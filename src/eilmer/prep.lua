@@ -1561,6 +1561,8 @@ function write_config_file(fileName)
 			 tostring(config.include_ghost_cells_in_spatial_deriv_clouds)))
    f:write(string.format('"suppress_reconstruction_at_boundaries": %s,\n',
 			 tostring(config.suppress_reconstruction_at_boundaries)))
+   f:write(string.format('"suppress_reconstruction_at_captured_shocks": %s,\n',
+			 tostring(config.suppress_reconstruction_at_captured_shocks)))
    f:write(string.format('"viscous_delay": %.18e,\n', config.viscous_delay))
    f:write(string.format('"shear_stress_relative_limit": %.18e,\n', config.shear_stress_relative_limit))
    f:write(string.format('"mass_diffusion_model": "%s",\n',

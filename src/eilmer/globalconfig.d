@@ -520,6 +520,7 @@ final class GlobalConfig {
     shared static SpatialDerivLocn spatial_deriv_locn = SpatialDerivLocn.vertices;
     shared static bool include_ghost_cells_in_spatial_deriv_clouds = true;
     shared static bool suppress_reconstruction_at_boundaries = false;
+    shared static bool suppress_reconstruction_at_captured_shocks = false;
     //
     // A factor to scale the viscosity in order to achieve a soft start. 
     // The soft-start for viscous effects may be handy for impulsively-started flows.
@@ -715,6 +716,7 @@ public:
     SpatialDerivLocn spatial_deriv_locn;
     bool include_ghost_cells_in_spatial_deriv_clouds;
     bool suppress_reconstruction_at_boundaries;
+    bool suppress_reconstruction_at_captured_shocks;
     double viscous_factor;
     double shear_stress_relative_limit;
     MassDiffusionModel mass_diffusion_model;
@@ -826,6 +828,8 @@ public:
             GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds;
         suppress_reconstruction_at_boundaries =
             GlobalConfig.suppress_reconstruction_at_boundaries;
+        suppress_reconstruction_at_captured_shocks =
+            GlobalConfig.suppress_reconstruction_at_captured_shocks;
         shear_stress_relative_limit = GlobalConfig.shear_stress_relative_limit;
         viscous_factor = GlobalConfig.viscous_factor;
         mass_diffusion_model = GlobalConfig.mass_diffusion_model;
@@ -1090,6 +1094,7 @@ void read_config_file()
     mixin(update_enum("spatial_deriv_locn", "spatial_deriv_locn", "spatial_deriv_locn_from_name"));
     mixin(update_bool("include_ghost_cells_in_spatial_deriv_clouds", "include_ghost_cells_in_spatial_deriv_clouds"));
     mixin(update_bool("suppress_reconstruction_at_boundaries", "suppress_reconstruction_at_boundaries"));
+    mixin(update_bool("suppress_reconstruction_at_captured_shocks", "suppress_reconstruction_at_captured_shocks"));
     mixin(update_double("viscous_delay", "viscous_delay"));
     mixin(update_double("viscous_factor_increment", "viscous_factor_increment"));
     mixin(update_double("shear_stress_relative_limit", "shear_stress_relative_limit"));
@@ -1113,6 +1118,7 @@ void read_config_file()
         writeln("  spatial_deriv_locn: ", spatial_deriv_locn_name(GlobalConfig.spatial_deriv_locn));
         writeln("  include_ghost_cells_in_spatial_deriv_clouds: ", GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds);
         writeln("  suppress_reconstruction_at_boundaries: ", GlobalConfig.suppress_reconstruction_at_boundaries);
+        writeln("  suppress_reconstruction_at_captured_shocks: ", GlobalConfig.suppress_reconstruction_at_captured_shocks);
         writeln("  viscous_delay: ", GlobalConfig.viscous_delay);
         writeln("  viscous_factor_increment: ", GlobalConfig.viscous_factor_increment);
         writeln("  shear_stress_relative_limit: ", GlobalConfig.shear_stress_relative_limit);
