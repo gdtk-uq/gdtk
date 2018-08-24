@@ -8,7 +8,7 @@ INSTALL_DIR ?= $(HOME)/dgdinst
 BUILD_DIR := ../../build
 
 DEMO_PROGRAMS := gas_model_demo ideal_gas_demo co2_model_demo co2_sw_model_demo \
-	sf6_model_demo luagas_model_demo univariate_lut_demo build_tree 
+	sf6_model_demo luagas_model_demo univariate_lut_demo build_tree
 TEST_PROGRAMS := cea_therm_cond_test cea_thermo_curves_test cea_viscosity_test \
 	gas_model_test ideal_gas_test cea_gas_test powers_aslam_gas_test \
 	ideal_dissociating_gas_test fuel_air_mix_test equilibrium_gas_test \
@@ -27,17 +27,17 @@ ifeq ($(DMD), dmd)
     # DFLAGS := -w
     DFLAGS := -w -O -release -inline -boundscheck=off
     OF := -of
-    DLINKFLAGS := -L-L$(LIBLUAPATH) -L-llua -L-ldl
+    DLINKFLAGS := -L-L$(LIBLUAPATH) -L-llua -L-ldl -L-lgfortran
 endif
 ifeq ($(DMD), ldmd2)
     DFLAGS := -w -O -release -inline -boundscheck=off
     OF := -of
-    DLINKFLAGS := -L-L$(LIBLUAPATH) -L-llua -L-ldl
+    DLINKFLAGS := -L-L$(LIBLUAPATH) -L-llua -L-ldl -L-lgfortran
 endif
 ifeq ($(DMD), gdc)
     DFLAGS := -Wall -O2 -frelease -fno-debug
     OF := -o
-    DLINKFLAGS := -L$(LIBLUAPATH) $(LIBLUA) -ldl
+    DLINKFLAGS := -L$(LIBLUAPATH) $(LIBLUA) -ldl -L-lgfortran
 endif
 
 UTIL_DIR := ../util
@@ -79,7 +79,7 @@ clean:
 	- rm gas-calc
 	- rm species-database/species-database.lua
 	- rm LOGFILE*TEST
-	- rm thermo.inp thermo.lib thermo.out 
+	- rm thermo.inp thermo.lib thermo.out
 	- rm trans.inp trans.lib trans.out
 	- rm tmp.inp tmp.out tmp.plt
 	- cd $(LUA); make clean
@@ -112,17 +112,17 @@ species-database.lua :
 
 # Some demo targets. These are left over from the early days of development.
 
-gas_model_demo: gas_model_demo.d $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA) 
+gas_model_demo: gas_model_demo.d $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
 	$(DMD) -g $(DFLAGS) gas_model_demo.d $(OF)gas_model_demo \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
-		$(DLINKFLAGS) 
+		$(DLINKFLAGS)
 
 ideal_gas_demo: ideal_gas_demo.d $(GAS_FILES) $(LIBLUA) $(UTIL_FILES) $(NM_FILES)
 	$(DMD) -g $(DFLAGS) ideal_gas_demo.d $(OF)ideal_gas_demo \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(DLINKFLAGS)
 
-co2_model_demo: co2_model_demo.d $(GAS_FILES) $(LIBLUA) $(UTIL_FILES) $(NM_FILES) 
+co2_model_demo: co2_model_demo.d $(GAS_FILES) $(LIBLUA) $(UTIL_FILES) $(NM_FILES)
 	$(DMD) -g $(DFLAGS) co2_model_demo.d $(OF)co2_model_demo \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(DLINKFLAGS)
@@ -142,7 +142,7 @@ luagas_model_demo: luagas_model_demo.d $(GAS_FILES) $(GAS_LUA_FILES) $(LIBLUA) \
 	$(DMD) -g $(DFLAGS) luagas_model_demo.d $(OF)luagas_model_demo \
 		$(GAS_FILES) $(GAS_LUA_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES) \
 		$(UTIL_FILES) $(NM_FILES) \
-		$(DLINKFLAGS) 
+		$(DLINKFLAGS)
 
 # Jonathan's programs that were moved out of nm.
 
@@ -279,3 +279,15 @@ pseudo_species_gas_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES
 
 ideal_air_fortran.o: ideal_air_fortran.f
 	gfortran -c -ffree-form ideal_air_fortran.f
+
+FFLAGS_fort=-freal-4-real-8 -fdefault-real-8  -fdefault-double-8
+FFLAGS_DEBUG_fort=-O0 -g -ggdb -finit-real=snan -ffpe-trap=zero,overflow -fcheck=all -std=legacy -Wall -fbacktrace
+
+$(KINETICS_DIR)/pseudosp_solve_ode.o: $(KINETICS_DIR)/pseudosp_solve_ode.f90
+	cd $(KINETICS_DIR); gfortran -c $(FFLAGS_fort) $(FFLAGS_DEBUG_fort) pseudosp_solve_ode.f90
+
+$(KINETICS_DIR)/pseudosp_rhs_ode.o: $(KINETICS_DIR)/pseudosp_rhs_ode.f90
+	cd $(KINETICS_DIR); gfortran -c $(FFLAGS_fort) $(FFLAGS_DEBUG_fort) pseudosp_rhs_ode.f90
+
+$(KINETICS_DIR)/dvode.o: $(KINETICS_DIR)/dvode.f
+	cd $(KINETICS_DIR); gfortran -c $(FFLAGS_fort) dvode.f

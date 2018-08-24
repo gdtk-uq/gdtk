@@ -5,6 +5,9 @@ KINETICS_FILES := $(KINETICS_DIR)/package.d \
 	$(KINETICS_DIR)/fuel_air_mix_kinetics.d \
 	$(KINETICS_DIR)/powers_aslam_kinetics.d \
 	$(KINETICS_DIR)/pseudo_species_kinetics.d \
+	$(KINETICS_DIR)/dvode.o \
+	$(KINETICS_DIR)/pseudosp_solve_ode.o \
+	$(KINETICS_DIR)/pseudosp_rhs_ode.o \
 	$(KINETICS_DIR)/rate_constant.d \
 	$(KINETICS_DIR)/reaction.d \
 	$(KINETICS_DIR)/reaction_mechanism.d \

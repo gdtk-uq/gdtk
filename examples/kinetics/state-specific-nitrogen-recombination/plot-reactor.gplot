@@ -1,0 +1,13 @@
+set term pdfcairo enhanced 
+set output "n2-reactor-massf.pdf"
+set key at 240,0.5
+set xlabel "{/Symbol m}s"
+set ylabel "mass fractions"
+set yrange [0:1]
+plot 'finite-rate-chem.data' u ($1*1e6):4 t 'finite-rate chemistry' w l lw 2 lc rgb "red", \
+     'finite-rate-chem.data' u ($1*1e6):5 notitle w l lw 2 lc rgb "red"
+
+set output 'n2-reactor-T.pdf'
+set yrange [0:7000]
+set key at 240,4000
+plot 'finite-rate-chem.data' u ($1*1e6):2 t 'finite-rate chemistry' w l lw 2 lc rgb "red"

@@ -37,15 +37,15 @@ TECPLOT_BIN_VERSION_STR = tecplot_unavailable
 ifneq ($(TECPLOT_BIN_DIR), unavailable)
     TECPLOT_BIN_VERSION_STR = with_tecplot_binary
 endif
-TECPLOT_FILES := 
+TECPLOT_FILES :=
 ifneq ($(TECPLOT_BIN_DIR), unavailable)
     TECPLOT_FILES += tecio.d tecplot_writer.d
 endif
 
 
 
-PROGRAMS := e4shared 
-SHARE_FILES := 
+PROGRAMS := e4shared
+SHARE_FILES :=
 
 ifeq ($(WITH_SSS),1)
     PROGRAMS += e4sss
@@ -93,9 +93,9 @@ EILMER_CORE_FILES := simcore.d \
 	mass_diffusion.d
 
 EILMER_LUA_FILES := luaglobalconfig.d lua_helper.d \
-	luaflowsolution.d luaflowstate.d user_defined_source_terms.d 
+	luaflowsolution.d luaflowstate.d user_defined_source_terms.d
 
-EILMER_EXTRA_FILES := postprocess.d 
+EILMER_EXTRA_FILES := postprocess.d
 
 EILMER_FILES := $(EILMER_CORE_FILES) $(EILMER_LUA_FILES) $(EILMER_EXTRA_FILES)
 
@@ -179,7 +179,7 @@ CUDA_FILES := $(CUDA_DIR)/cublas_api.d \
 	$(CUDA_DIR)/vector_types.d \
 	$(CUDA_DIR)/cublas_v2.d \
 	$(CUDA_DIR)/cuda.d \
-	$(CUDA_DIR)/cuda_runtime_api.d 
+	$(CUDA_DIR)/cuda_runtime_api.d
 
 OPENMPI_DIR := ../extern/OpenMPI/
 OPENMPI_FILES := $(OPENMPI_DIR)/source/mpi/package.d $(OPENMPI_DIR)/source/mpi/util.d
@@ -207,7 +207,7 @@ ifeq ($(DMD), dmd)
         DFLAGS := -w -O -release -inline -boundscheck=off
     endif
     OF := -of
-    DLINKFLAGS := -L-L$(LIBLUAPATH)
+    DLINKFLAGS := -L-L$(LIBLUAPATH) -L-lgfortran
     ifeq ($(findstring with_libplot,$(LIBPLOT_VERSION_STR)), with_libplot)
         DFLAGS := $(DFLAGS) -version=$(LIBPLOT_VERSION_STR)
         DLINKFLAGS := $(DLINKFLAGS) -L-lplot
@@ -316,7 +316,7 @@ clean:
 	- rm main_with_rev_string.d
 	- rm main_complex_with_rev_string.d
 	- rm steadystate_solver_with_rev_string.d
-	- rm steadystate_solver_complex_with_rev_string.d	
+	- rm steadystate_solver_complex_with_rev_string.d
 	- rm shape_sensitivity_calc_with_rev_string.d
 	- rm mpi_main_with_rev_string.d e4mpi loadbalance_with_rev_string.d
 	- rm dgd-for-mech4480.tgz
@@ -326,10 +326,10 @@ clean:
 	- cd $(GRID_DIR); make clean
 
 prep-gas:
-	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) build-prep-gas 
+	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) build-prep-gas
 
 ugrid_partition:
-	cd $(GRID_DIR); make BUILD_DIR=$(BUILD_DIR) ugrid_partition 
+	cd $(GRID_DIR); make BUILD_DIR=$(BUILD_DIR) ugrid_partition
 
 
 prep-chem:
@@ -350,7 +350,7 @@ globalconfig_demo: globalconfig_demo.d globalconfig.d fvcore.d \
 		globalconfig_demo.d globalconfig.d fvcore.d \
 		$(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(GZIP_FILES) \
 		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-		$(UTIL_FILES) $(NM_FILES) $(NM_LUA_FILES) $(DLINKFLAGS)  
+		$(UTIL_FILES) $(NM_FILES) $(NM_LUA_FILES) $(DLINKFLAGS)
 
 luaglobalconfig_demo: luaglobalconfig_demo.d luaglobalconfig.d globalconfig.d \
 	fvcore.d fvcell.d fvvertex.d fvinterface.d conservedquantities.d \
@@ -364,7 +364,7 @@ luaglobalconfig_demo: luaglobalconfig_demo.d luaglobalconfig.d globalconfig.d \
 		flowstate.d json_helper.d \
 		$(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) \
-		$(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES) $(DLINKFLAGS)  
+		$(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES) $(DLINKFLAGS)
 
 flowstate_demo: flowstate_demo.d flowstate.d \
 	fvcore.d fvcell.d fvvertex.d fvinterface.d conservedquantities.d \
@@ -609,3 +609,12 @@ libcudakernel.so: libcudakernel.so
 
 $(GAS_DIR)/ideal_air_fortran.o: $(GAS_DIR)/ideal_air_fortran.f
 	cd $(GAS_DIR); gfortran -c -ffree-form ideal_air_fortran.f
+
+$(KINETICS_DIR)/pseudosp_solve_ode.o: $(KINETICS_DIR)/pseudosp_solve_ode.f90
+	cd $(KINETICS_DIR); gfortran -c pseudosp_solve_ode.f90
+
+$(KINETICS_DIR)/pseudosp_rhs_ode.o: $(KINETICS_DIR)/pseudosp_rhs_ode.f90
+	cd $(KINETICS_DIR); gfortran -c pseudosp_rhs_ode.f90
+
+$(KINETICS_DIR)/dvode.o: $(KINETICS_DIR)/dvode.f
+	cd $(KINETICS_DIR); gfortran -c dvode.f

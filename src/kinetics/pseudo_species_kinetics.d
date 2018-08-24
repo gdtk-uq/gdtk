@@ -26,47 +26,20 @@ import gas.pseudo_species_gas;
 
 import kinetics.thermochemical_reactor;
 
+extern(C) {
+    // Wrapper of the fortran function `pseudosp_solve_ode`
+    void solveODE(double *Y, size_t *neq, double *temp_init, double *dt);
+}
+
 final class PseudoSpeciesKinetics : ThermochemicalReactor {
 public:
-    @property size_t nReactions() const { return _mech.nReactions(); }
 
-    this(string fileName, GasModel gmodel)
+    this(GasModel gmodel)
     {
         super(gmodel);
         _psGmodel = cast(PseudoSpeciesGas) gmodel;
-        auto L = init_lua_State();
-        doLuaFile(L, fileName);
-        _mech = createSSRMechanism(L, gmodel);
-        lua_close(L);
         _conc.length = gmodel.n_species;
         _conc0.length = gmodel.n_species;
-        _negFy.length = gmodel.n_species;
-        _dconc.length = gmodel.n_species;
-        _dconc0.length = gmodel.n_species;
-        _rates.length = gmodel.n_species;
-        _Jac = new SMatrix!number();
-        _max_iterations = _psGmodel.n_species;
-        _mech.initJacobian(_Jac, gmodel.n_species);
-        _ILU0 = new SMatrix!number(_Jac);
-        _gws = GMRESWorkSpace!number(gmodel.n_species, _max_iterations);
-    }
-
-    this(lua_State* L, GasModel gmodel)
-    {
-        super(gmodel);
-        _psGmodel = cast(PseudoSpeciesGas) gmodel;
-        _mech = createSSRMechanism(L, gmodel);
-        _conc.length = gmodel.n_species;
-        _conc0.length = gmodel.n_species;
-        _negFy.length = gmodel.n_species;
-        _dconc.length = gmodel.n_species;
-        _dconc0.length = gmodel.n_species;
-        _rates.length = gmodel.n_species;
-        _Jac = new SMatrix!number();
-        _max_iterations = _psGmodel.n_species;
-        _mech.initJacobian(_Jac, gmodel.n_species);
-        _ILU0 = new SMatrix!number(_Jac);
-        _gws = GMRESWorkSpace!number(gmodel.n_species, _max_iterations);
     }
 
     override void opCall(GasState Q, double tInterval,
@@ -77,86 +50,32 @@ public:
         foreach (i; 0 .. _conc.length) {
             _conc[i] = _conc0[i];
         }
-        _mech.evalRateConstants(Q);
-        foreach (i; 0 .. _dconc.length) {
-            _dconc[i] = to!number(0.0);
-        }
-        int stepCount = 0;
-        foreach (step; 0 .. _max_steps) {
-            stepCount++;
-            // 1. Evaluate negF(Y)
-            _mech.evalRates(_conc, _rates);
-            foreach (i; 0 .. _rates.length) {
-                _negFy[i] = -1.0*(_conc[i] - _conc0[i] - tInterval*_rates[i]);
-            }
-            // 2. Evaluate dfdY
-            _mech.evalJacobian(_conc, _Jac);
-            // 3. Form Jacobian as [I - dt*dfdy];
-            _Jac.scale(to!number(-1.0*tInterval));
-            // 3a. Add I on diagonal.
-            foreach (isp; 0 .. _conc.length) {
-                _Jac[isp,isp] = _Jac[isp,isp] + 1.0;
-            }
-            // 4. Compute dY
-            // 4a. Compute ILU0 preconditioner.
-            foreach (i; 0 .. _Jac.aa.length) {
-                _ILU0.aa[i] = _Jac.aa[i];
-            }
-            decompILU0!number(_ILU0);
-            // 4b. Use right-preconditioned GMRES to solve for dY
-            //     Use previous _dconc as guess.
-            foreach (i; 0 .. _dconc.length) {
-                _dconc0[i] = _dconc[i];
-            }
-            rpcGMRES(_Jac, _ILU0, _negFy, _dconc0, _dconc,
-                     _max_iterations, _GMRES_tol, _gws);
-            // 5. Y_new = Y_old + dY
-            foreach (i; 0 .. _conc.length) {
-                _conc[i] = _conc[i] + _dconc[i];
-            }
-            // 6. Check for convergence.
-            // [TODO] PM: We may need a more sophisticated convergence
-            //            check. For the moment, I'm just checking
-            //            for small changes in dY.
-            double largestChange = 0.0;
-            foreach (i; 0 .. _dconc.length) {
-                if (fabs(_dconc[i].re) > largestChange) {
-                    largestChange = fabs(_dconc[i].re);
-                }
-            }
-            if (largestChange < _Newton_tol) {
-                break;
-            }
-        }
-        if (stepCount == _max_steps) {
-            string excMsg = "Newton steps failed to converge in pseudo_species_kinetics.d\n";
-            excMsg ~= format("Number of steps: %d\n", _max_steps);
-            throw new ThermochemicalReactorUpdateException(excMsg);
-        }
+
+        size_t len=_conc.length;
+
+        // Now update the concentration vector at time t+t_interval
+        // by solving the kinetics ode (convection is frozen)
+        // solveODE updates _conc to its new value
+        // Pass pointers to the fortran subroutine
+        solveODE(_conc.ptr, &len, &Q.T , &tInterval);
+
         _psGmodel.conc2massf(_conc, Q);
+
     }
 
 private:
-    int _max_steps = 10;
-    int _max_iterations = 30; // in matrix solve
-    double _Newton_tol = 1.0e-9;
-    double _GMRES_tol = 1.0e-15;
     PseudoSpeciesGas _psGmodel;
-    StateSpecificReactionMechanism _mech;
     number[] _conc;
     number[] _conc0;
-    number[] _negFy;
-    number[] _dconc;
-    number[] _dconc0;
-    number[] _rates;
-    SMatrix!number _Jac;
-    SMatrix!number _ILU0;
-    GMRESWorkSpace!number _gws;
 }
 
 // --------------------------------------------------------------
 // Class to provide rates of pseudo-species population changes
 // --------------------------------------------------------------
+
+// TODO The classes below should be removed because the fortran file pseudosp_solve_ode.f90
+// is now in charge of updating the concentration vector.
+// Nevertheless I let it there in case one decides to use it the future
 
 class StateSpecificReactionMechanism {
 public:

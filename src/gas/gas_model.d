@@ -1,8 +1,8 @@
 /**
  * gas_model.d
- * 
+ *
  * Contents: The gas model file has a number of parts.
- *   1. The GasModel base class for specifying how 
+ *   1. The GasModel base class for specifying how
  *      specific gas models should behave.
  *   2. The GasState class which specifies the storage arrangement
  *      for the data defining a gas state.
@@ -40,7 +40,7 @@ import gas.physical_constants;
 immutable double SMALL_MOLE_FRACTION = 1.0e-15;
 immutable double MIN_MASS_FRACTION = 1.0e-30;
 immutable double MIN_MOLES = 1.0e-30;
-immutable double T_MIN = 20.0; 
+immutable double T_MIN = 20.0;
 immutable double MASSF_ERROR_TOL = 1.0e-6;
 
 immutable string[] equilibriumEnergyModeNames = ["equilibrium",
@@ -105,9 +105,9 @@ public:
     // const void update_diff_coeffs(ref GasState Q) {}
 
     // Methods to be overridden.
-    abstract number dudT_const_v(in GasState Q); 
-    abstract number dhdT_const_p(in GasState Q); 
-    abstract number dpdrho_const_T(in GasState Q); 
+    abstract number dudT_const_v(in GasState Q);
+    abstract number dhdT_const_p(in GasState Q);
+    abstract number dpdrho_const_T(in GasState Q);
     abstract number gas_constant(in GasState Q);
     abstract number internal_energy(in GasState Q);
     abstract number enthalpy(in GasState Q);
@@ -132,12 +132,12 @@ public:
         number g = h - Q.T*s;
         return g;
     }
-    
+
     final number Cv(in GasState Q) { return dudT_const_v(Q); }
     final number Cp(in GasState Q) { return dhdT_const_p(Q); }
     final number R(in GasState Q)  { return gas_constant(Q); }
     final number gamma(in GasState Q) { return Cp(Q)/Cv(Q); }
-    final number molecular_mass(in GasState Q) 
+    final number molecular_mass(in GasState Q)
     in {
         assert(Q.massf.length == _mol_masses.length, brokenPreCondition("Inconsistent array lengths."));
     }
@@ -145,7 +145,7 @@ public:
         return mixture_molecular_mass(Q.massf, _mol_masses);
     }
 
-    final void massf2molef(in GasState Q, number[] molef) 
+    final void massf2molef(in GasState Q, number[] molef)
     in {
         assert(Q.massf.length == molef.length, brokenPreCondition("Inconsistent array lengths."));
     }
@@ -153,7 +153,7 @@ public:
         gas.gas_model.massf2molef(Q.massf, _mol_masses, molef);
     }
 
-    final void molef2massf(in number[] molef, GasState Q) 
+    final void molef2massf(in number[] molef, GasState Q)
     in {
         assert(Q.massf.length == molef.length, brokenPreCondition("Inconsistent array lengths."));
     }
@@ -161,7 +161,7 @@ public:
         gas.gas_model.molef2massf(molef, _mol_masses, Q.massf);
     }
 
-    final void massf2conc(in GasState Q, number[] conc) 
+    final void massf2conc(in GasState Q, number[] conc)
     in {
         assert(Q.massf.length == conc.length, brokenPreCondition("Inconsistent array lengths."));
     }
@@ -172,9 +172,9 @@ public:
         }
     }
 
-    final void conc2massf(in number[] conc, GasState Q) 
+    final void conc2massf(in number[] conc, GasState Q)
     in {
-        assert(Q.massf.length == conc.length, brokenPreCondition("Inconsisten array lengths."));
+        assert(Q.massf.length == conc.length, brokenPreCondition("Inconsistent array lengths."));
     }
     body {
         foreach ( i; 0.._n_species ) {
@@ -302,11 +302,11 @@ body {
 //----------------------------------------------------------------------------------------
 
 /* The following functions:
-   update_thermo_state_pT(), update_thermo_state_rhoT(), update_thermo_state_rhop() 
+   update_thermo_state_pT(), update_thermo_state_rhoT(), update_thermo_state_rhop()
    are for updating the thermo state from when  the gas model does not  have a method
    for doing so with those variables, but does have a defined method for
    update_thermo_from_rhou(). (e.g. in the UniformLUT class)
-   A guess is made for rho & e and that guess is iterated using the  Newton-Raphson 
+   A guess is made for rho & e and that guess is iterated using the  Newton-Raphson
    method.
    A GasModel object is a function parameter so that the update method from rho,e for
    that gas model can be called.
@@ -332,11 +332,11 @@ void update_thermo_state_pT(GasModel gmodel, GasState Q)
     number p_given = Q.p;
     number T_given = Q.T;
     // When using single-sided finite-differences on the
-    // curve-fit EOS functions, we really cannot expect 
+    // curve-fit EOS functions, we really cannot expect
     // much more than 0.1% tolerance here.
     // However, we want a tighter tolerance so that the starting values
     // don't get shifted noticeably.
- 
+
     number fT_tol = 1.0e-6 * T_given;
     number fp_tol = 1.0e-6 * p_given;
     number fp_tol_fail = 0.02 * p_given;
@@ -348,7 +348,7 @@ void update_thermo_state_pT(GasModel gmodel, GasState Q)
     // equation of state with some starting values for density
     // and internal energy.
     gmodel.update_thermo_from_rhou(Q);
-    
+
     T_old = Q.T;
     R_eff = Q.p / (Q.rho * T_old);
     de = 0.01 * Q.u;
@@ -398,7 +398,7 @@ void update_thermo_state_pT(GasModel gmodel, GasState Q)
         try { gmodel.update_thermo_from_rhou(Q); }
         catch (Exception caughtException) {
             string msg;
-            msg ~= format("Iteration %s failed at call A in %s\n", count, __FUNCTION__); 
+            msg ~= format("Iteration %s failed at call A in %s\n", count, __FUNCTION__);
             msg ~= format("Exception message from update_thermo_from_rhou() was:\n\n");
             msg ~= to!string(caughtException);
             throw new GasModelException(msg);
@@ -436,15 +436,15 @@ void update_thermo_state_pT(GasModel gmodel, GasState Q)
         drho = (-dfT_de * fp_old + dfp_de * fT_old) / det;
         de = (dfT_drho * fp_old - dfp_drho * fT_old) / det;
         if( fabs(drho) > MAX_RELATIVE_STEP * rho_old ) {
-            // move a little toward the goal 
+            // move a little toward the goal
             drho_sign = (drho > 0.0 ? 1.0 : -1.0);
             drho = drho_sign * MAX_RELATIVE_STEP * rho_old;
-        } 
+        }
         if( fabs(de) > MAX_RELATIVE_STEP * e_old ) {
             // move a little toward the goal
             de_sign = (de > 0.0 ? 1.0 : -1.0);
             de = de_sign * MAX_RELATIVE_STEP * e_old;
-        } 
+        }
         rho_old += drho;
         e_old += de;
         // Make sure of consistent thermo state.
@@ -463,14 +463,14 @@ void update_thermo_state_pT(GasModel gmodel, GasState Q)
         fT_old = T_given - Q.T;
         converged = (fabs(fp_old) < fp_tol) && (fabs(fT_old) < fT_tol);
         ++count;
-    } // end while 
+    } // end while
 
     if ( count >= MAX_STEPS ) {
         string msg;
         msg ~= format("Warning in function: %s:\n", __FUNCTION__);
         msg ~= format("    Iterations did not converge.\n");
         msg ~= format("    fp_old = %g, fT_old = %g\n", fp_old, fT_old);
-        msg ~= format("    p_given = %.10s, T_given, %.5s\n", p_given, T_given); 
+        msg ~= format("    p_given = %.10s, T_given, %.5s\n", p_given, T_given);
         msg ~= "  Supplied Q:" ~ Q.toString();
         writeln(msg);
 
@@ -480,14 +480,14 @@ void update_thermo_state_pT(GasModel gmodel, GasState Q)
         string msg;
         msg ~= format("Error in function: %s:\n", __FUNCTION__);
         msg ~= format("    Iterations failed badly.\n");
-        msg ~= format("    p_given = %.10s, T_given, %.5s\n", p_given, T_given); 
+        msg ~= format("    p_given = %.10s, T_given, %.5s\n", p_given, T_given);
         msg ~= format("    fp_old = %g, fT_old = %g\n", fp_old, fT_old);
         msg ~= "  Supplied Q:" ~ Q.toString();
         throw new GasModelException(msg);
     }
 }
 
-void update_thermo_state_rhoT(GasModel gmodel, GasState Q)  
+void update_thermo_state_rhoT(GasModel gmodel, GasState Q)
 {
     // This method can be applied to single-species models only
     number e_old, e_new, de, tmp, de_sign;
@@ -498,7 +498,7 @@ void update_thermo_state_rhoT(GasModel gmodel, GasState Q)
     number rho_given = Q.rho;
     number T_given = Q.T;
     // When using single-sided finite-differences on the
-    // curve-fit EOS functions, we really cannot expect 
+    // curve-fit EOS functions, we really cannot expect
     // much more than 0.1% tolerance here.
     // However, we want a tighter tolerance so that the starting values
     // don't get shifted noticeably.
@@ -508,9 +508,9 @@ void update_thermo_state_rhoT(GasModel gmodel, GasState Q)
     // Get an idea of the gas properties by calling the original
     // equation of state with some dummy values for density
     // and internal energy.
-       
-    Q.rho = rho_given; // kg/m**3 
-    Q.u = 2.0e5; // J/kg 
+
+    Q.rho = rho_given; // kg/m**3
+    Q.u = 2.0e5; // J/kg
     gmodel.update_thermo_from_rhou(Q);
 
     T_old = Q.T;
@@ -525,8 +525,8 @@ void update_thermo_state_rhoT(GasModel gmodel, GasState Q)
         msg ~= to!string(caughtException);
         throw new GasModelException(msg);
     }
-   
-   
+
+
     Cv_eff = de / (Q.T - T_old);
     // Now, get a better guess for the appropriate density and internal energy.
     e_old = Q.u + (T_given - Q.T) * Cv_eff;
@@ -542,7 +542,7 @@ void update_thermo_state_rhoT(GasModel gmodel, GasState Q)
         msg ~= to!string(caughtException);
         throw new GasModelException(msg);
     }
-   
+
     fT_old = T_given - Q.T;
     // Perturb to get derivative.
     e_new = e_old * 1.001;
@@ -574,10 +574,10 @@ void update_thermo_state_rhoT(GasModel gmodel, GasState Q)
     while ( !converged && count < MAX_STEPS ) {
         de = -fT_old / dfT_de;
         if ( fabs(de) > MAX_RELATIVE_STEP * e_old ) {
-            // move a little toward the goal 
+            // move a little toward the goal
             de_sign = (de > 0.0 ? 1.0 : -1.0);
             de = de_sign * MAX_RELATIVE_STEP * fabs(e_old);
-        } 
+        }
         e_new = e_old + de;
         Q.rho = rho_given;
         Q.u = e_new;
@@ -596,7 +596,7 @@ void update_thermo_state_rhoT(GasModel gmodel, GasState Q)
         fT_old = fT_new;
         e_old = e_new;
         converged = fabs(fT_old) < fT_tol;
-    }   // end while 
+    }   // end while
     // Ensure that we have the current data for all EOS variables.
     Q.rho = rho_given;
     Q.u = e_old;
@@ -615,7 +615,7 @@ void update_thermo_state_rhoT(GasModel gmodel, GasState Q)
         msg ~= format("Warning in function: %s:\n", __FUNCTION__);
         msg ~= format("    Iterations did not converge.\n");
         msg ~= format("    fT_old = %g\n", fT_old);
-        msg ~= format("    rho_given = %.5s, T_given, %.5s\n", rho_given, T_given); 
+        msg ~= format("    rho_given = %.5s, T_given, %.5s\n", rho_given, T_given);
         msg ~= "  Supplied Q:" ~ Q.toString;
         writeln(msg);
 
@@ -624,10 +624,10 @@ void update_thermo_state_rhoT(GasModel gmodel, GasState Q)
         string msg;
         msg ~= format("Error in function: %s:\n", __FUNCTION__);
         msg ~= format("    Iterations failed badly.\n");
-        msg ~= format("    rho_given = %.5s, T_given, %.5s\n", rho_given, T_given); 
+        msg ~= format("    rho_given = %.5s, T_given, %.5s\n", rho_given, T_given);
         msg ~= "  Supplied Q:" ~ Q.toString();
         throw new GasModelException(msg);
-    }  
+    }
 }
 
 void update_thermo_state_rhop(GasModel gmodel, GasState Q)
@@ -640,7 +640,7 @@ void update_thermo_state_rhop(GasModel gmodel, GasState Q)
     number rho_given = Q.rho;
     number p_given = Q.p;
     // When using single-sided finite-differences on the
-    // curve-fit EOS functions, we really cannot expect 
+    // curve-fit EOS functions, we really cannot expect
     // much more than 0.1% tolerance here.
     // However, we want a tighter tolerance so that the starting values
     // don't get shifted noticeably.
@@ -651,7 +651,7 @@ void update_thermo_state_rhop(GasModel gmodel, GasState Q)
     // equation of state with some dummy values for density
     // and internal energy.
     Q.rho = rho_given; // kg/m**3
-    Q.u = 2.0e5; // J/kg 
+    Q.u = 2.0e5; // J/kg
     gmodel.update_thermo_from_rhou(Q);
     p_old = Q.p;
     de = 0.01 * Q.u;
@@ -718,7 +718,7 @@ void update_thermo_state_rhop(GasModel gmodel, GasState Q)
             // move a little toward the goal
             de_sign = (de > 0.0 ? 1.0 : -1.0);
             de = de_sign * MAX_RELATIVE_STEP * fabs(e_old);
-        } 
+        }
         e_new = e_old + de;
         Q.rho = rho_given;
         Q.u = e_new;
@@ -739,7 +739,7 @@ void update_thermo_state_rhop(GasModel gmodel, GasState Q)
         fp_old = fp_new;
         e_old = e_new;
         converged = fabs(fp_old) < fp_tol;
-    }   // end while 
+    }   // end while
     // Ensure that we have the current data for all EOS variables.
     Q.rho = rho_given;
     Q.u = e_old;
@@ -758,7 +758,7 @@ void update_thermo_state_rhop(GasModel gmodel, GasState Q)
         msg ~= format("Error in function: %s:\n", __FUNCTION__);
         msg ~= format("    Iterations did not converge.\n");
         msg ~= format("    fp_old = %g, e_old = %g\n", fp_old, e_old);
-        msg ~= format("    rho_given = %.5s, p_given, %.8s\n", rho_given, p_given); 
+        msg ~= format("    rho_given = %.5s, p_given, %.8s\n", rho_given, p_given);
         msg ~= "  Supplied Q:" ~ Q.toString;
         writeln(msg);
     }
@@ -767,13 +767,13 @@ void update_thermo_state_rhop(GasModel gmodel, GasState Q)
         string msg;
         msg ~= format("Error in function: %s:\n", __FUNCTION__);
         msg ~= format("    Iterations failed badly.\n");
-        msg ~= format("    rho_given = %.5s, T_given, %.8s\n", rho_given, p_given); 
+        msg ~= format("    rho_given = %.5s, T_given, %.8s\n", rho_given, p_given);
         msg ~= "  Supplied Q:" ~ Q.toString();
         throw new GasModelException(msg);
     }
 }
 
-void update_thermo_state_ps(GasModel gmodel, GasState Q, number s) 
+void update_thermo_state_ps(GasModel gmodel, GasState Q, number s)
 {
     number T_old, T_new, dT, tmp, dT_sign;
     number dfs_dT, fs_old, fs_new;
@@ -781,9 +781,9 @@ void update_thermo_state_ps(GasModel gmodel, GasState Q, number s)
 
     number s_given = s;
     number p_given = Q.p;
-   
+
     // When using single-sided finite-differences on the
-    // curve-fit EOS functions, we really cannot expect 
+    // curve-fit EOS functions, we really cannot expect
     // much more than 0.1% tolerance here.
     // However, we want a tighter tolerance so that the starting values
     // don't get shifted noticeably.
@@ -801,7 +801,7 @@ void update_thermo_state_ps(GasModel gmodel, GasState Q, number s)
         throw new GasModelException(msg);
     }
     ////**** Need to check this is the correct method - is called 2 more times*****/////
-    number s_old = gmodel.entropy(Q);   
+    number s_old = gmodel.entropy(Q);
     fs_old = s_given - s_old;
     // Perturb T to get a derivative estimate
     T_new = T_old * 1.001;
@@ -834,7 +834,7 @@ void update_thermo_state_ps(GasModel gmodel, GasState Q, number s)
             // move a little toward the goal
             dT_sign = (dT > 0.0 ? 1.0 : -1.0);
             dT = dT_sign * MAX_RELATIVE_STEP * fabs(T_old);
-        } 
+        }
         T_new = T_old + dT;
         Q.T = T_new;
         try { gmodel.update_thermo_from_pT(Q); }
@@ -853,7 +853,7 @@ void update_thermo_state_ps(GasModel gmodel, GasState Q, number s)
         fs_old = fs_new;
         T_old = T_new;
         converged = (fabs(fs_old) < fs_tol);
-    }   // end while 
+    }   // end while
     // Ensure that we have the current data for all EOS variables.
     Q.T = T_old;
 
@@ -870,7 +870,7 @@ void update_thermo_state_ps(GasModel gmodel, GasState Q, number s)
         msg ~= format("Error in function: %s:\n", __FUNCTION__);
         msg ~= format("    Iterations did not converge.\n");
         msg ~= format("    fs_old = %g\n", fs_old);
-        msg ~= format("    p_given = %.8s, s_given, %.5s\n", p_given, s_given); 
+        msg ~= format("    p_given = %.8s, s_given, %.5s\n", p_given, s_given);
         msg ~= "  Supplied Q:" ~ Q.toString;
         writeln(msg);
     }
@@ -879,7 +879,7 @@ void update_thermo_state_ps(GasModel gmodel, GasState Q, number s)
         string msg;
         msg ~= format("Error in function: %s:\n", __FUNCTION__);
         msg ~= format("    Iterations failed badly.\n");
-        msg ~= format("    p_given = %.8s, s_given, %.5s\n", p_given, s_given); 
+        msg ~= format("    p_given = %.8s, s_given, %.5s\n", p_given, s_given);
         msg ~= "  Supplied Q:" ~ Q.toString();
         throw new GasModelException(msg);
     }
@@ -896,7 +896,7 @@ void update_thermo_state_hs(GasModel gmodel, GasState Q, number h, number s)
     number h_given = h;
     number s_given = s;
     // When using single-sided finite-differences on the
-    // curve-fit EOS functions, we really cannot expect 
+    // curve-fit EOS functions, we really cannot expect
     // much more than 0.1% tolerance here.
     // However, we want a tighter tolerance so that the starting values
     // don't get shifted noticeably.
@@ -959,7 +959,7 @@ void update_thermo_state_hs(GasModel gmodel, GasState Q, number h, number s)
         dfs_dT = (fs_new - fs_old) / (T_new - T_old);
 
         det = dfh_dp * dfs_dT - dfs_dp * dfh_dT;
-      
+
         if( fabs(det) < 1.0e-12 ) {
             string msg;
             msg ~= format("Error in function %s\n", __FUNCTION__);
@@ -969,15 +969,15 @@ void update_thermo_state_hs(GasModel gmodel, GasState Q, number h, number s)
         dp = (-dfs_dT * fh_old + dfh_dT * fs_old) / det;
         dT = (dfs_dp * fh_old - dfh_dp * fs_old) / det;
         if( fabs(dp) > MAX_RELATIVE_STEP * p_old ) {
-            // move a little toward the goal 
+            // move a little toward the goal
             dp_sign = (dp > 0.0 ? 1.0 : -1.0);
             dp = dp_sign * MAX_RELATIVE_STEP * p_old;
-        } 
+        }
         if( fabs(dT) > MAX_RELATIVE_STEP * T_old ) {
             // move a little toward the goal
             dT_sign = (dT > 0.0 ? 1.0 : -1.0);
             dT = dT_sign * MAX_RELATIVE_STEP * T_old;
-        } 
+        }
         p_old += dp;
         T_old += dT;
         // Make sure of consistent thermo state.
@@ -998,14 +998,14 @@ void update_thermo_state_hs(GasModel gmodel, GasState Q, number h, number s)
         fs_old = s_given - s_new;
         converged = (fabs(fh_old) < fh_tol) && (fabs(fs_old) < fs_tol);
         ++count;
-    } // end while 
+    } // end while
 
     if ( count >= MAX_STEPS ) {
         string msg;
         msg ~= format("Error in function: %s:\n", __FUNCTION__);
         msg ~= format("    Iterations did not converge.\n");
         msg ~= format("    fh_old = %g, fs_old = %g\n", fh_old, fs_old);
-        msg ~= format("    h_given = %.10s, h_given, %.5s\n", h_given, s_given); 
+        msg ~= format("    h_given = %.10s, h_given, %.5s\n", h_given, s_given);
         msg ~= "  Supplied Q:" ~ Q.toString();
         writeln(msg);
     }
@@ -1014,7 +1014,7 @@ void update_thermo_state_hs(GasModel gmodel, GasState Q, number h, number s)
         string msg;
         msg ~= format("Error in function: %s:\n", __FUNCTION__);
         msg ~= format("    Iterations failed badly.\n");
-        msg ~= format("    h_given = %.10s, h_given, %.5s\n", h_given, s_given);        
+        msg ~= format("    h_given = %.10s, h_given, %.5s\n", h_given, s_given);
         msg ~= "  Supplied Q:" ~ Q.toString();
         throw new GasModelException(msg);
     }
@@ -1054,17 +1054,17 @@ import core.stdc.stdlib : exit;
 GasModel init_gas_model(string file_name="gas-model.lua")
 /**
  * Get the instructions for setting up the GasModel object from a Lua file.
- * The first item in the file should be a model name which we use to select 
+ * The first item in the file should be a model name which we use to select
  * the specific GasModel class.
  * The constructor for each specific gas model will know how to pick out the
  * specific parameters of interest.
- * As new GasModel classes are added to the collection, just 
+ * As new GasModel classes are added to the collection, just
  * add a new case to the switch statement below.
  */
 {
     lua_State* L;
-   
-    try { 
+
+    try {
         L = init_lua_State();
         doLuaFile(L, file_name);
     } catch (Exception e) {
@@ -1105,7 +1105,7 @@ GasModel init_gas_model(string file_name="gas-model.lua")
     case "SF6Virial":
         gm = new SF6Virial(L);
         break;
-    case "look-up table":  
+    case "look-up table":
         gm = new  UniformLUT(L);
         break;
     case "CEA adaptive look-up table":
@@ -1165,7 +1165,7 @@ version(gas_model_test) {
         gd.massf[1] = 0.2;
         number[] phi = [to!number(9.0), to!number(16.0)];
         assert(approxEqualNumbers(to!number(10.4), mass_average(gd, phi), 1.0e-6));
-        
+
         // Iterative methods test using idealgas single species model
         // These assume IdealGas class is working properly
         GasModel gm;
@@ -1197,7 +1197,7 @@ version(gas_model_test) {
         assert(approxEqualNumbers(gd.mu, to!number(1.84691e-05), 1.0e-6), "viscosity");
         assert(approxEqualNumbers(gd.k, to!number(0.0262449), 1.0e-6), "conductivity");
 
-        // Select arbitrary energy and density and establish a set of 
+        // Select arbitrary energy and density and establish a set of
         // variables that are thermodynamically consistent
         number e_given = 1.0e7;
         number rho_given = 2.0;
@@ -1207,14 +1207,14 @@ version(gas_model_test) {
         gm.update_thermo_from_rhou(Q);
         number p_given = Q.p;
         number T_given = Q.T;
-        
+
         // Initialise the same state from the different property combinations
         // Test pT iterative update
         Q.p = p_given;
         Q.T = T_given;
-        update_thermo_state_pT(gm, Q); 
+        update_thermo_state_pT(gm, Q);
         // Determine correct entropy/enthalpy for updates that use them
-        number s_given = gm.entropy(Q); 
+        number s_given = gm.entropy(Q);
         number h_given = gm.enthalpy(Q);
         assert(approxEqualNumbers(Q.rho, rho_given, 1.0e-6),  failedUnitTest());
         assert(approxEqualNumbers(Q.u, e_given, 1.0e-6), failedUnitTest());
@@ -1231,7 +1231,7 @@ version(gas_model_test) {
         assert(approxEqualNumbers(Q.u, e_given, 1.0e-6), failedUnitTest());
         // Test  ps iterative update
         Q.p = p_given;
-        update_thermo_state_ps(gm, Q, s_given); 
+        update_thermo_state_ps(gm, Q, s_given);
         assert(approxEqualNumbers(Q.T, T_given, 1.0e-6), failedUnitTest());
         assert(approxEqualNumbers(Q.u, e_given, 1.0e-6), failedUnitTest());
         assert(approxEqualNumbers(Q.rho, rho_given, 1.0e-6), failedUnitTest());
@@ -1253,4 +1253,3 @@ version(gas_model_test) {
         return 0;
     }
 }
-

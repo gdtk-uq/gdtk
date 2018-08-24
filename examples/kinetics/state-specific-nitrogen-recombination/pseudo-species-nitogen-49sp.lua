@@ -5,7 +5,7 @@ pseudo_species = {}
 pseudo_species[0] = {
    name = "N_e2p3Minus4S",
    type = "single_state",
-   M = 0.014,
+   M = 0.014007,
    DOF_base_mode = 3,
    energy = 0.0,
 }

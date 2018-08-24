@@ -38,16 +38,6 @@ extern(C) int newPseudoSpeciesKinetics(lua_State* L)
             "A table containing named arguments is expected, but no table was found.";
         luaL_error(L, errMsg.toStringz);
     }
-    // Expect to find a 'reactionsFile' entry
-    lua_getfield(L, 1, "reactionsFile");
-    if (!lua_isstring(L, -1)) {
-        string errMsg = "Error in call to PseudoSpeciesKinetics:new{}. " ~
-            "A string was expected as the reactionsFile argument. " ~
-            "No valid string was found.";
-        luaL_error(L, errMsg.toStringz);
-    }
-    auto reactionsFile = to!string(luaL_checkstring(L, -1));
-    lua_pop(L, 1);
 
     lua_getfield(L, 1, "gasModel");
     if ( lua_isnil(L, -1) ) {
@@ -63,8 +53,8 @@ extern(C) int newPseudoSpeciesKinetics(lua_State* L)
         luaL_error(L, errMsg.toStringz());
     }
     lua_pop(L, 1);
-    
-    auto myPseudoSpeciesKinetics = new PseudoSpeciesKinetics(reactionsFile, gmodel);
+
+    auto myPseudoSpeciesKinetics = new PseudoSpeciesKinetics(gmodel);
     PseudoSpeciesKineticsStore ~= pushObj!(PseudoSpeciesKinetics, PseudoSpeciesKineticsMT)(L, myPseudoSpeciesKinetics);
     return 1;
 }
@@ -106,7 +96,7 @@ extern(C) int updatePseudoSpeciesState(lua_State *L)
 void registerPseudoSpeciesKinetics(lua_State* L, int tblIdx)
 {
     luaL_newmetatable(L, PseudoSpeciesKineticsMT.toStringz);
-    
+
     // metatable.__index = metatable
     lua_pushvalue(L, -1);
     lua_setfield(L, -2, "__index");

@@ -1,2 +1,0 @@
-model = 'thermally perfect gas'
-species = {'N2', 'N'}

@@ -84,18 +84,17 @@ Q.massf['N_e2p3Minus4S']=mfN
 
 gm:updateThermoFromPT(Q)
 
-chemUpdate = PseudoSpeciesKinetics:new{reactionsFile='state-specific-kinetics-N2.lua', gasModel=gm}
+chemUpdate = PseudoSpeciesKinetics:new{gasModel=gm}
 
-tFinal = 1.0e-13 -- s
+tFinal = 1.0e-3 -- s
 t = 0.0
-dt = 1.0e-16
-dtSuggest = 1.0e-11
+dt = 1.0e-7
 print("# Start integration")
 f = assert(io.open("state-specific-chem.data", 'w'))
 
 -- Write header
 char='"t(s)","T(K)","p(Pa)"'
-for i=0,gm:nSpecies()-1 do 
+for i=0,gm:nSpecies()-1 do
   spName = gm:speciesName(i)
   char = char .. string.format(',"%s"',spName)
 end
@@ -103,20 +102,21 @@ char = char .. "\n"
 f:write(char)
 -- Write initial condition
 char = string.format("%10.3e, %10.3f, %10.3e", t, Q.T, Q.p)
-for i=0,gm:nSpecies()-1 do 
+for i=0,gm:nSpecies()-1 do
   spName = gm:speciesName(i)
   char = char .. string.format(", %20.12e",Q.massf[spName])
 end
 char = char .. "\n"
 f:write(char)
 -- Write current condition
-while t <= tFinal do
-  dtSuggest = chemUpdate:updateState(Q, dt)
+while t+dt <= tFinal do
   t = t + dt
+  print("t = ",t)
+  dtSuggest = chemUpdate:updateState(Q, dt)
   gm:updateThermoFromRHOE(Q)
   conc = gm:massf2conc(Q)
   char = string.format("%10.3e, %10.3f, %10.3e", t, Q.T, Q.p)
-  for i=0,gm:nSpecies()-1 do 
+  for i=0,gm:nSpecies()-1 do
     spName = gm:speciesName(i)
     char = char .. string.format(", %20.12e ",Q.massf[spName])
   end
@@ -125,4 +125,3 @@ while t <= tFinal do
 end
 f:close()
 print("# Done.")
-
