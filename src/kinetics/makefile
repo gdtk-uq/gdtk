@@ -44,7 +44,7 @@ test: $(TEST_PROGRAMS)
 	tclsh kinetics-package-test.tcl
 
 clean:
-	- rm *.o
+	- rm *.o *.mod
 	- rm $(TEST_PROGRAMS)
 	- rm two_temperature_argon_kinetics_test_results.data
 	- rm -r $(BUILD_DIR)/*

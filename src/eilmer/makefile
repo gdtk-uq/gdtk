@@ -323,6 +323,7 @@ clean:
 	- cd $(OPENMPI_DIR); make clean
 	- cd $(LUA_DIR); make clean
 	- cd $(GAS_DIR); make clean; rm libgas.a
+	- cd $(KINETICS_DIR); make clean
 	- cd $(GRID_DIR); make clean
 
 prep-gas:

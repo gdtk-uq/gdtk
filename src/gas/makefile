@@ -72,7 +72,7 @@ demo: ${DEMO_PROGRAMS}
 
 clean:
 	- rm *.o
-	- rm ideal_air_fortran.mod
+	- rm *.mod
 	- rm ${DEMO_PROGRAMS}
 	- rm ${TEST_PROGRAMS}
 	- rm gas.so
