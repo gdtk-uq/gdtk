@@ -228,7 +228,7 @@ ifeq ($(DMD), ldmd2)
         DFLAGS := -w -O -release -inline -boundscheck=off
     endif
     OF := -of
-    DLINKFLAGS := -L-L$(LIBLUAPATH)
+    DLINKFLAGS := -L-L$(LIBLUAPATH) -L-lgfortran
     ifeq ($(findstring with_libplot,$(LIBPLOT_VERSION_STR)), with_libplot)
         DFLAGS := $(DFLAGS) -version=$(LIBPLOT_VERSION_STR)
         DLINKFLAGS := $(DLINKFLAGS) -L-lplot
@@ -249,7 +249,7 @@ ifeq ($(DMD), gdc)
         DFLAGS := -Wall -O2 -frelease -fno-debug
     endif
     OF := -o
-    DLINKFLAGS := -L$(LIBLUAPATH)
+    DLINKFLAGS := -L$(LIBLUAPATH) -L-lgfortran
     ifeq ($(findstring with_libplot,$(LIBPLOT_VERSION_STR)), with_libplot)
         DFLAGS := $(DFLAGS) -version=$(LIBPLOT_VERSION_STR)
         DLINKFLAGS := $(DLINKFLAGS) -lplot
