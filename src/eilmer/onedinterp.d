@@ -68,11 +68,12 @@ public:
 
     @nogc number clip_to_limits(number q, number A, number B)
     // Returns q if q is between the values A and B, else
-    // it returns the closer limit of the range [A,B].
+    // it returns the closer limit of the range [min(A,B), max(A,B)].
     {
-        number lower_limit = fmin(A, B);
-        number upper_limit = fmax(A, B);
-        return fmin(upper_limit, fmax(lower_limit, q));
+        number lower_limit = (A <= B) ? A : B;
+        number upper_limit = (A > B) ? A : B;
+        number qclipped = (q > lower_limit) ? q : lower_limit;
+        return (qclipped <= upper_limit) ? qclipped : upper_limit;
     } // end clip_to_limits()
 
     @nogc void interp_both_scalar(number qL1, number qL0, number qR0, number qR1,
