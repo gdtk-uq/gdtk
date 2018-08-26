@@ -1636,6 +1636,20 @@ function write_config_file(fileName)
 			 config.boundary_group_for_loads))
    f:write(string.format('"compute_loads": %s,\n',
 			 tostring(config.compute_loads)))
+   f:write(string.format('"compute_run_time_loads": %s,\n',
+			 tostring(config.compute_run_time_loads)))
+   f:write(string.format('"run_time_loads_count": %d,\n', config.run_time_loads_count))
+   if run_time_loads and (#run_time_loads > 0) then
+      f:write(string.format('"run_time_loads": { "ngroups" : %d, \n', #run_time_loads))
+      for i,t in ipairs(run_time_loads) do
+         f:write(string.format('   "group-%d" : { "groupLabel" : "%s",\n',  i-1, run_time_loads[i].group))
+         f:write(string.format('       "momentCtr_x" : %.18e,\n',  run_time_loads[i].moment_centre.x))
+         f:write(string.format('       "momentCtr_y" : %.18e,\n',  run_time_loads[i].moment_centre.y))
+         f:write(string.format('       "momentCtr_z" : %.18e },\n',  run_time_loads[i].moment_centre.z))
+      end
+      f:write('   "dummy_entry_without_trailing_comma": 0\n') -- no comma on last entry
+      f:write('},\n')
+   end
    f:write(string.format('"nhcell": %d,\n', #historyCells))
    for i,hcell in ipairs(historyCells) do
       f:write(string.format('"history-cell-%d": [%d, %d],\n', i-1, hcell.ib, hcell.i))

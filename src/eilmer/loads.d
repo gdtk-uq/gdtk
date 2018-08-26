@@ -20,10 +20,13 @@ import std.format;
 import std.parallelism;
 import std.math;
 import std.conv;
+import std.typecons : Tuple;
+import std.json;
 import nm.complex;
 import nm.number;
 
 import fvcore;
+import json_helper;
 import globalconfig;
 import globaldata;
 import fvcell;
@@ -269,3 +272,101 @@ void compute_and_store_loads(FVInterface iface, number cellWidthNormalToSurface,
                          cellWidthNormalToSurface.re);
     std.file.append(fname, writer);    
 } // end compute_and_store_loads()
+
+
+struct RunTimeLoads {
+    Tuple!(size_t,size_t)[] surfaces;
+    Vector3 momentCentre;
+    Vector3 resultantForce = Vector3(0.0, 0.0, 0.0);
+    Vector3 resultantMoment = Vector3(0.0, 0.0, 0.0);
+}
+
+void initRunTimeLoads(JSONValue jsonData)
+{
+    int nLoadsGroups = getJSONint(jsonData, "ngroups", 0);
+    foreach (group; 0 .. nLoadsGroups) {
+        auto jsonDataForGroup = jsonData["group-" ~ to!string(group)];
+        string groupName = getJSONstring(jsonDataForGroup, "groupLabel", "");
+        double x = getJSONdouble(jsonDataForGroup, "momentCtr_x", 0.0);
+        double y = getJSONdouble(jsonDataForGroup, "momentCtr_y", 0.0);
+        double z = getJSONdouble(jsonDataForGroup, "momentCtr_z", 0.0);
+        if (groupName in runTimeLoads) {
+            string errMsg = "The group name for run-time loads configuration is not unique.\n";
+            errMsg ~= format("The problem occurred when tring to add '%s' to the list of runTimeLoads.", groupName);
+            throw new Error(errMsg);
+        }
+        runTimeLoads[groupName] = RunTimeLoads();
+        runTimeLoads[groupName].momentCentre = Vector3(x, y, z);
+        // Now look over all blocks and configure the surfaces list
+        foreach (iblk, blk; globalFluidBlocks) {
+            foreach (ibndry, bndry; blk.bc) {
+                if (groupName == bndry.group) {
+                    runTimeLoads[groupName].surfaces ~= Tuple!(size_t,size_t)(iblk, ibndry);
+                }
+            }
+        }
+    }
+
+    writeln("Configuration of run-time loads:");
+    foreach (name, group; runTimeLoads) {
+        writeln("   groupLabel= ", name);
+        writeln("   Includes surfaces: ");
+        foreach (blkNbndry; group.surfaces) {
+            writefln("      blk-%d--boundary-%d", blkNbndry[0], blkNbndry[1]);
+        }
+    }
+    
+}
+
+
+
+void computeRunTimeLoads()
+{
+    foreach (ref group; runTimeLoads) {
+        group.resultantForce = Vector3(0.0, 0.0, 0.0);
+        group.resultantMoment = Vector3(0.0, 0.0, 0.0);
+        foreach (blkNbndry; group.surfaces) {
+            auto iblk = blkNbndry[0];
+            auto ibndry = blkNbndry[1];
+            foreach (iface, face; globalFluidBlocks[iblk].bc[ibndry].faces) {
+                FlowState fs = face.fs;
+                FlowGradients grad = face.grad;
+                // iface orientation
+                number nx = face.n.x; number ny = face.n.y; number nz = face.n.z;
+                number t1x = face.t1.x; number t1y = face.t1.y; number t1z = face.t1.z;
+                number t2x = face.t2.x; number t2y = face.t2.y; number t2z = face.t2.z;
+                // iface properties
+                number mu_wall = fs.gas.mu;
+                number p = fs.gas.p;
+                if (GlobalConfig.viscous) {
+                    string errMsg = "Run-time-loads not implemented for viscous calculation yet.\n";
+                    throw new Error(errMsg);
+                }
+                number pdA = p * face.area[0];
+                int outsign = globalFluidBlocks[iblk].bc[ibndry].outsigns[iface];
+                Vector3 pressureForce = Vector3(pdA * nx * outsign,
+                                                pdA * ny * outsign,
+                                                pdA * nz * outsign);
+                Vector3 momentArm = face.pos - group.momentCentre;
+                Vector3 momentContrib = cross(pressureForce, momentArm);
+
+                group.resultantForce.refx += pressureForce.x;
+                group.resultantForce.refy += pressureForce.y;
+                group.resultantForce.refz += pressureForce.z;
+
+                group.resultantMoment.refx += momentContrib.x;
+                group.resultantMoment.refy += momentContrib.y;
+                group.resultantMoment.refz += momentContrib.z;
+            }
+        }
+    }
+}
+
+                
+
+                
+
+                
+
+                
+

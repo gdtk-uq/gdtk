@@ -196,6 +196,8 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_double_field("dt_loads", "dt_loads"));
     mixin(get_string_field("boundary_group_for_loads", "boundary_group_for_loads"));
     mixin(get_bool_field("compute_loads", "compute_loads"));
+    mixin(get_bool_field("compute_run_time_loads", "compute_run_time_loads"));
+    mixin(get_int_field("run_time_loads_count", "run_time_loads_count"));
     //
     mixin(get_bool_field("diffuse_wall_bcs_on_init", "diffuseWallBCsOnInit"));
     mixin(get_int_field("number_init_passes", "nInitPasses")); 
@@ -354,6 +356,8 @@ extern(C) int configGet(lua_State* L)
     case "dt_loads": lua_pushnumber(L, GlobalConfig.dt_loads); break;
     case "boundary_group_for_loads": lua_pushstring(L, GlobalConfig.boundary_group_for_loads.toStringz); break;
     case "compute_loads": lua_pushboolean(L, GlobalConfig.compute_loads); break;
+    case "compute_run_time_loads": lua_pushboolean(L, GlobalConfig.compute_run_time_loads); break;
+    case "run_time_loads_count": lua_pushnumber(L, GlobalConfig.run_time_loads_count); break;
         //
     case "diffuse_wall_bcs_on_init": lua_pushboolean(L, GlobalConfig.diffuseWallBCsOnInit); break;
     case "number_init_passes": lua_pushnumber(L, GlobalConfig.nInitPasses); break;

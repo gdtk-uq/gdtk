@@ -46,6 +46,7 @@ import user_defined_source_terms;
 import solid_udf_source_terms;
 import grid_motion;
 import mass_diffusion;
+import loads;
 
 // Indices into arrays for conserved quantities
 static size_t nConservedQuantities;
@@ -608,6 +609,8 @@ final class GlobalConfig {
     shared static double dt_loads = 1.0e-3; // interval for writing loads on boundary groups
     shared static string boundary_group_for_loads = "loads";
     shared static bool compute_loads = true;
+    shared static bool compute_run_time_loads = false;
+    shared static int run_time_loads_count = 100;
     shared static Tuple!(size_t, size_t)[] hcells;
     shared static Tuple!(size_t, size_t)[] solid_hcells;
     
@@ -1188,6 +1191,8 @@ void read_config_file()
     mixin(update_bool("save_intermediate_results", "save_intermediate_results"));
     mixin(update_string("boundary_group_for_loads", "boundary_group_for_loads"));
     mixin(update_bool("compute_loads", "compute_loads"));
+    mixin(update_bool("compute_run_time_loads", "compute_run_time_loads"));
+    mixin(update_int("run_time_loads_count", "run_time_loads_count"));
     mixin(update_double("thermionic_emission_bc_time_delay", "thermionic_emission_bc_time_delay"));
     if (GlobalConfig.verbosity_level > 1) {
         writeln("  diffuse_wall_bcs_on_init: ", GlobalConfig.diffuseWallBCsOnInit);
@@ -1365,6 +1370,13 @@ void read_config_file()
     if (GlobalConfig.grid_motion == GridMotion.user_defined) {
         doLuaFile(GlobalConfig.master_lua_State, GlobalConfig.udf_grid_motion_file);
     }
+
+    // After configuring blocks, we can also configure
+    // the run time loads calculation if requried.
+    if (GlobalConfig.compute_run_time_loads) {
+        initRunTimeLoads(jsonData["run_time_loads"]);
+    }
+
 } // end read_config_file()
 
 void read_control_file()
@@ -1679,3 +1691,5 @@ void init_master_lua_State()
     setSampleHelperFunctions(L);
     setGridMotionHelperFunctions(L);
 } // end init_master_lua_State()
+
+

@@ -862,11 +862,23 @@ void integrate_in_time(double target_time_as_requested)
             t_loads = t_loads + GlobalConfig.dt_loads;
             GC.collect();
         }
-        // 5. For steady-state approach, check the residuals for mass and energy.
+        // 5. Update the run-time loads calculation, if required
+        if (GlobalConfig.compute_run_time_loads) {
+            version(mpi_parallel) {
+                // Do not attempt to update run time loads.
+                // Need to think about how to coordinate this globally.
+            }
+            else {
+                if ( (step / GlobalConfig.run_time_loads_count) * GlobalConfig.run_time_loads_count == step ) {
+                    computeRunTimeLoads();
+                }
+            }
+        }
+        // 6. For steady-state approach, check the residuals for mass and energy.
 
-        // 6. Spatial filter may be applied occasionally.
+        // 7. Spatial filter may be applied occasionally.
 
-        // 7. Loop termination criteria:
+        // 8. Loop termination criteria:
         //    (1) reaching a maximum simulation time or target time
         //    (2) reaching a maximum number of steps
         //    (3) finding that the "halt_now" parameter has been set 

@@ -12,6 +12,7 @@ module globaldata;
 import globalconfig;
 import fluidblock;
 import ssolidblock;
+import loads;
 
 // Global collections of blocks for the simulation, as a whole.
 // For the fluid blocks, not all may be present in the local MPI task (Linux process).
@@ -31,3 +32,8 @@ static FluidBlock[] localFluidBlocksBySize; // sorted largest to smallest
 // There will be one of these LocalConfig objects per block.
 static LocalConfig[] dedicatedConfig;
 static LocalConfig[] dedicatedSolidConfig;
+
+// We store the computed run time loads globally
+// so that we may make these available in the
+// Lua environments.
+static RunTimeLoads[string] runTimeLoads;

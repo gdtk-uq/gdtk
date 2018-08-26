@@ -17,6 +17,7 @@ import nm.number;
 
 import gas;
 import geom: gridTypeName, Grid_t;
+import geom.luawrap;
 import fvcell;
 import fvinterface;
 import luaflowstate;
@@ -44,6 +45,8 @@ void setSampleHelperFunctions(lua_State *L)
     lua_setglobal(L, "sampleFluidCell");
     lua_pushcfunction(L, &luafn_sampleFluidCell);
     lua_setglobal(L, "sampleFlow"); // alias for sampleFluidCell; [TODO] remove eventually
+    lua_pushcfunction(L, &luafn_runTimeLoads);
+    lua_setglobal(L, "getRunTimeLoads");
 }
 
 extern(C) int luafn_infoFluidBlock(lua_State *L)
@@ -120,6 +123,31 @@ extern(C) int luafn_sampleFluidFace(lua_State *L)
     pushFluidFaceToTable(L, tblIdx, face, 0, globalFluidBlocks[blkId].myConfig.gmodel);
     return 1;
 } // end luafn_sampleFluidFace()
+
+extern(C) int luafn_runTimeLoads(lua_State *L)
+{
+    string loadsGroup = to!string(lua_tostring(L, 1));
+    // Set force as table {x=.., y=..., z=...}
+    lua_newtable(L);
+    int tblIdx = lua_gettop(L);
+    lua_pushnumber(L, runTimeLoads[loadsGroup].resultantForce.x);
+    lua_setfield(L, tblIdx, "x");
+    lua_pushnumber(L, runTimeLoads[loadsGroup].resultantForce.y);
+    lua_setfield(L, tblIdx, "y");
+    lua_pushnumber(L, runTimeLoads[loadsGroup].resultantForce.z);
+    lua_setfield(L, tblIdx, "z");
+     // Set moment as table {x=.., y=..., z=...}
+    lua_newtable(L);
+    tblIdx = lua_gettop(L);
+    lua_pushnumber(L, runTimeLoads[loadsGroup].resultantMoment.x);
+    lua_setfield(L, tblIdx, "x");
+    lua_pushnumber(L, runTimeLoads[loadsGroup].resultantMoment.y);
+    lua_setfield(L, tblIdx, "y");
+    lua_pushnumber(L, runTimeLoads[loadsGroup].resultantMoment.z);
+    lua_setfield(L, tblIdx, "z");
+        
+    return 2;
+}
 
 // -----------------------------------------------------
 // D code functions
