@@ -37,6 +37,7 @@ import nm.ridder;
 import nm.linesearch;
 import gas;
 import gas.cea_gas;
+import gasflowexception;
 
 
 number[] shock_ideal(const(GasState) state1, number Vs, GasState state2, GasModel gm)
@@ -55,6 +56,13 @@ number[] shock_ideal(const(GasState) state1, number Vs, GasState state2, GasMode
  */
 {
     number M1 = Vs / state1.a;
+    // We seem to be hitting a round-off problem with the following test.
+    // The small decrement is to be sure that we really have been given
+    // a truly subsonic inflow.
+    if ((M1-1.0) < -1.0e-6) {
+        string msg = text("M1 subsonic: Vs=", Vs, " a=", state1.a, " M1=", M1);
+        throw new GasFlowException(msg);
+    }
     number V1 = Vs;
     number gam = gm.gamma(state1);
     number R = gm.R(state1);
@@ -197,7 +205,7 @@ number[] normal_shock_p2p1(const(GasState) state1, number p2p1,
     number vguess1 = V1ideal;
     number vguess2 = 1.1 * V1ideal;
     if (bracket!error_in_p2p1(vguess1, vguess2) < 0) {
-        throw new Exception("normal_shock_p2p1 could not bracket the shock velocity.");
+        throw new GasFlowException("normal_shock_p2p1 could not bracket the shock velocity.");
     }
     number V1 = solve!error_in_p2p1(vguess1, vguess2, 1.0e-6);
     velocities = normal_shock(state1, V1, state2, gm);
@@ -258,7 +266,7 @@ number reflected_shock(const(GasState) state2, number Vg,
         count += 1;
     }
     if (count >= 20) {
-        throw new Exception("Reflected shock iteration did not converge.");
+        throw new GasFlowException("Reflected shock iteration did not converge.");
     }
     // At this point, Vr_b should be our best guess.
     // Update the gas state data and return the best-guess value.
@@ -327,7 +335,7 @@ number expand_to_mach(const(GasState) state0, number mach,
     };
     if (bracket!(error_in_mach, number)(p_over_p0_guess1, p_over_p0_guess2,
                                         to!number(1.0e-6), to!number(1.0)) < 0) {
-        throw new Exception("expand_to_mach() could not bracket the pressure ratio.");
+        throw new GasFlowException("expand_to_mach() could not bracket the pressure ratio.");
     }
     number p_over_p0 = solve!(error_in_mach, number)(p_over_p0_guess1, p_over_p0_guess2, 1.0e-6);
     state1.p = state0.p * p_over_p0;
@@ -368,7 +376,7 @@ void total_condition(const(GasState) state1, number V1,
     number x1 = 1.0; number x2 = 1.01;
     // [TODO] could probably do better with an ideal gas guess
     if (bracket!error_in_total_enthalpy(x1, x2) < 0) {
-        throw new Exception("total_condition() could not bracket the pressure ratio.");
+        throw new GasFlowException("total_condition() could not bracket the pressure ratio.");
     }
     number x_total = solve!error_in_total_enthalpy(x1, x2, 1.0e-4);
     state0.p = x_total * state1.p;
@@ -469,8 +477,8 @@ number steady_flow_with_area_change(const(GasState)state1, number V1, number A2_
         return mdot_error;
     };
     if (bracket!(error_in_mass_flux,number)(p2p1_guess1, p2p1_guess2, p2p1_min, p2p1_max) < 0) {
-        throw new Exception("steady_flow_with_area_change() could not bracket" ~
-                            " the pressure ratio.");
+        throw new GasFlowException("steady_flow_with_area_change() could not bracket" ~
+                                   " the pressure ratio.");
     }
     number p2p1 = solve!(error_in_mass_flux,number)(p2p1_guess1, p2p1_guess2, tol);
     state2.copy_values_from(state1);
@@ -616,8 +624,8 @@ number[] theta_oblique(const(GasState) state1, number V1, number beta,
     state2.copy_values_from(state1);
     gm.update_sound_speed(state2);
     number M1_n = V1 / state2.a; // normal Mach number coming into shock
-    if (M1_n < 1.0) {
-        throw new Exception(format("theta_oblique(): subsonic inflow M1_n=%e", M1_n));
+    if ((M1_n-1.0) < -1.0e-6) {
+        throw new GasFlowException(format("theta_oblique(): subsonic inflow M1_n=%e", M1_n));
     }
     number[] velocities = normal_shock(state1, V1_n, state2, gm);
     number V2_n = velocities[0]; number Vg_n = velocities[1]; 
@@ -653,7 +661,7 @@ number beta_oblique(const(GasState) state1, number V1, number theta,
         return error_value;
     };
     if (bracket!(error_in_theta,number)(b1, b2, to!number(asin(1.0/M1)), to!number(PI/2)) < 0) {
-        throw new Exception("beta_oblique(): failed to converge on a shock-wave angle.");
+        throw new GasFlowException("beta_oblique(): failed to bracket a shock-wave angle.");
     }
     number beta_result = solve!(error_in_theta,number)(b1, b2, 1.0e-6);
     return beta_result;
@@ -822,7 +830,7 @@ number beta_cone(const(GasState) state1, number V1, number theta, GasModel gm)
         return error_value;
     };
     if (bracket!(error_in_theta,number)(b1, b2, to!number(asin(1.0/M1)), to!number(PI/2)) < 0) {
-        throw new Exception("beta_cone(): failed to converge on a shock-wave angle.");
+        throw new GasFlowException("beta_cone(): failed to converge on a shock-wave angle.");
     }
     number beta_result = solve!(error_in_theta,number)(b1, b2, 1.0e-6);
     return beta_result;

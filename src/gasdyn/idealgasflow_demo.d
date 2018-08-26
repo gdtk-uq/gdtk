@@ -27,7 +27,7 @@ void main(){
     writeln("...provided M=0.8:");
     try {
         PM1(0.8,g);
-    } catch (Error e) {
+    } catch (Exception e) {
         writeln("Caught subsonic value.");
     }
         
@@ -38,7 +38,7 @@ void main(){
     writeln("...provided nu=-0.5:");
     try {
         PM2(-0.5,g);
-    } catch (Error e) {
+    } catch (Exception e) {
         writeln("Caught subsonic value.");
     }
         
@@ -48,7 +48,7 @@ void main(){
     writeln("...provided M=0.8:");
     try {
         MachAngle(0.8);
-    } catch (Error e) {
+    } catch (Exception e) {
         writeln("Caught subsonic value.");
     }
 

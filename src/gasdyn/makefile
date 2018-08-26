@@ -34,7 +34,7 @@ include $(KINETICS_DIR)/kinetics_files.mk
 # For development work, we have put on -debug and -unittest.
 DFLAGS := -w -debug -unittest -g -I..
 OF := -of
-DLINKFLAGS := -L-ldl
+DLINKFLAGS := -L-ldl -L-lgfortran
 
 DFLAGS_LUA := -w -debug -unittest -g -I.. -I$(LUAD_DIR)
 DLINKFLAGS_LUA := -L-L$(LIBLUAPATH) -L-llua $(DLINKFLAGS)
@@ -51,6 +51,7 @@ clean:
 	- rm tmp.inp tmp.out tmp.plt
 	- cd $(LUA_DIR); make clean
 	- cd $(GAS_DIR); make clean; rm libgas.a
+	- cd $(KINETICS_DIR); make clean
 
 $(LIBLUA):
 	cd $(LUA_DIR); make linux local
@@ -58,19 +59,21 @@ $(LIBLUA):
 idealgasflow_demo: idealgasflow_demo.d idealgasflow.d $(NM_FILES) $(LIBLUA) \
 	$(UTIL_FILES)
 	dmd $(DFLAGS) $(OF)idealgasflow_demo \
-		idealgasflow_demo.d idealgasflow.d $(NM_FILES) $(UTIL_FILES) \
-		$(DLINKFLAGS_LUA)
+		idealgasflow_demo.d idealgasflow.d gasflowexception.d \
+		$(NM_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA)
 
 luaidealgasflow_demo: luaidealgasflow_demo.d $(NM_FILES) $(LIBLUA) \
 	$(UTIL_FILES) idealgasflow.d luaidealgasflow.d
 	dmd $(DFLAGS_LUA) $(OF)luaidealgasflow_demo \
 		luaidealgasflow_demo.d idealgasflow.d luaidealgasflow.d \
+		gasflowexception.d \
 		$(NM_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA)
 
 gasflow_demo: gasflow_demo.d gasflow.d idealgasflow.d $(NM_FILES) $(LIBLUA) \
 	$(UTIL_FILES) $(GASDYN_FILES) $(GAS_FILES) $(KINETICS_FILES)
 	dmd $(DFLAGS) $(OF)gasflow_demo \
-		gasflow_demo.d gasflow.d idealgasflow.d $(NM_FILES) $(UTIL_FILES) \
+		gasflow_demo.d gasflow.d idealgasflow.d gasflowexception.d \
+		$(NM_FILES) $(UTIL_FILES) \
 		$(GAS_FILES) $(KINETICS_FILES) $(DLINKFLAGS_LUA)
 
 luagasflow_demo: luagasflow_demo.d luagasflow.d luaidealgasflow.d \
@@ -80,7 +83,7 @@ luagasflow_demo: luagasflow_demo.d luagasflow.d luaidealgasflow.d \
 	$(KINETICS_FILES) $(KINETICS_LUA_FILES)
 	dmd $(DFLAGS) $(OF)luagasflow_demo \
 		luagasflow_demo.d luagasflow.d luaidealgasflow.d \
-		gasflow.d idealgasflow.d $(NM_FILES) $(UTIL_FILES) \
+		gasflow.d idealgasflow.d gasflowexception.d \$(NM_FILES) $(UTIL_FILES) \
 		$(GAS_FILES) $(GAS_LUA_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES) \
 		$(DLINKFLAGS_LUA)
 
@@ -89,3 +92,12 @@ luagasflow_demo: luagasflow_demo.d luagasflow.d luaidealgasflow.d \
 
 $(GAS_DIR)/ideal_air_fortran.o: $(GAS_DIR)/ideal_air_fortran.f
 	cd $(GAS_DIR); gfortran -c -ffree-form ideal_air_fortran.f
+
+$(KINETICS_DIR)/pseudosp_solve_ode.o: $(KINETICS_DIR)/pseudosp_solve_ode.f90
+	cd $(KINETICS_DIR); gfortran -c pseudosp_solve_ode.f90
+
+$(KINETICS_DIR)/pseudosp_rhs_ode.o: $(KINETICS_DIR)/pseudosp_rhs_ode.f90
+	cd $(KINETICS_DIR); gfortran -c pseudosp_rhs_ode.f90
+
+$(KINETICS_DIR)/dvode.o: $(KINETICS_DIR)/dvode.f
+	cd $(KINETICS_DIR); gfortran -c dvode.f

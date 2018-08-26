@@ -40,11 +40,25 @@ int bracket(alias f, T)(ref T x1, ref T x2,
             x1 += factor * (x1 - x2);
             //prevent the bracket from being expanded beyond a specified domain
             x1 = fmax(x1_min, x1);
-            f1 = f(x1);
+            try {
+                f1 = f(x1);
+            } catch (Exception e) {
+                // Presume that we have gone into an invalid region,
+                // so reset to the boundary.
+                x1 = x1_min;
+                f1 = f(x1);
+            }
         } else {
             x2 += factor * (x2 - x1);
             x2 = fmin(x2_max, x2);
-            f2 = f(x2);
+            try {
+                f2 = f(x2);
+            } catch (Exception e) {
+                // Presume that we have gone into an invalid region,
+                // so reset to the boundary.
+                x2 = x2_max;
+                f2 = f(x2);
+            }
         }
     }
     // If we leave the loop here, we were unsuccessful.
