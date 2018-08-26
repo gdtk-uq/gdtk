@@ -162,12 +162,12 @@ public:
         u_modesMin.length = nmodes;
     }
 
-    this(ref const LSQInterpGradients other)
+    this(ref const(LSQInterpGradients) other)
     {
         this.copy_values_from(other);
     }
 
-    void copy_values_from(ref const LSQInterpGradients other)
+    void copy_values_from(ref const(LSQInterpGradients) other)
     {
         velx[] = other.velx[]; vely[] = other.vely[]; velz[] = other.velz[];
         Bx[] = other.Bx[]; By[] = other.By[]; Bz[] = other.Bz[]; psi[] = other.psi[];
