@@ -28,7 +28,7 @@ import kinetics.thermochemical_reactor;
 
 extern(C) {
     // Wrapper of the fortran function `pseudosp_solve_ode`
-    void solveODE(double *Y, size_t *neq, double *temp_init, double *dt);
+    void solveODE(number *Y, size_t *neq, number *temp_init, double *dt);
 }
 
 final class PseudoSpeciesKinetics : ThermochemicalReactor {
