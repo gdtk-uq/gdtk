@@ -98,6 +98,13 @@ struct Vector3 {
         return this;
     }
 
+    @nogc ref Vector3 set(Vector3* other)
+    // Convenience function for setting the components of an existing object.
+    {
+        _p[0] = other._p[0]; _p[1] = other._p[1]; _p[2] = other._p[2];
+        return this;
+    }
+
     @nogc ref Vector3 set(number x, number y, number z=to!number(0.0))
     // Convenience function for setting the components of an existing object.
     // Note that we may supply just the x,y coordinates.
@@ -132,7 +139,23 @@ struct Vector3 {
         return this;
     }
 
+    @nogc ref Vector3 add(Vector3* other)
+    // Convenience function for adding the components of an existing object.
+    // This avoids the temporary associated with += (below)
+    {
+        _p[0] += other._p[0]; _p[1] += other._p[1]; _p[2] += other._p[2];
+        return this;
+    }
+
     @nogc ref Vector3 add(ref const(Vector3) other, number factor)
+    // Convenience function for adding the components of an existing object, scaled.
+    // This avoids the temporary associated with += (below)
+    {
+        _p[0] += other._p[0]*factor; _p[1] += other._p[1]*factor; _p[2] += other._p[2]*factor;
+        return this;
+    }
+
+    @nogc ref Vector3 add(Vector3* other, number factor)
     // Convenience function for adding the components of an existing object, scaled.
     // This avoids the temporary associated with += (below)
     {
@@ -152,6 +175,14 @@ struct Vector3 {
         // We want to retain the flavour with double numbers.
 
         @nogc ref Vector3 add(ref const(Vector3) other, double factor)
+        // Convenience function for adding the components of an existing object, scaled.
+        // This avoids the temporary associated with += (below)
+        {
+            _p[0] += other._p[0]*factor; _p[1] += other._p[1]*factor; _p[2] += other._p[2]*factor;
+            return this;
+        }
+
+        @nogc ref Vector3 add(Vector3* other, double factor)
         // Convenience function for adding the components of an existing object, scaled.
         // This avoids the temporary associated with += (below)
         {
@@ -535,7 +566,7 @@ number dot(ref const(Vector3) v1, ref const(Vector3) v2)
 {
     number result = 0.0;
     // Maybe we should be careful with underflow and overflow...
-    foreach(i; 0 .. 3) { result += v1._p[i] * v2._p[i]; }
+    result = v1._p[0]*v2._p[0] + v1._p[1]*v2._p[1] + v1._p[2]*v2._p[2];
     return result;
 }
 

@@ -1625,7 +1625,7 @@ public:
                     for (size_t i = imin; i <= imax+1; ++i) {
                         auto vtx = get_vtx(i,j,k);
                         auto src_vtx = grid[i-imin,j-jmin,k-kmin];
-                        vtx.pos[gtl].set(*src_vtx);
+                        vtx.pos[gtl].set(src_vtx);
                     } // for i
                 } // for j
             } // for k

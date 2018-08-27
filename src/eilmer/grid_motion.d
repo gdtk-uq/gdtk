@@ -70,7 +70,7 @@ extern(C) int luafn_setVtxVelocitiesForDomain(lua_State* L)
                well except in the most critical cases of time
                accuracy.
             */
-            vtx.vel[0].set(*vel);
+            vtx.vel[0].set(vel);
         }
     }
     // In case, the user gave use more return values than
@@ -93,7 +93,7 @@ extern(C) int luafn_setVtxVelocitiesForBlock(lua_State* L)
            well except in the most critical cases of time
            accuracy.
         */
-        vtx.vel[0].set(*vel);
+        vtx.vel[0].set(vel);
     }
     // In case, the user gave use more return values than
     // we used, just set the lua stack to empty and let
@@ -205,9 +205,9 @@ extern(C) int luafn_setVtxVelocitiesByCorners(lua_State* L)
 
     @nogc
     void setAsWeightedSum(ref Vector3 result,
-                          double w0, ref const(Vector3) v0,
-                          double w1, ref const(Vector3) v1,
-                          double w2, ref const(Vector3) v2)
+                          double w0, Vector3* v0,
+                          double w1, Vector3* v1,
+                          double w2, Vector3* v2)
     {
         result.set(v0); result.scale(w0);
         result.add(v1, w1);
@@ -229,8 +229,8 @@ extern(C) int luafn_setVtxVelocitiesByCorners(lua_State* L)
                     // try south triangle
                     P_barycentricCoords(pos, centroid, p00, p10, Coords);
                     if ((Coords.x <= 0 ) || (Coords.y >= 0 && Coords.z >= 0)) {
-                        setAsWeightedSum(blk.get_vtx(i,j,k).vel[0], Coords.x, centroidVel, 
-                                         Coords.y, *p00vel, Coords.z, *p10vel);
+                        setAsWeightedSum(blk.get_vtx(i,j,k).vel[0], Coords.x, &centroidVel, 
+                                         Coords.y, p00vel, Coords.z, p10vel);
                         //writeln("Vel-S",  Coords.x * centroidVel 
                         //    + Coords.y * *p00vel + Coords.z * *p10vel,i,j);
                         continue;
@@ -238,8 +238,8 @@ extern(C) int luafn_setVtxVelocitiesByCorners(lua_State* L)
                     // try east triangle
                     P_barycentricCoords(pos, centroid, p10, p11, Coords);
                     if ((Coords.x <= 0 ) || (Coords.y >= 0 && Coords.z >= 0)) {
-                        setAsWeightedSum(blk.get_vtx(i,j,k).vel[0], Coords.x, centroidVel, 
-                                         Coords.y, *p10vel, Coords.z, *p11vel);
+                        setAsWeightedSum(blk.get_vtx(i,j,k).vel[0], Coords.x, &centroidVel, 
+                                         Coords.y, p10vel, Coords.z, p11vel);
                         //writeln("Vel-E",  Coords.x * centroidVel 
                         //    + Coords.y * *p10vel + Coords.z * *p11vel,i,j);
                         continue;
@@ -247,8 +247,8 @@ extern(C) int luafn_setVtxVelocitiesByCorners(lua_State* L)
                     // try north triangle
                     P_barycentricCoords(pos, centroid, p11, p01, Coords);
                     if ((Coords.x <= 0 ) || (Coords.y >= 0 && Coords.z >= 0)) {
-                        setAsWeightedSum(blk.get_vtx(i,j,k).vel[0], Coords.x, centroidVel, 
-                                         Coords.y, *p11vel, Coords.z, *p01vel);
+                        setAsWeightedSum(blk.get_vtx(i,j,k).vel[0], Coords.x, &centroidVel, 
+                                         Coords.y, p11vel, Coords.z, p01vel);
                         //writeln("Vel-N",  Coords.x * centroidVel 
                         //    + Coords.y * *p11vel + Coords.z * *p01vel,i,j);
                         continue;
@@ -256,8 +256,8 @@ extern(C) int luafn_setVtxVelocitiesByCorners(lua_State* L)
                     // try west triangle
                     P_barycentricCoords(pos, centroid, p01, p00, Coords);
                     if ((Coords.x <= 0 ) || (Coords.y >= 0 && Coords.z >= 0)) {
-                        setAsWeightedSum(blk.get_vtx(i,j,k).vel[0], Coords.x, centroidVel, 
-                                         Coords.y, *p01vel, Coords.z, *p00vel);
+                        setAsWeightedSum(blk.get_vtx(i,j,k).vel[0], Coords.x, &centroidVel, 
+                                         Coords.y, p01vel, Coords.z, p00vel);
                         //writeln("Vel-W",  Coords.x * centroidVel 
                         //    + Coords.y * *p01vel + Coords.z * *p00vel,i,j);
                         continue;
@@ -335,8 +335,8 @@ extern(C) int luafn_setVtxVelocitiesByCornersReg(lua_State* L)
 
     @nogc
     void setAsWeightedSum(ref Vector3 result,
-                          double w0, ref const(Vector3) v0,
-                          double w1, ref const(Vector3) v1)
+                          double w0, Vector3* v0,
+                          double w1, Vector3* v1)
     {
         result.set(v0); result.scale(w0);
         result.add(v1, w1);
@@ -349,13 +349,13 @@ extern(C) int luafn_setVtxVelocitiesByCornersReg(lua_State* L)
             for (j = blk.jmin; j <= blk.jmax+1; ++j) {
                 // find velocity along west and east edge
                 v = to!double(j-blk.jmin) / to!double(blk.jmax+1-blk.jmin); 
-                setAsWeightedSum(velw, v, *p01vel, 1-v, *p00vel);
-                setAsWeightedSum(vele, v, *p11vel, 1-v, *p10vel);
+                setAsWeightedSum(velw, v, p01vel, 1-v, p00vel);
+                setAsWeightedSum(vele, v, p11vel, 1-v, p10vel);
 
                 for (i = blk.imin; i <= blk.imax+1; ++i) {
                     //// interpolate in i direction
                     u = to!double(i-blk.imin) / to!double(blk.imax+1-blk.imin); 
-                    setAsWeightedSum(vel, u, vele, 1-u, velw);
+                    setAsWeightedSum(vel, u, &vele, 1-u, &velw);
                     //// set velocity
                     blk.get_vtx(i,j,k).vel[0].set(vel);
 
@@ -375,14 +375,14 @@ extern(C) int luafn_setVtxVelocitiesByCornersReg(lua_State* L)
             for (j = blk.jmin; j <= blk.jmax+1; ++j) {
                 // find velocity along west and east edge
                 v = to!double(j-blk.jmin) / to!double(blk.jmax+1-blk.jmin); 
-                setAsWeightedSum(velw, v, *p01vel, 1-v, *p00vel);
-                setAsWeightedSum(vele, v, *p11vel, 1-v, *p10vel);
+                setAsWeightedSum(velw, v, p01vel, 1-v, p00vel);
+                setAsWeightedSum(vele, v, p11vel, 1-v, p10vel);
 
 
                 for (i = blk.imin; i <= blk.imax+1; ++i) {
                     // interpolate in i direction
                     u = to!double(i-blk.imin) / to!double(blk.imax+1-blk.imin); 
-                    setAsWeightedSum(vel, u, vele, 1-u, velw);
+                    setAsWeightedSum(vel, u, &vele, 1-u, &velw);
 
                     // set velocity for all k
                     for (k = blk.kmin; k <= blk.kmax+1; ++i) {
@@ -406,21 +406,21 @@ extern(C) int luafn_setVtxVelocitiesByCornersReg(lua_State* L)
         for (j = blk.jmin; j <= blk.jmax+1; ++j) {
             // find velocity along west and east edge (four times)
             v = to!double(j-blk.jmin) / to!double(blk.jmax+1-blk.jmin); 
-            setAsWeightedSum(velw, v, *p01vel, 1-v, *p00vel);
-            setAsWeightedSum(vele, v, *p11vel, 1-v, *p10vel);
-            setAsWeightedSum(velwt, v, *p011vel, 1-v, *p001vel);
-            setAsWeightedSum(velet, v, *p111vel, 1-v, *p101vel);
+            setAsWeightedSum(velw, v, p01vel, 1-v, p00vel);
+            setAsWeightedSum(vele, v, p11vel, 1-v, p10vel);
+            setAsWeightedSum(velwt, v, p011vel, 1-v, p001vel);
+            setAsWeightedSum(velet, v, p111vel, 1-v, p101vel);
 
             for (i = blk.imin; i <= blk.imax+1; ++i) {
                 // interpolate in i direction (twice)
                 u = to!double(i-blk.imin) / to!double(blk.imax+1-blk.imin); 
-                setAsWeightedSum(vel, u, vele, 1-u, velw);
-                setAsWeightedSum(velt, u, velet, 1-u, velwt);
+                setAsWeightedSum(vel, u, &vele, 1-u, &velw);
+                setAsWeightedSum(velt, u, &velet, 1-u, &velwt);
 
                 // set velocity by interpolating in k.
                 for (k = blk.kmin; k <= blk.kmax+1; ++i) {
                     w = to!double(k-blk.kmin) / to!double(blk.kmax+1-blk.kmin); 
-                    setAsWeightedSum(blk.get_vtx(i,j,k).vel[0], w, velt, 1-w, vel);
+                    setAsWeightedSum(blk.get_vtx(i,j,k).vel[0], w, &velt, 1-w, &vel);
                 }
             }
         }
@@ -465,18 +465,18 @@ extern(C) int luafn_setVtxVelocity(lua_State* L)
 
     if ( narg == 3 ) {
         auto vtxId = lua_tointeger(L, 3);
-        globalFluidBlocks[blkId].vertices[vtxId].vel[0] = *vel;
+        globalFluidBlocks[blkId].vertices[vtxId].vel[0].set(vel);
     }
     else if ( narg == 4 ) {
         auto i = lua_tointeger(L, 3);
         auto j = lua_tointeger(L, 4);
-        globalFluidBlocks[blkId].get_vtx(i,j).vel[0] = *vel;
+        globalFluidBlocks[blkId].get_vtx(i,j).vel[0].set(vel);
     }
     else if ( narg >= 5 ) {
         auto i = lua_tointeger(L, 3);
         auto j = lua_tointeger(L, 4);
         auto k = lua_tointeger(L, 5);
-        globalFluidBlocks[blkId].get_vtx(i,j,k).vel[0] = *vel;
+        globalFluidBlocks[blkId].get_vtx(i,j,k).vel[0].set(vel);
     }
     else {
         string errMsg = "ERROR: Too few arguments passed to luafn: setVtxVelocity()\n";
