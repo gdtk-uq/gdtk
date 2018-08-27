@@ -305,12 +305,12 @@ public:
             auto cL = iface.left_cell;
             auto cR = iface.right_cell;
             if (cL && cR) {
-                number uL = cL.fs.vel.x * iface.n.x + cL.fs.vel.y * iface.n.y + cL.fs.vel.z * iface.n.z;
-                number uR = cR.fs.vel.x * iface.n.x + cR.fs.vel.y * iface.n.y + cR.fs.vel.z * iface.n.z;
+                number uL = geom.dot(cL.fs.vel, iface.n);
+                number uR = geom.dot(cR.fs.vel, iface.n);
                 number aL = cL.fs.gas.a;
                 number aR = cR.fs.gas.a;
-                number a_min = fmin(aL, aR);
-                iface.fs.S = ((uR - uL) / a_min < tol);
+                number a_min = (aL < aR) ? aL : aR;
+                iface.fs.S = ((uR - uL)/a_min) < tol;
             } else {
                 iface.fs.S = 0;
             }

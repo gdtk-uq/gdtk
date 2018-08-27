@@ -424,8 +424,9 @@ public:
             Vector3 ghostpos = mygc.pos[0];
             Vector3 mypos = ghostpos;
             if (transform_position) {
-                Vector3 c1 = c0 + dot(n, (ghostpos - c0)) * n;
-                Vector3 t1 = (ghostpos - c1);
+                Vector3 del1 = ghostpos - c0;
+                Vector3 c1 = c0 + dot(n, del1) * n;
+                Vector3 t1 = ghostpos - c1;
                 t1.normalize();
                 Vector3 t2 = cross(n, t1);
                 mypos = c1 + cos(alpha) * t1 + sin(alpha) * t2;

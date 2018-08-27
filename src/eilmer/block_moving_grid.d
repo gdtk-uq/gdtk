@@ -470,7 +470,8 @@ void shock_fitting_vertex_velocities(SFluidBlock blk, int step, double sim_time)
                     ws2 = dot(u_lft, ns) - temp1 * temp2;
                     interface_ws[jOffSet] = (0.5*ws1 + (1-0.5)*ws2)*ns;
                     // tav is a unit vector which points from the neighbouring interface to the current vertex
-                    tav = (vtx.pos[0]-iface_neighbour.pos)/sqrt(dot(vtx.pos[0] - iface_neighbour.pos, vtx.pos[0] - iface_neighbour.pos));
+                    Vector3 del1 = vtx.pos[0] - iface_neighbour.pos;
+                    tav = (del1)/geom.abs(del1);
                     M = dot(u_rght, tav)/cell.fs.gas.a; // equation explained in Ian Johnston's thesis on page 77, note...
                     // we are currently just using the right cell (i.e. first non-ghost cell) as the "post-shock" value, for higher accuracy
                     // we will need to update this with the right hand side reconstructed value.
@@ -546,8 +547,10 @@ Vector3 correct_direction(Vector3 unit_d, Vector3 pos, Vector3 left_pos, Vector3
     // originating from the EAST boundary spanning to the west
     Vector3 lft_temp;
     Vector3 rght_temp;
-    lft_temp = (pos-left_pos)/sqrt(dot(left_pos - pos, left_pos - pos));
-    rght_temp = (right_pos-pos)/sqrt(dot(right_pos-pos, right_pos-pos));
+    Vector3 delL = pos-left_pos;
+    Vector3 delR = right_pos-pos;
+    lft_temp = delL/geom.abs(delL);
+    rght_temp = delR/geom.abs(delR);
     unit_d = 0.5 * (lft_temp + rght_temp); // take an average of the left and right unit vectors
     if (i == imin) unit_d = rght_temp;     // west boundary vertex has no left neighbour
     if (i == imax+1) unit_d = lft_temp;    // east boundary vertex has no right neighbour

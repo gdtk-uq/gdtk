@@ -485,7 +485,7 @@ struct Vector3 {
  * Returns the distance between two points.
  */
 @nogc
-double distance_between(ref const Vector3 v1, ref const Vector3 v2)
+double distance_between(ref const(Vector3) v1, ref const(Vector3) v2)
 {
     number d = sqrt((v1.x-v2.x)^^2 + (v1.y-v2.y)^^2 + (v1.z-v2.z)^^2);
     return d.re;
@@ -495,7 +495,7 @@ double distance_between(ref const Vector3 v1, ref const Vector3 v2)
  * Returns the scalar dot product of two vectors.
  */
 @nogc
-number dot(in Vector3 v1, in Vector3 v2)
+number dot(ref const(Vector3) v1, ref const(Vector3) v2)
 {
     number result = 0.0;
     // Maybe we should be careful with underflow and overflow...

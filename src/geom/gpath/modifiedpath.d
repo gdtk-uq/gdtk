@@ -141,7 +141,9 @@ private:
         // "t" is underlying_t
         //chain rule on d_arc_f_dt
         Vector3 dpdt = underlying_path.dpdt(t);
-        return dot(unit(dpdt),underlying_path.d2pdt2(t)).re / arc_length_vector[$-1];
+        dpdt.normalize(); // direction only
+        Vector3 d2pdt2 = underlying_path.d2pdt2(t);
+        return dot(dpdt,d2pdt2).re / arc_length_vector[$-1];
     }
 } // end class ArcLengthParameterizedPath
 

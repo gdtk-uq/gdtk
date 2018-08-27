@@ -643,9 +643,12 @@ int inside_triangle(ref const(Vector3) p, ref const(Vector3) a,
                     ref const(Vector3) b, ref const(Vector3) c)
 {
     Vector3 n = cross(a-c, b-c); n.normalize(); // normal to plane of triangle
-    number area1 = 0.5 * dot(cross(p-a, p-b), n); // projected area of triangle pab
-    number area2 = 0.5 * dot(cross(p-b, p-c), n);
-    number area3 = 0.5 * dot(cross(p-c, p-a), n);
+    Vector3 varea = cross(p-a, p-b);
+    number area1 = 0.5 * dot(varea, n); // projected area of triangle pab
+    varea = cross(p-b, p-c);
+    number area2 = 0.5 * dot(varea, n);
+    varea = cross(p-c, p-a);
+    number area3 = 0.5 * dot(varea, n);
     // Only a point inside the triangle will have all areas positive.
     if ( area1 > 0.0 && area2 > 0.0 && area3 > 0.0 ) return 1;
     // However, the point may be damned close to an edge but
