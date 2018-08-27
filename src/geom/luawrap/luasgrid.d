@@ -83,9 +83,9 @@ extern(C) int set_vtx(lua_State* L)
     // Note that we expect 0 <= i < niv
     size_t j = 0; if (narg > 3) { j = to!size_t(luaL_checkint(L, 3)); }
     size_t k = 0; if (narg > 4) { k = to!size_t(luaL_checkint(L, 4)); }
-        Vector3* vtx = checkVector3(L, narg);
-        Vector3* grid_vtx = grid[i,j,k];
-        grid_vtx.set(*vtx);
+    Vector3* vtx = checkVector3(L, narg);
+    Vector3* grid_vtx = grid[i,j,k];
+    grid_vtx.set(vtx);
     return 0;
 }
 
