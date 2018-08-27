@@ -132,7 +132,7 @@ struct Vector3 {
         return this;
     }
 
-    @nogc ref Vector3 add(ref const(Vector3) other, double factor)
+    @nogc ref Vector3 add(ref const(Vector3) other, number factor)
     // Convenience function for adding the components of an existing object, scaled.
     // This avoids the temporary associated with += (below)
     {
@@ -140,13 +140,33 @@ struct Vector3 {
         return this;
     }
 
-    @nogc ref Vector3 scale(double factor)
+    @nogc ref Vector3 scale(number factor)
     // Convenience function for scaling the components of an existing object.
     // This avoids the temporary associated with *= (below)
     {
         _p[0] *= factor; _p[1] *= factor; _p[2] *= factor;
         return this;
     }
+    
+    version(complex_numbers) {
+        // We want to retain the flavour with double numbers.
+
+        @nogc ref Vector3 add(ref const(Vector3) other, double factor)
+        // Convenience function for adding the components of an existing object, scaled.
+        // This avoids the temporary associated with += (below)
+        {
+            _p[0] += other._p[0]*factor; _p[1] += other._p[1]*factor; _p[2] += other._p[2]*factor;
+            return this;
+        }
+
+        @nogc ref Vector3 scale(double factor)
+        // Convenience function for scaling the components of an existing object.
+        // This avoids the temporary associated with *= (below)
+        {
+            _p[0] *= factor; _p[1] *= factor; _p[2] *= factor;
+            return this;
+        }
+    } // end version complex_numbers
     
     string toString() const
     {
