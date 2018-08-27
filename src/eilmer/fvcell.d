@@ -564,72 +564,81 @@ public:
     //       2: End of stage-2.
     {
         number vol_inv = 1.0 / volume[gtl]; // Cell volume (inverted).
+        auto nf = iface.length;
+        number[10] area; // Assume this maximum number of faces.
+        ConservedQuantities*[10] myF; // Pointers to the fluxes for all of the faces.
+        assert(nf <= 10, "oops too many faces on the cell");
+        foreach(i; 0 .. nf) {
+            area[i] = outsign[i]*iface[i].area[gtl];
+            myF[i] = &(iface[i].F);
+        }
+        auto my_dUdt = dUdt[ftl]; 
     
         // Time-derivative for Mass/unit volume.
         number integral = 0.0;
-        foreach(i; 0 .. iface.length) { integral -= outsign[i]*iface[i].F.mass*iface[i].area[gtl]; }
-        dUdt[ftl].mass = vol_inv*integral + Q.mass;
+        foreach(i; 0 .. nf) { integral -= myF[i].mass*area[i]; }
+        my_dUdt.mass = vol_inv*integral + Q.mass;
 
         // Time-derivative for Momentum/unit volume.
         number integralx = 0.0; number integraly = 0.0; number integralz = 0.0;
-        foreach(i; 0 .. iface.length) {
-            integralx -= outsign[i]*iface[i].F.momentum.x*iface[i].area[gtl];
-            integraly -= outsign[i]*iface[i].F.momentum.y*iface[i].area[gtl];
+        foreach(i; 0 .. nf) {
+            integralx -= myF[i].momentum.x*area[i];
+            integraly -= myF[i].momentum.y*area[i];
             if ((myConfig.dimensions == 3) || ( myConfig.MHD )) {
                 // require z-momentum for MHD even in 2D
-                integralz -= outsign[i]*iface[i].F.momentum.z*iface[i].area[gtl];
+                integralz -= myF[i].momentum.z*area[i];
             }
         }
-        dUdt[ftl].momentum.set(vol_inv*integralx + Q.momentum.x,
-                               vol_inv*integraly + Q.momentum.y,
-                               vol_inv*integralz + Q.momentum.z);
+        my_dUdt.momentum.set(vol_inv*integralx + Q.momentum.x,
+                             vol_inv*integraly + Q.momentum.y,
+                             vol_inv*integralz + Q.momentum.z);
     
         if (myConfig.MHD) {
             // Time-derivative for Magnetic Field/unit volume.
             integralx = 0.0; integraly = 0.0; integralz = 0.0;
-            foreach(i; 0 .. iface.length) {
-                integralx -= outsign[i]*iface[i].F.B.x*iface[i].area[gtl];
-                integraly -= outsign[i]*iface[i].F.B.y*iface[i].area[gtl];
-                integralz -= outsign[i]*iface[i].F.B.z*iface[i].area[gtl];
+            foreach(i; 0 .. nf) {
+                integralx -= myF[i].B.x*area[i];
+                integraly -= myF[i].B.y*area[i];
+                integralz -= myF[i].B.z*area[i];
             }
             if (myConfig.MHD_static_field) { 
                 // then the magnetic field won't change...
-                dUdt[ftl].B.set(Q.B.x, Q.B.y, Q.B.z);
+                my_dUdt.B.set(Q.B.x, Q.B.y, Q.B.z);
             } else {
-                dUdt[ftl].B.set(vol_inv*integralx + Q.B.x,
-                                vol_inv*integraly + Q.B.y,
-                                vol_inv*integralz + Q.B.z);
+                my_dUdt.B.set(vol_inv*integralx + Q.B.x,
+                              vol_inv*integraly + Q.B.y,
+                              vol_inv*integralz + Q.B.z);
             }
             // Calculate divergence of the magnetic field here;
             // not actually a time-derivatice but seems to be the best way to calculate it.
-            dUdt[ftl].divB = 0.0;
-            foreach(i; 0 .. iface.length) { dUdt[ftl].divB += outsign[i]*iface[i].F.divB*iface[i].area[gtl]; }
+            my_dUdt.divB = 0.0;
+            foreach(i; 0 .. nf) { my_dUdt.divB += myF[i].divB*area[i]; }
             if (myConfig.divergence_cleaning) {
                 integral = 0.0;
-                foreach(i; 0 .. iface.length) { integral -= outsign[i]*iface[i].F.psi*iface[i].area[gtl]; }
-                dUdt[ftl].psi = vol_inv*integral + Q.psi;
+                foreach(i; 0 .. nf) { integral -= myF[i].psi*area[i]; }
+                my_dUdt.psi = vol_inv*integral + Q.psi;
             }
         } else {
-            dUdt[ftl].B.clear();
-            dUdt[ftl].psi = 0.0;
-            dUdt[ftl].divB = 0.0;
+            my_dUdt.B.clear();
+            my_dUdt.psi = 0.0;
+            my_dUdt.divB = 0.0;
         }
 
         // Time-derivative for Total Energy/unit volume.
         integral = 0.0;
-        foreach(i; 0 .. iface.length) { integral -= outsign[i]*iface[i].F.total_energy*iface[i].area[gtl]; }
-        dUdt[ftl].total_energy = vol_inv*integral + Q.total_energy;
+        foreach(i; 0 .. nf) { integral -= myF[i].total_energy*area[i]; }
+        my_dUdt.total_energy = vol_inv*integral + Q.total_energy;
     
         if (with_k_omega) {
             integral = 0.0;
-            foreach(i; 0 .. iface.length) { integral -= outsign[i]*iface[i].F.tke*iface[i].area[gtl]; }
-            dUdt[ftl].tke = vol_inv*integral + Q.tke;
+            foreach(i; 0 .. nf) { integral -= myF[i].tke*area[i]; }
+            my_dUdt.tke = vol_inv*integral + Q.tke;
             integral = 0.0;
-            foreach(i; 0 .. iface.length) { integral -= outsign[i]*iface[i].F.omega*iface[i].area[gtl]; }
-            dUdt[ftl].omega = vol_inv*integral + Q.omega;
+            foreach(i; 0 .. nf) { integral -= myF[i].omega*area[i]; }
+            my_dUdt.omega = vol_inv*integral + Q.omega;
         } else {
-            dUdt[ftl].tke = 0.0;
-            dUdt[ftl].omega = 0.0;
+            my_dUdt.tke = 0.0;
+            my_dUdt.omega = 0.0;
         }
         // Time-derivative for individual species.
         // The conserved quantity is the mass per unit
@@ -638,14 +647,14 @@ public:
         // Units of DmassfDt are 1/sec.
         foreach(isp; 0 .. iface[0].F.massf.length) {
             integral = 0.0;
-            foreach(i; 0 .. iface.length) { integral -= outsign[i]*iface[i].F.massf[isp]*iface[i].area[gtl]; }
-            dUdt[ftl].massf[isp] = vol_inv*integral + Q.massf[isp];
+            foreach(i; 0 .. nf) { integral -= myF[i].massf[isp]*area[i]; }
+            my_dUdt.massf[isp] = vol_inv*integral + Q.massf[isp];
         }
         // Individual energies.
         foreach(imode; 0 .. iface[0].F.energies.length) {
             integral = 0.0;
-            foreach(i; 0 .. iface.length) { integral -= outsign[i]*iface[i].F.energies[imode]*iface[i].area[gtl]; }
-            dUdt[ftl].energies[imode] = vol_inv*integral + Q.energies[imode];
+            foreach(i; 0 .. nf) { integral -= myF[i].energies[imode]*area[i]; }
+            my_dUdt.energies[imode] = vol_inv*integral + Q.energies[imode];
         }
     } // end time_derivatives()
 
