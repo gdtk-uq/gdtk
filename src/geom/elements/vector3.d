@@ -131,6 +131,22 @@ struct Vector3 {
         _p[0] += other._p[0]; _p[1] += other._p[1]; _p[2] += other._p[2];
         return this;
     }
+
+    @nogc ref Vector3 add(ref const(Vector3) other, double factor)
+    // Convenience function for adding the components of an existing object, scaled.
+    // This avoids the temporary associated with += (below)
+    {
+        _p[0] += other._p[0]*factor; _p[1] += other._p[1]*factor; _p[2] += other._p[2]*factor;
+        return this;
+    }
+
+    @nogc ref Vector3 scale(double factor)
+    // Convenience function for scaling the components of an existing object.
+    // This avoids the temporary associated with *= (below)
+    {
+        _p[0] *= factor; _p[1] *= factor; _p[2] *= factor;
+        return this;
+    }
     
     string toString() const
     {

@@ -30,7 +30,7 @@ void main()
     Q.mass = 99.0;
     Q.energies[0] = 301.0;
     writeln("Q=", Q);
-    Q.clear_values();
+    Q.clear();
     writeln("cleared Q=", Q);
 
     writeln("-----------------------");

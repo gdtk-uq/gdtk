@@ -450,7 +450,7 @@ public:
     @nogc
     void clear_fluxes_of_conserved_quantities()
     {
-        foreach (iface; faces) { iface.F.clear_values(); }
+        foreach (iface; faces) { iface.F.clear(); }
     }
 
     void viscous_flux()

@@ -679,8 +679,8 @@ string computeFluxDerivativesAroundCell(string varName, string posInArray, bool 
 
 void compute_flux(FVCell pcell, FluidBlock blk, size_t orderOfJacobian, ref FVCell[] cell_list, FVInterface[] iface_list, FVInterface[] ifaceP_list) {
     
-    foreach(iface; iface_list) iface.F.clear_values();
-    foreach(iface; ifaceP_list) iface.F.clear_values();
+    foreach(iface; iface_list) iface.F.clear();
+    foreach(iface; ifaceP_list) iface.F.clear();
     foreach(cell; cell_list) cell.clear_source_vector();
     if (orderOfJacobian > 1) {
         // TODO: add in missing MLP code. 

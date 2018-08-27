@@ -105,7 +105,7 @@ public:
         double[] T_modes; foreach(i; 0 .. n_modes) { T_modes ~= 300.0; }
         fs = new FlowState(gmodel, 100.0e3, T, T_modes, Vector3(0.0,0.0,0.0));
         F = new ConservedQuantities(n_species, n_modes);
-        F.clear_values();
+        F.clear();
         grad = new FlowGradients(myConfig);
         if (allocate_spatial_deriv_lsq_workspace) {
             ws_grad = new WLSQGradWorkspace();

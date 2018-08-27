@@ -144,7 +144,7 @@ public:
             dUdt ~= new ConservedQuantities(n_species, n_modes);
         }
         Q = new ConservedQuantities(n_species, n_modes);
-        Q.clear_values();
+        Q.clear();
         version(shape_sensitivity) {
             dQdU.length = 5; // number of conserved variables
             foreach (ref a; dQdU) a.length = 5;

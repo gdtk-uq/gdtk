@@ -34,7 +34,7 @@ public:
         energies.length = n_modes;
     }
 
-    this(in ConservedQuantities other)
+    this(ref const(ConservedQuantities) other)
     {
         mass = other.mass;
         momentum = other.momentum;
@@ -48,7 +48,8 @@ public:
         omega = other.omega;
     }
 
-    @nogc void copy_values_from(in ConservedQuantities src)
+    @nogc
+    void copy_values_from(ref const(ConservedQuantities) src)
     {
         mass = src.mass;
         momentum.set(src.momentum);
@@ -62,7 +63,8 @@ public:
         omega = src.omega;
     }
 
-    @nogc void clear_values()
+    @nogc
+    void clear()
     {
         mass = 0.0;
         momentum.clear();
@@ -74,6 +76,36 @@ public:
         divB = 0.0;
         tke = 0.0;
         omega = 0.0;
+    }
+
+    @nogc
+    void add(ref const(ConservedQuantities) other, double factor=1.0)
+    {
+        mass += other.mass * factor;
+        momentum.add(other.momentum, factor);
+        B.add(other.B, factor);
+        total_energy += other.total_energy * factor;
+        foreach(i; 0 .. massf.length) { massf[i] += other.massf[i] * factor; }
+        foreach(i; 0 .. energies.length) { energies[i] += other.energies[i] * factor; }
+        psi += other.psi * factor;
+        divB += other.divB * factor;
+        tke += other.tke * factor;
+        omega += other.omega * factor;
+    }
+
+    @nogc
+    void scale(double factor)
+    {
+        mass *= factor;
+        momentum.scale(factor);
+        B.scale(factor);
+        total_energy *= factor;
+        foreach(ref mf; massf) { mf *= factor; }
+        foreach(ref e; energies) { e *= factor; }
+        psi *= factor;
+        divB *= factor;
+        tke *= factor;
+        omega *= factor;
     }
 
     override string toString() const
