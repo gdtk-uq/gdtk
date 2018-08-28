@@ -645,7 +645,7 @@ public:
         return;
     } // end bind_interfaces_vertices_and_cells()
 
-    @nogc
+    // @nogc
     override void compute_primary_cell_geometric_data(size_t gtl)
     // Compute cell and interface geometric properties.
     {

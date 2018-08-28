@@ -286,7 +286,7 @@ public:
         pos = vtx[0].pos[gtl]; pos += vtx[1].pos[gtl]; pos *= to!number(0.5);
     } // end update_2D_geometric_data()
 
-    @nogc
+    // @nogc
     void update_3D_geometric_data(size_t gtl)
     {
         switch (vtx.length) {
@@ -301,10 +301,10 @@ public:
                             pos, n, t1, t2, area[gtl]);
             break;
         default:
-            // string msg = "FVInterface.update_3D_geometric_data(): ";
-            // msg ~= format("Unhandled number of vertices: %d", vtx.length);
-            // throw new FlowSolverException(msg);
-            assert(0, "unhandled number of vertices");
+            string msg = "FVInterface.update_3D_geometric_data(): ";
+            msg ~= format("Unhandled number of vertices: %d", vtx.length);
+            throw new FlowSolverException(msg);
+            // assert(0, "unhandled number of vertices"); // for @nogc
         } // end switch     
     } // end update_3D_geometric_data()
 

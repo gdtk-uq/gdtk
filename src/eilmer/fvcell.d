@@ -256,7 +256,7 @@ public:
         return to!string(repr);
     }
 
-    @nogc
+    // @nogc
     void update_2D_geometric_data(size_t gtl, bool axisymmetric)
     {
         number vol, xyplane_area;
@@ -271,10 +271,10 @@ public:
                                          pos[gtl], xyplane_area, iLength, jLength, L_min);
             break;
         default:
-            // string msg = "FVCell.update_2D_geometric_data(): ";
-            // msg ~= format("Unhandled number of vertices: %d", vtx.length);
-            // throw new FlowSolverException(msg);
-            assert(0, "unhandled number of vertices");
+            string msg = "FVCell.update_2D_geometric_data(): ";
+            msg ~= format("Unhandled number of vertices: %d", vtx.length);
+            throw new FlowSolverException(msg);
+            // assert(0, "unhandled number of vertices"); // for @nogc
         } // end switch
         // Cell Volume.
         if (axisymmetric) {
@@ -285,17 +285,17 @@ public:
             vol = xyplane_area;
         }
         if (vol < 0.0) {
-            // string msg = text("FVCell.update_2D_geometric_data: " ~
-            //                   "Negative cell volume for cell[", id, "]= ", vol);
-            // throw new FlowSolverException(msg);
-            assert(0, "negative volume for cell");
+            string msg = text("FVCell.update_2D_geometric_data: " ~
+                              "Negative cell volume for cell[", id, "]= ", vol);
+            throw new FlowSolverException(msg);
+            // assert(0, "negative volume for cell"); // for @nogc
         }
         volume[gtl] = vol;
         areaxy[gtl] = xyplane_area;
         kLength = 0.0;
     } // end update_2D_geometric_data()
 
-    @nogc
+    // @nogc
     void update_3D_geometric_data(size_t gtl)
     {
         switch (vtx.length) {
@@ -323,16 +323,16 @@ public:
             iLength = L_min; jLength = L_min; kLength = L_min;
             break;
         default:
-            // string msg = "FVCell.update_3D_geometric_data() cells: ";
-            // msg ~= format("Unhandled number of vertices: %d", vtx.length);
-            // throw new FlowSolverException(msg);
-            assert(0, "unhandled number of vertices");
+            string msg = "FVCell.update_3D_geometric_data() cells: ";
+            msg ~= format("Unhandled number of vertices: %d", vtx.length);
+            throw new FlowSolverException(msg);
+            // assert(0, "unhandled number of vertices"); // for @nogc
         } // end switch
         if (volume[gtl] <= 0.0) {
-            // string msg = "FVCell.update_3D_geometric_data(): ";
-            // msg ~= format("Invalid volume %g for cell %d", volume[gtl], id);
-            // throw new FlowSolverException(msg);
-            assert(0, "negative volume");
+            string msg = "FVCell.update_3D_geometric_data(): ";
+            msg ~= format("Invalid volume %g for cell %d", volume[gtl], id);
+            throw new FlowSolverException(msg);
+            // assert(0, "negative volume"); // for @nogc
         }
     } // end update_3D_geometric_data()
     
