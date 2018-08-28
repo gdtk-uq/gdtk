@@ -79,8 +79,8 @@ public:
             Vector3 oopvA = cross(dcArdt, pBminuspA);
             Vector3 oopvB = cross(dcBrdt, pBminuspA);
             // Inward-facing normal vectors on the surface.
-            Vector3 nA = cross(oopvA, dcArdt).normalize();
-            Vector3 nB = cross(dcBrdt, oopvB).normalize();
+            Vector3 nA = cross(oopvA, dcArdt); nA.normalize();
+            Vector3 nB = cross(dcBrdt, oopvB); nB.normalize();
             // Intermediate control points for the cubic Bezier.
             Vector3 p1 = cAr + L/3.0*nA;
             Vector3 p2 = cBr + L/3.0*nB;

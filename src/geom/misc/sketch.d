@@ -238,9 +238,9 @@ public:
         this.eye = eye;
         this.centre = centre;
         this.up = up;
-        Vector3 znew = (eye - centre).normalize();
-        Vector3 xnew = (cross(up, znew)).normalize();
-        Vector3 ynew = (cross(znew, xnew)).normalize();
+        Vector3 znew = (eye - centre); znew.normalize();
+        Vector3 xnew = (cross(up, znew)); xnew.normalize();
+        Vector3 ynew = (cross(znew, xnew)); ynew.normalize();
         view_mat[0][0] = xnew.x.re; view_mat[0][1] = xnew.y.re; view_mat[0][2] = xnew.z.re;
         view_mat[1][0] = ynew.x.re; view_mat[1][1] = ynew.y.re; view_mat[1][2] = ynew.z.re;
         view_mat[2][0] = znew.x.re; view_mat[2][1] = znew.y.re; view_mat[2][2] = znew.z.re;

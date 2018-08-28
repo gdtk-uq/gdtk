@@ -311,61 +311,70 @@ struct Vector3 {
     } // end version complex_numbers
 
     // Assignment operators. (Alexandrescu Section 7.1.5.1)
-    @nogc ref Vector3 opAssign(ref Vector3 rhs)
+    @nogc void opAssign(ref Vector3 rhs)
     {
         _p[0] = rhs._p[0]; _p[1] = rhs._p[1]; _p[2] = rhs._p[2];
-        return this;
     }
 
-    @nogc ref Vector3 opAssign(Vector3 rhs)
+    @nogc void opAssign(Vector3 rhs)
     {
         _p[0] = rhs._p[0]; _p[1] = rhs._p[1]; _p[2] = rhs._p[2];
-        return this;
     }
 
     // Combined assignment operators do change the original object.
-    @nogc ref Vector3 opOpAssign(string op)(in Vector3 rhs)
+    @nogc void opOpAssign(string op)(in Vector3 rhs)
         if (op == "+")
     {
-        this._p[0] += rhs._p[0]; this._p[1] += rhs._p[1]; this._p[2] += rhs._p[2];
-        return this;
+        _p[0] += rhs._p[0]; _p[1] += rhs._p[1]; _p[2] += rhs._p[2];
     }
 
-    @nogc ref Vector3 opOpAssign(string op)(in Vector3 rhs)
+    @nogc void opOpAssign(string op)(in Vector3 rhs)
         if (op == "-")
     {
-        this._p[0] -= rhs._p[0]; this._p[1] -= rhs._p[1]; this._p[2] -= rhs._p[2];
-        return this;
+        _p[0] -= rhs._p[0]; _p[1] -= rhs._p[1]; _p[2] -= rhs._p[2];
     }
 
-    @nogc ref Vector3 opOpAssign(string op)(in number rhs)
+    // 2018-08-28 PJ found that to call from within @nogc functions,
+    // we had to use ref const(Vector3) rather than in Vector3
+    // as the type of the parameter rhs.
+    // So, we now have two sets of these combined-operator assignments
+    // but the compiler seems to be able to pick the one it needs.
+    @nogc void opOpAssign(string op)(ref const(Vector3) rhs)
+        if (op == "+")
+    {
+        _p[0] += rhs._p[0]; _p[1] += rhs._p[1]; _p[2] += rhs._p[2];
+    }
+
+    @nogc void opOpAssign(string op)(ref const(Vector3) rhs)
+        if (op == "-")
+    {
+        _p[0] -= rhs._p[0]; _p[1] -= rhs._p[1]; _p[2] -= rhs._p[2];
+    }
+
+    @nogc void opOpAssign(string op)(in number rhs)
         if (op == "*")
     {
-        this._p[0] *= rhs; this._p[1] *= rhs; this._p[2] *= rhs;
-        return this;
+        _p[0] *= rhs; _p[1] *= rhs; _p[2] *= rhs;
     }
 
-    @nogc ref Vector3 opOpAssign(string op)(in number rhs)
+    @nogc void opOpAssign(string op)(in number rhs)
         if (op == "/")
     {
-        this._p[0] /= rhs; this._p[1] /= rhs; this._p[2] /= rhs;
-        return this;
+        _p[0] /= rhs; _p[1] /= rhs; _p[2] /= rhs;
     }
 
     version(complex_numbers) {
         // Retain the double version.
-        @nogc ref Vector3 opOpAssign(string op)(in double rhs)
+        @nogc void opOpAssign(string op)(in double rhs)
             if (op == "*")
         {
-            this._p[0] *= rhs; this._p[1] *= rhs; this._p[2] *= rhs;
-            return this;
+            _p[0] *= rhs; _p[1] *= rhs; _p[2] *= rhs;
         }
 
-        @nogc ref Vector3 opOpAssign(string op)(in double rhs)
+        @nogc void opOpAssign(string op)(in double rhs)
             if (op == "/")
         {
-            this._p[0] /= rhs; this._p[1] /= rhs; this._p[2] /= rhs;
-            return this;
+            _p[0] /= rhs; _p[1] /= rhs; _p[2] /= rhs;
         }
     } // end version complex_numbers
 
@@ -374,7 +383,7 @@ struct Vector3 {
     /**
      * Scales the vector to unit magnitude.
      */
-    @nogc ref Vector3 normalize()
+    @nogc void normalize()
     {
         number magnitude = sqrt(this.dot(this));
         if (magnitude > 0.0) {
@@ -395,7 +404,6 @@ struct Vector3 {
             if (fabs(this._p[1]) < small) { this._p[1] = 0.0; }
             if (fabs(this._p[2]) < small) { this._p[2] = 0.0; }
         }
-        return this;
     }
 
     @nogc number dot(ref const(Vector3) other) const
@@ -585,7 +593,8 @@ number abs(ref const(Vector3) v)
 Vector3 unit(ref const(Vector3) v)
 {
     Vector3 v2 = Vector3(v);
-    return v2.normalize();
+    v2.normalize();
+    return v2;
 }
 
 /**

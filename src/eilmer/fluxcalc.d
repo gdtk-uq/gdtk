@@ -107,7 +107,8 @@ void compute_interface_flux(ref FlowState Lft, ref FlowState Rght, ref FVInterfa
     F.total_energy += 0.5 * F.mass * v_sqr + F.momentum.dot(IFace.gvel);
     // Flux of momentum: Add component for interface velocity then
     // rotate back to the global frame of reference.
-    F.momentum += F.mass * IFace.gvel;
+    Vector3 momentum_increment = IFace.gvel; momentum_increment *= F.mass;
+    F.momentum += momentum_increment;
     F.momentum.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
     // Also, transform the interface (grid) velocity and magnetic field.
     IFace.gvel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
@@ -256,7 +257,8 @@ void set_flux_vector_in_global_frame(ref FVInterface IFace, ref FlowState fs,
     // Transform fluxes back from interface frame of reference to local frame of reference.
     number v_sqr = IFace.gvel.x*IFace.gvel.x + IFace.gvel.y*IFace.gvel.y + IFace.gvel.z*IFace.gvel.z;
     F.total_energy += 0.5 * F.mass * v_sqr + F.momentum.dot(IFace.gvel);
-    F.momentum += F.mass * IFace.gvel;
+    Vector3 momentum_increment = IFace.gvel; momentum_increment *= F.mass; 
+    F.momentum += momentum_increment;
     //
     // Rotate momentum fluxes back to the global frame of reference.
     F.momentum.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
