@@ -26,7 +26,7 @@ LUA_DIR := ../../extern/lua-5.1.4
 LIBLUA := ${LUA_DIR}/lib/liblua.a
 LIBLUAPATH := ${LUA_DIR}/lib
 
-DLINKFLAGS :=  -w -L-L${LIBLUAPATH} -L-llua -L-ldl
+DLINKFLAGS :=  -w -L-L${LIBLUAPATH} -L-llua -L-ldl -L-lgfortran
 
 build-prep-chem: prep_chem.lua reaction.lua lex_elems.lua
 	- mkdir -p $(BUILD_DIR)/bin
@@ -91,3 +91,11 @@ pseudo_species_kinetics_test:  $(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM
 $(GAS_DIR)/ideal_air_fortran.o: $(GAS_DIR)/ideal_air_fortran.f
 	cd $(GAS_DIR); gfortran -c -ffree-form ideal_air_fortran.f
 
+pseudosp_solve_ode.o: pseudosp_solve_ode.f90
+	gfortran -c pseudosp_solve_ode.f90
+
+pseudosp_rhs_ode.o: $(KINETICS_DIR)/pseudosp_rhs_ode.f90
+	gfortran -c pseudosp_rhs_ode.f90
+
+dvode.o: $(KINETICS_DIR)/dvode.f
+	gfortran -c dvode.f

@@ -83,6 +83,10 @@ clean:
 	- rm trans.inp trans.lib trans.out
 	- rm tmp.inp tmp.out tmp.plt
 	- cd $(LUA); make clean
+	- rm $(KINETICS_DIR)/pseudosp_solve_ode.o
+	- rm $(KINETICS_DIR)/pseudosp_rhs_ode.o
+	- rm $(KINETICS_DIR)/dvode.o
+	- rm $(KINETICS_DIR)/updatepseudospecieschem.mod
 
 # Specific targets for individual artefacts.
 
