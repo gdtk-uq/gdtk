@@ -93,15 +93,16 @@ ref Vector3 map_neutral_plane_to_cylinder(ref Vector3 p, number H)
 */
 @nogc
 void P_barycentricCoords(ref const(Vector3) p, ref const(Vector3) p0, 
-                     ref const(Vector3) p1, ref const(Vector3) p2, 
-                     ref Vector3 Coords, 
-                     double tol=1.0e-12, double area_tol=1.0e-20)
+                         ref const(Vector3) p1, ref const(Vector3) p2, 
+                         ref Vector3 Coords, 
+                         double tol=1.0e-12, double area_tol=1.0e-20)
 {
-    number lambda0 = ( (p1.y-p2.y)*(p.x -p2.x) + (p2.x-p1.x)*(p.y -p2.y) ) /
-                     ( (p1.y-p2.y)*(p0.x-p2.x) + (p2.x-p1.x)*(p0.y-p2.y) );
+    number numer0 = (p1.y-p2.y)*(p.x -p2.x) + (p2.x-p1.x)*(p.y -p2.y);
+    number denom = (p1.y-p2.y)*(p0.x-p2.x) + (p2.x-p1.x)*(p0.y-p2.y);
+    number lambda0 = numer0 / denom;
     if (abs(lambda0) < tol) { lambda0 = 0; }
-    number lambda1 = ( (p2.y-p0.y)*(p.x -p2.x) + (p0.x-p2.x)*(p.y -p2.y) ) /
-                     ( (p1.y-p2.y)*(p0.x-p2.x) + (p2.x-p1.x)*(p0.y-p2.y) );
+    number numer1 = (p2.y-p0.y)*(p.x -p2.x) + (p0.x-p2.x)*(p.y -p2.y);
+    number lambda1 = numer1 / denom;
     if (abs(lambda1) < tol) { lambda1 = 0; }
     number lambda2 = 1 - lambda0 - lambda1;
     if (abs(lambda2) < tol) { lambda2 = 0; }
