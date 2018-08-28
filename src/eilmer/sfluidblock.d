@@ -645,6 +645,7 @@ public:
         return;
     } // end bind_interfaces_vertices_and_cells()
 
+    @nogc
     override void compute_primary_cell_geometric_data(size_t gtl)
     // Compute cell and interface geometric properties.
     {
@@ -703,29 +704,34 @@ public:
         } // end if dimensions == 3
         /* Extrapolate (with first-order) cell positions and volumes to ghost cells. */
         // TODO -- think about how to make these things consistent.
+        @nogc
+        void extrap(ref Vector3 pos, ref const(Vector3) p1, ref const(Vector3) p2)
+        {
+            pos.set(p1); pos *= 2.0; pos -= p2;
+        }
         for (j = jmin; j <= jmax; ++j) {
             for (k = kmin; k <= kmax; ++k) {
                 i = imin;
                 auto cell_1 = get_cell(i,j,k);
                 auto cell_2 = get_cell(i+1,j,k);
                 auto ghost_cell = get_cell(i-1,j,k);
-                ghost_cell.pos[gtl] = 2.0*cell_1.pos[gtl] - cell_2.pos[gtl];
+                extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                 ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                 cell_2 = cell_1;
                 cell_1 = ghost_cell;
                 ghost_cell = get_cell(i-2,j,k);
-                ghost_cell.pos[gtl] = 2.0*cell_1.pos[gtl] - cell_2.pos[gtl];
+                extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                 ghost_cell.volume[gtl] = 2.0*cell_2.volume[gtl] - cell_2.volume[gtl];
                 i = imax;
                 cell_1 = get_cell(i,j,k);
                 cell_2 = get_cell(i-1,j,k);
                 ghost_cell = get_cell(i+1,j,k);
-                ghost_cell.pos[gtl] = 2.0*cell_1.pos[gtl] - cell_2.pos[gtl];
+                extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                 ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                 cell_2 = cell_1;
                 cell_1 = ghost_cell;
                 ghost_cell = get_cell(i+2,j,k);
-                ghost_cell.pos[gtl] = 2.0*cell_1.pos[gtl] - cell_2.pos[gtl];
+                extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                 ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
             }
         }
@@ -735,23 +741,23 @@ public:
                 auto cell_1 = get_cell(i,j,k);
                 auto cell_2 = get_cell(i,j+1,k);
                 auto ghost_cell = get_cell(i,j-1,k);
-                ghost_cell.pos[gtl] = 2.0*cell_1.pos[gtl] - cell_2.pos[gtl];
+                extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                 ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                 cell_2 = cell_1;
                 cell_1 = ghost_cell;
                 ghost_cell = get_cell(i,j-2,k);
-                ghost_cell.pos[gtl] = 2.0*cell_1.pos[gtl] - cell_2.pos[gtl];
+                extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                 ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                 j = jmax;
                 cell_1 = get_cell(i,j,k);
                 cell_2 = get_cell(i,j-1,k);
                 ghost_cell = get_cell(i,j+1,k);
-                ghost_cell.pos[gtl] = 2.0*cell_1.pos[gtl] - cell_2.pos[gtl];
+                extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                 ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                 cell_2 = cell_1;
                 cell_1 = ghost_cell;
                 ghost_cell = get_cell(i,j+2,k);
-                ghost_cell.pos[gtl] = 2.0*cell_1.pos[gtl] - cell_2.pos[gtl];
+                extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                 ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
             }
         }
@@ -762,23 +768,23 @@ public:
                     auto cell_1 = get_cell(i,j,k);
                     auto cell_2 = get_cell(i,j,k+1);
                     auto ghost_cell = get_cell(i,j,k-1);
-                    ghost_cell.pos[gtl] = 2.0*cell_1.pos[gtl] - cell_2.pos[gtl];
+                    extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                     ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                     cell_2 = cell_1;
                     cell_1 = ghost_cell;
                     ghost_cell = get_cell(i,j,k-2);
-                    ghost_cell.pos[gtl] = 2.0*cell_1.pos[gtl] - cell_2.pos[gtl];
+                    extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                     ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                     k = kmax;
                     cell_1 = get_cell(i,j,k);
                     cell_2 = get_cell(i,j,k-1);
                     ghost_cell = get_cell(i,j,k+1);
-                    ghost_cell.pos[gtl] = 2.0*cell_1.pos[gtl] - cell_2.pos[gtl];
+                    extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                     ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                     cell_2 = cell_1;
                     cell_1 = ghost_cell;
                     ghost_cell = get_cell(i,j,k+2);
-                    ghost_cell.pos[gtl] = 2.0*cell_1.pos[gtl] - cell_2.pos[gtl];
+                    extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                     ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                 }
             }

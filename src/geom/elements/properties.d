@@ -43,7 +43,7 @@ bool inside_bounding_box(ref const(Vector3) p,
  * Resultant normal vector is up, toward you.
  * Assume that all points are in the one plane.
  */
-//@nogc
+@nogc
 void triangle_properties(ref const(Vector3) p0, ref const(Vector3) p1,
                          ref const(Vector3) p2,
                          ref Vector3 centroid,

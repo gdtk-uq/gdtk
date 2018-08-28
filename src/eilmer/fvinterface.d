@@ -254,6 +254,7 @@ public:
         return to!string(repr);
     }
 
+    @nogc
     void update_2D_geometric_data(size_t gtl, bool axisymmetric)
     {
         number xA = vtx[0].pos[gtl].x;
@@ -266,7 +267,7 @@ public:
             // normal is purely in the xy-plane
             n.set((yB-yA)/LAB, -(xB-xA)/LAB, to!number(0.0));
             t2 = Vector3(0.0, 0.0, 1.0);
-            t1 = cross(n, t2);
+            cross(t1, n, t2);
             length = LAB; // Length in the XY-plane.
         } else {
             n = Vector3(1.0, 0.0, 0.0); // Arbitrary direction
@@ -282,9 +283,10 @@ public:
         } else {
             area[gtl] = LAB; // Assume unit depth in the Z-direction.
         }
-        pos = to!number(0.5)*(vtx[0].pos[gtl] + vtx[1].pos[gtl]);
+        pos = vtx[0].pos[gtl]; pos += vtx[1].pos[gtl]; pos *= to!number(0.5);
     } // end update_2D_geometric_data()
 
+    @nogc
     void update_3D_geometric_data(size_t gtl)
     {
         switch (vtx.length) {
@@ -299,9 +301,10 @@ public:
                             pos, n, t1, t2, area[gtl]);
             break;
         default:
-            string msg = "FVInterface.update_3D_geometric_data(): ";
-            msg ~= format("Unhandled number of vertices: %d", vtx.length);
-            throw new FlowSolverException(msg);
+            // string msg = "FVInterface.update_3D_geometric_data(): ";
+            // msg ~= format("Unhandled number of vertices: %d", vtx.length);
+            // throw new FlowSolverException(msg);
+            assert(0, "unhandled number of vertices");
         } // end switch     
     } // end update_3D_geometric_data()
 
