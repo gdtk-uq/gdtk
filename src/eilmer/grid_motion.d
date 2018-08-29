@@ -25,10 +25,16 @@ void setGridMotionHelperFunctions(lua_State *L)
 {
     lua_pushcfunction(L, &luafn_getVtxPosition);
     lua_setglobal(L, "getVtxPosition");
+    lua_pushcfunction(L, &luafn_getVtxPositionXYZ);
+    lua_setglobal(L, "getVtxPositionXYZ");
     lua_pushcfunction(L, &luafn_setVtxVelocitiesForDomain);
     lua_setglobal(L, "setVtxVelocitiesForDomain");
+    lua_pushcfunction(L, &luafn_setVtxVelocitiesForDomainXYZ);
+    lua_setglobal(L, "setVtxVelocitiesForDomainXYZ");
     lua_pushcfunction(L, &luafn_setVtxVelocitiesForBlock);
     lua_setglobal(L, "setVtxVelocitiesForBlock");
+    lua_pushcfunction(L, &luafn_setVtxVelocitiesForBlockXYZ);
+    lua_setglobal(L, "setVtxVelocitiesForBlockXYZ");
     lua_pushcfunction(L, &luafn_setVtxVelocitiesForRotatingBlock);
     lua_setglobal(L, "setVtxVelocitiesForRotatingBlock");
     lua_pushcfunction(L, &luafn_setVtxVelocitiesByCorners);
@@ -37,6 +43,8 @@ void setGridMotionHelperFunctions(lua_State *L)
     lua_setglobal(L, "setVtxVelocitiesByCornersReg");
     lua_pushcfunction(L, &luafn_setVtxVelocity);
     lua_setglobal(L, "setVtxVelocity");
+    lua_pushcfunction(L, &luafn_setVtxVelocityXYZ);
+    lua_setglobal(L, "setVtxVelocityXYZ");
 }
 
 extern(C) int luafn_getVtxPosition(lua_State *L)
@@ -56,6 +64,24 @@ extern(C) int luafn_getVtxPosition(lua_State *L)
     lua_pushnumber(L, vtx.pos[0].y.re); lua_setfield(L, -2, "y");
     lua_pushnumber(L, vtx.pos[0].z.re); lua_setfield(L, -2, "z");
     return 1;
+}
+
+extern(C) int luafn_getVtxPositionXYZ(lua_State *L)
+{
+    // Get arguments from lua_stack
+    auto blkId = lua_tointeger(L, 1);
+    auto i = lua_tointeger(L, 2);
+    auto j = lua_tointeger(L, 3);
+    auto k = lua_tointeger(L, 4);
+
+    // Grab the appropriate vtx
+    auto vtx = globalFluidBlocks[blkId].get_vtx(i, j, k);
+    
+    // Return the components x, y, z on the stack.
+    lua_pushnumber(L, vtx.pos[0].x.re);
+    lua_pushnumber(L, vtx.pos[0].y.re);
+    lua_pushnumber(L, vtx.pos[0].z.re);
+    return 3;
 }
 
 extern(C) int luafn_setVtxVelocitiesForDomain(lua_State* L)
@@ -80,6 +106,30 @@ extern(C) int luafn_setVtxVelocitiesForDomain(lua_State* L)
     return 0;
 }
 
+extern(C) int luafn_setVtxVelocitiesForDomainXYZ(lua_State* L)
+{
+    // Expect three velocity components.
+    double velx = lua_tonumber(L, 1);
+    double vely = lua_tonumber(L, 2);
+    double velz = lua_tonumber(L, 3);
+
+    foreach ( blk; localFluidBlocks ) {
+        foreach ( vtx; blk.vertices ) {
+            /* We assume that we'll only update grid positions
+               at the start of the increment. This should work
+               well except in the most critical cases of time
+               accuracy.
+            */
+            vtx.vel[0].set(velx, vely, velz);
+        }
+    }
+    // In case, the user gave use more return values than
+    // we used, just set the lua stack to empty and let
+    // the lua garbage collector do its thing.
+    lua_settop(L, 0);
+    return 0;
+}
+
 extern(C) int luafn_setVtxVelocitiesForBlock(lua_State* L)
 {
     // Expect two arguments: 1. a Vector3 object
@@ -94,6 +144,30 @@ extern(C) int luafn_setVtxVelocitiesForBlock(lua_State* L)
            accuracy.
         */
         vtx.vel[0].set(vel);
+    }
+    // In case, the user gave use more return values than
+    // we used, just set the lua stack to empty and let
+    // the lua garbage collector do its thing.
+    lua_settop(L, 0);
+    return 0;
+}
+
+extern(C) int luafn_setVtxVelocitiesForBlockXYZ(lua_State* L)
+{
+    // Expect two arguments: 1. a Vector3 object
+    //                       2. a block id
+    double velx = lua_tonumber(L, 1);
+    double vely = lua_tonumber(L, 2);
+    double velz = lua_tonumber(L, 3);
+    auto blkId = lua_tointeger(L, 4);
+
+    foreach ( vtx; globalFluidBlocks[blkId].vertices ) {
+        /* We assume that we'll only update grid positions
+           at the start of the increment. This should work
+           well except in the most critical cases of time
+           accuracy.
+        */
+        vtx.vel[0].set(velx, vely, velz);
     }
     // In case, the user gave use more return values than
     // we used, just set the lua stack to empty and let
@@ -480,6 +554,58 @@ extern(C) int luafn_setVtxVelocity(lua_State* L)
     }
     else {
         string errMsg = "ERROR: Too few arguments passed to luafn: setVtxVelocity()\n";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_settop(L, 0);
+    return 0;
+}
+
+/**
+ * Sets the velocity components of an individual vertex.
+ *
+ * This function can be called for structured 
+ * or unstructured grids. We'll determine what
+ * type grid is meant by the number of arguments
+ * supplied. The following calls are allowed:
+ *
+ * setVtxVelocityXYZ(velx, vely, velz, blkId, vtxId)
+ *   Sets the velocity vector for vertex vtxId in
+ *   block blkId. This works for both structured
+ *   and unstructured grids.
+ *
+ * setVtxVelocityXYZ(velx, vely, velz, blkId, i, j)
+ *   Sets the velocity vector for vertex "i,j" in
+ *   block blkId in a two-dimensional structured grid.
+ *
+ * setVtxVelocityXYZ(velx, vely, velz, blkId, i, j, k)
+ *   Set the velocity vector for vertex "i,j,k" in
+ *   block blkId in a three-dimensional structured grid.
+ */
+extern(C) int luafn_setVtxVelocityXYZ(lua_State* L)
+{
+    int narg = lua_gettop(L);
+    double velx = lua_tonumber(L, 1);
+    double vely = lua_tonumber(L, 2);
+    double velz = lua_tonumber(L, 3);
+    auto blkId = lua_tointeger(L, 4);
+
+    if ( narg == 5 ) {
+        auto vtxId = lua_tointeger(L, 5);
+        globalFluidBlocks[blkId].vertices[vtxId].vel[0].set(velx, vely, velz);
+    }
+    else if ( narg == 7 ) {
+        auto i = lua_tointeger(L, 6);
+        auto j = lua_tointeger(L, 7);
+        globalFluidBlocks[blkId].get_vtx(i,j).vel[0].set(velx, vely, velz);
+    }
+    else if ( narg >= 8 ) {
+        auto i = lua_tointeger(L, 6);
+        auto j = lua_tointeger(L, 7);
+        auto k = lua_tointeger(L, 8);
+        globalFluidBlocks[blkId].get_vtx(i,j,k).vel[0].set(velx, vely, velz);
+    }
+    else {
+        string errMsg = "ERROR: Too few arguments passed to luafn: setVtxVelocityXYZ()\n";
         luaL_error(L, errMsg.toStringz);
     }
     lua_settop(L, 0);
