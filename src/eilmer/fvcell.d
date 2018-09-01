@@ -51,6 +51,7 @@ string avg_over_iface_list(string quantity, string result)
 class FVCell {
 public:
     int id;  // allows us to work out where, in the block, the cell is
+    bool is_interior; // true if the cell is interior to the block, false is a ghost cell
     bool thermo_data_is_known_bad; // Set to false at the start of an update.
     // Reset and checked at points through the update so that we don't stagger on
     // with bad data poisoning the simulation.
@@ -93,6 +94,7 @@ public:
     ConservedQuantities[] U;  // Conserved flow quantities for the update stages.
     ConservedQuantities[] dUdt; // Time derivatives for the update stages.
     ConservedQuantities Q; // source (or production) terms
+    ConservedQuantities dUdt_copy; // for residual smoothing
     // for unstructured grids, we may be doing high-order reconstruction
     LSQInterpWorkspace ws;
     LSQInterpGradients gradients; // we only need these workspaces for the unstructured
@@ -130,6 +132,7 @@ public:
     {
         this.myConfig = myConfig;
         id = id_init;
+        is_interior = false; // initial presumption to be adjusted later
         pos.length = myConfig.n_grid_time_levels;
         volume.length = myConfig.n_grid_time_levels;
         areaxy.length = myConfig.n_grid_time_levels;

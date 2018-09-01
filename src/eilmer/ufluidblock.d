@@ -192,6 +192,7 @@ public:
             // We will reply upon this connection in other parts of the flow code.
             auto new_cell = new FVCell(myConfig, to!int(i));
             new_cell.will_have_valid_flow = true;
+            new_cell.is_interior = true;
             cells ~= new_cell;
         }
         // Bind the interfaces, vertices and cells together, 
@@ -224,7 +225,6 @@ public:
                         throw new FlowSolverException(msg);
                     } else {
                         my_face.left_cell = c;
-                        my_face.left_cell_is_interior = true;
                     }
                 } else {
                     if (my_face.right_cell) {
@@ -233,7 +233,6 @@ public:
                         throw new FlowSolverException(msg);
                     } else {
                         my_face.right_cell = c;
-                        my_face.right_cell_is_interior = true;
                     }
                 }
             }

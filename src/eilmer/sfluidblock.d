@@ -431,7 +431,8 @@ public:
         //
         // Make the cell. vertex. and face.id consistent with the index in the array.
         // We will depend on this equality in other parts of the flow solver.
-        foreach (i, c; cells) { c.id = to!int(i); }
+        // We also note that these cells are interior to the block (i.e. not ghost cells)
+        foreach (i, c; cells) { c.id = to!int(i); c.is_interior = true; }
         foreach (i, v; vertices) { v.id = to!int(i); }
         foreach (i, f; faces) { f.id = to!int(i); }
         // Alter the id values of the ghost cells to be a bit like those in the
@@ -533,8 +534,6 @@ public:
                     if (i == imin) {
                         IFace.is_on_boundary = true;
                         IFace.bc_id = Face.west;
-                        IFace.left_cell_is_interior = false;
-                        IFace.right_cell_is_interior = true;
                         if (bc[Face.west].ghost_cell_data_available) {
                             IFace.left_cell = (myConfig.dimensions == 3) ? get_cell(i-1,j,k) : get_cell(i-1,j);
                         }
@@ -542,15 +541,11 @@ public:
                     } else if (i == imax+1) {
                         IFace.is_on_boundary = true;
                         IFace.bc_id = Face.east;
-                        IFace.left_cell_is_interior = true;
-                        IFace.right_cell_is_interior = false;
                         IFace.left_cell = (myConfig.dimensions == 3) ? get_cell(i-1,j,k) : get_cell(i-1,j);
                         if (bc[Face.east].ghost_cell_data_available) {
                             IFace.right_cell = (myConfig.dimensions == 3) ? get_cell(i,j,k) : get_cell(i,j);
                         }
                     } else {
-                        IFace.left_cell_is_interior = true;
-                        IFace.right_cell_is_interior = true;
                         IFace.left_cell = (myConfig.dimensions == 3) ? get_cell(i-1,j,k) : get_cell(i-1,j);
                         IFace.right_cell = (myConfig.dimensions == 3) ? get_cell(i,j,k) : get_cell(i,j);
                     }
@@ -578,8 +573,6 @@ public:
                     if (j == jmin) {
                         IFace.is_on_boundary = true;
                         IFace.bc_id = Face.south;
-                        IFace.left_cell_is_interior = false;
-                        IFace.right_cell_is_interior = true;
                         if (bc[Face.south].ghost_cell_data_available) {
                             IFace.left_cell = (myConfig.dimensions == 3) ? get_cell(i,j-1,k) : get_cell(i,j-1);
                         }
@@ -587,15 +580,11 @@ public:
                     } else if (j == jmax+1) {
                         IFace.is_on_boundary = true;
                         IFace.bc_id = Face.north;
-                        IFace.left_cell_is_interior = true;
-                        IFace.right_cell_is_interior = false;
                         IFace.left_cell = (myConfig.dimensions == 3) ? get_cell(i,j-1,k) : get_cell(i,j-1);
                         if (bc[Face.north].ghost_cell_data_available) {
                             IFace.right_cell = (myConfig.dimensions == 3) ? get_cell(i,j,k) : get_cell(i,j,k);
                         }
                     } else {
-                        IFace.left_cell_is_interior = true;
-                        IFace.right_cell_is_interior = true;
                         IFace.left_cell = (myConfig.dimensions == 3) ? get_cell(i,j-1,k) : get_cell(i,j-1);
                         IFace.right_cell = (myConfig.dimensions == 3) ? get_cell(i,j,k) : get_cell(i,j,k);
                     }
@@ -618,8 +607,6 @@ public:
                     if (k == kmin) {
                         IFace.is_on_boundary = true;
                         IFace.bc_id = Face.bottom;
-                        IFace.left_cell_is_interior = false;
-                        IFace.right_cell_is_interior = true;
                         if (bc[Face.bottom].ghost_cell_data_available) {
                             IFace.left_cell = get_cell(i,j,k-1);
                         }
@@ -627,15 +614,11 @@ public:
                     } else if (k == kmax+1) {
                         IFace.is_on_boundary = true;
                         IFace.bc_id = Face.top;
-                        IFace.left_cell_is_interior = true;
-                        IFace.right_cell_is_interior = false;
                         IFace.left_cell = get_cell(i,j,k-1);
                         if (bc[Face.top].ghost_cell_data_available) {
                             IFace.right_cell = get_cell(i,j,k);
                         }
                     } else {
-                        IFace.left_cell_is_interior = true;
-                        IFace.right_cell_is_interior = true;
                         IFace.left_cell = get_cell(i,j,k-1);
                         IFace.right_cell = get_cell(i,j,k);
                     }

@@ -531,6 +531,26 @@ public:
         }
     } // end compute_Linf_residuals()
 
+    @nogc
+    void residual_smoothing_dUdt(size_t ftl)
+    {
+        foreach (c; cells) {
+            c.dUdt_copy.copy_values_from(c.dUdt[ftl]);
+        }
+        double eps = myConfig.residual_smoothing_weight;
+        foreach (c; cells) {
+            double total = 1.0;
+            foreach (i, f; c.iface) {
+                auto other_cell = (c.outsign[i] > 0.0) ? f.right_cell : f.left_cell;
+                if (other_cell && other_cell.is_interior) {
+                    total += eps;
+                    c.dUdt[ftl].add(other_cell.dUdt_copy, eps);
+                }
+            }
+            c.dUdt[ftl].scale(1.0/total);
+        }
+    } // end residual_smoothing_dUdt()
+    
     double update_c_h(double dt_current)
     // Update the c_h value for the divergence cleaning mechanism.
     {

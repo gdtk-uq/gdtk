@@ -1169,7 +1169,10 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                                         local_sim_time, blk.myConfig.gmodel);
             }
             cell.time_derivatives(local_gtl, local_ftl, local_with_k_omega);
-            bool force_euler = false;
+        }
+        if (blk.myConfig.residual_smoothing) { blk.residual_smoothing_dUdt(local_ftl); }
+        bool force_euler = false;
+        foreach (cell; blk.cells) {
             cell.stage_1_update_for_flow_on_fixed_grid(local_dt_global, force_euler,
                                                        local_with_k_omega);
             cell.decode_conserved(local_gtl, local_ftl+1, blk.omegaz);
@@ -1325,6 +1328,9 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                                             local_sim_time, blk.myConfig.gmodel);
                 }
                 cell.time_derivatives(local_gtl, local_ftl, local_with_k_omega);
+            }
+            if (blk.myConfig.residual_smoothing) { blk.residual_smoothing_dUdt(local_ftl); }
+            foreach (cell; blk.cells) {
                 cell.stage_2_update_for_flow_on_fixed_grid(local_dt_global, local_with_k_omega);
                 cell.decode_conserved(local_gtl, local_ftl+1, blk.omegaz);
             } // end foreach cell
@@ -1472,6 +1478,9 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                                             local_sim_time, blk.myConfig.gmodel);
                 }
                 cell.time_derivatives(local_gtl, local_ftl, local_with_k_omega);
+            }
+            if (blk.myConfig.residual_smoothing) { blk.residual_smoothing_dUdt(local_ftl); }
+            foreach (cell; blk.cells) {
                 cell.stage_3_update_for_flow_on_fixed_grid(local_dt_global, local_with_k_omega);
                 cell.decode_conserved(local_gtl, local_ftl+1, blk.omegaz);
             } // end foreach cell
