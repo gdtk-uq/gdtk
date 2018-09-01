@@ -148,6 +148,9 @@ public:
         }
         Q = new ConservedQuantities(n_species, n_modes);
         Q.clear();
+        if (myConfig.residual_smoothing) {
+            dUdt_copy = new ConservedQuantities(n_species, n_modes);
+        }
         version(shape_sensitivity) {
             dQdU.length = 5; // number of conserved variables
             foreach (ref a; dQdU) a.length = 5;

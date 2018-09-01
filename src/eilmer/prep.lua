@@ -1498,6 +1498,8 @@ function write_config_file(fileName)
    f:write(string.format('"strang_splitting": "%s",\n', config.strang_splitting))
    f:write(string.format('"gasdynamic_update_scheme": "%s",\n',
 			 config.gasdynamic_update_scheme))
+   f:write(string.format('"residual_smoothing": %s,\n', tostring(config.residual_smoothing)))
+   f:write(string.format('"residual_smoothing_weight": %.18e,\n', config.residual_smoothing_weight))
    f:write(string.format('"coupling_with_solid_domains": "%s",\n',
 			 config.coupling_with_solid_domains))
    f:write(string.format('"solid_has_isotropic_properties": %s,\n', tostring(config.solid_has_isotropic_properties)))

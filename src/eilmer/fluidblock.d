@@ -534,6 +534,7 @@ public:
     @nogc
     void residual_smoothing_dUdt(size_t ftl)
     {
+        assert(ftl < cells[0].dUdt.length, "inconsistent flow time level and allocated dUdt");
         foreach (c; cells) {
             c.dUdt_copy.copy_values_from(c.dUdt[ftl]);
         }
@@ -541,9 +542,9 @@ public:
         foreach (c; cells) {
             double total = 1.0;
             foreach (i, f; c.iface) {
+                total += eps;
                 auto other_cell = (c.outsign[i] > 0.0) ? f.right_cell : f.left_cell;
                 if (other_cell && other_cell.is_interior) {
-                    total += eps;
                     c.dUdt[ftl].add(other_cell.dUdt_copy, eps);
                 }
             }
