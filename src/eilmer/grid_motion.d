@@ -303,8 +303,8 @@ extern(C) int luafn_setVtxVelocitiesByCorners(lua_State* L)
                     // try south triangle
                     P_barycentricCoords(pos, centroid, p00, p10, Coords);
                     if ((Coords.x <= 0 ) || (Coords.y >= 0 && Coords.z >= 0)) {
-                        setAsWeightedSum(blk.get_vtx(i,j,k).vel[0], Coords.x, &centroidVel, 
-                                         Coords.y, p00vel, Coords.z, p10vel);
+                        setAsWeightedSum(blk.get_vtx(i,j,k).vel[0], Coords.x.re, &centroidVel, 
+                                         Coords.y.re, p00vel, Coords.z.re, p10vel);
                         //writeln("Vel-S",  Coords.x * centroidVel 
                         //    + Coords.y * *p00vel + Coords.z * *p10vel,i,j);
                         continue;
@@ -312,8 +312,8 @@ extern(C) int luafn_setVtxVelocitiesByCorners(lua_State* L)
                     // try east triangle
                     P_barycentricCoords(pos, centroid, p10, p11, Coords);
                     if ((Coords.x <= 0 ) || (Coords.y >= 0 && Coords.z >= 0)) {
-                        setAsWeightedSum(blk.get_vtx(i,j,k).vel[0], Coords.x, &centroidVel, 
-                                         Coords.y, p10vel, Coords.z, p11vel);
+                        setAsWeightedSum(blk.get_vtx(i,j,k).vel[0], Coords.x.re, &centroidVel, 
+                                         Coords.y.re, p10vel, Coords.z.re, p11vel);
                         //writeln("Vel-E",  Coords.x * centroidVel 
                         //    + Coords.y * *p10vel + Coords.z * *p11vel,i,j);
                         continue;
@@ -321,8 +321,8 @@ extern(C) int luafn_setVtxVelocitiesByCorners(lua_State* L)
                     // try north triangle
                     P_barycentricCoords(pos, centroid, p11, p01, Coords);
                     if ((Coords.x <= 0 ) || (Coords.y >= 0 && Coords.z >= 0)) {
-                        setAsWeightedSum(blk.get_vtx(i,j,k).vel[0], Coords.x, &centroidVel, 
-                                         Coords.y, p11vel, Coords.z, p01vel);
+                        setAsWeightedSum(blk.get_vtx(i,j,k).vel[0], Coords.x.re, &centroidVel, 
+                                         Coords.y.re, p11vel, Coords.z.re, p01vel);
                         //writeln("Vel-N",  Coords.x * centroidVel 
                         //    + Coords.y * *p11vel + Coords.z * *p01vel,i,j);
                         continue;
@@ -330,8 +330,8 @@ extern(C) int luafn_setVtxVelocitiesByCorners(lua_State* L)
                     // try west triangle
                     P_barycentricCoords(pos, centroid, p01, p00, Coords);
                     if ((Coords.x <= 0 ) || (Coords.y >= 0 && Coords.z >= 0)) {
-                        setAsWeightedSum(blk.get_vtx(i,j,k).vel[0], Coords.x, &centroidVel, 
-                                         Coords.y, p01vel, Coords.z, p00vel);
+                        setAsWeightedSum(blk.get_vtx(i,j,k).vel[0], Coords.x.re, &centroidVel, 
+                                         Coords.y.re, p01vel, Coords.z.re, p00vel);
                         //writeln("Vel-W",  Coords.x * centroidVel 
                         //    + Coords.y * *p01vel + Coords.z * *p00vel,i,j);
                         continue;
