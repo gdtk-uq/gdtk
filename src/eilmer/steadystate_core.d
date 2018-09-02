@@ -962,6 +962,10 @@ void evalComplexMatVecProd(double pseudoSimTime, double sigma)
                     blk.zed[cellCount+TKE] = -cell.dUdt[1].tke.im/(sigma*blk.maxRate.tke.re);
                     blk.zed[cellCount+OMEGA] = -cell.dUdt[1].omega.im/(sigma*blk.maxRate.omega.re);
                 }
+                // we must explicitly remove the complex-perturbation for the turbulent properties - failing to do so
+                // will cause imaginary values to leak into the flowstate variables (outside of the Frechet derivative).
+                cell.fs.mu_t = cell.fs.mu_t.re;
+                cell.fs.k_t = cell.fs.k_t.re;
                 cellCount += nConserved;
             }
         }
