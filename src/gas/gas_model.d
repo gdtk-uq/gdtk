@@ -1047,6 +1047,7 @@ import gas.vib_specific_nitrogen;
 import gas.fuel_air_mix;
 import gas.equilibrium_gas;
 import gas.steam : Steam;
+import gas.electronically_specific_gas: ElectronicallySpecificGas;
 
 import core.stdc.stdlib : exit;
 
@@ -1143,6 +1144,9 @@ GasModel init_gas_model(string file_name="gas-model.lua")
         break;
     case "Steam":
         gm = new Steam();
+        break;
+    case "ElectronicallySpecificGas":
+        gm = new ElectronicallySpecificGas(L);
         break;
     default:
         string errMsg = format("The gas model '%s' is not available.", gas_model_name);
