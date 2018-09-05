@@ -152,8 +152,8 @@ public:
             dUdt_copy = new ConservedQuantities(n_species, n_modes);
         }
         version(shape_sensitivity) {
-            dQdU.length = 5; // number of conserved variables
-            foreach (ref a; dQdU) a.length = 5;
+            dQdU.length = 7; // number of conserved variables
+            foreach (ref a; dQdU) a.length = 7;
             foreach (i; 0..dQdU.length) {
                 foreach (j; 0..dQdU[i].length) {
                     dQdU[i][j] = 0.0;

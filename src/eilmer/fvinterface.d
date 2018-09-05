@@ -108,8 +108,8 @@ public:
         jy.length = n_species;
         jz.length = n_species;
         version(shape_sensitivity) {
-            dFdU.length = 5; // number of conserved variables
-            foreach (ref a; dFdU) a.length = 5;
+            dFdU.length = 7; // number of conserved variables
+            foreach (ref a; dFdU) a.length = 7;
             foreach (i; 0..dFdU.length) {
                 foreach (j; 0..dFdU[i].length) {
                     dFdU[i][j] = 0.0;

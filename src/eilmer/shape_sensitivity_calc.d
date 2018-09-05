@@ -1,11 +1,10 @@
-/** shape_sensitivity_calc.d
+ /** shape_sensitivity_calc.d
  * 
  * Eilmer4 shape sensitivity calculator top-level function.
  *
  * Note: This is the first attempt at 'production' code.
  * Some test implementations began on 2017-09-18.
  *
- * Date: 2018-10-02 -- implemented shared memory parallelism.
  *
  * Author: Kyle D.
 **/
@@ -44,11 +43,9 @@ void main(string[] args) {
     
     writeln("Eilmer shape sensitivity calculator:");
     writeln("Revision: PUT_REVISION_STRING_HERE");
-
     version(mpi_parallel) {
         assert(0, "Adjoint solver is not MPI parallel, yet.");
     }
-
     string msg = "Usage:                                       Comment:\n";
     msg       ~= "e4ssc      [--job=<string>]                  name of job                                              \n";
     msg       ~= "           [--return-objective-function]     evaluates objective function                             \n";
@@ -56,6 +53,9 @@ void main(string[] args) {
     msg       ~= "           [--update-grid]                   perturbs grid according to updated Bezier control points \n";
     msg       ~= "           [--direct-method]                 evaluates sensitivities via direct complex step method   \n";
     msg       ~= "           [--adjoint-method]                evalautes sensitivities via adjoint method               \n";
+    msg       ~= "           [--verify-primitive-jacobian]     test the formation of the primtive Jacobian              \n";
+    msg       ~= "           [--verify-conservative-jacobian   test the formation of the conservative Jacobian          \n";
+    msg       ~= "           [--verify-sss-preconditioner      test the formation of the steady-state preconditioner    \n";
     msg       ~= "           [--max-cpus=<int>]                defaults to ";
     msg       ~= to!string(totalCPUs) ~" on this machine                                                                \n";
     msg       ~= "           [--max-wall-clock=<int>]          in seconds                                               \n";
@@ -79,7 +79,6 @@ void main(string[] args) {
     int maxCPUs = totalCPUs;
     int maxWallClock = 5*24*3600; // 5 days default
     bool helpWanted = false;
-
     try {
         getopt(args,
                "job", &jobName,
@@ -116,6 +115,7 @@ void main(string[] args) {
     maxCPUs = min(max(maxCPUs, 1), totalCPUs); // don't ask for more than available
     
     // read simulation details to initialise stored simulation
+    //
     auto times_dict = readTimesFile(jobName);
     auto tindx_list = times_dict.keys;
     sort(tindx_list);
@@ -126,6 +126,7 @@ void main(string[] args) {
     else init_simulation(last_tindx, 0, maxCPUs, 1, maxWallClock);
 
     // check some flag option compatibilities
+    //
     if (verifyPrimitiveJacobianFlag || verifyConservativeJacobianFlag)
         assert(verifyPrimitiveJacobianFlag != adjointMethodFlag || verifyConservativeJacobianFlag != adjointMethodFlag, "Error: Incompatible command line flags: verify-flow-jacobian & adjoint-method");
     else if (verifySSSPreconditionerFlag)
@@ -134,21 +135,24 @@ void main(string[] args) {
         assert(directMethodFlag != adjointMethodFlag, "Error: Incompatible command line flags: direct-method & adjoint-method");
     
     /* some global variables */    
+
     Vector3[] designVars;
-    version(complex_numbers) number EPS = complex(0.0, GlobalConfig.sscOptions.epsilon); //  0 + iEPSILON
+    version(complex_numbers) number EPS = complex(0.0, GlobalConfig.sscOptions.epsilon);
     else number EPS = -1.0;
     assert(EPS != -1.0, "Error: complex step size incorrectly set");
     writeln("/* Complex Step Size: ", EPS.im, ", i */");
+    with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega);
     
     /* Geometry parameterisation */
+    
     if (parameteriseSurfacesFlag) {
         fit_design_parameters_to_surface(designVars);
         //writeDesignVarsToDakotaFile(designVars, jobName);
         return; // --parameterise-surfaces complete
     }
     
-    
     /* Evaluate Sensitivities via Direct Complex Step */
+
     if (directMethodFlag) {
         readBezierDataFromFile(designVars);
         compute_direct_complex_step_derivatives(jobName, last_tindx, maxCPUs, designVars, EPS);
@@ -156,13 +160,18 @@ void main(string[] args) {
     }
 
     /* Evaluate Sensitivities via Discrete Adjoint Method */
+
     if (adjointMethodFlag) {
+
         bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega);
         size_t nPrimitive; 
-        if (GlobalConfig.dimensions == 2) nPrimitive = 4;  // density, velocity(x,y), pressure
-        else nPrimitive = 5;                               // density, velocity(x,y,z), pressure
+
+        nPrimitive = 4;  // density, velocity(x,y), pressure
+        if (GlobalConfig.dimensions == 3) nPrimitive += 1; // velocity(z)
+        if (with_k_omega) nPrimitive += 2; // tke, omega
 
         /* Flow Jacobian */
+
         foreach (myblk; parallel(localFluidBlocks,1)) {
             // make sure ghost cells are filled before proceeding...
             myblk.applyPreReconAction(0.0, 0, 0);
@@ -176,6 +185,7 @@ void main(string[] args) {
               
 
         /* Preconditioner */
+
         foreach (myblk; parallel(localFluidBlocks,1)) {
             bool viscousConfigSave = GlobalConfig.viscous;
             GlobalConfig.viscous = false;
@@ -186,6 +196,7 @@ void main(string[] args) {
         }
 
         /* Objective Function Sensitivity */
+
         // Surface intergal objective functions can be computed in parallel with a reduction process across blocks to gather the final value,
         // however the sensitivity w.r.t to primitive variables cannot be computed in parallel, since we are only computing a single objective calue (for example drag).
         foreach (myblk; localFluidBlocks) {
@@ -193,14 +204,17 @@ void main(string[] args) {
         }
         
         /* solve the adjoint system */
+
         rpcGMRES_solve(nPrimitive);
         
         /* Write out adjoint variables for visualisation */ 
+
         foreach (myblk; localFluidBlocks) {
             write_adjoint_variables_to_file(myblk, nPrimitive, jobName);
         }
         
         /* clear some expensive data structures from memory */
+
         foreach (myblk; parallel(localFluidBlocks,1)) {
             destroy(myblk.JlocT);
             destroy(myblk.JextT);
@@ -248,14 +262,18 @@ void main(string[] args) {
         return;
     }
 
-    /* Verify Primitive Jacobian routines via Frechet Derivative */
+    /* Check Accuracy of Primitive Jacobian routines via Frechet Derivative Comparison */
+
     if (verifyPrimitiveJacobianFlag) {
+
+        // set number of primitive variables
         bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega);
         size_t nPrimitive; 
-        if (GlobalConfig.dimensions == 2) nPrimitive = 4;  // density, velocity(x,y), pressure
-        else nPrimitive = 5;                               // density, velocity(x,y,z), pressure
+        nPrimitive = 4;  // density, velocity(x,y), pressure
+        if (GlobalConfig.dimensions == 3) nPrimitive += 1; // velocity(z)
+        if (with_k_omega) nPrimitive += 2; // tke, omega
         
-        // form 1st order Jacobian via adjoint routines
+        // construct the transposed primitive Jacobian
         foreach (myblk; parallel(localFluidBlocks,1)) {
             // make sure ghost cells are filled
             myblk.applyPreReconAction(0.0, 0, 0);
@@ -263,11 +281,108 @@ void main(string[] args) {
             myblk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
             myblk.applyPostDiffFluxAction(0.0, 0, 0);
 
+            steadystate_core.evalRHS(0.0, 0);
+
+            myblk.applyPreReconAction(0.0, 0, 0);
+            myblk.applyPostConvFluxAction(0.0, 0, 0);
+            myblk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
+            myblk.applyPostDiffFluxAction(0.0, 0, 0);
+            
+            myblk.Minv = new Matrix!number(nPrimitive, nPrimitive);
+            myblk.JcT = new SMatrix!number();
+            myblk.Jc = new SMatrix!number();
+            myblk.P = new SMatrix!number();
+            myblk.JlocT = new SMatrix!number();
             myblk.JlocT = new SMatrix!number();
             local_flow_jacobian_transpose(myblk.JlocT, myblk, nPrimitive, myblk.myConfig.interpolation_order, EPS);
+
+            // transpose
+            myblk.P.ia.length = myblk.JlocT.ia.length;
+            myblk.P.ja.length = myblk.JlocT.ja.length;
+            myblk.P.aa.length = myblk.JlocT.aa.length;
+            nm.smla.transpose(myblk.JlocT.ia, myblk.JlocT.ja, myblk.JlocT.aa, myblk.P.ia, myblk.P.ja, myblk.P.aa);
+
         }
-                
         foreach (blk; localFluidBlocks) {
+
+            /////////////////
+            /*
+            Matrix!number JP = new Matrix!number(blk.cells.length*nPrimitive, blk.cells.length*nPrimitive);
+            Matrix!number JC = new Matrix!number(blk.cells.length*nPrimitive, blk.cells.length*nPrimitive);
+            Matrix!number T = new Matrix!number(blk.cells.length*nPrimitive, blk.cells.length*nPrimitive);
+            foreach(i; 0..blk.cells.length*nPrimitive) {
+                foreach(j; 0..blk.cells.length*nPrimitive) {
+                    JP[i,j] = blk.P[i,j];
+                    T[i,j] = to!number(0.0);
+                }
+            }
+
+            foreach(cell;blk.cells) {
+                auto gmodel = blk.myConfig.gmodel;
+                number gamma = gmodel.gamma(cell.fs.gas);
+                // form inverse transformation matrix
+                T[cell.id*nPrimitive+0,cell.id*nPrimitive+0] = to!number(1.0);
+                T[cell.id*nPrimitive+0,cell.id*nPrimitive+1] = to!number(0.0);
+                T[cell.id*nPrimitive+0,cell.id*nPrimitive+2] = to!number(0.0);
+                T[cell.id*nPrimitive+0,cell.id*nPrimitive+3] = to!number(0.0);
+                // second row
+                T[cell.id*nPrimitive+1,cell.id*nPrimitive+0] = -cell.fs.vel.x/cell.fs.gas.rho;
+                T[cell.id*nPrimitive+1,cell.id*nPrimitive+1] = 1.0/cell.fs.gas.rho;
+                T[cell.id*nPrimitive+1,cell.id*nPrimitive+2] = to!number(0.0);
+                T[cell.id*nPrimitive+1,cell.id*nPrimitive+3] = to!number(0.0);
+                // third row
+                T[cell.id*nPrimitive+2,cell.id*nPrimitive+0] = -cell.fs.vel.y/cell.fs.gas.rho;
+                T[cell.id*nPrimitive+2,cell.id*nPrimitive+1] = to!number(0.0);
+                T[cell.id*nPrimitive+2,cell.id*nPrimitive+2] = 1.0/cell.fs.gas.rho;
+                T[cell.id*nPrimitive+2,cell.id*nPrimitive+3] = to!number(0.0);
+                // fourth row
+                T[cell.id*nPrimitive+3,cell.id*nPrimitive+0] = 0.5*(gamma-1.0)*(cell.fs.vel.x*cell.fs.vel.x+cell.fs.vel.y*cell.fs.vel.y);
+                T[cell.id*nPrimitive+3,cell.id*nPrimitive+1] = -cell.fs.vel.x*(gamma-1);
+                T[cell.id*nPrimitive+3,cell.id*nPrimitive+2] = -cell.fs.vel.y*(gamma-1);
+                T[cell.id*nPrimitive+3,cell.id*nPrimitive+3] = gamma-1.0;
+                
+                T[cell.id*nPrimitive+0,cell.id*nPrimitive+4] = to!number(0.0);
+                T[cell.id*nPrimitive+0,cell.id*nPrimitive+5] = to!number(0.0);
+                // second row
+                T[cell.id*nPrimitive+1,cell.id*nPrimitive+4] = to!number(0.0);
+                T[cell.id*nPrimitive+1,cell.id*nPrimitive+5] = to!number(0.0);
+                // third row
+                T[cell.id*nPrimitive+2,cell.id*nPrimitive+4] = to!number(0.0);
+                T[cell.id*nPrimitive+2,cell.id*nPrimitive+5] = to!number(0.0);
+                // fourth row
+                T[cell.id*nPrimitive+3,cell.id*nPrimitive+4] = -(gamma-1.0);
+                T[cell.id*nPrimitive+3,cell.id*nPrimitive+5] = to!number(0.0);
+                // fifth row
+                T[cell.id*nPrimitive+4,cell.id*nPrimitive+0] = -cell.fs.tke/cell.fs.gas.rho;
+                T[cell.id*nPrimitive+4,cell.id*nPrimitive+1] = to!number(0.0);
+                T[cell.id*nPrimitive+4,cell.id*nPrimitive+2] = to!number(0.0);
+                T[cell.id*nPrimitive+4,cell.id*nPrimitive+3] = to!number(0.0);
+                T[cell.id*nPrimitive+4,cell.id*nPrimitive+4] = 1.0/cell.fs.gas.rho;
+                T[cell.id*nPrimitive+4,cell.id*nPrimitive+5] = to!number(0.0);
+                // sixth row
+                T[cell.id*nPrimitive+5,cell.id*nPrimitive+0] = -cell.fs.omega/cell.fs.gas.rho;
+                T[cell.id*nPrimitive+5,cell.id*nPrimitive+1] = to!number(0.0);
+                T[cell.id*nPrimitive+5,cell.id*nPrimitive+2] = to!number(0.0);
+                T[cell.id*nPrimitive+5,cell.id*nPrimitive+3] = to!number(0.0);
+                T[cell.id*nPrimitive+5,cell.id*nPrimitive+4] = to!number(0.0);
+                T[cell.id*nPrimitive+5,cell.id*nPrimitive+5] = 1.0/cell.fs.gas.rho;
+                
+            }
+
+            for (size_t i = 0; i < blk.cells.length*nPrimitive; i++) {
+                for (size_t j = 0; j < blk.cells.length*nPrimitive; j++) {
+                    JC[i,j] = to!number(0.0);
+                    for (size_t k = 0; k < blk.cells.length*nPrimitive; k++) {
+                        JC[i,j] += JP[i,k]*T[k,j];
+                    }
+                }
+            }
+            */
+            ////////////////
+
+
+
+
             // compute arbitrary vector
             number[] v;
             v.length = blk.cells.length*nPrimitive;
@@ -292,6 +407,7 @@ void main(string[] args) {
             number[] p2;
             p2.length = blk.cells.length*nPrimitive;
 
+            /*
             // transpose the transposed primitive Jacpboan
             auto Jloc = new SMatrix!number();
             Jloc.ia ~= 0;
@@ -304,12 +420,14 @@ void main(string[] args) {
                 }
                 Jloc.ia ~= Jloc.aa.length;
             }
+            */
             
             // explicit multiplication of Jv
             foreach ( i; 0..blk.cells.length*nPrimitive) {
                 p1[i] = 0.0;
                 foreach ( j; 0..blk.cells.length*nPrimitive) {
-                    p1[i] += Jloc[i,j]*v[j];
+                    p1[i] += blk.P[i,j]*v[j];
+                    //p1[i] += JC[i,j]*v[j];
                 }
             }
 
@@ -321,7 +439,7 @@ void main(string[] args) {
                 string fileName = "primitive_jacobian_test.output";
                 auto outFile = File(fileName, "w");
                 foreach( i; 0..v.length ) {
-                    size_t id = i/4;
+                    size_t id = i/nPrimitive;
                     outFile.writef("%d    %.16e    %.16e    %.16f    %.16f \n", id, fabs((p1[i]-p2[i])/p1[i]), fabs(p1[i]-p2[i]), p1[i], p2[i]);
                 }
             }
@@ -330,22 +448,120 @@ void main(string[] args) {
         return;
     }
 
-    /* Verify conservative Jacobian routines via Frechet Derivative */
+    /* Check Accuracy of Conservative Jacobian routines via Frechet Derivative Comparison */
+    
     if (verifyConservativeJacobianFlag) {
         bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega);
         size_t nPrimitive; 
-        if (GlobalConfig.dimensions == 2) nPrimitive = 4;  // density, velocity(x,y), pressure
-        else nPrimitive = 5;                               // density, velocity(x,y,z), pressure
-
+        nPrimitive = 4;  // density, velocity(x,y), pressure
+        if (GlobalConfig.dimensions == 3) nPrimitive += 1; // velocity(z)
+        if (with_k_omega) nPrimitive += 2; // tke, omega
+        
         // make sure ghost cells are filled
         foreach (myblk; parallel(localFluidBlocks,1)) {
             myblk.applyPreReconAction(0.0, 0, 0);
             myblk.applyPostConvFluxAction(0.0, 0, 0);
             myblk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
             myblk.applyPostDiffFluxAction(0.0, 0, 0);
+            
+            steadystate_core.evalRHS(0.0, 0);
+            steadystate_core.evalRHS(0.0, 1);
+
+            myblk.applyPreReconAction(0.0, 0, 0);
+            myblk.applyPostConvFluxAction(0.0, 0, 0);
+            myblk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
+            myblk.applyPostDiffFluxAction(0.0, 0, 0);
+
+            
+            myblk.Minv = new Matrix!number(nPrimitive, nPrimitive);
+            myblk.JcT = new SMatrix!number();
+            myblk.Jc = new SMatrix!number();
+            myblk.P = new SMatrix!number();
+            myblk.JlocT = new SMatrix!number();
+            local_flow_jacobian_transpose(myblk.JlocT, myblk, nPrimitive, myblk.myConfig.interpolation_order, EPS, false, true); // false, true
+            // transpose
+            myblk.P.ia.length = myblk.JlocT.ia.length;
+            myblk.P.ja.length = myblk.JlocT.ja.length;
+            myblk.P.aa.length = myblk.JlocT.aa.length;
+            nm.smla.transpose(myblk.JlocT.ia, myblk.JlocT.ja, myblk.JlocT.aa, myblk.P.ia, myblk.P.ja, myblk.P.aa);
+            
         }
-                
+        
         foreach (blk; localFluidBlocks) {
+            
+            //////////////////
+            /*
+            foreach (cell; blk.cells) {
+                double[][] tmp;
+                tmp.length = nPrimitive;
+                foreach (ref a; tmp) a.length = nPrimitive;
+                with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega);
+                
+                cell.U[1].copy_values_from(cell.U[0]);
+                cell.U[1].mass += EPS;
+                cell.decode_conserved(0, 1, 0.0);
+                tmp[0][0] = cell.fs.gas.rho.im/EPS.im;
+                tmp[1][0] = cell.fs.vel.x.im/EPS.im;
+                tmp[2][0] = cell.fs.vel.y.im/EPS.im;
+                tmp[3][0] = cell.fs.gas.p.im/EPS.im;
+                tmp[4][0] = cell.fs.tke.im/EPS.im;
+                tmp[5][0] = cell.fs.omega.im/EPS.im;
+                    
+                cell.U[1].copy_values_from(cell.U[0]);
+                cell.U[1].momentum.refx += EPS;
+                cell.decode_conserved(0, 1, 0.0);
+                tmp[0][1] = cell.fs.gas.rho.im/EPS.im;
+                tmp[1][1] = cell.fs.vel.x.im/EPS.im;
+                tmp[2][1] = cell.fs.vel.y.im/EPS.im;
+                tmp[3][1] = cell.fs.gas.p.im/EPS.im;
+                tmp[4][1] = cell.fs.tke.im/EPS.im;
+                tmp[5][1] = cell.fs.omega.im/EPS.im;
+                
+                cell.U[1].copy_values_from(cell.U[0]);
+                cell.U[1].momentum.refy += EPS;
+                cell.decode_conserved(0, 1, 0.0);
+                tmp[0][2] = cell.fs.gas.rho.im/EPS.im;
+                tmp[1][2] = cell.fs.vel.x.im/EPS.im;
+                tmp[2][2] = cell.fs.vel.y.im/EPS.im;
+                tmp[3][2] = cell.fs.gas.p.im/EPS.im;
+                tmp[4][2] = cell.fs.tke.im/EPS.im;
+                tmp[5][2] = cell.fs.omega.im/EPS.im;
+                
+                cell.U[1].copy_values_from(cell.U[0]);
+                cell.U[1].total_energy += EPS;
+                cell.decode_conserved(0, 1, 0.0);
+                tmp[0][3] = cell.fs.gas.rho.im/EPS.im;
+                tmp[1][3] = cell.fs.vel.x.im/EPS.im;
+                tmp[2][3] = cell.fs.vel.y.im/EPS.im;
+                tmp[3][3] = cell.fs.gas.p.im/EPS.im;
+                tmp[4][3] = cell.fs.tke.im/EPS.im;
+                tmp[5][3] = cell.fs.omega.im/EPS.im;
+                
+                cell.U[1].copy_values_from(cell.U[0]);
+                cell.U[1].tke += EPS;
+                cell.decode_conserved(0, 1, 0.0);
+                tmp[0][4] = cell.fs.gas.rho.im/EPS.im;
+                tmp[1][4] = cell.fs.vel.x.im/EPS.im;
+                tmp[2][4] = cell.fs.vel.y.im/EPS.im;
+                tmp[3][4] = cell.fs.gas.p.im/EPS.im;
+                tmp[4][4] = cell.fs.tke.im/EPS.im;
+                tmp[5][4] = cell.fs.omega.im/EPS.im;
+                
+                cell.U[1].copy_values_from(cell.U[0]);
+                cell.U[1].omega += EPS;
+                cell.decode_conserved(0, 1, 0.0);
+                tmp[0][5] = cell.fs.gas.rho.im/EPS.im;
+                tmp[1][5] = cell.fs.vel.x.im/EPS.im;
+                tmp[2][5] = cell.fs.vel.y.im/EPS.im;
+                tmp[3][5] = cell.fs.gas.p.im/EPS.im;
+                tmp[4][5] = cell.fs.tke.im/EPS.im;
+                tmp[5][5] = cell.fs.omega.im/EPS.im;
+                
+                writeln("ref: ", cell.id, ", ", tmp);
+            }
+            */
+            //////////////////
+            
             // compute arbitrary vector
             number[] v;
             v.length = blk.cells.length*nPrimitive;
@@ -371,20 +587,20 @@ void main(string[] args) {
             p2.length = blk.cells.length*nPrimitive;
 
             // form 1st order Jacobian via ILU preconditioner routines
-            GlobalConfig.sssOptions.preconditionMatrixType = PreconditionMatrixType.ilu;
-            sss_preconditioner_initialisation(blk, nPrimitive);
-            sss_preconditioner(blk, nPrimitive, 1.0e+16);
+            //GlobalConfig.sssOptions.preconditionMatrixType = PreconditionMatrixType.ilu;
+            //sss_preconditioner_initialisation(blk, nPrimitive);
+            //sss_preconditioner(blk, nPrimitive, 1.0e+16);
             
             // form block diagonal precondition sub-matrices
-            GlobalConfig.sssOptions.preconditionMatrixType = PreconditionMatrixType.block_diagonal;
-            sss_preconditioner_initialisation(blk, nPrimitive);
-            sss_preconditioner(blk, nPrimitive, 1.0e+16);
+            //GlobalConfig.sssOptions.preconditionMatrixType = PreconditionMatrixType.block_diagonal;
+            //sss_preconditioner_initialisation(blk, nPrimitive);
+            //sss_preconditioner(blk, nPrimitive, 1.0e+16);
 
             // explicit multiplication of Jv
             foreach ( i; 0..blk.cells.length*nPrimitive) {
                 p1[i] = 0.0;
                 foreach ( j; 0..blk.cells.length*nPrimitive) {
-                    p1[i] += blk.Jc[i,j]*v[j];
+                    p1[i] += blk.P[i,j]*v[j];
                 }
             }
 
@@ -393,14 +609,15 @@ void main(string[] args) {
 
             // write out results for the 1st order Jacobian test
             {
-                string fileName = "conservative_jacobian_test0.output";
+                string fileName = "conservative_jacobian_test.output";
                 auto outFile = File(fileName, "w");
                 foreach( i; 0..v.length ) {
-                    size_t id = i/4;
+                    size_t id = i/nPrimitive;
                     outFile.writef("%d    %.16e    %.16e    %.16f    %.16f \n", id, fabs((p1[i]-p2[i])/p1[i]), fabs(p1[i]-p2[i]), p1[i], p2[i]);
                 }
             }
 
+            /*
             // write out results for testing the block-diagonal sub-matrices
             {
                 string fileName = "convervative_jacobian_test1.output";
@@ -418,6 +635,7 @@ void main(string[] args) {
                     }
                 }
             }
+            */
         }
         writeln("Conservative Jacobian Test: COMPLETED");
         return;
@@ -426,9 +644,11 @@ void main(string[] args) {
     /* Steady-state solver preconditioner routines test */
     if (verifySSSPreconditionerFlag) {
         size_t nPrimitive; 
-        if (GlobalConfig.dimensions == 2) nPrimitive = 4;  // density, velocity(x,y), pressure
-        else nPrimitive = 5;                               // density, velocity(x,y,z), pressure
         bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega);
+        nPrimitive = 4;  // density, velocity(x,y), pressure
+        if (GlobalConfig.dimensions == 3) nPrimitive += 1; // velocity(z)
+        if (with_k_omega) nPrimitive += 2; // tke, omega
+
         
         // Construct 1st order Flow Jacobian Transpose
         foreach (myblk; parallel(localFluidBlocks,1)) {
