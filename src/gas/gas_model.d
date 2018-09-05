@@ -183,6 +183,27 @@ public:
         }
     }
 
+    final void massf2numden(in GasState Q, number[] numden)
+    in {
+        assert(Q.massf.length == numden.length, brokenPreCondition("Inconsistent array lengths."));
+    }
+    body {
+        foreach ( i; 0.._n_species ) {
+            numden[i] = Avogadro_number*Q.massf[i]*Q.rho / _mol_masses[i];
+        }
+    }
+
+    final void numden2massf(in number[] numden, GasState Q)
+    in {
+        assert(Q.massf.length == numden.length, brokenPreCondition("Inconsistent array lengths."));
+    }
+    body {
+        foreach ( i; 0.._n_species ) {
+            Q.massf[i] = numden[i]*_mol_masses[i] / (Avogadro_number*Q.rho);
+            if ( Q.massf[i] < MIN_MASS_FRACTION ) Q.massf[i] = 0.0;
+        }
+    }
+
 protected:
     // These data need to be properly initialized by the derived class.
     uint _n_species;

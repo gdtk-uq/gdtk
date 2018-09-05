@@ -169,16 +169,10 @@ version(electronically_specific_gas_test) {
     int main()
     {
         import util.msg_service;
-        import std.math : FloatingPointControl; 
-        FloatingPointControl fpctrl;
-        // Enable hardware exceptions for division by zero, overflow to infinity,
-        // invalid operations, and uninitialized floating-point variables.
-        // Copied from https://dlang.org/library/std/math/floating_point_control.html
-        fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
 
         auto L = init_lua_State();
-        doLuaFile(L, "sample-data/brad_elec_composition.lua");
-        auto gm = new ElectronicSpeciesGas(L);
+        doLuaFile(L, "sample-data/elec_composition.lua");
+        auto gm = new ElectronicallySpecificGas(L);
         auto gd = new GasState(19,19);
 
         gd.massf[] = 0.0;
@@ -191,6 +185,8 @@ version(electronically_specific_gas_test) {
         gd.T_modes[0]=10000.0;
 
         gm.update_thermo_from_pT(gd);
+
+
 
         return 0;
     }
