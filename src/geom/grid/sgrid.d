@@ -985,6 +985,77 @@ to convert to metres for use in Eilmer.
     return grids;
 } // end import_gridpro_grid()
 
+StructuredGrid[] importPlot3DGrid(string fileName, int dim, double scale=1.0)
+{
+    if (dim != 2 && dim != 3) {
+        string errMsg = "ERROR in importPlot3DGrids: 'dim' must be 2 or 3";
+        throw new Error(errMsg);
+    }
+
+    auto f = File(fileName, "r");
+    // Determine if we have multiblock file, or not. A multiblock file
+    // will have a single integer on line.
+    auto line = f.readln().strip();
+    auto tks = line.split();
+    int nBlocks = (tks.length == 1) ? to!int(tks[0]) : 1;
+    // Next gather up the ni, nj and (possibly) nk dimensions.
+    StructuredGrid[] grids;
+    if (nBlocks == 1) {
+        // We already have the line gather up with indices.
+        auto niv = to!int(tks[0]);
+        auto njv = to!int(tks[1]);
+        auto nkv = (dim == 3) ? to!int(tks[2]) : 1;
+        grids ~= new StructuredGrid(niv, njv, nkv);
+    }
+    else {
+        foreach (iBlk; 0 .. nBlocks) {
+            line = f.readln().strip();
+            tks = line.split();
+            auto niv = to!int(tks[0]);
+            auto njv = to!int(tks[1]);
+            auto nkv = (dim == 3) ? to!int(tks[2]) : 1;
+            grids ~= new StructuredGrid(niv, njv, nkv);
+        }
+    }
+    // Now loop for all blocks, gathering x then y then z coordinates.
+    // We only gather z for dim = 3. Plot3D considers a 2D grid as
+    // one in the x-y plane. It is physically 2D. Not "logically" 2D
+    // as a surface in 3D might be.
+    foreach (g; grids) {
+        foreach (k; 0 .. g.nkv) {
+            foreach (j; 0 .. g.njv) {
+                foreach (i; 0 .. g.niv) {
+                    line = f.readln().strip();
+                    tks = line.split();
+                    g[i,j,k].refx = to!number(tks[0]);
+                }
+            }
+        }
+        foreach (k; 0 .. g.nkv) {
+            foreach (j; 0 .. g.njv) {
+                foreach (i; 0 .. g.niv) {
+                    line = f.readln().strip();
+                    tks = line.split();
+                    g[i,j,k].refy = to!number(tks[0]);
+                }
+            }
+        }
+        if (dim == 3) {
+            foreach (k; 0 .. g.nkv) {
+                foreach (j; 0 .. g.njv) {
+                    foreach (i; 0 .. g.niv) {
+                        line = f.readln().strip();
+                        tks = line.split();
+                        g[i,j,k].refz = to!number(tks[0]);
+                    }
+                }
+            }
+        }
+    }
+    f.close();
+    return grids;
+}
+
 void writeGridsAsPlot3D(string fname, StructuredGrid[] grids, int dim)
 {
     if ( dim != 2 && dim != 3 ) {
