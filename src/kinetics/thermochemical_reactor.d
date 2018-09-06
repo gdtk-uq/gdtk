@@ -18,6 +18,7 @@ import gas.fuel_air_mix;
 import gas.two_temperature_nitrogen;
 import gas.vib_specific_nitrogen;
 import gas.two_temperature_air;
+import gas.pseudo_species_gas;
 
 import kinetics.chemistry_update;
 import kinetics.powers_aslam_kinetics;
@@ -27,7 +28,7 @@ import kinetics.fuel_air_mix_kinetics;
 import kinetics.two_temperature_nitrogen_kinetics;
 import kinetics.vib_specific_nitrogen_kinetics;
 import kinetics.two_temperature_air_kinetics;
-
+import kinetics.pseudo_species_kinetics;
 
 class ThermochemicalReactorUpdateException : Exception {
     this(string message, string file=__FILE__, size_t line=__LINE__,
@@ -53,9 +54,9 @@ public:
     // For example, the mixing-limited combustion model by JJ Hoste needs
     // some information about the local flow state beyond the usual gas state.
     abstract void opCall(GasState Q, double tInterval,
-                         ref double dtChemSuggest, ref double dtThermSuggest, 
+                         ref double dtChemSuggest, ref double dtThermSuggest,
                          ref number[] params);
-    
+
     // We will need to access this referenced model from the Lua functions
     // so it needs to be public.
     GasModel _gmodel;
@@ -92,9 +93,11 @@ ThermochemicalReactor init_thermochemical_reactor(GasModel gmodel, string fileNa
     if ((cast(TwoTemperatureAir) gmodel) !is null) {
         reactor = new TwoTemperatureAirKinetics(fileName1, fileName2, gmodel);
     }
+    if ((cast(PseudoSpeciesGas) gmodel) !is null) {
+        reactor = new PseudoSpeciesKinetics(gmodel);
+    }
     if (reactor is null) {
         throw new ThermochemicalReactorUpdateException("Oops, failed to set up a ThermochemicalReactor.");
     }
     return reactor;
 } // end init_thermochemical_reactor()
-
