@@ -585,166 +585,170 @@ void integrate_in_time(double target_time_as_requested)
     //                 Top of main time-stepping loop
     //----------------------------------------------------------------
     while ( !finished_time_stepping ) {
-        //
-        // 0.0 Run-time configuration may change, a halt may be called, etc.
-        check_run_time_configuration(target_time_as_requested);
-        //
-        // 1.0 Maintain a stable time step size, and other maintenance, as required.
-        determine_time_step_size();
-        //
-        if (GlobalConfig.divergence_cleaning) {
-            update_ch_for_divergence_cleaning();
-        }
-        // If using k-omega, we need to set mu_t and k_t BEFORE we call convective_update
-        // because the convective update is where the interface values of mu_t and k_t are set.
-        // only needs to be done on initial step, subsequent steps take care of setting these values 
-        if ((step == 0) && (GlobalConfig.turbulence_model == TurbulenceModel.k_omega)) {
-            k_omega_set_mu_and_k();
-        }
-        //
-        // 2.0 Attempt a time step.
-        // 2.1 Chemistry 1/2 step (if appropriate). 
-        if (GlobalConfig.reacting && 
-            (GlobalConfig.strangSplitting == StrangSplittingMode.half_R_full_T_half_R) &&
-            (sim_time > GlobalConfig.reaction_time_delay)) {
-            chemistry_step(0.5*dt_global);
-        }
-        // 2.2 Update the convective terms.
-        if (GlobalConfig.grid_motion == GridMotion.none) {
-            gasdynamic_explicit_increment_with_fixed_grid();
-        } else {
-            // Moving Grid - perform gas update for moving grid
-            // [TODO] PJ 2018-01-20 Up to here with thinking about MPI parallel.
-            set_grid_velocities(sim_time, step, 0, dt_global);
-            gasdynamic_explicit_increment_with_moving_grid();
-            recalculate_all_geometry();
-        }
-        // 2.3 Solid domain update (if loosely coupled)
-        // If tight coupling, then this has already been performed
-        // in the gasdynamic_explicit_increment().
-        if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.loose) {
-            // Call Nigel's update function here.
-            solid_domains_backward_euler_update(sim_time, dt_global);
-        }
-        // 2.4 Chemistry step or 1/2 step (if appropriate). 
-        if ( GlobalConfig.reacting && (sim_time > GlobalConfig.reaction_time_delay)) {
-            double mydt = (GlobalConfig.strangSplitting == StrangSplittingMode.full_T_full_R) ? dt_global : 0.5*dt_global;
-            chemistry_step(mydt);
-        }
-        //
-        // 3.0 Update the time record and (occasionally) print status.
-        step = step + 1;
-        output_just_written = false;
-        history_just_written = false;
-        loads_just_written = false;
-        if ( (step / GlobalConfig.print_count) * GlobalConfig.print_count == step ) {
-            // Print the current time-stepping status.
-            auto writer = appender!string();
-            formattedWrite(writer, "Step=%7d t=%10.3e dt=%10.3e ", step, sim_time, dt_global);
-            // For reporting wall-clock time, convert to seconds with precision of milliseconds.
-            double wall_clock_elapsed = to!double((Clock.currTime() - wall_clock_start).total!"msecs"()) / 1000.0;
-            double wall_clock_per_step = wall_clock_elapsed / step;
-            double WCtFT = (GlobalConfig.max_time - sim_time) / dt_global * wall_clock_per_step;
-            double WCtMS = (GlobalConfig.max_step - step) * wall_clock_per_step;
-            formattedWrite(writer, "WC=%.1f WCtFT=%.1f WCtMS=%.1f", 
-                           wall_clock_elapsed, WCtFT, WCtMS);
-            if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) {
-                writeln(writer.data);
-                stdout.flush();
+        try {
+            // 0.0 Run-time configuration may change, a halt may be called, etc.
+            check_run_time_configuration(target_time_as_requested);
+            //
+            // 1.0 Maintain a stable time step size, and other maintenance, as required.
+            determine_time_step_size();
+            //
+            if (GlobalConfig.divergence_cleaning) {
+                update_ch_for_divergence_cleaning();
             }
-            version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
-            if (GlobalConfig.report_residuals) {
-                // We also compute the residual information and write to screen
-                auto wallClock2 = 1.0e-3*(Clock.currTime() - wall_clock_start).total!"msecs"();
-                compute_Linf_residuals(Linf_residuals);
-                version(mpi_parallel) {
-                    // Reduce residual values across MPI tasks.
-                    double my_local_value = Linf_residuals.mass;
-                    MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-                    Linf_residuals.mass = my_local_value;
-                    my_local_value = Linf_residuals.momentum.x;
-                    MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-                    Linf_residuals.momentum.refx = my_local_value;
-                    my_local_value = Linf_residuals.momentum.y;
-                    MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-                    Linf_residuals.momentum.refy = my_local_value;
-                    my_local_value = Linf_residuals.momentum.z;
-                    MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-                    Linf_residuals.momentum.refz = my_local_value;
-                    my_local_value = Linf_residuals.total_energy;
-                    MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-                    Linf_residuals.total_energy = my_local_value;
-                }
-                if (GlobalConfig.is_master_task) {
-                    auto writer2 = appender!string();
-                    formattedWrite(writer2, "RESIDUALS: step= %7d WC= %.8f ",
-                                   step, wallClock2);
-                    formattedWrite(writer2, "MASS: %10.6e X-MOM: %10.6e Y-MOM: %10.6e ENERGY: %10.6e",
-                                   Linf_residuals.mass, Linf_residuals.momentum.x,
-                                   Linf_residuals.momentum.y, Linf_residuals.total_energy);
-                    writeln(writer2.data);
+            // If using k-omega, we need to set mu_t and k_t BEFORE we call convective_update
+            // because the convective update is where the interface values of mu_t and k_t are set.
+            // only needs to be done on initial step, subsequent steps take care of setting these values 
+            if ((step == 0) && (GlobalConfig.turbulence_model == TurbulenceModel.k_omega)) {
+                k_omega_set_mu_and_k();
+            }
+            //
+            // 2.0 Attempt a time step.
+            // 2.1 Chemistry 1/2 step (if appropriate). 
+            if (GlobalConfig.reacting && 
+                (GlobalConfig.strangSplitting == StrangSplittingMode.half_R_full_T_half_R) &&
+                (sim_time > GlobalConfig.reaction_time_delay)) {
+                chemistry_step(0.5*dt_global);
+            }
+            // 2.2 Update the convective terms.
+            if (GlobalConfig.grid_motion == GridMotion.none) {
+                gasdynamic_explicit_increment_with_fixed_grid();
+            } else {
+                // Moving Grid - perform gas update for moving grid
+                // [TODO] PJ 2018-01-20 Up to here with thinking about MPI parallel.
+                set_grid_velocities(sim_time, step, 0, dt_global);
+                gasdynamic_explicit_increment_with_moving_grid();
+                recalculate_all_geometry();
+            }
+            // 2.3 Solid domain update (if loosely coupled)
+            // If tight coupling, then this has already been performed
+            // in the gasdynamic_explicit_increment().
+            if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.loose) {
+                // Call Nigel's update function here.
+                solid_domains_backward_euler_update(sim_time, dt_global);
+            }
+            // 2.4 Chemistry step or 1/2 step (if appropriate). 
+            if ( GlobalConfig.reacting && (sim_time > GlobalConfig.reaction_time_delay)) {
+                double mydt = (GlobalConfig.strangSplitting == StrangSplittingMode.full_T_full_R) ?
+                    dt_global : 0.5*dt_global;
+                chemistry_step(mydt);
+            }
+            //
+            // 3.0 Update the time record and (occasionally) print status.
+            step = step + 1;
+            output_just_written = false;
+            history_just_written = false;
+            loads_just_written = false;
+            if ((step / GlobalConfig.print_count) * GlobalConfig.print_count == step) {
+                // Print the current time-stepping status.
+                auto writer = appender!string();
+                formattedWrite(writer, "Step=%7d t=%10.3e dt=%10.3e ", step, sim_time, dt_global);
+                // For reporting wall-clock time, convert to seconds with precision of milliseconds.
+                double wall_clock_elapsed = to!double((Clock.currTime()-wall_clock_start).total!"msecs"())/1000.0;
+                double wall_clock_per_step = wall_clock_elapsed / step;
+                double WCtFT = (GlobalConfig.max_time - sim_time) / dt_global * wall_clock_per_step;
+                double WCtMS = (GlobalConfig.max_step - step) * wall_clock_per_step;
+                formattedWrite(writer, "WC=%.1f WCtFT=%.1f WCtMS=%.1f", 
+                               wall_clock_elapsed, WCtFT, WCtMS);
+                if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) {
+                    writeln(writer.data);
                     stdout.flush();
                 }
+                version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
+                if (GlobalConfig.report_residuals) {
+                    // We also compute the residual information and write to screen
+                    auto wallClock2 = 1.0e-3*(Clock.currTime() - wall_clock_start).total!"msecs"();
+                    compute_Linf_residuals(Linf_residuals);
+                    version(mpi_parallel) {
+                        // Reduce residual values across MPI tasks.
+                        double my_local_value = Linf_residuals.mass;
+                        MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+                        Linf_residuals.mass = my_local_value;
+                        my_local_value = Linf_residuals.momentum.x;
+                        MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+                        Linf_residuals.momentum.refx = my_local_value;
+                        my_local_value = Linf_residuals.momentum.y;
+                        MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+                        Linf_residuals.momentum.refy = my_local_value;
+                        my_local_value = Linf_residuals.momentum.z;
+                        MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+                        Linf_residuals.momentum.refz = my_local_value;
+                        my_local_value = Linf_residuals.total_energy;
+                        MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+                        Linf_residuals.total_energy = my_local_value;
+                    }
+                    if (GlobalConfig.is_master_task) {
+                        auto writer2 = appender!string();
+                        formattedWrite(writer2, "RESIDUALS: step= %7d WC= %.8f ",
+                                       step, wallClock2);
+                        formattedWrite(writer2, "MASS: %10.6e X-MOM: %10.6e Y-MOM: %10.6e ENERGY: %10.6e",
+                                       Linf_residuals.mass, Linf_residuals.momentum.x,
+                                       Linf_residuals.momentum.y, Linf_residuals.total_energy);
+                        writeln(writer2.data);
+                        stdout.flush();
+                    }
+                } // end if report_residuals
+                version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
+            } // end if (step...
+            //
+            // 4.0 (Occasionally) Write out an intermediate solution
+            if ((sim_time >= t_plot) && !output_just_written) {
+                write_solution_files();
+                output_just_written = true;
+                t_plot = t_plot + GlobalConfig.dt_plot;
+                GC.collect();
             }
-            version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
-        }
-        //
-        // 4.0 (Occasionally) Write out an intermediate solution
-        if ((sim_time >= t_plot) && !output_just_written) {
-            write_solution_files();
-            output_just_written = true;
-            t_plot = t_plot + GlobalConfig.dt_plot;
-            GC.collect();
-        }
-        //
-        // 4.1 (Occasionally) Write out the cell history data and loads on boundary groups data
-        if ((sim_time >= t_history) && !history_just_written) {
-            write_history_cells_to_files(sim_time);
-            history_just_written = true;
-            t_history = t_history + GlobalConfig.dt_history;
-            GC.collect();
-        }
-        if (GlobalConfig.compute_loads && (sim_time >= t_loads) && !loads_just_written) {
-            write_boundary_loads_to_file(sim_time, current_loads_tindx);
-            update_loads_times_file(sim_time, current_loads_tindx);
-            loads_just_written = true;
-            current_loads_tindx = current_loads_tindx + 1;
-            t_loads = t_loads + GlobalConfig.dt_loads;
-            GC.collect();
-        }
-        //
-        // 5.0 Update the run-time loads calculation, if required
-        if (GlobalConfig.compute_run_time_loads) {
-            version(mpi_parallel) {
-                // Do not attempt to update run time loads.
-                // Need to think about how to coordinate this globally.
-            } else {
-                if ((step / GlobalConfig.run_time_loads_count) * GlobalConfig.run_time_loads_count == step) {
-                    computeRunTimeLoads();
+            //
+            // 4.1 (Occasionally) Write out the cell history data and loads on boundary groups data
+            if ((sim_time >= t_history) && !history_just_written) {
+                write_history_cells_to_files(sim_time);
+                history_just_written = true;
+                t_history = t_history + GlobalConfig.dt_history;
+                GC.collect();
+            }
+            if (GlobalConfig.compute_loads && (sim_time >= t_loads) && !loads_just_written) {
+                write_boundary_loads_to_file(sim_time, current_loads_tindx);
+                update_loads_times_file(sim_time, current_loads_tindx);
+                loads_just_written = true;
+                current_loads_tindx = current_loads_tindx + 1;
+                t_loads = t_loads + GlobalConfig.dt_loads;
+                GC.collect();
+            }
+            //
+            // 5.0 Update the run-time loads calculation, if required
+            if (GlobalConfig.compute_run_time_loads) {
+                version(mpi_parallel) {
+                    // Do not attempt to update run time loads.
+                    // Need to think about how to coordinate this globally.
+                } else {
+                    if ((step / GlobalConfig.run_time_loads_count) * GlobalConfig.run_time_loads_count == step) {
+                        computeRunTimeLoads();
+                    }
                 }
             }
+            //
+            // 6.0 For steady-state approach, check the residuals for mass and energy.
+            //
+            // 7.0 Spatial filter may be applied occasionally.
+        } catch(Exception e) {
+            writefln("Exception caught while trying to take step %d.", step);
+            writeln(e);
+            finished_time_stepping = true;
         }
         //
-        // 6.0 For steady-state approach, check the residuals for mass and energy.
+        // Loop termination criteria:
+        // (a) Exception caught.
+        // (b) Reaching a maximum simulation time or target time.
+        // (c) Reaching a maximum number of steps.
+        // (d) Finding that the "halt_now" parameter has been set 
+        //     in the control-parameter file.
+        //     This provides a semi-interactive way to terminate the 
+        //     simulation and save the data.
+        // (e) Exceeding a maximum number of wall-clock seconds.
         //
-        // 7.0 Spatial filter may be applied occasionally.
+        // Note that the max_time and max_step control parameters can also
+        // be found in the control-parameter file (which may be edited
+        // while the code is running).
         //
-        // 8.0 Loop termination criteria:
-        //    (1) reaching a maximum simulation time or target time
-        //    (2) reaching a maximum number of steps
-        //    (3) finding that the "halt_now" parameter has been set 
-        //        in the control-parameter file.
-        //        This provides a semi-interactive way to terminate the 
-        //        simulation and save the data.
-        //    (4) Exceeding a maximum number of wall-clock seconds.
-        //    (5) Having the temperature at one of the control points exceed 
-        //        the preset tolerance.  
-        //        This is mainly for the radiation-coupled simulations.
-        //    (-) Exceeding an allowable delta(f_rad) / f_rad_org factor
-        //
-        //    Note that the max_time and max_step control parameters can also
-        //    be found in the control-parameter file (which may be edited
-        //    while the code is running).
         if (sim_time >= target_time) { finished_time_stepping = true; }
         if (step >= GlobalConfig.max_step) { finished_time_stepping = true; }
         if (GlobalConfig.halt_now == 1) { finished_time_stepping = true; }
