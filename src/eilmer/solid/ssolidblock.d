@@ -697,6 +697,10 @@ public:
                     qx = -IFace.sp.k * dTdx;
                     qy = -IFace.sp.k * dTdy;
                 }
+                else if (myConfig.solid_has_homogeneous_properties) { 
+		    qx = -IFace.sp.k11 * dTdx - IFace.sp.k12 * dTdy; 
+		    qy = -IFace.sp.k21 * dTdx - IFace.sp.k22 * dTdy;  
+		}
                 IFace.flux = qx * IFace.n.x + qy * IFace.n.y;
             }
         }
@@ -716,6 +720,10 @@ public:
                     qx = -IFace.sp.k * dTdx;
                     qy = -IFace.sp.k * dTdy;
                 }
+                else if (myConfig.solid_has_homogeneous_properties) { 
+		    qx = -IFace.sp.k11 * dTdx - IFace.sp.k12 * dTdy; 
+		    qy = -IFace.sp.k21 * dTdx - IFace.sp.k22 * dTdy;  
+		}
                 IFace.flux = qx * IFace.n.x + qy * IFace.n.y;
             }
         }
