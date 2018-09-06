@@ -361,7 +361,7 @@ usageMsg ~= to!string(totalCPUs) ~" on this machine
         }        
         init_simulation(tindxStart, nextLoadsIndx, maxCPUs, threadsPerMPITask, maxWallClock);
         if (verbosityLevel > 0 && GlobalConfig.is_master_task) {
-            writeln("starting simulation time= ", simcore.sim_time);
+            writeln("starting simulation time= ", simcore.SimState.time);
         }
         version(mpi_parallel) {
             stdout.flush();

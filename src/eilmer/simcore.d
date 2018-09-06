@@ -60,13 +60,12 @@ version(mpi_parallel) {
 
 // State data for simulation.
 // Needs to be seen by all of the coordination functions.
-shared static double sim_time;  // present simulation time, tracked by code
-shared static double[] sim_time_array;
+final class SimState {
+    shared static double time;  // present simulation time, tracked by code
+}
 shared static int step;
 shared static double dt_global;     // simulation time step determined by code
 shared static double dt_allow;      // allowable global time step determined by code
-shared static double[] local_dt_allow; // each block will put its result into this array
-shared static int[] local_invalid_cell_count;
 shared static double target_time;  // simulate_in_time will work toward this value
 shared static bool do_cfl_check_now;
 
@@ -93,6 +92,12 @@ shared static string flowFileExt = "gz";
 // For working out how long the simulation has been running.
 static SysTime wall_clock_start;
 static int maxWallClockSeconds;
+
+// To avoid race conditions, there are a couple of locations where
+// each block will put its result into the following arrays,
+// then we will reduce across the arrays.
+shared static double[] local_dt_allow;
+shared static int[] local_invalid_cell_count;
 
 //----------------------------------------------------------------------------
 
@@ -198,13 +203,12 @@ void init_simulation(int tindx, int nextLoadsIndx,
     foreach (i, myblk; globalFluidBlocks) {
         myblk.globalCellIdStart = (i == 0) ? 0 : globalFluidBlocks[i-1].globalCellIdStart + globalFluidBlocks[i-1].ncells_expected;
     }
-    sim_time_array.length = localFluidBlocks.length;
+    shared double[] time_array;
+    time_array.length = localFluidBlocks.length;
     foreach (i, myblk; parallel(localFluidBlocks,1)) {
         myblk.identify_reaction_zones(0);
         myblk.identify_turbulent_zones(0);
-        // I don't mind if blocks write over sim_time.  
-        // They should all have the same value for it.
-        sim_time_array[i] = myblk.read_solution(make_file_name!"flow"(job_name, myblk.id, current_tindx, flowFileExt), false);
+        time_array[i] = myblk.read_solution(make_file_name!"flow"(job_name, myblk.id, current_tindx, flowFileExt), false);
         foreach (iface; myblk.faces) { iface.gvel.clear(); }
         foreach (cell; myblk.cells) {
             cell.encode_conserved(0, 0, myblk.omegaz);
@@ -215,7 +219,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
         }
         myblk.set_cell_dt_chem(-1.0);
     }
-    sim_time = sim_time_array[0]; // Pick one; they should all be the same.
+    SimState.time = time_array[0]; // Pick one; they should all be the same.
     //
     // Now that the cells for all gas blocks have been initialized,
     // we can sift through the boundary condition effects and
@@ -411,12 +415,12 @@ void write_solution_files()
     auto job_name = GlobalConfig.base_file_name;
     foreach (myblk; parallel(localFluidBlocksBySize,1)) {
         auto file_name = make_file_name!"flow"(job_name, myblk.id, current_tindx, flowFileExt);
-        myblk.write_solution(file_name, sim_time);
+        myblk.write_solution(file_name, SimState.time);
     }
     ensure_directory_is_present(make_path_name!"solid"(current_tindx));
     foreach (ref mySolidBlk; solidBlocks) {
         auto fileName = make_file_name!"solid"(job_name, mySolidBlk.id, current_tindx, "gz");
-        mySolidBlk.writeSolution(fileName, sim_time);
+        mySolidBlk.writeSolution(fileName, SimState.time);
     }
     if (GlobalConfig.grid_motion != GridMotion.none) {
         ensure_directory_is_present(make_path_name!"grid"(current_tindx));
@@ -427,10 +431,10 @@ void write_solution_files()
             blk.write_underlying_grid(fileName);
         }
     }
-    // Update times file, connecting the tindx value to sim_time.
+    // Update times file, connecting the tindx value to SimState.time.
     if (GlobalConfig.is_master_task) {
         auto writer = appender!string();
-        formattedWrite(writer, "%04d %.18e %.18e\n", current_tindx, sim_time, dt_global);
+        formattedWrite(writer, "%04d %.18e %.18e\n", current_tindx, SimState.time, dt_global);
         append(GlobalConfig.base_file_name ~ ".times", writer.data);
     }
 } // end write_solution_files()
@@ -497,7 +501,7 @@ void march_over_blocks()
     // we force dt_plot to be large enough.
     GlobalConfig.dt_plot = max(GlobalConfig.dt_plot, time_slice+1.0);
     // Let's start integrating for the first pair of block slices.
-    integrate_in_time(sim_time+time_slice);
+    integrate_in_time(SimState.time+time_slice);
     // Now, move along one block in i-direction at a time and do the rest.
     foreach (i; 2 .. nib) {
         // Deactivate the old-upstream slice, activate the new slice of blocks.
@@ -513,19 +517,19 @@ void march_over_blocks()
             }
         }
         if (GlobalConfig.propagate_inflow_data) {
-            exchange_ghost_cell_boundary_data(sim_time, 0, 0);
+            exchange_ghost_cell_boundary_data(SimState.time, 0, 0);
             foreach (j; 0 .. njb) {
                 foreach (k; 0 .. nkb) {
                     auto blk = gasBlockArray[i][j][k]; // our newly active block
                     // Get upstream flow data into ghost cells
-                    blk.applyPreReconAction(sim_time, 0, 0);
+                    blk.applyPreReconAction(SimState.time, 0, 0);
                     // and propagate it across the domain.
                     blk.propagate_inflow_data_west_to_east();
                 }
             }
         }
         if (GlobalConfig.verbosity_level > 0) { writeln("march over blocks i=", i); }
-        integrate_in_time(sim_time+time_slice);
+        integrate_in_time(SimState.time+time_slice);
         if (GlobalConfig.save_intermediate_results) { write_solution_files(); }
     }
 } // end march_over_blocks()
@@ -549,9 +553,9 @@ void integrate_in_time(double target_time_as_requested)
     }
     target_time = (GlobalConfig.block_marching) ? target_time_as_requested : GlobalConfig.max_time;
     // The next time for output...
-    t_plot = sim_time + GlobalConfig.dt_plot;
-    t_history = sim_time + GlobalConfig.dt_history;
-    t_loads = sim_time + GlobalConfig.dt_loads;
+    t_plot = SimState.time + GlobalConfig.dt_plot;
+    t_history = SimState.time + GlobalConfig.dt_history;
+    t_loads = SimState.time + GlobalConfig.dt_loads;
     // Overall iteration count.
     step = 0;
     do_cfl_check_now = false;
@@ -559,7 +563,7 @@ void integrate_in_time(double target_time_as_requested)
     if (GlobalConfig.viscous) {
         // We have requested viscous effects but their application may be delayed
         // until the flow otherwise starts.
-        if (GlobalConfig.viscous_delay > 0.0 && sim_time < GlobalConfig.viscous_delay) {
+        if (GlobalConfig.viscous_delay > 0.0 && SimState.time < GlobalConfig.viscous_delay) {
             // We will initially turn-down viscous effects and
             // only turn them up when the delay time is exceeded.
             GlobalConfig.viscous_factor = 0.0;
@@ -580,7 +584,7 @@ void integrate_in_time(double target_time_as_requested)
     //
     // Normally, we can terminate upon either reaching 
     // a maximum time or upon reaching a maximum iteration count.
-    shared bool finished_time_stepping = (sim_time >= target_time) || (step >= GlobalConfig.max_step);
+    shared bool finished_time_stepping = (SimState.time >= target_time) || (step >= GlobalConfig.max_step);
     //----------------------------------------------------------------
     //                 Top of main time-stepping loop
     //----------------------------------------------------------------
@@ -606,7 +610,7 @@ void integrate_in_time(double target_time_as_requested)
             // 2.1 Chemistry 1/2 step (if appropriate). 
             if (GlobalConfig.reacting && 
                 (GlobalConfig.strangSplitting == StrangSplittingMode.half_R_full_T_half_R) &&
-                (sim_time > GlobalConfig.reaction_time_delay)) {
+                (SimState.time > GlobalConfig.reaction_time_delay)) {
                 chemistry_step(0.5*dt_global);
             }
             // 2.2 Update the convective terms.
@@ -615,7 +619,7 @@ void integrate_in_time(double target_time_as_requested)
             } else {
                 // Moving Grid - perform gas update for moving grid
                 // [TODO] PJ 2018-01-20 Up to here with thinking about MPI parallel.
-                set_grid_velocities(sim_time, step, 0, dt_global);
+                set_grid_velocities(SimState.time, step, 0, dt_global);
                 gasdynamic_explicit_increment_with_moving_grid();
                 recalculate_all_geometry();
             }
@@ -624,10 +628,10 @@ void integrate_in_time(double target_time_as_requested)
             // in the gasdynamic_explicit_increment().
             if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.loose) {
                 // Call Nigel's update function here.
-                solid_domains_backward_euler_update(sim_time, dt_global);
+                solid_domains_backward_euler_update(SimState.time, dt_global);
             }
             // 2.4 Chemistry step or 1/2 step (if appropriate). 
-            if ( GlobalConfig.reacting && (sim_time > GlobalConfig.reaction_time_delay)) {
+            if ( GlobalConfig.reacting && (SimState.time > GlobalConfig.reaction_time_delay)) {
                 double mydt = (GlobalConfig.strangSplitting == StrangSplittingMode.full_T_full_R) ?
                     dt_global : 0.5*dt_global;
                 chemistry_step(mydt);
@@ -641,11 +645,11 @@ void integrate_in_time(double target_time_as_requested)
             if ((step / GlobalConfig.print_count) * GlobalConfig.print_count == step) {
                 // Print the current time-stepping status.
                 auto writer = appender!string();
-                formattedWrite(writer, "Step=%7d t=%10.3e dt=%10.3e ", step, sim_time, dt_global);
+                formattedWrite(writer, "Step=%7d t=%10.3e dt=%10.3e ", step, SimState.time, dt_global);
                 // For reporting wall-clock time, convert to seconds with precision of milliseconds.
                 double wall_clock_elapsed = to!double((Clock.currTime()-wall_clock_start).total!"msecs"())/1000.0;
                 double wall_clock_per_step = wall_clock_elapsed / step;
-                double WCtFT = (GlobalConfig.max_time - sim_time) / dt_global * wall_clock_per_step;
+                double WCtFT = (GlobalConfig.max_time - SimState.time) / dt_global * wall_clock_per_step;
                 double WCtMS = (GlobalConfig.max_step - step) * wall_clock_per_step;
                 formattedWrite(writer, "WC=%.1f WCtFT=%.1f WCtMS=%.1f", 
                                wall_clock_elapsed, WCtFT, WCtMS);
@@ -691,7 +695,7 @@ void integrate_in_time(double target_time_as_requested)
             } // end if (step...
             //
             // 4.0 (Occasionally) Write out an intermediate solution
-            if ((sim_time >= t_plot) && !output_just_written) {
+            if ((SimState.time >= t_plot) && !output_just_written) {
                 write_solution_files();
                 output_just_written = true;
                 t_plot = t_plot + GlobalConfig.dt_plot;
@@ -699,15 +703,15 @@ void integrate_in_time(double target_time_as_requested)
             }
             //
             // 4.1 (Occasionally) Write out the cell history data and loads on boundary groups data
-            if ((sim_time >= t_history) && !history_just_written) {
-                write_history_cells_to_files(sim_time);
+            if ((SimState.time >= t_history) && !history_just_written) {
+                write_history_cells_to_files(SimState.time);
                 history_just_written = true;
                 t_history = t_history + GlobalConfig.dt_history;
                 GC.collect();
             }
-            if (GlobalConfig.compute_loads && (sim_time >= t_loads) && !loads_just_written) {
-                write_boundary_loads_to_file(sim_time, current_loads_tindx);
-                update_loads_times_file(sim_time, current_loads_tindx);
+            if (GlobalConfig.compute_loads && (SimState.time >= t_loads) && !loads_just_written) {
+                write_boundary_loads_to_file(SimState.time, current_loads_tindx);
+                update_loads_times_file(SimState.time, current_loads_tindx);
                 loads_just_written = true;
                 current_loads_tindx = current_loads_tindx + 1;
                 t_loads = t_loads + GlobalConfig.dt_loads;
@@ -749,7 +753,7 @@ void integrate_in_time(double target_time_as_requested)
         // be found in the control-parameter file (which may be edited
         // while the code is running).
         //
-        if (sim_time >= target_time) { finished_time_stepping = true; }
+        if (SimState.time >= target_time) { finished_time_stepping = true; }
         if (step >= GlobalConfig.max_step) { finished_time_stepping = true; }
         if (GlobalConfig.halt_now == 1) { finished_time_stepping = true; }
         auto wall_clock_elapsed = (Clock.currTime() - wall_clock_start).total!"seconds"();
@@ -765,7 +769,7 @@ void integrate_in_time(double target_time_as_requested)
         if(finished_time_stepping && GlobalConfig.verbosity_level >= 1 && GlobalConfig.is_master_task) {
             // Make an announcement about why we are finishing time-stepping.
             write("Integration stopped: "); 
-            if (sim_time >= target_time) { writefln("Reached target simulation time of %g seconds.", target_time); }
+            if (SimState.time >= target_time) { writefln("Reached target simulation time of %g seconds.", target_time); }
             if (step >= GlobalConfig.max_step) { writefln("Reached maximum number of steps with step=%d.", step); }
             if (GlobalConfig.halt_now == 1) { writeln("Halt set in control file."); }
             if (maxWallClockSeconds > 0 && (wall_clock_elapsed > maxWallClockSeconds)) {
@@ -790,7 +794,7 @@ void check_run_time_configuration(double target_time_as_requested)
         target_time = (GlobalConfig.block_marching) ? target_time_as_requested : GlobalConfig.max_time;
     }
     if (GlobalConfig.viscous && GlobalConfig.viscous_factor < 1.0 &&
-        sim_time > GlobalConfig.viscous_delay) {
+        SimState.time > GlobalConfig.viscous_delay) {
         // We want to increment the viscous_factor that scales the viscous effects terms.
         double viscous_factor = GlobalConfig.viscous_factor;
         viscous_factor += GlobalConfig.viscous_factor_increment;
@@ -803,7 +807,7 @@ void check_run_time_configuration(double target_time_as_requested)
     }
     // We might need to activate or deactivate the IgnitionZones depending on
     // what simulation time we are up to.
-    if (sim_time >= GlobalConfig.ignition_time_start && sim_time <= GlobalConfig.ignition_time_stop) {
+    if (SimState.time >= GlobalConfig.ignition_time_start && SimState.time <= GlobalConfig.ignition_time_stop) {
         foreach (blk; localFluidBlocksBySize) { blk.myConfig.ignition_zone_active = true; }
         GlobalConfig.ignition_zone_active = true;
     } else {
@@ -815,7 +819,7 @@ void check_run_time_configuration(double target_time_as_requested)
     if (GlobalConfig.udf_supervisor_file.length > 0) {
         auto L = GlobalConfig.master_lua_State;
         lua_getglobal(L, "atTimestepStart");
-        lua_pushnumber(L, sim_time);
+        lua_pushnumber(L, SimState.time);
         lua_pushnumber(L, step);
         int number_args = 2;
         int number_results = 0;
@@ -1046,10 +1050,10 @@ void exchange_ghost_cell_boundary_data(double t, int gtl, int ftl)
 
 void gasdynamic_explicit_increment_with_fixed_grid()
 {
-    shared double t0 = sim_time;
+    shared double t0 = SimState.time;
     shared bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) &&
         !GlobalConfig.separate_update_for_k_omega_source;
-    shared bool allow_high_order_interpolation = (sim_time >= GlobalConfig.interpolation_delay);
+    shared bool allow_high_order_interpolation = (SimState.time >= GlobalConfig.interpolation_delay);
     // Set the time-step coefficients for the stages of the update scheme.
     shared double c2 = 1.0; // default for predictor-corrector update
     shared double c3 = 1.0; // default for predictor-corrector update
@@ -1076,19 +1080,19 @@ void gasdynamic_explicit_increment_with_fixed_grid()
     // First-stage of gas-dynamic update.
     shared int ftl = 0; // time-level within the overall convective-update
     shared int gtl = 0; // grid time-level remains at zero for the non-moving grid
-    exchange_ghost_cell_boundary_data(sim_time, gtl, ftl);
+    exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
     if (GlobalConfig.apply_bcs_in_parallel) {
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
-            if (blk.active) { blk.applyPreReconAction(sim_time, gtl, ftl); }
+            if (blk.active) { blk.applyPreReconAction(SimState.time, gtl, ftl); }
         }
     } else {
         foreach (blk; localFluidBlocksBySize) {
-            if (blk.active) { blk.applyPreReconAction(sim_time, gtl, ftl); }
+            if (blk.active) { blk.applyPreReconAction(SimState.time, gtl, ftl); }
         }
     }
     // And we'll do a first pass on solid domain bc's too in case we need up-to-date info.
     foreach (sblk; parallel(solidBlocks, 1)) {
-        if (sblk.active) { sblk.applyPreSpatialDerivAction(sim_time, ftl); }
+        if (sblk.active) { sblk.applyPreSpatialDerivAction(SimState.time, ftl); }
     }
     // We've put this detector step here because it needs the ghost-cell data
     // to be current, as it should be just after a call to apply_convective_bc().
@@ -1106,26 +1110,26 @@ void gasdynamic_explicit_increment_with_fixed_grid()
     }
     if (GlobalConfig.apply_bcs_in_parallel) {
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
-            if (blk.active) { blk.applyPostConvFluxAction(sim_time, gtl, ftl); }
+            if (blk.active) { blk.applyPostConvFluxAction(SimState.time, gtl, ftl); }
         }
     } else {
         foreach (blk; localFluidBlocksBySize) {
-            if (blk.active) { blk.applyPostConvFluxAction(sim_time, gtl, ftl); }
+            if (blk.active) { blk.applyPostConvFluxAction(SimState.time, gtl, ftl); }
         }
     }
     if (GlobalConfig.viscous && !GlobalConfig.separate_update_for_viscous_terms) {
         if (GlobalConfig.apply_bcs_in_parallel) {
             foreach (blk; parallel(localFluidBlocksBySize,1)) {
                 if (blk.active) {
-                    blk.applyPreSpatialDerivActionAtBndryFaces(sim_time, gtl, ftl);
-                    blk.applyPreSpatialDerivActionAtBndryCells(sim_time, gtl, ftl);
+                    blk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, gtl, ftl);
+                    blk.applyPreSpatialDerivActionAtBndryCells(SimState.time, gtl, ftl);
                 }
             }
         } else {
             foreach (blk; localFluidBlocksBySize) {
                 if (blk.active) {
-                    blk.applyPreSpatialDerivActionAtBndryFaces(sim_time, gtl, ftl);
-                    blk.applyPreSpatialDerivActionAtBndryCells(sim_time, gtl, ftl);
+                    blk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, gtl, ftl);
+                    blk.applyPreSpatialDerivActionAtBndryCells(SimState.time, gtl, ftl);
                 }
             }
         }
@@ -1138,11 +1142,11 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         }
         if (GlobalConfig.apply_bcs_in_parallel) {
             foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                if (blk.active) { blk.applyPostDiffFluxAction(sim_time, gtl, ftl); }
+                if (blk.active) { blk.applyPostDiffFluxAction(SimState.time, gtl, ftl); }
             }
         } else {
             foreach (blk; localFluidBlocksBySize) {
-                if (blk.active) { blk.applyPostDiffFluxAction(sim_time, gtl, ftl); }
+                if (blk.active) { blk.applyPostDiffFluxAction(SimState.time, gtl, ftl); }
             }
         }
     } // end if viscous
@@ -1152,7 +1156,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         int local_gtl = gtl;
         bool local_with_k_omega = with_k_omega;
         double local_dt_global = dt_global;
-        double local_sim_time = sim_time;
+        double local_sim_time = SimState.time;
         foreach (cell; blk.cells) {
             cell.add_inviscid_source_vector(local_gtl, blk.omegaz);
             if (blk.myConfig.viscous && !blk.myConfig.separate_update_for_viscous_terms) {
@@ -1199,18 +1203,18 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         }
         if (GlobalConfig.apply_bcs_in_parallel) {
             foreach (sblk; parallel(solidBlocks, 1)) {
-                if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
+                if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl); }
             }
         } else {
             foreach (sblk; solidBlocks) {
-                if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
+                if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl); }
             }
         }
         // We need to synchronise before updating
         foreach (sblk; parallel(solidBlocks, 1)) {
             foreach (scell; sblk.activeCells) {
                 if (GlobalConfig.udfSolidSourceTerms) {
-                    addUDFSourceTermsToSolidCell(sblk.myL, scell, sim_time);
+                    addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time);
                 }
                 scell.timeDerivatives(ftl, GlobalConfig.dimensions);
                 scell.stage1Update(dt_global);
@@ -1221,7 +1225,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
     //
     if (number_of_stages_for_update_scheme(GlobalConfig.gasdynamic_update_scheme) >= 2) {
         // Preparation for second-stage of gas-dynamic update.
-        sim_time = t0 + c2 * dt_global;
+        SimState.time = t0 + c2 * dt_global;
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
             if (blk.active) {
                 blk.clear_fluxes_of_conserved_quantities();
@@ -1231,30 +1235,30 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         // Second stage of gas-dynamic update.
         ftl = 1;
         // We are relying on exchanging boundary data as a pre-reconstruction activity.
-        exchange_ghost_cell_boundary_data(sim_time, gtl, ftl);
+        exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
         if (GlobalConfig.apply_bcs_in_parallel) {
             foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                if (blk.active) { blk.applyPreReconAction(sim_time, gtl, ftl); }
+                if (blk.active) { blk.applyPreReconAction(SimState.time, gtl, ftl); }
             }
         } else {
             foreach (blk; localFluidBlocksBySize) {
-                if (blk.active) { blk.applyPreReconAction(sim_time, gtl, ftl); }
+                if (blk.active) { blk.applyPreReconAction(SimState.time, gtl, ftl); }
             }
         }
         // Let's set up solid domain bc's also before changing any flow properties.
         if (GlobalConfig.apply_bcs_in_parallel) {
             foreach (sblk; parallel(solidBlocks, 1)) {
-                if (sblk.active) { sblk.applyPreSpatialDerivAction(sim_time, ftl); }
+                if (sblk.active) { sblk.applyPreSpatialDerivAction(SimState.time, ftl); }
             }
             foreach (sblk; parallel(solidBlocks, 1)) {
-                if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
+                if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl); }
             }
         } else {
             foreach (sblk; solidBlocks) {
-                if (sblk.active) { sblk.applyPreSpatialDerivAction(sim_time, ftl); }
+                if (sblk.active) { sblk.applyPreSpatialDerivAction(SimState.time, ftl); }
             }
             foreach (sblk; solidBlocks) {
-                if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
+                if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl); }
             }
         }
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
@@ -1265,26 +1269,26 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         }
         if (GlobalConfig.apply_bcs_in_parallel) {
             foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                if (blk.active) { blk.applyPostConvFluxAction(sim_time, gtl, ftl); }
+                if (blk.active) { blk.applyPostConvFluxAction(SimState.time, gtl, ftl); }
             }
         } else {
             foreach (blk; localFluidBlocksBySize) {
-                if (blk.active) { blk.applyPostConvFluxAction(sim_time, gtl, ftl); }
+                if (blk.active) { blk.applyPostConvFluxAction(SimState.time, gtl, ftl); }
             }
         }
         if (GlobalConfig.viscous && !GlobalConfig.separate_update_for_viscous_terms) {
             if (GlobalConfig.apply_bcs_in_parallel) {
                 foreach (blk; parallel(localFluidBlocksBySize,1)) {
                     if (blk.active) {
-                        blk.applyPreSpatialDerivActionAtBndryFaces(sim_time, gtl, ftl);
-                        blk.applyPreSpatialDerivActionAtBndryCells(sim_time, gtl, ftl);
+                        blk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, gtl, ftl);
+                        blk.applyPreSpatialDerivActionAtBndryCells(SimState.time, gtl, ftl);
                     }
                 }
             } else {
                 foreach (blk; localFluidBlocksBySize) {
                     if (blk.active) {
-                        blk.applyPreSpatialDerivActionAtBndryFaces(sim_time, gtl, ftl);
-                        blk.applyPreSpatialDerivActionAtBndryCells(sim_time, gtl, ftl);
+                        blk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, gtl, ftl);
+                        blk.applyPreSpatialDerivActionAtBndryCells(SimState.time, gtl, ftl);
                     }
                 }
             }
@@ -1297,11 +1301,11 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             }
             if (GlobalConfig.apply_bcs_in_parallel) {
                 foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                    if (blk.active) { blk.applyPostDiffFluxAction(sim_time, gtl, ftl); }
+                    if (blk.active) { blk.applyPostDiffFluxAction(SimState.time, gtl, ftl); }
                 }
             } else {
                 foreach (blk; localFluidBlocksBySize) {
-                    if (blk.active) { blk.applyPostDiffFluxAction(sim_time, gtl, ftl); }
+                    if (blk.active) { blk.applyPostDiffFluxAction(SimState.time, gtl, ftl); }
                 }
             }
         } // end if viscous
@@ -1311,7 +1315,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             int local_gtl = gtl;
             bool local_with_k_omega = with_k_omega;
             double local_dt_global = dt_global;
-            double local_sim_time = sim_time;
+            double local_sim_time = SimState.time;
             foreach (cell; blk.cells) {
                 cell.add_inviscid_source_vector(local_gtl, blk.omegaz);
                 if (blk.myConfig.viscous && !blk.myConfig.separate_update_for_viscous_terms) {
@@ -1348,18 +1352,18 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             }
             if (GlobalConfig.apply_bcs_in_parallel) {
                 foreach (sblk; parallel(solidBlocks, 1)) {
-                    if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
+                    if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl); }
                 }
             } else {
                 foreach (sblk; solidBlocks) {
-                    if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
+                    if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl); }
                 }
             }
             // We need to synchronise before updating
             foreach (sblk; parallel(solidBlocks, 1)) {
                 foreach (scell; sblk.activeCells) {
                     if (GlobalConfig.udfSolidSourceTerms) {
-                        addUDFSourceTermsToSolidCell(sblk.myL, scell, sim_time);
+                        addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time);
                     }
                     scell.timeDerivatives(ftl, GlobalConfig.dimensions);
                     scell.stage2Update(dt_global);
@@ -1371,7 +1375,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
     //
     if ( number_of_stages_for_update_scheme(GlobalConfig.gasdynamic_update_scheme) >= 3 ) {
         // Preparation for third stage of gasdynamic update.
-        sim_time = t0 + c3 * dt_global;
+        SimState.time = t0 + c3 * dt_global;
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
             if (blk.active) {
                 blk.clear_fluxes_of_conserved_quantities();
@@ -1381,30 +1385,30 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         // Third stage of gas-dynamic update.
         ftl = 2;
         // We are relying on exchanging boundary data as a pre-reconstruction activity.
-        exchange_ghost_cell_boundary_data(sim_time, gtl, ftl);
+        exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
         if (GlobalConfig.apply_bcs_in_parallel) {
             foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                if (blk.active) { blk.applyPreReconAction(sim_time, gtl, ftl); }
+                if (blk.active) { blk.applyPreReconAction(SimState.time, gtl, ftl); }
             }
         } else {
             foreach (blk; localFluidBlocksBySize) {
-                if (blk.active) { blk.applyPreReconAction(sim_time, gtl, ftl); }
+                if (blk.active) { blk.applyPreReconAction(SimState.time, gtl, ftl); }
             }
         }
         // Let's set up solid domain bc's also before changing any flow properties.
         if (GlobalConfig.apply_bcs_in_parallel) {
             foreach (sblk; parallel(solidBlocks, 1)) {
-                if (sblk.active) { sblk.applyPreSpatialDerivAction(sim_time, ftl); }
+                if (sblk.active) { sblk.applyPreSpatialDerivAction(SimState.time, ftl); }
             }
             foreach (sblk; parallel(solidBlocks, 1)) {
-                if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
+                if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl); }
             }
         } else {
             foreach (sblk; solidBlocks) {
-                if (sblk.active) { sblk.applyPreSpatialDerivAction(sim_time, ftl); }
+                if (sblk.active) { sblk.applyPreSpatialDerivAction(SimState.time, ftl); }
             }
             foreach (sblk; solidBlocks) {
-                if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
+                if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl); }
             }
         }
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
@@ -1415,26 +1419,26 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         }
         if (GlobalConfig.apply_bcs_in_parallel) {
             foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                if (blk.active) { blk.applyPostConvFluxAction(sim_time, gtl, ftl); }
+                if (blk.active) { blk.applyPostConvFluxAction(SimState.time, gtl, ftl); }
             }
         } else {
             foreach (blk; localFluidBlocksBySize) {
-                if (blk.active) { blk.applyPostConvFluxAction(sim_time, gtl, ftl); }
+                if (blk.active) { blk.applyPostConvFluxAction(SimState.time, gtl, ftl); }
             }
         }
         if (GlobalConfig.viscous && !GlobalConfig.separate_update_for_viscous_terms) {
             if (GlobalConfig.apply_bcs_in_parallel) {
                 foreach (blk; parallel(localFluidBlocksBySize,1)) {
                     if (blk.active) {
-                        blk.applyPreSpatialDerivActionAtBndryFaces(sim_time, gtl, ftl);
-                        blk.applyPreSpatialDerivActionAtBndryCells(sim_time, gtl, ftl);
+                        blk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, gtl, ftl);
+                        blk.applyPreSpatialDerivActionAtBndryCells(SimState.time, gtl, ftl);
                     }
                 }
             } else {
                 foreach (blk; localFluidBlocksBySize) {
                     if (blk.active) {
-                        blk.applyPreSpatialDerivActionAtBndryFaces(sim_time, gtl, ftl);
-                        blk.applyPreSpatialDerivActionAtBndryCells(sim_time, gtl, ftl);
+                        blk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, gtl, ftl);
+                        blk.applyPreSpatialDerivActionAtBndryCells(SimState.time, gtl, ftl);
                     }
                 }
             }
@@ -1447,11 +1451,11 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             }
             if (GlobalConfig.apply_bcs_in_parallel) {
                 foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                    if (blk.active) { blk.applyPostDiffFluxAction(sim_time, gtl, ftl); }
+                    if (blk.active) { blk.applyPostDiffFluxAction(SimState.time, gtl, ftl); }
                 }
             } else {
                 foreach (blk; localFluidBlocksBySize) {
-                    if (blk.active) { blk.applyPostDiffFluxAction(sim_time, gtl, ftl); }
+                    if (blk.active) { blk.applyPostDiffFluxAction(SimState.time, gtl, ftl); }
                 }
             }
         } // end if viscous
@@ -1461,7 +1465,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             int local_gtl = gtl;
             bool local_with_k_omega = with_k_omega;
             double local_dt_global = dt_global;
-            double local_sim_time = sim_time;
+            double local_sim_time = SimState.time;
             foreach (cell; blk.cells) {
                 cell.add_inviscid_source_vector(local_gtl, blk.omegaz);
                 if (blk.myConfig.viscous && !blk.myConfig.separate_update_for_viscous_terms) {
@@ -1498,18 +1502,18 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             }
             if (GlobalConfig.apply_bcs_in_parallel) {
                 foreach (sblk; parallel(solidBlocks, 1)) {
-                    if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
+                    if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl); }
                 }
             } else {
                 foreach (sblk; solidBlocks) {
-                    if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
+                    if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl); }
                 }
             }
             // We need to synchronise before updating
             foreach (sblk; parallel(solidBlocks, 1)) {
                 foreach (scell; sblk.activeCells) {
                     if (GlobalConfig.udfSolidSourceTerms) {
-                        addUDFSourceTermsToSolidCell(sblk.myL, scell, sim_time);
+                        addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time);
                     }
                     scell.timeDerivatives(ftl, GlobalConfig.dimensions);
                     scell.stage3Update(dt_global);
@@ -1535,17 +1539,17 @@ void gasdynamic_explicit_increment_with_fixed_grid()
     } // end foreach sblk
     //
     // Finally, update the globally know simulation time for the whole step.
-    sim_time = t0 + dt_global;
+    SimState.time = t0 + dt_global;
 } // end gasdynamic_explicit_increment_with_fixed_grid()
 
 void gasdynamic_explicit_increment_with_moving_grid()
 {
     // For moving grid simulations we move the grid on the first predictor step and then
     // leave it fixed in this position for the corrector steps.
-    shared double t0 = sim_time;
+    shared double t0 = SimState.time;
     shared bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) &&
         !GlobalConfig.separate_update_for_k_omega_source;
-    shared bool allow_high_order_interpolation = (sim_time >= GlobalConfig.interpolation_delay);
+    shared bool allow_high_order_interpolation = (SimState.time >= GlobalConfig.interpolation_delay);
     // Set the time-step coefficients for the stages of the update scheme.
     shared double c2 = 1.0; // same for 1-stage or 2-stage update
     shared double c3 = 1.0; // ditto
@@ -1577,22 +1581,22 @@ void gasdynamic_explicit_increment_with_moving_grid()
         set_gcl_interface_properties(sblk, gtl+1, dt_global);
     }
     gtl = 1; // update gtl now that grid has moved
-    exchange_ghost_cell_boundary_data(sim_time, gtl, ftl);
+    exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
     if (GlobalConfig.apply_bcs_in_parallel) {
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
-            if (blk.active) { blk.applyPreReconAction(sim_time, gtl, ftl); }
+            if (blk.active) { blk.applyPreReconAction(SimState.time, gtl, ftl); }
         }
     } else {
         foreach (blk; localFluidBlocksBySize) {
-            if (blk.active) { blk.applyPreReconAction(sim_time, gtl, ftl); }
+            if (blk.active) { blk.applyPreReconAction(SimState.time, gtl, ftl); }
         }
     }
     // And we'll do a first pass on solid domain bc's too in case we need up-to-date info.
     foreach (sblk; solidBlocks) {
-        if (sblk.active) { sblk.applyPreSpatialDerivAction(sim_time, ftl); }
+        if (sblk.active) { sblk.applyPreSpatialDerivAction(SimState.time, ftl); }
     }
     foreach (sblk; solidBlocks) {
-        if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
+        if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl); }
     }
     // We've put this detector step here because it needs the ghost-cell data
     // to be current, as it should be just after a call to apply_convective_bc().
@@ -1610,26 +1614,26 @@ void gasdynamic_explicit_increment_with_moving_grid()
     }
     if (GlobalConfig.apply_bcs_in_parallel) {
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
-            if (blk.active) { blk.applyPostConvFluxAction(sim_time, gtl, ftl); }
+            if (blk.active) { blk.applyPostConvFluxAction(SimState.time, gtl, ftl); }
         }
     } else {
         foreach (blk; localFluidBlocksBySize) {
-            if (blk.active) { blk.applyPostConvFluxAction(sim_time, gtl, ftl); }
+            if (blk.active) { blk.applyPostConvFluxAction(SimState.time, gtl, ftl); }
         }
     }
     if (GlobalConfig.viscous && !GlobalConfig.separate_update_for_viscous_terms) {
         if (GlobalConfig.apply_bcs_in_parallel) {
             foreach (blk; parallel(localFluidBlocksBySize,1)) {
                 if (blk.active) {
-                    blk.applyPreSpatialDerivActionAtBndryFaces(sim_time, gtl, ftl);
-                    blk.applyPreSpatialDerivActionAtBndryCells(sim_time, gtl, ftl);
+                    blk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, gtl, ftl);
+                    blk.applyPreSpatialDerivActionAtBndryCells(SimState.time, gtl, ftl);
                 }
             }
         } else {
             foreach (blk; localFluidBlocksBySize) {
                 if (blk.active) {
-                    blk.applyPreSpatialDerivActionAtBndryFaces(sim_time, gtl, ftl);
-                    blk.applyPreSpatialDerivActionAtBndryCells(sim_time, gtl, ftl);
+                    blk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, gtl, ftl);
+                    blk.applyPreSpatialDerivActionAtBndryCells(SimState.time, gtl, ftl);
                 }
             }
         }
@@ -1642,11 +1646,11 @@ void gasdynamic_explicit_increment_with_moving_grid()
         }
         if (GlobalConfig.apply_bcs_in_parallel) {
             foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                if (blk.active) { blk.applyPostDiffFluxAction(sim_time, gtl, ftl); }
+                if (blk.active) { blk.applyPostDiffFluxAction(SimState.time, gtl, ftl); }
             }
         } else {
             foreach (blk; localFluidBlocksBySize) {
-                if (blk.active) { blk.applyPostDiffFluxAction(sim_time, gtl, ftl); }
+                if (blk.active) { blk.applyPostDiffFluxAction(SimState.time, gtl, ftl); }
             }
         }
     } // end if viscous
@@ -1656,7 +1660,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
         int local_gtl = gtl;
         bool local_with_k_omega = with_k_omega;
         double local_dt_global = dt_global;
-        double local_sim_time = sim_time;
+        double local_sim_time = SimState.time;
         foreach (cell; blk.cells) {
             cell.add_inviscid_source_vector(local_gtl, blk.omegaz);
             if (blk.myConfig.viscous && !blk.myConfig.separate_update_for_viscous_terms) {
@@ -1686,12 +1690,12 @@ void gasdynamic_explicit_increment_with_moving_grid()
         if (!sblk.active) continue;
         sblk.clearSources();
         sblk.computeSpatialDerivatives(ftl);
-        sblk.applyPostFluxAction(sim_time, ftl);
+        sblk.applyPostFluxAction(SimState.time, ftl);
         sblk.computeFluxes();
-        sblk.applyPostFluxAction(sim_time, ftl);
+        sblk.applyPostFluxAction(SimState.time, ftl);
         foreach (scell; sblk.activeCells) {
             if (GlobalConfig.udfSolidSourceTerms) {
-                addUDFSourceTermsToSolidCell(sblk.myL, scell, sim_time);
+                addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time);
             }
             scell.timeDerivatives(ftl, GlobalConfig.dimensions);
             scell.stage1Update(dt_global);
@@ -1701,7 +1705,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
     /////
     if (number_of_stages_for_update_scheme(GlobalConfig.gasdynamic_update_scheme) == 2) {
         // Preparation for second-stage of gas-dynamic update.
-        sim_time = t0 + c2 * dt_global;
+        SimState.time = t0 + c2 * dt_global;
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
             if (blk.active) {
                 blk.clear_fluxes_of_conserved_quantities();
@@ -1726,22 +1730,22 @@ void gasdynamic_explicit_increment_with_moving_grid()
         ftl = 1;
         gtl = 2;
         // We are relying on exchanging boundary data as a pre-reconstruction activity.
-        exchange_ghost_cell_boundary_data(sim_time, gtl, ftl);
+        exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
         if (GlobalConfig.apply_bcs_in_parallel) {
             foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                if (blk.active) { blk.applyPreReconAction(sim_time, gtl, ftl); }
+                if (blk.active) { blk.applyPreReconAction(SimState.time, gtl, ftl); }
             }
         } else {
             foreach (blk; localFluidBlocksBySize) {
-                if (blk.active) { blk.applyPreReconAction(sim_time, gtl, ftl); }
+                if (blk.active) { blk.applyPreReconAction(SimState.time, gtl, ftl); }
             }
         }
         // Let's set up solid domain bc's also before changing any flow properties.
         foreach (sblk; solidBlocks) {
-            if (sblk.active) { sblk.applyPreSpatialDerivAction(sim_time, ftl); }
+            if (sblk.active) { sblk.applyPreSpatialDerivAction(SimState.time, ftl); }
         }
         foreach (sblk; solidBlocks) {
-            if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
+            if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl); }
         }
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
             if (blk.active) { blk.convective_flux_phase0(allow_high_order_interpolation, 0); }
@@ -1753,26 +1757,26 @@ void gasdynamic_explicit_increment_with_moving_grid()
         }
         if (GlobalConfig.apply_bcs_in_parallel) {
             foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                if (blk.active) { blk.applyPostConvFluxAction(sim_time, gtl, ftl); }
+                if (blk.active) { blk.applyPostConvFluxAction(SimState.time, gtl, ftl); }
             }
         } else {
             foreach (blk; localFluidBlocksBySize) {
-                if (blk.active) { blk.applyPostConvFluxAction(sim_time, gtl, ftl); }
+                if (blk.active) { blk.applyPostConvFluxAction(SimState.time, gtl, ftl); }
             }
         }
         if (GlobalConfig.viscous && !GlobalConfig.separate_update_for_viscous_terms) {
             if (GlobalConfig.apply_bcs_in_parallel) {
                 foreach (blk; parallel(localFluidBlocksBySize,1)) {
                     if (blk.active) {
-                        blk.applyPreSpatialDerivActionAtBndryFaces(sim_time, gtl, ftl);
-                        blk.applyPreSpatialDerivActionAtBndryCells(sim_time, gtl, ftl);
+                        blk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, gtl, ftl);
+                        blk.applyPreSpatialDerivActionAtBndryCells(SimState.time, gtl, ftl);
                     }
                 }
             } else {
                 foreach (blk; localFluidBlocksBySize) {
                     if (blk.active) {
-                        blk.applyPreSpatialDerivActionAtBndryFaces(sim_time, gtl, ftl);
-                        blk.applyPreSpatialDerivActionAtBndryCells(sim_time, gtl, ftl);
+                        blk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, gtl, ftl);
+                        blk.applyPreSpatialDerivActionAtBndryCells(SimState.time, gtl, ftl);
                     }
                 }
             }
@@ -1785,11 +1789,11 @@ void gasdynamic_explicit_increment_with_moving_grid()
             }
             if (GlobalConfig.apply_bcs_in_parallel) {
                 foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                    if (blk.active) { blk.applyPostDiffFluxAction(sim_time, gtl, ftl); }
+                    if (blk.active) { blk.applyPostDiffFluxAction(SimState.time, gtl, ftl); }
                 }
             } else {
                 foreach (blk; localFluidBlocksBySize) {
-                    if (blk.active) { blk.applyPostDiffFluxAction(sim_time, gtl, ftl); }
+                    if (blk.active) { blk.applyPostDiffFluxAction(SimState.time, gtl, ftl); }
                 }
             }
         } // end if viscous
@@ -1799,7 +1803,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
             int local_gtl = gtl;
             bool local_with_k_omega = with_k_omega;
             double local_dt_global = dt_global;
-            double local_sim_time = sim_time;
+            double local_sim_time = SimState.time;
             foreach (cell; blk.cells) {
                 cell.add_inviscid_source_vector(local_gtl, blk.omegaz);
                 if (blk.myConfig.viscous && !blk.myConfig.separate_update_for_viscous_terms) {
@@ -1828,12 +1832,12 @@ void gasdynamic_explicit_increment_with_moving_grid()
             if (!sblk.active) continue;
             sblk.clearSources();
             sblk.computeSpatialDerivatives(ftl);
-            sblk.applyPostFluxAction(sim_time, ftl);
+            sblk.applyPostFluxAction(SimState.time, ftl);
             sblk.computeFluxes();
-            sblk.applyPostFluxAction(sim_time, ftl);
+            sblk.applyPostFluxAction(SimState.time, ftl);
             foreach (scell; sblk.activeCells) {
                 if (GlobalConfig.udfSolidSourceTerms) {
-                    addUDFSourceTermsToSolidCell(sblk.myL, scell, sim_time);
+                    addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time);
                 }
                 scell.timeDerivatives(ftl, GlobalConfig.dimensions);
                 scell.stage2Update(dt_global);
@@ -1862,7 +1866,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
         }
     }
     // Finally, update the globally known simulation time for the whole step.
-    sim_time = t0 + dt_global;
+    SimState.time = t0 + dt_global;
 } // end gasdynamic_explicit_increment_with_moving_grid()
 
 void compute_Linf_residuals(ConservedQuantities Linf_residuals)
@@ -1888,9 +1892,9 @@ void finalize_simulation()
         writeln("Finalize the simulation.");
     }
     if (!output_just_written) { write_solution_files(); }
-    if (!history_just_written) { write_history_cells_to_files(sim_time); }
+    if (!history_just_written) { write_history_cells_to_files(SimState.time); }
     GC.collect();
     if (GlobalConfig.verbosity_level > 0  && GlobalConfig.is_master_task) {
-        writeln("Step= ", step, " final-t= ", sim_time);
+        writeln("Step= ", step, " final-t= ", SimState.time);
     }
 } // end finalize_simulation()
