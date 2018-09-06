@@ -67,6 +67,8 @@ shared static double dt_global;     // simulation time step determined by code
 shared static double dt_allow;      // allowable global time step determined by code
 shared static double[] local_dt_allow; // each block will put its result into this array
 shared static int[] local_invalid_cell_count;
+shared static double target_time;  // simulate_in_time will work toward this value
+shared static bool do_cfl_check_now;
 
 // We want to write sets of output files periodically.
 // The following periods set the cadence for output.
@@ -203,6 +205,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
         // I don't mind if blocks write over sim_time.  
         // They should all have the same value for it.
         sim_time_array[i] = myblk.read_solution(make_file_name!"flow"(job_name, myblk.id, current_tindx, flowFileExt), false);
+        foreach (iface; myblk.faces) { iface.gvel.clear(); }
         foreach (cell; myblk.cells) {
             cell.encode_conserved(0, 0, myblk.omegaz);
             // Even though the following call appears redundant at this point,
@@ -544,14 +547,14 @@ void integrate_in_time(double target_time_as_requested)
         writeln("Integrate in time.");
         stdout.flush();
     }
-    double target_time = (GlobalConfig.block_marching) ? target_time_as_requested : GlobalConfig.max_time;
+    target_time = (GlobalConfig.block_marching) ? target_time_as_requested : GlobalConfig.max_time;
     // The next time for output...
     t_plot = sim_time + GlobalConfig.dt_plot;
     t_history = sim_time + GlobalConfig.dt_history;
     t_loads = sim_time + GlobalConfig.dt_loads;
     // Overall iteration count.
     step = 0;
-    shared bool do_cfl_check_now = false;
+    do_cfl_check_now = false;
     //
     if (GlobalConfig.viscous) {
         // We have requested viscous effects but their application may be delayed
@@ -583,206 +586,53 @@ void integrate_in_time(double target_time_as_requested)
     //----------------------------------------------------------------
     while ( !finished_time_stepping ) {
         //
-        // 0. Alter configuration setting if necessary.
-        if ( (step/GlobalConfig.control_count)*GlobalConfig.control_count == step ) {
-            read_control_file(); // Reparse the time-step control parameters occasionally.
-            target_time = (GlobalConfig.block_marching) ? target_time_as_requested : GlobalConfig.max_time;
-        }
-        if (GlobalConfig.viscous && GlobalConfig.viscous_factor < 1.0 &&
-            sim_time > GlobalConfig.viscous_delay) {
-            // We want to increment the viscous_factor that scales the viscous effects terms.
-            double viscous_factor = GlobalConfig.viscous_factor;
-            viscous_factor += GlobalConfig.viscous_factor_increment;
-            viscous_factor = min(viscous_factor, 1.0);
-            // Make sure that everyone is up-to-date.
-            foreach (myblk; localFluidBlocksBySize) {
-                myblk.myConfig.viscous_factor = viscous_factor; 
-            }
-            GlobalConfig.viscous_factor = viscous_factor;
-        }
-        if (GlobalConfig.udf_supervisor_file.length > 0) {
-            auto L = GlobalConfig.master_lua_State;
-            lua_getglobal(L, "atTimestepStart");
-            lua_pushnumber(L, sim_time);
-            lua_pushnumber(L, step);
-            int number_args = 2;
-            int number_results = 0;
-            if ( lua_pcall(L, number_args, number_results, 0) != 0 ) {
-                string errMsg = "ERROR: while running user-defined function atTimestepStart()\n";
-                errMsg ~= to!string(lua_tostring(L, -1));
-                throw new FlowSolverException(errMsg);
-            }
-        }
-        // We might need to activate or deactivate the IgnitionZones depending on
-        // what simulation time we are up to.
-        if (sim_time >= GlobalConfig.ignition_time_start && sim_time <= GlobalConfig.ignition_time_stop) {
-            foreach (blk; localFluidBlocksBySize) {
-                blk.myConfig.ignition_zone_active = true;
-            }
-            GlobalConfig.ignition_zone_active = true;
-        }
-        else {
-            foreach (blk; localFluidBlocksBySize) {
-                blk.myConfig.ignition_zone_active = false;
-            }
-            GlobalConfig.ignition_zone_active = false;
-
-        }
+        // 0.0 Run-time configuration may change, a halt may be called, etc.
+        check_run_time_configuration(target_time_as_requested);
         //
-        // 1. Set the size of the time step to be the minimum allowed for any active block.
-        if (!GlobalConfig.fixed_time_step && 
-            (step/GlobalConfig.cfl_count)*GlobalConfig.cfl_count == step) {
-            // Check occasionally 
-            do_cfl_check_now = true;
-        } // end if step == 0
-        version(mpi_parallel) {
-            // If one task is doing a time-step check, all tasks have to.
-            bool myFlag = do_cfl_check_now;
-            MPI_Allreduce(MPI_IN_PLACE, &myFlag, 1, MPI_LOGICAL, MPI_LOR, MPI_COMM_WORLD);
-            do_cfl_check_now = myFlag;
-        }
-        if (do_cfl_check_now) {
-            // Adjust the time step...
-            //
-            // First, check what each block thinks should be the allowable step size.
-            foreach (i, myblk; parallel(localFluidBlocksBySize,1)) {
-                // Note 'i' is not necessarily the block id but
-                // that is not important here, just need a unique spot to poke into local_dt_allow.
-                if (myblk.active) { local_dt_allow[i] = myblk.determine_time_step_size(dt_global); }
-            }
-            // Second, reduce this estimate across all local blocks.
-            dt_allow = double.max; // to be sure it is replaced.
-            foreach (i, myblk; localFluidBlocks) { // serial loop
-                if (myblk.active) { dt_allow = min(dt_allow, local_dt_allow[i]); } 
-            }
-            version(mpi_parallel) {
-                double my_dt_allow = dt_allow;
-                MPI_Allreduce(MPI_IN_PLACE, &my_dt_allow, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-                dt_allow = my_dt_allow;
-            }
-            // Now, change the actual time step, as needed.
-            if (dt_allow <= dt_global) {
-                // If we need to reduce the time step, do it immediately.
-                dt_global = dt_allow;
-            } else {
-                // Make the transitions to larger time steps gentle.
-                dt_global = min(dt_global*1.5, dt_allow);
-                // The user may supply, explicitly, a maximum time-step size.
-                dt_global = min(dt_global, GlobalConfig.dt_max);
-            }
-            do_cfl_check_now = false;  // we have done our check for now
-        } // end if do_cfl_check_now 
-
+        // 1.0 Maintain a stable time step size, and other maintenance, as required.
+        determine_time_step_size();
+        //
         if (GlobalConfig.divergence_cleaning) {
-            // Update the c_h value for MHD divergence cleaning.
-            bool first = true;
-            foreach (blk; localFluidBlocksBySize) {
-                if (!blk.active) continue;
-                if (first) {
-                    GlobalConfig.c_h = blk.update_c_h(dt_global);
-                    first = false;
-                } else {
-                    GlobalConfig.c_h = fmin(blk.update_c_h(dt_global), GlobalConfig.c_h);
-                }
-            }
-            version(mpi_parallel) {
-                double my_c_h = GlobalConfig.c_h;
-                MPI_Allreduce(MPI_IN_PLACE, &my_c_h, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-                GlobalConfig.c_h = my_c_h;
-            }
-            // Now that we have a globally-reduced value, propagate that new value
-            // into the block-local config structure.
-            foreach (blk; localFluidBlocksBySize) {
-                if (!blk.active) continue;
-                blk.myConfig.c_h = GlobalConfig.c_h;
-            }
-        } // end if (GlobalConfig.divergence_cleaning)
-
+            update_ch_for_divergence_cleaning();
+        }
         // If using k-omega, we need to set mu_t and k_t BEFORE we call convective_update
         // because the convective update is where the interface values of mu_t and k_t are set.
-        if (step == 0) {
-            // only needs to be done on initial step, subsequent steps take care of setting these values 
-            if (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) {
-                foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                    if (blk.active) {
-                        blk.flow_property_spatial_derivatives(0); 
-                        blk.estimate_turbulence_viscosity();
-                    }
-                }
-            }
+        // only needs to be done on initial step, subsequent steps take care of setting these values 
+        if ((step == 0) && (GlobalConfig.turbulence_model == TurbulenceModel.k_omega)) {
+            k_omega_set_mu_and_k();
         }
-
-        // 2. Attempt a time step.
-        // 2aa. Chemistry 1/2 step (if appropriate). 
-        if (GlobalConfig.strangSplitting == StrangSplittingMode.half_R_full_T_half_R) {
-            if (GlobalConfig.reacting && (sim_time > GlobalConfig.reaction_time_delay)) {
-                double dt_flow = 0.5*dt_global;
-                version (gpu_chem) {
-                    GlobalConfig.gpuChem.thermochemical_increment(dt_flow);
-                    
-                } else { // without GPU accelerator
-                    foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                        if (blk.active) {
-                            double local_dt_flow = dt_flow;
-                            foreach (cell; blk.cells) { cell.thermochemical_increment(local_dt_flow); }
-                        }
-                    }
-                }
-            }
-        }
-
-        // 2a. Moving Grid - let's start by calculating vertex velocties
-        //     if GridMotion.none then set_grid_velocities to 0 m/s
-        //     else moving grid vertex velocities will be set.
-            //
-            ///////////////////////////////////////////////////////////////////////
-            // [TODO] PJ 2018-01-20 Up to here with thinking about MPI parallel. //
-            ///////////////////////////////////////////////////////////////////////
-            //
-        set_grid_velocities(sim_time, step, 0, dt_global);
         //
-        // 2b. Explicit or implicit update of the convective terms.
-        if (GlobalConfig.grid_motion != GridMotion.none) {
-            //  Moving Grid - perform gas update for moving grid
-            gasdynamic_explicit_increment_with_moving_grid();
-        } else {
+        // 2.0 Attempt a time step.
+        // 2.1 Chemistry 1/2 step (if appropriate). 
+        if (GlobalConfig.reacting && 
+            (GlobalConfig.strangSplitting == StrangSplittingMode.half_R_full_T_half_R) &&
+            (sim_time > GlobalConfig.reaction_time_delay)) {
+            chemistry_step(0.5*dt_global);
+        }
+        // 2.2 Update the convective terms.
+        if (GlobalConfig.grid_motion == GridMotion.none) {
             gasdynamic_explicit_increment_with_fixed_grid();
+        } else {
+            // Moving Grid - perform gas update for moving grid
+            // [TODO] PJ 2018-01-20 Up to here with thinking about MPI parallel.
+            set_grid_velocities(sim_time, step, 0, dt_global);
+            gasdynamic_explicit_increment_with_moving_grid();
+            recalculate_all_geometry();
         }
-        //
-        // 2c. Moving Grid - Recalculate all geometry, note that in the gas dynamic
-        //     update gtl level 2 is copied to gtl level 0 for the next step thus
-        //     we actually do want to calculate geometry at gtl 0 here.
-        if (GlobalConfig.grid_motion != GridMotion.none) {
-            foreach (blk; localFluidBlocksBySize) {
-                if (blk.active) {
-                    blk.compute_primary_cell_geometric_data(0);
-                    blk.compute_least_squares_setup(0);
-                } // end if active
-            } // end foreach blk
-        }
-        // 2d. Solid domain update (if loosely coupled)
-        //     (If tight coupling, then this has been performed in the gasdynamic_explicit_increment()
-        if ( GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.loose ) {
+        // 2.3 Solid domain update (if loosely coupled)
+        // If tight coupling, then this has already been performed
+        // in the gasdynamic_explicit_increment().
+        if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.loose) {
             // Call Nigel's update function here.
             solid_domains_backward_euler_update(sim_time, dt_global);
         }
-        // 2e. Chemistry step or 1/2 step (if appropriate). 
+        // 2.4 Chemistry step or 1/2 step (if appropriate). 
         if ( GlobalConfig.reacting && (sim_time > GlobalConfig.reaction_time_delay)) {
-            double dt_flow = (GlobalConfig.strangSplitting == StrangSplittingMode.full_T_full_R) ? dt_global : 0.5*dt_global;
-            version (gpu_chem) {
-                GlobalConfig.gpuChem.thermochemical_increment(dt_flow);
-
-            } else { // without GPU accelerator
-                foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                    if (blk.active) {
-                        double local_dt_flow = dt_flow;
-                        foreach (cell; blk.cells) { cell.thermochemical_increment(local_dt_flow); }
-                    }
-                }
-            }
+            double mydt = (GlobalConfig.strangSplitting == StrangSplittingMode.full_T_full_R) ? dt_global : 0.5*dt_global;
+            chemistry_step(mydt);
         }
-
-        // 3. Update the time record and (occasionally) print status.
+        //
+        // 3.0 Update the time record and (occasionally) print status.
         step = step + 1;
         output_just_written = false;
         history_just_written = false;
@@ -838,16 +688,16 @@ void integrate_in_time(double target_time_as_requested)
             }
             version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
         }
-
-        // 4. (Occasionally) Write out an intermediate solution
+        //
+        // 4.0 (Occasionally) Write out an intermediate solution
         if ((sim_time >= t_plot) && !output_just_written) {
             write_solution_files();
             output_just_written = true;
             t_plot = t_plot + GlobalConfig.dt_plot;
             GC.collect();
         }
-
-        // 4a. (Occasionally) Write out the cell history data and loads on boundary groups data
+        //
+        // 4.1 (Occasionally) Write out the cell history data and loads on boundary groups data
         if ((sim_time >= t_history) && !history_just_written) {
             write_history_cells_to_files(sim_time);
             history_just_written = true;
@@ -862,23 +712,24 @@ void integrate_in_time(double target_time_as_requested)
             t_loads = t_loads + GlobalConfig.dt_loads;
             GC.collect();
         }
-        // 5. Update the run-time loads calculation, if required
+        //
+        // 5.0 Update the run-time loads calculation, if required
         if (GlobalConfig.compute_run_time_loads) {
             version(mpi_parallel) {
                 // Do not attempt to update run time loads.
                 // Need to think about how to coordinate this globally.
-            }
-            else {
-                if ( (step / GlobalConfig.run_time_loads_count) * GlobalConfig.run_time_loads_count == step ) {
+            } else {
+                if ((step / GlobalConfig.run_time_loads_count) * GlobalConfig.run_time_loads_count == step) {
                     computeRunTimeLoads();
                 }
             }
         }
-        // 6. For steady-state approach, check the residuals for mass and energy.
-
-        // 7. Spatial filter may be applied occasionally.
-
-        // 8. Loop termination criteria:
+        //
+        // 6.0 For steady-state approach, check the residuals for mass and energy.
+        //
+        // 7.0 Spatial filter may be applied occasionally.
+        //
+        // 8.0 Loop termination criteria:
         //    (1) reaching a maximum simulation time or target time
         //    (2) reaching a maximum number of steps
         //    (3) finding that the "halt_now" parameter has been set 
@@ -903,9 +754,11 @@ void integrate_in_time(double target_time_as_requested)
         }
         version(mpi_parallel) {
             // If one task is finished time-stepping, all tasks have to finish.
-            myFlag = finished_time_stepping;
-            MPI_Allreduce(MPI_IN_PLACE, &myFlag, 1, MPI_LOGICAL, MPI_LOR, MPI_COMM_WORLD);
-            finished_time_stepping = myFlag;
+            bool localFinishFlag = finished_time_stepping;
+            debug { writeln("rank=", GlobalConfig.mpi_rank_for_local_task, " before reduce, localFinishFlag=", localFinishFlag); }
+            MPI_Allreduce(MPI_IN_PLACE, &localFinishFlag, 1, MPI_LOGICAL, MPI_LOR, MPI_COMM_WORLD);
+            debug { writeln("rank=", GlobalConfig.mpi_rank_for_local_task, " after reduce, localFinishFlag=", localFinishFlag); }
+            finished_time_stepping = localFinishFlag;
         }
         if(finished_time_stepping && GlobalConfig.verbosity_level >= 1 && GlobalConfig.is_master_task) {
             // Make an announcement about why we are finishing time-stepping.
@@ -927,18 +780,192 @@ void integrate_in_time(double target_time_as_requested)
     return;
 } // end integrate_in_time()
 
-void finalize_simulation()
+void check_run_time_configuration(double target_time_as_requested)
 {
-    if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) {
-        writeln("Finalize the simulation.");
+    // Alter configuration setting if necessary.
+    if ( (step/GlobalConfig.control_count)*GlobalConfig.control_count == step ) {
+        read_control_file(); // Reparse the time-step control parameters occasionally.
+        target_time = (GlobalConfig.block_marching) ? target_time_as_requested : GlobalConfig.max_time;
     }
-    if (!output_just_written) { write_solution_files(); }
-    if (!history_just_written) { write_history_cells_to_files(sim_time); }
-    GC.collect();
-    if (GlobalConfig.verbosity_level > 0  && GlobalConfig.is_master_task) {
-        writeln("Step= ", step, " final-t= ", sim_time);
+    if (GlobalConfig.viscous && GlobalConfig.viscous_factor < 1.0 &&
+        sim_time > GlobalConfig.viscous_delay) {
+        // We want to increment the viscous_factor that scales the viscous effects terms.
+        double viscous_factor = GlobalConfig.viscous_factor;
+        viscous_factor += GlobalConfig.viscous_factor_increment;
+        viscous_factor = min(viscous_factor, 1.0);
+        // Make sure that everyone is up-to-date.
+        foreach (myblk; localFluidBlocksBySize) {
+            myblk.myConfig.viscous_factor = viscous_factor; 
+        }
+        GlobalConfig.viscous_factor = viscous_factor;
     }
-} // end finalize_simulation()
+    // We might need to activate or deactivate the IgnitionZones depending on
+    // what simulation time we are up to.
+    if (sim_time >= GlobalConfig.ignition_time_start && sim_time <= GlobalConfig.ignition_time_stop) {
+        foreach (blk; localFluidBlocksBySize) { blk.myConfig.ignition_zone_active = true; }
+        GlobalConfig.ignition_zone_active = true;
+    } else {
+        foreach (blk; localFluidBlocksBySize) { blk.myConfig.ignition_zone_active = false; }
+        GlobalConfig.ignition_zone_active = false;
+    }
+    // The user may also have some start-of-time-step configuration to do
+    // via their Lua script file.
+    if (GlobalConfig.udf_supervisor_file.length > 0) {
+        auto L = GlobalConfig.master_lua_State;
+        lua_getglobal(L, "atTimestepStart");
+        lua_pushnumber(L, sim_time);
+        lua_pushnumber(L, step);
+        int number_args = 2;
+        int number_results = 0;
+        if ( lua_pcall(L, number_args, number_results, 0) != 0 ) {
+            string errMsg = "ERROR: while running user-defined function atTimestepStart()\n";
+            errMsg ~= to!string(lua_tostring(L, -1));
+            throw new FlowSolverException(errMsg);
+        }
+    }
+} // end check_run_time_configuration()
+
+void determine_time_step_size()
+{
+    // Set the size of the time step to be the minimum allowed for any active block.
+    if (!GlobalConfig.fixed_time_step && 
+        (step/GlobalConfig.cfl_count)*GlobalConfig.cfl_count == step) {
+        // Check occasionally 
+        do_cfl_check_now = true;
+    } // end if step == 0
+    version(mpi_parallel) {
+        // If one task is doing a time-step check, all tasks have to.
+        bool myFlag = do_cfl_check_now;
+        MPI_Allreduce(MPI_IN_PLACE, &myFlag, 1, MPI_LOGICAL, MPI_LOR, MPI_COMM_WORLD);
+        do_cfl_check_now = myFlag;
+    }
+    if (do_cfl_check_now) {
+        // Adjust the time step...
+        //
+        // First, check what each block thinks should be the allowable step size.
+        foreach (i, myblk; parallel(localFluidBlocksBySize,1)) {
+            // Note 'i' is not necessarily the block id but
+            // that is not important here, just need a unique spot to poke into local_dt_allow.
+            if (myblk.active) { local_dt_allow[i] = myblk.determine_time_step_size(dt_global); }
+        }
+        // Second, reduce this estimate across all local blocks.
+        dt_allow = double.max; // to be sure it is replaced.
+        foreach (i, myblk; localFluidBlocks) { // serial loop
+            if (myblk.active) { dt_allow = min(dt_allow, local_dt_allow[i]); } 
+        }
+        version(mpi_parallel) {
+            double my_dt_allow = dt_allow;
+            MPI_Allreduce(MPI_IN_PLACE, &my_dt_allow, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+            dt_allow = my_dt_allow;
+        }
+        // Now, change the actual time step, as needed.
+        if (dt_allow <= dt_global) {
+            // If we need to reduce the time step, do it immediately.
+            dt_global = dt_allow;
+        } else {
+            // Make the transitions to larger time steps gentle.
+            dt_global = min(dt_global*1.5, dt_allow);
+            // The user may supply, explicitly, a maximum time-step size.
+            dt_global = min(dt_global, GlobalConfig.dt_max);
+        }
+        do_cfl_check_now = false;  // we have done our check for now
+    } // end if do_cfl_check_now 
+} // end determine_time_step_size()
+
+void update_ch_for_divergence_cleaning()
+{
+    bool first = true;
+    foreach (blk; localFluidBlocksBySize) {
+        if (!blk.active) continue;
+        if (first) {
+            GlobalConfig.c_h = blk.update_c_h(dt_global);
+            first = false;
+        } else {
+            GlobalConfig.c_h = fmin(blk.update_c_h(dt_global), GlobalConfig.c_h);
+        }
+    }
+    version(mpi_parallel) {
+        double my_c_h = GlobalConfig.c_h;
+        MPI_Allreduce(MPI_IN_PLACE, &my_c_h, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+        GlobalConfig.c_h = my_c_h;
+    }
+    // Now that we have a globally-reduced value, propagate that new value
+    // into the block-local config structure.
+    foreach (blk; localFluidBlocksBySize) {
+        if (!blk.active) continue;
+        blk.myConfig.c_h = GlobalConfig.c_h;
+    }
+} // end update_ch_for_divergence_cleaning()
+
+void k_omega_set_mu_and_k()
+{
+    foreach (blk; parallel(localFluidBlocksBySize,1)) {
+        if (blk.active) {
+            blk.flow_property_spatial_derivatives(0); 
+            blk.estimate_turbulence_viscosity();
+        }
+    }
+} // end k_omega_set_mu_and_k()
+
+void chemistry_step(double dt)
+{
+    version (gpu_chem) {
+        GlobalConfig.gpuChem.thermochemical_increment(dt);
+    } else {
+        // without GPU accelerator
+        foreach (blk; parallel(localFluidBlocksBySize,1)) {
+            if (blk.active) {
+                double local_dt = dt;
+                foreach (cell; blk.cells) { cell.thermochemical_increment(local_dt); }
+            }
+        }
+    }
+} // end chemistry_half_step()
+
+void set_grid_velocities(double sim_time, int step, int gtl, double dt_global)
+{
+    final switch(GlobalConfig.grid_motion){
+        case GridMotion.none:
+            throw new Error("Should not be setting grid velocities in with GridMotion.none");
+        case GridMotion.user_defined:
+            // Rely on user to set vertex velocities.
+            // Velocities remain unchanged if the user does nothing.
+            assign_vertex_velocities_via_udf(sim_time, dt_global);
+            break;
+        case GridMotion.shock_fitting:
+            if (GlobalConfig.in_mpi_context) {
+                throw new Error("oops, shock_fitting not compatible with MPI.");
+                // [TODO] 2018-01-20 PJ should do something to lift this restriction.
+            }
+            // apply boundary conditions here because ...
+            // shockfitting algorithm requires ghost cells to be up to date.
+            exchange_ghost_cell_boundary_data(sim_time, 0, 0);
+            foreach (blk; localFluidBlocksBySize) {
+                if (blk.active) { blk.applyPreReconAction(sim_time, 0, 0); }
+            }
+            foreach (blk; localFluidBlocksBySize) {
+                if (blk.active) {
+                    auto sblk = cast(SFluidBlock) blk;
+                    assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
+                    shock_fitting_vertex_velocities(sblk, step, sim_time);
+                }
+            }
+            break;              
+    }
+} // end set_grid_velocities()
+
+void recalculate_all_geometry()
+{
+    // Moving Grid - Recalculate all geometry, note that in the gas dynamic
+    // update gtl level 2 is copied to gtl level 0 for the next step thus
+    // we actually do want to calculate geometry at gtl 0 here.
+    foreach (blk; localFluidBlocksBySize) {
+        if (blk.active) {
+            blk.compute_primary_cell_geometric_data(0);
+            blk.compute_least_squares_setup(0);
+        }
+    }
+} // end recalculate_all_geometry()
 
 //---------------------------------------------------------------------------
 
@@ -1012,41 +1039,6 @@ void exchange_ghost_cell_boundary_data(double t, int gtl, int ftl)
         }
     }
 } // end exchange_ghost_cell_boundary_data()
-
-
-void set_grid_velocities(double sim_time, int step, int gtl, double dt_global)
-{
-    final switch(GlobalConfig.grid_motion){
-        case GridMotion.none:
-            foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                if (blk.active) { foreach (iface; blk.faces) { iface.gvel.clear(); } }
-            }
-            break;
-        case GridMotion.user_defined:
-            // Rely on user to set vertex velocities. Velocities remain unchanged if the user does nothing.
-            assign_vertex_velocities_via_udf(sim_time, dt_global);
-            break;
-        case GridMotion.shock_fitting:
-            if (GlobalConfig.in_mpi_context) {
-                throw new Error("oops, should not be doing shock fitting in MPI.");
-                // [TODO] 2018-01-20 PJ should do something to lift this restriction.
-            }
-            // apply boundary conditions here because ...
-            // shockfitting algorithm requires ghost cells to be up to date.
-            exchange_ghost_cell_boundary_data(sim_time, 0, 0);
-            foreach (blk; localFluidBlocksBySize) {
-                if (blk.active) { blk.applyPreReconAction(sim_time, 0, 0); }
-            }
-            foreach (blk; localFluidBlocksBySize) {
-                if (blk.active) {
-                    auto sblk = cast(SFluidBlock) blk;
-                    assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
-                    shock_fitting_vertex_velocities(sblk, step, sim_time);
-                }
-            }
-            break;              
-    }
-} // end set_grid_velocities()
 
 //----------------------------------------------------------------------------
 
@@ -1886,3 +1878,17 @@ void compute_Linf_residuals(ConservedQuantities Linf_residuals)
 
     }
 } // end compute_Linf_residuals()
+
+
+void finalize_simulation()
+{
+    if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) {
+        writeln("Finalize the simulation.");
+    }
+    if (!output_just_written) { write_solution_files(); }
+    if (!history_just_written) { write_history_cells_to_files(sim_time); }
+    GC.collect();
+    if (GlobalConfig.verbosity_level > 0  && GlobalConfig.is_master_task) {
+        writeln("Step= ", step, " final-t= ", sim_time);
+    }
+} // end finalize_simulation()
