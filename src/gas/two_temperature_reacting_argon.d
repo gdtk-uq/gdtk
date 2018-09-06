@@ -52,8 +52,6 @@ public:
         _theta_ion = 183100.0;
         _theta_A1star = 135300.0;
         _ion_tol = getDouble(L, -1, "ion_tol");
-        _T_modes_ref = getDouble(L, -1, "T_modes_ref");
-
         _mol_masses.length = 3;
         _mol_masses[0] = 39.948e-3; // Units are kg/mol
         _mol_masses[2] = 5.485799e-7; // Units are kg/mol
@@ -87,7 +85,7 @@ public:
         Q.rho = Q.p/(_Rgas*(Q.T + alpha*Q.T_modes[0]));
         Q.u = 3.0/2.0*_Rgas*Q.T;
         if (alpha<=_ion_tol) {
-            Q.T_modes[0] = _T_modes_ref;
+            Q.T_modes[0] = Q.T;
             Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
         } else {
             Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
@@ -102,7 +100,7 @@ public:
         }
         Q.T = 2.0/3.0*Q.u/_Rgas;
         if (alpha <= _ion_tol) {
-            Q.T_modes[0] = _T_modes_ref;
+            Q.T_modes[0] = Q.T;
             Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
         } else {
             Q.T_modes[0] = (Q.u_modes[0]/alpha-_Rgas*_theta_ion)*2.0/3.0/_Rgas;
@@ -120,7 +118,7 @@ public:
         Q.p = Q.rho*_Rgas*(Q.T+alpha*Q.T_modes[0]);     //Q.rho*_Rgas*Q.T;
         Q.u = 3.0/2.0*_Rgas*Q.T;
         if (alpha <= _ion_tol) {
-            Q.T_modes[0] = _T_modes_ref;
+            Q.T_modes[0] = Q.T;
             Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
         } else {
             Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
@@ -138,7 +136,7 @@ public:
         // Assume Q.T_modes[0] is set independently, and correct.
         Q.u = 3.0/2.0*_Rgas*Q.T;
         if (alpha <= _ion_tol) {
-            Q.T_modes[0] = _T_modes_ref;
+            Q.T_modes[0] = Q.T;
             Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
         } else {
             Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
@@ -210,8 +208,6 @@ private:
     double _Cp;
     double _Cv;
     double _ion_tol;
-    double _T_modes_ref;
-
 } // end class
 
 //// Unit test of the basic gas model...

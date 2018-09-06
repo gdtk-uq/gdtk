@@ -37,7 +37,6 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         auto L = init_lua_State();
         doLuaFile(L, fname);
         lua_getglobal(L, "TwoTemperatureReactingArgon");
-        _T_modes_ref = getDouble(L, -1, "T_modes_ref");
         _mol_masses.length = 3;
         _mol_masses[0] = 39.948e-3; // Units are kg/mol
         _mol_masses[2] = 5.485799e-7; // Units are kg/mol
@@ -51,9 +50,8 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         _theta_A1star = 135300.0;
         _ion_tol = getDouble(L, -1, "ion_tol");
         _chem_dt = getDouble(L, -1, "chem_dt");
-        _integration_method = "RK4"; //TODO CHANGE THIS SO THAT IT CAN BE ALTERED IN THE INPUT LUA SCRIPT
-        _Newton_Raphson_tol = 1.0e-6; //getDouble(L, -1, "Newton_Raphson_tol"); [TODO] Change this to come from lua input script
-        lua_pop(L, 1); // dispose of the table
+        _integration_method = getString(L, -1, "integration_method");
+        _Newton_Raphson_tol = getDouble(L, -1, "Newton_Raphson_tol");
         lua_close(L);
     }
     
@@ -61,7 +59,6 @@ final class UpdateArgonFrac : ThermochemicalReactor {
     {
         auto y_dash = new Matrix!number([[0.0],
                                          [0.0]]);
-
         number Q_ea;
         number Q_ei;
 
@@ -74,6 +71,11 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         Q.u = y[1,0];
         Q.u_modes[0] = _u_total-Q.u;
 
+        //Convenient variables
+        number alpha = n_e/(_n_total);
+        number Te;
+        number T = Q.T;
+
         //reconstruct the flow state from state vector
         if (n_e <= 0.0) {
             // Do not let the number of electrons go negative.
@@ -85,21 +87,22 @@ final class UpdateArgonFrac : ThermochemicalReactor {
             n_e = 0.0;
             //energy
             //temperature
-            Q.T =  2.0/3.0*Q.u/_Rgas;
-            Q.T_modes[0] = _T_modes_ref;
+            Q.T =  2.0/3.0*Q.u/_Rgas; T = Q.T;
+            Q.T_modes[0] = Q.T;
+        } else if (alpha < _ion_tol) {
+            Te = Q.T;
+        } else {
+            Te = Q.T_modes[0];
         }
+
+        if (Q.u_modes[0] == 0.0) {Te = T;}
         
         //Must update the mass fractions before updating the gas state from rho and u...
         Q.massf[0] = n_Ar/_Av/Q.rho*_mol_masses[0];
         Q.massf[1] = n_e/_Av/Q.rho*_mol_masses[1];
-        Q.massf[2] = n_e/_Av/Q.rho*_mol_masses[2];// Number density of Argon+ is the same as electron number density.       
+        Q.massf[2] = n_e/_Av/Q.rho*_mol_masses[2];// Number density of Argon+ is the same as electron number density.
         _gmodel.update_thermo_from_rhou(Q);
         _gmodel.update_sound_speed(Q);
-
-        //Convenient variables
-        number alpha = n_e/(_n_total);
-        number Te = Q.T_modes[0];
-        number T = Q.T;
 
         //=====================================================================
         //rate constants
@@ -109,16 +112,15 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         number kre = 1.29e-44*(_theta_A1star/Te+2)*exp((_theta_ion-_theta_A1star)/Te);
 
         //determine the current rate of ionisation
-        number n_dot_A = kfA*pow(n_Ar,2) - krA*n_Ar*pow(n_e,2);       //production rate of electrons due to argon collisions
-        number n_dot_e = kfe*n_Ar*n_e - kre*pow(n_e,3);       //production rate of electrons due to electron collisions
-        number n_dot = n_dot_A + n_dot_e; //$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ (1) (2)
+        number n_dot_A = kfA*pow(n_Ar,2) - krA*n_Ar*pow(n_e,2);         //production rate of electrons due to argon collisions
+        number n_dot_e = kfe*n_Ar*n_e - kre*pow(n_e,3);                 //production rate of electrons due to electron collisions
+        number n_dot = n_dot_A + n_dot_e;
 
         y_dash[0,0] = n_dot;
 
         //Energy moving to electronic mode due to reactions:
         number alpha_dot = n_dot/_n_total;
-        number u_dot_reac = 3.0/2.0*_Rgas*alpha_dot*Te+alpha_dot*_Rgas*_theta_ion;
-        if (alpha > _ion_tol) {u_dot_reac -= n_dot_e*_Kb*_theta_ion/Q.rho;}
+        number u_dot_reac = 3.0/2.0*_Rgas*alpha_dot*Te+alpha_dot*_Rgas*_theta_ion - n_dot_e*_Kb*_theta_ion/Q.rho;
 
         //=====================================================================
         //now need temperatures...
@@ -142,8 +144,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
             v_ei = alpha*Q.rho/_m_Ar*sqrt(8*_Kb*Te/to!number(PI)/_m_e)*Q_ei; //electron-Ar+ collisions
 
             alpha_dot = n_dot/(n_e+n_Ar);
-            number u_dot = 3*n_e*_m_e/_m_Ar*(v_ea+v_ei)*_Kb*(T-Te)/Q.rho;// energy transferred to electron mode through collisions ///THIS NEEDS TO ALSO ACCOUNT FOR energy absorbed due to ionisation as well
-
+            number u_dot = 3*n_e*_m_e/_m_Ar*(v_ea+v_ei)*_Kb*(T-Te)/Q.rho;// energy transferred to electron mode through collisions
             y_dash[1,0] = - u_dot - u_dot_reac;
         } else {
             y_dash[1,0] = 0.0 - u_dot_reac;            
@@ -161,12 +162,14 @@ final class UpdateArgonFrac : ThermochemicalReactor {
 
         auto J = new Matrix!number([[0.0,0.0],
                                     [0.0,0.0]]);
-        auto in1 = new Matrix!number([[y[0,0] + h[0,0]],[y[1,0]]]);
-        auto col1 = (BackEuler_F(in1,y_prev, Q) - BackEuler_F(y, y_prev, Q))/h[0,0];
-        auto in3 = new Matrix!number([[y[0,0]],[y[1,0] + h[1,0]]]);
-        auto col2 = (BackEuler_F(in1,y_prev, Q) - BackEuler_F(y, y_prev, Q))/h[1,0];
 
-        J[0,0] = col1[0,0]; J[0,1] = col1[1,0]; J[1,0] = col2[0,0]; J[1,1] = col2[1,0];
+        auto yph0 = new Matrix!number([[y[0,0] + h[0,0]],[y[1,0]]]); //y plus increment in index 0
+        auto col1 = (BackEuler_F(yph0,y_prev, Q) - BackEuler_F(y, y_prev, Q))/h[0,0];
+        auto yph1 = new Matrix!number([[y[0,0]],[y[1,0] + h[1,0]]]); //y plus increment in index 1
+        auto col2 = (BackEuler_F(yph1,y_prev, Q) - BackEuler_F(y, y_prev, Q))/h[1,0];
+
+        J[0,0] = col1[0,0]; J[1,0] = col1[1,0]; J[0,1] = col2[0,0]; J[1,1] = col2[1,0];
+
         return J;
     }
 
@@ -178,9 +181,9 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         if (Q.T > 3000.0) {
             double chem_dt_start = _chem_dt;
             int NumberSteps = to!int(tInterval/_chem_dt);
-            if (NumberSteps == 0) {NumberSteps = 1;}
+            if (NumberSteps < 1) {NumberSteps = 1;}
             _chem_dt = tInterval/NumberSteps;
-            //
+            //writeln("Number of Steps ", NumberSteps);
             // Determine the current number densities.
             number n_e = Q.rho/_mol_masses[2]*Q.massf[2]*_Av; // number density of electrons
             number n_Ar = Q.rho/_mol_masses[0]*Q.massf[0]*_Av; // number density of Ar
@@ -192,7 +195,8 @@ final class UpdateArgonFrac : ThermochemicalReactor {
             auto y = new Matrix!number([[n_e],
                                         [Q.u]]);
             auto y_prev = y;
-            number norm_error;
+            number norm_error = 1.0e50;
+            number prev_norm_error;
             
             //Initialise variables for RK4
             auto k1 = zeros!number(2,1);
@@ -202,24 +206,28 @@ final class UpdateArgonFrac : ThermochemicalReactor {
             auto k3 = zeros!number(2,1);
             auto k4_in = zeros!number(2,1);
             auto k4 = zeros!number(2,1);
+            auto h = new Matrix!number([[1.0e10],[1.0e-5]]); //working: auto h = new Matrix!number([[1.0e10],[1.0e0]]); 
 
             foreach (n; 1 .. NumberSteps) {
+                //writeln("y = ", y);
                 if (_integration_method == "Forward_Euler") {
                     y = y + _chem_dt*F(y, Q);
                 } else if (_integration_method == "Backward_Euler"){
-                    auto h = new Matrix!number([[1.0e20],[1.0e3]]); 
-                    //This while loop iterates the equation until it reaches the next value of y[].
-                    // This is a newton Raphson Solver for the next value of y[]
-                    do {
-                        writeln("y = ", y);
-                        writeln("h = ", h);
-                        auto J = Jacobian(y,y_prev,h,Q); 
-                        writeln("J = ", J);                     
-                        auto J_inv = inverse!number(J);
-                        y = y - dot!number(J_inv,BackEuler_F(y,y_prev,Q));
-                        auto error = BackEuler_F(y,y_prev,Q);
-                        norm_error = sqrt(pow(error[0,0],2) + pow(error[1,0],2));
-                    } while (norm_error < _Newton_Raphson_tol);
+                    if (y[0,0] < 0.0) {
+                        y = y + _chem_dt*F(y, Q);
+                    } else {
+                        do {
+                            //writeln(" ");
+                            //prev_norm_error = norm_error;
+                            auto J = Jacobian(y,y_prev,h,Q); 
+                            auto J_inv = inverse!number(J);
+                            y = y - dot!number(J_inv,BackEuler_F(y,y_prev,Q));
+                            auto error = BackEuler_F(y,y_prev,Q);
+                            //writeln("error = ", error);
+                            norm_error = sqrt(pow(error[0,0]/1.0e22,2) + pow(error[1,0]/1.0e7,2));
+                            //writeln("norm_error = ", norm_error);
+                        } while (norm_error > _Newton_Raphson_tol);//while (norm_error < prev_norm_error); // 
+                    }
 
                     y_prev = y;
                 } else if (_integration_method == "RK4"){
@@ -258,7 +266,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
                 //energy
                 //temperature
                 Q.T =  2.0/3.0*Q.u/_Rgas;
-                Q.T_modes[0] = _T_modes_ref;
+                Q.T_modes[0] = Q.T;
             }
             
             //Must update the mass fractions before updating the gas state from rho and u...
@@ -275,7 +283,6 @@ final class UpdateArgonFrac : ThermochemicalReactor {
 private:
     double[] _mol_masses;
     double _ion_tol;
-    double _T_modes_ref;
     double _chem_dt;
     double _m_Ar; //mass of argon (kg)
     double _m_e; //mass of electron (kg)
@@ -355,7 +362,7 @@ version(two_temperature_argon_kinetics_test) {
         auto GS = new GasState(3, 1);
         GS.p = p1*446.735124;
         GS.T = T1* 112.620756;
-        GS.T_modes[0] = 10000;
+        GS.T_modes[0] = GS.T;//10000;
         GS.massf[0] = 1.0; GS.massf[1] = 0.0; GS.massf[2] = 0.0;
         double vel = 1548.98; // m/s
         double x = 0.0;
@@ -438,9 +445,9 @@ version(two_temperature_argon_kinetics_test) {
                          collateddata[3][i], " ", collateddata[4][i], " ", collateddata[5][i], " ",
                          collateddata[6][i]);
         }
-        //
-        // [TODO] Daniel, we need some assert statements here to check particular values.
-        //
+    assert(approxEqual(GS.T, 14730, 1.0e2), failedUnitTest());
+    assert(approxEqual(GS.p, 705738, 1.0e2), failedUnitTest());
+    assert(approxEqual(vel, 700.095, 1.0e0), failedUnitTest());
     } // end main()
 } // end two_temperature_argon_kinetics_test
 
