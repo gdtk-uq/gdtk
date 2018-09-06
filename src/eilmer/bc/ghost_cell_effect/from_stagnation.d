@@ -9,6 +9,8 @@ import std.stdio;
 import std.math;
 import nm.complex;
 import nm.number;
+import util.lua;
+import util.lua_service;
 
 import geom;
 import globalconfig;
@@ -34,18 +36,21 @@ public:
     double relax_factor;
 private:
     FlowState inflow_condition;
+    string luaFileName;
     number stagnation_entropy;
     number stagnation_enthalpy;
     number p0_min;
     number p0_max;
 
 public:    
-    this(int id, int boundary, in FlowState stagnation_condition,
+    this(int id, int boundary,
+         in FlowState stagnation_condition, in string fileName,
          string direction_type, in Vector3 vec, double alpha, double beta,
          double mass_flux, double relax_factor)
     {
         super(id, boundary, "FromStagnation");
         this.stagnation_condition = new FlowState(stagnation_condition);
+        this.luaFileName = fileName;
         this.direction_type = direction_type;
         this.direction_vector = vec;
         this.direction_vector.normalize();
@@ -65,9 +70,17 @@ public:
         p0_max = 10.0 * stagnation_condition.gas.p;
     }
 
+    override void post_bc_construction()
+    {
+        if ((luaFileName.length > 0) && (blk.bc[which_boundary].myL == null)) {
+            blk.bc[which_boundary].init_lua_State(luaFileName);
+        }
+    }
+
     override string toString() const 
     {
-        return "FromStagnation(stagnation_condition=" ~ to!string(stagnation_condition) ~ 
+        return "FromStagnation(stagnation_condition=" ~ to!string(stagnation_condition) ~
+            ", luaFileName=\"" ~ luaFileName ~ "\"" ~
             ", direction_type=" ~ direction_type ~ 
             ", direction_vector=" ~ to!string(direction_vector) ~
             ", alpha=" ~ to!string(alpha) ~ ", beta=" ~ to!string(beta) ~ 
@@ -115,6 +128,36 @@ public:
             }
         }
     } // end set_velocity_components()
+
+    void callUDFstagnationPT(double t, double dt_global, int step, int gtl, int ftl,
+                             ref number new_p0, ref number new_T0)
+    {
+        // [TODO] call stagnationPT function
+        // 1. Set up for calling function
+        auto L = blk.bc[which_boundary].myL;
+        // 1a. Place function to call at TOS
+        lua_getglobal(L, "stagnationPT");
+        // 1b. Then put arguments (as single table) at TOS
+        lua_newtable(L);
+        lua_pushnumber(L, t); lua_setfield(L, -2, "t");
+        lua_pushnumber(L, dt_global); lua_setfield(L, -2, "dt");
+        lua_pushinteger(L, step); lua_setfield(L, -2, "timeStep");
+        lua_pushinteger(L, gtl); lua_setfield(L, -2, "gridTimeLevel");
+        lua_pushinteger(L, ftl); lua_setfield(L, -2, "flowTimeLevel");
+        lua_pushinteger(L, which_boundary); lua_setfield(L, -2, "boundaryId");
+        // 2. Call LuaFunction and expect two tables of ghost cell flow state
+        int number_args = 1;
+        int number_results = 2; // p0 and T0
+        if ( lua_pcall(L, number_args, number_results, 0) != 0 ) {
+            luaL_error(L, "error running user-defined b.c. ghostCell function on boundaryId %d: %s\n",
+                       which_boundary, lua_tostring(L, -1));
+        }
+        // The returned data, p0 first then T0:
+        new_p0 = to!double(luaL_checknumber(L, -2));
+        new_T0 = to!double(luaL_checknumber(L, -1));
+        // 4. Clear stack
+        lua_settop(L, 0);
+    }
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
@@ -169,6 +212,16 @@ public:
                 number new_p0 = (1.0 + dp_over_p) * stagnation_condition.gas.p;
                 new_p0 = fmin(fmax(new_p0, p0_min), p0_max);
                 stagnation_condition.gas.p = new_p0;
+                gmodel.update_thermo_from_pT(stagnation_condition.gas);
+                stagnation_enthalpy = gmodel.enthalpy(stagnation_condition.gas);
+                stagnation_entropy = gmodel.entropy(stagnation_condition.gas);
+            } else if (luaFileName.length > 0) {
+                number new_p0 = stagnation_condition.gas.p;
+                number new_T0 = stagnation_condition.gas.T;
+                // [FIXME] dt_global=0.0 step=0
+                callUDFstagnationPT(t, 0.0, 0, gtl, ftl, new_p0, new_T0);
+                stagnation_condition.gas.p = new_p0;
+                stagnation_condition.gas.T = new_T0;
                 gmodel.update_thermo_from_pT(stagnation_condition.gas);
                 stagnation_enthalpy = gmodel.enthalpy(stagnation_condition.gas);
                 stagnation_entropy = gmodel.entropy(stagnation_condition.gas);
@@ -230,6 +283,16 @@ public:
                 gmodel.update_thermo_from_pT(stagnation_condition.gas);
                 stagnation_enthalpy = gmodel.enthalpy(stagnation_condition.gas);
                 stagnation_entropy = gmodel.entropy(stagnation_condition.gas);
+            } else if (luaFileName.length > 0) {
+                number new_p0 = stagnation_condition.gas.p;
+                number new_T0 = stagnation_condition.gas.T;
+                // [FIXME] dt_global=0.0 step=0
+                callUDFstagnationPT(t, 0.0, 0, gtl, ftl, new_p0, new_T0);
+                stagnation_condition.gas.p = new_p0;
+                stagnation_condition.gas.T = new_T0;
+                gmodel.update_thermo_from_pT(stagnation_condition.gas);
+                stagnation_enthalpy = gmodel.enthalpy(stagnation_condition.gas);
+                stagnation_entropy = gmodel.entropy(stagnation_condition.gas);
             }
             number bulk_speed = sqrt((rhovxA/rhoA)^^2 + (rhovyA/rhoA)^^2 + (rhovzA/rhoA)^^2);
             if (rhoUA < 0.0) { bulk_speed = 0.0; } // Block any outflow with stagnation condition.
@@ -284,6 +347,16 @@ public:
                 number new_p0 = (1.0 + dp_over_p) * stagnation_condition.gas.p;
                 new_p0 = fmin(fmax(new_p0, p0_min), p0_max);
                 stagnation_condition.gas.p = new_p0;
+                gmodel.update_thermo_from_pT(stagnation_condition.gas);
+                stagnation_enthalpy = gmodel.enthalpy(stagnation_condition.gas);
+                stagnation_entropy = gmodel.entropy(stagnation_condition.gas);
+            } else if (luaFileName.length > 0) {
+                number new_p0 = stagnation_condition.gas.p;
+                number new_T0 = stagnation_condition.gas.T;
+                // [FIXME] dt_global=0.0 step=0
+                callUDFstagnationPT(t, 0.0, 0, gtl, ftl, new_p0, new_T0);
+                stagnation_condition.gas.p = new_p0;
+                stagnation_condition.gas.T = new_T0;
                 gmodel.update_thermo_from_pT(stagnation_condition.gas);
                 stagnation_enthalpy = gmodel.enthalpy(stagnation_condition.gas);
                 stagnation_entropy = gmodel.entropy(stagnation_condition.gas);
@@ -345,6 +418,16 @@ public:
                 gmodel.update_thermo_from_pT(stagnation_condition.gas);
                 stagnation_enthalpy = gmodel.enthalpy(stagnation_condition.gas);
                 stagnation_entropy = gmodel.entropy(stagnation_condition.gas);
+            } else if (luaFileName.length > 0) {
+                number new_p0 = stagnation_condition.gas.p;
+                number new_T0 = stagnation_condition.gas.T;
+                // [FIXME] dt_global=0.0 step=0
+                callUDFstagnationPT(t, 0.0, 0, gtl, ftl, new_p0, new_T0);
+                stagnation_condition.gas.p = new_p0;
+                stagnation_condition.gas.T = new_T0;
+                gmodel.update_thermo_from_pT(stagnation_condition.gas);
+                stagnation_enthalpy = gmodel.enthalpy(stagnation_condition.gas);
+                stagnation_entropy = gmodel.entropy(stagnation_condition.gas);
             }
             number bulk_speed = sqrt((rhovxA/rhoA)^^2 + (rhovyA/rhoA)^^2 + (rhovzA/rhoA)^^2);
             if (rhoUA < 0.0) { bulk_speed = 0.0; } // Block any outflow with stagnation condition.
@@ -403,6 +486,16 @@ public:
                 gmodel.update_thermo_from_pT(stagnation_condition.gas);
                 stagnation_enthalpy = gmodel.enthalpy(stagnation_condition.gas);
                 stagnation_entropy = gmodel.entropy(stagnation_condition.gas);
+            } else if (luaFileName.length > 0) {
+                number new_p0 = stagnation_condition.gas.p;
+                number new_T0 = stagnation_condition.gas.T;
+                // [FIXME] dt_global=0.0 step=0
+                callUDFstagnationPT(t, 0.0, 0, gtl, ftl, new_p0, new_T0);
+                stagnation_condition.gas.p = new_p0;
+                stagnation_condition.gas.T = new_T0;
+                gmodel.update_thermo_from_pT(stagnation_condition.gas);
+                stagnation_enthalpy = gmodel.enthalpy(stagnation_condition.gas);
+                stagnation_entropy = gmodel.entropy(stagnation_condition.gas);
             }
             number bulk_speed = sqrt((rhovxA/rhoA)^^2 + (rhovyA/rhoA)^^2 + (rhovzA/rhoA)^^2);
             if (rhoUA < 0.0) { bulk_speed = 0.0; } // Block any outflow with stagnation condition.
@@ -457,6 +550,16 @@ public:
                 number new_p0 = (1.0 + dp_over_p) * stagnation_condition.gas.p;
                 new_p0 = fmin(fmax(new_p0, p0_min), p0_max);
                 stagnation_condition.gas.p = new_p0;
+                gmodel.update_thermo_from_pT(stagnation_condition.gas);
+                stagnation_enthalpy = gmodel.enthalpy(stagnation_condition.gas);
+                stagnation_entropy = gmodel.entropy(stagnation_condition.gas);
+            } else if (luaFileName.length > 0) {
+                number new_p0 = stagnation_condition.gas.p;
+                number new_T0 = stagnation_condition.gas.T;
+                // [FIXME] dt_global=0.0 step=0
+                callUDFstagnationPT(t, 0.0, 0, gtl, ftl, new_p0, new_T0);
+                stagnation_condition.gas.p = new_p0;
+                stagnation_condition.gas.T = new_T0;
                 gmodel.update_thermo_from_pT(stagnation_condition.gas);
                 stagnation_enthalpy = gmodel.enthalpy(stagnation_condition.gas);
                 stagnation_entropy = gmodel.entropy(stagnation_condition.gas);

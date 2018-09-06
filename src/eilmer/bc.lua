@@ -113,7 +113,7 @@ function FixedPT:tojson()
    return str
 end
 
-FromStagnation = GhostCellEffect:new{stagnationState=nil,
+FromStagnation = GhostCellEffect:new{stagnationState=nil, fileName="",
 				     direction_type="normal",
                                      direction_x=1.0, direction_y=0.0, direction_z=0.0,
                                      alpha=0.0, beta=0.0,
@@ -124,6 +124,7 @@ function FromStagnation:tojson()
    local str = string.format('          {"type": "%s",', self.type)
    str = str .. string.format(' "stagnation_condition": %s,',
 			      self.stagnationState:toJSONString())
+   str = str .. string.format(' "filename": "%s", ', self.fileName)
    str = str .. string.format(' "direction_type": "%s",', self.direction_type)
    str = str .. string.format(' "direction_x": %.18e, "direction_y": %.18e, "direction_z": %.18e,',
 			      self.direction_x, self.direction_y, self.direction_z)
@@ -948,17 +949,19 @@ function InFlowBC_FromStagnation:new(o)
       error("Make sure that you are using InFlowBC_FromStagnation:new{} and not InFlowBC_FromStagnation.new{}", 2)
    end
    o = o or {}
-   flag = checkAllowedNames(o, {"stagnationState", "stagCondition", "direction_type",
-                                "direction_x", "direction_y", "direction_z",
+   flag = checkAllowedNames(o, {"stagnationState", "stagCondition", "fileName", "filename",
+                                "direction_type", "direction_x", "direction_y", "direction_z",
                                 "alpha", "mass_flux", "relax_factor",
                                 "label", "group"})
    if not flag then
       error("Invalid name for item supplied to InFlowBC_FromStagnation constructor.", 2)
    end
    if o.stagnationState == nil then o.stagnationState = o.stagCondition end -- look for old name 
+   o.fileName = o.fileName or o.filename
    o = BoundaryCondition.new(self, o)
    o.is_wall_with_viscous_effects = false
    o.preReconAction = { FromStagnation:new{stagnationState=o.stagnationState,
+                                           fileName=o.fileName,
 					   direction_type=o.direction_type,
 					   direction_x=o.direction_x,
 					   direction_y=o.direction_y,

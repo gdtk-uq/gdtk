@@ -105,6 +105,7 @@ GhostCellEffect make_GCE_from_json(JSONValue jsonData, int blk_id, int boundary)
         break;
     case "from_stagnation_condition":
         auto stagnation_condition = new FlowState(jsonData["stagnation_condition"], gmodel);
+        string fname = getJSONstring(jsonData, "filename", "");
         string direction_type = getJSONstring(jsonData, "direction_type", "normal");
         double direction_x = getJSONdouble(jsonData, "direction_x", 1.0);
         double direction_y = getJSONdouble(jsonData, "direction_y", 0.0);
@@ -113,7 +114,8 @@ GhostCellEffect make_GCE_from_json(JSONValue jsonData, int blk_id, int boundary)
         double beta = getJSONdouble(jsonData, "beta", 0.0);
         double mass_flux = getJSONdouble(jsonData, "mass_flux", 0.0);
         double relax_factor = getJSONdouble(jsonData, "relax_factor", 0.1);
-        newGCE = new GhostCellFromStagnation(blk_id, boundary, stagnation_condition,
+        newGCE = new GhostCellFromStagnation(blk_id, boundary,
+                                             stagnation_condition, fname,
                                              direction_type, 
                                              Vector3(direction_x, direction_y, direction_z),
                                              alpha, beta,
