@@ -754,11 +754,9 @@ void integrate_in_time(double target_time_as_requested)
         }
         version(mpi_parallel) {
             // If one task is finished time-stepping, all tasks have to finish.
-            bool localFinishFlag = finished_time_stepping;
-            debug { writeln("rank=", GlobalConfig.mpi_rank_for_local_task, " before reduce, localFinishFlag=", localFinishFlag); }
-            MPI_Allreduce(MPI_IN_PLACE, &localFinishFlag, 1, MPI_LOGICAL, MPI_LOR, MPI_COMM_WORLD);
-            debug { writeln("rank=", GlobalConfig.mpi_rank_for_local_task, " after reduce, localFinishFlag=", localFinishFlag); }
-            finished_time_stepping = localFinishFlag;
+            int localFinishFlag = to!int(finished_time_stepping);
+            MPI_Allreduce(MPI_IN_PLACE, &localFinishFlag, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+            finished_time_stepping = to!bool(localFinishFlag);
         }
         if(finished_time_stepping && GlobalConfig.verbosity_level >= 1 && GlobalConfig.is_master_task) {
             // Make an announcement about why we are finishing time-stepping.
@@ -835,9 +833,9 @@ void determine_time_step_size()
     } // end if step == 0
     version(mpi_parallel) {
         // If one task is doing a time-step check, all tasks have to.
-        bool myFlag = do_cfl_check_now;
-        MPI_Allreduce(MPI_IN_PLACE, &myFlag, 1, MPI_LOGICAL, MPI_LOR, MPI_COMM_WORLD);
-        do_cfl_check_now = myFlag;
+        int myFlag = to!int(do_cfl_check_now);
+        MPI_Allreduce(MPI_IN_PLACE, &myFlag, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+        do_cfl_check_now = to!bool(myFlag);
     }
     if (do_cfl_check_now) {
         // Adjust the time step...
