@@ -1,6 +1,6 @@
 /**
  * pseudo_species.d
- * Authors: Pierre Mariotto, Rowan G. and Peter J. 
+ * Authors: Pierre Mariotto, Rowan G. and Peter J.
  *
  * Pseudo-species objects are used by the pseudo-species gas model.
  * A pseudo-species represents a collection of microstates, even if that
@@ -26,12 +26,14 @@ class PseudoSpecies {
     @property string name() const { return _name; }
     @property double mol_mass() const { return _mol_mass; }
     @property int DOF() const { return _dof; }
+    @property int parentIdx() const { return _parentIdx; }
 
     this(lua_State *L)
     {
         _name = getString(L, -1, "name");
         _mol_mass = getDouble(L, -1, "M");
         _dof = getInt(L, -1, "DOF_base_mode");
+        _parentIdx = getInt(L, -1, "parentIdx");
     }
 
     abstract number energy(in GasState Q) const;
@@ -40,6 +42,7 @@ private:
     string _name;
     double _mol_mass;
     int _dof;
+    int _parentIdx;
 }
 
 class SingleStatePseudoSpecies : PseudoSpecies {
@@ -49,7 +52,7 @@ public:
         super(L);
         _energy = to!number(getDouble(L, -1, "energy"));
         // convert to J/kg
-        _energy *= (electron_volt_energy*Avogadro_number)/_mol_mass; 
+        _energy *= (electron_volt_energy*Avogadro_number)/_mol_mass;
     }
 
     override number energy(in GasState Q) const { return _energy; }
@@ -69,6 +72,3 @@ PseudoSpecies createPseudoSpecies(lua_State *L)
         throw new Exception(msg);
     }
 }
-
-
-
