@@ -6,6 +6,7 @@ gm = GasModel:new{"pseudo-species-nitogen-49sp.lua"}
 Q = GasState:new{gm}
 Q.p = 1.0e5 -- Pa
 Q.T = 4000.0 -- degree K
+T_noneq = 7000.0
 molef = {}
 mfN2 = 2/3
 mfN = 1-mfN2
@@ -74,10 +75,16 @@ function Qvib_N2X(T)
    return qvib
 end
 
-qvib = Qvib_N2X(Q.T)
-for sp,eV in pairs(Evib_eV) do
-   Q.massf[sp] = mfN2*math.exp(-eV*eV2J/(k_b*Q.T))/qvib
-   print("Q.massf",sp,Q.massf[sp])
+qvib = Qvib_N2X(T_noneq)
+-- for sp,eV in pairs(Evib_eV) do
+--    Q.massf[sp] = mfN2*math.exp(-eV*eV2J/(k_b*T_noneq))/qvib
+--    print("Q.massf",sp,Q.massf[sp])
+-- end
+for i=0,47 do
+	spName = string.format("N2_eX1SIGGPlus_v%i",i)
+	--print(math.exp(-Evib_eV[spName]*eV2J/(k_b*T_noneq)), qvib, math.exp(-Evib_eV[spName]*eV2J/(k_b*T_noneq))/qvib)
+	Q.massf[spName] = mfN2*math.exp(-Evib_eV[spName]*eV2J/(k_b*T_noneq))/qvib
+  print("Q.massf",spName,Q.massf[spName])
 end
 
 Q.massf['N_e2p3Minus4S']=mfN
