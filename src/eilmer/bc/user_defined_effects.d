@@ -205,7 +205,7 @@ private:
         // 1b. Then put arguments (as single table) at TOS
         lua_newtable(L);
         lua_pushnumber(L, t); lua_setfield(L, -2, "t");
-        lua_pushnumber(L, dt_global); lua_setfield(L, -2, "dt");
+        lua_pushnumber(L, SimState.dt_global); lua_setfield(L, -2, "dt");
         lua_pushinteger(L, SimState.step); lua_setfield(L, -2, "timeStep");
         lua_pushinteger(L, gtl); lua_setfield(L, -2, "gridTimeLevel");
         lua_pushinteger(L, ftl); lua_setfield(L, -2, "flowTimeLevel");
@@ -458,7 +458,7 @@ private:
         // 1b. Then put arguments (as single table) at TOS
         lua_newtable(L);
         lua_pushnumber(L, t); lua_setfield(L, -2, "t");
-        lua_pushnumber(L, dt_global); lua_setfield(L, -2, "dt");
+        lua_pushnumber(L, SimState.dt_global); lua_setfield(L, -2, "dt");
         lua_pushinteger(L, SimState.step); lua_setfield(L, -2, "timeStep");
         lua_pushinteger(L, gtl); lua_setfield(L, -2, "gridTimeLevel");
         lua_pushinteger(L, ftl); lua_setfield(L, -2, "flowTimeLevel");
@@ -677,7 +677,7 @@ private:
         // 1b. Then put arguments (as single table) at TOS
         lua_newtable(L);
         lua_pushnumber(L, t); lua_setfield(L, -2, "t");
-        lua_pushnumber(L, dt_global); lua_setfield(L, -2, "dt");
+        lua_pushnumber(L, SimState.dt_global); lua_setfield(L, -2, "dt");
         lua_pushinteger(L, SimState.step); lua_setfield(L, -2, "timeStep");
         lua_pushinteger(L, gtl); lua_setfield(L, -2, "gridTimeLevel");
         lua_pushinteger(L, ftl); lua_setfield(L, -2, "flowTimeLevel");

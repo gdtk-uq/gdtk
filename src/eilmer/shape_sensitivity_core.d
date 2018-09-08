@@ -1049,7 +1049,7 @@ void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref
     foreach (i; 0..nDesignVars) {
         foreach (myblk; localFluidBlocks) {
             ensure_directory_is_present(make_path_name!"grid"(0));
-            string gridFileName = make_file_name!"grid"("ramp", myblk.id, 0, gridFileExt = "gz");
+            string gridFileName = make_file_name!"grid"("ramp", myblk.id, 0, GlobalConfig.gridFileExt = "gz");
             myblk.read_new_underlying_grid(gridFileName);
             myblk.sync_vertices_from_underlying_grid(0);
             myblk.compute_primary_cell_geometric_data(0);
@@ -1862,7 +1862,7 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
         writeln("----- Computing Gradient for variable: ", i);
         foreach (myblk; localFluidBlocks) {
             ensure_directory_is_present(make_path_name!"grid"(0));
-            string gridFileName = make_file_name!"grid"(jobName, myblk.id, 0, gridFileExt = "gz");
+            string gridFileName = make_file_name!"grid"(jobName, myblk.id, 0, GlobalConfig.gridFileExt = "gz");
             myblk.read_new_underlying_grid(gridFileName);
             myblk.sync_vertices_from_underlying_grid(0);
             myblk.compute_primary_cell_geometric_data(0);
@@ -1870,7 +1870,7 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
         }
     
         foreach (myblk; localFluidBlocks) {
-            myblk.read_solution(make_file_name!"flow"(jobName, myblk.id, 0, flowFileExt), false);
+            myblk.read_solution(make_file_name!"flow"(jobName, myblk.id, 0, GlobalConfig.flowFileExt), false);
 
             foreach (cell; myblk.cells) {
                 cell.encode_conserved(0, 0, myblk.omegaz);
@@ -1906,7 +1906,7 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
             // save mesh
             myblk.sync_vertices_to_underlying_grid(0);
             ensure_directory_is_present(make_path_name!"grid-p"(0));
-            auto fileName = make_file_name!"grid-p"(jobName, myblk.id, 0, gridFileExt = "gz");
+            auto fileName = make_file_name!"grid-p"(jobName, myblk.id, 0, GlobalConfig.gridFileExt = "gz");
             myblk.write_underlying_grid(fileName);
         }
             

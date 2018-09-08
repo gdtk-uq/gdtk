@@ -354,6 +354,10 @@ final class GlobalConfig {
     shared static string base_file_name = "job"; // Change this to suit at run time.
     shared static string grid_format = "gziptext"; // alternative is "rawbinary"
     shared static string flow_format = "gziptext";
+    // Depending on the format of the contained data, grid and solution files will have
+    // a particular file extension.
+    shared static string gridFileExt = "gz";
+    shared static string flowFileExt = "gz";
     shared static string title = "Eilmer4 simulation"; // Change this to suit at run time.
     shared static string gas_model_file = "gas-model.lua";
     // Note that the following reference to the GasModel is NOT shared.

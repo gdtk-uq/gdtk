@@ -63,35 +63,31 @@ version(mpi_parallel) {
 final class SimState {
     shared static double time;  // present simulation time, tracked by code
     shared static int step;
-}
-shared static double dt_global;     // simulation time step determined by code
-shared static double dt_allow;      // allowable global time step determined by code
-shared static double target_time;  // simulate_in_time will work toward this value
-shared static bool do_cfl_check_now;
+    shared static double dt_global;     // simulation time step determined by code
+    shared static double dt_allow;      // allowable global time step determined by code
+    shared static double target_time;  // simulate_in_time will work toward this value
+    shared static bool do_cfl_check_now;
 
-// We want to write sets of output files periodically.
-// The following periods set the cadence for output.
-shared static double t_plot;
-shared static double t_history;
-shared static double t_loads;
-// Once we write some data to files, we don't want to write another set of files
-// until we have done some more stepping.  The following flags help us remember
-// the state of the solution output.
-shared static bool output_just_written = true;
-shared static bool history_just_written = true;
-shared static bool loads_just_written = true;
-// We connect the sets of files to the simulation time at which they were written
-// with an index that gets incremented each time we write a set of files.
-shared static int current_tindx;
-shared static int current_loads_tindx;
-// Depending on the format of the contained data, grid and solution files will have
-// a particular file extension.
-shared static string gridFileExt = "gz";
-shared static string flowFileExt = "gz";
+    // We want to write sets of output files periodically.
+    // The following periods set the cadence for output.
+    shared static double t_plot;
+    shared static double t_history;
+    shared static double t_loads;
+    // Once we write some data to files, we don't want to write another set of files
+    // until we have done some more stepping.  The following flags help us remember
+    // the state of the solution output.
+    shared static bool output_just_written = true;
+    shared static bool history_just_written = true;
+    shared static bool loads_just_written = true;
+    // We connect the sets of files to the simulation time at which they were written
+    // with an index that gets incremented each time we write a set of files.
+    shared static int current_tindx;
+    shared static int current_loads_tindx;
 
-// For working out how long the simulation has been running.
-static SysTime wall_clock_start;
-static int maxWallClockSeconds;
+    // For working out how long the simulation has been running.
+    static SysTime wall_clock_start;
+    static int maxWallClockSeconds;
+} // end class SimState
 
 // To avoid race conditions, there are a couple of locations where
 // each block will put its result into the following arrays,
@@ -107,8 +103,8 @@ void init_simulation(int tindx, int nextLoadsIndx,
     if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) {
         writeln("Begin init_simulation()...");
     }
-    maxWallClockSeconds = maxWallClock;
-    wall_clock_start = Clock.currTime();
+    SimState.maxWallClockSeconds = maxWallClock;
+    SimState.wall_clock_start = Clock.currTime();
     read_config_file();  // most of the configuration is in here
     read_control_file(); // some of the configuration is in here
     //
@@ -120,26 +116,26 @@ void init_simulation(int tindx, int nextLoadsIndx,
         fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
     }
     //
-    if (GlobalConfig.grid_format == "rawbinary") { gridFileExt = "bin"; }
-    if (GlobalConfig.flow_format == "rawbinary") { flowFileExt = "bin"; }
+    if (GlobalConfig.grid_format == "rawbinary") { GlobalConfig.gridFileExt = "bin"; }
+    if (GlobalConfig.flow_format == "rawbinary") { GlobalConfig.flowFileExt = "bin"; }
     setupIndicesForConservedQuantities(); 
-    current_tindx = tindx;
-    current_loads_tindx = nextLoadsIndx;
-    if ( current_loads_tindx == -1 ) {
+    SimState.current_tindx = tindx;
+    SimState.current_loads_tindx = nextLoadsIndx;
+    if (SimState.current_loads_tindx == -1) {
         // This is used to indicate that we should look at the old -loads.times file
         // to find the index where the previous simulation stopped.
         string fname = "loads/" ~ GlobalConfig.base_file_name ~ "-loads.times";
-        if ( exists(fname) ) {
+        if (exists(fname)) {
             auto finalLine = readText(fname).splitLines()[$-1];
             if (finalLine[0] == '#') {
                 // looks like we found a single comment line.
-                current_loads_tindx = 0;
+                SimState.current_loads_tindx = 0;
             } else {
                 // assume we have a valid line to work with
-                current_loads_tindx = to!int(finalLine.split[0]) + 1;
+                SimState.current_loads_tindx = to!int(finalLine.split[0]) + 1;
             }
         } else {
-            current_loads_tindx = 0;
+            SimState.current_loads_tindx = 0;
         }
     }
     auto job_name = GlobalConfig.base_file_name;
@@ -192,10 +188,11 @@ void init_simulation(int tindx, int nextLoadsIndx,
     // that are in the current MPI-task or process, only.
     foreach (myblk; parallel(localFluidBlocks,1)) {
         if (GlobalConfig.grid_motion != GridMotion.none) {
-            myblk.init_grid_and_flow_arrays(make_file_name!"grid"(job_name, myblk.id, current_tindx, gridFileExt)); 
+            myblk.init_grid_and_flow_arrays(make_file_name!"grid"(job_name, myblk.id, SimState.current_tindx,
+                                                                  GlobalConfig.gridFileExt)); 
         } else {
             // Assume there is only a single, static grid stored at tindx=0
-            myblk.init_grid_and_flow_arrays(make_file_name!"grid"(job_name, myblk.id, 0, gridFileExt)); 
+            myblk.init_grid_and_flow_arrays(make_file_name!"grid"(job_name, myblk.id, 0, GlobalConfig.gridFileExt)); 
         }
         myblk.compute_primary_cell_geometric_data(0);
     }
@@ -208,7 +205,8 @@ void init_simulation(int tindx, int nextLoadsIndx,
     foreach (i, myblk; parallel(localFluidBlocks,1)) {
         myblk.identify_reaction_zones(0);
         myblk.identify_turbulent_zones(0);
-        time_array[i] = myblk.read_solution(make_file_name!"flow"(job_name, myblk.id, current_tindx, flowFileExt), false);
+        time_array[i] = myblk.read_solution(make_file_name!"flow"(job_name, myblk.id, SimState.current_tindx,
+                                                                  GlobalConfig.flowFileExt), false);
         foreach (iface; myblk.faces) { iface.gvel.clear(); }
         foreach (cell; myblk.cells) {
             cell.encode_conserved(0, 0, myblk.omegaz);
@@ -324,7 +322,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
     init_history_cell_files();
     //
     // create the loads directory, maybe
-    if (GlobalConfig.compute_loads && (current_loads_tindx == 0)) {
+    if (GlobalConfig.compute_loads && (SimState.current_loads_tindx == 0)) {
         if (GlobalConfig.is_master_task) { ensure_directory_is_present("loads"); }
         version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
         init_loads_times_file();
@@ -386,17 +384,17 @@ void init_simulation(int tindx, int nextLoadsIndx,
 
     // Flags to indicate that the saved output is fresh.
     // On startup or restart, it is assumed to be so.
-    output_just_written = true;
-    history_just_written = true;
-    loads_just_written = true;
+    SimState.output_just_written = true;
+    SimState.history_just_written = true;
+    SimState.loads_just_written = true;
     // When starting a new calculation,
     // set the global time step to the initial value.
-    dt_global = GlobalConfig.dt_init; 
+    SimState.dt_global = GlobalConfig.dt_init; 
     //
     version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
     if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) {
         // For reporting wall-clock time, convert to seconds with precision of milliseconds.
-        double wall_clock_elapsed = to!double((Clock.currTime() - wall_clock_start).total!"msecs"()) / 1000.0;
+        double wall_clock_elapsed = to!double((Clock.currTime() - SimState.wall_clock_start).total!"msecs"())/1000.0;
         writefln("Done init_simulation() at wall-clock(WC)= %.1f sec", wall_clock_elapsed);
         stdout.flush();
     }
@@ -410,31 +408,31 @@ void write_solution_files()
         stdout.flush();
     }
     version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
-    current_tindx = current_tindx + 1;
-    ensure_directory_is_present(make_path_name!"flow"(current_tindx));
+    SimState.current_tindx = SimState.current_tindx + 1;
+    ensure_directory_is_present(make_path_name!"flow"(SimState.current_tindx));
     auto job_name = GlobalConfig.base_file_name;
     foreach (myblk; parallel(localFluidBlocksBySize,1)) {
-        auto file_name = make_file_name!"flow"(job_name, myblk.id, current_tindx, flowFileExt);
+        auto file_name = make_file_name!"flow"(job_name, myblk.id, SimState.current_tindx, GlobalConfig.flowFileExt);
         myblk.write_solution(file_name, SimState.time);
     }
-    ensure_directory_is_present(make_path_name!"solid"(current_tindx));
+    ensure_directory_is_present(make_path_name!"solid"(SimState.current_tindx));
     foreach (ref mySolidBlk; solidBlocks) {
-        auto fileName = make_file_name!"solid"(job_name, mySolidBlk.id, current_tindx, "gz");
+        auto fileName = make_file_name!"solid"(job_name, mySolidBlk.id, SimState.current_tindx, "gz");
         mySolidBlk.writeSolution(fileName, SimState.time);
     }
     if (GlobalConfig.grid_motion != GridMotion.none) {
-        ensure_directory_is_present(make_path_name!"grid"(current_tindx));
+        ensure_directory_is_present(make_path_name!"grid"(SimState.current_tindx));
         if (GlobalConfig.verbosity_level > 0) { writeln("Write grid"); }
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
             blk.sync_vertices_to_underlying_grid(0);
-            auto fileName = make_file_name!"grid"(job_name, blk.id, current_tindx, gridFileExt);
+            auto fileName = make_file_name!"grid"(job_name, blk.id, SimState.current_tindx, GlobalConfig.gridFileExt);
             blk.write_underlying_grid(fileName);
         }
     }
     // Update times file, connecting the tindx value to SimState.time.
     if (GlobalConfig.is_master_task) {
         auto writer = appender!string();
-        formattedWrite(writer, "%04d %.18e %.18e\n", current_tindx, SimState.time, dt_global);
+        formattedWrite(writer, "%04d %.18e %.18e\n", SimState.current_tindx, SimState.time, SimState.dt_global);
         append(GlobalConfig.base_file_name ~ ".times", writer.data);
     }
 } // end write_solution_files()
@@ -551,14 +549,14 @@ void integrate_in_time(double target_time_as_requested)
         writeln("Integrate in time.");
         stdout.flush();
     }
-    target_time = (GlobalConfig.block_marching) ? target_time_as_requested : GlobalConfig.max_time;
+    SimState.target_time = (GlobalConfig.block_marching) ? target_time_as_requested : GlobalConfig.max_time;
     // The next time for output...
-    t_plot = SimState.time + GlobalConfig.dt_plot;
-    t_history = SimState.time + GlobalConfig.dt_history;
-    t_loads = SimState.time + GlobalConfig.dt_loads;
+    SimState.t_plot = SimState.time + GlobalConfig.dt_plot;
+    SimState.t_history = SimState.time + GlobalConfig.dt_history;
+    SimState.t_loads = SimState.time + GlobalConfig.dt_loads;
     // Overall iteration count.
     SimState.step = 0;
-    do_cfl_check_now = false;
+    SimState.do_cfl_check_now = false;
     //
     if (GlobalConfig.viscous) {
         // We have requested viscous effects but their application may be delayed
@@ -584,7 +582,7 @@ void integrate_in_time(double target_time_as_requested)
     //
     // Normally, we can terminate upon either reaching 
     // a maximum time or upon reaching a maximum iteration count.
-    shared bool finished_time_stepping = (SimState.time >= target_time) ||
+    shared bool finished_time_stepping = (SimState.time >= SimState.target_time) ||
         (SimState.step >= GlobalConfig.max_step);
     //----------------------------------------------------------------
     //                 Top of main time-stepping loop
@@ -612,7 +610,7 @@ void integrate_in_time(double target_time_as_requested)
             if (GlobalConfig.reacting && 
                 (GlobalConfig.strangSplitting == StrangSplittingMode.half_R_full_T_half_R) &&
                 (SimState.time > GlobalConfig.reaction_time_delay)) {
-                chemistry_step(0.5*dt_global);
+                chemistry_step(0.5*SimState.dt_global);
             }
             // 2.2 Update the convective terms.
             if (GlobalConfig.grid_motion == GridMotion.none) {
@@ -620,7 +618,7 @@ void integrate_in_time(double target_time_as_requested)
             } else {
                 // Moving Grid - perform gas update for moving grid
                 // [TODO] PJ 2018-01-20 Up to here with thinking about MPI parallel.
-                set_grid_velocities(SimState.time, SimState.step, 0, dt_global);
+                set_grid_velocities(SimState.time, SimState.step, 0, SimState.dt_global);
                 gasdynamic_explicit_increment_with_moving_grid();
                 recalculate_all_geometry();
             }
@@ -629,29 +627,29 @@ void integrate_in_time(double target_time_as_requested)
             // in the gasdynamic_explicit_increment().
             if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.loose) {
                 // Call Nigel's update function here.
-                solid_domains_backward_euler_update(SimState.time, dt_global);
+                solid_domains_backward_euler_update(SimState.time, SimState.dt_global);
             }
             // 2.4 Chemistry step or 1/2 step (if appropriate). 
             if ( GlobalConfig.reacting && (SimState.time > GlobalConfig.reaction_time_delay)) {
                 double mydt = (GlobalConfig.strangSplitting == StrangSplittingMode.full_T_full_R) ?
-                    dt_global : 0.5*dt_global;
+                    SimState.dt_global : 0.5*SimState.dt_global;
                 chemistry_step(mydt);
             }
             //
             // 3.0 Update the time record and (occasionally) print status.
             SimState.step = SimState.step + 1;
-            output_just_written = false;
-            history_just_written = false;
-            loads_just_written = false;
+            SimState.output_just_written = false;
+            SimState.history_just_written = false;
+            SimState.loads_just_written = false;
             if ((SimState.step % GlobalConfig.print_count) == 0) {
                 // Print the current time-stepping status.
                 auto writer = appender!string();
                 formattedWrite(writer, "Step=%7d t=%10.3e dt=%10.3e ",
-                               SimState.step, SimState.time, dt_global);
+                               SimState.step, SimState.time, SimState.dt_global);
                 // For reporting wall-clock time, convert to seconds with precision of milliseconds.
-                double wall_clock_elapsed = to!double((Clock.currTime()-wall_clock_start).total!"msecs"())/1000.0;
+                double wall_clock_elapsed = to!double((Clock.currTime()-SimState.wall_clock_start).total!"msecs"())/1000.0;
                 double wall_clock_per_step = wall_clock_elapsed / SimState.step;
-                double WCtFT = (GlobalConfig.max_time - SimState.time) / dt_global * wall_clock_per_step;
+                double WCtFT = (GlobalConfig.max_time - SimState.time) / SimState.dt_global * wall_clock_per_step;
                 double WCtMS = (GlobalConfig.max_step - SimState.step) * wall_clock_per_step;
                 formattedWrite(writer, "WC=%.1f WCtFT=%.1f WCtMS=%.1f", 
                                wall_clock_elapsed, WCtFT, WCtMS);
@@ -662,7 +660,7 @@ void integrate_in_time(double target_time_as_requested)
                 version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
                 if (GlobalConfig.report_residuals) {
                     // We also compute the residual information and write to screen
-                    auto wallClock2 = 1.0e-3*(Clock.currTime() - wall_clock_start).total!"msecs"();
+                    auto wallClock2 = 1.0e-3*(Clock.currTime() - SimState.wall_clock_start).total!"msecs"();
                     compute_Linf_residuals(Linf_residuals);
                     version(mpi_parallel) {
                         // Reduce residual values across MPI tasks.
@@ -697,26 +695,26 @@ void integrate_in_time(double target_time_as_requested)
             } // end if (step...
             //
             // 4.0 (Occasionally) Write out an intermediate solution
-            if ((SimState.time >= t_plot) && !output_just_written) {
+            if ((SimState.time >= SimState.t_plot) && !SimState.output_just_written) {
                 write_solution_files();
-                output_just_written = true;
-                t_plot = t_plot + GlobalConfig.dt_plot;
+                SimState.output_just_written = true;
+                SimState.t_plot = SimState.t_plot + GlobalConfig.dt_plot;
                 GC.collect();
             }
             //
             // 4.1 (Occasionally) Write out the cell history data and loads on boundary groups data
-            if ((SimState.time >= t_history) && !history_just_written) {
+            if ((SimState.time >= SimState.t_history) && !SimState.history_just_written) {
                 write_history_cells_to_files(SimState.time);
-                history_just_written = true;
-                t_history = t_history + GlobalConfig.dt_history;
+                SimState.history_just_written = true;
+                SimState.t_history = SimState.t_history + GlobalConfig.dt_history;
                 GC.collect();
             }
-            if (GlobalConfig.compute_loads && (SimState.time >= t_loads) && !loads_just_written) {
-                write_boundary_loads_to_file(SimState.time, current_loads_tindx);
-                update_loads_times_file(SimState.time, current_loads_tindx);
-                loads_just_written = true;
-                current_loads_tindx = current_loads_tindx + 1;
-                t_loads = t_loads + GlobalConfig.dt_loads;
+            if (GlobalConfig.compute_loads && (SimState.time >= SimState.t_loads) && !SimState.loads_just_written) {
+                write_boundary_loads_to_file(SimState.time, SimState.current_loads_tindx);
+                update_loads_times_file(SimState.time, SimState.current_loads_tindx);
+                SimState.loads_just_written = true;
+                SimState.current_loads_tindx = SimState.current_loads_tindx + 1;
+                SimState.t_loads = SimState.t_loads + GlobalConfig.dt_loads;
                 GC.collect();
             }
             //
@@ -755,11 +753,11 @@ void integrate_in_time(double target_time_as_requested)
         // be found in the control-parameter file (which may be edited
         // while the code is running).
         //
-        if (SimState.time >= target_time) { finished_time_stepping = true; }
+        if (SimState.time >= SimState.target_time) { finished_time_stepping = true; }
         if (SimState.step >= GlobalConfig.max_step) { finished_time_stepping = true; }
         if (GlobalConfig.halt_now == 1) { finished_time_stepping = true; }
-        auto wall_clock_elapsed = (Clock.currTime() - wall_clock_start).total!"seconds"();
-        if (maxWallClockSeconds > 0 && (wall_clock_elapsed > maxWallClockSeconds)) {
+        auto wall_clock_elapsed = (Clock.currTime() - SimState.wall_clock_start).total!"seconds"();
+        if (SimState.maxWallClockSeconds > 0 && (wall_clock_elapsed > SimState.maxWallClockSeconds)) {
             finished_time_stepping = true;
         }
         version(mpi_parallel) {
@@ -771,14 +769,14 @@ void integrate_in_time(double target_time_as_requested)
         if(finished_time_stepping && GlobalConfig.verbosity_level >= 1 && GlobalConfig.is_master_task) {
             // Make an announcement about why we are finishing time-stepping.
             write("Integration stopped: "); 
-            if (SimState.time >= target_time) {
-                writefln("Reached target simulation time of %g seconds.", target_time);
+            if (SimState.time >= SimState.target_time) {
+                writefln("Reached target simulation time of %g seconds.", SimState.target_time);
             }
             if (SimState.step >= GlobalConfig.max_step) {
                 writefln("Reached maximum number of steps with step=%d.", SimState.step);
             }
             if (GlobalConfig.halt_now == 1) { writeln("Halt set in control file."); }
-            if (maxWallClockSeconds > 0 && (wall_clock_elapsed > maxWallClockSeconds)) {
+            if (SimState.maxWallClockSeconds > 0 && (wall_clock_elapsed > SimState.maxWallClockSeconds)) {
                 writefln("Reached maximum wall-clock time with elapsed time %s.", to!string(wall_clock_elapsed));
             }
             stdout.flush();
@@ -797,7 +795,7 @@ void check_run_time_configuration(double target_time_as_requested)
     // Alter configuration setting if necessary.
     if (GlobalConfig.control_count > 0 && (SimState.step % GlobalConfig.control_count) == 0) {
         read_control_file(); // Reparse the time-step control parameters occasionally.
-        target_time = (GlobalConfig.block_marching) ? target_time_as_requested : GlobalConfig.max_time;
+        SimState.target_time = (GlobalConfig.block_marching) ? target_time_as_requested : GlobalConfig.max_time;
     }
     if (GlobalConfig.viscous && GlobalConfig.viscous_factor < 1.0 &&
         SimState.time > GlobalConfig.viscous_delay) {
@@ -842,44 +840,44 @@ void determine_time_step_size()
     // Set the size of the time step to be the minimum allowed for any active block.
     if (!GlobalConfig.fixed_time_step && (SimState.step % GlobalConfig.cfl_count) == 0) {
         // Check occasionally 
-        do_cfl_check_now = true;
+        SimState.do_cfl_check_now = true;
     } // end if step == 0
     version(mpi_parallel) {
         // If one task is doing a time-step check, all tasks have to.
-        int myFlag = to!int(do_cfl_check_now);
+        int myFlag = to!int(SimState.do_cfl_check_now);
         MPI_Allreduce(MPI_IN_PLACE, &myFlag, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-        do_cfl_check_now = to!bool(myFlag);
+        SimState.do_cfl_check_now = to!bool(myFlag);
     }
-    if (do_cfl_check_now) {
+    if (SimState.do_cfl_check_now) {
         // Adjust the time step...
         //
         // First, check what each block thinks should be the allowable step size.
         foreach (i, myblk; parallel(localFluidBlocksBySize,1)) {
             // Note 'i' is not necessarily the block id but
             // that is not important here, just need a unique spot to poke into local_dt_allow.
-            if (myblk.active) { local_dt_allow[i] = myblk.determine_time_step_size(dt_global); }
+            if (myblk.active) { local_dt_allow[i] = myblk.determine_time_step_size(SimState.dt_global); }
         }
         // Second, reduce this estimate across all local blocks.
-        dt_allow = double.max; // to be sure it is replaced.
+        SimState.dt_allow = double.max; // to be sure it is replaced.
         foreach (i, myblk; localFluidBlocks) { // serial loop
-            if (myblk.active) { dt_allow = min(dt_allow, local_dt_allow[i]); } 
+            if (myblk.active) { SimState.dt_allow = min(SimState.dt_allow, local_dt_allow[i]); } 
         }
         version(mpi_parallel) {
-            double my_dt_allow = dt_allow;
+            double my_dt_allow = SimState.dt_allow;
             MPI_Allreduce(MPI_IN_PLACE, &my_dt_allow, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-            dt_allow = my_dt_allow;
+            SimState.dt_allow = my_dt_allow;
         }
         // Now, change the actual time step, as needed.
-        if (dt_allow <= dt_global) {
+        if (SimState.dt_allow <= SimState.dt_global) {
             // If we need to reduce the time step, do it immediately.
-            dt_global = dt_allow;
+            SimState.dt_global = SimState.dt_allow;
         } else {
             // Make the transitions to larger time steps gentle.
-            dt_global = min(dt_global*1.5, dt_allow);
+            SimState.dt_global = min(SimState.dt_global*1.5, SimState.dt_allow);
             // The user may supply, explicitly, a maximum time-step size.
-            dt_global = min(dt_global, GlobalConfig.dt_max);
+            SimState.dt_global = min(SimState.dt_global, GlobalConfig.dt_max);
         }
-        do_cfl_check_now = false;  // we have done our check for now
+        SimState.do_cfl_check_now = false;  // we have done our check for now
     } // end if do_cfl_check_now 
 } // end determine_time_step_size()
 
@@ -889,10 +887,10 @@ void update_ch_for_divergence_cleaning()
     foreach (blk; localFluidBlocksBySize) {
         if (!blk.active) continue;
         if (first) {
-            GlobalConfig.c_h = blk.update_c_h(dt_global);
+            GlobalConfig.c_h = blk.update_c_h(SimState.dt_global);
             first = false;
         } else {
-            GlobalConfig.c_h = fmin(blk.update_c_h(dt_global), GlobalConfig.c_h);
+            GlobalConfig.c_h = fmin(blk.update_c_h(SimState.dt_global), GlobalConfig.c_h);
         }
     }
     version(mpi_parallel) {
@@ -1160,7 +1158,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         int local_ftl = ftl;
         int local_gtl = gtl;
         bool local_with_k_omega = with_k_omega;
-        double local_dt_global = dt_global;
+        double local_dt_global = SimState.dt_global;
         double local_sim_time = SimState.time;
         foreach (cell; blk.cells) {
             cell.add_inviscid_source_vector(local_gtl, blk.omegaz);
@@ -1222,7 +1220,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                     addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time);
                 }
                 scell.timeDerivatives(ftl, GlobalConfig.dimensions);
-                scell.stage1Update(dt_global);
+                scell.stage1Update(SimState.dt_global);
                 scell.T = updateTemperature(scell.sp, scell.e[ftl+1]);
             } // end foreach scell
         } // end foreach sblk
@@ -1230,7 +1228,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
     //
     if (number_of_stages_for_update_scheme(GlobalConfig.gasdynamic_update_scheme) >= 2) {
         // Preparation for second-stage of gas-dynamic update.
-        SimState.time = t0 + c2 * dt_global;
+        SimState.time = t0 + c2 * SimState.dt_global;
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
             if (blk.active) {
                 blk.clear_fluxes_of_conserved_quantities();
@@ -1319,7 +1317,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             int local_ftl = ftl;
             int local_gtl = gtl;
             bool local_with_k_omega = with_k_omega;
-            double local_dt_global = dt_global;
+            double local_dt_global = SimState.dt_global;
             double local_sim_time = SimState.time;
             foreach (cell; blk.cells) {
                 cell.add_inviscid_source_vector(local_gtl, blk.omegaz);
@@ -1371,7 +1369,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                         addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time);
                     }
                     scell.timeDerivatives(ftl, GlobalConfig.dimensions);
-                    scell.stage2Update(dt_global);
+                    scell.stage2Update(SimState.dt_global);
                     scell.T = updateTemperature(scell.sp, scell.e[ftl+1]);
                 } // end foreach cell
             } // end foreach blk
@@ -1380,7 +1378,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
     //
     if ( number_of_stages_for_update_scheme(GlobalConfig.gasdynamic_update_scheme) >= 3 ) {
         // Preparation for third stage of gasdynamic update.
-        SimState.time = t0 + c3 * dt_global;
+        SimState.time = t0 + c3 * SimState.dt_global;
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
             if (blk.active) {
                 blk.clear_fluxes_of_conserved_quantities();
@@ -1469,7 +1467,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             int local_ftl = ftl;
             int local_gtl = gtl;
             bool local_with_k_omega = with_k_omega;
-            double local_dt_global = dt_global;
+            double local_dt_global = SimState.dt_global;
             double local_sim_time = SimState.time;
             foreach (cell; blk.cells) {
                 cell.add_inviscid_source_vector(local_gtl, blk.omegaz);
@@ -1521,7 +1519,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                         addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time);
                     }
                     scell.timeDerivatives(ftl, GlobalConfig.dimensions);
-                    scell.stage3Update(dt_global);
+                    scell.stage3Update(SimState.dt_global);
                     scell.T = updateTemperature(scell.sp, scell.e[ftl+1]);
                 } // end foreach cell
             } // end foreach blk
@@ -1544,7 +1542,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
     } // end foreach sblk
     //
     // Finally, update the globally know simulation time for the whole step.
-    SimState.time = t0 + dt_global;
+    SimState.time = t0 + SimState.dt_global;
 } // end gasdynamic_explicit_increment_with_fixed_grid()
 
 void gasdynamic_explicit_increment_with_moving_grid()
@@ -1578,12 +1576,12 @@ void gasdynamic_explicit_increment_with_moving_grid()
         auto sblk = cast(SFluidBlock) blk;
         assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
         // move vertices
-        predict_vertex_positions(sblk, GlobalConfig.dimensions, dt_global, gtl);
+        predict_vertex_positions(sblk, GlobalConfig.dimensions, SimState.dt_global, gtl);
         // recalculate cell geometry with new vertex positions @ gtl = 1
         blk.compute_primary_cell_geometric_data(gtl+1);
         blk.compute_least_squares_setup(gtl+1);
         // determine interface velocities using GCL for gtl = 1
-        set_gcl_interface_properties(sblk, gtl+1, dt_global);
+        set_gcl_interface_properties(sblk, gtl+1, SimState.dt_global);
     }
     gtl = 1; // update gtl now that grid has moved
     exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
@@ -1664,7 +1662,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
         int local_ftl = ftl;
         int local_gtl = gtl;
         bool local_with_k_omega = with_k_omega;
-        double local_dt_global = dt_global;
+        double local_dt_global = SimState.dt_global;
         double local_sim_time = SimState.time;
         foreach (cell; blk.cells) {
             cell.add_inviscid_source_vector(local_gtl, blk.omegaz);
@@ -1703,14 +1701,14 @@ void gasdynamic_explicit_increment_with_moving_grid()
                 addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time);
             }
             scell.timeDerivatives(ftl, GlobalConfig.dimensions);
-            scell.stage1Update(dt_global);
+            scell.stage1Update(SimState.dt_global);
             scell.T = updateTemperature(scell.sp, scell.e[ftl+1]);
         } // end foreach scell
     } // end foreach sblk
     /////
     if (number_of_stages_for_update_scheme(GlobalConfig.gasdynamic_update_scheme) == 2) {
         // Preparation for second-stage of gas-dynamic update.
-        SimState.time = t0 + c2 * dt_global;
+        SimState.time = t0 + c2 * SimState.dt_global;
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
             if (blk.active) {
                 blk.clear_fluxes_of_conserved_quantities();
@@ -1724,7 +1722,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
                 auto sblk = cast(SFluidBlock) blk;
                 assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
                 // move vertices - this is a formality since pos[2] = pos[1]
-                predict_vertex_positions(sblk, GlobalConfig.dimensions, dt_global, gtl);
+                predict_vertex_positions(sblk, GlobalConfig.dimensions, SimState.dt_global, gtl);
                 // recalculate cell geometry with new vertex positions
                 blk.compute_primary_cell_geometric_data(gtl+1);
                 blk.compute_least_squares_setup(gtl+1);
@@ -1807,7 +1805,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
             int local_ftl = ftl;
             int local_gtl = gtl;
             bool local_with_k_omega = with_k_omega;
-            double local_dt_global = dt_global;
+            double local_dt_global = SimState.dt_global;
             double local_sim_time = SimState.time;
             foreach (cell; blk.cells) {
                 cell.add_inviscid_source_vector(local_gtl, blk.omegaz);
@@ -1845,7 +1843,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
                     addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time);
                 }
                 scell.timeDerivatives(ftl, GlobalConfig.dimensions);
-                scell.stage2Update(dt_global);
+                scell.stage2Update(SimState.dt_global);
                 scell.T = updateTemperature(scell.sp, scell.e[ftl+1]);
             } // end foreach cell
         } // end foreach blk
@@ -1867,11 +1865,11 @@ void gasdynamic_explicit_increment_with_moving_grid()
     // update the latest grid level to the new step grid level 0
     foreach (blk; localFluidBlocksBySize) {
         if (blk.active) {
-            foreach ( cell; blk.cells ) { cell.copy_grid_level_to_level(gtl, 0); }
+            foreach (cell; blk.cells) { cell.copy_grid_level_to_level(gtl, 0); }
         }
     }
     // Finally, update the globally known simulation time for the whole step.
-    SimState.time = t0 + dt_global;
+    SimState.time = t0 + SimState.dt_global;
 } // end gasdynamic_explicit_increment_with_moving_grid()
 
 void compute_Linf_residuals(ConservedQuantities Linf_residuals)
@@ -1896,8 +1894,8 @@ void finalize_simulation()
     if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) {
         writeln("Finalize the simulation.");
     }
-    if (!output_just_written) { write_solution_files(); }
-    if (!history_just_written) { write_history_cells_to_files(SimState.time); }
+    if (!SimState.output_just_written) { write_solution_files(); }
+    if (!SimState.history_just_written) { write_history_cells_to_files(SimState.time); }
     GC.collect();
     if (GlobalConfig.verbosity_level > 0  && GlobalConfig.is_master_task) {
         writeln("Step= ", SimState.step, " final-t= ", SimState.time);

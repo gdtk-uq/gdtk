@@ -266,7 +266,7 @@ public:
         // Set some userful values for the caller in table
         lua_newtable(L);
         lua_pushnumber(L, t); lua_setfield(L, -2, "t");
-        lua_pushnumber(L, dt_global); lua_setfield(L, -2, "dt");
+        lua_pushnumber(L, SimState.dt_global); lua_setfield(L, -2, "dt");
         lua_pushinteger(L, SimState.step); lua_setfield(L, -2, "timeStep");
         lua_pushinteger(L, tLevel); lua_setfield(L, -2, "timeLevel");
         lua_pushnumber(L, IFace.pos.x); lua_setfield(L, -2, "x");

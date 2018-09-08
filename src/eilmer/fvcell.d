@@ -29,7 +29,7 @@ import fvinterface;
 import globalconfig;
 import lsqinterp;
 import gas.fuel_air_mix;
-import simcore : dt_global;
+import simcore : SimState;
 
 // The following functions are used at compile time.
 // Look for mixin statements further down in the file. 
@@ -1459,7 +1459,7 @@ public:
 
         if (myConfig.limit_tke_production) {
             // Apply a final limit on the rate of tke production, related to the local thermodynamic energy
-            double dt = dt_global;
+            double dt = SimState.dt_global;
             double deltaT = myConfig.tke_production_limit_in_kelvins;
             number Cv = myConfig.gmodel.Cv(fs.gas);
             number maxRateBasedOnLimit = fs.gas.rho*Cv*deltaT/dt;
