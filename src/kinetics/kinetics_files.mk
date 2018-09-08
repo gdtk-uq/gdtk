@@ -1,6 +1,7 @@
 KINETICS_DIR ?= .
 KINETICS_FILES := $(KINETICS_DIR)/package.d \
 	$(KINETICS_DIR)/chemistry_update.d \
+	$(KINETICS_DIR)/electronic_state_solver.d \
 	$(KINETICS_DIR)/electronically_specific_kinetics.d \
 	$(KINETICS_DIR)/ideal_dissociating_gas_kinetics.d \
 	$(KINETICS_DIR)/fuel_air_mix_kinetics.d \

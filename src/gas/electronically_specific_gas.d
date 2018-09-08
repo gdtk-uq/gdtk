@@ -1,5 +1,5 @@
 /**
- * Author: Brad Semple
+ * Author: Brad Semple, Rowan G.
  *
  */
 
@@ -168,23 +168,23 @@ private:
 version(electronically_specific_gas_test) {
     int main()
     {
-        import util.msg_service;
+        // import util.msg_service;
 
-        auto L = init_lua_State();
-        doLuaFile(L, "sample-data/elec_composition.lua");
-        auto gm = new ElectronicallySpecificGas(L);
-        auto gd = new GasState(19,19);
+        // auto L = init_lua_State();
+        // doLuaFile(L, "sample-data/elec_composition.lua");
+        // auto gm = new ElectronicallySpecificGas(L);
+        // auto gd = new GasState(19,19);
 
-        gd.massf[] = 0.0;
-        gd.massf[0] = 0.81403036047055; //initialises massf of NI
-        gd.massf[9] = 0.185968105968037; //initialises massf of OI
-        gd.massf[18] = 1.0 - (gd.massf[0] + gd.massf[9]); //tiny massf for free electron
+        // gd.massf[] = 0.0;
+        // gd.massf[0] = 0.81403036047055; //initialises massf of NI
+        // gd.massf[9] = 0.185968105968037; //initialises massf of OI
+        // gd.massf[18] = 1.0 - (gd.massf[0] + gd.massf[9]); //tiny massf for free electron
 
-        gd.p = 101325.0;
-        gd.T = 7000.0;
-        gd.T_modes[0]=10000.0;
+        // gd.p = 101325.0;
+        // gd.T = 7000.0;
+        // gd.T_modes[0]=10000.0;
 
-        gm.update_thermo_from_pT(gd);
+        // gm.update_thermo_from_pT(gd);
 
 
 

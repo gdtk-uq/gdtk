@@ -28,6 +28,10 @@ test two_temperature-argon-kinetics-test {Testing Daniel Smith's two-temperature
     exec ./two_temperature_argon_kinetics_test
 } -result {} -returnCodes {0}
 
+test electronically-specific-gas-test {Testing Brad Semple's electronically specific state to state gas model} -body {
+    exec ./electronically_specific_gas_test
+} -result {} -returnCodes {0}
+
 puts ""
 puts "==========================================  SUMMARY  =========================================="
 cleanupTests
