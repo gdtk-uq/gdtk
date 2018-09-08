@@ -1192,12 +1192,12 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             iterCount = j+1;
             if (usePreconditioner && step >= GlobalConfig.sssOptions.startPreconditioning) {
                 foreach (blk; parallel(localFluidBlocks,1)) {
-                    int n = GlobalConfig.sssOptions.frozenPreconditionerCount;
+                    int n = blk.myConfig.sssOptions.frozenPreconditionerCount; //GlobalConfig.sssOptions.frozenPreconditionerCount;
                     // We compute the precondition matrix on the very first step after the start up steps
                     // We then only update the precondition matrix once per GMRES call on every nth flow solver step. 
-                    if (r == 0 && j == 0 && (step == GlobalConfig.sssOptions.startPreconditioning || step%n == 0 || step == GlobalConfig.sssOptions.nStartUpSteps+1))
+                    if (r == 0 && j == 0 && (step == blk.myConfig.sssOptions.startPreconditioning || step%n == 0 || step == blk.myConfig.sssOptions.nStartUpSteps+1))
                         sss_preconditioner(blk, nConserved, dt);
-                    final switch (GlobalConfig.sssOptions.preconditionMatrixType) {
+                    final switch (blk.myConfig.sssOptions.preconditionMatrixType) {
                         case PreconditionMatrixType.block_diagonal:
                             int cellCount = 0;
                             number[] tmp;
@@ -1220,6 +1220,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                     blk.zed[] = blk.v[];
                 }
             }
+            
             // Prepare 'w' with (I/dt)(P^-1)v term;
             foreach (blk; parallel(localFluidBlocks,1)) {
                 double dtInv = 1.0/dt;
@@ -1318,7 +1319,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         
         if (usePreconditioner && step >= GlobalConfig.sssOptions.startPreconditioning) {
             foreach(blk; parallel(localFluidBlocks,1)) {
-                final switch (GlobalConfig.sssOptions.preconditionMatrixType) {
+                final switch (blk.myConfig.sssOptions.preconditionMatrixType) {
                 case PreconditionMatrixType.block_diagonal:
                     int cellCount = 0;
                     number[] tmp;
