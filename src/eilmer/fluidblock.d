@@ -91,6 +91,10 @@ public:
 
     // Shape sensitivity calculator workspace.
     version(shape_sensitivity) {
+        immutable size_t MAX_PERTURBED_INTERFACES = 80;
+        FVCell cellSave;
+        FVInterface[MAX_PERTURBED_INTERFACES] ifaceP;
+
         // local objective function evaluation
         number locObjFcn;
         // arrays used to temporarily store data during construction of the flow Jacobian transpose 

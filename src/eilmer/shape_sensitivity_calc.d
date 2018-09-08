@@ -265,7 +265,7 @@ void main(string[] args) {
     /* Check Accuracy of Primitive Jacobian routines via Frechet Derivative Comparison */
 
     if (verifyPrimitiveJacobianFlag) {
-
+        
         // set number of primitive variables
         bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega);
         size_t nPrimitive; 
@@ -275,6 +275,8 @@ void main(string[] args) {
         
         // construct the transposed primitive Jacobian
         foreach (myblk; parallel(localFluidBlocks,1)) {
+            initialisation(myblk, nPrimitive);
+
             // make sure ghost cells are filled
             myblk.applyPreReconAction(0.0, 0, 0);
             myblk.applyPostConvFluxAction(0.0, 0, 0);
@@ -459,6 +461,8 @@ void main(string[] args) {
         
         // make sure ghost cells are filled
         foreach (myblk; parallel(localFluidBlocks,1)) {
+            initialisation(myblk, nPrimitive);
+            
             myblk.applyPreReconAction(0.0, 0, 0);
             myblk.applyPostConvFluxAction(0.0, 0, 0);
             myblk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);

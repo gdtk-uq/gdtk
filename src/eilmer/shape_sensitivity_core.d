@@ -48,12 +48,12 @@ import simcore;
 import fluxcalc;
 import user_defined_source_terms;
 
-enum ghost_cell_start_id = 1_000_000_000;
-immutable double ESSENTIALLY_ZERO = 1.0e-50;
+shared enum ghost_cell_start_id = 1_000_000_000;
+shared immutable double ESSENTIALLY_ZERO = 1.0e-50;
 // some data objects used in forming the Jacobian
-immutable size_t MAX_PERTURBED_INTERFACES = 80;
-FVCell cellSave;
-FVInterface[MAX_PERTURBED_INTERFACES] ifaceP;
+//immutable size_t MAX_PERTURBED_INTERFACES = 80;
+//FVCell cellSave;
+//FVInterface[MAX_PERTURBED_INTERFACES] ifaceP;
 
 // Module-local, global memory arrays and matrices for GMRES
 number[] g0;
@@ -214,10 +214,15 @@ void evalConservativeJacobianVecProd(FluidBlock blk, size_t nConserved, number[]
 /***************************/
 /* FLOW JACOBIAN FUNCTIONS */
 /***************************/
+void initialisation(ref FluidBlock blk, size_t nPrimitive) {
+    blk.cellSave = new FVCell(blk.myConfig);
+    foreach(i; 0..blk.MAX_PERTURBED_INTERFACES) blk.ifaceP[i] = new FVInterface(blk.myConfig, false);
+}
+
 string computeGhostCellDerivatives(string varName, string posInArray, bool includeThermoUpdate)
 {
     string codeStr;
-    codeStr ~= "cellSave.copy_values_from(bcells[0], CopyDataOption.all);";
+    codeStr ~= "blk.cellSave.copy_values_from(bcells[0], CopyDataOption.all);";
     // ------------------ positive perturbation ------------------
     codeStr ~= "bcells[0].fs."~varName~" += EPS;";
     if ( includeThermoUpdate ) {
@@ -235,7 +240,7 @@ string computeGhostCellDerivatives(string varName, string posInArray, bool inclu
     codeStr ~= "qP[4] = pcell.fs.tke;";
     codeStr ~= "qP[5] = pcell.fs.omega;";
     codeStr ~= "}";
-    codeStr ~= "bcells[0].copy_values_from(cellSave, CopyDataOption.all);";
+    codeStr ~= "bcells[0].copy_values_from(blk.cellSave, CopyDataOption.all);";
     codeStr ~= "blk.applyPreReconAction(0.0, 0, 0);";
     codeStr ~= "blk.applyPostConvFluxAction(0.0, 0, 0);";
     codeStr ~= "blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);";
@@ -476,34 +481,31 @@ void approximate_residual_stencil(FVCell pcell, size_t orderOfJacobian) {
     FVCell[] refs_ordered; FVCell[] refs_unordered;
     size_t[size_t] pos_array; // used to identify where the cell is in the unordered list
     size_t[] cell_ids;
-        
     // clear the stencil arrays
     pcell.jacobian_cell_stencil = [];
     pcell.jacobian_face_stencil = [];
-
     size_t[] face_ids;
     // collect faces
     foreach(face; pcell.iface) {
         pcell.jacobian_face_stencil ~= face;
         face_ids ~= face.id;
     }
-    
+
     // for each effected face, add the neighbouring cells
     foreach(face; pcell.jacobian_face_stencil) {
         // collect (non-ghost) neighbour cells
-        if (cell_ids.canFind(face.left_cell.id) == false && face.left_cell.id < ghost_cell_start_id) {
+        if (cell_ids.canFind(face.left_cell.id) == false && face.left_cell.id < 1_000_000_000) { //.ghost_cell_start_id) {
             refs_unordered ~= face.left_cell;
             pos_array[face.left_cell.id] = refs_unordered.length-1;
             cell_ids ~= face.left_cell.id;
         }
-        if (cell_ids.canFind(face.right_cell.id) == false && face.right_cell.id < ghost_cell_start_id) {
+        if (cell_ids.canFind(face.right_cell.id) == false && face.right_cell.id < 1_000_000_000) { //ghost_cell_start_id) {
             refs_unordered ~= face.right_cell;
             pos_array[face.right_cell.id] = refs_unordered.length-1;
             cell_ids ~= face.right_cell.id;
         }
         else continue;
     }
-    
     // we collect the outer most faces as well to capture the viscous effects on the 1st order stencil
     foreach (cell; refs_unordered) {
         foreach (face; cell.iface) {
@@ -513,7 +515,6 @@ void approximate_residual_stencil(FVCell pcell, size_t orderOfJacobian) {
             }
         }
     }
-    
     // sort ids, and store sorted cell references
     cell_ids.sort();
     foreach(id; cell_ids) refs_ordered ~= refs_unordered[pos_array[id]];
@@ -654,13 +655,11 @@ void residual_stencil(FVCell pcell, size_t orderOfJacobian) {
     }
 }
 
-void local_flow_jacobian_transpose(ref SMatrix!number A, FluidBlock blk, size_t np, size_t orderOfJacobian, number EPS, bool preconditionMatrix = false, bool transformToConserved = false) {
+void local_flow_jacobian_transpose(ref SMatrix!number A, ref FluidBlock blk, size_t np, size_t orderOfJacobian, number EPS, bool preconditionMatrix = false, bool transformToConserved = false) {
     // set the interpolation order to that of the Jacobian
     if (orderOfJacobian < 2) blk.myConfig.interpolation_order = 1;
     else blk.myConfig.interpolation_order = 2;    
     // initialise re-used objects here to prevent memory bloat
-    cellSave = new FVCell(blk.myConfig);
-    foreach(i; 0..MAX_PERTURBED_INTERFACES) ifaceP[i] = new FVInterface(blk.myConfig, false);
     if (preconditionMatrix)
         foreach (cell; blk.cells) approximate_residual_stencil(cell, orderOfJacobian);
     else
@@ -896,7 +895,7 @@ string computeFluxDerivativesAroundCell(string varName, string posInArray, bool 
 {
     string codeStr;
     codeStr ~= "pcell.encode_conserved(0, 0, 0.0);";
-    codeStr ~= "cellSave.copy_values_from(pcell, CopyDataOption.all);";
+    codeStr ~= "blk.cellSave.copy_values_from(pcell, CopyDataOption.all);";
     // ------------------ positive perturbation ------------------
     codeStr ~= "pcell.fs."~varName~" += EPS;";
     if ( includeThermoUpdate ) {
@@ -905,17 +904,17 @@ string computeFluxDerivativesAroundCell(string varName, string posInArray, bool 
         codeStr ~= "blk.myConfig.gmodel.update_sound_speed(pcell.fs.gas);";
         codeStr ~= "foreach(isp; 0 .. blk.myConfig.gmodel.n_species) pcell.fs.gas.massf[isp] = (pcell.U[0].massf[isp] * (1.0/pcell.fs.gas.rho));";
     }
-    codeStr ~= "compute_flux(pcell, blk, orderOfJacobian, pcell.jacobian_cell_stencil, pcell.jacobian_face_stencil, ifaceP);"; 
+    codeStr ~= "compute_flux(pcell, blk, orderOfJacobian, pcell.jacobian_cell_stencil, pcell.jacobian_face_stencil, blk.ifaceP);"; 
     //codeStr ~= "pcell.copy_values_from(cellSave, CopyDataOption.all);";
     // ------------------ compute interface flux derivatives ------------------
     codeStr ~= "foreach (i, iface; pcell.jacobian_face_stencil) {";
-    codeStr ~= "iface.dFdU[0][" ~ posInArray ~ "] = ifaceP[i].F.mass.im/EPS.im;";         
-    codeStr ~= "iface.dFdU[1][" ~ posInArray ~ "] = ifaceP[i].F.momentum.x.im/EPS.im;";
-    codeStr ~= "iface.dFdU[2][" ~ posInArray ~ "] = ifaceP[i].F.momentum.y.im/EPS.im;";
-    codeStr ~= "iface.dFdU[3][" ~ posInArray ~ "] = ifaceP[i].F.total_energy.im/EPS.im;";
+    codeStr ~= "iface.dFdU[0][" ~ posInArray ~ "] = blk.ifaceP[i].F.mass.im/EPS.im;";         
+    codeStr ~= "iface.dFdU[1][" ~ posInArray ~ "] = blk.ifaceP[i].F.momentum.x.im/EPS.im;";
+    codeStr ~= "iface.dFdU[2][" ~ posInArray ~ "] = blk.ifaceP[i].F.momentum.y.im/EPS.im;";
+    codeStr ~= "iface.dFdU[3][" ~ posInArray ~ "] = blk.ifaceP[i].F.total_energy.im/EPS.im;";
     codeStr ~= "if (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) {";
-    codeStr ~= "iface.dFdU[4][" ~ posInArray ~ "] = ifaceP[i].F.tke.im/EPS.im;";
-    codeStr ~= "iface.dFdU[5][" ~ posInArray ~ "] = ifaceP[i].F.omega.im/EPS.im;";        
+    codeStr ~= "iface.dFdU[4][" ~ posInArray ~ "] = blk.ifaceP[i].F.tke.im/EPS.im;";
+    codeStr ~= "iface.dFdU[5][" ~ posInArray ~ "] = blk.ifaceP[i].F.omega.im/EPS.im;";        
     codeStr ~= "}";
     codeStr ~= "}";
     codeStr ~= "foreach (i, cell; pcell.jacobian_cell_stencil) {";
@@ -929,7 +928,7 @@ string computeFluxDerivativesAroundCell(string varName, string posInArray, bool 
         codeStr ~= "cell.dQdU[5][" ~ posInArray ~ "] = cell.Q.omega.im/EPS.im;";        
         //}
     codeStr ~= "}";
-    codeStr ~= "pcell.copy_values_from(cellSave, CopyDataOption.all);";
+    codeStr ~= "pcell.copy_values_from(blk.cellSave, CopyDataOption.all);";
     codeStr ~= "foreach(cell; pcell.jacobian_cell_stencil) {";
     codeStr ~= "cell.fs.mu_t = cell.fs.mu_t.re;";
     codeStr ~= "cell.fs.k_t = cell.fs.k_t.re;";
@@ -2094,8 +2093,8 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
 
 // NB. ONLY FOR UNSTRUCTURED SOLVER
 
-void sss_preconditioner_initialisation(FluidBlock blk, size_t nConservative) {
-    final switch (GlobalConfig.sssOptions.preconditionMatrixType) {
+void sss_preconditioner_initialisation(ref FluidBlock blk, size_t nConservative) {
+    final switch (blk.myConfig.sssOptions.preconditionMatrixType) {
     case PreconditionMatrixType.block_diagonal:
         // block-diagonal preconditioner has a special residual stencil
         foreach (cell; blk.cells) {
@@ -2108,23 +2107,25 @@ void sss_preconditioner_initialisation(FluidBlock blk, size_t nConservative) {
             cell.dPrimitive = new Matrix!number(nConservative, nConservative);
             cell.dConservative = new Matrix!number(nConservative, nConservative);
         }
-        cellSave = new FVCell(blk.myConfig);
-        foreach (i; 0..MAX_PERTURBED_INTERFACES) {
-            ifaceP[i] = new FVInterface(blk.myConfig, false);
+        blk.cellSave = new FVCell(blk.myConfig);
+        foreach (i; 0..blk.MAX_PERTURBED_INTERFACES) {
+            blk.ifaceP[i] = new FVInterface(blk.myConfig, false);
         }
         break;
     case PreconditionMatrixType.ilu:
-        // initialise objects
+        //initialise objects
         blk.Minv = new Matrix!number(nConservative, nConservative);
         blk.JcT = new SMatrix!number();
         blk.Jc = new SMatrix!number();
         blk.P = new SMatrix!number();
+        blk.cellSave = new FVCell(blk.myConfig);
+        foreach(i; 0..blk.MAX_PERTURBED_INTERFACES) blk.ifaceP[i] = new FVInterface(blk.myConfig, false);
         break;
     } // end switch
 }
 
-void sss_preconditioner(FluidBlock blk, size_t np, double dt, size_t orderOfJacobian=1) {
-    final switch (GlobalConfig.sssOptions.preconditionMatrixType) {
+void sss_preconditioner(ref FluidBlock blk, size_t np, double dt, size_t orderOfJacobian=1) {
+    final switch (blk.myConfig.sssOptions.preconditionMatrixType) {
     case PreconditionMatrixType.block_diagonal:
         block_diagonal_preconditioner(blk, np, dt, orderOfJacobian);
         break;
@@ -2134,39 +2135,34 @@ void sss_preconditioner(FluidBlock blk, size_t np, double dt, size_t orderOfJaco
     } // end switch
 }
 
-void ilu_preconditioner(FluidBlock blk, size_t np, double dt, size_t orderOfJacobian=1) {
+void ilu_preconditioner(ref FluidBlock blk, size_t np, double dt, size_t orderOfJacobian=1) {
     // temporarily switch the interpolation order of the config object to that of the Jacobian 
     version(complex_numbers) Complex!double EPS = complex(0.0, 1.0e-30);
     else double EPS;
     blk.myConfig.interpolation_order = 1;
-    
     /* form conservative Jacobian transpose */
-    blk.JcT.aa = [];
-    blk.JcT.ja = [];
-    blk.JcT.ia = [];
     blk.P.aa = [];
     blk.P.ja = [];
     blk.P.ia = [];
+    blk.JcT.aa = [];
+    blk.JcT.ja = [];
+    blk.JcT.ia = [];
     local_flow_jacobian_transpose(blk.JcT, blk, np, 1, EPS, true, true);
     /* transpose */
     blk.P.ia.length = blk.JcT.ia.length;
     blk.P.ja.length = blk.JcT.ja.length;
     blk.P.aa.length = blk.JcT.aa.length;
     nm.smla.transpose(blk.JcT.ia, blk.JcT.ja, blk.JcT.aa, blk.P.ia, blk.P.ja, blk.P.aa);
-
     number dtInv = 1.0/dt;
     foreach (i; 0 .. np*blk.cells.length) {
         blk.P[i,i] = blk.P[i,i] + dtInv;
     }
-
     blk.Jc = new SMatrix!number(blk.P);
     
-    
     /* perform ILU0 decomposition */
-    int level_of_fill_in = GlobalConfig.sssOptions.iluFill;
+    int level_of_fill_in = blk.myConfig.sssOptions.iluFill;
     if (level_of_fill_in == 0) decompILU0(blk.P);
     else decompILUp(blk.P, level_of_fill_in);
-        
     // reset interpolation order to the global setting
     blk.myConfig.interpolation_order = GlobalConfig.interpolation_order;
 }
@@ -2276,7 +2272,6 @@ void block_diagonal_preconditioner(FluidBlock blk, size_t np, double dt, size_t 
         Matrix!number tmp = nm.bbla.inverse(cell.dConservative);
         cell.dConservative = tmp;
     }
-    
     // reset interpolation order to the global setting
     blk.myConfig.interpolation_order = GlobalConfig.interpolation_order;
 }
