@@ -22,42 +22,51 @@ import std.math;
 
 import nm.bbla;
 import nm.bdfLU;
+import nm.complex;
+import nm.number;
 
 
 //define a list of global run conditions to take from file
-double Te;
+number Te;
 double endtime;
 double dt;
 double dj;
 int newton_steps;
-double Ne;
+number Ne;
 
 //define arrays for data storage for gas info and curve fitting parameters
 double[][][] full_grouped_data;
 double[8][9][9][2] full_rate_fit;
 int total_species_number;
 
-double[][] state;
-double[][] guess_state;
-double[][] step_state;
-double[] state_vector;
-double[] initial_vector;
-double[] rate_vector;
+number[][] state;
+number[][] guess_state;
+number[][] step_state;
+number[] state_vector;
+number[] initial_vector;
 
-double[][] jacobian;
 
-void UpdateVectorFromState(ref double[] given_vector, double[][] given_state) 
+//define linalg terms for BDF solver
+number[] rate_vector;
+number[][] jacobian;
+Matrix!number Asolve;
+number[] update_vector;
+number[] RHSvector;
+int[] pivot;
+
+
+void UpdateVectorFromState(ref number[] given_vector, number[][] given_state) 
 {
     int j=0;
-    foreach(double[] row; given_state) {
-        foreach(int i, double elem; row) {
+    foreach(number[] row; given_state) {
+        foreach(int i, number elem; row) {
             given_vector[i+j] = elem;
         }
         j += row.length;
     }
 }
 
-void UpdateStateFromVector(ref double[][] given_state, double[] given_vector)
+void UpdateStateFromVector(ref number[][] given_state, number[] given_vector)
 {
     int Vector_Pos(int m, int n){
         int pos_sum=0;
@@ -67,14 +76,14 @@ void UpdateStateFromVector(ref double[][] given_state, double[] given_vector)
         pos_sum+=n;
         return pos_sum;
     }
-    foreach(int m, double[] chem_spec;given_state) {
-        foreach(int n, double elec_spec;chem_spec) {
+    foreach(int m, number[] chem_spec;given_state) {
+        foreach(int n, number elec_spec;chem_spec) {
             given_state[m][n]=given_vector[Vector_Pos(m,n)];
         }
     }
 }
 
-void CopyStateToState(ref double[][] out_state, double[][] in_state, bool step=false, int stepn=0)
+void CopyStateToState(ref number[][] out_state, number[][] in_state, bool step=false, int stepn=0)
 {
     int[] Species_Position(int vector_position) {
         int chem_spec;
@@ -85,8 +94,8 @@ void CopyStateToState(ref double[][] out_state, double[][] in_state, bool step=f
         return [chem_spec,vector_position];
     }
 
-    foreach(int i, double[] row;in_state) {
-        foreach (int j, double elem;row) {
+    foreach(int i, number[] row;in_state) {
+        foreach (int j, number elem;row) {
             out_state[i][j] = elem;
         }
     }
@@ -97,11 +106,13 @@ void CopyStateToState(ref double[][] out_state, double[][] in_state, bool step=f
 }
 
 void Init() 
-{
+{   
+    //populate energy data and rate fitting coefficients
     full_grouped_data~=to!(double[][])(NI_grouped_data);
     full_grouped_data~=to!(double[][])(OI_grouped_data);
     PopulateRateFits();
 
+    //set size of state arrays and linalg BDF solver arrays and vectors
     state.length=full_grouped_data.length;
     guess_state.length=full_grouped_data.length;
     step_state.length=full_grouped_data.length;
@@ -116,41 +127,47 @@ void Init()
     state_vector.length=total_species_number;
     initial_vector.length=total_species_number;
     rate_vector.length=total_species_number;
+    Asolve = new Matrix!number(total_species_number,total_species_number);
+    update_vector.length=total_species_number;
+    RHSvector.length=total_species_number;
+    pivot.length=total_species_number;
 
+    //set size for linalg BDF solver arrays and vectors
     jacobian.length=total_species_number;
-    foreach(int i,double[] row;jacobian){
+    foreach(int i,number[] row;jacobian){
         jacobian[i].length=total_species_number;
     }
+
 }
 
-double Rate(int ip, int gas, double[][] input_state=state, double electron_density=Ne) 
+number Rate(int ip, int gas, number[][] input_state=state, number electron_density=Ne) 
 {
     //Takes an energy level, gas and current state and returns the rate of change of grouped level ip\
     //if no state is specified, use current state
     //if no electron density is specified, use Ne
     
-    double Forward_Rate_Coef(int gas, int ip,int jp) {
+    number Forward_Rate_Coef(int gas, int ip,int jp) {
         double A=full_rate_fit[gas][ip+1][jp+1][0];
         double n=full_rate_fit[gas][ip+1][jp+1][1];
         double E=full_rate_fit[gas][ip+1][jp+1][2];
         return A*((Te)^^n)*exp(-E/(Te));
     }
 
-    double Equil_Const(int gas, int ip, int jp) {
+    number Equil_Const(int gas, int ip, int jp) {
         double G1=full_rate_fit[gas][ip+1][jp+1][3];
         double G2=full_rate_fit[gas][ip+1][jp+1][4];
         double G3=full_rate_fit[gas][ip+1][jp+1][5];
         double G4=full_rate_fit[gas][ip+1][jp+1][6];
         double G5=full_rate_fit[gas][ip+1][jp+1][7];
-        double z=10000/(Te);
+        number z=10000/(Te);
         return exp((G1/z) + G2 + G3*log(z) + G4*z + G5*(z^^2));
     }
 
-    double Backward_Rate_Coef(int gas, int ip, int jp) {
+    number Backward_Rate_Coef(int gas, int ip, int jp) {
         return Forward_Rate_Coef(gas,ip,jp)/Equil_Const(gas,ip,jp);
     }
 
-    double group_rate=0;
+    number group_rate=0;
 	if (ip<(input_state[gas].length-1)) { //excited atomic species
 		for (int jp;jp<(input_state[gas].length-1);jp++) {
 			if (ip<jp) {
@@ -194,7 +211,7 @@ void Jacobian()
 
     for(int n;n<total_species_number;n++) { //for every element of the state
         CopyStateToState(step_state,guess_state,true,n); //update step state
-        double step_Ne=Ne;
+        number step_Ne=Ne;
         if (Ion(n)) {
             step_Ne+=dj;
         }
@@ -223,21 +240,21 @@ void Step()
     }
     //step dt with BDF formula
     for (int n;n<newton_steps;n++) {
-        foreach(int gas,double[] chem_spec;guess_state) {
-            foreach(int ip,double elec_state;chem_spec){
+        foreach(int gas,number[] chem_spec;guess_state) {
+            foreach(int ip,number elec_state;chem_spec){
                 rate_vector[VectorPosition(gas,ip)]=Rate(ip, gas, guess_state);
             }
         }
         UpdateVectorFromState(state_vector,guess_state);
-        double initial_ions=0;
-        foreach(double[] chem_spec;guess_state) {
+        number initial_ions=0;
+        foreach(number[] chem_spec;guess_state) {
             initial_ions+=chem_spec[$-1];
         }
         Jacobian();
-        state_vector=BDF1(dt,initial_vector,state_vector,rate_vector,jacobian);
+        BDF1(update_vector, RHSvector, Asolve, pivot, dt,initial_vector,state_vector,rate_vector,jacobian);
         UpdateStateFromVector(guess_state,state_vector);
-        double final_ions=0.0;
-        foreach(double[] chem_spec;guess_state) {
+        number final_ions=0.0;
+        foreach(number[] chem_spec;guess_state) {
             final_ions+=chem_spec[$-1];
         }
         Ne+=final_ions-initial_ions;
@@ -245,12 +262,12 @@ void Step()
     CopyStateToState(state,guess_state);
 }
 
-void Electronic_Solve(in double[] state_from_cfd, double[] state_to_cfd, double given_Te, double given_endtime)
+void Electronic_Solve( number[] state_from_cfd, ref number[] state_to_cfd, number given_Te, double given_endtime)
 {
     dt = 1.0e-10;
     Ne=state_from_cfd[$-1];
     state_vector[]=state_from_cfd[0 .. $-1];
-    UpdateStateFromVector(state,to!(double[])(state_from_cfd));
+    UpdateStateFromVector(state,state_from_cfd);
     UpdateVectorFromState(state_vector,state);
     Te=given_Te;
     endtime=given_endtime;
@@ -264,7 +281,6 @@ void Electronic_Solve(in double[] state_from_cfd, double[] state_to_cfd, double 
             dt=(endtime-dt);
         }
     }
-
     UpdateVectorFromState(state_vector,state);
     state_vector ~= Ne;
     state_to_cfd[] = state_vector[];
@@ -391,4 +407,3 @@ void PopulateRateFits()
         full_rate_fit[1][to!int(row[0])][to!int(row[1])] = row[2 .. $];
     }
 }
-    

@@ -9,6 +9,7 @@ import std.algorithm.iteration : sum;
 import std.math;
 import std.stdio;
 import std.string;
+import std.path : relativePath;
 import std.conv : to;
 import util.lua;
 import util.lua_service;
@@ -28,6 +29,10 @@ public:
         _n_species = cast(uint) nElecSpecies; //go to 15 or 16?
         _n_modes = 0; //dont know what to do with this?
         _species_names.length = _n_species; 
+
+        _s1 = getDouble(L, LUA_GLOBALSINDEX, "s1");
+        _T1 = getDouble(L, LUA_GLOBALSINDEX, "T1");
+        _p1 = getDouble(L, LUA_GLOBALSINDEX, "p1");
 
         lua_getfield(L, LUA_GLOBALSINDEX, "electronic_species");
         foreach (isp; 0 .. _n_species) {
@@ -94,12 +99,15 @@ public:
 
     override void update_thermo_from_ps(GasState Q, number s)
     {
-        throw new Error("ERROR: ElectronicallySpecificGas:update_thermo_from_ps NOT IMPLEMENTED.");
+        Q.T = _T1 * exp((1.0/_Cp)*((s - _s1) + _Rgas * log(Q.p/_p1)));
+        update_thermo_from_pT(Q);
     }
 
     override void update_thermo_from_hs(GasState Q, number h, number s)
     {
-        throw new Error("ERROR: ElectronicallySpecificGas:update_thermo_from_hs NOT IMPLEMENTED.");
+        Q.T = h / _Cp;
+        Q.p = _p1 * exp((1.0/_Rgas)*(_s1 - s + _Cp*log(Q.T/_T1)));
+        update_thermo_from_pT(Q);
     }
 
     override void update_sound_speed(GasState Q)
@@ -118,7 +126,7 @@ public:
 
     override number dudT_const_v(in GasState Q) const
     {
-        throw new Error("ERROR: ElectronicallySpecificGas:dudT_const_v NOT IMPLEMENTED.");
+        return to!number(_Cv);
     }
     override number dhdT_const_p(in GasState Q) const
     {
@@ -126,7 +134,8 @@ public:
     }
     override number dpdrho_const_T(in GasState Q) const
     {
-        throw new Error("ERROR: ElectronicallySpecificGas:dpdrho_const_T NOT IMPLEMENTED.");
+        number R = gas_constant(Q);
+        return R*Q.T;
     }
     override number gas_constant(in GasState Q) const
     {
@@ -146,7 +155,7 @@ public:
     }
     override number entropy(in GasState Q) const
     {
-        throw new Error("ERROR: ElecontricallySpecificGas:entropy NOT IMPLEMENTED.");
+        return _s1 + _Cp * log(Q.T/_T1) - _Rgas * log(Q.p/_p1);
     }
 
 private:
@@ -154,6 +163,16 @@ private:
     double[] _R;
     int[] _level;
     int[] _group_degeneracy;
+
+    // Thermodynamic constants
+    double _Rgas; // J/kg/K
+    double _gamma;   // ratio of specific heats
+    double _Cv; // J/kg/K
+    double _Cp; // J/kg/K
+    // Reference values for entropy
+    double _s1;  // J/kg/K
+    double _T1;  // K
+    double _p1;  // Pa
 
     number energyInNoneq(GasState Q) const {
         number uNoneq = 0.0;
@@ -168,25 +187,24 @@ private:
 version(electronically_specific_gas_test) {
     int main()
     {
-        // import util.msg_service;
+        import util.msg_service;
 
-        // auto L = init_lua_State();
-        // doLuaFile(L, "sample-data/elec_composition.lua");
-        // auto gm = new ElectronicallySpecificGas(L);
-        // auto gd = new GasState(19,19);
+        auto L = init_lua_State();
+        doLuaFile(L, relativePath("../gas/sample-data/electronic_composition.lua"));
+        auto gm = new ElectronicallySpecificGas(L);
+        auto gd = new GasState(19,19);
 
-        // gd.massf[] = 0.0;
-        // gd.massf[0] = 0.81403036047055; //initialises massf of NI
-        // gd.massf[9] = 0.185968105968037; //initialises massf of OI
-        // gd.massf[18] = 1.0 - (gd.massf[0] + gd.massf[9]); //tiny massf for free electron
+        gd.massf[] = 0.0;
+        gd.massf[0] = 0.81403036047055; //initialises massf of NI
+        gd.massf[9] = 0.185968105968037; //initialises massf of OI
+        gd.massf[18] = 1.0 - (gd.massf[0] + gd.massf[9]); //tiny massf for free electron
 
-        // gd.p = 101325.0;
-        // gd.T = 7000.0;
-        // gd.T_modes[0]=10000.0;
+        gd.p = 101325.0;
+        gd.T = 7000.0;
+        gd.T_modes[0]=10000.0;
 
-        // gm.update_thermo_from_pT(gd);
-
-
+        gm.update_thermo_from_pT(gd);
+        
 
         return 0;
     }

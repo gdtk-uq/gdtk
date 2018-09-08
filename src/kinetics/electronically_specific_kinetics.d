@@ -48,7 +48,7 @@ public:
         //update the number density vector for time t+t_interval
         //by solving the kinetics ODE (electron temp frozen)
         
-        //Electronic_Solve(d_numden0, d_numden, Q.T_modes[0], tInterval);
+        Electronic_Solve(_numden0, _numden, Q.T_modes[0], tInterval);
         _gmodel.numden2massf(_numden, Q);
     }
 
