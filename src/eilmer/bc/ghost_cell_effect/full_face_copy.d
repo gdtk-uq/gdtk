@@ -9,6 +9,7 @@ import std.stdio;
 import std.math;
 import std.file;
 import std.algorithm;
+import std.datetime;
 version(mpi_parallel) {
     import mpi;
     import mpi.util;
@@ -43,10 +44,18 @@ int make_mpi_tag(int blk_id, int bndry_id, int seq)
 version(mpi_parallel) {
     int MPI_Wait_a_while(MPI_Request* request, MPI_Status *status)
     {
-        int ierr = 0;
+        int ierr = 0; // Normally we return the MPI_Test result.
+        long timeOut_msecs = 10000; // Surely 10 seconds will be enough.
+        SysTime startTime = Clock.currTime();
         int flag = 0;
         while (!flag) {
             ierr = MPI_Test(request, &flag, status);
+            long elapsedTime_msecs = (Clock.currTime() - startTime).total!"msecs"();
+            if (elapsedTime_msecs > timeOut_msecs) {
+                // [TODO] Maybe we should consider cleaning up MPI resources, however,
+                // we do not expect our job to recover gracefully from this point.
+                throw new Exception("MPI_wait_a_while time-out has occurred.");
+            }
         }
         return ierr;
     } // end MPI_Wait_a_while()
