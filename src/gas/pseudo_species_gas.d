@@ -340,39 +340,39 @@ public:
     }
     override number dudT_const_v(in GasState Q)
     {
-        return 0.;
+        return to!number(0.);
     }
     override number dhdT_const_p(in GasState Q)
     {
-        return 0.;
+        return to!number(0.);
     }
     override number dpdrho_const_T(in GasState Q)
     {
-        return 0.;
+        return to!number(0.);
     }
     override number gas_constant(in GasState Q)
     {
-        return 0.;
+        return to!number(0.);
     }
     override number internal_energy(in GasState Q)
     {
-        return 0.;
+        return to!number(0.);
     }
     override number enthalpy(in GasState Q)
     {
-        return 0.;
+        return to!number(0.);
     }
     override number enthalpy(in GasState Q, int isp)
     {
-        return 0.;
+        return to!number(0.);
     }
     override number entropy(in GasState Q)
     {
-        return 0.;
+        return to!number(0.);
     }
     override number entropy(in GasState Q, int isp)
     {
-        return 0.;
+        return to!number(0.);
     }
 
 private:
