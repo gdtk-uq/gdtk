@@ -270,7 +270,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
                 break;
             }
             if ( failedAttempt ) {
-                writefln("Pre-step failed: %d", step);
+                writefln("Pre-step failed: %d", SimState.step);
                 writeln("Bailing out!");
                 exit(1);
             }

@@ -206,7 +206,7 @@ private:
         lua_newtable(L);
         lua_pushnumber(L, t); lua_setfield(L, -2, "t");
         lua_pushnumber(L, dt_global); lua_setfield(L, -2, "dt");
-        lua_pushinteger(L, step); lua_setfield(L, -2, "timeStep");
+        lua_pushinteger(L, SimState.step); lua_setfield(L, -2, "timeStep");
         lua_pushinteger(L, gtl); lua_setfield(L, -2, "gridTimeLevel");
         lua_pushinteger(L, ftl); lua_setfield(L, -2, "flowTimeLevel");
         lua_pushinteger(L, which_boundary); lua_setfield(L, -2, "boundaryId");
@@ -459,7 +459,7 @@ private:
         lua_newtable(L);
         lua_pushnumber(L, t); lua_setfield(L, -2, "t");
         lua_pushnumber(L, dt_global); lua_setfield(L, -2, "dt");
-        lua_pushinteger(L, step); lua_setfield(L, -2, "timeStep");
+        lua_pushinteger(L, SimState.step); lua_setfield(L, -2, "timeStep");
         lua_pushinteger(L, gtl); lua_setfield(L, -2, "gridTimeLevel");
         lua_pushinteger(L, ftl); lua_setfield(L, -2, "flowTimeLevel");
         lua_pushinteger(L, which_boundary); lua_setfield(L, -2, "boundaryId");
@@ -678,7 +678,7 @@ private:
         lua_newtable(L);
         lua_pushnumber(L, t); lua_setfield(L, -2, "t");
         lua_pushnumber(L, dt_global); lua_setfield(L, -2, "dt");
-        lua_pushinteger(L, step); lua_setfield(L, -2, "timeStep");
+        lua_pushinteger(L, SimState.step); lua_setfield(L, -2, "timeStep");
         lua_pushinteger(L, gtl); lua_setfield(L, -2, "gridTimeLevel");
         lua_pushinteger(L, ftl); lua_setfield(L, -2, "flowTimeLevel");
         lua_pushinteger(L, which_boundary); lua_setfield(L, -2, "boundaryId");

@@ -62,8 +62,8 @@ version(mpi_parallel) {
 // Needs to be seen by all of the coordination functions.
 final class SimState {
     shared static double time;  // present simulation time, tracked by code
+    shared static int step;
 }
-shared static int step;
 shared static double dt_global;     // simulation time step determined by code
 shared static double dt_allow;      // allowable global time step determined by code
 shared static double target_time;  // simulate_in_time will work toward this value
@@ -557,7 +557,7 @@ void integrate_in_time(double target_time_as_requested)
     t_history = SimState.time + GlobalConfig.dt_history;
     t_loads = SimState.time + GlobalConfig.dt_loads;
     // Overall iteration count.
-    step = 0;
+    SimState.step = 0;
     do_cfl_check_now = false;
     //
     if (GlobalConfig.viscous) {
@@ -584,7 +584,8 @@ void integrate_in_time(double target_time_as_requested)
     //
     // Normally, we can terminate upon either reaching 
     // a maximum time or upon reaching a maximum iteration count.
-    shared bool finished_time_stepping = (SimState.time >= target_time) || (step >= GlobalConfig.max_step);
+    shared bool finished_time_stepping = (SimState.time >= target_time) ||
+        (SimState.step >= GlobalConfig.max_step);
     //----------------------------------------------------------------
     //                 Top of main time-stepping loop
     //----------------------------------------------------------------
@@ -602,7 +603,7 @@ void integrate_in_time(double target_time_as_requested)
             // If using k-omega, we need to set mu_t and k_t BEFORE we call convective_update
             // because the convective update is where the interface values of mu_t and k_t are set.
             // only needs to be done on initial step, subsequent steps take care of setting these values 
-            if ((step == 0) && (GlobalConfig.turbulence_model == TurbulenceModel.k_omega)) {
+            if ((SimState.step == 0) && (GlobalConfig.turbulence_model == TurbulenceModel.k_omega)) {
                 k_omega_set_mu_and_k();
             }
             //
@@ -619,7 +620,7 @@ void integrate_in_time(double target_time_as_requested)
             } else {
                 // Moving Grid - perform gas update for moving grid
                 // [TODO] PJ 2018-01-20 Up to here with thinking about MPI parallel.
-                set_grid_velocities(SimState.time, step, 0, dt_global);
+                set_grid_velocities(SimState.time, SimState.step, 0, dt_global);
                 gasdynamic_explicit_increment_with_moving_grid();
                 recalculate_all_geometry();
             }
@@ -638,19 +639,20 @@ void integrate_in_time(double target_time_as_requested)
             }
             //
             // 3.0 Update the time record and (occasionally) print status.
-            step = step + 1;
+            SimState.step = SimState.step + 1;
             output_just_written = false;
             history_just_written = false;
             loads_just_written = false;
-            if ((step / GlobalConfig.print_count) * GlobalConfig.print_count == step) {
+            if ((SimState.step % GlobalConfig.print_count) == 0) {
                 // Print the current time-stepping status.
                 auto writer = appender!string();
-                formattedWrite(writer, "Step=%7d t=%10.3e dt=%10.3e ", step, SimState.time, dt_global);
+                formattedWrite(writer, "Step=%7d t=%10.3e dt=%10.3e ",
+                               SimState.step, SimState.time, dt_global);
                 // For reporting wall-clock time, convert to seconds with precision of milliseconds.
                 double wall_clock_elapsed = to!double((Clock.currTime()-wall_clock_start).total!"msecs"())/1000.0;
-                double wall_clock_per_step = wall_clock_elapsed / step;
+                double wall_clock_per_step = wall_clock_elapsed / SimState.step;
                 double WCtFT = (GlobalConfig.max_time - SimState.time) / dt_global * wall_clock_per_step;
-                double WCtMS = (GlobalConfig.max_step - step) * wall_clock_per_step;
+                double WCtMS = (GlobalConfig.max_step - SimState.step) * wall_clock_per_step;
                 formattedWrite(writer, "WC=%.1f WCtFT=%.1f WCtMS=%.1f", 
                                wall_clock_elapsed, WCtFT, WCtMS);
                 if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) {
@@ -683,7 +685,7 @@ void integrate_in_time(double target_time_as_requested)
                     if (GlobalConfig.is_master_task) {
                         auto writer2 = appender!string();
                         formattedWrite(writer2, "RESIDUALS: step= %7d WC= %.8f ",
-                                       step, wallClock2);
+                                       SimState.step, wallClock2);
                         formattedWrite(writer2, "MASS: %10.6e X-MOM: %10.6e Y-MOM: %10.6e ENERGY: %10.6e",
                                        Linf_residuals.mass, Linf_residuals.momentum.x,
                                        Linf_residuals.momentum.y, Linf_residuals.total_energy);
@@ -724,7 +726,7 @@ void integrate_in_time(double target_time_as_requested)
                     // Do not attempt to update run time loads.
                     // Need to think about how to coordinate this globally.
                 } else {
-                    if ((step / GlobalConfig.run_time_loads_count) * GlobalConfig.run_time_loads_count == step) {
+                    if ((SimState.step % GlobalConfig.run_time_loads_count) == 0) {
                         computeRunTimeLoads();
                     }
                 }
@@ -734,7 +736,7 @@ void integrate_in_time(double target_time_as_requested)
             //
             // 7.0 Spatial filter may be applied occasionally.
         } catch(Exception e) {
-            writefln("Exception caught while trying to take step %d.", step);
+            writefln("Exception caught while trying to take step %d.", SimState.step);
             writeln(e);
             finished_time_stepping = true;
         }
@@ -754,7 +756,7 @@ void integrate_in_time(double target_time_as_requested)
         // while the code is running).
         //
         if (SimState.time >= target_time) { finished_time_stepping = true; }
-        if (step >= GlobalConfig.max_step) { finished_time_stepping = true; }
+        if (SimState.step >= GlobalConfig.max_step) { finished_time_stepping = true; }
         if (GlobalConfig.halt_now == 1) { finished_time_stepping = true; }
         auto wall_clock_elapsed = (Clock.currTime() - wall_clock_start).total!"seconds"();
         if (maxWallClockSeconds > 0 && (wall_clock_elapsed > maxWallClockSeconds)) {
@@ -769,8 +771,12 @@ void integrate_in_time(double target_time_as_requested)
         if(finished_time_stepping && GlobalConfig.verbosity_level >= 1 && GlobalConfig.is_master_task) {
             // Make an announcement about why we are finishing time-stepping.
             write("Integration stopped: "); 
-            if (SimState.time >= target_time) { writefln("Reached target simulation time of %g seconds.", target_time); }
-            if (step >= GlobalConfig.max_step) { writefln("Reached maximum number of steps with step=%d.", step); }
+            if (SimState.time >= target_time) {
+                writefln("Reached target simulation time of %g seconds.", target_time);
+            }
+            if (SimState.step >= GlobalConfig.max_step) {
+                writefln("Reached maximum number of steps with step=%d.", SimState.step);
+            }
             if (GlobalConfig.halt_now == 1) { writeln("Halt set in control file."); }
             if (maxWallClockSeconds > 0 && (wall_clock_elapsed > maxWallClockSeconds)) {
                 writefln("Reached maximum wall-clock time with elapsed time %s.", to!string(wall_clock_elapsed));
@@ -789,7 +795,7 @@ void integrate_in_time(double target_time_as_requested)
 void check_run_time_configuration(double target_time_as_requested)
 {
     // Alter configuration setting if necessary.
-    if ( (step/GlobalConfig.control_count)*GlobalConfig.control_count == step ) {
+    if (GlobalConfig.control_count > 0 && (SimState.step % GlobalConfig.control_count) == 0) {
         read_control_file(); // Reparse the time-step control parameters occasionally.
         target_time = (GlobalConfig.block_marching) ? target_time_as_requested : GlobalConfig.max_time;
     }
@@ -820,7 +826,7 @@ void check_run_time_configuration(double target_time_as_requested)
         auto L = GlobalConfig.master_lua_State;
         lua_getglobal(L, "atTimestepStart");
         lua_pushnumber(L, SimState.time);
-        lua_pushnumber(L, step);
+        lua_pushnumber(L, SimState.step);
         int number_args = 2;
         int number_results = 0;
         if ( lua_pcall(L, number_args, number_results, 0) != 0 ) {
@@ -834,8 +840,7 @@ void check_run_time_configuration(double target_time_as_requested)
 void determine_time_step_size()
 {
     // Set the size of the time step to be the minimum allowed for any active block.
-    if (!GlobalConfig.fixed_time_step && 
-        (step/GlobalConfig.cfl_count)*GlobalConfig.cfl_count == step) {
+    if (!GlobalConfig.fixed_time_step && (SimState.step % GlobalConfig.cfl_count) == 0) {
         // Check occasionally 
         do_cfl_check_now = true;
     } // end if step == 0
@@ -1895,6 +1900,6 @@ void finalize_simulation()
     if (!history_just_written) { write_history_cells_to_files(SimState.time); }
     GC.collect();
     if (GlobalConfig.verbosity_level > 0  && GlobalConfig.is_master_task) {
-        writeln("Step= ", step, " final-t= ", SimState.time);
+        writeln("Step= ", SimState.step, " final-t= ", SimState.time);
     }
 } // end finalize_simulation()
