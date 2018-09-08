@@ -903,6 +903,9 @@ public:
         stringent_cfl = GlobalConfig.stringent_cfl;
         viscous_signal_factor = GlobalConfig.viscous_signal_factor;
         turbulent_signal_factor = GlobalConfig.turbulent_signal_factor;
+        version (steady_state) {
+            sssOptions = GlobalConfig.sssOptions;
+        }
     }
 } // end class LocalConfig
 
