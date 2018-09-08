@@ -547,7 +547,7 @@ public:
             foreach (i; 0 .. n_incoming) {
                 // Wait for non-blocking receive to complete.
                 // Once complete, copy the data back into the local context.
-                MPI_Wait(&incoming_geometry_request_list[i], &incoming_geometry_status_list[i]);
+                MPI_Wait_a_while(&incoming_geometry_request_list[i], &incoming_geometry_status_list[i]);
                 auto buf = incoming_geometry_buf_list[i];
                 size_t ii = 0;
                 foreach (gi; ghost_cell_indices[incoming_block_list[i]][blk.id]) {
@@ -665,7 +665,7 @@ public:
             foreach (i; 0 .. n_incoming) {
                 // Wait for non-blocking receive to complete.
                 // Once complete, copy the data back into the local context.
-                MPI_Wait(&incoming_flowstate_request_list[i], &incoming_flowstate_status_list[i]);
+                MPI_Wait_a_while(&incoming_flowstate_request_list[i], &incoming_flowstate_status_list[i]);
                 auto buf = incoming_flowstate_buf_list[i];
                 size_t ii = 0;
                 foreach (gi; ghost_cell_indices[incoming_block_list[i]][blk.id]) {
