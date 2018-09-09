@@ -1112,7 +1112,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     }
 
     foreach (blk; parallel(localFluidBlocks,1)) {
-        if (GlobalConfig.sssOptions.useScaling) {
+        if (blk.myConfig.sssOptions.useScaling) {
             blk.maxRate.mass = maxMass;
             blk.maxRate.momentum.refx = maxMomX;
             blk.maxRate.momentum.refy = maxMomY;
