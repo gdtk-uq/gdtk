@@ -1181,15 +1181,19 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         local_invalid_cell_count[i] = blk.count_invalid_cells(local_gtl, local_ftl+1);
     } // end foreach blk
     //
-    // [TODO] 2018-01-20 PJ, We need to be more careful when throwing the following exception in MPI.
-    //
-    foreach (i, blk; localFluidBlocksBySize) { // serial loop for possibly throwing exception
+    int flagTooManyBadCells = 0;
+    foreach (i, blk; localFluidBlocksBySize) { // serial loop
         if (local_invalid_cell_count[i] > GlobalConfig.max_invalid_cells) {
-            string msg = format("Following first-stage gasdynamic update: " ~
-                                "%d bad cells in block[%d].",
-                                local_invalid_cell_count[i], i);
-            throw new FlowSolverException(msg);
+            flagTooManyBadCells = 1;
+            writefln("Following first-stage gasdynamic update: %d bad cells in block[%d].",
+                     local_invalid_cell_count[i], i);
         }
+    }
+    version(mpi_parallel) {
+        MPI_Allreduce(MPI_IN_PLACE, &flagTooManyBadCells, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+    }
+    if (flagTooManyBadCells > 0) {
+        throw new FlowSolverException("Too many bad cells; go home.");
     }
     //
     if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.tight) {
@@ -1337,14 +1341,22 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             } // end foreach cell
         local_invalid_cell_count[i] = blk.count_invalid_cells(local_gtl, local_ftl+1);
         } // end foreach blk
-        foreach (i, blk; localFluidBlocksBySize) { // serial loop for possibly throwing exception
+        //
+        flagTooManyBadCells = 0;
+        foreach (i, blk; localFluidBlocksBySize) { // serial loop
             if (local_invalid_cell_count[i] > GlobalConfig.max_invalid_cells) {
-                string msg = format("Following second-stage gasdynamic update: " ~
-                                    "%d bad cells in block[%d].",
-                                    local_invalid_cell_count[i], i);
-                throw new FlowSolverException(msg);
+                flagTooManyBadCells = 1;
+                writefln("Following second-stage gasdynamic update: %d bad cells in block[%d].",
+                         local_invalid_cell_count[i], i);
             }
         }
+        version(mpi_parallel) {
+            MPI_Allreduce(MPI_IN_PLACE, &flagTooManyBadCells, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+        }
+        if (flagTooManyBadCells > 0) {
+            throw new FlowSolverException("Too many bad cells; go home.");
+        }
+        //
         if ( GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.tight ) {
             // Do solid domain update IMMEDIATELY after at same flow time level
             foreach (sblk; parallel(solidBlocks, 1)) {
@@ -1376,7 +1388,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         } // end if tight solid domain coupling.
     } // end if number_of_stages_for_update_scheme >= 2 
     //
-    if ( number_of_stages_for_update_scheme(GlobalConfig.gasdynamic_update_scheme) >= 3 ) {
+    if (number_of_stages_for_update_scheme(GlobalConfig.gasdynamic_update_scheme) >= 3) {
         // Preparation for third stage of gasdynamic update.
         SimState.time = t0 + c3 * SimState.dt_global;
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
@@ -1487,14 +1499,22 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             } // end foreach cell
         local_invalid_cell_count[i] = blk.count_invalid_cells(local_gtl, local_ftl+1);
         } // end foreach blk
-        foreach (i, blk; localFluidBlocksBySize) { // serial loop for possibly throwing exception
+        //
+        flagTooManyBadCells = 0;
+        foreach (i, blk; localFluidBlocksBySize) { // serial loop
             if (local_invalid_cell_count[i] > GlobalConfig.max_invalid_cells) {
-                string msg = format("Following third-stage gasdynamic update: " ~
-                                    "%d bad cells in block[%d].",
-                                    local_invalid_cell_count[i], i);
-                throw new FlowSolverException(msg);
+                flagTooManyBadCells = 1;
+                writefln("Following third-stage gasdynamic update: %d bad cells in block[%d].",
+                         local_invalid_cell_count[i], i);
             }
         }
+        version(mpi_parallel) {
+            MPI_Allreduce(MPI_IN_PLACE, &flagTooManyBadCells, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+        }
+        if (flagTooManyBadCells > 0) {
+            throw new FlowSolverException("Too many bad cells; go home.");
+        }
+        //
         if ( GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.tight ) {
             // Do solid domain update IMMEDIATELY after at same flow time level
             foreach (sblk; parallel(solidBlocks, 1)) {
@@ -1680,14 +1700,22 @@ void gasdynamic_explicit_increment_with_moving_grid()
         } // end foreach cell
         local_invalid_cell_count[i] = blk.count_invalid_cells(local_gtl, local_ftl+1);
     } // end foreach blk
-    foreach (i, blk; localFluidBlocksBySize) { // serial loop for possibly throwing exception
+    //
+    int flagTooManyBadCells = 0;
+    foreach (i, blk; localFluidBlocksBySize) { // serial loop
         if (local_invalid_cell_count[i] > GlobalConfig.max_invalid_cells) {
-            string msg = format("Following first-stage gasdynamic update: " ~
-                                "%d bad cells in block[%d].",
-                                local_invalid_cell_count[i], i);
-            throw new FlowSolverException(msg);
+            flagTooManyBadCells = 1;
+            writefln("Following first-stage gasdynamic update: %d bad cells in block[%d].",
+                     local_invalid_cell_count[i], i);
         }
     }
+    version(mpi_parallel) {
+        MPI_Allreduce(MPI_IN_PLACE, &flagTooManyBadCells, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+    }
+    if (flagTooManyBadCells > 0) {
+        throw new FlowSolverException("Too many bad cells; go home.");
+    }
+    //
     // Next do solid domain update IMMEDIATELY after at same flow time level
     foreach (sblk; solidBlocks) {
         if (!sblk.active) continue;
@@ -1822,14 +1850,22 @@ void gasdynamic_explicit_increment_with_moving_grid()
             } // end foreach cell
             local_invalid_cell_count[i] = blk.count_invalid_cells(local_gtl, local_ftl+1);
         } // end foreach blk
-        foreach (i, blk; localFluidBlocksBySize) { // serial loop for possibly throwing exception
+        //
+        flagTooManyBadCells = 0;
+        foreach (i, blk; localFluidBlocksBySize) { // serial loop
             if (local_invalid_cell_count[i] > GlobalConfig.max_invalid_cells) {
-                string msg = format("Following first-stage gasdynamic update: " ~
-                                    "%d bad cells in block[%d].",
-                                    local_invalid_cell_count[i], i);
-                throw new FlowSolverException(msg);
+                flagTooManyBadCells = 1;
+                writefln("Following second-stage gasdynamic update: %d bad cells in block[%d].",
+                         local_invalid_cell_count[i], i);
             }
         }
+        version(mpi_parallel) {
+            MPI_Allreduce(MPI_IN_PLACE, &flagTooManyBadCells, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+        }
+        if (flagTooManyBadCells > 0) {
+            throw new FlowSolverException("Too many bad cells; go home.");
+        }
+        //
         // Do solid domain update IMMEDIATELY after at same flow time level
         foreach (sblk; solidBlocks) {
             if (!sblk.active) continue;
