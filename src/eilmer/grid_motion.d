@@ -273,16 +273,22 @@ int set_gcl_interface_properties(SFluidBlock blk, size_t gtl, double dt) {
     return 0;
 } // end set_gcl_interface_properties()
 
-void predict_vertex_positions(SFluidBlock blk, size_t dimensions, double dt, int gtl) {
-    size_t krangemax = ( dimensions == 2 ) ? blk.kmax : blk.kmax+1;
-    for ( size_t k = blk.kmin; k <= krangemax; ++k ) {
-        for ( size_t j = blk.jmin; j <= blk.jmax+1; ++j ) {
-            for ( size_t i = blk.imin; i <= blk.imax+1; ++i ) {
+@nogc
+void predict_vertex_positions(SFluidBlock blk, double dt, int gtl)
+{
+    // [TODO] PJ 2018-09-10: Could generalize by just looping over all vertices in FluidBlock list.
+    size_t krangemax = ( blk.myConfig.dimensions == 2 ) ? blk.kmax : blk.kmax+1;
+    for (size_t k = blk.kmin; k <= krangemax; ++k) {
+        for (size_t j = blk.jmin; j <= blk.jmax+1; ++j) {
+            for (size_t i = blk.imin; i <= blk.imax+1; ++i) {
                 FVVertex vtx = blk.get_vtx(i,j,k);
-                if (gtl == 0) // if this is the predictor/sole step then update grid
-                    vtx.pos[1] = vtx.pos[0] + dt *  vtx.vel[0];
-                else   // else if this is the corrector step keep then grid fixed
+                if (gtl == 0) {
+                    // predictor/sole step; update grid
+                    vtx.pos[1] = vtx.pos[0] + dt * vtx.vel[0];
+                } else {
+                    // corrector step; keep grid fixed
                     vtx.pos[2] = vtx.pos[1];
+                }
             }
         }
     }

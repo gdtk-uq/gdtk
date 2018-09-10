@@ -618,7 +618,7 @@ void integrate_in_time(double target_time_as_requested)
             } else {
                 // Moving Grid - perform gas update for moving grid
                 // [TODO] PJ 2018-01-20 Up to here with thinking about MPI parallel.
-                set_grid_velocities(SimState.time, SimState.step, 0, SimState.dt_global);
+                set_grid_velocities();
                 gasdynamic_explicit_increment_with_moving_grid();
                 recalculate_all_geometry();
             }
@@ -931,15 +931,15 @@ void chemistry_step(double dt)
     }
 } // end chemistry_half_step()
 
-void set_grid_velocities(double sim_time, int step, int gtl, double dt_global)
+void set_grid_velocities()
 {
     final switch(GlobalConfig.grid_motion){
         case GridMotion.none:
             throw new Error("Should not be setting grid velocities in with GridMotion.none");
         case GridMotion.user_defined:
             // Rely on user to set vertex velocities.
-            // Velocities remain unchanged if the user does nothing.
-            assign_vertex_velocities_via_udf(sim_time, dt_global);
+            // Note that velocities remain unchanged if the user does nothing.
+            assign_vertex_velocities_via_udf(SimState.time, SimState.dt_global);
             break;
         case GridMotion.shock_fitting:
             if (GlobalConfig.in_mpi_context) {
@@ -948,15 +948,15 @@ void set_grid_velocities(double sim_time, int step, int gtl, double dt_global)
             }
             // apply boundary conditions here because ...
             // shockfitting algorithm requires ghost cells to be up to date.
-            exchange_ghost_cell_boundary_data(sim_time, 0, 0);
+            exchange_ghost_cell_boundary_data(SimState.time, 0, 0);
             foreach (blk; localFluidBlocksBySize) {
-                if (blk.active) { blk.applyPreReconAction(sim_time, 0, 0); }
+                if (blk.active) { blk.applyPreReconAction(SimState.time, 0, 0); }
             }
             foreach (blk; localFluidBlocksBySize) {
                 if (blk.active) {
                     auto sblk = cast(SFluidBlock) blk;
                     assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
-                    shock_fitting_vertex_velocities(sblk, step, sim_time);
+                    shock_fitting_vertex_velocities(sblk, SimState.step, SimState.time);
                 }
             }
             break;              
@@ -1596,7 +1596,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
         auto sblk = cast(SFluidBlock) blk;
         assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
         // move vertices
-        predict_vertex_positions(sblk, GlobalConfig.dimensions, SimState.dt_global, gtl);
+        predict_vertex_positions(sblk, SimState.dt_global, gtl);
         // recalculate cell geometry with new vertex positions @ gtl = 1
         blk.compute_primary_cell_geometric_data(gtl+1);
         blk.compute_least_squares_setup(gtl+1);
@@ -1750,7 +1750,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
                 auto sblk = cast(SFluidBlock) blk;
                 assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
                 // move vertices - this is a formality since pos[2] = pos[1]
-                predict_vertex_positions(sblk, GlobalConfig.dimensions, SimState.dt_global, gtl);
+                predict_vertex_positions(sblk, SimState.dt_global, gtl);
                 // recalculate cell geometry with new vertex positions
                 blk.compute_primary_cell_geometric_data(gtl+1);
                 blk.compute_least_squares_setup(gtl+1);
