@@ -89,7 +89,7 @@ EILMER_CORE_FILES := simcore.d \
 	fluidblock.d sfluidblock.d ufluidblock.d \
 	gas_solid_interface.d \
 	flowsolution.d grid_motion.d \
-	block_moving_grid.d history.d loads.d special_block_init.d \
+	shock_fitting_moving_grid.d history.d loads.d special_block_init.d \
 	mass_diffusion.d
 
 EILMER_LUA_FILES := luaglobalconfig.d lua_helper.d \

@@ -41,7 +41,7 @@ import solid_loose_coupling_update;
 import bc;
 import user_defined_source_terms;
 import solid_udf_source_terms;
-import block_moving_grid;
+import shock_fitting_moving_grid;
 import grid_motion;
 import history;
 import loads;
