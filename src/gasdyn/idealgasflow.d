@@ -116,7 +116,7 @@ double m2_shock(double M1, double g=1.4)
 {
     if (M1 < 1.0) {
         throw new GasFlowException(text("r2_r1: subsonic Mach number: ", M1));
-    } // end if
+    }
     double numer = 1.0 + (g - 1.0) * 0.5 * M1^^2;
     double denom = g * M1^^2 - (g - 1.0) * 0.5;
     return sqrt(numer / denom);
@@ -503,7 +503,7 @@ double beta_obl(double M1, double theta, double g=1.4,double tol=1.0e-6)
 {
     if (M1 < 1.0) {
         throw new GasFlowException(text("beta_obl: subsonic Mach number: ", M1));
-    } // end if
+    }
     int sign_beta = (theta < 0.0) ? -1 : 1;
     theta = fabs(theta);
     auto f_to_solve = delegate(double beta){return theta_obl(M1, beta, g) - theta;};

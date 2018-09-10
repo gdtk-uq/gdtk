@@ -62,14 +62,16 @@ extern(C) int gasflow_normal_shock(lua_State* L)
     if (lua_isnumber(L, 4)) {
         T_tol = to!double(luaL_checknumber(L, 4));
     }
-    //
-    number[] vel_results = normal_shock(state1, Vs, state2, gm, rho_tol, T_tol);
-    //
-    lua_settop(L, 0); // clear the stack, in preparation for pushing results
-    pushNewGasTable(L, state2, gm);
-    lua_pushnumber(L, vel_results[0]); // V2
-    lua_pushnumber(L, vel_results[1]); // Vg
-    return 3;
+    try {
+        number[] vel_results = normal_shock(state1, Vs, state2, gm, rho_tol, T_tol);
+        lua_settop(L, 0); // clear the stack, in preparation for pushing results
+        pushNewGasTable(L, state2, gm);
+        lua_pushnumber(L, vel_results[0]); // V2
+        lua_pushnumber(L, vel_results[1]); // Vg
+        return 3;
+    } catch(Exception e) {
+        return luaL_error(L, e.msg.toStringz);
+    }
 } // end gasflow_normal_shock()
 
 extern(C) int gasflow_normal_shock_p2p1(lua_State* L)
@@ -101,13 +103,17 @@ extern(C) int gasflow_normal_shock_p2p1(lua_State* L)
     }
     number p2p1 = to!number(luaL_checknumber(L, 2));
     //
-    number[] vel_results = normal_shock_p2p1(state1, p2p1, state2, gm);
-    //
-    lua_settop(L, 0); // clear the stack, in preparation for pushing results
-    lua_pushnumber(L, vel_results[0]); // V1
-    lua_pushnumber(L, vel_results[1]); // V2
-    lua_pushnumber(L, vel_results[2]); // Vg
-    return 3;
+    try {
+        number[] vel_results = normal_shock_p2p1(state1, p2p1, state2, gm);
+        //
+        lua_settop(L, 0); // clear the stack, in preparation for pushing results
+        lua_pushnumber(L, vel_results[0]); // V1
+        lua_pushnumber(L, vel_results[1]); // V2
+        lua_pushnumber(L, vel_results[2]); // Vg
+        return 3;
+    } catch(Exception e) {
+        return luaL_error(L, e.msg.toStringz);
+    }
 } // end gasflow_normal_shock_p2p1()
 
 extern(C) int gasflow_reflected_shock(lua_State* L)
@@ -138,12 +144,16 @@ extern(C) int gasflow_reflected_shock(lua_State* L)
     }
     number Vg = to!number(luaL_checknumber(L, 2));
     //
-    number Vr = reflected_shock(state2, Vg, state5, gm);
-    //
-    lua_settop(L, 0); // clear the stack, in preparation for pushing results
-    pushNewGasTable(L, state5, gm);
-    lua_pushnumber(L, Vr);
-    return 2;
+    try {
+        number Vr = reflected_shock(state2, Vg, state5, gm);
+        //
+        lua_settop(L, 0); // clear the stack, in preparation for pushing results
+        pushNewGasTable(L, state5, gm);
+        lua_pushnumber(L, Vr);
+        return 2;
+    } catch(Exception e) {
+        return luaL_error(L, e.msg.toStringz);
+    }
 } // end gasflow_reflected_shock()
 
 extern(C) int gasflow_expand_from_stagnation(lua_State* L)
@@ -174,12 +184,16 @@ extern(C) int gasflow_expand_from_stagnation(lua_State* L)
     }
     number p_over_p0 = to!number(luaL_checknumber(L, 2));
     //
-    number V = expand_from_stagnation(state0, p_over_p0, state1, gm);
-    //
-    lua_settop(L, 0); // clear the stack, in preparation for pushing results
-    pushNewGasTable(L, state1, gm);
-    lua_pushnumber(L, V);
-    return 2;
+    try {
+        number V = expand_from_stagnation(state0, p_over_p0, state1, gm);
+        //
+        lua_settop(L, 0); // clear the stack, in preparation for pushing results
+        pushNewGasTable(L, state1, gm);
+        lua_pushnumber(L, V);
+        return 2;
+    } catch(Exception e) {
+        return luaL_error(L, e.msg.toStringz);
+    }
 } // end gasflow_expand_from_stagnation()
 
 extern(C) int gasflow_expand_to_mach(lua_State* L)
@@ -210,12 +224,16 @@ extern(C) int gasflow_expand_to_mach(lua_State* L)
     }
     number mach = to!number(luaL_checknumber(L, 2));
     //
-    number V = expand_to_mach(state0, mach, state1, gm);
-    //
-    lua_settop(L, 0); // clear the stack, in preparation for pushing results
-    pushNewGasTable(L, state1, gm);
-    lua_pushnumber(L, V);
-    return 2;
+    try {
+        number V = expand_to_mach(state0, mach, state1, gm);
+        //
+        lua_settop(L, 0); // clear the stack, in preparation for pushing results
+        pushNewGasTable(L, state1, gm);
+        lua_pushnumber(L, V);
+        return 2;
+    } catch(Exception e) {
+        return luaL_error(L, e.msg.toStringz);
+    }
 } // end gasflow_expand_to_mach()
 
 extern(C) int gasflow_total_condition(lua_State* L)
@@ -245,11 +263,15 @@ extern(C) int gasflow_total_condition(lua_State* L)
     }
     number V1 = to!number(luaL_checknumber(L, 2));
     //
-    total_condition(state1, V1, state0, gm);
-    //
-    lua_settop(L, 0); // clear the stack, in preparation for pushing results
-    pushNewGasTable(L, state0, gm);
-    return 1;
+    try {
+        total_condition(state1, V1, state0, gm);
+        //
+        lua_settop(L, 0); // clear the stack, in preparation for pushing results
+        pushNewGasTable(L, state0, gm);
+        return 1;
+    } catch(Exception e) {
+        return luaL_error(L, e.msg.toStringz);
+    }
 } // end gasflow_total_condition()
 
 extern(C) int gasflow_pitot_condition(lua_State* L)
@@ -279,11 +301,15 @@ extern(C) int gasflow_pitot_condition(lua_State* L)
     }
     number V1 = to!number(luaL_checknumber(L, 2));
     //
-    pitot_condition(state1, V1, state2pitot, gm);
-    //
-    lua_settop(L, 0); // clear the stack, in preparation for pushing results
-    pushNewGasTable(L, state2pitot, gm);
-    return 1;
+    try {
+        pitot_condition(state1, V1, state2pitot, gm);
+        //
+        lua_settop(L, 0); // clear the stack, in preparation for pushing results
+        pushNewGasTable(L, state2pitot, gm);
+        return 1;
+    } catch(Exception e) {
+        return luaL_error(L, e.msg.toStringz);
+    }
 } // end gasflow_pitot_condition()
 
 extern(C) int gasflow_steady_flow_with_area_change(lua_State* L)
@@ -325,12 +351,16 @@ extern(C) int gasflow_steady_flow_with_area_change(lua_State* L)
         tol = to!double(luaL_checknumber(L, 4));
     }
     //
-    number V2 = steady_flow_with_area_change(state1, V1, A2_over_A1, state2, gm, tol);
-    //
-    lua_settop(L, 0); // clear the stack, in preparation for pushing results
-    pushNewGasTable(L, state2, gm);
-    lua_pushnumber(L, V2);
-    return 2;
+    try {
+        number V2 = steady_flow_with_area_change(state1, V1, A2_over_A1, state2, gm, tol);
+        //
+        lua_settop(L, 0); // clear the stack, in preparation for pushing results
+        pushNewGasTable(L, state2, gm);
+        lua_pushnumber(L, V2);
+        return 2;
+    } catch(Exception e) {
+        return luaL_error(L, e.msg.toStringz);
+    }
 } // end gasflow_steady_flow_with_area_change()
 
 extern(C) int gasflow_finite_wave_dp(lua_State* L)
@@ -378,12 +408,16 @@ extern(C) int gasflow_finite_wave_dp(lua_State* L)
         steps = to!int(luaL_checkint(L, 5));
     }
     //
-    number V2 = finite_wave_dp(state1, V1, characteristic, p2, state2, gm, steps);
-    //
-    lua_settop(L, 0); // clear the stack, in preparation for pushing results
-    pushNewGasTable(L, state2, gm);
-    lua_pushnumber(L, V2);
-    return 2;
+    try {
+        number V2 = finite_wave_dp(state1, V1, characteristic, p2, state2, gm, steps);
+        //
+        lua_settop(L, 0); // clear the stack, in preparation for pushing results
+        pushNewGasTable(L, state2, gm);
+        lua_pushnumber(L, V2);
+        return 2;
+    } catch(Exception e) {
+        return luaL_error(L, e.msg.toStringz);
+    }
 } // end gasflow_finite_wave_dp()
 
 extern(C) int gasflow_finite_wave_dv(lua_State* L)
@@ -437,13 +471,17 @@ extern(C) int gasflow_finite_wave_dv(lua_State* L)
         Tmin = to!double(luaL_checknumber(L, 6));
     }
     //
-    number V2 = finite_wave_dv(state1, V1, characteristic, V2_target,
-                               state2, gm, steps, Tmin);
-    //
-    lua_settop(L, 0); // clear the stack, in preparation for pushing results
-    pushNewGasTable(L, state2, gm);
-    lua_pushnumber(L, V2);
-    return 2;
+    try {
+        number V2 = finite_wave_dv(state1, V1, characteristic, V2_target,
+                                   state2, gm, steps, Tmin);
+        //
+        lua_settop(L, 0); // clear the stack, in preparation for pushing results
+        pushNewGasTable(L, state2, gm);
+        lua_pushnumber(L, V2);
+        return 2;
+    } catch(Exception e) {
+        return luaL_error(L, e.msg.toStringz);
+    }
 } // end gasflow_finite_wave_dv()
 
 extern(C) int gasflow_theta_oblique(lua_State* L)
@@ -481,13 +519,17 @@ extern(C) int gasflow_theta_oblique(lua_State* L)
     }
     number beta = to!number(luaL_checknumber(L, 3));
     //
-    number[] results = theta_oblique(state1, V1, beta, state2, gm);
-    //
-    lua_settop(L, 0); // clear the stack, in preparation for pushing results
-    pushNewGasTable(L, state2, gm);
-    lua_pushnumber(L, results[0]); // theta
-    lua_pushnumber(L, results[1]); // V2
-    return 3;
+    try {
+        number[] results = theta_oblique(state1, V1, beta, state2, gm);
+        //
+        lua_settop(L, 0); // clear the stack, in preparation for pushing results
+        pushNewGasTable(L, state2, gm);
+        lua_pushnumber(L, results[0]); // theta
+        lua_pushnumber(L, results[1]); // V2
+        return 3;
+    } catch(Exception e) {
+        return luaL_error(L, e.msg.toStringz);
+    }
 } // end gasflow_theta_oblique()
 
 extern(C) int gasflow_beta_oblique(lua_State* L)
@@ -523,11 +565,15 @@ extern(C) int gasflow_beta_oblique(lua_State* L)
     }
     number theta = to!number(luaL_checknumber(L, 3));
     //
-    number beta = beta_oblique(state1, V1, theta, gm);
-    //
-    lua_settop(L, 0); // clear the stack, in preparation for pushing results
-    lua_pushnumber(L, beta);
-    return 1;
+    try {
+        number beta = beta_oblique(state1, V1, theta, gm);
+        //
+        lua_settop(L, 0); // clear the stack, in preparation for pushing results
+        lua_pushnumber(L, beta);
+        return 1;
+    } catch(Exception e) {
+        return luaL_error(L, e.msg.toStringz);
+    }
 } // end gasflow_beta_oblique()
 
 string registerfn(string fname)

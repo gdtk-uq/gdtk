@@ -154,6 +154,19 @@ beta2 = gasflow.beta_oblique(state1, V1, theta)
 print("    beta2(degrees)=", beta2*180/math.pi)
 assert(approxEqual(beta, beta2), "shock wave angle fail")
 
+print("\nCatch an error")
+-- Note that we must wrap the code (that might throw errors 
+-- that we want to catch and handle in Lua)
+-- in a function before calling it with pcall.
+-- bad_fun = function() error("deliberate oops") end
+bad_fun = function() myBeta = gasflow.beta_oblique(state1, 0.5*V1, theta) end
+local ok, msg = pcall(bad_fun)
+if ok then
+   print("Did not correctly catch the subsonic Mach number.")
+else
+   print("Correctly caught subsonic Mach number, ", msg)
+end
+
 print("Done.")
     `;
     if ( luaL_dostring(L, toStringz(test_code)) != 0 ) {

@@ -102,8 +102,21 @@ assert(approxEqual(idealgasflow.p02_p01_obl(M, beta, g), 0.9608),
        "Oblique shock, total-pressure fail")
 assert(approxEqual(idealgasflow.Vn2_Vn1_obl(M, beta, g), 0.598),
        "Oblique shock, normal velocity ratio fail")
-assert(approxEqual(idealgasflow.V2_V1_obl(M, beta, g),0.828),
+assert(approxEqual(idealgasflow.V2_V1_obl(M, beta, g), 0.828),
        "Oblique shock, speed ratio fail")
+
+print("catch an error")
+-- Note that we must wrap the code (that might throw errors 
+-- that we want to catch and handle in Lua)
+-- in a function before calling it with pcall.
+-- bad_fun = function() error("deliberate oops") end
+bad_fun = function() myBeta = idealgasflow.beta_obl(0.8, 0.1, 1.4) end
+local ok, msg = pcall(bad_fun)
+if ok then
+   print("Did not correctly catch the subsonic Mach number.")
+else
+   print("Correctly caught subsonic Mach number, ", msg)
+end
 
 print("conical flow")
 local M1 = 1.5; local p1 = 100.0e3; local T1 = 300.0

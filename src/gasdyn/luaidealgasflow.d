@@ -75,19 +75,24 @@ string wrapfn(string fname, string[] args, int nreturn=1)
         }
     }
     // Now call the function and stack up the result(s).
+    code ~= "    try {\n";
     if (nreturn == 1) {
-        code ~= "    lua_pushnumber(L, "~fname~"(";
-        foreach(a; anames) { code ~= a~", "; } // a trailing comma is ok
-        code ~= "));\n";
-        code ~= "    return 1;\n";
-    } else {
-        assert(nreturn>1, "oops");
-        code ~= "    double[] results = "~fname~"(";
+        code ~= "        double result = "~fname~"(";
         foreach(a; anames) { code ~= a~", "; } // a trailing comma is ok
         code ~= ");\n";
-        code ~= "    foreach(res; results) { lua_pushnumber(L, res); }\n";
-        code ~= "    return to!int(results.length);\n";
+        code ~= "        lua_pushnumber(L, result);\n";      
+        code ~= "        return 1;\n";
+    } else {
+        assert(nreturn>1, "oops, expected a positive number of return values.");
+        code ~= "        double[] results = "~fname~"(";
+        foreach(a; anames) { code ~= a~", "; } // a trailing comma is ok
+        code ~= ");\n";
+        code ~= "        foreach(res; results) { lua_pushnumber(L, res); }\n";
+        code ~= "        return to!int(results.length);\n";
     }
+    code ~= "    } catch(Exception e) {\n";
+    code ~= "        return luaL_error(L, e.msg.toStringz);\n";
+    code ~= "    }\n";
     code ~= "}\n";
     return to!string(code);
 } // end wrapfn()
