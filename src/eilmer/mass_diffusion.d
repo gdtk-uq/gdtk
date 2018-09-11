@@ -12,11 +12,15 @@ module mass_diffusion;
 
 import std.math;
 import std.stdio;
+import std.conv;
+import std.string;
+
 import nm.complex;
 import nm.number;
+import util.lua;
+import gas;
 
-import gas.gas_model;
-import gas.physical_constants;
+import globalconfig;
 import flowstate;
 import flowgradients;
 import fvcore;
@@ -138,6 +142,7 @@ class FicksFirstLaw : MassDiffusion {
                 jz[isp] = jz[isp] - fs.gas.massf[isp] * sum_z;
             }
         }
+
     }
 
 private:
@@ -167,6 +172,12 @@ private:
         // Expression from:
         // Reid et al.
         // The Properties of Gases and Liquids
+
+        // This loop is inefficient. We only need to go up to
+        // from jsp = isp+1...
+        // Needs some thought. We're doing redundant work.
+        // RJG, 2018-09-11
+
         foreach (isp; 0 .. _nsp) {
             foreach (jsp; 0 .. _nsp) {
                 if (isp == jsp) continue;
@@ -219,6 +230,38 @@ private:
             }
         }
     }
+}
+
+// This lua wrapper is somewhat fragile.
+// It works presently (2018-09-11) because there
+// is only one type of mass diffusion model available.
+// This will need a re-work if it has wider utility.
+
+extern(C) int luafn_computeDiffusionCoefficients(lua_State *L)
+{
+    // Expect temperature, pressure, and mass fractions.
+    auto gmodel = GlobalConfig.gmodel_master;
+    GasState gas = new GasState(gmodel);
+    gas.T = to!number(luaL_checknumber(L, 1));
+    gas.p = to!number(luaL_checknumber(L, 2));
+    foreach (isp; 0 .. gmodel.n_species) {
+        lua_getfield(L, 3, toStringz(gmodel.species_name(isp)));
+        gas.massf[isp] = to!number(luaL_checknumber(L, -1));
+        lua_pop(L, 1);
+    }
+    gmodel.update_thermo_from_pT(gas);
+
+    auto mdmodel = cast(FicksFirstLaw) GlobalConfig.massDiffusion;
+    gmodel.massf2molef(gas, mdmodel._molef);
+    mdmodel.computeBinaryDiffCoeffs(gas.T, gas.p);
+    mdmodel.computeAvgDiffCoeffs();
+
+    lua_newtable(L);
+    foreach (isp; 0 .. gmodel.n_species) {
+        lua_pushnumber(L, mdmodel._D_avg[isp]);
+        lua_setfield(L, -2, gmodel.species_name(isp).toStringz);
+    }
+    return 1;
 }
 
 

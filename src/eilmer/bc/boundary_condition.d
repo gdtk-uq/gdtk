@@ -36,6 +36,7 @@ import bc.boundary_flux_effect;
 import bc.user_defined_effects;
 import lua_helper;
 import grid_motion;
+import mass_diffusion;
 
 BoundaryCondition make_BC_from_json(JSONValue jsonData, int blk_id, int boundary)
 {
@@ -327,6 +328,9 @@ public:
         // those functions only in the context of the master thread.
         setSampleHelperFunctions(myL);
         setGridMotionHelperFunctions(myL);
+        // Give access to diffusion coefficients calculation
+        lua_pushcfunction(myL, &luafn_computeDiffusionCoefficients);
+        lua_setglobal(myL, "computeDiffusionCoefficients");
         // Finally, do the actual user-supplied file.
         if ( luaL_dofile(myL, luafname.toStringz) != 0 ) {
             luaL_error(myL, "error while loading user-defined b.c. file '%s':\n %s\n",
