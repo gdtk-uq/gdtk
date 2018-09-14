@@ -237,31 +237,30 @@ private:
 // is only one type of mass diffusion model available.
 // This will need a re-work if it has wider utility.
 
-extern(C) int luafn_computeDiffusionCoefficients(lua_State *L)
+extern(C) int luafn_computeBinaryDiffCoeffs(lua_State *L)
 {
-    // Expect temperature, pressure, and mass fractions.
-    auto gmodel = GlobalConfig.gmodel_master;
-    GasState gas = new GasState(gmodel);
-    gas.T = to!number(luaL_checknumber(L, 1));
-    gas.p = to!number(luaL_checknumber(L, 2));
-    foreach (isp; 0 .. gmodel.n_species) {
-        lua_getfield(L, 3, toStringz(gmodel.species_name(isp)));
-        gas.massf[isp] = to!number(luaL_checknumber(L, -1));
-        lua_pop(L, 1);
-    }
-    gmodel.update_thermo_from_pT(gas);
+    auto n_species = GlobalConfig.gmodel_master.n_species;
+    // Expect temperature, pressure, and a table to push values into.
+    auto T = to!number(luaL_checknumber(L, 1));
+    auto p = to!number(luaL_checknumber(L, 2));
 
     auto mdmodel = cast(FicksFirstLaw) GlobalConfig.massDiffusion;
-    gmodel.massf2molef(gas, mdmodel._molef);
-    mdmodel.computeBinaryDiffCoeffs(gas.T, gas.p);
-    mdmodel.computeAvgDiffCoeffs();
+    mdmodel.computeBinaryDiffCoeffs(T, p);
 
-    lua_newtable(L);
-    foreach (isp; 0 .. gmodel.n_species) {
-        lua_pushnumber(L, mdmodel._D_avg[isp]);
-        lua_setfield(L, -2, gmodel.species_name(isp).toStringz);
+    foreach (isp; 0 .. n_species) {
+        lua_rawgeti(L, 3, isp);
+        foreach (jsp; 0 .. n_species) {
+            if (isp != jsp) {
+                lua_pushnumber(L, mdmodel._D[isp][jsp]);
+            }
+            else {
+                lua_pushnumber(L, 0.0);
+            }
+            lua_rawseti(L, -2, jsp);
+        }
+        lua_pop(L, 1);
     }
-    return 1;
+    return 0;
 }
 
 

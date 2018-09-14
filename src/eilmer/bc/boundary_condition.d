@@ -329,8 +329,8 @@ public:
         setSampleHelperFunctions(myL);
         setGridMotionHelperFunctions(myL);
         // Give access to diffusion coefficients calculation
-        lua_pushcfunction(myL, &luafn_computeDiffusionCoefficients);
-        lua_setglobal(myL, "computeDiffusionCoefficients");
+        lua_pushcfunction(myL, &luafn_computeBinaryDiffCoeffs);
+        lua_setglobal(myL, "computeBinaryDiffCoeffs");
         // Finally, do the actual user-supplied file.
         if ( luaL_dofile(myL, luafname.toStringz) != 0 ) {
             luaL_error(myL, "error while loading user-defined b.c. file '%s':\n %s\n",
