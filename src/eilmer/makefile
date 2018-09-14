@@ -31,6 +31,7 @@ WITH_CUDA_GPU_CHEM ?= 0
 DEBUG_CHEM ?= 0
 WITH_COMPLEX_NUMBERS ?= 0
 WITH_FPE ?= 0
+WITH_DVODE ?= 0
 
 TECPLOT_BIN_DIR ?= unavailable
 TECPLOT_BIN_VERSION_STR = tecplot_unavailable
@@ -207,7 +208,7 @@ ifeq ($(DMD), dmd)
         DFLAGS := -w -O -release -inline -boundscheck=off
     endif
     OF := -of
-    DLINKFLAGS := -L-L$(LIBLUAPATH) -L-lgfortran
+    DLINKFLAGS := -L-L$(LIBLUAPATH) 
     ifeq ($(findstring with_libplot,$(LIBPLOT_VERSION_STR)), with_libplot)
         DFLAGS := $(DFLAGS) -version=$(LIBPLOT_VERSION_STR)
         DLINKFLAGS := $(DLINKFLAGS) -L-lplot
@@ -228,7 +229,7 @@ ifeq ($(DMD), ldmd2)
         DFLAGS := -w -O -release -inline -boundscheck=off
     endif
     OF := -of
-    DLINKFLAGS := -L-L$(LIBLUAPATH) -L-lgfortran
+    DLINKFLAGS := -L-L$(LIBLUAPATH) 
     ifeq ($(findstring with_libplot,$(LIBPLOT_VERSION_STR)), with_libplot)
         DFLAGS := $(DFLAGS) -version=$(LIBPLOT_VERSION_STR)
         DLINKFLAGS := $(DLINKFLAGS) -L-lplot
@@ -249,7 +250,7 @@ ifeq ($(DMD), gdc)
         DFLAGS := -Wall -O2 -frelease -fno-debug
     endif
     OF := -o
-    DLINKFLAGS := -L$(LIBLUAPATH) -L-lgfortran
+    DLINKFLAGS := -L$(LIBLUAPATH) 
     ifeq ($(findstring with_libplot,$(LIBPLOT_VERSION_STR)), with_libplot)
         DFLAGS := $(DFLAGS) -version=$(LIBPLOT_VERSION_STR)
         DLINKFLAGS := $(DLINKFLAGS) -lplot
@@ -267,6 +268,10 @@ endif
 
 ifeq ($(WITH_FPE),1)
     DFLAGS += -version=enable_fp_exceptions
+endif
+
+ifeq ($(WITH_DVODE),1)
+    DLINKFLAGS += -L-lgfortran
 endif
 
 default: $(PROGRAMS)

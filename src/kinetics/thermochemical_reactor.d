@@ -28,7 +28,10 @@ import kinetics.fuel_air_mix_kinetics;
 import kinetics.two_temperature_nitrogen_kinetics;
 import kinetics.vib_specific_nitrogen_kinetics;
 import kinetics.two_temperature_air_kinetics;
-import kinetics.pseudo_species_kinetics;
+version (with_dvode)
+{
+    import kinetics.pseudo_species_kinetics;
+}
 
 class ThermochemicalReactorUpdateException : Exception {
     this(string message, string file=__FILE__, size_t line=__LINE__,
@@ -93,8 +96,11 @@ ThermochemicalReactor init_thermochemical_reactor(GasModel gmodel, string fileNa
     if ((cast(TwoTemperatureAir) gmodel) !is null) {
         reactor = new TwoTemperatureAirKinetics(fileName1, fileName2, gmodel);
     }
-    if ((cast(PseudoSpeciesGas) gmodel) !is null) {
-        reactor = new PseudoSpeciesKinetics(gmodel);
+    version (with_dvode)
+    {
+        if ((cast(PseudoSpeciesGas) gmodel) !is null) {
+            reactor = new PseudoSpeciesKinetics(gmodel);
+        }
     }
     if (reactor is null) {
         throw new ThermochemicalReactorUpdateException("Oops, failed to set up a ThermochemicalReactor.");
