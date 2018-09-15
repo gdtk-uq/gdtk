@@ -33,21 +33,35 @@ import gas.physical_constants;
 import gas.diffusion.viscosity;
 import gas.diffusion.therm_cond;
 
-
-immutable int N_VIB_LEVELS = 10;
+immutable int numVibLevels = 10;
 
 class VibSpecificNitrogen: GasModel {
 public:
+    double _R_N2 = 296.805; // gas constant for N2
+    double _M_N2 = 0.0280134; // kg/mole
+    double _gamma = 7./5.; // ratio of specific heats for vibrationally-frozen gas.
+    double kB = Boltzmann_constant;
+    double[numVibLevels] _vib_energy;
+    double[numVibLevels] _vib_energy_perkg;
+
     this()
     {
-        _n_species = N_VIB_LEVELS;
-        _n_modes = N_VIB_LEVELS;
+        // In this model the nitrogen molecules with differing vibrational levels
+        // are considered pseudo-chemical-species.
+        _n_species = numVibLevels;
+        _n_modes = 0;
         _species_names.length = _n_species;
         foreach (isp; 0 .. _n_species) {
             _species_names[isp] = format("N2-vib-%d", isp);
         }
         create_species_reverse_lookup();
-    }
+        // The energy levels of the individual vibration modes
+        // are constant, once computed.
+        foreach (i; 0 .. numVibLevels) {
+            _vib_energy[i] = vib_energy(i);
+            _vib_energy_perkg[i]= (Avogadro_number/_M_N2) * _vib_energy[i];
+        }
+    } // end constructor
 
     override string toString() const
     {
@@ -59,57 +73,38 @@ public:
     override void update_thermo_from_pT(GasState Q) const 
     {
         Q.rho = Q.p/(_R_N2*Q.T);
-        
-        foreach (imode; 0 .. _n_modes) {
-            Q.u_modes[imode] = (Avogadro_number/_M_N2) * Q.massf[imode] * vib_energy(imode);
-        }
+        // For full internal energy, start with trans-rotational mode
+        // and then add vibrational modes.
         Q.u = 2.5 * _R_N2 * Q.T;
-        
+        foreach (i; 0 .. numVibLevels) { Q.u += Q.massf[i]*_vib_energy_perkg[i]; }
     }
     override void update_thermo_from_rhou(GasState Q) const
     {
-        Q.T = 0.4 * Q.u * (1/_R_N2);
+        // Separate out vibrational energy before computing trans-rotational temperature.
+        number u = Q.u;
+        foreach (i; 0 .. numVibLevels) { u -= Q.massf[i]*_vib_energy_perkg[i]; }
+        Q.T = 0.4 * u * (1/_R_N2);
         Q.p = Q.rho * _R_N2 * Q.T;
-        Q.T_modes[0] = compute_Tvib(Q, to!number(300.0), to!number(1000.0), 1.0e-4);
-        foreach (i; 1 .. N_VIB_LEVELS) {
-            Q.T_modes[i] = Q.T_modes[0];
-        }       
-
     }
     override void update_thermo_from_rhoT(GasState Q) const
     {
         Q.p = Q.rho * _R_N2 * Q.T;
-        Q.u = 2.5 * _R_N2 * Q.T;
-        
-        foreach (imode; 0 .. _n_modes) {
-            Q.u_modes[imode] = (Avogadro_number/_M_N2) * Q.massf[imode] * vib_energy(imode);
-        }
-
+        Q.u = 2.5 * _R_N2 * Q.T; // trans-rotational component
+        foreach (i; 0 .. numVibLevels) { Q.u += Q.massf[i]*_vib_energy_perkg[i]; }
     }
     override void update_thermo_from_rhop(GasState Q) const
     {
-        //Q.T = 0.4 * Q.u * (1/_R_N2);
         Q.T = Q.p / (Q.rho * _R_N2);
         Q.u = 2.5 * _R_N2 * Q.T;
-        foreach (imode; 0 .. _n_modes) {
-            Q.u_modes[imode] = (Avogadro_number/_M_N2) * Q.massf[imode] * vib_energy(imode); 
-        }
-        Q.T_modes[0] = compute_Tvib(Q, to!number(300.0), to!number(1000.0), 1.0e-4);
-        foreach (i; 1 .. N_VIB_LEVELS) {
-            Q.T_modes[i] = Q.T_modes[0];
-        }       
+        foreach (i; 0 .. numVibLevels) { Q.u += Q.massf[i]*_vib_energy_perkg[i]; }
     }
-    
     override void update_thermo_from_ps(GasState Q, number s) const
     {
         throw new Error("ERROR: VibSpecificNitrogen:update_thermo_from_ps NOT IMPLEMENTED.");
-
     }
-
     override void update_thermo_from_hs(GasState Q, number h, number s) const
     {
         throw new Error("ERROR: VibSpecificNitrogen:update_thermo_from_hs NOT IMPLEMENTED.");
-
     }
     override void update_sound_speed(GasState Q) const
     {
@@ -118,6 +113,7 @@ public:
     override void update_trans_coeffs(GasState Q)
     {
         // The gas is inviscid.
+        // [TODO] Add nitrogen model.
         Q.mu = 0.0;
         Q.k = 0.0;
     }
@@ -139,22 +135,38 @@ public:
     }
     override number internal_energy(in GasState Q) const
     {
-        return Q.u + sum(Q.u_modes);
+        return Q.u;
     }
     override number enthalpy(in GasState Q) const
     {
-        return Q.u + sum(Q.u_modes) + Q.p/Q.rho;
+        return Q.u + Q.p/Q.rho;
     }
     override number entropy(in GasState Q) const
     {
         throw new Error("ERROR: VibSpecificNitrogen:entropy NOT IMPLEMENTED.");
     }
 
-private:
-    double _R_N2 = 296.805; // gas constant for N2
-    double _M_N2 = 0.0280134;
-    double _gamma = 7./5.; // ratio of specific heats.
-    double kB = Boltzmann_constant;
+    // Keep the following function as public
+    // because the postprocessor will use it.
+    number compute_Tvib(GasState Q, number x0, number x1, double tol) const
+    {
+        // Use secant method to compute Tf1
+        number init_x0 = x0;
+        number init_x1 = x1;
+        number fx0 = boltzmann_eq(x0) - Q.massf[0];
+        number fx1 = boltzmann_eq(x1) - Q.massf[0];
+        int max_it = 100; 
+        foreach(n; 0 .. max_it) {
+            if (abs(fx1) < tol) {return x1;}
+            number x2 = ((x0*fx1) - (x1*fx0)) / (fx1 - fx0);
+            x0 = x1;
+            x1 = x2;
+            fx0 = fx1;
+            fx1 = boltzmann_eq(x2) - Q.massf[0];
+        } //end foreach
+        return x1;
+    } // end compute_Tvib()
+    
     double vib_energy(int i) const 
     {
         int I = i+1;
@@ -165,43 +177,16 @@ private:
         double c = 2.998e8;
         double e = h*c * (w_e*(I-0.5) - we_xe*(I-0.5)^^2 + we_ye*(I-0.5)^^3);
         return e;
-     }
+    }
      
-     number boltzmann_eq(number Tf1) const
-     {
+    number boltzmann_eq(number Tf1) const
+    {
         number summ = 0;
-        
-        foreach(ej; 0 .. N_VIB_LEVELS) {
-            summ += exp(-vib_energy(ej) / (kB*Tf1));
-        }        
-        number ei = vib_energy(0);
+        foreach(ej; 0 .. numVibLevels) { summ += exp(-_vib_energy[ej] / (kB*Tf1)); }        
+        number ei = _vib_energy[0];
         number temp_func = (exp(-ei/(kB*Tf1)) / summ);
         return temp_func;   
-     }
-     
-     number compute_Tvib(GasState Q, number x0, number x1, double tol) const
-     {
-        //this method (secant) is used to compute Tf1
-        number init_x0 = x0;
-        number init_x1 = x1;
-        number fx0 = boltzmann_eq(x0) - Q.massf[0];
-        number fx1 = boltzmann_eq(x1) - Q.massf[0];
-        int max_it = 100; 
-        
-        foreach(n; 0 .. max_it) {
-            if (abs(fx1) < tol) {return x1;}
-        
-            number x2 = ((x0*fx1) - (x1*fx0)) / (fx1 - fx0);
-            x0 = x1;
-            x1 = x2;
-            fx0 = fx1;
-            fx1 = boltzmann_eq(x2) - Q.massf[0];
-        } //end foreach
-        return x1;
-     }
-     
-    
-     
+    }
 } // end class VibSpecificNitrogen
 
 version(vib_specific_nitrogen_test) {
@@ -210,16 +195,13 @@ version(vib_specific_nitrogen_test) {
 
     int main() {
         auto gm = new VibSpecificNitrogen();
-        auto Q = new GasState(N_VIB_LEVELS, N_VIB_LEVELS);
+        auto Q = new GasState(numVibLevels, 0);
         Q.p = 1.0e5;
         Q.T = 300.0;
-        foreach (imode; 0 .. gm.n_modes()) {
-            Q.T_modes[imode] = 300.0;
-        }
         Q.massf[] = 1.0/10;
 
         double R_N2 = 296.805; // gas constant for N2
-        double M_N2 = 0.0280134;
+        double M_N2 = 0.0280134; // kg/mole
         double gamma = 7./5.; // ratio of specific heats.
 
         gm.update_thermo_from_pT(Q);
@@ -227,10 +209,10 @@ version(vib_specific_nitrogen_test) {
         assert(approxEqual(Q.rho, my_rho, 1.0e-6), failedUnitTest());
         
         double my_u = 2.5 * R_N2 * 300.0;
+        foreach (i; 0 .. numVibLevels) {
+            my_u += (Avogadro_number/M_N2) * gm.vib_energy(i) * Q.massf[i];
+        }
         assert(approxEqual(Q.u, my_u, 1.0e-6), failedUnitTest());
-        
-        //double my_u_modes = (Avogadro_number/M_N2) * 1.0 * vib_energy(1); //using mode 1 for test (massf = 1.0 here)
-        //assert(approxEqual(Q.u_modes[0], my_u_modes, 1.0e-6), failedUnitTest());
         
         gm.update_trans_coeffs(Q);
         assert(approxEqual(Q.mu, 0.0, 1.0e-6), failedUnitTest());

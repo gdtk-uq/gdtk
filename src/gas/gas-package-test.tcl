@@ -64,6 +64,10 @@ test powers-aslam-gas-test {Testing powers_aslam_gas.d} -body {
     exec ./powers_aslam_gas_test
 } -result {} -returnCodes {0}
 
+test vib-specific-nitrogen-test {Testing vib_specific_nitrogen.d} -body {
+    exec ./vib_specific_nitrogen_test
+} -result {} -returnCodes {0}
+
 test ideal-dissociating-gas-test {Testing ideal_dissociating_gas.d} -body {
     exec ./ideal_dissociating_gas_test
 } -result {} -returnCodes {0}
