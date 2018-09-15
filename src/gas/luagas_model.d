@@ -1217,7 +1217,9 @@ version(gas_calc) {
         registerChemistryUpdate(L, LUA_GLOBALSINDEX);
         registerTwoTemperatureAirKinetics(L, LUA_GLOBALSINDEX);
         registerVibSpecNitrogenKinetics(L, LUA_GLOBALSINDEX);
-        registerPseudoSpeciesKinetics(L, LUA_GLOBALSINDEX);
+        version(with_dvode) {
+            registerPseudoSpeciesKinetics(L, LUA_GLOBALSINDEX);
+        }
         // Pass on command line args to user's scripts.
         lua_newtable(L);
         int argIdx = 1;

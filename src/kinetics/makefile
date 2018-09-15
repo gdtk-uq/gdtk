@@ -2,6 +2,7 @@
 # Can be used to perform unit tests
 # and build stand-alone programs.
 PLATFORM ?= linux
+WITH_DVODE ?= 0
 INSTALL_DIR ?= $(HOME)/e3bin
 BUILD_DIR ?= ../../build
 
@@ -27,7 +28,12 @@ LUA_DIR := ../../extern/lua-5.1.4
 LIBLUA := ${LUA_DIR}/lib/liblua.a
 LIBLUAPATH := ${LUA_DIR}/lib
 
-DLINKFLAGS :=  -w -L-L${LIBLUAPATH} -L-llua -L-ldl -L-lgfortran
+DLINKFLAGS :=  -w -L-L${LIBLUAPATH} -L-llua -L-ldl
+
+ifeq ($(WITH_DVODE),1)
+    DFLAGS += -version=with_dvode
+    DLINKFLAGS += -L-lgfortran
+endif
 
 build-prep-chem: prep_chem.lua reaction.lua lex_elems.lua
 	- mkdir -p $(BUILD_DIR)/bin

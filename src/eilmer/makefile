@@ -271,6 +271,7 @@ ifeq ($(WITH_FPE),1)
 endif
 
 ifeq ($(WITH_DVODE),1)
+    DFLAGS += -version=with_dvode
     DLINKFLAGS += -L-lgfortran
 endif
 

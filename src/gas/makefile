@@ -4,6 +4,7 @@
 # when invoking this makefile.  Can also ask for gdc.
 DMD ?= dmd
 PLATFORM ?= linux
+WITH_DVODE ?= 0
 INSTALL_DIR ?= $(HOME)/dgdinst
 BUILD_DIR := ../../build
 
@@ -27,17 +28,22 @@ ifeq ($(DMD), dmd)
     # DFLAGS := -w
     DFLAGS := -w -O -release -inline -boundscheck=off
     OF := -of
-    DLINKFLAGS := -L-L$(LIBLUAPATH) -L-llua -L-ldl -L-lgfortran
+    DLINKFLAGS := -L-L$(LIBLUAPATH) -L-llua -L-ldl
 endif
 ifeq ($(DMD), ldmd2)
     DFLAGS := -w -O -release -inline -boundscheck=off
     OF := -of
-    DLINKFLAGS := -L-L$(LIBLUAPATH) -L-llua -L-ldl -L-lgfortran
+    DLINKFLAGS := -L-L$(LIBLUAPATH) -L-llua -L-ldl
 endif
 ifeq ($(DMD), gdc)
     DFLAGS := -Wall -O2 -frelease -fno-debug
     OF := -o
-    DLINKFLAGS := -L$(LIBLUAPATH) $(LIBLUA) -ldl -L-lgfortran
+    DLINKFLAGS := -L$(LIBLUAPATH) $(LIBLUA) -ldl
+endif
+
+ifeq ($(WITH_DVODE),1)
+    DFLAGS += -version=with_dvode
+    DLINKFLAGS += -L-lgfortran
 endif
 
 UTIL_DIR := ../util
