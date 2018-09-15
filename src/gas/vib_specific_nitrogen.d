@@ -72,7 +72,7 @@ public:
 
     override void update_thermo_from_pT(GasState Q) const 
     {
-        Q.rho = Q.p/(_R_N2*Q.T);
+        Q.rho = Q.p / (_R_N2*Q.T);
         // For full internal energy, start with trans-rotational mode
         // and then add vibrational modes.
         Q.u = 2.5 * _R_N2 * Q.T;
@@ -83,7 +83,7 @@ public:
         // Separate out vibrational energy before computing trans-rotational temperature.
         number u = Q.u;
         foreach (i; 0 .. numVibLevels) { u -= Q.massf[i]*_vib_energy_perkg[i]; }
-        Q.T = 0.4 * u * (1/_R_N2);
+        Q.T = (0.4/_R_N2) * u;
         Q.p = Q.rho * _R_N2 * Q.T;
     }
     override void update_thermo_from_rhoT(GasState Q) const

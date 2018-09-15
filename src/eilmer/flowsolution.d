@@ -35,6 +35,7 @@ import nm.complex;
 import nm.number;
 import geom;
 import gas;
+import gas.vib_specific_nitrogen;
 import fvcore;
 import globalconfig;
 import json_helper;
@@ -563,6 +564,8 @@ public:
         bool add_entropy = canFind(addVarsList, "entropy");
         bool add_molef = canFind(addVarsList, "molef");
         bool add_conc = canFind(addVarsList, "conc"); // concentrations
+        VibSpecificNitrogen gmodel2 = cast(VibSpecificNitrogen) gmodel;
+        bool add_Tvib = gmodel2 && canFind(addVarsList, "Tvib");
         //
         if (add_mach) {
             variableNames ~= "M_local";
@@ -603,6 +606,10 @@ public:
                 variableNames ~= new_name;
                 variableIndex[new_name] = variableNames.length - 1;
             }
+        }
+        if (add_Tvib) {
+            variableNames ~= "Tvib";
+            variableIndex["Tvib"] = variableNames.length - 1;
         }
         //
         // Be careful to add auxiliary variable values in the code below 
@@ -678,6 +685,16 @@ public:
                 Q.p = p; Q.rho = rho; Q.T = T;
                 gmodel.massf2conc(Q, conc);
                 foreach (c; conc) { _data[i] ~= c.re; }
+            }
+            if (add_Tvib) {
+                foreach (isp; 0 .. Q.massf.length) {
+                    Q.massf[isp] = _data[i][variableIndex[massf_names[isp]]];
+                }
+                Q.p = p; Q.rho = rho; Q.T = T;
+                gmodel2.update_thermo_from_pT(Q);
+                // [TODO] 2018-09-15: Rowan, should we set Tvib to zero if massf[1] is essentially zero?
+                double Tvib = gmodel2.compute_Tvib(Q, T, T+100.0, 0.1);
+                _data[i] ~= Tvib;
             }
         } // foreach i
     } // end add_aux_variables()

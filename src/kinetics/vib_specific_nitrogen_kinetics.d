@@ -28,15 +28,15 @@ import gas.vib_specific_nitrogen;
 import kinetics.thermochemical_reactor;
 
 final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
-    // Keep a reference to the specific gas model so that we can dip into it
-    // for specialized data.
+    // Keep a reference to the specific gas model
+    // so that we can dip into it for specialized data.
     VibSpecificNitrogen gm;
     
     this(string fname, GasModel gmodel)
     {
         super(gmodel); // hang on to a reference to the gas model
-        gm = cast(VibSpecificNitrogen) _gmodel;
-        assert(gm, "Oops, wrong gas model");
+        gm = cast(VibSpecificNitrogen) gmodel;
+        assert(gm, "Oops, wrong gas model; should have been VibSpecificNitrogen.");
     }
     
     override void opCall(GasState Q, double tInterval,

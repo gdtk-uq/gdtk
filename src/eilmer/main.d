@@ -101,7 +101,8 @@ usageMsg ~= to!string(totalCPUs) ~" on this machine
   --add-vars=\"mach,pitot\"            add variables to the flow solution data
                                      (just for postprocessing)
                                      Other variables include:
-                                     total-h, total-p, entropy, molef, conc 
+                                     total-h, total-p, entropy, molef, conc, 
+                                     Tvib (for some gas models)
   --ref-soln=<filename>              Lua file for reference solution
   --vtk-xml                          produce XML VTK-format plot files
   --binary-format                    use binary within the VTK-XML
