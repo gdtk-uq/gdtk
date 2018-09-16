@@ -126,6 +126,7 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_bool_field("extrema_clipping", "extrema_clipping"));
     mixin(get_bool_field("interpolate_in_local_frame", "interpolate_in_local_frame"));
     mixin(get_enum_field("unstructured_limiter", "unstructured_limiter", "unstructured_limiter_from_name"));
+    mixin(get_int_field("freeze_limiter_on_step", "freeze_limiter_on_step"));
     mixin(get_bool_field("use_extended_stencil", "use_extended_stencil"));
     mixin(get_double_field("venkat_K_value", "venkat_K_value"));
     mixin(get_enum_field("flux_calculator", "flux_calculator", "flux_calculator_from_name"));
@@ -288,6 +289,7 @@ extern(C) int configGet(lua_State* L)
     case "extrema_clipping": lua_pushboolean(L, GlobalConfig.extrema_clipping); break;
     case "interpolate_in_local_frame": lua_pushboolean(L, GlobalConfig.interpolate_in_local_frame); break;
     case "unstructured_limiter": lua_pushstring(L, unstructured_limiter_name(GlobalConfig.unstructured_limiter).toStringz); break;
+    case "freeze_limiter_on_step": lua_pushnumber(L, GlobalConfig.freeze_limiter_on_step); break;
     case "use_extended_stencil": lua_pushboolean(L, GlobalConfig.use_extended_stencil); break;
     case "venkat_K_value": lua_pushnumber(L, GlobalConfig.venkat_K_value); break;
     case "flux_calculator": lua_pushstring(L, flux_calculator_name(GlobalConfig.flux_calculator).toStringz); break;

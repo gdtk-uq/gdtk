@@ -451,7 +451,8 @@ final class GlobalConfig {
     shared static bool extrema_clipping = true;
     shared static bool interpolate_in_local_frame = true; // only for structured-grid
     // The unstructured solver has a selection of limiters available
-    shared static UnstructuredLimiter unstructured_limiter = UnstructuredLimiter.venkat;
+    shared static UnstructuredLimiter unstructured_limiter = UnstructuredLimiter.venkat; 
+    shared static int freeze_limiter_on_step = 2000;
     // Allow the least-squares cloud of points (used to compute a cell-center gradient for
     // reconstruction in the unstructured solver) to grow.
     shared static bool use_extended_stencil = false;
@@ -702,6 +703,7 @@ public:
     bool extrema_clipping;
     bool interpolate_in_local_frame;
     UnstructuredLimiter unstructured_limiter;
+    int freeze_limiter_on_step;
     bool use_extended_stencil;
     double venkat_K_value;
     FluxCalculator flux_calculator;
@@ -814,6 +816,7 @@ public:
         extrema_clipping = GlobalConfig.extrema_clipping;
         interpolate_in_local_frame = GlobalConfig.interpolate_in_local_frame;
         unstructured_limiter = GlobalConfig.unstructured_limiter;
+        freeze_limiter_on_step = GlobalConfig.freeze_limiter_on_step;
         use_extended_stencil = GlobalConfig.use_extended_stencil;
         venkat_K_value = GlobalConfig.venkat_K_value;
         flux_calculator = GlobalConfig.flux_calculator;
@@ -1043,6 +1046,7 @@ void read_config_file()
     mixin(update_bool("extrema_clipping", "extrema_clipping"));
     mixin(update_bool("interpolate_in_local_frame", "interpolate_in_local_frame"));
     mixin(update_enum("unstructured_limiter", "unstructured_limiter", "unstructured_limiter_from_name"));
+    mixin(update_int("freeze_limiter_on_step", "freeze_limiter_on_step"));
     mixin(update_bool("use_extended_stencil", "use_extended_stencil"));
     mixin(update_double("venkat_K_value", "venkat_K_value"));
     mixin(update_enum("flux_calculator", "flux_calculator", "flux_calculator_from_name"));
@@ -1089,6 +1093,7 @@ void read_config_file()
         writeln("  thermo_interpolator: ", thermo_interpolator_name(GlobalConfig.thermo_interpolator));
         writeln("  apply_limiter: ", GlobalConfig.apply_limiter);
         writeln("  unstructured_limiter: ", unstructured_limiter_name(GlobalConfig.unstructured_limiter));
+        writeln("  freeze_limiter_on_step: ", GlobalConfig.freeze_limiter_on_step);
         writeln("  use_extended_stencil: ", GlobalConfig.use_extended_stencil);
         writeln("  venkat_K_value: ", GlobalConfig.venkat_K_value);
         writeln("  extrema_clipping: ", GlobalConfig.extrema_clipping);

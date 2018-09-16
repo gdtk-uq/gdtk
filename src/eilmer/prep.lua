@@ -1536,6 +1536,7 @@ function write_config_file(fileName)
    f:write(string.format('"apply_limiter": %s,\n', tostring(config.apply_limiter)))
    f:write(string.format('"extrema_clipping": %s,\n', tostring(config.extrema_clipping)))
    f:write(string.format('"unstructured_limiter": "%s",\n', config.unstructured_limiter))
+   f:write(string.format('"freeze_limiter_on_step": %d,\n', config.freeze_limiter_on_step))
    f:write(string.format('"use_extended_stencil": %s,\n', tostring(config.use_extended_stencil)))
    f:write(string.format('"venkat_K_value": %.18e,\n', config.venkat_K_value))
    
