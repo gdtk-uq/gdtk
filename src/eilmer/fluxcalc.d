@@ -66,11 +66,11 @@ void compute_interface_flux(ref FlowState Lft, ref FlowState Rght, ref FVInterfa
     case FluxCalculator.hanel:
         hanel(Lft, Rght, IFace, myConfig.gmodel);
         break;
-    case FluxCalculator.adaptive_efm_ausmdv:
-        adaptive_efm_ausmdv(Lft, Rght, IFace, myConfig);
+    case FluxCalculator.adaptive_hanel_ausmdv:
+        adaptive_hanel_ausmdv(Lft, Rght, IFace, myConfig);
         break;
-    case FluxCalculator.adaptive_hlle_ausmdv:
-        adaptive_hlle_ausmdv(Lft, Rght, IFace, myConfig);
+    case FluxCalculator.adaptive_hlle_roe:
+        adaptive_hlle_roe(Lft, Rght, IFace, myConfig);
         break;
     case FluxCalculator.ausm_plus_up:
         ausm_plus_up(Lft, Rght, IFace, myConfig.M_inf, myConfig.gmodel);
@@ -651,11 +651,11 @@ void exxef(number sn, ref number exx, ref number ef)
 } // end exxef
 
 
-void adaptive_efm_ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
-// This adaptive flux calculator uses uses the Equilibrium Flux Method
+void adaptive_hanel_ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
+// This adaptive flux calculator uses uses Hanel's flux calculator
 // near shocks and AUSMDV away from shocks, however, we really don't want
-// EFM to be used across interfaces with strong shear.
-// EFM should still be able to do it's work as we really needed it for the
+// Hanel to be used across interfaces with strong shear.
+// Hanel should still be able to do it's work as we really needed it for the
 // situations where the shock is closely aligned with the grid.
 // In that situation, we don't expect a stong shear at the interface.
 //
@@ -666,16 +666,16 @@ void adaptive_efm_ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IF
     number shear_z = fabs(Lft.vel.z - Rght.vel.z) / sound_speed;
     bool shear_is_small = fmax(shear_y, shear_z) <= myConfig.shear_tolerance;
     if ((Lft.S == 1 || Rght.S == 1) && shear_is_small) {
-        efmflx(Lft, Rght, IFace, myConfig.gmodel);
+        hanel(Lft, Rght, IFace, myConfig.gmodel);
     } else {
         ausmdv(Lft, Rght, IFace, myConfig.gmodel);
     }
 } // end adaptive_flux()
 
 
-void adaptive_hlle_ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
+void adaptive_hlle_roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
 // This adaptive flux calculator uses uses the HLLE flux calculator
-// near shocks and AUSMDV away from shocks.
+// near shocks and Roe away from shocks.
 //
 // The actual work is passed off to the original flux calculation functions.
 {
@@ -686,7 +686,7 @@ void adaptive_hlle_ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface I
     if ((Lft.S == 1 || Rght.S == 1) && shear_is_small) {
         hlle(Lft, Rght, IFace, myConfig.gmodel);
     } else {
-        ausmdv(Lft, Rght, IFace, myConfig.gmodel);
+        roe(Lft, Rght, IFace, myConfig.gmodel);
     }
 } // end adaptive_flux()
 

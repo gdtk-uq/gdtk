@@ -168,8 +168,8 @@ enum FluxCalculator {
     hanel, // Hanel's flux calculator (details in Wada & Lious's 1997 SIAM paper)
     efm, // Mike Macrossan's EFM flux calculation
     ausm_plus_up, // Liou's 2006 all-speed flux calculator
-    adaptive_efm_ausmdv, // EFM near shocks, AUSMDV otherwise
-    adaptive_hlle_ausmdv, // HLLE near shocks
+    adaptive_hanel_ausmdv, // Hanel near shocks, AUSMDV otherwise
+    adaptive_hlle_roe, // HLLE near shocks, Roe otherwise
     hlle, // MHD HLLE approximate Riemann solver
     roe // Roe approximate Riemann solver
 }
@@ -181,8 +181,8 @@ string flux_calculator_name(FluxCalculator fcalc)
     case FluxCalculator.hanel: return "hanel";
     case FluxCalculator.efm: return "efm";
     case FluxCalculator.ausm_plus_up: return "ausm_plus_up";
-    case FluxCalculator.adaptive_efm_ausmdv: return "adaptive_efm_ausmdv";
-    case FluxCalculator.adaptive_hlle_ausmdv: return "adaptive_hlle_ausmdv";
+    case FluxCalculator.adaptive_hanel_ausmdv: return "adaptive_hanel_ausmdv";
+    case FluxCalculator.adaptive_hlle_roe: return "adaptive_hlle_roe";
     case FluxCalculator.hlle: return "hlle";
     case FluxCalculator.roe: return "roe";
     }
@@ -195,9 +195,9 @@ FluxCalculator flux_calculator_from_name(string name)
     case "hanel": return FluxCalculator.hanel;
     case "efm": return FluxCalculator.efm;
     case "ausm_plus_up": return FluxCalculator.ausm_plus_up;
-    case "adaptive_efm_ausmdv": return FluxCalculator.adaptive_efm_ausmdv;
-    case "adaptive": return FluxCalculator.adaptive_efm_ausmdv;
-    case "adaptive_hlle_ausmdv": return FluxCalculator.adaptive_hlle_ausmdv;
+    case "adaptive_hanel_ausmdv": return FluxCalculator.adaptive_hanel_ausmdv;
+    case "adaptive": return FluxCalculator.adaptive_hanel_ausmdv;
+    case "adaptive_hlle_roe": return FluxCalculator.adaptive_hlle_roe;
     case "hlle": return FluxCalculator.hlle;
     case "roe": return FluxCalculator.roe;
     default:
