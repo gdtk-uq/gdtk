@@ -894,6 +894,8 @@ public:
             
             foreach (c; cells) {
                 c.gradients.compute_lsq_values(c.cell_cloud, c.ws, myConfig);
+            }
+            foreach (c; cells) {
                 // It is more efficient to determine limiting factor here for some usg limiters.
                 final switch (myConfig.unstructured_limiter) {
                     case UnstructuredLimiter.van_albada:
@@ -908,7 +910,10 @@ public:
                     case UnstructuredLimiter.barth:
                         c.gradients.barth_limit(c.cell_cloud, c.ws, myConfig);
                         break;
-                    case UnstructuredLimiter.venkat:
+                case UnstructuredLimiter.heuristic_van_albada:
+                    c.gradients.heuristic_van_albada_limit(c.cell_cloud, c.ws, myConfig);
+                    break;
+                case UnstructuredLimiter.venkat:
                         c.gradients.venkat_limit(c.cell_cloud, c.ws, myConfig, gtl);
                         break;
                 } // end switch

@@ -948,6 +948,8 @@ void compute_flux(FVCell pcell, FluidBlock blk, size_t orderOfJacobian, ref FVCe
         // compute gradients for reconstruction
         foreach(c; cell_list) {
             c.gradients.compute_lsq_values(c.cell_cloud, c.ws, blk.myConfig);
+        }
+        foreach(c; cell_list) {
             // It is more efficient to determine limiting factor here for some usg limiters.
             final switch (blk.myConfig.unstructured_limiter) {
             case UnstructuredLimiter.van_albada:
@@ -961,7 +963,10 @@ void compute_flux(FVCell pcell, FluidBlock blk, size_t orderOfJacobian, ref FVCe
                 break;
             case UnstructuredLimiter.barth:
                 c.gradients.barth_limit(c.cell_cloud, c.ws, blk.myConfig);
-                    break;
+                break;
+            case UnstructuredLimiter.heuristic_van_albada:
+                c.gradients.heuristic_van_albada_limit(c.cell_cloud, c.ws, blk.myConfig, 0);
+                break;
             case UnstructuredLimiter.venkat:
                 c.gradients.venkat_limit(c.cell_cloud, c.ws, blk.myConfig, 0);
                 break;
