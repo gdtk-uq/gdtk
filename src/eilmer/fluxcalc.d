@@ -63,6 +63,9 @@ void compute_interface_flux(ref FlowState Lft, ref FlowState Rght, ref FVInterfa
     case FluxCalculator.ausmdv:
         ausmdv(Lft, Rght, IFace, myConfig.gmodel);
         break;
+    case FluxCalculator.hanel:
+        hanel(Lft, Rght, IFace, myConfig.gmodel);
+        break;
     case FluxCalculator.adaptive_efm_ausmdv:
         adaptive_efm_ausmdv(Lft, Rght, IFace, myConfig);
         break;
@@ -406,6 +409,85 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel
     } // end of entropy fix (d_ua != 0)
 } // end ausmdv()
 
+void hanel(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel gmodel)
+// Hanel's flux calculator.
+// 
+// Implemented from Y. Wada and M. S. Liou details in their AIAA paper 
+// Y. Wada and M. -S. Liou (1997)
+// An accurate and robust flux splitting scheme for shock and contact discontinuities.
+// with reference to....
+// Hanel, Schwane, & Seider's 1987 paper
+// On the accuracy of upwind schemes for the solution of the Navier-Stokes equations
+
+{
+    // Unpack the flow-state vectors for either side of the interface.
+    // Store in work vectors, those quantities that will be neede later.
+    number rL = Lft.gas.rho;
+    number pL = Lft.gas.p;
+    number pLrL = pL / rL;
+    number uL = Lft.vel.x;
+    number vL = Lft.vel.y;
+    number wL = Lft.vel.z;
+    number eL = gmodel.internal_energy(Lft.gas);
+    number aL = Lft.gas.a;
+    number keL = 0.5*(uL*uL + vL*vL + wL*wL);
+    number HL = eL + pLrL + keL + Lft.tke;
+    //
+    number rR = Rght.gas.rho;
+    number pR = Rght.gas.p;
+    number pRrR = pR / rR;
+    number uR = Rght.vel.x;
+    number vR = Rght.vel.y;
+    number wR = Rght.vel.z;
+    number eR = gmodel.internal_energy(Rght.gas);
+    number aR = Rght.gas.a;
+    number keR = 0.5*(uR*uR + vR*vR + wR*wR);
+    number HR = eR + pRrR + keR + Rght.tke;
+    //
+    number am = fmax(aL, aR);
+    number ML = uL / am;
+    number MR = uR / am;
+    // Left state: 
+    // pressure splitting (eqn 7) 
+    // and velocity splitting (eqn 9)
+    number pLplus, uLplus;
+    if (fabs(uL) <= aL) {
+        uLplus = 1.0/(4.0*aL) * (uL+aL)*(uL+aL);
+        pLplus = pL*uLplus * (1.0/aL * (2.0-uL/aL));
+    } else {
+        uLplus = 0.5*(uL+fabs(uL));
+        pLplus = pL*uLplus * (1.0/uL);
+    }
+    // Right state: 
+    // pressure splitting (eqn 7) 
+    // and velocity splitting (eqn 9)
+    number pRminus, uRminus;
+    if (fabs(uR) <= aR) {
+        uRminus = -1.0/(4.0*aR) * (uR-aR)*(uR-aR);  
+        pRminus = pR*uRminus * (1.0/aR * (-2.0-uR/aR));
+    } else {
+        uRminus = 0.5*(uR-fabs(uR)); 
+        pRminus = pR*uRminus * (1.0/uR);
+    }
+    // The mass flux is relative to the moving interface.
+    number ru_half = uLplus * rL + uRminus * rR;
+    number ru2_half = uLplus * rL * uL + uRminus * rR * uR;
+    // Pressure flux (eqn 8)
+    number p_half = pLplus + pRminus;
+    // Assemble components of the flux vector (eqn 36).
+    ConservedQuantities F = IFace.F;
+    size_t nsp = F.massf.length;
+    size_t nmodes = F.energies.length;
+    F.mass = uLplus * rL + uRminus * rR;
+    F.momentum.set(uLplus * rL * uL + uRminus * rR * uR + p_half,
+                   uLplus * rL * vL + uRminus * rR * vR,
+                   uLplus * rL * wL + uRminus * rR * wR);
+    F.total_energy = uLplus * rL * HL + uRminus * rR * HR;
+    F.tke = uLplus * rL * Lft.tke + uRminus * rR * Rght.tke;
+    F.omega = uLplus * rL * Lft.omega + uRminus * rR * Rght.omega;
+    foreach (isp; 0 .. nsp) { F.massf[isp] = uLplus * rL * Lft.gas.massf[isp] + uRminus * rR * Rght.gas.massf[isp]; }
+    foreach (imode; 0 .. nmodes) { F.energies[imode] = uLplus * rL * Lft.gas.u_modes[imode] + uRminus * rR * Rght.gas.u_modes[imode]; }
+} // end hanel()
 
 void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel gmodel)
 /** \brief Compute the fluxes across an interface using
