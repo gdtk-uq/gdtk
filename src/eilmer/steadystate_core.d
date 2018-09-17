@@ -803,6 +803,7 @@ void evalRHS(double pseudoSimTime, int ftl)
     if ( ftl == 0 &&
          (GlobalConfig.flux_calculator == FluxCalculator.adaptive_hanel_ausmdv
           || GlobalConfig.flux_calculator == FluxCalculator.adaptive_hlle_roe
+          || GlobalConfig.flux_calculator == FluxCalculator.adaptive_efm_ausmdv
           || GlobalConfig.suppress_reconstruction_at_captured_shocks)) {
         foreach (blk; parallel(localFluidBlocks,1)) {
             blk.detect_shock_points();

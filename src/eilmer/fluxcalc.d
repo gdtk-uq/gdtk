@@ -66,6 +66,9 @@ void compute_interface_flux(ref FlowState Lft, ref FlowState Rght, ref FVInterfa
     case FluxCalculator.hanel:
         hanel(Lft, Rght, IFace, myConfig.gmodel);
         break;
+    case FluxCalculator.adaptive_efm_ausmdv:
+        adaptive_efm_ausmdv(Lft, Rght, IFace, myConfig);
+        break;
     case FluxCalculator.adaptive_hanel_ausmdv:
         adaptive_hanel_ausmdv(Lft, Rght, IFace, myConfig);
         break;
@@ -650,14 +653,30 @@ void exxef(number sn, ref number exx, ref number ef)
     ef = copysign(ef1, sn);
 } // end exxef
 
-
-void adaptive_hanel_ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
-// This adaptive flux calculator uses uses Hanel's flux calculator
+void adaptive_efm_ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
+// This adaptive flux calculator uses uses the Equilibrium Flux Method
 // near shocks and AUSMDV away from shocks, however, we really don't want
-// Hanel to be used across interfaces with strong shear.
-// Hanel should still be able to do it's work as we really needed it for the
+// EFM to be used across interfaces with strong shear.
+// EFM should still be able to do it's work as we really needed it for the
 // situations where the shock is closely aligned with the grid.
 // In that situation, we don't expect a stong shear at the interface.
+//
+// The actual work is passed off to the original flux calculation functions.
+{
+    number sound_speed = 0.5 * (Lft.gas.a + Rght.gas.a);
+    number shear_y = fabs(Lft.vel.y - Rght.vel.y) / sound_speed;
+    number shear_z = fabs(Lft.vel.z - Rght.vel.z) / sound_speed;
+    bool shear_is_small = fmax(shear_y, shear_z) <= myConfig.shear_tolerance;
+    if ((Lft.S == 1 || Rght.S == 1) && shear_is_small) {
+        efmflx(Lft, Rght, IFace, myConfig.gmodel);
+    } else {
+        ausmdv(Lft, Rght, IFace, myConfig.gmodel);
+    }
+} // end adaptive_flux()
+
+void adaptive_hanel_ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
+// This adaptive flux calculator uses uses the Hanel flux calculator
+// near shocks and AUSMDV away from shocks.
 //
 // The actual work is passed off to the original flux calculation functions.
 {
