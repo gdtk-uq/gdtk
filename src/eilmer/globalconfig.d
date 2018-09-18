@@ -453,6 +453,7 @@ final class GlobalConfig {
     // The unstructured solver has a selection of limiters available
     shared static UnstructuredLimiter unstructured_limiter = UnstructuredLimiter.venkat; 
     shared static int freeze_limiter_on_step = 2000;
+    shared static bool frozen_limiter = false;
     // Allow the least-squares cloud of points (used to compute a cell-center gradient for
     // reconstruction in the unstructured solver) to grow.
     shared static bool use_extended_stencil = false;

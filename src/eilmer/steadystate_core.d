@@ -459,8 +459,14 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
             tau = tau1;
             sigma = sigma1;
             usePreconditioner = GlobalConfig.sssOptions.usePreconditioner;
+            if (step > GlobalConfig.freeze_limiter_on_step) {
+                // compute the limiter value once more before freezing it
+                if (GlobalConfig.frozen_limiter == false) {
+                    evalRHS(pseudoSimTime, 0);
+                    GlobalConfig.frozen_limiter = true;
+                }
+            }
         }
-
         foreach (attempt; 0 .. maxNumberAttempts) {
             failedAttempt = false;
             try {
@@ -508,7 +514,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
 		    int cellCount = 0;
 		    foreach (cell; blk.cells) {
 			cell.decode_conserved(0, 0, 0.0);
-		    }
+                    }
 		}
                 continue;
 	    }
