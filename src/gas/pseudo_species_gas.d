@@ -194,7 +194,7 @@ public:
       // Update translational temperature
       parentsQ.T = Q.T;
       // Update parents mass fractions by suming pseudo species massf
-      parentsQ.massf[] = 0.;
+      parentsQ.massf[] = to!number(0.0);
       foreach (int psp ; 0 .. _n_species) {
         int prtIdx = _pseudoSpecies[psp].parentIdx;
         parentsQ.massf[prtIdx] += Q.massf[psp];
