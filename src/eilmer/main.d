@@ -479,7 +479,6 @@ usageMsg ~= to!string(totalCPUs) ~" on this machine
             registerGasModel(L, LUA_GLOBALSINDEX);
             registerReactionMechanism(L, LUA_GLOBALSINDEX);
             registerChemistryUpdate(L, LUA_GLOBALSINDEX);
-            registerTwoTemperatureAirKinetics(L, LUA_GLOBALSINDEX);
             registeridealgasflowFunctions(L);
             registergasflowFunctions(L);
             registerBBLA(L);
