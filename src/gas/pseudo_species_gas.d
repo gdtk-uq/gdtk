@@ -36,6 +36,9 @@ import gas.diffusion.wilke_mixing_viscosity;
 import gas.diffusion.wilke_mixing_therm_cond;
 
 class PseudoSpeciesGas : GasModel {
+
+// This class must use _n_species inherited from GasModel
+
 public:
     this(lua_State *L)
     {
@@ -50,7 +53,7 @@ public:
         // Create Parents Species
         lua_getfield(L, LUA_GLOBALSINDEX, "db");
         _parentSpecies = new ParentsSpecies(L);
-        _parentSpeciesState = new GasState(_parentSpecies);
+        _parentsQ = new GasState(_parentSpecies);
         lua_pop(L, 1);
 
         // Create Pseudo Species
@@ -138,11 +141,15 @@ public:
 
     override void update_trans_coeffs(GasState Q)
     {
-        // THINK ABOUT: PM/RJG
-        // We will need to implement this when we've made a decision.
-        // For the present, only inviscid simulations are valid.
-        Q.mu = 0.0;
-        Q.k = 0.0;
+        // Q is the GasState for the set of pseudo-species
+        // Determine the parentsGasState from Q
+        updateParentsGastate(Q, _parentsQ);
+        _parentSpecies._viscModel.update_viscosity(_parentsQ);
+        _parentSpecies._thermCondModel.update_thermal_conductivity(_parentsQ);
+        // Assign to each pseudo species viscosity and conductivity of the parent
+        // species
+        Q.mu = _parentsQ.mu;
+        Q.k = _parentsQ.k;
     }
 
     override number dudT_const_v(in GasState Q) const
@@ -182,17 +189,20 @@ public:
         throw new Error("ERROR: PseudoSpeciesGas:entropy NOT IMPLEMENTED.");
     }
 
-    /* void updateMassfInParents(GasState)
+    void updateParentsGastate(GasState Q, ref GasState parentsQ)
     {
-      for (psp; 0 .. _n_species) {
-        prtIdx = _pseudoSpecies[psp].parentIdx;
-        parentSpeciesState.massf[prtIdx] += _pseudoSpecies.massf[psp];
+      // Update translational temperature
+      parentsQ.T = Q.T;
+      // Update parents mass fractions by suming pseudo species massf
+      parentsQ.massf[] = 0.;
+      foreach (int psp ; 0 .. _n_species) {
+        int prtIdx = _pseudoSpecies[psp].parentIdx;
+        parentsQ.massf[prtIdx] += Q.massf[psp];
       }
-
-    } */
+    }
 
 private:
-    int _n_species;
+
     int _n_parents;
     string[] _parents_names;
     PseudoSpecies[] _pseudoSpecies;
@@ -200,7 +210,7 @@ private:
     int[] _dof;
     int[] _parentIdx;
     ParentsSpecies _parentSpecies;
-    GasState _parentSpeciesState;
+    GasState _parentsQ;
 
     number energyInNoneq(GasState Q) const {
         number uNoneq = 0.0;
@@ -395,10 +405,14 @@ version(pseudo_species_gas_test) {
         fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
 
         auto L = init_lua_State();
-        doLuaFile(L, "sample-data/pseudo-species-3-components.lua");
+        doLuaFile(L, "sample-data/pseudo-species-49-components.lua");
         auto gm = new PseudoSpeciesGas(L);
-        auto gd = new GasState(3, 3);
+        writeln("gm.n_species() = ", gm.n_species());
+        writeln("gm._n_parents = ", gm._n_parents);
+        auto gd = new GasState(gm.n_species(), 2);
+        writeln("gd.massf.length = ", gd.massf.length);
 
+        gd.massf[] = 0.0;
         gd.massf[1] = 0.20908519640652;
         gd.massf[2] = 0.12949211438053;
         gd.massf[0] = 1.0 - (gd.massf[1] + gd.massf[2]);
@@ -406,7 +420,16 @@ version(pseudo_species_gas_test) {
         gd.p = 101325.0;
         gd.T = 7000.0;
 
+        writeln(gd.massf);
+        writeln(gm.Cv(gd));
         gm.update_thermo_from_pT(gd);
+        writeln("gd.u = ", gd.u);
+
+        gm.update_trans_coeffs(gd);
+        writeln("gd.mu = ", gd.mu);
+        writeln("gd.k = ", gd.k);
+
+        writeln("gm._n_species() = ", gm.n_species());
 
         return 0;
     }
