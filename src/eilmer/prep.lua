@@ -853,12 +853,7 @@ function FluidBlockArray(t)
                   nkc = nkc_remaining
                end
                nkc_remaining = nkc_remaining - nkc
-               j0 = j0 + nkc
 	       local subgrid = t.grid:subgrid(i0,nic+1,j0,njc+1,k0,nkc+1)
-               -- Prepare i0, j0, k0 for next iteration
-               i0 = i0 + nic 
-               j0 = j0 + njc
-               k0 = k0 + nkc
 	       local bcList = {north=WallBC_WithSlip:new(), east=WallBC_WithSlip:new(),
 			       south=WallBC_WithSlip:new(), west=WallBC_WithSlip:new(),
 			       top=WallBC_WithSlip:new(), bottom=WallBC_WithSlip:new()}

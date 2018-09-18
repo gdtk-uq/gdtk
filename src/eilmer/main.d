@@ -23,6 +23,7 @@ import gas;
 import gas.luagas_model;
 import kinetics.luareaction_mechanism;
 import kinetics.luachemistry_update;
+import kinetics.luatwo_temperature_air_kinetics;
 import nm.luabbla;
 import fvcore: FlowSolverException;
 import globalconfig;
@@ -478,6 +479,7 @@ usageMsg ~= to!string(totalCPUs) ~" on this machine
             registerGasModel(L, LUA_GLOBALSINDEX);
             registerReactionMechanism(L, LUA_GLOBALSINDEX);
             registerChemistryUpdate(L, LUA_GLOBALSINDEX);
+            registerTwoTemperatureAirKinetics(L, LUA_GLOBALSINDEX);
             registeridealgasflowFunctions(L);
             registergasflowFunctions(L);
             registerBBLA(L);
