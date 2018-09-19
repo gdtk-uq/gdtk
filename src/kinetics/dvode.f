@@ -4661,167 +4661,142 @@ C
    70 CONTINUE
       RETURN
       END
-*DECK DNRM2
-      DOUBLE PRECISION FUNCTION DNRM2 (N, DX, INCX)
-C***BEGIN PROLOGUE  DNRM2
-C***PURPOSE  Compute the Euclidean length (L2 norm) of a vector.
-C***CATEGORY  D1A3B
-C***TYPE      DOUBLE PRECISION (SNRM2-S, DNRM2-D, SCNRM2-C)
-C***KEYWORDS  BLAS, EUCLIDEAN LENGTH, EUCLIDEAN NORM, L2,
-C             LINEAR ALGEBRA, UNITARY, VECTOR
-C***AUTHOR  Lawson, C. L., (JPL)
-C           Hanson, R. J., (SNLA)
-C           Kincaid, D. R., (U. of Texas)
-C           Krogh, F. T., (JPL)
-C***DESCRIPTION
-C
-C                B L A S  Subprogram
-C    Description of parameters
-C
-C     --Input--
-C        N  number of elements in input vector(s)
-C       DX  double precision vector with N elements
-C     INCX  storage spacing between elements of DX
-C
-C     --Output--
-C    DNRM2  double precision result (zero if N .LE. 0)
-C
-C     Euclidean norm of the N-vector stored in DX with storage
-C     increment INCX.
-C     If N .LE. 0, return with result = 0.
-C     If N .GE. 1, then INCX must be .GE. 1
-C
-C     Four phase method using two built-in constants that are
-C     hopefully applicable to all machines.
-C         CUTLO = maximum of  SQRT(U/EPS)  over all known machines.
-C         CUTHI = minimum of  SQRT(V)      over all known machines.
-C     where
-C         EPS = smallest no. such that EPS + 1. .GT. 1.
-C         U   = smallest positive no.   (underflow limit)
-C         V   = largest  no.            (overflow  limit)
-C
-C     Brief outline of algorithm.
-C
-C     Phase 1 scans zero components.
-C     move to phase 2 when a component is nonzero and .LE. CUTLO
-C     move to phase 3 when a component is .GT. CUTLO
-C     move to phase 4 when a component is .GE. CUTHI/M
-C     where M = N for X() real and M = 2*N for complex.
-C
-C     Values for CUTLO and CUTHI.
-C     From the environmental parameters listed in the IMSL converter
-C     document the limiting values are as follows:
-C     CUTLO, S.P.   U/EPS = 2**(-102) for  Honeywell.  Close seconds are
-C                   Univac and DEC at 2**(-103)
-C                   Thus CUTLO = 2**(-51) = 4.44089E-16
-C     CUTHI, S.P.   V = 2**127 for Univac, Honeywell, and DEC.
-C                   Thus CUTHI = 2**(63.5) = 1.30438E19
-C     CUTLO, D.P.   U/EPS = 2**(-67) for Honeywell and DEC.
-C                   Thus CUTLO = 2**(-33.5) = 8.23181D-11
-C     CUTHI, D.P.   same as S.P.  CUTHI = 1.30438D19
-C     DATA CUTLO, CUTHI /8.232D-11,  1.304D19/
-C     DATA CUTLO, CUTHI /4.441E-16,  1.304E19/
-C
-C***REFERENCES  C. L. Lawson, R. J. Hanson, D. R. Kincaid and F. T.
-C                 Krogh, Basic linear algebra subprograms for Fortran
-C                 usage, Algorithm No. 539, Transactions on Mathematical
-C                 Software 5, 3 (September 1979), pp. 308-323.
-C***ROUTINES CALLED  (NONE)
-C***REVISION HISTORY  (YYMMDD)
-C   791001  DATE WRITTEN
-C   890531  Changed all specific intrinsics to generic.  (WRB)
-C   890831  Modified array declarations.  (WRB)
-C   890831  REVISION DATE from Version 3.2
-C   891214  Prologue converted to Version 4.0 format.  (BAB)
-C   920501  Reformatted the REFERENCES section.  (WRB)
-C***END PROLOGUE  DNRM2
-      INTEGER NEXT
-      DOUBLE PRECISION DX(*), CUTLO, CUTHI, HITEST, SUM, XMAX, ZERO,
-     +                 ONE
-      SAVE CUTLO, CUTHI, ZERO, ONE
-      DATA ZERO, ONE /0.0D0, 1.0D0/
-C
-      DATA CUTLO, CUTHI /8.232D-11,  1.304D19/
-C***FIRST EXECUTABLE STATEMENT  DNRM2
-      IF (N .GT. 0) GO TO 10
-         DNRM2  = ZERO
-         GO TO 300
-C
-   10 ASSIGN 30 TO NEXT
-      SUM = ZERO
-      NN = N * INCX
-C
-C                                                 BEGIN MAIN LOOP
-C
-      I = 1
-   20    GO TO NEXT,(30, 50, 70, 110)
-   30 IF (ABS(DX(I)) .GT. CUTLO) GO TO 85
-      ASSIGN 50 TO NEXT
-      XMAX = ZERO
-C
-C                        PHASE 1.  SUM IS ZERO
-C
-   50 IF (DX(I) .EQ. ZERO) GO TO 200
-      IF (ABS(DX(I)) .GT. CUTLO) GO TO 85
-C
-C                                PREPARE FOR PHASE 2.
-C
-      ASSIGN 70 TO NEXT
-      GO TO 105
-C
-C                                PREPARE FOR PHASE 4.
-C
-  100 I = J
-      ASSIGN 110 TO NEXT
-      SUM = (SUM / DX(I)) / DX(I)
-  105 XMAX = ABS(DX(I))
-      GO TO 115
-C
-C                   PHASE 2.  SUM IS SMALL.
-C                             SCALE TO AVOID DESTRUCTIVE UNDERFLOW.
-C
-   70 IF (ABS(DX(I)) .GT. CUTLO) GO TO 75
-C
-C                     COMMON CODE FOR PHASES 2 AND 4.
-C                     IN PHASE 4 SUM IS LARGE.  SCALE TO AVOID OVERFLOW.
-C
-  110 IF (ABS(DX(I)) .LE. XMAX) GO TO 115
-         SUM = ONE + SUM * (XMAX / DX(I))**2
-         XMAX = ABS(DX(I))
-         GO TO 200
-C
-  115 SUM = SUM + (DX(I)/XMAX)**2
-      GO TO 200
-C
-C                  PREPARE FOR PHASE 3.
-C
-   75 SUM = (SUM * XMAX) * XMAX
-C
-C     FOR REAL OR D.P. SET HITEST = CUTHI/N
-C     FOR COMPLEX      SET HITEST = CUTHI/(2*N)
-C
-   85 HITEST = CUTHI / N
-C
-C                   PHASE 3.  SUM IS MID-RANGE.  NO SCALING.
-C
-      DO 95 J = I,NN,INCX
-      IF (ABS(DX(J)) .GE. HITEST) GO TO 100
-   95    SUM = SUM + DX(J)**2
-      DNRM2 = SQRT(SUM)
-      GO TO 300
-C
-  200 CONTINUE
-      I = I + INCX
-      IF (I .LE. NN) GO TO 20
-C
-C              END OF MAIN LOOP.
-C
-C              COMPUTE SQUARE ROOT AND ADJUST FOR SCALING.
-C
-      DNRM2 = XMAX * SQRT(SUM)
-  300 CONTINUE
+
+
+*> \brief \b DNRM2
+*
+*  =========== DOCUMENTATION ===========
+*
+* Online html documentation available at
+*            http://www.netlib.org/lapack/explore-html/
+*
+*  Definition:
+*  ===========
+*
+*       DOUBLE PRECISION FUNCTION DNRM2(N,X,INCX)
+*
+*       .. Scalar Arguments ..
+*       INTEGER INCX,N
+*       ..
+*       .. Array Arguments ..
+*       DOUBLE PRECISION X(*)
+*       ..
+*
+*
+*> \par Purpose:
+*  =============
+*>
+*> \verbatim
+*>
+*> DNRM2 returns the euclidean norm of a vector via the function
+*> name, so that
+*>
+*>    DNRM2 := sqrt( x'*x )
+*> \endverbatim
+*
+*  Arguments:
+*  ==========
+*
+*> \param[in] N
+*> \verbatim
+*>          N is INTEGER
+*>         number of elements in input vector(s)
+*> \endverbatim
+*>
+*> \param[in] X
+*> \verbatim
+*>          X is DOUBLE PRECISION array, dimension ( 1 + ( N - 1 )*abs( INCX ) )
+*> \endverbatim
+*>
+*> \param[in] INCX
+*> \verbatim
+*>          INCX is INTEGER
+*>         storage spacing between elements of DX
+*> \endverbatim
+*
+*  Authors:
+*  ========
+*
+*> \author Univ. of Tennessee
+*> \author Univ. of California Berkeley
+*> \author Univ. of Colorado Denver
+*> \author NAG Ltd.
+*
+*> \date November 2017
+*
+*> \ingroup double_blas_level1
+*
+*> \par Further Details:
+*  =====================
+*>
+*> \verbatim
+*>
+*>  -- This version written on 25-October-1982.
+*>     Modified on 14-October-1993 to inline the call to DLASSQ.
+*>     Sven Hammarling, Nag Ltd.
+*> \endverbatim
+*>
+*  =====================================================================
+      DOUBLE PRECISION FUNCTION DNRM2(N,X,INCX)
+*
+*  -- Reference BLAS level1 routine (version 3.8.0) --
+*  -- Reference BLAS is a software package provided by Univ. of Tennessee,    --
+*  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
+*     November 2017
+*
+*     .. Scalar Arguments ..
+      INTEGER INCX,N
+*     ..
+*     .. Array Arguments ..
+      DOUBLE PRECISION X(*)
+*     ..
+*
+*  =====================================================================
+*
+*     .. Parameters ..
+      DOUBLE PRECISION ONE,ZERO
+      PARAMETER (ONE=1.0D+0,ZERO=0.0D+0)
+*     ..
+*     .. Local Scalars ..
+      DOUBLE PRECISION ABSXI,NORM,SCALE,SSQ
+      INTEGER IX
+*     ..
+*     .. Intrinsic Functions ..
+      INTRINSIC ABS,SQRT
+*     ..
+      IF (N.LT.1 .OR. INCX.LT.1) THEN
+          NORM = ZERO
+      ELSE IF (N.EQ.1) THEN
+          NORM = ABS(X(1))
+      ELSE
+          SCALE = ZERO
+          SSQ = ONE
+*        The following loop is equivalent to this call to the LAPACK
+*        auxiliary routine:
+*        CALL DLASSQ( N, X, INCX, SCALE, SSQ )
+*
+          DO 10 IX = 1,1 + (N-1)*INCX,INCX
+              IF (X(IX).NE.ZERO) THEN
+                  ABSXI = ABS(X(IX))
+                  IF (SCALE.LT.ABSXI) THEN
+                      SSQ = ONE + SSQ* (SCALE/ABSXI)**2
+                      SCALE = ABSXI
+                  ELSE
+                      SSQ = SSQ + (ABSXI/SCALE)**2
+                  END IF
+              END IF
+   10     CONTINUE
+          NORM = SCALE*SQRT(SSQ)
+      END IF
+*
+      DNRM2 = NORM
       RETURN
+*
+*     End of DNRM2.
+*
       END
+
+
 *DECK DSCAL
       SUBROUTINE DSCAL (N, DA, DX, INCX)
 C***BEGIN PROLOGUE  DSCAL
