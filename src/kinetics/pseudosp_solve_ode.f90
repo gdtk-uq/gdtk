@@ -37,6 +37,7 @@ subroutine solveODE(Y, neq, T_init, dt) bind(C, name='solveODE')
     integer(kind=4), allocatable, dimension(:) :: iwork
     real(kind=8) :: RPAR ! not used in my case because I don't exchange float data
     integer(kind=4) :: IPAR ! not used in my case because I don't exchange integer data
+    ! real(kind=8) :: Yold(neq), YDOT(1:neq)
 
     ! Physics constants
     real(kind=8), parameter :: Na=6.0221409e+23 ! Avogadro
@@ -47,13 +48,15 @@ subroutine solveODE(Y, neq, T_init, dt) bind(C, name='solveODE')
     ! Convert vector Y from [mol/m^3] to [particules/m^3]
     do j=1,neq
       Y(j)=Y(j)*Na
+      ! Yold(j)=Y(j)
     enddo
 
     temperature = T_init ! make it accessible to FEX and JEX
+    ! neq = int(n,4)
 
     itol=1
     rtol=1e-9 ! relative tolerance
-    atol=0. ! absolute tolerance is not checked (only relative tolerance is checked)
+    atol=1.0e-10*SUM(Y(1:neq)) ! absolute tolerance
     itask=1
     istate=1
     iopt=1 ! to enable or disable the cutomization of DVODE with IWORK and RWORK
@@ -61,7 +64,9 @@ subroutine solveODE(Y, neq, T_init, dt) bind(C, name='solveODE')
     liw=30+neq ! advised by line 565 od dvode.f90
     allocate(rwork(1:lrw))
     allocate(iwork(1:liw))
-    rwork(:)=0.
+    rwork(:)=0.0
+    ! RWORK(6)=1.0e-11 ! HMAX
+    RWORK(7)=0.0 ! HMIN
     ! If IOPT=1, then IWORK is used to pass some options to the ODE solver
     iwork(:)=0 ! set the options to default
     iwork(6)=1000000 ! MXSTEP = maximum number of (internally defined) steps (default : 500)
@@ -75,6 +80,40 @@ subroutine solveODE(Y, neq, T_init, dt) bind(C, name='solveODE')
     ! print *,'dt = ', dt
     call DVODE(FEX,NEQ,Y,t,t_out,ITOL,RTOL,ATOL,ITASK,ISTATE, &
                IOPT,RWORK,LRW,IWORK,LIW,JEX,MF,RPAR,IPAR)
+
+    ! Check successful integration
+    ! if (ISTATE .ne. 2) then
+    !   print *,"A problem occurs in DVODE"
+    !   print *,"ATOL = ",atol
+    !   print *,"ISTATE = ", ISTATE
+    !   print *,"temperature = ",temperature
+    !   print *,"Yold = ", Yold(1:neq)
+    !   print *,"Y = ", Y(1:neq)
+    !   ! call FEX(NEQ, t, Y, YDOT, RPAR, IPAR)
+    !   ! print *,"YDOT = ", YDOT(1:neq)
+    !   print *,"t = ", t, "t_out = ", t_out
+    !   !
+    !   ! print *,"Internal loops"
+    !   ! t_out = 0.0
+    !   ! t = 0.0
+    !   ! istate = 1
+    !   Y(1:neq) = Yold(1:neq)
+    !   ! do j=1,10000
+    !   !   t_out = t_out + dt/10000
+    !   !   print *,"t = ", t, "t_out = ", t_out
+    !   !   call DVODE(FEX,NEQ,Y,t,t_out,ITOL,RTOL,ATOL,ITASK,ISTATE, &
+    !   !              IOPT,RWORK,LRW,IWORK,LIW,JEX,MF,RPAR,IPAR)
+    !   ! enddo
+    !   stop
+    ! endif
+
+    ! Check nucleus conservation
+    ! if (abs(Y(1)+2*sum(Y(2:neq))-(Yold(1)+2*sum(Yold(2:neq))))/(Yold(1)+2*sum(Yold(2:neq)))>1.0e-6) then
+    !   print *,"Error in nuclei conservation"
+    !   print *,Y(1)+2*sum(Y(2:neq)),Yold(1)+2*sum(Yold(2:neq))
+    !   print *,abs(Y(1)+2*sum(Y(2:neq))-(Yold(1)+2*sum(Yold(2:neq))))/(Yold(1)+2*sum(Yold(2:neq)))
+    !   ! stop
+    ! endif
 
     ! Convert back vector Y from [particules/m^3] to [mol/m^3]
     do j=1,neq

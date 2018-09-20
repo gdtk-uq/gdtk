@@ -217,14 +217,14 @@ protected:
     double[] _LJ_epsilons;
 } // end class GasModel
 
-@nogc void scale_mass_fractions(ref number[] massf, double tolerance=0.0,
+void scale_mass_fractions(ref number[] massf, double tolerance=0.0,
                                 double assert_error_tolerance=0.1)
 {
     auto my_nsp = massf.length;
     if (my_nsp == 1) {
         // Single species, always expect massf[0]==1.0, so we can take a short-cut.
         assert(fabs(massf[0] - 1.0) < assert_error_tolerance,
-               "Single species mass fraction far from 1.0");
+               "Single species mass fraction far from 1.0 \n");
         massf[0] = 1.0;
     } else {
         // Multiple species, do the full job.
@@ -233,8 +233,16 @@ protected:
             massf[isp] = massf[isp] >= 0.0 ? massf[isp] : to!number(0.0);
             massf_sum += massf[isp];
         }
+        if (fabs(massf_sum - 1.0) > assert_error_tolerance) {
+          writeln("my_nsp = ", my_nsp);
+          writeln("massf = ", massf);
+        }
+        string msg = "Sum of species mass fractions far from 1.0";
+        msg ~= format("fabs(massf_sum - 1.0) = %s \n", fabs(massf_sum - 1.0));
+        msg ~= format("assert_error_tolerance = %s \n", assert_error_tolerance);
+        msg ~= format("tolerance = %s \n", tolerance);
         assert(fabs(massf_sum - 1.0) < assert_error_tolerance,
-               "Sum of species mass fractions far from 1.0");
+               msg);
         if ( fabs(massf_sum - 1.0) > tolerance ) {
             foreach(isp; 0 .. my_nsp) massf[isp] /= massf_sum;
         }
