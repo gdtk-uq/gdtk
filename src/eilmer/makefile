@@ -260,6 +260,8 @@ ifeq ($(DMD), gdc)
         DLINKFLAGS += $(TECPLOT_BIN_DIR)/libtecio.so $(TECPLOT_BIN_DIR)/sys/libstdc++.so.6
     endif
 endif
+# DIP1008 allows throwing of exceptions in @nogc code.
+DFLAGS += -dip1008
 DFLAGS += -I.. -I$(NM_DIR) -I$(UTIL_DIR) -I$(GEOM_DIR) -I$(GRID_DIR) -I$(GZIP_DIR)
 
 ifeq ($(DEBUG_CHEM),1)
