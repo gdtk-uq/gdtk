@@ -202,7 +202,7 @@ function writeThermPerfGas(f, species, db, optsTable)
       end
       f:write("}\n")
       f:write(string.format("db['%s'].charge = %d\n", sp, db[sp].charge))
-      f:write(string.format("db['%s'].M = %.8f\n", sp, db[sp].M.value))
+      f:write(string.format("db['%s'].M = %.8e\n", sp, db[sp].M.value))
       sigma = db.default.sigma.value
       if db[sp].sigma then
 	 sigma = db[sp].sigma.value
