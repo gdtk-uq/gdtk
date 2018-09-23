@@ -97,20 +97,22 @@ public:
             T1 = T_bracket_low;
             T2 = T_bracket_high;
             if (bracket(T1, T2, e_tgt, Q, to!number(T_MIN)) == -1) {
-                string msg = "The 'bracket' function failed to find temperature values\n";
-                msg ~= "that bracketed the zero function in ThermallyPerfectGasMixEOS.eval_temperature().\n";
-                msg ~= format("The final values are: T1 = %12.6f and T2 = %12.6f\n", T1, T2);
-                msg ~= format("The initial temperature guess was: %12.6f\n", Tsave);
-                msg ~= format("The target energy value was: %12.6f\n", e_tgt);
-                msg ~= format("The bracket limits were: low=%12.6f  high=%12.6f\n", T_bracket_low, T_bracket_high);
-                Q.T = 20.0;
-                update_energy(Q);
-                msg ~= format("Energy at 20.0: %12.6f\n", Q.u);
-                Q.T = 100000.0;
-                update_energy(Q);
-                msg ~= format("Energy at 100000.0: %12.6f\n", Q.u);
-                msg ~= format("The GasState is currently:\n");
-                msg ~= Q.toString() ~ "\n";
+                string msg = "The 'bracket' function failed to find temperature values";
+                debug {
+                    msg ~= "\nthat bracketed the zero function in ThermallyPerfectGasMixEOS.eval_temperature().\n";
+                    msg ~= format("The final values are: T1 = %12.6f and T2 = %12.6f\n", T1, T2);
+                    msg ~= format("The initial temperature guess was: %12.6f\n", Tsave);
+                    msg ~= format("The target energy value was: %12.6f\n", e_tgt);
+                    msg ~= format("The bracket limits were: low=%12.6f  high=%12.6f\n", T_bracket_low, T_bracket_high);
+                    Q.T = 20.0;
+                    update_energy(Q);
+                    msg ~= format("Energy at 20.0: %12.6f\n", Q.u);
+                    Q.T = 100000.0;
+                    update_energy(Q);
+                    msg ~= format("Energy at 100000.0: %12.6f\n", Q.u);
+                    msg ~= format("The GasState is currently:\n");
+                    msg ~= Q.toString() ~ "\n";
+                }
                 throw new GasModelException(msg);
             }
         }
@@ -118,14 +120,16 @@ public:
             Q.T = solve(T1, T2, TOL, e_tgt, Q);
         }
         catch ( Exception e ) {
-            string msg = "There was a problem iterating to find temperature\n";
-            msg ~= "in function ThermallyPerfectGasMix.eval_temperature().\n";
-            msg ~= format("The initial temperature guess was: %12.6f\n", Tsave);
-            msg ~= format("The target energy value was: %12.6f\n", e_tgt);
-            msg ~= format("The GasState is currently:\n");
-            msg ~= Q.toString() ~ "\n";
-            msg ~= "The message from the solve function is:\n";
-            msg ~= e.msg;
+            string msg = "There was a problem iterating to find temperature";
+            debug {
+                msg ~= "\nin function ThermallyPerfectGasMix.eval_temperature().\n";
+                msg ~= format("The initial temperature guess was: %12.6f\n", Tsave);
+                msg ~= format("The target energy value was: %12.6f\n", e_tgt);
+                msg ~= format("The GasState is currently:\n");
+                msg ~= Q.toString() ~ "\n";
+                msg ~= "The message from the solve function is:\n";
+                msg ~= e.msg;
+            }
             throw new GasModelException(msg);
         }
     } // end update_temperature()
@@ -148,7 +152,7 @@ private:
     import std.math;
     import std.algorithm;
 
-    number zeroFun(number T, number e_tgt, ref GasState Q)
+    @nogc number zeroFun(number T, number e_tgt, ref GasState Q)
     // Helper function for update_temperature.
     {
         Q.T = T;
@@ -156,6 +160,7 @@ private:
         return e_tgt - Q.u;
     }
 
+    @nogc
     int bracket(ref number x1, ref number x2, number e_tgt, ref GasState Q,
                 number x1_min = -1.0e99, number x2_max = +1.0e99,
                 int max_try=50, double factor=1.6)
@@ -205,6 +210,7 @@ private:
      * Returns:
      *    b, a point near the root.
      */
+    @nogc
     number solve(number x1, number x2, double tol, number e_tgt, ref GasState Q) 
     {
         const int ITMAX = 100;           // Maximum allowed number of iterations
@@ -217,8 +223,8 @@ private:
         if (abs(fb) == 0.0) { return b; }
         if (fa * fb > 0.0) {
             // Supplied bracket does not encompass zero of the function.
-            string msg = "Root must be bracketed by x1 and x2\n";
-            msg ~= format("x1=%g f(x1)=%g x2=%g f(x2)=%g\n", x1, fa, x2, fb); 
+            string msg = "Root must be bracketed by x1 and x2";
+            debug { msg ~= format("\nx1=%g f(x1)=%g x2=%g f(x2)=%g\n", x1, fa, x2, fb); }
             throw new GasModelException(msg);
         }
         number c = b;

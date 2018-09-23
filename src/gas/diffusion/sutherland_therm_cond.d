@@ -32,12 +32,16 @@ import util.msg_service;
 @nogc pure
 number sutherland_thermal_conductivity(number T, double T_ref, double k_ref, double S)
 in {
-    assert(T > 0.0, brokenPreCondition("temperature", __LINE__, __FILE__));
-    assert(T_ref > 0.0, brokenPreCondition("T_ref", __LINE__, __FILE__));
-    assert(k_ref > 0.0, brokenPreCondition("k_ref", __LINE__, __FILE__));
+    debug {
+        assert(T > 0.0, brokenPreCondition("temperature", __LINE__, __FILE__));
+        assert(T_ref > 0.0, brokenPreCondition("T_ref", __LINE__, __FILE__));
+        assert(k_ref > 0.0, brokenPreCondition("k_ref", __LINE__, __FILE__));
+    }
 }
 out(result) {
-    assert(result > 0.0, brokenPostCondition("thermal conductivity", __LINE__, __FILE__));
+    debug {
+        assert(result > 0.0, brokenPostCondition("thermal conductivity", __LINE__, __FILE__));
+    }
 }
 body{
     number k = k_ref*sqrt(T/T_ref)*(T/T_ref)*(T_ref + S)/(T + S);

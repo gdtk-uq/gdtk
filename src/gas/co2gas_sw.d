@@ -135,7 +135,6 @@ public:
             Q.u = updateEnergy_rhoT(Q.rho.re, Q.T.re);
         } else {
             assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
-            return to!number(0.0);
         }
     }
 
@@ -157,7 +156,6 @@ public:
             }
         } else {
             assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
-            return to!number(0.0);
         }
     }
 
@@ -168,7 +166,6 @@ public:
             Q.u = updateEnergy_rhoT(Q.rho.re, Q.T.re);
         } else {
             assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
-            return to!number(0.0);
         }
     }
 
@@ -179,7 +176,6 @@ public:
             Q.u = updateEnergy_rhoT(Q.rho.re, Q.T.re);
         } else {
             assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
-            return to!number(0.0);
         }
     }
     
@@ -190,7 +186,6 @@ public:
             Q.u = updateEnergy_rhoT(Q.rho.re, Q.T.re);
         } else {
             assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
-            return to!number(0.0);
         }
     }
 
@@ -206,7 +201,6 @@ public:
             Q.u = updateEnergy_rhoT(Q.rho.re, Q.T.re);
         } else {
             assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
-            return to!number(0.0);
         }
     }
 
@@ -223,9 +217,8 @@ public:
             } else {
                 Q.a = updateSoundSpeed_rhoT(Q.rho.re, Q.T.re);
             }
-    } else {
+        } else {
             assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
-            return to!number(0.0);
         }
 
     }
@@ -245,7 +238,7 @@ public:
             return to!number(get_de_dT(Q.rho.re, Q.T.re));
         } else {
             assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
-            return to!number(0.0);
+            // return to!number(0.0);
         }
     }
     
@@ -275,7 +268,7 @@ public:
             return to!number(updateEnthalpy_rhoT_original(Q.rho.re, Q.T.re));
         } else {
             assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
-            return to!number(0.0);
+            // return to!number(0.0);
         }
     }
     
@@ -285,7 +278,7 @@ public:
             return to!number(updateEntropy_rhoT(Q.rho.re, Q.T.re));
         } else {
             assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
-            return to!number(0.0);
+            // return to!number(0.0);
         }
     }
     //------A function that re-maps the rho, T domain according to the liquid-vapour line------------

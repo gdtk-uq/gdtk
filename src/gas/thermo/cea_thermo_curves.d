@@ -18,7 +18,7 @@ import nm.number;
 import util.lua;
 import util.lua_service;
 
-struct CEAThermoCurve
+class CEAThermoCurve
 {
 public:
     double T_lower;
@@ -26,16 +26,19 @@ public:
     double R;
     double[9] a;
 
-    // Postblit constructor (Alexandrescu Section 7.1.3.4) so that
-    // the copy of the struct can become completely independent of 
-    // its source.
-    this(this)
+    this()
     {
-        a = a.dup;
+        // do nothing
+    }
+    this(ref const(CEAThermoCurve) other)
+    {
+        T_lower = other.T_lower;
+        T_upper = other.T_upper;
+        R = other.R;
+        a[] = other.a[];
     }
     @nogc number eval_Cp(number T) const
     {
-        
         if ( T < T_lower ) 
             throw new Exception("temperature value lower than T_lower in CEAThermoCurve.eval_Cp()");
         if ( T > T_upper )
@@ -71,14 +74,14 @@ class CEAThermo
 {
 public:
     this(in CEAThermo src) {
-        _curves = src._curves.dup;
+        foreach (c; src._curves) { _curves ~= new CEAThermoCurve(c); }
         _R = src._R;
         _T_lowest = src._T_lowest;
         _T_highest = src._T_highest;
     }
     this(in CEAThermoCurve[] curves)
     {
-        _curves = curves.dup;
+        foreach (c; curves) { _curves ~= new CEAThermoCurve(c); }
         /* We want the curves to ordered based on
            temperature ranges from lowest to highest,
            and the range of temperatures needs to be
@@ -189,7 +192,7 @@ CEAThermo createCEAThermo(lua_State* L, double R)
     foreach ( i; 0..nseg ) {
         auto key = format("segment%d", i);
         lua_getfield(L, -1, key.toStringz);
-        auto c = CEAThermoCurve();
+        auto c = new CEAThermoCurve();
         try {
             c.R = R;
             c.T_lower = getDouble(L, -1, "T_lower");
@@ -219,7 +222,7 @@ version(cea_thermo_curves_test) {
 
         import util.msg_service;
         // 1. Test a segment (CEAThermoCurve) on its own.
-        auto curve = CEAThermoCurve();
+        auto curve = new CEAThermoCurve();
         curve.T_lower = 6000.000;
         curve.T_upper = 20000.000;
         curve.R =  8.31451/14.0067000e-3;

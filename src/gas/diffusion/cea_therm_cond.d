@@ -44,7 +44,7 @@ public:
         D = params["D"];
     }
 
-    number eval(number T) const
+    @nogc number eval(number T) const
     {
         if ( T < T_lower )
             throw new Exception("temperature value lower than T_lower in CEAThermCondCurve:eval()");

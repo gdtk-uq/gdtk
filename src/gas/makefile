@@ -108,7 +108,7 @@ build-prep-gas: prep_gas.lua species-database.lua
 
 gas-calc: luagas_model.d $(LIBLUA) $(GAS_FILES) $(GAS_LUA_FILES) $(NM_FILES) \
 	$(UTIL_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES)
-	dmd -ofgas-calc -version=gas_calc \
+	dmd -ofgas-calc -dip1008 -version=gas_calc \
 		$(GAS_FILES) $(GAS_LUA_FILES) $(NM_FILES) $(UTIL_FILES) $(KINETICS_FILES) \
 		$(KINETICS_LUA_FILES) $(DLINKFLAGS)
 
@@ -160,12 +160,12 @@ luagas_model_demo: luagas_model_demo.d $(GAS_FILES) $(GAS_LUA_FILES) $(LIBLUA) \
 # Jonathan's programs that were moved out of nm.
 
 build_tree: build_tree.d $(LIBLUA) $(UTIL_FILES) $(NM_FILES)
-	$(DMD) build_tree.d $(OF)build_tree \
+	$(DMD) build_tree.d -dip1008 $(OF)build_tree \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(DLINKFLAGS)
 
 univariate_lut_demo: univariate_lut_demo.d $(LIBLUA) $(UTIL_FILES) $(NM_FILES)
-	$(DMD) -debug univariate_lut_demo.d $(OF)univariate_lut_demo \
+	$(DMD) -debug -dip1008 univariate_lut_demo.d $(OF)univariate_lut_demo \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(DLINKFLAGS)
 
@@ -176,124 +176,124 @@ cea_therm_cond_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 cea_viscosity_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -version=$@ \
+	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 cea_thermo_curves_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -version=$@ \
+	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 cea_thermo_curves_complex_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -version=cea_thermo_curves_test -version=complex_numbers \
+	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=cea_thermo_curves_test -version=complex_numbers \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 
 gas_model_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -version=$@ \
+	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 gas_model_complex_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -version=gas_model_test -version=complex_numbers \
+	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=gas_model_test -version=complex_numbers \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 ideal_gas_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -version=$@ \
+	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 ideal_gas_complex_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -version=ideal_gas_test -version=complex_numbers \
+	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=ideal_gas_test -version=complex_numbers \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 cea_gas_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -version=$@ \
+	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 perf_gas_mix_eos_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -version=$@ \
+	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 sutherland_therm_cond_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -version=$@ \
+	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 sutherland_viscosity_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -version=$@ \
+	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 therm_perf_gas_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -version=$@ \
+	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 therm_perf_gas_mix_eos_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -version=$@ \
+	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 very_viscous_air_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -version=$@ \
+	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 wilke_mixing_therm_cond_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -version=$@ \
+	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 wilke_mixing_viscosity_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -version=$@ \
+	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 co2gas_sw_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -version=$@ \
+	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 uniform_lut_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -version=$@ \
+	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 adaptive_lut_CEA_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -version=$@ \
+	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 lut_comp_demo: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA) lut_comp_demo.d
-	$(DMD) $(OF)$@ -debug -g -w lut_comp_demo.d \
+	$(DMD) $(OF)$@ -debug -g -w -dip1008 lut_comp_demo.d \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 ideal_air_proxy_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -version=$@ \
+	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 powers_aslam_gas_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -version=$@ \
+	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 vib_specific_nitrogen_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -version=$@ \
+	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 two_temperature_reacting_argon_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -version=$@ \
+	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 ideal_dissociating_gas_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -version=$@ \
+	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 fuel_air_mix_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -version=$@ \
+	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 equilibrium_gas_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -version=$@ \
+	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 steam_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -version=$@ \
+	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 pseudo_species_gas_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -version=$@ \
+	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 electronically_specific_gas_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -version=$@ \
+	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 # Fortran bits

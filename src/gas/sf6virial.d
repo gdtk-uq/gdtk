@@ -168,7 +168,7 @@ public:
             return to!number(get_de_dT(Q.rho.re, Q.T.re));
         } else {
             assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
-            return to!number(0.0);
+            // return to!number(0.0);
         }
     }
     override number dhdT_const_p(in GasState Q) const

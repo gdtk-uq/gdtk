@@ -2480,7 +2480,7 @@ public:
             return to!number(_IAPWS.SpecificIsochoricHeatCapacity(Q.p.re, Q.T.re, Q.quality.re));
         } else {
             throw new Error("not compatible with @nogc");
-            return to!number(0.0);
+            // return to!number(0.0);
         }
     }
     override number dhdT_const_p(in GasState Q)
@@ -2489,13 +2489,13 @@ public:
             return to!number(_IAPWS.SpecificIsobaricHeatCapacity(Q.p.re, Q.T.re, Q.quality.re));
         } else {
             throw new Error("not compatible with @nogc");
-            return to!number(0.0);
+            // return to!number(0.0);
         }
     }
     override number dpdrho_const_T(in GasState Q)
     {
-        //no defined function for this
-        return to!number(0.0);
+        throw new Error("no defined function for dpdrho_const_T");
+        // return to!number(0.0);
     }
     override number gas_constant(in GasState Q)
     {
@@ -2507,7 +2507,7 @@ public:
             return to!number(_IAPWS.SpecificInternalEnergy(Q.p.re, Q.T.re, Q.quality.re));
         } else {
             throw new Error("not compatible with @nogc");
-            return to!number(0.0);
+            // return to!number(0.0);
         }
     }
     override number enthalpy(in GasState Q)
@@ -2516,7 +2516,7 @@ public:
             return to!number(_IAPWS.SpecificEnthalpy(Q.p.re, Q.T.re, Q.quality.re));
         } else {
             throw new Error("not compatible with @nogc");
-            return to!number(0.0);
+            // return to!number(0.0);
         }
     }
     override number entropy(in GasState Q)
@@ -2525,7 +2525,7 @@ public:
             return to!number(_IAPWS.SpecificEntropy(Q.p.re, Q.T.re, Q.quality.re));
         } else {
             throw new Error("not compatible with @nogc");
-            return to!number(0.0);
+            // return to!number(0.0);
         }
     }
 } // end class Steam
