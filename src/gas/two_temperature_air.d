@@ -26,6 +26,35 @@ import gas.thermo.perf_gas_mix_eos;
 immutable double T_REF = 298.15; // K
 static string[] molecularSpeciesNames = ["N2", "O2", "NO", "N2+", "O2+", "NO+"];
 
+// The following symbols are for indexing into the thermo-coefficient database.
+enum Species {N=0, O, N2, O2, NO,
+              Nplus, Oplus, N2plus, O2plus, NOplus,
+              eminus}
+static string[] allSpeciesNames = ["N", "O", "N2", "O2", "NO",
+                                   "N+", "O+", "N2+", "O2+", "NO+",
+                                   "e-"];
+static Species[] allSpeciesIds =
+    [Species.N, Species.O, Species.N2, Species.O2, Species.NO,
+     Species.Nplus, Species.Oplus, Species.N2plus, Species.O2plus, Species.NOplus,
+     Species.eminus];
+@nogc Species getSpeciesId(string name)
+{
+    switch (name) {
+    case "N": return Species.N;
+    case "O": return Species.O;
+    case "N2": return Species.N2;
+    case "O2": return Species.O2;
+    case "NO": return Species.NO;
+    case "N+": return Species.Nplus;
+    case "O+": return Species.Oplus;
+    case "N2+": return Species.N2plus;
+    case "O2+": return Species.O2plus;
+    case "NO+": return Species.NOplus;
+    case "e-": return Species.eminus;
+    default: assert(0, "Oops, invalid species name.");
+    } // end switch
+} // end getSpeciesId
+
 // For table parameters see end of file.
 // They are declared in the static this() function.
 
@@ -64,7 +93,7 @@ public:
             bool[string] validSpecies = ["N":true, "O":true, "N2":true, "O2":true, "NO":true];
             foreach (isp, sp; _species_names) {
                 if (sp in validSpecies) {
-                    _mol_masses[isp] = __mol_masses[sp];
+                    _mol_masses[isp] = __mol_masses[getSpeciesId(sp)];
                     validSpecies.remove(sp);
                 }
                 else {
@@ -84,7 +113,7 @@ public:
                                          "NO+":true, "e-":true];
             foreach (isp, sp; _species_names) {
                 if (sp in validSpecies) {
-                    _mol_masses[isp] = __mol_masses[sp];
+                    _mol_masses[isp] = __mol_masses[getSpeciesId(sp)];
                     validSpecies.remove(sp);
                 }
                 else {
@@ -105,7 +134,7 @@ public:
                                          "N+":true, "O+":true, "N2+":true, "O2+":true];
             foreach (isp, sp; _species_names) {
                 if (sp in validSpecies) {
-                    _mol_masses[isp] = __mol_masses[sp];
+                    _mol_masses[isp] = __mol_masses[getSpeciesId(sp)];
                     validSpecies.remove(sp);
                 }
                 else {
@@ -139,7 +168,7 @@ public:
 
         _del_hf.length = _n_species;
         foreach (isp; 0 .. _n_species) {
-            _del_hf[isp] = del_hf[_species_names[isp]];
+            _del_hf[isp] = del_hf[getSpeciesId(_species_names[isp])];
         }
 
         _Cp_tr_rot.length = _n_species;
@@ -389,11 +418,13 @@ public:
         throw new GasModelException("entropy not implemented in TwoTemperatureNitrogen.");
     }
 
-    number vibEnergy(number Tve, int isp)
+    @nogc number vibEnergy(number Tve, int isp)
     {
         number h_at_Tve = enthalpyFromCurveFits(Tve, isp);
         number h_ve = h_at_Tve - _Cp_tr_rot[isp]*(Tve - T_REF) - _del_hf[isp];
-        //      writeln("Tve= ", Tve, " h_at_Tve= ", h_at_Tve, " h_ve= ", h_ve);
+        debug {
+            // writeln("Tve= ", Tve, " h_at_Tve= ", h_at_Tve, " h_ve= ", h_ve);
+        }
         return h_ve;
     }
 
@@ -408,7 +439,7 @@ private:
     number[7] _A; // working storage of coefficients
     number[][] _A_11, _B_11, _C_11, _D_11, _Delta_11, _alpha;
     number[][] _A_22, _B_22, _C_22, _D_22, _Delta_22, _mu;
-
+    Species[] species_ids;
 
     /**
      * In order to get smooth variations in thermodynamic properties
@@ -418,47 +449,47 @@ private:
      * on p.14 of their report, and give a Fortran implementation in
      * Appendix C (pp 40 & 41).
      */
-    void determineCoefficients(number T, int isp)
+    @nogc void determineCoefficients(number T, int isp)
     {
-        string spName = species_name(isp);
+        Species spId = getSpeciesId(species_name(isp));
         if (T < 800.0) {
-            foreach(i; 0 .. _A.length) { _A[i] = thermoCoeffs[spName][0][i]; }
+            foreach(i; 0 .. _A.length) { _A[i] = thermoCoeffs[spId][0][i]; }
         }
         if (T >= 800.0 && T <= 1200.0) {
             number wB = (1./400.0)*(T - 800.0);
             number wA = 1.0 - wB;
-            foreach(i; 0 .. _A.length) { _A[i] = wA*thermoCoeffs[spName][0][i] + wB*thermoCoeffs[spName][1][i]; }
+            foreach(i; 0 .. _A.length) { _A[i] = wA*thermoCoeffs[spId][0][i] + wB*thermoCoeffs[spId][1][i]; }
         }
         if (T > 1200.0 && T < 5500.0) {
-            foreach(i; 0 .. _A.length) { _A[i] = thermoCoeffs[spName][1][i]; }
+            foreach(i; 0 .. _A.length) { _A[i] = thermoCoeffs[spId][1][i]; }
         }
         if (T >= 5500.0 && T <= 6500.0) {
             number wB = (1./1000.0)*(T - 5500.0);
             number wA = 1.0 - wB;
-            foreach(i; 0 .. _A.length) { _A[i] = wA*thermoCoeffs[spName][1][i] + wB*thermoCoeffs[spName][2][i]; }
+            foreach(i; 0 .. _A.length) { _A[i] = wA*thermoCoeffs[spId][1][i] + wB*thermoCoeffs[spId][2][i]; }
         }
         if (T > 6500.0 && T < 14500.0) {
-            foreach(i; 0 .. _A.length) { _A[i] = thermoCoeffs[spName][2][i]; }
+            foreach(i; 0 .. _A.length) { _A[i] = thermoCoeffs[spId][2][i]; }
         }
         if (T >= 14500.0 && T <= 15500.0) {
             number wB = (1./1000.0)*(T - 14500.0);
             number wA = 1.0 - wB;
-            foreach(i; 0 .. _A.length) { _A[i] = wA*thermoCoeffs[spName][2][i] + wB*thermoCoeffs[spName][3][i]; }
+            foreach(i; 0 .. _A.length) { _A[i] = wA*thermoCoeffs[spId][2][i] + wB*thermoCoeffs[spId][3][i]; }
         }
         if (T > 15500.0 && T < 24500.0) {
-            foreach(i; 0 .. _A.length) { _A[i] = thermoCoeffs[spName][3][i]; }
+            foreach(i; 0 .. _A.length) { _A[i] = thermoCoeffs[spId][3][i]; }
         }
         if (T >= 24500.0 && T <= 25500.0) {
             number wB = (1./1000.0)*(T - 24500.0);
             number wA = 1.0 - wB;
-            foreach(i; 0 .. _A.length) { _A[i] = wA*thermoCoeffs[spName][3][i] + wB*thermoCoeffs[spName][4][i]; }
+            foreach(i; 0 .. _A.length) { _A[i] = wA*thermoCoeffs[spId][3][i] + wB*thermoCoeffs[spId][4][i]; }
         }
         if ( T > 25500.0) {
-            foreach(i; 0 .. _A.length) { _A[i] = thermoCoeffs[spName][4][i]; }
+            foreach(i; 0 .. _A.length) { _A[i] = thermoCoeffs[spId][4][i]; }
         }
     }
 
-    number CpFromCurveFits(number T, int isp)
+    @nogc number CpFromCurveFits(number T, int isp)
     {
         /* Assume that Cp is constant off the edges of the curve fits.
          * For T < 300.0, this is a reasonable assumption to make.
@@ -482,7 +513,7 @@ private:
         return Cp;
     }
 
-    number enthalpyFromCurveFits(number T, int isp)
+    @nogc number enthalpyFromCurveFits(number T, int isp)
     {
         /* Gupta et al suggest that specific enthalpy below 300 K
          * should be calculated assuming that the specific heat at
@@ -523,7 +554,7 @@ private:
         return h;
     }
 
-    number vibEnergy(in GasState Q, number Tve)
+    @nogc number vibEnergy(in GasState Q, number Tve)
     {
         number e_ve = 0.0;
         foreach (isp; molecularSpecies) {
@@ -532,7 +563,7 @@ private:
         return e_ve;
     }
 
-    number transRotEnergy(in GasState Q)
+    @nogc number transRotEnergy(in GasState Q)
     {
         number e_tr_rot = 0.0;
         foreach (isp; 0 .. _n_species) {
@@ -542,12 +573,12 @@ private:
         return e_tr_rot;
     }
 
-    number vibSpecHeatConstV(number Tve, int isp)
+    @nogc number vibSpecHeatConstV(number Tve, int isp)
     {
         return CpFromCurveFits(Tve, isp) - _Cp_tr_rot[isp];
     }
 
-    number vibSpecHeatConstV(in GasState Q, number Tve)
+    @nogc number vibSpecHeatConstV(in GasState Q, number Tve)
     {
         number Cv_vib = 0.0;
         foreach (isp; molecularSpecies) {
@@ -556,12 +587,12 @@ private:
         return Cv_vib;
     }
 
-    number transRotSpecHeatConstV(int isp)
+    @nogc number transRotSpecHeatConstV(int isp)
     {
         return to!number(_Cp_tr_rot[isp] - _R[isp]);
     }
 
-    number transRotSpecHeatConstV(in GasState Q)
+    @nogc number transRotSpecHeatConstV(in GasState Q)
     {
         number Cv = 0.0;
         foreach (isp; 0 .. _n_species) {
@@ -570,7 +601,7 @@ private:
         return Cv;
     }
 
-    number vibTemperature(in GasState Q)
+    @nogc number vibTemperature(in GasState Q)
     {
         int MAX_ITERATIONS = 20;
         // We'll keep adjusting our temperature estimate
@@ -604,9 +635,11 @@ private:
         
         if (count == MAX_ITERATIONS) {
             string msg = "The 'vibTemperature' function failed to converge.\n";
-            msg ~= format("The final value for Tvib was: %12.6f\n", T_guess);
-            msg ~= "The supplied GasState was:\n";
-            msg ~= Q.toString() ~ "\n";
+            debug {
+                msg ~= format("The final value for Tvib was: %12.6f\n", T_guess);
+                msg ~= "The supplied GasState was:\n";
+                msg ~= Q.toString() ~ "\n";
+            }
             throw new GasModelException(msg);
         }
 
@@ -640,9 +673,9 @@ version(two_temperature_air_test) {
     }
 }
 
-static double[string] __mol_masses;
-static double[string] del_hf;
-static double[7][5][string] thermoCoeffs;
+static double[11] __mol_masses;
+static double[11] del_hf;
+static double[7][5][11] thermoCoeffs;
 static double[string] A_11, B_11, C_11, D_11;
 static double[string] A_22, B_22, C_22, D_22;
 
@@ -657,34 +690,34 @@ static this()
     molecularSpecies["NO+"] = true;
     */
 
-    __mol_masses["N"] = 14.0067e-3;
-    __mol_masses["O"] = 0.01599940; 
-    __mol_masses["N2"] = 28.0134e-3;
-    __mol_masses["O2"] = 0.03199880;
-    __mol_masses["NO"] = 0.03000610;
-    __mol_masses["N+"] = 14.0061514e-3;
-    __mol_masses["O+"] = 15.9988514e-3;
-    __mol_masses["N2+"] = 28.0128514e-3;
-    __mol_masses["O2+"] = 31.9982514e-3;
-    __mol_masses["NO+"] = 30.0055514e-3;
-    __mol_masses["e-"] = 0.000548579903e-3;
+    __mol_masses[Species.N] = 14.0067e-3;
+    __mol_masses[Species.O] = 0.01599940; 
+    __mol_masses[Species.N2] = 28.0134e-3;
+    __mol_masses[Species.O2] = 0.03199880;
+    __mol_masses[Species.NO] = 0.03000610;
+    __mol_masses[Species.Nplus] = 14.0061514e-3;
+    __mol_masses[Species.Oplus] = 15.9988514e-3;
+    __mol_masses[Species.N2plus] = 28.0128514e-3;
+    __mol_masses[Species.O2plus] = 31.9982514e-3;
+    __mol_masses[Species.NOplus] = 30.0055514e-3;
+    __mol_masses[Species.eminus] = 0.000548579903e-3;
 
     /**
      * See Table I in Gnoffo et al.
      */
-    del_hf["N"]   = 112.951e3*4.184/__mol_masses["N"];
-    del_hf["O"]   = 59.544e3*4.184/__mol_masses["O"];
-    del_hf["N2"]  = 0.0;
-    del_hf["O2"]  = 0.0;
-    del_hf["NO"]  = 21.6009e3*4.184/__mol_masses["NO"];
-    del_hf["N+"]  = 449.709e3*4.184/__mol_masses["N+"];
-    del_hf["O+"]  = 374.867e3*4.184/__mol_masses["O+"];
-    del_hf["N2+"] = 364.9392e3*4.184/__mol_masses["N2+"];
-    del_hf["O2+"] = 280.2099e3*4.184/__mol_masses["O2+"];
-    del_hf["NO+"] = 237.3239e3*4.184/__mol_masses["NO+"];
-    del_hf["e-"]  =  0.0;
+    del_hf[Species.N]   = 112.951e3*4.184/__mol_masses[Species.N];
+    del_hf[Species.O]   = 59.544e3*4.184/__mol_masses[Species.O];
+    del_hf[Species.N2]  = 0.0;
+    del_hf[Species.O2]  = 0.0;
+    del_hf[Species.NO]  = 21.6009e3*4.184/__mol_masses[Species.NO];
+    del_hf[Species.Nplus]  = 449.709e3*4.184/__mol_masses[Species.Nplus];
+    del_hf[Species.Oplus]  = 374.867e3*4.184/__mol_masses[Species.Oplus];
+    del_hf[Species.N2plus] = 364.9392e3*4.184/__mol_masses[Species.N2plus];
+    del_hf[Species.O2plus] = 280.2099e3*4.184/__mol_masses[Species.O2plus];
+    del_hf[Species.NOplus] = 237.3239e3*4.184/__mol_masses[Species.NOplus];
+    del_hf[Species.eminus]  =  0.0;
 
-    thermoCoeffs["N2"] = 
+    thermoCoeffs[Species.N2] = 
         [
          [  0.3674826e+01, -0.1208150e-02,  0.2324010e-05, -0.6321755e-09, -0.2257725e-12, -0.1061160e+04,  0.23580e+01 ], // 300 -- 1000 K
          [  0.2896319e+01,  0.1515486e-02, -0.5723527e-06,  0.9980739e-10, -0.6522355e-14, -0.9058620e+03,  0.43661e+01 ], // 1000 -- 6000 K
@@ -693,7 +726,7 @@ static this()
          [ -0.5168080e+01,  0.2333690e-02, -0.1295340e-06,  0.2787210e-11, -0.2135960e-16, -0.1043000e+04,  0.66217e+02 ] // 25000 -- 30000 K
          ];
 
-    thermoCoeffs["O2"] = 
+    thermoCoeffs[Species.O2] = 
         [
          [  0.3625598e+01, -0.1878218e-02,  0.7055454e-05, -0.6763513e-08,  0.2155599e-11, -0.1047520e+04,  0.43628e+01 ], // 300 -- 1000 K
          [  0.3621953e+01,  0.7361826e-03, -0.1965222e-06,  0.3620155e-10, -0.2894562e-14, -0.1201980e+04,  0.38353e+01 ], // 1000 -- 6000 K
@@ -702,7 +735,7 @@ static this()
          [  0.3961980e+01,  0.3944550e-03, -0.2950580e-07,  0.7397450e-12, -0.6420930e-17, -0.1044000e+04,  0.13985e+01 ]
          ];
 
-    thermoCoeffs["N"] = 
+    thermoCoeffs[Species.N] = 
         [
          [  0.2503071e+01, -0.2180018e-04,  0.5420528e-07, -0.5647560e-10,  0.2099904e-13,  0.5609890e+05,  0.41676e+01 ], // 300 -- 1000 K
          [  0.2450268e+01,  0.1066145e-03, -0.7465337e-07,  0.1879652e-10, -0.1025983e-14,  0.5611600e+05,  0.42618e+01 ], // 1000 -- 6000 K
@@ -711,7 +744,7 @@ static this()
          [  0.1552020e+02, -0.3885790e-02,  0.3228840e-06, -0.9605270e-11,  0.9547220e-16,  0.5609000e+05, -0.88120e+02 ]  // 25000 -- 30000 K
          ];
 
-    thermoCoeffs["O"] = 
+    thermoCoeffs[Species.O] = 
         [
          [  0.2946428e+01, -0.1638166e-02,  0.2421031e-05, -0.1602843e-08,  0.3890696e-12,  0.2914760e+05,  0.35027e+01 ], // 300 -- 1000 K
          [  0.2542059e+01, -0.2755061e-04, -0.3102803e-08,  0.4551067e-11, -0.4368051e-15,  0.2923080e+05,  0.49203e+01 ], // 1000 -- 6000 K
@@ -720,7 +753,7 @@ static this()
          [  0.1642810e+02, -0.3931300e-02,  0.2983990e-06, -0.8161280e-11,  0.7500430e-16,  0.2915000e+05, -0.94358e+02 ] // 25000 -- 30000 K
          ];
         
-    thermoCoeffs["NO"] =
+    thermoCoeffs[Species.NO] =
         [
          [  0.4045952e+01, -0.3418178e-02,  0.7981919e-05, -0.6113931e-08,  0.1591907e-11,  0.9745390e+04,  0.51497e+01 ], // 300 -- 1000 K
          [  0.3189000e+01,  0.1338228e-02, -0.5289932e-06,  0.9591933e-10, -0.6484793e-14,  0.9828330e+04,  0.66867e+01 ], // 1000 -- 6000 K
@@ -729,7 +762,7 @@ static this()
          [  0.2350750e+01,  0.5864300e-03, -0.3131650e-07,  0.6049510e-12, -0.4055670e-17,  0.9764000e+04,  0.14026e+02 ] // 25000 -- 30000 K
          ];
 
-    thermoCoeffs["N+"] = 
+    thermoCoeffs[Species.Nplus] = 
         [
          [     0.2727e+01,    -0.2820e-03,     0.1105e-06,    -0.1551e-10,     0.7847e-15,     0.2254e+06,  0.36450e+01 ], // 300 -- 1000 K 
          [     0.2727e+01,    -0.2820e-03,     0.1105e-06,    -0.1551e-10,     0.7847e-15,     0.2254e+06,  0.36450e+01 ], // 1000 -- 6000 K , yes same as previous entry
@@ -738,7 +771,7 @@ static this()
          [  0.2228570e+01,  0.1245820e-03, -0.8763570e-08,  0.2620400e-12, -0.2167420e-17,     0.2554e+06,  0.67811e+01 ] // 25000 -- 30000 K
          ];
 
-    thermoCoeffs["O+"] = 
+    thermoCoeffs[Species.Oplus] = 
         [
          [  0.2498479e+01,  0.1141097e-04, -0.2976139e-07,  0.3224653e-10, -0.1237551e-13,  0.1879490e+06,  0.43864e+01 ], // 300 -- 1000 K
          [  0.2506048e+01, -0.1446424e-04,  0.1244604e-07, -0.4685847e-11,  0.6554887e-15,  0.1879470e+06,  0.43480e+01 ], // 1000 -- 6000 K
@@ -747,7 +780,7 @@ static this()
          [  0.1288860e+01,  0.4334250e-03, -0.2675820e-07,  0.6215900e-12, -0.4513150e-17,  0.1879000e+06,  0.12604e+02 ] // 25000 -- 30000 K
          ];
 
-    thermoCoeffs["N2+"] = 
+    thermoCoeffs[Species.N2plus] = 
         [
          [  0.3397000e+01,  0.4525000e-03,  0.1272000e-06, -0.3879000e-10,  0.2459000e-14,  0.1826000e+06,  0.36535e+01 ], // 300 -- 1000 K
          [  0.3397390e+01,  0.4524870e-03,  0.1272300e-06, -0.3879340e-10,  0.2458950e-14,  0.1826000e+06,  0.42050e+01 ], // 1000 -- 6000 K
@@ -756,7 +789,7 @@ static this()
          [  0.3949290e+01,  0.3679480e-03, -0.2691020e-07,  0.6711050e-12, -0.5824370e-17,  0.1826000e+06,  0.65472e+00 ] // 25000 -- 30000 K
          ];
 
-    thermoCoeffs["O2+"] = 
+    thermoCoeffs[Species.O2plus] = 
         [
          [  0.3243000e+01,  0.1174000e-02, -0.3900000e-06,  0.5437000e-10, -0.2392000e-14,  0.1400000e+06,  0.59250e+01 ], // 300 -- 1000 K
          [  0.3242980e+01,  0.1173910e-02, -0.3900420e-06,  0.5437260e-10, -0.2392320e-14,  0.1400000e+06,  0.59250e+01 ], // 1000 -- 6000 K
@@ -764,7 +797,7 @@ static this()
          [ -0.2801710e+00,  0.1667410e-02, -0.1210740e-06,  0.3211290e-11, -0.2834890e-16,  0.1400000e+06,  0.31013e+02 ], // 15000 -- 25000 K
          [  0.2044550e+01,  0.1031320e-02, -0.7404630e-07,  0.1925750e-11, -0.1746100e-16,  0.1400000e+06,  0.14310e+02 ] // 25000 -- 30000 K
          ]; 
-    thermoCoeffs["NO+"] = 
+    thermoCoeffs[Species.NOplus] = 
         [
          [  0.3668506e+01, -0.1154458e-02,  0.2175561e-05, -0.4822747e-09, -0.2784791e-12,  0.1180340e+06,  0.37852e+01 ],
          [  0.2888549e+01,  0.1521712e-02, -0.5753124e-06,  0.1005108e-09, -0.6604429e-14,  0.1181920e+06,  0.51508e+01 ],
@@ -773,7 +806,7 @@ static this()
          [ -0.4348760e+01,  0.2401210e-02, -0.1445990e-06,  0.3381320e-11, -0.2825510e-16,  0.1181920e+06,  0.65896e+02 ]
          ];
 
-    thermoCoeffs["e-"] = 
+    thermoCoeffs[Species.eminus] = 
         [
          [  0.2500000e+01,            0.0,            0.0,            0.0,            0.0, -0.7453750e+03, -0.11734e+02],
          [  0.2500000e+01,            0.0,            0.0,            0.0,            0.0, -0.7453750e+03, -0.11734e+02],

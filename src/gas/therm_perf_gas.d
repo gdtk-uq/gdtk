@@ -190,16 +190,18 @@ public:
         number Tsave = T1;
         number T2 = T1 + delT;
 
-        auto zeroFun = delegate (number T) {
+        number zeroFun(number T) {
             Q.T = T;
             number s_guess = entropy(Q);
             return s - s_guess;
-        };
+        }
 
         if ( bracket!(zeroFun,number)(T1, T2) == -1 ) {
             string msg = "The 'bracket' function failed to find temperature values\n";
-            msg ~= "that bracketed the zero function in ThermallyPerfectGas.update_thermo_from_ps().\n";
-            msg ~= format("The final values are: T1 = %12.6f and T2 = %12.6f\n", T1, T2);
+            debug {
+                msg ~= "that bracketed the zero function in ThermallyPerfectGas.update_thermo_from_ps().\n";
+                msg ~= format("The final values are: T1 = %12.6f and T2 = %12.6f\n", T1, T2);
+            }
             throw new Exception(msg);
         }
 
@@ -211,13 +213,15 @@ public:
         }
         catch ( Exception e ) {
             string msg = "There was a problem iterating to find temperature\n";
-            msg ~= "in function ThermallyPerfectGas.update_thermo_from_ps().\n";
-            msg ~= format("The initial temperature guess was: %12.6f\n", Tsave);
-            msg ~= format("The target entropy value was: %12.6f\n", s);
-            msg ~= format("The GasState is currently:\n");
-            msg ~= Q.toString();
-            msg ~= "The message from the ridder.solve function is:\n";
-            msg ~= e.msg;
+            debug {
+                msg ~= "in function ThermallyPerfectGas.update_thermo_from_ps().\n";
+                msg ~= format("The initial temperature guess was: %12.6f\n", Tsave);
+                msg ~= format("The target entropy value was: %12.6f\n", s);
+                msg ~= format("The GasState is currently:\n");
+                msg ~= Q.toString();
+                msg ~= "The message from the ridder.solve function is:\n";
+                msg ~= e.msg;
+            }
             throw new Exception(msg);
         }
         _tpgMixEOS.update_energy(Q);

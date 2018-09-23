@@ -102,35 +102,55 @@ public:
 
     override void update_thermo_from_pT(GasState Q) const 
     {
-        Q.rho = updateRho_PT(Q.p.re, Q.T.re);
-        Q.u = updateEnergy_rhoT(Q.rho.re, Q.T.re);
+        debug {
+            Q.rho = updateRho_PT(Q.p.re, Q.T.re);
+            Q.u = updateEnergy_rhoT(Q.rho.re, Q.T.re);
+        } else {
+            assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
+        }
     }
     override void update_thermo_from_rhou(GasState Q) const
     {
-        Q.T = updateTemperature_rhou(Q.rho.re, Q.u.re);
-        Q.p = updatePressure_rhoT(Q.rho.re, Q.T.re);
+        debug {
+            Q.T = updateTemperature_rhou(Q.rho.re, Q.u.re);
+            Q.p = updatePressure_rhoT(Q.rho.re, Q.T.re);
+        } else {
+            assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
+        }
     }
     override void update_thermo_from_rhoT(GasState Q) const //DONE
     {
-        Q.p = updatePressure_rhoT(Q.rho.re, Q.T.re);
-        Q.u = updateEnergy_rhoT(Q.rho.re, Q.u.re);
+        debug {
+            Q.p = updatePressure_rhoT(Q.rho.re, Q.T.re);
+            Q.u = updateEnergy_rhoT(Q.rho.re, Q.u.re);
+        } else {
+            assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
+        }
     }
     override void update_thermo_from_rhop(GasState Q) const
     {
-        Q.u = updateEnergy_Prho(Q.p.re, Q.rho.re);//might want to fix the order that this solves in
-        Q.T = updateTemperature_rhou(Q.rho.re, Q.u.re);
+        debug {
+            Q.u = updateEnergy_Prho(Q.p.re, Q.rho.re);//might want to fix the order that this solves in
+            Q.T = updateTemperature_rhou(Q.rho.re, Q.u.re);
+        } else {
+            assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
+        }
     }
     override void update_thermo_from_ps(GasState Q, number s) const
     {
-        throw new Exception(format("Not implemented: line=%d, file=%s\n", __LINE__, __FILE__));
+        throw new Exception("Not implemented.");
     }
     override void update_thermo_from_hs(GasState Q, number h, number s) const
     {
-        throw new Exception(format("Not implemented: line=%d, file=%s\n", __LINE__, __FILE__));
+        throw new Exception("Not implemented.");
     }
     override void update_sound_speed(GasState Q) const
     {
-        Q.a = updateSoundSpeed_rhoT(Q.rho.re, Q.T.re);
+        debug {
+            Q.a = updateSoundSpeed_rhoT(Q.rho.re, Q.T.re);
+        } else {
+            assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
+        }
     }
     override void update_trans_coeffs(GasState Q) const
     {
@@ -144,11 +164,16 @@ public:
     */
     override number dudT_const_v(in GasState Q) const
     {
-        return to!number(get_de_dT(Q.rho.re, Q.T.re));
+        debug {
+            return to!number(get_de_dT(Q.rho.re, Q.T.re));
+        } else {
+            assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
+            return to!number(0.0);
+        }
     }
     override number dhdT_const_p(in GasState Q) const
     {
-        throw new Exception(format("Not implemented: line=%d, file=%s\n", __LINE__, __FILE__));
+        throw new Exception("Not implemented.");
     }
     override number dpdrho_const_T(in GasState Q) const
     {
@@ -169,7 +194,7 @@ public:
     }
     override number entropy(in GasState Q) const
     {
-        throw new Exception(format("Not implemented: line=%d, file=%s\n", __LINE__, __FILE__));
+        throw new Exception("Not implemented.");
     }
 
 private:

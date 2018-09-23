@@ -23,10 +23,10 @@ import gas.physical_constants : electron_volt_energy, Avogadro_number;
 
 
 class PseudoSpecies {
-    @property string name() const { return _name; }
-    @property double mol_mass() const { return _mol_mass; }
-    @property int DOF() const { return _dof; }
-    @property int parentIdx() const { return _parentIdx; }
+    @property @nogc string name() const { return _name; }
+    @property @nogc double mol_mass() const { return _mol_mass; }
+    @property @nogc int DOF() const { return _dof; }
+    @property @nogc int parentIdx() const { return _parentIdx; }
 
     this(lua_State *L)
     {
@@ -36,7 +36,7 @@ class PseudoSpecies {
         _parentIdx = getInt(L, -1, "parentIdx");
     }
 
-    abstract number energy(in GasState Q) const;
+    @nogc abstract number energy(in GasState Q) const;
 
 private:
     string _name;

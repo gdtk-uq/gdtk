@@ -174,7 +174,7 @@ private:
     double _T1;  // K
     double _p1;  // Pa
 
-    number energyInNoneq(GasState Q) const {
+    @nogc number energyInNoneq(GasState Q) const {
         number uNoneq = 0.0;
         foreach (isp; 0 .. _n_species) {
             uNoneq += Q.massf[isp] * _electronicSpecies[isp].energy(Q);

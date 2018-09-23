@@ -21,14 +21,14 @@ import gas.diffusion.cea_therm_cond;
 
 interface ThermalConductivity {
     ThermalConductivity dup() const;
-    final void update_thermal_conductivity(GasState Q) 
+    @nogc final void update_thermal_conductivity(GasState Q) 
     {
         Q.k = eval(Q, Q.T);
         for ( auto imode = 0; imode < Q.T_modes.length; ++imode) {
             Q.k_modes[imode] = eval(Q, Q.T_modes[imode]);
         }
     }
-    number eval(ref const(GasState) Q, number T);
+    @nogc number eval(ref const(GasState) Q, number T);
 }
 
 /**

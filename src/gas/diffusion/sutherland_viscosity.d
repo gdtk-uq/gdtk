@@ -32,14 +32,18 @@ import util.msg_service;
    Returns:
      The viscosity in Pa.s.
 +/
-pure number sutherland_viscosity(number T, double T_ref, double mu_ref, double S)
+@nogc pure number sutherland_viscosity(number T, double T_ref, double mu_ref, double S)
 in {
-    assert(T > 0.0, brokenPreCondition("temperature", __LINE__, __FILE__));
-    assert(T_ref > 0.0, brokenPreCondition("T_ref", __LINE__, __FILE__));
-    assert(mu_ref > 0.0, brokenPreCondition("mu_ref", __LINE__, __FILE__));
+    debug {
+        assert(T > 0.0, brokenPreCondition("temperature", __LINE__, __FILE__));
+        assert(T_ref > 0.0, brokenPreCondition("T_ref", __LINE__, __FILE__));
+        assert(mu_ref > 0.0, brokenPreCondition("mu_ref", __LINE__, __FILE__));
+    }
 }
 out(result) {
-    assert(result > 0.0, brokenPostCondition("viscosity", __LINE__, __FILE__));
+    debug {
+        assert(result > 0.0, brokenPostCondition("viscosity", __LINE__, __FILE__));
+    }
 }
 body{
     number mu = mu_ref*sqrt(T/T_ref)*(T/T_ref)*(T_ref + S)/(T + S);
@@ -68,7 +72,7 @@ public:
       Compute the viscosity assuming that temperature is
       up-to-date in GasState Q.
     +/
-    override number eval(in GasState Q) const {
+    @nogc override number eval(in GasState Q) const {
         return sutherland_viscosity(Q.T, _T_ref, _mu_ref, _S);
     }
 

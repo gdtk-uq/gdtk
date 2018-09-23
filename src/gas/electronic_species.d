@@ -21,10 +21,10 @@ import gas.gas_state;
 import gas.physical_constants : electron_volt_energy, Avogadro_number, Boltzmann_constant;
 
 class ElectronicSpecies {
-    @property string name() const { return _name; }
-    @property int level() const { return _level; }
-    @property double mol_mass() const { return _mol_mass; }
-    @property int group_degeneracy() const { return _group_degeneracy; }
+    @property @nogc string name() const { return _name; }
+    @property @nogc int level() const { return _level; }
+    @property @nogc double mol_mass() const { return _mol_mass; }
+    @property @nogc int group_degeneracy() const { return _group_degeneracy; }
 
     this(lua_State *L)
     {
@@ -34,7 +34,7 @@ class ElectronicSpecies {
         _group_degeneracy = getInt(L, -1, "group_degeneracy");
     }
 
-    abstract number energy(in GasState Q) const;
+    @nogc abstract number energy(in GasState Q) const;
 
 private:
     string _name;

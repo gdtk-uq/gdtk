@@ -2398,25 +2398,32 @@ public:
 
     override void update_thermo_from_pT(GasState Q) 
     {
-        Q.rho = _IAPWS.Density(Q.p.re, Q.T.re, Q.quality.re);
-        Q.a = _IAPWS.SoundSpeed(Q.p.re, Q.T.re, Q.quality.re);
-        Q.u = _IAPWS.SpecificInternalEnergy(Q.p.re, Q.T.re, Q.quality.re);
-        Q.mu = _IAPWS.DynamicViscosity(Q.p.re, Q.T.re, Q.quality.re);
-        Q.k = _IAPWS.ThermalConductivity(Q.p.re, Q.T.re, Q.quality.re);
+        debug {
+            Q.rho = _IAPWS.Density(Q.p.re, Q.T.re, Q.quality.re);
+            Q.a = _IAPWS.SoundSpeed(Q.p.re, Q.T.re, Q.quality.re);
+            Q.u = _IAPWS.SpecificInternalEnergy(Q.p.re, Q.T.re, Q.quality.re);
+            Q.mu = _IAPWS.DynamicViscosity(Q.p.re, Q.T.re, Q.quality.re);
+            Q.k = _IAPWS.ThermalConductivity(Q.p.re, Q.T.re, Q.quality.re);
+        } else {
+            throw new Error("not compatible with @nogc");
+        }
     }
 
     override void update_thermo_from_rhou(GasState Q)
     {
-        if (Q.quality == 1) {
-            double[2] pT = getpT_from_rhou(Q.rho.re, Q.u.re);
-            Q.p = pT[0];
-            Q.T = pT[1];
-            Q.a = _IAPWS.SoundSpeed(Q.p.re, Q.T.re, Q.quality.re);
-            Q.mu = _IAPWS.DynamicViscosity(Q.p.re, Q.T.re, Q.quality.re);
-            Q.k = _IAPWS.ThermalConductivity(Q.p.re, Q.T.re, Q.quality.re); 
-        }
-        else {
-            assert(0, "Not in gas IAPWS-Region2, implement me");
+        debug {
+            if (Q.quality == 1) {
+                double[2] pT = getpT_from_rhou(Q.rho.re, Q.u.re);
+                Q.p = pT[0];
+                Q.T = pT[1];
+                Q.a = _IAPWS.SoundSpeed(Q.p.re, Q.T.re, Q.quality.re);
+                Q.mu = _IAPWS.DynamicViscosity(Q.p.re, Q.T.re, Q.quality.re);
+                Q.k = _IAPWS.ThermalConductivity(Q.p.re, Q.T.re, Q.quality.re); 
+            } else {
+                assert(0, "Not in gas IAPWS-Region2, implement me");
+            }
+        } else {
+            throw new Error("not compatible with @nogc");
         }
     } 
     
@@ -2438,8 +2445,7 @@ public:
             Q.u = _IAPWS.SpecificInternalEnergy(Q.p.re, Q.T.re, Q.quality.re);
             Q.mu = _IAPWS.DynamicViscosity(Q.p.re, Q.T.re, Q.quality.re);
             Q.k = _IAPWS.ThermalConductivity(Q.p.re, Q.T.re, Q.quality.re);
-        }
-        else {
+        } else {
             assert(0, "Not in IAPWS-Region2, implement me");
         }
     }
@@ -2451,22 +2457,40 @@ public:
     
     override void update_sound_speed(GasState Q)
     {
-        Q.a = _IAPWS.SoundSpeed(Q.p.re, Q.T.re, Q.quality.re);
+        debug {
+            Q.a = _IAPWS.SoundSpeed(Q.p.re, Q.T.re, Q.quality.re);
+        } else {
+            throw new Error("not compatible with @nogc");
+        }
     }
 
     override void update_trans_coeffs(GasState Q)
     {
-        Q.mu = _IAPWS.DynamicViscosity(Q.p.re, Q.T.re, Q.quality.re);
-        Q.k = _IAPWS.ThermalConductivity(Q.p.re, Q.T.re, Q.quality.re);
+        debug {
+            Q.mu = _IAPWS.DynamicViscosity(Q.p.re, Q.T.re, Q.quality.re);
+            Q.k = _IAPWS.ThermalConductivity(Q.p.re, Q.T.re, Q.quality.re);
+        } else {
+            throw new Error("not compatible with @nogc");
+        }
     }
 
     override number dudT_const_v(in GasState Q)
     {
-        return to!number(_IAPWS.SpecificIsochoricHeatCapacity(Q.p.re, Q.T.re, Q.quality.re));
+        debug {
+            return to!number(_IAPWS.SpecificIsochoricHeatCapacity(Q.p.re, Q.T.re, Q.quality.re));
+        } else {
+            throw new Error("not compatible with @nogc");
+            return to!number(0.0);
+        }
     }
     override number dhdT_const_p(in GasState Q)
     {
-        return to!number(_IAPWS.SpecificIsobaricHeatCapacity(Q.p.re, Q.T.re, Q.quality.re));
+        debug {
+            return to!number(_IAPWS.SpecificIsobaricHeatCapacity(Q.p.re, Q.T.re, Q.quality.re));
+        } else {
+            throw new Error("not compatible with @nogc");
+            return to!number(0.0);
+        }
     }
     override number dpdrho_const_T(in GasState Q)
     {
@@ -2479,15 +2503,30 @@ public:
     }
     override number internal_energy(in GasState Q)
     {
-        return to!number(_IAPWS.SpecificInternalEnergy(Q.p.re, Q.T.re, Q.quality.re));
+        debug {
+            return to!number(_IAPWS.SpecificInternalEnergy(Q.p.re, Q.T.re, Q.quality.re));
+        } else {
+            throw new Error("not compatible with @nogc");
+            return to!number(0.0);
+        }
     }
     override number enthalpy(in GasState Q)
     {
-        return to!number(_IAPWS.SpecificEnthalpy(Q.p.re, Q.T.re, Q.quality.re));
+        debug {
+            return to!number(_IAPWS.SpecificEnthalpy(Q.p.re, Q.T.re, Q.quality.re));
+        } else {
+            throw new Error("not compatible with @nogc");
+            return to!number(0.0);
+        }
     }
     override number entropy(in GasState Q)
     {
-        return to!number(_IAPWS.SpecificEntropy(Q.p.re, Q.T.re, Q.quality.re));
+        debug {
+            return to!number(_IAPWS.SpecificEntropy(Q.p.re, Q.T.re, Q.quality.re));
+        } else {
+            throw new Error("not compatible with @nogc");
+            return to!number(0.0);
+        }
     }
 } // end class Steam
 

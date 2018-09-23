@@ -130,70 +130,104 @@ public:
 
     override void update_thermo_from_pT(GasState Q) const 
     {
-        Q.rho = updateRho_PT(Q.p.re, Q.T.re);
-        Q.u = updateEnergy_rhoT(Q.rho.re, Q.T.re);
+        debug {
+            Q.rho = updateRho_PT(Q.p.re, Q.T.re);
+            Q.u = updateEnergy_rhoT(Q.rho.re, Q.T.re);
+        } else {
+            assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
+            return to!number(0.0);
+        }
     }
 
     override void update_thermo_from_rhou(GasState Q) const
     {
-        if (lookup_rhoeFlag){
-            //following line assumes that both T and P trees constructed with same bounds
-            double[2] uv = get_uv_rhoe(Q.rho.re, Q.u.re,
-                                       T_rhoe_Tree.X_min,
-                                       T_rhoe_Tree.X_max,
-                                       T_rhoe_Tree.Y_min,
-                                       T_rhoe_Tree.Y_max);
-            Q.T = T_rhoe_Tree.search(uv[0], uv[1]).interpolateF(uv[0], uv[1]);
-            Q.p = P_rhoe_Tree.search(uv[0], uv[1]).interpolateF(uv[0], uv[1]);
-        }
-        else{
-            Q.T = updateTemperature_rhoe(Q.rho.re, Q.u.re);
-            Q.p = updatePressure_rhoT(Q.rho.re,Q.T.re);
+        debug {
+            if (lookup_rhoeFlag) {
+                //following line assumes that both T and P trees constructed with same bounds
+                double[2] uv = get_uv_rhoe(Q.rho.re, Q.u.re,
+                                           T_rhoe_Tree.X_min,
+                                           T_rhoe_Tree.X_max,
+                                           T_rhoe_Tree.Y_min,
+                                           T_rhoe_Tree.Y_max);
+                Q.T = T_rhoe_Tree.search(uv[0], uv[1]).interpolateF(uv[0], uv[1]);
+                Q.p = P_rhoe_Tree.search(uv[0], uv[1]).interpolateF(uv[0], uv[1]);
+            } else {
+                Q.T = updateTemperature_rhoe(Q.rho.re, Q.u.re);
+                Q.p = updatePressure_rhoT(Q.rho.re,Q.T.re);
+            }
+        } else {
+            assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
+            return to!number(0.0);
         }
     }
 
     override void update_thermo_from_rhoT(GasState Q) const//DONE
     {
-        Q.p = updatePressure_rhoT(Q.rho.re, Q.T.re);
-        Q.u = updateEnergy_rhoT(Q.rho.re, Q.T.re);
+        debug {
+            Q.p = updatePressure_rhoT(Q.rho.re, Q.T.re);
+            Q.u = updateEnergy_rhoT(Q.rho.re, Q.T.re);
+        } else {
+            assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
+            return to!number(0.0);
+        }
     }
 
     override void update_thermo_from_rhop(GasState Q) const
     {
-        Q.T = updateT_Prho(Q.p.re, Q.rho.re);
-        Q.u = updateEnergy_rhoT(Q.rho.re, Q.T.re);
+        debug {
+            Q.T = updateT_Prho(Q.p.re, Q.rho.re);
+            Q.u = updateEnergy_rhoT(Q.rho.re, Q.T.re);
+        } else {
+            assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
+            return to!number(0.0);
+        }
     }
     
     override void update_thermo_from_ps(GasState Q, number s) const
     {
-        Q.rho = getRho_EntropyP(s.re, Q.p.re, Q.T.re);//Q.T is modified by function
-        Q.u = updateEnergy_rhoT(Q.rho.re, Q.T.re);
+        debug {
+            Q.rho = getRho_EntropyP(s.re, Q.p.re, Q.T.re);//Q.T is modified by function
+            Q.u = updateEnergy_rhoT(Q.rho.re, Q.T.re);
+        } else {
+            assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
+            return to!number(0.0);
+        }
     }
 
     override void update_thermo_from_hs(GasState Q, number h, number s) const
     {
-        if (lookup_hsFlag) {
-            Q.rho = rho_sh_Tree.search(s.re,h.re).interpolateF(s.re,h.re);
-            Q.T = T_sh_Tree.search(s.re,h.re).interpolateF(s.re,h.re);}
-        else {
-            Q.rho = getRho_sh(s.re, h.re, Q.T.re);
+        debug {
+            if (lookup_hsFlag) {
+                Q.rho = rho_sh_Tree.search(s.re,h.re).interpolateF(s.re,h.re);
+                Q.T = T_sh_Tree.search(s.re,h.re).interpolateF(s.re,h.re);
+            } else {
+                Q.rho = getRho_sh(s.re, h.re, Q.T.re);
+            }
+            Q.u = updateEnergy_rhoT(Q.rho.re, Q.T.re);
+        } else {
+            assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
+            return to!number(0.0);
         }
-        Q.u = updateEnergy_rhoT(Q.rho.re, Q.T.re);
     }
 
     override void update_sound_speed(GasState Q) const
     {
-        if (lookup_rhoeFlag){
-            double[2] uv = get_uv_rhoe(Q.rho.re, Q.u.re,
-                                       a_rhoe_Tree.X_min,
-                                       a_rhoe_Tree.X_max,
-                                       a_rhoe_Tree.Y_min,
-                                       a_rhoe_Tree.Y_max);
-            Q.a = a_rhoe_Tree.search(uv[0], uv[1]).interpolateF(uv[0], uv[1]);
-        }       
-        else {
-            Q.a = updateSoundSpeed_rhoT(Q.rho.re, Q.T.re);
+        debug {
+            if (lookup_rhoeFlag) {
+                double[2] uv = get_uv_rhoe(Q.rho.re, Q.u.re,
+                                           a_rhoe_Tree.X_min,
+                                           a_rhoe_Tree.X_max,
+                                           a_rhoe_Tree.Y_min,
+                                           a_rhoe_Tree.Y_max);
+                Q.a = a_rhoe_Tree.search(uv[0], uv[1]).interpolateF(uv[0], uv[1]);
+            } else {
+                Q.a = updateSoundSpeed_rhoT(Q.rho.re, Q.T.re);
+            }
+    } else {
+            assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
+            return to!number(0.0);
         }
+
     }
     override void update_trans_coeffs(GasState Q) const
     {
@@ -207,17 +241,22 @@ public:
     */
     override number dudT_const_v(in GasState Q) const
     {
-        return to!number(get_de_dT(Q.rho.re, Q.T.re));
+        debug {
+            return to!number(get_de_dT(Q.rho.re, Q.T.re));
+        } else {
+            assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
+            return to!number(0.0);
+        }
     }
     
     override number dhdT_const_p(in GasState Q) const
     {
-        throw new Exception(format("Not implemented: line=%d, file=%s\n", __LINE__, __FILE__));
+        throw new Exception("Not implemented.");
     }
     
     override number dpdrho_const_T(in GasState Q) const
     {
-        throw new Exception(format("Not implemented: line=%d, file=%s\n", __LINE__, __FILE__));
+        throw new Exception("Not implemented.");
     }
     
     override number gas_constant(in GasState Q) const
@@ -232,12 +271,22 @@ public:
     
     override number enthalpy(in GasState Q) const
     {
-        return to!number(updateEnthalpy_rhoT_original(Q.rho.re, Q.T.re));
+        debug {
+            return to!number(updateEnthalpy_rhoT_original(Q.rho.re, Q.T.re));
+        } else {
+            assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
+            return to!number(0.0);
+        }
     }
     
     override number entropy(in GasState Q) const
     {
-        return to!number(updateEntropy_rhoT(Q.rho.re, Q.T.re));
+        debug {
+            return to!number(updateEntropy_rhoT(Q.rho.re, Q.T.re));
+        } else {
+            assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
+            return to!number(0.0);
+        }
     }
     //------A function that re-maps the rho, T domain according to the liquid-vapour line------------
     //placed in public so it is available for building Tables
@@ -298,7 +347,7 @@ public:
         }
         return [rho, T];
     }
-    
+
     const double[2] get_uv_rhoe(double rho, double e, double rho_min, double rho_max, double e_min, double e_max)
     {
         double v = (rho - rho_min)/(rho_max - rho_min);
@@ -315,7 +364,7 @@ public:
         }
         return [u,v];
     } 
-    
+
     const double[2] get_rhoe_uv(double u, double v, double rho_min, double rho_max, double e_min, double e_max)
     {
         double rho = v*rho_max + (1-v)*rho_min;

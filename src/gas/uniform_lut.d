@@ -162,7 +162,8 @@ public:
         lua_pop(L, 1); // pop data table off.
         
         _mol_masses ~= s_molecular_weight(0).re; 
-  
+
+        Q_temp = new GasState(this); // For use in dpdrho_const_T()
     } // End constructor  
 
   
@@ -188,21 +189,26 @@ public:
         return to!string(repr);
     } 
     
+    @nogc
     void determine_interpolants(const GasState Q, ref int ir, ref int ie,
                                 ref number lrfrac, ref number efrac) const
     {
         if ( Q.rho <= 0.0) {
-            string msg;
-            msg ~= format("Error in function  %s \n", __FUNCTION__);
-            msg ~= format("density = %.5s is zero or negaive\n", Q.rho);
-            msg ~= format("  Supplied Q: %s", Q);
+            string msg = "Oops, ";
+            debug {
+                msg ~= format("Error in function  %s \n", __FUNCTION__);
+                msg ~= format("density = %.5s is zero or negaive\n", Q.rho);
+                msg ~= format("  Supplied Q: %s", Q);
+            }
             throw new Exception(msg);
         }
 
         // Find the enclosing cell
         double logrho = log10(Q.rho.re);
-        ir = to!int((logrho - _lrmin) / _dlr);
-        ie = to!int((Q.u.re - _emin) / _de);
+        // The couple of casts below were used instead of to!int()
+        // in order to be allowed in a @nogc context.
+        ir = cast(int) floor((logrho - _lrmin) / _dlr);
+        ie = cast(int) floor((Q.u.re - _emin) / _de);
 
         // Make sure that we don't try to access data outside the
         // actual arrays.
@@ -230,10 +236,12 @@ public:
    
         try { determine_interpolants(Q, ir, ie, lrfrac, efrac); }
         catch (Exception caughtException) {
-            string msg;
-            msg ~= format("Error in function %s \n", __FUNCTION__);
-            msg ~= format("Excpetion message from determine_interpolants() was:\n\n");
-            msg ~= to!string(caughtException);
+            string msg = "Oops, ";
+            debug {
+                msg ~= format("Error in function %s \n", __FUNCTION__);
+                msg ~= format("Exception message from determine_interpolants() was:\n\n");
+                msg ~= to!string(caughtException);
+            }
             throw new Exception(msg);
         }
         Cv_eff = (1.0 - efrac) * (1.0 - lrfrac) * _Cv_hat[ie][ir] +
@@ -250,20 +258,19 @@ public:
             efrac         * (1.0 - lrfrac) * _g_hat[ie+1][ir] +
             efrac         * lrfrac         * _g_hat[ie+1][ir+1] +
             (1.0 - efrac) * lrfrac         * _g_hat[ie][ir+1];
-   
         // Reconstruct the thermodynamic properties.
         Q.T = Q.u / Cv_eff;
         Q.p = Q.rho*R_eff*Q.T;
         Q.a = sqrt(g_eff*R_eff*Q.T);
         if ( Q.T < T_MIN ) {
-            string msg;
-            msg ~= format("Error in function  %s\n", __FUNCTION__);
-            msg ~= format("Low temperature, rho = %.5s ", Q.rho);
-            msg ~= format("e= %.8s  T= %.5s \n", Q.u, Q.T);
-            msg ~= format(    "Supplied Q: %s ", Q);
+            string msg = "Error in update_thermo_from_rhou().";
+            debug {
+                msg ~= format("Low temperature, rho = %.5s ", Q.rho);
+                msg ~= format("e= %.8s  T= %.5s \n", Q.u, Q.T);
+                msg ~= format(    "Supplied Q: %s ", Q);
+            }
             throw new Exception(msg);
         }
-
         // Fix meaningless values if they arise
         if ( Q.p < 0.0 ) Q.p = 0.0;
         if ( Q.T < 0.0 ) Q.T = 0.0;
@@ -278,10 +285,11 @@ public:
 
         try { determine_interpolants(Q, ir, ie, lrfrac, efrac); }
         catch (Exception caughtException) {
-            string msg;
-            msg ~= format("Error in function %s \n", __FUNCTION__);
-            msg ~= format("Excpetion message from determine_interpolants() was:\n\n");
-            msg ~= to!string(caughtException);
+            string msg = "Error in function update_trans_coeffs().";
+            debug {
+                msg ~= format("Exception message from determine_interpolants() was:\n\n");
+                msg ~= to!string(caughtException);
+            }
             throw new Exception(msg);
         }
         mu_eff = (1.0 - efrac) * (1.0 - lrfrac) * _mu_hat[ie][ir] +
@@ -293,11 +301,10 @@ public:
             efrac         * (1.0 - lrfrac) * _k_hat[ie+1][ir] +
             efrac         * lrfrac         * _k_hat[ie+1][ir+1] +
             (1.0 - efrac) * lrfrac         * _k_hat[ie][ir+1];
-   
         Q.mu = mu_eff;
         Q.k = k_eff;
-
     }
+
     /* 
        override void eval_diffusion_coefficients(ref GasState Q)
        {   // These have no meaning for an equilibrium gas.
@@ -310,20 +317,19 @@ public:
         number efrac, lrfrac;
         int    ir, ie;
         number Cv_actual;
-
         try { determine_interpolants(Q, ir, ie, lrfrac, efrac); }
         catch (Exception caughtException) {
-            string msg;
-            msg ~= format("Error in function %s\n", __FUNCTION__);
-            msg ~= format("Excpetion message from determine_interpolants() was:\n\n");
-            msg ~= to!string(caughtException);
+            string msg = "Error in dudT_const_v.";
+            debug {
+                msg ~= format("Excpetion message from determine_interpolants() was:\n\n");
+                msg ~= to!string(caughtException);
+            }
             throw new Exception(msg);
         }
         Cv_actual = (1.0 - efrac) * (1.0 - lrfrac) * _Cv[ie][ir] +
             efrac         * (1.0 - lrfrac) * _Cv[ie+1][ir] +
             efrac         * lrfrac         * _Cv[ie+1][ir+1] +
             (1.0 - efrac) * lrfrac         * _Cv[ie][ir+1];
-
         return Cv_actual;
     }
 
@@ -332,13 +338,13 @@ public:
         number efrac, lrfrac;
         int ir, ie;
         number Cv_actual, R_eff;
-
         try { determine_interpolants(Q, ir, ie, lrfrac, efrac); }
         catch (Exception caughtException) {
-            string msg;
-            msg ~= format("Error in function %s \n", __FUNCTION__);
-            msg ~= format("Excpetion message from determine_interpolants() was:\n\n");
-            msg ~= to!string(caughtException);
+            string msg = "Error in dhdT_const_p.";
+            debug {
+                msg ~= format("Excpetion message from determine_interpolants() was:\n\n");
+                msg ~= to!string(caughtException);
+            }
             throw new Exception(msg);
         }
         Cv_actual = (1.0 - efrac) * (1.0 - lrfrac) * _Cv[ie][ir] +
@@ -350,7 +356,6 @@ public:
             efrac         * (1.0 - lrfrac) * _R_hat[ie+1][ir] +
             efrac         * lrfrac         * _R_hat[ie+1][ir+1] +
             (1.0 - efrac) * lrfrac         * _R_hat[ie][ir+1];
-
         return (Cv_actual + R_eff);
     }
 
@@ -359,13 +364,13 @@ public:
         number efrac, lrfrac;
         int    ir, ie;
         number R_eff;
-
         try { determine_interpolants(Q, ir, ie, lrfrac, efrac); }
         catch (Exception caughtException) {
-            string msg;
-            msg ~= format("Error in function %s \n", __FUNCTION__);
-            msg ~= format("Excpetion message from determine_interpolants() was:\n\n");
-            msg ~= to!string(caughtException);
+            string msg = "Error in gas_constant.";
+            debug {
+                msg ~= format("Excpetion message from determine_interpolants() was:\n\n");
+                msg ~= to!string(caughtException);
+            }
             throw new Exception(msg);
         }
         R_eff  = (1.0 - efrac) * (1.0 - lrfrac) * _R_hat[ie][ir] +
@@ -398,7 +403,6 @@ public:
         // pressure and density are up-to-date in the
         // GasData object. Then enthalpy is computed
         // from definition.
-
         number h = Q.u + Q.p/Q.rho;
         return h;
     }
@@ -406,17 +410,17 @@ public:
     override number entropy(in GasState Q) const
     {
         number s;
-
-        if ( with_entropy ==1 ) {
+        if (with_entropy ==1) {
             int ir, ie;
             number lrfrac, efrac;
-
             try { determine_interpolants(Q, ir, ie, lrfrac, efrac); }
             catch (Exception caughtException) {
-                string msg;
-                msg ~= format("Error in function %s \n", __FUNCTION__);
-                msg ~= format("Excpetion message from determine_interpolants() was:\n\n");
-                msg ~= to!string(caughtException);
+                string msg = "Oops, ";
+                debug {
+                    msg ~= format("Error in function %s \n", __FUNCTION__);
+                    msg ~= format("Excpetion message from determine_interpolants() was:\n\n");
+                    msg ~= to!string(caughtException);
+                }
                 throw new Exception(msg);
             }
             number Cv_eff = (1.0 - efrac) * (1.0 - lrfrac) * _Cv_hat[ie][ir] +
@@ -434,12 +438,13 @@ public:
             number T = Q.u / Cv_eff;
             number p = Q.rho*R_eff*T;
             s = _s1 + Cp_eff*log(T/_T1) - R_eff*log(p/_p1); 
-        }
-        else {
+        } else {
             // Without having the entropy recorded as part of the original table,
             // the next best is to use a model of an ideal gas.
-            writeln( "Caution: calling s_entropy for LUT species without tabular data.");
-            writeln( "Using an ideal gas model" );
+            debug {
+                writeln( "Caution: calling s_entropy for LUT species without tabular data.");
+                writeln( "Using an ideal gas model" );
+            }
             int ie = 0; // coldest
             int ir = _irsteps - 1; // quite dense 
             number R = _R_hat[ie][ir]; // J/kg/deg-K
@@ -460,18 +465,15 @@ public:
         // there are times when a value from this function makes
         // other code simpler, in that the doesn't have to treat
         // the look-up gas specially.
-        if ( isp != 0 ) {
+        if (isp != 0) {
             throw new Exception("LUT gas: should not be looking up isp != 0");
         }
-    
         int ie = 0; // coldest
         int ir = _irsteps -1; // quite dense    
         number Rgas = _R_hat[ie][ir]; // J/kg/deg-K
-
         /* Eilmer3 converts these values to kg/kmol - I am keeping in SI units
          * immutable R_universal_kmol = R_universal * 1000;
          * number M = R_universal_kmol / Rgas; */
-
         number M = R_universal / Rgas;    
         return M;
     }
@@ -480,36 +482,35 @@ public:
     {
         number efrac, lrfrac, Cv_eff, R_eff, g_eff;
         int    ir, ie;
-   
         try { determine_interpolants(Q, ir, ie, lrfrac, efrac); }
         catch (Exception caughtException) {
-            string msg;
-            msg ~= format("Error in function %s \n", __FUNCTION__);
-            msg ~= format("Excpetion message from determine_interpolants() was:\n\n");
-            msg ~= to!string(caughtException);
+            string msg = "Error in update_sound_speed.";
+            debug {
+                msg ~= format("Error in function %s \n", __FUNCTION__);
+                msg ~= format("Exception message from determine_interpolants() was:\n\n");
+                msg ~= to!string(caughtException);
+            }
             throw new Exception(msg);
         }
         if (isNaN(Q.rho) || isNaN(Q.u)) {
-            string err;
-            err ~= format("update_sound_speed() method for LUT requires e and rho of ");
-            err ~= format("GasState Q to be defined: rho = %.5s, e = .8s", Q.rho, Q.u);
+            string err = "update_sound_speed() requires e and rho to be defined.";
+            debug {
+                err ~= format("GasState Q has rho= %.5s, e= .8s", Q.rho, Q.u);
+            }
             throw new Exception(err);
         }
         R_eff  = (1.0 - efrac) * (1.0 - lrfrac) * _R_hat[ie][ir] +
             efrac         * (1.0 - lrfrac) * _R_hat[ie+1][ir] +
             efrac         * lrfrac         * _R_hat[ie+1][ir+1] +
             (1.0 - efrac) * lrfrac         * _R_hat[ie][ir+1];
-           
         g_eff  = (1.0 - efrac) * (1.0 - lrfrac) * _g_hat[ie][ir] +
             efrac         * (1.0 - lrfrac) * _g_hat[ie+1][ir] +
             efrac         * lrfrac         * _g_hat[ie+1][ir+1] +
             (1.0 - efrac) * lrfrac         * _g_hat[ie][ir+1];
-   
         // Reconstruct the thermodynamic properties.
         Q.a = sqrt(g_eff*R_eff*Q.T);
     }
  
-
     // Remaining functions must call numerical method solution defined in gas_model.d
     override void update_thermo_from_pT(GasState Q) 
     {
@@ -542,7 +543,6 @@ public:
         // Cannot be directly computed from look up table
         // Apply forward finite difference in calling update from p, rho
         // Make a copy of the GasState object, to avoid modifying Q
-        auto Q_temp = new GasState(this);
         Q_temp.copy_values_from(Q);
 
         // Save values for derivative calculation
@@ -576,6 +576,7 @@ private:
     double[][] _k_hat;
     double[][] _Cp_hat;
 
+    GasState Q_temp;
 } // End of uniformLUT class
 
 version(uniform_lut_test) 

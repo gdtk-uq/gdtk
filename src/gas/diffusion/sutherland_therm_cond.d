@@ -29,7 +29,8 @@ import util.msg_service;
    Returns:
      The thermal conductivity in W/(m.K)
 +/
-pure number sutherland_thermal_conductivity(number T, double T_ref, double k_ref, double S)
+@nogc pure
+number sutherland_thermal_conductivity(number T, double T_ref, double k_ref, double S)
 in {
     assert(T > 0.0, brokenPreCondition("temperature", __LINE__, __FILE__));
     assert(T_ref > 0.0, brokenPreCondition("T_ref", __LINE__, __FILE__));
@@ -61,7 +62,7 @@ public:
     override SutherlandThermCond dup() const {
         return new SutherlandThermCond(this);
     }
-    override number eval(ref const(GasState) Q, number T) const {
+    @nogc override number eval(ref const(GasState) Q, number T) const {
         return sutherland_thermal_conductivity(T, _T_ref, _k_ref, _S);
     }
 

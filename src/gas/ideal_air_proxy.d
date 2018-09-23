@@ -27,25 +27,25 @@ import gas.physical_constants;
 
 extern(C) {
     void iaf_init();
-    int iaf_n_species();
-    int iaf_n_modes();
-    double iaf_mol_mass(int i);
-    void iaf_update_thermo_from_pT(double *p, double *T, double *rho, double *u, double *massf);
-    void iaf_update_thermo_from_rhou(double *p, double *T, double *rho, double *u, double *massf);
-    void iaf_update_thermo_from_rhoT(double *p, double *T, double *rho, double *u, double *massf);
-    void iaf_update_thermo_from_rhop(double *p, double *T, double *rho, double *u, double *massf);
-    void iaf_update_thermo_from_ps(double *p, double *T, double *rho, double *u, double *massf,
-                                   double *s);
-    void iaf_update_thermo_from_hs(double *p, double *T, double *rho, double *u, double *massf,
-                                   double *h, double *s);
-    void iaf_update_sound_speed(double *p, double *T, double *rho, double *u, double *massf,
-                                double *a);
-    void iaf_update_trans_coeffs(double *p, double *T, double *rho, double *u, double *massf,
-                                 double *mu, double *k);
-    double iaf_get_Cv();
-    double iaf_get_Cp();
-    double iaf_get_Rgas();
-    double iaf_entropy(double *p, double *T);
+    @nogc int iaf_n_species();
+    @nogc int iaf_n_modes();
+    @nogc double iaf_mol_mass(int i);
+    @nogc void iaf_update_thermo_from_pT(double *p, double *T, double *rho, double *u, double *massf);
+    @nogc void iaf_update_thermo_from_rhou(double *p, double *T, double *rho, double *u, double *massf);
+    @nogc void iaf_update_thermo_from_rhoT(double *p, double *T, double *rho, double *u, double *massf);
+    @nogc void iaf_update_thermo_from_rhop(double *p, double *T, double *rho, double *u, double *massf);
+    @nogc void iaf_update_thermo_from_ps(double *p, double *T, double *rho, double *u, double *massf,
+                                         double *s);
+    @nogc void iaf_update_thermo_from_hs(double *p, double *T, double *rho, double *u, double *massf,
+                                         double *h, double *s);
+    @nogc void iaf_update_sound_speed(double *p, double *T, double *rho, double *u, double *massf,
+                                      double *a);
+    @nogc void iaf_update_trans_coeffs(double *p, double *T, double *rho, double *u, double *massf,
+                                       double *mu, double *k);
+    @nogc double iaf_get_Cv();
+    @nogc double iaf_get_Cp();
+    @nogc double iaf_get_Rgas();
+    @nogc double iaf_entropy(double *p, double *T);
 }
 
 class IdealAirProxy: GasModel {

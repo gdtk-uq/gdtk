@@ -21,11 +21,11 @@ import gas.diffusion.cea_viscosity;
 
 interface Viscosity {
     Viscosity dup() const;
-    final void update_viscosity(GasState Q) 
+    @nogc final void update_viscosity(GasState Q) 
     {
         Q.mu = eval(Q);
     }
-    number eval(in GasState Q);
+    @nogc number eval(in GasState Q);
 }
 
 /**

@@ -201,15 +201,27 @@ public:
 
     override void update_thermo_from_pT(GasState Q) const 
     {
-        callCEA(Q, 0.0, 0.0, "pT", false);
+        debug {
+            callCEA(Q, 0.0, 0.0, "pT", false);
+        } else {
+            assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
+        }
     }
     override void update_thermo_from_rhou(GasState Q) const
     {
-        callCEA(Q, 0.0, 0.0, "rhoe", false);
+        debug {
+            callCEA(Q, 0.0, 0.0, "rhoe", false);
+        } else {
+            assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
+        }
     }
     override void update_thermo_from_rhoT(GasState Q) const
     {
-        callCEA(Q, 0.0, 0.0, "rhoT", false);
+        debug {
+            callCEA(Q, 0.0, 0.0, "rhoT", false);
+        } else {
+            assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
+        }
     }
     override void update_thermo_from_rhop(GasState Q) const
     {
@@ -218,7 +230,11 @@ public:
     
     override void update_thermo_from_ps(GasState Q, number s) const
     {
-        callCEA(Q, 0.0, s.re, "ps", false);
+        debug {
+            callCEA(Q, 0.0, s.re, "ps", false);
+        } else {
+            assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
+        }
     }
     override void update_thermo_from_hs(GasState Q, number h, number s) const
     {
@@ -228,11 +244,19 @@ public:
     {
         // It's not really a separate operation since all other updates will
         // also get a new estimate of sound speed.
-        callCEA(Q, 0.0, 0.0, "pT", false);
+        debug {
+            callCEA(Q, 0.0, 0.0, "pT", false);
+        } else {
+            assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
+        }
     }
     override void update_trans_coeffs(GasState Q)
     {
-        callCEA(Q, 0.0, 0.0, "pT", true);
+        debug {
+            callCEA(Q, 0.0, 0.0, "pT", true);
+        } else {
+            assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
+        }
     }
 
     // The following functions return the most-recently-computed values.

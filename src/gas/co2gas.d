@@ -102,8 +102,12 @@ public:
 
     override void update_thermo_from_pT(GasState Q) const 
     {
-        Q.rho = updateRho_PT(Q.p.re, Q.T.re);
-        Q.u = updateEnergy_rhoT(Q.rho.re, Q.T.re);
+        debug {
+            Q.rho = updateRho_PT(Q.p.re, Q.T.re);
+            Q.u = updateEnergy_rhoT(Q.rho.re, Q.T.re);
+        } else {
+            assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
+        }
     }
     override void update_thermo_from_rhou(GasState Q) const
     {
@@ -117,20 +121,28 @@ public:
     }
     override void update_thermo_from_rhop(GasState Q) const
     {
-        Q.u = updateEnergy_Prho(Q.p.re, Q.rho.re );//might want to fix the order that this solves in
-        Q.T = updateTemperature_rhou(Q.rho.re, Q.u.re);
+        debug {
+            Q.u = updateEnergy_Prho(Q.p.re, Q.rho.re );//might want to fix the order that this solves in
+            Q.T = updateTemperature_rhou(Q.rho.re, Q.u.re);
+        } else {
+            assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
+        }
     }
     override void update_thermo_from_ps(GasState Q, number s) const
     {
-        throw new Exception(format("Not implemented: line=%d, file=%s\n", __LINE__, __FILE__));
+        throw new Exception("Not implemented.");
     }
     override void update_thermo_from_hs(GasState Q, number h, number s) const
     {
-        throw new Exception(format("Not implemented: line=%d, file=%s\n", __LINE__, __FILE__));
+        throw new Exception("Not implemented.");
     }
     override void update_sound_speed(GasState Q) const
     {
-        Q.a = updateSoundSpeed_rhoT(Q.rho.re, Q.T.re);
+        debug {
+            Q.a = updateSoundSpeed_rhoT(Q.rho.re, Q.T.re);
+        } else {
+            assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
+        }
     }
     override void update_trans_coeffs(GasState Q) const
     {
@@ -148,7 +160,7 @@ public:
     }
     override number dhdT_const_p(in GasState Q) const
     {
-        throw new Exception(format("Not implemented: line=%d, file=%s\n", __LINE__, __FILE__));
+        throw new Exception("Not implemented.");
     }
     override number dpdrho_const_T(in GasState Q) const
     {
@@ -169,7 +181,7 @@ public:
     }
     override number entropy(in GasState Q) const
     {
-        throw new Exception(format("Not implemented: line=%d, file=%s\n", __LINE__, __FILE__));
+        throw new Exception("Not implemented.");
     }
 
 private:
@@ -196,8 +208,8 @@ private:
     
     
     
-    //define some functions that will be available to the functions in the private area    
-    const double updatePressure_rhoT(double rho, double T){
+    //define some functions that will be available to the functions in the private area
+    @nogc const double updatePressure_rhoT(double rho, double T){
         double gamma = _As[20];
         double sum1_5 = 0;
         for (int i = 1; i!=6; i++){sum1_5+= _As[i]*T^^(2-i);}
@@ -213,7 +225,7 @@ private:
                                 (rho^^3*sum14_16 + rho^^5*sum17_19)*exp(-gamma*rho^^2);
    }
 
-   const double updateEnergy_rhoT(double rho, double T){
+   @nogc const double updateEnergy_rhoT(double rho, double T){
         double gamma = _As[20];
         double integral_cV_dT = _G[1]*log(T/_T0) + _G[2]*(T-_T0) + _G[3]*(T^^2 - _T0^^2)/2.0 
                         + _G[4]*(T^^3 - _T0^^3)/3.0 + _G[5]*(T^^4 - _T0^^4)/4 + _G[6]*(T^^5 - _T0^^5)/5;
@@ -226,7 +238,7 @@ private:
                                                           + (-rho^^2/(2*gamma) - (2*gamma^^2)^^-1)*(3*_As[17]*T^^-2+4*_As[18]*T^^-3 + 5*_As[19]*T^^-4));
         return _u0 + integral_cV_dT + integralDensityChange;
    }
-   const double updateTemperature_rhou(double rho, double e, int maxIterations = 100, double Ttol = 0.1){
+   @nogc const double updateTemperature_rhou(double rho, double e, int maxIterations = 100, double Ttol = 0.1){
         assert(e >= _u0*0.3, "energy below 10% of reference");//make sure you are above the reference point
         double T = 1000*(e - 441482)/(1.42035e6-411482)+400; // first approximation using totally ideal gas not possible because we don't know pressure;
         for(int i = 0; i != maxIterations; i++){
@@ -242,7 +254,7 @@ private:
                 }
         return T;
    }
-   const double get_de_dT(double rho, double T) {
+   @nogc const double get_de_dT(double rho, double T) {
         //Gets derivative of specific energy w.r.t. Temperature for evaluating T as a function of e, rho based on Newton's method
         //Polynomials were derived by hand, not sure if accurate yet
         //coincidenty de_dt = c_V
@@ -264,7 +276,7 @@ private:
         string errorString = "P: " ~ to!string(P) ~ ", rho: " ~ to!string(rho);
         assert(!isNaN(e), errorString);
         //WORKS WELL FOR SUPERCRITICAL
-   return e;}
+        return e;}
    const double updateRho_PT(double P, double T, double[2] bracket = [0.1, 1000], double tol = 0.1){
         //when temperature is close to  critical temperature be very careful
         assert(T > 305, "Temperature too low and close to critical point (305K)");

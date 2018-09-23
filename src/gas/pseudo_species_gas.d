@@ -189,7 +189,7 @@ public:
         throw new Error("ERROR: PseudoSpeciesGas:entropy NOT IMPLEMENTED.");
     }
 
-    void updateParentsGastate(GasState Q, ref GasState parentsQ)
+    @nogc void updateParentsGastate(GasState Q, ref GasState parentsQ)
     {
       // Update translational temperature
       parentsQ.T = Q.T;
@@ -212,7 +212,7 @@ private:
     ParentsSpecies _parentSpecies;
     GasState _parentsQ;
 
-    number energyInNoneq(GasState Q) const {
+    @nogc number energyInNoneq(GasState Q) const {
         number uNoneq = 0.0;
         foreach (isp; 0 .. _n_species) {
             uNoneq += Q.massf[isp] * _pseudoSpecies[isp].energy(Q);

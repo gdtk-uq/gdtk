@@ -46,6 +46,9 @@ ifeq ($(WITH_DVODE),1)
     DLINKFLAGS += -L-lgfortran
 endif
 
+# DIP1008 allows throwing of exceptions in @nogc code.
+DFLAGS += -dip1008
+
 UTIL_DIR := ../util
 include $(UTIL_DIR)/util_files.mk
 
@@ -169,7 +172,7 @@ univariate_lut_demo: univariate_lut_demo.d $(LIBLUA) $(UTIL_FILES) $(NM_FILES)
 # Individual test targets
 
 cea_therm_cond_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -version=$@ \
+	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 cea_viscosity_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
