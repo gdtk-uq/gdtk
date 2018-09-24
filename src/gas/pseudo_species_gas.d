@@ -390,7 +390,7 @@ private:
     WilkeMixingViscosity _viscModel;
     WilkeMixingThermCond _thermCondModel;
 
-}
+} // end class PseudoSpeciesGas
 
 
 version(pseudo_species_gas_test) {
@@ -407,31 +407,33 @@ version(pseudo_species_gas_test) {
         auto L = init_lua_State();
         doLuaFile(L, "sample-data/pseudo-species-49-components.lua");
         auto gm = new PseudoSpeciesGas(L);
-        writeln("gm.n_species() = ", gm.n_species());
-        writeln("gm._n_parents = ", gm._n_parents);
-        auto gd = new GasState(gm.n_species(), 2);
-        writeln("gd.massf.length = ", gd.massf.length);
-
+        // writeln("gm.n_species = ", gm.n_species);
+        assert(gm.n_species == 49, failedUnitTest());
+        // writeln("gm._n_parents = ", gm._n_parents);
+        assert(gm._n_parents == 2, failedUnitTest());
+        
+        auto gd = new GasState(gm);
+        // writeln("gd.massf.length = ", gd.massf.length);
+        assert(gd.massf.length == 49, failedUnitTest());
         gd.massf[] = 0.0;
         gd.massf[1] = 0.20908519640652;
         gd.massf[2] = 0.12949211438053;
         gd.massf[0] = 1.0 - (gd.massf[1] + gd.massf[2]);
-
         gd.p = 101325.0;
         gd.T = 7000.0;
-
-        writeln(gd.massf);
-        writeln(gm.Cv(gd));
+        // writeln(gd.massf);
+        // writeln(gm.Cv(gd));
+        assert(approxEqual(gm.Cv(gd), 840.445, 1.0e-3), failedUnitTest());
         gm.update_thermo_from_pT(gd);
-        writeln("gd.u = ", gd.u);
+        // writeln("gd.u = ", gd.u);
+        assert(approxEqual(gd.u, -5.36274e+06, 1.0e-3), failedUnitTest());
 
         gm.update_trans_coeffs(gd);
-        writeln("gd.mu = ", gd.mu);
-        writeln("gd.k = ", gd.k);
-
-        writeln("gm._n_species() = ", gm.n_species());
+        // writeln("gd.mu = ", gd.mu);
+        // writeln("gd.k = ", gd.k);
+        assert(approxEqual(gd.mu, 0.000187585, 1.0e-6), failedUnitTest());
+        assert(approxEqual(gd.k, 0.403616, 1.0e-6), failedUnitTest());
 
         return 0;
-    }
-
+    } // end main()
 }
