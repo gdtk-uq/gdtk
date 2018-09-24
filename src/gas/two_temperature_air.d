@@ -27,16 +27,7 @@ immutable double T_REF = 298.15; // K
 static string[] molecularSpeciesNames = ["N2", "O2", "NO", "N2+", "O2+", "NO+"];
 
 // The following symbols are for indexing into the thermo-coefficient database.
-enum Species {N=0, O, N2, O2, NO,
-              Nplus, Oplus, N2plus, O2plus, NOplus,
-              eminus}
-static string[] allSpeciesNames = ["N", "O", "N2", "O2", "NO",
-                                   "N+", "O+", "N2+", "O2+", "NO+",
-                                   "e-"];
-static Species[] allSpeciesIds =
-    [Species.N, Species.O, Species.N2, Species.O2, Species.NO,
-     Species.Nplus, Species.Oplus, Species.N2plus, Species.O2plus, Species.NOplus,
-     Species.eminus];
+enum Species {N=0, O, N2, O2, NO, Nplus, Oplus, N2plus, O2plus, NOplus, eminus}
 @nogc Species getSpeciesId(string name)
 {
     switch (name) {
@@ -152,6 +143,9 @@ public:
             string errMsg = format("The model name '%s' is not a valid selection for the two-temperature air model.", model);
             throw new Error(errMsg);
         }
+
+        _species_ids.length = _n_species;
+        foreach (isp, sp; _species_names) { _species_ids[isp] = getSpeciesId(sp); }
         
         _molef.length = _n_species;
         _particleMass.length = _n_species;
@@ -439,7 +433,7 @@ private:
     number[7] _A; // working storage of coefficients
     number[][] _A_11, _B_11, _C_11, _D_11, _Delta_11, _alpha;
     number[][] _A_22, _B_22, _C_22, _D_22, _Delta_22, _mu;
-    Species[] species_ids;
+    Species[] _species_ids;
 
     /**
      * In order to get smooth variations in thermodynamic properties
@@ -451,7 +445,7 @@ private:
      */
     @nogc void determineCoefficients(number T, int isp)
     {
-        Species spId = getSpeciesId(species_name(isp));
+        Species spId = _species_ids[isp];
         if (T < 800.0) {
             foreach(i; 0 .. _A.length) { _A[i] = thermoCoeffs[spId][0][i]; }
         }
