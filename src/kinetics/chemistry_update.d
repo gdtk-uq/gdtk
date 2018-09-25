@@ -265,7 +265,7 @@ final class ChemistryUpdate : ThermochemicalReactor {
             string errMsg = "Hit maximum number of subcycles while attempting
 chemistry update.";
             Q.copy_values_from(_Qinit);
-            throw new Exception(errMsg);
+            throw new ThermochemicalReactorUpdateException(errMsg);
         }
         // At this point, it appears that everything has gone well.
         // We'll tweak the mass fractions in case they are a little off.
