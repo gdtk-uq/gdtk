@@ -34,7 +34,7 @@ class ElectronicSpecies {
         _group_degeneracy = getInt(L, -1, "group_degeneracy");
     }
 
-    @nogc abstract number energy(in GasState Q) const;
+    @nogc abstract number group_energy(in GasState Q) const;
 
 private:
     string _name;
@@ -53,7 +53,7 @@ public:
         _group_energy *= (electron_volt_energy*Avogadro_number)/_mol_mass;
     }
 
-    override number energy(in GasState Q) const { return _group_energy; }
+    override number group_energy(in GasState Q) const { return _group_energy; }
 
 private:
     number _group_energy;

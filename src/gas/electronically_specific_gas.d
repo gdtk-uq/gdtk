@@ -26,8 +26,8 @@ public:
     this(lua_State *L) 
     {
         auto nElecSpecies = getInt(L, LUA_GLOBALSINDEX, "number_electronic_species");
-        _n_species = cast(uint) nElecSpecies; //go to 15 or 16?
-        _n_modes = 0; //dont know what to do with this?
+        _n_species = cast(uint) nElecSpecies;
+        _n_modes = 1;
         _species_names.length = _n_species; 
 
         _s1 = getDouble(L, LUA_GLOBALSINDEX, "s1");
@@ -49,6 +49,7 @@ public:
             _level ~= _electronicSpecies[$-1].level;
             _group_degeneracy ~= _electronicSpecies[$-1].group_degeneracy;
         }
+        writeln(_R);
         lua_pop(L, 1);
         create_species_reverse_lookup();
     }
@@ -126,7 +127,11 @@ public:
 
     override number dudT_const_v(in GasState Q) const
     {
-        return to!number(_Cv);
+        number Cv = 0.0;
+        foreach (isp; 0 .. _n_species) {
+            Cv += Q.massf[isp] * (3.0/2.0) * _R[isp];
+        }
+        return Cv;
     }
     override number dhdT_const_p(in GasState Q) const
     {
@@ -166,9 +171,9 @@ private:
 
     // Thermodynamic constants
     double _Rgas; // J/kg/K
-    double _gamma;   // ratio of specific heats
     double _Cv; // J/kg/K
     double _Cp; // J/kg/K
+    double _gamma;   // ratio of specific heats
     // Reference values for entropy
     double _s1;  // J/kg/K
     double _T1;  // K
@@ -177,7 +182,7 @@ private:
     @nogc number energyInNoneq(GasState Q) const {
         number uNoneq = 0.0;
         foreach (isp; 0 .. _n_species) {
-            uNoneq += Q.massf[isp] * _electronicSpecies[isp].energy(Q);
+            uNoneq += Q.massf[isp] * _electronicSpecies[isp].group_energy(Q);
         }
         return uNoneq;
     }
@@ -202,10 +207,7 @@ version(electronically_specific_gas_test) {
         gd.p = 101325.0;
         gd.T = 7000.0;
         gd.T_modes[0]=10000.0;
-
         gm.update_thermo_from_pT(gd);
-        
-
         return 0;
     }
     

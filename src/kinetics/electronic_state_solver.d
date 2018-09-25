@@ -266,6 +266,7 @@ void Electronic_Solve( number[] state_from_cfd, ref number[] state_to_cfd, numbe
 {
     dt = 1.0e-10;
     Ne=state_from_cfd[$-1];
+    writeln("state_vector: ",state_vector);
     state_vector[]=state_from_cfd[0 .. $-1];
     UpdateStateFromVector(state,state_from_cfd);
     UpdateVectorFromState(state_vector,state);
@@ -282,8 +283,8 @@ void Electronic_Solve( number[] state_from_cfd, ref number[] state_to_cfd, numbe
         }
     }
     UpdateVectorFromState(state_vector,state);
-    state_vector ~= Ne;
-    state_to_cfd[] = state_vector[];
+    state_to_cfd[0 .. 18] = state_vector[];
+    state_to_cfd[18] = Ne;
 }
 
 

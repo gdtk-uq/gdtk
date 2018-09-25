@@ -19,7 +19,8 @@ TEST_PROGRAMS := cea_therm_cond_test cea_thermo_curves_test cea_viscosity_test \
 	co2gas_sw_test uniform_lut_test adaptive_lut_CEA_test ideal_air_proxy_test \
         two_temperature_reacting_argon_test steam_test \
 	gas_model_complex_test ideal_gas_complex_test cea_thermo_curves_complex_test \
-	pseudo_species_gas_test vib_specific_nitrogen_test
+	pseudo_species_gas_test vib_specific_nitrogen_test \
+	electronically_specific_gas_test
 
 LUA := ../../extern/lua-5.1.4
 LIBLUA := $(LUA)/lib/liblua.a

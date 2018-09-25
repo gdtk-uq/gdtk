@@ -11,7 +11,7 @@ TEST_PROGRAMS := chemistry_update_test \
 		reaction_test \
 		reaction_mechanism_test \
 		two_temperature_argon_kinetics_test \
-		electronically_specific_gas_test 
+		electronically_specific_kinetics_test 
 
 UTIL_DIR := ../util
 include $(UTIL_DIR)/util_files.mk
@@ -91,7 +91,7 @@ pseudo_species_kinetics_test:  $(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM
 		$(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(LIBLUA) $(DLINKFLAGS)
 
-electronically_specific_gas_test:  $(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
+electronically_specific_kinetics_test:  $(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
 	dmd -of$@ -debug -g -version=$@ \
 		$(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(LIBLUA) $(DLINKFLAGS)

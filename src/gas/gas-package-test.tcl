@@ -88,6 +88,10 @@ test pseudo-species-gas-test {Testing pseudo_species_gas.d} -body {
     exec ./pseudo_species_gas_test
 } -result {} -returnCodes {0}
 
+test electronically-specific-gas-test {Testing electronically_specific_gas.d} -body {
+    exec ./electronically_specific_gas_test
+} -result {} -returnCodes {0}
+
 puts "-------------------------------------"
 puts "   thermo/ tests"
 puts "-------------------------------------"
