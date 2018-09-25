@@ -34,6 +34,7 @@ version (with_dvode)
 }
 
 class ThermochemicalReactorUpdateException : Exception {
+    @nogc
     this(string message, string file=__FILE__, size_t line=__LINE__,
          Throwable next=null)
     {
@@ -56,6 +57,7 @@ public:
     // The array params is there to allow extra information to be passed in.
     // For example, the mixing-limited combustion model by JJ Hoste needs
     // some information about the local flow state beyond the usual gas state.
+    @nogc
     abstract void opCall(GasState Q, double tInterval,
                          ref double dtChemSuggest, ref double dtThermSuggest,
                          ref number[] params);

@@ -38,7 +38,8 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
         gm = cast(VibSpecificNitrogen) gmodel;
         assert(gm, "Oops, wrong gas model; should have been VibSpecificNitrogen.");
     }
-    
+
+    @nogc
     override void opCall(GasState Q, double tInterval,
                          ref double dtChemSuggest, ref double dtThermSuggest, 
                          ref number[] params)
@@ -110,6 +111,7 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
 
      
     // [TODO] Indices need checking
+    @nogc
     number FCoeff(int i, number T) const
     {
         double I = i + 1;
@@ -118,7 +120,8 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
         number f = (I-1) * ft * exp((I-2)*delta_t);
         return f;     
     }   
-    
+
+    @nogc
     number vvFCoeff(int i, int j, number T) const 
     {
         number vvdelta_t = exp((-6.8/sqrt(T))*abs(i-j));
@@ -126,7 +129,8 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
             *vvdelta_t*(1.5-0.5*vvdelta_t);
 	return f;
     }
-    
+
+    @nogc
     number BCoeff(int i, number T) const
     {
         number B = FCoeff(i,T) * exp(-(gm._vib_energy[i] - gm._vib_energy[i-1]) / (gm.kB * T));
@@ -134,6 +138,7 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
         return B;
     }
 
+    @nogc
     number vvBCoeff(int i, int j, number T) const 
     {
         number B = vvFCoeff(i,j,T)*exp(-1.0*(gm._vib_energy[i] - gm._vib_energy[i-1] +

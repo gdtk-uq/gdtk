@@ -88,18 +88,21 @@ class Matrix(T) {
                 _data[row][col] = other[row][col];
     }
 
-    @property const size_t nrows() { return _nrows; }
-    @property const size_t ncols() { return _ncols; }
+    @property @nogc const size_t nrows() { return _nrows; }
+    @property @nogc const size_t ncols() { return _ncols; }
 
+    @nogc
     const T opIndex(size_t row, size_t col) {
         return _data[row][col];
     }
 
+    @nogc
     ref T opIndexAssign(T c, size_t row, size_t col) {
         _data[row][col] = c;
         return _data[row][col];
     }
 
+    @nogc
     ref T opIndexOpAssign(string op)(T c, size_t row, size_t col)
         if ( op == "+" || op == "-" || op == "*" || op == "/" )
     {
@@ -232,6 +235,7 @@ class Matrix(T) {
         return s;
     }
 
+    @nogc
     void swapRows(size_t i1, size_t i2) {
         swap(_data[i1], _data[i2]);
     }
@@ -274,6 +278,7 @@ class Matrix(T) {
         }
     }
 
+    @nogc
     void zeros()
     {
         foreach (ref row; _data) {
@@ -281,6 +286,7 @@ class Matrix(T) {
         }
     }
 
+    @nogc
     void ones()
     {
         foreach (ref row; _data) {
@@ -288,6 +294,7 @@ class Matrix(T) {
         }
     }
 
+    @nogc
     void eye()
     {
         foreach (i, ref row; _data) {
@@ -462,6 +469,7 @@ body {
  *   2. matrix c is only changed where the the new reuls is
  *      computed based on the supplied row and column range.
  */
+@nogc
 void dot(T)(in Matrix!T a, size_t aRow, size_t aCol,
             in Matrix!T b, size_t bCol,
             ref Matrix!T c)
@@ -484,7 +492,7 @@ body {
     }
 }
 
-
+@nogc
 void dot(T)(in Matrix!T a, T[] b, T[] c)
 in {
     assert(a.ncols == b.length);
@@ -501,6 +509,7 @@ body {
     }
 }
 
+@nogc
 void dot(T)(in Matrix!T a, size_t aRow, size_t aCol, T[] b, T[] c)
 in {
     assert(aRow <= a.nrows);
@@ -517,7 +526,7 @@ body {
     }
 }
 
-
+@nogc
 void copy(T)(in Matrix!T src, ref Matrix!T tgt)
 in {
     assert(src.nrows == tgt.nrows);
@@ -582,6 +591,7 @@ version(bbla_test) {
  * c = [A|b] such that the mutated matrix becomes [I|x]
  * where x is the solution vector(s) to A.x = b
  */
+@nogc
 void gaussJordanElimination(T)(ref Matrix!T c, double very_small_value=1.0e-16)
 {
     if (c.ncols < c.nrows) {

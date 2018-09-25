@@ -18,7 +18,7 @@ import util.lua_service;
 import gas;
 import kinetics.thermochemical_reactor;
 
-alias RelaxTimeFunc = number function(number, number);
+alias RelaxTimeFunc = @nogc number function(number, number);
 
 final class VibRelaxNitrogen : ThermochemicalReactor {
     this(string fname, GasModel gmodel)
@@ -43,6 +43,7 @@ final class VibRelaxNitrogen : ThermochemicalReactor {
         }
     } // end constructor
 
+    @nogc
     override void opCall(GasState Q, double tInterval,
                          ref double dtChemSuggest, ref double dtThermSuggest, 
                          ref number[] params)
@@ -68,6 +69,7 @@ private:
     RelaxTimeFunc _relaxTimeCalc;
 }
 
+@nogc
 number BlackmanRelaxationTime(number T, number p)
 {
     double A = 7.12e-9;
@@ -77,6 +79,7 @@ number BlackmanRelaxationTime(number T, number p)
     return tau;
 }
 
+@nogc
 number MWRelaxationTime(number T, number p)
 {
     double a = 221.0;

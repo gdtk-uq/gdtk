@@ -62,37 +62,37 @@ ${LIBLUA}:
 	cd ${LUA_DIR}; make $(PLATFORM) local
 
 chemistry_update_test: $(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	dmd -of$@ -debug -g -version=$@ \
+	dmd -of$@ -debug -g -dip1008 -version=$@ \
 		$(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(LIBLUA) $(DLINKFLAGS)
 
 rate_constant_test: $(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	dmd -of$@ -debug -g -version=$@ \
+	dmd -of$@ -debug -g -dip1008 -version=$@ \
 		$(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(LIBLUA) $(DLINKFLAGS)
 
 reaction_test:  $(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	dmd -of$@ -debug -g -version=$@ \
+	dmd -of$@ -debug -g -dip1008 -version=$@ \
 		$(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(LIBLUA) $(DLINKFLAGS)
 
 reaction_mechanism_test:  $(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	dmd -of$@ -debug -g -version=$@ \
+	dmd -of$@ -debug -g -dip1008 -version=$@ \
 		$(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(LIBLUA) $(DLINKFLAGS)
 
 two_temperature_argon_kinetics_test:  $(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	dmd -of$@ -debug -g -version=$@ \
+	dmd -of$@ -debug -g -dip1008 -version=$@ \
 		$(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(LIBLUA) $(DLINKFLAGS)
 
 pseudo_species_kinetics_test:  $(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	dmd -of$@ -debug -g -version=$@ \
+	dmd -of$@ -debug -g -dip1008 -version=$@ \
 		$(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(LIBLUA) $(DLINKFLAGS)
 
 electronically_specific_kinetics_test:  $(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	dmd -of$@ -debug -g -version=$@ \
+	dmd -of$@ -debug -g -dip1008 -version=$@ \
 		$(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(LIBLUA) $(DLINKFLAGS)
 

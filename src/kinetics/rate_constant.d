@@ -25,7 +25,7 @@ import gas;
 
 interface RateConstant {
     RateConstant dup();
-    number eval(in GasState Q);
+    @nogc number eval(in GasState Q);
 }
 
 /++
@@ -108,7 +108,7 @@ private:
     int _rctIdx;
 }
 
-
+@nogc
 number thirdBodyConcentration(in GasState Q, Tuple!(int, double)[] efficiencies, GasModel gmodel)
 {
     number val = 0.0;

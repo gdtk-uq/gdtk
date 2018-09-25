@@ -115,6 +115,7 @@ final class ChemistryUpdate : ThermochemicalReactor {
         lua_close(L);
     }
 
+    @nogc
     override void opCall(GasState Q, double tInterval,
                          ref double dtChemSuggest, ref double dtThermSuggest,
                          ref number[] params)
@@ -211,7 +212,8 @@ final class ChemistryUpdate : ThermochemicalReactor {
                      */
                     h /= DT_REDUCTION_FACTOR;
                     if ( h < H_MIN ) {
-                        string errMsg = format("Hit the minimum allowable timestep in chemistry update: dt= %.4e", H_MIN);
+                        string errMsg = "Hit the minimum allowable timestep in chemistry update.";
+                        debug { errMsg ~= format("\ndt= %.4e", H_MIN); }
                         Q.copy_values_from(_Qinit);
                         throw new ThermochemicalReactorUpdateException(errMsg);
                     }
@@ -262,8 +264,7 @@ final class ChemistryUpdate : ThermochemicalReactor {
             // the maximum number of subscyles... we are taking too long.
             // Let's return the gas state to how it was before we failed
             // and throw an Exception.
-            string errMsg = "Hit maximum number of subcycles while attempting
-chemistry update.";
+            string errMsg = "Hit maximum number of subcycles while attempting chemistry update.";
             Q.copy_values_from(_Qinit);
             throw new ThermochemicalReactorUpdateException(errMsg);
         }
@@ -279,8 +280,8 @@ chemistry update.";
                 _gmodel.update_thermo_from_rhoT(Q);
             }
             catch (GasModelException err) {
-                string msg = format("caught %s", err.msg);
-                msg ~= "The call to update_thermo_from_rhoT in the chemistry update failed.\n";
+                string msg = "The call to update_thermo_from_rhoT in the chemistry update failed.";
+                debug { msg ~= format("\ncaught %s", err.msg); }
             throw new ThermochemicalReactorUpdateException(msg);
             }
             auto uOther = sum(Q.u_modes);
@@ -289,8 +290,8 @@ chemistry update.";
                 _gmodel.update_thermo_from_rhou(Q);
             }
             catch (GasModelException err) {
-                string msg = format("caught %s", err.msg);
-                msg ~= "The call to update_thermo_from_rhou in the chemistry update failed.\n";
+                string msg = "The call to update_thermo_from_rhou in the chemistry update failed.";
+                debug { msg ~= format("\ncaught %s", err.msg); }
             throw new ThermochemicalReactorUpdateException(msg);
             }
         }
@@ -324,6 +325,7 @@ public:
     {
         _rmech = rmech;
     }
+    @nogc
     abstract ResultOfStep opCall(number[] y0, double h, number[] yOut, ref double hSuggest);
 private:
     ReactionMechanism _rmech;
@@ -367,6 +369,7 @@ public:
         _k6.length = _ndim;
     }
 
+    @nogc
     override ResultOfStep opCall(number[] y0, double h, number[] yOut, ref double hSuggest)
     {
         // 0. Set up the constants associated with the update formula
@@ -471,7 +474,7 @@ private:
 
 class AlphaQssStep : ChemODEStep {
 public:
-  this(in GasModel gmodel, ReactionMechanism rmech, double eps1, double eps2, double delta, int max_iters)
+    this(in GasModel gmodel, ReactionMechanism rmech, double eps1, double eps2, double delta, int max_iters)
     {
         super(rmech);
         _eps1 = eps1;
@@ -495,6 +498,7 @@ public:
         _alphabar.length = _ndim;
     }
 
+    @nogc
     override ResultOfStep opCall(number[] y0, double h, number[] yOut, ref double hSuggest)
     {
         // 1. Predictor Step
@@ -553,12 +557,14 @@ private:
     number[] _yTmp, _yp, _yp0,  _yc, _q0, _L0, _p0, _pp, _qtilda, _pbar, _qp, _Lp, _alpha, _alphabar;
 
     // Private functions.
+    @nogc
     void p_on_y(number[] L, number[] y, number[] p_y) {
         foreach( i; 0.._ndim) 
             p_y[i] = L[i] / (y[i] + _ZERO_EPS);
         return;
     }
 
+    @nogc
     void alpha_compute(number[] p, number[] alpha, double h) {
         foreach ( i; 0.._ndim ) {
             number r = 1.0/(p[i]*h+_ZERO_EPS);  // ZERO_EPS prevents division by 0 
@@ -566,11 +572,13 @@ private:
         }
     }
 
+    @nogc
     void update_conc(number[] yTmp, number[] y0, number[] q, number[] p, number[] alpha, double h) {
         foreach ( i; 0.._ndim )
             yTmp[i] = y0[i] + (h*(q[i]-p[i]*y0[i]))/(1.0+alpha[i]*h*p[i]);
     }
 
+    @nogc
     bool test_converged(in number[] yc, in number[] yp, double h) {
         bool passesTest = true;
         double test = 0.0;
@@ -587,6 +595,7 @@ private:
         return passesTest;
     }
 
+    @nogc
     double step_suggest(double h, number[] yc, number[] yp)
     {
         double test = 0.0;

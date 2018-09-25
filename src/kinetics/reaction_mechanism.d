@@ -23,7 +23,7 @@ import kinetics.reaction;
 class ReactionMechanism
 {
 public:
-    @property size_t n_reactions() const { return _reactions.length; }
+    @property @nogc size_t n_reactions() const { return _reactions.length; }
     this(Reaction[] reactions, size_t n_species, double T_lower_limit, double T_upper_limit)
     {
         foreach ( ref r; reactions) {
@@ -42,7 +42,8 @@ public:
     {
         return new ReactionMechanism(_reactions, _q.length, _T_lower_limit, _T_upper_limit);
     }
-    
+
+    @nogc
     final void eval_rate_constants(GasState Q)
     {
         number T_save = Q.T;
@@ -55,6 +56,7 @@ public:
         Q.T = T_save;
     }
 
+    @nogc
     final void eval_rates(in number[] conc, number[] rates)
     {
         eval_split_rates(conc, _q, _L);
@@ -62,6 +64,7 @@ public:
             rates[isp] = _q[isp] - _L[isp];
         }
     }
+    @nogc
     final void eval_split_rates(in number[] conc, number[] q, number[] L)
     {
         foreach ( ref r; _reactions ) r.eval_rates(conc);
@@ -76,18 +79,22 @@ public:
             }
         }
     }
+    @nogc
     final number k_f(int ir)
     {
         return _reactions[ir].k_f;
     }
+    @nogc 
     final number k_b(int ir)
     {
         return _reactions[ir].k_b;
     }
+    @nogc
     final number rate(int ir, int isp)
     {
         return _reactions[ir].production(isp) - _reactions[ir].loss(isp);
     }
+    @nogc
     final bool reactionHasParticipant(int ir, int isp)
     {
         foreach (p; _reactions[ir].participants) {
@@ -116,6 +123,7 @@ public:
      + Integrating Chemically Reacting Systems.
      + PhD Thesis, The University of Michigan
      +/ 
+    @nogc
     final double estimateStepSize(in number[] conc)
     {
         immutable double MUCH_LARGER_FACTOR = 10000.0;

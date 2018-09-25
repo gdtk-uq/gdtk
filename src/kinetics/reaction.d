@@ -22,6 +22,7 @@ import gas;
 import util.msg_service;
 import kinetics.rate_constant;
 
+@nogc
 number compute_equilibrium_constant(GasModel gmodel, GasState Q,
                                     in int[] participants, in double[] nu)
 {
@@ -44,10 +45,10 @@ number compute_equilibrium_constant(GasModel gmodel, GasState Q,
 class Reaction
 {
 public:
-    @property number k_f() const { return _k_f; }
-    @property number k_b() const { return _k_b; }
-    @property number K_eq() const { return _K_eq; }
-    @property ref int[] participants() { return _participants; }
+    @property @nogc number k_f() const { return _k_f; }
+    @property @nogc number k_b() const { return _k_b; }
+    @property @nogc number K_eq() const { return _K_eq; }
+    @property @nogc ref int[] participants() { return _participants; }
     
     this(RateConstant forward, RateConstant backward, GasModel gmodel)
     {
@@ -73,9 +74,9 @@ public:
 
     abstract Reaction dup();
 
-    abstract void eval_equilibrium_constant(in GasState Q);
+    @nogc abstract void eval_equilibrium_constant(in GasState Q);
     
-    final void eval_rate_constants(in GasState Q)
+    @nogc final void eval_rate_constants(in GasState Q)
     {
         immutable double EPS = 1.0e-16; // To prevent divide by zero
                                         // if K_eq is very very small.
@@ -112,18 +113,18 @@ public:
         }
     }
 
-    final void eval_rates(in number[] conc)
+    @nogc final void eval_rates(in number[] conc)
     {
         _w_f = eval_forward_rate(conc);
         _w_b = eval_backward_rate(conc);
     }
 
-    abstract number production(int isp) const;
-    abstract number loss(int isp) const;
+    @nogc abstract number production(int isp) const;
+    @nogc abstract number loss(int isp) const;
 
 protected:
-    abstract number eval_forward_rate(in number[] conc);
-    abstract number eval_backward_rate(in number[] conc);
+    @nogc abstract number eval_forward_rate(in number[] conc);
+    @nogc abstract number eval_backward_rate(in number[] conc);
             
 private:
     RateConstant _forward, _backward;
@@ -135,11 +136,11 @@ private:
     GasState _Qw; // a GasState for temporary working
     int[] _participants; // Storage of indices of species that
                          // participate in this reaction
-    number eval_forward_rate_constant(in GasState Q)
+    @nogc number eval_forward_rate_constant(in GasState Q)
     {
         return _forward.eval(Q);
     }
-    number eval_backward_rate_constant(in GasState Q)
+    @nogc number eval_backward_rate_constant(in GasState Q)
     {
         return _backward.eval(Q);
     }
@@ -208,11 +209,13 @@ public:
         return new ElementaryReaction(_forward, _backward, _gmodel, _participants,
                                       _reactants, _products, _nu);
     }
+    @nogc
     override void eval_equilibrium_constant(in GasState Q)
     {
         _Qw.T = Q.T;
         _K_eq = compute_equilibrium_constant(_gmodel, _Qw, _participants, _nu);
     }
+    @nogc
     override number production(int isp) const
     {
         if ( _nu[isp] >  0.0 )
@@ -222,7 +225,8 @@ public:
         else
             return to!number(0.0);
     }
-    
+
+    @nogc
     override number loss(int isp) const
     {
         if ( _nu[isp] > 0.0 ) 
@@ -233,6 +237,7 @@ public:
             return to!number(0.0);
     }
 protected:
+    @nogc
     override number eval_forward_rate(in number[] conc)
     {
         number val = _k_f;
@@ -244,6 +249,7 @@ protected:
         return val;
     }
 
+    @nogc
     override number eval_backward_rate(in number[] conc)
     {
         number val = _k_b;
@@ -323,11 +329,13 @@ public:
         return new AnonymousColliderReaction(_forward, _backward, _gmodel, _participants,
                                              _reactants, _products, _nu, _efficiencies);
     }
+    @nogc
     override void eval_equilibrium_constant(in GasState Q)
     {
         _Qw.T = Q.T;
         _K_eq = compute_equilibrium_constant(_gmodel, _Qw, _participants, _nu);
     }
+    @nogc
     override number production(int isp) const
     {
         if ( _nu[isp] >  0.0 )
@@ -337,7 +345,8 @@ public:
         else
             return to!number(0.0);
     }
-    
+
+    @nogc
     override number loss(int isp) const
     {
         if ( _nu[isp] > 0.0 ) 
@@ -348,6 +357,7 @@ public:
             return to!number(0.0);
     }
 protected:
+    @nogc
     override number eval_forward_rate(in number[] conc)
     {
         // eval_forward_rate() needs to be called before
@@ -362,6 +372,7 @@ protected:
         return val;
     }
 
+    @nogc
     override number eval_backward_rate(in number[] conc)
     {
         number val = _k_b*_anonymousColliderTerm;
@@ -380,6 +391,7 @@ private:
     Tuple!(int, double)[] _efficiencies;
     number _anonymousColliderTerm;
 
+    @nogc
     void computeAnonymousColliderTerm(in number[] conc)
     {
         _anonymousColliderTerm = 0.0;

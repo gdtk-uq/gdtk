@@ -52,6 +52,7 @@ final class TwoTemperatureAirKinetics : ThermochemicalReactor {
         initModel(energyExchFile);
     }
 
+    @nogc
     override void opCall(GasState Q, double tInterval,
                          ref double dtChemSuggest, ref double dtThermSuggest,
                          ref number[] params)
@@ -71,8 +72,8 @@ final class TwoTemperatureAirKinetics : ThermochemicalReactor {
             energyUpdate(Q, tInterval, dtThermSuggest);
         }
         catch (GasModelException err) {
-            string msg = format("caught %s", err.msg);
-            msg ~= "The energy update in the two temperature air kinetics module failed.\n";
+            string msg = "The energy update in the two temperature air kinetics module failed.\n";
+            debug { msg ~= format("\ncaught %s", err.msg); }
             throw new ThermochemicalReactorUpdateException(msg);
         }
     }
@@ -174,6 +175,7 @@ private:
         }
     }
 
+    @nogc
     void energyUpdate(GasState Q, double tInterval, ref double dtSuggest)
     {
         _eTotal = Q.u + Q.u_modes[0];
@@ -246,7 +248,8 @@ private:
                      */
                     h /= DT_REDUCTION_FACTOR;
                     if (h < H_MIN) {
-                        string errMsg = format("Hit the minimum allowable timestep in 2-T air energy exchange update: dt= %.4e", H_MIN);
+                        string errMsg = "Hit the minimum allowable timestep in 2-T air energy exchange update.";
+                        debug { errMsg ~= format("\ndt= %.4e", H_MIN); }
                         Q.copy_values_from(_Qinit);
                         throw new ThermochemicalReactorUpdateException(errMsg);
                     }
@@ -285,6 +288,7 @@ private:
         dtSuggest = dtSave;
     }
 
+    @nogc
     number evalRelaxationTime(GasState Q, int isp)
     {
         number tauInv = 0.0;
@@ -320,6 +324,7 @@ private:
         return 1.0/tauInv;
     }
 
+    @nogc
     number evalRate(GasState Q)
     {
         number rate = 0.0;
@@ -341,6 +346,7 @@ private:
         return rate;
     }
 
+    @nogc
     ResultOfStep RKFStep(GasState Q, double h, ref double hSuggest)
     {
         _Q0.copy_values_from(Q);

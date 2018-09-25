@@ -55,6 +55,7 @@ number[] RHSvector;
 int[] pivot;
 
 
+@nogc
 void UpdateVectorFromState(ref number[] given_vector, number[][] given_state) 
 {
     int j=0;
@@ -66,6 +67,7 @@ void UpdateVectorFromState(ref number[] given_vector, number[][] given_state)
     }
 }
 
+@nogc
 void UpdateStateFromVector(ref number[][] given_state, number[] given_vector)
 {
     int Vector_Pos(int m, int n){
@@ -83,9 +85,10 @@ void UpdateStateFromVector(ref number[][] given_state, number[] given_vector)
     }
 }
 
+@nogc
 void CopyStateToState(ref number[][] out_state, number[][] in_state, bool step=false, int stepn=0)
 {
-    int[] Species_Position(int vector_position) {
+    int[2] Species_Position(int vector_position) {
         int chem_spec;
         while(vector_position>=out_state[chem_spec].length){
             chem_spec+=1;
@@ -100,7 +103,7 @@ void CopyStateToState(ref number[][] out_state, number[][] in_state, bool step=f
         }
     }
     if (step) {
-        int[] step_pos=Species_Position(stepn);
+        int[2] step_pos=Species_Position(stepn);
         out_state[step_pos[0]][step_pos[1]] += dj;
     }
 }
@@ -140,12 +143,14 @@ void Init()
 
 }
 
+@nogc
 number Rate(int ip, int gas, number[][] input_state=state, number electron_density=Ne) 
 {
     //Takes an energy level, gas and current state and returns the rate of change of grouped level ip\
     //if no state is specified, use current state
     //if no electron density is specified, use Ne
-    
+
+    @nogc
     number Forward_Rate_Coef(int gas, int ip,int jp) {
         double A=full_rate_fit[gas][ip+1][jp+1][0];
         double n=full_rate_fit[gas][ip+1][jp+1][1];
@@ -153,6 +158,7 @@ number Rate(int ip, int gas, number[][] input_state=state, number electron_densi
         return A*((Te)^^n)*exp(-E/(Te));
     }
 
+    @nogc
     number Equil_Const(int gas, int ip, int jp) {
         double G1=full_rate_fit[gas][ip+1][jp+1][3];
         double G2=full_rate_fit[gas][ip+1][jp+1][4];
@@ -163,6 +169,7 @@ number Rate(int ip, int gas, number[][] input_state=state, number electron_densi
         return exp((G1/z) + G2 + G3*log(z) + G4*z + G5*(z^^2));
     }
 
+    @nogc
     number Backward_Rate_Coef(int gas, int ip, int jp) {
         return Forward_Rate_Coef(gas,ip,jp)/Equil_Const(gas,ip,jp);
     }
@@ -185,8 +192,10 @@ number Rate(int ip, int gas, number[][] input_state=state, number electron_densi
 	return group_rate;
 }
 
+@nogc
 void Jacobian()
 {
+    @nogc
     bool Ion(int vector_position){
         int chem_spec;
         while(vector_position>=guess_state[chem_spec].length){
@@ -200,7 +209,8 @@ void Jacobian()
         }
     }
 
-    int[] Species_Position(int vector_position) {
+    @nogc
+    int[2] Species_Position(int vector_position) {
         int chem_spec;
         while(vector_position>=guess_state[chem_spec].length){
             chem_spec+=1;
@@ -216,7 +226,7 @@ void Jacobian()
             step_Ne+=dj;
         }
         for(int m;m<total_species_number;m++) { //for every element of the rate
-            int[] positions=Species_Position(m);
+            int[2] positions=Species_Position(m);
             int chem_spec=positions[0];
             int elec_spec=positions[1];
             jacobian[m][n]=(Rate(elec_spec,chem_spec,step_state,step_Ne)-Rate(elec_spec,chem_spec,guess_state,Ne))/dj;
@@ -224,11 +234,13 @@ void Jacobian()
     }
 }
 
+@nogc
 void Step() 
 {   
     CopyStateToState(guess_state,state);
     UpdateVectorFromState(initial_vector,state);
 
+    @nogc
     int VectorPosition(int gas, int ip)
     {
         int vectorposition;
@@ -251,7 +263,11 @@ void Step()
             initial_ions+=chem_spec[$-1];
         }
         Jacobian();
-        BDF1(update_vector, RHSvector, Asolve, pivot, dt,initial_vector,state_vector,rate_vector,jacobian);
+        debug {
+            BDF1(update_vector, RHSvector, Asolve, pivot, dt,initial_vector,state_vector,rate_vector,jacobian);
+        } else {
+            throw new Error("BDF1 is only available in debug flavour.");
+        }
         UpdateStateFromVector(guess_state,state_vector);
         number final_ions=0.0;
         foreach(number[] chem_spec;guess_state) {
@@ -262,11 +278,12 @@ void Step()
     CopyStateToState(state,guess_state);
 }
 
+@nogc
 void Electronic_Solve( number[] state_from_cfd, ref number[] state_to_cfd, number given_Te, double given_endtime)
 {
     dt = 1.0e-10;
     Ne=state_from_cfd[$-1];
-    writeln("state_vector: ",state_vector);
+    debug { writeln("state_vector: ",state_vector); }
     state_vector[]=state_from_cfd[0 .. $-1];
     UpdateStateFromVector(state,state_from_cfd);
     UpdateVectorFromState(state_vector,state);

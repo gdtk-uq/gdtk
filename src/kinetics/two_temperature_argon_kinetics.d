@@ -173,11 +173,14 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         return J;
     }
 
+    @nogc
     override void opCall(GasState Q, double tInterval,
                          ref double dtChemSuggest, ref double dtThermSuggest, 
                          ref number[] params)
     {
-
+        debug {
+        // Implement in debug context because of @nogc requirement.
+        //
         if (Q.T > 3000.0) {
             double chem_dt_start = _chem_dt;
             int NumberSteps = to!int(tInterval/_chem_dt);
@@ -277,6 +280,10 @@ final class UpdateArgonFrac : ThermochemicalReactor {
             _gmodel.update_sound_speed(Q);
 
             _chem_dt = chem_dt_start; // return _chem_dt back to its original value\
+        }
+        } else {
+            // We are not in a debug build context, so...
+            throw new Error("2T argon only available in debug build.");
         }
     } // end opCall()
     
