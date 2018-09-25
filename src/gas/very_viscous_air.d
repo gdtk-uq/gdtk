@@ -107,11 +107,11 @@ public:
     
     override void update_thermo_from_ps(GasState Q, number s) const
     {
-        throw new Exception(format("Not implemented: line=%d, file=%s\n", __LINE__, __FILE__));
+        throw new Exception("Not implemented.");
     }
     override void update_thermo_from_hs(GasState Q, number h, number s) const
     {
-        throw new Exception(format("Not implemented: line=%d, file=%s\n", __LINE__, __FILE__));
+        throw new Exception("Not implemented.");
     }
     override void update_sound_speed(GasState Q) const
     {

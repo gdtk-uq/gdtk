@@ -99,8 +99,8 @@ public:
     @nogc abstract void update_thermo_from_rhou(GasState Q);
     @nogc abstract void update_thermo_from_rhoT(GasState Q);
     @nogc abstract void update_thermo_from_rhop(GasState Q);
-    abstract void update_thermo_from_ps(GasState Q, number s);
-    abstract void update_thermo_from_hs(GasState Q, number h, number s);
+    @nogc abstract void update_thermo_from_ps(GasState Q, number s);
+    @nogc abstract void update_thermo_from_hs(GasState Q, number h, number s);
     @nogc abstract void update_sound_speed(GasState Q);
     @nogc abstract void update_trans_coeffs(GasState Q);
     // const void update_diff_coeffs(ref GasState Q) {}

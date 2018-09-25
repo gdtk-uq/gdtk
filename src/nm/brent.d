@@ -30,6 +30,7 @@ import nm.complex;
  * Returns:
  *    b, a point near the root.
  */
+@nogc
 T solve(alias f, T)(T x1, T x2, double tol=1.0e-9) 
     if (is(typeof(f(0.0)) == double) ||
         is(typeof(f(0.0)) == float) ||
@@ -45,8 +46,8 @@ T solve(alias f, T)(T x1, T x2, double tol=1.0e-9)
     if (abs(fb) == 0.0) { return b; }
     if (fa * fb > 0.0) {
         // Supplied bracket does not encompass zero of the function.
-        string msg = "Root must be bracketed by x1 and x2\n";
-        msg ~= format("x1=%g f(x1)=%g x2=%g f(x2)=%g\n", x1, fa, x2, fb); 
+        string msg = "Root must be bracketed by x1 and x2";
+        debug { msg ~= format("\nx1=%g f(x1)=%g x2=%g f(x2)=%g\n", x1, fa, x2, fb); } 
         throw new Exception(msg);
     }
     T c = b;
@@ -128,16 +129,18 @@ version(brent_test) {
     import std.conv;
     import nm.number;
     int main() {
-        number test_fun_1(number x) {
+        @nogc number test_fun_1(number x) {
             return pow(x,3) + pow(x,2) - 3*x - 3;
         }
-        number test_fun_2(number x, number a) {
+        @nogc number test_fun_2(number x, number a) {
             return a*x + sin(x) - exp(x);
         }
         assert(fabs(solve!(test_fun_1,number)(to!number(1), to!number(2)) - 1.732051) < 1.0e-5,
                failedUnitTest());
         number my_a = 3.0;
-        auto test_fun_3 = delegate (number x) { return test_fun_2(x, my_a); };
+        @nogc number test_fun_3 (number x) {
+            return test_fun_2(x, my_a);
+        }
         assert(fabs(solve!(test_fun_3,number)(to!number(0), to!number(1)) - 0.3604217) < 1.0e-5,
                failedUnitTest());
 

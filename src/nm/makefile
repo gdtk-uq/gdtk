@@ -75,23 +75,23 @@ $(LIBLUA):
 	cd $(LUA); make linux local
 
 bbla_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
-	dmd -of$@ -debug -g -w -version=$@ \
+	dmd -of$@ -debug -g -w -dip1008 -version=$@ \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 bbla_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
-	dmd -of$@ -debug -g -w -version=bbla_test -version=complex_numbers \
+	dmd -of$@ -debug -g -w -dip1008 -version=bbla_test -version=complex_numbers \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 bracketing_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
-	dmd -of$@ -debug -g -w -version=$@ \
+	dmd -of$@ -debug -g -w -dip1008 -version=$@ \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 bracketing_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
-	dmd -of$@ -debug -g -w -version=bracketing_test -version=complex_numbers \
+	dmd -of$@ -debug -g -w -dip1008 -version=bracketing_test -version=complex_numbers \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 gaussquad_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
-	dmd -of$@ -debug -g -w -version=$@ \
+	dmd -of$@ -debug -g -w -dip1008 -version=$@ \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 gaussquad_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
@@ -99,63 +99,63 @@ gaussquad_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 linesearch_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
-	dmd -of$@ -debug -g -w -version=$@ \
+	dmd -of$@ -debug -g -w -dip1008 -version=$@ \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 linesearch_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
-	dmd -of$@ -debug -g -w -version=linesearch_test -version=complex_numbers \
+	dmd -of$@ -debug -g -w -dip1008 -version=linesearch_test -version=complex_numbers \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 newtoncotes_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
-	dmd -of$@ -debug -g -w -version=$@ \
+	dmd -of$@ -debug -g -w -dip1008 -version=$@ \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 newtoncotes_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
-	dmd -of$@ -debug -g -w -version=newtoncotes_test -version=complex_numbers \
+	dmd -of$@ -debug -g -w -dip1008 -version=newtoncotes_test -version=complex_numbers \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 ridder_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
-	dmd -of$@ -debug -g -w -version=$@ \
+	dmd -of$@ -debug -g -w -dip1008 -version=$@ \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 ridder_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
-	dmd -of$@ -debug -g -w -version=ridder_test -version=complex_number \
+	dmd -of$@ -debug -g -w -dip1008 -version=ridder_test -version=complex_number \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 rungekutta_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
-	dmd -of$@ -debug -g -w -version=$@ \
+	dmd -of$@ -debug -g -w -dip1008 -version=$@ \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 rungekutta_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
-	dmd -of$@ -debug -g -w -version=rungekutta_test -version=complex_numbers \
+	dmd -of$@ -debug -g -w -dip1008 -version=rungekutta_test -version=complex_numbers \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 brent_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
-	dmd -of$@ -debug -g -w -version=$@ \
+	dmd -of$@ -debug -g -w -dip1008 -version=$@ \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 brent_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
-	dmd -of$@ -debug -g -w -version=brent_test -version=complex_numbers \
+	dmd -of$@ -debug -g -w -dip1008 -version=brent_test -version=complex_numbers \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 smla_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
-	dmd -of$@ -debug -g -w -version=$@ \
+	dmd -of$@ -debug -g -w -dip1008 -version=$@ \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 smla_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
-	dmd -of$@ -debug -g -w -version=smla_test -version=complex_numbers \
+	dmd -of$@ -debug -g -w -dip1008 -version=smla_test -version=complex_numbers \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 rsla_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
-	dmd -of$@ -debug -g -w -version=$@ \
+	dmd -of$@ -debug -g -w -dip1008 -version=$@ \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 rsla_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
-	dmd -of$@ -debug -g -w -version=rsla_test -version=complex_numbers \
+	dmd -of$@ -debug -g -w -dip1008 -version=rsla_test -version=complex_numbers \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 luabbla_test: luabbla.d bbla.d complex.d number.d $(UTIL_FILES) $(LIBLUA) $(UTIL_FILES)
-	dmd -of$@ -debug -g -w -version=$@ \
+	dmd -of$@ -debug -g -w -dip1008 -version=$@ \
 		luabbla.d bbla.d complex.d number.d $(UTIL_FILES) $(DLINKFLAGS)
 
 complex_number_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d

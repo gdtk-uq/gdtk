@@ -240,16 +240,19 @@ public:
         number Tsave = T1;
         number T2 = T1 + delT;
 
-        auto zeroFun = delegate (number T) {
+        number zeroFun(number T)
+        {
             Q.T = T;
             number h_guess = enthalpy(Q);
             return h - h_guess;
-        };
+        }
 
         if ( bracket!(zeroFun,number)(T1, T2) == -1 ) {
-            string msg = "The 'bracket' function failed to find temperature values\n";
-            msg ~= "that bracketed the zero function in ThermallyPerfectGas.update_thermo_from_hs().\n";
-            msg ~= format("The final values are: T1 = %12.6f and T2 = %12.6f\n", T1, T2);
+            string msg = "The 'bracket' function failed to find temperature values";
+            debug {
+                msg ~= "\nthat bracketed the zero function in ThermallyPerfectGas.update_thermo_from_hs().\n";
+                msg ~= format("The final values are: T1 = %12.6f and T2 = %12.6f\n", T1, T2);
+            }
             throw new Exception(msg);
         }
 
@@ -260,14 +263,16 @@ public:
             Q.T = solve!(zeroFun,number)(T1, T2, TOL);
         }
         catch ( Exception e ) {
-            string msg = "There was a problem iterating to find temperature\n";
-            msg ~= "in function ThermallyPerfectGas.update_thermo_from_hs().\n";
-            msg ~= format("The initial temperature guess was: %12.6f\n", Tsave);
-            msg ~= format("The target enthalpy value was: %12.6f\n", h);
-            msg ~= format("The GasState is currently:\n");
-            msg ~= Q.toString();
-            msg ~= "The message from the ridder.solve function is:\n";
-            msg ~= e.msg;
+            string msg = "There was a problem iterating to find temperature";
+            debug {
+                msg ~= "\nin function ThermallyPerfectGas.update_thermo_from_hs().\n";
+                msg ~= format("The initial temperature guess was: %12.6f\n", Tsave);
+                msg ~= format("The target enthalpy value was: %12.6f\n", h);
+                msg ~= format("The GasState is currently:\n");
+                msg ~= Q.toString();
+                msg ~= "The message from the ridder.solve function is:\n";
+                msg ~= e.msg;
+            }
             throw new Exception(msg);
         }
 
@@ -279,16 +284,19 @@ public:
         number psave = p1;
         number p2 = p1 + delp;
 
-        auto zeroFun2 = delegate (number p) {
+        number zeroFun2(number p)
+        {
             Q.p = p;
             number s_guess = entropy(Q);
             return s - s_guess;
-        };
+        }
 
         if ( bracket!(zeroFun2,number)(p1, p2) == -1 ) {
-            string msg = "The 'bracket' function failed to find pressure values\n";
-            msg ~= "that bracketed the zero function in ThermallyPerfectGas.update_thermo_from_hs().\n";
-            msg ~= format("The final values are: p1 = %12.6f and p2 = %12.6f\n", p1, p2);
+            string msg = "The 'bracket' function failed to find pressure values";
+            debug {
+                msg ~= "\nthat bracketed the zero function in ThermallyPerfectGas.update_thermo_from_hs().\n";
+                msg ~= format("The final values are: p1 = %12.6f and p2 = %12.6f\n", p1, p2);
+            }
             throw new Exception(msg);
         }
 
@@ -299,14 +307,16 @@ public:
             Q.p = solve!(zeroFun2,number)(p1, p2, TOL);
         }
         catch ( Exception e ) {
-            string msg = "There was a problem iterating to find pressure\n";
-            msg ~= "in function ThermallyPerfectGas.update_thermo_from_hs().\n";
-            msg ~= format("The initial pressure guess was: %12.6f\n", psave);
-            msg ~= format("The target entropy value was: %12.6f\n", s);
-            msg ~= format("The GasState is currently:\n");
-            msg ~= Q.toString();
-            msg ~= "The message from the ridder.solve function is:\n";
-            msg ~= e.msg;
+            string msg = "There was a problem iterating to find pressure";
+            debug {
+                msg ~= "\nin function ThermallyPerfectGas.update_thermo_from_hs().\n";
+                msg ~= format("The initial pressure guess was: %12.6f\n", psave);
+                msg ~= format("The target entropy value was: %12.6f\n", s);
+                msg ~= format("The GasState is currently:\n");
+                msg ~= Q.toString();
+                msg ~= "The message from the ridder.solve function is:\n";
+                msg ~= e.msg;
+            }
             throw new Exception(msg);
         }
         _tpgMixEOS.update_energy(Q);

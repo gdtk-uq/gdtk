@@ -2438,21 +2438,25 @@ public:
     }
     
     override void update_thermo_from_ps(GasState Q, number s)
-    { 
-        if(Q.quality==1) {
-            Q.T = getT_from_ps(Q.p.re, Q.T.re, s.re);
-            Q.a = _IAPWS.SoundSpeed(Q.p.re, Q.T.re, Q.quality.re);
-            Q.u = _IAPWS.SpecificInternalEnergy(Q.p.re, Q.T.re, Q.quality.re);
-            Q.mu = _IAPWS.DynamicViscosity(Q.p.re, Q.T.re, Q.quality.re);
-            Q.k = _IAPWS.ThermalConductivity(Q.p.re, Q.T.re, Q.quality.re);
+    {
+        debug {
+            if(Q.quality==1) {
+                Q.T = getT_from_ps(Q.p.re, Q.T.re, s.re);
+                Q.a = _IAPWS.SoundSpeed(Q.p.re, Q.T.re, Q.quality.re);
+                Q.u = _IAPWS.SpecificInternalEnergy(Q.p.re, Q.T.re, Q.quality.re);
+                Q.mu = _IAPWS.DynamicViscosity(Q.p.re, Q.T.re, Q.quality.re);
+                Q.k = _IAPWS.ThermalConductivity(Q.p.re, Q.T.re, Q.quality.re);
+            } else {
+                assert(0, "Not in IAPWS-Region2, implement me");
+            }
         } else {
-            assert(0, "Not in IAPWS-Region2, implement me");
+            throw new Error("not compatible with @nogc");
         }
     }
     
     override void update_thermo_from_hs(GasState Q, number h, number s)
     {
-        assert(0, "Implement me");
+        throw new Error("Not implemented.");
     }
     
     override void update_sound_speed(GasState Q)
