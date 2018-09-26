@@ -560,7 +560,7 @@ public:
         return;
     } // end decode_conserved()
 
-    //@nogc
+    @nogc
     void time_derivatives(int gtl, int ftl, bool with_k_omega) 
     // These are the spatial (RHS) terms in the semi-discrete governing equations.
     // gtl : (grid-time-level) flow derivatives are evaluated at this grid level
@@ -573,7 +573,7 @@ public:
         auto nf = iface.length;
         number[10] area; // Assume this maximum number of faces.
         ConservedQuantities*[10] myF; // Pointers to the fluxes for all of the faces.
-        assert(nf <= 10, "oops too many faces on the cell");
+        if (nf > 10) { throw new Error("oops too many faces on the cell"); }
         foreach(i; 0 .. nf) {
             area[i] = outsign[i]*iface[i].area[gtl];
             myF[i] = &(iface[i].F);
@@ -1018,7 +1018,7 @@ public:
             string msg = format("caught %s", err.msg);
             msg ~= format("The thermochemical_increment() failed for cell: %d\n", id);
             msg ~= format("This cell is located at: %s\n", pos[0]);
-                msg ~= format("This cell is located in block: %d\n", myConfig.universe_blk_id);
+            msg ~= format("This cell is located in block: %d\n", myConfig.universe_blk_id);
             msg ~= "This failure occurred when trying to update the thermo state after\n";
             msg ~= "computing the species change due to chemical reactions.\n";
             msg ~= format("The gas state after the failed update is:\n   fs.gas %s", fs.gas);

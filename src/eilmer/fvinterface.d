@@ -280,7 +280,7 @@ public:
         pos = vtx[0].pos[gtl]; pos += vtx[1].pos[gtl]; pos *= to!number(0.5);
     } // end update_2D_geometric_data()
 
-    // @nogc
+    @nogc
     void update_3D_geometric_data(size_t gtl)
     {
         switch (vtx.length) {
@@ -295,10 +295,9 @@ public:
                             pos, n, t1, t2, area[gtl]);
             break;
         default:
-            string msg = "FVInterface.update_3D_geometric_data(): ";
-            msg ~= format("Unhandled number of vertices: %d", vtx.length);
+            string msg = "FVInterface.update_3D_geometric_data(): Unhandled number of vertices: ";
+            debug { msg ~= format("%d", vtx.length); }
             throw new FlowSolverException(msg);
-            // assert(0, "unhandled number of vertices"); // for @nogc
         } // end switch     
     } // end update_3D_geometric_data()
 
@@ -310,8 +309,7 @@ public:
         grad.scale_values_by(to!number(1.0/vtx.length));
     } // end average_vertex_deriv_values()
 
-    //@nogc
-    // Removed presently because of call to GasModel.enthalpy.
+    @nogc
     void viscous_flux_calc()
     // Unified 2D and 3D viscous-flux calculation.
     // Note that the gradient values need to be in place before calling this procedure.
@@ -436,7 +434,7 @@ public:
             if (myConfig.turbulence_model != TurbulenceModel.none ||
                 myConfig.mass_diffusion_model != MassDiffusionModel.none ) {
                 foreach (isp; 0 .. n_species) {
-                    number h = gmodel.enthalpy(fs.gas, to!int(isp));
+                    number h = gmodel.enthalpy(fs.gas, cast(int)isp);
                     qx -= jx[isp] * h;
                     qy -= jy[isp] * h;
                     qz -= jz[isp] * h;

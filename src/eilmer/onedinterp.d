@@ -160,8 +160,7 @@ public:
         }
     } // end of interp_right_scalar()
 
-
-    // cannot use @nogc because the GasModel methods may allocate internal data
+    @nogc
     void interp_both(ref FVInterface IFace,
                      ref FVCell cL1, ref FVCell cL0, ref FVCell cR0, ref FVCell cR1,
                      number cL1Length, number cL0Length, 
@@ -230,13 +229,13 @@ public:
                 try {
                     scale_mass_fractions(Lft.gas.massf); 
                 } catch(Exception e) {
-                    writeln(e.msg);
+                    debug { writeln(e.msg); }
                     Lft.gas.massf[] = gL0.massf[];
                 }
                 try {
                     scale_mass_fractions(Rght.gas.massf);
                 } catch(Exception e) {
-                    writeln(e.msg);
+                    debug { writeln(e.msg); }
                     Rght.gas.massf[] = gR0.massf[];
                 }
             } else {
@@ -254,13 +253,13 @@ public:
                 try {
                     gmodel.update_thermo_from_"~funname~"(Lft.gas);
                 } catch (Exception e) {
-                    writeln(e.msg);
+                    debug { writeln(e.msg); }
                     Lft.copy_values_from(cL0.fs);
                 }
                 try {
                     gmodel.update_thermo_from_"~funname~"(Rght.gas);
                 } catch (Exception e) {
-                    writeln(e.msg);
+                    debug { writeln(e.msg); }
                     Rght.copy_values_from(cR0.fs);
                 }
                 ";
@@ -333,7 +332,7 @@ public:
         } // end of high-order reconstruction
     } // end interp_both()
 
-    // cannot use @nogc because the GasModel methods may allocate internal data
+    @nogc
     void interp_left(ref FVInterface IFace,
                      ref FVCell cL1, ref FVCell cL0, ref FVCell cR0,
                      number cL1Length, number cL0Length, number cR0Length,
@@ -384,7 +383,7 @@ public:
                 try {
                     scale_mass_fractions(Lft.gas.massf);
                 } catch(Exception e) {
-                    writeln(e.msg);
+                    debug { writeln(e.msg); }
                     Lft.gas.massf[] = gL0.massf[];
                 }
             } else {
@@ -401,7 +400,7 @@ public:
                 try {
                     gmodel.update_thermo_from_"~funname~"(Lft.gas);
                 } catch (Exception e) {
-                    writeln(e.msg);
+                    debug { writeln(e.msg); }
                     Lft.copy_values_from(cL0.fs);
                 }
                 ";
@@ -448,7 +447,7 @@ public:
         } // end of high-order reconstruction
     } // end interp_left()
 
-    // cannot use @nogc because the GasModel methods may allocate internal data
+    @nogc
     void interp_right(ref FVInterface IFace,
                       ref FVCell cL0, ref FVCell cR0, ref FVCell cR1,
                       number cL0Length, number cR0Length, number cR1Length,
@@ -503,7 +502,7 @@ public:
                 try {
                     scale_mass_fractions(Rght.gas.massf);
                 } catch(Exception e) {
-                    writeln(e.msg);
+                    debug { writeln(e.msg); }
                     Rght.gas.massf[] = gR0.massf[];
                 }
             } else {
@@ -520,7 +519,7 @@ public:
                 try {
                     gmodel.update_thermo_from_"~funname~"(Rght.gas);
                 } catch (Exception e) {
-                    writeln(e.msg);
+                    debug { writeln(e.msg); }
                     Rght.copy_values_from(cR0.fs);
                 }
                 ";

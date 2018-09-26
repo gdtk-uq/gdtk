@@ -265,15 +265,15 @@ void Step()
         Jacobian();
         debug {
             BDF1(update_vector, RHSvector, Asolve, pivot, dt,initial_vector,state_vector,rate_vector,jacobian);
+            UpdateStateFromVector(guess_state,state_vector);
+            number final_ions=0.0;
+            foreach(number[] chem_spec;guess_state) {
+                final_ions+=chem_spec[$-1];
+            }
+            Ne+=final_ions-initial_ions;
         } else {
             throw new Error("BDF1 is only available in debug flavour.");
         }
-        UpdateStateFromVector(guess_state,state_vector);
-        number final_ions=0.0;
-        foreach(number[] chem_spec;guess_state) {
-            final_ions+=chem_spec[$-1];
-        }
-        Ne+=final_ions-initial_ions;
     }
     CopyStateToState(state,guess_state);
 }

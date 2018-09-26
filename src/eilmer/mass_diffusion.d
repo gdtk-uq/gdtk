@@ -47,7 +47,9 @@ MassDiffusionModel massDiffusionModelFromName(string name)
 }
 
 interface MassDiffusion {
-    void update_mass_fluxes(const FlowState fs, const FlowGradients grad, number[] jx, number[] jy, number[] jz);
+    @nogc
+    void update_mass_fluxes(const FlowState fs, const FlowGradients grad,
+                            number[] jx, number[] jy, number[] jz);
 }
 
 MassDiffusion initMassDiffusion(GasModel gmodel, MassDiffusionModel mass_diffusion_model, bool withConstantLewisNumber, double Lewis)
@@ -109,7 +111,9 @@ class FicksFirstLaw : MassDiffusion {
             }
         }
     }
-    void update_mass_fluxes(const FlowState fs, const FlowGradients grad, number[] jx, number[] jy, number[] jz)
+    @nogc
+    void update_mass_fluxes(const FlowState fs, const FlowGradients grad,
+                            number[] jx, number[] jy, number[] jz)
     {
         _gmodel.massf2molef(fs.gas, _molef);
         if (_withConstantLewisNumber) {
@@ -167,6 +171,7 @@ private:
     double _g = 1.76474;
     double _h = 3.89411;
 
+    @nogc
     void computeBinaryDiffCoeffs(number T, number p)
     {
         // Expression from:
@@ -204,6 +209,7 @@ private:
         }
     }
 
+    @nogc
     void computeAvgDiffCoeffs()
     {
         foreach (isp; 0 .. _nsp) {
