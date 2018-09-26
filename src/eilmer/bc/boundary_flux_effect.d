@@ -16,6 +16,7 @@ import std.conv;
 import std.math;
 import nm.complex;
 import nm.number;
+import nm.bbla;
 
 import geom;
 import json_helper;
@@ -143,7 +144,13 @@ public:
 
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        computeFluxesAndTemperatures(ftl, _gasCells, _gasIFaces, _solidCells, _solidIFaces);
+        if (blk.myConfig.solid_has_isotropic_properties) {
+            computeFluxesAndTemperatures(ftl, _gasCells, _gasIFaces, _solidCells, _solidIFaces);
+        }
+        else {
+            computeFluxesAndTemperatures2(ftl, _gasCells, _gasIFaces, _solidCells, _solidIFaces,
+                                         _T, _B, _A, _pivot);
+        }
     }
 
 private:
@@ -155,6 +162,10 @@ private:
     FVInterface[] _gasIFaces;
     SolidFVCell[] _solidCells;
     SolidFVInterface[] _solidIFaces;
+    number[] _T;
+    number[] _B;
+    Matrix!number _A;
+    int[] _pivot;
 
 public:
     void initSolidCellsAndIFaces()
@@ -169,6 +180,15 @@ public:
                     _solidCells ~= blk.getCell(i, j, k);
                     _solidIFaces ~= _solidCells[$-1].iface[Face.south];
                 }
+            }
+            if (!blk.myConfig.solid_has_isotropic_properties) {
+                // We'll need to initialise working space for the
+                // linear system solve.
+                auto n = _solidIFaces.length;
+                _T.length = n;
+                _B.length = n;
+                _A = new Matrix!number(n);
+                _pivot.length = n;
             }
             break;
         default:
