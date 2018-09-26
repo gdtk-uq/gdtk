@@ -356,7 +356,7 @@ public:
             Q_rE_rad += other.Q_rE_rad;
         }
         Q_rE_rad /= n;
-    }
+    } // end replace_flow_data_with_average()
 
     void scan_values_from_string(string buffer, bool overwrite_geometry_data)
     // Note that the position data is read into grid_time_level 0.
@@ -408,6 +408,7 @@ public:
                                 myConfig.divergence_cleaning, myConfig.radiation);
     } // end write_values_to_raw_binary()
 
+    @nogc
     void encode_conserved(int gtl, int ftl, double omegaz)
     // gtl = grid time level
     // ftl = flow time level
@@ -466,6 +467,7 @@ public:
         return;
     } // end encode_conserved()
 
+    @nogc
     void decode_conserved(int gtl, int ftl, double omegaz) 
     {
         auto gmodel = myConfig.gmodel;
@@ -474,19 +476,26 @@ public:
         // The conserved quantities are carried as quantity per unit volume.
         // mass / unit volume = density
         if (!(myU.mass > 0.0)) {
-            writeln("FVCell.decode_conserved(): Density invalid in conserved quantities.");
-            writeln("  universe-blk-id= ", myConfig.universe_blk_id, " cell-id= ", id);
-            writeln("  x= ", pos[gtl].x, " y= ", pos[gtl].y, " z= ", pos[gtl].z);
-            writeln("  gas= ", fs.gas);
-            writeln("  ftl= ", ftl, " (flow-time-level)");
-            writeln("  U[ftl]= ", myU);
-            writeln("  U[0]= ", U[0]);
-            writeln("  interfaces:", iface.length);
-            foreach(i, f; iface) {
-                writeln("    iface[", i, "]= ", f);
+            if (myConfig.adjust_invalid_cell_data) {
+                thermo_data_is_known_bad = true;
+                // We can do nothing more with the present data but the caller may
+                // be able to replace the data with other nearby-cell data.
+                return;
+            } else {
+                debug {
+                    writeln("FVCell.decode_conserved(): Density invalid in conserved quantities.");
+                    writeln("  universe-blk-id= ", myConfig.universe_blk_id, " cell-id= ", id);
+                    writeln("  x= ", pos[gtl].x, " y= ", pos[gtl].y, " z= ", pos[gtl].z);
+                    writeln("  gas= ", fs.gas);
+                    writeln("  ftl= ", ftl, " (flow-time-level)");
+                    writeln("  U[ftl]= ", myU);
+                    writeln("  U[0]= ", U[0]);
+                    writeln("  interfaces:", iface.length);
+                    foreach(i, f; iface) { writeln("    iface[", i, "]= ", f); }
+                }
+                throw new FlowSolverException("Bad cell with negative mass.");
             }
-            throw new FlowSolverException("Bad cell, give up.");
-        }
+        } // end if mass is not positive
         number rho = myU.mass;
         fs.gas.rho = rho; // This is limited to nonnegative and finite values.
         number dinv = 1.0 / rho;
@@ -549,11 +558,14 @@ public:
             if (myConfig.adjust_invalid_cell_data) {
                 thermo_data_is_known_bad = true;
             } else {
-                string msg = format("Thermodynamic update exception with message:\n  %s", err.msg);
-                msg ~= format("The decode_conserved() failed for cell: %d\n", id);
-                msg ~= format("This cell is located at: %s\n", pos[0]);
-                msg ~= format("This cell is located in block: %d\n", myConfig.universe_blk_id);
-                msg ~= format("The gas state after the failed update is:\n   fs.gas %s", fs.gas);
+                string msg = "Bad cell with failed thermodynamic update.";
+                debug {
+                    msg ~= format("Thermodynamic update exception with message:\n  %s", err.msg);
+                    msg ~= format("The decode_conserved() failed for cell: %d\n", id);
+                    msg ~= format("This cell is located at: %s\n", pos[0]);
+                    msg ~= format("This cell is located in block: %d\n", myConfig.universe_blk_id);
+                    msg ~= format("The gas state after the failed update is:\n   fs.gas %s", fs.gas);
+                }
                 throw new FlowSolverException(msg);
             } // end if
         } // end catch
