@@ -21,6 +21,7 @@ import gas.gas_state;
 import gas.physical_constants;
 import gas.electronic_species;
 
+
 class ElectronicallySpecificGas : GasModel {
 public:
     this(lua_State *L) 
@@ -49,7 +50,6 @@ public:
             _level ~= _electronicSpecies[$-1].level;
             _group_degeneracy ~= _electronicSpecies[$-1].group_degeneracy;
         }
-        writeln(_R);
         lua_pop(L, 1);
         create_species_reverse_lookup();
     }
@@ -69,6 +69,7 @@ public:
         auto uNoneq = energyInNoneq(Q);
         auto Cv_mix = Cv(Q);
         Q.u = Cv_mix*Q.T - uNoneq;
+        Q.u_modes[0]=uNoneq;
     }
 
     override void update_thermo_from_rhou(GasState Q)
@@ -78,6 +79,7 @@ public:
         Q.T = (Q.u + uNoneq)/Cv_mix; 
         auto R_mix = gas_constant(Q);
         Q.p = Q.rho*R_mix*Q.T;
+        Q.u_modes[0]=uNoneq;
     }
 
     override void update_thermo_from_rhoT(GasState Q)
@@ -87,6 +89,7 @@ public:
         auto uNoneq = energyInNoneq(Q);
         auto Cv_mix = Cv(Q);
         Q.u = Cv_mix*Q.T - uNoneq;
+        Q.u_modes[0]=uNoneq;
     }
 
     override void update_thermo_from_rhop(GasState Q)
@@ -96,6 +99,7 @@ public:
         auto uNoneq = energyInNoneq(Q);
         auto Cv_mix = Cv(Q);
         Q.u = Cv_mix*Q.T - uNoneq;
+        Q.u_modes[0]=uNoneq;
     }
 
     override void update_thermo_from_ps(GasState Q, number s)
@@ -197,7 +201,8 @@ version(electronically_specific_gas_test) {
         auto L = init_lua_State();
         doLuaFile(L, relativePath("../gas/sample-data/electronic_composition.lua"));
         auto gm = new ElectronicallySpecificGas(L);
-        auto gd = new GasState(19,19);
+        auto gd = new GasState(19,1);
+        ElectronicallySpecificKinetics esk = new ElectronicallySpecificKinetics(gm);
 
         gd.massf[] = 0.0;
         gd.massf[0] = 0.81403036047055; //initialises massf of NI
@@ -208,6 +213,8 @@ version(electronically_specific_gas_test) {
         gd.T = 7000.0;
         gd.T_modes[0]=10000.0;
         gm.update_thermo_from_pT(gd);
+
+        writeln(gd);
         return 0;
     }
     

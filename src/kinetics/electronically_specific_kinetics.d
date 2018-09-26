@@ -44,10 +44,13 @@ public:
                          ref double dtChemSuggest, ref double dtThermSuggest,
                          ref number[] params)
     {
+        foreach(int i; 0 .. _gmodel.n_species){
+            _numden[i] = Q.massf[i];
+            _numden0[i] = Q.massf[i];
+        }
         _gmodel.massf2numden(Q, _numden0);
         //update the number density vector for time t+t_interval
         //by solving the kinetics ODE (electron temp frozen)
-        
         Electronic_Solve(_numden0, _numden, Q.T_modes[0], tInterval);
         _gmodel.numden2massf(_numden, Q);
     }
@@ -64,16 +67,16 @@ version(electronically_specific_kinetics_test)
         import util.msg_service;
 
         auto L = init_lua_State();
-        doLuaFile(L, "../gas/sample-data/electronic_composition.lua");
+        doLuaFile(L, "../kinetics/sample-input/electronic_composition.lua");
         auto gm = new ElectronicallySpecificGas(L);
-        auto gd = new GasState(19,19);
+        auto gd = new GasState(19,1);
 
         gd.massf[] = 0.0;
         gd.massf[0] = 0.81403036047055; //initialises massf of NI
         gd.massf[9] = 0.185968105968037; //initialises massf of OI
         gd.massf[18] = 1.0 - (gd.massf[0] + gd.massf[9]); //tiny massf for free electron
-        gd.p = 1.0e3;
-        gd.T = 10000.0;
+        gd.p = 10.0;
+        gd.T = 7000.0;
         gd.T_modes[0] = 10000.0;
         gm.update_thermo_from_pT(gd);
         
@@ -85,24 +88,22 @@ version(electronically_specific_kinetics_test)
         double _t = 0.0;
 
         auto L2 = init_lua_State();
-        writeln("Parsing kinetics file.");
-        writeln(gm.n_modes);
-        doLuaFile(L2, "sample-input/state-specific-N2-diss.lua");
+        doLuaFile(L2, "sample-input/electronic_composition.lua");
 
-        ElectronicallySpecificKinetics psk = new ElectronicallySpecificKinetics(gm);
-
-        writeln("Gas state BEFORE update: ", gd);
+        ElectronicallySpecificKinetics esk = new ElectronicallySpecificKinetics(gm);
 
         double dtChemSuggest = -1.0;
         double dtThermSuggest = -1.0;
         number[] params;
-
         while (_t < _duration) {
-            psk(gd, dt, dtChemSuggest, dtThermSuggest, params);
-            _t+=dt;
+            esk(gd, _dt, dtChemSuggest, dtThermSuggest, params);
+            _t+=_dt;
         }
-        writeln("Gas state AFTER update: ",gd);
-
+        double massfsum=0.0;
+        foreach(number eachmassf;gd.massf) {
+            massfsum += eachmassf;
+        }
+        assert(approxEqual(massfsum, 1.0, 1e-2), failedUnitTest());
         return 0;
 
     }

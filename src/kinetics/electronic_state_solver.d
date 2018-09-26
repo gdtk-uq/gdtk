@@ -281,16 +281,14 @@ void Step()
 @nogc
 void Electronic_Solve( number[] state_from_cfd, ref number[] state_to_cfd, number given_Te, double given_endtime)
 {
-    dt = 1.0e-10;
+    dt = 1.0e-12;
     Ne=state_from_cfd[$-1];
-    debug { writeln("state_vector: ",state_vector); }
     state_vector[]=state_from_cfd[0 .. $-1];
-    UpdateStateFromVector(state,state_from_cfd);
-    UpdateVectorFromState(state_vector,state);
+    UpdateStateFromVector(state,state_vector);
     Te=given_Te;
     endtime=given_endtime;
     dj=20;
-    newton_steps=3;
+    newton_steps=2;
     double t=0.0;
     while (t<endtime) {
         Step();
