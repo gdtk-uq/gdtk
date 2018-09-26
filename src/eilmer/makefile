@@ -21,7 +21,7 @@ GPP ?= g++
 
 # FLAVOUR options are debug, fast, profile
 # Flags for each compiler will be determined on this option.
-FLAVOUR ?= fast
+FLAVOUR ?= debug
 
 PLATFORM ?= linux
 WITH_SSS ?= 0
