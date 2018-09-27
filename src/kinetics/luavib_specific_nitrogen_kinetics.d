@@ -72,7 +72,7 @@ extern(C) int updateNitrogenStates(lua_State *L)
    
     // We need a dummy array of empty extra params
     // for the function signature
-    number[] params;
+    number[maxParams] params;
     // and dummy dtChemSuggest and dtThermSuggest
     double dtChemSuggest = 0.0;
     double dtThermSuggest = 0.0;

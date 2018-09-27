@@ -43,7 +43,7 @@ final class UpdateAB : ThermochemicalReactor {
     
     override void opCall(GasState Q, double tInterval,
                          ref double dtChemSuggest, ref double dtThermSuggest, 
-                         ref number[] params)
+                         ref number[maxParams] params)
     {
         if (Q.T > _Ti) {
             // We are above the ignition point, proceed with reaction.

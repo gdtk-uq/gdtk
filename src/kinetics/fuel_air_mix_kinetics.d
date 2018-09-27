@@ -161,7 +161,7 @@ final class MixingLimitedUpdate : ThermochemicalReactor {
     @nogc
     override void opCall(GasState Q, double tInterval,
                          ref double dtChemSuggest, ref double dtThermSuggest,
-                         ref number[] params)
+                         ref number[maxParams] params)
     {
         double local_dt_global=tInterval;
         number omega = params[0];

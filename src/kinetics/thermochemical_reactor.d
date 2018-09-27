@@ -42,6 +42,12 @@ class ThermochemicalReactorUpdateException : Exception {
     }
 }
 
+// The extra parameters are intended for some special gas and kinetics models,
+// such as JJ Hoste's mixing-limited fuel-air model, that need context information
+// from the flow solver.
+// Most gas models and reaction schemes will just ignore the params array.
+immutable size_t maxParams = 10;
+
 class ThermochemicalReactor {
 public:
     this(GasModel gmodel)
@@ -60,7 +66,7 @@ public:
     @nogc
     abstract void opCall(GasState Q, double tInterval,
                          ref double dtChemSuggest, ref double dtThermSuggest,
-                         ref number[] params);
+                         ref number[maxParams] params);
 
     // We will need to access this referenced model from the Lua functions
     // so it needs to be public.

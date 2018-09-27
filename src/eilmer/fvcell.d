@@ -957,6 +957,7 @@ public:
         return;
     } // end stage_2_update_for_flow_on_moving_grid()
 
+    @nogc
     void thermochemical_increment(double dt) 
     // Use the finite-rate chemistry module to update the species fractions
     // and the other thermochemical properties.
@@ -966,17 +967,14 @@ public:
         if (myConfig.ignition_zone_active) {
             // When active, replace gas temperature with an effective ignition temperature
             foreach(zone; myConfig.ignition_zones) {
-                if ( zone.is_inside(pos[0], myConfig.dimensions) ) fs.gas.T = zone.Tig; 
+                if (zone.is_inside(pos[0], myConfig.dimensions)) { fs.gas.T = zone.Tig; }
             }
         }
 
-        // The extra parameters are intended for some special gas and kinetics models,
-        // such as JJ Hoste's mixing-limited fuel-air model.
-        // Most gas models and reaction schemes will just ignore the params array.
-        number[] params;
+        number[maxParams] params;
         if ((cast(FuelAirMix) myConfig.gmodel) !is null) {
             // for this gas model thermochemical reactor we need turbulence info
-            params.length=1; 
+            if (params.length < 1) { throw new Error("params vector too short."); } 
             params[0]=fs.omega;
         }
 
@@ -1006,17 +1004,20 @@ public:
                      fs.gas.T = T_save;
                  }
             } catch(ThermochemicalReactorUpdateException err) {
-                string msg = format("caught %s", err.msg);
-                msg ~= format("The thermochemical_increment() failed for cell: %d\n", id);
-                msg ~= format("This cell is located at: %s\n", pos[0]);
-                msg ~= format("This cell is located in block: %d\n", myConfig.universe_blk_id);
-                msg ~= format("The cell's id is: %d\n", id);
-                msg ~= format("The flow timestep is: %12.6e\n", dt);
-                msg ~= format("The initial attempted dt_chem is: %12.6e\n", dt_chem_save);
-                version(debug_chem) {
-                    msg ~= format("The gas state BEFORE the failed update was:\n %s", savedGasState);
+                string msg = "The thermochemical_increment() failed.";
+                debug {
+                    msg ~= format("\nfor cell: %d\n", id);
+                    msg ~= format("caught %s", err.msg);
+                    msg ~= format("This cell is located at: %s\n", pos[0]);
+                    msg ~= format("This cell is located in block: %d\n", myConfig.universe_blk_id);
+                    msg ~= format("The cell's id is: %d\n", id);
+                    msg ~= format("The flow timestep is: %12.6e\n", dt);
+                    msg ~= format("The initial attempted dt_chem is: %12.6e\n", dt_chem_save);
+                    version(debug_chem) {
+                        msg ~= format("The gas state BEFORE the failed update was:\n %s", savedGasState);
+                    }
+                    msg ~= format("The gas state AFTER the failed update is:\n   fs.gas %s", fs.gas);
                 }
-                msg ~= format("The gas state AFTER the failed update is:\n   fs.gas %s", fs.gas);
                 throw new FlowSolverException(msg);
             }
         }
@@ -1027,13 +1028,16 @@ public:
             myConfig.gmodel.update_thermo_from_rhou(fs.gas);
         }
         catch (Exception err) {
-            string msg = format("caught %s", err.msg);
-            msg ~= format("The thermochemical_increment() failed for cell: %d\n", id);
-            msg ~= format("This cell is located at: %s\n", pos[0]);
-            msg ~= format("This cell is located in block: %d\n", myConfig.universe_blk_id);
-            msg ~= "This failure occurred when trying to update the thermo state after\n";
-            msg ~= "computing the species change due to chemical reactions.\n";
-            msg ~= format("The gas state after the failed update is:\n   fs.gas %s", fs.gas);
+            string msg = "The thermochemical_increment() failed update_thermo_from_rhou";
+            debug {
+                msg ~= format("\nfor cell: %d\n", id);
+                msg ~= format("caught %s", err.msg);
+                msg ~= format("This cell is located at: %s\n", pos[0]);
+                msg ~= format("This cell is located in block: %d\n", myConfig.universe_blk_id);
+                msg ~= "This failure occurred when trying to update the thermo state after\n";
+                msg ~= "computing the species change due to chemical reactions.\n";
+                msg ~= format("The gas state after the failed update is:\n   fs.gas %s", fs.gas);
+            }
             throw new FlowSolverException(msg);
         }
 

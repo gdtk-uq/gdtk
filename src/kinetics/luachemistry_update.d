@@ -103,7 +103,7 @@ extern(C) int updateState(lua_State* L)
     // Arg 4 is dtSuggest
     double dtChemSuggest = luaL_checknumber(L, 4);
     // Extra parameters are not considered, presently. PJ 2017-04-22
-    number[] params;
+    number[maxParams] params;
 
     try {
         double dummyDouble;

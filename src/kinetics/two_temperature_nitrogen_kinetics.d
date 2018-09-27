@@ -46,7 +46,7 @@ final class VibRelaxNitrogen : ThermochemicalReactor {
     @nogc
     override void opCall(GasState Q, double tInterval,
                          ref double dtChemSuggest, ref double dtThermSuggest, 
-                         ref number[] params)
+                         ref number[maxParams] params)
     {
         number tau = _relaxTimeCalc(Q.T, Q.p);
         // Find the total internal energy in the gas

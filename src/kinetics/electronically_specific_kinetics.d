@@ -42,7 +42,7 @@ public:
 
     override void opCall(GasState Q, double tInterval,
                          ref double dtChemSuggest, ref double dtThermSuggest,
-                         ref number[] params)
+                         ref number[maxParams] params)
     {
         foreach(int i; 0 .. _gmodel.n_species){
             _numden[i] = Q.massf[i];

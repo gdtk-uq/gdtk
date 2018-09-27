@@ -55,7 +55,7 @@ final class TwoTemperatureAirKinetics : ThermochemicalReactor {
     @nogc
     override void opCall(GasState Q, double tInterval,
                          ref double dtChemSuggest, ref double dtThermSuggest,
-                         ref number[] params)
+                         ref number[maxParams] params)
     {
         
         double dummyDouble;

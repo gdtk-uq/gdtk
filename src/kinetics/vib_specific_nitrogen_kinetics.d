@@ -42,7 +42,7 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
     @nogc
     override void opCall(GasState Q, double tInterval,
                          ref double dtChemSuggest, ref double dtThermSuggest, 
-                         ref number[] params)
+                         ref number[maxParams] params)
     {
         int nsteps = 10;
         double dt = tInterval/nsteps;

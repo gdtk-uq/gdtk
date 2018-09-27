@@ -49,7 +49,7 @@ final class UpdateIDG : ThermochemicalReactor {
     
     override void opCall(GasState Q, double tInterval,
                          ref double dtChemSuggest, ref double dtThermSuggest, 
-                         ref number[] params)
+                         ref number[maxParams] params)
     {
         // In the isolated reactor, density and internal energy remain constant.
         // Dissociation fraction and temperature may/will change.

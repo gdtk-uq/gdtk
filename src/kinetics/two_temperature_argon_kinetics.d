@@ -176,7 +176,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
     @nogc
     override void opCall(GasState Q, double tInterval,
                          ref double dtChemSuggest, ref double dtThermSuggest, 
-                         ref number[] params)
+                         ref number[maxParams] params)
     {
         debug {
         // Implement in debug context because of @nogc requirement.

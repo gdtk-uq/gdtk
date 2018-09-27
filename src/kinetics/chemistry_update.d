@@ -118,7 +118,7 @@ final class ChemistryUpdate : ThermochemicalReactor {
     @nogc
     override void opCall(GasState Q, double tInterval,
                          ref double dtChemSuggest, ref double dtThermSuggest,
-                         ref number[] params)
+                         ref number[maxParams] params)
     {
         _Qinit.copy_values_from(Q);
         _gmodel.massf2conc(Q, _conc0);

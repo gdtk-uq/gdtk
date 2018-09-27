@@ -357,6 +357,7 @@ public:
         }
     } // end set_up_workspace_leastsq()
 
+    @nogc
     void gradients_leastsq(ref FlowState[] cloud_fs, ref Vector3*[] cloud_pos,
                            ref WLSQGradWorkspace ws)
     // Evaluate the gradients using the precomputed weights.

@@ -96,7 +96,7 @@ extern(C) int updateTwoTempAirState(lua_State *L)
    
     // We need a dummy array of empty extra params
     // for the function signature
-    number[] params;
+    number[maxParams] params;
 
     try {
         twoTempAirKinetics(Q, tInterval, dtChemSuggest, dtThermSuggest, params);

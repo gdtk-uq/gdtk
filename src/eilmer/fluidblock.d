@@ -395,7 +395,8 @@ public:
         } // foreach cell
         return number_of_invalid_cells;
     } // end count_invalid_cells()
-    
+
+    @nogc
     void flow_property_spatial_derivatives(int gtl)
     {
         final switch (myConfig.spatial_deriv_locn) {

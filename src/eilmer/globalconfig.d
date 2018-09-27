@@ -212,7 +212,8 @@ class BlockZone {
     override string toString() {
         return text("BlockZone(p0=", to!string(p0), ", p1=", to!string(p1), ")");
     }
-    bool is_inside(in Vector3 p, int dimensions) {
+    @nogc
+    bool is_inside(ref const(Vector3) p, int dimensions) {
         if ( p.x >= p0.x && p.x <= p1.x &&
              p.y >= p0.y && p.y <= p1.y ) {
             if ( dimensions == 2 ) {
