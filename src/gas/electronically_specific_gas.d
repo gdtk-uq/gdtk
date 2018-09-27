@@ -49,6 +49,7 @@ public:
             _R ~= R_universal/_electronicSpecies[$-1].mol_mass;
             _level ~= _electronicSpecies[$-1].level;
             _group_degeneracy ~= _electronicSpecies[$-1].group_degeneracy;
+            _dof ~= _electronicSpecies[$-1].dof;
         }
         lua_pop(L, 1);
         create_species_reverse_lookup();
@@ -70,6 +71,7 @@ public:
         auto Cv_mix = Cv(Q);
         Q.u = Cv_mix*Q.T - uNoneq;
         Q.u_modes[0]=uNoneq;
+        update_sound_speed(Q);
     }
 
     override void update_thermo_from_rhou(GasState Q)
@@ -133,7 +135,7 @@ public:
     {
         number Cv = 0.0;
         foreach (isp; 0 .. _n_species) {
-            Cv += Q.massf[isp] * (3.0/2.0) * _R[isp];
+            Cv += Q.massf[isp] * (_dof[isp]/2.0) * _R[isp];
         }
         return Cv;
     }
@@ -172,6 +174,7 @@ private:
     double[] _R;
     int[] _level;
     int[] _group_degeneracy;
+    int[] _dof;
 
     // Thermodynamic constants
     double _Rgas; // J/kg/K
@@ -201,8 +204,7 @@ version(electronically_specific_gas_test) {
         auto L = init_lua_State();
         doLuaFile(L, relativePath("../gas/sample-data/electronic_composition.lua"));
         auto gm = new ElectronicallySpecificGas(L);
-        auto gd = new GasState(19,1);
-        ElectronicallySpecificKinetics esk = new ElectronicallySpecificKinetics(gm);
+        auto gd = new GasState(21,1);
 
         gd.massf[] = 0.0;
         gd.massf[0] = 0.81403036047055; //initialises massf of NI
@@ -214,7 +216,6 @@ version(electronically_specific_gas_test) {
         gd.T_modes[0]=10000.0;
         gm.update_thermo_from_pT(gd);
 
-        writeln(gd);
         return 0;
     }
     

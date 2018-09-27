@@ -35,7 +35,8 @@ public:
     {
         super(gmodel);
         _numden.length = gmodel.n_species;
-        _numden0.length = gmodel.n_species;
+        _numden_input.length = gmodel.n_species - 2;
+        _numden_output.length = gmodel.n_species - 2;
 
         kinetics.electronic_state_solver.Init();
     }
@@ -44,20 +45,33 @@ public:
                          ref double dtChemSuggest, ref double dtThermSuggest,
                          ref number[maxParams] params)
     {
-        foreach(int i; 0 .. _gmodel.n_species){
+        foreach(int i; 0 .. _gmodel.n_species){ //give massf values for the required species
             _numden[i] = Q.massf[i];
-            _numden0[i] = Q.massf[i];
         }
-        _gmodel.massf2numden(Q, _numden0);
+        
+        _gmodel.massf2numden(Q, _numden); //Convert from mass fraction to number density
+
+        foreach(int i;0 .. _gmodel.n_species - 2) {
+            _numden_input[i] = _numden[i];
+        }
         //update the number density vector for time t+t_interval
         //by solving the kinetics ODE (electron temp frozen)
-        Electronic_Solve(_numden0, _numden, Q.T_modes[0], tInterval);
-        _gmodel.numden2massf(_numden, Q);
+        Electronic_Solve(_numden_input, _numden_output, Q.T_modes[0], tInterval);
+
+        foreach (int i; 0 .. _gmodel.n_species - 2) {
+            _numden[i] = _numden_output[i];
+        } 
+
+        _gmodel.numden2massf(_numden, Q); //Convert back to number density
+
+        //Maybe include dissociation/recombination for N2 and O2 in a decoupled reaction here???
+
     }
 
 private:
-    number[] _numden;
-    number[] _numden0; 
+    number[] _numden; //Total set of species including static N2 and O2
+    number[] _numden_input; //Input for the electronic state solver, exclusive of N2 and O2
+    number[] _numden_output; //Output for the state solver
 }
 
 version(electronically_specific_kinetics_test) 
@@ -69,7 +83,7 @@ version(electronically_specific_kinetics_test)
         auto L = init_lua_State();
         doLuaFile(L, "../kinetics/sample-input/electronic_composition.lua");
         auto gm = new ElectronicallySpecificGas(L);
-        auto gd = new GasState(19,1);
+        auto gd = new GasState(21,1);
 
         gd.massf[] = 0.0;
         gd.massf[0] = 0.81403036047055; //initialises massf of NI
