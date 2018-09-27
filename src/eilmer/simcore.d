@@ -213,7 +213,9 @@ void init_simulation(int tindx, int nextLoadsIndx,
             // Even though the following call appears redundant at this point,
             // fills in some gas properties such as Prandtl number that is
             // needed for both the cfd_check and the BaldwinLomax turbulence model.
-            cell.decode_conserved(0, 0, myblk.omegaz);
+            if (0 != cell.decode_conserved(0, 0, myblk.omegaz)) {
+                throw new FlowSolverException("Bad cell decode_conserved while initializing.");
+            }
         }
         myblk.set_cell_dt_chem(-1.0);
     }
@@ -1076,7 +1078,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             blk.clear_fluxes_of_conserved_quantities();
             foreach (cell; blk.cells) {
                 cell.clear_source_vector();
-                cell.thermo_data_is_known_bad = false;
+                cell.data_is_bad = false;
             }
         }
     }
@@ -1584,7 +1586,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
             blk.clear_fluxes_of_conserved_quantities();
             foreach (cell; blk.cells) {
                 cell.clear_source_vector();
-                cell.thermo_data_is_known_bad = false;
+                cell.data_is_bad = false;
             }
         }
     }

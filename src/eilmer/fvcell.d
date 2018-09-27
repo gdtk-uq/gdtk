@@ -52,7 +52,7 @@ class FVCell {
 public:
     int id;  // allows us to work out where, in the block, the cell is
     bool is_interior; // true if the cell is interior to the block, false is a ghost cell
-    bool thermo_data_is_known_bad; // Set to false at the start of an update.
+    bool data_is_bad; // Set to false at the start of an update.
     // Reset and checked at points through the update so that we don't stagger on
     // with bad data poisoning the simulation.
     //
@@ -468,7 +468,7 @@ public:
     } // end encode_conserved()
 
     @nogc
-    void decode_conserved(int gtl, int ftl, double omegaz) 
+    int decode_conserved(int gtl, int ftl, double omegaz) 
     {
         auto gmodel = myConfig.gmodel;
         ConservedQuantities myU = U[ftl];
@@ -477,10 +477,10 @@ public:
         // mass / unit volume = density
         if (!(myU.mass > 0.0)) {
             if (myConfig.adjust_invalid_cell_data) {
-                thermo_data_is_known_bad = true;
+                data_is_bad = true;
                 // We can do nothing more with the present data but the caller may
                 // be able to replace the data with other nearby-cell data.
-                return;
+                return -1;
             } else {
                 debug {
                     writeln("FVCell.decode_conserved(): Density invalid in conserved quantities.");
@@ -556,7 +556,8 @@ public:
             if (myConfig.viscous) gmodel.update_trans_coeffs(fs.gas);
         } catch (GasModelException err) {
             if (myConfig.adjust_invalid_cell_data) {
-                thermo_data_is_known_bad = true;
+                data_is_bad = true;
+                return -2;
             } else {
                 string msg = "Bad cell with failed thermodynamic update.";
                 debug {
@@ -569,7 +570,7 @@ public:
                 throw new FlowSolverException(msg);
             } // end if
         } // end catch
-        return;
+        return 0; // success
     } // end decode_conserved()
 
     @nogc

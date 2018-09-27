@@ -343,8 +343,7 @@ public:
     {
         int number_of_invalid_cells = 0;
         foreach(cell; cells) {
-            if (cell.thermo_data_is_known_bad ||
-                cell.fs.check_data(cell.pos[0], myConfig.flowstate_limits) == false) {
+            if (cell.data_is_bad || cell.fs.check_data(cell.pos[0], myConfig.flowstate_limits) == false) {
                 ++number_of_invalid_cells;
                 if (myConfig.report_invalid_cells) {
                     writefln("count_invalid_cells: block_id=%d, cell_id=%d at pos %s\n",
@@ -374,21 +373,20 @@ public:
                     }
                     cell.fs.copy_average_values_from(neighbour_flows, myConfig.gmodel);
                     scale_mass_fractions(cell.fs.gas.massf, 0.0, 0.9); // big assertion-error-tolerance
-                    cell.thermo_data_is_known_bad = false; // assume that we've fixed it at this point.
+                    cell.data_is_bad = false; // assume that we've fixed it at this point.
                     cell.encode_conserved(gtl, ftl, omegaz);
-                    cell.decode_conserved(gtl, ftl, omegaz);
-                    if (myConfig.report_invalid_cells) {
-                        writefln("after flow-data replacement: block_id = %d, cell pos %.18e,%.18e,%.18e\n",
-                                 id, cell.pos[gtl].x, cell.pos[gtl].y, cell.pos[gtl].z);
-                        writeln(cell);
-                    }
-                    if (cell.thermo_data_is_known_bad) {
+                    if (0 != cell.decode_conserved(gtl, ftl, omegaz)) {
                         string msg = "Block::count_invalid_cells(): " ~
                             "Tried to replace flow data in cell but it's still bad.";
                         if (!myConfig.report_invalid_cells) {
                             msg ~= "\nTo get more information, rerun with config.report_invalid_cells=true";
                         }
                         throw new FlowSolverException(msg);
+                    }
+                    if (myConfig.report_invalid_cells) {
+                        writefln("after flow-data replacement: block_id = %d, cell pos %.18e,%.18e,%.18e\n",
+                                 id, cell.pos[gtl].x, cell.pos[gtl].y, cell.pos[gtl].z);
+                        writeln(cell);
                     }
                 } // end adjust_invalid_cell_data 
             } // end of if invalid data...

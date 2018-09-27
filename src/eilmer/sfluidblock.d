@@ -1854,7 +1854,9 @@ public:
             // Even though the following call appears redundant at this point,
             // fills in some gas properties such as Prandtl number that is
             // needed for both the cfd_check and the BaldwinLomax turbulence model.
-            cell.decode_conserved(0, 0, omegaz);
+            if (0 != cell.decode_conserved(0, 0, omegaz)) {
+                throw new FlowSolverException("Bad cell while propagating west to east.");
+            }
         }
         set_cell_dt_chem(-1.0);
     } // end propagate_inflow_data_west_to_east()
