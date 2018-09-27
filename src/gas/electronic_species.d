@@ -25,6 +25,7 @@ class ElectronicSpecies {
     @property @nogc int level() const { return _level; }
     @property @nogc double mol_mass() const { return _mol_mass; }
     @property @nogc int group_degeneracy() const { return _group_degeneracy; }
+    @property @nogc int dof() const { return _dof; }
 
     this(lua_State *L)
     {
@@ -32,6 +33,7 @@ class ElectronicSpecies {
         _level = getInt(L, -1, "level");
         _mol_mass = getDouble(L, -1, "M");
         _group_degeneracy = getInt(L, -1, "group_degeneracy");
+        _dof = getInt(L,-1,"dof");
     }
 
     @nogc abstract number group_energy(in GasState Q) const;
@@ -41,13 +43,14 @@ private:
     double _mol_mass;
     int _level;
     int _group_degeneracy;
+    int _dof;
 }
 
 class GroupedElectronicSpecies : ElectronicSpecies {
 public:
     this(lua_State *L)
     {
-        super(L); //what is this?
+        super(L);
         _group_energy = to!number(getDouble(L, -1, "group_energy"));
         //convert to J/kg
         _group_energy *= (electron_volt_energy*Avogadro_number)/_mol_mass;
