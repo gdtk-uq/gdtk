@@ -206,15 +206,29 @@ version(electronically_specific_gas_test) {
         auto gm = new ElectronicallySpecificGas(L);
         auto gd = new GasState(21,1);
 
-        gd.massf[] = 0.0;
-        gd.massf[0] = 0.81403036047055; //initialises massf of NI
-        gd.massf[9] = 0.185968105968037; //initialises massf of OI
-        gd.massf[18] = 1.0 - (gd.massf[0] + gd.massf[9]); //tiny massf for free electron
+        // gd.massf[] = 0.0;
+        // gd.massf[0] = 0.037041674288877; //initialises massf of NI
+        // gd.massf[9] = 0.010577876366622; //initialises massf of OI
+        // gd.massf[19] = 0.74082290750449; //N2
+        // gd.massf[20] = 0.21155752733244; //O2
+        // gd.massf[18] = 1.0 - (gd.massf[0] + gd.massf[9] + gd.massf[19] + gd.massf[20]); //tiny massf for free electron
+        gd.massf = [0.0313603, 0.00492971, 0.000741705, 1.06916e-06, 4.90114e-07, 
+                        2.46998e-07, 9.58454e-08, 6.6456e-07, 6.41328e-06, 0.010005, 
+                        0.000565079, 8.59624e-06, 2.58411e-07, 9.00322e-08, 5.80925e-08, 
+                        3.67871e-08, 9.06483e-08, 4.16313e-07, 1.4773e-08, 0.740823, 0.211558];
 
-        gd.p = 101325.0;
+        gd.p = 80000.0;
         gd.T = 7000.0;
         gd.T_modes[0]=10000.0;
         gm.update_thermo_from_pT(gd);
+
+        writeln(gd);
+
+        double test_sum = 0.0;
+        foreach(int i;0 .. 21){
+            test_sum += gd.massf[i];
+        }
+        writeln(test_sum);
 
         return 0;
     }

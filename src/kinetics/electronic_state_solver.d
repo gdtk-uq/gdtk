@@ -288,7 +288,7 @@ void Electronic_Solve( number[] state_from_cfd, ref number[] state_to_cfd, numbe
     Te=given_Te;
     endtime=given_endtime;
     dj=20;
-    newton_steps=2;
+    newton_steps=3;
     double t=0.0;
     while (t<endtime) {
         Step();
