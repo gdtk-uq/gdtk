@@ -60,10 +60,12 @@ void diffuseWallBCsIntoBlock(FluidBlock blk, int nPasses, double Twall)
                     cell.fs.gas.T = face.fs.gas.T;
                 }
                 cell.fs.vel.set(face.fs.vel);
-                cell.fs.tke = face.fs.tke;
-                cell.fs.omega = face.fs.omega;
-                cell.fs.mu_t = face.fs.mu_t;
-                cell.fs.k_t = face.fs.k_t;
+                if (cell.in_turbulent_zone) {
+                    cell.fs.tke = face.fs.tke;
+                    cell.fs.omega = face.fs.omega;
+                    cell.fs.mu_t = face.fs.mu_t;
+                    cell.fs.k_t = face.fs.k_t;
+                }
                 blk.myConfig.gmodel.update_thermo_from_pT(cell.fs.gas);
                 cell.encode_conserved(0, 0, 0.0);
                 cell.decode_conserved(0, 0, 0.0);
