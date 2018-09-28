@@ -451,7 +451,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
             eta = eta0;
             tau = tau0;
             sigma = sigma0;
-            usePreconditioner = false;
+            usePreconditioner = GlobalConfig.sssOptions.usePreconditioner;
         }
         else {
             foreach (blk; parallel(localFluidBlocks,1)) blk.set_interpolation_order(interpOrderSave);
@@ -885,15 +885,15 @@ void evalRealMatVecProd(double pseudoSimTime, double sigma)
         int cellCount = 0;
         foreach (cell; blk.cells) {
             cell.U[1].copy_values_from(cell.U[0]);
-            cell.U[1].mass += sigma*blk.maxRate.mass*blk.zed[cellCount+MASS];
-            cell.U[1].momentum.refx += sigma*blk.maxRate.momentum.x*blk.zed[cellCount+X_MOM];
-            cell.U[1].momentum.refy += sigma*blk.maxRate.momentum.y*blk.zed[cellCount+Y_MOM];
+            cell.U[1].mass += sigma*blk.zed[cellCount+MASS];
+            cell.U[1].momentum.refx += sigma*blk.zed[cellCount+X_MOM];
+            cell.U[1].momentum.refy += sigma*blk.zed[cellCount+Y_MOM];
             if ( blk.myConfig.dimensions == 3 )
-                cell.U[1].momentum.refz += sigma*blk.maxRate.momentum.z*blk.zed[cellCount+Z_MOM];
-            cell.U[1].total_energy += sigma*blk.maxRate.total_energy*blk.zed[cellCount+TOT_ENERGY];
+                cell.U[1].momentum.refz += sigma*blk.zed[cellCount+Z_MOM];
+            cell.U[1].total_energy += sigma*blk.zed[cellCount+TOT_ENERGY];
             if ( local_with_k_omega ) {
-                cell.U[1].tke += sigma*blk.maxRate.tke*blk.zed[cellCount+TKE];
-                cell.U[1].omega += sigma*blk.maxRate.omega*blk.zed[cellCount+OMEGA];
+                cell.U[1].tke += sigma*blk.zed[cellCount+TKE];
+                cell.U[1].omega += sigma*blk.zed[cellCount+OMEGA];
             }
             cell.decode_conserved(0, 1, 0.0);
             cellCount += nConserved;
@@ -904,15 +904,15 @@ void evalRealMatVecProd(double pseudoSimTime, double sigma)
         bool local_with_k_omega = with_k_omega;
         int cellCount = 0;
         foreach (cell; blk.cells) {
-            blk.zed[cellCount+MASS] = (-cell.dUdt[1].mass - blk.FU[cellCount+MASS])/(sigma*blk.maxRate.mass);
-            blk.zed[cellCount+X_MOM] = (-cell.dUdt[1].momentum.x - blk.FU[cellCount+X_MOM])/(sigma*blk.maxRate.momentum.x);
-            blk.zed[cellCount+Y_MOM] = (-cell.dUdt[1].momentum.y - blk.FU[cellCount+Y_MOM])/(sigma*blk.maxRate.momentum.y);
+            blk.zed[cellCount+MASS] = (-cell.dUdt[1].mass - blk.FU[cellCount+MASS])/(sigma);
+            blk.zed[cellCount+X_MOM] = (-cell.dUdt[1].momentum.x - blk.FU[cellCount+X_MOM])/(sigma);
+            blk.zed[cellCount+Y_MOM] = (-cell.dUdt[1].momentum.y - blk.FU[cellCount+Y_MOM])/(sigma);
             if ( blk.myConfig.dimensions == 3 )
-                blk.zed[cellCount+Z_MOM] = (-cell.dUdt[1].momentum.z - blk.FU[cellCount+Z_MOM])/(sigma*blk.maxRate.momentum.z);
-            blk.zed[cellCount+TOT_ENERGY] = (-cell.dUdt[1].total_energy - blk.FU[cellCount+TOT_ENERGY])/(sigma*blk.maxRate.total_energy);
+                blk.zed[cellCount+Z_MOM] = (-cell.dUdt[1].momentum.z - blk.FU[cellCount+Z_MOM])/(sigma);
+            blk.zed[cellCount+TOT_ENERGY] = (-cell.dUdt[1].total_energy - blk.FU[cellCount+TOT_ENERGY])/(sigma);
             if ( local_with_k_omega ) {
-                blk.zed[cellCount+TKE] = (-cell.dUdt[1].tke - blk.FU[cellCount+TKE])/(sigma*blk.maxRate.tke);
-                blk.zed[cellCount+OMEGA] = (-cell.dUdt[1].omega - blk.FU[cellCount+OMEGA])/(sigma*blk.maxRate.omega);
+                blk.zed[cellCount+TKE] = (-cell.dUdt[1].tke - blk.FU[cellCount+TKE])/(sigma);
+                blk.zed[cellCount+OMEGA] = (-cell.dUdt[1].omega - blk.FU[cellCount+OMEGA])/(sigma);
             }
             cellCount += nConserved;
         }
@@ -940,15 +940,15 @@ void evalComplexMatVecProd(double pseudoSimTime, double sigma)
             int cellCount = 0;
             foreach (cell; blk.cells) {
                 cell.U[1].copy_values_from(cell.U[0]);
-                cell.U[1].mass += complex(0.0, sigma*blk.maxRate.mass.re*blk.zed[cellCount+MASS].re);
-                cell.U[1].momentum.refx += complex(0.0, sigma*blk.maxRate.momentum.x.re*blk.zed[cellCount+X_MOM].re);
-                cell.U[1].momentum.refy += complex(0.0, sigma*blk.maxRate.momentum.y.re*blk.zed[cellCount+Y_MOM].re);
+                cell.U[1].mass += complex(0.0, sigma*blk.zed[cellCount+MASS].re);
+                cell.U[1].momentum.refx += complex(0.0, sigma*blk.zed[cellCount+X_MOM].re);
+                cell.U[1].momentum.refy += complex(0.0, sigma*blk.zed[cellCount+Y_MOM].re);
                 if ( blk.myConfig.dimensions == 3 )
-                    cell.U[1].momentum.refz += complex(0.0, sigma*blk.maxRate.momentum.z.re*blk.zed[cellCount+Z_MOM].re);
-                cell.U[1].total_energy += complex(0.0, sigma*blk.maxRate.total_energy.re*blk.zed[cellCount+TOT_ENERGY].re);
+                    cell.U[1].momentum.refz += complex(0.0, sigma*blk.zed[cellCount+Z_MOM].re);
+                cell.U[1].total_energy += complex(0.0, sigma*blk.zed[cellCount+TOT_ENERGY].re);
                 if ( local_with_k_omega ) {
-                    cell.U[1].tke += complex(0.0, sigma*blk.maxRate.tke.re*blk.zed[cellCount+TKE].re);
-                    cell.U[1].omega += complex(0.0, sigma*blk.maxRate.omega.re*blk.zed[cellCount+OMEGA].re);
+                    cell.U[1].tke += complex(0.0, sigma*blk.zed[cellCount+TKE].re);
+                    cell.U[1].omega += complex(0.0, sigma*blk.zed[cellCount+OMEGA].re);
                 }
                 cell.decode_conserved(0, 1, 0.0);
                 cellCount += nConserved;
@@ -959,15 +959,15 @@ void evalComplexMatVecProd(double pseudoSimTime, double sigma)
             bool local_with_k_omega = with_k_omega;
             int cellCount = 0;
             foreach (cell; blk.cells) {
-                blk.zed[cellCount+MASS] = -cell.dUdt[1].mass.im/(sigma*blk.maxRate.mass.re);
-                blk.zed[cellCount+X_MOM] = -cell.dUdt[1].momentum.x.im/(sigma*blk.maxRate.momentum.x.re);
-                blk.zed[cellCount+Y_MOM] = -cell.dUdt[1].momentum.y.im/(sigma*blk.maxRate.momentum.y.re);
+                blk.zed[cellCount+MASS] = -cell.dUdt[1].mass.im/(sigma);
+                blk.zed[cellCount+X_MOM] = -cell.dUdt[1].momentum.x.im/(sigma);
+                blk.zed[cellCount+Y_MOM] = -cell.dUdt[1].momentum.y.im/(sigma);
                 if ( blk.myConfig.dimensions == 3 )
-                    blk.zed[cellCount+Z_MOM] = -cell.dUdt[1].momentum.z.im/(sigma*blk.maxRate.momentum.z.re);
-                blk.zed[cellCount+TOT_ENERGY] = -cell.dUdt[1].total_energy.im/(sigma*blk.maxRate.total_energy.re);
+                    blk.zed[cellCount+Z_MOM] = -cell.dUdt[1].momentum.z.im/(sigma);
+                blk.zed[cellCount+TOT_ENERGY] = -cell.dUdt[1].total_energy.im/(sigma);
                 if ( local_with_k_omega ) {
-                    blk.zed[cellCount+TKE] = -cell.dUdt[1].tke.im/(sigma*blk.maxRate.tke.re);
-                    blk.zed[cellCount+OMEGA] = -cell.dUdt[1].omega.im/(sigma*blk.maxRate.omega.re);
+                    blk.zed[cellCount+TKE] = -cell.dUdt[1].tke.im/(sigma);
+                    blk.zed[cellCount+OMEGA] = -cell.dUdt[1].omega.im/(sigma);
                 }
                 // we must explicitly remove the complex-perturbation for the turbulent properties - failing to do so
                 // will cause imaginary values to leak into the flowstate variables (outside of the Frechet derivative).
@@ -1119,6 +1119,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     }
 
     foreach (blk; parallel(localFluidBlocks,1)) {
+        bool local_with_k_omega = with_k_omega;
         if (blk.myConfig.sssOptions.useScaling) {
             blk.maxRate.mass = maxMass;
             blk.maxRate.momentum.refx = maxMomX;
@@ -1126,7 +1127,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             if ( blk.myConfig.dimensions == 3 )
                 blk.maxRate.momentum.refz = maxMomZ;
             blk.maxRate.total_energy = maxEnergy;
-            if ( with_k_omega ) {
+            if ( local_with_k_omega ) {
                 blk.maxRate.tke = maxTke;
                 blk.maxRate.omega = maxOmega;
             }
@@ -1138,7 +1139,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             if ( blk.myConfig.dimensions == 3 )
                 blk.maxRate.momentum.refz = 1.0;
             blk.maxRate.total_energy = 1.0;
-            if ( with_k_omega ) {
+            if ( local_with_k_omega ) {
                 blk.maxRate.tke = 1.0; 
                 blk.maxRate.omega = 1.0; 
             }
@@ -1147,7 +1148,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     
     double unscaledNorm2;
     mixin(norm2_over_blocks("unscaledNorm2", "FU"));
-
+    
     // Initialise some arrays and matrices that have already been allocated
     g0[] = to!number(0.0);
     g1[] = to!number(0.0);
@@ -1159,6 +1160,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     // We'll scale r0 against these max rates of change.
     // r0 = b - A*x0
     // Taking x0 = [0] (as is common) gives r0 = b = FU
+    // apply scaling
     foreach (blk; parallel(localFluidBlocks,1)) {
         bool local_with_k_omega = with_k_omega;
         blk.x0[] = to!number(0.0);
@@ -1177,6 +1179,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             cellCount += nConserved;
         }
     }
+
     // Then compute v = r0/||r0||
     number betaTmp;
     mixin(norm2_over_blocks("betaTmp", "r0"));
@@ -1197,6 +1200,27 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         // 2a. Begin iterations
         foreach (j; 0 .. m) {
             iterCount = j+1;
+
+            // apply scaling
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                bool local_with_k_omega = with_k_omega;
+                int cellCount = 0;
+                foreach (cell; blk.cells) {
+                    blk.v[cellCount+MASS] *= (blk.maxRate.mass);
+                    blk.v[cellCount+X_MOM] *= (blk.maxRate.momentum.x);
+                    blk.v[cellCount+Y_MOM] *= (blk.maxRate.momentum.y);
+                    if ( blk.myConfig.dimensions == 3 )
+                        blk.v[cellCount+Z_MOM] *= (blk.maxRate.momentum.z);
+                    blk.v[cellCount+TOT_ENERGY] *= (blk.maxRate.total_energy);
+                    if ( local_with_k_omega ) {
+                        blk.v[cellCount+TKE] *= (blk.maxRate.tke);
+                        blk.v[cellCount+OMEGA] *= (blk.maxRate.omega);
+                    }
+                    cellCount += nConserved;
+                }
+            }
+            
+            // apply preconditioning
             if (usePreconditioner && step >= GlobalConfig.sssOptions.startPreconditioning) {
                 foreach (blk; parallel(localFluidBlocks,1)) {
                     int n = blk.myConfig.sssOptions.frozenPreconditionerCount; //GlobalConfig.sssOptions.frozenPreconditionerCount;
@@ -1241,6 +1265,27 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             foreach (blk; parallel(localFluidBlocks,1)) {
                 foreach (k; 0 .. blk.nvars)  blk.w[k] += blk.zed[k];
             }
+            
+            // apply scaling
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                bool local_with_k_omega = with_k_omega;
+                int cellCount = 0;
+                foreach (cell; blk.cells) {
+                    blk.w[cellCount+MASS] *= (1./blk.maxRate.mass);
+                    blk.w[cellCount+X_MOM] *= (1./blk.maxRate.momentum.x);
+                    blk.w[cellCount+Y_MOM] *= (1./blk.maxRate.momentum.y);
+                    if ( blk.myConfig.dimensions == 3 )
+                        blk.w[cellCount+Z_MOM] *= (1./blk.maxRate.momentum.z);
+                    blk.w[cellCount+TOT_ENERGY] *= (1./blk.maxRate.total_energy);
+                    if ( local_with_k_omega ) {
+                        blk.w[cellCount+TKE] *= (1./blk.maxRate.tke);
+                        blk.w[cellCount+OMEGA] *= (1./blk.maxRate.omega);
+                    }
+                    cellCount += nConserved;
+                }
+            }
+            
+                
             // The remainder of the algorithm looks a lot like any standard
             // GMRES implementation (for example, see smla.d)
             foreach (i; 0 .. j+1) {
@@ -1323,7 +1368,27 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         foreach (blk; parallel(localFluidBlocks,1)) {
             nm.bbla.dot!number(blk.V, blk.nvars, m, blk.g1, blk.zed);
         }
-        
+
+        // apply scaling
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            bool local_with_k_omega = with_k_omega;
+            int cellCount = 0;
+            foreach (cell; blk.cells) {
+                blk.zed[cellCount+MASS] *= (blk.maxRate.mass);
+                blk.zed[cellCount+X_MOM] *= (blk.maxRate.momentum.x);
+                blk.zed[cellCount+Y_MOM] *= (blk.maxRate.momentum.y);
+                if ( blk.myConfig.dimensions == 3 )
+                    blk.zed[cellCount+Z_MOM] *= (blk.maxRate.momentum.z);
+                blk.zed[cellCount+TOT_ENERGY] *= (blk.maxRate.total_energy);
+                if ( local_with_k_omega ) {
+                    blk.zed[cellCount+TKE] *= (blk.maxRate.tke);
+                    blk.zed[cellCount+OMEGA] *= (blk.maxRate.omega);
+                }
+                cellCount += nConserved;
+            }
+        }
+
+        // apply preconditioning
         if (usePreconditioner && step >= GlobalConfig.sssOptions.startPreconditioning) {
             foreach(blk; parallel(localFluidBlocks,1)) {
                 final switch (blk.myConfig.sssOptions.preconditionMatrixType) {
@@ -1349,6 +1414,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 blk.dU[] = blk.zed[];
             }
         }
+
         
         foreach (blk; parallel(localFluidBlocks,1)) {
             foreach (k; 0 .. blk.nvars) blk.dU[k] += blk.x0[k];
@@ -1376,7 +1442,26 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         foreach (blk; parallel(localFluidBlocks,1)) {
             nm.bbla.dot(blk.V, blk.nvars, m+1, blk.g1, blk.r0);
         }
-        
+
+        // apply scaling
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            bool local_with_k_omega = with_k_omega;
+            int cellCount = 0;
+            foreach (cell; blk.cells) {
+                blk.r0[cellCount+MASS] *= (1.0/blk.maxRate.mass);
+                blk.r0[cellCount+X_MOM] *= (1.0/blk.maxRate.momentum.x);
+                blk.r0[cellCount+Y_MOM] *= (1.0/blk.maxRate.momentum.y);
+                if ( blk.myConfig.dimensions == 3 )
+                    blk.r0[cellCount+Z_MOM] *= (1.0/blk.maxRate.momentum.z);
+                blk.r0[cellCount+TOT_ENERGY] *= (1.0/blk.maxRate.total_energy);
+                if ( local_with_k_omega ) {
+                    blk.r0[cellCount+TKE] *= (1.0/blk.maxRate.tke);
+                    blk.r0[cellCount+OMEGA] *= (1.0/blk.maxRate.omega);
+                }
+                cellCount += nConserved;
+            }
+        }
+
         mixin(norm2_over_blocks("betaTmp", "r0"));
         beta = betaTmp;
         // DEBUG: writefln("OUTER: ON RESTART beta= %e", beta);
@@ -1394,24 +1479,6 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         // And set first residual entry
         g0[0] = beta;
 
-    }
-    // Rescale
-    foreach (blk; parallel(localFluidBlocks,1)) {
-        bool local_with_k_omega = with_k_omega;
-        int cellCount = 0;
-        foreach (cell; blk.cells) {
-            blk.dU[cellCount+MASS] *= blk.maxRate.mass;
-            blk.dU[cellCount+X_MOM] *= blk.maxRate.momentum.x;
-            blk.dU[cellCount+Y_MOM] *= blk.maxRate.momentum.y;
-            if ( blk.myConfig.dimensions == 3 )
-                blk.dU[cellCount+Z_MOM] *= blk.maxRate.momentum.z;
-            blk.dU[cellCount+TOT_ENERGY] *= blk.maxRate.total_energy;
-            if ( local_with_k_omega ) {
-                blk.dU[cellCount+TKE] *= blk.maxRate.tke;
-                blk.dU[cellCount+OMEGA] *= blk.maxRate.omega;
-            }
-            cellCount += nConserved;
-        }
     }
 
     residual = unscaledNorm2;
