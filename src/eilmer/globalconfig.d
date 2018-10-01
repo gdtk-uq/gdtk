@@ -320,11 +320,13 @@ struct SteadyStateSolverOptions {
     int nInnerIterations = 5;
     // Options for start-up phase
     int nStartUpSteps = 5;
+    double p0 = 0.75;
     double cfl0 = 1.0;
     double eta0 = 0.5;
     double tau0 = 0.1;
     double sigma0 = 1.0e-8;
     // Options for inexact Newton phase
+    double p1 = 1.0;
     double cfl1 = 10.0;
     double tau1 = 0.1;
     double sigma1 = 1.0e-8;
@@ -1499,6 +1501,8 @@ void read_control_file()
         getJSONdouble(sssOptions, "tau0", GlobalConfig.sssOptions.tau0);
     GlobalConfig.sssOptions.sigma0 =
         getJSONdouble(sssOptions, "sigma0", GlobalConfig.sssOptions.sigma0);
+    GlobalConfig.sssOptions.p0 =
+        getJSONdouble(sssOptions, "p0", GlobalConfig.sssOptions.p0);
     // Setting for inexact Newton phase
     GlobalConfig.sssOptions.cfl1 =
         getJSONdouble(sssOptions, "cfl1", GlobalConfig.sssOptions.cfl1);
@@ -1506,6 +1510,8 @@ void read_control_file()
         getJSONdouble(sssOptions, "tau1", GlobalConfig.sssOptions.tau1);
     GlobalConfig.sssOptions.sigma1 =
         getJSONdouble(sssOptions, "sigma1", GlobalConfig.sssOptions.sigma1);
+    GlobalConfig.sssOptions.p1 =
+        getJSONdouble(sssOptions, "p1", GlobalConfig.sssOptions.p1);
     { 
         auto mySaveValue = GlobalConfig.sssOptions.etaStrategy;
         try {

@@ -66,10 +66,12 @@ sssOptionsHidden = { -- hidden from user
    eta0 = 0.5,
    tau0 = 0.1,
    sigma0 = 1.0e-8,
+   p0 = 0.75,
    -- Options for inexact Newton phase
    cfl1 = 10.0,
    tau1 = 0.1,
    sigma1 = 1.0e-8,
+   p1 = 1.0,
    eta_strategy = "constant",
    eta1 = 0.5,
    eta1_max = 0.9,
@@ -1454,9 +1456,11 @@ function write_control_file(fileName)
    f:write(string.format('   "eta0": %.18e,\n', SteadyStateSolver.eta0))
    f:write(string.format('   "tau0": %.18e,\n', SteadyStateSolver.tau0))
    f:write(string.format('   "sigma0": %.18e,\n', SteadyStateSolver.sigma0))
+   f:write(string.format('   "p0": %.18e,\n', SteadyStateSolver.p0))
    f:write(string.format('   "cfl1": %.18e,\n', SteadyStateSolver.cfl1))
    f:write(string.format('   "tau1": %.18e,\n', SteadyStateSolver.tau1))
    f:write(string.format('   "sigma1": %.18e,\n', SteadyStateSolver.sigma1))
+   f:write(string.format('   "p1": %.18e,\n', SteadyStateSolver.p1))
    f:write(string.format('   "eta_strategy": "%s",\n', SteadyStateSolver.eta_strategy))
    f:write(string.format('   "eta1": %.18e,\n', SteadyStateSolver.eta1))
    f:write(string.format('   "eta1_max": %.18e,\n', SteadyStateSolver.eta1_max))

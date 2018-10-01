@@ -677,12 +677,14 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
         if ( inexactNewtonPhase ) {
             if ( step < nStartUpSteps ) {
                 // Let's assume we're still letting the shock settle
-                // when doing low order steps, so we use a power of 0.75
-                dtTrial = dt*pow(normOld/normNew, 0.75);
+                // when doing low order steps, so we use a power of 0.75 as a default
+                double p0 =  GlobalConfig.sssOptions.p0;
+                dtTrial = dt*pow(normOld/normNew, p0);
             }
             else {
-                // We use a power of 1.0
-                dtTrial = dt*normRatio;
+                // We use a power of 1.0 as a default
+                double p1 =  GlobalConfig.sssOptions.p1;
+                dtTrial = dt*pow(normOld/normNew, p1);
             }
             // Apply safeguards to dt
             dtTrial = min(dtTrial, 2.0*dt);
