@@ -263,6 +263,12 @@ public:
     }
 
     @nogc
+    int universe_blk_id()
+    {
+        return myConfig.universe_blk_id;
+    }
+    
+    @nogc
     void update_2D_geometric_data(size_t gtl, bool axisymmetric)
     {
         string msg = "FVCell.update_2D_geometric_data(): ";
