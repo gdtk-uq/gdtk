@@ -335,9 +335,23 @@ public:
                 assert(0, "Oops, don't seem to have a cell available.");
             }
         }
-        number k_eff = viscous_factor * (k_laminar + fs.k_t);
-        number mu_eff = viscous_factor * (mu_laminar + fs.mu_t);
-        number lmbda = -2.0/3.0 * mu_eff;
+        number k_eff;
+        number mu_eff;
+        number lmbda;
+        // we would like to use the most up to date turbulent properties, so take averages of the neihgbouring cell values
+        if (left_cell && right_cell && left_cell.is_interior && right_cell.is_interior) {
+            k_eff = viscous_factor * (k_laminar + 0.5*(left_cell.fs.k_t+right_cell.fs.k_t));
+            mu_eff = viscous_factor * (mu_laminar + 0.5*(left_cell.fs.mu_t+right_cell.fs.mu_t));
+        } else if (left_cell && left_cell.is_interior) {
+            k_eff = viscous_factor * (k_laminar + left_cell.fs.k_t);
+            mu_eff = viscous_factor * (mu_laminar + left_cell.fs.mu_t);
+        } else if (right_cell && right_cell.is_interior) {
+            k_eff = viscous_factor * (k_laminar + right_cell.fs.k_t);
+            mu_eff = viscous_factor * (mu_laminar + right_cell.fs.mu_t);
+        } else {
+            assert(0, "Oops, don't seem to have a cell available.");
+        }
+        lmbda = -2.0/3.0 * mu_eff;
         //
         number local_pressure;
         if (left_cell && right_cell && left_cell.is_interior && right_cell.is_interior) {
@@ -360,8 +374,18 @@ public:
             // and treat the differently.
             if (myConfig.turbulence_model != TurbulenceModel.none) {
                 double Sc_t = myConfig.turbulence_schmidt_number;
-                number D_t = fs.mu_t / (fs.gas.rho * Sc_t);
-
+                number D_t; // = fs.mu_t / (fs.gas.rho * Sc_t)
+                // we would like to use the most up to date turbulent properties, so take averages of the neihgbouring cell values
+                if (left_cell && right_cell && left_cell.is_interior && right_cell.is_interior) {
+                    D_t = 0.5*(left_cell.fs.mu_t+right_cell.fs.mu_t) / (fs.gas.rho * Sc_t);
+                } else if (left_cell && left_cell.is_interior) {
+                    D_t = left_cell.fs.mu_t / (fs.gas.rho * Sc_t);
+                } else if (right_cell && right_cell.is_interior) {
+                    D_t = right_cell.fs.mu_t / (fs.gas.rho * Sc_t);
+                } else {
+                    assert(0, "Oops, don't seem to have a cell available.");
+                }
+                
                 foreach (isp; 0 .. n_species) {
                     jx[isp] = -fs.gas.rho * D_t * grad.massf[isp][0];
                     jy[isp] = -fs.gas.rho * D_t * grad.massf[isp][1];
