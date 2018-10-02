@@ -335,6 +335,7 @@ void initRunTimeLoads(JSONValue jsonData)
 
 void computeRunTimeLoads()
 {
+    
     foreach (ref group; runTimeLoads) {
         group.resultantForce = Vector3(0.0, 0.0, 0.0);
         group.resultantMoment = Vector3(0.0, 0.0, 0.0);
@@ -355,13 +356,14 @@ void computeRunTimeLoads()
                     string errMsg = "Run-time-loads not implemented for viscous calculation yet.\n";
                     throw new Error(errMsg);
                 }
-                number pdA = p * face.area[0];
+                number area = face.area[0];
+                number pdA = p * area;
                 int outsign = globalFluidBlocks[iblk].bc[ibndry].outsigns[iface];
                 Vector3 pressureForce = Vector3(pdA * nx * outsign,
                                                 pdA * ny * outsign,
                                                 pdA * nz * outsign);
                 Vector3 momentArm = face.pos - group.momentCentre;
-                Vector3 momentContrib = cross(pressureForce, momentArm);
+                Vector3 momentContrib = cross(momentArm, pressureForce);
 
                 group.resultantForce.refx += pressureForce.x;
                 group.resultantForce.refy += pressureForce.y;
@@ -370,6 +372,21 @@ void computeRunTimeLoads()
                 group.resultantMoment.refx += momentContrib.x;
                 group.resultantMoment.refy += momentContrib.y;
                 group.resultantMoment.refz += momentContrib.z;
+
+                if (GlobalConfig.viscous) {
+                    Vector3 shearForce = Vector3(face.F.momentum.x * area * outsign,
+                                                 face.F.momentum.y * area * outsign,
+                                                 face.F.momentum.z * area * outsign);
+                    momentContrib = cross(momentArm, shearForce);
+
+                    group.resultantForce.refx += shearForce.x;
+                    group.resultantForce.refy += shearForce.y;
+                    group.resultantForce.refz += shearForce.z;
+
+                    group.resultantMoment.refx += momentContrib.x;
+                    group.resultantMoment.refy += momentContrib.y;
+                    group.resultantMoment.refz += momentContrib.z;
+                }
             }
         }
     }

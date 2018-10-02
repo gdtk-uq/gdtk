@@ -727,6 +727,18 @@ void integrate_in_time(double target_time_as_requested)
                     // Need to think about how to coordinate this globally.
                 } else {
                     if ((SimState.step % GlobalConfig.run_time_loads_count) == 0) {
+                        // First prep the viscous fluxes by recomputing.
+                        // We'll wipe out everything else in the fluxes vector
+                        // and recall the the viscous_flux calc so that we get
+                        // only the viscous contribution.
+                        if (GlobalConfig.viscous) {
+                            foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                                if (blk.active) {
+                                    blk.clear_fluxes_of_conserved_quantities();
+                                    blk.viscous_flux();
+                                }
+                            }
+                        }
                         computeRunTimeLoads();
                     }
                 }
