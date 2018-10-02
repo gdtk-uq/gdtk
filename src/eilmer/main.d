@@ -383,7 +383,9 @@ usageMsg ~= to!string(totalCPUs) ~" on this machine
                 finalize_simulation();
             }
         } else {
-            integrate_in_time(GlobalConfig.max_time);
+            if (integrate_in_time(GlobalConfig.max_time) != 0 && GlobalConfig.is_master_task) {
+                writeln("Note that integrate_in_time failed.");
+            }
             finalize_simulation();
         }
         if (verbosityLevel > 0 && GlobalConfig.is_master_task) {

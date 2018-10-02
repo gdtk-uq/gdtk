@@ -501,7 +501,9 @@ void march_over_blocks()
     // we force dt_plot to be large enough.
     GlobalConfig.dt_plot = max(GlobalConfig.dt_plot, time_slice+1.0);
     // Let's start integrating for the first pair of block slices.
-    integrate_in_time(SimState.time+time_slice);
+    if (integrate_in_time(SimState.time+time_slice) != 0) {
+        throw new FlowSolverException("Integration failed for first pair of block slices.");
+    }
     // Now, move along one block in i-direction at a time and do the rest.
     foreach (i; 2 .. nib) {
         // Deactivate the old-upstream slice, activate the new slice of blocks.
@@ -529,12 +531,15 @@ void march_over_blocks()
             }
         }
         if (GlobalConfig.verbosity_level > 0) { writeln("march over blocks i=", i); }
-        integrate_in_time(SimState.time+time_slice);
+        if (integrate_in_time(SimState.time+time_slice) != 0) {
+            string msg = format("Integration failed for i=%d pair of block slices.", i);
+            throw new FlowSolverException(msg);
+        }
         if (GlobalConfig.save_intermediate_results) { write_solution_files(); }
     }
 } // end march_over_blocks()
 
-void integrate_in_time(double target_time_as_requested)
+int integrate_in_time(double target_time_as_requested)
 {
     version(enable_fp_exceptions) {
         FloatingPointControl fpctrl;
@@ -586,6 +591,8 @@ void integrate_in_time(double target_time_as_requested)
     // a maximum time or upon reaching a maximum iteration count.
     shared bool finished_time_stepping = (SimState.time >= SimState.target_time) ||
         (SimState.step >= GlobalConfig.max_step);
+    // There are occasions where things go wrong and an exception may be caught.
+    bool caughtException = false;
     //----------------------------------------------------------------
     //                 Top of main time-stepping loop
     //----------------------------------------------------------------
@@ -749,7 +756,10 @@ void integrate_in_time(double target_time_as_requested)
             // 7.0 Spatial filter may be applied occasionally.
         } catch(Exception e) {
             writefln("Exception caught while trying to take step %d.", SimState.step);
+            writeln("----- Begin exception message -----");
             writeln(e);
+            writeln("----- End exception message -----");
+            caughtException = true;
             finished_time_stepping = true;
         }
         //
@@ -782,7 +792,10 @@ void integrate_in_time(double target_time_as_requested)
         }
         if(finished_time_stepping && GlobalConfig.verbosity_level >= 1 && GlobalConfig.is_master_task) {
             // Make an announcement about why we are finishing time-stepping.
-            write("Integration stopped: "); 
+            write("Integration stopped: ");
+            if (caughtException) {
+                writeln("An exception was caught during the time step.");
+            }
             if (SimState.time >= SimState.target_time) {
                 writefln("Reached target simulation time of %g seconds.", SimState.target_time);
             }
@@ -801,7 +814,14 @@ void integrate_in_time(double target_time_as_requested)
         writeln("Done integrate_in_time().");
         stdout.flush();
     }
-    return;
+    // We use a strange mix of exception handling and error flags
+    // because we could not think of an easier way to deal with
+    // the MPI issues of shutting down cleanly.
+    if (caughtException) {
+        return -1; // failed integration
+    } else {
+        return 0; // success
+    }
 } // end integrate_in_time()
 
 void check_run_time_configuration(double target_time_as_requested)
