@@ -144,10 +144,12 @@ void diffuseWallBCsIntoBlock(FluidBlock blk, int nPasses, double Twall)
             cell.fs.vel.refx = velx_avg / nNbrCells;
             cell.fs.vel.refy = vely_avg / nNbrCells;
             cell.fs.vel.refz = velz_avg / nNbrCells;
-            cell.fs.tke = tke_avg / nNbrCells;
-            cell.fs.omega = omega_avg / nNbrCells;
-            cell.fs.mu_t = mu_t_avg / nNbrCells;
-            cell.fs.k_t = k_t_avg / nNbrCells;
+            if (cell.in_turbulent_zone) {
+                cell.fs.tke = tke_avg / nNbrCells;
+                cell.fs.omega = omega_avg / nNbrCells;
+                cell.fs.mu_t = mu_t_avg / nNbrCells;
+                cell.fs.k_t = k_t_avg / nNbrCells;
+            }
             blk.myConfig.gmodel.update_thermo_from_pT(cell.fs.gas);
             cell.encode_conserved(0, 0, 0.0);
             cell.decode_conserved(0, 0, 0.0);
