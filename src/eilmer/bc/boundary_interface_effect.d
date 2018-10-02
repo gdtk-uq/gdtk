@@ -1128,12 +1128,23 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
         foreach (i, f; bc.faces) {
             if (bc.outsigns[i] == 1) {
                 number d0 = distance_between(f.left_cell.pos[gtl], f.pos);
-                f.fs.omega = ideal_omega_at_wall(f.left_cell, d0);
+                if (f.left_cell.in_turbulent_zone) {
+                    f.fs.omega = ideal_omega_at_wall(f.left_cell, d0);
+                    f.fs.tke = 0.0;
+                } else {
+                    f.fs.omega = f.left_cell.fs.omega;
+                    f.fs.tke = f.left_cell.fs.tke;
+                }
             } else {
                 number d0 = distance_between(f.right_cell.pos[gtl], f.pos);
-                f.fs.omega = ideal_omega_at_wall(f.right_cell, d0);
+                if (f.right_cell.in_turbulent_zone) {
+                    f.fs.omega = ideal_omega_at_wall(f.right_cell, d0);
+                    f.fs.tke = 0.0;
+                } else {
+                    f.fs.omega = f.right_cell.fs.omega;
+                    f.fs.tke = f.right_cell.fs.tke;
+                }
             }
-            f.fs.tke = 0.0;
         } // end foreach face
     }
     
