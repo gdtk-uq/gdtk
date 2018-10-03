@@ -798,8 +798,17 @@ public:
             line = byLine.front; byLine.popFront();
             variableNames = line.strip().split();
             foreach (i; 0 .. variableNames.length) { variableNames[i] = variableNames[i].strip("\""); }
-            // If all of the variables line up, it is probably faster to use fixed-order.
-            bool useFixedOrder = std.algorithm.equal(variableNames, myConfig.flow_variable_list);
+            // If all of the variables line up,
+            // it is probably faster to use fixed-order, so default to that.
+            bool useFixedOrder = true;
+            foreach (i, varName; myConfig.flow_variable_list) {
+                if (!std.algorithm.canFind(variableNames, varName)) {
+                    throw new Exception("Could not find variable: " ~ varName);
+                }
+                if (!std.algorithm.equal(variableNames[i], varName)) {
+                    useFixedOrder = false;
+                }
+            }
             line = byLine.front; byLine.popFront();
             formattedRead(line, "dimensions: %d", &my_dimensions);
             line = byLine.front; byLine.popFront();
