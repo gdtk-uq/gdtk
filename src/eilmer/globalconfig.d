@@ -99,8 +99,8 @@ string flowVarName(FlowVar var)
     case FlowVar.dt_therm: return "dt_therm";
     } // end switch(var)
 } // end FlowVarName
-string massfName(int i) {
-    auto name = cast(char[]) GlobalConfig.gmodel_master.species_name(i);
+string massfName(GasModel gmodel, int i) {
+    auto name = cast(char[]) gmodel.species_name(i);
     name = tr(name, " \t", "--", "s"); // Replace internal whitespace with dashes.
     return "massf[" ~ to!string(i) ~ "]-" ~ to!string(name);
 }
@@ -734,6 +734,8 @@ final class GlobalConfig {
     static string[] build_flow_variable_list()
     {
         // Returns a list of variable names in the order of the fixed-layout data files.
+        // This function needs to be consistent with the cell-data reading and writing
+        // functions toward the end of fvcell.d.
         string[] list;
         list ~= [flowVarName(FlowVar.pos_x),
                  flowVarName(FlowVar.pos_y),
@@ -765,7 +767,7 @@ final class GlobalConfig {
                      flowVarName(FlowVar.Q_rE_rad)];
         }
         list ~= [flowVarName(FlowVar.tke), flowVarName(FlowVar.omega)];
-        foreach(i; 0 .. gmodel_master.n_species) { list ~= [massfName(i)]; }
+        foreach(i; 0 .. gmodel_master.n_species) { list ~= [massfName(gmodel_master, i)]; }
         if (gmodel_master.n_species > 1) { list ~= flowVarName(FlowVar.dt_chem); }
         list ~= [flowVarName(FlowVar.u), flowVarName(FlowVar.T)];
         foreach(i; 0 .. gmodel_master.n_modes) {

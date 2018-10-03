@@ -365,7 +365,7 @@ public:
     } // end replace_flow_data_with_average()
 
     void scan_values_from_string(string buffer, ref string[] varNameList, bool fixedOrder,
-                                 bool overwrite_geometry_data)
+                                 GasModel gmodel, bool overwrite_geometry_data)
     // Note that the position data is read into grid_time_level 0.
     {
         Vector3 new_pos;
@@ -380,7 +380,7 @@ public:
                  myConfig.divergence_cleaning, myConfig.radiation);
         } else {
             scan_cell_data_from_variable_order_string
-                (buffer, varNameList,
+                (buffer, varNameList, gmodel,
                  new_pos, new_volume, fs,
                  Q_rad_org, f_rad_org, Q_rE_rad,
                  dt_chem, dt_therm,
@@ -1999,7 +1999,7 @@ void scan_cell_data_from_fixed_order_string
 } // end scan_values_from_fixed_order_string()
 
 void scan_cell_data_from_variable_order_string
-(string buffer, string[] varNameList,
+(string buffer, string[] varNameList, GasModel gmodel,
  ref Vector3 pos, ref number volume, ref FlowState fs,
  ref number Q_rad_org, ref number f_rad_org, ref number Q_rE_rad,
  ref double dt_chem, ref double dt_therm,
@@ -2060,7 +2060,7 @@ void scan_cell_data_from_variable_order_string
         fs.tke = values[countUntil(varNameList, flowVarName(FlowVar.tke))];
         fs.omega = values[countUntil(varNameList, flowVarName(FlowVar.omega))];
         foreach(i; 0 .. fs.gas.massf.length) {
-            fs.gas.massf[i] = values[countUntil(varNameList, massfName(to!int(i)))];
+            fs.gas.massf[i] = values[countUntil(varNameList, massfName(gmodel, to!int(i)))];
         }
         if (fs.gas.massf.length > 1) {
             dt_chem = values[countUntil(varNameList, flowVarName(FlowVar.dt_chem))];

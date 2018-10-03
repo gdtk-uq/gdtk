@@ -812,7 +812,7 @@ public:
             foreach (i; 0 .. ncells) {
                 line = byLine.front; byLine.popFront();
                 cells[i].scan_values_from_string(line, variableNames, useFixedOrder,
-                                                 overwrite_geometry_data);
+                                                 myConfig.gmodel, overwrite_geometry_data);
             }
         } // end switch flow_format
         return sim_time;

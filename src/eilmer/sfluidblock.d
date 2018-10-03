@@ -1765,7 +1765,7 @@ public:
                     for ( size_t i = imin; i <= imax; ++i ) {
                         line = byLine.front; byLine.popFront();
                         get_cell(i,j,k).scan_values_from_string(line, variableNames, useFixedOrder,
-                                                                overwrite_geometry_data);
+                                                                myConfig.gmodel, overwrite_geometry_data);
                     } // for i
                 } // for j
             } // for k
