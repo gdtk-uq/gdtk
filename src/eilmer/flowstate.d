@@ -556,10 +556,11 @@ public:
                 pos ~= Vector3();
                 number volume, Q_rad_org, f_rad_org, Q_rE_rad;
                 double dt_chem, dt_therm;
-                scan_cell_data_from_string(text, pos[$-1], volume, fstate[$-1],
-                                           Q_rad_org, f_rad_org, Q_rE_rad, dt_chem, dt_therm,
-                                           GlobalConfig.include_quality, GlobalConfig.MHD,
-                                           GlobalConfig.divergence_cleaning, GlobalConfig.radiation);
+                scan_cell_data_from_fixed_order_string
+                    (text, pos[$-1], volume, fstate[$-1],
+                     Q_rad_org, f_rad_org, Q_rE_rad, dt_chem, dt_therm,
+                     GlobalConfig.include_quality, GlobalConfig.MHD,
+                     GlobalConfig.divergence_cleaning, GlobalConfig.radiation);
                 npoints += 1;
             }
             range.popFront();

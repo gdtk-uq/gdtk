@@ -364,16 +364,29 @@ public:
         Q_rE_rad /= n;
     } // end replace_flow_data_with_average()
 
-    void scan_values_from_string(string buffer, bool overwrite_geometry_data)
+    void scan_values_from_string(string buffer, ref string[] varNameList, bool fixedOrder,
+                                 bool overwrite_geometry_data)
     // Note that the position data is read into grid_time_level 0.
     {
         Vector3 new_pos;
         number new_volume;
-        scan_cell_data_from_string(buffer, new_pos, new_volume, fs,
-                                   Q_rad_org, f_rad_org, Q_rE_rad,
-                                   dt_chem, dt_therm,
-                                   myConfig.include_quality, myConfig.MHD,
-                                   myConfig.divergence_cleaning, myConfig.radiation);
+        if (fixedOrder) {
+            scan_cell_data_from_fixed_order_string
+                (buffer,
+                 new_pos, new_volume, fs,
+                 Q_rad_org, f_rad_org, Q_rE_rad,
+                 dt_chem, dt_therm,
+                 myConfig.include_quality, myConfig.MHD,
+                 myConfig.divergence_cleaning, myConfig.radiation);
+        } else {
+            scan_cell_data_from_variable_order_string
+                (buffer, varNameList,
+                 new_pos, new_volume, fs,
+                 Q_rad_org, f_rad_org, Q_rE_rad,
+                 dt_chem, dt_therm,
+                 myConfig.include_quality, myConfig.MHD,
+                 myConfig.divergence_cleaning, myConfig.radiation);
+        }
         if (overwrite_geometry_data) {
             pos[0].set(new_pos);
             volume[0] = new_volume;
@@ -1684,7 +1697,7 @@ public:
 } // end class FVCell
 
 //--------------------------------------------------------------------------------
-// The following functions define the written formats for the cell data.
+// The following functions define the written fixed-formats for the cell data.
 // Other input and output functions should delegate their work to these functions.
 //--------------------------------------------------------------------------------
 
@@ -1826,11 +1839,12 @@ void cell_data_to_raw_binary(ref File fout,
     return;
 } // end cell_data_to_raw_binary()
 
-void scan_cell_data_from_string(string buffer,
-                                ref Vector3 pos, ref number volume, ref FlowState fs,
-                                ref number Q_rad_org, ref number f_rad_org, ref number Q_rE_rad,
-                                ref double dt_chem, ref double dt_therm,
-                                bool include_quality, bool MHD, bool divergence_cleaning, bool radiation)
+void scan_cell_data_from_fixed_order_string
+(string buffer,
+ ref Vector3 pos, ref number volume, ref FlowState fs,
+ ref number Q_rad_org, ref number f_rad_org, ref number Q_rE_rad,
+ ref double dt_chem, ref double dt_therm,
+ bool include_quality, bool MHD, bool divergence_cleaning, bool radiation)
 {
     // This function needs to be kept consistent with cell_data_as_string() above.
     auto items = split(buffer);
@@ -1982,7 +1996,86 @@ void scan_cell_data_from_string(string buffer,
             dt_therm = to!double(items.front); items.popFront(); 
         }
     } // end version double_numbers
-} // end scan_values_from_string()
+} // end scan_values_from_fixed_order_string()
+
+void scan_cell_data_from_variable_order_string
+(string buffer, string[] varNameList,
+ ref Vector3 pos, ref number volume, ref FlowState fs,
+ ref number Q_rad_org, ref number f_rad_org, ref number Q_rE_rad,
+ ref double dt_chem, ref double dt_therm,
+ bool include_quality, bool MHD, bool divergence_cleaning, bool radiation)
+{
+    // This function uses the list of variable names read from the file
+    // to work out which data item to assign to each variable.
+    version(complex_numbers) {
+        throw new Error("Not implemented.");
+    } else {
+        // version double_numbers
+        double[] values; foreach (item; buffer.strip().split()) { values ~= to!double(item); }
+        pos.refx = values[countUntil(varNameList, flowVarName(FlowVar.pos_x))];
+        pos.refy = values[countUntil(varNameList, flowVarName(FlowVar.pos_y))];
+        pos.refz = values[countUntil(varNameList, flowVarName(FlowVar.pos_z))];
+        volume = values[countUntil(varNameList, flowVarName(FlowVar.volume))];
+        fs.gas.rho = values[countUntil(varNameList, flowVarName(FlowVar.rho))];
+        fs.vel.refx = values[countUntil(varNameList, flowVarName(FlowVar.vel_x))];
+        fs.vel.refy = values[countUntil(varNameList, flowVarName(FlowVar.vel_y))];
+        fs.vel.refz = values[countUntil(varNameList, flowVarName(FlowVar.vel_z))];
+        if (MHD) {
+            fs.B.refx = values[countUntil(varNameList, flowVarName(FlowVar.B_x))];
+            fs.B.refy = values[countUntil(varNameList, flowVarName(FlowVar.B_y))];
+            fs.B.refz = values[countUntil(varNameList, flowVarName(FlowVar.B_z))];
+            fs.divB = values[countUntil(varNameList, flowVarName(FlowVar.divB))];
+            if (divergence_cleaning) {
+                fs.psi = values[countUntil(varNameList, flowVarName(FlowVar.psi))];
+            } else {
+                fs.psi = 0.0;
+            }
+        } else {
+            fs.B.clear(); fs.psi = 0.0; fs.divB = 0.0;
+        }
+        if (include_quality) {
+            fs.gas.quality = values[countUntil(varNameList, flowVarName(FlowVar.quality))];
+        } else {
+            fs.gas.quality = 1.0;
+        }
+        fs.gas.p = values[countUntil(varNameList, flowVarName(FlowVar.p))];
+        fs.gas.a = values[countUntil(varNameList, flowVarName(FlowVar.a))];
+        fs.gas.mu = values[countUntil(varNameList, flowVarName(FlowVar.mu))];
+        fs.gas.k = values[countUntil(varNameList, flowVarName(FlowVar.k))];
+        foreach(i; 0 .. fs.gas.k_modes.length) {
+            fs.gas.k_modes[i] = values[countUntil(varNameList, k_modesName(to!int(i)))];
+        }
+        fs.mu_t = values[countUntil(varNameList, flowVarName(FlowVar.mu_t))];
+        fs.k_t = values[countUntil(varNameList, flowVarName(FlowVar.k_t))];
+        // In the usual format for the flow data, the shock detector appears as an int.
+        // In profile files, the same value may appear as a double.
+        fs.S = to!int(values[countUntil(varNameList, flowVarName(FlowVar.S))]);
+        if (radiation) {
+            Q_rad_org = values[countUntil(varNameList, flowVarName(FlowVar.Q_rad_org))];
+            f_rad_org = values[countUntil(varNameList, flowVarName(FlowVar.f_rad_org))];
+            Q_rE_rad = values[countUntil(varNameList, flowVarName(FlowVar.Q_rE_rad))];
+        } else {
+            Q_rad_org = 0.0; f_rad_org = 0.0; Q_rE_rad = 0.0;
+        }
+        fs.tke = values[countUntil(varNameList, flowVarName(FlowVar.tke))];
+        fs.omega = values[countUntil(varNameList, flowVarName(FlowVar.omega))];
+        foreach(i; 0 .. fs.gas.massf.length) {
+            fs.gas.massf[i] = values[countUntil(varNameList, massfName(to!int(i)))];
+        }
+        if (fs.gas.massf.length > 1) {
+            dt_chem = values[countUntil(varNameList, flowVarName(FlowVar.dt_chem))];
+        }
+        fs.gas.u = values[countUntil(varNameList, flowVarName(FlowVar.u))];
+        fs.gas.T = values[countUntil(varNameList, flowVarName(FlowVar.T))];
+        foreach(i; 0 .. fs.gas.u_modes.length) {
+            fs.gas.u_modes[i] = values[countUntil(varNameList, u_modesName(to!int(i)))];
+            fs.gas.T_modes[i] = values[countUntil(varNameList, T_modesName(to!int(i)))];
+        }
+        if (fs.gas.u_modes.length > 0) {
+            dt_therm = values[countUntil(varNameList, flowVarName(FlowVar.dt_therm))]; 
+        }
+    } // end version double_numbers
+} // end scan_values_from_variable_order_string()
 
 void raw_binary_to_cell_data(ref File fin,
                              ref Vector3 pos, ref number volume, ref FlowState fs,

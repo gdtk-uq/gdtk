@@ -14,6 +14,7 @@ import std.stdio;
 import std.format;
 import std.string;
 import std.array;
+import std.algorithm;
 import std.math;
 import nm.complex;
 import nm.number;
@@ -1674,7 +1675,7 @@ public:
         double sim_time; // to be read from file
         string myLabel;
         int nvariables;
-        string[] variable_list;
+        string[] variableNames;
         switch (myConfig.flow_format) {
         case "gziptext": goto default;
         case "rawbinary":
@@ -1736,11 +1737,10 @@ public:
             line = byLine.front; byLine.popFront();
             formattedRead(line, "variables: %d", &nvariables);
             line = byLine.front; byLine.popFront();
-            variable_list = line.strip().split();
-            if (variable_list.length != myConfig.flow_variable_list.length) {
-                throw new FlowSolverException("Mismatch in variable lists");
-            }
-            // [TODO] We should test the incoming strings against the current variable names.
+            variableNames = line.strip().split();
+            foreach (i; 0 .. variableNames.length) { variableNames[i] = variableNames[i].strip("\""); }
+            // If all of the variables line up, it is probably faster to use fixed-order.
+            bool useFixedOrder = std.algorithm.equal(variableNames, myConfig.flow_variable_list);
             line = byLine.front; byLine.popFront();
             size_t my_dimensions, nic, njc, nkc;
             formattedRead(line, "dimensions: %d", &my_dimensions);
@@ -1764,7 +1764,8 @@ public:
                 for ( size_t j = jmin; j <= jmax; ++j ) {
                     for ( size_t i = imin; i <= imax; ++i ) {
                         line = byLine.front; byLine.popFront();
-                        get_cell(i,j,k).scan_values_from_string(line, overwrite_geometry_data);
+                        get_cell(i,j,k).scan_values_from_string(line, variableNames, useFixedOrder,
+                                                                overwrite_geometry_data);
                     } // for i
                 } // for j
             } // for k

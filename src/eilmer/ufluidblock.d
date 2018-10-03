@@ -736,9 +736,9 @@ public:
     {
         if (myConfig.verbosity_level > 1) { writeln("read_solution(): Start block ", id); }
         double sim_time; // to be read from file
-        string[] expected_variable_list = myConfig.flow_variable_list.dup();
         string myLabel;
         size_t nvariables;
+        string[] variableNames;
         int my_dimensions;
         size_t nc;
         switch (myConfig.flow_format) {
@@ -796,7 +796,10 @@ public:
             line = byLine.front; byLine.popFront();
             formattedRead(line, "variables: %d", &nvariables);
             line = byLine.front; byLine.popFront();
-            // ingore variableNames = line.strip().split();
+            variableNames = line.strip().split();
+            foreach (i; 0 .. variableNames.length) { variableNames[i] = variableNames[i].strip("\""); }
+            // If all of the variables line up, it is probably faster to use fixed-order.
+            bool useFixedOrder = std.algorithm.equal(variableNames, myConfig.flow_variable_list);
             line = byLine.front; byLine.popFront();
             formattedRead(line, "dimensions: %d", &my_dimensions);
             line = byLine.front; byLine.popFront();
@@ -808,7 +811,8 @@ public:
             }   
             foreach (i; 0 .. ncells) {
                 line = byLine.front; byLine.popFront();
-                cells[i].scan_values_from_string(line, overwrite_geometry_data);
+                cells[i].scan_values_from_string(line, variableNames, useFixedOrder,
+                                                 overwrite_geometry_data);
             }
         } // end switch flow_format
         return sim_time;
