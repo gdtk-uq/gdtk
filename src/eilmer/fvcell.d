@@ -2096,32 +2096,3 @@ void raw_binary_to_cell_data(ref File fin,
         if (fs.gas.u_modes.length > 0) { fin.rawRead(dbl1); dt_therm = dbl1[0]; }
     } // end version double_numbers
 } // end raw_binary_to_cell_data()
-
-string[] variable_list_for_cell(ref GasModel gmodel, bool include_quality,
-                                bool MHD, bool divergence_cleaning, bool radiation)
-{
-    // This function needs to be kept consistent with cell_data_as_string() above.
-    string[] list;
-    list ~= ["pos.x", "pos.y", "pos.z", "volume"];
-    list ~= ["rho", "vel.x", "vel.y", "vel.z"];
-    if (MHD) { list ~= ["B.x", "B.y", "B.z", "divB"]; }
-    if (MHD && divergence_cleaning) { list ~= ["psi"]; }
-    if (include_quality) { list ~= ["quality"]; }
-    list ~= ["p", "a", "mu", "k"];
-    foreach(i; 0 .. gmodel.n_modes) { list ~= "k_modes[" ~ to!string(i) ~ "]"; }
-    list ~= ["mu_t", "k_t", "S"];
-    if (radiation) { list ~= ["Q_rad_org", "f_rad_org", "Q_rE_rad"]; }
-    list ~= ["tke", "omega"];
-    foreach(i; 0 .. gmodel.n_species) {
-        auto name = cast(char[]) gmodel.species_name(i);
-        name = tr(name, " \t", "--", "s"); // Replace internal whitespace with dashes.
-        list ~= ["massf[" ~ to!string(i) ~ "]-" ~ to!string(name)];
-    }
-    if (gmodel.n_species > 1) { list ~= ["dt_chem"]; }
-    list ~= ["u", "T"];
-    foreach(i; 0 .. gmodel.n_modes) {
-        list ~= ["u_modes[" ~ to!string(i) ~ "]", "T_modes[" ~ to!string(i) ~ "]"];
-    }
-    if (gmodel.n_modes > 0) { list ~= ["dt_therm"]; }
-    return list;
-} // end variable_list_for_cell()

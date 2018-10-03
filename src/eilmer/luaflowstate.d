@@ -476,6 +476,11 @@ extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
     auto fname = to!string(luaL_checkstring(L, 1));
     auto grid = checkStructuredGrid(L, 2); 
     double t0 = luaL_checknumber(L, 4);
+    if (GlobalConfig.flow_variable_list.length == 0) {
+        foreach(varname; GlobalConfig.build_flow_variable_list()) {
+            GlobalConfig.flow_variable_list ~= varname;
+        }
+    }
     FlowState fs;
     // Test if we have a simple flow state or something more exotic
     if ( isObjType(L, 3, "_FlowState") ) {
@@ -497,9 +502,6 @@ extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
         //      
         // Write the data for the whole structured block.
         auto gmodel = GlobalConfig.gmodel_master;
-        auto variable_list = variable_list_for_cell(gmodel, GlobalConfig.include_quality,
-                                                    GlobalConfig.MHD, GlobalConfig.divergence_cleaning,
-                                                    GlobalConfig.radiation);
         switch (GlobalConfig.flow_format) {
         case "gziptext": goto default;
         case "rawbinary":
@@ -510,8 +512,8 @@ extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
             int1[0] = to!int(grid.label.length); outfile.rawWrite(int1);
             if (grid.label.length > 0) { outfile.rawWrite(to!(char[])(grid.label)); }
             dbl1[0] = t0; outfile.rawWrite(dbl1); // sim_time
-            int1[0] = to!int(variable_list.length); outfile.rawWrite(int1);
-            foreach(varname; variable_list) {
+            int1[0] = to!int(GlobalConfig.flow_variable_list.length); outfile.rawWrite(int1);
+            foreach(varname; GlobalConfig.flow_variable_list) {
                 int1[0] = to!int(varname.length); outfile.rawWrite(int1);
                 outfile.rawWrite(to!(char[])(varname));
             }
@@ -576,9 +578,9 @@ extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
             formattedWrite(writer, "structured_grid_flow 1.0\n");
             formattedWrite(writer, "label: %s\n", grid.label);
             formattedWrite(writer, "sim_time: %.18e\n", t0);
-            formattedWrite(writer, "variables: %d\n", variable_list.length);
+            formattedWrite(writer, "variables: %d\n", GlobalConfig.flow_variable_list.length);
             // Variable list for cell on one line.
-            foreach(varname; variable_list) {
+            foreach(varname; GlobalConfig.flow_variable_list) {
                 formattedWrite(writer, " \"%s\"", varname);
             }
             formattedWrite(writer, "\n");
@@ -651,6 +653,11 @@ extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
     auto fname = to!string(luaL_checkstring(L, 1));
     auto grid = checkUnstructuredGrid(L, 2); 
     double t0 = luaL_checknumber(L, 4);
+    if (GlobalConfig.flow_variable_list.length == 0) {
+        foreach(varname; GlobalConfig.build_flow_variable_list()) {
+            GlobalConfig.flow_variable_list ~= varname;
+        }
+    }
     FlowState fs;
     // Test if we have a simple flow state or something more exotic
     if ( isObjType(L, 3, "_FlowState") ) {
@@ -669,9 +676,6 @@ extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
         //      
         // Write the data for the whole unstructured block.
         auto gmodel = GlobalConfig.gmodel_master;
-        auto variable_list = variable_list_for_cell(gmodel, GlobalConfig.include_quality,
-                                                    GlobalConfig.MHD, GlobalConfig.divergence_cleaning,
-                                                    GlobalConfig.radiation);
         switch (GlobalConfig.flow_format) {
         case "gziptext": goto default;
         case "rawbinary":
@@ -682,8 +686,8 @@ extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
             int1[0] = to!int(grid.label.length); outfile.rawWrite(int1);
             if (grid.label.length > 0) { outfile.rawWrite(to!(char[])(grid.label)); }
             dbl1[0] = t0; outfile.rawWrite(dbl1); // sim_time
-            int1[0] = to!int(variable_list.length); outfile.rawWrite(int1);
-            foreach(varname; variable_list) {
+            int1[0] = to!int(GlobalConfig.flow_variable_list.length); outfile.rawWrite(int1);
+            foreach(varname; GlobalConfig.flow_variable_list) {
                 int1[0] = to!int(varname.length); outfile.rawWrite(int1);
                 outfile.rawWrite(to!(char[])(varname));
             }
@@ -733,9 +737,9 @@ extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
             formattedWrite(writer, "unstructured_grid_flow 1.0\n");
             formattedWrite(writer, "label: %s\n", grid.label);
             formattedWrite(writer, "sim_time: %.18e\n", t0);
-            formattedWrite(writer, "variables: %d\n", variable_list.length);
+            formattedWrite(writer, "variables: %d\n", GlobalConfig.flow_variable_list.length);
             // Variable list for cell on one line.
-            foreach(varname; variable_list) {
+            foreach(varname; GlobalConfig.flow_variable_list) {
                 formattedWrite(writer, " \"%s\"", varname);
             }
             formattedWrite(writer, "\n");

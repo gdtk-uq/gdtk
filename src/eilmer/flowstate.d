@@ -342,9 +342,6 @@ void write_initial_flow_file(string fileName, ref StructuredGrid grid,
     auto njcell = grid.njv - 1;
     auto nkcell = grid.nkv - 1;
     if (GlobalConfig.dimensions == 2) nkcell = 1;
-    auto variable_list = variable_list_for_cell(gmodel, GlobalConfig.include_quality, 
-                                                GlobalConfig.MHD, GlobalConfig.divergence_cleaning,
-                                                GlobalConfig.radiation);
     //  
     // Write the data for the whole structured block.
     switch (GlobalConfig.flow_format) {
@@ -357,8 +354,8 @@ void write_initial_flow_file(string fileName, ref StructuredGrid grid,
         int1[0] = to!int(grid.label.length); outfile.rawWrite(int1);
         if (grid.label.length > 0) { outfile.rawWrite(to!(char[])(grid.label)); }
         dbl1[0] = t0; outfile.rawWrite(dbl1); // sim_time
-        int1[0] = to!int(variable_list.length); outfile.rawWrite(int1);
-        foreach(varname; variable_list) {
+        int1[0] = to!int(GlobalConfig.flow_variable_list.length); outfile.rawWrite(int1);
+        foreach(varname; GlobalConfig.flow_variable_list) {
             int1[0] = to!int(varname.length); outfile.rawWrite(int1);
             outfile.rawWrite(to!(char[])(varname));
         }
@@ -401,9 +398,9 @@ void write_initial_flow_file(string fileName, ref StructuredGrid grid,
         formattedWrite(writer, "structured_grid_flow 1.0\n");
         formattedWrite(writer, "label: %s\n", grid.label);
         formattedWrite(writer, "sim_time: %.18e\n", t0);
-        formattedWrite(writer, "variables: %d\n", variable_list.length);
+        formattedWrite(writer, "variables: %d\n", GlobalConfig.flow_variable_list.length);
         // Variable list for cell on one line.
-        foreach(varname; variable_list) {
+        foreach(varname; GlobalConfig.flow_variable_list) {
             formattedWrite(writer, " \"%s\"", varname);
         }
         formattedWrite(writer, "\n");
@@ -454,9 +451,6 @@ void write_initial_flow_file(string fileName, ref UnstructuredGrid grid,
 {
     // Numbers of cells derived from numbers of vertices in grid.
     auto ncells = grid.ncells;
-    auto variable_list = variable_list_for_cell(gmodel, GlobalConfig.include_quality,
-                                                GlobalConfig.MHD, GlobalConfig.divergence_cleaning,
-                                                GlobalConfig.radiation);
     //  
     // Write the data for the whole unstructured block.
     switch (GlobalConfig.flow_format) {
@@ -469,8 +463,8 @@ void write_initial_flow_file(string fileName, ref UnstructuredGrid grid,
         int1[0] = to!int(grid.label.length); outfile.rawWrite(int1);
         if (grid.label.length > 0) { outfile.rawWrite(to!(char[])(grid.label)); }
         dbl1[0] = t0; outfile.rawWrite(dbl1); // sim_time
-        int1[0] = to!int(variable_list.length); outfile.rawWrite(int1);
-        foreach(varname; variable_list) {
+        int1[0] = to!int(GlobalConfig.flow_variable_list.length); outfile.rawWrite(int1);
+        foreach(varname; GlobalConfig.flow_variable_list) {
             int1[0] = to!int(varname.length); outfile.rawWrite(int1);
             outfile.rawWrite(to!(char[])(varname));
         }
@@ -498,9 +492,9 @@ void write_initial_flow_file(string fileName, ref UnstructuredGrid grid,
         formattedWrite(writer, "unstructured_grid_flow 1.0\n");
         formattedWrite(writer, "label: %s\n", grid.label);
         formattedWrite(writer, "sim_time: %.18e\n", t0);
-        formattedWrite(writer, "variables: %d\n", variable_list.length);
+        formattedWrite(writer, "variables: %d\n", GlobalConfig.flow_variable_list.length);
         // Variable list for cell on one line.
-        foreach(varname; variable_list) {
+        foreach(varname; GlobalConfig.flow_variable_list) {
             formattedWrite(writer, " \"%s\"", varname);
         }
         formattedWrite(writer, "\n");

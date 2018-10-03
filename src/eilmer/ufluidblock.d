@@ -736,9 +736,7 @@ public:
     {
         if (myConfig.verbosity_level > 1) { writeln("read_solution(): Start block ", id); }
         double sim_time; // to be read from file
-        auto expected_variable_list = variable_list_for_cell(myConfig.gmodel, myConfig.include_quality,
-                                                             myConfig.MHD, myConfig.divergence_cleaning,
-                                                             myConfig.radiation);
+        string[] expected_variable_list = myConfig.flow_variable_list.dup();
         string myLabel;
         size_t nvariables;
         int my_dimensions;
@@ -824,9 +822,6 @@ public:
     // write_initial_flow_file() from flowstate.d.
     {
         if (myConfig.verbosity_level > 1) { writeln("write_solution(): Start block ", id); }
-        auto variable_list = variable_list_for_cell(myConfig.gmodel, myConfig.include_quality,
-                                                    myConfig.MHD, myConfig.divergence_cleaning,
-                                                    myConfig.radiation);
         switch (myConfig.flow_format) {
         case "gziptext": goto default;
         case "rawbinary":
@@ -837,8 +832,8 @@ public:
             int1[0] = to!int(label.length); outfile.rawWrite(int1);
             if (label.length > 0) { outfile.rawWrite(to!(char[])(label)); }
             dbl1[0] = sim_time; outfile.rawWrite(dbl1);
-            int1[0] = to!int(variable_list.length); outfile.rawWrite(int1);
-            foreach(varname; variable_list) {
+            int1[0] = to!int(myConfig.flow_variable_list.length); outfile.rawWrite(int1);
+            foreach(varname; myConfig.flow_variable_list) {
                 int1[0] = to!int(varname.length); outfile.rawWrite(int1);
                 outfile.rawWrite(to!(char[])(varname));
             }
@@ -852,9 +847,9 @@ public:
             formattedWrite(writer, "unstructured_grid_flow 1.0\n");
             formattedWrite(writer, "label: %s\n", label);
             formattedWrite(writer, "sim_time: %.18e\n", sim_time);
-            formattedWrite(writer, "variables: %d\n", variable_list.length);
+            formattedWrite(writer, "variables: %d\n", myConfig.flow_variable_list.length);
             // Variable list for cell on one line.
-            foreach(varname; variable_list) {
+            foreach(varname; myConfig.flow_variable_list) {
                 formattedWrite(writer, " \"%s\"", varname);
             }
             formattedWrite(writer, "\n");

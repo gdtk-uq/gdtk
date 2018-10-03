@@ -51,9 +51,7 @@ void main()
     GlobalConfig.gas_model_file = "sample-data/ideal-air-gas-model.lua"; 
     LocalConfig myConfig = new LocalConfig();
     auto cell = new FVCell(myConfig);
-    writeln("variable_list_for_cell=", variable_list_for_cell(myConfig.gmodel, myConfig.include_quality,
-                                                              myConfig.MHD, myConfig.divergence_cleaning,
-                                                              myConfig.radiation));
+    writeln("variable_list_for_cell=", GlobalConfig.flow_variable_list);
     string sample = "1.0 2.0 3.0 0.000999 0.1 1.1 1.2 1.3 100.0e3 345.0 1.8e-5 "
         ~ "0.0123 0.999 0.0888 1 0.05 1.009 1.0 2.65e5 311";
     cell.scan_values_from_string(sample, true);
