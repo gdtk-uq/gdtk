@@ -173,7 +173,16 @@ void main(string[] args) {
         /* Flow Jacobian */
 
         foreach (myblk; parallel(localFluidBlocks,1)) {
-            // make sure ghost cells are filled before proceeding...
+            initialisation(myblk, nPrimitive);
+
+            // make sure ghost cells are filled
+            myblk.applyPreReconAction(0.0, 0, 0);
+            myblk.applyPostConvFluxAction(0.0, 0, 0);
+            myblk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
+            myblk.applyPostDiffFluxAction(0.0, 0, 0);
+
+            steadystate_core.evalRHS(0.0, 0);
+
             myblk.applyPreReconAction(0.0, 0, 0);
             myblk.applyPostConvFluxAction(0.0, 0, 0);
             myblk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
