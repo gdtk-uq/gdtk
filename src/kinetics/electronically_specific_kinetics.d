@@ -109,7 +109,7 @@ private:
     @nogc
     number N2_fr(GasState Q) //must only be called when in conc mol/cm^3, not massf
     {
-        double rate_coef(int i){
+        number rate_coef(int i){
             return ArrN2_fr[i][0]*ArrN2_fr[i][1]*(Q.T^^ArrN2_fr[i][2])*exp(-ArrN2_fr[i][3]/Q.T);
         }
         
@@ -126,7 +126,7 @@ private:
     @nogc
     number N2_br(GasState Q) //must only be called when in conc mol/cm^3, not massff
     {
-        double rate_coef(int i){
+        number rate_coef(int i){
             return ArrN2_br[i][0]*ArrN2_br[i][1]*(Q.T^^ArrN2_br[i][2])*exp(-ArrN2_br[i][3]/Q.T);
         }
         
@@ -143,7 +143,7 @@ private:
     @nogc
     number O2_fr(GasState Q) //must only be called when in conc mol/cm^3, not massf
     {
-        double rate_coef(int i){
+        number rate_coef(int i){
             return ArrO2_fr[i][0]*ArrO2_fr[i][1]*(Q.T^^ArrO2_fr[i][2])*exp(-ArrO2_fr[i][3]/Q.T);
         }
         
@@ -160,7 +160,7 @@ private:
     @nogc
     number O2_br(GasState Q) //must only be called when in conc mol/cm^3, not massf
     {
-        double rate_coef(int i){
+        number rate_coef(int i){
             return ArrO2_br[i][0]*ArrO2_br[i][1]*(Q.T^^ArrO2_br[i][2])*exp(-ArrO2_br[i][3]/Q.T);
         }
         
