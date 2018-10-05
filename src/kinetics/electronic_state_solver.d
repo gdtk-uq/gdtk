@@ -43,6 +43,7 @@ number[][] state;
 number[][] guess_state;
 number[][] step_state;
 number[] state_vector;
+number[] prev_state_vector;
 number[] initial_vector;
 
 
@@ -128,6 +129,7 @@ void Init()
         step_state[i].length=indiv_data.length+1;
     }
     state_vector.length=total_species_number;
+    prev_state_vector.length=total_species_number;
     initial_vector.length=total_species_number;
     rate_vector.length=total_species_number;
     Asolve = new Matrix!number(total_species_number,total_species_number);
@@ -146,9 +148,7 @@ void Init()
 @nogc
 number Rate(int ip, int gas, number[][] input_state=state, number electron_density=Ne) 
 {
-    //Takes an energy level, gas and current state and returns the rate of change of grouped level ip\
-    //if no state is specified, use current state
-    //if no electron density is specified, use Ne
+    //Returns the current rate of change of a grouped electronic species
 
     @nogc
     number Forward_Rate_Coef(int gas, int ip,int jp) {
@@ -264,7 +264,52 @@ void Step()
         }
         Jacobian();
         debug {
-            BDF1(update_vector, RHSvector, Asolve, pivot, dt,initial_vector,state_vector,rate_vector,jacobian);
+            BDF2(update_vector, RHSvector, Asolve, pivot, dt, prev_state_vector, initial_vector, state_vector,rate_vector,jacobian);
+            UpdateStateFromVector(guess_state,state_vector);
+            number final_ions=0.0;
+            foreach(number[] chem_spec;guess_state) {
+                final_ions+=chem_spec[$-1];
+            }
+            Ne+=final_ions-initial_ions;
+        } else {
+            throw new Error("Var_BDF2 is only available in debug flavour.");
+        }
+    }
+    CopyStateToState(state,guess_state);
+    prev_state_vector[] = state_vector[];
+}
+
+@nogc
+void First_Step()
+{
+    CopyStateToState(guess_state,state);
+    UpdateVectorFromState(initial_vector,state);
+
+    @nogc
+    int VectorPosition(int gas, int ip) //A small function for give the position in the continuous vector, from a grouped species of a gas
+    {
+        int vectorposition;
+        foreach(int i; 0 .. gas) {
+            vectorposition+=state[i].length;
+        }
+        vectorposition+=ip;
+        return vectorposition;
+    }
+    //step dt with BDF formula
+    for (int n;n<newton_steps;n++) {
+        foreach(int gas,number[] chem_spec;guess_state) {
+            foreach(int ip,number elec_state;chem_spec){
+                rate_vector[VectorPosition(gas,ip)]=Rate(ip, gas, guess_state);
+            }
+        }
+        UpdateVectorFromState(state_vector,guess_state);
+        number initial_ions=0;
+        foreach(number[] chem_spec;guess_state) {
+            initial_ions+=chem_spec[$-1];
+        }
+        Jacobian();
+        debug {
+            BDF1(update_vector, RHSvector, Asolve, pivot, dt/100.0,initial_vector,state_vector,rate_vector,jacobian);
             UpdateStateFromVector(guess_state,state_vector);
             number final_ions=0.0;
             foreach(number[] chem_spec;guess_state) {
@@ -276,12 +321,40 @@ void Step()
         }
     }
     CopyStateToState(state,guess_state);
+    prev_state_vector[] = state_vector[];
+
+    for (int n;n<newton_steps;n++) {
+        foreach(int gas,number[] chem_spec;guess_state) {
+            foreach(int ip,number elec_state;chem_spec){
+                rate_vector[VectorPosition(gas,ip)]=Rate(ip, gas, guess_state);
+            }
+        }
+        UpdateVectorFromState(state_vector,guess_state);
+        number initial_ions=0;
+        foreach(number[] chem_spec;guess_state) {
+            initial_ions+=chem_spec[$-1];
+        }
+        Jacobian();
+        debug {
+            Var_BDF2(update_vector, RHSvector, Asolve, pivot,(99.0/100.0)*dt, dt/100.0, prev_state_vector, initial_vector, state_vector,rate_vector,jacobian);
+            UpdateStateFromVector(guess_state,state_vector);
+            number final_ions=0.0;
+            foreach(number[] chem_spec;guess_state) {
+                final_ions+=chem_spec[$-1];
+            }
+            Ne+=final_ions-initial_ions;
+        } else {
+            throw new Error("Var_BDF2 is only available in debug flavour.");
+        }
+    }
+    CopyStateToState(state,guess_state);
+    prev_state_vector[] = state_vector[];
 }
 
 @nogc
 void Electronic_Solve( number[] state_from_cfd, ref number[] state_to_cfd, number given_Te, double given_endtime)
 {
-    dt = 1.0e-12;
+    dt = 1.0e-9;
     Ne=state_from_cfd[$-1];
     state_vector[]=state_from_cfd[0 .. $-1];
     UpdateStateFromVector(state,state_vector);
@@ -290,6 +363,8 @@ void Electronic_Solve( number[] state_from_cfd, ref number[] state_to_cfd, numbe
     dj=20;
     newton_steps=3;
     double t=0.0;
+    First_Step();
+    t+=dt;
     while (t<endtime) {
         Step();
         t+=dt;

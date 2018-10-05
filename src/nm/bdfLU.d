@@ -1,6 +1,27 @@
-/** BDF1, BDF2 and variable BDF2
-*develops matrix class
-*solves with LU decomposition using Crout's method
+/** 
+* bdfLU.d
+* 
+* This module contains a set of implicit backwards differentiation methods.
+* These methods are written to solve the matrix equations developed when 
+* applying a newton-raphson step to a vector.
+* These are an extension of the backward euler step, using a newton-raphson
+* method to solve for the k+1 state.
+*
+* These methods call on Crout's LU decomposition method as specified in bbla.d
+* to solve the set of matrix equations. These are structured with the intent of
+* being called multiple times for any additional newton steps to improve the
+* accuracy of each timestep.
+*
+* Contents:
+* 	1. BDF1 - A single newton-raphson step using a first order backward
+* 				differentiation formula.
+* 	2. BDF2 - A single newton-raphson step using a second order backward
+* 				differentiation formula.
+* 	3. Var_BDF2 - A single newton-raphson step using a second order backward
+* 				differentiation formula with a variable timestep.
+*
+* Author: Brad Semple
+* Version: 2018-09-28, written
 */
 
 
@@ -34,7 +55,7 @@ void BDF1(number[] update_vector, number[] RHSvector, Matrix!number Asolve, int[
 		}
 		RHSvector[i]=state[i] + dt*rate[i] - state_guess[i];
 	}
-	//solve system with bbla
+	
 	LUDecomp!number(Asolve,pivot);
 	LUSolve!number(Asolve,pivot,RHSvector,update_vector);
 
@@ -43,49 +64,32 @@ void BDF1(number[] update_vector, number[] RHSvector, Matrix!number Asolve, int[
 	}
 }
 
-
-//Following methods not implemented:
-//------------------------------------------------------------------------------------------------------------------------
-
-double[] BDF2(double dt, double[] prev_state, double[] state, double[] state_guess, double[] rate, double[][] jacobian) {
+void BDF2(number[] update_vector, number[] RHSvector, Matrix!number Asolve, int[] pivot, double dt, number[] prev_state, number[] state, ref number[] state_guess, number[] rate, number[][] jacobian) {
 	//Solution takes the form Ax=b
 	//[I-(2/3)*dt(dR/dS)](dS) = (4/3)*state + (2/3)*dt*rate - (1/3)*prev_state - state_guess
-	auto A = new Matrix!double(state.length,state.length);
-	double[] x;
-	x.length=state.length;
-	double[] b;
-	b.length=state.length;
 	//populate A and b
 	for (int i;i<state.length;i++) {
 		for (int j;j<state.length;j++) {
 			if (i==j) {
-				A[i,j]=1-(2.0/3.0)*dt*jacobian[i][j];
+				Asolve[i,j]=1-(2.0/3.0)*dt*jacobian[i][j];
 			} else {
-				A[i,j]=-(2.0/3.0)*dt*jacobian[i][j];
+				Asolve[i,j]=-(2.0/3.0)*dt*jacobian[i][j];
 			}
 		}
-		b[i]=(4.0/3.0)*state[i] + (2.0/3.0)*dt*rate[i] - (1.0/3.0)*prev_state[i] - state_guess[i];
+		RHSvector[i]=(4.0/3.0)*state[i] + (2.0/3.0)*dt*rate[i] - (1.0/3.0)*prev_state[i] - state_guess[i];
 	}
-	//solve system with bbla
-	int[] pivot;
-	pivot.length=state.length;
-	LUDecomp!double(A,pivot);
-	LUSolve!double(A,pivot,b,x);
 	
-	double[] update_guess1=state_guess.dup;
-	update_guess1[] += x[];
+	LUDecomp!number(Asolve,pivot);
+	LUSolve!number(Asolve,pivot,RHSvector,update_vector);
 	
-	return update_guess1;
+	foreach (int i; 0 .. to!int(update_vector.length)){
+		state_guess[i] += update_vector[i];
+	}
 }
 
-double[] Var_BDF2(double prev_dt, double dt, double[] prev_state, double[] state, double[] state_guess, double[] rate, double[][] jacobian) {
+void Var_BDF2(number[] update_vector, number[] RHSvector, Matrix!number Asolve, int[] pivot, double dt, double prev_dt, number[] prev_state, number[] state, ref number[] state_guess, number[] rate, number[][] jacobian) {
 	//Solution takes the form Ax=b
 	//[I-gamma*dt(dR/dS)](dS) = alpha*state + gamma*dt*rate - beta*prev_state - state_guess
-	auto A = new Matrix!double(state.length,state.length);
-	double[] x;
-	x.length=state.length;
-	double[] b;
-	b.length=state.length;
 	
 	//define coefficients
 	double w=(dt/prev_dt);
@@ -97,22 +101,18 @@ double[] Var_BDF2(double prev_dt, double dt, double[] prev_state, double[] state
 	for (int i;i<state.length;i++) {
 		for (int j;j<state.length;j++) {
 			if (i==j) {
-				A[i,j]=1-gamma*dt*jacobian[i][j];
+				Asolve[i,j]=1-gamma*dt*jacobian[i][j];
 			} else {
-				A[i,j]=-gamma*dt*jacobian[i][j];
+				Asolve[i,j]=-gamma*dt*jacobian[i][j];
 			}
 		}
-		b[i]=alpha*state[i] + gamma*dt*rate[i] - beta*prev_state[i] - state_guess[i];
+		RHSvector[i]=alpha*state[i] + gamma*dt*rate[i] - beta*prev_state[i] - state_guess[i];
 	}
 	
-	//solve system with bbla
-	int[] pivot;
-	pivot.length=state.length;
-	LUDecomp!double(A,pivot);
-	LUSolve!double(A,pivot,b,x);
+	LUDecomp!number(Asolve,pivot);
+	LUSolve!number(Asolve,pivot,RHSvector,update_vector);
 	
-	double[] update_guess=state_guess.dup;
-	update_guess[] += x[];
-	
-	return update_guess;
+	foreach (int i; 0 .. to!int(update_vector.length)){
+		state_guess[i] += update_vector[i];
+	}
 }
