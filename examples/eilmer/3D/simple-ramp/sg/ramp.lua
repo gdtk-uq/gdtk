@@ -11,6 +11,7 @@ config.max_time = 5.0e-3
 config.max_step = 1000
 config.gasdynamic_update_scheme = "euler"
 config.interpolation_order = 2
+config.dt_init = 1.0e-6
 config.dt_plot = 1.0e-3
 config.dt_history = 1.0e-5
 

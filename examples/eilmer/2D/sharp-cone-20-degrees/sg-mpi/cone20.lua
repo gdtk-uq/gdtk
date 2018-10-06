@@ -58,7 +58,7 @@ setHistoryPoint{x=b.x/3+2*c.x/3, y=b.y/3+2*c.y/3}
 mpiTasks = mpiDistributeBlocks(3, "load-balance")
 config.max_time = 5.0e-3  -- seconds
 config.max_step = 3000
-config.dt_init = 1.0e-6
+-- config.dt_init = 1.0e-6
 config.cfl_value = 0.5
 config.dt_plot = 1.5e-3
 config.dt_history = 10.0e-5

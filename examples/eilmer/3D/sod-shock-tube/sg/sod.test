@@ -31,7 +31,7 @@ test number-of-steps {Iteration of the final block in a certain number of steps.
 	    set final_steps [lindex [split $line] 1]
 	}
     }
-    expr abs($final_steps - 107) < 3
+    expr abs($final_steps - 75) < 3
 } -result {1}
 
 test post-shock-region {Post-shock gas conditions.} -body {

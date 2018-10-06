@@ -66,7 +66,6 @@ final class SimState {
     shared static double dt_global;     // simulation time step determined by code
     shared static double dt_allow;      // allowable global time step determined by code
     shared static double target_time;  // simulate_in_time will work toward this value
-    shared static bool do_cfl_check_now;
 
     // We want to write sets of output files periodically.
     // The following periods set the cadence for output.
@@ -391,6 +390,8 @@ void init_simulation(int tindx, int nextLoadsIndx,
     SimState.loads_just_written = true;
     // When starting a new calculation,
     // set the global time step to the initial value.
+    // If we have elected to run with a variable time step,
+    // this value may get revised on the very first step.
     SimState.dt_global = GlobalConfig.dt_init; 
     //
     version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
@@ -563,7 +564,6 @@ int integrate_in_time(double target_time_as_requested)
     SimState.t_loads = SimState.time + GlobalConfig.dt_loads;
     // Overall iteration count.
     SimState.step = 0;
-    SimState.do_cfl_check_now = false;
     //
     if (GlobalConfig.viscous) {
         // We have requested viscous effects but their application may be delayed
@@ -602,11 +602,8 @@ int integrate_in_time(double target_time_as_requested)
             check_run_time_configuration(target_time_as_requested);
             //
             // 1.0 Maintain a stable time step size, and other maintenance, as required.
-            determine_time_step_size();
-            //
-            if (GlobalConfig.divergence_cleaning) {
-                update_ch_for_divergence_cleaning();
-            }
+            if (!GlobalConfig.fixed_time_step) { determine_time_step_size(); }
+            if (GlobalConfig.divergence_cleaning) { update_ch_for_divergence_cleaning(); }
             // If using k-omega, we need to set mu_t and k_t BEFORE we call convective_update
             // because the convective update is where the interface values of mu_t and k_t are set.
             // only needs to be done on initial step, subsequent steps take care of setting these values 
@@ -872,24 +869,25 @@ void check_run_time_configuration(double target_time_as_requested)
 void determine_time_step_size()
 {
     // Set the size of the time step to be the minimum allowed for any active block.
-    if (!GlobalConfig.fixed_time_step && (SimState.step % GlobalConfig.cfl_count) == 0) {
-        // Check occasionally 
-        SimState.do_cfl_check_now = true;
-    } // end if step == 0
+    // We will check it occasionally, if we have not elected to keep fixed time steps. 
+    bool do_dt_check_now = (SimState.step % GlobalConfig.cfl_count) == 0;
     version(mpi_parallel) {
         // If one task is doing a time-step check, all tasks have to.
-        int myFlag = to!int(SimState.do_cfl_check_now);
+        int myFlag = to!int(do_dt_check_now);
         MPI_Allreduce(MPI_IN_PLACE, &myFlag, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-        SimState.do_cfl_check_now = to!bool(myFlag);
+        do_dt_check_now = to!bool(myFlag);
     }
-    if (SimState.do_cfl_check_now) {
+    if (do_dt_check_now) {
         // Adjust the time step...
-        //
         // First, check what each block thinks should be the allowable step size.
+        // Also, if we have done some steps, check the CFL limits.
         foreach (i, myblk; parallel(localFluidBlocksBySize,1)) {
             // Note 'i' is not necessarily the block id but
             // that is not important here, just need a unique spot to poke into local_dt_allow.
-            if (myblk.active) { local_dt_allow[i] = myblk.determine_time_step_size(SimState.dt_global); }
+            if (myblk.active) {
+                local_dt_allow[i] = myblk.determine_time_step_size(SimState.dt_global,
+                                                                   (SimState.step > 0));
+            }
         }
         // Second, reduce this estimate across all local blocks.
         SimState.dt_allow = double.max; // to be sure it is replaced.
@@ -901,6 +899,12 @@ void determine_time_step_size()
             MPI_Allreduce(MPI_IN_PLACE, &my_dt_allow, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
             SimState.dt_allow = my_dt_allow;
         }
+        if (SimState.step == 0) {
+            // When starting out, we may override the computed value.
+            // This might be handy for situations where the computed estimate
+            // is likely to be not small enough for numerical stability.
+            SimState.dt_allow = fmin(GlobalConfig.dt_init, SimState.dt_allow);
+        }
         // Now, change the actual time step, as needed.
         if (SimState.dt_allow <= SimState.dt_global) {
             // If we need to reduce the time step, do it immediately.
@@ -911,7 +915,6 @@ void determine_time_step_size()
             // The user may supply, explicitly, a maximum time-step size.
             SimState.dt_global = min(SimState.dt_global, GlobalConfig.dt_max);
         }
-        SimState.do_cfl_check_now = false;  // we have done our check for now
     } // end if do_cfl_check_now 
 } // end determine_time_step_size()
 

@@ -42,7 +42,7 @@ test number-of-steps {Iteration of the final block in a certain number of steps.
 	    set final_steps [lindex [split $line] 1]
 	}
     }
-    expr abs($final_steps - 3140) < 3
+    expr abs($final_steps - 3150) < 3
 } -result {1}
 
 test computed-norms {Check the density norms.} -body {

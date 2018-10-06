@@ -30,7 +30,7 @@ test number-of-steps {The main simulation takes a certain number of steps.} -bod
 	    set final_steps [lindex [split $line] 1]
 	}
     }
-    expr abs($final_steps - 7114) < 2
+    expr abs($final_steps - 7124) < 2
 } -result {1}
 
 test run-postprocessor {Run the postprocessing stage.} -body {

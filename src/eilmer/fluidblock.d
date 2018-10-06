@@ -576,7 +576,7 @@ public:
         return cfl_max * min_L_for_block / dt_current;
     } // end update_c_h()
 
-    double determine_time_step_size(double dt_current)
+    double determine_time_step_size(double dt_current, bool check_cfl)
     // Compute the local time step limit for all cells in the block.
     // The overall time step is limited by the worst-case cell.
     {
@@ -601,7 +601,7 @@ public:
             signal = cell.signal_frequency();
             cfl_local = dt_current * signal; // Current (Local) CFL number
             dt_local = cfl_value / signal; // Recommend a time step size.
-            if ( first ) {
+            if (first) {
                 cfl_min = cfl_local;
                 cfl_max = cfl_local;
                 dt_allow = dt_local;
@@ -612,17 +612,9 @@ public:
                 dt_allow = fmin(dt_allow, dt_local);
             }
         } // foreach cell
-        if ( cfl_max < 0.0 || cfl_max > cfl_allow ) {
-            writeln( "determine_time_step_size(): bad CFL number was encountered");
-            writeln( "    cfl_max=", cfl_max, " for FluidBlock ", id);
-            writeln( "    If this cfl_max value is not much larger than 1.0,");
-            writeln( "    your simulation could probably be restarted successfully");
-            writeln( "    with some minor tweaking.");
-            writeln( "    That tweaking should probably include a reduction");
-            writeln( "    in the size of the initial time-step, dt");
-            writeln( "    If this job is a restart/continuation of an old job, look in");
-            writeln( "    the old-job.finish file for the value of dt at termination.");
-            string msg = text("Bad cfl number encountered cfl_max=", cfl_max);
+        if (check_cfl && (cfl_max < 0.0 || cfl_max > cfl_allow)) {
+            string msg = text("Bad cfl number encountered cfl_max=", cfl_max,
+                              " for FluidBlock ", id);
             throw new FlowSolverException(msg);
         }
         return dt_allow;

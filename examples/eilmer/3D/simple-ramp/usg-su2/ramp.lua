@@ -13,6 +13,7 @@ config.unstructured_limiter = "venkat"
 config.interpolation_order = 1
 config.dt_plot = 1.0e-3
 config.dt_history = 1.0e-5
+config.dt_init = 1.0e-6
 
 nsp, nmodes = setGasModel('ideal-air-gas-model.lua')
 print("GasModel set to ideal air. nsp= ", nsp, " nmodes= ", nmodes)

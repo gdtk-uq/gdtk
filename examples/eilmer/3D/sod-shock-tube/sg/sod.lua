@@ -44,5 +44,5 @@ FluidBlock:new{grid=grid0, initialState=tube_gas}
 config.flux_calculator = "ausmdv"
 config.max_time = 0.6e-3  -- seconds
 config.max_step = 600
-config.dt_init = 1.0e-6
+-- config.dt_init = 1.0e-6
 

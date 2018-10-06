@@ -37,7 +37,7 @@ test number-of-steps {The main simulation takes a certain number of steps.} -bod
 	    set final_steps [lindex [split $line] 1]
 	}
     }
-    list [expr abs($final_steps - 853) < 3]
+    list [expr abs($final_steps - 833) < 3]
 } -result {1}
 
 test free-stream-flow {The flow in the second block, upstream of the shock.} -body {

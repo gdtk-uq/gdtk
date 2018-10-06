@@ -57,7 +57,7 @@ setHistoryPoint{ib=1, i=math.floor(2*nx1/3), j=0}
 -- Do a little more setting of global data.
 config.max_time = 5.0e-3  -- seconds
 config.max_step = 3000
-config.dt_init = 1.0e-6
+-- config.dt_init = 1.0e-6
 config.cfl_value = 0.5
 config.dt_plot = 1.5e-3
 config.dt_history = 10.0e-5
