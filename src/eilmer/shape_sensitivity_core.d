@@ -314,9 +314,27 @@ void apply_boundary_conditions(ref SMatrix!number A, FluidBlock blk, size_t np, 
                         }
                     }
 
+                    //
+                    foreach (cell; bcells) {
+                        foreach ( face; cell.iface) {
+                            FVCell lftCell = face.left_cell;
+                            FVCell rghtCell = face.right_cell;
+                            if (lftCell.id != bcells[0].id && idList.canFind(lftCell.id) == false && lftCell.id < ghost_cell_start_id) {
+                                bcells ~= lftCell;
+                                idList ~= lftCell.id;
+                            }
+                            if (rghtCell.id != bcells[0].id && idList.canFind(rghtCell.id) == false && rghtCell.id < ghost_cell_start_id) {
+                                bcells ~= rghtCell; 
+                                idList ~= rghtCell.id;
+                            }
+                        }
+                    }
+                    //
+
                 }
                 
                 pcell.jacobian_cell_stencil ~= bcells;
+                
                 size_t[] idList;
                 foreach ( bcell; bcells) {
                     foreach ( face; bcell.iface) {
@@ -643,7 +661,6 @@ void residual_stencil(FVCell pcell, size_t orderOfJacobian) {
                 }
             }
         }
-
         
         
         // finally sort ids, and store sorted cell references
@@ -653,6 +670,7 @@ void residual_stencil(FVCell pcell, size_t orderOfJacobian) {
         }
         pcell.jacobian_cell_stencil ~= refs_ordered;            
     }
+
 }
 
 void local_flow_jacobian_transpose(ref SMatrix!number A, ref FluidBlock blk, size_t np, size_t orderOfJacobian, number EPS, bool preconditionMatrix = false, bool transformToConserved = false) {
@@ -678,6 +696,12 @@ void local_flow_jacobian_transpose(ref SMatrix!number A, ref FluidBlock blk, siz
         ja = [][];
     }
     A.ia ~= A.aa.length;
+
+    foreach (cell; blk.cells) {
+        cell.jacobian_face_stencil = [];
+        cell.jacobian_cell_stencil = [];
+    }
+
     apply_boundary_conditions(A, blk, np, orderOfJacobian, EPS, transformToConserved);
     // reset the interpolation order
     blk.myConfig.interpolation_order = GlobalConfig.interpolation_order;
@@ -923,19 +947,22 @@ string computeFluxDerivativesAroundCell(string varName, string posInArray, bool 
     codeStr ~= "cell.dQdU[1][" ~ posInArray ~ "] = cell.Q.momentum.x.im/EPS.im;";
     codeStr ~= "cell.dQdU[2][" ~ posInArray ~ "] = cell.Q.momentum.y.im/EPS.im;";
     codeStr ~= "cell.dQdU[3][" ~ posInArray ~ "] = cell.Q.total_energy.im/EPS.im;";
-    //if (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) {
-        codeStr ~= "cell.dQdU[4][" ~ posInArray ~ "] = cell.Q.tke.im/EPS.im;";
-        codeStr ~= "cell.dQdU[5][" ~ posInArray ~ "] = cell.Q.omega.im/EPS.im;";        
-        //}
+    codeStr ~= "if (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) {";
+    codeStr ~= "cell.dQdU[4][" ~ posInArray ~ "] = cell.Q.tke.im/EPS.im;";
+    codeStr ~= "cell.dQdU[5][" ~ posInArray ~ "] = cell.Q.omega.im/EPS.im;";        
+    codeStr ~= "}";
     codeStr ~= "}";
     codeStr ~= "pcell.copy_values_from(blk.cellSave, CopyDataOption.all);";
     codeStr ~= "foreach(cell; pcell.jacobian_cell_stencil) {";
     codeStr ~= "cell.fs.mu_t = cell.fs.mu_t.re;";
     codeStr ~= "cell.fs.k_t = cell.fs.k_t.re;";
+    codeStr ~= "cell.gradients.compute_lsq_values(cell.cell_cloud, cell.ws, blk.myConfig);";
     codeStr ~= "}";
-    codeStr ~= "foreach(iface; pcell.jacobian_face_stencil) {";
+    codeStr ~= "foreach(i, iface; pcell.jacobian_face_stencil) {";
     codeStr ~= "iface.fs.copy_average_values_from(iface.left_cell.fs, iface.right_cell.fs);";
+    codeStr ~= "blk.ifaceP[i].fs.copy_average_values_from(iface.left_cell.fs, iface.right_cell.fs);";
     codeStr ~= "}";
+    //codeStr ~= "steadystate_core.evalRHS(0.0, 0);";
     return codeStr;
 }
 

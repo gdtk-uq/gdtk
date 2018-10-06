@@ -316,84 +316,6 @@ void main(string[] args) {
         }
         foreach (blk; localFluidBlocks) {
 
-            /////////////////
-            /*
-            Matrix!number JP = new Matrix!number(blk.cells.length*nPrimitive, blk.cells.length*nPrimitive);
-            Matrix!number JC = new Matrix!number(blk.cells.length*nPrimitive, blk.cells.length*nPrimitive);
-            Matrix!number T = new Matrix!number(blk.cells.length*nPrimitive, blk.cells.length*nPrimitive);
-            foreach(i; 0..blk.cells.length*nPrimitive) {
-                foreach(j; 0..blk.cells.length*nPrimitive) {
-                    JP[i,j] = blk.P[i,j];
-                    T[i,j] = to!number(0.0);
-                }
-            }
-
-            foreach(cell;blk.cells) {
-                auto gmodel = blk.myConfig.gmodel;
-                number gamma = gmodel.gamma(cell.fs.gas);
-                // form inverse transformation matrix
-                T[cell.id*nPrimitive+0,cell.id*nPrimitive+0] = to!number(1.0);
-                T[cell.id*nPrimitive+0,cell.id*nPrimitive+1] = to!number(0.0);
-                T[cell.id*nPrimitive+0,cell.id*nPrimitive+2] = to!number(0.0);
-                T[cell.id*nPrimitive+0,cell.id*nPrimitive+3] = to!number(0.0);
-                // second row
-                T[cell.id*nPrimitive+1,cell.id*nPrimitive+0] = -cell.fs.vel.x/cell.fs.gas.rho;
-                T[cell.id*nPrimitive+1,cell.id*nPrimitive+1] = 1.0/cell.fs.gas.rho;
-                T[cell.id*nPrimitive+1,cell.id*nPrimitive+2] = to!number(0.0);
-                T[cell.id*nPrimitive+1,cell.id*nPrimitive+3] = to!number(0.0);
-                // third row
-                T[cell.id*nPrimitive+2,cell.id*nPrimitive+0] = -cell.fs.vel.y/cell.fs.gas.rho;
-                T[cell.id*nPrimitive+2,cell.id*nPrimitive+1] = to!number(0.0);
-                T[cell.id*nPrimitive+2,cell.id*nPrimitive+2] = 1.0/cell.fs.gas.rho;
-                T[cell.id*nPrimitive+2,cell.id*nPrimitive+3] = to!number(0.0);
-                // fourth row
-                T[cell.id*nPrimitive+3,cell.id*nPrimitive+0] = 0.5*(gamma-1.0)*(cell.fs.vel.x*cell.fs.vel.x+cell.fs.vel.y*cell.fs.vel.y);
-                T[cell.id*nPrimitive+3,cell.id*nPrimitive+1] = -cell.fs.vel.x*(gamma-1);
-                T[cell.id*nPrimitive+3,cell.id*nPrimitive+2] = -cell.fs.vel.y*(gamma-1);
-                T[cell.id*nPrimitive+3,cell.id*nPrimitive+3] = gamma-1.0;
-                
-                T[cell.id*nPrimitive+0,cell.id*nPrimitive+4] = to!number(0.0);
-                T[cell.id*nPrimitive+0,cell.id*nPrimitive+5] = to!number(0.0);
-                // second row
-                T[cell.id*nPrimitive+1,cell.id*nPrimitive+4] = to!number(0.0);
-                T[cell.id*nPrimitive+1,cell.id*nPrimitive+5] = to!number(0.0);
-                // third row
-                T[cell.id*nPrimitive+2,cell.id*nPrimitive+4] = to!number(0.0);
-                T[cell.id*nPrimitive+2,cell.id*nPrimitive+5] = to!number(0.0);
-                // fourth row
-                T[cell.id*nPrimitive+3,cell.id*nPrimitive+4] = -(gamma-1.0);
-                T[cell.id*nPrimitive+3,cell.id*nPrimitive+5] = to!number(0.0);
-                // fifth row
-                T[cell.id*nPrimitive+4,cell.id*nPrimitive+0] = -cell.fs.tke/cell.fs.gas.rho;
-                T[cell.id*nPrimitive+4,cell.id*nPrimitive+1] = to!number(0.0);
-                T[cell.id*nPrimitive+4,cell.id*nPrimitive+2] = to!number(0.0);
-                T[cell.id*nPrimitive+4,cell.id*nPrimitive+3] = to!number(0.0);
-                T[cell.id*nPrimitive+4,cell.id*nPrimitive+4] = 1.0/cell.fs.gas.rho;
-                T[cell.id*nPrimitive+4,cell.id*nPrimitive+5] = to!number(0.0);
-                // sixth row
-                T[cell.id*nPrimitive+5,cell.id*nPrimitive+0] = -cell.fs.omega/cell.fs.gas.rho;
-                T[cell.id*nPrimitive+5,cell.id*nPrimitive+1] = to!number(0.0);
-                T[cell.id*nPrimitive+5,cell.id*nPrimitive+2] = to!number(0.0);
-                T[cell.id*nPrimitive+5,cell.id*nPrimitive+3] = to!number(0.0);
-                T[cell.id*nPrimitive+5,cell.id*nPrimitive+4] = to!number(0.0);
-                T[cell.id*nPrimitive+5,cell.id*nPrimitive+5] = 1.0/cell.fs.gas.rho;
-                
-            }
-
-            for (size_t i = 0; i < blk.cells.length*nPrimitive; i++) {
-                for (size_t j = 0; j < blk.cells.length*nPrimitive; j++) {
-                    JC[i,j] = to!number(0.0);
-                    for (size_t k = 0; k < blk.cells.length*nPrimitive; k++) {
-                        JC[i,j] += JP[i,k]*T[k,j];
-                    }
-                }
-            }
-            */
-            ////////////////
-
-
-
-
             // compute arbitrary vector
             number[] v;
             v.length = blk.cells.length*nPrimitive;
@@ -417,31 +339,273 @@ void main(string[] args) {
             p1.length = blk.cells.length*nPrimitive;
             number[] p2;
             p2.length = blk.cells.length*nPrimitive;
-
-            /*
-            // transpose the transposed primitive Jacpboan
-            auto Jloc = new SMatrix!number();
-            Jloc.ia ~= 0;
-            foreach (i; 0..nPrimitive*blk.cells.length) {
-                foreach (j; 0..nPrimitive*blk.cells.length) {
-                    if (fabs(blk.JlocT[j,i]) > 1.0e-50) {
-                        Jloc.aa ~= blk.JlocT[j,i];
-                        Jloc.ja ~= j;
-                    }
-                }
-                Jloc.ia ~= Jloc.aa.length;
-            }
-            */
             
             // explicit multiplication of Jv
             foreach ( i; 0..blk.cells.length*nPrimitive) {
                 p1[i] = 0.0;
                 foreach ( j; 0..blk.cells.length*nPrimitive) {
                     p1[i] += blk.P[i,j]*v[j];
-                    //p1[i] += JC[i,j]*v[j];
+                }
+            }
+            
+            /*
+            writeln("----------------------");
+
+            foreach(cell; blk.cells) {
+                size_t id = cell.id;
+                writeln("[0, ", id, "]");
+                foreach(i; 0..nPrimitive) {
+                    size_t I = 0*nPrimitive + i;
+                    foreach(j; 0..nPrimitive) {
+                        size_t J = id*nPrimitive + j;
+                        if (fabs(blk.P[I,J]) > 1.0e-100) writef("%.16e ", blk.P[I,J].re);
+                        else writef("0 ");
+                    }
+                    writef("\n"); 
                 }
             }
 
+            writeln("----------------------");
+            
+            foreach(cell; blk.cells) {
+                size_t id = cell.id;
+                writeln("[1, ", id, "]");
+                foreach(i; 0..nPrimitive) {
+                    size_t I = 1*nPrimitive + i;
+                    foreach(j; 0..nPrimitive) {
+                        size_t J = id*nPrimitive + j;
+                        if (fabs(blk.P[I,J]) > 1.0e-100) writef("%.16e ", blk.P[I,J].re);
+                        else writef("0 ");
+                    }
+                    writef("\n"); 
+                }
+            }
+            
+            writeln("----------------------");
+            
+            foreach(cell; blk.cells) {
+                size_t id = cell.id;
+                writeln("[2, ", id, "]");
+                foreach(i; 0..nPrimitive) {
+                    size_t I = 2*nPrimitive + i;
+                    foreach(j; 0..nPrimitive) {
+                        size_t J = id*nPrimitive + j;
+                        if (fabs(blk.P[I,J]) > 1.0e-100) writef("%.16e ", blk.P[I,J].re);
+                        else writef("0 ");
+                    }
+                    writef("\n"); 
+                }
+            }
+            
+            writeln("----------------------");
+            
+            foreach(cell; blk.cells) {
+                size_t id = cell.id;
+                writeln("[3, ", id, "]");
+                foreach(i; 0..nPrimitive) {
+                    size_t I = 3*nPrimitive + i;
+                    foreach(j; 0..nPrimitive) {
+                        size_t J = id*nPrimitive + j;
+                        if (fabs(blk.P[I,J]) > 1.0e-100) writef("%.16e ", blk.P[I,J].re);
+                        else writef("0 ");
+                    }
+                    writef("\n"); 
+                }
+            }
+            
+            writeln("----------------------");
+            
+            foreach(cell; blk.cells) {
+                size_t id = cell.id;
+                writeln("[4, ", id, "]");
+                foreach(i; 0..nPrimitive) {
+                    size_t I = 4*nPrimitive + i;
+                    foreach(j; 0..nPrimitive) {
+                        size_t J = id*nPrimitive + j;
+                        if (fabs(blk.P[I,J]) > 1.0e-100) writef("%.16e ", blk.P[I,J].re);
+                        else writef("0 ");
+                    }
+                    writef("\n"); 
+                }
+            }
+
+            writeln("----------------------");
+            
+            foreach(cell; blk.cells) {
+                size_t id = cell.id;
+                writeln("[5, ", id, "]");
+                foreach(i; 0..nPrimitive) {
+                    size_t I = 5*nPrimitive + i;
+                    foreach(j; 0..nPrimitive) {
+                        size_t J = id*nPrimitive + j;
+                        if (fabs(blk.P[I,J]) > 1.0e-100) writef("%.16e ", blk.P[I,J].re);
+                        else writef("0 ");
+                    }
+                    writef("\n"); 
+                }
+            }
+            
+            writeln("----------------------");
+            
+            foreach(cell; blk.cells) {
+                size_t id = cell.id;
+                writeln("[6, ", id, "]");
+                foreach(i; 0..nPrimitive) {
+                    size_t I = 6*nPrimitive + i;
+                    foreach(j; 0..nPrimitive) {
+                        size_t J = id*nPrimitive + j;
+                        if (fabs(blk.P[I,J]) > 1.0e-100) writef("%.16e ", blk.P[I,J].re);
+                        else writef("0 ");
+                    }
+                    writef("\n"); 
+                }
+            }
+
+            writeln("----------------------");
+                                    
+            foreach(cell; blk.cells) {
+                size_t id = cell.id;
+                writeln("[7, ", id, "]");
+                foreach(i; 0..nPrimitive) {
+                    size_t I = 7*nPrimitive + i;
+                    foreach(j; 0..nPrimitive) {
+                        size_t J = id*nPrimitive + j;
+                    if (fabs(blk.P[I,J]) > 1.0e-100) writef("%.16e ", blk.P[I,J].re);
+                    else writef("0 ");
+                    }
+                    writef("\n"); 
+                }
+            }
+
+            writeln("----------------------");
+
+            foreach(cell; blk.cells) {
+                size_t id = cell.id;
+                writeln("[8, ", id, "]");
+                foreach(i; 0..nPrimitive) {
+                    size_t I = 8*nPrimitive + i;
+                    foreach(j; 0..nPrimitive) {
+                        size_t J = id*nPrimitive + j;
+                        if (fabs(blk.P[I,J]) > 1.0e-100) writef("%.16e ", blk.P[I,J].re);
+                        else writef("0 ");
+                    }
+                    writef("\n"); 
+                }
+            }
+            
+            foreach(cell; blk.cells) {
+                size_t id = cell.id;
+                writeln("[9, ", id, "]");
+                foreach(i; 0..nPrimitive) {
+                    size_t I = 9*nPrimitive + i;
+                    foreach(j; 0..nPrimitive) {
+                        size_t J = id*nPrimitive + j;
+                        if (fabs(blk.P[I,J]) > 1.0e-100) writef("%.16e ", blk.P[I,J].re);
+                        else writef("0 ");
+                    }
+                    writef("\n"); 
+                }
+            }
+
+            writeln("----------------------");
+            
+            foreach(cell; blk.cells) {
+                size_t id = cell.id;
+                writeln("[10, ", id, "]");
+                foreach(i; 0..nPrimitive) {
+                    size_t I = 10*nPrimitive + i;
+                    foreach(j; 0..nPrimitive) {
+                        size_t J = id*nPrimitive + j;
+                        if (fabs(blk.P[I,J]) > 1.0e-100) writef("%.16e ", blk.P[I,J].re);
+                        else writef("0 ");
+                    }
+                    writef("\n"); 
+                }
+            }
+
+            writeln("----------------------");
+            
+            foreach(cell; blk.cells) {
+                size_t id = cell.id;
+                writeln("[11, ", id, "]");
+                foreach(i; 0..nPrimitive) {
+                    size_t I = 11*nPrimitive + i;
+                    foreach(j; 0..nPrimitive) {
+                        size_t J = id*nPrimitive + j;
+                        if (fabs(blk.P[I,J]) > 1.0e-100) writef("%.16e ", blk.P[I,J].re);
+                        else writef("0 ");
+                    }
+                    writef("\n"); 
+                }
+            }
+
+            writeln("----------------------");
+
+            foreach(cell; blk.cells) {
+                size_t id = cell.id;
+                writeln("[12, ", id, "]");
+                foreach(i; 0..nPrimitive) {
+                    size_t I = 12*nPrimitive + i;
+                    foreach(j; 0..nPrimitive) {
+                        size_t J = id*nPrimitive + j;
+                        if (fabs(blk.P[I,J]) > 1.0e-100) writef("%.16e ", blk.P[I,J].re);
+                        else writef("0 ");
+                    }
+                    writef("\n"); 
+                }
+            }
+
+            writeln("----------------------");
+            
+            foreach(cell; blk.cells) {
+                size_t id = cell.id;
+                writeln("[13, ", id, "]");
+                foreach(i; 0..nPrimitive) {
+                    size_t I = 13*nPrimitive + i;
+                    foreach(j; 0..nPrimitive) {
+                        size_t J = id*nPrimitive + j;
+                        if (fabs(blk.P[I,J]) > 1.0e-100) writef("%.16e ", blk.P[I,J].re);
+                        else writef("0 ");
+                    }
+                    writef("\n"); 
+                }
+            }
+
+            writeln("----------------------");
+            
+            foreach(cell; blk.cells) {
+                size_t id = cell.id;
+                writeln("[14, ", id, "]");
+                foreach(i; 0..nPrimitive) {
+                    size_t I = 14*nPrimitive + i;
+                    foreach(j; 0..nPrimitive) {
+                        size_t J = id*nPrimitive + j;
+                        if (fabs(blk.P[I,J]) > 1.0e-100) writef("%.16e ", blk.P[I,J].re);
+                        else writef("0 ");
+                    }
+                    writef("\n"); 
+                }
+            }
+
+            writeln("----------------------");
+            
+            foreach(cell; blk.cells) {
+                size_t id = cell.id;
+                writeln("[15, ", id, "]");
+                foreach(i; 0..nPrimitive) {
+                    size_t I = 15*nPrimitive + i;
+                    foreach(j; 0..nPrimitive) {
+                        size_t J = id*nPrimitive + j;
+                        if (fabs(blk.P[I,J]) > 1.0e-100) writef("%.16e ", blk.P[I,J].re);
+                        else writef("0 ");
+                    }
+                    writef("\n"); 
+                }
+            }
+
+            writeln("----------------------");
+            */
+            
             // Frechet derivative of Jv
             evalPrimitiveJacobianVecProd(blk, nPrimitive, v, p2, EPS);
 
