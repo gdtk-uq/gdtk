@@ -561,6 +561,7 @@ public:
         bool add_total_p = canFind(addVarsList, "total-p");
         bool add_total_h = canFind(addVarsList, "total-h");
         bool add_total_T = canFind(addVarsList, "total-T");
+        bool add_enthalpy = canFind(addVarsList, "enthalpy");
         bool add_entropy = canFind(addVarsList, "entropy");
         bool add_molef = canFind(addVarsList, "molef");
         bool add_conc = canFind(addVarsList, "conc"); // concentrations
@@ -586,6 +587,10 @@ public:
         if (add_total_T) {
             variableNames ~= "total_T";
             variableIndex["total_T"] = variableNames.length - 1;
+        }
+        if (add_enthalpy) {
+            variableNames ~= "enthalpy";
+            variableIndex["enthalpy"] = variableNames.length - 1;
         }
         if (add_entropy) {
             variableNames ~= "entropy";
@@ -661,6 +666,14 @@ public:
             if (add_total_T) {
                 double total_T = T * (1.0 + 0.5 * (g - 1.0) * M*M);
                 _data[i] ~= total_T;
+            }
+            if (add_enthalpy) {
+                foreach (isp; 0 .. Q.massf.length) {
+                    Q.massf[isp] = _data[i][variableIndex[massf_names[isp]]];
+                }
+                Q.p = p; Q.T = T; Q.rho = rho; Q.u = _data[i][variableIndex["u"]];
+                double enthalpy = gmodel.enthalpy(Q).re;
+                _data[i] ~= enthalpy;
             }
             if (add_entropy) {
                 foreach (isp; 0 .. Q.massf.length) {
