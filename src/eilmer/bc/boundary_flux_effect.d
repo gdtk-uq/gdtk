@@ -479,24 +479,10 @@ public:
         // IFace properties.
         FlowGradients grad = IFace.grad;
 
-        // Mass diffusion things
-        number[] jx; // diffusive mass flux in x
-        number[] jy; // diffusive mass flux in y
-        number[] jz; // diffusive mass flux in z
-        size_t n_species = gmodel.n_species;
         double viscous_factor = blk.myConfig.viscous_factor;
-        // Mass diffusion
-        jx = IFace.jx.dup();
-        jy = IFace.jy.dup();
-        jz = IFace.jz.dup();
-        // [TODO] PJ 2018-01-17: Will, I would prefer to see initialization like.
-        // double[3] jx = IFace.jx;
-        // to avoid memory allocations, I think.
 
         // Newton method to find Twall when thermionic active
         number f_rad, f_thermionic, f_drv, Twall_1, Twall_0;
-
-        // Electron creation
 
         // Iteratively solve for the wall temperature
         foreach (Twall_iteration_count; 0 .. Twall_iterations+1) {
@@ -521,27 +507,7 @@ public:
 
             // Temperature gradient of cell centred value, to the present wall temperature
             dTdn = dT / dn;
-            // Break up into components to remove mass diffusion Cartesian components
-            dTdnx = dTdn*nx; dTdny = dTdn*ny; dTdnz = dTdn*nz; 
-            qx = k_eff*dTdnx; qy = k_eff*dTdny; qz = k_eff*dTdnz; 
-
-            //// Apply molecular diffusion for the present laminar flow
-            //foreach (isp; 0 .. n_species) {
-            //    jx[isp] *= viscous_factor;
-            //    jy[isp] *= viscous_factor;
-            //    jz[isp] *= viscous_factor;
-            //}
-            //// Subtract mass diffusion contribution to heat transfer
-            //foreach (isp; 0 .. n_species) {
-            //      h = gmodel.enthalpy(IFace.fs.gas, to!int(isp));
-            //      qx -= jx[isp] * h;
-            //      qy -= jy[isp] * h;
-            //      qz -= jz[isp] * h;
-            //}
-            //printf("%.4g\n", qx);
-
-            // Don't nest pow functions. It is very slow....
-            q_total = pow(qx*qx + qy*qy + qz*qz, 0.5);
+            q_total = k_eff * dTdn;
 
             if (q_total == 0.0){
                 // First couple of iterations after activating the Thermionic Emission
