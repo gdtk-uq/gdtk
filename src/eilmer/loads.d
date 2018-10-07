@@ -352,10 +352,6 @@ void computeRunTimeLoads()
                 // iface properties
                 number mu_wall = fs.gas.mu;
                 number p = fs.gas.p;
-                if (GlobalConfig.viscous) {
-                    string errMsg = "Run-time-loads not implemented for viscous calculation yet.\n";
-                    throw new Error(errMsg);
-                }
                 number area = face.area[0];
                 number pdA = p * area;
                 int outsign = globalFluidBlocks[iblk].bc[ibndry].outsigns[iface];
