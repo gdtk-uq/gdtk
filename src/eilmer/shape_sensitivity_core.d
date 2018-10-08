@@ -1127,6 +1127,10 @@ void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref
                 myblk.rT[i, j*nPrimitive+1] = to!number((-cell.dUdt[ftl].momentum.x.im)/(EPS.im));
                 myblk.rT[i, j*nPrimitive+2] = to!number((-cell.dUdt[ftl].momentum.y.im)/(EPS.im));
                 myblk.rT[i, j*nPrimitive+3] = to!number((-cell.dUdt[ftl].total_energy.im)/(EPS.im));
+                if (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) {
+                    myblk.rT[i, j*nPrimitive+4] = to!number((-cell.dUdt[ftl].tke.im)/(EPS.im));
+                    myblk.rT[i, j*nPrimitive+5] = to!number((-cell.dUdt[ftl].omega.im)/(EPS.im));
+                }
             }
         }
         
