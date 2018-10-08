@@ -31,6 +31,12 @@ import lsqinterp;
 import gas.fuel_air_mix;
 import simcore : SimState;
 
+
+version(debug_chem) {
+    GasState savedGasState;
+}
+
+
 // The following functions are used at compile time.
 // Look for mixin statements further down in the file. 
 string avg_over_vtx_list(string quantity, string result)
@@ -159,6 +165,12 @@ public:
                     dQdU[i][j] = 0.0;
                 }
             }
+        }
+        version(debug_chem) {
+            // The savedGasState is a module-level variable.
+            // It only needs to be initialised when debug_chem mode
+            // is on AND it only required initialisation once.
+            savedGasState = new GasState(gmodel);
         }
     }
 
@@ -1004,7 +1016,7 @@ public:
         double dt_chem_save = dt_chem;
 
         version(debug_chem) {
-            GasState savedGasState = new GasState(fs.gas);
+            savedGasState.copy_values_from(fs.gas);
         }
 
         try {
