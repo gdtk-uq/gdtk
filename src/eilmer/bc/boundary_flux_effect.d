@@ -17,6 +17,8 @@ import std.math;
 import nm.complex;
 import nm.number;
 import nm.bbla;
+import nm.brent; 
+import nm.bracketing;
 
 import geom;
 import json_helper;
@@ -34,8 +36,9 @@ import flowstate;
 import gas;
 import bc;
 import flowgradients;
-import nm.ridder;
-import nm.bracketing;
+import mass_diffusion;
+//import nm.ridder;
+//import nm.bracketing;
 
 BoundaryFluxEffect make_BFE_from_json(JSONValue jsonData, int blk_id, int boundary)
 {
@@ -461,118 +464,81 @@ public:
         } // end apply_structured_grid()
     }
 
+
     double solve_for_wall_temperature_and_energy_flux(const FVCell cell, FVInterface IFace, double dn)
     // Iteratively converge on wall temp
     {
+        double TOL = 1.0e-3;
+        number Tlow = 300.0;
+        number Thigh = 5000.0;
+
         auto gmodel = blk.myConfig.gmodel; 
-        number dT, dTdn, dTdnx, dTdny, dTdnz, qx, qy, qz, k_eff, k_lam_wall, h, q_cond, Twall;
-        double f_relax = 0.05;
-        double tolerance = 1.0e-3; 
-        number Twall_prev = IFace.fs.gas.T;
-        number Twall_prev_backup = IFace.fs.gas.T;
-        number q_total, q_total_prev, q_total_prev_backup = 1.0;
-        int iteration_check, subiteration_check = 0;
 
         // IFace orientation
         number nx = IFace.n.x; number ny = IFace.n.y; number nz = IFace.n.z;
-
         // IFace properties.
         FlowGradients grad = IFace.grad;
-
         double viscous_factor = blk.myConfig.viscous_factor;
 
-        // Newton method to find Twall when thermionic active
-        number f_rad, f_thermionic, f_drv, Twall_1, Twall_0;
 
-        // Iteratively solve for the wall temperature
-        foreach (Twall_iteration_count; 0 .. Twall_iterations+1) {
-
-            // Update the thermodynamic and transport properties at IFace
-            IFace.fs.gas.T = Twall_prev;
+        number zeroFun(number T)
+        {
+            IFace.fs.gas.T = T;
             IFace.fs.gas.p = cell.fs.gas.p;
             gmodel.update_thermo_from_pT(IFace.fs.gas);
             gmodel.update_trans_coeffs(IFace.fs.gas);
 
-            //Determine convective heat flux at current iteration with Twall_prev    
-            dT = (cell.fs.gas.T - IFace.fs.gas.T); // Positive is heat into wall
-            if (dT < 0.0){
-                // Catch in case the iteration goes negative (radiation would become imaginary)
-                IFace.fs.gas.T = 0.9*cell.fs.gas.T;
-                Twall_prev = IFace.fs.gas.T;
-                dT = (cell.fs.gas.T - IFace.fs.gas.T);
+            number dT = (cell.fs.gas.T - IFace.fs.gas.T); 
+            number k_eff = viscous_factor * (IFace.fs.gas.k + IFace.fs.k_t);
+            number dTdn = dT / dn;
+            number q_total = k_eff * dTdn;
+            if (blk.myConfig.turbulence_model != TurbulenceModel.none ||
+                blk.myConfig.mass_diffusion_model != MassDiffusionModel.none) {
+                q_total -= IFace.q_diffusion;
             }
 
-            // Calculate thermal conductivity 
-            k_eff = viscous_factor * (IFace.fs.gas.k + IFace.fs.k_t);
-
-            // Temperature gradient of cell centred value, to the present wall temperature
-            dTdn = dT / dn;
-            q_total = k_eff * dTdn;
-
-            if (q_total == 0.0){
-                // First couple of iterations after activating the Thermionic Emission
-                // will error without this 
-                q_total = 1.0;
-                q_total_prev = 0.0;
+            number f_rad = emissivity*SB_sigma*T*T*T*T;
+            number f_thermionic = to!number(0.0);
+            if (ThermionicEmissionActive == 1) {
+                f_thermionic = Ar*T*T*exp(-phi/(kb*T))/Qe*(phi + 2*kb*T);
             }
 
-            // If we reach our tolerance value, we break. Tolerance based off heat loads
-            // as it is very susceptible to minor changes in Twall
-
-            if ( fabs((q_total - q_total_prev)/q_total) < tolerance) {
-                // Update your wall temp with your final value
-                IFace.fs.gas.T = Twall;
-                IFace.fs.gas.p = cell.fs.gas.p;
-                gmodel.update_thermo_from_pT(IFace.fs.gas);
-                gmodel.update_trans_coeffs(IFace.fs.gas);
-
-                // Update flow gradients file
-                // The WallBC_ThermionicEmission is a copy of the adiabatic wall BC
-                // Hence, unless we alter these parameters, the exported heat transfer 
-                // will equal zero. It is assumed that there is no heat transfer
-                // between boundary cells (ie no conjugate heat transfer)
-                grad.T[0] = dTdnx;
-                grad.T[1] = dTdny;
-                grad.T[2] = dTdnz;
-                iteration_check = 1;
-                break;
-            }
-
-            // What wall temperature would reach radiative equilibrium at current q_total
-            if (ThermionicEmissionActive == 0){
-                Twall = pow( q_total / ( emissivity * SB_sigma ), 0.25 );
-            } else { // Homemade Newtons method
-                Twall_0 = Twall_prev;
-                foreach (Twall_subiteration_count; 0 .. Twall_subiterations) {
-                    //printf("Twall_subiteration_count = %.0f\n", Twall_subiteration_count);
-                    f_rad = emissivity*SB_sigma*Twall_0*Twall_0*Twall_0*Twall_0;
-                    //f_thermionic = phi/Qe*Ar*Twall_0*Twall_0*exp(-phi/(kb*Twall_0));
-                    f_thermionic = Ar*Twall_0*Twall_0*exp(-phi/(kb*Twall_0))/Qe*(phi + 2*kb*Twall_0);
-                    f_drv = f_rad*4/Twall_0 + Ar*exp(-phi/(kb*Twall_0))/(Qe*kb)*
-                        (phi*(phi + 2*kb*Twall_0) + 2*kb*Twall_0*(phi + 3*kb*Twall_0));
-                    Twall_1 = Twall_0 - (f_rad + f_thermionic - q_total)/f_drv;
-                    if (fabs((Twall_1 - Twall_0))/Twall_0 <= 0.001) {
-                        subiteration_check = 1;
-                        break;
-                    }
-                    Twall_0 = Twall_1;
-                }
-                Twall = Twall_1;
-                //printf("\n");
-            }
-
-            // Determine new guess as a weighted average so we don't take too much of a step.
-            Twall = f_relax * Twall + ( 1.0 - f_relax ) * Twall_prev;
-            Twall_prev_backup = Twall_prev;
-            Twall_prev = Twall;
-            q_total_prev_backup = q_total_prev;
-            q_total_prev = q_total;
+            return f_rad + f_thermionic - q_total;
         }
-        if (iteration_check == 0){
-            printf("Iteration's didn't converge\n");
+
+        if (bracket!(zeroFun,number)(Tlow, Thigh) == -1) {
+            string msg = "The 'bracket' function failed to find bracketing temperature values in thermionic emission boundary condition.\n";
+            throw new Exception(msg);
         }
+
+        number Twall = -1.0;
+        try {
+            Twall = solve!(zeroFun,number)(Tlow, Thigh, TOL);
+        }
+        catch (Exception e) {
+            string msg = "There was a problem iterating to find temperature in ETC boundary condition.\n";
+            throw new Exception(msg);
+        }
+
+        // If successful, set temperature, flux and gradients
+        IFace.fs.gas.T = Twall;
+        IFace.fs.gas.p = cell.fs.gas.p;
+        gmodel.update_thermo_from_pT(IFace.fs.gas);
+        gmodel.update_trans_coeffs(IFace.fs.gas);
+        number dT = (cell.fs.gas.T - IFace.fs.gas.T); 
+        number k_eff = viscous_factor * (IFace.fs.gas.k + IFace.fs.k_t);
+        number dTdn = dT / dn;
+        number q_total = k_eff * dTdn;
+        if (blk.myConfig.turbulence_model != TurbulenceModel.none ||
+            blk.myConfig.mass_diffusion_model != MassDiffusionModel.none) {
+            q_total -= IFace.q_diffusion;
+        }
+        grad.T[0] = dTdn * nx;
+        grad.T[1] = dTdn * ny;
+        grad.T[2] = dTdn * nz;
 
         return q_total.re;
+
     } // end solve_for_wall_temperature_and_energy_flux()
 
 } // end class BIE_EnergyBalanceThermionic
