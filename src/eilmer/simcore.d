@@ -727,20 +727,18 @@ int integrate_in_time(double target_time_as_requested)
             // 5.0 Update the run-time loads calculation, if required
             if (GlobalConfig.compute_run_time_loads) {
                 version(mpi_parallel) {
-                    // Do not attempt to update run time loads.
-                    // Need to think about how to coordinate this globally.
+                    throw new Exception("Update run time loads in MPI context not available.");
+                    // [TODO] Need to think about how to coordinate this globally.
                 } else {
                     if ((SimState.step % GlobalConfig.run_time_loads_count) == 0) {
-                        // First prep the viscous fluxes by recomputing.
-                        // We'll wipe out everything else in the fluxes vector
-                        // and recall the the viscous_flux calc so that we get
-                        // only the viscous contribution.
                         if (GlobalConfig.viscous) {
+                            // Prep the viscous fluxes by recomputing.
+                            // We'll wipe out everything else in the fluxes vector
+                            // and recall the the viscous_flux calc so that we get
+                            // only the viscous contribution.
                             foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                                if (blk.active) {
-                                    blk.clear_fluxes_of_conserved_quantities();
-                                    blk.viscous_flux();
-                                }
+                                blk.clear_fluxes_of_conserved_quantities();
+                                if (blk.active) { blk.viscous_flux(); }
                             }
                         }
                         computeRunTimeLoads();

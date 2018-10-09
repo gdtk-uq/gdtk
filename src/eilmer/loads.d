@@ -323,64 +323,43 @@ void initRunTimeLoads(JSONValue jsonData)
         }
     }
     
-}
+} // end initRunTimeLoads()
 
 
-
+@nogc
 void computeRunTimeLoads()
 {
-    
+    // Working across all blocks, tally the boundary loads
+    // along those boundaries that are marked.
     foreach (ref group; runTimeLoads) {
-        group.resultantForce = Vector3(0.0, 0.0, 0.0);
-        group.resultantMoment = Vector3(0.0, 0.0, 0.0);
+        group.resultantForce.clear();
+        group.resultantMoment.clear();
         foreach (blkNbndry; group.surfaces) {
             auto iblk = blkNbndry[0];
             auto ibndry = blkNbndry[1];
             foreach (iface, face; globalFluidBlocks[iblk].bc[ibndry].faces) {
-                FlowState fs = face.fs;
-                FlowGradients grad = face.grad;
-                // iface orientation
-                number nx = face.n.x; number ny = face.n.y; number nz = face.n.z;
-                number t1x = face.t1.x; number t1y = face.t1.y; number t1z = face.t1.z;
-                number t2x = face.t2.x; number t2y = face.t2.y; number t2z = face.t2.z;
-                // iface properties
-                number mu_wall = fs.gas.mu;
-                number p = fs.gas.p;
-                number area = face.area[0];
-                number pdA = p * area;
                 int outsign = globalFluidBlocks[iblk].bc[ibndry].outsigns[iface];
-                Vector3 pressureForce = Vector3(pdA * nx * outsign,
-                                                pdA * ny * outsign,
-                                                pdA * nz * outsign);
-                Vector3 momentArm = face.pos - group.momentCentre;
-                Vector3 momentContrib = cross(momentArm, pressureForce);
-
-                group.resultantForce.refx += pressureForce.x;
-                group.resultantForce.refy += pressureForce.y;
-                group.resultantForce.refz += pressureForce.z;
-
-                group.resultantMoment.refx += momentContrib.x;
-                group.resultantMoment.refy += momentContrib.y;
-                group.resultantMoment.refz += momentContrib.z;
-
+                number area = face.area[0] * outsign;
+                number pdA = face.fs.gas.p * area;
+                Vector3 pressureForce = Vector3(pdA*face.n.x, pdA*face.n.y, pdA*face.n.z);
+                Vector3 momentArm; momentArm.set(face.pos); momentArm -= group.momentCentre;
+                Vector3 momentContrib; cross(momentContrib, momentArm, pressureForce);
+                group.resultantForce += pressureForce;
+                group.resultantMoment += momentContrib;
                 if (GlobalConfig.viscous) {
-                    Vector3 shearForce = Vector3(face.F.momentum.x * area * outsign,
-                                                 face.F.momentum.y * area * outsign,
-                                                 face.F.momentum.z * area * outsign);
-                    momentContrib = cross(momentArm, shearForce);
-
-                    group.resultantForce.refx += shearForce.x;
-                    group.resultantForce.refy += shearForce.y;
-                    group.resultantForce.refz += shearForce.z;
-
-                    group.resultantMoment.refx += momentContrib.x;
-                    group.resultantMoment.refy += momentContrib.y;
-                    group.resultantMoment.refz += momentContrib.z;
+                    // The shear stresses have been calculated and stored in the flux
+                    // for momentum just before calling this function.
+                    Vector3 shearForce = Vector3(face.F.momentum.x*area,
+                                                 face.F.momentum.y*area,
+                                                 face.F.momentum.z*area);
+                    cross(momentContrib, momentArm, shearForce);
+                    group.resultantForce += shearForce;
+                    group.resultantMoment += momentContrib;
                 }
             }
         }
     }
-}
+} // end computeRunTimeLoads()
 
                 
 
