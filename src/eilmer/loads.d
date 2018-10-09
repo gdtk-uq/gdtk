@@ -218,13 +218,7 @@ void compute_and_store_loads(FVInterface iface, number cellWidthNormalToSurface,
         // compute heat load
         number dTdn = dTdx*nx + dTdy*ny + dTdz*nz; // dot product
         q_cond = k_wall * dTdn; // heat load (positive sign means heat flows to the wall)
-        q_diff = 0.0;
-        if (GlobalConfig.mass_diffusion_model != MassDiffusionModel.none) {
-            foreach (isp; 0 .. gmodel.n_species) {
-                number h = gmodel.enthalpy(fs.gas, to!int(isp));
-                q_diff += -iface.jx[isp]*h*nx - iface.jy[isp]*h*ny - iface.jz[isp]*h*nz;
-            }
-        }
+        q_diff = -iface.q_diffusion;
         q_total = q_cond + q_diff;
         // compute stress tensor at interface in global reference frame
         number lmbda = -2.0/3.0 * mu_wall;

@@ -71,6 +71,7 @@ public:
     number[] jx; // diffusive mass flux in x
     number[] jy; // diffusive mass flux in y
     number[] jz; // diffusive mass flux in z
+    number q_diffusion; 
     //
     // Shape sensitivity calculator workspace.
     version(shape_sensitivity) {
@@ -457,11 +458,13 @@ public:
             number qz = k_eff * grad.T[2];
             if (myConfig.turbulence_model != TurbulenceModel.none ||
                 myConfig.mass_diffusion_model != MassDiffusionModel.none ) {
+                q_diffusion = to!number(0.0);
                 foreach (isp; 0 .. n_species) {
                     number h = gmodel.enthalpy(fs.gas, cast(int)isp);
                     qx -= jx[isp] * h;
                     qy -= jy[isp] * h;
                     qz -= jz[isp] * h;
+                    q_diffusion -= (jx[isp]*h*n.x + jy[isp]*h*n.y + jz[isp]*h*n.z);
                 }
                 // [TODO] Rowan, modal enthalpies ?
             }
