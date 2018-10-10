@@ -28,10 +28,6 @@ import sfluidblock: SFluidBlock;
 
 // -----------------------------------------------------
 // Convenience functions for user's Lua script
-// [TODO] [FIXME] the following functions won't work in parallel loops
-// because the localFluidBlocks array probably won't be initialized correctly
-// for any thread other than the main thread.
-
 
 void setSampleHelperFunctions(lua_State *L)
 {

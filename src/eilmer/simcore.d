@@ -746,9 +746,6 @@ int integrate_in_time(double target_time_as_requested)
                 }
             }
             //
-            // 6.0 For steady-state approach, check the residuals for mass and energy.
-            //
-            // 7.0 Spatial filter may be applied occasionally.
         } catch(Exception e) {
             writefln("Exception caught while trying to take step %d.", SimState.step);
             writeln("----- Begin exception message -----");
