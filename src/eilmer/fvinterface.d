@@ -117,6 +117,7 @@ public:
                 }
             }
         }
+        q_diffusion = to!number(0.0);
     }
 
     this(FVInterface other, GasModel gm)
@@ -157,6 +158,7 @@ public:
         dFdU_R.length = 5;
         foreach (ref a; dFdU_R) a.length = 5;
         }
+        q_diffusion = other.q_diffusion;
     }
 
     @nogc
@@ -171,6 +173,7 @@ public:
             tau_wall_y = other.tau_wall_y;
             tau_wall_z = other.tau_wall_z;
             q = other.q;
+            q_diffusion = other.q_diffusion;
             break;
         case CopyDataOption.grid:
             pos.set(other.pos);
@@ -199,6 +202,7 @@ public:
             tau_wall_z = other.tau_wall_z;
             q = other.q;
             grad.copy_values_from(other.grad);
+            q_diffusion = other.q_diffusion;
             // omit scratch workspace ws_grad
         } // end switch
     }
