@@ -107,6 +107,9 @@ public:
                         dest_cell.fs.vel.refx = 2.0*cell_1.fs.vel.x - cell_2.fs.vel.x;
                         dest_cell.fs.vel.refy = 2.0*cell_1.fs.vel.y - cell_2.fs.vel.y;
                         dest_cell.fs.vel.refz = 2.0*cell_1.fs.vel.z - cell_2.fs.vel.z;
+                        dest_cell.fs.B.refx = 2.0*cell_1.fs.B.x - cell_2.fs.B.x;
+                        dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
+                        dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
                         dest_cell.fs.tke = 2.0*cell_1.fs.tke - cell_2.fs.tke;
                         dest_cell.fs.omega = 2.0*cell_1.fs.omega - cell_2.fs.omega;
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
@@ -135,6 +138,9 @@ public:
                         dest_cell.fs.vel.refx = 2.0*cell_1.fs.vel.x - cell_2.fs.vel.x;
                         dest_cell.fs.vel.refy = 2.0*cell_1.fs.vel.y - cell_2.fs.vel.y;
                         dest_cell.fs.vel.refz = 2.0*cell_1.fs.vel.z - cell_2.fs.vel.z;
+                        dest_cell.fs.B.refx = 2.0*cell_1.fs.B.x - cell_2.fs.B.x;
+                        dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
+                        dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
                         dest_cell.fs.tke = 2.0*cell_1.fs.tke - cell_2.fs.tke;
                         dest_cell.fs.omega = 2.0*cell_1.fs.omega - cell_2.fs.omega;
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
@@ -186,6 +192,9 @@ public:
                         dest_cell.fs.vel.refx = 2.0*cell_1.fs.vel.x - cell_2.fs.vel.x;
                         dest_cell.fs.vel.refy = 2.0*cell_1.fs.vel.y - cell_2.fs.vel.y;
                         dest_cell.fs.vel.refz = 2.0*cell_1.fs.vel.z - cell_2.fs.vel.z;
+                        dest_cell.fs.B.refx = 2.0*cell_1.fs.B.x - cell_2.fs.B.x;
+                        dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
+                        dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
                         dest_cell.fs.tke = 2.0*cell_1.fs.tke - cell_2.fs.tke;
                         dest_cell.fs.omega = 2.0*cell_1.fs.omega - cell_2.fs.omega;
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
@@ -214,6 +223,9 @@ public:
                         dest_cell.fs.vel.refx = 2.0*cell_1.fs.vel.x - cell_2.fs.vel.x;
                         dest_cell.fs.vel.refy = 2.0*cell_1.fs.vel.y - cell_2.fs.vel.y;
                         dest_cell.fs.vel.refz = 2.0*cell_1.fs.vel.z - cell_2.fs.vel.z;
+                        dest_cell.fs.B.refx = 2.0*cell_1.fs.B.x - cell_2.fs.B.x;
+                        dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
+                        dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
                         dest_cell.fs.tke = 2.0*cell_1.fs.tke - cell_2.fs.tke;
                         dest_cell.fs.omega = 2.0*cell_1.fs.omega - cell_2.fs.omega;
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
@@ -264,6 +276,9 @@ public:
                         dest_cell.fs.vel.refx = 2.0*cell_1.fs.vel.x - cell_2.fs.vel.x;
                         dest_cell.fs.vel.refy = 2.0*cell_1.fs.vel.y - cell_2.fs.vel.y;
                         dest_cell.fs.vel.refz = 2.0*cell_1.fs.vel.z - cell_2.fs.vel.z;
+                        dest_cell.fs.B.refx = 2.0*cell_1.fs.B.x - cell_2.fs.B.x;
+                        dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
+                        dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
                         dest_cell.fs.tke = 2.0*cell_1.fs.tke - cell_2.fs.tke;
                         dest_cell.fs.omega = 2.0*cell_1.fs.omega - cell_2.fs.omega;
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
@@ -292,6 +307,9 @@ public:
                         dest_cell.fs.vel.refx = 2.0*cell_1.fs.vel.x - cell_2.fs.vel.x;
                         dest_cell.fs.vel.refy = 2.0*cell_1.fs.vel.y - cell_2.fs.vel.y;
                         dest_cell.fs.vel.refz = 2.0*cell_1.fs.vel.z - cell_2.fs.vel.z;
+                        dest_cell.fs.B.refx = 2.0*cell_1.fs.B.x - cell_2.fs.B.x;
+                        dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
+                        dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
                         dest_cell.fs.tke = 2.0*cell_1.fs.tke - cell_2.fs.tke;
                         dest_cell.fs.omega = 2.0*cell_1.fs.omega - cell_2.fs.omega;
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
@@ -341,6 +359,9 @@ public:
                         dest_cell.fs.vel.refx = 2.0*cell_1.fs.vel.x - cell_2.fs.vel.x;
                         dest_cell.fs.vel.refy = 2.0*cell_1.fs.vel.y - cell_2.fs.vel.y;
                         dest_cell.fs.vel.refz = 2.0*cell_1.fs.vel.z - cell_2.fs.vel.z;
+                        dest_cell.fs.B.refx = 2.0*cell_1.fs.B.x - cell_2.fs.B.x;
+                        dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
+                        dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
                         dest_cell.fs.tke = 2.0*cell_1.fs.tke - cell_2.fs.tke;
                         dest_cell.fs.omega = 2.0*cell_1.fs.omega - cell_2.fs.omega;
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
@@ -369,6 +390,9 @@ public:
                         dest_cell.fs.vel.refx = 2.0*cell_1.fs.vel.x - cell_2.fs.vel.x;
                         dest_cell.fs.vel.refy = 2.0*cell_1.fs.vel.y - cell_2.fs.vel.y;
                         dest_cell.fs.vel.refz = 2.0*cell_1.fs.vel.z - cell_2.fs.vel.z;
+                        dest_cell.fs.B.refx = 2.0*cell_1.fs.B.x - cell_2.fs.B.x;
+                        dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
+                        dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
                         dest_cell.fs.tke = 2.0*cell_1.fs.tke - cell_2.fs.tke;
                         dest_cell.fs.omega = 2.0*cell_1.fs.omega - cell_2.fs.omega;
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
@@ -419,6 +443,9 @@ public:
                         dest_cell.fs.vel.refx = 2.0*cell_1.fs.vel.x - cell_2.fs.vel.x;
                         dest_cell.fs.vel.refy = 2.0*cell_1.fs.vel.y - cell_2.fs.vel.y;
                         dest_cell.fs.vel.refz = 2.0*cell_1.fs.vel.z - cell_2.fs.vel.z;
+                        dest_cell.fs.B.refx = 2.0*cell_1.fs.B.x - cell_2.fs.B.x;
+                        dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
+                        dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
                         dest_cell.fs.tke = 2.0*cell_1.fs.tke - cell_2.fs.tke;
                         dest_cell.fs.omega = 2.0*cell_1.fs.omega - cell_2.fs.omega;
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
@@ -447,6 +474,9 @@ public:
                         dest_cell.fs.vel.refx = 2.0*cell_1.fs.vel.x - cell_2.fs.vel.x;
                         dest_cell.fs.vel.refy = 2.0*cell_1.fs.vel.y - cell_2.fs.vel.y;
                         dest_cell.fs.vel.refz = 2.0*cell_1.fs.vel.z - cell_2.fs.vel.z;
+                        dest_cell.fs.B.refx = 2.0*cell_1.fs.B.x - cell_2.fs.B.x;
+                        dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
+                        dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
                         dest_cell.fs.tke = 2.0*cell_1.fs.tke - cell_2.fs.tke;
                         dest_cell.fs.omega = 2.0*cell_1.fs.omega - cell_2.fs.omega;
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
@@ -497,6 +527,9 @@ public:
                         dest_cell.fs.vel.refx = 2.0*cell_1.fs.vel.x - cell_2.fs.vel.x;
                         dest_cell.fs.vel.refy = 2.0*cell_1.fs.vel.y - cell_2.fs.vel.y;
                         dest_cell.fs.vel.refz = 2.0*cell_1.fs.vel.z - cell_2.fs.vel.z;
+                        dest_cell.fs.B.refx = 2.0*cell_1.fs.B.x - cell_2.fs.B.x;
+                        dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
+                        dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
                         dest_cell.fs.tke = 2.0*cell_1.fs.tke - cell_2.fs.tke;
                         dest_cell.fs.omega = 2.0*cell_1.fs.omega - cell_2.fs.omega;
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
@@ -525,6 +558,9 @@ public:
                         dest_cell.fs.vel.refx = 2.0*cell_1.fs.vel.x - cell_2.fs.vel.x;
                         dest_cell.fs.vel.refy = 2.0*cell_1.fs.vel.y - cell_2.fs.vel.y;
                         dest_cell.fs.vel.refz = 2.0*cell_1.fs.vel.z - cell_2.fs.vel.z;
+                        dest_cell.fs.B.refx = 2.0*cell_1.fs.B.x - cell_2.fs.B.x;
+                        dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
+                        dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
                         dest_cell.fs.tke = 2.0*cell_1.fs.tke - cell_2.fs.tke;
                         dest_cell.fs.omega = 2.0*cell_1.fs.omega - cell_2.fs.omega;
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
