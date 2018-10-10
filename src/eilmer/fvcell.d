@@ -559,6 +559,12 @@ public:
             if (allow_k_omega_update) {
                 fs.tke = myU.tke * dinv;
                 fs.omega = myU.omega * dinv;
+                // for stability, we enforce tke and omega to be positive.
+                // This approach is referred to as clipping in Chisholm's (2007) thesis:
+                // A fully coupled Newton-Krylov solver with a one-equation turbulence model.
+                // to prevent division by 0.0 set variables to a very small positive value.
+                if (fs.tke < 0.0) fs.tke = 1.0e-10;
+                if (fs.omega < 0.0) fs.omega = 1.0e-10;
                 u = (rE - myU.tke - me) * dinv - ke;
             } else {
                 // Do nothing about fs.tke and fs.omega
