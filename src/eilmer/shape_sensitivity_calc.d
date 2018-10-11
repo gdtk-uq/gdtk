@@ -196,12 +196,12 @@ void main(string[] args) {
         /* Preconditioner */
 
         foreach (myblk; parallel(localFluidBlocks,1)) {
-            bool viscousConfigSave = GlobalConfig.viscous;
-            GlobalConfig.viscous = false;
+            //bool viscousConfigSave = GlobalConfig.viscous;
+            //GlobalConfig.viscous = false;
             myblk.P = new SMatrix!number();
-            local_flow_jacobian_transpose(myblk.P, myblk, nPrimitive, 1, EPS); // orderOfJacobian=0
+            local_flow_jacobian_transpose(myblk.P, myblk, nPrimitive, 1, EPS, true, false); // orderOfJacobian=0
             decompILU0(myblk.P);
-            GlobalConfig.viscous = viscousConfigSave;
+            //GlobalConfig.viscous = viscousConfigSave;
         }
 
         /* Objective Function Sensitivity */

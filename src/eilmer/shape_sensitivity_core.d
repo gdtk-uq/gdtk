@@ -26,6 +26,7 @@ import nm.luabbla;
 import nm.complex;
 import nm.number;
 
+import special_block_init;
 import steadystate_core;
 import fluidblock;
 import sfluidblock;
@@ -1076,7 +1077,7 @@ void compute_flux(FVCell pcell, FluidBlock blk, size_t orderOfJacobian, ref FVCe
 void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref number[] g, size_t nPrimitive, bool with_k_omega, number EPS) {
     size_t nDesignVars = design_variables.length;
     int gtl; int ftl; number objFcnEvalP; number objFcnEvalM; string varID; number dP; number P0;
-
+    
     foreach (i; 0..nDesignVars) {
         foreach (myblk; localFluidBlocks) {
             ensure_directory_is_present(make_path_name!"grid"(0));
@@ -1890,7 +1891,7 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
     writeln("----EVALUATING DERIVATIVES VIA DIRECT COMPLEX STEP----");
     writeln("------------------------------------------------------");
     writeln(" ");
-        
+    
     size_t nDesignVars = design_variables.length;
     double[] gradients; number P0; number objFcnP; number objFcnM; 
 
@@ -1908,6 +1909,15 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
         foreach (myblk; localFluidBlocks) {
             myblk.read_solution(make_file_name!"flow"(jobName, myblk.id, 0, GlobalConfig.flowFileExt), false);
 
+            // We can apply a special initialisation to the flow field, if requested.
+            //if (GlobalConfig.diffuseWallBCsOnInit) {
+            writeln("Applying special initialisation to blocks: wall BCs being diffused into domain.");
+            writefln("%d passes of the near-wall flow averaging operation will be performed.", GlobalConfig.nInitPasses);
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                diffuseWallBCsIntoBlock(blk, GlobalConfig.nInitPasses, GlobalConfig.initTWall);
+            }
+            //}
+            
             foreach (cell; myblk.cells) {
                 cell.encode_conserved(0, 0, myblk.omegaz);
                 // Even though the following call appears redundant at this point,
