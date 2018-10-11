@@ -1,0 +1,53 @@
+----------------------------------------------
+Simulation of Stokes Second Flow
+----------------------------------------------
+:Author: Ingo JH Jahn
+:Date: 2018-10-10
+
+This directory contains an Eilmer example simulating what 
+is known a Stokes Second Flow. 
+See: 
+Schliching, H (1979), Boundary-Layer Theory, 
+McGraw-Hill, New York for details. 
+Stoke's second flow consists of viscous flow adjacent to a 
+wall that oscilates in the tangential direction with 
+tangential velocity:
+
+    u(t) = U_max * cos(omega * t)
+ 
+For laminar flow, this has an analytical solution to the
+Navier Stokes Equation, given by:
+
+    u(y,t) = u_max * exp(-y * sqrt(omega / (2*nu)) 
+            * cos(omega * t - y * sqrt(omega / (2*nu)))
+
+This flow alos has a solution for the shear stress acting 
+on the wall:
+
+    t_wall = d u(y,t) / dy |_y=0 
+           = rho * u_wall * sqrt(omega / (2*nu)) 
+             * (sin(omega * t) - cos(oemag * t) )
+ 
+For the simualtion this type of flow can be use a single block. 
+The bottom wall is set as the moving wall and top wall as fixed 
+pressure. The left and righ wall can be set as simple extrapolation
+boundary conditions as the flow result is constant with
+respect to x.
+
+This example can be run in the usual manner:
+
+> ./prep.sh
+> ./run.sh
+> ./post.sh
+
+At the end, a series of VTK files are produced and placed in the
+plot/ subdirectory. You may then use Paraview to inspect the
+flow field and make an animation of the moving piston simulation.
+
+You can also extract a velocity profile data at different values 
+of (omega*t) and plot this agains the analytical solution. 
+To do that use:
+
+> ./extract-profile.sh
+
+

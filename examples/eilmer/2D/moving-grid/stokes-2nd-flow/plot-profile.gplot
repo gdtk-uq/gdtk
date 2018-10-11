@@ -1,0 +1,17 @@
+set term postscript eps enhanced 20
+
+set output 'velocity-profiles.eps'
+set title 'Velocity Profile.'
+set ylabel 'y, m'
+set xlabel 'U_x, m/s'
+plot 'ideal.dat' u 2:1 title 'Ideal 0deg' w l , \
+     'ideal.dat' u 3:1 title 'Ideal 90 deg' w l , \
+     'ideal.dat' u 4:1 title 'Ideal 180 deg' w l , \
+     'ideal.dat' u 5:1 title 'Ideal 270 deg' w l , \
+     'profile0.dat' u 6:2 title 'Eilmer' w p ps 2, \
+     'profile1.dat' u 6:2 title 'Eilmer' w p ps 2, \
+     'profile2.dat' u 6:2 title 'Eilmer' w p ps 2, \
+     'profile3.dat' u 6:2 title 'Eilmer' w p ps 2, \
+     'profile4.dat' u 6:2 title 'Eilmer' w p ps 2, \
+     'profile5.dat' u 6:2 title 'Eilmer' w p ps 2
+
