@@ -408,10 +408,10 @@ extern(C) int luafn_setVtxVelocitiesForDomainXYZ(lua_State* L)
 
 extern(C) int luafn_setVtxVelocitiesForBlock(lua_State* L)
 {
-    // Expect two arguments: 1. a Vector3 object
-    //                       2. a block id
-    auto vel = checkVector3(L, 1);
-    auto blkId = lua_tointeger(L, 2);
+    // Expect two arguments: 1. a block id
+    //                       2. a Vector3 object
+    auto blkId = lua_tointeger(L, 1);
+    auto vel = checkVector3(L, 2);
 
     foreach ( vtx; globalFluidBlocks[blkId].vertices ) {
         /* We assume that we'll only update grid positions
@@ -430,12 +430,12 @@ extern(C) int luafn_setVtxVelocitiesForBlock(lua_State* L)
 
 extern(C) int luafn_setVtxVelocitiesForBlockXYZ(lua_State* L)
 {
-    // Expect two arguments: 1. a Vector3 object
-    //                       2. a block id
-    double velx = lua_tonumber(L, 1);
-    double vely = lua_tonumber(L, 2);
-    double velz = lua_tonumber(L, 3);
-    auto blkId = lua_tointeger(L, 4);
+    // Expect two arguments: 1. a block id
+    //                       2. a Vector3 object
+    auto blkId = lua_tointeger(L, 1);
+    double velx = lua_tonumber(L, 2);
+    double vely = lua_tonumber(L, 3);
+    double velz = lua_tonumber(L, 4);
 
     foreach ( vtx; globalFluidBlocks[blkId].vertices ) {
         /* We assume that we'll only update grid positions
