@@ -706,7 +706,7 @@ function WallBC_TranslatingSurface_FixedT:new(o)
       error("Make sure that you are using WallBC_TranslatingSurface_FixedT:new{} and not WallBC_TranslatingSurface_FixedT.new{}", 2)
    end
    o = o or {}
-   flag = checkAllowedNames(o, {"v_trans", "T_wall", "label", "group", "is_design_surface", "num_cntrl_pts"})
+   flag = checkAllowedNames(o, {"v_trans", "Twall", "label", "group", "is_design_surface", "num_cntrl_pts"})
    if not flag then
       error("Invalid name for item supplied to WallBC_TranslatingSurface_FixedT constructor.", 2)
    end
