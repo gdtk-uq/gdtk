@@ -213,6 +213,11 @@ function writeThermPerfGas(f, species, db, optsTable)
 	 epsilon = db[sp].epsilon.value
       end
       f:write(string.format("db['%s'].epsilon = %.8f\n", sp, epsilon))
+      Lewis = db.default.Lewis.value
+      if db[sp].Lewis then
+	 Lewis = db[sp].Lewis.value
+      end
+      f:write(string.format("db['%s'].Lewis = %.8f\n", sp, Lewis))
       writeCeaThermoCoeffs(f, sp, db, optsTable)
       -- Our preference is to use CEA transport properties where available,
       -- however we intercept on 'air' as a special case and use the

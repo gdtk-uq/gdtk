@@ -34,6 +34,10 @@ db.default.epsilon = {
    description = 'Lennard-Jones potential well depth.',
    reference = 'taken from N2.'
 }
+db.default.Lewis = {
+   value = 1.152,
+   reference = 'taken from N2'
+}
 db.default.entropyRefValues = {
    s1 = 0.0,
    T1 = 298.15,

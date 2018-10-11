@@ -21,6 +21,9 @@ db.CO2.epsilon = {
    description = 'Lennard-Jones potential well depth.',
    reference = 'GRI-Mech 3.0 transport file.'
 }
+db.CO2.Lewis = {
+   value = 1.404
+}
 db.CO2.entropyRefValues = {
    s1 = 0.0,
    T1 = 298.15,

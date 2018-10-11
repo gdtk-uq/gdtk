@@ -25,7 +25,9 @@ db.CH3O.epsilon = {
    description = 'Lennard-Jones potential well depth.',
    reference = 'GRI-Mech 3.0 transport file.'
 }
-
+db.CH3O.Lewis = {
+   value = 1.360
+}
 db.CH3O.grimechThermoCoeffs = {
    notes = 'data from GRIMECH 3.0',
    nsegments = 2, 

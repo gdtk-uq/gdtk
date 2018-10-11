@@ -613,6 +613,7 @@ final class GlobalConfig {
     shared static MassDiffusionModel mass_diffusion_model = MassDiffusionModel.none;
     static MassDiffusion massDiffusion;
     shared static bool constant_lewis_number = false;
+    shared static bool species_specific_lewis_numbers = false;
     shared static double lewis_number = 1.0;
 
     shared static TurbulenceModel turbulence_model = TurbulenceModel.none;
@@ -847,6 +848,7 @@ public:
     MassDiffusionModel mass_diffusion_model;
     MassDiffusion massDiffusion;
     bool constant_lewis_number;
+    bool species_specific_lewis_numbers;
     double lewis_number;
 
     bool stringent_cfl;
@@ -964,6 +966,7 @@ public:
         viscous_factor = GlobalConfig.viscous_factor;
         mass_diffusion_model = GlobalConfig.mass_diffusion_model;
         constant_lewis_number = GlobalConfig.constant_lewis_number;
+        species_specific_lewis_numbers = GlobalConfig.species_specific_lewis_numbers;
         lewis_number = GlobalConfig.lewis_number;
         //
         stringent_cfl = GlobalConfig.stringent_cfl;
@@ -999,7 +1002,8 @@ public:
         gmodel = init_gas_model(GlobalConfig.gas_model_file);
         if (mass_diffusion_model != MassDiffusionModel.none) {
             massDiffusion = initMassDiffusion(gmodel, mass_diffusion_model,
-                                              GlobalConfig.constant_lewis_number, GlobalConfig.lewis_number);
+                                              GlobalConfig.constant_lewis_number, GlobalConfig.lewis_number,
+                                              GlobalConfig.species_specific_lewis_numbers);
         }
         include_quality = GlobalConfig.include_quality;
         if (GlobalConfig.reacting) {
@@ -1240,6 +1244,7 @@ void read_config_file()
     mixin(update_double("shear_stress_relative_limit", "shear_stress_relative_limit"));
     mixin(update_enum("mass_diffusion_model", "mass_diffusion_model", "massDiffusionModelFromName"));
     mixin(update_bool("constant_lewis_number", "constant_lewis_number"));
+    mixin(update_bool("species_specific_lewis_numbers", "species_specific_lewis_numbers"));
     mixin(update_double("lewis_number", "lewis_number"));
     mixin(update_bool("separate_update_for_viscous_terms", "separate_update_for_viscous_terms"));
     mixin(update_bool("separate_update_for_k_omega_source", "separate_update_for_k_omega_source"));
@@ -1264,6 +1269,7 @@ void read_config_file()
         writeln("  shear_stress_relative_limit: ", GlobalConfig.shear_stress_relative_limit);
         writeln("  mass_diffusion_model: ", massDiffusionModelName(GlobalConfig.mass_diffusion_model));
         writeln("  constant_lewis_number: ", GlobalConfig.constant_lewis_number);
+        writeln("  species_specific_lewis_numbers: ", GlobalConfig.species_specific_lewis_numbers);
         writeln("  lewis_number: ", GlobalConfig.lewis_number);
         writeln("  separate_update_for_viscous_terms: ", GlobalConfig.separate_update_for_viscous_terms);
         writeln("  separate_update_for_k_omega_source: ", GlobalConfig.separate_update_for_k_omega_source);
@@ -1280,7 +1286,8 @@ void read_config_file()
 
     if (GlobalConfig.mass_diffusion_model != MassDiffusionModel.none) {
         GlobalConfig.massDiffusion = initMassDiffusion(GlobalConfig.gmodel_master, GlobalConfig.mass_diffusion_model,
-                                                       GlobalConfig.constant_lewis_number, GlobalConfig.lewis_number);
+                                                       GlobalConfig.constant_lewis_number, GlobalConfig.lewis_number,
+                                                       GlobalConfig.species_specific_lewis_numbers);
     }
     // User-defined source terms
     mixin(update_bool("udf_source_terms", "udf_source_terms"));

@@ -25,6 +25,9 @@ db.N2.epsilon = {
    description = 'Lennard-Jones potential well depth.',
    reference = 'GRI-Mech 3.0 transport file.'
 }
+db.N2.Lewis = {
+   value = 1.152
+}
 db.N2.entropyRefValues = {
    s1 = 6839.91,
    T1 = 298.15,

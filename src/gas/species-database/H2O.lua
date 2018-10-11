@@ -25,6 +25,9 @@ db.H2O.epsilon = {
    description = 'Lennard-Jones potential well depth.',
    reference = 'GRI-Mech 3.0 transport file.'
 }
+db.H2O.Lewis = {
+   value = 0.854
+}
 db.H2O.ceaThermoCoeffs = {
    nsegments = 2,
    segment0 = {

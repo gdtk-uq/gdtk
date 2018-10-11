@@ -48,25 +48,27 @@ MassDiffusionModel massDiffusionModelFromName(string name)
 
 interface MassDiffusion {
     @nogc
-    void update_mass_fluxes(const FlowState fs, const FlowGradients grad,
+    void update_mass_fluxes(FlowState fs, const FlowGradients grad,
                             number[] jx, number[] jy, number[] jz);
 }
 
-MassDiffusion initMassDiffusion(GasModel gmodel, MassDiffusionModel mass_diffusion_model, bool withConstantLewisNumber, double Lewis)
+MassDiffusion initMassDiffusion(GasModel gmodel, MassDiffusionModel mass_diffusion_model, bool withConstantLewisNumber, double Lewis,
+                                bool withSpeciesSpecificLewisNumbers)
 {
     switch (mass_diffusion_model) {
     case MassDiffusionModel.ficks_first_law:
-        return new FicksFirstLaw(gmodel, true, withConstantLewisNumber, Lewis);
+        return new FicksFirstLaw(gmodel, true, withConstantLewisNumber, Lewis, withSpeciesSpecificLewisNumbers);
     default:
         throw new FlowSolverException("Selected mass diffusion model is not available.");
     }
 }
 
 class FicksFirstLaw : MassDiffusion {
-    this(GasModel gmodel, bool withMassFluxCorrection=true, bool withConstantLewisNumber=false, double Lewis=1.0)
+    this(GasModel gmodel, bool withMassFluxCorrection=true, bool withConstantLewisNumber=false, double Lewis=1.0, bool withSpeciesSpecificLewisNumbers=false)
     {
         _withMassFluxCorrection = withMassFluxCorrection;
         _withConstantLewisNumber = withConstantLewisNumber;
+        _withSpeciesSpecificLewisNumbers = withSpeciesSpecificLewisNumbers;
         _Le = Lewis;
         
         _gmodel = gmodel;
@@ -74,6 +76,7 @@ class FicksFirstLaw : MassDiffusion {
         
         _sigma.length = _nsp;
         _eps.length = _nsp;
+        _LeS.length = _nsp;
         _D.length = _nsp;
         _M.length = _nsp;
         foreach (isp; 0 .. _nsp) {
@@ -95,24 +98,31 @@ class FicksFirstLaw : MassDiffusion {
             }
         }
         if (!withConstantLewisNumber) { 
-            // Compute sigma_ij terms
-            foreach (isp; 0 .. _nsp) {
-                foreach (jsp; 0 .. _nsp) {
-                    if (isp == jsp) continue;
-                    _sigma[isp][jsp] = 0.5*(gmodel.LJ_sigmas[isp] + gmodel.LJ_sigmas[jsp]);
+            if (withSpeciesSpecificLewisNumbers) {
+                foreach (isp; 0 .. _nsp) {
+                    _LeS[isp] = gmodel.Le[isp];
                 }
             }
-            // Compute eps_ij terms
-            foreach (isp; 0 .. _nsp) {
-                foreach (jsp; 0 .. _nsp) {
-                    if (isp == jsp) continue;
-                    _eps[isp][jsp] = sqrt(gmodel.LJ_epsilons[isp] * gmodel.LJ_epsilons[jsp]);
+            else {
+                // Compute sigma_ij terms
+                foreach (isp; 0 .. _nsp) {
+                    foreach (jsp; 0 .. _nsp) {
+                        if (isp == jsp) continue;
+                        _sigma[isp][jsp] = 0.5*(gmodel.LJ_sigmas[isp] + gmodel.LJ_sigmas[jsp]);
+                    }
+                }
+                // Compute eps_ij terms
+                foreach (isp; 0 .. _nsp) {
+                    foreach (jsp; 0 .. _nsp) {
+                        if (isp == jsp) continue;
+                        _eps[isp][jsp] = sqrt(gmodel.LJ_epsilons[isp] * gmodel.LJ_epsilons[jsp]);
+                    }
                 }
             }
         }
     }
     @nogc
-    void update_mass_fluxes(const FlowState fs, const FlowGradients grad,
+    void update_mass_fluxes(FlowState fs, const FlowGradients grad,
                             number[] jx, number[] jy, number[] jz)
     {
         _gmodel.massf2molef(fs.gas, _molef);
@@ -122,8 +132,9 @@ class FicksFirstLaw : MassDiffusion {
             foreach (isp; 0 .. _nsp) _D_avg[isp] = alpha/_Le;
         }
         else {
-            computeBinaryDiffCoeffs(fs.gas.T, fs.gas.p);
-            computeAvgDiffCoeffs();
+            if (!_withSpeciesSpecificLewisNumbers)
+                computeBinaryDiffCoeffs(fs.gas.T, fs.gas.p);
+            computeAvgDiffCoeffs(fs.gas);
         }
         foreach (isp; 0 .. _nsp) {
             jx[isp] = -fs.gas.rho * _D_avg[isp] * grad.massf[isp][0];
@@ -154,11 +165,13 @@ private:
     size_t _nsp;
     bool _withMassFluxCorrection;
     bool _withConstantLewisNumber;
+    bool _withSpeciesSpecificLewisNumbers;
     double _Le = 1.0;
     number[][] _sigma;
     number[][] _eps;
     number[][] _D;
     number[][] _M;
+    double[] _LeS;
     number[] _D_avg;
     number[] _molef;
     // coefficients for diffusion collision integral calculation
@@ -177,7 +190,7 @@ private:
         // Expression from:
         // Reid et al.
         // The Properties of Gases and Liquids
-
+        
         // This loop is inefficient. We only need to go up to
         // from jsp = isp+1...
         // Needs some thought. We're doing redundant work.
@@ -200,39 +213,43 @@ private:
                 number numer = 0.00266*sqrt(T*T*T);
                 numer *= 1.0e-4; // cm^2/s --> m^2/s
                 _D[isp][jsp] = numer/denom;
-                /+
-                _D[isp][jsp] = 1.0/(p/P_atm)/sqrt(_M[isp][jsp])/(_sigma[isp][jsp]*_sigma[isp][jsp])/omega;
-                _D[isp][jsp] *= 0.00266*sqrt(T*T*T);
-                _D[isp][jsp] *= 1.0e-4; // cm^2/s --> m^2/s
-                +/
             }
         }
     }
 
     @nogc
-    void computeAvgDiffCoeffs()
+    void computeAvgDiffCoeffs(GasState Q)
     {
-        foreach (isp; 0 .. _nsp) {
-            number sum = 0.0;
-            foreach (jsp; 0 .. _nsp) {
-                if (isp == jsp) continue;
-                // The following two if-statements should generally catch the
-                // same flow condition, namely, a zero or very small presence of
-                // a certain species.  In this case the diffusion is effectively
-                // zero and its contribution to the mixture diffusion coefficient
-                // may be ignored.
-                //
-                // The two statements are used for extra security in detecting the
-                // condition.
-                if (_D[isp][jsp] < SMALL_DIFFUSION_COEFFICIENT ) continue;  // there is effectively nothing to diffuse
-                if (_molef[jsp] < SMALL_MOLE_FRACTION ) continue; // there is effectively nothing to diffuse
-                sum += _molef[jsp] / _D[isp][jsp];
+        if(_withSpeciesSpecificLewisNumbers) {
+            _gmodel.update_trans_coeffs(Q);
+            number Prandtl = _gmodel.Prandtl(Q);
+            foreach (isp; 0 .. _nsp) {
+                _D_avg[isp] = Q.mu / (Q.rho * Prandtl * _LeS[isp]); 
             }
-            if (sum <= 0.0) {
-                _D_avg[isp] = 0.0;
-            }
-            else {
-                _D_avg[isp] = (1.0 - _molef[isp])/sum;
+        }
+        else {
+            foreach (isp; 0 .. _nsp) {
+                number sum = 0.0;
+                foreach (jsp; 0 .. _nsp) {
+                    if (isp == jsp) continue;
+                    // The following two if-statements should generally catch the
+                    // same flow condition, namely, a zero or very small presence of
+                    // a certain species.  In this case the diffusion is effectively
+                    // zero and its contribution to the mixture diffusion coefficient
+                    // may be ignored.
+                    //
+                    // The two statements are used for extra security in detecting the
+                    // condition.
+                    if (_D[isp][jsp] < SMALL_DIFFUSION_COEFFICIENT ) continue;  // there is effectively nothing to diffuse
+                    if (_molef[jsp] < SMALL_MOLE_FRACTION ) continue; // there is effectively nothing to diffuse
+                    sum += _molef[jsp] / _D[isp][jsp];
+                }
+                if (sum <= 0.0) {
+                    _D_avg[isp] = 0.0;
+                }
+                else {
+                    _D_avg[isp] = (1.0 - _molef[isp])/sum;
+                }
             }
         }
     }

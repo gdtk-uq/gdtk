@@ -63,6 +63,7 @@ public:
     @nogc @property ref double[] mol_masses() { return _mol_masses; }
     @nogc @property ref double[] LJ_sigmas() { return _LJ_sigmas; }
     @nogc @property ref double[] LJ_epsilons() { return _LJ_epsilons; }
+    @nogc @property ref double[] Le() { return _Lewis_numbers; }
     @nogc final string species_name(int i) const { return _species_names[i]; }
     final int species_index(string spName) const { return _species_indices.get(spName, -1); }
     @nogc final string energy_mode_name(int i) const { return _energy_mode_names[i]; }
@@ -138,6 +139,7 @@ public:
     @nogc final number Cp(in GasState Q) { return dhdT_const_p(Q); }
     @nogc final number R(in GasState Q)  { return gas_constant(Q); }
     @nogc final number gamma(in GasState Q) { return Cp(Q)/Cv(Q); }
+    @nogc final number Prandtl(in GasState Q) { return Cp(Q)*Q.mu/Q.k; }
 
     @nogc
     final number molecular_mass(in GasState Q)
@@ -231,6 +233,7 @@ protected:
     double[] _mol_masses;
     double[] _LJ_sigmas;
     double[] _LJ_epsilons;
+    double[] _Lewis_numbers;
 } // end class GasModel
 
 @nogc

@@ -158,6 +158,7 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_double_field("turbulent_signal_factor", "turbulent_signal_factor"));
     mixin(get_enum_field("mass_diffusion_model", "mass_diffusion_model", "massDiffusionModelFromName"));
     mixin(get_bool_field("constant_lewis_number", "constant_lewis_number"));
+    mixin(get_bool_field("species_specific_lewis_numbers", "species_specific_lewis_numbers"));
     mixin(get_double_field("lewis_number", "lewis_number"));
     //
     mixin(get_bool_field("separate_update_for_viscous_terms", "separate_update_for_viscous_terms"));
@@ -321,6 +322,7 @@ extern(C) int configGet(lua_State* L)
     case "turbulent_signal_factor": lua_pushnumber(L, GlobalConfig.turbulent_signal_factor); break;
     case "mass_diffusion_model": lua_pushstring(L, massDiffusionModelName(GlobalConfig.mass_diffusion_model).toStringz); break;
     case "constant_lewis_number": lua_pushboolean(L, GlobalConfig.constant_lewis_number); break;
+    case "species_specific_lewis_numbers": lua_pushboolean(L, GlobalConfig.species_specific_lewis_numbers); break;
     case "lewis_number": lua_pushnumber(L, GlobalConfig.lewis_number); break;
         //
     case "separate_update_for_viscous_terms": lua_pushboolean(L, GlobalConfig.separate_update_for_viscous_terms); break;

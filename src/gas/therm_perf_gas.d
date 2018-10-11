@@ -63,11 +63,13 @@ public:
         // 1b. Gather L-J parameters
         _LJ_sigmas.length = _n_species;
         _LJ_epsilons.length = _n_species;
+        _Lewis_numbers.length = _n_species;
         foreach (isp; 0 .. _n_species) {
             lua_getglobal(L, "db");
             lua_getfield(L, -1, _species_names[isp].toStringz);
             _LJ_sigmas[isp] = getDouble(L, -1, "sigma");
             _LJ_epsilons[isp] = getDouble(L, -1, "epsilon");
+            _Lewis_numbers[isp] = getDouble(L, -1, "Lewis");
             lua_pop(L, 1);
             lua_pop(L, 1);
         }

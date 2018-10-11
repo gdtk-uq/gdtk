@@ -25,7 +25,9 @@ db.CH2O.epsilon = {
    description = 'Lennard-Jones potential well depth.',
    reference = 'GRI-Mech 3.0 transport file.'
 }
-
+db.CH2O.Lewis = {
+   value = 1.329
+}
 db.CH2O.ceaThermoCoeffs = {
    notes = 'converted data from Eilmer 3, origin. Chemkin Thermo. Database Kee et al. (1993)',
    nsegments = 2, 

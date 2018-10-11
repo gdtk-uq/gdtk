@@ -1570,6 +1570,7 @@ function write_config_file(fileName)
    f:write(string.format('"mass_diffusion_model": "%s",\n',
 			 string.lower(config.mass_diffusion_model)))
    f:write(string.format('"constant_lewis_number": %s,\n', tostring(config.constant_lewis_number)))
+   f:write(string.format('"species_specific_lewis_numbers": %s,\n', tostring(config.species_specific_lewis_numbers)))
    f:write(string.format('"lewis_number": %.18e,\n', config.lewis_number))
 
    f:write(string.format('"separate_update_for_viscous_terms": %s,\n',
