@@ -1911,11 +1911,11 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
 
             // We can apply a special initialisation to the flow field, if requested.
             //if (GlobalConfig.diffuseWallBCsOnInit) {
-            writeln("Applying special initialisation to blocks: wall BCs being diffused into domain.");
-            writefln("%d passes of the near-wall flow averaging operation will be performed.", GlobalConfig.nInitPasses);
-            foreach (blk; parallel(localFluidBlocks,1)) {
-                diffuseWallBCsIntoBlock(blk, GlobalConfig.nInitPasses, GlobalConfig.initTWall);
-            }
+            //writeln("Applying special initialisation to blocks: wall BCs being diffused into domain.");
+            //writefln("%d passes of the near-wall flow averaging operation will be performed.", GlobalConfig.nInitPasses);
+            //foreach (blk; parallel(localFluidBlocks,1)) {
+            //    diffuseWallBCsIntoBlock(blk, GlobalConfig.nInitPasses, GlobalConfig.initTWall);
+            //}
             //}
             
             foreach (cell; myblk.cells) {
@@ -1926,7 +1926,18 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
                 cell.decode_conserved(0, 0, myblk.omegaz);
             }
         }
+
+        foreach (myblk; localFluidBlocks) {
+            // We can apply a special initialisation to the flow field, if requested.
+            //if (GlobalConfig.diffuseWallBCsOnInit) {
+            writeln("Applying special initialisation to blocks: wall BCs being diffused into domain.");
+            writefln("%d passes of the near-wall flow averaging operation will be performed.", GlobalConfig.nInitPasses);
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                diffuseWallBCsIntoBlock(blk, GlobalConfig.nInitPasses, GlobalConfig.initTWall);
+            }
+        }
         
+
         // perturb design variable in complex plane
         P0 = design_variables[i].y; 
         design_variables[i].refy = P0 + EPS;
