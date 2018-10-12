@@ -331,7 +331,7 @@ void apply_boundary_conditions(ref SMatrix!number A, FluidBlock blk, size_t np, 
                         }
                     }
                     //
-
+                    
                 }
                 
                 pcell.jacobian_cell_stencil ~= bcells;
@@ -959,9 +959,12 @@ string computeFluxDerivativesAroundCell(string varName, string posInArray, bool 
     codeStr ~= "cell.fs.k_t = cell.fs.k_t.re;";
     codeStr ~= "cell.gradients.compute_lsq_values(cell.cell_cloud, cell.ws, blk.myConfig);";
     codeStr ~= "}";
-    codeStr ~= "foreach(i, iface; pcell.jacobian_face_stencil) {";
-    codeStr ~= "iface.fs.copy_average_values_from(iface.left_cell.fs, iface.right_cell.fs);";
-    codeStr ~= "blk.ifaceP[i].fs.copy_average_values_from(iface.left_cell.fs, iface.right_cell.fs);";
+    //codeStr ~= "foreach(i, iface; pcell.jacobian_face_stencil) {";
+    //codeStr ~= "iface.fs.copy_average_values_from(iface.left_cell.fs, iface.right_cell.fs);";
+    //codeStr ~= "blk.ifaceP[i].fs.copy_average_values_from(iface.left_cell.fs, iface.right_cell.fs);";
+    //codeStr ~= "}";
+    codeStr ~= "foreach(face; pcell.jacobian_face_stencil) {";
+    codeStr ~= "face.grad.gradients_leastsq(face.cloud_fs, face.cloud_pos, face.ws_grad);";
     codeStr ~= "}";
     //codeStr ~= "steadystate_core.evalRHS(0.0, 0);";
     return codeStr;
