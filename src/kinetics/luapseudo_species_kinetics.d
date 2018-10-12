@@ -74,7 +74,7 @@ extern(C) int updatePseudoSpeciesState(lua_State *L)
     double dtChemSuggest, dtThermSuggest;
     // We need a dummy array of empty extra params
     // for the function signature
-    number[] params;
+    number[maxParams] params;
 
     try {
         pseudoSpeciesKinetics(Q, tInterval, dtChemSuggest, dtThermSuggest, params);

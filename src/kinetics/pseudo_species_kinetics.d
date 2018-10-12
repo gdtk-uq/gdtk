@@ -28,6 +28,7 @@ import kinetics.thermochemical_reactor;
 
 extern(C) {
     // Wrapper of the fortran function `pseudosp_solve_ode`
+    @nogc
     void solveODE(number *Y, size_t *neq, number *temp_init, double *dt);
 }
 
@@ -44,7 +45,7 @@ public:
 
     override void opCall(GasState Q, double tInterval,
                          ref double dtChemSuggest, ref double dtThermSuggest,
-                         ref number[] params)
+                         ref number[maxParams] params)
     {
         _psGmodel.massf2conc(Q, _conc0);
         foreach (i; 0 .. _conc.length) {
