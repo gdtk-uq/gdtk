@@ -6,7 +6,7 @@
 
 module gas.two_temperature_gasgiant;
 
-import std.math : fabs, sqrt, log, pow, exp, PI;
+import std.math;
 import std.conv;
 import std.stdio;
 import std.string;
@@ -14,6 +14,9 @@ import std.algorithm : canFind;
 
 import util.lua;
 import util.lua_service;
+import nm.complex;
+import nm.number;
+
 import gas.gas_model;
 import gas.gas_state;
 import gas.physical_constants;
@@ -33,16 +36,16 @@ public:
     {
         _n_species = 5;
         _n_modes = 1;
-	    _species_names.length = _n_species;
+        _species_names.length = _n_species;
         //_species_names	
-	    _species_names[0] = "H2";
+        _species_names[0] = "H2";
         _species_names[1] = "H";
         _species_names[2] = "H+";
-	    _species_names[3] = "e-";
+        _species_names[3] = "e-";
         _species_names[4] = "He";
         //_mol_masses
         _mol_masses.length = _n_species;
-	    _mol_masses[0] = 2.01588e-3; // Units are kg/mol
+        _mol_masses[0] = 2.01588e-3; // Units are kg/mol
         _mol_masses[1] = 1.00794e-3; // Units are kg/mol
         _mol_masses[3] = 5.48579909070e-7; // Units are kg/mol
         _mol_masses[2] = _mol_masses[1] - _mol_masses[3]; // Units are kg/mol
@@ -152,8 +155,8 @@ public:
         // We can compute T by direct inversion since the Cp in 
         // in translation and rotation are fully excited,
         // and, as such, constant.
-        double sumA = 0.0;
-        double sumB = 0.0;
+        number sumA = 0.0;
+        number sumB = 0.0;
         foreach (isp; 0 .. _n_species) {
             sumA += Q.massf[isp]*(_Cp_tr_rot[isp]*T_REF - _del_hf[isp]); //del_hf: h reference
             sumB += Q.massf[isp]*(_Cp_tr_rot[isp] - _R[isp]);
@@ -184,12 +187,12 @@ public:
         Q.u_modes[0] = vibEnergy(Q, Q.T_modes[0]);
     }
 
-    override void update_thermo_from_ps(GasState Q, double s)
+    override void update_thermo_from_ps(GasState Q, number s)
     {
         throw new GasModelException("update_thermo_from_ps not implemented in TwoTemperatureGasGiant.");
     }
 
-    override void update_thermo_from_hs(GasState Q, double h, double s)
+    override void update_thermo_from_hs(GasState Q, number h, number s)
     {
         throw new GasModelException("update_thermo_from_hs not implemented in TwoTemperatureGasGiant.");
     }
@@ -197,7 +200,7 @@ public:
     override void update_sound_speed(GasState Q) //not used
     {
         // We compute the frozen sound speed based on an effective gamma
-        double R = gas_constant(Q);
+        number R = gas_constant(Q);
         Q.a = sqrt(gamma(Q)*R*Q.T); 
     }
 
@@ -207,17 +210,17 @@ public:
         // Computation of transport coefficients via collision integrals.
         // Equations follow those in Gupta et al. (1990)
         double kB = Boltzmann_constant;
-        double T = Q.T;
+        number T = Q.T;
         foreach (isp; 0 .. _n_species) {
             foreach (jsp; 0 .. isp+1) {
-                double expnt = _A_22[isp][jsp]*(log(T))^^2 + _B_22[isp][jsp]*log(T) + _C_22[isp][jsp];
-                double pi_Omega_22 = exp(_D_22[isp][jsp])*pow(T, expnt); 
-                _Delta_22[isp][jsp] = (16./5)*1.546e-20*sqrt(2.0*_mu[isp][jsp]/(PI*_R_U_cal*T))*pi_Omega_22;
+                number expnt = _A_22[isp][jsp]*(log(T))^^2 + _B_22[isp][jsp]*log(T) + _C_22[isp][jsp];
+                number pi_Omega_22 = exp(_D_22[isp][jsp])*pow(T, expnt); 
+                _Delta_22[isp][jsp] = (16./5)*1.546e-20*sqrt(2.0*_mu[isp][jsp]/(to!number(PI)*_R_U_cal*T))*pi_Omega_22;
                 _Delta_22[jsp][isp] = _Delta_22[isp][jsp];
             }
         }
-        double sumA = 0.0;
-        double sumB;
+        number sumA = 0.0;
+        number sumB;
         foreach (isp; 0 .. n_species) {
             sumB = 0.0;
             foreach (jsp; 0 .. n_species) {
@@ -236,27 +239,27 @@ public:
             }
             sumA += _molef[isp]/sumB;
         }
-        double kB_erg = 1.38066e-16; // erg/K
-        double k_tr = 2.3901e-8*(15./4.)*kB_erg*sumA;
+        number kB_erg = 1.38066e-16; // erg/K
+        number k_tr = 2.3901e-8*(15./4.)*kB_erg*sumA;
         k_tr *= (4.184/1.0e-2); // cal/(cm.s.K) --> J/(m.s.K)
 
         foreach (isp; 0 .. _n_species) {
             foreach (jsp; 0 .. isp+1) {
-                double expnt = _A_11[isp][jsp]*(log(T))^^2 + _B_11[isp][jsp]*log(T) + _C_11[isp][jsp];
-                double pi_Omega_11 = exp(_D_11[isp][jsp])*pow(T, expnt); 
-                _Delta_11[isp][jsp] = (8.0/3)*1.546e-20*sqrt(2.0*_mu[isp][jsp]/(PI*_R_U_cal*T))*pi_Omega_11;
+                number expnt = _A_11[isp][jsp]*(log(T))^^2 + _B_11[isp][jsp]*log(T) + _C_11[isp][jsp];
+                number pi_Omega_11 = exp(_D_11[isp][jsp])*pow(T, expnt); 
+                _Delta_11[isp][jsp] = (8.0/3)*1.546e-20*sqrt(2.0*_mu[isp][jsp]/(to!number(PI)*_R_U_cal*T))*pi_Omega_11;
                 _Delta_11[jsp][isp] = _Delta_11[isp][jsp];
             }
         }
-        double k_rot = 0.0;
-        double k_vib = 0.0;
+        number k_rot = 0.0;
+        number k_vib = 0.0;
         foreach (isp; molecularSpecies) {
             sumB = 0.0;
             foreach (jsp; 0 .. _n_species) {
                 sumB += _molef[jsp]*_Delta_11[isp][jsp];
             }
             k_rot += _molef[isp]/sumB;
-            double Cp_vib = vibSpecHeatConstV(Q.T_modes[0], isp);                    
+            number Cp_vib = vibSpecHeatConstV(Q.T_modes[0], isp);                    
             k_vib += (Cp_vib*_mol_masses[isp]/R_universal)*_molef[isp]/sumB;
         }
         k_rot *= 2.3901e-8*kB_erg;
@@ -268,10 +271,10 @@ public:
         Q.k_modes[0] = k_vib;
     }
 
-    override double dudT_const_v(in GasState Q)
+    override number dudT_const_v(in GasState Q)
     {
-        double Cv = 0.0;
-        double Cv_tr_rot, Cv_vib;
+        number Cv = 0.0;
+        number Cv_tr_rot, Cv_vib;
         foreach (isp; 0 .. _n_species) {
             Cv_tr_rot = transRotSpecHeatConstV(isp);
             Cv_vib = vibSpecHeatConstV(Q.T_modes[0], isp);
@@ -279,61 +282,62 @@ public:
         } 
         return Cv;
     }
-    override double dhdT_const_p(in GasState Q)
+    override number dhdT_const_p(in GasState Q)
     {
         // Using the fact that internal structure specific heats
         // are equal, that is, Cp_vib = Cv_vib
-        double Cp = 0.0;
-        double Cp_vib;
+        number Cp = 0.0;
+        number Cp_vib;
         foreach (isp; 0 .. _n_species) {
             Cp_vib = vibSpecHeatConstV(Q.T_modes[0], isp);
             Cp += Q.massf[isp] * (_Cp_tr_rot[isp] + Cp_vib);
         }
         return Cp;
     }
-    override double dpdrho_const_T(in GasState Q)
+    override number dpdrho_const_T(in GasState Q)
     {
-        double R = gas_constant(Q);
+        number R = gas_constant(Q);
         return R * Q.T;
     }
-    override double gas_constant(in GasState Q)
+    override number gas_constant(in GasState Q)
     {
         return  mass_average(Q, _R);
     }
-    override double internal_energy(in GasState Q)
+    override number internal_energy(in GasState Q)
     {
         return Q.u + Q.u_modes[0];
     }
-    override double enthalpy(in GasState Q)
+    override number enthalpy(in GasState Q)
     {
-        double e = transRotEnergy(Q) + vibEnergy(Q, Q.T_modes[0]);
-        double R = gas_constant(Q);
-        double h = e + R*Q.T;
+        number e = transRotEnergy(Q) + vibEnergy(Q, Q.T_modes[0]);
+        number R = gas_constant(Q);
+        number h = e + R*Q.T;
         return h;
     }
-    override double entropy(in GasState Q)
+    override number entropy(in GasState Q)
     {
         throw new GasModelException("entropy not implemented in TwoTemperatureNitrogen.");
     }
 
-    double vibEnergy(double Tve, int isp) // Vibrational energy (h) = Total energy - Referenced energy- Rotational Energy
+    @nogc
+    number vibEnergy(number Tve, int isp) // Vibrational energy (h) = Total energy - Referenced energy- Rotational Energy
     {
-        double h_at_Tve = enthalpyFromCurveFits(Tve, isp);
-        double h_ve = h_at_Tve - _Cp_tr_rot[isp]*(Tve - T_REF) - _del_hf[isp];
+        number h_at_Tve = enthalpyFromCurveFits(Tve, isp);
+        number h_ve = h_at_Tve - _Cp_tr_rot[isp]*(Tve - T_REF) - _del_hf[isp];
         return h_ve;
     }
 
 private:
     PerfectGasMixEOS _pgMixEOS;
     double _R_U_cal = 1.987; // cal/(mole.K)
-    double[] _molef;
+    number[] _molef; // will be getting mole-fractions from outside, so may be complex
     double[] _particleMass;
     double[] _R;
     double[] _del_hf;
     double[] _Cp_tr_rot;
-    double[9] _A; // working storage of coefficients
-    double[][] _A_11, _B_11, _C_11, _D_11, _Delta_11, _alpha;
-    double[][] _A_22, _B_22, _C_22, _D_22, _Delta_22, _mu;
+    number[9] _A; // working storage of coefficients
+    number[][] _A_11, _B_11, _C_11, _D_11, _Delta_11, _alpha;
+    number[][] _A_22, _B_22, _C_22, _D_22, _Delta_22, _mu;
 
 
     /**
@@ -344,118 +348,132 @@ private:
      * on p.14 of their report, and give a Fortran implementation in
      * Appendix C (pp 40 & 41).
      */
-    void determineCoefficients(double T, int isp)
+    @nogc
+    void determineCoefficients(number T, int isp)
     {
+        debug {
         string spName = species_name(isp);
         if (T < 800.0) {
-            _A[] = thermoCoeffs[spName][0][];
+            foreach(i; 0 .. _A.length) { _A[i] = thermoCoeffs[spName][0][i]; }
         }
         if (T >= 800.0 && T <= 1200.0) {
-            double wB = (1./400.0)*(T - 800.0);
-            double wA = 1.0 - wB;
-            _A[] = wA*thermoCoeffs[spName][0][] + wB*thermoCoeffs[spName][1][];
+            number wB = (1./400.0)*(T - 800.0);
+            number wA = 1.0 - wB;
+            foreach(i; 0 .. _A.length) { _A[i] = wA*thermoCoeffs[spName][0][i] + wB*thermoCoeffs[spName][1][i]; }
         }
         if (T > 1200.0 && T < 5500.0) {
-            _A[] = thermoCoeffs[spName][1][];
+            foreach(i; 0 .. _A.length) { _A[i] = thermoCoeffs[spName][1][i]; }
         }
         if (T >= 5500.0 && T <= 6500.0) {
-            double wB = (1./1000.0)*(T - 5500.0);
-            double wA = 1.0 - wB;
-            _A[] = wA*thermoCoeffs[spName][1][] + wB*thermoCoeffs[spName][2][];
+            number wB = (1./1000.0)*(T - 5500.0);
+            number wA = 1.0 - wB;
+            foreach(i; 0 .. _A.length) { _A[i] = wA*thermoCoeffs[spName][1][i] + wB*thermoCoeffs[spName][2][i]; }
         }
         if ( T > 6500.0) {
-            _A[] = thermoCoeffs[spName][2][];
+            foreach(i; 0 .. _A.length) { _A[i] = thermoCoeffs[spName][2][i]; }
+        }
+        } else {
+            throw new Error("not yet fixed for @nogc");
         }
     }
 
-    double CpFromCurveFits(double T, int isp)
+    @nogc
+    number CpFromCurveFits(number T, int isp)
     {
         /* Assume that Cp is constant off the edges of the curve fits.
          * For T < 200.0, this is a reasonable assumption to make.
          * For T > 20000.0, that assumption might be questionable.
          */
         if (T < 200.0) {
-            determineCoefficients(200.0, isp);
+            determineCoefficients(to!number(200.0), isp);
             T = 200.0;
         }
         if (T > 20000.0) {
-            determineCoefficients(20000.0, isp);
+            determineCoefficients(to!number(20000.0), isp);
             T = 20000.0;
         }
         // For all other cases, use supplied temperature
         determineCoefficients(T, isp);
-        double Cp = (_A[0]/T/T + _A[1]/T + _A[2] + _A[3]*T + _A[4]*T*T+_A[5]*T*T*T+_A[6]*T*T*T*T);
+        number Cp = (_A[0]/T/T + _A[1]/T + _A[2] + _A[3]*T + _A[4]*T*T+_A[5]*T*T*T+_A[6]*T*T*T*T);
         Cp *= (R_universal/_mol_masses[isp]);
         return Cp;
     }
 
-    double enthalpyFromCurveFits(double T, int isp)
+    @nogc
+    number enthalpyFromCurveFits(number T, int isp)
     {
         if (T < 200) {
-            double Cp = CpFromCurveFits(200.0, isp);
-            double h = Cp*(T - 200) + enthalpyFromCurveFits(200.0, isp);
+            number Cp = CpFromCurveFits(to!number(200.0), isp);
+            number h = Cp*(T - 200) + enthalpyFromCurveFits(to!number(200.0), isp);
             return h;
         }
         if ( T > 20000.0) {
-            double Cp = CpFromCurveFits(20000.0, isp);
-            double h = Cp*(T - 20000.0) + enthalpyFromCurveFits(20000.0, isp);
+            number Cp = CpFromCurveFits(to!number(20000.0), isp);
+            number h = Cp*(T - 20000.0) + enthalpyFromCurveFits(to!number(20000.0), isp);
             return h;
         }
         // For all other, determine coefficients and compute specific enthalpy.
         determineCoefficients(T, isp);
-        double h = (-1)*_A[0]/T/T + _A[1]*log(T)/T + _A[2] + _A[3]*T/2 + _A[4]*T*T/3 + _A[5]*T*T*T/4+_A[6]*T*T*T*T/5+_A[7]/T;
+        number h = (-1)*_A[0]/T/T + _A[1]*log(T)/T + _A[2] + _A[3]*T/2 + _A[4]*T*T/3 + _A[5]*T*T*T/4+_A[6]*T*T*T*T/5+_A[7]/T;
         h *= (R_universal*T/_mol_masses[isp]);
         return h;
     }
 
-    double vibEnergy(in GasState Q, double Tve)
+    @nogc
+    number vibEnergy(in GasState Q, number Tve)
     {
-        double e_ve = 0.0;
+        number e_ve = 0.0;
         foreach (isp; molecularSpecies) {
             e_ve += Q.massf[isp] * vibEnergy(Tve, isp);
         }
         return e_ve;
     }
 
-    double transRotEnergy(in GasState Q)
+    @nogc
+    number transRotEnergy(in GasState Q)
     {
-        double e_tr_rot = 0.0;
+        number e_tr_rot = 0.0;
         foreach (isp; 0 .. _n_species) {
-            double h_tr_rot = _Cp_tr_rot[isp]*(Q.T - T_REF) + _del_hf[isp]; // Cp and del_hf here should be mass based not mole
+            number h_tr_rot = _Cp_tr_rot[isp]*(Q.T - T_REF) + _del_hf[isp]; // Cp and del_hf here should be mass based not mole
             e_tr_rot += Q.massf[isp]*(h_tr_rot - _R[isp]*Q.T); //calorically perfect gas
         }
         return e_tr_rot;
     }
 
-    double vibSpecHeatConstV(double Tve, int isp)
+    @nogc
+    number vibSpecHeatConstV(number Tve, int isp)
     {
         return CpFromCurveFits(Tve, isp) - _Cp_tr_rot[isp];
     }
 
-    double vibSpecHeatConstV(in GasState Q, double Tve)
+    @nogc
+    number vibSpecHeatConstV(in GasState Q, number Tve)
     {
-        double Cv_vib = 0.0;
+        number Cv_vib = 0.0;
         foreach (isp; molecularSpecies) {
             Cv_vib += Q.massf[isp] * vibSpecHeatConstV(Tve, isp);
         }
         return Cv_vib;
     }
 
-    double transRotSpecHeatConstV(int isp)
+    @nogc
+    number transRotSpecHeatConstV(int isp)
     {
-        return _Cp_tr_rot[isp] - _R[isp];
+        return to!number(_Cp_tr_rot[isp] - _R[isp]);
     }
 
-    double transRotSpecHeatConstV(in GasState Q)
+    @nogc
+    number transRotSpecHeatConstV(in GasState Q)
     {
-        double Cv = 0.0;
+        number Cv = 0.0;
         foreach (isp; 0 .. _n_species) {
             Cv += Q.massf[isp]*transRotSpecHeatConstV(isp);
         }
         return Cv;
     }
 
-    double vibTemperature(in GasState Q)
+    @nogc
+    number vibTemperature(in GasState Q)
     {
         int MAX_ITERATIONS = 20;
         // We'll keep adjusting our temperature estimate
@@ -463,8 +481,8 @@ private:
         double TOL = 1.0e-6;
         
         // Take the supplied T_modes[0] as the initial guess.
-        double T_guess = Q.T_modes[0];
-        double f_guess = vibEnergy(Q, T_guess) - Q.u_modes[0];
+        number T_guess = Q.T_modes[0];
+        number f_guess = vibEnergy(Q, T_guess) - Q.u_modes[0];
         // Before iterating, check if the supplied guess is
         // good enough. Define good enough as 1/100th of a Joule.
         double E_TOL = 0.01;
@@ -475,7 +493,7 @@ private:
 
         // Begin iterating.
         int count = 0;
-        double Cv, dT;
+        number Cv, dT;
         foreach (iter; 0 .. MAX_ITERATIONS) {
             Cv = vibSpecHeatConstV(Q, T_guess);
             dT = -f_guess/Cv;
@@ -491,9 +509,11 @@ private:
         
         if (count == MAX_ITERATIONS) {
             string msg = "The 'vibTemperature' function failed to converge.\n";
-            msg ~= format("The final value for Tvib was: %12.6f\n", T_guess);
-            msg ~= "The supplied GasState was:\n";
-            msg ~= Q.toString() ~ "\n";
+            debug {
+                msg ~= format("The final value for Tvib was: %12.6f\n", T_guess);
+                msg ~= "The supplied GasState was:\n";
+                msg ~= Q.toString() ~ "\n";
+            }
             throw new GasModelException(msg);
         }
 
@@ -593,7 +613,7 @@ static this()
 
 //// Unit test of the basic gas model...
 
-version(two_temperature_gas_giant_test) {
+version(two_temperature_gasgiant_test) {
     import std.stdio;
     import util.msg_service;
     import std.math : approxEqual;
