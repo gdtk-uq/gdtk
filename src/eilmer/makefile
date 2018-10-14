@@ -14,7 +14,7 @@
 # array accesses.
 
 # We can specify the LDC2 compiler as DMD=ldmd2 on the command-line
-# when invoking this makefile.  Can also ask for gdc.
+# when invoking this makefile.  Can also ask for gdc and ldc2.
 DMD ?= dmd
 NVCC ?= nvcc
 GPP ?= g++
@@ -208,9 +208,10 @@ ifeq ($(DMD), dmd)
         DFLAGS := -w -O -release -inline -boundscheck=off
     endif
     OF := -of
+    DVERSION := -version=
     DLINKFLAGS := -L-L$(LIBLUAPATH) 
     ifeq ($(findstring with_libplot,$(LIBPLOT_VERSION_STR)), with_libplot)
-        DFLAGS := $(DFLAGS) -version=$(LIBPLOT_VERSION_STR)
+        DFLAGS := $(DFLAGS) $(DVERSION)$(LIBPLOT_VERSION_STR)
         DLINKFLAGS := $(DLINKFLAGS) -L-lplot
     endif
     DLINKFLAGS := $(DLINKFLAGS) -L-llua -L-ldl
@@ -229,9 +230,38 @@ ifeq ($(DMD), ldmd2)
         DFLAGS := -w -O -release -inline -boundscheck=off
     endif
     OF := -of
+    DVERSION := -version=
     DLINKFLAGS := -L-L$(LIBLUAPATH) 
     ifeq ($(findstring with_libplot,$(LIBPLOT_VERSION_STR)), with_libplot)
-        DFLAGS := $(DFLAGS) -version=$(LIBPLOT_VERSION_STR)
+        DFLAGS := $(DFLAGS) $(DVERSION)$(LIBPLOT_VERSION_STR)
+        DLINKFLAGS := $(DLINKFLAGS) -L-lplot
+    endif
+    DLINKFLAGS := $(DLINKFLAGS) -L-llua -L-ldl
+    ifneq ($(TECPLOT_BIN_DIR), unavailable)
+        DLINKFLAGS += -L$(TECPLOT_BIN_DIR)/libtecio.so -L$(TECPLOT_BIN_DIR)/sys/libstdc++.so.6
+    endif
+endif
+ifeq ($(DMD), ldc2)
+    ifeq ($(FLAVOUR), debug)
+        DFLAGS := -w -g -d-debug
+    endif
+    ifeq ($(FLAVOUR), profile)
+        # -fprofile-generate will result in profraw files being written
+        # that may be viewed, showing the top 10 functions with internal block counts
+        # llvm-profdata show -text -topn=10 <profraw-file>
+        DFLAGS := -fprofile-generate -g -w -O -release -enable-inlining -boundscheck=off
+    endif
+    ifeq ($(FLAVOUR), fast)
+        DFLAGS := -w -O -release -enable-inlining -boundscheck=off
+    endif
+    OF := -of=
+    DVERSION := -d-version=
+    DLINKFLAGS := -L-L$(LIBLUAPATH)
+    #ifeq ($(FLAVOUR), profile)
+    #    DLINKFLAGS := $(DLINKFLAGS) -Wl,-fprofile-generate
+    #endif
+    ifeq ($(findstring with_libplot,$(LIBPLOT_VERSION_STR)), with_libplot)
+        DFLAGS := $(DFLAGS) $(DVERSION)$(LIBPLOT_VERSION_STR)
         DLINKFLAGS := $(DLINKFLAGS) -L-lplot
     endif
     DLINKFLAGS := $(DLINKFLAGS) -L-llua -L-ldl
@@ -250,9 +280,10 @@ ifeq ($(DMD), gdc)
         DFLAGS := -Wall -O2 -frelease -fno-debug
     endif
     OF := -o
+    DVERSION := -version=
     DLINKFLAGS := -L$(LIBLUAPATH) 
     ifeq ($(findstring with_libplot,$(LIBPLOT_VERSION_STR)), with_libplot)
-        DFLAGS := $(DFLAGS) -version=$(LIBPLOT_VERSION_STR)
+        DFLAGS := $(DFLAGS) $(DVERSION)$(LIBPLOT_VERSION_STR)
         DLINKFLAGS := $(DLINKFLAGS) -lplot
     endif
     DLINKFLAGS := $(DLINKFLAGS) $(LIBLUA) -ldl -lcurl
@@ -265,15 +296,15 @@ DFLAGS += -dip1008
 DFLAGS += -I.. -I$(NM_DIR) -I$(UTIL_DIR) -I$(GEOM_DIR) -I$(GRID_DIR) -I$(GZIP_DIR)
 
 ifeq ($(DEBUG_CHEM),1)
-    DFLAGS += -version=debug_chem
+    DFLAGS += $(DVERSION)debug_chem
 endif
 
 ifeq ($(WITH_FPE),1)
-    DFLAGS += -version=enable_fp_exceptions
+    DFLAGS += $(DVERSION)enable_fp_exceptions
 endif
 
 ifeq ($(WITH_DVODE),1)
-    DFLAGS += -version=with_dvode
+    DFLAGS += $(DVERSION)with_dvode
     DLINKFLAGS += -L-lgfortran
 endif
 
@@ -431,7 +462,7 @@ e4shared: main.d $(EILMER_FILES) \
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' main.d > \
 		main_with_rev_string.d
 	$(DMD) $(DFLAGS) $(OF)e4shared \
-		-version=$(TECPLOT_BIN_VERSION_STR) \
+		$(DVERSION)$(TECPLOT_BIN_VERSION_STR) \
 		main_with_rev_string.d \
 		$(EILMER_FILES) \
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
@@ -450,8 +481,8 @@ e4zshared: main.d $(EILMER_FILES) \
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' main.d > \
 		main_complex_with_rev_string.d
 	$(DMD) $(DFLAGS) $(OF)e4zshared \
-		-version=complex_numbers \
-		-version=$(TECPLOT_BIN_VERSION_STR) \
+		$(DVERSION)complex_numbers \
+		$(DVERSION)$(TECPLOT_BIN_VERSION_STR) \
 		main_complex_with_rev_string.d \
 		$(EILMER_FILES) \
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
@@ -471,7 +502,7 @@ e4mpi: main.d $(EILMER_FILES) \
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' main.d > \
 		mpi_main_with_rev_string.d
 	$(DMD) $(DFLAGS) $(OF)e4mpi \
-		-version=mpi_parallel \
+		$(DVERSION)mpi_parallel \
 		-I$(OPENMPI_DIR) $(MPI_LIB_DIRS_SEARCH) \
 		mpi_main_with_rev_string.d \
 		$(EILMER_FILES) \
@@ -490,8 +521,8 @@ e4sss: steadystate_solver.d steadystate_core.d shape_sensitivity_core.d $(EILMER
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' steadystate_solver.d > \
 		steadystate_solver_with_rev_string.d
 	$(DMD) $(DFLAGS) $(OF)e4sss \
-		-version=steady_state \
-		-version=shape_sensitivity \
+		$(DVERSION)steady_state \
+		$(DVERSION)shape_sensitivity \
 		steadystate_solver_with_rev_string.d steadystate_core.d shape_sensitivity_core.d \
 		$(EILMER_FILES) \
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
@@ -509,9 +540,9 @@ e4zsss: steadystate_solver.d steadystate_core.d shape_sensitivity_core.d $(EILME
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' steadystate_solver.d > \
 		steadystate_solver_complex_with_rev_string.d
 	$(DMD) $(DFLAGS) $(OF)e4zsss \
-		-version=complex_numbers \
-		-version=steady_state \
-		-version=shape_sensitivity \
+		$(DVERSION)complex_numbers \
+		$(DVERSION)steady_state \
+		$(DVERSION)shape_sensitivity \
 		steadystate_solver_complex_with_rev_string.d steadystate_core.d shape_sensitivity_core.d \
 		$(EILMER_FILES) \
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
@@ -529,9 +560,9 @@ e4ssc: shape_sensitivity_calc.d shape_sensitivity_core.d steadystate_core.d $(EI
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' shape_sensitivity_calc.d > \
 		shape_sensitivity_calc_with_rev_string.d
 	$(DMD) $(DFLAGS) $(OF)e4ssc \
-		-version=complex_numbers \
-		-version=shape_sensitivity \
-		-version=steady_state \
+		$(DVERSION)complex_numbers \
+		$(DVERSION)shape_sensitivity \
+		$(DVERSION)steady_state \
 		shape_sensitivity_calc_with_rev_string.d \
 		shape_sensitivity_core.d steadystate_core.d \
 		$(EILMER_FILES) \
@@ -569,7 +600,7 @@ eilmer-opencl-gpu-chem: main.d opencl_gpu_chem.d $(EILMER_FILES) \
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' main.d > \
 		main_with_rev_string.d
 	$(DMD) $(DFLAGS) $(OF)eilmer-opencl-gpu-chem \
-		-version=gpu_chem -version=opencl_gpu_chem \
+		$(DVERSION)gpu_chem $(DVERSION)opencl_gpu_chem \
 		main_with_rev_string.d $(EILMER_FILES) opencl_gpu_chem.d \
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
 		$(GAS_FILES) $(GZIP_FILES) $(OPENCL_FILES) \
@@ -587,7 +618,7 @@ eilmer-cuda-gpu-chem: main.d cuda_gpu_chem.d alpha_qss_kernel_cuda_tmplt.cu $(EI
 	$(NVCC) --shared -o libcudakernel.so alpha_qss_kernel_cuda_tmplt.cu \
 		--compiler-options '-fPIC'
 	$(DMD) $(DFLAGS) $(OF)eilmer-cuda-gpu-chem \
-		-version=gpu_chem -version=cuda_gpu_chem \
+		$(DVERSION)gpu_chem $(DVERSION)cuda_gpu_chem \
 		main_with_rev_string.d $(EILMER_FILES) cuda_gpu_chem.d \
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
 		$(GAS_FILES) $(GZIP_FILES) $(OPENCL_FILES) \
