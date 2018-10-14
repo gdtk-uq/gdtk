@@ -66,7 +66,7 @@ void computeFluxesAndTemperatures2(int ftl, FVCell[] gasCells, FVInterface[] gas
     // 1a. First row in matrix (special)
     auto dyG = gasIFaces[0].pos.y - gasCells[0].pos[0].y;
     auto dyS = solidCells[0].pos.y - solidIFaces[0].pos.y;
-    auto dx = solidCells[1].pos.x - solidCells[0].pos.x;
+    auto dx = 2*(solidCells[1].pos.x - solidCells[0].pos.x);
     auto kG = gasCells[0].fs.gas.k;
     auto k22 = solidCells[0].sp.k22;
     auto k21 = solidCells[0].sp.k21;
@@ -80,7 +80,7 @@ void computeFluxesAndTemperatures2(int ftl, FVCell[] gasCells, FVInterface[] gas
     foreach (i; 1 .. gasCells.length-1) {
         dyG = gasIFaces[i].pos.y - gasCells[i].pos[0].y;
         dyS = solidCells[i].pos.y - solidIFaces[i].pos.y;
-        dx = solidCells[i].pos.x - solidCells[i-1].pos.x;
+        dx = 2*(solidCells[i].pos.x - solidCells[i-1].pos.x);
         kG = gasCells[i].fs.gas.k;
         k22 = solidCells[i].sp.k22;
         k21 = solidCells[i].sp.k21;
@@ -96,24 +96,25 @@ void computeFluxesAndTemperatures2(int ftl, FVCell[] gasCells, FVInterface[] gas
     auto nm1 = gasCells.length-1;
     dyG = gasIFaces[nm1].pos.y - gasCells[nm1].pos[0].y;
     dyS = solidCells[nm1].pos.y - solidIFaces[nm1].pos.y;
-    dx = solidCells[nm1].pos.x - solidCells[nm1-1].pos.x;
+    dx = 2*(solidCells[nm1].pos.x - solidCells[nm1-1].pos.x);
     kG = gasCells[nm1].fs.gas.k;
     k22 = solidCells[nm1].sp.k22;
     k21 = solidCells[nm1].sp.k21;
     TG = gasCells[nm1].fs.gas.T;
     TS = solidCells[nm1].T;
     A[nm1,nm1-1] = k21/dx;
-    A[nm1,nm1] = kG/dyG + k22/dx - k21/dyS;
+    A[nm1,nm1] = kG/dyG + k22/dyS - k21/dx;
+    B[nm1] = kG*TG/dyG + k22*TS/dyS;
 
     // 2. Solve for temperatures.
     LUDecomp!number(A, pivot);
     LUSolve!number(A, pivot, B, T);
-
     // 3. Place temperatures and fluxes in interfaces
     foreach (i; 0 .. gasCells.length) {
         kG = gasCells[i].fs.gas.k;
         dyG = gasIFaces[i].pos.y - gasCells[i].pos[0].y;
-        auto q = -kG*(T[i] - gasCells[i].fs.gas.T);
+	auto kG_dyG = kG/dyG; 
+        auto q = -kG_dyG*(T[i] - gasCells[i].fs.gas.T);
         gasIFaces[i].fs.gas.T = T[i];
         gasIFaces[i].F.total_energy = q;
         solidIFaces[i].T = T[i];
