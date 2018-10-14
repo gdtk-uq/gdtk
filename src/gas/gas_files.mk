@@ -30,7 +30,8 @@ GAS_MODEL_FILES := $(GAS_DIR)/package.d \
 	$(GAS_DIR)/pseudo_species_gas.d \
 	$(GAS_DIR)/pseudo_species.d \
 	$(GAS_DIR)/electronically_specific_gas.d \
-	$(GAS_DIR)/electronic_species.d
+	$(GAS_DIR)/electronic_species.d \
+	$(GAS_DIR)/two_temperature_gasgiant.d
 
 THERMO_FILES := \
 	$(GAS_DIR)/thermo/cea_thermo_curves.d \

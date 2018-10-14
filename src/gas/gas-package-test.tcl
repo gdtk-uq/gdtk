@@ -92,6 +92,10 @@ test electronically-specific-gas-test {Testing electronically_specific_gas.d} -b
     exec ./electronically_specific_gas_test
 } -result {} -returnCodes {0}
 
+test two-temperature-gasgiant-test {Testing Daisy's two-T H2-He gas model} -body {
+    exec ./two_temperature_gasgiant_test
+} -result {} -returnCodes {0}
+
 puts "-------------------------------------"
 puts "   thermo/ tests"
 puts "-------------------------------------"

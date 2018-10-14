@@ -20,7 +20,7 @@ TEST_PROGRAMS := cea_therm_cond_test cea_thermo_curves_test cea_viscosity_test \
         two_temperature_reacting_argon_test steam_test \
 	gas_model_complex_test ideal_gas_complex_test cea_thermo_curves_complex_test \
 	pseudo_species_gas_test vib_specific_nitrogen_test \
-	electronically_specific_gas_test
+	electronically_specific_gas_test two_temperature_gasgiant_test
 
 LUA := ../../extern/lua-5.1.4
 LIBLUA := $(LUA)/lib/liblua.a
@@ -294,6 +294,10 @@ pseudo_species_gas_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 electronically_specific_gas_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
+	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
+		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
+
+two_temperature_gasgiant_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
 	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
