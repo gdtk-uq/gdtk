@@ -193,7 +193,7 @@ electronic_species[17] = {
 }
 
 electronic_species[18] = {
-    name = 'free electron',
+    name = 'e',
     level = 0,
     individual_range = "none",
     M = 0.0000005485799,
