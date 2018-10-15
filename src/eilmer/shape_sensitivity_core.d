@@ -495,6 +495,225 @@ void apply_boundary_conditions(ref SMatrix!number A, FluidBlock blk, size_t np, 
     }
 }
 
+void form_external_flow_jacobian_block_phase0(FluidBlock blk, size_t np, int orderOfJacobian, number EPS) {
+    // In this phase we compute the external effects for the neighbouring blocks from perturbing cells in those blocks. The
+    // effects are attached to boundary faces rather than the boundary cells (mapped cells). This is because when partitioning
+    // an unstructured mesh, it is possible that a ghost cell maybe shared by more than one neighbour cell. However, the interfaces
+    // are a unique connection between two cells.
+
+    size_t nDim = GlobalConfig.dimensions;
+    if (orderOfJacobian == 0) return; // no external effects
+    foreach (bc; blk.bc) {
+        if (bc.type == "exchange_using_mapped_cells") {
+            foreach (i, bf; bc.faces) {
+                FVCell intcell;
+                FVCell ghostcell;
+                // construct stencil of effected cells
+                if (bc.outsigns[i] == 1) {
+                    intcell = bf.left_cell;
+                    ghostcell = bf.right_cell;
+                } else {
+                    intcell = bf.right_cell;
+                    ghostcell = bf.left_cell;
+                }
+                if (orderOfJacobian == 1) {
+                    ghostcell.jacobian_cell_stencil ~= intcell;
+                    foreach (f; intcell.iface) {
+                        ghostcell.jacobian_face_stencil ~= f;
+                    }
+                } 
+                else { // higher-order
+                    size_t[] face_id_list;
+                    foreach(cell; intcell.cell_cloud) {
+                        if (cell.id < ghost_cell_start_id) ghostcell.jacobian_cell_stencil ~= cell;
+                        foreach (f; cell.iface) {
+                            if (face_id_list.canFind(f.id) == false) {
+                                ghostcell.jacobian_face_stencil ~= f;
+                                face_id_list ~= f.id;
+                            } // end if
+                        } // end foreach cell.iface
+                    } // end foreach intcell.cell_cloud
+                } // end else
+                construct_flow_jacobian(ghostcell, bf, blk, nDim, np, orderOfJacobian, EPS);
+            } // end foreach bc.faces
+        } // end if
+    } // end foreach blk.bc
+} // end form_external_flow_jacobian_block_phase0()
+
+void form_external_flow_jacobian_block_phase1(ref SMatrix!number A, FluidBlock blk, size_t np, int orderOfJacobian, number EPS) {
+    // In this phase we first reach across and grab the external effects from the neighbour blocks. We then make a record of what cells in the
+    // block are on the boundary, and then finally loop through all cells in the block filling our the external effects matrix used in the
+    // domain decomposition Jacobian. Note that this matrix has rows of 0 for non-boundary cells, these are stored in CRS by storing a 0
+    // as the initial row value.
+    
+    size_t nDim = GlobalConfig.dimensions;
+    // retrieve neighbour data (not MPI compatible)
+    foreach (bc; blk.bc) {
+        if (bc.type == "exchange_using_mapped_cells") {
+            foreach (gce; bc.preReconAction) {
+                auto mygce = cast(GhostCellMappedCellCopy) gce;
+                foreach (i, bf; bc.faces) {
+                    FVCell mapped_cell = mygce.mapped_cells[i];
+                    foreach ( f; mapped_cell.iface) {
+                        if (f.is_on_boundary) {
+                            if (abs(bf.pos.x-f.pos.x) < ESSENTIALLY_ZERO && abs(bf.pos.y-f.pos.y) < ESSENTIALLY_ZERO) {
+                                bc.ghostcells[i].idList = f.idList;
+                                bc.ghostcells[i].aa = f.aa;
+                            } // end if
+                        } // end if
+                    } // end foreach mapped_cell.iface
+                } // end for each bc.faces
+            } // end foreach bc.preReconAction
+        } // end if
+    } // end foreach blk.bc
+
+    // collect & sort boundary ids in ascending order
+    size_t[] bndary_cell_id_list;
+    foreach (bc; blk.bc) {
+        if (bc.type == "exchange_using_mapped_cells") {
+            foreach (i, bf; bc.faces) {
+                FVCell cell;
+                FVCell ghostcell;
+                if (bc.outsigns[i] == 1) {
+                    cell = bf.left_cell;
+                    ghostcell = bf.right_cell;
+                } else {
+                    cell = bf.right_cell;
+                    ghostcell = bf.left_cell;
+                }
+                if (bndary_cell_id_list.canFind(cell.id) == false) bndary_cell_id_list ~= cell.id;
+            } // end ofreach bc.faces
+        } // end if
+    } // end foreach blk.bc
+    bndary_cell_id_list.sort();
+    
+    // construct flow Jacobian external matrix
+    A.ia ~= 0;
+    foreach ( cell; blk.cells) {
+        if (bndary_cell_id_list.canFind(cell.id)) {
+            size_t[size_t] pos_array; // position of unsorted array
+            size_t[] idList;
+            number[] entries;
+            foreach (i, f; cell.iface) {
+                if (f.is_on_boundary) {
+                    FVCell ghostcell;
+                    if (cell.outsign[i] == 1) {
+                        ghostcell = f.right_cell;
+                    } else {
+                        ghostcell = f.left_cell;
+                    }
+                    idList ~= ghostcell.idList;
+                    entries ~= ghostcell.aa;
+                }
+            }
+            foreach (i, cid; idList) pos_array[cid] = i;
+            idList.sort(); // we want these in global id order
+            for ( size_t ip = 0; ip < np; ++ip ) {
+                size_t aaLen = A.aa.length;
+                foreach (cid; idList) {
+                    for ( size_t jp = 0; jp < np; ++jp ) {
+                        size_t idx = pos_array[cid]*np*np+np*jp+ip;
+                        size_t J = cid*np + jp;
+                        if (abs(entries[idx]) > ESSENTIALLY_ZERO) {
+                            A.aa ~= entries[idx];
+                            A.ja ~= J;
+                        }
+                    }
+                }
+                if (aaLen == A.aa.length) {
+                    // no entries have been added for this row, for CRS we must store a dummy 0 entry
+                    A.aa ~= to!number(0.0);
+                    A.ja ~= 0;
+                }
+                A.ia ~= A.aa.length;
+            }
+        }
+        else { // internal cell (no entries are required this row, for CRS we must store a dummy 0 entry)
+            for ( size_t ip = 0; ip < np; ++ip ) {
+                A.aa ~= to!number(0.0);
+                A.ja ~= 0;
+                A.ia ~= A.aa.length;
+            }
+        } // end else
+    } // end for each blk.cells
+} // end form_external_flow_jacobian_block_phase1()
+
+void construct_flow_jacobian(FVCell pcell, FVInterface pface, FluidBlock blk, size_t ndim, size_t np, size_t orderOfJacobian, number EPS) {
+    /++
+     + computes and stores a block local transpose Jacobian in  Compressed
+     Row Storage (CSR) format.     
+     + initial method for efficient computation of the Jacobian -- predecessor
+     to colourings.
+
+     TODO: turbulence, 3D
+     ++/
+    // initialise some variables used in the finite difference perturbation
+    //double h; double diff;
+
+    // initialise objects
+    //cellOrig = new FVCell(blk.myConfig);
+    //foreach(i; 0..MAX_PERTURBED_INTERFACES) {
+    //    ifaceOrig[i] = new FVInterface(blk.myConfig, false);
+    //    ifacePp[i] = new FVInterface(blk.myConfig, false);
+    //    ifacePm[i] = new FVInterface(blk.myConfig, false);
+    // }
+
+    // 0th perturbation: rho
+    mixin(computeFluxDerivativesAroundCell("gas.rho", "0", true));
+    // 1st perturbation: u
+    mixin(computeFluxDerivativesAroundCell("vel.refx", "1", false));
+    // 2nd perturbation: v
+    mixin(computeFluxDerivativesAroundCell("vel.refy", "2", false));
+    // 3rd perturbation: P
+    mixin(computeFluxDerivativesAroundCell("gas.p", "3", true));
+    if (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) {
+        // 4th perturbation: tke
+        mixin(computeFluxDerivativesAroundCell("tke", "4", false));
+        // 5th perturbation: omega
+        mixin(computeFluxDerivativesAroundCell("omega", "5", false));
+    }
+    // -----------------------------------------------------
+    // loop through influenced cells and fill out Jacobian 
+    // -----------------------------------------------------
+    // at this point we can use the cell counter ci to access the correct stencil
+    // because the stencil is not necessarily in cell id order, we need to
+    // do some shuffling
+    int count = 0;
+    //writef("perturbed cell: %d effected cells: ", cell.id);
+    foreach(c; pcell.jacobian_cell_stencil) {
+        pface.idList ~= blk.globalCellId(c.id);
+        number integral;
+        number volInv = 1.0 / c.volume[0];
+        for ( size_t ip = 0; ip < np; ++ip ) {
+            for ( size_t jp = 0; jp < np; ++jp ) {
+                integral = 0.0;
+                foreach(fi, iface; c.iface) {
+                    integral -= c.outsign[fi] * iface.dFdU[ip][jp] * iface.area[0]; // gtl=0
+                }
+                number JacEntry = volInv * integral + c.dQdU[ip][jp];
+                pface.aa ~= -JacEntry;
+            }
+        }
+    }
+    // clear the interface flux Jacobian entries
+    foreach (iface; pcell.jacobian_face_stencil) {
+        foreach (i; 0..iface.dFdU.length) {
+            foreach (j; 0..iface.dFdU[i].length) {
+                iface.dFdU[i][j] = 0.0;
+            }
+        }
+    }
+    // clear the cell source term Jacobian entries
+    foreach (cell; pcell.jacobian_cell_stencil) {
+        foreach (i; 0..cell.dQdU.length) {
+            foreach (j; 0..cell.dQdU[i].length) {
+                cell.dQdU[i][j] = 0.0;
+            }
+        }
+    }
+}
+
+
 void approximate_residual_stencil(FVCell pcell, size_t orderOfJacobian) {
     // used for the steady-state preconditioner (always first order)
     FVCell[] refs_ordered; FVCell[] refs_unordered;
@@ -1003,6 +1222,23 @@ void compute_flux(FVCell pcell, FluidBlock blk, size_t orderOfJacobian, ref FVCe
                 break;
             } // end switch
         } // end foreach c
+
+        // Fill in gradients for ghost cells so that left- and right- cells at all faces,
+        // including those along block boundaries, have the latest gradient values.
+        // Note that we DO NOT copy gradients from neighbour blocks even if the boundary
+        // has a mapped cell, this is due to efficiency, and block-parallel formation reasons.
+        // So we just use the fall back for all boundary conditions.
+        foreach (bcond; blk.bc) {
+            // There are no other cells backing the ghost cells on this boundary.
+            // Fill in ghost-cell gradients from the other side of the face.
+            foreach (i, f; bcond.faces) {
+                if (bcond.outsigns[i] == 1) {
+                    f.right_cell.gradients.copy_values_from(f.left_cell.gradients);
+                } else {
+                    f.left_cell.gradients.copy_values_from(f.right_cell.gradients);
+                }
+            } // end foreach f
+        } // end foreach bcond
     } // end if interpolation_order > 1
     // Convective flux update
     foreach(iface; iface_list) {
@@ -1090,6 +1326,29 @@ void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref
             myblk.compute_primary_cell_geometric_data(0);
             myblk.compute_least_squares_setup(0);
         }
+        /*
+        foreach (myblk; localFluidBlocks) {
+            myblk.read_solution(make_file_name!"flow"("ramp", myblk.id, 0, GlobalConfig.flowFileExt), false);
+            
+            // We can apply a special initialisation to the flow field, if requested.
+            //if (GlobalConfig.diffuseWallBCsOnInit) {
+            //writeln("Applying special initialisation to blocks: wall BCs being diffused into domain.");
+            //writefln("%d passes of the near-wall flow averaging operation will be performed.", GlobalConfig.nInitPasses);
+            //foreach (blk; parallel(localFluidBlocks,1)) {
+            //    diffuseWallBCsIntoBlock(blk, GlobalConfig.nInitPasses, GlobalConfig.initTWall);
+            //}
+            //}
+            
+            foreach (cell; myblk.cells) {
+                cell.encode_conserved(0, 0, myblk.omegaz);
+                // Even though the following call appears redundant at this point,
+                // fills in some gas properties such as Prandtl number that is
+                // needed for both the cfd_check and the BaldwinLomax turbulence model.
+                cell.decode_conserved(0, 0, myblk.omegaz);
+            }
+        }
+        */
+        //steadystate_core.evalRHS(0.0, 0);
         
         // perturb design variable +ve
         gtl = 1; ftl = 1;
@@ -1123,15 +1382,26 @@ void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref
         
         // compute cost function sensitivity
         g[i] = (objFcnEvalP.im)/(EPS.im);
-        
+
         // compute residual sensitivity
         foreach (myblk; parallel(localFluidBlocks,1)) {
             foreach(j, cell; myblk.cells) {
                 myblk.rT[i, j*nPrimitive] = to!number((-cell.dUdt[ftl].mass.im)/(EPS.im));
                 myblk.rT[i, j*nPrimitive+1] = to!number((-cell.dUdt[ftl].momentum.x.im)/(EPS.im));
                 myblk.rT[i, j*nPrimitive+2] = to!number((-cell.dUdt[ftl].momentum.y.im)/(EPS.im));
-                myblk.rT[i, j*nPrimitive+3] = to!number((-cell.dUdt[ftl].total_energy.im)/(EPS.im));
-                if (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) {
+                myblk.rT[i, j*nPrimitive+3] = to!number((-cell.dUdt[ftl].total_energy.im)/(EPS.im));                
+
+                /*
+                writeln("blk.id: ", myblk.id, " var.id: ", i, ", cell.id: ", cell.id);
+                writef("%.13e %.13e -------- \n", cell.pos[0].x.re, cell.pos[0].y.re);
+                writef(" %.13e \n", cell.volume[0]);
+                writef(" %.13e \n", myblk.rT[i, j*nPrimitive+0]);
+                writef(" %.13e \n", myblk.rT[i, j*nPrimitive+1]);
+                writef(" %.13e \n", myblk.rT[i, j*nPrimitive+2]);
+                writef(" %.13e \n", myblk.rT[i, j*nPrimitive+3]);
+                */
+                
+                if (myblk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
                     myblk.rT[i, j*nPrimitive+4] = to!number((-cell.dUdt[ftl].tke.im)/(EPS.im));
                     myblk.rT[i, j*nPrimitive+5] = to!number((-cell.dUdt[ftl].omega.im)/(EPS.im));
                 }
@@ -1287,15 +1557,27 @@ void gridUpdate(Vector3[] designVars, size_t gtl) {
         foreach(bndary; myblk.bc) {
             foreach( face; bndary.faces) {
                 foreach ( vtx; face.vtx) {
-                    if (idList.canFind(vtx.id) == false) {
-                        bndaryVtxInitPos ~= vtx.pos[0];
+                    if (idList.canFind(vtx.id) == false && bndary.type != "exchange_using_mapped_cells") {            
                         myblk.boundaryVtxIndexList ~= vtx.id;
+                        //
+                        bool update = true;
+                        foreach(pos; bndaryVtxInitPos) {
+                            if ( fabs(pos.x.re - vtx.pos[0].x.re) < 1.0e-50 && fabs(pos.y.re - vtx.pos[0].y.re) < 1.0e-50 ) {
+                                update = false;
+                            }
+                        }
+                        //
+                        if(update) {
+                            bndaryVtxInitPos ~= vtx.pos[0];
+                            //myblk.boundaryVtxIndexList ~= vtx.id;
+                            idList ~= vtx.id;
+                        }
                     }
                 }
             }
         }
     }
-
+    writeln("length: ", bndaryVtxInitPos.length);
     foreach (myblk; localFluidBlocks) {
         foreach( bndary; myblk.bc ) {
                 if (bndary.is_design_surface) {
@@ -1320,8 +1602,20 @@ void gridUpdate(Vector3[] designVars, size_t gtl) {
         foreach(bndary; myblk.bc) {
             foreach( face; bndary.faces) {
                 foreach ( vtx; face.vtx) {
-                    if (idList.canFind(vtx.id) == false) {
-                        bndaryVtxNewPos ~= vtx.pos[gtl];
+                    if (idList.canFind(vtx.id) == false  && bndary.type != "exchange_using_mapped_cells") {
+
+                        //
+                        bool update = true;
+                        foreach(pos; bndaryVtxNewPos) {
+                            if ( fabs(pos.x.re - vtx.pos[gtl].x.re) < 1.0e-50 && fabs(pos.y.re - vtx.pos[gtl].y.re) < 1.0e-50 ) {
+                                update = false;
+                            }
+                        }
+                        //
+                        if(update) {
+                            bndaryVtxNewPos ~= vtx.pos[gtl];
+                            idList ~= vtx.id;
+                        }
                     }
                 }
             }
@@ -1332,6 +1626,18 @@ void gridUpdate(Vector3[] designVars, size_t gtl) {
         inverse_distance_weighting(myblk, bndaryVtxInitPos, bndaryVtxNewPos, gtl);
     }
 
+    /*
+    foreach(blk; localFluidBlocks) {
+        writeln("blk.id: ", blk.id);
+        foreach(vtx; blk.vertices) {
+            writef(" %.13e %.13e --------- \n", vtx.pos[gtl].x.re, vtx.pos[gtl].y.re);
+            writef(" %.13e \n", vtx.pos[gtl].x.im);
+            writef(" %.13e \n", vtx.pos[gtl].y.im);
+            
+        }
+    }
+    */
+    
     foreach (myblk; localFluidBlocks) {
         myblk.boundaryVtxIndexList = [];
     }
@@ -1548,6 +1854,14 @@ void rpcGMRES_solve(size_t nPrimitive) {
     foreach (blk; parallel(localFluidBlocks,1)) {
         multiply(blk.JlocT, blk.x0, blk.r0);
     }
+    // 3. external product
+    foreach (blk; parallel(localFluidBlocks,1)) {
+         multiply(blk.JextT, blk.Z, blk.wext);
+    }
+    // 4. sum the two contributions
+    foreach (blk; parallel(localFluidBlocks,1)) {
+        blk.r0[] += blk.wext[];
+    }
     foreach (blk; parallel(localFluidBlocks,1)) {
         foreach (k; 0 .. blk.nvars) { blk.r0[k] = blk.f[k] - blk.r0[k];}
     }
@@ -1595,6 +1909,14 @@ void rpcGMRES_solve(size_t nPrimitive) {
             // 2. local product
             foreach (blk; parallel(localFluidBlocks,1)) {
                 multiply(blk.JlocT, blk.z, blk.w);
+            }
+            // 3. external product
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                multiply(blk.JextT, blk.Z, blk.wext);
+            }
+            // 4. sum the two contributions
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                blk.w[] += blk.wext[];
             }
             
             // The remainder of the algorithm looks a lot like any standard
@@ -1723,6 +2045,14 @@ void rpcGMRES_solve(size_t nPrimitive) {
         foreach (blk; parallel(localFluidBlocks,1)) {
             nm.smla.multiply(blk.JlocT, blk.x0, blk.r0);
         }
+        // 3. external product
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            multiply(blk.JextT, blk.Z, blk.wext);
+        }
+        // 4. sum the two contributions
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            blk.r0[] += blk.wext[];
+        }
         foreach (blk; parallel(localFluidBlocks,1)) {
             foreach (k; 0 .. blk.nvars) { blk.r0[k] = blk.f[k] - blk.r0[k];}
         }
@@ -1817,6 +2147,81 @@ void readBezierDataFromFile(ref Vector3[] designVars)
     } // end foreach myblk
 } // end readBezierDataFromFile
 
+void writeDesignVarsToDakotaFile(Vector3[] design_variables, string jobName) {
+    size_t ndvars = design_variables.length;
+    // write subset of bezier control points out to DAKOTA input script
+    string dakota_input_filename = jobName ~ ".in";
+    string pathToDakotaInputFile = "../" ~ dakota_input_filename;
+    if (exists(pathToDakotaInputFile)) {
+        string error_msg = format("DAKOTA input file already exists. Please remove the .in file before proceeding");
+        throw new FlowSolverException(error_msg);
+    }
+    string dakota_input_tmplt_filename = jobName ~ ".tmplt";
+    string pathToDakotaInputTmpltFile = "../" ~ dakota_input_tmplt_filename;
+    if (!exists(pathToDakotaInputTmpltFile)) {
+        string error_msg = format("DAKOTA input template file does not exist.");
+        throw new FlowSolverException(error_msg);
+    }
+    
+    // generate design variable information string
+    
+    string designVariableInputContent;
+    designVariableInputContent ~= "    continuous_design = " ~ to!string(ndvars) ~ "\n";
+    designVariableInputContent ~= "    initial_point    ";
+    foreach ( i; 0..design_variables.length) designVariableInputContent ~= format!"%.16e    %.16e    "(design_variables[i].x, design_variables[i].y);
+    designVariableInputContent ~= " \n"; 
+    designVariableInputContent ~= "    descriptors    ";
+    foreach ( i; 0..design_variables.length) {
+                string descriptor;
+                // y-variable
+                descriptor = "'" ~ "design_var" ~ "_x" ~ to!string(i) ~ "'" ~ "    " ~ "'" ~ "design_var" ~ "_y" ~ to!string(i) ~ "'";
+                designVariableInputContent ~= descriptor ~ "    ";
+    }
+
+    designVariableInputContent ~= " \n"; 
+    
+    auto fR = File(pathToDakotaInputTmpltFile, "r");
+    auto fW = File(pathToDakotaInputFile, "w");
+    
+    while (!fR.eof) {
+        auto line = fR.readln().strip();
+        if (line == "variables") {
+            fW.writeln(line);
+            fW.writef(designVariableInputContent);
+        }
+        else fW.writeln(line);
+    }
+}
+
+void readDesignVarsFromDakotaFile(ref Vector3[] design_variables)
+{
+    // read in new control points (note we should have pre-filled the design variables array with the original points)
+    auto f = File("params.in", "r");
+    auto line = f.readln().strip;// read first line & do nothing 
+    auto tokens = line.split();
+    foreach ( i; 0..design_variables.length) {
+	// x-variable
+        line = f.readln().strip;
+        tokens = line.split();
+        design_variables[i].refx = to!double(tokens[0]);
+        // y-variable
+        line = f.readln().strip;
+        tokens = line.split();
+        design_variables[i].refy = to!double(tokens[0]);
+    }
+    // assign design variables to bezier curve
+    foreach ( myblk; localFluidBlocks) {
+	foreach ( bndary; myblk.bc) {
+	    if ( bndary.is_design_surface) {
+		foreach ( i; 1..bndary.bezier.B.length-1) {
+		    bndary.bezier.B[i].refx = design_variables[i-1].x;
+		    bndary.bezier.B[i].refy = design_variables[i-1].y;
+		} // end foreach i
+	    } // end if
+	} // end foreach bndary
+    } // end foreach myblk
+} // end readDesignVarsFromDakotaFile
+
 void write_adjoint_variables_to_file(FluidBlock blk, size_t np, string jobName) {
     size_t ncells = blk.cells.length;
     size_t nvertices = blk.vertices.length;
@@ -1885,6 +2290,21 @@ void write_adjoint_variables_to_file(FluidBlock blk, size_t np, string jobName) 
     }
 }
 
+void write_objective_fn_to_file(string fileName, number objFnEval) {
+    auto outFile = File(fileName, "w");
+    outFile.writef("%.16e f\n", objFnEval.re); 
+}
+
+void write_gradients_to_file(string fileName, number[] grad) {
+    auto outFile = File(fileName, "a");
+    outFile.writef("[ ");
+    foreach( i; 0..grad.length ) {
+        outFile.writef("%.16e %.16e ", 0.0, grad[i].re);
+    }
+    outFile.writef(" ]\n"); 
+}
+
+
 /*****************************/
 /*  DIRECT GRADIENT METHOD   */
 /*****************************/
@@ -1930,17 +2350,18 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
             }
         }
 
-        foreach (myblk; localFluidBlocks) {
-            // We can apply a special initialisation to the flow field, if requested.
-            //if (GlobalConfig.diffuseWallBCsOnInit) {
-            writeln("Applying special initialisation to blocks: wall BCs being diffused into domain.");
-            writefln("%d passes of the near-wall flow averaging operation will be performed.", GlobalConfig.nInitPasses);
-            foreach (blk; parallel(localFluidBlocks,1)) {
-                diffuseWallBCsIntoBlock(blk, GlobalConfig.nInitPasses, GlobalConfig.initTWall);
+        if (GlobalConfig.viscous) {
+            foreach (myblk; localFluidBlocks) {
+                // We can apply a special initialisation to the flow field, if requested.
+                //if (GlobalConfig.diffuseWallBCsOnInit) {
+                writeln("Applying special initialisation to blocks: wall BCs being diffused into domain.");
+                writefln("%d passes of the near-wall flow averaging operation will be performed.", GlobalConfig.nInitPasses);
+                foreach (blk; parallel(localFluidBlocks,1)) {
+                    diffuseWallBCsIntoBlock(blk, GlobalConfig.nInitPasses, GlobalConfig.initTWall);
+                }
             }
         }
         
-
         // perturb design variable in complex plane
         P0 = design_variables[i].y; 
         design_variables[i].refy = P0 + EPS;

@@ -2,13 +2,17 @@
  * 
  * Eilmer4 shape sensitivity calculator top-level function.
  *
- * Note: This is the first attempt at 'production' code.
- * Some test implementations began on 2017-09-18.
- *
+ * This file coordinates all the functions required for the Eilmer4 sensitivity analysis code, including:
+ *     + complex-variable discrete adjoint solver
+ *     + direct differentiation via complex-variable finitie difference solver (used for verification)
+ *     + surface parameterisation
+ *     + grid perturbation
+ *     + objective function evaluation
  *
  * Author: Kyle D.
 **/
 
+// standard library
 import core.stdc.stdlib : exit;
 import core.memory;
 import std.stdio;
@@ -17,11 +21,13 @@ import std.parallelism;
 import std.algorithm;
 import std.getopt;
 
+// numerical methods
 import nm.smla;
 import nm.bbla;
 import nm.complex;
 import nm.number;
 
+// eilmer
 import steadystate_core;
 import shape_sensitivity_core;
 import fileutil;
@@ -53,6 +59,7 @@ void main(string[] args) {
     msg       ~= "           [--update-grid]                   perturbs grid according to updated Bezier control points \n";
     msg       ~= "           [--direct-method]                 evaluates sensitivities via direct complex step method   \n";
     msg       ~= "           [--adjoint-method]                evalautes sensitivities via adjoint method               \n";
+    msg       ~= "           [--adjoint-verification           evalautes sensitivities via adjoint method               \n";
     msg       ~= "           [--verify-primitive-jacobian]     test the formation of the primtive Jacobian              \n";
     msg       ~= "           [--verify-conservative-jacobian   test the formation of the conservative Jacobian          \n";
     msg       ~= "           [--verify-sss-preconditioner      test the formation of the steady-state preconditioner    \n";
@@ -73,6 +80,7 @@ void main(string[] args) {
     bool updateGridFlag = false;
     bool directMethodFlag = false;
     bool adjointMethodFlag = true;
+    bool adjointVerificationFlag = false;
     bool verifyPrimitiveJacobianFlag = false;
     bool verifyConservativeJacobianFlag = false;
     bool verifySSSPreconditionerFlag = false;
@@ -87,6 +95,7 @@ void main(string[] args) {
                "update-grid", &updateGridFlag,
                "direct-method", &directMethodFlag,
                "adjoint-method", &adjointMethodFlag,
+               "adjoint-verification", &adjointVerificationFlag,
                "verify-primitive-jacobian", &verifyPrimitiveJacobianFlag,
                "verify-conservative-jacobian", &verifyConservativeJacobianFlag,
                "verify-sss-preconditioner", &verifySSSPreconditionerFlag,
@@ -126,7 +135,6 @@ void main(string[] args) {
     else init_simulation(last_tindx, 0, maxCPUs, 1, maxWallClock);
 
     // check some flag option compatibilities
-    //
     if (verifyPrimitiveJacobianFlag || verifyConservativeJacobianFlag)
         assert(verifyPrimitiveJacobianFlag != adjointMethodFlag || verifyConservativeJacobianFlag != adjointMethodFlag, "Error: Incompatible command line flags: verify-flow-jacobian & adjoint-method");
     else if (verifySSSPreconditionerFlag)
@@ -134,7 +142,7 @@ void main(string[] args) {
     else
         assert(directMethodFlag != adjointMethodFlag, "Error: Incompatible command line flags: direct-method & adjoint-method");
     
-    /* some global variables */    
+    /* initilise some global variables */    
 
     Vector3[] designVars;
     version(complex_numbers) number EPS = complex(0.0, GlobalConfig.sscOptions.epsilon);
@@ -143,12 +151,34 @@ void main(string[] args) {
     writeln("/* Complex Step Size: ", EPS.im, ", i */");
     with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega);
     
+
     /* Geometry parameterisation */
     
     if (parameteriseSurfacesFlag) {
         fit_design_parameters_to_surface(designVars);
         //writeDesignVarsToDakotaFile(designVars, jobName);
         return; // --parameterise-surfaces complete
+    }
+
+    /* update grid */
+
+    if (updateGridFlag) {
+	// fill-in bezier curve with previous bezier points
+        readBezierDataFromFile(designVars);
+	// update bezier curve with new design variables
+	readDesignVarsFromDakotaFile(designVars);
+	gridUpdate(designVars, 1); // gtl=1
+        return; // --grid-update complete
+    }
+
+    /* objective function evaluation */
+    number objFnEval;
+    if (returnObjFcnFlag) {
+        objFnEval = objective_function_evaluation();
+        writeln("objective fn evaluation: ", objFnEval);
+        write_objective_fn_to_file("results.out", objFnEval);
+        
+        return; // --return-objective-function
     }
     
     /* Evaluate Sensitivities via Direct Complex Step */
@@ -172,6 +202,11 @@ void main(string[] args) {
 
         /* Flow Jacobian */
 
+        // we make sure that the ghost cells are filled here (we don't want to update ghost cells during the flow Jacobian formation)
+        // TODO: currently the code works for second order interpolation for internal interfaces, with first order interpolation at boundaries.
+        // Should think about how to extend this to second order at block boundaries (i.e. manage the copying of gradients correctly).
+        exchange_ghost_cell_boundary_data(0.0, 0, 0); // pseudoSimTime = 0.0; gtl = 0; ftl = 0
+    
         foreach (myblk; parallel(localFluidBlocks,1)) {
             initialisation(myblk, nPrimitive);
 
@@ -191,7 +226,15 @@ void main(string[] args) {
             myblk.JlocT = new SMatrix!number();
             local_flow_jacobian_transpose(myblk.JlocT, myblk, nPrimitive, myblk.myConfig.interpolation_order, EPS);
         }
-              
+
+        foreach (myblk; parallel(localFluidBlocks,1)) {
+            form_external_flow_jacobian_block_phase0(myblk, nPrimitive, myblk.myConfig.interpolation_order, EPS); // orderOfJacobian=interpolation_order
+        }
+
+        foreach (myblk; parallel(localFluidBlocks,1)) {
+            myblk.JextT = new SMatrix!number();
+            form_external_flow_jacobian_block_phase1(myblk.JextT, myblk, nPrimitive, myblk.myConfig.interpolation_order, EPS); // orderOfJacobian=interpolation_order
+        }
 
         /* Preconditioner */
 
@@ -234,6 +277,17 @@ void main(string[] args) {
         // ------------------------------------------------------
         // RESIDUAL/OBJECTIVE SENSITIVITY W.R.T. DESIGN VARIABLES
         // ------------------------------------------------------
+        /*
+        if (adjointVerificationFlag) fit_design_parameters_to_surface(designVars);    
+        else { 
+            readBezierDataFromFile(designVars);
+            readDesignVarsFromDakotaFile(designVars);
+        }
+        */
+        if (!adjointVerificationFlag) { 
+            readBezierDataFromFile(designVars);
+            readDesignVarsFromDakotaFile(designVars);
+        }
         
         // objective function sensitivity w.r.t. design variables
         number[] g;
@@ -256,11 +310,13 @@ void main(string[] args) {
         
         number[] adjointGradients;
         adjointGradients.length = designVars.length;
-        foreach (myblk; localFluidBlocks) adjointGradients[] = myblk.rTdotPsi[];
+        adjointGradients[] = to!number(0.0);
+        foreach (myblk; localFluidBlocks) adjointGradients[] += myblk.rTdotPsi[];
         adjointGradients[] = g[] - adjointGradients[];
 
         foreach ( i; 0..adjointGradients.length) writef("gradient for variable %d: %.16e \n", i+1, adjointGradients[i]);
-        
+
+        write_gradients_to_file("results.out", adjointGradients);
         // clear some expensive data structures from memory
         foreach (myblk; parallel(localFluidBlocks,1)) {
             destroy(myblk.rT);
