@@ -176,8 +176,8 @@ public:
             _numden[i] = _numden[i]/1e6;
         }
         number heatToElectron = AppletonBrayRate(Q,_numden);
-        Q.u_modes[0] += heatToElectron;
-        Q.u -= heatToElectron;
+        Q.u_modes[0] += dt*heatToElectron;
+        Q.u -= dt*heatToElectron;
     }
 
 private:
@@ -237,16 +237,17 @@ private:
         foreach (isp; 19 .. _n_species) {
             _Cv1 += Q.massf[isp] * (_dof[isp]/2.0) * _R[isp];
         }
-        return _Cv1 * (1.0/heavyMassf(Q));
+        return _Cv1;
     }
 
     @nogc number electron_Cv(GasState Q)
     {   
-        number elec_cv = (_dof[18]/2.0) * _R[18];
+        number elec_cv = Q.massf[18]*(_dof[18]/2.0) * _R[18];
         return elec_cv; 
     }
 
-    @nogc number AppletonBrayRate(GasState Q, number[] _numden) { //only call when gas state in number density /cm^3
+    @nogc number AppletonBrayRate(GasState Q, number[] _numden) 
+    { //only call when gas state in number density /cm^3
         assert((_numden[0]>1e10),"Still in mass fraction, not number density?");
         @nogc number eff_coll_freq(number ni, bool ion, string species = "ion") 
         {
@@ -284,12 +285,9 @@ private:
             _Osum += _numden[isp + 9];
         }
         _sumterm = 0.0;
-        _sumterm += eff_coll_freq(_numden[19],false,"N2")/_mol_masses[19];
-        _sumterm += eff_coll_freq(_Nsum,false,"N")/_mol_masses[0];
-        _sumterm += eff_coll_freq(_numden[8],true)/_mol_masses[8];
-        _sumterm += eff_coll_freq(_numden[20],false,"O2")/_mol_masses[20];
-        _sumterm += eff_coll_freq(_Osum,false,"O")/_mol_masses[9];
-        _sumterm += eff_coll_freq(_numden[17],true)/_mol_masses[17];
+        _sumterm += eff_coll_freq(_numden[19],false,"N2")/_mol_masses[19] + eff_coll_freq(_Nsum,false,"N")/_mol_masses[0] +
+                    eff_coll_freq(_numden[8],true)/_mol_masses[8] + eff_coll_freq(_numden[20],false,"O2")/_mol_masses[20] + 
+                    eff_coll_freq(_Osum,false,"O")/_mol_masses[9] + eff_coll_freq(_numden[17],true)/_mol_masses[17];
         return 3*_numden[18]*_me*1e3*R_universal*(Q.T - Q.T_modes[0])*_sumterm;
     }
 
@@ -324,14 +322,15 @@ version(electronically_specific_gas_test) {
                         0.000565079, 8.59624e-06, 2.58411e-07, 9.00322e-08, 5.80925e-08, 
                         3.67871e-08, 9.06483e-08, 4.16313e-07, 1.4773e-08, 0.740823, 0.211558];
 
-        gd.p = 80000.0;
-        gd.T = 7000.0;
-        gd.T_modes[0]=10000.0;
+        gd.p = 100000.0;
+        gd.T = 300.0;
+        gd.T_modes[0]=4000.0;
         gm.update_thermo_from_pT(gd);
         //writeln(gd);
-        gm.relaxEnergy(1e-9,gd);
-        //writeln(gd);
-        gm.update_thermo_from_rhou(gd);
+        foreach(int i;0 .. 100000){
+            gm.relaxEnergy(1e-8,gd);
+            gm.update_thermo_from_rhou(gd);
+        }
         //writeln(gd);
         double massfsum=0.0;
         foreach(number eachmassf;gd.massf) {

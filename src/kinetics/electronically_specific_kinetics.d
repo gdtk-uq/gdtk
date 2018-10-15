@@ -58,7 +58,7 @@ public:
         //by solving the kinetics ODE (electron temp frozen)
         Electronic_Solve(_numden_input, _numden_output, Q.T_modes[0], tInterval);
 
-        foreach (int i; 0 .. _gmodel.n_species - 2) {//number density in state solver in #/cm^3
+        foreach (int i; 0 .. _gmodel.n_species - 2) {//convert back to number density in #/m^3
             _numden[i] = _numden_output[i] * 1e6;
         } 
 
