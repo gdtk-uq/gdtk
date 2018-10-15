@@ -29,6 +29,7 @@ version (with_dvode)
 
 import gas.gas_model;
 import gas.gas_state;
+import gas.init_gas_model: init_gas_model;
 import gas.cea_gas;
 import gas.physical_constants;
 

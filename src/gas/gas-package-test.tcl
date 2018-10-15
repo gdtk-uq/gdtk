@@ -20,12 +20,12 @@ puts "-------------------------------------"
 puts "   Top-level gas/ tests"
 puts "-------------------------------------"
 
-test gas-model-test {Testing gas_model.d} -body {
-    exec ./gas_model_test
+test init-gas-model-test {Testing init_gas_model.d} -body {
+    exec ./init_gas_model_test
 } -result {} -returnCodes {0}
 
-test gas-model-complex-test {Testing gas_model.d} -body {
-    exec ./gas_model_complex_test
+test init-gas-model-complex-test {Testing init_gas_model.d complex flavour} -body {
+    exec ./init_gas_model_complex_test
 } -result {} -returnCodes {0}
 
 test ideal-gas-complex-test {Testing ideal_gas.d} -body {

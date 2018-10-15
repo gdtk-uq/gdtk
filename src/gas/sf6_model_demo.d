@@ -7,6 +7,7 @@
 
 import std.stdio;
 import gas.gas_model;
+import gas.init_gas_model;
 import gas.gas_state;
 
 void main() {
