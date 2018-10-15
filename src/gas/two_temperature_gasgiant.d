@@ -1,6 +1,9 @@
 /**
- * Authors: Yu Liu.
- * Date: 2018-09-05
+ * Two-temperature hydrogen, helium gas model for Gas-Giant entry simulations.
+ * Authors: Yu Liu, RG and PJ.
+ * Date: 2018-09-05 -- 2018-10-15
+ * Adapted from Rowan's two-temperature air gas model,
+ * using data from:
  *
  */
 
@@ -26,36 +29,40 @@ import gas.thermo.perf_gas_mix_eos;
 immutable double T_REF = 298.15; // K
 static string[] molecularSpeciesNames = ["H2"];
 
+// The following symbols are for indexing into the thermo-coefficient database.
+// They also set the order for the list of species in this gas model.
+enum Species {H2=0, H, Hplus, eminus, He}
+
 // For table parameters see end of file.
 // They are declared in the static this() function.
 
 class TwoTemperatureGasGiant : GasModel {
 public:
     int[] molecularSpecies;
-    this(lua_State* L)
+    
+    this()
     {
         _n_species = 5;
         _n_modes = 1;
         _species_names.length = _n_species;
-        //_species_names	
-        _species_names[0] = "H2";
-        _species_names[1] = "H";
-        _species_names[2] = "H+";
-        _species_names[3] = "e-";
-        _species_names[4] = "He";
-        //_mol_masses
+        // Species_names	
+        _species_names[Species.H2] = "H2";
+        _species_names[Species.H] = "H";
+        _species_names[Species.Hplus] = "H+";
+        _species_names[Species.eminus] = "e-";
+        _species_names[Species.He] = "He";
+        // Molar masses in kg/mole
         _mol_masses.length = _n_species;
-        _mol_masses[0] = 2.01588e-3; // Units are kg/mol
-        _mol_masses[1] = 1.00794e-3; // Units are kg/mol
-        _mol_masses[3] = 5.48579909070e-7; // Units are kg/mol
-        _mol_masses[2] = _mol_masses[1] - _mol_masses[3]; // Units are kg/mol
-        _mol_masses[4] = 4.002602e-3; // Units are kg/mol
-
-        lua_getglobal(L, "TwoTemperatureGasGiant");
+        _mol_masses[Species.H2] = 2.01588e-3;
+        _mol_masses[Species.H] = 1.00794e-3;
+        _mol_masses[Species.eminus] = 5.48579909070e-7;
+        _mol_masses[Species.Hplus] = _mol_masses[Species.H] - _mol_masses[Species.eminus];
+        _mol_masses[Species.He] = 4.002602e-3;
 
         _molef.length = _n_species;
+        
+        // Particle mass in g
         _particleMass.length = _n_species;
-        //_particleMass
         foreach (isp; 0 .. _n_species) {
             _particleMass[isp] = mol_masses[isp]/Avogadro_number;
             _particleMass[isp] *= 1000.0; // kg -> g
@@ -66,12 +73,12 @@ public:
             _R[isp] = R_universal/_mol_masses[isp];
         }
         _pgMixEOS = new PerfectGasMixEOS(_R);
-        //enthalpy of formation
+        // enthalpy of formation
         _del_hf.length = _n_species;
         foreach (isp; 0 .. _n_species) {
-            _del_hf[isp] = del_hf[_species_names[isp]];
+            _del_hf[isp] = del_hf[isp];
         }
-        //Cp_tr_rot at lower temperature (When vibrational energy not excited)
+        // Cp_tr_rot at lower temperature (When vibrational energy not excited)
         _Cp_tr_rot.length = _n_species;
         foreach (isp; 0 .. _n_species) {
             _Cp_tr_rot[isp] = (5./2.)*_R[isp];
@@ -95,7 +102,6 @@ public:
         _Delta_22.length = _n_species;
         _mu.length = _n_species;
         foreach (isp; 0 .. _n_species) {
- 
             _A_11[isp].length = isp+1;
             _B_11[isp].length = isp+1;
             _C_11[isp].length = isp+1;
@@ -134,13 +140,11 @@ public:
                 _alpha[jsp][isp] = _alpha[isp][jsp];
             }
         }
-    }
+    } // end constructor this()
 
     override string toString() const
     {
-        char[] repr;
-        repr ~= "TwoTemperatureGasGiant";
-        return to!string(repr);
+        return "TwoTemperatureGasGiant()";
     }
 
     override void update_thermo_from_pT(GasState Q)
@@ -351,47 +355,35 @@ private:
     @nogc
     void determineCoefficients(number T, int isp)
     {
-        debug {
-        string spName = species_name(isp);
         if (T < 800.0) {
-            foreach(i; 0 .. _A.length) { _A[i] = thermoCoeffs[spName][0][i]; }
+            foreach(i; 0 .. _A.length) { _A[i] = thermoCoeffs[isp][0][i]; }
         }
         if (T >= 800.0 && T <= 1200.0) {
             number wB = (1./400.0)*(T - 800.0);
             number wA = 1.0 - wB;
-            foreach(i; 0 .. _A.length) { _A[i] = wA*thermoCoeffs[spName][0][i] + wB*thermoCoeffs[spName][1][i]; }
+            foreach(i; 0 .. _A.length) { _A[i] = wA*thermoCoeffs[isp][0][i] + wB*thermoCoeffs[isp][1][i]; }
         }
         if (T > 1200.0 && T < 5500.0) {
-            foreach(i; 0 .. _A.length) { _A[i] = thermoCoeffs[spName][1][i]; }
+            foreach(i; 0 .. _A.length) { _A[i] = thermoCoeffs[isp][1][i]; }
         }
         if (T >= 5500.0 && T <= 6500.0) {
             number wB = (1./1000.0)*(T - 5500.0);
             number wA = 1.0 - wB;
-            foreach(i; 0 .. _A.length) { _A[i] = wA*thermoCoeffs[spName][1][i] + wB*thermoCoeffs[spName][2][i]; }
+            foreach(i; 0 .. _A.length) { _A[i] = wA*thermoCoeffs[isp][1][i] + wB*thermoCoeffs[isp][2][i]; }
         }
         if ( T > 6500.0) {
-            foreach(i; 0 .. _A.length) { _A[i] = thermoCoeffs[spName][2][i]; }
-        }
-        } else {
-            throw new Error("not yet fixed for @nogc");
+            foreach(i; 0 .. _A.length) { _A[i] = thermoCoeffs[isp][2][i]; }
         }
     }
 
     @nogc
     number CpFromCurveFits(number T, int isp)
     {
-        /* Assume that Cp is constant off the edges of the curve fits.
-         * For T < 200.0, this is a reasonable assumption to make.
-         * For T > 20000.0, that assumption might be questionable.
-         */
-        if (T < 200.0) {
-            determineCoefficients(to!number(200.0), isp);
-            T = 200.0;
-        }
-        if (T > 20000.0) {
-            determineCoefficients(to!number(20000.0), isp);
-            T = 20000.0;
-        }
+        // Assume that Cp is constant off the edges of the curve fits.
+        // For T < 200.0, this is a reasonable assumption to make.
+        // For T > 20000.0, that assumption might be questionable.
+        if (T < 200.0) { T = 200.0; }
+        if (T > 20000.0) { T = 20000.0; }
         // For all other cases, use supplied temperature
         determineCoefficients(T, isp);
         number Cp = (_A[0]/T/T + _A[1]/T + _A[2] + _A[3]*T + _A[4]*T*T+_A[5]*T*T*T+_A[6]*T*T*T*T);
@@ -522,49 +514,49 @@ private:
 
 }
 
-static double[string] del_hf;
-static double[9][3][string] thermoCoeffs;
+static double[5] del_hf;
+static double[9][3][5] thermoCoeffs;
 static double[string] A_11, B_11, C_11, D_11;
 static double[string] A_22, B_22, C_22, D_22;
 
 static this()
 {
-    del_hf["H2"]  = 0.0;
-    del_hf["H"]   = 217.999/1.00794e-3;
-    del_hf["H+"]  = 1536.246/(1.00794e-3 - 5.48579909070e-7);
-    del_hf["e-"]  = 0.0;
-    del_hf["He"]  = 0.0;
+    del_hf[Species.H2]  = 0.0;
+    del_hf[Species.H]   = 217.999/1.00794e-3;
+    del_hf[Species.Hplus]  = 1536.246/(1.00794e-3 - 5.48579909070e-7);
+    del_hf[Species.eminus]  = 0.0;
+    del_hf[Species.He]  = 0.0;
     
 
-    thermoCoeffs["H2"] = 
+    thermoCoeffs[Species.H2] = 
         [
          [  4.078323210e+04, -8.009186040e+02, 8.214702010e+00, -1.269714457e-02,  1.753605076e-05, -1.202860270e-08,  3.368093490e-12, 2.682484665e+03, -3.043788844e+01], // 200 -- 1000 K
          [  5.608128010e+05, -8.371504740e+02, 2.975364532e+00,  1.252249124e-03, -3.740716190e-07,  5.936625200e-11, -3.606994100e-15, 5.339824410e+03, -2.202774769e+00], // 1000 -- 6000 K
          [  4.966884120e+08, -3.147547149e+05, 7.984121880e+01, -8.414789210e-03,  4.753248350e-07, -1.371873492e-11,  1.605461756e-16, 2.488433516e+06, -6.695728110e+02], // 6000 -- 20000 K
          ];
 
-    thermoCoeffs["H"] = 
+    thermoCoeffs[Species.H] = 
         [
          [  0.000000000e+00,  0.000000000e+00, 2.500000000e+00,  0.000000000e+00, 0.000000000e+00,  0.000000000e+00, 0.000000000e+00, 2.547370801e+04, -4.466828530e-01], // 200 -- 1000 K
          [  6.078774250e+01, -1.819354417e-01, 2.500211817e+00, -1.226512864e-07, 3.732876330e-11, -5.687744560e-15, 3.410210197e-19, 2.547486398e+04, -4.481917770e-01], // 1000 -- 6000 K
          [  2.173757694e+08, -1.312035403e+05, 3.399174200e+01, -3.813999680e-03, 2.432854837e-07, -7.694275540e-12, 9.644105630e-17, 1.067638086e+06, -2.742301051e+02], // 6000 -- 20000 K
          ];
 
-    thermoCoeffs["H+"] = 
+    thermoCoeffs[Species.Hplus] = 
         [
          [  0.000000000e+00,  0.000000000e+00, 2.500000000e+00,  0.000000000e+00, 0.000000000e+00,  0.000000000e+00, 0.000000000e+00, 1.840214877e+05, -1.140646644e+00], // 300 -- 1000 K
          [  0.000000000e+00,  0.000000000e+00, 2.500000000e+00,  0.000000000e+00, 0.000000000e+00,  0.000000000e+00, 0.000000000e+00, 1.840214877e+05, -1.140646644e+00], // 1000 -- 6000 K
          [  0.000000000e+00,  0.000000000e+00, 2.500000000e+00,  0.000000000e+00, 0.000000000e+00,  0.000000000e+00, 0.000000000e+00, 1.840214877e+05, -1.140646644e+00], // 6000 -- 20000 K
          ];
 
-    thermoCoeffs["e-"] = 
+    thermoCoeffs[Species.eminus] = 
         [
          [  0.000000000e+00,  0.000000000e+00, 2.500000000e+00,  0.000000000e+00, 0.000000000e+00,  0.000000000e+00, 0.000000000e+00, -7.453750000e+02, -1.172081224e+01], // 300 -- 1000 K
          [  0.000000000e+00,  0.000000000e+00, 2.500000000e+00,  0.000000000e+00, 0.000000000e+00,  0.000000000e+00, 0.000000000e+00, -7.453750000e+02, -1.172081224e+01], // 1000 -- 6000 K
          [  0.000000000e+00,  0.000000000e+00, 2.500000000e+00,  0.000000000e+00, 0.000000000e+00,  0.000000000e+00, 0.000000000e+00, -7.453750000e+02, -1.172081224e+01], // 6000 -- 20000 K
          ];
         
-    thermoCoeffs["He"] =
+    thermoCoeffs[Species.He] =
         [
          [  0.000000000e+00,  0.000000000e+00, 2.500000000e+00,  0.000000000e+00, 0.000000000e+00,  0.000000000e+00, 0.000000000e+00, -7.453750000e+02,  9.287239740e-01], // 300 -- 1000 K
          [  0.000000000e+00,  0.000000000e+00, 2.500000000e+00,  0.000000000e+00, 0.000000000e+00,  0.000000000e+00, 0.000000000e+00, -7.453750000e+02,  9.287239740e-01], // 1000 -- 6000 K
@@ -610,21 +602,16 @@ static this()
 }
 
 
-
-//// Unit test of the basic gas model...
-
 version(two_temperature_gasgiant_test) {
     import std.stdio;
     import util.msg_service;
     import std.math : approxEqual;
     int main() {
-        writeln("Beginning the unit test...");
-        writeln("Testing the gas state functions...");
-        lua_State* L = init_lua_State();
-
-        doLuaFile(L, "sample-data/two-temperature-gasgiant-model.lua");
-        auto gm = new TwoTemperatureGasGiant(L);
-        lua_close(L);
+        // Comment out lines that write to console
+        // to avoid triggering a test failure.
+        // writeln("Beginning the unit test...");
+        // writeln("Testing the gas state functions...");
+        auto gm = new TwoTemperatureGasGiant();
         auto gd = new GasState(5, 1);
         gd.p = 1.0e5;
         gd.T = 310.0;
@@ -644,7 +631,7 @@ version(two_temperature_gasgiant_test) {
         gm.update_thermo_from_pT(gd);
         double my_rho = 1.0e5 / (4124.506 * 310.0);
         assert(approxEqual(gd.rho, my_rho, 1.0e-4), failedUnitTest());
-        writeln(gd);
+        // writeln(gd);
 
         return 0;
     }
