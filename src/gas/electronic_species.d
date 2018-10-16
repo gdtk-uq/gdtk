@@ -26,6 +26,7 @@ class ElectronicSpecies {
     @property @nogc double mol_mass() const { return _mol_mass; }
     @property @nogc int group_degeneracy() const { return _group_degeneracy; }
     @property @nogc int dof() const { return _dof; }
+    @property @nogc double electronic_energy() const {return _electronic_energy; }
 
     this(lua_State *L)
     {
@@ -34,9 +35,10 @@ class ElectronicSpecies {
         _mol_mass = getDouble(L, -1, "M");
         _group_degeneracy = getInt(L, -1, "group_degeneracy");
         _dof = getInt(L,-1,"dof");
+        _electronic_energy = getDouble(L, -1, "group_energy")*electron_volt_energy*Avogadro_number/_mol_mass;
     }
 
-    @nogc abstract number group_energy(in GasState Q) const;
+    // @nogc abstract number group_energy(in GasState Q) const;
 
 private:
     string _name;
@@ -44,25 +46,26 @@ private:
     int _level;
     int _group_degeneracy;
     int _dof;
+    double _electronic_energy;
 }
 
-class GroupedElectronicSpecies : ElectronicSpecies {
-public:
-    this(lua_State *L)
-    {
-        super(L);
-        _group_energy = to!number(getDouble(L, -1, "group_energy"));
-        //convert to J/kg
-        _group_energy *= (electron_volt_energy*Avogadro_number)/_mol_mass;
-    }
+// class GroupedElectronicSpecies : ElectronicSpecies {
+// public:
+//     this(lua_State *L)
+//     {
+//         super(L);
+//         _group_energy = to!number(getDouble(L, -1, "group_energy"));
+//         //convert to J/kg
+//         _group_energy *= (electron_volt_energy*Avogadro_number)/_mol_mass;
+//     }
 
-    override number group_energy(in GasState Q) const { return _group_energy; }
+//     override number group_energy(in GasState Q) const { return _group_energy; }
 
-private:
-    number _group_energy;
-}
+// private:
+//     number _group_energy;
+// }
 
 ElectronicSpecies createElectronicSpecies(lua_State *L)
 {
-    return new GroupedElectronicSpecies(L);
+    return new ElectronicSpecies(L);
 }

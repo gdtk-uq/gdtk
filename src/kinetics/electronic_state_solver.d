@@ -352,9 +352,9 @@ void First_Step()
 }
 
 @nogc
-void Electronic_Solve( number[] state_from_cfd, ref number[] state_to_cfd, number given_Te, double given_endtime)
+void Electronic_Solve( number[] state_from_cfd, ref number[] state_to_cfd, number given_Te, double given_endtime, double dtChemSuggest)
 {
-    dt = 1.0e-9;
+    dt = dtChemSuggest;
     Ne=state_from_cfd[$-1];
     state_vector[]=state_from_cfd[0 .. $-1];
     UpdateStateFromVector(state,state_vector);
@@ -369,7 +369,10 @@ void Electronic_Solve( number[] state_from_cfd, ref number[] state_to_cfd, numbe
         Step();
         t+=dt;
         if ((endtime-t)<dt){
-            dt=(endtime-dt);
+            dt = (endtime-t);
+        }
+        if (dt<1e-18){
+            break;
         }
     }
     UpdateVectorFromState(state_vector,state);

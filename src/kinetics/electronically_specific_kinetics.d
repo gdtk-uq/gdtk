@@ -24,6 +24,7 @@ import util.lua_service;
 import gas;
 import gas.physical_constants;
 import gas.electronically_specific_gas;
+import gas.electronic_species;
 
 import kinetics.thermochemical_reactor;
 import kinetics.electronic_state_solver;
@@ -44,45 +45,96 @@ public:
     override void opCall(GasState Q, double tInterval,
                          ref double dtChemSuggest, ref double dtThermSuggest,
                          ref number[maxParams] params)
-    {
+    {   
+        /**
+         * Process for kinetics update is as follows
+         * 1. Calculate initial energy in higher electronic states
+         * 2. Pass mass fraction to number density vector and convert to #/cm^3 for the solver
+         * 3. Solve for the updated electronic states over a time of tInterval (use dtChemSuggest in solver)
+         * 4. Convert number density vector to mol/cm^3 for the chemistry dissociation
+         * 5. Call molecule update with state Q --> updates numden vector
+         * 6. Convert number density vector to #/m^3 and pass back to Q.massf
+         * 8. Calculate final energy in higher electronic states --> update u_modes[0] --> update thermo
+         * 9. Relax energy over tInterval with 100 timesteps
+         *
+         */
+        
+        // 1. 
+        initialEnergy = energyInNoneq(Q);
+        
+        // 2. 
         foreach(int i; 0 .. _gmodel.n_species){ //give massf values for the required species
             _numden[i] = Q.massf[i];
         }
-        
         _gmodel.massf2numden(Q, _numden); //Convert from mass fraction to number density
 
         foreach(int i;0 .. _gmodel.n_species - 2) { //number density in state solver in #/cm^3
             _numden_input[i] = _numden[i] / 1e6;
         }
-        //update the number density vector for time t+t_interval
-        //by solving the kinetics ODE (electron temp frozen)
-        Electronic_Solve(_numden_input, _numden_output, Q.T_modes[0], tInterval);
 
+        // 3. 
+        Electronic_Solve(_numden_input, _numden_output, Q.T_modes[0], tInterval, dtChemSuggest);
+        
+        // 4. 
         foreach (int i; 0 .. _gmodel.n_species - 2) {//convert back to number density in #/m^3
             _numden[i] = _numden_output[i] * 1e6;
         } 
 
-        //Coefficients for Molecule Update require mol/cm^3
         foreach(int i; 0 .. _gmodel.n_species){ //convert numden to mol/cm^3
             _numden[i] = _numden[i] / (Avogadro_number*1e6);
         }
-        Molecule_Update(Q, tInterval);
 
+        // 5. 
+        Molecule_Update(Q, tInterval);
+    
+        // 6. 
         foreach(int i; 0 .. _gmodel.n_species){ //convert mol/cm^3 to numden
             _numden[i] = _numden[i] * Avogadro_number*1e6;
         }
-
         _gmodel.numden2massf(_numden,Q);
+        // 8. 
+        finalEnergy = energyInNoneq(Q);
+        Q.u -= finalEnergy-initialEnergy;
+        _gmodel.update_thermo_from_rhou(Q);
+        
+        // 9. 
+        foreach(int i; 0 .. 100) {
+            relaxEnergy(tInterval/100,Q);
+            _gmodel.update_thermo_from_rhou(Q);
+        }
+        
     }
 
 private:
     number[] _numden; //Total set of species including static N2 and O2
     number[] _numden_input; //Input for the electronic state solver, exclusive of N2 and O2
     number[] _numden_output; //Output for the state solver
+    number initialEnergy;
+    number finalEnergy;
     number N_sum;
     number O_sum;
     number N2_step_change;
     number O2_step_change;
+
+    //physical cconstants
+    double _pi = 3.14159265359; //honestly, this should probably be defined in physical constants
+    double _me = 9.10938356e-28; //electron mass in g
+    double _kb = 1.3807e-16; //Boltzmann constant in cm^2 g s^-1 K^-1
+    double _e = 4.8032e-10; // electron charge, cm^(3/2) g s^-2 K^-1
+
+
+    //create array of coefficients for appleton and Bray energy relaxation method
+    //Rows in order N2, N, O2, O
+    //each element: a,b,c in equation cross_section = a + b*Te + c*Te^2
+    double[][] AB_coef = [[7.5e-20, 5.5e-24, -1e-28],
+                            [5.0e-20, 0.0, 0.0],
+                            [2.0e-20, 6.0e-24, 0.0],
+                            [1.2e-20, 1.7e-24, -2e-29]];
+
+    number _cs;
+    number _Nsum;
+    number _Osum;
+    number _sumterm;
 
     //Arhenius coefficients for N2 and O2 dissociation
     //In order: N2, N, O2, O
@@ -106,6 +158,7 @@ private:
                             [1.0, 3.010e+15, -0.50, 0.0],
                             [9.0, 3.010e+15, -0.50, 0.0],
                             [25.0, 3.010e+15, -0.50, 0.0]];
+
     @nogc
     number N2_fr(GasState Q) //must only be called when in conc mol/cm^3, not massf
     {
@@ -197,6 +250,72 @@ private:
             _numden[9] += _dt*2*O2_step_change;
         }
     }
+
+    @nogc number energyInNoneq(const GasState Q)  
+    {
+        number uNoneq = 0.0;
+        foreach (int isp; 0 .. _gmodel.n_species) {
+            uNoneq += Q.massf[isp] * _gmodel.electronic_energy[isp];
+        }
+        return uNoneq;
+    }
+
+    @nogc void relaxEnergy(double dt, GasState Q) //Uses the Appleton & Bray model to relax energy between the two energy modes
+    {   
+        _gmodel.massf2numden(Q,_numden);
+        foreach(int i;0 .. _gmodel.n_species){
+            _numden[i] = _numden[i]/1e6;
+        }
+        number heatToElectron = 100*AppletonBrayRate(Q,_numden);
+        Q.u_modes[0] += dt*heatToElectron;
+        Q.u -= dt*heatToElectron;
+    }
+
+    @nogc number AppletonBrayRate(GasState Q, number[] _numden) 
+    { //only call when gas state in number density /cm^3
+        assert((_numden[0]>1e6),"Still in mass fraction, not number density?");
+        @nogc number eff_coll_freq(number ni, bool ion, string species = "ion") 
+        {
+            if (ion) {
+                return (8.0/3.0)*((_pi/_me)^^0.5)*ni*(_e^^4)*(1.0/((2*_kb*Q.T_modes[0])^^(3.0/2.0)))*
+                                log(((_kb*Q.T_modes[0])^^3)/(_pi*_numden[18]*(_e^^6)));
+            } else {
+                switch (species)
+                {
+                    default:
+                        throw new Exception("This shouldn't happen");
+                    
+                    case "N2":
+                        _cs = AB_coef[0][0] + AB_coef[0][1]*Q.T_modes[0] + AB_coef[0][2]*(Q.T_modes[0]^^2); //energy exchange cross section
+                        return ni*_cs*(((8*_kb*Q.T_modes[0])/(_pi*_me))^^0.5);
+
+                    case "N":
+                        _cs = AB_coef[1][0] + AB_coef[1][1]*Q.T_modes[0] + AB_coef[1][2]*(Q.T_modes[0]^^2); //energy exchange cross section
+                        return ni*_cs*(((8*_kb*Q.T_modes[0])/(_pi*_me))^^0.5);
+                    
+                    case "O2":
+                        _cs = AB_coef[2][0] + AB_coef[2][1]*Q.T_modes[0] + AB_coef[2][2]*(Q.T_modes[0]^^2); //energy exchange cross section
+                        return ni*_cs*(((8*_kb*Q.T_modes[0])/(_pi*_me))^^0.5);
+                    
+                    case "O":
+                        _cs = AB_coef[3][0] + AB_coef[3][1]*Q.T_modes[0] + AB_coef[3][2]*(Q.T_modes[0]^^2); //energy exchange cross section
+                        return ni*_cs*(((8*_kb*Q.T_modes[0])/(_pi*_me))^^0.5);
+                }
+            }
+        }
+        _Nsum = 0.0;
+        _Osum = 0.0;
+        foreach(int isp;0 .. 8) {
+            _Nsum += _numden[isp];
+            _Osum += _numden[isp + 9];
+        }
+        _sumterm = 0.0;
+        _sumterm += eff_coll_freq(_numden[19],false,"N2")/_gmodel.mol_masses[19] + eff_coll_freq(_Nsum,false,"N")/_gmodel.mol_masses[0] +
+                    eff_coll_freq(_numden[8],true)/_gmodel.mol_masses[8] + eff_coll_freq(_numden[20],false,"O2")/_gmodel.mol_masses[20] + 
+                    eff_coll_freq(_Osum,false,"O")/_gmodel.mol_masses[9] + eff_coll_freq(_numden[17],true)/_gmodel.mol_masses[17];
+        return 3*_numden[18]*_me*1e3*R_universal*(Q.T - Q.T_modes[0])*_sumterm;
+    }
+
 }
 
 version(electronically_specific_kinetics_test) 
@@ -206,7 +325,7 @@ version(electronically_specific_kinetics_test)
         import util.msg_service;
 
         auto L = init_lua_State();
-        doLuaFile(L, "../kinetics/sample-input/electronic_composition.lua");
+        doLuaFile(L, "../gas/sample-data/electronic_composition.lua");
         auto gm = new ElectronicallySpecificGas(L);
         auto gd = new GasState(21,1);
 
@@ -226,16 +345,15 @@ version(electronically_specific_kinetics_test)
         gd.massf[18] = 1e-8;
         gd.massf[19] = 0.78;
         gd.massf[20] = 1.0 - 0.78 - 1e-8;
-        gd.p = 1000000.0;
+        gd.p = 100000.0;
         gd.T = 7000.0;
         gd.T_modes[0] = 10000.0;
         gm.update_thermo_from_pT(gd);
-        
 
         lua_close(L);
 
-        double _dt = 1e-9;
-        double _duration = 1e-7;
+        double _dt = 1e-7;
+        double _duration = 1e-6;
         double _t = 0.0;
 
         // auto L2 = init_lua_State();
@@ -243,14 +361,11 @@ version(electronically_specific_kinetics_test)
 
         ElectronicallySpecificKinetics esk = new ElectronicallySpecificKinetics(gm);
 
-        double dtChemSuggest = -1.0;
+        double dtChemSuggest = 1e-8;
         double dtThermSuggest = -1.0;
         number[maxParams] params;
         while (_t < _duration) {
-            
             esk(gd, _dt, dtChemSuggest, dtThermSuggest, params);
-            //update U from change in energy modes
-            gm.update_thermo_from_rhou(gd);
             _t+=_dt;
         }
         double massfsum=0.0;
@@ -258,7 +373,6 @@ version(electronically_specific_kinetics_test)
             massfsum += eachmassf;
         }
         assert(approxEqual(massfsum, 1.0, 1e-2), failedUnitTest());
-        
         return 0;
 
     }

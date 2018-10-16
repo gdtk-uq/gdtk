@@ -40,7 +40,7 @@ public:
         foreach (isp; 0 .. _n_species) {
             lua_rawgeti(L, -1, isp);
             if (lua_isnil(L, -1)) {
-                string msg = format("There was an error when attempting to information about pseudo-species %d.\n", isp);
+                string msg = format("There was an error when attempting to information about electronic-species %d.\n", isp);
                 throw new Error(msg);
             }
             _electronicSpecies ~= createElectronicSpecies(L);
@@ -51,6 +51,7 @@ public:
             _level ~= _electronicSpecies[$-1].level;
             _group_degeneracy ~= _electronicSpecies[$-1].group_degeneracy;
             _dof ~= _electronicSpecies[$-1].dof;
+            _electronic_energy ~= _electronicSpecies[$-1].electronic_energy;
         }
         lua_pop(L, 1);
         create_species_reverse_lookup();
@@ -75,7 +76,6 @@ public:
 
     override void update_thermo_from_rhou(GasState Q)
     {
-        auto uNoneq = energyInNoneq(Q);
         auto Cv_heavy = heavy_Cv(Q);
         Q.T = (Q.u)/Cv_heavy; 
         auto Cv_electron = electron_Cv(Q);
@@ -169,16 +169,18 @@ public:
     {
         return _s1 + _Cp * log(Q.T/_T1) - _Rgas * log(Q.p/_p1);
     }
-    void relaxEnergy(double dt, GasState Q) //Uses the Appleton & Bray model to relax energy between the two energy modes
-    {   
-        massf2numden(Q,_numden);
-        foreach(int i;0 .. _n_species){
-            _numden[i] = _numden[i]/1e6;
-        }
-        number heatToElectron = AppletonBrayRate(Q,_numden);
-        Q.u_modes[0] += dt*heatToElectron;
-        Q.u -= dt*heatToElectron;
-    }
+    // void relaxEnergy(double dt, GasState Q) //Uses the Appleton & Bray model to relax energy between the two energy modes
+    // {   
+    //     massf2numden(Q,_numden);
+    //     foreach(int i;0 .. _n_species){
+    //         _numden[i] = _numden[i]/1e6;
+    //     }
+    //     number heatToElectron = AppletonBrayRate(Q,_numden);
+    //     Q.u_modes[0] += dt*heatToElectron;
+    //     Q.u -= dt*heatToElectron;
+    // }
+
+    
 
 private:
     ElectronicSpecies[] _electronicSpecies;
@@ -220,10 +222,11 @@ private:
     number _Osum;
     number _sumterm;
 
-    @nogc number energyInNoneq(const GasState Q) const {
+    @nogc number energyInNoneq(const GasState Q) const 
+    {
         number uNoneq = 0.0;
         foreach (isp; 0 .. _n_species) {
-            uNoneq += Q.massf[isp] * _electronicSpecies[isp].group_energy(Q);
+            uNoneq += Q.massf[isp] * _electronicSpecies[isp].electronic_energy;
         }
         return uNoneq;
     }
@@ -327,10 +330,7 @@ version(electronically_specific_gas_test) {
         gd.T_modes[0]=4000.0;
         gm.update_thermo_from_pT(gd);
         //writeln(gd);
-        foreach(int i;0 .. 100000){
-            gm.relaxEnergy(1e-8,gd);
-            gm.update_thermo_from_rhou(gd);
-        }
+        
         //writeln(gd);
         double massfsum=0.0;
         foreach(number eachmassf;gd.massf) {
