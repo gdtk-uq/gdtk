@@ -476,6 +476,49 @@ public:
                     cell_cloud_cell_ids ~= f.left_cell.id;
                 }
             }
+            foreach (face; cell_list[0].iface) {
+		if (cell_cloud_face_ids.canFind(face.id) == false) {
+		    f.cloud_pos ~= &(face.pos); // assume gtl = 0
+		    f.cloud_fs ~= face.fs;
+		    cell_cloud_face_ids ~= face.id;
+		}
+	    }
+	} // end void boundary_face_cloud_generic()
+        void boundary_face_cloud_symmetric(FVInterface f, size_t i, BoundaryCondition bc, size_t bndary_idx, BoundaryFaceSet boundary){
+            double[] cell_cloud_face_ids;
+            double[] cell_cloud_cell_ids;
+            FVCell[] cell_list;
+            // store interface
+            f.cloud_pos ~= &(f.pos);
+            f.cloud_fs ~= f.fs;
+            cell_cloud_face_ids ~= f.id;
+            if (bc.outsigns[i] == 1) {
+                // left cell should be interior
+                // store as a neighbour cell
+                f.cloud_pos ~= &(f.left_cell.pos[0]); // assume gtl = 0
+                f.cloud_fs ~= f.left_cell.fs;
+                cell_list~= f.left_cell.cell_cloud;
+                cell_cloud_cell_ids ~= f.left_cell.id;
+                // store ghost0
+                if (f.right_cell && f.right_cell.will_have_valid_flow) {
+                    f.cloud_pos ~= &(f.right_cell.pos[0]);
+                    f.cloud_fs ~= f.right_cell.fs;
+                    cell_cloud_cell_ids ~= f.right_cell.id;
+                }
+            } else {
+                // right_cell should be interior
+                // store as a neighbour cell
+                f.cloud_pos ~= &(f.right_cell.pos[0]); // assume gtl = 0
+                f.cloud_fs ~= f.right_cell.fs;
+                cell_list ~= f.right_cell.cell_cloud;
+                cell_cloud_cell_ids ~= f.right_cell.id;
+                // store ghost0
+                if (f.left_cell && f.left_cell.will_have_valid_flow) { 
+                    f.cloud_pos ~= &(f.left_cell.pos[0]);
+                    f.cloud_fs ~= f.left_cell.fs;
+                    cell_cloud_cell_ids ~= f.left_cell.id;
+                }
+            }
             foreach (fvtx; f.vtx) {
                 foreach (other_face_id; faceIndexListPerVertex[fvtx.id]) {
                     FVInterface other_face = faces[other_face_id];
