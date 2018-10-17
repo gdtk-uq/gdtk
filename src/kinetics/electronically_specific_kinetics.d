@@ -55,7 +55,6 @@ public:
          * 5. Call molecule update with state Q --> updates numden vector
          * 6. Convert number density vector to #/m^3 and pass back to Q.massf
          * 8. Calculate final energy in higher electronic states --> update u_modes[0] --> update thermo
-         * 9. Relax energy over tInterval with 100 timesteps
          *
          */
         
@@ -95,14 +94,7 @@ public:
         // 8. 
         finalEnergy = energyInNoneq(Q);
         Q.u -= finalEnergy-initialEnergy;
-        _gmodel.update_thermo_from_rhou(Q);
-        
-        // 9. 
-        foreach(int i; 0 .. 100) {
-            relaxEnergy(tInterval/100,Q);
-            _gmodel.update_thermo_from_rhou(Q);
-        }
-        
+        _gmodel.update_thermo_from_rhou(Q);        
     }
 
 private:
@@ -122,19 +114,6 @@ private:
     double _kb = 1.3807e-16; //Boltzmann constant in cm^2 g s^-1 K^-1
     double _e = 4.8032e-10; // electron charge, cm^(3/2) g s^-2 K^-1
 
-
-    //create array of coefficients for appleton and Bray energy relaxation method
-    //Rows in order N2, N, O2, O
-    //each element: a,b,c in equation cross_section = a + b*Te + c*Te^2
-    double[][] AB_coef = [[7.5e-20, 5.5e-24, -1e-28],
-                            [5.0e-20, 0.0, 0.0],
-                            [2.0e-20, 6.0e-24, 0.0],
-                            [1.2e-20, 1.7e-24, -2e-29]];
-
-    number _cs;
-    number _Nsum;
-    number _Osum;
-    number _sumterm;
 
     //Arhenius coefficients for N2 and O2 dissociation
     //In order: N2, N, O2, O
@@ -259,63 +238,6 @@ private:
         }
         return uNoneq;
     }
-
-    @nogc void relaxEnergy(double dt, GasState Q) //Uses the Appleton & Bray model to relax energy between the two energy modes
-    {   
-        _gmodel.massf2numden(Q,_numden);
-        foreach(int i;0 .. _gmodel.n_species){
-            _numden[i] = _numden[i]/1e6;
-        }
-        number heatToElectron = 100*AppletonBrayRate(Q,_numden);
-        Q.u_modes[0] += dt*heatToElectron;
-        Q.u -= dt*heatToElectron;
-    }
-
-    @nogc number AppletonBrayRate(GasState Q, number[] _numden) 
-    { //only call when gas state in number density /cm^3
-        assert((_numden[0]>1e6),"Still in mass fraction, not number density?");
-        @nogc number eff_coll_freq(number ni, bool ion, string species = "ion") 
-        {
-            if (ion) {
-                return (8.0/3.0)*((_pi/_me)^^0.5)*ni*(_e^^4)*(1.0/((2*_kb*Q.T_modes[0])^^(3.0/2.0)))*
-                                log(((_kb*Q.T_modes[0])^^3)/(_pi*_numden[18]*(_e^^6)));
-            } else {
-                switch (species)
-                {
-                    default:
-                        throw new Exception("This shouldn't happen");
-                    
-                    case "N2":
-                        _cs = AB_coef[0][0] + AB_coef[0][1]*Q.T_modes[0] + AB_coef[0][2]*(Q.T_modes[0]^^2); //energy exchange cross section
-                        return ni*_cs*(((8*_kb*Q.T_modes[0])/(_pi*_me))^^0.5);
-
-                    case "N":
-                        _cs = AB_coef[1][0] + AB_coef[1][1]*Q.T_modes[0] + AB_coef[1][2]*(Q.T_modes[0]^^2); //energy exchange cross section
-                        return ni*_cs*(((8*_kb*Q.T_modes[0])/(_pi*_me))^^0.5);
-                    
-                    case "O2":
-                        _cs = AB_coef[2][0] + AB_coef[2][1]*Q.T_modes[0] + AB_coef[2][2]*(Q.T_modes[0]^^2); //energy exchange cross section
-                        return ni*_cs*(((8*_kb*Q.T_modes[0])/(_pi*_me))^^0.5);
-                    
-                    case "O":
-                        _cs = AB_coef[3][0] + AB_coef[3][1]*Q.T_modes[0] + AB_coef[3][2]*(Q.T_modes[0]^^2); //energy exchange cross section
-                        return ni*_cs*(((8*_kb*Q.T_modes[0])/(_pi*_me))^^0.5);
-                }
-            }
-        }
-        _Nsum = 0.0;
-        _Osum = 0.0;
-        foreach(int isp;0 .. 8) {
-            _Nsum += _numden[isp];
-            _Osum += _numden[isp + 9];
-        }
-        _sumterm = 0.0;
-        _sumterm += eff_coll_freq(_numden[19],false,"N2")/_gmodel.mol_masses[19] + eff_coll_freq(_Nsum,false,"N")/_gmodel.mol_masses[0] +
-                    eff_coll_freq(_numden[8],true)/_gmodel.mol_masses[8] + eff_coll_freq(_numden[20],false,"O2")/_gmodel.mol_masses[20] + 
-                    eff_coll_freq(_Osum,false,"O")/_gmodel.mol_masses[9] + eff_coll_freq(_numden[17],true)/_gmodel.mol_masses[17];
-        return 3*_numden[18]*_me*1e3*R_universal*(Q.T - Q.T_modes[0])*_sumterm;
-    }
-
 }
 
 version(electronically_specific_kinetics_test) 

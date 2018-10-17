@@ -74,7 +74,7 @@ extern(C) int updateElectronicStates(lua_State *L)
     // for the function signature
     number[maxParams] params;
     // and dummy dtChemSuggest and dtThermSuggest
-    double dtChemSuggest = 0.0;
+    double dtChemSuggest = luaL_checknumber(L, 4);
     double dtThermSuggest = 0.0;
 
     try {
@@ -87,7 +87,8 @@ extern(C) int updateElectronicStates(lua_State *L)
     }
     // Update gas table.
     setGasStateInTable(L, gm, 2, Q);
-
+    // Return new dtChemSuggest
+    lua_pushnumber(L, dtChemSuggest);
     return 0;
 }
 
