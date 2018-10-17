@@ -19,6 +19,7 @@ import gas.two_temperature_nitrogen;
 import gas.vib_specific_nitrogen;
 import gas.two_temperature_air;
 import gas.pseudo_species_gas;
+import gas.electronically_specific_gas;
 
 import kinetics.chemistry_update;
 import kinetics.powers_aslam_kinetics;
@@ -28,6 +29,7 @@ import kinetics.fuel_air_mix_kinetics;
 import kinetics.two_temperature_nitrogen_kinetics;
 import kinetics.vib_specific_nitrogen_kinetics;
 import kinetics.two_temperature_air_kinetics;
+import kinetics.electronically_specific_kinetics;
 version (with_dvode)
 {
     import kinetics.pseudo_species_kinetics;
@@ -103,6 +105,9 @@ ThermochemicalReactor init_thermochemical_reactor(GasModel gmodel, string fileNa
     }
     if ((cast(TwoTemperatureAir) gmodel) !is null) {
         reactor = new TwoTemperatureAirKinetics(fileName1, fileName2, gmodel);
+    }
+    if ((cast(ElectronicallySpecificGas) gmodel) !is null) {
+        reactor = new ElectronicallySpecificKinetics(gmodel);
     }
     version (with_dvode)
     {

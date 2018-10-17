@@ -23,6 +23,7 @@ ifeq ($(WITH_DVODE),1)
 endif
 
 KINETICS_LUA_FILES := $(KINETICS_DIR)/luachemistry_update.d \
+	$(KINETICS_DIR)/luaelectronically_specific_kinetics.d \
 	$(KINETICS_DIR)/luareaction_mechanism.d \
 	$(KINETICS_DIR)/luatwo_temperature_air_kinetics.d \
 	$(KINETICS_DIR)/luavib_specific_nitrogen_kinetics.d
