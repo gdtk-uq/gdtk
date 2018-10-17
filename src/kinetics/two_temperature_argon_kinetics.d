@@ -324,7 +324,7 @@ version(two_temperature_argon_kinetics_test) {
         gd.massf[0] = 1.0; gd.massf[1] = 0.0; gd.massf[2] = 0.0;
 
         auto reactor = new UpdateArgonFrac("sample-input/two-temperature-reacting-argon-model.lua", gm);
-        double[] params;
+        double[maxParams] params;
         double dtThermSuggest;
         double dtSuggest;
 

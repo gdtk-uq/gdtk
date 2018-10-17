@@ -20,6 +20,7 @@ import gas.vib_specific_nitrogen;
 import gas.two_temperature_air;
 import gas.pseudo_species_gas;
 import gas.electronically_specific_gas;
+import gas.two_temperature_gasgiant;
 
 import kinetics.chemistry_update;
 import kinetics.powers_aslam_kinetics;
@@ -34,6 +35,8 @@ version (with_dvode)
 {
     import kinetics.pseudo_species_kinetics;
 }
+import kinetics.two_temperature_gasgiant_kinetics;
+
 
 class ThermochemicalReactorUpdateException : Exception {
     @nogc
@@ -114,6 +117,9 @@ ThermochemicalReactor init_thermochemical_reactor(GasModel gmodel, string fileNa
         if ((cast(PseudoSpeciesGas) gmodel) !is null) {
             reactor = new PseudoSpeciesKinetics(gmodel);
         }
+    }
+    if ((cast(TwoTemperatureGasGiant) gmodel) !is null) {
+        reactor = new UpdateGasGiant(gmodel);
     }
     if (reactor is null) {
         throw new ThermochemicalReactorUpdateException("Oops, failed to set up a ThermochemicalReactor.");

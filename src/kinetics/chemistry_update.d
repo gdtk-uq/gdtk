@@ -716,7 +716,7 @@ version(chemistry_update_test) {
         double dtChemSuggest = 200.0;
         double dtThermSuggest = 0.0;
         auto chemUpdate = new ChemistryUpdate("sample-input/H2-I2-inp.lua", gmodel);
-        double[] params;
+        double[maxParams] params;
         chemUpdate(gd, tInterval, dtChemSuggest, dtThermSuggest, params);
         double[] conc;
         conc.length = 3;
