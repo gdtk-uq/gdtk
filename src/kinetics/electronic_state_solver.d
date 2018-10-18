@@ -74,6 +74,8 @@ double[][] Import_2D(string filename) {
             writeln("no such filename: ",filename);
         }
 	return output_data;
+    } else {
+        throw new Error("Not implemented for nondebug build.");
     }
 }
 
@@ -153,40 +155,38 @@ void Init()
     //populate energy data and rate fitting coefficients
     full_grouped_data~=to!(double[][])(NI_grouped_data);
     full_grouped_data~=to!(double[][])(OI_grouped_data);
-    debug 
-    {
+    debug {
         PopulateRateFits();
-    }else {
-            throw new Error("PopulateRateFits is only available in debug flavour.");
+
+        //set size of state arrays and linalg BDF solver arrays and vectors
+        state.length=full_grouped_data.length;
+        guess_state.length=full_grouped_data.length;
+        step_state.length=full_grouped_data.length;
+
+        foreach (int i, double[][] indiv_data;full_grouped_data){
+            total_species_number+=indiv_data.length+1;
+
+            state[i].length=indiv_data.length+1;
+            guess_state[i].length=indiv_data.length+1;
+            step_state[i].length=indiv_data.length+1;
         }
+        state_vector.length=total_species_number;
+        prev_state_vector.length=total_species_number;
+        initial_vector.length=total_species_number;
+        rate_vector.length=total_species_number;
+        Asolve = new Matrix!number(total_species_number,total_species_number);
+        update_vector.length=total_species_number;
+        RHSvector.length=total_species_number;
+        pivot.length=total_species_number;
 
-    //set size of state arrays and linalg BDF solver arrays and vectors
-    state.length=full_grouped_data.length;
-    guess_state.length=full_grouped_data.length;
-    step_state.length=full_grouped_data.length;
-
-    foreach (int i, double[][] indiv_data;full_grouped_data){
-        total_species_number+=indiv_data.length+1;
-
-        state[i].length=indiv_data.length+1;
-        guess_state[i].length=indiv_data.length+1;
-        step_state[i].length=indiv_data.length+1;
+        //set size for linalg BDF solver arrays and vectors
+        jacobian.length=total_species_number;
+        foreach(int i,number[] row;jacobian){
+            jacobian[i].length=total_species_number;
+        }
+    } else {
+        throw new Error("PopulateRateFits is only available in debug flavour.");
     }
-    state_vector.length=total_species_number;
-    prev_state_vector.length=total_species_number;
-    initial_vector.length=total_species_number;
-    rate_vector.length=total_species_number;
-    Asolve = new Matrix!number(total_species_number,total_species_number);
-    update_vector.length=total_species_number;
-    RHSvector.length=total_species_number;
-    pivot.length=total_species_number;
-
-    //set size for linalg BDF solver arrays and vectors
-    jacobian.length=total_species_number;
-    foreach(int i,number[] row;jacobian){
-        jacobian[i].length=total_species_number;
-    }
-
 }
 
 @nogc
