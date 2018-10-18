@@ -73,7 +73,6 @@ public:
 
         // 3. 
         Electronic_Solve(_numden_input, _numden_output, Q.T_modes[0], tInterval, dtChemSuggest);
-        
         // 4. 
         foreach (int i; 0 .. _gmodel.n_species - 2) {//convert back to number density in #/m^3
             _numden[i] = _numden_output[i] * 1e6;
@@ -85,7 +84,6 @@ public:
 
         // 5. 
         Molecule_Update(Q, tInterval);
-    
         // 6. 
         foreach(int i; 0 .. _gmodel.n_species){ //convert mol/cm^3 to numden
             _numden[i] = _numden[i] * Avogadro_number*1e6;
@@ -94,7 +92,7 @@ public:
         // 8. 
         finalEnergy = energyInNoneq(Q);
         Q.u -= finalEnergy-initialEnergy;
-        _gmodel.update_thermo_from_rhou(Q);        
+        _gmodel.update_thermo_from_rhou(Q);     
     }
 
 private:
@@ -269,7 +267,7 @@ version(electronically_specific_kinetics_test)
         gd.massf[20] = 1.0 - 0.78 - 1e-8;
         gd.p = 100000.0;
         gd.T = 7000.0;
-        gd.T_modes[0] = 10000.0;
+        gd.T_modes[0] = 20000.0;
         gm.update_thermo_from_pT(gd);
 
         lua_close(L);

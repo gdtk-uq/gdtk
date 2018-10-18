@@ -169,18 +169,6 @@ public:
     {
         return _s1 + _Cp * log(Q.T/_T1) - _Rgas * log(Q.p/_p1);
     }
-    // void relaxEnergy(double dt, GasState Q) //Uses the Appleton & Bray model to relax energy between the two energy modes
-    // {   
-    //     massf2numden(Q,_numden);
-    //     foreach(int i;0 .. _n_species){
-    //         _numden[i] = _numden[i]/1e6;
-    //     }
-    //     number heatToElectron = AppletonBrayRate(Q,_numden);
-    //     Q.u_modes[0] += dt*heatToElectron;
-    //     Q.u -= dt*heatToElectron;
-    // }
-
-    
 
 private:
     ElectronicSpecies[] _electronicSpecies;
@@ -249,50 +237,7 @@ private:
         return elec_cv; 
     }
 
-    @nogc number AppletonBrayRate(GasState Q, number[] _numden) 
-    { //only call when gas state in number density /cm^3
-        assert((_numden[0]>1e10),"Still in mass fraction, not number density?");
-        @nogc number eff_coll_freq(number ni, bool ion, string species = "ion") 
-        {
-            if (ion) {
-                return (8.0/3.0)*((_pi/_me)^^0.5)*ni*(_e^^4)*(1.0/((2*_kb*Q.T_modes[0])^^(3.0/2.0)))*
-                                log(((_kb*Q.T_modes[0])^^3)/(_pi*_numden[18]*(_e^^6)));
-            } else {
-                switch (species)
-                {
-                    default:
-                        throw new Exception("This shouldn't happen");
-                    
-                    case "N2":
-                        _cs = AB_coef[0][0] + AB_coef[0][1]*Q.T_modes[0] + AB_coef[0][2]*(Q.T_modes[0]^^2); //energy exchange cross section
-                        return ni*_cs*(((8*_kb*Q.T_modes[0])/(_pi*_me))^^0.5);
 
-                    case "N":
-                        _cs = AB_coef[1][0] + AB_coef[1][1]*Q.T_modes[0] + AB_coef[1][2]*(Q.T_modes[0]^^2); //energy exchange cross section
-                        return ni*_cs*(((8*_kb*Q.T_modes[0])/(_pi*_me))^^0.5);
-                    
-                    case "O2":
-                        _cs = AB_coef[2][0] + AB_coef[2][1]*Q.T_modes[0] + AB_coef[2][2]*(Q.T_modes[0]^^2); //energy exchange cross section
-                        return ni*_cs*(((8*_kb*Q.T_modes[0])/(_pi*_me))^^0.5);
-                    
-                    case "O":
-                        _cs = AB_coef[3][0] + AB_coef[3][1]*Q.T_modes[0] + AB_coef[3][2]*(Q.T_modes[0]^^2); //energy exchange cross section
-                        return ni*_cs*(((8*_kb*Q.T_modes[0])/(_pi*_me))^^0.5);
-                }
-            }
-        }
-        _Nsum = 0.0;
-        _Osum = 0.0;
-        foreach(int isp;0 .. 8) {
-            _Nsum += _numden[isp];
-            _Osum += _numden[isp + 9];
-        }
-        _sumterm = 0.0;
-        _sumterm += eff_coll_freq(_numden[19],false,"N2")/_mol_masses[19] + eff_coll_freq(_Nsum,false,"N")/_mol_masses[0] +
-                    eff_coll_freq(_numden[8],true)/_mol_masses[8] + eff_coll_freq(_numden[20],false,"O2")/_mol_masses[20] + 
-                    eff_coll_freq(_Osum,false,"O")/_mol_masses[9] + eff_coll_freq(_numden[17],true)/_mol_masses[17];
-        return 3*_numden[18]*_me*1e3*R_universal*(Q.T - Q.T_modes[0])*_sumterm;
-    }
 
     @nogc number electronMassf(GasState Q) {
         return Q.massf[18];
