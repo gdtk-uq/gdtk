@@ -516,7 +516,7 @@ void form_external_flow_jacobian_block_phase0(FluidBlock blk, size_t np, int ord
                     intcell = bf.right_cell;
                     ghostcell = bf.left_cell;
                 }
-                if (orderOfJacobian == 1) {
+                if (orderOfJacobian == 1) { // && blk.myConfig.viscous == false) {
                     ghostcell.jacobian_cell_stencil ~= intcell;
                     foreach (f; intcell.iface) {
                         ghostcell.jacobian_face_stencil ~= f;
@@ -535,6 +535,8 @@ void form_external_flow_jacobian_block_phase0(FluidBlock blk, size_t np, int ord
                     } // end foreach intcell.cell_cloud
                 } // end else
                 construct_flow_jacobian(ghostcell, bf, blk, nDim, np, orderOfJacobian, EPS);
+                ghostcell.jacobian_face_stencil = [];
+                ghostcell.jacobian_cell_stencil = [];
             } // end foreach bc.faces
         } // end if
     } // end foreach blk.bc
@@ -2320,27 +2322,23 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
 
     foreach ( i; 0..nDesignVars) {
         writeln("----- Computing Gradient for variable: ", i);
+        ensure_directory_is_present(make_path_name!"grid"(0));
         foreach (myblk; localFluidBlocks) {
-            ensure_directory_is_present(make_path_name!"grid"(0));
             string gridFileName = make_file_name!"grid"(jobName, myblk.id, 0, GlobalConfig.gridFileExt = "gz");
             myblk.read_new_underlying_grid(gridFileName);
             myblk.sync_vertices_from_underlying_grid(0);
+        }
+
+        exchange_ghost_cell_boundary_data(0.0, 0, 0);
+        
+        foreach (myblk; localFluidBlocks) {
             myblk.compute_primary_cell_geometric_data(0);
             myblk.compute_least_squares_setup(0);
         }
-    
+        
+        
         foreach (myblk; localFluidBlocks) {
             myblk.read_solution(make_file_name!"flow"(jobName, myblk.id, 0, GlobalConfig.flowFileExt), false);
-
-            // We can apply a special initialisation to the flow field, if requested.
-            //if (GlobalConfig.diffuseWallBCsOnInit) {
-            //writeln("Applying special initialisation to blocks: wall BCs being diffused into domain.");
-            //writefln("%d passes of the near-wall flow averaging operation will be performed.", GlobalConfig.nInitPasses);
-            //foreach (blk; parallel(localFluidBlocks,1)) {
-            //    diffuseWallBCsIntoBlock(blk, GlobalConfig.nInitPasses, GlobalConfig.initTWall);
-            //}
-            //}
-            
             foreach (cell; myblk.cells) {
                 cell.encode_conserved(0, 0, myblk.omegaz);
                 // Even though the following call appears redundant at this point,
@@ -2350,18 +2348,6 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
             }
         }
 
-        if (GlobalConfig.viscous) {
-            foreach (myblk; localFluidBlocks) {
-                // We can apply a special initialisation to the flow field, if requested.
-                //if (GlobalConfig.diffuseWallBCsOnInit) {
-                writeln("Applying special initialisation to blocks: wall BCs being diffused into domain.");
-                writefln("%d passes of the near-wall flow averaging operation will be performed.", GlobalConfig.nInitPasses);
-                foreach (blk; parallel(localFluidBlocks,1)) {
-                    diffuseWallBCsIntoBlock(blk, GlobalConfig.nInitPasses, GlobalConfig.initTWall);
-                }
-            }
-        }
-        
         // perturb design variable in complex plane
         P0 = design_variables[i].y; 
         design_variables[i].refy = P0 + EPS;
@@ -2379,8 +2365,6 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
         foreach (myblk; localFluidBlocks) {
             myblk.compute_primary_cell_geometric_data(0);
             myblk.compute_least_squares_setup(0);
-            //foreach ( face; myblk.faces )
-            //    foreach ( j; 0..face.cloud_pos.length) writef("%d    %.16f    %.16f \n", face.id, face.ws_grad.wx[j], face.ws_grad.wy[j]); 
         }
 
         foreach (myblk; localFluidBlocks) {
@@ -2390,7 +2374,17 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
             auto fileName = make_file_name!"grid-p"(jobName, myblk.id, 0, GlobalConfig.gridFileExt = "gz");
             myblk.write_underlying_grid(fileName);
         }
-            
+
+        if (GlobalConfig.viscous) {
+            // We can apply a special initialisation to the flow field, if requested.
+            //if (GlobalConfig.diffuseWallBCsOnInit) {
+            writeln("Applying special initialisation to blocks: wall BCs being diffused into domain.");
+            writefln("%d passes of the near-wall flow averaging operation will be performed.", GlobalConfig.nInitPasses);
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                diffuseWallBCsIntoBlock(blk, GlobalConfig.nInitPasses, GlobalConfig.initTWall);
+            }
+        }
+        
         // Additional memory allocation specific to steady-state solver
         allocate_global_workspace();
         foreach (myblk; localFluidBlocks) {
