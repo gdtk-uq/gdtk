@@ -1147,10 +1147,48 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             }
         }
     }
+
+    foreach (blk; parallel(localFluidBlocks,1)) {
+        bool local_with_k_omega = with_k_omega;
+        blk.x0[] = to!number(0.0);
+        int cellCount = 0;
+        foreach (cell; blk.cells) {
+            blk.FU[cellCount+MASS] = -blk.FU[cellCount+MASS];
+            blk.FU[cellCount+X_MOM] = -blk.FU[cellCount+X_MOM];
+            blk.FU[cellCount+Y_MOM] = -blk.FU[cellCount+Y_MOM];
+            if ( blk.myConfig.dimensions == 3 )
+                blk.FU[cellCount+Z_MOM] = -blk.FU[cellCount+Z_MOM];
+            blk.r0[cellCount+TOT_ENERGY] = -blk.FU[cellCount+TOT_ENERGY];
+            if ( local_with_k_omega ) {
+                blk.FU[cellCount+TKE] = -blk.FU[cellCount+TKE];
+                blk.FU[cellCount+OMEGA] = -0.001*blk.FU[cellCount+OMEGA];
+            }
+            cellCount += nConserved;
+        }
+    }
     
     double unscaledNorm2;
     mixin(norm2_over_blocks("unscaledNorm2", "FU"));
-    
+
+    foreach (blk; parallel(localFluidBlocks,1)) {
+        bool local_with_k_omega = with_k_omega;
+        blk.x0[] = to!number(0.0);
+        int cellCount = 0;
+        foreach (cell; blk.cells) {
+            blk.FU[cellCount+MASS] = -blk.FU[cellCount+MASS];
+            blk.FU[cellCount+X_MOM] = -blk.FU[cellCount+X_MOM];
+            blk.FU[cellCount+Y_MOM] = -blk.FU[cellCount+Y_MOM];
+            if ( blk.myConfig.dimensions == 3 )
+                blk.FU[cellCount+Z_MOM] = -blk.FU[cellCount+Z_MOM];
+            blk.r0[cellCount+TOT_ENERGY] = -blk.FU[cellCount+TOT_ENERGY];
+            if ( local_with_k_omega ) {
+                blk.FU[cellCount+TKE] = -blk.FU[cellCount+TKE];
+                blk.FU[cellCount+OMEGA] = -1000*blk.FU[cellCount+OMEGA];
+            }
+            cellCount += nConserved;
+        }
+    }
+
     // Initialise some arrays and matrices that have already been allocated
     g0[] = to!number(0.0);
     g1[] = to!number(0.0);
