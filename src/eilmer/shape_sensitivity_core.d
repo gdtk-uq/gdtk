@@ -516,7 +516,7 @@ void form_external_flow_jacobian_block_phase0(FluidBlock blk, size_t np, int ord
                     intcell = bf.right_cell;
                     ghostcell = bf.left_cell;
                 }
-                if (orderOfJacobian == 1) { // && blk.myConfig.viscous == false) {
+                if (orderOfJacobian == 1 && blk.myConfig.viscous == false) {
                     ghostcell.jacobian_cell_stencil ~= intcell;
                     foreach (f; intcell.iface) {
                         ghostcell.jacobian_face_stencil ~= f;
@@ -534,6 +534,7 @@ void form_external_flow_jacobian_block_phase0(FluidBlock blk, size_t np, int ord
                         } // end foreach cell.iface
                     } // end foreach intcell.cell_cloud
                 } // end else
+                writeln("boundary face: ", bf.pos.x, ", ", bf.pos.y);
                 construct_flow_jacobian(ghostcell, bf, blk, nDim, np, orderOfJacobian, EPS);
                 ghostcell.jacobian_face_stencil = [];
                 ghostcell.jacobian_cell_stencil = [];
@@ -558,7 +559,7 @@ void form_external_flow_jacobian_block_phase1(ref SMatrix!number A, FluidBlock b
                     FVCell mapped_cell = mygce.mapped_cells[i];
                     foreach ( f; mapped_cell.iface) {
                         if (f.is_on_boundary) {
-                            if (abs(bf.pos.x-f.pos.x) < ESSENTIALLY_ZERO && abs(bf.pos.y-f.pos.y) < ESSENTIALLY_ZERO) {
+                            if (fabs(bf.pos.x-f.pos.x) < ESSENTIALLY_ZERO && fabs(bf.pos.y-f.pos.y) < ESSENTIALLY_ZERO) {
                                 bc.ghostcells[i].idList = f.idList;
                                 bc.ghostcells[i].aa = f.aa;
                             } // end if
@@ -616,7 +617,7 @@ void form_external_flow_jacobian_block_phase1(ref SMatrix!number A, FluidBlock b
                     for ( size_t jp = 0; jp < np; ++jp ) {
                         size_t idx = pos_array[cid]*np*np+np*jp+ip;
                         size_t J = cid*np + jp;
-                        if (abs(entries[idx]) > ESSENTIALLY_ZERO) {
+                        if (fabs(entries[idx]) > ESSENTIALLY_ZERO) {
                             A.aa ~= entries[idx];
                             A.ja ~= J;
                         }
@@ -1180,10 +1181,10 @@ string computeFluxDerivativesAroundCell(string varName, string posInArray, bool 
     codeStr ~= "cell.fs.k_t = cell.fs.k_t.re;";
     codeStr ~= "cell.gradients.compute_lsq_values(cell.cell_cloud, cell.ws, blk.myConfig);";
     codeStr ~= "}";
-    //codeStr ~= "foreach(i, iface; pcell.jacobian_face_stencil) {";
-    //codeStr ~= "iface.fs.copy_average_values_from(iface.left_cell.fs, iface.right_cell.fs);";
-    //codeStr ~= "blk.ifaceP[i].fs.copy_average_values_from(iface.left_cell.fs, iface.right_cell.fs);";
-    //codeStr ~= "}";
+    codeStr ~= "foreach(i, iface; pcell.jacobian_face_stencil) {";
+    codeStr ~= "iface.fs.copy_average_values_from(iface.left_cell.fs, iface.right_cell.fs);";
+    codeStr ~= "blk.ifaceP[i].fs.copy_average_values_from(iface.left_cell.fs, iface.right_cell.fs);";
+    codeStr ~= "}";
     codeStr ~= "foreach(face; pcell.jacobian_face_stencil) {";
     codeStr ~= "face.grad.gradients_leastsq(face.cloud_fs, face.cloud_pos, face.ws_grad);";
     codeStr ~= "}";
@@ -1328,6 +1329,7 @@ void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref
             myblk.compute_primary_cell_geometric_data(0);
             myblk.compute_least_squares_setup(0);
         }
+
         /*
         foreach (myblk; localFluidBlocks) {
             myblk.read_solution(make_file_name!"flow"("ramp", myblk.id, 0, GlobalConfig.flowFileExt), false);
@@ -1369,8 +1371,20 @@ void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref
             }
         }
 
+        //exchange_ghost_cell_boundary_data(0.0, 0, 0);
+        
         foreach (myblk; parallel(localFluidBlocks,1)) {
             myblk.compute_primary_cell_geometric_data(0);
+            myblk.compute_least_squares_setup(0);
+            
+            //foreach ( face; myblk.faces )
+            //    foreach ( j; 0..face.cloud_pos.length) writef("%d    %.16f    %.16f \n", face.id, face.ws_grad.wx[j], face.ws_grad.wy[j]); 
+        }
+
+        exchange_ghost_cell_boundary_data(0.0, 0, 0);
+        
+        foreach (myblk; parallel(localFluidBlocks,1)) {
+            //myblk.compute_primary_cell_geometric_data(0);
             myblk.compute_least_squares_setup(0);
             
             //foreach ( face; myblk.faces )
@@ -2361,11 +2375,15 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
                 vtx.pos[0].refy = vtx.pos[1].y;
             }
         }
-        
+
+        exchange_ghost_cell_boundary_data(0.0, 0, 0);
+                
         foreach (myblk; localFluidBlocks) {
             myblk.compute_primary_cell_geometric_data(0);
             myblk.compute_least_squares_setup(0);
         }
+
+        exchange_ghost_cell_boundary_data(0.0, 0, 0);
 
         foreach (myblk; localFluidBlocks) {
             // save mesh
@@ -2390,7 +2408,12 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
         foreach (myblk; localFluidBlocks) {
             myblk.allocate_GMRES_workspace();
         }
-        
+
+        foreach (myblk; localFluidBlocks) {
+            //myblk.compute_primary_cell_geometric_data(0);
+            myblk.compute_least_squares_setup(0);
+        }
+
         // run steady-state solver
         iterate_to_steady_state(0, maxCPUs); // snapshotStart = 0
         //GlobalConfig.report_residuals = true;
