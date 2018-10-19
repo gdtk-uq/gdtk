@@ -534,7 +534,7 @@ void form_external_flow_jacobian_block_phase0(FluidBlock blk, size_t np, int ord
                         } // end foreach cell.iface
                     } // end foreach intcell.cell_cloud
                 } // end else
-                writeln("boundary face: ", bf.pos.x, ", ", bf.pos.y);
+                //writeln("boundary face: ", bf.pos.x, ", ", bf.pos.y);
                 construct_flow_jacobian(ghostcell, bf, blk, nDim, np, orderOfJacobian, EPS);
                 ghostcell.jacobian_face_stencil = [];
                 ghostcell.jacobian_cell_stencil = [];
