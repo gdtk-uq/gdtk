@@ -25,8 +25,6 @@ import nm.bdfLU;
 import nm.complex;
 import nm.number;
 
-//Define whether you'd like to run a binned simulation - this should normally be true
-bool bin = false;
 
 //define a list of global run conditions to take from file
 number Te;
@@ -80,7 +78,7 @@ double[][] Import_2D(string filename) {
 }
 
 @nogc
-void PopulateRateFits()
+void PopulateRateFits(bool bin)
 {   
     if (bin) {
         N_rate_fit = Import_2D("sample-input/ESK-N-Grouped.txt");
@@ -133,8 +131,8 @@ void CopyStateToState(ref number[][] out_state, number[][] in_state, bool step=f
     int[2] Species_Position(int vector_position) {
         int chem_spec;
         while(vector_position>=out_state[chem_spec].length){
-            chem_spec+=1;
             vector_position-=out_state[chem_spec].length;
+            chem_spec+=1;
         }
         return [chem_spec,vector_position];
     }
@@ -150,13 +148,18 @@ void CopyStateToState(ref number[][] out_state, number[][] in_state, bool step=f
     }
 }
 
-void Init() 
+void Init(bool bin) 
 {   
     //populate energy data and rate fitting coefficients
-    full_grouped_data~=to!(double[][])(NI_grouped_data);
-    full_grouped_data~=to!(double[][])(OI_grouped_data);
+    if (bin) {
+        full_grouped_data~=to!(double[][])(NI_grouped_data);
+        full_grouped_data~=to!(double[][])(OI_grouped_data);
+    } else {
+        full_grouped_data~=to!(double[][])(NI_ungrouped_data);
+        full_grouped_data~=to!(double[][])(OI_ungrouped_data);
+    }
     debug {
-        PopulateRateFits();
+        PopulateRateFits(bin);
 
         //set size of state arrays and linalg BDF solver arrays and vectors
         state.length=full_grouped_data.length;
@@ -243,8 +246,8 @@ void Jacobian()
     bool Ion(int vector_position){
         int chem_spec;
         while(vector_position>=guess_state[chem_spec].length){
-            chem_spec+=1;
             vector_position-=guess_state[chem_spec].length;
+            chem_spec+=1;
         }
         if (vector_position==guess_state[chem_spec].length-1) {
             return true;
@@ -257,8 +260,8 @@ void Jacobian()
     int[2] Species_Position(int vector_position) {
         int chem_spec;
         while(vector_position>=guess_state[chem_spec].length){
-            chem_spec+=1;
             vector_position-=guess_state[chem_spec].length;
+            chem_spec+=1;
         }
         return [chem_spec,vector_position];
     }
@@ -420,8 +423,8 @@ void Electronic_Solve( number[] state_from_cfd, ref number[] state_to_cfd, numbe
         }
     }
     UpdateVectorFromState(state_vector,state);
-    state_to_cfd[0 .. 18] = state_vector[];
-    state_to_cfd[18] = Ne;
+    state_to_cfd[0 .. state_vector.length] = state_vector[];
+    state_to_cfd[state_vector.length] = Ne;
 }
 
 
@@ -462,3 +465,93 @@ immutable double[][] OI_grouped_data = [[1, 1, 1, 0, 9],
                                         [6, 14, 21, 12.7522, 139], 
                                         [7, 22, 27, 13.0729, 128], 
                                         [8, 28, 40, 13.3392, 428]]; //grouped number, lower level, upper level, energy, degeneracy
+                                    
+immutable double[][] NI_ungrouped_data = [[1.0, 0.0, 4.0, 1.0],
+                                            [2.0, 2.384, 10.0, 1.0],
+                                            [3.0, 3.576, 6.0, 1.0],
+                                            [4.0, 10.332, 12.0, 0.0],
+                                            [5.0, 10.687, 6.0, 0.0],
+                                            [6.0, 10.927, 12.0, 1.0],
+                                            [7.0, 11.603, 2.0, 1.0],
+                                            [8.0, 11.759, 20.0, 1.0],
+                                            [9.0, 11.842, 12.0, 1.0],
+                                            [10.0, 11.996, 4.0, 1.0],
+                                            [11.0, 12.006, 10.0, 1.0],
+                                            [12.0, 12.125, 6.0, 1.0],
+                                            [13.0, 12.357, 10.0, 0.0],
+                                            [14.0, 12.856, 12.0, 0.0],
+                                            [15.0, 12.919, 6.0, 0.0],
+                                            [16.0, 12.972, 6.0, 2.0],
+                                            [17.0, 12.984, 28.0, 2.0],
+                                            [18.0, 13.0, 26.0, 2.0],
+                                            [19.0, 13.02, 20.0, 2.0],
+                                            [20.0, 13.035, 10.0, 2.0],
+                                            [21.0, 13.202, 2.0, 1.0],
+                                            [22.0, 13.245, 20.0, 1.0],
+                                            [23.0, 13.268, 12.0, 1.0],
+                                            [24.0, 13.294, 10.0, 1.0],
+                                            [25.0, 13.322, 4.0, 1.0],
+                                            [26.0, 13.343, 6.0, 1.0],
+                                            [27.0, 13.624, 12.0, 0.0],
+                                            [28.0, 13.648, 6.0, 0.0],
+                                            [29.0, 13.679, 90.0, 2.0],
+                                            [30.0, 13.693, 126.0, 3.0],
+                                            [31.0, 13.717, 24.0, 1.0],
+                                            [32.0, 13.77, 2.0, 1.0],
+                                            [33.0, 13.792, 38.0, 1.0],
+                                            [34.0, 13.824, 4.0, 1.0],
+                                            [35.0, 13.872, 10.0, 1.0],
+                                            [36.0, 13.925, 6.0, 1.0],
+                                            [37.0, 13.969, 18.0, 0.0],
+                                            [38.0, 13.988, 60.0, 2.0],
+                                            [39.0, 13.999, 126.0, 3.0],
+                                            [40.0, 14.054, 32.0, 1.0],
+                                            [41.0, 14.149, 18.0, 0.0],
+                                            [42.0, 14.16, 90.0, 2.0],
+                                            [43.0, 14.164, 126.0, 3.0],
+                                            [44.0, 14.202, 20.0, 1.0],
+                                            [45.0, 14.26, 108.0, 0.0],
+                                            [46.0, 14.316, 18.0, 0.0]];
+
+immutable double[][] OI_ungrouped_data = [[1.0, 0.0, 9.0, 1.0],
+                                            [2.0, 1.97, 5.0, 1.0],
+                                            [3.0, 4.19, 1.0, 1.0],
+                                            [4.0, 9.146, 5.0, 0.0],
+                                            [5.0, 9.521, 3.0, 0.0],
+                                            [6.0, 10.74, 15.0, 1.0],
+                                            [7.0, 10.99, 9.0, 1.0],
+                                            [8.0, 11.838, 5.0, 0.0],
+                                            [9.0, 11.93, 3.0, 0.0],
+                                            [10.0, 12.09, 25.0, 2.0],
+                                            [11.0, 12.1, 15.0, 2.0],
+                                            [12.0, 12.3, 15.0, 1.0],
+                                            [13.0, 12.37, 9.0, 1.0],
+                                            [14.0, 12.55, 15.0, 0.0],
+                                            [15.0, 12.67, 5.0, 0.0],
+                                            [16.0, 12.71, 3.0, 0.0],
+                                            [17.0, 12.74, 5.0, 0.0],
+                                            [18.0, 12.76, 25.0, 2.0],
+                                            [19.0, 12.77, 15.0, 2.0],
+                                            [20.0, 12.78, 56.0, 3.0],
+                                            [21.0, 12.86, 15.0, 1.0],
+                                            [22.0, 12.89, 9.0, 1.0],
+                                            [23.0, 13.03, 5.0, 0.0],
+                                            [24.0, 13.05, 3.0, 0.0],
+                                            [25.0, 13.08, 40.0, 2.0],
+                                            [26.0, 13.087, 56.0, 3.0],
+                                            [27.0, 13.13, 15.0, 1.0],
+                                            [28.0, 13.14, 9.0, 1.0],
+                                            [29.0, 13.22, 5.0, 0.0],
+                                            [30.0, 13.23, 3.0, 0.0],
+                                            [31.0, 13.25, 168.0, 2.0],
+                                            [32.0, 13.33, 5.0, 0.0],
+                                            [33.0, 13.34, 3.0, 0.0],
+                                            [34.0, 13.353, 96.0, 2.0],
+                                            [35.0, 13.412, 8.0, 0.0],
+                                            [36.0, 13.418, 40.0, 2.0],
+                                            [37.0, 13.459, 8.0, 0.0],
+                                            [38.0, 13.464, 40.0, 2.0],
+                                            [39.0, 13.493, 3.0, 0.0],
+                                            [40.0, 13.496, 40.0, 2.0]];
+
+

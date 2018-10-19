@@ -31,7 +31,7 @@ class ElectronicSpecies {
     this(lua_State *L)
     {
         _name = getString(L, -1, "name");
-        _level = getInt(L, -1, "level");
+        //_level = getInt(L, -1, "level");
         _mol_mass = getDouble(L, -1, "M");
         _group_degeneracy = getInt(L, -1, "group_degeneracy");
         _dof = getInt(L,-1,"dof");

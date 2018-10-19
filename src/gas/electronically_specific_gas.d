@@ -28,6 +28,7 @@ public:
     {
         auto nElecSpecies = getInt(L, LUA_GLOBALSINDEX, "number_electronic_species");
         _n_species = cast(uint) nElecSpecies;
+
         _n_modes = 1;
         _species_names.length = _n_species; 
         _numden.length = _n_species;
@@ -48,7 +49,7 @@ public:
             _species_names[isp] = _electronicSpecies[$-1].name;
             _mol_masses ~= _electronicSpecies[$-1].mol_mass;
             _R ~= R_universal/_electronicSpecies[$-1].mol_mass;
-            _level ~= _electronicSpecies[$-1].level;
+            //_level ~= _electronicSpecies[$-1].level;
             _group_degeneracy ~= _electronicSpecies[$-1].group_degeneracy;
             _dof ~= _electronicSpecies[$-1].dof;
             _electronic_energy ~= _electronicSpecies[$-1].electronic_energy;
@@ -222,10 +223,10 @@ private:
     @nogc number heavy_Cv(GasState Q)
     {
         _Cv1 = 0.0;
-        foreach (isp; 0 .. 18){
+        foreach (isp; 0 .. _n_species-3){
             _Cv1 += Q.massf[isp] * (_dof[isp]/2.0) * _R[isp];
         }
-        foreach (isp; 19 .. _n_species) {
+        foreach (isp; _n_species-2 .. _n_species) {
             _Cv1 += Q.massf[isp] * (_dof[isp]/2.0) * _R[isp];
         }
         return _Cv1;
@@ -233,14 +234,14 @@ private:
 
     @nogc number electron_Cv(GasState Q)
     {   
-        number elec_cv = Q.massf[18]*(_dof[18]/2.0) * _R[18];
+        number elec_cv = Q.massf[_n_species-3]*(_dof[_n_species-3]/2.0) * _R[_n_species-3];
         return elec_cv; 
     }
 
 
 
     @nogc number electronMassf(GasState Q) {
-        return Q.massf[18];
+        return Q.massf[_n_species-3];
     }
 
     @nogc number heavyMassf(GasState Q) {
@@ -254,10 +255,22 @@ version(electronically_specific_gas_test) {
     {
         import util.msg_service;
 
+        bool grouped = false;
+        
+        int testnspecies;
+        string filename;
+        if (grouped) {
+            testnspecies = 21;
+            filename = "../gas/sample-data/electronic_composition_grouped.lua";
+        } else {
+            testnspecies = 91;
+            filename = "../gas/sample-data/electronic_composition_ungrouped.lua";
+        }
+
         auto L = init_lua_State();
-        doLuaFile(L, relativePath("../gas/sample-data/electronic_composition.lua"));
+        doLuaFile(L, relativePath(filename));
         auto gm = new ElectronicallySpecificGas(L);
-        auto gd = new GasState(21,1);
+        auto gd = new GasState(testnspecies,1);
 
         // gd.massf[] = 0.0;
         // gd.massf[0] = 0.037041674288877; //initialises massf of NI
@@ -265,10 +278,14 @@ version(electronically_specific_gas_test) {
         // gd.massf[19] = 0.74082290750449; //N2
         // gd.massf[20] = 0.21155752733244; //O2
         // gd.massf[18] = 1.0 - (gd.massf[0] + gd.massf[9] + gd.massf[19] + gd.massf[20]); //tiny massf for free electron
-        gd.massf = [0.0313603, 0.00492971, 0.000741705, 1.06916e-06, 4.90114e-07, 
-                        2.46998e-07, 9.58454e-08, 6.6456e-07, 6.41328e-06, 0.010005, 
-                        0.000565079, 8.59624e-06, 2.58411e-07, 9.00322e-08, 5.80925e-08, 
-                        3.67871e-08, 9.06483e-08, 4.16313e-07, 1.4773e-08, 0.740823, 0.211558];
+        // gd.massf = [0.0313603, 0.00492971, 0.000741705, 1.06916e-06, 4.90114e-07, 
+        //                 2.46998e-07, 9.58454e-08, 6.6456e-07, 6.41328e-06, 0.010005, 
+        //                 0.000565079, 8.59624e-06, 2.58411e-07, 9.00322e-08, 5.80925e-08, 
+        //                 3.67871e-08, 9.06483e-08, 4.16313e-07, 1.4773e-08, 0.740823, 0.211558];
+        gd.massf[] = 0;
+        gd.massf[gm.n_species-3] = 1e-8;
+        gd.massf[gm.n_species-2] = 0.78;
+        gd.massf[gm.n_species-1] = 1.0 - 0.78 - 1e-8;
 
         gd.p = 100000.0;
         gd.T = 300.0;
