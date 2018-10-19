@@ -524,8 +524,12 @@ void form_external_flow_jacobian_block_phase0(FluidBlock blk, size_t np, int ord
                 } 
                 else { // higher-order
                     size_t[] face_id_list;
+                    size_t[] cell_id_list;
                     foreach(cell; intcell.cell_cloud) {
-                        if (cell.id < ghost_cell_start_id) ghostcell.jacobian_cell_stencil ~= cell;
+                        if (cell.id < ghost_cell_start_id) {
+                            ghostcell.jacobian_cell_stencil ~= cell;
+                            cell_id_list ~= cell.id;
+                        }
                         foreach (f; cell.iface) {
                             if (face_id_list.canFind(f.id) == false) {
                                 ghostcell.jacobian_face_stencil ~= f;
@@ -533,6 +537,28 @@ void form_external_flow_jacobian_block_phase0(FluidBlock blk, size_t np, int ord
                             } // end if
                         } // end foreach cell.iface
                     } // end foreach intcell.cell_cloud
+
+                    if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
+                        foreach(face; ghostcell.jacobian_face_stencil) {
+                            if (cell_id_list.canFind(face.left_cell.id) == false && face.left_cell.id < ghost_cell_start_id) {
+                                ghostcell.jacobian_cell_stencil ~= face.left_cell;
+                                cell_id_list ~= face.left_cell.id;
+                            } // end foreach cell.iface
+                            if (cell_id_list.canFind(face.right_cell.id) == false && face.right_cell.id < ghost_cell_start_id) {
+                                ghostcell.jacobian_cell_stencil ~= face.right_cell;
+                                cell_id_list ~= face.right_cell.id;
+                            } // end foreach cell.iface
+                        } // end foreach intcell.cell_cloud
+                        foreach (cell; ghostcell.jacobian_cell_stencil) {
+                            foreach (f; cell.iface) {
+                                if (face_id_list.canFind(f.id) == false) {
+                                    ghostcell.jacobian_face_stencil ~= f;
+                                    face_id_list ~= f.id;
+                                } // end if
+                            }
+                        }
+                    }
+                    
                 } // end else
                 //writeln("boundary face: ", bf.pos.x, ", ", bf.pos.y);
                 construct_flow_jacobian(ghostcell, bf, blk, nDim, np, orderOfJacobian, EPS);
