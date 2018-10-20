@@ -60,8 +60,7 @@ public:
                 O2ind=i;
             }
         }
-        debug{writeln(NInum);}
-        kinetics.electronic_state_solver.Init(true);
+        kinetics.electronic_state_solver.Init(false);
     }
 
     override void opCall(GasState Q, double tInterval,
@@ -324,8 +323,8 @@ version(electronically_specific_kinetics_test)
 
         lua_close(L);
 
-        double _dt = 1e-7;
-        double _duration = 2e-7;
+        double _dt = 1e-9;
+        double _duration = 1e-9;
         double _t = 0.0;
 
         // auto L2 = init_lua_State();
@@ -333,7 +332,7 @@ version(electronically_specific_kinetics_test)
 
         ElectronicallySpecificKinetics esk = new ElectronicallySpecificKinetics(gm);
 
-        double dtChemSuggest = 1e-8;
+        double dtChemSuggest = 1e-9;
         double dtThermSuggest = -1.0;
         number[maxParams] params;
         while (_t < _duration) {
@@ -345,7 +344,6 @@ version(electronically_specific_kinetics_test)
             massfsum += eachmassf;
         }
         assert(approxEqual(massfsum, 1.0, 1e-2), failedUnitTest());
-        debug{writeln(gd);}
         return 0;
 
     }
