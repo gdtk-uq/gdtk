@@ -5,6 +5,7 @@
 -- electronic gas model
 
 -- First 8 are NI (1-46), second 8 are OI (1-40)
+model = "ElectronicallySpecificGas"
 number_electronic_species=91
 grouped = "false"
 s1 = 0.0
@@ -14,7 +15,7 @@ p1 = 1e5
 electronic_species = {}
 
 electronic_species[0] = {
-	name = 'NI',
+	name = 'NI - 1',
 	individual_range = 1 - 1,
 	M = 0.0140067,
 	group_energy = 0.0,
@@ -23,7 +24,7 @@ electronic_species[0] = {
 }
 
 electronic_species[1] = {
-	name = 'NI',
+	name = 'NI - 2',
 	individual_range = 2 - 2,
 	M = 0.0140067,
 	group_energy = 2.384,
@@ -32,7 +33,7 @@ electronic_species[1] = {
 }
 
 electronic_species[2] = {
-	name = 'NI',
+	name = 'NI - 3',
 	individual_range = 3 - 3,
 	M = 0.0140067,
 	group_energy = 3.576,
@@ -41,7 +42,7 @@ electronic_species[2] = {
 }
 
 electronic_species[3] = {
-	name = 'NI',
+	name = 'NI - 4',
 	individual_range = 4 - 4,
 	M = 0.0140067,
 	group_energy = 10.332,
@@ -50,7 +51,7 @@ electronic_species[3] = {
 }
 
 electronic_species[4] = {
-	name = 'NI',
+	name = 'NI - 5',
 	individual_range = 5 - 5,
 	M = 0.0140067,
 	group_energy = 10.687,
@@ -59,7 +60,7 @@ electronic_species[4] = {
 }
 
 electronic_species[5] = {
-	name = 'NI',
+	name = 'NI - 6',
 	individual_range = 6 - 6,
 	M = 0.0140067,
 	group_energy = 10.927,
@@ -68,7 +69,7 @@ electronic_species[5] = {
 }
 
 electronic_species[6] = {
-	name = 'NI',
+	name = 'NI - 7',
 	individual_range = 7 - 7,
 	M = 0.0140067,
 	group_energy = 11.603,
@@ -77,7 +78,7 @@ electronic_species[6] = {
 }
 
 electronic_species[7] = {
-	name = 'NI',
+	name = 'NI - 8',
 	individual_range = 8 - 8,
 	M = 0.0140067,
 	group_energy = 11.759,
@@ -86,7 +87,7 @@ electronic_species[7] = {
 }
 
 electronic_species[8] = {
-	name = 'NI',
+	name = 'NI - 9',
 	individual_range = 9 - 9,
 	M = 0.0140067,
 	group_energy = 11.842,
@@ -95,7 +96,7 @@ electronic_species[8] = {
 }
 
 electronic_species[9] = {
-	name = 'NI',
+	name = 'NI - 10',
 	individual_range = 10 - 10,
 	M = 0.0140067,
 	group_energy = 11.996,
@@ -104,7 +105,7 @@ electronic_species[9] = {
 }
 
 electronic_species[10] = {
-	name = 'NI',
+	name = 'NI - 11',
 	individual_range = 11 - 11,
 	M = 0.0140067,
 	group_energy = 12.006,
@@ -113,7 +114,7 @@ electronic_species[10] = {
 }
 
 electronic_species[11] = {
-	name = 'NI',
+	name = 'NI - 12',
 	individual_range = 12 - 12,
 	M = 0.0140067,
 	group_energy = 12.125,
@@ -122,7 +123,7 @@ electronic_species[11] = {
 }
 
 electronic_species[12] = {
-	name = 'NI',
+	name = 'NI - 13',
 	individual_range = 13 - 13,
 	M = 0.0140067,
 	group_energy = 12.357,
@@ -131,7 +132,7 @@ electronic_species[12] = {
 }
 
 electronic_species[13] = {
-	name = 'NI',
+	name = 'NI - 14',
 	individual_range = 14 - 14,
 	M = 0.0140067,
 	group_energy = 12.856,
@@ -140,7 +141,7 @@ electronic_species[13] = {
 }
 
 electronic_species[14] = {
-	name = 'NI',
+	name = 'NI - 15',
 	individual_range = 15 - 15,
 	M = 0.0140067,
 	group_energy = 12.919,
@@ -149,7 +150,7 @@ electronic_species[14] = {
 }
 
 electronic_species[15] = {
-	name = 'NI',
+	name = 'NI - 16',
 	individual_range = 16 - 16,
 	M = 0.0140067,
 	group_energy = 12.972,
@@ -158,7 +159,7 @@ electronic_species[15] = {
 }
 
 electronic_species[16] = {
-	name = 'NI',
+	name = 'NI - 17',
 	individual_range = 17 - 17,
 	M = 0.0140067,
 	group_energy = 12.984,
@@ -167,7 +168,7 @@ electronic_species[16] = {
 }
 
 electronic_species[17] = {
-	name = 'NI',
+	name = 'NI - 18',
 	individual_range = 18 - 18,
 	M = 0.0140067,
 	group_energy = 13.0,
@@ -176,7 +177,7 @@ electronic_species[17] = {
 }
 
 electronic_species[18] = {
-	name = 'NI',
+	name = 'NI - 19',
 	individual_range = 19 - 19,
 	M = 0.0140067,
 	group_energy = 13.02,
@@ -185,7 +186,7 @@ electronic_species[18] = {
 }
 
 electronic_species[19] = {
-	name = 'NI',
+	name = 'NI - 20',
 	individual_range = 20 - 20,
 	M = 0.0140067,
 	group_energy = 13.035,
@@ -194,7 +195,7 @@ electronic_species[19] = {
 }
 
 electronic_species[20] = {
-	name = 'NI',
+	name = 'NI - 21',
 	individual_range = 21 - 21,
 	M = 0.0140067,
 	group_energy = 13.202,
@@ -203,7 +204,7 @@ electronic_species[20] = {
 }
 
 electronic_species[21] = {
-	name = 'NI',
+	name = 'NI - 22',
 	individual_range = 22 - 22,
 	M = 0.0140067,
 	group_energy = 13.245,
@@ -212,7 +213,7 @@ electronic_species[21] = {
 }
 
 electronic_species[22] = {
-	name = 'NI',
+	name = 'NI - 23',
 	individual_range = 23 - 23,
 	M = 0.0140067,
 	group_energy = 13.268,
@@ -221,7 +222,7 @@ electronic_species[22] = {
 }
 
 electronic_species[23] = {
-	name = 'NI',
+	name = 'NI - 24',
 	individual_range = 24 - 24,
 	M = 0.0140067,
 	group_energy = 13.294,
@@ -230,7 +231,7 @@ electronic_species[23] = {
 }
 
 electronic_species[24] = {
-	name = 'NI',
+	name = 'NI - 25',
 	individual_range = 25 - 25,
 	M = 0.0140067,
 	group_energy = 13.322,
@@ -239,7 +240,7 @@ electronic_species[24] = {
 }
 
 electronic_species[25] = {
-	name = 'NI',
+	name = 'NI - 26',
 	individual_range = 26 - 26,
 	M = 0.0140067,
 	group_energy = 13.343,
@@ -248,7 +249,7 @@ electronic_species[25] = {
 }
 
 electronic_species[26] = {
-	name = 'NI',
+	name = 'NI - 27',
 	individual_range = 27 - 27,
 	M = 0.0140067,
 	group_energy = 13.624,
@@ -257,7 +258,7 @@ electronic_species[26] = {
 }
 
 electronic_species[27] = {
-	name = 'NI',
+	name = 'NI - 28',
 	individual_range = 28 - 28,
 	M = 0.0140067,
 	group_energy = 13.648,
@@ -266,7 +267,7 @@ electronic_species[27] = {
 }
 
 electronic_species[28] = {
-	name = 'NI',
+	name = 'NI - 29',
 	individual_range = 29 - 29,
 	M = 0.0140067,
 	group_energy = 13.679,
@@ -275,7 +276,7 @@ electronic_species[28] = {
 }
 
 electronic_species[29] = {
-	name = 'NI',
+	name = 'NI - 30',
 	individual_range = 30 - 30,
 	M = 0.0140067,
 	group_energy = 13.693,
@@ -284,7 +285,7 @@ electronic_species[29] = {
 }
 
 electronic_species[30] = {
-	name = 'NI',
+	name = 'NI - 31',
 	individual_range = 31 - 31,
 	M = 0.0140067,
 	group_energy = 13.717,
@@ -293,7 +294,7 @@ electronic_species[30] = {
 }
 
 electronic_species[31] = {
-	name = 'NI',
+	name = 'NI - 32',
 	individual_range = 32 - 32,
 	M = 0.0140067,
 	group_energy = 13.77,
@@ -302,7 +303,7 @@ electronic_species[31] = {
 }
 
 electronic_species[32] = {
-	name = 'NI',
+	name = 'NI - 33',
 	individual_range = 33 - 33,
 	M = 0.0140067,
 	group_energy = 13.792,
@@ -311,7 +312,7 @@ electronic_species[32] = {
 }
 
 electronic_species[33] = {
-	name = 'NI',
+	name = 'NI - 34',
 	individual_range = 34 - 34,
 	M = 0.0140067,
 	group_energy = 13.824,
@@ -320,7 +321,7 @@ electronic_species[33] = {
 }
 
 electronic_species[34] = {
-	name = 'NI',
+	name = 'NI - 35',
 	individual_range = 35 - 35,
 	M = 0.0140067,
 	group_energy = 13.872,
@@ -329,7 +330,7 @@ electronic_species[34] = {
 }
 
 electronic_species[35] = {
-	name = 'NI',
+	name = 'NI - 36',
 	individual_range = 36 - 36,
 	M = 0.0140067,
 	group_energy = 13.925,
@@ -338,7 +339,7 @@ electronic_species[35] = {
 }
 
 electronic_species[36] = {
-	name = 'NI',
+	name = 'NI - 37',
 	individual_range = 37 - 37,
 	M = 0.0140067,
 	group_energy = 13.969,
@@ -347,7 +348,7 @@ electronic_species[36] = {
 }
 
 electronic_species[37] = {
-	name = 'NI',
+	name = 'NI - 38',
 	individual_range = 38 - 38,
 	M = 0.0140067,
 	group_energy = 13.988,
@@ -356,7 +357,7 @@ electronic_species[37] = {
 }
 
 electronic_species[38] = {
-	name = 'NI',
+	name = 'NI - 39',
 	individual_range = 39 - 39,
 	M = 0.0140067,
 	group_energy = 13.999,
@@ -365,7 +366,7 @@ electronic_species[38] = {
 }
 
 electronic_species[39] = {
-	name = 'NI',
+	name = 'NI - 40',
 	individual_range = 40 - 40,
 	M = 0.0140067,
 	group_energy = 14.054,
@@ -374,7 +375,7 @@ electronic_species[39] = {
 }
 
 electronic_species[40] = {
-	name = 'NI',
+	name = 'NI - 41',
 	individual_range = 41 - 41,
 	M = 0.0140067,
 	group_energy = 14.149,
@@ -383,7 +384,7 @@ electronic_species[40] = {
 }
 
 electronic_species[41] = {
-	name = 'NI',
+	name = 'NI - 42',
 	individual_range = 42 - 42,
 	M = 0.0140067,
 	group_energy = 14.16,
@@ -392,7 +393,7 @@ electronic_species[41] = {
 }
 
 electronic_species[42] = {
-	name = 'NI',
+	name = 'NI - 43',
 	individual_range = 43 - 43,
 	M = 0.0140067,
 	group_energy = 14.164,
@@ -401,7 +402,7 @@ electronic_species[42] = {
 }
 
 electronic_species[43] = {
-	name = 'NI',
+	name = 'NI - 44',
 	individual_range = 44 - 44,
 	M = 0.0140067,
 	group_energy = 14.202,
@@ -410,7 +411,7 @@ electronic_species[43] = {
 }
 
 electronic_species[44] = {
-	name = 'NI',
+	name = 'NI - 45',
 	individual_range = 45 - 45,
 	M = 0.0140067,
 	group_energy = 14.26,
@@ -419,7 +420,7 @@ electronic_species[44] = {
 }
 
 electronic_species[45] = {
-	name = 'NI',
+	name = 'NI - 46',
 	individual_range = 46 - 46,
 	M = 0.0140067,
 	group_energy = 14.316,
@@ -438,7 +439,7 @@ electronic_species[46] = {
 }
 
 electronic_species[47] = {
-	name = 'OI',
+	name = 'OI - 1',
 	individual_range = 1 - 1,
 	M = 0.0159994,
 	group_energy = 0.0,
@@ -447,7 +448,7 @@ electronic_species[47] = {
 }
 
 electronic_species[48] = {
-	name = 'OI',
+	name = 'OI - 2',
 	individual_range = 2 - 2,
 	M = 0.0159994,
 	group_energy = 1.97,
@@ -456,7 +457,7 @@ electronic_species[48] = {
 }
 
 electronic_species[49] = {
-	name = 'OI',
+	name = 'OI - 3',
 	individual_range = 3 - 3,
 	M = 0.0159994,
 	group_energy = 4.19,
@@ -465,7 +466,7 @@ electronic_species[49] = {
 }
 
 electronic_species[50] = {
-	name = 'OI',
+	name = 'OI - 4',
 	individual_range = 4 - 4,
 	M = 0.0159994,
 	group_energy = 9.146,
@@ -474,7 +475,7 @@ electronic_species[50] = {
 }
 
 electronic_species[51] = {
-	name = 'OI',
+	name = 'OI - 5',
 	individual_range = 5 - 5,
 	M = 0.0159994,
 	group_energy = 9.521,
@@ -483,7 +484,7 @@ electronic_species[51] = {
 }
 
 electronic_species[52] = {
-	name = 'OI',
+	name = 'OI - 6',
 	individual_range = 6 - 6,
 	M = 0.0159994,
 	group_energy = 10.74,
@@ -492,7 +493,7 @@ electronic_species[52] = {
 }
 
 electronic_species[53] = {
-	name = 'OI',
+	name = 'OI - 7',
 	individual_range = 7 - 7,
 	M = 0.0159994,
 	group_energy = 10.99,
@@ -501,7 +502,7 @@ electronic_species[53] = {
 }
 
 electronic_species[54] = {
-	name = 'OI',
+	name = 'OI - 8',
 	individual_range = 8 - 8,
 	M = 0.0159994,
 	group_energy = 11.838,
@@ -510,7 +511,7 @@ electronic_species[54] = {
 }
 
 electronic_species[55] = {
-	name = 'OI',
+	name = 'OI - 9',
 	individual_range = 9 - 9,
 	M = 0.0159994,
 	group_energy = 11.93,
@@ -519,7 +520,7 @@ electronic_species[55] = {
 }
 
 electronic_species[56] = {
-	name = 'OI',
+	name = 'OI - 10',
 	individual_range = 10 - 10,
 	M = 0.0159994,
 	group_energy = 12.09,
@@ -528,7 +529,7 @@ electronic_species[56] = {
 }
 
 electronic_species[57] = {
-	name = 'OI',
+	name = 'OI - 11',
 	individual_range = 11 - 11,
 	M = 0.0159994,
 	group_energy = 12.1,
@@ -537,7 +538,7 @@ electronic_species[57] = {
 }
 
 electronic_species[58] = {
-	name = 'OI',
+	name = 'OI - 12',
 	individual_range = 12 - 12,
 	M = 0.0159994,
 	group_energy = 12.3,
@@ -546,7 +547,7 @@ electronic_species[58] = {
 }
 
 electronic_species[59] = {
-	name = 'OI',
+	name = 'OI - 13',
 	individual_range = 13 - 13,
 	M = 0.0159994,
 	group_energy = 12.37,
@@ -555,7 +556,7 @@ electronic_species[59] = {
 }
 
 electronic_species[60] = {
-	name = 'OI',
+	name = 'OI - 14',
 	individual_range = 14 - 14,
 	M = 0.0159994,
 	group_energy = 12.55,
@@ -564,7 +565,7 @@ electronic_species[60] = {
 }
 
 electronic_species[61] = {
-	name = 'OI',
+	name = 'OI - 15',
 	individual_range = 15 - 15,
 	M = 0.0159994,
 	group_energy = 12.67,
@@ -573,7 +574,7 @@ electronic_species[61] = {
 }
 
 electronic_species[62] = {
-	name = 'OI',
+	name = 'OI - 16',
 	individual_range = 16 - 16,
 	M = 0.0159994,
 	group_energy = 12.71,
@@ -582,7 +583,7 @@ electronic_species[62] = {
 }
 
 electronic_species[63] = {
-	name = 'OI',
+	name = 'OI - 17',
 	individual_range = 17 - 17,
 	M = 0.0159994,
 	group_energy = 12.74,
@@ -591,7 +592,7 @@ electronic_species[63] = {
 }
 
 electronic_species[64] = {
-	name = 'OI',
+	name = 'OI - 18',
 	individual_range = 18 - 18,
 	M = 0.0159994,
 	group_energy = 12.76,
@@ -600,7 +601,7 @@ electronic_species[64] = {
 }
 
 electronic_species[65] = {
-	name = 'OI',
+	name = 'OI - 19',
 	individual_range = 19 - 19,
 	M = 0.0159994,
 	group_energy = 12.77,
@@ -609,7 +610,7 @@ electronic_species[65] = {
 }
 
 electronic_species[66] = {
-	name = 'OI',
+	name = 'OI - 20',
 	individual_range = 20 - 20,
 	M = 0.0159994,
 	group_energy = 12.78,
@@ -618,7 +619,7 @@ electronic_species[66] = {
 }
 
 electronic_species[67] = {
-	name = 'OI',
+	name = 'OI - 21',
 	individual_range = 21 - 21,
 	M = 0.0159994,
 	group_energy = 12.86,
@@ -627,7 +628,7 @@ electronic_species[67] = {
 }
 
 electronic_species[68] = {
-	name = 'OI',
+	name = 'OI - 22',
 	individual_range = 22 - 22,
 	M = 0.0159994,
 	group_energy = 12.89,
@@ -636,7 +637,7 @@ electronic_species[68] = {
 }
 
 electronic_species[69] = {
-	name = 'OI',
+	name = 'OI - 23',
 	individual_range = 23 - 23,
 	M = 0.0159994,
 	group_energy = 13.03,
@@ -645,7 +646,7 @@ electronic_species[69] = {
 }
 
 electronic_species[70] = {
-	name = 'OI',
+	name = 'OI - 24',
 	individual_range = 24 - 24,
 	M = 0.0159994,
 	group_energy = 13.05,
@@ -654,7 +655,7 @@ electronic_species[70] = {
 }
 
 electronic_species[71] = {
-	name = 'OI',
+	name = 'OI - 25',
 	individual_range = 25 - 25,
 	M = 0.0159994,
 	group_energy = 13.08,
@@ -663,7 +664,7 @@ electronic_species[71] = {
 }
 
 electronic_species[72] = {
-	name = 'OI',
+	name = 'OI - 26',
 	individual_range = 26 - 26,
 	M = 0.0159994,
 	group_energy = 13.087,
@@ -672,7 +673,7 @@ electronic_species[72] = {
 }
 
 electronic_species[73] = {
-	name = 'OI',
+	name = 'OI - 27',
 	individual_range = 27 - 27,
 	M = 0.0159994,
 	group_energy = 13.13,
@@ -681,7 +682,7 @@ electronic_species[73] = {
 }
 
 electronic_species[74] = {
-	name = 'OI',
+	name = 'OI - 28',
 	individual_range = 28 - 28,
 	M = 0.0159994,
 	group_energy = 13.14,
@@ -690,7 +691,7 @@ electronic_species[74] = {
 }
 
 electronic_species[75] = {
-	name = 'OI',
+	name = 'OI - 29',
 	individual_range = 29 - 29,
 	M = 0.0159994,
 	group_energy = 13.22,
@@ -699,7 +700,7 @@ electronic_species[75] = {
 }
 
 electronic_species[76] = {
-	name = 'OI',
+	name = 'OI - 30',
 	individual_range = 30 - 30,
 	M = 0.0159994,
 	group_energy = 13.23,
@@ -708,7 +709,7 @@ electronic_species[76] = {
 }
 
 electronic_species[77] = {
-	name = 'OI',
+	name = 'OI - 31',
 	individual_range = 31 - 31,
 	M = 0.0159994,
 	group_energy = 13.25,
@@ -717,7 +718,7 @@ electronic_species[77] = {
 }
 
 electronic_species[78] = {
-	name = 'OI',
+	name = 'OI - 32',
 	individual_range = 32 - 32,
 	M = 0.0159994,
 	group_energy = 13.33,
@@ -726,7 +727,7 @@ electronic_species[78] = {
 }
 
 electronic_species[79] = {
-	name = 'OI',
+	name = 'OI - 33',
 	individual_range = 33 - 33,
 	M = 0.0159994,
 	group_energy = 13.34,
@@ -735,7 +736,7 @@ electronic_species[79] = {
 }
 
 electronic_species[80] = {
-	name = 'OI',
+	name = 'OI - 34',
 	individual_range = 34 - 34,
 	M = 0.0159994,
 	group_energy = 13.353,
@@ -744,7 +745,7 @@ electronic_species[80] = {
 }
 
 electronic_species[81] = {
-	name = 'OI',
+	name = 'OI - 35',
 	individual_range = 35 - 35,
 	M = 0.0159994,
 	group_energy = 13.412,
@@ -753,7 +754,7 @@ electronic_species[81] = {
 }
 
 electronic_species[82] = {
-	name = 'OI',
+	name = 'OI - 36',
 	individual_range = 36 - 36,
 	M = 0.0159994,
 	group_energy = 13.418,
@@ -762,7 +763,7 @@ electronic_species[82] = {
 }
 
 electronic_species[83] = {
-	name = 'OI',
+	name = 'OI - 37',
 	individual_range = 37 - 37,
 	M = 0.0159994,
 	group_energy = 13.459,
@@ -771,7 +772,7 @@ electronic_species[83] = {
 }
 
 electronic_species[84] = {
-	name = 'OI',
+	name = 'OI - 38',
 	individual_range = 38 - 38,
 	M = 0.0159994,
 	group_energy = 13.464,
@@ -780,7 +781,7 @@ electronic_species[84] = {
 }
 
 electronic_species[85] = {
-	name = 'OI',
+	name = 'OI - 39',
 	individual_range = 39 - 39,
 	M = 0.0159994,
 	group_energy = 13.493,
@@ -789,7 +790,7 @@ electronic_species[85] = {
 }
 
 electronic_species[86] = {
-	name = 'OI',
+	name = 'OI - 40',
 	individual_range = 40 - 40,
 	M = 0.0159994,
 	group_energy = 13.496,

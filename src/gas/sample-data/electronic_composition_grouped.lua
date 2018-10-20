@@ -5,6 +5,7 @@
 -- electronic gas model
 
 -- First 8 are NI (1-46), second 8 are OI (1-40)
+model = "ElectronicallySpecificGas"
 number_electronic_species=21
 grouped = "true"
 s1 = 0.0
@@ -14,7 +15,7 @@ p1 = 1e5
 electronic_species = {}
 
 electronic_species[0] = {
-    name = 'NI',
+    name = 'NI - 1',
     level = 1,
     individual_range = "1 - 1",
     M = 0.0140067,
@@ -24,7 +25,7 @@ electronic_species[0] = {
 }
 
 electronic_species[1] = {
-    name = 'NI',
+    name = 'NI - 2',
     level = 2,
     individual_range = "2 - 2",
     M = 0.0140067,
@@ -34,7 +35,7 @@ electronic_species[1] = {
 }
 
 electronic_species[2] = {
-    name = 'NI',
+    name = 'NI - 3',
     level = 3,
     individual_range = "3 - 3",
     M = 0.0140067,
@@ -44,7 +45,7 @@ electronic_species[2] = {
 }
 
 electronic_species[3] = {
-    name = 'NI',
+    name = 'NI - 4',
     level = 4,
     individual_range = "4 - 6",
     M = 0.0140067,
@@ -54,7 +55,7 @@ electronic_species[3] = {
 }
 
 electronic_species[4] = {
-    name = 'NI',
+    name = 'NI - 5',
     level = 5,
     individual_range = "7 - 13",
     M = 0.0140067,
@@ -64,7 +65,7 @@ electronic_species[4] = {
 }
 
 electronic_species[5] = {
-    name = 'NI',
+    name = 'NI - 6',
     level = 6,
     individual_range = "14 - 21",
     M = 0.0140067,
@@ -74,7 +75,7 @@ electronic_species[5] = {
 }
 
 electronic_species[6] = {
-    name = 'NI',
+    name = 'NI - 7',
     level = 7,
     individual_range = "22 - 27",
     M = 0.0140067,
@@ -84,7 +85,7 @@ electronic_species[6] = {
 }
 
 electronic_species[7] = {
-    name = 'NI',
+    name = 'NI - 8',
     level = 8,
     individual_range = "28-46",
     M = 0.0140067,
@@ -104,7 +105,7 @@ electronic_species[8] = {
 }
 
 electronic_species[9] = {
-    name = 'OI',
+    name = 'OI - 1',
     level = 1,
     individual_range = "1 - 1",
     M = 0.0159994,
@@ -114,7 +115,7 @@ electronic_species[9] = {
 }
 
 electronic_species[10] = {
-    name = 'OI',
+    name = 'OI - 2',
     level = 2,
     individual_range = "2 - 2",
     M = 0.0159994,
@@ -124,7 +125,7 @@ electronic_species[10] = {
 }
 
 electronic_species[11] = {
-    name = 'OI',
+    name = 'OI - 3',
     level = 3,
     individual_range = "3 - 3",
     M = 0.0159994,
@@ -134,7 +135,7 @@ electronic_species[11] = {
 }
 
 electronic_species[12] = {
-    name = 'OI',
+    name = 'OI - 4',
     level = 4,
     individual_range = "4 - 6",
     M = 0.0159994,
@@ -144,7 +145,7 @@ electronic_species[12] = {
 }
 
 electronic_species[13] = {
-    name = 'OI',
+    name = 'OI - 5',
     level = 5,
     individual_range = "7 - 13",
     M = 0.0159994,
@@ -154,7 +155,7 @@ electronic_species[13] = {
 }
 
 electronic_species[14]  ={
-    name = 'OI',
+    name = 'OI - 6',
     level = 6,
     individual_range = "14 - 21",
     M = 0.0159994,
@@ -164,7 +165,7 @@ electronic_species[14]  ={
 }
 
 electronic_species[15] = {
-    name = 'OI',
+    name = 'OI - 7',
     level = 7,
     individual_range = "22 - 27",
     M = 0.0159994,
@@ -174,7 +175,7 @@ electronic_species[15] = {
 }
 
 electronic_species[16] = {
-    name = 'OI',
+    name = 'OI - 8',
     level = 8,
     individual_range = "28 - 40",
     M = 0.0159994,

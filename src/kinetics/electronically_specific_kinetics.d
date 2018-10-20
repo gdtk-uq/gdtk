@@ -41,11 +41,14 @@ public:
         _numden_output.length = gmodel.n_species - 2;
 
         foreach(int i;0 .. gmodel.n_species) {
-            if (gmodel.species_name(i) == "NI") {
-                NInum += 1;
-            } else if (gmodel.species_name(i) == "OI") {
-                OInum += 1;
-            } else if (gmodel.species_name(i) == "e") {
+            if (gmodel.species_name(i).length > 2) {
+                if (to!(char[])(gmodel.species_name(i))[0..3] == "NI ") {
+                    NInum += 1;
+                } else if (to!(char[])(gmodel.species_name(i))[0..3] == "OI") {
+                    OInum += 1;
+                }
+            }
+            if (gmodel.species_name(i) == "e") {
                 eind = i;
             } else if (gmodel.species_name(i) == "NII") {
                 NIIind = i;
@@ -57,8 +60,8 @@ public:
                 O2ind=i;
             }
         }
-
-        kinetics.electronic_state_solver.Init(false);
+        debug{writeln(NInum);}
+        kinetics.electronic_state_solver.Init(true);
     }
 
     override void opCall(GasState Q, double tInterval,
