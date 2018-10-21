@@ -523,8 +523,8 @@ final class GlobalConfig {
     shared static bool use_extended_stencil = false;
     shared static double venkat_K_value = 0.3;
     
-    // Default flux calculator is the adaptive mix of ausmdv and efm.
-    shared static FluxCalculator flux_calculator = FluxCalculator.adaptive_efm_ausmdv;
+    // Default flux calculator is the adaptive mix of (diffusive) Hanel and AUSMDV.
+    shared static FluxCalculator flux_calculator = FluxCalculator.adaptive_hanel_ausmdv;
 
     // Set the tolerance to shear when applying the adaptive flux calculator.
     // We don't want EFM to be applied in situations of significant shear.
