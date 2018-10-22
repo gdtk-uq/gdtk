@@ -1094,22 +1094,48 @@ function ExchangeBC_MappedCell:new(o)
    return o
 end
 
-UserDefinedBC = BoundaryCondition:new()
-UserDefinedBC.type = "user_defined"
-function UserDefinedBC:new(o)
-   local flag = type(self)=='table' and self.type=='user_defined'
+UserDefinedGhostCellBC = BoundaryCondition:new()
+UserDefinedGhostCellBC.type = "user_defined_ghost_cell"
+function UserDefinedGhostCellBC:new(o)
+   local flag = type(self)=='table' and self.type=='user_defined_ghost_cell'
    if not flag then
-      error("Make sure that you are using UserDefinedBC:new{} and not UserDefinedBC.new{}", 2)
+      error("Make sure that you are using UserDefinedGhostCellBC:new{} and not UserDefinedGhostCellBC.new{}", 2)
    end
    o = o or {}
    flag = checkAllowedNames(o, {"fileName", "filename", "label", "group", "is_design_surface", "num_cntrl_pts"})
    if not flag then
-      error("Invalid name for item supplied to UserDefinedBC constructor.", 2)
+      error("Invalid name for item supplied to UserDefinedGhostCellBC constructor.", 2)
    end
    o = BoundaryCondition.new(self, o)
    o.fileName = o.fileName or o.filename
    o.preReconAction = { UserDefinedGhostCell:new{fileName=o.fileName} }
    o.preSpatialDerivActionAtBndryFaces = { UserDefinedInterface:new{fileName=o.fileName}, UpdateThermoTransCoeffs:new() } 
+   o.is_configured = true
+   return o
+end
+-- Keep the old name.
+UserDefinedBC = UserDefinedGhostCellBC
+
+UserDefinedFluxBC = BoundaryCondition:new()
+UserDefinedFluxBC.type = "user_defined_flux"
+function UserDefinedFluxBC:new(o)
+   local flag = type(self)=='table' and self.type=='user_defined_flux'
+   if not flag then
+      error("Make sure that you are using UserDefinedFluxBC:new{} and not UserDefinedFluxBC.new{}", 2)
+   end
+   o = o or {}
+   flag = checkAllowedNames(o, {"fileName", "filename", "funcName", "funcname",
+                                "label", "group", "is_design_surface", "num_cntrl_pts"})
+   if not flag then
+      error("Invalid name for item supplied to UserDefinedFluxBC constructor.", 2)
+   end
+   o = BoundaryCondition.new(self, o)
+   o.fileName = o.fileName or o.filename
+   o.funcName = o.funcName or o.funcname
+   o.funcName = o.funcName or 'convectiveFlux'
+   o.postConvFluxAction = { UserDefinedFlux:new{fileName=o.fileName, funcName=o.funcName} }
+   o.ghost_cell_data_available = false
+   o.convective_flux_computed_in_bc = true
    o.is_configured = true
    return o
 end
