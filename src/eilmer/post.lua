@@ -6,8 +6,11 @@ print("Loading post.lua...")
 FlowSolution.get_cell_data_along_i_index = function(self, args)
    -- Return a table of CellData tables, for cells along an i-index slice
    -- for specified j,k indices of a structured-grid.
+   if not (type(self)=='userdata') then
+      error("Make sure that you are using FlowSolution:get_xxxx{args} not FlowSolution.get_xxxx{args}", 2)
+   end
    if (not (args.ib and args.j)) then
-      error("FlowSolution:get_cell_data_along_i_index{ib=n1, j=n2, k=n3}")
+      error("FlowSolution:get_cell_data_along_i_index{ib=n1, j=n2, k=n3}", 2)
    end
    local ib = args.ib
    local j = args.j
@@ -24,8 +27,11 @@ end
 FlowSolution.get_cell_data_along_j_index = function(self, args)
    -- Return a table of CellData tables, for cells along an j-index slice
    -- for specified i,k indices of a structured-grid.
+   if not (type(self)=='userdata') then
+      error("Make sure that you are using FlowSolution:get_xxxx{args} not FlowSolution.get_xxxx{args}", 2)
+   end
    if (not (args.ib and args.i)) then
-      error("FlowSolution:get_cell_data_along_j_index{ib=n1, i=n2, k=n3}")
+      error("FlowSolution:get_cell_data_along_j_index{ib=n1, i=n2, k=n3}", 2)
    end
    local ib = args.ib
    local i = args.i
@@ -42,8 +48,11 @@ end
 FlowSolution.get_cell_data_along_k_index = function(self, args)
    -- Return a table of CellData tables, for cells along an k-index slice
    -- for specified i,j indices of a structured-grid.
+   if not (type(self)=='userdata') then
+      error("Make sure that you are using FlowSolution:get_xxxx{args} not FlowSolution.get_xxxx{args}", 2)
+   end
    if (not (args.ib and args.i and args.j)) then
-      error("FlowSolution:get_cell_data_along_k_index{ib=n1, i=n2, j=n3}")
+      error("FlowSolution:get_cell_data_along_k_index{ib=n1, i=n2, j=n3}", 2)
    end
    local ib = args.ib
    local i = args.i
