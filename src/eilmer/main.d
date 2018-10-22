@@ -486,7 +486,12 @@ usageMsg ~= to!string(totalCPUs) ~" on this machine
             registeridealgasflowFunctions(L);
             registergasflowFunctions(L);
             registerBBLA(L);
-            if ( luaL_dofile(L, toStringz(scriptFile)) != 0 ) {
+            if (luaL_dofile(L, toStringz(dirName(thisExePath())~"/post.lua")) != 0) {
+                writeln("There was a problem in the post.lua script.");
+                string errMsg = to!string(lua_tostring(L, -1));
+                throw new FlowSolverException(errMsg);
+            }
+            if (luaL_dofile(L, toStringz(scriptFile)) != 0) {
                 writeln("There was a problem in the user-supplied Lua script: ", scriptFile);
                 string errMsg = to!string(lua_tostring(L, -1));
                 throw new FlowSolverException(errMsg);
