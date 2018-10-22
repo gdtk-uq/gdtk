@@ -600,6 +600,8 @@ void registerStructuredGrid(lua_State* L)
     lua_setfield(L, -2, "get_boundary_grid");
     lua_pushcfunction(L, &cellVolume!(StructuredGrid, StructuredGridMT));
     lua_setfield(L, -2, "cellVolume");
+    lua_pushcfunction(L, &cellCentroid!(StructuredGrid, StructuredGridMT));
+    lua_setfield(L, -2, "cellCentroid");
     lua_pushcfunction(L, &write_to_vtk_file!(StructuredGrid, StructuredGridMT));
     lua_setfield(L, -2, "write_to_vtk_file");
     lua_pushcfunction(L, &write_to_gzip_file!(StructuredGrid, StructuredGridMT));

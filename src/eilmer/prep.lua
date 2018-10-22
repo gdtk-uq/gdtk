@@ -1122,7 +1122,8 @@ function setHistoryPoint(args)
       error("Invalid name for item supplied to setHistoryPoint.", 2)
    end
    -- First look for x,y,z
-   if (args.x) then
+   local found = false
+   if args.x then
       local x = args.x
       local y = args.y
       local z = args.z or 0.0
@@ -1140,10 +1141,10 @@ function setHistoryPoint(args)
       -- Convert blkId to 0-offset
       blkId = blkId - 1
       historyCells[#historyCells+1] = {ib=blkId, i=cellId}
-      return
+      found = true
    end
    -- Still trying; look for integer indices.
-   if (args.j and args.ib) then
+   if (not found) and args.j and args.ib then
       local ib = args.ib
       local i = args.i
       local j = args.j
@@ -1153,12 +1154,24 @@ function setHistoryPoint(args)
       local njc = fluidBlocks[ib+1].njc
       local cellId = k * (njc * nic) + j * nic + i
       historyCells[#historyCells+1] = {ib=args.ib, i=cellId}
-      return
+      found = true
    end
-   if not (args.ib and args.i) then
-      error("Could not identify cell for setHistoryPoint.", 2)
+   if not found then
+      -- Final option is to directly set the identity block and cell.
+      if args.ib and args.i then
+         historyCells[#historyCells+1] = {ib=args.ib, i=args.i}
+      else
+         error("Could not identify cell for setHistoryPoint.", 2)
+      end
    end
-   historyCells[#historyCells+1] = {ib=args.ib, i=args.i}
+   -- If we arrive here, we have successfully set the cell identity.
+   -- Print a summary of its identity and location.
+   local n = #historyCells
+   local ib = historyCells[n].ib -- zero-based block index
+   local i = historyCells[n].i
+   local pos = fluidBlocks[ib+1].grid:cellCentroid(i) -- one-based block array
+   print(string.format("History point [%d] ib=%d i=%d x=%g y=%g z=%g",
+                       n, ib, i, pos.x, pos.y, pos.z))
    return
 end
 

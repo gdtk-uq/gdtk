@@ -22,6 +22,7 @@ import nm.number;
 import util.lua;
 import util.lua_service;
 import geom;
+import geom.luawrap.luageom;
 
 extern(C) int get_type(T, string MTname)(lua_State* L)
 {
@@ -64,6 +65,16 @@ extern(C) int cellVolume(T, string MTname)(lua_State *L)
     grid.compute_cell_properties(indx, centroid, volume);
     lua_pushnumber(L, volume);
     return 1;
+}
+
+extern(C) int cellCentroid(T, string MTname)(lua_State *L)
+{
+    auto grid = checkObj!(T, MTname)(L, 1);
+    size_t indx = to!size_t(luaL_checkint(L, 2));
+    number volume;
+    Vector3 centroid;
+    grid.compute_cell_properties(indx, centroid, volume);
+    return pushVector3(L, centroid);
 }
 
 extern(C) int write_to_vtk_file(T, string MTname)(lua_State* L)
