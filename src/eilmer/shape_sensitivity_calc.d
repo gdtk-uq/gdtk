@@ -218,14 +218,17 @@ void main(string[] args) {
             myblk.applyPostConvFluxAction(0.0, 0, 0);
             myblk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
             myblk.applyPostDiffFluxAction(0.0, 0, 0);
-
-            steadystate_core.evalRHS(0.0, 0);
-
+        }
+        
+        steadystate_core.evalRHS(0.0, 0);
+        foreach (myblk; parallel(localFluidBlocks,1)) {
             myblk.applyPreReconAction(0.0, 0, 0);
             myblk.applyPostConvFluxAction(0.0, 0, 0);
             myblk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
             myblk.applyPostDiffFluxAction(0.0, 0, 0);
-            
+        }
+        
+        foreach (myblk; parallel(localFluidBlocks,1)) {
             myblk.JlocT = new SMatrix!number();
             local_flow_jacobian_transpose(myblk.JlocT, myblk, nPrimitive, myblk.myConfig.interpolation_order, EPS);
         }
