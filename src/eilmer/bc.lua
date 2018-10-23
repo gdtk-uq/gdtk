@@ -372,11 +372,20 @@ function BoundaryFluxEffect:new(o)
    self.__index = self
    return o
 end
+
 ConstFlux = BoundaryFluxEffect:new{flowState=nil}
 ConstFlux.type = "const_flux"
 function ConstFlux:tojson()
    local str = string.format('          {"type": "%s", ', self.type)
    str = str .. string.format(' "flowstate": %s', self.flowState:toJSONString())
+   str = str .. '}'
+   return str
+end
+
+SimpleOutflowFlux = BoundaryFluxEffect:new{}
+ConstFlux.type = "simple_outflow_flux"
+function SimpleOutflowFlux:tojson()
+   local str = string.format('          {"type": "%s", ', self.type)
    str = str .. '}'
    return str
 end
@@ -974,22 +983,47 @@ function InFlowBC_FromStagnation:new(o)
    return o
 end
 
-OutFlowBC_Simple = BoundaryCondition:new()
-OutFlowBC_Simple.type = "outflow_simple_extrapolate"
-function OutFlowBC_Simple:new(o)
+OutFlowBC_SimpleExtrapolate = BoundaryCondition:new()
+OutFlowBC_SimpleExtrapolate.type = "outflow_simple_extrapolate"
+function OutFlowBC_SimpleExtrapolate:new(o)
    local flag = type(self)=='table' and self.type=='outflow_simple_extrapolate'
    if not flag then
-      error("Make sure that you are using OutFlowBC_Simple:new{} and not OutFlowBC_Simple.new{}", 2)
+      error("Make sure that you are using OutFlowBC_SimpleExtrapolate:new{} and not OutFlowBC_SimpleExtrapolate.new{}", 2)
    end
    o = o or {}
    flag = checkAllowedNames(o, {"xOrder", "label", "group"})
    if not flag then
-      error("Invalid name for item supplied to OutFlowBC_Simple constructor.", 2)
+      error("Invalid name for item supplied to OutFlowBC_SimpleExtrapolate constructor.", 2)
    end
    o = BoundaryCondition.new(self, o)
    o.is_wall_with_viscous_effects = false
    o.preReconAction = { ExtrapolateCopy:new{xOrder = o.xOrder} }
    o.preSpatialDerivAction = { CopyCellData:new() }
+   o.is_configured = true
+   return o
+end
+-- Old name is retained.
+OutFlowBC_Simple = OutFlowBC_SimpleExtrapolate
+
+OutFlowBC_SimpleFlux = BoundaryCondition:new()
+OutFlowBC_SimpleFlux.type = "outflow_simple_flux"
+function OutFlowBC_SimpleFlux:new(o)
+   local flag = type(self)=='table' and self.type=='outflow_simple_flux'
+   if not flag then
+      error("Make sure that you are using OutFlowBC_SimpleFlux:new{} and not OutFlowBC_SimpleFlux.new{}", 2)
+   end
+   o = o or {}
+   flag = checkAllowedNames(o, {"label", "group"})
+   if not flag then
+      error("Invalid name for item supplied to OutFlowBC_SimpleFlux constructor.", 2)
+   end
+   o = BoundaryCondition.new(self, o)
+   o.is_wall_with_viscous_effects = false
+   o.preReconAction = { ExtrapolateCopy:new{xOrder = o.xOrder} }
+   o.preSpatialDerivAction = { CopyCellData:new() }
+   o.postConvFluxAction = { SimpleOutflowFlux:new() }
+   o.ghost_cell_data_available = true
+   o.convective_flux_computed_in_bc = true
    o.is_configured = true
    return o
 end

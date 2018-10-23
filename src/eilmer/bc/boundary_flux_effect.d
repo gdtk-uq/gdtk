@@ -51,6 +51,9 @@ BoundaryFluxEffect make_BFE_from_json(JSONValue jsonData, int blk_id, int bounda
         auto flowstate = new FlowState(jsonData["flowstate"], gmodel);
         newBFE = new BFE_ConstFlux(blk_id, boundary, flowstate);
         break;
+    case "simple_outflow_flux":
+        newBFE = new BFE_SimpleOutflowFlux(blk_id, boundary);
+        break;
     case "user_defined":
         string fname = getJSONstring(jsonData, "filename", "none");
         string funcName = getJSONstring(jsonData, "function_name", "none");
@@ -219,6 +222,7 @@ public:
         }
     }
 }
+
 class BFE_ConstFlux : BoundaryFluxEffect {
 public:
     FlowState fstate;
@@ -307,6 +311,73 @@ public:
             break;
         default:
             throw new Error("Const_Flux only implemented for WEST gas face.");
+        }
+    }
+}
+
+class BFE_SimpleOutflowFlux : BoundaryFluxEffect {
+public:  
+    this(int id, int boundary)
+    {
+        auto gmodel = blk.myConfig.gmodel;
+        super(id, boundary, "Simple_Outflow_Flux");
+    }
+
+    override string toString() const 
+    {
+        return "BFE_SimpleOutflowFlux";
+    }
+
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
+    {
+        throw new Error("BFE_SimpleOutflowFlux.apply_unstructured_grid() not yet implemented");
+    }
+    
+    override void apply_structured_grid(double t, int gtl, int ftl)
+    {
+        FVInterface IFace;
+        size_t i, j, k;
+        number _u_rel, _v_rel;
+        auto blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
+
+        switch(which_boundary){
+        case Face.west:
+            i = blk.imin;
+            for (k = blk.kmin; k <= blk.kmax; ++k) {
+                for (j = blk.jmin; j <= blk.jmax; ++j) {
+                    /+ PJ [FIX-ME] 2018-10-23
+                    // Flux equations
+                    IFace = blk.get_cell(i,j,k).iface[Face.west];
+                    // for a moving grid we need vel relative to the interface
+                    _u_rel = _u - IFace.gvel.x;
+                    _v_rel = _v - IFace.gvel.y;
+                    IFace.F.mass = _rho * ( _u_rel*IFace.n.x + _v_rel*IFace.n.y );
+                    /++ when the boundary is moving we use the relative velocity
+                      + between the fluid and the boundary interface to determine
+                      + the amount of mass flux across the cell face (above). 
+                      + Alternatively momentum is a fluid property hence we use the 
+                      + fluid velocity in determining the momentum flux -- this is 
+                      + akin to saying we know how much mass flux is crossing 
+                      + the cell face of which this mass has a momentum dependant 
+                      + on its velocity. Since we we want this momentum flux in global 
+                      + coordinates there is no need to rotate the velocity.
+                      ++/
+                    IFace.F.momentum.refx = _p * IFace.n.x + _u*IFace.F.mass;
+                    IFace.F.momentum.refy = _p * IFace.n.y + _v*IFace.F.mass;
+                    IFace.F.momentum.refz = 0.0;
+                    // [TODO]: Kyle, think about z component.
+                    IFace.F.total_energy = IFace.F.mass * (_e + 0.5*(_u*_u+_v*_v)) + _p*(_u*IFace.n.x+_v*IFace.n.y);
+                    for ( int _isp = 0; _isp < _nsp; _isp++ ){
+                        IFace.F.massf[_isp] = IFace.F.mass * _massf[_isp];
+                    }
+                    // [TODO]: Kyle, separate energy modes for multi-species simulations.
+                    +/
+                } // end j loop
+            } // end k loop
+            break;
+        default:
+            throw new Error("SimpleOutflowFlux only implemented for WEST gas face (not even that [FIX-ME].");
         }
     }
 }
