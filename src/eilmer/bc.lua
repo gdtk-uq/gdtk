@@ -383,7 +383,7 @@ function ConstFlux:tojson()
 end
 
 SimpleOutflowFlux = BoundaryFluxEffect:new{}
-ConstFlux.type = "simple_outflow_flux"
+SimpleOutflowFlux.type = "simple_outflow_flux"
 function SimpleOutflowFlux:tojson()
    local str = string.format('          {"type": "%s", ', self.type)
    str = str .. '}'
