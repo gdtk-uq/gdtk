@@ -90,7 +90,11 @@ void main(string[] args) {
     // perturb mesh
     string perturbMeshCmd = "bash perturb_mesh.sh" ;
     auto perturbMeshOutput = executeShell(perturbMeshCmd);
-    
+
+    // clear directory (excetp new mesh)
+    string clearCmd = "bash clear.sh" ;
+    auto clearOutput = executeShell(clearCmd);
+
     // execute flow solver if objective function evaluations are needed
     if (computeObjFns) {
         assert(exists(runFlowSolverCmd), "e4sss execution bash file not present");
