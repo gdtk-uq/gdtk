@@ -238,10 +238,9 @@ public:
     {
         /+ We only need to gather the freestream values once at
          + the start of simulation since we are interested in
-         + applying a constant flux as the incoming boundary
-         + condition.
+         + applying a constant flux as the incoming boundary condition.
+         + Note that, at this time, the gmodel held by the block is notavailable.
         +/
-        //auto gmodel = blk.myConfig.gmodel;
         auto gmodel = GlobalConfig.gmodel_master;
         super(id, boundary, "Const_Flux");
         _u = fstate.vel.x;
@@ -319,7 +318,6 @@ class BFE_SimpleOutflowFlux : BoundaryFluxEffect {
 public:  
     this(int id, int boundary)
     {
-        auto gmodel = blk.myConfig.gmodel;
         super(id, boundary, "Simple_Outflow_Flux");
     }
 
@@ -330,57 +328,120 @@ public:
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-        throw new Error("BFE_SimpleOutflowFlux.apply_unstructured_grid() not yet implemented");
+        BoundaryCondition bc = blk.bc[which_boundary];
+        foreach (i, face; bc.faces) {
+            int outsign = bc.outsigns[i];
+            FVCell interior_cell = (outsign == 1) ? face.left_cell : face.right_cell;
+            compute_outflow_flux(interior_cell.fs, outsign, face);
+        }
     }
     
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        FVInterface IFace;
-        size_t i, j, k;
-        number _u_rel, _v_rel;
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
 
         switch(which_boundary){
+        case Face.north:
+            size_t j = blk.jmax;
+            for (size_t k = blk.kmin; k <= blk.kmax; ++k) {
+                for (size_t i = blk.imin; i <= blk.imax; ++i) {
+                    int outsign = 1;
+                    FVCell interior_cell = blk.get_cell(i,j,k);
+                    compute_outflow_flux(interior_cell.fs, outsign, interior_cell.iface[Face.north]);
+                }
+            }
+            break;
+        case Face.east:
+            size_t i = blk.imax;
+            for (size_t k = blk.kmin; k <= blk.kmax; ++k) {
+                for (size_t j = blk.jmin; j <= blk.jmax; ++j) {
+                    int outsign = 1;
+                    FVCell interior_cell = blk.get_cell(i,j,k);
+                    compute_outflow_flux(interior_cell.fs, outsign, interior_cell.iface[Face.east]);
+                }
+            }
+            break;
+        case Face.south:
+            size_t j = blk.jmin;
+            for (size_t k = blk.kmin; k <= blk.kmax; ++k) {
+                for (size_t i = blk.imin; i <= blk.imax; ++i) {
+                    int outsign = -1;
+                    FVCell interior_cell = blk.get_cell(i,j,k);
+                    compute_outflow_flux(interior_cell.fs, outsign, interior_cell.iface[Face.south]);
+                }
+            }
+            break;
         case Face.west:
-            i = blk.imin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    /+ PJ [FIX-ME] 2018-10-23
-                    // Flux equations
-                    IFace = blk.get_cell(i,j,k).iface[Face.west];
-                    // for a moving grid we need vel relative to the interface
-                    _u_rel = _u - IFace.gvel.x;
-                    _v_rel = _v - IFace.gvel.y;
-                    IFace.F.mass = _rho * ( _u_rel*IFace.n.x + _v_rel*IFace.n.y );
-                    /++ when the boundary is moving we use the relative velocity
-                      + between the fluid and the boundary interface to determine
-                      + the amount of mass flux across the cell face (above). 
-                      + Alternatively momentum is a fluid property hence we use the 
-                      + fluid velocity in determining the momentum flux -- this is 
-                      + akin to saying we know how much mass flux is crossing 
-                      + the cell face of which this mass has a momentum dependant 
-                      + on its velocity. Since we we want this momentum flux in global 
-                      + coordinates there is no need to rotate the velocity.
-                      ++/
-                    IFace.F.momentum.refx = _p * IFace.n.x + _u*IFace.F.mass;
-                    IFace.F.momentum.refy = _p * IFace.n.y + _v*IFace.F.mass;
-                    IFace.F.momentum.refz = 0.0;
-                    // [TODO]: Kyle, think about z component.
-                    IFace.F.total_energy = IFace.F.mass * (_e + 0.5*(_u*_u+_v*_v)) + _p*(_u*IFace.n.x+_v*IFace.n.y);
-                    for ( int _isp = 0; _isp < _nsp; _isp++ ){
-                        IFace.F.massf[_isp] = IFace.F.mass * _massf[_isp];
-                    }
-                    // [TODO]: Kyle, separate energy modes for multi-species simulations.
-                    +/
-                } // end j loop
-            } // end k loop
+            size_t i = blk.imin;
+            for (size_t k = blk.kmin; k <= blk.kmax; ++k) {
+                for (size_t j = blk.jmin; j <= blk.jmax; ++j) {
+                    int outsign = -1;
+                    FVCell interior_cell = blk.get_cell(i,j,k);
+                    compute_outflow_flux(interior_cell.fs, outsign, interior_cell.iface[Face.west]);
+                }
+            }
+            break;
+        case Face.top:
+            size_t k = blk.kmax;
+            for (size_t i = blk.imin; i <= blk.imax; ++i) {
+                for (size_t j = blk.jmin; j <= blk.jmax; ++j) {
+                    int outsign = 1;
+                    FVCell interior_cell = blk.get_cell(i,j,k);
+                    compute_outflow_flux(interior_cell.fs, outsign, interior_cell.iface[Face.top]);
+                }
+            }
+            break;
+        case Face.bottom:
+            size_t k = blk.kmin;
+            for (size_t i = blk.imin; i <= blk.imax; ++i) {
+                for (size_t j = blk.jmin; j <= blk.jmax; ++j) {
+                    int outsign = -1;
+                    FVCell interior_cell = blk.get_cell(i,j,k);
+                    compute_outflow_flux(interior_cell.fs, outsign, interior_cell.iface[Face.bottom]);
+                }
+            }
             break;
         default:
-            throw new Error("SimpleOutflowFlux only implemented for WEST gas face (not even that [FIX-ME].");
+            throw new Error("oops, wrong boundary id");
+        } // end switch
+    } // end apply_structured_grid()
+
+private:
+    @nogc
+    void compute_outflow_flux(ref const(FlowState) fs, int outsign, ref FVInterface face)
+    {
+        // Flux equations use the local flow state information.
+        // For a moving grid we need vel relative to the interface.
+        Vector3 v_rel; v_rel.set(fs.vel); v_rel -= face.gvel;
+        number mass_flux = fs.gas.rho * dot(v_rel, face.n);
+        if ((outsign*mass_flux) > 0.0) {
+            // We have a true outflow flux.
+            face.F.mass = mass_flux;
+            face.F.momentum.refx = fs.gas.p * face.n.x + fs.vel.x * mass_flux;
+            face.F.momentum.refy = fs.gas.p * face.n.y + fs.vel.y * mass_flux;
+            face.F.momentum.refz = fs.gas.p * face.n.z + fs.vel.z * mass_flux;
+            face.F.total_energy = mass_flux*(fs.gas.u + 0.5*dot(fs.vel,fs.vel))
+                + fs.gas.p*dot(fs.vel,face.n);
+            // [TODO] PJ 2018-10-24 check that fs.vel is the correct velocity
+            // to use for pressure-work flowing across the face.
+            foreach (i; 0 .. face.F.massf.length) { face.F.massf[i] = mass_flux * fs.gas.massf[i]; }
+            foreach (i; 0 .. face.F.energies.length) { face.F.energies[i] = mass_flux * fs.gas.u_modes[i]; }
+        } else {
+            // We have a situation where the nominal mass flux
+            // indicates that flow should be coming into the domain.
+            // Since we really do not want to have this happen,
+            // we close off the face and think of it as a wall.
+            face.F.mass = 0.0;
+            face.F.momentum.set(face.n); face.F.momentum *= fs.gas.p;
+            face.F.total_energy = fs.gas.p*dot(face.gvel,face.n);
+            foreach (i; 0 .. face.F.massf.length) { face.F.massf[i] = 0.0; }
+            foreach (i; 0 .. face.F.energies.length) { face.F.energies[i] = 0.0; }
         }
+        return;
     }
-}
+} // end class BFE_SimpleOutflowFlux
+
 
 class BFE_EnergyBalanceThermionic : BoundaryFluxEffect {
 public:

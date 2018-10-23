@@ -385,7 +385,7 @@ end
 SimpleOutflowFlux = BoundaryFluxEffect:new{}
 SimpleOutflowFlux.type = "simple_outflow_flux"
 function SimpleOutflowFlux:tojson()
-   local str = string.format('          {"type": "%s", ', self.type)
+   local str = string.format('          {"type": "%s" ', self.type)
    str = str .. '}'
    return str
 end
