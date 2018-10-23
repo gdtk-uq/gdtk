@@ -59,7 +59,7 @@ void main(string[] args) {
     msg       ~= "           [--update-grid]                   perturbs grid according to updated Bezier control points \n";
     msg       ~= "           [--direct-method]                 evaluates sensitivities via direct complex step method   \n";
     msg       ~= "           [--adjoint-method]                evalautes sensitivities via adjoint method               \n";
-    msg       ~= "           [--adjoint-verification           evalautes sensitivities via adjoint method               \n";
+    msg       ~= "           [--adjoint-verification           flag for verifying the adjoint sensitivities             \n";
     msg       ~= "           [--verify-primitive-jacobian]     test the formation of the primtive Jacobian              \n";
     msg       ~= "           [--verify-conservative-jacobian   test the formation of the conservative Jacobian          \n";
     msg       ~= "           [--verify-sss-preconditioner      test the formation of the steady-state preconditioner    \n";
@@ -156,7 +156,9 @@ void main(string[] args) {
     
     if (parameteriseSurfacesFlag) {
         fit_design_parameters_to_surface(designVars);
-        //writeDesignVarsToDakotaFile(designVars, jobName);
+        if (!adjointVerificationFlag) { 
+            writeDesignVarsToDakotaFile(designVars, jobName);
+        }
         return; // --parameterise-surfaces complete
     }
 
@@ -167,11 +169,12 @@ void main(string[] args) {
         readBezierDataFromFile(designVars);
 	// update bezier curve with new design variables
 	readDesignVarsFromDakotaFile(designVars);
-	gridUpdate(designVars, 1); // gtl=1
+	gridUpdate(designVars, 1, updateGridFlag, jobName); // gtl=1
         return; // --grid-update complete
     }
 
     /* objective function evaluation */
+
     number objFnEval;
     if (returnObjFcnFlag) {
         objFnEval = objective_function_evaluation();
@@ -284,21 +287,21 @@ void main(string[] args) {
             readDesignVarsFromDakotaFile(designVars);
         }
         */
+        readBezierDataFromFile(designVars);
         if (!adjointVerificationFlag) { 
-            readBezierDataFromFile(designVars);
             readDesignVarsFromDakotaFile(designVars);
         }
         
         // objective function sensitivity w.r.t. design variables
         number[] g;
-        readBezierDataFromFile(designVars);
+        //readBezierDataFromFile(designVars);
         g.length = designVars.length;
         foreach (myblk; localFluidBlocks) {
             size_t nLocalCells = myblk.cells.length;
             myblk.rT = new Matrix!number(designVars.length, nLocalCells*nPrimitive);
         }
 
-        compute_design_variable_partial_derivatives(designVars, g, nPrimitive, with_k_omega, EPS);
+        compute_design_variable_partial_derivatives(designVars, g, nPrimitive, with_k_omega, EPS, jobName);
         
         // ---------------------
         // COMPUTE SENSITIVITIES

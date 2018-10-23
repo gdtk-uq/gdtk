@@ -51,11 +51,6 @@ import user_defined_source_terms;
 
 shared enum ghost_cell_start_id = 1_000_000_000;
 shared immutable double ESSENTIALLY_ZERO = 1.0e-50;
-// some data objects used in forming the Jacobian
-//immutable size_t MAX_PERTURBED_INTERFACES = 80;
-//FVCell cellSave;
-//FVInterface[MAX_PERTURBED_INTERFACES] ifaceP;
-
 // Module-local, global memory arrays and matrices for GMRES
 number[] g0;
 number[] g1;
@@ -76,75 +71,6 @@ void evalPrimitiveJacobianVecProd(FluidBlock blk, size_t nPrimitive, number[] v,
     with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega);
     blk.clear_fluxes_of_conserved_quantities();
     foreach (cell; blk.cells) cell.clear_source_vector();
-    ///////////////////
-    /*
-    number[] w;
-    w.length = v.length;
-    auto gmodel = blk.myConfig.gmodel;
-    int cellCount = 0;
-    foreach (cell; blk.cells) { 
-        // form transformation matrix (TODO: genearlise, currently only for 2D Euler/Laminar Navier-Stokes).
-        number gamma = gmodel.gamma(cell.fs.gas);
-        // form inverse transformation matrix
-        blk.Minv[0,0] = to!number(1.0);
-        blk.Minv[0,1] = to!number(0.0);
-        blk.Minv[0,2] = to!number(0.0);
-        blk.Minv[0,3] = to!number(0.0);
-        // second row
-        blk.Minv[1,0] = -cell.fs.vel.x/cell.fs.gas.rho;
-        blk.Minv[1,1] = 1.0/cell.fs.gas.rho;
-        blk.Minv[1,2] = to!number(0.0);
-        blk.Minv[1,3] = to!number(0.0);
-        // third row
-        blk.Minv[2,0] = -cell.fs.vel.y/cell.fs.gas.rho;
-        blk.Minv[2,1] = to!number(0.0);
-        blk.Minv[2,2] = 1.0/cell.fs.gas.rho;
-        blk.Minv[2,3] = to!number(0.0);
-        // fourth row
-        blk.Minv[3,0] = 0.5*(gamma-1.0)*(cell.fs.vel.x*cell.fs.vel.x+cell.fs.vel.y*cell.fs.vel.y);
-        blk.Minv[3,1] = -cell.fs.vel.x*(gamma-1);
-        blk.Minv[3,2] = -cell.fs.vel.y*(gamma-1);
-        blk.Minv[3,3] = gamma-1.0;
-        
-        if (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) {
-            blk.Minv[0,4] = to!number(0.0);
-            blk.Minv[0,5] = to!number(0.0);
-            // second row
-            blk.Minv[1,4] = to!number(0.0);
-            blk.Minv[1,5] = to!number(0.0);
-            // third row
-            blk.Minv[2,4] = to!number(0.0);
-            blk.Minv[2,5] = to!number(0.0);
-            // fourth row
-            blk.Minv[3,4] = -(gamma-1.0);
-            blk.Minv[3,5] = to!number(0.0);
-            // fifth row
-            blk.Minv[4,0] = -cell.fs.tke/cell.fs.gas.rho;
-            blk.Minv[4,1] = to!number(0.0);
-            blk.Minv[4,2] = to!number(0.0);
-            blk.Minv[4,3] = to!number(0.0);
-            blk.Minv[4,4] = 1.0/cell.fs.gas.rho;
-            blk.Minv[4,5] = to!number(0.0);
-            // sixth row
-            blk.Minv[5,0] = -cell.fs.omega/cell.fs.gas.rho;
-            blk.Minv[5,1] = to!number(0.0);
-            blk.Minv[5,2] = to!number(0.0);
-            blk.Minv[5,3] = to!number(0.0);
-            blk.Minv[5,4] = to!number(0.0);
-            blk.Minv[5,5] = 1.0/cell.fs.gas.rho;
-        }
-        
-        number[] tmp;
-        tmp.length = nPrimitive;
-        nm.bbla.dot(blk.Minv, v[cellCount..cellCount+nPrimitive], tmp);
-        w[cellCount..cellCount+nPrimitive] = tmp[];
-        cellCount += nPrimitive;
-    }
-    v[] = w[];
-    */
-    //////////////////
-
-
     int cellCount = 0;
     foreach (cell; blk.cells) {
         cell.fs.gas.rho += EPS*v[cellCount+0];
@@ -1342,14 +1268,14 @@ void compute_flux(FVCell pcell, FluidBlock blk, size_t orderOfJacobian, ref FVCe
 }
 
 
-void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref number[] g, size_t nPrimitive, bool with_k_omega, number EPS) {
+void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref number[] g, size_t nPrimitive, bool with_k_omega, number EPS, string jobName) {
     size_t nDesignVars = design_variables.length;
     int gtl; int ftl; number objFcnEvalP; number objFcnEvalM; string varID; number dP; number P0;
     
     foreach (i; 0..nDesignVars) {
         foreach (myblk; localFluidBlocks) {
             ensure_directory_is_present(make_path_name!"grid"(0));
-            string gridFileName = make_file_name!"grid"("ramp", myblk.id, 0, GlobalConfig.gridFileExt = "gz");
+            string gridFileName = make_file_name!"grid"(jobName, myblk.id, 0, GlobalConfig.gridFileExt = "gz");
             myblk.read_new_underlying_grid(gridFileName);
             myblk.sync_vertices_from_underlying_grid(0);
             myblk.compute_primary_cell_geometric_data(0);
@@ -1458,6 +1384,58 @@ void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref
 /**************************/
 /*  OBJECTIVE FUNCTIONS   */
 /**************************/
+number volume_constraint(int gtl=0, string bndaryForSurfaceIntergral = "objective_function_surface")
+{
+    number vol = 0.0;
+    foreach (myblk; localFluidBlocks) {
+        foreach (bndary; myblk.bc) {
+            if (bndary.group == bndaryForSurfaceIntergral) {
+                foreach (i, f; bndary.faces) {
+                    number h = fabs(f.vtx[1].pos[gtl].x - f.vtx[0].pos[gtl].x); number r = f.Ybar;
+                    vol += PI*r*r*h;
+                }
+            }
+        }
+    }
+    //writef("volume = %.16f \n", vol);
+    double vol0 = 15.7077380991336444; // volume of Von Karman Ogive with L/D = 10/2 
+    number ConFcn = fabs(vol0 - vol);
+    // writef("volume: %.16f    \n", vol);
+    return ConFcn;   
+}
+
+number objective_function_evaluation(int gtl=0, string bndaryForSurfaceIntergral = "objective_function_surface") {
+
+    number ConsFcn = volume_constraint(gtl);
+    double scale;// = 1.0e03;
+    auto fR = File("scale.in", "r");
+    auto line = fR.readln().strip();
+    auto tokens = line.split();
+    scale = to!double(tokens[0]);
+    number ObjFcn = 0.0;    
+    foreach (myblk; parallel(localFluidBlocks,1)) {
+        myblk.locObjFcn = 0.0;
+        foreach (bndary; myblk.bc) {
+            if (bndary.group == bndaryForSurfaceIntergral) {
+                foreach (i, f; bndary.faces) {
+                    FVCell cell;
+                    // collect interior cell
+                    if (bndary.outsigns[i] == 1) {
+                        cell = f.left_cell;
+                    } else {
+                        cell = f.right_cell;
+                    }
+                    myblk.locObjFcn += cell.fs.gas.p*f.area[gtl]*f.n.x;
+                }
+            }
+        }
+    }
+    foreach ( myblk; localFluidBlocks) ObjFcn += myblk.locObjFcn;
+    // writef("drag: %.16f    constraint: %.16f    scale: %.16f \n", 2.0*PI*abs(ObjFcn), ConsFcn, scale);
+    return to!number(2.0*PI)*fabs(ObjFcn) + scale*ConsFcn;
+}
+
+/*
 number objective_function_evaluation(int gtl=0, string bndaryForSurfaceIntergral = "objective_function_surface") {
     number ObjFcn = 0.0;    
     foreach (myblk; parallel(localFluidBlocks,1)) {
@@ -1479,7 +1457,43 @@ number objective_function_evaluation(int gtl=0, string bndaryForSurfaceIntergral
     foreach ( myblk; localFluidBlocks) ObjFcn += myblk.locObjFcn;
     return fabs(ObjFcn);
 }
+*/
 
+void form_objective_function_sensitivity(FluidBlock blk, size_t np, number EPS, string bndaryForSurfaceIntergral = "objective_function_surface") {
+
+    // for now we have hard coded the pressure drag in the x-direction as the objective function
+    size_t nLocalCells = blk.cells.length;
+    blk.f.length = nLocalCells * np;
+
+    foreach(cell; blk.cells) {
+        for ( size_t ip = 0; ip < np; ++ip ) {
+            blk.f[cell.id*np + ip] = 0.0;
+        }
+    }
+    
+    foreach (bndary; blk.bc) {
+        if (bndary.group == bndaryForSurfaceIntergral) {            
+	    foreach (i, f; bndary.faces) {
+		FVCell cell; number origValue; number ObjFcnM; number ObjFcnP; number h;
+                // collect interior cell
+                if (bndary.outsigns[i] == 1) {
+		    cell = f.left_cell;
+		} else {
+		    cell = f.right_cell;
+		}
+                // for current objective function only perturbations in pressure have any effect
+                origValue = cell.fs.gas.p;
+                cell.fs.gas.p = origValue + EPS;
+                ObjFcnP = objective_function_evaluation();
+                //writeln(ObjFcnP);
+                blk.f[cell.id*np + 3] = (ObjFcnP.im)/(EPS.im);
+                cell.fs.gas.p = origValue;
+            }
+        }
+    }
+}
+
+/*
 void form_objective_function_sensitivity(FluidBlock blk, size_t np, number EPS, string bndaryForSurfaceIntergral = "objective_function_surface") {
 
     // for now we have hard coded the pressure drag in the x-direction as the objective function
@@ -1503,6 +1517,7 @@ void form_objective_function_sensitivity(FluidBlock blk, size_t np, number EPS, 
     }
     
 }
+*/
 
 /**********************************/
 /*  GRID PERTURBATION FUNCTIONs   */
@@ -1583,7 +1598,7 @@ void fit_design_parameters_to_surface(ref Vector3[] designVars)
     writeBezierDataToFile();
 } // end parameterise_design_surfaces
 
-void gridUpdate(Vector3[] designVars, size_t gtl) {
+void gridUpdate(Vector3[] designVars, size_t gtl, bool gridUpdate = false, string jobName = "") {
     size_t nDesignVars = designVars.length;
     
     foreach (myblk; parallel(localFluidBlocks,1)) {
@@ -1619,7 +1634,7 @@ void gridUpdate(Vector3[] designVars, size_t gtl) {
             }
         }
     }
-    writeln("length: ", bndaryVtxInitPos.length);
+    //writeln("length: ", bndaryVtxInitPos.length);
     foreach (myblk; localFluidBlocks) {
         foreach( bndary; myblk.bc ) {
                 if (bndary.is_design_surface) {
@@ -1629,10 +1644,13 @@ void gridUpdate(Vector3[] designVars, size_t gtl) {
                     }
                     
                     foreach(j, vtx; bndary.vertices) {
-                        //vtx.pos[gtl].refx = bndary.bezier(bndary.ts[j]).x;
-                        //vtx.pos[gtl].refy = bndary.bezier(bndary.ts[j]).y;
-                        version(complex_numbers) vtx.pos[gtl].refx = complex(vtx.pos[gtl].x.re, bndary.bezier(bndary.ts[j]).x.im);
-                        version(complex_numbers) vtx.pos[gtl].refy = complex(vtx.pos[gtl].y.re, bndary.bezier(bndary.ts[j]).y.im);
+                        if (gridUpdate) {
+                            vtx.pos[gtl].refx = bndary.bezier(bndary.ts[j]).x;
+                            vtx.pos[gtl].refy = bndary.bezier(bndary.ts[j]).y;
+                        } else {
+                            version(complex_numbers) vtx.pos[gtl].refx = complex(vtx.pos[gtl].x.re, bndary.bezier(bndary.ts[j]).x.im);
+                            version(complex_numbers) vtx.pos[gtl].refy = complex(vtx.pos[gtl].y.re, bndary.bezier(bndary.ts[j]).y.im);
+                        }
                     }
                 }
         }
@@ -1668,20 +1686,24 @@ void gridUpdate(Vector3[] designVars, size_t gtl) {
         inverse_distance_weighting(myblk, bndaryVtxInitPos, bndaryVtxNewPos, gtl);
     }
 
-    /*
-    foreach(blk; localFluidBlocks) {
-        writeln("blk.id: ", blk.id);
-        foreach(vtx; blk.vertices) {
-            writef(" %.13e %.13e --------- \n", vtx.pos[gtl].x.re, vtx.pos[gtl].y.re);
-            writef(" %.13e \n", vtx.pos[gtl].x.im);
-            writef(" %.13e \n", vtx.pos[gtl].y.im);
-            
-        }
-    }
-    */
-    
     foreach (myblk; localFluidBlocks) {
         myblk.boundaryVtxIndexList = [];
+    }
+
+    if (gridUpdate) {
+        foreach (myblk; localFluidBlocks) {
+            foreach(j, vtx; myblk.vertices) {
+                vtx.pos[0].refx = vtx.pos[gtl].x;
+                vtx.pos[0].refy = vtx.pos[gtl].y;
+            }
+            
+            // write out grid
+            // save mesh
+            myblk.sync_vertices_to_underlying_grid(0);
+            ensure_directory_is_present(make_path_name!"grid"(0));
+            auto fileName = make_file_name!"grid"(jobName, myblk.id, 0, GlobalConfig.gridFileExt = "gz");
+            myblk.write_underlying_grid(fileName);
+        }
     }
 }
 
@@ -2170,6 +2192,7 @@ void readBezierDataFromFile(ref Vector3[] designVars)
                     bezPts ~= pt;
                 }
                 bndary.bezier = new Bezier(bezPts);
+                //writeln(myblk.id, ", ", bndary.vertices.length, ", ", bndary.which_boundary, ", ", bndary.group, ", ", bndary.type);
                 foreach ( i; 0..bndary.vertices.length) {
                     auto line = fR.readln().strip();
                     auto tokens = line.split();
@@ -2210,7 +2233,7 @@ void writeDesignVarsToDakotaFile(Vector3[] design_variables, string jobName) {
     string designVariableInputContent;
     designVariableInputContent ~= "    continuous_design = " ~ to!string(ndvars) ~ "\n";
     designVariableInputContent ~= "    initial_point    ";
-    foreach ( i; 0..design_variables.length) designVariableInputContent ~= format!"%.16e    %.16e    "(design_variables[i].x, design_variables[i].y);
+    foreach ( i; 0..design_variables.length) designVariableInputContent ~= format!"%.16e    %.16e    "(design_variables[i].x.re, design_variables[i].y.re);
     designVariableInputContent ~= " \n"; 
     designVariableInputContent ~= "    descriptors    ";
     foreach ( i; 0..design_variables.length) {
