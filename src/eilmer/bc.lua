@@ -1025,8 +1025,8 @@ function OutFlowBC_SimpleFlux:new(o)
    o.is_configured = true
    return o
 end
--- Old name is retained but is an alias for the newer BC.
-OutFlowBC_Simple = OutFlowBC_SimpleFlux
+-- Old name is retained as an alias for the original BC.
+OutFlowBC_Simple = OutFlowBC_SimpleExtrapolate
 
 OutFlowBC_FixedP = BoundaryCondition:new()
 OutFlowBC_FixedP.type = "outflow_fixed_p"
