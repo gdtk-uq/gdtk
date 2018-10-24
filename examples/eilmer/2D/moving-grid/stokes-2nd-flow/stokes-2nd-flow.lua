@@ -89,7 +89,7 @@ blk.bcList[south] = UserDefinedBC:new{fileName='southwall-bc.lua'}
 
 
 -- east and west are set as extraploation as the flow is invariant in the x-direction
-blk.bcList[east] = OutFlowBC_Simple:new{xOrder=0}
-blk.bcList[west] = OutFlowBC_Simple:new{xOrder=0}
+blk.bcList[east] = OutFlowBC_SimpleExtrapolate:new{xOrder=0}
+blk.bcList[west] = OutFlowBC_SimpleExtrapolate:new{xOrder=0}
 
 

@@ -40,8 +40,8 @@ grid = StructuredGrid:new{psurface=CoonsPatch:new{p00=p00, p10=p10, p11=p11, p01
 
 bcList = {}
 if case == 1 or case == 3 then
-   bcList[north] = OutFlowBC_Simple:new{xOrder=1}
-   bcList[east] = OutFlowBC_Simple:new{xOrder=1}
+   bcList[north] = OutFlowBC_SimpleExtrapolate:new{xOrder=1}
+   bcList[east] = OutFlowBC_SimpleExtrapolate:new{xOrder=1}
    bcList[south] = UserDefinedBC:new{fileName='udf-bc.lua'}
    bcList[west] = UserDefinedBC:new{fileName='udf-bc.lua'}
 else

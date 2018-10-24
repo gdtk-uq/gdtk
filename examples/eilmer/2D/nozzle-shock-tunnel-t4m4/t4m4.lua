@@ -109,7 +109,7 @@ throat_blk = FluidBlockArray{grid=throat_grid, initialState=inflow, label="throa
 			     nib=1, njb=2}
 exp_blk = FluidBlockArray{grid=exp_grid, initialState=inflow, label="expansion",
 			  bcList={north=WallBC_NoSlip_FixedT:new{Twall=300.0},
-				  east=OutFlowBC_Simple:new{}}, 
+				  east=OutFlowBC_SimpleExtrapolate:new{}}, 
 			  nib=30, njb=2}
 identifyBlockConnections()
 
