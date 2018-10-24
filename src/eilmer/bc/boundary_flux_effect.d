@@ -26,6 +26,7 @@ import globalconfig;
 import globaldata;
 import fluidblock;
 import sfluidblock;
+import ufluidblock;
 import fvcore;
 import fvcell;
 import fvinterface;
@@ -328,6 +329,11 @@ public:
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
+        auto blk = cast(UFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be a UFluidBlock object.");
+        assert(!(blk.myConfig.MHD), "Oops, not implemented for MHD.");
+        assert(blk.omegaz == 0.0, "Oops, not implemented for rotating frame.");
+
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, face; bc.faces) {
             int outsign = bc.outsigns[i];
@@ -340,6 +346,8 @@ public:
     {
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
+        assert(!(blk.myConfig.MHD), "Oops, not implemented for MHD.");
+        assert(blk.omegaz == 0.0, "Oops, not implemented for rotating frame.");
 
         switch(which_boundary){
         case Face.north:
@@ -425,6 +433,10 @@ private:
                 + fs.gas.p*dot(fs.vel,face.n);
             // [TODO] PJ 2018-10-24 check that fs.vel is the correct velocity
             // to use for pressure-work flowing across the face.
+            // [TODO] PJ 2018-10-25 consider rothalpy flavour for rotating frame
+            face.F.tke = mass_flux * fs.tke;
+            face.F.omega = mass_flux * fs.omega;
+            // [TODO] PJ 2018-10-25 MHD?
             foreach (i; 0 .. face.F.massf.length) { face.F.massf[i] = mass_flux * fs.gas.massf[i]; }
             foreach (i; 0 .. face.F.energies.length) { face.F.energies[i] = mass_flux * fs.gas.u_modes[i]; }
         } else {
@@ -435,6 +447,10 @@ private:
             face.F.mass = 0.0;
             face.F.momentum.set(face.n); face.F.momentum *= fs.gas.p;
             face.F.total_energy = fs.gas.p*dot(face.gvel,face.n);
+            // [TODO] PJ 2018-10-25 consider rothalpy flavour for rotating frame
+            face.F.tke = 0.0;
+            face.F.omega = 0.0;
+            // [TODO] PJ 2018-10-25 MHD?
             foreach (i; 0 .. face.F.massf.length) { face.F.massf[i] = 0.0; }
             foreach (i; 0 .. face.F.energies.length) { face.F.energies[i] = 0.0; }
         }
