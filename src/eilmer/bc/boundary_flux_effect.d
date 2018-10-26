@@ -429,7 +429,7 @@ private:
             face.F.momentum.refx = fs.gas.p * face.n.x + fs.vel.x * mass_flux;
             face.F.momentum.refy = fs.gas.p * face.n.y + fs.vel.y * mass_flux;
             face.F.momentum.refz = fs.gas.p * face.n.z + fs.vel.z * mass_flux;
-            face.F.total_energy = mass_flux*(fs.gas.u + 0.5*dot(fs.vel,fs.vel))
+            face.F.total_energy = mass_flux*(fs.gas.u + 0.5*dot(fs.vel,fs.vel) + fs.tke)
                 + fs.gas.p*dot(fs.vel,face.n);
             // [TODO] PJ 2018-10-24 check that fs.vel is the correct velocity
             // to use for pressure-work flowing across the face.
