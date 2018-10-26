@@ -486,10 +486,14 @@ void march_over_blocks()
             }
         }
     }
-    // Set the downstream boundary condition to simple outflow.
-    foreach (j; 0 .. njb) {
-        foreach (k; 0 .. nkb) {
-            gasBlockArray[1][j][k].bc[Face.east].pushExtrapolateCopyAction();
+    if (nib > 2) {
+        // For the slice of blocks that are upstream of the inactive blocks,
+        // set the downstream boundary condition to simple outflow,
+        // saving the original boundary conditions so that they can be restored.
+        foreach (j; 0 .. njb) {
+            foreach (k; 0 .. nkb) {
+                gasBlockArray[1][j][k].bc[Face.east].pushExtrapolateCopyAction();
+            }
         }
     }
     //
@@ -509,14 +513,15 @@ void march_over_blocks()
     foreach (i; 2 .. nib) {
         // Deactivate the old-upstream slice, activate the new slice of blocks.
         // Restore boundary connections between currently-active upstream
-        // and downstream block slices and set downstream boundary condition
-        // for newly active slice to a simple outflow.
+        // and downstream block slices and
+        // (so long as we are not at the last slice of blocks)
+        // set downstream boundary condition for newly active slice to a simple outflow.
         foreach (j; 0 .. njb) {
             foreach (k; 0 .. nkb) {
                 gasBlockArray[i-2][j][k].active = false;
                 gasBlockArray[i-1][j][k].bc[Face.east].restoreOriginalActions();
                 gasBlockArray[i][j][k].active = true;
-                gasBlockArray[i][j][k].bc[Face.east].pushExtrapolateCopyAction();
+                if (i < (nib-1)) { gasBlockArray[i][j][k].bc[Face.east].pushExtrapolateCopyAction(); }
             }
         }
         if (GlobalConfig.propagate_inflow_data) {
