@@ -1,5 +1,6 @@
 // init_gas_model.d
-// Utility function to make a GasModel from information in a Lua script.
+// Utility function to make a specific GasModel
+// from information contained in a Lua script.
 //
 
 module gas.init_gas_model;

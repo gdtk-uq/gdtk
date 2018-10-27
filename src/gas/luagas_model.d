@@ -50,11 +50,12 @@ GasModel checkGasModel(lua_State* L, int index)
  * This function implements the constructor for the GasModel
  * from the Lua interface.
  *
- * Construction of GasModel object in Lua will accept
- * a filename.
+ * Construction of GasModel object in Lua will accept a filename.
+ * All of the configuration details needed to construct any
+ * particular gas model are contained within that file.
  * -------------
  * gmodel = GasModel:new{fname}
- *--------------
+ * -------------
  */
 extern(C) int newGasModel(lua_State* L)
 {
