@@ -24,7 +24,8 @@ ifeq ($(WITH_DVODE),1)
 	$(KINETICS_DIR)/pseudosp_rhs_ode.o 
 endif
 
-KINETICS_LUA_FILES := $(KINETICS_DIR)/luachemistry_update.d \
+KINETICS_LUA_FILES := $(KINETICS_DIR)/luathermochemical_reactor.d \
+	$(KINETICS_DIR)/luachemistry_update.d \
 	$(KINETICS_DIR)/luaelectronically_specific_kinetics.d \
 	$(KINETICS_DIR)/luareaction_mechanism.d \
 	$(KINETICS_DIR)/luatwo_temperature_air_kinetics.d \

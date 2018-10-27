@@ -21,6 +21,7 @@ import std.math;
 import geom;
 import gas;
 import gas.luagas_model;
+import kinetics.luathermochemical_reactor;
 import kinetics.luareaction_mechanism;
 import kinetics.luachemistry_update;
 import kinetics.luatwo_temperature_air_kinetics;
@@ -480,6 +481,7 @@ usageMsg ~= to!string(totalCPUs) ~" on this machine
             registerSketch(L);
             registerSolidProps(L);
             registerGasModel(L, LUA_GLOBALSINDEX);
+            registerThermochemicalReactor(L, LUA_GLOBALSINDEX);
             registerReactionMechanism(L, LUA_GLOBALSINDEX);
             registerChemistryUpdate(L, LUA_GLOBALSINDEX);
             registerElectronicallySpecificKinetics(L, LUA_GLOBALSINDEX);
