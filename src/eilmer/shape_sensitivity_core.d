@@ -256,6 +256,24 @@ void apply_boundary_conditions(ref SMatrix!number A, FluidBlock blk, size_t np, 
                             }
                         }
                     }
+
+                    // Turbulent flow needs a larger stencil for 2nd order....
+                    foreach (cell; bcells) {
+                        foreach ( face; cell.iface) {
+                            FVCell lftCell = face.left_cell;
+                            FVCell rghtCell = face.right_cell;
+                            if (lftCell.id != bcells[0].id && idList.canFind(lftCell.id) == false && lftCell.id < ghost_cell_start_id) {
+                                bcells ~= lftCell;
+                                idList ~= lftCell.id;
+                            }
+                            if (rghtCell.id != bcells[0].id && idList.canFind(rghtCell.id) == false && rghtCell.id < ghost_cell_start_id) {
+                                bcells ~= rghtCell; 
+                                idList ~= rghtCell.id;
+                            }
+                        }
+                    }
+                    //
+
                     //
                     
                 }
@@ -811,6 +829,32 @@ void residual_stencil(FVCell pcell, size_t orderOfJacobian) {
         }
 
         // turbulent modelling requires a larger stencil - add more cells and faces....
+        // for each effected face, add the neighbouring cells
+        foreach(face; pcell.jacobian_face_stencil) {
+            // collect (non-ghost) neighbour cells
+            if (cell_ids.canFind(face.left_cell.id) == false && face.left_cell.id < ghost_cell_start_id) {
+                refs_unordered ~= face.left_cell;
+                pos_array[face.left_cell.id] = refs_unordered.length-1;
+                cell_ids ~= face.left_cell.id;
+            }
+            if (cell_ids.canFind(face.right_cell.id) == false && face.right_cell.id < ghost_cell_start_id) {
+                refs_unordered ~= face.right_cell;
+                pos_array[face.right_cell.id] = refs_unordered.length-1;
+                cell_ids ~= face.right_cell.id;
+            }
+            else continue;
+        }
+
+        // finally collect the faces of the outer most cells for simulations that use source terms (i.e. axisymmetric)
+        foreach(cell; refs_unordered) {
+            foreach(face; cell.iface) {
+                 if (face_ids.canFind(face.id) == false) {
+                    pcell.jacobian_face_stencil ~= face;
+                    face_ids ~= face.id;
+                }
+            }
+        }
+        
         // for each effected face, add the neighbouring cells
         foreach(face; pcell.jacobian_face_stencil) {
             // collect (non-ghost) neighbour cells

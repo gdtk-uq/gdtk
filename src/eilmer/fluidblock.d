@@ -91,7 +91,7 @@ public:
 
     // Shape sensitivity calculator workspace.
     version(shape_sensitivity) {
-        immutable size_t MAX_PERTURBED_INTERFACES = 80;
+        immutable size_t MAX_PERTURBED_INTERFACES = 200;
         FVCell cellSave;
         FVInterface[MAX_PERTURBED_INTERFACES] ifaceP;
 
