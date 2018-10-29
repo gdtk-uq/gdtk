@@ -1128,6 +1128,7 @@ string computeFluxDerivativesAroundCell(string varName, string posInArray, bool 
     codeStr ~= "}";
     codeStr ~= "}";
     codeStr ~= "pcell.copy_values_from(blk.cellSave, CopyDataOption.all);";
+    /*
     codeStr ~= "foreach(cell; pcell.jacobian_cell_stencil) {";
     codeStr ~= "cell.fs.mu_t = cell.fs.mu_t.re;";
     codeStr ~= "cell.fs.k_t = cell.fs.k_t.re;";
@@ -1140,6 +1141,8 @@ string computeFluxDerivativesAroundCell(string varName, string posInArray, bool 
     codeStr ~= "foreach(face; pcell.jacobian_face_stencil) {";
     codeStr ~= "face.grad.gradients_leastsq(face.cloud_fs, face.cloud_pos, face.ws_grad);";
     codeStr ~= "}";
+    */
+    codeStr ~= "compute_flux(pcell, blk, orderOfJacobian, pcell.jacobian_cell_stencil, pcell.jacobian_face_stencil, blk.ifaceP);"; 
     //codeStr ~= "steadystate_core.evalRHS(0.0, 0);";
     return codeStr;
 }

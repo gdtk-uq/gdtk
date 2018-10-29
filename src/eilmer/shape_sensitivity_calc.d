@@ -677,7 +677,7 @@ void main(string[] args) {
                 auto outFile = File(fileName, "w");
                 foreach( i; 0..v.length ) {
                     size_t id = i/nPrimitive;
-                    outFile.writef("%d    %.16e    %.16e    %.16f    %.16f \n", id, fabs((p1[i]-p2[i])/p1[i]), fabs(p1[i]-p2[i]), p1[i], p2[i]);
+                    outFile.writef("%d    %d    %.16e    %.16e    %.16f    %.16f \n", i, id, fabs((p1[i]-p2[i])/p1[i]), fabs(p1[i]-p2[i]), p1[i], p2[i]);
                 }
             }
         }
@@ -852,7 +852,7 @@ void main(string[] args) {
                 auto outFile = File(fileName, "w");
                 foreach( i; 0..v.length ) {
                     size_t id = i/nPrimitive;
-                    outFile.writef("%d    %.16e    %.16e    %.16f    %.16f \n", id, fabs((p1[i]-p2[i])/p1[i]), fabs(p1[i]-p2[i]), p1[i], p2[i]);
+                    outFile.writef("%d    %d    %.16e    %.16e    %.16f    %.16f \n", i, id, fabs((p1[i]-p2[i])/p1[i]), fabs(p1[i]-p2[i]), p1[i], p2[i]);
                 }
             }
 
@@ -1046,7 +1046,7 @@ void main(string[] args) {
             auto outFile = File(fileName, "w");
             foreach( i; 0..v.length ) {
                 size_t id = i/4;
-                    outFile.writef("%d    %.16e    %.16e    %.16f    %.16f \n", id, fabs((p1[i]-p2[i])/p1[i]), fabs(p1[i]-p2[i]), p1[i], p2[i]);
+                outFile.writef("%d    %d    %.16e    %.16e    %.16f    %.16f \n", i, id, fabs((p1[i]-p2[i])/p1[i]), fabs(p1[i]-p2[i]), p1[i], p2[i]);
             }
         }
         writeln("Steady-state Solver Preconditioner Test: COMPLETE.");
