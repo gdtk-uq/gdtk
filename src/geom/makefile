@@ -17,6 +17,7 @@ TEST_PROGRAMS := vector3_test vector3_complex_test \
 	polyline_test polyline_complex_test \
 	coonspatch_test coonspatch_complex_test \
 	aopatch_test aopatch_complex_test \
+	bezierpatch_test bezierpatch_complex_test \
 	tfivolume_test tfivolume_complex_test \
 	sweptsurfacevolume_test sweptsurfacevolume_complex_test \
 	wedgevolume_test wedgevolume_complex_test \
@@ -205,6 +206,14 @@ aopatch_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.
 
 aopatch_complex_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	dmd -of$@ -debug -g -w -version=aopatch_test -version=complex_numbers \
+		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
+
+bezierpatch_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d
+	dmd -of$@ -debug -g -w -version=$@ \
+		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
+
+bezierpatch_complex_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d
+	dmd -of$@ -debug -g -w -version=bezierpatch_test -version=complex_numbers \
 		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 tfivolume_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d

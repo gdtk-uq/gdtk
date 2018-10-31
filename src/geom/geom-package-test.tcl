@@ -20,6 +20,7 @@ set module_names [list vector3 vector3_complex \
                       polyline polyline_complex \
 		      coonspatch coonspatch_complex \
                       aopatch aopatch_complex \
+                      bezierpatch bezierpatch_complex \
 		      tfivolume tfivolume_complex \
                       sweptsurfacevolume sweptsurfacevolume_complex \
                       wedgevolume wedgevolume_complex \
