@@ -285,6 +285,10 @@ class Grid {
         deltax = (bb1.x.re - bb0.x.re)/nbx;
         deltay = (bb1.y.re - bb0.y.re)/nby;
         deltaz = (bb1.z.re - bb0.z.re)/nbz;
+        immutable very_small_delta = 1.0e-6;
+        deltax = fmax(deltax, very_small_delta);
+        deltay = fmax(deltay, very_small_delta);
+        deltaz = fmax(deltaz, very_small_delta);
         // Now, set up the array of bins and sort the cells into those bins.
         bins.length = nbx;
         foreach (ix; 0 .. nbx) {
