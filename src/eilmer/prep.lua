@@ -1833,14 +1833,33 @@ function build_job_files(job)
 	 -- leave alone
       elseif type(ifs) == "userdata" then
 	 -- presume to be a wrapped-D-language _FlowState object already
+      elseif type(ifs) == "string" then
+         -- We are given the name of a flow file and we'll copy that in place directly
+         existingFlowFile = ifs
+         -- Presume file exists and let 'cp' command complain if it doesn't
+         cmd = "cp " .. existingFlowFile .. " " .. fileName
+         returnCode = os.execute(cmd)
+         if returnCode ~= 0 then
+            errMsg = "Error while trying to copy an existing flow solution as initial flow solution.\n"
+            errMsg = errMsg .. "FluidBlock id= " .. id .. "\n"
+            errMsg = errMsg .. "Specified existing flow file: " .. existingFlowFile .. "\n"
+            errMsg = errMsg .. "Check this file exists and is readable.\n"
+            errMsg = errMsg .. "Bailing out!\n"
+            error(errMsg)
+         end
+         -- Otherwise succesful.
+         str = string.format("Initialised FluidBlock id= %d with existing flow solution: \n\t%s", id, existingFlowFile)
+         print(str)
       else
 	 error("Unexpected type for initial flow state in block.")
       end
-      local grid = fluidBlocks[i].grid
-      if grid:get_type() == "structured_grid" then
-	 write_initial_sg_flow_file(fileName, grid, ifs, 0.0)
-      else
-	 write_initial_usg_flow_file(fileName, grid, ifs, 0.0)
+      if type(ifs) ~= "string" then
+         local grid = fluidBlocks[i].grid
+         if grid:get_type() == "structured_grid" then
+            write_initial_sg_flow_file(fileName, grid, ifs, 0.0)
+         else
+            write_initial_usg_flow_file(fileName, grid, ifs, 0.0)
+         end
       end
    end
    for i = 1, #solidBlocks do
