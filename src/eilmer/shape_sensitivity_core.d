@@ -401,7 +401,7 @@ void apply_boundary_conditions(ref SMatrix!number A, FluidBlock blk, size_t np, 
                         blk.Minv[blk.Y_MOM,blk.Y_MOM] = 1.0/bcells[0].fs.gas.rho;
                         blk.Minv[blk.Y_MOM,blk.TOT_ENERGY] = to!number(0.0);
                         // fourth row
-                        blk.Minv[blk.TOT_ENERGY,blk.MASS] = 0.5*(gamma-1.0)*(bcells[0].fs.vel.x*bcells[0].fs.vel.x+bcells[0].fs.vel.y*bcells[0].fs.vel.y);
+                        blk.Minv[blk.TOT_ENERGY,blk.MASS] = 0.5*(gamma-1.0)*(bcells[0].fs.vel.x*bcells[0].fs.vel.x+bcells[0].fs.vel.y*bcells[0].fs.vel.y+bcells[0].fs.vel.z*bcells[0].fs.vel.z);
                         blk.Minv[blk.TOT_ENERGY,blk.X_MOM] = -bcells[0].fs.vel.x*(gamma-1);
                         blk.Minv[blk.TOT_ENERGY,blk.Y_MOM] = -bcells[0].fs.vel.y*(gamma-1);
                         blk.Minv[blk.TOT_ENERGY,blk.TOT_ENERGY] = gamma-1.0;
@@ -1065,7 +1065,7 @@ void compute_flow_jacobian_rows_for_cell(number[][] aa, size_t[][] ja, FVCell pc
             blk.Minv[blk.Y_MOM,blk.Y_MOM] = 1.0/pcell.fs.gas.rho;
             blk.Minv[blk.Y_MOM,blk.TOT_ENERGY] = to!number(0.0);
             // fourth row
-            blk.Minv[blk.TOT_ENERGY,blk.MASS] = 0.5*(gamma-1.0)*(pcell.fs.vel.x*pcell.fs.vel.x+pcell.fs.vel.y*pcell.fs.vel.y);
+            blk.Minv[blk.TOT_ENERGY,blk.MASS] = 0.5*(gamma-1.0)*(pcell.fs.vel.x*pcell.fs.vel.x+pcell.fs.vel.y*pcell.fs.vel.y+pcell.fs.vel.z*pcell.fs.vel.z);
             blk.Minv[blk.TOT_ENERGY,blk.X_MOM] = -pcell.fs.vel.x*(gamma-1);
             blk.Minv[blk.TOT_ENERGY,blk.Y_MOM] = -pcell.fs.vel.y*(gamma-1);
             blk.Minv[blk.TOT_ENERGY,blk.TOT_ENERGY] = gamma-1.0;
@@ -1159,7 +1159,7 @@ void compute_flow_jacobian_rows_for_cell(number[][] aa, size_t[][] ja, FVCell pc
             blk.Minv[blk.Y_MOM,blk.Y_MOM] = 1.0/pcell.fs.gas.rho;
             blk.Minv[blk.Y_MOM,blk.TOT_ENERGY] = to!number(0.0);
             // fourth row
-            blk.Minv[blk.TOT_ENERGY,blk.MASS] = 0.5*(gamma-1.0)*(pcell.fs.vel.x*pcell.fs.vel.x+pcell.fs.vel.y*pcell.fs.vel.y);
+            blk.Minv[blk.TOT_ENERGY,blk.MASS] = 0.5*(gamma-1.0)*(pcell.fs.vel.x*pcell.fs.vel.x+pcell.fs.vel.y*pcell.fs.vel.y+pcell.fs.vel.z*pcell.fs.vel.z);
             blk.Minv[blk.TOT_ENERGY,blk.X_MOM] = -pcell.fs.vel.x*(gamma-1);
             blk.Minv[blk.TOT_ENERGY,blk.Y_MOM] = -pcell.fs.vel.y*(gamma-1);
             blk.Minv[blk.TOT_ENERGY,blk.TOT_ENERGY] = gamma-1.0;
