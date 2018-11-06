@@ -183,7 +183,16 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
     bool usePreconditioner = GlobalConfig.sssOptions.usePreconditioner;
     if (usePreconditioner) {
         writeln("Initialising memory.");
-        foreach (blk; parallel(localFluidBlocks,1)) {
+        foreach (blk; localFluidBlocks) {
+            // Make a block-local copy of conserved quantities info
+            blk.nConserved = nConservedQuantities;
+            blk.MASS = massIdx;
+            blk.X_MOM = xMomIdx;
+            blk.Y_MOM = yMomIdx;
+            blk.Z_MOM = zMomIdx;
+            blk.TOT_ENERGY = totEnergyIdx;
+            blk.TKE = tkeIdx;
+            blk.OMEGA = omegaIdx;
             sss_preconditioner_initialisation(blk, nConserved); 
         }
     }

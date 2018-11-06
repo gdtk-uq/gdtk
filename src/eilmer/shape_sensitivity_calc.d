@@ -196,12 +196,24 @@ void main(string[] args) {
 
     if (adjointMethodFlag) {
 
+        foreach (myblk; localFluidBlocks) {
+            // Make a stack-local copy of conserved quantities info
+            myblk.nConserved = nConservedQuantities;
+            myblk.MASS = massIdx;
+            myblk.X_MOM = xMomIdx;
+            myblk.Y_MOM = yMomIdx;
+            myblk.Z_MOM = zMomIdx;
+            myblk.TOT_ENERGY = totEnergyIdx;
+            myblk.TKE = tkeIdx;
+            myblk.OMEGA = omegaIdx;
+        }
+        
         bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega);
         size_t nPrimitive; 
 
-        nPrimitive = 4;  // density, velocity(x,y), pressure
-        if (GlobalConfig.dimensions == 3) nPrimitive += 1; // velocity(z)
-        if (with_k_omega) nPrimitive += 2; // tke, omega
+        nPrimitive = nConservedQuantities;  // density, velocity(x,y), pressure
+        //if (GlobalConfig.dimensions == 3) nPrimitive += 1; // velocity(z)
+        //if (with_k_omega) nPrimitive += 2; // tke, omega
 
         /* Flow Jacobian */
 
@@ -337,12 +349,24 @@ void main(string[] args) {
 
     if (verifyPrimitiveJacobianFlag) {
         
+        foreach (myblk; localFluidBlocks) {
+            // Make a stack-local copy of conserved quantities info
+            myblk.nConserved = nConservedQuantities;
+            myblk.MASS = massIdx;
+            myblk.X_MOM = xMomIdx;
+            myblk.Y_MOM = yMomIdx;
+            myblk.Z_MOM = zMomIdx;
+            myblk.TOT_ENERGY = totEnergyIdx;
+            myblk.TKE = tkeIdx;
+            myblk.OMEGA = omegaIdx;
+        }
+
         // set number of primitive variables
         bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega);
         size_t nPrimitive; 
-        nPrimitive = 4;  // density, velocity(x,y), pressure
-        if (GlobalConfig.dimensions == 3) nPrimitive += 1; // velocity(z)
-        if (with_k_omega) nPrimitive += 2; // tke, omega
+        nPrimitive = nConservedQuantities; //4;  // density, velocity(x,y), pressure
+        //if (GlobalConfig.dimensions == 3) nPrimitive += 1; // velocity(z)
+        //if (with_k_omega) nPrimitive += 2; // tke, omega
         
         // construct the transposed primitive Jacobian
         foreach (myblk; parallel(localFluidBlocks,1)) {
@@ -432,11 +456,23 @@ void main(string[] args) {
     /* Check Accuracy of Conservative Jacobian routines via Frechet Derivative Comparison */
     
     if (verifyConservativeJacobianFlag) {
+        foreach (myblk; localFluidBlocks) {
+            // Make a stack-local copy of conserved quantities info
+            myblk.nConserved = nConservedQuantities;
+            myblk.MASS = massIdx;
+            myblk.X_MOM = xMomIdx;
+            myblk.Y_MOM = yMomIdx;
+            myblk.Z_MOM = zMomIdx;
+            myblk.TOT_ENERGY = totEnergyIdx;
+            myblk.TKE = tkeIdx;
+            myblk.OMEGA = omegaIdx;
+        }
+        
         bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega);
         size_t nPrimitive; 
-        nPrimitive = 4;  // density, velocity(x,y), pressure
-        if (GlobalConfig.dimensions == 3) nPrimitive += 1; // velocity(z)
-        if (with_k_omega) nPrimitive += 2; // tke, omega
+        nPrimitive = nConservedQuantities; //4;  // density, velocity(x,y), pressure
+        //if (GlobalConfig.dimensions == 3) nPrimitive += 1; // velocity(z)
+        //if (with_k_omega) nPrimitive += 2; // tke, omega
         
         // make sure ghost cells are filled
         foreach (myblk; parallel(localFluidBlocks,1)) {
@@ -626,11 +662,23 @@ void main(string[] args) {
 
     /* Steady-state solver preconditioner routines test */
     if (verifySSSPreconditionerFlag) {
+        foreach (myblk; localFluidBlocks) {
+            // Make a stack-local copy of conserved quantities info
+            myblk.nConserved = nConservedQuantities;
+            myblk.MASS = massIdx;
+            myblk.X_MOM = xMomIdx;
+            myblk.Y_MOM = yMomIdx;
+            myblk.Z_MOM = zMomIdx;
+            myblk.TOT_ENERGY = totEnergyIdx;
+            myblk.TKE = tkeIdx;
+            myblk.OMEGA = omegaIdx;
+        }
+        
         size_t nPrimitive; 
         bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega);
-        nPrimitive = 4;  // density, velocity(x,y), pressure
-        if (GlobalConfig.dimensions == 3) nPrimitive += 1; // velocity(z)
-        if (with_k_omega) nPrimitive += 2; // tke, omega
+        nPrimitive = nConservedQuantities; //4;  // density, velocity(x,y), pressure
+        //if (GlobalConfig.dimensions == 3) nPrimitive += 1; // velocity(z)
+        //if (with_k_omega) nPrimitive += 2; // tke, omega
 
         
         // Construct 1st order Flow Jacobian Transpose

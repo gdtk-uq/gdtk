@@ -68,18 +68,31 @@ private lua_State* L; // module-local Lua interpreter
 /* Frechet Derivative */
 /**********************/
 void evalPrimitiveJacobianVecProd(FluidBlock blk, size_t nPrimitive, number[] v, ref number[] p, number EPS) {
-    with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega);
+
+    // Make a stack-local copy of conserved quantities info
+    //size_t nConserved = nConservedQuantities;
+    //size_t MASS = massIdx;
+    //size_t X_MOM = xMomIdx;
+    //size_t Y_MOM = yMomIdx;
+    //size_t Z_MOM = zMomIdx;
+    //size_t TOT_ENERGY = totEnergyIdx;
+    //size_t TKE = tkeIdx;
+    //size_t OMEGA = omegaIdx;
+    
+    with_k_omega = (blk.myConfig.turbulence_model == TurbulenceModel.k_omega);
     blk.clear_fluxes_of_conserved_quantities();
     foreach (cell; blk.cells) cell.clear_source_vector();
     int cellCount = 0;
     foreach (cell; blk.cells) {
-        cell.fs.gas.rho += EPS*v[cellCount+0];
-        cell.fs.vel.refx += EPS*v[cellCount+1];
-        cell.fs.vel.refy += EPS*v[cellCount+2];
-        cell.fs.gas.p += EPS*v[cellCount+3];
-        if (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) {
-            cell.fs.tke += EPS*v[cellCount+4];
-            cell.fs.omega += EPS*v[cellCount+5];
+        cell.fs.gas.rho += EPS*v[cellCount+blk.MASS];
+        cell.fs.vel.refx += EPS*v[cellCount+blk.X_MOM];
+        cell.fs.vel.refy += EPS*v[cellCount+blk.Y_MOM];
+        cell.fs.gas.p += EPS*v[cellCount+blk.TOT_ENERGY];
+        if ( blk.myConfig.dimensions == 3 )
+            cell.fs.vel.refz += EPS*v[cellCount+blk.Z_MOM];
+        if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
+            cell.fs.tke += EPS*v[cellCount+blk.TKE];
+            cell.fs.omega += EPS*v[cellCount+blk.OMEGA];
         }
                 
         blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);
@@ -91,33 +104,48 @@ void evalPrimitiveJacobianVecProd(FluidBlock blk, size_t nPrimitive, number[] v,
     steadystate_core.evalRHS(0.0, 0);
     cellCount = 0;
     foreach (cell; blk.cells) {
-        p[cellCount+0] = -cell.dUdt[0].mass.im/EPS.im; 
-        p[cellCount+1] = -cell.dUdt[0].momentum.x.im/EPS.im;
-        p[cellCount+2] = -cell.dUdt[0].momentum.y.im/EPS.im; 
-        p[cellCount+3] = -cell.dUdt[0].total_energy.im/EPS.im;
-        if (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) {
-            p[cellCount+4] = -cell.dUdt[0].tke.im/EPS.im;
-            p[cellCount+5] = -cell.dUdt[0].omega.im/EPS.im;
+        p[cellCount+blk.MASS] = -cell.dUdt[0].mass.im/EPS.im; 
+        p[cellCount+blk.X_MOM] = -cell.dUdt[0].momentum.x.im/EPS.im;
+        p[cellCount+blk.Y_MOM] = -cell.dUdt[0].momentum.y.im/EPS.im;
+        if ( blk.myConfig.dimensions == 3 )
+            p[cellCount+blk.Z_MOM] = -cell.dUdt[0].momentum.z.im/EPS.im;
+        p[cellCount+blk.TOT_ENERGY] = -cell.dUdt[0].total_energy.im/EPS.im;
+        if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
+            p[cellCount+blk.TKE] = -cell.dUdt[0].tke.im/EPS.im;
+            p[cellCount+blk.OMEGA] = -cell.dUdt[0].omega.im/EPS.im;
         }
         cellCount += nPrimitive;
     }
 }
 
 void evalConservativeJacobianVecProd(FluidBlock blk, size_t nConserved, number[] v, ref number[] p, number EPS) {
+
+    // Make a stack-local copy of conserved quantities info
+    //size_t nConserved = nConservedQuantities;
+    //size_t MASS = massIdx;
+    //size_t X_MOM = xMomIdx;
+    //size_t Y_MOM = yMomIdx;
+    //size_t Z_MOM = zMomIdx;
+    //size_t TOT_ENERGY = totEnergyIdx;
+    //size_t TKE = tkeIdx;
+    //size_t OMEGA = omegaIdx;
+
     // We perform a Frechet derivative to evaluate J*D^(-1)v
-    with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega);
+    with_k_omega = (blk.myConfig.turbulence_model == TurbulenceModel.k_omega);
     blk.clear_fluxes_of_conserved_quantities();
     foreach (cell; blk.cells) cell.clear_source_vector();
     int cellCount = 0;
     foreach (cell; blk.cells) {
         cell.U[1].copy_values_from(cell.U[0]);
-        cell.U[1].mass += EPS*v[cellCount+0];
-        cell.U[1].momentum.refx += EPS*v[cellCount+1];
-        cell.U[1].momentum.refy += EPS*v[cellCount+2];
-        cell.U[1].total_energy += EPS*v[cellCount+3];
-        if (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) {
-            cell.U[1].tke += EPS*v[cellCount+4];
-            cell.U[1].omega += EPS*v[cellCount+5];
+        cell.U[1].mass += EPS*v[cellCount+blk.MASS];
+        cell.U[1].momentum.refx += EPS*v[cellCount+blk.X_MOM];
+        cell.U[1].momentum.refy += EPS*v[cellCount+blk.Y_MOM];
+        if ( blk.myConfig.dimensions == 3 )
+            cell.U[1].momentum.refz += EPS*v[cellCount+blk.Z_MOM];
+        cell.U[1].total_energy += EPS*v[cellCount+blk.TOT_ENERGY];
+        if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
+            cell.U[1].tke += EPS*v[cellCount+blk.TKE];
+            cell.U[1].omega += EPS*v[cellCount+blk.OMEGA];
         }
         cell.decode_conserved(0, 1, 0.0);
         cellCount += nConserved;
@@ -125,13 +153,15 @@ void evalConservativeJacobianVecProd(FluidBlock blk, size_t nConserved, number[]
     steadystate_core.evalRHS(0.0, 1);
     cellCount = 0;
     foreach (cell; blk.cells) {
-        p[cellCount+0] = -cell.dUdt[1].mass.im/EPS.im;
-        p[cellCount+1] = -cell.dUdt[1].momentum.x.im/EPS.im;
-        p[cellCount+2] = -cell.dUdt[1].momentum.y.im/EPS.im;
-        p[cellCount+3] = -cell.dUdt[1].total_energy.im/EPS.im;
-        if (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) {
-            p[cellCount+4] = -cell.dUdt[1].tke.im/EPS.im;
-            p[cellCount+5] = -cell.dUdt[1].omega.im/EPS.im;
+        p[cellCount+blk.MASS] = -cell.dUdt[1].mass.im/EPS.im;
+        p[cellCount+blk.X_MOM] = -cell.dUdt[1].momentum.x.im/EPS.im;
+        p[cellCount+blk.Y_MOM] = -cell.dUdt[1].momentum.y.im/EPS.im;
+        if ( blk.myConfig.dimensions == 3 )
+            p[cellCount+blk.Z_MOM] = -cell.dUdt[1].momentum.z.im/EPS.im;
+        p[cellCount+blk.TOT_ENERGY] = -cell.dUdt[1].total_energy.im/EPS.im;
+        if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
+            p[cellCount+blk.TKE] = -cell.dUdt[1].tke.im/EPS.im;
+            p[cellCount+blk.OMEGA] = -cell.dUdt[1].omega.im/EPS.im;
         }
         cellCount += nConserved;
     }
@@ -159,13 +189,16 @@ string computeGhostCellDerivatives(string varName, string posInArray, bool inclu
     codeStr ~= "blk.applyPostConvFluxAction(0.0, 0, 0);";
     codeStr ~= "blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);";
     codeStr ~= "blk.applyPostDiffFluxAction(0.0, 0, 0);";
-    codeStr ~= "qP[0] = pcell.fs.gas.rho;";
-    codeStr ~= "qP[1] = pcell.fs.vel.x;";
-    codeStr ~= "qP[2] = pcell.fs.vel.y;";
-    codeStr ~= "qP[3] = pcell.fs.gas.p;";
-    codeStr ~= "if (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) {";
-    codeStr ~= "qP[4] = pcell.fs.tke;";
-    codeStr ~= "qP[5] = pcell.fs.omega;";
+    codeStr ~= "qP[blk.MASS] = pcell.fs.gas.rho;";
+    codeStr ~= "qP[blk.X_MOM] = pcell.fs.vel.x;";
+    codeStr ~= "qP[blk.Y_MOM] = pcell.fs.vel.y;";
+    codeStr ~= "if (blk.myConfig.dimensions == 3) {";
+    codeStr ~= "qP[blk.Z_MOM] = pcell.fs.vel.z;";
+    codeStr ~= "}";
+    codeStr ~= "qP[blk.TOT_ENERGY] = pcell.fs.gas.p;";
+    codeStr ~= "if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {";
+    codeStr ~= "qP[blk.TKE] = pcell.fs.tke;";
+    codeStr ~= "qP[blk.OMEGA] = pcell.fs.omega;";
     codeStr ~= "}";
     codeStr ~= "bcells[0].copy_values_from(blk.cellSave, CopyDataOption.all);";
     codeStr ~= "blk.applyPreReconAction(0.0, 0, 0);";
@@ -173,18 +206,32 @@ string computeGhostCellDerivatives(string varName, string posInArray, bool inclu
     codeStr ~= "blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);";
     codeStr ~= "blk.applyPostDiffFluxAction(0.0, 0, 0);";
     // ------------------ compute interface flux derivatives ------------------
-    codeStr ~= "dqdQ[0][" ~ posInArray ~ "] = qP[0].im/(EPS.im);";
-    codeStr ~= "dqdQ[1][" ~ posInArray ~ "] = qP[1].im/(EPS.im);";
-    codeStr ~= "dqdQ[2][" ~ posInArray ~ "] = qP[2].im/(EPS.im);";
-    codeStr ~= "dqdQ[3][" ~ posInArray ~ "] = qP[3].im/(EPS.im);";         
-    codeStr ~= "if (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) {";
-    codeStr ~= "dqdQ[4][" ~ posInArray ~ "] = qP[4].im/(EPS.im);";
-    codeStr ~= "dqdQ[5][" ~ posInArray ~ "] = qP[5].im/(EPS.im);";
+    codeStr ~= "dqdQ[blk.MASS][" ~ posInArray ~ "] = qP[blk.MASS].im/(EPS.im);";
+    codeStr ~= "dqdQ[blk.X_MOM][" ~ posInArray ~ "] = qP[blk.X_MOM].im/(EPS.im);";
+    codeStr ~= "dqdQ[blk.Y_MOM][" ~ posInArray ~ "] = qP[blk.Y_MOM].im/(EPS.im);";
+    codeStr ~= "if (blk.myConfig.dimensions == 3) {";
+    codeStr ~= "dqdQ[blk.Z_MOM][" ~ posInArray ~ "] = qP[blk.Z_MOM].im/(EPS.im);";
+    codeStr ~= "}";
+    codeStr ~= "dqdQ[blk.TOT_ENERGY][" ~ posInArray ~ "] = qP[blk.TOT_ENERGY].im/(EPS.im);";         
+    codeStr ~= "if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {";
+    codeStr ~= "dqdQ[blk.TKE][" ~ posInArray ~ "] = qP[blk.TKE].im/(EPS.im);";
+    codeStr ~= "dqdQ[blk.OMEGA][" ~ posInArray ~ "] = qP[blk.OMEGA].im/(EPS.im);";
     codeStr ~= "}";
     return codeStr;
 }
 
 void apply_boundary_conditions(ref SMatrix!number A, FluidBlock blk, size_t np, size_t orderOfJacobian, number EPS, bool transformToConserved) {
+
+    // Make a stack-local copy of conserved quantities info
+    //size_t nConserved = nConservedQuantities;
+    //size_t MASS = massIdx;
+    //size_t X_MOM = xMomIdx;
+    //size_t Y_MOM = yMomIdx;
+    //size_t Z_MOM = zMomIdx;
+    //size_t TOT_ENERGY = totEnergyIdx;
+    //size_t TKE = tkeIdx;
+    //size_t OMEGA = omegaIdx;
+    
     // initialise some re-used data objects here
     number[][] dRdq; number[][] dqdQ; number[][] Aext; number[] qP;
     qP.length = np; dRdq.length = np; dqdQ.length = np; Aext.length = np; 
@@ -208,24 +255,26 @@ void apply_boundary_conditions(ref SMatrix!number A, FluidBlock blk, size_t np, 
                 /* form dqdQ - ghost cell derivatives */
 
                 // 0th perturbation: rho
-                mixin(computeGhostCellDerivatives("gas.rho", "0", true));
+                mixin(computeGhostCellDerivatives("gas.rho", "blk.MASS", true));
                 // 1st perturbation: u
-                mixin(computeGhostCellDerivatives("vel.refx", "1", false));
+                mixin(computeGhostCellDerivatives("vel.refx", "blk.X_MOM", false));
                 // 2nd perturbation: v
-                mixin(computeGhostCellDerivatives("vel.refy", "2", false));
+                mixin(computeGhostCellDerivatives("vel.refy", "blk.Y_MOM", false));
+                if ( blk.myConfig.dimensions == 3 )
+                    mixin(computeGhostCellDerivatives("vel.refz", "blk.Z_MOM", false));
                 // 3rd perturbation: P
-                mixin(computeGhostCellDerivatives("gas.p", "3", true));
-                if (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) {
+                mixin(computeGhostCellDerivatives("gas.p", "blk.TOT_ENERGY", true));
+                if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
                     // 4th perturbation: k
-                    mixin(computeGhostCellDerivatives("tke", "4", false));
+                    mixin(computeGhostCellDerivatives("tke", "blk.TKE", false));
                     // 5th perturbation: omega
-                    mixin(computeGhostCellDerivatives("omega", "5", false));
+                    mixin(computeGhostCellDerivatives("omega", "blk.OMEGA", false));
                 }
                 
                 /* form dRdq */                
                 // TODO: Currently only works for nearest-neighbour reconstruction stencil. Think about the MLP limiter.
                 
-                if (orderOfJacobian > 1 || GlobalConfig.viscous) {
+                if (orderOfJacobian > 1 || blk.myConfig.viscous) {
                     
                     size_t[] idList;
                     foreach ( face; bcells[0].iface) {
@@ -291,18 +340,20 @@ void apply_boundary_conditions(ref SMatrix!number A, FluidBlock blk, size_t np, 
                 }
                 
                 // 0th perturbation: rho
-                mixin(computeFluxDerivativesAroundCell("gas.rho", "0", true));
+                mixin(computeFluxDerivativesAroundCell("gas.rho", "blk.MASS", true));
                 // 1st perturbation: u
-                mixin(computeFluxDerivativesAroundCell("vel.refx", "1", false));
+                mixin(computeFluxDerivativesAroundCell("vel.refx", "blk.X_MOM", false));
                 // 2nd perturbation: v
-                mixin(computeFluxDerivativesAroundCell("vel.refy", "2", false));
+                mixin(computeFluxDerivativesAroundCell("vel.refy", "blk.Y_MOM", false));
+                if ( blk.myConfig.dimensions == 3 )
+                    mixin(computeFluxDerivativesAroundCell("vel.refz", "blk.Z_MOM", false));
                 // 3rd perturbation: P
-                mixin(computeFluxDerivativesAroundCell("gas.p", "3", true));
-                if (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) {
+                mixin(computeFluxDerivativesAroundCell("gas.p", "blk.TOT_ENERGY", true));
+                if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
                     // 4th perturbation: k
-                    mixin(computeFluxDerivativesAroundCell("tke", "4", false));
+                    mixin(computeFluxDerivativesAroundCell("tke", "blk.TKE", false));
                     // 5th perturbation: omega
-                    mixin(computeFluxDerivativesAroundCell("omega", "5", false));
+                    mixin(computeFluxDerivativesAroundCell("omega", "blk.OMEGA", false));
                 }
                 
                 foreach(bcell; pcell.jacobian_cell_stencil) {
@@ -335,53 +386,74 @@ void apply_boundary_conditions(ref SMatrix!number A, FluidBlock blk, size_t np, 
                         // form transformation matrix (TODO: genearlise, currently only for 2D Euler/Laminar Navier-Stokes).
                         number gamma = gmodel.gamma(bcells[0].fs.gas);
                         // form inverse transformation matrix
-                        blk.Minv[0,0] = to!number(1.0);
-                        blk.Minv[0,1] = to!number(0.0);
-                        blk.Minv[0,2] = to!number(0.0);
-                        blk.Minv[0,3] = to!number(0.0);
+                        blk.Minv[blk.MASS,blk.MASS] = to!number(1.0);
+                        blk.Minv[blk.MASS,blk.X_MOM] = to!number(0.0);
+                        blk.Minv[blk.MASS,blk.Y_MOM] = to!number(0.0);
+                        blk.Minv[blk.MASS,blk.TOT_ENERGY] = to!number(0.0);
                         // second row
-                        blk.Minv[1,0] = -bcells[0].fs.vel.x/bcells[0].fs.gas.rho;
-                        blk.Minv[1,1] = 1.0/bcells[0].fs.gas.rho;
-                        blk.Minv[1,2] = to!number(0.0);
-                        blk.Minv[1,3] = to!number(0.0);
+                        blk.Minv[blk.X_MOM,blk.MASS] = -bcells[0].fs.vel.x/bcells[0].fs.gas.rho;
+                        blk.Minv[blk.X_MOM,blk.X_MOM] = 1.0/bcells[0].fs.gas.rho;
+                        blk.Minv[blk.X_MOM,blk.Y_MOM] = to!number(0.0);
+                        blk.Minv[blk.X_MOM,blk.TOT_ENERGY] = to!number(0.0);
                         // third row
-                        blk.Minv[2,0] = -bcells[0].fs.vel.y/bcells[0].fs.gas.rho;
-                        blk.Minv[2,1] = to!number(0.0);
-                        blk.Minv[2,2] = 1.0/bcells[0].fs.gas.rho;
-                        blk.Minv[2,3] = to!number(0.0);
+                        blk.Minv[blk.Y_MOM,blk.MASS] = -bcells[0].fs.vel.y/bcells[0].fs.gas.rho;
+                        blk.Minv[blk.Y_MOM,blk.X_MOM] = to!number(0.0);
+                        blk.Minv[blk.Y_MOM,blk.Y_MOM] = 1.0/bcells[0].fs.gas.rho;
+                        blk.Minv[blk.Y_MOM,blk.TOT_ENERGY] = to!number(0.0);
                         // fourth row
-                        blk.Minv[3,0] = 0.5*(gamma-1.0)*(bcells[0].fs.vel.x*bcells[0].fs.vel.x+bcells[0].fs.vel.y*bcells[0].fs.vel.y);
-                        blk.Minv[3,1] = -bcells[0].fs.vel.x*(gamma-1);
-                        blk.Minv[3,2] = -bcells[0].fs.vel.y*(gamma-1);
-                        blk.Minv[3,3] = gamma-1.0;
+                        blk.Minv[blk.TOT_ENERGY,blk.MASS] = 0.5*(gamma-1.0)*(bcells[0].fs.vel.x*bcells[0].fs.vel.x+bcells[0].fs.vel.y*bcells[0].fs.vel.y);
+                        blk.Minv[blk.TOT_ENERGY,blk.X_MOM] = -bcells[0].fs.vel.x*(gamma-1);
+                        blk.Minv[blk.TOT_ENERGY,blk.Y_MOM] = -bcells[0].fs.vel.y*(gamma-1);
+                        blk.Minv[blk.TOT_ENERGY,blk.TOT_ENERGY] = gamma-1.0;
 
-                        if (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) {
-                            blk.Minv[0,4] = to!number(0.0);
-                            blk.Minv[0,5] = to!number(0.0);
-                            // second row
-                            blk.Minv[1,4] = to!number(0.0);
-                            blk.Minv[1,5] = to!number(0.0);
-                            // third row
-                            blk.Minv[2,4] = to!number(0.0);
-                            blk.Minv[2,5] = to!number(0.0);
-                            // fourth row
-                            blk.Minv[3,4] = -(gamma-1.0); 
-                            blk.Minv[3,5] = to!number(0.0);
-                            // fifth row
-                            blk.Minv[4,0] = -bcells[0].fs.tke/bcells[0].fs.gas.rho;
-                            blk.Minv[4,1] = to!number(0.0);
-                            blk.Minv[4,2] = to!number(0.0);
-                            blk.Minv[4,3] = to!number(0.0);
-                            blk.Minv[4,4] = 1.0/bcells[0].fs.gas.rho;
-                            blk.Minv[4,5] = to!number(0.0);
-                            // sixth row
-                            blk.Minv[5,0] = -bcells[0].fs.omega/bcells[0].fs.gas.rho;
-                            blk.Minv[5,1] = to!number(0.0);
-                            blk.Minv[5,2] = to!number(0.0);
-                            blk.Minv[5,3] = to!number(0.0);
-                            blk.Minv[5,4] = to!number(0.0);
-                            blk.Minv[5,5] = 1.0/bcells[0].fs.gas.rho;
+                        if (blk.myConfig.dimensions == 3) {
+                            blk.Minv[blk.MASS,blk.Z_MOM] = to!number(0.0);
+                            blk.Minv[blk.X_MOM,blk.Z_MOM] = to!number(0.0);
+                            blk.Minv[blk.Y_MOM,blk.Z_MOM] = to!number(0.0);
+                            blk.Minv[blk.TOT_ENERGY,blk.Z_MOM] = -bcells[0].fs.vel.z*(gamma-1);
+                            
+                            blk.Minv[blk.Z_MOM,blk.MASS] = -bcells[0].fs.vel.z/bcells[0].fs.gas.rho;
+                            blk.Minv[blk.Z_MOM,blk.X_MOM] = to!number(0.0);
+                            blk.Minv[blk.Z_MOM,blk.Y_MOM] = to!number(0.0);
+                            blk.Minv[blk.Z_MOM,blk.Z_MOM] = 1.0/bcells[0].fs.gas.rho;
+                            blk.Minv[blk.Z_MOM,blk.TOT_ENERGY] = to!number(0.0);
                         }
+                        
+                        if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
+                            blk.Minv[blk.MASS,blk.TKE] = to!number(0.0);
+                            blk.Minv[blk.MASS,blk.OMEGA] = to!number(0.0);
+                            // second row
+                            blk.Minv[blk.X_MOM,blk.TKE] = to!number(0.0);
+                            blk.Minv[blk.X_MOM,blk.OMEGA] = to!number(0.0);
+                            // third row
+                            blk.Minv[blk.Y_MOM,blk.TKE] = to!number(0.0);
+                            blk.Minv[blk.Y_MOM,blk.OMEGA] = to!number(0.0);
+                            // fourth row
+                            blk.Minv[blk.TOT_ENERGY,blk.TKE] = -(gamma-1.0); 
+                            blk.Minv[blk.TOT_ENERGY,blk.OMEGA] = to!number(0.0);
+                            // fifth row
+                            blk.Minv[blk.TKE,blk.MASS] = -bcells[0].fs.tke/bcells[0].fs.gas.rho;
+                            blk.Minv[blk.TKE,blk.X_MOM] = to!number(0.0);
+                            blk.Minv[blk.TKE,blk.Y_MOM] = to!number(0.0);
+                            blk.Minv[blk.TKE,blk.TOT_ENERGY] = to!number(0.0);
+                            blk.Minv[blk.TKE,blk.TKE] = 1.0/bcells[0].fs.gas.rho;
+                            blk.Minv[blk.TKE,blk.OMEGA] = to!number(0.0);
+                            // sixth row
+                            blk.Minv[blk.OMEGA,blk.MASS] = -bcells[0].fs.omega/bcells[0].fs.gas.rho;
+                            blk.Minv[blk.OMEGA,blk.X_MOM] = to!number(0.0);
+                            blk.Minv[blk.OMEGA,blk.Y_MOM] = to!number(0.0);
+                            blk.Minv[blk.OMEGA,blk.TOT_ENERGY] = to!number(0.0);
+                            blk.Minv[blk.OMEGA,blk.TKE] = to!number(0.0);
+                            blk.Minv[blk.OMEGA,blk.OMEGA] = 1.0/bcells[0].fs.gas.rho;
+                            
+                            if (blk.myConfig.dimensions == 3) {
+                                blk.Minv[blk.Z_MOM,blk.TKE] = to!number(0.0);
+                                blk.Minv[blk.Z_MOM,blk.OMEGA] = to!number(0.0);
+                                blk.Minv[blk.TKE,blk.Z_MOM] = to!number(0.0);
+                                blk.Minv[blk.OMEGA,blk.Z_MOM] = to!number(0.0);
+                            }
+                        }
+                        
                         //writeln(blk.Minv);
                         number[][] tmp;
                         tmp.length = np;
@@ -445,7 +517,7 @@ void form_external_flow_jacobian_block_phase0(FluidBlock blk, size_t np, int ord
     // an unstructured mesh, it is possible that a ghost cell maybe shared by more than one neighbour cell. However, the interfaces
     // are a unique connection between two cells.
 
-    size_t nDim = GlobalConfig.dimensions;
+    size_t nDim = blk.myConfig.dimensions;
     if (orderOfJacobian == 0) return; // no external effects
     foreach (bc; blk.bc) {
         if (bc.type == "exchange_using_mapped_cells") {
@@ -519,7 +591,7 @@ void form_external_flow_jacobian_block_phase1(ref SMatrix!number A, FluidBlock b
     // domain decomposition Jacobian. Note that this matrix has rows of 0 for non-boundary cells, these are stored in CRS by storing a 0
     // as the initial row value.
     
-    size_t nDim = GlobalConfig.dimensions;
+    size_t nDim = blk.myConfig.dimensions;
     // retrieve neighbour data (not MPI compatible)
     foreach (bc; blk.bc) {
         if (bc.type == "exchange_using_mapped_cells") {
@@ -631,19 +703,31 @@ void construct_flow_jacobian(FVCell pcell, FVInterface pface, FluidBlock blk, si
     //    ifacePm[i] = new FVInterface(blk.myConfig, false);
     // }
 
+    // Make a stack-local copy of conserved quantities info
+    //size_t nConserved = nConservedQuantities;
+    //size_t MASS = massIdx;
+    //size_t X_MOM = xMomIdx;
+    //size_t Y_MOM = yMomIdx;
+    //size_t Z_MOM = zMomIdx;
+    //size_t TOT_ENERGY = totEnergyIdx;
+    //size_t TKE = tkeIdx;
+    //size_t OMEGA = omegaIdx;
+
     // 0th perturbation: rho
-    mixin(computeFluxDerivativesAroundCell("gas.rho", "0", true));
+    mixin(computeFluxDerivativesAroundCell("gas.rho", "blk.MASS", true));
     // 1st perturbation: u
-    mixin(computeFluxDerivativesAroundCell("vel.refx", "1", false));
+    mixin(computeFluxDerivativesAroundCell("vel.refx", "blk.X_MOM", false));
     // 2nd perturbation: v
-    mixin(computeFluxDerivativesAroundCell("vel.refy", "2", false));
+    mixin(computeFluxDerivativesAroundCell("vel.refy", "blk.Y_MOM", false));
+    if ( blk.myConfig.dimensions == 3 )
+        mixin(computeFluxDerivativesAroundCell("vel.refz", "blk.Z_MOM", false));
     // 3rd perturbation: P
-    mixin(computeFluxDerivativesAroundCell("gas.p", "3", true));
-    if (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) {
+    mixin(computeFluxDerivativesAroundCell("gas.p", "blk.TOT_ENERGY", true));
+    if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
         // 4th perturbation: tke
-        mixin(computeFluxDerivativesAroundCell("tke", "4", false));
+        mixin(computeFluxDerivativesAroundCell("tke", "blk.TKE", false));
         // 5th perturbation: omega
-        mixin(computeFluxDerivativesAroundCell("omega", "5", false));
+        mixin(computeFluxDerivativesAroundCell("omega", "blk.OMEGA", false));
     }
     // -----------------------------------------------------
     // loop through influenced cells and fill out Jacobian 
@@ -893,6 +977,7 @@ void residual_stencil(FVCell pcell, size_t orderOfJacobian) {
 }
 
 void local_flow_jacobian_transpose(ref SMatrix!number A, ref FluidBlock blk, size_t np, size_t orderOfJacobian, number EPS, bool preconditionMatrix = false, bool transformToConserved = false) {
+
     // set the interpolation order to that of the Jacobian
     if (orderOfJacobian < 2) blk.myConfig.interpolation_order = 1;
     else blk.myConfig.interpolation_order = 2;    
@@ -932,19 +1017,31 @@ void local_flow_jacobian_transpose(ref SMatrix!number A, ref FluidBlock blk, siz
 }
 
 void compute_flow_jacobian_rows_for_cell(number[][] aa, size_t[][] ja, FVCell pcell, FluidBlock blk, size_t np, size_t orderOfJacobian, number EPS, bool transformToConserved) {
+    // Make a stack-local copy of conserved quantities info
+    //size_t nConserved = nConservedQuantities;
+    //size_t MASS = massIdx;
+    //size_t X_MOM = xMomIdx;
+    //size_t Y_MOM = yMomIdx;
+    //size_t Z_MOM = zMomIdx;
+    //size_t TOT_ENERGY = totEnergyIdx;
+    //size_t TKE = tkeIdx;
+    //size_t OMEGA = omegaIdx;
+
     // 0th perturbation: rho
-    mixin(computeFluxDerivativesAroundCell("gas.rho", "0", true));
+    mixin(computeFluxDerivativesAroundCell("gas.rho", "blk.MASS", true));
     // 1st perturbation: u
-    mixin(computeFluxDerivativesAroundCell("vel.refx", "1", false));
+    mixin(computeFluxDerivativesAroundCell("vel.refx", "blk.X_MOM", false));
     // 2nd perturbation: v
-    mixin(computeFluxDerivativesAroundCell("vel.refy", "2", false));
+    mixin(computeFluxDerivativesAroundCell("vel.refy", "blk.Y_MOM", false));
+    if ( blk.myConfig.dimensions == 3 )
+        mixin(computeFluxDerivativesAroundCell("vel.refz", "blk.Z_MOM", false));
     // 3rd perturbation: P
-    mixin(computeFluxDerivativesAroundCell("gas.p", "3", true));
-    if (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) {
+    mixin(computeFluxDerivativesAroundCell("gas.p", "blk.TOT_ENERGY", true));
+    if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
         // 4th perturbation: tke
-        mixin(computeFluxDerivativesAroundCell("tke", "4", false));
+        mixin(computeFluxDerivativesAroundCell("tke", "blk.TKE", false));
         // 5th perturbation: omega
-        mixin(computeFluxDerivativesAroundCell("omega", "5", false));
+        mixin(computeFluxDerivativesAroundCell("omega", "blk.OMEGA", false));
     }
     // transform the face flux Jacobians from primitive to conservative form
     if (transformToConserved) {
@@ -953,53 +1050,74 @@ void compute_flow_jacobian_rows_for_cell(number[][] aa, size_t[][] ja, FVCell pc
             // form transformation matrix (TODO: genearlise, currently only for 2D Euler/Laminar Navier-Stokes).
             number gamma = gmodel.gamma(pcell.fs.gas);
             // form inverse transformation matrix
-            blk.Minv[0,0] = to!number(1.0);
-            blk.Minv[0,1] = to!number(0.0);
-            blk.Minv[0,2] = to!number(0.0);
-            blk.Minv[0,3] = to!number(0.0);
+            blk.Minv[blk.MASS,blk.MASS] = to!number(1.0);
+            blk.Minv[blk.MASS,blk.X_MOM] = to!number(0.0);
+            blk.Minv[blk.MASS,blk.Y_MOM] = to!number(0.0);
+            blk.Minv[blk.MASS,blk.TOT_ENERGY] = to!number(0.0);
             // second row
-            blk.Minv[1,0] = -pcell.fs.vel.x/pcell.fs.gas.rho;
-            blk.Minv[1,1] = 1.0/pcell.fs.gas.rho;
-            blk.Minv[1,2] = to!number(0.0);
-            blk.Minv[1,3] = to!number(0.0);
+            blk.Minv[blk.X_MOM,blk.MASS] = -pcell.fs.vel.x/pcell.fs.gas.rho;
+            blk.Minv[blk.X_MOM,blk.X_MOM] = 1.0/pcell.fs.gas.rho;
+            blk.Minv[blk.X_MOM,blk.Y_MOM] = to!number(0.0);
+            blk.Minv[blk.X_MOM,blk.TOT_ENERGY] = to!number(0.0);
             // third row
-            blk.Minv[2,0] = -pcell.fs.vel.y/pcell.fs.gas.rho;
-            blk.Minv[2,1] = to!number(0.0);
-            blk.Minv[2,2] = 1.0/pcell.fs.gas.rho;
-            blk.Minv[2,3] = to!number(0.0);
+            blk.Minv[blk.Y_MOM,blk.MASS] = -pcell.fs.vel.y/pcell.fs.gas.rho;
+            blk.Minv[blk.Y_MOM,blk.X_MOM] = to!number(0.0);
+            blk.Minv[blk.Y_MOM,blk.Y_MOM] = 1.0/pcell.fs.gas.rho;
+            blk.Minv[blk.Y_MOM,blk.TOT_ENERGY] = to!number(0.0);
             // fourth row
-            blk.Minv[3,0] = 0.5*(gamma-1.0)*(pcell.fs.vel.x*pcell.fs.vel.x+pcell.fs.vel.y*pcell.fs.vel.y);
-            blk.Minv[3,1] = -pcell.fs.vel.x*(gamma-1);
-            blk.Minv[3,2] = -pcell.fs.vel.y*(gamma-1);
-            blk.Minv[3,3] = gamma-1.0;
-            
-            if (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) {
-                blk.Minv[0,4] = to!number(0.0);
-                blk.Minv[0,5] = to!number(0.0);
-                // second row
-                blk.Minv[1,4] = to!number(0.0);
-                blk.Minv[1,5] = to!number(0.0);
-                // third row
-                blk.Minv[2,4] = to!number(0.0);
-                blk.Minv[2,5] = to!number(0.0);
-                // fourth row
-                blk.Minv[3,4] = -(gamma-1.0);
-                blk.Minv[3,5] = to!number(0.0);
-                // fifth row
-                blk.Minv[4,0] = -pcell.fs.tke/pcell.fs.gas.rho;
-                blk.Minv[4,1] = to!number(0.0);
-                blk.Minv[4,2] = to!number(0.0);
-                blk.Minv[4,3] = to!number(0.0);
-                blk.Minv[4,4] = 1.0/pcell.fs.gas.rho;
-                blk.Minv[4,5] = to!number(0.0);
-                // sixth row
-                blk.Minv[5,0] = -pcell.fs.omega/pcell.fs.gas.rho;
-                blk.Minv[5,1] = to!number(0.0);
-                blk.Minv[5,2] = to!number(0.0);
-                blk.Minv[5,3] = to!number(0.0);
-                blk.Minv[5,4] = to!number(0.0);
-                blk.Minv[5,5] = 1.0/pcell.fs.gas.rho;
+            blk.Minv[blk.TOT_ENERGY,blk.MASS] = 0.5*(gamma-1.0)*(pcell.fs.vel.x*pcell.fs.vel.x+pcell.fs.vel.y*pcell.fs.vel.y);
+            blk.Minv[blk.TOT_ENERGY,blk.X_MOM] = -pcell.fs.vel.x*(gamma-1);
+            blk.Minv[blk.TOT_ENERGY,blk.Y_MOM] = -pcell.fs.vel.y*(gamma-1);
+            blk.Minv[blk.TOT_ENERGY,blk.TOT_ENERGY] = gamma-1.0;
+
+            if (blk.myConfig.dimensions == 3) {
+                blk.Minv[blk.MASS,blk.Z_MOM] = to!number(0.0);
+                blk.Minv[blk.X_MOM,blk.Z_MOM] = to!number(0.0);
+                blk.Minv[blk.Y_MOM,blk.Z_MOM] = to!number(0.0);
+                blk.Minv[blk.TOT_ENERGY,blk.Z_MOM] = -pcell.fs.vel.z*(gamma-1);
+                
+                blk.Minv[blk.Z_MOM,blk.MASS] = -pcell.fs.vel.z/pcell.fs.gas.rho;
+                blk.Minv[blk.Z_MOM,blk.X_MOM] = to!number(0.0);
+                blk.Minv[blk.Z_MOM,blk.Y_MOM] = to!number(0.0);
+                blk.Minv[blk.Z_MOM,blk.Z_MOM] = 1.0/pcell.fs.gas.rho;
+                blk.Minv[blk.Z_MOM,blk.TOT_ENERGY] = to!number(0.0);
             }
+            
+            if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
+                blk.Minv[blk.MASS,blk.TKE] = to!number(0.0);
+                blk.Minv[blk.MASS,blk.OMEGA] = to!number(0.0);
+                // second row
+                blk.Minv[blk.X_MOM,blk.TKE] = to!number(0.0);
+                blk.Minv[blk.X_MOM,blk.OMEGA] = to!number(0.0);
+                // third row
+                blk.Minv[blk.Y_MOM,blk.TKE] = to!number(0.0);
+                blk.Minv[blk.Y_MOM,blk.OMEGA] = to!number(0.0);
+                // fourth row
+                blk.Minv[blk.TOT_ENERGY,blk.TKE] = -(gamma-1.0);
+                blk.Minv[blk.TOT_ENERGY,blk.OMEGA] = to!number(0.0);
+                // fifth row
+                blk.Minv[blk.TKE,blk.MASS] = -pcell.fs.tke/pcell.fs.gas.rho;
+                blk.Minv[blk.TKE,blk.X_MOM] = to!number(0.0);
+                blk.Minv[blk.TKE,blk.Y_MOM] = to!number(0.0);
+                blk.Minv[blk.TKE,blk.TOT_ENERGY] = to!number(0.0);
+                blk.Minv[blk.TKE,blk.TKE] = 1.0/pcell.fs.gas.rho;
+                blk.Minv[blk.TKE,blk.OMEGA] = to!number(0.0);
+                // sixth row
+                blk.Minv[blk.OMEGA,blk.MASS] = -pcell.fs.omega/pcell.fs.gas.rho;
+                blk.Minv[blk.OMEGA,blk.X_MOM] = to!number(0.0);
+                blk.Minv[blk.OMEGA,blk.Y_MOM] = to!number(0.0);
+                blk.Minv[blk.OMEGA,blk.TOT_ENERGY] = to!number(0.0);
+                blk.Minv[blk.OMEGA,blk.TKE] = to!number(0.0);
+                blk.Minv[blk.OMEGA,blk.OMEGA] = 1.0/pcell.fs.gas.rho;
+
+                if (blk.myConfig.dimensions == 3) {
+                    blk.Minv[blk.Z_MOM,blk.TKE] = to!number(0.0);
+                    blk.Minv[blk.Z_MOM,blk.OMEGA] = to!number(0.0);
+                    blk.Minv[blk.TKE,blk.Z_MOM] = to!number(0.0);
+                    blk.Minv[blk.OMEGA,blk.Z_MOM] = to!number(0.0);
+                }
+            }
+            //writeln(blk.Minv);
             // writeln(pcell.id, ", ", blk.Minv);
             //if(pcell.id == 0) writeln(blk.Minv);
             //writeln(blk.Minv);
@@ -1026,54 +1144,74 @@ void compute_flow_jacobian_rows_for_cell(number[][] aa, size_t[][] ja, FVCell pc
             // form transformation matrix (TODO: genearlise, currently only for 2D Euler/Laminar Navier-Stokes).
             number gamma = gmodel.gamma(pcell.fs.gas);
             // form inverse transformation matrix
-            blk.Minv[0,0] = to!number(1.0);
-            blk.Minv[0,1] = to!number(0.0);
-            blk.Minv[0,2] = to!number(0.0);
-            blk.Minv[0,3] = to!number(0.0);
+            blk.Minv[blk.MASS,blk.MASS] = to!number(1.0);
+            blk.Minv[blk.MASS,blk.X_MOM] = to!number(0.0);
+            blk.Minv[blk.MASS,blk.Y_MOM] = to!number(0.0);
+            blk.Minv[blk.MASS,blk.TOT_ENERGY] = to!number(0.0);
             // second row
-            blk.Minv[1,0] = -pcell.fs.vel.x/pcell.fs.gas.rho;
-            blk.Minv[1,1] = 1.0/pcell.fs.gas.rho;
-            blk.Minv[1,2] = to!number(0.0);
-            blk.Minv[1,3] = to!number(0.0);
+            blk.Minv[blk.X_MOM,blk.MASS] = -pcell.fs.vel.x/pcell.fs.gas.rho;
+            blk.Minv[blk.X_MOM,blk.X_MOM] = 1.0/pcell.fs.gas.rho;
+            blk.Minv[blk.X_MOM,blk.Y_MOM] = to!number(0.0);
+            blk.Minv[blk.X_MOM,blk.TOT_ENERGY] = to!number(0.0);
             // third row
-            blk.Minv[2,0] = -pcell.fs.vel.y/pcell.fs.gas.rho;
-            blk.Minv[2,1] = to!number(0.0);
-            blk.Minv[2,2] = 1.0/pcell.fs.gas.rho;
-            blk.Minv[2,3] = to!number(0.0);
+            blk.Minv[blk.Y_MOM,blk.MASS] = -pcell.fs.vel.y/pcell.fs.gas.rho;
+            blk.Minv[blk.Y_MOM,blk.X_MOM] = to!number(0.0);
+            blk.Minv[blk.Y_MOM,blk.Y_MOM] = 1.0/pcell.fs.gas.rho;
+            blk.Minv[blk.Y_MOM,blk.TOT_ENERGY] = to!number(0.0);
             // fourth row
-            blk.Minv[3,0] = 0.5*(gamma-1.0)*(pcell.fs.vel.x*pcell.fs.vel.x+pcell.fs.vel.y*pcell.fs.vel.y);
-            blk.Minv[3,1] = -pcell.fs.vel.x*(gamma-1);
-            blk.Minv[3,2] = -pcell.fs.vel.y*(gamma-1);
-            blk.Minv[3,3] = gamma-1.0;
+            blk.Minv[blk.TOT_ENERGY,blk.MASS] = 0.5*(gamma-1.0)*(pcell.fs.vel.x*pcell.fs.vel.x+pcell.fs.vel.y*pcell.fs.vel.y);
+            blk.Minv[blk.TOT_ENERGY,blk.X_MOM] = -pcell.fs.vel.x*(gamma-1);
+            blk.Minv[blk.TOT_ENERGY,blk.Y_MOM] = -pcell.fs.vel.y*(gamma-1);
+            blk.Minv[blk.TOT_ENERGY,blk.TOT_ENERGY] = gamma-1.0;
 
-            if (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) {
-                blk.Minv[0,4] = to!number(0.0);
-                blk.Minv[0,5] = to!number(0.0);
-                // second row
-                blk.Minv[1,4] = to!number(0.0);
-                blk.Minv[1,5] = to!number(0.0);
-                // third row
-                blk.Minv[2,4] = to!number(0.0);
-                blk.Minv[2,5] = to!number(0.0);
-                // fourth row
-                blk.Minv[3,4] = -(gamma-1.0);
-                blk.Minv[3,5] = to!number(0.0);
-                // fifth row
-                blk.Minv[4,0] = -pcell.fs.tke/pcell.fs.gas.rho;
-                blk.Minv[4,1] = to!number(0.0);
-                blk.Minv[4,2] = to!number(0.0);
-                blk.Minv[4,3] = to!number(0.0);
-                blk.Minv[4,4] = 1.0/pcell.fs.gas.rho;
-                blk.Minv[4,5] = to!number(0.0);
-                // sixth row
-                blk.Minv[5,0] = -pcell.fs.omega/pcell.fs.gas.rho;
-                blk.Minv[5,1] = to!number(0.0);
-                blk.Minv[5,2] = to!number(0.0);
-                blk.Minv[5,3] = to!number(0.0);
-                blk.Minv[5,4] = to!number(0.0);
-                blk.Minv[5,5] = 1.0/pcell.fs.gas.rho;
+            if (blk.myConfig.dimensions == 3) {
+                blk.Minv[blk.MASS,blk.Z_MOM] = to!number(0.0);
+                blk.Minv[blk.X_MOM,blk.Z_MOM] = to!number(0.0);
+                blk.Minv[blk.Y_MOM,blk.Z_MOM] = to!number(0.0);
+                blk.Minv[blk.TOT_ENERGY,blk.Z_MOM] = -pcell.fs.vel.z*(gamma-1);
+                
+                blk.Minv[blk.Z_MOM,blk.MASS] = -pcell.fs.vel.z/pcell.fs.gas.rho;
+                blk.Minv[blk.Z_MOM,blk.X_MOM] = to!number(0.0);
+                blk.Minv[blk.Z_MOM,blk.Y_MOM] = to!number(0.0);
+                blk.Minv[blk.Z_MOM,blk.Z_MOM] = 1.0/pcell.fs.gas.rho;
+                blk.Minv[blk.Z_MOM,blk.TOT_ENERGY] = to!number(0.0);
             }
+            
+            if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
+                blk.Minv[blk.MASS,blk.TKE] = to!number(0.0);
+                blk.Minv[blk.MASS,blk.OMEGA] = to!number(0.0);
+                // second row
+                blk.Minv[blk.X_MOM,blk.TKE] = to!number(0.0);
+                blk.Minv[blk.X_MOM,blk.OMEGA] = to!number(0.0);
+                // third row
+                blk.Minv[blk.Y_MOM,blk.TKE] = to!number(0.0);
+                blk.Minv[blk.Y_MOM,blk.OMEGA] = to!number(0.0);
+                // fourth row
+                blk.Minv[blk.TOT_ENERGY,blk.TKE] = -(gamma-1.0);
+                blk.Minv[blk.TOT_ENERGY,blk.OMEGA] = to!number(0.0);
+                // fifth row
+                blk.Minv[blk.TKE,blk.MASS] = -pcell.fs.tke/pcell.fs.gas.rho;
+                blk.Minv[blk.TKE,blk.X_MOM] = to!number(0.0);
+                blk.Minv[blk.TKE,blk.Y_MOM] = to!number(0.0);
+                blk.Minv[blk.TKE,blk.TOT_ENERGY] = to!number(0.0);
+                blk.Minv[blk.TKE,blk.TKE] = 1.0/pcell.fs.gas.rho;
+                blk.Minv[blk.TKE,blk.OMEGA] = to!number(0.0);
+                // sixth row
+                blk.Minv[blk.OMEGA,blk.MASS] = -pcell.fs.omega/pcell.fs.gas.rho;
+                blk.Minv[blk.OMEGA,blk.X_MOM] = to!number(0.0);
+                blk.Minv[blk.OMEGA,blk.Y_MOM] = to!number(0.0);
+                blk.Minv[blk.OMEGA,blk.TOT_ENERGY] = to!number(0.0);
+                blk.Minv[blk.OMEGA,blk.TKE] = to!number(0.0);
+                blk.Minv[blk.OMEGA,blk.OMEGA] = 1.0/pcell.fs.gas.rho;
 
+                if (blk.myConfig.dimensions == 3) {
+                    blk.Minv[blk.Z_MOM,blk.TKE] = to!number(0.0);
+                    blk.Minv[blk.Z_MOM,blk.OMEGA] = to!number(0.0);
+                    blk.Minv[blk.TKE,blk.Z_MOM] = to!number(0.0);
+                    blk.Minv[blk.OMEGA,blk.Z_MOM] = to!number(0.0);
+                }
+            }
+            //writeln(blk.Minv);
             number[][] tmp;
             tmp.length = np;
             foreach (ref a; tmp) a.length = np;
@@ -1151,24 +1289,30 @@ string computeFluxDerivativesAroundCell(string varName, string posInArray, bool 
     //codeStr ~= "pcell.copy_values_from(cellSave, CopyDataOption.all);";
     // ------------------ compute interface flux derivatives ------------------
     codeStr ~= "foreach (i, iface; pcell.jacobian_face_stencil) {";
-    codeStr ~= "iface.dFdU[0][" ~ posInArray ~ "] = blk.ifaceP[i].F.mass.im/EPS.im;";         
-    codeStr ~= "iface.dFdU[1][" ~ posInArray ~ "] = blk.ifaceP[i].F.momentum.x.im/EPS.im;";
-    codeStr ~= "iface.dFdU[2][" ~ posInArray ~ "] = blk.ifaceP[i].F.momentum.y.im/EPS.im;";
-    codeStr ~= "iface.dFdU[3][" ~ posInArray ~ "] = blk.ifaceP[i].F.total_energy.im/EPS.im;";
-    codeStr ~= "if (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) {";
-    codeStr ~= "iface.dFdU[4][" ~ posInArray ~ "] = blk.ifaceP[i].F.tke.im/EPS.im;";
-    codeStr ~= "iface.dFdU[5][" ~ posInArray ~ "] = blk.ifaceP[i].F.omega.im/EPS.im;";        
+    codeStr ~= "iface.dFdU[blk.MASS][" ~ posInArray ~ "] = blk.ifaceP[i].F.mass.im/EPS.im;";         
+    codeStr ~= "iface.dFdU[blk.X_MOM][" ~ posInArray ~ "] = blk.ifaceP[i].F.momentum.x.im/EPS.im;";
+    codeStr ~= "iface.dFdU[blk.Y_MOM][" ~ posInArray ~ "] = blk.ifaceP[i].F.momentum.y.im/EPS.im;";
+    codeStr ~= "if (blk.myConfig.dimensions == 3) {";
+    codeStr ~= "iface.dFdU[blk.Z_MOM][" ~ posInArray ~ "] = blk.ifaceP[i].F.momentum.z.im/EPS.im;";
+    codeStr ~= "}";
+    codeStr ~= "iface.dFdU[blk.TOT_ENERGY][" ~ posInArray ~ "] = blk.ifaceP[i].F.total_energy.im/EPS.im;";
+    codeStr ~= "if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {";
+    codeStr ~= "iface.dFdU[blk.TKE][" ~ posInArray ~ "] = blk.ifaceP[i].F.tke.im/EPS.im;";
+    codeStr ~= "iface.dFdU[blk.OMEGA][" ~ posInArray ~ "] = blk.ifaceP[i].F.omega.im/EPS.im;";        
     codeStr ~= "}";
     codeStr ~= "}";
     codeStr ~= "foreach (i, cell; pcell.jacobian_cell_stencil) {";
     //codeStr ~= "writeln(cell.Q);";
-    codeStr ~= "cell.dQdU[0][" ~ posInArray ~ "] = cell.Q.mass.im/EPS.im;";         
-    codeStr ~= "cell.dQdU[1][" ~ posInArray ~ "] = cell.Q.momentum.x.im/EPS.im;";
-    codeStr ~= "cell.dQdU[2][" ~ posInArray ~ "] = cell.Q.momentum.y.im/EPS.im;";
-    codeStr ~= "cell.dQdU[3][" ~ posInArray ~ "] = cell.Q.total_energy.im/EPS.im;";
-    codeStr ~= "if (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) {";
-    codeStr ~= "cell.dQdU[4][" ~ posInArray ~ "] = cell.Q.tke.im/EPS.im;";
-    codeStr ~= "cell.dQdU[5][" ~ posInArray ~ "] = cell.Q.omega.im/EPS.im;";        
+    codeStr ~= "cell.dQdU[blk.MASS][" ~ posInArray ~ "] = cell.Q.mass.im/EPS.im;";         
+    codeStr ~= "cell.dQdU[blk.X_MOM][" ~ posInArray ~ "] = cell.Q.momentum.x.im/EPS.im;";
+    codeStr ~= "cell.dQdU[blk.Y_MOM][" ~ posInArray ~ "] = cell.Q.momentum.y.im/EPS.im;";
+    codeStr ~= "if (blk.myConfig.dimensions == 3) {";
+    codeStr ~= "cell.dQdU[blk.Z_MOM][" ~ posInArray ~ "] = cell.Q.momentum.z.im/EPS.im;";
+    codeStr ~= "}";
+    codeStr ~= "cell.dQdU[blk.TOT_ENERGY][" ~ posInArray ~ "] = cell.Q.total_energy.im/EPS.im;";
+    codeStr ~= "if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {";
+    codeStr ~= "cell.dQdU[blk.TKE][" ~ posInArray ~ "] = cell.Q.tke.im/EPS.im;";
+    codeStr ~= "cell.dQdU[blk.OMEGA][" ~ posInArray ~ "] = cell.Q.omega.im/EPS.im;";        
     codeStr ~= "}";
     codeStr ~= "}";
     codeStr ~= "pcell.copy_values_from(blk.cellSave, CopyDataOption.all);";
@@ -1267,7 +1411,7 @@ void compute_flux(FVCell pcell, FluidBlock blk, size_t orderOfJacobian, ref FVCe
     }
     blk.applyPostConvFluxAction(0.0, 0, 0);
     // Viscous flux update
-    if (GlobalConfig.viscous) {
+    if (blk.myConfig.viscous) {
         // currently only for least-squares at faces
         blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
         
@@ -1297,7 +1441,7 @@ void compute_flux(FVCell pcell, FluidBlock blk, size_t orderOfJacobian, ref FVCe
         }
         blk.applyPostDiffFluxAction(0.0, 0, 0);
     }
-    bool local_with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega);
+    bool local_with_k_omega = (blk.myConfig.turbulence_model == TurbulenceModel.k_omega);
     foreach (i, cell; cell_list) {
         cell.add_inviscid_source_vector(0, 0.0);
         if (blk.myConfig.viscous) {
@@ -1318,7 +1462,17 @@ void compute_flux(FVCell pcell, FluidBlock blk, size_t orderOfJacobian, ref FVCe
 void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref number[] g, size_t nPrimitive, bool with_k_omega, number EPS, string jobName) {
     size_t nDesignVars = design_variables.length;
     int gtl; int ftl; number objFcnEvalP; number objFcnEvalM; string varID; number dP; number P0;
-    
+
+    // Make a stack-local copy of conserved quantities info
+    //size_t nConserved = nConservedQuantities;
+    //size_t MASS = massIdx;
+    //size_t X_MOM = xMomIdx;
+    //size_t Y_MOM = yMomIdx;
+    //size_t Z_MOM = zMomIdx;
+    //size_t TOT_ENERGY = totEnergyIdx;
+    //size_t TKE = tkeIdx;
+    //size_t OMEGA = omegaIdx;
+
     foreach (i; 0..nDesignVars) {
         foreach (myblk; localFluidBlocks) {
             ensure_directory_is_present(make_path_name!"grid"(0));
@@ -1401,24 +1555,16 @@ void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref
         // compute residual sensitivity
         foreach (myblk; parallel(localFluidBlocks,1)) {
             foreach(j, cell; myblk.cells) {
-                myblk.rT[i, j*nPrimitive] = to!number((-cell.dUdt[ftl].mass.im)/(EPS.im));
-                myblk.rT[i, j*nPrimitive+1] = to!number((-cell.dUdt[ftl].momentum.x.im)/(EPS.im));
-                myblk.rT[i, j*nPrimitive+2] = to!number((-cell.dUdt[ftl].momentum.y.im)/(EPS.im));
-                myblk.rT[i, j*nPrimitive+3] = to!number((-cell.dUdt[ftl].total_energy.im)/(EPS.im));                
-
-                /*
-                writeln("blk.id: ", myblk.id, " var.id: ", i, ", cell.id: ", cell.id);
-                writef("%.13e %.13e -------- \n", cell.pos[0].x.re, cell.pos[0].y.re);
-                writef(" %.13e \n", cell.volume[0]);
-                writef(" %.13e \n", myblk.rT[i, j*nPrimitive+0]);
-                writef(" %.13e \n", myblk.rT[i, j*nPrimitive+1]);
-                writef(" %.13e \n", myblk.rT[i, j*nPrimitive+2]);
-                writef(" %.13e \n", myblk.rT[i, j*nPrimitive+3]);
-                */
+                myblk.rT[i, j*nPrimitive+myblk.MASS] = to!number((-cell.dUdt[ftl].mass.im)/(EPS.im));
+                myblk.rT[i, j*nPrimitive+myblk.X_MOM] = to!number((-cell.dUdt[ftl].momentum.x.im)/(EPS.im));
+                myblk.rT[i, j*nPrimitive+myblk.Y_MOM] = to!number((-cell.dUdt[ftl].momentum.y.im)/(EPS.im));
+                if (myblk.myConfig.dimensions == 3) 
+                    myblk.rT[i, j*nPrimitive+myblk.Z_MOM] = to!number((-cell.dUdt[ftl].momentum.z.im)/(EPS.im));
+                myblk.rT[i, j*nPrimitive+myblk.TOT_ENERGY] = to!number((-cell.dUdt[ftl].total_energy.im)/(EPS.im));                
                 
                 if (myblk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                    myblk.rT[i, j*nPrimitive+4] = to!number((-cell.dUdt[ftl].tke.im)/(EPS.im));
-                    myblk.rT[i, j*nPrimitive+5] = to!number((-cell.dUdt[ftl].omega.im)/(EPS.im));
+                    myblk.rT[i, j*nPrimitive+myblk.TKE] = to!number((-cell.dUdt[ftl].tke.im)/(EPS.im));
+                    myblk.rT[i, j*nPrimitive+myblk.OMEGA] = to!number((-cell.dUdt[ftl].omega.im)/(EPS.im));
                 }
             }
         }
@@ -1508,6 +1654,16 @@ number objective_function_evaluation(int gtl=0, string bndaryForSurfaceIntergral
 
 void form_objective_function_sensitivity(FluidBlock blk, size_t np, number EPS, string bndaryForSurfaceIntergral = "objective_function_surface") {
 
+    // Make a stack-local copy of conserved quantities info
+    //size_t nConserved = nConservedQuantities;
+    //size_t MASS = massIdx;
+    //size_t X_MOM = xMomIdx;
+    //size_t Y_MOM = yMomIdx;
+    //size_t Z_MOM = zMomIdx;
+    //size_t TOT_ENERGY = totEnergyIdx;
+    //size_t TKE = tkeIdx;
+    //size_t OMEGA = omegaIdx;
+
     // for now we have hard coded the pressure drag in the x-direction as the objective function
     size_t nLocalCells = blk.cells.length;
     blk.f.length = nLocalCells * np;
@@ -1533,7 +1689,7 @@ void form_objective_function_sensitivity(FluidBlock blk, size_t np, number EPS, 
                 cell.fs.gas.p = origValue + EPS;
                 ObjFcnP = objective_function_evaluation();
                 //writeln(ObjFcnP);
-                blk.f[cell.id*np + 3] = (ObjFcnP.im)/(EPS.im);
+                blk.f[cell.id*np + blk.TOT_ENERGY] = (ObjFcnP.im)/(EPS.im);
                 cell.fs.gas.p = origValue;
             }
         }
@@ -1800,6 +1956,7 @@ void collect_boundary_vertices(FluidBlock blk)
 /*************************/
 /*  EVALUATE RHS @ gtl   */
 /*************************/
+/*
 void evalRHS(double pseudoSimTime, int ftl, int gtl, bool with_k_omega)
 {
     foreach (blk; parallel(localFluidBlocks,1)) {
@@ -1863,7 +2020,7 @@ void evalRHS(double pseudoSimTime, int ftl, int gtl, bool with_k_omega)
         }
     }
 }
-
+*/
 
 /**********************/
 /*  GMRES FUNCTIONS   */
@@ -1898,6 +2055,16 @@ foreach (blk; localFluidBlocks) `~norm2~` += blk.normAcc;
 }
 
 void rpcGMRES_solve(size_t nPrimitive) {    
+    // Make a stack-local copy of conserved quantities info
+    //size_t nConserved = nConservedQuantities;
+    //size_t MASS = massIdx;
+    //size_t X_MOM = xMomIdx;
+    //size_t Y_MOM = yMomIdx;
+    //size_t Z_MOM = zMomIdx;
+    //size_t TOT_ENERGY = totEnergyIdx;
+    //size_t TKE = tkeIdx;
+    //size_t OMEGA = omegaIdx;
+    
     // restarted-GMRES settings
     size_t maxIters = GlobalConfig.sscOptions.gmresRestartInterval; // maxOuterIters
     size_t m = maxIters;
@@ -2335,6 +2502,16 @@ void readDesignVarsFromDakotaFile(ref Vector3[] design_variables)
 } // end readDesignVarsFromDakotaFile
 
 void write_adjoint_variables_to_file(FluidBlock blk, size_t np, string jobName) {
+    // Make a stack-local copy of conserved quantities info
+    //size_t nConserved = nConservedQuantities;
+    //size_t MASS = massIdx;
+    //size_t X_MOM = xMomIdx;
+    //size_t Y_MOM = yMomIdx;
+    //size_t Z_MOM = zMomIdx;
+    //size_t TOT_ENERGY = totEnergyIdx;
+    //size_t TKE = tkeIdx;
+    //size_t OMEGA = omegaIdx;
+
     size_t ncells = blk.cells.length;
     size_t nvertices = blk.vertices.length;
     // write out adjoint variables in VTK-format
@@ -2378,27 +2555,48 @@ void write_adjoint_variables_to_file(FluidBlock blk, size_t np, string jobName) 
         outFile.writef("SCALARS adjoint_density double \n");
         outFile.writef("LOOKUP_TABLE default \n");
         foreach(i; 0..ncells) {
-            outFile.writef("%.16f \n", blk.psi[np*i].re);
+            outFile.writef("%.16f \n", blk.psi[np*i+blk.MASS].re);
         }
 
         outFile.writef("SCALARS adjoint_velx double \n");
         outFile.writef("LOOKUP_TABLE default \n");
         foreach(i; 0..ncells) {
-            outFile.writef("%.16f \n", blk.psi[np*i+1].re);
+            outFile.writef("%.16f \n", blk.psi[np*i+blk.X_MOM].re);
         }
 
         outFile.writef("SCALARS adjoint_vely double \n");
         outFile.writef("LOOKUP_TABLE default \n");
         foreach(i; 0..ncells) {
-            outFile.writef("%.16f \n", blk.psi[np*i+2].re);
+            outFile.writef("%.16f \n", blk.psi[np*i+blk.Y_MOM].re);
         }
 
+        if (blk.myConfig.dimensions == 3) {
+            outFile.writef("SCALARS adjoint_vely double \n");
+            outFile.writef("LOOKUP_TABLE default \n");
+            foreach(i; 0..ncells) {
+                outFile.writef("%.16f \n", blk.psi[np*i+blk.Z_MOM].re);
+            }
+        }
+        
         outFile.writef("SCALARS adjoint_pressure double \n");
         outFile.writef("LOOKUP_TABLE default \n");
         foreach(i; 0..ncells) { 
-            outFile.writef("%.16f \n", blk.psi[np*i+3].re);
+            outFile.writef("%.16f \n", blk.psi[np*i+blk.TOT_ENERGY].re);
         }
-
+ 
+        if ( blk.myConfig.turbulence_model == TurbulenceModel.k_omega ) {
+            outFile.writef("SCALARS adjoint_pressure double \n");
+            outFile.writef("LOOKUP_TABLE default \n");
+            foreach(i; 0..ncells) { 
+                outFile.writef("%.16f \n", blk.psi[np*i+blk.TKE].re);
+            }
+            
+            outFile.writef("SCALARS adjoint_pressure double \n");
+            outFile.writef("LOOKUP_TABLE default \n");
+            foreach(i; 0..ncells) { 
+                outFile.writef("%.16f \n", blk.psi[np*i+blk.OMEGA].re);
+            }
+        }
     }
 }
 
@@ -2722,6 +2920,7 @@ void sss_preconditioner_initialisation(ref FluidBlock blk, size_t nConservative)
 void sss_preconditioner(ref FluidBlock blk, size_t np, double dt, size_t orderOfJacobian=1) {
     final switch (blk.myConfig.sssOptions.preconditionMatrixType) {
     case PreconditionMatrixType.block_diagonal:
+        assert(blk.myConfig.sssOptions.preconditionMatrixType != PreconditionMatrixType.block_diagonal, "Error: Block Diagonal precondition matrix currently not available");
         block_diagonal_preconditioner(blk, np, dt, orderOfJacobian);
         break;
     case PreconditionMatrixType.ilu:
@@ -2763,6 +2962,17 @@ void ilu_preconditioner(ref FluidBlock blk, size_t np, double dt, size_t orderOf
 }
 
 void block_diagonal_preconditioner(FluidBlock blk, size_t np, double dt, size_t orderOfJacobian=1) {
+    /*
+    // Make a stack-local copy of conserved quantities info
+    size_t nConserved = nConservedQuantities;
+    size_t MASS = massIdx;
+    size_t X_MOM = xMomIdx;
+    size_t Y_MOM = yMomIdx;
+    size_t Z_MOM = zMomIdx;
+    size_t TOT_ENERGY = totEnergyIdx;
+    size_t TKE = tkeIdx;
+    size_t OMEGA = omegaIdx;
+    
     // temporarily switch the interpolation order of the config object to that of the Jacobian 
     bool transformToConserved = true;
     version(complex_numbers) Complex!double EPS = complex(0.0, 1.0e-30);
@@ -2869,9 +3079,11 @@ void block_diagonal_preconditioner(FluidBlock blk, size_t np, double dt, size_t 
     }
     // reset interpolation order to the global setting
     blk.myConfig.interpolation_order = GlobalConfig.interpolation_order;
+    */
 }
 
 void apply_boundary_conditions_for_sss_preconditioner(FluidBlock blk, size_t np, size_t orderOfJacobian, number EPS, bool transformToConserved) {
+    /*
     // initialise some re-used data objects here
     number[][] dRdq; number[][] dqdQ; number[][] Aext; number[] qP;
     qP.length = np; dRdq.length = np; dqdQ.length = np; Aext.length = np; 
@@ -2892,7 +3104,7 @@ void apply_boundary_conditions_for_sss_preconditioner(FluidBlock blk, size_t np,
                     pcell = bface.left_cell;
                 }
                 
-                /* form dqdQ - ghost cell derivatives */
+                // form dqdQ - ghost cell derivatives 
 
                 // 0th perturbation: rho
                 mixin(computeGhostCellDerivatives("gas.rho", "0", true));
@@ -2903,7 +3115,7 @@ void apply_boundary_conditions_for_sss_preconditioner(FluidBlock blk, size_t np,
                 // 3rd perturbation: P
                 mixin(computeGhostCellDerivatives("gas.p", "3", true));
 
-                /* form dRdq */       
+                // form dRdq //       
                 pcell.jacobian_cell_stencil ~= bcells;
                 size_t[] idList;
                 foreach ( bcell; bcells) {
@@ -3020,4 +3232,5 @@ void apply_boundary_conditions_for_sss_preconditioner(FluidBlock blk, size_t np,
             }
         }
     }
+*/
 }

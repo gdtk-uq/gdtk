@@ -91,7 +91,7 @@ public:
 
     // Shape sensitivity calculator workspace.
     version(shape_sensitivity) {
-        immutable size_t MAX_PERTURBED_INTERFACES = 200;
+        immutable size_t MAX_PERTURBED_INTERFACES = 800;
         FVCell cellSave;
         FVInterface[MAX_PERTURBED_INTERFACES] ifaceP;
 
@@ -119,6 +119,16 @@ public:
         // These arrays and matrices are directly tied to using the
         // GMRES iterative solver (use some directly from steady-state solver).
         number[] Z, z, wext, zext;
+        //
+        // Make a block-local copy of conserved quantities info
+        size_t nConserved;
+        size_t MASS;
+        size_t X_MOM;
+        size_t Y_MOM;
+        size_t Z_MOM;
+        size_t TOT_ENERGY;
+        size_t TKE;
+        size_t OMEGA;
     }
     
     version(steady_state)
