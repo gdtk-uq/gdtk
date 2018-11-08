@@ -220,7 +220,7 @@ string computeGhostCellDerivatives(string varName, string posInArray, bool inclu
     return codeStr;
 }
 
-void apply_boundary_conditions(ref SMatrix!number A, FluidBlock blk, size_t np, size_t orderOfJacobian, number EPS, bool transformToConserved) {
+void apply_boundary_conditions(ref SMatrix!number A, FluidBlock blk, size_t np, size_t orderOfJacobian, number EPS, bool transformToConserved, bool preconditionMatrix) {
 
     // Make a stack-local copy of conserved quantities info
     //size_t nConserved = nConservedQuantities;
@@ -274,7 +274,7 @@ void apply_boundary_conditions(ref SMatrix!number A, FluidBlock blk, size_t np, 
                 /* form dRdq */                
                 // TODO: Currently only works for nearest-neighbour reconstruction stencil. Think about the MLP limiter.
                 
-                if (orderOfJacobian > 1 || blk.myConfig.viscous) {
+                if (orderOfJacobian > 1 || ( blk.myConfig.viscous && preconditionMatrix == false ) ) {
                     
                     size_t[] idList;
                     foreach ( face; bcells[0].iface) {
@@ -1006,7 +1006,7 @@ void local_flow_jacobian_transpose(ref SMatrix!number A, ref FluidBlock blk, siz
         cell.jacobian_cell_stencil = [];
     }
 
-    apply_boundary_conditions(A, blk, np, orderOfJacobian, EPS, transformToConserved);
+    apply_boundary_conditions(A, blk, np, orderOfJacobian, EPS, transformToConserved, preconditionMatrix);
     // reset the interpolation order
     blk.myConfig.interpolation_order = GlobalConfig.interpolation_order;
 
