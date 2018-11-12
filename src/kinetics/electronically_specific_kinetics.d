@@ -15,6 +15,7 @@ import std.conv : to;
 import std.string;
 import std.math;
 import std.algorithm;
+import std.file;
 
 import nm.complex;
 import nm.number;
@@ -33,18 +34,20 @@ import kinetics.electronic_state_solver;
 final class ElectronicallySpecificKinetics : ThermochemicalReactor {
 public:
 
-    this(GasModel gmodel)
+    this(string ESK_N_Filename, string ESK_O_Filename, GasModel gmodel)
     {
         super(gmodel);
         _numden.length = gmodel.n_species;
         _numden_input.length = gmodel.n_species - 2;
         _numden_output.length = gmodel.n_species - 2;
 
+        full_grouped_data.length = 2;
+
         foreach(int i;0 .. gmodel.n_species) {
             if (gmodel.species_name(i).length > 2) {
                 if (to!(char[])(gmodel.species_name(i))[0..3] == "NI ") {
                     NInum += 1;
-                } else if (to!(char[])(gmodel.species_name(i))[0..3] == "OI") {
+                } else if (to!(char[])(gmodel.species_name(i))[0..3] == "OI ") {
                     OInum += 1;
                 }
             }
@@ -60,7 +63,10 @@ public:
                 O2ind=i;
             }
         }
-        kinetics.electronic_state_solver.Init(false);
+
+        //Need to construct the energy data table and the reaction rate parameters from file.
+        PopulateRateFits(ESK_N_Filename,ESK_O_Filename);
+        kinetics.electronic_state_solver.Init(full_rate_fit, [NInum,OInum]);
     }
 
     override void opCall(GasState Q, double tInterval,
@@ -126,6 +132,8 @@ private:
     number O_sum;
     number N2_step_change;
     number O2_step_change;
+    double[8][47][47][2] full_rate_fit;
+    double[][][] full_grouped_data;
 
     //physical cconstants
     double _pi = 3.14159265359; //honestly, this should probably be defined in physical constants
@@ -274,30 +282,56 @@ private:
         }
         return uNoneq;
     }
+
+    @nogc
+    double[][] Import_2D(string filename) {
+        debug{
+            double[][] output_data;
+            if (exists(filename)) { //check for existance of file
+                File file=File(filename, "r");
+                while (!file.eof()) {
+                    output_data~=to!(double[])(split(strip(file.readln()),","));
+                }
+                if (output_data[$-1].length==0) { //accounts for the sometimes blank line at the end of csv files
+                    output_data = output_data[0..$-1];
+                }
+            } else { //if no filename exists
+                writeln("no such filename: ",filename);
+            }
+        return output_data;
+        } else {
+            throw new Error("Not implemented for nondebug build.");
+        }
+    }
+
+    @nogc
+    void PopulateRateFits(string Nfilename, string Ofilename)
+    {   
+        debug{
+            double[][] N_rate_fit = Import_2D(Nfilename);
+            double[][] O_rate_fit = Import_2D(Ofilename);
+            foreach (double[] row;N_rate_fit){
+                full_rate_fit[0][to!int(row[0])][to!int(row[1])] = row[2 .. $];
+            }
+            foreach (double[] row;O_rate_fit){
+                full_rate_fit[1][to!int(row[0])][to!int(row[1])] = row[2 .. $];
+            }
+        }
+    }
+
 }
 
 version(electronically_specific_kinetics_test) 
 {
     int main() 
     {
-        bool grouped = false;
-
-        int testnspecies;
-        string filename;
-        if (grouped) {
-            testnspecies = 21;
-            filename = "../gas/sample-data/electronic_composition_grouped.lua";
-        } else {
-            testnspecies = 91;
-            filename = "../gas/sample-data/electronic_composition_ungrouped.lua";
-        }
-
         import util.msg_service;
 
         auto L = init_lua_State();
+        string filename = "../gas/sample-data/electronic_composition.lua";
         doLuaFile(L, filename);
         auto gm = new ElectronicallySpecificGas(L);
-        auto gd = new GasState(testnspecies,1);
+        auto gd = new GasState(gm.n_species,1);
 
         number initial_uNoneq=0.0;
 
@@ -317,20 +351,17 @@ version(electronically_specific_kinetics_test)
         gd.massf[gm.n_species-1] = 1.0 - 0.78 - 1e-8;
 
         gd.p = 100000.0;
-        gd.T = 7000.0;
-        gd.T_modes[0] = 20000.0;
+        gd.T = 20000.0;
+        gd.T_modes[0] = 10000.0;
         gm.update_thermo_from_pT(gd);
 
         lua_close(L);
 
         double _dt = 1e-9;
-        double _duration = 1e-9;
+        double _duration = 1e-8;
         double _t = 0.0;
 
-        // auto L2 = init_lua_State();
-        // doLuaFile(L2, "sample-input/electronic_composition.lua");   
-
-        ElectronicallySpecificKinetics esk = new ElectronicallySpecificKinetics(gm);
+        ElectronicallySpecificKinetics esk = new ElectronicallySpecificKinetics("sample-input/ESK-N.txt","sample-input/ESK-O.txt",gm);
 
         double dtChemSuggest = 1e-9;
         double dtThermSuggest = -1.0;

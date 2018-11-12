@@ -22,8 +22,9 @@ import gas.physical_constants : electron_volt_energy, Avogadro_number, Boltzmann
 
 class ElectronicSpecies {
     @property @nogc string name() const { return _name; }
-    @property @nogc int level() const { return _level; }
     @property @nogc double mol_mass() const { return _mol_mass; }
+    @property @nogc int lowerLevel() const {return _lowerLevel; }
+    @property @nogc int upperLevel() const {return _upperLevel; }
     @property @nogc int group_degeneracy() const { return _group_degeneracy; }
     @property @nogc int dof() const { return _dof; }
     @property @nogc double electronic_energy() const {return _electronic_energy; }
@@ -31,7 +32,8 @@ class ElectronicSpecies {
     this(lua_State *L)
     {
         _name = getString(L, -1, "name");
-        //_level = getInt(L, -1, "level");
+        _lowerLevel = getInt(L, -1, "lower_level");
+        _upperLevel = getInt(L, -1, "upper_level");
         _mol_mass = getDouble(L, -1, "M");
         _group_degeneracy = getInt(L, -1, "group_degeneracy");
         _dof = getInt(L,-1,"dof");
@@ -43,7 +45,8 @@ class ElectronicSpecies {
 private:
     string _name;
     double _mol_mass;
-    int _level;
+    int _lowerLevel;
+    int _upperLevel;
     int _group_degeneracy;
     int _dof;
     double _electronic_energy;

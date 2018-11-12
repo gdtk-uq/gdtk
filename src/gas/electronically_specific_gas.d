@@ -49,7 +49,8 @@ public:
             _species_names[isp] = _electronicSpecies[$-1].name;
             _mol_masses ~= _electronicSpecies[$-1].mol_mass;
             _R ~= R_universal/_electronicSpecies[$-1].mol_mass;
-            //_level ~= _electronicSpecies[$-1].level;
+            _lowerLevel ~= _electronicSpecies[$-1].lowerLevel;
+            _upperLevel ~= _electronicSpecies[$-1].upperLevel;
             _group_degeneracy ~= _electronicSpecies[$-1].group_degeneracy;
             _dof ~= _electronicSpecies[$-1].dof;
             _electronic_energy ~= _electronicSpecies[$-1].electronic_energy;
@@ -174,7 +175,8 @@ public:
 private:
     ElectronicSpecies[] _electronicSpecies;
     double[] _R;
-    int[] _level;
+    int[] _lowerLevel;
+    int[] _upperLevel;
     int[] _group_degeneracy;
     int[] _dof;
     number[] _numden; //  #/cm^3
@@ -255,22 +257,12 @@ version(electronically_specific_gas_test) {
     {
         import util.msg_service;
 
-        bool grouped = false;
-        
-        int testnspecies;
-        string filename;
-        if (grouped) {
-            testnspecies = 21;
-            filename = "../gas/sample-data/electronic_composition_grouped.lua";
-        } else {
-            testnspecies = 91;
-            filename = "../gas/sample-data/electronic_composition_ungrouped.lua";
-        }
+        string filename = "sample-data/electronic_composition.lua";
 
         auto L = init_lua_State();
         doLuaFile(L, relativePath(filename));
         auto gm = new ElectronicallySpecificGas(L);
-        auto gd = new GasState(testnspecies,1);
+        auto gd = new GasState(gm.n_species,1);
 
         // gd.massf[] = 0.0;
         // gd.massf[0] = 0.037041674288877; //initialises massf of NI
@@ -291,16 +283,14 @@ version(electronically_specific_gas_test) {
         gd.T = 300.0;
         gd.T_modes[0]=4000.0;
         gm.update_thermo_from_pT(gd);
-        //writeln(gd);
         
-        //writeln(gd);
+
         double massfsum=0.0;
         foreach(number eachmassf;gd.massf) {
             massfsum += eachmassf;
         }
         assert(approxEqual(massfsum, 1.0, 1e-2), failedUnitTest());
 
-        //convert to number density in #/cm^3
         return 0;
     }
     

@@ -54,7 +54,7 @@ extern(C) int newElectronicallySpecificKinetics(lua_State* L)
     }
     lua_pop(L, 1);
     
-    auto myESK = new ElectronicallySpecificKinetics(gmodel);
+    auto myESK = new ElectronicallySpecificKinetics("","",gmodel);
     ESKStore ~= pushObj!(ElectronicallySpecificKinetics, ElectronicallySpecificKineticsMT)(L, myESK);
     return 1;
 }
