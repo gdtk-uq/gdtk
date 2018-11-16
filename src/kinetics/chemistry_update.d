@@ -273,6 +273,13 @@ final class ChemistryUpdate : ThermochemicalReactor {
         _gmodel.conc2massf(_concOut, Q);
         auto massfTotal = sum(Q.massf);
         foreach (ref mf; Q.massf) mf /= massfTotal;
+        /*
+         * RJG 2018-11-16
+         * Let's remove this piece of complication.
+         * Let's have the chemistry module *only* update mass fractions.
+         * The caller can decide on the thermodynamic constraint.
+         * This allows re-use as a chemistry updater in multi-temperature models.
+         *
         if (_gmodel.n_modes >= 1) {
             // Changing mass fractions does not change internal energies
             // but it might have been redistributed.
@@ -295,6 +302,7 @@ final class ChemistryUpdate : ThermochemicalReactor {
             throw new ThermochemicalReactorUpdateException(msg);
             }
         }
+        */
         dtChemSuggest = dtSave;
     }
 
