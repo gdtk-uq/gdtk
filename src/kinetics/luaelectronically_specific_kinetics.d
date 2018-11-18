@@ -38,6 +38,26 @@ extern(C) int newElectronicallySpecificKinetics(lua_State* L)
             "A table containing named arguments is expected, but no table was found.";
         luaL_error(L, errMsg.toStringz);
     }
+    // Expect to find a 'Nrates' entry
+    lua_getfield(L, 1, "Nrates");
+    if ( !lua_isstring(L, -1) ) {
+        string errMsg = "Error in call to ElectronicallySpecificKinetics:new{}. " ~
+            "A string was expected as the filename1 argument. " ~
+            "No valid string was found.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    auto Nrates = to!string(luaL_checkstring(L, -1));
+    lua_pop(L, 1);
+    // Expect to find a 'Orates' entry
+    lua_getfield(L, 1, "Orates");
+    if ( !lua_isstring(L, -1) ) {
+        string errMsg = "Error in call to ElectronicallySpecificKinetics:new{}. " ~
+            "A string was expected as the energyExchFile argument. " ~
+            "No valid string was found.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    auto Orates = to!string(luaL_checkstring(L, -1));
+    lua_pop(L, 1);
     // Expect to find a 'gasModel' entry
     lua_getfield(L, 1, "gasModel");
     if ( lua_isnil(L, -1) ) {
@@ -54,7 +74,7 @@ extern(C) int newElectronicallySpecificKinetics(lua_State* L)
     }
     lua_pop(L, 1);
     
-    auto myESK = new ElectronicallySpecificKinetics("","",gmodel);
+    auto myESK = new ElectronicallySpecificKinetics(Nrates,Orates,gmodel);
     ESKStore ~= pushObj!(ElectronicallySpecificKinetics, ElectronicallySpecificKineticsMT)(L, myESK);
     return 1;
 }

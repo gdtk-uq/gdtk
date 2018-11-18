@@ -19,11 +19,13 @@ import std.string;
 import std.format;
 import std.conv : to;
 import std.math;
+import std.algorithm.iteration : sum;
 
 import nm.bbla;
 import nm.bdfLU;
 import nm.complex;
 import nm.number;
+import util.msg_service;
 
 
 //define a list of global run conditions to take from file
@@ -351,8 +353,16 @@ void First_Step()
 }
 
 @nogc
-void Electronic_Solve( number[] state_from_cfd, ref number[] state_to_cfd, number given_Te, double given_endtime, double dtChemSuggest)
+int Electronic_Solve( number[] state_from_cfd, ref number[] state_to_cfd, number given_Te, double given_endtime, double dtChemSuggest)
 {   
+    debug{
+        assert((given_Te>1500 && given_Te<30000.0), brokenPreCondition("given_Te"));
+        assert((dtChemSuggest>1e-13 && dtChemSuggest<1e-5), brokenPreCondition("dtChemSuggest"));
+        foreach(int i, double val;state_from_cfd) {
+            assert ((!isNaN(val)),brokenPreCondition("state from cfd value"));
+        }
+    }
+
     // debug{
     //     writeln(state_from_cfd);
     //     writeln(dtChemSuggest);
@@ -367,6 +377,11 @@ void Electronic_Solve( number[] state_from_cfd, ref number[] state_to_cfd, numbe
     dj=20;
     newton_steps=3;
     double t=0.0;
+    if (sum(state_vector) < 1.0) {
+        state_to_cfd[0 .. state_vector.length] = state_vector[];
+        state_to_cfd[state_vector.length] = Ne;
+        return 0;
+    }
     First_Step();
     t+=dt;
     while (t<endtime) {
@@ -385,5 +400,6 @@ void Electronic_Solve( number[] state_from_cfd, ref number[] state_to_cfd, numbe
     // debug{
     //     writeln(state_to_cfd);
     // }
+    return 0;
 }
 

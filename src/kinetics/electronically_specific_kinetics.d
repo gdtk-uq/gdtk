@@ -64,6 +64,7 @@ public:
             }
         }
 
+
         //Need to construct the energy data table and the reaction rate parameters from file.
         PopulateRateFits(ESK_N_Filename,ESK_O_Filename);
         kinetics.electronic_state_solver.Init(full_rate_fit, [NInum,OInum]);
@@ -136,7 +137,7 @@ private:
     double[][][] full_grouped_data;
 
     //physical cconstants
-    double _pi = 3.14159265359; //honestly, this should probably be defined in physical constants
+    double _pi = 3.14159265359;
     double _me = 9.10938356e-28; //electron mass in g
     double _kb = 1.3807e-16; //Boltzmann constant in cm^2 g s^-1 K^-1
     double _e = 4.8032e-10; // electron charge, cm^(3/2) g s^-2 K^-1
@@ -350,15 +351,15 @@ version(electronically_specific_kinetics_test)
         gd.massf[gm.n_species-2] = 0.78;
         gd.massf[gm.n_species-1] = 1.0 - 0.78 - 1e-8;
 
-        gd.p = 100000.0;
-        gd.T = 20000.0;
-        gd.T_modes[0] = 10000.0;
+        gd.p = 64502.1;
+        gd.T = 54826.4;
+        gd.T_modes[0] = 15000.0;
         gm.update_thermo_from_pT(gd);
 
         lua_close(L);
 
         double _dt = 1e-9;
-        double _duration = 1e-8;
+        double _duration = 1e-7;
         double _t = 0.0;
 
         ElectronicallySpecificKinetics esk = new ElectronicallySpecificKinetics("sample-input/ESK-N.txt","sample-input/ESK-O.txt",gm);
@@ -366,7 +367,7 @@ version(electronically_specific_kinetics_test)
         double dtChemSuggest = 1e-9;
         double dtThermSuggest = -1.0;
         number[maxParams] params;
-        while (_t < _duration) {
+        while (_t < _duration+_dt) {
             esk(gd, _dt, dtChemSuggest, dtThermSuggest, params);
             _t+=_dt;
         }
@@ -375,6 +376,7 @@ version(electronically_specific_kinetics_test)
             massfsum += eachmassf;
         }
         assert(approxEqual(massfsum, 1.0, 1e-2), failedUnitTest());
+
         return 0;
 
     }
