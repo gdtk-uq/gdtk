@@ -242,6 +242,10 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
                             cell.U[1].tke = cell.U[0].tke + blk.dU[cellCount+TKE];
                             cell.U[1].omega = cell.U[0].omega + blk.dU[cellCount+OMEGA];
                         }
+                        // enforce mass fraction of 1 for single species gas
+                        if (blk.myConfig.gmodel.n_species == 1) {
+                            cell.U[1].massf[0] = cell.U[1].mass;
+                        } 
                         try {
                             cell.decode_conserved(0, 1, 0.0);
                         }
@@ -503,6 +507,10 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
                         cell.U[1].tke = cell.U[0].tke + blk.dU[cellCount+TKE];
                         cell.U[1].omega = cell.U[0].omega + blk.dU[cellCount+OMEGA];
                     }
+                    // enforce mass fraction of 1 for single species gas
+                    if (blk.myConfig.gmodel.n_species == 1) {
+                        cell.U[1].massf[0] = cell.U[1].mass;
+                    } 
                     try {
                         cell.decode_conserved(0, 1, 0.0);
                     }
