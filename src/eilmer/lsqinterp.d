@@ -36,7 +36,8 @@ public:
     {
         wx[] = other.wx[]; wy[] = other.wy[]; wz[] = other.wz[];
     }
-    
+
+    @nogc
     void assemble_and_invert_normal_matrix(FVCell[] cell_cloud, int dimensions, size_t gtl)
     {
         auto np = cell_cloud.length;
@@ -217,7 +218,8 @@ public:
             T_modesMin[i] = other.T_modesMin[i]; u_modesMin[i] = other.u_modesMin[i];
         }
     } // end copy_values_from()
-    
+
+    @nogc
     void barth_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws, ref LocalConfig myConfig)
     {
         size_t dimensions = myConfig.dimensions;
@@ -317,6 +319,7 @@ public:
         } // end switch thermo_interpolator
     } // end compute_lsq_gradients()
 
+    @nogc
     void mlp_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws,
                    ref LocalConfig myConfig, size_t gtl=0)
     {
@@ -421,6 +424,7 @@ public:
         } // end switch thermo_interpolator
     } // end compute_lsq_gradients()
 
+    @nogc
     void store_max_min_values_for_mlp_limiter(FVCell[] cell_cloud, ref LocalConfig myConfig)
     {
         // the MLP limiter stores the maximum and minimum flowstate values
@@ -505,7 +509,7 @@ public:
         } // end switch thermo_interpolator
     } // end compute_lsq_gradients()
 
-    
+    @nogc
     void venkat_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws,
                       ref LocalConfig myConfig, size_t gtl=0)
     {
@@ -614,8 +618,9 @@ public:
         } // end switch thermo_interpolator
     } // end compute_lsq_gradients()
 
+    @nogc
     void heuristic_van_albada_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws,
-                      ref LocalConfig myConfig, size_t gtl=0)
+                                    ref LocalConfig myConfig, size_t gtl=0)
     {
         size_t dimensions = myConfig.dimensions;
         number phi, s, a, b;
@@ -746,7 +751,8 @@ public:
             break;
         } // end switch thermo_interpolator
     } // end compute_lsq_gradients()
-    
+
+    @nogc
     void compute_lsq_values(FVCell[] cell_cloud, ref LSQInterpWorkspace ws,
                             ref LocalConfig myConfig)
     {
@@ -886,7 +892,8 @@ public:
         a *= s;
         b *= s;
     }
-    
+
+    @nogc
     void interp_both(ref FVInterface IFace, size_t gtl,
                      ref FlowState Lft, ref FlowState Rght,
                      bool allow_high_order_interpolation)
@@ -1011,13 +1018,13 @@ public:
                 try {
                     scale_mass_fractions(Lft.gas.massf); 
                 } catch (Exception e) {
-                    writeln(e.msg);
+                    debug { writeln(e.msg); }
                     Lft.gas.massf[] = IFace.left_cell.fs.gas.massf[];
                 }
                 try {
                     scale_mass_fractions(Rght.gas.massf);
                 } catch (Exception e) {
-                    writeln(e.msg);
+                    debug { writeln(e.msg); }
                     Rght.gas.massf[] = IFace.right_cell.fs.gas.massf[];
                 }
             } else {
@@ -1035,13 +1042,13 @@ public:
                 try {
                     gmodel.update_thermo_from_"~funname~"(Lft.gas);
                 } catch (Exception e) {
-                    writeln(e.msg);
+                    debug { writeln(e.msg); }
                     Lft.copy_values_from(IFace.left_cell.fs);
                 }
                 try {
                     gmodel.update_thermo_from_"~funname~"(Rght.gas);
                 } catch (Exception e) {
-                    writeln(e.msg);
+                    debug { writeln(e.msg); }
                     Rght.copy_values_from(IFace.right_cell.fs);
                 }
                 ";
@@ -1083,7 +1090,8 @@ public:
             } // end switch thermo_interpolator
         } // end of high-order reconstruction
     } // end interp_both()
-        
+
+    @nogc
     void interp_right(ref FVInterface IFace, size_t gtl, ref FlowState Rght,
                       bool allow_high_order_interpolation)
     // Interpolate the flow field quantities at the right-side of the interface,
@@ -1100,7 +1108,8 @@ public:
         // [TODO] 2018-06-10 higher-order interpolation.
         return;
     }
-        
+
+    @nogc
     void interp_left(ref FVInterface IFace, size_t gtl, ref FlowState Lft,
                      bool allow_high_order_interpolation)
     // Interpolate the flow field quantities at the left-side of the interface,
