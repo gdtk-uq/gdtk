@@ -8,8 +8,6 @@
 
 module fvcore;
 
-import std.conv;
-
 class FlowSolverException : Exception {
     @nogc
     this(string message, string file=__FILE__, size_t line=__LINE__,
@@ -39,6 +37,7 @@ enum GasdynamicUpdate {
     moving_grid_2_stage
 }
 
+@nogc
 string gasdynamic_update_scheme_name(GasdynamicUpdate gdut)
 {
     final switch ( gdut ) {
@@ -53,6 +52,7 @@ string gasdynamic_update_scheme_name(GasdynamicUpdate gdut)
     }
 } // end gasdynamic_update_scheme_name()
 
+@nogc
 size_t number_of_stages_for_update_scheme(GasdynamicUpdate gdut)
 {
     final switch (gdut) {
@@ -67,6 +67,7 @@ size_t number_of_stages_for_update_scheme(GasdynamicUpdate gdut)
     }
 } // end number_of_stages_for_update_scheme()
 
+@nogc
 size_t final_index_for_update_scheme(GasdynamicUpdate gdut)
 {
     final switch (gdut) {
@@ -81,6 +82,7 @@ size_t final_index_for_update_scheme(GasdynamicUpdate gdut)
     }
 } // end final_index_for_update_scheme()
 
+@nogc
 GasdynamicUpdate update_scheme_from_name(string name)
 {
     switch (name) {
@@ -100,13 +102,14 @@ GasdynamicUpdate update_scheme_from_name(string name)
     case "moving_grid_2_stage": return GasdynamicUpdate.moving_grid_2_stage;
     case "moving-grid-2-stage": return GasdynamicUpdate.moving_grid_2_stage;
     default:
-        string msg = text("Invalid gasdynamic update scheme name:", name);
-        throw new FlowSolverException(msg);
+        throw new FlowSolverException("Invalid gasdynamic update scheme name");
     }
 }  // end scheme_from_name()
 
 // Symbolic names for grid motion types
 enum GridMotion { none, user_defined, shock_fitting }
+
+@nogc
 string grid_motion_name(GridMotion i)
 {
     final switch (i) {
@@ -116,6 +119,7 @@ string grid_motion_name(GridMotion i)
     }
 }
 
+@nogc
 GridMotion grid_motion_from_name(string name)
 {
     switch (name) {
@@ -139,6 +143,7 @@ enum
 // Symbolic names for the types of flow-data reconstruction.
 enum InterpolateOption { pt, rhou, rhop, rhot }
 
+@nogc
 string thermo_interpolator_name(InterpolateOption i)
 {
     final switch ( i ) {
@@ -149,6 +154,7 @@ string thermo_interpolator_name(InterpolateOption i)
     }
 } // end thermo_interpolator_name()
 
+@nogc
 InterpolateOption thermo_interpolator_from_name(string name)
 {
     switch ( name ) {
@@ -176,6 +182,7 @@ enum FluxCalculator {
     roe // Roe approximate Riemann solver
 }
 
+@nogc
 string flux_calculator_name(FluxCalculator fcalc)
 {
     final switch ( fcalc ) {
@@ -191,6 +198,7 @@ string flux_calculator_name(FluxCalculator fcalc)
     }
 }
 
+@nogc
 FluxCalculator flux_calculator_from_name(string name)
 {
     switch ( name ) {
@@ -205,8 +213,7 @@ FluxCalculator flux_calculator_from_name(string name)
     case "hlle": return FluxCalculator.hlle;
     case "roe": return FluxCalculator.roe;
     default:
-        string msg = text("Invalid flux calculator name:", name);
-        throw new FlowSolverException(msg);
+        throw new FlowSolverException("Invalid flux calculator name");
     }
 }
 
@@ -216,6 +223,7 @@ enum SpatialDerivCalc {
     divergence,
 }
 
+@nogc
 string spatial_deriv_calc_name(SpatialDerivCalc sdc)
 {
     final switch ( sdc ) {
@@ -224,14 +232,14 @@ string spatial_deriv_calc_name(SpatialDerivCalc sdc)
     }
 }
 
+@nogc
 SpatialDerivCalc spatial_deriv_calc_from_name(string name)
 {
     switch ( name ) {
     case "least_squares": return SpatialDerivCalc.least_squares;
     case "divergence": return SpatialDerivCalc.divergence;
     default:
-        string msg = text("Invalid spatial-derivative calculator name:", name);
-        throw new FlowSolverException(msg);
+        throw new FlowSolverException("Invalid spatial-derivative calculator name");
     }
 }
 
@@ -240,6 +248,7 @@ enum SpatialDerivLocn {
     vertices
 }
 
+@nogc
 string spatial_deriv_locn_name(SpatialDerivLocn sdl)
 {
     final switch ( sdl ) {
@@ -248,14 +257,14 @@ string spatial_deriv_locn_name(SpatialDerivLocn sdl)
     }
 }
 
+@nogc
 SpatialDerivLocn spatial_deriv_locn_from_name(string name)
 {
     switch ( name ) {
     case "faces": return SpatialDerivLocn.faces;
     case "vertices": return SpatialDerivLocn.vertices;
     default:
-        string msg = text("Invalid spatial-derivative location name:", name);
-        throw new FlowSolverException(msg);
+        throw new FlowSolverException("Invalid spatial-derivative location name");
     }
 }
 
@@ -269,6 +278,7 @@ enum UnstructuredLimiter {
     venkat
 }
 
+@nogc
 string unstructured_limiter_name(UnstructuredLimiter ul)
 {
     final switch ( ul ) {
@@ -281,6 +291,7 @@ string unstructured_limiter_name(UnstructuredLimiter ul)
     }
 }
 
+@nogc
 UnstructuredLimiter unstructured_limiter_from_name(string name)
 {
     switch ( name ) {
@@ -291,7 +302,6 @@ UnstructuredLimiter unstructured_limiter_from_name(string name)
     case "heuristic_van_albada": return UnstructuredLimiter.heuristic_van_albada;
     case "venkat": return UnstructuredLimiter.venkat;
     default:
-        string msg = text("Invalid unstructured limiter name:", name);
-        throw new FlowSolverException(msg);
+        throw new FlowSolverException("Invalid unstructured limiter name");
     }
 }

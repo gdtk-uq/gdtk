@@ -281,46 +281,46 @@ public:
         return writer.data;
     } // end toJSONString()
 
-
+    @nogc
     bool check_data(ref Vector3 pos, ref const(FlowStateLimits) flowstate_limits) const
     {
         bool is_data_valid = gas.check_values(true);
         if (fabs(vel.x) > flowstate_limits.max_velocity ||
             fabs(vel.y) > flowstate_limits.max_velocity ||
             fabs(vel.z) > flowstate_limits.max_velocity) {
-            writeln("Velocity too high ", vel);
+            debug { writeln("Velocity too high ", vel); }
             is_data_valid = false;
         }
         if (!isFinite(tke.re)) {
-            writeln("Turbulence KE invalid number ", tke);
+            debug { writeln("Turbulence KE invalid number ", tke); }
             is_data_valid = false;
         }
         if (tke < flowstate_limits.min_tke) {
-            writeln("Turbulence KE below minimum ", tke);
+            debug { writeln("Turbulence KE below minimum ", tke); }
             is_data_valid = false;
         }
         if (tke > flowstate_limits.max_tke) {
-            writeln("Turbulence KE above maximum ", tke);
+            debug { writeln("Turbulence KE above maximum ", tke); }
             is_data_valid = false;
         }
         if (gas.T < flowstate_limits.min_temp) {
-            writeln("Temperature below minimum ", gas.T);
+            debug { writeln("Temperature below minimum ", gas.T); }
             is_data_valid = false;
         }
         if (gas.T > flowstate_limits.max_temp) {
-            writeln("Temperature above maximum ", gas.T);
+            debug { writeln("Temperature above maximum ", gas.T); }
             is_data_valid = false;
         }
         if (!isFinite(omega.re)) {
-            writeln("Turbulence frequency invalid number ", omega);
+            debug { writeln("Turbulence frequency invalid number ", omega); }
             is_data_valid = false;
         }
         if (omega <= 0.0) {
-            writeln("Turbulence frequency nonpositive ", omega);
+            debug { writeln("Turbulence frequency nonpositive ", omega); }
             is_data_valid = false;
         }
         if (!is_data_valid) {
-            writeln("   at position ", pos);
+            debug { writeln("   at position ", pos); }
         }
         return is_data_valid;
     } // end check_data()

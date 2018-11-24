@@ -1096,6 +1096,7 @@ public:
         }
     } // end thermochemical_increment()
 
+    @nogc
     double signal_frequency()
     // Remember to use stringent_cfl=true for unstructured-grid.
     {
@@ -1208,6 +1209,7 @@ public:
         fs.k_t *= factor;
     }
 
+    @nogc
     void turbulence_viscosity_k_omega() 
     {
         auto gmodel = myConfig.gmodel;
@@ -1281,6 +1283,7 @@ public:
         fs.k_t = gmodel.Cp(fs.gas) * fs.mu_t / Pr_t;
     } // end turbulence_viscosity_k_omega()
 
+    @nogc
     void update_k_omega_properties(double dt) 
     {
         // Do not update k_omega properties if we are in laminar block
@@ -1377,6 +1380,7 @@ public:
         } // End of Newton-solve loop for implicit update scheme
     } // end update_k_omega_properties()
 
+    @nogc
     void k_omega_time_derivatives(ref number Q_rtke, ref number Q_romega, number tke, number omega) 
     // Compute k-omega source terms.
     //
@@ -1576,6 +1580,7 @@ public:
         return;
     } // end add_inviscid_source_vector()
 
+    @nogc
     void add_viscous_source_vector(bool with_k_omega) 
     {
         if (myConfig.axisymmetric) {
@@ -1637,6 +1642,7 @@ public:
         return;
     } // end add_viscous_source_vector()
 
+    @nogc
     number calculate_wall_Reynolds_number(int which_boundary, GasModel gmodel)
     // [TODO] unstructured-grid adaption to be done, however,
     // this function is not presently used because we have not ported the
@@ -1656,6 +1662,7 @@ public:
         return Re_wall;
     } // end calculate_wall_Reynolds_number()
 
+    @nogc
     void store_rad_scaling_params() 
     // Store parameters for (re-)scaling of radiative source term.
     // Simple rho x T**4 scaling seems to be adequate.
@@ -1674,6 +1681,7 @@ public:
         }
     } // end store_rad_scaling_params()
 
+    @nogc
     void rescale_Q_rE_rad() 
     {
         // 1. Compute the current scaling factor based on local gas properties
@@ -1691,11 +1699,13 @@ public:
         Q_rE_rad = ( f_rad_new / f_rad_org ) * Q_rad_org;
     } // end rescale_Q_rE_rad()
 
+    @nogc
     void reset_Q_rad_to_zero() 
     {
         Q_rE_rad = 0.0;
     } // end reset_Q_rad_to_zero()
 
+    @nogc
     number rad_scaling_ratio() 
     {
         // 1. Compute the current scaling factor based on local gas properties

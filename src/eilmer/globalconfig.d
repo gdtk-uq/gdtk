@@ -64,6 +64,7 @@ enum FlowVar {
     dt_chem, u, T, dt_therm
 };
 
+@nogc
 string flowVarName(FlowVar var)
 {
     final switch(var) {
@@ -120,6 +121,7 @@ static size_t tkeIdx;
 static size_t omegaIdx;
 
 enum StrangSplittingMode { full_T_full_R, half_R_full_T_half_R }
+@nogc
 string strangSplittingModeName(StrangSplittingMode i)
 {
     final switch(i) {
@@ -128,6 +130,7 @@ string strangSplittingModeName(StrangSplittingMode i)
     }
 }
 
+@nogc
 StrangSplittingMode strangSplittingModeFromName(string name)
 {
     switch(name) {
@@ -139,6 +142,8 @@ StrangSplittingMode strangSplittingModeFromName(string name)
 
 // Symbolic names for turbulence models.
 enum TurbulenceModel { none, baldwin_lomax, k_omega, spalart_allmaras }
+
+@nogc
 string turbulence_model_name(TurbulenceModel i)
 {
     final switch (i) {
@@ -149,6 +154,7 @@ string turbulence_model_name(TurbulenceModel i)
     }
 } // end turbulence_model_name()
 
+@nogc
 TurbulenceModel turbulence_model_from_name(string name)
 {
     switch (name) {
@@ -163,6 +169,8 @@ TurbulenceModel turbulence_model_from_name(string name)
 
 // Symbolic names for JJ Hoste's Turbulence-Chemistry-Interaction Model
 enum TCIModel { none, edm, edc }
+
+@nogc
 string tci_model_name(TCIModel tcim)
 {
     final switch (tcim) {
@@ -172,6 +180,7 @@ string tci_model_name(TCIModel tcim)
     }
 } // end tci_model_name()
 
+@nogc
 TCIModel tci_model_from_name(string name)
 {
     switch (name) {
@@ -184,6 +193,8 @@ TCIModel tci_model_from_name(string name)
 
 
 enum SolidDomainCoupling { tight, loose, lagged }
+
+@nogc
 string solidDomainCouplingName(SolidDomainCoupling i)
 {
     final switch (i) {
@@ -193,6 +204,7 @@ string solidDomainCouplingName(SolidDomainCoupling i)
     }
 }
 
+@nogc
 SolidDomainCoupling solidDomainCouplingFromName(string name)
 {
     switch (name) {
@@ -212,47 +224,52 @@ struct SolidDomainLooseUpdateOptions {
 }
 
 version(shape_sensitivity) {
-enum GradientMethod { adjoint, finite_difference }
-string gradientMethodName(GradientMethod i)
-{
-    final switch (i) {
-    case GradientMethod.adjoint: return "adjoint";
-    case GradientMethod.finite_difference: return "finite_difference";
-    }
-} // end gradientMethodName()
+    enum GradientMethod { adjoint, finite_difference };
 
-GradientMethod gradientMethodFromName(string name)
-{
-    switch (name) {
-    case "adjoint": return GradientMethod.adjoint;
-    case "finite_difference": return GradientMethod.finite_difference;
-    default:
-        string errMsg = "The selected 'gradient_method' is unavailable.\n";
-        errMsg ~= format("You selected: '%s'\n", name);
-        errMsg ~= "The available strategies are: \n";
-        errMsg ~= "   'adjoint'\n";
-        errMsg ~= "   'finite_difference'\n";
-        errMsg ~= "Check your selection or its spelling in the input file.\n";
-        throw new Error(errMsg);
-    }
-} // end gradientMethodFromName()
+    @nogc
+    string gradientMethodName(GradientMethod i)
+    {
+        final switch (i) {
+        case GradientMethod.adjoint: return "adjoint";
+        case GradientMethod.finite_difference: return "finite_difference";
+        }
+    } // end gradientMethodName()
 
-struct ShapeSensitivityCalculatorOptions {
-    GradientMethod gradientMethod = GradientMethod.adjoint;
-    bool gradientVerification = true;
-    // finite difference parameters
-    double epsilon = 1.0e-04; // flow sensitivity perturbation
-    double mu = 1.0e-04; // flow sensitivity threshold
-    double eta = 1.0e-04; // residual sensitivity perturbation
-    double delta = 1.0e-04; // finite difference gradient perturbation
-    // GMRES parameters
-    int gmresRestartInterval = 85;
-    double stopOnRelativeGlobalResidual = 1.0e-16;
-    // bezier curve fit parameters
-    double tolBezierCurveFit = 1.0e-06;
-    int maxStepsBezierCurveFit = 10000;
-    string userDefinedObjectiveFile = "";
-}
+    @nogc
+    GradientMethod gradientMethodFromName(string name)
+    {
+        switch (name) {
+        case "adjoint": return GradientMethod.adjoint;
+        case "finite_difference": return GradientMethod.finite_difference;
+        default:
+            string errMsg = "The selected 'gradient_method' is unavailable.\n";
+            debug {
+                errMsg ~= format("You selected: '%s'\n", name);
+                errMsg ~= "The available strategies are: \n";
+                errMsg ~= "   'adjoint'\n";
+                errMsg ~= "   'finite_difference'\n";
+                errMsg ~= "Check your selection or its spelling in the input file.\n";
+            }
+            throw new Error(errMsg);
+        }
+    } // end gradientMethodFromName()
+
+    struct ShapeSensitivityCalculatorOptions {
+        GradientMethod gradientMethod = GradientMethod.adjoint;
+        bool gradientVerification = true;
+        // finite difference parameters
+        double epsilon = 1.0e-04; // flow sensitivity perturbation
+        double mu = 1.0e-04; // flow sensitivity threshold
+        double eta = 1.0e-04; // residual sensitivity perturbation
+        double delta = 1.0e-04; // finite difference gradient perturbation
+        // GMRES parameters
+        int gmresRestartInterval = 85;
+        double stopOnRelativeGlobalResidual = 1.0e-16;
+        // bezier curve fit parameters
+        double tolBezierCurveFit = 1.0e-06;
+        int maxStepsBezierCurveFit = 10000;
+        string userDefinedObjectiveFile = "";
+    }
  
 } // end version(shape_sensitivity)
 
