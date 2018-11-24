@@ -344,8 +344,9 @@ public:
     // We shouldn't be calling this until the essential bits of the GlobalConfig
     // and the local myConfig instances have been set up.
     {
-        if ( myConfig.verbosity_level >= 2 ) 
+        if (myConfig.verbosity_level >= 2) {
             writefln("assemble_arrays(): Begin for block %d", id);
+        }
         // Check for obvious errors.
         if ( _nidim <= 0 || _njdim <= 0 || _nkdim <= 0 ) {
             string msg = text("resize_arrays(): invalid dimensions nidim=",
@@ -463,8 +464,8 @@ public:
                 }
             }
         } // end if dimensions
-        if ( myConfig.verbosity_level >= 2 ) {
-            writefln("Done assembling arrays for %d cells.", ntot);
+        if (myConfig.verbosity_level >= 2) {
+            writefln("Done assembling arrays for %d cells in block %d.", ntot, id);
         }
     } // end of assemble_arrays()
 
@@ -1779,6 +1780,7 @@ public:
                 } // for j
             } // for k
         } // end switch flow_format
+        if (myConfig.verbosity_level > 1) { writeln("read_solution(): Done block ", id); }
         return sim_time;
     } // end read_solution()
 
@@ -1839,6 +1841,7 @@ public:
             }
             outfile.finish();
         } // end switch flow_format
+        if (myConfig.verbosity_level > 1) { writeln("write_solution(): Done block ", id); }
     } // end write_solution()
 
     override void propagate_inflow_data_west_to_east()

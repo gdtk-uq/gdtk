@@ -206,6 +206,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
         myblk.identify_turbulent_zones(0);
         time_array[i] = myblk.read_solution(make_file_name!"flow"(job_name, myblk.id, SimState.current_tindx,
                                                                   GlobalConfig.flowFileExt), false);
+        if (myblk.myConfig.verbosity_level >= 2) { writefln("Cold start cells in block %d", myblk.id); }
         foreach (iface; myblk.faces) { iface.gvel.clear(); }
         foreach (cell; myblk.cells) {
             cell.encode_conserved(0, 0, myblk.omegaz);
@@ -220,9 +221,12 @@ void init_simulation(int tindx, int nextLoadsIndx,
     }
     SimState.time = time_array[0]; // Pick one; they should all be the same.
     //
+    version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
+    //
     // Now that the cells for all gas blocks have been initialized,
     // we can sift through the boundary condition effects and
     // set up the ghost-cell mapping for the appropriate boundaries.
+    if (GlobalConfig.verbosity_level >= 2) { writeln("Prepare exchange of boundary information."); }
     // Serial loops because the cell-mapping function searches across
     // all blocks local to the process.
     // Also, there are several loops because the MPI communication,
