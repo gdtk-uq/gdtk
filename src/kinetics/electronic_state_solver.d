@@ -358,8 +358,8 @@ int Electronic_Solve( number[] state_from_cfd, ref number[] state_to_cfd, number
     debug{
         assert((given_Te>1500 && given_Te<30000.0), brokenPreCondition("given_Te"));
         assert((dtChemSuggest>1e-13 && dtChemSuggest<1e-5), brokenPreCondition("dtChemSuggest"));
-        foreach(int i, double val;state_from_cfd) {
-            assert ((!isNaN(val)),brokenPreCondition("state from cfd value"));
+        foreach(int i, number val;state_from_cfd) {
+            assert ((!isNaN(val.re)),brokenPreCondition("state from cfd value"));
         }
     }
 
