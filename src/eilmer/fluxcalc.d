@@ -22,7 +22,7 @@ import fvcore;
 import fvinterface;
 import globalconfig;
 
-
+@nogc
 void compute_interface_flux(ref FlowState Lft, ref FlowState Rght, ref FVInterface IFace,
                             ref LocalConfig myConfig, double omegaz=0.0)
 /** Compute the inviscid fluxes (in 1D) across the cell interfaces.
@@ -113,7 +113,8 @@ void compute_interface_flux(ref FlowState Lft, ref FlowState Rght, ref FVInterfa
     F.total_energy += 0.5 * F.mass * v_sqr + F.momentum.dot(IFace.gvel);
     // Flux of momentum: Add component for interface velocity then
     // rotate back to the global frame of reference.
-    Vector3 momentum_increment = IFace.gvel; momentum_increment *= F.mass;
+    Vector3 momentum_increment;
+    momentum_increment.set(IFace.gvel); momentum_increment *= F.mass;
     F.momentum += momentum_increment;
     F.momentum.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
     // Also, transform the interface (grid) velocity and magnetic field.
@@ -122,6 +123,7 @@ void compute_interface_flux(ref FlowState Lft, ref FlowState Rght, ref FVInterfa
     return;
 } // end compute_interface_flux()
 
+@nogc
 void compute_flux_at_left_wall(ref FlowState Rght, ref FVInterface IFace,
                                ref LocalConfig myConfig, double omegaz=0.0)
 {
@@ -168,6 +170,7 @@ void compute_flux_at_left_wall(ref FlowState Rght, ref FVInterface IFace,
     return;
 } // end compute_flux_at_left_wall()
 
+@nogc
 void compute_flux_at_right_wall(ref FlowState Lft, ref FVInterface IFace,
                                 ref LocalConfig myConfig, double omegaz=0.0)
 {
@@ -214,6 +217,7 @@ void compute_flux_at_right_wall(ref FlowState Lft, ref FVInterface IFace,
     return;
 } // end  compute_flux_at_right_wall()
 
+@nogc
 void set_flux_vector_in_local_frame(ref ConservedQuantities F, ref FlowState fs, 
                                     ref LocalConfig myConfig)
 {
@@ -235,6 +239,7 @@ void set_flux_vector_in_local_frame(ref ConservedQuantities F, ref FlowState fs,
     foreach (imode; 0 .. F.energies.length) { F.energies[imode] = F.mass*fs.gas.u_modes[imode]; }
 } // end set_flux_vector_in_local_frame()
 
+@nogc
 void set_flux_vector_in_global_frame(ref FVInterface IFace, ref FlowState fs, 
                                      ref LocalConfig myConfig, double omegaz=0.0)
 {
@@ -263,7 +268,8 @@ void set_flux_vector_in_global_frame(ref FVInterface IFace, ref FlowState fs,
     // Transform fluxes back from interface frame of reference to local frame of reference.
     number v_sqr = IFace.gvel.x*IFace.gvel.x + IFace.gvel.y*IFace.gvel.y + IFace.gvel.z*IFace.gvel.z;
     F.total_energy += 0.5 * F.mass * v_sqr + F.momentum.dot(IFace.gvel);
-    Vector3 momentum_increment = IFace.gvel; momentum_increment *= F.mass; 
+    Vector3 momentum_increment;
+    momentum_increment.set(IFace.gvel); momentum_increment *= F.mass; 
     F.momentum += momentum_increment;
     //
     // Rotate momentum fluxes back to the global frame of reference.
@@ -275,6 +281,7 @@ void set_flux_vector_in_global_frame(ref FVInterface IFace, ref FlowState fs,
     fs.vel.set(vx, vy, vz); // restore fs.vel
 } // end set_flux_vector_in_global_frame()
 
+@nogc
 void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel gmodel)
 // Wada and Liou's flux calculator.
 // 
@@ -412,6 +419,7 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel
     } // end of entropy fix (d_ua != 0)
 } // end ausmdv()
 
+@nogc
 void hanel(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel gmodel)
 // Hanel's flux calculator.
 // 
@@ -492,6 +500,7 @@ void hanel(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel 
     foreach (imode; 0 .. nmodes) { F.energies[imode] = uLplus * rL * Lft.gas.u_modes[imode] + uRminus * rR * Rght.gas.u_modes[imode]; }
 } // end hanel()
 
+@nogc
 void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel gmodel)
 /** \brief Compute the fluxes across an interface using
  * the Equilibrium Flux Method of Macrossan & Pullin
@@ -653,6 +662,7 @@ void exxef(number sn, ref number exx, ref number ef)
     ef = copysign(ef1, sn);
 } // end exxef
 
+@nogc
 void adaptive_efm_ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
 // This adaptive flux calculator uses uses the Equilibrium Flux Method
 // near shocks and AUSMDV away from shocks, however, we really don't want
@@ -674,6 +684,7 @@ void adaptive_efm_ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IF
     }
 } // end adaptive_flux()
 
+@nogc
 void adaptive_hanel_ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
 // This adaptive flux calculator uses uses the Hanel flux calculator
 // near shocks and AUSMDV away from shocks.
@@ -691,7 +702,7 @@ void adaptive_hanel_ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface 
     }
 } // end adaptive_flux()
 
-
+@nogc
 void adaptive_hlle_roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
 // This adaptive flux calculator uses uses the HLLE flux calculator
 // near shocks and Roe away from shocks.
@@ -709,7 +720,7 @@ void adaptive_hlle_roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFac
     }
 } // end adaptive_flux()
 
-
+@nogc
 void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
                   double M_inf, GasModel gmodel)
 // Liou's 2006 AUSM+up flux calculator
@@ -874,7 +885,7 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
     }
 } // end ausm_plus_up()
 
-
+@nogc
 void hlle(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel gmodel)
 // HLLE fluxes for MHD.
 // From V. Wheatley Matlab implementation
@@ -1051,6 +1062,7 @@ void hlle(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel g
     }
 } // end hlle()
 
+@nogc
 void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel gmodel)
 // Philip Roe's flux calculator with entropy fix.
 // 

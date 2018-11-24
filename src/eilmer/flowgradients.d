@@ -233,6 +233,7 @@ public:
         omega[2] = 0.0;
     } // end gradients_xy_div()
 
+    @nogc
     void set_up_workspace_leastsq(ref Vector3*[] cloud_pos, ref Vector3 pos,
                                   bool compute_about_mid, ref WLSQGradWorkspace ws)
     {
