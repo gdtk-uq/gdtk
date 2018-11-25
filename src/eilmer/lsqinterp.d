@@ -168,16 +168,18 @@ public:
         this.copy_values_from(other);
     }
 
+    @nogc
     void copy_values_from(ref const(LSQInterpGradients) other)
     {
         velx[] = other.velx[]; vely[] = other.vely[]; velz[] = other.velz[];
         Bx[] = other.Bx[]; By[] = other.By[]; Bz[] = other.Bz[]; psi[] = other.psi[];
         tke[] = other.tke[]; omega[] = other.omega[];
-        massf.length = other.massf.length;
+        assert(massf.length == other.massf.length, "Mismatch in massf length");
         foreach(i; 0 .. other.massf.length) { massf[i][] = other.massf[i][]; }
         rho[] = other.rho[]; p[] = other.p[];
         T[] = other.T[]; u[] = other.u[];
-        T_modes.length = other.T_modes.length; u_modes.length = other.u_modes.length;
+        assert(T_modes.length == other.T_modes.length, "Mismatch in T_modes length");
+        assert(u_modes.length == other.u_modes.length, "Mismatch in u_modes length");
         foreach(i; 0 .. other.T_modes.length) {
             T_modes[i][] = other.T_modes[i][]; u_modes[i][] = other.u_modes[i][];
         }
@@ -185,11 +187,12 @@ public:
         velxPhi = other.velxPhi; velyPhi = other.velyPhi; velzPhi = other.velzPhi;
         BxPhi = other.BxPhi; ByPhi = other.ByPhi; BzPhi = other.BzPhi; psiPhi = other.psiPhi;
         tkePhi = other.tkePhi; omegaPhi = other.omegaPhi;
-        massfPhi.length = other.massfPhi.length;
+        assert(massfPhi.length == other.massfPhi.length, "Mismatch in massfPhi length");
         foreach(i; 0 .. other.massf.length) { massfPhi[i] = other.massfPhi[i]; }
         rhoPhi = other.rhoPhi; pPhi = other.pPhi;
         TPhi = other.TPhi; uPhi = other.uPhi;
-        T_modesPhi.length = other.T_modesPhi.length; u_modesPhi.length = other.u_modesPhi.length;
+        assert(T_modesPhi.length == other.T_modesPhi.length, "Mismatch in T_modesPhi length");
+        assert(u_modesPhi.length == other.u_modesPhi.length, "Mismatch in u_modesPhi length");
         foreach(i; 0 .. other.T_modesPhi.length) {
             T_modesPhi[i] = other.T_modesPhi[i]; u_modesPhi[i] = other.u_modesPhi[i];
         }
@@ -197,11 +200,12 @@ public:
         velxMax = other.velxMax; velyMax = other.velyMax; velzMax = other.velzMax;
         BxMax = other.BxMax; ByMax = other.ByMax; BzMax = other.BzMax; psiMax = other.psiMax;
         tkeMax = other.tkeMax; omegaMax = other.omegaMax;
-        massfMax.length = other.massfMax.length;
+        assert(massfMax.length == other.massfMax.length, "Mismatch in massfMax length");
         foreach(i; 0 .. other.massf.length) { massfMax[i] = other.massfMax[i]; }
         rhoMax = other.rhoMax; pMax = other.pMax;
         TMax = other.TMax; uMax = other.uMax;
-        T_modesMax.length = other.T_modesMax.length; u_modesMax.length = other.u_modesMax.length;
+        assert(T_modesMax.length == other.T_modesMax.length, "Mismatch in T_modesMax length");
+        assert(u_modesMax.length == other.u_modesMax.length, "Mismatch in u_modesMax length");
         foreach(i; 0 .. other.T_modesMax.length) {
             T_modesMax[i] = other.T_modesMax[i]; u_modesMax[i] = other.u_modesMax[i];
         }
@@ -209,11 +213,12 @@ public:
         velxMin = other.velxMin; velyMin = other.velyMin; velzMin = other.velzMin;
         BxMin = other.BxMin; ByMin = other.ByMin; BzMin = other.BzMin; psiMin = other.psiMin;
         tkeMin = other.tkeMin; omegaMin = other.omegaMin;
-        massfMin.length = other.massfMin.length;
+        assert(massfMin.length == other.massfMin.length, "Mismatch in massfMin length");
         foreach(i; 0 .. other.massf.length) { massfMin[i] = other.massfMin[i]; }
         rhoMin = other.rhoMin; pMin = other.pMin;
         TMin = other.TMin; uMin = other.uMin;
-        T_modesMin.length = other.T_modesMin.length; u_modesMin.length = other.u_modesMin.length;
+        assert(T_modesMin.length == other.T_modesMin.length, "Mismatch in T_modesMin length");
+        assert(u_modesMin.length == other.u_modesMin.length, "Mismatch in u_modesMin length");
         foreach(i; 0 .. other.T_modesMin.length) {
             T_modesMin[i] = other.T_modesMin[i]; u_modesMin[i] = other.u_modesMin[i];
         }

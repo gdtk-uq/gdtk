@@ -67,11 +67,12 @@ class Grid {
     }
 
     // Unified indexing.
+    @nogc
     size_t single_index(size_t i, size_t j, size_t k=0) const
     in {
-        assert (i < niv, text("index i=", i, " is invalid, niv=", niv));
-        assert (j < njv, text("index j=", j, " is invalid, njv=", njv));
-        assert (k < nkv, text("index k=", k, " is invalid, nkv=", nkv));
+        assert (i < niv, "index i is invalid");
+        assert (j < njv, "index j is invalid");
+        assert (k < nkv, "index k is invalid");
     }
     body {
         return i + niv*(j + njv*k);
@@ -89,8 +90,8 @@ class Grid {
         return [indx, j, k];
     }
             
-    abstract Vector3* opIndex(size_t i, size_t j, size_t k=0);
-    abstract Vector3* opIndex(size_t indx);
+    @nogc abstract Vector3* opIndex(size_t i, size_t j, size_t k=0);
+    @nogc abstract Vector3* opIndex(size_t indx);
     abstract size_t[] get_vtx_id_list_for_cell(size_t i, size_t j, size_t k=0) const; 
     abstract size_t[] get_vtx_id_list_for_cell(size_t indx) const;
     

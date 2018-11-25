@@ -30,6 +30,7 @@ public:
     FlowGradients grad;
     Vector3*[] cloud_pos; // Positions of flow points for derivative calculation.
     FlowState[] cloud_fs; // References to flow states at those points.
+    FVCell[] cell_cloud; // for the MLP limiter we need access to the gradients within each cell
     WLSQGradWorkspace ws_grad;
     LSQInterpGradients gradients; // needed for the MLP limiter
     

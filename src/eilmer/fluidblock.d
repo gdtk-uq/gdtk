@@ -201,16 +201,16 @@ public:
     abstract void find_enclosing_cell(ref const(Vector3) p, ref size_t indx, ref bool found);
     abstract void init_grid_and_flow_arrays(string gridFileName);
     @nogc abstract void compute_primary_cell_geometric_data(size_t gtl);
-    abstract void compute_least_squares_setup(size_t gtl);
-    abstract void sync_vertices_from_underlying_grid(size_t gtl=0);
-    abstract void sync_vertices_to_underlying_grid(size_t gtl=0);
+    @nogc abstract void compute_least_squares_setup(size_t gtl);
+    @nogc abstract void sync_vertices_from_underlying_grid(size_t gtl=0);
+    @nogc abstract void sync_vertices_to_underlying_grid(size_t gtl=0);
     abstract void read_new_underlying_grid(string fileName);
     abstract void write_underlying_grid(string fileName);
     abstract double read_solution(string filename, bool overwrite_geometry_data);
     abstract void write_solution(string filename, double sim_time);
-    abstract void propagate_inflow_data_west_to_east();
-    abstract void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0);
-    abstract void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0);
+    @nogc abstract void propagate_inflow_data_west_to_east();
+    @nogc abstract void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0);
+    @nogc abstract void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0);
 
     @nogc
     void identify_reaction_zones(int gtl)

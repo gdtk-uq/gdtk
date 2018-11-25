@@ -135,15 +135,14 @@ public:
         return &(vertices[single_index(i,j,k)]);
     }
 
+    @nogc
     override Vector3* opIndex(size_t indx)
-    in {
-        assert (indx < niv*njv*nkv,
-                text("index indx=", indx, " is invalid, niv*njv*nkv=", niv*njv*nkv));
-    }
+    in { assert (indx < niv*njv*nkv, "index indx is invalid"); }
     body {
         return &(vertices[indx]);
     }
 
+    @nogc
     override size_t number_of_vertices_for_cell(size_t i)
     {
         switch (dimensions) {
@@ -154,6 +153,7 @@ public:
         }
     }
 
+    @nogc
     override int vtk_element_type_for_cell(size_t i)
     {
         switch (dimensions) {
@@ -163,7 +163,8 @@ public:
         default: return 0; // oops
         }
     }
-    
+
+    @nogc
     override int get_cell_type(size_t i)
     {
         return -1; // for structured grid.

@@ -477,12 +477,13 @@ public:
         } // end foreach mygc
     } // end set_up_cell_mapping_via_search()
 
+    @nogc
     ref FVCell get_mapped_cell(size_t i)
     {
         if (i < mapped_cells.length) {
             return mapped_cells[i];
         } else {
-            throw new FlowSolverException(format("Reference to requested mapped-cell[%d] is not available.", i));
+            throw new FlowSolverException("Reference to requested mapped-cell is not available.");
         }
     }
 

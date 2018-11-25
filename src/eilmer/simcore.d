@@ -366,6 +366,16 @@ void init_simulation(int tindx, int nextLoadsIndx,
             }
         }
     }
+    // For the MLP limiter (on unstructured grids only), we need access to the
+    // gradients stored in the cloud of cells surrounding a vertex.
+    if ((GlobalConfig.interpolation_order > 1) &&
+        (GlobalConfig.unstructured_limiter == UnstructuredLimiter.mlp)) {
+        foreach (myblk; localFluidBlocks) {
+            auto ublock = cast(UFluidBlock) myblk;
+            if (ublock) { ublock.build_cloud_of_cell_references_at_each_vertex(); }
+        }
+    }
+    
     // We conditionally sort the local blocks, based on numbers of cells,
     // in an attempt to balance the load for shared-memory parallel runs.
     localFluidBlocksBySize.length = 0;

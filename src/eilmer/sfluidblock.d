@@ -776,6 +776,7 @@ public:
         } // end if dimensions == 3
     } // end compute_primary_cell_geometric_data()
 
+    @nogc
     override void compute_least_squares_setup(size_t gtl)
     {
         // Update the least-squares geometric weights and the workspaces, if appropriate.
@@ -1601,14 +1602,18 @@ public:
         } // end if (myConfig.dimensions
     } // end store_references_for_derivative_calc_at_vertices()
 
+    @nogc
     override void sync_vertices_from_underlying_grid(size_t gtl=0)
     {
         size_t nivtx, njvtx, nkvtx;
         nivtx = grid.niv; njvtx = grid.njv; nkvtx = grid.nkv;
         if (myConfig.dimensions == 3) {
             if ( nivtx-1 != nicell || njvtx-1 != njcell || nkvtx-1 != nkcell ) {
-                string msg = text("For block[", id, "] we have a mismatch in 3D grid size.",
-                                  " Have read nivtx=", nivtx, " njvtx=", njvtx, " nkvtx=", nkvtx);
+                string msg = "Mismatch in 3D grid size";
+                debug {
+                    msg ~= text("\nFor block[", id, "] we have read nivtx=", nivtx,
+                                " njvtx=", njvtx, " nkvtx=", nkvtx);
+                }
                 throw new FlowSolverException(msg);
             }
             for (size_t k = kmin; k <= kmax+1; ++k) {
@@ -1622,8 +1627,11 @@ public:
             } // for k
         } else { // 2D case
             if (nivtx-1 != nicell || njvtx-1 != njcell || nkvtx != 1) {
-                string msg = text("For block[", id, "] we have a mismatch in 2D grid size.",
-                                  " Have read nivtx=", nivtx, " njvtx=", njvtx, " nkvtx=", nkvtx);
+                string msg = "Mismatch in 2D grid size";
+                debug {
+                    msg ~= text("\nFor block[", id, "] we have read nivtx=", nivtx,
+                                " njvtx=", njvtx, " nkvtx=", nkvtx);
+                }
                 throw new FlowSolverException(msg);
             }
             for (size_t j = jmin; j <= jmax+1; ++j) {
@@ -1635,7 +1643,8 @@ public:
             } // for j
         }
     } // end sync_vertices_from_underlying_grid()
-    
+
+    @nogc
     override void sync_vertices_to_underlying_grid(size_t gtl=0)
     // Note that we reuse the StructuredGrid object that was created on the
     // use of init_grid_and_flow_arrays().
@@ -1844,6 +1853,7 @@ public:
         if (myConfig.verbosity_level > 1) { writeln("write_solution(): Done block ", id); }
     } // end write_solution()
 
+    @nogc
     override void propagate_inflow_data_west_to_east()
     {
         // Assume that the west-face ghost cells have appropriate data.
@@ -1868,6 +1878,7 @@ public:
         set_cell_dt_chem(-1.0);
     } // end propagate_inflow_data_west_to_east()
 
+    @nogc
     override void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0)
     // Compute the flux from data on either-side of the interface.
     {
@@ -1988,6 +1999,7 @@ public:
         return;
     } // end convective_flux()
 
+    @nogc
     override void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0)
     // Compute the flux from data on either-side of the interface.
     // For the structured-grid block, there is nothing to do.

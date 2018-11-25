@@ -54,6 +54,7 @@ int[] vtk_element_types = [0, VTKElement.triangle, VTKElement.quad, VTKElement.p
                            VTKElement.tetra, VTKElement.wedge, VTKElement.hexahedron,
                            VTKElement.pyramid, VTKElement.line];
 
+@nogc
 USGCell_type convert_cell_type(int vtk_element_type)
 {
     switch (vtk_element_type) {
@@ -69,6 +70,7 @@ USGCell_type convert_cell_type(int vtk_element_type)
     }
 }
 
+@nogc
 USGCell_type cell_type_from_name(string name)
 {
     switch (name) {
@@ -757,36 +759,37 @@ public:
     // -----------------------------
     // Indexing and location methods.
     // -----------------------------
-    
+    @nogc
     override Vector3* opIndex(size_t i, size_t j, size_t k=0)
     in {
-        assert (i < nvertices, text("index i=", i, " is invalid, nvertices=", nvertices));
-        assert (j == 0, text("index j=", j, " is invalid for unstructured grid"));
-        assert (k == 0, text("index k=", k, " is invalid for unstructured grid"));
+        assert (i < nvertices, "index i is invalid");
+        assert (j == 0, "index j is invalid");
+        assert (k == 0, "index k is invalid");
     }
     body {
         return &(vertices[i]);
     }
 
+    @nogc
     override Vector3* opIndex(size_t indx)
-    in {
-        assert (indx < nvertices,
-                text("index indx=", indx, " is invalid, nvertices=", nvertices));
-    }
+    in { assert (indx < nvertices, "index indx is invalid"); }
     body {
         return &(vertices[indx]);
     }
 
+    @nogc
     override size_t number_of_vertices_for_cell(size_t i)
     {
         return cells[i].vtx_id_list.length;
     }
 
+    @nogc
     override int vtk_element_type_for_cell(size_t i)
     {
         return vtk_element_types[cells[i].cell_type];
     }
 
+    @nogc
     override int get_cell_type(size_t i)
     {
         return cells[i].cell_type;

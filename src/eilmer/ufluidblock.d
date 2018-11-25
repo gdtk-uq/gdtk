@@ -664,6 +664,14 @@ public:
         } // end switch (myConfig.spatial_deriv_locn)
     } // end init_grid_and_flow_arrays()
 
+    void build_cloud_of_cell_references_at_each_vertex()
+    {
+        // For the MLP limiter, we need access to the gradients stored in the cells.
+        foreach (vtx; vertices) {
+            foreach(cid; cellIndexListPerVertex[vtx.id]) { vtx.cell_cloud ~= cells[cid]; }
+        }
+    }
+
     @nogc
     override void compute_primary_cell_geometric_data(size_t gtl)
     {
@@ -715,6 +723,7 @@ public:
         } // end foreach bndry
     } // end compute_primary_cell_geometric_data()
 
+    @nogc
     override void compute_least_squares_setup(size_t gtl)
     {
         // Update the least-squares geometric weights and the workspaces, if appropriate.
@@ -740,20 +749,24 @@ public:
                 try {
                     c.ws.assemble_and_invert_normal_matrix(c.cell_cloud, myConfig.dimensions, gtl);
                 } catch (Exception e) {
-                    writefln("In compute_least_squares_setup()," ~
-                             " we have failed to assemble and invert normal matrix for cell id=%d",
-                             c.id);
+                    debug {
+                        writefln("In compute_least_squares_setup()," ~
+                                 " we have failed to assemble and invert normal matrix for cell id=%d",
+                                 c.id);
+                    }
                     throw e;
                 }
             }
         }
     } // end compute_least_squares_setup()
 
+    @nogc
     override void sync_vertices_from_underlying_grid(size_t gtl=0)
     {
         foreach (i; 0 .. vertices.length) { vertices[i].pos[gtl].set(grid[i]); }
     }
-    
+
+    @nogc
     override void sync_vertices_to_underlying_grid(size_t gtl=0)
     {
         foreach (i; 0 .. vertices.length) { grid[i].set(vertices[i].pos[gtl]); }
@@ -922,28 +935,23 @@ public:
         } // end switch flow_format
     } // end write_solution()
 
+    @nogc
     override void propagate_inflow_data_west_to_east()
     {
-        string msg = "propagate_inflow_data_west_to_east() " ~ 
-            "function not implemented for unstructured grid.";
-        throw new FlowSolverException(msg);
+        throw new FlowSolverException("function not implemented for unstructured grid.");
     }
-
+    
+    @nogc
     override void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0)
     // Compute gradients of flow quantities for higher-order reconstruction, if required.
     // To be used, later, in the convective flux calculation.
     {
         if (allow_high_order_interpolation && (myConfig.interpolation_order > 1)) {
-
-            // for the MLP limiter we need to first loop over the vertices
             if (myConfig.unstructured_limiter == UnstructuredLimiter.mlp) {
                 foreach (vtx; vertices) {
-                    FVCell[] cell_cloud;
-                    foreach(cid; cellIndexListPerVertex[vtx.id]) cell_cloud ~= cells[cid];
-                    vtx.gradients.store_max_min_values_for_mlp_limiter(cell_cloud, myConfig);
+                    vtx.gradients.store_max_min_values_for_mlp_limiter(vtx.cell_cloud, myConfig);
                 }
             }
-            
             foreach (c; cells) {
                 c.gradients.compute_lsq_values(c.cell_cloud, c.ws, myConfig);
             }
@@ -975,6 +983,7 @@ public:
         } // end if interpolation_order > 1
     } // end convective_flux-phase0()
 
+    @nogc
     override void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0)
     // Make use of the flow gradients to actually do the high-order reconstruction
     // and then compute fluxes of conserved quantities at all faces.
