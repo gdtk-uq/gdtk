@@ -29,6 +29,7 @@ private immutable double SMALL_DIFFUSION_COEFFICIENT = 1.0e-20;
 
 enum MassDiffusionModel { none, ficks_first_law }
 
+@nogc
 string massDiffusionModelName(MassDiffusionModel i)
 {
     final switch (i) {
@@ -37,6 +38,7 @@ string massDiffusionModelName(MassDiffusionModel i)
     }
 }
 
+@nogc
 MassDiffusionModel massDiffusionModelFromName(string name)
 {
     switch (name) {
