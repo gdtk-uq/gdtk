@@ -663,7 +663,8 @@ public:
             } // end if (myConfig.include_ghost_cells_in_spatial_deriv_clouds)
         } // end switch (myConfig.spatial_deriv_locn)
     } // end init_grid_and_flow_arrays()
-    
+
+    @nogc
     override void compute_primary_cell_geometric_data(size_t gtl)
     {
         if (myConfig.dimensions == 2) {
@@ -693,18 +694,18 @@ public:
                 auto my_outsign = bndry.outsign_list[j];
                 if (my_outsign == 1) {
                     auto inside0 = my_face.left_cell;
-                    Vector3 delta = my_face.pos - inside0.pos[gtl];
+                    Vector3 delta; delta = my_face.pos; delta -= inside0.pos[gtl];
                     auto ghost0 = my_face.right_cell;
-                    ghost0.pos[gtl] = my_face.pos + delta;
+                    ghost0.pos[gtl] = my_face.pos; ghost0.pos[gtl] += delta;
                     ghost0.iLength = inside0.iLength;
                     ghost0.jLength = inside0.jLength;
                     ghost0.kLength = inside0.kLength;
                     ghost0.L_min = inside0.L_min;
                 } else {
                     auto inside0 = my_face.right_cell;
-                    Vector3 delta = my_face.pos - inside0.pos[gtl];
+                    Vector3 delta; delta = my_face.pos; delta -= inside0.pos[gtl];
                     auto ghost0 = my_face.left_cell;
-                    ghost0.pos[gtl] = my_face.pos + delta;
+                    ghost0.pos[gtl] = my_face.pos; ghost0.pos[gtl] += delta;
                     ghost0.iLength = inside0.iLength;
                     ghost0.jLength = inside0.jLength;
                     ghost0.kLength = inside0.kLength;

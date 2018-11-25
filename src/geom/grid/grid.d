@@ -236,33 +236,36 @@ class Grid {
     
     // Since we are cannot control what position we are given,
     // determine the bin index cautiously.
+    @nogc
     int get_bin_ix(ref const(Vector3) p)
     {
         double dx = p.x.re - bb0.x.re;
-        int ix = to!int(dx/deltax);
+        int ix = cast(int) (dx/deltax);
         ix = max(0, min(nbx-1, ix));
         return ix;
     }
-    
+
+    @nogc
     int get_bin_iy(ref const(Vector3) p)
     {
         double dy = p.y.re - bb0.y.re;
-        int iy = to!int(dy/deltay);
+        int iy = cast(int) (dy/deltay);
         iy = max(0, min(nby-1, iy));
         return iy;
     }
-    
+
+    @nogc
     int get_bin_iz(ref const(Vector3) p)
     {
         int iz = 0;
         if (dimensions == 3) {
             double dz = p.z.re - bb0.z.re;
-            iz = to!int(dz/deltaz);
+            iz = cast(int) (dz/deltaz);
             iz = max(0, min(nbz-1, iz));
         }
         return iz;
     }
-    
+
     void sort_cells_into_bins(size_t nbinx=5, size_t nbiny=5, size_t nbinz=5)
     // We have this as method separate from the constructor because
     // it may need to be called more than once for a moving grid.
@@ -274,7 +277,7 @@ class Grid {
         }
         nbx = nbinx; nby = nbiny; nbz = nbinz;
         // Determine the bounding box for the grid.
-        Vector3 p = vertices[0];
+        Vector3 p; p = vertices[0];
         bb0 = p; bb1 = p;
         foreach (i; 1 .. nvertices) {
             p = vertices[i];

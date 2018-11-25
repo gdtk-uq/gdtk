@@ -200,7 +200,7 @@ public:
     @nogc abstract ref FVVertex get_vtx(size_t i, size_t j, size_t k=0);
     abstract void find_enclosing_cell(ref const(Vector3) p, ref size_t indx, ref bool found);
     abstract void init_grid_and_flow_arrays(string gridFileName);
-    abstract void compute_primary_cell_geometric_data(size_t gtl);
+    @nogc abstract void compute_primary_cell_geometric_data(size_t gtl);
     abstract void compute_least_squares_setup(size_t gtl);
     abstract void sync_vertices_from_underlying_grid(size_t gtl=0);
     abstract void sync_vertices_to_underlying_grid(size_t gtl=0);
@@ -211,7 +211,8 @@ public:
     abstract void propagate_inflow_data_west_to_east();
     abstract void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0);
     abstract void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0);
-    
+
+    @nogc
     void identify_reaction_zones(int gtl)
     // Set the reactions-allowed flag for cells in this block.
     {
@@ -231,17 +232,20 @@ public:
             total_cells_in_reaction_zones += (cell.fr_reactions_allowed ? 1: 0);
             total_cells += 1;
         } // foreach cell
-        if ( myConfig.reacting && myConfig.verbosity_level >= 2 ) {
-            writeln("identify_reaction_zones(): block ", id,
-                    " cells inside zones = ", total_cells_in_reaction_zones, 
-                    " out of ", total_cells);
-            if ( myConfig.reaction_zones.length == 0 ) {
-                writeln("Note that for no user-specified zones,",
-                        " the whole domain is allowed to be reacting.");
+        debug {
+            if (myConfig.reacting && myConfig.verbosity_level >= 2) {
+                writeln("identify_reaction_zones(): block ", id,
+                        " cells inside zones = ", total_cells_in_reaction_zones, 
+                        " out of ", total_cells);
+                if (myConfig.reaction_zones.length == 0) {
+                    writeln("Note that for no user-specified zones,",
+                            " the whole domain is allowed to be reacting.");
+                }
             }
         }
     } // end identify_reaction_zones()
 
+    @nogc
     void identify_turbulent_zones(int gtl)
     // Set the in-turbulent-zone flag for cells in this block.
     {
@@ -261,18 +265,21 @@ public:
             total_cells_in_turbulent_zones += (cell.in_turbulent_zone ? 1: 0);
             total_cells += 1;
         } // foreach cell
-        if ( myConfig.turbulence_model != TurbulenceModel.none && 
-             myConfig.verbosity_level >= 2 ) {
-            writeln("identify_turbulent_zones(): block ", id,
-                    " cells inside zones = ", total_cells_in_turbulent_zones, 
-                    " out of ", total_cells);
-            if ( myConfig.turbulent_zones.length == 0 ) {
-                writeln("Note that for no user-specified zones,",
-                        " the whole domain is allowed to be turbulent.");
+        debug {
+            if (myConfig.turbulence_model != TurbulenceModel.none && 
+                myConfig.verbosity_level >= 2) {
+                writeln("identify_turbulent_zones(): block ", id,
+                        " cells inside zones = ", total_cells_in_turbulent_zones, 
+                        " out of ", total_cells);
+                if (myConfig.turbulent_zones.length == 0) {
+                    writeln("Note that for no user-specified zones,",
+                            " the whole domain is allowed to be turbulent.");
+                }
             }
         }
     } // end identify_turbulent_zones()
 
+    @nogc
     void estimate_turbulence_viscosity()
     {
         final switch (myConfig.turbulence_model) {
@@ -286,8 +293,7 @@ public:
         case TurbulenceModel.k_omega:
             foreach (cell; cells) cell.turbulence_viscosity_k_omega();
             break;
-
-        }
+        } // end switch
         foreach (cell; cells) {
             cell.turbulence_viscosity_factor(myConfig.transient_mu_t_factor);
             cell.turbulence_viscosity_limit(myConfig.max_mu_t_factor);
@@ -360,7 +366,7 @@ public:
                              id, cell.id, to!string(cell.pos[gtl]));
                     writeln(cell);
                 }
-                if ( myConfig.adjust_invalid_cell_data ) {
+                if (myConfig.adjust_invalid_cell_data) {
                     // We shall set the cell data to something that
                     // is valid (and self consistent).
                     FlowState[] neighbour_flows;
@@ -466,6 +472,7 @@ public:
         foreach (iface; faces) { iface.F.clear(); }
     }
 
+    @nogc
     void viscous_flux()
     {
         foreach (iface; faces) { iface.viscous_flux_calc(); } 
@@ -564,7 +571,8 @@ public:
             c.dUdt[ftl].scale(1.0/total);
         }
     } // end residual_smoothing_dUdt()
-    
+
+    @nogc
     double update_c_h(double dt_current)
     // Update the c_h value for the divergence cleaning mechanism.
     {
@@ -586,6 +594,7 @@ public:
         return cfl_max * min_L_for_block / dt_current;
     } // end update_c_h()
 
+    @nogc
     double determine_time_step_size(double dt_current, bool check_cfl)
     // Compute the local time step limit for all cells in the block.
     // The overall time step is limited by the worst-case cell.
@@ -623,8 +632,8 @@ public:
             }
         } // foreach cell
         if (check_cfl && (cfl_max < 0.0 || cfl_max > cfl_allow)) {
-            string msg = text("Bad cfl number encountered cfl_max=", cfl_max,
-                              " for FluidBlock ", id);
+            string msg = "Bad cfl number encountered";
+            debug { msg ~= text(" cfl_max=", cfl_max, " for FluidBlock ", id); }
             throw new FlowSolverException(msg);
         }
         return dt_allow;

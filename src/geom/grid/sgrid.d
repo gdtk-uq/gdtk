@@ -908,7 +908,7 @@ public:
 // when it is reading Float32 values that are *too* small.
 // We have also come across unreasonably-small float values 
 // in the context of reading GridPro files.
-double uflowz(double q, double tiny=1.0e-30)
+@nogc double uflowz(double q, double tiny=1.0e-30)
 {
     return (fabs(q) > tiny) ? q: 0.0;
 }
