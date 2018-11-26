@@ -419,6 +419,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
         auto heapFree = to!double(myStats.freeSize)/(2^^20); 
         writefln("Heap memory used for task %d: %.2f  free: %.2f  total: %.1f MB",
                  GlobalConfig.mpi_rank_for_local_task, heapUsed, heapFree, heapUsed+heapFree);
+        stdout.flush();
     }
     version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
     if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) {
