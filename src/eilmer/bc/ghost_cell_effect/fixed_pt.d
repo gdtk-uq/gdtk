@@ -38,6 +38,7 @@ public:
         return "FixedPT(p_outside=" ~ to!string(p_outside) ~ ", T_outside=" ~ to!string(T_outside) ~")";
     }
 
+    @nogc
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         FVCell src_cell, ghost0;
@@ -58,7 +59,8 @@ public:
             gmodel.update_thermo_from_pT(ghost0.fs.gas);
         } // end foreach face
     } // end apply_unstructured_grid()
-    
+
+    @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         size_t i, j, k;

@@ -141,6 +141,7 @@ public:
         return str;
     }
 
+    // not @nogc
     void set_up_cell_mapping()
     {
         if (cell_mapping_from_file) {
@@ -331,7 +332,8 @@ public:
             set_up_cell_mapping_via_search();
         } // end if !cell_mapping_from_file
     } // end set_up_cell_mapping()
-    
+
+    // not @nogc
     void set_up_cell_mapping_via_search()
     {
         // For the situation when we haven't been given a file to specify
@@ -487,6 +489,7 @@ public:
         }
     }
 
+    // not @nogc
     void exchange_geometry_phase0()
     {
         version(mpi_parallel) {
@@ -507,6 +510,7 @@ public:
         }
     } // end exchange_geometry_phase0()
 
+    // not @nogc
     void exchange_geometry_phase1()
     {
         version(mpi_parallel) {
@@ -542,6 +546,7 @@ public:
         }
     } // end exchange_geometry_phase1()
 
+    // not @nogc
     void exchange_geometry_phase2()
     {
         version(mpi_parallel) {
@@ -574,6 +579,7 @@ public:
         }
     } // end exchange_geometry_phase2()
 
+    // not @nogc
     void exchange_flowstate_phase0(double t, int gtl, int ftl)
     {
         version(mpi_parallel) {
@@ -601,6 +607,7 @@ public:
         }
     } // end exchange_flowstate_phase0()
 
+    // not @nogc
     void exchange_flowstate_phase1(double t, int gtl, int ftl)
     {
         version(mpi_parallel) {
@@ -657,6 +664,7 @@ public:
         }
     } // end exchange_flowstate_phase1()
 
+    // not @nogc
     void exchange_flowstate_phase2(double t, int gtl, int ftl)
     {
         version(mpi_parallel) {
@@ -709,7 +717,8 @@ public:
             }
         }
     } // end exchange_flowstate_phase2()
-    
+
+    @nogc
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         // We presume that all of the exchange of data happened earlier,
@@ -725,6 +734,7 @@ public:
         }
     } // end apply_unstructured_grid()
 
+    @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         foreach (i, mygc; ghost_cells) {

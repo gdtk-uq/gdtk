@@ -23,6 +23,7 @@ import fvinterface;
 import solidfvcell;
 import solidfvinterface;
 
+@nogc
 void computeFluxesAndTemperatures(int ftl, FVCell[] gasCells, FVInterface[] gasIFaces,
                                   SolidFVCell[] solidCells, SolidFVInterface[] solidIFaces)
 {
@@ -57,6 +58,7 @@ void computeFluxesAndTemperatures(int ftl, FVCell[] gasCells, FVInterface[] gasI
     }
 }
 
+// not @nogc because of LUDecomp
 void computeFluxesAndTemperatures2(int ftl, FVCell[] gasCells, FVInterface[] gasIFaces, 
                                    SolidFVCell[] solidCells, SolidFVInterface[] solidIFaces,
                                    number[] T, number[] B, Matrix!number A, int[] pivot)

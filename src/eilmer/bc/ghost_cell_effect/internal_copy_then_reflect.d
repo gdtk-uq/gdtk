@@ -34,6 +34,7 @@ public:
         return "InternalCopyThenReflect()";
     }
 
+    @nogc
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         // In contrast with the structured-grid implementation, below,
@@ -68,6 +69,7 @@ public:
         } // end foreach face
     } // end apply_unstructured_grid()
 
+    @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         size_t i, j, k;

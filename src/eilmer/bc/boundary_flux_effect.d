@@ -144,11 +144,14 @@ public:
     {
         return "BFE_EnergyFluxFromAdjacentSolid()";
     }
+
+    @nogc
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         throw new Error("BFE_EnergyFluxFromAdjacentSolid.apply_unstructured_grid() not yet implemented");
     }
 
+    // not @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         if (blk.myConfig.solid_has_isotropic_properties) {
@@ -263,11 +266,13 @@ public:
         return "BFE_ConstFlux";
     }
 
+    @nogc
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         throw new Error("BFE_ConstFlux.apply_unstructured_grid() not yet implemented");
     }
-    
+
+    @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         FVInterface IFace;
@@ -327,6 +332,7 @@ public:
         return "BFE_SimpleOutflowFlux";
     }
 
+    @nogc
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         auto blk = cast(UFluidBlock) this.blk;
@@ -341,7 +347,8 @@ public:
             compute_outflow_flux(interior_cell.fs, outsign, face);
         }
     }
-    
+
+    @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         auto blk = cast(SFluidBlock) this.blk;
@@ -499,11 +506,13 @@ public:
             ")";
     }
 
+    @nogc
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         throw new Error("BFE_EnergyBalanceThermionic.apply_unstructured_grid() not yet implemented");
     }
-    
+
+    @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         auto blk = cast(SFluidBlock) this.blk;
@@ -612,7 +621,7 @@ public:
         } // end apply_structured_grid()
     }
 
-
+    @nogc
     double solve_for_wall_temperature_and_energy_flux(const FVCell cell, FVInterface IFace, double dn)
     // Iteratively converge on wall temp
     {
@@ -714,11 +723,13 @@ public:
         return "BFE_UpdateEnergyWallNormalVelocity";
     }
 
+    @nogc
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         throw new Error("BFE_UpdateEnergyWallNormalVelocity.apply_unstructured_grid() not yet implemented");
     }
-    
+
+    @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         FVInterface IFace;

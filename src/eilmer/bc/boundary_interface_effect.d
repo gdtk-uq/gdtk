@@ -1668,11 +1668,13 @@ public:
         return "TemperatureFromGasSolidInterface()";
     }
 
+    @nogc
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         throw new Error("BIE_TemperatureFromGasSolidInterface.apply_unstructured_grid() not implemented yet");
     }
 
+    @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         computeFluxesAndTemperatures(ftl, _gasCells, _gasIFaces, _solidCells, _solidIFaces);

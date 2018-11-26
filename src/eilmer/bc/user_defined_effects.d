@@ -151,6 +151,7 @@ public:
     }
                         
 private:
+    // not @nogc
     void putFlowStateIntoGhostCell(lua_State* L, int tblIdx, FVCell ghostCell)
     {
         auto gmodel = blk.myConfig.gmodel;
@@ -195,6 +196,7 @@ private:
         ghostCell.fs.omega = getNumberFromTable(L, tblIdx, "omega", false, 1.0);
     }
 
+    // not @nogc because of Lua functions
     void callGhostCellUDF(double t, int gtl, int ftl, size_t i, size_t j, size_t k,
                           in FVInterface IFace, FVCell ghostCell0, FVCell ghostCell1)
     {
@@ -286,6 +288,7 @@ public:
         return "UserDefined(fname=" ~ luafname ~ ")";
     }
 
+    // not @nogc
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         size_t j = 0, k = 0;
@@ -295,6 +298,7 @@ public:
         } // end foreach face
     }
 
+    // not @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         size_t i, j, k;
@@ -367,6 +371,7 @@ public:
         } // end switch which boundary
     }
 private:
+    // not @nogc because of Lua function calls
     void putFlowStateIntoInterface(lua_State* L, int tblIdx, FVInterface iface)
     {
         // Now the user might only set some of the flowstate
@@ -447,7 +452,8 @@ private:
 
         lua_pop(L, 1);
     }
-            
+
+    // not @nogc
     void callInterfaceUDF(double t, int gtl, int ftl, size_t i, size_t j, size_t k,
                           FVInterface IFace)
     {
@@ -517,6 +523,7 @@ public:
         return "UserDefinedFluxEffect(fname=" ~ luafname ~ ", luaFnName=" ~ luaFnName ~ ")";
     }
 
+    // not @nogc
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         size_t j = 0, k = 0;
@@ -527,6 +534,7 @@ public:
         } // end foreach face
     }  // end apply_unstructured_grid()
 
+    // not @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         size_t i, j, k;
@@ -593,6 +601,7 @@ public:
     }
                         
 private:
+    // not @nogc
     void putFluxIntoInterface(lua_State* L, int tblIdx, FVInterface iface)
     {
         // Now the user might only set some of the fluxes
@@ -667,6 +676,7 @@ private:
         */
     }
 
+    // not @nogc
     void callFluxUDF(double t, int gtl, int ftl, size_t i, size_t j, size_t k,
                      FVInterface IFace)
     {

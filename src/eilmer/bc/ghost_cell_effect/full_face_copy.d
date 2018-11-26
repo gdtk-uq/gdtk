@@ -31,6 +31,7 @@ import bc;
 // ----------------------------------------------------------------------------------
 // MPI-specific services.
 
+@nogc
 int make_mpi_tag(int blk_id, int bndry_id, int seq)
 {
     // This function provides a somewhat unique integer
@@ -42,6 +43,7 @@ int make_mpi_tag(int blk_id, int bndry_id, int seq)
 }
 
 version(mpi_parallel) {
+    // not @nogc
     int MPI_Wait_a_while(MPI_Request* request, MPI_Status *status)
     {
         int ierr = 0; // Normally we return the MPI_Test result.
@@ -808,6 +810,7 @@ public:
         }
     } // end set_up_cell_mapping_phase0()
 
+    // not @nogc because we set array length
     void set_up_cell_mapping_phase1()
     {
         version(mpi_parallel) {
@@ -834,6 +837,7 @@ public:
         }
     } // end set_up_cell_mapping_send()
 
+    // not @nogc
     void set_up_cell_mapping_phase2()
     {
         version(mpi_parallel) {
@@ -863,16 +867,20 @@ public:
             }
         }
     } // end set_up_cell_mapping_phase2()
-    
+
+    @nogc
     ref FVCell get_mapped_cell(size_t i)
     {
         if (i < mapped_cells.length) {
             return mapped_cells[i];
         } else {
-            throw new FlowSolverException(format("Reference to requested mapped-cell[%d] is not available.", i));
+            string msg = "Reference to requested mapped-cell is not available.";
+            debug { msg ~= format(" cell[%d]", i); }
+            throw new FlowSolverException(msg);
         }
     }
 
+    // not @nogc because we may set length and use MPI_Irecv
     void exchange_geometry_phase0()
     {
         version(mpi_parallel) {
@@ -902,6 +910,7 @@ public:
         }
     } // end exchange_geometry_phase0()
 
+    // not @nogc
     void exchange_geometry_phase1()
     {
         version(mpi_parallel) {
@@ -942,6 +951,7 @@ public:
         }
     } // end exchange_geometry_phase1()
 
+    // not @nogc
     void exchange_geometry_phase2()
     {
         version(mpi_parallel) {
@@ -981,6 +991,7 @@ public:
         }
     } // end exchange_geometry_phase2()
 
+    // not @nogc
     void exchange_flowstate_phase0(double t, int gtl, int ftl)
     {
         version(mpi_parallel) {
@@ -1019,6 +1030,7 @@ public:
         // Done with setting up all non-blocking reads for MPI.
     } // end exchange_flowstate_phase0()
 
+    // not @nogc
     void exchange_flowstate_phase1(double t, int gtl, int ftl)
     {
         version(mpi_parallel) {
@@ -1119,7 +1131,8 @@ public:
         }
         // Done with copying from source cells.
     } // end exchange_flowstate_phase1()
-    
+
+    // not @nogc
     void exchange_flowstate_phase2(double t, int gtl, int ftl)
     {
         version(mpi_parallel) {
@@ -1184,11 +1197,13 @@ public:
         // Done with copying from source cells.
     } // end exchange_flowstate_phase2()
 
+    @nogc
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         throw new Error("GhostCellFullFaceCopy.apply_unstructured_grid() not implemented");
     }
-    
+
+    @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         // We presume that all of the exchange of data happened earlier,

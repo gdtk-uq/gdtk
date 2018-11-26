@@ -88,6 +88,7 @@ public:
             ", relax_factor=" ~ to!string(relax_factor) ~ ")";
     }
 
+    @nogc
     void set_velocity_components(ref Vector3 vel, number speed, ref FVInterface face)
     {
         switch (direction_type) {
@@ -129,6 +130,7 @@ public:
         }
     } // end set_velocity_components()
 
+    // not @nogc
     void callUDFstagnationPT(double t, double dt_global, int step, int gtl, int ftl,
                              ref number new_p0, ref number new_T0)
     {
@@ -164,6 +166,7 @@ public:
         throw new Error("GhostCellFromStagnation.apply_unstructured_grid() not yet implemented");
     }
 
+    // not @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         size_t i, j, k;

@@ -92,11 +92,13 @@ public:
         return "WallFunction_CellEffect()";
     }
 
+    @nogc
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         throw new FlowSolverException("WallFunction_CellEffect bc not implemented for unstructured grids.");
     } // end apply_unstructured_grid()
 
+    @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         size_t i, j, k;

@@ -36,6 +36,7 @@ public:
                       fprofile.fileName, fprofile.posMatch);
     }
 
+    // not @nogc
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         FVCell ghost0;
@@ -51,6 +52,7 @@ public:
         } // end foreach face
     } // end apply_unstructured_grid()
 
+    // not @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         // Fill ghost cells with data from just inside the boundary

@@ -573,6 +573,7 @@ public:
         // This way, all of the necessary cell and position data should be valid.
     } // end this()
 
+    @nogc
     double compute_distance(ref const(Vector3) my_pos, ref const(Vector3) other_pos)
     {
         double distance, other_r, my_r, dx, dy, dz, dr;
@@ -618,11 +619,12 @@ public:
             distance = fabs(dr);
             break;
         default:
-            throw new FlowSolverException(format("Invalid match option: \"%s\".", posMatch));
+            throw new FlowSolverException("Invalid match option.");
         }
         return distance;
     } // end compute_distance()
-    
+
+    @nogc
     size_t find_nearest_profile_point(ref const(Vector3) my_pos)
     {
         size_t ip = 0; // Start looking here, assuming that there is at least one point.
@@ -634,6 +636,7 @@ public:
         return ip;
     } // end find_nearest_profile_point()
 
+    // not @nogc because of associative array lookup
     FlowState get_flowstate(size_t my_id, ref const(Vector3) my_pos)
     {
         assert(fstate.length > 0, "FlowProfile is empty.");
@@ -646,6 +649,7 @@ public:
         }
     } // end get_flowstate()
 
+    @nogc
     void adjust_velocity(ref FlowState fs, ref const(Vector3) my_pos)
     {
         switch (posMatch) {
@@ -662,7 +666,7 @@ public:
             fs.vel.refz = vely_sign * vel_yz * my_pos.z.re / r;
             break;
         default: 
-            throw new FlowSolverException(format("Invalid match option: \"%s\".", posMatch));
+            throw new FlowSolverException("Invalid match option.");
         }
     }
 } // end class FlowProfile
