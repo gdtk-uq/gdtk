@@ -13,7 +13,8 @@ import globalconfig;
 import globaldata;
 import fvcell;
 import gas;
-import kinetics;
+import kinetics.reaction_mechanism;
+import kinetics.chemistry_update;
 
 import cuda_d.cuda;
 import cuda_d.cuda_runtime_api;
