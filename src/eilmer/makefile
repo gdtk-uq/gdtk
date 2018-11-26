@@ -351,6 +351,7 @@ clean:
 	- rm steadystate_solver_with_rev_string.d
 	- rm steadystate_solver_complex_with_rev_string.d
 	- rm shape_sensitivity_calc_with_rev_string.d
+	- rm e4opt optdriver_with_rev_string.d
 	- rm mpi_main_with_rev_string.d e4mpi loadbalance_with_rev_string.d
 	- rm dgd-for-mech4480.tgz
 	- cd $(OPENMPI_DIR); make clean
