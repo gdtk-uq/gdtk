@@ -408,6 +408,18 @@ void init_simulation(int tindx, int nextLoadsIndx,
     // this value may get revised on the very first step.
     SimState.dt_global = GlobalConfig.dt_init; 
     //
+    // Keep our memory foot-print small.
+    GC.collect();
+    GC.minimize();
+    //
+    version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
+    if (GlobalConfig.verbosity_level > 0) {
+        auto myStats = GC.stats();
+        auto heapUsed = to!double(myStats.usedSize)/(2^^20);
+        auto heapFree = to!double(myStats.freeSize)/(2^^20); 
+        writefln("Heap memory used for task %d: %.2f  free: %.2f  total: %.1f MB",
+                 GlobalConfig.mpi_rank_for_local_task, heapUsed, heapFree, heapUsed+heapFree);
+    }
     version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
     if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) {
         // For reporting wall-clock time, convert to seconds with precision of milliseconds.
@@ -725,6 +737,7 @@ int integrate_in_time(double target_time_as_requested)
                 SimState.output_just_written = true;
                 SimState.t_plot = SimState.t_plot + GlobalConfig.dt_plot;
                 GC.collect();
+                GC.minimize();
             }
             //
             // 4.1 (Occasionally) Write out the cell history data and loads on boundary groups data
@@ -733,6 +746,7 @@ int integrate_in_time(double target_time_as_requested)
                 SimState.history_just_written = true;
                 SimState.t_history = SimState.t_history + GlobalConfig.dt_history;
                 GC.collect();
+                GC.minimize();
             }
             if (GlobalConfig.compute_loads && (SimState.time >= SimState.t_loads) && !SimState.loads_just_written) {
                 write_boundary_loads_to_file(SimState.time, SimState.current_loads_tindx);
@@ -741,6 +755,7 @@ int integrate_in_time(double target_time_as_requested)
                 SimState.current_loads_tindx = SimState.current_loads_tindx + 1;
                 SimState.t_loads = SimState.t_loads + GlobalConfig.dt_loads;
                 GC.collect();
+                GC.minimize();
             }
             //
             // 5.0 Update the run-time loads calculation, if required
@@ -1985,6 +2000,7 @@ void finalize_simulation()
     if (!SimState.output_just_written) { write_solution_files(); }
     if (!SimState.history_just_written) { write_history_cells_to_files(SimState.time); }
     GC.collect();
+    GC.minimize();
     if (GlobalConfig.verbosity_level > 0  && GlobalConfig.is_master_task) {
         writeln("Step= ", SimState.step, " final-t= ", SimState.time);
     }
