@@ -78,9 +78,6 @@ ifeq ($(WITH_COMPLEX_NUMBERS),1)
     PROGRAMS += e4zsss
 endif
 
-DEMO_PROGRAMS := globalconfig_demo flowstate_demo fv_demo fluidblock_demo \
-	luaflowstate_demo luaglobalconfig_demo
-
 EILMER_CORE_FILES := simcore.d \
 	fileutil.d json_helper.d \
 	fvcore.d fvcell.d fvvertex.d fvinterface.d \
@@ -343,10 +340,6 @@ sync-tarball: tarball
 	rsync -av dgd-for-mech4480.tgz cfcfd:/opt/local/share/httpd/htdocs/eilmer/tarball/
 	rsync -av dgd-for-mech4480.tgz mango:dropbox/
 
-demo: $(DEMO_PROGRAMS)
-	@echo "Source code revision string $(REVISION_STRING)"
-	@echo "Demo codes built."
-
 clean:
 	- rm *.o
 	- rm $(DEMO_PROGRAMS) $(PROGRAMS)
@@ -382,77 +375,6 @@ chemkin2eilmer:
 
 $(LIBLUA):
 	cd $(LUA_DIR); make $(PLATFORM) local
-
-globalconfig_demo: globalconfig_demo.d globalconfig.d fvcore.d \
-	$(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(LIBLUA) $(UTIL_FILES) $(NM_FILES) \
-	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-	$(NM_LUA_FILES) $(GZIP_FILES)
-	$(DMD) $(DFLAGS) $(OF)globalconfig_demo \
-		globalconfig_demo.d globalconfig.d fvcore.d \
-		$(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(GZIP_FILES) \
-		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-		$(UTIL_FILES) $(NM_FILES) $(NM_LUA_FILES) $(DLINKFLAGS)
-
-luaglobalconfig_demo: luaglobalconfig_demo.d luaglobalconfig.d globalconfig.d \
-	fvcore.d fvcell.d fvvertex.d fvinterface.d conservedquantities.d \
-	flowstate.d json_helper.d \
-	$(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(LIBLUA) $(UTIL_FILES) $(NM_FILES) \
-	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-	$(NM_LUA_FILES) $(GZIP_FILES)
-	$(DMD) $(DFLAGS) $(OF)luaglobalconfig_demo \
-		luaglobalconfig_demo.d luaglobalconfig.d globalconfig.d \
-		fvcore.d fvcell.d fvvertex.d fvinterface.d conservedquantities.d \
-		flowstate.d json_helper.d \
-		$(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(GZIP_FILES) \
-		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) \
-		$(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES) $(DLINKFLAGS)
-
-flowstate_demo: flowstate_demo.d flowstate.d \
-	fvcore.d fvcell.d fvvertex.d fvinterface.d conservedquantities.d \
-	globalconfig.d json_helper.d \
-	$(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(LIBLUA) $(UTIL_FILES) $(NM_FILES) \
-	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-	$(NM_LUA_FILES) $(GZIP_FILES)
-	$(DMD) $(DFLAGS) $(OF)flowstate_demo flowstate_demo.d \
-		fvcore.d flowstate.d fvcell.d fvvertex.d fvinterface.d \
-		conservedquantities.d globalconfig.d json_helper.d \
-		$(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(GZIP_FILES) \
-		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) \
-		$(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES) \
-		$(DLINKFLAGS)
-
-luaflowstate_demo: luaflowstate_demo.d $(EILMER_FILES) \
-	$(GEOM_FILES) $(GRID_FILES) $(BC_FILES) $(SOLID_FILES) $(GAS_FILES) \
-	$(LIBLUA) $(UTIL_FILES) $(NM_FILES) \
-	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-	$(NM_LUA_FILES) $(GZIP_FILES)
-	$(DMD) $(DFLAGS) $(OF)luaflowstate_demo luaflowstate_demo.d \
-		$(EILMER_FILES) \
-		$(GEOM_FILES) $(GRID_FILES) $(BC_FILES) $(SOLID_FILES) \
-		$(GAS_FILES) $(GZIP_FILES) \
-		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) \
-		$(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES) \
-		$(DLINKFLAGS)
-
-fv_demo: fv_demo.d $(EILMER_FILES) $(SOLID_FILES) \
-	$(BC_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
-	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-	$(UTIL_FILES) $(NM_FILES) $(NM_LUA_FILES)
-	$(DMD) $(DFLAGS) $(OF)fv_demo fv_demo.d \
-		$(EILMER_FILES) $(SOLID_FILES) \
-		$(BC_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(GZIP_FILES) \
-		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) \
-		$(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES) $(DLINKFLAGS)
-
-fluidblock_demo: fluidblock_demo.d $(EILMER_FILES) $(SOLID_FILES) \
-	$(BC_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
-	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-	$(UTIL_FILES) $(NM_FILES) $(NM_LUA_FILES)
-	$(DMD) $(DFLAGS) $(OF)block_demo block_demo.d \
-		$(EILMER_FILES) $(SOLID_FILES) \
-		$(BC_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(GZIP_FILES) \
-		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) \
-		$(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES) $(DLINKFLAGS)
 
 e4shared: main.d $(EILMER_FILES) \
 	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
