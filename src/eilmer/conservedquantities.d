@@ -17,35 +17,59 @@ import gas;
 
 class ConservedQuantities {
 public:
-    number mass;         // density, kg/m**3
-    Vector3 momentum;    // momentum/unit volume
-    Vector3 B;           // magnetic field, Tesla
-    number total_energy; // total energy
-    number[] massf;      // mass fractions of species
-    number[] energies;   // modal energies (mode 0 is usually transrotational)
-    number psi;          // divergence cleaning parameter for MHD
-    number divB;         // divergence of the magnetic field
-    number tke;          // turbulent kinetic energy
-    number omega;        // omega from k-omega turbulence model
+    number mass;           // density, kg/m**3
+    Vector3 momentum;      // momentum/unit volume
+    number total_energy;   // total energy
+    version(multi_species_gas) {
+        number[] massf;    // mass fractions of species
+    }
+    version(multi_T_gas) {
+        number[] energies; // modal energies (mode 0 is usually transrotational)
+    }
+    version(MHD) {
+        Vector3 B;         // magnetic field, Tesla
+        number psi;        // divergence cleaning parameter for MHD
+        number divB;       // divergence of the magnetic field
+    }
+    version(komega) {
+        number tke;        // turbulent kinetic energy
+        number omega;      // omega from k-omega turbulence model
+    }
 
     this(int n_species, int n_modes)
     {
-        massf.length = n_species;
-        energies.length = n_modes;
+        version(multi_species_gas) {
+            massf.length = n_species;
+        } else {
+            assert(n_species == 1, "only single-specied gas available");
+        }
+        version(multi_T_gas) {
+            energies.length = n_modes;
+        } else {
+            assert(n_modes == 0, "single-temperature gas only");
+        }
     }
 
     this(ref const(ConservedQuantities) other)
     {
         mass = other.mass;
         momentum = other.momentum;
-        B = other.B;
         total_energy = other.total_energy;
-        massf = other.massf.dup;
-        energies = other.energies.dup;
-        psi = other.psi;
-        divB = other.divB;
-        tke = other.tke;
-        omega = other.omega;
+        version(multi_species_gas) {
+            massf = other.massf.dup;
+        }
+        version(multi_T_gas) {
+            energies = other.energies.dup;
+        }
+        version(MHD) {
+            B = other.B;
+            psi = other.psi;
+            divB = other.divB;
+        }
+        version(komega) {
+            tke = other.tke;
+            omega = other.omega;
+        }
     }
 
     @nogc
@@ -53,14 +77,22 @@ public:
     {
         mass = src.mass;
         momentum.set(src.momentum);
-        B.set(src.B);
         total_energy = src.total_energy;
-        massf[] = src.massf[];
-        energies[] = src.energies[];
-        psi = src.psi;
-        divB = src.divB;
-        tke = src.tke;
-        omega = src.omega;
+        version(multi_species_gas) {
+            massf[] = src.massf[];
+        }
+        version(multi_T_gas) {
+            energies[] = src.energies[];
+        }
+        version(MHD) {
+            B.set(src.B);
+            psi = src.psi;
+            divB = src.divB;
+        }
+        version(komega) {
+            tke = src.tke;
+            omega = src.omega;
+        }
     }
 
     @nogc
@@ -68,14 +100,22 @@ public:
     {
         mass = 0.0;
         momentum.clear();
-        B.clear();
         total_energy = 0.0;
-        foreach(ref mf; massf) { mf = 0.0; }
-        foreach(ref e; energies) { e = 0.0; }
-        psi = 0.0;
-        divB = 0.0;
-        tke = 0.0;
-        omega = 0.0;
+        version(multi_species_gas) {
+            foreach(ref mf; massf) { mf = 0.0; }
+        }
+        version(multi_T_gas) {
+            foreach(ref e; energies) { e = 0.0; }
+        }
+        version(MHD) {
+            B.clear();
+            psi = 0.0;
+            divB = 0.0;
+        }
+        version(komega) {
+            tke = 0.0;
+            omega = 0.0;
+        }
     }
 
     @nogc
@@ -83,14 +123,22 @@ public:
     {
         mass += other.mass * factor;
         momentum.add(other.momentum, factor);
-        B.add(other.B, factor);
         total_energy += other.total_energy * factor;
-        foreach(i; 0 .. massf.length) { massf[i] += other.massf[i] * factor; }
-        foreach(i; 0 .. energies.length) { energies[i] += other.energies[i] * factor; }
-        psi += other.psi * factor;
-        divB += other.divB * factor;
-        tke += other.tke * factor;
-        omega += other.omega * factor;
+        version(multi_species_gas) {
+            foreach(i; 0 .. massf.length) { massf[i] += other.massf[i] * factor; }
+        }
+        version(multi_T_gas) {
+            foreach(i; 0 .. energies.length) { energies[i] += other.energies[i] * factor; }
+        }
+        version(MHD) {
+            B.add(other.B, factor);
+            psi += other.psi * factor;
+            divB += other.divB * factor;
+        }
+        version(komega) {
+            tke += other.tke * factor;
+            omega += other.omega * factor;
+        }
     }
 
     @nogc
@@ -98,14 +146,22 @@ public:
     {
         mass *= factor;
         momentum.scale(factor);
-        B.scale(factor);
         total_energy *= factor;
-        foreach(ref mf; massf) { mf *= factor; }
-        foreach(ref e; energies) { e *= factor; }
-        psi *= factor;
-        divB *= factor;
-        tke *= factor;
-        omega *= factor;
+        version(multi_species_gas) {
+            foreach(ref mf; massf) { mf *= factor; }
+        }
+        version(multi_T_gas) {
+            foreach(ref e; energies) { e *= factor; }
+        }
+        version(MHD) {
+            B.scale(factor);
+            psi *= factor;
+            divB *= factor;
+        }
+        version(komega) {
+            tke *= factor;
+            omega *= factor;
+        }
     }
 
     override string toString() const
@@ -114,14 +170,22 @@ public:
         repr ~= "ConservedQuantities(";
         repr ~= "mass=" ~ to!string(mass);
         repr ~= ", momentum=" ~ to!string(momentum);
-        repr ~= ", B=" ~ to!string(B);
         repr ~= ", total_energy=" ~ to!string(total_energy);
-        repr ~= ", massf=" ~ to!string(massf);
-        repr ~= ", energies=" ~ to!string(energies);
-        repr ~= ", psi=" ~ to!string(psi);
-        repr ~= ", divB-" ~ to!string(divB);
-        repr ~= ", tke=" ~ to!string(tke);
-        repr ~= ", omega=" ~ to!string(omega);
+        version(multi_species_gas) {
+            repr ~= ", massf=" ~ to!string(massf);
+        }
+        version(multi_T_gas) {
+            repr ~= ", energies=" ~ to!string(energies);
+        }
+        version(MHD) {
+            repr ~= ", B=" ~ to!string(B);
+            repr ~= ", psi=" ~ to!string(psi);
+            repr ~= ", divB-" ~ to!string(divB);
+        }
+        version(komega) {
+            repr ~= ", tke=" ~ to!string(tke);
+            repr ~= ", omega=" ~ to!string(omega);
+        }
         repr ~= ")";
         return to!string(repr);
     }

@@ -80,7 +80,7 @@ int main(string[] args)
     // Be careful when editing it and try to limit the line length
     // to something that is likely to easily fit on a console,
     // say 80 characters.
-    string usageMsg = "Usage: e4shared [OPTION]...
+    string usageMsg = "Usage: e4shared/e4mpi/... [OPTION]...
 Argument:                            Comment:
 --------------------------------------------------------------------------------
   --job=<string>                     file names built from this string
@@ -233,11 +233,35 @@ usageMsg ~= to!string(totalCPUs) ~" on this machine
         return exitFlag;
     }
     if (verbosityLevel > 0) {
+        if (GlobalConfig.is_master_task) {
+            writeln("Eilmer 4.0 compressible-flow simulation code.");
+            writeln("Revision: PUT_REVISION_STRING_HERE");
+            write("Capabilities:");
+            version(multi_species_gas) {
+                write(" multi-species-gas");
+            } else {
+                write(" single-species-gas");
+            }
+            version(multi_T_gas) {
+                write(" multi-temperature-gas");
+            } else {
+                write(" single-temperature-gas");
+            }
+            version(MHD) {
+                write(" MHD");
+            } else {
+                write(" no-MHD");
+            }
+            version(komega) {
+                write(" k-omega-turbulence");
+            } else {
+                write(" no-k-omega");
+            }
+            writeln(".");
+        }
         version(mpi_parallel) {
             MPI_Barrier(MPI_COMM_WORLD);
             if (GlobalConfig.is_master_task) {
-                writeln("Eilmer 4.0 compressible-flow simulation code.");
-                writeln("Revision: PUT_REVISION_STRING_HERE");
                 writefln("MPI-parallel, number of tasks %d", GlobalConfig.mpi_size);
             }
             stdout.flush();
@@ -250,8 +274,6 @@ usageMsg ~= to!string(totalCPUs) ~" on this machine
             Thread.sleep(dur!("msecs")(100));
             MPI_Barrier(MPI_COMM_WORLD);
         } else {
-            writeln("Eilmer 4.0 compressible-flow simulation code.");
-            writeln("Revision: PUT_REVISION_STRING_HERE");
             writeln("Shared-memory");
         }
     }

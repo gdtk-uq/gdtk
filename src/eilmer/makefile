@@ -32,6 +32,10 @@ DEBUG_CHEM ?= 0
 WITH_COMPLEX_NUMBERS ?= 0
 WITH_FPE ?= 0
 WITH_DVODE ?= 0
+MULTI_SPECIES_GAS ?= 1
+MULTI_T_GAS ?= 1
+MHD ?= 1
+KOMEGA ?= 1
 
 TECPLOT_BIN_DIR ?= unavailable
 TECPLOT_BIN_VERSION_STR = tecplot_unavailable
@@ -303,6 +307,22 @@ endif
 ifeq ($(WITH_DVODE),1)
     DFLAGS += $(DVERSION)with_dvode
     DLINKFLAGS += -L-lgfortran
+endif
+
+ifeq ($(MULTI_SPECIES_GAS),1)
+    DFLAGS += $(DVERSION)multi_species_gas
+endif
+
+ifeq ($(MULTI_T_GAS),1)
+    DFLAGS += $(DVERSION)multi_T_gas
+endif
+
+ifeq ($(MHD),1)
+    DFLAGS += $(DVERSION)MHD
+endif
+
+ifeq ($(KOMEGA),1)
+    DFLAGS += $(DVERSION)komega
 endif
 
 default: $(PROGRAMS)
