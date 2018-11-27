@@ -105,11 +105,13 @@ public:
         if (allocate_spatial_deriv_lsq_workspace) {
             ws_grad = new WLSQGradWorkspace();
         }
-        jx.length = n_species;
-        jy.length = n_species;
-        jz.length = n_species;
+        version(multi_species_gas) {
+            jx.length = n_species;
+            jy.length = n_species;
+            jz.length = n_species;
+        }
         version(shape_sensitivity) {
-            dFdU.length = 7; // number of conserved variables
+            dFdU.length = 7; // number of conserved variables; FIX-ME for versions
             foreach (ref a; dFdU) a.length = 7;
             foreach (i; 0..dFdU.length) {
                 foreach (j; 0..dFdU[i].length) {
@@ -149,14 +151,16 @@ public:
         // we cannot have const (or "in") qualifier on other.
         cloud_pos = other.cloud_pos.dup();
         cloud_fs = other.cloud_fs.dup();
-        jx = other.jx.dup();
-        jy = other.jy.dup();
-        jz = other.jz.dup();
+        version(multi_species_gas) {
+            jx = other.jx.dup();
+            jy = other.jy.dup();
+            jz = other.jz.dup();
+        }
         version(steadystate) {
-        dFdU_L.length = 5; // number of conserved variables
-        foreach (ref a; dFdU_L) a.length = 5;
-        dFdU_R.length = 5;
-        foreach (ref a; dFdU_R) a.length = 5;
+            dFdU_L.length = 5; // number of conserved variables; FIX-ME for versions
+            foreach (ref a; dFdU_L) a.length = 5;
+            dFdU_R.length = 5;
+            foreach (ref a; dFdU_R) a.length = 5;
         }
         q_diffusion = other.q_diffusion;
     }
@@ -380,7 +384,8 @@ public:
             if (myConfig.turbulence_model != TurbulenceModel.none) {
                 double Sc_t = myConfig.turbulence_schmidt_number;
                 number D_t; // = fs.mu_t / (fs.gas.rho * Sc_t)
-                // we would like to use the most up to date turbulent properties, so take averages of the neihgbouring cell values
+                // we would like to use the most up to date turbulent properties,
+                // so take averages of the neihgbouring cell values
                 if (left_cell && right_cell && left_cell.is_interior && right_cell.is_interior) {
                     D_t = 0.5*(left_cell.fs.mu_t+right_cell.fs.mu_t) / (fs.gas.rho * Sc_t);
                 } else if (left_cell && left_cell.is_interior) {
@@ -390,20 +395,23 @@ public:
                 } else {
                     assert(0, "Oops, don't seem to have a cell available.");
                 }
-                
-                foreach (isp; 0 .. n_species) {
-                    jx[isp] = -fs.gas.rho * D_t * grad.massf[isp][0];
-                    jy[isp] = -fs.gas.rho * D_t * grad.massf[isp][1];
-                    jz[isp] = -fs.gas.rho * D_t * grad.massf[isp][2];
+                version(multi_species_gas) {
+                    foreach (isp; 0 .. n_species) {
+                        jx[isp] = -fs.gas.rho * D_t * grad.massf[isp][0];
+                        jy[isp] = -fs.gas.rho * D_t * grad.massf[isp][1];
+                        jz[isp] = -fs.gas.rho * D_t * grad.massf[isp][2];
+                    }
                 }
             }
             else { // apply molecular diffusion instead of turbulence in laminar flows
-                if (myConfig.mass_diffusion_model != MassDiffusionModel.none) {
-                    myConfig.massDiffusion.update_mass_fluxes(fs, grad, jx, jy, jz);
-                    foreach (isp; 0 .. n_species) {
-                        jx[isp] *= viscous_factor;
-                        jy[isp] *= viscous_factor;
-                        jz[isp] *= viscous_factor;
+                version(multi_species_gas) {
+                    if (myConfig.mass_diffusion_model != MassDiffusionModel.none) {
+                        myConfig.massDiffusion.update_mass_fluxes(fs, grad, jx, jy, jz);
+                        foreach (isp; 0 .. n_species) {
+                            jx[isp] *= viscous_factor;
+                            jy[isp] *= viscous_factor;
+                            jz[isp] *= viscous_factor;
+                        }
                     }
                 }
             }
@@ -460,49 +468,53 @@ public:
             number qx = k_eff * grad.T[0];
             number qy = k_eff * grad.T[1];
             number qz = k_eff * grad.T[2];
-            if (myConfig.turbulence_model != TurbulenceModel.none ||
-                myConfig.mass_diffusion_model != MassDiffusionModel.none ) {
-                q_diffusion = to!number(0.0);
-                foreach (isp; 0 .. n_species) {
-                    number h = gmodel.enthalpy(fs.gas, cast(int)isp);
-                    qx -= jx[isp] * h;
-                    qy -= jy[isp] * h;
-                    qz -= jz[isp] * h;
-                    q_diffusion -= (jx[isp]*h*n.x + jy[isp]*h*n.y + jz[isp]*h*n.z);
+            version(multi_species_gas) {
+                if (myConfig.turbulence_model != TurbulenceModel.none ||
+                    myConfig.mass_diffusion_model != MassDiffusionModel.none ) {
+                    q_diffusion = to!number(0.0);
+                    foreach (isp; 0 .. n_species) {
+                        number h = gmodel.enthalpy(fs.gas, cast(int)isp);
+                        qx -= jx[isp] * h;
+                        qy -= jy[isp] * h;
+                        qz -= jz[isp] * h;
+                        q_diffusion -= (jx[isp]*h*n.x + jy[isp]*h*n.y + jz[isp]*h*n.z);
+                    }
+                    // [TODO] Rowan, modal enthalpies ?
                 }
-                // [TODO] Rowan, modal enthalpies ?
             }
-            number tau_kx = 0.0;
-            number tau_ky = 0.0;
-            number tau_kz = 0.0;
-            number tau_wx = 0.0;
-            number tau_wy = 0.0;
-            number tau_wz = 0.0;
-            if ( myConfig.turbulence_model == TurbulenceModel.k_omega &&
-                 !(myConfig.axisymmetric && (Ybar <= 1.0e-10)) ) {
-                // Turbulence contribution to the shear stresses.
-                tau_xx -= 2.0/3.0 * fs.gas.rho * fs.tke;
-                tau_yy -= 2.0/3.0 * fs.gas.rho * fs.tke;
-                if (myConfig.dimensions == 3) { tau_zz -= 2.0/3.0 * fs.gas.rho * fs.tke; }
-                // Turbulence contribution to heat transfer.
-                number sigma_star = 0.6;
-                number mu_effective = fs.gas.mu + sigma_star * fs.gas.rho * fs.tke / fs.omega;
-                // Apply a limit on mu_effective in the same manner as that applied to mu_t.
-                mu_effective = fmin(mu_effective, myConfig.max_mu_t_factor * fs.gas.mu);
-                qx += mu_effective * grad.tke[0];
-                qy += mu_effective * grad.tke[1];
-                if (myConfig.dimensions == 3) { qz += mu_effective * grad.tke[2]; }
-                // Turbulence transport of the turbulence properties themselves.
-                tau_kx = mu_effective * grad.tke[0]; 
-                tau_ky = mu_effective * grad.tke[1];
-                if (myConfig.dimensions == 3) { tau_kz = mu_effective * grad.tke[2]; }
-                number sigma = 0.5;
-                mu_effective = fs.gas.mu + sigma * fs.gas.rho * fs.tke / fs.omega;
-                // Apply a limit on mu_effective in the same manner as that applied to mu_t.
-                mu_effective = fmin(mu_effective, myConfig.max_mu_t_factor * fs.gas.mu);
-                tau_wx = mu_effective * grad.omega[0]; 
-                tau_wy = mu_effective * grad.omega[1]; 
-                if (myConfig.dimensions == 3) { tau_wz = mu_effective * grad.omega[2]; } 
+            version(komega) {
+                number tau_kx = 0.0;
+                number tau_ky = 0.0;
+                number tau_kz = 0.0;
+                number tau_wx = 0.0;
+                number tau_wy = 0.0;
+                number tau_wz = 0.0;
+                if ( myConfig.turbulence_model == TurbulenceModel.k_omega &&
+                     !(myConfig.axisymmetric && (Ybar <= 1.0e-10)) ) {
+                    // Turbulence contribution to the shear stresses.
+                    tau_xx -= 2.0/3.0 * fs.gas.rho * fs.tke;
+                    tau_yy -= 2.0/3.0 * fs.gas.rho * fs.tke;
+                    if (myConfig.dimensions == 3) { tau_zz -= 2.0/3.0 * fs.gas.rho * fs.tke; }
+                    // Turbulence contribution to heat transfer.
+                    number sigma_star = 0.6;
+                    number mu_effective = fs.gas.mu + sigma_star * fs.gas.rho * fs.tke / fs.omega;
+                    // Apply a limit on mu_effective in the same manner as that applied to mu_t.
+                    mu_effective = fmin(mu_effective, myConfig.max_mu_t_factor * fs.gas.mu);
+                    qx += mu_effective * grad.tke[0];
+                    qy += mu_effective * grad.tke[1];
+                    if (myConfig.dimensions == 3) { qz += mu_effective * grad.tke[2]; }
+                    // Turbulence transport of the turbulence properties themselves.
+                    tau_kx = mu_effective * grad.tke[0]; 
+                    tau_ky = mu_effective * grad.tke[1];
+                    if (myConfig.dimensions == 3) { tau_kz = mu_effective * grad.tke[2]; }
+                    number sigma = 0.5;
+                    mu_effective = fs.gas.mu + sigma * fs.gas.rho * fs.tke / fs.omega;
+                    // Apply a limit on mu_effective in the same manner as that applied to mu_t.
+                    mu_effective = fmin(mu_effective, myConfig.max_mu_t_factor * fs.gas.mu);
+                    tau_wx = mu_effective * grad.omega[0]; 
+                    tau_wy = mu_effective * grad.omega[1]; 
+                    if (myConfig.dimensions == 3) { tau_wz = mu_effective * grad.omega[2]; } 
+                }
             }
             // Apply limits to the component values.
             tau_xx = copysign(fmin(fabs(tau_xx),shear_stress_limit), tau_xx);
@@ -543,15 +555,21 @@ public:
                     (tau_xy*fs.vel.x + tau_yy*fs.vel.y + tau_yz*fs.vel.z + qy)*ny +
                     (tau_xz*fs.vel.x + tau_yz*fs.vel.y + tau_zz*fs.vel.z + qz)*nz;
             } // end if
-            // [TODO] Rowan, Modal energy flux?
-            if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                F.tke -= tau_kx * nx + tau_ky * ny + tau_kz * nz;
-                F.omega -= tau_wx * nx + tau_wy * ny + tau_wz * nz;
+            version(multi_T_gas) {
+                // [TODO] Rowan, Modal energy flux?
             }
-            if (myConfig.turbulence_model != TurbulenceModel.none ||
-                myConfig.mass_diffusion_model != MassDiffusionModel.none) {
-                foreach (isp; 0 .. n_species) {
-                    F.massf[isp] += jx[isp]*nx + jy[isp]*ny + jz[isp]*nz;
+            version(komega) {
+                if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
+                    F.tke -= tau_kx * nx + tau_ky * ny + tau_kz * nz;
+                    F.omega -= tau_wx * nx + tau_wy * ny + tau_wz * nz;
+                }
+            }
+            version(multi_species_gas) {
+                if (myConfig.turbulence_model != TurbulenceModel.none ||
+                    myConfig.mass_diffusion_model != MassDiffusionModel.none) {
+                    foreach (isp; 0 .. n_species) {
+                        F.massf[isp] += jx[isp]*nx + jy[isp]*ny + jz[isp]*nz;
+                    }
                 }
             }
         } // end of viscous-flux calculation with gradients from many points
@@ -642,17 +660,23 @@ public:
                 F.momentum.refz -= tau_z;
                 F.total_energy -= qn;
             } // end if (use_wall_function_shear_and_heat_flux)
-            // [TODO] Rowan, Modal energy flux?
-            if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                number tau_kn = 0.0; // [TODO] PJ, 2018-05-05, talk to Wilson
-                number tau_wn = 0.0;
-                F.tke -= tau_kn;
-                F.omega -= tau_wn;
+            version(multi_T_gas) {
+                // [TODO] Rowan, Modal energy flux?
             }
-            if (myConfig.turbulence_model != TurbulenceModel.none ||
-                myConfig.mass_diffusion_model != MassDiffusionModel.none) {
-                // Mass diffusion done separately.
-                assert(0, "Oops, not implemented.");
+            version(komega) {
+                if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
+                    number tau_kn = 0.0; // [TODO] PJ, 2018-05-05, talk to Wilson
+                    number tau_wn = 0.0;
+                    F.tke -= tau_kn;
+                    F.omega -= tau_wn;
+                }
+            }
+            version(multi_species_gas) {
+                if (myConfig.turbulence_model != TurbulenceModel.none ||
+                    myConfig.mass_diffusion_model != MassDiffusionModel.none) {
+                    // Mass diffusion done separately.
+                    assert(0, "Oops, not implemented.");
+                }
             }
         } // end of viscous-flux calculation with gradients from two points
     } // end viscous_flux_calc()

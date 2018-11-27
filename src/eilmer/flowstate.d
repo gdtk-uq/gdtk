@@ -31,11 +31,15 @@ class FlowState {
 public:
     GasState gas;  // gas state
     Vector3 vel;   // flow velocity, m/s
-    Vector3 B;     // magnetic field strength
-    number psi;    // divergence cleaning parameter
-    number divB;   // divergence of the magnetic field
-    number tke;    // turbulent kinetic energy 0.5(u'^2+v'^2+w'^2)
-    number omega;  // turbulence 'frequency' in k-omega model
+    version(MHD) {
+        Vector3 B;     // magnetic field strength
+        number psi;    // divergence cleaning parameter
+        number divB;   // divergence of the magnetic field
+    }
+    version(komega) {
+        number tke;    // turbulent kinetic energy 0.5(u'^2+v'^2+w'^2)
+        number omega;  // turbulence 'frequency' in k-omega model
+    }
     number mu_t;   // turbulence viscosity
     number k_t;    // turbulence thermal-conductivity
     int S;         // shock indicator, value 0 or 1
@@ -56,11 +60,15 @@ public:
         gas = new GasState(gm, p_init, T_init, T_modes_init,
                            massf_init, quality_init);
         vel = vel_init;
-        B = B_init;
-        psi = psi_init;
-        divB = divB_init;
-        tke = tke_init;
-        omega = omega_init;
+        version(MHD) {
+            B = B_init;
+            psi = psi_init;
+            divB = divB_init;
+        }
+        version(komega) {
+            tke = tke_init;
+            omega = omega_init;
+        }
         mu_t = mu_t_init;
         k_t = k_t_init;
         S = S_init;
@@ -71,11 +79,15 @@ public:
         gas = new GasState(gm);
         gas.copy_values_from(other.gas);
         vel = other.vel;
-        B = other.B;
-        psi = other.psi;
-        divB = other.divB;
-        tke = other.tke;
-        omega = other.omega;
+        version(MHD) {
+            B = other.B;
+            psi = other.psi;
+            divB = other.divB;
+        }
+        version(komega) {
+            tke = other.tke;
+            omega = other.omega;
+        }
         mu_t = other.mu_t;
         k_t = other.k_t;
         S = other.S;
@@ -87,11 +99,15 @@ public:
                            to!int(other.gas.T_modes.length));
         gas.copy_values_from(other.gas);
         vel.set(other.vel);
-        B.set(other.B);
-        psi = other.psi;
-        divB = other.divB;
-        tke = other.tke;
-        omega = other.omega;
+        version(MHD) {
+            B.set(other.B);
+            psi = other.psi;
+            divB = other.divB;
+        }
+        version(komega) {
+            tke = other.tke;
+            omega = other.omega;
+        }
         mu_t = other.mu_t;
         k_t = other.k_t;
         S = other.S;
@@ -101,11 +117,15 @@ public:
     {
         gas = new GasState(gm, 100.0e3, 300.0, [1.0,], 1.0); 
         vel.set(0.0,0.0,0.0);
-        B.set(0.0,0.0,0.0);
-        psi = 0.0;
-        divB = 0.0;
-        tke = 0.0;
-        omega = 1.0;
+        version(MHD) {
+            B.set(0.0,0.0,0.0);
+            psi = 0.0;
+            divB = 0.0;
+        }
+        version(komega) {
+            tke = 0.0;
+            omega = 1.0;
+        }
         mu_t = 0.0;
         k_t = 0.0;
         S = 0;
@@ -116,23 +136,32 @@ public:
         double p = getJSONdouble(json_data, "p", 100.0e3);
         double T = getJSONdouble(json_data, "T", 300.0e3);
         double[] T_modes;
-        foreach(i; 0 .. gm.n_modes) { T_modes ~= T; }
-        T_modes = getJSONdoublearray(json_data, "T_modes", []);
-        double[] massf = getJSONdoublearray(json_data, "massf", [1.0,]);
+        version(multi_T_gas) {
+            foreach(i; 0 .. gm.n_modes) { T_modes ~= T; }
+            T_modes = getJSONdoublearray(json_data, "T_modes", []);
+        }
+        double[] massf;
+        version(multi_species_gas) {
+            massf = getJSONdoublearray(json_data, "massf", [1.0,]);
+        }
         double quality = getJSONdouble(json_data, "quality", 1.0);
         gas = new GasState(gm, p, T, T_modes, massf, quality);
         double velx = getJSONdouble(json_data, "velx", 0.0);
         double vely = getJSONdouble(json_data, "vely", 0.0);
         double velz = getJSONdouble(json_data, "velz", 0.0);
         vel.set(velx,vely,velz);
-        double Bx = getJSONdouble(json_data, "Bx", 0.0);
-        double By = getJSONdouble(json_data, "By", 0.0);
-        double Bz = getJSONdouble(json_data, "Bz", 0.0);
-        B.set(Bx,By,Bz);
-        psi = getJSONdouble(json_data, "psi", 0.0);
-        divB = getJSONdouble(json_data, "divB", 0.0);
-        tke = getJSONdouble(json_data, "tke", 0.0);
-        omega = getJSONdouble(json_data, "omega", 1.0);
+        version(MHD) {
+            double Bx = getJSONdouble(json_data, "Bx", 0.0);
+            double By = getJSONdouble(json_data, "By", 0.0);
+            double Bz = getJSONdouble(json_data, "Bz", 0.0);
+            B.set(Bx,By,Bz);
+            psi = getJSONdouble(json_data, "psi", 0.0);
+            divB = getJSONdouble(json_data, "divB", 0.0);
+        }
+        version(komega) {
+            tke = getJSONdouble(json_data, "tke", 0.0);
+            omega = getJSONdouble(json_data, "omega", 1.0);
+        }
         mu_t = getJSONdouble(json_data, "mu_t", 0.0);
         k_t = getJSONdouble(json_data, "k_t", 0.0);
         S = getJSONint(json_data, "S", 0);
@@ -150,11 +179,15 @@ public:
     {
         gas.copy_values_from(other.gas);
         vel.set(other.vel);
-        B.set(other.B);
-        psi = other.psi;
-        divB = other.divB;
-        tke = other.tke;
-        omega = other.omega;
+        version(MHD) {
+            B.set(other.B);
+            psi = other.psi;
+            divB = other.divB;
+        }
+        version(komega) {
+            tke = other.tke;
+            omega = other.omega;
+        }
         mu_t = other.mu_t;
         k_t = other.k_t;
         S = other.S;
@@ -168,13 +201,17 @@ public:
         vel.set(0.5*(fs0.vel.x + fs1.vel.x),
                 0.5*(fs0.vel.y + fs1.vel.y),
                 0.5*(fs0.vel.z + fs1.vel.z));
-        B.set(0.5*(fs0.B.x + fs1.B.x),
-              0.5*(fs0.B.y + fs1.B.y),
-              0.5*(fs0.B.z + fs1.B.z));
-        psi = 0.5 * (fs0.psi + fs1.psi);
-        divB = 0.5 * (fs0.divB + fs1.divB);
-        tke = 0.5 * (fs0.tke + fs1.tke);
-        omega = 0.5 * (fs0.omega + fs1.omega);
+        version(MHD) {
+            B.set(0.5*(fs0.B.x + fs1.B.x),
+                  0.5*(fs0.B.y + fs1.B.y),
+                  0.5*(fs0.B.z + fs1.B.z));
+            psi = 0.5 * (fs0.psi + fs1.psi);
+            divB = 0.5 * (fs0.divB + fs1.divB);
+        }
+        version(komega) {
+            tke = 0.5 * (fs0.tke + fs1.tke);
+            omega = 0.5 * (fs0.omega + fs1.omega);
+        }
         mu_t = 0.5 * (fs0.mu_t + fs1.mu_t);
         k_t = 0.5 * (fs0.k_t + fs1.k_t);
     } // end copy_average_values_from()
@@ -197,32 +234,44 @@ public:
         gas.copy_average_values_from(gasList, gm);
         // Accumulate from a clean slate and then divide.
         vel.clear();
-        B.clear();
-        psi = 0.0;
-        divB = 0.0;
-        tke = 0.0;
-        omega = 0.0;
+        version(MHD) {
+            B.clear();
+            psi = 0.0;
+            divB = 0.0;
+        }
+        version(komega) {
+            tke = 0.0;
+            omega = 0.0;
+        }
         mu_t = 0.0;
         k_t = 0.0;
         S = 0; // Remember that shock detector is an integer flag.
         foreach(other; others) {
             vel.refx += other.vel.x; vel.refy += other.vel.y; vel.refz += other.vel.z;
-            B.refx += other.B.x; B.refy += other.B.y; B.refz += other.B.z;
-            psi += other.psi;
-            divB += other.divB;
-            tke += other.tke;
-            omega += other.omega;
+            version(MHD) {
+                B.refx += other.B.x; B.refy += other.B.y; B.refz += other.B.z;
+                psi += other.psi;
+                divB += other.divB;
+            }
+            version(komega) {
+                tke += other.tke;
+                omega += other.omega;
+            }
             mu_t += other.mu_t;
             k_t += other.k_t;
             S += other.S;
         }
         number scale = 1.0/to!number(n);
         vel *= scale;
-        B *= scale;
-        psi *= scale;
-        divB *= scale;
-        tke *= scale;
-        omega *= scale;
+        version(MHD) {
+            B *= scale;
+            psi *= scale;
+            divB *= scale;
+        }
+        version(komega) {
+            tke *= scale;
+            omega *= scale;
+        }
         mu_t *= scale;
         k_t *= scale;
         S = (S > 0) ? 1 : 0;
@@ -234,11 +283,15 @@ public:
         repr ~= "FlowState(";
         repr ~= "gas=" ~ to!string(gas);
         repr ~= ", vel=" ~ to!string(vel);
-        repr ~= ", B=" ~ to!string(B);
-        repr ~= ", psi=" ~ to!string(psi);
-        repr ~= ", divB=" ~ to!string(psi);
-        repr ~= ", tke=" ~ to!string(tke);
-        repr ~= ", omega=" ~ to!string(omega);
+        version(MHD) {
+            repr ~= ", B=" ~ to!string(B);
+            repr ~= ", psi=" ~ to!string(psi);
+            repr ~= ", divB=" ~ to!string(psi);
+        }
+        version(komega) {
+            repr ~= ", tke=" ~ to!string(tke);
+            repr ~= ", omega=" ~ to!string(omega);
+        }
         repr ~= ", mu_t=" ~ to!string(mu_t);
         repr ~= ", k_t=" ~ to!string(k_t);
         repr ~= ", S=" ~ to!string(S);
@@ -252,28 +305,36 @@ public:
         formattedWrite(writer, "{");
         formattedWrite(writer, "\"p\": %.18e", gas.p.re);
         formattedWrite(writer, ", \"T\": %.18e", gas.T.re);
-        // zero or more T_modes
-        formattedWrite(writer, ", \"T_modes\": [");
-        if (gas.T_modes.length > 0) { formattedWrite(writer, " %.18e", gas.T_modes[0].re); }
-        foreach (i; 1 .. gas.T_modes.length) { formattedWrite(writer, ", %.18e", gas.T_modes[i].re); }
-        // one or more mass fractions
-        formattedWrite(writer, "]");
-        formattedWrite(writer, ", \"massf\": [ %.18e", gas.massf[0].re);
-        foreach (i; 1 .. gas.massf.length) {
-            formattedWrite(writer, ", %.18e", gas.massf[i].re);
+        version(multi_T_gas) {
+            // zero or more T_modes
+            formattedWrite(writer, ", \"T_modes\": [");
+            if (gas.T_modes.length > 0) { formattedWrite(writer, " %.18e", gas.T_modes[0].re); }
+            foreach (i; 1 .. gas.T_modes.length) { formattedWrite(writer, ", %.18e", gas.T_modes[i].re); }
         }
-        formattedWrite(writer, "]");
+        version(multi_species_gas) {
+            // one or more mass fractions
+            formattedWrite(writer, "]");
+            formattedWrite(writer, ", \"massf\": [ %.18e", gas.massf[0].re);
+            foreach (i; 1 .. gas.massf.length) {
+                formattedWrite(writer, ", %.18e", gas.massf[i].re);
+            }
+            formattedWrite(writer, "]");
+        }
         formattedWrite(writer, ", \"quality\": %.18e", gas.quality.re);
         formattedWrite(writer, ", \"velx\": %.18e", vel.x.re);
         formattedWrite(writer, ", \"vely\": %.18e", vel.y.re);
         formattedWrite(writer, ", \"velz\": %.18e", vel.z.re);
-        formattedWrite(writer, ", \"Bx\": %.18e", B.x.re);
-        formattedWrite(writer, ", \"By\": %.18e", B.y.re);
-        formattedWrite(writer, ", \"Bz\": %.18e", B.z.re);
-        formattedWrite(writer, ", \"psi\": %.18e", psi.re);
-        formattedWrite(writer, ", \"divB\": %.18e", divB.re);
-        formattedWrite(writer, ", \"tke\": %.18e", tke.re);
-        formattedWrite(writer, ", \"omega\": %.18e", omega.re);
+        version(MHD) {
+            formattedWrite(writer, ", \"Bx\": %.18e", B.x.re);
+            formattedWrite(writer, ", \"By\": %.18e", B.y.re);
+            formattedWrite(writer, ", \"Bz\": %.18e", B.z.re);
+            formattedWrite(writer, ", \"psi\": %.18e", psi.re);
+            formattedWrite(writer, ", \"divB\": %.18e", divB.re);
+        }
+        version(komega) {
+            formattedWrite(writer, ", \"tke\": %.18e", tke.re);
+            formattedWrite(writer, ", \"omega\": %.18e", omega.re);
+        }
         formattedWrite(writer, ", \"mu_t\": %.18e", mu_t.re);
         formattedWrite(writer, ", \"k_t\": %.18e", k_t.re);
         formattedWrite(writer, ", \"S\": %d", S);
@@ -291,18 +352,6 @@ public:
             debug { writeln("Velocity too high ", vel); }
             is_data_valid = false;
         }
-        if (!isFinite(tke.re)) {
-            debug { writeln("Turbulence KE invalid number ", tke); }
-            is_data_valid = false;
-        }
-        if (tke < flowstate_limits.min_tke) {
-            debug { writeln("Turbulence KE below minimum ", tke); }
-            is_data_valid = false;
-        }
-        if (tke > flowstate_limits.max_tke) {
-            debug { writeln("Turbulence KE above maximum ", tke); }
-            is_data_valid = false;
-        }
         if (gas.T < flowstate_limits.min_temp) {
             debug { writeln("Temperature below minimum ", gas.T); }
             is_data_valid = false;
@@ -311,13 +360,27 @@ public:
             debug { writeln("Temperature above maximum ", gas.T); }
             is_data_valid = false;
         }
-        if (!isFinite(omega.re)) {
-            debug { writeln("Turbulence frequency invalid number ", omega); }
-            is_data_valid = false;
-        }
-        if (omega <= 0.0) {
-            debug { writeln("Turbulence frequency nonpositive ", omega); }
-            is_data_valid = false;
+        version(komega) {
+            if (!isFinite(tke.re)) {
+                debug { writeln("Turbulence KE invalid number ", tke); }
+                is_data_valid = false;
+            }
+            if (tke < flowstate_limits.min_tke) {
+                debug { writeln("Turbulence KE below minimum ", tke); }
+                is_data_valid = false;
+            }
+            if (tke > flowstate_limits.max_tke) {
+                debug { writeln("Turbulence KE above maximum ", tke); }
+                is_data_valid = false;
+            }
+            if (!isFinite(omega.re)) {
+                debug { writeln("Turbulence frequency invalid number ", omega); }
+                is_data_valid = false;
+            }
+            if (omega <= 0.0) {
+                debug { writeln("Turbulence frequency nonpositive ", omega); }
+                is_data_valid = false;
+            }
         }
         if (!is_data_valid) {
             debug { writeln("   at position ", pos); }
@@ -329,7 +392,9 @@ public:
     void reorient_vector_quantities(const(double[]) Rmatrix)
     {
         vel.apply_matrix_transform(Rmatrix);
-        B.apply_matrix_transform(Rmatrix);
+        version(MHD) {
+            B.apply_matrix_transform(Rmatrix);
+        }
     }
 } // end class FlowState
  

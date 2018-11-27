@@ -61,8 +61,10 @@ void diffuseWallBCsIntoBlock(FluidBlock blk, int nPasses, double Twall)
                 }
                 cell.fs.vel.set(face.fs.vel);
                 if (cell.in_turbulent_zone) {
-                    cell.fs.tke = face.fs.tke;
-                    cell.fs.omega = face.fs.omega;
+                    version(komega) {
+                        cell.fs.tke = face.fs.tke;
+                        cell.fs.omega = face.fs.omega;
+                    }
                     cell.fs.mu_t = face.fs.mu_t;
                     cell.fs.k_t = face.fs.k_t;
                 }
@@ -108,8 +110,10 @@ void diffuseWallBCsIntoBlock(FluidBlock blk, int nPasses, double Twall)
             number velx_avg = 0.0;
             number vely_avg = 0.0;
             number velz_avg = 0.0;
-            number tke_avg = 0.0;
-            number omega_avg = 0.0;
+            version(komega) {
+                number tke_avg = 0.0;
+                number omega_avg = 0.0;
+            }
             number mu_t_avg = 0.0;
             number k_t_avg = 0.0;
             foreach (face; cell.iface) {
@@ -121,8 +125,10 @@ void diffuseWallBCsIntoBlock(FluidBlock blk, int nPasses, double Twall)
                     velx_avg += face.right_cell.fs.vel.x;
                     vely_avg += face.right_cell.fs.vel.y;
                     velz_avg += face.right_cell.fs.vel.z;
-                    tke_avg += face.right_cell.fs.tke;
-                    omega_avg += face.right_cell.fs.omega;
+                    version(komega) {
+                        tke_avg += face.right_cell.fs.tke;
+                        omega_avg += face.right_cell.fs.omega;
+                    }
                     mu_t_avg += face.right_cell.fs.mu_t;
                     k_t_avg += face.right_cell.fs.k_t;
                 }
@@ -133,8 +139,10 @@ void diffuseWallBCsIntoBlock(FluidBlock blk, int nPasses, double Twall)
                     velx_avg += face.left_cell.fs.vel.x;
                     vely_avg += face.left_cell.fs.vel.y;
                     velz_avg += face.left_cell.fs.vel.z;
-                    tke_avg += face.left_cell.fs.tke;
-                    omega_avg += face.left_cell.fs.omega;
+                    version(komega) {
+                        tke_avg += face.left_cell.fs.tke;
+                        omega_avg += face.left_cell.fs.omega;
+                    }
                     mu_t_avg += face.left_cell.fs.mu_t;
                     k_t_avg += face.left_cell.fs.k_t;
                 }
@@ -145,8 +153,10 @@ void diffuseWallBCsIntoBlock(FluidBlock blk, int nPasses, double Twall)
             cell.fs.vel.refy = vely_avg / nNbrCells;
             cell.fs.vel.refz = velz_avg / nNbrCells;
             if (cell.in_turbulent_zone) {
-                cell.fs.tke = tke_avg / nNbrCells;
-                cell.fs.omega = omega_avg / nNbrCells;
+                version(komega) {
+                    cell.fs.tke = tke_avg / nNbrCells;
+                    cell.fs.omega = omega_avg / nNbrCells;
+                }
                 cell.fs.mu_t = mu_t_avg / nNbrCells;
                 cell.fs.k_t = k_t_avg / nNbrCells;
             }

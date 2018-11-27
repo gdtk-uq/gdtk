@@ -123,43 +123,45 @@ class FicksFirstLaw : MassDiffusion {
             }
         }
     }
-    @nogc
-    void update_mass_fluxes(FlowState fs, const FlowGradients grad,
-                            number[] jx, number[] jy, number[] jz)
-    {
-        _gmodel.massf2molef(fs.gas, _molef);
-        if (_withConstantLewisNumber) {
-            number Cp = _gmodel.Cp(fs.gas);
-            number alpha = fs.gas.k/(fs.gas.rho*Cp);
-            foreach (isp; 0 .. _nsp) _D_avg[isp] = alpha/_Le;
-        }
-        else {
-            if (!_withSpeciesSpecificLewisNumbers)
-                computeBinaryDiffCoeffs(fs.gas.T, fs.gas.p);
-            computeAvgDiffCoeffs(fs.gas);
-        }
-        foreach (isp; 0 .. _nsp) {
-            jx[isp] = -fs.gas.rho * _D_avg[isp] * grad.massf[isp][0];
-            jy[isp] = -fs.gas.rho * _D_avg[isp] * grad.massf[isp][1];
-            jz[isp] = -fs.gas.rho * _D_avg[isp] * grad.massf[isp][2];
-        }
-        if (_withMassFluxCorrection) {
-            // Correction as suggested by Sutton and Gnoffo, 1998  
-            number sum_x = 0.0;
-            number sum_y = 0.0;
-            number sum_z = 0.0;
-            foreach (isp; 0 .. _nsp) {
-                sum_x += jx[isp];
-                sum_y += jy[isp];
-                sum_z += jz[isp];
-            }
-            foreach (isp; 0 .. _nsp) {
-                jx[isp] = jx[isp] - fs.gas.massf[isp] * sum_x;
-                jy[isp] = jy[isp] - fs.gas.massf[isp] * sum_y;
-                jz[isp] = jz[isp] - fs.gas.massf[isp] * sum_z;
-            }
-        }
 
+    version(multi_species_gas) {
+        @nogc
+            void update_mass_fluxes(FlowState fs, const FlowGradients grad,
+                                    number[] jx, number[] jy, number[] jz)
+        {
+            _gmodel.massf2molef(fs.gas, _molef);
+            if (_withConstantLewisNumber) {
+                number Cp = _gmodel.Cp(fs.gas);
+                number alpha = fs.gas.k/(fs.gas.rho*Cp);
+                foreach (isp; 0 .. _nsp) _D_avg[isp] = alpha/_Le;
+            }
+            else {
+                if (!_withSpeciesSpecificLewisNumbers)
+                    computeBinaryDiffCoeffs(fs.gas.T, fs.gas.p);
+                computeAvgDiffCoeffs(fs.gas);
+            }
+            foreach (isp; 0 .. _nsp) {
+                jx[isp] = -fs.gas.rho * _D_avg[isp] * grad.massf[isp][0];
+                jy[isp] = -fs.gas.rho * _D_avg[isp] * grad.massf[isp][1];
+                jz[isp] = -fs.gas.rho * _D_avg[isp] * grad.massf[isp][2];
+            }
+            if (_withMassFluxCorrection) {
+                // Correction as suggested by Sutton and Gnoffo, 1998  
+                number sum_x = 0.0;
+                number sum_y = 0.0;
+                number sum_z = 0.0;
+                foreach (isp; 0 .. _nsp) {
+                    sum_x += jx[isp];
+                    sum_y += jy[isp];
+                    sum_z += jz[isp];
+                }
+                foreach (isp; 0 .. _nsp) {
+                    jx[isp] = jx[isp] - fs.gas.massf[isp] * sum_x;
+                    jy[isp] = jy[isp] - fs.gas.massf[isp] * sum_y;
+                    jz[isp] = jz[isp] - fs.gas.massf[isp] * sum_z;
+                }
+            }
+        } // end update_mass_fluxes()
     }
 
 private:

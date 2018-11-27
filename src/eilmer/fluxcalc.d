@@ -50,10 +50,12 @@ void compute_interface_flux(ref FlowState Lft, ref FlowState Rght, ref FVInterfa
     IFace.gvel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
     Lft.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
     Rght.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
-    // Also transform the magnetic field
-    if (myConfig.MHD) {
-        Lft.B.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
-        Rght.B.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
+    version(MHD) {
+        // Also transform the magnetic field
+        if (myConfig.MHD) {
+            Lft.B.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
+            Rght.B.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
+        }
     }
     // Compute the fluxes in the local frame of the interface.
     final switch (myConfig.flux_calculator) {
@@ -86,17 +88,17 @@ void compute_interface_flux(ref FlowState Lft, ref FlowState Rght, ref FVInterfa
         break;
     } // end switch
     ConservedQuantities F = IFace.F;
-
-    // Adjustment of the magnetic field flux and associated parameter psi as per Dedner et al.
-    if (myConfig.MHD) {
-        F.divB = 0.5 * (Rght.B.x - Lft.B.x);
-        if (myConfig.divergence_cleaning) {
-            F.B.refx += Lft.psi + 0.5 * (Rght.psi - Lft.psi) - (myConfig.c_h / 2.0) * (Rght.B.x - Lft.B.x);
-            F.psi += (Lft.B.x + 0.5 * (Rght.B.x - Lft.B.x) - (1.0 / (2.0 * myConfig.c_h)) *
-                      (Rght.psi - Lft.psi)) * myConfig.c_h * myConfig.c_h;
+    version(MHD) {
+        // Adjustment of the magnetic field flux and associated parameter psi as per Dedner et al.
+        if (myConfig.MHD) {
+            F.divB = 0.5 * (Rght.B.x - Lft.B.x);
+            if (myConfig.divergence_cleaning) {
+                F.B.refx += Lft.psi + 0.5 * (Rght.psi - Lft.psi) - (myConfig.c_h / 2.0) * (Rght.B.x - Lft.B.x);
+                F.psi += (Lft.B.x + 0.5 * (Rght.B.x - Lft.B.x) - (1.0 / (2.0 * myConfig.c_h)) *
+                          (Rght.psi - Lft.psi)) * myConfig.c_h * myConfig.c_h;
+            }
         }
     }
-
     if (omegaz != 0.0) {
         // Rotating frame.
         number x = IFace.pos.x;
@@ -119,7 +121,9 @@ void compute_interface_flux(ref FlowState Lft, ref FlowState Rght, ref FVInterfa
     F.momentum.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
     // Also, transform the interface (grid) velocity and magnetic field.
     IFace.gvel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
-    if (myConfig.MHD) { F.B.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2); }
+    version(MHD) {
+        if (myConfig.MHD) { F.B.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2); }
+    }
     return;
 } // end compute_interface_flux()
 
@@ -130,8 +134,10 @@ void compute_flux_at_left_wall(ref FlowState Rght, ref FVInterface IFace,
     // Transform to interface frame of reference.
     IFace.gvel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
     Rght.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
-    // Also transform the magnetic field
-    if (myConfig.MHD) { Rght.B.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2); }
+    version(MHD) {
+        // Also transform the magnetic field
+        if (myConfig.MHD) { Rght.B.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2); }
+    }
     // Compute the fluxes in the local frame of the interface,
     // presuming that there is a right-running wave which processes the gas
     // from the initial right-flow-state to that at the wall.
@@ -153,20 +159,30 @@ void compute_flux_at_left_wall(ref FlowState Rght, ref FVInterface IFace,
     F.mass = 0.0;
     F.momentum.set(pstar, to!number(0.0), to!number(0.0));
     F.total_energy = pstar * vstar;
-    foreach (i; 0 .. F.massf.length) { F.massf[i] = 0.0; }
-    foreach (i; 0 .. F.energies.length) { F.energies[i] = 0.0; }
-    F.tke = 0.0;
-    F.omega = 0.0;
-    // [TODO] magnetic field.
-    F.B.set(0.0, 0.0, 0.0);
-    F.psi = 0.0;
-    F.divB = 0.0;
+    version(multi_species_gas) {
+        foreach (i; 0 .. F.massf.length) { F.massf[i] = 0.0; }
+    }
+    version(multi_T_gas) {
+        foreach (i; 0 .. F.energies.length) { F.energies[i] = 0.0; }
+    }
+    version(komega) {
+        F.tke = 0.0;
+        F.omega = 0.0;
+    }
+    version(MHD) {
+        // [TODO] magnetic field.
+        F.B.set(0.0, 0.0, 0.0);
+        F.psi = 0.0;
+        F.divB = 0.0;
+    }
     // Rotate back to the global frame of reference.
     F.momentum.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
     // Also, transform the interface (grid) velocity
     IFace.gvel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
-    // and transform the magnetic field
-    if (myConfig.MHD) { F.B.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2); }
+    version(MHD) {
+        // and transform the magnetic field
+        if (myConfig.MHD) { F.B.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2); }
+    }
     return;
 } // end compute_flux_at_left_wall()
 
@@ -177,8 +193,10 @@ void compute_flux_at_right_wall(ref FlowState Lft, ref FVInterface IFace,
     // Transform to interface frame of reference.
     IFace.gvel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
     Lft.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
-    // Also transform the magnetic field
-    if (myConfig.MHD) { Lft.B.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2); }
+    version(MHD) {
+        // Also transform the magnetic field
+        if (myConfig.MHD) { Lft.B.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2); }
+    }
     // Compute the fluxes in the local frame of the interface,
     // presuming that there is a right-running wave which processes the gas
     // from the initial right-flow-state to that at the wall.
@@ -200,20 +218,30 @@ void compute_flux_at_right_wall(ref FlowState Lft, ref FVInterface IFace,
     F.mass = 0.0;
     F.momentum.set(pstar, to!number(0.0), to!number(0.0));
     F.total_energy = pstar * vstar;
-    foreach (i; 0 .. F.massf.length) { F.massf[i] = 0.0; }
-    foreach (i; 0 .. F.energies.length) { F.energies[i] = 0.0; }
-    F.tke = 0.0;
-    F.omega = 0.0;
-    // [TODO] magnetic field.
-    F.B.set(0.0, 0.0, 0.0);
-    F.psi = 0.0;
-    F.divB = 0.0;
+    version(multi_species_gas) {
+        foreach (i; 0 .. F.massf.length) { F.massf[i] = 0.0; }
+    }
+    version(multi_T_gas) {
+        foreach (i; 0 .. F.energies.length) { F.energies[i] = 0.0; }
+    }
+    version(komega) {
+        F.tke = 0.0;
+        F.omega = 0.0;
+    }
+    version(MHD) {
+        // [TODO] magnetic field.
+        F.B.set(0.0, 0.0, 0.0);
+        F.psi = 0.0;
+        F.divB = 0.0;
+    }
     // Rotate back to the global frame of reference.
     F.momentum.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
     // Also, transform the interface (grid) velocity
     IFace.gvel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
-    // and transform the magnetic field
-    if (myConfig.MHD) { F.B.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2); }
+    version(MHD) {
+        // and transform the magnetic field
+        if (myConfig.MHD) { F.B.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2); }
+    }
     return;
 } // end  compute_flux_at_right_wall()
 
@@ -232,11 +260,18 @@ void set_flux_vector_in_local_frame(ref ConservedQuantities F, ref FlowState fs,
     // Fluxes (quantity / unit time / unit area)
     F.mass = rho * vn; // The mass flux is relative to the moving interface.
     F.momentum.set(F.mass*vn + p, F.mass*vt1, F.mass*vt2);
-    F.total_energy = F.mass*(u+ke) + p*vn + fs.tke;
-    F.tke = F.mass * fs.tke;  // turbulence kinetic energy
-    F.omega = F.mass * fs.omega;  // pseudo vorticity
-    foreach (isp; 0 .. F.massf.length) { F.massf[isp] = F.mass*fs.gas.massf[isp]; }
-    foreach (imode; 0 .. F.energies.length) { F.energies[imode] = F.mass*fs.gas.u_modes[imode]; }
+    F.total_energy = F.mass*(u+ke) + p*vn;
+    version(komega) {
+        F.total_energy += fs.tke;
+        F.tke = F.mass * fs.tke;  // turbulence kinetic energy
+        F.omega = F.mass * fs.omega;  // pseudo vorticity
+    }
+    version(multi_species_gas) {
+        foreach (isp; 0 .. F.massf.length) { F.massf[isp] = F.mass*fs.gas.massf[isp]; }
+    }
+    version(multi_T_gas) {
+        foreach (imode; 0 .. F.energies.length) { F.energies[imode] = F.mass*fs.gas.u_modes[imode]; }
+    }
 } // end set_flux_vector_in_local_frame()
 
 @nogc
@@ -251,8 +286,10 @@ void set_flux_vector_in_global_frame(ref FVInterface IFace, ref FlowState fs,
     fs.vel.refx -= IFace.gvel.x; fs.vel.refy -= IFace.gvel.y; fs.vel.refz -= IFace.gvel.z; 
     IFace.gvel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
     fs.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
-    // also transform the magnetic field
-    if (myConfig.MHD) { fs.B.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2); }
+    version(MHD) {
+        // also transform the magnetic field
+        if (myConfig.MHD) { fs.B.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2); }
+    }
     set_flux_vector_in_local_frame(IFace.F, fs, myConfig);
     if (omegaz != 0.0) {
         // Rotating frame.
@@ -275,9 +312,11 @@ void set_flux_vector_in_global_frame(ref FVInterface IFace, ref FlowState fs,
     // Rotate momentum fluxes back to the global frame of reference.
     F.momentum.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
     // also transform the interface (grid) velocity
-    IFace.gvel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);    
-    // also transform the magnetic field
-    if (myConfig.MHD) { F.B.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2); }
+    IFace.gvel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
+    version(MHD) {
+        // also transform the magnetic field
+        if (myConfig.MHD) { F.B.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2); }
+    }
     fs.vel.set(vx, vy, vz); // restore fs.vel
 } // end set_flux_vector_in_global_frame()
 
@@ -302,7 +341,8 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel
     number eL = gmodel.internal_energy(Lft.gas);
     number aL = Lft.gas.a;
     number keL = 0.5*(uL*uL + vL*vL + wL*wL);
-    number HL = eL + pLrL + keL + Lft.tke;
+    number HL = eL + pLrL + keL;
+    version(komega) { HL += Lft.tke; }
     //
     number rR = Rght.gas.rho;
     number pR = Rght.gas.p;
@@ -313,7 +353,8 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel
     number eR = gmodel.internal_energy(Rght.gas);
     number aR = Rght.gas.a;
     number keR = 0.5*(uR*uR + vR*vR + wR*wR);
-    number HR = eR + pRrR + keR + Rght.tke;
+    number HR = eR + pRrR + keR;
+    version(komega) { HR += Rght.tke; }
     //
     // This is the main part of the flux calculator.
     // Weighting parameters (eqn 32) for velocity splitting.
@@ -366,17 +407,21 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel
     //
     // Assemble components of the flux vector.
     ConservedQuantities F = IFace.F;
-    size_t nsp = F.massf.length;
-    size_t nmodes = F.energies.length;
     F.mass = ru_half;
     if (ru_half >= 0.0) {
         // Wind is blowing from the left.
         F.momentum.set(ru2_half+p_half, ru_half*vL, ru_half*wL);
         F.total_energy = ru_half*HL;
-        F.tke = ru_half*Lft.tke;
-        F.omega = ru_half*Lft.omega;
-        foreach (isp; 0 .. nsp) { F.massf[isp] = ru_half*Lft.gas.massf[isp]; }
-        foreach (imode; 0 .. nmodes) { F.energies[imode] = ru_half*Lft.gas.u_modes[imode]; }
+        version(komega) {
+            F.tke = ru_half*Lft.tke;
+            F.omega = ru_half*Lft.omega;
+        }
+        version(multi_species_gas) {
+            foreach (i; 0 .. F.massf.length) { F.massf[i] = ru_half*Lft.gas.massf[i]; }
+        }
+        version(multi_T_gas) {
+            foreach (i; 0 .. F.energies.length) { F.energies[i] = ru_half*Lft.gas.u_modes[i]; }
+        }
         // NOTE: - the following relies on the free-electron mode being the last mode
         //       - for single temp models F_renergies isn't used
         //       - for multitemp modes with no free-electrons p_e is zero
@@ -386,11 +431,16 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel
         // Wind is blowing from the right.
         F.momentum.set(ru2_half+p_half, ru_half*vR, ru_half*wR);
         F.total_energy = ru_half*HR;
-        F.tke = ru_half*Rght.tke;
-        F.omega = ru_half*Rght.omega;
-        foreach (isp; 0 .. nsp) { F.massf[isp] = ru_half*Rght.gas.massf[isp]; }
-        foreach (imode; 0 .. nmodes) { F.energies[imode] = ru_half*Rght.gas.u_modes[imode]; }
-        // FIX-ME F.energies[nmodes-1] += ru_half * Rght.gas.p_e / Rght.gas.rho;
+        version(komega) {
+            F.tke = ru_half*Rght.tke;
+            F.omega = ru_half*Rght.omega;
+        }
+        version(multi_species_gas) {
+            foreach (i; 0 .. F.massf.length) { F.massf[i] = ru_half*Rght.gas.massf[i]; }
+        }
+        version(multi_T_gas) {
+            foreach (i; 0 .. F.energies.length) { F.energies[i] = ru_half*Rght.gas.u_modes[i]; }
+        }
     }
     //
     // Apply entropy fix (section 3.5 in Wada and Liou's paper)
@@ -408,13 +458,19 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel
         F.momentum.refy -= d_ua*(rR*vR - rL*vL);
         F.momentum.refz -= d_ua*(rR*wR - rL*wL);
         F.total_energy -= d_ua*(rR*HR - rL*HL);
-        F.tke -= d_ua*(rR*Rght.tke - rL*Lft.tke);
-        F.omega -= d_ua*(rR*Rght.omega - rL*Lft.omega);
-        foreach (isp; 0 .. nsp) {
-            F.massf[isp] -= d_ua*(rR*Rght.gas.massf[isp] - rL*Lft.gas.massf[isp]);
+        version(komega) {
+            F.tke -= d_ua*(rR*Rght.tke - rL*Lft.tke);
+            F.omega -= d_ua*(rR*Rght.omega - rL*Lft.omega);
         }
-        foreach (imode; 0 .. nmodes) {
-            F.energies[imode] -= d_ua*(rR*Rght.gas.u_modes[imode] - rL*Lft.gas.u_modes[imode]);
+        version(multi_species_gas) {
+            foreach (i; 0 .. F.massf.length) {
+                F.massf[i] -= d_ua*(rR*Rght.gas.massf[i] - rL*Lft.gas.massf[i]);
+            }
+        }
+        version(multi_T_gas) {
+            foreach (i; 0 .. F.energies.length) {
+                F.energies[i] -= d_ua*(rR*Rght.gas.u_modes[i] - rL*Lft.gas.u_modes[i]);
+            }
         }
     } // end of entropy fix (d_ua != 0)
 } // end ausmdv()
@@ -442,7 +498,8 @@ void hanel(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel 
     number eL = gmodel.internal_energy(Lft.gas);
     number aL = Lft.gas.a;
     number keL = 0.5*(uL*uL + vL*vL + wL*wL);
-    number HL = eL + pLrL + keL + Lft.tke;
+    number HL = eL + pLrL + keL;
+    version(komega) { HL += Lft.tke; }
     //
     number rR = Rght.gas.rho;
     number pR = Rght.gas.p;
@@ -453,7 +510,8 @@ void hanel(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel 
     number eR = gmodel.internal_energy(Rght.gas);
     number aR = Rght.gas.a;
     number keR = 0.5*(uR*uR + vR*vR + wR*wR);
-    number HR = eR + pRrR + keR + Rght.tke;
+    number HR = eR + pRrR + keR;
+    version(komega) { HR += Rght.tke; }
     //
     number am = fmax(aL, aR);
     number ML = uL / am;
@@ -487,17 +545,25 @@ void hanel(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel 
     number p_half = pLplus + pRminus;
     // Assemble components of the flux vector (eqn 36).
     ConservedQuantities F = IFace.F;
-    size_t nsp = F.massf.length;
-    size_t nmodes = F.energies.length;
     F.mass = uLplus * rL + uRminus * rR;
     F.momentum.set(uLplus * rL * uL + uRminus * rR * uR + p_half,
                    uLplus * rL * vL + uRminus * rR * vR,
                    uLplus * rL * wL + uRminus * rR * wR);
     F.total_energy = uLplus * rL * HL + uRminus * rR * HR;
-    F.tke = uLplus * rL * Lft.tke + uRminus * rR * Rght.tke;
-    F.omega = uLplus * rL * Lft.omega + uRminus * rR * Rght.omega;
-    foreach (isp; 0 .. nsp) { F.massf[isp] = uLplus * rL * Lft.gas.massf[isp] + uRminus * rR * Rght.gas.massf[isp]; }
-    foreach (imode; 0 .. nmodes) { F.energies[imode] = uLplus * rL * Lft.gas.u_modes[imode] + uRminus * rR * Rght.gas.u_modes[imode]; }
+    version(komega) {
+        F.tke = uLplus * rL * Lft.tke + uRminus * rR * Rght.tke;
+        F.omega = uLplus * rL * Lft.omega + uRminus * rR * Rght.omega;
+    }
+    version(multi_species_gas) {
+        foreach (i; 0 .. F.massf.length) {
+            F.massf[i] = uLplus*rL*Lft.gas.massf[i] + uRminus*rR*Rght.gas.massf[i];
+        }
+    }
+    version(multi_T_gas) {
+        foreach (i; 0 .. F.energies.length) {
+            F.energies[i] = uLplus*rL*Lft.gas.u_modes[i] + uRminus*rR*Rght.gas.u_modes[i];
+        }
+    }
 } // end hanel()
 
 @nogc
@@ -544,7 +610,8 @@ void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel
     rhoL = Lft.gas.rho;
     presL = Lft.gas.p;
     eL = gmodel.internal_energy(Lft.gas);
-    hL = eL + presL/rhoL + Lft.tke; // bundle turbulent energy, PJ 2017-06-17
+    hL = eL + presL/rhoL;
+    version(komega) { hL += Lft.tke; } // bundle turbulent energy, PJ 2017-06-17
     tL = Lft.gas.T;
     vnL = Lft.vel.x;
     vpL = Lft.vel.y;
@@ -553,7 +620,8 @@ void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel
     rhoR = Rght.gas.rho;
     presR = Rght.gas.p;
     eR = gmodel.internal_energy(Rght.gas);
-    hR = eR + presR/rhoR + Rght.tke;
+    hR = eR + presR/rhoR;
+    version(komega) { hR += Rght.tke; }
     tR = Rght.gas.T;
     vnR = Rght.vel.x;
     vpR = Rght.vel.y;
@@ -609,21 +677,32 @@ void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel
     // Such an approach may not be fully compatible with the
     // EFM approach where there can be fluxes from both sides.
     if (F.mass > 0.0) {
-        F.tke = F.mass * Lft.tke;
-        F.omega = F.mass * Lft.omega;
-        foreach (isp; 0 .. F.massf.length) { F.massf[isp] = (F.mass) * Lft.gas.massf[isp]; }
-        foreach (imode; 0 .. F.energies.length) { F.energies[imode] = (F.mass) * Lft.gas.u_modes[imode]; }
+        version(komega) {
+            F.tke = F.mass * Lft.tke;
+            F.omega = F.mass * Lft.omega;
+        }
+        version(multi_species_gas) {
+            foreach (i; 0 .. F.massf.length) { F.massf[i] = F.mass * Lft.gas.massf[i]; }
+        }
+        version(multi_T_gas) {
+            foreach (i; 0 .. F.energies.length) { F.energies[i] = F.mass * Lft.gas.u_modes[i]; }
+        }
         // NOTE: - the following relies on the free-electron mode being the last mode
         //       - for single temp models F_renergies isn't used
         //       - for multitemp modes with no free-electrons p_e is zero
         // Add electron pressure work term onto final energy mode
         // F.energies[$-1] += (F.mass) * Lft.gas.p_e / Lft.gas.rho; [TODO]
     } else {
-        F.tke = F.mass * Rght.tke;
-        F.omega = F.mass * Rght.omega;
-        foreach (isp; 0 .. F.massf.length) { F.massf[isp] = (F.mass) * Rght.gas.massf[isp]; }
-        foreach (imode; 0 .. F.energies.length) { F.energies[imode] = F.mass * Rght.gas.u_modes[imode]; }
-        // F.energies[nmodes-1] += F.mass * Rght.gas.p_e / Rght.gas.rho; [TODO]
+        version(komega) {
+            F.tke = F.mass * Rght.tke;
+            F.omega = F.mass * Rght.omega;
+        }
+        version(multi_species_gas) {
+            foreach (i; 0 .. F.massf.length) { F.massf[i] = F.mass * Rght.gas.massf[i]; }
+        }
+        version(multi_T_gas) {
+            foreach (i; 0 .. F.energies.length) { F.energies[i] = F.mass * Rght.gas.u_modes[i]; }
+        }
     }
 } // end efmflx()
 
@@ -793,7 +872,8 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
     number eL = gmodel.internal_energy(Lft.gas);
     number aL = Lft.gas.a;
     number keL = 0.5 * (uL * uL + vL * vL + wL * wL);
-    number HL = eL + pL/rL + keL + Lft.tke;
+    number HL = eL + pL/rL + keL;
+    version(komega) { HL += Lft.tke; }
     //
     number rR = Rght.gas.rho;
     number pR = Rght.gas.p;
@@ -803,7 +883,8 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
     number eR = gmodel.internal_energy(Rght.gas);
     number aR = Rght.gas.a;
     number keR = 0.5 * (uR * uR + vR * vR + wR * wR);
-    number HR = eR + pR/rR + keR + Rght.tke;
+    number HR = eR + pR/rR + keR;
+    version(komega) { HR += Rght.tke; }
     //
     // This is the main part of the flux calculator.
     //
@@ -864,10 +945,16 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
         // Wind is blowing from the left.
         F.momentum.set(ru2_half+p_half, ru_half*vL, ru_half*wL);
         F.total_energy = ru_half * HL;
-        F.tke = ru_half * Lft.tke;
-        F.omega = ru_half * Lft.omega;
-        foreach (isp; 0 .. F.massf.length) { F.massf[isp] = ru_half * Lft.gas.massf[isp]; }
-        foreach (imode; 0 .. F.energies.length) { F.energies[imode] = ru_half * Lft.gas.u_modes[imode]; }
+        version(komega) {
+            F.tke = ru_half * Lft.tke;
+            F.omega = ru_half * Lft.omega;
+        }
+        version(multi_species_gas) {
+            foreach (i; 0 .. F.massf.length) { F.massf[i] = ru_half * Lft.gas.massf[i]; }
+        }
+        version(multi_T_gas) {
+            foreach (i; 0 .. F.energies.length) { F.energies[i] = ru_half * Lft.gas.u_modes[i]; }
+        }
         // NOTE: - the following relies on the free-electron mode being the last mode
         //       - for single temp models F_renergies isn't used
         //       - for multitemp modes with no free-electrons p_e is zero
@@ -877,11 +964,16 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
         // Wind is blowing from the right.
         F.momentum.set(ru2_half+p_half, ru_half*vR, ru_half*wR);
         F.total_energy = ru_half * HR;
-        F.tke = ru_half * Rght.tke;
-        F.omega = ru_half * Rght.omega;
-        foreach (isp; 0 .. F.massf.length) { F.massf[isp] = ru_half * Rght.gas.massf[isp]; }
-        foreach (imode; 0 .. F.energies.length) { F.energies[imode] = ru_half * Rght.gas.u_modes[imode]; }
-        // F.energies[nmodes-1] += ru_half * Rght.gas.p_e / Rght.gas.rho;
+        version(komega) {
+            F.tke = ru_half * Rght.tke;
+            F.omega = ru_half * Rght.omega;
+        }
+        version(multi_species_gas) {
+            foreach (i; 0 .. F.massf.length) { F.massf[i] = ru_half * Rght.gas.massf[i]; }
+        }
+        version(multi_T_gas) {
+            foreach (i; 0 .. F.energies.length) { F.energies[i] = ru_half * Rght.gas.u_modes[i]; }
+        }
     }
 } // end ausm_plus_up()
 
@@ -900,17 +992,21 @@ void hlle(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel g
     number uL = Lft.vel.x;
     number vL = Lft.vel.y;
     number wL = Lft.vel.z;
-    number BxL = Lft.B.x;
-    number ByL = Lft.B.y;
-    number BzL = Lft.B.z;
+    version(MHD) {
+        number BxL = Lft.B.x;
+        number ByL = Lft.B.y;
+        number BzL = Lft.B.z;
+    }
     number rR = Rght.gas.rho;
     number pR = Rght.gas.p;
     number uR = Rght.vel.x;
     number vR = Rght.vel.y;
     number wR = Rght.vel.z;
-    number BxR = Rght.B.x;
-    number ByR = Rght.B.y;
-    number BzR = Rght.B.z;
+    version(MHD) {
+        number BxR = Rght.B.x;
+        number ByR = Rght.B.y;
+        number BzR = Rght.B.z;
+    }
     //
     // Derive the gas "constants" from the local conditions.
     number cvL = gmodel.Cv(Lft.gas);
@@ -931,134 +1027,114 @@ void hlle(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel g
     number u   = 0.5*(uL+uR);
     //v   = 0.5*(vL+vR);
     //w   = 0.5*(wL+wR);
-    number Bx  = 0.5*(BxL+BxR);
-    number By  = 0.5*(ByL+ByR);
-    number Bz  = 0.5*(BzL+BzR);
+    version(MHD) {
+        number Bx  = 0.5*(BxL+BxR);
+        number By  = 0.5*(ByL+ByR);
+        number Bz  = 0.5*(BzL+BzR);
+    }
     //
     // Compute Eigenvalues of Roe Matrix
     //u2=u*u;
     //v2=v*v;
     //w2=w*w;
     //uu=u2+v2+w2;
-    number a2 = gam*p/rho;
-    number Bx2 = Bx*Bx;
-    number Bt2 = By*By + Bz*Bz;
-    number BB = Bx2 + Bt2;
-    number ca2 = Bx2/rho;
-    number alf = a2+BB/rho;
-    number als = SAFESQRT(alf*alf-4.0*a2*ca2);
-    number cf2 = 0.5*(alf+als);
-    number cf = sqrt(cf2);
-    number wp = u+cf;
-    number wm = u-cf;
-    //
-    // Compute the Jump in Conserved Variables between L and R
-    number BxL2 = BxL*BxL;
-    number BtL2 = ByL*ByL + BzL*BzL;
-    number BBL = BxL2 + BtL2;
-    number ptL = pL + 0.5*BBL;
-    number uL2 = uL*uL;
-    number uuL = uL2 + vL*vL + wL*wL;
-    number aL2 = gam*pL/rL;
-    number caL2 = BxL2/rL;
-    number alfL = aL2+BBL/rL;
-    number alsL = SAFESQRT(alfL*alfL-4.0*aL2*caL2);
-    number cfL2 = 0.5*(alfL+alsL);
-    number cfL = sqrt(cfL2);
-    //wpL = uL+cfL;
-    number wmL = uL-cfL;
-    number BxR2 = BxR*BxR;
-    number BtR2 = ByR*ByR + BzR*BzR;
-    number BBR = BxR2 + BtR2;
-    number ptR = pR + 0.5*BBR;
-    number uR2 = uR*uR;
-    number uuR = uR2 + vR*vR + wR*wR;
-    number aR2 = gam*pR/rR;
-    number caR2 = BxR2/rR;
-    number alfR = aR2+BBR/rR;
-    number alsR = SAFESQRT(alfR*alfR-4.0*aR2*caR2);
-    number cfR2 = 0.5*(alfR+alsR);
-    number cfR = sqrt(cfR2);
-    number wpR = uR+cfR;
-    //wmR = uR-cfR;
+    version(MHD) {
+        number a2 = gam*p/rho;
+        number Bx2 = Bx*Bx;
+        number Bt2 = By*By + Bz*Bz;
+        number BB = Bx2 + Bt2;
+        number ca2 = Bx2/rho;
+        number alf = a2+BB/rho;
+        number als = SAFESQRT(alf*alf-4.0*a2*ca2);
+        number cf2 = 0.5*(alf+als);
+        number cf = sqrt(cf2);
+        number wp = u+cf;
+        number wm = u-cf;
+        //
+        // Compute the Jump in Conserved Variables between L and R
+        number BxL2 = BxL*BxL;
+        number BtL2 = ByL*ByL + BzL*BzL;
+        number BBL = BxL2 + BtL2;
+        number ptL = pL + 0.5*BBL;
+        number uL2 = uL*uL;
+        number uuL = uL2 + vL*vL + wL*wL;
+        number aL2 = gam*pL/rL;
+        number caL2 = BxL2/rL;
+        number alfL = aL2+BBL/rL;
+        number alsL = SAFESQRT(alfL*alfL-4.0*aL2*caL2);
+        number cfL2 = 0.5*(alfL+alsL);
+        number cfL = sqrt(cfL2);
+        //wpL = uL+cfL;
+        number wmL = uL-cfL;
+        number BxR2 = BxR*BxR;
+        number BtR2 = ByR*ByR + BzR*BzR;
+        number BBR = BxR2 + BtR2;
+        number ptR = pR + 0.5*BBR;
+        number uR2 = uR*uR;
+        number uuR = uR2 + vR*vR + wR*wR;
+        number aR2 = gam*pR/rR;
+        number caR2 = BxR2/rR;
+        number alfR = aR2+BBR/rR;
+        number alsR = SAFESQRT(alfR*alfR-4.0*aR2*caR2);
+        number cfR2 = 0.5*(alfR+alsR);
+        number cfR = sqrt(cfR2);
+        number wpR = uR+cfR;
+        //wmR = uR-cfR;
 
-    number[8] dU;
-    dU[0] = rR - rL;
-    dU[1] = rR*uR - rL*uL;
-    dU[2] = rR*vR - rL*vL;
-    dU[3] = rR*wR - rL*wL;
-    dU[4] = BxR - BxL;
-    dU[5] = ByR - ByL;
-    dU[6] = BzR - BzL;
-    dU[7] = (pR - pL)/(gam-1.0) + 0.5*(rR*uuR+BBR) - 0.5*(rL*uuL+BBL);
-    //
-    number bl = fmin(wmL, wm);
-    number br = fmax(wpR, wp);
-    number blm = fmin(bl, 0.0);
-    number brp = fmax(br, 0.0);
-    number fmassL = rL*uL;
-    number fmassR = rR*uR;
-    number fmomxL = rL*uL2 - BxL2 + ptL;
-    number fmomxR = rR*uR2 - BxR2 + ptR;
-    number fmomyL = rL*uL*vL - BxL*ByL;
-    number fmomyR = rR*uR*vR - BxR*ByR;
-    number fmomzL = rL*uL*wL - BxL*BzL;
-    number fmomzR = rR*uR*wR - BxR*BzR;
-    number fBxL = 0.0;
-    number fBxR = 0.0;
-    number fByL = uL*ByL - vL*BxL;
-    number fByR = uR*ByR - vR*BxR;
-    number fBzL = uL*BzL - wL*BxL;
-    number fBzR = uR*BzR - wR*BxR;
-    number fenergyL = (pL/(gam-1.0)+0.5*(rL*uuL+BBL)+ptL)*uL - (uL*BxL+vL*ByL+wL*BzL)*BxL;
-    number fenergyR = (pR/(gam-1.0)+0.5*(rR*uuR+BBR)+ptR)*uR - (uR*BxR+vR*ByR+wR*BzR)*BxR;
-    number iden = 1.0/(brp - blm);
-    number fac1 = brp*blm;
-    //
-    ConservedQuantities F = IFace.F;
-    F.mass = (brp*fmassL - blm*fmassR + fac1*dU[0])*iden;
-    F.momentum.set((brp*fmomxL - blm*fmomxR + fac1*dU[1])*iden,
-                   (brp*fmomyL - blm*fmomyR + fac1*dU[2])*iden,
-                   (brp*fmomzL - blm*fmomzR + fac1*dU[3])*iden);
-    F.B.set((brp*fBxL - blm*fBxR + fac1*dU[4])*iden,
-            (brp*fByL - blm*fByR + fac1*dU[5])*iden,
-            (brp*fBzL - blm*fBzR + fac1*dU[6])*iden);
-    F.total_energy = (brp*fenergyL - blm*fenergyR + fac1*dU[7])*iden;
-    /*
-     * Species mass fluxes
-     */
-    for (size_t isp = 0; isp < F.massf.length; ++isp ) {
-        if (F.mass >= 0.0) {
-            /* Wind is blowing from the left */
-            F.massf[isp] = F.mass * Lft.gas.massf[isp];
-        } else {
-            /* Wind is blowing from the right */
-            F.massf[isp] = F.mass * Rght.gas.massf[isp];
+        number[8] dU;
+        dU[0] = rR - rL;
+        dU[1] = rR*uR - rL*uL;
+        dU[2] = rR*vR - rL*vL;
+        dU[3] = rR*wR - rL*wL;
+        dU[4] = BxR - BxL;
+        dU[5] = ByR - ByL;
+        dU[6] = BzR - BzL;
+        dU[7] = (pR - pL)/(gam-1.0) + 0.5*(rR*uuR+BBR) - 0.5*(rL*uuL+BBL);
+        //
+        number bl = fmin(wmL, wm);
+        number br = fmax(wpR, wp);
+        number blm = fmin(bl, 0.0);
+        number brp = fmax(br, 0.0);
+        number fmassL = rL*uL;
+        number fmassR = rR*uR;
+        number fmomxL = rL*uL2 - BxL2 + ptL;
+        number fmomxR = rR*uR2 - BxR2 + ptR;
+        number fmomyL = rL*uL*vL - BxL*ByL;
+        number fmomyR = rR*uR*vR - BxR*ByR;
+        number fmomzL = rL*uL*wL - BxL*BzL;
+        number fmomzR = rR*uR*wR - BxR*BzR;
+        number fBxL = 0.0;
+        number fBxR = 0.0;
+        number fByL = uL*ByL - vL*BxL;
+        number fByR = uR*ByR - vR*BxR;
+        number fBzL = uL*BzL - wL*BxL;
+        number fBzR = uR*BzR - wR*BxR;
+        number fenergyL = (pL/(gam-1.0)+0.5*(rL*uuL+BBL)+ptL)*uL - (uL*BxL+vL*ByL+wL*BzL)*BxL;
+        number fenergyR = (pR/(gam-1.0)+0.5*(rR*uuR+BBR)+ptR)*uR - (uR*BxR+vR*ByR+wR*BzR)*BxR;
+        number iden = 1.0/(brp - blm);
+        number fac1 = brp*blm;
+        //
+        ConservedQuantities F = IFace.F;
+        F.mass = (brp*fmassL - blm*fmassR + fac1*dU[0])*iden;
+        F.momentum.set((brp*fmomxL - blm*fmomxR + fac1*dU[1])*iden,
+                       (brp*fmomyL - blm*fmomyR + fac1*dU[2])*iden,
+                       (brp*fmomzL - blm*fmomzR + fac1*dU[3])*iden);
+        F.B.set((brp*fBxL - blm*fBxR + fac1*dU[4])*iden,
+                (brp*fByL - blm*fByR + fac1*dU[5])*iden,
+                (brp*fBzL - blm*fBzR + fac1*dU[6])*iden);
+        F.total_energy = (brp*fenergyL - blm*fenergyR + fac1*dU[7])*iden;
+        version(multi_species_gas) {
+            foreach (i; 0 .. F.massf.length) {
+                F.massf[i] = F.mass * ((F.mass >= 0.0) ? Lft.gas.massf[i]: Rght.gas.massf[i]);
+            }
         }
-    } /* isp loop */
-    /*
-     * Individual energies
-     */
-    if (F.mass >= 0.0) {
-        /* Wind is blowing from the left */
-        for (size_t imode = 0; imode < F.energies.length; ++imode ) {
-            F.energies[imode] = F.mass * Lft.gas.u_modes[imode];
+        version(multi_T_gas) {
+            foreach (i; 0 .. F.energies.length) {
+                F.energies[i] = F.mass * ((F.mass >= 0.0) ? Lft.gas.u_modes[i]: Rght.gas.u_modes[i]);
+            }
         }
-        // NOTE: - the following relies on the free-electron mode being the last mode
-        //       - for single temp models F_renergies isn't used
-        //       - for multitemp modes with no free-electrons p_e is zero
-        // Add electron pressure work term onto final energy mode
-        // F.energies[$-1] += F.mass * Lft.gas.p_e / Lft.gas.rho; [TODO]
     } else {
-        /* Wind is blowing from the right */
-        for (size_t imode = 0; imode < F.energies.length; ++imode ) {
-            F.energies[imode] = F.mass * Rght.gas.u_modes[imode];
-        }
-        // NOTE: - the following relies on the free-electron mode being the last mode
-        //       - for single temp models F_renergies isn't used
-        //       - for multitemp modes with no free-electrons p_e is zero
-        // Add electron pressure work term onto final energy mode
-        // F.energies[$-1] += F.mass * Rght.gas.p_e / Rght.gas.rho; [TODO]
+        assert(0, "HLLE not implemented for normal gas dynamics");
     }
 } // end hlle()
 
@@ -1084,7 +1160,8 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel gm
     number eL = gmodel.internal_energy(Lft.gas);
     number aL = Lft.gas.a;
     number keL = 0.5*(uL*uL + vL*vL + wL*wL);
-    number HL = eL + pLrL + keL + Lft.tke;
+    number HL = eL + pLrL + keL;
+    version(komega) { HL += Lft.tke; }
     //
     number rR = Rght.gas.rho;
     number pR = Rght.gas.p;
@@ -1095,7 +1172,8 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel gm
     number eR = gmodel.internal_energy(Rght.gas);
     number aR = Rght.gas.a;
     number keR = 0.5*(uR*uR + vR*vR + wR*wR);
-    number HR = eR + pRrR + keR + Rght.tke;
+    number HR = eR + pRrR + keR;
+    version(komega) { HR += Rght.tke; }
 
     // averaged gamma
     number gL = gmodel.gamma(Lft.gas);
@@ -1170,8 +1248,6 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel gm
     
     // compute fluxes (eq. 11.29)
     ConservedQuantities F = IFace.F;
-    size_t nsp = F.massf.length;
-    size_t nmodes = F.energies.length;
 
     number FL; number FR;
 
@@ -1208,16 +1284,28 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel gm
     // remaining fluxes
     if (F.mass >= 0.0) {
         /* Wind is blowing from the left */
-        F.tke = F.mass*Lft.tke;
-        F.omega = F.mass*Lft.omega;
-        foreach (isp; 0 .. nsp) { F.massf[isp] = F.mass*Lft.gas.massf[isp]; }
-        foreach (imode; 0 .. nmodes) { F.energies[imode] = F.mass*Lft.gas.u_modes[imode]; }
+        version(komega) {
+            F.tke = F.mass*Lft.tke;
+            F.omega = F.mass*Lft.omega;
+        }
+        version(multi_species_gas) {
+            foreach (i; 0 .. F.massf.length) { F.massf[i] = F.mass*Lft.gas.massf[i]; }
+        }
+        version(multi_T_gas) {
+            foreach (i; 0 .. F.energies.length) { F.energies[i] = F.mass*Lft.gas.u_modes[i]; }
+        }
     } else {
         /* Wind is blowing from the right */
-        F.tke = F.mass*Rght.tke;
-        F.omega = F.mass*Rght.omega;
-        foreach (isp; 0 .. nsp) { F.massf[isp] = F.mass*Rght.gas.massf[isp]; }
-        foreach (imode; 0 .. nmodes) { F.energies[imode] = F.mass*Rght.gas.u_modes[imode]; }
+        version(komega) {
+            F.tke = F.mass*Rght.tke;
+            F.omega = F.mass*Rght.omega;
+        }
+        version(multi_species_gas) {
+            foreach (i; 0 .. F.massf.length) { F.massf[i] = F.mass*Rght.gas.massf[i]; }
+        }
+        version(multi_T_gas) {
+            foreach (i; 0 .. F.energies.length) { F.energies[i] = F.mass*Rght.gas.u_modes[i]; }
+        }
     }
 } // end roe()
 

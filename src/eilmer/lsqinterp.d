@@ -114,53 +114,61 @@ class LSQInterpGradients {
     // We need to hold onto their gradients within cells.
 public:
     number[3] velx, vely, velz;
-    number[3] Bx, By, Bz, psi;
-    number[3] tke, omega;
-    number[3][] massf;
-    number[3] rho, p;
-    number[3] T, u;
-    number[3][] T_modes, u_modes;
-
     number velxPhi, velyPhi, velzPhi;
-    number BxPhi, ByPhi, BzPhi, psiPhi;
-    number tkePhi, omegaPhi;
-    number[] massfPhi;
-    number rhoPhi, pPhi;
-    number TPhi, uPhi;
-    number[] T_modesPhi, u_modesPhi;
-
     number velxMax, velyMax, velzMax;
-    number BxMax, ByMax, BzMax, psiMax;
-    number tkeMax, omegaMax;
-    number[] massfMax;
-    number rhoMax, pMax;
-    number TMax, uMax;
-    number[] T_modesMax, u_modesMax;
     number velxMin, velyMin, velzMin;
-    number BxMin, ByMin, BzMin, psiMin;
-    number tkeMin, omegaMin;
-    number[] massfMin;
+    version(MHD) {
+        number[3] Bx, By, Bz, psi;
+        number BxPhi, ByPhi, BzPhi, psiPhi;
+        number BxMax, ByMax, BzMax, psiMax;
+        number BxMin, ByMin, BzMin, psiMin;
+    }
+    version(komega) {
+        number[3] tke, omega;
+        number tkePhi, omegaPhi;
+        number tkeMax, omegaMax;
+        number tkeMin, omegaMin;
+    }
+    version(multi_species_gas) {
+        number[3][] massf;
+        number[] massfPhi;
+        number[] massfMax;
+        number[] massfMin;
+    }
+    number[3] rho, p;
+    number rhoPhi, pPhi;
+    number rhoMax, pMax;
     number rhoMin, pMin;
+    number[3] T, u;
+    number TPhi, uPhi;
+    number TMax, uMax;
     number TMin, uMin;
-    number[] T_modesMin, u_modesMin;
+    version(multi_T_gas) {
+        number[3][] T_modes, u_modes;
+        number[] T_modesPhi, u_modesPhi;
+        number[] T_modesMax, u_modesMax;
+        number[] T_modesMin, u_modesMin;
+    }
+
 
     this(size_t nsp, size_t nmodes)
     {
-        massf.length = nsp;
-        T_modes.length = nmodes;
-        u_modes.length = nmodes;
-
-        massfPhi.length = nsp;
-        T_modesPhi.length = nmodes;
-        u_modesPhi.length = nmodes;
-
-        massfMax.length = nsp;
-        T_modesMax.length = nmodes;
-        u_modesMax.length = nmodes;
-
-        massfMin.length = nsp;
-        T_modesMin.length = nmodes;
-        u_modesMin.length = nmodes;
+        version(multi_species_gas) {
+            massf.length = nsp;
+            massfPhi.length = nsp;
+            massfMax.length = nsp;
+            massfMin.length = nsp;
+        }
+        version(multi_T_gas) {
+            T_modes.length = nmodes;
+            u_modes.length = nmodes;
+            T_modesPhi.length = nmodes;
+            u_modesPhi.length = nmodes;
+            T_modesMax.length = nmodes;
+            u_modesMax.length = nmodes;
+            T_modesMin.length = nmodes;
+            u_modesMin.length = nmodes;
+        }
     }
 
     this(ref const(LSQInterpGradients) other)
@@ -172,55 +180,60 @@ public:
     void copy_values_from(ref const(LSQInterpGradients) other)
     {
         velx[] = other.velx[]; vely[] = other.vely[]; velz[] = other.velz[];
-        Bx[] = other.Bx[]; By[] = other.By[]; Bz[] = other.Bz[]; psi[] = other.psi[];
-        tke[] = other.tke[]; omega[] = other.omega[];
-        assert(massf.length == other.massf.length, "Mismatch in massf length");
-        foreach(i; 0 .. other.massf.length) { massf[i][] = other.massf[i][]; }
-        rho[] = other.rho[]; p[] = other.p[];
-        T[] = other.T[]; u[] = other.u[];
-        assert(T_modes.length == other.T_modes.length, "Mismatch in T_modes length");
-        assert(u_modes.length == other.u_modes.length, "Mismatch in u_modes length");
-        foreach(i; 0 .. other.T_modes.length) {
-            T_modes[i][] = other.T_modes[i][]; u_modes[i][] = other.u_modes[i][];
-        }
-
         velxPhi = other.velxPhi; velyPhi = other.velyPhi; velzPhi = other.velzPhi;
-        BxPhi = other.BxPhi; ByPhi = other.ByPhi; BzPhi = other.BzPhi; psiPhi = other.psiPhi;
-        tkePhi = other.tkePhi; omegaPhi = other.omegaPhi;
-        assert(massfPhi.length == other.massfPhi.length, "Mismatch in massfPhi length");
-        foreach(i; 0 .. other.massf.length) { massfPhi[i] = other.massfPhi[i]; }
-        rhoPhi = other.rhoPhi; pPhi = other.pPhi;
-        TPhi = other.TPhi; uPhi = other.uPhi;
-        assert(T_modesPhi.length == other.T_modesPhi.length, "Mismatch in T_modesPhi length");
-        assert(u_modesPhi.length == other.u_modesPhi.length, "Mismatch in u_modesPhi length");
-        foreach(i; 0 .. other.T_modesPhi.length) {
-            T_modesPhi[i] = other.T_modesPhi[i]; u_modesPhi[i] = other.u_modesPhi[i];
-        }
-
         velxMax = other.velxMax; velyMax = other.velyMax; velzMax = other.velzMax;
-        BxMax = other.BxMax; ByMax = other.ByMax; BzMax = other.BzMax; psiMax = other.psiMax;
-        tkeMax = other.tkeMax; omegaMax = other.omegaMax;
-        assert(massfMax.length == other.massfMax.length, "Mismatch in massfMax length");
-        foreach(i; 0 .. other.massf.length) { massfMax[i] = other.massfMax[i]; }
-        rhoMax = other.rhoMax; pMax = other.pMax;
-        TMax = other.TMax; uMax = other.uMax;
-        assert(T_modesMax.length == other.T_modesMax.length, "Mismatch in T_modesMax length");
-        assert(u_modesMax.length == other.u_modesMax.length, "Mismatch in u_modesMax length");
-        foreach(i; 0 .. other.T_modesMax.length) {
-            T_modesMax[i] = other.T_modesMax[i]; u_modesMax[i] = other.u_modesMax[i];
-        }
-
         velxMin = other.velxMin; velyMin = other.velyMin; velzMin = other.velzMin;
-        BxMin = other.BxMin; ByMin = other.ByMin; BzMin = other.BzMin; psiMin = other.psiMin;
-        tkeMin = other.tkeMin; omegaMin = other.omegaMin;
-        assert(massfMin.length == other.massfMin.length, "Mismatch in massfMin length");
-        foreach(i; 0 .. other.massf.length) { massfMin[i] = other.massfMin[i]; }
+        version(MHD) {
+            Bx[] = other.Bx[]; By[] = other.By[]; Bz[] = other.Bz[]; psi[] = other.psi[];
+            BxPhi = other.BxPhi; ByPhi = other.ByPhi; BzPhi = other.BzPhi; psiPhi = other.psiPhi;
+            BxMax = other.BxMax; ByMax = other.ByMax; BzMax = other.BzMax; psiMax = other.psiMax;
+            BxMin = other.BxMin; ByMin = other.ByMin; BzMin = other.BzMin; psiMin = other.psiMin;
+        }
+        version(komega) {
+            tke[] = other.tke[]; omega[] = other.omega[];
+            tkePhi = other.tkePhi; omegaPhi = other.omegaPhi;
+            tkeMax = other.tkeMax; omegaMax = other.omegaMax;
+            tkeMin = other.tkeMin; omegaMin = other.omegaMin;
+        }
+        version(multi_species_gas) {
+            assert(massf.length == other.massf.length, "Mismatch in massf length");
+            foreach(i; 0 .. other.massf.length) { massf[i][] = other.massf[i][]; }
+            assert(massfPhi.length == other.massfPhi.length, "Mismatch in massfPhi length");
+            foreach(i; 0 .. other.massf.length) { massfPhi[i] = other.massfPhi[i]; }
+            assert(massfMax.length == other.massfMax.length, "Mismatch in massfMax length");
+            foreach(i; 0 .. other.massf.length) { massfMax[i] = other.massfMax[i]; }
+            assert(massfMin.length == other.massfMin.length, "Mismatch in massfMin length");
+            foreach(i; 0 .. other.massf.length) { massfMin[i] = other.massfMin[i]; }
+        }
+        rho[] = other.rho[]; p[] = other.p[];
+        rhoPhi = other.rhoPhi; pPhi = other.pPhi;
+        rhoMax = other.rhoMax; pMax = other.pMax;
         rhoMin = other.rhoMin; pMin = other.pMin;
+        T[] = other.T[]; u[] = other.u[];
+        TPhi = other.TPhi; uPhi = other.uPhi;
+        TMax = other.TMax; uMax = other.uMax;
         TMin = other.TMin; uMin = other.uMin;
-        assert(T_modesMin.length == other.T_modesMin.length, "Mismatch in T_modesMin length");
-        assert(u_modesMin.length == other.u_modesMin.length, "Mismatch in u_modesMin length");
-        foreach(i; 0 .. other.T_modesMin.length) {
-            T_modesMin[i] = other.T_modesMin[i]; u_modesMin[i] = other.u_modesMin[i];
+        version(multi_T_gas) {
+            assert(T_modes.length == other.T_modes.length, "Mismatch in T_modes length");
+            assert(u_modes.length == other.u_modes.length, "Mismatch in u_modes length");
+            foreach(i; 0 .. other.T_modes.length) {
+                T_modes[i][] = other.T_modes[i][]; u_modes[i][] = other.u_modes[i][];
+            }
+            assert(T_modesPhi.length == other.T_modesPhi.length, "Mismatch in T_modesPhi length");
+            assert(u_modesPhi.length == other.u_modesPhi.length, "Mismatch in u_modesPhi length");
+            foreach(i; 0 .. other.T_modesPhi.length) {
+                T_modesPhi[i] = other.T_modesPhi[i]; u_modesPhi[i] = other.u_modesPhi[i];
+            }
+            assert(T_modesMax.length == other.T_modesMax.length, "Mismatch in T_modesMax length");
+            assert(u_modesMax.length == other.u_modesMax.length, "Mismatch in u_modesMax length");
+            foreach(i; 0 .. other.T_modesMax.length) {
+                T_modesMax[i] = other.T_modesMax[i]; u_modesMax[i] = other.u_modesMax[i];
+            }
+            assert(T_modesMin.length == other.T_modesMin.length, "Mismatch in T_modesMin length");
+            assert(u_modesMin.length == other.u_modesMin.length, "Mismatch in u_modesMin length");
+            foreach(i; 0 .. other.T_modesMin.length) {
+                T_modesMin[i] = other.T_modesMin[i]; u_modesMin[i] = other.u_modesMin[i];
+            }
         }
     } // end copy_values_from()
 
@@ -266,28 +279,34 @@ public:
         mixin(codeForLimits("vel.x", "velx", "velxPhi", "velxMax", "velxMin"));
         mixin(codeForLimits("vel.y", "vely", "velyPhi", "velyMax", "velyMin"));
         mixin(codeForLimits("vel.z", "velz", "velzPhi", "velzMax", "velzMin"));
-        if (myConfig.MHD) {
-            mixin(codeForLimits("B.x", "Bx", "BxPhi", "BxMax", "BxMin"));
-            mixin(codeForLimits("B.y", "By", "ByPhi", "ByMax", "ByMin"));
-            mixin(codeForLimits("B.z", "Bz", "BzPhi", "BzMax", "BzMin"));
-            if (myConfig.divergence_cleaning) {
-                mixin(codeForLimits("psi", "psi", "psiPhi", "psiMax", "psiMin"));
+        version(MHD) {
+            if (myConfig.MHD) {
+                mixin(codeForLimits("B.x", "Bx", "BxPhi", "BxMax", "BxMin"));
+                mixin(codeForLimits("B.y", "By", "ByPhi", "ByMax", "ByMin"));
+                mixin(codeForLimits("B.z", "Bz", "BzPhi", "BzMax", "BzMin"));
+                if (myConfig.divergence_cleaning) {
+                    mixin(codeForLimits("psi", "psi", "psiPhi", "psiMax", "psiMin"));
+                }
             }
         }
-        if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-            mixin(codeForLimits("tke", "tke", "tkePhi", "tkeMax", "tkeMin"));
-            mixin(codeForLimits("omega", "omega", "omegaPhi", "omegaMax", "omegaMin"));
-        }
-        auto nsp = myConfig.gmodel.n_species;
-        if (nsp > 1) {
-            // Multiple species.
-            foreach (isp; 0 .. nsp) {
-                mixin(codeForLimits("gas.massf[isp]", "massf[isp]", "massfPhi[isp]",
-                                    "massfMax[isp]", "massfMin[isp]"));
+        version(komega) {
+            if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
+                mixin(codeForLimits("tke", "tke", "tkePhi", "tkeMax", "tkeMin"));
+                mixin(codeForLimits("omega", "omega", "omegaPhi", "omegaMax", "omegaMin"));
             }
-        } else {
-            // Only one possible gradient value for a single species.
-            massf[0][0] = 0.0; massf[0][1] = 0.0; massf[0][2] = 0.0;
+        }
+        version(multi_species_gas) {
+            auto nsp = myConfig.gmodel.n_species;
+            if (nsp > 1) {
+                // Multiple species.
+                foreach (isp; 0 .. nsp) {
+                    mixin(codeForLimits("gas.massf[isp]", "massf[isp]", "massfPhi[isp]",
+                                        "massfMax[isp]", "massfMin[isp]"));
+                }
+            } else {
+                // Only one possible gradient value for a single species.
+                massf[0][0] = 0.0; massf[0][1] = 0.0; massf[0][2] = 0.0;
+            }
         }
         // Interpolate on two of the thermodynamic quantities, 
         // and fill in the rest based on an EOS call. 
@@ -296,17 +315,21 @@ public:
         case InterpolateOption.pt: 
             mixin(codeForLimits("gas.p", "p", "pPhi", "pMax", "pMin"));
             mixin(codeForLimits("gas.T", "T", "TPhi", "TMax", "TMin"));
-            foreach (imode; 0 .. nmodes) {
-                mixin(codeForLimits("gas.T_modes[imode]", "T_modes[imode]", "T_modesPhi[imode]",
-                                    "T_modesMax[imode]", "T_modesMin[imode]"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForLimits("gas.T_modes[imode]", "T_modes[imode]", "T_modesPhi[imode]",
+                                        "T_modesMax[imode]", "T_modesMin[imode]"));
+                }
             }
             break;
         case InterpolateOption.rhou:
             mixin(codeForLimits("gas.rho", "rho", "rhoPhi", "rhoMax", "rhoMin"));
             mixin(codeForLimits("gas.u", "u", "uPhi", "uMax", "uMin"));
-            foreach (imode; 0 .. nmodes) {
-                mixin(codeForLimits("gas.u_modes[imode]", "u_modes[imode]", "u_modesPhi[imode]",
-                                    "u_modesMax[imode]", "u_modesMin[imode]"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForLimits("gas.u_modes[imode]", "u_modes[imode]", "u_modesPhi[imode]",
+                                        "u_modesMax[imode]", "u_modesMin[imode]"));
+                }
             }
             break;
         case InterpolateOption.rhop:
@@ -316,9 +339,11 @@ public:
         case InterpolateOption.rhot: 
             mixin(codeForLimits("gas.rho", "rho", "rhoPhi", "rhoMax", "rhoMin"));
             mixin(codeForLimits("gas.T", "T", "TPhi", "TMax", "TMin"));
-            foreach (imode; 0 .. nmodes) {
-                mixin(codeForLimits("gas.T_modes[imode]", "T_modes[imode]", "T_modesPhi[imode]",
-                                    "T_modesMax[imode]", "T_modesMin[imode]"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForLimits("gas.T_modes[imode]", "T_modes[imode]", "T_modesPhi[imode]",
+                                        "T_modesMax[imode]", "T_modesMin[imode]"));
+                }
             }
             break;
         } // end switch thermo_interpolator
@@ -371,28 +396,34 @@ public:
         mixin(codeForLimits("vel.x", "velx", "velxPhi", "velxMax", "velxMin"));
         mixin(codeForLimits("vel.y", "vely", "velyPhi", "velyMax", "velyMin"));
         mixin(codeForLimits("vel.z", "velz", "velzPhi", "velzMax", "velzMin"));
-        if (myConfig.MHD) {
-            mixin(codeForLimits("B.x", "Bx", "BxPhi", "BxMax", "BxMin"));
-            mixin(codeForLimits("B.y", "By", "ByPhi", "ByMax", "ByMin"));
-            mixin(codeForLimits("B.z", "Bz", "BzPhi", "BzMax", "BzMin"));
-            if (myConfig.divergence_cleaning) {
-                mixin(codeForLimits("psi", "psi", "psiPhi", "psiMax", "psiMin"));
+        version(MHD) {
+            if (myConfig.MHD) {
+                mixin(codeForLimits("B.x", "Bx", "BxPhi", "BxMax", "BxMin"));
+                mixin(codeForLimits("B.y", "By", "ByPhi", "ByMax", "ByMin"));
+                mixin(codeForLimits("B.z", "Bz", "BzPhi", "BzMax", "BzMin"));
+                if (myConfig.divergence_cleaning) {
+                    mixin(codeForLimits("psi", "psi", "psiPhi", "psiMax", "psiMin"));
+                }
             }
         }
-        if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-            mixin(codeForLimits("tke", "tke", "tkePhi", "tkeMax", "tkeMin"));
-            mixin(codeForLimits("omega", "omega", "omegaPhi", "omegaMax", "omegaMin"));
-        }
-        auto nsp = myConfig.gmodel.n_species;
-        if (nsp > 1) {
-            // Multiple species.
-            foreach (isp; 0 .. nsp) {
-                mixin(codeForLimits("gas.massf[isp]", "massf[isp]", "massfPhi[isp]",
-                                    "massfMax[isp]", "massfMin[isp]"));
+        version(komega) {
+            if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
+                mixin(codeForLimits("tke", "tke", "tkePhi", "tkeMax", "tkeMin"));
+                mixin(codeForLimits("omega", "omega", "omegaPhi", "omegaMax", "omegaMin"));
             }
-        } else {
-            // Only one possible gradient value for a single species.
-            massf[0][0] = 0.0; massf[0][1] = 0.0; massf[0][2] = 0.0;
+        }
+        version(multi_species_gas) {
+            auto nsp = myConfig.gmodel.n_species;
+            if (nsp > 1) {
+                // Multiple species.
+                foreach (isp; 0 .. nsp) {
+                    mixin(codeForLimits("gas.massf[isp]", "massf[isp]", "massfPhi[isp]",
+                                        "massfMax[isp]", "massfMin[isp]"));
+                }
+            } else {
+                // Only one possible gradient value for a single species.
+                massf[0][0] = 0.0; massf[0][1] = 0.0; massf[0][2] = 0.0;
+            }
         }
         // Interpolate on two of the thermodynamic quantities, 
         // and fill in the rest based on an EOS call. 
@@ -401,17 +432,21 @@ public:
         case InterpolateOption.pt: 
             mixin(codeForLimits("gas.p", "p", "pPhi", "pMax", "pMin"));
             mixin(codeForLimits("gas.T", "T", "TPhi", "TMax", "TMin"));
-            foreach (imode; 0 .. nmodes) {
-                mixin(codeForLimits("gas.T_modes[imode]", "T_modes[imode]", "T_modesPhi[imode]",
-                                    "T_modesMax[imode]", "T_modesMin[imode]"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForLimits("gas.T_modes[imode]", "T_modes[imode]", "T_modesPhi[imode]",
+                                        "T_modesMax[imode]", "T_modesMin[imode]"));
+                }
             }
             break;
         case InterpolateOption.rhou:
             mixin(codeForLimits("gas.rho", "rho", "rhoPhi", "rhoMax", "rhoMin"));
             mixin(codeForLimits("gas.u", "u", "uPhi", "uMax", "uMin"));
-            foreach (imode; 0 .. nmodes) {
-                mixin(codeForLimits("gas.u_modes[imode]", "u_modes[imode]", "u_modesPhi[imode]",
-                                    "u_modesMax[imode]", "u_modesMin[imode]"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForLimits("gas.u_modes[imode]", "u_modes[imode]", "u_modesPhi[imode]",
+                                        "u_modesMax[imode]", "u_modesMin[imode]"));
+                }
             }
             break;
         case InterpolateOption.rhop:
@@ -421,9 +456,11 @@ public:
         case InterpolateOption.rhot: 
             mixin(codeForLimits("gas.rho", "rho", "rhoPhi", "rhoMax", "rhoMin"));
             mixin(codeForLimits("gas.T", "T", "TPhi", "TMax", "TMin"));
-            foreach (imode; 0 .. nmodes) {
-                mixin(codeForLimits("gas.T_modes[imode]", "T_modes[imode]", "T_modesPhi[imode]",
-                                    "T_modesMax[imode]", "T_modesMin[imode]"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForLimits("gas.T_modes[imode]", "T_modes[imode]", "T_modesPhi[imode]",
+                                        "T_modesMax[imode]", "T_modesMin[imode]"));
+                }
             }
             break;
         } // end switch thermo_interpolator
@@ -456,28 +493,34 @@ public:
         mixin(codeForGradients("vel.x", "velx", "velxMax", "velxMin"));
         mixin(codeForGradients("vel.y", "vely", "velyMax", "velyMin"));
         mixin(codeForGradients("vel.z", "velz", "velzMax", "velzMin"));
-        if (myConfig.MHD) {
-            mixin(codeForGradients("B.x", "Bx", "BxMax", "BxMin"));
-            mixin(codeForGradients("B.y", "By", "ByMax", "ByMin"));
-            mixin(codeForGradients("B.z", "Bz", "BzMax", "BzMin"));
-            if (myConfig.divergence_cleaning) {
-                mixin(codeForGradients("psi", "psi", "psiMax", "psiMin"));
+        version(MHD) {
+            if (myConfig.MHD) {
+                mixin(codeForGradients("B.x", "Bx", "BxMax", "BxMin"));
+                mixin(codeForGradients("B.y", "By", "ByMax", "ByMin"));
+                mixin(codeForGradients("B.z", "Bz", "BzMax", "BzMin"));
+                if (myConfig.divergence_cleaning) {
+                    mixin(codeForGradients("psi", "psi", "psiMax", "psiMin"));
+                }
             }
         }
-        if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-            mixin(codeForGradients("tke", "tke", "tkeMax", "tkeMin"));
-            mixin(codeForGradients("omega", "omega", "omegaMax", "omegaMin"));
-        }
-        auto nsp = myConfig.gmodel.n_species;
-        if (nsp > 1) {
-            // Multiple species.
-            foreach (isp; 0 .. nsp) {
-                mixin(codeForGradients("gas.massf[isp]", "massf[isp]",
-                                       "massfMax[isp]", "massfMin[isp]"));
+        version(komega) {
+            if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
+                mixin(codeForGradients("tke", "tke", "tkeMax", "tkeMin"));
+                mixin(codeForGradients("omega", "omega", "omegaMax", "omegaMin"));
             }
-        } else {
-            // Only one possible gradient value for a single species.
-            massf[0][0] = 0.0; massf[0][1] = 0.0; massf[0][2] = 0.0;
+        }
+        version(multi_species_gas) {
+            auto nsp = myConfig.gmodel.n_species;
+            if (nsp > 1) {
+                // Multiple species.
+                foreach (isp; 0 .. nsp) {
+                    mixin(codeForGradients("gas.massf[isp]", "massf[isp]",
+                                           "massfMax[isp]", "massfMin[isp]"));
+                }
+            } else {
+                // Only one possible gradient value for a single species.
+                massf[0][0] = 0.0; massf[0][1] = 0.0; massf[0][2] = 0.0;
+            }
         }
         // Interpolate on two of the thermodynamic quantities, 
         // and fill in the rest based on an EOS call. 
@@ -486,17 +529,21 @@ public:
         case InterpolateOption.pt: 
             mixin(codeForGradients("gas.p", "p", "pMax", "pMin"));
             mixin(codeForGradients("gas.T", "T", "TMax", "TMin"));
-            foreach (imode; 0 .. nmodes) {
-                mixin(codeForGradients("gas.T_modes[imode]", "T_modes[imode]",
-                                       "T_modesMax[imode]", "T_modesMin[imode]"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForGradients("gas.T_modes[imode]", "T_modes[imode]",
+                                           "T_modesMax[imode]", "T_modesMin[imode]"));
+                }
             }
             break;
         case InterpolateOption.rhou:
             mixin(codeForGradients("gas.rho", "rho", "rhoMax", "rhoMin"));
             mixin(codeForGradients("gas.u", "u", "uMax", "uMin"));
-            foreach (imode; 0 .. nmodes) {
-                mixin(codeForGradients("gas.u_modes[imode]", "u_modes[imode]",
-                                       "u_modesMax[imode]", "u_modesMin[imode]"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForGradients("gas.u_modes[imode]", "u_modes[imode]",
+                                           "u_modesMax[imode]", "u_modesMin[imode]"));
+                }
             }
             break;
         case InterpolateOption.rhop:
@@ -506,9 +553,11 @@ public:
         case InterpolateOption.rhot: 
             mixin(codeForGradients("gas.rho", "rho", "rhoMax", "rhoMin"));
             mixin(codeForGradients("gas.T", "T", "TMax", "TMin"));
-            foreach (imode; 0 .. nmodes) {
-                mixin(codeForGradients("gas.T_modes[imode]", "T_modes[imode]",
-                                       "T_modesMax[imode]", "T_modesMin[imode]"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForGradients("gas.T_modes[imode]", "T_modes[imode]",
+                                           "T_modesMax[imode]", "T_modesMin[imode]"));
+                }
             }
             break;
         } // end switch thermo_interpolator
@@ -565,28 +614,34 @@ public:
         mixin(codeForLimits("vel.x", "velx", "velxPhi", "velxMax", "velxMin"));
         mixin(codeForLimits("vel.y", "vely", "velyPhi", "velyMax", "velyMin"));
         mixin(codeForLimits("vel.z", "velz", "velzPhi", "velzMax", "velzMin"));
-        if (myConfig.MHD) {
-            mixin(codeForLimits("B.x", "Bx", "BxPhi", "BxMax", "BxMin"));
-            mixin(codeForLimits("B.y", "By", "ByPhi", "ByMax", "ByMin"));
-            mixin(codeForLimits("B.z", "Bz", "BzPhi", "BzMax", "BzMin"));
-            if (myConfig.divergence_cleaning) {
-                mixin(codeForLimits("psi", "psi", "psiPhi", "psiMax", "psiMin"));
+        version(MHD) {
+            if (myConfig.MHD) {
+                mixin(codeForLimits("B.x", "Bx", "BxPhi", "BxMax", "BxMin"));
+                mixin(codeForLimits("B.y", "By", "ByPhi", "ByMax", "ByMin"));
+                mixin(codeForLimits("B.z", "Bz", "BzPhi", "BzMax", "BzMin"));
+                if (myConfig.divergence_cleaning) {
+                    mixin(codeForLimits("psi", "psi", "psiPhi", "psiMax", "psiMin"));
+                }
             }
         }
-        if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-            mixin(codeForLimits("tke", "tke", "tkePhi", "tkeMax", "tkeMin"));
-            mixin(codeForLimits("omega", "omega", "omegaPhi", "omegaMax", "omegaMin"));
-        }
-        auto nsp = myConfig.gmodel.n_species;
-        if (nsp > 1) {
-            // Multiple species.
-            foreach (isp; 0 .. nsp) {
-                mixin(codeForLimits("gas.massf[isp]", "massf[isp]", "massfPhi[isp]",
-                                    "massfMax[isp]", "massfMin[isp]"));
+        version(komega) {
+            if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
+                mixin(codeForLimits("tke", "tke", "tkePhi", "tkeMax", "tkeMin"));
+                mixin(codeForLimits("omega", "omega", "omegaPhi", "omegaMax", "omegaMin"));
             }
-        } else {
-            // Only one possible gradient value for a single species.
-            massf[0][0] = 0.0; massf[0][1] = 0.0; massf[0][2] = 0.0;
+        }
+        version(multi_species_gas) {
+            auto nsp = myConfig.gmodel.n_species;
+            if (nsp > 1) {
+                // Multiple species.
+                foreach (isp; 0 .. nsp) {
+                    mixin(codeForLimits("gas.massf[isp]", "massf[isp]", "massfPhi[isp]",
+                                        "massfMax[isp]", "massfMin[isp]"));
+                }
+            } else {
+                // Only one possible gradient value for a single species.
+                massf[0][0] = 0.0; massf[0][1] = 0.0; massf[0][2] = 0.0;
+            }
         }
         // Interpolate on two of the thermodynamic quantities, 
         // and fill in the rest based on an EOS call. 
@@ -595,17 +650,21 @@ public:
         case InterpolateOption.pt: 
             mixin(codeForLimits("gas.p", "p", "pPhi", "pMax", "pMin"));
             mixin(codeForLimits("gas.T", "T", "TPhi", "TMax", "TMin"));
-            foreach (imode; 0 .. nmodes) {
-                mixin(codeForLimits("gas.T_modes[imode]", "T_modes[imode]", "T_modesPhi[imode]",
-                                    "T_modesMax[imode]", "T_modesMin[imode]"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForLimits("gas.T_modes[imode]", "T_modes[imode]", "T_modesPhi[imode]",
+                                        "T_modesMax[imode]", "T_modesMin[imode]"));
+                }
             }
             break;
         case InterpolateOption.rhou:
             mixin(codeForLimits("gas.rho", "rho", "rhoPhi", "rhoMax", "rhoMin"));
             mixin(codeForLimits("gas.u", "u", "uPhi", "uMax", "uMin"));
-            foreach (imode; 0 .. nmodes) {
-                mixin(codeForLimits("gas.u_modes[imode]", "u_modes[imode]", "u_modesPhi[imode]",
-                                    "u_modesMax[imode]", "u_modesMin[imode]"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForLimits("gas.u_modes[imode]", "u_modes[imode]", "u_modesPhi[imode]",
+                                        "u_modesMax[imode]", "u_modesMin[imode]"));
+                }
             }
             break;
         case InterpolateOption.rhop:
@@ -615,9 +674,11 @@ public:
         case InterpolateOption.rhot: 
             mixin(codeForLimits("gas.rho", "rho", "rhoPhi", "rhoMax", "rhoMin"));
             mixin(codeForLimits("gas.T", "T", "TPhi", "TMax", "TMin"));
-            foreach (imode; 0 .. nmodes) {
-                mixin(codeForLimits("gas.T_modes[imode]", "T_modes[imode]", "T_modesPhi[imode]",
-                                    "T_modesMax[imode]", "T_modesMin[imode]"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForLimits("gas.T_modes[imode]", "T_modes[imode]", "T_modesPhi[imode]",
+                                        "T_modesMax[imode]", "T_modesMin[imode]"));
+                }
             }
             break;
         } // end switch thermo_interpolator
@@ -699,28 +760,34 @@ public:
         mixin(codeForLimits("vel.x", "velx", "velxPhi", "velxMax", "velxMin"));
         mixin(codeForLimits("vel.y", "vely", "velyPhi", "velyMax", "velyMin"));
         mixin(codeForLimits("vel.z", "velz", "velzPhi", "velzMax", "velzMin"));
-        if (myConfig.MHD) {
-            mixin(codeForLimits("B.x", "Bx", "BxPhi", "BxMax", "BxMin"));
-            mixin(codeForLimits("B.y", "By", "ByPhi", "ByMax", "ByMin"));
-            mixin(codeForLimits("B.z", "Bz", "BzPhi", "BzMax", "BzMin"));
-            if (myConfig.divergence_cleaning) {
-                mixin(codeForLimits("psi", "psi", "psiPhi", "psiMax", "psiMin"));
+        version(MHD) {
+            if (myConfig.MHD) {
+                mixin(codeForLimits("B.x", "Bx", "BxPhi", "BxMax", "BxMin"));
+                mixin(codeForLimits("B.y", "By", "ByPhi", "ByMax", "ByMin"));
+                mixin(codeForLimits("B.z", "Bz", "BzPhi", "BzMax", "BzMin"));
+                if (myConfig.divergence_cleaning) {
+                    mixin(codeForLimits("psi", "psi", "psiPhi", "psiMax", "psiMin"));
+                }
             }
         }
-        if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-            mixin(codeForLimits("tke", "tke", "tkePhi", "tkeMax", "tkeMin"));
-            mixin(codeForLimits("omega", "omega", "omegaPhi", "omegaMax", "omegaMin"));
-        }
-        auto nsp = myConfig.gmodel.n_species;
-        if (nsp > 1) {
-            // Multiple species.
-            foreach (isp; 0 .. nsp) {
-                mixin(codeForLimits("gas.massf[isp]", "massf[isp]", "massfPhi[isp]",
-                                    "massfMax[isp]", "massfMin[isp]"));
+        version(komega) {
+            if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
+                mixin(codeForLimits("tke", "tke", "tkePhi", "tkeMax", "tkeMin"));
+                mixin(codeForLimits("omega", "omega", "omegaPhi", "omegaMax", "omegaMin"));
             }
-        } else {
-            // Only one possible gradient value for a single species.
-            massf[0][0] = 0.0; massf[0][1] = 0.0; massf[0][2] = 0.0;
+        }
+        version(multi_species_gas) {
+            auto nsp = myConfig.gmodel.n_species;
+            if (nsp > 1) {
+                // Multiple species.
+                foreach (isp; 0 .. nsp) {
+                    mixin(codeForLimits("gas.massf[isp]", "massf[isp]", "massfPhi[isp]",
+                                        "massfMax[isp]", "massfMin[isp]"));
+                }
+            } else {
+                // Only one possible gradient value for a single species.
+                massf[0][0] = 0.0; massf[0][1] = 0.0; massf[0][2] = 0.0;
+            }
         }
         // Interpolate on two of the thermodynamic quantities, 
         // and fill in the rest based on an EOS call. 
@@ -729,17 +796,21 @@ public:
         case InterpolateOption.pt: 
             mixin(codeForLimits("gas.p", "p", "pPhi", "pMax", "pMin"));
             mixin(codeForLimits("gas.T", "T", "TPhi", "TMax", "TMin"));
-            foreach (imode; 0 .. nmodes) {
-                mixin(codeForLimits("gas.T_modes[imode]", "T_modes[imode]", "T_modesPhi[imode]",
-                                    "T_modesMax[imode]", "T_modesMin[imode]"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForLimits("gas.T_modes[imode]", "T_modes[imode]", "T_modesPhi[imode]",
+                                        "T_modesMax[imode]", "T_modesMin[imode]"));
+                }
             }
             break;
         case InterpolateOption.rhou:
             mixin(codeForLimits("gas.rho", "rho", "rhoPhi", "rhoMax", "rhoMin"));
             mixin(codeForLimits("gas.u", "u", "uPhi", "uMax", "uMin"));
-            foreach (imode; 0 .. nmodes) {
-                mixin(codeForLimits("gas.u_modes[imode]", "u_modes[imode]", "u_modesPhi[imode]",
-                                    "u_modesMax[imode]", "u_modesMin[imode]"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForLimits("gas.u_modes[imode]", "u_modes[imode]", "u_modesPhi[imode]",
+                                        "u_modesMax[imode]", "u_modesMin[imode]"));
+                }
             }
             break;
         case InterpolateOption.rhop:
@@ -749,9 +820,11 @@ public:
         case InterpolateOption.rhot: 
             mixin(codeForLimits("gas.rho", "rho", "rhoPhi", "rhoMax", "rhoMin"));
             mixin(codeForLimits("gas.T", "T", "TPhi", "TMax", "TMin"));
-            foreach (imode; 0 .. nmodes) {
-                mixin(codeForLimits("gas.T_modes[imode]", "T_modes[imode]", "T_modesPhi[imode]",
-                                    "T_modesMax[imode]", "T_modesMin[imode]"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForLimits("gas.T_modes[imode]", "T_modes[imode]", "T_modesPhi[imode]",
+                                        "T_modesMax[imode]", "T_modesMin[imode]"));
+                }
             }
             break;
         } // end switch thermo_interpolator
@@ -788,28 +861,34 @@ public:
         mixin(codeForGradients("vel.x", "velx", "velxMax", "velxMin"));
         mixin(codeForGradients("vel.y", "vely", "velyMax", "velyMin"));
         mixin(codeForGradients("vel.z", "velz", "velzMax", "velzMin"));
-        if (myConfig.MHD) {
-            mixin(codeForGradients("B.x", "Bx", "BxMax", "BxMin"));
-            mixin(codeForGradients("B.y", "By", "ByMax", "ByMin"));
-            mixin(codeForGradients("B.z", "Bz", "BzMax", "BzMin"));
-            if (myConfig.divergence_cleaning) {
-                mixin(codeForGradients("psi", "psi", "psiMax", "psiMin"));
+        version(MHD) {
+            if (myConfig.MHD) {
+                mixin(codeForGradients("B.x", "Bx", "BxMax", "BxMin"));
+                mixin(codeForGradients("B.y", "By", "ByMax", "ByMin"));
+                mixin(codeForGradients("B.z", "Bz", "BzMax", "BzMin"));
+                if (myConfig.divergence_cleaning) {
+                    mixin(codeForGradients("psi", "psi", "psiMax", "psiMin"));
+                }
             }
         }
-        if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-            mixin(codeForGradients("tke", "tke", "tkeMax", "tkeMin"));
-            mixin(codeForGradients("omega", "omega", "omegaMax", "omegaMin"));
-        }
-        auto nsp = myConfig.gmodel.n_species;
-        if (nsp > 1) {
-            // Multiple species.
-            foreach (isp; 0 .. nsp) {
-                mixin(codeForGradients("gas.massf[isp]", "massf[isp]",
-                                       "massfMax[isp]", "massfMin[isp]"));
+        version(komega) {
+            if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
+                mixin(codeForGradients("tke", "tke", "tkeMax", "tkeMin"));
+                mixin(codeForGradients("omega", "omega", "omegaMax", "omegaMin"));
             }
-        } else {
-            // Only one possible gradient value for a single species.
-            massf[0][0] = 0.0; massf[0][1] = 0.0; massf[0][2] = 0.0;
+        }
+        version(multi_species_gas) {
+            auto nsp = myConfig.gmodel.n_species;
+            if (nsp > 1) {
+                // Multiple species.
+                foreach (isp; 0 .. nsp) {
+                    mixin(codeForGradients("gas.massf[isp]", "massf[isp]",
+                                           "massfMax[isp]", "massfMin[isp]"));
+                }
+            } else {
+                // Only one possible gradient value for a single species.
+                massf[0][0] = 0.0; massf[0][1] = 0.0; massf[0][2] = 0.0;
+            }
         }
         // Interpolate on two of the thermodynamic quantities, 
         // and fill in the rest based on an EOS call. 
@@ -818,17 +897,21 @@ public:
         case InterpolateOption.pt: 
             mixin(codeForGradients("gas.p", "p", "pMax", "pMin"));
             mixin(codeForGradients("gas.T", "T", "TMax", "TMin"));
-            foreach (imode; 0 .. nmodes) {
-                mixin(codeForGradients("gas.T_modes[imode]", "T_modes[imode]",
-                                       "T_modesMax[imode]", "T_modesMin[imode]"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForGradients("gas.T_modes[imode]", "T_modes[imode]",
+                                           "T_modesMax[imode]", "T_modesMin[imode]"));
+                }
             }
             break;
         case InterpolateOption.rhou:
             mixin(codeForGradients("gas.rho", "rho", "rhoMax", "rhoMin"));
             mixin(codeForGradients("gas.u", "u", "uMax", "uMin"));
-            foreach (imode; 0 .. nmodes) {
-                mixin(codeForGradients("gas.u_modes[imode]", "u_modes[imode]",
-                                       "u_modesMax[imode]", "u_modesMin[imode]"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForGradients("gas.u_modes[imode]", "u_modes[imode]",
+                                           "u_modesMax[imode]", "u_modesMin[imode]"));
+                }
             }
             break;
         case InterpolateOption.rhop:
@@ -838,9 +921,11 @@ public:
         case InterpolateOption.rhot: 
             mixin(codeForGradients("gas.rho", "rho", "rhoMax", "rhoMin"));
             mixin(codeForGradients("gas.T", "T", "TMax", "TMin"));
-            foreach (imode; 0 .. nmodes) {
-                mixin(codeForGradients("gas.T_modes[imode]", "T_modes[imode]",
-                                       "T_modesMax[imode]", "T_modesMin[imode]"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForGradients("gas.T_modes[imode]", "T_modes[imode]",
+                                           "T_modesMax[imode]", "T_modesMin[imode]"));
+                }
             }
             break;
         } // end switch thermo_interpolator
@@ -1002,40 +1087,46 @@ public:
             mixin(codeForReconstruction("vel.x", "velx", "vel.refx", "velxPhi"));
             mixin(codeForReconstruction("vel.y", "vely", "vel.refy", "velyPhi"));
             mixin(codeForReconstruction("vel.z", "velz", "vel.refz", "velzPhi"));
-            if (myConfig.MHD) {
-                mixin(codeForReconstruction("B.x", "Bx", "B.refx", "BxPhi"));
-                mixin(codeForReconstruction("B.y", "By", "B.refy", "ByPhi"));
-                mixin(codeForReconstruction("B.z", "Bz", "B.refz", "BxPhi"));
-                if (myConfig.divergence_cleaning) {
-                    mixin(codeForReconstruction("psi", "psi", "psi", "psiPhi"));
+            version(MHD) {
+                if (myConfig.MHD) {
+                    mixin(codeForReconstruction("B.x", "Bx", "B.refx", "BxPhi"));
+                    mixin(codeForReconstruction("B.y", "By", "B.refy", "ByPhi"));
+                    mixin(codeForReconstruction("B.z", "Bz", "B.refz", "BxPhi"));
+                    if (myConfig.divergence_cleaning) {
+                        mixin(codeForReconstruction("psi", "psi", "psi", "psiPhi"));
+                    }
                 }
             }
-            if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                mixin(codeForReconstruction("tke", "tke", "tke", "tkePhi"));
-                mixin(codeForReconstruction("omega", "omega", "omega", "omegaPhi"));
+            version(komega) {
+                if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
+                    mixin(codeForReconstruction("tke", "tke", "tke", "tkePhi"));
+                    mixin(codeForReconstruction("omega", "omega", "omega", "omegaPhi"));
+                }
             }
-            if (nsp > 1) {
-                // Multiple species.
-                foreach (isp; 0 .. nsp) {
-                    mixin(codeForReconstruction("gas.massf[isp]", "massf[isp]",
-                                                "gas.massf[isp]", "massfPhi[isp]"));
+            version(multi_species_gas) {
+                if (nsp > 1) {
+                    // Multiple species.
+                    foreach (isp; 0 .. nsp) {
+                        mixin(codeForReconstruction("gas.massf[isp]", "massf[isp]",
+                                                    "gas.massf[isp]", "massfPhi[isp]"));
+                    }
+                    try {
+                        scale_mass_fractions(Lft.gas.massf); 
+                    } catch (Exception e) {
+                        debug { writeln(e.msg); }
+                        Lft.gas.massf[] = IFace.left_cell.fs.gas.massf[];
+                    }
+                    try {
+                        scale_mass_fractions(Rght.gas.massf);
+                    } catch (Exception e) {
+                        debug { writeln(e.msg); }
+                        Rght.gas.massf[] = IFace.right_cell.fs.gas.massf[];
+                    }
+                } else {
+                    // Only one possible mass-fraction value for a single species.
+                    Lft.gas.massf[0] = 1.0;
+                    Rght.gas.massf[0] = 1.0;
                 }
-                try {
-                    scale_mass_fractions(Lft.gas.massf); 
-                } catch (Exception e) {
-                    debug { writeln(e.msg); }
-                    Lft.gas.massf[] = IFace.left_cell.fs.gas.massf[];
-                }
-                try {
-                    scale_mass_fractions(Rght.gas.massf);
-                } catch (Exception e) {
-                    debug { writeln(e.msg); }
-                    Rght.gas.massf[] = IFace.right_cell.fs.gas.massf[];
-                }
-            } else {
-                // Only one possible mass-fraction value for a single species.
-                Lft.gas.massf[0] = 1.0;
-                Rght.gas.massf[0] = 1.0;
             }
             // Interpolate on two of the thermodynamic quantities, 
             // and fill in the rest based on an EOS call. 
@@ -1063,18 +1154,22 @@ public:
             case InterpolateOption.pt: 
                 mixin(codeForReconstruction("gas.p", "p", "gas.p", "pPhi"));
                 mixin(codeForReconstruction("gas.T", "T", "gas.T", "TPhi"));
-                foreach (imode; 0 .. nmodes) {
-                    mixin(codeForReconstruction("gas.T_modes[imode]", "T_modes[imode]",
-                                                "gas.T_modes[imode]", "T_modesPhi[imode]"));
+                version(multi_T_gas) {
+                    foreach (imode; 0 .. nmodes) {
+                        mixin(codeForReconstruction("gas.T_modes[imode]", "T_modes[imode]",
+                                                    "gas.T_modes[imode]", "T_modesPhi[imode]"));
+                    }
                 }
                 mixin(codeForThermoUpdate("pT"));
                 break;
             case InterpolateOption.rhou:
                 mixin(codeForReconstruction("gas.rho", "rho", "gas.rho", "rhoPhi"));
                 mixin(codeForReconstruction("gas.u", "u", "gas.u", "uPhi"));
-                foreach (imode; 0 .. nmodes) {
-                    mixin(codeForReconstruction("gas.u_modes[imode]", "u_modes[imode]",
-                                                "gas.u_modes[imode]", "u_modesPhi[imode]"));
+                version(multi_T_gas) {
+                    foreach (imode; 0 .. nmodes) {
+                        mixin(codeForReconstruction("gas.u_modes[imode]", "u_modes[imode]",
+                                                    "gas.u_modes[imode]", "u_modesPhi[imode]"));
+                    }
                 }
                 mixin(codeForThermoUpdate("rhou"));
                 break;
@@ -1086,9 +1181,11 @@ public:
             case InterpolateOption.rhot: 
                 mixin(codeForReconstruction("gas.rho", "rho", "gas.rho", "rhoPhi"));
                 mixin(codeForReconstruction("gas.T", "T", "gas.T", "TPhi"));
-                foreach (imode; 0 .. nmodes) {
-                    mixin(codeForReconstruction("gas.T_modes[imode]", "T_modes[imode]",
-                                                "gas.T_modes[imode]", "T_modesPhi[imode]"));
+                version(multi_T_gas) {
+                    foreach (imode; 0 .. nmodes) {
+                        mixin(codeForReconstruction("gas.T_modes[imode]", "T_modes[imode]",
+                                                    "gas.T_modes[imode]", "T_modesPhi[imode]"));
+                    }
                 }
                 mixin(codeForThermoUpdate("rhoT"));
                 break;
