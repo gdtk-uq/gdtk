@@ -451,29 +451,37 @@ public:
         myU.mass = myrho;
         // Momentum per unit volume.
         myU.momentum.set(fs.gas.rho*fs.vel.x, fs.gas.rho*fs.vel.y, fs.gas.rho*fs.vel.z);
-        // Magnetic field
-        myU.B.set(fs.B);
-        myU.psi = fs.psi;
-        myU.divB = fs.divB;
+        version(MHD) {
+            // Magnetic field
+            myU.B.set(fs.B);
+            myU.psi = fs.psi;
+            myU.divB = fs.divB;
+        }
         // Total Energy / unit volume
         number u = myConfig.gmodel.internal_energy(fs.gas);
         number ke = 0.5*(fs.vel.x*fs.vel.x + fs.vel.y*fs.vel.y+fs.vel.z*fs.vel.z);
-        if (with_k_omega) {
-            myU.tke = fs.gas.rho * fs.tke;
-            myU.omega = fs.gas.rho * fs.omega;
-            myU.total_energy = fs.gas.rho*(u + ke + fs.tke);
-        } else {
-            myU.tke = 0.0;
-            myU.omega = fs.gas.rho * 1.0;
-            myU.total_energy = fs.gas.rho*(u + ke);
+        myU.total_energy = fs.gas.rho*(u + ke);
+        version(komega) {
+            if (with_k_omega) {
+                myU.tke = fs.gas.rho * fs.tke;
+                myU.omega = fs.gas.rho * fs.omega;
+                myU.total_energy += fs.gas.rho * fs.tke;
+            } else {
+                myU.tke = 0.0;
+                myU.omega = fs.gas.rho * 1.0;
+            }
         }
-        if (myConfig.MHD) {
-            number me = 0.5*(fs.B.x*fs.B.x + fs.B.y*fs.B.y + fs.B.z*fs.B.z);
-            myU.total_energy += me;
+        version(MHD) {
+            if (myConfig.MHD) {
+                number me = 0.5*(fs.B.x*fs.B.x + fs.B.y*fs.B.y + fs.B.z*fs.B.z);
+                myU.total_energy += me;
+            }
         }
-        // Other internal energies: energy in mode per unit volume.
-        foreach(imode; 0 .. myU.energies.length) {
-            myU.energies[imode] = fs.gas.rho*fs.gas.u_modes[imode];
+        version(multi_T_gas) {
+            // Other internal energies: energy in mode per unit volume.
+            foreach(imode; 0 .. myU.energies.length) {
+                myU.energies[imode] = fs.gas.rho*fs.gas.u_modes[imode];
+            }
         }
         if (omegaz != 0.0) {
             // Rotating frame.
@@ -489,9 +497,11 @@ public:
             // where rotating frame velocity  u = omegaz * r.
             myU.total_energy -= rho*0.5*omegaz*omegaz*rsq;
         }
-        // Species densities: mass of species is per unit volume.
-        foreach(isp; 0 .. myU.massf.length) {
-            myU.massf[isp] = fs.gas.rho*fs.gas.massf[isp];
+        version(multi_species_gas) {
+            // Species densities: mass of species is per unit volume.
+            foreach(isp; 0 .. myU.massf.length) {
+                myU.massf[isp] = fs.gas.rho*fs.gas.massf[isp];
+            }
         }
         assert(U[ftl].mass > 0.0, "invalid density in conserved quantities vector" ~
                " at end of FVCell.encode_conserved().");
@@ -532,10 +542,12 @@ public:
         number dinv = 1.0 / rho;
         // Velocities from momenta.
         fs.vel.set(myU.momentum.x*dinv, myU.momentum.y*dinv, myU.momentum.z*dinv);
-        // Magnetic field.
-        fs.B.set(myU.B);
-        fs.psi = myU.psi;
-        fs.divB = myU.divB;
+        version(MHD) {
+            // Magnetic field.
+            fs.B.set(myU.B);
+            fs.psi = myU.psi;
+            fs.divB = myU.divB;
+        }
         // Divide up the total energy per unit volume.
         number rE;
         if (omegaz != 0.0) {
@@ -550,13 +562,16 @@ public:
             // Non-rotating frame.
             rE = myU.total_energy;
         }
-        number ke = 0.5*(fs.vel.x*fs.vel.x + fs.vel.y*fs.vel.y + fs.vel.z*fs.vel.z);
-        number me = 0.0;
-        if ( myConfig.MHD ) { me = 0.5*(fs.B.x*fs.B.x + fs.B.y*fs.B.y + fs.B.z*fs.B.z); }
+        version(MHD) {
+            number me = 0.0;
+            if ( myConfig.MHD ) { me = 0.5*(fs.B.x*fs.B.x + fs.B.y*fs.B.y + fs.B.z*fs.B.z); }
+            rE -= me;
+        }
+        // Start with the total energy, then take out the other components.
         // Internal energy is what remains.
-        number u;
-        if (with_k_omega) {
-            if (allow_k_omega_update) {
+        number u = rE * dinv;
+        version(KOMEGA) {
+            if (with_k_omega && allow_k_omega_update) {
                 fs.tke = myU.tke * dinv;
                 fs.omega = myU.omega * dinv;
                 // for stability, we enforce tke and omega to be positive.
@@ -565,26 +580,29 @@ public:
                 // to prevent division by 0.0 set variables to a very small positive value.
                 if (fs.tke < 0.0) fs.tke = 1.0e-10;
                 if (fs.omega < 0.0) fs.omega = 1.0e-10;
-                u = (rE - myU.tke - me) * dinv - ke;
             } else {
-                // Do nothing about fs.tke and fs.omega
-                u = (rE - me) * dinv - fs.tke - ke;
+                fs.tke = 0.0;
+                fs.omega = 1.0;
             }
-        } else {
-            fs.tke = 0.0;
-            fs.omega = 1.0;
-            u = (rE - me) * dinv - ke;
+            u -= fs.tke;
         }
-        if (gmodel.n_modes > 0) {
+        // Remove kinetic energy for bulk flow.
+        number ke = 0.5*(fs.vel.x*fs.vel.x + fs.vel.y*fs.vel.y + fs.vel.z*fs.vel.z);
+        u -= ke;
+        // Other energies, if any.
+        version(multi_T_gas) {
+            number u_other = 0.0;
             foreach(imode; 0 .. gmodel.n_modes) { fs.gas.u_modes[imode] = myU.energies[imode] * dinv; } 
-            number u_other = 0.0; foreach(ei; fs.gas.u_modes) { u_other += ei; }
+            foreach(ei; fs.gas.u_modes) { u_other += ei; }
             fs.gas.u = u - u_other;
         } else {
             fs.gas.u = u;
         }
-        // Thermochemical species.
-        foreach(isp; 0 .. gmodel.n_species) fs.gas.massf[isp] = myU.massf[isp] * dinv; 
-        if (gmodel.n_species > 1) scale_mass_fractions(fs.gas.massf);
+        // Thermochemical species, if appropriate.
+        version(multi_species_gas) {
+            foreach(isp; 0 .. gmodel.n_species) { fs.gas.massf[isp] = myU.massf[isp] * dinv; } 
+            if (gmodel.n_species > 1) scale_mass_fractions(fs.gas.massf);
+        }
         //
         // Fill out the other variables: P, T, a, and viscous transport coefficients.
         try {
@@ -648,69 +666,74 @@ public:
         my_dUdt.momentum.set(vol_inv*integralx + Q.momentum.x,
                              vol_inv*integraly + Q.momentum.y,
                              vol_inv*integralz + Q.momentum.z);
-    
-        if (myConfig.MHD) {
-            // Time-derivative for Magnetic Field/unit volume.
-            integralx = 0.0; integraly = 0.0; integralz = 0.0;
-            foreach(i; 0 .. nf) {
-                integralx -= myF[i].B.x*area[i];
-                integraly -= myF[i].B.y*area[i];
-                integralz -= myF[i].B.z*area[i];
-            }
-            if (myConfig.MHD_static_field) { 
-                // then the magnetic field won't change...
-                my_dUdt.B.set(Q.B.x, Q.B.y, Q.B.z);
+        version(MHD) {
+            if (myConfig.MHD) {
+                // Time-derivative for Magnetic Field/unit volume.
+                integralx = 0.0; integraly = 0.0; integralz = 0.0;
+                foreach(i; 0 .. nf) {
+                    integralx -= myF[i].B.x*area[i];
+                    integraly -= myF[i].B.y*area[i];
+                    integralz -= myF[i].B.z*area[i];
+                }
+                if (myConfig.MHD_static_field) { 
+                    // then the magnetic field won't change...
+                    my_dUdt.B.set(Q.B.x, Q.B.y, Q.B.z);
+                } else {
+                    my_dUdt.B.set(vol_inv*integralx + Q.B.x,
+                                  vol_inv*integraly + Q.B.y,
+                                  vol_inv*integralz + Q.B.z);
+                }
+                // Calculate divergence of the magnetic field here;
+                // not actually a time-derivatice but seems to be the best way to calculate it.
+                my_dUdt.divB = 0.0;
+                foreach(i; 0 .. nf) { my_dUdt.divB += myF[i].divB*area[i]; }
+                if (myConfig.divergence_cleaning) {
+                    integral = 0.0;
+                    foreach(i; 0 .. nf) { integral -= myF[i].psi*area[i]; }
+                    my_dUdt.psi = vol_inv*integral + Q.psi;
+                }
             } else {
-                my_dUdt.B.set(vol_inv*integralx + Q.B.x,
-                              vol_inv*integraly + Q.B.y,
-                              vol_inv*integralz + Q.B.z);
+                my_dUdt.B.clear();
+                my_dUdt.psi = 0.0;
+                my_dUdt.divB = 0.0;
             }
-            // Calculate divergence of the magnetic field here;
-            // not actually a time-derivatice but seems to be the best way to calculate it.
-            my_dUdt.divB = 0.0;
-            foreach(i; 0 .. nf) { my_dUdt.divB += myF[i].divB*area[i]; }
-            if (myConfig.divergence_cleaning) {
-                integral = 0.0;
-                foreach(i; 0 .. nf) { integral -= myF[i].psi*area[i]; }
-                my_dUdt.psi = vol_inv*integral + Q.psi;
-            }
-        } else {
-            my_dUdt.B.clear();
-            my_dUdt.psi = 0.0;
-            my_dUdt.divB = 0.0;
         }
-
         // Time-derivative for Total Energy/unit volume.
         integral = 0.0;
         foreach(i; 0 .. nf) { integral -= myF[i].total_energy*area[i]; }
         my_dUdt.total_energy = vol_inv*integral + Q.total_energy;
-    
-        if (with_k_omega) {
-            integral = 0.0;
-            foreach(i; 0 .. nf) { integral -= myF[i].tke*area[i]; }
-            my_dUdt.tke = vol_inv*integral + Q.tke;
-            integral = 0.0;
-            foreach(i; 0 .. nf) { integral -= myF[i].omega*area[i]; }
-            my_dUdt.omega = vol_inv*integral + Q.omega;
-        } else {
-            my_dUdt.tke = 0.0;
-            my_dUdt.omega = 0.0;
+        version(komega) {
+            if (with_k_omega) {
+                integral = 0.0;
+                foreach(i; 0 .. nf) { integral -= myF[i].tke*area[i]; }
+                my_dUdt.tke = vol_inv*integral + Q.tke;
+                integral = 0.0;
+                foreach(i; 0 .. nf) { integral -= myF[i].omega*area[i]; }
+                my_dUdt.omega = vol_inv*integral + Q.omega;
+            } else {
+                my_dUdt.tke = 0.0;
+                my_dUdt.omega = 0.0;
+            }
         }
-        // Time-derivative for individual species.
-        // The conserved quantity is the mass per unit
-        // volume of species isp and
-        // the fluxes are mass/unit-time/unit-area.
-        // Units of DmassfDt are 1/sec.
-        foreach(isp; 0 .. iface[0].F.massf.length) {
-            integral = 0.0;
-            foreach(i; 0 .. nf) { integral -= myF[i].massf[isp]*area[i]; }
-            my_dUdt.massf[isp] = vol_inv*integral + Q.massf[isp];
+        version(multi_species_gas) {
+            // Time-derivative for individual species.
+            // The conserved quantity is the mass per unit
+            // volume of species isp and
+            // the fluxes are mass/unit-time/unit-area.
+            // Units of DmassfDt are 1/sec.
+            foreach(isp; 0 .. iface[0].F.massf.length) {
+                integral = 0.0;
+                foreach(i; 0 .. nf) { integral -= myF[i].massf[isp]*area[i]; }
+                my_dUdt.massf[isp] = vol_inv*integral + Q.massf[isp];
+            }
         }
-        // Individual energies.
-        foreach(imode; 0 .. iface[0].F.energies.length) {
-            integral = 0.0;
-            foreach(i; 0 .. nf) { integral -= myF[i].energies[imode]*area[i]; }
-            my_dUdt.energies[imode] = vol_inv*integral + Q.energies[imode];
+        version(multi_T_gas) {
+            // Individual energies.
+            foreach(imode; 0 .. iface[0].F.energies.length) {
+                integral = 0.0;
+                foreach(i; 0 .. nf) { integral -= myF[i].energies[imode]*area[i]; }
+                my_dUdt.energies[imode] = vol_inv*integral + Q.energies[imode];
+            }
         }
     } // end time_derivatives()
 
@@ -745,45 +768,53 @@ public:
         U1.momentum.set(U0.momentum.x + dt*gamma_1*dUdt0.momentum.x,
                         U0.momentum.y + dt*gamma_1*dUdt0.momentum.y,
                         U0.momentum.z + dt*gamma_1*dUdt0.momentum.z);
-        if (myConfig.MHD) {
-            // Magnetic field
-            U1.B.set(U0.B.x + dt*gamma_1*dUdt0.B.x,
-                     U0.B.y + dt*gamma_1*dUdt0.B.y,
-                     U0.B.z + dt*gamma_1*dUdt0.B.z);
-            U1.divB = dUdt0.divB;
-            if (myConfig.divergence_cleaning) {
-                U1.psi = U0.psi + dt*gamma_1*dUdt0.psi;
-                U1.psi *= divergence_damping_factor(dt, myConfig.c_h, myConfig.divB_damping_length);
+        version(MHD) {
+            if (myConfig.MHD) {
+                // Magnetic field
+                U1.B.set(U0.B.x + dt*gamma_1*dUdt0.B.x,
+                         U0.B.y + dt*gamma_1*dUdt0.B.y,
+                         U0.B.z + dt*gamma_1*dUdt0.B.z);
+                U1.divB = dUdt0.divB;
+                if (myConfig.divergence_cleaning) {
+                    U1.psi = U0.psi + dt*gamma_1*dUdt0.psi;
+                    U1.psi *= divergence_damping_factor(dt, myConfig.c_h, myConfig.divB_damping_length);
+                }
+            } else {
+                U1.B.clear();
+                U1.psi = 0.0;
+                U1.divB = 0.0;
             }
-        } else {
-            U1.B.clear();
-            U1.psi = 0.0;
-            U1.divB = 0.0;
         }
         U1.total_energy = U0.total_energy + dt * gamma_1 * dUdt0.total_energy;
-        if (with_k_omega) {
-            U1.tke = U0.tke + dt * gamma_1 * dUdt0.tke;
-            U1.tke = fmax(U1.tke, 0.0);
-            U1.omega = U0.omega + dt * gamma_1 * dUdt0.omega;
-            U1.omega = fmax(U1.omega, U0.mass);
-            // ...assuming a minimum value of 1.0 for omega
-            // It may occur (near steps in the wall) that a large flux of romega
-            // through one of the cell interfaces causes romega within the cell
-            // to drop rapidly.
-            // The large values of omega come from Menter's near-wall correction that may be
-            // applied outside the control of this finite-volume core code.
-            // These large values of omega will be convected along the wall and,
-            // if they are convected past a corner with a strong expansion,
-            // there will be an unreasonably-large flux out of the cell.
-        } else {
-            U1.tke = U0.tke;
-            U1.omega = U0.omega;
+        version(komega) {
+            if (with_k_omega) {
+                U1.tke = U0.tke + dt * gamma_1 * dUdt0.tke;
+                U1.tke = fmax(U1.tke, 0.0);
+                U1.omega = U0.omega + dt * gamma_1 * dUdt0.omega;
+                U1.omega = fmax(U1.omega, U0.mass);
+                // ...assuming a minimum value of 1.0 for omega
+                // It may occur (near steps in the wall) that a large flux of romega
+                // through one of the cell interfaces causes romega within the cell
+                // to drop rapidly.
+                // The large values of omega come from Menter's near-wall correction that may be
+                // applied outside the control of this finite-volume core code.
+                // These large values of omega will be convected along the wall and,
+                // if they are convected past a corner with a strong expansion,
+                // there will be an unreasonably-large flux out of the cell.
+            } else {
+                U1.tke = U0.tke;
+                U1.omega = U0.omega;
+            }
         }
-        foreach(isp; 0 .. U1.massf.length) {
-            U1.massf[isp] = U0.massf[isp] + dt*gamma_1*dUdt0.massf[isp];
+        version(multi_species_gas) {
+            foreach(isp; 0 .. U1.massf.length) {
+                U1.massf[isp] = U0.massf[isp] + dt*gamma_1*dUdt0.massf[isp];
+            }
         }
-        foreach(imode; 0 .. U1.energies.length) {
-            U1.energies[imode] = U0.energies[imode] + dt*gamma_1*dUdt0.energies[imode];
+        version(multi_T_gas) {
+            foreach(imode; 0 .. U1.energies.length) {
+                U1.energies[imode] = U0.energies[imode] + dt*gamma_1*dUdt0.energies[imode];
+            }
         }
         return;
     } // end stage_1_update_for_flow_on_fixed_grid()
@@ -812,36 +843,45 @@ public:
         U2.momentum.set(U_old.momentum.x + dt*(gamma_1*dUdt0.momentum.x + gamma_2*dUdt1.momentum.x),
                         U_old.momentum.y + dt*(gamma_1*dUdt0.momentum.y + gamma_2*dUdt1.momentum.y),
                         U_old.momentum.z + dt*(gamma_1*dUdt0.momentum.z + gamma_2*dUdt1.momentum.z));
-        if (myConfig.MHD) {
-            // Magnetic field
-            U2.B.set(U_old.B.x + dt*(gamma_1*dUdt0.B.x + gamma_2*dUdt1.B.x),
-                     U_old.B.y + dt*(gamma_1*dUdt0.B.y + gamma_2*dUdt1.B.y),
-                     U_old.B.z + dt*(gamma_1*dUdt0.B.z + gamma_2*dUdt1.B.z));
-            U2.divB = dUdt0.divB;
-            if (myConfig.divergence_cleaning) {
-                U2.psi = U_old.psi + dt*(gamma_1*dUdt0.psi + gamma_2*dUdt1.psi);
-                U2.psi *= divergence_damping_factor(dt, myConfig.c_h, myConfig.divB_damping_length);
+        version(MHD) {
+            if (myConfig.MHD) {
+                // Magnetic field
+                U2.B.set(U_old.B.x + dt*(gamma_1*dUdt0.B.x + gamma_2*dUdt1.B.x),
+                         U_old.B.y + dt*(gamma_1*dUdt0.B.y + gamma_2*dUdt1.B.y),
+                         U_old.B.z + dt*(gamma_1*dUdt0.B.z + gamma_2*dUdt1.B.z));
+                U2.divB = dUdt0.divB;
+                if (myConfig.divergence_cleaning) {
+                    U2.psi = U_old.psi + dt*(gamma_1*dUdt0.psi + gamma_2*dUdt1.psi);
+                    U2.psi *= divergence_damping_factor(dt, myConfig.c_h, myConfig.divB_damping_length);
+                }
+            } else {
+                U2.B.clear();
+                U2.psi = 0.0;
+                U2.divB = 0.0;
             }
-        } else {
-            U2.B.clear();
-            U2.psi = 0.0;
-            U2.divB = 0.0;
         }
         U2.total_energy = U_old.total_energy + dt*(gamma_1*dUdt0.total_energy + gamma_2*dUdt1.total_energy);
-        if (with_k_omega) {
-            U2.tke = U_old.tke + dt*(gamma_1*dUdt0.tke + gamma_2*dUdt1.tke);
-            U2.tke = fmax(U2.tke, 0.0);
-            U2.omega = U_old.omega + dt*(gamma_1*dUdt0.omega + gamma_2*dUdt1.omega);
-            U2.omega = fmax(U2.omega, U_old.mass);
-        } else {
-            U2.tke = U_old.tke;
-            U2.omega = U_old.omega;
+        version(komega) {
+            if (with_k_omega) {
+                U2.tke = U_old.tke + dt*(gamma_1*dUdt0.tke + gamma_2*dUdt1.tke);
+                U2.tke = fmax(U2.tke, 0.0);
+                U2.omega = U_old.omega + dt*(gamma_1*dUdt0.omega + gamma_2*dUdt1.omega);
+                U2.omega = fmax(U2.omega, U_old.mass);
+            } else {
+                U2.tke = U_old.tke;
+                U2.omega = U_old.omega;
+            }
         }
-        foreach(isp; 0 .. U2.massf.length) {
-            U2.massf[isp] = U_old.massf[isp] + dt*(gamma_1*dUdt0.massf[isp] + gamma_2*dUdt1.massf[isp]);
+        version(multi_species_gas) {
+            foreach(isp; 0 .. U2.massf.length) {
+                U2.massf[isp] = U_old.massf[isp] + dt*(gamma_1*dUdt0.massf[isp] + gamma_2*dUdt1.massf[isp]);
+            }
         }
-        foreach(imode; 0 .. U2.energies.length) {
-            U2.energies[imode] = U_old.energies[imode] + dt*(gamma_1*dUdt0.energies[imode] + gamma_2*dUdt1.energies[imode]);
+        version(multi_T_gas) {
+            foreach(imode; 0 .. U2.energies.length) {
+                U2.energies[imode] = U_old.energies[imode] + dt*(gamma_1*dUdt0.energies[imode] +
+                                                                 gamma_2*dUdt1.energies[imode]);
+            }
         }
         return;
     } // end stage_2_update_for_flow_on_fixed_grid()
@@ -871,40 +911,53 @@ public:
         case GasdynamicUpdate.denman_rk3: gamma_1 = 0.0; gamma_2 = -5.0/12.0; gamma_3 = 3.0/4.0; break;
         }
         U3.mass = U_old.mass + dt * (gamma_1*dUdt0.mass + gamma_2*dUdt1.mass + gamma_3*dUdt2.mass);
-        U3.momentum.set(U_old.momentum.x + dt*(gamma_1*dUdt0.momentum.x + gamma_2*dUdt1.momentum.x + gamma_3*dUdt2.momentum.x),
-                        U_old.momentum.y + dt*(gamma_1*dUdt0.momentum.y + gamma_2*dUdt1.momentum.y + gamma_3*dUdt2.momentum.y),
-                        U_old.momentum.z + dt*(gamma_1*dUdt0.momentum.z + gamma_2*dUdt1.momentum.z + gamma_3*dUdt2.momentum.z));
-        if (myConfig.MHD) {
-            // Magnetic field
-            U3.B.set(U_old.B.x + dt*(gamma_1*dUdt0.B.x + gamma_2*dUdt1.B.x + gamma_3*dUdt2.B.x),
-                     U_old.B.y + dt*(gamma_1*dUdt0.B.y + gamma_2*dUdt1.B.y + gamma_3*dUdt2.B.y),
-                     U_old.B.z + dt*(gamma_1*dUdt0.B.z + gamma_2*dUdt1.B.z + gamma_3*dUdt2.B.z));
-            if (myConfig.divergence_cleaning) {
-                U3.psi = U_old.psi + dt*(gamma_1*dUdt0.psi + gamma_2*dUdt1.psi + gamma_3*dUdt2.psi);
-                U3.psi *= divergence_damping_factor(dt, myConfig.c_h, myConfig.divB_damping_length);
+        U3.momentum.set(U_old.momentum.x + dt*(gamma_1*dUdt0.momentum.x + gamma_2*dUdt1.momentum.x +
+                                               gamma_3*dUdt2.momentum.x),
+                        U_old.momentum.y + dt*(gamma_1*dUdt0.momentum.y + gamma_2*dUdt1.momentum.y +
+                                               gamma_3*dUdt2.momentum.y),
+                        U_old.momentum.z + dt*(gamma_1*dUdt0.momentum.z + gamma_2*dUdt1.momentum.z +
+                                               gamma_3*dUdt2.momentum.z));
+        version(MHD) {
+            if (myConfig.MHD) {
+                // Magnetic field
+                U3.B.set(U_old.B.x + dt*(gamma_1*dUdt0.B.x + gamma_2*dUdt1.B.x + gamma_3*dUdt2.B.x),
+                         U_old.B.y + dt*(gamma_1*dUdt0.B.y + gamma_2*dUdt1.B.y + gamma_3*dUdt2.B.y),
+                         U_old.B.z + dt*(gamma_1*dUdt0.B.z + gamma_2*dUdt1.B.z + gamma_3*dUdt2.B.z));
+                if (myConfig.divergence_cleaning) {
+                    U3.psi = U_old.psi + dt*(gamma_1*dUdt0.psi + gamma_2*dUdt1.psi + gamma_3*dUdt2.psi);
+                    U3.psi *= divergence_damping_factor(dt, myConfig.c_h, myConfig.divB_damping_length);
+                }
+            } else {
+                U3.B.clear();
+                U3.psi = 0.0;
             }
-        } else {
-            U3.B.clear();
-            U3.psi = 0.0;
         }
         U3.total_energy = U_old.total_energy + 
             dt*(gamma_1*dUdt0.total_energy + gamma_2*dUdt1.total_energy + gamma_3*dUdt2.total_energy);
-        if (with_k_omega) {
-            U3.tke = U_old.tke + dt*(gamma_1*dUdt0.tke + gamma_2*dUdt1.tke + gamma_3*dUdt2.tke);
-            U3.tke = fmax(U3.tke, 0.0);
-            U3.omega = U_old.omega + dt*(gamma_1*dUdt0.omega + gamma_2*dUdt1.omega + gamma_3*dUdt2.omega);
-            U3.omega = fmax(U3.omega, U_old.mass);
-        } else {
-            U3.tke = U_old.tke;
-            U3.omega = U_old.omega;
+        version(komega) {
+            if (with_k_omega) {
+                U3.tke = U_old.tke + dt*(gamma_1*dUdt0.tke + gamma_2*dUdt1.tke + gamma_3*dUdt2.tke);
+                U3.tke = fmax(U3.tke, 0.0);
+                U3.omega = U_old.omega + dt*(gamma_1*dUdt0.omega + gamma_2*dUdt1.omega +
+                                             gamma_3*dUdt2.omega);
+                U3.omega = fmax(U3.omega, U_old.mass);
+            } else {
+                U3.tke = U_old.tke;
+                U3.omega = U_old.omega;
+            }
         }
-        foreach(isp; 0 .. U3.massf.length) {
-            U3.massf[isp] = U_old.massf[isp] +
-                dt*(gamma_1*dUdt0.massf[isp] + gamma_2*dUdt1.massf[isp] + gamma_3*dUdt2.massf[isp]);
+        version(multi_species_gas) {
+            foreach(isp; 0 .. U3.massf.length) {
+                U3.massf[isp] = U_old.massf[isp] +
+                    dt*(gamma_1*dUdt0.massf[isp] + gamma_2*dUdt1.massf[isp] + gamma_3*dUdt2.massf[isp]);
+            }
         }
-        foreach(imode; 0 .. U3.energies.length) {
-            U3.energies[imode] = U_old.energies[imode] +
-                dt*(gamma_1*dUdt0.energies[imode] + gamma_2*dUdt1.energies[imode] + gamma_3*dUdt2.energies[imode]);
+        version(multi_T_gas) {
+            foreach(imode; 0 .. U3.energies.length) {
+                U3.energies[imode] = U_old.energies[imode] +
+                    dt*(gamma_1*dUdt0.energies[imode] + gamma_2*dUdt1.energies[imode] +
+                        gamma_3*dUdt2.energies[imode]);
+            }
         }
         return;
     } // end stage_3_update_for_flow_on_fixed_grid()
@@ -921,29 +974,37 @@ public:
         U1.momentum.set(vr*(U0.momentum.x + dt*gamma_1*dUdt0.momentum.x),
                         vr*(U0.momentum.y + dt*gamma_1*dUdt0.momentum.y),
                         vr*(U0.momentum.z + dt*gamma_1*dUdt0.momentum.z));
-        if (myConfig.MHD) {
+        version(MHD) {
             // Magnetic field
-            U1.B.set(vr*(U0.B.x + dt*gamma_1*dUdt0.B.x),
-                     vr*(U0.B.y + dt*gamma_1*dUdt0.B.y),
-                     vr*(U0.B.z + dt*gamma_1*dUdt0.B.z));
-        } else {
-            U1.B.clear();
+            if (myConfig.MHD) {
+                U1.B.set(vr*(U0.B.x + dt*gamma_1*dUdt0.B.x),
+                         vr*(U0.B.y + dt*gamma_1*dUdt0.B.y),
+                         vr*(U0.B.z + dt*gamma_1*dUdt0.B.z));
+            } else {
+                U1.B.clear();
+            }
         }
         U1.total_energy = vr*(U0.total_energy + dt*gamma_1*dUdt0.total_energy);
-        if (with_k_omega) {
-            U1.tke = vr*(U0.tke + dt*gamma_1*dUdt0.tke);
-            U1.tke = fmax(U1.tke, 0.0);
-            U1.omega = vr*(U0.omega + dt*gamma_1*dUdt0.omega);
-            U1.omega = fmax(U1.omega, U0.mass);
-        } else {
-            U1.tke = U0.tke;
-            U1.omega = U0.omega;
+        version(komega) {
+            if (with_k_omega) {
+                U1.tke = vr*(U0.tke + dt*gamma_1*dUdt0.tke);
+                U1.tke = fmax(U1.tke, 0.0);
+                U1.omega = vr*(U0.omega + dt*gamma_1*dUdt0.omega);
+                U1.omega = fmax(U1.omega, U0.mass);
+            } else {
+                U1.tke = U0.tke;
+                U1.omega = U0.omega;
+            }
         }
-        foreach(isp; 0 .. U1.massf.length) {
-            U1.massf[isp] = vr*(U0.massf[isp] + dt*gamma_1*dUdt0.massf[isp]);
+        version(multi_species_gas) {
+            foreach(isp; 0 .. U1.massf.length) {
+                U1.massf[isp] = vr*(U0.massf[isp] + dt*gamma_1*dUdt0.massf[isp]);
+            }
         }
-        foreach(imode; 0 .. U1.energies.length) {
-            U1.energies[imode] = vr*(U0.energies[imode] + dt*gamma_1*dUdt0.energies[imode]);
+        version(multi_T_gas) {
+            foreach(imode; 0 .. U1.energies.length) {
+                U1.energies[imode] = vr*(U0.energies[imode] + dt*gamma_1*dUdt0.energies[imode]);
+            }
         }
         return;
     } // end stage_1_update_for_flow_on_moving_grid()
@@ -962,35 +1023,47 @@ public:
         gamma_1 *= volume[0]; gamma_2 *= volume[1]; // Roll-in the volumes for convenience below. 
         //
         U2.mass = vol_inv * (v_old * U0.mass + dt * (gamma_1 * dUdt0.mass + gamma_2 * dUdt1.mass));
-        U2.momentum.set(vol_inv*(v_old*U0.momentum.x + dt*(gamma_1*dUdt0.momentum.x + gamma_2*dUdt1.momentum.x)),
-                        vol_inv*(v_old*U0.momentum.y + dt*(gamma_1*dUdt0.momentum.y + gamma_2*dUdt1.momentum.y)),
-                        vol_inv*(v_old*U0.momentum.z + dt*(gamma_1*dUdt0.momentum.z + gamma_2*dUdt1.momentum.z)));
-        if (myConfig.MHD) {
-            // Magnetic field
-            U2.B.set(vol_inv*(v_old*U0.B.x + dt*(gamma_1*dUdt0.B.x + gamma_2*dUdt1.B.x)),
-                     vol_inv*(v_old*U0.B.y + dt*(gamma_1*dUdt0.B.y + gamma_2*dUdt1.B.y)),
-                     vol_inv*(v_old*U0.B.z + dt*(gamma_1*dUdt0.B.z + gamma_2*dUdt1.B.z)));
-        } else {
-            U2.B.clear();
+        U2.momentum.set(vol_inv*(v_old*U0.momentum.x + dt*(gamma_1*dUdt0.momentum.x +
+                                                           gamma_2*dUdt1.momentum.x)),
+                        vol_inv*(v_old*U0.momentum.y + dt*(gamma_1*dUdt0.momentum.y +
+                                                           gamma_2*dUdt1.momentum.y)),
+                        vol_inv*(v_old*U0.momentum.z + dt*(gamma_1*dUdt0.momentum.z +
+                                                           gamma_2*dUdt1.momentum.z)));
+        version(MHD) {
+            if (myConfig.MHD) {
+                // Magnetic field
+                U2.B.set(vol_inv*(v_old*U0.B.x + dt*(gamma_1*dUdt0.B.x + gamma_2*dUdt1.B.x)),
+                         vol_inv*(v_old*U0.B.y + dt*(gamma_1*dUdt0.B.y + gamma_2*dUdt1.B.y)),
+                         vol_inv*(v_old*U0.B.z + dt*(gamma_1*dUdt0.B.z + gamma_2*dUdt1.B.z)));
+            } else {
+                U2.B.clear();
+            }
         }
         U2.total_energy = vol_inv*(v_old*U0.total_energy +
                                    dt*(gamma_1*dUdt0.total_energy + gamma_2*dUdt1.total_energy));
-        if (with_k_omega) {
-            U2.tke = vol_inv*(v_old*U0.tke + dt*(gamma_1*dUdt0.tke + gamma_2*dUdt1.tke));
-            U2.tke = fmax(U2.tke, 0.0);
-            U2.omega = vol_inv*(v_old*U0.omega + dt*(gamma_1*dUdt0.omega + gamma_2*dUdt1.omega));
-            U2.omega = fmax(U2.omega, U0.mass);
-        } else {
-            U2.tke = vol_inv * (v_old * U0.tke);
-            U2.omega = vol_inv * (v_old * U0.omega);
+        version(komega) {
+            if (with_k_omega) {
+                U2.tke = vol_inv*(v_old*U0.tke + dt*(gamma_1*dUdt0.tke + gamma_2*dUdt1.tke));
+                U2.tke = fmax(U2.tke, 0.0);
+                U2.omega = vol_inv*(v_old*U0.omega + dt*(gamma_1*dUdt0.omega + gamma_2*dUdt1.omega));
+                U2.omega = fmax(U2.omega, U0.mass);
+            } else {
+                U2.tke = vol_inv * (v_old * U0.tke);
+                U2.omega = vol_inv * (v_old * U0.omega);
+            }
         }
-        foreach(isp; 0 .. U2.massf.length) {
-            U2.massf[isp] = vol_inv*(v_old*U0.massf[isp] +
-                                     dt*(gamma_1*dUdt0.massf[isp] + gamma_2*dUdt1.massf[isp]));
+        version(multi_species_gas) {
+            foreach(isp; 0 .. U2.massf.length) {
+                U2.massf[isp] = vol_inv*(v_old*U0.massf[isp] +
+                                         dt*(gamma_1*dUdt0.massf[isp] + gamma_2*dUdt1.massf[isp]));
+            }
         }
-        foreach(imode; 0 .. U2.energies.length) {
-            U2.energies[imode] = vol_inv*(v_old*U0.energies[imode] +
-                                          dt*(gamma_1*dUdt0.energies[imode] + gamma_2*dUdt1.energies[imode]));
+        version(multi_T_gas) {
+            foreach(imode; 0 .. U2.energies.length) {
+                U2.energies[imode] = vol_inv*(v_old*U0.energies[imode] +
+                                              dt*(gamma_1*dUdt0.energies[imode] +
+                                                  gamma_2*dUdt1.energies[imode]));
+            }
         }
         return;
     } // end stage_2_update_for_flow_on_moving_grid()
@@ -1012,8 +1085,12 @@ public:
         number[maxParams] params;
         if ((cast(FuelAirMix) myConfig.gmodel) !is null) {
             // for this gas model thermochemical reactor we need turbulence info
-            if (params.length < 1) { throw new Error("params vector too short."); } 
-            params[0]=fs.omega;
+            if (params.length < 1) { throw new Error("params vector too short."); }
+            version(komega) {
+                params[0]=fs.omega;
+            } else {
+                throw new Error("FuelAirMix needs komega capability.");
+            }
         }
 
         // Take a copy of dt_chem since it will be modified during the update.
@@ -1086,13 +1163,17 @@ public:
 
         // Finally, we have to manually update the conservation quantities
         // for the gas-dynamics time integration.
-        // Species densities: mass of species isp per unit volume.
-        foreach(isp; 0 .. fs.gas.massf.length) {
-            U[0].massf[isp] = fs.gas.rho * fs.gas.massf[isp];
+        version(multi_species_gas) {
+            // Species densities: mass of species isp per unit volume.
+            foreach(isp; 0 .. fs.gas.massf.length) {
+                U[0].massf[isp] = fs.gas.rho * fs.gas.massf[isp];
+            }
         }
-        // Independent energies energy: Joules per unit volume.
-        foreach(imode; 0 .. U[0].energies.length) {
-            U[0].energies[imode] = fs.gas.rho * fs.gas.u_modes[imode];
+        version(multi_T_gas) {
+            // Independent energies energy: Joules per unit volume.
+            foreach(imode; 0 .. U[0].energies.length) {
+                U[0].energies[imode] = fs.gas.rho * fs.gas.u_modes[imode];
+            }
         }
     } // end thermochemical_increment()
 
@@ -1100,63 +1181,68 @@ public:
     double signal_frequency()
     // Remember to use stringent_cfl=true for unstructured-grid.
     {
-        number signal, turbulent_signal; // Signal speed is something like a frequency, with units 1/s.
+        number signal = 0; // Signal speed is something like a frequency, with units 1/s.
         //
         // Check the convective/wave-driven time step limit first,
         // then add a component to ensure viscous stability.
-        // Note: MHD seems to only works if stringent_cfl is used.
-        if (myConfig.stringent_cfl || myConfig.MHD) {
-            // Ignoring flow and index directions, make the worst case assumptions.
-            number u_mag_sq = (fs.vel.x)^^2 + (fs.vel.y)^^2;
-            if (myConfig.dimensions == 3) { u_mag_sq += (fs.vel.z)^^2; }
-            number u_mag = sqrt(u_mag_sq);
-            if (myConfig.MHD) {
-                // MHD signal speed
-                number B_mag_sq = (fs.B.x)^^2 + (fs.B.y)^^2 + (fs.B.z)^^2;
-                number ca2 = B_mag_sq / fs.gas.rho;
-                number cfast = sqrt(ca2 + (fs.gas.a)^^2);
-                signal = (u_mag + cfast) / L_min;
-            } else {
-                // Hydrodynamics only
-                signal = (u_mag + fs.gas.a) / L_min;
-            }
-        } else {
-            // Look at signal speeds along each face.
-            // This works for gas-dynamics only (not MHD), on a structured grid.
-            //
-            // Get the local normal velocities by rotating the local frame of reference.
-            // Also, compute the velocity magnitude and recall the minimum length.
-            number un_N = fabs(fs.vel.dot(iface[Face.north].n));
-            number un_E = fabs(fs.vel.dot(iface[Face.east].n));
-            // just in case we are given a non-hex cell
-            size_t third_face = min(Face.top, iface.length-1);
-            number un_T = (myConfig.dimensions == 3) ? fabs(fs.vel.dot(iface[third_face].n)) : to!number(0.0);
-            number signalN = (un_N + fs.gas.a) / jLength; signal = signalN;
-            number signalE = (un_E + fs.gas.a) / iLength; signal = fmax(signal, signalE);
-            if (myConfig.dimensions == 3) {
-                number signalT = (un_T + fs.gas.a) / kLength; signal = fmax(signal, signalT);
-            }
+        //
+        // Look at gas-dynamic signal speeds along each face.
+        // This works for gas-dynamics only (not MHD), on a structured grid.
+        //
+        // Get the local normal velocities by rotating the local frame of reference.
+        // Also, compute the velocity magnitude and recall the minimum length.
+        number un_N = fabs(fs.vel.dot(iface[Face.north].n));
+        number un_E = fabs(fs.vel.dot(iface[Face.east].n));
+        // just in case we are given a non-hex cell
+        size_t third_face = min(Face.top, iface.length-1);
+        number un_T = (myConfig.dimensions == 3) ? fabs(fs.vel.dot(iface[third_face].n)) : to!number(0.0);
+        number signalN = (un_N + fs.gas.a) / jLength;
+        signal = fmax(signal, signalN);
+        number signalE = (un_E + fs.gas.a) / iLength;
+        signal = fmax(signal, signalE);
+        if (myConfig.dimensions == 3) {
+            number signalT = (un_T + fs.gas.a) / kLength;
+            signal = fmax(signal, signalT);
         }
+        // Factor for the viscous time limit.
+        // See Swanson, Turkel and White (1991)
+        // This factor is not included if viscosity is zero.
         if (myConfig.viscous && (fs.gas.mu > 10.0e-23)) {
-            // Factor for the viscous time limit.
-            // See Swanson, Turkel and White (1991)
-            // This factor is not included if viscosity is zero.
             auto gmodel = myConfig.gmodel;
             number gam_eff = gmodel.gamma(fs.gas);
             // Need to sum conductivities for thermal nonequilibrium.
-            number k_total = fs.gas.k; foreach(k_value; fs.gas.k_modes) { k_total += k_value; }
+            number k_total = fs.gas.k;
+            version(multi_T_gas) {
+                foreach(k_value; fs.gas.k_modes) { k_total += k_value; }
+            }
             number Prandtl = fs.gas.mu * gmodel.Cp(fs.gas) / k_total;
             signal += 4.0 * myConfig.viscous_factor * (fs.gas.mu + fs.mu_t)
                 * gam_eff / (Prandtl * fs.gas.rho)
                 * 1.0/(L_min^^2) * myConfig.viscous_signal_factor;
         }
-        bool with_k_omega = (myConfig.turbulence_model == TurbulenceModel.k_omega && 
-                             !myConfig.separate_update_for_k_omega_source);
-        if (with_k_omega) { 
-            turbulent_signal = myConfig.turbulent_signal_factor*fs.omega;
-            signal = fmax(signal, turbulent_signal); 
+        version(komega) {
+            bool with_k_omega = (myConfig.turbulence_model == TurbulenceModel.k_omega && 
+                                 !myConfig.separate_update_for_k_omega_source);
+            if (with_k_omega) { 
+                number turbulent_signal = myConfig.turbulent_signal_factor*fs.omega;
+                signal = fmax(signal, turbulent_signal); 
+            }
         }
-        //
+        version(MHD) {
+            if (myConfig.MHD) {
+                assert(myConfig.stringent_cfl, "MHD seems to only works if stringent_cfl is used.");
+                // Gas dynamics speed
+                // Ignoring flow and index directions, make the worst case assumptions.
+                number u_mag_sq = (fs.vel.x)^^2 + (fs.vel.y)^^2;
+                if (myConfig.dimensions == 3) { u_mag_sq += (fs.vel.z)^^2; }
+                number u_mag = sqrt(u_mag_sq);
+                // MHD signal speed
+                number B_mag_sq = (fs.B.x)^^2 + (fs.B.y)^^2 + (fs.B.z)^^2;
+                number ca2 = B_mag_sq / fs.gas.rho;
+                number cfast = sqrt(ca2 + (fs.gas.a)^^2);
+                signal = fmax(signal, (u_mag+cfast)/L_min);
+            }
+        }
         return signal.re;
     } // end signal_frequency()
 
@@ -1209,6 +1295,7 @@ public:
         fs.k_t *= factor;
     }
 
+    version(komega) {
     @nogc
     void turbulence_viscosity_k_omega() 
     {
@@ -1519,6 +1606,8 @@ public:
         }
     } // end k_omega_time_derivatives()
 
+    } // end version(komega)
+    
     @nogc
     void clear_source_vector() 
     // When doing the gasdynamic update stages, the source vector values
@@ -1527,12 +1616,20 @@ public:
     {
         Q.mass = 0.0;
         Q.momentum.clear();
-        Q.B.clear();
         Q.total_energy = 0.0;
-        Q.tke = 0.0;
-        Q.omega = 0.0;
-        foreach(ref elem; Q.massf) { elem = 0.0; }
-        foreach(ref elem; Q.energies) { elem = 0.0; }
+        version(MHD) {
+            Q.B.clear();
+        }
+        version(komega) {
+            Q.tke = 0.0;
+            Q.omega = 0.0;
+        }
+        version(multi_species_gas) {
+            foreach(ref elem; Q.massf) { elem = 0.0; }
+        }
+        version(multi_T_gas) {
+            foreach(ref elem; Q.energies) { elem = 0.0; }
+        }
         Q_rE_rad = 0.0;
     } // end clear_source_vector()
 
@@ -1575,7 +1672,9 @@ public:
             // FIX-ME: - assuming electronic mode is the last in the vector of energies
             //         - what about Q_renergies[0]?
             Q.total_energy += Q_rE_rad;
-            Q.energies.back() += Q_rE_rad;
+            version(multi_T_gas) {
+                Q.energies.back() += Q_rE_rad; // FIX-ME old C++ code
+            }
         }
         return;
     } // end add_inviscid_source_vector()
@@ -1610,12 +1709,14 @@ public:
             Q.momentum.refy -= tau_00 * areaxy[0] / volume[0];
         } // end if ( myConfig.axisymmetric )
 
-        if (with_k_omega) {
-            number Q_tke = 0.0; number Q_omega = 0.0;
-            if ( in_turbulent_zone ) {
-                this.k_omega_time_derivatives(Q_tke, Q_omega, fs.tke, fs.omega);
+        version(komega) {
+            if (with_k_omega) {
+                number Q_tke = 0.0; number Q_omega = 0.0;
+                if ( in_turbulent_zone ) {
+                    this.k_omega_time_derivatives(Q_tke, Q_omega, fs.tke, fs.omega);
+                }
+                Q.tke += Q_tke; Q.omega += Q_omega;
             }
-            Q.tke += Q_tke; Q.omega += Q_omega;
         }
 
         if (myConfig.electric_field_work) {
