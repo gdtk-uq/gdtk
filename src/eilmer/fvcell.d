@@ -570,7 +570,7 @@ public:
         // Start with the total energy, then take out the other components.
         // Internal energy is what remains.
         number u = rE * dinv;
-        version(KOMEGA) {
+        version(komega) {
             if (with_k_omega && allow_k_omega_update) {
                 fs.tke = myU.tke * dinv;
                 fs.omega = myU.omega * dinv;
