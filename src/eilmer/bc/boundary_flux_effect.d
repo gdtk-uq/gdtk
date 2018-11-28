@@ -254,9 +254,11 @@ public:
         _rho = fstate.gas.rho;
         _e = gmodel.internal_energy(fstate.gas);
         _nsp = gmodel.n_species;
-        _massf.length = _nsp;
-        for (int _isp=0; _isp < _nsp; _isp++) {
-            _massf[_isp] = fstate.gas.massf[_isp];
+        version(multi_species_gas) {
+            _massf.length = _nsp;
+            for (int _isp=0; _isp < _nsp; _isp++) {
+                _massf[_isp] = fstate.gas.massf[_isp];
+            }
         }
         this.fstate = fstate.dup();
     }
@@ -307,10 +309,14 @@ public:
                     IFace.F.momentum.refz = 0.0;
                     // [TODO]: Kyle, think about z component.
                     IFace.F.total_energy = IFace.F.mass * (_e + 0.5*(_u*_u+_v*_v)) + _p*(_u*IFace.n.x+_v*IFace.n.y);
-                    for ( int _isp = 0; _isp < _nsp; _isp++ ){
-                        IFace.F.massf[_isp] = IFace.F.mass * _massf[_isp];
+                    version(multi_species_gas) {
+                        for ( int _isp = 0; _isp < _nsp; _isp++ ){
+                            IFace.F.massf[_isp] = IFace.F.mass * _massf[_isp];
+                        }
                     }
-                    // [TODO]: Kyle, separate energy modes for multi-species simulations.
+                    version(multi_T_gas) {
+                        // [TODO]: Kyle, separate energy modes for multi-species simulations.
+                    }
                 } // end j loop
             } // end k loop
             break;
@@ -436,16 +442,27 @@ private:
             face.F.momentum.refx = fs.gas.p * face.n.x + fs.vel.x * mass_flux;
             face.F.momentum.refy = fs.gas.p * face.n.y + fs.vel.y * mass_flux;
             face.F.momentum.refz = fs.gas.p * face.n.z + fs.vel.z * mass_flux;
-            face.F.total_energy = mass_flux*(fs.gas.u + 0.5*dot(fs.vel,fs.vel) + fs.tke)
-                + fs.gas.p*dot(fs.vel,face.n);
+            number utot = fs.gas.u + 0.5*dot(fs.vel,fs.vel);
+            version(komega) {
+                utot += fs.tke;
+            }
+            face.F.total_energy = mass_flux*utot + fs.gas.p*dot(fs.vel,face.n);
             // [TODO] PJ 2018-10-24 check that fs.vel is the correct velocity
             // to use for pressure-work flowing across the face.
             // [TODO] PJ 2018-10-25 consider rothalpy flavour for rotating frame
-            face.F.tke = mass_flux * fs.tke;
-            face.F.omega = mass_flux * fs.omega;
-            // [TODO] PJ 2018-10-25 MHD?
-            foreach (i; 0 .. face.F.massf.length) { face.F.massf[i] = mass_flux * fs.gas.massf[i]; }
-            foreach (i; 0 .. face.F.energies.length) { face.F.energies[i] = mass_flux * fs.gas.u_modes[i]; }
+            version(komega) {
+                face.F.tke = mass_flux * fs.tke;
+                face.F.omega = mass_flux * fs.omega;
+            }
+            version(MHD) {
+                // [TODO] PJ 2018-10-25 MHD?
+            }
+            version(multi_species_gas) {
+                foreach (i; 0 .. face.F.massf.length) { face.F.massf[i] = mass_flux * fs.gas.massf[i]; }
+            }
+            version(multi_T_gas) {
+                foreach (i; 0 .. face.F.energies.length) { face.F.energies[i] = mass_flux * fs.gas.u_modes[i]; }
+            }
         } else {
             // We have a situation where the nominal mass flux
             // indicates that flow should be coming into the domain.
@@ -455,11 +472,19 @@ private:
             face.F.momentum.set(face.n); face.F.momentum *= fs.gas.p;
             face.F.total_energy = fs.gas.p*dot(face.gvel,face.n);
             // [TODO] PJ 2018-10-25 consider rothalpy flavour for rotating frame
-            face.F.tke = 0.0;
-            face.F.omega = 0.0;
-            // [TODO] PJ 2018-10-25 MHD?
-            foreach (i; 0 .. face.F.massf.length) { face.F.massf[i] = 0.0; }
-            foreach (i; 0 .. face.F.energies.length) { face.F.energies[i] = 0.0; }
+            version(komega) {
+                face.F.tke = 0.0;
+                face.F.omega = 0.0;
+            }
+            version(MHD) {
+                // [TODO] PJ 2018-10-25 MHD?
+            }
+            version(multi_species_gas) {
+                foreach (i; 0 .. face.F.massf.length) { face.F.massf[i] = 0.0; }
+            }
+            version(multi_T_gas) {
+                foreach (i; 0 .. face.F.energies.length) { face.F.energies[i] = 0.0; }
+            }
         }
         return;
     }

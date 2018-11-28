@@ -158,28 +158,30 @@ private:
         try {
             ghostCell.fs.gas.p = getDouble(L, tblIdx, "p");
             ghostCell.fs.gas.T = getDouble(L, tblIdx, "T");
-            if (gmodel.n_modes > 0) {
-                getArrayOfDoubles(L, tblIdx, "T_modes", ghostCell.fs.gas.T_modes);
-            }
-            lua_getfield(L, tblIdx, "massf");
-            if ( lua_istable(L, -1) ) {
-                int massfIdx = lua_gettop(L);
-                getSpeciesValsFromTable(L, gmodel, massfIdx, ghostCell.fs.gas.massf, "massf");
-            }
-            else {
-                if ( gmodel.n_species() == 1 ) {
-                    ghostCell.fs.gas.massf[0] = 1.0;
-                }
-                else {
-                    // There's no clear choice for multi-species.
-                    // Maybe best to set everything to zero to 
-                    // trigger some bad behaviour rather than
-                    // one value to 1.0 and have the calculation
-                    // proceed but not follow the users' intent.
-                    foreach (ref mf; ghostCell.fs.gas.massf) { mf = 0.0; }
+            version(multi_T_gas) {
+                if (gmodel.n_modes > 0) {
+                    getArrayOfDoubles(L, tblIdx, "T_modes", ghostCell.fs.gas.T_modes);
                 }
             }
-            lua_pop(L, 1);
+            version(multi_species_gas) {
+                lua_getfield(L, tblIdx, "massf");
+                if ( lua_istable(L, -1) ) {
+                    int massfIdx = lua_gettop(L);
+                    getSpeciesValsFromTable(L, gmodel, massfIdx, ghostCell.fs.gas.massf, "massf");
+                } else {
+                    if ( gmodel.n_species() == 1 ) {
+                        ghostCell.fs.gas.massf[0] = 1.0;
+                    } else {
+                        // There's no clear choice for multi-species.
+                        // Maybe best to set everything to zero to 
+                        // trigger some bad behaviour rather than
+                        // one value to 1.0 and have the calculation
+                        // proceed but not follow the users' intent.
+                        foreach (ref mf; ghostCell.fs.gas.massf) { mf = 0.0; }
+                    }
+                }
+                lua_pop(L, 1);
+            }
         }
         catch (Exception e) {
             string errMsg = "There was an error trying to read p, T or massf in user-supplied table.\n";
@@ -192,8 +194,10 @@ private:
         ghostCell.fs.vel.refx = getNumberFromTable(L, tblIdx, "velx", false, 0.0);
         ghostCell.fs.vel.refy = getNumberFromTable(L, tblIdx, "vely", false, 0.0);
         ghostCell.fs.vel.refz = getNumberFromTable(L, tblIdx, "velz", false, 0.0);
-        ghostCell.fs.tke = getNumberFromTable(L, tblIdx, "tke", false, 0.0);
-        ghostCell.fs.omega = getNumberFromTable(L, tblIdx, "omega", false, 1.0);
+        version(komega) {
+            ghostCell.fs.tke = getNumberFromTable(L, tblIdx, "tke", false, 0.0);
+            ghostCell.fs.omega = getNumberFromTable(L, tblIdx, "omega", false, 1.0);
+        }
     }
 
     // not @nogc because of Lua functions
@@ -394,21 +398,25 @@ private:
         }
         lua_pop(L, 1);
 
-        if (gmodel.n_modes > 0) {
-            lua_getfield(L, tblIdx, "T_modes");
+        version(multi_T_gas) {
+            if (gmodel.n_modes > 0) {
+                lua_getfield(L, tblIdx, "T_modes");
+                if ( !lua_isnil(L, -1) ) {
+                    // Interior-modes temperatures should be provided as an array.
+                    getArrayOfDoubles(L, tblIdx, "T_modes", fs.gas.T_modes);
+                }
+                lua_pop(L, 1);
+            }
+        }
+
+        version(multi_species_gas) {
+            lua_getfield(L, tblIdx, "massf");
             if ( !lua_isnil(L, -1) ) {
-                // Interior-modes temperatures should be provided as an array.
-                getArrayOfDoubles(L, tblIdx, "T_modes", fs.gas.T_modes);
+                int massfIdx = lua_gettop(L);
+                getSpeciesValsFromTable(L, gmodel, massfIdx, fs.gas.massf, "massf");
             }
             lua_pop(L, 1);
         }
-
-        lua_getfield(L, tblIdx, "massf");
-        if ( !lua_isnil(L, -1) ) {
-            int massfIdx = lua_gettop(L);
-            getSpeciesValsFromTable(L, gmodel, massfIdx, fs.gas.massf, "massf");
-        }
-        lua_pop(L, 1);
 
         lua_getfield(L, tblIdx, "velx");
         if ( !lua_isnil(L, -1) ) {
@@ -428,15 +436,17 @@ private:
         }
         lua_pop(L, 1);
 
-        lua_getfield(L, tblIdx, "tke");
-        if ( !lua_isnil(L, -1) ) {
-            fs.tke = getDouble(L, tblIdx, "tke");
-        }
-        lua_pop(L, 1);
+        version(komega) {
+            lua_getfield(L, tblIdx, "tke");
+            if ( !lua_isnil(L, -1) ) {
+                fs.tke = getDouble(L, tblIdx, "tke");
+            }
+            lua_pop(L, 1);
 
-        lua_getfield(L, tblIdx, "omega");
-        if ( !lua_isnil(L, -1) ) {
-            fs.omega = getDouble(L, tblIdx, "omega");
+            lua_getfield(L, tblIdx, "omega");
+            if ( !lua_isnil(L, -1) ) {
+                fs.omega = getDouble(L, tblIdx, "omega");
+            }
         }
 
         lua_getfield(L, tblIdx, "mu_t");
@@ -451,7 +461,7 @@ private:
         }
 
         lua_pop(L, 1);
-    }
+    } // end putFlowStateIntoInterface()
 
     // not @nogc
     void callInterfaceUDF(double t, int gtl, int ftl, size_t i, size_t j, size_t k,
@@ -598,7 +608,7 @@ public:
             } // end i loop
             break;
         } // end switch which boundary
-    }
+    } // end apply_structured_grid()
                         
 private:
     // not @nogc
@@ -640,41 +650,46 @@ private:
             iface.F.total_energy += getDouble(L, tblIdx, "total_energy");
         }
         lua_pop(L, 1);
-        
-        if (gmodel.n_modes > 0) {
-            // TODO: update user-defined flux for multiple energy modes.
-            throw new Error("User-defined flux not implemented for n_modes > 0.");
-        }
 
-        lua_getfield(L, tblIdx, "species");
-        if ( !lua_isnil(L, -1) ) {
-            int massfIdx = lua_gettop(L);
-            getSpeciesValsFromTable(L, gmodel, massfIdx, iface.F.massf, "species");
-        }
-        else {
-            if ( gmodel.n_species() == 1 ) {
-                iface.F.massf[0] = iface.F.mass;
+        version(multi_T_gas) {
+            if (gmodel.n_modes > 0) {
+                // TODO: update user-defined flux for multiple energy modes.
+                throw new Error("User-defined flux not implemented for n_modes > 0.");
             }
-            // ELSE: There's no clear choice for multi-species.
-            // Maybe best not to alter the species flux.
         }
-        lua_pop(L, 1);
 
-        // TODO: Think on tke and omega fluxes.
-        /*
-        lua_getfield(L, tblIdx, "tke");
-        if ( !lua_isnil(L, -1) ) {
-            fs.tke = getDouble(L, tblIdx, "tke");
+        version(multi_species_gas) {
+            lua_getfield(L, tblIdx, "species");
+            if ( !lua_isnil(L, -1) ) {
+                int massfIdx = lua_gettop(L);
+                getSpeciesValsFromTable(L, gmodel, massfIdx, iface.F.massf, "species");
+            } else {
+                if ( gmodel.n_species() == 1 ) {
+                    iface.F.massf[0] = iface.F.mass;
+                }
+                // ELSE: There's no clear choice for multi-species.
+                // Maybe best not to alter the species flux.
+            }
+            lua_pop(L, 1);
         }
-        lua_pop(L, 1);
 
-        lua_getfield(L, tblIdx, "omega");
-        if ( !lua_isnil(L, -1) ) {
-            fs.omega = getDouble(L, tblIdx, "omega");
+        version(komega) {
+            // TODO: Think on tke and omega fluxes.
+            /*
+              lua_getfield(L, tblIdx, "tke");
+              if ( !lua_isnil(L, -1) ) {
+              fs.tke = getDouble(L, tblIdx, "tke");
+              }
+              lua_pop(L, 1);
+
+              lua_getfield(L, tblIdx, "omega");
+              if ( !lua_isnil(L, -1) ) {
+              fs.omega = getDouble(L, tblIdx, "omega");
+              }
+              lua_pop(L, 1);
+            */
         }
-        lua_pop(L, 1);
-        */
-    }
+    } // end putFluxIntoInterface()
 
     // not @nogc
     void callFluxUDF(double t, int gtl, int ftl, size_t i, size_t j, size_t k,

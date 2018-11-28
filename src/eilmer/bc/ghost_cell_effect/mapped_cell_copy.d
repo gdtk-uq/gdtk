@@ -618,7 +618,10 @@ public:
                 // Blocking send of this block's flow data
                 // to the corresponding non-blocking receive that was posted
                 // at in src_blk MPI process.
-                size_t ne = outgoing_ncells_list[i] * (nmodes*3 + nspecies + 23);
+                size_t nitems = 16;
+                version(MHD) { nitems += 5; }
+                version(komega) { nitems += 2; }
+                size_t ne = outgoing_ncells_list[i] * (nmodes*3 + nspecies + nitems);
                 if (outgoing_flowstate_buf_list[i].length < ne) { outgoing_flowstate_buf_list[i].length = ne; }
                 auto buf = outgoing_flowstate_buf_list[i];
                 size_t ii = 0;
@@ -632,24 +635,34 @@ public:
                     buf[ii++] = gs.u;
                     buf[ii++] = gs.p_e;
                     buf[ii++] = gs.a;
-                    foreach (j; 0 .. nmodes) { buf[ii++] = gs.u_modes[j]; }
-                    foreach (j; 0 .. nmodes) { buf[ii++] = gs.T_modes[j]; }
+                    version(multi_T_gas) {
+                        foreach (j; 0 .. nmodes) { buf[ii++] = gs.u_modes[j]; }
+                        foreach (j; 0 .. nmodes) { buf[ii++] = gs.T_modes[j]; }
+                    }
                     buf[ii++] = gs.mu;
                     buf[ii++] = gs.k;
-                    foreach (j; 0 .. nmodes) { buf[ii++] = gs.k_modes[j]; }
+                    version(multi_T_gas) {
+                        foreach (j; 0 .. nmodes) { buf[ii++] = gs.k_modes[j]; }
+                    }
                     buf[ii++] = gs.sigma;
-                    foreach (j; 0 .. nspecies) { buf[ii++] = gs.massf[j]; }
+                    version(multi_species_gas) {
+                        foreach (j; 0 .. nspecies) { buf[ii++] = gs.massf[j]; }
+                    }
                     buf[ii++] = gs.quality;
                     buf[ii++] = fs.vel.x;
                     buf[ii++] = fs.vel.y;
                     buf[ii++] = fs.vel.z;
-                    buf[ii++] = fs.B.x;
-                    buf[ii++] = fs.B.y;
-                    buf[ii++] = fs.B.z;
-                    buf[ii++] = fs.psi;
-                    buf[ii++] = fs.divB;
-                    buf[ii++] = fs.tke;
-                    buf[ii++] = fs.omega;
+                    version(MHD) {
+                        buf[ii++] = fs.B.x;
+                        buf[ii++] = fs.B.y;
+                        buf[ii++] = fs.B.z;
+                        buf[ii++] = fs.psi;
+                        buf[ii++] = fs.divB;
+                    }
+                    version(komega) {
+                        buf[ii++] = fs.tke;
+                        buf[ii++] = fs.omega;
+                    }
                     buf[ii++] = fs.mu_t;
                     buf[ii++] = fs.k_t;
                     buf[ii++] = to!double(fs.S);
@@ -687,24 +700,34 @@ public:
                     gs.u = buf[ii++];
                     gs.p_e = buf[ii++];
                     gs.a = buf[ii++];
-                    foreach (j; 0 .. nmodes) { gs.u_modes[j] = buf[ii++]; }
-                    foreach (j; 0 .. nmodes) { gs.T_modes[j] = buf[ii++]; }
+                    version(multi_T_gas) {
+                        foreach (j; 0 .. nmodes) { gs.u_modes[j] = buf[ii++]; }
+                        foreach (j; 0 .. nmodes) { gs.T_modes[j] = buf[ii++]; }
+                    }
                     gs.mu = buf[ii++];
                     gs.k = buf[ii++];
-                    foreach (j; 0 .. nmodes) { gs.k_modes[j] = buf[ii++]; }
+                    version(multi_T_gas) {
+                        foreach (j; 0 .. nmodes) { gs.k_modes[j] = buf[ii++]; }
+                    }
                     gs.sigma = buf[ii++];
-                    foreach (j; 0 .. nspecies) { gs.massf[j] = buf[ii++]; }
+                    version(multi_species_gas) {
+                        foreach (j; 0 .. nspecies) { gs.massf[j] = buf[ii++]; }
+                    }
                     gs.quality = buf[ii++];
                     fs.vel.refx = buf[ii++];
                     fs.vel.refy = buf[ii++];
                     fs.vel.refz = buf[ii++];
-                    fs.B.refx = buf[ii++];
-                    fs.B.refy = buf[ii++];
-                    fs.B.refz = buf[ii++];
-                    fs.psi = buf[ii++];
-                    fs.divB = buf[ii++];
-                    fs.tke = buf[ii++];
-                    fs.omega = buf[ii++];
+                    version(MHD) {
+                        fs.B.refx = buf[ii++];
+                        fs.B.refy = buf[ii++];
+                        fs.B.refz = buf[ii++];
+                        fs.psi = buf[ii++];
+                        fs.divB = buf[ii++];
+                    }
+                    version(komega) {
+                        fs.tke = buf[ii++];
+                        fs.omega = buf[ii++];
+                    }
                     fs.mu_t = buf[ii++];
                     fs.k_t = buf[ii++];
                     fs.S = to!int(buf[ii++]);

@@ -171,8 +171,10 @@ public:
                 for (i = blk.imin; i <= blk.imax; ++i) {
                     cell = blk.get_cell(i,j,k);
                     iface = cell.iface[Face.north];
-                    cell.fs.tke = iface.fs.tke;
-                    cell.fs.omega = iface.fs.omega;
+                    version(komega) {
+                        cell.fs.tke = iface.fs.tke;
+                        cell.fs.omega = iface.fs.omega;
+                    }
                 } // end i loop
             } // for k
             break;
@@ -182,8 +184,10 @@ public:
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     cell = blk.get_cell(i,j,k);
                     iface = cell.iface[Face.east];
-                    cell.fs.tke = iface.fs.tke;
-                    cell.fs.omega = iface.fs.omega;
+                    version(komega) {
+                        cell.fs.tke = iface.fs.tke;
+                        cell.fs.omega = iface.fs.omega;
+                    }
                 } // end j loop
             } // for k
             break;
@@ -193,8 +197,10 @@ public:
                 for (i = blk.imin; i <= blk.imax; ++i) {
                     cell = blk.get_cell(i,j,k);
                     iface = cell.iface[Face.south];
-                    cell.fs.tke = iface.fs.tke;
-                    cell.fs.omega = iface.fs.omega;
+                    version(komega) {
+                        cell.fs.tke = iface.fs.tke;
+                        cell.fs.omega = iface.fs.omega;
+                    }
                 } // end i loop
             } // for k
             break;
@@ -204,8 +210,10 @@ public:
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     cell = blk.get_cell(i,j,k);
                     iface = cell.iface[Face.west];
-                    cell.fs.tke = iface.fs.tke;
-                    cell.fs.omega = iface.fs.omega;
+                    version(komega) {
+                        cell.fs.tke = iface.fs.tke;
+                        cell.fs.omega = iface.fs.omega;
+                    }
                 } // end j loop
             } // for k
             break;
@@ -215,8 +223,10 @@ public:
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     cell = blk.get_cell(i,j,k);
                     iface = cell.iface[Face.top];
-                    cell.fs.tke = iface.fs.tke;
-                    cell.fs.omega = iface.fs.omega;
+                    version(komega) {
+                        cell.fs.tke = iface.fs.tke;
+                        cell.fs.omega = iface.fs.omega;
+                    }
                 } // end j loop
             } // for i
             break;
@@ -226,8 +236,10 @@ public:
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     cell = blk.get_cell(i,j,k);
                     iface = cell.iface[Face.bottom];
-                    cell.fs.tke = iface.fs.tke;
-                    cell.fs.omega = iface.fs.omega;
+                    version(komega) {
+                        cell.fs.tke = iface.fs.tke;
+                        cell.fs.omega = iface.fs.omega;
+                    }
                 } // end j loop
             } // for i
             break;

@@ -78,7 +78,7 @@ public:
             j = blk.jmax;
             for (k = blk.kmin; k <= blk.kmax; ++k) {
                 for (i = blk.imin; i <= blk.imax; ++i) {
-                    if ( xOrder == 1 ) {
+                    if (xOrder == 1) {
                         //  |--- [2] ---|--- [1] ---|||--- [dest] ---|---[ghost cell 2]----
                         //      (j-1)        (j)           (j+1)
                         //  dest: ghost cell 1
@@ -93,27 +93,34 @@ public:
                         // 1. First exterior point
                         dest_cell.fs.gas.rho = 2.0*cell_1.fs.gas.rho - cell_2.fs.gas.rho;
                         dest_cell.fs.gas.u = 2.0*cell_1.fs.gas.u - cell_2.fs.gas.u;
-                        for ( size_t imode = 0; imode < nmodes; ++imode ) {
-                            dest_cell.fs.gas.u_modes[imode] = 2.0*cell_1.fs.gas.u_modes[imode] - cell_2.fs.gas.u_modes[imode];
-                        }
-                        if ( nsp > 1 ) {
-                            for ( size_t isp = 0; isp < nsp; ++isp ) {
-                                dest_cell.fs.gas.massf[isp] = 2.0*cell_1.fs.gas.massf[isp] - cell_2.fs.gas.massf[isp];
+                        version(multi_T_gas) {
+                            for ( size_t imode = 0; imode < nmodes; ++imode ) {
+                                dest_cell.fs.gas.u_modes[imode] = 2.0*cell_1.fs.gas.u_modes[imode] - cell_2.fs.gas.u_modes[imode];
                             }
-                            scale_mass_fractions(dest_cell.fs.gas.massf);
                         }
-                        else {
-                            dest_cell.fs.gas.massf[0] = 1.0;
+                        version(multi_species_gas) {
+                            if (nsp > 1) {
+                                for ( size_t isp = 0; isp < nsp; ++isp ) {
+                                    dest_cell.fs.gas.massf[isp] = 2.0*cell_1.fs.gas.massf[isp] - cell_2.fs.gas.massf[isp];
+                                }
+                                scale_mass_fractions(dest_cell.fs.gas.massf);
+                            } else {
+                                dest_cell.fs.gas.massf[0] = 1.0;
+                            }
                         }
                         gmodel.update_thermo_from_rhou(dest_cell.fs.gas);
                         dest_cell.fs.vel.refx = 2.0*cell_1.fs.vel.x - cell_2.fs.vel.x;
                         dest_cell.fs.vel.refy = 2.0*cell_1.fs.vel.y - cell_2.fs.vel.y;
                         dest_cell.fs.vel.refz = 2.0*cell_1.fs.vel.z - cell_2.fs.vel.z;
-                        dest_cell.fs.B.refx = 2.0*cell_1.fs.B.x - cell_2.fs.B.x;
-                        dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
-                        dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
-                        dest_cell.fs.tke = 2.0*cell_1.fs.tke - cell_2.fs.tke;
-                        dest_cell.fs.omega = 2.0*cell_1.fs.omega - cell_2.fs.omega;
+                        version(MHD) {
+                            dest_cell.fs.B.refx = 2.0*cell_1.fs.B.x - cell_2.fs.B.x;
+                            dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
+                            dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
+                        }
+                        version(komega) {
+                            dest_cell.fs.tke = 2.0*cell_1.fs.tke - cell_2.fs.tke;
+                            dest_cell.fs.omega = 2.0*cell_1.fs.omega - cell_2.fs.omega;
+                        }
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
                         dest_cell.fs.k_t = 2.0*cell_1.fs.k_t - cell_2.fs.k_t;
                         // 2. Second exterior point
@@ -124,31 +131,37 @@ public:
                         dest_cell = blk.get_cell(i,j+2,k);
                         dest_cell.fs.gas.rho = 2.0*cell_1.fs.gas.rho - cell_2.fs.gas.rho;
                         dest_cell.fs.gas.u = 2.0*cell_1.fs.gas.u - cell_2.fs.gas.u;
-                        for ( size_t imode = 0; imode < nmodes; ++imode ) {
-                            dest_cell.fs.gas.u_modes[imode] = 2.0*cell_1.fs.gas.u_modes[imode] - cell_2.fs.gas.u_modes[imode];
-                        }
-                        if ( nsp > 1 ) {
-                            for ( size_t isp = 0; isp < nsp; ++isp ) {
-                                dest_cell.fs.gas.massf[isp] = 2.0*cell_1.fs.gas.massf[isp] - cell_2.fs.gas.massf[isp];
+                        version(multi_T_gas) {
+                            for ( size_t imode = 0; imode < nmodes; ++imode ) {
+                                dest_cell.fs.gas.u_modes[imode] = 2.0*cell_1.fs.gas.u_modes[imode] - cell_2.fs.gas.u_modes[imode];
                             }
-                            scale_mass_fractions(dest_cell.fs.gas.massf);
                         }
-                        else {
-                            dest_cell.fs.gas.massf[0] = 1.0;
+                        version(multi_species_gas) {
+                            if (nsp > 1) {
+                                for ( size_t isp = 0; isp < nsp; ++isp ) {
+                                    dest_cell.fs.gas.massf[isp] = 2.0*cell_1.fs.gas.massf[isp] - cell_2.fs.gas.massf[isp];
+                                }
+                                scale_mass_fractions(dest_cell.fs.gas.massf);
+                            } else {
+                                dest_cell.fs.gas.massf[0] = 1.0;
+                            }
                         }
                         gmodel.update_thermo_from_rhou(dest_cell.fs.gas);
                         dest_cell.fs.vel.refx = 2.0*cell_1.fs.vel.x - cell_2.fs.vel.x;
                         dest_cell.fs.vel.refy = 2.0*cell_1.fs.vel.y - cell_2.fs.vel.y;
                         dest_cell.fs.vel.refz = 2.0*cell_1.fs.vel.z - cell_2.fs.vel.z;
-                        dest_cell.fs.B.refx = 2.0*cell_1.fs.B.x - cell_2.fs.B.x;
-                        dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
-                        dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
-                        dest_cell.fs.tke = 2.0*cell_1.fs.tke - cell_2.fs.tke;
-                        dest_cell.fs.omega = 2.0*cell_1.fs.omega - cell_2.fs.omega;
+                        version(MHD) {
+                            dest_cell.fs.B.refx = 2.0*cell_1.fs.B.x - cell_2.fs.B.x;
+                            dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
+                            dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
+                        }
+                        version(komega) {
+                            dest_cell.fs.tke = 2.0*cell_1.fs.tke - cell_2.fs.tke;
+                            dest_cell.fs.omega = 2.0*cell_1.fs.omega - cell_2.fs.omega;
+                        }
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
                         dest_cell.fs.k_t = 2.0*cell_1.fs.k_t - cell_2.fs.k_t;
-                    }
-                    else {
+                    } else {
                         // Zero-order extrapolation
                         src_cell = blk.get_cell(i,j,k);
                         dest_cell = blk.get_cell(i,j+1,k);
@@ -163,7 +176,7 @@ public:
             i = blk.imax;
             for (k = blk.kmin; k <= blk.kmax; ++k) {
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    if ( xOrder == 1 ) {
+                    if (xOrder == 1) {
                         //  |--- [2] ---|--- [1] ---|||--- [dest] ---|---[ghost cell 2]----
                         //      (i-1)        (i)           (i+1)
                         //  dest: ghost cell 1
@@ -178,27 +191,34 @@ public:
                         // 1. First exterior point
                         dest_cell.fs.gas.rho = 2.0*cell_1.fs.gas.rho - cell_2.fs.gas.rho;
                         dest_cell.fs.gas.u = 2.0*cell_1.fs.gas.u - cell_2.fs.gas.u;
-                        for ( size_t imode = 0; imode < nmodes; ++imode ) {
-                            dest_cell.fs.gas.u_modes[imode] = 2.0*cell_1.fs.gas.u_modes[imode] - cell_2.fs.gas.u_modes[imode];
-                        }
-                        if ( nsp > 1 ) {
-                            for ( size_t isp = 0; isp < nsp; ++isp ) {
-                                dest_cell.fs.gas.massf[isp] = 2.0*cell_1.fs.gas.massf[isp] - cell_2.fs.gas.massf[isp];
+                        version(multi_T_gas) {
+                            for ( size_t imode = 0; imode < nmodes; ++imode ) {
+                                dest_cell.fs.gas.u_modes[imode] = 2.0*cell_1.fs.gas.u_modes[imode] - cell_2.fs.gas.u_modes[imode];
                             }
-                            scale_mass_fractions(dest_cell.fs.gas.massf);
                         }
-                        else {
-                            dest_cell.fs.gas.massf[0] = 1.0;
+                        version(multi_species_gas) {
+                            if (nsp > 1) {
+                                for ( size_t isp = 0; isp < nsp; ++isp ) {
+                                    dest_cell.fs.gas.massf[isp] = 2.0*cell_1.fs.gas.massf[isp] - cell_2.fs.gas.massf[isp];
+                                }
+                                scale_mass_fractions(dest_cell.fs.gas.massf);
+                            } else {
+                                dest_cell.fs.gas.massf[0] = 1.0;
+                            }
                         }
                         gmodel.update_thermo_from_rhou(dest_cell.fs.gas);
                         dest_cell.fs.vel.refx = 2.0*cell_1.fs.vel.x - cell_2.fs.vel.x;
                         dest_cell.fs.vel.refy = 2.0*cell_1.fs.vel.y - cell_2.fs.vel.y;
                         dest_cell.fs.vel.refz = 2.0*cell_1.fs.vel.z - cell_2.fs.vel.z;
-                        dest_cell.fs.B.refx = 2.0*cell_1.fs.B.x - cell_2.fs.B.x;
-                        dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
-                        dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
-                        dest_cell.fs.tke = 2.0*cell_1.fs.tke - cell_2.fs.tke;
-                        dest_cell.fs.omega = 2.0*cell_1.fs.omega - cell_2.fs.omega;
+                        version(MHD) {
+                            dest_cell.fs.B.refx = 2.0*cell_1.fs.B.x - cell_2.fs.B.x;
+                            dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
+                            dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
+                        }
+                        version(komega) {
+                            dest_cell.fs.tke = 2.0*cell_1.fs.tke - cell_2.fs.tke;
+                            dest_cell.fs.omega = 2.0*cell_1.fs.omega - cell_2.fs.omega;
+                        }
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
                         dest_cell.fs.k_t = 2.0*cell_1.fs.k_t - cell_2.fs.k_t;
                         // 2. Second exterior point
@@ -209,27 +229,34 @@ public:
                         dest_cell = blk.get_cell(i+2,j,k);
                         dest_cell.fs.gas.rho = 2.0*cell_1.fs.gas.rho - cell_2.fs.gas.rho;
                         dest_cell.fs.gas.u = 2.0*cell_1.fs.gas.u - cell_2.fs.gas.u;
-                        for ( size_t imode = 0; imode < nmodes; ++imode ) {
-                            dest_cell.fs.gas.u_modes[imode] = 2.0*cell_1.fs.gas.u_modes[imode] - cell_2.fs.gas.u_modes[imode];
-                        }
-                        if ( nsp > 1 ) {
-                            for ( size_t isp = 0; isp < nsp; ++isp ) {
-                                dest_cell.fs.gas.massf[isp] = 2.0*cell_1.fs.gas.massf[isp] - cell_2.fs.gas.massf[isp];
+                        version(multi_T_gas) {
+                            for ( size_t imode = 0; imode < nmodes; ++imode ) {
+                                dest_cell.fs.gas.u_modes[imode] = 2.0*cell_1.fs.gas.u_modes[imode] - cell_2.fs.gas.u_modes[imode];
                             }
-                            scale_mass_fractions(dest_cell.fs.gas.massf);
                         }
-                        else {
-                            dest_cell.fs.gas.massf[0] = 1.0;
+                        version(multi_species_gas) {
+                            if (nsp > 1) {
+                                for ( size_t isp = 0; isp < nsp; ++isp ) {
+                                    dest_cell.fs.gas.massf[isp] = 2.0*cell_1.fs.gas.massf[isp] - cell_2.fs.gas.massf[isp];
+                                }
+                                scale_mass_fractions(dest_cell.fs.gas.massf);
+                            } else {
+                                dest_cell.fs.gas.massf[0] = 1.0;
+                            }
                         }
                         gmodel.update_thermo_from_rhou(dest_cell.fs.gas);
                         dest_cell.fs.vel.refx = 2.0*cell_1.fs.vel.x - cell_2.fs.vel.x;
                         dest_cell.fs.vel.refy = 2.0*cell_1.fs.vel.y - cell_2.fs.vel.y;
                         dest_cell.fs.vel.refz = 2.0*cell_1.fs.vel.z - cell_2.fs.vel.z;
-                        dest_cell.fs.B.refx = 2.0*cell_1.fs.B.x - cell_2.fs.B.x;
-                        dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
-                        dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
-                        dest_cell.fs.tke = 2.0*cell_1.fs.tke - cell_2.fs.tke;
-                        dest_cell.fs.omega = 2.0*cell_1.fs.omega - cell_2.fs.omega;
+                        version(MHD) {
+                            dest_cell.fs.B.refx = 2.0*cell_1.fs.B.x - cell_2.fs.B.x;
+                            dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
+                            dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
+                        }
+                        version(komega) {
+                            dest_cell.fs.tke = 2.0*cell_1.fs.tke - cell_2.fs.tke;
+                            dest_cell.fs.omega = 2.0*cell_1.fs.omega - cell_2.fs.omega;
+                        }
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
                         dest_cell.fs.k_t = 2.0*cell_1.fs.k_t - cell_2.fs.k_t;
                     }
@@ -247,7 +274,7 @@ public:
             j = blk.jmin;
             for (k = blk.kmin; k <= blk.kmax; ++k) {
                 for (i = blk.imin; i <= blk.imax; ++i) {
-                    if ( xOrder == 1 ) {
+                    if (xOrder == 1) {
                         //  |--- [2] ---|--- [1] ---|||--- [dest] ---|---[ghost cell 2]----
                         //      (j+1)        (j)           (j-1)
                         //  dest: ghost cell 1
@@ -262,27 +289,34 @@ public:
                         // 1. First exterior point
                         dest_cell.fs.gas.rho = 2.0*cell_1.fs.gas.rho - cell_2.fs.gas.rho;
                         dest_cell.fs.gas.u = 2.0*cell_1.fs.gas.u - cell_2.fs.gas.u;
-                        for ( size_t imode = 0; imode < nmodes; ++imode ) {
-                            dest_cell.fs.gas.u_modes[imode] = 2.0*cell_1.fs.gas.u_modes[imode] - cell_2.fs.gas.u_modes[imode];
-                        }
-                        if ( nsp > 1 ) {
-                            for ( size_t isp = 0; isp < nsp; ++isp ) {
-                                dest_cell.fs.gas.massf[isp] = 2.0*cell_1.fs.gas.massf[isp] - cell_2.fs.gas.massf[isp];
+                        version(multi_T_gas) {
+                            for ( size_t imode = 0; imode < nmodes; ++imode ) {
+                                dest_cell.fs.gas.u_modes[imode] = 2.0*cell_1.fs.gas.u_modes[imode] - cell_2.fs.gas.u_modes[imode];
                             }
-                            scale_mass_fractions(dest_cell.fs.gas.massf);
                         }
-                        else {
-                            dest_cell.fs.gas.massf[0] = 1.0;
+                        version(multi_species_gas) {
+                            if (nsp > 1) {
+                                for ( size_t isp = 0; isp < nsp; ++isp ) {
+                                    dest_cell.fs.gas.massf[isp] = 2.0*cell_1.fs.gas.massf[isp] - cell_2.fs.gas.massf[isp];
+                                }
+                                scale_mass_fractions(dest_cell.fs.gas.massf);
+                            } else {
+                                dest_cell.fs.gas.massf[0] = 1.0;
+                            }
                         }
                         gmodel.update_thermo_from_rhou(dest_cell.fs.gas);
                         dest_cell.fs.vel.refx = 2.0*cell_1.fs.vel.x - cell_2.fs.vel.x;
                         dest_cell.fs.vel.refy = 2.0*cell_1.fs.vel.y - cell_2.fs.vel.y;
                         dest_cell.fs.vel.refz = 2.0*cell_1.fs.vel.z - cell_2.fs.vel.z;
-                        dest_cell.fs.B.refx = 2.0*cell_1.fs.B.x - cell_2.fs.B.x;
-                        dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
-                        dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
-                        dest_cell.fs.tke = 2.0*cell_1.fs.tke - cell_2.fs.tke;
-                        dest_cell.fs.omega = 2.0*cell_1.fs.omega - cell_2.fs.omega;
+                        version(MHD) {
+                            dest_cell.fs.B.refx = 2.0*cell_1.fs.B.x - cell_2.fs.B.x;
+                            dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
+                            dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
+                        }
+                        version(komega) {
+                            dest_cell.fs.tke = 2.0*cell_1.fs.tke - cell_2.fs.tke;
+                            dest_cell.fs.omega = 2.0*cell_1.fs.omega - cell_2.fs.omega;
+                        }
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
                         dest_cell.fs.k_t = 2.0*cell_1.fs.k_t - cell_2.fs.k_t;
                         // 2. Second exterior point
@@ -293,27 +327,34 @@ public:
                         dest_cell = blk.get_cell(i,j-2,k);
                         dest_cell.fs.gas.rho = 2.0*cell_1.fs.gas.rho - cell_2.fs.gas.rho;
                         dest_cell.fs.gas.u = 2.0*cell_1.fs.gas.u - cell_2.fs.gas.u;
-                        for ( size_t imode = 0; imode < nmodes; ++imode ) {
-                            dest_cell.fs.gas.u_modes[imode] = 2.0*cell_1.fs.gas.u_modes[imode] - cell_2.fs.gas.u_modes[imode];
-                        }
-                        if ( nsp > 1 ) {
-                            for ( size_t isp = 0; isp < nsp; ++isp ) {
-                                dest_cell.fs.gas.massf[isp] = 2.0*cell_1.fs.gas.massf[isp] - cell_2.fs.gas.massf[isp];
+                        version(multi_T_gas) {
+                            for ( size_t imode = 0; imode < nmodes; ++imode ) {
+                                dest_cell.fs.gas.u_modes[imode] = 2.0*cell_1.fs.gas.u_modes[imode] - cell_2.fs.gas.u_modes[imode];
                             }
-                            scale_mass_fractions(dest_cell.fs.gas.massf);
                         }
-                        else {
-                            dest_cell.fs.gas.massf[0] = 1.0;
+                        version(multi_species_gas) {
+                            if (nsp > 1) {
+                                for ( size_t isp = 0; isp < nsp; ++isp ) {
+                                    dest_cell.fs.gas.massf[isp] = 2.0*cell_1.fs.gas.massf[isp] - cell_2.fs.gas.massf[isp];
+                                }
+                                scale_mass_fractions(dest_cell.fs.gas.massf);
+                            } else {
+                                dest_cell.fs.gas.massf[0] = 1.0;
+                            }
                         }
                         gmodel.update_thermo_from_rhou(dest_cell.fs.gas);
                         dest_cell.fs.vel.refx = 2.0*cell_1.fs.vel.x - cell_2.fs.vel.x;
                         dest_cell.fs.vel.refy = 2.0*cell_1.fs.vel.y - cell_2.fs.vel.y;
                         dest_cell.fs.vel.refz = 2.0*cell_1.fs.vel.z - cell_2.fs.vel.z;
-                        dest_cell.fs.B.refx = 2.0*cell_1.fs.B.x - cell_2.fs.B.x;
-                        dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
-                        dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
-                        dest_cell.fs.tke = 2.0*cell_1.fs.tke - cell_2.fs.tke;
-                        dest_cell.fs.omega = 2.0*cell_1.fs.omega - cell_2.fs.omega;
+                        version(MHD) {
+                            dest_cell.fs.B.refx = 2.0*cell_1.fs.B.x - cell_2.fs.B.x;
+                            dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
+                            dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
+                        }
+                        version(komega) {
+                            dest_cell.fs.tke = 2.0*cell_1.fs.tke - cell_2.fs.tke;
+                            dest_cell.fs.omega = 2.0*cell_1.fs.omega - cell_2.fs.omega;
+                        }
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
                         dest_cell.fs.k_t = 2.0*cell_1.fs.k_t - cell_2.fs.k_t;
                     } else {
@@ -330,7 +371,7 @@ public:
             i = blk.imin;
             for (k = blk.kmin; k <= blk.kmax; ++k) {
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    if ( xOrder == 1 ) {
+                    if (xOrder == 1) {
                         //  ---[ghost cell 2]---|--- [dest] ---|||--- [1] ---|---[2]----
                         //      (i-2)                 (i-1)           (i)       (i+1)
                         //  dest: ghost cell 1
@@ -345,27 +386,34 @@ public:
                         // 1. First exterior point
                         dest_cell.fs.gas.rho = 2.0*cell_1.fs.gas.rho - cell_2.fs.gas.rho;
                         dest_cell.fs.gas.u = 2.0*cell_1.fs.gas.u - cell_2.fs.gas.u;
-                        for ( size_t imode = 0; imode < nmodes; ++imode ) {
-                            dest_cell.fs.gas.u_modes[imode] = 2.0*cell_1.fs.gas.u_modes[imode] - cell_2.fs.gas.u_modes[imode];
-                        }
-                        if ( nsp > 1 ) {
-                            for ( size_t isp = 0; isp < nsp; ++isp ) {
-                                dest_cell.fs.gas.massf[isp] = 2.0*cell_1.fs.gas.massf[isp] - cell_2.fs.gas.massf[isp];
+                        version(multi_T_gas) {
+                            for ( size_t imode = 0; imode < nmodes; ++imode ) {
+                                dest_cell.fs.gas.u_modes[imode] = 2.0*cell_1.fs.gas.u_modes[imode] - cell_2.fs.gas.u_modes[imode];
                             }
-                            scale_mass_fractions(dest_cell.fs.gas.massf);
                         }
-                        else {
-                            dest_cell.fs.gas.massf[0] = 1.0;
+                        version(multi_species_gas) {
+                            if (nsp > 1) {
+                                for ( size_t isp = 0; isp < nsp; ++isp ) {
+                                    dest_cell.fs.gas.massf[isp] = 2.0*cell_1.fs.gas.massf[isp] - cell_2.fs.gas.massf[isp];
+                                }
+                                scale_mass_fractions(dest_cell.fs.gas.massf);
+                            } else {
+                                dest_cell.fs.gas.massf[0] = 1.0;
+                            }
                         }
                         gmodel.update_thermo_from_rhou(dest_cell.fs.gas);
                         dest_cell.fs.vel.refx = 2.0*cell_1.fs.vel.x - cell_2.fs.vel.x;
                         dest_cell.fs.vel.refy = 2.0*cell_1.fs.vel.y - cell_2.fs.vel.y;
                         dest_cell.fs.vel.refz = 2.0*cell_1.fs.vel.z - cell_2.fs.vel.z;
-                        dest_cell.fs.B.refx = 2.0*cell_1.fs.B.x - cell_2.fs.B.x;
-                        dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
-                        dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
-                        dest_cell.fs.tke = 2.0*cell_1.fs.tke - cell_2.fs.tke;
-                        dest_cell.fs.omega = 2.0*cell_1.fs.omega - cell_2.fs.omega;
+                        version(MHD) {
+                            dest_cell.fs.B.refx = 2.0*cell_1.fs.B.x - cell_2.fs.B.x;
+                            dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
+                            dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
+                        }
+                        version(komega) {
+                            dest_cell.fs.tke = 2.0*cell_1.fs.tke - cell_2.fs.tke;
+                            dest_cell.fs.omega = 2.0*cell_1.fs.omega - cell_2.fs.omega;
+                        }
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
                         dest_cell.fs.k_t = 2.0*cell_1.fs.k_t - cell_2.fs.k_t;
                         // 2. Second exterior point
@@ -376,27 +424,34 @@ public:
                         dest_cell = blk.get_cell(i-2,j,k);
                         dest_cell.fs.gas.rho = 2.0*cell_1.fs.gas.rho - cell_2.fs.gas.rho;
                         dest_cell.fs.gas.u = 2.0*cell_1.fs.gas.u - cell_2.fs.gas.u;
-                        for ( size_t imode = 0; imode < nmodes; ++imode ) {
-                            dest_cell.fs.gas.u_modes[imode] = 2.0*cell_1.fs.gas.u_modes[imode] - cell_2.fs.gas.u_modes[imode];
-                        }
-                        if ( nsp > 1 ) {
-                            for ( size_t isp = 0; isp < nsp; ++isp ) {
-                                dest_cell.fs.gas.massf[isp] = 2.0*cell_1.fs.gas.massf[isp] - cell_2.fs.gas.massf[isp];
+                        version(multi_T_gas) {
+                            for ( size_t imode = 0; imode < nmodes; ++imode ) {
+                                dest_cell.fs.gas.u_modes[imode] = 2.0*cell_1.fs.gas.u_modes[imode] - cell_2.fs.gas.u_modes[imode];
                             }
-                            scale_mass_fractions(dest_cell.fs.gas.massf);
                         }
-                        else {
-                            dest_cell.fs.gas.massf[0] = 1.0;
+                        version(multi_species_gas) {
+                            if (nsp > 1) {
+                                for ( size_t isp = 0; isp < nsp; ++isp ) {
+                                    dest_cell.fs.gas.massf[isp] = 2.0*cell_1.fs.gas.massf[isp] - cell_2.fs.gas.massf[isp];
+                                }
+                                scale_mass_fractions(dest_cell.fs.gas.massf);
+                            } else {
+                                dest_cell.fs.gas.massf[0] = 1.0;
+                            }
                         }
                         gmodel.update_thermo_from_rhou(dest_cell.fs.gas);
                         dest_cell.fs.vel.refx = 2.0*cell_1.fs.vel.x - cell_2.fs.vel.x;
                         dest_cell.fs.vel.refy = 2.0*cell_1.fs.vel.y - cell_2.fs.vel.y;
                         dest_cell.fs.vel.refz = 2.0*cell_1.fs.vel.z - cell_2.fs.vel.z;
-                        dest_cell.fs.B.refx = 2.0*cell_1.fs.B.x - cell_2.fs.B.x;
-                        dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
-                        dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
-                        dest_cell.fs.tke = 2.0*cell_1.fs.tke - cell_2.fs.tke;
-                        dest_cell.fs.omega = 2.0*cell_1.fs.omega - cell_2.fs.omega;
+                        version(MHD) {
+                            dest_cell.fs.B.refx = 2.0*cell_1.fs.B.x - cell_2.fs.B.x;
+                            dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
+                            dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
+                        }
+                        version(komega) {
+                            dest_cell.fs.tke = 2.0*cell_1.fs.tke - cell_2.fs.tke;
+                            dest_cell.fs.omega = 2.0*cell_1.fs.omega - cell_2.fs.omega;
+                        }
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
                         dest_cell.fs.k_t = 2.0*cell_1.fs.k_t - cell_2.fs.k_t;
                     } else {
@@ -414,7 +469,7 @@ public:
             k = blk.kmax;
             for (i = blk.imin; i <= blk.imax; ++i) {
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    if ( xOrder == 1 ) {
+                    if (xOrder == 1) {
                         //  |--- [2] ---|--- [1] ---|||--- [dest] ---|---[ghost cell 2]----
                         //      (k-1)        (k)           (k+1)
                         //  dest: ghost cell 1
@@ -429,27 +484,34 @@ public:
                         // 1. First exterior point
                         dest_cell.fs.gas.rho = 2.0*cell_1.fs.gas.rho - cell_2.fs.gas.rho;
                         dest_cell.fs.gas.u = 2.0*cell_1.fs.gas.u - cell_2.fs.gas.u;
-                        for ( size_t imode = 0; imode < nmodes; ++imode ) {
-                            dest_cell.fs.gas.u_modes[imode] = 2.0*cell_1.fs.gas.u_modes[imode] - cell_2.fs.gas.u_modes[imode];
-                        }
-                        if ( nsp > 1 ) {
-                            for ( size_t isp = 0; isp < nsp; ++isp ) {
-                                dest_cell.fs.gas.massf[isp] = 2.0*cell_1.fs.gas.massf[isp] - cell_2.fs.gas.massf[isp];
+                        version(multi_T_gas) {
+                            for ( size_t imode = 0; imode < nmodes; ++imode ) {
+                                dest_cell.fs.gas.u_modes[imode] = 2.0*cell_1.fs.gas.u_modes[imode] - cell_2.fs.gas.u_modes[imode];
                             }
-                            scale_mass_fractions(dest_cell.fs.gas.massf);
                         }
-                        else {
-                            dest_cell.fs.gas.massf[0] = 1.0;
+                        version(multi_species_gas) {
+                            if (nsp > 1) {
+                                for ( size_t isp = 0; isp < nsp; ++isp ) {
+                                    dest_cell.fs.gas.massf[isp] = 2.0*cell_1.fs.gas.massf[isp] - cell_2.fs.gas.massf[isp];
+                                }
+                                scale_mass_fractions(dest_cell.fs.gas.massf);
+                            } else {
+                                dest_cell.fs.gas.massf[0] = 1.0;
+                            }
                         }
                         gmodel.update_thermo_from_rhou(dest_cell.fs.gas);
                         dest_cell.fs.vel.refx = 2.0*cell_1.fs.vel.x - cell_2.fs.vel.x;
                         dest_cell.fs.vel.refy = 2.0*cell_1.fs.vel.y - cell_2.fs.vel.y;
                         dest_cell.fs.vel.refz = 2.0*cell_1.fs.vel.z - cell_2.fs.vel.z;
-                        dest_cell.fs.B.refx = 2.0*cell_1.fs.B.x - cell_2.fs.B.x;
-                        dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
-                        dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
-                        dest_cell.fs.tke = 2.0*cell_1.fs.tke - cell_2.fs.tke;
-                        dest_cell.fs.omega = 2.0*cell_1.fs.omega - cell_2.fs.omega;
+                        version(MHD) {
+                            dest_cell.fs.B.refx = 2.0*cell_1.fs.B.x - cell_2.fs.B.x;
+                            dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
+                            dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
+                        }
+                        version(komega) {
+                            dest_cell.fs.tke = 2.0*cell_1.fs.tke - cell_2.fs.tke;
+                            dest_cell.fs.omega = 2.0*cell_1.fs.omega - cell_2.fs.omega;
+                        }
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
                         dest_cell.fs.k_t = 2.0*cell_1.fs.k_t - cell_2.fs.k_t;
                         // 2. Second exterior point
@@ -460,27 +522,34 @@ public:
                         dest_cell = blk.get_cell(i,j,k+2);
                         dest_cell.fs.gas.rho = 2.0*cell_1.fs.gas.rho - cell_2.fs.gas.rho;
                         dest_cell.fs.gas.u = 2.0*cell_1.fs.gas.u - cell_2.fs.gas.u;
-                        for ( size_t imode = 0; imode < nmodes; ++imode ) {
-                            dest_cell.fs.gas.u_modes[imode] = 2.0*cell_1.fs.gas.u_modes[imode] - cell_2.fs.gas.u_modes[imode];
-                        }
-                        if ( nsp > 1 ) {
-                            for ( size_t isp = 0; isp < nsp; ++isp ) {
-                                dest_cell.fs.gas.massf[isp] = 2.0*cell_1.fs.gas.massf[isp] - cell_2.fs.gas.massf[isp];
+                        version(multi_T_gas) {
+                            for ( size_t imode = 0; imode < nmodes; ++imode ) {
+                                dest_cell.fs.gas.u_modes[imode] = 2.0*cell_1.fs.gas.u_modes[imode] - cell_2.fs.gas.u_modes[imode];
                             }
-                            scale_mass_fractions(dest_cell.fs.gas.massf);
                         }
-                        else {
-                            dest_cell.fs.gas.massf[0] = 1.0;
+                        version(multi_species_gas) {
+                            if (nsp > 1) {
+                                for ( size_t isp = 0; isp < nsp; ++isp ) {
+                                    dest_cell.fs.gas.massf[isp] = 2.0*cell_1.fs.gas.massf[isp] - cell_2.fs.gas.massf[isp];
+                                }
+                                scale_mass_fractions(dest_cell.fs.gas.massf);
+                            } else {
+                                dest_cell.fs.gas.massf[0] = 1.0;
+                            }
                         }
                         gmodel.update_thermo_from_rhou(dest_cell.fs.gas);
                         dest_cell.fs.vel.refx = 2.0*cell_1.fs.vel.x - cell_2.fs.vel.x;
                         dest_cell.fs.vel.refy = 2.0*cell_1.fs.vel.y - cell_2.fs.vel.y;
                         dest_cell.fs.vel.refz = 2.0*cell_1.fs.vel.z - cell_2.fs.vel.z;
-                        dest_cell.fs.B.refx = 2.0*cell_1.fs.B.x - cell_2.fs.B.x;
-                        dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
-                        dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
-                        dest_cell.fs.tke = 2.0*cell_1.fs.tke - cell_2.fs.tke;
-                        dest_cell.fs.omega = 2.0*cell_1.fs.omega - cell_2.fs.omega;
+                        version(MHD) {
+                            dest_cell.fs.B.refx = 2.0*cell_1.fs.B.x - cell_2.fs.B.x;
+                            dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
+                            dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
+                        }
+                        version(komega) {
+                            dest_cell.fs.tke = 2.0*cell_1.fs.tke - cell_2.fs.tke;
+                            dest_cell.fs.omega = 2.0*cell_1.fs.omega - cell_2.fs.omega;
+                        }
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
                         dest_cell.fs.k_t = 2.0*cell_1.fs.k_t - cell_2.fs.k_t;
                     } else {
@@ -498,7 +567,7 @@ public:
             k = blk.kmin;
             for (i = blk.imin; i <= blk.imax; ++i) {
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    if ( xOrder == 1 ) {
+                    if (xOrder == 1) {
                         //  |--- [2] ---|--- [1] ---|||--- [dest] ---|---[ghost cell 2]----
                         //      (k+1)        (k)           (k-1)
                         //  dest: ghost cell 1
@@ -513,27 +582,34 @@ public:
                         // 1. First exterior point
                         dest_cell.fs.gas.rho = 2.0*cell_1.fs.gas.rho - cell_2.fs.gas.rho;
                         dest_cell.fs.gas.u = 2.0*cell_1.fs.gas.u - cell_2.fs.gas.u;
-                        for ( size_t imode = 0; imode < nmodes; ++imode ) {
-                            dest_cell.fs.gas.u_modes[imode] = 2.0*cell_1.fs.gas.u_modes[imode] - cell_2.fs.gas.u_modes[imode];
-                        }
-                        if ( nsp > 1 ) {
-                            for ( size_t isp = 0; isp < nsp; ++isp ) {
-                                dest_cell.fs.gas.massf[isp] = 2.0*cell_1.fs.gas.massf[isp] - cell_2.fs.gas.massf[isp];
+                        version(multi_T_gas) {
+                            for ( size_t imode = 0; imode < nmodes; ++imode ) {
+                                dest_cell.fs.gas.u_modes[imode] = 2.0*cell_1.fs.gas.u_modes[imode] - cell_2.fs.gas.u_modes[imode];
                             }
-                            scale_mass_fractions(dest_cell.fs.gas.massf);
                         }
-                        else {
-                            dest_cell.fs.gas.massf[0] = 1.0;
+                        version(multi_species_gas) {
+                            if ( nsp > 1 ) {
+                                for ( size_t isp = 0; isp < nsp; ++isp ) {
+                                    dest_cell.fs.gas.massf[isp] = 2.0*cell_1.fs.gas.massf[isp] - cell_2.fs.gas.massf[isp];
+                                }
+                                scale_mass_fractions(dest_cell.fs.gas.massf);
+                            } else {
+                                dest_cell.fs.gas.massf[0] = 1.0;
+                            }
                         }
                         gmodel.update_thermo_from_rhou(dest_cell.fs.gas);
                         dest_cell.fs.vel.refx = 2.0*cell_1.fs.vel.x - cell_2.fs.vel.x;
                         dest_cell.fs.vel.refy = 2.0*cell_1.fs.vel.y - cell_2.fs.vel.y;
                         dest_cell.fs.vel.refz = 2.0*cell_1.fs.vel.z - cell_2.fs.vel.z;
-                        dest_cell.fs.B.refx = 2.0*cell_1.fs.B.x - cell_2.fs.B.x;
-                        dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
-                        dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
-                        dest_cell.fs.tke = 2.0*cell_1.fs.tke - cell_2.fs.tke;
-                        dest_cell.fs.omega = 2.0*cell_1.fs.omega - cell_2.fs.omega;
+                        version(MHD) {
+                            dest_cell.fs.B.refx = 2.0*cell_1.fs.B.x - cell_2.fs.B.x;
+                            dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
+                            dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
+                        }
+                        version(komega) {
+                            dest_cell.fs.tke = 2.0*cell_1.fs.tke - cell_2.fs.tke;
+                            dest_cell.fs.omega = 2.0*cell_1.fs.omega - cell_2.fs.omega;
+                        }
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
                         dest_cell.fs.k_t = 2.0*cell_1.fs.k_t - cell_2.fs.k_t;
                         // 2. Second exterior point
@@ -544,27 +620,34 @@ public:
                         dest_cell = blk.get_cell(i,j,k-2);
                         dest_cell.fs.gas.rho = 2.0*cell_1.fs.gas.rho - cell_2.fs.gas.rho;
                         dest_cell.fs.gas.u = 2.0*cell_1.fs.gas.u - cell_2.fs.gas.u;
-                        for ( size_t imode = 0; imode < nmodes; ++imode ) {
-                            dest_cell.fs.gas.u_modes[imode] = 2.0*cell_1.fs.gas.u_modes[imode] - cell_2.fs.gas.u_modes[imode];
-                        }
-                        if ( nsp > 1 ) {
-                            for ( size_t isp = 0; isp < nsp; ++isp ) {
-                                dest_cell.fs.gas.massf[isp] = 2.0*cell_1.fs.gas.massf[isp] - cell_2.fs.gas.massf[isp];
+                        version(multi_T_gas) {
+                            for ( size_t imode = 0; imode < nmodes; ++imode ) {
+                                dest_cell.fs.gas.u_modes[imode] = 2.0*cell_1.fs.gas.u_modes[imode] - cell_2.fs.gas.u_modes[imode];
                             }
-                            scale_mass_fractions(dest_cell.fs.gas.massf);
                         }
-                        else {
-                            dest_cell.fs.gas.massf[0] = 1.0;
+                        version(multi_species_gas) {
+                            if (nsp > 1) {
+                                for ( size_t isp = 0; isp < nsp; ++isp ) {
+                                    dest_cell.fs.gas.massf[isp] = 2.0*cell_1.fs.gas.massf[isp] - cell_2.fs.gas.massf[isp];
+                                }
+                                scale_mass_fractions(dest_cell.fs.gas.massf);
+                            } else {
+                                dest_cell.fs.gas.massf[0] = 1.0;
+                            }
                         }
                         gmodel.update_thermo_from_rhou(dest_cell.fs.gas);
                         dest_cell.fs.vel.refx = 2.0*cell_1.fs.vel.x - cell_2.fs.vel.x;
                         dest_cell.fs.vel.refy = 2.0*cell_1.fs.vel.y - cell_2.fs.vel.y;
                         dest_cell.fs.vel.refz = 2.0*cell_1.fs.vel.z - cell_2.fs.vel.z;
-                        dest_cell.fs.B.refx = 2.0*cell_1.fs.B.x - cell_2.fs.B.x;
-                        dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
-                        dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
-                        dest_cell.fs.tke = 2.0*cell_1.fs.tke - cell_2.fs.tke;
-                        dest_cell.fs.omega = 2.0*cell_1.fs.omega - cell_2.fs.omega;
+                        version(MHD) {
+                            dest_cell.fs.B.refx = 2.0*cell_1.fs.B.x - cell_2.fs.B.x;
+                            dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
+                            dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
+                        }
+                        version(komega) {
+                            dest_cell.fs.tke = 2.0*cell_1.fs.tke - cell_2.fs.tke;
+                            dest_cell.fs.omega = 2.0*cell_1.fs.omega - cell_2.fs.omega;
+                        }
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
                         dest_cell.fs.k_t = 2.0*cell_1.fs.k_t - cell_2.fs.k_t;
                     } else {

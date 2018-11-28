@@ -124,11 +124,11 @@ class FicksFirstLaw : MassDiffusion {
         }
     }
 
-    version(multi_species_gas) {
-        @nogc
-            void update_mass_fluxes(FlowState fs, const FlowGradients grad,
-                                    number[] jx, number[] jy, number[] jz)
-        {
+    @nogc
+    void update_mass_fluxes(FlowState fs, const FlowGradients grad,
+                            number[] jx, number[] jy, number[] jz)
+    {
+        version(multi_species_gas) {
             _gmodel.massf2molef(fs.gas, _molef);
             if (_withConstantLewisNumber) {
                 number Cp = _gmodel.Cp(fs.gas);
@@ -161,8 +161,10 @@ class FicksFirstLaw : MassDiffusion {
                     jz[isp] = jz[isp] - fs.gas.massf[isp] * sum_z;
                 }
             }
-        } // end update_mass_fluxes()
-    }
+        } else {
+            // this function is gitless for single-species gas
+        }
+    } // end update_mass_fluxes()
 
 private:
     GasModel _gmodel;

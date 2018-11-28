@@ -49,52 +49,54 @@ void addUDFSourceTermsToCell(lua_State* L, FVCell cell, size_t gtl, double t, Ga
     cell.Q.momentum.refy += getNumberFromTable(L, -1, "momentum_y", false, 0.0);
     cell.Q.momentum.refz += getNumberFromTable(L, -1, "momentum_z", false, 0.0);
     cell.Q.total_energy += getNumberFromTable(L, -1, "total_energy",false, 0.0);
-    cell.Q.tke += getNumberFromTable(L, -1, "tke", false, 0.0);
-    cell.Q.omega += getNumberFromTable(L, -1, "omega", false, 0.0);
-    lua_getfield(L, -1, "species");
-    if ( lua_istable(L, -1) ) {
-        // Iterate over species by names.
-        int idx = lua_gettop(L);
-        lua_pushnil(L);
-        while ( lua_next(L, idx) != 0 ) {
-            string key = to!string(lua_tostring(L, -2));
-            auto isp = gmodel.species_index(key);
-            if ( isp == -1 ) {
-                string errMsg = format("ERROR: In the user-defined source terms, the species name '%s'\n", key);
-                errMsg ~= "in the species table is not a valid species name.\n";
+    version(komega) {
+        cell.Q.tke += getNumberFromTable(L, -1, "tke", false, 0.0);
+        cell.Q.omega += getNumberFromTable(L, -1, "omega", false, 0.0);
+    }
+    version(multi_species_gas) {
+        lua_getfield(L, -1, "species");
+        if ( lua_istable(L, -1) ) {
+            // Iterate over species by names.
+            int idx = lua_gettop(L);
+            lua_pushnil(L);
+            while ( lua_next(L, idx) != 0 ) {
+                string key = to!string(lua_tostring(L, -2));
+                auto isp = gmodel.species_index(key);
+                if ( isp == -1 ) {
+                    string errMsg = format("ERROR: In the user-defined source terms, the species name '%s'\n", key);
+                    errMsg ~= "in the species table is not a valid species name.\n";
+                    lua_pop(L, 1);
+                    throw new LuaInputException(errMsg);
+                }
+                cell.Q.massf[isp] += lua_tonumber(L, -1);
                 lua_pop(L, 1);
-                throw new LuaInputException(errMsg);
             }
-            cell.Q.massf[isp] += lua_tonumber(L, -1);
+            lua_pop(L, 1); // discard species table
+        } else {
+            lua_pop(L, 1); // discard species item first
+            // For the single-species case, we just set the 
+            // source terms of the single-species to equal
+            // that of the mass term.
+            if (n_species == 1) {
+                cell.Q.massf[0] += getNumberFromTable(L, -1, "mass", false, 0.0);
+            }
+            // For multi-component gases, there is really no sensible
+            // decision, so leave it alone.
+        }
+    }
+    version(multi_T_gas) {
+        if (n_modes > 0) {
+            lua_getfield(L, -1, "energies");
+            if ( !lua_isnil(L, -1) ) {
+                for ( int imode = 0; imode < n_modes; ++imode ) {
+                    lua_rawgeti(L, -1, imode+1);
+                    cell.Q.energies[imode] += lua_tonumber(L, -1);
+                    lua_pop(L, 1);
+                }
+            }
             lua_pop(L, 1);
         }
-        lua_pop(L, 1);
     }
-    else {
-        // Get rid of species table first.
-        lua_pop(L, 1);
-        // For the single-species case, we just set the 
-        // source terms of the single-species to equal
-        // that of the mass term.
-        if ( n_species == 1 ) {
-            cell.Q.massf[0] += getNumberFromTable(L, -1, "mass", false, 0.0);
-        }
-        // For multi-component gases, there is really no sensible
-        // decision, so leave it alone.
-    }
-
-    if (n_modes > 0) {
-        lua_getfield(L, -1, "energies");
-        if ( !lua_isnil(L, -1) ) {
-            for ( int imode = 0; imode < n_modes; ++imode ) {
-                lua_rawgeti(L, -1, imode+1);
-                cell.Q.energies[imode] += lua_tonumber(L, -1);
-                lua_pop(L, 1);
-            }
-        }
-        lua_pop(L, 1);
-    }
-
     // Clear stack.
     lua_settop(L, 0);
-}
+} // end addUDFSourceTermsToCell()

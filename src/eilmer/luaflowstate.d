@@ -301,31 +301,41 @@ void pushFlowStateToTable(lua_State* L, int tblIdx, in FlowState fs, GasModel gm
 {
     mixin(pushGasVar("p"));
     mixin(pushGasVar("T", "T")); // now same in Lua and Dlang domains, 2017-12-04
-    mixin(pushGasVarArray("T_modes"));
     mixin(pushGasVar("u"));
-    mixin(pushGasVarArray("u_modes"));
-    mixin(pushGasVar("quality"));
-    // -- massf as key-val table
-    lua_newtable(L);
-    foreach (int isp, mf; fs.gas.massf) {
-        lua_pushnumber(L, mf);
-        lua_setfield(L, -2, toStringz(gmodel.species_name(isp)));
+    version(multi_T_gas) {
+        mixin(pushGasVarArray("T_modes"));
+        mixin(pushGasVarArray("u_modes"));
     }
-    lua_setfield(L, tblIdx, "massf");
-    // -- done setting massf
+    mixin(pushGasVar("quality"));
+    version(multi_species_gas) {
+        // -- massf as key-val table
+        lua_newtable(L);
+        foreach (int isp, mf; fs.gas.massf) {
+            lua_pushnumber(L, mf);
+            lua_setfield(L, -2, toStringz(gmodel.species_name(isp)));
+        }
+        lua_setfield(L, tblIdx, "massf");
+        // -- done setting massf
+    }
     mixin(pushGasVar("a"));
     mixin(pushGasVar("rho"));
     mixin(pushGasVar("mu"));
     mixin(pushGasVar("k", "k"));
-    mixin(pushGasVarArray("k_modes"));
-    mixin(pushFSVar("tke"));
-    mixin(pushFSVar("omega"));
+    version(multi_T_gas) {
+        mixin(pushGasVarArray("k_modes"));
+    }
+    version(komega) {
+        mixin(pushFSVar("tke"));
+        mixin(pushFSVar("omega"));
+    }
     mixin(pushFSVar("mu_t"));
     mixin(pushFSVar("k_t"));
     mixin(pushFSVecVar("vel"));
-    mixin(pushFSVecVar("B"));
-    mixin(pushFSVar("psi"));
-    mixin(pushFSVar("divB"));
+    version(MHD) {
+        mixin(pushFSVecVar("B"));
+        mixin(pushFSVar("psi"));
+        mixin(pushFSVar("divB"));
+    }
 }
 
 /**
@@ -393,21 +403,25 @@ extern(C) int fromTable(lua_State* L)
     mixin(checkGasVar("p"));
     mixin(checkGasVar("quality"));
     mixin(checkGasVar("T", "T")); // now same name in Lua domain
-    // Look for a table with mass fraction info
-    lua_getfield(L, 2, "massf");
-    if ( lua_istable(L, -1) ) {
-        int massfIdx = lua_gettop(L);
-        getSpeciesValsFromTable(L, managedGasModel, massfIdx, fs.gas.massf, "massf");
+    version(multi_species_gas) {
+        // Look for a table with mass fraction info
+        lua_getfield(L, 2, "massf");
+        if ( lua_istable(L, -1) ) {
+            int massfIdx = lua_gettop(L);
+            getSpeciesValsFromTable(L, managedGasModel, massfIdx, fs.gas.massf, "massf");
+        }
+        lua_pop(L, 1);
     }
-    lua_pop(L, 1);
-    // Look for an array of internal temperatures.
-    mixin(checkGasVarArray("T_modes"));
-    if ( fs.gas.T_modes.length != GlobalConfig.gmodel_master.n_modes ) {
-        string errMsg = "The temperature array ('T_modes') did not contain"~
-            " the correct number of entries.\n";
-        errMsg ~= format("T_modes.length= %d; n_modes= %d\n", fs.gas.T_modes.length,
-                         GlobalConfig.gmodel_master.n_modes);
-        luaL_error(L, errMsg.toStringz);
+    version(multi_T_gas) {
+        // Look for an array of internal temperatures.
+        mixin(checkGasVarArray("T_modes"));
+        if ( fs.gas.T_modes.length != GlobalConfig.gmodel_master.n_modes ) {
+            string errMsg = "The temperature array ('T_modes') did not contain"~
+                " the correct number of entries.\n";
+            errMsg ~= format("T_modes.length= %d; n_modes= %d\n", fs.gas.T_modes.length,
+                             GlobalConfig.gmodel_master.n_modes);
+            luaL_error(L, errMsg.toStringz);
+        }
     }
     // Let's try to find rho and u so that the pT thermo call
     // has a good set of starting values.
@@ -435,30 +449,34 @@ extern(C) int fromTable(lua_State* L)
         fs.vel.refz = luaL_checknumber(L, -1);
     }
     lua_pop(L, 1);
-    // Look for B components: "Bx", "By", "Bz"
-    lua_getfield(L, 2, "Bx");
-    if ( !lua_isnil(L, -1 ) ) {
-        fs.B.refx = luaL_checknumber(L, -1);
-    }
-    lua_pop(L, 1);
-    lua_getfield(L, 2, "By");
-    if ( !lua_isnil(L, -1 ) ) {
-        fs.B.refy = luaL_checknumber(L, -1);
-    }
-    lua_pop(L, 1);
-    lua_getfield(L, 2, "Bz");
-    if ( !lua_isnil(L, -1 ) ) {
-        fs.B.refz = luaL_checknumber(L, -1);
-    }
-    lua_pop(L, 1);
+    version(MHD) {
+        // Look for B components: "Bx", "By", "Bz"
+        lua_getfield(L, 2, "Bx");
+        if ( !lua_isnil(L, -1 ) ) {
+            fs.B.refx = luaL_checknumber(L, -1);
+        }
+        lua_pop(L, 1);
+        lua_getfield(L, 2, "By");
+        if ( !lua_isnil(L, -1 ) ) {
+            fs.B.refy = luaL_checknumber(L, -1);
+        }
+        lua_pop(L, 1);
+        lua_getfield(L, 2, "Bz");
+        if ( !lua_isnil(L, -1 ) ) {
+            fs.B.refz = luaL_checknumber(L, -1);
+        }
+        lua_pop(L, 1);
 
-    // Look for divergence cleaning parameter psi
-    mixin(checkFSVar("psi"));
-    mixin(checkFSVar("divB"));
+        // Look for divergence cleaning parameter psi
+        mixin(checkFSVar("psi"));
+        mixin(checkFSVar("divB"));
+    }
 
     // Now look turbulence quantities
-    mixin(checkFSVar("tke"));
-    mixin(checkFSVar("omega"));
+    version(komega) {
+        mixin(checkFSVar("tke"));
+        mixin(checkFSVar("omega"));
+    }
     mixin(checkFSVar("mu_t"));
     mixin(checkFSVar("k_t"));
     return 0;
