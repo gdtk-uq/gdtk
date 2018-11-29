@@ -1086,6 +1086,31 @@ string update_enum(string key, string field, string enum_from_name)
     }";
 }
 
+// To check if we are starting up with a suitable gas model,
+// we need to know about all of the gas-model modules that are in play.
+import gas.ideal_gas;
+import gas.cea_gas;
+import gas.therm_perf_gas;
+import gas.very_viscous_air;
+import gas.co2gas;
+import gas.co2gas_sw;
+import gas.sf6virial;
+import gas.uniform_lut;
+import gas.adaptive_lut_CEA;
+import gas.ideal_air_proxy;
+import gas.powers_aslam_gas;
+import gas.pseudo_species_gas;
+import gas.two_temperature_reacting_argon;
+import gas.ideal_dissociating_gas;
+import gas.two_temperature_air;
+import gas.two_temperature_nitrogen;
+import gas.vib_specific_nitrogen;
+import gas.fuel_air_mix;
+import gas.equilibrium_gas;
+import gas.steam : Steam;
+import gas.electronically_specific_gas: ElectronicallySpecificGas;
+import gas.two_temperature_gasgiant: TwoTemperatureGasGiant;
+
 void read_config_file()
 {
     if (GlobalConfig.verbosity_level > 1) writeln("Read config file.");
@@ -1114,7 +1139,34 @@ void read_config_file()
     mixin(update_string("flow_format", "flow_format"));
     mixin(update_string("title", "title"));
     mixin(update_string("gas_model_file", "gas_model_file"));
-    GlobalConfig.gmodel_master = init_gas_model(GlobalConfig.gas_model_file);
+    auto gm = init_gas_model(GlobalConfig.gas_model_file);
+    // The following checks on gas model will need to be maintained
+    // as new gas models are added.
+    bool multiSpecies = true; // assumed
+    bool multiT = false; // assumed
+    if (cast(IdealGas)gm) { multiSpecies = false; }
+    if (cast(CEAGas)gm) { multiSpecies = false; }
+    if (cast(VeryViscousAir)gm) { multiSpecies = false; }
+    if (cast(CO2Gas)gm) { multiSpecies = false; }
+    if (cast(CO2GasSW)gm) { multiSpecies = false; }
+    if (cast(SF6Virial)gm) { multiSpecies = false; }
+    if (cast(UniformLUT)gm) { multiSpecies = false; }
+    if (cast(AdaptiveLUT)gm) { multiSpecies = false; }
+    if (cast(TwoTemperatureReactingArgon)gm) { multiT = true; }
+    if (cast(TwoTemperatureAir)gm) { multiT = true; }
+    if (cast(TwoTemperatureNitrogen)gm) { multiT = true; }
+    if (cast(TwoTemperatureGasGiant)gm) { multiT = true; }
+    version(multi_species_gas) {
+        // Any gas model will do.
+    } else {
+        if (multiSpecies) { throw new Error("Cannot accommodate multi-species gas model."); }
+    }
+    version(multi_T_gas) {
+        // Any gas model will do.
+    } else {
+        if (multiT) { throw new Error("Cannot accommodate multi-temperature gas model."); }
+    }
+    GlobalConfig.gmodel_master = gm;
     mixin(update_string("udf_supervisor_file", "udf_supervisor_file"));
     mixin(update_bool("include_quality", "include_quality"));
     mixin(update_int("dimensions", "dimensions"));
@@ -1192,6 +1244,11 @@ void read_config_file()
     mixin(update_bool("artificial_compressibility", "artificial_compressibility"));
     mixin(update_double("ac_alpha", "ac_alpha"));
     mixin(update_bool("MHD", "MHD"));
+    version(MHD) {
+        // no problem
+    } else {
+        if (GlobalConfig.MHD) { throw new Error("MHD capability has not been enabled."); }
+    }
     mixin(update_bool("MHD_static_field", "MHD_static_field"));
     mixin(update_bool("MHD_resistive", "MHD_resistive"));
     mixin(update_bool("divergence_cleaning", "divergence_cleaning"));
@@ -1266,6 +1323,13 @@ void read_config_file()
     mixin(update_bool("separate_update_for_viscous_terms", "separate_update_for_viscous_terms"));
     mixin(update_bool("separate_update_for_k_omega_source", "separate_update_for_k_omega_source"));
     mixin(update_enum("turbulence_model", "turbulence_model", "turbulence_model_from_name"));
+    version(komega) {
+        // Can accommodate the k_omega turbulence model.
+    } else {
+        if (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) {
+            throw new Error("The k-omega turbulence capability is not enabled.");
+        }
+    }
     mixin(update_double("turbulence_prandtl_number", "turbulence_prandtl_number"));
     mixin(update_double("turbulence_schmidt_number", "turbulence_schmidt_number"));
     mixin(update_double("max_mu_t_factor", "max_mu_t_factor"));

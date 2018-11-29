@@ -93,7 +93,7 @@ GasModel init_gas_model(string file_name="gas-model.lua")
         gm = new SF6Virial(L);
         break;
     case "look-up table":
-        gm = new  UniformLUT(L);
+        gm = new UniformLUT(L);
         break;
     case "CEA adaptive look-up table":
         gm = new AdaptiveLUT(L);
