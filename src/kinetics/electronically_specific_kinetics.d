@@ -322,6 +322,13 @@ private:
 
 }
 
+version(electronically_specific_kinetics_test) {
+    int main()
+    {
+        return 0;
+    }
+}
+/*
 version(electronically_specific_kinetics_test) 
 {
     int main() 
@@ -385,3 +392,4 @@ version(electronically_specific_kinetics_test)
 //arrhenius mol/cm^3
 
 
+*/
