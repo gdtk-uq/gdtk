@@ -110,9 +110,10 @@ public:
                     Q.T = 100000.0;
                     update_energy(Q);
                     msg ~= format("Energy at 100000.0: %12.6f\n", Q.u);
-                    msg ~= format("The GasState is currently:\n");
-                    msg ~= Q.toString() ~ "\n";
                 }
+                // If we fail, leave temperature at value upon entry to method.
+                Q.T = Tsave;
+                update_energy(Q);
                 throw new GasModelException(msg);
             }
         }
@@ -130,6 +131,9 @@ public:
                 msg ~= "The message from the solve function is:\n";
                 msg ~= e.msg;
             }
+            // If we fail, leave temperature at value upon entry to method.
+            Q.T = Tsave;
+            update_energy(Q);
             throw new GasModelException(msg);
         }
     } // end update_temperature()
