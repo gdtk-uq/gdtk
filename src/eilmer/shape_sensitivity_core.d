@@ -2051,29 +2051,26 @@ foreach (blk; parallel(localFluidBlocks,1)) {
 `~norm2~` = 0.0;
 foreach (blk; localFluidBlocks) `~norm2~` += blk.normAcc;
 `~norm2~` = sqrt(`~norm2~`);`;
-
 }
 
 void rpcGMRES_solve(size_t nPrimitive) {    
-    // Make a stack-local copy of conserved quantities info
-    //size_t nConserved = nConservedQuantities;
-    //size_t MASS = massIdx;
-    //size_t X_MOM = xMomIdx;
-    //size_t Y_MOM = yMomIdx;
-    //size_t Z_MOM = zMomIdx;
-    //size_t TOT_ENERGY = totEnergyIdx;
-    //size_t TKE = tkeIdx;
-    //size_t OMEGA = omegaIdx;
+
+    auto fileName = "e4ssc.diagnostics.dat";
+    auto outFile = File(fileName, "w");
+    outFile.close();
     
     // restarted-GMRES settings
     size_t maxIters = GlobalConfig.sscOptions.gmresRestartInterval; // maxOuterIters
     size_t m = maxIters;
     number outerTol = GlobalConfig.sscOptions.stopOnRelativeGlobalResidual;
-    size_t maxRestarts = 1000;
+    size_t maxRestarts = 10;
     size_t iterCount;
     number resid;
     size_t nRestarts;
     size_t r;
+    double CFL = 0.01;
+    double dt = steadystate_core.determine_initial_dt(CFL);
+    
     // allocate GMRES arrays attached to the block objectcs
     foreach (blk; localFluidBlocks) {
         size_t n = nPrimitive*blk.cells.length;
@@ -2082,6 +2079,8 @@ void rpcGMRES_solve(size_t nPrimitive) {
         blk.psi.length = n;
         blk.r0.length = n;
         blk.x0.length = n;
+        blk.b.length = n;
+        blk.delpsi.length = n;
         blk.v.length = n;
         blk.w.length = n;
         blk.wext.length = n;
@@ -2110,19 +2109,23 @@ void rpcGMRES_solve(size_t nPrimitive) {
     H1.zeros();
 
     number[] Z; // global array used in the matrix-vector product
-    
-    // 1. Evaluate r0, beta, v1
-    // r0 = b - A*x0
+
+    // set initial guess for the adjoint variables (either 0 or 1 is popular in the literature)
     foreach (blk; parallel(localFluidBlocks,1)) {
-        blk.x0[] = to!number(1.0); 
+        blk.x0[] = to!number(1.0); // this is delpsi guess
+        blk.delpsi[] = to!number(1.0);
+        blk.psi[] = to!number(1.0); // this is psi guess
     }
 
+    // compute original adjoint system residual (resid = b - Ax0)
+    number residualRef = 0.0;
+    number residual = 0.0;
     // parallel matrix-vector product; Saad, Krylov Subspace Methods in Distributed Computing Environments
     // 1. exchange interface data
     // let's take a shortcut for now by grabbing the global z array, this won't work for MPI
     Z = [];                        
     foreach (blk; localFluidBlocks) {
-        Z ~= blk.x0[];
+        Z ~= blk.psi[];
     }
     foreach (blk; localFluidBlocks) {
         blk.Z.length = Z.length;
@@ -2130,7 +2133,7 @@ void rpcGMRES_solve(size_t nPrimitive) {
     }
     // 2. local product
     foreach (blk; parallel(localFluidBlocks,1)) {
-        multiply(blk.JlocT, blk.x0, blk.r0);
+        multiply(blk.JlocT, blk.psi, blk.r0);
     }
     // 3. external product
     foreach (blk; parallel(localFluidBlocks,1)) {
@@ -2143,170 +2146,77 @@ void rpcGMRES_solve(size_t nPrimitive) {
     foreach (blk; parallel(localFluidBlocks,1)) {
         foreach (k; 0 .. blk.nvars) { blk.r0[k] = blk.f[k] - blk.r0[k];}
     }
-    
-    // Then compute v = r0/||r0||
-    number betaTmp;
-    mixin(norm2_over_blocks("betaTmp", "r0"));
-    number beta = betaTmp;
-    g0[0] = beta;
-    foreach (blk; parallel(localFluidBlocks,1)) {
-        foreach (k; 0 .. blk.nvars) {
-            blk.v[k] = blk.r0[k]/beta;
-            blk.V[k,0] = blk.v[k];
+
+    mixin(norm2_over_blocks("residualRef", "r0"));
+
+    residual = residualRef;
+    writeln("reference residual: ", residualRef);
+    //start outer loop
+    // augment Precondition matrix with 1/dt
+    foreach (blk; localFluidBlocks) {
+        foreach (i; 0 .. nPrimitive*blk.cells.length) {
+            blk.P[i,i] = blk.P[i,i] + (1.0/dt);
         }
     }
-    
-    // Compute tolerance
-    //auto outerTol = eta*beta;
-    
-    // 2. Start outer-loop of restarted GMRES
+    int step = 0;
+    while (residual/residualRef > outerTol) {
 
-    for ( r = 0; r < maxRestarts; r++ ) {
-        // 2a. Begin iterations
-        foreach (j; 0 .. m) {
-            iterCount = j+1;
+        foreach (blk; localFluidBlocks) {
+            foreach (i; 0 .. nPrimitive*blk.cells.length) {
+                blk.P[i,i] = blk.P[i,i] - (1.0/dt);
+            }
+        }
 
-            // compute z (preconditioning step);
-            foreach (blk; parallel(localFluidBlocks,1)) {
-                blk.z[] = blk.v[];
-                solve(blk.P, blk.z);
-            }
+        dt = steadystate_core.determine_initial_dt(CFL);
 
-            // compute w
-            // parallel matrix-vector product; Saad, Krylov Subspace Methods in Distributed Computing Environments
-            // 1. exchange interface data
-            // let's take a shortcut for now by grabbing the global z array, this won't work for MPI
-            Z = [];                        
-            foreach (blk; localFluidBlocks) {
-                Z ~= blk.z[];
-            }
-            foreach (blk; localFluidBlocks) {
-                blk.Z.length = Z.length;
-                blk.Z[] = Z[];
-            }
-            // 2. local product
-            foreach (blk; parallel(localFluidBlocks,1)) {
-                multiply(blk.JlocT, blk.z, blk.w);
-            }
-            // 3. external product
-            foreach (blk; parallel(localFluidBlocks,1)) {
-                multiply(blk.JextT, blk.Z, blk.wext);
-            }
-            // 4. sum the two contributions
-            foreach (blk; parallel(localFluidBlocks,1)) {
-                blk.w[] += blk.wext[];
-            }
-            
-            // The remainder of the algorithm looks a lot like any standard
-            // GMRES implementation (for example, see smla.d)
-            foreach (i; 0 .. j+1) {
-                foreach (blk; parallel(localFluidBlocks,1)) {
-                    // Extract column 'i'
-                    foreach (k; 0 .. blk.nvars ) blk.v[k] = blk.V[k,i]; 
-                }
-                number H0_ij_tmp;
-                mixin(dot_over_blocks("H0_ij_tmp", "w", "v"));
-                number H0_ij = H0_ij_tmp;
-                H0[i,j] = H0_ij;
-                foreach (blk; parallel(localFluidBlocks,1)) {
-                    foreach (k; 0 .. blk.nvars) blk.w[k] -= H0_ij*blk.v[k]; 
-                }
-            }
-            number H0_jp1j_tmp;
-            mixin(norm2_over_blocks("H0_jp1j_tmp", "w"));
-            number H0_jp1j = H0_jp1j_tmp;
-            H0[j+1,j] = H0_jp1j;
-        
-            foreach (blk; parallel(localFluidBlocks,1)) {
-                foreach (k; 0 .. blk.nvars) {
-                    blk.v[k] = blk.w[k]/H0_jp1j;
-                    blk.V[k,j+1] = blk.v[k];
-                }
-            }
-
-            // Build rotated Hessenberg progressively
-            if ( j != 0 ) {
-                // Extract final column in H
-                foreach (i; 0 .. j+1) h[i] = H0[i,j];
-                // Rotate column by previous rotations (stored in Q0)
-                nm.bbla.dot!number(Q0, j+1, j+1, h, hR);
-                // Place column back in H
-                foreach (i; 0 .. j+1) H0[i,j] = hR[i];
-            }
-            // Now form new Gamma
-            Gamma.eye();
-            auto denom = sqrt(H0[j,j]*H0[j,j] + H0[j+1,j]*H0[j+1,j]);
-            auto s_j = H0[j+1,j]/denom; 
-            auto c_j = H0[j,j]/denom;
-            Gamma[j,j] = c_j; Gamma[j,j+1] = s_j;
-            Gamma[j+1,j] = -s_j; Gamma[j+1,j+1] = c_j;
-            // Apply rotations
-            nm.bbla.dot!number(Gamma, j+2, j+2, H0, j+1, H1);
-            nm.bbla.dot!number(Gamma, j+2, j+2, g0, g1);
-            // Accumulate Gamma rotations in Q.
-            if ( j == 0 ) {
-                copy(Gamma, Q1);
-            }
-            else {
-                nm.bbla.dot!number(Gamma, j+2, j+2, Q0, j+2, Q1);
-            }
-            // Prepare for next step
-            copy(H1, H0);
-            g0[] = g1[];
-            copy(Q1, Q0);
-            // Get residual
-            resid = fabs(g1[j+1]);
-            // DEBUG:
-            //      writefln("OUTER: restart-count= %d iteration= %d, resid= %e", r, j, resid);
-            if ( resid <= outerTol ) {
-                m = j+1;
-                // DEBUG:
-                //      writefln("OUTER: TOL ACHIEVED restart-count= %d iteration-count= %d, resid= %e", r, m, resid);
-                break;
+        foreach (blk; localFluidBlocks) {
+            foreach (i; 0 .. nPrimitive*blk.cells.length) {
+                blk.P[i,i] = blk.P[i,i] + (1.0/dt);
             }
         }
         
-        if (iterCount == maxIters)
-            m = maxIters;
-        // At end H := R up to row m
-        //        g := gm up to row m
-        nm.bbla.upperSolve!number(H1, to!int(m), g1);
-        // In serial, distribute a copy of g1 to each block
-        foreach (blk; localFluidBlocks) blk.g1[] = g1[];
         foreach (blk; parallel(localFluidBlocks,1)) {
-            nm.bbla.dot!number(blk.V, blk.nvars, m, blk.g1, blk.psi);
+            blk.x0[] = to!number(0.0); // this is delpsi guess
         }
+
+        // 1. Evaluate r0, beta, v1
+        // where r0 = b* - A*x0 (* refers to pseudo-time augumented system)
+
+        // compute b = -dRdQ*psi_n + f
+        // parallel matrix-vector product; Saad, Krylov Subspace Methods in Distributed Computing Environments
+        // 1. exchange interface data
+        // let's take a shortcut for now by grabbing the global z array, this won't work for MPI
+        Z = [];                        
+        foreach (blk; localFluidBlocks) {
+            Z ~= blk.psi[];
+        }
+        foreach (blk; localFluidBlocks) {
+            blk.Z.length = Z.length;
+            blk.Z[] = Z[];
+        }
+        // 2. local product
         foreach (blk; parallel(localFluidBlocks,1)) {
-            nm.smla.solve(blk.P, blk.psi);
+            multiply(blk.JlocT, blk.psi, blk.r0);
         }
+        // 3. external product
         foreach (blk; parallel(localFluidBlocks,1)) {
-            foreach (k; 0 .. blk.nvars) blk.psi[k] += blk.x0[k];
+            multiply(blk.JextT, blk.Z, blk.wext);
         }
-        writef("global residual: %.16e \n",  resid);
-        if ( resid <= outerTol || r+1 == maxRestarts ) {
-            // DEBUG:  writefln("resid= %e outerTol= %e  r+1= %d  maxRestarts= %d", resid, outerTol, r+1, maxRestarts);
-            // DEBUG:  writefln("Breaking restart loop.");
-            break;
-        }
-        writeln("RESTARTING");
-        // Else, we prepare for restart by setting x0 and computing r0
-        // Computation of r0 as per Fraysee etal (2005)
+        // 4. sum the two contributions
         foreach (blk; parallel(localFluidBlocks,1)) {
-            blk.x0[] = blk.psi[];
-        }
-        /*
-        foreach (blk; localFluidBlocks) copy(Q1, blk.Q1);
-        // Set all values in g0 to 0.0 except for final (m+1) value
-        foreach (i; 0 .. m) g0[i] = 0.0;
-        foreach (blk; localFluidBlocks) blk.g0[] = g0[];
-        
-        foreach (blk; parallel(localFluidBlocks,1)) {
-            nm.bbla.dot(blk.Q1, m, m+1, blk.g0, blk.g1);
+            blk.r0[] += blk.wext[];
         }
         foreach (blk; parallel(localFluidBlocks,1)) {
-            nm.bbla.dot(blk.V, blk.nvars, m+1, blk.g1, blk.r0);
+            foreach (k; 0 .. blk.nvars) { blk.b[k] = blk.f[k] - blk.r0[k];}
         }
-        */
+
+        // now evalaute r0
+        // augment Jacobian matrix with 1/dt
+        foreach (blk; localFluidBlocks) {
+            foreach (i; 0 .. nPrimitive*blk.cells.length) {
+                blk.JlocT[i,i] = blk.JlocT[i,i] + (1.0/dt);
+            }
+        }
 
         // parallel matrix-vector product; Saad, Krylov Subspace Methods in Distributed Computing Environments
         // 1. exchange interface data
@@ -2321,7 +2231,304 @@ void rpcGMRES_solve(size_t nPrimitive) {
         }
         // 2. local product
         foreach (blk; parallel(localFluidBlocks,1)) {
-            nm.smla.multiply(blk.JlocT, blk.x0, blk.r0);
+            multiply(blk.JlocT, blk.x0, blk.r0);
+        }
+        // 3. external product
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            multiply(blk.JextT, blk.Z, blk.wext);
+        }
+        // 4. sum the two contributions
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            blk.r0[] += blk.wext[];
+        }
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            foreach (k; 0 .. blk.nvars) { blk.r0[k] = blk.b[k] - blk.r0[k];}
+        }
+        
+        // Then compute v = r0/||r0||
+        number betaTmp;
+        mixin(norm2_over_blocks("betaTmp", "r0"));
+        number beta = betaTmp;
+        g0[0] = beta;
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            foreach (k; 0 .. blk.nvars) {
+                blk.v[k] = blk.r0[k]/beta;
+                blk.V[k,0] = blk.v[k];
+            }
+        }
+
+        // unaugment Jacobian matrix with 1/dt
+        //foreach (blk; localFluidBlocks) {
+        //    foreach (i; 0 .. nPrimitive*blk.cells.length) {
+        //        blk.JlocT[i,i] = blk.JlocT[i,i] - (1.0/dt);
+        //    }
+        //}
+
+        // Compute tolerance
+        //auto outerTol = eta*beta;
+        
+        // 2. Start inner-loop of restarted GMRES
+        for ( r = 0; r < maxRestarts; r++ ) {
+            // 2a. Begin iterations
+            foreach (j; 0 .. m) {
+                iterCount = j+1;
+                
+                // compute z (preconditioning step);
+                foreach (blk; parallel(localFluidBlocks,1)) {
+                    blk.z[] = blk.v[];
+                    solve(blk.P, blk.z);
+                }
+                
+                // compute w
+                // parallel matrix-vector product; Saad, Krylov Subspace Methods in Distributed Computing Environments
+                // 1. exchange interface data
+                // let's take a shortcut for now by grabbing the global z array, this won't work for MPI
+                Z = [];                        
+                foreach (blk; localFluidBlocks) {
+                    Z ~= blk.z[];
+                }
+                foreach (blk; localFluidBlocks) {
+                    blk.Z.length = Z.length;
+                    blk.Z[] = Z[];
+                }
+                // 2. local product
+                foreach (blk; parallel(localFluidBlocks,1)) {
+                    multiply(blk.JlocT, blk.z, blk.w);
+                }
+                // 3. external product
+                foreach (blk; parallel(localFluidBlocks,1)) {
+                    multiply(blk.JextT, blk.Z, blk.wext);
+                }
+                // 4. sum the two contributions
+                foreach (blk; parallel(localFluidBlocks,1)) {
+                    blk.w[] += blk.wext[];
+                }
+                
+                // The remainder of the algorithm looks a lot like any standard
+                // GMRES implementation (for example, see smla.d)
+                foreach (i; 0 .. j+1) {
+                    foreach (blk; parallel(localFluidBlocks,1)) {
+                        // Extract column 'i'
+                        foreach (k; 0 .. blk.nvars ) blk.v[k] = blk.V[k,i]; 
+                    }
+                    number H0_ij_tmp;
+                    mixin(dot_over_blocks("H0_ij_tmp", "w", "v"));
+                    number H0_ij = H0_ij_tmp;
+                    H0[i,j] = H0_ij;
+                    foreach (blk; parallel(localFluidBlocks,1)) {
+                        foreach (k; 0 .. blk.nvars) blk.w[k] -= H0_ij*blk.v[k]; 
+                    }
+                }
+                number H0_jp1j_tmp;
+                mixin(norm2_over_blocks("H0_jp1j_tmp", "w"));
+                number H0_jp1j = H0_jp1j_tmp;
+                H0[j+1,j] = H0_jp1j;
+                
+                foreach (blk; parallel(localFluidBlocks,1)) {
+                    foreach (k; 0 .. blk.nvars) {
+                        blk.v[k] = blk.w[k]/H0_jp1j;
+                        blk.V[k,j+1] = blk.v[k];
+                    }
+                }
+                
+                // Build rotated Hessenberg progressively
+                if ( j != 0 ) {
+                    // Extract final column in H
+                    foreach (i; 0 .. j+1) h[i] = H0[i,j];
+                    // Rotate column by previous rotations (stored in Q0)
+                    nm.bbla.dot!number(Q0, j+1, j+1, h, hR);
+                    // Place column back in H
+                    foreach (i; 0 .. j+1) H0[i,j] = hR[i];
+                }
+                // Now form new Gamma
+                Gamma.eye();
+                auto denom = sqrt(H0[j,j]*H0[j,j] + H0[j+1,j]*H0[j+1,j]);
+                auto s_j = H0[j+1,j]/denom; 
+                auto c_j = H0[j,j]/denom;
+                Gamma[j,j] = c_j; Gamma[j,j+1] = s_j;
+                Gamma[j+1,j] = -s_j; Gamma[j+1,j+1] = c_j;
+                // Apply rotations
+                nm.bbla.dot!number(Gamma, j+2, j+2, H0, j+1, H1);
+                nm.bbla.dot!number(Gamma, j+2, j+2, g0, g1);
+                // Accumulate Gamma rotations in Q.
+                if ( j == 0 ) {
+                    copy(Gamma, Q1);
+                }
+                else {
+                    nm.bbla.dot!number(Gamma, j+2, j+2, Q0, j+2, Q1);
+                }
+                // Prepare for next step
+                copy(H1, H0);
+                g0[] = g1[];
+                copy(Q1, Q0);
+                // Get residual
+                resid = fabs(g1[j+1]);
+                // DEBUG:
+                //      writefln("OUTER: restart-count= %d iteration= %d, resid= %e", r, j, resid);
+                if ( resid <= beta*0.1 ) { // inner tolerance of 0.01
+                    m = j+1;
+                    // DEBUG:
+                    //      writefln("OUTER: TOL ACHIEVED restart-count= %d iteration-count= %d, resid= %e", r, m, resid);
+                    break;
+                }
+            }
+            
+            if (iterCount == maxIters)
+                m = maxIters;
+            // At end H := R up to row m
+            //        g := gm up to row m
+            nm.bbla.upperSolve!number(H1, to!int(m), g1);
+            // In serial, distribute a copy of g1 to each block
+            foreach (blk; localFluidBlocks) blk.g1[] = g1[];
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                nm.bbla.dot!number(blk.V, blk.nvars, m, blk.g1, blk.delpsi);
+            }
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                nm.smla.solve(blk.P, blk.delpsi);
+            }
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                foreach (k; 0 .. blk.nvars) blk.delpsi[k] += blk.x0[k];
+            }
+            //writef("global residual: %.16e \n",  resid);
+            if ( resid <= outerTol || r+1 == maxRestarts ) {
+                // DEBUG:  writefln("resid= %e outerTol= %e  r+1= %d  maxRestarts= %d", resid, outerTol, r+1, maxRestarts);
+                // DEBUG:  writefln("Breaking restart loop.");
+                break;
+            }
+            //writeln("RESTARTING");
+            // Else, we prepare for restart by setting x0 and computing r0
+            // Computation of r0 as per Fraysee etal (2005)
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                blk.x0[] = blk.delpsi[];
+            }
+            /*
+              foreach (blk; localFluidBlocks) copy(Q1, blk.Q1);
+              // Set all values in g0 to 0.0 except for final (m+1) value
+              foreach (i; 0 .. m) g0[i] = 0.0;
+              foreach (blk; localFluidBlocks) blk.g0[] = g0[];
+              
+              foreach (blk; parallel(localFluidBlocks,1)) {
+              nm.bbla.dot(blk.Q1, m, m+1, blk.g0, blk.g1);
+              }
+              foreach (blk; parallel(localFluidBlocks,1)) {
+              nm.bbla.dot(blk.V, blk.nvars, m+1, blk.g1, blk.r0);
+              }
+
+            */
+
+            // unaugment Jacobian matrix with 1/dt
+            foreach (blk; localFluidBlocks) {
+                foreach (i; 0 .. nPrimitive*blk.cells.length) {
+                    blk.JlocT[i,i] = blk.JlocT[i,i] - (1.0/dt);
+                }
+            }
+
+            // parallel matrix-vector product; Saad, Krylov Subspace Methods in Distributed Computing Environments
+            // 1. exchange interface data
+            // let's take a shortcut for now by grabbing the global z array, this won't work for MPI
+            Z = [];                        
+            foreach (blk; localFluidBlocks) {
+                Z ~= blk.psi[];
+            }
+            foreach (blk; localFluidBlocks) {
+                blk.Z.length = Z.length;
+                blk.Z[] = Z[];
+            }
+            // 2. local product
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                multiply(blk.JlocT, blk.psi, blk.r0);
+            }
+            // 3. external product
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                multiply(blk.JextT, blk.Z, blk.wext);
+            }
+            // 4. sum the two contributions
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                blk.r0[] += blk.wext[];
+            }
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                foreach (k; 0 .. blk.nvars) { blk.b[k] = blk.f[k] - blk.r0[k];}
+            }
+            
+            // now evalaute r0
+            // augment Jacobian matrix with 1/dt
+            foreach (blk; localFluidBlocks) {
+                foreach (i; 0 .. nPrimitive*blk.cells.length) {
+                    blk.JlocT[i,i] = blk.JlocT[i,i] + (1.0/dt);
+                }
+            }
+            
+            // parallel matrix-vector product; Saad, Krylov Subspace Methods in Distributed Computing Environments
+            // 1. exchange interface data
+            // let's take a shortcut for now by grabbing the global z array, this won't work for MPI
+            Z = [];                        
+            foreach (blk; localFluidBlocks) {
+                Z ~= blk.x0[];
+            }
+            foreach (blk; localFluidBlocks) {
+                blk.Z.length = Z.length;
+                blk.Z[] = Z[];
+            }
+            // 2. local product
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                multiply(blk.JlocT, blk.x0, blk.r0);
+            }
+            // 3. external product
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                multiply(blk.JextT, blk.Z, blk.wext);
+            }
+            // 4. sum the two contributions
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                blk.r0[] += blk.wext[];
+            }
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                foreach (k; 0 .. blk.nvars) { blk.r0[k] = blk.b[k] - blk.r0[k];}
+            }
+            mixin(norm2_over_blocks("betaTmp", "r0"));
+            beta = betaTmp;
+            // DEBUG: writefln("OUTER: ON RESTART beta= %e", beta);
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                foreach (k; 0 .. blk.nvars) {
+                    blk.v[k] = blk.r0[k]/beta;
+                    blk.V[k,0] = blk.v[k];
+                }
+            }
+            // Re-initialise some vectors and matrices for restart
+            g0[] = to!number(0.0);
+            g1[] = to!number(0.0);
+            H0.zeros();
+            H1.zeros();
+            // And set first residual entry
+            g0[0] = beta;
+            
+        }
+        // should have a decent estimate for delpsi at this point, so update psi
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            foreach (k; 0 .. blk.nvars) { blk.psi[k] = blk.psi[k] + blk.delpsi[k];}
+        }
+        
+        // compute new residual
+        // unaugment Jacobian matrix with 1/dt
+        foreach (blk; localFluidBlocks) {
+            foreach (i; 0 .. nPrimitive*blk.cells.length) {
+                blk.JlocT[i,i] = blk.JlocT[i,i] - (1.0/dt);
+            }
+        }
+
+        // parallel matrix-vector product; Saad, Krylov Subspace Methods in Distributed Computing Environments
+        // 1. exchange interface data
+        // let's take a shortcut for now by grabbing the global z array, this won't work for MPI
+        Z = [];                        
+        foreach (blk; localFluidBlocks) {
+            Z ~= blk.psi[];
+        }
+        foreach (blk; localFluidBlocks) {
+            blk.Z.length = Z.length;
+            blk.Z[] = Z[];
+        }
+        // 2. local product
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            multiply(blk.JlocT, blk.psi, blk.r0);
         }
         // 3. external product
         foreach (blk; parallel(localFluidBlocks,1)) {
@@ -2334,26 +2541,20 @@ void rpcGMRES_solve(size_t nPrimitive) {
         foreach (blk; parallel(localFluidBlocks,1)) {
             foreach (k; 0 .. blk.nvars) { blk.r0[k] = blk.f[k] - blk.r0[k];}
         }
-        mixin(norm2_over_blocks("betaTmp", "r0"));
-        beta = betaTmp;
-        // DEBUG: writefln("OUTER: ON RESTART beta= %e", beta);
-        foreach (blk; parallel(localFluidBlocks,1)) {
-            foreach (k; 0 .. blk.nvars) {
-                blk.v[k] = blk.r0[k]/beta;
-                blk.V[k,0] = blk.v[k];
-            }
-        }
-        // Re-initialise some vectors and matrices for restart
-        g0[] = to!number(0.0);
-        g1[] = to!number(0.0);
-        H0.zeros();
-        H1.zeros();
-        // And set first residual entry
-        g0[0] = beta;
+        number residual_tmp = 0.0;
+        mixin(norm2_over_blocks("residual_tmp", "r0"));
+        writef("step: %d    CFL: %.4f    relative residual: %.16e    absolute residual: %.16e \n", step, CFL, residual_tmp/residualRef, residual_tmp);
+        outFile = File(fileName, "a");
+        outFile.writef("%d %.16e %.16e $.4e\n", step, residual_tmp/residualRef, residual, CFL);
+        outFile.close();
+        step += 1;
 
+        CFL = CFL*pow(residual.re/residual_tmp.re, 1.0);
+        residual = residual_tmp;
     }
+
     nRestarts = to!int(r);
-    writeln(nRestarts, " restarts.");
+    writeln("COMPLETE");
 }
 
 /**********************/

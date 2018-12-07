@@ -110,8 +110,10 @@ public:
         SMatrix!number P;
         // objective function senstivity w.r.t primitive variables
         number[] f;
+        number[] b;
         // adjoint variables
         number[] psi;
+        number[] delpsi;
         // residual sensitivity w.r.t. design variables (transposed)
         Matrix!number rT;           
         // local dot product of the residual sensitivity w.r.t. design variables (transposed) with the adjoint variables
