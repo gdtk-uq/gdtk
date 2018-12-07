@@ -2060,15 +2060,16 @@ void rpcGMRES_solve(size_t nPrimitive) {
     outFile.close();
     
     // restarted-GMRES settings
-    size_t maxIters = GlobalConfig.sscOptions.gmresRestartInterval; // maxOuterIters
+    size_t maxIters = GlobalConfig.sscOptions.maxOuterIterations;
     size_t m = maxIters;
     number outerTol = GlobalConfig.sscOptions.stopOnRelativeGlobalResidual;
-    size_t maxRestarts = 10;
+    size_t maxRestarts = GlobalConfig.sscOptions.maxRestarts;
+    double eta = GlobalConfig.sscOptions.eta;
     size_t iterCount;
     number resid;
     size_t nRestarts;
     size_t r;
-    double CFL = 0.01;
+    double CFL = GlobalConfig.sscOptions.cfl0;
     double dt = steadystate_core.determine_initial_dt(CFL);
     
     // allocate GMRES arrays attached to the block objectcs
@@ -2365,7 +2366,7 @@ void rpcGMRES_solve(size_t nPrimitive) {
                 resid = fabs(g1[j+1]);
                 // DEBUG:
                 //      writefln("OUTER: restart-count= %d iteration= %d, resid= %e", r, j, resid);
-                if ( resid <= beta*0.1 ) { // inner tolerance of 0.01
+                if ( resid <= beta*eta ) { // inner tolerance of 0.01
                     m = j+1;
                     // DEBUG:
                     //      writefln("OUTER: TOL ACHIEVED restart-count= %d iteration-count= %d, resid= %e", r, m, resid);
@@ -2543,7 +2544,7 @@ void rpcGMRES_solve(size_t nPrimitive) {
         }
         number residual_tmp = 0.0;
         mixin(norm2_over_blocks("residual_tmp", "r0"));
-        writef("step: %d    CFL: %.4f    relative residual: %.16e    absolute residual: %.16e \n", step, CFL, residual_tmp/residualRef, residual_tmp);
+        writef("step: %d    CFL: %.4e    relative residual: %.4e    absolute residual: %.4e \n", step, CFL, (residual_tmp/residualRef).re, (residual_tmp).re);
         outFile = File(fileName, "a");
         outFile.writef("%d %.16e %.16e $.4e\n", step, residual_tmp/residualRef, residual, CFL);
         outFile.close();

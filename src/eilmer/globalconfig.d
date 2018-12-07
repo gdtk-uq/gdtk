@@ -224,53 +224,20 @@ struct SolidDomainLooseUpdateOptions {
 }
 
 version(shape_sensitivity) {
-    enum GradientMethod { adjoint, finite_difference };
-
-    @nogc
-    string gradientMethodName(GradientMethod i)
-    {
-        final switch (i) {
-        case GradientMethod.adjoint: return "adjoint";
-        case GradientMethod.finite_difference: return "finite_difference";
-        }
-    } // end gradientMethodName()
-
-    @nogc
-    GradientMethod gradientMethodFromName(string name)
-    {
-        switch (name) {
-        case "adjoint": return GradientMethod.adjoint;
-        case "finite_difference": return GradientMethod.finite_difference;
-        default:
-            string errMsg = "The selected 'gradient_method' is unavailable.\n";
-            debug {
-                errMsg ~= format("You selected: '%s'\n", name);
-                errMsg ~= "The available strategies are: \n";
-                errMsg ~= "   'adjoint'\n";
-                errMsg ~= "   'finite_difference'\n";
-                errMsg ~= "Check your selection or its spelling in the input file.\n";
-            }
-            throw new Error(errMsg);
-        }
-    } // end gradientMethodFromName()
-
     struct ShapeSensitivityCalculatorOptions {
-        GradientMethod gradientMethod = GradientMethod.adjoint;
-        bool gradientVerification = true;
-        // finite difference parameters
-        double epsilon = 1.0e-04; // flow sensitivity perturbation
-        double mu = 1.0e-04; // flow sensitivity threshold
-        double eta = 1.0e-04; // residual sensitivity perturbation
-        double delta = 1.0e-04; // finite difference gradient perturbation
+        // sensitivity parameters
+        double epsilon = 1.0e-30;
         // GMRES parameters
-        int gmresRestartInterval = 85;
-        double stopOnRelativeGlobalResidual = 1.0e-16;
+        int maxOuterIterations = 10;
+        int maxRestarts = 10;
+        double cfl0 = 1.0; // initial CFL
+        double eta = 0.1; // inner loop tolerance
+        double stopOnRelativeGlobalResidual = 1.0e-16; // outer loop tolerance
         // bezier curve fit parameters
         double tolBezierCurveFit = 1.0e-06;
         int maxStepsBezierCurveFit = 10000;
         string userDefinedObjectiveFile = "";
     }
- 
 } // end version(shape_sensitivity)
 
 
@@ -1488,29 +1455,19 @@ void read_config_file()
         getJSONdouble(sdluOptions, "tolerance_gmres_solve", GlobalConfig.sdluOptions.toleranceGMRESSolve);
     GlobalConfig.sdluOptions.perturbationSize = 
         getJSONdouble(sdluOptions, "perturbation_size", GlobalConfig.sdluOptions.perturbationSize);
-    
+
     version (shape_sensitivity) {
     auto sscOptions = jsonData["shape_sensitivity_calculator_options"];
-    { 
-        auto mySaveValue = GlobalConfig.sscOptions.gradientMethod;
-        try {
-            string name = sscOptions["gradient_method"].str;
-            GlobalConfig.sscOptions.gradientMethod = gradientMethodFromName(name);
-        } catch (Exception e) {
-            GlobalConfig.sscOptions.gradientMethod = mySaveValue;
-        }
-    }
-    GlobalConfig.sscOptions.gradientVerification = getJSONbool(sscOptions, "gradient_verification", GlobalConfig.sscOptions.gradientVerification);
     GlobalConfig.sscOptions.epsilon =
         getJSONdouble(sscOptions, "epsilon", GlobalConfig.sscOptions.epsilon);
-    GlobalConfig.sscOptions.mu =
-        getJSONdouble(sscOptions, "mu", GlobalConfig.sscOptions.mu);
+    GlobalConfig.sscOptions.maxOuterIterations = 
+        getJSONint(sscOptions, "maxOuterIterations", GlobalConfig.sscOptions.maxOuterIterations);
+    GlobalConfig.sscOptions.maxRestarts = 
+        getJSONint(sscOptions, "maxRestarts", GlobalConfig.sscOptions.maxRestarts);
+    GlobalConfig.sscOptions.cfl0 =
+        getJSONdouble(sscOptions, "cfl0", GlobalConfig.sscOptions.cfl0);
     GlobalConfig.sscOptions.eta =
         getJSONdouble(sscOptions, "eta", GlobalConfig.sscOptions.eta);
-    GlobalConfig.sscOptions.delta =
-        getJSONdouble(sscOptions, "delta", GlobalConfig.sscOptions.delta);
-    GlobalConfig.sscOptions.gmresRestartInterval = 
-        getJSONint(sscOptions, "gmres_restart_interval", GlobalConfig.sscOptions.gmresRestartInterval);
     GlobalConfig.sscOptions.stopOnRelativeGlobalResidual = 
         getJSONdouble(sscOptions, "stop_on_relative_global_residual", GlobalConfig.sscOptions.stopOnRelativeGlobalResidual);
     GlobalConfig.sscOptions.tolBezierCurveFit =

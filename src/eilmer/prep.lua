@@ -108,16 +108,14 @@ setmetatable(SteadyStateSolver, sssOptionsHidden)
 -- Storage for shape sensitivity calculator settings
 sscOptionsHidden = { -- hidden from user
    -- set defaults here
-   gradient_method = "adjoint",
-   gradient_verification = true,
-   -- finite difference parameters
-   epsilon = 1.0e-04,
-   mu = 1.0e-04, 
-   eta = 1.0e-04, 
-   delta = 1.0e-04,
+   -- sensitivity parameters
+   epsilon = 1.0e-30,
    -- GMRES parameters
-   gmres_restart_interval = 85,
-   stop_on_relative_global_residual = 1.0e-16,
+   maxOuterIterations = 10,
+   maxRestarts = 10,
+   cfl0=1.0,
+   eta = 0.1, 
+   stop_on_relative_global_residual = 1.0e-99,
    -- Bezier curve fit parameters
    tol_bezier_curve_fit = 1.0e-06,
    max_steps_bezier_curve_fit = 10000,
