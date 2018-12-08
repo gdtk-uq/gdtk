@@ -3,6 +3,11 @@
 # We can specify the LDC2 compiler as DMD=ldmd2 on the command-line
 # when invoking this makefile.  Can also ask for gdc.
 DMD ?= dmd
+
+# FLAVOUR options are debug, fast, profile
+# Flags for each compiler will be determined on this option.
+FLAVOUR ?= debug
+
 PLATFORM ?= linux
 WITH_DVODE ?= 0
 INSTALL_DIR ?= $(HOME)/dgdinst
@@ -26,8 +31,15 @@ LUA := ../../extern/lua-5.1.4
 LIBLUA := $(LUA)/lib/liblua.a
 LIBLUAPATH := $(LUA)/lib
 ifeq ($(DMD), dmd)
-    # DFLAGS := -w
-    DFLAGS := -w -O -release -inline -boundscheck=off
+    ifeq ($(FLAVOUR), debug)
+        DFLAGS := -w -g -debug
+    endif
+    ifeq ($(FLAVOUR), profile)
+        DFLAGS := -profile -w -O -release -inline -boundscheck=off
+    endif
+    ifeq ($(FLAVOUR), fast)
+        DFLAGS := -w -O -release -inline -boundscheck=off
+    endif
     OF := -of
     DLINKFLAGS := -L-L$(LIBLUAPATH) -L-llua -L-ldl
 endif
@@ -109,7 +121,7 @@ build-prep-gas: prep_gas.lua species-database.lua
 
 gas-calc: luagas_model.d $(LIBLUA) $(GAS_FILES) $(GAS_LUA_FILES) $(NM_FILES) \
 	$(UTIL_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES)
-	dmd -ofgas-calc -dip1008 -version=gas_calc \
+	dmd -ofgas-calc -dip1008 -version=gas_calc $(DFLAGS) \
 		$(GAS_FILES) $(GAS_LUA_FILES) $(NM_FILES) $(UTIL_FILES) $(KINETICS_FILES) \
 		$(KINETICS_LUA_FILES) $(DLINKFLAGS)
 

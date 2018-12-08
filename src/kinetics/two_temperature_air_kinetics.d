@@ -14,6 +14,7 @@ import std.stdio;
 import std.conv;
 import std.string;
 import std.math;
+import std.algorithm;
 import nm.complex;
 import nm.number;
 import util.lua;
@@ -57,10 +58,35 @@ final class TwoTemperatureAirKinetics : ThermochemicalReactor {
                          ref double dtChemSuggest, ref double dtThermSuggest,
                          ref number[maxParams] params)
     {
-        
+
         double dummyDouble;
+        number uTotal = Q.u + Q.u_modes[0];
         // 1. Perform chemistry update.
         _chemUpdate(Q, tInterval, dtChemSuggest, dummyDouble, params);
+        debug {
+            writeln("--- 1 ---");
+            writefln("uTotal= %.12e u= %.12e uv= %.12e", uTotal, Q.u, Q.u_modes[0]);
+            writefln("T= %.12e  Tv= %.12e", Q.T, Q.T_modes[0]);
+        }
+        // Changing mass fractions does not change the temperature 
+        // of the temperatures associated with internal structure.
+        // Now we can adjust the transrotational energy, given that
+        // some of it was redistributed to other internal structure energy bins.
+        Q.u_modes[0] = _airModel.vibEnergy(Q, Q.T_modes[0]);
+        Q.u = uTotal - Q.u_modes[0];
+        try {
+            _airModel.update_thermo_from_rhou(Q);
+            debug {
+                writeln("--- 2 ---");
+                writefln("uTotal= %.12e u= %.12e uv= %.12e", uTotal, Q.u, Q.u_modes[0]);
+                writefln("T= %.12e  Tv= %.12e", Q.T, Q.T_modes[0]);
+            }
+        }
+        catch (GasModelException err) {
+            string msg = "Call to update_thermo_from_rhou failed in two-temperature air kinetics.";
+            debug { msg ~= format("\ncaught %s", err.msg); }
+            throw new ThermochemicalReactorUpdateException(msg);
+        }
 
         // 2. Perform energy exchange update.
         // As prep work, compute mole fractions.
@@ -70,6 +96,10 @@ final class TwoTemperatureAirKinetics : ThermochemicalReactor {
         massf2molef(Q.massf, _airModel.mol_masses, _molef);
         try {
             energyUpdate(Q, tInterval, dtThermSuggest);
+            debug {
+                writeln("--- 3 ---");
+                writeln(Q);
+            }
         }
         catch (GasModelException err) {
             string msg = "The energy update in the two temperature air kinetics module failed.\n";
@@ -82,8 +112,8 @@ private:
     TwoTemperatureAir _airModel;
     GasState _Qinit, _Q0;
     ChemistryUpdate _chemUpdate;
-    number _eTotal;
     double _c2 = 1.0;
+    number _uTotal;
     number _T_sh, _Tv_sh;
     double[] _A;
     number[] _molef;
@@ -178,7 +208,7 @@ private:
     @nogc
     void energyUpdate(GasState Q, double tInterval, ref double dtSuggest)
     {
-        _eTotal = Q.u + Q.u_modes[0];
+        _uTotal = Q.u + Q.u_modes[0];
         // We borrow the algorithm from ChemistryUpdate.opCall()
         // Take a copy of what's passed in, in case something goes wrong
         _Qinit.copy_values_from(Q);
@@ -285,6 +315,15 @@ private:
         }
         // At this point, it appears that everything has gone well.
         // Update energies and leave.
+        try {
+            Q.u = _uTotal - Q.u_modes[0];
+            _airModel.update_thermo_from_rhou(Q);
+        }
+        catch (GasModelException err) {
+            string msg = "Call to update_thermo_from_rhou failed in two-temperature air kinetics.";
+            debug { msg ~= format("\ncaught %s", err.msg); }
+            throw new ThermochemicalReactorUpdateException(msg);
+        }
         dtSuggest = dtSave;
     }
 
@@ -359,33 +398,45 @@ private:
 
         number k1 = evalRate(Q);
         Q.u_modes[0] = _Q0.u_modes[0] + h*(a21*k1);
-        Q.u = _eTotal - Q.u_modes[0];
+
+        Q.u = _uTotal - Q.u_modes[0];
         _airModel.update_thermo_from_rhou(Q);
+
 
         number k2 = evalRate(Q);
         Q.u_modes[0] = _Q0.u_modes[0] + h*(a31*k1 + a32*k2);
-        Q.u = _eTotal - Q.u_modes[0];
+
+        Q.u = _uTotal - Q.u_modes[0];
         _airModel.update_thermo_from_rhou(Q);
+
 
         number k3 = evalRate(Q);
         Q.u_modes[0] = _Q0.u_modes[0] + h*(a41*k1 + a42*k2 + a43*k3);
-        Q.u = _eTotal - Q.u_modes[0];
+
+        Q.u = _uTotal - Q.u_modes[0];
         _airModel.update_thermo_from_rhou(Q);
+
 
         number k4 = evalRate(Q);
         Q.u_modes[0] = _Q0.u_modes[0] + h*(a51*k1 + a52*k2 + a53*k3 + a54*k4);
-        Q.u = _eTotal - Q.u_modes[0];
+
+        Q.u = _uTotal - Q.u_modes[0];
         _airModel.update_thermo_from_rhou(Q);
+
 
         number k5 = evalRate(Q);
         Q.u_modes[0] = _Q0.u_modes[0] + h*(a61*k1 + a62*k2 + a63*k3 + a64*k4 + a65*k5);
-        Q.u = _eTotal - Q.u_modes[0];
+
+        Q.u = _uTotal - Q.u_modes[0];
         _airModel.update_thermo_from_rhou(Q);
+
 
         number k6 = evalRate(Q);
         Q.u_modes[0] = _Q0.u_modes[0] + h*(b51*k1 + b53*k3 + b54*k4 + b56*k6);
-        Q.u = _eTotal - Q.u_modes[0];
+
+        Q.u = _uTotal - Q.u_modes[0];
         _airModel.update_thermo_from_rhou(Q);
+
 
         // Compute error estimate.
         number errEst = Q.u_modes[0] - (_Q0.u_modes[0] + h*(b41*k1 + b43*k3 + b44*k4 + b45*k5 + b46*k6));

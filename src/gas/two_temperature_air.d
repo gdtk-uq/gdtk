@@ -422,6 +422,15 @@ public:
         return h_ve;
     }
 
+    @nogc number vibEnergy(in GasState Q, number Tve)
+    {
+        number e_ve = 0.0;
+        foreach (isp; molecularSpecies) {
+            e_ve += Q.massf[isp] * vibEnergy(Tve, isp);
+        }
+        return e_ve;
+    }
+    
 private:
     PerfectGasMixEOS _pgMixEOS;
     double _R_U_cal = 1.987; // cal/(mole.K)
@@ -546,15 +555,6 @@ private:
         number h = _A[0] + _A[1]*T/2. + _A[2]*T2/3. + _A[3]*T3/4. + _A[4]*T4/5. + _A[5]/T;
         h *= (R_universal*T/_mol_masses[isp]);
         return h;
-    }
-
-    @nogc number vibEnergy(in GasState Q, number Tve)
-    {
-        number e_ve = 0.0;
-        foreach (isp; molecularSpecies) {
-            e_ve += Q.massf[isp] * vibEnergy(Tve, isp);
-        }
-        return e_ve;
     }
 
     @nogc number transRotEnergy(in GasState Q)
