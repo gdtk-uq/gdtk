@@ -261,6 +261,14 @@ void main(string[] args) {
             //GlobalConfig.viscous = false;
             myblk.P = new SMatrix!number();
             local_flow_jacobian_transpose(myblk.P, myblk, nPrimitive, 1, EPS, true, false); // orderOfJacobian=0
+
+            double CFL = GlobalConfig.sscOptions.cfl0;
+            double dt = steadystate_core.determine_initial_dt(CFL);
+
+            foreach (i; 0 .. nPrimitive*myblk.cells.length) {
+                myblk.P[i,i] = myblk.P[i,i] + (1.0/dt);
+            }
+
             decompILU0(myblk.P);
             //GlobalConfig.viscous = viscousConfigSave;
         }

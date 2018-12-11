@@ -2153,28 +2153,8 @@ void rpcGMRES_solve(size_t nPrimitive) {
     residual = residualRef;
     writeln("reference residual: ", residualRef);
     //start outer loop
-    // augment Precondition matrix with 1/dt
-    foreach (blk; localFluidBlocks) {
-        foreach (i; 0 .. nPrimitive*blk.cells.length) {
-            blk.P[i,i] = blk.P[i,i] + (1.0/dt);
-        }
-    }
     int step = 0;
     while (residual/residualRef > outerTol) {
-
-        foreach (blk; localFluidBlocks) {
-            foreach (i; 0 .. nPrimitive*blk.cells.length) {
-                blk.P[i,i] = blk.P[i,i] - (1.0/dt);
-            }
-        }
-
-        dt = steadystate_core.determine_initial_dt(CFL);
-
-        foreach (blk; localFluidBlocks) {
-            foreach (i; 0 .. nPrimitive*blk.cells.length) {
-                blk.P[i,i] = blk.P[i,i] + (1.0/dt);
-            }
-        }
         
         foreach (blk; parallel(localFluidBlocks,1)) {
             blk.x0[] = to!number(0.0); // this is delpsi guess
@@ -2259,11 +2239,11 @@ void rpcGMRES_solve(size_t nPrimitive) {
         }
 
         // unaugment Jacobian matrix with 1/dt
-        //foreach (blk; localFluidBlocks) {
-        //    foreach (i; 0 .. nPrimitive*blk.cells.length) {
-        //        blk.JlocT[i,i] = blk.JlocT[i,i] - (1.0/dt);
-        //    }
-        //}
+        foreach (blk; localFluidBlocks) {
+            foreach (i; 0 .. nPrimitive*blk.cells.length) {
+                blk.JlocT[i,i] = blk.JlocT[i,i] - (1.0/dt);
+            }
+        }
 
         // Compute tolerance
         //auto outerTol = eta*beta;
@@ -2278,6 +2258,13 @@ void rpcGMRES_solve(size_t nPrimitive) {
                 foreach (blk; parallel(localFluidBlocks,1)) {
                     blk.z[] = blk.v[];
                     solve(blk.P, blk.z);
+                }
+
+                // augment Jacobian matrix with 1/dt
+                foreach (blk; localFluidBlocks) {
+                    foreach (i; 0 .. nPrimitive*blk.cells.length) {
+                        blk.JlocT[i,i] = blk.JlocT[i,i] + (1.0/dt);
+                    }
                 }
                 
                 // compute w
@@ -2304,7 +2291,14 @@ void rpcGMRES_solve(size_t nPrimitive) {
                 foreach (blk; parallel(localFluidBlocks,1)) {
                     blk.w[] += blk.wext[];
                 }
-                
+
+                // unaugment Jacobian matrix with 1/dt
+                foreach (blk; localFluidBlocks) {
+                    foreach (i; 0 .. nPrimitive*blk.cells.length) {
+                        blk.JlocT[i,i] = blk.JlocT[i,i] - (1.0/dt);
+                    }
+                }
+        
                 // The remainder of the algorithm looks a lot like any standard
                 // GMRES implementation (for example, see smla.d)
                 foreach (i; 0 .. j+1) {
@@ -2391,7 +2385,7 @@ void rpcGMRES_solve(size_t nPrimitive) {
                 foreach (k; 0 .. blk.nvars) blk.delpsi[k] += blk.x0[k];
             }
             //writef("global residual: %.16e \n",  resid);
-            if ( resid <= outerTol || r+1 == maxRestarts ) {
+            if ( resid <= beta*eta || r+1 == maxRestarts ) {
                 // DEBUG:  writefln("resid= %e outerTol= %e  r+1= %d  maxRestarts= %d", resid, outerTol, r+1, maxRestarts);
                 // DEBUG:  writefln("Breaking restart loop.");
                 break;
@@ -2416,13 +2410,6 @@ void rpcGMRES_solve(size_t nPrimitive) {
               }
 
             */
-
-            // unaugment Jacobian matrix with 1/dt
-            foreach (blk; localFluidBlocks) {
-                foreach (i; 0 .. nPrimitive*blk.cells.length) {
-                    blk.JlocT[i,i] = blk.JlocT[i,i] - (1.0/dt);
-                }
-            }
 
             // parallel matrix-vector product; Saad, Krylov Subspace Methods in Distributed Computing Environments
             // 1. exchange interface data
@@ -2485,6 +2472,14 @@ void rpcGMRES_solve(size_t nPrimitive) {
             foreach (blk; parallel(localFluidBlocks,1)) {
                 foreach (k; 0 .. blk.nvars) { blk.r0[k] = blk.b[k] - blk.r0[k];}
             }
+
+            // unaugment Jacobian matrix with 1/dt
+            foreach (blk; localFluidBlocks) {
+                foreach (i; 0 .. nPrimitive*blk.cells.length) {
+                    blk.JlocT[i,i] = blk.JlocT[i,i] - (1.0/dt);
+                }
+            }
+
             mixin(norm2_over_blocks("betaTmp", "r0"));
             beta = betaTmp;
             // DEBUG: writefln("OUTER: ON RESTART beta= %e", beta);
@@ -2508,14 +2503,6 @@ void rpcGMRES_solve(size_t nPrimitive) {
             foreach (k; 0 .. blk.nvars) { blk.psi[k] = blk.psi[k] + blk.delpsi[k];}
         }
         
-        // compute new residual
-        // unaugment Jacobian matrix with 1/dt
-        foreach (blk; localFluidBlocks) {
-            foreach (i; 0 .. nPrimitive*blk.cells.length) {
-                blk.JlocT[i,i] = blk.JlocT[i,i] - (1.0/dt);
-            }
-        }
-
         // parallel matrix-vector product; Saad, Krylov Subspace Methods in Distributed Computing Environments
         // 1. exchange interface data
         // let's take a shortcut for now by grabbing the global z array, this won't work for MPI
@@ -2550,7 +2537,7 @@ void rpcGMRES_solve(size_t nPrimitive) {
         outFile.close();
         step += 1;
 
-        CFL = CFL*pow(residual.re/residual_tmp.re, 1.0);
+        CFL = CFL;
         residual = residual_tmp;
     }
 
