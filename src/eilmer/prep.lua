@@ -108,6 +108,7 @@ setmetatable(SteadyStateSolver, sssOptionsHidden)
 -- Storage for shape sensitivity calculator settings
 sscOptionsHidden = { -- hidden from user
    -- set defaults here
+   pseudotime = false,
    -- sensitivity parameters
    epsilon = 1.0e-30,
    -- GMRES parameters
@@ -1636,6 +1637,7 @@ function write_config_file(fileName)
    f:write(string.format('"thermionic_emission_bc_time_delay": %.18e,\n', config.thermionic_emission_bc_time_delay))
 
    f:write('"shape_sensitivity_calculator_options" : {\n')
+   f:write(string.format('   "pseudotime": %s,\n', tostring(ShapeSensitivityCalculator.pseudotime)))
    f:write(string.format('   "epsilon": %.18e,\n', ShapeSensitivityCalculator.epsilon))
    f:write(string.format('   "maxOuterIterations": %d,\n', ShapeSensitivityCalculator.maxOuterIterations))
    f:write(string.format('   "maxRestarts": %d,\n', ShapeSensitivityCalculator.maxRestarts))

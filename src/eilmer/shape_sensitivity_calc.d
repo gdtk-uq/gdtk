@@ -254,25 +254,49 @@ void main(string[] args) {
             form_external_flow_jacobian_block_phase1(myblk.JextT, myblk, nPrimitive, myblk.myConfig.interpolation_order, EPS); // orderOfJacobian=interpolation_order
         }
 
-        /* Preconditioner */
+        steadystate_core.evalRHS(0.0, 0);
+        exchange_ghost_cell_boundary_data(0.0, 0, 0); // pseudoSimTime = 0.0; gtl = 0; ftl = 0
 
-        foreach (myblk; parallel(localFluidBlocks,1)) {
-            //bool viscousConfigSave = GlobalConfig.viscous;
-            //GlobalConfig.viscous = false;
-            myblk.P = new SMatrix!number();
-            local_flow_jacobian_transpose(myblk.P, myblk, nPrimitive, 1, EPS, true, false); // orderOfJacobian=0
-
+        if (GlobalConfig.sscOptions.pseudotime) {
             double CFL = GlobalConfig.sscOptions.cfl0;
             double dt = steadystate_core.determine_initial_dt(CFL);
 
-            foreach (i; 0 .. nPrimitive*myblk.cells.length) {
-                myblk.P[i,i] = myblk.P[i,i] + (1.0/dt);
+            /* low order Jacobian */
+            foreach (myblk; parallel(localFluidBlocks,1)) {
+                myblk.A = new SMatrix!number();
+                local_flow_jacobian_transpose(myblk.A, myblk, nPrimitive, 1, EPS, true, false);
+                foreach (i; 0 .. nPrimitive*myblk.cells.length) {
+                    myblk.A[i,i] = myblk.A[i,i] + (1.0/dt);
+                }
             }
-
-            decompILU0(myblk.P);
-            //GlobalConfig.viscous = viscousConfigSave;
+            
+            foreach (myblk; parallel(localFluidBlocks,1)) {
+                form_external_flow_jacobian_block_phase0(myblk, nPrimitive, myblk.myConfig.interpolation_order, EPS); // orderOfJacobian=interpolation_order
+            }
+            
+            foreach (myblk; parallel(localFluidBlocks,1)) {
+                myblk.Aext = new SMatrix!number();
+                form_external_flow_jacobian_block_phase1(myblk.Aext, myblk, nPrimitive, 1, EPS); // orderOfJacobian=interpolation_order
+            }
+        
+            /* Preconditioner */
+            foreach (myblk; parallel(localFluidBlocks,1)) {
+                myblk.P = new SMatrix!number();
+                local_flow_jacobian_transpose(myblk.P, myblk, nPrimitive, 1, EPS, true, false); // orderOfJacobian=0
+                foreach (i; 0 .. nPrimitive*myblk.cells.length) {
+                    myblk.P[i,i] = myblk.P[i,i] + (1.0/dt);
+                }
+                decompILU0(myblk.P);
+            }
+        } else {
+            /* Preconditioner */
+            foreach (myblk; parallel(localFluidBlocks,1)) {
+                myblk.P = new SMatrix!number();
+                local_flow_jacobian_transpose(myblk.P, myblk, nPrimitive, 1, EPS, true, false); // orderOfJacobian=0
+                decompILU0(myblk.P);
+            }
         }
-
+        
         /* Objective Function Sensitivity */
 
         // Surface intergal objective functions can be computed in parallel with a reduction process across blocks to gather the final value,
@@ -283,7 +307,10 @@ void main(string[] args) {
         
         /* solve the adjoint system */
 
-        rpcGMRES_solve(nPrimitive);
+        if (GlobalConfig.sscOptions.pseudotime)
+            rpcGMRES_solve1(nPrimitive);
+        else
+            rpcGMRES_solve0(nPrimitive);
         
         /* Write out adjoint variables for visualisation */ 
 
@@ -395,7 +422,7 @@ void main(string[] args) {
             
             myblk.Minv = new Matrix!number(nPrimitive, nPrimitive);
             myblk.JcT = new SMatrix!number();
-            myblk.Jc = new SMatrix!number();
+            myblk.A = new SMatrix!number();
             myblk.P = new SMatrix!number();
             myblk.JlocT = new SMatrix!number();
             myblk.JlocT = new SMatrix!number();
@@ -502,7 +529,7 @@ void main(string[] args) {
             
             myblk.Minv = new Matrix!number(nPrimitive, nPrimitive);
             myblk.JcT = new SMatrix!number();
-            myblk.Jc = new SMatrix!number();
+            myblk.A = new SMatrix!number();
             myblk.P = new SMatrix!number();
             myblk.JlocT = new SMatrix!number();
             local_flow_jacobian_transpose(myblk.JlocT, myblk, nPrimitive, myblk.myConfig.interpolation_order, EPS, false, true); // false, true

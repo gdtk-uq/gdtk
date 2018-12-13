@@ -108,6 +108,8 @@ public:
         SMatrix!number JextT;
         // Matrix used in preconditioning (low order, local, flow Jacobian).
         SMatrix!number P;
+        SMatrix!number A; // Jacobian (w.r.t conserved variables)
+        SMatrix!number Aext; // Jacobian (w.r.t conserved variables)
         // objective function senstivity w.r.t primitive variables
         number[] f;
         number[] b;
@@ -139,7 +141,6 @@ public:
     // These arrays and matrices are directly tied to using the
     // GMRES iterative solver.
     SMatrix!number JcT; // transposed Jacobian (w.r.t conserved variables)
-    SMatrix!number Jc; // Jacobian (w.r.t conserved variables)
     ConservedQuantities maxRate, residuals;
     double normAcc, dotAcc;
     size_t nvars;
