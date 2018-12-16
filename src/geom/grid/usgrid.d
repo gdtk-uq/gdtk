@@ -416,14 +416,21 @@ public:
                 to!string(bPoints[0][0]) ~ " " ~ to!string(bPoints[$-1][$-1]);
             throw new Error(msg);
         }
+        size_t[] bndry_vtx_ids;
         foreach (i, bpa; bPoints) {
             size_t[] face_id_list;
             int[] outsign_list;
-            if (i == 0) { vertices ~= Vector3(bpa[0]); }
+            if (i == 0) {
+                vertices ~= Vector3(bpa[0]);
+                bndry_vtx_ids ~= vertices.length - 1;
+            }
             foreach (j; 1 .. bpa.length) {
                 vertices ~= Vector3(bpa[j]);
-                size_t[] vtx_id_list = [vertices.length-1, vertices.length-2];
-                faceIndices[makeFaceTag(vtx_id_list)] = faces.length; // before new face
+                bndry_vtx_ids ~= vertices.length - 1;
+                // Also, build a face object on the boundary.
+                size_t[] vtx_id_list = [vertices.length-2, vertices.length-1];
+                string faceTag = makeFaceTag(vtx_id_list);
+                faceIndices[faceTag] = faces.length; // before new face
                 faces ~= new USGFace(vtx_id_list);
                 face_id_list ~= faces.length-1;
                 outsign_list ~= 1; // always pointing out for a counter-clockwise vertex order 
@@ -438,11 +445,17 @@ public:
                 }
             }
         }
-        // At this point, we should have a closed region defined by its bounding points and faces.
+        // At this point, we should have a closed region defined by its bounding polygon.
         // Need to fill in interior points, faces and cells.
-        paver2d.fill_interior(vertices, faces, cells);
+        paver2d.fill_interior(vertices, faces, faceIndices, cells, bndry_vtx_ids);
         // Should also be able to use any other algorithm, such as an advancing-front method.
+        //
+        // Fill in some other properties that the flow-code expects.
         niv = vertices.length; njv = 1; nkv = 1;
+        nvertices = vertices.length;
+        nfaces = faces.length;
+        ncells = cells.length;
+        nboundaries = boundaries.length;
     } // end construction via paving in 2D
     
     this(const Vector3[] boundary, BoundaryFaceSet[] in_boundaries, const string new_label="")
