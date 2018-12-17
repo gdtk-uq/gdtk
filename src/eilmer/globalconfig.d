@@ -490,6 +490,8 @@ final class GlobalConfig {
     // We have the option to start a calculation without high-order reconstruction
     // and later activate it, presumably once the difficult flow has passed.
     shared static double interpolation_delay = 0.0;
+    // We may elect to suppress reconstruction in particular zones always.
+    static BlockZone[] suppress_reconstruction_zones;
     // Default flow-data reconstruction includes interpolation of density 
     // and internal energy.  Other options for the thermodunamic properties
     // to be interpolated are pressure+temperature, density+temperature and
@@ -795,6 +797,7 @@ public:
     FlowStateLimits flowstate_limits;
     int interpolation_order;
     double interpolation_delay;
+    BlockZone[] suppress_reconstruction_zones;
     InterpolateOption thermo_interpolator;
     bool allow_reconstruction_for_energy_modes;
     bool apply_limiter;
@@ -911,6 +914,9 @@ public:
         flowstate_limits = GlobalConfig.flowstate_limits;
         interpolation_order = GlobalConfig.interpolation_order;
         interpolation_delay = GlobalConfig.interpolation_delay;
+        foreach (bz; GlobalConfig.suppress_reconstruction_zones) {
+            suppress_reconstruction_zones ~= new BlockZone(bz);
+        }
         thermo_interpolator = GlobalConfig.thermo_interpolator;
         allow_reconstruction_for_energy_modes = GlobalConfig.allow_reconstruction_for_energy_modes;
         apply_limiter = GlobalConfig.apply_limiter;
@@ -1443,6 +1449,14 @@ void read_config_file()
         Vector3 p0 = Vector3(zone_data[0], zone_data[1], zone_data[2]);
         Vector3 p1 = Vector3(zone_data[3], zone_data[4], zone_data[5]);
         GlobalConfig.turbulent_zones ~= new BlockZone(p0, p1);
+    }
+    int n_suppress_reconstruction_zones = getJSONint(jsonData, "n-suppress-reconstruction-zones", 0);
+    foreach (i; 0 .. n_suppress_reconstruction_zones) {
+        string jsonKey = format("suppress-reconstruction-zone-%d", i);
+        auto zone_data = getJSONdoublearray(jsonData, jsonKey, [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
+        Vector3 p0 = Vector3(zone_data[0], zone_data[1], zone_data[2]);
+        Vector3 p1 = Vector3(zone_data[3], zone_data[4], zone_data[5]);
+        GlobalConfig.suppress_reconstruction_zones ~= new BlockZone(p0, p1);
     }
 
     auto sdluOptions = jsonData["solid_domain_loose_update_options"];

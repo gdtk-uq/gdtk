@@ -204,6 +204,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
     foreach (i, myblk; parallel(localFluidBlocks,1)) {
         myblk.identify_reaction_zones(0);
         myblk.identify_turbulent_zones(0);
+        myblk.identify_suppress_reconstruction_zones();
         time_array[i] = myblk.read_solution(make_file_name!"flow"(job_name, myblk.id, SimState.current_tindx,
                                                                   GlobalConfig.flowFileExt), false);
         if (myblk.myConfig.verbosity_level >= 2) { writefln("Cold start cells in block %d", myblk.id); }

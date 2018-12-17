@@ -249,6 +249,37 @@ public:
     } // end identify_reaction_zones()
 
     @nogc
+    void identify_suppress_reconstruction_zones()
+    // Set the in-suppress_reconstruction-zone flag for faces in this block.
+    {
+        size_t total_faces_in_suppress_reconstruction_zones = 0;
+        size_t total_faces = 0;
+        foreach(f; faces) {
+            f.in_suppress_reconstruction_zone = false;
+            if (myConfig.suppress_reconstruction_zones.length > 0 ) {
+                foreach(srz; myConfig.suppress_reconstruction_zones) {
+                    if (srz.is_inside(f.pos, myConfig.dimensions)) {
+                        f.in_suppress_reconstruction_zone = true;
+                    }
+                } // foreach srz
+            }
+            total_faces_in_suppress_reconstruction_zones += (f.in_suppress_reconstruction_zone ? 1: 0);
+            total_faces += 1;
+        } // foreach face
+        debug {
+            if (myConfig.verbosity_level >= 2) {
+                writeln("identify_suppress_reconstruction_zones(): block ", id,
+                        " faces inside zones = ", total_faces_in_suppress_reconstruction_zones, 
+                        " out of ", total_faces);
+                if (myConfig.suppress_reconstruction_zones.length == 0) {
+                    writeln("Note that for no user-specified zones,",
+                            " reconstruction is allowed for the whole domain.");
+                }
+            }
+        }
+    } // end identify_suppress_reconstruction_zones()
+
+    @nogc
     void identify_turbulent_zones(int gtl)
     // Set the in-turbulent-zone flag for cells in this block.
     {

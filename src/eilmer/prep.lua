@@ -377,10 +377,11 @@ solidBlocks = {}
 historyCells = {}
 solidHistoryCells = {}
 
--- Storage for zones
+-- Storage for special zones
 ignitionZones = {}
 reactionZones = {}
 turbulentZones = {}
+suppressReconstructionZones = {}
 
 function to_eilmer_axis_map(gridpro_ijk)
    -- Convert from GridPro axis_map string to Eilmer3 axis_map string.
@@ -1440,6 +1441,33 @@ function TurbulentZone:new(o)
    return o
 end
 
+SuppressReconstructionZone = {
+   p0 = nil,
+   p1 = nil,
+}
+
+function SuppressReconstructionZone:new(o)
+   o = o or {}
+   local flag = checkAllowedNames(o, {"p0", "p1"})
+   if not flag then
+      error("Invalid name for item supplied to SuppressReconstructionZone constructor.", 2)
+   end
+   setmetatable(o, self)
+   self.__index = self
+   -- Make a record of the new zone, for later construction of the config file.
+   -- Note that we want zone id to start at zero for the D code.
+   o.id = #(suppressReconstructionZones)
+   suppressReconstructionZones[#(suppressReconstructionZones)+1] = o
+   -- Must have corners
+   if not o.p0 then
+      error("You need to supply lower-left corner p0", 2)
+   end
+   if not o.p1 then
+      error("You need to supply upper-right corner p1", 2)
+   end
+   return o
+end
+
 -- --------------------------------------------------------------------
 
 function write_control_file(fileName)
@@ -1701,6 +1729,12 @@ function write_config_file(fileName)
    f:write(string.format('"n-turbulent-zones": %d,\n', #turbulentZones))
    for i,zone in ipairs(turbulentZones) do
       f:write(string.format('"turbulent-zone-%d": [%.18e, %.18e, %.18e, %.18e, %.18e, %.18e],\n',
+			    i-1, zone.p0.x, zone.p0.y, zone.p0.z,
+			    zone.p1.x, zone.p1.y, zone.p1.z))
+   end
+   f:write(string.format('"n-suppress-reconstruction-zones": %d,\n', #suppressReconstructionZones))
+   for i,zone in ipairs(suppressReconstructionZones) do
+      f:write(string.format('"suppress-reconstruction-zone-%d": [%.18e, %.18e, %.18e, %.18e, %.18e, %.18e],\n',
 			    i-1, zone.p0.x, zone.p0.y, zone.p0.z,
 			    zone.p1.x, zone.p1.y, zone.p1.z))
    end

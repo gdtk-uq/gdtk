@@ -1895,22 +1895,24 @@ public:
                     auto IFace = get_ifi(i,j,k);
                     auto cL0 = get_cell(i-1,j,k); auto cL1 = get_cell(i-2,j,k);
                     auto cR0 = get_cell(i,j,k); auto cR1 = get_cell(i+1,j,k);
+                    bool do_reconstruction = allow_high_order_interpolation &&
+                        !IFace.in_suppress_reconstruction_zone;
                     if ((i == imin) && (bc[Face.west].ghost_cell_data_available == false)) {
                         Lft.copy_values_from(cR0.fs); Rght.copy_values_from(cR0.fs);
                     } else if ((i == imin+1) && (bc[Face.west].ghost_cell_data_available == false)) {
                         one_d.interp_right(IFace, cL0, cR0, cR1,
                                            cL0.iLength, cR0.iLength, cR1.iLength,
-                                           Lft, Rght, allow_high_order_interpolation);
+                                           Lft, Rght, do_reconstruction);
                     } else if ((i == imax) && (bc[Face.east].ghost_cell_data_available == false)) {
                         one_d.interp_left(IFace, cL1, cL0, cR0,
                                           cL1.iLength, cL0.iLength, cR0.iLength,
-                                          Lft, Rght, allow_high_order_interpolation);
+                                          Lft, Rght, do_reconstruction);
                     } else if ((i == imax+1) && (bc[Face.east].ghost_cell_data_available == false)) {
                         Lft.copy_values_from(cL0.fs); Rght.copy_values_from(cL0.fs);
                     } else { // General symmetric reconstruction.
                         one_d.interp_both(IFace, cL1, cL0, cR0, cR1,
                                           cL1.iLength, cL0.iLength, cR0.iLength, cR1.iLength,
-                                          Lft, Rght, allow_high_order_interpolation);
+                                          Lft, Rght, do_reconstruction);
                     }
                     IFace.fs.copy_average_values_from(Lft, Rght);
                     if ((i == imin) && (bc[Face.west].convective_flux_computed_in_bc == true)) continue;

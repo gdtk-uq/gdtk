@@ -1040,16 +1040,17 @@ public:
         // At this point, we should have all gradient values up to date and we are now ready
         // to reconstruct field values and compute the convective fluxes.
         foreach (f; faces) {
+            bool do_reconstruction = allow_high_order_interpolation && !f.in_suppress_reconstruction_zone;
             if (f.left_cell && f.right_cell) {
-                lsq.interp_both(f, gtl, Lft, Rght, allow_high_order_interpolation);
+                lsq.interp_both(f, gtl, Lft, Rght, do_reconstruction);
                 f.fs.copy_average_values_from(Lft, Rght);
                 compute_interface_flux(Lft, Rght, f, myConfig, omegaz);
             } else if (f.right_cell) {
-                lsq.interp_right(f, gtl, Rght, allow_high_order_interpolation);
+                lsq.interp_right(f, gtl, Rght, do_reconstruction);
                 f.fs.copy_values_from(Rght);
                 compute_flux_at_left_wall(Rght, f, myConfig, omegaz);
             } else if (f.left_cell) {
-                lsq.interp_left(f, gtl, Lft, allow_high_order_interpolation);
+                lsq.interp_left(f, gtl, Lft, do_reconstruction);
                 f.fs.copy_values_from(Lft);
                 compute_flux_at_right_wall(Lft, f, myConfig, omegaz);
             } else {

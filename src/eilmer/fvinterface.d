@@ -37,6 +37,7 @@ public:
     bool is_on_boundary = false;  // by default, assume not on boundary
     size_t bc_id;  // if the face is on a block boundary, which one
     bool use_wall_function_shear_and_heat_flux = false; // for use in viscous_flux_calc()
+    bool in_suppress_reconstruction_zone; // if true, we no do reconstruction at this face
     //
     // Geometry
     Vector3 pos;           // position of the (approx) midpoint
