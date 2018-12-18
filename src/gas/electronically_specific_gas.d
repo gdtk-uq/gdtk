@@ -45,6 +45,7 @@ public:
         getArrayOfStrings(L_macro, LUA_GLOBALSINDEX, "species", _macro_species_names);
         _n_macro_species = to!int(_macro_species_names.length);
         _macro_molef.length = _n_macro_species;
+        macro_Q.massf.length = _n_macro_species;
         _macro_particleMass.length = _n_species;
         foreach (isp; 0 .. _n_macro_species) {
             _macro_particleMass[isp] = _macro_mol_masses[isp]/Avogadro_number;
@@ -162,15 +163,18 @@ public:
         return to!string(repr);
     }
 
-    override void update_thermo_from_pT(GasState macro_Q)
+    override void update_thermo_from_pT(GasState Q)
     {
+        Update_Macro_State(macro_Q, Q);
         _pgMixEOS.update_density(macro_Q);
         macro_Q.u = transRotEnergy(macro_Q);
         macro_Q.u_modes[0] = vibEnergy(macro_Q, macro_Q.T_modes[0]);
+        Update_Electronic_State(Q, macro_Q);
     }
 
-    override void update_thermo_from_rhou(GasState macro_Q)
+    override void update_thermo_from_rhou(GasState Q)
     {
+        Update_Macro_State(macro_Q, Q);
         // We can compute T by direct inversion since the Cp in 
         // in translation and rotation are fully excited,
         // and, as such, constant.
@@ -188,43 +192,51 @@ public:
         // Now we can compute pressure from the perfect gas
         // equation of state.
         _pgMixEOS.update_pressure(macro_Q);
+        Update_Electronic_State(Q, macro_Q);
     }
 
-    override void update_thermo_from_rhoT(GasState macro_Q)
+    override void update_thermo_from_rhoT(GasState Q)
     {
+        Update_Macro_State(macro_Q, Q);
         _pgMixEOS.update_pressure(macro_Q);
         macro_Q.u = transRotEnergy(macro_Q); 
         macro_Q.u_modes[0] = vibEnergy(macro_Q, macro_Q.T_modes[0]);
+        Update_Electronic_State(Q, macro_Q);
     }
 
-    override void update_thermo_from_rhop(GasState macro_Q)
+    override void update_thermo_from_rhop(GasState Q)
     {
+        Update_Macro_State(macro_Q, Q);
         // In this function, we assume that T_modes is set correctly
         // in addition to density and pressure.
         _pgMixEOS.update_temperature(macro_Q);
         macro_Q.u = transRotEnergy(macro_Q);
         macro_Q.u_modes[0] = vibEnergy(macro_Q, macro_Q.T_modes[0]);
+        Update_Electronic_State(Q, macro_Q);
     }
 
-    override void update_thermo_from_ps(GasState macro_Q, number s)
+    override void update_thermo_from_ps(GasState Q, number s)
     {
         throw new GasModelException("update_thermo_from_ps not implemented in ElectronicallySpecificGas.");
     }
 
-    override void update_thermo_from_hs(GasState macro_Q, number h, number s)
+    override void update_thermo_from_hs(GasState Q, number h, number s)
     {
         throw new GasModelException("update_thermo_from_hs not implemented in ElectronicallySpecificGas.");
     }
 
-    override void update_sound_speed(GasState macro_Q)
+    override void update_sound_speed(GasState Q)
     {
+        Update_Macro_State(macro_Q, Q);
         // We compute the frozen sound speed based on an effective gamma
         number R = gas_constant(macro_Q);
         macro_Q.a = sqrt(gamma(macro_Q)*R*macro_Q.T);
+        Update_Electronic_State(Q, macro_Q);
     }
 
-    override void update_trans_coeffs(GasState macro_Q)
+    override void update_trans_coeffs(GasState Q)
     {
+        Update_Macro_State(macro_Q, Q);
         massf2molef(macro_Q, _macro_molef);
         // Computation of transport coefficients via collision integrals.
         // Equations follow those in Gupta et al. (1990)
@@ -289,10 +301,12 @@ public:
         k_vib *= 2.3901e-8*kB_erg;
         k_vib *= (4.184/1.0e-2); // cal/(cm.s.K) --> J/(m.s.K)
         macro_Q.k_modes[0] = k_vib;
+        Update_Electronic_State(Q, macro_Q);
     }
 
-    override number dudT_const_v(in GasState macro_Q)
+    override number dudT_const_v(in GasState Q)
     {
+        Update_Macro_State(macro_Q, Q);
         number Cv = 0.0;
         number Cv_tr_rot, Cv_vib;
         foreach (isp; 0 .. _n_macro_species) {
@@ -302,8 +316,9 @@ public:
         } 
         return Cv;
     }
-    override number dhdT_const_p(in GasState macro_Q)
+    override number dhdT_const_p(in GasState Q)
     {
+        Update_Macro_State(macro_Q, Q);
         // Using the fact that internal structure specific heats
         // are equal, that is, Cp_vib = Cv_vib
         number Cp = 0.0;
@@ -314,27 +329,29 @@ public:
         }
         return Cp;
     }
-    override number dpdrho_const_T(in GasState macro_Q)
+    override number dpdrho_const_T(in GasState Q)
     {
-        number R = gas_constant(macro_Q);
-        return R * macro_Q.T;
+        number R = gas_constant(Q);
+        return R * Q.T;
     }
-    override number gas_constant(in GasState macro_Q)
+    override number gas_constant(in GasState Q)
     {
+        Update_Macro_State(macro_Q, Q);
         return  mass_average(macro_Q, _macro_R);
     }
-    override number internal_energy(in GasState macro_Q)
+    override number internal_energy(in GasState Q)
     {
-        return macro_Q.u + macro_Q.u_modes[0];
+        return Q.u + Q.u_modes[0];
     }
-    override number enthalpy(in GasState macro_Q)
+    override number enthalpy(in GasState Q)
     {
+        Update_Macro_State(macro_Q, Q);
         number e = transRotEnergy(macro_Q) + vibEnergy(macro_Q, macro_Q.T_modes[0]);
         number R = gas_constant(macro_Q);
         number h = e + R*macro_Q.T;
         return h;
     }
-    override number entropy(in GasState macro_Q)
+    override number entropy(in GasState Q)
     {
         throw new GasModelException("entropy not implemented in ElectronicallySpecificGas.");
     }
@@ -347,6 +364,16 @@ public:
             // writeln("Tve= ", Tve, " h_at_Tve= ", h_at_Tve, " h_ve= ", h_ve);
         }
         return h_ve;
+    }
+
+    @nogc number vibEnergy(in GasState Q, number Tve)
+    {
+        Update_Macro_State(macro_Q, Q);
+        number e_ve = 0.0;
+        foreach (isp; molecularSpecies) {
+            e_ve += macro_Q.massf[isp] * vibEnergy(Tve, isp);
+        }
+        return e_ve;
     }
 
 
@@ -362,6 +389,7 @@ private:
     double[] _elec_electronic_energy;
     double[] _elec_R;
     ElectronicSpecies[] _electronicSpecies;
+    GasState macro_Q;
     
     //storage for macro species
     int _n_macro_species;
@@ -379,6 +407,76 @@ private:
     number[7] _A; // working storage of coefficients
     number[][] _A_11, _B_11, _C_11, _D_11, _Delta_11, _alpha;
     number[][] _A_22, _B_22, _C_22, _D_22, _Delta_22, _mu;
+
+    @nogc
+    void Update_Macro_State(GasState macro_state, in GasState Q)
+    {
+        macro_state.rho = Q.rho;
+        macro_state.p = Q.p;
+        macro_state.p_e = Q.p_e;
+        macro_state.a = Q.a;
+        macro_state.T = Q.T;
+        macro_state.u = Q.u;
+        macro_state.u_modes[] = Q.u_modes[];
+        macro_state.T_modes[] = Q.T_modes[];
+        macro_state.mu = Q.mu;
+        macro_state.k = Q.k;
+        macro_state.k_modes[] = Q.k_modes[];
+        macro_state.sigma = Q.sigma;
+        macro_state.quality = Q.quality;
+
+        number N_massf_sum = 0.0;
+        foreach (isp; 0 .. _n_N_species) {
+            N_massf_sum += Q.massf[isp];
+        }
+        macro_state.massf[0] = N_massf_sum;
+
+        number O_massf_sum = 0.0;
+        foreach (isp; _n_N_species .. _n_N_species + _n_O_species) {
+            O_massf_sum += Q.massf[isp];
+        }
+        macro_state.massf[0] = O_massf_sum;
+
+        foreach ( isp; 2 .. _n_macro_species) {
+            macro_state.massf[isp] = Q.massf[isp];
+        }
+    }
+
+    @nogc
+    void Update_Electronic_State(GasState Q, GasState macro_state)
+    {
+        Q.rho = macro_state.rho;
+        Q.p = macro_state.p;
+        Q.p_e = macro_state.p_e;
+        Q.a = macro_state.a;
+        Q.T = macro_state.T;
+        Q.u = macro_state.u;
+        Q.u_modes[] = macro_state.u_modes[];
+        Q.T_modes[] = macro_state.T_modes[];
+        Q.mu = macro_state.mu;
+        Q.k = macro_state.k;
+        Q.k_modes[] = macro_state.k_modes[];
+        Q.sigma = macro_state.sigma;
+        Q.quality = macro_state.quality;
+
+        number N_massf_sum = 0.0;
+        foreach (isp; 0 .. _n_N_species) {
+            N_massf_sum += Q.massf[isp];
+        }
+        number N_massf_factor = macro_state.massf[0]/N_massf_sum;
+        foreach (isp; 0 .. _n_N_species) {
+            Q.massf[isp] *= N_massf_factor;
+        }
+
+        number O_massf_sum = 0.0;
+        foreach (isp; _n_N_species .. _n_N_species + _n_O_species) {
+            O_massf_sum += Q.massf[isp];
+        }
+        number O_massf_factor = macro_state.massf[1]/O_massf_sum;
+        foreach (isp; _n_N_species .. _n_N_species + _n_O_species) {
+            Q.massf[isp] *= O_massf_factor;
+        }
+    }
 
     /**
      * In order to get smooth variations in thermodynamic properties
@@ -490,15 +588,6 @@ private:
         number h = _A[0] + _A[1]*T/2. + _A[2]*T2/3. + _A[3]*T3/4. + _A[4]*T4/5. + _A[5]/T;
         h *= (R_universal*T/_macro_mol_masses[isp]);
         return h;
-    }
-
-    @nogc number vibEnergy(in GasState macro_Q, number Tve)
-    {
-        number e_ve = 0.0;
-        foreach (isp; molecularSpecies) {
-            e_ve += macro_Q.massf[isp] * vibEnergy(Tve, isp);
-        }
-        return e_ve;
     }
 
     @nogc number transRotEnergy(in GasState macro_Q)

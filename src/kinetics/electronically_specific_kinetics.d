@@ -28,9 +28,553 @@ import gas.electronically_specific_gas;
 import gas.electronic_species;
 
 import kinetics.thermochemical_reactor;
+import kinetics.chemistry_update;
 import kinetics.electronic_state_solver;
 
 
+immutable double DT_INCREASE_PERCENT = 10.0; // allowable percentage increase on succesful step
+immutable double DT_DECREASE_PERCENT = 50.0; // allowable percentage decrease on succesful step
+                                             // Yes, you read that right. Sometimes a step is succesful
+                                             // but the timestep selection algorithm will suggest
+                                             // a reduction. We limit that reduction to no more than 50%.
+immutable double DT_REDUCTION_FACTOR = 10.0; // factor by which to reduce timestep
+                                             // after a failed attempt
+immutable double H_MIN = 1.0e-15; // Minimum allowable step size
+enum ResultOfStep { success, failure };
+
+final class ElectronicallySpecificKinetics : ThermochemicalReactor {
+    this(string macroFiles, string elecFiles, GasModel gmodel)
+    {   
+        auto L_macro = init_lua_State();
+        doLuaFile(L_macro, macroFiles);
+        auto energyExchFile = getString(L_macro,LUA_GLOBALSINDEX, "energyExchFile");
+        auto chemFile = getString(L_macro,LUA_GLOBALSINDEX, "chemFile");
+
+        auto L_elec = init_lua_State();
+        doLuaFile(L_elec, macroFiles);
+        auto ESK_N_Filename = getString(L_elec,LUA_GLOBALSINDEX, "ESK_N_Filename");
+        auto ESK_O_Filename = getString(L_elec,LUA_GLOBALSINDEX, "ESK_O_Filename");
+        auto _n_N_species = getInt(L_elec,LUA_GLOBALSINDEX,"Number of N Species");
+        auto _n_O_species = getInt(L_elec,LUA_GLOBALSINDEX,"Number of O Species");
+
+
+        // Initialise much of the macro species data
+        super(gmodel);
+        _airModel = cast(ElectronicallySpecificGas) gmodel;
+        if (_airModel is null) {
+            string errMsg = "Error in construction of ElectronicallySpecificKinetics.\n";
+            errMsg ~= "The supplied gas model must be a ElectronicallySpecific model.\n";
+            throw new ThermochemicalReactorUpdateException(errMsg);
+        }
+
+        _n_macro_species = _airModel.n_species - _n_N_species - _n_O_species + 2;
+
+        _macro_Qinit = new GasState(gmodel);
+        _macro_Q0 = new GasState(gmodel);
+        _macro_chemUpdate = new ChemistryUpdate(chemFile, gmodel);
+        _macro_molef.length = _n_macro_species;
+        initModel(energyExchFile);
+
+        // Initialise the electronic data
+        _numden.length = _airModel.n_species;
+        _numden_input.length = _n_N_species + _n_O_species + 1;
+        _numden_output.length = _n_N_species + _n_O_species + 1;
+
+        //Need to construct the reaction rate parameters from file.
+        PopulateRateFits(ESK_N_Filename,ESK_O_Filename);
+        kinetics.electronic_state_solver.Init(full_rate_fit, [_n_N_species,_n_O_species]);
+    }
+
+    @nogc
+    override void opCall(GasState Q, double tInterval,
+                         ref double dtChemSuggest, ref double dtThermSuggest,
+                         ref number[maxParams] params)
+    {
+        double dummyDouble;
+        number uTotal = Q.u + Q.u_modes[0];
+        // 1. Perform chemistry update.
+        _macro_chemUpdate(Q, tInterval, dtChemSuggest, dummyDouble, params);
+        debug {
+            writeln("--- 1 ---");
+            writefln("uTotal= %.12e u= %.12e uv= %.12e", uTotal, Q.u, Q.u_modes[0]);
+            writefln("T= %.12e  Tv= %.12e", Q.T, Q.T_modes[0]);
+        }
+        // Changing mass fractions does not change the temperature 
+        // of the temperatures associated with internal structure.
+        // Now we can adjust the transrotational energy, given that
+        // some of it was redistributed to other internal structure energy bins.
+        Q.u_modes[0] = _airModel.vibEnergy(Q, Q.T_modes[0]);
+        Q.u = uTotal - Q.u_modes[0];
+        try {
+            _airModel.update_thermo_from_rhou(Q);
+            debug {
+                writeln("--- 2 ---");
+                writefln("uTotal= %.12e u= %.12e uv= %.12e", uTotal, Q.u, Q.u_modes[0]);
+                writefln("T= %.12e  Tv= %.12e", Q.T, Q.T_modes[0]);
+            }
+        }
+        catch (GasModelException err) {
+            string msg = "Call to update_thermo_from_rhou failed in two-temperature air kinetics.";
+            debug { msg ~= format("\ncaught %s", err.msg); }
+            throw new ThermochemicalReactorUpdateException(msg);
+        }
+
+        // 2. Perform energy exchange update.
+        // As prep work, compute mole fractions.
+        // These values won't change during the energy update
+        // since the composition does not change
+        // during energy exhange.
+        massf2molef(Q.massf, _airModel.mol_masses, _molef);
+        try {
+            energyUpdate(Q, tInterval, dtThermSuggest);
+            debug {
+                writeln("--- 3 ---");
+                writeln(Q);
+            }
+        }
+        catch (GasModelException err) {
+            string msg = "The energy update in the two temperature air kinetics module failed.\n";
+            debug { msg ~= format("\ncaught %s", err.msg); }
+            throw new ThermochemicalReactorUpdateException(msg);
+        }
+    }
+
+private:
+    ElectronicallySpecificGas _airModel;
+
+    //macro definitions
+    GasState _macro_Qinit, _macro_Q0;
+    ChemistryUpdate _macro_chemUpdate;
+    number[] _macro_molef;
+    int _n_macro_species;
+    double _c2 = 1.0;
+    number _uTotal;
+    number _T_sh, _Tv_sh;
+    double[] _A;
+    number[] _molef;
+    double[] _particleMass;
+    double[][] _mu;
+    int[][] _reactionsByMolecule;
+    // Numerics control
+    int _maxSubcycles = 10000;
+    int _maxAttempts = 3;
+    double _energyAbsTolerance = 1.0e-9;
+    double _energyRelTolerance = 1.0e-9;
+
+    //definitions for electronics
+    number[] _numden;
+    number[] _numden_input;
+    number[] _numden_output;
+
+    //macro functions
+    void initModel(string energyExchFile)
+    {
+        // Read parameters from file.
+        auto L = init_lua_State();
+        doLuaFile(L, energyExchFile);
+
+        lua_getglobal(L, "parameters");
+        _T_sh = getDouble(L, -1, "post_shock_Ttr");
+        _Tv_sh = getDouble(L, -1, "post_shock_Tve");
+        lua_getfield(L, -1, "c2");
+        if (!lua_isnil(L, -1)) {
+            _c2 = luaL_checknumber(L, -1);
+        }
+        lua_pop(L, 1);
+        lua_pop(L, 1);
+
+        lua_getglobal(L, "numerics");
+        if (!lua_isnil(L, -1)) {
+            lua_getfield(L, -1, "maxSubcycles");
+            if (!lua_isnil(L, -1)) {
+                _maxSubcycles = to!int(luaL_checkinteger(L, -1));
+            }
+            lua_pop(L, 1);
+
+            lua_getfield(L, -1, "maxAttempts");
+            if (!lua_isnil(L, -1)) {
+                _maxAttempts = to!int(luaL_checkinteger(L, -1));
+            }
+            lua_pop(L, 1);
+
+            lua_getfield(L, -1, "absTolerance");
+            if (!lua_isnil(L, -1)) {
+                _energyAbsTolerance = to!int(luaL_checknumber(L, -1));
+            }
+            lua_pop(L, 1);
+
+            lua_getfield(L, -1, "relTolerance");
+            if (!lua_isnil(L, -1)) {
+                _energyRelTolerance = to!int(luaL_checknumber(L, -1));
+            }
+            lua_pop(L, 1);
+        }
+        lua_pop(L, 1);
+
+        lua_close(L);
+
+        int nSpecies = _airModel.n_species;
+        _A.length = nSpecies;
+        _A[] = 0.0;
+        foreach (isp; _airModel.molecularSpecies) {
+            _A[isp] = A_MW[_airModel.species_name(isp)];
+        }
+        
+        _mu.length = nSpecies;
+        foreach (isp; 0 .. nSpecies) _mu[isp].length = nSpecies;
+        foreach (isp; 0 .. nSpecies) {
+            foreach (jsp; 0 .. nSpecies) {
+                double M_isp = _airModel.mol_masses[isp];
+                double M_jsp = _airModel.mol_masses[jsp];
+                _mu[isp][jsp] = (M_isp*M_jsp)/(M_isp + M_jsp);
+                _mu[isp][jsp] *= 1000.0; // convert kg/mole to g/mole
+            }
+        }
+
+        _particleMass.length = nSpecies;
+        foreach (isp; 0 .. nSpecies) {
+            _particleMass[isp] = _airModel.mol_masses[isp]/Avogadro_number;
+        }
+
+        _reactionsByMolecule.length = nSpecies;
+        foreach (isp; _airModel.molecularSpecies) {
+            foreach (ir; 0 .. to!int(_macro_chemUpdate.rmech.n_reactions)) {
+                if (_macro_chemUpdate.rmech.reactionHasParticipant(ir, isp)) {
+                    _reactionsByMolecule[isp] ~= ir;
+                }
+            }
+        }
+    }
+
+    @nogc
+    void energyUpdate(GasState Q, double tInterval, ref double dtSuggest)
+    {
+        _uTotal = Q.u + Q.u_modes[0];
+        // We borrow the algorithm from ChemistryUpdate.opCall()
+        // Take a copy of what's passed in, in case something goes wrong
+        _macro_Qinit.copy_values_from(Q);
+
+        // 1. Sort out the time step for possible subcycling.
+        double t = 0.0;
+        double h;
+        double dtSave;
+        if ( dtSuggest > tInterval )
+            h = tInterval;
+        else if ( dtSuggest <= 0.0 )
+            h = 0.01*tInterval;
+        else
+            h = dtSuggest;
+        
+        // 2. Now do the interesting stuff, increment energy change
+        int cycle = 0;
+        int attempt = 0;
+        for ( ; cycle < _maxSubcycles; ++cycle) {
+            /* Copy the last good timestep suggestion before moving on.
+             * If we're near the end of the interval, we want
+             * the penultimate step. In other words, we don't
+             * want to store the fractional step of (tInterval - t)
+             * that is taken as the last step.
+             */
+            dtSave = dtSuggest;
+            h = fmin(h, tInterval - t);
+            attempt= 0;
+            for ( ; attempt < _maxAttempts; ++attempt) {
+                ResultOfStep result = RKFStep(Q, h, dtSuggest);
+                if (result == ResultOfStep.success) {
+                    t += h;
+                    /* We can now make some decision about how to
+                     * increase the timestep. We will take some
+                     * guidance from the ODE step, but also check
+                     * that it's sensible. For example, we won't
+                     * increase by more than 10% (or INCREASE_PERCENT).
+                     * We'll also balk if the ODE step wants to reduce
+                     * the stepsize on a successful step. This is because
+                     * if the step was successful there shouldn't be any
+                     * need (stability wise or accuracy related) to warrant 
+                     * a reduction. Thus if the step is successful and
+                     * the dtSuggest comes back lower, let's just set
+                     * h as the original value for the successful step.
+                     */
+                    double hMax = h*(1.0 + DT_INCREASE_PERCENT/100.0);
+                    if (dtSuggest > h) {
+                        /* It's possible that dtSuggest is less than h.
+                         * When that occurs, we've made the decision to ignore
+                         * the new timestep suggestion supplied by the ODE step.
+                         * Our reasoning is that we'd like push for an aggressive
+                         * timestep size. If that fails, then a later part of
+                         * the timestepping algorithm will catch that and reduce
+                         * the timestep.
+                         *
+                         * It's also possible that the suggested timestep
+                         * is much larger than what we just used. For that
+                         * case, we cap it at hMax. That's the following line.
+                         */
+                        h = fmin(dtSuggest, hMax);
+                    }
+                    break;
+                }
+                else { // in the case of failure...
+                    /* We now need to make some decision about 
+                     * what timestep to attempt next.
+                     */
+                    h /= DT_REDUCTION_FACTOR;
+                    if (h < H_MIN) {
+                        string errMsg = "Hit the minimum allowable timestep in 2-T air energy exchange update.";
+                        debug { errMsg ~= format("\ndt= %.4e", H_MIN); }
+                        Q.copy_values_from(_macro_Qinit);
+                        throw new ThermochemicalReactorUpdateException(errMsg);
+                    }
+                }
+            } // end attempts at single subcycle.
+            if (attempt == _maxAttempts) {
+                string errMsg = "Hit maximum number of step attempts within a subcycle for 2-T air energy exchange update.";
+                // We did poorly. Let's put the original GasState back in place,
+                // and let the outside world know via an Exception.
+                Q.copy_values_from(_macro_Qinit);
+                throw new ThermochemicalReactorUpdateException(errMsg);
+            }
+            /* Otherwise, we've done well. */
+            if (t >= tInterval) {
+                // We've done enough work.
+                // If we've only take one cycle, then we would like to use
+                // dtSuggest rather than using the dtSuggest from the
+                // penultimate step.
+                if (cycle == 0) {
+                    dtSave = dtSuggest;
+                }
+                break;
+            }
+        }
+        if (cycle == _maxSubcycles) {
+            // If we make it out here, then we didn't complete within
+            // the maximum number of subscyles... we are taking too long.
+            // Let's return the gas state to how it was before we failed
+            // and throw an Exception.
+            string errMsg = "Hit maximum number of subcycles while attempting 2-T air energy exchange update.";
+            Q.copy_values_from(_macro_Qinit);
+            throw new ThermochemicalReactorUpdateException(errMsg);
+        }
+        // At this point, it appears that everything has gone well.
+        // Update energies and leave.
+        try {
+            Q.u = _uTotal - Q.u_modes[0];
+            _airModel.update_thermo_from_rhou(Q);
+        }
+        catch (GasModelException err) {
+            string msg = "Call to update_thermo_from_rhou failed in two-temperature air kinetics.";
+            debug { msg ~= format("\ncaught %s", err.msg); }
+            throw new ThermochemicalReactorUpdateException(msg);
+        }
+        dtSuggest = dtSave;
+    }
+
+    @nogc
+    number evalRelaxationTime(GasState Q, int isp)
+    {
+        number tauInv = 0.0;
+        foreach (csp; 0 .. _airModel.n_species) {
+            // We exclude electrons in the vibrational relaxation time.
+            if (_airModel.species_name(csp) == "e-") {
+                continue;
+            }
+            // 1. Compute Millikan-White value for each interaction
+            if (_molef[csp] >= SMALL_MOLE_FRACTION) {
+                number pTau = exp(_A[isp] * (pow(Q.T, -1./3) - 0.015*pow(_mu[isp][csp], 0.25)) - 18.42);
+                number pCollider = _molef[csp]*Q.p/P_atm;
+                number tau = pTau/pCollider;
+                tauInv += 1.0/tau;
+            }
+        }
+        number tauMW = 1.0/tauInv;
+        // 2. Compute Park value for high-temperature correction
+        double k = Boltzmann_constant;
+        number nd = Q.p/(k*Q.T); // 1/m^3
+        nd *= 1.0e-6; // convert 1/m^3 --> 1/cm^3
+        number c = sqrt(8*k*Q.T/(to!double(PI)*_particleMass[isp]));
+        c *= 100.0; // convert m/s --> cm/s
+        double sigmaDash = 3.0e-17; // cm^2
+        number sigma = sigmaDash*((50000.0/Q.T)^^2); // cm^2
+        number tauP = 1.0/(nd*c*sigma);
+        // 3. Combine M-W and Park values.
+        number tauV = tauMW + tauP;
+        // 4. Correct Landau-Teller at high temperatures by
+        //    modifying tau.
+        number s = 3.5*exp(-5000.0/_T_sh);
+        tauInv = (1.0/tauV)*(pow(fabs((_T_sh - Q.T_modes[0])/(_T_sh - _Tv_sh)), s-1.0));
+        return 1.0/tauInv;
+    }
+
+    @nogc
+    number evalRate(GasState Q)
+    {
+        number rate = 0.0;
+        foreach (isp; _airModel.molecularSpecies) {
+            // Vibrational energy exchange via collisions.
+            number tau = evalRelaxationTime(Q, isp);
+            number evStar = _airModel.vibEnergy(Q.T, isp);
+            number ev = _airModel.vibEnergy(Q.T_modes[0], isp);
+            rate += Q.massf[isp] * (evStar - ev)/tau;
+            // Vibrational energy change due to chemical reactions.
+            number chemRate = 0.0;
+            foreach (ir; _reactionsByMolecule[isp]) {
+                chemRate += _macro_chemUpdate.rmech.rate(ir, isp);
+            }
+            chemRate *= _airModel.mol_masses[isp]; // convert mol/m^3/s --> kg/m^3/s
+            number Ds = _c2*ev;
+            rate += Q.massf[isp]*chemRate*Ds;
+        }
+        return rate;
+    }
+
+    @nogc
+    ResultOfStep RKFStep(GasState Q, double h, ref double hSuggest)
+    {
+        _macro_Q0.copy_values_from(Q);
+        immutable double a21=1./5., a31=3./40., a32=9./40.,
+            a41=3./10., a42=-9./10., a43 = 6./5.,
+            a51=-11./54., a52=5./2., a53=-70./27., a54=35./27.,
+            a61=1631./55296., a62=175./512., a63=575./13824., a64=44275./110592., a65=253./4096.;
+        immutable double b51=37./378., b53=250./621., b54=125./594., b56=512./1771.,
+            b41=2825./27648., b43=18575./48384., b44=13525./55296., b45=277./14336., b46=1.0/4.0;
+
+        number k1 = evalRate(Q);
+        Q.u_modes[0] = _macro_Q0.u_modes[0] + h*(a21*k1);
+
+        Q.u = _uTotal - Q.u_modes[0];
+        _airModel.update_thermo_from_rhou(Q);
+
+
+        number k2 = evalRate(Q);
+        Q.u_modes[0] = _macro_Q0.u_modes[0] + h*(a31*k1 + a32*k2);
+
+        Q.u = _uTotal - Q.u_modes[0];
+        _airModel.update_thermo_from_rhou(Q);
+
+
+        number k3 = evalRate(Q);
+        Q.u_modes[0] = _macro_Q0.u_modes[0] + h*(a41*k1 + a42*k2 + a43*k3);
+
+        Q.u = _uTotal - Q.u_modes[0];
+        _airModel.update_thermo_from_rhou(Q);
+
+
+        number k4 = evalRate(Q);
+        Q.u_modes[0] = _macro_Q0.u_modes[0] + h*(a51*k1 + a52*k2 + a53*k3 + a54*k4);
+
+        Q.u = _uTotal - Q.u_modes[0];
+        _airModel.update_thermo_from_rhou(Q);
+
+
+        number k5 = evalRate(Q);
+        Q.u_modes[0] = _macro_Q0.u_modes[0] + h*(a61*k1 + a62*k2 + a63*k3 + a64*k4 + a65*k5);
+
+        Q.u = _uTotal - Q.u_modes[0];
+        _airModel.update_thermo_from_rhou(Q);
+
+
+        number k6 = evalRate(Q);
+        Q.u_modes[0] = _macro_Q0.u_modes[0] + h*(b51*k1 + b53*k3 + b54*k4 + b56*k6);
+
+        Q.u = _uTotal - Q.u_modes[0];
+        _airModel.update_thermo_from_rhou(Q);
+
+
+        // Compute error estimate.
+        number errEst = Q.u_modes[0] - (_macro_Q0.u_modes[0] + h*(b41*k1 + b43*k3 + b44*k4 + b45*k5 + b46*k6));
+
+        // And use error estimate as a means to suggest a new timestep.
+        double atol = _energyAbsTolerance;
+        double rtol = _energyRelTolerance;
+        double sk = atol + rtol*fmax(fabs(_macro_Q0.u_modes[0].re), fabs(Q.u_modes[0].re));
+        double err = fabs(errEst.re/sk);
+        // Now use error as an estimate for new step size
+        double scale = 0.0;
+        const double maxscale = 10.0;
+        const double minscale = 0.2;
+        const double safe = 0.9;
+        const double alpha = 0.2;
+        if ( err <= 1.0 ) { // A succesful step...
+            if ( err == 0.0 )
+                scale = maxscale;
+            else {
+                scale = safe * pow(err, -alpha);
+                if ( scale < minscale )
+                    scale = minscale;
+                if ( scale > maxscale )
+                    scale = maxscale;
+            }
+            hSuggest = scale*h;
+            return ResultOfStep.success;
+        }
+        // else, failed step
+        scale = fmax(safe*pow(err, -alpha), minscale);
+        hSuggest = scale*h;
+        return ResultOfStep.failure;
+    }
+
+
+
+    //electronic functions
+    
+    @nogc
+    void PopulateRateFits(string Nfilename, string Ofilename)
+    {   
+        @nogc
+        double[][] Import_2D(string filename) {
+            debug{
+                double[][] output_data;
+                if (exists(filename)) { //check for existance of file
+                    File file=File(filename, "r");
+                    while (!file.eof()) {
+                        output_data~=to!(double[])(split(strip(file.readln()),","));
+                    }
+                    if (output_data[$-1].length==0) { //accounts for the sometimes blank line at the end of csv files
+                        output_data = output_data[0..$-1];
+                    }
+                } else { //if no filename exists
+                    writeln("no such filename: ",filename);
+                }
+            return output_data;
+            } else {
+                throw new Error("Not implemented for nondebug build.");
+            }
+        }
+
+        debug{
+            double[][] N_rate_fit = Import_2D(Nfilename);
+            double[][] O_rate_fit = Import_2D(Ofilename);
+            foreach (double[] row;N_rate_fit){
+                full_rate_fit[0][to!int(row[0])][to!int(row[1])] = row[2 .. $];
+            }
+            foreach (double[] row;O_rate_fit){
+                full_rate_fit[1][to!int(row[0])][to!int(row[1])] = row[2 .. $];
+            }
+        }
+    }
+}
+
+
+static double[string] A_MW; // A parameter in Millikan-White expression
+static this()
+{
+    // Gnoffo et al. Table 1
+    A_MW["N2"] = 220.0;
+    A_MW["O2"] = 129.0;
+    A_MW["NO"] = 168.0;
+    A_MW["N2+"] = 220.0;
+    A_MW["O2+"] = 129.0;
+    A_MW["NO+"] = 168.0;
+}
+
+version(electronically_specific_kinetics_test) {
+    int main()
+    {
+        return 0;
+    }
+}
+
+//Everything from here is old, will delete when appropriate
+/*
 final class ElectronicallySpecificKinetics : ThermochemicalReactor {
 public:
 
@@ -74,17 +618,15 @@ public:
                          ref double dtChemSuggest, ref double dtThermSuggest,
                          ref number[maxParams] params)
     {   
-        /**
-         * Process for kinetics update is as follows
-         * 1. Calculate initial energy in higher electronic states
-         * 2. Pass mass fraction to number density vector and convert to #/cm^3 for the solver
-         * 3. Solve for the updated electronic states over a time of tInterval (use dtChemSuggest in solver)
-         * 4. Convert number density vector to mol/cm^3 for the chemistry dissociation
-         * 5. Call molecule update with state Q --> updates numden vector
-         * 6. Convert number density vector to #/m^3 and pass back to Q.massf
-         * 8. Calculate final energy in higher electronic states --> update u_modes[0] --> update thermo
-         *
-         */
+        
+        //  Process for kinetics update is as follows
+        //  1. Calculate initial energy in higher electronic states
+        //  2. Pass mass fraction to number density vector and convert to #/cm^3 for the solver
+        //  3. Solve for the updated electronic states over a time of tInterval (use dtChemSuggest in solver)
+        //  4. Convert number density vector to mol/cm^3 for the chemistry dissociation
+        //  5. Call molecule update with state Q --> updates numden vector
+        //  6. Convert number density vector to #/m^3 and pass back to Q.massf
+        //  8. Calculate final energy in higher electronic states --> update u_modes[0] --> update thermo
         
         // 1. 
         initialEnergy = energyInNoneq(Q);
@@ -328,6 +870,7 @@ version(electronically_specific_kinetics_test) {
         return 0;
     }
 }
+*/
 /*
 version(electronically_specific_kinetics_test) 
 {
