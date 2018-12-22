@@ -67,9 +67,9 @@ function ghostCells_north(args)
    i = args.i; j = args.j; k = args.k
    ghost1 = {}
    ghost2 = {}
-   cell = sampleFlow(blkId, i, j+1, k)
+   cell = sampleFluidCell(blkId, i, j+1, k)
    ghost1 = fillTable(ghost1, cell.x, cell.y)
-   cell = sampleFlow(blkId, i, j+2, k)
+   cell = sampleFluidCell(blkId, i, j+2, k)
    ghost2 = fillTable(ghost2, cell.x, cell.y)
    return ghost1, ghost2
 end
@@ -79,9 +79,9 @@ function ghostCells_east(args)
    i = args.i; j = args.j; k = args.k
    ghost1 = {}
    ghost2 = {}
-   cell = sampleFlow(blkId, i+1, j, k)
+   cell = sampleFluidCell(blkId, i+1, j, k)
    ghost1 = fillTable(ghost1, cell.x, cell.y)
-   cell = sampleFlow(blkId, i+2, j, k)
+   cell = sampleFluidCell(blkId, i+2, j, k)
    ghost2 = fillTable(ghost2, cell.x, cell.y)
    return ghost1, ghost2
 end
@@ -91,9 +91,9 @@ function ghostCells_south(args)
    i = args.i; j = args.j; k = args.k
    ghost1 = {}
    ghost2 = {}
-   cell = sampleFlow(blkId, i, j-1, k)
+   cell = sampleFluidCell(blkId, i, j-1, k)
    ghost1 = fillTable(ghost1, cell.x, cell.y)
-   cell = sampleFlow(blkId, i, j-2, k)
+   cell = sampleFluidCell(blkId, i, j-2, k)
    ghost2 = fillTable(ghost2, cell.x, cell.y)
    return ghost1, ghost2
 end
@@ -103,9 +103,9 @@ function ghostCells_west(args)
    i = args.i; j = args.j; k = args.k
    ghost1 = {}
    ghost2 = {}
-   cell = sampleFlow(blkId, i-1, j, k)
+   cell = sampleFluidCell(blkId, i-1, j, k)
    ghost1 = fillTable(ghost1, cell.x, cell.y)
-   cell = sampleFlow(blkId, i-2, j, k)
+   cell = sampleFluidCell(blkId, i-2, j, k)
    ghost2 = fillTable(ghost2, cell.x, cell.y)
    return ghost1, ghost2
 end

@@ -13,7 +13,7 @@
    --
    -- Sample the flow field at the current cell 
    -- which is beside the boundary.
---   cell = sample_flow(block_id, args.i, args.j, args.k)
+--   cell = sampleFluidCell(block_id, args.i, args.j, args.k)
 --   return cell, cell
 --end
 
@@ -24,8 +24,8 @@ function interface(args)
    -- Function that returns the conditions at the boundary 
    -- when viscous terms are active.
    --print(block_id)
-   --print(sample_flow(block_id, args.i, args.j, args.k))
-   return sample_flow(block_id, args.i, args.j, args.k)
+   --print(sampleFluidCell(block_id, args.i, args.j, args.k))
+   return sampleFluidCell(block_id, args.i, args.j, args.k)
 end
 
 function convective_flux(args)
@@ -108,8 +108,8 @@ function convective_flux(args)
    --print("Stator outlet, working on: Block,I,J,K",blkId,args.i,args.j,args.k)
    vtx3 = getVtxPosition(blkId,args.i,args.j+1,args.k)
    vtx0 = getVtxPosition(blkId,args.i,args.j,args.k)
-   -- vtx4 = sample_vtx(blk_id,args.i,args.j,args.k+1)
-   -- vtx7 = sample_vtx(blk_id,args.i,args.j+1,args.k+1)
+   -- vtx4 = getVtxPosition(blk_id,args.i,args.j,args.k+1)
+   -- vtx7 = getVtxPosition(blk_id,args.i,args.j+1,args.k+1)
    T_low = math.atan(vtx0.y/vtx0.x)
    T_high = math.atan(vtx3.y/vtx3.x)
    --print("Angles before Rotation: T_low, T_high:", T_low,T_high)
@@ -268,12 +268,12 @@ function convective_flux(args)
          --print("Stator_out Sampling from, blk, i, j, k:",  b_id,T_faces[j],2,Z_face_ind[i]) -- set i = 2 as going along WEST face
          --print("weight =", weight)  
          if args.timeStep == 0 then   
-            flow = sampleFlow(b_id,T_faces[j],2,Z_face_ind[i])
-            flow2 = sampleFace("j",b_id,T_faces[j],2,Z_face_ind[i])
+            flow = sampleFluidCell(b_id,T_faces[j],2,Z_face_ind[i])
+            flow2 = sampleFluidFace("j",b_id,T_faces[j],2,Z_face_ind[i])
 
             area = flow2.area
          else 
-            flow = sampleFace("j",b_id,T_faces[j],2,Z_face_ind[i])
+            flow = sampleFluidFace("j",b_id,T_faces[j],2,Z_face_ind[i])
             area = flow.area
          end
 
@@ -415,11 +415,11 @@ function convective_flux(args)
             --print("Stator_out Periodic Sampling from, blk, i, j, k:",  b_id,T_faces[j],2,Z_face_ind[i]) -- set i = 2 as going along WEST face
             --print("weight =", weight)  
             if args.timeStep == 0 then   
-               flow = sampleFlow(b_id,T_faces[j],2,Z_face_ind[i])
-               flow2 = sampleFace("j",b_id,T_faces[j],2,Z_face_ind[i])
+               flow = sampleFluidCell(b_id,T_faces[j],2,Z_face_ind[i])
+               flow2 = sampleFluidFace("j",b_id,T_faces[j],2,Z_face_ind[i])
                area = flow2.area
             else 
-               flow = sampleFace("j",b_id,T_faces[j],2,Z_face_ind[i])
+               flow = sampleFluidFace("j",b_id,T_faces[j],2,Z_face_ind[i])
                area = flow.area
             end
             Tot_area2 = Tot_area2 + area * weight
@@ -474,7 +474,7 @@ function convective_flux(args)
       CSZ = args.csZ
    end 
    
-   FLOW = sampleFace("i",blkId,args.i,args.j,args.k)
+   FLOW = sampleFluidFace("i",blkId,args.i,args.j,args.k)
    --relax = 0.1 -- fraction to which properties are updated.
 
 

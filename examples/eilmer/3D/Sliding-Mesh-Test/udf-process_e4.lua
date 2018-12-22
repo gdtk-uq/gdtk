@@ -31,14 +31,14 @@ function atTimestepStart(sim_time,steps,localFluidBlocks)
    --     print("Global key:", k,"value:",v)
    --end
 
-   --A = sampleFlow(0,1,1,1)
-   --print("Contents of sampleFlow")
+   --A = sampleFluidCell(0,1,1,1)
+   --print("Contents of sampleFluidCell")
    --for k,v in pairs(A) do
    --     print("Global key:", k,"value:",v)
    -- end
 
-   --A = sampleFace("i",0,1,1,1)
-   --print("Contents of sampleFace")
+   --A = sampleFluidFace("i",0,1,1,1)
+   --print("Contents of sampleFluidFace")
    --for k,v in pairs(A) do
    --     print("Global key:", k,"value:",v)
    -- end
@@ -551,7 +551,7 @@ function sum_total_mass(args)
       for k=kmin,kmax do
          for j=jmin,jmax do
             for i=imin,imax do
-               cell = sample_flow(blk_id, i, j, k)
+               cell = sampleFluidCell(blk_id, i, j, k)
                --print( blk_id, i, j, k)
                -- We are only given p and T
                -- so need to compute density

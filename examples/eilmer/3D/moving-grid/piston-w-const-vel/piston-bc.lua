@@ -11,7 +11,7 @@ function convective_flux(args)
    -- We need to get the pressure at the cell adjacent to the boundary.
    -- We aren't going to do any fancy reconstruction of the piston face pressure,
    -- we are simply going to take the adjacent cell pressure.
-   cell = sampleFlow(blkId, args.i, args.j, args.k)
+   cell = sampleFluidCell(blkId, args.i, args.j, args.k)
    p = cell.p
    flux = {}
    flux.mass = 0

@@ -37,12 +37,12 @@ function atTimestepStart (sim_time,steps,gasBlocks)
        pos1 = getVtxPosition(blkId, imax, j+1, k)
 
        -- get conditions at end of tube (nearest to projectile)
-       Dat  = sampleFlow(blkId,imax-1,jmin,k)
+       Dat  = sampleFluidCell(blkId,imax-1,jmin,k)
        Fx   = Fx + Dat.p * (pos1.y - pos0.y)
        P_mean1 = P_mean1 + Dat.p * (pos1.y - pos0.y)
 
        -- get conditions at start of tube
-       Dat  = sampleFlow(blkId,imin,jmin,k)
+       Dat  = sampleFluidCell(blkId,imin,jmin,k)
        P_mean0 = P_mean0 + Dat.p * (pos1.y - pos0.y)
    end
    pos0 = getVtxPosition(blkId, imax, jmin, k)
@@ -50,9 +50,9 @@ function atTimestepStart (sim_time,steps,gasBlocks)
    P_mean0 = P_mean0 / ( pos1.y - pos0.y )
    P_mean1 = P_mean1 / ( pos1.y - pos0.y )
 
-   Dat0  = sampleFlow(blkId,imax-1,jmin,k)
-   Dat1  = sampleFlow(blkId,imax-1,jmin,k)
-   Dat2  = sampleFlow(blkId,imax-2,jmin,k)
+   Dat0  = sampleFluidCell(blkId,imax-1,jmin,k)
+   Dat1  = sampleFluidCell(blkId,imax-1,jmin,k)
+   Dat2  = sampleFluidCell(blkId,imax-2,jmin,k)
    --print("P, imax-1:", Dat0.p, Dat1.p, Dat2.p)
 
 

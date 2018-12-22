@@ -44,9 +44,9 @@ function interface(args) -- only needed for viscous simualtions.
    --print("You shouldn't be here! This function has not yet been implemented")
 
    -- model as zero viscous interaction across sliding interface I.e. set same conditions as at cell center
-   -- flow = sample_flow(block_id, args.i, args.j, args.k) 
+   -- flow = sampleFluidCell(block_id, args.i, args.j, args.k) 
    --print(flow.u,flow.v,flow.w,flow.T[0],flow.massf[0])
-   return sample_flow(block_id, args.i, args.j, args.k)
+   return sampleFluidCell(block_id, args.i, args.j, args.k)
 end
 
 
@@ -257,11 +257,11 @@ function convective_flux(args)
          --print("Rotor_in Sampling from, blk, i, j, k:",  b_id,2,T_faces[j],Z_face_ind[i])  -- set j = 2 as going along SOUTH face
          --print("weight =", weight)     
          if args.timeStep == 0 then     
-            flow = sampleFlow(b_id,2,T_faces[j],Z_face_ind[i])
-            flow2 = sampleFace("i",b_id,2,T_faces[j],Z_face_ind[i])
+            flow = sampleFluidCell(b_id,2,T_faces[j],Z_face_ind[i])
+            flow2 = sampleFluidFace("i",b_id,2,T_faces[j],Z_face_ind[i])
             area = flow2.area
          else            
-            flow = sampleFace("i",b_id,2,T_faces[j],Z_face_ind[i])
+            flow = sampleFluidFace("i",b_id,2,T_faces[j],Z_face_ind[i])
             area = flow.area
          end
          Tot_area = Tot_area + area * weight
@@ -375,11 +375,11 @@ function convective_flux(args)
             --print("Rotor_in Periodic sampling from, blk, i, j, k:",  b_id,2,T_faces[j],Z_face_ind[i])
             --print("weight =", weight)
             if args.timeStep == 0 then     
-               flow = sampleFlow(b_id,2,T_faces[j],Z_face_ind[i])
-               flow2 = sampleFace("i",b_id,2,T_faces[j],Z_face_ind[i])
+               flow = sampleFluidCell(b_id,2,T_faces[j],Z_face_ind[i])
+               flow2 = sampleFluidFace("i",b_id,2,T_faces[j],Z_face_ind[i])
                area = flow2.area
             else            
-               flow = sampleFace("i",b_id,2,T_faces[j],Z_face_ind[i])
+               flow = sampleFluidFace("i",b_id,2,T_faces[j],Z_face_ind[i])
                area = flow.area
             end
             Tot_area2 = Tot_area2 + area * weight
@@ -441,7 +441,7 @@ function convective_flux(args)
    end 
 
 
-   FLOW = sampleFace("i",blkId,args.i,args.j,args.k)
+   FLOW = sampleFluidFace("i",blkId,args.i,args.j,args.k)
    --relax = 0.1 -- fraction to which properties are updated.
 
    u_old = FLOW.velx
