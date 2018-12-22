@@ -50,6 +50,7 @@ final class TwoTemperatureAirKinetics : ThermochemicalReactor {
         _Q0 = new GasState(gmodel);
         _chemUpdate = new ChemistryUpdate(chemFile, gmodel);
         _molef.length = _airModel.n_species;
+        _numden.length = _airModel.n_species;
         initModel(energyExchFile);
     }
 
@@ -93,7 +94,8 @@ final class TwoTemperatureAirKinetics : ThermochemicalReactor {
         // These values won't change during the energy update
         // since the composition does not change
         // during energy exhange.
-        massf2molef(Q.massf, _airModel.mol_masses, _molef);
+        _gmodel.massf2molef(Q, _molef);
+        _gmodel.massf2numden(Q, _numden);
         try {
             energyUpdate(Q, tInterval, dtThermSuggest);
             debug {
@@ -117,6 +119,7 @@ private:
     number _T_sh, _Tv_sh;
     double[] _A;
     number[] _molef;
+    number[] _numden; 
     double[] _particleMass;
     double[][] _mu;
     int[][] _reactionsByMolecule;
@@ -330,7 +333,9 @@ private:
     @nogc
     number evalRelaxationTime(GasState Q, int isp)
     {
-        number tauInv = 0.0;
+
+        number totalND = 0.0;
+        number sum = 0.0;
         foreach (csp; 0 .. _airModel.n_species) {
             // We exclude electrons in the vibrational relaxation time.
             if (_airModel.species_name(csp) == "e-") {
@@ -338,29 +343,36 @@ private:
             }
             // 1. Compute Millikan-White value for each interaction
             if (_molef[csp] >= SMALL_MOLE_FRACTION) {
-                number pTau = exp(_A[isp] * (pow(Q.T, -1./3) - 0.015*pow(_mu[isp][csp], 0.25)) - 18.42);
-                number pCollider = _molef[csp]*Q.p/P_atm;
-                number tau = pTau/pCollider;
-                tauInv += 1.0/tau;
+                number nd = _numden[csp];
+                sum += nd * exp(_A[isp] * (pow(Q.T, -1./3) - 0.015*pow(_mu[isp][csp], 0.25)) - 18.42);
+                totalND += nd;
             }
         }
-        number tauMW = 1.0/tauInv;
+        number tauMW = sum/totalND; // <-- p*tauMW (in atm.s)
+        tauMW *= P_atm/Q.p;
+
         // 2. Compute Park value for high-temperature correction
-        double k = Boltzmann_constant;
-        number nd = Q.p/(k*Q.T); // 1/m^3
-        nd *= 1.0e-6; // convert 1/m^3 --> 1/cm^3
-        number c = sqrt(8*k*Q.T/(to!double(PI)*_particleMass[isp]));
-        c *= 100.0; // convert m/s --> cm/s
-        double sigmaDash = 3.0e-17; // cm^2
-        number sigma = sigmaDash*((50000.0/Q.T)^^2); // cm^2
-        number tauP = 1.0/(nd*c*sigma);
+        number nd = _numden[isp];
+        double kB = Boltzmann_constant;
+        number cBar_s = sqrt(8*kB*Q.T/(to!double(PI)*_particleMass[isp]));
+        double sigma_s = 1e-20; // Gnoffo p. 17 gives 1.0e-16 cm^2,
+                                // converted to m^2 this is: 1.0e-20 m^2
+        number tauP = 1.0/(sigma_s*cBar_s*nd);
         // 3. Combine M-W and Park values.
         number tauV = tauMW + tauP;
+        return tauV;
+        
+        /* RJG, 2018-12-22
+           Remove this correction for present. It is causing issues.
+           Need to do some deeper research on this correction.
         // 4. Correct Landau-Teller at high temperatures by
         //    modifying tau.
         number s = 3.5*exp(-5000.0/_T_sh);
-        tauInv = (1.0/tauV)*(pow(fabs((_T_sh - Q.T_modes[0])/(_T_sh - _Tv_sh)), s-1.0));
+        number tauInv = (1.0/tauV)*(pow(fabs((_T_sh - Q.T_modes[0])/(_T_sh - _Tv_sh)), s-1.0));
         return 1.0/tauInv;
+           END: RJG, 2018-12-22
+        */
+        
     }
 
     @nogc
