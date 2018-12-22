@@ -1235,8 +1235,20 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                 cell.add_viscous_source_vector(local_with_k_omega);
             }
             if (blk.myConfig.udf_source_terms) { // [TODO] may want to apply serially
+                size_t i_cell = cell.id;
+                size_t j_cell = 0;
+                size_t k_cell = 0;
+                if (blk.grid_type == Grid_t.structured_grid) {
+                    auto sblk = cast(SFluidBlock) blk;
+                    assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
+                    auto ijk_indices = sblk.to_ijk_indices(cell.id);
+                    i_cell = ijk_indices[0];
+                    j_cell = ijk_indices[1];
+                    k_cell = ijk_indices[2];
+                }
                 addUDFSourceTermsToCell(blk.myL, cell, local_gtl, 
-                                        local_sim_time, blk.myConfig.gmodel);
+                                        local_sim_time, blk.myConfig.gmodel,
+                                        blk.id, i_cell, j_cell, k_cell);
             }
             cell.time_derivatives(local_gtl, local_ftl, local_with_k_omega);
         }
@@ -1398,8 +1410,20 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                     cell.add_viscous_source_vector(local_with_k_omega);
                 }
                 if (blk.myConfig.udf_source_terms) {
+                    size_t i_cell = cell.id;
+                    size_t j_cell = 0;
+                    size_t k_cell = 0;
+                    if (blk.grid_type == Grid_t.structured_grid) {
+                        auto sblk = cast(SFluidBlock) blk;
+                        assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
+                        auto ijk_indices = sblk.to_ijk_indices(cell.id);
+                        i_cell = ijk_indices[0];
+                        j_cell = ijk_indices[1];
+                        k_cell = ijk_indices[2];
+                    }
                     addUDFSourceTermsToCell(blk.myL, cell, local_gtl,
-                                            local_sim_time, blk.myConfig.gmodel);
+                                            local_sim_time, blk.myConfig.gmodel,
+                                            blk.id, i_cell, j_cell, k_cell);
                 }
                 cell.time_derivatives(local_gtl, local_ftl, local_with_k_omega);
             }
@@ -1556,8 +1580,20 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                     cell.add_viscous_source_vector(local_with_k_omega);
                 }
                 if (blk.myConfig.udf_source_terms) {
+                    size_t i_cell = cell.id;
+                    size_t j_cell = 0;
+                    size_t k_cell = 0;
+                    if (blk.grid_type == Grid_t.structured_grid) {
+                        auto sblk = cast(SFluidBlock) blk;
+                        assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
+                        auto ijk_indices = sblk.to_ijk_indices(cell.id);
+                        i_cell = ijk_indices[0];
+                        j_cell = ijk_indices[1];
+                        k_cell = ijk_indices[2];
+                    }
                     addUDFSourceTermsToCell(blk.myL, cell, local_gtl,
-                                            local_sim_time, blk.myConfig.gmodel);
+                                            local_sim_time, blk.myConfig.gmodel,
+                                            blk.id, i_cell, j_cell, k_cell);
                 }
                 cell.time_derivatives(local_gtl, local_ftl, local_with_k_omega);
             }
@@ -1759,8 +1795,20 @@ void gasdynamic_explicit_increment_with_moving_grid()
                 cell.add_viscous_source_vector(local_with_k_omega);
             }
             if (blk.myConfig.udf_source_terms) { // [TODO] may want to apply serially
+                size_t i_cell = cell.id;
+                size_t j_cell = 0;
+                size_t k_cell = 0;
+                if (blk.grid_type == Grid_t.structured_grid) {
+                    auto sblk = cast(SFluidBlock) blk;
+                    assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
+                    auto ijk_indices = sblk.to_ijk_indices(cell.id);
+                    i_cell = ijk_indices[0];
+                    j_cell = ijk_indices[1];
+                    k_cell = ijk_indices[2];
+                }
                 addUDFSourceTermsToCell(blk.myL, cell, local_gtl, 
-                                        local_sim_time, blk.myConfig.gmodel);
+                                        local_sim_time, blk.myConfig.gmodel,
+                                        blk.id, i_cell, j_cell, k_cell);
             }
             cell.time_derivatives(local_gtl, local_ftl, local_with_k_omega);
             bool force_euler = false;
@@ -1910,8 +1958,20 @@ void gasdynamic_explicit_increment_with_moving_grid()
                     cell.add_viscous_source_vector(local_with_k_omega);
                 }
                 if (blk.myConfig.udf_source_terms) {
+                    size_t i_cell = cell.id;
+                    size_t j_cell = 0;
+                    size_t k_cell = 0;
+                    if (blk.grid_type == Grid_t.structured_grid) {
+                        auto sblk = cast(SFluidBlock) blk;
+                        assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
+                        auto ijk_indices = sblk.to_ijk_indices(cell.id);
+                        i_cell = ijk_indices[0];
+                        j_cell = ijk_indices[1];
+                        k_cell = ijk_indices[2];
+                    }
                     addUDFSourceTermsToCell(blk.myL, cell, local_gtl,
-                                            local_sim_time, blk.myConfig.gmodel);
+                                            local_sim_time, blk.myConfig.gmodel,
+                                            blk.id, i_cell, j_cell, k_cell);
                 }
                 cell.time_derivatives(local_gtl, local_ftl, local_with_k_omega);
                 cell.stage_2_update_for_flow_on_moving_grid(local_dt_global, local_with_k_omega);

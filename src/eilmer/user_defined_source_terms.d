@@ -20,7 +20,9 @@ import gas;
 import fvcell;
 import globalconfig;
 
-void addUDFSourceTermsToCell(lua_State* L, FVCell cell, size_t gtl, double t, GasModel gmodel)
+void addUDFSourceTermsToCell(lua_State* L, FVCell cell, size_t gtl,
+                             double t, GasModel gmodel,
+                             size_t blkId, size_t i, size_t j, size_t k)
 {
     size_t n_species = gmodel.n_species;
     size_t n_modes = gmodel.n_modes;
@@ -33,6 +35,10 @@ void addUDFSourceTermsToCell(lua_State* L, FVCell cell, size_t gtl, double t, Ga
     lua_newtable(L);
     int tblIdx = lua_gettop(L);
     pushFluidCellToTable(L, tblIdx, cell, gtl, gmodel);
+    lua_pushinteger(L, blkId); lua_setfield(L, tblIdx, "blkId");
+    lua_pushinteger(L, i); lua_setfield(L, tblIdx, "i");
+    lua_pushinteger(L, j); lua_setfield(L, tblIdx, "j");
+    lua_pushinteger(L, k); lua_setfield(L, tblIdx, "k");
     // Call sourceTerms function with (t, args)
     int number_args = 2;
     int number_results = 1;

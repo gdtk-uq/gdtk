@@ -1450,8 +1450,20 @@ void compute_flux(FVCell pcell, FluidBlock blk, size_t orderOfJacobian, ref FVCe
             cell.add_viscous_source_vector(local_with_k_omega);
         }
         if (blk.myConfig.udf_source_terms) {
+            size_t i_cell = cell.id;
+            size_t j_cell = 0;
+            size_t k_cell = 0;
+            if (blk.grid_type == Grid_t.structured_grid) {
+                auto sblk = cast(SFluidBlock) blk;
+                assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
+                auto ijk_indices = sblk.to_ijk_indices(cell.id);
+                i_cell = ijk_indices[0];
+                j_cell = ijk_indices[1];
+                k_cell = ijk_indices[2];
+            }
             addUDFSourceTermsToCell(blk.myL, cell, 0, 
-                                    0.0, blk.myConfig.gmodel);
+                                    0.0, blk.myConfig.gmodel,
+                                    blk.id, i_cell, j_cell, k_cell);
         }
     }
     // copy perturbed flux
@@ -1929,8 +1941,20 @@ void evalRHS(double pseudoSimTime, int ftl, int gtl, bool with_k_omega)
                 cell.add_viscous_source_vector(local_with_k_omega);
             }
             if (blk.myConfig.udf_source_terms) {
+                size_t i_cell = cell.id;
+                size_t j_cell = 0;
+                size_t k_cell = 0;
+                if (blk.grid_type == Grid_t.structured_grid) {
+                    auto sblk = cast(SFluidBlock) blk;
+                    assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
+                    auto ijk_indices = sblk.to_ijk_indices(cell.id);
+                    i_cell = ijk_indices[0];
+                    j_cell = ijk_indices[1];
+                    k_cell = ijk_indices[2];
+                }
                 addUDFSourceTermsToCell(blk.myL, cell, gtl, 
-                                        pseudoSimTime, blk.myConfig.gmodel);
+                                        pseudoSimTime, blk.myConfig.gmodel,
+                                        blk.id, i_cell, j_cell, k_cell);
             }
             cell.time_derivatives(gtl, ftl, local_with_k_omega);
         }
