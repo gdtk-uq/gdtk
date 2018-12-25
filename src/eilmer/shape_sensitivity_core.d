@@ -1456,7 +1456,7 @@ void compute_flux(FVCell pcell, FluidBlock blk, size_t orderOfJacobian, ref FVCe
             if (blk.grid_type == Grid_t.structured_grid) {
                 auto sblk = cast(SFluidBlock) blk;
                 assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
-                auto ijk_indices = sblk.to_ijk_indices(cell.id);
+                auto ijk_indices = sblk.cell_id_to_ijk_indices(cell.id);
                 i_cell = ijk_indices[0];
                 j_cell = ijk_indices[1];
                 k_cell = ijk_indices[2];
@@ -1947,7 +1947,7 @@ void evalRHS(double pseudoSimTime, int ftl, int gtl, bool with_k_omega)
                 if (blk.grid_type == Grid_t.structured_grid) {
                     auto sblk = cast(SFluidBlock) blk;
                     assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
-                    auto ijk_indices = sblk.to_ijk_indices(cell.id);
+                    auto ijk_indices = sblk.cell_id_to_ijk_indices(cell.id);
                     i_cell = ijk_indices[0];
                     j_cell = ijk_indices[1];
                     k_cell = ijk_indices[2];

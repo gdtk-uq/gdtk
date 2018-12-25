@@ -1241,7 +1241,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                 if (blk.grid_type == Grid_t.structured_grid) {
                     auto sblk = cast(SFluidBlock) blk;
                     assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
-                    auto ijk_indices = sblk.to_ijk_indices(cell.id);
+                    auto ijk_indices = sblk.cell_id_to_ijk_indices(cell.id);
                     i_cell = ijk_indices[0];
                     j_cell = ijk_indices[1];
                     k_cell = ijk_indices[2];
@@ -1416,7 +1416,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                     if (blk.grid_type == Grid_t.structured_grid) {
                         auto sblk = cast(SFluidBlock) blk;
                         assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
-                        auto ijk_indices = sblk.to_ijk_indices(cell.id);
+                        auto ijk_indices = sblk.cell_id_to_ijk_indices(cell.id);
                         i_cell = ijk_indices[0];
                         j_cell = ijk_indices[1];
                         k_cell = ijk_indices[2];
@@ -1586,7 +1586,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                     if (blk.grid_type == Grid_t.structured_grid) {
                         auto sblk = cast(SFluidBlock) blk;
                         assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
-                        auto ijk_indices = sblk.to_ijk_indices(cell.id);
+                        auto ijk_indices = sblk.cell_id_to_ijk_indices(cell.id);
                         i_cell = ijk_indices[0];
                         j_cell = ijk_indices[1];
                         k_cell = ijk_indices[2];
@@ -1801,7 +1801,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
                 if (blk.grid_type == Grid_t.structured_grid) {
                     auto sblk = cast(SFluidBlock) blk;
                     assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
-                    auto ijk_indices = sblk.to_ijk_indices(cell.id);
+                    auto ijk_indices = sblk.cell_id_to_ijk_indices(cell.id);
                     i_cell = ijk_indices[0];
                     j_cell = ijk_indices[1];
                     k_cell = ijk_indices[2];
@@ -1964,7 +1964,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
                     if (blk.grid_type == Grid_t.structured_grid) {
                         auto sblk = cast(SFluidBlock) blk;
                         assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
-                        auto ijk_indices = sblk.to_ijk_indices(cell.id);
+                        auto ijk_indices = sblk.cell_id_to_ijk_indices(cell.id);
                         i_cell = ijk_indices[0];
                         j_cell = ijk_indices[1];
                         k_cell = ijk_indices[2];
