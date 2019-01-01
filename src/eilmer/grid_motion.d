@@ -869,15 +869,15 @@ extern(C) int luafn_setVtxVelocityXYZ(lua_State* L)
         auto vtxId = lua_tointeger(L, 5);
         globalFluidBlocks[blkId].vertices[vtxId].vel[0].set(velx, vely, velz);
     }
-    else if ( narg == 7 ) {
-        auto i = lua_tointeger(L, 6);
-        auto j = lua_tointeger(L, 7);
+    else if ( narg == 6 ) {
+        auto i = lua_tointeger(L, 5);
+        auto j = lua_tointeger(L, 6);
         globalFluidBlocks[blkId].get_vtx(i,j).vel[0].set(velx, vely, velz);
     }
-    else if ( narg >= 8 ) {
-        auto i = lua_tointeger(L, 6);
-        auto j = lua_tointeger(L, 7);
-        auto k = lua_tointeger(L, 8);
+    else if ( narg >= 7 ) {
+        auto i = lua_tointeger(L, 5);
+        auto j = lua_tointeger(L, 6);
+        auto k = lua_tointeger(L, 7);
         globalFluidBlocks[blkId].get_vtx(i,j,k).vel[0].set(velx, vely, velz);
     }
     else {
