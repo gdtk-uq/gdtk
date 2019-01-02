@@ -43,15 +43,17 @@ public:
         auto L_macro = init_lua_State();
         doLuaFile(L_macro, macroSpeciesFilename);
         getArrayOfStrings(L_macro, LUA_GLOBALSINDEX, "species", _macro_species_names);
+
+        
         _n_macro_species = to!int(_macro_species_names.length);
         _macro_molef.length = _n_macro_species;
-        macro_Q.massf.length = _n_macro_species;
-        _macro_particleMass.length = _n_species;
+        macro_Q = new GasState(_n_macro_species,1);
+        _macro_particleMass.length = _n_macro_species;
         foreach (isp; 0 .. _n_macro_species) {
             _macro_particleMass[isp] = _macro_mol_masses[isp]/Avogadro_number;
             _macro_particleMass[isp] *= 1000.0; // kg -> g
         }
-
+        
         _macro_R.length = _n_macro_species;
         foreach (isp; 0 .. _n_macro_species) {
             _macro_R[isp] = R_universal/_macro_mol_masses[isp];
@@ -128,24 +130,26 @@ public:
         auto L_elec = init_lua_State();
         doLuaFile(L_elec, electronicCompFilename);
         _n_N_species = getInt(L_elec, LUA_GLOBALSINDEX, "number_N_species");
-        _n_O_species = getInt(L_elec, LUA_GLOBALSINDEX, "number_O_Species");
+        _n_O_species = getInt(L_elec, LUA_GLOBALSINDEX, "number_O_species");
         _n_elec_species = _n_N_species + _n_O_species;
-
-        lua_getfield(L, LUA_GLOBALSINDEX, "electronic_species");
+        
+        lua_getfield(L_elec, LUA_GLOBALSINDEX, "electronic_species");
         foreach (isp; 0 .. _n_elec_species) {
             lua_rawgeti(L_elec, -1, isp);
-            if (lua_isnil(L, -1)) {
+            if (lua_isnil(L_elec, -1)) {
                 string msg = format("There was an error when attempting to information about electronic-species %d.\n", isp);
                 throw new Error(msg);
             }
-            _electronicSpecies ~= createElectronicSpecies(L);
-            lua_pop(L, 1);
-            _elec_species_names[isp] = _electronicSpecies[$-1].name;
+            
+            _electronicSpecies ~= createElectronicSpecies(L_elec);
+            lua_pop(L_elec, 1);
+            _elec_species_names ~= _electronicSpecies[$-1].name;
             _elec_mol_masses ~= _electronicSpecies[$-1].mol_mass;
             _elec_R ~= R_universal/_electronicSpecies[$-1].mol_mass;
             _elec_electronic_energy ~= _electronicSpecies[$-1].electronic_energy;
+            
         }
-
+        
         //define global properties for the general gas model
         _n_species = _n_macro_species + _n_elec_species - 2;
         _n_modes = 1;
@@ -154,6 +158,7 @@ public:
         _energy_mode_names[0] = "vibroelectronic";
         create_energy_mode_reverse_lookup();
         _mol_masses = _elec_mol_masses ~ _macro_mol_masses[2 .. $];
+        
     }
 
     override string toString() const
@@ -166,6 +171,7 @@ public:
     override void update_thermo_from_pT(GasState Q)
     {
         Update_Macro_State(macro_Q, Q);
+        
         _pgMixEOS.update_density(macro_Q);
         macro_Q.u = transRotEnergy(macro_Q);
         macro_Q.u_modes[0] = vibEnergy(macro_Q, macro_Q.T_modes[0]);
@@ -366,9 +372,9 @@ public:
         return h_ve;
     }
 
-    @nogc number vibEnergy(in GasState Q, number Tve)
+    @nogc number vibEnergy(in GasState macro_Q, number Tve)
     {
-        Update_Macro_State(macro_Q, Q);
+        //Update_Macro_State(macro_Q, Q);
         number e_ve = 0.0;
         foreach (isp; molecularSpecies) {
             e_ve += macro_Q.massf[isp] * vibEnergy(Tve, isp);
@@ -435,15 +441,15 @@ private:
         foreach (isp; _n_N_species .. _n_N_species + _n_O_species) {
             O_massf_sum += Q.massf[isp];
         }
-        macro_state.massf[0] = O_massf_sum;
+        macro_state.massf[1] = O_massf_sum;
 
         foreach ( isp; 2 .. _n_macro_species) {
-            macro_state.massf[isp] = Q.massf[isp];
+            macro_state.massf[isp] = Q.massf[_n_elec_species+isp-2];
         }
     }
 
     @nogc
-    void Update_Electronic_State(GasState Q, GasState macro_state)
+    void Update_Electronic_State(GasState Q, in GasState macro_state)
     {
         Q.rho = macro_state.rho;
         Q.p = macro_state.p;
@@ -463,18 +469,32 @@ private:
         foreach (isp; 0 .. _n_N_species) {
             N_massf_sum += Q.massf[isp];
         }
-        number N_massf_factor = macro_state.massf[0]/N_massf_sum;
-        foreach (isp; 0 .. _n_N_species) {
-            Q.massf[isp] *= N_massf_factor;
+        if (N_massf_sum == 0.0){
+            Q.massf[0] = macro_state.massf[0];
+            foreach (isp; 1 .. _n_N_species) {
+                Q.massf[isp] = 0.0;
+            }
+        } else {
+            number N_massf_factor = macro_state.massf[0]/N_massf_sum;
+            foreach (isp; 0 .. _n_N_species) {
+                Q.massf[isp] *= N_massf_factor;
+            }
         }
 
         number O_massf_sum = 0.0;
         foreach (isp; _n_N_species .. _n_N_species + _n_O_species) {
             O_massf_sum += Q.massf[isp];
         }
-        number O_massf_factor = macro_state.massf[1]/O_massf_sum;
-        foreach (isp; _n_N_species .. _n_N_species + _n_O_species) {
-            Q.massf[isp] *= O_massf_factor;
+        if (O_massf_sum == 0.0) {
+            Q.massf[_n_N_species] = macro_state.massf[1];
+            foreach (isp; _n_N_species + 1 .. _n_N_species + _n_O_species) {
+                Q.massf[isp] = 0.0;
+            }
+        } else {
+            number O_massf_factor = macro_state.massf[1]/O_massf_sum;
+            foreach (isp; _n_N_species .. _n_N_species + _n_O_species) {
+                Q.massf[isp] *= O_massf_factor;
+            }
         }
     }
 
@@ -683,7 +703,28 @@ static double[string] A_22, B_22, C_22, D_22;
 
 version(electronically_specific_gas_test) {
     int main()
-    {
+    {   
+        import util.msg_service;
+        
+        auto L = init_lua_State();
+        doLuaFile(L,"sample-data/electronic-and-macro-species.lua");
+
+        auto gm = new ElectronicallySpecificGas(L);
+        auto gd = new GasState(gm.n_species,1);
+
+        gd.p=666.0;
+        gd.T = 293;
+        gd.T_modes[0] = 293;
+        gd.massf = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.78, 0.22, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+        gm.update_thermo_from_pT(gd);
+        
+        assert(approxEqual(-89784.2, gd.u, 1.0e-6), failedUnitTest());
+        assert(approxEqual(0.00787412, gd.rho, 1.0e-6), failedUnitTest());
+
+        gm.update_thermo_from_rhou(gd);
+        assert(approxEqual(666.0, gd.p, 1.0e-6), failedUnitTest());
+        assert(approxEqual(293, gd.T, 1.0e-6), failedUnitTest());
+
         return 0;
     }
 }

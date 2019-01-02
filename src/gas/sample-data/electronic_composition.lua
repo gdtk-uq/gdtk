@@ -1,5 +1,7 @@
 model = "ElectronicallySpecificGas"
 number_electronic_species=21
+number_N_species = 8
+number_O_species = 8
 s1 = 0.0
 T1 = 300.0
 p1 = 1e5
