@@ -466,6 +466,26 @@ void write_solution_files()
         formattedWrite(writer, "%04d %.18e %.18e\n", SimState.current_tindx, SimState.time, SimState.dt_global);
         append(GlobalConfig.base_file_name ~ ".times", writer.data);
     }
+    // The user may also have some writing of data to do via their Lua script file.
+    if (GlobalConfig.is_master_task && (GlobalConfig.udf_supervisor_file.length > 0)) {
+        auto L = GlobalConfig.master_lua_State;
+        lua_getglobal(L, "atWriteToFile");
+        if (lua_isnil(L, -1)) {
+            // There is no suitable Lua function.
+            lua_pop(L, 1); // discard the nil item
+        } else {
+            // Proceed to call the user's function.
+            lua_pushnumber(L, SimState.time);
+            lua_pushnumber(L, SimState.step);
+            int number_args = 2;
+            int number_results = 0;
+            if ( lua_pcall(L, number_args, number_results, 0) != 0 ) {
+                string errMsg = "ERROR: while running user-defined function atWriteToFile()\n";
+                errMsg ~= to!string(lua_tostring(L, -1));
+                throw new FlowSolverException(errMsg);
+            }
+        }
+    }
 } // end write_solution_files()
 
 void march_over_blocks()
@@ -885,14 +905,20 @@ void check_run_time_configuration(double target_time_as_requested)
     if (GlobalConfig.udf_supervisor_file.length > 0) {
         auto L = GlobalConfig.master_lua_State;
         lua_getglobal(L, "atTimestepStart");
-        lua_pushnumber(L, SimState.time);
-        lua_pushnumber(L, SimState.step);
-        int number_args = 2;
-        int number_results = 0;
-        if ( lua_pcall(L, number_args, number_results, 0) != 0 ) {
-            string errMsg = "ERROR: while running user-defined function atTimestepStart()\n";
-            errMsg ~= to!string(lua_tostring(L, -1));
-            throw new FlowSolverException(errMsg);
+        if (lua_isnil(L, -1)) {
+            // There is no suitable Lua function.
+            lua_pop(L, 1); // discard the nil item
+        } else {
+            // Proceed to call the user's function.
+            lua_pushnumber(L, SimState.time);
+            lua_pushnumber(L, SimState.step);
+            int number_args = 2;
+            int number_results = 0;
+            if ( lua_pcall(L, number_args, number_results, 0) != 0 ) {
+                string errMsg = "ERROR: while running user-defined function atTimestepStart()\n";
+                errMsg ~= to!string(lua_tostring(L, -1));
+                throw new FlowSolverException(errMsg);
+            }
         }
     }
 } // end check_run_time_configuration()
