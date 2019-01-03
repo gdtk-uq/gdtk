@@ -220,6 +220,14 @@ class Matrix(T) {
         }
     }
 
+    @nogc
+    void scale(double s)
+    {
+        foreach(row; 0 .. _nrows)
+            foreach(col; 0 .. _ncols)
+                _data[row][col] *= s;
+    }
+    
     override string toString() {
         string s = "Matrix["; // [TODO] add string form of type T here
         foreach(row; 0 .. _nrows) {
@@ -434,6 +442,7 @@ Matrix!T dot(T)(in Matrix!T a, in Matrix!T b)
     return c;
 }
 
+@nogc
 void dot(T)(in Matrix!T a, in Matrix!T b, ref Matrix!T c)
 in {
     assert(a.ncols == b.nrows);

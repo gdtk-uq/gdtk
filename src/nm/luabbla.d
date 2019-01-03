@@ -283,8 +283,17 @@ extern(C) int scale(lua_State *L)
     return 1;
 }
 
+extern(C) int scale_in_place(lua_State *L)
+{
+    auto M = checkMatrix(L, 1);
+    double rhs = luaL_checknumber(L, 2);
+    M.scale(rhs);
+    return 0;
+}
+
 extern(C) int dotProduct(lua_State *L)
 {
+    // Use as result = M:dot(other)
     auto M = checkMatrix(L, 1); // this
     auto other = checkMatrix(L, 2);
     if (M.ncols == other.nrows) {
@@ -306,6 +315,25 @@ extern(C) int dotProduct(lua_State *L)
     }
     return 1;
 } // end dotProduct()
+
+extern(C) int dotProduct2(lua_State *L)
+{
+    // Use as M:dot2(other, result) or as M.dot2(M, other, result)
+    auto M = checkMatrix(L, 1); // this
+    auto other = checkMatrix(L, 2);
+    auto result = checkMatrix(L, 3); // result matrix must exist already
+    if ((M.ncols == other.nrows) &&
+        (result.nrows == M.nrows) &&
+        (result.ncols == other.ncols)) {
+        // We have consistent dimensions and can compute the dot product.
+        dot(M, other, result);
+    } else {
+        string errMsg = "Error in Matrix:dot2() method. ";
+        errMsg ~= "Inconsistent dimensions.\n";
+        luaL_error(L, errMsg.toStringz);
+    }
+    return 0;
+} // end dotProduct2()
 
 extern(C) int tostring(lua_State *L)
 {
@@ -459,8 +487,12 @@ void registerBBLA(lua_State *L)
     lua_setfield(L, -2, "__div");
     lua_pushcfunction(L, &scale);
     lua_setfield(L, -2, "scale");
+    lua_pushcfunction(L, &scale_in_place);
+    lua_setfield(L, -2, "scale_in_place");
     lua_pushcfunction(L, &dotProduct);
     lua_setfield(L, -2, "dot");
+    lua_pushcfunction(L, &dotProduct2);
+    lua_setfield(L, -2, "dot2");
     lua_pushcfunction(L, &tostring);
     lua_setfield(L, -2, "__tostring");
     lua_pushcfunction(L, &zerosMatrix);
@@ -525,8 +557,12 @@ assert(math.abs(x:get(0,0) - -0.5) < 1.0e-6)
 assert(math.abs(x:get(1,0) - 1.0) < 1.0e-6)
 assert(math.abs(x:get(2,0) - 0.333333) < 1.0e-6)
 assert(math.abs(x:get(3,0) - -2.0) < 1.0e-6)
-
-
+b2 = zeros(4, 1)
+A:dot2(x, b2)
+assert(math.abs(b2:get(0,0) - b:get(0,0)) < 1.0e-6)
+assert(math.abs(b2:get(1,0) - b:get(1,0)) < 1.0e-6)
+assert(math.abs(b2:get(2,0) - b:get(2,0)) < 1.0e-6)
+assert(math.abs(b2:get(3,0) - b:get(3,0)) < 1.0e-6)
         `;
         assert(luaL_dostring(L, toStringz(testCode)) == 0, failedUnitTest());
         return 0;
