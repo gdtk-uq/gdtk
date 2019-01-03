@@ -1863,7 +1863,7 @@ void init_master_lua_State()
     // Note that not all of these blocks may be fully present
     // in an MPI-parallel simulation.
     lua_newtable(L);
-    foreach (int i, blk; globalFluidBlocks) {
+    foreach (i, blk; globalFluidBlocks) {
         lua_newtable(L);
         lua_pushnumber(L, blk.cells.length);
         lua_setfield(L, -2, "nCells");
@@ -1891,7 +1891,7 @@ void init_master_lua_State()
             lua_pushnumber(L, sblk.kmax+1);
             lua_setfield(L, -2, "vtxKmax");
         }
-        lua_rawseti(L, -2, i);
+        lua_rawseti(L, -2, to!int(i));
     }
     lua_setglobal(L, "blockData");
     //

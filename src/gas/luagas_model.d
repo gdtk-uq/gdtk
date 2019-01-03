@@ -96,7 +96,7 @@ extern(C) int molMasses(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
     lua_newtable(L);
-    foreach ( int isp, mMass; gm.mol_masses ) {
+    foreach (isp, mMass; gm.mol_masses ) {
         lua_pushnumber(L, mMass);
         lua_setfield(L, -2, toStringz(gm.species_name(isp)));
     }
@@ -511,7 +511,7 @@ extern(C) int massf2molef(lua_State* L)
     // Place molef in an array and leave at at
     // top-of-stack as a return to the caller.
     lua_newtable(L);
-    foreach ( int i, mf; molef ) {
+    foreach (i, mf; molef) {
         lua_pushnumber(L, mf);
         lua_setfield(L, -2, toStringz(gm.species_name(i)));
     }
@@ -543,7 +543,7 @@ extern(C) int molef2massf(lua_State* L)
     }
     // and return a table to the caller.
     lua_newtable(L);
-    foreach ( int i, mf; Q.massf ) {
+    foreach (i, mf; Q.massf) {
         lua_pushnumber(L, mf);
         lua_setfield(L, -2, toStringz(gm.species_name(i)));
     }
@@ -579,7 +579,7 @@ extern(C) int massf2conc(lua_State* L)
     // Place conc in an array and leave at at
     // top-of-stack as a return to the caller.
     lua_newtable(L);
-    foreach ( int i, c; conc ) {
+    foreach (i, c; conc) {
         lua_pushnumber(L, c);
         lua_setfield(L, -2, toStringz(gm.species_name(i)));
     }
@@ -606,7 +606,7 @@ extern(C) int conc2massf(lua_State* L)
     setGasStateInTable(L, gm, 3, Q);
     // and return a table to the caller.
     lua_newtable(L);
-    foreach ( int i, mf; Q.massf ) {
+    foreach (i, mf; Q.massf) {
         lua_pushnumber(L, mf);
         lua_setfield(L, -2, toStringz(gm.species_name(i)));
     }
@@ -971,14 +971,14 @@ void setGasStateInTable(lua_State* L, GasModel gm, int idx, const(GasState) Q)
     lua_setfield(L, idx, "u");
 
     lua_newtable(L);
-    foreach ( int i, e; Q.u_modes ) {
-        lua_pushnumber(L, e); lua_rawseti(L, -2, i+1);
+    foreach (i, e; Q.u_modes) {
+        lua_pushnumber(L, e); lua_rawseti(L, -2, to!int(i)+1);
     }
     lua_setfield(L, idx, "u_modes");
 
     lua_newtable(L);
-    foreach ( int i, T; Q.T_modes ) {
-        lua_pushnumber(L, T); lua_rawseti(L, -2, i+1);
+    foreach (i, T; Q.T_modes) {
+        lua_pushnumber(L, T); lua_rawseti(L, -2, to!int(i)+1);
     }
     lua_setfield(L, idx, "T_modes");
     
@@ -989,8 +989,8 @@ void setGasStateInTable(lua_State* L, GasModel gm, int idx, const(GasState) Q)
     lua_setfield(L, idx, "k");
 
     lua_newtable(L);
-    foreach (int i, k; Q.k_modes) {
-        lua_pushnumber(L, k); lua_rawseti(L, -2, i+1);
+    foreach (i, k; Q.k_modes) {
+        lua_pushnumber(L, k); lua_rawseti(L, -2, to!int(i)+1);
     }
     lua_setfield(L, idx, "k_modes");
 
@@ -998,7 +998,7 @@ void setGasStateInTable(lua_State* L, GasModel gm, int idx, const(GasState) Q)
     lua_setfield(L, idx, "sigma");
 
     lua_newtable(L);
-    foreach (int i, mf; Q.massf) {
+    foreach (i, mf; Q.massf) {
         lua_pushnumber(L, mf);
         string spName = gm.species_name(i);
         lua_setfield(L, -2, toStringz(spName));

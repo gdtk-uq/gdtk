@@ -1174,9 +1174,9 @@ private:
         get_subregion;
         
         //(Region3 backward equation) preparation to proceed calculation of specific volume  
-        foreach(int i,element;_subregion_char) {
+        foreach(i,element;_subregion_char) {
             if (element==SubRegion) {
-                subregion_i=i;
+                subregion_i=to!int(i);
             }
         }
         //for subregion 3n

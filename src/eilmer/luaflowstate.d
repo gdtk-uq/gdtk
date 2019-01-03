@@ -310,7 +310,7 @@ void pushFlowStateToTable(lua_State* L, int tblIdx, in FlowState fs, GasModel gm
     version(multi_species_gas) {
         // -- massf as key-val table
         lua_newtable(L);
-        foreach (int isp, mf; fs.gas.massf) {
+        foreach (isp, mf; fs.gas.massf) {
             lua_pushnumber(L, mf);
             lua_setfield(L, -2, toStringz(gmodel.species_name(isp)));
         }

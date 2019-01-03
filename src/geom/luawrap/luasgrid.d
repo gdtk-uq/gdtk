@@ -471,9 +471,9 @@ extern(C) int importGridproGrid(lua_State *L)
     }
     auto sgrids = import_gridpro_grid(fname, scale);
     lua_newtable(L);
-    foreach ( int i, grid; sgrids ) {
+    foreach (i, grid; sgrids) {
         structuredGridStore ~= pushObj!(StructuredGrid, StructuredGridMT)(L, grid);
-        lua_rawseti(L, -2, i+1);
+        lua_rawseti(L, -2, to!int(i)+1);
     }
     return 1;
 } // end importGridproGrid()
@@ -496,9 +496,9 @@ extern(C) int importPlot3DGrid(lua_State *L)
     }
     auto sgrids = geom.grid.sgrid.importPlot3DGrid(fname, dim, scale);
     lua_newtable(L);
-    foreach (int i, grid; sgrids) {
+    foreach (i, grid; sgrids) {
         structuredGridStore ~= pushObj!(StructuredGrid, StructuredGridMT)(L, grid);
-        lua_rawseti(L, -2, i+1);
+        lua_rawseti(L, -2, to!int(i)+1);
     }
     return 1;
 } // end importPlot3DGrid()
