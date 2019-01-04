@@ -291,6 +291,16 @@ extern(C) int scale_in_place(lua_State *L)
     return 0;
 }
 
+extern(C) int add_in_place(lua_State *L)
+{
+    // Use as M:dot(other), where other is a matrix object of matching size.
+    // Euqivalent to M = M + other
+    auto M = checkMatrix(L, 1);
+    auto other = checkMatrix(L, 2);
+    M.add(other);
+    return 0;
+}
+
 extern(C) int dotProduct(lua_State *L)
 {
     // Use as result = M:dot(other)
@@ -489,6 +499,8 @@ void registerBBLA(lua_State *L)
     lua_setfield(L, -2, "scale");
     lua_pushcfunction(L, &scale_in_place);
     lua_setfield(L, -2, "scale_in_place");
+    lua_pushcfunction(L, &add_in_place);
+    lua_setfield(L, -2, "add_in_place");
     lua_pushcfunction(L, &dotProduct);
     lua_setfield(L, -2, "dot");
     lua_pushcfunction(L, &dotProduct2);
@@ -568,4 +580,3 @@ assert(math.abs(b2:get(3,0) - b:get(3,0)) < 1.0e-6)
         return 0;
     }
 }
-

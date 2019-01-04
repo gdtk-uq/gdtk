@@ -228,6 +228,14 @@ class Matrix(T) {
                 _data[row][col] *= s;
     }
     
+    @nogc
+    void add(in Matrix rhs)
+    {
+        foreach(row; 0 .. _nrows)
+            foreach(col; 0 .. _ncols)
+                _data[row][col] += rhs._data[row][col];
+    }
+    
     override string toString() {
         string s = "Matrix["; // [TODO] add string form of type T here
         foreach(row; 0 .. _nrows) {
