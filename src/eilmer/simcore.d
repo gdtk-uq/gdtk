@@ -409,6 +409,27 @@ void init_simulation(int tindx, int nextLoadsIndx,
     // this value may get revised on the very first step.
     SimState.dt_global = GlobalConfig.dt_init; 
     //
+    // If we are using Lua supervisory script, fill in some more global
+    // information for the interpreter.
+    if (GlobalConfig.udf_supervisor_file.length > 0) {
+        auto L = GlobalConfig.master_lua_State;
+        lua_pushboolean(L, GlobalConfig.in_mpi_context);
+        lua_setglobal(L, "in_mpi_context");
+        lua_pushnumber(L, GlobalConfig.mpi_size);
+        lua_setglobal(L, "mpi_size");
+        lua_pushnumber(L, GlobalConfig.mpi_rank_for_local_task);
+        lua_setglobal(L, "mpi_rank_for_local_task");
+        lua_pushboolean(L, GlobalConfig.is_master_task);
+        lua_setglobal(L, "is_master_task");
+        // int[] localBlockIds
+        lua_newtable(L);
+        foreach (i, blkid; GlobalConfig.localBlockIds) {
+            lua_pushnumber(L, blkid);
+            lua_rawseti(L, -2, to!int(i+1));
+        }
+        lua_setglobal(L, "localBlockIds");
+    }
+    //
     // Keep our memory foot-print small.
     GC.collect();
     GC.minimize();
@@ -467,7 +488,7 @@ void write_solution_files()
         append(GlobalConfig.base_file_name ~ ".times", writer.data);
     }
     // The user may also have some writing of data to do via their Lua script file.
-    if (GlobalConfig.is_master_task && (GlobalConfig.udf_supervisor_file.length > 0)) {
+    if (GlobalConfig.udf_supervisor_file.length > 0) {
         auto L = GlobalConfig.master_lua_State;
         lua_getglobal(L, "atWriteToFile");
         if (lua_isnil(L, -1)) {
