@@ -193,24 +193,23 @@ public:
         return to!string(repr);
     } // end toString()
 
-    @nogc
-    size_t to_single_index(size_t i, size_t j, size_t k) const
-    in {
-        assert(i < _nidim && j < _njdim && k < _nkdim, "Index out of bounds.");
+    @nogc size_t to_single_index(size_t i, size_t j, size_t k) const
+    {
+        pragma(inline, true);
+        assert (i < _nidim && j < _njdim && k < _nkdim, "Index out of bounds.");
+        return (k*_njdim + j)*_nidim + i; 
     }
-    body {
-        return k*_njdim*_nidim + j*_nidim + i; 
-    } // end to_single_index()
 
     @nogc size_t[3] to_ijk_indices(size_t gid) const
     {
         size_t[3] ijk;
-        size_t k = gid / (_njdim * _nidim);
-        size_t j = (gid - k * (_njdim * _nidim)) / _nidim;
-        size_t i = gid - k * (_njdim * _nidim) - j * _nidim;
+        size_t slabDim = _njdim * _nidim;
+        size_t k = gid / slabDim;
+        size_t j = (gid - k*slabDim) / _nidim;
+        size_t i = gid - k*slabDim - j*_nidim;
         ijk[0] = i; ijk[1] = j; ijk[2] = k;
         return ijk;
-    } // end to_ijk_indices()
+    }
 
     @nogc size_t ijk_0n_indices_to_cell_id(size_t i, size_t j, size_t k=0) const
     // ijk indices into the hypothetical block of active cells.
@@ -230,7 +229,7 @@ public:
         i -= n_ghost_cell_layers;
         j -= n_ghost_cell_layers;
         k = (myConfig.dimensions == 2) ? 0 : k - n_ghost_cell_layers;
-        return k*njcell*nicell + j*nicell + i;
+        return (k*njcell + j)*nicell + i;
     }
     
     @nogc size_t[3] cell_id_to_ijk_indices(size_t id) const
