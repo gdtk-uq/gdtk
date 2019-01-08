@@ -85,7 +85,7 @@ endif
 EILMER_CORE_FILES := simcore.d \
 	fileutil.d json_helper.d \
 	fvcore.d fvcell.d fvvertex.d fvinterface.d \
-	fluxcalc.d onedinterp.d flowgradients.d lsqinterp.d \
+	fluxcalc.d onedinterp.d flowgradients.d lsqinterp.d limiters.d \
 	conservedquantities.d flowstate.d \
 	globalconfig.d globaldata.d \
 	fluidblock.d sfluidblock.d ufluidblock.d \

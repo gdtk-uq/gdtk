@@ -3,7 +3,9 @@
 //
 // See MBCNS workbook 2000/2 page 36 (26-Jan-2001) for formulation.
 // and MBCNS workbook 2005/Apr page 36 for new index labels
- 
+
+module onedinterp;
+
 import std.math;
 import std.stdio;
 import nm.complex;
@@ -15,6 +17,7 @@ import globalconfig;
 import flowstate;
 import fvinterface;
 import fvcell;
+import limiters;
 
 immutable double epsilon_van_albada = 1.0e-12;
 
@@ -65,16 +68,6 @@ public:
         two_lenL0_plus_lenL1 = (2.0*lenL0 + lenL1);
         two_lenR0_plus_lenR1 = (2.0*lenR0 + lenR1);
     } // end both_prepare()
-
-    @nogc number clip_to_limits(number q, number A, number B)
-    // Returns q if q is between the values A and B, else
-    // it returns the closer limit of the range [min(A,B), max(A,B)].
-    {
-        number lower_limit = (A <= B) ? A : B;
-        number upper_limit = (A > B) ? A : B;
-        number qclipped = (q > lower_limit) ? q : lower_limit;
-        return (qclipped <= upper_limit) ? qclipped : upper_limit;
-    } // end clip_to_limits()
 
     @nogc void interp_both_scalar(number qL1, number qL0, number qR0, number qR1,
                                   ref number qL, ref number qR)

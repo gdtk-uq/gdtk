@@ -2,6 +2,8 @@
 // Least-squares interpolation/reconstruction of flow field.
 //
 
+module lsqinterp;
+
 import std.math;
 import std.stdio;
 import std.algorithm;
@@ -17,6 +19,7 @@ import globalconfig;
 import flowstate;
 import fvinterface;
 import fvcell;
+import limiters;
 
 immutable size_t cloud_nmax = 33;
 immutable double ESSENTIALLY_ZERO = 1.0e-50;
@@ -952,35 +955,6 @@ public:
     @nogc void set_interpolation_order(int order)
     {
         myConfig.interpolation_order = order;
-    }
-
-    @nogc number clip_to_limits(number q, number A, number B)
-    // Returns q if q is between the values A and B, else
-    // it returns the closer limit of the range [A,B].
-    {
-        number lower_limit = fmin(A, B);
-        number upper_limit = fmax(A, B);
-        return fmin(upper_limit, fmax(lower_limit, q));
-    } // end clip_to_limits()
-
-    @nogc void min_mod_limit(ref number a, ref number b)
-    // A rough slope limiter.
-    {
-        if (a * b < 0.0) {
-            a = 0.0; b = 0.0;
-            return;
-        }
-        a = copysign(fmin(fabs(a), fabs(b)), a);
-        b = a;
-    }
-
-    @nogc void van_albada_limit(ref number a, ref number b)
-    // A smooth slope limiter.
-    {
-        immutable double eps = 1.0e-12;
-        number s = (a*b + fabs(a*b))/(a*a + b*b + eps);
-        a *= s;
-        b *= s;
     }
 
     @nogc
