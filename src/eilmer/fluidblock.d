@@ -196,7 +196,6 @@ public:
     @nogc abstract void set_interpolation_order(int order);
     abstract void init_lua_globals();
     abstract void init_boundary_conditions(JSONValue json_data);
-    @nogc abstract ref FVCell get_cell(size_t i, size_t j, size_t k=0);
     @nogc abstract ref FVInterface get_ifi(size_t i, size_t j, size_t k=0);
     @nogc abstract ref FVInterface get_ifj(size_t i, size_t j, size_t k=0);
     @nogc abstract ref FVInterface get_ifk(size_t i, size_t j, size_t k=0);

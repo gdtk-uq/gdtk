@@ -83,20 +83,20 @@ void shock_fitting_vertex_velocities(SFluidBlock blk, int step, double sim_time)
                 int neighbourBlock =  ffeBC.neighbourBlock.id;
                 auto nbblk = cast(SFluidBlock) globalFluidBlocks[neighbourBlock];
                 assert(nbblk !is null, "Oops, this should be an SFluidBlock object.");
-                cell_botrght = nbblk.get_cell(nbblk.imin, nbblk.jmax, k);
+                cell_botrght = nbblk.get_cell!()(nbblk.imin, nbblk.jmax, k);
             }
             else // else grab data from neighbour cell in current block
-                cell_botrght = blk.get_cell(i, j-1, k);
+                cell_botrght = blk.get_cell!()(i, j-1, k);
             // if vtx is on block edge then grab cell data from neighbour block
             if (j == blk.jmax+1 && blk.bc[Face.north].type=="exchange_over_full_face") {
                 auto ffeBC = cast(GhostCellFullFaceCopy) blk.bc[Face.north].preReconAction[0];
                 int neighbourBlock =  ffeBC.neighbourBlock.id;
                 auto nbblk = cast(SFluidBlock) globalFluidBlocks[neighbourBlock];
                 assert(nbblk !is null, "Oops, this should be an SFluidBlock object.");
-                cell_toprght = nbblk.get_cell(nbblk.imin, nbblk.jmin, k);
+                cell_toprght = nbblk.get_cell!()(nbblk.imin, nbblk.jmin, k);
             }
             else // else grab data from neighbour cell in current block
-                cell_toprght = blk.get_cell(i, j, k);            
+                cell_toprght = blk.get_cell!()(i, j, k);            
             if (interpolation_order == 2) { 
                 if (j == blk.jmin && blk.bc[Face.south].type =="exchange_over_full_face") {
                     // if reconsturction is true and vtx is on block edge grab rhs cell data from neighbour block
@@ -104,12 +104,12 @@ void shock_fitting_vertex_velocities(SFluidBlock blk, int step, double sim_time)
                     int neighbourBlock =  ffeBC.neighbourBlock.id;
                     auto nbblk = cast(SFluidBlock) globalFluidBlocks[neighbourBlock];
                     assert(nbblk !is null, "Oops, this should be an SFluidBlock object.");
-                    bot_cell_R1 = nbblk.get_cell(nbblk.imin+1, nbblk.jmax, k);
-                    bot_cell_R2 = nbblk.get_cell(nbblk.imin+2, nbblk.jmax, k);
+                    bot_cell_R1 = nbblk.get_cell!()(nbblk.imin+1, nbblk.jmax, k);
+                    bot_cell_R2 = nbblk.get_cell!()(nbblk.imin+2, nbblk.jmax, k);
                 }
                 else { // else if reconstruction is true and vtx is not on block edge
-                    bot_cell_R1 = blk.get_cell(i+1, j-1, k);
-                    bot_cell_R2 = blk.get_cell(i+2, j-1, k);
+                    bot_cell_R1 = blk.get_cell!()(i+1, j-1, k);
+                    bot_cell_R2 = blk.get_cell!()(i+2, j-1, k);
                 }
                 if (j == blk.jmax+1 && blk.bc[Face.north].type=="exchange_over_full_face") {
                     // if reconsturction is true and vtx is on block edge grab rhs cell data from neighbour block
@@ -117,12 +117,12 @@ void shock_fitting_vertex_velocities(SFluidBlock blk, int step, double sim_time)
                     int neighbourBlock =  ffeBC.neighbourBlock.id;
                     auto nbblk = cast(SFluidBlock) globalFluidBlocks[neighbourBlock];
                     assert(nbblk !is null, "Oops, this should be an SFluidBlock object.");
-                    top_cell_R1 = nbblk.get_cell(nbblk.imin+1, nbblk.jmin, k);
-                    top_cell_R2 = nbblk.get_cell(nbblk.imin+2, nbblk.jmin, k);
+                    top_cell_R1 = nbblk.get_cell!()(nbblk.imin+1, nbblk.jmin, k);
+                    top_cell_R2 = nbblk.get_cell!()(nbblk.imin+2, nbblk.jmin, k);
                 }
                 else { // else if reconstruction is true and vtx is not on block edge
-                    top_cell_R1 = blk.get_cell(i+1, j, k);
-                    top_cell_R2 = blk.get_cell(i+2, j, k);
+                    top_cell_R1 = blk.get_cell!()(i+1, j, k);
+                    top_cell_R2 = blk.get_cell!()(i+2, j, k);
                 }
                 // perform reconstruction
                 rho_recon_top = scalar_reconstruction(cell_toprght.fs.gas.rho,  top_cell_R1.fs.gas.rho,
@@ -163,7 +163,7 @@ void shock_fitting_vertex_velocities(SFluidBlock blk, int step, double sim_time)
                 p_lft = inflow.gas.p;           // pressure
                 // loop over neighbouring interfaces (above vtx first, then below vtx)
                 foreach (int jOffSet; [0, 1]) {
-                    cell =  blk.get_cell(i, j-jOffSet, k);
+                    cell =  blk.get_cell!()(i, j-jOffSet, k);
                     iface_neighbour = blk.get_ifi(i,j-jOffSet,k);
                     // For the case where two blocks connect (either on the south or north faces) we need to reach across to the neighbour block and
                     // retrieve the neighbouring vertex and interface to ensure the vertices on the connecting interface move together and
@@ -173,7 +173,7 @@ void shock_fitting_vertex_velocities(SFluidBlock blk, int step, double sim_time)
                         int neighbourBlock =  ffeBC.neighbourBlock.id;
                         auto nbblk = cast(SFluidBlock) globalFluidBlocks[neighbourBlock];
                         assert(nbblk !is null, "Oops, this should be an SFluidBlock object.");
-                        cell = nbblk.get_cell(nbblk.imin, nbblk.jmax, k);
+                        cell = nbblk.get_cell!()(nbblk.imin, nbblk.jmax, k);
                         iface_neighbour = nbblk.get_ifi(nbblk.imin, nbblk.jmax, k);
                     }
                     if (j == blk.jmax+1 && blk.bc[Face.north].type=="exchange_over_full_face" && jOffSet == 0) {
@@ -181,12 +181,12 @@ void shock_fitting_vertex_velocities(SFluidBlock blk, int step, double sim_time)
                         int neighbourBlock =  ffeBC.neighbourBlock.id;
                         auto nbblk = cast(SFluidBlock) globalFluidBlocks[neighbourBlock];
                         assert(nbblk !is null, "Oops, this should be an SFluidBlock object.");
-                        cell = nbblk.get_cell(nbblk.imin, nbblk.jmin, k);
+                        cell = nbblk.get_cell!()(nbblk.imin, nbblk.jmin, k);
                         iface_neighbour = nbblk.get_ifi(nbblk.imin, nbblk.jmin, k);
                     }
                     if (interpolation_order == 2) {
-                        cell_R1 = blk.get_cell(i+1, j-jOffSet, k);
-                        cell_R2 =  blk.get_cell(i+2, j-jOffSet, k);
+                        cell_R1 = blk.get_cell!()(i+1, j-jOffSet, k);
+                        cell_R2 =  blk.get_cell!()(i+2, j-jOffSet, k);
                         // As suggested in onedinterp.d we are transforming all cells velocities to a local reference frame relative to the
                         // interface where the reconstruction is taking place
                         cell.fs.vel.transform_to_local_frame(cell.iface[Face.west].n, cell.iface[Face.west].t1, cell.iface[Face.west].t2);

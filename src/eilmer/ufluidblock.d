@@ -118,13 +118,8 @@ public:
         return to!string(repr);
     }
 
-    // The following 5 access methods are here to match the structured-grid API
+    // The following 4 access methods are here to match the structured-grid API
     // but they're really not intended for serious use on the unstructured-grid.
-    @nogc 
-    override ref FVCell get_cell(size_t i, size_t j, size_t k=0) 
-    {
-        return cells[i]; // j, k ignored
-    }
     @nogc 
     override ref FVInterface get_ifi(size_t i, size_t j, size_t k=0) 
     {

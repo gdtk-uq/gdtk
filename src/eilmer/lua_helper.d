@@ -86,7 +86,15 @@ extern(C) int luafn_sampleFluidCell(lua_State *L)
     auto k = lua_tointeger(L, 4);
 
     // Grab the appropriate cell
-    auto cell = globalFluidBlocks[blkId].get_cell(i, j, k);
+    auto sblk = cast(SFluidBlock) globalFluidBlocks[blkId];
+    FVCell cell;
+    if (sblk) {
+        cell = sblk.get_cell!()(i, j, k);
+    } else {
+        string msg = "Not implemented.";
+        msg ~= " You have asked for an ijk-index cell in an unstructured-grid block.";
+        luaL_error(L, msg.toStringz);
+    }
     
     // Return the interesting bits as a table.
     lua_newtable(L);
