@@ -219,7 +219,7 @@ public:
     // Note that the hypothetical block of active cells is embedded in
     // a larger array that includes surrounding layers of ghost cells.
     {
-        return k*njcell*nicell + j*nicell + i;
+        return (k*njcell + j)*nicell + i;
     }
 
     @nogc size_t ijk_indices_to_cell_id(size_t i, size_t j, size_t k=0) const
