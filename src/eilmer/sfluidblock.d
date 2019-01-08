@@ -249,26 +249,22 @@ public:
     {
         return _ctr[to_single_index!()(i,j,k)];
     }
-    @nogc 
-    override ref FVInterface get_ifi(size_t i, size_t j, size_t k=0) 
+    @nogc ref FVInterface get_ifi(size_t i, size_t j, size_t k=0) 
     {
         pragma(inline, true);
         return _ifi[to_single_index!()(i,j,k)];
     }
-    @nogc
-    override ref FVInterface get_ifj(size_t i, size_t j, size_t k=0)
+    @nogc ref FVInterface get_ifj(size_t i, size_t j, size_t k=0)
     {
         pragma(inline, true);
         return _ifj[to_single_index!()(i,j,k)];
     }
-    @nogc
-    override ref FVInterface get_ifk(size_t i, size_t j, size_t k=0)
+    @nogc ref FVInterface get_ifk(size_t i, size_t j, size_t k=0)
     {
         pragma(inline, true);
         return _ifk[to_single_index!()(i,j,k)];
     }
-    @nogc
-    override ref FVVertex get_vtx(size_t i, size_t j, size_t k=0)
+    @nogc ref FVVertex get_vtx(size_t i, size_t j, size_t k=0)
     {
         pragma(inline, true);
         return _vtx[to_single_index!()(i,j,k)];

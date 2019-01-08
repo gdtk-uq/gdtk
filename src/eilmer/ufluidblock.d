@@ -118,29 +118,6 @@ public:
         return to!string(repr);
     }
 
-    // The following 4 access methods are here to match the structured-grid API
-    // but they're really not intended for serious use on the unstructured-grid.
-    @nogc 
-    override ref FVInterface get_ifi(size_t i, size_t j, size_t k=0) 
-    {
-        return faces[i];
-    }
-    @nogc
-    override ref FVInterface get_ifj(size_t i, size_t j, size_t k=0)
-    {
-        return faces[i];
-    }
-    @nogc
-    override ref FVInterface get_ifk(size_t i, size_t j, size_t k=0)
-    {
-        return faces[i];
-    }
-    @nogc
-    override ref FVVertex get_vtx(size_t i, size_t j, size_t k=0)
-    {
-        return vertices[i];
-    }
-
     override void find_enclosing_cell(ref const(Vector3) p, ref size_t indx, ref bool found)
     {
         grid.find_enclosing_cell(p, indx, found); // delegate to the grid object

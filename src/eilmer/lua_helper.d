@@ -24,7 +24,8 @@ import luaflowstate;
 import globalconfig;
 import globaldata;
 import solidfvcell;
-import sfluidblock: SFluidBlock;
+import sfluidblock;
+import ufluidblock;
 
 // -----------------------------------------------------
 // Convenience functions for user's Lua script
@@ -114,12 +115,16 @@ extern(C) int luafn_sampleFluidFace(lua_State *L)
 
     FVInterface face;
     // Grab the appropriate face
+    auto sblk = cast(SFluidBlock) globalFluidBlocks[blkId];
+    auto ublk = cast(UFluidBlock) globalFluidBlocks[blkId];
     switch (which_face) {
-    case "i": face = globalFluidBlocks[blkId].get_ifi(i, j, k); break;
-    case "j": face = globalFluidBlocks[blkId].get_ifj(i, j, k); break;
-    case "k": face = globalFluidBlocks[blkId].get_ifk(i, j, k); break;
-    case "u": face = globalFluidBlocks[blkId].get_ifi(i, j, k); break; // unstructured grid
-    default:  face = globalFluidBlocks[blkId].get_ifi(i, j, k);
+    case "i": face = sblk.get_ifi(i, j, k); break;
+    case "j": face = sblk.get_ifj(i, j, k); break;
+    case "k": face = sblk.get_ifk(i, j, k); break;
+    case "u": face = ublk.faces[i]; break; // unstructured grid
+    default:
+        string msg = "You have asked for an unknown type of face.";
+        luaL_error(L, msg.toStringz);
     }
     // Return the interesting bits as a table.
     lua_newtable(L);

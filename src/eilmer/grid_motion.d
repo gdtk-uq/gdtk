@@ -21,6 +21,7 @@ import geom;
 import geom.luawrap;
 import fluidblock;
 import sfluidblock;
+import ufluidblock;
 import std.stdio;
 
 
@@ -332,7 +333,15 @@ extern(C) int luafn_getVtxPosition(lua_State *L)
     auto k = lua_tointeger(L, 4);
 
     // Grab the appropriate vtx
-    auto vtx = globalFluidBlocks[blkId].get_vtx(i, j, k);
+    FVVertex vtx;
+    auto sblk = cast(SFluidBlock) globalFluidBlocks[blkId];
+    if (sblk) {
+        vtx = sblk.get_vtx(i, j, k);
+    } else {
+        string msg = "Not implemented.";
+        msg ~= " You have asked for an ijk-index vertex in an unstructured-grid block.";
+        luaL_error(L, msg.toStringz);
+    }
     
     // Return the interesting bits as a table with entries x, y, z.
     lua_newtable(L);
@@ -351,7 +360,15 @@ extern(C) int luafn_getVtxPositionXYZ(lua_State *L)
     auto k = lua_tointeger(L, 4);
 
     // Grab the appropriate vtx
-    auto vtx = globalFluidBlocks[blkId].get_vtx(i, j, k);
+    FVVertex vtx;
+    auto sblk = cast(SFluidBlock) globalFluidBlocks[blkId];
+    if (sblk) {
+        vtx = sblk.get_vtx(i, j, k);
+    } else {
+        string msg = "Not implemented.";
+        msg ~= " You have asked for an ijk-index vertex in an unstructured-grid block.";
+        luaL_error(L, msg.toStringz);
+    }
     
     // Return the components x, y, z on the stack.
     lua_pushnumber(L, vtx.pos[0].x.re);
@@ -813,22 +830,40 @@ extern(C) int luafn_setVtxVelocity(lua_State* L)
     auto vel = checkVector3(L, 1);
     auto blkId = lua_tointeger(L, 2);
 
-    if ( narg == 3 ) {
+    if (narg == 3) {
         auto vtxId = lua_tointeger(L, 3);
-        globalFluidBlocks[blkId].vertices[vtxId].vel[0].set(vel);
-    }
-    else if ( narg == 4 ) {
+        auto ublk = cast(UFluidBlock) globalFluidBlocks[blkId];
+        if (ublk) {
+            ublk.vertices[vtxId].vel[0].set(vel);
+        } else {
+            string msg = "Oops...";
+            msg ~= " You have asked for an i-index vertex in a structured-grid block.";
+            luaL_error(L, msg.toStringz);
+        }
+    } else if (narg == 4) {
         auto i = lua_tointeger(L, 3);
         auto j = lua_tointeger(L, 4);
-        globalFluidBlocks[blkId].get_vtx(i,j).vel[0].set(vel);
-    }
-    else if ( narg >= 5 ) {
+        auto sblk = cast(SFluidBlock) globalFluidBlocks[blkId];
+        if (sblk) {
+            sblk.get_vtx(i,j).vel[0].set(vel);
+        } else {
+            string msg = "Oops...";
+            msg ~= " You have asked for an ij-index vertex in an unstructured-grid block.";
+            luaL_error(L, msg.toStringz);
+        }
+    } else if (narg >= 5) {
         auto i = lua_tointeger(L, 3);
         auto j = lua_tointeger(L, 4);
         auto k = lua_tointeger(L, 5);
-        globalFluidBlocks[blkId].get_vtx(i,j,k).vel[0].set(vel);
-    }
-    else {
+        auto sblk = cast(SFluidBlock) globalFluidBlocks[blkId];
+        if (sblk) {
+            sblk.get_vtx(i,j,k).vel[0].set(vel);
+        } else {
+            string msg = "Oops...";
+            msg ~= " You have asked for an ijk-index vertex in an unstructured-grid block.";
+            luaL_error(L, msg.toStringz);
+        }
+    } else {
         string errMsg = "ERROR: Too few arguments passed to luafn: setVtxVelocity()\n";
         luaL_error(L, errMsg.toStringz);
     }
@@ -865,22 +900,40 @@ extern(C) int luafn_setVtxVelocityXYZ(lua_State* L)
     double velz = lua_tonumber(L, 3);
     auto blkId = lua_tointeger(L, 4);
 
-    if ( narg == 5 ) {
+    if (narg == 5) {
         auto vtxId = lua_tointeger(L, 5);
-        globalFluidBlocks[blkId].vertices[vtxId].vel[0].set(velx, vely, velz);
-    }
-    else if ( narg == 6 ) {
+        auto ublk = cast(UFluidBlock) globalFluidBlocks[blkId];
+        if (ublk) {
+            ublk.vertices[vtxId].vel[0].set(velx, vely, velz);
+        } else {
+            string msg = "Oops...";
+            msg ~= " You have asked for an i-index vertex in a structured-grid block.";
+            luaL_error(L, msg.toStringz);
+        }
+    } else if (narg == 6) {
         auto i = lua_tointeger(L, 5);
         auto j = lua_tointeger(L, 6);
-        globalFluidBlocks[blkId].get_vtx(i,j).vel[0].set(velx, vely, velz);
-    }
-    else if ( narg >= 7 ) {
+        auto sblk = cast(SFluidBlock) globalFluidBlocks[blkId];
+        if (sblk) {
+            sblk.get_vtx(i,j).vel[0].set(velx, vely, velz);
+        } else {
+            string msg = "Oops...";
+            msg ~= " You have asked for an ij-index vertex in an unstructured-grid block.";
+            luaL_error(L, msg.toStringz);
+        }
+    } else if (narg >= 7) {
         auto i = lua_tointeger(L, 5);
         auto j = lua_tointeger(L, 6);
         auto k = lua_tointeger(L, 7);
-        globalFluidBlocks[blkId].get_vtx(i,j,k).vel[0].set(velx, vely, velz);
-    }
-    else {
+        auto sblk = cast(SFluidBlock) globalFluidBlocks[blkId];
+        if (sblk) {
+            sblk.get_vtx(i,j,k).vel[0].set(velx, vely, velz);
+        } else {
+            string msg = "Oops...";
+            msg ~= " You have asked for an ijk-index vertex in an unstructured-grid block.";
+            luaL_error(L, msg.toStringz);
+        }
+    } else {
         string errMsg = "ERROR: Too few arguments passed to luafn: setVtxVelocityXYZ()\n";
         luaL_error(L, errMsg.toStringz);
     }
