@@ -193,10 +193,9 @@ public:
         return to!string(repr);
     } // end toString()
 
-    @nogc size_t to_single_index(size_t i, size_t j, size_t k) const
+    @nogc size_t to_single_index()(size_t i, size_t j, size_t k) const
     {
-        pragma(inline, true);
-        assert (i < _nidim && j < _njdim && k < _nkdim, "Index out of bounds.");
+        assert(i < _nidim && j < _njdim && k < _nkdim, "Index out of bounds.");
         return (k*_njdim + j)*_nidim + i; 
     }
 
@@ -249,27 +248,32 @@ public:
     @nogc
     override ref FVCell get_cell(size_t i, size_t j, size_t k=0) 
     {
-        return _ctr[to_single_index(i,j,k)];
+        pragma(inline, true);
+        return _ctr[to_single_index!()(i,j,k)];
     }
     @nogc 
     override ref FVInterface get_ifi(size_t i, size_t j, size_t k=0) 
     {
-        return _ifi[to_single_index(i,j,k)];
+        pragma(inline, true);
+        return _ifi[to_single_index!()(i,j,k)];
     }
     @nogc
     override ref FVInterface get_ifj(size_t i, size_t j, size_t k=0)
     {
-        return _ifj[to_single_index(i,j,k)];
+        pragma(inline, true);
+        return _ifj[to_single_index!()(i,j,k)];
     }
     @nogc
     override ref FVInterface get_ifk(size_t i, size_t j, size_t k=0)
     {
-        return _ifk[to_single_index(i,j,k)];
+        pragma(inline, true);
+        return _ifk[to_single_index!()(i,j,k)];
     }
     @nogc
     override ref FVVertex get_vtx(size_t i, size_t j, size_t k=0)
     {
-        return _vtx[to_single_index(i,j,k)];
+        pragma(inline, true);
+        return _vtx[to_single_index!()(i,j,k)];
     }
 
     override void find_enclosing_cell(ref const(Vector3) p, ref size_t indx, ref bool found)
