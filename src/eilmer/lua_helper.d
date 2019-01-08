@@ -118,9 +118,9 @@ extern(C) int luafn_sampleFluidFace(lua_State *L)
     auto sblk = cast(SFluidBlock) globalFluidBlocks[blkId];
     auto ublk = cast(UFluidBlock) globalFluidBlocks[blkId];
     switch (which_face) {
-    case "i": face = sblk.get_ifi(i, j, k); break;
-    case "j": face = sblk.get_ifj(i, j, k); break;
-    case "k": face = sblk.get_ifk(i, j, k); break;
+    case "i": face = sblk.get_ifi!()(i, j, k); break;
+    case "j": face = sblk.get_ifj!()(i, j, k); break;
+    case "k": face = sblk.get_ifk!()(i, j, k); break;
     case "u": face = ublk.faces[i]; break; // unstructured grid
     default:
         string msg = "You have asked for an unknown type of face.";

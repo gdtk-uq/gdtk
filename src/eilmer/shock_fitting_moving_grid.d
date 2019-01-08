@@ -51,7 +51,7 @@ void shock_fitting_vertex_velocities(SFluidBlock blk, int step, double sim_time)
     for ( size_t k = blk.kmin; k <= krangemax; ++k ) {
         for ( size_t j = blk.jmin; j <= blk.jmax+2; ++j ) {    
             for ( size_t i = blk.imin; i <= blk.imax+2; ++i ) {
-                vtx = blk.get_vtx(i,j,k);
+                vtx = blk.get_vtx!()(i,j,k);
                 vtx.vel[0].clear();
             }
         }
@@ -68,9 +68,9 @@ void shock_fitting_vertex_velocities(SFluidBlock blk, int step, double sim_time)
     for ( size_t k = blk.kmin; k <= krangemax; ++k ) {
         for ( size_t j = blk.jmin; j <= blk.jmax+1; ++j ) {
             size_t i = blk.imin;
-            vtx = blk.get_vtx(i,j,k);
-            vtx_left = blk.get_vtx(i-1,j,k);
-            vtx_right = blk.get_vtx(i+1,j,k);
+            vtx = blk.get_vtx!()(i,j,k);
+            vtx_left = blk.get_vtx!()(i-1,j,k);
+            vtx_right = blk.get_vtx!()(i+1,j,k);
             /++ the next several lines are necessarily bulky, what we are doing here is estimating
              ++ a density value (rho) to compare with the inflow density for the shock detector.
              ++ This estimation can take on many different forms depending on whether the current
@@ -164,7 +164,7 @@ void shock_fitting_vertex_velocities(SFluidBlock blk, int step, double sim_time)
                 // loop over neighbouring interfaces (above vtx first, then below vtx)
                 foreach (int jOffSet; [0, 1]) {
                     cell =  blk.get_cell!()(i, j-jOffSet, k);
-                    iface_neighbour = blk.get_ifi(i,j-jOffSet,k);
+                    iface_neighbour = blk.get_ifi!()(i,j-jOffSet,k);
                     // For the case where two blocks connect (either on the south or north faces) we need to reach across to the neighbour block and
                     // retrieve the neighbouring vertex and interface to ensure the vertices on the connecting interface move together and
                     // do not move independently
@@ -174,7 +174,7 @@ void shock_fitting_vertex_velocities(SFluidBlock blk, int step, double sim_time)
                         auto nbblk = cast(SFluidBlock) globalFluidBlocks[neighbourBlock];
                         assert(nbblk !is null, "Oops, this should be an SFluidBlock object.");
                         cell = nbblk.get_cell!()(nbblk.imin, nbblk.jmax, k);
-                        iface_neighbour = nbblk.get_ifi(nbblk.imin, nbblk.jmax, k);
+                        iface_neighbour = nbblk.get_ifi!()(nbblk.imin, nbblk.jmax, k);
                     }
                     if (j == blk.jmax+1 && blk.bc[Face.north].type=="exchange_over_full_face" && jOffSet == 0) {
                         auto ffeBC = cast(GhostCellFullFaceCopy) blk.bc[Face.north].preReconAction[0];
@@ -182,7 +182,7 @@ void shock_fitting_vertex_velocities(SFluidBlock blk, int step, double sim_time)
                         auto nbblk = cast(SFluidBlock) globalFluidBlocks[neighbourBlock];
                         assert(nbblk !is null, "Oops, this should be an SFluidBlock object.");
                         cell = nbblk.get_cell!()(nbblk.imin, nbblk.jmin, k);
-                        iface_neighbour = nbblk.get_ifi(nbblk.imin, nbblk.jmin, k);
+                        iface_neighbour = nbblk.get_ifi!()(nbblk.imin, nbblk.jmin, k);
                     }
                     if (interpolation_order == 2) {
                         cell_R1 = blk.get_cell!()(i+1, j-jOffSet, k);
@@ -266,14 +266,14 @@ void shock_fitting_vertex_velocities(SFluidBlock blk, int step, double sim_time)
     // Next update the internal vertex velocities (these are slaves dervied from the WEST boundary master velocities) 
     for ( size_t k = blk.kmin; k <= krangemax; ++k ) {
         for ( size_t j = blk.jmin; j <= blk.jmax+1; ++j ) {
-            Vector3 vel_max = blk.get_vtx(blk.imin, j, k).vel[0];
+            Vector3 vel_max = blk.get_vtx!()(blk.imin, j, k).vel[0];
             // Set up a linear weighting on fraction of distance from east boundary back to west boundary.
             number[300] distance;
             assert(300 > blk.imax+1, "my distance array is not big enough");
             distance[blk.imax+1] = 0.0;
             for (size_t i = blk.imax; i >= blk.imin; --i) {
-                vtx =  blk.get_vtx(i,j,k);
-                vtx_right = blk.get_vtx(i+1,j,k);
+                vtx =  blk.get_vtx!()(i,j,k);
+                vtx_right = blk.get_vtx!()(i+1,j,k);
                 Vector3 delta = vtx.pos[0] - vtx_right.pos[0];
                 distance[i] = geom.abs(delta) + distance[i+1];
             }
@@ -282,15 +282,15 @@ void shock_fitting_vertex_velocities(SFluidBlock blk, int step, double sim_time)
                 distance[i] /= west_distance;
             }
             for ( size_t i = blk.imin+1; i <= blk.imax; ++i ) {
-                vtx = blk.get_vtx(i,j,k);
-                vtx_left = blk.get_vtx(i-1,j,k);
-                vtx_right = blk.get_vtx(i+1,j,k);
+                vtx = blk.get_vtx!()(i,j,k);
+                vtx_left = blk.get_vtx!()(i-1,j,k);
+                vtx_right = blk.get_vtx!()(i+1,j,k);
                 temp_vel = distance[i]*vel_max; // we used to call weighting function here
                 unit_d = correct_direction(unit_d, vtx.pos[0], vtx_left.pos[0], vtx_right.pos[0], i, blk.imin, blk.imax);
                 temp_vel = dot(temp_vel, unit_d)*unit_d;
                 vtx.vel[0] = temp_vel;
             }
-            vtx = blk.get_vtx(blk.imax+1,j,k); // east boundary vertex is fixed
+            vtx = blk.get_vtx!()(blk.imax+1,j,k); // east boundary vertex is fixed
             vtx.vel[0].clear();
         }
     }
