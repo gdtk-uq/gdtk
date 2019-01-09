@@ -44,24 +44,25 @@ immutable double H_MIN = 1.0e-15; // Minimum allowable step size
 enum ResultOfStep { success, failure };
 
 final class ElectronicallySpecificKinetics : ThermochemicalReactor {
-    this(string macroFiles, string elecFiles, GasModel gmodel)
+    this(string listOfFiles, GasModel gmodel)
     {   
-        auto L_macro = init_lua_State();
-        doLuaFile(L_macro, macroFiles);
-        auto energyExchFile = getString(L_macro,LUA_GLOBALSINDEX, "energyExchFile");
-        auto chemFile = getString(L_macro,LUA_GLOBALSINDEX, "chemFile");
-        auto twotemperaturegmodel = getString(L_macro,LUA_GLOBALSINDEX,"macro_species_filename");
+
+        auto L_filenames = init_lua_State();
+        doLuaFile(L_filenames,listOfFiles);
+
+        auto energyExchFile = getString(L_filenames, LUA_GLOBALSINDEX, "energyExchFile");
+        auto chemFile = getString(L_filenames,LUA_GLOBALSINDEX, "chemFile");
+        auto twotemperaturegmodel = getString(L_filenames,LUA_GLOBALSINDEX,"macro_species_filename");
+        auto ESK_N_Filename = getString(L_filenames,LUA_GLOBALSINDEX, "ESK_N_Filename");
+        auto ESK_O_Filename = getString(L_filenames,LUA_GLOBALSINDEX, "ESK_O_Filename");
+
+        _n_N_species = getInt(L_filenames,LUA_GLOBALSINDEX,"number_N_species");
+        _n_O_species = getInt(L_filenames,LUA_GLOBALSINDEX,"number_O_species");
+        _n_elec_species = _n_N_species + _n_O_species;
+        
         auto L_TT = init_lua_State();
         doLuaFile(L_TT,twotemperaturegmodel);
-
-        auto L_elec = init_lua_State();
-        doLuaFile(L_elec, macroFiles);
-        auto ESK_N_Filename = getString(L_elec,LUA_GLOBALSINDEX, "ESK_N_Filename");
-        auto ESK_O_Filename = getString(L_elec,LUA_GLOBALSINDEX, "ESK_O_Filename");
-        _n_N_species = getInt(L_elec,LUA_GLOBALSINDEX,"Number of N Species");
-        _n_O_species = getInt(L_elec,LUA_GLOBALSINDEX,"Number of O Species");
-
-
+        
         // Initialise much of the macro species data
         auto macro_gmodel = new TwoTemperatureAir(L_TT);
         _macroAirModel = cast(TwoTemperatureAir) macro_gmodel;
@@ -79,7 +80,7 @@ final class ElectronicallySpecificKinetics : ThermochemicalReactor {
             throw new ThermochemicalReactorUpdateException(errMsg);
         }
 
-        _n_macro_species = _macroAirModel.n_species - _n_N_species - _n_O_species + 2;
+        _n_macro_species = _macroAirModel.n_species;
 
         _macro_Q = new GasState(macro_gmodel);
         _macro_Qinit = new GasState(macro_gmodel);
@@ -91,10 +92,11 @@ final class ElectronicallySpecificKinetics : ThermochemicalReactor {
 
         // Initialise the electronic data
         _numden.length = _fullAirModel.n_species;
-        _numden_input.length = _n_N_species + _n_O_species + 1;
-        _numden_output.length = _n_N_species + _n_O_species + 1;
+        _numden_input.length = _n_N_species + _n_O_species + 3;
+        _numden_output.length = _n_N_species + _n_O_species + 3;
 
         //Need to construct the reaction rate parameters from file.
+        
         PopulateRateFits(ESK_N_Filename,ESK_O_Filename);
         kinetics.electronic_state_solver.Init(full_rate_fit, [_n_N_species,_n_O_species]);
     }
@@ -111,11 +113,13 @@ final class ElectronicallySpecificKinetics : ThermochemicalReactor {
         double dummyDouble;
         number uTotal = _macro_Q.u + _macro_Q.u_modes[0];
         // 1. Perform chemistry update.
+
         _macro_chemUpdate(_macro_Q, tInterval, dtChemSuggest, dummyDouble, params);
+        
         debug {
-            writeln("--- 1 ---");
-            writefln("uTotal= %.12e u= %.12e uv= %.12e", uTotal, _macro_Q.u, _macro_Q.u_modes[0]);
-            writefln("T= %.12e  Tv= %.12e", _macro_Q.T, _macro_Q.T_modes[0]);
+            // writeln("--- 1 ---");
+            // writefln("uTotal= %.12e u= %.12e uv= %.12e", uTotal, _macro_Q.u, _macro_Q.u_modes[0]);
+            // writefln("T= %.12e  Tv= %.12e", _macro_Q.T, _macro_Q.T_modes[0]);
         }
         // Changing mass fractions does not change the temperature 
         // of the temperatures associated with internal structure.
@@ -126,9 +130,9 @@ final class ElectronicallySpecificKinetics : ThermochemicalReactor {
         try {
             _macroAirModel.update_thermo_from_rhou(_macro_Q);
             debug {
-                writeln("--- 2 ---");
-                writefln("uTotal= %.12e u= %.12e uv= %.12e", uTotal, _macro_Q.u, _macro_Q.u_modes[0]);
-                writefln("T= %.12e  Tv= %.12e", _macro_Q.T, _macro_Q.T_modes[0]);
+                // writeln("--- 2 ---");
+                // writefln("uTotal= %.12e u= %.12e uv= %.12e", uTotal, _macro_Q.u, _macro_Q.u_modes[0]);
+                // writefln("T= %.12e  Tv= %.12e", _macro_Q.T, _macro_Q.T_modes[0]);
             }
         }
         catch (GasModelException err) {
@@ -142,13 +146,14 @@ final class ElectronicallySpecificKinetics : ThermochemicalReactor {
         // These values won't change during the energy update
         // since the composition does not change
         // during energy exhange.
-        _gmodel.massf2molef(_macro_Q, _macro_molef);
-        _gmodel.massf2numden(_macro_Q, _macro_numden);
+        
+        _macroAirModel.massf2molef(_macro_Q, _macro_molef);
+        _macroAirModel.massf2numden(_macro_Q, _macro_numden);
         try {
             energyUpdate(_macro_Q, tInterval, dtThermSuggest);
             debug {
-                writeln("--- 3 ---");
-                writeln(_macro_Q);
+                // writeln("--- 3 ---");
+                // writeln(_macro_Q);
             }
         }
         catch (GasModelException err) {
@@ -159,28 +164,22 @@ final class ElectronicallySpecificKinetics : ThermochemicalReactor {
 
         Update_Electronic_State(Q,_macro_Q);
         //update the electronic distribution
-        
         initialEnergy = energyInNoneq(Q);
         _gmodel.massf2numden(Q, _numden); //Convert from mass fraction to number density
 
         //Remember, gas model always initialised in this order: 
         //N, O, N2, O2, NO, N+, O+, N2+, O2+, NO+, e-
         //input in electronic solver takes the form
-        //[N1, N2, N3 .... Nn, O1, O2, O3 ... On, e-]
+        //[N1, N2, N3 .... Nn, N+, O1, O2, O3 ... On, O+, e-]
 
-        foreach(int i;0 .. _n_N_species+_n_O_species) { //number density in state solver in #/cm^3
-            _numden_input[i] = _numden[i] / 1e6;
-        }
-        _numden_input[$-1] = _numden[$-1] / 1e6;
+        update_input_from_numden(_numden_input, _numden);
 
-        // 3. 
         Electronic_Solve(_numden_input, _numden_output, Q.T_modes[0], tInterval, dtChemSuggest);
-        // 4. 
-        foreach (int i; 0 .. _n_N_species+_n_O_species) {//convert back to number density in #/m^3
-            _numden[i] = _numden_output[i] * 1e6;
-        }
-        _numden[$-1] = _numden_output[$-1] * 1e6;
+        
+        update_numden_from_output(_numden,_numden_output);
+
         _gmodel.numden2massf(_numden,Q);
+
         Q.u_modes[0] -= energyInNoneq(Q) - initialEnergy;
 
     }
@@ -214,7 +213,7 @@ private:
     number[] _numden;
     number[] _numden_input;
     number[] _numden_output;
-    int _n_N_species,_n_O_species;
+    int _n_N_species, _n_O_species, _n_elec_species;
 
     //macro functions
     void initModel(string energyExchFile)
@@ -249,13 +248,13 @@ private:
 
             lua_getfield(L, -1, "absTolerance");
             if (!lua_isnil(L, -1)) {
-                _energyAbsTolerance = to!int(luaL_checknumber(L, -1));
+                _energyAbsTolerance = to!double(luaL_checknumber(L, -1));
             }
             lua_pop(L, 1);
 
             lua_getfield(L, -1, "relTolerance");
             if (!lua_isnil(L, -1)) {
-                _energyRelTolerance = to!int(luaL_checknumber(L, -1));
+                _energyRelTolerance = to!double(luaL_checknumber(L, -1));
             }
             lua_pop(L, 1);
         }
@@ -303,7 +302,6 @@ private:
         // We borrow the algorithm from ChemistryUpdate.opCall()
         // Take a copy of what's passed in, in case something goes wrong
         _macro_Qinit.copy_values_from(Q);
-
         // 1. Sort out the time step for possible subcycling.
         double t = 0.0;
         double h;
@@ -439,7 +437,7 @@ private:
         number tauMW = sum/totalND; // <-- p*tauMW (in atm.s)
         tauMW *= P_atm/Q.p;
         // 2. Compute Park value for high-temperature correction
-        number nd = _numden[isp];
+        number nd = _macro_numden[isp];
         double kB = Boltzmann_constant;
         number cBar_s = sqrt(8*kB*Q.T/(to!double(PI)*_particleMass[isp]));
         double sigma_s = 1e-20; // Gnoffo p. 17 gives 1.0e-16 cm^2,
@@ -495,7 +493,6 @@ private:
 
         number k1 = evalRate(Q);
         Q.u_modes[0] = _macro_Q0.u_modes[0] + h*(a21*k1);
-
         Q.u = _uTotal - Q.u_modes[0];
         _macroAirModel.update_thermo_from_rhou(Q);
 
@@ -568,10 +565,37 @@ private:
         return ResultOfStep.failure;
     }
 
-
-
     //electronic functions
     
+    @nogc
+    void update_input_from_numden(number[] elec_numden, number[] full_numden)
+    {   
+        foreach(int i;0 .. _n_N_species) { //number density in state solver in #/cm^3
+            elec_numden[i] = full_numden[i] / 1e6;
+        }
+        elec_numden[_n_N_species] = full_numden[_n_elec_species + 3] / 1e6;
+
+        foreach(int i;_n_N_species .. _n_elec_species) {
+            elec_numden[i+1] = full_numden[i] / 1e6;
+        }
+        elec_numden[_n_elec_species+1] = full_numden[_n_elec_species + 4] / 1e6;
+        elec_numden[$-1] = full_numden[$-1] / 1e6;
+    }
+
+    @nogc update_numden_from_output(number[] full_numden, number[] elec_numden)
+    { // Remember - N1, N2, ..., O1, O2, ..., N2, O2, NO, N+, O+, N2+, O2+, NO+, e
+        foreach (int i;0 .. _n_N_species) { // Do N
+            full_numden[i] = elec_numden[i] * 1e6;
+        }
+        full_numden[_n_elec_species + 3] = elec_numden[_n_N_species] * 1e6; //Do N+
+
+        foreach (int i; _n_N_species .. _n_elec_species) {
+            full_numden[i] = elec_numden[i+1] * 1e6; //Do O
+        }
+        full_numden[_n_elec_species + 4] = elec_numden[_n_elec_species+1] * 1e6; //Do O+
+        full_numden[$-1] = elec_numden[$-1] * 1e6;
+    }
+
     @nogc
     void PopulateRateFits(string Nfilename, string Ofilename)
     {   
@@ -641,10 +665,10 @@ private:
         foreach (isp; _n_N_species .. _n_N_species + _n_O_species) {
             O_massf_sum += Q.massf[isp];
         }
-        macro_state.massf[0] = O_massf_sum;
+        macro_state.massf[1] = O_massf_sum;
 
         foreach ( isp; 2 .. _n_macro_species) {
-            macro_state.massf[isp] = Q.massf[isp];
+            macro_state.massf[isp] = Q.massf[_n_elec_species+isp-2];
         }
     }
 
@@ -682,19 +706,23 @@ private:
         }
 
         number O_massf_sum = 0.0;
-        foreach (isp; _n_N_species .. _n_N_species + _n_O_species) {
+        foreach (isp; _n_N_species .. _n_elec_species) {
             O_massf_sum += Q.massf[isp];
         }
         if (O_massf_sum == 0.0) {
             Q.massf[_n_N_species] = macro_state.massf[1];
-            foreach (isp; _n_N_species + 1 .. _n_N_species + _n_O_species) {
+            foreach (isp; _n_N_species + 1 .. _n_elec_species) {
                 Q.massf[isp] = 0.0;
             }
         } else {
             number O_massf_factor = macro_state.massf[1]/O_massf_sum;
-            foreach (isp; _n_N_species .. _n_N_species + _n_O_species) {
+            foreach (isp; _n_N_species .. _n_elec_species) {
                 Q.massf[isp] *= O_massf_factor;
             }
+        }
+
+        foreach (isp; _n_elec_species .. Q.massf.length) {
+            Q.massf[isp] = macro_state.massf[isp - _n_elec_species + 2];
         }
     }
 }
@@ -715,6 +743,49 @@ static this()
 version(electronically_specific_kinetics_test) {
     int main()
     {
+        //writeln("---------Start Test---------");
+        import util.msg_service;
+
+        auto L = init_lua_State();
+        string filename = "../gas/sample-data/electronic-and-macro-species.lua";
+        doLuaFile(L, filename);
+        auto gm = new ElectronicallySpecificGas(L);
+        auto gd = new GasState(gm.n_species,1);
+        lua_close(L);
+        //writeln("----------Initialised Gas model and state-----------");
+        ElectronicallySpecificKinetics esk = new ElectronicallySpecificKinetics("sample-input/ES_files.lua",gm);
+
+        //writeln("--------Initialised kinetics-------------");
+
+        gd.massf[] = 0;
+        gd.massf[16] = 0.78;
+        gd.massf[16 + 1] = 0.22;
+
+        gd.p = 1000;
+        gd.T = 50000;
+        gd.T_modes[0] = 3000.0;
+        gm.update_thermo_from_pT(gd);
+        // writeln(gd);
+        double _dt = 1e-10;
+        double dtChemSuggest = 1e-10;
+        double dtThermSuggest = 1e-10;
+        number[maxParams] params;
+
+        esk(gd, _dt, dtChemSuggest, dtThermSuggest, params);
+        esk(gd, _dt, dtChemSuggest, dtThermSuggest, params);
+        esk(gd, _dt, dtChemSuggest, dtThermSuggest, params);
+        esk(gd, _dt, dtChemSuggest, dtThermSuggest, params);
+        esk(gd, _dt, dtChemSuggest, dtThermSuggest, params);
+        // writeln("The final gas state after the kinetics steps is: ");
+        // writeln(gd);
+
+        double massfsum=0.0;
+        foreach(number eachmassf;gd.massf) {
+            massfsum += eachmassf;
+        }
+        assert(approxEqual(massfsum, 1.0, 1e-2), failedUnitTest());
+
+
         return 0;
     }
 }

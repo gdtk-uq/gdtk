@@ -654,7 +654,6 @@ private:
         // We'll keep adjusting our temperature estimate
         // until it is less than TOL.
         double TOL = 1.0e-6;
-        
         // Take the supplied T_modes[0] as the initial guess.
         number T_guess = macro_Q.T_modes[0];
         number f_guess = vibEnergy(macro_Q, T_guess) - macro_Q.u_modes[0];
@@ -671,6 +670,7 @@ private:
         number Cv, dT;
         foreach (iter; 0 .. MAX_ITERATIONS) {
             Cv = vibSpecHeatConstV(macro_Q, T_guess);
+            debug{writeln("The calculated Cv is: ",Cv);}
             dT = -f_guess/Cv;
             T_guess += dT;
             if (fabs(dT) < TOL) {

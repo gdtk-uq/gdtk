@@ -71,7 +71,7 @@ ThermochemicalReactor init_thermochemical_reactor(GasModel gmodel, string fileNa
         reactor = new TwoTemperatureAirKinetics(fileName1, fileName2, gmodel);
     }
     if ((cast(ElectronicallySpecificGas) gmodel) !is null) {
-        reactor = new ElectronicallySpecificKinetics(fileName1, fileName2, gmodel);
+        reactor = new ElectronicallySpecificKinetics(fileName1, gmodel);
     }
     version (with_dvode)
     {
