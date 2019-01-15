@@ -56,8 +56,8 @@ class GasModelException : Exception {
 
 class GasModel {
 public:
-    @nogc @property uint n_species() const { pragma(inline, true); return _n_species; }
-    @nogc @property uint n_modes() const { pragma(inline, true); return _n_modes; }
+    @nogc @property uint n_species() const { return _n_species; }
+    @nogc @property uint n_modes() const { return _n_modes; }
     @nogc @property ref double[] mol_masses() { return _mol_masses; }
     @nogc @property ref double[] LJ_sigmas() { return _LJ_sigmas; }
     @nogc @property ref double[] LJ_epsilons() { return _LJ_epsilons; }
