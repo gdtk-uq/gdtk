@@ -366,6 +366,9 @@ end
 -- Storage for later definitions of FluidBlock objects
 fluidBlocks = {}
 
+-- Storage for later definitions of FluidBlockArray objects
+fluidBlockArrays = {}
+
 -- The user may assign the MPI task id for eack block manually
 -- but, if they don't, a default distribution will be made.
 mpiTasks = nil
@@ -416,7 +419,7 @@ function FluidBlock:new(o)
    o = o or {}
    flag = checkAllowedNames(o, {"grid", "initialState", "fillCondition", "active",
                                 "label", "omegaz", "bcList", "bcDict",
-                                "hcellList", "xforceList"})
+                                "hcellList", "xforceList", "fluidBlockArrayId"})
    if not flag then
       error("Invalid name for item supplied to FluidBlock constructor.", 2)
    end
@@ -427,6 +430,8 @@ function FluidBlock:new(o)
    -- Note that we want block id to start at zero for the D code.
    o.id = #(fluidBlocks)
    fluidBlocks[#(fluidBlocks)+1] = o
+   -- Set to -1 if NOT part of a fluid-block-array, otherwise use supplied value
+   o.fluidBlockArrayId = o.fluidBlockArrayId or -1
    -- Must have a grid and initialState
    assert(o.grid, "need to supply a grid")
    assert(o.initialState, "need to supply a initialState")
@@ -515,6 +520,7 @@ function FluidBlock:tojson()
    str = str .. string.format('    "type": "%s",\n', self.myType)
    str = str .. string.format('    "label": "%s",\n', self.label)
    str = str .. string.format('    "active": %s,\n', tostring(self.active))
+   str = str .. string.format('    "fluidBlockArrayId": %d,\n', self.fluidBlockArrayId)
    str = str .. string.format('    "omegaz": %.18e,\n', self.omegaz)
    str = str .. string.format('    "grid_type": "%s",\n', self.grid:get_type())
    if self.grid:get_type() == "structured_grid" then
@@ -753,8 +759,15 @@ function identifyBlockConnections(blockList, excludeList, tolerance)
    end -- for _,A
 end
 
-
 function FluidBlockArray(t)
+   -- We'd like the arrayId to start from 0 for the D code.
+   local arrayId = #(fluidBlockArrays)
+   fluidBlockArrays[#fluidBlockArrays+1] = {
+      id=arrayId,
+      blocks={}
+   }
+   -- Get a pointer to the current table for convenience
+   fbt = fluidBlockArrays[arrayId+1]
    -- Expect one table as argument, with named fields.
    -- Returns an array of FluidBlocks defined over a single region.
    local flag = checkAllowedNames(t, {"grid", "initialState", "fillCondition",
@@ -841,9 +854,13 @@ function FluidBlockArray(t)
 	       bcList[north] = t.bcList[north]
 	    end
 	    local new_block = FluidBlock:new{grid=subgrid, omegaz=t.omegaz,
-                                             initialState=t.initialState, bcList=bcList}
+                                             initialState=t.initialState,
+                                             bcList=bcList,
+                                             fluidBlockArrayId=arrayId
+            }
 	    blockArray[ib][jb] = new_block
 	    blockCollection[#blockCollection+1] = new_block
+            fbt.blocks[#(fbt.blocks)+1] = new_block.id
 	 else
 	    -- 3D flow, need one more level in the array
 	    blockArray[ib][jb] = {}
@@ -879,9 +896,12 @@ function FluidBlockArray(t)
 	       end
 	       local new_block = FluidBlock:new{grid=subgrid, omegaz=t.omegaz,
                                                 initialState=t.initialState,
-                                                bcList=bcList}
+                                                bcList=bcList,
+                                                fluidBlockArrayId=arrayId,
+               }
 	       blockArray[ib][jb][kb] = new_block
 	       blockCollection[#blockCollection+1] = new_block
+               fbt.blocks[#(fbt.blocks)+1] = new_block.id
                -- Prepare k0 at end of loop, ready for next iteration
                k0 = k0 + nkc
 	    end -- kb loop
@@ -896,9 +916,26 @@ function FluidBlockArray(t)
    if #blockCollection > 1 then
       identifyBlockConnections(blockCollection)
    end
+   -- Fill in meta-information about fluidBlockArray
+   fbt.nib = t.nib
+   fbt.njb = t.njb
+   fbt.nkb = t.nkb
    return blockArray
 end -- FluidBlockArray
 
+function fluidBlockArrayToJson(fbt)
+   local str = string.format('"fluid_block_array_%d": {\n', fbt.id)
+   str = str .. string.format('    "nib": %d,\n', fbt.nib)
+   str = str .. string.format('    "njb": %d,\n', fbt.njb)
+   str = str .. string.format('    "nkb": %d,\n', fbt.nkb)
+   str = str .. string.format('    "blocks": [ ')
+   for ib=1,#(fbt.blocks)-1 do
+      str = str .. string.format('%d, ', fbt.blocks[ib])
+   end
+   str = str .. string.format('%d ]\n', fbt.blocks[#fbt.blocks])
+   str = str .. '},\n'
+   return str
+end
 
 -- Class for SolidBlock construction
 SolidBlock = {
@@ -1657,6 +1694,7 @@ function write_config_file(fileName)
 
    f:write(string.format('"control_count": %d,\n', config.control_count))
    f:write(string.format('"nfluidblock": %d,\n', #(fluidBlocks)))
+   f:write(string.format('"nfluidblockarrays": %d,\n', #(fluidBlockArrays)))
 
    f:write(string.format('"diffuse_wall_bcs_on_init": %s,\n', tostring(config.diffuse_wall_bcs_on_init)))
    f:write(string.format('"number_init_passes": %d,\n', config.number_init_passes))
@@ -1743,6 +1781,9 @@ function write_config_file(fileName)
    f:write(string.format('"udf_solid_source_terms": %s,\n', tostring(config.udf_solid_source_terms)))
    f:write(string.format('"nsolidblock": %d,\n', #solidBlocks))
 
+   for i = 1, #fluidBlockArrays do
+      f:write(fluidBlockArrayToJson(fluidBlockArrays[i]))
+   end
    for i = 1, #fluidBlocks do
       f:write(fluidBlocks[i]:tojson())
    end
