@@ -64,11 +64,6 @@ final class TwoTemperatureAirKinetics : ThermochemicalReactor {
         number uTotal = Q.u + Q.u_modes[0];
         // 1. Perform chemistry update.
         _chemUpdate(Q, tInterval, dtChemSuggest, dummyDouble, params);
-        debug {
-            writeln("--- 1 ---");
-            writefln("uTotal= %.12e u= %.12e uv= %.12e", uTotal, Q.u, Q.u_modes[0]);
-            writefln("T= %.12e  Tv= %.12e", Q.T, Q.T_modes[0]);
-        }
         // Changing mass fractions does not change the temperature 
         // of the temperatures associated with internal structure.
         // Now we can adjust the transrotational energy, given that
@@ -77,11 +72,6 @@ final class TwoTemperatureAirKinetics : ThermochemicalReactor {
         Q.u = uTotal - Q.u_modes[0];
         try {
             _airModel.update_thermo_from_rhou(Q);
-            debug {
-                writeln("--- 2 ---");
-                writefln("uTotal= %.12e u= %.12e uv= %.12e", uTotal, Q.u, Q.u_modes[0]);
-                writefln("T= %.12e  Tv= %.12e", Q.T, Q.T_modes[0]);
-            }
         }
         catch (GasModelException err) {
             string msg = "Call to update_thermo_from_rhou failed in two-temperature air kinetics.";
@@ -98,10 +88,6 @@ final class TwoTemperatureAirKinetics : ThermochemicalReactor {
         _gmodel.massf2numden(Q, _numden);
         try {
             energyUpdate(Q, tInterval, dtThermSuggest);
-            debug {
-                writeln("--- 3 ---");
-                writeln(Q);
-            }
         }
         catch (GasModelException err) {
             string msg = "The energy update in the two temperature air kinetics module failed.\n";
