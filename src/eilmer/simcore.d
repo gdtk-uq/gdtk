@@ -376,6 +376,17 @@ void init_simulation(int tindx, int nextLoadsIndx,
             if (ublock) { ublock.build_cloud_of_cell_references_at_each_vertex(); }
         }
     }
+
+    // We can apply a special initialisation to the flow field, if requested.
+    // This will take viscous boundary conditions and diffuse them into the
+    // nearby domain.
+    if (GlobalConfig.diffuseWallBCsOnInit) {
+        writeln("Applying special initialisation to blocks: wall BCs being diffused into domain.");
+        writefln("%d passes of the near-wall flow averaging operation will be performed.", GlobalConfig.nInitPasses);
+        foreach (myblk; parallel(localFluidBlocks,1)) {
+            diffuseWallBCsIntoBlock(myblk, GlobalConfig.nInitPasses, GlobalConfig.initTWall);
+        }
+    }
     
     // We conditionally sort the local blocks, based on numbers of cells,
     // in an attempt to balance the load for shared-memory parallel runs.
