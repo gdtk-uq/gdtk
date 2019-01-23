@@ -1121,8 +1121,8 @@ public:
             } catch(ThermochemicalReactorUpdateException err) {
                 string msg = "The thermochemical_increment() failed.";
                 debug {
-                    msg ~= format("\nfor cell: %d\n", id);
-                    msg ~= format("caught %s", err.msg);
+                    msg ~= format("\nFOR CELL: %d\n", id);
+                    msg ~= format("CAUGHT: %s\n", err.msg);
                     msg ~= format("This cell is located at: %s\n", pos[0]);
                     msg ~= format("This cell is located in block: %d\n", myConfig.universe_blk_id);
                     msg ~= format("The cell's id is: %d\n", id);
@@ -1130,6 +1130,7 @@ public:
                     msg ~= format("The initial attempted dt_chem is: %12.6e\n", dt_chem_save);
                     version(debug_chem) {
                         msg ~= format("The gas state BEFORE the failed update was:\n %s", savedGasState);
+                        msg ~= "\n";
                     }
                     msg ~= format("The gas state AFTER the failed update is:\n   fs.gas %s", fs.gas);
                 }
