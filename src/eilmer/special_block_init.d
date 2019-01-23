@@ -55,9 +55,14 @@ void diffuseWallBCsIntoBlock(FluidBlock blk, int nPasses, double Twall)
             if (face.is_on_boundary && (face.bc_id in noSlipWalls)) {
                 if (Twall > 0.0) {
                     cell.fs.gas.T = Twall;
+                    foreach (ref T; cell.fs.gas.T_modes) T = Twall;
                 }
                 else {
                     cell.fs.gas.T = face.fs.gas.T;
+                    // We set the other modes to the transrotational temperature
+                    // since we are expecting the gas to at equilibrium (or very close to)
+                    // a cold wall with no-slip.
+                    foreach (ref T; cell.fs.gas.T_modes) T = face.fs.gas.T;
                 }
                 cell.fs.vel.set(face.fs.vel);
                 if (cell.in_turbulent_zone) {
