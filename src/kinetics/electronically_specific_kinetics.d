@@ -30,7 +30,7 @@ import gas.two_temperature_air;
 
 import kinetics.thermochemical_reactor;
 import kinetics.chemistry_update;
-import kinetics.electronic_state_solver;
+import kinetics.electronic_update;
 
 
 immutable double DT_INCREASE_PERCENT = 10.0; // allowable percentage increase on succesful step
@@ -90,15 +90,11 @@ final class ElectronicallySpecificKinetics : ThermochemicalReactor {
         _macro_numden.length = _macroAirModel.n_species;
         initModel(energyExchFile);
 
-        // Initialise the electronic data
-        _numden.length = _fullAirModel.n_species;
-        _numden_input.length = _n_N_species + _n_O_species + 3;
-        _numden_output.length = _n_N_species + _n_O_species + 3;
+        //Create the electronic objects
 
-        //Need to construct the reaction rate parameters from file.
-        
-        PopulateRateFits(ESK_N_Filename,ESK_O_Filename);
-        kinetics.electronic_state_solver.Init(full_rate_fit, [_n_N_species,_n_O_species]);
+        ES_N = new ElectronicUpdate(ESK_N_Filename, [0,_n_elec_species+3], _fullAirModel);
+
+        ES_O = new ElectronicUpdate(ESK_O_Filename, [_n_N_species, _n_elec_species + 4], _fullAirModel);
     }
 
     @nogc
@@ -157,36 +153,28 @@ final class ElectronicallySpecificKinetics : ThermochemicalReactor {
             }
         }
         catch (GasModelException err) {
-            string msg = "The energy update in the eletronically specific kinetics module failed.\n";
+            string msg = "The energy update in the electronically specific kinetics module failed.\n";
             debug { msg ~= format("\ncaught %s", err.msg); }
             throw new ThermochemicalReactorUpdateException(msg);
         }
 
         Update_Electronic_State(Q,_macro_Q);
         //update the electronic distribution
-        initialEnergy = energyInNoneq(Q);
-        _gmodel.massf2numden(Q, _numden); //Convert from mass fraction to number density
 
         //Remember, gas model always initialised in this order: 
         //N, O, N2, O2, NO, N+, O+, N2+, O2+, NO+, e-
         //input in electronic solver takes the form
         //[N1, N2, N3 .... Nn, N+, O1, O2, O3 ... On, O+, e-]
 
-        update_input_from_numden(_numden_input, _numden);
-
-        Electronic_Solve(_numden_input, _numden_output, Q.T_modes[0], tInterval, dtChemSuggest);
-        
-        update_numden_from_output(_numden,_numden_output);
-
-        _gmodel.numden2massf(_numden,Q);
-
-        Q.u_modes[0] -= energyInNoneq(Q) - initialEnergy;
+        ES_N.Update(Q, tInterval);
+        ES_O.Update(Q, tInterval);
 
     }
 
 private:
     ElectronicallySpecificGas _fullAirModel;
     TwoTemperatureAir _macroAirModel;
+    ElectronicUpdate ES_N, ES_O;
 
     //macro definitions
     
@@ -596,41 +584,6 @@ private:
         full_numden[$-1] = elec_numden[$-1] * 1e6;
     }
 
-    @nogc
-    void PopulateRateFits(string Nfilename, string Ofilename)
-    {   
-        @nogc
-        double[][] Import_2D(string filename) {
-            debug{
-                double[][] output_data;
-                if (exists(filename)) { //check for existance of file
-                    File file=File(filename, "r");
-                    while (!file.eof()) {
-                        output_data~=to!(double[])(split(strip(file.readln()),","));
-                    }
-                    if (output_data[$-1].length==0) { //accounts for the sometimes blank line at the end of csv files
-                        output_data = output_data[0..$-1];
-                    }
-                } else { //if no filename exists
-                    writeln("no such filename: ",filename);
-                }
-            return output_data;
-            } else {
-                throw new Error("Not implemented for nondebug build.");
-            }
-        }
-
-        debug{
-            double[][] N_rate_fit = Import_2D(Nfilename);
-            double[][] O_rate_fit = Import_2D(Ofilename);
-            foreach (double[] row;N_rate_fit){
-                full_rate_fit[0][to!int(row[0])][to!int(row[1])] = row[2 .. $];
-            }
-            foreach (double[] row;O_rate_fit){
-                full_rate_fit[1][to!int(row[0])][to!int(row[1])] = row[2 .. $];
-            }
-        }
-    }
 
     @nogc 
     number energyInNoneq(GasState Q)
@@ -760,17 +713,22 @@ version(electronically_specific_kinetics_test) {
         gd.massf[] = 0;
         gd.massf[16] = 0.78;
         gd.massf[16 + 1] = 0.22;
-
-        gd.p = 1000;
-        gd.T = 50000;
-        gd.T_modes[0] = 3000.0;
+        
+        gd.p = 21478.7;
+        gd.T = 25000.9;
+        gd.T_modes[0] = 20000.0;
         gm.update_thermo_from_pT(gd);
         // writeln(gd);
-        double _dt = 1e-10;
+        double _dt = 1e-9;
         double dtChemSuggest = 1e-10;
         double dtThermSuggest = 1e-10;
         number[maxParams] params;
 
+        esk(gd, _dt, dtChemSuggest, dtThermSuggest, params);
+        esk(gd, _dt, dtChemSuggest, dtThermSuggest, params);
+        esk(gd, _dt, dtChemSuggest, dtThermSuggest, params);
+        esk(gd, _dt, dtChemSuggest, dtThermSuggest, params);
+        esk(gd, _dt, dtChemSuggest, dtThermSuggest, params);
         esk(gd, _dt, dtChemSuggest, dtThermSuggest, params);
         esk(gd, _dt, dtChemSuggest, dtThermSuggest, params);
         esk(gd, _dt, dtChemSuggest, dtThermSuggest, params);
@@ -784,6 +742,7 @@ version(electronically_specific_kinetics_test) {
             massfsum += eachmassf;
         }
         assert(approxEqual(massfsum, 1.0, 1e-2), failedUnitTest());
+
 
 
         return 0;

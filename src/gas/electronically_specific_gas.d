@@ -158,7 +158,7 @@ public:
         _energy_mode_names[0] = "vibroelectronic";
         create_energy_mode_reverse_lookup();
         _mol_masses = _elec_mol_masses ~ _macro_mol_masses[2 .. $];
-        
+        create_species_reverse_lookup();
     }
 
     override string toString() const
@@ -235,8 +235,8 @@ public:
     {
         Update_Macro_State(macro_Q, Q);
         // We compute the frozen sound speed based on an effective gamma
-        number R = gas_constant(macro_Q);
-        macro_Q.a = sqrt(gamma(macro_Q)*R*macro_Q.T);
+        number R = gas_constant(Q);
+        macro_Q.a = sqrt(gamma(Q)*R*macro_Q.T);
         Update_Electronic_State(Q, macro_Q);
     }
 
@@ -353,7 +353,7 @@ public:
     {
         Update_Macro_State(macro_Q, Q);
         number e = transRotEnergy(macro_Q) + vibEnergy(macro_Q, macro_Q.T_modes[0]);
-        number R = gas_constant(macro_Q);
+        number R = gas_constant(Q);
         number h = e + R*macro_Q.T;
         return h;
     }
@@ -670,7 +670,6 @@ private:
         number Cv, dT;
         foreach (iter; 0 .. MAX_ITERATIONS) {
             Cv = vibSpecHeatConstV(macro_Q, T_guess);
-            debug{writeln("The calculated Cv is: ",Cv);}
             dT = -f_guess/Cv;
             T_guess += dT;
             if (fabs(dT) < TOL) {
