@@ -36,7 +36,7 @@ test reaction-products {Recombination should have occurred over time.} -body {
     set massf_N2_ref 0.8760
     set massf_N_ref 0.1240
     # Pick up the history file and pull a few values from the last line of data.
-    set fp [open hist/reactor-blk-0-cell-0.dat r]
+    set fp [open hist/reactor-blk-0-cell-0.dat.0 r]
     set results [string trim [read $fp]]
     close $fp
     set line_of_data [string trim [lindex [split $results "\n"] end]]

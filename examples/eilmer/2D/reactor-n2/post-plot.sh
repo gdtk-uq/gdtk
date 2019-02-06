@@ -23,7 +23,7 @@ set ylabel 'T, K'
 set key bottom right
 #
 plot 'fvreactor.data' using (\$1*1.0e6):2 with lines linetype 1 title 'fvreactor script', \
-     'hist/reactor-blk-0-cell-0.dat' using (\$1*1.0e6):23 with points pointtype 4 title 'Eilmer'
+     'hist/reactor-blk-0-cell-0.dat.0' using (\$1*1.0e6):23 with points pointtype 4 title 'Eilmer'
 EOF
 
 
@@ -44,7 +44,7 @@ set ylabel 'p, bar'
 set key bottom right
 #
 plot 'fvreactor.data' using (\$1*1.0e6):(\$3/1.0e5) with lines linetype 1 title 'fvreactor script', \
-     'hist/reactor-blk-0-cell-0.dat' using (\$1*1.0e6):(\$13/1.0e5) with points pointtype 4 title 'Eilmer'
+     'hist/reactor-blk-0-cell-0.dat.0' using (\$1*1.0e6):(\$13/1.0e5) with points pointtype 4 title 'Eilmer'
 EOF
 
 gnuplot <<EOF
@@ -64,5 +64,5 @@ set ylabel 'mass fraction N'
 set key bottom right
 #
 plot 'fvreactor.data' using (\$1*1.0e6):5 with lines linetype 1 title 'fvreactor script', \
-     'hist/reactor-blk-0-cell-0.dat' using (\$1*1.0e6):20 with points pointtype 4 title 'Eilmer'
+     'hist/reactor-blk-0-cell-0.dat.0' using (\$1*1.0e6):20 with points pointtype 4 title 'Eilmer'
 EOF
