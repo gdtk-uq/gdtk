@@ -65,6 +65,7 @@ final class SimState {
     shared static int step;
     shared static double dt_global;     // simulation time step determined by code
     shared static double dt_allow;      // allowable global time step determined by code
+    shared static double dt_override = 0.0;  // A positive value will override a larger computed time step.
     shared static double target_time;  // simulate_in_time will work toward this value
 
     // We want to write sets of output files periodically.
@@ -951,6 +952,13 @@ void check_run_time_configuration(double target_time_as_requested)
                 errMsg ~= to!string(lua_tostring(L, -1));
                 throw new FlowSolverException(errMsg);
             }
+            lua_getglobal(L, "dt_override");
+            if (lua_isnumber(L, -1)) {
+                SimState.dt_override = to!double(lua_tonumber(L, -1));
+            } else {
+                SimState.dt_override = 0.0;
+            }
+            lua_pop(L, 1); // dispose item
         }
     }
 } // end check_run_time_configuration()
@@ -959,7 +967,9 @@ void determine_time_step_size()
 {
     // Set the size of the time step to be the minimum allowed for any active block.
     // We will check it occasionally, if we have not elected to keep fixed time steps. 
-    bool do_dt_check_now = (SimState.step % GlobalConfig.cfl_count) == 0;
+    bool do_dt_check_now =
+        ((SimState.step % GlobalConfig.cfl_count) == 0) ||
+        (SimState.dt_override > 0.0);
     version(mpi_parallel) {
         // If one task is doing a time-step check, all tasks have to.
         int myFlag = to!int(do_dt_check_now);
@@ -993,6 +1003,12 @@ void determine_time_step_size()
             // This might be handy for situations where the computed estimate
             // is likely to be not small enough for numerical stability.
             SimState.dt_allow = fmin(GlobalConfig.dt_init, SimState.dt_allow);
+        }
+        if (SimState.dt_override > 0.0) {
+            // The user-defined supervisory function atTimestepStart may have set
+            // dt_override because it knows something about the simulation conditions
+            // that is not handled well by our generic CFL check.
+            SimState.dt_allow = fmin(SimState.dt_override, SimState.dt_allow);
         }
         // Now, change the actual time step, as needed.
         if (SimState.dt_allow <= SimState.dt_global) {
