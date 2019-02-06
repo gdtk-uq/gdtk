@@ -36,8 +36,11 @@ void init_history_cell_files()
             errMsg ~= format("This block only has %d cells.\n", globalFluidBlocks[blkId].cells.length);
             throw new FlowSolverException(errMsg);
         }
-        string fname = format("%s/%s-blk-%d-cell-%d.dat", 
-                              histDir, GlobalConfig.base_file_name, blkId, cellId);
+        string basicName = format("%s-blk-%d-cell-%d.dat", GlobalConfig.base_file_name, blkId, cellId);
+        auto foundTheseEntries = dirEntries(histDir, basicName~".*", SpanMode.shallow);
+        string[] foundTheseNames;
+        foreach (entry; foundTheseEntries) { foundTheseNames ~= entry.name; }
+        string fname = format("%s/%s.%d", histDir, basicName, foundTheseNames.length);
         auto f = File(fname, "w");
         f.write("# 1:t ");
         foreach (i, var; GlobalConfig.flow_variable_list) {
@@ -77,12 +80,14 @@ void write_history_cells_to_files(double sim_time)
         auto blkId = hcell[0];
         auto cellId = hcell[1];
         if (find(GlobalConfig.localBlockIds, blkId).empty) { continue; }
-        string fname = format("%s/%s-blk-%d-cell-%d.dat", 
-                              histDir, GlobalConfig.base_file_name, blkId, cellId);
         auto cell = globalFluidBlocks[blkId].cells[cellId];
         auto writer = appender!string();
-        formattedWrite(writer, "%.18e %s\n", sim_time,
-                       cell.write_values_to_string());
+        formattedWrite(writer, "%.18e %s\n", sim_time, cell.write_values_to_string());
+        string basicName = format("%s-blk-%d-cell-%d.dat", GlobalConfig.base_file_name, blkId, cellId);
+        auto foundTheseEntries = dirEntries(histDir, basicName~".*", SpanMode.shallow);
+        string[] foundTheseNames;
+        foreach (entry; foundTheseEntries) { foundTheseNames ~= entry.name; }
+        string fname = format("%s/%s.%d", histDir, basicName, foundTheseNames.length-1);
         append(fname, writer.data);
     } // end foreach hcell
     // And history cells in solid domain, if present
