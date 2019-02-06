@@ -76,11 +76,24 @@ int main(string[] args)
         GlobalConfig.in_mpi_context = false;
         GlobalConfig.is_master_task = true;
     }
-    // We assemble the usage message as a multi-line string.
-    // Be careful when editing it and try to limit the line length
+    // We assemble the usage messages as multi-line strings.
+    // Be careful when editing them and try to limit the line length
     // to something that is likely to easily fit on a console,
     // say 80 characters.
-    string usageMsg = "Usage: e4shared/e4mpi/... [OPTION]...
+    string briefUsageMsg = "Usage: e4shared/e4mpi/... [OPTION]...
+Top-level arguments include the following.
+Argument:                            Comment:
+--------------------------------------------------------------------------------
+  --job=<string>                     file names built from this string
+  --prep                             prepare config, grid and flow files
+  --run                              run the simulation over time
+  --post                             post-process simulation data
+  --custom-post                      run custom post-processing script
+  --help                             writes a longer help message
+--------------------------------------------------------------------------------
+For a more detailed help message, use --help or view the online help at
+http://cfcfd.mechmining.uq.edu.au/eilmer/";
+    string longUsageMsg = "Usage: e4shared/e4mpi/... [OPTION]...
 Argument:                            Comment:
 --------------------------------------------------------------------------------
   --job=<string>                     file names built from this string
@@ -93,7 +106,7 @@ Argument:                            Comment:
   --next-loads-indx=<int>            defaults to (final index + 1) of lines
                                      found in the loads.times file
   --max-cpus=<int>                   (e4shared) defaults to ";
-usageMsg ~= to!string(totalCPUs) ~" on this machine
+longUsageMsg ~= to!string(totalCPUs) ~" on this machine
   --threads-per-mpi-task=<int>       (e4mpi) defaults to 1
   --max-wall-clock=<int>             in seconds
   --report-residuals                 include residuals in console output
@@ -135,12 +148,12 @@ usageMsg ~= to!string(totalCPUs) ~" on this machine
   --custom-post                      run custom post-processing script
   --script-file=<string>             defaults to \"post.lua\"
 
-  --help                             writes this message
+  --help                             writes this long help message
 --------------------------------------------------------------------------------";
     if ( args.length < 2 ) {
         if (GlobalConfig.is_master_task) {
             writeln("Too few arguments.");
-            writeln(usageMsg);
+            writeln(briefUsageMsg);
             stdout.flush();
         }
         exitFlag = 1;
@@ -226,7 +239,7 @@ usageMsg ~= to!string(totalCPUs) ~" on this machine
             writeln("Arguments not processed: ");
             args = args[1 .. $]; // Dispose of program name in first argument.
             foreach (myarg; args) writeln("    arg: ", myarg);
-            writeln(usageMsg);
+            writeln(briefUsageMsg);
             stdout.flush();
         }
         exitFlag = 1;
@@ -278,7 +291,7 @@ usageMsg ~= to!string(totalCPUs) ~" on this machine
         }
     }
     if (helpWanted) {
-        if (GlobalConfig.is_master_task) { writeln(usageMsg); stdout.flush(); }
+        if (GlobalConfig.is_master_task) { writeln(longUsageMsg); stdout.flush(); }
         exitFlag = 0;
         return exitFlag;
     }
@@ -295,7 +308,7 @@ usageMsg ~= to!string(totalCPUs) ~" on this machine
             if (verbosityLevel > 0) { writeln("Begin preparation stage for a simulation."); }
             if (jobName.length == 0) {
                 writeln("Need to specify a job name.");
-                writeln(usageMsg);
+                writeln(briefUsageMsg);
                 exitFlag = 1;
                 return exitFlag;
             }
@@ -346,7 +359,7 @@ usageMsg ~= to!string(totalCPUs) ~" on this machine
     if (runFlag) {
         if (jobName.length == 0) {
             writeln("Need to specify a job name.");
-            writeln(usageMsg);
+            writeln(briefUsageMsg);
             exitFlag = 1;
             return exitFlag;
         }
@@ -428,7 +441,7 @@ usageMsg ~= to!string(totalCPUs) ~" on this machine
         } else { // NOT mpi_parallel
             if (jobName.length == 0) {
                 writeln("Need to specify a job name.");
-                writeln(usageMsg);
+                writeln(briefUsageMsg);
                 exitFlag = 1;
                 return exitFlag;
             }
