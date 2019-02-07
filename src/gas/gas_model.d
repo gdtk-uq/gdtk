@@ -56,6 +56,7 @@ class GasModelException : Exception {
 
 class GasModel {
 public:
+    @nogc @property bool is_plasma() const { return _is_plasma; }
     @nogc @property uint n_species() const { return _n_species; }
     @nogc @property uint n_modes() const { return _n_modes; }
     @nogc @property ref double[] mol_masses() { return _mol_masses; }
@@ -222,7 +223,12 @@ public:
     }
 
 protected:
-    // These data need to be properly initialized by the derived class.
+    // Default to non-plasma gas model, where all species are treated alike.
+    // The quasi-neutral plasma model assumes that the last species is the electron,
+    // and that the number of electrons balances the numbers of ions.
+    bool _is_plasma = false;
+    
+    // The following data need to be properly initialized by the derived class.
     uint _n_species;
     uint _n_modes;
     string[] _species_names;

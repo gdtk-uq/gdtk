@@ -31,7 +31,7 @@ static string[] molecularSpeciesNames = ["H2"];
 
 // The following symbols are for indexing into the thermo-coefficient database.
 // They also set the order for the list of species in this gas model.
-enum Species {H2=0, H, Hplus, eminus, He}
+enum Species {H2=0, H, Hplus, He, eminus}
 
 // For table parameters see end of file.
 // They are declared in the static this() function.
@@ -42,6 +42,7 @@ public:
     
     this()
     {
+        _is_plasma = true;
         _n_species = 5;
         _n_modes = 1;
         _species_names.length = _n_species;

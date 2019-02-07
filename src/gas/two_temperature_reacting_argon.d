@@ -39,6 +39,7 @@ public:
 
     this(lua_State *L) {
         // Some parameters are fixed and some come from the gas model file.
+        _is_plasma = true;
         _n_species = 3;
         _n_modes = 1;
         _species_names.length = 3;

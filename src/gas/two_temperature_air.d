@@ -80,6 +80,7 @@ public:
         // appropriate properties.
         switch (model) {
         case "5-species":
+            _is_plasma = false;
             _mol_masses.length = 5;
             bool[string] validSpecies = ["N":true, "O":true, "N2":true, "O2":true, "NO":true];
             foreach (isp, sp; _species_names) {
@@ -99,6 +100,7 @@ public:
             create_species_reverse_lookup();
             break;
         case "7-species":
+            _is_plasma = true;
             _mol_masses.length = 7;
             bool[string] validSpecies = ["N":true, "O":true, "N2":true, "O2":true, "NO":true,
                                          "NO+":true, "e-":true];
@@ -116,13 +118,16 @@ public:
                     throw new Error(errMsg);
                 }
             }
+            if (!(_species_names[$-1] == "e-" || _species_names[$-1] == "eminus")) {
+                throw new Error("Electrons should be the last species.\n");
+            }
             create_species_reverse_lookup();
             break;
         case "11-species":
+            _is_plasma = true;
             _mol_masses.length = 11;
             bool[string] validSpecies = ["N":true, "O":true, "N2":true, "O2":true, "NO":true,
-                                         "NO+":true, "e-":true,
-                                         "N+":true, "O+":true, "N2+":true, "O2+":true];
+                                         "NO+":true, "N+":true, "O+":true, "N2+":true, "O2+":true, "e-":true];
             foreach (isp, sp; _species_names) {
                 if (sp in validSpecies) {
                     _mol_masses[isp] = __mol_masses[getSpeciesId(sp)];
@@ -133,9 +138,12 @@ public:
                     errMsg ~= "or you have supplied a duplicate species.\n";
                     errMsg ~= format("The error occurred for supplied species: %s\n", sp);
                     errMsg ~= "The valid species for the 7-species 2-T air model are:\n";
-                    errMsg ~= "   'N', 'O', 'N2', 'O2', 'NO', 'NO+', 'e-', 'N+', 'O+', 'N2+', 'O2+'\n";
+                    errMsg ~= "   'N', 'O', 'N2', 'O2', 'NO', 'NO+', 'N+', 'O+', 'N2+', 'O2+', 'e-'\n";
                     throw new Error(errMsg);
                 }
+            }
+            if (!(_species_names[$-1] == "e-" || _species_names[$-1] == "eminus")) {
+                throw new Error("Electrons should be the last species.\n");
             }
             create_species_reverse_lookup();
             break;

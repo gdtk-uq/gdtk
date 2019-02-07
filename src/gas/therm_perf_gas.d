@@ -12,6 +12,7 @@ import std.math;
 import std.stdio;
 import std.string;
 import std.conv : to;
+import std.algorithm;
 import util.lua;
 import util.lua_service;
 import nm.complex;
@@ -42,8 +43,13 @@ public:
     {
         getArrayOfStrings(L, LUA_GLOBALSINDEX, "species", _species_names);
         _n_species = cast(uint) _species_names.length;
-        _n_modes = 0;
-        
+        _n_modes = 0; // Single temperature gas
+        if (canFind(_species_names, "e-") || canFind(_species_names, "eminus")) {
+            if (!(_species_names[$-1] == "e-" || _species_names[$-1] == "eminus")) {
+                throw new Error("Electrons should be last species.");
+            }
+            _is_plasma = true;
+        }
         // 0. Initialise private work arrays
         _Cp.length = _n_species;
         _Cv.length = _n_species;
