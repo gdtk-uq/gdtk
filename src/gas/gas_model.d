@@ -152,7 +152,7 @@ public:
     }
 
     @nogc
-    final void massf2molef(in GasState Q, number[] molef)
+    final void massf2molef(ref const(GasState) Q, ref number[] molef)
     in {
         debug { assert(Q.massf.length == molef.length,
                        brokenPreCondition("Inconsistent array lengths.")); }
@@ -162,7 +162,7 @@ public:
     }
 
     @nogc
-    final void molef2massf(in number[] molef, GasState Q)
+    final void molef2massf(ref const(number[]) molef, GasState Q)
     in {
         debug { assert(Q.massf.length == molef.length,
                        brokenPreCondition("Inconsistent array lengths.")); }
@@ -172,7 +172,7 @@ public:
     }
 
     @nogc
-    final void massf2conc(in GasState Q, number[] conc)
+    final void massf2conc(const(GasState) Q, ref number[] conc)
     in {
         debug { assert(Q.massf.length == conc.length,
                        brokenPreCondition("Inconsistent array lengths.")); }
@@ -185,7 +185,13 @@ public:
     }
 
     @nogc
-    final void conc2massf(in number[] conc, GasState Q)
+    final void update_concentrations_from_massf(GasState Q)
+    {
+        massf2conc(Q, Q.conc);
+    }
+
+    @nogc
+    final void conc2massf(ref const(number[]) conc, GasState Q)
     in {
         debug { assert(Q.massf.length == conc.length,
                        brokenPreCondition("Inconsistent array lengths.")); }
@@ -198,7 +204,13 @@ public:
     }
 
     @nogc
-    final void massf2numden(in GasState Q, number[] numden)
+    final void update_massf_from_concentrations(GasState Q)
+    {
+        conc2massf(Q.conc, Q);
+    }
+
+    @nogc
+    final void massf2numden(const(GasState) Q, ref number[] numden)
     in {
         debug { assert(Q.massf.length == numden.length,
                        brokenPreCondition("Inconsistent array lengths.")); }
@@ -210,7 +222,7 @@ public:
     }
 
     @nogc
-    final void numden2massf(in number[] numden, GasState Q)
+    final void numden2massf(ref const(number[]) numden, GasState Q)
     in {
         debug { assert(Q.massf.length == numden.length,
                        brokenPreCondition("Inconsistent array lengths.")); }
@@ -235,7 +247,7 @@ protected:
     int[string] _species_indices;
     string[] _energy_mode_names;
     int[string] _energy_mode_indices;
-    double[] _mol_masses;
+    double[] _mol_masses; // kg/mol
     double[] _LJ_sigmas;
     double[] _LJ_epsilons;
     double[] _Lewis_numbers;

@@ -33,10 +33,10 @@ public:
         _n_modes = 0; 
         _species_names ~= "AdaptiveLUT";
         assert(_species_names.length == 1);
+        _mol_masses ~= 28.96e-3; // kg/mol, use dummy value for air
+        // [FIX-ME] to use gas constant to compute a better value some time.
         create_species_reverse_lookup();
         Q_temp = new GasState(_n_species, _n_modes); // for use later in dpdrho_const_T
-        // _mol_masses should be defined at the end of the constructor,
-        // but they are not PJ 2018-09-24 
         version(complex_numbers) {
             throw new Error("Do not use with complex numbers.");
         }

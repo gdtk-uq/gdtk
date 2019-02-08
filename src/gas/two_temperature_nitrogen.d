@@ -29,6 +29,8 @@ public:
         _n_modes = 1;
         _species_names.length = 1;
         _species_names[0] = "N2";
+        _mol_masses.length = 1;
+        _mol_masses[0] = 28.0134e-3; // kg/mol
         create_species_reverse_lookup();
     }
 

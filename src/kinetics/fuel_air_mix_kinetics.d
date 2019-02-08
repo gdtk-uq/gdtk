@@ -179,11 +179,10 @@ final class MixingLimitedUpdate : ThermochemicalReactor {
             get_massf(Q,_Y_s);
             _omega_dot_F = get_omegaDotF(omega,_Y_s);
             if(_laminar_limit){
-                number[dim_species] conc;
                 rmech.eval_rate_constants(Q);  
-                _gmodel.massf2conc(Q,conc);
-                debug { writeln("concentration ",conc); }
-                rmech.eval_rates(conc,rates); 
+                _gmodel.update_concentrations_from_massf(Q);
+                debug { writeln("concentration ",Q.conc); }
+                rmech.eval_rates(Q.conc,rates); 
                 debug { writeln("laminar RR (1/s)= ",rates); }
                 number[dim_species] lamRR; //in kg/(m^3 . s)
                 number sumLamRR=0.0;
@@ -213,11 +212,10 @@ final class MixingLimitedUpdate : ThermochemicalReactor {
             _Y_s[2]=Q.massf[2];
             _omega_dot_F = get_omegaDotF(omega,_Y_s);   // units 1/s in here 
             if(_laminar_limit) {
-                number[dim_species] conc;
                 rmech.eval_rate_constants(Q);  
-                _gmodel.massf2conc(Q,conc);
-                debug { writeln("concentration ",conc); }
-                rmech.eval_rates(conc,rates); 
+                _gmodel.update_concentrations_from_massf(Q);
+                debug { writeln("concentration ",Q.conc); }
+                rmech.eval_rates(Q.conc,rates); 
                 debug { writeln("laminar RR (1/s)= ",rates); }
                 number[dim_species] lamRR; //in kg/(m^3 . s)
                 number sumLamRR=0.0;
