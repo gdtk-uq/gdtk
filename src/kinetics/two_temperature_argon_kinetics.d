@@ -172,7 +172,6 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         debug {
         // Implement in debug context because of @nogc requirement.
         //
-        number[3] numden;
         if (Q.T > 3000.0) {
             double chem_dt_start = _chem_dt;
             int NumberSteps = to!int(tInterval/_chem_dt);
@@ -180,6 +179,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
             _chem_dt = tInterval/NumberSteps;
             //writeln("Number of Steps ", NumberSteps);
             // Determine the current number densities.
+            number[3] numden;
             _gmodel.massf2numden(Q, numden);
             number n_e = numden[2]; // number density of electrons
             number n_Ar = numden[0]; // number density of Ar
@@ -265,10 +265,10 @@ final class UpdateArgonFrac : ThermochemicalReactor {
                 Q.T_modes[0] = Q.T;
             }
             
-            //Must update the mass fractions before updating the gas state from rho and u...
+            // Must update the mass fractions before updating the gas state from rho and u...
             // Number density of Argon+ is the same as electron number density.
-            number[3] nden; nden[0] = n_Ar; nden[1] = n_e; nden[2] = n_e;
-            _gmodel.numden2massf(nden, Q);
+            numden[0] = n_Ar; numden[1] = n_e; numden[2] = n_e;
+            _gmodel.numden2massf(numden, Q);
             _gmodel.update_thermo_from_rhou(Q);
             _gmodel.update_sound_speed(Q);
 
@@ -281,7 +281,6 @@ final class UpdateArgonFrac : ThermochemicalReactor {
     } // end opCall()
     
 private:
-    double[] _mol_masses;
     double _m_Ar = 6.6335209e-26; // mass of argon (kg)
     double _m_e = 9.10938e-31; // mass of electron (kg)
     double _Kb = Boltzmann_constant;
