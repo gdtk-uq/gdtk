@@ -142,7 +142,7 @@ public:
     @nogc final number Prandtl(in GasState Q) { return Cp(Q)*Q.mu/Q.k; }
 
     @nogc
-    final number molecular_mass(in GasState Q)
+    final number molecular_mass(const(GasState) Q) const
     in {
         debug { assert(Q.massf.length == _mol_masses.length,
                        brokenPreCondition("Inconsistent array lengths.")); }
@@ -152,7 +152,7 @@ public:
     }
 
     @nogc
-    final void massf2molef(ref const(GasState) Q, ref number[] molef)
+    final void massf2molef(const(GasState) Q, number[] molef) const
     in {
         debug { assert(Q.massf.length == molef.length,
                        brokenPreCondition("Inconsistent array lengths.")); }
@@ -162,7 +162,7 @@ public:
     }
 
     @nogc
-    final void molef2massf(ref const(number[]) molef, GasState Q)
+    final void molef2massf(const(number[]) molef, GasState Q) const
     in {
         debug { assert(Q.massf.length == molef.length,
                        brokenPreCondition("Inconsistent array lengths.")); }
@@ -172,10 +172,12 @@ public:
     }
 
     @nogc
-    final void massf2conc(const(GasState) Q, ref number[] conc)
+    final void massf2conc(GasState Q, number[] conc) const
     in {
-        debug { assert(Q.massf.length == conc.length,
-                       brokenPreCondition("Inconsistent array lengths.")); }
+        debug {
+            assert(Q.massf.length == conc.length, brokenPreCondition("Inconsistent array lengths."));
+            assert(!isNaN(Q.rho) && Q.rho > 0.0, brokenPreCondition("Need positive density."));
+        }
     }
     body {
         foreach ( i; 0.._n_species ) {
@@ -185,16 +187,12 @@ public:
     }
 
     @nogc
-    final void update_concentrations_from_massf(GasState Q)
-    {
-        massf2conc(Q, Q.conc);
-    }
-
-    @nogc
-    final void conc2massf(ref const(number[]) conc, GasState Q)
+    final void conc2massf(const(number[]) conc, GasState Q) const
     in {
-        debug { assert(Q.massf.length == conc.length,
-                       brokenPreCondition("Inconsistent array lengths.")); }
+        debug {
+            assert(Q.massf.length == conc.length, brokenPreCondition("Inconsistent array lengths."));
+            assert(!isNaN(Q.rho) && Q.rho > 0.0, brokenPreCondition("Need positive density."));
+        }
     }
     body {
         foreach ( i; 0.._n_species ) {
@@ -204,13 +202,7 @@ public:
     }
 
     @nogc
-    final void update_massf_from_concentrations(GasState Q)
-    {
-        conc2massf(Q.conc, Q);
-    }
-
-    @nogc
-    final void massf2numden(const(GasState) Q, ref number[] numden)
+    final void massf2numden(const(GasState) Q, number[] numden) const
     in {
         debug { assert(Q.massf.length == numden.length,
                        brokenPreCondition("Inconsistent array lengths.")); }
@@ -222,7 +214,7 @@ public:
     }
 
     @nogc
-    final void numden2massf(ref const(number[]) numden, GasState Q)
+    final void numden2massf(const(number[]) numden, GasState Q) const
     in {
         debug { assert(Q.massf.length == numden.length,
                        brokenPreCondition("Inconsistent array lengths.")); }
@@ -234,6 +226,12 @@ public:
         }
     }
 
+    @nogc
+    void balance_charge(GasState Q) const
+    {
+        /* If relevant, the derived GasModel should know what to do. */
+    }
+    
 protected:
     // Default to non-plasma gas model, where all species are treated alike.
     // The quasi-neutral plasma model assumes that the last species is the electron,

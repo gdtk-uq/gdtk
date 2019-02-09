@@ -72,6 +72,10 @@ test ideal-dissociating-gas-test {Testing ideal_dissociating_gas.d} -body {
     exec ./ideal_dissociating_gas_test
 } -result {} -returnCodes {0}
 
+test two-temperature-reacting-argon-test {Testing Daniel's two-T argon gas model} -body {
+    exec ./two_temperature_reacting_argon_test
+} -result {} -returnCodes {0}
+
 test steam-test {Testing steam.d} -body {
     exec ./steam_test
 } -result {} -returnCodes {0}

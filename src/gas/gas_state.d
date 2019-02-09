@@ -39,7 +39,6 @@ public:
     number sigma;    /// electrical conductivity, S/m
     /// Composition
     number[] massf;  /// species mass fractions
-    number[] conc;   /// species concentrations, mol/m^^3
     number quality;  /// vapour quality
     // A place to hang on to some CEA data, so that it can be called up
     // in CEAGas methods that don't have access to the original CEA output file.
@@ -48,7 +47,6 @@ public:
     this(uint n_species, uint n_modes, bool includeSavedData=false)
     {
         massf.length = n_species;
-        conc.length = n_species;
         u_modes.length = n_modes;
         T_modes.length = n_modes;
         k_modes.length = n_modes;
@@ -75,7 +73,6 @@ public:
         u_modes.length = nmodes;
         k_modes.length = nmodes;
         massf.length = nsp;
-        conc.length = nsp;
         foreach(i; 0 .. nsp) {
             massf[i] = (i < massf_init.length) ? massf_init[i] : 0.0;
         }
@@ -83,7 +80,6 @@ public:
         sigma = sigma_init;
         if (cast(CEAGas)gm) { ceaSavedData = new CEASavedData; }
         // Now, evaluate the rest of the properties using the gas model.
-        gm.update_concentrations_from_massf(this);
         gm.update_thermo_from_pT(this);
         gm.update_sound_speed(this);
         gm.update_trans_coeffs(this);
@@ -114,7 +110,6 @@ public:
         k_modes = other.k_modes.dup;
         sigma = other.sigma;
         massf = other.massf.dup;
-        conc = other.conc.dup;
         quality = other.quality;
         if (other.ceaSavedData !is null) {
             ceaSavedData = new CEASavedData(*(other.ceaSavedData));
@@ -136,7 +131,6 @@ public:
         foreach (i; 0 .. k_modes.length) { k_modes[i] = other.k_modes[i]; }
         sigma = other.sigma;
         foreach (i; 0 .. massf.length) { massf[i] = other.massf[i]; }
-        foreach (i; 0 .. conc.length) { conc[i] = other.conc[i]; }
         quality = other.quality;
     }
 
@@ -156,7 +150,6 @@ public:
         foreach(i; 0 .. k_modes.length) { k_modes[i] = 0.5 * (gs0.k_modes[i] + gs1.k_modes[i]); }
         sigma = 0.5 * (gs0.sigma + gs1.sigma);
         foreach(i; 0 .. massf.length) massf[i] = 0.5 * (gs0.massf[i] + gs1.massf[i]);
-        foreach(i; 0 .. conc.length) conc[i] = 0.5 * (gs0.conc[i] + gs1.conc[i]);
         quality = 0.5 * (gs0.quality + gs1.quality);
     }
 
@@ -176,7 +169,6 @@ public:
         foreach(ref elem; k_modes) { elem = 0.0; }
         sigma = 0.0;
         foreach(ref elem; massf) { elem = 0.0; }
-        foreach(ref elem; conc) { elem = 0.0; }
         quality = 0.0;
         foreach(other; others) {
             p += other.p; T += other.T; u += other.u; p_e += other.p_e; a += other.a;
@@ -186,7 +178,6 @@ public:
             foreach(i; 0 .. k_modes.length) { k_modes[i] += other.k_modes[i]; }
             sigma += other.sigma;
             foreach(i; 0 .. massf.length) { massf[i] += other.massf[i]; }
-            foreach(i; 0 .. conc.length) { conc[i] += other.conc[i]; }
             quality += other.quality;
         }
         p /= n; T /= n; u /= n; p_e /= n; a /= n;
@@ -196,7 +187,6 @@ public:
         foreach(ref elem; k_modes) { elem /= n; }
         sigma /= n;
         foreach(ref elem; massf) { elem /= n; }
-        foreach(ref elem; conc) { elem /= n; }
         quality /= n;
         // Now, make the properties consistent using the gas model.
         gm.update_thermo_from_pT(this);
@@ -265,7 +255,6 @@ public:
         repr ~= ", k=" ~ to!string(k);
         repr ~= ", k_modes=" ~ to!string(k_modes);
         repr ~= ", massf=" ~ to!string(massf);
-        repr ~= ", conc=" ~ to!string(conc);
         repr ~= ", quality=" ~ to!string(quality);
         repr ~= ", sigma=" ~ to!string(sigma);
         repr ~= ")";

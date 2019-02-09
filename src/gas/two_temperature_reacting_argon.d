@@ -33,6 +33,7 @@ import gas.diffusion.viscosity;
 import gas.diffusion.therm_cond;
 
 // First, the basic gas model.
+enum Species {Ar=0, Ar_plus, e_minus}
 
 class TwoTemperatureReactingArgon: GasModel {
 public:
@@ -43,9 +44,9 @@ public:
         _n_species = 3;
         _n_modes = 1;
         _species_names.length = 3;
-        _species_names[0] = "Ar";
-        _species_names[1] = "Ar_plus";
-        _species_names[2] = "e_minus";
+        _species_names[Species.Ar] = "Ar";
+        _species_names[Species.Ar_plus] = "Ar_plus";
+        _species_names[Species.e_minus] = "e_minus";
         lua_getglobal(L, "TwoTemperatureReactingArgon");
         // [TODO] test that we actually have the table as item -1
         // Now, pull out the remaining numeric value parameters.
@@ -54,9 +55,9 @@ public:
         _theta_A1star = 135300.0;
         _ion_tol = getDouble(L, -1, "ion_tol");
         _mol_masses.length = 3;
-        _mol_masses[0] = 39.948e-3; // Units are kg/mol
-        _mol_masses[2] = 5.485799e-7; // Units are kg/mol
-        _mol_masses[1] = _mol_masses[0] - _mol_masses[2]; // Units are kg/mol
+        _mol_masses[Species.Ar] = 39.948e-3; // Units are kg/mol
+        _mol_masses[Species.e_minus] = 5.485799e-7; // Units are kg/mol
+        _mol_masses[Species.Ar_plus] = _mol_masses[Species.Ar] - _mol_masses[Species.e_minus];
         _Cp = 520.0;
         _Cv = 312.0;
         lua_pop(L, 1); // dispose of the table
@@ -69,9 +70,9 @@ public:
         char[] repr;
         repr ~= "TwoTemperatureReactingArgon =(";
         repr ~= "species=[\"Ar\", \"Ar_plus\", \"e_minus\"]";
-        repr ~= ", Mmass=[" ~ to!string(_mol_masses[0]);
-        repr ~= "," ~ to!string(_mol_masses[1]);
-        repr ~= "," ~ to!string(_mol_masses[2]) ~ "]";
+        repr ~= ", Mmass=[" ~ to!string(_mol_masses[Species.Ar]);
+        repr ~= "," ~ to!string(_mol_masses[Species.Ar_plus]);
+        repr ~= "," ~ to!string(_mol_masses[Species.e_minus]) ~ "]";
         repr ~= ")";
         return to!string(repr);
     }
@@ -201,6 +202,11 @@ public:
         throw new GasModelException("entropy not implemented in TwoTemperatureReactingArgon.");
     }
 
+    override void balance_charge(GasState Q) const
+    {
+        // [FIX-ME] Q.conc[Species.e_minus] = Q.conc[Species.Ar_plus];
+    }
+    
 private:
     // Thermodynamic constants
     double _Rgas; // J/kg/K
@@ -218,8 +224,6 @@ version(two_temperature_reacting_argon_test) {
     import util.msg_service;
     import std.math : approxEqual;
     int main() {
-        writeln("Beginning the unit test...");
-        writeln("Testing the gas state functions...");
         lua_State* L = init_lua_State();
         doLuaFile(L, "sample-data/two-temperature-reacting-argon-model.lua");
         auto gm = new TwoTemperatureReactingArgon(L);
@@ -228,16 +232,18 @@ version(two_temperature_reacting_argon_test) {
         gd.p = 1.0e5;
         gd.T = 300.0;
         gd.T_modes[0] = 300;
-        gd.massf[0] = 1.0; gd.massf[1] = 0.0; gd.massf[2] = 0.0;
+        gd.massf[Species.Ar] = 1.0;
+        gd.massf[Species.Ar_plus] = 0.0;
+        gd.massf[Species.e_minus] = 0.0;
 
         assert(approxEqual(gm.R(gd), 208.0, 1.0e-4), failedUnitTest());
         assert(gm.n_modes == 1, failedUnitTest());
         assert(gm.n_species == 3, failedUnitTest());
         assert(approxEqual(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
         assert(approxEqual(gd.T, 300.0, 1.0e-6), failedUnitTest());
-        assert(approxEqual(gd.massf[0], 1.0, 1.0e-6), failedUnitTest());
-        assert(approxEqual(gd.massf[1], 0.0, 1.0e-6), failedUnitTest());
-        assert(approxEqual(gd.massf[2], 0.0, 1.0e-6), failedUnitTest());
+        assert(approxEqual(gd.massf[Species.Ar], 1.0, 1.0e-6), failedUnitTest());
+        assert(approxEqual(gd.massf[Species.Ar_plus], 0.0, 1.0e-6), failedUnitTest());
+        assert(approxEqual(gd.massf[Species.e_minus], 0.0, 1.0e-6), failedUnitTest());
 
         gm.update_thermo_from_pT(gd);
         gm.update_sound_speed(gd);
