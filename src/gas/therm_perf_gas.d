@@ -398,6 +398,13 @@ public:
         return _curves[isp].eval_s(Q.T);
     }
 
+    override void balance_charge(GasState Q) const
+    {
+        if (_is_plasma) {
+            throw new Error("[FIX-ME] Not yet implemented.");
+        }
+    }
+
 private:
     double[] _R;
     PerfectGasMixEOS _pgMixEOS;

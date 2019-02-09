@@ -47,19 +47,15 @@ public:
         _species_names[Species.Ar] = "Ar";
         _species_names[Species.Ar_plus] = "Ar_plus";
         _species_names[Species.e_minus] = "e_minus";
-        lua_getglobal(L, "TwoTemperatureReactingArgon");
-        // [TODO] test that we actually have the table as item -1
-        // Now, pull out the remaining numeric value parameters.
-        _Rgas = 208.0;
-        _theta_ion = 183100.0;
-        _theta_A1star = 135300.0;
-        _ion_tol = getDouble(L, -1, "ion_tol");
         _mol_masses.length = 3;
         _mol_masses[Species.Ar] = 39.948e-3; // Units are kg/mol
         _mol_masses[Species.e_minus] = 5.485799e-7; // Units are kg/mol
         _mol_masses[Species.Ar_plus] = _mol_masses[Species.Ar] - _mol_masses[Species.e_minus];
-        _Cp = 520.0;
-        _Cv = 312.0;
+        _e_mass_over_ion_mass = _mol_masses[Species.e_minus] / _mol_masses[Species.Ar_plus];
+        lua_getglobal(L, "TwoTemperatureReactingArgon");
+        // [TODO] test that we actually have the table as item -1
+        // Now, pull out the remaining numeric value parameters.
+        _ion_tol = getDouble(L, -1, "ion_tol");
         lua_pop(L, 1); // dispose of the table
         // Compute derived parameters
         create_species_reverse_lookup();
@@ -79,7 +75,7 @@ public:
 
     override void update_thermo_from_pT(GasState Q) const 
     {
-        number alpha = (Q.massf[2]/_mol_masses[2]) / ((Q.massf[2]/_mol_masses[2])+(Q.massf[0]/_mol_masses[0]));
+        number alpha = ionisation_fraction_from_mass_fractions(Q);
         if (Q.T <= 0.0 || Q.p <= 0.0) {
             string msg = "Temperature and/or pressure was negative for update_thermo_from_pT."; 
             throw new GasModelException(msg);
@@ -95,7 +91,7 @@ public:
     }
     override void update_thermo_from_rhou(GasState Q) const
     {
-        number alpha = (Q.massf[2]/_mol_masses[2]) / ((Q.massf[2]/_mol_masses[2])+(Q.massf[0]/_mol_masses[0]));
+        number alpha = ionisation_fraction_from_mass_fractions(Q);
         if (Q.u <= 0.0 || Q.rho <= 0.0) {
             string msg = "Internal energy and/or density was negative for update_thermo_from_rhou."; 
             throw new GasModelException(msg);
@@ -112,7 +108,7 @@ public:
 
     override void update_thermo_from_rhoT(GasState Q) const
     {
-        number alpha = (Q.massf[2]/_mol_masses[2]) / ((Q.massf[2]/_mol_masses[2])+(Q.massf[0]/_mol_masses[0]));
+        number alpha = ionisation_fraction_from_mass_fractions(Q);
         if (Q.T <= 0.0 || Q.rho <= 0.0) {
             string msg = "Temperature and/or density was negative for update_thermo_from_rhoT."; 
             throw new GasModelException(msg);
@@ -129,7 +125,7 @@ public:
 
     override void update_thermo_from_rhop(GasState Q) const
     {
-        number alpha = (Q.massf[2]/_mol_masses[2]) / ((Q.massf[2]/_mol_masses[2])+(Q.massf[0]/_mol_masses[0]));
+        number alpha = ionisation_fraction_from_mass_fractions(Q);
         if (Q.p <= 0.0 || Q.rho <= 0.0) {
             string msg = "Pressure and/or density was negative for update_thermo_from_rhop."; 
             throw new GasModelException(msg);
@@ -204,17 +200,25 @@ public:
 
     override void balance_charge(GasState Q) const
     {
-        // [FIX-ME] Q.conc[Species.e_minus] = Q.conc[Species.Ar_plus];
+        Q.massf[Species.e_minus] = Q.massf[Species.Ar_plus] * _e_mass_over_ion_mass;
+    }
+
+    @nogc number ionisation_fraction_from_mass_fractions(const(GasState) Q) const
+    {
+        number ions = Q.massf[Species.Ar_plus] / _mol_masses[Species.Ar_plus];
+        number atoms = Q.massf[Species.Ar] / _mol_masses[Species.Ar];
+        return ions/(ions+atoms);
     }
     
 private:
     // Thermodynamic constants
-    double _Rgas; // J/kg/K
-    double _theta_ion;
-    double _theta_A1star;
-    double _Cp;
-    double _Cv;
-    double _ion_tol;
+    double _Rgas = 208.0; // J/kg/K
+    double _Cp = 520.0;
+    double _Cv = 312.0;
+    double _theta_ion = 183100.0;
+    double _theta_A1star = 135300.0;
+    double _ion_tol; // set from value in Lua file
+    double _e_mass_over_ion_mass; // set once mol masses are set in constructor
 } // end class
 
 //// Unit test of the basic gas model...

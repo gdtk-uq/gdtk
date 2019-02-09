@@ -229,7 +229,11 @@ public:
     @nogc
     void balance_charge(GasState Q) const
     {
-        /* If relevant, the derived GasModel should know what to do. */
+        // If relevant, the derived GasModel should know what to do...
+        if (_is_plasma) {
+            // ... such that we should never arrive here.
+            throw new Error("Your gas model does not handle the setting of the electron mass-fraction.");
+        }
     }
     
 protected:

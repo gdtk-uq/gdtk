@@ -37,17 +37,6 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         auto L = init_lua_State();
         doLuaFile(L, fname);
         lua_getglobal(L, "TwoTemperatureReactingArgon");
-        _mol_masses.length = 3;
-        _mol_masses[0] = 39.948e-3; // Units are kg/mol
-        _mol_masses[2] = 5.485799e-7; // Units are kg/mol
-        _mol_masses[1] = _mol_masses[0] - _mol_masses[2]; // Units are kg/mol
-        _m_Ar = 6.6335209e-26; //mass of argon (kg)
-        _m_e = 9.10938e-31; //mass of electron (kg)
-        _Kb = Boltzmann_constant;
-        _Av = Avogadro_number;
-        _Rgas = 208.0;
-        _theta_ion = 183100.0;
-        _theta_A1star = 135300.0;
         _ion_tol = getDouble(L, -1, "ion_tol");
         _chem_dt = getDouble(L, -1, "chem_dt");
         _integration_method = getString(L, -1, "integration_method");
@@ -67,7 +56,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
 
         //unpack dependant variables
         number n_e = y[0,0];
-        number n_Ar = _n_total-n_e;        
+        number n_Ar = _n_total-n_e;
         Q.u = y[1,0];
         Q.u_modes[0] = _u_total-Q.u;
 
@@ -95,30 +84,32 @@ final class UpdateArgonFrac : ThermochemicalReactor {
             Te = Q.T_modes[0];
         }
 
-        if (Q.u_modes[0] == 0.0) {Te = T;}
+        if (Q.u_modes[0] == 0.0) { Te = T; }
         
-        //Must update the mass fractions before updating the gas state from rho and u...
-        Q.massf[0] = n_Ar/_Av/Q.rho*_mol_masses[0];
-        Q.massf[1] = n_e/_Av/Q.rho*_mol_masses[1];
-        Q.massf[2] = n_e/_Av/Q.rho*_mol_masses[2];// Number density of Argon+ is the same as electron number density.
+        // Must update the mass fractions before updating the gas state from rho and u...
+        // Number density of Argon+ is the same as electron number density.
+        number[3] nden; nden[0] = n_Ar; nden[1] = n_e; nden[2] = n_e;
+        _gmodel.numden2massf(nden, Q);
         _gmodel.update_thermo_from_rhou(Q);
         _gmodel.update_sound_speed(Q);
 
         //=====================================================================
-        //rate constants
+        // rate constants
         number kfA = 1.68e-26*T*sqrt(T)*(_theta_A1star/T+2)*exp(-_theta_A1star/T);
         number kfe = 3.75e-22*Te*sqrt(Te)*(_theta_A1star/Te+2)*exp(-_theta_A1star/Te);
         number krA = 5.8e-49*(_theta_A1star/T+2)*exp((_theta_ion-_theta_A1star)/T);
         number kre = 1.29e-44*(_theta_A1star/Te+2)*exp((_theta_ion-_theta_A1star)/Te);
 
-        //determine the current rate of ionisation
-        number n_dot_A = kfA*pow(n_Ar,2) - krA*n_Ar*pow(n_e,2);         //production rate of electrons due to argon collisions
-        number n_dot_e = kfe*n_Ar*n_e - kre*pow(n_e,3);                 //production rate of electrons due to electron collisions
+        // determine the current rate of ionisation
+        // production rate of electrons due to argon collisions
+        number n_dot_A = kfA*pow(n_Ar,2) - krA*n_Ar*pow(n_e,2);
+        // production rate of electrons due to electron collisions
+        number n_dot_e = kfe*n_Ar*n_e - kre*pow(n_e,3);
         number n_dot = n_dot_A + n_dot_e;
 
         y_dash[0,0] = n_dot;
 
-        //Energy moving to electronic mode due to reactions:
+        // Energy moving to electronic mode due to reactions:
         number alpha_dot = n_dot/_n_total;
         number u_dot_reac = 3.0/2.0*_Rgas*alpha_dot*Te+alpha_dot*_Rgas*_theta_ion - n_dot_e*_Kb*_theta_ion/Q.rho;
 
@@ -181,6 +172,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         debug {
         // Implement in debug context because of @nogc requirement.
         //
+        number[3] numden;
         if (Q.T > 3000.0) {
             double chem_dt_start = _chem_dt;
             int NumberSteps = to!int(tInterval/_chem_dt);
@@ -188,10 +180,11 @@ final class UpdateArgonFrac : ThermochemicalReactor {
             _chem_dt = tInterval/NumberSteps;
             //writeln("Number of Steps ", NumberSteps);
             // Determine the current number densities.
-            number n_e = Q.rho/_mol_masses[2]*Q.massf[2]*_Av; // number density of electrons
-            number n_Ar = Q.rho/_mol_masses[0]*Q.massf[0]*_Av; // number density of Ar
-            number alpha = n_e/(n_e + n_Ar);
+            _gmodel.massf2numden(Q, numden);
+            number n_e = numden[2]; // number density of electrons
+            number n_Ar = numden[0]; // number density of Ar
             _n_total = n_e + n_Ar;
+            number alpha = n_e/_n_total;
             _u_total = 3.0/2.0*_Rgas*(Q.T+alpha*Q.T_modes[0])+alpha*_Rgas*_theta_ion;
             //writeln("_u_total = ", _u_total);
 
@@ -273,13 +266,13 @@ final class UpdateArgonFrac : ThermochemicalReactor {
             }
             
             //Must update the mass fractions before updating the gas state from rho and u...
-            Q.massf[0] = n_Ar/_Av/Q.rho*_mol_masses[0];
-            Q.massf[1] = n_e/_Av/Q.rho*_mol_masses[1];
-            Q.massf[2] = n_e/_Av/Q.rho*_mol_masses[2];// Number density of Argon+ is the same as electron number density.       
+            // Number density of Argon+ is the same as electron number density.
+            number[3] nden; nden[0] = n_Ar; nden[1] = n_e; nden[2] = n_e;
+            _gmodel.numden2massf(nden, Q);
             _gmodel.update_thermo_from_rhou(Q);
             _gmodel.update_sound_speed(Q);
 
-            _chem_dt = chem_dt_start; // return _chem_dt back to its original value\
+            _chem_dt = chem_dt_start; // return _chem_dt back to its original value
         }
         } else {
             // We are not in a debug build context, so...
@@ -289,22 +282,21 @@ final class UpdateArgonFrac : ThermochemicalReactor {
     
 private:
     double[] _mol_masses;
+    double _m_Ar = 6.6335209e-26; // mass of argon (kg)
+    double _m_e = 9.10938e-31; // mass of electron (kg)
+    double _Kb = Boltzmann_constant;
+    double _Rgas = 208.0;
+    double _theta_ion = 183100.0;
+    double _theta_A1star = 135300.0;
     double _ion_tol;
     double _chem_dt;
-    double _m_Ar; //mass of argon (kg)
-    double _m_e; //mass of electron (kg)
-    double _Kb;
-    double _Av;
-    double _Rgas;
-    double _theta_ion;
-    double _theta_A1star;
     string _integration_method;
     double _Newton_Raphson_tol;
 public:
     number _n_total;
     number _u_total;
 
-} // end class UpdateAB
+} // end class UpdateArgonFrac
 
 
 version(two_temperature_argon_kinetics_test) {

@@ -420,6 +420,13 @@ public:
         throw new GasModelException("entropy not implemented in TwoTemperatureNitrogen.");
     }
 
+    override void balance_charge(GasState Q) const
+    {
+        if (_is_plasma) {
+            throw new Error("[FIX-ME] Not yet implemented.");
+        }
+    }
+
     @nogc number vibEnergy(number Tve, int isp)
     {
         number h_at_Tve = enthalpyFromCurveFits(Tve, isp);
