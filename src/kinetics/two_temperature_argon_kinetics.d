@@ -175,13 +175,13 @@ final class UpdateArgonFrac : ThermochemicalReactor {
     }
 
     @nogc
-    void solve2(number[2][2] a, number[2] b, number[2] x)
+    void solve2(ref number[2][2] a, ref number[2] b, ref number[2] x)
     {
         number det = a[0][0]*a[1][1] - a[0][1]*a[1][0];
         if (fabs(det) < 1.0e-20) {
             throw new Error("Effectively singular Jacobian.");
         }
-        x[0] = (a[0][1]*b[1] - a[1][1]*b[0])/det;
+        x[0] = -(a[0][1]*b[1] - a[1][1]*b[0])/det;
         x[1] = (a[0][0]*b[1] - a[1][0]*b[0])/det;
     }
     
@@ -217,6 +217,8 @@ final class UpdateArgonFrac : ThermochemicalReactor {
             // Perturbation sizes for the finite-difference Jacobian
             double[2] h = [1.0e10, 1.0e-5]; // working: [1.0e10, 1.0e0]; 
 
+            // [FIX-ME] Ask Dan about the time-step count.
+            // I think that it should be 0 .. NumberSteps. 2019-02-11, PJ.
             foreach (n; 1 .. NumberSteps) {
                 switch (_integration_method) {
                 case "Forward_Euler":
@@ -224,18 +226,18 @@ final class UpdateArgonFrac : ThermochemicalReactor {
                     foreach (i; 0 .. 2) { y[i] = y[i] + _chem_dt * myF[i]; }
                     break;
                 case "Backward_Euler":
-                    if (y[0] <= 0.0) {
-                        // There are no electrons, fall back to a forward-Euler step.
+                    if (y[0] < 0.0) {
+                        // Invalid number of electrons, fall back to a forward-Euler step.
+                        // [FIX-ME] We should never enter here; check with Daniel.
                         number[2] myF = F(y, Q);
                         foreach (i; 0 .. 2) { y[i] = y[i] + _chem_dt * myF[i]; }
                     } else {
                         // Some electrons already.
                         double norm_error = 1.0e50; // something large that will be replaced
                         do {
-                            number[2][2] J = Jacobian(y, y_prev, h, Q); 
-                            number[2] dy;
+                            number[2][2] J = Jacobian(y, y_prev, h, Q);
                             number[2] rhs = BackEuler_F(y, y_prev, Q);
-                            solve2(J, rhs, dy);
+                            number[2] dy; solve2(J, rhs, dy);
                             foreach (i; 0 .. 2) { y[i] = y[i] - dy[i]; }
                             number[2] error = BackEuler_F(y, y_prev, Q);
                             norm_error = sqrt(pow(error[0].re/1.0e22,2) +
