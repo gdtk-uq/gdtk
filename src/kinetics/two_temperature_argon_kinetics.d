@@ -216,10 +216,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
             number[2] y_prev; y_prev[0] = n_e; y_prev[1] = Q.u;
             // Perturbation sizes for the finite-difference Jacobian
             double[2] h = [1.0e10, 1.0e-5]; // working: [1.0e10, 1.0e0]; 
-
-            // [FIX-ME] Ask Dan about the time-step count.
-            // I think that it should be 0 .. NumberSteps. 2019-02-11, PJ.
-            foreach (n; 1 .. NumberSteps) {
+            foreach (n; 0 .. NumberSteps) {
                 switch (_integration_method) {
                 case "Forward_Euler":
                     number[2] myF = F(y, Q);
@@ -228,7 +225,6 @@ final class UpdateArgonFrac : ThermochemicalReactor {
                 case "Backward_Euler":
                     if (y[0] < 0.0) {
                         // Invalid number of electrons, fall back to a forward-Euler step.
-                        // [FIX-ME] We should never enter here; check with Daniel.
                         number[2] myF = F(y, Q);
                         foreach (i; 0 .. 2) { y[i] = y[i] + _chem_dt * myF[i]; }
                     } else {
