@@ -46,16 +46,16 @@ final class UpdateArgonFrac : ThermochemicalReactor {
     }
 
     @nogc
-    number[2] F(number[2] y, GasState Q)
+    number[2] F(ref const(number[2]) y, GasState Q)
+    // Compute the rate of change of the state vector for the ionisation reactions.
+    // It also has the side effect of keeping the GasState up to date with y vector.
     {
+        // Definition of our state vector:
+        // [0] number density of electrons and
+        // [1] translational energy of heavy particles
         number[2] y_dash; y_dash[0] = 0.0; y_dash[1] = 0.0;
-        number Q_ea;
-        number Q_ei;
 
-        number v_ea;
-        number v_ei;
-
-        // Unpack dependant variables
+        // Unpack the state vector.
         number n_e = y[0];
         number n_Ar = _n_total - n_e;
         Q.u = y[1];
@@ -66,7 +66,11 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         number Te;
         number T = Q.T;
 
-        //reconstruct the flow state from state vector
+        // Update the GasState from state vector.
+        //
+        // We do this so that we alwas work the rate calculations from
+        // a physically realizable state.
+        //
         if (n_e <= 0.0) {
             // Do not let the number of electrons go negative.
             // Force the numbers back to something physically realizable.
@@ -77,9 +81,9 @@ final class UpdateArgonFrac : ThermochemicalReactor {
             Q.u = _u_total;
             Q.u_modes[0] = 0.0;
             // temperature
-            Q.T =  2.0/3.0*Q.u/_Rgas;
-            T = Q.T;
-            Q.T_modes[0] = Q.T;
+            T =  2.0/3.0*Q.u/_Rgas;
+            Q.T = T;
+            Q.T_modes[0] = T;
         } else if (alpha < _ion_tol) {
             Te = Q.T;
         } else {
@@ -117,7 +121,8 @@ final class UpdateArgonFrac : ThermochemicalReactor {
             + alpha_dot*_Rgas*_theta_ion - n_dot_e*_Kb*_theta_ion/Q.rho;
 
         //=====================================================================
-        // now need temperatures...
+        // now need temperatures... [FIX-ME] comment to left seems wrong. 2019-02-12 PJ
+        number Q_ea, Q_ei, v_ea, v_ei;
         if (alpha > _ion_tol) {
             // Calculate Qea
             if (Te < 10.0e3) {
@@ -142,7 +147,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
             alpha_dot = n_dot/(n_e+n_Ar);
             // energy transferred to electron mode through collisions
             number u_dot = 3*n_e*_m_e/_m_Ar*(v_ea+v_ei)*_Kb*(T-Te)/Q.rho;
-            y_dash[1] = - u_dot - u_dot_reac;
+            y_dash[1] = -u_dot - u_dot_reac;
         } else {
             y_dash[1] = 0.0 - u_dot_reac;            
         }
@@ -150,7 +155,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
     } // end F()
 
     @nogc
-    number[2] BackEuler_F(number[2] y, number[2] y_prev, GasState Q)
+    number[2] BackEuler_F(ref const(number[2]) y, ref const(number[2]) y_prev, GasState Q)
     {
         number[2] myF = F(y, Q);
         number[2] output;
@@ -159,7 +164,8 @@ final class UpdateArgonFrac : ThermochemicalReactor {
     }
 
     @nogc
-    number[2][2] Jacobian(number[2] y, number[2] y_prev, double[2] h, GasState Q)
+    number[2][2] Jacobian(ref const(number[2]) y, ref const(number[2]) y_prev,
+                          ref const(double[2]) h, GasState Q)
     {
         number[2] myF0 = BackEuler_F(y, y_prev, Q);
         number[2] yph0; yph0[0] = y[0]+h[0]; yph0[1] = y[1]; // y plus increment in index 0
@@ -175,7 +181,8 @@ final class UpdateArgonFrac : ThermochemicalReactor {
     }
 
     @nogc
-    void solve2(ref number[2][2] a, ref number[2] b, ref number[2] x)
+    void solve2(ref const(number[2][2]) a, ref const(number[2]) b,
+                ref number[2] x)
     {
         number det = a[0][0]*a[1][1] - a[0][1]*a[1][0];
         if (fabs(det) < 1.0e-20) {
@@ -190,9 +197,9 @@ final class UpdateArgonFrac : ThermochemicalReactor {
                          ref double dtChemSuggest, ref double dtThermSuggest, 
                          ref number[maxParams] params)
     {
-        // Implement in debug context because of @nogc requirement.
-        //
+        // There are changes only if the gas is hot enough.
         if (Q.T > 3000.0) {
+            // [FIX-ME] Dan, why are you not using dtChemSuggest ?
             double chem_dt_saved = _chem_dt;
             int NumberSteps = cast(int) floor(tInterval/_chem_dt);
             if (NumberSteps < 1) { NumberSteps = 1; }
@@ -203,16 +210,17 @@ final class UpdateArgonFrac : ThermochemicalReactor {
             _gmodel.massf2numden(Q, numden);
             number n_e = numden[2]; // number density of electrons
             number n_Ar = numden[0]; // number density of Ar
+            //
+            // This is a model of an isolated reactor so the total number
+            // of heavy particles and the energy in the reactor remain constant.
             _n_total = n_e + n_Ar;
             number alpha = n_e/_n_total;
             _u_total = 3.0/2.0*_Rgas*(Q.T+alpha*Q.T_modes[0])+alpha*_Rgas*_theta_ion;
 
-            // Definition of our state vector:
-            // [0] number density of electrons and
-            // [1] translational energy of heavy particles
+            // Pack the state vector, ready for the integrator.
             number[2] y; y[0] = n_e; y[1] = Q.u;
 
-            // The following needed for Backward-Euler step
+            // The following items are needed for Backward-Euler step
             number[2] y_prev; y_prev[0] = n_e; y_prev[1] = Q.u;
             // Perturbation sizes for the finite-difference Jacobian
             double[2] h = [1.0e10, 1.0e-5]; // working: [1.0e10, 1.0e0]; 
@@ -223,23 +231,16 @@ final class UpdateArgonFrac : ThermochemicalReactor {
                     foreach (i; 0 .. 2) { y[i] = y[i] + _chem_dt * myF[i]; }
                     break;
                 case "Backward_Euler":
-                    if (y[0] < 0.0) {
-                        // Invalid number of electrons, fall back to a forward-Euler step.
-                        number[2] myF = F(y, Q);
-                        foreach (i; 0 .. 2) { y[i] = y[i] + _chem_dt * myF[i]; }
-                    } else {
-                        // Some electrons already.
-                        double norm_error = 1.0e50; // something large that will be replaced
-                        do {
-                            number[2][2] J = Jacobian(y, y_prev, h, Q);
-                            number[2] rhs = BackEuler_F(y, y_prev, Q);
-                            number[2] dy; solve2(J, rhs, dy);
-                            foreach (i; 0 .. 2) { y[i] = y[i] - dy[i]; }
-                            number[2] error = BackEuler_F(y, y_prev, Q);
-                            norm_error = sqrt(pow(error[0].re/1.0e22,2) +
-                                              pow(error[1].re/1.0e7,2));
-                        } while (norm_error > _Newton_Raphson_tol);
-                    }
+                    double norm_error = 1.0e50; // something large that will be replaced
+                    do {
+                        number[2][2] J = Jacobian(y, y_prev, h, Q);
+                        number[2] rhs = BackEuler_F(y, y_prev, Q);
+                        number[2] dy; solve2(J, rhs, dy);
+                        foreach (i; 0 .. 2) { y[i] = y[i] - dy[i]; }
+                        number[2] error = BackEuler_F(y, y_prev, Q);
+                        norm_error = sqrt(pow(error[0].re/1.0e22,2) +
+                                          pow(error[1].re/1.0e7,2));
+                    } while (norm_error > _Newton_Raphson_tol);
                     foreach (i; 0 .. 2) { y_prev[i] = y[i]; } // needed for next step
                     break;
                 case "RK4":
@@ -280,7 +281,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
                 alpha = n_e/(n_e + n_Ar);
                 //energy
                 //temperature
-                Q.T =  2.0/3.0*Q.u/_Rgas;
+                Q.T = 2.0/3.0*Q.u/_Rgas;
                 Q.T_modes[0] = Q.T;
             }
             

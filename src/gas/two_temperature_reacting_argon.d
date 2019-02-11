@@ -103,9 +103,8 @@ public:
         } else {
             Q.T_modes[0] = (Q.u_modes[0]/alpha-_Rgas*_theta_ion)*2.0/3.0/_Rgas;
         }
-        Q.p = Q.rho*_Rgas*(Q.T+alpha*Q.T_modes[0]);                                     // Q.rho*_Rgas*Q.T;
+        Q.p = Q.rho*_Rgas*(Q.T+alpha*Q.T_modes[0]);
     }
-
     override void update_thermo_from_rhoT(GasState Q) const
     {
         number alpha = ionisation_fraction_from_mass_fractions(Q);
@@ -113,32 +112,23 @@ public:
             string msg = "Temperature and/or density was negative for update_thermo_from_rhoT."; 
             throw new GasModelException(msg);
         }
-        Q.p = Q.rho*_Rgas*(Q.T+alpha*Q.T_modes[0]);     //Q.rho*_Rgas*Q.T;
+        Q.p = Q.rho*_Rgas*(Q.T+alpha*Q.T_modes[0]);
         Q.u = 3.0/2.0*_Rgas*Q.T;
-        if (alpha <= _ion_tol) {
-            Q.T_modes[0] = Q.T;
-            Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
-        } else {
-            Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
-        }
+        if (alpha <= _ion_tol) { Q.T_modes[0] = Q.T; }
+        Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
     }
-
     override void update_thermo_from_rhop(GasState Q) const
     {
+        // Assume Q.T_modes[0] is set independently, and is correct.
         number alpha = ionisation_fraction_from_mass_fractions(Q);
         if (Q.p <= 0.0 || Q.rho <= 0.0) {
             string msg = "Pressure and/or density was negative for update_thermo_from_rhop."; 
             throw new GasModelException(msg);
         }
         Q.T = Q.p/Q.rho/_Rgas - alpha*Q.T_modes[0];
-        // Assume Q.T_modes[0] is set independently, and correct.
         Q.u = 3.0/2.0*_Rgas*Q.T;
-        if (alpha <= _ion_tol) {
-            Q.T_modes[0] = Q.T;
-            Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
-        } else {
-            Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
-        }
+        if (alpha <= _ion_tol) { Q.T_modes[0] = Q.T; }
+        Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
     }
     override void update_thermo_from_ps(GasState Q, number s) const
     {
@@ -156,7 +146,7 @@ public:
         }
         number _gamma = dhdT_const_p(Q)/dudT_const_v(Q);
         Q.a = sqrt(_gamma*_Rgas*Q.T);
-        //[TODO] update the _Cv and _Cp properties to be dependant on alpha...
+        //[TODO] update the _Cv and _Cp properties to be dependent on alpha...
     }
     override void update_trans_coeffs(GasState Q)
     {
