@@ -36,9 +36,10 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         auto L = init_lua_State();
         doLuaFile(L, fname);
         lua_getglobal(L, "TwoTemperatureReactingArgon");
-        _ion_tol = getDouble(L, -1, "ion_tol");
-        _integration_method = getString(L, -1, "integration_method");
-        _Newton_Raphson_tol = getDouble(L, -1, "Newton_Raphson_tol");
+        _ion_tol = getDoubleWithDefault(L, -1, "ion_tol", 1.0e-15);
+        _integration_method = getStringWithDefault(L, -1, "integration_method", "Backward_Euler");
+        _Newton_Raphson_tol = getDoubleWithDefault(L, -1, "Newton_Raphson_tol", 1.0e-10);
+        _T_min_for_reaction = getDoubleWithDefault(L, -1, "T_min_for_reaction", 3000.0);
         lua_close(L);
     }
 
@@ -195,7 +196,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
                          ref number[maxParams] params)
     {
         // There are changes only if the gas is hot enough.
-        if (Q.T > 3000.0) {
+        if (Q.T > _T_min_for_reaction) {
             int NumberSteps = cast(int) fmax(ceil(tInterval/dtChemSuggest), 1.0);
             _chem_dt = tInterval/NumberSteps;
             dtChemSuggest = _chem_dt; // Remember this value for the next call.
@@ -300,9 +301,13 @@ final class UpdateArgonFrac : ThermochemicalReactor {
     double _chem_dt;
     string _integration_method;
     double _Newton_Raphson_tol;
+    double _T_min_for_reaction = 3000.0; // degrees K
+
+    // The following items are constants for the duration
+    // of the update for our abstract isolated reactor.
     public:
-    number _n_total;
-    number _u_total;
+    number _n_total; // number density of atoms and ions combined
+    number _u_total; // energy within the reactor
 
     } // end class UpdateArgonFrac
 

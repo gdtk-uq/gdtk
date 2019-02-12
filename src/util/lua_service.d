@@ -46,6 +46,17 @@ string getString(lua_State* L, int tblIdx, string key)
     return val;
 }
 
+string getStringWithDefault(lua_State* L, int tblIdx, string key, string defaultValue)
+{
+    string val = defaultValue;
+    lua_getfield(L, tblIdx, key.toStringz);
+    if (lua_isstring(L, -1)) {
+        val = to!string(lua_tostring(L, -1));
+    }
+    lua_pop(L, 1);
+    return val;
+}
+
 double getDouble(lua_State* L, int tblIdx, string key)
 {
     lua_getfield(L, tblIdx, key.toStringz);
@@ -55,6 +66,17 @@ double getDouble(lua_State* L, int tblIdx, string key)
         throw new Error(errMsg);
     }
     double val = lua_tonumber(L, -1);
+    lua_pop(L, 1);
+    return val;
+}
+
+double getDoubleWithDefault(lua_State* L, int tblIdx, string key, double defaultValue)
+{
+    double val = defaultValue;
+    lua_getfield(L, tblIdx, key.toStringz);
+    if (lua_isnumber(L, -1)) {
+        val = lua_tonumber(L, -1);
+    }
     lua_pop(L, 1);
     return val;
 }
@@ -72,6 +94,17 @@ int getInt(lua_State* L, int tblIdx, string key)
     return val;
 }
 
+int getIntWithDefault(lua_State* L, int tblIdx, string key, int defaultValue)
+{
+    int val = defaultValue;
+    lua_getfield(L, tblIdx, key.toStringz);
+    if (lua_isnumber(L, -1)) {
+        val = to!int(lua_tointeger(L, -1));
+    }
+    lua_pop(L, 1);
+    return val;
+}
+
 bool getBool(lua_State* L, int tblIdx, string key)
 {
     lua_getfield(L, tblIdx, key.toStringz);
@@ -81,6 +114,17 @@ bool getBool(lua_State* L, int tblIdx, string key)
         throw new Error(errMsg);
     }
     bool val = to!bool(lua_toboolean(L, -1));
+    lua_pop(L, 1);
+    return val;
+}
+
+bool getBoolWithDefault(lua_State* L, int tblIdx, string key, bool defaultValue)
+{
+    bool val = defaultValue;
+    lua_getfield(L, tblIdx, key.toStringz);
+    if (lua_isboolean(L, -1)) {
+        val = to!bool(lua_toboolean(L, -1));
+    }
     lua_pop(L, 1);
     return val;
 }
