@@ -37,7 +37,6 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         doLuaFile(L, fname);
         lua_getglobal(L, "TwoTemperatureReactingArgon");
         _ion_tol = getDouble(L, -1, "ion_tol");
-        _chem_dt = getDouble(L, -1, "chem_dt");
         _integration_method = getString(L, -1, "integration_method");
         _Newton_Raphson_tol = getDouble(L, -1, "Newton_Raphson_tol");
         lua_close(L);
@@ -197,11 +196,9 @@ final class UpdateArgonFrac : ThermochemicalReactor {
     {
         // There are changes only if the gas is hot enough.
         if (Q.T > 3000.0) {
-            // [FIX-ME] Dan, why are you not using dtChemSuggest ?
-            double chem_dt_saved = _chem_dt;
-            int NumberSteps = cast(int) floor(tInterval/_chem_dt);
-            if (NumberSteps < 1) { NumberSteps = 1; }
+            int NumberSteps = cast(int) fmax(ceil(tInterval/dtChemSuggest), 1.0);
             _chem_dt = tInterval/NumberSteps;
+            dtChemSuggest = _chem_dt; // Remember this value for the next call.
             //
             // Determine the current number densities.
             number[3] numden;
@@ -289,8 +286,6 @@ final class UpdateArgonFrac : ThermochemicalReactor {
             _gmodel.numden2massf(numden, Q);
             _gmodel.update_thermo_from_rhou(Q);
             _gmodel.update_sound_speed(Q);
-
-            _chem_dt = chem_dt_saved; // restore _chem_dt value
         } // end if Q.T > 3000
     } // end opCall()
     
@@ -318,8 +313,9 @@ version(two_temperature_argon_kinetics_test) {
     import std.math : approxEqual;
     import gas.two_temperature_reacting_argon;
     void main() {
+        string modelFileName = "sample-input/two-temperature-reacting-argon-model.lua";
         lua_State* L = init_lua_State();
-        doLuaFile(L, "sample-input/two-temperature-reacting-argon-model.lua");
+        doLuaFile(L, modelFileName);
         auto gm = new TwoTemperatureReactingArgon(L);
         lua_close(L);
         auto gd = new GasState(3, 1);
@@ -327,11 +323,6 @@ version(two_temperature_argon_kinetics_test) {
         gd.T = 300.0;
         gd.T_modes[0] = 300;
         gd.massf[0] = 1.0; gd.massf[1] = 0.0; gd.massf[2] = 0.0;
-
-        auto reactor = new UpdateArgonFrac("sample-input/two-temperature-reacting-argon-model.lua", gm);
-        double[maxParams] params;
-        double dtThermSuggest;
-        double dtSuggest;
 
         // Need molar masses to determine alpha
         double[3] _mol_masses;
@@ -341,6 +332,10 @@ version(two_temperature_argon_kinetics_test) {
         double theta_ion = 183100.0;
         double alpha;
         double new_vel; 
+        
+        double Ru = R_universal;
+        double m_Ar = 6.6335209e-26; //mass of argon (kg)        
+        double M_Ar = Avogadro_number*m_Ar;            
 
         // This is the benchmark case presented in the Hoffert & Lien paper,
         // Section IV. Normal-shock relaxation zone: the local steady-state approximation
@@ -362,17 +357,14 @@ version(two_temperature_argon_kinetics_test) {
         gm.update_thermo_from_pT(gs);
         gm.update_sound_speed(gs); // (not necessary)
 
-        // Some time stepping information
+        // Some space- and time-stepping information
         double vel = 1548.98; // m/s
         double x = 0.0;
         double maxtime = 4.0e-6; // max time for the simulation
-        double dt = 1.0e-9;//1.312e-11; // time step for chemistry update
+        double dt = 1.0e-9; // time interval for chemistry update
         int maxsteps = to!int(maxtime/dt + 1); // number of steps in which to iterate through
         int printfreq = maxsteps/10;
         int writefreq = maxsteps/1000;
-        double Ru = R_universal;
-        double m_Ar = 6.6335209e-26; //mass of argon (kg)        
-        double M_Ar = Avogadro_number*m_Ar;            
 
         // initialise the storage arrays
         double[] t_list;
@@ -383,7 +375,7 @@ version(two_temperature_argon_kinetics_test) {
         double[] u_list;
         double[] alpha_list;
 
-        //initial values for storage arrays
+        // Initial values for storage arrays
         t_list ~= 0.0;
         x_list ~= x;
         T_list ~= gs.T;
@@ -392,10 +384,16 @@ version(two_temperature_argon_kinetics_test) {
         u_list ~= vel;
         alpha_list ~= 0.0;
 
-        //main for loop for chemistry
+        // Now, step along, allowing the reactions to proceed.
+        //
+        auto argonChemUpdate = new UpdateArgonFrac(modelFileName, gm);
+        double[maxParams] params; // ignore
+        double dtThermSuggest; // ignore
+        double dtChemSuggest = 1.0e-11; // To give 100 steps per integration interval. 
+        //
         foreach (i; 1 .. maxsteps) {
             // Perform the chemistry update
-            reactor.opCall(gs,dt,dtSuggest,dtThermSuggest,params);
+            argonChemUpdate(gs, dt, dtChemSuggest, dtThermSuggest, params);
             // New ionisation fraction
             alpha = (gs.massf[2]/_mol_masses[2]) /
                 ((gs.massf[2]/_mol_masses[2])+(gs.massf[0]/_mol_masses[0]));
@@ -404,17 +402,17 @@ version(two_temperature_argon_kinetics_test) {
                                                       96*alpha/5./pow(M1,2)*theta_ion/T1));
             x += (vel + new_vel)/2*dt;
             vel = new_vel;
-            //update rho, P and u.
+            // Update rho, P and u.
             gs.rho = rho1*u1/vel;
             gs.p = rho1*((Ru/M_Ar)*T1 + pow(u1,2)) - gs.rho*pow(vel,2);
-            // new internal energy
+            // New internal energy
             double e_new = 5*(Ru/M_Ar)*T1/2. + pow(u1,2)/2 - pow(vel,2)/2 - gs.p/gs.rho;
-            //give all of the new energy to the heavy particles
+            // Give all of the new energy to the heavy particles.
             gs.u = gs.u + (e_new - (gs.u + gs.u_modes[0]));
-            //update the temperature of the heavy paritcles based on this
+            // Update the temperature of the heavy paritcles based on this.
             gm.update_thermo_from_rhou(gs); 
             //
-            if (writefreq == 0) {writefreq = 1;}
+            if (writefreq == 0) { writefreq = 1; }
             if ((i % writefreq) == 0) { // only save 1000 points
                 t_list ~= i*dt;
                 x_list ~= x;
