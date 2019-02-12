@@ -1,12 +1,10 @@
 /**
  * two_temperature_argon_kinetics.d
  *
- * Two-temperature reacting argon based off of:
- * "Quasi-One-Dimensional, Nonequilibrium Gas Dynamics of Partially Ionised Two-Temperature Argon"
+ * Two-temperature reacting argon based on the model of:
  * Martin I. Hoffert and Hwachii Lien
- * 
+ * "Quasi-One-Dimensional, Nonequilibrium Gas Dynamics of Partially Ionised Two-Temperature Argon"
  * The Physics of Fluids 10, 1769 (1967); doi 10.1063/1.1762356
- *
  *
  * Authors: Daniel Smith, Rory Kelly and Peter J.
  * Version: 19-July-2017: initial cut.
@@ -68,7 +66,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
 
         // Update the GasState from state vector.
         //
-        // We do this so that we alwas work the rate calculations from
+        // We do this so that we always work the rate calculations from
         // a physically realizable state.
         //
         if (n_e <= 0.0) {
@@ -89,9 +87,9 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         } else {
             Te = Q.T_modes[0];
         }
-
-        if (Q.u_modes[0] == 0.0) { Te = T; }
-        
+        //
+        if (Q.u_modes[0] == 0.0) { Te = T; } // belts and braces
+        //
         // Must update the mass fractions before updating the gas state from rho and u...
         // Number density of Argon+ is the same as electron number density.
         number[3] nden; nden[0] = n_Ar; nden[1] = n_e; nden[2] = n_e;
@@ -100,28 +98,27 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         _gmodel.update_sound_speed(Q);
 
         //=====================================================================
-        // rate constants
+        // Rate constants for ionisation reactions.
         number kfA = 1.68e-26*T*sqrt(T)*(_theta_A1star/T+2)*exp(-_theta_A1star/T);
         number kfe = 3.75e-22*Te*sqrt(Te)*(_theta_A1star/Te+2)*exp(-_theta_A1star/Te);
         number krA = 5.8e-49*(_theta_A1star/T+2)*exp((_theta_ion-_theta_A1star)/T);
         number kre = 1.29e-44*(_theta_A1star/Te+2)*exp((_theta_ion-_theta_A1star)/Te);
 
-        // determine the current rate of ionisation
-        // production rate of electrons due to argon collisions
+        // Determine the current rate of ionisation.
+        // Production rate due to argon collisions.
         number n_dot_A = kfA*pow(n_Ar,2) - krA*n_Ar*pow(n_e,2);
-        // production rate of electrons due to electron collisions
+        // Production rate due to electron collisions.
         number n_dot_e = kfe*n_Ar*n_e - kre*pow(n_e,3);
         number n_dot = n_dot_A + n_dot_e;
 
         y_dash[0] = n_dot;
 
-        // Energy moving to electronic mode due to reactions:
+        //=====================================================================
+        // Energy moving to electronic mode due to reactions.
         number alpha_dot = n_dot/_n_total;
         number u_dot_reac = 3.0/2.0*_Rgas*alpha_dot*Te
             + alpha_dot*_Rgas*_theta_ion - n_dot_e*_Kb*_theta_ion/Q.rho;
-
-        //=====================================================================
-        // now need temperatures... [FIX-ME] comment to left seems wrong. 2019-02-12 PJ
+        //
         number Q_ea, Q_ei, v_ea, v_ei;
         if (alpha > _ion_tol) {
             // Calculate Qea
@@ -151,6 +148,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         } else {
             y_dash[1] = 0.0 - u_dot_reac;            
         }
+        //
         return y_dash;
     } // end F()
 
@@ -335,7 +333,7 @@ version(two_temperature_argon_kinetics_test) {
         double dtThermSuggest;
         double dtSuggest;
 
-        //need molar masses to determine alpha
+        // Need molar masses to determine alpha
         double[3] _mol_masses;
         _mol_masses[0] = 39.948e-3; // Units are kg/mol
         _mol_masses[2] = 5.485799e-7; // Units are kg/mol
@@ -344,51 +342,29 @@ version(two_temperature_argon_kinetics_test) {
         double alpha;
         double new_vel; 
 
-        //This is my own condition (Daniel Smith Condition 1 Experimental Campaign 1)
-        //pre-shock conditions
-        //==============================
-        //double rho1 = 0.03334;
-        //double T1 = 260.4;
-        //double p1 = 180.6;
-        //double u1 = 5.7e3;
-        //double M1 = 18.96;
-
-        ////inital gas properties
-        //auto GS = new GasState(3, 1);
-        //GS.p = p1*449.6;
-        //GS.T = T1*113.33;
-        //GS.T_modes[0] = 10000;
-        //GS.massf[0] = 1.0; GS.massf[1] = 0.0; GS.massf[2] = 0.0;
-        //double vel = 1436; // m/s
-        //double x = 0.0;
-        //==============================
-
-        //This is the benchmark case presented in the paper
-        //pre-shock conditions
+        // This is the benchmark case presented in the Hoffert & Lien paper,
+        // Section IV. Normal-shock relaxation zone: the local steady-state approximation
+        //
+        // Pre-shock conditions
         //==============================
         double rho1 = 0.0213657;
         double T1 = 300;
         double p1 = 1333.22;
         double u1 = 6.1e3;
         double M1 = 18.91;
+        //
+        // Inital gas properties, immediate post-shock
+        auto gs = new GasState(3, 1);
+        gs.p = p1 * 446.735124;
+        gs.T = T1 * 112.620756;
+        gs.T_modes[0] = gs.T;
+        gs.massf[0] = 1.0; gs.massf[1] = 0.0; gs.massf[2] = 0.0;
+        gm.update_thermo_from_pT(gs);
+        gm.update_sound_speed(gs); // (not necessary)
 
-        //inital gas properties
-        auto GS = new GasState(3, 1);
-        GS.p = p1*446.735124;
-        GS.T = T1* 112.620756;
-        GS.T_modes[0] = GS.T;//10000;
-        GS.massf[0] = 1.0; GS.massf[1] = 0.0; GS.massf[2] = 0.0;
+        // Some time stepping information
         double vel = 1548.98; // m/s
         double x = 0.0;
-        //==============================
-
-        double e_new;
-
-        //update the gas model based on the properties specified above
-        gm.update_thermo_from_pT(GS); // update gas state
-        gm.update_sound_speed(GS); // upate sound speed (not necessary)
-
-        // some time stepping information
         double maxtime = 4.0e-6; // max time for the simulation
         double dt = 1.0e-9;//1.312e-11; // time step for chemistry update
         int maxsteps = to!int(maxtime/dt + 1); // number of steps in which to iterate through
@@ -410,41 +386,41 @@ version(two_temperature_argon_kinetics_test) {
         //initial values for storage arrays
         t_list ~= 0.0;
         x_list ~= x;
-        T_list ~= GS.T;
-        T_modes_list ~= GS.T_modes[0];
-        P_list ~= GS.p;
+        T_list ~= gs.T;
+        T_modes_list ~= gs.T_modes[0];
+        P_list ~= gs.p;
         u_list ~= vel;
         alpha_list ~= 0.0;
 
         //main for loop for chemistry
         foreach (i; 1 .. maxsteps) {
-            // perform the chemistry update
-            reactor.opCall(GS,dt,dtSuggest,dtThermSuggest,params);
-            // new alpha
-            alpha = (GS.massf[2]/_mol_masses[2]) / ((GS.massf[2]/_mol_masses[2])+(GS.massf[0]/_mol_masses[0]));
-            // update x position
+            // Perform the chemistry update
+            reactor.opCall(gs,dt,dtSuggest,dtThermSuggest,params);
+            // New ionisation fraction
+            alpha = (gs.massf[2]/_mol_masses[2]) /
+                ((gs.massf[2]/_mol_masses[2])+(gs.massf[0]/_mol_masses[0]));
+            // Update x position
             new_vel = u1/8.*(5 + 3.0/pow(M1,2) - sqrt(9*pow(1-1.0/pow(M1,2),2) + 
                                                       96*alpha/5./pow(M1,2)*theta_ion/T1));
-            //writeln("new vel = ", new_vel);
             x += (vel + new_vel)/2*dt;
             vel = new_vel;
             //update rho, P and u.
-            GS.rho = rho1*u1/vel;
-            GS.p = rho1*((Ru/M_Ar)*T1 + pow(u1,2)) - GS.rho*pow(vel,2);
-            //new internal energy
-            e_new = 5*(Ru/M_Ar)*T1/2. + pow(u1,2)/2 - pow(vel,2)/2 - GS.p/GS.rho;
+            gs.rho = rho1*u1/vel;
+            gs.p = rho1*((Ru/M_Ar)*T1 + pow(u1,2)) - gs.rho*pow(vel,2);
+            // new internal energy
+            double e_new = 5*(Ru/M_Ar)*T1/2. + pow(u1,2)/2 - pow(vel,2)/2 - gs.p/gs.rho;
             //give all of the new energy to the heavy particles
-            GS.u = GS.u + (e_new - (GS.u + GS.u_modes[0]));
+            gs.u = gs.u + (e_new - (gs.u + gs.u_modes[0]));
             //update the temperature of the heavy paritcles based on this
-            gm.update_thermo_from_rhou(GS); 
+            gm.update_thermo_from_rhou(gs); 
             //
             if (writefreq == 0) {writefreq = 1;}
             if ((i % writefreq) == 0) { // only save 1000 points
                 t_list ~= i*dt;
                 x_list ~= x;
-                T_list ~= GS.T;
-                T_modes_list ~= GS.T_modes[0];
-                P_list ~= GS.p;
+                T_list ~= gs.T;
+                T_modes_list ~= gs.T_modes[0];
+                P_list ~= gs.p;
                 u_list ~= vel;
                 alpha_list ~= alpha;
             }
@@ -455,12 +431,13 @@ version(two_temperature_argon_kinetics_test) {
         //
         File file = File("two_temperature_argon_kinetics_test_results.data","w");
         foreach (i; 0..t_list.length) {
-            file.writeln(collateddata[0][i], " ", collateddata[1][i], " ", collateddata[2][i], " ",
-                         collateddata[3][i], " ", collateddata[4][i], " ", collateddata[5][i], " ",
+            file.writeln(collateddata[0][i], " ", collateddata[1][i], " ",
+                         collateddata[2][i], " ", collateddata[3][i], " ",
+                         collateddata[4][i], " ", collateddata[5][i], " ",
                          collateddata[6][i]);
         }
-    assert(approxEqual(GS.T, 14730, 1.0e2), failedUnitTest());
-    assert(approxEqual(GS.p, 705738, 1.0e2), failedUnitTest());
+    assert(approxEqual(gs.T, 14730, 1.0e2), failedUnitTest());
+    assert(approxEqual(gs.p, 705738, 1.0e2), failedUnitTest());
     assert(approxEqual(vel, 700.095, 1.0e0), failedUnitTest());
     } // end main()
 } // end two_temperature_argon_kinetics_test

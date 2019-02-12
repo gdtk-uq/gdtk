@@ -1,15 +1,14 @@
 /**
  * two_temperature_reacting_argon.d
  *
- * Two-temperature reacting argon based off of:
- * "Quasi-One-Dimensional, Nonequilibrium Gas Dynamics of Partially Ionised Two-Temperature Argon"
+ * Two-temperature reacting argon based model of:
  * Martin I. Hoffert and Hwachii Lien
- * 
+ * "Quasi-One-Dimensional, Nonequilibrium Gas Dynamics of Partially Ionised Two-Temperature Argon"
  * The Physics of Fluids 10, 1769 (1967); doi 10.1063/1.1762356
  *
- *
- * Authors: Daniel Smith and Rory Kelly
+ * Authors: Daniel Smith, Rory Kelly and Peter J.
  * Version: 19-July-2017: initial cut.
+ *          12-Feb-2019: code clean up and viscous transport coefficients
  */
 
 module gas.two_temperature_reacting_argon;
@@ -132,11 +131,11 @@ public:
     }
     override void update_thermo_from_ps(GasState Q, number s) const
     {
-        throw new GasModelException("update_thermo_from_ps not implemented in TwoTemperatureReactingArgon.");
+        throw new GasModelException("update_thermo_from_ps not implemented.");
     }
     override void update_thermo_from_hs(GasState Q, number h, number s) const
     {
-        throw new GasModelException("update_thermo_from_hs not implemented in TwoTemperatureReactingArgon.");
+        throw new GasModelException("update_thermo_from_hs not implemented.");
     }
     override void update_sound_speed(GasState Q) const
     {
@@ -144,32 +143,36 @@ public:
             string msg = "Temperature was negative for update_sound_speed."; 
             throw new GasModelException(msg);
         }
+        // Assume that the properties for argon atoms, ignoring dissociation.
         number _gamma = dhdT_const_p(Q)/dudT_const_v(Q);
         Q.a = sqrt(_gamma*_Rgas*Q.T);
-        //[TODO] update the _Cv and _Cp properties to be dependent on alpha...
     }
     override void update_trans_coeffs(GasState Q)
     {
-        // TODO (DANIEL) - Should add these in such that viscous effects can be modelled
-        Q.mu = 0.0;
-        Q.k = 0.0;
+        // Assume the properties of argon atoms, ignoring the ionisation.
+        // Use power-law from
+        // Michael Macrossan and Charles Lilley (2003)
+        // Viscosity of aegon at temperatures >2000K from measured shock thickness.
+        // Physics of Fluids Vol 15 No 11 pp 3452-3457
+        double mu_ref = 73.0e-6; // Pa.s
+        double T_ref = 1500.0; // degree K
+        Q.mu = mu_ref * pow(Q.T/T_ref, 0.72);
+        Q.k = Q.mu * _Cp / 0.667; // fixed Prandtl number
         Q.k_modes[0] = 0.0;
     }
     override number dudT_const_v(in GasState Q) const
     {
-        //number alpha = (Q.massf[2]/_mol_masses[2]) / ((Q.massf[2]/_mol_masses[2])+(Q.massf[0]/_mol_masses[0]));
-        //return 3.0/2.0*_Rgas*(1+alpha) + alpha-_Rgas*alpha*(1-alpha)/(2-alpha)*pow((3.0/2.0*Q.T+alpha*_theta_ion)/Q.T,2);
-        return to!number(312.0);
+        // Assume frozen dissociation, 3/2*_Rgas
+        return to!number(_Cv);
     }
     override number dhdT_const_p(in GasState Q) const
     {
-        //number alpha = (Q.massf[2]/_mol_masses[2]) / ((Q.massf[2]/_mol_masses[2])+(Q.massf[0]/_mol_masses[0]));
-        //return 5.0/2.0*_Rgas*(1+alpha) + _Rgas/2*alpha*(1-pow(alpha,2))*pow((5.0/2.0*Q.T+alpha*_theta_ion)/Q.T,2);
-        return to!number(520.0);
+        // Assume frozen dissociation, 5/2*_Rgas
+        return to!number(_Cp);
     }
     override number dpdrho_const_T(in GasState Q) const
     {
-        return _Rgas*Q.T; //TODO (Daniel) Check this
+        return _Rgas*Q.T;
     }
     override number gas_constant(in GasState Q) const
     {
@@ -253,9 +256,8 @@ version(two_temperature_reacting_argon_test) {
         assert(approxEqual(gd.a, my_a, 1.0e-3), failedUnitTest());
 
         gm.update_trans_coeffs(gd);
-        assert(approxEqual(gd.mu, 0.0, 1.0e-6), failedUnitTest());
-        assert(approxEqual(gd.k, 0.0, 1.0e-6), failedUnitTest());
-        assert(approxEqual(gd.k, 0.0, 1.0e-6), failedUnitTest());
+        assert(approxEqual(gd.mu, 22.912e-6, 1.0e-6), failedUnitTest());
+        assert(approxEqual(gd.k, 0.0178625, 1.0e-6), failedUnitTest());
 
         return 0;
     }
