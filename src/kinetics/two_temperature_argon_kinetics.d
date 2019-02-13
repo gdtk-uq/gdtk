@@ -38,8 +38,10 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         lua_getglobal(L, "TwoTemperatureReactingArgon");
         _ion_tol = getDoubleWithDefault(L, -1, "ion_tol", 1.0e-15);
         _integration_method = getStringWithDefault(L, -1, "integration_method", "Backward_Euler");
-        _Newton_Raphson_tol = getDoubleWithDefault(L, -1, "Newton_Raphson_tol", 1.0e-10);
         _T_min_for_reaction = getDoubleWithDefault(L, -1, "T_min_for_reaction", 3000.0);
+        _n_step_suggest = getIntWithDefault(L, -1, "n_step_suggest", 100);
+        _Newton_Raphson_tol = getDoubleWithDefault(L, -1, "Newton_Raphson_tol", 1.0e-10);
+        _max_iter_newton = getIntWithDefault(L, -1, "max_iter_newton", 20);
         lua_close(L);
     }
 
@@ -175,6 +177,15 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         number[2][2] J;
         J[0][0] = col1[0]; J[0][1] = col2[0];
         J[1][0] = col1[1]; J[1][1] = col2[1];
+        number det = J[0][0]*J[1][1] - J[0][1]*J[1][0];
+        if (fabs(det) < 1.0e-20) {
+            debug {
+                writeln("Jacobian appears singular.");
+                writeln("J=", J, " y=", y, " y_prev=", y_prev);
+                writeln("current Q=", Q);
+            }
+            throw new ThermochemicalReactorUpdateException("Effectively singular Jacobian.");
+        }
         return J;
     }
 
@@ -184,7 +195,11 @@ final class UpdateArgonFrac : ThermochemicalReactor {
     {
         number det = a[0][0]*a[1][1] - a[0][1]*a[1][0];
         if (fabs(det) < 1.0e-20) {
-            throw new Error("Effectively singular Jacobian.");
+            debug {
+                writeln("Matrix appears singular.");
+                writeln("a=", a, " b=", b);
+            }
+            throw new ThermochemicalReactorUpdateException("Effectively singular Jacobian.");
         }
         x[0] = -(a[0][1]*b[1] - a[1][1]*b[0])/det;
         x[1] = (a[0][0]*b[1] - a[1][0]*b[0])/det;
@@ -195,9 +210,14 @@ final class UpdateArgonFrac : ThermochemicalReactor {
                          ref double dtChemSuggest, ref double dtThermSuggest, 
                          ref number[maxParams] params)
     {
+        if (dtChemSuggest < 0.0) {
+            // A negative value indicated that the flow solver did not have
+            // a suggested time-step size.
+            dtChemSuggest = tInterval/_n_step_suggest;
+        }
         // There are changes only if the gas is hot enough.
         if (Q.T > _T_min_for_reaction) {
-            int NumberSteps = cast(int) fmax(ceil(tInterval/dtChemSuggest), 1.0);
+            int NumberSteps = cast(int) fmax(floor(tInterval/dtChemSuggest), 1.0);
             _chem_dt = tInterval/NumberSteps;
             dtChemSuggest = _chem_dt; // Remember this value for the next call.
             //
@@ -228,6 +248,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
                     break;
                 case "Backward_Euler":
                     double norm_error = 1.0e50; // something large that will be replaced
+                    int iter = 0;
                     do {
                         number[2][2] J = Jacobian(y, y_prev, h, Q);
                         number[2] rhs = BackEuler_F(y, y_prev, Q);
@@ -236,7 +257,8 @@ final class UpdateArgonFrac : ThermochemicalReactor {
                         number[2] error = BackEuler_F(y, y_prev, Q);
                         norm_error = sqrt(pow(error[0].re/1.0e22,2) +
                                           pow(error[1].re/1.0e7,2));
-                    } while (norm_error > _Newton_Raphson_tol);
+                        ++iter;
+                    } while (norm_error > _Newton_Raphson_tol && iter < _max_iter_newton);
                     foreach (i; 0 .. 2) { y_prev[i] = y[i]; } // needed for next step
                     break;
                 case "RK4":
@@ -297,11 +319,13 @@ final class UpdateArgonFrac : ThermochemicalReactor {
     double _Rgas = 208.0;
     double _theta_ion = 183100.0;
     double _theta_A1star = 135300.0;
-    double _ion_tol;
+    double _ion_tol = 1.0e-15;
     double _chem_dt;
-    string _integration_method;
-    double _Newton_Raphson_tol;
+    string _integration_method = "Backward_Euler";
     double _T_min_for_reaction = 3000.0; // degrees K
+    int _n_step_suggest = 100; // number of substeps to take if dtChemSuggest<0.0
+    double _Newton_Raphson_tol = 1.0e-10;
+    int _max_iter_newton = 20; // limit the number of Newton iterations for backard Euler
 
     // The following items are constants for the duration
     // of the update for our abstract isolated reactor.
