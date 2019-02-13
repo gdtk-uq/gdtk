@@ -194,15 +194,21 @@ final class UpdateArgonFrac : ThermochemicalReactor {
                 ref number[2] x)
     {
         number det = a[0][0]*a[1][1] - a[0][1]*a[1][0];
-        if (fabs(det) < 1.0e-20) {
-            debug {
-                writeln("Matrix appears singular.");
-                writeln("a=", a, " b=", b);
-            }
-            throw new ThermochemicalReactorUpdateException("Effectively singular Jacobian.");
-        }
         x[0] = -(a[0][1]*b[1] - a[1][1]*b[0])/det;
         x[1] = (a[0][0]*b[1] - a[1][0]*b[0])/det;
+    }
+
+    @nogc
+    void limit_state_vector(ref number[2] y)
+    {
+        if (y[0] < 0.0) {
+            y[0] = 0.0; // electron number density
+            y[1] = _u_total; // translational energy of heavy particles
+        }
+        if (y[1] > _u_total) {
+            y[0] = 0.0;
+            y[1] = _u_total;
+        }
     }
     
     @nogc
@@ -240,11 +246,13 @@ final class UpdateArgonFrac : ThermochemicalReactor {
             number[2] y_prev; y_prev[0] = n_e; y_prev[1] = Q.u;
             // Perturbation sizes for the finite-difference Jacobian
             double[2] h = [1.0e10, 1.0e-5]; // working: [1.0e10, 1.0e0]; 
+
             foreach (n; 0 .. NumberSteps) {
                 switch (_integration_method) {
                 case "Forward_Euler":
                     number[2] myF = F(y, Q);
                     foreach (i; 0 .. 2) { y[i] = y[i] + _chem_dt * myF[i]; }
+                    limit_state_vector(y);
                     break;
                 case "Backward_Euler":
                     double norm_error = 1.0e50; // something large that will be replaced
@@ -254,6 +262,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
                         number[2] rhs = BackEuler_F(y, y_prev, Q);
                         number[2] dy; solve2(J, rhs, dy);
                         foreach (i; 0 .. 2) { y[i] = y[i] - dy[i]; }
+                        limit_state_vector(y);
                         number[2] error = BackEuler_F(y, y_prev, Q);
                         norm_error = sqrt(pow(error[0].re/1.0e22,2) +
                                           pow(error[1].re/1.0e7,2));
@@ -266,15 +275,19 @@ final class UpdateArgonFrac : ThermochemicalReactor {
                     number[2] myF = F(y, Q);
                     foreach (i; 0 .. 2) { k1[i] = _chem_dt * myF[i]; }
                     foreach (i; 0 .. 2) { k2_in[i] = y[i] + k1[i]/2.0; }
+                    limit_state_vector(k2_in);
                     myF = F(k2_in, Q);
                     foreach (i; 0 .. 2) { k2[i] = _chem_dt * myF[i]; }
                     foreach (i; 0 .. 2) { k3_in[i] = y[i] + k2[i]/2.0; }
+                    limit_state_vector(k3_in);
                     myF = F(k3_in, Q);
                     foreach (i; 0 .. 2) { k3[i] = _chem_dt * myF[i]; }
                     foreach (i; 0 .. 2) { k4_in[i] = y[i] + k3[i]; }
+                    limit_state_vector(k4_in);
                     myF = F(k4_in, Q);
                     foreach (i; 0 .. 2) { k4[i] = _chem_dt * myF[i]; }
                     foreach (i; 0 .. 2) { y[i] = y[i] + 1.0/6.0*(k1[i]+2.0*k2[i]+2.0*k3[i]+k4[i]); }
+                    limit_state_vector(y);
                     break;
                 default:
                     throw new Error("Invalid ODE update selection.");
