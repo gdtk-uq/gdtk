@@ -57,7 +57,6 @@ string avg_over_iface_list(string quantity, string result)
 class FVCell {
 public:
     int id;  // allows us to work out where, in the block, the cell is
-    bool is_interior; // true if the cell is interior to the block, false is a ghost cell
     bool data_is_bad; // Set to false at the start of an update.
     // Reset and checked at points through the update so that we don't stagger on
     // with bad data poisoning the simulation.
@@ -94,7 +93,7 @@ public:
     // where there is no gas on the otherside of the "wall",
     // this flag might not be needed.
     // Such a change will need a big rework of boundary condition code.
-    bool will_have_valid_flow; 
+    bool contains_flow_data; 
     bool allow_k_omega_update = true; // turbulent wall functions may turn this off
     FlowState fs; // Flow properties
     ConservedQuantities[] U;  // Conserved flow quantities for the update stages.
@@ -138,7 +137,7 @@ public:
     {
         this.myConfig = myConfig;
         id = id_init;
-        is_interior = false; // initial presumption to be adjusted later
+        contains_flow_data = false; // initial presumption to be adjusted later
         pos.length = myConfig.n_grid_time_levels;
         volume.length = myConfig.n_grid_time_levels;
         areaxy.length = myConfig.n_grid_time_levels;
@@ -265,7 +264,7 @@ public:
         repr ~= ", dt_therm=" ~ to!string(dt_therm);
         repr ~= ", in_turbulent_zone=" ~ to!string(in_turbulent_zone);
         repr ~= ", fr_reactions_allowed=" ~ to!string(fr_reactions_allowed);
-        repr ~= ", will_have_valid_flow=" ~ to!string(will_have_valid_flow);
+        repr ~= ", contains_flow_data=" ~ to!string(contains_flow_data);
         repr ~= ", allow_k_omega_update=" ~ to!string(allow_k_omega_update);
         repr ~= ",\n... fs=" ~ to!string(fs);
         repr ~= ",\n... U=" ~ to!string(U);

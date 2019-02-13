@@ -595,7 +595,7 @@ public:
             foreach (i, f; c.iface) {
                 total += eps;
                 auto other_cell = (c.outsign[i] > 0.0) ? f.right_cell : f.left_cell;
-                if (other_cell && other_cell.is_interior) {
+                if (other_cell && other_cell.contains_flow_data) {
                     c.dUdt[ftl].add(other_cell.dUdt_copy, eps);
                 }
             }

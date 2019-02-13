@@ -427,7 +427,7 @@ public:
         // Make the cell. vertex. and face.id consistent with the index in the array.
         // We will depend on this equality in other parts of the flow solver.
         // We also note that these cells are interior to the block (i.e. not ghost cells)
-        foreach (i, c; cells) { c.id = to!int(i); c.is_interior = true; }
+        foreach (i, c; cells) { c.id = to!int(i); c.contains_flow_data = true; }
         foreach (i, v; vertices) { v.id = to!int(i); }
         foreach (i, f; faces) { f.id = to!int(i); }
         // Alter the id values of the ghost cells to be a bit like those in the

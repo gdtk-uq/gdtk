@@ -163,8 +163,8 @@ public:
             // Note that the cell id and the index in the cells array are the same.
             // We will reply upon this connection in other parts of the flow code.
             auto new_cell = new FVCell(myConfig, to!int(i));
-            new_cell.will_have_valid_flow = true;
-            new_cell.is_interior = true;
+            new_cell.contains_flow_data = true;
+            new_cell.contains_flow_data = true;
             cells ~= new_cell;
         }
         // Bind the interfaces, vertices and cells together, 
@@ -247,7 +247,7 @@ public:
                     // the warning/error messages are somewhat informative. 
                     FVCell ghost0 = new FVCell(myConfig, ghost_cell_start_id+ghost_cell_count);
                     ghost_cell_count++;
-                    ghost0.will_have_valid_flow = bc[i].ghost_cell_data_available;
+                    ghost0.contains_flow_data = bc[i].ghost_cell_data_available;
                     bc[i].ghostcells ~= ghost0;
                     if (my_outsign == 1) {
                         if (my_face.right_cell) {
@@ -330,11 +330,11 @@ public:
                     // apply nearest-face neighbour
                     foreach (i, f; c.iface) {
                         if (c.outsign[i] > 0.0) {
-                            if (f.right_cell && f.right_cell.will_have_valid_flow) {
+                            if (f.right_cell && f.right_cell.contains_flow_data) {
                                 c.cell_cloud ~= f.right_cell;
                             }
                         } else {
-                            if (f.left_cell && f.left_cell.will_have_valid_flow) {
+                            if (f.left_cell && f.left_cell.contains_flow_data) {
                                 c.cell_cloud ~= f.left_cell;
                             }
                         }
@@ -343,7 +343,7 @@ public:
                     // apply nearest-node neighbour
                     foreach(vtx; c.vtx) {
                         foreach(cid; cellIndexListPerVertex[vtx.id])
-                            if (cell_ids.canFind(cid) == false && cells[cid].will_have_valid_flow)
+                            if (cell_ids.canFind(cid) == false && cells[cid].contains_flow_data)
                                 { c.cell_cloud ~= cells[cid]; cell_ids ~= cid; } 
                     }
                 } 
@@ -357,11 +357,11 @@ public:
                 // Subsequent cells are the surrounding cells.
                 foreach (i, f; c.iface) {
                     if (c.outsign[i] > 0.0) {
-                        if (f.right_cell && f.right_cell.will_have_valid_flow) {
+                        if (f.right_cell && f.right_cell.contains_flow_data) {
                             c.cell_cloud ~= f.right_cell;
                         }
                     } else {
-                        if (f.left_cell && f.left_cell.will_have_valid_flow) {
+                        if (f.left_cell && f.left_cell.contains_flow_data) {
                             c.cell_cloud ~= f.left_cell;
                         }
                     }
@@ -429,7 +429,7 @@ public:
                 cell_list~= f.left_cell.cell_cloud;
                 cell_cloud_cell_ids ~= f.left_cell.id;
                 // store ghost0
-                if (f.right_cell && f.right_cell.will_have_valid_flow) {
+                if (f.right_cell && f.right_cell.contains_flow_data) {
                     f.cloud_pos ~= &(f.right_cell.pos[0]);
                     f.cloud_fs ~= f.right_cell.fs;
                     cell_cloud_cell_ids ~= f.right_cell.id;
@@ -442,7 +442,7 @@ public:
                 cell_list ~= f.right_cell.cell_cloud;
                 cell_cloud_cell_ids ~= f.right_cell.id;
                 // store ghost0
-                if (f.left_cell && f.left_cell.will_have_valid_flow) { 
+                if (f.left_cell && f.left_cell.contains_flow_data) { 
                     f.cloud_pos ~= &(f.left_cell.pos[0]);
                     f.cloud_fs ~= f.left_cell.fs;
                     cell_cloud_cell_ids ~= f.left_cell.id;
@@ -472,7 +472,7 @@ public:
                 cell_list~= f.left_cell.cell_cloud;
                 cell_cloud_cell_ids ~= f.left_cell.id;
                 // store ghost0
-                if (f.right_cell && f.right_cell.will_have_valid_flow) {
+                if (f.right_cell && f.right_cell.contains_flow_data) {
                     f.cloud_pos ~= &(f.right_cell.pos[0]);
                     f.cloud_fs ~= f.right_cell.fs;
                     cell_cloud_cell_ids ~= f.right_cell.id;
@@ -485,7 +485,7 @@ public:
                 cell_list ~= f.right_cell.cell_cloud;
                 cell_cloud_cell_ids ~= f.right_cell.id;
                 // store ghost0
-                if (f.left_cell && f.left_cell.will_have_valid_flow) { 
+                if (f.left_cell && f.left_cell.contains_flow_data) { 
                     f.cloud_pos ~= &(f.left_cell.pos[0]);
                     f.cloud_fs ~= f.left_cell.fs;
                     cell_cloud_cell_ids ~= f.left_cell.id;

@@ -706,7 +706,7 @@ public:
                 fabs("~gname~"[2]) > ESSENTIALLY_ZERO) {
                 foreach (i, f; cell_cloud[0].iface) {
                     // heuristic pressure limiter value
-                    if (f.left_cell && f.right_cell && f.left_cell.is_interior && f.right_cell.is_interior) {
+                    if (f.left_cell && f.right_cell && f.left_cell.contains_flow_data && f.right_cell.contains_flow_data) {
                         dx1 = f.pos.x - f.left_cell.pos[gtl].x; 
                         dy1 = f.pos.y - f.left_cell.pos[gtl].y; 
                         dz1 = f.pos.z - f.left_cell.pos[gtl].z;
@@ -718,7 +718,7 @@ public:
                         dPz = dz1*f.left_cell.gradients.p[2] - dz2*f.right_cell.gradients.p[2];
                         dP = sqrt(dPx*dPx + dPy*dPy + dPz*dPz);
                         h = 1.0 - tanh(dP/fmin(f.left_cell.fs.gas.p, f.right_cell.fs.gas.p));
-                    } else if (f.left_cell && f.left_cell.is_interior) {
+                    } else if (f.left_cell && f.left_cell.contains_flow_data) {
                         dx1 = f.pos.x - f.left_cell.pos[gtl].x; 
                         dy1 = f.pos.y - f.left_cell.pos[gtl].y; 
                         dz1 = f.pos.z - f.left_cell.pos[gtl].z;
@@ -727,7 +727,7 @@ public:
                         dPz = dz1*f.left_cell.gradients.p[2];
                         dP = sqrt(dPx*dPx + dPy*dPy + dPz*dPz);
                         h = 1.0 - tanh(dP/f.left_cell.fs.gas.p);
-                    } else if (f.right_cell && f.right_cell.is_interior) {
+                    } else if (f.right_cell && f.right_cell.contains_flow_data) {
                         dx1 = f.pos.x - f.right_cell.pos[gtl].x; 
                         dy1 = f.pos.y - f.right_cell.pos[gtl].y; 
                         dz1 = f.pos.z - f.right_cell.pos[gtl].z;
@@ -738,7 +738,7 @@ public:
                         h = 1.0 - tanh(dP/f.right_cell.fs.gas.p);
                     }
                     // Van Albada limiter value
-                    if (f.left_cell && f.right_cell && f.left_cell.is_interior && f.right_cell.is_interior) {
+                    if (f.left_cell && f.right_cell && f.left_cell.contains_flow_data && f.right_cell.contains_flow_data) {
                         a = sqrt(f.left_cell.gradients."~gname~"[0]^^2 + 
                                  f.left_cell.gradients."~gname~"[1]^^2 + 
                                  f.left_cell.gradients."~gname~"[2]^^2);
@@ -746,9 +746,9 @@ public:
                                  f.right_cell.gradients."~gname~"[1]^^2 + 
                                  f.right_cell.gradients."~gname~"[2]^^2);
                         s = h * (a*b + fabs(a*b))/(a*a + b*b + eps);
-                    } else if (f.left_cell && f.left_cell.is_interior) {
+                    } else if (f.left_cell && f.left_cell.contains_flow_data) {
                         s = h * 1.0;
-                    } else if (f.right_cell && f.right_cell.is_interior) {
+                    } else if (f.right_cell && f.right_cell.contains_flow_data) {
                         s = h * 1.0;  
                     }
                     phi = fmin(phi, s);

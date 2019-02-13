@@ -332,13 +332,13 @@ public:
         if (myConfig.use_viscosity_from_cells) {
             // Emulate Eilmer3 behaviour by using the viscous transport coefficients
             // from the cells either side of the interface.
-            if (left_cell && right_cell && left_cell.is_interior && right_cell.is_interior) {
+            if (left_cell && right_cell && left_cell.contains_flow_data && right_cell.contains_flow_data) {
                 k_laminar = 0.5*(left_cell.fs.gas.k+right_cell.fs.gas.k);
                 mu_laminar = 0.5*(left_cell.fs.gas.mu+right_cell.fs.gas.mu);
-            } else if (left_cell && left_cell.is_interior) {
+            } else if (left_cell && left_cell.contains_flow_data) {
                 k_laminar = left_cell.fs.gas.k;
                 mu_laminar = left_cell.fs.gas.mu;
-            } else if (right_cell && right_cell.is_interior) {
+            } else if (right_cell && right_cell.contains_flow_data) {
                 k_laminar = right_cell.fs.gas.k;
                 mu_laminar = right_cell.fs.gas.mu;
             } else {
@@ -349,13 +349,13 @@ public:
         number mu_eff;
         number lmbda;
         // we would like to use the most up to date turbulent properties, so take averages of the neihgbouring cell values
-        if (left_cell && right_cell && left_cell.is_interior && right_cell.is_interior) {
+        if (left_cell && right_cell && left_cell.contains_flow_data && right_cell.contains_flow_data) {
             k_eff = viscous_factor * (k_laminar + 0.5*(left_cell.fs.k_t+right_cell.fs.k_t));
             mu_eff = viscous_factor * (mu_laminar + 0.5*(left_cell.fs.mu_t+right_cell.fs.mu_t));
-        } else if (left_cell && left_cell.is_interior) {
+        } else if (left_cell && left_cell.contains_flow_data) {
             k_eff = viscous_factor * (k_laminar + left_cell.fs.k_t);
             mu_eff = viscous_factor * (mu_laminar + left_cell.fs.mu_t);
-        } else if (right_cell && right_cell.is_interior) {
+        } else if (right_cell && right_cell.contains_flow_data) {
             k_eff = viscous_factor * (k_laminar + right_cell.fs.k_t);
             mu_eff = viscous_factor * (mu_laminar + right_cell.fs.mu_t);
         } else {
@@ -364,11 +364,11 @@ public:
         lmbda = -2.0/3.0 * mu_eff;
         //
         number local_pressure;
-        if (left_cell && right_cell && left_cell.is_interior && right_cell.is_interior) {
+        if (left_cell && right_cell && left_cell.contains_flow_data && right_cell.contains_flow_data) {
             local_pressure = 0.5*(left_cell.fs.gas.p+right_cell.fs.gas.p);
-        } else if (left_cell && left_cell.is_interior) {
+        } else if (left_cell && left_cell.contains_flow_data) {
             local_pressure = left_cell.fs.gas.p;
-        } else if (right_cell && right_cell.is_interior) {
+        } else if (right_cell && right_cell.contains_flow_data) {
             local_pressure = right_cell.fs.gas.p;
         } else {
             assert(0, "Oops, don't seem to have a cell available.");
@@ -387,11 +387,11 @@ public:
                 number D_t; // = fs.mu_t / (fs.gas.rho * Sc_t)
                 // we would like to use the most up to date turbulent properties,
                 // so take averages of the neihgbouring cell values
-                if (left_cell && right_cell && left_cell.is_interior && right_cell.is_interior) {
+                if (left_cell && right_cell && left_cell.contains_flow_data && right_cell.contains_flow_data) {
                     D_t = 0.5*(left_cell.fs.mu_t+right_cell.fs.mu_t) / (fs.gas.rho * Sc_t);
-                } else if (left_cell && left_cell.is_interior) {
+                } else if (left_cell && left_cell.contains_flow_data) {
                     D_t = left_cell.fs.mu_t / (fs.gas.rho * Sc_t);
-                } else if (right_cell && right_cell.is_interior) {
+                } else if (right_cell && right_cell.contains_flow_data) {
                     D_t = right_cell.fs.mu_t / (fs.gas.rho * Sc_t);
                 } else {
                     assert(0, "Oops, don't seem to have a cell available.");
@@ -581,7 +581,7 @@ public:
             // First, select the 2 points.
             number x0, x1, y0, y1, z0, z1;
             number velx0, velx1, vely0, vely1, velz0, velz1, T0, T1;
-            if (left_cell && right_cell && left_cell.is_interior && right_cell.is_interior) {
+            if (left_cell && right_cell && left_cell.contains_flow_data && right_cell.contains_flow_data) {
                 x0 = left_cell.pos[0].x; x1 = right_cell.pos[0].x;
                 y0 = left_cell.pos[0].y; y1 = right_cell.pos[0].y;
                 z0 = left_cell.pos[0].z; z1 = right_cell.pos[0].z;
@@ -589,7 +589,7 @@ public:
                 vely0 = left_cell.fs.vel.y; vely1 = right_cell.fs.vel.y;
                 velz0 = left_cell.fs.vel.z; velz1 = right_cell.fs.vel.z;
                 T0 = left_cell.fs.gas.T; T1 = right_cell.fs.gas.T;
-            } else if (left_cell && left_cell.is_interior) {
+            } else if (left_cell && left_cell.contains_flow_data) {
                 x0 = left_cell.pos[0].x; x1 = pos.x;
                 y0 = left_cell.pos[0].y; y1 = pos.y;
                 z0 = left_cell.pos[0].z; z1 = pos.z;
@@ -597,7 +597,7 @@ public:
                 vely0 = left_cell.fs.vel.y; vely1 = fs.vel.y;
                 velz0 = left_cell.fs.vel.z; velz1 = fs.vel.z;
                 T0 = left_cell.fs.gas.T; T1 = fs.gas.T;
-            } else if (right_cell && right_cell.is_interior) {
+            } else if (right_cell && right_cell.contains_flow_data) {
                 x0 = pos.x; x1 = right_cell.pos[0].x;
                 y0 = pos.y; y1 = right_cell.pos[0].y;
                 z0 = pos.z; z1 = right_cell.pos[0].z;
@@ -624,11 +624,11 @@ public:
                 veln1 += velz1*nz;
             } 
             number veln_face;
-            if (left_cell && right_cell && left_cell.is_interior && right_cell.is_interior) {
+            if (left_cell && right_cell && left_cell.contains_flow_data && right_cell.contains_flow_data) {
                 veln_face = 0.5*(veln0+veln1);
-            } else if (left_cell && left_cell.is_interior) {
+            } else if (left_cell && left_cell.contains_flow_data) {
                 veln_face = veln1;
-            } else if (right_cell && right_cell.is_interior) {
+            } else if (right_cell && right_cell.contains_flow_data) {
                 veln_face = veln0;
             }
             number ke0 = 0.5*(velx0^^2 + vely0^^2 + velz0^^2);
