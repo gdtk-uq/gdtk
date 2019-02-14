@@ -1347,29 +1347,31 @@ void compute_flux(FVCell pcell, FluidBlock blk, size_t orderOfJacobian, ref FVCe
         foreach(c; cell_list) {
             c.gradients.compute_lsq_values(c.cell_cloud, c.ws, blk.myConfig);
         }
-        foreach(c; cell_list) {
-            // It is more efficient to determine limiting factor here for some usg limiters.
-            final switch (blk.myConfig.unstructured_limiter) {
-            case UnstructuredLimiter.van_albada:
-                // do nothing now
-                break;
-            case UnstructuredLimiter.min_mod:
-                // do nothing now
-                break;
-            case UnstructuredLimiter.mlp:
-                c.gradients.mlp_limit(c.cell_cloud, c.ws, blk.myConfig);
-                break;
-            case UnstructuredLimiter.barth:
-                c.gradients.barth_limit(c.cell_cloud, c.ws, blk.myConfig);
-                break;
-            case UnstructuredLimiter.heuristic_van_albada:
-                c.gradients.heuristic_van_albada_limit(c.cell_cloud, c.ws, blk.myConfig, 0);
-                break;
-            case UnstructuredLimiter.venkat:
-                c.gradients.venkat_limit(c.cell_cloud, c.ws, blk.myConfig, 0);
-                break;
-            } // end switch
-        } // end foreach c
+	if (GlobalConfig.frozen_limiter == false) {
+	    foreach(c; cell_list) {
+		// It is more efficient to determine limiting factor here for some usg limiters.
+		final switch (blk.myConfig.unstructured_limiter) {
+		case UnstructuredLimiter.van_albada:
+		    // do nothing now
+		    break;
+		case UnstructuredLimiter.min_mod:
+		    // do nothing now
+		    break;
+		case UnstructuredLimiter.mlp:
+		    c.gradients.mlp_limit(c.cell_cloud, c.ws, blk.myConfig);
+		    break;
+		case UnstructuredLimiter.barth:
+		    c.gradients.barth_limit(c.cell_cloud, c.ws, blk.myConfig);
+		    break;
+		case UnstructuredLimiter.heuristic_van_albada:
+		    c.gradients.heuristic_van_albada_limit(c.cell_cloud, c.ws, blk.myConfig, 0);
+		    break;
+		case UnstructuredLimiter.venkat:
+		    c.gradients.venkat_limit(c.cell_cloud, c.ws, blk.myConfig, 0);
+		    break;
+		} // end switch
+	    } // end foreach c
+	}
 
         // Fill in gradients for ghost cells so that left- and right- cells at all faces,
         // including those along block boundaries, have the latest gradient values.
@@ -3077,11 +3079,12 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
             myblk.write_underlying_grid(fileName);
         }
 
-        if (GlobalConfig.viscous) {
+	if (GlobalConfig.diffuseWallBCsOnInit) {
+	    //        if (GlobalConfig.viscous) {
             // We can apply a special initialisation to the flow field, if requested.
             //if (GlobalConfig.diffuseWallBCsOnInit) {
-            writeln("Applying special initialisation to blocks: wall BCs being diffused into domain.");
-            writefln("%d passes of the near-wall flow averaging operation will be performed.", GlobalConfig.nInitPasses);
+            //writeln("Applying special initialisation to blocks: wall BCs being diffused into domain.");
+            //writefln("%d passes of the near-wall flow averaging operation will be performed.", GlobalConfig.nInitPasses);
             foreach (blk; parallel(localFluidBlocks,1)) {
                 diffuseWallBCsIntoBlock(blk, GlobalConfig.nInitPasses, GlobalConfig.initTWall);
             }
@@ -3097,6 +3100,50 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
             //myblk.compute_primary_cell_geometric_data(0);
             myblk.compute_least_squares_setup(0);
         }
+	
+	if (GlobalConfig.sscOptions.read_frozen_limiter_values_from_file) {
+	    steadystate_core.evalRHS(0.0, 0); // fill in some values
+	    auto fileName = "frozen_limiter_values.dat";
+	    auto outFile = File(fileName, "r");
+	    foreach (blk; localFluidBlocks) {
+		foreach (cell; blk.cells) {
+		    auto line = outFile.readln().strip();
+		    auto token = line.split();
+		    cell.gradients.rhoPhi = to!double(token[0]);
+		    
+		    line = outFile.readln().strip();
+		    token = line.split();
+		    cell.gradients.velxPhi = to!double(token[0]);
+		    
+		    line = outFile.readln().strip();
+		    token = line.split();
+		    cell.gradients.velyPhi = to!double(token[0]);
+		    
+		    if (blk.myConfig.dimensions == 3) {
+			line = outFile.readln().strip();
+			token = line.split();
+			cell.gradients.velzPhi = to!double(token[0]);
+		    }
+		    
+		    line = outFile.readln().strip();
+		    token = line.split();
+		    cell.gradients.pPhi = to!double(token[0]);
+		    
+		    if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
+			line = outFile.readln().strip();
+			token = line.split();
+			cell.gradients.tkePhi = to!double(token[0]);
+			
+			line = outFile.readln().strip();
+			token = line.split();
+			cell.gradients.omegaPhi = to!double(token[0]);
+		    }
+		}
+	    }
+	    outFile.close();
+	    GlobalConfig.frozen_limiter = true;
+	}
+	
 
         // run steady-state solver
         iterate_to_steady_state(0, maxCPUs); // snapshotStart = 0

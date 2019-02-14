@@ -226,7 +226,8 @@ struct SolidDomainLooseUpdateOptions {
 version(shape_sensitivity) {
     struct ShapeSensitivityCalculatorOptions {
         bool pseudotime = false;
-        // sensitivity parameters
+        bool read_frozen_limiter_values_from_file = false;
+	// sensitivity parameters
         double epsilon = 1.0e-30;
         // GMRES parameters
         int maxOuterIterations = 10;
@@ -1475,6 +1476,8 @@ void read_config_file()
     auto sscOptions = jsonData["shape_sensitivity_calculator_options"];
     GlobalConfig.sscOptions.pseudotime =
         getJSONbool(sscOptions, "pseudotime", GlobalConfig.sscOptions.pseudotime);
+    GlobalConfig.sscOptions.read_frozen_limiter_values_from_file =
+        getJSONbool(sscOptions, "read_frozen_limiter_values_from_file", GlobalConfig.sscOptions.read_frozen_limiter_values_from_file);
     GlobalConfig.sscOptions.epsilon =
         getJSONdouble(sscOptions, "epsilon", GlobalConfig.sscOptions.epsilon);
     GlobalConfig.sscOptions.maxOuterIterations = 

@@ -757,7 +757,30 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
 
         normOld = normNew;
     }
-
+    
+    // for some simulations we freeze the limiter to assist in reducing the relative residuals
+    // to machine precision - in these instances it is typically necessary to store the limiter 
+    // values for further analysis.
+    if (GlobalConfig.frozen_limiter) {
+	auto fileName = "frozen_limiter_values.dat";
+	auto outFile = File(fileName, "w");
+	foreach (blk; localFluidBlocks) {
+	    foreach (cell; blk.cells) {
+		outFile.writef("%.16e \n", cell.gradients.rhoPhi.re);
+		outFile.writef("%.16e \n", cell.gradients.velxPhi.re);
+		outFile.writef("%.16e \n", cell.gradients.velyPhi.re);
+		if (blk.myConfig.dimensions == 3) {
+		    outFile.writef("%.16e \n", cell.gradients.velzPhi.re);
+		}
+		outFile.writef("%.16e \n", cell.gradients.pPhi.re);
+		if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
+		    outFile.writef("%.16e \n", cell.gradients.tkePhi.re);
+		    outFile.writef("%.16e \n", cell.gradients.omegaPhi.re);
+		}
+	    }
+	}
+	outFile.close();
+    } // end if (GlobalConfig.frozen_limiter)    
 }
 
 void allocate_global_workspace()

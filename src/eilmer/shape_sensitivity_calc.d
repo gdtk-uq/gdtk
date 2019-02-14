@@ -20,6 +20,8 @@ import std.conv;
 import std.parallelism;
 import std.algorithm;
 import std.getopt;
+import std.string;
+import std.file;
 
 // numerical methods
 import nm.smla;
@@ -195,7 +197,7 @@ void main(string[] args) {
     /* Evaluate Sensitivities via Discrete Adjoint Method */
 
     if (adjointMethodFlag) {
-
+	
         foreach (myblk; localFluidBlocks) {
             // Make a stack-local copy of conserved quantities info
             myblk.nConserved = nConservedQuantities;
@@ -220,7 +222,52 @@ void main(string[] args) {
         // we make sure that the ghost cells are filled here (we don't want to update ghost cells during the flow Jacobian formation)
         // TODO: currently the code works for second order interpolation for internal interfaces, with first order interpolation at boundaries.
         // Should think about how to extend this to second order at block boundaries (i.e. manage the copying of gradients correctly).
-        exchange_ghost_cell_boundary_data(0.0, 0, 0); // pseudoSimTime = 0.0; gtl = 0; ftl = 0
+	
+	if (GlobalConfig.sscOptions.read_frozen_limiter_values_from_file) {
+	    steadystate_core.evalRHS(0.0, 0); // fill in some values
+	    auto fileName = "frozen_limiter_values.dat";
+	    auto outFile = File(fileName, "r");
+	    foreach (blk; localFluidBlocks) {
+		foreach (cell; blk.cells) {
+		    
+		    auto line = outFile.readln().strip();
+		    auto token = line.split();
+		    cell.gradients.rhoPhi = to!double(token[0]);
+		    
+		    line = outFile.readln().strip();
+		    token = line.split();
+		    cell.gradients.velxPhi = to!double(token[0]);
+		    
+		    line = outFile.readln().strip();
+		    token = line.split();
+		    cell.gradients.velyPhi = to!double(token[0]);
+
+		    if (blk.myConfig.dimensions == 3) {
+			line = outFile.readln().strip();
+			token = line.split();
+			cell.gradients.velzPhi = to!double(token[0]);
+		    }
+
+		    line = outFile.readln().strip();
+		    token = line.split();
+		    cell.gradients.pPhi = to!double(token[0]);
+		    
+		    if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
+			line = outFile.readln().strip();
+			token = line.split();
+			cell.gradients.tkePhi = to!double(token[0]);
+			
+			line = outFile.readln().strip();
+			token = line.split();
+			cell.gradients.omegaPhi = to!double(token[0]);
+		    }
+		}
+	    }
+	    outFile.close();
+	    GlobalConfig.frozen_limiter = true;
+	}
+	
+	exchange_ghost_cell_boundary_data(0.0, 0, 0); // pseudoSimTime = 0.0; gtl = 0; ftl = 0
     
         foreach (myblk; parallel(localFluidBlocks,1)) {
             initialisation(myblk, nPrimitive);
@@ -243,7 +290,7 @@ void main(string[] args) {
         foreach (myblk; parallel(localFluidBlocks,1)) {
             myblk.JlocT = new SMatrix!number();
             local_flow_jacobian_transpose(myblk.JlocT, myblk, nPrimitive, myblk.myConfig.interpolation_order, EPS);
-        }
+	}
 
         foreach (myblk; parallel(localFluidBlocks,1)) {
             form_external_flow_jacobian_block_phase0(myblk, nPrimitive, myblk.myConfig.interpolation_order, EPS); // orderOfJacobian=interpolation_order
