@@ -77,44 +77,47 @@ public:
         number alpha = ionisation_fraction_from_mass_fractions(Q);
         if (Q.T <= 0.0 || Q.p <= 0.0) {
             string msg = "Temperature and/or pressure was negative for update_thermo_from_pT."; 
+            debug { msg ~= format("\nQ=%s\n", Q); }
             throw new GasModelException(msg);
         }
-        Q.rho = Q.p/(_Rgas*(Q.T + alpha*Q.T_modes[0]));
+        number Te = Q.T; // Assume electron temperature is the same as heavy-particle T.
+        Q.rho = Q.p/(_Rgas*(Q.T + alpha*Te));
         Q.u = 3.0/2.0*_Rgas*Q.T;
-        if (alpha<=_ion_tol) {
-            Q.T_modes[0] = Q.T;
-            Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
-        } else {
-            Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
-        }
+        Q.T_modes[0] = Te;
+        Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Te + alpha*_Rgas*_theta_ion;
     }
     override void update_thermo_from_rhou(GasState Q) const
     {
         number alpha = ionisation_fraction_from_mass_fractions(Q);
         if (Q.u <= 0.0 || Q.rho <= 0.0) {
-            string msg = "Internal energy and/or density was negative for update_thermo_from_rhou."; 
+            string msg = "Internal energy and/or density was negative for update_thermo_from_rhou.";
+            debug { msg ~= format("\nQ=%s\n", Q); }
             throw new GasModelException(msg);
         }
         Q.T = 2.0/3.0*Q.u/_Rgas;
-        if (alpha <= _ion_tol) {
-            Q.T_modes[0] = Q.T;
-            Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
+        number Te;
+        if (alpha > 0.0) {
+            Te = (Q.u_modes[0]/alpha-_Rgas*_theta_ion)*2.0/3.0/_Rgas;
+            if (Te > 500.0e3) { Te = 500.0e3; }
+            if (Te < 20.0) { Te = 20.0; }
         } else {
-            Q.T_modes[0] = (Q.u_modes[0]/alpha-_Rgas*_theta_ion)*2.0/3.0/_Rgas;
+            Te = Q.T;
         }
-        Q.p = Q.rho*_Rgas*(Q.T+alpha*Q.T_modes[0]);
+        Q.p = Q.rho*_Rgas*(Q.T+alpha*Te);
+        Q.T_modes[0] = Te;
     }
     override void update_thermo_from_rhoT(GasState Q) const
     {
         number alpha = ionisation_fraction_from_mass_fractions(Q);
         if (Q.T <= 0.0 || Q.rho <= 0.0) {
             string msg = "Temperature and/or density was negative for update_thermo_from_rhoT."; 
+            debug { msg ~= format("\nQ=%s\n", Q); }
             throw new GasModelException(msg);
         }
-        Q.p = Q.rho*_Rgas*(Q.T+alpha*Q.T_modes[0]);
+        number Te = Q.T_modes[0];
+        Q.p = Q.rho*_Rgas*(Q.T+alpha*Te);
         Q.u = 3.0/2.0*_Rgas*Q.T;
-        if (alpha <= _ion_tol) { Q.T_modes[0] = Q.T; }
-        Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
+        Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Te + alpha*_Rgas*_theta_ion;
     }
     override void update_thermo_from_rhop(GasState Q) const
     {
@@ -122,11 +125,11 @@ public:
         number alpha = ionisation_fraction_from_mass_fractions(Q);
         if (Q.p <= 0.0 || Q.rho <= 0.0) {
             string msg = "Pressure and/or density was negative for update_thermo_from_rhop."; 
+            debug { msg ~= format("\nQ=%s\n", Q); }
             throw new GasModelException(msg);
         }
         Q.T = Q.p/Q.rho/_Rgas - alpha*Q.T_modes[0];
         Q.u = 3.0/2.0*_Rgas*Q.T;
-        if (alpha <= _ion_tol) { Q.T_modes[0] = Q.T; }
         Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
     }
     override void update_thermo_from_ps(GasState Q, number s) const
@@ -141,6 +144,7 @@ public:
     {
         if (Q.T <= 0.0) {
             string msg = "Temperature was negative for update_sound_speed."; 
+            debug { msg ~= format("\nQ=%s\n", Q); }
             throw new GasModelException(msg);
         }
         // Assume that the properties for argon atoms, ignoring dissociation.

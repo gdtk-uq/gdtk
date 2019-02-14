@@ -205,6 +205,12 @@ final class UpdateArgonFrac : ThermochemicalReactor {
             y[0] = 0.0; // electron number density
             y[1] = _u_total; // translational energy of heavy particles
         }
+        if (y[0] > _n_e_max) {
+            y[0] = _n_e_max;
+        }
+        if (y[1] < _u_min_heavy_particles) {
+            y[1] = _u_min_heavy_particles;
+        }
         if (y[1] > _u_total) {
             y[0] = 0.0;
             y[1] = _u_total;
@@ -235,9 +241,19 @@ final class UpdateArgonFrac : ThermochemicalReactor {
             //
             // This is a model of an isolated reactor so the total number
             // of heavy particles and the energy in the reactor remain constant.
+            // Note, also, that n_e == n_Ar_plus.
             _n_total = n_e + n_Ar;
             number alpha = n_e/_n_total;
             _u_total = 3.0/2.0*_Rgas*(Q.T+alpha*Q.T_modes[0])+alpha*_Rgas*_theta_ion;
+            //
+            // Given the amount of energy, we have a limit to the number of ions
+            // that can be formed before driving the energy of the heavy particles
+            // too low.
+            // Let's put a lower limit of 200K for the temperature of the heavy particles.
+            number u_available = _u_total - 3.0/2.0*_Rgas*200.0;
+            number alpha_max = fmin(1.0, u_available/(Q.T_modes[0] + _Rgas*_theta_ion));
+            _n_e_max = alpha_max * _n_total;
+            _u_min_heavy_particles = 3.0/2.0*_Rgas*200.0;
 
             // Pack the state vector, ready for the integrator.
             number[2] y; y[0] = n_e; y[1] = Q.u;
@@ -345,6 +361,12 @@ final class UpdateArgonFrac : ThermochemicalReactor {
     public:
     number _n_total; // number density of atoms and ions combined
     number _u_total; // energy within the reactor
+    // Since the energy in the reactor is limited,
+    // the number of ionized particles also limited.
+    number _n_e_max;
+    // We don't want the translational energy of the heavy particles
+    // dropping too low, so keep limit for their internal energy.
+    number _u_min_heavy_particles;
 
     } // end class UpdateArgonFrac
 
