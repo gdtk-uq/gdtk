@@ -39,12 +39,136 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         _ion_tol = getDoubleWithDefault(L, -1, "ion_tol", 1.0e-15);
         _integration_method = getStringWithDefault(L, -1, "integration_method", "Backward_Euler");
         _T_min_for_reaction = getDoubleWithDefault(L, -1, "T_min_for_reaction", 3000.0);
-        _n_step_suggest = getIntWithDefault(L, -1, "n_step_suggest", 100);
-        _Newton_Raphson_tol = getDoubleWithDefault(L, -1, "Newton_Raphson_tol", 1.0e-10);
-        _max_iter_newton = getIntWithDefault(L, -1, "max_iter_newton", 20);
+        _n_step_suggest = getIntWithDefault(L, -1, "n_step_suggest", 1);
+        _Newton_Raphson_tol = getDoubleWithDefault(L, -1, "Newton_Raphson_tol", 1.0e-6);
+        _max_iter_newton = getIntWithDefault(L, -1, "max_iter_newton", 10);
         lua_close(L);
     }
+    
+    @nogc
+    override void opCall(GasState Q, double tInterval,
+                         ref double dtChemSuggest, ref double dtThermSuggest, 
+                         ref number[maxParams] params)
+    {
+        if (dtChemSuggest < 0.0) {
+            // A negative value indicated that the flow solver did not have
+            // a suggested time-step size.
+            dtChemSuggest = tInterval/_n_step_suggest;
+        }
+        // There are changes only if the gas is hot enough.
+        if (Q.T > _T_min_for_reaction) {
+            int NumberSteps = cast(int) fmax(floor(tInterval/dtChemSuggest), 1.0);
+            _chem_dt = tInterval/NumberSteps;
+            dtChemSuggest = _chem_dt; // Remember this value for the next call.
+            //
+            // Determine the current number densities.
+            number[3] numden;
+            _gmodel.massf2numden(Q, numden);
+            number n_e = numden[2]; // number density of electrons
+            number n_Ar = numden[0]; // number density of Ar
+            //
+            // This is a model of an isolated reactor so the total number
+            // of heavy particles and the energy in the reactor remain constant.
+            // Note, also, that n_e == n_Ar_plus.
+            _n_total = n_e + n_Ar;
+            number alpha = n_e/_n_total;
+            _u_total = 3.0/2.0*_Rgas*(Q.T+alpha*Q.T_modes[0])+alpha*_Rgas*_theta_ion;
+            //
+            // Given the amount of energy, we have a limit to the number of ions
+            // that can be formed before driving the energy of the heavy particles
+            // too low.
+            // Let's put a lower limit of 200K for the temperature of the heavy particles.
+            number u_available = _u_total - 3.0/2.0*_Rgas*200.0;
+            number alpha_max = fmin(1.0, u_available/(Q.T_modes[0] + _Rgas*_theta_ion));
+            _n_e_max = alpha_max * _n_total;
+            _u_min_heavy_particles = 3.0/2.0*_Rgas*200.0;
 
+            // Pack the state vector, ready for the integrator.
+            number[2] y; y[0] = n_e; y[1] = Q.u;
+
+            // The following items are needed for Backward-Euler step
+            number[2] y_prev; y_prev[0] = n_e; y_prev[1] = Q.u;
+            // Perturbation sizes for the finite-difference Jacobian
+            double[2] h = [1.0e10, 1.0e-5]; // working: [1.0e10, 1.0e0]; 
+
+            foreach (n; 0 .. NumberSteps) {
+                switch (_integration_method) {
+                case "Forward_Euler":
+                    number[2] myF = F(y, Q);
+                    foreach (i; 0 .. 2) { y[i] = y[i] + _chem_dt * myF[i]; }
+                    limit_state_vector(y);
+                    break;
+                case "Backward_Euler":
+                    double norm_error = 1.0e50; // something large that will be replaced
+                    int iter = 0;
+                    do {
+                        number[2][2] J = Jacobian(y, y_prev, h, Q);
+                        number[2] rhs = BackEuler_F(y, y_prev, Q);
+                        number[2] dy; solve2(J, rhs, dy);
+                        foreach (i; 0 .. 2) { y[i] = y[i] - dy[i]; }
+                        limit_state_vector(y);
+                        number[2] error = BackEuler_F(y, y_prev, Q);
+                        norm_error = fabs(error[0].re/_n_total) + fabs(error[1].re/_u_total);
+                        ++iter;
+                    } while (norm_error > _Newton_Raphson_tol && iter < _max_iter_newton);
+                    foreach (i; 0 .. 2) { y_prev[i] = y[i]; } // needed for next step
+                    break;
+                case "RK4":
+                    number[2] k1, k2_in, k2, k3_in, k3, k4_in, k4;
+                    number[2] myF = F(y, Q);
+                    foreach (i; 0 .. 2) { k1[i] = _chem_dt * myF[i]; }
+                    foreach (i; 0 .. 2) { k2_in[i] = y[i] + k1[i]/2.0; }
+                    limit_state_vector(k2_in);
+                    myF = F(k2_in, Q);
+                    foreach (i; 0 .. 2) { k2[i] = _chem_dt * myF[i]; }
+                    foreach (i; 0 .. 2) { k3_in[i] = y[i] + k2[i]/2.0; }
+                    limit_state_vector(k3_in);
+                    myF = F(k3_in, Q);
+                    foreach (i; 0 .. 2) { k3[i] = _chem_dt * myF[i]; }
+                    foreach (i; 0 .. 2) { k4_in[i] = y[i] + k3[i]; }
+                    limit_state_vector(k4_in);
+                    myF = F(k4_in, Q);
+                    foreach (i; 0 .. 2) { k4[i] = _chem_dt * myF[i]; }
+                    foreach (i; 0 .. 2) { y[i] = y[i] + 1.0/6.0*(k1[i]+2.0*k2[i]+2.0*k3[i]+k4[i]); }
+                    limit_state_vector(y);
+                    break;
+                default:
+                    throw new Error("Invalid ODE update selection.");
+                } // end switch
+            } // end foreach n
+
+            // Unpack the results.
+            n_e = y[0];
+            Q.u = y[1];
+            // Reconstruct the other parts of the flow state.
+            if (n_e > 0.0) {
+                n_Ar = _n_total - n_e;
+                Q.u_modes[0] = _u_total - Q.u;    
+            } else {
+                // Do not let the number of electrons go negative.
+                // Force the numbers back to something physically realizable.
+                Q.u = _u_total;
+                Q.u_modes[0] = 0.0;
+                //mass
+                n_Ar = _n_total;
+                n_e = 0.0;
+                alpha = n_e/(n_e + n_Ar);
+                //energy
+                //temperature
+                Q.T = 2.0/3.0*Q.u/_Rgas;
+                Q.T_modes[0] = Q.T;
+            }
+            
+            // Must update the mass fractions before updating the gas state from rho and u...
+            // Number density of Argon+ is the same as electron number density.
+            numden[0] = n_Ar; numden[1] = n_e; numden[2] = n_e;
+            _gmodel.numden2massf(numden, Q);
+            _gmodel.update_thermo_from_rhou(Q);
+            _gmodel.update_sound_speed(Q);
+        } // end if Q.T > 3000
+    } // end opCall()
+    
+    private:
     @nogc
     number[2] F(ref const(number[2]) y, GasState Q)
     // Compute the rate of change of the state vector for the ionisation reactions.
@@ -216,131 +340,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
             y[1] = _u_total;
         }
     }
-    
-    @nogc
-    override void opCall(GasState Q, double tInterval,
-                         ref double dtChemSuggest, ref double dtThermSuggest, 
-                         ref number[maxParams] params)
-    {
-        if (dtChemSuggest < 0.0) {
-            // A negative value indicated that the flow solver did not have
-            // a suggested time-step size.
-            dtChemSuggest = tInterval/_n_step_suggest;
-        }
-        // There are changes only if the gas is hot enough.
-        if (Q.T > _T_min_for_reaction) {
-            int NumberSteps = cast(int) fmax(floor(tInterval/dtChemSuggest), 1.0);
-            _chem_dt = tInterval/NumberSteps;
-            dtChemSuggest = _chem_dt; // Remember this value for the next call.
-            //
-            // Determine the current number densities.
-            number[3] numden;
-            _gmodel.massf2numden(Q, numden);
-            number n_e = numden[2]; // number density of electrons
-            number n_Ar = numden[0]; // number density of Ar
-            //
-            // This is a model of an isolated reactor so the total number
-            // of heavy particles and the energy in the reactor remain constant.
-            // Note, also, that n_e == n_Ar_plus.
-            _n_total = n_e + n_Ar;
-            number alpha = n_e/_n_total;
-            _u_total = 3.0/2.0*_Rgas*(Q.T+alpha*Q.T_modes[0])+alpha*_Rgas*_theta_ion;
-            //
-            // Given the amount of energy, we have a limit to the number of ions
-            // that can be formed before driving the energy of the heavy particles
-            // too low.
-            // Let's put a lower limit of 200K for the temperature of the heavy particles.
-            number u_available = _u_total - 3.0/2.0*_Rgas*200.0;
-            number alpha_max = fmin(1.0, u_available/(Q.T_modes[0] + _Rgas*_theta_ion));
-            _n_e_max = alpha_max * _n_total;
-            _u_min_heavy_particles = 3.0/2.0*_Rgas*200.0;
 
-            // Pack the state vector, ready for the integrator.
-            number[2] y; y[0] = n_e; y[1] = Q.u;
-
-            // The following items are needed for Backward-Euler step
-            number[2] y_prev; y_prev[0] = n_e; y_prev[1] = Q.u;
-            // Perturbation sizes for the finite-difference Jacobian
-            double[2] h = [1.0e10, 1.0e-5]; // working: [1.0e10, 1.0e0]; 
-
-            foreach (n; 0 .. NumberSteps) {
-                switch (_integration_method) {
-                case "Forward_Euler":
-                    number[2] myF = F(y, Q);
-                    foreach (i; 0 .. 2) { y[i] = y[i] + _chem_dt * myF[i]; }
-                    limit_state_vector(y);
-                    break;
-                case "Backward_Euler":
-                    double norm_error = 1.0e50; // something large that will be replaced
-                    int iter = 0;
-                    do {
-                        number[2][2] J = Jacobian(y, y_prev, h, Q);
-                        number[2] rhs = BackEuler_F(y, y_prev, Q);
-                        number[2] dy; solve2(J, rhs, dy);
-                        foreach (i; 0 .. 2) { y[i] = y[i] - dy[i]; }
-                        limit_state_vector(y);
-                        number[2] error = BackEuler_F(y, y_prev, Q);
-                        norm_error = sqrt(pow(error[0].re/1.0e22,2) +
-                                          pow(error[1].re/1.0e7,2));
-                        ++iter;
-                    } while (norm_error > _Newton_Raphson_tol && iter < _max_iter_newton);
-                    foreach (i; 0 .. 2) { y_prev[i] = y[i]; } // needed for next step
-                    break;
-                case "RK4":
-                    number[2] k1, k2_in, k2, k3_in, k3, k4_in, k4;
-                    number[2] myF = F(y, Q);
-                    foreach (i; 0 .. 2) { k1[i] = _chem_dt * myF[i]; }
-                    foreach (i; 0 .. 2) { k2_in[i] = y[i] + k1[i]/2.0; }
-                    limit_state_vector(k2_in);
-                    myF = F(k2_in, Q);
-                    foreach (i; 0 .. 2) { k2[i] = _chem_dt * myF[i]; }
-                    foreach (i; 0 .. 2) { k3_in[i] = y[i] + k2[i]/2.0; }
-                    limit_state_vector(k3_in);
-                    myF = F(k3_in, Q);
-                    foreach (i; 0 .. 2) { k3[i] = _chem_dt * myF[i]; }
-                    foreach (i; 0 .. 2) { k4_in[i] = y[i] + k3[i]; }
-                    limit_state_vector(k4_in);
-                    myF = F(k4_in, Q);
-                    foreach (i; 0 .. 2) { k4[i] = _chem_dt * myF[i]; }
-                    foreach (i; 0 .. 2) { y[i] = y[i] + 1.0/6.0*(k1[i]+2.0*k2[i]+2.0*k3[i]+k4[i]); }
-                    limit_state_vector(y);
-                    break;
-                default:
-                    throw new Error("Invalid ODE update selection.");
-                } // end switch
-            } // end foreach n
-
-            // Unpack the results.
-            n_e = y[0];
-            Q.u = y[1];
-            // Reconstruct the other parts of the flow state.
-            if (n_e > 0.0) {
-                n_Ar = _n_total - n_e;
-                Q.u_modes[0] = _u_total - Q.u;    
-            } else {
-                // Do not let the number of electrons go negative.
-                // Force the numbers back to something physically realizable.
-                Q.u = _u_total;
-                Q.u_modes[0] = 0.0;
-                //mass
-                n_Ar = _n_total;
-                n_e = 0.0;
-                alpha = n_e/(n_e + n_Ar);
-                //energy
-                //temperature
-                Q.T = 2.0/3.0*Q.u/_Rgas;
-                Q.T_modes[0] = Q.T;
-            }
-            
-            // Must update the mass fractions before updating the gas state from rho and u...
-            // Number density of Argon+ is the same as electron number density.
-            numden[0] = n_Ar; numden[1] = n_e; numden[2] = n_e;
-            _gmodel.numden2massf(numden, Q);
-            _gmodel.update_thermo_from_rhou(Q);
-            _gmodel.update_sound_speed(Q);
-        } // end if Q.T > 3000
-    } // end opCall()
-    
     private:
     double _m_Ar = 6.6335209e-26; // mass of argon (kg)
     double _m_e = 9.10938e-31; // mass of electron (kg)
@@ -348,17 +348,17 @@ final class UpdateArgonFrac : ThermochemicalReactor {
     double _Rgas = 208.0;
     double _theta_ion = 183100.0;
     double _theta_A1star = 135300.0;
-    double _ion_tol = 1.0e-15;
-    double _chem_dt;
-    string _integration_method = "Backward_Euler";
-    double _T_min_for_reaction = 3000.0; // degrees K
-    int _n_step_suggest = 100; // number of substeps to take if dtChemSuggest<0.0
-    double _Newton_Raphson_tol = 1.0e-10;
-    int _max_iter_newton = 20; // limit the number of Newton iterations for backard Euler
+
+    // Adjustable parameters, will be set in the constructor.
+    string _integration_method;
+    double _T_min_for_reaction; // degrees K
+    double _ion_tol;
+    int _n_step_suggest; // number of substeps to take if dtChemSuggest<0.0
+    double _Newton_Raphson_tol;
+    int _max_iter_newton; // limit the number of Newton iterations for backard Euler
 
     // The following items are constants for the duration
     // of the update for our abstract isolated reactor.
-    public:
     number _n_total; // number density of atoms and ions combined
     number _u_total; // energy within the reactor
     // Since the energy in the reactor is limited,
@@ -368,6 +368,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
     // dropping too low, so keep limit for their internal energy.
     number _u_min_heavy_particles;
 
+    double _chem_dt;
     } // end class UpdateArgonFrac
 
 
