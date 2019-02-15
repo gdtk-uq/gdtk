@@ -3,6 +3,7 @@ air.lua       : air      : air
 Ar.lua        : Ar       : argon
 Ar_plus.lua   : Ar+      : argon ion
 C.lua         : C        : carbon
+C2.lua        : C2       : dicarbon
 C2H.lua       : C2H      : ethynyl
 C2H2.lua      : C2H2     : ethyne
 C2H3.lua      : C2H3     : ethenyl radical
