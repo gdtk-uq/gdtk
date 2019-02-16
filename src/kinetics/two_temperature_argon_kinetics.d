@@ -105,8 +105,14 @@ final class UpdateArgonFrac : ThermochemicalReactor {
                         number[2][2] J = Jacobian(y, y_prev, h, Q);
                         number[2] rhs = BackEuler_F(y, y_prev, Q);
                         number[2] dy; solve2(J, rhs, dy);
-                        foreach (i; 0 .. 2) { y[i] = y[i] - dy[i]; }
-                        limit_state_vector(y);
+                        number[2] y_new;
+                        double scale = 1.0; // First attempt at full scale.
+                        do {
+                            foreach (i; 0 .. 2) { y_new[i] = y[i] - scale*dy[i]; }
+                            scale /= 10.0; // for next pass
+                        } while (!state_vector_is_within_limits(y_new) && scale > 0.001);
+                        limit_state_vector(y_new);
+                        foreach (i; 0 .. 2) { y[i] = y_new[i]; }
                         number[2] error = BackEuler_F(y, y_prev, Q);
                         norm_error = fabs(error[0].re/_n_total) + fabs(error[1].re/_u_total);
                         ++iter;
@@ -322,6 +328,17 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         x[1] = (a[0][0]*b[1] - a[1][0]*b[0])/det;
     }
 
+    @nogc
+    bool state_vector_is_within_limits(ref number[2] y)
+    {
+        bool result = true;
+        if (y[0] < 0.0) { result = false; }
+        if (y[0] > _n_e_max) { result = false; }
+        if (y[1] < _u_min_heavy_particles) { result = false; }
+        if (y[1] > _u_total) { result = false; }
+        return result;
+    }
+    
     @nogc
     void limit_state_vector(ref number[2] y)
     {
