@@ -210,36 +210,24 @@ Species2G = lpeg.P{ Species2 }
 
 function checkEquationBalances(r, rnumber)
    -- Checks both mass and charge balance
-   local elem = {}
+   local elems = {}
    local charge = 0
    
    for _,p in ipairs(r[1]) do
       if type(p) == 'table' then
 	 local coeff = tonumber(p[1]) or 1
-	 if p[2] ~= "M" then
-	    -- break species into elements and charge
-	    local ets = lpeg.match(Species2, p[2])
-	    for _,et in ipairs(ets) do
-               if type(et) == 'table' then
-                  local e = et[1]
-                  local ne = tonumber(et[2]) or 1
-                  -- collate the element counts
-                  if e ~= "e" then -- don't add electron to mass balance
-                     if elem[e] then
-                        elem[e] = elem[e] + coeff*ne
-                     else
-                        elem[e] = coeff*ne
-                     end
-                  end
+         local sp = p[2]
+	 if sp ~= "M" then
+            -- look up species composition in database
+            for elem,count in pairs(db[sp].atomicConstituents) do
+               if elems[elem] then
+                  elems[elem] = elems[elem] - coeff*count
                else
-                  -- collate the charge counts
-                  if et == "+" then
-                     charge = charge + coeff*1
-                  elseif et == "-" then
-                     charge = charge - coeff*1
-                  end
+                  elems[elem] = -coeff*count
                end
 	    end
+            -- look up species charge in database
+            charge = charge - db[sp].charge
 	 end
       end
    end
@@ -248,37 +236,25 @@ function checkEquationBalances(r, rnumber)
    for _,p in ipairs(r[3]) do
       if type(p) == 'table' then
 	 local coeff = tonumber(p[1]) or 1
+         local sp = p[2]
 	 if p[2] ~= "M" then
-	    -- break species into elements and charge
-	    local ets = lpeg.match(Species2, p[2])
-	    for _,et in ipairs(ets) do
-               if type(et) == 'table' then
-                  local e = et[1]
-                  local ne = tonumber(et[2]) or 1
-                  -- collate the element counts
-                  if e ~= "e" then -- don't add mass of electron to mass balance
-                     if elem[e] then
-                        elem[e] = elem[e] - coeff*ne
-                     else
-                        elem[e] = -coeff*ne
-                     end
-                  end	
-               else 
-                  -- collate the charge counts
-                  if et == "+" then
-                     charge = charge - coeff*1
-                  elseif et == "-" then
-                     charge = charge + coeff*1
-                  end
+            -- look up species composition in database
+            for elem,count in pairs(db[sp].atomicConstituents) do
+               if elems[elem] then
+                  elems[elem] = elems[elem] + coeff*count
+               else
+                  elems[elem] = coeff*count
                end
 	    end
+            -- look up species charge in database
+            charge = charge + db[sp].charge
 	 end
       end
    end
 
    -- mass check
    mass_balances = true
-   for k,v in pairs(elem) do
+   for k,v in pairs(elems) do
       if v ~= 0 then
 	 mass_balances = false
 	 print("There is a problem with the mass balance for reaction: ", rnumber)
