@@ -135,15 +135,6 @@ void main(string[] args)
     writefln("Initialising simulation from snapshot: %d", snapshotStart);
     init_simulation(snapshotStart, -1, maxCPUs, 1, maxWallClock);
 
-    // We can apply a special initialisation to the flow field, if requested.
-    if (GlobalConfig.diffuseWallBCsOnInit) {
-        writeln("Applying special initialisation to blocks: wall BCs being diffused into domain.");
-        writefln("%d passes of the near-wall flow averaging operation will be performed.", GlobalConfig.nInitPasses);
-        foreach (blk; parallel(localFluidBlocks,1)) {
-            diffuseWallBCsIntoBlock(blk, GlobalConfig.nInitPasses, GlobalConfig.initTWall);
-        }
-    }
-    
     // Additional memory allocation specific to steady-state solver
     allocate_global_workspace();
     foreach (blk; localFluidBlocks) {
