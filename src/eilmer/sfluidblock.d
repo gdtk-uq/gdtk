@@ -427,7 +427,7 @@ public:
         // Make the cell. vertex. and face.id consistent with the index in the array.
         // We will depend on this equality in other parts of the flow solver.
         // We also note that these cells are interior to the block (i.e. not ghost cells)
-        foreach (i, c; cells) { c.id = to!int(i); c.contains_flow_data = true; }
+        foreach (i, c; cells) { c.id = to!int(i); c.contains_flow_data = true; c.is_interior_to_domain = true; }
         foreach (i, v; vertices) { v.id = to!int(i); }
         foreach (i, f; faces) { f.id = to!int(i); }
         // Alter the id values of the ghost cells to be a bit like those in the
@@ -796,6 +796,9 @@ public:
             break;
         case SpatialDerivLocn.faces:
             store_references_for_derivative_calc_at_faces(gtl);
+            break;
+        case SpatialDerivLocn.cells:
+            assert(0, "spatial_deriv_locn at cells not implemented for the structured solver.");
         }
     } // end store_references_for_derivative_calc()
 

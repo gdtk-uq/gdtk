@@ -875,7 +875,17 @@ void evalRHS(double pseudoSimTime, int ftl)
             blk.applyPreSpatialDerivActionAtBndryFaces(pseudoSimTime, 0, ftl);
         }
         foreach (blk; parallel(localFluidBlocks,1)) {
-            blk.flow_property_spatial_derivatives(0); 
+            blk.flow_property_spatial_derivatives(0);
+        }
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            blk.exchange_boundary_spatial_deriv_data(0);
+        }
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            if (blk.myConfig.spatial_deriv_locn == SpatialDerivLocn.cells) {
+                foreach(f; blk.faces) {
+                    f.average_cell_deriv_values(0);
+                }
+            }
             blk.estimate_turbulence_viscosity();
             blk.viscous_flux();
         }

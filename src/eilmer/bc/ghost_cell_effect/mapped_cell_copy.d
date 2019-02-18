@@ -737,6 +737,7 @@ public:
             // For a single process, just access the data directly.
             foreach (i, mygc; ghost_cells) {
                 mygc.fs.copy_values_from(mapped_cells[i].fs);
+                mygc.is_interior_to_domain = mapped_cells[i].is_interior_to_domain;
             }
         }
     } // end exchange_flowstate_phase2()

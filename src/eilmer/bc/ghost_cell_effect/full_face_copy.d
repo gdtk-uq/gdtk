@@ -1219,6 +1219,7 @@ public:
             // we know that we can just access the data directly.
             foreach (i; 0 .. ghost_cells.length) {
                 ghost_cells[i].fs.copy_values_from(mapped_cells[i].fs);
+                ghost_cells[i].is_interior_to_domain = mapped_cells[i].is_interior_to_domain;
             }
         }
         // Done with copying from source cells.

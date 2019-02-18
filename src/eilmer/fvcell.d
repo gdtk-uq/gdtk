@@ -23,6 +23,7 @@ import gas;
 import kinetics;
 import fvcore;
 import flowstate;
+import flowgradients;
 import conservedquantities;
 import fvvertex;
 import fvinterface;
@@ -93,7 +94,8 @@ public:
     // where there is no gas on the otherside of the "wall",
     // this flag might not be needed.
     // Such a change will need a big rework of boundary condition code.
-    bool contains_flow_data; 
+    bool contains_flow_data;
+    bool is_interior_to_domain; // true if the cell is interior to the flow domain
     bool allow_k_omega_update = true; // turbulent wall functions may turn this off
     FlowState fs; // Flow properties
     ConservedQuantities[] U;  // Conserved flow quantities for the update stages.
@@ -104,6 +106,11 @@ public:
     LSQInterpWorkspace ws;
     LSQInterpGradients gradients; // we only need these workspaces for the unstructured
                                   // solver, they are instantiated in ufluidblock.d
+    // Viscous-flux-related quantities.
+    FlowGradients grad;
+    WLSQGradWorkspace ws_grad;
+    Vector3*[] cloud_pos; // Positions of flow points for gradients calculation.
+    FlowState[] cloud_fs; // References to flow states at those points.
     // Terms for loose-coupling of radiation.
     number Q_rad_org;
     number f_rad_org;
@@ -133,11 +140,12 @@ private:
     LocalConfig myConfig;
 
 public:
-    this(LocalConfig myConfig, int id_init=-1)
+    this(LocalConfig myConfig, bool allocate_spatial_deriv_lsq_workspace=false, int id_init=-1)
     {
         this.myConfig = myConfig;
         id = id_init;
         contains_flow_data = false; // initial presumption to be adjusted later
+        is_interior_to_domain = false;
         pos.length = myConfig.n_grid_time_levels;
         volume.length = myConfig.n_grid_time_levels;
         areaxy.length = myConfig.n_grid_time_levels;
@@ -155,6 +163,10 @@ public:
         Q.clear();
         if (myConfig.residual_smoothing) {
             dUdt_copy = new ConservedQuantities(n_species, n_modes);
+        }
+        grad = new FlowGradients(myConfig);
+        if (allocate_spatial_deriv_lsq_workspace) {
+            ws_grad = new WLSQGradWorkspace();
         }
         version(shape_sensitivity) {
             dQdU.length = 7; // number of conserved variables
@@ -209,6 +221,7 @@ public:
         default:
             // [TODO] really need to think about what needs to be copied...
             id = other.id;
+            is_interior_to_domain = other.is_interior_to_domain;
             myConfig = other.myConfig;
             foreach(i; 0 .. other.myConfig.n_grid_time_levels) {
                 pos[i].set(other.pos[i]);
@@ -221,6 +234,7 @@ public:
             L_min = other.L_min;
             fs.copy_values_from(other.fs);
             Q.copy_values_from(other.Q);
+            grad.copy_values_from(other.grad);
             foreach(i; 0 .. other.myConfig.n_flow_time_levels) {
                 U[i].copy_values_from(other.U[i]);
                 dUdt[i].copy_values_from(other.dUdt[i]);
@@ -1323,6 +1337,12 @@ public:
             mixin(avg_over_iface_list("grad.vel[0][1]", "dudy"));
             mixin(avg_over_iface_list("grad.vel[1][0]", "dvdx"));
             mixin(avg_over_iface_list("grad.vel[1][1]", "dvdy"));
+            break;
+        case SpatialDerivLocn.cells:
+            dudx = grad.vel[0][0];
+            dudy = grad.vel[0][1];
+            dvdx = grad.vel[1][0];
+            dvdy = grad.vel[1][1];
         } // end switch (myConfig.spatial_deriv_locn)
         if ( myConfig.dimensions == 2 ) {
             // 2D cartesian or 2D axisymmetric
@@ -1356,6 +1376,13 @@ public:
                 mixin(avg_over_iface_list("grad.vel[2][0]", "dwdx"));
                 mixin(avg_over_iface_list("grad.vel[2][1]", "dwdy"));
                 mixin(avg_over_iface_list("grad.vel[2][2]", "dwdz"));
+                break;
+            case SpatialDerivLocn.cells:
+                dudz = grad.vel[0][2];
+                dvdz = grad.vel[1][2];
+                dwdx = grad.vel[2][0];
+                dwdy = grad.vel[2][1];
+                dwdz = grad.vel[2][2];
             } // end switch (myConfig.spatial_deriv_locn)
             S_bar_squared =  dudx*dudx + dvdy*dvdy + dwdz*dwdz
                 - 4.0/9.0*(dudx + dvdy + dwdz)*(dudx + dvdy + dwdz)
@@ -1516,6 +1543,16 @@ public:
             mixin(avg_over_iface_list("grad.tke[1]", "dtkedy"));
             mixin(avg_over_iface_list("grad.omega[0]", "domegadx"));
             mixin(avg_over_iface_list("grad.omega[1]", "domegady"));
+            break;
+        case SpatialDerivLocn.cells:
+            dudx = grad.vel[0][0];
+            dudy = grad.vel[0][1];
+            dvdx = grad.vel[1][0];
+            dvdy = grad.vel[1][1];
+            dtkedx = grad.tke[0];
+            dtkedy = grad.tke[1];
+            domegadx = grad.omega[0];
+            domegady = grad.omega[1];
         } // end switch (myConfig.spatial_deriv_locn)
         if ( myConfig.dimensions == 2 ) {
             // 2D cartesian or 2D axisymmetric
@@ -1562,6 +1599,15 @@ public:
                 mixin(avg_over_iface_list("grad.vel[2][2]", "dwdz"));
                 mixin(avg_over_iface_list("grad.tke[2]", "dtkedz"));
                 mixin(avg_over_iface_list("grad.omega[2]", "domegadz"));
+                break;
+            case SpatialDerivLocn.cells:
+                dudz = grad.vel[0][2];
+                dvdz = grad.vel[1][2];
+                dwdx = grad.vel[2][0];
+                dwdy = grad.vel[2][1];
+                dwdz = grad.vel[2][2];
+                dtkedz = grad.tke[2];
+                domegadz = grad.omega[2];
             } // end switch (myConfig.spatial_deriv_locn)
             P_K = 2.0 * fs.mu_t * (dudx*dudx + dvdy*dvdy + dwdz*dwdz)
                 - 2.0/3.0 * fs.mu_t * (dudx + dvdy + dwdz) * (dudx + dvdy + dwdz)
@@ -1695,6 +1741,10 @@ public:
             case SpatialDerivLocn.faces:
                 mixin(avg_over_iface_list("grad.vel[0][0]", "dudx"));
                 mixin(avg_over_iface_list("grad.vel[1][1]", "dvdy"));
+                break;
+            case SpatialDerivLocn.cells:
+                dudx = grad.vel[0][0];
+                dvdy = grad.vel[1][1];
             } // end switch (myConfig.spatial_deriv_locn)
             number mu; mixin(avg_over_iface_list("fs.gas.mu", "mu"));
             number mu_t; mixin(avg_over_iface_list("fs.mu_t", "mu_t"));

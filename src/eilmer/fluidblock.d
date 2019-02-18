@@ -494,6 +494,70 @@ public:
                     }
                 } // end switch
             } // end if (myConfig.dimensions)
+            break;
+        case SpatialDerivLocn.cells:
+            foreach(cell; cells) {
+                cell.grad.gradients_leastsq(cell.cloud_fs, cell.cloud_pos, cell.ws_grad);
+            }
+        } // end switch (myConfig.spatial_deriv_locn)
+    } // end flow_property_spatial_derivatives()
+
+    @nogc
+    void exchange_boundary_spatial_deriv_data(int gtl)
+    {
+        final switch (myConfig.spatial_deriv_locn) {
+        case SpatialDerivLocn.vertices:
+            break;
+        case SpatialDerivLocn.faces:
+            break;
+        case SpatialDerivLocn.cells:
+            if (grid_type == Grid_t.structured_grid) {
+            } else {
+                foreach (bcond; bc) {
+                    if (bcond.ghost_cell_data_available == false) { continue; }
+                    // Proceed to do some work only if we have ghost cells in which to insert gradients.
+                    bool found_mapped_cell_bc = false;
+                    foreach (gce; bcond.preReconAction) {
+                        auto mygce = cast(GhostCellMappedCellCopy)gce;
+                        if (mygce && !myConfig.in_mpi_context) {
+                            found_mapped_cell_bc = true;
+                            // There is a mapped-cell backing the ghost cell, so we can copy its gradients.
+                            foreach (i, f; bcond.faces) {
+                                // Only FVCell objects in an unstructured-grid are expected to have
+                                // precomputed gradients.  There will be an initialized reference
+                                // in the FVCell object of a structured-grid block, so we need to
+                                // test and avoid copying from such a reference.
+                                auto mapped_cell_grad = mygce.get_mapped_cell(i).grad;
+                                if (bcond.outsigns[i] == 1) {
+                                    if (mapped_cell_grad) {
+                                        f.right_cell.grad.copy_values_from(mapped_cell_grad);
+                                    } else {
+                                        // Fall back to looking over the face for suitable gradient data.
+                                        f.right_cell.grad.copy_values_from(f.left_cell.grad);
+                                    }
+                                } else {
+                                    if (mapped_cell_grad) {
+                                        f.left_cell.grad.copy_values_from(mapped_cell_grad);
+                                    } else {
+                                        f.left_cell.grad.copy_values_from(f.right_cell.grad);
+                                    }
+                                }
+                            } // end foreach f
+                        } // end if (mygce)
+                    } // end foreach gce
+                    if (!found_mapped_cell_bc) {
+                        // There are no other cells backing the ghost cells on this boundary.
+                        // Fill in ghost-cell gradients from the other side of the face.
+                        foreach (i, f; bcond.faces) {
+                            if (bcond.outsigns[i] == 1) {
+                                f.right_cell.grad.copy_values_from(f.left_cell.grad);
+                            } else {
+                                f.left_cell.grad.copy_values_from(f.right_cell.grad);
+                            }
+                        } // end foreach f
+                    } // end if !found_mapped_cell_bc
+                } // end foreach bcond
+            }
         } // end switch (myConfig.spatial_deriv_locn)
     } // end flow_property_spatial_derivatives()
     

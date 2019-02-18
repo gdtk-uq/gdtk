@@ -1418,11 +1418,27 @@ void compute_flux(FVCell pcell, FluidBlock blk, size_t orderOfJacobian, ref FVCe
     if (blk.myConfig.viscous) {
         // currently only for least-squares at faces
         blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
-        
-        foreach(iface; iface_list) {
-            iface.grad.gradients_leastsq(iface.cloud_fs, iface.cloud_pos, iface.ws_grad); // blk.flow_property_spatial_derivatives(0); 
+
+        foreach(c; cell_list) {
+            c.grad.gradients_leastsq(c.cloud_fs, c.cloud_pos, c.ws_grad); // blk.flow_property_spatial_derivatives(0); 
         }
-        
+
+        foreach (bcond; blk.bc) {
+            // There are no other cells backing the ghost cells on this boundary.
+            // Fill in ghost-cell gradients from the other side of the face.
+            foreach (i, f; bcond.faces) {
+                if (bcond.outsigns[i] == 1) {
+                    f.right_cell.grad.copy_values_from(f.left_cell.grad);
+                } else {
+                    f.left_cell.grad.copy_values_from(f.right_cell.grad);
+                }
+            } // end foreach f
+        }
+
+        foreach (f; iface_list) {
+            f.average_cell_deriv_values(0);
+        }
+
         final switch (blk.myConfig.turbulence_model) {
         case TurbulenceModel.none:
             foreach (cell; cell_list) cell.turbulence_viscosity_zero();
@@ -1435,11 +1451,13 @@ void compute_flux(FVCell pcell, FluidBlock blk, size_t orderOfJacobian, ref FVCe
             foreach (cell; cell_list) cell.turbulence_viscosity_k_omega();
             break;
         }
+
         foreach (cell; cell_list) {
             cell.turbulence_viscosity_factor(blk.myConfig.transient_mu_t_factor);
             cell.turbulence_viscosity_limit(blk.myConfig.max_mu_t_factor);
             cell.turbulence_viscosity_zero_if_not_in_zone();
         }
+
         foreach(iface; iface_list) {
             iface.viscous_flux_calc();
         }

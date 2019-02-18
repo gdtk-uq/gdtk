@@ -162,9 +162,11 @@ public:
         foreach (i, c; grid.cells) {
             // Note that the cell id and the index in the cells array are the same.
             // We will reply upon this connection in other parts of the flow code.
-            auto new_cell = new FVCell(myConfig, to!int(i));
+            bool lsq_workspace_at_cells = (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
+                && (myConfig.spatial_deriv_locn == SpatialDerivLocn.cells);            
+            auto new_cell = new FVCell(myConfig, lsq_workspace_at_cells, to!int(i));
             new_cell.contains_flow_data = true;
-            new_cell.contains_flow_data = true;
+            new_cell.is_interior_to_domain = true;
             cells ~= new_cell;
         }
         // Bind the interfaces, vertices and cells together, 
@@ -245,7 +247,7 @@ public:
                 if (bc[i].ghost_cell_data_available) {
                     // Make ghost-cell id values distinct from FVCell ids so that
                     // the warning/error messages are somewhat informative. 
-                    FVCell ghost0 = new FVCell(myConfig, ghost_cell_start_id+ghost_cell_count);
+                    FVCell ghost0 = new FVCell(myConfig, false, ghost_cell_start_id+ghost_cell_count);
                     ghost_cell_count++;
                     ghost0.contains_flow_data = bc[i].ghost_cell_data_available;
                     bc[i].ghostcells ~= ghost0;
@@ -387,255 +389,46 @@ public:
         //
         // We will now store the cloud of points in cloud_pos for viscous derivative calcualtions.
         // This is equivalent to store_references_for_derivative_calc(size_t gtl) in sblock.d
-        // first we define some functions to make the code cleaner (assume gtl=0)
-        void boundary_face_cloud_wall(FVInterface f, size_t i, BoundaryCondition bc, size_t bndary_idx, BoundaryFaceSet boundary) {
-            FVCell cell;
-            // store the interface
-            f.cloud_pos ~= &(f.pos);
-            f.cloud_fs ~= f.fs;
-            if (bc.outsigns[i] == 1) {
-                // store internal neighbour cell
-                f.cloud_pos ~= &(f.left_cell.pos[0]); // assume gtl = 0
-                f.cloud_fs ~= f.left_cell.fs;
-                cell = f.left_cell;
-            } else {
-                // store internal neighbour cell
-                f.cloud_pos ~= &(f.right_cell.pos[0]); // assume gtl = 0
-                f.cloud_fs ~= f.right_cell.fs;
-                cell = f.right_cell;
+        if (myConfig.viscous) {
+            if (myConfig.spatial_deriv_calc ==  SpatialDerivCalc.divergence) {
+                throw new Error("Divergence theorem not implemented for unstructured grid");
             }
-            // now grab the remaining cloud points i.e. the faces of the neighbour cell
-            foreach (other_face; cell.iface) { // loop around cell interfaces
-                if(other_face.id != f.id) { // skip boundary interface
-                    // store interface
-                    f.cloud_pos ~= &(other_face.pos);
-                    f.cloud_fs ~= other_face.fs;
+            // else continue on to fill least-squares/finite-difference cloud
+            final switch (myConfig.spatial_deriv_locn) {
+            case SpatialDerivLocn.vertices:
+                throw new Error("spatial_deriv_locn at vertices not implemented for unstructured grid");
+                // no need for break;
+            case SpatialDerivLocn.faces:
+                throw new Error("spatial_deriv_locn at interfaces not implemented for unstructured grid");
+                // no need for break;
+            case SpatialDerivLocn.cells:
+                // We will now store the cloud of points in cloud_pos for viscous derivative calcualtions.
+                foreach (c; cells) {
+                    // First cell in the cloud is the cell itself.  Differences are taken about it.
+                    c.cloud_pos ~= &(c.pos[0]);
+                    c.cloud_fs ~= c.fs;
+                    // Subsequent cells are the surrounding cells.
+                    foreach (i, f; c.iface) {
+                        c.cloud_pos ~= &(f.pos);
+                        c.cloud_fs ~= f.fs;
+                    } // end foreach face
                 }
-            }
-        } // end void boundary_face_cloud_wall()
-        void boundary_face_cloud_generic(FVInterface f, size_t i, BoundaryCondition bc, size_t bndary_idx, BoundaryFaceSet boundary){
-            double[] cell_cloud_face_ids;
-            double[] cell_cloud_cell_ids;
-            FVCell[] cell_list;
-            // store interface
-            f.cloud_pos ~= &(f.pos);
-            f.cloud_fs ~= f.fs;
-            cell_cloud_face_ids ~= f.id;
-            if (bc.outsigns[i] == 1) {
-                // left cell should be interior
-                // store as a neighbour cell
-                f.cloud_pos ~= &(f.left_cell.pos[0]); // assume gtl = 0
-                f.cloud_fs ~= f.left_cell.fs;
-                cell_list~= f.left_cell.cell_cloud;
-                cell_cloud_cell_ids ~= f.left_cell.id;
-                // store ghost0
-                if (f.right_cell && f.right_cell.contains_flow_data) {
-                    f.cloud_pos ~= &(f.right_cell.pos[0]);
-                    f.cloud_fs ~= f.right_cell.fs;
-                    cell_cloud_cell_ids ~= f.right_cell.id;
-                }
-            } else {
-                // right_cell should be interior
-                // store as a neighbour cell
-                f.cloud_pos ~= &(f.right_cell.pos[0]); // assume gtl = 0
-                f.cloud_fs ~= f.right_cell.fs;
-                cell_list ~= f.right_cell.cell_cloud;
-                cell_cloud_cell_ids ~= f.right_cell.id;
-                // store ghost0
-                if (f.left_cell && f.left_cell.contains_flow_data) { 
-                    f.cloud_pos ~= &(f.left_cell.pos[0]);
-                    f.cloud_fs ~= f.left_cell.fs;
-                    cell_cloud_cell_ids ~= f.left_cell.id;
-                }
-            }
-            foreach (face; cell_list[0].iface) {
-		if (cell_cloud_face_ids.canFind(face.id) == false) {
-		    f.cloud_pos ~= &(face.pos); // assume gtl = 0
-		    f.cloud_fs ~= face.fs;
-		    cell_cloud_face_ids ~= face.id;
-		}
-	    }
-	} // end void boundary_face_cloud_generic()
-        void boundary_face_cloud_symmetric(FVInterface f, size_t i, BoundaryCondition bc, size_t bndary_idx, BoundaryFaceSet boundary){
-            double[] cell_cloud_face_ids;
-            double[] cell_cloud_cell_ids;
-            FVCell[] cell_list;
-            // store interface
-            f.cloud_pos ~= &(f.pos);
-            f.cloud_fs ~= f.fs;
-            cell_cloud_face_ids ~= f.id;
-            if (bc.outsigns[i] == 1) {
-                // left cell should be interior
-                // store as a neighbour cell
-                f.cloud_pos ~= &(f.left_cell.pos[0]); // assume gtl = 0
-                f.cloud_fs ~= f.left_cell.fs;
-                cell_list~= f.left_cell.cell_cloud;
-                cell_cloud_cell_ids ~= f.left_cell.id;
-                // store ghost0
-                if (f.right_cell && f.right_cell.contains_flow_data) {
-                    f.cloud_pos ~= &(f.right_cell.pos[0]);
-                    f.cloud_fs ~= f.right_cell.fs;
-                    cell_cloud_cell_ids ~= f.right_cell.id;
-                }
-            } else {
-                // right_cell should be interior
-                // store as a neighbour cell
-                f.cloud_pos ~= &(f.right_cell.pos[0]); // assume gtl = 0
-                f.cloud_fs ~= f.right_cell.fs;
-                cell_list ~= f.right_cell.cell_cloud;
-                cell_cloud_cell_ids ~= f.right_cell.id;
-                // store ghost0
-                if (f.left_cell && f.left_cell.contains_flow_data) { 
-                    f.cloud_pos ~= &(f.left_cell.pos[0]);
-                    f.cloud_fs ~= f.left_cell.fs;
-                    cell_cloud_cell_ids ~= f.left_cell.id;
-                }
-            }
-            foreach (fvtx; f.vtx) {
-                foreach (other_face_id; faceIndexListPerVertex[fvtx.id]) {
-                    FVInterface other_face = faces[other_face_id];
-                    if (other_face.is_on_boundary &&
-                        other_face.bc_id == bndary_idx &&
-                        cell_cloud_face_ids.canFind(other_face.id) == false) {
-                        // store left and right cell
-                        if (other_face.left_cell && cell_cloud_cell_ids.canFind(other_face.left_cell.id) == false) {
-                            f.cloud_pos ~= &(other_face.left_cell.pos[0]); // assume gtl = 0
-                            f.cloud_fs ~= other_face.left_cell.fs;
-                            cell_cloud_cell_ids ~= other_face.left_cell.id;
+                // We will also need derivative storage in ghostcells because the
+                // reconstruction functions will expect to be able to access the gradients
+                // either side of each interface.
+                // We will be able to get these gradients from the mapped-cells
+                // in an adjoining block.
+                foreach (bci; bc) {
+                    if (bci.ghost_cell_data_available) {
+                        foreach (c; bci.ghostcells) {
+                            c.grad = new FlowGradients(myConfig);
                         }
-                        if (other_face.right_cell && cell_cloud_cell_ids.canFind(other_face.right_cell.id) == false) {
-                            f.cloud_pos ~= &(other_face.right_cell.pos[0]); // assume gtl = 0
-                            f.cloud_fs ~= other_face.right_cell.fs;
-                            cell_cloud_cell_ids ~= other_face.right_cell.id;
-                        }
-                        cell_cloud_face_ids ~= other_face.id;
                     }
                 }
-            } // end foreach (fvtx; f.vtx)
-            // in some instances we might have a degenerate cloud, let's make sure we have enough points
-            if (f.cloud_pos.length <= 3) {
-                foreach (fvtx; f.vtx) {
-                    foreach (other_face_id; faceIndexListPerVertex[fvtx.id]) {
-                        FVInterface other_face = faces[other_face_id];
-                        if (other_face.is_on_boundary && cell_cloud_face_ids.canFind(other_face.id) == false) {
-                            // store left and right cell
-                            if (other_face.left_cell && cell_cloud_cell_ids.canFind(other_face.left_cell.id) == false) {
-                                f.cloud_pos ~= &(other_face.left_cell.pos[0]); // assume gtl = 0
-                                f.cloud_fs ~= other_face.left_cell.fs;
-                                cell_cloud_cell_ids ~= other_face.left_cell.id;
-                            }
-                            if (other_face.right_cell && cell_cloud_cell_ids.canFind(other_face.right_cell.id) == false) {
-                                f.cloud_pos ~= &(other_face.right_cell.pos[0]); // assume gtl = 0
-                                f.cloud_fs ~= other_face.right_cell.fs;
-                                cell_cloud_cell_ids ~= other_face.right_cell.id;
-                            }
-                            cell_cloud_face_ids ~= other_face.id;
-                        }
-                    }
-                } // end foreach (fvtx; f.vtx)
-            } // end if (f.cloud_pos.length <= 3) {
-        } // end void boundary_face_cloud_generic()
-        void internal_face_cloud_interfaces(FVInterface f, size_t i) {
-            if ( f.is_on_boundary) { return;} // boundaries already set
-            // store interface
-            f.cloud_pos ~= &(f.pos);
-            f.cloud_fs ~= f.fs;
-            FVCell[] cell_list;
-            cell_list ~= f.left_cell;
-            cell_list ~= f.right_cell;
-            foreach (cell; cell_list) {
-                // store cell
-                f.cloud_pos ~= &(cell.pos[0]); // assume gtl = 0
-                f.cloud_fs ~= cell.fs;
-                // now grab the cell interfaces
-                foreach (other_face; cell.iface) {
-                    if (other_face.id == f.id) continue;
-                    // store interface
-                    f.cloud_pos ~= &(other_face.pos);
-                    f.cloud_fs ~= other_face.fs;
-                } // end foreach (other_face; cell.iface)
-            } // end foreach (cell; cell_list)
-        } // end void internal_face_cloud_interfaces()
-        void internal_face_cloud_cells(FVInterface f, size_t i) {
-            if ( f.is_on_boundary) { return;} // boundaries already set
-            double[] cell_cloud_face_ids;
-            double[] cell_cloud_cell_ids;
-            cell_cloud_face_ids ~= f.id;
-            // store interface
-            f.cloud_pos ~= &(f.pos);
-            f.cloud_fs ~= f.fs;
-            cell_cloud_face_ids ~= f.id;
-            // store neighbour cell
-            f.cloud_pos ~= &(f.left_cell.pos[0]); // assume gtl = 0
-            f.cloud_fs ~= f.left_cell.fs;
-            cell_cloud_cell_ids ~= f.left_cell.id;
-            // store neighbour cell
-            f.cloud_pos ~= &(f.right_cell.pos[0]);
-            f.cloud_fs ~= f.right_cell.fs;
-            cell_cloud_cell_ids ~= f.right_cell.id;
-            foreach (fvtx; f.vtx) {
-                foreach (other_face_id; faceIndexListPerVertex[fvtx.id]) {
-                    FVInterface other_face = faces[other_face_id];
-                    if (cell_cloud_face_ids.canFind(other_face.id) == false) {
-                        // store left and right cell
-                        if (cell_cloud_cell_ids.canFind(other_face.left_cell.id) == false &&
-                            other_face.left_cell.id < ghost_cell_start_id) {
-                            f.cloud_pos ~= &(other_face.left_cell.pos[0]); // assume gtl = 0
-                            f.cloud_fs ~= other_face.left_cell.fs;
-                            cell_cloud_cell_ids ~= other_face.left_cell.id;
-                        }
-                        if (cell_cloud_cell_ids.canFind(other_face.right_cell.id) == false &&
-                            other_face.right_cell.id < ghost_cell_start_id) {
-                            f.cloud_pos ~= &(other_face.right_cell.pos[0]); // assume gtl = 0
-                            f.cloud_fs ~= other_face.right_cell.fs;
-                            cell_cloud_cell_ids ~= other_face.right_cell.id;
-                        }
-                        cell_cloud_face_ids ~= other_face.id;
-                    }
-                }
-            } // end foreach (fvtx; f.vtx)
-        } // end void internal_face_cloud_cells()
-        if (myConfig.spatial_deriv_calc ==  SpatialDerivCalc.divergence) {
-            throw new Error("Divergence theorem not implemented for unstructured grid");
-        }
-        // else continue on to fill least-squares/finite-difference cloud
-        final switch (myConfig.spatial_deriv_locn) {
-        case SpatialDerivLocn.vertices:
-            throw new Error("spatial_deriv_locn at vertices not implemented for unstructured grid");
-            // no need for break;
-        case SpatialDerivLocn.faces:
-            if (myConfig.spatial_deriv_calc ==  SpatialDerivCalc.least_squares) {  
-                // this cloud allows for consistent gradients at block
-                // boundaries, necessary to have 2nd order convergence for multiblock simulations.
-                // 1. BOUNDARY INTERFACE CLOUDS
-                foreach(bndary_idx, boundary; grid.boundaries) { // set boundary clouds first
-                    BoundaryCondition bc = this.bc[bndary_idx];
-                    // TO_DO: currently we have to check whether the boundary interface is on a wall,
-                    //        using wall ghost cell data is causing issues for the viscous gradient calculations
-                    //        at these interfaces. We are working towards removing ghost cell data from
-                    //        wall type boundaries. In the mean time we will apply a temporary fix by using the
-                    //        point cloud stencil which does not use any ghost cell data at walls. KD 17/06/2016
-                    if (bc.is_wall_with_viscous_effects ||
-                        myConfig.include_ghost_cells_in_spatial_deriv_clouds == false) {
-                        // If the bc type is WALL OR we're not using ghost cell data then
-                        // only use internal data 
-                        foreach (i, f; bc.faces) { 
-                            boundary_face_cloud_wall(f, i, bc, bndary_idx, boundary);
-                        } // end foreach (i, f; bc.faces)
-                    } else {
-                        foreach (i, f; bc.faces) {
-                            boundary_face_cloud_generic(f, i, bc, bndary_idx, boundary);
-                        }
-                    }
-                } // end (bndary_idx, boundary; grid.boundaries)
-                // 2. INTERNAL INTERFACE CLOUDS
-                foreach (i, f; faces) {
-                    internal_face_cloud_interfaces(f, i);
-                }
-            } // end if (myConfig.include_ghost_cells_in_spatial_deriv_clouds)
-        } // end switch (myConfig.spatial_deriv_locn)
+            } // end switch (myConfig.spatial_deriv_locn)
+        } // if myConfig.viscous
     } // end init_grid_and_flow_arrays()
-
+    
     void build_cloud_of_cell_references_at_each_vertex()
     {
         // For the MLP limiter, we need access to the gradients stored in the cells.
@@ -703,7 +496,11 @@ public:
         //
         if (myConfig.viscous && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)) {
             // LSQ weights are used in the calculation of flow gradients for the viscous terms.
-            if (myConfig.spatial_deriv_locn == SpatialDerivLocn.faces) {
+            if (myConfig.spatial_deriv_locn == SpatialDerivLocn.cells) {
+                foreach(cell; cells) {
+                    cell.grad.set_up_workspace_leastsq(cell.cloud_pos, cell.pos[gtl], false, cell.ws_grad);
+                }
+            } else if (myConfig.spatial_deriv_locn == SpatialDerivLocn.faces) {
                 foreach(iface; faces) {
                     iface.grad.set_up_workspace_leastsq(iface.cloud_pos, iface.pos, false, iface.ws_grad);
                 }       

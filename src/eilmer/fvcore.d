@@ -245,7 +245,8 @@ SpatialDerivCalc spatial_deriv_calc_from_name(string name)
 
 enum SpatialDerivLocn {
     faces,
-    vertices
+    vertices,
+    cells
 }
 
 @nogc
@@ -254,6 +255,7 @@ string spatial_deriv_locn_name(SpatialDerivLocn sdl)
     final switch ( sdl ) {
     case SpatialDerivLocn.faces: return "faces";
     case SpatialDerivLocn.vertices: return "vertices";
+    case SpatialDerivLocn.cells: return "cells";
     }
 }
 
@@ -263,6 +265,7 @@ SpatialDerivLocn spatial_deriv_locn_from_name(string name)
     switch ( name ) {
     case "faces": return SpatialDerivLocn.faces;
     case "vertices": return SpatialDerivLocn.vertices;
+    case "cells": return SpatialDerivLocn.cells;
     default:
         throw new FlowSolverException("Invalid spatial-derivative location name");
     }

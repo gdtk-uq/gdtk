@@ -319,6 +319,151 @@ public:
         grad.scale_values_by(to!number(1.0/vtx.length));
     } // end average_vertex_deriv_values()
 
+    //@nogc
+    void average_cell_deriv_values(int gtl)
+    {
+        if (left_cell.is_interior_to_domain == false ||
+            right_cell.is_interior_to_domain == false) {
+            FVCell cL0 = left_cell;
+            FVCell cR0 = right_cell;
+            // vel-x
+            grad.vel[0][0] = 0.5*(cL0.grad.vel[0][0]+cR0.grad.vel[0][0]);
+            grad.vel[0][1] = 0.5*(cL0.grad.vel[0][1]+cR0.grad.vel[0][1]);
+            grad.vel[0][2] = 0.5*(cL0.grad.vel[0][2]+cR0.grad.vel[0][2]);
+            
+            // vel-y
+            grad.vel[1][0] = 0.5*(cL0.grad.vel[1][0]+cR0.grad.vel[1][0]);
+            grad.vel[1][1] = 0.5*(cL0.grad.vel[1][1]+cR0.grad.vel[1][1]);
+            grad.vel[1][2] = 0.5*(cL0.grad.vel[1][2]+cR0.grad.vel[1][2]);
+            
+            // vel-z
+            grad.vel[2][0] = 0.5*(cL0.grad.vel[2][0]+cR0.grad.vel[2][0]);
+            grad.vel[2][1] = 0.5*(cL0.grad.vel[2][1]+cR0.grad.vel[2][1]);
+            grad.vel[2][2] = 0.5*(cL0.grad.vel[2][2]+cR0.grad.vel[2][2]);
+            
+            // massf
+            version(multi_species_gas) {
+                foreach (isp; 0 .. cL0.fs.gas.massf.length) {
+                    grad.massf[isp][0] = 0.5*(cL0.grad.massf[isp][0]+cR0.grad.massf[isp][0]);
+                    grad.massf[isp][1] = 0.5*(cL0.grad.massf[isp][1]+cR0.grad.massf[isp][1]);
+                    grad.massf[isp][2] = 0.5*(cL0.grad.massf[isp][2]+cR0.grad.massf[isp][2]);                        }
+            }
+            
+            // T
+            grad.T[0] = 0.5*(cL0.grad.T[0]+cR0.grad.T[0]);
+            grad.T[1] = 0.5*(cL0.grad.T[1]+cR0.grad.T[1]);
+            grad.T[2] = 0.5*(cL0.grad.T[2]+cR0.grad.T[2]);
+            
+            version(komega) {
+                // tke
+                grad.tke[0] = 0.5*(cL0.grad.tke[0]+cR0.grad.tke[0]);
+                grad.tke[1] = 0.5*(cL0.grad.tke[1]+cR0.grad.tke[1]);
+                grad.tke[2] = 0.5*(cL0.grad.tke[2]+cR0.grad.tke[2]);
+                
+                // omega
+                grad.omega[0] = 0.5*(cL0.grad.omega[0]+cR0.grad.omega[0]);
+                grad.omega[1] = 0.5*(cL0.grad.omega[1]+cR0.grad.omega[1]);
+                grad.omega[2] = 0.5*(cL0.grad.omega[2]+cR0.grad.omega[2]);
+            }
+        } else {
+            number qL; number qR;
+            FVCell cL0 = left_cell; // i
+            FVCell cR0 = right_cell; // j
+            // interface normal
+            number nx = n.x;
+            number ny = n.y;
+            number nz = n.z;
+            // vector from left-cell-centre to face midpoint
+            number rLx = pos.x - cL0.pos[gtl].x;
+            number rLy = pos.y - cL0.pos[gtl].y;
+            number rLz = pos.z - cL0.pos[gtl].z;
+            number rRx = pos.x - cR0.pos[gtl].x;
+            number rRy = pos.y - cR0.pos[gtl].y;
+            number rRz = pos.z - cR0.pos[gtl].z;
+            // vector from left-cell-centre to right-cell-centre
+            number ex = cR0.pos[gtl].x - cL0.pos[gtl].x;
+            number ey = cR0.pos[gtl].y - cL0.pos[gtl].y;
+            number ez = cR0.pos[gtl].z - cL0.pos[gtl].z;                
+            // ehat
+            number emag = sqrt(ex*ex + ey*ey + ez*ez);
+            number ehatx = ex/emag;
+            number ehaty = ey/emag;
+            number ehatz = ez/emag;                
+            // ndotehat
+            number ndotehat = nx*ehatx + ny*ehaty + nz*ehatz;
+            number avgdotehat;
+            number jump;
+            
+            // vel-x
+            avgdotehat = 0.5*(cL0.grad.vel[0][0]+cR0.grad.vel[0][0])*ehatx +
+                0.5*(cL0.grad.vel[0][1]+cR0.grad.vel[0][1])*ehaty +
+                0.5*(cL0.grad.vel[0][2]+cR0.grad.vel[0][2])*ehatz;
+            jump = avgdotehat - (cR0.fs.vel.x - cL0.fs.vel.x)/emag;
+            grad.vel[0][0] = 0.5*(cL0.grad.vel[0][0]+cR0.grad.vel[0][0]) - jump*(nx/ndotehat);
+            grad.vel[0][1] = 0.5*(cL0.grad.vel[0][1]+cR0.grad.vel[0][1]) - jump*(ny/ndotehat);
+            grad.vel[0][2] = 0.5*(cL0.grad.vel[0][2]+cR0.grad.vel[0][2]) - jump*(nz/ndotehat);
+            
+            // vel-y
+            avgdotehat = 0.5*(cL0.grad.vel[1][0]+cR0.grad.vel[1][0])*ehatx +
+                0.5*(cL0.grad.vel[1][1]+cR0.grad.vel[1][1])*ehaty +
+                0.5*(cL0.grad.vel[1][2]+cR0.grad.vel[1][2])*ehatz;
+            jump = avgdotehat - (cR0.fs.vel.y - cL0.fs.vel.y)/emag;
+            grad.vel[1][0] = 0.5*(cL0.grad.vel[1][0]+cR0.grad.vel[1][0]) - jump*(nx/ndotehat);
+            grad.vel[1][1] = 0.5*(cL0.grad.vel[1][1]+cR0.grad.vel[1][1]) - jump*(ny/ndotehat);
+            grad.vel[1][2] = 0.5*(cL0.grad.vel[1][2]+cR0.grad.vel[1][2]) - jump*(nz/ndotehat);
+            
+            // vel-z
+            avgdotehat = 0.5*(cL0.grad.vel[2][0]+cR0.grad.vel[2][0])*ehatx +
+                0.5*(cL0.grad.vel[2][1]+cR0.grad.vel[2][1])*ehaty +
+                0.5*(cL0.grad.vel[2][2]+cR0.grad.vel[2][2])*ehatz;
+            jump = avgdotehat - (cR0.fs.vel.z - cL0.fs.vel.z)/emag;
+            grad.vel[2][0] = 0.5*(cL0.grad.vel[2][0]+cR0.grad.vel[2][0]) - jump*(nx/ndotehat);
+            grad.vel[2][1] = 0.5*(cL0.grad.vel[2][1]+cR0.grad.vel[2][1]) - jump*(ny/ndotehat);
+            grad.vel[2][2] = 0.5*(cL0.grad.vel[2][2]+cR0.grad.vel[2][2]) - jump*(nz/ndotehat);
+            
+            // massf
+            version(multi_species_gas) {
+                foreach (isp; 0 .. cL0.fs.gas.massf.length) {
+                    avgdotehat = 0.5*(cL0.grad.massf[isp][0]+cR0.grad.massf[isp][0])*ehatx +
+                        0.5*(cL0.grad.massf[isp][1]+cR0.grad.massf[isp][1])*ehaty +
+                        0.5*(cL0.grad.massf[isp][2]+cR0.grad.massf[isp][2])*ehatz;
+                    jump = avgdotehat - (cR0.fs.gas.massf[isp] - cL0.fs.gas.massf[isp])/emag;
+                    grad.massf[isp][0] = 0.5*(cL0.grad.massf[isp][0]+cR0.grad.massf[isp][0]) - jump*(nx/ndotehat);
+                    grad.massf[isp][1] = 0.5*(cL0.grad.massf[isp][1]+cR0.grad.massf[isp][1]) - jump*(ny/ndotehat);
+                    grad.massf[isp][2] = 0.5*(cL0.grad.massf[isp][2]+cR0.grad.massf[isp][2]) - jump*(nz/ndotehat);                        }
+            }
+            
+            // T
+            avgdotehat = 0.5*(cL0.grad.T[0]+cR0.grad.T[0])*ehatx +
+                0.5*(cL0.grad.T[1]+cR0.grad.T[1])*ehaty +
+                0.5*(cL0.grad.T[2]+cR0.grad.T[2])*ehatz;
+            jump = avgdotehat - (cR0.fs.gas.T - cL0.fs.gas.T)/emag;
+            grad.T[0] = 0.5*(cL0.grad.T[0]+cR0.grad.T[0]) - jump*(nx/ndotehat);
+            grad.T[1] = 0.5*(cL0.grad.T[1]+cR0.grad.T[1]) - jump*(ny/ndotehat);
+            grad.T[2] = 0.5*(cL0.grad.T[2]+cR0.grad.T[2]) - jump*(nz/ndotehat);
+            
+            version(komega) {
+                // tke
+                avgdotehat = 0.5*(cL0.grad.tke[0]+cR0.grad.tke[0])*ehatx +
+                    0.5*(cL0.grad.tke[1]+cR0.grad.tke[1])*ehaty +
+                    0.5*(cL0.grad.tke[2]+cR0.grad.tke[2])*ehatz;
+                jump = avgdotehat - (cR0.fs.tke - cL0.fs.tke)/emag;
+                grad.tke[0] = 0.5*(cL0.grad.tke[0]+cR0.grad.tke[0]) - jump*(nx/ndotehat);
+                grad.tke[1] = 0.5*(cL0.grad.tke[1]+cR0.grad.tke[1]) - jump*(ny/ndotehat);
+                grad.tke[2] = 0.5*(cL0.grad.tke[2]+cR0.grad.tke[2]) - jump*(nz/ndotehat);
+                
+                // omega
+                avgdotehat = 0.5*(cL0.grad.omega[0]+cR0.grad.omega[0])*ehatx +
+                    0.5*(cL0.grad.omega[1]+cR0.grad.omega[1])*ehaty +
+                    0.5*(cL0.grad.omega[2]+cR0.grad.omega[2])*ehatz;
+                jump = avgdotehat - (cR0.fs.omega - cL0.fs.omega)/emag;
+                grad.omega[0] = 0.5*(cL0.grad.omega[0]+cR0.grad.omega[0]) - jump*(nx/ndotehat);
+                grad.omega[1] = 0.5*(cL0.grad.omega[1]+cR0.grad.omega[1]) - jump*(ny/ndotehat);
+                grad.omega[2] = 0.5*(cL0.grad.omega[2]+cR0.grad.omega[2]) - jump*(nz/ndotehat);
+            }
+        }
+    } // end average_cell_spatial_derivs()
+            
     @nogc
     void viscous_flux_calc()
     // Unified 2D and 3D viscous-flux calculation.
@@ -332,13 +477,13 @@ public:
         if (myConfig.use_viscosity_from_cells) {
             // Emulate Eilmer3 behaviour by using the viscous transport coefficients
             // from the cells either side of the interface.
-            if (left_cell && right_cell && left_cell.contains_flow_data && right_cell.contains_flow_data) {
+            if (left_cell && right_cell && left_cell.is_interior_to_domain && right_cell.is_interior_to_domain) {
                 k_laminar = 0.5*(left_cell.fs.gas.k+right_cell.fs.gas.k);
                 mu_laminar = 0.5*(left_cell.fs.gas.mu+right_cell.fs.gas.mu);
-            } else if (left_cell && left_cell.contains_flow_data) {
+            } else if (left_cell && left_cell.is_interior_to_domain) {
                 k_laminar = left_cell.fs.gas.k;
                 mu_laminar = left_cell.fs.gas.mu;
-            } else if (right_cell && right_cell.contains_flow_data) {
+            } else if (right_cell && right_cell.is_interior_to_domain) {
                 k_laminar = right_cell.fs.gas.k;
                 mu_laminar = right_cell.fs.gas.mu;
             } else {
@@ -349,13 +494,13 @@ public:
         number mu_eff;
         number lmbda;
         // we would like to use the most up to date turbulent properties, so take averages of the neihgbouring cell values
-        if (left_cell && right_cell && left_cell.contains_flow_data && right_cell.contains_flow_data) {
+        if (left_cell && right_cell && left_cell.is_interior_to_domain && right_cell.is_interior_to_domain) {
             k_eff = viscous_factor * (k_laminar + 0.5*(left_cell.fs.k_t+right_cell.fs.k_t));
             mu_eff = viscous_factor * (mu_laminar + 0.5*(left_cell.fs.mu_t+right_cell.fs.mu_t));
-        } else if (left_cell && left_cell.contains_flow_data) {
+        } else if (left_cell && left_cell.is_interior_to_domain) {
             k_eff = viscous_factor * (k_laminar + left_cell.fs.k_t);
             mu_eff = viscous_factor * (mu_laminar + left_cell.fs.mu_t);
-        } else if (right_cell && right_cell.contains_flow_data) {
+        } else if (right_cell && right_cell.is_interior_to_domain) {
             k_eff = viscous_factor * (k_laminar + right_cell.fs.k_t);
             mu_eff = viscous_factor * (mu_laminar + right_cell.fs.mu_t);
         } else {
@@ -364,11 +509,11 @@ public:
         lmbda = -2.0/3.0 * mu_eff;
         //
         number local_pressure;
-        if (left_cell && right_cell && left_cell.contains_flow_data && right_cell.contains_flow_data) {
+        if (left_cell && right_cell && left_cell.is_interior_to_domain && right_cell.is_interior_to_domain) {
             local_pressure = 0.5*(left_cell.fs.gas.p+right_cell.fs.gas.p);
-        } else if (left_cell && left_cell.contains_flow_data) {
+        } else if (left_cell && left_cell.is_interior_to_domain) {
             local_pressure = left_cell.fs.gas.p;
-        } else if (right_cell && right_cell.contains_flow_data) {
+        } else if (right_cell && right_cell.is_interior_to_domain) {
             local_pressure = right_cell.fs.gas.p;
         } else {
             assert(0, "Oops, don't seem to have a cell available.");
@@ -387,11 +532,11 @@ public:
                 number D_t; // = fs.mu_t / (fs.gas.rho * Sc_t)
                 // we would like to use the most up to date turbulent properties,
                 // so take averages of the neihgbouring cell values
-                if (left_cell && right_cell && left_cell.contains_flow_data && right_cell.contains_flow_data) {
+                if (left_cell && right_cell && left_cell.is_interior_to_domain && right_cell.is_interior_to_domain) {
                     D_t = 0.5*(left_cell.fs.mu_t+right_cell.fs.mu_t) / (fs.gas.rho * Sc_t);
-                } else if (left_cell && left_cell.contains_flow_data) {
+                } else if (left_cell && left_cell.is_interior_to_domain) {
                     D_t = left_cell.fs.mu_t / (fs.gas.rho * Sc_t);
-                } else if (right_cell && right_cell.contains_flow_data) {
+                } else if (right_cell && right_cell.is_interior_to_domain) {
                     D_t = right_cell.fs.mu_t / (fs.gas.rho * Sc_t);
                 } else {
                     assert(0, "Oops, don't seem to have a cell available.");
@@ -581,7 +726,7 @@ public:
             // First, select the 2 points.
             number x0, x1, y0, y1, z0, z1;
             number velx0, velx1, vely0, vely1, velz0, velz1, T0, T1;
-            if (left_cell && right_cell && left_cell.contains_flow_data && right_cell.contains_flow_data) {
+            if (left_cell && right_cell && left_cell.is_interior_to_domain && right_cell.is_interior_to_domain) {
                 x0 = left_cell.pos[0].x; x1 = right_cell.pos[0].x;
                 y0 = left_cell.pos[0].y; y1 = right_cell.pos[0].y;
                 z0 = left_cell.pos[0].z; z1 = right_cell.pos[0].z;
@@ -589,7 +734,7 @@ public:
                 vely0 = left_cell.fs.vel.y; vely1 = right_cell.fs.vel.y;
                 velz0 = left_cell.fs.vel.z; velz1 = right_cell.fs.vel.z;
                 T0 = left_cell.fs.gas.T; T1 = right_cell.fs.gas.T;
-            } else if (left_cell && left_cell.contains_flow_data) {
+            } else if (left_cell && left_cell.is_interior_to_domain) {
                 x0 = left_cell.pos[0].x; x1 = pos.x;
                 y0 = left_cell.pos[0].y; y1 = pos.y;
                 z0 = left_cell.pos[0].z; z1 = pos.z;
@@ -597,7 +742,7 @@ public:
                 vely0 = left_cell.fs.vel.y; vely1 = fs.vel.y;
                 velz0 = left_cell.fs.vel.z; velz1 = fs.vel.z;
                 T0 = left_cell.fs.gas.T; T1 = fs.gas.T;
-            } else if (right_cell && right_cell.contains_flow_data) {
+            } else if (right_cell && right_cell.is_interior_to_domain) {
                 x0 = pos.x; x1 = right_cell.pos[0].x;
                 y0 = pos.y; y1 = right_cell.pos[0].y;
                 z0 = pos.z; z1 = right_cell.pos[0].z;
@@ -624,11 +769,11 @@ public:
                 veln1 += velz1*nz;
             } 
             number veln_face;
-            if (left_cell && right_cell && left_cell.contains_flow_data && right_cell.contains_flow_data) {
+            if (left_cell && right_cell && left_cell.is_interior_to_domain && right_cell.is_interior_to_domain) {
                 veln_face = 0.5*(veln0+veln1);
-            } else if (left_cell && left_cell.contains_flow_data) {
+            } else if (left_cell && left_cell.is_interior_to_domain) {
                 veln_face = veln1;
-            } else if (right_cell && right_cell.contains_flow_data) {
+            } else if (right_cell && right_cell.is_interior_to_domain) {
                 veln_face = veln0;
             }
             number ke0 = 0.5*(velx0^^2 + vely0^^2 + velz0^^2);
@@ -654,7 +799,7 @@ public:
                 tau_x = copysign(fmin(fabs(tau_x),shear_stress_limit), tau_x);
                 tau_y = copysign(fmin(fabs(tau_y),shear_stress_limit), tau_y);
                 tau_z = copysign(fmin(fabs(tau_z),shear_stress_limit), tau_z);
-                qn = copysign(fmin(fabs(qn),heat_transfer_limit), qn);
+                //qn = copysign(fmin(fabs(qn),heat_transfer_limit), qn);
                 // Mass flux -- NO CONTRIBUTION, unless there's diffusion (below)
                 F.momentum.refx -= tau_x;
                 F.momentum.refy -= tau_y;
