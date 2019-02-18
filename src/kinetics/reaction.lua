@@ -202,12 +202,6 @@ function validateReaction(t)
    return true
 end
 
---local Species2 = lpeg.Ct(lpeg.R("ad","fz")^0 * lpeg.Ct((lpeg.C(Element) * lpeg.C(Number^0) * (PM + Star + (Underscore * (S_letter + ElecLevel)))^0))^1)
-local Species2 = lpeg.Ct( 
-   (lpeg.R("ad","fz")^0 * lpeg.Ct((lpeg.C(Element) * lpeg.C(Digit^0)))^1)^1 * (lpeg.C(PM) + (Underscore * (S_letter + ElecLevel)))^0
-)
-Species2G = lpeg.P{ Species2 }
-
 function checkEquationBalances(r, rnumber)
    -- Checks both mass and charge balance
    local elems = {}
