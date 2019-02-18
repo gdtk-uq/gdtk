@@ -383,7 +383,7 @@ function parseSpeciesList(fname)
 	 break
       end
       tks = split_string(line)
-      if tks[1] ~= '#' then
+      if tks[1] ~= '#' and tks[3] then
 	 spSymbol = tks[3]
 	 spMap[spSymbol] = true
       end
