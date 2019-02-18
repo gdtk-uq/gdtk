@@ -114,7 +114,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
                         limit_state_vector(y_new);
                         foreach (i; 0 .. 2) { y[i] = y_new[i]; }
                         number[2] error = BackEuler_F(y, y_prev, Q);
-                        norm_error = fabs(error[0].re/_n_total) + fabs(error[1].re/_u_total);
+                        norm_error = fabs(error[0].re/_n_total.re) + fabs(error[1].re/_u_total.re);
                         ++iter;
                     } while (norm_error > _Newton_Raphson_tol && iter < _max_iter_newton);
                     foreach (i; 0 .. 2) { y_prev[i] = y[i]; } // needed for next step
