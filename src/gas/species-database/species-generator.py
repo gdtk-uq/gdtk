@@ -22,20 +22,25 @@ the relevant information.                    |
   and the molecular weights file.
 """
 """
-Last Change 19/02/2019 -- removed -1 from length f constants
+Last Change Date: 19/02/2019
 """
 import numpy as np
-import molecular_weights
+
 import re
 #import species_list
+#Molecular Weights kg/mol
+hydrogen = 1.0079e-3
+carbon = 12.0107e-3
+oxygen = 15.9994e-3
+
 #            Change these only
 # -------------------------------------------
-species = 'A1-'
-numb = [6, 5, 0] #[carbon, hydrogen, oxygen]
+species = 'C2H4'
+numb = [2, 4, 0] #[carbon, hydrogen, oxygen]
 # -------------------------------------------
 
-mweight = float("%.5g" % ((numb[0]*molecular_weights.carbon)+(numb[1]*\
-                          molecular_weights.hydrogen)+(numb[2]*molecular_weights.oxygen)))
+mweight = float("%.5g" % ((numb[0]*carbon)+(numb[1]*\
+                          hydrogen)+(numb[2]*oxygen)))
 thermo= open("thermo.txt","rt")
 thermolines = []
 transportlines = []
@@ -184,7 +189,8 @@ values = (species, species, numb[0], numb[1], numb[2], \
           )
 
 # ---------------------------------------------------------------- 
-txt = "db.%s = {}\
+txt = "--Auto-Generated File\n\
+db.%s = {}\
 \ndb.%s.atomicConstituents = {C=%s,H=%s,O=%s,}\
 \ndb.%s.charge = 0\
 \ndb.%s.M = {\
@@ -249,7 +255,8 @@ txt = "db.%s = {}\
 \n\n" % values
                   
 # ----------------------------------------------------------------                  
-txt1 = "db[\"%s\"] = {}\ndb[\"%s\"].atomicConstituents = {C=%s,H=%s,O=%s,}\
+txt1 = "--Auto-Generated File\n\
+db[\"%s\"] = {}\ndb[\"%s\"].atomicConstituents = {C=%s,H=%s,O=%s,}\
 \ndb[\"%s\"].charge = 0\
 \ndb[\"%s\"].M = {\
    \n\tvalue = %s,\
