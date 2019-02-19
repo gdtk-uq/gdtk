@@ -360,10 +360,34 @@ function main()
    outChemFile = arg[3]
 
    -- -----------------------------------------
+   -- 0. Scrub input chemkin file
+   -- -----------------------------------------
+   -- There are some idiosyncracies allowed in Chemkin input
+   -- that are troublesome to parse. We use sed to clean up
+   -- the input before starting to process the file.
+   --
+   -- Specifically, we will:
+   -- 1. Convert "AR" as Argon symbol to the proper "Ar".
+   -- 2. We will NOT allow participants in a reaction to 
+   --    crowd around the plus sign. For example:
+   --    N2+Ar  should transform to N2 + Ar
+   --    The former causes problem as the lpeg parser would
+   --    try to interpret that as N2+ species but then find
+   --    that it's a malformed species symbol.
+   -- 3. Similarly, we'll add space around third bodies
+   --    that designate a pressure-dependent reaction.
+   --    OH(+M) should transform to OH (+M)
+   --
+   -- We handle these with an invocation of 'sed' and
+   -- put the result in a temporary file, tmp.
+   sedCmd = string.format('sed -e "s/AR/Ar/g" -e "s/\\([A-Z0-9]\\)+\\([A-Z]\\)/\\1 + \\2/g" -e "s/(+M)/ (+M)/g" < %s > tmp', inFname)
+   os.execute(sedCmd)
+
+   -- -----------------------------------------
    -- 1. Create gas model file
    -- -----------------------------------------
    print("Creating gas model file: ", outGasFile)
-   f = assert(io.open(inFname, 'r'))
+   f = assert(io.open('tmp', 'r'))
    parseChemkinFileForElements(f)
    species = parseChemkinFileForSpecies(f)
    -- Try to create a gas model before moving on
@@ -392,11 +416,8 @@ function main()
    writeReactionsToFile(outChemFile, reactions)
    print("Done: chemistry file created.")
    
-
-   
-   
-
-
+   -- Clean up tmp file
+   os.execute("rm tmp")
 
 end
 
