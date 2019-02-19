@@ -974,7 +974,8 @@ public:
         // the viscous-transport and diffusion coefficients.
         Lft.copy_values_from(cL0.fs);
         Rght.copy_values_from(cR0.fs);
-        // for some simulations we would like to have the boundaries to remain 1st order
+	IFace.fs.copy_average_values_from(Lft, Rght);
+	// for some simulations we would like to have the boundaries to remain 1st order
         if (myConfig.suppress_reconstruction_at_boundaries && IFace.is_on_boundary) return;
         // enforce first order reconstruction for cells that capure the shocks
         if (GlobalConfig.suppress_reconstruction_at_captured_shocks)
@@ -1181,7 +1182,8 @@ public:
         // Even for high-order reconstruction, we depend upon this copy for
         // the viscous-transport and diffusion coefficients.
         Rght.copy_values_from(cR0.fs);
-        // [TODO] 2018-06-10 higher-order interpolation.
+        IFace.fs.copy_values_from(Rght);
+	// [TODO] 2018-06-10 higher-order interpolation.
         return;
     }
 
@@ -1199,6 +1201,7 @@ public:
         // Even for high-order reconstruction, we depend upon this copy for
         // the viscous-transport and diffusion coefficients.
         Lft.copy_values_from(cL0.fs);
+	IFace.fs.copy_values_from(Lft);
         // [TODO] 2018-06-10 higher-order interpolation.
         return;
     }
