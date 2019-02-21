@@ -1,5 +1,5 @@
 db.CO2 = {}
-db.CO2.atomicConstituents = {}
+db.CO2.atomicConstituents = {C=1, O=2}
 db.CO2.charge = 0
 db.CO2.M = {
    value = 0.04401,
