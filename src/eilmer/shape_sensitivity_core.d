@@ -449,25 +449,58 @@ void ghost_cell_connectivity_for_gradients(ref FluidBlock blk) {
 	    }
 	}	
     }
-    
-    // collect the cloud for the viscous gradients
-    if(blk.myConfig.viscous) {
-	foreach (bcond; blk.bc) {
-	    if (bcond.type == "exchange_using_mapped_cells") {
-		// add spatial gradient workspace to ghost cells
-		foreach(cell; bcond.ghostcells) {
-		    if (cell.iface.length >= 3) {
-			cell.grad = new FlowGradients(blk.myConfig);
-			cell.ws_grad = new WLSQGradWorkspace();
-			// add stencil
-			cell.cloud_pos ~= &(cell.pos[0]);
-			cell.cloud_fs ~= cell.fs;
-			foreach(iface; cell.iface) {
-			    cell.cloud_pos ~= &(iface.pos);
-			    cell.cloud_fs ~= iface.fs;
+
+    // copy limiter values incase we have frozen the limiter
+    foreach (bcond; blk.bc) {
+	if (bcond.ghost_cell_data_available == false) { continue; }
+	// Proceed to do some work only if we have ghost cells in which to insert gradients.
+	bool found_mapped_cell_bc = false;
+	foreach (gce; bcond.preReconAction) {
+	    auto mygce = cast(GhostCellMappedCellCopy)gce;
+	    if (mygce && !blk.myConfig.in_mpi_context) {
+		found_mapped_cell_bc = true;
+		// There is a mapped-cell backing the ghost cell, so we can copy its gradients.
+		foreach (i, f; bcond.faces) {
+		    // Only FVCell objects in an unstructured-grid are expected to have
+		    // precomputed gradients.  There will be an initialized reference
+		    // in the FVCell object of a structured-grid block, so we need to
+		    // test and avoid copying from such a reference.
+		    auto mapped_cell_grad = mygce.get_mapped_cell(i).gradients;
+		    if (bcond.outsigns[i] == 1) {
+			if (mapped_cell_grad) {
+			    f.right_cell.gradients.copy_values_from(mapped_cell_grad);
+			} else {
+			    // Fall back to looking over the face for suitable gradient data.
+			    f.right_cell.gradients.copy_values_from(f.left_cell.gradients);
 			}
-			cell.grad.set_up_workspace_leastsq(cell.cloud_pos, cell.pos[0], false, cell.ws_grad);
+		    } else {
+			if (mapped_cell_grad) {
+			    f.left_cell.gradients.copy_values_from(mapped_cell_grad);
+			} else {
+			    f.left_cell.gradients.copy_values_from(f.right_cell.gradients);
+			}
 		    }
+		} // end foreach f
+	    } // end if (mygce)
+	} // end foreach gce
+    }
+        
+    // collect the cloud for the viscous gradients
+    foreach (bcond; blk.bc) {
+	if (bcond.type == "exchange_using_mapped_cells") {
+	    // add spatial gradient workspace to ghost cells
+	    foreach(cell; bcond.ghostcells) {
+		if (cell.iface.length >= 3) {
+		    cell.grad = new FlowGradients(blk.myConfig);
+		    cell.ws_grad = new WLSQGradWorkspace();
+		    // add stencil
+		    cell.cloud_pos ~= &(cell.pos[0]);
+		    cell.cloud_fs ~= cell.fs;
+		    foreach(iface; cell.iface) {
+			cell.cloud_pos ~= &(iface.pos);
+			cell.cloud_fs ~= iface.fs;
+		    }
+		    cell.grad.set_up_workspace_leastsq(cell.cloud_pos, cell.pos[0], false, cell.ws_grad);
 		}
 	    }
 	}
@@ -1977,6 +2010,7 @@ void compute_flux(FVCell pcell, FluidBlock blk, size_t orderOfJacobian, ref FVCe
 	    //writeln(pcell.global_id, ", ", c.global_id, ", ", c.cell_cloud.length, ", ", blk.id);
             c.gradients.compute_lsq_values(c.cell_cloud, c.ws, blk.myConfig);
         }
+
 	if (GlobalConfig.frozen_limiter == false) {
 	    foreach(c; cell_list) {
 		// It is more efficient to determine limiting factor here for some usg limiters.
@@ -2009,16 +2043,18 @@ void compute_flux(FVCell pcell, FluidBlock blk, size_t orderOfJacobian, ref FVCe
         // has a mapped cell, this is due to efficiency, and block-parallel formation reasons.
         // So we just use the fall back for all boundary conditions.
         foreach (bcond; blk.bc) {
-            // There are no other cells backing the ghost cells on this boundary.
-            // Fill in ghost-cell gradients from the other side of the face.
-            foreach (i, f; bcond.faces) {
-                if (bcond.outsigns[i] == 1) {
-                    f.right_cell.gradients.copy_values_from(f.left_cell.gradients);
-                } else {
-                    f.left_cell.gradients.copy_values_from(f.right_cell.gradients);
-                }
-            } // end foreach f
-        } // end foreach bcond
+	if (bcond.type != "exchange_using_mapped_cells") {
+	    // There are no other cells backing the ghost cells on this boundary.
+		// Fill in ghost-cell gradients from the other side of the face.
+		foreach (i, f; bcond.faces) {
+		    if (bcond.outsigns[i] == 1) {
+			f.right_cell.gradients.copy_values_from(f.left_cell.gradients);
+		    } else {
+			f.left_cell.gradients.copy_values_from(f.right_cell.gradients);
+		    }
+		} // end foreach f
+	    } // end foreach bcond
+	}
 
 	foreach(c; cell_list) {
             c.gradients.compute_lsq_values(c.cell_cloud, c.ws, blk.myConfig);
@@ -2028,7 +2064,6 @@ void compute_flux(FVCell pcell, FluidBlock blk, size_t orderOfJacobian, ref FVCe
     // Convective flux update
     //writeln("BEGIN INVISCID");
     foreach(iface; iface_list) {
-        
         auto ublk = cast(UFluidBlock) blk;
         size_t gtl = 0;
         bool allow_high_order_interpolation = true;

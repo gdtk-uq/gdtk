@@ -294,12 +294,11 @@ void main(string[] args) {
         // Should think about how to extend this to second order at block boundaries (i.e. manage the copying of gradients correctly).
 	
 	if (GlobalConfig.sscOptions.read_frozen_limiter_values_from_file) {
-	    steadystate_core.evalRHS(0.0, 0); // fill in some values
+	    //steadystate_core.evalRHS(0.0, 0); // fill in some values
 	    auto fileName = "frozen_limiter_values.dat";
 	    auto outFile = File(fileName, "r");
 	    foreach (blk; localFluidBlocks) {
 		foreach (cell; blk.cells) {
-		    
 		    auto line = outFile.readln().strip();
 		    auto token = line.split();
 		    cell.gradients.rhoPhi = to!double(token[0]);
@@ -316,6 +315,8 @@ void main(string[] args) {
 			line = outFile.readln().strip();
 			token = line.split();
 			cell.gradients.velzPhi = to!double(token[0]);
+		    } else {
+			cell.gradients.velzPhi = 1.0;
 		    }
 
 		    line = outFile.readln().strip();
@@ -338,7 +339,8 @@ void main(string[] args) {
 	}
 
 	exchange_ghost_cell_boundary_data(0.0, 0, 0); // pseudoSimTime = 0.0; gtl = 0; ftl = 0
-    
+	
+
         foreach (myblk; parallel(localFluidBlocks,1)) {
             initialisation(myblk, nPrimitive);
 
@@ -392,6 +394,7 @@ void main(string[] args) {
 	foreach (myblk; localFluidBlocks) {
 	    ngcells += myblk.cells.length;
 	}
+	
 	/*
         foreach (myblk; parallel(localFluidBlocks,1)) {
             foreach(icell; myblk.cells) {
@@ -422,7 +425,8 @@ void main(string[] args) {
 		
             } 
         }
-        */
+	*/
+
         steadystate_core.evalRHS(0.0, 0);
         exchange_ghost_cell_boundary_data(0.0, 0, 0); // pseudoSimTime = 0.0; gtl = 0; ftl = 0
         
