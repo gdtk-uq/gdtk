@@ -115,7 +115,7 @@ public:
         // we need to have copies of the neighbour block cells and interfaces that are effected
         // by perturbations in the parent block. We will reference the objects in these arrays by their global ids.
         FVCell[size_t] neighbour_block_cells;
-        FVInterface[size_t] neighbour_block_faces;
+        FVInterface[] neighbour_block_faces;
     }
 
 private:

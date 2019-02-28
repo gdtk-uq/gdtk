@@ -30,6 +30,8 @@ import nm.complex;
 import nm.number;
 
 // eilmer
+import fvcell;
+import bc;
 import steadystate_core;
 import shape_sensitivity_core;
 import fileutil;
@@ -198,7 +200,75 @@ void main(string[] args) {
 
     if (adjointMethodFlag) {
 	
+	// store global ids
+	foreach (myblk; parallel(localFluidBlocks,1)) {
+	    foreach (cell; myblk.cells) {
+		cell.global_id = to!int(myblk.globalCellId(to!size_t(cell.id)));
+		//writeln(cell.global_id, ", ", cell.pos[0].x.re, ", ", cell.pos[0].y.re);
+	    }
+	}
+	
+        foreach (blk; localFluidBlocks) {
+            foreach (bc; blk.bc) {
+                if (bc.type != "exchange_using_mapped_cells") {
+                    //writeln("boundary: ", blk.id, ", ", bc.which_boundary, ", ", bc.faces.length, " ------");
+                    foreach (i, face0; bc.faces) {
+                        FVCell ghostcell;
+                        if (bc.outsigns[i] == 1) {
+                            ghostcell = face0.right_cell;
+                        } else {
+                            ghostcell = face0.left_cell;
+                        }
+                        string cid = to!string(ghostcell.id);
+                        string bid = to!string(blk.id);
+                        string gid = cid ~ bid;
+                        ghostcell.global_id = to!size_t(gid);
+                    }
+                }
+            }
+        }
+	
+	foreach (blk; localFluidBlocks) {
+	    foreach (bcond; blk.bc) {
+		foreach (gce; bcond.preReconAction) {
+		    auto mygce = cast(GhostCellMappedCellCopy)gce;
+		    if (mygce && !blk.myConfig.in_mpi_context) {
+			foreach (i, f; bcond.faces) {
+			    // Only FVCell objects in an unstructured-grid are expected to have
+			    // precomputed gradients.  There will be an initialized reference
+			    // in the FVCell object of a structured-grid block, so we need to
+			    // test and avoid copying from such a reference.
+			    auto mapped_cell = mygce.get_mapped_cell(i);
+			    FVCell ghost_cell;
+			    if (bcond.outsigns[i] == 1) {
+				ghost_cell = f.right_cell;
+			    } else {
+				ghost_cell = f.left_cell;
+			    }
+			    // writeln(ghost_cell.global_id, ", ", mapped_cell.global_id);
+			    ghost_cell.global_id = mapped_cell.global_id;
+			    // writeln(ghost_cell.global_id, ", ", mapped_cell.global_id);
+			}
+		    }
+		}
+	    }
+	}
+	
+	foreach (myblk; localFluidBlocks) {
+	    foreach(face; myblk.faces) {
+		string id;
+		if(face.left_cell.global_id > face.right_cell.global_id) id = to!string(face.left_cell.global_id) ~ "_" ~ to!string(face.right_cell.global_id);
+		else id = to!string(face.right_cell.global_id) ~ "_" ~ to!string(face.left_cell.global_id);
+		face.global_id = id;
+	    }
+	}
+
         foreach (myblk; localFluidBlocks) {
+            foreach(cell; myblk.cells) {
+                //writeln(cell.global_id, ", ", cell.pos[0].x.re, ", ", cell.pos[0].y.re, ", ", myblk.id);
+            }
+            
+
             // Make a stack-local copy of conserved quantities info
             myblk.nConserved = nConservedQuantities;
             myblk.MASS = massIdx;
@@ -218,7 +288,7 @@ void main(string[] args) {
         //if (with_k_omega) nPrimitive += 2; // tke, omega
 
         /* Flow Jacobian */
-
+        
         // we make sure that the ghost cells are filled here (we don't want to update ghost cells during the flow Jacobian formation)
         // TODO: currently the code works for second order interpolation for internal interfaces, with first order interpolation at boundaries.
         // Should think about how to extend this to second order at block boundaries (i.e. manage the copying of gradients correctly).
@@ -266,7 +336,7 @@ void main(string[] args) {
 	    outFile.close();
 	    GlobalConfig.frozen_limiter = true;
 	}
-	
+
 	exchange_ghost_cell_boundary_data(0.0, 0, 0); // pseudoSimTime = 0.0; gtl = 0; ftl = 0
     
         foreach (myblk; parallel(localFluidBlocks,1)) {
@@ -278,7 +348,7 @@ void main(string[] args) {
             myblk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
             myblk.applyPostDiffFluxAction(0.0, 0, 0);
         }
-        
+
         steadystate_core.evalRHS(0.0, 0);
         foreach (myblk; parallel(localFluidBlocks,1)) {
             myblk.applyPreReconAction(0.0, 0, 0);
@@ -286,24 +356,76 @@ void main(string[] args) {
             myblk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
             myblk.applyPostDiffFluxAction(0.0, 0, 0);
         }
-        
+
+	foreach (myblk; parallel(localFluidBlocks,1)) {
+            fill_boundary_conditions(myblk, nPrimitive, myblk.myConfig.interpolation_order, EPS, false, false);
+	}	
+
+        //if (GlobalConfig.interpolation_order > 1) {
+	foreach (myblk; localFluidBlocks) {
+	    ghost_cell_connectivity_for_gradients(myblk);
+	}
+
         foreach (myblk; parallel(localFluidBlocks,1)) {
             myblk.JlocT = new SMatrix!number();
             local_flow_jacobian_transpose(myblk.JlocT, myblk, nPrimitive, myblk.myConfig.interpolation_order, EPS);
 	}
 
-        foreach (myblk; parallel(localFluidBlocks,1)) {
-            form_external_flow_jacobian_block_phase0(myblk, nPrimitive, myblk.myConfig.interpolation_order, EPS); // orderOfJacobian=interpolation_order
+        foreach (myblk; localFluidBlocks) {
+	    form_external_flow_jacobian_block_phase0(myblk, nPrimitive, myblk.myConfig.interpolation_order, EPS);
+        }
+
+        foreach (myblk; localFluidBlocks) {
+	    form_external_flow_jacobian_block_phase1(nPrimitive, myblk.myConfig.interpolation_order, EPS);
         }
 
         foreach (myblk; parallel(localFluidBlocks,1)) {
             myblk.JextT = new SMatrix!number();
-            form_external_flow_jacobian_block_phase1(myblk.JextT, myblk, nPrimitive, myblk.myConfig.interpolation_order, EPS); // orderOfJacobian=interpolation_order
-        }
+            form_external_flow_jacobian_block_phase2(myblk.JextT, myblk, nPrimitive, myblk.myConfig.interpolation_order, EPS);
+	}
 
+        foreach (myblk; parallel(localFluidBlocks,1)) {
+            form_external_flow_jacobian_block_phase3(myblk.JextT, myblk, nPrimitive, myblk.myConfig.interpolation_order, EPS);
+	}
+
+	int ngcells = 0;
+	foreach (myblk; localFluidBlocks) {
+	    ngcells += myblk.cells.length;
+	}
+	/*
+        foreach (myblk; parallel(localFluidBlocks,1)) {
+            foreach(icell; myblk.cells) {
+                // local
+		foreach(jcell; myblk.cells) {
+                    writeln(icell.global_id, ", ", jcell.global_id, " ------------------- ", myblk.id);
+                    foreach(i; 0..nPrimitive) {
+                        foreach(j; 0..nPrimitive) {
+                            size_t I = icell.id*(nPrimitive) + i;
+                            size_t J = jcell.id*(nPrimitive) + j;
+                            writef("%.12e ", myblk.JlocT[I,J].re);
+                        }
+                        writef("\n");
+                    }
+                }
+		// external
+		foreach(jcell; 0..ngcells) {
+                    writeln(icell.global_id, ", ", jcell, " external ------------------ ", myblk.id);
+                    foreach(i; 0..nPrimitive) {
+                        foreach(j; 0..nPrimitive) {
+                            size_t I = icell.id*(nPrimitive) + i;
+                            size_t J = jcell*(nPrimitive) + j;
+                            writef("%.12e ", myblk.JextT[I,J].re);
+                        }
+                        writef("\n");
+                    }
+                }
+		
+            } 
+        }
+        */
         steadystate_core.evalRHS(0.0, 0);
         exchange_ghost_cell_boundary_data(0.0, 0, 0); // pseudoSimTime = 0.0; gtl = 0; ftl = 0
-
+        
         if (GlobalConfig.sscOptions.pseudotime) {
             double CFL = GlobalConfig.sscOptions.cfl0;
             double dt = steadystate_core.determine_initial_dt(CFL);
@@ -316,17 +438,26 @@ void main(string[] args) {
                     myblk.A[i,i] = myblk.A[i,i] + (1.0/dt);
                 }
             }
-            
-            foreach (myblk; parallel(localFluidBlocks,1)) {
-                form_external_flow_jacobian_block_phase0(myblk, nPrimitive, 1, EPS); // orderOfJacobian=interpolation_order
-            }
-            
-            foreach (myblk; parallel(localFluidBlocks,1)) {
-                myblk.Aext = new SMatrix!number();
-                form_external_flow_jacobian_block_phase1(myblk.Aext, myblk, nPrimitive, 1, EPS); // orderOfJacobian=interpolation_order
-            }
-        
-            /* Preconditioner */
+
+
+	    foreach (myblk; localFluidBlocks) {
+		form_external_flow_jacobian_block_phase0(myblk, nPrimitive, 1, EPS);
+	    }
+
+	    foreach (myblk; localFluidBlocks) {
+		form_external_flow_jacobian_block_phase1(nPrimitive, 1, EPS);
+	    }
+
+	    foreach (myblk; parallel(localFluidBlocks,1)) {
+		myblk.Aext = new SMatrix!number();
+		form_external_flow_jacobian_block_phase2(myblk.Aext, myblk, nPrimitive, 1, EPS);
+	    }
+
+	    foreach (myblk; parallel(localFluidBlocks,1)) {
+		form_external_flow_jacobian_block_phase3(myblk.Aext, myblk, nPrimitive, 1, EPS);
+	    }
+
+	    /* Preconditioner */
             foreach (myblk; parallel(localFluidBlocks,1)) {
                 myblk.P = new SMatrix!number();
                 local_flow_jacobian_transpose(myblk.P, myblk, nPrimitive, 1, EPS, true, false); // orderOfJacobian=0

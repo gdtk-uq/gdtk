@@ -122,6 +122,12 @@ public:
     number rho_at_start_of_step, rE_at_start_of_step;
     // Shape sensitivity calculator workspace.
     version(shape_sensitivity) {
+	size_t[] pcell_global_coord_list;
+	size_t[][] ecell_global_coord_list;
+	number[][] entry_list;
+
+	size_t global_id;
+	number[][] dqdQ;
         number[][] dQdU;
         // stencil of effected cells & faces used in forming the flow Jacobian
         FVCell[] jacobian_cell_stencil;
@@ -170,10 +176,13 @@ public:
         }
         version(shape_sensitivity) {
             dQdU.length = 7; // number of conserved variables
-            foreach (ref a; dQdU) a.length = 7;
+            dqdQ.length = 7;
+	    foreach (ref a; dQdU) a.length = 7;
+	    foreach (ref a; dqdQ) a.length = 7;
             foreach (i; 0..dQdU.length) {
                 foreach (j; 0..dQdU[i].length) {
                     dQdU[i][j] = 0.0;
+		    dqdQ[i][j] = 0.0;
                 }
             }
         }

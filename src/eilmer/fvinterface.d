@@ -75,8 +75,10 @@ public:
     number q_diffusion; 
     //
     // Shape sensitivity calculator workspace.
+    string global_id;
     version(shape_sensitivity) {
-        number[][] dFdU;
+        //string global_id;
+	number[][] dFdU;
         // arrays used to temporarily store data intended for the neighbouring block
         // during construction of the external portion of the flow Jacobian.  
         size_t[] idList;
@@ -319,7 +321,7 @@ public:
         grad.scale_values_by(to!number(1.0/vtx.length));
     } // end average_vertex_deriv_values()
 
-    //@nogc
+    @nogc
     void average_cell_deriv_values(int gtl)
     {
         if (left_cell.is_interior_to_domain == false ||
@@ -799,7 +801,7 @@ public:
                 tau_x = copysign(fmin(fabs(tau_x),shear_stress_limit), tau_x);
                 tau_y = copysign(fmin(fabs(tau_y),shear_stress_limit), tau_y);
                 tau_z = copysign(fmin(fabs(tau_z),shear_stress_limit), tau_z);
-                //qn = copysign(fmin(fabs(qn),heat_transfer_limit), qn);
+                qn = copysign(fmin(fabs(qn),heat_transfer_limit), qn);
                 // Mass flux -- NO CONTRIBUTION, unless there's diffusion (below)
                 F.momentum.refx -= tau_x;
                 F.momentum.refy -= tau_y;

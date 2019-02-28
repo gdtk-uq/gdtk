@@ -95,6 +95,10 @@ public:
         FVCell cellSave;
         FVInterface[MAX_PERTURBED_INTERFACES] ifaceP;
 
+	size_t[] local_pcell_global_coord_list;
+	size_t[][] local_ecell_global_coord_list;
+	number[][] local_entry_list;
+    
         // local objective function evaluation
         number locObjFcn;
         // arrays used to temporarily store data during construction of the flow Jacobian transpose 
