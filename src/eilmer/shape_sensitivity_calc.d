@@ -425,8 +425,8 @@ void main(string[] args) {
 		
             } 
         }
+	
 	*/
-
         steadystate_core.evalRHS(0.0, 0);
         exchange_ghost_cell_boundary_data(0.0, 0, 0); // pseudoSimTime = 0.0; gtl = 0; ftl = 0
         
@@ -565,7 +565,69 @@ void main(string[] args) {
     /* Check Accuracy of Primitive Jacobian routines via Frechet Derivative Comparison */
 
     if (verifyPrimitiveJacobianFlag) {
-        
+        	// store global ids
+	foreach (myblk; parallel(localFluidBlocks,1)) {
+	    foreach (cell; myblk.cells) {
+		cell.global_id = to!int(myblk.globalCellId(to!size_t(cell.id)));
+		//writeln(cell.global_id, ", ", cell.pos[0].x.re, ", ", cell.pos[0].y.re);
+	    }
+	}
+	
+        foreach (blk; localFluidBlocks) {
+            foreach (bc; blk.bc) {
+                if (bc.type != "exchange_using_mapped_cells") {
+                    //writeln("boundary: ", blk.id, ", ", bc.which_boundary, ", ", bc.faces.length, " ------");
+                    foreach (i, face0; bc.faces) {
+                        FVCell ghostcell;
+                        if (bc.outsigns[i] == 1) {
+                            ghostcell = face0.right_cell;
+                        } else {
+                            ghostcell = face0.left_cell;
+                        }
+                        string cid = to!string(ghostcell.id);
+                        string bid = to!string(blk.id);
+                        string gid = cid ~ bid;
+                        ghostcell.global_id = to!size_t(gid);
+                    }
+                }
+            }
+        }
+	
+	foreach (blk; localFluidBlocks) {
+	    foreach (bcond; blk.bc) {
+		foreach (gce; bcond.preReconAction) {
+		    auto mygce = cast(GhostCellMappedCellCopy)gce;
+		    if (mygce && !blk.myConfig.in_mpi_context) {
+			foreach (i, f; bcond.faces) {
+			    // Only FVCell objects in an unstructured-grid are expected to have
+			    // precomputed gradients.  There will be an initialized reference
+			    // in the FVCell object of a structured-grid block, so we need to
+			    // test and avoid copying from such a reference.
+			    auto mapped_cell = mygce.get_mapped_cell(i);
+			    FVCell ghost_cell;
+			    if (bcond.outsigns[i] == 1) {
+				ghost_cell = f.right_cell;
+			    } else {
+				ghost_cell = f.left_cell;
+			    }
+			    // writeln(ghost_cell.global_id, ", ", mapped_cell.global_id);
+			    ghost_cell.global_id = mapped_cell.global_id;
+			    // writeln(ghost_cell.global_id, ", ", mapped_cell.global_id);
+			}
+		    }
+		}
+	    }
+	}
+	
+	foreach (myblk; localFluidBlocks) {
+	    foreach(face; myblk.faces) {
+		string id;
+		if(face.left_cell.global_id > face.right_cell.global_id) id = to!string(face.left_cell.global_id) ~ "_" ~ to!string(face.right_cell.global_id);
+		else id = to!string(face.right_cell.global_id) ~ "_" ~ to!string(face.left_cell.global_id);
+		face.global_id = id;
+	    }
+	}
+
         foreach (myblk; localFluidBlocks) {
             // Make a stack-local copy of conserved quantities info
             myblk.nConserved = nConservedQuantities;

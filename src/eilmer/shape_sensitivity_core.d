@@ -254,6 +254,7 @@ void ghost_cell_connectivity_for_gradients(ref FluidBlock blk) {
 			ghostcell = bface.left_cell;
 		    }
 		    ghostcell.outsign = mapped_cell.outsign;
+		    ghostcell.in_turbulent_zone = mapped_cell.in_turbulent_zone;
 		    foreach(cell; mapped_cell.cell_cloud) {
 			if(!ghost_cell_global_id_list.canFind(cell.global_id) && !interior_cell_global_id_list.canFind(cell.global_id)) {
 			    // make a new cell and copy the neighbour blocks cell information
@@ -261,6 +262,7 @@ void ghost_cell_connectivity_for_gradients(ref FluidBlock blk) {
 			    new_cell.copy_values_from(cell, CopyDataOption.all);
 			    new_cell.global_id = cell.global_id;
 			    new_cell.is_interior_to_domain = cell.is_interior_to_domain;
+			    new_cell.in_turbulent_zone = cell.in_turbulent_zone;
 			    auto nsp = blk.myConfig.gmodel.n_species;
 			    auto nmodes = blk.myConfig.gmodel.n_modes;
 			    new_cell.gradients = new LSQInterpGradients(nsp, nmodes);
@@ -501,6 +503,7 @@ void ghost_cell_connectivity_for_gradients(ref FluidBlock blk) {
 			cell.cloud_fs ~= iface.fs;
 		    }
 		    cell.grad.set_up_workspace_leastsq(cell.cloud_pos, cell.pos[0], false, cell.ws_grad);
+		    cell.grad.gradients_leastsq(cell.cloud_fs, cell.cloud_pos, cell.ws_grad);
 		}
 	    }
 	}
@@ -2120,16 +2123,18 @@ void compute_flux(FVCell pcell, FluidBlock blk, size_t orderOfJacobian, ref FVCe
 	//writeln("SPATIAL GRAD CHECKS OUT");
 	//writeln("STAGE 2");
         foreach (bcond; blk.bc) {
-            // There are no other cells backing the ghost cells on this boundary.
-            // Fill in ghost-cell gradients from the other side of the face.
-            foreach (i, f; bcond.faces) {
-                if (bcond.outsigns[i] == 1) {
-                    f.right_cell.grad.copy_values_from(f.left_cell.grad);
-                } else {
-                    f.left_cell.grad.copy_values_from(f.right_cell.grad);
-                }
-            } // end foreach f
-        }
+	    if (bcond.type != "exchange_using_mapped_cells") {
+		// There are no other cells backing the ghost cells on this boundary.
+		// Fill in ghost-cell gradients from the other side of the face.
+		foreach (i, f; bcond.faces) {
+		    if (bcond.outsigns[i] == 1) {
+			f.right_cell.grad.copy_values_from(f.left_cell.grad);
+		    } else {
+			f.left_cell.grad.copy_values_from(f.right_cell.grad);
+		    }
+		} // end foreach f
+	    }
+	}
 
 	//writeln("SPATIAL GRAD COPY CHECKS OUT");
         if(pcell.global_id == 17) //writef("pcell info: %d   %d    %d \n", blk.id, pcell.jacobian_cell_stencil.length, pcell.jacobian_face_stencil.length);
