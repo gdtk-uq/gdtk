@@ -5,6 +5,16 @@
 -- from J.D. Anderson's text Hypersonic and High Temperature Gas Dynamics
 --
 -- PJ 2016-10-16 adapted from Python module
+--
+-- RJG 2019-03-06 Re-packaged as module.
+--                
+-- NOTE on use as a module.
+-- ------------------------
+-- This module will not work stand-alone since it is dependent on having
+-- idealgasflow functions registered in the namespace. If you are working
+-- with the dgd code collection, this module WILL work with the custom-built
+-- version of lua provided during install: dgd-lua
+--
 
 module(..., package.seeall)
 
