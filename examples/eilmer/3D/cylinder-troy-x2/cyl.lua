@@ -40,12 +40,12 @@ a = Vector3:new{x=-Rc}; b = Vector3:new{y=Rc}; c = Vector3:new{x=0.0, y=0.0}
 -- In order to have a grid that fits reasonably close the the shock,
 -- use Billig's shock shape correlation to generate
 -- a few sample points along the expected shock position.
-dofile("billig.lua")
+
 M_inf = 8.9566
 print("Points on Billig's correlation.")
 xys = {}
 for i,y in ipairs({0.0, 0.5, 1.0, 1.5, 2.0, 2.5}) do
-   x = x_from_y(y*Rc, M_inf, 0.0, false, Rc)
+   x = billig.x_from_y(y*Rc, M_inf, 0.0, false, Rc)
    xys[#xys+1] = {x=x, y=y*Rc}  -- a new coordinate pair
    print("x=", x, "y=", y*Rc)
 end
