@@ -340,6 +340,7 @@ install: $(PROGRAMS) $(LUA_MODULES) prep.lua prep-gas prep-chem chemkin2eilmer $
 	cp post.lua $(BUILD_DIR)/bin
 	cp $(LUA_MODULES) $(BUILD_DIR)/lib
 	cp $(NML_LUA_MODULES) $(BUILD_DIR)/lib
+	cp $(GASDYN_LUA_MODULES) $(BUILD_DIR)/lib
 	cp e4console.tcl $(BUILD_DIR)/bin
 	chmod +x $(BUILD_DIR)/bin/e4console.tcl
 ifneq "$(SHARE_FILES)" ""

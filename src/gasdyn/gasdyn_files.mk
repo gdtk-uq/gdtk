@@ -4,3 +4,6 @@ GASDYN_FILES := $(GASDYN_DIR)/gasflowexception.d \
 	$(GASDYN_DIR)/luaidealgasflow.d \
 	$(GASDYN_DIR)/gasflow.d \
 	$(GASDYN_DIR)/luagasflow.d
+
+GASDYN_LUA_MODULES := $(GASDYN_DIR)/billig.lua
+

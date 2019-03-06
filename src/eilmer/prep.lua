@@ -3,6 +3,10 @@
 -- 
 print("Loading prep.lua...")
 
+-- This module is not required by prep itself, but we load it here
+-- to make it available in the user's script.
+require 'billig'
+
 require 'lua_helper'
 local deepclone = lua_helper.deepclone
 
