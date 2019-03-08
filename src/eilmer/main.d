@@ -88,7 +88,7 @@ Argument:                            Comment:
   --prep                             prepare config, grid and flow files
   --run                              run the simulation over time
   --post                             post-process simulation data
-  --custom-post                      run custom post-processing script
+  --custom-script | --custom-post    run custom script
   --help                             writes a longer help message
 --------------------------------------------------------------------------------
 For a more detailed help message, use --help or view the online help at
@@ -145,7 +145,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
   --norms=\"varName,varName,...\"      report L1,L2,Linf norms
   --region=\"x0,y0,z0,x1,y1,z1\"       limit norms calculation to a box
 
-  --custom-post                      run custom post-processing script
+  --custom-script | --custom-post    run custom script
   --script-file=<string>             defaults to \"post.lua\"
 
   --help                             writes this long help message
@@ -192,7 +192,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
     string outputFormat = "gnuplot";
     string normsStr = "";
     string regionStr = "";
-    bool customPostFlag = false;
+    bool customScriptFlag = false;
     string scriptFile = "post.lua";
     bool helpWanted = false;
     try {
@@ -229,7 +229,8 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
                "output-format", &outputFormat,
                "norms", &normsStr,
                "region", &regionStr,
-               "custom-post", &customPostFlag,
+               "custom-post", &customScriptFlag,
+               "custom-script", &customScriptFlag,
                "script-file", &scriptFile,
                "help", &helpWanted
                );
@@ -485,17 +486,17 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
         } // end NOT mpi_parallel
     } // end if postFlag
 
-    if (customPostFlag) {
+    if (customScriptFlag) {
         version(mpi_parallel) {
             if (GlobalConfig.is_master_task) {
-                writeln("Do not do custom postprocessing using MPI.");
+                writeln("Do not do custom script processing using MPI.");
                 stdout.flush();
             }
             exitFlag = 1;
             return exitFlag;
         } else { // NOT mpi_parallel
             if (verbosityLevel > 0) { 
-                writeln("Begin custom post-processing using user-supplied script.");
+                writeln("Begin custom script processing using user-supplied script.");
             }
             // For this case, there is very little job context loaded and
             // after loading all of the libraries, we pretty much hand over
@@ -523,17 +524,12 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
             registeridealgasflowFunctions(L);
             registergasflowFunctions(L);
             registerBBLA(L);
-            if (luaL_dofile(L, toStringz(dirName(thisExePath())~"/post.lua")) != 0) {
-                writeln("There was a problem in the post.lua script.");
-                string errMsg = to!string(lua_tostring(L, -1));
-                throw new FlowSolverException(errMsg);
-            }
             if (luaL_dofile(L, toStringz(scriptFile)) != 0) {
                 writeln("There was a problem in the user-supplied Lua script: ", scriptFile);
                 string errMsg = to!string(lua_tostring(L, -1));
                 throw new FlowSolverException(errMsg);
             }
-            if (verbosityLevel > 0) { writeln("Done custom postprocessing."); }
+            if (verbosityLevel > 0) { writeln("Done custom script processing."); }
         } // end NOT mpi_parallel
     } // end if customPostFlag
     //
