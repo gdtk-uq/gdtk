@@ -471,8 +471,15 @@ final class GlobalConfig {
     shared static bool apply_bcs_in_parallel = true;
     
     /// When decoding the array of conserved quantities, 
-    /// the temperature or the density may try to go negative.  
-    /// If it does and adjust_invalid_cell_data == true,
+    /// the temperature or the density may try to go negative.
+    //
+    /// If the density is OK but the update fails to find a valid temperature,
+    /// it is possible that the internal energy is erroneously small and
+    /// it may be reasonable to ignore the failure, resetting a low temperature.
+    shared static bool ignore_low_T_thermo_update_failure = true;
+    shared static double suggested_low_T_value = 200.0;
+    //
+    /// If the cell still has invalid data and adjust_invalid_cell_data == true,
     /// the cell data are adjusted to make them reasonable.
     shared static bool adjust_invalid_cell_data = false;
     shared static bool report_invalid_cells = true;
@@ -793,6 +800,8 @@ public:
     bool solid_has_isotropic_properties;
     bool solid_has_homogeneous_properties;
 
+    bool ignore_low_T_thermo_update_failure;
+    double suggested_low_T_value;
     bool adjust_invalid_cell_data;
     bool report_invalid_cells;
     FlowStateLimits flowstate_limits;
@@ -910,6 +919,8 @@ public:
         solid_has_isotropic_properties = GlobalConfig.solid_has_isotropic_properties;
         solid_has_homogeneous_properties = GlobalConfig.solid_has_homogeneous_properties;
         //
+        ignore_low_T_thermo_update_failure = GlobalConfig.ignore_low_T_thermo_update_failure;
+        suggested_low_T_value = GlobalConfig.suggested_low_T_value;
         adjust_invalid_cell_data = GlobalConfig.adjust_invalid_cell_data;
         report_invalid_cells = GlobalConfig.report_invalid_cells;
         flowstate_limits = GlobalConfig.flowstate_limits;
@@ -1198,6 +1209,8 @@ void read_config_file()
     mixin(update_double("flowstate_limits_min_tke", "flowstate_limits.min_tke"));
     mixin(update_double("flowstate_limits_max_temp", "flowstate_limits.max_temp"));
     mixin(update_double("flowstate_limits_min_temp", "flowstate_limits.min_temp"));
+    mixin(update_bool("ignore_low_T_thermo_update_failure", "ignore_low_T_thermo_update_failure"));
+    mixin(update_double("suggested_low_T_value", "suggested_low_T_value"));
     mixin(update_bool("adjust_invalid_cell_data", "adjust_invalid_cell_data"));
     mixin(update_bool("report_invalid_cells", "report_invalid_cells"));
     mixin(update_int("max_invalid_cells", "max_invalid_cells"));
@@ -1253,6 +1266,8 @@ void read_config_file()
         writeln("  flowstate_limits_min_tke: ", GlobalConfig.flowstate_limits.min_tke);
         writeln("  flowstate_limits_max_temp: ", GlobalConfig.flowstate_limits.max_temp);
         writeln("  flowstate_limits_min_temp: ", GlobalConfig.flowstate_limits.min_temp);
+        writeln("  ignore_low_T_thermo_update_failure: ", GlobalConfig.ignore_low_T_thermo_update_failure);
+        writeln("  suggested_low_T_value: ", GlobalConfig.suggested_low_T_value);
         writeln("  adjust_invalid_cell_data: ", GlobalConfig.adjust_invalid_cell_data);
         writeln("  report_invalid_cells: ", GlobalConfig.report_invalid_cells);
         writeln("  max_invalid_cells: ", GlobalConfig.max_invalid_cells);

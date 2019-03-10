@@ -628,7 +628,30 @@ public:
         //
         // Fill out the other variables: P, T, a, and viscous transport coefficients.
         try {
-            gmodel.update_thermo_from_rhou(fs.gas);
+            try {
+                gmodel.update_thermo_from_rhou(fs.gas);
+            } catch (GasModelException err) {
+                // Oops, it seems that the thermo update has failed to work
+                // using the internal energy and density that have been
+                // decoded from the current conserved quantities.
+                if (myConfig.ignore_low_T_thermo_update_failure && (rho > 0.0)) {
+                    // This small-energy, hopefully-transient error may get
+                    // washed out of the flow field, so let's try to keep going.
+                    // We reset the thermo data to an acceptable low-T state
+                    // and make the current conserved quantities consistent.
+                    fs.gas.T = myConfig.suggested_low_T_value;
+                    version(multi_T_gas) {
+                        foreach(i; 0 .. gmodel.n_modes) {
+                            fs.gas.T_modes[i] = myConfig.suggested_low_T_value;
+                        }
+                    }
+                    gmodel.update_thermo_from_rhoT(fs.gas);
+                    encode_conserved(gtl, ftl, omegaz);
+                } else {
+                    // We do not ignore the thermo update error at this point.
+                    throw err;
+                }
+            }
             gmodel.update_sound_speed(fs.gas);
             if (myConfig.viscous) gmodel.update_trans_coeffs(fs.gas);
         } catch (GasModelException err) {
