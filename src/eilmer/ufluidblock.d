@@ -143,7 +143,7 @@ public:
         }
         grid.sort_cells_into_bins();
         // Assemble array storage for finite-volume cells, etc.
-        bool lsq_workspace_at_vertices = (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
+        bool lsq_workspace_at_vertices = (myConfig.viscous && myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
             && (myConfig.spatial_deriv_locn == SpatialDerivLocn.vertices);
         foreach (i, v; grid.vertices) {
             auto new_vtx = new FVVertex(myConfig, lsq_workspace_at_vertices, to!int(i));
@@ -153,7 +153,7 @@ public:
             vertices ~= new_vtx;
         }
         // sync_vertices_from_underlying_grid(0); // redundant, if done just above
-        bool lsq_workspace_at_faces = (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
+        bool lsq_workspace_at_faces = (myConfig.viscous && myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
             && (myConfig.spatial_deriv_locn == SpatialDerivLocn.faces);
         foreach (i, f; grid.faces) {
             auto new_face = new FVInterface(myConfig, lsq_workspace_at_faces, to!int(i));
@@ -162,7 +162,7 @@ public:
         foreach (i, c; grid.cells) {
             // Note that the cell id and the index in the cells array are the same.
             // We will reply upon this connection in other parts of the flow code.
-            bool lsq_workspace_at_cells = (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
+            bool lsq_workspace_at_cells = (myConfig.viscous && myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
                 && (myConfig.spatial_deriv_locn == SpatialDerivLocn.cells);            
             auto new_cell = new FVCell(myConfig, lsq_workspace_at_cells, to!int(i));
             new_cell.contains_flow_data = true;
