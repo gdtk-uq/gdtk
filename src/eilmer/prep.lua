@@ -1849,8 +1849,8 @@ function perform_spatial_gradient_consistency_check()
 	 config.spatial_deriv_calc = "least_squares"
       end
       if config.spatial_deriv_locn == "vertices" then
-	 print("NOTE: config.spatial_deriv_locn is being set to 'faces' when using least squares.")
-	 config.spatial_deriv_locn = "faces"
+	 print("NOTE: config.spatial_deriv_locn is being set to 'cells' when using least squares.")
+	 config.spatial_deriv_locn = "cells"
       end
    else
       -- Only structured grids are present.
