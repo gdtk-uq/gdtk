@@ -776,9 +776,9 @@ int integrate_in_time(double target_time_as_requested)
                         auto writer2 = appender!string();
                         formattedWrite(writer2, "RESIDUALS: step= %7d WC= %.8f ",
                                        SimState.step, wallClock2);
-                        formattedWrite(writer2, "MASS: %10.6e X-MOM: %10.6e Y-MOM: %10.6e ENERGY: %10.6e",
+                        formattedWrite(writer2, "MASS: %10.6e X-MOM: %10.6e Y-MOM: %10.6e Z-MOM: %10.6e ENERGY: %10.6e",
                                        Linf_residuals.mass, Linf_residuals.momentum.x,
-                                       Linf_residuals.momentum.y, Linf_residuals.total_energy);
+                                       Linf_residuals.momentum.y, Linf_residuals.momentum.z, Linf_residuals.total_energy);
                         writeln(writer2.data);
                         stdout.flush();
                     }
