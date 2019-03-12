@@ -60,11 +60,13 @@ function x_from_y(y, M, theta, axisymmetric, R_nose)
    theta = theta or 0.0
    local Rc = R_nose * Rc_over_R(M, axisymmetric)
    local d = R_nose * delta_over_R(M, axisymmetric)
-   -- Assume use of shock angle on a wedge
-   local beta = idealgasflow.beta_obl(M, theta)
+   local beta
    if axisymmetric then
       -- Use shock angle on a cone
       beta = idealgasflow.beta_cone2(M, theta)
+   else
+      -- Use shock angle on a wedge
+      beta = idealgasflow.beta_obl(M, theta)
    end
    local tan_beta = math.tan(beta)
    local cot_beta = 1.0/tan_beta
