@@ -97,13 +97,8 @@ end
 --%----------------------------------
 
 function Reaction(t)
-   if validateReaction(t) then
-      reactions[#reactions+1] = t
-   else 
-      print("There was a problem encountered for reaction: ", #reactions+1)
-      print("The reaction is: ", t[1])
-      os.exit(1)
-   end
+   -- Gather reactions, but don't yet validate.
+   reactions[#reactions+1] = t
 end
 
 -- This function looks for any reactions that have
@@ -333,7 +328,14 @@ function main()
    dofile(inFname)
    for i,r in ipairs(reactions) do
       r.number = i
-      reactions[i] = transformReaction(r, species, energyModes, SUPPRESS_WARNINGS)
+      if validateReaction(reactions[i]) then 
+         reactions[i] = transformReaction(r, species, energyModes, SUPPRESS_WARNINGS)
+      else
+         print("Error while trying to validate reaction ", i)
+         print(reactions[i][1])
+         print("Bailing out!")
+         os.exit(1)
+      end
    end
    -- Now write out transformed results
    buildVerboseLuaFile(outFname)
