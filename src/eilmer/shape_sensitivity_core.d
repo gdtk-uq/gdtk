@@ -4116,9 +4116,7 @@ void sss_preconditioner_initialisation(ref FluidBlock blk, size_t nConservative)
     case PreconditionMatrixType.ilu:
         //initialise objects
         blk.Minv = new Matrix!number(nConservative, nConservative);
-        blk.JcT = new SMatrix!number();
-        blk.A = new SMatrix!number();
-        blk.P = new SMatrix!number();
+	blk.P = new SMatrix!number();
         blk.cellSave = new FVCell(blk.myConfig);
         foreach(i; 0..blk.MAX_PERTURBED_INTERFACES) blk.ifaceP[i] = new FVInterface(blk.myConfig, false);
         break;
@@ -4146,25 +4144,17 @@ void ilu_preconditioner(ref FluidBlock blk, size_t np, double dt, size_t orderOf
     blk.P.aa = [];
     blk.P.ja = [];
     blk.P.ia = [];
-    blk.JcT.aa = [];
-    blk.JcT.ja = [];
-    blk.JcT.ia = [];
-    local_flow_jacobian_transpose(blk.JcT, blk, np, 1, EPS, true, true);
-    /* transpose */
-    blk.P.ia.length = blk.JcT.ia.length;
-    blk.P.ja.length = blk.JcT.ja.length;
-    blk.P.aa.length = blk.JcT.aa.length;
-    nm.smla.transpose(blk.JcT.ia, blk.JcT.ja, blk.JcT.aa, blk.P.ia, blk.P.ja, blk.P.aa);
+    local_flow_jacobian_transpose(blk.P, blk, np, 1, EPS, true, true);
     number dtInv = 1.0/dt;
     foreach (i; 0 .. np*blk.cells.length) {
         blk.P[i,i] = blk.P[i,i] + dtInv;
     }
-    //blk.A = new SMatrix!number(blk.P);
     
     /* perform ILU0 decomposition */
     int level_of_fill_in = blk.myConfig.sssOptions.iluFill;
     if (level_of_fill_in == 0) decompILU0(blk.P);
     else decompILUp(blk.P, level_of_fill_in);
+    scaleLU(blk.P);
     // reset interpolation order to the global setting
     blk.myConfig.interpolation_order = GlobalConfig.interpolation_order;
 }

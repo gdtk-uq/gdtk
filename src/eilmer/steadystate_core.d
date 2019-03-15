@@ -1344,8 +1344,8 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                             break;
                         case PreconditionMatrixType.ilu:
                             blk.zed[] = blk.v[];
-                            nm.smla.solve(blk.P, blk.zed);
-                            break;
+			    nm.smla.transpose_solve(blk.P, blk.zed);
+			    break;
                     } // end switch
                 }
             }
@@ -1507,7 +1507,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                     break;
                 case PreconditionMatrixType.ilu:
                     blk.dU[] = blk.zed[];
-                    nm.smla.solve(blk.P, blk.dU);
+		    nm.smla.transpose_solve(blk.P, blk.dU);
                     break;
                 } // end switch
             }
