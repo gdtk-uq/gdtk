@@ -28,7 +28,7 @@ import fvvertex;
 import globalconfig;
 import mass_diffusion;
 
-immutable size_t cloud_nmax = 64;
+immutable size_t cloud_nmax = 12;
 
 class WLSQGradWorkspace {
 public:

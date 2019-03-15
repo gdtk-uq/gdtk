@@ -21,7 +21,7 @@ import fvinterface;
 import fvcell;
 import limiters;
 
-immutable size_t cloud_nmax = 33;
+immutable size_t cloud_nmax = 12;
 immutable double ESSENTIALLY_ZERO = 1.0e-50;
 
 class LSQInterpWorkspace {
