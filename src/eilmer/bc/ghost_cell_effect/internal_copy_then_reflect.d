@@ -56,12 +56,6 @@ public:
             }
             ghost0.fs.copy_values_from(src_cell.fs);
             reflect_normal_velocity(ghost0.fs, f);
-
-            // TO_DO: remove this ugly hack after we have removed ghost_cell_data dependence for
-            //        wall-type boundary conditions. K.D. 17/06/2016
-            if (bc.type == "wall_no_slip_fixed_t" || bc.type == "wall_no_slip_adiabatic") {
-                reverse_tangential_velocity(ghost0.fs, f);
-            }
             
             if (blk.myConfig.MHD) {
                 reflect_normal_magnetic_field(ghost0.fs, f);
