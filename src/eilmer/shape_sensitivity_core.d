@@ -1232,7 +1232,7 @@ void form_external_flow_jacobian_block_phase3(ref SMatrix!number A, FluidBlock b
                 }
                 
                 bool found = false;
-                foreach (cell; ghost.cell_cloud) {
+                foreach (cell; interior.cell_cloud) {
                     if (cell.is_interior_to_domain == false) found = true;
                 }
                 if (found) {
