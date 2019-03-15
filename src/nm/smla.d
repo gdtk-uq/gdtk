@@ -333,8 +333,6 @@ void decompILUp(T)(SMatrix!T a, int k)
     decompILU0!T(a);
 }
 
-
-
 void solve(T)(SMatrix!T LU, T[] b)
 {
     int n = to!int(LU.ia.length-1);
@@ -360,6 +358,70 @@ void solve(T)(SMatrix!T LU, T[] b)
         b[i] = sum/LU[i,i];
     }
 }
+
+/**
+ * Solve the system (LU)^T.[x] = [b].
+ *
+ * This algorithm solves a transposed system without requiring
+ * the explicit transposition of the system matrix.
+ *
+ * The algorithm is taken (with modifications) from pg.65 of, 
+ *     Templates for the Solution of Linear Systems:
+ *          Building Block for Iterative Methods, Barret et al.
+ *
+ * NB. The LU decomposition of the transposed matrix should be
+ * scaled using scaleLU before being passed to this routine.
+ */
+
+void transpose_solve(T)(SMatrix!T LU, T[] b)
+{
+    int n = to!int(LU.ia.length-1);
+    assert(b.length == n);
+
+    T[] z; z.length = n;
+    
+    foreach ( i; 0 .. n ) {
+	z[i] = b[i];
+        foreach ( j; LU.ja[LU.ia[i] .. LU.ia[i+1]] ) {
+	    // only work on entries where j > i
+	    if ( j <= i ) continue;
+	    T val = LU[i,j];
+	    b[j] -= val*z[i];
+	}
+    }
+    
+    for ( int i = to!int(n-1); i >= 0; --i ) {
+	b[i] = (1.0/LU[i,i])*z[i];
+     	foreach ( j; LU.ja[LU.ia[i] .. LU.ia[i+1]] ) {	  
+	    // only work on entries where j < i
+	    if ( j >= i ) break;
+	    T val = LU[i,j];
+	    z[j] -= b[i]*val;
+	}
+    }
+}
+
+void scaleLU(T)(SMatrix!T LU)
+{
+    int n = to!int(LU.ia.length-1);
+
+    foreach(i; 0 .. n) {
+	foreach(j; LU.ja[LU.ia[i] .. LU.ia[i+1]]) {
+	    // only work on entries where j > i
+	    if ( j <= i ) continue;
+	    LU[j,i] = LU[j,i] * LU[i,i];
+	}
+    }
+    
+    foreach(i; 0 .. n) {
+	foreach(j; LU.ja[LU.ia[i] .. LU.ia[i+1]]) {
+	    // only work on entries where j > i
+	    if ( j <= i ) continue;
+	    LU[i,j] = LU[i,j] / LU[i,i];
+	}
+    }
+}
+
 
 T[] gmres(T)(SMatrix!T A, T[] b, T[] x0, int m)
 in {
@@ -858,18 +920,34 @@ version(smla_test) {
         // Test solve.
         // Let's give the ILU(0) method a triangular matrix that is can solve exactly.
         // This example is taken from Faires and Burden (1993), Sec. 6.6, example 3. 
-        auto e = new SMatrix!number();
+	auto e = new SMatrix!number();
         e.addRow([to!number(2.), to!number(-1.)], [0, 1]);
         e.addRow([to!number(-1.), to!number(2.), to!number(-1.)], [0, 1, 2]);
         e.addRow([to!number(-1.), to!number(2.), to!number(-1.)], [1, 2, 3]);
         e.addRow([to!number(-1.), to!number(2.)], [2, 3]);
-        decompILU0(e);
-        number[] B = [to!number(1.), to!number(0.), to!number(0.), to!number(1.)];
+
+	number[] B = [to!number(1.), to!number(0.), to!number(0.), to!number(1.)];
         solve(e, B);
-        number[] B_exp = [to!number(1.), to!number(1.), to!number(1.), to!number(1.)];
+	number[] B_exp = [to!number(1.), to!number(1.), to!number(1.), to!number(1.)];
         foreach ( i; 0 .. B.length ) {
             assert(approxEqualNumbers(B[i], B_exp[i]), failedUnitTest());
         }
+
+	// Now let's see if we can solve this problem using the transpose solve method
+	// transpose of e
+	auto k = new SMatrix!number();
+        k.addRow([to!number(2.), to!number(-1.)], [0, 1]);
+        k.addRow([to!number(-1.), to!number(2.), to!number(-1.)], [0, 1, 2]);
+        k.addRow([to!number(-1.), to!number(2.), to!number(-1.)], [1, 2, 3]);
+        k.addRow([to!number(-1.), to!number(2.)], [2, 3]);
+	decompILU0(k);
+	B = [to!number(1.), to!number(0.), to!number(0.), to!number(1.)];
+	scaleLU(k);
+	transpose_solve(k, B);
+	foreach ( i; 0 .. B.length ) {
+            assert(approxEqualNumbers(B[i], B_exp[i]), failedUnitTest());
+        }
+	
         // Now let's see how we go at an approximate solve by using a non-triangular matrix.
         // This is example 2.2 from Gerard and Wheatley, 6th edition
         auto f = new SMatrix!number();
@@ -877,14 +955,56 @@ version(smla_test) {
         f.addRow([to!number(1.), to!number(4.), to!number(2.)], [0, 1, 3]);
         f.addRow([to!number(2.), to!number(1.), to!number(2.), to!number(-1.)], [0, 1, 2, 3]);
         f.addRow([to!number(1.), to!number(1.), to!number(-1.), to!number(3.)], [0, 1, 2, 3]);
-        decompILU0(f);
-        number[] C = [to!number(2.), to!number(2.), to!number(0.), to!number(0.)];
+	decompILU0(f);
+	number[] C = [to!number(2.), to!number(2.), to!number(0.), to!number(0.)];
         solve(f, C);
         number[] C_exp = [to!number(0.333333), to!number(0.666667), to!number(-1), to!number(-0.666667)];
         foreach ( i; 0 .. C.length ) {
             assert(approxEqualNumbers(C[i], C_exp[i]), failedUnitTest());
         }
-        
+	// Again, let's now test the transpose solve on the previous example
+	auto t = new SMatrix!number();
+        t.addRow([to!number(3.), to!number(1.), to!number(2.), to!number(1.)], [0, 1, 2, 3]);
+        t.addRow([to!number(2.), to!number(4.), to!number(1.), to!number(1.)], [0, 1, 2, 3]);
+        t.addRow([to!number(-1.), to!number(2.), to!number(-1.)], [0, 2, 3]);
+        t.addRow([to!number(2.), to!number(2.), to!number(-1.), to!number(3.)], [0, 1, 2, 3]);
+	decompILU0(t);	
+	C = [to!number(2.), to!number(2.), to!number(0.), to!number(0.)];
+	scaleLU(t);
+	transpose_solve(t, C);
+	foreach ( i; 0 .. C.length ) {
+            assert(approxEqualNumbers(C[i], C_exp[i]), failedUnitTest());
+        }
+	// Finally, exercise transpose solve on a larger system
+	// original matrix
+	auto l = new SMatrix!number([to!number(1.), to!number(2.), to!number(-1.), to!number(3.), to!number(2.), to!number(-1.), to!number(-2.),
+				     to!number(2.), to!number(3.), to!number(-2.), to!number(-1.), to!number(2.), to!number(4.), to!number(2.), 
+				     to!number(-2.), to!number(1.), to!number(5.), to!number(-1.), to!number(-1.), to!number(6.), to!number(-2.),
+				     to!number(-2.), to!number(3.), to!number(-1.), to!number(-1.), to!number(-5.), to!number(4.), to!number(3.),
+				     to!number(-2.), to!number(1.), to!number(2.), to!number(1.), to!number(-1.), to!number(3.), to!number(4.)],
+				    [0, 1, 5, 0, 1, 2, 6, 1, 2, 3, 7, 2, 3, 4, 8, 3, 4, 9, 0, 5, 1, 5, 6, 7, 2, 6, 7, 8, 3, 7, 8, 9, 4, 8, 9],
+				    [0, 3, 7, 11, 15, 18, 20, 24, 28, 32, 35]);
+	// transpose matrix
+	auto lt = new SMatrix!number();
+	lt.aa.length = l.aa.length;
+	lt.ja.length = l.ja.length;
+	lt.ia.length = l.ia.length;
+	transpose(l.ia, l.ja, l.aa, lt.ia, lt.ja, lt.aa);
+	number[] q = [to!number(1.), to!number(2.), to!number(3.), to!number(4.), to!number(5.), 
+		      to!number(6.), to!number(7.), to!number(8.), to!number(9.), to!number(10.)];
+	number[] Q_exp = [to!number(1.), to!number(2.), to!number(3.), to!number(4.), to!number(5.), 
+		      to!number(6.), to!number(7.), to!number(8.), to!number(9.), to!number(10.)];
+	// solution
+	decompILU0(l);
+	solve(l, Q_exp);
+	// transpose solution
+	decompILU0(lt);
+	scaleLU(lt);
+	transpose_solve(lt, q);
+	foreach (i; 0 .. q.length) {
+            assert(approxEqualNumbers(q[i], Q_exp[i]), failedUnitTest());
+        }
+	
         // Let's test the ILU(p) method
         auto s = new SMatrix!number([to!number(1.), to!number(1.), to!number(4.), to!number(2.),
                                      to!number(4.), to!number(1.), to!number(2.), to!number(1.),
@@ -893,23 +1013,7 @@ version(smla_test) {
                                     [0, 1, 4, 1, 2, 4, 0, 1, 2, 3, 2, 3, 0, 1, 2, 4],
                                     [0, 3, 6, 10, 12, 16]);
         int p;
-	/*
-        // test for ILU(p=0)
-        p = 0;
-        decompILUp(s, p);
-        auto sol0 = new SMatrix!number([1., 1., 4., 2., 4., 1., 2., -0.5, 10., 2., 0.4, 0.2, 3., 1.5, -0.4, -12.5],
-                                [0, 1, 4, 1, 2, 4, 0, 1, 2, 3, 2, 3, 0, 1, 2, 4],
-                                [0, 3, 6, 10, 12, 16]);
-
-        assert(approxEqualMatrix(s, sol0), failedUnitTest());
-        
-        // As a result of the note in decompILUp() we don't expect an exact match of the SMatrix classes
-        foreach ( i; 0 .. 5) {
-            foreach ( j; 0 .. 5) {
-                assert(approxEqual(s[i,j], sol0[i,j]), failedUnitTest());
-            }
-        }
-        */
+	
         // test for ILU(p=2)
         s = new SMatrix!number([to!number(1.), to!number(1.), to!number(4.), to!number(2.),
                                 to!number(4.), to!number(1.), to!number(2.), to!number(1.),
@@ -927,14 +1031,7 @@ version(smla_test) {
                                        [0, 1, 4, 1, 2, 4, 0, 1, 2, 3, 4, 2, 3, 4, 0, 1, 2, 3, 4],
                                        [0, 3, 6, 11, 14, 19]);
 	assert(approxEqualMatrix!number(s, sol1), failedUnitTest());
-        /*
-        // As a result of the note in decompILUp() we don't expect an exact match of the SMatrix classes
-        foreach ( i; 0 .. 5) {
-            foreach ( j; 0 .. 5) {
-                assert(approxEqual(s[i,j], sol1[i,j]), failedUnitTest());
-            }
-        }
-        */
+        
         // Test GMRES on Faires and Burden problem.
 
         auto g = new SMatrix!number();
