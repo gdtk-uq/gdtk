@@ -53,10 +53,8 @@ int set_gcl_interface_properties(SFluidBlock blk, size_t gtl, double dt) {
             // Aeronautical Journal November 1994 Eqn 25
             cross(vol, pos1, pos2);
             if (blk.myConfig.axisymmetric == false) {
-                // vol = 0.5*cross(pos1, pos2);
                 vol.scale(0.5);
             } else {
-                // vol=0.5*cross(pos1, pos2)*((vtx1.pos[gtl].y+vtx1.pos[0].y+vtx2.pos[gtl].y+vtx2.pos[0].y)/4.0);
                 vol.scale(0.125*(vtx1.pos[gtl].y+vtx1.pos[0].y+vtx2.pos[gtl].y+vtx2.pos[0].y));
             }
             temp = vol; temp /= dt*IFace.area[0];
@@ -81,10 +79,8 @@ int set_gcl_interface_properties(SFluidBlock blk, size_t gtl, double dt) {
             averaged_ivel = vtx1.vel[0]; averaged_ivel += vtx2.vel[0]; averaged_ivel.scale(0.5);
             cross(vol, pos1, pos2);
             if (blk.myConfig.axisymmetric == false) {
-                // vol=0.5*cross( pos1, pos2 );
                 vol.scale(0.5);
             } else {
-                // vol=0.5*cross(pos1, pos2)*((vtx1.pos[gtl].y+vtx1.pos[0].y+vtx2.pos[gtl].y+vtx2.pos[0].y)/4.0);
                 vol.scale(0.125*(vtx1.pos[gtl].y+vtx1.pos[0].y+vtx2.pos[gtl].y+vtx2.pos[0].y));
             }
             IFace.gvel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
