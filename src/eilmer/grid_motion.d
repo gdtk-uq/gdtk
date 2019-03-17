@@ -576,6 +576,19 @@ extern(C) int luafn_setVtxVelocitiesByCorners(lua_State* L)
         result.add(v1, w1);
         result.add(v2, w2);
     }
+
+    @nogc
+    void setAsWeightedSum4(ref Vector3 result,
+                           double w0, Vector3* v0,
+                           double w1, Vector3* v1,
+                           double w2, Vector3* v2,
+                           double w3, Vector3* v3)
+    {
+        result.set(v0); result.scale(w0);
+        result.add(v1, w1);
+        result.add(v2, w2);
+        result.add(v3, w3);
+    }
     
     if ( narg == 5 ) {
         if (blk.myConfig.dimensions == 2) {
@@ -585,62 +598,81 @@ extern(C) int luafn_setVtxVelocitiesByCorners(lua_State* L)
                 for (i = blk.imin; i <= blk.imax+1; ++i) {
                     // get position of current point                    
                     pos = blk.get_vtx!()(i,j,k).pos[0];
-                    //writeln("pos",pos);
 
-                    // find baricentric ccordinates, always keep p0 at centroid
-                    // sequentially try the different triangles.
-                    // try south triangle
-                    P_barycentricCoords(pos, centroid, p00, p10, Coords);
-                    if ((Coords.x <= 0 ) || (Coords.y >= 0 && Coords.z >= 0)) {
-                        setAsWeightedSum(blk.get_vtx!()(i,j,k).vel[0], Coords.x.re, &centroidVel, 
-                                         Coords.y.re, p00vel, Coords.z.re, p10vel);
-                        //writeln("Vel-S",  Coords.x * centroidVel 
-                        //    + Coords.y * *p00vel + Coords.z * *p10vel,i,j);
-                        continue;
+                    bool use_barycentric_coords = false;
+                    if (use_barycentric_coords) {
+                        // Find baricentric ccordinates, keeping p0 at centroid.
+                        // Sequentially try the different triangles.
+                        // Try south triangle
+                        P_barycentricCoords(pos, centroid, p00, p10, Coords);
+                        if ((Coords.x <= 0 ) || (Coords.y >= 0 && Coords.z >= 0)) {
+                            setAsWeightedSum(blk.get_vtx!()(i,j,k).vel[0], Coords.x.re, &centroidVel, 
+                                             Coords.y.re, p00vel, Coords.z.re, p10vel);
+                            continue;
+                        }
+                        // Try east triangle.
+                        P_barycentricCoords(pos, centroid, p10, p11, Coords);
+                        if ((Coords.x <= 0 ) || (Coords.y >= 0 && Coords.z >= 0)) {
+                            setAsWeightedSum(blk.get_vtx!()(i,j,k).vel[0], Coords.x.re, &centroidVel, 
+                                             Coords.y.re, p10vel, Coords.z.re, p11vel);
+                            continue;
+                        }
+                        // Try north triangle.
+                        P_barycentricCoords(pos, centroid, p11, p01, Coords);
+                        if ((Coords.x <= 0 ) || (Coords.y >= 0 && Coords.z >= 0)) {
+                            setAsWeightedSum(blk.get_vtx!()(i,j,k).vel[0], Coords.x.re, &centroidVel, 
+                                             Coords.y.re, p11vel, Coords.z.re, p01vel);
+                            continue;
+                        }
+                        // Try west triangle.
+                        P_barycentricCoords(pos, centroid, p01, p00, Coords);
+                        if ((Coords.x <= 0 ) || (Coords.y >= 0 && Coords.z >= 0)) {
+                            setAsWeightedSum(blk.get_vtx!()(i,j,k).vel[0], Coords.x.re, &centroidVel, 
+                                             Coords.y.re, p01vel, Coords.z.re, p00vel);
+                            continue;
+                        }
+                        // One of the 4 continue statements should have acted by now. 
+                        writeln("Pos", pos, p00, p10, p11, p01);
+                        writeln("Cell-indices",i,j,k);
+                        string errMsg = "Barycentric Calculation failed in luafn: setVtxVelocitiesByCorners()\n";
+                        luaL_error(L, errMsg.toStringz);
+                    } else {
+                        // Assuming we have a roughly-quadrilateral block,
+                        // Weight the corner velocities by the area the opposite quadrant.
+                        // This is effectively a bilinear interpolation.
+                        // p01---pN----p11
+                        //  |    |      |
+                        // pW----p------pE
+                        //  |    |      |
+                        //  |    |      |
+                        // p00---pS----p10
+                        Vector3 pS = blk.get_vtx!()(i,blk.jmin,k).pos[0];
+                        Vector3 pE = blk.get_vtx!()(blk.imax+1,j,k).pos[0];
+                        Vector3 pN = blk.get_vtx!()(i,blk.jmax+1,k).pos[0];
+                        Vector3 pW = blk.get_vtx!()(blk.imin,j,k).pos[0];
+                        // Compute areas for opposite corners.
+                        number w00 = xyplane_area(pos, pE, p11, pN);
+                        number w10 = xyplane_area(pW, pos, pN, p01);
+                        number w11 = xyplane_area(p00, pS, pos, pW);
+                        number w01 = xyplane_area(pS, p10, pE, pos);
+                        // Scale so that the weights sum to 1.0.
+                        double wsum = w00.re + w10.re + w11.re + w01.re;
+                        double wscale = 1.0/wsum;
+                        w00 *= wscale; w10 *= wscale; w11 *= wscale; w01 *= wscale;
+                        //
+                        setAsWeightedSum4(blk.get_vtx!()(i,j,k).vel[0],
+                                          w00.re, p00vel, w10.re, p10vel, 
+                                          w11.re, p11vel, w01.re, p01vel);
                     }
-                    // try east triangle
-                    P_barycentricCoords(pos, centroid, p10, p11, Coords);
-                    if ((Coords.x <= 0 ) || (Coords.y >= 0 && Coords.z >= 0)) {
-                        setAsWeightedSum(blk.get_vtx!()(i,j,k).vel[0], Coords.x.re, &centroidVel, 
-                                         Coords.y.re, p10vel, Coords.z.re, p11vel);
-                        //writeln("Vel-E",  Coords.x * centroidVel 
-                        //    + Coords.y * *p10vel + Coords.z * *p11vel,i,j);
-                        continue;
-                    }
-                    // try north triangle
-                    P_barycentricCoords(pos, centroid, p11, p01, Coords);
-                    if ((Coords.x <= 0 ) || (Coords.y >= 0 && Coords.z >= 0)) {
-                        setAsWeightedSum(blk.get_vtx!()(i,j,k).vel[0], Coords.x.re, &centroidVel, 
-                                         Coords.y.re, p11vel, Coords.z.re, p01vel);
-                        //writeln("Vel-N",  Coords.x * centroidVel 
-                        //    + Coords.y * *p11vel + Coords.z * *p01vel,i,j);
-                        continue;
-                    }
-                    // try west triangle
-                    P_barycentricCoords(pos, centroid, p01, p00, Coords);
-                    if ((Coords.x <= 0 ) || (Coords.y >= 0 && Coords.z >= 0)) {
-                        setAsWeightedSum(blk.get_vtx!()(i,j,k).vel[0], Coords.x.re, &centroidVel, 
-                                         Coords.y.re, p01vel, Coords.z.re, p00vel);
-                        //writeln("Vel-W",  Coords.x * centroidVel 
-                        //    + Coords.y * *p01vel + Coords.z * *p00vel,i,j);
-                        continue;
-                    }
-                    // One of the 4 continue statements should have acted by now. 
-                    writeln("Pos", pos, p00, p10, p11, p01);
-                    writeln("Cell-indices",i,j,k);
-                    string errMsg = "ERROR: Barycentric Calculation failed 
-                                     in luafn: setVtxVelocitiesByCorners()\n";
-                    luaL_error(L, errMsg.toStringz);
                 }
             }
+        } else {
+            // Deal with 3-D meshes.
+            string errMsg = "3D velocity interpolation not yet implemented: setVtxVelocitiesByCorners()\n";
+            luaL_error(L, errMsg.toStringz);
         }
-        else { // deal with 3-D meshesv (assume constant properties wrt k index)
-            writeln("Aaah How did I get here?");
-
-        }
-    }
-    else {
-        string errMsg = "ERROR: Wrong number of arguments passed to luafn: setVtxVelocitiesByCorners()\n";
+    } else {
+        string errMsg = "Wrong number of arguments passed to luafn: setVtxVelocitiesByCorners()\n";
         luaL_error(L, errMsg.toStringz);
     }
     // In case, the user gave use more return values than

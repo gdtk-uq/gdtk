@@ -147,6 +147,19 @@ void quad_properties(ref const(Vector3)[] p, ref Vector3 centroid,
 }
 
 @nogc
+number xyplane_area(ref const(Vector3) p0, ref const(Vector3) p1,
+                    ref const(Vector3) p2, ref const(Vector3) p3)
+// 3-----2
+// |     |    j
+// |  c  |    ^
+// |     |    |
+// 0-----1    O-->i
+{
+    return 0.5 * ((p2.x + p1.x) * (p2.y - p1.y) + (p3.x + p2.x) * (p3.y - p2.y) +
+                  (p0.x + p3.x) * (p0.y - p3.y) + (p1.x + p0.x) * (p1.y - p0.y));
+}
+
+@nogc
 void xyplane_quad_cell_properties(ref const(Vector3) p0, ref const(Vector3) p1,
                                   ref const(Vector3) p2, ref const(Vector3) p3,
                                   ref Vector3 centroid, ref number xyplane_area,
