@@ -567,10 +567,19 @@ extern(C) int luafn_setVtxVelocitiesByCorners(lua_State* L)
     quad_properties(p00, p10, p11, p01, centroid,  n, n, n, area);
 
     @nogc
-    void setAsWeightedSum(ref Vector3 result,
-                          double w0, Vector3* v0,
-                          double w1, Vector3* v1,
-                          double w2, Vector3* v2)
+    void setAsWeightedSum2(ref Vector3 result,
+                           double w0, Vector3* v0,
+                           double w1, Vector3* v1)
+    {
+        result.set(v0); result.scale(w0);
+        result.add(v1, w1);
+    }
+
+    @nogc
+    void setAsWeightedSum3(ref Vector3 result,
+                           double w0, Vector3* v0,
+                           double w1, Vector3* v1,
+                           double w2, Vector3* v2)
     {
         result.set(v0); result.scale(w0);
         result.add(v1, w1);
@@ -606,29 +615,29 @@ extern(C) int luafn_setVtxVelocitiesByCorners(lua_State* L)
                         // Try south triangle
                         P_barycentricCoords(pos, centroid, p00, p10, Coords);
                         if ((Coords.x <= 0 ) || (Coords.y >= 0 && Coords.z >= 0)) {
-                            setAsWeightedSum(blk.get_vtx!()(i,j,k).vel[0], Coords.x.re, &centroidVel, 
-                                             Coords.y.re, p00vel, Coords.z.re, p10vel);
+                            setAsWeightedSum3(blk.get_vtx!()(i,j,k).vel[0], Coords.x.re, &centroidVel, 
+                                              Coords.y.re, p00vel, Coords.z.re, p10vel);
                             continue;
                         }
                         // Try east triangle.
                         P_barycentricCoords(pos, centroid, p10, p11, Coords);
                         if ((Coords.x <= 0 ) || (Coords.y >= 0 && Coords.z >= 0)) {
-                            setAsWeightedSum(blk.get_vtx!()(i,j,k).vel[0], Coords.x.re, &centroidVel, 
-                                             Coords.y.re, p10vel, Coords.z.re, p11vel);
+                            setAsWeightedSum3(blk.get_vtx!()(i,j,k).vel[0], Coords.x.re, &centroidVel, 
+                                              Coords.y.re, p10vel, Coords.z.re, p11vel);
                             continue;
                         }
                         // Try north triangle.
                         P_barycentricCoords(pos, centroid, p11, p01, Coords);
                         if ((Coords.x <= 0 ) || (Coords.y >= 0 && Coords.z >= 0)) {
-                            setAsWeightedSum(blk.get_vtx!()(i,j,k).vel[0], Coords.x.re, &centroidVel, 
-                                             Coords.y.re, p11vel, Coords.z.re, p01vel);
+                            setAsWeightedSum3(blk.get_vtx!()(i,j,k).vel[0], Coords.x.re, &centroidVel, 
+                                              Coords.y.re, p11vel, Coords.z.re, p01vel);
                             continue;
                         }
                         // Try west triangle.
                         P_barycentricCoords(pos, centroid, p01, p00, Coords);
                         if ((Coords.x <= 0 ) || (Coords.y >= 0 && Coords.z >= 0)) {
-                            setAsWeightedSum(blk.get_vtx!()(i,j,k).vel[0], Coords.x.re, &centroidVel, 
-                                             Coords.y.re, p01vel, Coords.z.re, p00vel);
+                            setAsWeightedSum3(blk.get_vtx!()(i,j,k).vel[0], Coords.x.re, &centroidVel, 
+                                              Coords.y.re, p01vel, Coords.z.re, p00vel);
                             continue;
                         }
                         // One of the 4 continue statements should have acted by now. 
@@ -638,8 +647,7 @@ extern(C) int luafn_setVtxVelocitiesByCorners(lua_State* L)
                         luaL_error(L, errMsg.toStringz);
                     } else {
                         // Assuming we have a roughly-quadrilateral block,
-                        // Weight the corner velocities by the area the opposite quadrant.
-                        // This is effectively a bilinear interpolation.
+                        // transfinite interpolation with reconstructed parameters.
                         // p01---pN----p11
                         //  |    |      |
                         // pW----p------pE
@@ -650,22 +658,26 @@ extern(C) int luafn_setVtxVelocitiesByCorners(lua_State* L)
                         Vector3 pE = blk.get_vtx!()(blk.imax+1,j,k).pos[0];
                         Vector3 pN = blk.get_vtx!()(i,blk.jmax+1,k).pos[0];
                         Vector3 pW = blk.get_vtx!()(blk.imin,j,k).pos[0];
-                        // Compute areas for opposite corners.
-                        number w00 = xyplane_area(pos, pE, p11, pN);
-                        number w10 = xyplane_area(pW, pos, pN, p01);
-                        number w11 = xyplane_area(p00, pS, pos, pW);
-                        number w01 = xyplane_area(pS, p10, pE, pos);
-                        // Scale so that the weights sum to 1.0.
-                        double wsum = w00.re + w10.re + w11.re + w01.re;
-                        double wscale = 1.0/wsum;
-                        w00 *= wscale; w10 *= wscale; w11 *= wscale; w01 *= wscale;
-                        //
-                        setAsWeightedSum4(blk.get_vtx!()(i,j,k).vel[0],
-                                          w00.re, p00vel, w10.re, p10vel, 
-                                          w11.re, p11vel, w01.re, p01vel);
+                        double dW = distance_between(pW, pos);
+                        double dE = distance_between(pos, pE);
+                        double r = dW/(dW+dE); double omr = 1.0-r;
+                        double dS = distance_between(pS, pos);
+                        double dN = distance_between(pos, pN);
+                        double s = dS/(dS+dN); double oms = 1.0-s;
+                        Vector3 pSvel, pEvel, pNvel, pWvel;
+                        setAsWeightedSum2(pSvel, omr, p00vel, r, p10vel);
+                        setAsWeightedSum2(pNvel, omr, p01vel, r, p11vel);
+                        setAsWeightedSum2(pWvel, oms, p00vel, s, p01vel);
+                        setAsWeightedSum2(pEvel, oms, p10vel, s, p11vel);
+                        number velx = oms*pSvel.x + s*pNvel.x + omr*pWvel.x + r*pEvel.x - 
+                            (omr*oms*p00vel.x + omr*s*p01vel.x + r*oms*p10vel.x + r*s*p11vel.x);
+                        number vely = oms*pSvel.y + s*pNvel.y + omr*pWvel.y + r*pEvel.y - 
+                            (omr*oms*p00vel.y + omr*s*p01vel.y + r*oms*p10vel.y + r*s*p11vel.y);
+                        number velz = 0.0;
+                        blk.get_vtx!()(i,j,k).vel[0].set(velx, vely, velz);
                     }
-                }
-            }
+                } // end loop i
+            } // end loop j
         } else {
             // Deal with 3-D meshes.
             string errMsg = "3D velocity interpolation not yet implemented: setVtxVelocitiesByCorners()\n";
