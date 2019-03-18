@@ -324,6 +324,16 @@ function main()
    end
    energyModes["translational"] = -1
 
+   -- For two-temperature model, "db" might be empty.
+   -- In which case, we'll load the entire database so that we have access
+   -- to the atomicConsituents field for each species.
+   if not db then
+      DGD = os.getenv("DGD")
+      dir = DGD.."/data/"
+      dbName = dir.."species-database.lua"
+      dofile(dbName)
+   end
+
    -- Transform reactions internally
    dofile(inFname)
    for i,r in ipairs(reactions) do
