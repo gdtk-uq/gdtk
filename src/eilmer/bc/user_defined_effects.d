@@ -68,6 +68,7 @@ public:
             }
             callGhostCellUDF(t, gtl, ftl, i, j, k, f, ghost0, ghost1);
         } // end foreach face
+        lua_gc(bc.myL, LUA_GCCOLLECT, 0);
     }  // end apply_unstructured_grid()
 
     override void apply_structured_grid(double t, int gtl, int ftl)
@@ -148,6 +149,7 @@ public:
             } // end i loop
             break;
         } // end switch which boundary
+        lua_gc(blk.bc[which_boundary].myL, LUA_GCCOLLECT, 0);
     }
                         
 private:
@@ -300,6 +302,7 @@ public:
         foreach (i, f; bc.faces) {
             callInterfaceUDF(t, gtl, ftl, i, j, k, f);
         } // end foreach face
+        lua_gc(bc.myL, LUA_GCCOLLECT, 0);
     }
 
     // not @nogc
@@ -373,6 +376,7 @@ public:
             } // end i loop
             break;
         } // end switch which boundary
+        lua_gc(blk.bc[which_boundary].myL, LUA_GCCOLLECT, 0);
     }
 private:
     // not @nogc because of Lua function calls
@@ -542,6 +546,7 @@ public:
         foreach (i, f; bc.faces) {
             callFluxUDF(t, gtl, ftl, i, j, k, f);
         } // end foreach face
+        lua_gc(bc.myL, LUA_GCCOLLECT, 0);
     }  // end apply_unstructured_grid()
 
     // not @nogc
@@ -608,6 +613,7 @@ public:
             } // end i loop
             break;
         } // end switch which boundary
+        lua_gc(blk.bc[which_boundary].myL, LUA_GCCOLLECT, 0);
     } // end apply_structured_grid()
                         
 private:

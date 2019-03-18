@@ -13,6 +13,15 @@ const LUA_TBOOLEAN = 1;
 const LUA_TTABLE = 5;
 const LUA_TFUNCTION = 6;
 
+const LUA_GCSTOP = 0;
+const LUA_GCRESTART = 1;
+const LUA_GCCOLLECT = 2;
+const LUA_GCCOUNT = 3;
+const LUA_GCCOUNTB = 4;
+const LUA_GCSTEP = 5;
+const LUA_GCSETPAUSE = 6;
+const LUA_GCSETSTEPMUL = 7;
+
 struct lua_State {}
 alias int function(lua_State* L) lua_CFunction;
 alias double lua_Number;
@@ -43,7 +52,7 @@ const(char)* lua_tolstring(lua_State *L, int idx, size_t *len);
 void lua_setglobal(lua_State* L, const(char)* s) { lua_setfield(L, LUA_GLOBALSINDEX, s); }
 void lua_getglobal(lua_State* L, const(char)* s) { lua_getfield(L, LUA_GLOBALSINDEX, s); }
 int lua_pcall(lua_State *L, int nargs, int nresults, int errfunc);
-
+int lua_gc(lua_State *L, int what, int data);
 
 int lua_setmetatable(lua_State* L, int idx);
 int lua_next(lua_State *L, int idx);
