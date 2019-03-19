@@ -341,8 +341,8 @@ void main(string[] args) {
 	exchange_ghost_cell_boundary_data(0.0, 0, 0); // pseudoSimTime = 0.0; gtl = 0; ftl = 0
 	
 
-        foreach (myblk; parallel(localFluidBlocks,1)) {
-            initialisation(myblk, nPrimitive);
+        foreach (myblk; localFluidBlocks) {
+            initialisation(myblk, nPrimitive, myblk.myConfig.interpolation_order);
 
             // make sure ghost cells are filled
             myblk.applyPreReconAction(0.0, 0, 0);
@@ -369,8 +369,7 @@ void main(string[] args) {
 	}
 
         foreach (myblk; parallel(localFluidBlocks,1)) {
-            myblk.JlocT = new SMatrix!number();
-            local_flow_jacobian_transpose(myblk.JlocT, myblk, nPrimitive, myblk.myConfig.interpolation_order, EPS);
+	    local_flow_jacobian_transpose(myblk.JlocT, myblk, nPrimitive, myblk.myConfig.interpolation_order, EPS);
 	}
 
         foreach (myblk; localFluidBlocks) {
@@ -463,7 +462,7 @@ void main(string[] args) {
 
 	    /* Preconditioner */
             foreach (myblk; parallel(localFluidBlocks,1)) {
-                myblk.P = new SMatrix!number();
+                //myblk.P = new SMatrix!number();
                 local_flow_jacobian_transpose(myblk.P, myblk, nPrimitive, 1, EPS, true, false); // orderOfJacobian=0
                 foreach (i; 0 .. nPrimitive*myblk.cells.length) {
                     myblk.P[i,i] = myblk.P[i,i] + (1.0/dt);
@@ -473,7 +472,7 @@ void main(string[] args) {
         } else {
             /* Preconditioner */
             foreach (myblk; parallel(localFluidBlocks,1)) {
-                myblk.P = new SMatrix!number();
+                //myblk.P = new SMatrix!number();
                 local_flow_jacobian_transpose(myblk.P, myblk, nPrimitive, 1, EPS, true, false); // orderOfJacobian=0
                 decompILU0(myblk.P);
             }
@@ -648,8 +647,8 @@ void main(string[] args) {
         //if (with_k_omega) nPrimitive += 2; // tke, omega
         
         // construct the transposed primitive Jacobian
-        foreach (myblk; parallel(localFluidBlocks,1)) {
-            initialisation(myblk, nPrimitive);
+        foreach (myblk; localFluidBlocks) {
+            initialisation(myblk, nPrimitive, myblk.myConfig.interpolation_order);
 
             // make sure ghost cells are filled
             myblk.applyPreReconAction(0.0, 0, 0);
@@ -668,8 +667,8 @@ void main(string[] args) {
             myblk.JcT = new SMatrix!number();
             myblk.A = new SMatrix!number();
             myblk.P = new SMatrix!number();
-            myblk.JlocT = new SMatrix!number();
-            myblk.JlocT = new SMatrix!number();
+            //myblk.JlocT = new SMatrix!number();
+            //myblk.JlocT = new SMatrix!number();
             local_flow_jacobian_transpose(myblk.JlocT, myblk, nPrimitive, myblk.myConfig.interpolation_order, EPS);
 
             // transpose
@@ -755,7 +754,7 @@ void main(string[] args) {
         
         // make sure ghost cells are filled
         foreach (myblk; parallel(localFluidBlocks,1)) {
-            initialisation(myblk, nPrimitive);
+            initialisation(myblk, nPrimitive, myblk.myConfig.interpolation_order);
             
             myblk.applyPreReconAction(0.0, 0, 0);
             myblk.applyPostConvFluxAction(0.0, 0, 0);

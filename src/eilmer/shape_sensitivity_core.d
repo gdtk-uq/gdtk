@@ -172,7 +172,36 @@ void evalConservativeJacobianVecProd(FluidBlock blk, size_t nConserved, number[]
 /***************************/
 /* FLOW JACOBIAN FUNCTIONS */
 /***************************/
-void initialisation(ref FluidBlock blk, size_t nPrimitive) {
+void initialisation(ref FluidBlock blk, size_t nPrimitive, size_t orderOfJacobian,) {
+    // compute size of sparse matrix arrays
+    foreach (cell; blk.cells) residual_stencil(cell, orderOfJacobian);
+    size_t size = 0;
+    foreach( cell; blk.cells) {
+	size += cell.jacobian_cell_stencil.length;
+    }
+    size *= (nConservedQuantities*nConservedQuantities);
+    blk.JlocT = new SMatrix!number();
+    blk.JlocT.aa.length = size;
+    blk.JlocT.ja.length = size;
+    blk.JlocT.ia.length = blk.cells.length*nConservedQuantities + 1;
+    foreach (cell; blk.cells) {
+        cell.jacobian_face_stencil = [];
+        cell.jacobian_cell_stencil = [];
+    }
+    foreach (cell; blk.cells) approximate_residual_stencil(cell, 1);
+    size = 0;
+    foreach( cell; blk.cells) {
+	size += cell.jacobian_cell_stencil.length;
+    }
+    size *= (nConservedQuantities*nConservedQuantities);
+    blk.P = new SMatrix!number();
+    blk.P.aa.length = size;
+    blk.P.ja.length = size;
+    blk.P.ia.length = blk.cells.length*nConservedQuantities + 1;
+    foreach (cell; blk.cells) {
+        cell.jacobian_face_stencil = [];
+        cell.jacobian_cell_stencil = [];
+    }
     blk.cellSave = new FVCell(blk.myConfig);
     foreach(i; 0..blk.MAX_PERTURBED_INTERFACES) blk.ifaceP[i] = new FVInterface(blk.myConfig, false);
 }
@@ -635,7 +664,10 @@ void apply_boundary_conditions(ref SMatrix!number A, FluidBlock blk, size_t np, 
     foreach (ref a; dRdq) a.length = np;
     foreach (ref a; dqdQ) a.length = np;
     foreach (ref a; Aext) a.length = np;
-
+    number[][] tmp;
+    tmp.length = np;
+    foreach (ref a; tmp) a.length = np;
+    
     foreach ( bndary; blk.bc ) {
         if ( bndary.type != "exchange_using_mapped_cells") {
             foreach ( bi, bface; bndary.faces) {                
@@ -869,9 +901,9 @@ void apply_boundary_conditions(ref SMatrix!number A, FluidBlock blk, size_t np, 
 			    }
 			    
 			    //writeln(blk.Minv);
-			    number[][] tmp;
-			    tmp.length = np;
-			    foreach (ref a; tmp) a.length = np;
+			    //number[][] tmp;
+			    //tmp.length = np;
+			    //foreach (ref a; tmp) a.length = np;
 			    for (size_t i = 0; i < np; i++) {
 				for (size_t j = 0; j < np; j++) {
 				    tmp[i][j] = to!number(0.0);
@@ -1625,43 +1657,27 @@ void residual_stencil(FVCell pcell, size_t orderOfJacobian) {
 }
 
 void local_flow_jacobian_transpose(ref SMatrix!number A, ref FluidBlock blk, size_t np, size_t orderOfJacobian, number EPS, bool preconditionMatrix = false, bool transformToConserved = false) {
-    //writeln("JACOBIAN START: ", blk.id);
+    writeln("in");
     // set the interpolation order to that of the Jacobian
     if (orderOfJacobian < 2) blk.myConfig.interpolation_order = 1;
     else blk.myConfig.interpolation_order = 2;    
     // initialise re-used objects here to prevent memory bloat
-    //writeln("PRIOR STENCIL");
     if (preconditionMatrix)
         foreach (cell; blk.cells) approximate_residual_stencil(cell, orderOfJacobian);
     else
         foreach (cell; blk.cells) residual_stencil(cell, orderOfJacobian);
-    //writeln("STENCIL SET");
-    number[][] aa; size_t[][] ja; size_t ia = 0;
+    size_t aa_idx = 0; size_t ja_idx = 0; size_t ia_idx = 0;
+    A.ia[ia_idx] = 0;
+    ia_idx += 1;
     foreach(cell; blk.cells) {
-	//writeln(cell.global_id, " ----");
-	//foreach(c; cell.jacobian_cell_stencil) writef("%d    (%.12e    %.12e)    ", c.global_id, c.pos[0].x.re, c.pos[0].y.re);
-	foreach(c; cell.jacobian_cell_stencil) //writef("%d    ", c.global_id);
-	//writef("\n");
-	foreach(f; cell.jacobian_face_stencil) //writef("%s    ", f.global_id);
-	//writef("\n");
-
-        aa.length = np; ja.length = np;
-        compute_flow_jacobian_rows_for_cell(aa, ja, cell, blk, np, orderOfJacobian, EPS, transformToConserved);
-        foreach (i; 0 .. np ) {
-            A.aa ~= aa[i];
-            A.ja ~= ja[i];
-            A.ia ~= ia;
-            ia += aa[i].length;
-        }
-        aa = [][];
-        ja = [][];
+	compute_flow_jacobian_rows_for_cell(A, aa_idx, ja_idx, ia_idx, cell, blk, np, orderOfJacobian, EPS, transformToConserved);
     }
-    A.ia ~= A.aa.length;
     foreach (cell; blk.cells) {
         cell.jacobian_face_stencil = [];
         cell.jacobian_cell_stencil = [];
     }
     apply_boundary_conditions(A, blk, np, orderOfJacobian, EPS, transformToConserved, preconditionMatrix);
+
     // reset the interpolation order
     blk.myConfig.interpolation_order = GlobalConfig.interpolation_order;
 
@@ -1669,19 +1685,14 @@ void local_flow_jacobian_transpose(ref SMatrix!number A, ref FluidBlock blk, siz
         cell.jacobian_face_stencil = [];
         cell.jacobian_cell_stencil = [];
     }
+    writeln("out");
 }
 
-void compute_flow_jacobian_rows_for_cell(number[][] aa, size_t[][] ja, FVCell pcell, FluidBlock blk, size_t np, size_t orderOfJacobian, number EPS, bool transformToConserved) {
-    // Make a stack-local copy of conserved quantities info
-    //size_t nConserved = nConservedQuantities;
-    //size_t MASS = massIdx;
-    //size_t X_MOM = xMomIdx;
-    //size_t Y_MOM = yMomIdx;
-    //size_t Z_MOM = zMomIdx;
-    //size_t TOT_ENERGY = totEnergyIdx;
-    //size_t TKE = tkeIdx;
-    //size_t OMEGA = omegaIdx;
-
+void compute_flow_jacobian_rows_for_cell(ref SMatrix!number A, ref size_t aa_idx, ref size_t ja_idx, ref size_t ia_idx, FVCell pcell, FluidBlock blk, size_t np, size_t orderOfJacobian, number EPS, bool transformToConserved) {
+    number[][] tmp;
+    tmp.length = np;
+    foreach (ref a; tmp) a.length = np;
+    
     // 0th perturbation: rho
     mixin(computeFluxDerivativesAroundCell("gas.rho", "blk.MASS", true));
     // 1st perturbation: u
@@ -1772,13 +1783,9 @@ void compute_flow_jacobian_rows_for_cell(number[][] aa, size_t[][] ja, FVCell pc
                     blk.Minv[blk.OMEGA,blk.Z_MOM] = to!number(0.0);
                 }
             }
-            //writeln(blk.Minv);
-            // writeln(pcell.id, ", ", blk.Minv);
-            //if(pcell.id == 0) writeln(blk.Minv);
-            //writeln(blk.Minv);
-            number[][] tmp;
-            tmp.length = np;
-            foreach (ref a; tmp) a.length = np;
+            //number[][] tmp;
+            //tmp.length = np;
+            //foreach (ref a; tmp) a.length = np;
             for (size_t i = 0; i < np; i++) {
                 for (size_t j = 0; j < np; j++) {
                     tmp[i][j] = to!number(0.0);
@@ -1866,10 +1873,9 @@ void compute_flow_jacobian_rows_for_cell(number[][] aa, size_t[][] ja, FVCell pc
                     blk.Minv[blk.OMEGA,blk.Z_MOM] = to!number(0.0);
                 }
             }
-            //writeln(blk.Minv);
-            number[][] tmp;
-            tmp.length = np;
-            foreach (ref a; tmp) a.length = np;
+	    //number[][] tmp;
+            //tmp.length = np;
+            //foreach (ref a; tmp) a.length = np;
             for (size_t i = 0; i < np; i++) {
                 for (size_t j = 0; j < np; j++) {
                     tmp[i][j] = to!number(0.0);
@@ -1888,6 +1894,7 @@ void compute_flow_jacobian_rows_for_cell(number[][] aa, size_t[][] ja, FVCell pc
     }
 
     // compute Jacobian rows for perturbed cell
+    /*
     foreach(cell; pcell.jacobian_cell_stencil) {
 	if (cell.id < ghost_cell_start_id) {
 	    size_t I, J; // indices in Jacobian matrix
@@ -1898,18 +1905,7 @@ void compute_flow_jacobian_rows_for_cell(number[][] aa, size_t[][] ja, FVCell pc
 		for ( size_t jp = 0; jp < np; ++jp ) {
 		    integral = 0.0;
 		    J = jp; // column index
-
-		    if(pcell.global_id == 6 && cell.global_id == 10) {
-			//writeln(pcell.global_id, ", ", cell.global_id, ", ", pcell.pos[0].x.re, ", ", pcell.pos[0].y.re, ", ", cell.pos[0].x.re, ", ", cell.pos[0].y.re);
-			foreach(fi, iface; cell.iface) {
-			    //writef(" %.6e    %.6e   %d    %d    %.4e    %.12e    %.12e    %.12e \n", iface.pos.x.re, iface.pos.y.re, ip, jp, cell.outsign[fi].re, iface.area[0].re, iface.dFdU[ip][jp].re, volInv.re);
-			}
-		    }
-
-
 		    foreach(fi, iface; cell.iface) {
-			//if (cell.id == 0 && pcell.id == 1 && iface.id == 1) writeln("dFdU_f1: ", iface.dFdU);
-			//if (cell.id == 90 && pcell.id == 91 && iface.id == 100) writeln("dFdU_f100: ", iface.dFdU);
 			integral -= cell.outsign[fi] * iface.dFdU[ip][jp] * iface.area[0]; // gtl=0
 		    }
 		    number JacEntry = volInv * integral + cell.dQdU[ip][jp];
@@ -1919,6 +1915,32 @@ void compute_flow_jacobian_rows_for_cell(number[][] aa, size_t[][] ja, FVCell pc
 	    }
 	}
     }
+    */
+    
+    size_t I, J; // indices in Jacobian matrix
+    number integral;
+    for ( size_t ip = 0; ip < np; ++ip ) {
+	foreach(cell; pcell.jacobian_cell_stencil) {
+	    if (cell.id < ghost_cell_start_id) {
+		number volInv = 1.0 / cell.volume[0];	    
+		for ( size_t jp = 0; jp < np; ++jp ) {
+		    J = cell.id*np + jp; // column index
+		    integral = 0.0;
+		    foreach(fi, iface; cell.iface) {
+			integral -= cell.outsign[fi] * iface.dFdU[jp][ip] * iface.area[0]; // gtl=0
+		    }
+		    number JacEntry = volInv * integral + cell.dQdU[jp][ip];
+		    A.aa[aa_idx] = -JacEntry;
+		    aa_idx += 1;
+		    A.ja[ja_idx] = J;
+		    ja_idx += 1;
+		}
+	    }
+	}
+	A.ia[ia_idx] = aa_idx; //A.aa.length;
+	ia_idx += 1;
+    }
+    
     // clear the interface flux Jacobian entries
     foreach (iface; pcell.jacobian_face_stencil) {
         foreach (i; 0..iface.dFdU.length) {
@@ -4114,10 +4136,19 @@ void sss_preconditioner_initialisation(ref FluidBlock blk, size_t nConservative)
         }
         break;
     case PreconditionMatrixType.ilu:
-        //initialise objects
+        // compute size of sparse matrix arrays
+        foreach (cell; blk.cells) approximate_residual_stencil(cell, 1);
+        size_t size = 0;
+	foreach( cell; blk.cells) {
+	    size += cell.jacobian_cell_stencil.length;
+	}
+	size *= (nConservedQuantities*nConservedQuantities);
         blk.Minv = new Matrix!number(nConservative, nConservative);
 	blk.P = new SMatrix!number();
-        blk.cellSave = new FVCell(blk.myConfig);
+	blk.P.aa.length = size;
+	blk.P.ja.length = size;
+	blk.P.ia.length = blk.cells.length*nConservedQuantities + 1;
+	blk.cellSave = new FVCell(blk.myConfig);
         foreach(i; 0..blk.MAX_PERTURBED_INTERFACES) blk.ifaceP[i] = new FVInterface(blk.myConfig, false);
         break;
     } // end switch
@@ -4141,9 +4172,6 @@ void ilu_preconditioner(ref FluidBlock blk, size_t np, double dt, size_t orderOf
     else double EPS;
     blk.myConfig.interpolation_order = 1;
     /* form conservative Jacobian transpose */
-    blk.P.aa = [];
-    blk.P.ja = [];
-    blk.P.ia = [];
     local_flow_jacobian_transpose(blk.P, blk, np, 1, EPS, true, true);
     number dtInv = 1.0/dt;
     foreach (i; 0 .. np*blk.cells.length) {
