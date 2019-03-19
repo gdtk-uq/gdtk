@@ -1593,11 +1593,6 @@ void read_config_file()
         doLuaFile(GlobalConfig.master_lua_State, GlobalConfig.udf_grid_motion_file);
     }
 
-    // After configuring blocks, we can also configure
-    // the run time loads calculation if requried.
-    if (GlobalConfig.compute_run_time_loads) {
-        initRunTimeLoads(jsonData["run_time_loads"]);
-    }
 } // end read_config_file()
 
 void read_control_file()

@@ -136,23 +136,32 @@ extern(C) int luafn_sampleFluidFace(lua_State *L)
 extern(C) int luafn_runTimeLoads(lua_State *L)
 {
     string loadsGroup = to!string(lua_tostring(L, 1));
+    size_t grpIdx;
+    size_t* grpIdxPtr = (loadsGroup in runTimeLoadsByName);
+    if (grpIdxPtr !is null) {
+        grpIdx = *grpIdxPtr;
+    }
+    else {
+        string msg = "You have asked for an unknown loads group: "~loadsGroup;
+        luaL_error(L, msg.toStringz);
+    }
     // Set force as table {x=.., y=..., z=...}
     lua_newtable(L);
     int tblIdx = lua_gettop(L);
-    lua_pushnumber(L, runTimeLoads[loadsGroup].resultantForce.x);
+    lua_pushnumber(L, runTimeLoads[grpIdx].resultantForce.x);
     lua_setfield(L, tblIdx, "x");
-    lua_pushnumber(L, runTimeLoads[loadsGroup].resultantForce.y);
+    lua_pushnumber(L, runTimeLoads[grpIdx].resultantForce.y);
     lua_setfield(L, tblIdx, "y");
-    lua_pushnumber(L, runTimeLoads[loadsGroup].resultantForce.z);
+    lua_pushnumber(L, runTimeLoads[grpIdx].resultantForce.z);
     lua_setfield(L, tblIdx, "z");
      // Set moment as table {x=.., y=..., z=...}
     lua_newtable(L);
     tblIdx = lua_gettop(L);
-    lua_pushnumber(L, runTimeLoads[loadsGroup].resultantMoment.x);
+    lua_pushnumber(L, runTimeLoads[grpIdx].resultantMoment.x);
     lua_setfield(L, tblIdx, "x");
-    lua_pushnumber(L, runTimeLoads[loadsGroup].resultantMoment.y);
+    lua_pushnumber(L, runTimeLoads[grpIdx].resultantMoment.y);
     lua_setfield(L, tblIdx, "y");
-    lua_pushnumber(L, runTimeLoads[loadsGroup].resultantMoment.z);
+    lua_pushnumber(L, runTimeLoads[grpIdx].resultantMoment.z);
     lua_setfield(L, tblIdx, "z");
         
     return 2;

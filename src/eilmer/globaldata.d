@@ -41,4 +41,5 @@ __gshared static LocalConfig[] dedicatedSolidConfig;
 // We store the computed run time loads globally
 // so that we may make these available in the
 // Lua environments.
-__gshared static RunTimeLoads[string] runTimeLoads;
+__gshared static RunTimeLoads[] runTimeLoads;
+__gshared static size_t[string] runTimeLoadsByName;

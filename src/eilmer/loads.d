@@ -43,6 +43,11 @@ import fvinterface;
 import bc;
 import mass_diffusion;
 
+version(mpi_parallel) {
+    import mpi;
+    import mpi.util;
+}
+
 string loadsDir = "loads";
 
 void init_current_tindx_dir(int current_loads_tindx)
@@ -288,57 +293,47 @@ struct RunTimeLoads {
     Vector3 resultantMoment = Vector3(0.0, 0.0, 0.0);
 }
 
+double[] groupedLoads;
+
 void initRunTimeLoads(JSONValue jsonData)
 {
     int nLoadsGroups = getJSONint(jsonData, "ngroups", 0);
-    foreach (group; 0 .. nLoadsGroups) {
-        auto jsonDataForGroup = jsonData["group-" ~ to!string(group)];
+    groupedLoads.length = nLoadsGroups*6; // 6 components: F.x, F.y, F.z, M.x, M.y, M.z
+    runTimeLoads.length = nLoadsGroups;
+    foreach (grpIdx; 0 .. nLoadsGroups) {
+        auto jsonDataForGroup = jsonData["group-" ~ to!string(grpIdx)];
         string groupName = getJSONstring(jsonDataForGroup, "groupLabel", "");
+        runTimeLoadsByName[groupName] = grpIdx;
         double x = getJSONdouble(jsonDataForGroup, "momentCtr_x", 0.0);
         double y = getJSONdouble(jsonDataForGroup, "momentCtr_y", 0.0);
         double z = getJSONdouble(jsonDataForGroup, "momentCtr_z", 0.0);
-        if (groupName in runTimeLoads) {
-            string errMsg = "The group name for run-time loads configuration is not unique.\n";
-            errMsg ~= format("The problem occurred when tring to add '%s' to the list of runTimeLoads.", groupName);
-            throw new Error(errMsg);
-        }
-        runTimeLoads[groupName] = RunTimeLoads();
-        runTimeLoads[groupName].momentCentre = Vector3(x, y, z);
-        // Now look over all blocks and configure the surfaces list
-        foreach (iblk, blk; globalFluidBlocks) {
+        runTimeLoads[grpIdx].momentCentre = Vector3(x, y, z);
+        // Now look over all blocks in this process and configure the surfaces list
+        foreach (iblk, blk; localFluidBlocks) {
             foreach (ibndry, bndry; blk.bc) {
                 if (groupName == bndry.group) {
-                    runTimeLoads[groupName].surfaces ~= Tuple!(size_t,size_t)(iblk, ibndry);
+                    runTimeLoads[grpIdx].surfaces ~= Tuple!(size_t,size_t)(iblk, ibndry);
                 }
             }
         }
     }
 
-    writeln("Configuration of run-time loads:");
-    foreach (name, group; runTimeLoads) {
-        writeln("   groupLabel= ", name);
-        writeln("   Includes surfaces: ");
-        foreach (blkNbndry; group.surfaces) {
-            writefln("      blk-%d--boundary-%d", blkNbndry[0], blkNbndry[1]);
-        }
-    }
-    
 } // end initRunTimeLoads()
 
-
-@nogc
+//@nogc
 void computeRunTimeLoads()
 {
-    // Working across all blocks, tally the boundary loads
-    // along those boundaries that are marked.
-    foreach (ref group; runTimeLoads) {
+    // Make sure each process has finished getting its viscous fluxes in place.
+    version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
+    // On each process, tally up forces and moments by group
+    foreach (grpIdx, ref group; runTimeLoads) {
         group.resultantForce.clear();
         group.resultantMoment.clear();
         foreach (blkNbndry; group.surfaces) {
             auto iblk = blkNbndry[0];
             auto ibndry = blkNbndry[1];
-            foreach (iface, face; globalFluidBlocks[iblk].bc[ibndry].faces) {
-                int outsign = globalFluidBlocks[iblk].bc[ibndry].outsigns[iface];
+            foreach (iface, face; localFluidBlocks[iblk].bc[ibndry].faces) {
+                int outsign = localFluidBlocks[iblk].bc[ibndry].outsigns[iface];
                 number area = face.area[0] * outsign;
                 number pdA = face.fs.gas.p * area;
                 Vector3 pressureForce = Vector3(pdA*face.n.x, pdA*face.n.y, pdA*face.n.z);
@@ -359,7 +354,45 @@ void computeRunTimeLoads()
             }
         }
     }
-} // end computeRunTimeLoads()
+    
+    // The remainder is only required for parallel work.
+    // We do the following:
+    // 1. update the groupedLoads array locally on each process
+    // 2. reduce the array with a sum across all processes
+    // 3. make that sum available on all processes.
+    // 4. place the array values back in our convenient data structure
+    version(mpi_parallel) {
+        foreach (grpIdx, group; runTimeLoads) {
+            // Place local values in groupedLoads on each process
+            groupedLoads[grpIdx*6+0] = group.resultantForce.x;
+            groupedLoads[grpIdx*6+1] = group.resultantForce.y;
+            groupedLoads[grpIdx*6+2] = group.resultantForce.z;
+            groupedLoads[grpIdx*6+3] = group.resultantMoment.x;
+            groupedLoads[grpIdx*6+4] = group.resultantMoment.y;
+            groupedLoads[grpIdx*6+5] = group.resultantMoment.z;
+        }
+
+        // Make sure each process has updated its loads calculation complete
+        // before going on.
+        version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
+
+        MPI_Allreduce(MPI_IN_PLACE, groupedLoads.ptr, to!int(groupedLoads.length), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+        foreach (grpIdx, ref group; runTimeLoads) {
+            group.resultantForce.refx = groupedLoads[grpIdx*6+0];
+            group.resultantForce.refy = groupedLoads[grpIdx*6+1];
+            group.resultantForce.refz = groupedLoads[grpIdx*6+2];
+            group.resultantMoment.refx = groupedLoads[grpIdx*6+3];
+            group.resultantMoment.refy = groupedLoads[grpIdx*6+4];
+            group.resultantMoment.refz = groupedLoads[grpIdx*6+5];
+        }
+    } // end version(mpi_parallel)
+}
+            
+
+
+    
+
 
                 
 
