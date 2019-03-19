@@ -1657,7 +1657,6 @@ void residual_stencil(FVCell pcell, size_t orderOfJacobian) {
 }
 
 void local_flow_jacobian_transpose(ref SMatrix!number A, ref FluidBlock blk, size_t np, size_t orderOfJacobian, number EPS, bool preconditionMatrix = false, bool transformToConserved = false) {
-    writeln("in");
     // set the interpolation order to that of the Jacobian
     if (orderOfJacobian < 2) blk.myConfig.interpolation_order = 1;
     else blk.myConfig.interpolation_order = 2;    
@@ -1685,7 +1684,6 @@ void local_flow_jacobian_transpose(ref SMatrix!number A, ref FluidBlock blk, siz
         cell.jacobian_face_stencil = [];
         cell.jacobian_cell_stencil = [];
     }
-    writeln("out");
 }
 
 void compute_flow_jacobian_rows_for_cell(ref SMatrix!number A, ref size_t aa_idx, ref size_t ja_idx, ref size_t ia_idx, FVCell pcell, FluidBlock blk, size_t np, size_t orderOfJacobian, number EPS, bool transformToConserved) {
