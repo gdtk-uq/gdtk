@@ -28,6 +28,7 @@ immutable string SweptPathPatchMT = "SweptPathPatch";
 immutable string MeshPatchMT = "MeshPatch";
 immutable string LuaFnSurfaceMT = "LuaFnSurface";
 immutable string SubRangedSurfaceMT = "SubRangedSurface";
+immutable string BezierPatchMT = "BezierPatch";
 
 static const(ParametricSurface)[] surfaceStore;
 
@@ -625,6 +626,80 @@ A table with input parameters is expected as the first argument.`;
     return 1;
 } // end newSubRangedSurface()
 
+/**
+ * This is the constructor for a BezierPatch to be used from the Lua interface.
+ *
+ * At successful completion of this function, a new BezierPatch object
+ * is pushed onto the Lua stack.
+ *
+ * Construction is:
+ * -------------------------
+ * patch = BezierPatch:new{points=Q}
+ * --------------------------
+ * 
+ * points  : an array of points Q[n+1][m+1]
+ */
+
+extern(C) int newBezierPatch(lua_State* L)
+{
+    int narg = lua_gettop(L);
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected BezierPatch:new{}; ";
+        errMsg ~= "maybe you tried BezierPatch.new{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if ( !lua_istable(L, 1) ) {
+        string errMsg = "Error in constructor BezierPatch:new{}. " ~
+            "A table with input parameters is expected as the first argument.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    if (!checkAllowedNames(L, 1, ["points"])) {
+        string errMsg = "Error in call to BezierPatch:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_getfield(L, 1, "points");
+    if (!lua_istable(L, -1)) {
+        string errMsg = "There's a problem in call to BezierPatch:new{}. " ~
+            "An array of arrays for 'points' is expected.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    int np1 = to!int(lua_objlen(L, -1));
+    int mp1 = 0;
+    int n = np1 - 1;
+    int m = 0;
+    Vector3[][] Q;
+    Q.length = np1;
+    foreach (i; 0 .. np1) {
+        lua_rawgeti(L, -1, i+1); // +1 for Lua offset
+        if (i == 0) {
+            mp1 = to!int(lua_objlen(L, -1));
+            m = mp1 - 1;
+        }
+        else {
+            if (mp1 != lua_objlen(L, -1)) {
+                string errMsg = "There's a problem in call to BezierPatch:new{}. " ~
+                    "Inconsistent numbers of points in array of 'points'.";
+                luaL_error(L, errMsg.toStringz);
+            }
+        }
+        Q[i].length = mp1;
+        foreach (j; 0 .. mp1) {
+            lua_rawgeti(L, -1, j+1);
+            Q[i][j].set(checkVector3(L, -1));
+            lua_pop(L, 1);
+        }
+        lua_pop(L, 1);
+    }
+    lua_pop(L, 1);
+    // Try to construct object.
+    auto bezPatch = new BezierPatch(Q, n, m);
+    surfaceStore ~= pushObj!(BezierPatch, BezierPatchMT)(L, bezPatch);
+    return 1;
+} // end newBezierPatch()
+
+
 /* ---------- convenience functions -------------- */
 
 extern(C) int makePatch(lua_State* L)
@@ -817,6 +892,26 @@ void registerSurfaces(lua_State* L)
     lua_setfield(L, -2, "__tostring");
 
     lua_setglobal(L, SubRangedSurfaceMT.toStringz);
+
+    // Register the BezierPatch object
+    luaL_newmetatable(L, BezierPatchMT.toStringz);
+    
+    /* metatable.__index = metatable */
+    lua_pushvalue(L, -1); // duplicates the current metatable
+    lua_setfield(L, -2, "__index");
+
+    /* Register methods for use. */
+    lua_pushcfunction(L, &newBezierPatch);
+    lua_setfield(L, -2, "new");
+    lua_pushcfunction(L, &opCallSurface!(BezierPatch, BezierPatchMT));
+    lua_setfield(L, -2, "__call");
+    lua_pushcfunction(L, &opCallSurface!(BezierPatch, BezierPatchMT));
+    lua_setfield(L, -2, "eval");
+    lua_pushcfunction(L, &toStringObj!(BezierPatch, BezierPatchMT));
+    lua_setfield(L, -2, "__tostring");
+
+    lua_setglobal(L, BezierPatchMT.toStringz);
+    lua_getglobal(L, BezierPatchMT.toStringz); lua_setglobal(L, "BezierSurface"); // alias
 
     // Register utility functions.
     lua_pushcfunction(L, &isSurface); lua_setglobal(L, "isSurface");

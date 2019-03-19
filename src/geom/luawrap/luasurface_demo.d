@@ -75,6 +75,24 @@ spp = SweptPathPatch:new{west=cA, south=cB}
 print("spp= ", spp)
 print("spp(0.5,0.5)= ", spp(0.5, 0.5))
 --
+print("BezierPatch demo")
+L = 2.0
+H = 1.0
+n = 3
+m = 4
+dx = L/n
+dy = H/m
+Q = {}
+for i=1,n+1 do
+   Q[i] = {}
+   for j=1,m+1 do
+      Q[i][j] = Vector3:new{x=(i-1)*dx, y=(j-1)*dy, z=0.0}
+   end
+end
+bezPatch = BezierPatch:new{points=Q}
+print("bezPatch(0.2, 0.25)= ", bezPatch(0.2, 0.25))
+print("Expected result: x=0.4, y=0.25, z=0.0")
+--
 print("Utility functions")
 print("isSurface(my_aopatch)= ", isSurface(my_aopatch))
 print("isSurface(surf2)= ", isSurface(surf2));
