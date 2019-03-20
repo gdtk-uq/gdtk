@@ -549,9 +549,9 @@ string computeGhostCellDerivatives(string varName, string posInArray, bool inclu
         codeStr ~= "blk.myConfig.gmodel.update_thermo_from_rhop(bcells[0].fs.gas);";
     }
     codeStr ~= "blk.applyPreReconAction(0.0, 0, 0);";
-    codeStr ~= "blk.applyPostConvFluxAction(0.0, 0, 0);";
-    codeStr ~= "blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);";
-    codeStr ~= "blk.applyPostDiffFluxAction(0.0, 0, 0);";
+    //codeStr ~= "blk.applyPostConvFluxAction(0.0, 0, 0);";
+    //codeStr ~= "blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);";
+    //codeStr ~= "blk.applyPostDiffFluxAction(0.0, 0, 0);";
     codeStr ~= "qP[blk.MASS] = pcell.fs.gas.rho;";
     codeStr ~= "qP[blk.X_MOM] = pcell.fs.vel.x;";
     codeStr ~= "qP[blk.Y_MOM] = pcell.fs.vel.y;";
@@ -565,9 +565,9 @@ string computeGhostCellDerivatives(string varName, string posInArray, bool inclu
     codeStr ~= "}";
     codeStr ~= "bcells[0].copy_values_from(blk.cellSave, CopyDataOption.all);";
     codeStr ~= "blk.applyPreReconAction(0.0, 0, 0);";
-    codeStr ~= "blk.applyPostConvFluxAction(0.0, 0, 0);";
-    codeStr ~= "blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);";
-    codeStr ~= "blk.applyPostDiffFluxAction(0.0, 0, 0);";
+    //codeStr ~= "blk.applyPostConvFluxAction(0.0, 0, 0);";
+    //codeStr ~= "blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);";
+    //codeStr ~= "blk.applyPostDiffFluxAction(0.0, 0, 0);";
     // ------------------ compute interface flux derivatives ------------------
     codeStr ~= "dqdQ[blk.MASS][" ~ posInArray ~ "] = qP[blk.MASS].im/(EPS.im);";
     codeStr ~= "dqdQ[blk.X_MOM][" ~ posInArray ~ "] = qP[blk.X_MOM].im/(EPS.im);";
@@ -2022,6 +2022,13 @@ string computeFluxDerivativesAroundCell(string varName, string posInArray, bool 
 }
 
 void compute_flux(FVCell pcell, FluidBlock blk, size_t orderOfJacobian, ref FVCell[] cell_list, FVInterface[] iface_list, FVInterface[] ifaceP_list) {
+
+    bool apply_bcs = false;
+    foreach(cell; cell_list) {
+	foreach(f; cell.iface) {
+	    if(f.is_on_boundary) apply_bcs = true;
+	}
+    }
     //writeln("COMPUTE FLUX");
     foreach(iface; iface_list) iface.F.clear();
     foreach(iface; ifaceP_list) iface.F.clear();
@@ -2125,12 +2132,12 @@ void compute_flux(FVCell pcell, FluidBlock blk, size_t orderOfJacobian, ref FVCe
     */
     
     //writeln("END INVISCID");
-    blk.applyPostConvFluxAction(0.0, 0, 0);
+    if (apply_bcs) blk.applyPostConvFluxAction(0.0, 0, 0);
     // Viscous flux update
     //writeln("BEGIN VISCOUS");
     if (blk.myConfig.viscous) {
         // currently only for least-squares at faces
-        blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
+        if (apply_bcs)  blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
 	//writeln("STAGE 1");
         foreach(c; cell_list) {
 	    //writeln(c.global_id, " in");
@@ -2228,7 +2235,7 @@ void compute_flux(FVCell pcell, FluidBlock blk, size_t orderOfJacobian, ref FVCe
         }
         
 	//writeln("VISCOUS CALC CHECKS OUT");
-        blk.applyPostDiffFluxAction(0.0, 0, 0);
+        if (apply_bcs) blk.applyPostDiffFluxAction(0.0, 0, 0);
     }
     bool local_with_k_omega = (blk.myConfig.turbulence_model == TurbulenceModel.k_omega);
     foreach (i, cell; cell_list) {
