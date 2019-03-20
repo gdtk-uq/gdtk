@@ -2,6 +2,7 @@
 
 module bc.ghost_cell_effect.mapped_cell_copy;
 
+import core.memory;
 import std.json;
 import std.string;
 import std.conv;
@@ -476,6 +477,9 @@ public:
                 }
                 mapped_cells ~= closest_cell;
             }
+            // There is quite a bit if Vector3 arithmetic above.
+            // Clean-up incrementally.
+            GC.minimize();
         } // end foreach mygc
     } // end set_up_cell_mapping_via_search()
 
