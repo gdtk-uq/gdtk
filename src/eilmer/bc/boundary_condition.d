@@ -266,14 +266,29 @@ public:
         foreach ( gce; preReconAction ) gce.apply(t, gtl, ftl);
     }
 
+    final void applyPreReconAction(double t, int gtl, int ftl, FVInterface f)
+    {
+        foreach ( gce; preReconAction ) gce.apply_for_interface(t, gtl, ftl, f);
+    }
+
     final void applyPostConvFluxAction(double t, int gtl, int ftl)
     {
         foreach ( bfe; postConvFluxAction ) bfe.apply(t, gtl, ftl);
+    }
+
+    final void applyPostConvFluxAction(double t, int gtl, int ftl, FVInterface f)
+    {
+        foreach ( bfe; postConvFluxAction ) bfe.apply_for_interface(t, gtl, ftl, f);
     }
     
     final void applyPreSpatialDerivActionAtBndryFaces(double t, int gtl, int ftl)
     {
         foreach ( bie; preSpatialDerivActionAtBndryFaces ) bie.apply(t, gtl, ftl);
+    }
+
+    final void applyPreSpatialDerivActionAtBndryFaces(double t, int gtl, int ftl, FVInterface f)
+    {
+        foreach ( bie; preSpatialDerivActionAtBndryFaces ) bie.apply_for_interface(t, gtl, ftl, f);
     }
 
     final void applyPreSpatialDerivActionAtBndryCells(double t, int gtl, int ftl)
@@ -284,6 +299,11 @@ public:
     final void applyPostDiffFluxAction(double t, int gtl, int ftl)
     {
         foreach ( bfe; postDiffFluxAction ) bfe.apply(t, gtl, ftl);
+    }
+
+    final void applyPostDiffFluxAction(double t, int gtl, int ftl, FVInterface f)
+    {
+        foreach ( bfe; postDiffFluxAction ) bfe.apply_for_interface(t, gtl, ftl, f);
     }
 
     // The Lua interpreter for the user-defined boundary condition belongs to

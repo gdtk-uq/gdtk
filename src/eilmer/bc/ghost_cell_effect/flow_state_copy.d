@@ -35,6 +35,19 @@ public:
     }
 
     @nogc
+    override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        FVCell ghost0;
+        BoundaryCondition bc = blk.bc[which_boundary];
+	if (bc.outsigns[f.i_bndry] == 1) {
+	    ghost0 = f.right_cell;
+	} else {
+	    ghost0 = f.left_cell;
+	}
+	ghost0.fs.copy_values_from(fstate);
+    } // end apply_unstructured_grid()
+
+    @nogc
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         FVCell ghost0;

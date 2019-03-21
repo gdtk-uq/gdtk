@@ -161,6 +161,11 @@ public:
         lua_settop(L, 0);
     }
 
+    override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+	throw new Error("GhostCellFromStagnation.apply_for_interface_unstructured_grid() not yet implemented");
+    }
+
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         throw new Error("GhostCellFromStagnation.apply_unstructured_grid() not yet implemented");

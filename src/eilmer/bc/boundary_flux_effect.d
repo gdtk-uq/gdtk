@@ -116,6 +116,17 @@ public:
             apply_structured_grid(t, gtl, ftl);
         }
     }
+    void apply_for_interface(double t, int gtl, int ftl, FVInterface f)
+    {
+        final switch (blk.grid_type) {
+        case Grid_t.unstructured_grid: 
+            apply_for_interface_unstructured_grid(t, gtl, ftl, f);
+            break;
+        case Grid_t.structured_grid:
+	    throw new Error("BFE: apply_for_interface not yet implemented for structured grid");
+        }
+    }
+    abstract void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f);
     abstract void apply_unstructured_grid(double t, int gtl, int ftl);
     abstract void apply_structured_grid(double t, int gtl, int ftl);
 } // end class BoundaryFluxEffect()
@@ -143,6 +154,12 @@ public:
     override string toString() const 
     {
         return "BFE_EnergyFluxFromAdjacentSolid()";
+    }
+
+    @nogc
+    override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        throw new Error("BFE_EnergyFluxFromAdjacentSolid.apply_for_interface_unstructured_grid() not yet implemented");
     }
 
     @nogc
@@ -269,6 +286,12 @@ public:
     }
 
     @nogc
+    override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        throw new Error("BFE_ConstFlux.apply_for_interface_unstructured_grid() not yet implemented");
+    }
+
+    @nogc
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         throw new Error("BFE_ConstFlux.apply_unstructured_grid() not yet implemented");
@@ -336,6 +359,20 @@ public:
     override string toString() const 
     {
         return "BFE_SimpleOutflowFlux";
+    }
+
+    @nogc
+    override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        auto blk = cast(UFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be a UFluidBlock object.");
+        assert(!(blk.myConfig.MHD), "Oops, not implemented for MHD.");
+        assert(blk.omegaz == 0.0, "Oops, not implemented for rotating frame.");
+
+        BoundaryCondition bc = blk.bc[which_boundary];
+	int outsign = bc.outsigns[f.i_bndry];
+	FVCell interior_cell = (outsign == 1) ? f.left_cell : f.right_cell;
+	compute_outflow_flux(interior_cell.fs, outsign, f);
     }
 
     @nogc
@@ -529,6 +566,12 @@ public:
             "eV , emissivity=" ~ to!string(emissivity) ~ 
             ", Richardson Constant=" ~ to!string(Ar) ~
             ")";
+    }
+
+    @nogc
+    override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        throw new Error("BFE_EnergyBalanceThermionic.apply_for_interface_unstructured_grid() not yet implemented");
     }
 
     @nogc
@@ -746,6 +789,12 @@ public:
     override string toString() const 
     {
         return "BFE_UpdateEnergyWallNormalVelocity";
+    }
+
+    @nogc
+    override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        throw new Error("BFE_UpdateEnergyWallNormalVelocity.apply_for_interface_unstructured_grid() not yet implemented");
     }
 
     @nogc

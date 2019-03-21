@@ -38,6 +38,11 @@ public:
         return "FixedPT(p_outside=" ~ to!string(p_outside) ~ ", T_outside=" ~ to!string(T_outside) ~")";
     }
 
+    override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+	throw new Error("GhostCellFixedPT.apply_for_interface_unstructured_grid() not yet implemented");
+    }
+
     @nogc
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {

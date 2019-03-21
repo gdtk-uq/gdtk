@@ -36,6 +36,11 @@ public:
                       fprofile.fileName, fprofile.posMatch);
     }
 
+    override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+	throw new Error("GhostCellFlowStateCopyFromProfile.apply_for_interface_unstructured_grid() not yet implemented");
+    }
+
     // not @nogc
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {

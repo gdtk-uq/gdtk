@@ -196,6 +196,17 @@ public:
             apply_structured_grid(t, gtl, ftl);
         }
     }
+    void apply_for_interface(double t, int gtl, int ftl, FVInterface f)
+    {
+        final switch (blk.grid_type) {
+        case Grid_t.unstructured_grid: 
+            apply_for_interface_unstructured_grid(t, gtl, ftl, f);
+            break;
+        case Grid_t.structured_grid:
+	    throw new Error("GCE: apply_for_interface not yet implemented for structured grid");
+        }
+    }
+    abstract void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f);
     abstract void apply_unstructured_grid(double t, int gtl, int ftl);
     abstract void apply_structured_grid(double t, int gtl, int ftl);
 } // end class GhostCellEffect

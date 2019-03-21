@@ -55,6 +55,20 @@ public:
         return "UserDefinedGhostCellEffect(fname=" ~ luafname ~ ")";
     }
 
+    override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        size_t j = 0, k = 0;
+        FVCell ghost0, ghost1;
+        BoundaryCondition bc = blk.bc[which_boundary];
+	if (bc.outsigns[f.i_bndry] == 1) {
+	    ghost0 = f.right_cell;
+	} else {
+	    ghost0 = f.left_cell;
+	}
+	callGhostCellUDF(t, gtl, ftl, f.i_bndry, j, k, f, ghost0, ghost1);
+	lua_gc(bc.myL, LUA_GCCOLLECT, 0);
+    }  // end apply_unstructured_grid()
+    
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         size_t j = 0, k = 0;
@@ -293,7 +307,16 @@ public:
     {
         return "UserDefined(fname=" ~ luafname ~ ")";
     }
-
+    
+    // not @nogc
+    override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        size_t j = 0, k = 0;
+        BoundaryCondition bc = blk.bc[which_boundary];
+	callInterfaceUDF(t, gtl, ftl, f.i_bndry, j, k, f);
+	lua_gc(bc.myL, LUA_GCCOLLECT, 0);
+    }
+    
     // not @nogc
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
@@ -536,6 +559,16 @@ public:
     {
         return "UserDefinedFluxEffect(fname=" ~ luafname ~ ", luaFnName=" ~ luaFnName ~ ")";
     }
+
+    // not @nogc
+    override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        size_t j = 0, k = 0;
+        FVCell ghost0, ghost1;
+        BoundaryCondition bc = blk.bc[which_boundary];
+	callFluxUDF(t, gtl, ftl, f.i_bndry, j, k, f);
+	lua_gc(bc.myL, LUA_GCCOLLECT, 0);
+    }  // end apply_unstructured_grid()
 
     // not @nogc
     override void apply_unstructured_grid(double t, int gtl, int ftl)

@@ -1225,6 +1225,11 @@ public:
         // Done with copying from source cells.
     } // end exchange_flowstate_phase2()
 
+    override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+	throw new Error("GhostCellFullFaceCopy.apply_for_interface_unstructured_grid() not implemented");
+    }
+    
     @nogc
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {

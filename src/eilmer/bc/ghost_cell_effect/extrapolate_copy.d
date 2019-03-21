@@ -37,6 +37,26 @@ public:
     }
 
     @nogc
+    override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        FVCell src_cell, ghost0;
+        BoundaryCondition bc = blk.bc[which_boundary];
+	if (bc.outsigns[f.i_bndry] == 1) {
+	    src_cell = f.left_cell;
+	    ghost0 = f.right_cell;
+	} else {
+	    src_cell = f.right_cell;
+	    ghost0 = f.left_cell;
+	}
+	if (xOrder == 1) {
+	    throw new Error("First order extrapolation not implemented.");
+	} else {
+	    // Zero-order extrapolation.
+	    ghost0.fs.copy_values_from(src_cell.fs);
+	}
+    } // end apply_unstructured_grid()
+
+    @nogc
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         FVCell src_cell, ghost0;

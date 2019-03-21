@@ -746,6 +746,11 @@ public:
         }
     } // end exchange_flowstate_phase2()
 
+    override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+	assert(0, "apply_for_interface_unstructured_grid not implemented for this BC.");
+    }
+
     @nogc
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
