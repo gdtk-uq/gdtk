@@ -32,6 +32,10 @@ test ideal-gas-complex-test {Testing ideal_gas.d} -body {
     exec ./ideal_gas_complex_test
 } -result {} -returnCodes {0}
 
+test ideal-helium-test {Testing ideal_helium.d} -body {
+    exec ./ideal_helium_test
+} -result {} -returnCodes {0}
+
 #test cea-gas-test {Testing cea_gas.d} -body {
 #    exec ./cea_gas_test
 #} -result {} -returnCodes {0}
