@@ -36,6 +36,7 @@ public:
     int id;
     bool is_on_boundary = false;  // by default, assume not on boundary
     size_t bc_id;  // if the face is on a block boundary, which one
+    size_t i_bndry; // if the face is on a block boundary, store index into the array of faces attached to bc
     bool use_wall_function_shear_and_heat_flux = false; // for use in viscous_flux_calc()
     bool in_suppress_reconstruction_zone; // if true, we no do reconstruction at this face
     //

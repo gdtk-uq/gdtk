@@ -243,8 +243,9 @@ public:
                 my_face.bc_id = i; // note which boundary this face is on
                 int my_outsign = bndry.outsign_list[j];
                 bc[i].faces ~= my_face;
-                bc[i].outsigns ~= my_outsign;
-                if (bc[i].ghost_cell_data_available) {
+		bc[i].outsigns ~= my_outsign;
+		my_face.i_bndry = bc[i].outsigns.length - 1;
+		if (bc[i].ghost_cell_data_available) {
                     // Make ghost-cell id values distinct from FVCell ids so that
                     // the warning/error messages are somewhat informative. 
                     FVCell ghost0 = new FVCell(myConfig, false, ghost_cell_start_id+ghost_cell_count);
