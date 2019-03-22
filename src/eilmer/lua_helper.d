@@ -11,6 +11,8 @@
 import std.stdio;
 import std.conv;
 import std.string;
+import std.algorithm;
+
 import util.lua;
 import nm.complex;
 import nm.number;
@@ -82,6 +84,10 @@ extern(C) int luafn_sampleFluidCell(lua_State *L)
 {
     // Get arguments from lua_stack
     auto blkId = lua_tointeger(L, 1);
+    if (!canFind(GlobalConfig.localBlockIds, blkId)) {
+        string msg = format("Block id %d is not local to process.", blkId);
+        luaL_error(L, msg.toStringz);
+    }
     auto i = lua_tointeger(L, 2);
     auto j = lua_tointeger(L, 3);
     auto k = lua_tointeger(L, 4);
@@ -90,7 +96,12 @@ extern(C) int luafn_sampleFluidCell(lua_State *L)
     auto sblk = cast(SFluidBlock) globalFluidBlocks[blkId];
     FVCell cell;
     if (sblk) {
-        cell = sblk.get_cell!()(i, j, k);
+        try {
+            cell = sblk.get_cell!()(i, j, k);
+        } catch (Exception e) {
+            string msg = format("Failed to locate vertex[%d,%d,%d] in block %d.", i, j, k, blkId);
+            luaL_error(L, msg.toStringz);
+        }
     } else {
         string msg = "Not implemented.";
         msg ~= " You have asked for an ijk-index cell in an unstructured-grid block.";
@@ -109,6 +120,10 @@ extern(C) int luafn_sampleFluidFace(lua_State *L)
     // Get arguments from lua_stack
     string which_face = to!string(lua_tostring(L, 1));
     auto blkId = lua_tointeger(L, 2);
+    if (!canFind(GlobalConfig.localBlockIds, blkId)) {
+        string msg = format("Block id %d is not local to process.", blkId);
+        luaL_error(L, msg.toStringz);
+    }
     auto i = lua_tointeger(L, 3);
     auto j = lua_tointeger(L, 4);
     auto k = lua_tointeger(L, 5);
@@ -117,15 +132,20 @@ extern(C) int luafn_sampleFluidFace(lua_State *L)
     // Grab the appropriate face
     auto sblk = cast(SFluidBlock) globalFluidBlocks[blkId];
     auto ublk = cast(UFluidBlock) globalFluidBlocks[blkId];
-    switch (which_face) {
-    case "i": face = sblk.get_ifi!()(i, j, k); break;
-    case "j": face = sblk.get_ifj!()(i, j, k); break;
-    case "k": face = sblk.get_ifk!()(i, j, k); break;
-    case "u": face = ublk.faces[i]; break; // unstructured grid
-    default:
-        string msg = "You have asked for an unknown type of face.";
+    try {
+        switch (which_face) {
+        case "i": face = sblk.get_ifi!()(i, j, k); break;
+        case "j": face = sblk.get_ifj!()(i, j, k); break;
+        case "k": face = sblk.get_ifk!()(i, j, k); break;
+        case "u": face = ublk.faces[i]; break; // unstructured grid
+        default:
+            string msg = "You have asked for an unknown type of face.";
+            luaL_error(L, msg.toStringz);
+        }
+    } catch (Exception e) {
+        string msg = format("Failed to locate face[%d,%d,%d] in block %d.", i, j, k, blkId);
         luaL_error(L, msg.toStringz);
-    }
+    }    
     // Return the interesting bits as a table.
     lua_newtable(L);
     int tblIdx = lua_gettop(L);
