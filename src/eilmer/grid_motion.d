@@ -5,6 +5,7 @@ module grid_motion;
 
 import std.string;
 import std.conv;
+import std.algorithm;
 
 import util.lua;
 import util.lua_service;
@@ -324,6 +325,10 @@ extern(C) int luafn_getVtxPosition(lua_State *L)
 {
     // Get arguments from lua_stack
     auto blkId = lua_tointeger(L, 1);
+    if (!canFind(GlobalConfig.localBlockIds, blkId)) {
+        string msg = format("Block id %d is not local to process.", blkId);
+        luaL_error(L, msg.toStringz);
+    }
     auto i = lua_tointeger(L, 2);
     auto j = lua_tointeger(L, 3);
     auto k = lua_tointeger(L, 4);
@@ -332,7 +337,12 @@ extern(C) int luafn_getVtxPosition(lua_State *L)
     FVVertex vtx;
     auto sblk = cast(SFluidBlock) globalFluidBlocks[blkId];
     if (sblk) {
-        vtx = sblk.get_vtx!()(i, j, k);
+        try {
+            vtx = sblk.get_vtx!()(i, j, k);
+        } catch (Exception e) {
+            string msg = format("Failed to locate vertex[%d,%d,%d] in block %d.", i, j, k, blkId);
+            luaL_error(L, msg.toStringz);
+        }
     } else {
         string msg = "Not implemented.";
         msg ~= " You have asked for an ijk-index vertex in an unstructured-grid block.";
@@ -351,6 +361,10 @@ extern(C) int luafn_getVtxPositionXYZ(lua_State *L)
 {
     // Get arguments from lua_stack
     auto blkId = lua_tointeger(L, 1);
+    if (!canFind(GlobalConfig.localBlockIds, blkId)) {
+        string msg = format("Block id %d is not local to process.", blkId);
+        luaL_error(L, msg.toStringz);
+    }
     auto i = lua_tointeger(L, 2);
     auto j = lua_tointeger(L, 3);
     auto k = lua_tointeger(L, 4);
@@ -359,7 +373,12 @@ extern(C) int luafn_getVtxPositionXYZ(lua_State *L)
     FVVertex vtx;
     auto sblk = cast(SFluidBlock) globalFluidBlocks[blkId];
     if (sblk) {
-        vtx = sblk.get_vtx!()(i, j, k);
+        try {
+            vtx = sblk.get_vtx!()(i, j, k);
+        } catch (Exception e) {
+            string msg = format("Failed to locate vertex[%d,%d,%d] in block %d.", i, j, k, blkId);
+            luaL_error(L, msg.toStringz);
+        }
     } else {
         string msg = "Not implemented.";
         msg ~= " You have asked for an ijk-index vertex in an unstructured-grid block.";
@@ -424,6 +443,10 @@ extern(C) int luafn_setVtxVelocitiesForBlock(lua_State* L)
     // Expect two arguments: 1. a block id
     //                       2. a Vector3 object
     auto blkId = lua_tointeger(L, 1);
+    if (!canFind(GlobalConfig.localBlockIds, blkId)) {
+        string msg = format("Block id %d is not local to process.", blkId);
+        luaL_error(L, msg.toStringz);
+    }
     auto vel = checkVector3(L, 2);
 
     foreach ( vtx; globalFluidBlocks[blkId].vertices ) {
@@ -446,6 +469,10 @@ extern(C) int luafn_setVtxVelocitiesForBlockXYZ(lua_State* L)
     // Expect two arguments: 1. a block id
     //                       2. a Vector3 object
     auto blkId = lua_tointeger(L, 1);
+    if (!canFind(GlobalConfig.localBlockIds, blkId)) {
+        string msg = format("Block id %d is not local to process.", blkId);
+        luaL_error(L, msg.toStringz);
+    }
     double velx = lua_tonumber(L, 2);
     double vely = lua_tonumber(L, 3);
     double velz = lua_tonumber(L, 4);
@@ -485,6 +512,10 @@ extern(C) int luafn_setVtxVelocitiesForRotatingBlock(lua_State* L)
     //                             3. a vector (optional) 
     int narg = lua_gettop(L);
     auto blkId = lua_tointeger(L, 1);
+    if (!canFind(GlobalConfig.localBlockIds, blkId)) {
+        string msg = format("Block id %d is not local to process.", blkId);
+        luaL_error(L, msg.toStringz);
+    }
     double omega = lua_tonumber(L, 2);
     double velx, vely;
 
@@ -517,10 +548,7 @@ extern(C) int luafn_setVtxVelocitiesForRotatingBlock(lua_State* L)
 
 /**
  * Sets the velocity of vertices in a block based on
- * specified corner velocities. The velocity of any cell 
- * is estimated using decomposition of the quad into 4x 
- * triangles and then calculates velocities using barycentric 
- * interpolation within the respective triangles. 
+ * specified corner velocities.
  * Works for clustered grids.
  *
  *   p3-----p2
@@ -546,6 +574,10 @@ extern(C) int luafn_setVtxVelocitiesByCorners(lua_State* L)
     //                                  (optional)
     int narg = lua_gettop(L);
     auto blkId = lua_tointeger(L, 1);
+    if (!canFind(GlobalConfig.localBlockIds, blkId)) {
+        string msg = format("Block id %d is not local to process.", blkId);
+        luaL_error(L, msg.toStringz);
+    }
     auto blk = cast(SFluidBlock) globalFluidBlocks[blkId];
     // get corner velocities
     auto p00vel = checkVector3(L, 2);
@@ -734,6 +766,10 @@ extern(C) int luafn_setVtxVelocitiesByCornersReg(lua_State* L)
     size_t i, j, k;
     Vector3 velw, vele, veln, vels, vel;
     auto blk = cast(SFluidBlock) globalFluidBlocks[blkId];
+    if (!canFind(GlobalConfig.localBlockIds, blkId)) {
+        string msg = format("Block id %d is not local to process.", blkId);
+        luaL_error(L, msg.toStringz);
+    }
     // get corner velocities
     auto p00vel = checkVector3(L, 2);
     auto p10vel = checkVector3(L, 3);
@@ -869,12 +905,21 @@ extern(C) int luafn_setVtxVelocity(lua_State* L)
     int narg = lua_gettop(L);
     auto vel = checkVector3(L, 1);
     auto blkId = lua_tointeger(L, 2);
+    if (!canFind(GlobalConfig.localBlockIds, blkId)) {
+        string msg = format("Block id %d is not local to process.", blkId);
+        luaL_error(L, msg.toStringz);
+    }
 
     if (narg == 3) {
         auto vtxId = lua_tointeger(L, 3);
         auto ublk = cast(UFluidBlock) globalFluidBlocks[blkId];
         if (ublk) {
-            ublk.vertices[vtxId].vel[0].set(vel);
+            try {
+                ublk.vertices[vtxId].vel[0].set(vel);
+            } catch (Exception e) {
+                string msg = format("Failed to locate vertex[%d] in block %d.", vtxId, blkId);
+                luaL_error(L, msg.toStringz);
+            }
         } else {
             string msg = "Oops...";
             msg ~= " You have asked for an i-index vertex in a structured-grid block.";
@@ -885,7 +930,12 @@ extern(C) int luafn_setVtxVelocity(lua_State* L)
         auto j = lua_tointeger(L, 4);
         auto sblk = cast(SFluidBlock) globalFluidBlocks[blkId];
         if (sblk) {
-            sblk.get_vtx!()(i,j).vel[0].set(vel);
+            try {
+                sblk.get_vtx!()(i,j).vel[0].set(vel);
+            } catch (Exception e) {
+                string msg = format("Failed to locate vertex[%d,%d] in block %d.", i, j, blkId);
+                luaL_error(L, msg.toStringz);
+            }
         } else {
             string msg = "Oops...";
             msg ~= " You have asked for an ij-index vertex in an unstructured-grid block.";
@@ -897,7 +947,12 @@ extern(C) int luafn_setVtxVelocity(lua_State* L)
         auto k = lua_tointeger(L, 5);
         auto sblk = cast(SFluidBlock) globalFluidBlocks[blkId];
         if (sblk) {
-            sblk.get_vtx!()(i,j,k).vel[0].set(vel);
+            try {
+                sblk.get_vtx!()(i,j,k).vel[0].set(vel);
+            } catch (Exception e) {
+                string msg = format("Failed to locate vertex[%d,%d,%d] in block %d.", i, j, k, blkId);
+                luaL_error(L, msg.toStringz);
+            }
         } else {
             string msg = "Oops...";
             msg ~= " You have asked for an ijk-index vertex in an unstructured-grid block.";
@@ -939,12 +994,21 @@ extern(C) int luafn_setVtxVelocityXYZ(lua_State* L)
     double vely = lua_tonumber(L, 2);
     double velz = lua_tonumber(L, 3);
     auto blkId = lua_tointeger(L, 4);
+    if (!canFind(GlobalConfig.localBlockIds, blkId)) {
+        string msg = format("Block id %d is not local to process.", blkId);
+        luaL_error(L, msg.toStringz);
+    }
 
     if (narg == 5) {
         auto vtxId = lua_tointeger(L, 5);
         auto ublk = cast(UFluidBlock) globalFluidBlocks[blkId];
         if (ublk) {
-            ublk.vertices[vtxId].vel[0].set(velx, vely, velz);
+            try {
+                ublk.vertices[vtxId].vel[0].set(velx, vely, velz);
+            } catch (Exception e) {
+                string msg = format("Failed to locate vertex[%d] in block %d.", vtxId, blkId);
+                luaL_error(L, msg.toStringz);
+            }
         } else {
             string msg = "Oops...";
             msg ~= " You have asked for an i-index vertex in a structured-grid block.";
@@ -955,7 +1019,12 @@ extern(C) int luafn_setVtxVelocityXYZ(lua_State* L)
         auto j = lua_tointeger(L, 6);
         auto sblk = cast(SFluidBlock) globalFluidBlocks[blkId];
         if (sblk) {
-            sblk.get_vtx!()(i,j).vel[0].set(velx, vely, velz);
+            try {
+                sblk.get_vtx!()(i,j).vel[0].set(velx, vely, velz);
+            } catch (Exception e) {
+                string msg = format("Failed to locate vertex[%d,%d] in block %d.", i, j, blkId);
+                luaL_error(L, msg.toStringz);
+            }
         } else {
             string msg = "Oops...";
             msg ~= " You have asked for an ij-index vertex in an unstructured-grid block.";
@@ -967,7 +1036,12 @@ extern(C) int luafn_setVtxVelocityXYZ(lua_State* L)
         auto k = lua_tointeger(L, 7);
         auto sblk = cast(SFluidBlock) globalFluidBlocks[blkId];
         if (sblk) {
-            sblk.get_vtx!()(i,j,k).vel[0].set(velx, vely, velz);
+            try {
+                sblk.get_vtx!()(i,j,k).vel[0].set(velx, vely, velz);
+            } catch (Exception e) {
+                string msg = format("Failed to locate vertex[%d,%d,%d] in block %d.", i, j, k, blkId);
+                luaL_error(L, msg.toStringz);
+            }
         } else {
             string msg = "Oops...";
             msg ~= " You have asked for an ijk-index vertex in an unstructured-grid block.";
