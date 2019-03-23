@@ -92,8 +92,12 @@ class Grid {
             
     @nogc abstract Vector3* opIndex(size_t i, size_t j, size_t k=0);
     @nogc abstract Vector3* opIndex(size_t indx);
-    abstract size_t[] get_vtx_id_list_for_cell(size_t i, size_t j, size_t k=0) const; 
+    abstract size_t[] get_vtx_id_list_for_cell(size_t i, size_t j, size_t k=0) const;
+    @nogc abstract void copy_vtx_id_list_for_cell(ref size_t[8] vtx_list_copy, ref size_t nvtx,
+                                                  size_t i, size_t j, size_t k=0) const;
     abstract size_t[] get_vtx_id_list_for_cell(size_t indx) const;
+    @nogc abstract void copy_vtx_id_list_for_cell(ref size_t[8] vtx_list_copy, ref size_t nvtx,
+                                                  size_t indx) const;
     
     abstract void read_from_gzip_file(string fileName, double scale=1.0);
     abstract void read_from_raw_binary_file(string fileName, double scale=1.0);
@@ -116,14 +120,16 @@ class Grid {
     abstract int get_cell_type(size_t i);
     abstract Grid get_boundary_grid(size_t boundary_indx);
     abstract size_t[] get_list_of_boundary_cells(size_t boundary_indx);
-    
+
+    @nogc
     void compute_cell_properties(size_t indx, ref Vector3 centroid, ref number volume)
     {
         number iLen, jLen, kLen, Lmin;
-        size_t[] vtx_ids = get_vtx_id_list_for_cell(indx);
+        size_t nvtx; size_t[8] vtx_ids;
+        copy_vtx_id_list_for_cell(vtx_ids, nvtx, indx);
 
         if (dimensions == 2) {
-            switch (vtx_ids.length) {
+            switch (nvtx) {
             case 3:
                 xyplane_triangle_cell_properties(vertices[vtx_ids[0]], vertices[vtx_ids[1]], vertices[vtx_ids[2]],
                                                   centroid, volume, iLen, jLen, Lmin);
@@ -134,13 +140,11 @@ class Grid {
                                              centroid, volume, iLen, jLen, Lmin);
                 return;
             default:
-                string msg = "Grid.compute_cell_properties(): ";
-                msg ~= format("Unhandled number of vertices: %d", vtx_ids.length);
-                throw new Error(msg);
+                throw new Error("Unhandled number of vertices.");
             } // end switch
         } // end: if 2D
         // else, 3D
-        switch (vtx_ids.length) {
+        switch (nvtx) {
         case 4:
             tetrahedron_properties(vertices[vtx_ids[0]], vertices[vtx_ids[1]], 
                                    vertices[vtx_ids[2]], vertices[vtx_ids[3]],
@@ -166,20 +170,20 @@ class Grid {
                              centroid, volume);
             return;
         default:
-            string msg = "Grid.compute_cell_properties(): ";
-            msg ~= format("Unhandled number of vertices: %d", vtx_ids.length);
-            throw new Error(msg);
+            throw new Error("Unhandled number of vertices.");
         } // end switch
     } // end compute_cell_properties()
 
+    @nogc
     bool point_is_inside_cell(ref const(Vector3) p, size_t i)
     {
         bool inside_cell = false;
-        size_t[] vtx_id = get_vtx_id_list_for_cell(i);
+        size_t nvtx; size_t[8] vtx_id;
+        copy_vtx_id_list_for_cell(vtx_id, nvtx, i);
         switch (dimensions) {
         case 1: throw new Exception("cell search not implemented for 1D grids");
         case 2:
-            switch (vtx_id.length) {
+            switch (nvtx) {
             case 3:
                 inside_cell = inside_xy_triangle(vertices[vtx_id[0]], vertices[vtx_id[1]],
                                                  vertices[vtx_id[2]], p);
@@ -193,7 +197,7 @@ class Grid {
             } // end switch (vtx_id.length)
             break;
         case 3:
-            switch (vtx_id.length) {
+            switch (nvtx) {
             case 4:
                 inside_cell = inside_tetrahedron(vertices[vtx_id[0]], vertices[vtx_id[1]],
                                                  vertices[vtx_id[2]], vertices[vtx_id[3]], p);
@@ -223,13 +227,15 @@ class Grid {
         return inside_cell;
     } // end point_is_inside_cell()
 
+    @nogc
     Vector3 cell_barycentre(size_t indx)
     // Returns the "centre-of-mass" of the vertices defining the cell.
     {
-        Vector3 cbc = Vector3(0.0, 0.0, 0.0);
-        size_t[] vtx_ids = get_vtx_id_list_for_cell(indx);
-        foreach(vtx_id; vtx_ids) { cbc += vertices[vtx_id]; }
-        cbc *= 1.0/vtx_ids.length;
+        size_t[8] vtx_ids; size_t nvtx;
+        copy_vtx_id_list_for_cell(vtx_ids, nvtx, indx);
+        Vector3 cbc; cbc.set(vertices[vtx_ids[0]]);
+        foreach(i; 1 .. nvtx) { cbc.add(vertices[vtx_ids[i]]); }
+        cbc.scale(1.0/nvtx);
         return cbc;
     } // end cell_barycentre()
 
@@ -309,6 +315,7 @@ class Grid {
         cells_are_sorted_into_bins = true;
     } // end sort_cells_into_bins()
 
+    @nogc
     void find_enclosing_cell_fast(ref const(Vector3) p, ref size_t indx, ref bool found)
     {
         // Search for the cell only in the near-by bins.
@@ -343,6 +350,7 @@ class Grid {
         return;
     } // end find_enclosing_cell_fast()
 
+    @nogc
     void find_enclosing_cell_slow(ref const(Vector3) p, ref size_t indx, ref bool found)
     {
         // Search every cell in the block.
@@ -353,6 +361,7 @@ class Grid {
         return;
     } // end find_enclosing_cell_slow()
 
+    @nogc
     void find_enclosing_cell(ref const(Vector3) p, ref size_t indx, ref bool found)
     {
         if (cells_are_sorted_into_bins) {
@@ -362,14 +371,15 @@ class Grid {
         }
     } // end find_enclosing_cell()
 
+    @nogc
     void find_nearest_cell_centre(ref const(Vector3) p, ref size_t nearestCell, ref double minDist)
     {
-        Vector3 dp = cell_barycentre(0); dp -= p;
-        double d = geom.abs(dp).re;
+        Vector3 c = cell_barycentre(0);
+        double d = distance_between(c, p);
         minDist = d; nearestCell = 0;
         foreach (i; 1 .. ncells) {
-            dp = cell_barycentre(i); dp -= p;
-            d = geom.abs(dp).re;
+            c = cell_barycentre(i);
+            d = distance_between(c, p);
             if (d < minDist) { minDist = d; nearestCell = i; }
         }
     } // end find_nearest_cell_centre

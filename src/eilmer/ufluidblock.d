@@ -118,6 +118,7 @@ public:
         return to!string(repr);
     }
 
+    @nogc
     override void find_enclosing_cell(ref const(Vector3) p, ref size_t indx, ref bool found)
     {
         grid.find_enclosing_cell(p, indx, found); // delegate to the grid object

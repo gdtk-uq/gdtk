@@ -652,15 +652,23 @@ void hex_cell_properties(ref const(Vector3)[] p,
 //------------------------------------------------------------------------
 // Utility functions for searching cells in the finite-volume code.
 
+@nogc
 int inside_triangle(ref const(Vector3) p, ref const(Vector3) a,
                     ref const(Vector3) b, ref const(Vector3) c)
 {
-    Vector3 n = cross(a-c, b-c); n.normalize(); // normal to plane of triangle
-    Vector3 varea = cross(p-a, p-b);
+    // Vector3 n = cross(a-c, b-c); n.normalize(); // normal to plane of triangle
+    Vector3 ca; ca.set(a); ca.add(c, -1.0);
+    Vector3 cb; cb.set(b); cb.add(c, -1.0);
+    Vector3 n; cross(n, ca, cb); n.normalize();
+    // Vector3 varea = cross(p-a, p-b);
+    Vector3 ap; ap.set(p); ap.add(a, -1.0);
+    Vector3 bp; bp.set(p); bp.add(b, -1.0);
+    Vector3 varea; cross(varea, ap, bp);
     number area1 = 0.5 * dot(varea, n); // projected area of triangle pab
-    varea = cross(p-b, p-c);
+    Vector3 cp; cp.set(p); cp.add(c, -1.0);
+    cross(varea, bp, cp);
     number area2 = 0.5 * dot(varea, n);
-    varea = cross(p-c, p-a);
+    cross(varea, cp, ap);
     number area3 = 0.5 * dot(varea, n);
     // Only a point inside the triangle will have all areas positive.
     if ( area1 > 0.0 && area2 > 0.0 && area3 > 0.0 ) return 1;
@@ -755,6 +763,7 @@ int winding_number(Vector3[] vertices, ref const(Vector3) p)
 
 // Functions for 3D cells.
 
+@nogc
 bool inside_tetrahedron(ref const(Vector3) p0, ref const(Vector3) p1,
                         ref const(Vector3) p2, ref const(Vector3) p3,
                         ref const(Vector3) p)
@@ -768,6 +777,7 @@ bool inside_tetrahedron(ref const(Vector3) p0, ref const(Vector3) p1,
     return true;
 } // end inside_tetrahedron()
 
+@nogc
 bool inside_pyramid(ref const(Vector3) p0, ref const(Vector3) p1,
                     ref const(Vector3) p2, ref const(Vector3) p3,
                     ref const(Vector3) p4, ref const(Vector3) p)
@@ -785,7 +795,7 @@ bool inside_pyramid(ref const(Vector3) p0, ref const(Vector3) p1,
 // was adapted from the inside_hexagon function, below.
 {
     // Mid-points of quadrilateral base.
-    Vector3 pmid = 0.25*(p3+p2+p1+p0);
+    Vector3 pmid; pmid.set(p0); pmid.add(p1); pmid.add(p2); pmid.add(p3); pmid.scale(0.25);
     // Test the volume of the single pyramid.
     if (tetragonal_dipyramid_volume(p3, p2, p1, p0, pmid, p) > 0.0) return false; // Bottom
     // If we arrive here, we haven't determined that the point is outside...
@@ -797,6 +807,7 @@ bool inside_pyramid(ref const(Vector3) p0, ref const(Vector3) p1,
     return true;
 } // end inside_pyramid()
 
+@nogc
 bool inside_wedge(ref const(Vector3) p0, ref const(Vector3) p1,
                   ref const(Vector3) p2, ref const(Vector3) p3,
                   ref const(Vector3) p4, ref const(Vector3) p5,
@@ -813,9 +824,9 @@ bool inside_wedge(ref const(Vector3) p0, ref const(Vector3) p1,
 {
     // Mid-points of quadrilateral faces.
     double quarter = 0.25;
-    Vector3 pmA = quarter*(p0+p3+p4+p1);
-    Vector3 pmB = quarter*(p2+p1+p4+p5);
-    Vector3 pmC = quarter*(p0+p2+p5+p3);
+    Vector3 pmA; pmA.set(p0); pmA.add(p3); pmA.add(p4); pmA.add(p1); pmA.scale(quarter); // 0.25(p0+p3+p4+p1)
+    Vector3 pmB; pmB.set(p2); pmB.add(p1); pmB.add(p4); pmB.add(p5); pmB.scale(quarter); // 0.25(p2+p1+p4+p5);
+    Vector3 pmC; pmC.set(p0); pmC.add(p2); pmC.add(p5); pmC.add(p3); pmC.scale(quarter); // 0.25(p0+p2+p5+p3);
     // Test the volume of each pyramid.
     if (tetragonal_dipyramid_volume(p0, p3, p4, p1, pmA, p) > 0.0) return false;
     if (tetragonal_dipyramid_volume(p2, p1, p4, p5, pmB, p) > 0.0) return false;
@@ -827,6 +838,7 @@ bool inside_wedge(ref const(Vector3) p0, ref const(Vector3) p1,
     return true;
 } // end inside_wedge()
 
+@nogc
 bool inside_hexahedron(ref const(Vector3) p0, ref const(Vector3) p1,
                        ref const(Vector3) p2, ref const(Vector3) p3,
                        ref const(Vector3) p4, ref const(Vector3) p5,
@@ -844,12 +856,12 @@ bool inside_hexahedron(ref const(Vector3) p0, ref const(Vector3) p1,
 {
     // Mid-points of faces.
     double quarter = 0.25;
-    Vector3 pmN = quarter*(p3+p2+p6+p7);
-    Vector3 pmE = quarter*(p1+p2+p6+p5);
-    Vector3 pmS = quarter*(p0+p1+p5+p4);
-    Vector3 pmW = quarter*(p0+p3+p7+p4);
-    Vector3 pmT = quarter*(p4+p5+p6+p7);
-    Vector3 pmB = quarter*(p0+p1+p2+p3);
+    Vector3 pmN; pmN.set(p3); pmN.add(p2); pmN.add(p6); pmN.add(p7); pmN.scale(quarter); // 0.25(p3+p2+p6+p7)
+    Vector3 pmE; pmE.set(p1); pmE.add(p2); pmE.add(p6); pmE.add(p5); pmE.scale(quarter); // 0.25(p1+p2+p6+p5)
+    Vector3 pmS; pmS.set(p0); pmS.add(p1); pmS.add(p5); pmS.add(p4); pmS.scale(quarter); // 0.25(p0+p1+p5+p4)
+    Vector3 pmW; pmW.set(p0); pmW.add(p3); pmW.add(p7); pmW.add(p4); pmW.scale(quarter); // 0.25(p0+p3+p7+p4)
+    Vector3 pmT; pmT.set(p4); pmT.add(p5); pmT.add(p6); pmT.add(p7); pmT.scale(quarter); // 0.25(p4+p5+p6+p7)
+    Vector3 pmB; pmB.set(p0); pmB.add(p1); pmB.add(p2); pmB.add(p3); pmB.scale(quarter); // 0.25(p0+p1+p2+p3)
     // Test the volume of each pyramid.
     if (tetragonal_dipyramid_volume(p2, p3, p7, p6, pmN, p) > 0.0) return false; // North
     if (tetragonal_dipyramid_volume(p1, p2, p6, p5, pmE, p) > 0.0) return false; // East

@@ -818,6 +818,13 @@ public:
         return cells[i].vtx_id_list.dup();
     }
 
+    @nogc
+    override void copy_vtx_id_list_for_cell(ref size_t[8] vtx_list_copy, ref size_t nvtx,
+                                            size_t indx, size_t j, size_t k=0) const
+    {
+        copy_vtx_id_list_for_cell(vtx_list_copy, nvtx, indx);
+    }
+
     override size_t[] get_vtx_id_list_for_cell(size_t indx) const
     in {
         assert (indx < ncells,
@@ -825,6 +832,14 @@ public:
     }
     body {
         return cells[indx].vtx_id_list.dup();
+    }
+
+    @nogc
+    override void copy_vtx_id_list_for_cell(ref size_t[8] vtx_list_copy, ref size_t nvtx,
+                                            size_t indx) const
+    {
+        nvtx = cells[indx].vtx_id_list.length;
+        foreach(i; 0 .. nvtx) { vtx_list_copy[i] = cells[indx].vtx_id_list[i]; }
     }
 
     override Grid get_boundary_grid(size_t boundary_indx)

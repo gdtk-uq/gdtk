@@ -200,7 +200,7 @@ public:
     @nogc abstract void set_interpolation_order(int order);
     abstract void init_lua_globals();
     abstract void init_boundary_conditions(JSONValue json_data);
-    abstract void find_enclosing_cell(ref const(Vector3) p, ref size_t indx, ref bool found);
+    @nogc abstract void find_enclosing_cell(ref const(Vector3) p, ref size_t indx, ref bool found);
     abstract void init_grid_and_flow_arrays(string gridFileName);
     @nogc abstract void compute_primary_cell_geometric_data(size_t gtl);
     @nogc abstract void compute_least_squares_setup(size_t gtl);

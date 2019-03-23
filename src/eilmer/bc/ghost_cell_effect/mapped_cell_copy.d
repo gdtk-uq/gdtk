@@ -463,12 +463,10 @@ public:
                 // Fall back to nearest cell search.
                 FVCell closest_cell = localFluidBlocks[0].cells[0];
                 Vector3 cellpos = closest_cell.pos[0];
-                Vector3 dp = cellpos - mypos;
-                double min_distance = geom.abs(dp).re;
+                double min_distance = distance_between(cellpos, mypos);
                 foreach (blk; localFluidBlocks) {
                     foreach (cell; blk.cells) {
-                        dp = cell.pos[0] - mypos;
-                        double distance = geom.abs(dp).re;
+                        double distance = distance_between(cell.pos[0], mypos);
                         if (distance < min_distance) {
                             closest_cell = cell;
                             min_distance = distance;
@@ -477,10 +475,9 @@ public:
                 }
                 mapped_cells ~= closest_cell;
             }
-            // There is quite a bit if Vector3 arithmetic above.
-            // Clean-up incrementally.
-            GC.minimize();
         } // end foreach mygc
+        GC.collect();
+        GC.minimize();
     } // end set_up_cell_mapping_via_search()
 
     @nogc

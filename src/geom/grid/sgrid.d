@@ -213,7 +213,39 @@ public:
                         vtx_id[single_index(i,j+1,k+1)]];
         default: assert(0);
         }
-    }
+    } // end get_vtx_id_list_for_cell()
+
+    @nogc
+    override void copy_vtx_id_list_for_cell(ref size_t[8] vtx_list_copy, ref size_t nvtx,
+                                            size_t i, size_t j, size_t k=0) const
+    {
+        switch (dimensions) {
+        case 1:
+            vtx_list_copy[0] = vtx_id[single_index(i,j,k)];
+            vtx_list_copy[1] = vtx_id[single_index(i+1,j,k)];
+            nvtx = 2;
+            break;
+        case 2:
+            vtx_list_copy[0] = vtx_id[single_index(i,j,k)];
+            vtx_list_copy[1] = vtx_id[single_index(i+1,j,k)];
+            vtx_list_copy[2] = vtx_id[single_index(i+1,j+1,k)];
+            vtx_list_copy[3] = vtx_id[single_index(i,j+1,k)];
+            nvtx = 4;
+            break;
+        case 3:
+            vtx_list_copy[0] = vtx_id[single_index(i,j,k)];
+            vtx_list_copy[1] = vtx_id[single_index(i+1,j,k)]; 
+            vtx_list_copy[2] = vtx_id[single_index(i+1,j+1,k)];
+            vtx_list_copy[3] = vtx_id[single_index(i,j+1,k)];
+            vtx_list_copy[4] = vtx_id[single_index(i,j,k+1)];
+            vtx_list_copy[5] = vtx_id[single_index(i+1,j,k+1)]; 
+            vtx_list_copy[6] = vtx_id[single_index(i+1,j+1,k+1)];
+            vtx_list_copy[7] = vtx_id[single_index(i,j+1,k+1)];
+            nvtx = 8;
+            break;
+        default: assert(0);
+        }
+    } // end copy_vtx_id_list_for_cell()
 
     override size_t[] get_vtx_id_list_for_cell(size_t indx) const
     {
@@ -229,7 +261,25 @@ public:
         size_t j = indx / nic;
         indx -= j * nic;
         return get_vtx_id_list_for_cell(indx, j, k);
-    }
+    } // end get_vtx_id_list_for_cell()
+
+    @nogc
+    override void copy_vtx_id_list_for_cell(ref size_t[8] vtx_list_copy, ref size_t nvtx,
+                                            size_t indx) const
+    {
+        size_t nic, njc, nkc;
+        switch (dimensions) {
+        case 1: nic = niv-1; njc = 1; nkc = 1; break;
+        case 2: nic = niv-1; njc = njv-1; nkc = 1; break;
+        case 3: nic = niv-1; njc = njv-1; nkc = njv-1; break;
+        default: assert(0);
+        }
+        size_t k = indx / (nic*njc);
+        indx -= k * (nic * njc);
+        size_t j = indx / nic;
+        indx -= j * nic;
+        copy_vtx_id_list_for_cell(vtx_list_copy, nvtx, indx, j, k);
+    } // end copy_vtx_id_list_for_cell()
 
     StructuredGrid subgrid(size_t i0, size_t ni,
                            size_t j0=0, size_t nj=1,
