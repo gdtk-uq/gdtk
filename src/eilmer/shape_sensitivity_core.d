@@ -3750,7 +3750,8 @@ void write_adjoint_variables_to_file(FluidBlock blk, size_t np, string jobName) 
         // write cell connectivity
         size_t connections = 0;
         foreach ( cell; blk.cells) {
-            connections += cell.iface.length;
+            //connections += cell.iface.length;
+	    connections += cell.vtx.length;
         }
         size_t size = ncells + connections; // TODO: only for quads, need to generalise
 
