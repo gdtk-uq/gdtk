@@ -1270,7 +1270,7 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel gm
     foreach ( i; 0..5) F.momentum.refy -= 0.5*alpha[i]*fabs(lambda[i])*K[i][2];
 
     // z-momentum flux;
-    FL = rL*uL*wR;
+    FL = rL*uL*wL;
     FR = rR*uR*wR;
     F.momentum.refz = 0.5*(FL+FR);
     foreach ( i; 0..5) F.momentum.refz -= 0.5*alpha[i]*fabs(lambda[i])*K[i][3];
