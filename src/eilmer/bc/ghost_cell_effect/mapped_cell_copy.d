@@ -476,8 +476,9 @@ public:
                 mapped_cells ~= closest_cell;
             }
         } // end foreach mygc
-        GC.collect();
-        GC.minimize();
+	// TODO: temporarily removing the GC calls below, they are (oddly) computationally expensive - KD 26/03/2019. 
+        //GC.collect();
+        //GC.minimize();
     } // end set_up_cell_mapping_via_search()
 
     @nogc
