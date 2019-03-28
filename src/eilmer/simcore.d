@@ -698,6 +698,9 @@ int integrate_in_time(double target_time_as_requested)
             check_run_time_configuration(target_time_as_requested);
             //
             // 1.0 Maintain a stable time step size, and other maintenance, as required.
+            // The user may also have some start-of-time-step maintenance to do
+            // via their Lua script file.  Let them have first go.
+            if (GlobalConfig.udf_supervisor_file.length > 0) { call_UDF_at_timestep_start(); }            
             if (!GlobalConfig.fixed_time_step) { determine_time_step_size(); }
             if (GlobalConfig.divergence_cleaning) { update_ch_for_divergence_cleaning(); }
             // If using k-omega, we need to set mu_t and k_t BEFORE we call convective_update
@@ -840,6 +843,9 @@ int integrate_in_time(double target_time_as_requested)
                 }
             }
             //
+            // 6.0 Allow the user to do special actions at the end of a timestep..
+            if (GlobalConfig.udf_supervisor_file.length > 0) { call_UDF_at_timestep_end(); }            
+            //
         } catch(Exception e) {
             writefln("Exception caught while trying to take step %d.", SimState.step);
             writeln("----- Begin exception message -----");
@@ -938,35 +944,56 @@ void check_run_time_configuration(double target_time_as_requested)
         foreach (blk; localFluidBlocksBySize) { blk.myConfig.ignition_zone_active = false; }
         GlobalConfig.ignition_zone_active = false;
     }
-    // The user may also have some start-of-time-step configuration to do
-    // via their Lua script file.
-    if (GlobalConfig.udf_supervisor_file.length > 0) {
-        auto L = GlobalConfig.master_lua_State;
-        lua_getglobal(L, "atTimestepStart");
-        if (lua_isnil(L, -1)) {
-            // There is no suitable Lua function.
-            lua_pop(L, 1); // discard the nil item
+} // end check_run_time_configuration()
+
+void call_UDF_at_timestep_start()
+{
+    auto L = GlobalConfig.master_lua_State;
+    lua_getglobal(L, "atTimestepStart");
+    if (lua_isnil(L, -1)) {
+        // There is no suitable Lua function.
+        lua_pop(L, 1); // discard the nil item
+    } else {
+        // Proceed to call the user's function.
+        lua_pushnumber(L, SimState.time);
+        lua_pushnumber(L, SimState.step);
+        int number_args = 2;
+        int number_results = 0;
+        if ( lua_pcall(L, number_args, number_results, 0) != 0 ) {
+            string errMsg = "ERROR: while running user-defined function atTimestepStart()\n";
+            errMsg ~= to!string(lua_tostring(L, -1));
+            throw new FlowSolverException(errMsg);
+        }
+        lua_getglobal(L, "dt_override");
+        if (lua_isnumber(L, -1)) {
+            SimState.dt_override = to!double(lua_tonumber(L, -1));
         } else {
-            // Proceed to call the user's function.
-            lua_pushnumber(L, SimState.time);
-            lua_pushnumber(L, SimState.step);
-            int number_args = 2;
-            int number_results = 0;
-            if ( lua_pcall(L, number_args, number_results, 0) != 0 ) {
-                string errMsg = "ERROR: while running user-defined function atTimestepStart()\n";
-                errMsg ~= to!string(lua_tostring(L, -1));
-                throw new FlowSolverException(errMsg);
-            }
-            lua_getglobal(L, "dt_override");
-            if (lua_isnumber(L, -1)) {
-                SimState.dt_override = to!double(lua_tonumber(L, -1));
-            } else {
-                SimState.dt_override = 0.0;
-            }
-            lua_pop(L, 1); // dispose item
+            SimState.dt_override = 0.0;
+        }
+        lua_pop(L, 1); // dispose item
+    }
+} // end call_UDF_at_timestep_start()
+
+void call_UDF_at_timestep_end()
+{
+    auto L = GlobalConfig.master_lua_State;
+    lua_getglobal(L, "atTimestepEnd");
+    if (lua_isnil(L, -1)) {
+        // There is no suitable Lua function.
+        lua_pop(L, 1); // discard the nil item
+    } else {
+        // Proceed to call the user's function.
+        lua_pushnumber(L, SimState.time);
+        lua_pushnumber(L, SimState.step);
+        int number_args = 2;
+        int number_results = 0;
+        if ( lua_pcall(L, number_args, number_results, 0) != 0 ) {
+            string errMsg = "ERROR: while running user-defined function atTimestepEnd()\n";
+            errMsg ~= to!string(lua_tostring(L, -1));
+            throw new FlowSolverException(errMsg);
         }
     }
-} // end check_run_time_configuration()
+} // end call_UDF_at_timestep_end()
 
 void determine_time_step_size()
 {
