@@ -1256,7 +1256,8 @@ void form_external_flow_jacobian_block_phase3(ref SMatrix!number A, FluidBlock b
     
     foreach ( bndary; blk.bc ) {
         if ( bndary.type == "exchange_using_mapped_cells") {
-            foreach (bi, bface; bndary.faces) {                
+            foreach (bi, bface; bndary.faces) {
+                FVCell[] ghost_cell_list;
                 // collect interior boundary cells (bcells) and exterior ghost cell (pcell)
                 FVCell interior; FVCell ghost;
                 if (bndary.outsigns[bi] == 1) {
@@ -1266,111 +1267,112 @@ void form_external_flow_jacobian_block_phase3(ref SMatrix!number A, FluidBlock b
                     interior = bface.right_cell;
                     ghost = bface.left_cell;
                 }
-                
+
                 bool found = false;
                 foreach (cell; interior.cell_cloud) {
-                    if (cell.is_interior_to_domain == false) found = true;
+                    if (cell.is_interior_to_domain == false) {
+                        ghost_cell_list ~= cell;
+                        found = true;
+                    }
                 }
                 if (found) {
-                    FVCell bcell = ghost;
-                    FVCell pcell;
-		    foreach (cell; interior.cell_cloud) {
-			if (cell.is_interior_to_domain == false) pcell = cell;
-		    }
-                    
-                    // form dqdQ - ghost cell derivatives
-                    FVCell[] bcells;
-                    bcells ~= bcell;
-		    dqdQ = pcell.dqdQ;			    
-                    
-                    // form dRdq                
-                    pcell.jacobian_cell_stencil = [];
-                    pcell.jacobian_face_stencil = [];
-                    pcell.jacobian_cell_stencil ~= bcells;
-                    pcell.jacobian_cell_stencil ~= interior;
-                    
-                    string[] idList;
-                    foreach ( cell; pcell.jacobian_cell_stencil) {
-                        foreach ( face; cell.iface) {
-                            if ( idList.canFind(face.global_id) == false ) {
-                                pcell.jacobian_face_stencil ~= face;
-                                idList ~= face.global_id;
-                            }
-                        }
-                    }
-                    
-                    // 0th perturbation: rho
-                    mixin(computeFluxDerivativesAroundCell("gas.rho", "blk.MASS", true));
-                    // 1st perturbation: u
-                    mixin(computeFluxDerivativesAroundCell("vel.refx", "blk.X_MOM", false));
-                    // 2nd perturbation: v
-                    mixin(computeFluxDerivativesAroundCell("vel.refy", "blk.Y_MOM", false));
-                    if ( blk.myConfig.dimensions == 3 )
-                        mixin(computeFluxDerivativesAroundCell("vel.refz", "blk.Z_MOM", false));
-                    // 3rd perturbation: P
-                    mixin(computeFluxDerivativesAroundCell("gas.p", "blk.TOT_ENERGY", true));
-                    if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                        // 4th perturbation: k
-                        mixin(computeFluxDerivativesAroundCell("tke", "blk.TKE", false));
-                        // 5th perturbation: omega
-                        mixin(computeFluxDerivativesAroundCell("omega", "blk.OMEGA", false));
-                    }
-                    
-		    
-
-                    foreach(cell; pcell.jacobian_cell_stencil) {
-			number integral;
-                        number volInv = 1.0 / cell.volume[0];
-                        for ( size_t ip = 0; ip < np; ++ip ) {
-                            for ( size_t jp = 0; jp < np; ++jp ) {
-                                integral = 0.0;
-                                foreach(fi, iface; cell.iface) {
-				    integral -= cell.outsign[fi] * iface.dFdU[ip][jp] * iface.area[0]; // gtl=0
+                    foreach( pcell; ghost_cell_list) {
+                        FVCell bcell = ghost;
+                        //FVCell pcell;
+                        //foreach (cell; interior.cell_cloud) {
+                        //    if (cell.is_interior_to_domain == false) pcell = cell;
+                        //}
+                        
+                        // form dqdQ - ghost cell derivatives
+                        FVCell[] bcells;
+                        bcells ~= bcell;
+                        dqdQ = pcell.dqdQ;			    
+                        // form dRdq                
+                        pcell.jacobian_cell_stencil = [];
+                        pcell.jacobian_face_stencil = [];
+                        pcell.jacobian_cell_stencil ~= bcells;
+                        pcell.jacobian_cell_stencil ~= interior;
+                        
+                        string[] idList;
+                        foreach ( cell; pcell.jacobian_cell_stencil) {
+                            foreach ( face; cell.iface) {
+                                if ( idList.canFind(face.global_id) == false ) {
+                                    pcell.jacobian_face_stencil ~= face;
+                                    idList ~= face.global_id;
                                 }
-                                number entry = volInv * integral + cell.dQdU[ip][jp];                    
-                                dRdq[ip][jp] = -entry*-1; // multiply by negative one due to outsign difference
                             }
                         }
                         
-                        // perform matrix-matrix multiplication
-                        for (size_t i = 0; i < np; i++) {
-                            for (size_t j = 0; j < np; j++) {
-                                Aext[i][j] = 0;
-                                for (size_t k = 0; k < np; k++) {
-                                    Aext[i][j] += dRdq[i][k]*dqdQ[k][j];
+                        // 0th perturbation: rho
+                        mixin(computeFluxDerivativesAroundCell("gas.rho", "blk.MASS", true));
+                        // 1st perturbation: u
+                        mixin(computeFluxDerivativesAroundCell("vel.refx", "blk.X_MOM", false));
+                        // 2nd perturbation: v
+                        mixin(computeFluxDerivativesAroundCell("vel.refy", "blk.Y_MOM", false));
+                        if ( blk.myConfig.dimensions == 3 )
+                            mixin(computeFluxDerivativesAroundCell("vel.refz", "blk.Z_MOM", false));
+                        // 3rd perturbation: P
+                        mixin(computeFluxDerivativesAroundCell("gas.p", "blk.TOT_ENERGY", true));
+                        if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
+                            // 4th perturbation: k
+                            mixin(computeFluxDerivativesAroundCell("tke", "blk.TKE", false));
+                            // 5th perturbation: omega
+                            mixin(computeFluxDerivativesAroundCell("omega", "blk.OMEGA", false));
+                        }
+                        
+                        foreach(cell; pcell.jacobian_cell_stencil) {
+                            number integral;
+                            number volInv = 1.0 / cell.volume[0];
+                            for ( size_t ip = 0; ip < np; ++ip ) {
+                                for ( size_t jp = 0; jp < np; ++jp ) {
+                                    integral = 0.0;
+                                    foreach(fi, iface; cell.iface) {
+                                        integral -= cell.outsign[fi] * iface.dFdU[ip][jp] * iface.area[0]; // gtl=0
+                                    }
+                                    number entry = volInv * integral + cell.dQdU[ip][jp];                    
+                                    dRdq[ip][jp] = -entry*-1; // multiply by negative one due to outsign difference
+                                }
+                            }
+                            
+                            // perform matrix-matrix multiplication
+                            for (size_t i = 0; i < np; i++) {
+                                for (size_t j = 0; j < np; j++) {
+                                    Aext[i][j] = 0;
+                                    for (size_t k = 0; k < np; k++) {
+                                        Aext[i][j] += dRdq[i][k]*dqdQ[k][j];
+                                    }
+                                }
+                            }
+                            
+                            // 3: update entry
+                            if(cell.global_id == ghost.global_id) {
+                                for ( size_t ip = 0; ip < np; ++ip ) {
+                                    for ( size_t jp = 0; jp < np; ++jp ) {
+                                        A[interior.id*np+ip,ghost.global_id*np+jp] = A[interior.id*np+ip,ghost.global_id*np+jp] + Aext[jp][ip];
+                                    }
                                 }
                             }
                         }
-
-                        // 3: update entry
-                        if(cell.global_id == ghost.global_id) {
-			    for ( size_t ip = 0; ip < np; ++ip ) {
-				for ( size_t jp = 0; jp < np; ++jp ) {
-				    
-				    A[interior.id*np+ip,ghost.global_id*np+jp] = A[interior.id*np+ip,ghost.global_id*np+jp] + Aext[jp][ip];
-				}
-			    }
-			}
-		    }
-		    // clear the interface flux Jacobian entries
-		    foreach (iface; pcell.jacobian_face_stencil) {
-			foreach (i; 0..iface.dFdU.length) {
-			    foreach (j; 0..iface.dFdU[i].length) {
-				iface.dFdU[i][j] = 0.0;
-			    }
-			}
-		    }
-                    
-		    // clear the cell source term Jacobian entries
-		    foreach (c; pcell.jacobian_cell_stencil) {
-			foreach (i; 0..c.dQdU.length) {
-			    foreach (j; 0..c.dQdU[i].length) {
-				c.dQdU[i][j] = 0.0;
-			    }
-			}
-		    }
-		    pcell.jacobian_cell_stencil = [];
-                    pcell.jacobian_face_stencil = [];
+                        // clear the interface flux Jacobian entries
+                        foreach (iface; pcell.jacobian_face_stencil) {
+                            foreach (i; 0..iface.dFdU.length) {
+                                foreach (j; 0..iface.dFdU[i].length) {
+                                    iface.dFdU[i][j] = 0.0;
+                                }
+                            }
+                        }
+                        
+                        // clear the cell source term Jacobian entries
+                        foreach (c; pcell.jacobian_cell_stencil) {
+                            foreach (i; 0..c.dQdU.length) {
+                                foreach (j; 0..c.dQdU[i].length) {
+                                    c.dQdU[i][j] = 0.0;
+                                }
+                            }
+                        }
+                        pcell.jacobian_cell_stencil = [];
+                        pcell.jacobian_face_stencil = [];
+                    }
                 }
             }
         }
