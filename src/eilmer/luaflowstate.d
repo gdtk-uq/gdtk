@@ -504,6 +504,7 @@ extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
     if ( isObjType(L, 3, "_FlowState") ) {
         fs = checkFlowState(L, 3);
         write_initial_flow_file(fname, grid, fs, t0, GlobalConfig.gmodel_master);
+        lua_settop(L, 0); // clear stack
         return 0;
     }
     // Else, we might have a callable lua function
@@ -661,8 +662,10 @@ extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
             } // end foreach k
             outfile.finish();
         } // end switch flow_format
+        lua_settop(L, 0); // clear stack
         return 0;
     } // end if lua_isfunction
+    lua_settop(L, 0); // clear stack
     return -1;
 } // end write_initial_sg_flow_file_from_lua()
 
@@ -681,6 +684,7 @@ extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
     if ( isObjType(L, 3, "_FlowState") ) {
         fs = checkFlowState(L, 3);
         write_initial_flow_file(fname, grid, fs, t0, GlobalConfig.gmodel_master);
+        lua_settop(L, 0); // clear stack
         return 0;
     }
     // Else, we might have a callable lua function
@@ -803,8 +807,10 @@ extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
             } // end foreach i
             outfile.finish();
         }
+        lua_settop(L, 0); // clear stack
         return 0;
     } // end if lua_isfunction
+    lua_settop(L, 0); // clear stack
     return -1;
 } // end write_initial_usg_flow_file_from_lua()
 

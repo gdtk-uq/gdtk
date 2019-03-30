@@ -953,6 +953,7 @@ void call_UDF_at_timestep_start()
         }
         lua_pop(L, 1); // dispose item
     }
+    lua_settop(L, 0); // clear stack
 } // end call_UDF_at_timestep_start()
 
 void call_UDF_at_timestep_end()
@@ -974,6 +975,7 @@ void call_UDF_at_timestep_end()
             throw new FlowSolverException(errMsg);
         }
     }
+    lua_settop(L, 0); // clear stack
 } // end call_UDF_at_timestep_end()
 
 void call_UDF_at_write_to_files()
@@ -996,6 +998,7 @@ void call_UDF_at_write_to_files()
             throw new FlowSolverException(errMsg);
         }
     }
+    lua_settop(L, 0); // clear stack
 } // end call_UDF_at_write_to_files()
 
 void determine_time_step_size()

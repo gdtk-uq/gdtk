@@ -1063,10 +1063,11 @@ void assign_vertex_velocities_via_udf(double sim_time, double dt)
     lua_pushnumber(L, dt);
     int number_args = 2;
     int number_results = 0;
-
+    //
     if ( lua_pcall(L, number_args, number_results, 0) != 0 ) {
         string errMsg = "ERROR: while running user-defined function assignVtxVelocities()\n";
         errMsg ~= to!string(lua_tostring(L, -1));
         throw new FlowSolverException(errMsg);
     }
+    lua_settop(L, 0); // clear stack
 }
