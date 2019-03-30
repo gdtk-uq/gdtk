@@ -435,32 +435,30 @@ void main(string[] args) {
 
             /* low order Jacobian */
             foreach (myblk; parallel(localFluidBlocks,1)) {
-                myblk.A = new SMatrix!number();
                 local_flow_jacobian_transpose(myblk.A, myblk, nPrimitive, 1, EPS, false, false);
                 foreach (i; 0 .. nPrimitive*myblk.cells.length) {
                     myblk.A[i,i] = myblk.A[i,i] + (1.0/dt);
                 }
             }
 
+            foreach (myblk; localFluidBlocks) {
+                form_external_flow_jacobian_block_phase0(myblk, nPrimitive, myblk.myConfig.interpolation_order, EPS);
+            }
+            
+            foreach (myblk; localFluidBlocks) {
+                form_external_flow_jacobian_block_phase1(nPrimitive, myblk.myConfig.interpolation_order, EPS);
+            }
+            
+            foreach (myblk; parallel(localFluidBlocks,1)) {
+                myblk.Aext = new SMatrix!number();
+                form_external_flow_jacobian_block_phase2(myblk.Aext, myblk, nPrimitive, myblk.myConfig.interpolation_order, EPS);
+            }
+            
+            foreach (myblk; parallel(localFluidBlocks,1)) {
+                form_external_flow_jacobian_block_phase3(myblk.Aext, myblk, nPrimitive, myblk.myConfig.interpolation_order, EPS);
+            }
 
-	    foreach (myblk; localFluidBlocks) {
-		form_external_flow_jacobian_block_phase0(myblk, nPrimitive, 1, EPS);
-	    }
-
-	    foreach (myblk; localFluidBlocks) {
-		form_external_flow_jacobian_block_phase1(nPrimitive, 1, EPS);
-	    }
-
-	    foreach (myblk; parallel(localFluidBlocks,1)) {
-		myblk.Aext = new SMatrix!number();
-		form_external_flow_jacobian_block_phase2(myblk.Aext, myblk, nPrimitive, 1, EPS);
-	    }
-
-	    foreach (myblk; parallel(localFluidBlocks,1)) {
-		form_external_flow_jacobian_block_phase3(myblk.Aext, myblk, nPrimitive, 1, EPS);
-	    }
-
-	    /* Preconditioner */
+            /* Preconditioner */
             foreach (myblk; parallel(localFluidBlocks,1)) {
                 //myblk.P = new SMatrix!number();
                 local_flow_jacobian_transpose(myblk.P, myblk, nPrimitive, 1, EPS, true, false); // orderOfJacobian=0

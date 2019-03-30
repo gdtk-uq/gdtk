@@ -202,6 +202,24 @@ void initialisation(ref FluidBlock blk, size_t nPrimitive, size_t orderOfJacobia
         cell.jacobian_face_stencil = [];
         cell.jacobian_cell_stencil = [];
     }
+
+    if (GlobalConfig.sscOptions.pseudotime) {
+        foreach (cell; blk.cells) residual_stencil(cell, 1);
+        size = 0;
+        foreach( cell; blk.cells) {
+            size += cell.jacobian_cell_stencil.length;
+        }
+        size *= (nConservedQuantities*nConservedQuantities);
+        blk.A = new SMatrix!number();
+        blk.A.aa.length = size;
+        blk.A.ja.length = size;
+        blk.A.ia.length = blk.cells.length*nConservedQuantities + 1;
+        foreach (cell; blk.cells) {
+            cell.jacobian_face_stencil = [];
+            cell.jacobian_cell_stencil = [];
+        }
+    }
+
     blk.cellSave = new FVCell(blk.myConfig);
     foreach(i; 0..blk.MAX_PERTURBED_INTERFACES) blk.ifaceP[i] = new FVInterface(blk.myConfig, false);
 }
