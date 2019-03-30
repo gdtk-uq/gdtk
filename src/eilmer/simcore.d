@@ -782,7 +782,7 @@ int integrate_in_time(double target_time_as_requested)
             // 4.0 (Occasionally) Write out an intermediate solution
             if ((SimState.time >= SimState.t_plot) && !SimState.output_just_written) {
                 write_solution_files();
-                if (GlobalConfig.udf_supervisor_file.length > 0) { call_UDF_at_write_to_files(); }
+                if (GlobalConfig.udf_supervisor_file.length > 0) { call_UDF_at_write_to_file(); }
                 SimState.output_just_written = true;
                 SimState.t_plot = SimState.t_plot + GlobalConfig.dt_plot;
                 GC.collect();
@@ -978,9 +978,10 @@ void call_UDF_at_timestep_end()
     lua_settop(L, 0); // clear stack
 } // end call_UDF_at_timestep_end()
 
-void call_UDF_at_write_to_files()
+void call_UDF_at_write_to_file()
 {
     // The user may also have some writing of data to do via their Lua script file.
+    // This function is called just after writing the flow solution to file.
     auto L = GlobalConfig.master_lua_State;
     lua_getglobal(L, "atWriteToFile");
     if (lua_isnil(L, -1)) {
@@ -999,7 +1000,7 @@ void call_UDF_at_write_to_files()
         }
     }
     lua_settop(L, 0); // clear stack
-} // end call_UDF_at_write_to_files()
+} // end call_UDF_at_write_to_file()
 
 void determine_time_step_size()
 {
@@ -2171,7 +2172,10 @@ void finalize_simulation()
     if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) {
         writeln("Finalize the simulation.");
     }
-    if (!SimState.output_just_written) { write_solution_files(); }
+    if (!SimState.output_just_written) {
+        write_solution_files();
+        if (GlobalConfig.udf_supervisor_file.length > 0) { call_UDF_at_write_to_file(); }
+    }
     if (!SimState.history_just_written) { write_history_cells_to_files(SimState.time); }
     GC.collect();
     GC.minimize();
