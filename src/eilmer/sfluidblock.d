@@ -2023,7 +2023,7 @@ public:
             corner_coords[3] = vtx10.pos[0].x;
             corner_coords[4] = vtx10.pos[0].y;
             corner_coords[5] = vtx10.pos[0].z;
-            FVVertex vtx11 = get_vtx!()(imin+1,jmax+1);
+            FVVertex vtx11 = get_vtx!()(imax+1,jmax+1);
             corner_coords[6] = vtx11.pos[0].x;
             corner_coords[7] = vtx11.pos[0].y;
             corner_coords[8] = vtx11.pos[0].z;
@@ -2056,7 +2056,7 @@ public:
             corner_coords[3] = vtx100.pos[0].x;
             corner_coords[4] = vtx100.pos[0].y;
             corner_coords[5] = vtx100.pos[0].z;
-            FVVertex vtx110 = get_vtx!()(imin+1,jmax+1,kmin);
+            FVVertex vtx110 = get_vtx!()(imax+1,jmax+1,kmin);
             corner_coords[6] = vtx110.pos[0].x;
             corner_coords[7] = vtx110.pos[0].y;
             corner_coords[8] = vtx110.pos[0].z;
@@ -2072,7 +2072,7 @@ public:
             corner_coords[15] = vtx101.pos[0].x;
             corner_coords[16] = vtx101.pos[0].y;
             corner_coords[17] = vtx101.pos[0].z;
-            FVVertex vtx111 = get_vtx!()(imin+1,jmax+1,kmax+1);
+            FVVertex vtx111 = get_vtx!()(imax+1,jmax+1,kmax+1);
             corner_coords[18] = vtx111.pos[0].x;
             corner_coords[19] = vtx111.pos[0].y;
             corner_coords[20] = vtx111.pos[0].z;
