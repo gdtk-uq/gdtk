@@ -58,6 +58,11 @@ public:
     size_t imin, imax; 
     size_t jmin, jmax;
     size_t kmin, kmax;
+    
+    // A place to store coordinates of the corner vertices.
+    // For a moving-grid simulation these will be kept up to date
+    // and communicated to user-defined Lua functions via infoFluidBlock.
+    double[24] corner_coords;
 
     // Work-space that gets reused.
     // The following objects are used in the convective_flux method.
@@ -2007,6 +2012,81 @@ public:
         return;
     }
 
+    @nogc void copy_current_corner_coords()
+    {
+        if (myConfig.dimensions == 2) {
+            FVVertex vtx00 = get_vtx!()(imin,jmin);
+            corner_coords[0] = vtx00.pos[0].x;
+            corner_coords[1] = vtx00.pos[0].y;
+            corner_coords[2] = vtx00.pos[0].z;
+            FVVertex vtx10 = get_vtx!()(imax+1,jmin);
+            corner_coords[3] = vtx10.pos[0].x;
+            corner_coords[4] = vtx10.pos[0].y;
+            corner_coords[5] = vtx10.pos[0].z;
+            FVVertex vtx11 = get_vtx!()(imin+1,jmax+1);
+            corner_coords[6] = vtx11.pos[0].x;
+            corner_coords[7] = vtx11.pos[0].y;
+            corner_coords[8] = vtx11.pos[0].z;
+            FVVertex vtx01 = get_vtx!()(imin,jmax+1);
+            corner_coords[9] = vtx01.pos[0].x;
+            corner_coords[10] = vtx01.pos[0].y;
+            corner_coords[11] = vtx01.pos[0].z;
+            // In 2D, the upper layer get the same values.
+            corner_coords[12] = vtx00.pos[0].x;
+            corner_coords[13] = vtx00.pos[0].y;
+            corner_coords[14] = vtx00.pos[0].z;
+            //
+            corner_coords[15] = vtx10.pos[0].x;
+            corner_coords[16] = vtx10.pos[0].y;
+            corner_coords[17] = vtx10.pos[0].z;
+            //
+            corner_coords[18] = vtx11.pos[0].x;
+            corner_coords[19] = vtx11.pos[0].y;
+            corner_coords[20] = vtx11.pos[0].z;
+            //
+            corner_coords[21] = vtx01.pos[0].x;
+            corner_coords[22] = vtx01.pos[0].y;
+            corner_coords[23] = vtx01.pos[0].z;
+        } else {
+            FVVertex vtx000 = get_vtx!()(imin,jmin,kmin);
+            corner_coords[0] = vtx000.pos[0].x;
+            corner_coords[1] = vtx000.pos[0].y;
+            corner_coords[2] = vtx000.pos[0].z;
+            FVVertex vtx100 = get_vtx!()(imax+1,jmin,kmin);
+            corner_coords[3] = vtx100.pos[0].x;
+            corner_coords[4] = vtx100.pos[0].y;
+            corner_coords[5] = vtx100.pos[0].z;
+            FVVertex vtx110 = get_vtx!()(imin+1,jmax+1,kmin);
+            corner_coords[6] = vtx110.pos[0].x;
+            corner_coords[7] = vtx110.pos[0].y;
+            corner_coords[8] = vtx110.pos[0].z;
+            FVVertex vtx010 = get_vtx!()(imin,jmax+1,kmin);
+            corner_coords[9] = vtx010.pos[0].x;
+            corner_coords[10] = vtx010.pos[0].y;
+            corner_coords[11] = vtx010.pos[0].z;
+            FVVertex vtx001 = get_vtx!()(imin,jmin,kmax+1);
+            corner_coords[12] = vtx001.pos[0].x;
+            corner_coords[13] = vtx001.pos[0].y;
+            corner_coords[14] = vtx001.pos[0].z;
+            FVVertex vtx101 = get_vtx!()(imax+1,jmin,kmax+1);
+            corner_coords[15] = vtx101.pos[0].x;
+            corner_coords[16] = vtx101.pos[0].y;
+            corner_coords[17] = vtx101.pos[0].z;
+            FVVertex vtx111 = get_vtx!()(imin+1,jmax+1,kmax+1);
+            corner_coords[18] = vtx111.pos[0].x;
+            corner_coords[19] = vtx111.pos[0].y;
+            corner_coords[20] = vtx111.pos[0].z;
+            FVVertex vtx011 = get_vtx!()(imin,jmax+1,kmax+1);
+            corner_coords[21] = vtx011.pos[0].x;
+            corner_coords[22] = vtx011.pos[0].y;
+            corner_coords[23] = vtx011.pos[0].z;
+        }
+    } // end copy_current_corner_coords()
+    
+    @nogc void set_current_corner_coords_to_infinity()
+    {
+        foreach(ref double cc; corner_coords) { cc = double.infinity; } 
+    }
 } // end class SFluidBlock
 
 

@@ -72,6 +72,19 @@ extern(C) int luafn_infoFluidBlock(lua_State *L)
         lua_pushinteger(L, sblk.imax); lua_setfield(L, tblIdx, "imax");
         lua_pushinteger(L, sblk.jmax); lua_setfield(L, tblIdx, "jmax");
         lua_pushinteger(L, sblk.kmax); lua_setfield(L, tblIdx, "kmax");
+        string[] corner_names;
+        if (GlobalConfig.dimensions == 3) {
+            corner_names = ["p000","p100","p110","p010","p001","p101","p111","p011"];
+        } else {
+            corner_names = ["p00","p10","p11","p01"];
+        }
+        foreach (i; 0 .. corner_names.length) {
+            lua_newtable(L);
+            lua_pushnumber(L, sblk.corner_coords[i*3+0]); lua_setfield(L, -2, "x");
+            lua_pushnumber(L, sblk.corner_coords[i*3+1]); lua_setfield(L, -2, "y");
+            lua_pushnumber(L, sblk.corner_coords[i*3+2]); lua_setfield(L, -2, "z");
+            lua_setfield(L, tblIdx, corner_names[i].toStringz);
+        }
     }
     // For an unstructured_grid or structured_grid
     lua_pushinteger(L, blk.cells.length); lua_setfield(L, tblIdx, "ncells");

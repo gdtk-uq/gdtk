@@ -378,7 +378,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
             if (ublock) { ublock.build_cloud_of_cell_references_at_each_vertex(); }
         }
     }
-
+    //
     // We can apply a special initialisation to the flow field, if requested.
     // This will take viscous boundary conditions and diffuse them into the
     // nearby domain.
@@ -389,7 +389,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
             diffuseWallBCsIntoBlock(myblk, GlobalConfig.nInitPasses, GlobalConfig.initTWall);
         }
     }
-    
+    //
     // We conditionally sort the local blocks, based on numbers of cells,
     // in an attempt to balance the load for shared-memory parallel runs.
     localFluidBlocksBySize.length = 0;
@@ -410,7 +410,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
             localFluidBlocksBySize ~= localFluidBlocks[blkpair[0]]; // [0] holds the block id
         }
     }
-
+    //
     // Flags to indicate that the saved output is fresh.
     // On startup or restart, it is assumed to be so.
     SimState.output_just_written = true;
@@ -442,7 +442,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
         }
         lua_setglobal(L, "localBlockIds");
     }
-
+    //
     // Configure the run-time loads if required
     if (GlobalConfig.compute_run_time_loads) {
         string fileName = GlobalConfig.base_file_name ~ ".config";
@@ -450,7 +450,10 @@ void init_simulation(int tindx, int nextLoadsIndx,
         JSONValue jsonData = parseJSON!string(content);
         initRunTimeLoads(jsonData["run_time_loads"]);
     }
-
+    //
+    // We want to get the corner-coordinates for each block copied
+    // in case the Lua functions try to use them.
+    synchronize_corner_coords_for_all_blocks();
     //
     // Keep our memory foot-print small.
     GC.collect();
@@ -676,6 +679,7 @@ int integrate_in_time(double target_time_as_requested)
         try {
             // 0.0 Run-time configuration may change, a halt may be called, etc.
             check_run_time_configuration(target_time_as_requested);
+            if (GlobalConfig.grid_motion != GridMotion.none) { synchronize_corner_coords_for_all_blocks(); }
             //
             // 1.0 Maintain a stable time step size, and other maintenance, as required.
             // The user may also have some start-of-time-step maintenance to do
@@ -926,6 +930,39 @@ void check_run_time_configuration(double target_time_as_requested)
         GlobalConfig.ignition_zone_active = false;
     }
 } // end check_run_time_configuration()
+
+void synchronize_corner_coords_for_all_blocks()
+{
+    // Presently, the corner coordinates are only meaningful for structured-grid blocks.
+    version(mpi_parallel) {
+        // In MPI context, we can only see a subset of the block data.
+        foreach (blk; globalFluidBlocks) {
+            auto sblk = cast(SFluidBlock) blk;
+            if (!sblk) { continue; }
+            if (canFind(GlobalConfig.localBlockIds, sblk.id)) {
+                // We can see this inside this block to get valid coordinate values.
+                sblk.copy_current_corner_coords();
+            } else {
+                // Cannot see this block so fill in invalid coordinate values.
+                sblk.set_current_corner_coords_to_infinity();
+            }
+        }
+        // Now, propagate the valid coordinates across all tasks.
+        foreach (blk; globalFluidBlocks) {
+            auto sblk = cast(SFluidBlock) blk;
+            if (sblk) {
+                MPI_Allreduce(MPI_IN_PLACE, sblk.corner_coords.ptr, sblk.corner_coords.length,
+                              MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+            }
+        }
+    } else {
+        // In shared-memory, we can see all blocks.
+        foreach (blk; globalFluidBlocks) {
+            auto sblk = cast(SFluidBlock) blk;
+            if (sblk) { sblk.copy_current_corner_coords(); }
+        }
+    }
+} // end synchronize_corner_coords_for_all_blocks()
 
 void call_UDF_at_timestep_start()
 {
