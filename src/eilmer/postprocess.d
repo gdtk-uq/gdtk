@@ -31,13 +31,13 @@ import gas;
 import globalconfig;
 import flowsolution;
 import solidsolution;
-version(with_tecplot_binary) {
 import tecplot_writer;
-}
+
 
 void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
                   string addVarsStr, string luaRefSoln,
-                  bool vtkxmlFlag, bool binary_format, bool tecplotBinaryFlag, bool tecplotAsciiFlag,
+                  bool vtkxmlFlag, bool binary_format,
+                  bool tecplotBinaryFlag, bool tecplotAsciiFlag, bool tecplotAsciiLegacyFlag,
                   string outputFileName, string sliceListStr,
                   string surfaceListStr, string extractStreamStr, string trackWaveStr,
                   string extractLineStr, string computeLoadsOnGroupStr,
@@ -169,6 +169,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
     //
     version(with_tecplot_binary) {
     if (tecplotBinaryFlag) {
+        // Use Pierpaolo's Tecplot-writer module.
         ensure_directory_is_present(plotDir);
         writeln("Writing Tecplot (binary) file(s) to directory \"", plotDir, "\"");
         foreach (tindx; tindx_list_to_plot) {
@@ -198,7 +199,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
                 throw new FlowSolverException(errMsg);
             }
         }
-    }
+    } // end if tecplotBinaryFlag
     }
     else {
     if (tecplotBinaryFlag) {
@@ -207,7 +208,32 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
     }   
     } 
     if (tecplotAsciiFlag) {
-        writeln("writing Tecplot file(s) to directory \"", plotDir, "\"");
+        // Use Pierpaolo's tecplot-writer module.
+        ensure_directory_is_present(plotDir);
+        writeln("writing Tecplot ASCII-text file(s) to directory \"", plotDir, "\"");
+        foreach (tindx; tindx_list_to_plot) {
+            writeln("  tindx= ", tindx);
+            double timeStamp = times_dict[tindx];
+            auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nFluidBlocks);
+            soln.add_aux_variables(addVarsList);
+            string fname = format("%s/%s-t%04d.tec", plotDir, jobName, tindx);
+            File fp = writeTecplotAsciiHeader(jobName, tindx, fname, soln.flowBlocks[0].variableNames);
+            foreach (jb; 0 .. GlobalConfig.nFluidBlocks) {
+                int zoneType;
+                size_t[][] connList;
+                prepareGridConnectivity(soln.gridBlocks[jb], zoneType, connList);
+                writeTecplotAsciiZoneHeader(soln.flowBlocks[jb], soln.gridBlocks[jb], jb, fp,
+                                            soln.flowBlocks[jb].variableNames, timeStamp, zoneType);
+                writeTecplotAsciiZoneData(soln.flowBlocks[jb], soln.gridBlocks[jb], fp,
+                                          soln.flowBlocks[jb].variableNames, connList);
+            }
+            fp.close();
+        }
+    } // end 
+    if (tecplotAsciiLegacyFlag) {
+        // For structured-grid blocks, we had an old Tecplot writer from long ago.
+        ensure_directory_is_present(plotDir);
+        writeln("writing Tecplot ASCII-text (Legacy) file(s) to directory \"", plotDir, "\"");
         foreach (tindx; tindx_list_to_plot) {
             writeln("  tindx= ", tindx);
             auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nFluidBlocks);

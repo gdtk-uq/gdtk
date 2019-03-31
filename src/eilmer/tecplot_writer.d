@@ -15,7 +15,9 @@ import std.stdio;
 import std.conv;
 import std.string;
 
+version(with_tecplot_binary) {
 import tecio;
+}
 import geom;
 import flowsolution;
 import fvcore: FlowSolverException;
@@ -120,8 +122,9 @@ void prepareGridConnectivity(Grid grid, ref int zoneType, ref size_t[][] connLis
             connList ~= transformCellConnectivity(grid.get_vtx_id_list_for_cell(i), cellType);
         }
     }
-}
+} // end prepareGridConnectivity()
 
+version(with_tecplot_binary) {
 int writeTecplotBinaryHeader(string jobName, int tindx, string fileName, string[] varNames)
 {   
     string varstr;
@@ -131,6 +134,7 @@ int writeTecplotBinaryHeader(string jobName, int tindx, string fileName, string[
     }
     auto title = format("%s-t%04d", jobName, tindx);
     return dtecini142(title, varstr, fileName);
+} // end writeTecplotBinaryHeader()
 }
 
 File writeTecplotAsciiHeader(string jobName, int tindx, string fileName, string[] varNames)
@@ -144,8 +148,9 @@ File writeTecplotAsciiHeader(string jobName, int tindx, string fileName, string[
     }
     fp.write("\n");
     return fp;
-}
+} // end writeTecplotAsciiHeader()
 
+version(with_tecplot_binary) {
 int writeTecplotBinaryZoneHeader(BlockFlow flow, Grid grid, size_t idx,
                                  string[] varNames, double timestamp, int zoneType)
 {
@@ -167,6 +172,7 @@ int writeTecplotBinaryZoneHeader(BlockFlow flow, Grid grid, size_t idx,
     //strandId=idx+1 allows tecplot to be timeaware
     return dteczne142(zonetitle, zoneType, to!int(grid.nvertices), to!int(grid.ncells), 0,
                       timestamp, to!int(idx+1), ValueLocation);
+} // end writeTecplotBinaryZoneHeader()
 }
 
 void writeTecplotAsciiZoneHeader(BlockFlow flow, Grid grid, size_t idx, File fp,
@@ -201,8 +207,9 @@ void writeTecplotAsciiZoneHeader(BlockFlow flow, Grid grid, size_t idx, File fp,
         fp.writef("%d,", i+4); // +4 to account for pos.x, pos.y and pos.z in locations 1, 2, and 3.
     }
     fp.write("] = CELLCENTERED) \n");
-}
+} // end writeTecplotAsciiZoneHeader()
 
+version(with_tecplot_binary) {
 void writeTecplotBinaryZoneData(BlockFlow flow, Grid grid, string[] varNames, size_t[][] conn)
 {
     //writing nodal information
@@ -238,6 +245,7 @@ void writeTecplotBinaryZoneData(BlockFlow flow, Grid grid, string[] varNames, si
         if (dtecnode142(c) != 0)
             throw new FlowSolverException("Error writing data in writeTecplotBinaryZoneData");
     }
+} // end writeTecplotBinaryZoneData()
 }
 
 void writeTecplotAsciiZoneData(BlockFlow flow, Grid grid, File fp,
@@ -306,9 +314,11 @@ void writeTecplotAsciiZoneData(BlockFlow flow, Grid grid, File fp,
         foreach (id; c) fp.writef(" %d", id);
         fp.write("\n");
     }
-}
+} // end writeTecplotAsciiZoneData()
 
+version(with_tecplot_binary) {
 int closeTecplotBinaryFile()
 {
     return dtecend142();
+}
 }

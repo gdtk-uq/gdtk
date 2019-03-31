@@ -124,6 +124,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
   --binary-format                    use binary within the VTK-XML
   --tecplot                          write a binary szplt file for Tecplot
   --tecplot-ascii                    write an ASCII (text) file for Tecplot
+  --tecplot-ascii-legacy             write an ASCII (legacy, text) file for Tecplot
   --plot-dir=<string>                defaults to plot
   --output-file=<string>             defaults to stdout
   --slice-list=\"blk-range,i-range,j-range,k-range;...\"
@@ -179,6 +180,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
     bool binaryFormat = false;
     bool tecplotBinaryFlag = false;
     bool tecplotAsciiFlag = false;
+    bool tecplotAsciiLegacyFlag = false;
     string plotDir = "plot";
     string outputFileName = "";
     string sliceListStr = "";
@@ -216,6 +218,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
                "binary-format", &binaryFormat,
                "tecplot", &tecplotBinaryFlag,
                "tecplot-ascii", &tecplotAsciiFlag,
+               "tecplot-ascii-legacy", &tecplotAsciiLegacyFlag,
                "plot-dir", &plotDir,
                "output-file", &outputFileName,
                "slice-list", &sliceListStr,
@@ -462,6 +465,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
                 writeln("  binaryFormat: ", binaryFormat);
                 writeln("  tecplotBinaryFlag: ", tecplotBinaryFlag);
                 writeln("  tecplotAsciiFlag: ", tecplotAsciiFlag);
+                writeln("  tecplotAsciiLegacyFlag: ", tecplotAsciiLegacyFlag);
                 writeln("  plotDir: ", plotDir);
                 writeln("  outputFileName: ", outputFileName);
                 writeln("  sliceListStr: ", sliceListStr);
@@ -478,7 +482,8 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
             }
             post_process(plotDir, listInfoFlag, tindxPlot,
                          addVarsStr, luaRefSoln,
-                         vtkxmlFlag, binaryFormat, tecplotBinaryFlag, tecplotAsciiFlag,
+                         vtkxmlFlag, binaryFormat,
+                         tecplotBinaryFlag, tecplotAsciiFlag, tecplotAsciiLegacyFlag,
                          outputFileName, sliceListStr, surfaceListStr,
                          extractStreamStr, trackWaveStr, extractLineStr, computeLoadsOnGroupStr,
                          probeStr, outputFormat, normsStr, regionStr, extractSolidLineStr);
