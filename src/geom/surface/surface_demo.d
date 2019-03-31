@@ -47,6 +47,9 @@ void main()
     auto spp = new SweptPathPatch(cA, cB);
     writeln("spp= ", spp);
     writeln("spp(0.5,0.5)= ", spp(0.5, 0.5));
+
+    writeln("Generating VTK-XML of AOPatch.");
+    writeSurfaceAsVtkXml(my_AOpatch, "aopatch.vts", 25, 50);
     
     writeln("Done surface_demo.");
 }

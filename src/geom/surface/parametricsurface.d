@@ -33,3 +33,29 @@ public:
     abstract ParametricSurface dup() const;
     abstract override string toString() const;
 } // end class ParametricSurface
+
+void writeSurfaceAsVtkXml(ParametricSurface surf, string fileName, int nrPts, int nsPts)
+{
+    double dr = 1.0/(nrPts-1);
+    double ds = 1.0/(nsPts-1);
+    auto f = File(fileName, "w");
+    f.writeln("<VTKFile type=\"StructuredGrid\" version=\"1.0\" header_type=\"UInt64\">");
+    f.writefln("  <StructuredGrid WholeExtent=\"%d %d %d %d 0 0\">", 0, nrPts-1, 0, nsPts-1);
+    f.writefln("    <Piece Extent=\"%d %d %d %d 0 0\">",  0, nrPts-1, 0, nsPts-1);
+    f.writeln("      <Points>");
+    f.writeln("        <DataArray type=\"Float32\" Name=\"Points\" NumberOfComponents=\"3\" format=\"ascii\">");
+    foreach (j; 0 .. nsPts) {
+        foreach (i; 0 .. nrPts) {
+            auto r = i*dr;
+            auto s = j*ds;
+            auto p = surf(r, s);
+            f.writefln("       %20.16e %20.16e %20.16e", p.x, p.y, p.z);
+        }
+    }
+    f.writeln("        </DataArray>");
+    f.writeln("      </Points>");
+    f.writeln("    </Piece>");
+    f.writeln("  </StructuredGrid>");
+    f.writeln("</VTKFile>");
+    f.close();
+}
