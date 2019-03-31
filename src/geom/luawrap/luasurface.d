@@ -48,6 +48,8 @@ ParametricSurface checkSurface(lua_State* L, int index) {
         return checkObj!(LuaFnSurface, LuaFnSurfaceMT)(L, index);
     if ( isObjType(L, index, SubRangedSurfaceMT ) )
         return checkObj!(SubRangedSurface, SubRangedSurfaceMT)(L, index);
+    if ( isObjType(L, index, BezierPatchMT) )
+        return checkObj!(BezierPatch, BezierPatchMT)(L, index);
     // if no match found then
     return null;
 }
@@ -68,6 +70,21 @@ extern(C) int opCallSurface(T, string MTname)(lua_State* L)
     auto s = luaL_checknumber(L, 3);
     auto pt = surface(r, s);
     return pushVector3(L, pt);
+}
+
+extern(C) int luaWriteSurfaceAsVtkXml(lua_State *L)
+{
+    int narg = lua_gettop(L);
+    if (narg < 4) {
+        string errMsg = "Not enough arguments passed to writeSurfaceAsVtkXml\n";
+        luaL_error(L, errMsg.toStringz);
+    }
+    auto surface = checkSurface(L, 1);
+    string fName = to!string(luaL_checkstring(L, 2));
+    int nrPts = luaL_checkint(L, 3);
+    int nsPts = luaL_checkint(L, 4);
+    writeSurfaceAsVtkXml(surface, fName, nrPts, nsPts);
+    return 0;
 }
 
 
@@ -699,6 +716,19 @@ extern(C) int newBezierPatch(lua_State* L)
     return 1;
 } // end newBezierPatch()
 
+extern(C) int luaWriteCtrlPtsAsVtkXml(lua_State *L) 
+{
+    int narg = lua_gettop(L);
+    if (narg < 2) {
+        string errMsg = "Not enough arguments passed to writeCtrlPtsVtkXml\n";
+        luaL_error(L, errMsg.toStringz);
+    }
+    auto bPatch = checkObj!(BezierPatch, BezierPatchMT)(L, 1);
+    string fName = to!string(luaL_checkstring(L, 2));
+    writeCtrlPtsAsVtkXml(bPatch, fName);
+    return 0;
+}
+
 
 /* ---------- convenience functions -------------- */
 
@@ -913,8 +943,12 @@ void registerSurfaces(lua_State* L)
     lua_setglobal(L, BezierPatchMT.toStringz);
     lua_getglobal(L, BezierPatchMT.toStringz); lua_setglobal(L, "BezierSurface"); // alias
 
+    // Register function to write Bezier control points.
+    lua_pushcfunction(L, &luaWriteCtrlPtsAsVtkXml); lua_setglobal(L, "writeCtrlPtsAsVtkXml");
+
     // Register utility functions.
     lua_pushcfunction(L, &isSurface); lua_setglobal(L, "isSurface");
     lua_pushcfunction(L, &makePatch); lua_setglobal(L, "makePatch");
     lua_pushcfunction(L, &makePatch); lua_setglobal(L, "makeSurface"); // alias
+    lua_pushcfunction(L, &luaWriteSurfaceAsVtkXml); lua_setglobal(L, "writeSurfaceAsVtkXml");
 } // end registerSurfaces()

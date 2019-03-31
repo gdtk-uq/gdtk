@@ -5,6 +5,7 @@
 
 module geom.surface.bezierpatch;
 
+import std.stdio : File;
 import std.conv;
 import nm.complex;
 import nm.number;
@@ -76,8 +77,32 @@ public:
 
 private:
     Bezier[] _b1s;
-} // end class CoonsPatch
+} // end class BezierPatch
 
+void writeCtrlPtsAsVtkXml(BezierPatch bPatch, string fileName)
+{
+    auto n = bPatch.Q.length;
+    auto m = bPatch.Q[0].length;
+
+    auto f = File(fileName, "w");
+    f.writeln("<VTKFile type=\"StructuredGrid\" version=\"1.0\" header_type=\"UInt64\">");
+    f.writefln("  <StructuredGrid WholeExtent=\"%d %d %d %d 0 0\">", 0, n-1, 0, m-1);
+    f.writefln("    <Piece Extent=\"%d %d %d %d 0 0\">",  0, n-1, 0, m-1);
+    f.writeln("      <Points>");
+    f.writeln("        <DataArray type=\"Float32\" Name=\"Points\" NumberOfComponents=\"3\" format=\"ascii\">");
+    foreach (j; 0 .. m) {
+        foreach (i; 0 .. n) {
+            auto p = bPatch.Q[i][j];
+            f.writefln("       %20.16e %20.16e %20.16e", p.x, p.y, p.z);
+        }
+    }
+    f.writeln("        </DataArray>");
+    f.writeln("      </Points>");
+    f.writeln("    </Piece>");
+    f.writeln("  </StructuredGrid>");
+    f.writeln("</VTKFile>");
+    f.close();
+}
 
 version(bezierpatch_test) {
     import util.msg_service;
