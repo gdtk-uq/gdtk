@@ -260,7 +260,7 @@ void writeTecplotAsciiZoneData(BlockFlow flow, Grid grid, File fp,
     string values_format = " %.8e";
     // Writing nodal data for x,y,z 
     foreach (i; 0 .. grid.nvertices) {
-        fp.writef(values_format, uflowz(grid[i].x));
+        fp.writef(values_format, uflowz(grid[i].x.re));
         j += 1;
         if (j == values_per_row) {
             fp.write("\n");
@@ -271,7 +271,7 @@ void writeTecplotAsciiZoneData(BlockFlow flow, Grid grid, File fp,
     j = 0;
     foreach (i; 0 .. grid.nvertices)
     {
-        fp.writef(values_format, uflowz(grid[i].y));
+        fp.writef(values_format, uflowz(grid[i].y.re));
         j += 1;
         if (j == values_per_row) {
             fp.write("\n");
@@ -282,7 +282,7 @@ void writeTecplotAsciiZoneData(BlockFlow flow, Grid grid, File fp,
     j = 0;
     foreach (i; 0 .. grid.nvertices)
     {
-        fp.writef(values_format, uflowz(grid[i].z));
+        fp.writef(values_format, uflowz(grid[i].z.re));
         j += 1;
         if (j == values_per_row) {
             fp.write("\n");
