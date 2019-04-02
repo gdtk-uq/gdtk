@@ -115,6 +115,53 @@ private:
 
 } // end class BezierTrianglePatch
 
+void writeBezierTriangleCtrlPtsAsVtkXml(BezierTrianglePatch btp, string fileName)
+{
+    auto nPtsTotal = btp.B.length;
+    
+    auto f = File(fileName, "w");
+    f.writeln("<VTKFile type=\"PolyData\" version=\"1.0\" header_type=\"UInt64\">");
+    f.writeln("  <PolyData>");
+    f.writefln("    <Piece NumberOfPoints=\"%d\" NumberOfVerts=\"0\" NumberOfLines=\"0\" NumberOfStrips=\"0\" NumberOfPolys=\"0\" >",  nPtsTotal);
+    f.writeln("       <Points>");
+    f.writeln("         <DataArray type=\"Float32\" Name=\"Points\" NumberOfComponents=\"3\" format=\"ascii\">");
+    foreach (ref p; btp.B) {
+        f.writefln("       %20.16e %20.16e %20.16e", p.x, p.y, p.z);
+    }
+    f.writeln("        </DataArray>");
+    f.writeln("      </Points>");
+    f.writeln("    </Piece>");
+    f.writeln("  </PolyData>");
+    f.writeln("</VTKFile>");
+    f.close();
+}
+
+void writeBezierTriangleAsVtkXml(BezierTrianglePatch btp, string fileName, int nEdgePts)
+{
+    int nPtsTotal = nEdgePts*(nEdgePts+1)/2;
+    double du = 1.0/(nEdgePts-1);
+    double dv = du;
+    
+    auto f = File(fileName, "w");
+    f.writeln("<VTKFile type=\"PolyData\" version=\"1.0\" header_type=\"UInt64\">");
+    f.writeln("  <PolyData>");
+    f.writefln("    <Piece NumberOfPoints=\"%d\" NumberOfVerts=\"0\" NumberOfLines=\"0\" NumberOfStrips=\"0\" NumberOfPolys=\"0\" >",  nPtsTotal);
+    f.writeln("       <Points>");
+    f.writeln("         <DataArray type=\"Float32\" Name=\"Points\" NumberOfComponents=\"3\" format=\"ascii\">");
+    foreach (u; iota(0.0, 1.0+0.5*du, du)) {
+        foreach (v; iota(0.0, (1.0-u)+0.5*dv, dv)) {
+            auto p = btp(u, v);
+            f.writefln("       %20.16e %20.16e %20.16e", p.x, p.y, p.z);
+        }
+    }
+    f.writeln("        </DataArray>");
+    f.writeln("      </Points>");
+    f.writeln("    </Piece>");
+    f.writeln("  </PolyData>");
+    f.writeln("</VTKFile>");
+    f.close();
+}
+
 
 version(beziertrianglepatch_test) {
     import util.msg_service;
