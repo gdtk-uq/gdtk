@@ -24,7 +24,8 @@ TEST_PROGRAMS := vector3_test vector3_complex_test \
 	slabvolume_test slabvolume_complex_test \
 	sgrid_test sgrid_complex_test \
 	usgrid_test usgrid_complex_test \
-	univariatefunctions_test svg_test
+	univariatefunctions_test svg_test \
+	beziertrianglepatch_test
 
 DEMO_PROGRAMS := vector3_demo gpath_demo surface_demo volume_demo \
 	univariatefunctions_demo \
@@ -271,6 +272,11 @@ univariatefunctions_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/
 svg_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	dmd -of$@ -debug -g -w -version=$@ \
 		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
+
+beziertrianglepatch_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d
+	dmd -of$@ -debug -g -w -version=$@ \
+		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
+
 
 # The original demo artefacts.
 

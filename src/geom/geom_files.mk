@@ -26,6 +26,7 @@ GEOM_D_FILES := \
 	$(GEOM_DIR)/surface/meshpatch.d \
 	$(GEOM_DIR)/surface/subrangedsurface.d \
 	$(GEOM_DIR)/surface/bezierpatch.d \
+	$(GEOM_DIR)/surface/beziertrianglepatch.d \
 	$(GEOM_DIR)/volume/package.d \
 	$(GEOM_DIR)/volume/parametricvolume.d \
 	$(GEOM_DIR)/volume/tfivolume.d \
