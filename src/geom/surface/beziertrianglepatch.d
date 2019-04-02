@@ -34,10 +34,14 @@
 
 module geom.surface.beziertrianglepatch;
 
+import std.stdio : File;
 import std.conv : text;
 import std.range : iota;
+import std.string : format;
 
-import geom.elements;
+import nm.nelmin;
+
+import geom;
 
 class BezierTrianglePatch {
 public:
@@ -110,6 +114,71 @@ public:
         return _b[n][0];
     }
 
+    double projectPoint(Vector3 p, ref Vector3 q, ref double uFound, ref double vFound)
+    {
+        // Establish an initial guess for u and v
+        double[] samples = [0.0, 0.2, 0.4, 0.8, 1.0];
+        q = opCall(0.0, 0.0);
+        double minDist = distance_between(p, q);
+        double min_u = 0.0;
+        double min_v = 0.0;
+        foreach (u; samples) {
+            foreach (v; samples) {
+                if (u + v > 1.0) break;
+                q = opCall(u, v);
+                double dist = distance_between(p, q);
+                if (dist < minDist) {
+                    minDist = dist;
+                    min_u = u;
+                    min_v = v;
+                }
+            }
+        }
+
+        // Define function to minimize
+        double penalty = 1.0e6 * minDist;
+        double fMin(double[] x)
+        {
+            double u = x[0];
+            double v = x[1];
+            // Check that u and v are feasible.
+            // Apply penalty if not.
+            if (u < 0.0) return penalty;
+            if (v < 0.0) return penalty;
+            if (u + v > 1.0) return penalty;
+            // Now proceed to evaluate distance.
+            q = opCall(u, v);
+            return distance_between(p, q);
+        }
+
+        // Set up initial guess
+        double[] x = [min_u, min_v];
+
+        // Call optimizer
+        double f_min;
+        int n_fe, n_restart;
+        double[] dx = [0.001, 0.001];
+        double tol = 1.0e-9;
+        int max_steps = 1000;
+
+        bool success = nm.nelmin.minimize!(fMin, double)(x, f_min, n_fe, n_restart, dx, tol, max_steps);
+
+        if (success) {
+            uFound = x[0];
+            vFound = x[1];
+            q = opCall(uFound, vFound);
+            return distance_between(p, q);
+        }
+
+        // Otherwise, we failed in the minimize step.
+        string errMsg = "Error in BezierTrianglePatch.projectPoint()\n";
+        errMsg ~= "Optimizer stats:\n";
+        errMsg ~= format("  number of function evaluations: %d\n", n_fe);
+        errMsg ~= format("  number of restarts: %d\n", n_restart);
+        errMsg ~= format("  minimum of function found: %12.6e\n", f_min);
+        throw new Exception(errMsg);
+    }
+
 private:
     Vector3[][] _b; // working space for de Casteljau algorithm
 
@@ -163,9 +232,11 @@ void writeBezierTriangleAsVtkXml(BezierTrianglePatch btp, string fileName, int n
 }
 
 
+
 version(beziertrianglepatch_test) {
     import util.msg_service;
     import std.stdio;
+    import std.math;
     int main()
     {
         // Example on 17.1 on p. 312 in Farin (2001)
@@ -178,6 +249,15 @@ version(beziertrianglepatch_test) {
         auto p = btp(u, v);
         // Farin gives results as (2, 2, 7/3);
         assert(approxEqualVectors(p, Vector3(2, 2, 7./3)), failedUnitTest());
+
+        // Test projection of point that is ON surface
+        Vector3 q;
+        auto dist = btp.projectPoint(p, q, u, v);
+        assert(dist < 1.0e-9, failedUnitTest());
+        assert(approxEqualVectors(q, Vector3(2, 2, 7./3)), failedUnitTest());
+        assert(approxEqual(u, 1./3, 1.0e-6), failedUnitTest());
+        assert(approxEqual(v, 1./3, 1.0e-6), failedUnitTest());
+
         return 0;
     }
 
