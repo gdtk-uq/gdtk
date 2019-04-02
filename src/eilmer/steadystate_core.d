@@ -1221,7 +1221,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             blk.FU[cellCount+Y_MOM] = -blk.FU[cellCount+Y_MOM];
             if ( blk.myConfig.dimensions == 3 )
                 blk.FU[cellCount+Z_MOM] = -blk.FU[cellCount+Z_MOM];
-            blk.r0[cellCount+TOT_ENERGY] = -blk.FU[cellCount+TOT_ENERGY];
+            blk.FU[cellCount+TOT_ENERGY] = -blk.FU[cellCount+TOT_ENERGY];
             if ( local_with_k_omega ) {
                 blk.FU[cellCount+TKE] = -blk.FU[cellCount+TKE];
                 blk.FU[cellCount+OMEGA] = -0.001*blk.FU[cellCount+OMEGA];
@@ -1243,7 +1243,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             blk.FU[cellCount+Y_MOM] = -blk.FU[cellCount+Y_MOM];
             if ( blk.myConfig.dimensions == 3 )
                 blk.FU[cellCount+Z_MOM] = -blk.FU[cellCount+Z_MOM];
-            blk.r0[cellCount+TOT_ENERGY] = -blk.FU[cellCount+TOT_ENERGY];
+            blk.FU[cellCount+TOT_ENERGY] = -blk.FU[cellCount+TOT_ENERGY];
             if ( local_with_k_omega ) {
                 blk.FU[cellCount+TKE] = -blk.FU[cellCount+TKE];
                 blk.FU[cellCount+OMEGA] = -1000*blk.FU[cellCount+OMEGA];
