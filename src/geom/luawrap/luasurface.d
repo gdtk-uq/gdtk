@@ -29,8 +29,10 @@ immutable string MeshPatchMT = "MeshPatch";
 immutable string LuaFnSurfaceMT = "LuaFnSurface";
 immutable string SubRangedSurfaceMT = "SubRangedSurface";
 immutable string BezierPatchMT = "BezierPatch";
+immutable string BezierTrianglePatchMT = "BezierTrianglePatchMT";
 
 static const(ParametricSurface)[] surfaceStore;
+static const(BezierTrianglePatch)[] triPatchStore;
 
 ParametricSurface checkSurface(lua_State* L, int index) {
     // We have to do a brute force test for each object type, in turn.
@@ -660,7 +662,7 @@ A table with input parameters is expected as the first argument.`;
 extern(C) int newBezierPatch(lua_State* L)
 {
     int narg = lua_gettop(L);
-    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+    if ( !(narg == 2 && lua_istable(L, 2)) ) {
         // We did not get what we expected as arguments.
         string errMsg = "Expected BezierPatch:new{}; ";
         errMsg ~= "maybe you tried BezierPatch.new{}.";
@@ -780,6 +782,170 @@ extern(C) int makePatch(lua_State* L)
     }
     return 1;
 } // end makePatch()
+
+
+/**
+ * This is the constructor for a BezierTrianglePatch to be used from the Lua interface.
+ *
+ * At successful completion of this function, a new BezierTrianglePatch object
+ * is pushed onto the Lua stack.
+ *
+ * Construction is:
+ * -------------------------
+ * patch = BezierTrianglePatch:new{points=Q, degree=n}
+ * --------------------------
+ * 
+ * points  : a linear array of points Q
+ * degree  : degree of patch
+ *
+ * A degree n Bezier triangle has (n+1)(n+2)/2 points.
+ * The points are given in linear order. An example for
+ * n=3 is:
+ *                     + b_(0,3,0)
+ *
+ *              + b_(0,2,1)   + b_(1,2,0)
+ *
+ *       + b_(0,1,2)   + b(1,1,1)    + b(2,1,0)
+ *
+ * + b_(0,0,3)  + b_(1,0,2)  + b_(2,0,1)    + b_(3,0,0)
+ *
+ * Array entries are:
+ * Q = [b_(3,0,0), b_(2,1,0), b_(2,0,1), b_(1,2,0), b_(1,1,1),
+ *      b_(1,0,2), b_(0,3,0), b_(0,2,1), b_(0,1,2), b_(0,0,3)]
+ *
+ * As a loop, the entries are:
+ *
+ *    for i=n,0,-1 do
+ *        for j=n-i,0,-1 do
+ *            k = n - (i+j)
+ *            pts[#pts+1] = b_(i,j,k)
+ *        end
+ *    end
+ */
+
+extern(C) int newBezierTrianglePatch(lua_State* L)
+{
+    int narg = lua_gettop(L);
+    if ( !(narg == 2 && lua_istable(L, 2)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Excepted BezierTrianglePatch:new{};\n";
+        errMsg ~= "Maybe you tried BezierTrianglePatch.new{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if (!checkAllowedNames(L, 1, ["points", "degree"])) {
+        string errMsg = "Error in call to BezierTrianglePatch:new{}.\n";
+        errMsg ~= "Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_getfield(L, 1, "degree");
+    int n = to!int(luaL_checkint(L, -1));
+    lua_pop(L, 1);
+    lua_getfield(L, 1, "points");
+    if (!lua_istable(L, -1)) {
+        string errMsg = "Error in call to BezierTrianglePatch:new{}.\n";
+        errMsg ~= "An array is expected for 'points'.\n";
+        luaL_error(L, errMsg.toStringz);
+    }
+    int nPtsExpected = (n+1)*(n+2)/2;
+    int nPts = to!int(lua_objlen(L, -1));
+    if (nPts != nPtsExpected) {
+        string errMsg = "Error in call to BezierTrianglePatch:new{}.\n";
+        errMsg ~= "The number of supplied points is not consistent with the supplied degree of patch.\n";
+        errMsg ~= format("The degree is %d, so %d points are expected.\n", n, nPtsExpected);
+        errMsg ~= format("The number of points found is %d.\n", nPts);
+        luaL_error(L, errMsg.toStringz);
+    }
+    Vector3[] Q;
+    foreach (i; 1 .. nPts+1) {
+        lua_rawgeti(L, -1, i);
+        Q ~= *(checkVector3(L, -1));
+        lua_pop(L, 1);
+    }
+    lua_pop(L, 1);
+    // Now try to construct object, and keep a D copy in store.
+    auto bezTriPatch = new BezierTrianglePatch(Q, n);
+    triPatchStore ~= pushObj!(BezierTrianglePatch, BezierTrianglePatchMT)(L, bezTriPatch);
+    return 1;
+}
+
+BezierTrianglePatch checkBezierTrianglePatch(lua_State* L, int index)
+{
+    if (isObjType(L, index, BezierTrianglePatchMT))
+        return checkObj!(BezierTrianglePatch, BezierTrianglePatchMT)(L, index);
+    // no match found
+    return null;
+}
+
+extern(C) int opCallBezierTrianglePatch(lua_State* L)
+{
+    auto bezTri = checkBezierTrianglePatch(L, 1);
+    auto u = luaL_checknumber(L, 2);
+    auto v = luaL_checknumber(L, 3);
+    auto p = bezTri(u, v);
+    return pushVector3(L, p);
+}
+
+extern(C) int writeBezierTriangleCtrlPtsAsVtkXml(lua_State *L)
+{
+    int narg = lua_gettop(L);
+    if (narg < 2) {
+        string errMsg = "Not enough arguments passed to writeBezierTriangleCtrlPtsAsVtkXml().\n";
+        luaL_error(L, errMsg.toStringz);
+    }
+    auto bezTri = checkBezierTrianglePatch(L, 1);
+    string fName = to!string(luaL_checkstring(L, 2));
+    geom.writeBezierTriangleCtrlPtsAsVtkXml(bezTri, fName);
+    return 0;
+}
+
+extern(C) int writeBezierTriangleAsVtkXml(lua_State* L)
+{
+    int narg = lua_gettop(L);
+    if (narg < 3) {
+        string errMsg = "Not enough arguments passed to writeBezierTriangleCtrlPtsAsVtkXml().\n";
+        luaL_error(L, errMsg.toStringz);
+    }
+    auto bezTri = checkBezierTrianglePatch(L, 1);
+    string fName = to!string(luaL_checkstring(L, 2));
+    int nEdgePts = luaL_checkint(L, 3);
+    geom.writeBezierTriangleAsVtkXml(bezTri, fName, nEdgePts);
+    return 0;
+}
+
+extern(C) int bezierTriangleFromPointCloud(lua_State* L)
+{
+    int narg = lua_gettop(L);
+    if (narg < 5) {
+        string errMsg = "Not enough arguments passed to bezierTriangleFromPointCloud().\n";
+        luaL_error(L, errMsg.toStringz);
+    }
+    if (!lua_istable(L, 1)) {
+        string errMsg = "An array of points is expected as first argument in\n";
+        errMsg ~= "bezierTriangleFromPointCloud().\n";
+        errMsg ~= "No points array found.\n";
+        luaL_error(L, errMsg.toStringz);
+    }
+    int nPts = to!int(lua_objlen(L, 1));
+    Vector3[] pts;
+    foreach (i; 1 .. nPts+1) {
+        lua_rawgeti(L, 1, i);
+        pts ~= *(checkVector3(L, -1));
+        lua_pop(L, 1);
+    }
+    auto b0 = checkObj!(Bezier, BezierMT)(L, 2);
+    auto b1 = checkObj!(Bezier, BezierMT)(L, 3);
+    auto b2 = checkObj!(Bezier, BezierMT)(L, 4);
+    int n = luaL_checkint(L, 5);
+    BezierTrianglePatch initGuess;
+    if (narg >= 6) {
+        // Attempt to grab a BezierTriangle
+        initGuess = checkBezierTrianglePatch(L, 6);
+    }
+    auto bezTri = geom.bezierTriangleFromPointCloud(pts, b0, b1, b2, n, initGuess);
+    triPatchStore ~= pushObj!(BezierTrianglePatch, BezierTrianglePatchMT)(L, bezTri);
+    return 1;
+}
 
 void registerSurfaces(lua_State* L)
 {
@@ -951,4 +1117,30 @@ void registerSurfaces(lua_State* L)
     lua_pushcfunction(L, &makePatch); lua_setglobal(L, "makePatch");
     lua_pushcfunction(L, &makePatch); lua_setglobal(L, "makeSurface"); // alias
     lua_pushcfunction(L, &luaWriteSurfaceAsVtkXml); lua_setglobal(L, "writeSurfaceAsVtkXml");
+
+    // Register the BezierTrianglePatch object
+    luaL_newmetatable(L, BezierTrianglePatchMT.toStringz);
+    
+    /* metatable.__index = metatable */
+    lua_pushvalue(L, -1); // duplicates the current metatable
+    lua_setfield(L, -2, "__index");
+
+    /* Register methods for use. */
+    lua_pushcfunction(L, &newBezierTrianglePatch);
+    lua_setfield(L, -2, "new");
+    lua_pushcfunction(L, &opCallBezierTrianglePatch);
+    lua_setfield(L, -2, "__call");
+    lua_pushcfunction(L, &opCallBezierTrianglePatch);
+    lua_setfield(L, -2, "eval");
+
+    lua_setglobal(L, BezierTrianglePatchMT.toStringz);
+    lua_getglobal(L, BezierTrianglePatchMT.toStringz); lua_setglobal(L, "BezierTriangleSurface"); // alias
+
+    lua_pushcfunction(L, &writeBezierTriangleCtrlPtsAsVtkXml);
+    lua_setglobal(L, "writeBezierTriangleCtrlPtsAsVtkXml");
+    lua_pushcfunction(L, &writeBezierTriangleAsVtkXml);
+    lua_setglobal(L, "writeBezierTriangleAsVtkXml");
+    lua_pushcfunction(L, &bezierTriangleFromPointCloud);
+    lua_setglobal(L, "bezierTriangleFromPointCloud");
+
 } // end registerSurfaces()
