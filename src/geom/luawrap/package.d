@@ -2,6 +2,7 @@ module geom.luawrap;
 
 public import geom.luawrap.luageom;
 public import geom.luawrap.luagpath;
+public import geom.luawrap.luagpath_utils;
 public import geom.luawrap.luasurface;
 public import geom.luawrap.luavolume;
 

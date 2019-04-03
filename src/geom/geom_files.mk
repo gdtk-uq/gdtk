@@ -62,6 +62,7 @@ GEOM_LUAWRAP_FILES := \
 	$(GEOM_DIR)/luawrap/luaunifunction.d \
 	$(GEOM_DIR)/luawrap/luageom.d \
 	$(GEOM_DIR)/luawrap/luagpath.d \
+	$(GEOM_DIR)/luawrap/luagpath_utils.d \
 	$(GEOM_DIR)/luawrap/luasurface.d \
 	$(GEOM_DIR)/luawrap/luavolume.d \
 	$(GEOM_DIR)/luawrap/luagrid.d \
