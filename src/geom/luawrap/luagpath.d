@@ -588,6 +588,41 @@ extern(C) int newBezier(lua_State* L)
     return 1;
 } // end newBezier()
 
+/**
+ * A getter for number of Bezier control points.
+ */
+extern(C) int numberBezierCtrlPoints(lua_State* L)
+{
+    auto bezier = checkObj!(Bezier, BezierMT)(L, 1);
+    lua_pushinteger(L, bezier.B.length);
+    return 1;
+}
+
+/**
+ * A getter/setter for Bezier control points.
+ */
+extern(C) int bezierCtrlPoint(lua_State* L)
+{
+    auto bezier = checkObj!(Bezier, BezierMT)(L, 1);
+    int narg = lua_gettop(L);
+    if (narg < 2) {
+        string errMsg = "Error in call to bez:ctrlPt(): not enough arguments.\n";
+        luaL_error(L, errMsg.toStringz);
+    }
+    int i = to!int(luaL_checkint(L, 2));
+    if (i < 0 || i >= bezier.B.length) {
+        string errMsg = "Error in call to bez:ctrPt(): index out of range.\n";
+        errMsg ~= format("Index is: %d  No. of control points is: %d\n", i, bezier.B.length);
+    }
+    if (narg == 2) {
+        // Treat as getter
+        pushVector3(L, bezier.B[i]);
+        return 1;
+    }
+    // Treat as setter
+    bezier.B[i] = *(checkVector3(L, 3));
+    return 0;
+}
 
 /**
  * The Lua constructor for a Polyline.
@@ -1376,6 +1411,10 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "copy");
     lua_pushcfunction(L, &pathIntersect2D!(Bezier, BezierMT));
     lua_setfield(L, -2, "intersect2D");
+    lua_pushcfunction(L, &numberBezierCtrlPoints);
+    lua_setfield(L, -2, "numberCtrlPts");
+    lua_pushcfunction(L, &bezierCtrlPoint);
+    lua_setfield(L, -2, "ctrlPt");
 
     lua_setglobal(L, BezierMT.toStringz);
 
