@@ -324,6 +324,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
             registerFlowSolution(L);
             registerFlowState(L);
             registerPaths(L);
+            registerGpathUtils(L);
             registerSurfaces(L);
             registerVolumes(L);
             registerUnivariateFunctions(L);
@@ -514,6 +515,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
             registerFlowSolution(L);
             registerFlowState(L);
             registerPaths(L);
+            registerGpathUtils(L);
             registerSurfaces(L);
             registerVolumes(L);
             registerUnivariateFunctions(L);
