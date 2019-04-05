@@ -36,10 +36,12 @@ module geom.surface.beziertrianglepatch;
 
 import std.stdio;
 import std.stdio : File;
-import std.conv : text;
+import std.conv : text, to;
 import std.range : iota;
 import std.string : format;
 import std.algorithm.comparison : max;
+import nm.complex;
+import nm.number;
 
 import nm.nelmin;
 
@@ -124,21 +126,21 @@ public:
         return _b[n][0];
     }
 
-    double projectPoint(Vector3 p, ref Vector3 q, ref double uFound, ref double vFound, bool returnOnFailure=false)
+    number projectPoint(Vector3 p, ref Vector3 q, ref double uFound, ref double vFound, bool returnOnFailure=false)
     {
         // Establish an initial guess for u and v
         double[] samples = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5,
                             0.6, 0.7, 0.8, 0.9, 1.0];
         q = opCall(0.0, 0.0);
-        double minDist = distance_between(p, q);
-        double maxDist = minDist;
+        number minDist = distance_between(p, q);
+        number maxDist = minDist;
         double min_u = 0.0;
         double min_v = 0.0;
         foreach (u; samples) {
             foreach (v; samples) {
                 if (u + v > 1.0) break;
                 q = opCall(u, v);
-                double dist = distance_between(p, q);
+                number dist = distance_between(p, q);
                 if (dist < minDist) {
                     minDist = dist;
                     min_u = u;
@@ -149,11 +151,11 @@ public:
         }
 
         // Define function to minimize
-        double penalty = 1000 * maxDist;
-        double fMin(double[] x)
+        number penalty = 1000 * maxDist;
+        number fMin(number[] x)
         {
-            double u = x[0];
-            double v = x[1];
+            double u = x[0].re;
+            double v = x[1].re;
             // Check that u and v are feasible.
             // Apply penalty if not.
             // We let the values of u and v wander off the
@@ -165,26 +167,26 @@ public:
             if (u + v > 1.1) return penalty;
             // Now proceed to evaluate distance.
             q = opCall(u, v);
-            return distance_between(p, q);
+            return to!number(distance_between(p, q));
         }
 
         // Set up initial guess
-        double[] x = [min_u, min_v];
+        number[] x = [to!number(min_u), to!number(min_v)];
 
         // Call optimizer
-        double f_min;
+        number f_min;
         int n_fe, n_restart;
-        double[] dx = [0.01, 0.01];
+        number[] dx = [to!number(0.01), to!number(0.01)];
         double tol = 1.0e-8;
         int max_steps = 10000;
 
-        bool success = nm.nelmin.minimize!(fMin, double)(x, f_min, n_fe, n_restart, dx, tol, max_steps);
+        bool success = nm.nelmin.minimize!(fMin, number)(x, f_min, n_fe, n_restart, dx, tol, max_steps);
 
         if (success || returnOnFailure) {
-            uFound = x[0];
-            vFound = x[1];
+            uFound = x[0].re;
+            vFound = x[1].re;
             q = opCall(uFound, vFound);
-            return distance_between(p, q);
+            return to!number(distance_between(p, q));
         }
 
         // Otherwise, we failed in the minimize step.
@@ -214,7 +216,7 @@ void writeBezierTriangleCtrlPtsAsVtkXml(BezierTrianglePatch btp, string fileName
     f.writeln("       <Points>");
     f.writeln("         <DataArray type=\"Float32\" Name=\"Points\" NumberOfComponents=\"3\" format=\"ascii\">");
     foreach (ref p; btp.B) {
-        f.writefln("       %20.16e %20.16e %20.16e", p.x, p.y, p.z);
+        f.writefln("       %20.16e %20.16e %20.16e", p.x.re, p.y.re, p.z.re);
     }
     f.writeln("        </DataArray>");
     f.writeln("      </Points>");
@@ -334,7 +336,7 @@ BezierTrianglePatch bezierTriangleFromPointCloud(Vector3[] points, Vector3 p0, V
     auto nCtrlPts = (n+1)*(n+2)/2;
     Vector3[] ctrlPts;
     ctrlPts.length = nCtrlPts;
-    double[] d;
+    number[] d;
 
     // -----------------------------------------------------------------
     // Establish an initial guess for the location of control points
@@ -386,7 +388,7 @@ BezierTrianglePatch bezierTriangleFromPointCloud(Vector3[] points, Vector3 p0, V
     // --------------------------------------------------------------
     // Build cost function to be minimized.
     // --------------------------------------------------------------
-    double fMin(double[] d)
+    number fMin(number[] d)
     {
         // Adjust control points based on supplied design values 'd'.
         size_t pos = 0;
@@ -405,7 +407,7 @@ BezierTrianglePatch bezierTriangleFromPointCloud(Vector3[] points, Vector3 p0, V
         // point locations.
         myBezTriPatch.updateWorkingSpace();
         // Evaluate error between point cloud and triangle batch
-        double err = 0.0;
+        number err = 0.0;
         Vector3 q;
         double uFound, vFound;
         foreach (p; points) {
@@ -418,14 +420,14 @@ BezierTrianglePatch bezierTriangleFromPointCloud(Vector3[] points, Vector3 p0, V
     // ---------------------------------------------------------------------
     // Optimize the placement of control points using Nelder-Mead minimiser
     // ---------------------------------------------------------------------
-    double f_min;
+    number f_min;
     int n_fe, n_restart;
-    double[] dx;
+    number[] dx;
     dx.length = d.length;
     // Make the initial perturbations of control points 1/100th of the longest side length
-    double dp = 0.01*max(distance_between(p0, p1), distance_between(p0, p2), distance_between(p1, p2));
+    number dp = 0.01*max(distance_between(p0, p1), distance_between(p0, p2), distance_between(p1, p2));
     dx[] = dp;
-    bool success = nm.nelmin.minimize!(fMin, double)(d, f_min, n_fe, n_restart, dx, tol, maxSteps);
+    bool success = nm.nelmin.minimize!(fMin, number)(d, f_min, n_fe, n_restart, dx, tol, maxSteps);
     if (success) {
         size_t pos = 0;
         foreach (i; iota(n, -1, -1)) {
@@ -499,7 +501,7 @@ BezierTrianglePatch bezierTriangleFromPointCloud(Vector3[] points, Bezier b0, Be
     auto nCtrlPts = (n+1)*(n+2)/2;
     Vector3[] ctrlPts;
     ctrlPts.length = nCtrlPts;
-    double[] d;
+    number[] d;
 
     // -----------------------------------------------------------------
     // Establish an initial guess for the location of control points
@@ -571,7 +573,7 @@ BezierTrianglePatch bezierTriangleFromPointCloud(Vector3[] points, Bezier b0, Be
     // Build cost function to be minimized.
     // --------------------------------------------------------------
     int count = 0;
-    double fMin(double[] d)
+    number fMin(number[] d)
     {
         // Adjust control points based on supplied design values 'd'.
         size_t pos = 0;
@@ -592,7 +594,7 @@ BezierTrianglePatch bezierTriangleFromPointCloud(Vector3[] points, Bezier b0, Be
         // point locations.
         myBezTriPatch.updateWorkingSpace();
         // Evaluate error between point cloud and triangle batch
-        double err = 0.0;
+        number err = 0.0;
         Vector3 q;
         double uFound, vFound;
         foreach (p; points) {
@@ -610,16 +612,16 @@ BezierTrianglePatch bezierTriangleFromPointCloud(Vector3[] points, Bezier b0, Be
     // ---------------------------------------------------------------------
     // Optimize the placement of control points using Nelder-Mead minimiser
     // ---------------------------------------------------------------------
-    double f_min;
+    number f_min;
     int n_fe, n_restart;
-    double[] dx;
+    number[] dx;
     dx.length = d.length;
     // Make the initial perturbations of control points 1/100th of the longest side length
-    double dp = 0.01*max(distance_between(b0.B[0], b0.B[$-1]),
+    number dp = 0.01*max(distance_between(b0.B[0], b0.B[$-1]),
                          distance_between(b1.B[0], b1.B[$-1]),
                          distance_between(b2.B[0], b2.B[$-1]));
     dx[] = dp;
-    success = nm.nelmin.minimize!(fMin, double)(d, f_min, n_fe, n_restart, dx, tol, maxSteps);
+    success = nm.nelmin.minimize!(fMin, number)(d, f_min, n_fe, n_restart, dx, tol, maxSteps);
     
     
     size_t pos = 0;

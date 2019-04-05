@@ -942,7 +942,8 @@ extern(C) int bezierTriangleFromPointCloud(lua_State* L)
         // Attempt to grab a BezierTriangle
         initGuess = checkBezierTrianglePatch(L, 6);
     }
-    auto bezTri = geom.bezierTriangleFromPointCloud(pts, b0, b1, b2, n, initGuess);
+    int fittingSuccess;
+    auto bezTri = geom.bezierTriangleFromPointCloud(pts, b0, b1, b2, n, initGuess, fittingSuccess);
     triPatchStore ~= pushObj!(BezierTrianglePatch, BezierTrianglePatchMT)(L, bezTri);
     return 1;
 }
