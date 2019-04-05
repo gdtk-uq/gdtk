@@ -34,6 +34,7 @@
 
 module geom.surface.beziertrianglepatch;
 
+import std.stdio;
 import std.stdio : File;
 import std.conv : text;
 import std.range : iota;
@@ -85,10 +86,15 @@ public:
         _b[0][] = B[];
     }
 
+    void updateWorkingSpace()
+    {
+        // After changing control points, we need to reflect this
+        // in the working space.
+        _b[0][] = B[];
+    }
+
     Vector3 opCall(double u, double v)
     {
-        // Ensure _b[0] is up-to-date in case caller has changed.
-        _b[0][] = B[];
         auto w = 1.0 - u - v;
         // We may allow u or v to get slightly larger than 1.0
         // if we are perturbing to get sensitivity.
@@ -198,11 +204,13 @@ private:
 void writeBezierTriangleCtrlPtsAsVtkXml(BezierTrianglePatch btp, string fileName)
 {
     auto nPtsTotal = btp.B.length;
+    auto n = btp.n;
+    auto nCells = n^^2;
     
     auto f = File(fileName, "w");
-    f.writeln("<VTKFile type=\"PolyData\" version=\"1.0\" header_type=\"UInt64\">");
-    f.writeln("  <PolyData>");
-    f.writefln("    <Piece NumberOfPoints=\"%d\" NumberOfVerts=\"0\" NumberOfLines=\"0\" NumberOfStrips=\"0\" NumberOfPolys=\"0\" >",  nPtsTotal);
+    f.writeln("<VTKFile type=\"UnstructuredGrid\" version=\"1.0\" header_type=\"UInt64\">");
+    f.writeln("  <UnstructuredGrid>");
+    f.writefln("    <Piece NumberOfPoints=\"%d\" NumberOfCells=\"%d\">",  nPtsTotal, nCells);
     f.writeln("       <Points>");
     f.writeln("         <DataArray type=\"Float32\" Name=\"Points\" NumberOfComponents=\"3\" format=\"ascii\">");
     foreach (ref p; btp.B) {
@@ -210,8 +218,39 @@ void writeBezierTriangleCtrlPtsAsVtkXml(BezierTrianglePatch btp, string fileName
     }
     f.writeln("        </DataArray>");
     f.writeln("      </Points>");
+    f.writeln("      <Cells>");
+    f.writeln("        <DataArray type=\"Int32\" Name=\"connectivity\">");
+    foreach (i; iota(n, 0, -1)) {
+            foreach (j; iota(n-i, -1, -1)) {
+                auto k = n - (i+j);
+                // Triangle pattern A
+                auto idx0 = toSingleIndex!()(i,j,k);
+                auto idx1 = toSingleIndex!()(i-1,j+1,k);
+                auto idx2 = toSingleIndex!()(i-1,j,k+1);
+                f.writefln("       %d %d %d", idx0, idx1, idx2);
+                // Triangle pattern B
+                if (j == 0) continue;
+                idx1 = toSingleIndex!()(i-1,j,k+1);
+                idx2 = toSingleIndex!()(i,j-1,k+1);
+                f.writefln("       %d %d %d", idx0, idx1, idx2);
+            }
+    }
+    f.writeln("         </DataArray>");
+    f.writeln("         <DataArray type=\"Int32\" Name=\"offsets\">");
+    int offset = 0;
+    foreach (i; 0 .. nCells) {
+        offset += 3;
+        f.writefln("        %d", offset);
+    }
+    f.writeln("         </DataArray>");
+    f.writeln("         <DataArray type=\"UInt8\" Name=\"types\">");
+    foreach (i; 0 .. nCells) {
+        f.writeln("          5");
+    }
+    f.writeln("         </DataArray>");
+    f.writeln("       </Cells>");
     f.writeln("    </Piece>");
-    f.writeln("  </PolyData>");
+    f.writeln("  </UnstructuredGrid>");
     f.writeln("</VTKFile>");
     f.close();
 }
@@ -219,25 +258,58 @@ void writeBezierTriangleCtrlPtsAsVtkXml(BezierTrianglePatch btp, string fileName
 void writeBezierTriangleAsVtkXml(BezierTrianglePatch btp, string fileName, int nEdgePts)
 {
     int nPtsTotal = nEdgePts*(nEdgePts+1)/2;
-    double du = 1.0/(nEdgePts-1);
-    double dv = du;
+    int n = nEdgePts - 1;
+    int nCells = (nEdgePts-1)^^2;
     
     auto f = File(fileName, "w");
-    f.writeln("<VTKFile type=\"PolyData\" version=\"1.0\" header_type=\"UInt64\">");
-    f.writeln("  <PolyData>");
-    f.writefln("    <Piece NumberOfPoints=\"%d\" NumberOfVerts=\"0\" NumberOfLines=\"0\" NumberOfStrips=\"0\" NumberOfPolys=\"0\" >",  nPtsTotal);
+    f.writeln("<VTKFile type=\"UnstructuredGrid\" version=\"1.0\" header_type=\"UInt64\">");
+    f.writeln("  <UnstructuredGrid>");
+    f.writefln("    <Piece NumberOfPoints=\"%d\" NumberOfCells=\"%d\">",  nPtsTotal, nCells);
     f.writeln("       <Points>");
     f.writeln("         <DataArray type=\"Float32\" Name=\"Points\" NumberOfComponents=\"3\" format=\"ascii\">");
-    foreach (u; iota(0.0, 1.0+0.5*du, du)) {
-        foreach (v; iota(0.0, (1.0-u)+0.5*dv, dv)) {
+    foreach (i; iota(n, -1, -1)) {
+        foreach (j; iota(n-i, -1, -1)) {
+            double u = double(i)/n;
+            double v = double(j)/n;
             auto p = btp(u, v);
             f.writefln("       %20.16e %20.16e %20.16e", p.x, p.y, p.z);
         }
     }
     f.writeln("        </DataArray>");
     f.writeln("      </Points>");
+    f.writeln("      <Cells>");
+    f.writeln("        <DataArray type=\"Int32\" Name=\"connectivity\">");
+    foreach (i; iota(n, 0, -1)) {
+            foreach (j; iota(n-i, -1, -1)) {
+                auto k = n - (i+j);
+                // Triangle pattern A
+                auto idx0 = toSingleIndex!()(i,j,k);
+                auto idx1 = toSingleIndex!()(i-1,j+1,k);
+                auto idx2 = toSingleIndex!()(i-1,j,k+1);
+                f.writefln("       %d %d %d", idx0, idx1, idx2);
+                // Triangle pattern B
+                if (j == 0) continue;
+                idx1 = toSingleIndex!()(i-1,j,k+1);
+                idx2 = toSingleIndex!()(i,j-1,k+1);
+                f.writefln("       %d %d %d", idx0, idx1, idx2);
+            }
+    }
+    f.writeln("         </DataArray>");
+    f.writeln("         <DataArray type=\"Int32\" Name=\"offsets\">");
+    int offset = 0;
+    foreach (i; 0 .. nCells) {
+        offset += 3;
+        f.writefln("        %d", offset);
+    }
+    f.writeln("         </DataArray>");
+    f.writeln("         <DataArray type=\"UInt8\" Name=\"types\">");
+    foreach (i; 0 .. nCells) {
+        f.writeln("          5");
+    }
+    f.writeln("         </DataArray>");
+    f.writeln("       </Cells>");
     f.writeln("    </Piece>");
-    f.writeln("  </PolyData>");
+    f.writeln("  </UnstructuredGrid>");
     f.writeln("</VTKFile>");
     f.close();
 }
@@ -329,6 +401,9 @@ BezierTrianglePatch bezierTriangleFromPointCloud(Vector3[] points, Vector3 p0, V
                 myBezTriPatch.B[idx].refz = d[pos]; pos++;
             }
         }
+        // Remember to update working space after changing control
+        // point locations.
+        myBezTriPatch.updateWorkingSpace();
         // Evaluate error between point cloud and triangle batch
         double err = 0.0;
         Vector3 q;
@@ -364,6 +439,9 @@ BezierTrianglePatch bezierTriangleFromPointCloud(Vector3[] points, Vector3 p0, V
                 myBezTriPatch.B[idx].refz = d[pos]; pos++;
             }
         }
+        // Remember to update working space after changing control
+        // point locations.
+        myBezTriPatch.updateWorkingSpace();
         return myBezTriPatch;
     }
     // Otherwise, we failed in the optimizer.
@@ -375,10 +453,10 @@ BezierTrianglePatch bezierTriangleFromPointCloud(Vector3[] points, Vector3 p0, V
     throw new Exception(errMsg);
 }
 
-BezierTrianglePatch bezierTriangleFromPointCloud(Vector3[] points, Bezier b0, Bezier b1, Bezier b2, int n, BezierTrianglePatch initGuess)
+BezierTrianglePatch bezierTriangleFromPointCloud(Vector3[] points, Bezier b0, Bezier b1, Bezier b2, int n, BezierTrianglePatch initGuess, ref int success)
 {
-    double tol = 1.0e-3;
-    int maxSteps = 10000;
+    double tol = 0.01;
+    int maxSteps = 1500;
     // Edges and their directions are defined as: 
     // (_,_,_) = (u,v,w)
     // b_ = Bezier curve
@@ -407,6 +485,17 @@ BezierTrianglePatch bezierTriangleFromPointCloud(Vector3[] points, Bezier b0, Be
     //    : runs from u=1 --> v=1
     //
 
+    // Perform some checks that Bezier end points are (approximately) coincident
+    if (!approxEqualVectors(b0.B[0], b2.B[$-1])) {
+        throw new Error("Error: b0 and b2 end points are not coincident.\n");
+    }
+    if (!approxEqualVectors(b0.B[$-1], b1.B[$-1])) {
+        throw new Error("Error: b0 and b1 end points are not coincident.\n");
+    }
+    if (!approxEqualVectors(b1.B[0], b2.B[0])) {
+        throw new Error("Error: b1 and b2 end points are not coincident.\n");
+    }
+
     auto nCtrlPts = (n+1)*(n+2)/2;
     Vector3[] ctrlPts;
     ctrlPts.length = nCtrlPts;
@@ -419,18 +508,24 @@ BezierTrianglePatch bezierTriangleFromPointCloud(Vector3[] points, Bezier b0, Be
     // These points are not to be touched by the optimiser.
     // Work down b0 curve
     foreach (i, b; b0.B) {
-        ctrlPts[$-n-1-i] = b;
+        writeln("i= ", i);
+        writeln("$-n-1+i= ", ctrlPts.length-n-1+i);
+        ctrlPts[$-n-1+i] = b;
     }
     // Work down b1 curve
     foreach (i, b; b1.B) {
         auto idx = (i+1)*(i+2)/2 - 1;
+        writeln("i= ", i, " idx= ", idx);
         ctrlPts[idx] = b;
     }
     // Work down b2 curve
     foreach (i, b; b2.B) {
         auto idx = i*(i+1)/2;
+        writeln("i= ", i, " idx= ", idx);
         ctrlPts[idx] = b;
     }
+    writeln("After edge curves....");
+    writeln(ctrlPts);
     // The user might have supplied an initial guess.
     // We can use this if the degree is correct.
     if (initGuess !is null && initGuess.n == n) {
@@ -467,12 +562,15 @@ BezierTrianglePatch bezierTriangleFromPointCloud(Vector3[] points, Bezier b0, Be
             }
         }
     }
+    writeln("after initialisation...");
+    writeln(ctrlPts);
     auto myBezTriPatch = new BezierTrianglePatch(ctrlPts, n);
     // -------------- Done: establishing starting guess ------------------------
 
     // --------------------------------------------------------------
     // Build cost function to be minimized.
     // --------------------------------------------------------------
+    int count = 0;
     double fMin(double[] d)
     {
         // Adjust control points based on supplied design values 'd'.
@@ -483,11 +581,16 @@ BezierTrianglePatch bezierTriangleFromPointCloud(Vector3[] points, Bezier b0, Be
                 // Skip edge points
                 if (i == 0 || j == 0 || k == 0) continue;
                 auto idx = toSingleIndex!()(i,j,k);
+                //writeln("i= ", i, " j= ", j, " k= ", k);
+                //writeln("idx= ", idx);
                 myBezTriPatch.B[idx].refx = d[pos]; pos++;
                 myBezTriPatch.B[idx].refy = d[pos]; pos++;
                 myBezTriPatch.B[idx].refz = d[pos]; pos++;
             }
         }
+        // Remember to update working space after changing control
+        // point locations.
+        myBezTriPatch.updateWorkingSpace();
         // Evaluate error between point cloud and triangle batch
         double err = 0.0;
         Vector3 q;
@@ -495,6 +598,11 @@ BezierTrianglePatch bezierTriangleFromPointCloud(Vector3[] points, Bezier b0, Be
         foreach (p; points) {
             err += myBezTriPatch.projectPoint(p, q, uFound, vFound, true);
         }
+        count++;
+        import std.stdio;
+        writefln("count= %d, fMin= %e", count, err);
+        //import core.stdc.stdlib : exit;
+        //exit(1);
         return err;
     }
     // ----------- Done: building cost function ----------------------------
@@ -511,29 +619,27 @@ BezierTrianglePatch bezierTriangleFromPointCloud(Vector3[] points, Bezier b0, Be
                          distance_between(b1.B[0], b1.B[$-1]),
                          distance_between(b2.B[0], b2.B[$-1]));
     dx[] = dp;
-    bool success = nm.nelmin.minimize!(fMin, double)(d, f_min, n_fe, n_restart, dx, tol, maxSteps);
-    if (success) {
-        size_t pos = 0;
-        foreach (i; iota(n, -1, -1)) {
-            foreach (j; iota(n-i, -1, -1)) {
-                auto k = n - (i+j);
-                // Skip edge points
-                if (i == 0 || j == 0 || k == 0) continue;
-                auto idx = toSingleIndex!()(i,j,k);
-                myBezTriPatch.B[idx].refx = d[pos]; pos++;
-                myBezTriPatch.B[idx].refy = d[pos]; pos++;
-                myBezTriPatch.B[idx].refz = d[pos]; pos++;
-            }
+    success = nm.nelmin.minimize!(fMin, double)(d, f_min, n_fe, n_restart, dx, tol, maxSteps);
+    
+    
+    size_t pos = 0;
+    foreach (i; iota(n, -1, -1)) {
+        foreach (j; iota(n-i, -1, -1)) {
+            auto k = n - (i+j);
+            // Skip edge points
+            if (i == 0 || j == 0 || k == 0) continue;
+            auto idx = toSingleIndex!()(i,j,k);
+            myBezTriPatch.B[idx].refx = d[pos]; pos++;
+            myBezTriPatch.B[idx].refy = d[pos]; pos++;
+            myBezTriPatch.B[idx].refz = d[pos]; pos++;
         }
-        return myBezTriPatch;
     }
-    // Otherwise, we failed in the optimizer.
-    string errMsg = "Error in bezierTriangleFromPointCloud().\n";
-    errMsg ~= "Optimizer stats:\n";
-    errMsg ~= format("  number of function evaluations: %d\n", n_fe);
-    errMsg ~= format("  number of restarts: %d\n", n_restart);
-    errMsg ~= format("  minimum of function found: %12.6e\n", f_min);
-    throw new Exception(errMsg);
+    // Remember to update working space after changing control
+    // point locations.
+    myBezTriPatch.updateWorkingSpace();
+    writeln("Final ctrl pts:");
+    writeln(myBezTriPatch.B);
+    return myBezTriPatch;
 }
 
 version(beziertrianglepatch_test) {
@@ -547,6 +653,8 @@ version(beziertrianglepatch_test) {
                        Vector3(3, 3, 6), Vector3(3, 0, 0),
                        Vector3(0, 6, 0), Vector3(0, 3, 0), Vector3(0, 0, 0)];
         auto btp = new BezierTrianglePatch(B, 2);
+        writeBezierTriangleAsVtkXml(btp, "test-tri.vtu", 50);
+        writeBezierTriangleCtrlPtsAsVtkXml(btp, "test-ctrl-pts.vtu");
         double u = 1./3;
         double v = 1./3;
         auto p = btp(u, v);
