@@ -133,6 +133,7 @@ public:
         if ( i >= n ) i = n - 1;  // last segment
         // At this point, t_values[i-1] < t <= t_values[i] (we hope)
         // Have assumed that the t breakpoints are well behaved.
+        // i.e. There are no zero-length segments.
         double t_local;
         if ( i == 0 ) {
             t_local = t / t_values[i];
