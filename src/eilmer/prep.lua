@@ -113,6 +113,8 @@ setmetatable(SteadyStateSolver, sssOptionsHidden)
 sscOptionsHidden = { -- hidden from user
    -- set defaults here
    pseudotime = false,
+   pseudotime_lhs_jacobian_order = 1,
+   adjoint_precondition_matrix_order = 0,
    read_frozen_limiter_values_from_file = false,
    -- sensitivity parameters
    epsilon = 1.0e-30,
@@ -1709,6 +1711,8 @@ function write_config_file(fileName)
 
    f:write('"shape_sensitivity_calculator_options" : {\n')
    f:write(string.format('   "pseudotime": %s,\n', tostring(ShapeSensitivityCalculator.pseudotime)))
+   f:write(string.format('   "pseudotime_lhs_jacobian_order": %d,\n', ShapeSensitivityCalculator.pseudotime_lhs_jacobian_order))
+   f:write(string.format('   "adjoint_precondition_matrix_order": %d,\n', ShapeSensitivityCalculator.adjoint_precondition_matrix_order))
    f:write(string.format('   "read_frozen_limiter_values_from_file": %s,\n', tostring(ShapeSensitivityCalculator.read_frozen_limiter_values_from_file)))
    f:write(string.format('   "epsilon": %.18e,\n', ShapeSensitivityCalculator.epsilon))
    f:write(string.format('   "maxOuterIterations": %d,\n', ShapeSensitivityCalculator.maxOuterIterations))

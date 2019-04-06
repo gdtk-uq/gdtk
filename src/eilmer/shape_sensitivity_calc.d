@@ -433,46 +433,97 @@ void main(string[] args) {
             double CFL = GlobalConfig.sscOptions.cfl0;
             double dt = steadystate_core.determine_initial_dt(CFL);
 
+            int interpolation_order = 2;
+            final switch (GlobalConfig.sscOptions.pseudotime_lhs_jacobian_order) {
+            case 1:
+                interpolation_order = 1;
+                break;
+            case 2:
+                interpolation_order = 2;
+                break;
+            }
             /* low order Jacobian */
             foreach (myblk; parallel(localFluidBlocks,1)) {
-                local_flow_jacobian_transpose(myblk.A, myblk, nPrimitive, 1, EPS, false, false);
+                local_flow_jacobian_transpose(myblk.A, myblk, nPrimitive, interpolation_order, EPS, false, false);
                 foreach (i; 0 .. nPrimitive*myblk.cells.length) {
                     myblk.A[i,i] = myblk.A[i,i] + (1.0/dt);
                 }
             }
 
             foreach (myblk; localFluidBlocks) {
-                form_external_flow_jacobian_block_phase0(myblk, nPrimitive, myblk.myConfig.interpolation_order, EPS);
+                form_external_flow_jacobian_block_phase0(myblk, nPrimitive, interpolation_order, EPS);
             }
             
             foreach (myblk; localFluidBlocks) {
-                form_external_flow_jacobian_block_phase1(nPrimitive, myblk.myConfig.interpolation_order, EPS);
+                form_external_flow_jacobian_block_phase1(nPrimitive, interpolation_order, EPS);
             }
             
             foreach (myblk; parallel(localFluidBlocks,1)) {
                 myblk.Aext = new SMatrix!number();
-                form_external_flow_jacobian_block_phase2(myblk.Aext, myblk, nPrimitive, myblk.myConfig.interpolation_order, EPS);
+                form_external_flow_jacobian_block_phase2(myblk.Aext, myblk, nPrimitive, interpolation_order, EPS);
             }
             
             foreach (myblk; parallel(localFluidBlocks,1)) {
-                form_external_flow_jacobian_block_phase3(myblk.Aext, myblk, nPrimitive, myblk.myConfig.interpolation_order, EPS);
+                form_external_flow_jacobian_block_phase3(myblk.Aext, myblk, nPrimitive, interpolation_order, EPS);
             }
 
             /* Preconditioner */
-            foreach (myblk; parallel(localFluidBlocks,1)) {
-                //myblk.P = new SMatrix!number();
-                local_flow_jacobian_transpose(myblk.P, myblk, nPrimitive, 1, EPS, true, false); // orderOfJacobian=0
-                foreach (i; 0 .. nPrimitive*myblk.cells.length) {
-                    myblk.P[i,i] = myblk.P[i,i] + (1.0/dt);
+            final switch (GlobalConfig.sscOptions.adjoint_precondition_matrix_order) {
+            case 0:
+                foreach (myblk; parallel(localFluidBlocks,1)) {
+                    //myblk.P = new SMatrix!number();
+                    local_flow_jacobian_transpose(myblk.P, myblk, nPrimitive, 1, EPS, true, false); // orderOfJacobian=0
+                    foreach (i; 0 .. nPrimitive*myblk.cells.length) {
+                        myblk.P[i,i] = myblk.P[i,i] + (1.0/dt);
+                    }
+                    decompILU0(myblk.P);
                 }
-                decompILU0(myblk.P);
+                break;
+            case 1:
+                foreach (myblk; parallel(localFluidBlocks,1)) {
+                    //myblk.P = new SMatrix!number();
+                    local_flow_jacobian_transpose(myblk.P, myblk, nPrimitive, 1, EPS, false, false); // orderOfJacobian=0
+                    foreach (i; 0 .. nPrimitive*myblk.cells.length) {
+                        myblk.P[i,i] = myblk.P[i,i] + (1.0/dt);
+                    }
+                    decompILU0(myblk.P);
+                }
+                break;
+            case 2:
+                foreach (myblk; parallel(localFluidBlocks,1)) {
+                    //myblk.P = new SMatrix!number();
+                    local_flow_jacobian_transpose(myblk.P, myblk, nPrimitive, 2, EPS, false, false); // orderOfJacobian=0
+                    foreach (i; 0 .. nPrimitive*myblk.cells.length) {
+                        myblk.P[i,i] = myblk.P[i,i] + (1.0/dt);
+                    }
+                    decompILU0(myblk.P);
+                }
+                break;
             }
         } else {
             /* Preconditioner */
-            foreach (myblk; parallel(localFluidBlocks,1)) {
-                //myblk.P = new SMatrix!number();
-                local_flow_jacobian_transpose(myblk.P, myblk, nPrimitive, 1, EPS, true, false); // orderOfJacobian=0
-                decompILU0(myblk.P);
+            final switch (GlobalConfig.sscOptions.adjoint_precondition_matrix_order) {
+            case 0:
+                foreach (myblk; parallel(localFluidBlocks,1)) {
+                    //myblk.P = new SMatrix!number();
+                    local_flow_jacobian_transpose(myblk.P, myblk, nPrimitive, 1, EPS, true, false); // orderOfJacobian=0
+                    decompILU0(myblk.P);
+                }
+                break;
+            case 1:
+                foreach (myblk; parallel(localFluidBlocks,1)) {
+                    //myblk.P = new SMatrix!number();
+                    local_flow_jacobian_transpose(myblk.P, myblk, nPrimitive, 1, EPS, false, false); // orderOfJacobian=0
+                    decompILU0(myblk.P);
+                }
+                break;
+            case 2:
+                foreach (myblk; parallel(localFluidBlocks,1)) {
+                    //myblk.P = new SMatrix!number();
+                    local_flow_jacobian_transpose(myblk.P, myblk, nPrimitive, 2, EPS, false, false); // orderOfJacobian=0
+                    decompILU0(myblk.P);
+                }
+                break;
             }
         }
         

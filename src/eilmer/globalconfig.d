@@ -226,6 +226,8 @@ struct SolidDomainLooseUpdateOptions {
 version(shape_sensitivity) {
     struct ShapeSensitivityCalculatorOptions {
         bool pseudotime = false;
+        int pseudotime_lhs_jacobian_order = 1;
+        int adjoint_precondition_matrix_order = 0;
         bool read_frozen_limiter_values_from_file = false;
 	// sensitivity parameters
         double epsilon = 1.0e-30;
@@ -1491,6 +1493,10 @@ void read_config_file()
     auto sscOptions = jsonData["shape_sensitivity_calculator_options"];
     GlobalConfig.sscOptions.pseudotime =
         getJSONbool(sscOptions, "pseudotime", GlobalConfig.sscOptions.pseudotime);
+    GlobalConfig.sscOptions.pseudotime_lhs_jacobian_order = 
+        getJSONint(sscOptions, "pseudotime_lhs_jacobian_order", GlobalConfig.sscOptions.pseudotime_lhs_jacobian_order);
+    GlobalConfig.sscOptions.adjoint_precondition_matrix_order = 
+        getJSONint(sscOptions, "adjoint_precondition_matrix_order", GlobalConfig.sscOptions.adjoint_precondition_matrix_order);
     GlobalConfig.sscOptions.read_frozen_limiter_values_from_file =
         getJSONbool(sscOptions, "read_frozen_limiter_values_from_file", GlobalConfig.sscOptions.read_frozen_limiter_values_from_file);
     GlobalConfig.sscOptions.epsilon =

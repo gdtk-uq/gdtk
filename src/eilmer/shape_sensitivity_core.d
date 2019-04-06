@@ -188,10 +188,21 @@ void initialisation(ref FluidBlock blk, size_t nPrimitive, size_t orderOfJacobia
         cell.jacobian_face_stencil = [];
         cell.jacobian_cell_stencil = [];
     }
-    foreach (cell; blk.cells) approximate_residual_stencil(cell, 1);
+
     size = 0;
+    final switch (GlobalConfig.sscOptions.adjoint_precondition_matrix_order) {
+        case 0:
+            foreach (cell; blk.cells) approximate_residual_stencil(cell, 1);
+            break;
+        case 1:
+            foreach (cell; blk.cells) residual_stencil(cell, 1);
+            break;
+        case 2:
+            foreach (cell; blk.cells) residual_stencil(cell, 2);
+            break;
+    }
     foreach( cell; blk.cells) {
-	size += cell.jacobian_cell_stencil.length;
+        size += cell.jacobian_cell_stencil.length;
     }
     size *= (nConservedQuantities*nConservedQuantities);
     blk.P = new SMatrix!number();
@@ -204,7 +215,14 @@ void initialisation(ref FluidBlock blk, size_t nPrimitive, size_t orderOfJacobia
     }
 
     if (GlobalConfig.sscOptions.pseudotime) {
-        foreach (cell; blk.cells) residual_stencil(cell, 1);
+        final switch (GlobalConfig.sscOptions.pseudotime_lhs_jacobian_order) {
+        case 1:
+            foreach (cell; blk.cells) residual_stencil(cell, 1);
+            break;
+        case 2:
+            foreach (cell; blk.cells) residual_stencil(cell, 2);
+            break;
+        }
         size = 0;
         foreach( cell; blk.cells) {
             size += cell.jacobian_cell_stencil.length;
