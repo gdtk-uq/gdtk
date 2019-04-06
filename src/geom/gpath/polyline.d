@@ -161,7 +161,8 @@ public:
     
     override string toString() const
     {
-        return "Polyline(segments=" ~ to!string(segments) ~ ")";
+        return "Polyline(segments=" ~ to!string(segments) ~
+            ", closed=" ~ to!string(closed) ~ ")";
     }
     override string classString() const
     {

@@ -15,6 +15,7 @@ TEST_PROGRAMS := vector3_test vector3_complex_test \
 	bezier_test bezier_complex_test \
 	helix_test helix_complex_test \
 	polyline_test polyline_complex_test \
+	svgpath_test \
 	coonspatch_test coonspatch_complex_test \
 	aopatch_test aopatch_complex_test \
 	bezierpatch_test bezierpatch_complex_test \
@@ -191,6 +192,10 @@ polyline_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service
 
 polyline_complex_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	dmd -of$@ -dip1008 -debug -g -w -version=polyline_test -version=complex_numbers \
+		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
+
+svgpath_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d
+	dmd -of$@ -dip1008 -debug -g -w -version=$@ \
 		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 coonspatch_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d
