@@ -41,25 +41,32 @@ extern(C) int optimiseBezierPoints(lua_State* L)
     // Grab number of desired control points
     int nCtrlPts = luaL_checkint(L, 2);
     // Look for some optional arguments.
-    double tol = 1.0e-6;
+    Bezier initGuess;
     if (narg >= 3) {
-        tol = luaL_checknumber(L, 3);
+        if (!lua_isnil(L, 3)) {
+            initGuess = checkObj!(Bezier, BezierMT)(L, 3);
+        }
+    }
+    double tol = 1.0e-6;
+    if (narg >= 4) {
+        tol = luaL_checknumber(L, 4);
     }
     int maxSteps = 10000;
-    if (narg >= 4) {
-        maxSteps = luaL_checkint(L, 4);
+    if (narg >= 5) {
+        maxSteps = luaL_checkint(L, 5);
     }
     int dim = 2;
-    if (narg >= 5) {
-        dim = luaL_checkint(L, 5);
+    if (narg >= 6) {
+        dim = luaL_checkint(L, 6);
     }
 
     double[] ts; // We aren't interested in handing back t parameters
                  // through the Lua interface
-    
-    auto myBez = geom.optimiseBezierPoints(pts, nCtrlPts, ts, tol, maxSteps, dim);
+    bool fittingSuccess;
+    auto myBez = geom.optimiseBezierPoints(pts, nCtrlPts, initGuess, ts, fittingSuccess, tol, maxSteps, dim);
     pathStore ~= pushObj!(Bezier, BezierMT)(L, myBez);
-    return 1;
+    lua_pushboolean(L, fittingSuccess);
+    return 2;
 }
 
 void registerGpathUtils(lua_State* L)

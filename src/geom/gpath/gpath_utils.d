@@ -42,17 +42,17 @@ void readPointsFromFile(string fileName, ref Vector3[] points)
     f.close();
 }
 
-Bezier optimiseBezierPoints(string fileName, int nCtrlPts, ref double[] ts, int dim=2)
+Bezier optimiseBezierPoints(string fileName, int nCtrlPts, Bezier initGuess, ref double[] ts, ref bool success, int dim=2)
 {
     // Read in points.
     Vector3[] points;
     readPointsFromFile(fileName, points);
     // call bezier optimiser
-    Bezier myBez = optimiseBezierPoints(points, nCtrlPts, ts);
+    Bezier myBez = optimiseBezierPoints(points, nCtrlPts, initGuess, ts, success);
     return myBez;
 }
 
-Bezier optimiseBezierPoints(Vector3[] points, int nCtrlPts, ref double[] ts,
+Bezier optimiseBezierPoints(Vector3[] points, int nCtrlPts, Bezier initGuess, ref double[] ts, ref bool success,
                             double tol=1.0e-06, int max_steps=10000, int dim=2)
 {
     double t;
@@ -68,20 +68,27 @@ Bezier optimiseBezierPoints(Vector3[] points, int nCtrlPts, ref double[] ts,
     // ------------------------------------------------------------------
     // Establish an initial guess for the location of the control points.
     // ------------------------------------------------------------------
-    // Distribute Bezier control points at roughly equal
-    // spacing using the given data points.
-    Vector3[] bezPts;
-    // Add starting point as first control point.
-    bezPts ~= points[0];
-    // Distribute points in line joining between start and end points
-    auto line = new Line(points[0], points[$-1]);
-    double dt = 1.0/(nCtrlPts-1);
-    foreach (i; 1 .. nCtrlPts-1) {
-        bezPts ~= line(i*dt);
+
+    Bezier myBez;
+    if (initGuess) {
+        myBez = new Bezier(initGuess);
     }
-    // Add end point as final contrl point.
-    bezPts ~= points[$-1];
-    Bezier myBez = new Bezier(bezPts);
+    else {
+        // Distribute Bezier control points at roughly equal
+        // spacing using the given data points.
+        Vector3[] bezPts;
+        // Add starting point as first control point.
+        bezPts ~= points[0];
+        // Distribute points in line joining between start and end points
+        auto line = new Line(points[0], points[$-1]);
+        double dt = 1.0/(nCtrlPts-1);
+        foreach (i; 1 .. nCtrlPts-1) {
+            bezPts ~= line(i*dt);
+        }
+        // Add end point as final contrl point.
+        bezPts ~= points[$-1];
+        myBez = new Bezier(bezPts);
+    }
     number[] d;
     if (dim == 2)
         d.length = 2*(nCtrlPts-2);
@@ -136,34 +143,25 @@ Bezier optimiseBezierPoints(Vector3[] points, int nCtrlPts, ref double[] ts,
     // Make the initial perturbations 1/100th of the arc length.
     number dp = myBez.length()/100.0;
     dx[] = dp;
-    bool success = nm.nelmin.minimize!(funMin,number)(d, f_min, n_fe, n_restart, dx, tol, max_steps);
-    if (success) {
-        foreach (i; 1 .. nCtrlPts-1) {
-            if (dim == 2) {
-                myBez.B[i].refx = d[2*i - 2];
-                myBez.B[i].refy = d[2*i - 1];
-            }
-            else {
-                myBez.B[i].refx = d[3*i - 3];
-                myBez.B[i].refy = d[3*i - 2];
-                myBez.B[i].refz = d[3*i - 1];
-            }
+    success = nm.nelmin.minimize!(funMin,number)(d, f_min, n_fe, n_restart, dx, tol, max_steps);
+    foreach (i; 1 .. nCtrlPts-1) {
+        if (dim == 2) {
+            myBez.B[i].refx = d[2*i - 2];
+            myBez.B[i].refy = d[2*i - 1];
         }
-        // Populate ts vector with all the t-values associated with the data points.
-        ts[0] = 0.0;
-        foreach (i; 1 .. points.length-1) {
-            myBez.closestDistance(points[i], t);
-            ts[i] = t;
+        else {
+            myBez.B[i].refx = d[3*i - 3];
+            myBez.B[i].refy = d[3*i - 2];
+            myBez.B[i].refz = d[3*i - 1];
         }
-        ts[$-1] = 1.0;
-        return myBez;
     }
-    // Otherwise, we failed in the optimiser.
-    string errMsg = "Error in bestFitBezier while using optimiser.\n";
-    errMsg ~= "Optimiser stats:\n";
-    errMsg ~= format("  number of function evaluations: %d\n", n_fe);
-    errMsg ~= format("  number of restarts: %d\n", n_restart);
-    errMsg ~= format("  minimum of function found: %12.6e\n", f_min);
-    throw new Exception(errMsg);
+    // Populate ts vector with all the t-values associated with the data points.
+    ts[0] = 0.0;
+    foreach (i; 1 .. points.length-1) {
+        myBez.closestDistance(points[i], t);
+        ts[i] = t;
+    }
+    ts[$-1] = 1.0;
+    return myBez;
     // ------------- Done calling optimiser -----------------------
 }

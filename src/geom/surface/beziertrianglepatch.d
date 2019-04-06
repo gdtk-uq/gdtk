@@ -203,6 +203,15 @@ private:
 
 } // end class BezierTrianglePatch
 
+void writeBezierTriangleCtrlPtsAsText(BezierTrianglePatch btp, string fileName)
+{
+    auto f = File(fileName, "w");
+    foreach (ref p; btp.B) {
+        f.writefln("%20.16e %20.16e %20.16e", p.x.re, p.y.re, p.z.re);
+    }
+    f.close();
+}
+
 void writeBezierTriangleCtrlPtsAsVtkXml(BezierTrianglePatch btp, string fileName)
 {
     auto nPtsTotal = btp.B.length;
@@ -455,10 +464,10 @@ BezierTrianglePatch bezierTriangleFromPointCloud(Vector3[] points, Vector3 p0, V
     throw new Exception(errMsg);
 }
 
-BezierTrianglePatch bezierTriangleFromPointCloud(Vector3[] points, Bezier b0, Bezier b1, Bezier b2, int n, BezierTrianglePatch initGuess, ref int success)
+BezierTrianglePatch bezierTriangleFromPointCloud(Vector3[] points, Bezier b0, Bezier b1, Bezier b2, int n, BezierTrianglePatch initGuess, ref bool success)
 {
     double tol = 0.01;
-    int maxSteps = 1500;
+    int maxSteps = 500;
     // Edges and their directions are defined as: 
     // (_,_,_) = (u,v,w)
     // b_ = Bezier curve
@@ -510,24 +519,18 @@ BezierTrianglePatch bezierTriangleFromPointCloud(Vector3[] points, Bezier b0, Be
     // These points are not to be touched by the optimiser.
     // Work down b0 curve
     foreach (i, b; b0.B) {
-        writeln("i= ", i);
-        writeln("$-n-1+i= ", ctrlPts.length-n-1+i);
         ctrlPts[$-n-1+i] = b;
     }
     // Work down b1 curve
     foreach (i, b; b1.B) {
         auto idx = (i+1)*(i+2)/2 - 1;
-        writeln("i= ", i, " idx= ", idx);
         ctrlPts[idx] = b;
     }
     // Work down b2 curve
     foreach (i, b; b2.B) {
         auto idx = i*(i+1)/2;
-        writeln("i= ", i, " idx= ", idx);
         ctrlPts[idx] = b;
     }
-    writeln("After edge curves....");
-    writeln(ctrlPts);
     // The user might have supplied an initial guess.
     // We can use this if the degree is correct.
     if (initGuess !is null && initGuess.n == n) {
@@ -564,8 +567,6 @@ BezierTrianglePatch bezierTriangleFromPointCloud(Vector3[] points, Bezier b0, Be
             }
         }
     }
-    writeln("after initialisation...");
-    writeln(ctrlPts);
     auto myBezTriPatch = new BezierTrianglePatch(ctrlPts, n);
     // -------------- Done: establishing starting guess ------------------------
 
@@ -601,8 +602,8 @@ BezierTrianglePatch bezierTriangleFromPointCloud(Vector3[] points, Bezier b0, Be
             err += myBezTriPatch.projectPoint(p, q, uFound, vFound, true);
         }
         count++;
-        import std.stdio;
-        writefln("count= %d, fMin= %e", count, err);
+        //import std.stdio;
+        //writefln("count= %d, fMin= %e", count, err);
         //import core.stdc.stdlib : exit;
         //exit(1);
         return err;
@@ -639,8 +640,8 @@ BezierTrianglePatch bezierTriangleFromPointCloud(Vector3[] points, Bezier b0, Be
     // Remember to update working space after changing control
     // point locations.
     myBezTriPatch.updateWorkingSpace();
-    writeln("Final ctrl pts:");
-    writeln(myBezTriPatch.B);
+    //writeln("Final ctrl pts:");
+    //writeln(myBezTriPatch.B);
     return myBezTriPatch;
 }
 

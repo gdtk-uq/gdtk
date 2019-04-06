@@ -29,7 +29,7 @@ immutable string MeshPatchMT = "MeshPatch";
 immutable string LuaFnSurfaceMT = "LuaFnSurface";
 immutable string SubRangedSurfaceMT = "SubRangedSurface";
 immutable string BezierPatchMT = "BezierPatch";
-immutable string BezierTrianglePatchMT = "BezierTrianglePatchMT";
+immutable string BezierTrianglePatchMT = "BezierTrianglePatch";
 
 static const(ParametricSurface)[] surfaceStore;
 static const(BezierTrianglePatch)[] triPatchStore;
@@ -886,7 +886,20 @@ extern(C) int opCallBezierTrianglePatch(lua_State* L)
     return pushVector3(L, p);
 }
 
-extern(C) int writeBezierTriangleCtrlPtsAsVtkXml(lua_State *L)
+extern(C) int writeBezierTriangleCtrlPtsAsText(lua_State* L)
+{
+    int narg = lua_gettop(L);
+    if (narg < 2) {
+        string errMsg = "Not enough arguments passed to writeBezierTriangleCtrlPtsAsText().\n";
+        luaL_error(L, errMsg.toStringz);
+    }
+    auto bezTri = checkBezierTrianglePatch(L, 1);
+    string fName = to!string(luaL_checkstring(L, 2));
+    geom.writeBezierTriangleCtrlPtsAsText(bezTri, fName);
+    return 0;
+}
+
+extern(C) int writeBezierTriangleCtrlPtsAsVtkXml(lua_State* L)
 {
     int narg = lua_gettop(L);
     if (narg < 2) {
@@ -942,10 +955,11 @@ extern(C) int bezierTriangleFromPointCloud(lua_State* L)
         // Attempt to grab a BezierTriangle
         initGuess = checkBezierTrianglePatch(L, 6);
     }
-    int fittingSuccess;
+    bool fittingSuccess;
     auto bezTri = geom.bezierTriangleFromPointCloud(pts, b0, b1, b2, n, initGuess, fittingSuccess);
     triPatchStore ~= pushObj!(BezierTrianglePatch, BezierTrianglePatchMT)(L, bezTri);
-    return 1;
+    lua_pushboolean(L, fittingSuccess);
+    return 2;
 }
 
 void registerSurfaces(lua_State* L)
@@ -1137,6 +1151,8 @@ void registerSurfaces(lua_State* L)
     lua_setglobal(L, BezierTrianglePatchMT.toStringz);
     lua_getglobal(L, BezierTrianglePatchMT.toStringz); lua_setglobal(L, "BezierTriangleSurface"); // alias
 
+    lua_pushcfunction(L, &writeBezierTriangleCtrlPtsAsText);
+    lua_setglobal(L, "writeBezierTriangleCtrlPtsAsText");
     lua_pushcfunction(L, &writeBezierTriangleCtrlPtsAsVtkXml);
     lua_setglobal(L, "writeBezierTriangleCtrlPtsAsVtkXml");
     lua_pushcfunction(L, &writeBezierTriangleAsVtkXml);
