@@ -656,8 +656,6 @@ version(beziertrianglepatch_test) {
                        Vector3(3, 3, 6), Vector3(3, 0, 0),
                        Vector3(0, 6, 0), Vector3(0, 3, 0), Vector3(0, 0, 0)];
         auto btp = new BezierTrianglePatch(B, 2);
-        writeBezierTriangleAsVtkXml(btp, "test-tri.vtu", 50);
-        writeBezierTriangleCtrlPtsAsVtkXml(btp, "test-ctrl-pts.vtu");
         double u = 1./3;
         double v = 1./3;
         auto p = btp(u, v);
