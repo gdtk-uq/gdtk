@@ -23,21 +23,37 @@ class Polyline : Path {
 public:
     Path[] segments; // collection of Path segments
     double[] t_values; // collection of segment break-points (in parameter t)
+    bool closed = false; // assume an open path, unless told otherwise
 
     // Construct from the Path segments.
-    this(in Path[] segments)
+    this(in Path[] segments, bool isClosed=false, double tolerance=1.0e-10)
     {
         if (segments.length == 0) {
             throw new Error(text("Polyline() No segments present."));
         }
-        foreach (myseg; segments) this.segments ~= myseg.dup(); 
+        foreach (myseg; segments) { this.segments ~= myseg.dup(); }
+        if (isClosed) {
+            // Test that the end-points of the path are close enough and,
+            // if not, add a line segment to close the path.
+            Vector3 p0 = segments[0](0.0);
+            Vector3 p1 = segments[$-1](1.0);
+            if (distance_between(p1, p0) > tolerance) {
+                this.segments ~= new Line(p1, p0);
+            }
+        }
+        closed = isClosed;
         t_values.length = this.segments.length;
         reset_breakpoints();
     }
     
     // Construct as a spline through specified points.
-    this(const Vector3[] p, double tolerance=1.0e-10)
+    this(const Vector3[] p_orig, bool isClosed=false, double tolerance=1.0e-10)
     {
+        Vector3[] p; foreach(pnt; p_orig) { p ~= pnt; } 
+        if (isClosed && distance_between(p[0], p[$-1]) > tolerance) {
+            // Add one more point to close the path.
+            p ~= p[0];
+        }
         auto m = p.length - 1;
         // Given m+1 interpolation points p, determine the m-segment
         // Bezier polyline that interpolates these points as a spline. 
@@ -85,11 +101,11 @@ public:
             seg ~= new Bezier(p03);
         }
         // and pack them away.
-        this(seg);
+        this(seg, isClosed);
     } // end spline constructor
 
     // Contructs a spline from a file containing x(,y(,z)) coordinates.
-    this(string fileName)
+    this(string fileName, bool isClosed=false)
     {
         // This function takes a filename and processes it assuming that each
         // line contains (x,y,z) triples (space-delimited).  If any values are
@@ -107,12 +123,12 @@ public:
             number z = 0.0; if (tokens.length > 2) { z = to!double(tokens[2]); }
             points ~= Vector3(x, y, z);
         }
-        this(points);
+        this(points, isClosed);
     } // end spline constructor
     
-    this(ref const(Polyline) other)
+    this(ref const(Polyline) other, bool isClosed=false)
     {
-        this(other.segments);
+        this(other.segments, isClosed);
     }
     
     override Polyline dup() const
@@ -173,9 +189,12 @@ version(polyline_test) {
         auto b = Vector3([1.0, 2.0, 1.0]);
         auto c = Vector3([1.0, 2.0, 0.0]);
         auto abc = new Arc(a, b, c);
-        auto polyline = new Polyline([abc, new Line(b, c)]);
-        auto f = polyline(0.5);
+        auto polyline1 = new Polyline([abc, new Line(b, c)]);
+        auto f = polyline1(0.5);
         assert(approxEqualVectors(f, Vector3(1.28154, 2, 0.95955)), failedUnitTest());
+        auto polyline2 = new Polyline(polyline1, true);
+        auto g = polyline2(0.999999);
+        assert(approxEqualVectors(g, a), failedUnitTest());
                 //
         version(complex_numbers) {
             // Try out the complex derivative evaluation.
@@ -189,12 +208,12 @@ version(polyline_test) {
             auto pc = Vector3(zero, one); 
             auto line0 = new Line(pc, pa_dash);
             auto line1 = new Line(pa_dash, pb);
-            polyline = new Polyline([line0, line1]);
+            auto polyline3 = new Polyline([line0, line1]);
             // What we want to compute is the sensitivity
             // of the midpoint of the arc with respect to alpha.
-            double dpmid_da_x = polyline(0.5).x.im / h;
-            double dpmid_da_y = polyline(0.5).y.im / h;
-            double dpmid_da_z = polyline(0.5).z.im / h;
+            double dpmid_da_x = polyline3(0.5).x.im / h;
+            double dpmid_da_y = polyline3(0.5).y.im / h;
+            double dpmid_da_z = polyline3(0.5).z.im / h;
             assert(approxEqual(dpmid_da_x,1.0), failedUnitTest());
             assert(approxEqual(dpmid_da_y,1.0), failedUnitTest());
             assert(approxEqual(dpmid_da_z,0.0), failedUnitTest());
