@@ -2542,7 +2542,8 @@ void fit_design_parameters_to_surface(ref Vector3[] designVars)
     foreach(x; xPosition) orderedList ~= unorderedList[origPosId[to!string(x)]];
 
     double[] ts;
-    Bezier bezier = optimiseBezierPoints(orderedList, nCntrlPts, ts, tol, maxSteps);
+    bool success;
+    Bezier bezier = optimiseBezierPoints(orderedList, nCntrlPts, null, ts, success, tol, maxSteps);
     // first and last control points are not design variables
     foreach ( i; 1..bezier.B.length-1) {
         designVars ~= bezier.B[i];
