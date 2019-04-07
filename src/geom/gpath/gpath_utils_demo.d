@@ -13,8 +13,10 @@ void main()
 {
     writeln("Demo of gpath_utils functions.");
     writeln("Using optimiseBezierPoints.");
+    Bezier b_init_guess;
     double[] ts;
-    Bezier bezier = optimiseBezierPoints("sample-data/cowl-spline-pts.dat", 7, ts);
+    bool success;
+    Bezier bezier = optimiseBezierPoints("sample-data/cowl-spline-pts.dat", 7, b_init_guess, ts, success);
     
     writeln("Optimised control points are:");
     foreach (p; bezier.B) {
