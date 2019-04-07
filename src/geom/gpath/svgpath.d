@@ -66,6 +66,7 @@ private:
     {
         txt = txt.strip();
         foreach (cmdStr; txt.split(";")) {
+            cmdStr = cmdStr.strip();
             char cmd = cmdStr[0];
             string argStr = "";
             if (cmdStr.length > 1) { argStr = cmdStr[1..$]; }
