@@ -133,7 +133,7 @@ public:
     
     override Polyline dup() const
     {
-        return new Polyline(segments);
+        return new Polyline(segments, closed);
     }
     
     override Vector3 opCall(double t) const 

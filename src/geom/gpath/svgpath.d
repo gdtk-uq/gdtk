@@ -32,6 +32,21 @@ public:
         interpret_svg_path(txt);
         super(segments, closed, tolerance);
     }
+    
+    this(ref const(SVGPath) other)
+    {
+        this(other.txt, other.tolerance);
+    }
+    
+    override SVGPath dup() const
+    {
+        return new SVGPath(txt);
+    }
+
+    override string toString() const
+    {
+        return "SVGPath(path=\""~ txt~"\")";
+    }
 
     override string classString() const
     {
@@ -39,6 +54,8 @@ public:
     }
     
 private:
+    string txt; // Keep a copy of the original text specification.
+                // It will be useful for making copies of the path.
     Vector3 p0; // Starting point.
     Vector3 cp; // Current point.
     Path[] segments;

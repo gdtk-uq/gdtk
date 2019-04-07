@@ -82,6 +82,13 @@ print("polyline(0.25)= ", polyline(0.25))
 print("polyline(0.5)= ", f, "expected approximately Vector3([1.28154, 2, 0.95955])")
 print("polyline(0.75)= ", polyline(0.75))
 --
+print("SVGPath")
+svgpth = SVGPath:new{path="M3.0,3.0;L4.0,3.0;v1.0;h-1.0;Z"}
+f1 = svgpth(0.5)
+print("svgpth(0.25)= ", svgpth(0.25), "expected Vector3([4.0, 3.0, 0.0])")
+print("svgpth(0.5)= ", f1, "expected Vector3([4.0, 4.0, 0.0])")
+print("svgpth(0.75)= ", svgpth(0.75), "expected Vector3([3.0, 4.0, 0.0])")
+--
 print("LuaFnPath")
 function myLuaFunction(t)
    -- Straight line from 0,0,0 to 1.0,2.0,3.0

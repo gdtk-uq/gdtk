@@ -24,6 +24,7 @@ immutable string BezierMT = "Bezier";
 immutable string PolylineMT = "Polyline";
 immutable string SplineMT = "Spline";
 immutable string Spline2MT = "Spline2";
+immutable string SVGPathMT = "SVGPath";
 immutable string LuaFnPathMT = "LuaFnPath";
 immutable string ArcLengthParameterizedPathMT = "ArcLengthParameterizedPath";
 immutable string SubRangedPathMT = "SubRangedPath";
@@ -54,6 +55,9 @@ Path checkPath(lua_State* L, int index) {
     }
     if ( isObjType(L, index, PolylineMT) ) {
         return checkObj!(Polyline, PolylineMT)(L, index);
+    }
+    if ( isObjType(L, index, SVGPathMT) ) {
+        return checkObj!(SVGPath, SVGPathMT)(L, index);
     }
     if ( isObjType(L, index, LuaFnPathMT) ) {
         return checkObj!(LuaFnPath, LuaFnPathMT)(L, index);
@@ -800,6 +804,48 @@ extern(C) int newSpline2(lua_State* L)
 
 
 /**
+ * The Lua constructor for a SVGPath (subclass of Polyline).
+ *
+ * Example construction in Lua:
+ * ---------------------------------
+ * svgpth = SVGPath:new{path="M3.0,3.0;L4.0,3.0;v1.0;h-1.0;Z"}
+ * -- Expecting 3 numbers per line, space-separated.
+ * ---------------------------------
+ */
+extern(C) int newSVGPath(lua_State* L)
+{
+    int narg = lua_gettop(L);
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected SVGPath:new{path=\"some-path-commands\"}; ";
+        errMsg ~= "maybe you tried SVGPath.new{path=\"some-path-commands\"}.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if ( !lua_istable(L, 1) ) {
+        string errMsg = "Error in call to SVGPath:new{}.; " ~
+            "A table containing arguments is expected, but no table was found.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    if (!checkAllowedNames(L, 1, ["path"])) {
+        string errMsg = "Error in call to SVGPath:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_getfield(L, 1, "path".toStringz());
+    if ( !lua_isstring(L, -1) ) {
+        string errMsg = "Error in call to SVGPath:new{}.; " ~
+            "A string containing the path specification is expected, but no string was found.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    auto pathTxt = to!string(lua_tostring(L, -1));
+    lua_pop(L, 1); // dispose of filename string
+    auto svgpath = new SVGPath(pathTxt);
+    pathStore ~= pushObj!(SVGPath, SVGPathMT)(L, svgpath);
+    return 1;
+} // end newSVGPath()
+
+
+/**
  * LuaFnPath class and it's Lua constructor.
  *
  * This is hangs onto a Lua call-back function that is invoked from the D domain.
@@ -1483,6 +1529,28 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "intersect2D");
 
     lua_setglobal(L, Spline2MT.toStringz);
+
+    // Register the SVGPath object which is a subclass of Polyline in Dlang.
+    luaL_newmetatable(L, SVGPathMT.toStringz);
+    
+    /* metatable.__index = metatable */
+    lua_pushvalue(L, -1); // duplicates the current metatable
+    lua_setfield(L, -2, "__index");
+
+    lua_pushcfunction(L, &newSVGPath);
+    lua_setfield(L, -2, "new");
+    lua_pushcfunction(L, &opCallPath!(SVGPath, SVGPathMT));
+    lua_setfield(L, -2, "__call");
+    lua_pushcfunction(L, &opCallPath!(SVGPath, SVGPathMT));
+    lua_setfield(L, -2, "eval");
+    lua_pushcfunction(L, &toStringObj!(SVGPath, SVGPathMT));
+    lua_setfield(L, -2, "__tostring");
+    lua_pushcfunction(L, &copyPath!(SVGPath, SVGPathMT));
+    lua_setfield(L, -2, "copy");
+    lua_pushcfunction(L, &pathIntersect2D!(SVGPath, SVGPathMT));
+    lua_setfield(L, -2, "intersect2D");
+
+    lua_setglobal(L, SVGPathMT.toStringz);
 
     // Register the LuaFnPath object
     luaL_newmetatable(L, LuaFnPathMT.toStringz);
