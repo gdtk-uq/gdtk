@@ -17,7 +17,10 @@ test prepare-gas-model {Prepare gas model.} -body {
 } -result {} -returnCodes {0}
 
 test run-preprocessor {Run the preprocessing stage.} -body {
-    exec e4shared --prep --job=bump --verbosity=1 > LOGFILE_PREP
+    set cmd0 [list e4shared --prep --job=bump --verbosity=1 --only-blocks=0..<48 > LOGFILE_PREP_0]
+    set cmd1 [list e4shared --prep --job=bump --verbosity=1 --only-blocks=48..<96 > LOGFILE_PREP_1]
+    exec {*}$cmd0
+    exec {*}$cmd1
 } -result {} -returnCodes {0}
 
 test run-simulation {Run the block-marching simulation code.} -body {
