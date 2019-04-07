@@ -1875,21 +1875,28 @@ function perform_spatial_gradient_consistency_check()
 end
 
 function build_job_files(job)
+   if #fluidBlocksForPrep == 0 then
+      -- We'll set *all* blocks for processing.
+      for i=1,#fluidBlocks do
+         fluidBlocksForPrep[i] = fluidBlocks[i].id
+      end
+   end
    perform_spatial_gradient_consistency_check()
-   print("Build job files for ", job)
-   write_config_file(job .. ".config")
-   write_control_file(job .. ".control")
-   write_times_file(job .. ".times")
-   write_block_list_file(job .. ".list")
-   write_mpimap_file(job .. ".mpimap")
+   if buildMasterFiles then
+      print("Build job files for ", job)
+      write_config_file(job .. ".config")
+      write_control_file(job .. ".control")
+      write_times_file(job .. ".times")
+      write_block_list_file(job .. ".list")
+      write_mpimap_file(job .. ".mpimap")
+   end
    os.execute("mkdir -p grid/t0000")
    os.execute("mkdir -p flow/t0000")
    if #solidBlocks >= 1 then
       os.execute("mkdir -p solid-grid/t0000")
       os.execute("mkdir -p solid/t0000")
    end
-   for i = 1, #fluidBlocks do
-      local id = fluidBlocks[i].id
+   for i, id in ipairs(fluidBlocksForPrep) do
       print("FluidBlock id=", id)
       local fileName = "grid/t0000/" .. job .. string.format(".grid.b%04d.t0000", id)
       if (config.grid_format == "gziptext") then

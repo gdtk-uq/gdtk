@@ -100,6 +100,7 @@ Argument:                            Comment:
   --verbosity=<int>                  defaults to 0
 
   --prep                             prepare config, grid and flow files
+  --only-blocks=\"blk-list\"         only prepare blocks in given list
 
   --run                              run the simulation over time
   --tindx-start=<int>|last|9999      defaults to 0
@@ -163,6 +164,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
     string jobName = "";
     int verbosityLevel = 1; // default to having a little information
     bool prepFlag = false;
+    string blocksForPrep = "";
     bool runFlag = false;
     string tindxStartStr = "0";
     int tindxStart = 0;
@@ -202,6 +204,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
                "job", &jobName,
                "verbosity", &verbosityLevel,
                "prep", &prepFlag,
+               "only-blocks", &blocksForPrep,
                "run", &runFlag,
                "tindx-start", &tindxStartStr,
                "next-loads-indx", &nextLoadsIndx,
@@ -336,11 +339,65 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
             registeridealgasflowFunctions(L);
             registergasflowFunctions(L);
             registerBBLA(L);
-            // Before processing the Lua input files, move old .config and .control files.
-            // This should prevent a subsequent run of the simulation on old config files
-            // in the case that the processing of the input script fails.
-            moveFileToBackup(jobName~".config");
-            moveFileToBackup(jobName~".control");
+            // Determine which fluidBlocks we need to process.
+            int[] blockList;
+            blocksForPrep = blocksForPrep.strip();
+            foreach (blkStr; blocksForPrep.split(",")) {
+                blkStr = blkStr.strip();
+                auto blkRange = blkStr.split("..<");
+                if (blkRange.length == 1) {
+                    blockList ~= to!int(blkRange[0]);
+                }
+                else if (blkRange.length == 2) {
+                    auto start = to!int(blkRange[0]);
+                    auto end = to!int(blkRange[1]);
+                    if (end < start) {
+                        writeln("Supplied block list is in error. Range given is not allowed.");
+                        writeln("Bad supplied range is: ", blkStr);
+                        exitFlag = 1;
+                        return exitFlag;
+                    }
+                    foreach (i; start .. end) {
+                        blockList ~= i;
+                    }
+                }
+                else {
+                    writeln("Supplied block list is in error. Range given is not allowed.");
+                    writeln("Bad supplied range is: ", blkStr);
+                    exitFlag = 1;
+                    return exitFlag;
+                }
+            }
+            // Let's sort blocks in ascending order
+            blockList.sort();
+            lua_newtable(L);
+            lua_setglobal(L, "fluidBlocksForPrep");
+            lua_getglobal(L, "fluidBlocksForPrep");
+            // Use uniq so that we remove any duplicates the user might have supplied
+            import std.range;
+            foreach (i, blkId; blockList.uniq().enumerate(1)) {
+                lua_pushinteger(L, blkId);
+                lua_rawseti(L, -2, to!int(i));
+            }
+            lua_pop(L, 1);
+            // Set buildMasterFiles as appropriate
+            if (blockList.length == 0 || blockList[0] == 0) {
+                lua_pushboolean(L, true);
+                // Before processing the Lua input files, move old .config and .control files.
+                // This should prevent a subsequent run of the simulation on old config files
+                // in the case that the processing of the input script fails.
+                //
+                // RJG, 2019-04-07
+                // We only do this if we are processing master files.
+                // We'll assume that things proceed ok if we are working on other block ranges.
+                moveFileToBackup(jobName~".config");
+                moveFileToBackup(jobName~".control");
+            }
+            else {
+                lua_pushboolean(L, false);
+            }
+            lua_setglobal(L, "buildMasterFiles");
+            
             if ( luaL_dofile(L, toStringz(dirName(thisExePath())~"/prep.lua")) != 0 ) {
                 writeln("There was a problem in the Eilmer Lua code: prep.lua");
                 string errMsg = to!string(lua_tostring(L, -1));
