@@ -1898,11 +1898,12 @@ function build_job_files(job)
    end
    for i, id in ipairs(fluidBlocksForPrep) do
       print("FluidBlock id=", id)
+      local idx = id+1
       local fileName = "grid/t0000/" .. job .. string.format(".grid.b%04d.t0000", id)
       if (config.grid_format == "gziptext") then
-	 fluidBlocks[i].grid:write_to_gzip_file(fileName .. ".gz")
+	 fluidBlocks[idx].grid:write_to_gzip_file(fileName .. ".gz")
       elseif (config.grid_format == "rawbinary") then
-	 fluidBlocks[i].grid:write_to_raw_binary_file(fileName .. ".bin")
+	 fluidBlocks[idx].grid:write_to_raw_binary_file(fileName .. ".bin")
       else
 	 error(string.format("Oops, invalid grid_format: %s", config.grid_format))
       end
@@ -1914,7 +1915,7 @@ function build_job_files(job)
       else
 	 error(string.format("Oops, invalid flow_format: %s", config.flow_format))
       end
-      local ifs = fluidBlocks[i].initialState
+      local ifs = fluidBlocks[idx].initialState
       if type(ifs) == "table" and ifs.myType == "FlowState" then
 	 -- We have one of the pure-Lua FlowState objects and we convert it to
 	 -- a wrapped-D-language _FlowState object.
@@ -1944,7 +1945,7 @@ function build_job_files(job)
 	 error("Unexpected type for initial flow state in block.")
       end
       if type(ifs) ~= "string" then
-         local grid = fluidBlocks[i].grid
+         local grid = fluidBlocks[idx].grid
          if grid:get_type() == "structured_grid" then
             write_initial_sg_flow_file(fileName, grid, ifs, 0.0)
          else
