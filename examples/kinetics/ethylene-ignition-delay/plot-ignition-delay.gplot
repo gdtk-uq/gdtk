@@ -1,0 +1,13 @@
+set term postscript eps enhanced "Courier" 20 
+set output "C2H4-ignition-delay.eps"
+set title "Ignition delay times for C_2H_4/O_2/Ar system\n at p = 3 atm, {/Symbol f}=0.5"
+set xlabel "10^4/T(K)"
+set ylabel "ignition delay, {/Symbol m}s"
+set yrange [10:10000]
+set logscale y
+set format y "10^{%T}"
+set xrange [5.5:9]
+set key left
+plot 'baker-skinner-1972.dat' t 'Baker \& Skinner (1972) expt.' w p pt 8 ps 1.5, \
+     'ethylene-ignition-delay.dat' u (1.0e4/$1):($2*1.0e6) t 'eilmer4: Wang et al mechanism' w l ls 1
+
