@@ -1,3 +1,6 @@
+-- Authors: Samuel Dillon and Rowan Gollan
+-- Date: 2019, Jan-Apr
+
 spFile = "C2H2-C2H4-model-gas.lua"
 reacFile = "C2H2-C2H4-model-reactions-eilmer.lua"
 outFile = "ethylene-ignition-delay.dat"

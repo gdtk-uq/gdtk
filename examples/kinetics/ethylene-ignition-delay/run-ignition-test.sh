@@ -1,3 +1,3 @@
 #!/bin/bash
 
-gas-calc ethylene-ignition.lua
+gas-calc ignition-delay.lua
