@@ -1,0 +1,13 @@
+set term postscript eps enhanced "Courier" 20 
+set output "C2H2-ignition-delay.eps"
+set title "Ignition delay times for C_2H_2/O_2/Ar system\n at p = 0.6 atm, {/Symbol f}=2.0"
+set xlabel "10^4/T(K)"
+set ylabel "Ignition delay, {/Symbol m}s"
+set yrange [10:10000]
+set logscale y
+set format y "10^{%T}"
+set xrange [5.5:9]
+set key left
+plot 'hidaka-et-al-1981.dat' t 'Hidaka et al (1981) exp.' w p pt 8 ps 1.5, \
+     'acetylene-ignition.dat' u (1.0e4/$1):($2*1.0e6) t 'eilmer4: Wang et al mechanism' w l ls 1
+
