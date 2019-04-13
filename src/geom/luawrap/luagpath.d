@@ -808,8 +808,11 @@ extern(C) int newSpline2(lua_State* L)
  *
  * Example construction in Lua:
  * ---------------------------------
- * svgpth = SVGPath:new{path="M3.0,3.0;L4.0,3.0;v1.0;h-1.0;Z"}
- * -- Expecting 3 numbers per line, space-separated.
+ * svgpth = SVGPath:new{path="M3.0,3.0;L4.0,3.0;v1.0;h-1.0;Z",
+ *                      xtrans=0, ytrans=0, xscale=1, yscale=1,
+ *                      tolerance=1.0e-10}
+ * -- Only the path string is required.
+ * -- In that string, we are expecting 3 numbers per line, space-separated.
  * ---------------------------------
  */
 extern(C) int newSVGPath(lua_State* L)
@@ -827,7 +830,7 @@ extern(C) int newSVGPath(lua_State* L)
             "A table containing arguments is expected, but no table was found.";
         luaL_error(L, errMsg.toStringz);
     }
-    if (!checkAllowedNames(L, 1, ["path"])) {
+    if (!checkAllowedNames(L, 1, ["path", "xtrans", "ytrans", "xscale", "yscale", "tolerance"])) {
         string errMsg = "Error in call to SVGPath:new{}. Invalid name in table.";
         luaL_error(L, errMsg.toStringz);
     }
@@ -838,8 +841,30 @@ extern(C) int newSVGPath(lua_State* L)
         luaL_error(L, errMsg.toStringz);
     }
     auto pathTxt = to!string(lua_tostring(L, -1));
-    lua_pop(L, 1); // dispose of filename string
-    auto svgpath = new SVGPath(pathTxt);
+    lua_pop(L, 1); // dispose of path string
+    //
+    double xtrans = 0.0;
+    lua_getfield(L, 1, "xtrans".toStringz());
+    if ( lua_isnumber(L, -1) ) { xtrans = to!double(lua_tonumber(L, -1)); }
+    lua_pop(L, 1); // dispose of xtrans item
+    double ytrans = 0.0;
+    lua_getfield(L, 1, "ytrans".toStringz());
+    if ( lua_isnumber(L, -1) ) { ytrans = to!double(lua_tonumber(L, -1)); }
+    lua_pop(L, 1); // dispose of ytrans item
+    double xscale = 1.0;
+    lua_getfield(L, 1, "xscale".toStringz());
+    if ( lua_isnumber(L, -1) ) { xscale = to!double(lua_tonumber(L, -1)); }
+    lua_pop(L, 1); // dispose of xscale item
+    double yscale = 1.0;
+    lua_getfield(L, 1, "yscale".toStringz());
+    if ( lua_isnumber(L, -1) ) { yscale = to!double(lua_tonumber(L, -1)); }
+    lua_pop(L, 1); // dispose of yscale item
+    double tolerance = 1.0e-10;
+    lua_getfield(L, 1, "tolerance".toStringz());
+    if ( lua_isnumber(L, -1) ) { tolerance = to!double(lua_tonumber(L, -1)); }
+    lua_pop(L, 1); // dispose of tolerance item
+    //
+    auto svgpath = new SVGPath(pathTxt, xtrans, ytrans, xscale, yscale, tolerance);
     pathStore ~= pushObj!(SVGPath, SVGPathMT)(L, svgpath);
     return 1;
 } // end newSVGPath()
