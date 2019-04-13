@@ -333,6 +333,7 @@ public:
     @nogc
     number vibElecEnergy(number Tve, int isp) // Vibrational energy (h) = Total energy - Referenced energy- Rotational Energy
     {
+        number h_ve;
         if (isp == Species.H2 && Tve.re < 500.0) {
             // Below 500.0 K, the energy vibrational and electronic energy
             // is essentially 0.
@@ -340,10 +341,10 @@ public:
             // lower in temperature, we run into a temperature region where the 
             // rotational mode of hydrogen is not fully excited. So, our assumption
             // of a constant Cp_tr_rot no longer holds at low temperatures.
-            return 0.0 ;
+            h_ve = 0.0;
+            return h_ve;
         }
         number h_at_Tve = enthalpyFromCurveFits(Tve, isp);
-        number h_ve;
         if (isp == Species.eminus) {
             h_ve = h_at_Tve - _R[isp]*Tve;
         }
@@ -493,13 +494,16 @@ private:
     @nogc
     number vibElecTemperature(in GasState Q)
     {
+        number T_guess;
         // We have made the statement that we consider energy in vibElec
         // mode to be 0.0 at 500.0 K or less. This means that when 
         // u_modes is 0.0, we cannot distinguish any vibroelectronic
         // temperature below this.
         // So we'll just set the vibroelectronic temperature to 500.0 K.
-        if (Q.u_modes[0] <= 0.0)
-            return 500.0;
+        if (Q.u_modes[0] <= 0.0) {
+            T_guess = 500.0;
+            return T_guess;
+        }
 
     	//Let us assume the density mass fractions and densities are known, 
     	//now make the vibrational temperature consistent with this data.
@@ -509,15 +513,15 @@ private:
         double TOL = 1.0e-6;
         
         // Take the supplied T_modes[0] as the initial guess.
-        number T_guess = Q.T_modes[0];
+        T_guess = Q.T_modes[0];
         number f_guess = vibElecEnergy(Q, T_guess) - Q.u_modes[0];
-        //number f_guess = vibEnergy(Q, T_guess) - Q.u_modes[0];
+        // number f_guess = vibEnergy(Q, T_guess) - Q.u_modes[0];
         // Before iterating, check if the supplied guess is
         // good enough. Define good enough as 1/100th of a Joule.
         double E_TOL = 0.01;
         if (fabs(f_guess) < E_TOL) {
             // Given temperature is good enough.
-            return Q.T_modes[0];
+            return T_guess;
         }
 
         // Begin iterating.
