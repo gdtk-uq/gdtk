@@ -319,6 +319,10 @@ two_temperature_gasgiant_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM
 	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
+gasgiant_transport_properties_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
+	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
+		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
+
 # Fortran bits
 
 ideal_air_fortran.o: ideal_air_fortran.f

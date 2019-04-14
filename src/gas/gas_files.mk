@@ -50,7 +50,8 @@ DIFFUSION_FILES := \
 	$(GAS_DIR)/diffusion/therm_cond.d \
 	$(GAS_DIR)/diffusion/viscosity.d \
 	$(GAS_DIR)/diffusion/wilke_mixing_therm_cond.d \
-	$(GAS_DIR)/diffusion/wilke_mixing_viscosity.d
+	$(GAS_DIR)/diffusion/wilke_mixing_viscosity.d \
+	$(GAS_DIR)/diffusion/gasgiant_transport_properties.d
 
 GAS_FILES := $(GAS_MODEL_FILES) $(THERMO_FILES) $(DIFFUSION_FILES)
 
