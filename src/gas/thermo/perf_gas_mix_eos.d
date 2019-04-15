@@ -29,13 +29,23 @@ public:
         _R = R.dup;
     }
 
+    this(in double[] R, bool separateElectronTemperature, int electronSpeciesIdx, int electronModeIdx) {
+        _R = R.dup;
+        _separateElecTemp = separateElectronTemperature;
+        _eSpIdx = electronSpeciesIdx;
+        _eMIdx = electronModeIdx;
+    }
+
     /++
       Compute the pressure assuming density and temperature
       are up-to-date in GasState Q.
     +/
     @nogc override void update_pressure(ref GasState Q) const {
-        number Rmix = mass_average(Q, _R);
+        number Rmix = heavyParticleGasConstant(Q);
         Q.p = Q.rho*Rmix*Q.T;
+        if (_separateElecTemp) {
+            Q.p += Q.rho*Q.massf[_eSpIdx]*_R[_eSpIdx]*Q.T_modes[_eMIdx];
+        }
     }
 
     /++
@@ -43,21 +53,45 @@ public:
       are up-to-date in GasState Q.
     +/
     @nogc override void update_density(ref GasState Q) const {
-        number Rmix = mass_average(Q, _R);
-        Q.rho = Q.p/(Rmix*Q.T);
+        number Rmix = heavyParticleGasConstant(Q);
+        number denom = Rmix*Q.T;
+        if (_separateElecTemp) {
+            denom += Q.massf[_eSpIdx]*_R[_eSpIdx]*Q.T_modes[_eMIdx];
+        }
+        Q.rho = Q.p/denom;
     }
 
     /++
       Compute the temperature assuming density and pressure
       are up-to-date in GasState Q.
+      We can update the transrotaional temperature only if we
+      assume the electron temperature is already known.
     +/
     @nogc override void update_temperature(ref GasState Q) const {
-        number Rmix = mass_average(Q, _R);
-        Q.T = Q.p/(Rmix*Q.rho);
+        number Rmix = heavyParticleGasConstant(Q);
+        number p = Q.p;
+        if (_separateElecTemp) {
+            p -= Q.rho*Q.massf[_eSpIdx]*_R[_eSpIdx]*Q.T_modes[_eMIdx];
+        }
+        Q.T = p/(Rmix*Q.rho);
     }
 
 private:
     double[] _R; /// specific gas constants in J/(kg.K)
+    bool _separateElecTemp = false;
+    int _eSpIdx = -1;
+    int _eMIdx = -1;
+
+    @nogc
+    number heavyParticleGasConstant(ref GasState Q) const
+    {
+        number Rmix = 0.0;
+        foreach (isp; 0 .. Q.massf.length) {
+            if (isp == _eSpIdx && _separateElecTemp) continue;
+            Rmix += Q.massf[isp]*_R[isp];
+        }
+        return Rmix;
+    }
 }         
 
 version(perf_gas_mix_eos_test) {
@@ -66,7 +100,7 @@ version(perf_gas_mix_eos_test) {
     import util.msg_service;
     int main() {
         double[] R = [297.0, 260.0]; // N2, O2
-        auto pg = new PerfectGasMixEOS(R);
+        auto pg = new PerfectGasMixEOS(R, false, -1, -1);
         auto gd = new GasState(2, 1);
         gd.T = 300.0;
         gd.rho = 1.2;

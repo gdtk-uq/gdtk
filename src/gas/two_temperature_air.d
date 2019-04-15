@@ -166,7 +166,7 @@ public:
         foreach (isp; 0 .. _n_species) {
             _R[isp] = R_universal/_mol_masses[isp];
         }
-        _pgMixEOS = new PerfectGasMixEOS(_R);
+        _pgMixEOS = new PerfectGasMixEOS(_R, true, Species.eminus, 0);
 
         _del_hf.length = _n_species;
         foreach (isp; 0 .. _n_species) {
@@ -175,6 +175,12 @@ public:
 
         _Cp_tr_rot.length = _n_species;
         foreach (isp; 0 .. _n_species) {
+            if (isp == Species.eminus) {
+                // The electron translation is governed by T_ve,
+                // so it has no energy contribution in the T_tr mode.
+                _Cp_tr_rot[isp] = 0.0;
+                continue;
+            }
             _Cp_tr_rot[isp] = (5./2.)*_R[isp];
             if (canFind(molecularSpeciesNames, _species_names[isp])) {
                 _Cp_tr_rot[isp] += _R[isp];
@@ -258,6 +264,7 @@ public:
         number sumA = 0.0;
         number sumB = 0.0;
         foreach (isp; 0 .. _n_species) {
+            if (isp == Species.eminus) continue;
             sumA += Q.massf[isp]*(_Cp_tr_rot[isp]*T_REF - _del_hf[isp]);
             sumB += Q.massf[isp]*(_Cp_tr_rot[isp] - _R[isp]);
         }

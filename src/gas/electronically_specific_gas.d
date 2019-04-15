@@ -58,7 +58,10 @@ public:
         foreach (isp; 0 .. _n_macro_species) {
             _macro_R[isp] = R_universal/_macro_mol_masses[isp];
         }
-        _pgMixEOS = new PerfectGasMixEOS(_macro_R);
+        // TODO 2019-04-15
+        // RJG think about this. How do we find an effective electron
+        // temperature in an electronically specific gas?
+        _pgMixEOS = new PerfectGasMixEOS(_macro_R, false, -1, -1);
 
         _del_hf.length = _n_macro_species;
         foreach (isp; 0 .. _n_macro_species) {

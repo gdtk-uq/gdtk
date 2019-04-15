@@ -74,7 +74,7 @@ public:
         foreach (isp; 0 .. _n_species) {
             _R[isp] = R_universal/_mol_masses[isp];//J/(kg.K)
         }
-        _pgMixEOS = new PerfectGasMixEOS(_R);
+        _pgMixEOS = new PerfectGasMixEOS(_R, true, Species.eminus, 0);
         // enthalpy of formation
         _del_hf.length = _n_species;
         foreach (isp; 0 .. _n_species) {
