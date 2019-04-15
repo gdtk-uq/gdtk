@@ -166,7 +166,12 @@ public:
         foreach (isp; 0 .. _n_species) {
             _R[isp] = R_universal/_mol_masses[isp];
         }
-        _pgMixEOS = new PerfectGasMixEOS(_R, true, Species.eminus, 0);
+        if (model == "5-species") {
+            _pgMixEOS = new PerfectGasMixEOS(_R, false, -1, -1);
+        }
+        else {
+            _pgMixEOS = new PerfectGasMixEOS(_R, true, Species.eminus, 0);
+        }
 
         _del_hf.length = _n_species;
         foreach (isp; 0 .. _n_species) {
@@ -418,8 +423,7 @@ public:
     override number enthalpy(in GasState Q)
     {
         number e = transRotEnergy(Q) + vibEnergy(Q, Q.T_modes[0]);
-        number R = gas_constant(Q);
-        number h = e + R*Q.T;
+        number h = e + Q.p/Q.rho;
         return h;
     }
     override number entropy(in GasState Q)
@@ -437,17 +441,17 @@ public:
     @nogc number vibEnergy(number Tve, int isp)
     {
         number h_at_Tve = enthalpyFromCurveFits(Tve, isp);
-        number h_ve = h_at_Tve - _Cp_tr_rot[isp]*(Tve - T_REF) - _del_hf[isp];
-        debug {
-            // writeln("Tve= ", Tve, " h_at_Tve= ", h_at_Tve, " h_ve= ", h_ve);
+        if (isp == Species.eminus) {
+            return h_at_Tve;
         }
+        number h_ve = h_at_Tve - _Cp_tr_rot[isp]*(Tve - T_REF) - _del_hf[isp];
         return h_ve;
     }
 
     @nogc number vibEnergy(in GasState Q, number Tve)
     {
         number e_ve = 0.0;
-        foreach (isp; molecularSpecies) {
+        foreach (isp; 0 .. _n_species) {
             e_ve += Q.massf[isp] * vibEnergy(Tve, isp);
         }
         return e_ve;
