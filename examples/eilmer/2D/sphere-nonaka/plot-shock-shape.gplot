@@ -1,0 +1,15 @@
+set term pdf enhanced mono dashed font "Courier,25" size 25cm,15cm
+set title "Shock shape in front of a sphere fired in air\nR_n = 7.0mm, u_{/Symbol \245} = 3.49 km/s, p_{/Symbol \245} = 4850 Pa, {/Symbol r}_{/Symbol \245}R_n = 4.0e-4 kg/m^2"
+set output 'nonaka-2T-model-shock-shape.pdf'
+set size square
+set xlabel '{/Symbol q}, degrees'
+set ylabel '{/Symbol D}/R_n'
+set yrange [0:0.6]
+set xrange [0:90]
+set mytics 5
+set mxtics 5
+set key at 75,0.58 font ",20"
+plot 'expt-data/fig10-upper.g3data' u 1:2 t 'experiment, upper side' w p pt 6 ps 1, \
+     'expt-data/fig10-lower.g3data' u 1:2 t 'experiment, lower side' w p pt 4 ps 1, \
+     'shock-shape.dat' u 3:4 t 'eilmer4, 2-T air model' w l ls 1 lw 2.5
+

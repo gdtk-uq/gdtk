@@ -1,0 +1,12 @@
+set term pdfcairo size 15cm,10cm font "20,Courier"
+set output 'residuals.pdf'
+set xlabel 'iteration count'
+set ylabel 'mass residual'
+set y2tics
+set y2label 'energy residual'
+set logscale y
+set logscale y2
+set yrange [100:*]
+set y2range [1e9:*]
+plot 'residuals.dat' u 1:3 t 'mass residual' w l, \
+     'residuals.dat' u 1:7 axes x1y2 t 'energy residual' w l

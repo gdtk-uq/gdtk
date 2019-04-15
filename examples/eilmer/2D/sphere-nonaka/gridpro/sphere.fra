@@ -1,0 +1,36 @@
+SET GRIDDEN 8
+SET DIMENSION 2
+SET DISPLAY.SURF ON
+COMPONENT main()
+BEGIN
+INPUT 1 surf(sOUT (0..3));
+INPUT 2 corn(sIN (1:1..4),cIN (-4));
+END
+
+COMPONENT surf()
+BEGIN
+s 0  -linear  "body.dat" -l  ;
+s 1  -linear  "inflow-boundary.dat" -l  ;
+s 2  -plane @({0.004,0,0},{0,0,0}) -l   -R 0 -1 0 1 0 0 0 0 1  -t -0.002 0 0  ;
+s 3  -plane @({0.02,0,0},{0,0,0}) -l   -t 0.007 0 0  ;
+#surface_groups_labelled start
+#s 0 "surf 0"
+#s 1 "surf 1"
+#s 2 "surf 4"
+#s 3 "surf 6"
+#l 0 "All surfaces"
+#start
+#end
+#surface_groups_labelled end
+END
+
+COMPONENT corn(sIN s[0..3],cIN c[0..3])
+BEGIN
+c 0   -0.0001845913    0.0000577773    0.0000000000 -s s:2 s:0 -L c:0 -g 0 ;
+c 1    0.0069174836    0.0072128383    0.0000000000 -s s:3 s:0 -L c:1 0 -g 0 ;
+c 2    0.0068561691    0.0139027558    0.0000000000 -s s:1 s:3 -L c:2 1 -g 0 ;
+c 3   -0.0015573485    0.0001221144    0.0000000000 -s s:1 s:2 -L c:3 2 0 -g 0 ;
+g 0 1 120;
+g 0 3 60;
+END
+

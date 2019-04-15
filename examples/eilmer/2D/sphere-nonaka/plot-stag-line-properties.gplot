@@ -1,0 +1,8 @@
+set term postscript eps enhanced 20 "Times"
+set output "stag-prof-T.eps"
+set yrange [0:6000]
+set xtics 0.0005
+set mxtics
+set mytics
+set grid xtics ytics mxtics mytics
+plot 'stag-profile.dat' u 1:25 notitle w l lw 2
