@@ -619,7 +619,10 @@ extern(C) int get_cell_data(lua_State* L)
     int ib;
     lua_getfield(L, 2, "ib");
     if ( lua_isnil(L, -1) ) {
-        ib = 0;
+        string errMsg = "Error in call to FlowSolution:get_cell_data.\n";
+        errMsg ~= " No field for ib was found.\n";
+        errMsg ~= " A block number in field ib should be provided.\n";
+        throw new LuaInputException(errMsg);
     } else if ( lua_isnumber(L, -1) ) {
         ib = to!int(luaL_checknumber(L, -1));
     } else {
@@ -633,7 +636,10 @@ extern(C) int get_cell_data(lua_State* L)
     int i;
     lua_getfield(L, 2, "i");
     if ( lua_isnil(L, -1) ) {
-        i = 0;
+        string errMsg = "Error in call to FlowSolution:get_cell_data.\n";
+        errMsg ~= " No field for i was found.\n";
+        errMsg ~= " A cell index number in field i should be provided.\n";
+        throw new LuaInputException(errMsg);
     } else if ( lua_isnumber(L, -1) ) {
         i = to!int(luaL_checknumber(L, -1));
     } else {
