@@ -169,6 +169,7 @@ public:
         number sumA = 0.0;
         number sumB = 0.0;
         foreach (isp; 0 .. _n_species) {
+        	if (isp == Species.eminus) continue;
             sumA += Q.massf[isp]*(_Cp_tr_rot[isp]*T_REF - _del_hf[isp]); //del_hf: h reference
             sumB += Q.massf[isp]*(_Cp_tr_rot[isp] - _R[isp]);
         }
@@ -346,7 +347,7 @@ public:
         }
         number h_at_Tve = enthalpyFromCurveFits(Tve, isp);
         if (isp == Species.eminus) {
-            h_ve = h_at_Tve - _R[isp]*Tve;
+            return h_at_Tve;
         }
         else {
             h_ve = h_at_Tve - _Cp_tr_rot[isp]*(Tve - T_REF) - _del_hf[isp];
@@ -662,7 +663,7 @@ static this()
     A_22["He:H+"]   =  -2.73e-2;    B_22["He:H+"]   =  5.60e-1; C_22["He:H+"]   =  -4.18;    D_22["He:H+"]   =    1.26e+6;
     A_22["He:e-"]   =  -6.49e-3;    B_22["He:e-"]   =  1.20e-1; C_22["He:e-"]   =  -6.91e-1; D_22["He:e-"]   =    1.95e+1;
     A_22["He:He"]   =  -5.25e-3;    B_22["He:He"]   =  9.66e-2; C_22["He:He"]   =  -8.03e-1; D_22["He:He"]   =    1.65e+2; 
-    A_22["He+:H2"]  =  -1.15e+3;    B_22["He+:H2"]  =  3.91e-2; C_22["He+:H2"]  =  -8.74e-1; D_22["He+:H2"]  =    2.81e+3;
+    A_22["He+:H2"]  =  -1.15e-3;    B_22["He+:H2"]  =  3.91e-2; C_22["He+:H2"]  =  -8.74e-1; D_22["He+:H2"]  =    2.81e+3;
     A_22["He+:H"]   =  -1.62e-2;    B_22["He+:H"]   =  2.83e-1; C_22["He+:H"]   =  -1.86;    D_22["He+:H"]   =    1.95e+3; 
     A_22["He+:H+"]  =  -2.05e-2;    B_22["He+:H+"]  =  3.91e-1; C_22["He+:H+"]  =  -2.91;    D_22["He+:H+"]  =    7.60e+4; //Unknown
     A_22["He+:e-"]  =  -8.24e-3;    B_22["He+:e-"]  =  1.68e-1; C_22["He+:e-"]  =  -1.06;    D_22["He+:e-"]  =    4.65e+1; //Unknown
