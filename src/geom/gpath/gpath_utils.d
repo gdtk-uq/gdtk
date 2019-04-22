@@ -59,10 +59,10 @@ Bezier optimiseBezierPoints(Vector3[] points, int nCtrlPts, Bezier initGuess, re
     // Check that there are more data points than
     // desired control points
     if (points.length < nCtrlPts) {
-        string errMsg = "Error in bestFitBezier: there are fewer data points than the desired number of control points.\n";
+        string errMsg = "Error in optimiseBezierPoints: there are fewer data points than the desired number of control points.\n";
         errMsg ~= format("No. of data points: %d\n", points.length);
         errMsg ~= format("No. of desired control points: %d", nCtrlPts);
-        throw new Error(errMsg);
+        throw new Exception(errMsg);
     }
     ts.length = points.length;
     // ------------------------------------------------------------------
@@ -71,6 +71,13 @@ Bezier optimiseBezierPoints(Vector3[] points, int nCtrlPts, Bezier initGuess, re
 
     Bezier myBez;
     if (initGuess) {
+        if (initGuess.B.length != nCtrlPts) {
+            string errMsg = "Error in optimiseBezierPoints: the supplied initial guess Bezier does not have the same number of controls points\n";
+            errMsg ~= "as the desired number of control points for the optimised Bezier.\n";
+            errMsg ~= format("No. of control points desired: %d\n", nCtrlPts);
+            errMsg ~= format("No. of control points in supplied initial guess: %d", initGuess.B.length);
+            throw new Exception(errMsg);
+        }
         myBez = new Bezier(initGuess);
     }
     else {
@@ -106,7 +113,7 @@ Bezier optimiseBezierPoints(Vector3[] points, int nCtrlPts, Bezier initGuess, re
         }
     }
     // --------------- Done establishing guess ---------------------------
-    
+
     // --------------------------------------------------------------------
     // Build cost function to be minimised.
     // --------------------------------------------------------------------
