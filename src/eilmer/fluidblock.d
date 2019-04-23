@@ -411,8 +411,10 @@ public:
                     foreach (i; 0 .. cell.iface.length) {
                         auto face = cell.iface[i];
                         auto other_cell = (cell.outsign[i] == 1) ? face.right_cell : face.left_cell;
-                        if (other_cell.fs.check_data(other_cell.pos[gtl], myConfig.flowstate_limits))
-                            { neighbour_flows ~= other_cell.fs; }
+                        if (other_cell && other_cell.contains_flow_data &&
+                            other_cell.fs.check_data(other_cell.pos[gtl], myConfig.flowstate_limits)) {
+                            neighbour_flows ~= other_cell.fs;
+                        }
                     }
                     if (neighbour_flows.length == 0) {
                         string msg = "Block::count_invalid_cells(): There were no valid neighbours " ~
