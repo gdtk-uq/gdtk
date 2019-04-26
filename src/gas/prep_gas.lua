@@ -1,7 +1,7 @@
 #!/usr/bin/env dgd-lua
 -- Author: Rowan J. Gollan
 -- Date: 08-Mar-2015
--- 
+--
 -- This program is used to prepare a detailed
 -- gas model file for use by the eilmer4 gas
 -- dynamics simulation code. It requires a fairly
@@ -134,7 +134,7 @@ function writeCeaThermoCoeffs(f, sp, db, optsTable)
          print("ERROR: could not be found for species: ", sp)
          print("ERROR: Bailing out!")
          os.exit(1)
-      else 
+      else
          t = db[sp].ceaThermoCoeffs
          t.origin = "CEA"
       end
@@ -171,6 +171,41 @@ function writeCeaTransCoeffs(f, sp, db, name, key)
    t = db[sp][secName]
    f:write(string.format("db['%s'].%s = {\n", sp, key))
    f:write("   model = 'CEA',\n")
+   f:write(string.format("   nsegments = %d,\n", t.nsegments))
+   for i=0,t.nsegments-1 do
+      seg = "segment"..i
+      f:write(string.format("   segment%d = {\n", i))
+      f:write(string.format("      T_lower = %.1f,\n", t[seg].T_lower))
+      f:write(string.format("      T_upper = %.1f,\n", t[seg].T_upper))
+      f:write(string.format("      A = % -10.7e,\n", t[seg].A))
+      f:write(string.format("      B = % -10.7e,\n", t[seg].B))
+      f:write(string.format("      C = % -10.7e,\n", t[seg].C))
+      f:write(string.format("      D = % -10.7e,\n", t[seg].D))
+      f:write("   },\n")
+   end
+   f:write("}\n")
+end
+
+function writeChemkinTransCoeffs(f, sp, db, name, key)
+   secName = "chemkin"..name
+   if ( not db[sp][secName] ) then
+      print("")
+      print("------------------------------------------------------------------------------------------")
+      print(string.format("WARNING: The table of Chemkin coefficients to compute diffusion property: %s", secName))
+      print("WARNING: could not be found for species: ", sp)
+      print("WARNING: As a substitute the CEA model and values from 'defaults.lua' will be used.")
+      print("------------------------------------------------------------------------------------------")
+      db[sp][secName] = db.default[secName]
+   end
+   t = db[sp][secName]
+   f:write(string.format("db['%s'].%s = {\n", sp, key))
+
+   if ( not db[sp][secName] ) then
+      f:write("   model = 'CEA',\n")
+   else
+      f:write("   model = 'Chemkin',\n")
+   end
+
    f:write(string.format("   nsegments = %d,\n", t.nsegments))
    for i=0,t.nsegments-1 do
       seg = "segment"..i
@@ -230,18 +265,42 @@ function writeThermPerfGas(f, species, db, optsTable)
 	 f:write(string.format("   T_ref = %.8f,\n", db['air'].sutherlandVisc.T_ref))
 	 f:write(string.format("   S = %.8f,\n", db['air'].sutherlandVisc.S))
 	 f:write("}\n")
-      else 
-	 writeCeaTransCoeffs(f, sp, db, "Viscosity", "viscosity")
+      else
+	   if optsTable and optsTable.transport_database == "prefer-chemkin" then
+	      if ( not db[sp].chemkinViscosity ) then
+		 print("WARNING: Chemkin viscosity coefficients have been selected as preferred,")
+		 print("WARNING: but they could not be found for species: ", sp)
+		 print("WARNING: We default back to using the CEA viscosity coefficients (if available).")
+		 print("")
+		 writeCeaTransCoeffs(f, sp, db, "Viscosity", "viscosity")
+	      else
+		 writeChemkinTransCoeffs(f, sp, db, "Viscosity", "viscosity")
+	      end
+	   else
+		writeCeaTransCoeffs(f, sp, db, "Viscosity", "viscosity")
+	   end
       end
-      if ( sp == 'air' ) then 
+      if ( sp == 'air' ) then
 	 f:write("db['air'].thermal_conductivity = {\n")
 	 f:write("   model = 'Sutherland',\n")
 	 f:write(string.format("   k_ref = %.8e,\n", db['air'].sutherlandThermCond.k_ref))
 	 f:write(string.format("   T_ref = %.8f,\n", db['air'].sutherlandThermCond.T_ref))
 	 f:write(string.format("   S = %.8f,\n", db['air'].sutherlandThermCond.S))
 	 f:write("}\n")
-      else 
-	 writeCeaTransCoeffs(f, sp, db, "ThermCond", "thermal_conductivity")
+      else
+	   if optsTable and optsTable.transport_database == "prefer-chemkin" then
+	      if ( not db[sp].chemkinThermCond ) then
+		 print("WARNING: Chemkin thermal conductivity coefficients have been selected as preferred,")
+		 print("WARNING: but they could not be found for species: ", sp)
+		 print("WARNING: We default back to using the CEA thermal conductivity coefficients (if available).")
+		 print("")
+		 writeCeaTransCoeffs(f, sp, db, "ThermCond", "thermal_conductivity")
+	      else
+		 writeChemkinTransCoeffs(f, sp, db, "ThermCond", "thermal_conductivity")
+	      end
+	   else
+		writeCeaTransCoeffs(f, sp, db, "ThermCond", "thermal_conductivity")
+	   end
       end
    end
 end
@@ -456,14 +515,14 @@ function main()
       print("Exiting program without doing anything.")
       printHelp()
    end
-   
+
    -- Locate species database and load
    DGD = os.getenv("DGD")
    dir = DGD.."/data/"
    dbName = dir.."species-database.lua"
    dofile(dbName)
    print("Species database loaded from: ", dbName)
-   
+
    if listSpecies then
       spList = {}
       for sp,_ in pairs(db) do

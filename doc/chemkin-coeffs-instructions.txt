@@ -1,0 +1,174 @@
+Using Chemkin style thermo and transport coefficients with Eilmer4
+Author: Oliver Street
+Date: 26/04/2019
+
+================================================================================
+
+USAGE:
+
+To use Chemkin-like transport properties, simply ensure Eilmer4 is up to date,
+and add:
+
+           options = {transport_database = "prefer-chemkin"}
+
+to the gas input file, as is used in the prep-gas command. Note it will only
+function with:
+
+                    model = 'ThermallyPerfectGas'
+
+If Chemkin-like transport coefficients do not exist for a species, it will
+instead use the default CEA curves for N2. To add Chemkin-like transport
+coefficients for a species, species-generator.py has been created.
+It is found in:
+
+              dgd/src/gas/species-database/species-generation
+
+Note that the OMEGA_tables directory is necessary for operation.
+
+First, get Chemkin style thermo.dat and tran.dat files. (See EXAMPLE for
+structure), and place in the directory with the script.
+
+The species present in the therm.dat and tran.dat files do not have to match
+perfectly, however the script will only generate species data files for those
+which are common between both. It will print to console those which are used,
+and those which are missing from either file.
+
+Chemkin files do not give a comprehensive database of all useful information,
+lacking details such as 9-coefficient CEA thermo curves, CEA transport
+properties, and Lewis numbers. As such, existing species files can be copied
+into the species-files directory, and missing information will be appeneded.
+In the absence of an existing species file, a new one will be created, though
+it will only contain information derived from the Chemkin files.
+
+For convenience, the entire Eilmer4 species database can be copied into the
+species-file directory. Any species which are not from the data files will have
+their file purged afterwards, leaving only the relevant changed files.
+
+Run the python script. Species files will be constructed or edited, and now will
+have compatability with the Chemkin style transport models.
+
+================================================================================
+
+THEORY:
+
+The theory behind Chemkin style transport is comprehensively covered in many
+sources, such as the Chemkin Theory Manual (2016) and TRA-036-1. In brief, the
+.dat files contain physical properties of the species, which can be used to
+model the viscosity and thermal conductivity using the standard kinetic
+expression, and contributions from degrees of freedom, respectively. This is not
+empirical, and the computations are expensive. Therefore, the python script
+does the heavy computation beforehand, and performs a curve fit of:
+
+           log(xi) = Ai + Bi*log(T) + Ci*log(T)^2 + Di*log(T)^3
+
+for xi = viscosity, thermal conductivity; T = temperature. Chemkin reports this
+curvefit to be accurate to within several percent. A, B, C and D are stored in
+the species database for both viscosity and thermal conductivity, and this
+simplified expression is used to evaluate the properties while in operation.
+
+================================================================================
+
+SOURCE CODE CHANGES:
+
+Changed or New (*) Files:
+dgd
+--src
+----gas
+    gas_files.mk:
+        added under DIFFUSION_FILES $(GAS_DIR)/diffusion/chemkin_therm_cond.d
+        and $(GAS_DIR)/diffusion/chemkin_viscosity.d
+
+    makefile:
+        added chemkin test targets, and names under TEST_PROGRAMS
+
+    prep_gas.lua:
+        added function writeChemkinTransCoeffs, in style of the CEA version.
+        Preferentially writes chemkin data if:
+        {optsTable.transport_database == "prefer-chemkin"}, otherwise defaults
+        to CEA. If Chemkin data does not exist, it uses CEA.
+
+    therm_perf_gas.d:
+        Added chemkin models to be imported, added model cases.
+
+------diffusion
+      chemkin_therm_cond.d:                                                    *
+          Based on cea equivalent, edited references to chemkin, changed model.*
+          Trivial test works, other is commented out.                          *
+
+      chemkin_viscosity.d:                                                     *
+          Based on cea equivalent, edited references to chemkin, changed model.*
+          Trivial test works, other is commented out.                          *
+
+      therm_cond.d:
+          Added chemkin model to be imported, added model case.
+
+      viscosity.d:
+          Added chemkin model to be imported, added model case.
+
+------species-database
+      Updated species files in Tianfeng Lu, 2018 sk32 ethylene scheme to have  
+      chemkin transport
+
+--------species-generation                                                     *
+        species-generator-old.py.backup:                                       *
+            Original species generation program. Kept for posterity.           *
+
+        species-generator.py:                                                  *
+            Species generation script. Intakes Chemkin like thermo and         *
+            transport data, and outputs updated or new species database files. *
+
+        OMEGA_tables:                                                          *
+            Collision integral tables. Taken from Monchick and Mason.          *
+
+================================================================================
+
+EXAMPLE:
+Chemkin style data files, source: Tianfeng Lu, 2018:
+
+therm.dat format - standard Chemkin format **
+
+H2                TPIS78H   2   00   00   00G   200.000  3500.000   1000.00    1
+ 3.33727920E+00-4.94024731E-05 4.99456778E-07-1.79566394E-10 2.00255376E-14    2
+-9.50158922E+02-3.20502331E+00 2.34433112E+00 7.98052075E-03-1.94781510E-05    3
+ 2.01572094E-08-7.37611761E-12-9.17935173E+02 6.83010238E-01 8.46810200E+03    4
+OH                RUS 78O   1H   1   00   00G   200.000  3500.000  1000.000    1
+ 3.09288767E+00 5.48429716E-04 1.26505228E-07-8.79461556E-11 1.17412376E-14    2
+ 3.85865700E+03 4.47669610E+00 3.99201543E+00-2.40131752E-03 4.61793841E-06    3
+-3.88113333E-09 1.36411470E-12 3.61508056E+03-1.03925458E-01 8.81310600E+03    4
+
+tran.dat format - standard Chemkin format ***
+
+H2                 1    38.000     2.920     0.000     0.790   280.000
+H2O                2   572.400     2.605     1.844     0.000     4.000
+
+================================================================================
+
+** Meaning of rows and columns (col left to right, row 1-4)
+Row                                          Col.
+1   Species Name                             1-15
+    Reference                                19-24
+    Formula                                  25-44
+    State (G=Gaseous or C=Condensed)         45
+    Temperature Range (Low, High, Mid)       46-75
+    Row No.                                  80
+
+2   Coefficients ai(i=1,5) for higher temp   1-75
+    Row No.                                  80
+
+3   Coefficients ai(i=6,7) for higher temp   1-30
+    Coefficients ai(i=1,3) for lower temp    31-75
+    Row No.                                  80
+
+4   Coefficients ai(i=4,7) for lower Temps   1-60
+    H0(298.15) or blank                      61-75
+    Row No.                                  80
+
+
+*** Meaning of column (left to right)
+Molecule Name
+Molecule Geometry -> (0 = atom, 1 = linear, 2 = non-linear)
+epsilon/kB        -> Lennard-Jones potential well depth (K)
+sigma             -> Lennard-Jones collision diameter (Angstrom)
+mu                -> dipole moment (Debye)
+alpha             -> polarisability (cubic Angstrom)
+Zrot              -> rotational relaxation coefficient at 298K

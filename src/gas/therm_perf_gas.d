@@ -17,7 +17,7 @@ import util.lua;
 import util.lua_service;
 import nm.complex;
 import nm.number;
-import nm.brent; 
+import nm.brent;
 import nm.bracketing;
 import core.stdc.stdlib : exit;
 
@@ -31,6 +31,8 @@ import gas.diffusion.viscosity;
 import gas.diffusion.therm_cond;
 import gas.diffusion.cea_viscosity;
 import gas.diffusion.cea_therm_cond;
+import gas.diffusion.chemkin_viscosity;
+import gas.diffusion.chemkin_therm_cond;
 import gas.diffusion.sutherland_viscosity;
 import gas.diffusion.sutherland_therm_cond;
 import gas.diffusion.wilke_mixing_viscosity;
@@ -108,6 +110,9 @@ public:
             case "Sutherland":
                 vms ~= createSutherlandViscosity(L);
                 break;
+            case "Chemkin":
+                vms ~= createChemkinViscosity(L);
+                break;
             default:
                 string errMsg = format("The viscosity model '%s' is not available.\n", model);
                 errMsg ~= format("This error occurred for species %d when constructing "
@@ -134,6 +139,9 @@ public:
                 break;
             case "Sutherland":
                 tcms ~=  createSutherlandThermalConductivity(L);
+                break;
+            case "Chemkin":
+                tcms ~=  createChemkinThermalConductivity(L);
                 break;
             default:
                 string errMsg = format("The thermal conductivity model '%s' "
@@ -167,7 +175,7 @@ public:
         return "ThermallyPerfectGas(species=[TODO])";
     }
 
-    override void update_thermo_from_pT(GasState Q) 
+    override void update_thermo_from_pT(GasState Q)
     {
         _pgMixEOS.update_density(Q);
         _tpgMixEOS.update_energy(Q);
@@ -215,7 +223,7 @@ public:
 
         if ( T1 < T_MIN )
             T1 = T_MIN;
-        
+
         try {
             Q.T = solve!(zeroFun,number)(T1, T2, TOL);
         }
@@ -266,7 +274,7 @@ public:
 
         if ( T1 < T_MIN )
             T1 = T_MIN;
-        
+
         try {
             Q.T = solve!(zeroFun,number)(T1, T2, TOL);
         }
@@ -310,7 +318,7 @@ public:
 
         if ( p1 < 0.0 )
             p1 = 1.0;
-        
+
         try {
             Q.p = solve!(zeroFun2,number)(p1, p2, TOL);
         }
@@ -337,7 +345,7 @@ public:
         // Thermodynamics: an Engineering Approach, 3rd edition
         // McGraw Hill
         // Equation 16-10 on p. 849
-    
+
         // "frozen" sound speed
         Q.a = sqrt(gamma(Q)*dpdrho_const_T(Q));
     }
@@ -444,7 +452,7 @@ version(therm_perf_gas_test) {
         gm.update_thermo_from_rhou(gd);
         assert(approxEqual(3373757.4, gd.p, 1.0e-6), failedUnitTest());
         assert(approxEqual(4331.944, gd.T, 1.0e-6), failedUnitTest());
-    
+
         gd.T = 10000.0;
         gd.rho = 1.5;
         gm.update_thermo_from_rhoT(gd);
@@ -476,7 +484,7 @@ version(therm_perf_gas_test) {
         gm.update_trans_coeffs(gd);
         assert(approxEqual(0.00012591, gd.mu, 1.0e-6), failedUnitTest());
         assert(approxEqual(0.2448263, gd.k, 1.0e-6), failedUnitTest());
-        
+
         // [TODO]
         // entropy, enthalpy and sound speed tests
         return 0;

@@ -45,6 +45,8 @@ THERMO_FILES := \
 DIFFUSION_FILES := \
 	$(GAS_DIR)/diffusion/cea_therm_cond.d \
 	$(GAS_DIR)/diffusion/cea_viscosity.d \
+	$(GAS_DIR)/diffusion/chemkin_therm_cond.d \
+	$(GAS_DIR)/diffusion/chemkin_viscosity.d \
 	$(GAS_DIR)/diffusion/sutherland_therm_cond.d \
 	$(GAS_DIR)/diffusion/sutherland_viscosity.d \
 	$(GAS_DIR)/diffusion/therm_cond.d \
