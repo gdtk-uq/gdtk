@@ -418,8 +418,16 @@ final class GlobalConfig {
     // Presumably, we won't be accessing this particular gas model from the 
     // individual block computations, so that parallel computations for the blocks
     // don't trip over each other.
+    //
+    // Customization of the simulation is via user-defined actions.
     shared static string udf_supervisor_file; // empty to start
+    // A scratch-pad area for the user-defined functions.
+    // This will allow use to persist some arbitrary user data
+    // between calls to the master Lua interpreter.
+    // The meaning of the data items is user-defined.
+    shared static double[] userPad;
     shared static int user_pad_length = 0;
+    
     shared static bool include_quality = false; // if true, we include quality in the solution file  
 
     shared static int nFluidBlocks = 0; // Number of fluid blocks in the overall simulation.
@@ -1158,6 +1166,13 @@ void read_config_file()
     GlobalConfig.gmodel_master = gm;
     mixin(update_string("udf_supervisor_file", "udf_supervisor_file"));
     mixin(update_int("user_pad_length", "user_pad_length"));
+    GlobalConfig.userPad.length = GlobalConfig.user_pad_length;
+    double[] default_user_pad_data; 
+    foreach (i; 0 .. GlobalConfig.userPad.length) { default_user_pad_data ~= 0.0; }
+    auto user_pad_data = getJSONdoublearray(jsonData, "user_pad_data", default_user_pad_data);
+    foreach (i; 0 .. GlobalConfig.userPad.length) {
+        GlobalConfig.userPad[i] = (i < user_pad_data.length) ? user_pad_data[i] : default_user_pad_data[i];
+    }
     mixin(update_bool("include_quality", "include_quality"));
     mixin(update_int("dimensions", "dimensions"));
     mixin(update_bool("axisymmetric", "axisymmetric"));
@@ -1168,6 +1183,7 @@ void read_config_file()
         writeln("  gas_model_file: ", to!string(GlobalConfig.gas_model_file));
         writeln("  udf_supervisor_file: ", to!string(GlobalConfig.udf_supervisor_file));
         writeln("  user_pad_length: ", GlobalConfig.user_pad_length);
+        writeln("  user_pad_data: ", to!string(GlobalConfig.userPad));
         writeln("  include_quality: ", GlobalConfig.include_quality);
         writeln("  dimensions: ", GlobalConfig.dimensions);
         writeln("  axisymmetric: ", GlobalConfig.axisymmetric);

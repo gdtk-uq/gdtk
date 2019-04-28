@@ -1584,7 +1584,20 @@ function write_config_file(fileName)
    f:write(string.format('"flow_format": "%s",\n', config.flow_format))
    f:write(string.format('"gas_model_file": "%s",\n', config.gas_model_file))
    f:write(string.format('"udf_supervisor_file": "%s",\n', tostring(config.udf_supervisor_file)))
+   if type(user_pad_data) == 'table' then
+      if config.user_pad_length < #user_pad_data then
+         config.user_pad_length = #user_pad_data
+      end
+   end
    f:write(string.format('"user_pad_length": %d,\n', config.user_pad_length))
+   f:write('"user_pad_data": [')
+   if type(user_pad_data) == 'table' then
+      for i,e in ipairs(user_pad_data) do
+         f:write(string.format('%.18e', e))
+         if i < #user_pad_data then f:write(', ') end
+      end
+   end
+   f:write('],\n')
    f:write(string.format('"include_quality": %s,\n',
 			 tostring(config.include_quality)))
    f:write(string.format('"dimensions": %d,\n', config.dimensions))
