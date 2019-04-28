@@ -1058,6 +1058,7 @@ extern(C) int luafn_setVtxVelocityXYZ(lua_State* L)
 void assign_vertex_velocities_via_udf(double sim_time, double dt)
 {
     auto L = GlobalConfig.master_lua_State;
+    // [TODO] userPad
     lua_getglobal(L, "assignVtxVelocities");
     lua_pushnumber(L, sim_time);
     lua_pushnumber(L, dt);
@@ -1069,5 +1070,6 @@ void assign_vertex_velocities_via_udf(double sim_time, double dt)
         errMsg ~= to!string(lua_tostring(L, -1));
         throw new FlowSolverException(errMsg);
     }
+    // [TODO] userPad
     lua_settop(L, 0); // clear stack
 }

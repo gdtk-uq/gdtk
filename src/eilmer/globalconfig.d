@@ -419,6 +419,7 @@ final class GlobalConfig {
     // individual block computations, so that parallel computations for the blocks
     // don't trip over each other.
     shared static string udf_supervisor_file; // empty to start
+    shared static int user_pad_length = 0;
     shared static bool include_quality = false; // if true, we include quality in the solution file  
 
     shared static int nFluidBlocks = 0; // Number of fluid blocks in the overall simulation.
@@ -1156,6 +1157,7 @@ void read_config_file()
     }
     GlobalConfig.gmodel_master = gm;
     mixin(update_string("udf_supervisor_file", "udf_supervisor_file"));
+    mixin(update_int("user_pad_length", "user_pad_length"));
     mixin(update_bool("include_quality", "include_quality"));
     mixin(update_int("dimensions", "dimensions"));
     mixin(update_bool("axisymmetric", "axisymmetric"));
@@ -1165,6 +1167,7 @@ void read_config_file()
         writeln("  title: ", to!string(GlobalConfig.title));
         writeln("  gas_model_file: ", to!string(GlobalConfig.gas_model_file));
         writeln("  udf_supervisor_file: ", to!string(GlobalConfig.udf_supervisor_file));
+        writeln("  user_pad_length: ", GlobalConfig.user_pad_length);
         writeln("  include_quality: ", GlobalConfig.include_quality);
         writeln("  dimensions: ", GlobalConfig.dimensions);
         writeln("  axisymmetric: ", GlobalConfig.axisymmetric);

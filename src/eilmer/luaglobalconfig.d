@@ -88,6 +88,7 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_string_field("title", "title"));
     mixin(get_string_field("gas_model_file", "gas_model_file"));
     mixin(get_string_field("udf_supervisor_file", "udf_supervisor_file"));
+    mixin(get_int_field("user_pad_length", "user_pad_length"));
     mixin(get_bool_field("include_quality", "include_quality"));
     //
     mixin(get_int_field("nFluidBlocks","nFluidBlocks"));
@@ -253,6 +254,7 @@ extern(C) int configGet(lua_State* L)
     case "title": lua_pushstring(L, GlobalConfig.title.toStringz); break;
     case "gas_model_file": lua_pushstring(L, GlobalConfig.gas_model_file.toStringz); break;
     case "udf_supervisor_file": lua_pushstring(L, toStringz(GlobalConfig.udf_supervisor_file)); break;
+    case "user_pad_length": lua_pushnumber(L, GlobalConfig.user_pad_length); break;
     case "include_quality": lua_pushboolean(L, GlobalConfig.include_quality); break;
         //
     case "nFluidBlocks": lua_pushnumber(L, GlobalConfig.nFluidBlocks); break;
