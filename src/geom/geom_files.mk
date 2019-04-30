@@ -2,6 +2,7 @@ GEOM_DIR ?= .
 
 GEOM_D_FILES := \
 	$(GEOM_DIR)/package.d \
+	$(GEOM_DIR)/geometry_exception.d \
 	$(GEOM_DIR)/elements/package.d \
 	$(GEOM_DIR)/elements/nomenclature.d \
 	$(GEOM_DIR)/elements/vector3.d \
