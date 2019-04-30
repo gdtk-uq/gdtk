@@ -158,6 +158,15 @@ extern(C) int find_nearest_cell_centre_usg(lua_State *L)
     return 2;
 } // end find_nearest_cell_centre_usg()
 
+extern(C) int splitTriangleCell(lua_State* L)
+{
+    int narg = lua_gettop(L); // assume narg == 2;
+    auto grid = checkObj!(UnstructuredGrid, UnstructuredGridMT)(L, 1);
+    size_t id = to!size_t(luaL_checkint(L, 2));
+    grid.splitTriangleCell(id);
+    return 0;
+}
+
 /**
  * The Lua constructor for a UnstructuredGrid.
  *
@@ -355,6 +364,8 @@ void registerUnstructuredGrid(lua_State* L)
     lua_setfield(L, -2, "write_to_su2_file");
     lua_pushcfunction(L, &find_nearest_cell_centre_usg);
     lua_setfield(L, -2, "find_nearest_cell_centre");
+    lua_pushcfunction(L, &splitTriangleCell);
+    lua_setfield(L, -2, "splitTriangleCell");
     lua_pushcfunction(L, &usg_joinGrid);
     lua_setfield(L, -2, "joinGrid");
     lua_pushcfunction(L, &usg_writeStats);

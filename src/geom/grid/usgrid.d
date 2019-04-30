@@ -953,6 +953,83 @@ public:
         }
         return varea;
     } // end vectorAreaOfCell
+
+    // -----------------------
+    // Cell insertion methods
+    // -----------------------
+    void splitTriangleCell(size_t id)
+    {
+        assert(id < cells.length);
+        if (dimensions != 2) {
+            string excMsg = "Exception in UnstructureGrid:splitTriangleCell():\n";
+            excMsg ~= "This method can only be used on 2D grids.\n";
+            throw new GeometryException(excMsg);
+        }
+        if (cells[id].cell_type != USGCell_type.triangle) {
+            string excMsg = "Exception in UnstructureGrid:splitTriangleCell():\n";
+            excMsg ~= "This method can only be used on TRIANGLE cells.\n";
+            throw new GeometryException(excMsg);
+        }
+        
+        auto vtxList = get_vtx_id_list_for_cell(id, 0, 0);
+        auto p0 = vertices[vtxList[0]];
+        auto p1 = vertices[vtxList[1]];
+        auto p2 = vertices[vtxList[2]];
+        Vector3 centroid = Vector3(0.0, 0.0, 0.0);
+        centroid.set((p0.x + p1.x + p2.x)/3.0,
+                     (p0.y + p1.y + p2.y)/3.0,
+                     (p0.z + p1.z + p2.z)/3.0);
+        // Add centroid as new vertex in grid.
+        vertices ~= centroid;
+        nvertices = vertices.length;
+        auto ctrId = vertices.length-1;
+        // Add new faces
+        faces ~= new USGFace([vtxList[0], ctrId]);
+        auto if0_id = faces.length-1;
+        faceIndices[makeFaceTag([vtxList[0], ctrId])] = if0_id;
+
+        faces ~= new USGFace([vtxList[1], ctrId]);
+        auto if1_id = faces.length-1;
+        faceIndices[makeFaceTag([vtxList[1], ctrId])] = if1_id;
+
+        faces ~= new USGFace([vtxList[2], ctrId]);
+        auto if2_id = faces.length-1;
+        faceIndices[makeFaceTag([vtxList[2], ctrId])] = if2_id;
+
+        nfaces = faces.length;
+        // We'll replace the present cell with sub-triangle 0,
+        // then add sub-triangle 1 and 2 as new cells.
+        cells[id].vtx_id_list[0] = ctrId;
+        cells[id].face_id_list[0] = if1_id;
+        cells[id].face_id_list[2] = if2_id;
+        cells[id].outsign_list[0] = -1;
+
+        cells ~= new USGCell(USGCell_type.triangle,
+                             [vtxList[0], ctrId, vtxList[2]],
+                             [if0_id, if2_id, cells[id].face_id_list[2]],
+                             [1, -1, 1]);
+        auto nc1_id = cells.length-1;
+
+        cells ~= new USGCell(USGCell_type.triangle,
+                             [vtxList[0], vtxList[1], ctrId],
+                             [cells[id].face_id_list[0], if1_id, if0_id],
+                             [1, 1, -1]);
+        auto nc2_id = cells.length-1;
+
+        ncells = cells.length;
+
+        // Set left and right cells on new faces.
+        faces[if0_id].left_cell = cells[nc1_id];
+        faces[if0_id].right_cell = cells[nc2_id];
+
+        faces[if1_id].left_cell = cells[nc2_id];
+        faces[if1_id].right_cell = cells[id];
+
+        faces[if2_id].left_cell = cells[id];
+        faces[if2_id].right_cell = cells[nc1_id];
+    }
+    
+
     
     // ------------------------
     // Import-from-file methods.
