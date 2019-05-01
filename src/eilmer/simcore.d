@@ -97,6 +97,10 @@ final class SimState {
 shared static double[] local_dt_allow;
 shared static int[] local_invalid_cell_count;
 
+// The shared double[] flavour of GlobalConfig.userPad can give trouble,
+// so we need a normal array for the MPI task to work with.
+double[] userPad_copy;
+
 //----------------------------------------------------------------------------
 
 void init_simulation(int tindx, int nextLoadsIndx,
@@ -442,13 +446,12 @@ void init_simulation(int tindx, int nextLoadsIndx,
             lua_rawseti(L, -2, to!int(i+1));
         }
         lua_setglobal(L, "localBlockIds");
-        // double[] userPad
-        lua_newtable(L);
-        foreach (i, elem; GlobalConfig.userPad) {
-            lua_pushnumber(L, elem);
-            lua_rawseti(L, -2, to!int(i+1));
+        if (GlobalConfig.user_pad_length > 0) {
+            // At this point, userPad has been initialized with values
+            // from the job.config file and all MPI tasks should see the same data.
+            push_array_to_Lua(L, GlobalConfig.userPad, "userPad");
+            copy_userPad_into_block_interpreters();
         }
-        lua_setglobal(L, "userPad");
     }
     //
     // Configure the run-time loads if required
@@ -980,8 +983,9 @@ void call_UDF_at_timestep_start()
         // There is no suitable Lua function.
         lua_pop(L, 1); // discard the nil item
     } else {
-        push_array_to_Lua(L, GlobalConfig.userPad, "userPad");  
-        //
+        if (GlobalConfig.user_pad_length > 0) {
+            push_array_to_Lua(L, GlobalConfig.userPad, "userPad");
+        }
         // Proceed to call the user's function.
         lua_pushnumber(L, SimState.time);
         lua_pushnumber(L, SimState.step);
@@ -999,12 +1003,46 @@ void call_UDF_at_timestep_start()
         } else {
             SimState.dt_override = 0.0;
         }
-        lua_pop(L, 1); // dispose item
+        lua_pop(L, 1); // dispose dt_override item
         //
-        get_array_from_Lua(L, GlobalConfig.userPad, "userPad");  
+        if (GlobalConfig.user_pad_length > 0) {
+            get_array_from_Lua(L, GlobalConfig.userPad, "userPad");
+        }
     }
     lua_settop(L, 0); // clear stack
+    if (GlobalConfig.user_pad_length > 0) {
+        broadcast_master_userPad();
+        copy_userPad_into_block_interpreters();
+    }
 } // end call_UDF_at_timestep_start()
+
+void broadcast_master_userPad()
+{
+    version(mpi_parallel) {
+        // The userPad data in master MPI task is broadcast to all other MPI tasks.
+        int nelem = to!int(GlobalConfig.userPad.length);
+        assert(nelem == GlobalConfig.user_pad_length, "Oops, wrong lengths");
+        // We allocate the array once.
+        if (userPad_copy.length < nelem) { userPad_copy.length = nelem; }
+        foreach (i, elem; GlobalConfig.userPad) { userPad_copy[i] = elem; }
+        MPI_Bcast(userPad_copy.ptr, nelem, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        if (GlobalConfig.mpi_rank_for_local_task > 0) {
+            foreach (i, elem; userPad_copy) { GlobalConfig.userPad[i] = elem; }
+        }
+    }
+} // end broadcast_master_userPad()
+
+void copy_userPad_into_block_interpreters()
+{
+    // Within the one task, broadcast userPad to the Lua interpreters
+    // associated with the blocks and boundary-conditions.
+    foreach (blk; localFluidBlocks) {
+        push_array_to_Lua(blk.myL, GlobalConfig.userPad, "userPad");
+        foreach (bc; blk.bc) {
+            if (bc.myL) { push_array_to_Lua(bc.myL, GlobalConfig.userPad, "userPad"); }
+        }
+    }
+} // end copy_userPad_into_block_interpreters()
 
 void call_UDF_at_timestep_end()
 {
@@ -1014,8 +1052,9 @@ void call_UDF_at_timestep_end()
         // There is no suitable Lua function.
         lua_pop(L, 1); // discard the nil item
     } else {
-        push_array_to_Lua(L, GlobalConfig.userPad, "userPad");  
-        //
+        if (GlobalConfig.user_pad_length > 0) {
+            push_array_to_Lua(L, GlobalConfig.userPad, "userPad");
+        }
         // Proceed to call the user's function.
         lua_pushnumber(L, SimState.time);
         lua_pushnumber(L, SimState.step);
@@ -1027,9 +1066,15 @@ void call_UDF_at_timestep_end()
             errMsg ~= to!string(lua_tostring(L, -1));
             throw new FlowSolverException(errMsg);
         }
-        get_array_from_Lua(L, GlobalConfig.userPad, "userPad");  
+        if (GlobalConfig.user_pad_length > 0) {
+            get_array_from_Lua(L, GlobalConfig.userPad, "userPad");
+        }
     }
     lua_settop(L, 0); // clear stack
+    if (GlobalConfig.user_pad_length > 0) {
+        broadcast_master_userPad();
+        copy_userPad_into_block_interpreters();
+    }
 } // end call_UDF_at_timestep_end()
 
 void call_UDF_at_write_to_file()
@@ -1042,7 +1087,9 @@ void call_UDF_at_write_to_file()
         // There is no suitable Lua function.
         lua_pop(L, 1); // discard the nil item
     } else {
-        push_array_to_Lua(L, GlobalConfig.userPad, "userPad");  
+        if (GlobalConfig.user_pad_length > 0) {
+            push_array_to_Lua(L, GlobalConfig.userPad, "userPad");
+        }
         //
         // Proceed to call the user's function.
         lua_pushnumber(L, SimState.time);
@@ -1055,9 +1102,15 @@ void call_UDF_at_write_to_file()
             errMsg ~= to!string(lua_tostring(L, -1));
             throw new FlowSolverException(errMsg);
         }
-        get_array_from_Lua(L, GlobalConfig.userPad, "userPad");  
+        if (GlobalConfig.user_pad_length > 0) {
+            get_array_from_Lua(L, GlobalConfig.userPad, "userPad");
+        }
     }
     lua_settop(L, 0); // clear stack
+    if (GlobalConfig.user_pad_length > 0) {
+        broadcast_master_userPad();
+        copy_userPad_into_block_interpreters();
+    }
 } // end call_UDF_at_write_to_file()
 
 void determine_time_step_size()

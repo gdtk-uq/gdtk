@@ -30,27 +30,36 @@ import sfluidblock;
 import ufluidblock;
 
 // -----------------------------------------------------
-// Functions to synchronise the userPad array
+// Functions to synchronise an array in the Dlang domain with a table in Lua
 
 void push_array_to_Lua(T)(lua_State *L, ref T array_in_dlang, string name_in_Lua)
 {
     lua_getglobal(L, name_in_Lua.toStringz);
+    if (!lua_istable(L, -1)) {
+        // TOS is not a table, so dispose of it and make a fresh table.
+        lua_pop(L, 1);
+        lua_newtable(L);
+        lua_setglobal(L, name_in_Lua.toStringz);
+    }
+    lua_getglobal(L, name_in_Lua.toStringz);
+    assert(lua_istable(L, -1), format("Did not find Lua table %s", name_in_Lua));
     foreach (i, elem; array_in_dlang) {
         lua_pushnumber(L, elem);
         lua_rawseti(L, -2, to!int(i+1));
     }
-    lua_pop(L, 1); // clean up after ourselves
+    lua_pop(L, 1); // dismiss the table
 }
 
 void get_array_from_Lua(T)(lua_State *L, ref T array_in_dlang, string name_in_Lua)
 {
     lua_getglobal(L, name_in_Lua.toStringz);
+    assert(lua_istable(L, -1), format("Did not find Lua table %s", name_in_Lua));
     foreach (i; 0 .. array_in_dlang.length) {
         lua_rawgeti(L, -1, to!int(i+1)); // get an item to top of stack
         array_in_dlang[i] = (lua_isnumber(L, -1)) ? to!double(lua_tonumber(L, -1)) : 0.0;
         lua_pop(L, 1); // discard item
     }
-    lua_pop(L, 1); // clean up after ourselves
+    lua_pop(L, 1); // dismiss the table
 }
 
 // -----------------------------------------------------
