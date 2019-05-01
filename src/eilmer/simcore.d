@@ -1047,8 +1047,8 @@ void call_UDF_at_write_to_file()
         // Proceed to call the user's function.
         lua_pushnumber(L, SimState.time);
         lua_pushnumber(L, SimState.step);
-        // [TODO] dt
-        int number_args = 2;
+        lua_pushnumber(L, SimState.dt_global);
+        int number_args = 3;
         int number_results = 0;
         if ( lua_pcall(L, number_args, number_results, 0) != 0 ) {
             string errMsg = "ERROR: while running user-defined function atWriteToFile()\n";
