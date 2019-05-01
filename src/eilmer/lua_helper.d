@@ -40,8 +40,8 @@ void push_array_to_Lua(T)(lua_State *L, ref T array_in_dlang, string name_in_Lua
         lua_pop(L, 1);
         lua_newtable(L);
         lua_setglobal(L, name_in_Lua.toStringz);
+        lua_getglobal(L, name_in_Lua.toStringz);
     }
-    lua_getglobal(L, name_in_Lua.toStringz);
     assert(lua_istable(L, -1), format("Did not find Lua table %s", name_in_Lua));
     foreach (i, elem; array_in_dlang) {
         lua_pushnumber(L, elem);
