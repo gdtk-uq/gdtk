@@ -30,6 +30,30 @@ import sfluidblock;
 import ufluidblock;
 
 // -----------------------------------------------------
+// Functions to synchronise the userPad array
+
+void push_array_to_Lua(T)(lua_State *L, ref T array_in_dlang, string name_in_Lua)
+{
+    lua_getglobal(L, name_in_Lua.toStringz);
+    foreach (i, elem; array_in_dlang) {
+        lua_pushnumber(L, elem);
+        lua_rawseti(L, -2, to!int(i+1));
+    }
+    lua_pop(L, 1); // clean up after ourselves
+}
+
+void get_array_from_Lua(T)(lua_State *L, ref T array_in_dlang, string name_in_Lua)
+{
+    lua_getglobal(L, name_in_Lua.toStringz);
+    foreach (i; 0 .. array_in_dlang.length) {
+        lua_rawgeti(L, -1, to!int(i+1)); // get an item to top of stack
+        array_in_dlang[i] = (lua_isnumber(L, -1)) ? to!double(lua_tonumber(L, -1)) : 0.0;
+        lua_pop(L, 1); // discard item
+    }
+    lua_pop(L, 1); // clean up after ourselves
+}
+
+// -----------------------------------------------------
 // Convenience functions for user's Lua script
 
 void setSampleHelperFunctions(lua_State *L)

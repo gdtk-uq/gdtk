@@ -25,6 +25,7 @@ import nm.number;
 
 import util.lua;
 import util.lua_service;
+import lua_helper;
 import fileutil;
 import geom;
 import gas;
@@ -979,12 +980,7 @@ void call_UDF_at_timestep_start()
         // There is no suitable Lua function.
         lua_pop(L, 1); // discard the nil item
     } else {
-        lua_getglobal(L, "userPad");
-        foreach (i, elem; GlobalConfig.userPad) {
-            lua_pushnumber(L, elem);
-            lua_rawseti(L, -2, to!int(i+1));
-        }
-        lua_pop(L, 1); // dismiss userPad table
+        push_array_to_Lua(L, GlobalConfig.userPad, "userPad");  
         //
         // Proceed to call the user's function.
         lua_pushnumber(L, SimState.time);
@@ -1005,13 +1001,7 @@ void call_UDF_at_timestep_start()
         }
         lua_pop(L, 1); // dispose item
         //
-        lua_getglobal(L, "userPad");
-        foreach (i; 0 .. GlobalConfig.userPad.length) {
-            lua_rawgeti(L, -1, to!int(i+1)); // get an item to top of stack
-            GlobalConfig.userPad[i] = (lua_isnumber(L, -1)) ? to!double(lua_tonumber(L, -1)) : 0.0;
-            lua_pop(L, 1); // discard item
-        }
-        lua_pop(L, 1); // dismiss userPad table
+        get_array_from_Lua(L, GlobalConfig.userPad, "userPad");  
     }
     lua_settop(L, 0); // clear stack
 } // end call_UDF_at_timestep_start()
@@ -1024,12 +1014,7 @@ void call_UDF_at_timestep_end()
         // There is no suitable Lua function.
         lua_pop(L, 1); // discard the nil item
     } else {
-        lua_getglobal(L, "userPad");
-        foreach (i, elem; GlobalConfig.userPad) {
-            lua_pushnumber(L, elem);
-            lua_rawseti(L, -2, to!int(i+1));
-        }
-        lua_pop(L, 1); // dismiss userPad table
+        push_array_to_Lua(L, GlobalConfig.userPad, "userPad");  
         //
         // Proceed to call the user's function.
         lua_pushnumber(L, SimState.time);
@@ -1042,13 +1027,7 @@ void call_UDF_at_timestep_end()
             errMsg ~= to!string(lua_tostring(L, -1));
             throw new FlowSolverException(errMsg);
         }
-        lua_getglobal(L, "userPad");
-        foreach (i; 0 .. GlobalConfig.userPad.length) {
-            lua_rawgeti(L, -1, to!int(i+1)); // get an item to top of stack
-            GlobalConfig.userPad[i] = (lua_isnumber(L, -1)) ? to!double(lua_tonumber(L, -1)) : 0.0;
-            lua_pop(L, 1); // discard item
-        }
-        lua_pop(L, 1); // dismiss userPad table
+        get_array_from_Lua(L, GlobalConfig.userPad, "userPad");  
     }
     lua_settop(L, 0); // clear stack
 } // end call_UDF_at_timestep_end()
@@ -1063,12 +1042,7 @@ void call_UDF_at_write_to_file()
         // There is no suitable Lua function.
         lua_pop(L, 1); // discard the nil item
     } else {
-        lua_getglobal(L, "userPad");
-        foreach (i, elem; GlobalConfig.userPad) {
-            lua_pushnumber(L, elem);
-            lua_rawseti(L, -2, to!int(i+1));
-        }
-        lua_pop(L, 1); // dismiss userPad table
+        push_array_to_Lua(L, GlobalConfig.userPad, "userPad");  
         //
         // Proceed to call the user's function.
         lua_pushnumber(L, SimState.time);
@@ -1081,13 +1055,7 @@ void call_UDF_at_write_to_file()
             errMsg ~= to!string(lua_tostring(L, -1));
             throw new FlowSolverException(errMsg);
         }
-        lua_getglobal(L, "userPad");
-        foreach (i; 0 .. GlobalConfig.userPad.length) {
-            lua_rawgeti(L, -1, to!int(i+1)); // get an item to top of stack
-            GlobalConfig.userPad[i] = (lua_isnumber(L, -1)) ? to!double(lua_tonumber(L, -1)) : 0.0;
-            lua_pop(L, 1); // discard item
-        }
-        lua_pop(L, 1); // dismiss userPad table
+        get_array_from_Lua(L, GlobalConfig.userPad, "userPad");  
     }
     lua_settop(L, 0); // clear stack
 } // end call_UDF_at_write_to_file()

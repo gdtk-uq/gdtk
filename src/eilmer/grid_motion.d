@@ -1053,17 +1053,12 @@ extern(C) int luafn_setVtxVelocityXYZ(lua_State* L)
     }
     lua_settop(L, 0);
     return 0;
-}
+} // end luafn_setVtxVelocityXYZ()
 
 void assign_vertex_velocities_via_udf(double sim_time, double dt)
 {
     auto L = GlobalConfig.master_lua_State;
-    lua_getglobal(L, "userPad");
-    foreach (i, elem; GlobalConfig.userPad) {
-        lua_pushnumber(L, elem);
-        lua_rawseti(L, -2, to!int(i+1));
-    }
-    lua_pop(L, 1); // dismiss userPad table
+    push_array_to_Lua(L, GlobalConfig.userPad, "userPad");  
     //
     lua_getglobal(L, "assignVtxVelocities");
     lua_pushnumber(L, sim_time);
@@ -1076,13 +1071,6 @@ void assign_vertex_velocities_via_udf(double sim_time, double dt)
         errMsg ~= to!string(lua_tostring(L, -1));
         throw new FlowSolverException(errMsg);
     }
-    lua_getglobal(L, "userPad");
-    foreach (i; 0 .. GlobalConfig.userPad.length) {
-        lua_rawgeti(L, -1, to!int(i+1)); // get an item to top of stack
-        GlobalConfig.userPad[i] = (lua_isnumber(L, -1)) ? to!double(lua_tonumber(L, -1)) : 0.0;
-        lua_pop(L, 1); // discard item
-    }
-    lua_pop(L, 1); // dismiss userPad table
-    //
+    get_array_from_Lua(L, GlobalConfig.userPad, "userPad");  
     lua_settop(L, 0); // clear stack
-}
+} // end assign_vertex_velocities_via_udf()
