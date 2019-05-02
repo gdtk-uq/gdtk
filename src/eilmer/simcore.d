@@ -447,11 +447,16 @@ void init_simulation(int tindx, int nextLoadsIndx,
         }
         lua_setglobal(L, "localBlockIds");
         if (GlobalConfig.user_pad_length > 0) {
-            // At this point, userPad has been initialized with values
-            // from the job.config file and all MPI tasks should see the same data.
             push_array_to_Lua(L, GlobalConfig.userPad, "userPad");
-            copy_userPad_into_block_interpreters();
         }
+    }
+    if (GlobalConfig.user_pad_length > 0) {
+        // At this point, userPad has been initialized with values
+        // from the job.config file, even if there are no supervisory functions.
+        // All MPI tasks should see the same data and all interpreters
+        // associated with blocks should get a copy of the data.
+        broadcast_master_userPad();
+        copy_userPad_into_block_interpreters();
     }
     //
     // Configure the run-time loads if required
