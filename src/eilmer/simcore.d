@@ -439,13 +439,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
         lua_setglobal(L, "mpi_rank_for_local_task");
         lua_pushboolean(L, GlobalConfig.is_master_task);
         lua_setglobal(L, "is_master_task");
-        // int[] localBlockIds
-        lua_newtable(L);
-        foreach (i, blkid; GlobalConfig.localBlockIds) {
-            lua_pushnumber(L, blkid);
-            lua_rawseti(L, -2, to!int(i+1));
-        }
-        lua_setglobal(L, "localBlockIds");
+        push_array_to_Lua(L, GlobalConfig.localBlockIds, "localBlockIds");
         if (GlobalConfig.user_pad_length > 0) {
             push_array_to_Lua(L, GlobalConfig.userPad, "userPad");
         }
