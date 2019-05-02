@@ -7,6 +7,20 @@
 
 module(..., package.seeall)
 
+-- Keep the following consistent with ws_ptymap.eilmer
+-- The master copy of this is in examples/eilmer/3D/gridpro-import
+gproBCMap = {
+  [4] = "SLIP_WALL",
+  [5] = "ADABIATIC",
+  [6] = "FIXED_T", 
+  [7] = "INFLOW_SUPERSONIC",
+  [8] = "INFLOW_SUBSONIC",
+  [9] = "INFLOW_SHOCKFITTING",
+ [10] = "OUTFLOW_SIMPLE",
+ [11] = "OUTFLOW_SUBSONIC",
+ [12] = "USER_DEFINED"
+}
+
 local function split_string(str)
    tokens = {}
    for tk in string.gmatch(str, "%S+") do
@@ -157,14 +171,28 @@ function applyGridproBoundaryConditions(fname, blks, bcMap, dim)
    for ibc=1,nBCTypes do
       line = f:read("*line")
       tks = split_string(line)
-      BCTypeMap[tonumber(tks[1])] = tks[2]
+      bcIdx = tonumber(tks[1])
+      -- Gridpro seems to give the index as either an integer <= 32
+      -- or a 4-digit integer. In this 4-digit integers, the last two
+      -- digits encode the BC information
+      bcInt = 0
+      if #(tks[1]) == 4 then
+          bcInt = tonumber(string.sub(tks[1], 3, 4))
+      else
+          bcInt = tonumber(tks[1])
+      end
+      BCTypeMap[tonumber(tks[1])] = bcInt
    end
    f:close()
    -- At this point all of the information has been gathered.
    -- Now loop over the blocks, and apply the BCs as appropriate.
    for ib, blk in ipairs(blks) do
       for face, bcID in pairs(bcs[ib]) do
-	 bcLabel = BCTypeMap[bcID]
+	 bcInt = BCTypeMap[bcID]
+	 bcLabel = gproBCMap[bcInt]
+	 if bcLabel == nil then
+	    bcLabel = string.format("user%d", bcInt)
+	 end
 	 if bcMap[bcLabel] then
 	    blk.bcList[face] = bcMap[bcLabel]
          end
