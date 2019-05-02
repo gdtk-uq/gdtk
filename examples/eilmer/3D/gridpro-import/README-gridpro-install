@@ -1,0 +1,39 @@
+:doctype: Article
+:doctitle:  Adding Eilmer Boundary Conditions to Gridpro WS Gui
+:authors: Rowan J. Gollan & Will Landsberg
+:date: 2019-05-01
+
+ifdef::backend-pdf[:notitle:]
+ifdef::backend-pdf[]
+[discrete]
+= {doctitle}
+endif::[]
+
+{authors}
+
+{date}
+
+== Overview
+With some small edits, one can add the Eilmer boundary conditions to the
+Gridpro GUI menu. This is done by adding a file to the Gridpro installation
+and editing an entry in the installation files.
+
+Then, when using Gridpro, one selects Eilmer as the solver and the Eilmer-specific
+boundary conditions will be available for use.
+
+== One-time install/edit of files
+These instructions follow closely the ones given in the Gridpro WS GUI manual
+in Appendix A.
+
+* Find your Gridpro installation and edit: `GridPro/az_mngr/ws_ptymap.menu`
+Add a line for Eilmer anywhere of your choosing. (We think the top spot is best!):
++
+  Eilmer &pty=Eilmer & ws_ptymap.eilmer
+
+ * Copy the file from this directory `ws_ptymap.eilmer` to that install area `GridPro/az_mngr/`
+
+== TODO: Write note on setting BCs
+
+
+
+

@@ -1,0 +1,102 @@
+### This file serve as a template for different solvers ###
+#
+#1)map-id: must be >=1 and <= totalIdCount
+#	The id's should be in incremental order
+#
+#2)pty-name: generic pty names. can be renamed.
+#   However, (2d)id=1..3 (3d)id=1 have special roles when the pty of
+#   surfaces, faces and blocks are initialized. The following rules 
+#   are applied to the pty initialization:
+#      rule 1: a 2-sided surface, a 1-sided surface and a periodic 
+#              surface is initialy assigned a id=1(pty-name=INTERBLK),
+#              2(pty-name=BOUNDARY) and 3(pty-name=PERIODIC) respectively.
+#      rule 2: if the face is on a surface, face is reassigned the 
+#              surface pty. 
+#      Otherwise,
+#      rule 3: if the face attaches to two blocks,
+#              the face is reassigned the pty id=1(pty-name=INTERBLK).	
+#      rule 4: for anything else, 
+#              the face is reassigned the pty id=2(pty-name=BOUNDARY).
+#      rule 5: if two pty ids mapped to the same mapped-name,
+#              the faces with larger id are reassigned with the lower
+#              pty id.  
+#
+#3)default-name: Default names.
+#   These are the names which will be used if there is no pty file exists in the directory. 
+#   From v6.5, The default names are used only for Interblock and Fluid properties. 
+#   For the rest, it uses the surface id's read from the *conn file.
+#   If it does not find a default name, it uses the pdc-name.
+#
+### for	a PDC pre-defined pty map file, a user
+#1) can not change the order of the lines;
+#2) can change the default_name;
+#3) can change pty-name for id >= 4(2d) and id >= 2(3d);
+#4) need to understand the initialization rules.
+#
+### for a user defined pty map file (if you want set pty
+#   for your solver), a user need to 
+#1) copy 'ptymap.template' to 'ptymap.user'. Then edit it.
+#2) map INTERBLK correctly since mrgb will merge blocks through it.
+#3) write a program to read GridPro files: blk.grd, blk.grd.conn 
+#    and optionaly blk.grd.pty and output in you format.
+#    GridPro files have only pty ids. You need use 'ptymap.user'
+#    to give meaning to them.
+#    For detail information, Check Appendix A in WS_GUI_Manual
+#
+#5) There must be 32 2d ptys and 16 3d ptys for any solver format.
+#
+32     # 2d-ptys.
+#map-id& pty-name & default-name   #comments
+1      & INTERBLK & interblk
+2      & BOUNDARY & wall    
+3      & PERIODIC & periodic
+4      & SLIP_WALL              
+5      & ADIABATIC	    
+6      & FIXED_T    
+7      & SUP_IN    
+8      & EXTRAPOLATE_OUT    
+9      & SUBSONIC_IN 		
+10     & SUBSONIC_OUT		
+11     & TRANSIENT_UNI 	
+12     & TRANSIENT_PROF 	
+13     & STATIC_PROF 		
+14     & FIXED_P_OUT 		
+15     & RRM         		
+16     & TRANSIENT_T_WALL 	
+17     & SEB         		
+18     & USER_DEFINED 		
+19     & ADJACENT_PLUS_UDF 
+20     & ABLATING    		
+21     & SLIDING_T   		
+22     & FSTC        		
+23     & MOVING_WALL 		
+24     & MASS_FLUX_OUT 	
+25     & user25    
+26     & user26    
+27     & user27    
+28     & user28    
+29     & user29    
+30     & user30    
+31     & user31    
+32     & user32    
+#---------------
+16      # 3d-ptys.
+#map-id& pty-name &default-name #comments
+1      & BULK     &fluid  
+2      & user2
+3      & user3	  
+4      & user4	  
+5      & user5    
+6      & user6
+7      & user7
+8      & user8
+9      & user9
+10     & user10
+11     & user11
+12     & user12
+13     & user13
+14     & user14
+15     & user15
+16     & user16
+
+
