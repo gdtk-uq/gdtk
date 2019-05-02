@@ -106,8 +106,9 @@ void prepareGridConnectivity(Grid grid, ref int zoneType, ref size_t[][] connLis
                 specialCase = false;
                 // writeln("Non tria/tetra cell detected: switching to quad/hexa elements");
                 zoneType = (grid.dimensions == 2) ? 3 : 5;
+                ulong len = (grid.dimensions == 2) ? connList.length-1 : connList.length;
                 // We need to convert all of our previous connList
-                foreach (j; 0 .. connList.length) {
+                foreach (j; 0 .. len) {
                     if ( grid.dimensions == 2 ) {
                         connList[j] = transformCellConnectivity(connList[j], 1);
                     }
