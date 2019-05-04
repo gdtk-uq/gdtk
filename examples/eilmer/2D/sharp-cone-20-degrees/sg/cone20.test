@@ -40,6 +40,66 @@ test number-of-steps {The main simulation takes a certain number of steps.} -bod
     list [expr abs($final_steps - 833) < 3]
 } -result {1}
 
+test free-stream-flow {The flow in the second block, upstream of the shock.} -body {
+    set a 0; set M 0; set p 0; set T 0
+    if { [catch {exec e4shared --post --job=cone20 --tindx-plot=last --add-vars="mach" --probe=0.4,0.5,0.0 } results] } {
+        puts "Flow-field-probing command failed"
+        puts $results
+    } else {
+	# puts $results
+	# Skip through the output, looking for the interesting data.
+	# There will be a header line, followed by the actual data values.
+	set found 0
+	foreach line [split $results "\n"] {
+	    if {[string first "pos.x" $line] >= 0} {
+		set found 1
+		continue; # skip to following line
+	    }
+	    if {$found} {
+		set tokens [split [string trim $line]]
+		# puts "tokens= $tokens"
+		set a [lindex $tokens 9]
+		set M [lindex $tokens 20]
+		set p [lindex $tokens 8]
+		set T [lindex $tokens 19]
+		break; # We have our data so stop looking.
+	    }
+	}
+    }
+    list [expr abs($a - 666.0) < 1.0] [expr abs($M - 1.50) < 0.02] \
+	[expr abs($p - 95.84e3) < 500] [expr abs($T - 1103.0) < 1.0]
+} -result {1 1 1 1}
+
+test pressure-on-cone-surface {The expected pressure on the cone surface.} -body {
+    set p 0
+    if { [catch {exec e4shared --post --job=cone20 --tindx-plot=last --probe=0.7,0.182,0.0 } results] } {
+        puts "Flow-field-probing command failed"
+        puts $results
+    } else {
+	# puts $results
+	# Skip through the output, looking for the interesting data.
+	# There will be a header line, followed by the actual data values.
+	set found 0
+	foreach line [split $results "\n"] {
+	    if {[string first "pos.x" $line] >= 0} {
+		set found 1
+		continue; # skip to following line
+	    }
+	    if {$found} {
+		set tokens [split [string trim $line]]
+		# puts "tokens= $tokens"
+		set p [lindex $tokens 8]
+		break; # We have our data so stop looking.
+	    }
+	}
+    }
+    # The expected pressure coefficient in 0.387 = (p_cone_surface - p_inf)/q_inf
+    set q_inf [expr 0.5 * 0.3029 * 1.0e6]; # dynamic pressure for free stream
+    set p_cone_surface [expr 95.84e3 + 0.387 * $q_inf]
+    # puts "p=$p, q_inf=$q_inf, p_cone_surface=$p_cone_surface"
+    list [expr abs($p - $p_cone_surface) < 1.0e3]
+} -result {1}
+
 test shock-angle {The shock angle should be close to 49 degrees.} -body {
     set shock_angle 0
     set average_deviation 0
