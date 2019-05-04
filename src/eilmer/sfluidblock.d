@@ -1902,17 +1902,17 @@ public:
                     if ((i == imin) && (bc[Face.west].ghost_cell_data_available == false)) {
                         Lft.copy_values_from(cR0.fs); Rght.copy_values_from(cR0.fs);
                     } else if ((i == imin+1) && (bc[Face.west].ghost_cell_data_available == false)) {
-                        one_d.interp_right(IFace, cL0, cR0, cR1,
-                                           cL0.iLength, cR0.iLength, cR1.iLength,
-                                           Lft, Rght, do_reconstruction);
+                        one_d.interp_l1r2(IFace, cL0, cR0, cR1,
+                                          cL0.iLength, cR0.iLength, cR1.iLength,
+                                          Lft, Rght, do_reconstruction);
                     } else if ((i == imax) && (bc[Face.east].ghost_cell_data_available == false)) {
-                        one_d.interp_left(IFace, cL1, cL0, cR0,
+                        one_d.interp_l2r1(IFace, cL1, cL0, cR0,
                                           cL1.iLength, cL0.iLength, cR0.iLength,
                                           Lft, Rght, do_reconstruction);
                     } else if ((i == imax+1) && (bc[Face.east].ghost_cell_data_available == false)) {
                         Lft.copy_values_from(cL0.fs); Rght.copy_values_from(cL0.fs);
                     } else { // General symmetric reconstruction.
-                        one_d.interp_both(IFace, cL1, cL0, cR0, cR1,
+                        one_d.interp_l2r2(IFace, cL1, cL0, cR0, cR1,
                                           cL1.iLength, cL0.iLength, cR0.iLength, cR1.iLength,
                                           Lft, Rght, do_reconstruction);
                     }
@@ -1939,17 +1939,17 @@ public:
                     if ((j == jmin) && (bc[Face.south].ghost_cell_data_available == false)) {
                         Lft.copy_values_from(cR0.fs); Rght.copy_values_from(cR0.fs);
                     } else if ((j == jmin+1) && (bc[Face.south].ghost_cell_data_available == false)) {
-                        one_d.interp_right(IFace, cL0, cR0, cR1,
-                                           cL0.jLength, cR0.jLength, cR1.jLength,
-                                           Lft, Rght, allow_high_order_interpolation);
+                        one_d.interp_l1r2(IFace, cL0, cR0, cR1,
+                                          cL0.jLength, cR0.jLength, cR1.jLength,
+                                          Lft, Rght, allow_high_order_interpolation);
                     } else if ((j == jmax) && (bc[Face.north].ghost_cell_data_available == false)) {
-                        one_d.interp_left(IFace, cL1, cL0, cR0,
+                        one_d.interp_l2r1(IFace, cL1, cL0, cR0,
                                           cL1.jLength, cL0.jLength, cR0.jLength,
                                           Lft, Rght, allow_high_order_interpolation);
                     } else if ((j == jmax+1) && (bc[Face.north].ghost_cell_data_available == false)) {
                         Lft.copy_values_from(cL0.fs); Rght.copy_values_from(cL0.fs);
                     } else { // General symmetric reconstruction.
-                        one_d.interp_both(IFace, cL1, cL0, cR0, cR1,
+                        one_d.interp_l2r2(IFace, cL1, cL0, cR0, cR1,
                                           cL1.jLength, cL0.jLength, cR0.jLength, cR1.jLength,
                                           Lft, Rght, allow_high_order_interpolation);
                     }
@@ -1979,13 +1979,19 @@ public:
                     if ((k == kmin) && (bc[Face.bottom].ghost_cell_data_available == false)) {
                         Lft.copy_values_from(cR0.fs); Rght.copy_values_from(cR0.fs);
                     } else if ((k == kmin+1) && (bc[Face.bottom].ghost_cell_data_available == false)) {
-                        one_d.interp_right(IFace, cL0, cR0, cR1, cL0.kLength, cR0.kLength, cR1.kLength, Lft, Rght, allow_high_order_interpolation);
+                        one_d.interp_l1r2(IFace, cL0, cR0, cR1,
+                                          cL0.kLength, cR0.kLength, cR1.kLength,
+                                          Lft, Rght, allow_high_order_interpolation);
                     } else if ((k == kmax) && (bc[Face.top].ghost_cell_data_available == false)) {
-                        one_d.interp_left(IFace, cL1, cL0, cR0, cL1.kLength, cL0.kLength, cR0.kLength, Lft, Rght, allow_high_order_interpolation);
+                        one_d.interp_l2r1(IFace, cL1, cL0, cR0,
+                                          cL1.kLength, cL0.kLength, cR0.kLength,
+                                          Lft, Rght, allow_high_order_interpolation);
                     } else if ((k == kmax+1) && (bc[Face.top].ghost_cell_data_available == false)) {
                         Lft.copy_values_from(cL0.fs); Rght.copy_values_from(cL0.fs);
                     } else { // General symmetric reconstruction.
-                        one_d.interp_both(IFace, cL1, cL0, cR0, cR1, cL1.kLength, cL0.kLength, cR0.kLength, cR1.kLength, Lft, Rght, allow_high_order_interpolation);
+                        one_d.interp_l2r2(IFace, cL1, cL0, cR0, cR1,
+                                          cL1.kLength, cL0.kLength, cR0.kLength, cR1.kLength,
+                                          Lft, Rght, allow_high_order_interpolation);
                     }
                     IFace.fs.copy_average_values_from(Lft, Rght);
                     if ((k == kmin) && (bc[Face.bottom].convective_flux_computed_in_bc == true)) continue;
