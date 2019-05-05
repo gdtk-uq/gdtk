@@ -1900,7 +1900,9 @@ public:
                     bool do_reconstruction = allow_high_order_interpolation &&
                         !IFace.in_suppress_reconstruction_zone;
                     if ((i == imin) && (bc[Face.west].ghost_cell_data_available == false)) {
-                        Lft.copy_values_from(cR0.fs); Rght.copy_values_from(cR0.fs);
+                        one_d.interp_l0r2(IFace, cR0, cR1,
+                                          cR0.iLength, cR1.iLength,
+                                          Lft, Rght, do_reconstruction);
                     } else if ((i == imin+1) && (bc[Face.west].ghost_cell_data_available == false)) {
                         one_d.interp_l1r2(IFace, cL0, cR0, cR1,
                                           cL0.iLength, cR0.iLength, cR1.iLength,
@@ -1910,15 +1912,19 @@ public:
                                           cL1.iLength, cL0.iLength, cR0.iLength,
                                           Lft, Rght, do_reconstruction);
                     } else if ((i == imax+1) && (bc[Face.east].ghost_cell_data_available == false)) {
-                        Lft.copy_values_from(cL0.fs); Rght.copy_values_from(cL0.fs);
+                        one_d.interp_l2r0(IFace, cL1, cL0,
+                                          cL1.iLength, cL0.iLength,
+                                          Lft, Rght, do_reconstruction);
                     } else { // General symmetric reconstruction.
                         one_d.interp_l2r2(IFace, cL1, cL0, cR0, cR1,
                                           cL1.iLength, cL0.iLength, cR0.iLength, cR1.iLength,
                                           Lft, Rght, do_reconstruction);
                     }
                     IFace.fs.copy_average_values_from(Lft, Rght);
+                    //
                     if ((i == imin) && (bc[Face.west].convective_flux_computed_in_bc == true)) continue;
                     if ((i == imax+1) && (bc[Face.east].convective_flux_computed_in_bc == true)) continue;
+                    //
                     if ((i == imin) && (bc[Face.west].ghost_cell_data_available == false)) {
                         compute_flux_at_left_wall(Rght, IFace, myConfig, omegaz);
                     } else if ((i == imax+1) && (bc[Face.east].ghost_cell_data_available == false)) {
@@ -1936,26 +1942,34 @@ public:
                     auto IFace = get_ifj!()(i,j,k);
                     auto cL0 = get_cell!()(i,j-1,k); auto cL1 = get_cell!()(i,j-2,k);
                     auto cR0 = get_cell!()(i,j,k); auto cR1 = get_cell!()(i,j+1,k);
+                    bool do_reconstruction = allow_high_order_interpolation &&
+                        !IFace.in_suppress_reconstruction_zone;
                     if ((j == jmin) && (bc[Face.south].ghost_cell_data_available == false)) {
-                        Lft.copy_values_from(cR0.fs); Rght.copy_values_from(cR0.fs);
+                        one_d.interp_l0r2(IFace, cR0, cR1,
+                                          cR0.jLength, cR1.jLength,
+                                          Lft, Rght, do_reconstruction);
                     } else if ((j == jmin+1) && (bc[Face.south].ghost_cell_data_available == false)) {
                         one_d.interp_l1r2(IFace, cL0, cR0, cR1,
                                           cL0.jLength, cR0.jLength, cR1.jLength,
-                                          Lft, Rght, allow_high_order_interpolation);
+                                          Lft, Rght, do_reconstruction);
                     } else if ((j == jmax) && (bc[Face.north].ghost_cell_data_available == false)) {
                         one_d.interp_l2r1(IFace, cL1, cL0, cR0,
                                           cL1.jLength, cL0.jLength, cR0.jLength,
-                                          Lft, Rght, allow_high_order_interpolation);
+                                          Lft, Rght, do_reconstruction);
                     } else if ((j == jmax+1) && (bc[Face.north].ghost_cell_data_available == false)) {
-                        Lft.copy_values_from(cL0.fs); Rght.copy_values_from(cL0.fs);
+                        one_d.interp_l2r0(IFace, cL1, cL0,
+                                          cL1.jLength, cL0.jLength,
+                                          Lft, Rght, do_reconstruction);
                     } else { // General symmetric reconstruction.
                         one_d.interp_l2r2(IFace, cL1, cL0, cR0, cR1,
                                           cL1.jLength, cL0.jLength, cR0.jLength, cR1.jLength,
-                                          Lft, Rght, allow_high_order_interpolation);
+                                          Lft, Rght, do_reconstruction);
                     }
                     IFace.fs.copy_average_values_from(Lft, Rght);
+                    //
                     if ((j == jmin) && (bc[Face.south].convective_flux_computed_in_bc == true)) continue;
                     if ((j == jmax+1) && (bc[Face.north].convective_flux_computed_in_bc == true)) continue;
+                    //
                     if ((j == jmin) && (bc[Face.south].ghost_cell_data_available == false)) {
                         compute_flux_at_left_wall(Rght, IFace, myConfig, omegaz);
                     } else if ((j == jmax+1) && (bc[Face.north].ghost_cell_data_available == false)) {
@@ -1976,26 +1990,34 @@ public:
                     auto IFace = get_ifk!()(i,j,k);
                     auto cL0 = get_cell!()(i,j,k-1); auto cL1 = get_cell!()(i,j,k-2);
                     auto cR0 = get_cell!()(i,j,k); auto cR1 = get_cell!()(i,j,k+1);
+                    bool do_reconstruction = allow_high_order_interpolation &&
+                        !IFace.in_suppress_reconstruction_zone;
                     if ((k == kmin) && (bc[Face.bottom].ghost_cell_data_available == false)) {
-                        Lft.copy_values_from(cR0.fs); Rght.copy_values_from(cR0.fs);
+                        one_d.interp_l0r2(IFace, cR0, cR1,
+                                          cR0.kLength, cR1.kLength,
+                                          Lft, Rght, do_reconstruction);
                     } else if ((k == kmin+1) && (bc[Face.bottom].ghost_cell_data_available == false)) {
                         one_d.interp_l1r2(IFace, cL0, cR0, cR1,
                                           cL0.kLength, cR0.kLength, cR1.kLength,
-                                          Lft, Rght, allow_high_order_interpolation);
+                                          Lft, Rght, do_reconstruction);
                     } else if ((k == kmax) && (bc[Face.top].ghost_cell_data_available == false)) {
                         one_d.interp_l2r1(IFace, cL1, cL0, cR0,
                                           cL1.kLength, cL0.kLength, cR0.kLength,
-                                          Lft, Rght, allow_high_order_interpolation);
+                                          Lft, Rght, do_reconstruction);
                     } else if ((k == kmax+1) && (bc[Face.top].ghost_cell_data_available == false)) {
-                        Lft.copy_values_from(cL0.fs); Rght.copy_values_from(cL0.fs);
+                        one_d.interp_l2r0(IFace, cL1, cL0,
+                                          cL1.kLength, cL0.kLength,
+                                          Lft, Rght, do_reconstruction);
                     } else { // General symmetric reconstruction.
                         one_d.interp_l2r2(IFace, cL1, cL0, cR0, cR1,
                                           cL1.kLength, cL0.kLength, cR0.kLength, cR1.kLength,
-                                          Lft, Rght, allow_high_order_interpolation);
+                                          Lft, Rght, do_reconstruction);
                     }
                     IFace.fs.copy_average_values_from(Lft, Rght);
+                    //
                     if ((k == kmin) && (bc[Face.bottom].convective_flux_computed_in_bc == true)) continue;
                     if ((k == kmax+1) && (bc[Face.top].convective_flux_computed_in_bc == true)) continue;
+                    //
                     if ((k == kmin) && (bc[Face.bottom].ghost_cell_data_available == false)) {
                         compute_flux_at_left_wall(Rght, IFace, myConfig, omegaz);
                     } else if ((k == kmax+1) && (bc[Face.top].ghost_cell_data_available == false)) {
