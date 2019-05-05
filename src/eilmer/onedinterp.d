@@ -191,7 +191,8 @@ public:
         // For the moment, omit the clipping because the cone20 structured-grid
         // simulation shows better pressure estimates on cone surface.
         // Maybe this will carry over into other simulations in a good way.
-        // if (myConfig.extrema_clipping) { q = clip_to_limits(q, q0, q1); }
+        // ... No, the shock-fitting case needs it.
+        if (myConfig.extrema_clipping) { q = clip_to_limits(q, q0, q1); }
         return q;
     }
 

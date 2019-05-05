@@ -48,3 +48,6 @@ config.cfl_value = 0.25
 config.dt_plot = config.max_time/16
 config.grid_motion = "shock_fitting"
 config.shock_fitting_delay = (radius*2)/u_inf  -- allow for one flow length
+config.max_invalid_cells = 10
+config.adjust_invalid_cell_data = true
+
