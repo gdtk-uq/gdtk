@@ -130,7 +130,7 @@ public:
         if (myConfig.extrema_clipping) {
             qL = clip_to_limits(qL, qL0, qR0);
         }
-        qR = weight_linear_scalar(qL0, qR0);
+        qR = weight_scalar(qL0, qR0);
         // Since qR is linearly interpolated, should not need to clip extrema.
     } // end of interp_l2r1_scalar()
 
@@ -147,7 +147,7 @@ public:
 
     @nogc void interp_l1r2_scalar(number qL0, number qR0, number qR1, ref number qL, ref number qR)
     {
-        qL = weight_linear_scalar(qL0, qR0);
+        qL = weight_scalar(qL0, qR0);
         // Since qL is linearly interpolated, should not need to clip extrema.
         number del, delRplus, sR;
         del = (qR0 - qL0) * two_over_lenR0_plus_lenL0;
@@ -183,7 +183,7 @@ public:
         w1 = len0/(len0+len1);
     }
 
-    @nogc number weight_linear_scalar(number q0, number q1)
+    @nogc number weight_scalar(number q0, number q1)
     {
         // The weights for interpolation or extrapolation may be used.
         number q = q0*w0 + q1*w1;
@@ -594,23 +594,23 @@ public:
             cL0.fs.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
         }
         linear_extrap_prepare(cL0Length, cL1Length);
-        Lft.vel.refx = weight_linear_scalar(cL0.fs.vel.x, cL1.fs.vel.x);
-        Lft.vel.refy = weight_linear_scalar(cL0.fs.vel.y, cL1.fs.vel.y);
-        Lft.vel.refz = weight_linear_scalar(cL0.fs.vel.z, cL1.fs.vel.z);
+        Lft.vel.refx = weight_scalar(cL0.fs.vel.x, cL1.fs.vel.x);
+        Lft.vel.refy = weight_scalar(cL0.fs.vel.y, cL1.fs.vel.y);
+        Lft.vel.refz = weight_scalar(cL0.fs.vel.z, cL1.fs.vel.z);
         version(MHD) {
             if (myConfig.MHD) {
-                Lft.B.refx = weight_linear_scalar(cL0.fs.B.x, cL1.fs.B.x);
-                Lft.B.refy = weight_linear_scalar(cL0.fs.B.y, cL1.fs.B.y);
-                Lft.B.refz = weight_linear_scalar(cL0.fs.B.z, cL1.fs.B.z);
+                Lft.B.refx = weight_scalar(cL0.fs.B.x, cL1.fs.B.x);
+                Lft.B.refy = weight_scalar(cL0.fs.B.y, cL1.fs.B.y);
+                Lft.B.refz = weight_scalar(cL0.fs.B.z, cL1.fs.B.z);
                 if (myConfig.divergence_cleaning) {
-                    Lft.psi = weight_linear_scalar(cL0.fs.psi, cL1.fs.psi);
+                    Lft.psi = weight_scalar(cL0.fs.psi, cL1.fs.psi);
                 }
             }
         }
         version(komega) {
             if ( myConfig.turbulence_model == TurbulenceModel.k_omega ) {
-                Lft.tke = weight_linear_scalar(cL0.fs.tke, cL1.fs.tke);
-                Lft.omega = weight_linear_scalar(cL0.fs.omega, cL1.fs.omega);
+                Lft.tke = weight_scalar(cL0.fs.tke, cL1.fs.tke);
+                Lft.omega = weight_scalar(cL0.fs.omega, cL1.fs.omega);
             }
         }
         auto gL1 = &(cL1.fs.gas); auto gL0 = &(cL0.fs.gas);
@@ -618,7 +618,7 @@ public:
             if (nsp > 1) {
                 // Multiple species.
                 foreach (isp; 0 .. nsp) {
-                    Lft.gas.massf[isp] = weight_linear_scalar(gL0.massf[isp], gL1.massf[isp]);
+                    Lft.gas.massf[isp] = weight_scalar(gL0.massf[isp], gL1.massf[isp]);
                 }
                 try {
                     scale_mass_fractions(Lft.gas.massf);
@@ -635,36 +635,36 @@ public:
         // and fill in the rest based on an EOS call. 
         final switch (myConfig.thermo_interpolator) {
         case InterpolateOption.pt: 
-            Lft.gas.p = weight_linear_scalar(gL0.p, gL1.p);
-            Lft.gas.T = weight_linear_scalar(gL0.T, gL1.T);
+            Lft.gas.p = weight_scalar(gL0.p, gL1.p);
+            Lft.gas.T = weight_scalar(gL0.T, gL1.T);
             version(multi_T_gas) {
                 foreach (i; 0 .. nmodes) {
-                    Lft.gas.T_modes[i] = weight_linear_scalar(gL0.T_modes[i], gL1.T_modes[i]);
+                    Lft.gas.T_modes[i] = weight_scalar(gL0.T_modes[i], gL1.T_modes[i]);
                 }
             }
             mixin(codeForThermoUpdateLft("pT"));
             break;
         case InterpolateOption.rhou:
-            Lft.gas.rho = weight_linear_scalar(gL0.rho, gL1.rho);
-            Lft.gas.u = weight_linear_scalar(gL0.u, gL1.u);
+            Lft.gas.rho = weight_scalar(gL0.rho, gL1.rho);
+            Lft.gas.u = weight_scalar(gL0.u, gL1.u);
             version(multi_T_gas) {
                 foreach (i; 0 .. nmodes) {
-                    Lft.gas.u_modes[i] = weight_linear_scalar(gL0.u_modes[i], gL1.u_modes[i]);
+                    Lft.gas.u_modes[i] = weight_scalar(gL0.u_modes[i], gL1.u_modes[i]);
                 }
             }
             mixin(codeForThermoUpdateLft("rhou"));
             break;
         case InterpolateOption.rhop:
-            Lft.gas.rho = weight_linear_scalar(gL0.rho, gL1.rho);
-            Lft.gas.p = weight_linear_scalar(gL0.p, gL1.p);
+            Lft.gas.rho = weight_scalar(gL0.rho, gL1.rho);
+            Lft.gas.p = weight_scalar(gL0.p, gL1.p);
             mixin(codeForThermoUpdateLft("rhop"));
             break;
         case InterpolateOption.rhot: 
-            Lft.gas.rho = weight_linear_scalar(gL0.rho, gL1.rho);
-            Lft.gas.T = weight_linear_scalar(gL0.T, gL1.T);
+            Lft.gas.rho = weight_scalar(gL0.rho, gL1.rho);
+            Lft.gas.T = weight_scalar(gL0.T, gL1.T);
             version(multi_T_gas) {
                 foreach (i; 0 .. nmodes) {
-                    Lft.gas.T_modes[i] = weight_linear_scalar(gL0.T_modes[i], gL1.T_modes[i]);
+                    Lft.gas.T_modes[i] = weight_scalar(gL0.T_modes[i], gL1.T_modes[i]);
                 }
             }
             mixin(codeForThermoUpdateLft("rhoT"));
@@ -694,23 +694,23 @@ public:
             cR1.fs.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
         }
         linear_extrap_prepare(cR0Length, cR1Length);
-        Rght.vel.refx = weight_linear_scalar(cR0.fs.vel.x, cR1.fs.vel.x);
-        Rght.vel.refy = weight_linear_scalar(cR0.fs.vel.y, cR1.fs.vel.y);
-        Rght.vel.refz = weight_linear_scalar(cR0.fs.vel.z, cR1.fs.vel.z);
+        Rght.vel.refx = weight_scalar(cR0.fs.vel.x, cR1.fs.vel.x);
+        Rght.vel.refy = weight_scalar(cR0.fs.vel.y, cR1.fs.vel.y);
+        Rght.vel.refz = weight_scalar(cR0.fs.vel.z, cR1.fs.vel.z);
         version(MHD) {
             if (myConfig.MHD) {
-                Rght.B.refx = weight_linear_scalar(cR0.fs.B.x, cR1.fs.B.x);
-                Rght.B.refy = weight_linear_scalar(cR0.fs.B.y, cR1.fs.B.y);
-                Rght.B.refz = weight_linear_scalar(cR0.fs.B.z, cR1.fs.B.z);
+                Rght.B.refx = weight_scalar(cR0.fs.B.x, cR1.fs.B.x);
+                Rght.B.refy = weight_scalar(cR0.fs.B.y, cR1.fs.B.y);
+                Rght.B.refz = weight_scalar(cR0.fs.B.z, cR1.fs.B.z);
                 if (myConfig.divergence_cleaning) {
-                    Rght.psi = weight_linear_scalar(cR0.fs.psi, cR1.fs.psi);
+                    Rght.psi = weight_scalar(cR0.fs.psi, cR1.fs.psi);
                 }
             }
         }
         version(komega) {
             if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                Rght.tke = weight_linear_scalar(cR0.fs.tke, cR1.fs.tke);
-                Rght.omega = weight_linear_scalar(cR0.fs.omega, cR1.fs.omega);
+                Rght.tke = weight_scalar(cR0.fs.tke, cR1.fs.tke);
+                Rght.omega = weight_scalar(cR0.fs.omega, cR1.fs.omega);
             }
         }
         auto gR0 = &(cR0.fs.gas); auto gR1 = &(cR1.fs.gas);
@@ -718,7 +718,7 @@ public:
             if (nsp > 1) {
                 // Multiple species.
                 foreach (isp; 0 .. nsp) {
-                    Rght.gas.massf[isp] = weight_linear_scalar(gR0.massf[isp], gR1.massf[isp]);
+                    Rght.gas.massf[isp] = weight_scalar(gR0.massf[isp], gR1.massf[isp]);
                 }
                 try {
                     scale_mass_fractions(Rght.gas.massf);
@@ -735,36 +735,36 @@ public:
         // and fill in the rest based on an EOS call. 
         final switch (myConfig.thermo_interpolator) {
         case InterpolateOption.pt: 
-            Rght.gas.p = weight_linear_scalar(gR0.p, gR1.p);
-            Rght.gas.T = weight_linear_scalar(gR0.T, gR1.T);
+            Rght.gas.p = weight_scalar(gR0.p, gR1.p);
+            Rght.gas.T = weight_scalar(gR0.T, gR1.T);
             version(multi_T_gas) {
                 foreach (i; 0 .. nmodes) {
-                    Rght.gas.T_modes[i] = weight_linear_scalar(gR0.T_modes[i], gR1.T_modes[i]);
+                    Rght.gas.T_modes[i] = weight_scalar(gR0.T_modes[i], gR1.T_modes[i]);
                 }
             }
             mixin(codeForThermoUpdateRght("pT"));
             break;
         case InterpolateOption.rhou:
-            Rght.gas.rho = weight_linear_scalar(gR0.rho, gR1.rho);
-            Rght.gas.u = weight_linear_scalar(gR0.u, gR1.u);
+            Rght.gas.rho = weight_scalar(gR0.rho, gR1.rho);
+            Rght.gas.u = weight_scalar(gR0.u, gR1.u);
             version(multi_T_gas) {
                 foreach (i; 0 .. nmodes) {
-                    Rght.gas.u_modes[i] = weight_linear_scalar(gR0.u_modes[i], gR1.u_modes[i]);
+                    Rght.gas.u_modes[i] = weight_scalar(gR0.u_modes[i], gR1.u_modes[i]);
                 }
             }
             mixin(codeForThermoUpdateRght("rhou"));
             break;
         case InterpolateOption.rhop:
-            Rght.gas.rho = weight_linear_scalar(gR0.rho, gR1.rho);
-            Rght.gas.p = weight_linear_scalar(gR0.p, gR1.p);
+            Rght.gas.rho = weight_scalar(gR0.rho, gR1.rho);
+            Rght.gas.p = weight_scalar(gR0.p, gR1.p);
             mixin(codeForThermoUpdateRght("rhop"));
             break;
         case InterpolateOption.rhot: 
-            Rght.gas.rho = weight_linear_scalar(gR0.rho, gR1.rho);
-            Rght.gas.T = weight_linear_scalar(gR0.T, gR1.T);
+            Rght.gas.rho = weight_scalar(gR0.rho, gR1.rho);
+            Rght.gas.T = weight_scalar(gR0.T, gR1.T);
             version(multi_T_gas) {
                 foreach (i; 0 .. nmodes) {
-                    Rght.gas.T_modes[i] = weight_linear_scalar(gR0.T_modes[i], gR1.T_modes[i]);
+                    Rght.gas.T_modes[i] = weight_scalar(gR0.T_modes[i], gR1.T_modes[i]);
                 }
             }
             mixin(codeForThermoUpdateRght("rhoT"));
