@@ -1900,8 +1900,16 @@ public:
                     // Low-order reconstruction just copies data from adjacent FV_Cell.
                     // Even for high-order reconstruction, we depend upon this copy for
                     // the viscous-transport and diffusion coefficients.
-                    Lft.copy_values_from((i > imin) ? cL0.fs : cR0.fs);
-                    Rght.copy_values_from((i < imax+1) ? cR0.fs : cL0.fs);
+                    if ((i == imin) && !(bc[Face.west].ghost_cell_data_available)) {
+                        Lft.copy_values_from(cR0.fs);
+                    } else {
+                        Lft.copy_values_from(cL0.fs);
+                    }
+                    if ((i == imax+1) && !(bc[Face.east].ghost_cell_data_available)) {
+                        Rght.copy_values_from(cL0.fs);
+                    } else {
+                        Rght.copy_values_from(cR0.fs);
+                    }
                     bool do_reconstruction = allow_high_order_interpolation &&
                         (myConfig.interpolation_order > 1) &&
                         !IFace.in_suppress_reconstruction_zone &&
@@ -1946,8 +1954,16 @@ public:
                     // Low-order reconstruction just copies data from adjacent FV_Cell.
                     // Even for high-order reconstruction, we depend upon this copy for
                     // the viscous-transport and diffusion coefficients.
-                    Lft.copy_values_from((j > jmin) ? cL0.fs : cR0.fs);
-                    Rght.copy_values_from((j < jmax+1) ? cR0.fs : cL0.fs);
+                    if ((j == jmin) && !(bc[Face.south].ghost_cell_data_available)) {
+                        Lft.copy_values_from(cR0.fs);
+                    } else {
+                        Lft.copy_values_from(cL0.fs);
+                    }
+                    if ((j == jmax+1) && !(bc[Face.north].ghost_cell_data_available)) {
+                        Rght.copy_values_from(cL0.fs);
+                    } else {
+                        Rght.copy_values_from(cR0.fs);
+                    }
                     bool do_reconstruction = allow_high_order_interpolation &&
                         (myConfig.interpolation_order > 1) &&
                         !IFace.in_suppress_reconstruction_zone &&
@@ -1995,8 +2011,16 @@ public:
                     // Low-order reconstruction just copies data from adjacent FV_Cell.
                     // Even for high-order reconstruction, we depend upon this copy for
                     // the viscous-transport and diffusion coefficients.
-                    Lft.copy_values_from((k > kmin) ? cL0.fs : cR0.fs);
-                    Rght.copy_values_from((k < kmax+1) ? cR0.fs : cL0.fs);
+                    if ((k == kmin) && !(bc[Face.bottom].ghost_cell_data_available)) {
+                        Lft.copy_values_from(cR0.fs);
+                    } else {
+                        Lft.copy_values_from(cL0.fs);
+                    }
+                    if ((k == kmax+1) && !(bc[Face.top].ghost_cell_data_available)) {
+                        Rght.copy_values_from(cL0.fs);
+                    } else {
+                        Rght.copy_values_from(cR0.fs);
+                    }
                     bool do_reconstruction = allow_high_order_interpolation &&
                         (myConfig.interpolation_order > 1) &&
                         !IFace.in_suppress_reconstruction_zone &&
