@@ -268,29 +268,31 @@ public:
         number yA = vtx[0].pos[gtl].y;
         number xB = vtx[1].pos[gtl].x;
         number yB = vtx[1].pos[gtl].y;
-        number LAB = sqrt((xB - xA) * (xB - xA) + (yB - yA) * (yB - yA));
+        number LAB = sqrt((xB-xA)*(xB-xA) + (yB-yA)*(yB-yA));
         // Direction cosines for the unit normal and two tangential directions.
         if (LAB > 1.0e-12) {
-            // normal is purely in the xy-plane
+            // Normal is purely in the xy-plane, pointing to the "right"
+            // as we sit at A, looking toward B. 
             n.set((yB-yA)/LAB, -(xB-xA)/LAB, to!number(0.0));
             t2 = Vector3(0.0, 0.0, 1.0);
             cross(t1, n, t2);
             length = LAB; // Length in the XY-plane.
         } else {
+            // A and B coincide.
             n = Vector3(1.0, 0.0, 0.0); // Arbitrary direction
             t2 = Vector3(0.0, 0.0, 1.0);
             t1 = Vector3(0.0, 1.0, 0.0);
             length = 0.0; // Zero length in the xy-plane
         }
-        // Mid-point and area.
-        // [TODO] think about using a better estimate for Ybar.
-        Ybar = 0.5 * (yA + yB);
+        // Mid-point and surface area.
+        number Xbar = 0.5*(xA+xB);
+        Ybar = 0.5*(yA+yB);
         if (axisymmetric) {
-            area[gtl] = LAB * Ybar; // Face area per radian.
+            area[gtl] = length * Ybar; // Face area per radian.
         } else {
-            area[gtl] = LAB; // Assume unit depth in the Z-direction.
+            area[gtl] = length; // Assume unit depth in the Z-direction.
         }
-        pos = vtx[0].pos[gtl]; pos += vtx[1].pos[gtl]; pos *= to!number(0.5);
+        pos.set(Xbar, Ybar, to!number(0.0));
     } // end update_2D_geometric_data()
 
     @nogc
