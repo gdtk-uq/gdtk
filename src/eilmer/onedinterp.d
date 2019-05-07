@@ -127,11 +127,15 @@ public:
             sL = 1.0;
         }
         qL = qL0 + sL * aL0 * (del * two_lenL0_plus_lenL1 + delLminus * lenR0_);
+        if (myConfig.apply_limiter && (delLminus*del < 0.0)) {
+            qR = qR0;
+        } else {
+            qR = weight_scalar(qL0, qR0);
+        }
         if (myConfig.extrema_clipping) {
             qL = clip_to_limits(qL, qL0, qR0);
+            // Since qR is linearly interpolated, should not need to clip extrema.
         }
-        qR = weight_scalar(qL0, qR0);
-        // Since qR is linearly interpolated, should not need to clip extrema.
     } // end of interp_l2r1_scalar()
 
     @nogc void l1r2_prepare(number lenL0, number lenR0, number lenR1)
@@ -147,8 +151,6 @@ public:
 
     @nogc void interp_l1r2_scalar(number qL0, number qR0, number qR1, ref number qL, ref number qR)
     {
-        qL = weight_scalar(qL0, qR0);
-        // Since qL is linearly interpolated, should not need to clip extrema.
         number del, delRplus, sR;
         del = (qR0 - qL0) * two_over_lenR0_plus_lenL0;
         delRplus = (qR1 - qR0) * two_over_lenR1_plus_lenR0;
@@ -159,7 +161,13 @@ public:
             sR = 1.0;
         }
         qR = qR0 - sR * aR0 * (delRplus * lenL0_ + del * two_lenR0_plus_lenR1);
+        if (myConfig.apply_limiter && (delRplus*del < 0.0)) {
+            qL = qL0;
+        } else {
+            qL = weight_scalar(qL0, qR0);
+        }
         if (myConfig.extrema_clipping) {
+            // Since qL is linearly interpolated, should not need to clip extrema.
             qR = clip_to_limits(qR, qL0, qR0);
         }
     } // end of interp_l1r2_scalar()
@@ -587,6 +595,12 @@ public:
         auto gmodel = myConfig.gmodel;
         auto nsp = gmodel.n_species;
         auto nmodes = gmodel.n_modes;
+        if (myConfig.extrema_clipping) {
+            // Not much that we can do with linear extrapolation
+            // that doesn't produce an new extreme value.
+            // Let the copy, made by the caller, stand.
+            return;
+        }
         // High-order reconstruction for some properties.
         if (myConfig.interpolate_in_local_frame) {
             // In the interface-local frame.
@@ -687,6 +701,13 @@ public:
         auto gmodel = myConfig.gmodel;
         auto nsp = gmodel.n_species;
         auto nmodes = gmodel.n_modes;
+        //
+        if (myConfig.extrema_clipping) {
+            // Not much that we can do with linear extrapolation
+            // that doesn't produce an new extreme value.
+            // Let the copy, made by the caller, stand.
+            return;
+        }
         // High-order reconstruction for some properties.
         if (myConfig.interpolate_in_local_frame) {
             // In the interface-local frame.

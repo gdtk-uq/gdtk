@@ -48,9 +48,10 @@ test stand-off {The shock stand-off distance compared with experiment.} -body {
 	}
     }
     # Compute shock stand-off im mm and then check that the 
-    # relative error is less than 2%.
+    # relative error is less than 15%, which corresponds to 
+    # a distance of two cells.
     set stand_off [expr ($shock_location * -1000) - 31.8]
-    expr abs($stand_off - 2.66)/2.66 < 2.0e-2
+    expr abs($stand_off - 2.66)/2.66 < 0.15
 } -result {1}
 
 cleanupTests
