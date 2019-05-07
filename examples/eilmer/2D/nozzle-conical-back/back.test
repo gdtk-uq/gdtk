@@ -6,6 +6,9 @@
 # PJ, 03-Mar-2014
 #     2015-10-22 ported to Eilmer4
 #     2015-10-27 relax tolerance to accommodate the less steady mass-flux solution.
+#     2019-05-07 relax further to accommodate the different reconstruction
+#     associated with the WallBC_WithSlip1 boundary condition.
+#     We are sampling the exit flow in the most sensitive region, near the axis.
 
 package require tcltest 2.0
 namespace import ::tcltest::*
@@ -118,10 +121,10 @@ test supersonic-region {Supersonic exit should be a bit over Mach 3.} -body {
 	# puts "rho=$rho p=$p T=$T Mach=$Mach"
     }
     # The differences with respect to the reference values should be small. 
-    list [expr abs($rho - $rho_ref)/$rho_ref < 1.0e-2] \
-    	 [expr abs($p - $p_ref)/$p_ref < 1.0e-2] \
-    	 [expr abs($T - $T_ref)/$T_ref < 1.0e-2] \
-    	 [expr abs($Mach - $Mach_ref)/$Mach_ref < 1.0e-2]
+    list [expr abs($rho - $rho_ref)/$rho_ref < 5.0e-2] \
+    	 [expr abs($p - $p_ref)/$p_ref < 5.0e-2] \
+    	 [expr abs($T - $T_ref)/$T_ref < 2.0e-2] \
+    	 [expr abs($Mach - $Mach_ref)/$Mach_ref < 2.0e-2]
 } -result {1 1 1 1}
 
 cleanupTests
