@@ -6,7 +6,7 @@
 #
 # PJ, 13-Jan-2011
 #     01-Aug-2017 Ported to Eilmer4
-
+#     2019-05-07 Increase tolerances to accommodate no-ghost-cell BC. 
 
 package require tcltest 2.0
 namespace import ::tcltest::*
@@ -30,7 +30,7 @@ test number-of-steps {The main simulation takes a certain number of steps.} -bod
 	    set final_steps [lindex [split $line] 1]
 	}
     }
-    expr abs($final_steps - 7124) < 10
+    expr abs($final_steps - 7124) < 50
 } -result {1}
 
 test run-postprocessor {Run the postprocessing stage.} -body {
@@ -48,7 +48,7 @@ test run-postprocessor {Run the postprocessing stage.} -body {
     set T_tr [lindex [split [string trim $contents]] 20]
     set T_v [lindex [split [string trim $contents]] 22]
     list [expr abs($T_tr - 2536.4) < 20.0] \
-         [expr abs($T_v - 2349.0) < 20.0]
+         [expr abs($T_v - 2349.0) < 60.0]
 
 } -result {1 1}
 
