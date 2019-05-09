@@ -14,6 +14,7 @@ import gas.gas_model;
 // Needs to know about all of the gas-model modules that are in play.
 import gas.ideal_gas;
 import gas.ideal_helium;
+import gas.cubic_gas;
 import gas.cea_gas;
 import gas.therm_perf_gas;
 import gas.very_viscous_air;
@@ -77,6 +78,9 @@ GasModel init_gas_model(string file_name="gas-model.lua")
         break;
     case "IdealHelium":
         gm = new IdealHelium();
+        break;
+    case "CubicGas":
+        gm = new CubicGas(L);
         break;
     case "CEAGas":
         gm = new CEAGas(L);

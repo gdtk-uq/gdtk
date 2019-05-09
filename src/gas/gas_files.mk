@@ -11,6 +11,7 @@ GAS_MODEL_FILES := $(GAS_DIR)/package.d \
 	$(GAS_DIR)/init_gas_model.d \
 	$(GAS_DIR)/ideal_gas.d \
 	$(GAS_DIR)/ideal_helium.d \
+	$(GAS_DIR)/cubic_gas.d \
 	$(GAS_DIR)/cea_gas.d \
 	$(GAS_DIR)/physical_constants.d \
 	$(GAS_DIR)/sf6virial.d \

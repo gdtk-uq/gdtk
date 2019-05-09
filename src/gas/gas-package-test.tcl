@@ -28,12 +28,20 @@ test init-gas-model-complex-test {Testing init_gas_model.d complex flavour} -bod
     exec ./init_gas_model_complex_test
 } -result {} -returnCodes {0}
 
-test ideal-gas-complex-test {Testing ideal_gas.d} -body {
+test ideal-gas-test {Testing ideal_gas.d} -body {
+    exec ./ideal_gas_test
+} -result {} -returnCodes {0}
+
+test ideal-gas-complex-test {Testing ideal_gas.d complex flavour} -body {
     exec ./ideal_gas_complex_test
 } -result {} -returnCodes {0}
 
 test ideal-helium-test {Testing ideal_helium.d} -body {
     exec ./ideal_helium_test
+} -result {} -returnCodes {0}
+
+test cubic-gas-test {Testing cubic_gas.d} -body {
+    exec ./cubic_gas_test
 } -result {} -returnCodes {0}
 
 #test cea-gas-test {Testing cea_gas.d} -body {

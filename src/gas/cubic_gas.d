@@ -1,12 +1,12 @@
 /**
- * ideal_gas.d
- * Ideal gas model for use in the CFD codes.
+ * cubic_gas.d
+ * Dense-gas model with a cubic EOS for use in the CFD codes.
  *
- * Author: Peter J. and Rowan G.
- * Version: 2014-06-22: initial cut, to explore options.
+ * Author: Matthew Kratzer, Peter J. and Rowan G.
+ * Version: 2019-05-10: initial cut adapted from ideal_gas.
  */
 
-module gas.ideal_gas;
+module gas.cubic_gas;
 
 import gas.gas_model;
 import gas.gas_state;
@@ -25,14 +25,14 @@ import core.stdc.stdlib : exit;
 import nm.complex;
 import nm.number;
 
-class IdealGas: GasModel {
+class CubicGas: GasModel {
 public:
 
     this(lua_State *L) {
         _n_species = 1;
         _n_modes = 0;
         // Bring table to TOS
-        lua_getglobal(L, "IdealGas");
+        lua_getglobal(L, "CubicGas");
         // There's just one species name to be read from the gas-model file.
         _species_names.length = 1;
         _species_names[0] = getString(L, -1, "speciesName");
@@ -72,7 +72,7 @@ public:
     override string toString() const
     {
         char[] repr;
-        repr ~= "IdealGas =(";
+        repr ~= "CubicGas =(";
         repr ~= "name=\"" ~ _species_names[0] ~"\"";
         repr ~= ", Mmass=" ~ to!string(_mol_masses[0]);
         repr ~= ", gamma=" ~ to!string(_gamma);
@@ -206,16 +206,16 @@ private:
     double _Prandtl;
     ThermalConductivity _thermCondModel;
 
-} // end class IdealGas
+} // end class CubicGas
 
-version(ideal_gas_test) {
+version(cubic_gas_test) {
     import std.stdio;
     import util.msg_service;
 
     int main() {
         lua_State* L = init_lua_State();
-        doLuaFile(L, "sample-data/ideal-air-gas-model.lua");
-        auto gm = new IdealGas(L);
+        doLuaFile(L, "sample-data/cubic-gas-model.lua");
+        auto gm = new CubicGas(L);
         lua_close(L);
         auto gd = new GasState(1, 0);
         gd.p = 1.0e5;

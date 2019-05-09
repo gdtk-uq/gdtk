@@ -698,6 +698,7 @@ version(two_temperature_gasgiant_test) {
         //assert(approxEqual(gd.massf[2], 0.0, 1.0e-6), failedUnitTest());
         //assert(approxEqual(gd.massf[3], 0.0, 1.0e-6), failedUnitTest());
         //assert(approxEqual(gd.massf[4], 0.0, 1.0e-6), failedUnitTest());
+        /*
         writeln("before update_thermo_from_pT");
         writeln(gd);
         gm.update_thermo_from_pT(gd);
@@ -709,6 +710,7 @@ version(two_temperature_gasgiant_test) {
         gm.update_thermo_from_rhou(gd);
         writeln("after update_thermo_from_rhou");
         writeln(gd);
+        */
         /*
 		//writeln("Cv");
 		//writeln(gm. vibSpecHeatConstV(dg, 600);
