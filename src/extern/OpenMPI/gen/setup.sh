@@ -49,6 +49,6 @@ mv dub.json.part dub.json
 
 unset IFS
 
-dub build :configure
-dub build :splice
+dub build mpi:configure
+dub build mpi:splice
 ./mpi_splice ./source/mpi/package.d.in <(./mpi_configure $(./gen/get_mpi.h.sh)) > ./source/mpi/package.d
