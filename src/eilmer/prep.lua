@@ -767,14 +767,10 @@ function identifyBlockConnections(blockList, excludeList, tolerance)
 end
 
 function FluidBlockArray(t)
-   -- We'd like the arrayId to start from 0 for the D code.
+   -- We will embed the FluidBlockArray identity in the individual blocks
+   -- and we would like that identity to start from 0 for the D code.
    local arrayId = #(fluidBlockArrays)
-   fluidBlockArrays[#fluidBlockArrays+1] = {
-      id=arrayId,
-      blocks={}
-   }
-   -- Get a pointer to the current table for convenience
-   fbt = fluidBlockArrays[arrayId+1]
+   --
    -- Expect one table as argument, with named fields.
    -- Returns an array of FluidBlocks defined over a single region.
    local flag = checkAllowedNames(t, {"grid", "initialState", "fillCondition",
@@ -867,7 +863,6 @@ function FluidBlockArray(t)
             }
 	    blockArray[ib][jb] = new_block
 	    blockCollection[#blockCollection+1] = new_block
-            fbt.blocks[#(fbt.blocks)+1] = new_block.id
 	 else
 	    -- 3D flow, need one more level in the array
 	    blockArray[ib][jb] = {}
@@ -908,7 +903,6 @@ function FluidBlockArray(t)
                }
 	       blockArray[ib][jb][kb] = new_block
 	       blockCollection[#blockCollection+1] = new_block
-               fbt.blocks[#(fbt.blocks)+1] = new_block.id
                -- Prepare k0 at end of loop, ready for next iteration
                k0 = k0 + nkc
 	    end -- kb loop
@@ -923,23 +917,29 @@ function FluidBlockArray(t)
    if #blockCollection > 1 then
       identifyBlockConnections(blockCollection)
    end
-   -- Fill in meta-information about fluidBlockArray
-   fbt.nib = t.nib
-   fbt.njb = t.njb
-   fbt.nkb = t.nkb
+   --
+   -- Retain meta-information about fluidBlockArray
+   -- for use later in the user-defined functions, during simulation.
+   fluidBlockArrays[#fluidBlockArrays+1] = {
+      id=arrayId,
+      nib=t.nib, njb=t.njb, nkb=t.nkb,
+      blockArray=blockArray,
+      blockCollection=blockCollection
+   }
+   --
    return blockArray
 end -- FluidBlockArray
 
-function fluidBlockArrayToJson(fbt)
-   local str = string.format('"fluid_block_array_%d": {\n', fbt.id)
-   str = str .. string.format('    "nib": %d,\n', fbt.nib)
-   str = str .. string.format('    "njb": %d,\n', fbt.njb)
-   str = str .. string.format('    "nkb": %d,\n', fbt.nkb)
-   str = str .. string.format('    "blocks": [ ')
-   for ib=1,#(fbt.blocks)-1 do
-      str = str .. string.format('%d, ', fbt.blocks[ib])
+function fluidBlockArrayToJson(t)
+   local str = string.format('"fluid_block_array_%d": {\n', t.id)
+   str = str .. string.format('    "nib": %d,\n', t.nib)
+   str = str .. string.format('    "njb": %d,\n', t.njb)
+   str = str .. string.format('    "nkb": %d,\n', t.nkb)
+   str = str .. string.format('    "blockIds": [ ')
+   for ib=1,#(t.blockCollection)-1 do
+      str = str .. string.format('%d, ', t.blockCollection[ib].id)
    end
-   str = str .. string.format('%d ]\n', fbt.blocks[#fbt.blocks])
+   str = str .. string.format('%d ]\n', t.blockCollection[#t.blockCollection].id)
    str = str .. '},\n'
    return str
 end
