@@ -67,6 +67,7 @@ final class SimState {
     shared static int step;
     shared static double dt_global;     // simulation time step determined by code
     shared static double dt_allow;      // allowable global time step determined by code
+    shared static double cfl_max;      // current max cfl determined by code
     shared static double dt_override = 0.0;  // A positive value will override a larger computed time step.
     shared static double target_time;  // simulate_in_time will work toward this value
 
@@ -95,6 +96,7 @@ final class SimState {
 // each block will put its result into the following arrays,
 // then we will reduce across the arrays.
 shared static double[] local_dt_allow;
+shared static double[] local_cfl_max;
 shared static int[] local_invalid_cell_count;
 
 // The shared double[] flavour of GlobalConfig.userPad can give trouble,
@@ -674,6 +676,7 @@ int integrate_in_time(double target_time_as_requested)
     }
     //
     local_dt_allow.length = localFluidBlocks.length; // prepare array for use later
+    local_cfl_max.length = localFluidBlocks.length; // prepare array for use later
     local_invalid_cell_count.length = localFluidBlocks.length;
     //
     // Normally, we can terminate upon either reaching 
@@ -743,8 +746,8 @@ int integrate_in_time(double target_time_as_requested)
             if ((SimState.step % GlobalConfig.print_count) == 0) {
                 // Print the current time-stepping status.
                 auto writer = appender!string();
-                formattedWrite(writer, "Step=%7d t=%10.3e dt=%10.3e ",
-                               SimState.step, SimState.time, SimState.dt_global);
+                formattedWrite(writer, "Step=%7d t=%10.3e dt=%10.3e cfl=%.2f ",
+                               SimState.step, SimState.time, SimState.dt_global, SimState.cfl_max);
                 // For reporting wall-clock time, convert to seconds with precision of milliseconds.
                 double wall_clock_elapsed = to!double((Clock.currTime()-SimState.wall_clock_start).total!"msecs"())/1000.0;
                 double wall_clock_per_step = wall_clock_elapsed / SimState.step;
@@ -1134,18 +1137,25 @@ void determine_time_step_size()
             // that is not important here, just need a unique spot to poke into local_dt_allow.
             if (myblk.active) {
                 local_dt_allow[i] = myblk.determine_time_step_size(SimState.dt_global,
-                                                                   (SimState.step > 0));
+                                                                   (SimState.step > 0))[0];
+                local_cfl_max[i] = myblk.determine_time_step_size(SimState.dt_global,
+                                                                   (SimState.step > 0))[1];
             }
         }
         // Second, reduce this estimate across all local blocks.
         SimState.dt_allow = double.max; // to be sure it is replaced.
+        SimState.cfl_max = 0.0; // to be sure it is replaced.
         foreach (i, myblk; localFluidBlocks) { // serial loop
             if (myblk.active) { SimState.dt_allow = min(SimState.dt_allow, local_dt_allow[i]); } 
+            if (myblk.active) { SimState.cfl_max = max(SimState.cfl_max, local_cfl_max[i]); } 
         }
         version(mpi_parallel) {
             double my_dt_allow = SimState.dt_allow;
+            double my_cfl_max = SimState.cfl_max;
             MPI_Allreduce(MPI_IN_PLACE, &my_dt_allow, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+            MPI_Allreduce(MPI_IN_PLACE, &my_cfl_max, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
             SimState.dt_allow = my_dt_allow;
+            SimState.cfl_max = my_cfl_max;
         }
         if (SimState.step == 0) {
             // When starting out, we may override the computed value.

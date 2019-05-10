@@ -696,7 +696,7 @@ public:
     } // end update_c_h()
 
     @nogc
-    double determine_time_step_size(double dt_current, bool check_cfl)
+    double[2] determine_time_step_size(double dt_current, bool check_cfl)
     // Compute the local time step limit for all cells in the block.
     // The overall time step is limited by the worst-case cell.
     {
@@ -737,7 +737,7 @@ public:
             debug { msg ~= text(" cfl_max=", cfl_max, " for FluidBlock ", id); }
             throw new FlowSolverException(msg);
         }
-        return dt_allow;
+        return [dt_allow, cfl_max];
     } // end determine_time_step_size()
 
     void applyPreReconAction(double t, int gtl, int ftl)
