@@ -707,6 +707,7 @@ public:
         double cfl_allow; // allowable CFL number, t_order dependent
         double dt_allow;
         double cfl_min, cfl_max;
+        double cfl_adjust = 0.5; // Adjust cfl_max (and hence dt_allow) if cfl_max > cfl_allow
         // The following limits allow the simulation of the sod shock tube
         // to get just a little wobbly around the shock.
         // Lower values of cfl should be used for a smooth solution.
@@ -735,7 +736,14 @@ public:
         if (check_cfl && (cfl_max < 0.0 || cfl_max > cfl_allow)) {
             string msg = "Bad cfl number encountered";
             debug { msg ~= text(" cfl_max=", cfl_max, " for FluidBlock ", id); }
-            throw new FlowSolverException(msg);
+            debug { writeln(msg); } // Write out warning message when running in debug mode
+            cfl_max = cfl_adjust*cfl_allow;// If cfl_max exceeds cfl_allow, simply reduce the
+                                    // cfl_max to cfl_adjust*cfl_allow. A value of 0.5 seems 
+                                    // to work robustly. Values to 0.7 also work, beyond this 
+                                    // and code begins to crash due to numerical instability.
+                                    // Results in auto-limitation of the time step/cfl
+            dt_allow = cfl_max/signal; // Reduce dt_allow according to new rescaled cfl_max
+            //throw new FlowSolverException(msg); // Previous code threw an error and halted
         }
         return [dt_allow, cfl_max];
     } // end determine_time_step_size()
