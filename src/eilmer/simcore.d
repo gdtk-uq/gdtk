@@ -457,7 +457,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
     //
     // Configure the run-time loads if required
     if (GlobalConfig.compute_run_time_loads) {
-        string fileName = "config." ~ GlobalConfig.base_file_name ~ ".config";
+        string fileName = "config/" ~ GlobalConfig.base_file_name ~ ".config";
         string content = readText(fileName);
         JSONValue jsonData = parseJSON!string(content);
         initRunTimeLoads(jsonData["run_time_loads"]);
