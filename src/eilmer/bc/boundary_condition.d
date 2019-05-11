@@ -324,6 +324,9 @@ public:
         lua_setglobal(myL, "n_species");
         lua_pushinteger(myL, blk.myConfig.gmodel.n_modes);
         lua_setglobal(myL, "n_modes");
+        if (GlobalConfig.user_pad_length > 0) {
+            push_array_to_Lua(myL, GlobalConfig.userPad, "userPad");
+        }
         if (blk.grid_type == Grid_t.structured_grid) {
             // Structured-block-specific data
             auto sblk = cast(SFluidBlock) blk;
