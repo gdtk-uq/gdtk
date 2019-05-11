@@ -1878,6 +1878,47 @@ function write_mpimap_file(fileName)
    f:close()
 end
 
+function write_fluidBlockArrays_file(fileName)
+   local f = assert(io.open(fileName, "w"))
+   f:write("-- A description of the fluidBlockArrays in Lua code.\n")
+   f:write("-- Use dofile() to get the content into your interpreter.\n")
+   f:write("fluidBlockArrays = {\n")
+   for i = 1, #(fluidBlockArrays) do
+      local fba = fluidBlockArrays[i]
+      local label = fba.label or ""
+      f:write(string.format("  [%d]={label=\"%s\",\n", fba.id, label))
+      f:write(string.format("    nib=%d, njb=%d, nkb=%d,\n", fba.nib, fba.njb, fba.nkb))
+      --
+      f:write("    blockCollection={")
+      for _,blk in ipairs(fba.blockCollection) do
+         f:write(string.format("%d, ", blk.id))
+      end
+      f:write("},\n") -- end blockCollection
+      --
+      f:write("    blockArray={\n")
+      for ib,itable in pairs(fba.blockArray) do
+         f:write(string.format("      [%d]={", ib))
+         for jb,jitem in pairs(itable) do
+            f:write(string.format("[%d]={", jb))
+            if config.dimensions == 3 then
+               for kb,blk in pairs(jitem) do
+                  f:write(string.format("[%d]=%d, ", kb, blk.id))
+               end
+            else
+               -- For 2D
+               f:write(string.format("[1]=%d" , jitem.id))
+            end
+            f:write("}, ") -- end [ib][jb]
+         end
+         f:write("},\n") -- end [ib]
+      end
+      f:write("    },\n") -- end blockArray
+      f:write("  },\n")
+   end
+   f:write("}\n")
+   f:close()
+end
+
 function perform_spatial_gradient_consistency_check()
    -- Not all spatial gradient options are available, depending on the type of grid.
    -- First, search for any unstructured grids, since these are the most restricted.
@@ -1931,6 +1972,7 @@ function build_job_files(job)
       write_times_file("config/" .. job .. ".times")
       write_block_list_file("config/" .. job .. ".list")
       write_mpimap_file("config/" .. job .. ".mpimap")
+      write_fluidBlockArrays_file("config/" .. job .. ".fluidBlockArrays")
    end
    os.execute("mkdir -p grid/t0000")
    os.execute("mkdir -p flow/t0000")
