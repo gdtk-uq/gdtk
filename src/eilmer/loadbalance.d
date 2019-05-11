@@ -118,7 +118,7 @@ void main(string[] args)
     
     // Perform load balance and write out.
     distributeBlocksToTasks(nTasks, blockLoads, taskMap, taskLoads, taskIds);
-    string fName = jobName~".mpimap";
+    string fName = "config/"~jobName~".mpimap";
     // writeBlocksToTasksMap(fName, taskMap, taskLoads);
     auto f = File(fName, "w");
     f.writeln("# indx mpiTask");

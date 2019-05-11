@@ -155,7 +155,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
         // of the MPI rank for all blocks.
         int my_rank = GlobalConfig.mpi_rank_for_local_task;
         GlobalConfig.mpi_rank_for_block.length = GlobalConfig.nFluidBlocks;
-        auto lines = readText(job_name ~ ".mpimap").splitLines();
+        auto lines = readText("config/" ~ job_name ~ ".mpimap").splitLines();
         foreach (line; lines) {
             auto content = line.strip();
             if (content.startsWith("#")) continue; // Skip comment
@@ -457,7 +457,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
     //
     // Configure the run-time loads if required
     if (GlobalConfig.compute_run_time_loads) {
-        string fileName = GlobalConfig.base_file_name ~ ".config";
+        string fileName = "config." ~ GlobalConfig.base_file_name ~ ".config";
         string content = readText(fileName);
         JSONValue jsonData = parseJSON!string(content);
         initRunTimeLoads(jsonData["run_time_loads"]);
@@ -522,7 +522,7 @@ void write_solution_files()
     if (GlobalConfig.is_master_task) {
         auto writer = appender!string();
         formattedWrite(writer, "%04d %.18e %.18e\n", SimState.current_tindx, SimState.time, SimState.dt_global);
-        append(GlobalConfig.base_file_name ~ ".times", writer.data);
+        append("config/" ~ GlobalConfig.base_file_name ~ ".times", writer.data);
     }
 } // end write_solution_files()
 

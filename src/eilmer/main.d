@@ -390,8 +390,8 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
                 // RJG, 2019-04-07
                 // We only do this if we are processing master files.
                 // We'll assume that things proceed ok if we are working on other block ranges.
-                moveFileToBackup(jobName~".config");
-                moveFileToBackup(jobName~".control");
+                moveFileToBackup("config/"~jobName~".config");
+                moveFileToBackup("config/"~jobName~".control");
             }
             else {
                 lua_pushboolean(L, false);

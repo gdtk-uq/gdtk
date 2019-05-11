@@ -867,11 +867,11 @@ size_t[] decode_range_indices(string rangeStr, size_t first, size_t endplus1)
     return [first, endplus1];
 } // end decode_range_indices()
 
-double[int] readTimesFile(string jobName)
+double[int] readTimesFile(string jobName, string jobDir=".")
 {
     double[int] times_dict;
     // Read the times file for all tindx values.
-    auto timesFile = File(jobName ~ ".times");
+    auto timesFile = File(jobDir ~ "/config/" ~ jobName ~ ".times");
     auto line = timesFile.readln().strip();
     while (line.length > 0) {
         if (line[0] != '#') {

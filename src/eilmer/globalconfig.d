@@ -1111,7 +1111,7 @@ import gas.two_temperature_gasgiant: TwoTemperatureGasGiant;
 void read_config_file()
 {
     if (GlobalConfig.verbosity_level > 1) writeln("Read config file.");
-    string fileName = GlobalConfig.base_file_name ~ ".config";
+    string fileName = "config/" ~ GlobalConfig.base_file_name ~ ".config";
     string content;
     try {
         content = readText(fileName);
@@ -1623,7 +1623,7 @@ void read_config_file()
 void read_control_file()
 {
     if (GlobalConfig.verbosity_level > 1) writeln("read_control_file()");
-    string fileName = GlobalConfig.base_file_name ~ ".control";
+    string fileName = "config/" ~ GlobalConfig.base_file_name ~ ".control";
     string content;
     try {
         content = readText(fileName);

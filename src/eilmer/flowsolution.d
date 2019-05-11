@@ -57,7 +57,7 @@ public:
         // -- initialising JSONData
         // We need to set a few things here if we are constructing this object
         // in a custom-postprocessing context.
-        string configFileName = dir ~ "/" ~ jobName ~ ".config";
+        string configFileName = dir ~ "/config/" ~ jobName ~ ".config";
         string content;
         try {
             content = readText(configFileName);
@@ -81,7 +81,7 @@ public:
         // -- end initialising JSONData
         //
         // Use job.list to get a hint of the type of each block.
-        auto listFile = File(dir ~ "/" ~ jobName ~ ".list");
+        auto listFile = File(dir ~ "/config/" ~ jobName ~ ".list");
         auto listFileLine = listFile.readln().chomp(); // only comments on the first line
         //
         foreach (ib; 0 .. nBlocks) {
