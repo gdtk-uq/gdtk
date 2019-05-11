@@ -55,7 +55,7 @@ setHistoryPoint{x=2*b.x/3+c.x/3, y=2*b.y/3+c.y/3}
 setHistoryPoint{x=b.x/3+2*c.x/3, y=b.y/3+2*c.y/3}
 
 -- Do a little more setting of global data.
-mpiTasks = mpiDistributeBlocks(3, "load-balance")
+mpiTasks = mpiDistributeBlocks{ntasks=3, dist="load-balance", preassign={[0]=1}}
 config.max_time = 5.0e-3  -- seconds
 config.max_step = 3000
 -- config.dt_init = 1.0e-6

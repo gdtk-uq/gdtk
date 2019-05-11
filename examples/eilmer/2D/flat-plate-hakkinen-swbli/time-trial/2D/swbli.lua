@@ -93,7 +93,7 @@ blk2 = FluidBlockArray{grid=grid2, initialState=inflow, nib=2, njb=2,
 identifyBlockConnections()
 
 --------------------- MPI Setup ---------------------
-mpiTasks = mpiDistributeBlocks(4, "load-balance")
+mpiTasks = mpiDistributeBlocks{ntasks=4, dist="load-balance"}
 config.spatial_deriv_from_many_points = false
 
 config.gasdynamic_update_scheme = "euler"

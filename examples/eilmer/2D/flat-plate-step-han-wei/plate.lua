@@ -213,7 +213,7 @@ config.dt_plot = config.max_time / 200.0
 config.dt_history = 1.0e-6
 
 -- PJ wants to run the calculation on his 8-core workstation.
-mpiTasks = mpiDistributeBlocks(8, "load-balance")
+mpiTasks = mpiDistributeBlocks{ntasks=8, dist="load-balance"}
 
 dsen = 0.0045 -- distance between each sensor, m
 -- Kulite pressure transducer or thin film heat transfer gauge

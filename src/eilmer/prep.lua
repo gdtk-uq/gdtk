@@ -475,6 +475,7 @@ function FluidBlock:new(o)
       else
 	 o.nkc = 1
       end
+      o.ncells = o.nic * o.njc * o.nkc
       -- The following table p for the corner locations,
       -- is to be used later for testing for block connections.
       o.p = {}
@@ -1333,26 +1334,42 @@ function checkCellVolumes(t)
 end
 
 
-function mpiDistributeBlocks(nTasks, option)
-   -- Assign blocks to MPI tasks, keeping a record of the MPI task
-   -- to which each block is assigned.
+function mpiDistributeBlocks(args)
+   -- Assign blocks to MPI tasks,
+   -- keeping a record of the MPI rank (or task) for every block.
+   --
+   if args and not(type(args) == "table") then
+      error("mpiDistributeBlocks expects its arguments in single table with named fields", 2);
+   end
    --
    local nBlocks = #fluidBlocks
    -- If nTasks is not given, assume that we want one per block.
-   nTasks = nTasks or nBlocks
-   if nTasks > nBlocks then
-      nTasks = nBlocks
-   end
-   option = option or "uniform"
+   local nTasks = (args and args.ntasks) or nBlocks
+   nTasks = math.min(nTasks, nBlocks)
    --
-   local mpiTaskList = {}
-   if option == "uniform" then
+   local option = (args and args.dist) or "round-robin"
+   --
+   -- The following list will eventually hold the MPI-rank for each FluidBlock.
+   local mpiTaskList = {}; for i=1,nBlocks do mpiTaskList[i] = -1 end
+   --
+   -- Preassigned blocks.
+   -- Entries in the table are of the form blockId:mpiRank
+   -- Remember that blockId and mpiRank values start at zero.
+   if args and (type(args.preassign) == "table") then
+      for blkId,mpirank in pairs(args.preassign) do mpiTaskList[blkId+1] = mpirank end
+   end
+   --
+   -- Distribute the rest of the blocks.
+   if option == "uniform" or option == "round-robin" or option == "roundrobin" then
       -- For each block, assign to an MPI task, round-robin order.
-      local idTask = 0
+      local mpirank = 0
       for i=1,nBlocks do
-         mpiTaskList[i] = idTask
-         idTask = idTask + 1
-         if idTask == nTasks then idTask = 0 end
+         if mpiTaskList[i] < 0 then
+            -- This block not previously assigned a rank.
+            mpiTaskList[i] = mpirank
+            mpirank = mpirank + 1
+            if mpirank == nTasks then mpirank = 0 end
+         end
       end
    elseif option == "loadbalance" or option == "load-balance" then
       -- Load-balance procedure first sorts the blocks by size...
@@ -1360,27 +1377,37 @@ function mpiDistributeBlocks(nTasks, option)
       local totalCells = 0
       for i=1,nBlocks do
          local blk = fluidBlocks[i]
-         blksNcells[i] = {i, blk.grid:get_ncells()}
-         -- Add the total number of cells in the grid as we go
-         totalCells = totalCells + blksNcells[i][2]      end
+         blksNcells[i] = {i, blk.ncells}
+         totalCells = totalCells + blk.ncells
+      end
       table.sort(blksNcells, function (a,b) return a[2] > b[2] end)
       -- ...then distributes the blocks to the tasks,
       -- biggest block first into the task with the smallest load.
-      local taskLoads = {}
-      for i=1,nTasks do taskLoads[i] = 0 end
-      for _,v in pairs(blksNcells) do
-         local ib = v[1]; local ncells = v[2]
-         -- Add the block to the task with smallest load.
-         local indxSmallest = 1; local smallestLoad = taskLoads[1]
-         for i=2,#taskLoads do
-         if taskLoads[i] < smallestLoad then
-            indxSmallest = i; smallestLoad = taskLoads[i]
+      -- We shall tally the loads, in number of cells, for each MPI task.
+      local taskLoads = {}; for i=1,nTasks do taskLoads[i] = 0 end
+      -- Account for the preassigned blocks.
+      for ib=1,nBlocks do
+         mpirank = mpiTaskList[ib]
+         if mpirank >= 0 then
+            taskLoads[mpirank+1] = taskLoads[mpirank+1] + fluidBlocks[ib].ncells
          end
       end
-      mpiTaskList[ib] = indxSmallest-1 -- MPI task ids start from zero
-      taskLoads[indxSmallest] = taskLoads[indxSmallest] + ncells
+      -- Distribute remaining blocks.
+      for _,v in pairs(blksNcells) do
+         local ib = v[1]; local ncells = v[2]
+         if mpiTaskList[ib] < 0 then
+            -- Add the so-far-unassigned block to the MPI task with smallest load.
+            local indxSmallest = 1; local smallestLoad = taskLoads[1]
+            for i=2,#taskLoads do
+               if taskLoads[i] < smallestLoad then
+                  indxSmallest = i; smallestLoad = taskLoads[i]
+               end
+            end
+            mpiTaskList[ib] = indxSmallest-1 -- MPI task ids start from zero
+            taskLoads[indxSmallest] = taskLoads[indxSmallest] + ncells
+         end
       end
-
+      --
       local maxmpiLoads = (math.max(unpack(taskLoads)))
       local minmpiLoads = (math.min(unpack(taskLoads)))
       local mpiProcessors = math.max(unpack(mpiTaskList)) + 1
@@ -1391,7 +1418,7 @@ function mpiDistributeBlocks(nTasks, option)
       print(string.format("Largest partition factor  \t = %.3f", maxmpiLoads/(totalCells/mpiProcessors)))
 
    else
-      error('Did not select one of "uniform" or "loadbalance". for mpiDistributeBlocks', 2) 
+      error('Did not select one of "round-robin" or "load-balance". for mpiDistributeBlocks', 2) 
    end
    return mpiTaskList
 end
@@ -1830,11 +1857,11 @@ end
 
 function write_block_list_file(fileName)
    local f = assert(io.open(fileName, "w"))
-   f:write("# indx type label\n")
+   f:write("# indx type label ncells\n")
    for i = 1, #(fluidBlocks) do
-      f:write(string.format("%4d %s %s\n", fluidBlocks[i].id,
-			    fluidBlocks[i].grid:get_type(),
-			    fluidBlocks[i].label))
+      local blk = fluidBlocks[i]
+      f:write(string.format("%4d %s %s %d\n", blk.id,
+                            blk.grid:get_type(), blk.label, blk.ncells))
    end
    f:close()
 end
