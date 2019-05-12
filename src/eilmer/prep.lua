@@ -1888,12 +1888,37 @@ function write_fluidBlockArrays_file(fileName)
       local label = fba.label or ""
       f:write(string.format("  [%d]={label=\"%s\",\n", fba.id, label))
       f:write(string.format("    nib=%d, njb=%d, nkb=%d,\n", fba.nib, fba.njb, fba.nkb))
+      local blkId = 0
+      if config.dimensions == 3 then
+         blkId = fba.blockArray[1][1][1].id
+      else
+         blkId = fba.blockArray[1][1].id
+      end
+      f:write(string.format("    p00=function() return infoFluidBlock[%d].p00 end,\n", blkId));
+      if config.dimensions == 3 then
+         blkId = fba.blockArray[fba.nib][1][1].id
+      else
+         blkId = fba.blockArray[fba.nib][1].id
+      end
+      f:write(string.format("    p10=function() return infoFluidBlock[%d].p10 end,\n", blkId));
+      if config.dimensions == 3 then
+         blkId = fba.blockArray[fba.nib][fba.njb][1].id
+      else
+         blkId = fba.blockArray[fba.nib][fba.njb].id
+      end
+      f:write(string.format("    p11=function() return infoFluidBlock[%d].p11 end,\n", blkId));
+      if config.dimensions == 3 then
+         blkId = fba.blockArray[1][fba.njb][1].id
+      else
+         blkId = fba.blockArray[1][fba.njb].id
+      end
+      f:write(string.format("    p01=function() return infoFluidBlock[%d].p01 end,\n", blkId));
       --
       f:write("    blockCollection={")
       for _,blk in ipairs(fba.blockCollection) do
          f:write(string.format("%d, ", blk.id))
       end
-      f:write("},\n") -- end blockCollection
+      f:write("}, -- end blockCollection\n")
       --
       f:write("    blockArray={\n")
       for ib,itable in pairs(fba.blockArray) do
@@ -1910,14 +1935,24 @@ function write_fluidBlockArrays_file(fileName)
             end
             f:write("}, ") -- end [ib][jb]
          end
-         f:write("},\n") -- end [ib]
+         f:write("}, -- end [ib]\n")
       end
-      f:write("    },\n") -- end blockArray
+      f:write("    }, -- end blockArray\n")
       f:write("  },\n")
    end
-   f:write("}\n")
+   f:write("} -- end fluidBlockArrays\n")
+   --
+   f:write("whichFluidBlockArray = {\n")
+   for i,blk in ipairs(fluidBlocks) do
+      if blk.fluidBlockArrayId >= 0 then
+         f:write(string.format(" [%d]=%d,", blk.id, blk.fluidBlockArrayId))
+      end
+      if (i > 1 and i%10 == 0) or i == #fluidBlocks then f:write("\n") end
+   end
+   f:write("} -- end whichBlockArray\n")
+   --
    f:close()
-end
+end -- function write_fluidBlockArrays_file
 
 function perform_spatial_gradient_consistency_check()
    -- Not all spatial gradient options are available, depending on the type of grid.
