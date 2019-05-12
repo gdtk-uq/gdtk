@@ -1570,6 +1570,9 @@ void read_config_file()
     }
     foreach (blk; globalFluidBlocks) {
         blk.init_lua_globals();
+        if (GlobalConfig.user_pad_length > 0) {
+            push_array_to_Lua(blk.myL, GlobalConfig.userPad, "userPad");
+        }
         blk.init_boundary_conditions(jsonData["block_" ~ to!string(blk.id)]);
         if (GlobalConfig.udf_source_terms) {
             luaL_dofile(blk.myL, GlobalConfig.udf_source_terms_file.toStringz);
@@ -1611,6 +1614,9 @@ void read_config_file()
     // the lua_State that holds the user's functions
     // for simulation supervision and for defining grid motion.
     init_master_lua_State();
+    if (GlobalConfig.user_pad_length > 0) {
+        push_array_to_Lua(GlobalConfig.master_lua_State, GlobalConfig.userPad, "userPad");
+    }
     if (GlobalConfig.udf_supervisor_file.length > 0) {
         doLuaFile(GlobalConfig.master_lua_State, GlobalConfig.udf_supervisor_file);
     }
