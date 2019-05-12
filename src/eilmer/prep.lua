@@ -1894,25 +1894,25 @@ function write_fluidBlockArrays_file(fileName)
       else
          blkId = fba.blockArray[1][1].id
       end
-      f:write(string.format("    p00=function() return infoFluidBlock[%d].p00 end,\n", blkId));
+      f:write(string.format("    p00=function() return infoFluidBlock(%d).p00 end,\n", blkId));
       if config.dimensions == 3 then
          blkId = fba.blockArray[fba.nib][1][1].id
       else
          blkId = fba.blockArray[fba.nib][1].id
       end
-      f:write(string.format("    p10=function() return infoFluidBlock[%d].p10 end,\n", blkId));
+      f:write(string.format("    p10=function() return infoFluidBlock(%d).p10 end,\n", blkId));
       if config.dimensions == 3 then
          blkId = fba.blockArray[fba.nib][fba.njb][1].id
       else
          blkId = fba.blockArray[fba.nib][fba.njb].id
       end
-      f:write(string.format("    p11=function() return infoFluidBlock[%d].p11 end,\n", blkId));
+      f:write(string.format("    p11=function() return infoFluidBlock(%d).p11 end,\n", blkId));
       if config.dimensions == 3 then
          blkId = fba.blockArray[1][fba.njb][1].id
       else
          blkId = fba.blockArray[1][fba.njb].id
       end
-      f:write(string.format("    p01=function() return infoFluidBlock[%d].p01 end,\n", blkId));
+      f:write(string.format("    p01=function() return infoFluidBlock(%d).p01 end,\n", blkId));
       --
       f:write("    blockCollection={")
       for _,blk in ipairs(fba.blockCollection) do
