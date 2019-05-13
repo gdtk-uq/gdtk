@@ -1157,6 +1157,8 @@ void determine_time_step_size()
             SimState.dt_allow = my_dt_allow;
             SimState.cfl_max = my_cfl_max;
         }
+        // remove following lines for LTS implementation
+        /*  
         if (SimState.step == 0) {
             // When starting out, we may override the computed value.
             // This might be handy for situations where the computed estimate
@@ -1179,6 +1181,8 @@ void determine_time_step_size()
             // The user may supply, explicitly, a maximum time-step size.
             SimState.dt_global = min(SimState.dt_global, GlobalConfig.dt_max);
         }
+        */
+        SimState.dt_global = SimState.dt_allow;
     } // end if do_cfl_check_now 
 } // end determine_time_step_size()
 

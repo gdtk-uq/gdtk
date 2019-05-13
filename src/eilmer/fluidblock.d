@@ -722,6 +722,7 @@ public:
             signal = cell.signal_frequency();
             cfl_local = dt_current * signal; // Current (Local) CFL number
             dt_local = cfl_value / signal; // Recommend a time step size.
+            cell.dt_local = dt_local; // set local time-step in cell
             if (first) {
                 cfl_min = cfl_local;
                 cfl_max = cfl_local;

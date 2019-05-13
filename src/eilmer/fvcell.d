@@ -62,6 +62,10 @@ public:
     // Reset and checked at points through the update so that we don't stagger on
     // with bad data poisoning the simulation.
     //
+    // local time-stepping
+    double dt_local;
+    double t_local;
+    //
     bool fr_reactions_allowed; // if true, will call thermochemical_increment
     double dt_chem; // acceptable time step for finite-rate chemistry
     double dt_therm; // acceptable time step for thermal relaxation
@@ -785,6 +789,9 @@ public:
     @nogc
     void stage_1_update_for_flow_on_fixed_grid(double dt, bool force_euler, bool with_k_omega) 
     {
+        // use the local-time step
+        dt = this.dt_local;
+        
         ConservedQuantities dUdt0 = dUdt[0];
         ConservedQuantities U0 = U[0];
         ConservedQuantities U1 = U[1];
@@ -867,6 +874,9 @@ public:
     @nogc
     void stage_2_update_for_flow_on_fixed_grid(double dt, bool with_k_omega) 
     {
+        // use the local-time step
+        dt = this.dt_local;
+        
         ConservedQuantities dUdt0 = dUdt[0];
         ConservedQuantities dUdt1 = dUdt[1];
         ConservedQuantities U_old = U[0];
@@ -934,6 +944,9 @@ public:
     @nogc
     void stage_3_update_for_flow_on_fixed_grid(double dt, bool with_k_omega) 
     {
+        // use the local-time step
+        dt = this.dt_local;
+        
         ConservedQuantities dUdt0 = dUdt[0];
         ConservedQuantities dUdt1 = dUdt[1];
         ConservedQuantities dUdt2 = dUdt[2];
@@ -1010,6 +1023,9 @@ public:
     @nogc
     void stage_1_update_for_flow_on_moving_grid(double dt, bool with_k_omega) 
     {
+        // use the local-time step
+        dt = this.dt_local;
+        
         ConservedQuantities dUdt0 = dUdt[0];
         ConservedQuantities U0 = U[0];
         ConservedQuantities U1 = U[1];
@@ -1057,6 +1073,9 @@ public:
     @nogc
     void stage_2_update_for_flow_on_moving_grid(double dt, bool with_k_omega) 
     {
+        // use the local-time step
+        dt = this.dt_local;
+        
         ConservedQuantities dUdt0 = dUdt[0];
         ConservedQuantities dUdt1 = dUdt[1];
         ConservedQuantities U0 = U[0];
