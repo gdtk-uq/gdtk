@@ -308,3 +308,29 @@ UnstructuredLimiter unstructured_limiter_from_name(string name)
         throw new FlowSolverException("Invalid unstructured limiter name");
     }
 }
+
+// Symbolic names for the residual smoothing
+enum ResidualSmoothingType {
+    explicit,
+    implicit
+}
+
+@nogc
+string residual_smoothing_type_name(ResidualSmoothingType rs)
+{
+    final switch ( rs ) {
+    case ResidualSmoothingType.explicit: return "explicit";
+    case ResidualSmoothingType.implicit: return "implicit";
+    }
+}
+
+@nogc
+ResidualSmoothingType residual_smoothing_type_from_name(string name)
+{
+    switch ( name ) {
+    case "explicit": return ResidualSmoothingType.explicit;
+    case "implicit": return ResidualSmoothingType.implicit;
+    default:
+        throw new FlowSolverException("Invalid residual smoothing type name");
+    }
+}

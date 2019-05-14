@@ -1637,6 +1637,8 @@ function write_config_file(fileName)
 			 config.gasdynamic_update_scheme))
    f:write(string.format('"residual_smoothing": %s,\n', tostring(config.residual_smoothing)))
    f:write(string.format('"residual_smoothing_weight": %.18e,\n', config.residual_smoothing_weight))
+   f:write(string.format('"residual_smoothing_type": "%s",\n',
+			 config.residual_smoothing_type))
    f:write(string.format('"with_local_time_stepping": %s,\n', tostring(config.with_local_time_stepping)))
    f:write(string.format('"coupling_with_solid_domains": "%s",\n',
 			 config.coupling_with_solid_domains))

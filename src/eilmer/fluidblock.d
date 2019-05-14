@@ -660,16 +660,52 @@ public:
             c.dUdt_copy.copy_values_from(c.dUdt[ftl]);
         }
         double eps = myConfig.residual_smoothing_weight;
-        foreach (c; cells) {
-            double total = 1.0;
-            foreach (i, f; c.iface) {
-                total += eps;
-                auto other_cell = (c.outsign[i] > 0.0) ? f.right_cell : f.left_cell;
-                if (other_cell && other_cell.contains_flow_data) {
-                    c.dUdt[ftl].add(other_cell.dUdt_copy, eps);
+        if (GlobalConfig.residual_smoothing_type == ResidualSmoothingType.explicit) { 
+            foreach (c; cells) {
+                double total = 1.0;
+                foreach (i, f; c.iface) {
+                    total += eps;
+                    auto other_cell = (c.outsign[i] > 0.0) ? f.right_cell : f.left_cell;
+                    if (other_cell && other_cell.contains_flow_data) {
+                        c.dUdt[ftl].add(other_cell.dUdt_copy, eps);
+                    }
                 }
+                c.dUdt[ftl].scale(1.0/total);
             }
-            c.dUdt[ftl].scale(1.0/total);
+        } else { // ResidualSmoothingType.implicit
+            // perform two (fixed) Jacobi iterations
+            // 1.
+            foreach (c; cells) {
+                double n = 0;
+                c.dUdt_copy.copy_values_from(c.dUdt[ftl]);
+                foreach (i, f; c.iface) {
+                    n += 1;
+                    auto other_cell = (c.outsign[i] > 0.0) ? f.right_cell : f.left_cell;
+                    if (other_cell && other_cell.contains_flow_data) {
+                        c.dUdt_copy.add(other_cell.dUdt_copy, eps);
+                    }
+                }
+                double scale = 1.0+n*eps;
+                c.dUdt_copy.scale(1.0/scale);
+            }
+            // 2.
+            foreach (c; cells) {
+                int n = 0;
+                c.dUdt_copy.copy_values_from(c.dUdt[ftl]);
+                foreach (i, f; c.iface) {
+                    n += 1;
+                    auto other_cell = (c.outsign[i] > 0.0) ? f.right_cell : f.left_cell;
+                    if (other_cell && other_cell.contains_flow_data) {
+                        c.dUdt_copy.add(other_cell.dUdt_copy, eps);
+                    }
+                }
+                double scale = 1.0+n*eps;
+                c.dUdt_copy.scale(1.0/scale);
+            }
+            // replace residual with smoothed residual
+            foreach (c; cells) {
+                c.dUdt[ftl].copy_values_from(c.dUdt_copy);
+            }
         }
     } // end residual_smoothing_dUdt()
 
@@ -717,6 +753,10 @@ public:
         case 3: cfl_allow = 1.6; break;
         default: cfl_allow = 0.9;
         }
+        // when using residual smoothing (implicit) we should be able to achieve a higher stable CFL
+        // so let's relax the cfl_allow
+        if (myConfig.residual_smoothing && myConfig.with_local_time_stepping) cfl_allow *= 10.0;
+
         bool first = true;
         foreach(FVCell cell; cells) {
             signal = cell.signal_frequency();
