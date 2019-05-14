@@ -1157,32 +1157,31 @@ void determine_time_step_size()
             SimState.dt_allow = my_dt_allow;
             SimState.cfl_max = my_cfl_max;
         }
-        // remove following lines for LTS implementation
-        /*  
-        if (SimState.step == 0) {
-            // When starting out, we may override the computed value.
-            // This might be handy for situations where the computed estimate
-            // is likely to be not small enough for numerical stability.
-            SimState.dt_allow = fmin(GlobalConfig.dt_init, SimState.dt_allow);
+        if (GlobalConfig.with_local_time_stepping) { SimState.dt_global = SimState.dt_allow; }
+        else { // do some global time-stepping checks
+            if (SimState.step == 0) {
+                // When starting out, we may override the computed value.
+                // This might be handy for situations where the computed estimate
+                // is likely to be not small enough for numerical stability.
+                SimState.dt_allow = fmin(GlobalConfig.dt_init, SimState.dt_allow);
+            }
+            if (SimState.dt_override > 0.0) {
+                // The user-defined supervisory function atTimestepStart may have set
+                // dt_override because it knows something about the simulation conditions
+                // that is not handled well by our generic CFL check.
+                SimState.dt_allow = fmin(SimState.dt_override, SimState.dt_allow);
+            }
+            // Now, change the actual time step, as needed.
+            if (SimState.dt_allow <= SimState.dt_global) {
+                // If we need to reduce the time step, do it immediately.
+                SimState.dt_global = SimState.dt_allow;
+            } else {
+                // Make the transitions to larger time steps gentle.
+                SimState.dt_global = min(SimState.dt_global*1.5, SimState.dt_allow);
+                // The user may supply, explicitly, a maximum time-step size.
+                SimState.dt_global = min(SimState.dt_global, GlobalConfig.dt_max);
+            }
         }
-        if (SimState.dt_override > 0.0) {
-            // The user-defined supervisory function atTimestepStart may have set
-            // dt_override because it knows something about the simulation conditions
-            // that is not handled well by our generic CFL check.
-            SimState.dt_allow = fmin(SimState.dt_override, SimState.dt_allow);
-        }
-        // Now, change the actual time step, as needed.
-        if (SimState.dt_allow <= SimState.dt_global) {
-            // If we need to reduce the time step, do it immediately.
-            SimState.dt_global = SimState.dt_allow;
-        } else {
-            // Make the transitions to larger time steps gentle.
-            SimState.dt_global = min(SimState.dt_global*1.5, SimState.dt_allow);
-            // The user may supply, explicitly, a maximum time-step size.
-            SimState.dt_global = min(SimState.dt_global, GlobalConfig.dt_max);
-        }
-        */
-        SimState.dt_global = SimState.dt_allow;
     } // end if do_cfl_check_now 
 } // end determine_time_step_size()
 
@@ -1359,6 +1358,7 @@ void exchange_ghost_cell_boundary_data(double t, int gtl, int ftl)
 void gasdynamic_explicit_increment_with_fixed_grid()
 {
     shared double t0 = SimState.time;
+    shared bool with_local_time_stepping = GlobalConfig.with_local_time_stepping;
     shared bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) &&
         !GlobalConfig.separate_update_for_k_omega_source;
     shared bool allow_high_order_interpolation = (SimState.time >= GlobalConfig.interpolation_delay);
@@ -1464,6 +1464,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         int local_ftl = ftl;
         int local_gtl = gtl;
         bool local_with_k_omega = with_k_omega;
+        bool local_with_local_time_stepping = with_local_time_stepping;
         double local_dt_global = SimState.dt_global;
         double local_sim_time = SimState.time;
         foreach (cell; blk.cells) {
@@ -1493,7 +1494,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         bool force_euler = false;
         foreach (cell; blk.cells) {
             cell.stage_1_update_for_flow_on_fixed_grid(local_dt_global, force_euler,
-                                                       local_with_k_omega);
+                                                       local_with_k_omega, local_with_local_time_stepping);
             cell.decode_conserved(local_gtl, local_ftl+1, blk.omegaz);
         } // end foreach cell
         local_invalid_cell_count[i] = blk.count_invalid_cells(local_gtl, local_ftl+1);
@@ -1639,6 +1640,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             int local_ftl = ftl;
             int local_gtl = gtl;
             bool local_with_k_omega = with_k_omega;
+            bool local_with_local_time_stepping = with_local_time_stepping;
             double local_dt_global = SimState.dt_global;
             double local_sim_time = SimState.time;
             foreach (cell; blk.cells) {
@@ -1666,7 +1668,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             }
             if (blk.myConfig.residual_smoothing) { blk.residual_smoothing_dUdt(local_ftl); }
             foreach (cell; blk.cells) {
-                cell.stage_2_update_for_flow_on_fixed_grid(local_dt_global, local_with_k_omega);
+                cell.stage_2_update_for_flow_on_fixed_grid(local_dt_global, local_with_k_omega, local_with_local_time_stepping);
                 cell.decode_conserved(local_gtl, local_ftl+1, blk.omegaz);
             } // end foreach cell
         local_invalid_cell_count[i] = blk.count_invalid_cells(local_gtl, local_ftl+1);
@@ -1809,6 +1811,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             int local_ftl = ftl;
             int local_gtl = gtl;
             bool local_with_k_omega = with_k_omega;
+            bool local_with_local_time_stepping = with_local_time_stepping;
             double local_dt_global = SimState.dt_global;
             double local_sim_time = SimState.time;
             foreach (cell; blk.cells) {
@@ -1836,7 +1839,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             }
             if (blk.myConfig.residual_smoothing) { blk.residual_smoothing_dUdt(local_ftl); }
             foreach (cell; blk.cells) {
-                cell.stage_3_update_for_flow_on_fixed_grid(local_dt_global, local_with_k_omega);
+                cell.stage_3_update_for_flow_on_fixed_grid(local_dt_global, local_with_k_omega, local_with_local_time_stepping);
                 cell.decode_conserved(local_gtl, local_ftl+1, blk.omegaz);
             } // end foreach cell
         local_invalid_cell_count[i] = blk.count_invalid_cells(local_gtl, local_ftl+1);
@@ -1912,6 +1915,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
     // For moving grid simulations we move the grid on the first predictor step and then
     // leave it fixed in this position for the corrector steps.
     shared double t0 = SimState.time;
+    shared bool with_local_time_stepping = GlobalConfig.with_local_time_stepping;
     shared bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) &&
         !GlobalConfig.separate_update_for_k_omega_source;
     shared bool allow_high_order_interpolation = (SimState.time >= GlobalConfig.interpolation_delay);
@@ -2024,6 +2028,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
         int local_ftl = ftl;
         int local_gtl = gtl;
         bool local_with_k_omega = with_k_omega;
+        bool local_with_local_time_stepping = with_local_time_stepping;
         double local_dt_global = SimState.dt_global;
         double local_sim_time = SimState.time;
         foreach (cell; blk.cells) {
@@ -2049,7 +2054,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
             }
             cell.time_derivatives(local_gtl, local_ftl, local_with_k_omega);
             bool force_euler = false;
-            cell.stage_1_update_for_flow_on_moving_grid(local_dt_global, local_with_k_omega);
+            cell.stage_1_update_for_flow_on_moving_grid(local_dt_global, local_with_k_omega, local_with_local_time_stepping);
             cell.decode_conserved(local_gtl, local_ftl+1, blk.omegaz);
         } // end foreach cell
         local_invalid_cell_count[i] = blk.count_invalid_cells(local_gtl, local_ftl+1);
@@ -2187,6 +2192,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
             int local_ftl = ftl;
             int local_gtl = gtl;
             bool local_with_k_omega = with_k_omega;
+            bool local_with_local_time_stepping = with_local_time_stepping;
             double local_dt_global = SimState.dt_global;
             double local_sim_time = SimState.time;
             foreach (cell; blk.cells) {
@@ -2211,7 +2217,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
                                             blk.id, i_cell, j_cell, k_cell);
                 }
                 cell.time_derivatives(local_gtl, local_ftl, local_with_k_omega);
-                cell.stage_2_update_for_flow_on_moving_grid(local_dt_global, local_with_k_omega);
+                cell.stage_2_update_for_flow_on_moving_grid(local_dt_global, local_with_k_omega, local_with_local_time_stepping);
                 cell.decode_conserved(local_gtl, local_ftl+1, blk.omegaz);
             } // end foreach cell
             local_invalid_cell_count[i] = blk.count_invalid_cells(local_gtl, local_ftl+1);

@@ -787,10 +787,10 @@ public:
     } // end time_derivatives()
 
     @nogc
-    void stage_1_update_for_flow_on_fixed_grid(double dt, bool force_euler, bool with_k_omega) 
+    void stage_1_update_for_flow_on_fixed_grid(double dt, bool force_euler, bool with_k_omega, bool with_local_time_stepping) 
     {
         // use the local-time step
-        dt = this.dt_local;
+        if (with_local_time_stepping) dt = this.dt_local;
         
         ConservedQuantities dUdt0 = dUdt[0];
         ConservedQuantities U0 = U[0];
@@ -872,10 +872,10 @@ public:
     } // end stage_1_update_for_flow_on_fixed_grid()
 
     @nogc
-    void stage_2_update_for_flow_on_fixed_grid(double dt, bool with_k_omega) 
+    void stage_2_update_for_flow_on_fixed_grid(double dt, bool with_k_omega, bool with_local_time_stepping) 
     {
         // use the local-time step
-        dt = this.dt_local;
+        if (with_local_time_stepping) dt = this.dt_local;
         
         ConservedQuantities dUdt0 = dUdt[0];
         ConservedQuantities dUdt1 = dUdt[1];
@@ -942,10 +942,10 @@ public:
     } // end stage_2_update_for_flow_on_fixed_grid()
 
     @nogc
-    void stage_3_update_for_flow_on_fixed_grid(double dt, bool with_k_omega) 
+    void stage_3_update_for_flow_on_fixed_grid(double dt, bool with_k_omega, bool with_local_time_stepping) 
     {
         // use the local-time step
-        dt = this.dt_local;
+        if (with_local_time_stepping) dt = this.dt_local;
         
         ConservedQuantities dUdt0 = dUdt[0];
         ConservedQuantities dUdt1 = dUdt[1];
@@ -1021,10 +1021,10 @@ public:
     } // end stage_3_update_for_flow_on_fixed_grid()
 
     @nogc
-    void stage_1_update_for_flow_on_moving_grid(double dt, bool with_k_omega) 
+    void stage_1_update_for_flow_on_moving_grid(double dt, bool with_k_omega, bool with_local_time_stepping) 
     {
         // use the local-time step
-        dt = this.dt_local;
+        if (with_local_time_stepping) dt = this.dt_local;
         
         ConservedQuantities dUdt0 = dUdt[0];
         ConservedQuantities U0 = U[0];
@@ -1071,10 +1071,10 @@ public:
     } // end stage_1_update_for_flow_on_moving_grid()
 
     @nogc
-    void stage_2_update_for_flow_on_moving_grid(double dt, bool with_k_omega) 
+    void stage_2_update_for_flow_on_moving_grid(double dt, bool with_k_omega, bool with_local_time_stepping) 
     {
         // use the local-time step
-        dt = this.dt_local;
+        if (with_local_time_stepping) dt = this.dt_local;
         
         ConservedQuantities dUdt0 = dUdt[0];
         ConservedQuantities dUdt1 = dUdt[1];
