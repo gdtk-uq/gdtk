@@ -107,7 +107,6 @@ public:
         //
         // Make sure that all of the pieces are in place to run CEA calculations.
         _cea_exe_path = expandTilde(environment.get("CEA_EXE_PATH", "~/e3bin/cea2"));
-        _cea_cases_path = expandTilde(environment.get("CEA_CASES_PATH", "~/e3bin/cea-cases"));
         // writeln("_cea_exe_path=", _cea_exe_path); // DEBUG
         if (!exists(_cea_exe_path)) {
             throw new Exception("Cannot find cea2 exe file.");
