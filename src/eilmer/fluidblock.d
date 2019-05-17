@@ -755,7 +755,7 @@ public:
         }
         // when using residual smoothing (implicit) we should be able to achieve a higher stable CFL
         // so let's relax the cfl_allow
-        if (myConfig.residual_smoothing && myConfig.with_local_time_stepping) cfl_allow *= 10.0;
+        if (myConfig.residual_smoothing && myConfig.with_local_time_stepping && GlobalConfig.residual_smoothing_type == ResidualSmoothingType.implicit) cfl_allow *= 10.0;
 
         bool first = true;
         foreach(FVCell cell; cells) {
