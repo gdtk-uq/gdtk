@@ -5,8 +5,8 @@ dofile('sim-config.lua')
 
 function assignVtxVelocities(t, dt)
    xdot = userPad[2]
-   zeroVel = Vector3:new{x=0.0, y=0.0}
-   pSpeedVec = Vector3:new{x=xdot, y=0.0}
+   zeroVel = Vector3:new{x=0, y=0}
+   pSpeedVec = Vector3:new{x=xdot, y=0}
    for _,blkId in ipairs(localBlockIds) do
       if blkId == 0 then
          setVtxVelocitiesByCorners(blkId, zeroVel, pSpeedVec, pSpeedVec, zeroVel)

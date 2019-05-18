@@ -5,7 +5,7 @@
 dofile('sim-config.lua')
 
 function atTimestepStart(sim_time, steps, dt)
-   -- Current piston state.
+   -- Unpack current piston state.
    local x = userPad[1]
    local xdot = userPad[2]
    -- Get the surface loads on the piston using getRunTimeLoads.
@@ -13,10 +13,10 @@ function atTimestepStart(sim_time, steps, dt)
    local downstreamForce, downstreamMoment = getRunTimeLoads("pistonDownstream")
    -- Acceleration of the piston.
    local xdotdot = ((upstreamForce.x + downstreamForce.x)*2*math.pi) / pMass
-   -- Update piston state (simple Euler update)
+   -- Update piston state using simple Euler update.
    x    = x + xdot * dt
    xdot = xdot + xdotdot * dt
-   -- save data to userPad for vtxSpeed Assignment in grid-motion
+   -- Save data to userPad for vtxSpeed Assignment in grid-motion.
    userPad[1] = x
    userPad[2] = xdot
    return

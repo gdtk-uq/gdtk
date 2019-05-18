@@ -21,13 +21,13 @@ initialRight = FlowState:new{p=1.0e-10, T=TInit}
 
 -- Geometry, grid and block setup.
 -- Gas region that drives piston.
-driver_patch = CoonsPatch:new{p00=Vector3:new{x=0, y=0},
+driver_patch = CoonsPatch:new{p00=Vector3:new{x=0,  y=0},
                               p10=Vector3:new{x=L1, y=0},
                               p11=Vector3:new{x=L1, y=H},
-                              p01=Vector3:new{x=0, y=H}}
+                              p01=Vector3:new{x=0,  y=H}}
 -- Gas region that is compressed by piston.
-driven_patch = CoonsPatch:new{p00=Vector3:new{x=L2, y=0.0},
-                              p10=Vector3:new{x=L3, y=0.0},
+driven_patch = CoonsPatch:new{p00=Vector3:new{x=L2, y=0},
+                              p10=Vector3:new{x=L3, y=0},
                               p11=Vector3:new{x=L3, y=H},
                               p01=Vector3:new{x=L2, y=H}}
 nxc = 100; nyc = 2
@@ -43,12 +43,8 @@ blk1 = FluidBlock:new{
    bcList={west=WallBC_WithSlip1:new{group='pistonDownStream'}}
 }
 
-config.interpolation_order = 2
-config.flux_calculator = "ausmdv"
-config.cfl_value = 0.1
-config.dt_init = 1.0e-7
 config.max_time = 40.0e-3
-config.max_step = 30000
+config.max_step = 3000
 config.dt_plot = config.max_time/8
 
 config.gasdynamic_update_scheme = "moving_grid_1_stage"
