@@ -31,6 +31,7 @@ if gpmetis_exe.length > 0 then
   puts "Found gpmetis"
   test_scripts << "2D/sharp-cone-20-degrees/usg-metis/cone20-usg-metis.test"
 end
+test_scripts << "2D/moving-grid/piston-in-tube/piston-2-block/pit2-test.rb"
 test_scripts << "3D/sod-shock-tube/sg/sod.test"
 test_scripts << "3D/sod-shock-tube/usg/sod.test"
 test_scripts << "3D/connection-test/connection-shared-memory.test"
