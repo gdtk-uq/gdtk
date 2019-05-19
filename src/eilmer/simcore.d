@@ -511,7 +511,7 @@ void write_solution_files()
     }
     if (GlobalConfig.grid_motion != GridMotion.none) {
         ensure_directory_is_present(make_path_name!"grid"(SimState.current_tindx));
-        if (GlobalConfig.verbosity_level > 0) { writeln("Write grid"); }
+        if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) { writeln("Write grid"); }
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
             blk.sync_vertices_to_underlying_grid(0);
             auto fileName = make_file_name!"grid"(job_name, blk.id, SimState.current_tindx, GlobalConfig.gridFileExt);
