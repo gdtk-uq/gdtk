@@ -743,14 +743,16 @@ public:
         }
         // when using residual smoothing (implicit) we should be able to achieve a higher stable CFL
         // so let's relax the cfl_allow
-        if (myConfig.residual_smoothing && myConfig.with_local_time_stepping && GlobalConfig.residual_smoothing_type == ResidualSmoothingType.implicit) cfl_allow *= 10.0;
-
+        if (myConfig.residual_smoothing &&
+            myConfig.with_local_time_stepping &&
+            GlobalConfig.residual_smoothing_type == ResidualSmoothingType.implicit) cfl_allow *= 10.0;
+        int local_time_stepping_limit_factor = myConfig.local_time_stepping_limit_factor; // for local time-stepping we limit the larger time-steps by a factor of the smallest timestep
         bool first = true;
         foreach(FVCell cell; cells) {
             signal = cell.signal_frequency();
             cfl_local = dt_current * signal; // Current (Local) CFL number
             dt_local = cfl_value / signal; // Recommend a time step size.
-            cell.dt_local = dt_local; // set local time-step in cell
+            cell.dt_local = fmin(dt_local, dt_current*local_time_stepping_limit_factor); // set local time-step in cell
             if (first) {
                 cfl_min = cfl_local;
                 cfl_max = cfl_local;

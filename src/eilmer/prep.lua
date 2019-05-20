@@ -1641,6 +1641,7 @@ function write_config_file(fileName)
 			 config.gasdynamic_update_scheme))
    f:write(string.format('"residual_smoothing": %s,\n', tostring(config.residual_smoothing)))
    f:write(string.format('"with_local_time_stepping": %s,\n', tostring(config.with_local_time_stepping)))
+   f:write(string.format('"local_time_stepping_limit_factor": %d,\n', tostring(config.local_time_stepping_limit_factor)))
    f:write(string.format('"coupling_with_solid_domains": "%s",\n',
 			 config.coupling_with_solid_domains))
    f:write(string.format('"solid_has_isotropic_properties": %s,\n', tostring(config.solid_has_isotropic_properties)))

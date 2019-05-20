@@ -443,6 +443,7 @@ final class GlobalConfig {
     shared static ResidualSmoothingType residual_smoothing_type = ResidualSmoothingType.explicit;
     shared static int residual_smoothing_iterations = 2;
     shared static bool with_local_time_stepping = false;
+    shared static int local_time_stepping_limit_factor = 10000;
     
     // Parameter controlling Strang-splitting mode when simulating reacting flows
     shared static StrangSplittingMode strangSplitting = StrangSplittingMode.full_T_full_R;
@@ -804,6 +805,7 @@ public:
     size_t n_flow_time_levels;
     bool residual_smoothing;
     bool with_local_time_stepping;
+    int local_time_stepping_limit_factor;
     GridMotion grid_motion;
     string udf_grid_motion_file;
     size_t n_grid_time_levels;
@@ -923,6 +925,7 @@ public:
         n_flow_time_levels = GlobalConfig.n_flow_time_levels;
         residual_smoothing = GlobalConfig.residual_smoothing;
         with_local_time_stepping = GlobalConfig.with_local_time_stepping;
+        local_time_stepping_limit_factor = GlobalConfig.local_time_stepping_limit_factor;
         grid_motion = GlobalConfig.grid_motion;
         udf_grid_motion_file = GlobalConfig.udf_grid_motion_file;
         n_grid_time_levels = GlobalConfig.n_grid_time_levels;
@@ -1201,6 +1204,7 @@ void read_config_file()
     GlobalConfig.n_flow_time_levels = 1 + number_of_stages_for_update_scheme(GlobalConfig.gasdynamic_update_scheme);
     mixin(update_bool("residual_smoothing", "residual_smoothing"));
     mixin(update_bool("with_local_time_stepping", "with_local_time_stepping"));
+    mixin(update_int("local_time_stepping_limit_factor", "local_time_stepping_limit_factor"));
     mixin(update_enum("grid_motion", "grid_motion", "grid_motion_from_name"));
     if (GlobalConfig.grid_motion == GridMotion.none) {
         GlobalConfig.n_grid_time_levels = 1;
@@ -1275,6 +1279,7 @@ void read_config_file()
         writeln("  gasdynamic_update_scheme: ", gasdynamic_update_scheme_name(GlobalConfig.gasdynamic_update_scheme));
         writeln("  residual_smoothing: ", GlobalConfig.residual_smoothing);
         writeln("  with_local_time_stepping: ", GlobalConfig.with_local_time_stepping);
+        writeln("  local_time_stepping_limit_factor: ", GlobalConfig.local_time_stepping_limit_factor);
         writeln("  grid_motion: ", grid_motion_name(GlobalConfig.grid_motion));
         writeln("  write_vertex_velocities: ", GlobalConfig.write_vertex_velocities);
         writeln("  udf_grid_motion_file: ", to!string(GlobalConfig.udf_grid_motion_file));
