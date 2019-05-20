@@ -337,7 +337,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
     init_history_cell_files();
     //
     // create the loads directory, maybe
-    if (GlobalConfig.compute_loads && (SimState.current_loads_tindx == 0)) {
+    if (GlobalConfig.write_loads && (SimState.current_loads_tindx == 0)) {
         if (GlobalConfig.is_master_task) { ensure_directory_is_present("loads"); }
         version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
         init_loads_times_file();
@@ -814,7 +814,8 @@ int integrate_in_time(double target_time_as_requested)
                 GC.collect();
                 GC.minimize();
             }
-            if (GlobalConfig.compute_loads && (SimState.time >= SimState.t_loads) && !SimState.loads_just_written) {
+            if (GlobalConfig.write_loads &&
+                (SimState.time >= SimState.t_loads) && !SimState.loads_just_written) {
                 write_boundary_loads_to_file(SimState.time, SimState.current_loads_tindx);
                 update_loads_times_file(SimState.time, SimState.current_loads_tindx);
                 SimState.loads_just_written = true;

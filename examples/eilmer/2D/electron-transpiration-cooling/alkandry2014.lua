@@ -46,7 +46,7 @@ config.viscous_signal_factor = 0.2
 -----------------------
 -- Loads calculation --
 -----------------------
-config.compute_loads = true
+config.write_loads = true
 config.dt_loads = config.max_time/N_solutions
 config.boundary_group_for_loads = "cylinder-wedge"
 -- config.boundary_group_for_loads = "stagnation-line"

@@ -1778,8 +1778,8 @@ function write_config_file(fileName)
 			 tostring(config.save_intermediate_results)))
    f:write(string.format('"boundary_group_for_loads": "%s",\n',
 			 config.boundary_group_for_loads))
-   f:write(string.format('"compute_loads": %s,\n',
-			 tostring(config.compute_loads)))
+   f:write(string.format('"write_loads": %s,\n',
+			 tostring(config.write_loads)))
    f:write(string.format('"compute_run_time_loads": %s,\n',
 			 tostring(config.compute_run_time_loads)))
    f:write(string.format('"run_time_loads_count": %d,\n', config.run_time_loads_count))
