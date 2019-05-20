@@ -652,14 +652,14 @@ public:
         }
     } // end compute_Linf_residuals()
 
-    @nogc
+    //@nogc
     void residual_smoothing_dUdt(size_t ftl)
     {
         assert(ftl < cells[0].dUdt.length, "inconsistent flow time level and allocated dUdt");
         foreach (c; cells) {
             c.dUdt_copy.copy_values_from(c.dUdt[ftl]);
         }
-        double eps = myConfig.residual_smoothing_weight;
+        double eps = GlobalConfig.residual_smoothing_weight;
         if (GlobalConfig.residual_smoothing_type == ResidualSmoothingType.explicit) { 
             foreach (c; cells) {
                 double total = 1.0;

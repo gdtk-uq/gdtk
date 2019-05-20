@@ -923,8 +923,6 @@ public:
         gasdynamic_update_scheme = GlobalConfig.gasdynamic_update_scheme;
         n_flow_time_levels = GlobalConfig.n_flow_time_levels;
         residual_smoothing = GlobalConfig.residual_smoothing;
-        residual_smoothing_weight = GlobalConfig.residual_smoothing_weight;
-        residual_smoothing_type = GlobalConfig.residual_smoothing_type;
         with_local_time_stepping = GlobalConfig.with_local_time_stepping;
         grid_motion = GlobalConfig.grid_motion;
         udf_grid_motion_file = GlobalConfig.udf_grid_motion_file;
@@ -1203,8 +1201,6 @@ void read_config_file()
     mixin(update_enum("gasdynamic_update_scheme", "gasdynamic_update_scheme", "update_scheme_from_name"));
     GlobalConfig.n_flow_time_levels = 1 + number_of_stages_for_update_scheme(GlobalConfig.gasdynamic_update_scheme);
     mixin(update_bool("residual_smoothing", "residual_smoothing"));
-    mixin(update_double("residual_smoothing_weight", "residual_smoothing_weight"));
-    mixin(update_enum("residual_smoothing_type", "residual_smoothing_type", "residual_smoothing_type_from_name"));    
     mixin(update_bool("with_local_time_stepping", "with_local_time_stepping"));
     mixin(update_enum("grid_motion", "grid_motion", "grid_motion_from_name"));
     if (GlobalConfig.grid_motion == GridMotion.none) {
@@ -1279,8 +1275,6 @@ void read_config_file()
     if (GlobalConfig.verbosity_level > 1) {
         writeln("  gasdynamic_update_scheme: ", gasdynamic_update_scheme_name(GlobalConfig.gasdynamic_update_scheme));
         writeln("  residual_smoothing: ", GlobalConfig.residual_smoothing);
-        writeln("  residual_smoothing_weight: ", GlobalConfig.residual_smoothing_weight);
-        writeln("  residual_smoothing_type: ", residual_smoothing_type_name(GlobalConfig.residual_smoothing_type));
         writeln("  with_local_time_stepping: ", GlobalConfig.with_local_time_stepping);
         writeln("  grid_motion: ", grid_motion_name(GlobalConfig.grid_motion));
         writeln("  write_vertex_velocities: ", GlobalConfig.write_vertex_velocities);
@@ -1660,6 +1654,8 @@ void read_control_file()
     mixin(update_bool("stringent_cfl", "stringent_cfl"));
     mixin(update_double("viscous_signal_factor", "viscous_signal_factor"));
     mixin(update_double("turbulent_signal_factor", "turbulent_signal_factor"));
+    mixin(update_enum("residual_smoothing_type", "residual_smoothing_type", "residual_smoothing_type_from_name"));
+    mixin(update_double("residual_smoothing_weight", "residual_smoothing_weight"));
     mixin(update_bool("fixed_time_step", "fixed_time_step"));
     mixin(update_int("print_count", "print_count"));
     mixin(update_int("cfl_count", "cfl_count"));
@@ -1677,6 +1673,8 @@ void read_control_file()
         writeln("  stringent_cfl: ", GlobalConfig.stringent_cfl);
         writeln("  viscous_signal_factor: ", GlobalConfig.viscous_signal_factor);
         writeln("  turbulent_signal_factor: ", GlobalConfig.turbulent_signal_factor);
+        writeln("  residual_smoothing_type: ", GlobalConfig.residual_smoothing_type);
+        writeln("  residual_smoothing_weight: ", GlobalConfig.residual_smoothing_weight);
         writeln("  fixed_time_step: ", GlobalConfig.fixed_time_step);
         writeln("  print_count: ", GlobalConfig.print_count);
         writeln("  cfl_count: ", GlobalConfig.cfl_count);

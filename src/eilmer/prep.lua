@@ -1550,6 +1550,9 @@ function write_control_file(fileName)
    f:write(string.format('"stringent_cfl": %s,\n', tostring(config.stringent_cfl)))
    f:write(string.format('"viscous_signal_factor": %.18e,\n', config.viscous_signal_factor))
    f:write(string.format('"turbulent_signal_factor": %.18e,\n', config.turbulent_signal_factor))
+   f:write(string.format('"residual_smoothing_weight": %.18e,\n', config.residual_smoothing_weight))
+   f:write(string.format('"residual_smoothing_type": "%s",\n',
+			 config.residual_smoothing_type))
    f:write(string.format('"fixed_time_step": %s,\n', tostring(config.fixed_time_step)))
    f:write(string.format('"print_count": %d,\n', config.print_count))
    f:write(string.format('"cfl_count": %d,\n', config.cfl_count))
@@ -1636,9 +1639,6 @@ function write_config_file(fileName)
    f:write(string.format('"gasdynamic_update_scheme": "%s",\n',
 			 config.gasdynamic_update_scheme))
    f:write(string.format('"residual_smoothing": %s,\n', tostring(config.residual_smoothing)))
-   f:write(string.format('"residual_smoothing_weight": %.18e,\n', config.residual_smoothing_weight))
-   f:write(string.format('"residual_smoothing_type": "%s",\n',
-			 config.residual_smoothing_type))
    f:write(string.format('"with_local_time_stepping": %s,\n', tostring(config.with_local_time_stepping)))
    f:write(string.format('"coupling_with_solid_domains": "%s",\n',
 			 config.coupling_with_solid_domains))
