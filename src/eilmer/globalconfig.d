@@ -441,6 +441,7 @@ final class GlobalConfig {
     shared static bool residual_smoothing = false;
     shared static double residual_smoothing_weight = 0.2;
     shared static ResidualSmoothingType residual_smoothing_type = ResidualSmoothingType.explicit;
+    shared static int residual_smoothing_iterations = 2;
     shared static bool with_local_time_stepping = false;
     
     // Parameter controlling Strang-splitting mode when simulating reacting flows
@@ -802,8 +803,6 @@ public:
     GasdynamicUpdate gasdynamic_update_scheme;
     size_t n_flow_time_levels;
     bool residual_smoothing;
-    double residual_smoothing_weight;
-    ResidualSmoothingType residual_smoothing_type;
     bool with_local_time_stepping;
     GridMotion grid_motion;
     string udf_grid_motion_file;
@@ -1656,6 +1655,7 @@ void read_control_file()
     mixin(update_double("turbulent_signal_factor", "turbulent_signal_factor"));
     mixin(update_enum("residual_smoothing_type", "residual_smoothing_type", "residual_smoothing_type_from_name"));
     mixin(update_double("residual_smoothing_weight", "residual_smoothing_weight"));
+    mixin(update_int("residual_smoothing_iterations", "residual_smoothing_iterations"));
     mixin(update_bool("fixed_time_step", "fixed_time_step"));
     mixin(update_int("print_count", "print_count"));
     mixin(update_int("cfl_count", "cfl_count"));
@@ -1675,6 +1675,7 @@ void read_control_file()
         writeln("  turbulent_signal_factor: ", GlobalConfig.turbulent_signal_factor);
         writeln("  residual_smoothing_type: ", GlobalConfig.residual_smoothing_type);
         writeln("  residual_smoothing_weight: ", GlobalConfig.residual_smoothing_weight);
+        writeln("  residual_smoothing_iterations: ", GlobalConfig.residual_smoothing_iterations);
         writeln("  fixed_time_step: ", GlobalConfig.fixed_time_step);
         writeln("  print_count: ", GlobalConfig.print_count);
         writeln("  cfl_count: ", GlobalConfig.cfl_count);

@@ -1551,6 +1551,7 @@ function write_control_file(fileName)
    f:write(string.format('"viscous_signal_factor": %.18e,\n', config.viscous_signal_factor))
    f:write(string.format('"turbulent_signal_factor": %.18e,\n', config.turbulent_signal_factor))
    f:write(string.format('"residual_smoothing_weight": %.18e,\n', config.residual_smoothing_weight))
+   f:write(string.format('"residual_smoothing_iterations": %d,\n', config.residual_smoothing_iterations))
    f:write(string.format('"residual_smoothing_type": "%s",\n',
 			 config.residual_smoothing_type))
    f:write(string.format('"fixed_time_step": %s,\n', tostring(config.fixed_time_step)))

@@ -652,7 +652,7 @@ public:
         }
     } // end compute_Linf_residuals()
 
-    //@nogc
+    @nogc
     void residual_smoothing_dUdt(size_t ftl)
     {
         assert(ftl < cells[0].dUdt.length, "inconsistent flow time level and allocated dUdt");
@@ -673,34 +673,22 @@ public:
                 c.dUdt[ftl].scale(1.0/total);
             }
         } else { // ResidualSmoothingType.implicit
-            // perform two (fixed) Jacobi iterations
-            // 1.
-            foreach (c; cells) {
-                double n = 0;
-                c.dUdt_copy.copy_values_from(c.dUdt[ftl]);
-                foreach (i, f; c.iface) {
-                    n += 1;
-                    auto other_cell = (c.outsign[i] > 0.0) ? f.right_cell : f.left_cell;
-                    if (other_cell && other_cell.contains_flow_data) {
-                        c.dUdt_copy.add(other_cell.dUdt_copy, eps);
+            int n_iters = GlobalConfig.residual_smoothing_iterations;
+            // perform Jacobi iterations
+            foreach (ni; 0..n_iters) {
+                foreach (c; cells) {
+                    double n = 0;
+                    c.dUdt_copy.copy_values_from(c.dUdt[ftl]);
+                    foreach (i, f; c.iface) {
+                        n += 1;
+                        auto other_cell = (c.outsign[i] > 0.0) ? f.right_cell : f.left_cell;
+                        if (other_cell && other_cell.contains_flow_data) {
+                            c.dUdt_copy.add(other_cell.dUdt_copy, eps);
+                        }
                     }
+                    double scale = 1.0+n*eps;
+                    c.dUdt_copy.scale(1.0/scale);
                 }
-                double scale = 1.0+n*eps;
-                c.dUdt_copy.scale(1.0/scale);
-            }
-            // 2.
-            foreach (c; cells) {
-                int n = 0;
-                c.dUdt_copy.copy_values_from(c.dUdt[ftl]);
-                foreach (i, f; c.iface) {
-                    n += 1;
-                    auto other_cell = (c.outsign[i] > 0.0) ? f.right_cell : f.left_cell;
-                    if (other_cell && other_cell.contains_flow_data) {
-                        c.dUdt_copy.add(other_cell.dUdt_copy, eps);
-                    }
-                }
-                double scale = 1.0+n*eps;
-                c.dUdt_copy.scale(1.0/scale);
             }
             // replace residual with smoothed residual
             foreach (c; cells) {
@@ -708,7 +696,7 @@ public:
             }
         }
     } // end residual_smoothing_dUdt()
-
+    
     @nogc
     double update_c_h(double dt_current)
     // Update the c_h value for the divergence cleaning mechanism.

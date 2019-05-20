@@ -106,6 +106,7 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_enum_field("gasdynamic_update_scheme", "gasdynamic_update_scheme", "update_scheme_from_name"));
     mixin(get_bool_field("residual_smoothing", "residual_smoothing"));
     mixin(get_double_field("residual_smoothing_weight", "residual_smoothing_weight"));
+    mixin(get_int_field("residual_smoothing_iterations", "residual_smoothing_iterations"));
     mixin(get_enum_field("residual_smoothing_type", "residual_smoothing_type", "residual_smoothing_type_from_name"));
     mixin(get_bool_field("with_local_time_stepping", "with_local_time_stepping"));
     mixin(get_enum_field("coupling_with_solid_domains", "coupling_with_solid_domains", "solidDomainCouplingFromName"));
@@ -275,6 +276,7 @@ extern(C) int configGet(lua_State* L)
     case "gasdynamic_update_scheme": lua_pushstring(L, gasdynamic_update_scheme_name(GlobalConfig.gasdynamic_update_scheme).toStringz); break;
     case "residual_smoothing": lua_pushboolean(L, GlobalConfig.residual_smoothing); break;
     case "residual_smoothing_weight": lua_pushnumber(L, GlobalConfig.residual_smoothing_weight); break;
+    case "residual_smoothing_iterations": lua_pushinteger(L, GlobalConfig.residual_smoothing_iterations); break;
     case "residual_smoothing_type": lua_pushstring(L, residual_smoothing_type_name(GlobalConfig.residual_smoothing_type).toStringz); break;
     case "with_local_time_stepping": lua_pushboolean(L, GlobalConfig.with_local_time_stepping); break;
     case "coupling_with_solid_domains": lua_pushstring(L, solidDomainCouplingName(GlobalConfig.coupling_with_solid_domains).toStringz); break;
