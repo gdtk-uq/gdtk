@@ -1,5 +1,5 @@
 -- Author: Fabian Zander
--- Data: 2019-05-03
+-- Date: 2019-05-03
 --
 -- This script gives us some checking of the moving mesh processes.
 -- We look at the total gas mass and energy at the start and end of the simulation.
