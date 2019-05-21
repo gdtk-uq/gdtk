@@ -12,13 +12,12 @@ config.axisymmetric = true
 pMass = 1.0 -- kg
 L1 = 9.0; H = 0.2 -- metres
 
--- Gas model and initial gas states.
+-- Gas model and initial gas state.
 setGasModel("ideal-air-gas-model.lua")
 pInit = 100.0e3 -- Pa
 TInit = 348.43 -- K
 -- density is 1.0 kg/m**3
-initialLeft = FlowState:new{p=pInit, T=TInit}
-initialRight = FlowState:new{p=1.0e-10, T=TInit}
+initial = FlowState:new{p=pInit, T=TInit}
 
 -- Geometry, grid and block setup.
 -- Gas region that drives piston.
@@ -29,7 +28,7 @@ driver_patch = CoonsPatch:new{p00=Vector3:new{x=0,  y=0},
 grid0 = StructuredGrid:new{psurface=driver_patch, niv=101, njv=3}
 
 blk0 = FluidBlock:new{
-   grid=grid0, initialState=initialLeft,
+   grid=grid0, initialState=initial,
    bcList={east=WallBC_WithSlip1:new{group='pistonUpstream'}}
 }
 
