@@ -657,7 +657,8 @@ public:
     {
         assert(ftl < cells[0].dUdt.length, "inconsistent flow time level and allocated dUdt");
         foreach (c; cells) {
-            c.dUdt_copy.copy_values_from(c.dUdt[ftl]);
+            c.dUdt_copy[0].copy_values_from(c.dUdt[ftl]);
+            c.dUdt_copy[1].copy_values_from(c.dUdt[ftl]);
         }
         double eps = GlobalConfig.residual_smoothing_weight;
         if (GlobalConfig.residual_smoothing_type == ResidualSmoothingType.explicit) { 
@@ -667,7 +668,7 @@ public:
                     total += eps;
                     auto other_cell = (c.outsign[i] > 0.0) ? f.right_cell : f.left_cell;
                     if (other_cell && other_cell.contains_flow_data) {
-                        c.dUdt[ftl].add(other_cell.dUdt_copy, eps);
+                        c.dUdt[ftl].add(other_cell.dUdt_copy[0], eps);
                     }
                 }
                 c.dUdt[ftl].scale(1.0/total);
@@ -678,21 +679,24 @@ public:
             foreach (ni; 0..n_iters) {
                 foreach (c; cells) {
                     double n = 0;
-                    c.dUdt_copy.copy_values_from(c.dUdt[ftl]);
+                    c.dUdt_copy[1].copy_values_from(c.dUdt[ftl]);
                     foreach (i, f; c.iface) {
-                        n += 1;
                         auto other_cell = (c.outsign[i] > 0.0) ? f.right_cell : f.left_cell;
                         if (other_cell && other_cell.contains_flow_data) {
-                            c.dUdt_copy.add(other_cell.dUdt_copy, eps);
+                            n += 1;
+                            c.dUdt_copy[1].add(other_cell.dUdt_copy[0], eps);
                         }
                     }
                     double scale = 1.0+n*eps;
-                    c.dUdt_copy.scale(1.0/scale);
+                    c.dUdt_copy[1].scale(1.0/scale);
+                }
+                foreach (c; cells) {
+                    c.dUdt_copy[0].copy_values_from(c.dUdt_copy[1]);
                 }
             }
             // replace residual with smoothed residual
             foreach (c; cells) {
-                c.dUdt[ftl].copy_values_from(c.dUdt_copy);
+                c.dUdt[ftl].copy_values_from(c.dUdt_copy[1]);
             }
         }
     } // end residual_smoothing_dUdt()

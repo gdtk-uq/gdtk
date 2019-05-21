@@ -105,7 +105,7 @@ public:
     ConservedQuantities[] U;  // Conserved flow quantities for the update stages.
     ConservedQuantities[] dUdt; // Time derivatives for the update stages.
     ConservedQuantities Q; // source (or production) terms
-    ConservedQuantities dUdt_copy; // for residual smoothing
+    ConservedQuantities[2] dUdt_copy; // for residual smoothing
     // for unstructured grids, we may be doing high-order reconstruction
     LSQInterpWorkspace ws;
     LSQInterpGradients gradients; // we only need these workspaces for the unstructured
@@ -172,7 +172,8 @@ public:
         Q = new ConservedQuantities(n_species, n_modes);
         Q.clear();
         if (myConfig.residual_smoothing) {
-            dUdt_copy = new ConservedQuantities(n_species, n_modes);
+            dUdt_copy[0] = new ConservedQuantities(n_species, n_modes);
+            dUdt_copy[1] = new ConservedQuantities(n_species, n_modes);
         }
         grad = new FlowGradients(myConfig);
         if (allocate_spatial_deriv_lsq_workspace) {
