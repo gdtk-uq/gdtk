@@ -61,7 +61,7 @@ enum FlowVar {
     mu_t, k_t, S,
     Q_rad_org, f_rad_org, Q_rE_rad,
     tke, omega,
-    dt_chem, u, T, dt_therm
+    dt_local, dt_chem, u, T, dt_therm
 };
 
 @nogc
@@ -94,6 +94,7 @@ string flowVarName(FlowVar var)
     case FlowVar.Q_rE_rad: return "Q_rE_rad";
     case FlowVar.tke: return "tke";
     case FlowVar.omega: return "omega";
+    case FlowVar.dt_local: return "dt_local";
     case FlowVar.dt_chem: return "dt_chem";
     case FlowVar.u: return "u";
     case FlowVar.T: return "T";
@@ -785,6 +786,7 @@ final class GlobalConfig {
             list ~= [u_modesName(i), T_modesName(i)];
         }
         if (gmodel_master.n_modes > 0) { list ~= flowVarName(FlowVar.dt_therm); }
+        list ~= flowVarName(FlowVar.dt_local);
         return list;
     } // end variable_list_for_flow_data()
 

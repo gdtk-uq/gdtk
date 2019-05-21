@@ -447,7 +447,7 @@ void write_initial_flow_file(string fileName, ref StructuredGrid grid,
                         pos = to!number(0.5)*pos + to!number(0.125)*(p001 + p101 + p111 + p011);
                     }
                     cell_data_to_raw_binary(outfile, pos, volume, fs,
-                                            to!number(0.0), to!number(0.0), to!number(0.0), -1.0, -1.0,
+                                            to!number(0.0), to!number(0.0), to!number(0.0), -1.0, -1.0, -1.0,
                                             GlobalConfig.include_quality,
                                             GlobalConfig.MHD,
                                             GlobalConfig.divergence_cleaning,
@@ -497,7 +497,7 @@ void write_initial_flow_file(string fileName, ref StructuredGrid grid,
                     }
                     outfile.compress(" " ~ cell_data_as_string(pos, volume, fs,
                                                                to!number(0.0), to!number(0.0), to!number(0.0),
-                                                               -1.0, -1.0,
+                                                               -1.0, -1.0, -1.0,
                                                                GlobalConfig.include_quality,
                                                                GlobalConfig.MHD,
                                                                GlobalConfig.divergence_cleaning,
@@ -543,7 +543,7 @@ void write_initial_flow_file(string fileName, ref UnstructuredGrid grid,
             number volume = 0.0; 
             cell_data_to_raw_binary(outfile, pos, volume, fs,
                                     to!number(0.0), to!number(0.0), to!number(0.0),
-                                    -1.0, -1.0,
+                                    -1.0, -1.0, -1.0,
                                     GlobalConfig.include_quality,
                                     GlobalConfig.MHD,
                                     GlobalConfig.divergence_cleaning,
@@ -575,7 +575,7 @@ void write_initial_flow_file(string fileName, ref UnstructuredGrid grid,
             number volume = 0.0; 
             outfile.compress(" " ~ cell_data_as_string(pos, volume, fs,
                                                        to!number(0.0), to!number(0.0), to!number(0.0),
-                                                       -1.0, -1.0,
+                                                       -1.0, -1.0, -1.0,
                                                        GlobalConfig.include_quality,
                                                        GlobalConfig.MHD,
                                                        GlobalConfig.divergence_cleaning,
@@ -620,10 +620,10 @@ public:
                 fstate ~= new FlowState(GlobalConfig.gmodel_master);
                 pos ~= Vector3();
                 number volume, Q_rad_org, f_rad_org, Q_rE_rad;
-                double dt_chem, dt_therm;
+                double dt_chem, dt_therm, dt_local;
                 scan_cell_data_from_fixed_order_string
                     (text, pos[$-1], volume, fstate[$-1],
-                     Q_rad_org, f_rad_org, Q_rE_rad, dt_chem, dt_therm,
+                     Q_rad_org, f_rad_org, Q_rE_rad, dt_local, dt_chem, dt_therm,
                      GlobalConfig.include_quality, GlobalConfig.MHD,
                      GlobalConfig.divergence_cleaning, GlobalConfig.radiation);
                 npoints += 1;

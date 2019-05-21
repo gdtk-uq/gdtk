@@ -581,7 +581,7 @@ extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
                         }
                         cell_data_to_raw_binary(outfile, pos, volume, fs,
                                                 to!number(0.0), to!number(0.0), to!number(0.0),
-                                                -1.0, -1.0,
+                                                -1.0, -1.0, -1.0,
                                                 GlobalConfig.include_quality,
                                                 GlobalConfig.MHD,
                                                 GlobalConfig.divergence_cleaning,
@@ -652,7 +652,7 @@ extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
                         }
                         outfile.compress(" " ~ cell_data_as_string(pos, volume, fs,
                                                                    to!number(0.0), to!number(0.0), to!number(0.0),
-                                                                   -1.0, -1.0,
+                                                                   -1.0, -1.0, -1.0,
                                                                    GlobalConfig.include_quality,
                                                                    GlobalConfig.MHD,
                                                                    GlobalConfig.divergence_cleaning,
@@ -745,7 +745,7 @@ extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
                 }
                 cell_data_to_raw_binary(outfile, pos, volume, fs,
                                         to!number(0.0), to!number(0.0), to!number(0.0),
-                                        -1.0, -1.0,
+                                        -1.0, -1.0, -1.0,
                                         GlobalConfig.include_quality,
                                         GlobalConfig.MHD,
                                         GlobalConfig.divergence_cleaning,
@@ -799,7 +799,7 @@ extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
                 }
                 outfile.compress(" " ~ cell_data_as_string(pos, volume, fs,
                                                            to!number(0.0), to!number(0.0), to!number(0.0),
-                                                           -1.0, -1.0,
+                                                           -1.0, -1.0, -1.0,
                                                            GlobalConfig.include_quality,
                                                            GlobalConfig.MHD,
                                                            GlobalConfig.divergence_cleaning,

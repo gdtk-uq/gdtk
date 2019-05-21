@@ -413,7 +413,7 @@ public:
                 (buffer,
                  new_pos, new_volume, fs,
                  Q_rad_org, f_rad_org, Q_rE_rad,
-                 dt_chem, dt_therm,
+                 dt_local, dt_chem, dt_therm,
                  myConfig.include_quality, myConfig.MHD,
                  myConfig.divergence_cleaning, myConfig.radiation);
         } else {
@@ -421,7 +421,7 @@ public:
                 (buffer, varNameList, gmodel,
                  new_pos, new_volume, fs,
                  Q_rad_org, f_rad_org, Q_rE_rad,
-                 dt_chem, dt_therm,
+                 dt_local, dt_chem, dt_therm,
                  myConfig.include_quality, myConfig.MHD,
                  myConfig.divergence_cleaning, myConfig.radiation);
         }
@@ -438,7 +438,7 @@ public:
         number new_volume;
         raw_binary_to_cell_data(fin, new_pos, new_volume, fs,
                                 Q_rad_org, f_rad_org, Q_rE_rad,
-                                dt_chem, dt_therm,
+                                dt_local, dt_chem, dt_therm,
                                 myConfig.include_quality, myConfig.MHD,
                                 myConfig.divergence_cleaning, myConfig.radiation);
         if (overwrite_geometry_data) {
@@ -451,7 +451,7 @@ public:
     {
         return cell_data_as_string(pos[0], volume[0], fs,
                                    Q_rad_org, f_rad_org, Q_rE_rad,
-                                   dt_chem, dt_therm,
+                                   dt_local, dt_chem, dt_therm,
                                    myConfig.include_quality, myConfig.MHD,
                                    myConfig.divergence_cleaning, myConfig.radiation);
     } // end write_values_to_string()
@@ -460,7 +460,7 @@ public:
     {
         cell_data_to_raw_binary(fout, pos[0], volume[0], fs,
                                 Q_rad_org, f_rad_org, Q_rE_rad,
-                                dt_chem, dt_therm,
+                                dt_local, dt_chem, dt_therm,
                                 myConfig.include_quality, myConfig.MHD,
                                 myConfig.divergence_cleaning, myConfig.radiation);
     } // end write_values_to_raw_binary()
@@ -1933,7 +1933,7 @@ public:
 
 string cell_data_as_string(ref const(Vector3) pos, number volume, ref const(FlowState) fs,
                            number Q_rad_org, number f_rad_org, number Q_rE_rad,
-                           double dt_chem, double dt_therm,
+                           double dt_local, double dt_chem, double dt_therm,
                            bool include_quality,
                            bool MHDflag, bool divergence_cleaning,
                            bool radiation)
@@ -1978,6 +1978,7 @@ string cell_data_as_string(ref const(Vector3) pos, number volume, ref const(Flow
             }
             if (fs.gas.u_modes.length > 0) { formattedWrite(writer, " %.18e", dt_therm); }
         }
+        formattedWrite(writer, " %.18e", dt_local);
     } else {
         // version double_numbers
         formattedWrite(writer, "%.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e",
@@ -2015,6 +2016,7 @@ string cell_data_as_string(ref const(Vector3) pos, number volume, ref const(Flow
             }
             if (fs.gas.u_modes.length > 0) { formattedWrite(writer, " %.18e", dt_therm); }
         }
+        formattedWrite(writer, " %.18e", dt_local);
     } // end version double_numbers
     return writer.data;
 } // end cell_data_as_string()
@@ -2022,7 +2024,7 @@ string cell_data_as_string(ref const(Vector3) pos, number volume, ref const(Flow
 void cell_data_to_raw_binary(ref File fout,
                              ref const(Vector3) pos, number volume, ref const(FlowState) fs,
                              number Q_rad_org, number f_rad_org, number Q_rE_rad,
-                             double dt_chem, double dt_therm,
+                             double dt_local, double dt_chem, double dt_therm,
                              bool include_quality, bool MHDflag, bool divergence_cleaning,
                              bool radiation)
 {
@@ -2080,6 +2082,7 @@ void cell_data_to_raw_binary(ref File fout,
             }
             if (fs.gas.u_modes.length > 0) { dbl1[0] = dt_therm; fout.rawWrite(dbl1); }
         }
+        dbl1[0] = dt_local; fout.rawWrite(dbl1);
     } else {
         // version double_numbers
         // Fixed-length buffers to hold data for sending to binary file.
@@ -2129,6 +2132,7 @@ void cell_data_to_raw_binary(ref File fout,
             }
             if (fs.gas.u_modes.length > 0) { dbl1[0] = dt_therm; fout.rawWrite(dbl1); }
         }
+        dbl1[0] = dt_local; fout.rawWrite(dbl1);
     } // end version double_numbers
     return;
 } // end cell_data_to_raw_binary()
@@ -2137,7 +2141,7 @@ void scan_cell_data_from_fixed_order_string
 (string buffer,
  ref Vector3 pos, ref number volume, ref FlowState fs,
  ref number Q_rad_org, ref number f_rad_org, ref number Q_rE_rad,
- ref double dt_chem, ref double dt_therm,
+ ref double dt_local, ref double dt_chem, ref double dt_therm,
  bool include_quality, bool MHDflag, bool divergence_cleaning, bool radiation)
 {
     // This function needs to be kept consistent with cell_data_as_string() above.
@@ -2230,6 +2234,7 @@ void scan_cell_data_from_fixed_order_string
                 dt_therm = to!double(items.front); items.popFront(); 
             }
         }
+        dt_local = to!double(items.front); items.popFront();
     } else {
         // version double_numbers
         pos.refx = to!double(items.front); items.popFront();
@@ -2317,6 +2322,7 @@ void scan_cell_data_from_fixed_order_string
                 dt_therm = to!double(items.front); items.popFront(); 
             }
         }
+        dt_local = to!double(items.front); items.popFront();
     } // end version double_numbers
 } // end scan_values_from_fixed_order_string()
 
@@ -2324,7 +2330,7 @@ void scan_cell_data_from_variable_order_string
 (string buffer, string[] varNameList, GasModel gmodel,
  ref Vector3 pos, ref number volume, ref FlowState fs,
  ref number Q_rad_org, ref number f_rad_org, ref number Q_rE_rad,
- ref double dt_chem, ref double dt_therm,
+ ref double dt_local, ref double dt_chem, ref double dt_therm,
  bool include_quality, bool MHDflag, bool divergence_cleaning, bool radiation)
 {
     // This function uses the list of variable names read from the file
@@ -2409,12 +2415,13 @@ void scan_cell_data_from_variable_order_string
             dt_therm = values[countUntil(varNameList, flowVarName(FlowVar.dt_therm))].re; 
         }
     }
+    dt_local = values[countUntil(varNameList, flowVarName(FlowVar.dt_local))].re;
 } // end scan_values_from_variable_order_string()
 
 void raw_binary_to_cell_data(ref File fin,
                              ref Vector3 pos, ref number volume, ref FlowState fs,
                              ref number Q_rad_org, ref number f_rad_org, ref number Q_rE_rad,
-                             ref double dt_chem, ref double dt_therm,
+                             ref double dt_local, ref double dt_chem, ref double dt_therm,
                              bool include_quality, bool MHDflag, bool divergence_cleaning,
                              bool radiation)
 {
@@ -2485,6 +2492,7 @@ void raw_binary_to_cell_data(ref File fin,
             }
             if (fs.gas.u_modes.length > 0) { fin.rawRead(dbl1); dt_therm = dbl1[0]; }
         }
+        fin.rawRead(dbl1); dt_local = dbl1[0];
     } else {
         // double_numbers
         // Fixed-length buffers to hold data while reading binary file.
@@ -2547,5 +2555,6 @@ void raw_binary_to_cell_data(ref File fin,
             }
             if (fs.gas.u_modes.length > 0) { fin.rawRead(dbl1); dt_therm = dbl1[0]; }
         }
+        fin.rawRead(dbl1); dt_local = dbl1[0];
     } // end version double_numbers
 } // end raw_binary_to_cell_data()
