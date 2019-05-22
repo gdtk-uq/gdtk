@@ -78,6 +78,7 @@ public:
         GlobalConfig.flow_format = jsonData["flow_format"].str;
         string gridFileExt = "gz"; if (GlobalConfig.grid_format == "rawbinary") { gridFileExt = "bin"; }
         string flowFileExt = "gz"; if (GlobalConfig.flow_format == "rawbinary") { flowFileExt = "bin"; }
+        GlobalConfig.grid_motion = grid_motion_from_name(jsonData["grid_motion"].str);
         // -- end initialising JSONData
         //
         // Use job.list to get a hint of the type of each block.
@@ -96,7 +97,7 @@ public:
             }
             auto gridType = gridTypeFromName(gridTypeName);
             string fileName;
-            if (GlobalConfig.grid_motion != GridMotion.none) { // [TODO] suspect that this is just default.
+            if (GlobalConfig.grid_motion != GridMotion.none) {
                 fileName = make_file_name!"grid"(jobName, to!int(ib), tindx, gridFileExt);
             } else {
                 fileName = make_file_name!"grid"(jobName, to!int(ib), 0, gridFileExt);
