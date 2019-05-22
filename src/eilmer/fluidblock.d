@@ -757,6 +757,7 @@ public:
             cfl_local = dt_current * signal; // Current (Local) CFL number
             dt_local = cfl_value / signal; // Recommend a time step size.
             cell.dt_local = fmin(dt_local, dt_current*local_time_stepping_limit_factor); // set local time-step in cell
+            cell.dt_local = fmin(cell.dt_local, GlobalConfig.dt_max); // Limit the largest local time-step to a set input value
             if (first) {
                 cfl_min = cfl_local;
                 cfl_max = cfl_local;
