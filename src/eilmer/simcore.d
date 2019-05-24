@@ -343,6 +343,16 @@ void init_simulation(int tindx, int nextLoadsIndx,
         init_loads_times_file();
     }
     version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
+
+    // For the shock fitting grid motion, we need to assign radial positions for all vertices
+    if (GlobalConfig.grid_motion == GlobalConfig.grid_motion.shock_fitting && GlobalConfig.in_mpi_context == false) {
+        foreach (myblk; localFluidBlocks) {
+            if (myblk.bc[Face.west].type == "inflow_shock_fitting") {
+                auto sblk = cast(SFluidBlock) myblk;
+                assign_radial_dist(sblk);
+            }
+        }
+    }
     // Finally when both gas AND solid domains are setup..
     // Look for a solid-adjacent bc, if there is one,
     // then we can set up the cells and interfaces that
@@ -1255,7 +1265,7 @@ void set_grid_velocities()
                 if (blk.active) { blk.applyPreReconAction(SimState.time, 0, 0); }
             }
             foreach (blk; localFluidBlocksBySize) {
-                if (blk.active) {
+                if (blk.active && blk.bc[Face.west].type == "inflow_shock_fitting") {
                     auto sblk = cast(SFluidBlock) blk;
                     assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
                     shock_fitting_vertex_velocities(sblk, SimState.step, SimState.time);
