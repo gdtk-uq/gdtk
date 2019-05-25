@@ -46,7 +46,9 @@ function x_from_y(y, M, theta, axisymmetric, R_nose)
    -- y: y-coordinate of the point on the shock wave
    -- M: free-stream Mach number
    -- theta: angle of the downstream surface (radians)
-   --        with respect to free-stream direction 
+   --    with respect to free-stream direction.
+   --    For example, a blunted plate or cylinder will have
+   --    a surface angle of zero.
    -- axisymmetric: flag
    --    false or nil : cylinder-wedge
    --    true: sphere-cone

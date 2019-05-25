@@ -142,6 +142,7 @@ UTIL_DIR := ../util
 include $(UTIL_DIR)/util_files.mk
 LUA_MODULES += $(UTIL_DIR)/lua_helper.lua \
 	$(UTIL_DIR)/simplecsv.lua \
+	$(UTIL_DIR)/billig_patch.lua \
 	$(UTIL_DIR)/tools.lua
 
 NM_DIR := ../nm
