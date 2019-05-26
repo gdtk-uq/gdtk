@@ -80,9 +80,9 @@ test post-shock-state {Post-shock state along the stagnation line.} -body {
     }
     # The differences with respect to the reference values should be small. 
     list [expr abs($rho - $rho_ref)/$rho_ref < 1.0e-2] \
-    	 [expr abs($velx - $velx_ref)/$velx_ref < 1.0e-2] \
+    	 [expr abs($velx - $velx_ref) < 50.0] \
     	 [expr abs($p - $p_ref)/$p_ref < 1.0e-2] \
-    	 [expr abs($massf_N - $massf_N_ref)/$massf_N_ref < 5.0e-2] \
+    	 [expr abs($massf_N - $massf_N_ref) < 2.0e-3] \
     	 [expr abs($T - $T_ref)/$T_ref < 1.0e-2]
 } -result {1 1 1 1 1}
 
