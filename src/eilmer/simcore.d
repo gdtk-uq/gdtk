@@ -1229,7 +1229,8 @@ void chemistry_step(double dt)
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
             if (blk.active) {
                 double local_dt = dt;
-                foreach (cell; blk.cells) { cell.thermochemical_increment(local_dt); }
+                if (GlobalConfig.with_local_time_stepping) foreach (cell; blk.cells) { cell.thermochemical_increment(cell.dt_local); }
+                else foreach (cell; blk.cells) { cell.thermochemical_increment(local_dt); }
             }
         }
     }
