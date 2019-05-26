@@ -528,6 +528,8 @@ final class GlobalConfig {
     // reconstruction in the unstructured solver) to grow.
     shared static bool use_extended_stencil = false;
     shared static double venkat_K_value = 0.3;
+    // There are another couple of reconstruction-control parameters
+    // further down in the viscous effects parameters.
     
     // Default flux calculator is the adaptive mix of (diffusive) Hanel and AUSMDV.
     shared static FluxCalculator flux_calculator = FluxCalculator.adaptive_hanel_ausmdv;
