@@ -134,7 +134,7 @@ public:
         }
         if (myConfig.extrema_clipping) {
             qL = clip_to_limits(qL, qL0, qR0);
-            // Since qR is linearly interpolated, should not need to clip extrema.
+            // qR is already clipped inside weight_scalar().
         }
     } // end of interp_l2r1_scalar()
 
@@ -167,7 +167,7 @@ public:
             qL = weight_scalar(qL0, qR0);
         }
         if (myConfig.extrema_clipping) {
-            // Since qL is linearly interpolated, should not need to clip extrema.
+            // qL is already clipped inside weight_scalar().
             qR = clip_to_limits(qR, qL0, qR0);
         }
     } // end of interp_l1r2_scalar()
