@@ -596,7 +596,7 @@ function WallBC_WithSlip2:new(o)
 end
 
 -- Select the default slip-wall boundary condition flavour.
-WallBC_WithSlip = WallBC_WithSlip0
+WallBC_WithSlip = WallBC_WithSlip1
 
 
 WallBC_NoSlip_FixedT = BoundaryCondition:new()
