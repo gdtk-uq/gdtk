@@ -651,6 +651,7 @@ int integrate_in_time(double target_time_as_requested)
         fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
     }
     //
+    number mass_balance = to!number(0.0);
     ConservedQuantities Linf_residuals = new ConservedQuantities(GlobalConfig.gmodel_master.n_species,
                                                                  GlobalConfig.gmodel_master.n_modes);
     version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
@@ -773,6 +774,7 @@ int integrate_in_time(double target_time_as_requested)
                 if (GlobalConfig.report_residuals) {
                     // We also compute the residual information and write to screen
                     auto wallClock2 = 1.0e-3*(Clock.currTime() - SimState.wall_clock_start).total!"msecs"();
+                    compute_mass_balance(mass_balance);
                     compute_Linf_residuals(Linf_residuals);
                     version(mpi_parallel) {
                         // Reduce residual values across MPI tasks.
@@ -791,14 +793,19 @@ int integrate_in_time(double target_time_as_requested)
                         my_local_value = Linf_residuals.total_energy;
                         MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
                         Linf_residuals.total_energy = my_local_value;
+                        my_local_value = mass_balance;
+                        MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                        mass_balance = my_local_value;
                     }
                     if (GlobalConfig.is_master_task) {
                         auto writer2 = appender!string();
                         formattedWrite(writer2, "RESIDUALS: step= %7d WC= %.8f ",
                                        SimState.step, wallClock2);
-                        formattedWrite(writer2, "MASS: %10.6e X-MOM: %10.6e Y-MOM: %10.6e Z-MOM: %10.6e ENERGY: %10.6e",
+                        formattedWrite(writer2, "MASS: %10.6e X-MOM: %10.6e Y-MOM: %10.6e Z-MOM: %10.6e ENERGY: %10.6e ",
                                        Linf_residuals.mass, Linf_residuals.momentum.x,
                                        Linf_residuals.momentum.y, Linf_residuals.momentum.z, Linf_residuals.total_energy);
+                        formattedWrite(writer2, "MASS_BALANCE: %10.6e",
+                                       fabs(mass_balance));
                         writeln(writer2.data);
                         stdout.flush();
                     }
@@ -2294,6 +2301,17 @@ void compute_Linf_residuals(ConservedQuantities Linf_residuals)
                                     fmax(Linf_residuals.momentum.z, fabs(blk.Linf_residuals.momentum.z)));
         Linf_residuals.total_energy = fmax(Linf_residuals.total_energy, fabs(blk.Linf_residuals.total_energy));
 
+    }
+} // end compute_Linf_residuals()
+
+void compute_mass_balance(ref number mass_balance)
+{
+    mass_balance = to!number(0.0);
+    foreach (blk; parallel(localFluidBlocksBySize,1)) {
+        blk.compute_mass_balance();
+    }
+    foreach (blk; localFluidBlocksBySize) {
+        mass_balance += blk.mass_balance;
     }
 } // end compute_Linf_residuals()
 
