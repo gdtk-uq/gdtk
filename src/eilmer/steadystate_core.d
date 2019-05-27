@@ -146,7 +146,8 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
     int n_modes = GlobalConfig.gmodel_master.n_modes();
     ConservedQuantities maxResiduals = new ConservedQuantities(n_species, n_modes);
     ConservedQuantities currResiduals = new ConservedQuantities(n_species, n_modes);
-
+    number mass_balance = 0.0;
+    
     // Make a stack-local copy of conserved quantities info
     size_t nConserved = nConservedQuantities;
     size_t MASS = massIdx;
@@ -447,7 +448,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
             fResid.writefln("# %02d: omega-abs", 11+2*OMEGA);
             fResid.writefln("# %02d: omega-rel", 11+2*OMEGA+1);
         }
-
+        fResid.writeln("# %02d: mass-balance", 11+2*OMEGA+2);
         fResid.close();
     }
 
@@ -578,6 +579,8 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
         
         // Now do some output and diagnostics work
         if ( (step % writeDiagnosticsCount) == 0 || finalStep ) {
+            mass_balance = 0.0;
+            compute_mass_balance(mass_balance);
             cfl = determine_min_cfl(dt);
             // Write out residuals
             if ( !residualsUpToDate ) {
@@ -585,7 +588,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
                 residualsUpToDate = true;
             }
             fResid = File(residFname, "a");
-            fResid.writef("%8d  %20.16e  %20.16e %20.16e %20.16e %3d %5d %.8f %20.16e  %20.16e  %20.16e  %20.16e  %20.16e  %20.16e  %20.16e  %20.16e  ",
+            fResid.writef("%8d  %20.16e  %20.16e %20.16e %20.16e %3d %5d %.8f %20.16e  %20.16e  %20.16e  %20.16e  %20.16e  %20.16e  %20.16e  %20.16e ",
                           step, pseudoSimTime, dt, cfl, eta, nRestarts, fnCount, wallClockElapsed, 
                           normNew, normNew/normRef,
                           currResiduals.mass, currResiduals.mass/maxResiduals.mass,
@@ -600,6 +603,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
                               currResiduals.tke, currResiduals.tke/maxResiduals.tke,
                               currResiduals.omega, currResiduals.omega/maxResiduals.omega);
             }
+            fResid.writef("%20.16e ", fabs(mass_balance.re));
             fResid.write("\n");
             fResid.close();
         }
