@@ -3,7 +3,7 @@
 # This exercises the nonequilibrium thermochemistry with the flow of
 # dissociating nitrogen over a cylinder.
 #
-# PJ, 2015-11-10
+# PJ, 2015-11-10, 2019-05-25
 
 package require tcltest 2.0
 namespace import ::tcltest::*
@@ -35,17 +35,17 @@ test number-of-steps {Iteration of the final block in a certain number of steps.
 	    set final_steps [lindex [split $line] 1]
 	}
     }
-    expr abs($final_steps - 3459) < 30
+    expr abs($final_steps - 4428) < 30
 } -result {1}
 
 test post-shock-state {Post-shock state along the stagnation line.} -body {
-    # The following values were extracted from the solution
-    # as it was computed on PJ's computer 2015-11-10.
-    set rho_ref 1.899158e-02
-    set velx_ref 6.843182e+02
-    set p_ref 5.376321e+04
-    set massf_N_ref 1.344658e-02
-    set T_ref 9.411362e+03
+    # The following values were extracted from the solution, with a nicer grid,
+    # as it was computed on PJ's computer 2019-05-25.
+    set rho_ref 1.9090e-02
+    set velx_ref 5.797e+02
+    set p_ref 5.3735e+04
+    set massf_N_ref 1.749e-02
+    set T_ref 9.3205e+03
     # Probe the solution near on the stagnation line downstream of the shock
     # and pull a few values from the line of data that is produced by the postprocessor.
     if { [catch {exec e4shared --post --job=n90 --tindx-plot=5 --probe=-0.010,0.0,0.0 } results] } {
@@ -80,9 +80,9 @@ test post-shock-state {Post-shock state along the stagnation line.} -body {
     }
     # The differences with respect to the reference values should be small. 
     list [expr abs($rho - $rho_ref)/$rho_ref < 1.0e-2] \
-    	 [expr abs($velx - $velx_ref)/$velx_ref < 1.0e-2] \
+    	 [expr abs($velx - $velx_ref) < 50.0] \
     	 [expr abs($p - $p_ref)/$p_ref < 1.0e-2] \
-    	 [expr abs($massf_N - $massf_N_ref)/$massf_N_ref < 5.0e-2] \
+    	 [expr abs($massf_N - $massf_N_ref) < 2.0e-3] \
     	 [expr abs($T - $T_ref)/$T_ref < 1.0e-2]
 } -result {1 1 1 1 1}
 

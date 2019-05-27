@@ -206,7 +206,7 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_double_field("dt_history", "dt_history"));
     mixin(get_double_field("dt_loads", "dt_loads"));
     mixin(get_string_field("boundary_group_for_loads", "boundary_group_for_loads"));
-    mixin(get_bool_field("compute_loads", "compute_loads"));
+    mixin(get_bool_field("write_loads", "write_loads"));
     mixin(get_bool_field("compute_run_time_loads", "compute_run_time_loads"));
     mixin(get_int_field("run_time_loads_count", "run_time_loads_count"));
     //
@@ -377,7 +377,7 @@ extern(C) int configGet(lua_State* L)
     case "dt_history": lua_pushnumber(L, GlobalConfig.dt_history); break;
     case "dt_loads": lua_pushnumber(L, GlobalConfig.dt_loads); break;
     case "boundary_group_for_loads": lua_pushstring(L, GlobalConfig.boundary_group_for_loads.toStringz); break;
-    case "compute_loads": lua_pushboolean(L, GlobalConfig.compute_loads); break;
+    case "write_loads": lua_pushboolean(L, GlobalConfig.write_loads); break;
     case "compute_run_time_loads": lua_pushboolean(L, GlobalConfig.compute_run_time_loads); break;
     case "run_time_loads_count": lua_pushnumber(L, GlobalConfig.run_time_loads_count); break;
         //

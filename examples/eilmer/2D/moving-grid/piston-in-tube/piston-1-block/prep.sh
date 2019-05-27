@@ -1,4 +1,4 @@
 #!/bin/bash
 
 prep-gas ideal-air.inp ideal-air-gas-model.lua
-e4shared --prep --job=pit2
+e4shared --prep --job=pit1

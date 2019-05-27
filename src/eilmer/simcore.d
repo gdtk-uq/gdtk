@@ -337,12 +337,22 @@ void init_simulation(int tindx, int nextLoadsIndx,
     init_history_cell_files();
     //
     // create the loads directory, maybe
-    if (GlobalConfig.compute_loads && (SimState.current_loads_tindx == 0)) {
+    if (GlobalConfig.write_loads && (SimState.current_loads_tindx == 0)) {
         if (GlobalConfig.is_master_task) { ensure_directory_is_present("loads"); }
         version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
         init_loads_times_file();
     }
     version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
+
+    // For the shock fitting grid motion, we need to assign radial positions for all vertices
+    if (GlobalConfig.grid_motion == GlobalConfig.grid_motion.shock_fitting && GlobalConfig.in_mpi_context == false) {
+        foreach (myblk; localFluidBlocks) {
+            if (myblk.bc[Face.west].type == "inflow_shock_fitting") {
+                auto sblk = cast(SFluidBlock) myblk;
+                assign_radial_dist(sblk);
+            }
+        }
+    }
     // Finally when both gas AND solid domains are setup..
     // Look for a solid-adjacent bc, if there is one,
     // then we can set up the cells and interfaces that
@@ -814,7 +824,8 @@ int integrate_in_time(double target_time_as_requested)
                 GC.collect();
                 GC.minimize();
             }
-            if (GlobalConfig.compute_loads && (SimState.time >= SimState.t_loads) && !SimState.loads_just_written) {
+            if (GlobalConfig.write_loads &&
+                (SimState.time >= SimState.t_loads) && !SimState.loads_just_written) {
                 write_boundary_loads_to_file(SimState.time, SimState.current_loads_tindx);
                 update_loads_times_file(SimState.time, SimState.current_loads_tindx);
                 SimState.loads_just_written = true;
@@ -1258,7 +1269,7 @@ void set_grid_velocities()
                 if (blk.active) { blk.applyPreReconAction(SimState.time, 0, 0); }
             }
             foreach (blk; localFluidBlocksBySize) {
-                if (blk.active) {
+                if (blk.active && blk.bc[Face.west].type == "inflow_shock_fitting") {
                     auto sblk = cast(SFluidBlock) blk;
                     assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
                     shock_fitting_vertex_velocities(sblk, SimState.step, SimState.time);

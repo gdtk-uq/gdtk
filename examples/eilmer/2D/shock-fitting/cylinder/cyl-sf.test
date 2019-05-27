@@ -1,7 +1,5 @@
-# back.test
-#
-# This exercises the SubsonicInBC that forms the upstream boundary for
-# the simulation of the Back et al. nozzle.
+# cyl-sf.test
+# Shock-fitting over a cylinder.
 #
 # PJ, 2015-01-20 adapted from Back nozzle test
 
@@ -74,7 +72,7 @@ test shock-position {Shock position and post-shock conditions.} -body {
     list [expr abs($x_pos - $x_ref) < 3.0e-2] \
     	 [expr abs($p - $p_ref)/$p_ref < 3.0e-2] \
     	 [expr abs($T - $T_ref)/$T_ref < 1.0e-2] \
-    	 [expr abs($Mach - $Mach_ref)/$Mach_ref < 2e-2]
+    	 [expr abs($Mach - $Mach_ref)/$Mach_ref < 2.5e-2]
 } -result {1 1 1 1}
 
 cleanupTests

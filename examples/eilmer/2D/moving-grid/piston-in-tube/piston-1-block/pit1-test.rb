@@ -1,23 +1,23 @@
 #! /usr/bin/env ruby
-# pit2-test.rb
-# Tests for the piston-in-tube example, 2 FluidBlock case.
-# PJ, 2019-05-20
+# pit1-test.rb
+# Tests for the piston-in-tube example, 1 FluidBlock case.
+# PJ, 2019-05-21
 #
 require 'test/unit'
 require 'open3'
 
-class TestPIT2 < Test::Unit::TestCase
+class TestPIT1 < Test::Unit::TestCase
   def test_0_prep
     cmd = "prep-gas ideal-air.inp ideal-air-gas-model.lua"
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
-    cmd = "e4shared --prep --job=pit2"
+    cmd = "e4shared --prep --job=pit1"
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
   end
 
   def test_1_run
-    cmd = "mpirun -np 2 e4mpi --run --job=pit2"
+    cmd = "e4shared --run --job=pit1"
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
     steps = 0
@@ -28,7 +28,7 @@ class TestPIT2 < Test::Unit::TestCase
         steps = items[1].to_i
       end
     end
-    assert((steps - 831).abs < 3, "Failed to take correct number of steps.")
+    assert((steps - 359).abs < 3, "Failed to take correct number of steps.")
   end
 
   def test_2_post

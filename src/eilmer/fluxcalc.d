@@ -154,6 +154,27 @@ void compute_flux_at_left_wall(ref FlowState Rght, ref FVInterface IFace,
     number pR = Rght.gas.p;
     number tmp = (vstar - UbarR)*(g-1.0)/(2.0*sqrt(g))*sqrt(rhoR/pow(pR,1.0/g));
     number pstar = pow(tmp, 2.0*g/(g-1.0));
+    if (pstar > 1.1*pR) {
+        // Shock wave processing. See PJ workbook notes 2010-05-22.
+        number f(number ps)
+        {
+            number xi = ps/pR;
+            number M1sq = 1.0 + (g+1.0)/2.0/g*(xi-1.0);
+            number u1 = sqrt(M1sq)*aR;
+            number u2 = u1*((g-1.0)*M1sq+2.0)/((g+1.0)*M1sq);
+            return vstar - u1 + u2 - vR;
+        }
+        int count = 0;
+        number incr_pstar;
+        do {
+            number f0 = f(pstar);
+            number dp = 0.001 * pstar;
+            number f1 = f(pstar+dp);
+            incr_pstar = -f0*dp/(f1-f0);
+            pstar += incr_pstar;
+            count += 1;
+        } while (fabs(incr_pstar)/pstar > 0.01 && count < 10);
+    }
     // Fill in the fluxes.
     ConservedQuantities F = IFace.F;
     F.mass = 0.0;
@@ -213,6 +234,27 @@ void compute_flux_at_right_wall(ref FlowState Lft, ref FVInterface IFace,
     number pL = Lft.gas.p;
     number tmp = (UbarL - vstar)*(g-1.0)/(2.0*sqrt(g))*sqrt(rhoL/pow(pL,1.0/g));
     number pstar = pow(tmp, 2.0*g/(g-1.0));
+    if (pstar > 1.1*pL) {
+        // Shock wave processing. See PJ workbook notes 2010-05-22.
+        number f(number ps)
+        {
+            number xi = ps/pL;
+            number M1sq = 1.0 + (g+1.0)/2.0/g*(xi-1.0);
+            number u1 = sqrt(M1sq)*aL;
+            number u2 = u1*((g-1.0)*M1sq+2.0)/((g+1.0)*M1sq);
+            return vstar + u1 - u2 - vL;
+        }
+        int count = 0;
+        number incr_pstar;
+        do {
+            number f0 = f(pstar);
+            number dp = 0.001 * pstar;
+            number f1 = f(pstar+dp);
+            incr_pstar = -f0*dp/(f1-f0);
+            pstar += incr_pstar;
+            count += 1;
+        } while (fabs(incr_pstar)/pstar > 0.01 && count < 10);
+    }
     // Fill in the fluxes.
     ConservedQuantities F = IFace.F;
     F.mass = 0.0;

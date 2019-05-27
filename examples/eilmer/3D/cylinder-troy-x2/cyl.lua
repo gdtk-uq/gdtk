@@ -153,6 +153,6 @@ my_max_time = Rc/V_inf * 30
 print("max_time=", my_max_time)
 config.max_time = my_max_time
 config.max_step = 40000
-config.dt_init = 1.0e-10
+config.dt_init = 1.0e-9
 config.cfl_value = 0.5
 config.dt_plot = my_max_time/10

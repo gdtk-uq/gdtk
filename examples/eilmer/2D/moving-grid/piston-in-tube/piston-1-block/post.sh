@@ -2,7 +2,7 @@
 
 # We'll ask for all of the flow field snapshots so
 # that we can make an animation in Paraview.
-e4shared --post --job=pit2 --vtk-xml --tindx-plot=all
+e4shared --post --job=pit1 --vtk-xml --tindx-plot=all
 
 # Run the custom post script to check our energy and mass balances
 e4shared --custom-script --script-file="balanceCheck.lua"
@@ -12,7 +12,7 @@ gnuplot <<EOF
 set term postscript eps enhanced 20
 set output "velocity-time.eps"
 set style line 1 linetype 1 linewidth 3.0 
-set title "Piston trajectory, 2 FluidBlock"
+set title "Piston trajectory, 1 FluidBlock"
 set xlabel "time, ms"
 set ylabel "velocity, m/s"
 set xtic 5.0
@@ -27,7 +27,7 @@ gnuplot <<EOF
 set term postscript eps enhanced 20
 set output "velocity-distance.eps"
 set style line 1 linetype 1 linewidth 3.0 
-set title "Piston trajectory, 2 FluidBlock"
+set title "Piston trajectory, 1 FluidBlock"
 set xlabel "position, m"
 set ylabel "velocity, m/s"
 set xtic 1.0
