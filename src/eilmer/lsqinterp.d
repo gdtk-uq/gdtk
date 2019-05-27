@@ -591,16 +591,20 @@ public:
             string code = "{
             U = cell_cloud[0].fs."~qname~";
             phi = 1.0;
-            foreach (i, f; cell_cloud[0].iface) {
-                number dx = f.pos.x - cell_cloud[0].pos[gtl].x; 
-                number dy = f.pos.y - cell_cloud[0].pos[gtl].y; 
-                number dz = f.pos.z - cell_cloud[0].pos[gtl].z;
-                b = "~gname~"[0] * dx + "~gname~"[1] * dy;
-                if (myConfig.dimensions == 3) { b += "~gname~"[2] * dz; }
-                b = copysign(((fabs(b) + w)), b); 
-                a = (b > 0.0) ? "~qMaxname~" - U: "~qMinname~" - U;
-                s = (a*a + 2.0*b*a + eps)/(a*a + 2.0*b*b + a*b + eps);                    
-                phi = fmin(phi, s);
+            if (fabs("~gname~"[0]) > ESSENTIALLY_ZERO ||
+                fabs("~gname~"[1]) > ESSENTIALLY_ZERO ||
+                fabs("~gname~"[2]) > ESSENTIALLY_ZERO) {
+                foreach (i, f; cell_cloud[0].iface) {
+                    number dx = f.pos.x - cell_cloud[0].pos[gtl].x; 
+                    number dy = f.pos.y - cell_cloud[0].pos[gtl].y; 
+                    number dz = f.pos.z - cell_cloud[0].pos[gtl].z;
+                    b = "~gname~"[0] * dx + "~gname~"[1] * dy;
+                    if (myConfig.dimensions == 3) { b += "~gname~"[2] * dz; }
+                    b = copysign(((fabs(b) + w)), b); 
+                    a = (b > 0.0) ? "~qMaxname~" - U: "~qMinname~" - U;
+                    s = (a*a + 2.0*b*a + eps)/(a*a + 2.0*b*b + a*b + eps);                    
+                    phi = fmin(phi, s);
+                }
             }
             "~limFactorname~" = phi;
             }
