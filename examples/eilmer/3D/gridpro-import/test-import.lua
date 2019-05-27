@@ -38,8 +38,8 @@ print("Number of blocks constructed: ", #blks)
 
 applyGridproConnectivity(gproConn, blks)
 
-bcMap = {SLIP_WALL=WallBC_WithSlip:new{},
-   	 FIXED_T=WallBC_NoSlip_FixedT:new{Twall=30000},
+bcMap = {WALL_SLIP=WallBC_WithSlip:new{},
+   	 WALL_FIXED_T=WallBC_NoSlip_FixedT:new{Twall=30000},
    	 INFLOW_SUPERSONIC=InFlowBC_Supersonic:new{flowState=inflow},
    	 OUTFLOW_SIMPLE=OutFlowBC_Simple:new{}}
 
