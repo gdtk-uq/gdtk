@@ -10,15 +10,20 @@ module(..., package.seeall)
 -- Keep the following consistent with ws_ptymap.eilmer
 -- The master copy of this is in examples/eilmer/3D/gridpro-import
 gproBCMap = {
-  [4] = "SLIP_WALL",
-  [5] = "ADABIATIC",
-  [6] = "FIXED_T", 
+  [4] = "WALL_SLIP",
+  [5] = "WALL_ADIABATIC",
+  [6] = "WALL_FIXED_T", 
   [7] = "INFLOW_SUPERSONIC",
   [8] = "INFLOW_SUBSONIC",
   [9] = "INFLOW_SHOCKFITTING",
  [10] = "OUTFLOW_SIMPLE",
  [11] = "OUTFLOW_SUBSONIC",
- [12] = "USER_DEFINED"
+ [12] = "OUTFLOW_FIXED_P",
+ [13] = "USER_DEFINED1",
+ [14] = "USER_DEFINED2",
+ [15] = "USER_DEFINED3",
+ [16] = "USER_DEFINED4",
+ [17] = "USER_DEFINED5"
 }
 
 local function split_string(str)
