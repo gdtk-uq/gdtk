@@ -720,6 +720,8 @@ int integrate_in_time(double target_time_as_requested)
             //
             // 2.0 Attempt a time step.
             // 2.1 Chemistry 1/2 step (if appropriate). 
+            if(GlobalConfig.strangSplitting == StrangSplittingMode.half_R_full_T_half_R && GlobalConfig.with_local_time_stepping)
+                assert(0, "Oops, strangSplitting.half_R_full_T_half_R and LTS aren't currently compatible");
             if (GlobalConfig.reacting && 
                 (GlobalConfig.strangSplitting == StrangSplittingMode.half_R_full_T_half_R) &&
                 (SimState.time > GlobalConfig.reaction_time_delay)) {
@@ -1241,6 +1243,8 @@ void k_omega_set_mu_and_k()
 void chemistry_step(double dt)
 {
     version (gpu_chem) {
+        if (GlobalConfig.with_local_time_stepping)
+            assert(0, "Oops, GPU accelerated chemistry and LTS aren't currently compatible.");
         GlobalConfig.gpuChem.thermochemical_increment(dt);
     } else {
         // without GPU accelerator
