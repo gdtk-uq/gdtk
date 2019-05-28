@@ -55,6 +55,7 @@ blk2 = FluidBlockArray{grid=grid2, nib=4, njb=4,
 identifyBlockConnections()
 
 -- Do a little more setting of global data.
+mpiTasks = mpiDistributeBlocks{ntasks=3}
 config.max_time = 5.0e-3  -- seconds
 config.max_step = 6000
 config.dt_init = 1.0e-6
