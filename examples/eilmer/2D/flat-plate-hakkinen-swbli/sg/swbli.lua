@@ -79,6 +79,7 @@ blk2 = FluidBlockArray{grid=grid2, initialState=inflow, nib=2, njb=2,
 							  T_outside=T_inf}}}
 identifyBlockConnections()
 
+mpiTasks = mpiDistributeBlocks{ntasks=4}
 config.gasdynamic_update_scheme = "classic-rk3"
 config.flux_calculator = 'adaptive'
 config.viscous = true
