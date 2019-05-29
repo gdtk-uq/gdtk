@@ -607,22 +607,24 @@ end
 WallBC_WithSlip = WallBC_WithSlip1
 
 
-WallBC_NoSlip_FixedT = BoundaryCondition:new()
-WallBC_NoSlip_FixedT.type = "wall_no_slip_fixed_t"
-function WallBC_NoSlip_FixedT:new(o)
+WallBC_NoSlip_FixedT0 = BoundaryCondition:new()
+WallBC_NoSlip_FixedT0.type = "wall_no_slip_fixed_t"
+function WallBC_NoSlip_FixedT0:new(o)
    local flag = type(self)=='table' and self.type=='wall_no_slip_fixed_t'
    if not flag then
-      error("Make sure that you are using WallBC_NoSlip_FixedT:new{}"..
-               " and not WallBC_NoSlip_FixedT.new{}", 2)
+      error("Make sure that you are using WallBC_NoSlip_FixedT0:new{}"..
+               " and not WallBC_NoSlip_FixedT0.new{}", 2)
    end
    o = o or {}
    flag = checkAllowedNames(o, {"Twall", "wall_function", 
                                 "catalytic_type", "wall_massf_composition",
                                 "label", "group", "is_design_surface", "num_cntrl_pts"})
    if not flag then
-      error("Invalid name for item supplied to WallBC_NoSlip_FixedT constructor.", 2)
+      error("Invalid name for item supplied to WallBC_NoSlip_FixedT0 constructor.", 2)
    end
    o = BoundaryCondition.new(self, o)
+   o.ghost_cell_data_available = true
+   o.is_wall_with_viscous_effects = true
    o.preReconAction = { InternalCopyThenReflect:new() }
    o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new(),
 					   FixedT:new{Twall=o.Twall},
@@ -644,6 +646,48 @@ function WallBC_NoSlip_FixedT:new(o)
    o.is_configured = true
    return o
 end
+
+WallBC_NoSlip_FixedT1 = BoundaryCondition:new()
+WallBC_NoSlip_FixedT1.type = "wall_no_slip_fixed_t"
+function WallBC_NoSlip_FixedT1:new(o)
+   local flag = type(self)=='table' and self.type=='wall_no_slip_fixed_t'
+   if not flag then
+      error("Make sure that you are using WallBC_NoSlip_FixedT1:new{}"..
+               " and not WallBC_NoSlip_FixedT1.new{}", 2)
+   end
+   o = o or {}
+   flag = checkAllowedNames(o, {"Twall", "wall_function", 
+                                "catalytic_type", "wall_massf_composition",
+                                "label", "group", "is_design_surface", "num_cntrl_pts"})
+   if not flag then
+      error("Invalid name for item supplied to WallBC_NoSlip_FixedT1 constructor.", 2)
+   end
+   o = BoundaryCondition.new(self, o)
+   o.ghost_cell_data_available = false
+   o.is_wall_with_viscous_effects = true
+   o.preReconAction = {}
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new(),
+					   FixedT:new{Twall=o.Twall},
+					   UpdateThermoTransCoeffs:new() }
+   if config.turbulence_model == "k_omega" then
+      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallKOmega:new()
+      if o.wall_function then
+	 -- Only makes sense to add a wall function if the k-omega model is active.
+	 o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = 
+	    WallFunctionInterfaceEffect:new{thermal_condition='FIXED_T'}
+	 o.preSpatialDerivActionAtBndryCells = { WallFunctionCellEffect:new() }
+      end
+   end
+   if o.catalytic_type and o.catalytic_type ~= "none" then
+      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
+	 FixedComposition:new{wall_massf_composition=
+                                 convertSpeciesTableToArray(o.wall_massf_composition)}
+   end
+   o.is_configured = true
+   return o
+end
+
+WallBC_NoSlip_FixedT = WallBC_NoSlip_FixedT1
 
 WallBC_ThermionicEmission = BoundaryCondition:new()
 WallBC_ThermionicEmission.type = "wall_thermionic_emission"
@@ -688,22 +732,24 @@ function WallBC_ThermionicEmission:new(o)
    return o
 end
 
-WallBC_NoSlip_Adiabatic = BoundaryCondition:new()
-WallBC_NoSlip_Adiabatic.type = "wall_no_slip_adiabatic"
-function WallBC_NoSlip_Adiabatic:new(o)
+WallBC_NoSlip_Adiabatic0 = BoundaryCondition:new()
+WallBC_NoSlip_Adiabatic0.type = "wall_no_slip_adiabatic"
+function WallBC_NoSlip_Adiabatic0:new(o)
    local flag = type(self)=='table' and self.type=='wall_no_slip_adiabatic'
    if not flag then
-      error("Make sure that you are using WallBC_NoSlip_Adiabatic:new{}"..
-               " and not WallBC_NoSlip_Adiabatic.new{}", 2)
+      error("Make sure that you are using WallBC_NoSlip_Adiabatic0:new{}"..
+               " and not WallBC_NoSlip_Adiabatic0.new{}", 2)
    end
    o = o or {}
    flag = checkAllowedNames(o, {"wall_function",
                                 "catalytic_type", "wall_massf_composition",
                                 "label", "group", "is_design_surface", "num_cntrl_pts"})
    if not flag then
-      error("Invalid name for item supplied to WallBC_NoSlip_Adiabatic constructor.", 2)
+      error("Invalid name for item supplied to WallBC_NoSlip_Adiabatic0 constructor.", 2)
    end
    o = BoundaryCondition.new(self, o)
+   o.ghost_cell_data_available = true
+   o.is_wall_with_viscous_effects = true
    o.preReconAction = { InternalCopyThenReflect:new() }
    o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new() }
    if config.turbulence_model == "k_omega" then
@@ -723,6 +769,46 @@ function WallBC_NoSlip_Adiabatic:new(o)
    o.is_configured = true
    return o
 end
+
+WallBC_NoSlip_Adiabatic1 = BoundaryCondition:new()
+WallBC_NoSlip_Adiabatic1.type = "wall_no_slip_adiabatic"
+function WallBC_NoSlip_Adiabatic1:new(o)
+   local flag = type(self)=='table' and self.type=='wall_no_slip_adiabatic'
+   if not flag then
+      error("Make sure that you are using WallBC_NoSlip_Adiabatic1:new{}"..
+               " and not WallBC_NoSlip_Adiabatic1.new{}", 2)
+   end
+   o = o or {}
+   flag = checkAllowedNames(o, {"wall_function",
+                                "catalytic_type", "wall_massf_composition",
+                                "label", "group", "is_design_surface", "num_cntrl_pts"})
+   if not flag then
+      error("Invalid name for item supplied to WallBC_NoSlip_Adiabatic1 constructor.", 2)
+   end
+   o = BoundaryCondition.new(self, o)
+   o.ghost_cell_data_available = false
+   o.is_wall_with_viscous_effects = true
+   o.preReconAction = {}
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new() }
+   if config.turbulence_model == "k_omega" then
+      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallKOmega:new()
+      if o.wall_function then
+	 -- Only makes sense to add a wall function if the k-omega model is active.
+	 o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = 
+	    WallFunctionInterfaceEffect:new{thermal_condition='ADIABATIC'}
+	 o.preSpatialDerivActionAtBndryCells = { WallFunctionCellEffect:new() }
+      end
+   end
+   if o.catalytic_type and o.catalytic_type ~= "none" then
+      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
+	 FixedComposition:new{wall_massf_composition=
+                                 convertSpeciesTableToArray(o.wall_massf_composition)}
+   end
+   o.is_configured = true
+   return o
+end
+
+WallBC_NoSlip_Adiabatic = WallBC_NoSlip_Adiabatic1
 
 WallBC_TranslatingSurface_FixedT = BoundaryCondition:new()
 WallBC_TranslatingSurface_FixedT.type = "wall_translating_surface_fixed_t"
