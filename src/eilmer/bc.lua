@@ -38,7 +38,8 @@ function convertSpeciesTableToArray(massfTable)
    if math.abs(massfSum - 1) > MASSF_ERROR_TOL then
       errMsg = "The given mass faction values to do sum to 1.0\n"
       errMsg = errMsg .. string.format("The sum value is: %e\n", massfSum)
-      errMsg = errMsg .. string.format("The error is larger than the tolerance: %e\n", MASSF_ERR_TOL)
+      errMsg = errMsg .. string.format("The error is larger than the tolerance: %e\n",
+                                       MASSF_ERR_TOL)
       error(errMsg)
    end
    -- otherwise, perform a scaling
@@ -175,7 +176,8 @@ function MappedCellCopy:tojson()
    str = str .. string.format('"c0": [%.18e, %.18e, %.18e], ', self.c0.x, self.c0.y, self.c0.z)
    str = str .. string.format('"n": [%.18e, %.18e, %.18e], ', self.n.x, self.n.y, self.n.z)
    str = str .. string.format('"alpha": %.18e, ', self.alpha)
-   str = str .. string.format('"delta": [%.18e, %.18e, %.18e], ', self.delta.x, self.delta.y, self.delta.z)
+   str = str .. string.format('"delta": [%.18e, %.18e, %.18e], ',
+                              self.delta.x, self.delta.y, self.delta.z)
    str = str .. string.format('"list_mapped_cells": %s, ',
 			      tostring(self.list_mapped_cells))
    str = str .. string.format('"reorient_vector_quantities": %s, ',
@@ -478,13 +480,16 @@ function BoundaryCondition:tojson()
    str = str .. string.format('"label": "%s", \n', self.label)
    str = str .. string.format('        "type": "%s", \n', self.type)
    str = str .. string.format('        "group": "%s", \n', self.group)
-   str = str .. string.format('        "is_wall_with_viscous_effects": %s, \n', tostring(self.is_wall_with_viscous_effects))
+   str = str .. string.format('        "is_wall_with_viscous_effects": %s, \n',
+                              tostring(self.is_wall_with_viscous_effects))
    str = str .. string.format('        "ghost_cell_data_available": %s, \n',
 			      tostring(self.ghost_cell_data_available))
    str = str .. string.format('        "convective_flux_computed_in_bc": %s, \n',
 			      tostring(self.convective_flux_computed_in_bc))
-   str = str .. string.format('        "is_design_surface": %s, \n', tostring(self.is_design_surface))
-   str = str .. string.format('        "num_cntrl_pts": %s, \n', tostring(self.num_cntrl_pts))
+   str = str .. string.format('        "is_design_surface": %s, \n',
+                              tostring(self.is_design_surface))
+   str = str .. string.format('        "num_cntrl_pts": %s, \n',
+                              tostring(self.num_cntrl_pts))
    str = str .. '        "pre_recon_action": [\n'
    for i,effect in ipairs(self.preReconAction) do
       str = str .. effect:tojson()
@@ -525,7 +530,8 @@ WallBC_WithSlip0.type = "wall_with_slip"
 function WallBC_WithSlip0:new(o)
    local flag = type(self)=='table' and self.type=='wall_with_slip'
    if not flag then
-      error("Make sure that you are using WallBC_WithSlip0:new{} and not WallBC_WithSlip0.new{}", 2)
+      error("Make sure that you are using WallBC_WithSlip0:new{}"..
+               " and not WallBC_WithSlip0.new{}", 2)
    end
    o = o or {}
    flag = checkAllowedNames(o, {"label", "group", "is_design_surface", "num_cntrl_pts"})
@@ -550,7 +556,8 @@ WallBC_WithSlip1.type = "wall_with_slip"
 function WallBC_WithSlip1:new(o)
    local flag = type(self)=='table' and self.type=='wall_with_slip'
    if not flag then
-      error("Make sure that you are using WallBC_WithSlip1:new{} and not WallBC_WithSlip1.new{}", 2)
+      error("Make sure that you are using WallBC_WithSlip1:new{}"..
+               " and not WallBC_WithSlip1.new{}", 2)
    end
    o = o or {}
    flag = checkAllowedNames(o, {"label", "group", "is_design_surface", "num_cntrl_pts"})
@@ -575,7 +582,8 @@ WallBC_WithSlip2.type = "wall_with_slip2"
 function WallBC_WithSlip2:new(o)
    local flag = type(self)=='table' and self.type=='wall_with_slip2'
    if not flag then
-      error("Make sure that you are using WallBC_WithSlip2:new{} and not WallBC_WithSlip2.new{}", 2)
+      error("Make sure that you are using WallBC_WithSlip2:new{}"..
+               " and not WallBC_WithSlip2.new{}", 2)
    end
    o = o or {}
    flag = checkAllowedNames(o, {"label", "group", "is_design_surface", "num_cntrl_pts"})
@@ -604,7 +612,8 @@ WallBC_NoSlip_FixedT.type = "wall_no_slip_fixed_t"
 function WallBC_NoSlip_FixedT:new(o)
    local flag = type(self)=='table' and self.type=='wall_no_slip_fixed_t'
    if not flag then
-      error("Make sure that you are using WallBC_NoSlip_FixedT:new{} and not WallBC_NoSlip_FixedT.new{}", 2)
+      error("Make sure that you are using WallBC_NoSlip_FixedT:new{}"..
+               " and not WallBC_NoSlip_FixedT.new{}", 2)
    end
    o = o or {}
    flag = checkAllowedNames(o, {"Twall", "wall_function", 
@@ -629,7 +638,8 @@ function WallBC_NoSlip_FixedT:new(o)
    end
    if o.catalytic_type and o.catalytic_type ~= "none" then
       o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
-	 FixedComposition:new{wall_massf_composition=convertSpeciesTableToArray(o.wall_massf_composition)}
+	 FixedComposition:new{wall_massf_composition=
+                                 convertSpeciesTableToArray(o.wall_massf_composition)}
    end
    o.is_configured = true
    return o
@@ -640,7 +650,8 @@ WallBC_ThermionicEmission.type = "wall_thermionic_emission"
 function WallBC_ThermionicEmission:new(o)
    local flag = type(self)=='table' and self.type=='wall_thermionic_emission'
    if not flag then
-      error("Make sure that you are using WallBC_ThermionicEmission:new{} and not WallBC_ThermionicEmission.new{}", 2)
+      error("Make sure that you are using WallBC_ThermionicEmission:new{}"..
+               " and not WallBC_ThermionicEmission.new{}", 2)
    end
    o = o or {}
    flag = checkAllowedNames(o, {"emissivity", "Ar", "phi", "ThermionicEmissionActive",
@@ -657,7 +668,8 @@ function WallBC_ThermionicEmission:new(o)
                   UpdateThermoTransCoeffs:new() }
    if o.catalytic_type and o.catalytic_type ~= "none" then
       o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
-    FixedComposition:new{wall_massf_composition=convertSpeciesTableToArray(o.wall_massf_composition)}
+         FixedComposition:new{wall_massf_composition=
+                                 convertSpeciesTableToArray(o.wall_massf_composition)}
    end
    if o.ThermionicEmissionActive == 0 then
       print("Thermionic Emission not activated. Running radiation equilibrium only");
@@ -665,9 +677,12 @@ function WallBC_ThermionicEmission:new(o)
       print("Thermionic Emission activated");
    end
    -- Added update for wall temperature following the computation of spatial derivaitives
-   o.postDiffFluxAction = {EnergyBalanceThermionic:new{emissivity=o.emissivity, 
-      Ar=o.Ar, phi=o.phi,ThermionicEmissionActive=o.ThermionicEmissionActive,
-      Twall_iterations=o.Twall_iterations, Twall_subiterations=o.Twall_subiterations}}
+   o.postDiffFluxAction = {
+      EnergyBalanceThermionic:new{emissivity=o.emissivity, Ar=o.Ar, phi=o.phi,
+                                  ThermionicEmissionActive=o.ThermionicEmissionActive,
+                                  Twall_iterations=o.Twall_iterations,
+                                  Twall_subiterations=o.Twall_subiterations}
+   }
 
    o.is_configured = true
    return o
@@ -678,7 +693,8 @@ WallBC_NoSlip_Adiabatic.type = "wall_no_slip_adiabatic"
 function WallBC_NoSlip_Adiabatic:new(o)
    local flag = type(self)=='table' and self.type=='wall_no_slip_adiabatic'
    if not flag then
-      error("Make sure that you are using WallBC_NoSlip_Adiabatic:new{} and not WallBC_NoSlip_Adiabatic.new{}", 2)
+      error("Make sure that you are using WallBC_NoSlip_Adiabatic:new{}"..
+               " and not WallBC_NoSlip_Adiabatic.new{}", 2)
    end
    o = o or {}
    flag = checkAllowedNames(o, {"wall_function",
@@ -701,7 +717,8 @@ function WallBC_NoSlip_Adiabatic:new(o)
    end
    if o.catalytic_type and o.catalytic_type ~= "none" then
       o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
-	 FixedComposition:new{wall_massf_composition=convertSpeciesTableToArray(o.wall_massf_composition)}
+	 FixedComposition:new{wall_massf_composition=
+                                 convertSpeciesTableToArray(o.wall_massf_composition)}
    end
    o.is_configured = true
    return o
@@ -712,10 +729,12 @@ WallBC_TranslatingSurface_FixedT.type = "wall_translating_surface_fixed_t"
 function WallBC_TranslatingSurface_FixedT:new(o)
    local flag = type(self)=='table' and self.type=='wall_translating_surface_fixed_t'
    if not flag then
-      error("Make sure that you are using WallBC_TranslatingSurface_FixedT:new{} and not WallBC_TranslatingSurface_FixedT.new{}", 2)
+      error("Make sure that you are using WallBC_TranslatingSurface_FixedT:new{}"..
+               " and not WallBC_TranslatingSurface_FixedT.new{}", 2)
    end
    o = o or {}
-   flag = checkAllowedNames(o, {"v_trans", "Twall", "label", "group", "is_design_surface", "num_cntrl_pts"})
+   flag = checkAllowedNames(o, {"v_trans", "Twall", "label", "group", "is_design_surface",
+                                "num_cntrl_pts"})
    if not flag then
       error("Invalid name for item supplied to WallBC_TranslatingSurface_FixedT constructor.", 2)
    end
@@ -747,7 +766,8 @@ WallBC_TranslatingSurface_Adiabatic.type = "wall_translating_surface_adiabatic"
 function WallBC_TranslatingSurface_Adiabatic:new(o)
    local flag = type(self)=='table' and self.type=='wall_translating_surface_adiabatic'
    if not flag then
-      error("Make sure that you are using WallBC_TranslatingSurface_Adiabatic:new{} and not WallBC_TranslatingSurface_Adiabatic.new{}", 2)
+      error("Make sure that you are using WallBC_TranslatingSurface_Adiabatic:new{}"..
+               " and not WallBC_TranslatingSurface_Adiabatic.new{}", 2)
    end
    o = o or {}
    flag = checkAllowedNames(o, {"v_trans", "label", "group", "is_design_surface", "num_cntrl_pts"})
@@ -780,10 +800,12 @@ WallBC_RotatingSurface_FixedT.type = "wall_rotating_surface_fixed_t"
 function WallBC_RotatingSurface_FixedT:new(o)
    local flag = type(self)=='table' and self.type=='wall_rotating_surface_fixed_t'
    if not flag then
-      error("Make sure that you are using WallBC_RotatingSurface_FixedT:new{} and not WallBC_RotatingSurface_FixedT.new{}", 2)
+      error("Make sure that you are using WallBC_RotatingSurface_FixedT:new{}"..
+               " and not WallBC_RotatingSurface_FixedT.new{}", 2)
    end
    o = o or {}
-   flag = checkAllowedNames(o, {"r_omega", "centre", "Twall", "label", "group", "is_design_surface", "num_cntrl_pts"})
+   flag = checkAllowedNames(o, {"r_omega", "centre", "Twall", "label", "group",
+                                "is_design_surface", "num_cntrl_pts"})
    if not flag then
       error("Invalid name for item supplied to WallBC_RotatingSurface_FixedT constructor.", 2)
    end
@@ -824,10 +846,12 @@ WallBC_RotatingSurface_Adiabatic.type = "wall_rotating_surface_adiabatic"
 function WallBC_RotatingSurface_Adiabatic:new(o)
    local flag = type(self)=='table' and self.type=='wall_rotating_surface_adiabatic'
    if not flag then
-      error("Make sure that you are using WallBC_RotatingSurface_Adiabatic:new{} and not WallBC_RotatingSurface_Adiabatic.new{}", 2)
+      error("Make sure that you are using WallBC_RotatingSurface_Adiabatic:new{}"..
+               " and not WallBC_RotatingSurface_Adiabatic.new{}", 2)
    end
    o = o or {}
-   flag = checkAllowedNames(o, {"r_omega", "centre", "label", "group", "is_design_surface", "num_cntrl_pts"})
+   flag = checkAllowedNames(o, {"r_omega", "centre", "label", "group",
+                                "is_design_surface", "num_cntrl_pts"})
    if not flag then
       error("Invalid name for item supplied to WallBC_RotatingSurface_Adiabatic constructor.", 2)
    end
@@ -866,7 +890,8 @@ InFlowBC_Supersonic.type = "inflow_supersonic"
 function InFlowBC_Supersonic:new(o)
    local flag = type(self)=='table' and self.type=='inflow_supersonic'
    if not flag then
-      error("Make sure that you are using InFlowBC_Supersonic:new{} and not InFlowBC_Supersonic.new{}", 2)
+      error("Make sure that you are using InFlowBC_Supersonic:new{}"..
+               " and not InFlowBC_Supersonic.new{}", 2)
    end
    o = o or {}
    flag = checkAllowedNames(o, {"flowState", "flowCondition", "label", "group"})
@@ -887,7 +912,8 @@ InFlowBC_StaticProfile.type = "inflow_static_profile"
 function InFlowBC_StaticProfile:new(o)
    local flag = type(self)=='table' and self.type=='inflow_static_profile'
    if not flag then
-      error("Make sure that you are using InFlowBC_StaticProfile:new{} and not InFlowBC_StaticProfile.new{}", 2)
+      error("Make sure that you are using InFlowBC_StaticProfile:new{}"..
+               " and not InFlowBC_StaticProfile.new{}", 2)
    end
    o = o or {}
    flag = checkAllowedNames(o, {"filename", "fileName", "match", "label", "group"})
@@ -899,7 +925,9 @@ function InFlowBC_StaticProfile:new(o)
    o.match = o.match or "xyz-to-xyz"
    o.filename = o.filename or o.fileName
    o.preReconAction = { FlowStateCopyFromProfile:new{filename=o.filename, match=o.match} }
-   o.preSpatialDerivActionAtBndryFaces = { FlowStateCopyFromProfileToInterface:new{filename=o.filename, match=o.match} }
+   o.preSpatialDerivActionAtBndryFaces = {
+      FlowStateCopyFromProfileToInterface:new{filename=o.filename, match=o.match}
+   }
    o.is_configured = true      
    return o
 end
@@ -909,7 +937,8 @@ InFlowBC_ConstFlux.type = "inflow_const_flux"
 function InFlowBC_ConstFlux:new(o)
    local flag = type(self)=='table' and self.type=='inflow_const_flux'
    if not flag then
-      error("Make sure that you are using InFlowBC_ConstFlux:new{} and not InFlowBC_ConstFlux.new{}", 2)
+      error("Make sure that you are using InFlowBC_ConstFlux:new{}"..
+               " and not InFlowBC_ConstFlux.new{}", 2)
    end
    o = o or {}
    flag = checkAllowedNames(o, {"flowState", "flowCondition", "label", "group"})
@@ -932,7 +961,8 @@ InFlowBC_ShockFitting.type = "inflow_shock_fitting"
 function InFlowBC_ShockFitting:new(o)
    local flag = type(self)=='table' and self.type=='inflow_shock_fitting'
    if not flag then
-      error("Make sure that you are using InFlowBC_ShockFitting:new{} and not InFlowBC_ShockFitting.new{}", 2)
+      error("Make sure that you are using InFlowBC_ShockFitting:new{}"..
+               " and not InFlowBC_ShockFitting.new{}", 2)
    end
    o = o or {}
    flag = checkAllowedNames(o, {"flowState", "flowCondition", "label", "group"})
@@ -955,7 +985,8 @@ InFlowBC_FromStagnation.type = "inflow_from_stagnation_condition"
 function InFlowBC_FromStagnation:new(o)
    local flag = type(self)=='table' and self.type=='inflow_from_stagnation_condition'
    if not flag then
-      error("Make sure that you are using InFlowBC_FromStagnation:new{} and not InFlowBC_FromStagnation.new{}", 2)
+      error("Make sure that you are using InFlowBC_FromStagnation:new{}"..
+               " and not InFlowBC_FromStagnation.new{}", 2)
    end
    o = o or {}
    flag = checkAllowedNames(o, {"stagnationState", "stagCondition", "fileName", "filename",
@@ -988,7 +1019,8 @@ OutFlowBC_SimpleExtrapolate.type = "outflow_simple_extrapolate"
 function OutFlowBC_SimpleExtrapolate:new(o)
    local flag = type(self)=='table' and self.type=='outflow_simple_extrapolate'
    if not flag then
-      error("Make sure that you are using OutFlowBC_SimpleExtrapolate:new{} and not OutFlowBC_SimpleExtrapolate.new{}", 2)
+      error("Make sure that you are using OutFlowBC_SimpleExtrapolate:new{}"..
+               " and not OutFlowBC_SimpleExtrapolate.new{}", 2)
    end
    o = o or {}
    flag = checkAllowedNames(o, {"xOrder", "label", "group"})
@@ -1008,7 +1040,8 @@ OutFlowBC_SimpleFlux.type = "outflow_simple_flux"
 function OutFlowBC_SimpleFlux:new(o)
    local flag = type(self)=='table' and self.type=='outflow_simple_flux'
    if not flag then
-      error("Make sure that you are using OutFlowBC_SimpleFlux:new{} and not OutFlowBC_SimpleFlux.new{}", 2)
+      error("Make sure that you are using OutFlowBC_SimpleFlux:new{}"..
+               " and not OutFlowBC_SimpleFlux.new{}", 2)
    end
    o = o or {}
    flag = checkAllowedNames(o, {"label", "group"})
@@ -1033,7 +1066,8 @@ OutFlowBC_FixedP.type = "outflow_fixed_p"
 function OutFlowBC_FixedP:new(o)
    local flag = type(self)=='table' and self.type=='outflow_fixed_p'
    if not flag then
-      error("Make sure that you are using OutFlowBC_FixedP:new{} and not OutFlowBC_FixedP.new{}", 2)
+      error("Make sure that you are using OutFlowBC_FixedP:new{}"..
+               " and not OutFlowBC_FixedP.new{}", 2)
    end
    o = o or {}
    flag = checkAllowedNames(o, {"xOrder", "p_outside", "label", "group"})
@@ -1054,7 +1088,8 @@ OutFlowBC_FixedPT.type = "outflow_fixed_p_and_t"
 function OutFlowBC_FixedPT:new(o)
    local flag = type(self)=='table' and self.type=='outflow_fixed_p_and_t'
    if not flag then
-      error("Make sure that you are using OutFlowBC_FixedPT:new{} and not OutFlowBC_FixedPT.new{}", 2)
+      error("Make sure that you are using OutFlowBC_FixedPT:new{}"..
+               " and not OutFlowBC_FixedPT.new{}", 2)
    end
    o = o or {}
    flag = checkAllowedNames(o, {"xOrder", "p_outside", "T_outside",
@@ -1076,7 +1111,8 @@ ExchangeBC_FullFace.type = "exchange_over_full_face"
 function ExchangeBC_FullFace:new(o)
    local flag = type(self)=='table' and self.type=='exchange_over_full_face'
    if not flag then
-      error("Make sure that you are using ExchangeBC_FullFace:new{} and not ExchangeBC_FullFace.new{}", 2)
+      error("Make sure that you are using ExchangeBC_FullFace:new{}"..
+               " and not ExchangeBC_FullFace.new{}", 2)
    end
    o = o or {}
    flag = checkAllowedNames(o, {"otherBlock", "otherFace", "orientation",
@@ -1102,7 +1138,8 @@ ExchangeBC_MappedCell.type = "exchange_using_mapped_cells"
 function ExchangeBC_MappedCell:new(o)
    local flag = type(self)=='table' and self.type=='exchange_using_mapped_cells'
    if not flag then
-      error("Make sure that you are using ExchangeBC_MappedCell:new{} and not ExchangeBC_MappedCell.new{}", 2)
+      error("Make sure that you are using ExchangeBC_MappedCell:new{}"..
+               " and not ExchangeBC_MappedCell.new{}", 2)
    end
    o = o or {}
    flag = checkAllowedNames(o, {"cell_mapping_from_file", "fileName", "filename",
@@ -1133,17 +1170,22 @@ UserDefinedGhostCellBC.type = "user_defined_ghost_cell"
 function UserDefinedGhostCellBC:new(o)
    local flag = type(self)=='table' and self.type=='user_defined_ghost_cell'
    if not flag then
-      error("Make sure that you are using UserDefinedGhostCellBC:new{} and not UserDefinedGhostCellBC.new{}", 2)
+      error("Make sure that you are using UserDefinedGhostCellBC:new{}"..
+               " and not UserDefinedGhostCellBC.new{}", 2)
    end
    o = o or {}
-   flag = checkAllowedNames(o, {"fileName", "filename", "label", "group", "is_design_surface", "num_cntrl_pts"})
+   flag = checkAllowedNames(o, {"fileName", "filename", "label", "group",
+                                "is_design_surface", "num_cntrl_pts"})
    if not flag then
       error("Invalid name for item supplied to UserDefinedGhostCellBC constructor.", 2)
    end
    o = BoundaryCondition.new(self, o)
    o.fileName = o.fileName or o.filename
    o.preReconAction = { UserDefinedGhostCell:new{fileName=o.fileName} }
-   o.preSpatialDerivActionAtBndryFaces = { UserDefinedInterface:new{fileName=o.fileName}, UpdateThermoTransCoeffs:new() } 
+   o.preSpatialDerivActionAtBndryFaces = {
+      UserDefinedInterface:new{fileName=o.fileName},
+      UpdateThermoTransCoeffs:new()
+   } 
    o.is_configured = true
    return o
 end
@@ -1155,7 +1197,8 @@ UserDefinedFluxBC.type = "user_defined_flux"
 function UserDefinedFluxBC:new(o)
    local flag = type(self)=='table' and self.type=='user_defined_flux'
    if not flag then
-      error("Make sure that you are using UserDefinedFluxBC:new{} and not UserDefinedFluxBC.new{}", 2)
+      error("Make sure that you are using UserDefinedFluxBC:new{}"..
+               " and not UserDefinedFluxBC.new{}", 2)
    end
    o = o or {}
    flag = checkAllowedNames(o, {"fileName", "filename", "funcName", "funcname",
@@ -1179,7 +1222,8 @@ WallBC_AdjacentToSolid.type = "wall_adjacent_to_solid"
 function WallBC_AdjacentToSolid:new(o)
    local flag = type(self)=='table' and self.type=='wall_adjacent_to_solid'
    if not flag then
-      error("Make sure that you are using WallBC_AdjacentToSolid:new{} and not WallBC_AdjacentToSolid.new{}", 2)
+      error("Make sure that you are using WallBC_AdjacentToSolid:new{}"..
+               " and not WallBC_AdjacentToSolid.new{}", 2)
    end
    o = o or {}
    flag = checkAllowedNames(o, {"otherBlock", "otherFace", "orientation",
@@ -1308,7 +1352,8 @@ function SolidBoundaryCondition:tojson()
    str = str .. string.format('"label": "%s", \n', self.label)
    str = str .. string.format('        "type": "%s", \n', self.type)
    str = str .. string.format('        "group": "%s", \n', self.group)
-   str = str .. string.format('        "sets_flux_directly": %s,\n', tostring(self.setsFluxDirectly))
+   str = str .. string.format('        "sets_flux_directly": %s,\n',
+                              tostring(self.setsFluxDirectly))
    str = str .. '        "pre_spatial_deriv_action": [\n'
    for i,effect in ipairs(self.preSpatialDerivAction) do
       str = str .. effect:tojson()
