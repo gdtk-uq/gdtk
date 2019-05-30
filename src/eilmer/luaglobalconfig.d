@@ -191,6 +191,7 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_int_field("print_count", "print_count"));
     mixin(get_int_field("control_count", "control_count"));
     mixin(get_int_field("verbosity_level", "verbosity_level"));
+    mixin(get_double_field("start_time", "start_time"));
     mixin(get_double_field("max_time", "max_time"));
     mixin(get_double_field("dt_init", "dt_init"));
     mixin(get_double_field("dt_max", "dt_max"));
@@ -358,6 +359,7 @@ extern(C) int configGet(lua_State* L)
     case "print_count": lua_pushnumber(L, GlobalConfig.print_count); break;
     case "control_count": lua_pushnumber(L, GlobalConfig.control_count); break;
     case "verbosity_level": lua_pushnumber(L, GlobalConfig.verbosity_level); break;
+    case "start_time": lua_pushnumber(L, GlobalConfig.start_time); break;
     case "max_time": lua_pushnumber(L, GlobalConfig.max_time); break;
     case "dt_init": lua_pushnumber(L, GlobalConfig.dt_init); break;
     case "dt_max": lua_pushnumber(L, GlobalConfig.dt_max); break;
