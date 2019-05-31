@@ -35,6 +35,7 @@ GEOM_D_FILES := \
 	$(GEOM_DIR)/volume/slabvolume.d \
 	$(GEOM_DIR)/volume/wedgevolume.d \
 	$(GEOM_DIR)/volume/sweptsurfacevolume.d \
+	$(GEOM_DIR)/volume/twosurfacevolume.d \
 	$(GEOM_DIR)/volume/meshvolume.d \
 	$(GEOM_DIR)/volume/subrangedvolume.d \
 	$(GEOM_DIR)/grid/package.d \
