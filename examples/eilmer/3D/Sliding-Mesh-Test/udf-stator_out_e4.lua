@@ -19,16 +19,7 @@
 
 require 'lua_helper'  -- loads lua helper functions
 
-function interface(args)
-   --print("Shouldnt be here")
-   -- Function that returns the conditions at the boundary 
-   -- when viscous terms are active.
-   --print(block_id)
-   --print(sampleFluidCell(block_id, args.i, args.j, args.k))
-   return sampleFluidCell(block_id, args.i, args.j, args.k)
-end
-
-function convective_flux(args)
+function convectiveFlux(args)
    -- Function that returns the fluxes of conserved quantities.
    -- For use in the inviscid flux calculations.
    --
@@ -48,7 +39,6 @@ function convective_flux(args)
    --for k,v in pairs(args) do
    --     print("args key:", k,"value:",v)
    --end
-
 
    if (args.i==2 and args.j==2 and args.k==2) then -- loading routine only needs to be run at first call (imin, jmin, kmin) 
       -- might be able to pre-allocate this
@@ -505,7 +495,10 @@ function convective_flux(args)
 
     -- get gas model information
     Q = GasState:new{gmodel}
-    Cv = gmodel:Cv{Q}
+    Q.T = T
+    Q.p = p 
+    gmodel:updateThermoFromPT(Q)
+
 
    massf = Q.massf   -- mass fractions are indexed from 0 to nsp-1
    -- Assemble flux vector
@@ -515,7 +508,7 @@ function convective_flux(args)
    flux.momentum_x = p * args.csX + u * flux.mass
    flux.momentum_y = p * args.csY + v * flux.mass
    flux.momentum_z = p * CSZ + w * flux.mass
-   flux.total_energy = flux.mass * (Cv*T + 0.5*(u*u+v*v+w*w) + p/rho)
+   flux.total_energy = flux.mass * (Q.u + 0.5*(u*u+v*v+w*w) + p/rho)
    flux.tke = tke * flux.mass
    flux.omega = omega * flux.mass
    --flux.species = {}
