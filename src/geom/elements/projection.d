@@ -83,7 +83,8 @@ ref Vector3 map_neutral_plane_to_cylinder(ref Vector3 p, number H)
 }
 
 /**
- * Find Barycentric Coordinates of point P in triangle 
+ * Find Barycentric Coordinates of point P in triangle,
+ * considering (x,y)-plane components, only.
  *  p2
  *   |\
  *   | \
@@ -92,25 +93,32 @@ ref Vector3 map_neutral_plane_to_cylinder(ref Vector3 p, number H)
  *  p0----p1
 */
 @nogc
-void P_barycentricCoords(ref const(Vector3) p, ref const(Vector3) p0, 
-                         ref const(Vector3) p1, ref const(Vector3) p2, 
-                         ref Vector3 Coords, 
-                         double tol=1.0e-12, double area_tol=1.0e-20)
+number[3] barycentricCoords(ref const(Vector3) p, ref const(Vector3) p0, 
+                            ref const(Vector3) p1, ref const(Vector3) p2) 
 {
-    number numer0 = (p1.y-p2.y)*(p.x -p2.x) + (p2.x-p1.x)*(p.y -p2.y);
+    // Transcribe equations from Wikipedia article "Barycentric coordinate system", 
+    // subsection on "Conversion between barycentric and Cartesian coordinates".
+    number[3] lmbda;
+    number numer0 = (p1.y-p2.y)*(p.x-p2.x) + (p2.x-p1.x)*(p.y-p2.y);
     number denom = (p1.y-p2.y)*(p0.x-p2.x) + (p2.x-p1.x)*(p0.y-p2.y);
-    number lambda0 = numer0 / denom;
-    if (abs(lambda0) < tol) { lambda0 = 0; }
-    number numer1 = (p2.y-p0.y)*(p.x -p2.x) + (p0.x-p2.x)*(p.y -p2.y);
-    number lambda1 = numer1 / denom;
-    if (abs(lambda1) < tol) { lambda1 = 0; }
-    number lambda2 = 1 - lambda0 - lambda1;
-    if (abs(lambda2) < tol) { lambda2 = 0; }
-    // set Barycentric coordinates.
-    Coords.set(lambda0, lambda1, lambda2);
+    lmbda[0] = numer0/denom;
+    number numer1 = (p2.y-p0.y)*(p.x-p2.x) + (p0.x-p2.x)*(p.y-p2.y);
+    lmbda[1] = numer1/denom;
+    lmbda[2] = 1.0 - lmbda[0] - lmbda[1];
+    return lmbda;
+} // end barycentricCoords()
 
-} // end P_barycentricCoords()
-
+@nogc
+bool is_outside_triangle(number[3] lmbda, double tol=1.0e-10)
+{
+    bool is_outside = false;
+    if (lmbda[0] < -tol) { is_outside = true; }
+    if (lmbda[1] < -tol) { is_outside = true; }
+    if (lmbda[2] < -tol) { is_outside = true; }
+    // Now, we have determined that the coordinates are for a point
+    // inside or on an edge or at a vertex, to within the tolerance.
+    return is_outside;
+} // end is_outside_triangle()
 
 
 
@@ -198,6 +206,22 @@ version(projection_test) {
             foreach( idx; 0..3) assert(std.math.approxEqual(qDerivCmplx[idx], qDerivReal[idx]), failedUnitTest());
         }
 
+        // Barycentric coordinates for the midpoint of an equilateral triangle.
+        Vector3 p0 = Vector3(0.0, 0.0);
+        Vector3 p1 = Vector3(1.0, 0.0);
+        Vector3 p2 = Vector3(0.5, std.math.sin(60.0*std.math.PI/180.0));
+        Vector3 p = (p0+p1+p2)/3.0;
+        number[3] bcc = barycentricCoords(p, p0, p1, p2);
+        assert(approxEqual(bcc[0].re, 1.0/3.0), failedUnitTest()); 
+        assert(approxEqual(bcc[1].re, 1.0/3.0), failedUnitTest()); 
+        assert(approxEqual(bcc[2].re, 1.0/3.0), failedUnitTest());
+        assert(!is_outside_triangle(bcc), failedUnitTest());
+        p = Vector3(0.5, 0.0);
+        bcc = barycentricCoords(p, p0, p1, p2);
+        assert(!is_outside_triangle(bcc), failedUnitTest());
+        p = Vector3(0.5, -0.01);
+        bcc = barycentricCoords(p, p0, p1, p2);
+        assert(is_outside_triangle(bcc), failedUnitTest());
         return 0;
     }
 } // end projection_test

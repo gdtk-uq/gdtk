@@ -599,36 +599,18 @@ extern(C) int luafn_setVtxVelocitiesByCorners(lua_State* L)
     quad_properties(p00, p10, p11, p01, centroid,  n, n, n, area);
 
     @nogc
-    void setAsWeightedSum2(ref Vector3 result,
-                           double w0, Vector3* v0,
-                           double w1, Vector3* v1)
+    void setAsWeightedSum2(ref Vector3 result, double w0, Vector3* v0, double w1, Vector3* v1)
     {
         result.set(v0); result.scale(w0);
         result.add(v1, w1);
     }
 
     @nogc
-    void setAsWeightedSum3(ref Vector3 result,
-                           double w0, Vector3* v0,
-                           double w1, Vector3* v1,
-                           double w2, Vector3* v2)
+    void setAsWeightedSum3(ref Vector3 result, number[3] w, Vector3* v0, Vector3* v1, Vector3* v2)
     {
-        result.set(v0); result.scale(w0);
-        result.add(v1, w1);
-        result.add(v2, w2);
-    }
-
-    @nogc
-    void setAsWeightedSum4(ref Vector3 result,
-                           double w0, Vector3* v0,
-                           double w1, Vector3* v1,
-                           double w2, Vector3* v2,
-                           double w3, Vector3* v3)
-    {
-        result.set(v0); result.scale(w0);
-        result.add(v1, w1);
-        result.add(v2, w2);
-        result.add(v3, w3);
+        result.set(v0); result.scale(w[0]);
+        result.add(v1, w[1]);
+        result.add(v2, w[2]);
     }
     
     if ( narg == 5 ) {
@@ -644,32 +626,29 @@ extern(C) int luafn_setVtxVelocitiesByCorners(lua_State* L)
                     if (use_barycentric_coords) {
                         // Find baricentric ccordinates, keeping p0 at centroid.
                         // Sequentially try the different triangles.
+                        number[3] bcc;
                         // Try south triangle
-                        P_barycentricCoords(pos, centroid, p00, p10, Coords);
-                        if ((Coords.x <= 0 ) || (Coords.y >= 0 && Coords.z >= 0)) {
-                            setAsWeightedSum3(blk.get_vtx!()(i,j,k).vel[0], Coords.x.re, &centroidVel, 
-                                              Coords.y.re, p00vel, Coords.z.re, p10vel);
+                        bcc = barycentricCoords(pos, centroid, p00, p10);
+                        if (!is_outside_triangle(bcc)) {
+                            setAsWeightedSum3(blk.get_vtx!()(i,j,k).vel[0], bcc, &centroidVel, p00vel, p10vel);
                             continue;
                         }
                         // Try east triangle.
-                        P_barycentricCoords(pos, centroid, p10, p11, Coords);
-                        if ((Coords.x <= 0 ) || (Coords.y >= 0 && Coords.z >= 0)) {
-                            setAsWeightedSum3(blk.get_vtx!()(i,j,k).vel[0], Coords.x.re, &centroidVel, 
-                                              Coords.y.re, p10vel, Coords.z.re, p11vel);
+                        bcc = barycentricCoords(pos, centroid, p10, p11);
+                        if (!is_outside_triangle(bcc)) {
+                            setAsWeightedSum3(blk.get_vtx!()(i,j,k).vel[0], bcc, &centroidVel, p10vel, p11vel);
                             continue;
                         }
                         // Try north triangle.
-                        P_barycentricCoords(pos, centroid, p11, p01, Coords);
-                        if ((Coords.x <= 0 ) || (Coords.y >= 0 && Coords.z >= 0)) {
-                            setAsWeightedSum3(blk.get_vtx!()(i,j,k).vel[0], Coords.x.re, &centroidVel, 
-                                              Coords.y.re, p11vel, Coords.z.re, p01vel);
+                        bcc = barycentricCoords(pos, centroid, p11, p01);
+                        if (!is_outside_triangle(bcc)) {
+                            setAsWeightedSum3(blk.get_vtx!()(i,j,k).vel[0], bcc, &centroidVel, p11vel, p01vel);
                             continue;
                         }
                         // Try west triangle.
-                        P_barycentricCoords(pos, centroid, p01, p00, Coords);
-                        if ((Coords.x <= 0 ) || (Coords.y >= 0 && Coords.z >= 0)) {
-                            setAsWeightedSum3(blk.get_vtx!()(i,j,k).vel[0], Coords.x.re, &centroidVel, 
-                                              Coords.y.re, p01vel, Coords.z.re, p00vel);
+                        bcc = barycentricCoords(pos, centroid, p01, p00);
+                        if (!is_outside_triangle(bcc)) {
+                            setAsWeightedSum3(blk.get_vtx!()(i,j,k).vel[0], bcc, &centroidVel, p01vel, p00vel);
                             continue;
                         }
                         // One of the 4 continue statements should have acted by now. 
