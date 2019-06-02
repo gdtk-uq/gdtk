@@ -32,6 +32,7 @@ if gpmetis_exe.length > 0 then
   test_scripts << "2D/sharp-cone-20-degrees/usg-metis/cone20-usg-metis.test"
 end
 test_scripts << "2D/moving-grid/piston-w-const-vel/simple/piston-test.rb"
+test_scripts << "2D/moving-grid/piston-w-const-vel/simple-2/piston-test.rb"
 test_scripts << "2D/moving-grid/piston-w-const-vel/simple-reverse/piston-test.rb"
 test_scripts << "2D/moving-grid/piston-in-tube/piston-1-block/pit1-test.rb"
 test_scripts << "2D/moving-grid/piston-in-tube/piston-2-block/pit2-test.rb"
