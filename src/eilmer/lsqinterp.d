@@ -570,8 +570,12 @@ public:
     void venkat_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws,
                       ref LocalConfig myConfig, size_t gtl=0)
     {
+        // Reference: V. Venkatakrishnan
+        // Convergence to steady state solutions of the Euler equations
+        // on unstructured grids with limiters.
+        // Journal of Computational Physics vol.118 pp120-130 (1995)
         size_t dimensions = myConfig.dimensions;
-        number a, b, U, phi, h, denom, numer, s;
+        number a, b, U, phi, h, s;
         immutable double w = 1.0e-12;
         double K = myConfig.venkat_K_value;
         if (myConfig.dimensions == 3) {
@@ -597,16 +601,10 @@ public:
                     b = "~gname~"[0] * dx + "~gname~"[1] * dy;
                     if (myConfig.dimensions == 3) { b += "~gname~"[2] * dz; }
                     b = copysign(((fabs(b) + w)), b); 
-                    if (fabs(b) > ESSENTIALLY_ZERO) {
-                        a = (b > 0.0) ? "~qMaxname~" - U: "~qMinname~" - U;
-                        numer = (a*a + eps)*b + 2.0*b*b*a;
-                        denom = a*a + 2.0*b*b + a*b + eps;
-                        s = (1.0/b) * (numer/denom);                    
-                    } else {
-                        s = 1.0;
-                    }
+                    a = (b > 0.0) ? "~qMaxname~" - U: "~qMinname~" - U;
+                    s = (a*a + 2.0*b*a + eps)/(a*a + 2.0*b*b + a*b + eps);                    
                     phi = fmin(phi, s);
-               }
+                }
             }
             "~limFactorname~" = phi;
             }
@@ -999,7 +997,6 @@ public:
             //
             // Always reconstruct in the global frame of reference -- for now
             //
-            // x-velocity
             string codeForReconstruction(string qname, string gname,
                                          string tname, string lname)
             {
@@ -1202,8 +1199,8 @@ public:
             number[3] mygradR;
             //
             // Always reconstruct in the global frame of reference -- for now
+            // At a boundary, don't apply limiter unless extrema_clipping also.
             //
-            // x-velocity
             string codeForReconstruction(string qname, string gname,
                                          string tname, string lname)
             {
@@ -1214,7 +1211,7 @@ public:
                 mygradR[0] = cR0.gradients."~gname~"[0];
                 mygradR[1] = cR0.gradients."~gname~"[1];
                 mygradR[2] = cR0.gradients."~gname~"[2];
-                if (myConfig.apply_limiter) {
+                if (myConfig.apply_limiter && myConfig.extrema_clipping) {
                     final switch (myConfig.unstructured_limiter) {
                     case UnstructuredLimiter.van_albada:
                         break;
@@ -1368,8 +1365,8 @@ public:
             number[3] mygradL;
             //
             // Always reconstruct in the global frame of reference -- for now
+            // At a boundary, don't apply limiter unless extrema_clipping also.
             //
-            // x-velocity
             string codeForReconstruction(string qname, string gname,
                                          string tname, string lname)
             {
@@ -1380,7 +1377,7 @@ public:
                 mygradL[0] = cL0.gradients."~gname~"[0];
                 mygradL[1] = cL0.gradients."~gname~"[1];
                 mygradL[2] = cL0.gradients."~gname~"[2];
-                if (myConfig.apply_limiter) {
+                if (myConfig.apply_limiter && myConfig.extrema_clipping) {
                     final switch (myConfig.unstructured_limiter) {
                     case UnstructuredLimiter.van_albada:
                         break;

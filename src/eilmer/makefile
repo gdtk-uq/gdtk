@@ -203,13 +203,13 @@ REVISION_STRING := $(shell hg identify --id --num --branch --tags)
 
 ifeq ($(DMD), dmd)
     ifeq ($(FLAVOUR), debug)
-        DFLAGS := -w -g -debug
+        DFLAGS := -w -g -debug -version=flavour_debug
     endif
     ifeq ($(FLAVOUR), profile)
-        DFLAGS := -profile -w -O -release -inline -boundscheck=off
+        DFLAGS := -profile -w -O -release -inline -boundscheck=off -version=flavour_profile
     endif
     ifeq ($(FLAVOUR), fast)
-        DFLAGS := -w -O -release -inline -boundscheck=off
+        DFLAGS := -w -O -release -inline -boundscheck=off -version=flavour_fast
     endif
     OF := -of
     DVERSION := -version=
@@ -225,13 +225,13 @@ ifeq ($(DMD), dmd)
 endif
 ifeq ($(DMD), ldmd2)
     ifeq ($(FLAVOUR), debug)
-        DFLAGS := -w -g -debug
+        DFLAGS := -w -g -debug -version=flavour_debug
     endif
     ifeq ($(FLAVOUR), profile)
-        DFLAGS := -profile -w -O -release -inline -boundscheck=off
+        DFLAGS := -profile -w -O -release -inline -boundscheck=off -version=flavour_profile
     endif
     ifeq ($(FLAVOUR), fast)
-        DFLAGS := -w -O -release -inline -boundscheck=off
+        DFLAGS := -w -O -release -inline -boundscheck=off -version=flavour_fast
     endif
     OF := -of
     DVERSION := -version=
@@ -247,16 +247,16 @@ ifeq ($(DMD), ldmd2)
 endif
 ifeq ($(DMD), ldc2)
     ifeq ($(FLAVOUR), debug)
-        DFLAGS := -w -g -d-debug
+        DFLAGS := -w -g -d-debug -d-version=flavour_debug
     endif
     ifeq ($(FLAVOUR), profile)
         # -fprofile-generate will result in profraw files being written
         # that may be viewed, showing the top 10 functions with internal block counts
         # llvm-profdata show -text -topn=10 <profraw-file>
-        DFLAGS := -fprofile-generate -g -w -O -release -enable-inlining -boundscheck=off
+        DFLAGS := -fprofile-generate -g -w -O -release -enable-inlining -boundscheck=off -d-version=flavour_profile
     endif
     ifeq ($(FLAVOUR), fast)
-        DFLAGS := -w -O -release -enable-inlining -boundscheck=off
+        DFLAGS := -w -O -release -enable-inlining -boundscheck=off -d-version=flavour_fast
     endif
     OF := -of=
     DVERSION := -d-version=
@@ -275,13 +275,13 @@ ifeq ($(DMD), ldc2)
 endif
 ifeq ($(DMD), gdc)
     ifeq ($(FLAVOUR), debug)
-        DFLAGS := -Wall -Og -g
+        DFLAGS := -Wall -Og -g -version=flavour_debug
     endif
     ifeq ($(FLAVOUR), profile)
-        DFLAGS := -Wall -O2 -frelease -fno-debug
+        DFLAGS := -Wall -O2 -frelease -fno-debug -version=flavour_profile
     endif
     ifeq ($(FLAVOUR), fast)
-        DFLAGS := -Wall -O2 -frelease -fno-debug
+        DFLAGS := -Wall -O2 -frelease -fno-debug -version=flavour_fast
     endif
     OF := -o
     DVERSION := -version=
@@ -346,6 +346,8 @@ install: $(PROGRAMS) $(LUA_MODULES) prep.lua prep-gas prep-chem chemkin2eilmer $
 	cp $(GASDYN_LUA_MODULES) $(BUILD_DIR)/lib
 	cp e4console.tcl $(BUILD_DIR)/bin
 	chmod +x $(BUILD_DIR)/bin/e4console.tcl
+	cp e4compact.rb $(BUILD_DIR)/bin/e4compact
+	chmod +x $(BUILD_DIR)/bin/e4compact
 ifneq "$(SHARE_FILES)" ""
 	cp $(SHARE_FILES) $(BUILD_DIR)/share
 endif
@@ -376,7 +378,9 @@ clean:
 	- rm steadystate_solver_complex_with_rev_string.d
 	- rm shape_sensitivity_calc_with_rev_string.d
 	- rm e4opt optdriver_with_rev_string.d
-	- rm mpi_main_with_rev_string.d e4mpi loadbalance_with_rev_string.d
+	- rm mpi_main_with_rev_string.d
+	- rm loadbalance_with_rev_string.d
+	- rm e4mpi e4loadbalance
 	- rm dgd-for-mech4480.tgz
 	- cd $(OPENMPI_DIR); make clean
 	- cd $(LUA_DIR); make clean

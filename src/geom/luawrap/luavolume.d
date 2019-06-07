@@ -25,6 +25,7 @@ import geom.luawrap.luasurface;
 /// Name of the metatables -- these are the Lua access name.
 immutable string TFIVolumeMT = "TFIVolume";
 immutable string SweptSurfaceVolumeMT = "SweptSurfaceVolume";
+immutable string TwoSurfaceVolumeMT = "TwoSurfaceVolume";
 immutable string SlabVolumeMT = "SlabVolume";
 immutable string WedgeVolumeMT = "WedgeVolume";
 immutable string LuaFnVolumeMT = "LuaFnVolume";
@@ -40,6 +41,9 @@ ParametricVolume checkVolume(lua_State* L, int index) {
     }
     if (isObjType(L, index, SweptSurfaceVolumeMT)) {
         return checkObj!(SweptSurfaceVolume, SweptSurfaceVolumeMT)(L, index);
+    }
+    if (isObjType(L, index, TwoSurfaceVolumeMT)) {
+        return checkObj!(TwoSurfaceVolume, TwoSurfaceVolumeMT)(L, index);
     }
     if (isObjType(L, index, SlabVolumeMT)) {
         return checkObj!(SlabVolume, SlabVolumeMT)(L, index);
@@ -233,6 +237,60 @@ extern(C) int newSweptSurfaceVolume(lua_State* L)
     volumeStore ~= pushObj!(SweptSurfaceVolume, SweptSurfaceVolumeMT)(L, ssv);
     return 1;
 } // end newSweptSurfaceVolume()
+
+
+/**
+ * This is the constructor for a TwoSurfaceVolume to be used from the Lua interface.
+ *
+ * At successful completion of this function, a new TwoSurfaceVolume object
+ * is pushed onto the Lua stack.
+ *
+ * Supported constructions are:
+ * -------------------------
+ * vol0 = TwoSurfaceVolume:new{face0123=myFaceBottom, face4567=myFaceTop}
+ * --------------------------
+ */
+
+extern(C) int newTwoSurfaceVolume(lua_State* L)
+{
+    int narg = lua_gettop(L);
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected TwoSurfaceVolume:new{}; ";
+        errMsg ~= "maybe you tried TwoSurfaceVolume.new{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if (!lua_istable(L, 1)) {
+        string errMsg = "Error in constructor TwoSurfaceVolume:new{}. " ~
+            "A table with input parameters is expected as the first argument.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    if (!checkAllowedNames(L, 1, ["face0123","face4567"])) {
+        string errMsg = "Error in call to TwoSurfaceVolume:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    // Look for surface to sweep.
+    lua_getfield(L, 1, "face0123");
+    auto face0123 = checkSurface(L, -1);
+    if (face0123 is null) {
+        string errMsg = "Error in constructor TwoSurfaceVolume:new{}. Couldn't find face0123.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_pop(L, 1);
+    // Look for edge to sweep along.
+    lua_getfield(L, 1, "face4567");
+    auto face4567 = checkSurface(L, -1);
+    if (face4567 is null) {
+        string errMsg = "Error in constructor TwoSurfaceVolume:new{}. Couldn't find face4567.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_pop(L, 1);
+    // Construct the actual surface.
+    auto tsv = new TwoSurfaceVolume(face0123, face4567);
+    volumeStore ~= pushObj!(TwoSurfaceVolume, TwoSurfaceVolumeMT)(L, tsv);
+    return 1;
+} // end newTowSurfaceVolume()
 
 
 /**
@@ -563,6 +621,25 @@ void registerVolumes(lua_State* L)
     lua_setfield(L, -2, "__tostring");
 
     lua_setglobal(L, SweptSurfaceVolumeMT.toStringz);
+
+    // Register the TwoSurfaceVolume object
+    luaL_newmetatable(L, TwoSurfaceVolumeMT.toStringz);
+    
+    /* metatable.__index = metatable */
+    lua_pushvalue(L, -1); // duplicates the current metatable
+    lua_setfield(L, -2, "__index");
+
+    /* Register methods for use. */
+    lua_pushcfunction(L, &newTwoSurfaceVolume);
+    lua_setfield(L, -2, "new");
+    lua_pushcfunction(L, &opCallVolume!(TwoSurfaceVolume, TwoSurfaceVolumeMT));
+    lua_setfield(L, -2, "__call");
+    lua_pushcfunction(L, &opCallVolume!(TwoSurfaceVolume, TwoSurfaceVolumeMT));
+    lua_setfield(L, -2, "eval");
+    lua_pushcfunction(L, &toStringObj!(TwoSurfaceVolume, TwoSurfaceVolumeMT));
+    lua_setfield(L, -2, "__tostring");
+
+    lua_setglobal(L, TwoSurfaceVolumeMT.toStringz);
 
     // Register the SlabVolume object
     luaL_newmetatable(L, SlabVolumeMT.toStringz);

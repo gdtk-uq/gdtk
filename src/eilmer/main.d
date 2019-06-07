@@ -256,6 +256,12 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
         if (GlobalConfig.is_master_task) {
             writeln("Eilmer 4.0 compressible-flow simulation code.");
             writeln("Revision: PUT_REVISION_STRING_HERE");
+            //
+            write("Build-flavour: ");
+            version(flavour_debug) { writeln("debug"); }
+            version(flavour_profile) { writeln("profile"); }
+            version(flavour_fast) { writeln("fast"); }
+            //
             write("Capabilities:");
             version(multi_species_gas) {
                 write(" multi-species-gas");
@@ -282,7 +288,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
         version(mpi_parallel) {
             MPI_Barrier(MPI_COMM_WORLD);
             if (GlobalConfig.is_master_task) {
-                writefln("MPI-parallel, number of tasks %d", GlobalConfig.mpi_size);
+                writefln("Parallelism: MPI-parallel, number of tasks %d", GlobalConfig.mpi_size);
             }
             stdout.flush();
             // Give master_task a chance to be seen first.
@@ -294,7 +300,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
             Thread.sleep(dur!("msecs")(100));
             MPI_Barrier(MPI_COMM_WORLD);
         } else {
-            writeln("Shared-memory");
+            writeln("Parallelism: Shared-memory");
         }
     }
     if (helpWanted) {

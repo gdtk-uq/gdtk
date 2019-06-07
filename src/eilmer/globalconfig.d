@@ -679,6 +679,7 @@ final class GlobalConfig {
     shared static bool report_residuals; // indicate if residuals are computed and reported
                                          // on STDOUT for time-integrated simulations
 
+    shared static double start_time = 0.0; // Initial solution time, in seconds.
     shared static double max_time = 1.0e-3; // final solution time, in seconds, set by user
     shared static double dt_init = 1.0e-3; // initial time step, set by user
     shared static double dt_max = 1.0e-3; // Maximum allowable time-step, after all other considerations.
@@ -1142,9 +1143,10 @@ void read_config_file()
     // Note that some of the lines below are much longer than PJ would normally tolerate.
     // The trade-off for ease of reading with one line per entry won out... 
     //
+    mixin(update_string("title", "title"));
+    mixin(update_double("start_time", "start_time"));
     mixin(update_string("grid_format", "grid_format"));
     mixin(update_string("flow_format", "flow_format"));
-    mixin(update_string("title", "title"));
     mixin(update_string("gas_model_file", "gas_model_file"));
     auto gm = init_gas_model(GlobalConfig.gas_model_file);
     // The following checks on gas model will need to be maintained

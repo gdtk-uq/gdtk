@@ -33,24 +33,7 @@
 
 require 'lua_helper'  -- loads lua helper functions
 
-function interface(args) -- only needed for viscous simualtions.
-   -- Function that returns the conditions at the boundary 
-   -- when viscous terms are active.
-   --
-   -- args contains t, x, y, z, csX, csY, csZ, i, j, k, which_boundary
-   -- but we don't happen to us any of them.
-   --print("Hello from function interface.")
-   --print("You are in udf-rotor_in.lua")
-   --print("You shouldn't be here! This function has not yet been implemented")
-
-   -- model as zero viscous interaction across sliding interface I.e. set same conditions as at cell center
-   -- flow = sampleFluidCell(block_id, args.i, args.j, args.k) 
-   --print(flow.u,flow.v,flow.w,flow.T[0],flow.massf[0])
-   return sampleFluidCell(block_id, args.i, args.j, args.k)
-end
-
-
-function convective_flux(args)
+function convectiveFlux(args)
    -- Function that returns the fluxes of conserved quantities.
    -- For use in the inviscid flux calculations.
    --
@@ -70,7 +53,6 @@ function convective_flux(args)
    --for k,v in pairs(args) do
    --     print("args key:", k,"value:",v)
    --end
-
 
 
    if (args.i==2 and args.j==2 and args.k==2) then -- loading routine only needs to be run at first call (imin, jmin, kmin) 
@@ -111,8 +93,8 @@ function convective_flux(args)
       --print("Rotation",Rotation)
    end
 
-    --print("Time:", args.t)
-    --print("Rotation",Rotation)
+   --print("Time:", args.t)
+   --print("Rotation",Rotation)
 
    -- access vtx locations for current patch. 
    --print("\n")
@@ -473,8 +455,9 @@ function convective_flux(args)
 
     -- get gas model information
     Q = GasState:new{gmodel}
-    Cv = gmodel:Cv{Q}
-
+    Q.T = T
+    Q.p = p 
+    gmodel:updateThermoFromPT(Q)
 
    massf = Q.massf       -- mass fractions to be provided as a table
    -- Assemble flux vector
@@ -485,7 +468,7 @@ function convective_flux(args)
    flux.momentum_y = p * args.csY + v * flux.mass
    flux.momentum_z = p * CSZ + w * flux.mass
    --print("Block,I,J,K",block_id,args.i,args.j,args.k,"Zmomentum:",F.momentum_z, p, args.csZ, CSZ, w)
-   flux.total_energy = flux.mass * (Cv*T + 0.5*(u*u+v*v+w*w) + p/rho)
+   flux.total_energy = flux.mass * (Q.u + 0.5*(u*u+v*v+w*w) + p/rho)
    flux.tke = tke * flux.mass
    flux.omega = omega * flux.mass
    --flux.species = {}

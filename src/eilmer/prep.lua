@@ -1611,6 +1611,7 @@ function write_config_file(fileName)
    local f = assert(io.open(fileName, "w"))
    f:write("{\n")
    f:write(string.format('"title": "%s",\n', config.title))
+   f:write(string.format('"start_time": %.18e,\n', config.start_time))
    f:write(string.format('"grid_format": "%s",\n', config.grid_format))
    f:write(string.format('"flow_format": "%s",\n', config.flow_format))
    f:write(string.format('"gas_model_file": "%s",\n', config.gas_model_file))
@@ -1856,7 +1857,7 @@ end
 function write_times_file(fileName)
    local f = assert(io.open(fileName, "w"))
    f:write("# tindx sim_time dt_global\n");
-   f:write(string.format("%04d %.18e %.18e\n", 0, 0.0, config.dt_init))
+   f:write(string.format("%04d %.18e %.18e\n", 0, config.start_time, config.dt_init))
    f:close()
 end
 
@@ -2071,9 +2072,9 @@ function build_job_files(job)
       if type(ifs) ~= "string" then
          local grid = fluidBlocks[idx].grid
          if grid:get_type() == "structured_grid" then
-            write_initial_sg_flow_file(fileName, grid, ifs, 0.0)
+            write_initial_sg_flow_file(fileName, grid, ifs, config.start_time)
          else
-            write_initial_usg_flow_file(fileName, grid, ifs, 0.0)
+            write_initial_usg_flow_file(fileName, grid, ifs, config.start_time)
          end
       end
    end
@@ -2084,7 +2085,7 @@ function build_job_files(job)
       solidBlocks[i].grid:write_to_gzip_file(fileName)
       local fileName = "solid/t0000/" .. job .. string.format(".solid.b%04d.t0000", id)
       writeInitialSolidFile(fileName, solidBlocks[i].grid,
-			    solidBlocks[i].initTemperature, solidBlocks[i].properties, 0.0)
+			    solidBlocks[i].initTemperature, solidBlocks[i].properties, config.start_time)
       os.execute("gzip -f " .. fileName)
    end
    --

@@ -1,20 +1,20 @@
 5 Blocks 
 #B bid b-pty b-lbid f_i-pty f_i-lbid f_I-pty f_I-lbid ...
-B 1 1 -1 4 -1 1 -1 7 -1 6 -1 1 -1 1004 -1  
-B 2 1 -1 1 -1 4 -1 7 -1 6 -1 1 -1 1010 -1  
-B 3 1 -1 4 -1 1 -1 7 -1 6 -1 1 -1 1 -1  
-B 4 1 -1 1004 -1 1 -1 7 -1 6 -1 1 -1 1010 -1  
-B 5 1 -1 1 -1 1004 -1 7 -1 6 -1 1 -1 1 -1  
+B 1 1 -1 1004 -1 1 -1 7 -1 1006 -1 1 -1 4 -1  
+B 2 1 -1 1 -1 1004 -1 7 -1 1006 -1 1 -1 10 -1  
+B 3 1 -1 1004 -1 1 -1 7 -1 1006 -1 1 -1 1 -1  
+B 4 1 -1 4 -1 1 -1 7 -1 1006 -1 1 -1 10 -1  
+B 5 1 -1 1 -1 4 -1 7 -1 1006 -1 1 -1 1 -1  
  0 labels 
  8 17 2D properties (used, max-id) 
  0 unused (pdc:DEFAULT)
- 1 ws.Interblock (pdc:INTERBLK)
- 2 ws.Wall (pdc:WALL)
- 4 surface_5 (pdc:SYMMETRY)
- 6 surface_1 (pdc:user6)
- 7 surface_2 (pdc:user7)
- 1004 surface_4 (pdc:SYMMETRY)
- 1010 surface_3 (pdc:user10)
+ 1 interblk (pdc:INTERBLK)
+ 2 wall (pdc:BOUNDARY)
+ 4 surface_4 (pdc:WALL_SLIP)
+ 7 surface_2 (pdc:INFLOW_SUPERSONIC)
+ 10 surface_3 (pdc:OUTFLOW_SIMPLE)
+ 1004 surface_5 (pdc:WALL_SLIP)
+ 1006 surface_1 (pdc:WALL_FIXED_T)
  2 17 3D properties (used, max-id) 
  0 unused (pdc:DEFAULT)
- 1 ws.Fluid (pdc:Fluid)
+ 1 fluid (pdc:BULK)

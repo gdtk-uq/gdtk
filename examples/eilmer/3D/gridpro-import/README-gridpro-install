@@ -3,16 +3,6 @@
 :authors: Rowan J. Gollan & Will Landsberg
 :date: 2019-05-01
 
-ifdef::backend-pdf[:notitle:]
-ifdef::backend-pdf[]
-[discrete]
-= {doctitle}
-endif::[]
-
-{authors}
-
-{date}
-
 == Overview
 With some small edits, one can add the Eilmer boundary conditions to the
 Gridpro GUI menu. This is done by adding a file to the Gridpro installation
@@ -32,8 +22,85 @@ Add a line for Eilmer anywhere of your choosing. (We think the top spot is best!
 
  * Copy the file from this directory `ws_ptymap.eilmer` to that install area `GridPro/az_mngr/`
 
-== TODO: Write note on setting BCs
+ * Copy the file from this directory `ws_ptymap.eilmer` to that install area `GridPro/az_mngr/` and rename to `ws_ptymap.default`. Gridpro currently sets the blk.tmp.pty based off this file
 
+### Setting Eilmer BCs in GridPro ###
 
+BCs are set via a dictionary within the job.lua for. For example
+===================================================================
+===================================================================
+-- Read in GridPro grids.
+-- The GridPro grid file contains all the blocks in one file.
+-- We'll separate these into individual pieces, and store
+-- a list of grids.
+scale = 1.0
+gproGrid = "blk.tmp"
+gproConn = "blk.tmp.conn"
+gproPty = "blk.tmp.pty"
+grids = importGridproGrid(gproGrid, scale)
 
+-- Now we attach the grids to blocks
+blks = {}
+for i,g in ipairs(grids) do
+   blks[#blks+1] = FluidBlock:new{grid=g, initialState=initial}
+end
 
+print("Number of blocks constructed: ", #blks)
+
+applyGridproConnectivity(gproConn, blks)
+
+bcMap = {WALL_SLIP=WallBC_WithSlip:new{},
+   	 WALL_FIXED_T=WallBC_NoSlip_FixedT:new{Twall=30000},
+   	 INFLOW_SUPERSONIC=InFlowBC_Supersonic:new{flowState=inflow},
+   	 OUTFLOW_SIMPLE=OutFlowBC_Simple:new{}}
+
+applyGridproBoundaryConditions(gproPty, blks, bcMap)
+===================================================================
+===================================================================
+
+Eilmer will read in the input grid, conn and pty files, and assign boundaries as per the "bcMap" table. The boundary labels (e.g. WALL_SLIP, INFLOW_SUPERSONIC etc.) correspond to the Lua table in /dgd/src/eilmer/gridpro.lua
+
+gridpro.lua
+===================================================================
+===================================================================
+gproBCMap = {
+  [4] = "WALL_SLIP",
+  [5] = "WALL_ADIABATIC",
+  [6] = "WALL_FIXED_T", 
+  [7] = "INFLOW_SUPERSONIC",
+  [8] = "INFLOW_SUBSONIC",
+  [9] = "INFLOW_SHOCKFITTING",
+ [10] = "OUTFLOW_SIMPLE",
+ [11] = "OUTFLOW_SUBSONIC",
+ [12] = "OUTFLOW_FIXED_P",
+ [13] = "USER_DEFINED1",
+ [14] = "USER_DEFINED2",
+ [15] = "USER_DEFINED3",
+ [16] = "USER_DEFINED4",
+ [17] = "USER_DEFINED5"
+}
+===================================================================
+===================================================================
+
+The indexes assigned in the left hand column of this table correspond to the index assigned within the ws_ptymap.eilmer and ws_ptymap.default files set within your Gridpro/az_mngr/ directory. Once set, these labels are documented at the end of the blk.tmp.pty file
+
+blk.tmp.pty
+===================================================================
+===================================================================
+ 0 labels 
+ 8 17 2D properties (used, max-id) 
+ 0 unused (pdc:DEFAULT)
+ 1 interblk (pdc:INTERBLK)
+ 2 wall (pdc:BOUNDARY)
+ 4 surface_4 (pdc:WALL_SLIP)
+ 7 surface_2 (pdc:INFLOW_SUPERSONIC)
+ 10 surface_3 (pdc:OUTFLOW_SIMPLE)
+ 1004 surface_5 (pdc:WALL_SLIP)
+ 1006 surface_1 (pdc:WALL_FIXED_T)
+ 2 17 3D properties (used, max-id) 
+ 0 unused (pdc:DEFAULT)
+ 1 fluid (pdc:BULK)
+===================================================================
+===================================================================
+
+The indexes in the left hand column correspond to the indexes in both the gridpro.lua table, and the ws_ptymap files. In the cases of duplicate boundary assignments, Gridpro simply adds "1000" to the index integer (e.g. 1004 as above). The trailing integer is read by Eilmer.

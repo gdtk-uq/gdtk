@@ -265,34 +265,11 @@ if true then  -- attempts at sliding interface
     -- Do preprocessing of B/C data
     dofile('udf-process_e4.lua')
 
-    blk0.bcList[west] = BoundaryCondition:new{type="user_defined",
-					    ghost_cell_data_available=false,
-					    convective_flux_computed_in_bc=true,
-					    postConvFluxAction = {UserDefinedFlux:new{fileName='udf-stator_out_e4.lua',
-                        funcName='convective_flux'}}}
-    blk1.bcList[west] = BoundaryCondition:new{type="user_defined",
-					    ghost_cell_data_available=false,
-					    convective_flux_computed_in_bc=true,
-					    postConvFluxAction = {UserDefinedFlux:new{fileName='udf-stator_out_e4.lua',
-                      funcName='convective_flux'}}}
+    blk0.bcList[west] = UserDefinedFluxBC:new{fileName='udf-stator_out_e4.lua'}
+    blk1.bcList[west] = UserDefinedFluxBC:new{fileName='udf-stator_out_e4.lua'}
 
-    --blk0.bcList[west] = OutFlowBC_Simple:new{}
-    --blk1.bcList[west] = OutFlowBC_Simple:new{}
-
-
-    blk2.bcList[south] = BoundaryCondition:new{type="user_defined",
-					    ghost_cell_data_available=false,
-					    convective_flux_computed_in_bc=true,
-					    postConvFluxAction = {UserDefinedFlux:new{fileName='udf-rotor_in_e4.lua',
-                        funcName='convective_flux'}}}
-    blk3.bcList[south] = BoundaryCondition:new{type="user_defined",
-					    ghost_cell_data_available=false,
-					    convective_flux_computed_in_bc=true,
-					    postConvFluxAction = {UserDefinedFlux:new{fileName='udf-rotor_in_e4.lua',
-                        funcName='convective_flux'}}}
-
-    -- by set_conv_flux=1 --> need convective_flux() in lua
-    -- by set_visc_flux=0 --> need interface() in lua  if using viscous simulation  
+    blk2.bcList[south] = UserDefinedFluxBC:new{fileName='udf-rotor_in_e4.lua'}
+    blk3.bcList[south] = UserDefinedFluxBC:new{fileName='udf-rotor_in_e4.lua'}
 end
 
 

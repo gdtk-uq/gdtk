@@ -301,6 +301,8 @@ void setGridMotionHelperFunctions(lua_State *L)
     lua_setglobal(L, "getVtxPosition");
     lua_pushcfunction(L, &luafn_getVtxPositionXYZ);
     lua_setglobal(L, "getVtxPositionXYZ");
+    lua_pushcfunction(L, &luafn_getVtxPositionVector3);
+    lua_setglobal(L, "getVtxPositionVector3");
     lua_pushcfunction(L, &luafn_setVtxVelocitiesForDomain);
     lua_setglobal(L, "setVtxVelocitiesForDomain");
     lua_pushcfunction(L, &luafn_setVtxVelocitiesForDomainXYZ);
@@ -313,6 +315,8 @@ void setGridMotionHelperFunctions(lua_State *L)
     lua_setglobal(L, "setVtxVelocitiesForRotatingBlock");
     lua_pushcfunction(L, &luafn_setVtxVelocitiesByCorners);
     lua_setglobal(L, "setVtxVelocitiesByCorners");
+    lua_pushcfunction(L, &luafn_setVtxVelocitiesByQuad);
+    lua_setglobal(L, "setVtxVelocitiesByQuad");
     lua_pushcfunction(L, &luafn_setVtxVelocitiesByCornersReg);
     lua_setglobal(L, "setVtxVelocitiesByCornersReg");
     lua_pushcfunction(L, &luafn_setVtxVelocity);
@@ -332,7 +336,7 @@ extern(C) int luafn_getVtxPosition(lua_State *L)
     auto i = lua_tointeger(L, 2);
     auto j = lua_tointeger(L, 3);
     auto k = lua_tointeger(L, 4);
-
+    //
     // Grab the appropriate vtx
     FVVertex vtx;
     auto sblk = cast(SFluidBlock) globalFluidBlocks[blkId];
@@ -348,14 +352,14 @@ extern(C) int luafn_getVtxPosition(lua_State *L)
         msg ~= " You have asked for an ijk-index vertex in an unstructured-grid block.";
         luaL_error(L, msg.toStringz);
     }
-    
+    //
     // Return the interesting bits as a table with entries x, y, z.
     lua_newtable(L);
     lua_pushnumber(L, vtx.pos[0].x.re); lua_setfield(L, -2, "x");
     lua_pushnumber(L, vtx.pos[0].y.re); lua_setfield(L, -2, "y");
     lua_pushnumber(L, vtx.pos[0].z.re); lua_setfield(L, -2, "z");
     return 1;
-}
+} // end luafn_getVtxPosition()
 
 extern(C) int luafn_getVtxPositionXYZ(lua_State *L)
 {
@@ -368,7 +372,7 @@ extern(C) int luafn_getVtxPositionXYZ(lua_State *L)
     auto i = lua_tointeger(L, 2);
     auto j = lua_tointeger(L, 3);
     auto k = lua_tointeger(L, 4);
-
+    //
     // Grab the appropriate vtx
     FVVertex vtx;
     auto sblk = cast(SFluidBlock) globalFluidBlocks[blkId];
@@ -384,13 +388,45 @@ extern(C) int luafn_getVtxPositionXYZ(lua_State *L)
         msg ~= " You have asked for an ijk-index vertex in an unstructured-grid block.";
         luaL_error(L, msg.toStringz);
     }
-    
+    //
     // Return the components x, y, z on the stack.
     lua_pushnumber(L, vtx.pos[0].x.re);
     lua_pushnumber(L, vtx.pos[0].y.re);
     lua_pushnumber(L, vtx.pos[0].z.re);
     return 3;
-}
+} // end luafn_getVtxPositionXYZ()
+
+extern(C) int luafn_getVtxPositionVector3(lua_State *L)
+{
+    // Get arguments from lua_stack
+    auto blkId = lua_tointeger(L, 1);
+    if (!canFind(GlobalConfig.localBlockIds, blkId)) {
+        string msg = format("Block id %d is not local to process.", blkId);
+        luaL_error(L, msg.toStringz);
+    }
+    auto i = lua_tointeger(L, 2);
+    auto j = lua_tointeger(L, 3);
+    auto k = lua_tointeger(L, 4);
+    //
+    // Grab the appropriate vtx
+    FVVertex vtx;
+    auto sblk = cast(SFluidBlock) globalFluidBlocks[blkId];
+    if (sblk) {
+        try {
+            vtx = sblk.get_vtx!()(i, j, k);
+        } catch (Exception e) {
+            string msg = format("Failed to locate vertex[%d,%d,%d] in block %d.", i, j, k, blkId);
+            luaL_error(L, msg.toStringz);
+        }
+    } else {
+        string msg = "Not implemented.";
+        msg ~= " You have asked for an ijk-index vertex in an unstructured-grid block.";
+        luaL_error(L, msg.toStringz);
+    }
+    //
+    pushVector3(L, vtx.pos[0]);
+    return 1;
+} // end luafn_getVtxPositionVector3()
 
 extern(C) int luafn_setVtxVelocitiesForDomain(lua_State* L)
 {
@@ -412,7 +448,7 @@ extern(C) int luafn_setVtxVelocitiesForDomain(lua_State* L)
     // the lua garbage collector do its thing.
     lua_settop(L, 0);
     return 0;
-}
+} // end luafn_setVtxVelocitiesForDomain()
 
 extern(C) int luafn_setVtxVelocitiesForDomainXYZ(lua_State* L)
 {
@@ -436,7 +472,7 @@ extern(C) int luafn_setVtxVelocitiesForDomainXYZ(lua_State* L)
     // the lua garbage collector do its thing.
     lua_settop(L, 0);
     return 0;
-}
+} // end luafn_setVtxVelocitiesForDomainXYZ()
 
 extern(C) int luafn_setVtxVelocitiesForBlock(lua_State* L)
 {
@@ -462,7 +498,7 @@ extern(C) int luafn_setVtxVelocitiesForBlock(lua_State* L)
     // the lua garbage collector do its thing.
     lua_settop(L, 0);
     return 0;
-}
+} // end luafn_setVtxVelocitiesForBlock()
 
 extern(C) int luafn_setVtxVelocitiesForBlockXYZ(lua_State* L)
 {
@@ -544,7 +580,7 @@ extern(C) int luafn_setVtxVelocitiesForRotatingBlock(lua_State* L)
     // the lua garbage collector do its thing.
     lua_settop(L, 0);
     return 0;
-}
+} // end luafn_setVtxVelocitiesForRotatingBlock()
 
 /**
  * Sets the velocity of vertices in a block based on
@@ -565,7 +601,6 @@ extern(C) int luafn_setVtxVelocitiesForRotatingBlock(lua_State* L)
  *   2-D and 3- meshes. In 3-D a uniform velocity is applied 
  *   in k direction.
  */
-
 extern(C) int luafn_setVtxVelocitiesByCorners(lua_State* L)
 {
     // Expect five/nine arguments: 1. a block id
@@ -591,127 +626,62 @@ extern(C) int luafn_setVtxVelocitiesByCorners(lua_State* L)
     Vector3 p11 = blk.get_vtx!()(blk.imax+1,blk.jmax+1,k).pos[0];
     Vector3 p01 = blk.get_vtx!()(blk.imin,blk.jmax+1,k).pos[0];
 
-    size_t i, j;
-    Vector3 centroidVel = 0.25 * ( *p00vel + *p10vel + *p01vel + *p11vel);
-    Vector3 centroid, n, pos, Coords;
-    number area;
-    // get centroid location
-    quad_properties(p00, p10, p11, p01, centroid,  n, n, n, area);
-
     @nogc
-    void setAsWeightedSum2(ref Vector3 result,
-                           double w0, Vector3* v0,
-                           double w1, Vector3* v1)
+    void setAsWeightedSum2(ref Vector3 result, double w0, Vector3* v0, double w1, Vector3* v1)
     {
         result.set(v0); result.scale(w0);
         result.add(v1, w1);
     }
 
     @nogc
-    void setAsWeightedSum3(ref Vector3 result,
-                           double w0, Vector3* v0,
-                           double w1, Vector3* v1,
-                           double w2, Vector3* v2)
+    void setAsWeightedSum3(ref Vector3 result, number[3] w, Vector3* v0, Vector3* v1, Vector3* v2)
     {
-        result.set(v0); result.scale(w0);
-        result.add(v1, w1);
-        result.add(v2, w2);
-    }
-
-    @nogc
-    void setAsWeightedSum4(ref Vector3 result,
-                           double w0, Vector3* v0,
-                           double w1, Vector3* v1,
-                           double w2, Vector3* v2,
-                           double w3, Vector3* v3)
-    {
-        result.set(v0); result.scale(w0);
-        result.add(v1, w1);
-        result.add(v2, w2);
-        result.add(v3, w3);
+        result.set(v0); result.scale(w[0]);
+        result.add(v1, w[1]);
+        result.add(v2, w[2]);
     }
     
+    size_t i, j;
     if ( narg == 5 ) {
         if (blk.myConfig.dimensions == 2) {
-            // deal with 2-D meshes
             k = blk.kmin;
             for (j = blk.jmin; j <= blk.jmax+1; ++j) {
                 for (i = blk.imin; i <= blk.imax+1; ++i) {
                     // get position of current point                    
-                    pos = blk.get_vtx!()(i,j,k).pos[0];
-
-                    bool use_barycentric_coords = false;
-                    if (use_barycentric_coords) {
-                        // Find baricentric ccordinates, keeping p0 at centroid.
-                        // Sequentially try the different triangles.
-                        // Try south triangle
-                        P_barycentricCoords(pos, centroid, p00, p10, Coords);
-                        if ((Coords.x <= 0 ) || (Coords.y >= 0 && Coords.z >= 0)) {
-                            setAsWeightedSum3(blk.get_vtx!()(i,j,k).vel[0], Coords.x.re, &centroidVel, 
-                                              Coords.y.re, p00vel, Coords.z.re, p10vel);
-                            continue;
-                        }
-                        // Try east triangle.
-                        P_barycentricCoords(pos, centroid, p10, p11, Coords);
-                        if ((Coords.x <= 0 ) || (Coords.y >= 0 && Coords.z >= 0)) {
-                            setAsWeightedSum3(blk.get_vtx!()(i,j,k).vel[0], Coords.x.re, &centroidVel, 
-                                              Coords.y.re, p10vel, Coords.z.re, p11vel);
-                            continue;
-                        }
-                        // Try north triangle.
-                        P_barycentricCoords(pos, centroid, p11, p01, Coords);
-                        if ((Coords.x <= 0 ) || (Coords.y >= 0 && Coords.z >= 0)) {
-                            setAsWeightedSum3(blk.get_vtx!()(i,j,k).vel[0], Coords.x.re, &centroidVel, 
-                                              Coords.y.re, p11vel, Coords.z.re, p01vel);
-                            continue;
-                        }
-                        // Try west triangle.
-                        P_barycentricCoords(pos, centroid, p01, p00, Coords);
-                        if ((Coords.x <= 0 ) || (Coords.y >= 0 && Coords.z >= 0)) {
-                            setAsWeightedSum3(blk.get_vtx!()(i,j,k).vel[0], Coords.x.re, &centroidVel, 
-                                              Coords.y.re, p01vel, Coords.z.re, p00vel);
-                            continue;
-                        }
-                        // One of the 4 continue statements should have acted by now. 
-                        writeln("Pos", pos, p00, p10, p11, p01);
-                        writeln("Cell-indices",i,j,k);
-                        string errMsg = "Barycentric Calculation failed in luafn: setVtxVelocitiesByCorners()\n";
-                        luaL_error(L, errMsg.toStringz);
-                    } else {
-                        // Assuming we have a roughly-quadrilateral block,
-                        // transfinite interpolation with reconstructed parameters.
-                        // p01---pN----p11
-                        //  |    |      |
-                        // pW----p------pE
-                        //  |    |      |
-                        //  |    |      |
-                        // p00---pS----p10
-                        Vector3 pS = blk.get_vtx!()(i,blk.jmin,k).pos[0];
-                        Vector3 pE = blk.get_vtx!()(blk.imax+1,j,k).pos[0];
-                        Vector3 pN = blk.get_vtx!()(i,blk.jmax+1,k).pos[0];
-                        Vector3 pW = blk.get_vtx!()(blk.imin,j,k).pos[0];
-                        double dW = distance_between(pW, pos);
-                        double dE = distance_between(pos, pE);
-                        double r = dW/(dW+dE); double omr = 1.0-r;
-                        double dS = distance_between(pS, pos);
-                        double dN = distance_between(pos, pN);
-                        double s = dS/(dS+dN); double oms = 1.0-s;
-                        Vector3 pSvel, pEvel, pNvel, pWvel;
-                        setAsWeightedSum2(pSvel, omr, p00vel, r, p10vel);
-                        setAsWeightedSum2(pNvel, omr, p01vel, r, p11vel);
-                        setAsWeightedSum2(pWvel, oms, p00vel, s, p01vel);
-                        setAsWeightedSum2(pEvel, oms, p10vel, s, p11vel);
-                        number velx = oms*pSvel.x + s*pNvel.x + omr*pWvel.x + r*pEvel.x - 
-                            (omr*oms*p00vel.x + omr*s*p01vel.x + r*oms*p10vel.x + r*s*p11vel.x);
-                        number vely = oms*pSvel.y + s*pNvel.y + omr*pWvel.y + r*pEvel.y - 
-                            (omr*oms*p00vel.y + omr*s*p01vel.y + r*oms*p10vel.y + r*s*p11vel.y);
-                        number velz = 0.0;
-                        blk.get_vtx!()(i,j,k).vel[0].set(velx, vely, velz);
-                    }
+                    auto pos = blk.get_vtx!()(i,j,k).pos[0];
+                    // Assuming we have a roughly-quadrilateral block,
+                    // transfinite interpolation with reconstructed parameters.
+                    // p01---pN----p11
+                    //  |    |      |
+                    // pW----p------pE
+                    //  |    |      |
+                    //  |    |      |
+                    // p00---pS----p10
+                    Vector3 pS = blk.get_vtx!()(i,blk.jmin,k).pos[0];
+                    Vector3 pE = blk.get_vtx!()(blk.imax+1,j,k).pos[0];
+                    Vector3 pN = blk.get_vtx!()(i,blk.jmax+1,k).pos[0];
+                    Vector3 pW = blk.get_vtx!()(blk.imin,j,k).pos[0];
+                    double dW = distance_between(pW, pos);
+                    double dE = distance_between(pos, pE);
+                    double r = dW/(dW+dE); double omr = 1.0-r;
+                    double dS = distance_between(pS, pos);
+                    double dN = distance_between(pos, pN);
+                    double s = dS/(dS+dN); double oms = 1.0-s;
+                    Vector3 pSvel, pEvel, pNvel, pWvel;
+                    setAsWeightedSum2(pSvel, omr, p00vel, r, p10vel);
+                    setAsWeightedSum2(pNvel, omr, p01vel, r, p11vel);
+                    setAsWeightedSum2(pWvel, oms, p00vel, s, p01vel);
+                    setAsWeightedSum2(pEvel, oms, p10vel, s, p11vel);
+                    number velx = oms*pSvel.x + s*pNvel.x + omr*pWvel.x + r*pEvel.x - 
+                        (omr*oms*p00vel.x + omr*s*p01vel.x + r*oms*p10vel.x + r*s*p11vel.x);
+                    number vely = oms*pSvel.y + s*pNvel.y + omr*pWvel.y + r*pEvel.y - 
+                        (omr*oms*p00vel.y + omr*s*p01vel.y + r*oms*p10vel.y + r*s*p11vel.y);
+                    number velz = 0.0;
+                    blk.get_vtx!()(i,j,k).vel[0].set(velx, vely, velz);
                 } // end loop i
             } // end loop j
         } else {
-            // Deal with 3-D meshes.
+            // dimensions==3
             string errMsg = "3D velocity interpolation not yet implemented: setVtxVelocitiesByCorners()\n";
             luaL_error(L, errMsg.toStringz);
         }
@@ -724,9 +694,166 @@ extern(C) int luafn_setVtxVelocitiesByCorners(lua_State* L)
     // the lua garbage collector do its thing.
     lua_settop(L, 0);
     return 0;
-}
+} // end luafn_setVtxVelocitiesByCorners()
 
-
+/**
+ * Sets the velocity of vertices in a block based on
+ * specified corner velocities of a given quadrilateral,
+ * assuming that the block is within the quad.
+ *
+ *   p01-----p11
+ *    |       |
+ *    |       |
+ *   p00-----p10
+ *
+ * This function can be called for 2D grids only.
+ * It uses barycenter interpolation to determine the velocities
+ * of the vertices within the block.
+ * This works for clustered, structured or unstructured grid.
+ *
+ * The function expects its arguments in a single table with named fields,
+ * with the supplied points and velocities as Vector3 objects.
+ *
+ * setVtxVelocitiesByQuad{blkId=i,
+ *                        p00=p0, p10=p1, p11=p2, p01=p3,
+ *                        v00=v0, v10=v1, v11=v2, v01=v3}                        
+ */
+extern(C) int luafn_setVtxVelocitiesByQuad(lua_State* L)
+{
+    int narg = lua_gettop(L);
+    if (!lua_istable(L, -1)) {
+        luaL_error(L, "setVtxVelocitiesByQuad expected to receive a single table with named arguments.");
+    }
+    int blkId = -1;
+    lua_getfield(L, 1, "blkId");
+    if (lua_isnumber(L, -1)) {
+        blkId = to!int(lua_tointeger(L, -1));
+    } else {
+        luaL_error(L, "setVtxVelocitiesByQuad expected to receive a integer for blkId.");
+    }
+    lua_pop(L, 1); // discard item
+    if (!canFind(GlobalConfig.localBlockIds, blkId)) {
+        string msg = format("Block id %d is not local to process.", blkId);
+        luaL_error(L, msg.toStringz);
+    }
+    auto blk = globalFluidBlocks[blkId];
+    // Get corner positions and velocities for the quadrilateral.
+    Vector3* p00, p10, p11, p01, vel00, vel10, vel11, vel01;
+    lua_getfield(L, 1, "p00");
+    if (!lua_isnil(L, -1)) {
+        p00 = checkVector3(L, -1);
+    } else {
+        luaL_error(L, "setVtxVelocitiesByQuad expected to receive a Vector3 for p00.");
+    }
+    lua_pop(L, 1); // discard item
+    lua_getfield(L, 1, "p10");
+    if (!lua_isnil(L, -1)) {
+        p10 = checkVector3(L, -1);
+    } else {
+        luaL_error(L, "setVtxVelocitiesByQuad expected to receive a Vector3 for p10.");
+    }
+    lua_pop(L, 1); // discard item
+    lua_getfield(L, 1, "p11");
+    if (!lua_isnil(L, -1)) {
+        p11 = checkVector3(L, -1);
+    } else {
+        luaL_error(L, "setVtxVelocitiesByQuad expected to receive a Vector3 for p11.");
+    }
+    lua_pop(L, 1); // discard item
+    lua_getfield(L, 1, "p01");
+    if (!lua_isnil(L, -1)) {
+        p01 = checkVector3(L, -1);
+    } else {
+        luaL_error(L, "setVtxVelocitiesByQuad expected to receive a Vector3 for p01.");
+    }
+    lua_pop(L, 1); // discard item
+    lua_getfield(L, 1, "vel00");
+    if (!lua_isnil(L, -1)) {
+        vel00 = checkVector3(L, -1);
+    } else {
+        luaL_error(L, "setVtxVelocitiesByQuad expected to receive a Vector3 for vel00.");
+    }
+    lua_pop(L, 1); // discard item
+    lua_getfield(L, 1, "vel10");
+    if (!lua_isnil(L, -1)) {
+        vel10 = checkVector3(L, -1);
+    } else {
+        luaL_error(L, "setVtxVelocitiesByQuad expected to receive a Vector3 for vel10.");
+    }
+    lua_pop(L, 1); // discard item
+    lua_getfield(L, 1, "vel11");
+    if (!lua_isnil(L, -1)) {
+        vel11 = checkVector3(L, -1);
+    } else {
+        luaL_error(L, "setVtxVelocitiesByQuad expected to receive a Vector3 for vel11.");
+    }
+    lua_pop(L, 1); // discard item
+    lua_getfield(L, 1, "vel01");
+    if (!lua_isnil(L, -1)) {
+        vel01 = checkVector3(L, -1);
+    } else {
+        luaL_error(L, "setVtxVelocitiesByQuad expected to receive a Vector3 for vel01.");
+    }
+    lua_pop(L, 1); // discard item
+    //
+    // Middle-point of quadrilateral and it's velocity.
+    // This will form one point of each triangle that we'll use for interpolation.
+    Vector3 pC = 0.25 * ( *p00 + *p10 + *p01 + *p11);
+    Vector3 velC = 0.25 * ( *vel00 + *vel10 + *vel01 + *vel11);
+    //
+    @nogc
+    void setAsWeightedSum3(ref Vector3 result, number[3] w, Vector3* v0, Vector3* v1, Vector3* v2)
+    {
+        result.set(v0); result.scale(w[0]);
+        result.add(v1, w[1]);
+        result.add(v2, w[2]);
+    }
+    //
+    if (blk.myConfig.dimensions == 2) {
+        foreach (vtx; blk.vertices) {
+            // get position of current point                    
+            auto pos = vtx.pos[0];
+            // Find baricentric ccordinates, keeping p0 (of the triangle) at centroid.
+            // Sequentially try the different triangles.
+            number[3] bcc;
+            // Try south triangle
+            bcc = barycentricCoords(pos, pC, *p00, *p10);
+            if (!is_outside_triangle(bcc)) {
+                setAsWeightedSum3(vtx.vel[0], bcc, &velC, vel00, vel10);
+                continue;
+            }
+            // Try east triangle.
+            bcc = barycentricCoords(pos, pC, *p10, *p11);
+            if (!is_outside_triangle(bcc)) {
+                setAsWeightedSum3(vtx.vel[0], bcc, &velC, vel10, vel11);
+                continue;
+            }
+            // Try north triangle.
+            bcc = barycentricCoords(pos, pC, *p11, *p01);
+            if (!is_outside_triangle(bcc)) {
+                setAsWeightedSum3(vtx.vel[0], bcc, &velC, vel11, vel01);
+                continue;
+            }
+            // Try west triangle.
+            bcc = barycentricCoords(pos, pC, *p01, *p00);
+            if (!is_outside_triangle(bcc)) {
+                setAsWeightedSum3(vtx.vel[0], bcc, &velC, vel01, vel00);
+                continue;
+            }
+            // One of the 4 continue statements should have acted by now. 
+            writeln("Vertex index: ", vtx.id, " pos: ", pos, "Quad-corners: ", p00, p10, p11, p01);
+            luaL_error(L, "Barycentric Calculation failed in luafn: setVtxVelocitiesByQuad()\n");
+        } // end loop vtx
+    } else {
+        // dimensions==3
+        luaL_error(L, "3D velocity interpolation not yet implemented: setVtxVelocitiesByQuad()\n");
+    }
+    // In case, the user gave use more return values than
+    // we used, just set the lua stack to empty and let
+    // the lua garbage collector do its thing.
+    lua_settop(L, 0);
+    return 0;
+} // end luafn_setVtxVelocitiesByQuad()
 
 /**
  * Sets the velocity of vertices in a block based on
@@ -877,7 +1004,7 @@ extern(C) int luafn_setVtxVelocitiesByCornersReg(lua_State* L)
     // the lua garbage collector do its thing.
     lua_settop(L, 0);
     return 0;
-}
+} // end luafn_setVtxVelocitiesByCornersReg()
 
 /**
  * Sets the velocity of an individual vertex.
@@ -964,7 +1091,7 @@ extern(C) int luafn_setVtxVelocity(lua_State* L)
     }
     lua_settop(L, 0);
     return 0;
-}
+} // end luafn_setVtxVelocity()
 
 /**
  * Sets the velocity components of an individual vertex.

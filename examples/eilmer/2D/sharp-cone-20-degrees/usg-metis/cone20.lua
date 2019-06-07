@@ -51,6 +51,7 @@ config.max_step = 3000
 config.cfl_value = 0.5
 config.dt_plot = 1.5e-3
 config.dt_history = 10.0e-5
+config.extrema_clipping = false
 
 setHistoryPoint{x=1.0, y=0.2} -- nose of cone
 setHistoryPoint{x=0.201, y=0.001} -- base of cone
