@@ -19,6 +19,8 @@ import flowgradients;
 import fvcell;
 import fvinterface;
 import lsqinterp;
+import nm.complex;
+import nm.number;
 
 class FVVertex {
 public:
@@ -28,7 +30,7 @@ public:
     Vector3[] vel;  // vertex velocity for time-levels, m/s
     // Derivatives of primary-cell variables.
     FlowGradients grad;
-    double radial_pos_norm;
+    number radial_pos_norm;
     Vector3*[] cloud_pos; // Positions of flow points for derivative calculation.
     FlowState[] cloud_fs; // References to flow states at those points.
     FVCell[] cell_cloud; // for the MLP limiter we need access to the gradients within each cell

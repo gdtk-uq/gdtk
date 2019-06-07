@@ -42,7 +42,7 @@ void assign_radial_dist(SFluidBlock blk) {
     FVVertex vtx, vtx_next;
     Vector3 delta;
     SFluidBlock master_block = blk;
-    double radial_dist, block_crossover_value;
+    number radial_dist, block_crossover_value;
     bool last_block;
     for ( size_t k = blk.kmin; k <= krange; ++k ) {
         for ( size_t j = blk.jmin; j <= blk.jmax+1; ++j ) {
@@ -131,7 +131,7 @@ void shock_fitting_vertex_velocities(SFluidBlock blk, int step, double sim_time)
     Vector3[] interface_ws;
     number[] w;
     int array_size;
-    double wsum, denom;
+    number wsum, denom;
     Vector3[] vertex_master_velocities;
 	bool isSouth, isNorth, isTop, isBot;
     int interpolation_order = blk.myConfig.shock_fitting_interpolation_order;
