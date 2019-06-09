@@ -10,7 +10,7 @@
 config.title = "Mallinson's Mach 9 flow over a hollow cylinder (k-omega)"
 print(config.title)
 config.dimensions = 2
-config.axisymmetric_flag = true     -- Axisymmetric calculations
+config.axisymmetric = true     -- Axisymmetric calculations
 config.turbulence_model = "k_omega"
 config.viscous = true
 config.flux_calculator = 'ausmdv'
