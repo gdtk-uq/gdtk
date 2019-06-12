@@ -207,6 +207,7 @@ private:
         }
         gmodel.update_thermo_from_pT(ghostCell.fs.gas);
         gmodel.update_sound_speed(ghostCell.fs.gas);
+        gmodel.update_trans_coeffs(ghostCell.fs.gas);
         ghostCell.fs.vel.refx = getNumberFromTable(L, tblIdx, "velx", false, 0.0);
         ghostCell.fs.vel.refy = getNumberFromTable(L, tblIdx, "vely", false, 0.0);
         ghostCell.fs.vel.refz = getNumberFromTable(L, tblIdx, "velz", false, 0.0);
