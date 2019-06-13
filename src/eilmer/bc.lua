@@ -1219,6 +1219,38 @@ function ExchangeBC_FullFace:new(o)
    return o
 end
 
+ExchangeBC_FullFacePlusUDF = BoundaryCondition:new()
+ExchangeBC_FullFacePlusUDF.type = "exchange_over_full_face_plus_udf"
+function ExchangeBC_FullFacePlusUDF:new(o)
+   local flag = type(self)=='table' and self.type=='exchange_over_full_face_plus_udf'
+   if not flag then
+      error("Make sure that you are using ExchangeBC_FullFacePlusUDF:new{}"..
+               " and not ExchangeBC_FullFacePlusUDF.new{}", 2)
+   end
+   o = o or {}
+   flag = checkAllowedNames(o, {"otherBlock", "otherFace", "orientation",
+                                "reorient_vector_quantities", "Rmatrix",
+                                "fileName", "filename", "label", "group"})
+   if not flag then
+      error("Invalid name for item supplied to ExchangeBC_FullFacePlusUDF constructor.", 2)
+   end
+   o = BoundaryCondition.new(self, o)
+   o.is_wall_with_viscous_effects = false
+   o.preReconAction = { FullFaceCopy:new{otherBlock=o.otherBlock,
+                                         otherFace=o.otherFace,
+                                         orientation=o.orientation,
+                                         reorient_vector_quantities=o.reorient_vector_quantities,
+                                         Rmatrix=o.Rmatrix},
+                        UserDefinedGhostCell:new{fileName=o.fileName}
+   }
+   o.preSpatialDerivActionAtBndryFaces = {
+      UserDefinedInterface:new{fileName=o.fileName},
+      UpdateThermoTransCoeffs:new()
+   }
+   o.is_configured = true
+   return o
+end
+
 ExchangeBC_MappedCell = BoundaryCondition:new()
 ExchangeBC_MappedCell.type = "exchange_using_mapped_cells"
 function ExchangeBC_MappedCell:new(o)
