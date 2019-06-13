@@ -23,6 +23,7 @@ TEST_PROGRAMS := vector3_test vector3_complex_test \
 	sweptsurfacevolume_test sweptsurfacevolume_complex_test \
 	wedgevolume_test wedgevolume_complex_test \
 	slabvolume_test slabvolume_complex_test \
+	twosurfacevolume_test twosurfacevolume_complex_test \
 	sgrid_test sgrid_complex_test \
 	usgrid_test usgrid_complex_test \
 	univariatefunctions_test svg_test \
