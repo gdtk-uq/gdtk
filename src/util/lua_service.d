@@ -33,6 +33,20 @@ void doLuaFile(lua_State* L, string fname)
     }
 }
 
+bool tableEmpty(lua_State* L, int tblIdx)
+{
+    lua_pushnil(L); // first key
+    // If we are looking from the top of the stack,
+    // the table is now one further down.
+    if (tblIdx < 0) { tblIdx -= 1; }
+    if (lua_next(L, tblIdx) != 0) {
+        lua_pop(L, 2); // discard key and value
+        return false;
+    } else {
+        return true;
+    }
+}
+
 string getString(lua_State* L, int tblIdx, string key)
 {
     lua_getfield(L, tblIdx, key.toStringz);
