@@ -418,6 +418,9 @@ final class GlobalConfig {
     // Presumably, we won't be accessing this particular gas model from the 
     // individual block computations, so that parallel computations for the blocks
     // don't trip over each other.
+    static bool sticky_electrons = false; // Default to electrons being a separate species.
+    // Setting sticky_electrons=true will signal to the flow solver that we carry electrons
+    // in the gas model but do not treat them as a separate species in the transport equations.
     //
     // Customization of the simulation is via user-defined actions.
     shared static string udf_supervisor_file; // empty to start
@@ -894,6 +897,7 @@ public:
     bool ignition_zone_active;
 
     GasModel gmodel;
+    bool sticky_electrons;
     bool include_quality;
     ThermochemicalReactor thermochemUpdate;
 
@@ -1017,6 +1021,7 @@ public:
         foreach (iz; GlobalConfig.ignition_zones) { ignition_zones ~= new IgnitionZone(iz); }
         //
         gmodel = init_gas_model(GlobalConfig.gas_model_file);
+        sticky_electrons = GlobalConfig.sticky_electrons;
         if (mass_diffusion_model != MassDiffusionModel.none) {
             massDiffusion = initMassDiffusion(gmodel, mass_diffusion_model,
                                               GlobalConfig.constant_lewis_number, GlobalConfig.lewis_number,
@@ -1177,6 +1182,7 @@ void read_config_file()
     foreach (i; 0 .. GlobalConfig.userPad.length) {
         GlobalConfig.userPad[i] = (i < user_pad_data.length) ? user_pad_data[i] : default_user_pad_data[i];
     }
+    mixin(update_bool("sticky_electrons", "sticky_electrons"));
     mixin(update_bool("include_quality", "include_quality"));
     mixin(update_int("dimensions", "dimensions"));
     mixin(update_bool("axisymmetric", "axisymmetric"));
@@ -1188,6 +1194,7 @@ void read_config_file()
         writeln("  udf_supervisor_file: ", to!string(GlobalConfig.udf_supervisor_file));
         writeln("  user_pad_length: ", GlobalConfig.user_pad_length);
         writeln("  user_pad_data: ", to!string(GlobalConfig.userPad));
+        writeln("  sticky_electrons: ", GlobalConfig.sticky_electrons);
         writeln("  include_quality: ", GlobalConfig.include_quality);
         writeln("  dimensions: ", GlobalConfig.dimensions);
         writeln("  axisymmetric: ", GlobalConfig.axisymmetric);

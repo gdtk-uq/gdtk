@@ -1626,6 +1626,8 @@ function write_config_file(fileName)
       end
    end
    f:write('],\n')
+   f:write(string.format('"sticky_electrons": %s,\n',
+			 tostring(config.sticky_electrons)))
    f:write(string.format('"include_quality": %s,\n',
 			 tostring(config.include_quality)))
    f:write(string.format('"dimensions": %d,\n', config.dimensions))
