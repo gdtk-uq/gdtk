@@ -1,8 +1,11 @@
 -- exptube.lua
--- An expansion tube demonstration to show the use of user-defined BCs.
--- PJ 2017-05-07
+-- An expansion tube demonstration, MPI flavour.
+-- Although the set-up is more complicated than the shared-memory variant,
+-- this MPI example should scale to very large simulations.
 --
-config.title = "Expansion tube demo with UDF-bc diaphragm."
+-- PJ 2019-06-14
+--
+config.title = "MPI Expansion tube demo with UDF-bc diaphragm."
 print(config.title)
 config.dimensions = 2
 config.axisymmetric = true
@@ -38,11 +41,22 @@ for i = 0, 2 do
 end
 identifyBlockConnections()
 -- The diaphragm boundary condition is between FluidBlocks [1] and [2]
-blks[1].bcList[east] = UserDefinedGhostCellBC:new{fileName="udf-diaphragm.lua"}
-blks[2].bcList[west] = UserDefinedGhostCellBC:new{fileName="udf-diaphragm.lua"}
--- The following setting is important for UDF BCs that sample cell data
--- from other blocks.
-config.apply_bcs_in_parallel = false 
+blks[1].bcList[east] = ExchangeBC_FullFacePlusUDF:new{
+   otherBlock=2, otherFace=west,
+   fileName="diaphragm.lua"
+}
+blks[2].bcList[west] = ExchangeBC_FullFacePlusUDF:new{
+   otherBlock=1, otherFace=east,
+   fileName="diaphragm.lua"
+}
+-- A place to record the state of the diaphragm.
+config.user_pad_length = 1
+user_pad_data = {0}
+-- We want the shock-tube block [1] that sets the rupture state
+-- to be on the MPI master task 0.  Its user_pad_data is broadcast.
+mpiTasks = mpiDistributeBlocks{ntasks=3, dist="load-balance", preassign={[1]=0}}
+-- The function that sets the diaphragm state is also a user-defined function.
+config.udf_supervisor_file='supervisor.lua'
 --
 -- Do a little more setting of global data.
 config.max_time = 1.0e-3  -- seconds
