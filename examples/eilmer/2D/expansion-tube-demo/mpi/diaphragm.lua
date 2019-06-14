@@ -28,7 +28,7 @@ function ghostCells(args)
    local ruptureFlag = userPad[1]
    local cell0, cell1
    if blkId == 2 and args.boundaryId == west then
-      if ruptureFlag then
+      if ruptureFlag >= 1 then
 	 -- Leave previous exchange data from block 1, east boundary.
 	 cell0 = {}
 	 cell1 = {}
@@ -40,7 +40,7 @@ function ghostCells(args)
 	 cell1.velx = -cell1.velx
      end
    elseif blkId == 1 and args.boundaryId == east then
-      if ruptureFlag then
+      if ruptureFlag >= 1 then
 	 -- Leave previous exchange data from block 2, west boundary.
 	 cell0 = {}
 	 cell1 = {}
