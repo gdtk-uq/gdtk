@@ -97,7 +97,7 @@ string generate_boundary_load_file(int blkid, int current_loads_tindx, double si
         auto f = File(fname, "w");
         f.writeln("# t = ", sim_time);
         f.writeln("# 1:pos.x 2:pos.y 3:pos.z 4:area 5:q_total 6:q_cond 7:q_diff 8:tau 9:l_tau 10:m_tau 11:n_tau 12:sigma "~
-                  "13:n.x 14:n.y 15:n.z 16:T 17:Re_wall 18:y+ 19:cellWidthNormalToSurface");
+                  "13:n.x 14:n.y 15:n.z 16:T 17:Re_wall 18:y+ 19:cellWidthNormalToSurface 20:outsign");
         f.close();
     }
     return fname;
@@ -111,7 +111,7 @@ void apply_unstructured_grid(UFluidBlock blk, double sim_time, int current_loads
             foreach (i, iface; bndary.faces) {
                 // cell width normal to surface
                 number w = (bndary.outsigns[i] == 1) ? iface.left_cell.L_min : iface.right_cell.L_min;
-                compute_and_store_loads(iface, w, sim_time, fname);
+                compute_and_store_loads(iface, bndary.outsigns[i], w, sim_time, fname);
             }
         }
     }
@@ -133,7 +133,7 @@ void apply_structured_grid(SFluidBlock blk, double sim_time, int current_loads_t
                         cell = blk.get_cell!()(i,j,k);
                         IFace = cell.iface[Face.north];
                         cellWidthNormalToSurface = cell.jLength;
-                        compute_and_store_loads(IFace, cellWidthNormalToSurface, sim_time, fname);
+                        compute_and_store_loads(IFace, bndary.outsigns[i], cellWidthNormalToSurface, sim_time, fname);
                     } // end i loop
                 } // end for k
                 break;
@@ -144,7 +144,7 @@ void apply_structured_grid(SFluidBlock blk, double sim_time, int current_loads_t
                         cell = blk.get_cell!()(i,j,k);
                         IFace = cell.iface[Face.east];
                         cellWidthNormalToSurface = cell.iLength;
-                        compute_and_store_loads(IFace, cellWidthNormalToSurface, sim_time, fname);
+                        compute_and_store_loads(IFace, bndary.outsigns[i], cellWidthNormalToSurface, sim_time, fname);
                     } // end j loop
                 } // end for k
                 break;
@@ -155,7 +155,7 @@ void apply_structured_grid(SFluidBlock blk, double sim_time, int current_loads_t
                         cell = blk.get_cell!()(i,j,k);
                         IFace = cell.iface[Face.south];
                         cellWidthNormalToSurface = cell.jLength;                        
-                        compute_and_store_loads(IFace, cellWidthNormalToSurface, sim_time, fname);
+                        compute_and_store_loads(IFace, bndary.outsigns[i], cellWidthNormalToSurface, sim_time, fname);
                     } // end i loop
                 } // end for k
                 break;
@@ -166,7 +166,7 @@ void apply_structured_grid(SFluidBlock blk, double sim_time, int current_loads_t
                         cell = blk.get_cell!()(i,j,k);
                         IFace = cell.iface[Face.west];
                         cellWidthNormalToSurface = cell.iLength;
-                        compute_and_store_loads(IFace, cellWidthNormalToSurface, sim_time, fname);
+                        compute_and_store_loads(IFace, bndary.outsigns[i], cellWidthNormalToSurface, sim_time, fname);
                     } // end j loop
                 } // end for k
                 break;
@@ -177,7 +177,7 @@ void apply_structured_grid(SFluidBlock blk, double sim_time, int current_loads_t
                         cell = blk.get_cell!()(i,j,k);
                         IFace = cell.iface[Face.top];
                         cellWidthNormalToSurface = cell.kLength;
-                        compute_and_store_loads(IFace, cellWidthNormalToSurface, sim_time, fname);
+                        compute_and_store_loads(IFace, bndary.outsigns[i], cellWidthNormalToSurface, sim_time, fname);
                     } // end j loop
                 } // end for i
                 break;
@@ -188,7 +188,7 @@ void apply_structured_grid(SFluidBlock blk, double sim_time, int current_loads_t
                         cell = blk.get_cell!()(i,j,k);
                         IFace = cell.iface[Face.bottom];
                         cellWidthNormalToSurface = cell.kLength;
-                        compute_and_store_loads(IFace, cellWidthNormalToSurface, sim_time, fname);
+                        compute_and_store_loads(IFace, bndary.outsigns[i], cellWidthNormalToSurface, sim_time, fname);
                     } // end j loop
                 } // end for i
                 break;
@@ -197,7 +197,7 @@ void apply_structured_grid(SFluidBlock blk, double sim_time, int current_loads_t
     } // end foreach
 } // end apply_structured_grid()
 
-void compute_and_store_loads(FVInterface iface, number cellWidthNormalToSurface, double sim_time, string fname)
+void compute_and_store_loads(FVInterface iface, int outsign, number cellWidthNormalToSurface, double sim_time, string fname)
 {
     auto gmodel = GlobalConfig.gmodel_master;
     FlowState fs = iface.fs;
@@ -277,11 +277,11 @@ void compute_and_store_loads(FVInterface iface, number cellWidthNormalToSurface,
         y_plus = 0.0;
     }
     // store in file
-    auto writer = format("%20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e\n",
+    auto writer = format("%20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %d\n",
                          iface.pos.x.re, iface.pos.y.re, iface.pos.z.re, iface.area[0].re,
                          q_total.re, q_cond.re, q_diff.re, tau_wall.re, l_tau.re, m_tau.re, n_tau.re, sigma_wall.re,
                          nx.re, ny.re, nz.re, T_wall.re, Re_wall.re, y_plus.re,
-                         cellWidthNormalToSurface.re);
+                         cellWidthNormalToSurface.re, outsign);
     std.file.append(fname, writer);    
 } // end compute_and_store_loads()
 

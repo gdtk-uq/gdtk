@@ -1262,13 +1262,25 @@ public:
         // just in case we are given a non-hex cell
         size_t third_face = min(Face.top, iface.length-1);
         number un_T = (myConfig.dimensions == 3) ? fabs(fs.vel.dot(iface[third_face].n)) : to!number(0.0);
-        number signalN = (un_N + fs.gas.a) / jLength;
-        signal = fmax(signal, signalN);
-        number signalE = (un_E + fs.gas.a) / iLength;
-        signal = fmax(signal, signalE);
-        if (myConfig.dimensions == 3) {
-            number signalT = (un_T + fs.gas.a) / kLength;
-            signal = fmax(signal, signalT);
+        if (myConfig.stringent_cfl) {
+            // Compute the speed with the shortest length and the highest speed.
+            number un_max = fmax(un_N, un_E);
+            number minLength = fmin(iLength, jLength);
+            if (myConfig.dimensions == 3) {
+                un_max = fmax(un_max, un_T);
+                minLength = fmin(minLength, kLength);
+            }
+            signal = (un_max + fs.gas.a) / minLength;
+        } else {
+            // Compute the signal speed in each index direction.
+            number signalN = (un_N + fs.gas.a) / jLength;
+            signal = fmax(signal, signalN);
+            number signalE = (un_E + fs.gas.a) / iLength;
+            signal = fmax(signal, signalE);
+            if (myConfig.dimensions == 3) {
+                number signalT = (un_T + fs.gas.a) / kLength;
+                signal = fmax(signal, signalT);
+            }
         }
         // Factor for the viscous time limit.
         // See Swanson, Turkel and White (1991)

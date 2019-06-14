@@ -64,8 +64,8 @@ a = Vector3:new{x=L, y=0.0}; b = Vector3:new{x=L, y=H};
 c = Vector3:new{x=0.0, y=H}; d = Vector3:new{x=0.0, y=3.0*H/4.0}
 patch = CoonsPatch:new{p00=d, p10=a, p11=b, p01=c}
 cfx = RobertsFunction:new{end0=true,end1=false,beta=1.05}
-cflist = {north=cfx, east=RobertsFunction:new{end0=false,end1=true,beta=1.0014},
-	  south=cfx, west=RobertsFunction:new{end0=false,end1=true,beta=1.0074}}
+cflist = {north=cfx, east=RobertsFunction:new{end0=false,end1=true,beta=1.1400},
+	  south=cfx, west=RobertsFunction:new{end0=false,end1=true,beta=1.7400}}
 grd = StructuredGrid:new{psurface=patch, niv=129, njv=87, cfList=cflist}
 
 blks = FluidBlockArray{grid=grd, nib=2, njb=2, fillCondition=inflow,
