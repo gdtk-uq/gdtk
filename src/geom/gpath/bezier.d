@@ -8,6 +8,7 @@ import std.math;
 import nm.complex;
 import nm.number;
 
+import geom.geometry_exception;
 import geom.elements;
 import geom.gpath.path;
 
@@ -54,6 +55,46 @@ public:
     override string classString() const
     {
         return "Bezier";
+    }
+    void elevateDegree(int newDegree)
+    {
+        /*
+         * This algorithm is described in Section 2.5 of
+         * Rogers (2001), An Introduction to NURBS: with historical perspective."
+         *
+         * Rogers cites Forrest for this procedure:
+         * Forrest, A.R. (1972)
+         * Interactive interpolation and approximation by Bezier polynomials.
+         * Comp. J. 15:pp.71--79
+         */
+        auto currentDegree = B.length - 1;
+        
+        if (newDegree < currentDegree) {
+            throw new GeometryException("Desired Bezier degree elevation is less than current degree.");
+        }
+
+        if (currentDegree == newDegree)
+            return;
+
+        auto n_elevations = newDegree - currentDegree;
+        Vector3[] B_star;
+        B_star.length = B.length + n_elevations;
+        foreach (j; 0 .. n_elevations) {
+            auto n = B.length - 1;
+            B_star[0] = B[0];
+            // Blend internal points
+            foreach (i; 1 .. n+1) {
+                double alpha = to!double(i)/(n + 1);
+                B_star[i] = alpha*B[i-1] + (1.0 - alpha)*B[i];
+            }
+            B_star[n+1] = B[n];
+            // Get B ready for use, or prepare for next iteration
+            B.length = B.length + 1;
+            foreach (i; 0 .. n+2) B[i] = B_star[i];
+        }
+        // Remember to reset control points for derivative
+        // and second derivative curves.
+        set_deriv_control_points();
     }
 
 protected:
@@ -114,6 +155,9 @@ version(bezier_test) {
         assert(approxEqualVectors(acb.dpdt(0.5), Vector3(-1, 0, 1)), failedUnitTest());
         assert(approxEqualVectors(acb.d2pdt2(0.5), Vector3(2,0,2)), failedUnitTest());
         //
+        auto adbCopy = adb.dup();
+        adbCopy.elevateDegree(4);
+        assert(approxEqualVectors(adb(0.5), adbCopy(0.5)), failedUnitTest());
         version(complex_numbers) {
             // Try out the complex derivative evaluation.
             double cubic_bezier_analytic_derivative(double t, size_t pt) {
