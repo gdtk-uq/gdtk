@@ -79,7 +79,9 @@ public:
     {
         this.myConfig = myConfig;
         version(multi_species_gas) {
-            massf.length = myConfig.gmodel.n_species;
+            auto gm = myConfig.gmodel;
+            uint nsp = (myConfig.sticky_electrons) ? gm.n_heavy : gm.n_species;
+            massf.length = nsp;
         }
     }
 

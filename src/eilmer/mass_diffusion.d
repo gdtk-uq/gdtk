@@ -54,19 +54,29 @@ interface MassDiffusion {
                             number[] jx, number[] jy, number[] jz);
 }
 
-MassDiffusion initMassDiffusion(GasModel gmodel, MassDiffusionModel mass_diffusion_model, bool withConstantLewisNumber, double Lewis,
+MassDiffusion initMassDiffusion(GasModel gmodel,
+                                bool sticky_electrons,
+                                MassDiffusionModel mass_diffusion_model,
+                                bool withConstantLewisNumber,
+                                double Lewis,
                                 bool withSpeciesSpecificLewisNumbers)
 {
     switch (mass_diffusion_model) {
     case MassDiffusionModel.ficks_first_law:
-        return new FicksFirstLaw(gmodel, true, withConstantLewisNumber, Lewis, withSpeciesSpecificLewisNumbers);
+        return new FicksFirstLaw(gmodel, sticky_electrons, true, withConstantLewisNumber,
+                                 Lewis, withSpeciesSpecificLewisNumbers);
     default:
         throw new FlowSolverException("Selected mass diffusion model is not available.");
     }
 }
 
 class FicksFirstLaw : MassDiffusion {
-    this(GasModel gmodel, bool withMassFluxCorrection=true, bool withConstantLewisNumber=false, double Lewis=1.0, bool withSpeciesSpecificLewisNumbers=false)
+    this(GasModel gmodel,
+         bool sticky_electrons,
+         bool withMassFluxCorrection=true,
+         bool withConstantLewisNumber=false,
+         double Lewis=1.0,
+         bool withSpeciesSpecificLewisNumbers=false)
     {
         _withMassFluxCorrection = withMassFluxCorrection;
         _withConstantLewisNumber = withConstantLewisNumber;
@@ -74,7 +84,7 @@ class FicksFirstLaw : MassDiffusion {
         _Le = Lewis;
         
         _gmodel = gmodel;
-        _nsp = gmodel.n_species;
+        _nsp = (sticky_electrons) ? gmodel.n_heavy : gmodel.n_species;
         
         _sigma.length = _nsp;
         _eps.length = _nsp;
@@ -268,7 +278,8 @@ private:
 
 extern(C) int luafn_computeBinaryDiffCoeffs(lua_State *L)
 {
-    auto n_species = GlobalConfig.gmodel_master.n_species;
+    auto gmodel = GlobalConfig.gmodel_master;
+    auto n_species = (GlobalConfig.sticky_electrons) ? gmodel.n_heavy : gmodel.n_species;
     // Expect temperature, pressure, and a table to push values into.
     auto T = to!number(luaL_checknumber(L, 1));
     auto p = to!number(luaL_checknumber(L, 2));

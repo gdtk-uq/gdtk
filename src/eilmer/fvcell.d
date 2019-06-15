@@ -521,7 +521,9 @@ public:
         }
         version(multi_species_gas) {
             // Species densities: mass of species is per unit volume.
-            foreach(isp; 0 .. myU.massf.length) {
+            auto gm = myConfig.gmodel;
+            uint nsp = (myConfig.sticky_electrons) ? gm.n_heavy : gm.n_species;
+            foreach(isp; 0 .. nsp) {
                 myU.massf[isp] = fs.gas.rho*fs.gas.massf[isp];
             }
         }
@@ -622,8 +624,10 @@ public:
         }
         // Thermochemical species, if appropriate.
         version(multi_species_gas) {
-            foreach(isp; 0 .. gmodel.n_species) { fs.gas.massf[isp] = myU.massf[isp] * dinv; } 
-            if (gmodel.n_species > 1) scale_mass_fractions(fs.gas.massf);
+            uint nsp = (myConfig.sticky_electrons) ? gmodel.n_heavy : gmodel.n_species;
+            foreach(isp; 0 .. nsp) { fs.gas.massf[isp] = myU.massf[isp] * dinv; }
+            if (myConfig.sticky_electrons) { gmodel.balance_charge(fs.gas); }
+            if (gmodel.n_species > 1) { scale_mass_fractions(fs.gas.massf); }
         }
         //
         // Fill out the other variables: P, T, a, and viscous transport coefficients.
@@ -766,7 +770,9 @@ public:
             // volume of species isp and
             // the fluxes are mass/unit-time/unit-area.
             // Units of DmassfDt are 1/sec.
-            foreach(isp; 0 .. iface[0].F.massf.length) {
+            auto gm = myConfig.gmodel;
+            uint nsp = (myConfig.sticky_electrons) ? gm.n_heavy : gm.n_species;
+            foreach(isp; 0 .. nsp) {
                 integral = 0.0;
                 foreach(i; 0 .. nf) { integral -= myF[i].massf[isp]*area[i]; }
                 my_dUdt.massf[isp] = vol_inv*integral + Q.massf[isp];
@@ -852,7 +858,9 @@ public:
             }
         }
         version(multi_species_gas) {
-            foreach(isp; 0 .. U1.massf.length) {
+            auto gm = myConfig.gmodel;
+            uint nsp = (myConfig.sticky_electrons) ? gm.n_heavy : gm.n_species;
+            foreach(isp; 0 .. nsp) {
                 U1.massf[isp] = U0.massf[isp] + dt*gamma_1*dUdt0.massf[isp];
             }
         }
@@ -918,7 +926,9 @@ public:
             }
         }
         version(multi_species_gas) {
-            foreach(isp; 0 .. U2.massf.length) {
+            auto gm = myConfig.gmodel;
+            uint nsp = (myConfig.sticky_electrons) ? gm.n_heavy : gm.n_species;
+            foreach(isp; 0 .. nsp) {
                 U2.massf[isp] = U_old.massf[isp] + dt*(gamma_1*dUdt0.massf[isp] + gamma_2*dUdt1.massf[isp]);
             }
         }
@@ -992,7 +1002,9 @@ public:
             }
         }
         version(multi_species_gas) {
-            foreach(isp; 0 .. U3.massf.length) {
+            auto gm = myConfig.gmodel;
+            uint nsp = (myConfig.sticky_electrons) ? gm.n_heavy : gm.n_species;
+            foreach(isp; 0 .. nsp) {
                 U3.massf[isp] = U_old.massf[isp] +
                     dt*(gamma_1*dUdt0.massf[isp] + gamma_2*dUdt1.massf[isp] + gamma_3*dUdt2.massf[isp]);
             }
@@ -1042,7 +1054,9 @@ public:
             }
         }
         version(multi_species_gas) {
-            foreach(isp; 0 .. U1.massf.length) {
+            auto gm = myConfig.gmodel;
+            uint nsp = (myConfig.sticky_electrons) ? gm.n_heavy : gm.n_species;
+            foreach(isp; 0 .. nsp) {
                 U1.massf[isp] = vr*(U0.massf[isp] + dt*gamma_1*dUdt0.massf[isp]);
             }
         }
@@ -1098,7 +1112,9 @@ public:
             }
         }
         version(multi_species_gas) {
-            foreach(isp; 0 .. U2.massf.length) {
+            auto gm = myConfig.gmodel;
+            uint nsp = (myConfig.sticky_electrons) ? gm.n_heavy : gm.n_species;
+            foreach(isp; 0 .. nsp) {
                 U2.massf[isp] = vol_inv*(v_old*U0.massf[isp] +
                                          dt*(gamma_1*dUdt0.massf[isp] + gamma_2*dUdt1.massf[isp]));
             }
@@ -1143,6 +1159,8 @@ public:
         // chemistry update.
         double dt_chem_save = dt_chem;
 
+        if (myConfig.sticky_electrons) { myConfig.gmodel.balance_charge(fs.gas); }
+        
         version(debug_chem) {
             savedGasState.copy_values_from(fs.gas);
         }

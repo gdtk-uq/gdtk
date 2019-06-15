@@ -1023,7 +1023,7 @@ public:
         gmodel = init_gas_model(GlobalConfig.gas_model_file);
         sticky_electrons = GlobalConfig.sticky_electrons;
         if (mass_diffusion_model != MassDiffusionModel.none) {
-            massDiffusion = initMassDiffusion(gmodel, mass_diffusion_model,
+            massDiffusion = initMassDiffusion(gmodel, sticky_electrons, mass_diffusion_model,
                                               GlobalConfig.constant_lewis_number, GlobalConfig.lewis_number,
                                               GlobalConfig.species_specific_lewis_numbers);
         }
@@ -1388,7 +1388,8 @@ void read_config_file()
     configCheckPoint3();
 
     if (GlobalConfig.mass_diffusion_model != MassDiffusionModel.none) {
-        GlobalConfig.massDiffusion = initMassDiffusion(GlobalConfig.gmodel_master, GlobalConfig.mass_diffusion_model,
+        GlobalConfig.massDiffusion = initMassDiffusion(GlobalConfig.gmodel_master, GlobalConfig.sticky_electrons,
+                                                       GlobalConfig.mass_diffusion_model,
                                                        GlobalConfig.constant_lewis_number, GlobalConfig.lewis_number,
                                                        GlobalConfig.species_specific_lewis_numbers);
     }
