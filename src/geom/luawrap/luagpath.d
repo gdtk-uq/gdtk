@@ -629,6 +629,23 @@ extern(C) int bezierCtrlPoint(lua_State* L)
 }
 
 /**
+ * Access to the elevateDegree Bezier method.
+ */
+extern(C) int elevateDegree(lua_State* L)
+{
+    auto bezier = checkObj!(Bezier, BezierMT)(L, 1);
+    int narg = lua_gettop(L);
+    if (narg < 2) {
+        string errMsg = "Error in call to bez:elevateDegree(): not enough arguments.\n";
+        errMsg ~= "An integer for the desired degree elevation is required as single argument.\n";
+        luaL_error(L, errMsg.toStringz);
+    }
+    int newDegree = to!int(luaL_checkint(L, 2));
+    bezier.elevateDegree(newDegree);
+    return 0;
+}
+
+/**
  * The Lua constructor for a Polyline.
  *
  * Example construction in Lua:
@@ -1486,6 +1503,8 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "numberCtrlPts");
     lua_pushcfunction(L, &bezierCtrlPoint);
     lua_setfield(L, -2, "ctrlPt");
+    lua_pushcfunction(L, &elevateDegree);
+    lua_setfield(L, -2, "elevateDegree");
 
     lua_setglobal(L, BezierMT.toStringz);
 
