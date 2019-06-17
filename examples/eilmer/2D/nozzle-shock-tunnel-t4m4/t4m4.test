@@ -23,7 +23,7 @@ test prep {Prepare input files.} -body {
         file copy [file join $dgd_repo src gas sample-data cea-air13species-gas-model.lua] \
             $here
     }
-    exec e4shared --prep --job=t4m4  > LOGFILE_PREP
+    exec e4shared-debug --prep --job=t4m4  > LOGFILE_PREP
 } -result {} -returnCodes {0}
 
 test run {Run block-marching simulation.} -body {
