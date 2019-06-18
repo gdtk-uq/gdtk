@@ -50,7 +50,7 @@ bool getJSONbool(JSONValue jsonData, string key, bool defaultValue)
 {
     bool value;
     try {
-        value = jsonData[key].type is JSON_TYPE.TRUE;
+        value = jsonData[key].type is JSONType.true_;
     } catch (Exception e) {
         value = defaultValue;
     }
