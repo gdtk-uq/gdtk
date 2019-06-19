@@ -714,7 +714,7 @@ extern(C) int newPolyline(lua_State* L)
 /**
  * Access to the Polyline::toGmshString method.
  *
- * pTag, cTag, lTag, str = polyline:toGmshString(pointsTag, curvesTag, loopsTag)
+ * pTag, cTag, lTag, str = polyline:toGmshString(pointsTag, curvesTag, loopsTag, ?label?, ?len?)
  */
 extern(C) int polyline_toGmshString(lua_State* L)
 {
@@ -728,7 +728,11 @@ extern(C) int polyline_toGmshString(lua_State* L)
     int pointsTag = to!int(luaL_checkint(L, 2));
     int curvesTag = to!int(luaL_checkint(L, 3));
     int loopsTag = to!int(luaL_checkint(L, 4));
-    string str = polyline.toGmshString(pointsTag, curvesTag, loopsTag);
+    string label = "";
+    if (narg >= 5) { label = to!string(luaL_checkstring(L, 5)); }
+    double len = 1.0e-2;
+    if (narg >= 6) { len = to!double(luaL_checknumber(L, 6)); }
+    string str = polyline.toGmshString(pointsTag, curvesTag, loopsTag, label, len);
     lua_settop(L, 0); // clear stack
     lua_pushnumber(L, pointsTag);
     lua_pushnumber(L, curvesTag);
@@ -914,7 +918,7 @@ extern(C) int newSVGPath(lua_State* L)
 /**
  * Access to the SVGPath::toGmshString method.
  *
- * pTag, cTag, lTag, str = svgpath:toGmshString(pointsTag, curvesTag, loopsTag)
+ * pTag, cTag, lTag, str = svgpath:toGmshString(pointsTag, curvesTag, loopsTag, ?label?, ?len?)
  */
 extern(C) int svgpath_toGmshString(lua_State* L)
 {
@@ -928,7 +932,11 @@ extern(C) int svgpath_toGmshString(lua_State* L)
     int pointsTag = to!int(luaL_checkint(L, 2));
     int curvesTag = to!int(luaL_checkint(L, 3));
     int loopsTag = to!int(luaL_checkint(L, 4));
-    string str = svgpath.toGmshString(pointsTag, curvesTag, loopsTag);
+    string label = "";
+    if (narg >= 5) { label = to!string(luaL_checkstring(L, 5)); }
+    double len = 1.0e-2;
+    if (narg >= 6) { len = to!double(luaL_checknumber(L, 6)); }
+    string str = svgpath.toGmshString(pointsTag, curvesTag, loopsTag, label, len);
     lua_settop(L, 0); // clear stack
     lua_pushnumber(L, pointsTag);
     lua_pushnumber(L, curvesTag);
