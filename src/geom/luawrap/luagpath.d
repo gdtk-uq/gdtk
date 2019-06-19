@@ -711,6 +711,31 @@ extern(C) int newPolyline(lua_State* L)
     return 1;
 } // end newPolyline()
 
+/**
+ * Access to the Polyline::toGmshString method.
+ *
+ * pTag, cTag, lTag, str = polyline:toGmshString(pointsTag, curvesTag, loopsTag)
+ */
+extern(C) int polyline_toGmshString(lua_State* L)
+{
+    auto polyline = checkObj!(Polyline, PolylineMT)(L, 1);
+    int narg = lua_gettop(L);
+    if (narg < 4) {
+        string errMsg = "Error in call to Polyline:toGmshString(): not enough arguments.\n";
+        errMsg ~= "Integer values for the start tags for points, curves and loops are required.\n";
+        luaL_error(L, errMsg.toStringz);
+    }
+    int pointsTag = to!int(luaL_checkint(L, 2));
+    int curvesTag = to!int(luaL_checkint(L, 3));
+    int loopsTag = to!int(luaL_checkint(L, 4));
+    string str = polyline.toGmshString(pointsTag, curvesTag, loopsTag);
+    lua_settop(L, 0); // clear stack
+    lua_pushnumber(L, pointsTag);
+    lua_pushnumber(L, curvesTag);
+    lua_pushnumber(L, loopsTag);
+    lua_pushstring(L, str.toStringz);
+    return 4;
+}
 
 /**
  * The Lua constructor for a Spline (Polyline).
@@ -885,6 +910,32 @@ extern(C) int newSVGPath(lua_State* L)
     pathStore ~= pushObj!(SVGPath, SVGPathMT)(L, svgpath);
     return 1;
 } // end newSVGPath()
+
+/**
+ * Access to the SVGPath::toGmshString method.
+ *
+ * pTag, cTag, lTag, str = svgpath:toGmshString(pointsTag, curvesTag, loopsTag)
+ */
+extern(C) int svgpath_toGmshString(lua_State* L)
+{
+    auto svgpath = checkObj!(SVGPath, SVGPathMT)(L, 1);
+    int narg = lua_gettop(L);
+    if (narg < 4) {
+        string errMsg = "Error in call to SVGPath:toGmshString(): not enough arguments.\n";
+        errMsg ~= "Integer values for the start tags for points, curves and loops are required.\n";
+        luaL_error(L, errMsg.toStringz);
+    }
+    int pointsTag = to!int(luaL_checkint(L, 2));
+    int curvesTag = to!int(luaL_checkint(L, 3));
+    int loopsTag = to!int(luaL_checkint(L, 4));
+    string str = svgpath.toGmshString(pointsTag, curvesTag, loopsTag);
+    lua_settop(L, 0); // clear stack
+    lua_pushnumber(L, pointsTag);
+    lua_pushnumber(L, curvesTag);
+    lua_pushnumber(L, loopsTag);
+    lua_pushstring(L, str.toStringz);
+    return 4;
+}
 
 
 /**
@@ -1527,6 +1578,8 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "copy");
     lua_pushcfunction(L, &pathIntersect2D!(Polyline, PolylineMT));
     lua_setfield(L, -2, "intersect2D");
+    lua_pushcfunction(L, &polyline_toGmshString);
+    lua_setfield(L, -2, "toGmshString");
 
     lua_setglobal(L, PolylineMT.toStringz);
 
@@ -1593,6 +1646,8 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "copy");
     lua_pushcfunction(L, &pathIntersect2D!(SVGPath, SVGPathMT));
     lua_setfield(L, -2, "intersect2D");
+    lua_pushcfunction(L, &svgpath_toGmshString);
+    lua_setfield(L, -2, "toGmshString");
 
     lua_setglobal(L, SVGPathMT.toStringz);
 
