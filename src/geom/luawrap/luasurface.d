@@ -926,6 +926,20 @@ extern(C) int writeBezierTriangleAsVtkXml(lua_State* L)
     return 0;
 }
 
+extern(C) int writeBezierTriangleAsDat(lua_State* L)
+{
+    int narg = lua_gettop(L);
+    if (narg < 3) {
+        string errMsg = "Not enough arguments passed to writeBezierTriangleCtrlPtsAsDat().\n";
+        luaL_error(L, errMsg.toStringz);
+    }
+    auto bezTri = checkBezierTrianglePatch(L, 1);
+    string fName = to!string(luaL_checkstring(L, 2));
+    int nEdgePts = luaL_checkint(L, 3);
+    geom.writeBezierTriangleAsDat(bezTri, fName, nEdgePts);
+    return 0;
+}
+
 extern(C) int bezierTriangleFromPointCloud(lua_State* L)
 {
     int narg = lua_gettop(L);
@@ -1157,6 +1171,8 @@ void registerSurfaces(lua_State* L)
     lua_setglobal(L, "writeBezierTriangleCtrlPtsAsVtkXml");
     lua_pushcfunction(L, &writeBezierTriangleAsVtkXml);
     lua_setglobal(L, "writeBezierTriangleAsVtkXml");
+    lua_pushcfunction(L, &writeBezierTriangleAsDat);
+    lua_setglobal(L, "writeBezierTriangleAsDat");
     lua_pushcfunction(L, &bezierTriangleFromPointCloud);
     lua_setglobal(L, "bezierTriangleFromPointCloud");
 
