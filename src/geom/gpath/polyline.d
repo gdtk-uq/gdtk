@@ -169,6 +169,111 @@ public:
         return "Polyline";
     }
 
+    string toGmshString(ref int pointTag, ref int curveTag, ref int loopTag,
+                        string label="", double len=1.0e-2)
+    // We use int tags for the points, curves and loops written to the string.
+    // Values passed in will be used as the starting values for these tags.
+    // Subsequent calls should be careful to not double-up on tag values.
+    {
+        string str = "// "~label~"\n";
+        str ~= format("len = %g;\n", len);
+        int[] segmentTags;
+        Vector3 startPoint = segments[0](0.0);
+        Vector3 previousPoint = startPoint;
+        pointTag += 1;
+        str ~= format("Point(%d) = {%g, %g, %g, len};\n", pointTag,
+                      startPoint.x, startPoint.y, startPoint.z);
+        int startPointTag = pointTag;
+        double tol = 1.0e-6;
+        
+        foreach (i, seg; segments) {
+            switch (seg.classString()) {
+            case "Line":
+                // Put down the first point of the segment
+                // only if it significantly different to the previous point.
+                Vector3 p0 = seg(0.0);
+                if (distance_between(p0, previousPoint) > tol) {
+                    pointTag += 1;
+                    str ~= format("Point(%d) = {%g, %g, %g, len};\n", pointTag, p0.x, p0.y, p0.z);
+                    previousPoint.set(p0);
+                }
+                int tag0 = pointTag;
+                int tag1;
+                if ((i < segments.length-1) || (!closed)) {
+                    Vector3 p1 = seg(1.0);
+                    if (distance_between(p1, previousPoint) > tol) {
+                        pointTag += 1;
+                        str ~= format("Point(%d) = {%g, %g, %g, len};\n", pointTag, p1.x, p1.y, p1.z);
+                        tag1 = pointTag;
+                        previousPoint.set(p1);
+                    }
+                } else {
+                    tag1 = startPointTag;
+                }
+                curveTag += 1;
+                str ~= format("Line(%d) = {%d, %d};\n", curveTag, tag0, tag1);
+                segmentTags ~= curveTag;
+                break;
+            case "Arc":
+                str ~= "Arc not yet implemented\n";
+                break;
+            case "Bezier":
+                // Put down the first point of the segment
+                // only if it significantly different to the previous point.
+                auto mySeg = cast(Bezier) seg;
+                Vector3[] p; p ~= mySeg.B[0];
+                if (distance_between(p[0], previousPoint) > tol) {
+                    pointTag += 1;
+                    str ~= format("Point(%d) = {%g, %g, %g, len};\n", pointTag, p[0].x, p[0].y, p[0].z);
+                    previousPoint.set(p[0]);
+                }
+                int[] tags; tags ~= pointTag;
+                // Put down intermediate control points.
+                foreach (j; 1 .. mySeg.B.length-1) {
+                    pointTag += 1;
+                    str ~= format("Point(%d) = {%g, %g, %g, len};\n",
+                                  pointTag, mySeg.B[j].x, mySeg.B[j].y, mySeg.B[j].z);
+                    tags ~= pointTag;
+                }
+                // Conditionally put down final point of Bezier.
+                if ((i < segments.length-1) || (!closed)) {
+                    p ~= mySeg.B[$-1];
+                    if (distance_between(p[$-1], previousPoint) > tol) {
+                        pointTag += 1;
+                        str ~= format("Point(%d) = {%g, %g, %g, len};\n",
+                                      pointTag, p[$-1].x, p[$-1].y, p[$-1].z);
+                        tags ~= pointTag;
+                        previousPoint.set(p[$-1]);
+                    }
+                } else {
+                    tags ~= startPointTag;
+                }
+                curveTag += 1;
+                str ~= format("Bezier(%d) = {%d", curveTag, tags[0]);
+                foreach (j; 1 .. tags.length-1) { str ~= format(", %d", tags[j]); }
+                str ~= format(", %d};\n", tags[$-1]);
+                segmentTags ~= curveTag;
+                break;
+            default:
+                str ~= "// Segment type " ~ seg.classString() ~ " not handled.\n";
+            } // end switch
+        } // end foreach
+        //
+        loopTag += 1;
+        str ~= format("Curve Loop(%d) = {", loopTag);
+        foreach (i, segTag; segmentTags) {
+            str ~= format("%d", segTag);
+            str ~= (i+1 == segmentTags.length) ? "};\n" : ", ";
+        }
+        curveTag += 1;
+        str ~= format("Physical Curve(\"%s\", %d) = {", label, curveTag);
+        foreach (i, segTag; segmentTags) {
+            str ~= format("%d", segTag);
+            str ~= (i+1 == segmentTags.length) ? "};\n" : ", ";
+        }
+        return str;
+    }
+    
 private:
     void reset_breakpoints()
     {

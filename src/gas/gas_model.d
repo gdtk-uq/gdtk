@@ -58,6 +58,14 @@ class GasModel {
 public:
     @nogc @property bool is_plasma() const { return _is_plasma; }
     @nogc @property uint n_species() const { return _n_species; }
+    @nogc @property uint n_heavy() const {
+        uint nheavy = _n_species;
+        if (_is_plasma) {
+            assert(_n_species > 2, "Not enough species for electrons to be separate.");
+            nheavy -= 1;
+        }
+        return nheavy;
+    }
     @nogc @property uint n_modes() const { return _n_modes; }
     @nogc @property ref double[] mol_masses() { return _mol_masses; }
     @nogc @property ref double[] LJ_sigmas() { return _LJ_sigmas; }

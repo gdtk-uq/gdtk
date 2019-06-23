@@ -325,6 +325,26 @@ void writeBezierTriangleAsVtkXml(BezierTrianglePatch btp, string fileName, int n
     f.close();
 }
 
+void writeBezierTriangleAsDat(BezierTrianglePatch btp, string fileName, int nEdgePts)
+{
+    int nPtsTotal = nEdgePts*(nEdgePts+1)/2;
+    int n = nEdgePts - 1;
+    int nCells = (nEdgePts-1)^^2;
+    
+    auto f = File(fileName, "w");
+    f.writefln("%d",  nPtsTotal);
+    foreach (i; iota(n, -1, -1)) {
+        foreach (j; iota(n-i, -1, -1)) {
+            double u = double(i)/n;
+            double v = double(j)/n;
+            auto p = btp(u, v);
+            f.writefln("       %20.16e %20.16e %20.16e", p.x, p.y, p.z);
+        }
+    }
+    f.close();
+}
+
+
 BezierTrianglePatch bezierTriangleFromPointCloud(Vector3[] points, Vector3 p0, Vector3 p1, Vector3 p2, int n, BezierTrianglePatch initGuess)
 {
     // NOTE: This function has no constraint at the edges. It's quite possible to find a patch that fits the point

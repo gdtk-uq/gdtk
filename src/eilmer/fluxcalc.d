@@ -60,13 +60,13 @@ void compute_interface_flux(ref FlowState Lft, ref FlowState Rght, ref FVInterfa
     // Compute the fluxes in the local frame of the interface.
     final switch (myConfig.flux_calculator) {
     case FluxCalculator.efm:
-        efmflx(Lft, Rght, IFace, myConfig.gmodel);
+        efmflx(Lft, Rght, IFace, myConfig);
         break;
     case FluxCalculator.ausmdv:
-        ausmdv(Lft, Rght, IFace, myConfig.gmodel);
+        ausmdv(Lft, Rght, IFace, myConfig);
         break;
     case FluxCalculator.hanel:
-        hanel(Lft, Rght, IFace, myConfig.gmodel);
+        hanel(Lft, Rght, IFace, myConfig);
         break;
     case FluxCalculator.adaptive_efm_ausmdv:
         adaptive_efm_ausmdv(Lft, Rght, IFace, myConfig);
@@ -78,13 +78,13 @@ void compute_interface_flux(ref FlowState Lft, ref FlowState Rght, ref FVInterfa
         adaptive_hlle_roe(Lft, Rght, IFace, myConfig);
         break;
     case FluxCalculator.ausm_plus_up:
-        ausm_plus_up(Lft, Rght, IFace, myConfig.M_inf, myConfig.gmodel);
+        ausm_plus_up(Lft, Rght, IFace, myConfig.M_inf, myConfig);
         break;
     case FluxCalculator.hlle:
-        hlle(Lft, Rght, IFace, myConfig.gmodel);
+        hlle(Lft, Rght, IFace, myConfig);
         break;
     case FluxCalculator.roe:
-        roe(Lft, Rght, IFace, myConfig.gmodel);
+        roe(Lft, Rght, IFace, myConfig);
         break;
     } // end switch
     ConservedQuantities F = IFace.F;
@@ -181,7 +181,9 @@ void compute_flux_at_left_wall(ref FlowState Rght, ref FVInterface IFace,
     F.momentum.set(pstar, to!number(0.0), to!number(0.0));
     F.total_energy = pstar * vstar;
     version(multi_species_gas) {
-        foreach (i; 0 .. F.massf.length) { F.massf[i] = 0.0; }
+        auto gm = myConfig.gmodel;
+        uint nsp = (myConfig.sticky_electrons) ? gm.n_heavy : gm.n_species;
+        foreach (i; 0 .. nsp) { F.massf[i] = 0.0; }
     }
     version(multi_T_gas) {
         foreach (i; 0 .. F.energies.length) { F.energies[i] = 0.0; }
@@ -261,7 +263,9 @@ void compute_flux_at_right_wall(ref FlowState Lft, ref FVInterface IFace,
     F.momentum.set(pstar, to!number(0.0), to!number(0.0));
     F.total_energy = pstar * vstar;
     version(multi_species_gas) {
-        foreach (i; 0 .. F.massf.length) { F.massf[i] = 0.0; }
+        auto gm = myConfig.gmodel;
+        uint nsp = (myConfig.sticky_electrons) ? gm.n_heavy : gm.n_species;
+        foreach (i; 0 .. nsp) { F.massf[i] = 0.0; }
     }
     version(multi_T_gas) {
         foreach (i; 0 .. F.energies.length) { F.energies[i] = 0.0; }
@@ -309,7 +313,9 @@ void set_flux_vector_in_local_frame(ref ConservedQuantities F, ref FlowState fs,
         F.omega = F.mass * fs.omega;  // pseudo vorticity
     }
     version(multi_species_gas) {
-        foreach (isp; 0 .. F.massf.length) { F.massf[isp] = F.mass*fs.gas.massf[isp]; }
+        auto gm = myConfig.gmodel;
+        uint nsp = (myConfig.sticky_electrons) ? gm.n_heavy : gm.n_species;
+        foreach (isp; 0 .. nsp) { F.massf[isp] = F.mass*fs.gas.massf[isp]; }
     }
     version(multi_T_gas) {
         foreach (imode; 0 .. F.energies.length) { F.energies[imode] = F.mass*fs.gas.u_modes[imode]; }
@@ -363,7 +369,7 @@ void set_flux_vector_in_global_frame(ref FVInterface IFace, ref FlowState fs,
 } // end set_flux_vector_in_global_frame()
 
 @nogc
-void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel gmodel)
+void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
 // Wada and Liou's flux calculator.
 // 
 // Implemented from details in their AIAA paper 
@@ -372,6 +378,7 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel
 // A flux splitting scheme with high-resolution and robustness for discontinuities.
 // AIAA-94-0083.
 {
+    auto gmodel = myConfig.gmodel;
     // Unpack the flow-state vectors for either side of the interface.
     // Store in work vectors, those quantities that will be neede later.
     number rL = Lft.gas.rho;
@@ -459,7 +466,8 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel
             F.omega = ru_half*Lft.omega;
         }
         version(multi_species_gas) {
-            foreach (i; 0 .. F.massf.length) { F.massf[i] = ru_half*Lft.gas.massf[i]; }
+            uint nsp = (myConfig.sticky_electrons) ? gmodel.n_heavy : gmodel.n_species;
+            foreach (i; 0 .. nsp) { F.massf[i] = ru_half*Lft.gas.massf[i]; }
         }
         version(multi_T_gas) {
             foreach (i; 0 .. F.energies.length) { F.energies[i] = ru_half*Lft.gas.u_modes[i]; }
@@ -478,7 +486,8 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel
             F.omega = ru_half*Rght.omega;
         }
         version(multi_species_gas) {
-            foreach (i; 0 .. F.massf.length) { F.massf[i] = ru_half*Rght.gas.massf[i]; }
+            uint nsp = (myConfig.sticky_electrons) ? gmodel.n_heavy : gmodel.n_species;
+            foreach (i; 0 .. nsp) { F.massf[i] = ru_half*Rght.gas.massf[i]; }
         }
         version(multi_T_gas) {
             foreach (i; 0 .. F.energies.length) { F.energies[i] = ru_half*Rght.gas.u_modes[i]; }
@@ -505,7 +514,8 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel
             F.omega -= d_ua*(rR*Rght.omega - rL*Lft.omega);
         }
         version(multi_species_gas) {
-            foreach (i; 0 .. F.massf.length) {
+            uint nsp = (myConfig.sticky_electrons) ? gmodel.n_heavy : gmodel.n_species;
+            foreach (i; 0 .. nsp) {
                 F.massf[i] -= d_ua*(rR*Rght.gas.massf[i] - rL*Lft.gas.massf[i]);
             }
         }
@@ -518,7 +528,7 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel
 } // end ausmdv()
 
 @nogc
-void hanel(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel gmodel)
+void hanel(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
 // Hanel's flux calculator.
 // 
 // Implemented from Y. Wada and M. S. Liou details in their AIAA paper 
@@ -529,6 +539,7 @@ void hanel(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel 
 // On the accuracy of upwind schemes for the solution of the Navier-Stokes equations
 
 {
+    auto gmodel = myConfig.gmodel;
     // Unpack the flow-state vectors for either side of the interface.
     // Store in work vectors, those quantities that will be neede later.
     number rL = Lft.gas.rho;
@@ -597,7 +608,8 @@ void hanel(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel 
         F.omega = uLplus * rL * Lft.omega + uRminus * rR * Rght.omega;
     }
     version(multi_species_gas) {
-        foreach (i; 0 .. F.massf.length) {
+        uint nsp = (myConfig.sticky_electrons) ? gmodel.n_heavy : gmodel.n_species;
+        foreach (i; 0 .. nsp) {
             F.massf[i] = uLplus*rL*Lft.gas.massf[i] + uRminus*rR*Rght.gas.massf[i];
         }
     }
@@ -609,7 +621,7 @@ void hanel(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel 
 } // end hanel()
 
 @nogc
-void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel gmodel)
+void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
 /** \brief Compute the fluxes across an interface using
  * the Equilibrium Flux Method of Macrossan & Pullin
  *
@@ -630,6 +642,7 @@ void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel
  * \endverbatim 
  */
 {
+    auto gmodel = myConfig.gmodel;
     // Local variable names reflect the names used in the original FORTRAN code by MNM.
     const double PHI = 1.0;
     number vnL, vpL, vnR, vpR, vqL, vqR;
@@ -724,7 +737,8 @@ void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel
             F.omega = F.mass * Lft.omega;
         }
         version(multi_species_gas) {
-            foreach (i; 0 .. F.massf.length) { F.massf[i] = F.mass * Lft.gas.massf[i]; }
+            uint nsp = (myConfig.sticky_electrons) ? gmodel.n_heavy : gmodel.n_species;
+            foreach (i; 0 .. nsp) { F.massf[i] = F.mass * Lft.gas.massf[i]; }
         }
         version(multi_T_gas) {
             foreach (i; 0 .. F.energies.length) { F.energies[i] = F.mass * Lft.gas.u_modes[i]; }
@@ -740,7 +754,8 @@ void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel
             F.omega = F.mass * Rght.omega;
         }
         version(multi_species_gas) {
-            foreach (i; 0 .. F.massf.length) { F.massf[i] = F.mass * Rght.gas.massf[i]; }
+            uint nsp = (myConfig.sticky_electrons) ? gmodel.n_heavy : gmodel.n_species;
+            foreach (i; 0 .. nsp) { F.massf[i] = F.mass * Rght.gas.massf[i]; }
         }
         version(multi_T_gas) {
             foreach (i; 0 .. F.energies.length) { F.energies[i] = F.mass * Rght.gas.u_modes[i]; }
@@ -799,9 +814,9 @@ void adaptive_efm_ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IF
     number shear_z = fabs(Lft.vel.z - Rght.vel.z) / sound_speed;
     bool shear_is_small = fmax(shear_y, shear_z) <= myConfig.shear_tolerance;
     if ((Lft.S == 1 || Rght.S == 1) && shear_is_small) {
-        efmflx(Lft, Rght, IFace, myConfig.gmodel);
+        efmflx(Lft, Rght, IFace, myConfig);
     } else {
-        ausmdv(Lft, Rght, IFace, myConfig.gmodel);
+        ausmdv(Lft, Rght, IFace, myConfig);
     }
 } // end adaptive_flux()
 
@@ -817,9 +832,9 @@ void adaptive_hanel_ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface 
     number shear_z = fabs(Lft.vel.z - Rght.vel.z) / sound_speed;
     bool shear_is_small = fmax(shear_y, shear_z) <= myConfig.shear_tolerance;
     if ((Lft.S == 1 || Rght.S == 1) && shear_is_small) {
-        hanel(Lft, Rght, IFace, myConfig.gmodel);
+        hanel(Lft, Rght, IFace, myConfig);
     } else {
-        ausmdv(Lft, Rght, IFace, myConfig.gmodel);
+        ausmdv(Lft, Rght, IFace, myConfig);
     }
 } // end adaptive_flux()
 
@@ -835,15 +850,15 @@ void adaptive_hlle_roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFac
     number shear_z = fabs(Lft.vel.z - Rght.vel.z) / sound_speed;
     bool shear_is_small = fmax(shear_y, shear_z) <= myConfig.shear_tolerance;
     if ((Lft.S == 1 || Rght.S == 1) && shear_is_small) {
-        hlle(Lft, Rght, IFace, myConfig.gmodel);
+        hlle(Lft, Rght, IFace, myConfig);
     } else {
-        roe(Lft, Rght, IFace, myConfig.gmodel);
+        roe(Lft, Rght, IFace, myConfig);
     }
 } // end adaptive_flux()
 
 @nogc
 void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
-                  double M_inf, GasModel gmodel)
+                  double M_inf, ref LocalConfig myConfig)
 // Liou's 2006 AUSM+up flux calculator
 //
 // A new version of the AUSM-family schemes, based 
@@ -863,6 +878,7 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
 //
 // This code: W. Y. K. Chan & P. A. Jacobs
 {
+    auto gmodel = myConfig.gmodel;
     // Some helper functions
     @nogc number M1plus(number M) { return 0.5*(M + fabs(M)); }
     @nogc number M1minus(number M) { return 0.5*(M - fabs(M)); }
@@ -992,7 +1008,8 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
             F.omega = ru_half * Lft.omega;
         }
         version(multi_species_gas) {
-            foreach (i; 0 .. F.massf.length) { F.massf[i] = ru_half * Lft.gas.massf[i]; }
+            uint nsp = (myConfig.sticky_electrons) ? gmodel.n_heavy : gmodel.n_species;
+            foreach (i; 0 .. nsp) { F.massf[i] = ru_half * Lft.gas.massf[i]; }
         }
         version(multi_T_gas) {
             foreach (i; 0 .. F.energies.length) { F.energies[i] = ru_half * Lft.gas.u_modes[i]; }
@@ -1011,7 +1028,8 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
             F.omega = ru_half * Rght.omega;
         }
         version(multi_species_gas) {
-            foreach (i; 0 .. F.massf.length) { F.massf[i] = ru_half * Rght.gas.massf[i]; }
+            uint nsp = (myConfig.sticky_electrons) ? gmodel.n_heavy : gmodel.n_species;
+            foreach (i; 0 .. nsp) { F.massf[i] = ru_half * Rght.gas.massf[i]; }
         }
         version(multi_T_gas) {
             foreach (i; 0 .. F.energies.length) { F.energies[i] = ru_half * Rght.gas.u_modes[i]; }
@@ -1020,12 +1038,13 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
 } // end ausm_plus_up()
 
 @nogc
-void hlle(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel gmodel)
+void hlle(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
 // HLLE fluxes for MHD.
 // From V. Wheatley Matlab implementation
 // Author D. M. Bond
 // Port to D by PJ, 2014-07-24
 {
+    auto gmodel = myConfig.gmodel;
     @nogc number SAFESQRT(number x) { return (fabs(x)>1.0e-14) ? sqrt(x) : to!number(0.0); }
     // Unpack the flow-state vectors for either side of the interface.
     // Store in work vectors, those quantities that will be neede later.
@@ -1166,7 +1185,8 @@ void hlle(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel g
                 (brp*fBzL - blm*fBzR + fac1*dU[6])*iden);
         F.total_energy = (brp*fenergyL - blm*fenergyR + fac1*dU[7])*iden;
         version(multi_species_gas) {
-            foreach (i; 0 .. F.massf.length) {
+            uint nsp = (myConfig.sticky_electrons) ? gmodel.n_heavy : gmodel.n_species;
+            foreach (i; 0 .. nsp) {
                 F.massf[i] = F.mass * ((F.mass >= 0.0) ? Lft.gas.massf[i]: Rght.gas.massf[i]);
             }
         }
@@ -1181,7 +1201,7 @@ void hlle(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel g
 } // end hlle()
 
 @nogc
-void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel gmodel)
+void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
 // Philip Roe's flux calculator with entropy fix.
 // 
 // Particular implementation is the Roe-Pike Method from
@@ -1191,6 +1211,7 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel gm
 // M. J. Kermani & E. G. Plett (2001)
 // Modified Entropy Correction Formula for the Roe Scheme
 {
+    auto gmodel = myConfig.gmodel;
     // Unpack the flow-state vectors for either side of the interface.
     // Store in work vectors, those quantities that will be neede later.
     number rL = Lft.gas.rho;
@@ -1331,7 +1352,8 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel gm
             F.omega = F.mass*Lft.omega;
         }
         version(multi_species_gas) {
-            foreach (i; 0 .. F.massf.length) { F.massf[i] = F.mass*Lft.gas.massf[i]; }
+            uint nsp = (myConfig.sticky_electrons) ? gmodel.n_heavy : gmodel.n_species;
+            foreach (i; 0 .. nsp) { F.massf[i] = F.mass*Lft.gas.massf[i]; }
         }
         version(multi_T_gas) {
             foreach (i; 0 .. F.energies.length) { F.energies[i] = F.mass*Lft.gas.u_modes[i]; }
@@ -1343,7 +1365,8 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel gm
             F.omega = F.mass*Rght.omega;
         }
         version(multi_species_gas) {
-            foreach (i; 0 .. F.massf.length) { F.massf[i] = F.mass*Rght.gas.massf[i]; }
+            uint nsp = (myConfig.sticky_electrons) ? gmodel.n_heavy : gmodel.n_species;
+            foreach (i; 0 .. nsp) { F.massf[i] = F.mass*Rght.gas.massf[i]; }
         }
         version(multi_T_gas) {
             foreach (i; 0 .. F.energies.length) { F.energies[i] = F.mass*Rght.gas.u_modes[i]; }

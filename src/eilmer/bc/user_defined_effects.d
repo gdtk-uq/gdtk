@@ -278,11 +278,11 @@ private:
             // Stack positions for two ghost cells:
             //    -2 :: ghostCell0
             //    -1 :: ghostCell1
-            putFlowStateIntoGhostCell(L, -2, ghostCell0);
-            putFlowStateIntoGhostCell(L, -1, ghostCell1);
+            if (!tableEmpty(L, -2)) { putFlowStateIntoGhostCell(L, -2, ghostCell0); }
+            if (!tableEmpty(L, -1)) { putFlowStateIntoGhostCell(L, -1, ghostCell1); }
         } else {
             // Just the first ghost cell.
-            putFlowStateIntoGhostCell(L, -1, ghostCell0);
+            if (!tableEmpty(L, -1)) { putFlowStateIntoGhostCell(L, -1, ghostCell0); }
         }
 
         // 4. Clear stack
@@ -535,7 +535,7 @@ private:
 
         // 3. Grab Flowstate data from table and populate interface
         int tblIdx = lua_gettop(L);
-        putFlowStateIntoInterface(L, tblIdx, IFace);
+        if (!tableEmpty(L, tblIdx)) { putFlowStateIntoInterface(L, tblIdx, IFace); }
 
         // 4. Clear stack
         lua_settop(L, 0);
@@ -775,7 +775,7 @@ private:
 
         // 3. Grab flux data from table and populate interface fluxes
         int tblIdx = lua_gettop(L);
-        putFluxIntoInterface(L, tblIdx, IFace);
+        if (!tableEmpty(L, tblIdx)) { putFluxIntoInterface(L, tblIdx, IFace); }
 
         // 4. Clear stack
         lua_settop(L, 0);

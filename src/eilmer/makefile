@@ -380,7 +380,7 @@ clean:
 	- rm e4opt optdriver_with_rev_string.d
 	- rm mpi_main_with_rev_string.d
 	- rm loadbalance_with_rev_string.d
-	- rm e4mpi e4loadbalance
+	- rm e4mpi e4loadbalance e4ssc e4sss e4zshared e4zsss
 	- rm dgd-for-mech4480.tgz
 	- cd $(OPENMPI_DIR); make clean
 	- cd $(LUA_DIR); make clean
