@@ -792,7 +792,7 @@ final class GlobalConfig {
             list ~= [u_modesName(i), T_modesName(i)];
         }
         if (gmodel_master.n_modes > 0) { list ~= flowVarName(FlowVar.dt_therm); }
-        list ~= flowVarName(FlowVar.dt_local);
+        if (with_local_time_stepping) { list ~= flowVarName(FlowVar.dt_local); }
         return list;
     } // end variable_list_for_flow_data()
 
