@@ -23,13 +23,13 @@ long_tests = false
 
 test_scripts = []
 test_scripts << "2D/sharp-cone-20-degrees/sg/cone20-test.rb"
-test_scripts << "2D/sharp-cone-20-degrees/sg-mpi/cone20-mpi.test"
-test_scripts << "2D/sharp-cone-20-degrees/usg/cone20-usg.test"
-test_scripts << "2D/sharp-cone-20-degrees/usg-su2/cone20-usg-su2.test"
+test_scripts << "2D/sharp-cone-20-degrees/sg-mpi/cone20-mpi-test.rb"
+test_scripts << "2D/sharp-cone-20-degrees/usg/cone20-usg-test.rb"
+test_scripts << "2D/sharp-cone-20-degrees/usg-su2/cone20-usg-su2-test.rb"
 gpmetis_exe = `which gpmetis`
 if gpmetis_exe.length > 0 then
   puts "Found gpmetis"
-  test_scripts << "2D/sharp-cone-20-degrees/usg-metis/cone20-usg-metis.test"
+  test_scripts << "2D/sharp-cone-20-degrees/usg-metis/cone20-usg-metis-test.rb"
 end
 test_scripts << "2D/moving-grid/piston-w-const-vel/simple/piston-test.rb"
 test_scripts << "2D/moving-grid/piston-w-const-vel/simple-2/piston-test.rb"
