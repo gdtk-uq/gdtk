@@ -1416,6 +1416,7 @@ function mpiDistributeBlocks(args)
       print(string.format("Ideal cell partitioning   \t = %d cells/proc", totalCells/mpiProcessors))
       print(string.format("Smallest partition factor \t = %.3f", minmpiLoads/(totalCells/mpiProcessors)))
       print(string.format("Largest partition factor  \t = %.3f", maxmpiLoads/(totalCells/mpiProcessors)))
+      print(string.format("Largest processor load    \t = %.0f cells", maxmpiLoads))
 
    else
       error('Did not select one of "round-robin" or "load-balance". for mpiDistributeBlocks', 2) 
