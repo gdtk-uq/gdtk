@@ -8,7 +8,7 @@
 require 'test/unit'
 require 'open3'
 
-class TestCone20 < Test::Unit::TestCase
+class TestCone20_MPI < Test::Unit::TestCase
   def test_0_prep
     cmd = "prep-gas ideal-air.inp ideal-air-gas-model.lua"
     o, e, s = Open3.capture3(*cmd.split)
@@ -19,7 +19,7 @@ class TestCone20 < Test::Unit::TestCase
   end
 
   def test_1_run
-    cmd = "mpirun -np 3 e4mpi --run --job=cone20 --verbosity=1"
+    cmd = "mpirun -np 8 e4mpi --run --job=cone20 --verbosity=1"
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
     steps = 0

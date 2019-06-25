@@ -4,7 +4,7 @@
 -- PJ, 2015-10-20, 2018-01-28 updated to not be sensitive to blocks
 --
 print("Begin estimate_shock_angle")
-nb = 6
+nb = 8
 fsol = FlowSolution:new{jobName="cone20", dir=".", tindx=4, nBlocks=nb}
 print("fsol=", fsol)
 

@@ -40,12 +40,13 @@ quad0 = makePatch{north=fe, east=be, south=ab, west=af}
 quad1 = makePatch{north=ed, east=cd, south=bc, west=be, gridType="ao"}
 -- Mesh the patches, with particular discretisation.
 nx0 = 10; nx1 = 30; ny = 40
+-- nx0 = 25; nx1 = 75; ny = 100
 grid0 = StructuredGrid:new{psurface=quad0, niv=nx0+1, njv=ny+1}
 grid1 = StructuredGrid:new{psurface=quad1, niv=nx1+1, njv=ny+1}
 -- Define the flow-solution blocks.
 blk0 = FluidBlockArray{grid=grid0, njb=2, initialState=inflow,
                        bcList={west=InFlowBC_Supersonic:new{flowState=inflow}}}
-blk1 = FluidBlockArray{grid=grid1, nib=2, njb=2, initialState=initial,
+blk1 = FluidBlockArray{grid=grid1, nib=3, njb=2, initialState=initial,
                        bcList={east=OutFlowBC_Simple:new{}}}
 identifyBlockConnections()
 
@@ -55,13 +56,16 @@ setHistoryPoint{x=2*b.x/3+c.x/3, y=2*b.y/3+c.y/3}
 setHistoryPoint{x=b.x/3+2*c.x/3, y=b.y/3+2*c.y/3}
 
 -- Do a little more setting of global data.
-mpiTasks = mpiDistributeBlocks{ntasks=3, dist="load-balance", preassign={[0]=1}}
+mpiTasks = mpiDistributeBlocks{ntasks=8, dist="load-balance", preassign={[0]=1}}
 config.max_time = 5.0e-3  -- seconds
 config.max_step = 3000
 -- config.dt_init = 1.0e-6
 config.cfl_value = 0.5
 config.dt_plot = 1.5e-3
 config.dt_history = 10.0e-5
+-- config.gasdynamic_update_scheme = "euler"
+-- config.print_count = 100
+-- config.cfl_count = 20
 config.extrema_clipping = false
 
 dofile("sketch-domain.lua")
