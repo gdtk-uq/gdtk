@@ -8,7 +8,7 @@
 require 'test/unit'
 require 'open3'
 
-class TestCone20 < Test::Unit::TestCase
+class TestCone20_USG < Test::Unit::TestCase
   def test_0_prep
     cmd = "prep-gas ideal-air.inp ideal-air-gas-model.lua"
     o, e, s = Open3.capture3(*cmd.split)

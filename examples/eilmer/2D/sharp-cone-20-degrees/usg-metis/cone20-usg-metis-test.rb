@@ -8,7 +8,7 @@
 require 'test/unit'
 require 'open3'
 
-class TestCone20 < Test::Unit::TestCase
+class TestCone20_USG_Metis < Test::Unit::TestCase
   def test_0_prep
     # Clean up old generated files.
     files = Dir.glob("block_*")
