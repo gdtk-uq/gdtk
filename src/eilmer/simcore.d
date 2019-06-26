@@ -1234,7 +1234,7 @@ void k_omega_set_mu_and_k()
 {
     foreach (blk; parallel(localFluidBlocksBySize,1)) {
         if (blk.active) {
-            blk.flow_property_spatial_derivatives(0); 
+	    blk.flow_property_spatial_derivatives(0); 
             blk.estimate_turbulence_viscosity();
         }
     }
@@ -1469,7 +1469,15 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             if (blk.active) {
                 blk.flow_property_spatial_derivatives(gtl); 
                 blk.estimate_turbulence_viscosity();
-                blk.viscous_flux();
+	    }
+	}
+	// we exchange boundary data at this point to ensure the
+	// ghost cells along block-block boundaries have the most
+	// recent mu_t and k_t values.
+	exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
+	foreach (blk; parallel(localFluidBlocksBySize,1)) {
+	    if (blk.active) {         
+		blk.viscous_flux();
             }
         }
         if (GlobalConfig.apply_bcs_in_parallel) {
@@ -1641,13 +1649,21 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                     }
                 }
             }
-            foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                if (blk.active) {
-                    blk.flow_property_spatial_derivatives(gtl); 
-                    blk.estimate_turbulence_viscosity();
-                    blk.viscous_flux();
-                }
-            }
+	    foreach (blk; parallel(localFluidBlocksBySize,1)) {
+		if (blk.active) {
+		    blk.flow_property_spatial_derivatives(gtl); 
+		    blk.estimate_turbulence_viscosity();
+		}
+	    }
+	    // we exchange boundary data at this point to ensure the
+	    // ghost cells along block-block boundaries have the most
+	    // recent mu_t and k_t values.
+	    exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
+	    foreach (blk; parallel(localFluidBlocksBySize,1)) {
+		if (blk.active) {         
+		    blk.viscous_flux();
+		}
+	    }
             if (GlobalConfig.apply_bcs_in_parallel) {
                 foreach (blk; parallel(localFluidBlocksBySize,1)) {
                     if (blk.active) { blk.applyPostDiffFluxAction(SimState.time, gtl, ftl); }
@@ -1812,13 +1828,21 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                     }
                 }
             }
-            foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                if (blk.active) {
-                    blk.flow_property_spatial_derivatives(gtl); 
-                    blk.estimate_turbulence_viscosity();
-                    blk.viscous_flux();
-                }
-            }
+	    foreach (blk; parallel(localFluidBlocksBySize,1)) {
+		if (blk.active) {
+		    blk.flow_property_spatial_derivatives(gtl); 
+		    blk.estimate_turbulence_viscosity();
+		}
+	    }
+	    // we exchange boundary data at this point to ensure the
+	    // ghost cells along block-block boundaries have the most
+	    // recent mu_t and k_t values.
+	    exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
+	    foreach (blk; parallel(localFluidBlocksBySize,1)) {
+		if (blk.active) {         
+		    blk.viscous_flux();
+		}
+	    }
             if (GlobalConfig.apply_bcs_in_parallel) {
                 foreach (blk; parallel(localFluidBlocksBySize,1)) {
                     if (blk.active) { blk.applyPostDiffFluxAction(SimState.time, gtl, ftl); }
@@ -2033,7 +2057,15 @@ void gasdynamic_explicit_increment_with_moving_grid()
             if (blk.active) {
                 blk.flow_property_spatial_derivatives(gtl); 
                 blk.estimate_turbulence_viscosity();
-                blk.viscous_flux();
+	    }
+	}
+	// we exchange boundary data at this point to ensure the
+	// ghost cells along block-block boundaries have the most
+	// recent mu_t and k_t values.
+	exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
+	foreach (blk; parallel(localFluidBlocksBySize,1)) {
+	    if (blk.active) {         
+		blk.viscous_flux();
             }
         }
         if (GlobalConfig.apply_bcs_in_parallel) {
@@ -2193,13 +2225,21 @@ void gasdynamic_explicit_increment_with_moving_grid()
                     }
                 }
             }
-            foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                if (blk.active) {
-                    blk.flow_property_spatial_derivatives(gtl); 
-                    blk.estimate_turbulence_viscosity();
-                    blk.viscous_flux();
-                }
-            }
+	    foreach (blk; parallel(localFluidBlocksBySize,1)) {
+		if (blk.active) {
+		    blk.flow_property_spatial_derivatives(gtl); 
+		    blk.estimate_turbulence_viscosity();
+		}
+	    }
+	    // we exchange boundary data at this point to ensure the
+	    // ghost cells along block-block boundaries have the most
+	    // recent mu_t and k_t values.
+	    exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
+	    foreach (blk; parallel(localFluidBlocksBySize,1)) {
+		if (blk.active) {         
+		    blk.viscous_flux();
+		}
+	    }
             if (GlobalConfig.apply_bcs_in_parallel) {
                 foreach (blk; parallel(localFluidBlocksBySize,1)) {
                     if (blk.active) { blk.applyPostDiffFluxAction(SimState.time, gtl, ftl); }
