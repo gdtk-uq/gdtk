@@ -147,6 +147,19 @@ void quad_properties(ref const(Vector3)[] p, ref Vector3 centroid,
 }
 
 @nogc
+number xyplane_area(ref const(Vector3) p0, ref const(Vector3) p1, ref const(Vector3) p2)
+// 2
+// |\
+// | \
+// |  \
+// 0---1
+{
+    return 0.5 * ((p2.x + p1.x) * (p2.y - p1.y) + 
+                  (p0.x + p2.x) * (p0.y - p2.y) +
+                  (p1.x + p0.x) * (p1.y - p0.y));
+}
+
+@nogc
 number xyplane_area(ref const(Vector3) p0, ref const(Vector3) p1,
                     ref const(Vector3) p2, ref const(Vector3) p3)
 // 3-----2
@@ -921,6 +934,7 @@ version(properties_test) {
         number area;
         triangle_properties(p0, p1, p2, centroid, n, t1, t2, area);
         assert(approxEqualNumbers(area, to!number(0.5)), failedUnitTest());
+        assert(approxEqualNumbers(xyplane_area(p0, p1, p2), to!number(0.5)), failedUnitTest());
         assert(approxEqualVectors(centroid, Vector3(2.0/3,1.0/3,1.0)), failedUnitTest());
         assert(approxEqualVectors(n, Vector3(0.0,0.0,1.0)), failedUnitTest());
         assert(approxEqualVectors(t1, Vector3(1.0,0.0,0.0)), failedUnitTest());

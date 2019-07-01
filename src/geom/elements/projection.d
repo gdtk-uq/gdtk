@@ -8,7 +8,9 @@ import std.math;
 import std.conv;
 import nm.complex;
 import nm.number;
+import geom.geometry_exception;
 import geom.elements.vector3;
+import geom.elements.properties;
 
 @nogc
 bool intersect2D(const Vector3 p0, const Vector3 p1, const Vector3 ps, const Vector3 d,
@@ -83,7 +85,7 @@ ref Vector3 map_neutral_plane_to_cylinder(ref Vector3 p, number H)
 }
 
 /**
- * Find Barycentric Coordinates of point P in triangle,
+ * Find Barycentric Coordinates of point p in triangle,
  * considering (x,y)-plane components, only.
  *  p2
  *   |\
@@ -120,6 +122,65 @@ bool is_outside_triangle(number[3] lmbda, double tol=1.0e-10)
     return is_outside;
 } // end is_outside_triangle()
 
+/**
+ * Find Barycentric Coordinates of point p in a quadrilateral polygon,
+ * considering (x,y)-plane components, only.
+ *  p3-----p2
+ *   |\   /|
+ *   | \ / |
+ *   |  p  |
+ *   | / \ |
+ *   |/   \|
+ *  p0-----p1
+*/
+@nogc
+number[4] barycentricCoords(ref const(Vector3) p,
+                            ref const(Vector3) p0, ref const(Vector3) p1,
+                            ref const(Vector3) p2, ref const(Vector3) p3) 
+{
+    // Compute the normalized barycentric coordinates for a point within
+    // a convex quadrilateral polygon, as described in Michael Floater's
+    // 2003 paper "Mean Value Coordinates" in the journal
+    // Computer Aided Geometric Design Vol 20, issue 1, pages 19-27.
+    //
+    // Signed areas of triangular corners.
+    number[4] Acorner;
+    Acorner[0] = xyplane_area(p3, p0, p1);
+    Acorner[1] = xyplane_area(p0, p1, p2);
+    Acorner[2] = xyplane_area(p1, p2, p3);
+    Acorner[3] = xyplane_area(p2, p3, p0);
+    if ((Acorner[0] < 0.0) || (Acorner[1] < 0.0) ||
+        (Acorner[2] < 0.0) || (Acorner[3] < 0.0)) {
+        throw new GeometryException("Quadrilateral is not convex.");
+    }
+    // Signed areas of triangles associated with edges and point p.
+    number[4] Amid;
+    Amid[0] = xyplane_area(p0, p1, p);
+    Amid[1] = xyplane_area(p1, p2, p);
+    Amid[2] = xyplane_area(p2, p3, p);
+    Amid[3] = xyplane_area(p3, p0, p);
+    // Wachpress coordinates computed as per the final remarks in Floater's paper.
+    number[4] lmbda;
+    lmbda[0] = Acorner[0] * Amid[1]*Amid[2];
+    lmbda[1] = Acorner[1] * Amid[2]*Amid[3];
+    lmbda[2] = Acorner[2] * Amid[3]*Amid[0];
+    lmbda[3] = Acorner[3] * Amid[0]*Amid[1];
+    number scale = 1.0/(lmbda[0]+lmbda[1]+lmbda[2]+lmbda[3]);
+    foreach (i; 0 .. 4) { lmbda[i] *= scale; }
+    return lmbda;
+} // end barycentricCoords()
+
+@nogc
+bool is_outside_quad(number[4] lmbda, double tol=1.0e-10)
+{
+    bool is_outside = false;
+    foreach (i; 0 .. 4) {
+        if (lmbda[i] < -tol) { is_outside = true; }
+    }
+    // Now, we have determined that the coordinates are for a point
+    // inside or on an edge or at a vertex, to within the tolerance.
+    return is_outside;
+} // end is_outside_quad()
 
 
 version(projection_test) {
@@ -205,7 +266,7 @@ version(projection_test) {
             qDerivReal[2] = (myp.z.re-myp0.z.re)/hRe;
             foreach( idx; 0..3) assert(std.math.approxEqual(qDerivCmplx[idx], qDerivReal[idx]), failedUnitTest());
         }
-
+        //
         // Barycentric coordinates for the midpoint of an equilateral triangle.
         Vector3 p0 = Vector3(0.0, 0.0);
         Vector3 p1 = Vector3(1.0, 0.0);
@@ -216,12 +277,36 @@ version(projection_test) {
         assert(approxEqual(bcc[1].re, 1.0/3.0), failedUnitTest()); 
         assert(approxEqual(bcc[2].re, 1.0/3.0), failedUnitTest());
         assert(!is_outside_triangle(bcc), failedUnitTest());
+        // Now move the point down to the bottom edge of the triangle.
         p = Vector3(0.5, 0.0);
         bcc = barycentricCoords(p, p0, p1, p2);
         assert(!is_outside_triangle(bcc), failedUnitTest());
+        // Finally, move the point just outside the triangle.
         p = Vector3(0.5, -0.01);
         bcc = barycentricCoords(p, p0, p1, p2);
         assert(is_outside_triangle(bcc), failedUnitTest());
+        //
+        // Barycentric coordinates for the midpoint of a square.
+        p0 = Vector3(0.0, 0.0);
+        p1 = Vector3(1.0, 0.0);
+        p2 = Vector3(1.0, 1.0);
+        Vector3 p3 = Vector3(0.0, 1.0);
+        p = (p0+p1+p2+p3)/4.0;
+        number[4] bcc4 = barycentricCoords(p, p0, p1, p2, p3);
+        assert(approxEqual(bcc4[0].re, 0.25), failedUnitTest()); 
+        assert(approxEqual(bcc4[1].re, 0.25), failedUnitTest()); 
+        assert(approxEqual(bcc4[2].re, 0.25), failedUnitTest());
+        assert(approxEqual(bcc4[3].re, 0.25), failedUnitTest());
+        assert(!is_outside_quad(bcc4), failedUnitTest());
+        // Now move the point down to the bottom edge of the square.
+        p = Vector3(0.5, 0.0);
+        bcc4 = barycentricCoords(p, p0, p1, p2, p3);
+        assert(!is_outside_quad(bcc4), failedUnitTest());
+        // Finally, move the point just outside the square.
+        p = Vector3(0.5, -0.01);
+        bcc4 = barycentricCoords(p, p0, p1, p2, p3);
+        assert(is_outside_quad(bcc4), failedUnitTest());
+        //
         return 0;
     }
 } // end projection_test

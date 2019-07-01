@@ -796,53 +796,24 @@ extern(C) int luafn_setVtxVelocitiesByQuad(lua_State* L)
     }
     lua_pop(L, 1); // discard item
     //
-    // Middle-point of quadrilateral and it's velocity.
-    // This will form one point of each triangle that we'll use for interpolation.
-    Vector3 pC = 0.25 * ( *p00 + *p10 + *p01 + *p11);
-    Vector3 velC = 0.25 * ( *vel00 + *vel10 + *vel01 + *vel11);
-    //
-    @nogc
-    void setAsWeightedSum3(ref Vector3 result, number[3] w, Vector3* v0, Vector3* v1, Vector3* v2)
-    {
-        result.set(v0); result.scale(w[0]);
-        result.add(v1, w[1]);
-        result.add(v2, w[2]);
-    }
-    //
     if (blk.myConfig.dimensions == 2) {
         foreach (vtx; blk.vertices) {
             // get position of current point                    
             auto pos = vtx.pos[0];
-            // Find baricentric ccordinates, keeping p0 (of the triangle) at centroid.
-            // Sequentially try the different triangles.
-            number[3] bcc;
-            // Try south triangle
-            bcc = barycentricCoords(pos, pC, *p00, *p10);
-            if (!is_outside_triangle(bcc)) {
-                setAsWeightedSum3(vtx.vel[0], bcc, &velC, vel00, vel10);
-                continue;
+            // Find the normalized barycentric coordinates for position within the quad
+            // and use those coordinates as weights to interpolate the corner velocity values.
+            number[4] bcc;
+            try {
+                bcc = barycentricCoords(pos, *p00, *p10, *p11, *p01);
+                vtx.vel[0].set(vel00); vtx.vel[0].scale(bcc[0]);
+                vtx.vel[0].add(vel10, bcc[1]);
+                vtx.vel[0].add(vel11, bcc[2]);
+                vtx.vel[0].add(vel01, bcc[3]);
+            } catch (GeometryException e) {
+                writeln("GeometryException caught: %s", e.msg);
+                writeln("Vertex index: ", vtx.id, " pos: ", pos, "Quad-corners: ", p00, p10, p11, p01);
+                luaL_error(L, "Barycentric Calculation failed in luafn: setVtxVelocitiesByQuad()\n");
             }
-            // Try east triangle.
-            bcc = barycentricCoords(pos, pC, *p10, *p11);
-            if (!is_outside_triangle(bcc)) {
-                setAsWeightedSum3(vtx.vel[0], bcc, &velC, vel10, vel11);
-                continue;
-            }
-            // Try north triangle.
-            bcc = barycentricCoords(pos, pC, *p11, *p01);
-            if (!is_outside_triangle(bcc)) {
-                setAsWeightedSum3(vtx.vel[0], bcc, &velC, vel11, vel01);
-                continue;
-            }
-            // Try west triangle.
-            bcc = barycentricCoords(pos, pC, *p01, *p00);
-            if (!is_outside_triangle(bcc)) {
-                setAsWeightedSum3(vtx.vel[0], bcc, &velC, vel01, vel00);
-                continue;
-            }
-            // One of the 4 continue statements should have acted by now. 
-            writeln("Vertex index: ", vtx.id, " pos: ", pos, "Quad-corners: ", p00, p10, p11, p01);
-            luaL_error(L, "Barycentric Calculation failed in luafn: setVtxVelocitiesByQuad()\n");
         } // end loop vtx
     } else {
         // dimensions==3
