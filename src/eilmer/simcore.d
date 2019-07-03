@@ -162,8 +162,19 @@ void init_simulation(int tindx, int nextLoadsIndx,
             auto tokens = content.split();
             int blkid = to!int(tokens[0]);
             int taskid = to!int(tokens[1]);
+            if (taskid >= GlobalConfig.mpi_size && GlobalConfig.is_master_task) {
+                writefln("Number of MPI tasks (%d) is insufficient for "~
+                         "taskid=%d that is associated with blockid=%d. Quitting.",
+                         GlobalConfig.mpi_size, taskid, blkid);
+                MPI_Abort(MPI_COMM_WORLD, 2);
+            }
             GlobalConfig.mpi_rank_for_block[blkid] = taskid;
             if (taskid == my_rank) { localFluidBlocks ~= globalFluidBlocks[blkid]; }
+        }
+        MPI_Barrier(MPI_COMM_WORLD);
+        if (localFluidBlocks.length == 0) {
+            writefln("MPI-task with rank %d has no FluidBlocks. Quitting.", my_rank);
+            MPI_Abort(MPI_COMM_WORLD, 2);
         }
     } else {
         // There is only one process and it deals with all blocks.
