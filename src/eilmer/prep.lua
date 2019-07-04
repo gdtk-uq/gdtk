@@ -370,11 +370,18 @@ end
 
 -- ---------------------------------------------------------------------------------------
 
--- Storage for later definitions of FluidBlock objects
+-- Storage for later definitions of FluidBlock objects.
+-- Note that the index for this array starts at 1, in the Lua way.
+-- The block ids start at 0 to be like the indexing inside the D code.
+-- Yes, this is confusing...
 fluidBlocks = {}
-
--- Storage for later definitions of FluidBlockArray objects
+-- Storage for later definitions of FluidBlockArray objects.
 fluidBlockArrays = {}
+-- We may want to look up the blocks via labels rather than numerical id
+-- in user-defined procedures.
+-- The following dictionaries store the connections.
+fluidBlocksDict = {}
+fluidBlockArraysDict = {}
 
 -- The user may assign the MPI task id for eack block manually
 -- but, if they don't, a default distribution will be made.
@@ -437,6 +444,11 @@ function FluidBlock:new(o)
    -- Note that we want block id to start at zero for the D code.
    o.id = #(fluidBlocks)
    fluidBlocks[#(fluidBlocks)+1] = o
+   o.label = o.label or string.format("FluidBlock-%d", o.id)
+   if fluidBlocksDict[o.label] then
+      error('Have previously defined a fluidBlock with label "' .. o.label .. '"', 2)
+   end
+   fluidBlocksDict[o.label] = o.id
    -- Set to -1 if NOT part of a fluid-block-array, otherwise use supplied value
    o.fluidBlockArrayId = o.fluidBlockArrayId or -1
    -- Must have a grid and initialState
@@ -450,7 +462,6 @@ function FluidBlock:new(o)
    if o.active == nil then
       o.active = true
    end
-   o.label = o.label or string.format("BLOCK-%d", o.id)
    o.omegaz = o.omegaz or 0.0
    if o.bcList then
       o.bcList = deepclone(o.bcList, false)
@@ -780,6 +791,11 @@ function FluidBlockArray(t)
    if not flag then
       error("Invalid name for item supplied to FluidBlockArray.", 2)
    end
+   t.label = t.label or string.format("FluidBlockArray-%d", arrayId)
+   if fluidBlockArraysDict[t.label] then
+      error('Have previously defined a fluidBlockArray with label "' .. t.label .. '"', 2)
+   end
+   fluidBlockArraysDict[t.label] = arrayId
    if not t.grid then
       error("You need to supply a grid to FluidBlockArray.", 2)
    end
@@ -921,8 +937,10 @@ function FluidBlockArray(t)
    --
    -- Retain meta-information about fluidBlockArray
    -- for use later in the user-defined functions, during simulation.
+   -- Note that the index of this array starts at 1 (in the Lua way).
    fluidBlockArrays[#fluidBlockArrays+1] = {
       id=arrayId,
+      label=t.label,
       nib=t.nib, njb=t.njb, nkb=t.nkb,
       blockArray=blockArray,
       blockCollection=blockCollection
@@ -1894,8 +1912,7 @@ function write_fluidBlockArrays_file(fileName)
    f:write("fluidBlockArrays = {\n")
    for i = 1, #(fluidBlockArrays) do
       local fba = fluidBlockArrays[i]
-      local label = fba.label or ""
-      f:write(string.format("  [%d]={label=\"%s\",\n", fba.id, label))
+      f:write(string.format("  [%d]={label=\"%s\",\n", fba.id, fba.label))
       f:write(string.format("    nib=%d, njb=%d, nkb=%d,\n", fba.nib, fba.njb, fba.nkb))
       local blkId = 0
       if config.dimensions == 3 then
@@ -1951,14 +1968,40 @@ function write_fluidBlockArrays_file(fileName)
    end
    f:write("} -- end fluidBlockArrays\n")
    --
+   f:write("-- Dictionary of FluidBlockArrays\n")
+   f:write("fluidBlockArraysDict = {\n")
+   for label,id in pairs(fluidBlockArraysDict) do
+      f:write(string.format(' ["%s"]=%d,\n', label, id))
+   end
+   f:write("} -- end fluidBlockArraysDict\n")
+   --
+   f:write("-- Map from FluidBlock id to FluidBlockArray id\n")
    f:write("whichFluidBlockArray = {\n")
    for i,blk in ipairs(fluidBlocks) do
       if blk.fluidBlockArrayId >= 0 then
          f:write(string.format(" [%d]=%d,", blk.id, blk.fluidBlockArrayId))
       end
-      if (i > 1 and i%10 == 0) or i == #fluidBlocks then f:write("\n") end
+      if (i > 1 and i%5 == 0) or i == #fluidBlocks then f:write("\n") end
    end
-   f:write("} -- end whichBlockArray\n")
+   f:write("} -- end whichFluidBlockArray\n")
+   --
+   f:write("-- Map from FluidBlock id to FluidBlockArray label\n")
+   f:write("whichFluidBlockArrayLabel = {\n")
+   for i,blk in ipairs(fluidBlocks) do
+      if blk.fluidBlockArrayId >= 0 then
+         fba = fluidBlockArrays[blk.fluidBlockArrayId+1]
+         f:write(string.format(' [%d]="%s",', blk.id, fba.label))
+      end
+      if (i > 1 and i%5 == 0) or i == #fluidBlocks then f:write("\n") end
+   end
+   f:write("} -- end whichFluidBlockArrayLabel\n")
+   --
+   f:write("-- Dictionary of FluidBlocks\n")
+   f:write("fluidBlocksDict = {\n")
+   for label,id in pairs(fluidBlocksDict) do
+      f:write(string.format(' ["%s"]=%d,\n', label, id))
+   end
+   f:write("} -- end fluidBlocksDict\n")
    --
    f:close()
 end -- function write_fluidBlockArrays_file
