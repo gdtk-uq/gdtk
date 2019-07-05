@@ -2003,6 +2003,21 @@ function write_fluidBlockArrays_file(fileName)
    end
    f:write("} -- end fluidBlocksDict\n")
    --
+   f:write([[
+function is_in_FluidBlockArray(blkId, label)
+   -- Returns true if a block is in a particular FluidBlockArray.
+   local myfba = whichFluidBlockArrayLabel[blkId]
+   if not myfba then
+      return false
+   end
+   if label == myfba then
+      return true
+   else
+      return false
+   end
+end
+]])
+   --
    f:close()
 end -- function write_fluidBlockArrays_file
 
