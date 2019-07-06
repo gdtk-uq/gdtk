@@ -2155,7 +2155,7 @@ function build_job_files(job)
 end
 
 
-if true then
+if false then
    -- Keep old names available, for now.
    -- Once we purge all of the old names from the examples,
    -- we should delete this code block
