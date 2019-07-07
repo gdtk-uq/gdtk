@@ -1,6 +1,6 @@
 /**
  number.d
- Specifices what type of numbers to use in the numerical methods.
+ Specifies the type of numbers to use in the numerical methods.
 */
 
 module nm.number;
