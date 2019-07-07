@@ -40,6 +40,36 @@ int pushVector3(lua_State *L, Vector3 vec)
 }
 
 /**
+ * Returns a Vector3 constructed from the item on the Lua stack.
+ * This item may be a true Vector3 pointer (to userdata) or it
+ * may be a table with suitable fields, x, y, z.
+ */
+Vector3 toVector3(lua_State *L, int index)
+{
+    // First, see if it is a udata blob of Vector3 type.
+    if (lua_isuserdata(L, index)) {
+        return *checkVector3(L, index);
+    }
+    // If we arrive here, see if we have a table with x,y,z fields.
+    Vector3 vec = Vector3(0.0, 0.0, 0.0);
+    if (!lua_istable(L, index)) {
+        luaL_error(L, "Did not get a Vector3 udata object nor a table.");
+        return vec;
+    }
+    // Have table, now look for named fields containing coordinate values.
+    lua_getfield(L, index, "x");
+    if (lua_isnumber(L, -1)) { vec.refx = lua_tonumber(L, -1); }
+    lua_pop(L, 1);
+    lua_getfield(L, index, "y");
+    if (lua_isnumber(L, -1)) { vec.refy = lua_tonumber(L, -1); }
+    lua_pop(L, 1);
+    lua_getfield(L, index, "z");
+    if (lua_isnumber(L, -1)) { vec.refz = lua_tonumber(L, -1); }
+    lua_pop(L, 1);
+    return vec;
+} // end toVector3
+
+/**
  * Provides a sanity check that the raw userdata
  * is in fact what we think it is.
  */
@@ -345,16 +375,16 @@ extern(C) int quadProperties(lua_State* L)
             luaL_error(L, errMsg.toStringz);
         }
         lua_getfield(L, 1, "p0");
-        Vector3 p0 = *checkVector3(L, -1);
+        Vector3 p0 = toVector3(L, -1);
         lua_pop(L, 1);
         lua_getfield(L, 1, "p1");
-        Vector3 p1 = *checkVector3(L, -1);
+        Vector3 p1 = toVector3(L, -1);
         lua_pop(L, 1);
         lua_getfield(L, 1, "p2");
-        Vector3 p2 = *checkVector3(L, -1);
+        Vector3 p2 = toVector3(L, -1);
         lua_pop(L, 1);
         lua_getfield(L, 1, "p3");
-        Vector3 p3 = *checkVector3(L, -1);
+        Vector3 p3 = toVector3(L, -1);
         lua_pop(L, 1);
         lua_settop(L, 0); // clear stack
 
@@ -397,28 +427,28 @@ extern(C) int hexCellProperties(lua_State* L)
             luaL_error(L, errMsg.toStringz);
         }
         lua_getfield(L, 1, "p0");
-        Vector3 p0 = *checkVector3(L, -1);
+        Vector3 p0 = toVector3(L, -1);
         lua_pop(L, 1);
         lua_getfield(L, 1, "p1");
-        Vector3 p1 = *checkVector3(L, -1);
+        Vector3 p1 = toVector3(L, -1);
         lua_pop(L, 1);
         lua_getfield(L, 1, "p2");
-        Vector3 p2 = *checkVector3(L, -1);
+        Vector3 p2 = toVector3(L, -1);
         lua_pop(L, 1);
         lua_getfield(L, 1, "p3");
-        Vector3 p3 = *checkVector3(L, -1);
+        Vector3 p3 = toVector3(L, -1);
         lua_pop(L, 1);
         lua_getfield(L, 1, "p4");
-        Vector3 p4 = *checkVector3(L, -1);
+        Vector3 p4 = toVector3(L, -1);
         lua_pop(L, 1);
         lua_getfield(L, 1, "p5");
-        Vector3 p5 = *checkVector3(L, -1);
+        Vector3 p5 = toVector3(L, -1);
         lua_pop(L, 1);
         lua_getfield(L, 1, "p6");
-        Vector3 p6 = *checkVector3(L, -1);
+        Vector3 p6 = toVector3(L, -1);
         lua_pop(L, 1);
         lua_getfield(L, 1, "p7");
-        Vector3 p7 = *checkVector3(L, -1);
+        Vector3 p7 = toVector3(L, -1);
         lua_pop(L, 1);
         lua_settop(L, 0); // clear stack
 
