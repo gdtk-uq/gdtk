@@ -23,7 +23,8 @@ TEST_PROGRAMS := chemkin_therm_cond_test chemkin_viscosity_test cea_therm_cond_t
 	perf_gas_mix_eos_test sutherland_therm_cond_test sutherland_viscosity_test \
 	wilke_mixing_therm_cond_test wilke_mixing_viscosity_test \
 	therm_perf_gas_test therm_perf_gas_mix_eos_test very_viscous_air_test \
-	co2gas_sw_test uniform_lut_test adaptive_lut_CEA_test ideal_air_proxy_test \
+	co2gas_sw_test uniform_lut_test uniform_lut_plus_ideal_test \
+	adaptive_lut_CEA_test ideal_air_proxy_test \
         two_temperature_reacting_argon_test \
 	steam_test \
 	init_gas_model_complex_test ideal_gas_complex_test cea_thermo_curves_complex_test \
@@ -278,6 +279,10 @@ co2gas_sw_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLU
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 uniform_lut_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
+	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
+		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
+
+uniform_lut_plus_ideal_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
 	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 

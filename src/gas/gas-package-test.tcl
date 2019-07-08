@@ -68,6 +68,10 @@ test adaptive-lut-test {Testing uniform_lut.d} -body {
     exec ./adaptive_lut_CEA_test
 } -result {} -returnCodes {0}
 
+test uniform-lut-plus_ideal-test {Testing uniform_lut_plus_ideal.d} -body {
+    exec ./uniform_lut_plus_ideal_test > LOGFILE_UNIFORM_LUT_PLUS_IDEAL_TEST
+} -result {} -returnCodes {0}
+
 test ideal-air-proxy-test {Testing ideal_air_proxy.d} -body {
     exec ./ideal_air_proxy_test
 } -result {} -returnCodes {0}

@@ -22,6 +22,7 @@ import gas.co2gas;
 import gas.co2gas_sw;
 import gas.sf6virial;
 import gas.uniform_lut;
+import gas.uniform_lut_plus_ideal;
 import gas.adaptive_lut_CEA;
 import gas.ideal_air_proxy;
 import gas.powers_aslam_gas;
@@ -102,6 +103,9 @@ GasModel init_gas_model(string file_name="gas-model.lua")
         break;
     case "look-up table":
         gm = new UniformLUT(L);
+        break;
+    case "UniformLUTPlusIdealGas":
+        gm = new UniformLUTPlusIdealGas(L);
         break;
     case "CEA adaptive look-up table":
         gm = new AdaptiveLUT(L);
