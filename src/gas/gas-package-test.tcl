@@ -64,11 +64,14 @@ test uniform-lut-test {Testing uniform_lut.d} -body {
     exec ./uniform_lut_test > LOGFILE_UNIFORM_LUT_TEST
 } -result {} -returnCodes {0}
 
-test adaptive-lut-test {Testing uniform_lut.d} -body {
+test adaptive-lut-test {Testing adaptive_lut.d} -body {
     exec ./adaptive_lut_CEA_test
 } -result {} -returnCodes {0}
 
 test uniform-lut-plus_ideal-test {Testing uniform_lut_plus_ideal.d} -body {
+    exec cp sample-data/uniform-lut-plus-ideal-air-gas-model.lua ./uniform-lut-plus-ideal-air-gas-model.lua
+    exec cp sample-data/cea-lut-air-version-test.lua ./cea-lut-air-version-test.lua
+    exec cp sample-data/ideal-air-gas-model.lua ./ideal-air-gas-model.lua
     exec ./uniform_lut_plus_ideal_test > LOGFILE_UNIFORM_LUT_PLUS_IDEAL_TEST
 } -result {} -returnCodes {0}
 

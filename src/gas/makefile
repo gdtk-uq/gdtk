@@ -109,6 +109,8 @@ clean:
 	- rm thermo.inp thermo.lib thermo.out
 	- rm trans.inp trans.lib trans.out
 	- rm tmp.inp tmp.out tmp.plt
+	- rm ./ideal-air-gas-model.lua ./cea-lut-air-version-test.lua
+	- rm ./uniform-lut-plus-ideal-air-gas-model.lua
 	- cd $(LUA); make clean
 	- rm $(KINETICS_DIR)/pseudosp_solve_ode.o
 	- rm $(KINETICS_DIR)/pseudosp_rhs_ode.o
