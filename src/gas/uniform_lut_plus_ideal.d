@@ -26,6 +26,8 @@ import util.lua_service;
 import core.stdc.stdlib : exit;
 import nm.complex;
 import nm.number;
+import nm.bracketing;
+import nm.brent;
 
 class UniformLUTPlusIdealGas: GasModel {
 public:
@@ -70,7 +72,9 @@ public:
         lut_gas.update_thermo_from_pT(Q_lut);
         Q_ideal.p = Q.massf[1]*Q.p; Q_ideal.T = Q.T;
         ideal_gas.update_thermo_from_pT(Q_ideal);
+        // Masses add.
         Q.rho = Q_lut.rho + Q_ideal.rho;
+        // Internal energy is a weighted average.
         Q.u = Q.massf[0]*Q_lut.u + Q.massf[1]*Q_ideal.u;
     }
     override void update_thermo_from_rhou(GasState Q)
@@ -83,13 +87,27 @@ public:
         Q_ideal.rho = Q.massf[1]*Q.rho;
         // Need to determine the temperature at which the individual energies sum
         // to the mixture internal energy.
-        number T = Q.u/ideal_gas.dudT_const_v(Q_ideal); // First guess is just ideal gas
+        // The LUT update of thermo from rhou is quite fast
+        // because that is the basic tabulation.
+        // Let's assume that the form of the internal energies is similar,
+        // such that we can just form an average T from the known energy.
+        Q_lut.u = Q.u; lut_gas.update_thermo_from_rhou(Q_lut);
+        Q_ideal.u = Q.u; ideal_gas.update_thermo_from_rhou(Q_ideal);
+        // Initial guess for Temperature
+        number T = Q.massf[0]*Q_lut.T + Q.massf[1]*Q_ideal.T;
+        number u_error(number T)
+        {
+            Q_lut.T = T; Q_ideal.T = T;
+            lut_gas.update_thermo_from_rhoT(Q_lut);
+            ideal_gas.update_thermo_from_rhoT(Q_ideal);
+            return (Q.massf[0]*Q_lut.u + Q.massf[1]*Q_ideal.u) - Q.u;
+        }
+        number T2 = T*1.1; number T1 = T*0.9;
+        bracket!(u_error, number)(T1, T2);
+        T = solve!(u_error, number)(T1, T2, 1.0e-6);
         Q_lut.T = T; Q_ideal.T = T;
         lut_gas.update_thermo_from_rhoT(Q_lut);
         ideal_gas.update_thermo_from_rhoT(Q_ideal);
-        number u_error = (Q.massf[0]*Q_lut.u + Q.massf[1]*Q_ideal.u) - Q.u;
-        debug { writefln("u_error=%g", u_error); } 
-        // [FIX-ME] finish iterations
         // Partial pressures just sum to the mixture pressure.
         Q.p = Q_lut.p + Q_ideal.p;
         Q.T = T;
@@ -100,15 +118,14 @@ public:
             string msg = "Temperature and/or density was negative for update_thermo_from_rhoT."; 
             throw new GasModelException(msg);
         }
-        // Components just add together.
         Q_lut.T = Q.T;
         Q_lut.rho = Q.massf[0] * Q.rho;
         lut_gas.update_thermo_from_rhoT(Q_lut);
         Q_ideal.T = Q.T;
         Q_ideal.rho = Q.massf[1] * Q.rho;
         ideal_gas.update_thermo_from_rhoT(Q_ideal);
-        Q.p = Q_lut.p + Q_ideal.p;
-        Q.u = Q_lut.u + Q_ideal.u;
+        Q.p = Q_lut.p + Q_ideal.p; // partial pressures add
+        Q.u = Q.massf[0]*Q_lut.u + Q.massf[1]*Q_ideal.u;
     }
     override void update_thermo_from_rhop(GasState Q)
     {
@@ -120,13 +137,21 @@ public:
         Q_ideal.rho = Q.massf[1]*Q.rho;
         // Need to determine the temperature at which the partial pressures sum
         // to the mixture pressure.
-        number T = Q.p/ideal_gas.gas_constant(Q_ideal); // First guess is just ideal gas
+        // First guess is just ideal gas
+        number T = Q.p/ideal_gas.gas_constant(Q_ideal)/Q.rho;
+        number p_error(number T)
+        {
+            Q_lut.T = T; Q_ideal.T = T;
+            lut_gas.update_thermo_from_rhoT(Q_lut);
+            ideal_gas.update_thermo_from_rhoT(Q_ideal);
+            return (Q_lut.p + Q_ideal.p) - Q.p;
+        }
+        number T2 = T*1.1; number T1 = T*0.9;
+        bracket!(p_error, number)(T1, T2);
+        T = solve!(p_error, number)(T1, T2, 1.0e-6);
         Q_lut.T = T; Q_ideal.T = T;
         lut_gas.update_thermo_from_rhoT(Q_lut);
         ideal_gas.update_thermo_from_rhoT(Q_ideal);
-        number p_error = (Q_lut.p + Q_ideal.p) - Q.p;
-        debug { writefln("p_error=%g", p_error); } 
-        // [FIX-ME] finish iterations
         Q.T = T;
         Q.u = Q.massf[0]*Q_lut.u + Q.massf[1]*Q_ideal.u;
     }
@@ -277,6 +302,26 @@ version(uniform_lut_plus_ideal_test) {
         assert(approxEqualNumbers(gd.mu, to!number(2.22104e-05), 1.0e-6), failedUnitTest());
         writeln("k=", gd.k);
         assert(approxEqualNumbers(gd.k, to!number(0.0316054), 1.0e-6), failedUnitTest());
+
+        gm.update_thermo_from_rhou(gd);
+        writeln("same condition: p=", gd.p);
+        assert(approxEqualNumbers(gd.p, to!number(1.0e5), 1.0e-6), failedUnitTest());
+        writeln("T=", gd.T);
+        assert(approxEqualNumbers(gd.T, to!number(300.0), 1.0e-6), failedUnitTest());
+
+        gd.u *= 1.2;
+        gm.update_thermo_from_rhou(gd);
+        writeln("increase u: p=", gd.p);
+        assert(approxEqualNumbers(gd.p, to!number(1.2e5), 1.0e-6), failedUnitTest());
+        writeln("T=", gd.T);
+        assert(approxEqualNumbers(gd.T, to!number(360.0), 1.0e-6), failedUnitTest());
+
+        gd.p /= 1.2;
+        gm.update_thermo_from_rhop(gd);
+        writeln("decrease p: u=", gd.u);
+        assert(approxEqualNumbers(gd.u, to!number(215643.0), 1.0e-4), failedUnitTest());
+        writeln("T=", gd.T);
+        assert(approxEqualNumbers(gd.T, to!number(300.0), 1.0e-6), failedUnitTest());
 
         version(complex_numbers) {
             // Check du/dT = Cv
