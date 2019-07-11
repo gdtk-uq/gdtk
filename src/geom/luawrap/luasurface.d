@@ -109,17 +109,14 @@ void getPaths(lua_State *L, string ctorName, out Path[string] paths)
 void getVector3s(lua_State *L, string ctorName, out Vector3[string] corners)
 {
     string errMsgTmplt = "Error in call to %s:new. " ~
-        "The value set for the '%s' corner was not of Vector3 type."; 
+        "A value for the '%s' corner was not available."; 
     int index = 1;  // Assume that table is at index 1.
     string[] corner_names = ["p00", "p10", "p11", "p01"];
     foreach (name; corner_names) {
         lua_getfield(L, index, name.toStringz());
-        auto p = checkVector3(L, -1);
-        if (p is null) {
-            luaL_error(L, toStringz(format(errMsgTmplt, ctorName, name)));
-        } else {
-            corners[name] = *p;
-        }
+        if (lua_isnil(L, -1)) { luaL_error(L, toStringz(format(errMsgTmplt, ctorName, name))); }
+        auto p = toVector3(L, -1);
+        corners[name] = p;
         lua_pop(L, 1);
     }
 }
@@ -706,7 +703,8 @@ extern(C) int newBezierPatch(lua_State* L)
         Q[i].length = mp1;
         foreach (j; 0 .. mp1) {
             lua_rawgeti(L, -1, j+1);
-            Q[i][j].set(checkVector3(L, -1));
+            auto p = toVector3(L, -1);
+            Q[i][j].set(p);
             lua_pop(L, 1);
         }
         lua_pop(L, 1);
@@ -859,7 +857,7 @@ extern(C) int newBezierTrianglePatch(lua_State* L)
     Vector3[] Q;
     foreach (i; 1 .. nPts+1) {
         lua_rawgeti(L, -1, i);
-        Q ~= *(checkVector3(L, -1));
+        Q ~= toVector3(L, -1);
         lua_pop(L, 1);
     }
     lua_pop(L, 1);
@@ -957,7 +955,7 @@ extern(C) int bezierTriangleFromPointCloud(lua_State* L)
     Vector3[] pts;
     foreach (i; 1 .. nPts+1) {
         lua_rawgeti(L, 1, i);
-        pts ~= *(checkVector3(L, -1));
+        pts ~= toVector3(L, -1);
         lua_pop(L, 1);
     }
     auto b0 = checkObj!(Bezier, BezierMT)(L, 2);

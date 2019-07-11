@@ -105,16 +105,13 @@ Vector3[] get8Vector3s(lua_State *L, string ctorName)
 {
     // Assume that table containing the Vector3 objects is at top of stack.
     string errMsgTmplt = "Error in call to %s:new. " ~
-        "The value set for the corner[%d] was not of Vector3 type.";
+        "The value for the corner[%d] was not available.";
     Vector3[] corners;
     foreach(i; 0 .. 8) {
         lua_rawgeti(L, -1, i+1);
-        auto ptr = checkVector3(L, -1);
-        if ( ptr is null ) {
-            luaL_error(L, toStringz(format(errMsgTmplt, ctorName, i)));
-        } else {
-            corners ~= *ptr;
-        }
+        if (lua_isnil(L, -1)) { luaL_error(L, toStringz(format(errMsgTmplt, ctorName, i))); }
+        auto p = toVector3(L, -1);
+        corners ~= p;
         lua_pop(L, 1);
     }
     return corners;
@@ -331,14 +328,14 @@ extern(C) int newSlabVolume(lua_State* L)
     lua_pop(L, 1);
     // Look for thickness vector.
     lua_getfield(L, 1, "dz");
-    auto dz_ptr = checkVector3(L, -1);
-    if (dz_ptr is null) {
+    if (lua_isnil(L, -1)) {
         string errMsg = "Error in constructor SlabVolume:new{}. Couldn't find dz.";
         luaL_error(L, errMsg.toStringz);
     }
+    auto dz = toVector3(L, -1);
     lua_pop(L, 1);
     // Construct the actual surface.
-    auto slabv = new SlabVolume(face0123, *dz_ptr);
+    auto slabv = new SlabVolume(face0123, dz);
     volumeStore ~= pushObj!(SlabVolume, SlabVolumeMT)(L, slabv);
     return 1;
 } // end newSlabVolume()

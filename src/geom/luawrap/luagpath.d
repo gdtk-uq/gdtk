@@ -124,13 +124,7 @@ extern(C) int pathIntersect2D(T, string MTname)(lua_State* L)
             "and that a valid object is passed as value.\n";
         luaL_error(L, errMsg.toStringz());
     }
-    auto ps = checkVector3(L, -1);
-    if (ps is null) {
-        string errMsg = "Error in call to Path:intersect2D{}. " ~
-            "A Vector3 object is expected as the ps argument. " ~ 
-            "No valid Vector3 was found.";
-        luaL_error(L, errMsg.toStringz());
-    }
+    auto ps = toVector3(L, -1);
     lua_pop(L, 1);
     // Expect Vector3 for direction vector.
     lua_getfield(L, 2, "d");
@@ -140,13 +134,7 @@ extern(C) int pathIntersect2D(T, string MTname)(lua_State* L)
             "and that a valid object is passed as value.";
         luaL_error(L, errMsg.toStringz());
     }
-    auto d = checkVector3(L, -1);
-    if (d is null) {
-        string errMsg = "Error in call to Path:intersect2D{}. " ~
-            "A Vector3 object is expected as the d argument. " ~
-            "No valid Vector3 was found.";
-        luaL_error(L, errMsg.toStringz());
-    }
+    auto d = toVector3(L, -1);
     lua_pop(L, 1);
     int nseg = 20; // default value
     lua_getfield(L, 2, "nseg");
@@ -156,7 +144,7 @@ extern(C) int pathIntersect2D(T, string MTname)(lua_State* L)
     lua_pop(L, 1);
     //
     double t = 0.0;
-    bool found = path.intersect2D(*ps, *d, t, nseg);
+    bool found = path.intersect2D(ps, d, t, nseg);
     lua_settop(L, 0); // clear stack
     lua_pushboolean(L, found);
     lua_pushnumber(L, t);
@@ -202,13 +190,7 @@ extern(C) int newLine(lua_State* L)
             "and that a valid object is passed as value.\n";
         luaL_error(L, errMsg.toStringz());
     }
-    auto p0 = checkVector3(L, -1);
-    if ( p0 is null ) {
-        string errMsg = "Error in call to Line:new{}. " ~
-            "A Vector3 object is expected as the p0 argument. " ~ 
-            "No valid Vector3 was found.";
-        luaL_error(L, errMsg.toStringz());
-    }
+    auto p0 = toVector3(L, -1);
     lua_pop(L, 1);
     // Expect Vector3 for end point.
     lua_getfield(L, 1, "p1");
@@ -218,15 +200,9 @@ extern(C) int newLine(lua_State* L)
             "and that a valid object is passed as value.";
         luaL_error(L, errMsg.toStringz());
     }
-    auto p1 = checkVector3(L, -1);
-    if ( p1 is null ) {
-        string errMsg = "Error in call to Line:new{}. " ~
-            "A Vector3 object is expected as the p1 argument. " ~
-            "No valid Vector3 was found.";
-        luaL_error(L, errMsg.toStringz());
-    }
+    auto p1 = toVector3(L, -1);
     lua_pop(L, 1);
-    auto my_line = new Line(*p0, *p1);
+    auto my_line = new Line(p0, p1);
     pathStore ~= pushObj!(Line, LineMT)(L, my_line);
     return 1;
 } // end newLine()
@@ -268,13 +244,7 @@ extern(C) int newArc(lua_State* L)
         string errMsg = "Error in call to Arc:new{}. No p0 entry found.";
         luaL_error(L, errMsg.toStringz());
     }
-    auto p0 = checkVector3(L, -1);
-    if ( p0 is null ) {
-        string errMsg = "Error in call to Arc:new{}. " ~
-            "A Vector3 object is expected as the p0 argument. " ~ 
-            "No valid Vector3 was found.";
-        luaL_error(L, errMsg.toStringz());
-    }
+    auto p0 = toVector3(L, -1);
     lua_pop(L, 1);
     // Expect Vector3 for end point.
     lua_getfield(L, 1, "p1");
@@ -282,13 +252,7 @@ extern(C) int newArc(lua_State* L)
         string errMsg = "Error in call to Arc:new{}. No p1 entry found.";
         luaL_error(L, errMsg.toStringz());
     }
-    auto p1 = checkVector3(L, -1);
-    if ( p1 is null ) {
-        string errMsg = "Error in call to Arc:new{}. " ~
-            "A Vector3 object is expected as the p1 argument." ~ 
-            " No valid Vector3 was found.";
-        luaL_error(L, errMsg.toStringz());
-    }
+    auto p1 = toVector3(L, -1);
     lua_pop(L, 1);
     // Expect Vector3 at centre.
     lua_getfield(L, 1, "centre");
@@ -296,15 +260,9 @@ extern(C) int newArc(lua_State* L)
         string errMsg = "Error in call to Arc:new{}. No centre entry found.";
         luaL_error(L, errMsg.toStringz());
     }
-    auto centre = checkVector3(L, -1);
-    if ( centre is null ) {
-        string errMsg = "Error in call to Arc:new{}. " ~
-            "A Vector3 object is expected as the centre argument. " ~ 
-            "No valid Vector3 was found.";
-        luaL_error(L, errMsg.toStringz());
-    }
+    auto centre = toVector3(L, -1);
     lua_pop(L, 1);
-    auto my_arc = new Arc(*p0, *p1, *centre);
+    auto my_arc = new Arc(p0, p1, centre);
     pathStore ~= pushObj!(Arc, ArcMT)(L, my_arc);
     return 1;
 } // end newArc()
@@ -346,12 +304,7 @@ extern(C) int newArc3(lua_State* L)
         string errMsg = "Error in call to Arc3:new{}. No p0 entry found.";
         luaL_error(L, errMsg.toStringz());
     }
-    auto p0 = checkVector3(L, -1);
-    if ( p0 is null ) {
-        string errMsg = "Error in call to Arc3:new{}. " ~
-            "A Vector3 object is expected as the p0 argument. No valid Vector3 was found.";
-        luaL_error(L, errMsg.toStringz());
-    }
+    auto p0 = toVector3(L, -1);
     lua_pop(L, 1);
     // Expect Vector3 at mid-point pmid.
     lua_getfield(L, 1, "pmid");
@@ -359,12 +312,7 @@ extern(C) int newArc3(lua_State* L)
         string errMsg = "Error in call to Arc3:new{}. No pmid entry found.";
         luaL_error(L, errMsg.toStringz());
     }
-    auto pmid = checkVector3(L, -1);
-    if ( pmid is null ) {
-        string errMsg = "Error in call to Arc3:new{}. " ~
-            "A Vector3 object is expected as the pmid argument. No valid Vector3 was found.";
-        luaL_error(L, errMsg.toStringz());
-    }
+    auto pmid = toVector3(L, -1);
     lua_pop(L, 1);
     // Expect Vector3 at end point p1.
     lua_getfield(L, 1, "p1");
@@ -372,14 +320,9 @@ extern(C) int newArc3(lua_State* L)
         string errMsg = "Error in call to Arc3:new{}. No p1 entry found.";
         luaL_error(L, errMsg.toStringz());
     }
-    auto p1 = checkVector3(L, -1);
-    if ( p1 is null ) {
-        string errMsg = "Error in call to Arc3:new{}. " ~
-            "A Vector3 object is expected as the p1 argument. No valid Vector3 was found.";
-        luaL_error(L, errMsg.toStringz());
-    }
+    auto p1 = toVector3(L, -1);
     lua_pop(L, 1);
-    auto my_arc = new Arc3(*p0, *pmid, *p1);
+    auto my_arc = new Arc3(p0, pmid, p1);
     pathStore ~= pushObj!(Arc3, Arc3MT)(L, my_arc);
     return 1;
 } // end newArc3()
@@ -432,12 +375,7 @@ extern(C) int newHelix(lua_State* L)
         lua_pop(L, 1);
         // Expect Vector3 for start point.
         lua_getfield(L, 1, "point_start");
-        auto pstart = checkVector3(L, -1);
-        if (pstart is null) {
-            string errMsg = "Error in call to Helix:new{}. " ~
-                "A Vector3 object is expected as the point_start argument. No valid Vector3 was found.";
-            luaL_error(L, errMsg.toStringz());
-        }
+        auto pstart = toVector3(L, -1);
         lua_pop(L, 1);
         // Expect Vector3 at end point.
         lua_getfield(L, 1, "point_end");
@@ -445,12 +383,7 @@ extern(C) int newHelix(lua_State* L)
             string errMsg = "Error in call to Helix:new{}. No point_end entry found.";
             luaL_error(L, errMsg.toStringz());
         }
-        auto pend = checkVector3(L, -1);
-        if (pend is null) {
-            string errMsg = "Error in call to Helix:new{}. " ~
-                "A Vector3 object is expected as the point_end argument. No valid Vector3 was found.";
-            luaL_error(L, errMsg.toStringz());
-        }
+        auto pend = toVector3(L, -1);
         lua_pop(L, 1);
         // Expect Vector3 specifying start of axis.
         lua_getfield(L, 1, "axis0");
@@ -458,12 +391,7 @@ extern(C) int newHelix(lua_State* L)
             string errMsg = "Error in call to Helix:new{}. No axis0 entry found.";
             luaL_error(L, errMsg.toStringz());
         }
-        auto axis0 = checkVector3(L, -1);
-        if (axis0 is null) {
-            string errMsg = "Error in call to Helix:new{}. " ~
-                "A Vector3 object is expected as the axis0 argument. No valid Vector3 was found.";
-            luaL_error(L, errMsg.toStringz());
-        }
+        auto axis0 = toVector3(L, -1);
         lua_pop(L, 1);
         // Expect Vector3 at end of axis, axis1.
         lua_getfield(L, 1, "axis1");
@@ -471,23 +399,13 @@ extern(C) int newHelix(lua_State* L)
             string errMsg = "Error in call to Helix:new{}. No axis1 entry found.";
             luaL_error(L, errMsg.toStringz());
         }
-        auto axis1 = checkVector3(L, -1);
-        if (axis1 is null) {
-            string errMsg = "Error in call to Helix:new{}. " ~
-                "A Vector3 object is expected as the axis1 argument. No valid Vector3 was found.";
-            luaL_error(L, errMsg.toStringz());
-        }
+        auto axis1 = toVector3(L, -1);
         lua_pop(L, 1);
-        my_helix = new Helix(*pstart, *pend, *axis0, *axis1);
+        my_helix = new Helix(pstart, pend, axis0, axis1);
     } else {
         // Proceed with the specification using fundamental parameters.
         // Expect Vector3 for start point on local axis, a0.
-        auto a0 = checkVector3(L, -1);
-        if (a0 is null) {
-            string errMsg = "Error in call to Helix:new{}. " ~
-                "A Vector3 object is expected as the a0 argument. No valid Vector3 was found.";
-            luaL_error(L, errMsg.toStringz());
-        }
+        auto a0 = toVector3(L, -1);
         lua_pop(L, 1);
         // Expect Vector3 at end point on local axis, a1.
         lua_getfield(L, 1, "a1");
@@ -495,12 +413,7 @@ extern(C) int newHelix(lua_State* L)
             string errMsg = "Error in call to Helix:new{}. No a1 entry found.";
             luaL_error(L, errMsg.toStringz());
         }
-        auto a1 = checkVector3(L, -1);
-        if (a1 is null) {
-            string errMsg = "Error in call to Helix:new{}. " ~
-                "A Vector3 object is expected as the a1 argument. No valid Vector3 was found.";
-            luaL_error(L, errMsg.toStringz());
-        }
+        auto a1 = toVector3(L, -1);
         lua_pop(L, 1);
         // Expect Vector3 specifying local x-direction.
         lua_getfield(L, 1, "xlocal");
@@ -508,12 +421,7 @@ extern(C) int newHelix(lua_State* L)
             string errMsg = "Error in call to Helix:new{}. No xlocal entry found.";
             luaL_error(L, errMsg.toStringz());
         }
-        auto xlocal = checkVector3(L, -1);
-        if (xlocal is null) {
-            string errMsg = "Error in call to Helix:new{}. " ~
-                "A Vector3 object is expected as the xlocal argument. No valid Vector3 was found.";
-            luaL_error(L, errMsg.toStringz());
-        }
+        auto xlocal = toVector3(L, -1);
         lua_pop(L, 1);
         string errMsgTmplt = "Error in call to Helix:new{}. " ~
             "A valid value for '%s' was not found in list of arguments. " ~
@@ -521,7 +429,7 @@ extern(C) int newHelix(lua_State* L)
         double r0 = getNumberFromTable(L, 1, "r0", true, 1.0, true, format(errMsgTmplt, "r0"));
         double r1 = getNumberFromTable(L, 1, "r1", true, 1.0, true, format(errMsgTmplt, "r1"));
         double dtheta = getNumberFromTable(L, 1, "dtheta", true, 0.0, true, format(errMsgTmplt, "dtheta"));
-        my_helix = new Helix(*a0, *a1, *xlocal, r0, r1, dtheta);
+        my_helix = new Helix(a0, a1, xlocal, r0, r1, dtheta);
     }
     assert(my_helix !is null, "Did not successfully make a Helix object.");
     pathStore ~= pushObj!(Helix, HelixMT)(L, my_helix);
@@ -576,10 +484,9 @@ extern(C) int newBezier(lua_State* L)
     while ( true ) {
         lua_rawgeti(L, -1, position);
         if ( lua_isnil(L, -1) ) { lua_pop(L, 1); break; }
-        auto a = checkVector3(L, -1);
+        auto a = toVector3(L, -1);
         lua_pop(L, 1);
-        if ( a is null ) break;
-        B ~= *a;
+        B ~= a;
         ++position;
     }
     lua_pop(L, 1); // dispose of points table
@@ -624,7 +531,7 @@ extern(C) int bezierCtrlPoint(lua_State* L)
         return 1;
     }
     // Treat as setter
-    bezier.B[i] = *(checkVector3(L, 3));
+    bezier.B[i] = toVector3(L, 3);
     return 0;
 }
 
@@ -790,10 +697,9 @@ extern(C) int newSpline(lua_State* L)
     while ( true ) {
         lua_rawgeti(L, -1, position);
         if ( lua_isnil(L, -1) ) { lua_pop(L, 1); break; }
-        auto a = checkVector3(L, -1);
+        auto a = toVector3(L, -1);
         lua_pop(L, 1);
-        if ( a is null ) break;
-        B ~= *a;
+        B ~= a;
         ++position;
     }
     lua_pop(L, 1); // dispose of points table
@@ -1313,14 +1219,9 @@ extern(C) int newTranslatedPath(lua_State* L)
     }
     // Expect Vector3 for key "shift".
     lua_getfield(L, 1, "shift".toStringz());
-    auto shift = checkVector3(L, -1);
-    if ( shift is null ) {
-        string errMsg = "Error in call to TranslatedPath:new{}. " ~
-            "A Vector3 object is expected at key shift. No valid Vector3 was found.";
-        luaL_error(L, errMsg.toStringz());
-    }
+    auto shift = toVector3(L, -1);
     lua_pop(L, 1);
-    auto tr_path = new TranslatedPath(original_path, *shift);
+    auto tr_path = new TranslatedPath(original_path, shift);
     pathStore ~= pushObj!(TranslatedPath, TranslatedPathMT)(L, tr_path);
     return 1;
 } // end newTranslatedPath()
@@ -1373,23 +1274,13 @@ extern(C) int newMirrorImagePath(lua_State* L)
     }
     // Expect Vector3 for key "point".
     lua_getfield(L, 1, "point".toStringz());
-    auto point = checkVector3(L, -1);
-    if ( point is null ) {
-        string errMsg = "Error in call to MirrorImagePath:new{}. " ~
-            "A Vector3 object is expected at key point. No valid Vector3 was found.";
-        luaL_error(L, errMsg.toStringz());
-    }
+    auto point = toVector3(L, -1);
     lua_pop(L, 1);
     // Expect Vector3 for key "normal".
     lua_getfield(L, 1, "normal".toStringz());
-    auto normal = checkVector3(L, -1);
-    if ( normal is null ) {
-        string errMsg = "Error in call to MirrorImagePath:new{}. " ~
-            "A Vector3 object is expected at key normal. No valid Vector3 was found.";
-        luaL_error(L, errMsg.toStringz());
-    }
+    auto normal = toVector3(L, -1);
     lua_pop(L, 1);
-    auto mi_path = new MirrorImagePath(original_path, *point, *normal);
+    auto mi_path = new MirrorImagePath(original_path, point, normal);
     pathStore ~= pushObj!(MirrorImagePath, MirrorImagePathMT)(L, mi_path);
     return 1;
 } // end newMirrorImagePath()

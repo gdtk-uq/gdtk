@@ -35,7 +35,7 @@ print("pt2= ", pt2)
 print("Arc")
 a = Vector3:new{x=2.0, y=2.0, z=0.0}
 b = Vector3:new{x=1.0, y=2.0, z=1.0}
-c = Vector3:new{x=1.0, y=2.0, z=0.0}
+c = {x=1.0, y=2.0, z=0.0} -- should also accept a table with names coordinates
 abc = Arc:new{p0=a, p1=b, centre=c}
 d = abc(0.5)
 print("d=", d, "expected approximately Vector3([1.7071068, 2.0, 0.7071068])")

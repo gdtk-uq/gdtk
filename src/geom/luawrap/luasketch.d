@@ -265,12 +265,7 @@ extern(C) int lineSketch(lua_State* L)
         string errMsg = "Error in call to Sketch:line{}. No p0 entry found.";
         luaL_error(L, errMsg.toStringz());
     }
-    auto p0 = checkVector3(L, -1);
-    if (p0 is null) {
-        string errMsg = "Error in call to Sketch:line{}. " ~
-            "A Vector3 object is expected as the p0 argument. No valid Vector3 was found.";
-        luaL_error(L, errMsg.toStringz());
-    }
+    auto p0 = toVector3(L, -1);
     lua_pop(L, 1); // dispose of p0 item
     //
     lua_getfield(L, 1, "p1");
@@ -278,12 +273,7 @@ extern(C) int lineSketch(lua_State* L)
         string errMsg = "Error in call to Sketch:line{}. No p1 entry found.";
         luaL_error(L, errMsg.toStringz());
     }
-    auto p1 = checkVector3(L, -1);
-    if (p1 is null) {
-        string errMsg = "Error in call to Sketch:line{}. " ~
-            "A Vector3 object is expected as the p1 argument. No valid Vector3 was found.";
-        luaL_error(L, errMsg.toStringz());
-    }
+    auto p1 = toVector3(L, -1);
     lua_pop(L, 1); // dispose of p1 item
     //
     bool dashed = false;
@@ -298,7 +288,7 @@ extern(C) int lineSketch(lua_State* L)
     }
     lua_pop(L, 1); // dispose of dashed item
     //
-    my_sketch.line(*p0, *p1, dashed);
+    my_sketch.line(p0, p1, dashed);
     return 0;
 } // end lineSketch()
 
@@ -330,10 +320,9 @@ extern(C) int polylineSketch(lua_State* L)
     while (true) {
         lua_rawgeti(L, -1, position);
         if (lua_isnil(L, -1)) { lua_pop(L, 1); break; }
-        auto p = checkVector3(L, -1);
+        auto p = toVector3(L, -1);
         lua_pop(L, 1);
-        if (p is null) break;
-        points ~= *p;
+        points ~= p;
         ++position;
     }
     lua_pop(L, 1); // dispose of points table
@@ -386,10 +375,9 @@ extern(C) int polygonSketch(lua_State* L)
     while (true) {
         lua_rawgeti(L, -1, position);
         if (lua_isnil(L, -1)) { lua_pop(L, 1); break; }
-        auto p = checkVector3(L, -1);
+        auto p = toVector3(L, -1);
         lua_pop(L, 1);
-        if (p is null) break;
-        points ~= *p;
+        points ~= p;
         ++position;
     }
     lua_pop(L, 1); // dispose of points table
@@ -455,12 +443,7 @@ extern(C) int textSketch(lua_State* L)
         string errMsg = "Error in call to Sketch:text{}. No point entry found.";
         luaL_error(L, errMsg.toStringz());
     }
-    Vector3* point = checkVector3(L, -1);
-    if (point is null) {
-        string errMsg = "Error in call to Sketch:text{}. " ~
-            "A Vector3 object is expected as the point argument. No valid Vector3 was found.";
-        luaL_error(L, errMsg.toStringz());
-    }
+    Vector3 point = toVector3(L, -1);
     lua_pop(L, 1); // dispose of point item
     //
     string text = "";
@@ -533,7 +516,7 @@ extern(C) int textSketch(lua_State* L)
     }
     lua_pop(L, 1); // dispose of font_family item
     //
-    my_sketch.text(*point, text, angle, anchor, fontSize, colour, fontFamily);
+    my_sketch.text(point, text, angle, anchor, fontSize, colour, fontFamily);
     return 0;
 } // end textSketch()
 
@@ -554,12 +537,7 @@ extern(C) int dotlabelSketch(lua_State* L)
         string errMsg = "Error in call to Sketch:dotlabel{}. No point entry found.";
         luaL_error(L, errMsg.toStringz());
     }
-    auto point = checkVector3(L, -1);
-    if (point is null) {
-        string errMsg = "Error in call to Sketch:dotlabel{}. " ~
-            "A Vector3 object is expected as the point argument. No valid Vector3 was found.";
-        luaL_error(L, errMsg.toStringz());
-    }
+    auto point = toVector3(L, -1);
     lua_pop(L, 1); // dispose of point item
     //
     string label = "";
@@ -632,7 +610,7 @@ extern(C) int dotlabelSketch(lua_State* L)
     }
     lua_pop(L, 1); // dispose of font_family item
     //
-    my_sketch.dotlabel(*point, label, anchor, dotSize, fontSize, colour, fontFamily);
+    my_sketch.dotlabel(point, label, anchor, dotSize, fontSize, colour, fontFamily);
     return 0;
 } // end dotlabelSketch()
 
@@ -695,16 +673,10 @@ extern(C) int ruleSketch(lua_State* L)
     }
     lua_pop(L, 1); // dispose of vtic item
     //
-    Vector3* anchorPoint = new Vector3(0.0,0.0,0.0);
+    Vector3 anchorPoint = Vector3(0.0,0.0,0.0);
     lua_getfield(L, 1, "anchor_point");
     if (!lua_isnil(L, -1)) {
-        anchorPoint = checkVector3(L, -1);
-        if (anchorPoint is null) {
-            string errMsg = "Error in call to Sketch:rule{}. " ~
-                "A Vector3 object is expected as the anchor_point argument. " ~
-                "No valid Vector3 was found.";
-            luaL_error(L, errMsg.toStringz());
-        }
+        anchorPoint = toVector3(L, -1);
     }
     lua_pop(L, 1); // dispose of anchorPoint item
     //
@@ -768,7 +740,7 @@ extern(C) int ruleSketch(lua_State* L)
     }
     lua_pop(L, 1); // dispose of font_size item
     //
-    my_sketch.rule(direction, vmin, vmax, vtic, *anchorPoint,
+    my_sketch.rule(direction, vmin, vmax, vtic, anchorPoint,
                    ticMarkSize, numberFormat, textOffset, textAngle, fontSize);
     return 0;
 } // end ruleSketch()

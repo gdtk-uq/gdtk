@@ -28,21 +28,21 @@ s = Sketch:new{renderer="svg", projection="xyortho"}
 print("s=", s)
 s:set{canvas={0.0,0.0,120.0,120.0}, viewport={-2.0,-2.0,2.0,2.0}}
 a = Vector3:new{x=2.0, y=0.0}
-b = Vector3:new{x=1.0, y=1.0}
+b = {x=1.0, y=1.0} -- should accept table with named coordinates, also
 c = Vector3:new{x=1.0, y=0.0}
 abc = Arc:new{p0=a, p1=b, centre=c}
 s:start{file_name="test.svg"}
 s:set{line_width=0.1}
 s:line{p0=Vector3:new{x=-1.0,y=1.0,z=0.0}, p1=Vector3:new{x=1.0,y=-1.0,z=0.0}}
 s:render{path=abc}
-s:rule{direction="x", vmin=-1.2, vmax=1.2, vtic=0.4, anchor_point=Vector3:new{x=0,y=-1.3},
+s:rule{direction="x", vmin=-1.2, vmax=1.2, vtic=0.4, anchor_point={x=0,y=-1.3},
        tic_mark_size=0.03, number_format="%.1f", text_offset=0.12, text_angle=0.0, font_size=8}
 s:rule{direction="y", vmin=-1.2, vmax=1.2, vtic=0.4, anchor_point=Vector3:new{x=-1.3,y=0},
        tic_mark_size=0.03, number_format="%.1f", text_offset=0.06, text_angle=0.0, font_size=8}
 s:set{fill_colour="green"}
 s:text{point=Vector3:new{x=0.0,y=1.5},text="A sample, just to see",font_size=20}
 p00 = Vector3:new{x=0.0, y=0.1}
-p10 = Vector3:new{x=1.0, y=0.1}
+p10 = {x=1.0, y=0.1} -- should accept table with named coordinates, also
 p11 = Vector3:new{x=1.0, y=1.1}
 p01 = Vector3:new{x=0.0, y=1.1}
 s:set{line_width=0.3}

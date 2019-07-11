@@ -23,7 +23,7 @@ void main()
     string test_code = `
 print("Construct from edges")
 a = Vector3:new{x=0.0, y=0.0}
-b = Vector3:new{x=0.0, y=1.0}
+b = {x=0.0, y=1.0} -- should accept a table with named coordinates, also
 c = Vector3:new{x=1.0, y=0.0}
 d = Vector3:new{x=1.0, y=1.0}
 surf = CoonsPatch:new{north=Line:new{p0=b, p1=d}, east=Line:new{p0=c, p1=d},
@@ -38,7 +38,7 @@ print("same point p= ", p)
 --
 print("AO patch")
 p00 = Vector3:new{x=0.0, y=0.1, z=3.0}
-p10 = Vector3:new{x=1.0, y=0.4, z=3.0}
+p10 = {x=1.0, y=0.4, z=3.0} -- should accept a table with named coordinates, also
 p11 = Vector3:new{x=1.0, y=1.1, z=3.0}
 p01 = Vector3:new{x=0.0, y=1.1, z=3.0}
 my_aopatch = AOPatch:new{p00=p00, p10=p10, p11=p11, p01=p01}

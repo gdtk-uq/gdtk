@@ -35,7 +35,7 @@ extern(C) int optimiseBezierPoints(lua_State* L)
     Vector3[] pts;
     foreach (i; 1 .. nPts+1) {
         lua_rawgeti(L, 1, i);
-        pts ~= *(checkVector3(L, -1));
+        pts ~= toVector3(L, -1);
         lua_pop(L, 1);
     }
     // Grab number of desired control points
@@ -92,15 +92,15 @@ extern(C) int optimiseBezierPoints2(lua_State* L)
     Vector3[] pts;
     foreach (i; 1 .. nPts+1) {
         lua_rawgeti(L, 1, i);
-        pts ~= *(checkVector3(L, -1));
+        pts ~= toVector3(L, -1);
         lua_pop(L, 1);
     }
     // Grab number of desired control points
     int nCtrlPts = luaL_checkint(L, 2);
     // Grab start slope
-    Vector3 startSlope = *(checkVector3(L, 3));
+    Vector3 startSlope = toVector3(L, 3);
     // Grab end slope
-    Vector3 endSlope = *(checkVector3(L, 4));
+    Vector3 endSlope = toVector3(L, 4);
     // Look for some optional arguments.
     Bezier initGuess;
     if (narg >= 5) {
