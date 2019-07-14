@@ -601,6 +601,7 @@ end
 -- ---------------------------------------------------------------------------
 function SBlock2UBlock(blk)
    local origId = blk.id
+   local origLabel = blk.label
    -- Let's swap out any exchange_over_full_face BCs and replace
    -- with exchange BCs.
    local bcList = {}
@@ -616,14 +617,15 @@ function SBlock2UBlock(blk)
    ublk = FluidBlock:new{grid=UnstructuredGrid:new{sgrid=blk.grid},
 			 initialState=blk.initialState,
 			 active=blk.active,
-			 label=blk.label,
+			 label=nil,
 			 omegaz=blk.omegaz,
 			 bcList=bcList}
    local newId = ublk.id
    -- Swap blocks in global list
    fluidBlocks[origId+1], fluidBlocks[newId+1] = fluidBlocks[newId+1], fluidBlocks[origId+1]
-   -- Fix id of ublk
+   -- Fix id and label of ublk
    fluidBlocks[origId+1].id = origId
+   fluidBlocks[origId+1].label = origLabel
    -- Now remove original SFluidBlock (which is now in pos ublk.id+1)
    table.remove(fluidBlocks, newId+1)
 end
