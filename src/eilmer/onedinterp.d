@@ -595,19 +595,19 @@ public:
         auto gmodel = myConfig.gmodel;
         uint nsp = (myConfig.sticky_electrons) ? gmodel.n_heavy : gmodel.n_species;
         auto nmodes = gmodel.n_modes;
+        if (myConfig.extrema_clipping) {
+            // Not much that we can do with linear extrapolation
+            // that doesn't produce an new extreme value.
+            // Let the copy, made by the caller, stand.
+            return;
+        }
         // High-order reconstruction for some properties.
         if (myConfig.interpolate_in_local_frame) {
             // In the interface-local frame.
             cL1.fs.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
             cL0.fs.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
         }
-        if (myConfig.extrema_clipping) {
-            // Not much that we can do with linear extrapolation
-            // that doesn't produce an new extreme value.
-            w0 = 1.0; w1 = 0.0;
-        } else {
-            linear_extrap_prepare(cL0Length, cL1Length);
-        }
+        linear_extrap_prepare(cL0Length, cL1Length);
         Lft.vel.refx = weight_scalar(cL0.fs.vel.x, cL1.fs.vel.x);
         Lft.vel.refy = weight_scalar(cL0.fs.vel.y, cL1.fs.vel.y);
         Lft.vel.refz = weight_scalar(cL0.fs.vel.z, cL1.fs.vel.z);
@@ -702,19 +702,19 @@ public:
         uint nsp = (myConfig.sticky_electrons) ? gmodel.n_heavy : gmodel.n_species;
         auto nmodes = gmodel.n_modes;
         //
+        if (myConfig.extrema_clipping) {
+            // Not much that we can do with linear extrapolation
+            // that doesn't produce an new extreme value.
+            // Let the copy, made by the caller, stand.
+            return;
+        }
         // High-order reconstruction for some properties.
         if (myConfig.interpolate_in_local_frame) {
             // In the interface-local frame.
             cR0.fs.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
             cR1.fs.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
         }
-        if (myConfig.extrema_clipping) {
-            // Not much that we can do with linear extrapolation
-            // that doesn't produce an new extreme value.
-            w0 = 1.0; w1 = 0.0;
-        } else {
-            linear_extrap_prepare(cR0Length, cR1Length);
-        }
+        linear_extrap_prepare(cR0Length, cR1Length);
         Rght.vel.refx = weight_scalar(cR0.fs.vel.x, cR1.fs.vel.x);
         Rght.vel.refy = weight_scalar(cR0.fs.vel.y, cR1.fs.vel.y);
         Rght.vel.refz = weight_scalar(cR0.fs.vel.z, cR1.fs.vel.z);
