@@ -214,16 +214,53 @@ public:
     
     override void update_thermo_from_ps(GasState Q, number s)
     {
-        // Q.T = _T1 * exp((1.0/_Cp)*((s - _s1) + _Rgas * log(Q.p/_p1)));
-        // update_thermo_from_pT(Q);
-        throw new Error("not implemented");
+        bool with_lut = Q.massf[0] > massf_tiny;
+        bool with_ideal = Q.massf[1] > massf_tiny;
+        if (with_lut && with_ideal) {
+            throw new Error("update_thermo_from_ps() not implemented for a mix");
+            // Assume
+            // Q.s = fmass[0]*Q_lut.s + fmass[1]*Q_ideal.s
+            // Q.p = Q_lut.p + Q_ideal.p
+            // From ideal gas implementation...
+            // Q.T = _T1 * exp((1.0/_Cp)*((s - _s1) + _Rgas * log(Q.p/_p1)));
+            // update_thermo_from_pT(Q);
+        } else if (with_lut) {
+            Q_lut.p = Q.p;
+            lut_gas.update_thermo_from_ps(Q_lut, s);
+            Q.T = Q_lut.T;
+            Q.u = Q_lut.u;
+            Q.rho = Q_lut.rho;
+        } else {
+            Q_ideal.p = Q.p;
+            ideal_gas.update_thermo_from_ps(Q_ideal, s);
+            Q.T = Q_ideal.T;
+            Q.u = Q_ideal.u;
+            Q.rho = Q_ideal.rho;
+        }
     }
     override void update_thermo_from_hs(GasState Q, number h, number s)
     {
-        // Q.T = h / _Cp;
-        // Q.p = _p1 * exp((1.0/_Rgas)*(_s1 - s + _Cp*log(Q.T/_T1)));
-        // update_thermo_from_pT(Q);
-        throw new Error("not implemented");
+        bool with_lut = Q.massf[0] > massf_tiny;
+        bool with_ideal = Q.massf[1] > massf_tiny;
+        if (with_lut && with_ideal) {
+            throw new Error("update_thermo_from_hs() not implemented for a mix");
+            // From ideal gas implementation...
+            // Q.T = h / _Cp;
+            // Q.p = _p1 * exp((1.0/_Rgas)*(_s1 - s + _Cp*log(Q.T/_T1)));
+            // update_thermo_from_pT(Q);
+        } else if (with_lut) {
+            lut_gas.update_thermo_from_hs(Q_lut, h, s);
+            Q.p = Q_lut.p;
+            Q.T = Q_lut.T;
+            Q.u = Q_lut.u;
+            Q.rho = Q_lut.rho;
+        } else {
+            ideal_gas.update_thermo_from_hs(Q_ideal, h, s);
+            Q.p = Q_ideal.p;
+            Q.T = Q_ideal.T;
+            Q.u = Q_ideal.u;
+            Q.rho = Q_ideal.rho;
+        }
     }
     override void update_sound_speed(GasState Q)
     {
