@@ -43,6 +43,10 @@ extern(C) int gasflow_normal_shock(lua_State* L)
     lua_pop(L, 1);
     GasState state1 = new GasState(gm);
     getGasStateFromTable(L, gm, 1, state1);
+    // The CEAgas model is a bit special in that some of the state data
+    // are stored in a table within the GasModel object.
+    // We need to call the update_thermo function to get this table
+    // up-to-date.
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state1); }
     // Same values into state2, for now.
     GasState state2 =  new GasState(gm);
