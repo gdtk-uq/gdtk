@@ -24,12 +24,12 @@ if false then
 end
 
 function vortex_flow(r)
-   u   = u_i * r_i / r
-   t1  = r_i / r
-   t2  = 1.0 + 0.5 * (g - 1.0) * M_i * M_i * (1.0 - t1 * t1)
-   rho = rho_i * math.pow( t2, 1.0/(g - 1.0) )
-   p = p_i * math.pow( rho/rho_i, g )
-   T = p / (rho * Rgas)
+   local u   = u_i * r_i / r
+   local t1  = r_i / r
+   local t2  = 1.0 + 0.5 * (g - 1.0) * M_i * M_i * (1.0 - t1 * t1)
+   local rho = rho_i * math.pow( t2, 1.0/(g - 1.0) )
+   local p = p_i * math.pow( rho/rho_i, g )
+   local T = p / (rho * Rgas)
    return u, p, T
 end
 
@@ -41,7 +41,7 @@ function fillTable(t, x, y)
    t.velx = math.sin(theta) * speed
    t.vely = -math.cos(theta) * speed
    t.velz = 0.0
-   t.T = {TKelvin,} -- Temperatures as a table
+   t.T = TKelvin
    -- omit mass fractions; we have a single species gas model
    return t
 end
@@ -56,31 +56,11 @@ end
 -- interpreter.  It will call them up at run time, at the appropriate
 -- stage of the time-step calculation.
 
--- Functions that return the flow states for the ghost cells on
--- each boundary. For use in the convective flux calculations.
-
-function ghostCells_north(args)
+function ghostCells(args)
    return twoGhostCells(args)
 end
 
-function ghostCells_south(args)
-   return twoGhostCells(args)
-end
-
-function ghostCells_west(args)
-   return twoGhostCells(args)
-end
-
--- Functions for the pre-spatial-derivative part of the calculation.
-
-function interface_north(args)
+function interface(args)
    return fillTable({}, args.x, args.y)
 end
 
-function interface_south(args)
-   return fillTable({}, args.x, args.y)
-end
-
-function interface_west(args)
-   return fillTable({}, args.x, args.y)
-end

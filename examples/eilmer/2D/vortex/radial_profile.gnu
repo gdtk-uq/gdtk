@@ -12,10 +12,10 @@ plot "radial_profile_0.dat" using 1:2 title "exact" with lines, \
      "radial_profile_90.dat" using 1:2 title "exit plane"
 
 set term postscript eps enhanced 20
-set output "radial_profile_u.eps"
+set output "radial_profile_vel.eps"
 set title "Inviscid Vortex"
 set xlabel "r/r_i"
-set ylabel "u/u_i"
+set ylabel "vel/vel_i"
 # set yrange [0.7:1.0]
 set key top right
 plot "radial_profile_0.dat" using 1:3 title "exact" with lines, \
