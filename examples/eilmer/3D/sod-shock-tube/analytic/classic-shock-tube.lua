@@ -3,7 +3,7 @@
 -- $ e4shared --custom-post --script-file=classic-shock-tube.lua
 -- Note that you need the gas-model file in the current directory.
 -- You may copy it from the adjacent sg/ folder.
--- PJ, 2018-04-27
+-- PJ, 2018-04-27, 2019-07-15
 print("Compute the flow conditions expected in the Sod shock tube.")
 --
 print("shock-tube fill conditions with air driving air")
@@ -38,8 +38,8 @@ function error_in_velocity(p3p4)
    return (V3g - V2g)/V3g
 end
 --
-dofile("secant.lua")
-p3p4, err = secant(error_in_velocity, 0.1, 0.11, 1.0e-3)
+local secant = require "secant"
+p3p4, err = secant.solve(error_in_velocity, 0.105, 0.11, 1.0e-3)
 if err then
    print("Secant iteration for pressure ratio failed.")
    print("error message is:", err)
