@@ -621,13 +621,16 @@ function SBlock2UBlock(blk)
 			 omegaz=blk.omegaz,
 			 bcList=bcList}
    local newId = ublk.id
+   local newLabel = ublk.label 
    -- Swap blocks in global list
    fluidBlocks[origId+1], fluidBlocks[newId+1] = fluidBlocks[newId+1], fluidBlocks[origId+1]
    -- Fix id and label of ublk
    fluidBlocks[origId+1].id = origId
    fluidBlocks[origId+1].label = origLabel
-   -- Now remove original SFluidBlock (which is now in pos ublk.id+1)
+   -- Now remove original SFluidBlock, which is presently in pos ublk.id+1 and
+   -- remove the latest dictionary entry, since the ublk no longer has that label.
    table.remove(fluidBlocks, newId+1)
+   fluidBlocksDict[newLabel] = nil
 end
 
 function closeEnough(vA, vB, tolerance)
