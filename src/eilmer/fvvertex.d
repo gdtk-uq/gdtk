@@ -30,7 +30,7 @@ public:
     Vector3[] vel;  // vertex velocity for time-levels, m/s
     // Derivatives of primary-cell variables.
     FlowGradients grad;
-    number radial_pos_norm;
+    number radial_pos_norm = 0;
     Vector3*[] cloud_pos; // Positions of flow points for derivative calculation.
     FlowState[] cloud_fs; // References to flow states at those points.
     FVCell[] cell_cloud; // for the MLP limiter we need access to the gradients within each cell

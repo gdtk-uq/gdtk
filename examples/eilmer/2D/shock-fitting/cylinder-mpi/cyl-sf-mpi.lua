@@ -29,18 +29,22 @@ psurf = makePatch{north=Line:new{p0=g, p1=c},
 		  east=Arc:new{p0=b, p1=c, centre=a},
 		  south=Line:new{p0=d, p1=b},
 		  west=Bezier:new{points={d, e, f, g}}}
+
+N = 7
 grid = StructuredGrid:new{psurface=psurf, niv=40, njv=40}
 
 -- We can leave east and south as slip-walls
 blk = FluidBlockArray{grid=grid, initialState=initial,
 		      bcList={west=InFlowBC_ShockFitting:new{flowState=inflow},
 			      north=OutFlowBC_Simple:new{}}, 
-		      nib=3, njb=3}
+		      nib=4, njb=2}
 identifyBlockConnections()
 
 -- Set a few more config options
 config.flux_calculator = "ausmdv"
-config.gasdynamic_update_scheme = "moving-grid-1-stage"
+mpiTasks = mpiDistributeBlocks{ntasks=8, dist="load-balance", preassign={[0]=1}}
+config.report_invalid_cells = false
+config.gasdynamic_update_scheme = "moving-grid-2-stage"
 config.max_time = (radius*2)/u_inf * 20 -- 16 flow lengths
 config.max_step = 400000
 config.cfl_value = 0.75
@@ -50,5 +54,4 @@ config.grid_motion = "shock_fitting"
 config.shock_fitting_delay = (radius*2)/u_inf  -- allow for one flow length
 config.max_invalid_cells = 10
 config.adjust_invalid_cell_data = true
-config.report_invalid_cells = false
 

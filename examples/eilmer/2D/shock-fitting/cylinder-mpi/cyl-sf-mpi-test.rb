@@ -11,13 +11,13 @@ class TestCyl_SF < Test::Unit::TestCase
     cmd = "prep-gas ideal-air.inp ideal-air-gas-model.lua"
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
-    cmd = "e4shared --prep --job=cyl-sf"
+    cmd = "e4shared --prep --job=cyl-sf-mpi"
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
   end
 
   def test_1_run
-    cmd = "e4shared --run --job=cyl-sf --verbosity=1 --max-cpus=4"
+    cmd = "mpirun -np 8 e4mpi --run --job=cyl-sf-mpi --verbosity=1"
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
     steps = 0
@@ -38,7 +38,7 @@ class TestCyl_SF < Test::Unit::TestCase
     # delta/R = 0.4246.
     # Normal shock jump tables give p2/p1=57, T2/T1=10.47, M2=0.3974
     ref = {'x'=>-1.425, 'p'=>5.7e6, 'T'=>3141.0, 'M'=>0.3974}
-    cmd = 'e4shared --post --job=cyl-sf --tindx-plot=last --add-vars="mach" --probe=-1.425,0.0,0.0'
+    cmd = 'e4shared --post --job=cyl-sf-mpi --tindx-plot=last --add-vars="mach" --probe=-1.425,0.0,0.0'
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
     lines = o.split("\n")

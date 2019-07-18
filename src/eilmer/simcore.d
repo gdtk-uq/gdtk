@@ -356,11 +356,17 @@ void init_simulation(int tindx, int nextLoadsIndx,
     version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
 
     // For the shock fitting grid motion, we need to assign radial positions for all vertices
-    if (GlobalConfig.grid_motion == GlobalConfig.grid_motion.shock_fitting && GlobalConfig.in_mpi_context == false) {
+    if (GlobalConfig.grid_motion == GlobalConfig.grid_motion.shock_fitting) {
         foreach (myblk; localFluidBlocks) {
-            if (myblk.bc[Face.west].type == "inflow_shock_fitting") {
+            version(mpi_parallel) {
                 auto sblk = cast(SFluidBlock) myblk;
-                assign_radial_dist(sblk);
+                assign_radial_dist_mpi(sblk);
+            }
+            else {
+                if (myblk.bc[Face.west].type == "inflow_shock_fitting") {
+                    auto sblk = cast(SFluidBlock) myblk;
+                    assign_radial_dist(sblk);
+                }
             }
         }
     }
@@ -1280,24 +1286,69 @@ void set_grid_velocities()
             assign_vertex_velocities_via_udf(SimState.time, SimState.dt_global);
             break;
         case GridMotion.shock_fitting:
-            if (GlobalConfig.in_mpi_context) {
+            /++if (GlobalConfig.in_mpi_context) {
                 throw new Error("oops, shock_fitting not compatible with MPI.");
                 // [TODO] 2018-01-20 PJ should do something to lift this restriction.
-            }
+            }++/
             // apply boundary conditions here because ...
             // shockfitting algorithm requires ghost cells to be up to date.
-            exchange_ghost_cell_boundary_data(SimState.time, 0, 0);
-            foreach (blk; localFluidBlocksBySize) {
-                if (blk.active) { blk.applyPreReconAction(SimState.time, 0, 0); }
-            }
-            foreach (blk; localFluidBlocksBySize) {
-                if (blk.active && blk.bc[Face.west].type == "inflow_shock_fitting") {
-                    auto sblk = cast(SFluidBlock) blk;
-                    assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
-                    shock_fitting_vertex_velocities(sblk, SimState.step, SimState.time);
+            if (SimState.time > GlobalConfig.shock_fitting_delay) {
+                exchange_ghost_cell_boundary_data(SimState.time, 0, 0);
+                foreach (blk; localFluidBlocksBySize) {
+                    if (blk.active) { blk.applyPreReconAction(SimState.time, 0, 0); }
                 }
-            }
-            break;              
+                foreach (blk; localFluidBlocksBySize) {
+                    SFluidBlock sblk = cast(SFluidBlock) blk;
+                    
+                    version(mpi_parallel) {
+                        // Define a new communication group- need to be real explicit with MPI
+                        assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
+                        MPI_Comm shock_fitting_comm;
+                        int communicator_tag = 0, local_rank;
+                        MPI_Comm_rank(MPI_COMM_WORLD, &local_rank);
+                        foreach (indx; sblk.inflow_partners) {
+                            communicator_tag += indx;
+                        }
+                        MPI_Comm_split(MPI_COMM_WORLD, communicator_tag, local_rank, &shock_fitting_comm);
+                        // Define the variables that will be local to some processes
+                        int[2] is_master_block; // Bit passed around to determine master rank
+                        int[2] master_rank; // This contains the location of the shock fitted block
+                        int shock_fitting_rank; // Rank of local process
+                        double[] unpacked_vertex_velocities; // Array that will contain the vertex velocities broken into their spatial elements
+                        Vector3[] inflow_vertex_velocities, packed_vertex_velocities; // Array that will contain the vertex velocities in vector form
+                        MPI_Comm_rank(shock_fitting_comm, &shock_fitting_rank); // Assign the local rank
+                        is_master_block[1] = shock_fitting_rank;
+
+                        // Calculate the vertex velocities on the inflow boundary
+                        if (blk.active && blk.bc[Face.west].type == "inflow_shock_fitting") {
+                            is_master_block[0] = 1;     // Assign self as the master block
+                            inflow_vertex_velocities = shock_fitting_vertex_velocities(sblk);   // Do calculation
+                            assert(inflow_vertex_velocities.length == (sblk.jmax - sblk.jmin + 2), "the vertex velocity array is the wrong size");
+                            unpacked_vertex_velocities = unpack_vertex_velocities(inflow_vertex_velocities); // Unpack the vertex velocities to a form that can be read by MPI
+                        }
+
+                        MPI_Allreduce(is_master_block.ptr, master_rank.ptr, 2, MPI_2INT, MPI_MAXLOC, shock_fitting_comm);     // Tell everyone who their master is
+                        int ne = to!int(unpacked_vertex_velocities.length);     // Number of orders
+                        MPI_Bcast(&ne, 1, MPI_INT, master_rank[1], shock_fitting_comm);     // Let all the other blocks know how much space to set aside
+                        unpacked_vertex_velocities.length = ne;                             // Set aside that space
+                        MPI_Bcast(unpacked_vertex_velocities.ptr, ne, MPI_DOUBLE, master_rank[1], shock_fitting_comm);  // Master gives his orders
+                        packed_vertex_velocities = pack_vertex_velocities(unpacked_vertex_velocities);      // Put orders into usable format
+                        assign_slave_velocities(sblk, packed_vertex_velocities);    // Assign inner vertex velocities
+                        MPI_Comm_free(&shock_fitting_comm);
+                    }
+                    else {
+                        if (blk.active && blk.bc[Face.west].type == "inflow_shock_fitting" && SimState.time > GlobalConfig.shock_fitting_delay) {
+                            assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
+                            Vector3[] inflow_vertex_velocities = shock_fitting_vertex_velocities(sblk);
+                            assert(inflow_vertex_velocities.length == (sblk.jmax - sblk.jmin + 2), "the vertex velocity array is the wrong size");
+
+                            foreach (indx; sblk.inflow_partners) {
+                                assign_slave_velocities(cast(SFluidBlock) globalFluidBlocks[indx], inflow_vertex_velocities);
+                            }
+                        }
+                    }
+                }
+            }              
     }
 } // end set_grid_velocities()
 
