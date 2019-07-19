@@ -70,6 +70,7 @@ public:
         }
         bool with_lut = Q.massf[0] > massf_tiny;
         bool with_ideal = Q.massf[1] > massf_tiny;
+        // As an initial guess, let's assume that the gas constants are equal.
         if (with_lut) {
             Q_lut.p = Q.massf[0]*Q.p; Q_lut.T = Q.T;
             lut_gas.update_thermo_from_pT(Q_lut);
@@ -79,8 +80,26 @@ public:
             ideal_gas.update_thermo_from_pT(Q_ideal);
         }
         if (with_lut && with_ideal) {
-            // Masses add.
-            Q.rho = Q_lut.rho + Q_ideal.rho;
+            // Need to determine the density at which
+            // the partial pressures sum to the mixture pressure.
+            number p_error(number rho)
+            {
+                Q_lut.rho = Q.massf[0]*rho;
+                lut_gas.update_thermo_from_rhoT(Q_lut);
+                Q_ideal.rho = Q.massf[1]*rho;
+                ideal_gas.update_thermo_from_rhoT(Q_ideal);
+                return (Q_lut.p + Q_ideal.p) - Q.p;
+            }
+            // Initial guess for mixture density.
+            number rho2 = 1.05*(Q_lut.rho + Q_ideal.rho);
+            number rho1 = rho2*0.9;
+            bracket!(p_error, number)(rho1, rho2);
+            Q.rho = solve!(p_error, number)(rho1, rho2, 1.0e-6);
+            // Now that we have density, go back and get internal energy.
+            Q_lut.rho = Q.massf[0]*Q.rho;
+            lut_gas.update_thermo_from_rhoT(Q_lut);
+            Q_ideal.rho = Q.massf[1]*Q.rho;
+            ideal_gas.update_thermo_from_rhoT(Q_ideal);
             // Internal energy is a weighted average.
             Q.u = Q.massf[0]*Q_lut.u + Q.massf[1]*Q_ideal.u;
         } else if (with_lut) {
