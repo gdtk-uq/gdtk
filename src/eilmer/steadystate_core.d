@@ -82,7 +82,7 @@ void extractRestartInfoFromTimesFile(string jobName, ref RestartInfo[] times)
     auto gmodel = GlobalConfig.gmodel_master;
     RestartInfo restartInfo = RestartInfo(gmodel.n_species, gmodel.n_modes);
     // Start reading the times file, looking for the snapshot index
-    auto timesFile = File(jobName ~ ".times");
+    auto timesFile = File("./config/" ~ jobName ~ ".times");
     auto line = timesFile.readln().strip();
     while (line.length > 0) {
         if (line[0] != '#') {
@@ -378,7 +378,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
         }
         
         // We also need to determine how many snapshots have already been written
-        auto timesFile = File(jobName ~ ".times");
+        auto timesFile = File("./config/" ~ jobName ~ ".times");
         line = timesFile.readln().strip();
         while (line.length > 0) {
             if (line[0] != '#') {
@@ -1650,7 +1650,7 @@ void max_residuals(ConservedQuantities residuals)
 
 void rewrite_times_file(RestartInfo[] times)
 {
-    auto fname = format("%s.times", GlobalConfig.base_file_name);
+    auto fname = format("./config/%s.times", GlobalConfig.base_file_name);
     auto f = File(fname, "w");
     f.writeln("# tindx sim_time dt_global");
     foreach (i, rInfo; times) {
