@@ -28,7 +28,7 @@ class TestCyl_SF < Test::Unit::TestCase
         steps = items[1].to_i
       end
     end
-    assert((steps - 3483).abs < 100, "Failed to take correct number of steps.")
+    assert((steps - 5185).abs < 100, "Failed to take correct number of steps.")
   end
 
   def test_2_post_shock_condition
