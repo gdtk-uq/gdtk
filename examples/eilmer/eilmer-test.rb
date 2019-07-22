@@ -51,6 +51,7 @@ test_scripts << "2D/manufactured-solution/sg/smoke-tests/mms-ns-least-sq-at-face
 test_scripts << "2D/manufactured-solution/usg/mms-euler-test.rb"
 test_scripts << "2D/cht-manufactured-solution/spatial-verification/smoke-tests/single-thread-test.rb"
 test_scripts << "2D/shock-fitting/cylinder/cyl-sf-test.rb"
+test_scripts << "2D/shock-fitting/cylinder-mpi/cyl-sf-mpi-test.rb"
 test_scripts << "2D/oblique-detonation-wave/odw-test.rb"
 test_scripts << "2D/duct-hydrogen-combustion/bittker-test.rb"
 test_scripts << "2D/cylinder-giordano/two-temperature/inf_cyl-test.rb"
