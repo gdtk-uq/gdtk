@@ -57,6 +57,7 @@ public:
     double omegaz; // Angular velocity (in rad/s) of the rotating frame.
                    // There is only one component, about the z-axis.
     number mass_balance; // domain mass balance used to monitor for steady state
+    number L2_residual; // L2 norm of the global residual
     number mass_residual, energy_residual; // monitor these for steady state
     Vector3 mass_residual_loc, energy_residual_loc; // locations of worst case
     ConservedQuantities Linf_residuals;
@@ -654,6 +655,24 @@ public:
     } // end compute_Linf_residuals()
 
     @nogc
+    void compute_L2_residual()
+    {
+        L2_residual = 0.0;
+        foreach (cell; cells) {
+            L2_residual += fabs(cell.dUdt[0].mass)^^2;
+	    L2_residual += fabs(cell.dUdt[0].momentum.x)^^2;
+	    L2_residual += fabs(cell.dUdt[0].momentum.y)^^2;
+	    L2_residual += fabs(cell.dUdt[0].momentum.z)^^2;
+	    L2_residual += fabs(cell.dUdt[0].total_energy)^^2;
+	    if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
+		L2_residual += fabs(cell.dUdt[0].tke)^^2;
+		L2_residual += fabs(cell.dUdt[0].omega)^^2;
+	    } 
+	    L2_residual = sqrt(L2_residual);
+        }
+    } // end compute_Linf_residuals()
+
+    @nogc
     void compute_mass_balance()
     {
         mass_balance = 0.0;
@@ -772,7 +791,7 @@ public:
             dt_local = cfl_value / signal; // Recommend a time step size.
             cell.dt_local = fmin(dt_local, dt_current*local_time_stepping_limit_factor); // set local time-step in cell
             cell.dt_local = fmin(cell.dt_local, GlobalConfig.dt_max); // Limit the largest local time-step to a set input value
-            if (first) {
+	    if (first) {
                 cfl_min = cfl_local;
                 cfl_max = cfl_local;
                 dt_allow = dt_local;

@@ -669,6 +669,7 @@ int integrate_in_time(double target_time_as_requested)
     }
     //
     number mass_balance = to!number(0.0);
+    number L2_residual = to!number(0.0);
     ConservedQuantities Linf_residuals = new ConservedQuantities(GlobalConfig.gmodel_master.n_species,
                                                                  GlobalConfig.gmodel_master.n_modes);
     version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
@@ -794,6 +795,7 @@ int integrate_in_time(double target_time_as_requested)
                     // We also compute the residual information and write to screen
                     auto wallClock2 = 1.0e-3*(Clock.currTime() - SimState.wall_clock_start).total!"msecs"();
                     compute_mass_balance(mass_balance);
+		    compute_L2_residual(L2_residual);
                     compute_Linf_residuals(Linf_residuals);
                     version(mpi_parallel) {
                         // Reduce residual values across MPI tasks.
@@ -823,6 +825,8 @@ int integrate_in_time(double target_time_as_requested)
                         formattedWrite(writer2, "MASS: %10.6e X-MOM: %10.6e Y-MOM: %10.6e Z-MOM: %10.6e ENERGY: %10.6e ",
                                        Linf_residuals.mass, Linf_residuals.momentum.x,
                                        Linf_residuals.momentum.y, Linf_residuals.momentum.z, Linf_residuals.total_energy);
+                        formattedWrite(writer2, "L2: %10.6e ",
+                                       fabs(L2_residual));
                         formattedWrite(writer2, "MASS_BALANCE: %10.6e",
                                        fabs(mass_balance));
                         writeln(writer2.data);
@@ -1489,13 +1493,13 @@ void gasdynamic_explicit_increment_with_fixed_grid()
     }
     // We've put this detector step here because it needs the ghost-cell data
     // to be current, as it should be just after a call to apply_convective_bc().
-    if (GlobalConfig.flux_calculator == FluxCalculator.adaptive_hanel_ausmdv ||
-        GlobalConfig.flux_calculator == FluxCalculator.adaptive_hlle_roe ||
-        GlobalConfig.flux_calculator == FluxCalculator.adaptive_efm_ausmdv) {
-        foreach (blk; parallel(localFluidBlocksBySize,1)) {
-            if (blk.active) { blk.detect_shock_points(); }
-        }
+    //if (GlobalConfig.flux_calculator == FluxCalculator.adaptive_hanel_ausmdv ||
+    //    GlobalConfig.flux_calculator == FluxCalculator.adaptive_hlle_roe ||
+    //    GlobalConfig.flux_calculator == FluxCalculator.adaptive_efm_ausmdv) {
+    foreach (blk; parallel(localFluidBlocksBySize,1)) {
+	if (blk.active) { blk.detect_shock_points(); }
     }
+    //}
     foreach (blk; parallel(localFluidBlocksBySize,1)) {
         if (blk.active) { blk.convective_flux_phase0(allow_high_order_interpolation, gtl); }
     }
@@ -2418,6 +2422,17 @@ void compute_Linf_residuals(ConservedQuantities Linf_residuals)
                                     fmax(Linf_residuals.momentum.z, fabs(blk.Linf_residuals.momentum.z)));
         Linf_residuals.total_energy = fmax(Linf_residuals.total_energy, fabs(blk.Linf_residuals.total_energy));
 
+    }
+} // end compute_Linf_residuals()
+
+void compute_L2_residual(ref number L2_residual)
+{
+    L2_residual = to!number(0.0);
+    foreach (blk; parallel(localFluidBlocksBySize,1)) {
+        blk.compute_L2_residual();
+    }
+    foreach (blk; localFluidBlocksBySize) {
+        L2_residual += blk.L2_residual;
     }
 } // end compute_Linf_residuals()
 
