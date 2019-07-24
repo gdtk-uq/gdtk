@@ -105,6 +105,7 @@ clean:
 	- rm *.o *.so
 	- rm *.mod
 	- rm -r $(BUILD_DIR)/*
+	- rm -r __pycache__
 	- rm ${DEMO_PROGRAMS}
 	- rm ${TEST_PROGRAMS}
 	- rm gas.so
