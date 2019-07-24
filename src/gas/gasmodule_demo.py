@@ -7,16 +7,16 @@
 # and then invoke this script from a location where
 # the gas-model Lua file is visible, as given by the path below.
 #
-# PJ 2019-07-24
+# PJ 2019-07-24 direct use of FFI
+#    2019-07-25 using Pythonic wrapper
 #
-import gasmodule
+from gasmodule import GasModel, GasState
 
-gmodel = gasmodule.so.gas_model_new(b"sample-data/ideal-air-gas-model.lua")
+gmodel = GasModel("sample-data/ideal-air-gas-model.lua")
 print("gmodel=", gmodel)
-print("n_species=", gasmodule.so.gas_model_n_species(gmodel))
+print("n_species=", gmodel.n_species)
 
-Q = gasmodule.so.gas_state_new(gmodel)
-print("Q=", Q)
-flag = gasmodule.so.gas_state_set_scalar_field(Q, b"rho", 1.1)
-myrho = gasmodule.so.gas_state_get_scalar_field(Q, b"rho")
-print("Q.rho=", myrho)
+Q = GasState(gmodel)
+print("freshly minted Q=", Q)
+Q.rho = 1.1
+print("after setting density Q.rho=", Q.rho)

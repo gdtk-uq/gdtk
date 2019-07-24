@@ -1,6 +1,7 @@
 # gasmodule.py
 # A Python wrapper for GasModel and GasState classes.
-# PJ 2019-07-24: start of experiment.
+# PJ 2019-07-24: start of experiment with FFI.
+#    2019-07-25: added Python wrapper
 #
 from cffi import FFI
 ffi = FFI()
@@ -17,6 +18,39 @@ ffi.cdef("""
 so = ffi.dlopen("libgasmodule.so")
 so.cwrap_gas_module_init()
 
-# Should now introduce a service class that wraps the C-API
-# in a nice Pythonic API...
+# Service classes that wrap the C-API in a nice Pythonic API...
 
+class GasModel(object):
+    def __init__(self, file_name):
+        self.file_name = file_name
+        self.i = so.gas_model_new(bytes(self.file_name, 'utf-8'))
+
+    def __str__(self):
+        text = 'GasModel(file="%s", i=%d)' % (self.file_name, self.i)
+        return text
+    
+    @property
+    def n_species(self):
+        return so.gas_model_n_species(self.i)
+
+
+class GasState(object):
+    def __init__(self, gmodel):
+        self.gmodel = gmodel
+        self.i = so.gas_state_new(self.gmodel.i)
+
+    def __str__(self):
+        text = 'GasState(rho=%g' % self.rho
+        text += ', i=%d, gmodel.i=%d)' % (self.i, self.gmodel.i)
+        return text
+    
+    @property
+    def rho(self):
+        return so.gas_state_get_scalar_field(self.i, b"rho")
+    @rho.getter
+    def rho(self):
+        return so.gas_state_get_scalar_field(self.i, b"rho")
+    @rho.setter
+    def rho(self, value):
+        flag = so.gas_state_set_scalar_field(self.i, b"rho", value)
+        if flag < 0: raise Exception("Oops, could not set density.")
