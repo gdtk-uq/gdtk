@@ -59,12 +59,6 @@ public:
 	if (blk.myConfig.MHD) {
 	    reflect_normal_magnetic_field(ghost0.fs, f);
 	}
-	ghost0.fs.copy_values_from(src_cell.fs);
-	reflect_normal_velocity(ghost0.fs, f);
-        
-	if (blk.myConfig.MHD) {
-	    reflect_normal_magnetic_field(ghost0.fs, f);
-	}
     } // end apply_unstructured_grid()
 
     @nogc
