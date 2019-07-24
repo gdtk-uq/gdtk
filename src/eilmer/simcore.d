@@ -817,7 +817,10 @@ int integrate_in_time(double target_time_as_requested)
                         my_local_value = mass_balance;
                         MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
                         mass_balance = my_local_value;
-                    }
+			my_local_value = L2_residual;
+                        MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                        L2_residual = my_local_value;
+		    }
                     if (GlobalConfig.is_master_task) {
                         auto writer2 = appender!string();
                         formattedWrite(writer2, "RESIDUALS: step= %7d WC= %.8f ",
