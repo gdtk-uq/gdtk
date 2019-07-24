@@ -88,18 +88,23 @@ include gas_files.mk
 test: $(TEST_PROGRAMS) gas-calc
 	tclsh gas-package-test.tcl
 
-install: gas-calc build-prep-gas species-data-converter
+install: gas-calc build-prep-gas species-data-converter \
+		libgasmodule.so gasmodule.py gasmodule.rb
 	- mkdir -p $(INSTALL_DIR)
 	cp gas-calc $(BUILD_DIR)/bin/
 	@echo "Installing to $(INSTALL_DIR)"
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
+	cp libgasmodule.so $(INSTALL_DIR)/lib/
+	cp gasmodule.py $(INSTALL_DIR)/lib/
+	cp gasmodule.rb $(INSTALL_DIR)/lib/
 
 demo: ${DEMO_PROGRAMS}
 	echo "Demo programs built."
 
 clean:
-	- rm *.o
+	- rm *.o *.so
 	- rm *.mod
+	- rm -r $(BUILD_DIR)/*
 	- rm ${DEMO_PROGRAMS}
 	- rm ${TEST_PROGRAMS}
 	- rm gas.so
@@ -131,6 +136,15 @@ gas-calc: luagas_model.d $(LIBLUA) $(GAS_FILES) $(GAS_LUA_FILES) $(NM_FILES) \
 	dmd -ofgas-calc -dip1008 -version=gas_calc $(DFLAGS) \
 		$(GAS_FILES) $(GAS_LUA_FILES) $(NM_FILES) $(UTIL_FILES) $(KINETICS_FILES) \
 		$(KINETICS_LUA_FILES) $(DLINKFLAGS)
+
+libgasmodule.so: cwrap_gasmodule.d $(LIBLUA) $(GAS_FILES) $(GAS_LUA_FILES) $(NM_FILES) \
+	$(UTIL_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES)
+	dmd -c cwrap_gasmodule.d -fPIC -dip1008 $(DFLAGS) \
+		$(GAS_FILES) $(NM_FILES) $(UTIL_FILES) $(KINETICS_FILES)
+	dmd -oflibgasmodule.so cwrap_gasmodule.o -shared -defaultlib=libphobos2.so \
+		-dip1008 \
+		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
+		-L-rpath=$(INSTALL_DIR)/lib $(DLINKFLAGS)
 
 species-data-converter: species_data_converter.lua
 	- mkdir -p $(BUILD_DIR)/bin
@@ -347,7 +361,7 @@ gasgiant_transport_properties_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES)
 # Fortran bits
 
 ideal_air_fortran.o: ideal_air_fortran.f
-	gfortran -c -ffree-form ideal_air_fortran.f
+	gfortran -c -ffree-form -fPIC ideal_air_fortran.f
 
 FFLAGS_fort=-freal-4-real-8 -fdefault-real-8  -fdefault-double-8
 FFLAGS_DEBUG_fort=-O0 -g -ggdb -finit-real=snan -ffpe-trap=zero,overflow -fcheck=all -std=legacy -Wall -fbacktrace
