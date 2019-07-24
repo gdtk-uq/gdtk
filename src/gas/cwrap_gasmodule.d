@@ -12,22 +12,107 @@ import std.format;
 import std.conv;
 import core.runtime;
 
+import gas.gas_model;
+import gas.gas_state;
+import gas.init_gas_model;
+
+// We will accumulate GasModel and GasState objects in these arrays
+// and use the indices as handles in the scripting language.
+GasModel[] gas_models;
+GasState[] gas_states;
+
 extern (C) int cwrap_gas_module_init()
 {
-    writeln("cwrap_gas_module_init() start of call");
     Runtime.initialize();
-    double[] b;
-    foreach(i; 0 .. 5) { b ~= to!double(i); }
-    writeln("b= ", b);
+    gas_models.length = 0;
+    gas_states.length = 0;
     return 0;
 }
 
 shared static this()
 {
-    writeln("libgasmodule.so shared static this");
+    // writeln("libgasmodule.so shared static this");
 }
 
 shared static ~this()
 {
-    writeln("libgasmodule.so shared static ~this");
+    // writeln("libgasmodule.so shared static ~this");
+}
+
+extern (C) int gas_model_new(char* file_name)
+{
+    try {
+        GasModel gm = init_gas_model(to!string(file_name));
+        gas_models ~= gm;
+        return to!int(gas_models.length - 1);
+    } catch (Exception e) {
+        writeln("Failed to construct a new GasModel.");
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern (C) int gas_model_n_species(int gm_i)
+{
+    try {
+        int n = to!int(gas_models[gm_i].n_species);
+        return n;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern (C) int gas_state_new(int gm_i)
+{
+    try {
+        GasState gs = new GasState(gas_models[gm_i]);
+        gas_states ~= gs;
+        return to!int(gas_states.length - 1);
+    } catch (Exception e) {
+        writeln("Failed to construct a new GasState.");
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern (C) int gas_state_set_scalar_field(int gs_i, char* field_name, double value)
+{
+    try {
+        GasState gs = gas_states[gs_i];
+        string name = to!string(field_name); 
+        switch (name) {
+        case "rho":
+            gs.rho = value;
+            break;
+        default:
+            string msg = format("Unknown field name: %s", name);
+            throw new Exception(msg);
+        }
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern (C) double gas_state_get_scalar_field(int gs_i, char* field_name)
+{
+    try {
+        GasState gs = gas_states[gs_i];
+        string name = to!string(field_name);
+        double value = 0.0;
+        switch (name) {
+        case "rho":
+            value = gs.rho;
+            break;
+        default:
+            string msg = format("Unknown field name: %s", name);
+            throw new Exception(msg);
+        }
+        return value;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return 0.0;
+    }
 }
