@@ -23,34 +23,34 @@ so.cwrap_gas_module_init()
 class GasModel(object):
     def __init__(self, file_name):
         self.file_name = file_name
-        self.i = so.gas_model_new(bytes(self.file_name, 'utf-8'))
+        self.id = so.gas_model_new(bytes(self.file_name, 'utf-8'))
 
     def __str__(self):
-        text = 'GasModel(file="%s", i=%d)' % (self.file_name, self.i)
+        text = 'GasModel(file="%s", id=%d)' % (self.file_name, self.id)
         return text
     
     @property
     def n_species(self):
-        return so.gas_model_n_species(self.i)
+        return so.gas_model_n_species(self.id)
 
 
 class GasState(object):
     def __init__(self, gmodel):
         self.gmodel = gmodel
-        self.i = so.gas_state_new(self.gmodel.i)
+        self.id = so.gas_state_new(self.gmodel.id)
 
     def __str__(self):
         text = 'GasState(rho=%g' % self.rho
-        text += ', i=%d, gmodel.i=%d)' % (self.i, self.gmodel.i)
+        text += ', id=%d, gmodel.id=%d)' % (self.id, self.gmodel.id)
         return text
     
     @property
     def rho(self):
-        return so.gas_state_get_scalar_field(self.i, b"rho")
+        return so.gas_state_get_scalar_field(self.id, b"rho")
     @rho.getter
     def rho(self):
-        return so.gas_state_get_scalar_field(self.i, b"rho")
+        return so.gas_state_get_scalar_field(self.id, b"rho")
     @rho.setter
     def rho(self, value):
-        flag = so.gas_state_set_scalar_field(self.i, b"rho", value)
+        flag = so.gas_state_set_scalar_field(self.id, b"rho", value)
         if flag < 0: raise Exception("Oops, could not set density.")
