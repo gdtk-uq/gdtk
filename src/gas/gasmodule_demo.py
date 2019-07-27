@@ -14,9 +14,14 @@ from gasmodule import GasModel, GasState
 
 gmodel = GasModel("sample-data/ideal-air-gas-model.lua")
 print("gmodel=", gmodel)
-print("n_species=", gmodel.n_species)
+print("n_species=", gmodel.n_species, "n_modes=", gmodel.n_modes)
 
 Q = GasState(gmodel)
 print("freshly minted Q=", Q)
-Q.rho = 1.1
-print("after setting density Q.rho=", Q.rho)
+Q.rho = 1.1; Q.p = 1.0e5; Q.T = 300.0; Q.u = 1.44e6
+print("after setting some values Q.rho= %g, p=%g, T=%g, u=%g" % (Q.rho, Q.p, Q.T, Q.u))
+gmodel.update_thermo_from_pT(Q) # the way that we do the update in D
+print("after update thermo from pT Q.rho=%g, p=%g, T=%g, u=%g" % (Q.rho, Q.p, Q.T, Q.u))
+Q.p = 3000.0; Q.T=99.0
+Q.update_thermo_from_rhou() # update another way
+print("after update thermo from rhou Q.rho=%g, p=%g, T=%g, u=%g" % (Q.rho, Q.p, Q.T, Q.u))

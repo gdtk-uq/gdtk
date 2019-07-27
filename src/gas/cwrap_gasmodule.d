@@ -63,6 +63,17 @@ extern (C) int gas_model_n_species(int gm_i)
     }
 }
 
+extern (C) int gas_model_n_modes(int gm_i)
+{
+    try {
+        int n = to!int(gas_models[gm_i].n_modes);
+        return n;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
 extern (C) int gas_state_new(int gm_i)
 {
     try {
@@ -85,6 +96,15 @@ extern (C) int gas_state_set_scalar_field(int gs_i, char* field_name, double val
         case "rho":
             gs.rho = value;
             break;
+        case "p":
+            gs.p = value;
+            break;
+        case "T":
+            gs.T = value;
+            break;
+        case "u":
+            gs.u = value;
+            break;
         default:
             string msg = format("Unknown field name: %s", name);
             throw new Exception(msg);
@@ -106,6 +126,15 @@ extern (C) double gas_state_get_scalar_field(int gs_i, char* field_name)
         case "rho":
             value = gs.rho;
             break;
+        case "p":
+            value = gs.p;
+            break;
+        case "T":
+            value = gs.T;
+            break;
+        case "u":
+            value = gs.u;
+            break;
         default:
             string msg = format("Unknown field name: %s", name);
             throw new Exception(msg);
@@ -114,5 +143,50 @@ extern (C) double gas_state_get_scalar_field(int gs_i, char* field_name)
     } catch (Exception e) {
         writeln("Exception message: ", e.msg);
         return 0.0;
+    }
+}
+
+
+extern (C) int gas_model_gas_state_update_thermo_from_pT(int gm_i, int gs_i)
+{
+    try {
+        gas_models[gm_i].update_thermo_from_pT(gas_states[gs_i]);
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern (C) int gas_model_gas_state_update_thermo_from_rhou(int gm_i, int gs_i)
+{
+    try {
+        gas_models[gm_i].update_thermo_from_rhou(gas_states[gs_i]);
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern (C) int gas_model_gas_state_update_thermo_from_rhoT(int gm_i, int gs_i)
+{
+    try {
+        gas_models[gm_i].update_thermo_from_rhoT(gas_states[gs_i]);
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern (C) int gas_model_gas_state_update_thermo_from_rhop(int gm_i, int gs_i)
+{
+    try {
+        gas_models[gm_i].update_thermo_from_rhop(gas_states[gs_i]);
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
     }
 }
