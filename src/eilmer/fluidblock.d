@@ -757,7 +757,7 @@ public:
     } // end update_c_h()
 
     @nogc
-    double[2] determine_time_step_size(double dt_current, bool check_cfl)
+    double[3] determine_time_step_size(double dt_current, bool check_cfl)
     // Compute the local time step limit for all cells in the block.
     // The overall time step is limited by the worst-case cell.
     {
@@ -765,6 +765,12 @@ public:
         double dt_local;
         double cfl_local;
         double signal;
+	// for STS
+        double signal_hyp;
+        double signal_parab;
+	double dt_allow_hyp;
+	double dt_allow_parab;
+       	//
         double cfl_allow; // allowable CFL number, t_order dependent
         double dt_allow;
         double cfl_min, cfl_max;
@@ -787,22 +793,40 @@ public:
         bool first = true;
         foreach(FVCell cell; cells) {
             signal = cell.signal_frequency();
-            cfl_local = dt_current * signal; // Current (Local) CFL number
-            dt_local = cfl_value / signal; // Recommend a time step size.
-            cell.dt_local = fmin(dt_local, dt_current*local_time_stepping_limit_factor); // set local time-step in cell
-            cell.dt_local = fmin(cell.dt_local, GlobalConfig.dt_max); // Limit the largest local time-step to a set input value
-	    if (first) {
-                cfl_min = cfl_local;
-                cfl_max = cfl_local;
-                dt_allow = dt_local;
-                first = false;
-            } else {
-                cfl_min = fmin(cfl_min, cfl_local);
-                cfl_max = fmax(cfl_max, cfl_local);
-                dt_allow = fmin(dt_allow, dt_local);
-            }
+	    if (myConfig.with_super_time_stepping) {
+		signal_hyp = cell.signal_hyp.re;
+		signal_parab = cell.signal_parab.re;
+		if (first) {
+		    dt_allow_hyp = cfl_value / signal_hyp;
+		    dt_allow_parab = cfl_value / signal_parab;
+		    first = false;
+		} else {
+		    dt_allow_hyp = fmax(dt_allow_hyp, cfl_value / signal_hyp);
+		    dt_allow_parab = fmin(dt_allow_parab, cfl_value / signal_parab);
+		}
+		dt_allow = dt_allow_hyp; // FIXME: Kyle D. 26/07/2019
+      	    } else {
+		// no STS
+		dt_allow_hyp = 0;
+		dt_allow_parab = 0;
+		//
+		cfl_local = dt_current * signal; // Current (Local) CFL number
+		dt_local = cfl_value / signal; // Recommend a time step size.
+		cell.dt_local = fmin(dt_local, dt_current*local_time_stepping_limit_factor); // set local time-step in cell
+		cell.dt_local = fmin(cell.dt_local, GlobalConfig.dt_max); // Limit the largest local time-step to a set input value
+		if (first) {
+		    cfl_min = cfl_local;
+		    cfl_max = cfl_local;
+		    dt_allow = dt_local;
+		    first = false;
+		} else {
+		    cfl_min = fmin(cfl_min, cfl_local);
+		    cfl_max = fmax(cfl_max, cfl_local);
+		    dt_allow = fmin(dt_allow, dt_local);
+		}
+	    }
         } // foreach cell
-        if (check_cfl && (cfl_max < 0.0 || cfl_max > cfl_allow)) {
+        if (myConfig.with_super_time_stepping == false && check_cfl && (cfl_max < 0.0 || cfl_max > cfl_allow)) {
             string msg = "Bad cfl number encountered";
             debug { msg ~= text(" cfl_max=", cfl_max, " for FluidBlock ", id); }
             debug { writeln(msg); } // Write out warning message when running in debug mode
@@ -814,7 +838,7 @@ public:
             dt_allow = cfl_max/signal; // Reduce dt_allow according to new rescaled cfl_max
             //throw new FlowSolverException(msg); // Previous code threw an error and halted
         }
-        return [dt_allow, cfl_max];
+        return [dt_allow, cfl_max, dt_allow_parab];
     } // end determine_time_step_size()
 
     void applyPreReconAction(double t, int gtl, int ftl)

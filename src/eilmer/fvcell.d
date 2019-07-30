@@ -65,6 +65,9 @@ public:
     // local time-stepping
     double dt_local;
     double t_local;
+    // super time-stepping
+    number signal_hyp;
+    number signal_parab;
     //
     bool fr_reactions_allowed; // if true, will call thermochemical_increment
     double dt_chem; // acceptable time step for finite-rate chemistry
@@ -793,6 +796,84 @@ public:
         }
     } // end time_derivatives()
 
+    void sts_stage_update_for_flow_on_fixed_grid(double dt, bool with_k_omega, int j, int s, bool with_local_time_stepping) 
+    {
+        ConservedQuantities dUdt0;
+        ConservedQuantities U0;
+        ConservedQuantities U1;
+        ConservedQuantities U2;
+	if ( j == 1) {
+            U0 = U[0];
+            U1 = U[0];
+            U2 = U[2];
+	    dUdt0 = dUdt[0];
+	} else {
+            U0 = U[0];
+            U1 = U[1];
+            U2 = U[2];
+	    dUdt0 = dUdt[1];
+	}
+        // coefficients
+        double muj; double vuj; double muj_tilde;
+        if (j < 2) {
+            muj_tilde = (2.0*j-1)/j * 2.0/(s*s+s);
+            muj = 1.0;
+            vuj = 0.0;
+        } else {
+            muj_tilde = (2.0*j-1)/j * 2.0/(s*s+s);
+            muj = (2*j-1)/j;
+            vuj = (1-j)/j;
+        }
+        U2.mass = muj*U1.mass + vuj*U0.mass + muj_tilde*dt*dUdt0.mass;
+       	U2.momentum.set(muj*U1.momentum.x + vuj*U0.momentum.x + muj_tilde*dt*dUdt0.momentum.x,
+                        muj*U1.momentum.y + vuj*U0.momentum.y + muj_tilde*dt*dUdt0.momentum.y,
+                        muj*U1.momentum.z + vuj*U0.momentum.z + muj_tilde*dt*dUdt0.momentum.z);
+	version(MHD) {
+            if (myConfig.MHD) {
+                // Magnetic field
+                U2.B.set(muj*U1.B.x + vuj*U0.B.x + muj_tilde*dt*dUdt0.B.x,
+                         muj*U1.B.y + vuj*U0.B.y + muj_tilde*dt*dUdt0.B.y,
+                         muj*U1.B.z + vuj*U0.B.z + muj_tilde*dt*dUdt0.B.z);
+                if (myConfig.divergence_cleaning) {
+                    U2.psi = muj*U1.psi + vuj*U0.psi + muj_tilde*dt*dUdt0.psi;
+                    U2.psi *= divergence_damping_factor(dt, myConfig.c_h, myConfig.divB_damping_length);
+                }
+            } else {
+                U2.B.clear();
+                U2.psi = 0.0;
+            }
+        }
+        U2.total_energy = muj*U1.total_energy + vuj*U0.total_energy + muj_tilde*dt*dUdt0.total_energy; 
+        version(komega) {
+            if (with_k_omega) {
+                U2.tke = muj*U1.tke + vuj*U0.tke + muj_tilde*dt*dUdt0.tke;
+                U2.tke = fmax(U2.tke, 0.0);
+                U2.omega = muj*U1.omega + vuj*U0.omega + muj_tilde*dt*dUdt0.omega;
+                U2.omega = fmax(U2.omega, U0.mass);
+            } else {
+                U2.tke = U0.tke;
+                U2.omega = U0.omega;
+            }
+        }
+        version(multi_species_gas) {
+            foreach(isp; 0 .. U2.massf.length) {
+                U2.massf[isp] = muj*U1.massf[isp] + vuj*U0.massf[isp] + muj_tilde*dt*dUdt0.massf[isp];
+            }
+        }
+        version(multi_T_gas) {
+            foreach(imode; 0 .. U2.energies.length) {
+                U2.energies[imode] = muj*U1.energies[imode] + vuj*U0.energies[imode] + muj_tilde*dt*dUdt0.energies[imode];
+            }
+        }
+        // shuffle time-levels
+	//writeln("U0: ", U0);	
+	U[0] = U1;
+	//writeln("U1: ", U1);
+	U[1] = U2;
+	//writeln("U2: ", U2);
+	return;
+    } // end stage_j_update_for_flow_on_fixed_grid()
+
     @nogc
     void stage_1_update_for_flow_on_fixed_grid(double dt, bool force_euler, bool with_k_omega, bool with_local_time_stepping) 
     {
@@ -1300,6 +1381,7 @@ public:
                 signal = fmax(signal, signalT);
             }
         }
+        this.signal_hyp = signal; // store hyperbolic signal for STS
         // Factor for the viscous time limit.
         // See Swanson, Turkel and White (1991)
         // This factor is not included if viscosity is zero.
@@ -1316,12 +1398,14 @@ public:
                 * gam_eff / (Prandtl * fs.gas.rho)
                 * 1.0/(L_min^^2) * myConfig.viscous_signal_factor;
         }
-        version(komega) {
+        this.signal_parab = signal - this.signal_hyp; // store parabolic signal for STS
+	version(komega) {
             bool with_k_omega = (myConfig.turbulence_model == TurbulenceModel.k_omega && 
                                  !myConfig.separate_update_for_k_omega_source);
             if (with_k_omega) { 
                 number turbulent_signal = myConfig.turbulent_signal_factor*fs.omega;
                 signal = fmax(signal, turbulent_signal); 
+		this.signal_parab = fmax(signal, turbulent_signal);
             }
         }
         version(MHD) {

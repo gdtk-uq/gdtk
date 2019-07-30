@@ -111,6 +111,7 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_enum_field("residual_smoothing_type", "residual_smoothing_type", "residual_smoothing_type_from_name"));
     mixin(get_bool_field("with_local_time_stepping", "with_local_time_stepping"));
     mixin(get_int_field("local_time_stepping_limit_factor", "local_time_stepping_limit_factor"));
+    mixin(get_bool_field("with_super_time_stepping", "with_super_time_stepping"));
     mixin(get_enum_field("coupling_with_solid_domains", "coupling_with_solid_domains", "solidDomainCouplingFromName"));
     mixin(get_bool_field("solid_has_isotropic_properties", "solid_has_isotropic_properties"));
     mixin(get_bool_field("solid_has_homogeneous_properties", "solid_has_homogeneous_properties"));
@@ -284,6 +285,7 @@ extern(C) int configGet(lua_State* L)
     case "residual_smoothing_type": lua_pushstring(L, residual_smoothing_type_name(GlobalConfig.residual_smoothing_type).toStringz); break;
     case "with_local_time_stepping": lua_pushboolean(L, GlobalConfig.with_local_time_stepping); break;
     case "local_time_stepping_limit_factor": lua_pushinteger(L, GlobalConfig.local_time_stepping_limit_factor); break;
+    case "with_super_time_stepping": lua_pushboolean(L, GlobalConfig.with_super_time_stepping); break;
     case "coupling_with_solid_domains": lua_pushstring(L, solidDomainCouplingName(GlobalConfig.coupling_with_solid_domains).toStringz); break;
     case "solid_has_isotropic_properties": lua_pushboolean(L, GlobalConfig.solid_has_isotropic_properties); break;
     case "solid_has_homogeneous_properties": lua_pushboolean(L, GlobalConfig.solid_has_homogeneous_properties); break;
