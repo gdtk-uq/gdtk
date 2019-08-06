@@ -61,7 +61,9 @@ public:
     @nogc @property uint n_heavy() const {
         uint nheavy = _n_species;
         if (_is_plasma) {
-            assert(_n_species > 2, "Not enough species for electrons to be separate.");
+            if (_n_species <= 2) {
+                throw new GasModelException("Not enough species for electrons to be separate.");
+            }
             nheavy -= 1;
         }
         return nheavy;
@@ -184,10 +186,12 @@ public:
     in {
         debug {
             assert(Q.massf.length == conc.length, brokenPreCondition("Inconsistent array lengths."));
-            assert(!isNaN(Q.rho) && Q.rho > 0.0, brokenPreCondition("Need positive density."));
         }
     }
     body {
+        if (isNaN(Q.rho) || (Q.rho <= 0.0)) {
+            throw new GasModelException("Invalid density.");
+        }
         foreach ( i; 0.._n_species ) {
             conc[i] = Q.massf[i]*Q.rho / _mol_masses[i];
             if ( conc[i] < MIN_MOLES ) conc[i] = 0.0;
@@ -199,10 +203,12 @@ public:
     in {
         debug {
             assert(Q.massf.length == conc.length, brokenPreCondition("Inconsistent array lengths."));
-            assert(!isNaN(Q.rho) && Q.rho > 0.0, brokenPreCondition("Need positive density."));
         }
     }
     body {
+        if (isNaN(Q.rho) || (Q.rho <= 0.0)) {
+            throw new GasModelException("Invalid density.");
+        }
         foreach ( i; 0.._n_species ) {
             Q.massf[i] = conc[i]*_mol_masses[i] / Q.rho;
             if ( Q.massf[i] < MIN_MASS_FRACTION ) Q.massf[i] = 0.0;
@@ -276,8 +282,9 @@ void scale_mass_fractions(ref number[] massf, double tolerance=0.0,
     auto my_nsp = massf.length;
     if (my_nsp == 1) {
         // Single species, always expect massf[0]==1.0, so we can take a short-cut.
-        assert(fabs(massf[0] - 1.0) < assert_error_tolerance,
-               "Single species mass fraction far from 1.0 \n");
+        if (fabs(massf[0] - 1.0) > assert_error_tolerance) {
+            throw new GasModelException("Single species mass fraction far from 1.0.");
+        }
         massf[0] = 1.0;
     } else {
         // Multiple species, do the full job.
@@ -286,19 +293,15 @@ void scale_mass_fractions(ref number[] massf, double tolerance=0.0,
             massf[isp] = massf[isp] >= 0.0 ? massf[isp] : to!number(0.0);
             massf_sum += massf[isp];
         }
-        debug {
-            if (fabs(massf_sum - 1.0) > assert_error_tolerance) {
-                writeln("my_nsp = ", my_nsp);
-                writeln("massf = ", massf);
+        if (fabs(massf_sum - 1.0) > assert_error_tolerance) {
+            string msg = "Sum of species mass fractions far from 1.0";
+            debug {
+                msg ~= format("fabs(massf_sum - 1.0) = %s \n", fabs(massf_sum - 1.0));
+                msg ~= format("assert_error_tolerance = %s \n", assert_error_tolerance);
+                msg ~= format("tolerance = %s \n", tolerance);
             }
+            throw new GasModelException(msg);
         }
-        string msg = "Sum of species mass fractions far from 1.0";
-        debug {
-            msg ~= format("fabs(massf_sum - 1.0) = %s \n", fabs(massf_sum - 1.0));
-            msg ~= format("assert_error_tolerance = %s \n", assert_error_tolerance);
-            msg ~= format("tolerance = %s \n", tolerance);
-        }
-        assert(fabs(massf_sum - 1.0) < assert_error_tolerance, msg);
         if ( fabs(massf_sum - 1.0) > tolerance ) {
             foreach(isp; 0 .. my_nsp) massf[isp] /= massf_sum;
         }
