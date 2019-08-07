@@ -175,6 +175,10 @@ void compute_flux_at_left_wall(ref FlowState Rght, ref FVInterface IFace,
             count += 1;
         } while (fabs(incr_pstar)/pstar > 0.01 && count < 10);
     }
+    // Limit the post-wave pressure to handle extreme boundary situations
+    // where there is a large velocity difference between the cell centre and the wall.
+    pstar = fmin(pstar, pR*10.0);
+    //
     // Fill in the fluxes.
     ConservedQuantities F = IFace.F;
     F.mass = 0.0;
@@ -257,6 +261,10 @@ void compute_flux_at_right_wall(ref FlowState Lft, ref FVInterface IFace,
             count += 1;
         } while (fabs(incr_pstar)/pstar > 0.01 && count < 10);
     }
+    // Limit the post-wave pressure to handle extreme boundary situations
+    // where there is a large velocity difference between the cell centre and the wall.
+    pstar = fmin(pstar, pL*10.0);
+    //
     // Fill in the fluxes.
     ConservedQuantities F = IFace.F;
     F.mass = 0.0;
