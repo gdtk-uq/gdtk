@@ -231,8 +231,8 @@ public:
         repr ~= ", vtx_ids=[";
         foreach (v; vtx) { repr ~= format("%d,", v.id); }
         repr ~= "]";
-        repr ~= format(", left_cell_id=%d", left_cell.id);
-        repr ~= format(", right_cell_id=%d", right_cell.id);
+        repr ~= format(", left_cell_id=%d", left_cell ? left_cell.id : -1);
+        repr ~= format(", right_cell_id=%d", right_cell ? right_cell.id : -1);
         repr ~= ", gvel=" ~ to!string(gvel);
         repr ~= ", Ybar=" ~ to!string(Ybar);
         repr ~= ", length=" ~ to!string(length);
