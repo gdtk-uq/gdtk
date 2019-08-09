@@ -1475,6 +1475,8 @@ function ReactionZone:new(o)
    if not o.p1 then
       error("You need to supply upper-right corner p1", 2)
    end
+   o.p0.z = o.p0.z or 0.0
+   o.p1.z = o.p1.z or 0.0
    return o
 end
 
@@ -1506,6 +1508,8 @@ function IgnitionZone:new(o)
    if not o.T then
       error("You need to supply ignition temperature T", 2)
    end
+   o.p0.z = o.p0.z or 0.0
+   o.p1.z = o.p1.z or 0.0
    return o
 end
 
@@ -1533,6 +1537,8 @@ function TurbulentZone:new(o)
    if not o.p1 then
       error("You need to supply upper-right corner p1", 2)
    end
+   o.p0.z = o.p0.z or 0.0
+   o.p1.z = o.p1.z or 0.0
    return o
 end
 
@@ -1560,6 +1566,8 @@ function SuppressReconstructionZone:new(o)
    if not o.p1 then
       error("You need to supply upper-right corner p1", 2)
    end
+   o.p0.z = o.p0.z or 0.0
+   o.p1.z = o.p1.z or 0.0
    return o
 end
 
