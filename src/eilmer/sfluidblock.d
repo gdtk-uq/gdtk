@@ -1882,8 +1882,127 @@ public:
 
     @nogc
     override void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0)
-    // Compute the flux from data on either-side of the interface.
+    // Compute the flux from flow-field data on either-side of the interface.
     {
+        if (myConfig.high_order_flux_calculator) {
+            // ------------------------- Lachlan, put your code here. ---------------------------------
+            // For the moment, I have put in a low-order calculation so that things run (even if poorly).
+            //
+            FVCell[2] cL, cR;
+            // ifi interfaces are East-facing interfaces.
+            for (size_t k = kmin; k <= kmax; ++k) {
+                for (size_t j = jmin; j <= jmax; ++j) {
+                    for (size_t i = imin; i <= imax+1; ++i) {
+                        auto IFace = get_ifi!()(i,j,k);
+                        cL[0] = get_cell!()(i-1,j,k); cL[1] = get_cell!()(i-2,j,k);
+                        cR[0] = get_cell!()(i,j,k); cR[1] = get_cell!()(i+1,j,k);
+                        // Low-order reconstruction just copies data from adjacent FV_Cell.
+                        // Even for high-order reconstruction, we depend upon this copy for
+                        // the viscous-transport and diffusion coefficients.
+                        if ((i == imin) && !(bc[Face.west].ghost_cell_data_available)) {
+                            Lft.copy_values_from(cR[0].fs);
+                        } else {
+                            Lft.copy_values_from(cL[0].fs);
+                        }
+                        if ((i == imax+1) && !(bc[Face.east].ghost_cell_data_available)) {
+                            Rght.copy_values_from(cL[0].fs);
+                        } else {
+                            Rght.copy_values_from(cR[0].fs);
+                        }
+                        IFace.fs.copy_average_values_from(Lft, Rght);
+                        //
+                        if ((i == imin) && bc[Face.west].convective_flux_computed_in_bc) continue;
+                        if ((i == imax+1) && bc[Face.east].convective_flux_computed_in_bc) continue;
+                        //
+                        if ((i == imin) && !(bc[Face.west].ghost_cell_data_available)) {
+                            compute_flux_at_left_wall(Rght, IFace, myConfig, omegaz);
+                        } else if ((i == imax+1) && !(bc[Face.east].ghost_cell_data_available)) {
+                            compute_flux_at_right_wall(Lft, IFace, myConfig, omegaz);
+                        } else {
+                            compute_interface_flux(Lft, Rght, IFace, myConfig, omegaz);
+                        }
+                    } // i loop
+                } // j loop
+            } // for k
+            // ifj interfaces are North-facing interfaces.
+            for (size_t k = kmin; k <= kmax; ++k) {
+                for (size_t i = imin; i <= imax; ++i) {
+                    for (size_t j = jmin; j <= jmax+1; ++j) {
+                        auto IFace = get_ifj!()(i,j,k);
+                        cL[0] = get_cell!()(i,j-1,k); cL[1] = get_cell!()(i,j-2,k);
+                        cR[0] = get_cell!()(i,j,k); cR[1] = get_cell!()(i,j+1,k);
+                        // Low-order reconstruction just copies data from adjacent FV_Cell.
+                        // Even for high-order reconstruction, we depend upon this copy for
+                        // the viscous-transport and diffusion coefficients.
+                        if ((j == jmin) && !(bc[Face.south].ghost_cell_data_available)) {
+                            Lft.copy_values_from(cR[0].fs);
+                        } else {
+                            Lft.copy_values_from(cL[0].fs);
+                        }
+                        if ((j == jmax+1) && !(bc[Face.north].ghost_cell_data_available)) {
+                            Rght.copy_values_from(cL[0].fs);
+                        } else {
+                            Rght.copy_values_from(cR[0].fs);
+                        }
+                        IFace.fs.copy_average_values_from(Lft, Rght);
+                        //
+                        if ((j == jmin) && bc[Face.south].convective_flux_computed_in_bc) continue;
+                        if ((j == jmax+1) && bc[Face.north].convective_flux_computed_in_bc) continue;
+                        //
+                        if ((j == jmin) && !(bc[Face.south].ghost_cell_data_available)) {
+                            compute_flux_at_left_wall(Rght, IFace, myConfig, omegaz);
+                        } else if ((j == jmax+1) && !(bc[Face.north].ghost_cell_data_available)) {
+                            compute_flux_at_right_wall(Lft, IFace, myConfig, omegaz);
+                        } else {
+                            compute_interface_flux(Lft, Rght, IFace, myConfig, omegaz);
+                        }
+                    } // j loop
+                } // i loop
+            } // for k
+    
+            if (myConfig.dimensions == 2) return;
+    
+            // ifk interfaces are Top-facing interfaces.
+            for (size_t i = imin; i <= imax; ++i) {
+                for (size_t j = jmin; j <= jmax; ++j) {
+                    for (size_t k = kmin; k <= kmax+1; ++k) {
+                        auto IFace = get_ifk!()(i,j,k);
+                        cL[0] = get_cell!()(i,j,k-1); cL[1] = get_cell!()(i,j,k-2);
+                        cR[0] = get_cell!()(i,j,k); cR[1] = get_cell!()(i,j,k+1);
+                        // Low-order reconstruction just copies data from adjacent FV_Cell.
+                        // Even for high-order reconstruction, we depend upon this copy for
+                        // the viscous-transport and diffusion coefficients.
+                        if ((k == kmin) && !(bc[Face.bottom].ghost_cell_data_available)) {
+                            Lft.copy_values_from(cR[0].fs);
+                        } else {
+                            Lft.copy_values_from(cL[0].fs);
+                        }
+                        if ((k == kmax+1) && !(bc[Face.top].ghost_cell_data_available)) {
+                            Rght.copy_values_from(cL[0].fs);
+                        } else {
+                            Rght.copy_values_from(cR[0].fs);
+                        }
+                        IFace.fs.copy_average_values_from(Lft, Rght);
+                        //
+                        if ((k == kmin) && bc[Face.bottom].convective_flux_computed_in_bc) continue;
+                        if ((k == kmax+1) && bc[Face.top].convective_flux_computed_in_bc) continue;
+                        //
+                        if ((k == kmin) && !(bc[Face.bottom].ghost_cell_data_available)) {
+                            compute_flux_at_left_wall(Rght, IFace, myConfig, omegaz);
+                        } else if ((k == kmax+1) && !(bc[Face.top].ghost_cell_data_available)) {
+                            compute_flux_at_right_wall(Lft, IFace, myConfig, omegaz);
+                        } else {
+                            compute_interface_flux(Lft, Rght, IFace, myConfig, omegaz);
+                        }
+                    } // for k 
+                } // j loop
+            } // i loop
+            return;
+        } // end if (high_order_flux_calculator)
+        //
+        // Continue with the flux calculation being done in the classic reconstruction,
+        // followed by flux calculation from Left,Right conditions.
+        //
         // Barring exceptions at the block boundaries, the general process is:
         // (1) interpolate LEFT and RIGHT interface states from cell-center properties.
         // (2) save u, v, w, T for the viscous flux calculation by making a local average.
@@ -1893,9 +2012,9 @@ public:
         bool do_reconstruction = allow_high_order_interpolation && (myConfig.interpolation_order > 1);
         //
         // ifi interfaces are East-facing interfaces.
-        for ( size_t k = kmin; k <= kmax; ++k ) {
-            for ( size_t j = jmin; j <= jmax; ++j ) {
-                for ( size_t i = imin; i <= imax+1; ++i ) {
+        for (size_t k = kmin; k <= kmax; ++k) {
+            for (size_t j = jmin; j <= jmax; ++j) {
+                for (size_t i = imin; i <= imax+1; ++i) {
                     auto IFace = get_ifi!()(i,j,k);
                     auto cL0 = get_cell!()(i-1,j,k); auto cL1 = get_cell!()(i-2,j,k);
                     auto cR0 = get_cell!()(i,j,k); auto cR1 = get_cell!()(i+1,j,k);
@@ -1943,9 +2062,9 @@ public:
             } // j loop
         } // for k
         // ifj interfaces are North-facing interfaces.
-        for ( size_t k = kmin; k <= kmax; ++k ) {
-            for ( size_t i = imin; i <= imax; ++i ) {
-                for ( size_t j = jmin; j <= jmax+1; ++j ) {
+        for (size_t k = kmin; k <= kmax; ++k) {
+            for (size_t i = imin; i <= imax; ++i) {
+                for (size_t j = jmin; j <= jmax+1; ++j) {
                     auto IFace = get_ifj!()(i,j,k);
                     auto cL0 = get_cell!()(i,j-1,k); auto cL1 = get_cell!()(i,j-2,k);
                     auto cR0 = get_cell!()(i,j,k); auto cR1 = get_cell!()(i,j+1,k);
@@ -1996,9 +2115,9 @@ public:
         if (myConfig.dimensions == 2) return;
     
         // ifk interfaces are Top-facing interfaces.
-        for ( size_t i = imin; i <= imax; ++i ) {
-            for ( size_t j = jmin; j <= jmax; ++j ) {
-                for ( size_t k = kmin; k <= kmax+1; ++k ) {
+        for (size_t i = imin; i <= imax; ++i) {
+            for (size_t j = jmin; j <= jmax; ++j) {
+                for (size_t k = kmin; k <= kmax+1; ++k) {
                     auto IFace = get_ifk!()(i,j,k);
                     auto cL0 = get_cell!()(i,j,k-1); auto cL1 = get_cell!()(i,j,k-2);
                     auto cR0 = get_cell!()(i,j,k); auto cR1 = get_cell!()(i,j,k+1);
@@ -2046,7 +2165,7 @@ public:
             } // j loop
         } // i loop
         return;
-    } // end convective_flux()
+    } // end convective_flux_phase0()
 
     @nogc
     override void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0)

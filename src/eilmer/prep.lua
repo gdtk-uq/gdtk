@@ -1704,6 +1704,9 @@ function write_config_file(fileName)
    f:write(string.format('"max_invalid_cells": %d,\n', config.max_invalid_cells))
    f:write(string.format('"adjust_invalid_cell_data": %s,\n', tostring(config.adjust_invalid_cell_data)))
    f:write(string.format('"report_invalid_cells": %s,\n', tostring(config.report_invalid_cells)))
+
+   f:write(string.format('"high_order_flux_calculator": %s,\n', tostring(config.high_order_flux_calculator)))
+   f:write(string.format('"flux_calculator": "%s",\n', config.flux_calculator))
    f:write(string.format('"thermo_interpolator": "%s",\n', 
 			 string.lower(config.thermo_interpolator)))
    f:write(string.format('"allow_reconstruction_for_energy_modes": %s,\n', 
@@ -1716,8 +1719,6 @@ function write_config_file(fileName)
    f:write(string.format('"freeze_limiter_on_step": %d,\n', config.freeze_limiter_on_step))
    f:write(string.format('"use_extended_stencil": %s,\n', tostring(config.use_extended_stencil)))
    f:write(string.format('"venkat_K_value": %.18e,\n', config.venkat_K_value))
-   
-   f:write(string.format('"flux_calculator": "%s",\n', config.flux_calculator))
    f:write(string.format('"compression_tolerance": %.18e,\n', config.compression_tolerance))
    f:write(string.format('"shear_tolerance": %.18e,\n', config.shear_tolerance))
    f:write(string.format('"M_inf": %.18e,\n', config.M_inf))

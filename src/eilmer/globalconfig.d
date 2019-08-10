@@ -507,8 +507,21 @@ final class GlobalConfig {
     shared static int max_invalid_cells = 0;
     shared static FlowStateLimits flowstate_limits;
 
+    // Convective flux calculation can be via either:
+    // (1) low-order, one-dimensional flux calculators with local flow-field
+    //     reconstruction done as a preprocessing step, or
+    // (2) a high-order flux calculator.
+    shared static bool high_order_flux_calculator = false;
+    //
+    // Parameters controlling the low-order flux calculators and the
+    // preprocessing reconstruction/interpolation procedure.
+    // This is the "classic" arrangement for Eilmer so there are a lot of parameters. 
+    //
+    // Default flux calculator is the adaptive mix of (diffusive) Hanel and AUSMDV.
+    shared static FluxCalculator flux_calculator = FluxCalculator.adaptive_hanel_ausmdv;
+    // 
     // Low order reconstruction (1) uses just the cell-centre data as left- and right-
-    // flow properties in the flux calculation.
+    // flow properties in the convective flux calculation.
     // High-order reconstruction (2) adds a correction term to the cell-centre values
     // to approach something like a piecewise-quadratic interpolation between the
     // cell centres for structured-grids and a linear model across a cloud of cell 
@@ -538,22 +551,19 @@ final class GlobalConfig {
     shared static double venkat_K_value = 0.3;
     // There are another couple of reconstruction-control parameters
     // further down in the viscous effects parameters.
-    
-    // Default flux calculator is the adaptive mix of (diffusive) Hanel and AUSMDV.
-    shared static FluxCalculator flux_calculator = FluxCalculator.adaptive_hanel_ausmdv;
-
+    //
     // Set the tolerance to shear when applying the adaptive flux calculator.
     // We don't want EFM to be applied in situations of significant shear.
     // The shear value is computed as the tangential-velocity difference across an interface
     // normalised by the local sound speed.
     shared static double shear_tolerance = 0.20;
-
+    //
     // Reference free-stream Mach number, for use in the ausm_plus_up flux calculator.
     // Choose a value for M_inf that is good for low Mach numbers.
     // To be strictly correct, we should set this at run time
     // if an M_inf value is easily defined.
     shared static double M_inf = 0.01;
-
+    //
     // Set the tolerance in relative velocity change for the shock detector.
     // This value is expected to be a negative number (for compression)
     // and not too large in magnitude.
@@ -829,6 +839,9 @@ public:
     bool adjust_invalid_cell_data;
     bool report_invalid_cells;
     FlowStateLimits flowstate_limits;
+
+    bool high_order_flux_calculator;
+    FluxCalculator flux_calculator;
     int interpolation_order;
     double interpolation_delay;
     BlockZone[] suppress_reconstruction_zones;
@@ -841,7 +854,6 @@ public:
     int freeze_limiter_on_step;
     bool use_extended_stencil;
     double venkat_K_value;
-    FluxCalculator flux_calculator;
     double shear_tolerance;
     double M_inf;
     double compression_tolerance;
@@ -950,6 +962,9 @@ public:
         adjust_invalid_cell_data = GlobalConfig.adjust_invalid_cell_data;
         report_invalid_cells = GlobalConfig.report_invalid_cells;
         flowstate_limits = GlobalConfig.flowstate_limits;
+        //
+        high_order_flux_calculator = GlobalConfig.high_order_flux_calculator;
+        flux_calculator = GlobalConfig.flux_calculator;
         interpolation_order = GlobalConfig.interpolation_order;
         interpolation_delay = GlobalConfig.interpolation_delay;
         foreach (bz; GlobalConfig.suppress_reconstruction_zones) {
@@ -964,10 +979,10 @@ public:
         freeze_limiter_on_step = GlobalConfig.freeze_limiter_on_step;
         use_extended_stencil = GlobalConfig.use_extended_stencil;
         venkat_K_value = GlobalConfig.venkat_K_value;
-        flux_calculator = GlobalConfig.flux_calculator;
         shear_tolerance = GlobalConfig.shear_tolerance;
         M_inf = GlobalConfig.M_inf;
         compression_tolerance = GlobalConfig.compression_tolerance;
+        //
         artificial_compressibility = GlobalConfig.artificial_compressibility;
         ac_alpha = GlobalConfig.ac_alpha;
         //
@@ -1255,6 +1270,9 @@ void read_config_file()
     mixin(update_bool("adjust_invalid_cell_data", "adjust_invalid_cell_data"));
     mixin(update_bool("report_invalid_cells", "report_invalid_cells"));
     mixin(update_int("max_invalid_cells", "max_invalid_cells"));
+    //
+    mixin(update_bool("high_order_flux_calculator", "high_order_flux_calculator"));
+    mixin(update_enum("flux_calculator", "flux_calculator", "flux_calculator_from_name"));
     mixin(update_int("interpolation_order", "interpolation_order"));
     mixin(update_double("interpolation_delay", "interpolation_delay"));
     mixin(update_enum("thermo_interpolator", "thermo_interpolator", "thermo_interpolator_from_name"));
@@ -1266,7 +1284,6 @@ void read_config_file()
     mixin(update_int("freeze_limiter_on_step", "freeze_limiter_on_step"));
     mixin(update_bool("use_extended_stencil", "use_extended_stencil"));
     mixin(update_double("venkat_K_value", "venkat_K_value"));
-    mixin(update_enum("flux_calculator", "flux_calculator", "flux_calculator_from_name"));
     mixin(update_double("shear_tolerance", "shear_tolerance"));
     mixin(update_double("M_inf", "M_inf"));
     mixin(update_double("compression_tolerance", "compression_tolerance"));
@@ -1313,6 +1330,9 @@ void read_config_file()
         writeln("  adjust_invalid_cell_data: ", GlobalConfig.adjust_invalid_cell_data);
         writeln("  report_invalid_cells: ", GlobalConfig.report_invalid_cells);
         writeln("  max_invalid_cells: ", GlobalConfig.max_invalid_cells);
+        //
+        writeln("  high_order_flux_calculator: ", GlobalConfig.high_order_flux_calculator);
+        writeln("  flux_calculator: ", flux_calculator_name(GlobalConfig.flux_calculator));
         writeln("  interpolation_order: ", GlobalConfig.interpolation_order);
         writeln("  interpolation_delay: ", GlobalConfig.interpolation_delay);
         writeln("  thermo_interpolator: ", thermo_interpolator_name(GlobalConfig.thermo_interpolator));
@@ -1323,10 +1343,10 @@ void read_config_file()
         writeln("  venkat_K_value: ", GlobalConfig.venkat_K_value);
         writeln("  extrema_clipping: ", GlobalConfig.extrema_clipping);
         writeln("  interpolate_in_local_frame: ", GlobalConfig.interpolate_in_local_frame);
-        writeln("  flux_calculator: ", flux_calculator_name(GlobalConfig.flux_calculator));
         writeln("  shear_tolerance: ", GlobalConfig.shear_tolerance);
         writeln("  M_inf: ", GlobalConfig.M_inf);
         writeln("  compression_tolerance: ", GlobalConfig.compression_tolerance);
+        //
         writeln("  MHD: ", GlobalConfig.MHD);
         writeln("  MHD_static_field: ", GlobalConfig.MHD_static_field);
         writeln("  MHD_resistive: ", GlobalConfig.MHD_resistive);
