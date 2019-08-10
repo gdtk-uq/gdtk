@@ -1890,6 +1890,8 @@ public:
         // The values for u, v and T may be updated subsequently by the interface-flux function.
         // (3) Apply the flux calculator to the Lft,Rght flow states.
         //
+        bool do_reconstruction = allow_high_order_interpolation && (myConfig.interpolation_order > 1);
+        //
         // ifi interfaces are East-facing interfaces.
         for ( size_t k = kmin; k <= kmax; ++k ) {
             for ( size_t j = jmin; j <= jmax; ++j ) {
@@ -1910,11 +1912,7 @@ public:
                     } else {
                         Rght.copy_values_from(cR0.fs);
                     }
-                    bool do_reconstruction = allow_high_order_interpolation &&
-                        (myConfig.interpolation_order > 1) &&
-                        !IFace.in_suppress_reconstruction_zone &&
-                        !(myConfig.suppress_reconstruction_at_boundaries && IFace.is_on_boundary);
-                    if (do_reconstruction) {
+                    if (do_reconstruction && !IFace.in_suppress_reconstruction_zone) {
                         if ((i == imin) && !(bc[Face.west].ghost_cell_data_available)) {
                             one_d.interp_l0r2(IFace, cR0, cR1, cR0.iLength, cR1.iLength, Lft, Rght);
                         } else if ((i == imin+1) && !(bc[Face.west].ghost_cell_data_available)) {
@@ -1964,11 +1962,7 @@ public:
                     } else {
                         Rght.copy_values_from(cR0.fs);
                     }
-                    bool do_reconstruction = allow_high_order_interpolation &&
-                        (myConfig.interpolation_order > 1) &&
-                        !IFace.in_suppress_reconstruction_zone &&
-                        !(myConfig.suppress_reconstruction_at_boundaries && IFace.is_on_boundary);
-                    if (do_reconstruction) {
+                    if (do_reconstruction && !IFace.in_suppress_reconstruction_zone) {
                         if ((j == jmin) && !(bc[Face.south].ghost_cell_data_available)) {
                             one_d.interp_l0r2(IFace, cR0, cR1, cR0.jLength, cR1.jLength, Lft, Rght);
                         } else if ((j == jmin+1) && !(bc[Face.south].ghost_cell_data_available)) {
@@ -2021,11 +2015,7 @@ public:
                     } else {
                         Rght.copy_values_from(cR0.fs);
                     }
-                    bool do_reconstruction = allow_high_order_interpolation &&
-                        (myConfig.interpolation_order > 1) &&
-                        !IFace.in_suppress_reconstruction_zone &&
-                        !(myConfig.suppress_reconstruction_at_boundaries && IFace.is_on_boundary);
-                    if (do_reconstruction) {
+                    if (do_reconstruction && !IFace.in_suppress_reconstruction_zone) {
                         if ((k == kmin) && !(bc[Face.bottom].ghost_cell_data_available)) {
                             one_d.interp_l0r2(IFace, cR0, cR1, cR0.kLength, cR1.kLength, Lft, Rght);
                         } else if ((k == kmin+1) && !(bc[Face.bottom].ghost_cell_data_available)) {
