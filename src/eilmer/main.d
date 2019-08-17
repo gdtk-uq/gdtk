@@ -309,6 +309,26 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
         return exitFlag;
     }
     //
+    if (jobName.length > 0) {
+        // Clean up the jobName, by removing any extension or path details, if necessary.
+        string ext = extension(jobName);
+        if (!ext.empty && ext != ".lua") {
+            writeln("If you are going to supply an extension for your job name, it needs to be \".lua\"");
+            return 1;
+        }
+        string dir = dirName(jobName);
+        if (dir != ".") {
+            writeln("You are expected to start with your job script in your working directory.");
+            return 1;
+        }
+        string bn = baseName(jobName);
+        if (ext.length > 0) {
+            jobName = bn.replace(ext, "");
+        } else {
+            jobName = bn;
+        }
+    }
+    //
     if (prepFlag) {
         version(mpi_parallel) {
             if (GlobalConfig.is_master_task) {
