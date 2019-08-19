@@ -14,6 +14,7 @@ import std.conv;
 import std.stdio;
 import std.format;
 import std.math;
+import std.range : iota;
 import gzip;
 import nm.complex;
 import nm.number;
@@ -872,7 +873,18 @@ public:
         vertices.length = nvertices;
         vtx_id.length = nvertices;
         // Now we need to add the new vertices.
+        size_t oldSingleIndex(size_t i, size_t j)
+        {
+            return i + orig_niv*j;
+        }
         if ( (joinLocation == "east") || (joinLocation == "imax") ) {
+            // Reshuffle points in existing grid
+            for (auto j = njv-1; j > 0; --j) {
+                for (int i = to!int(orig_niv)-1; i >= 0; --i) {
+                   *(this[i, j]) = vertices[oldSingleIndex(i, j)];
+                }
+            }
+            // Then add new points
             foreach ( j; 0 .. gridToJoin.njv ) {
                 foreach ( i; 1 .. gridToJoin.niv ) {
                     *(this[(i-1)+orig_niv,j]) = *(gridToJoin[i,j]);
@@ -883,6 +895,16 @@ public:
             foreach ( j; 1 .. gridToJoin.njv ) {
                 foreach ( i; 0 .. gridToJoin.niv ) {
                     *(this[i,(j-1)+orig_njv]) = *(gridToJoin[i,j]);
+                }
+            }
+        }
+        // Make the vtx_id list up-to-date 
+        size_t ivtx = 0;
+        foreach (k; 0 .. nkv) {
+            foreach (j; 0 .. njv) {
+                foreach (i; 0 .. niv) {
+                    vtx_id[single_index(i,j,k)] = ivtx;
+                    ivtx++;
                 }
             }
         }

@@ -127,6 +127,8 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_bool_field("report_invalid_cells", "report_invalid_cells"));
     mixin(get_int_field("max_invalid_cells", "max_invalid_cells"));
     //
+    mixin(get_bool_field("high_order_flux_calculator", "high_order_flux_calculator"));
+    mixin(get_enum_field("flux_calculator", "flux_calculator", "flux_calculator_from_name"));
     mixin(get_int_field("interpolation_order", "interpolation_order"));
     mixin(get_double_field("interpolation_delay", "interpolation_delay"));
     mixin(get_enum_field("thermo_interpolator", "thermo_interpolator", "thermo_interpolator_from_name"));
@@ -138,10 +140,10 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_int_field("freeze_limiter_on_step", "freeze_limiter_on_step"));
     mixin(get_bool_field("use_extended_stencil", "use_extended_stencil"));
     mixin(get_double_field("venkat_K_value", "venkat_K_value"));
-    mixin(get_enum_field("flux_calculator", "flux_calculator", "flux_calculator_from_name"));
     mixin(get_double_field("shear_tolerance", "shear_tolerance"));
     mixin(get_double_field("M_inf", "M_inf"));
     mixin(get_double_field("compression_tolerance", "compression_tolerance"));
+    //
     mixin(get_bool_field("artificial_compressiblity", "artificial_compressibility"));
     mixin(get_double_field("ac_alpha", "ac_alpha"));
     //
@@ -301,6 +303,8 @@ extern(C) int configGet(lua_State* L)
     case "report_invalid_cells": lua_pushboolean(L, GlobalConfig.report_invalid_cells); break;
     case "max_invalid_cells": lua_pushnumber(L, GlobalConfig.max_invalid_cells); break;
         //
+    case "high_order_flux_calculator": lua_pushboolean(L, GlobalConfig.high_order_flux_calculator); break;
+    case "flux_calculator": lua_pushstring(L, flux_calculator_name(GlobalConfig.flux_calculator).toStringz); break;
     case "interpolation_order": lua_pushnumber(L, GlobalConfig.interpolation_order); break;
     case "interpolation_delay": lua_pushnumber(L, GlobalConfig.interpolation_delay); break;
     case "thermo_interpolator": lua_pushstring(L, thermo_interpolator_name(GlobalConfig.thermo_interpolator).toStringz); break;
@@ -312,7 +316,6 @@ extern(C) int configGet(lua_State* L)
     case "freeze_limiter_on_step": lua_pushnumber(L, GlobalConfig.freeze_limiter_on_step); break;
     case "use_extended_stencil": lua_pushboolean(L, GlobalConfig.use_extended_stencil); break;
     case "venkat_K_value": lua_pushnumber(L, GlobalConfig.venkat_K_value); break;
-    case "flux_calculator": lua_pushstring(L, flux_calculator_name(GlobalConfig.flux_calculator).toStringz); break;
     case "shear_tolerance": lua_pushnumber(L, GlobalConfig.shear_tolerance); break;
     case "M_inf": lua_pushnumber(L, GlobalConfig.M_inf); break;
     case "compression_tolerance": lua_pushnumber(L, GlobalConfig.compression_tolerance); break;

@@ -32,6 +32,7 @@ import conservedquantities;
 import lua_helper;
 import grid_motion;
 import grid_deform;
+import sfluidblock; // needed for some special-case processing, below
 
 // To distinguish ghost cells from active cells, we start their id values at
 // an arbitrarily high value.  It seem high to me (PJ) but feel free to adjust it
@@ -218,7 +219,7 @@ public:
 
     @nogc
     void identify_reaction_zones(int gtl)
-    // Set the reactions-allowed flag for cells in this block.
+    // Adjust the reactions-allowed flag for cells in this block.
     {
         size_t total_cells_in_reaction_zones = 0;
         size_t total_cells = 0;
@@ -251,10 +252,8 @@ public:
 
     @nogc
     void identify_suppress_reconstruction_zones()
-    // Set the in-suppress_reconstruction-zone flag for faces in this block.
+    // Adjust the in_suppress_reconstruction-zone flag for faces in this block.
     {
-        size_t total_faces_in_suppress_reconstruction_zones = 0;
-        size_t total_faces = 0;
         foreach(f; faces) {
             f.in_suppress_reconstruction_zone = false;
             if (myConfig.suppress_reconstruction_zones.length > 0 ) {
@@ -264,17 +263,68 @@ public:
                     }
                 } // foreach srz
             }
-            total_faces_in_suppress_reconstruction_zones += (f.in_suppress_reconstruction_zone ? 1: 0);
-            total_faces += 1;
+            if (myConfig.suppress_reconstruction_at_boundaries && f.is_on_boundary) {
+                f.in_suppress_reconstruction_zone = true;
+            }
         } // foreach face
+        //
+        auto sfb = cast(SFluidBlock) this;
+        if (sfb) {
+            // Some special processing for Structured-grid blocks.
+            if (myConfig.dimensions == 2 && myConfig.axisymmetric) {
+                immutable double tol = 1.0e-9;
+                // Work along each boundary and suppress reconstruction for faces that are
+                // on the axis of symmetry or just one off the axis (but parallel to the axis).
+                for (size_t i = sfb.imin; i <= sfb.imax; ++i) {
+                    auto f = sfb.get_ifj!()(i,sfb.jmin);
+                    if (f.pos.y < tol) {
+                        f.in_suppress_reconstruction_zone = true;
+                        auto f1 = sfb.get_ifj!()(i,sfb.jmin+1);
+                        f1.in_suppress_reconstruction_zone = true;
+                    }
+                }
+                for (size_t i = sfb.imin; i <= sfb.imax; ++i) {
+                    auto f = sfb.get_ifj!()(i,sfb.jmax+1);
+                    if (f.pos.y < tol) {
+                        f.in_suppress_reconstruction_zone = true;
+                        auto f1 = sfb.get_ifj!()(i,sfb.jmax);
+                        f1.in_suppress_reconstruction_zone = true;
+                    }
+                }
+                for (size_t j = sfb.jmin; j <= sfb.jmax; ++j) {
+                    auto f = sfb.get_ifi!()(sfb.imin,j);
+                    if (f.pos.y < tol) {
+                        f.in_suppress_reconstruction_zone = true;
+                        auto f1 = sfb.get_ifi!()(sfb.imin+1,j);
+                        f1.in_suppress_reconstruction_zone = true;
+                    }
+                }
+                for (size_t j = sfb.jmin; j <= sfb.jmax; ++j) {
+                    auto f = sfb.get_ifi!()(sfb.imax+1,j);
+                    if (f.pos.y < tol) {
+                        f.in_suppress_reconstruction_zone = true;
+                        auto f1 = sfb.get_ifi!()(sfb.imax,j);
+                        f1.in_suppress_reconstruction_zone = true;
+                    }
+                }
+            } // end if (myConfig...)
+        } // end if(sfb)
+        //
         debug {
+            size_t total_faces_in_suppress_reconstruction_zones = 0;
+            size_t total_faces = 0;
+            foreach(f; faces) {
+                total_faces_in_suppress_reconstruction_zones += (f.in_suppress_reconstruction_zone ? 1: 0);
+                total_faces += 1;
+            } // foreach face
             if (myConfig.verbosity_level >= 2) {
                 writeln("identify_suppress_reconstruction_zones(): block ", id,
                         " faces inside zones = ", total_faces_in_suppress_reconstruction_zones, 
                         " out of ", total_faces);
                 if (myConfig.suppress_reconstruction_zones.length == 0) {
                     writeln("Note that for no user-specified zones,",
-                            " reconstruction is allowed for the whole domain.");
+                            " nominally reconstruction is allowed for the whole domain",
+                            " but may be suppressed at the boundaries and/or near the axis of symmetry.");
                 }
             }
         }
@@ -282,7 +332,7 @@ public:
 
     @nogc
     void identify_turbulent_zones(int gtl)
-    // Set the in-turbulent-zone flag for cells in this block.
+    // Adjust the in-turbulent-zone flag for cells in this block.
     {
         size_t total_cells_in_turbulent_zones = 0;
         size_t total_cells = 0;
