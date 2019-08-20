@@ -164,6 +164,7 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_double_field("viscous_factor_increment", "viscous_factor_increment"));
     mixin(get_double_field("viscous_delay", "viscous_delay"));
     mixin(get_double_field("shear_stress_relative_limit", "shear_stress_relative_limit"));
+    mixin(get_bool_field("apply_shear_stress_relative_limit", "apply_shear_stress_relative_limit"));
     mixin(get_double_field("viscous_signal_factor", "viscous_signal_factor"));
     mixin(get_double_field("turbulent_signal_factor", "turbulent_signal_factor"));
     mixin(get_enum_field("mass_diffusion_model", "mass_diffusion_model", "massDiffusionModelFromName"));
@@ -338,6 +339,7 @@ extern(C) int configGet(lua_State* L)
     case "viscous_factor_increment": lua_pushnumber(L, GlobalConfig.viscous_factor_increment); break;
     case "viscous_delay": lua_pushnumber(L, GlobalConfig.viscous_delay); break;
     case "shear_stress_relative_limit": lua_pushnumber(L, GlobalConfig.shear_stress_relative_limit); break;
+    case "apply_shear_stress_relative_limit": lua_pushboolean(L, GlobalConfig.apply_shear_stress_relative_limit); break;
     case "viscous_signal_factor": lua_pushnumber(L, GlobalConfig.viscous_signal_factor); break;
     case "turbulent_signal_factor": lua_pushnumber(L, GlobalConfig.turbulent_signal_factor); break;
     case "mass_diffusion_model": lua_pushstring(L, massDiffusionModelName(GlobalConfig.mass_diffusion_model).toStringz); break;

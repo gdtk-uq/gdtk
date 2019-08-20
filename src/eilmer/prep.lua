@@ -1746,6 +1746,7 @@ function write_config_file(fileName)
 			 tostring(config.suppress_reconstruction_at_captured_shocks)))
    f:write(string.format('"viscous_delay": %.18e,\n', config.viscous_delay))
    f:write(string.format('"shear_stress_relative_limit": %.18e,\n', config.shear_stress_relative_limit))
+   f:write(string.format('"apply_shear_stress_relative_limit": %s,\n', tostring(config.apply_shear_stress_relative_limit)))
    f:write(string.format('"mass_diffusion_model": "%s",\n',
 			 string.lower(config.mass_diffusion_model)))
    f:write(string.format('"constant_lewis_number": %s,\n', tostring(config.constant_lewis_number)))

@@ -634,7 +634,8 @@ final class GlobalConfig {
     // stresses were limited to physically-more-reasonable values.
     // Also, for leading edged of sharp plates, the continuum model leads to
     // unreasonably large shear stresses that cannot be true in the physical world.
-    shared static double shear_stress_relative_limit = 0.25;
+    shared static double shear_stress_relative_limit = 1.0;
+    shared static bool apply_shear_stress_relative_limit = false;
     //
     shared static MassDiffusionModel mass_diffusion_model = MassDiffusionModel.none;
     static MassDiffusion massDiffusion;
@@ -879,6 +880,7 @@ public:
     bool suppress_reconstruction_at_captured_shocks;
     double viscous_factor;
     double shear_stress_relative_limit;
+    bool apply_shear_stress_relative_limit;
     MassDiffusionModel mass_diffusion_model;
     MassDiffusion massDiffusion;
     bool constant_lewis_number;
@@ -1007,6 +1009,7 @@ public:
         suppress_reconstruction_at_captured_shocks =
             GlobalConfig.suppress_reconstruction_at_captured_shocks;
         shear_stress_relative_limit = GlobalConfig.shear_stress_relative_limit;
+        apply_shear_stress_relative_limit = GlobalConfig.apply_shear_stress_relative_limit;
         viscous_factor = GlobalConfig.viscous_factor;
         mass_diffusion_model = GlobalConfig.mass_diffusion_model;
         constant_lewis_number = GlobalConfig.constant_lewis_number;
@@ -1368,6 +1371,7 @@ void read_config_file()
     mixin(update_double("viscous_delay", "viscous_delay"));
     mixin(update_double("viscous_factor_increment", "viscous_factor_increment"));
     mixin(update_double("shear_stress_relative_limit", "shear_stress_relative_limit"));
+    mixin(update_bool("apply_shear_stress_relative_limit", "apply_shear_stress_relative_limit"));
     mixin(update_enum("mass_diffusion_model", "mass_diffusion_model", "massDiffusionModelFromName"));
     mixin(update_bool("constant_lewis_number", "constant_lewis_number"));
     mixin(update_bool("species_specific_lewis_numbers", "species_specific_lewis_numbers"));
@@ -1400,6 +1404,7 @@ void read_config_file()
         writeln("  viscous_delay: ", GlobalConfig.viscous_delay);
         writeln("  viscous_factor_increment: ", GlobalConfig.viscous_factor_increment);
         writeln("  shear_stress_relative_limit: ", GlobalConfig.shear_stress_relative_limit);
+        writeln("  apply_shear_stress_relative_limit: ", GlobalConfig.apply_shear_stress_relative_limit);
         writeln("  mass_diffusion_model: ", massDiffusionModelName(GlobalConfig.mass_diffusion_model));
         writeln("  constant_lewis_number: ", GlobalConfig.constant_lewis_number);
         writeln("  species_specific_lewis_numbers: ", GlobalConfig.species_specific_lewis_numbers);
