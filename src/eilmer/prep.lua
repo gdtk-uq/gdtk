@@ -1677,8 +1677,6 @@ function write_config_file(fileName)
    f:write(string.format('"dimensions": %d,\n', config.dimensions))
    f:write(string.format('"axisymmetric": %s,\n',
 			 tostring(config.axisymmetric)))
-   f:write(string.format('"interpolation_order": %d,\n', config.interpolation_order))
-   f:write(string.format('"interpolation_delay": %.18e,\n', config.interpolation_delay))
    f:write(string.format('"strang_splitting": "%s",\n', config.strang_splitting))
    f:write(string.format('"gasdynamic_update_scheme": "%s",\n',
 			 config.gasdynamic_update_scheme))
@@ -1715,6 +1713,9 @@ function write_config_file(fileName)
 
    f:write(string.format('"high_order_flux_calculator": %s,\n', tostring(config.high_order_flux_calculator)))
    f:write(string.format('"flux_calculator": "%s",\n', config.flux_calculator))
+   f:write(string.format('"interpolation_order": %d,\n', config.interpolation_order))
+   f:write(string.format('"interpolation_delay": %.18e,\n', config.interpolation_delay))
+   f:write(string.format('"suppress_reconstruction_at_xaxis": %s,\n', tostring(config.suppress_reconstruction_at_xaxis)))
    f:write(string.format('"thermo_interpolator": "%s",\n', 
 			 string.lower(config.thermo_interpolator)))
    f:write(string.format('"allow_reconstruction_for_energy_modes": %s,\n', 
