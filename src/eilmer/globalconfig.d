@@ -536,7 +536,7 @@ final class GlobalConfig {
     // we may wish to suppress the reconstruction as we approach the x-axis.
     // Faces along the x-axis and the first row off the axis are flagged.
     // Faces normal to the x-axis are not flagged. 
-    shared static bool suppress_reconstruction_at_xaxis = false;
+    shared static bool suppress_radial_reconstruction_at_xaxis = false;
     // Default flow-data reconstruction includes interpolation of density 
     // and internal energy.  Other options for the thermodunamic properties
     // to be interpolated are pressure+temperature, density+temperature and
@@ -851,7 +851,7 @@ public:
     int interpolation_order;
     double interpolation_delay;
     BlockZone[] suppress_reconstruction_zones;
-    bool suppress_reconstruction_at_xaxis;
+    bool suppress_radial_reconstruction_at_xaxis;
     InterpolateOption thermo_interpolator;
     bool allow_reconstruction_for_energy_modes;
     bool apply_limiter;
@@ -978,7 +978,7 @@ public:
         foreach (bz; GlobalConfig.suppress_reconstruction_zones) {
             suppress_reconstruction_zones ~= new BlockZone(bz);
         }
-        suppress_reconstruction_at_xaxis = GlobalConfig.suppress_reconstruction_at_xaxis;
+        suppress_radial_reconstruction_at_xaxis = GlobalConfig.suppress_radial_reconstruction_at_xaxis;
         thermo_interpolator = GlobalConfig.thermo_interpolator;
         allow_reconstruction_for_energy_modes = GlobalConfig.allow_reconstruction_for_energy_modes;
         apply_limiter = GlobalConfig.apply_limiter;
@@ -1285,7 +1285,7 @@ void read_config_file()
     mixin(update_enum("flux_calculator", "flux_calculator", "flux_calculator_from_name"));
     mixin(update_int("interpolation_order", "interpolation_order"));
     mixin(update_double("interpolation_delay", "interpolation_delay"));
-    mixin(update_bool("suppress_reconstruction_at_xaxis", "suppress_reconstruction_at_xaxis"));
+    mixin(update_bool("suppress_radial_reconstruction_at_xaxis", "suppress_radial_reconstruction_at_xaxis"));
     mixin(update_enum("thermo_interpolator", "thermo_interpolator", "thermo_interpolator_from_name"));
     mixin(update_bool("allow_reconstruction_for_energy_modes", "allow_reconstruction_for_energy_modes"));
     mixin(update_bool("apply_limiter", "apply_limiter"));
@@ -1346,7 +1346,7 @@ void read_config_file()
         writeln("  flux_calculator: ", flux_calculator_name(GlobalConfig.flux_calculator));
         writeln("  interpolation_order: ", GlobalConfig.interpolation_order);
         writeln("  interpolation_delay: ", GlobalConfig.interpolation_delay);
-        writeln("  suppress_reconstruction_at_xaxis: ", GlobalConfig.suppress_reconstruction_at_xaxis);
+        writeln("  suppress_radial_reconstruction_at_xaxis: ", GlobalConfig.suppress_radial_reconstruction_at_xaxis);
         writeln("  thermo_interpolator: ", thermo_interpolator_name(GlobalConfig.thermo_interpolator));
         writeln("  apply_limiter: ", GlobalConfig.apply_limiter);
         writeln("  unstructured_limiter: ", unstructured_limiter_name(GlobalConfig.unstructured_limiter));

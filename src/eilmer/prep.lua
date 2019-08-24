@@ -1715,7 +1715,8 @@ function write_config_file(fileName)
    f:write(string.format('"flux_calculator": "%s",\n', config.flux_calculator))
    f:write(string.format('"interpolation_order": %d,\n', config.interpolation_order))
    f:write(string.format('"interpolation_delay": %.18e,\n', config.interpolation_delay))
-   f:write(string.format('"suppress_reconstruction_at_xaxis": %s,\n', tostring(config.suppress_reconstruction_at_xaxis)))
+   f:write(string.format('"suppress_radial_reconstruction_at_xaxis": %s,\n',
+                         tostring(config.suppress_radial_reconstruction_at_xaxis)))
    f:write(string.format('"thermo_interpolator": "%s",\n', 
 			 string.lower(config.thermo_interpolator)))
    f:write(string.format('"allow_reconstruction_for_energy_modes": %s,\n', 
