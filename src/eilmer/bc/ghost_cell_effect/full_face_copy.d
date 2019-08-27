@@ -823,8 +823,11 @@ public:
                 assert(ne == mapped_cell_ids.length, "oops, wrong length");
                 outgoing_cell_ids_tag = make_mpi_tag(blk.id, which_boundary, 0);
                 foreach (i; 0 .. ne) { outgoing_cell_ids_buf[i] = to!int(mapped_cell_ids[i]); }
-                MPI_Send(outgoing_cell_ids_buf.ptr, to!int(ne), MPI_INT, other_blk_rank,
-                         outgoing_cell_ids_tag, MPI_COMM_WORLD);
+                MPI_Request send_request;
+                MPI_Isend(outgoing_cell_ids_buf.ptr, to!int(ne), MPI_INT, other_blk_rank,
+                          outgoing_cell_ids_tag, MPI_COMM_WORLD, &send_request);
+                MPI_Status send_status;
+                MPI_Wait_a_while(&send_request, &send_status);
             } else {
                 // The other block happens to be in this MPI process so
                 // we know that we can just access the cell data directly
@@ -937,8 +940,11 @@ public:
                     outgoing_geometry_buf[ii++] = c.kLength;
                     outgoing_geometry_buf[ii++] = c.L_min;
                 }
-                MPI_Send(outgoing_geometry_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
-                         outgoing_geometry_tag, MPI_COMM_WORLD);
+                MPI_Request send_request;
+                MPI_Isend(outgoing_geometry_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
+                          outgoing_geometry_tag, MPI_COMM_WORLD, &send_request);
+                MPI_Status send_status;
+                MPI_Wait_a_while(&send_request, &send_status);
             } else {
                 // The other block happens to be in this MPI process so
                 // we know that we can just access the cell data directly
@@ -1132,8 +1138,11 @@ public:
                     outgoing_flowstate_buf[ii++] = fs.k_t;
                     outgoing_flowstate_buf[ii++] = to!double(fs.S);
                 }
-                MPI_Send(outgoing_flowstate_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
-                         outgoing_flowstate_tag, MPI_COMM_WORLD);
+                MPI_Request send_request;
+                MPI_Isend(outgoing_flowstate_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
+                         outgoing_flowstate_tag, MPI_COMM_WORLD, &send_request);
+                MPI_Status send_status;
+                MPI_Wait_a_while(&send_request, &send_status);
             } else {
                 // The other block happens to be in this MPI process so
                 // we know that we can just access the cell data directly
