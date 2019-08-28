@@ -1373,6 +1373,7 @@ function mpiDistributeBlocks(args)
    if args and not(type(args) == "table") then
       error("mpiDistributeBlocks expects its arguments in single table with named fields", 2);
    end
+   args = args or {}
    local flag = checkAllowedNames(args, {"ntasks", "dist", "preassign"})
    if not flag then
       error("Invalid name for item supplied to mpiDistributeBlocks.", 2)
