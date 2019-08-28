@@ -1368,9 +1368,14 @@ end
 function mpiDistributeBlocks(args)
    -- Assign blocks to MPI tasks,
    -- keeping a record of the MPI rank (or task) for every block.
+   -- This record is stored in the global variable mpiTasks.
    --
    if args and not(type(args) == "table") then
       error("mpiDistributeBlocks expects its arguments in single table with named fields", 2);
+   end
+   local flag = checkAllowedNames(args, {"ntasks", "dist", "preassign"})
+   if not flag then
+      error("Invalid name for item supplied to mpiDistributeBlocks.", 2)
    end
    --
    local nBlocks = #fluidBlocks
@@ -1452,6 +1457,11 @@ function mpiDistributeBlocks(args)
    else
       error('Did not select one of "round-robin" or "load-balance". for mpiDistributeBlocks', 2) 
    end
+   -- Assign the newly-constructed list to the global variable
+   -- for later use in writing the job.mpimap file.
+   mpiTasks = mpiTaskList
+   -- Finally, return the list as we have always done, however,
+   -- we expect that the caller will ignore this return value.
    return mpiTaskList
 end
    
@@ -1920,7 +1930,7 @@ end
 
 function write_mpimap_file(fileName)
    if not mpiTasks then
-      mpiTasks = mpiDistributeBlocks()
+      mpiDistributeBlocks()
    end
    local f = assert(io.open(fileName, "w"))
    f:write("# indx mpiTask\n")
