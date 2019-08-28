@@ -54,7 +54,7 @@ config.user_pad_length = 1
 user_pad_data = {0}
 -- We want the shock-tube block [1] that sets the rupture state
 -- to be on the MPI master task 0.  Its user_pad_data is broadcast.
-mpiTasks = mpiDistributeBlocks{ntasks=3, dist="load-balance", preassign={[1]=0}}
+mpiDistributeBlocks{ntasks=3, dist="load-balance", preassign={[1]=0}}
 -- The function that sets the diaphragm state is also a user-defined function.
 config.udf_supervisor_file='supervisor.lua'
 --
