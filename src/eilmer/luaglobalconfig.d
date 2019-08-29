@@ -130,6 +130,7 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_bool_field("high_order_flux_calculator", "high_order_flux_calculator"));
     mixin(get_enum_field("flux_calculator", "flux_calculator", "flux_calculator_from_name"));
     mixin(get_int_field("interpolation_order", "interpolation_order"));
+    mixin(get_bool_field("suppress_radial_reconstruction_at_xaxis", "suppress_radial_reconstruction_at_xaxis"));
     mixin(get_double_field("interpolation_delay", "interpolation_delay"));
     mixin(get_enum_field("thermo_interpolator", "thermo_interpolator", "thermo_interpolator_from_name"));
     mixin(get_bool_field("allow_reconstruction_for_energy_modes", "allow_reconstruction_for_energy_modes"));
@@ -165,6 +166,7 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_double_field("viscous_factor_increment", "viscous_factor_increment"));
     mixin(get_double_field("viscous_delay", "viscous_delay"));
     mixin(get_double_field("shear_stress_relative_limit", "shear_stress_relative_limit"));
+    mixin(get_bool_field("apply_shear_stress_relative_limit", "apply_shear_stress_relative_limit"));
     mixin(get_double_field("viscous_signal_factor", "viscous_signal_factor"));
     mixin(get_double_field("turbulent_signal_factor", "turbulent_signal_factor"));
     mixin(get_enum_field("mass_diffusion_model", "mass_diffusion_model", "massDiffusionModelFromName"));
@@ -307,6 +309,7 @@ extern(C) int configGet(lua_State* L)
     case "flux_calculator": lua_pushstring(L, flux_calculator_name(GlobalConfig.flux_calculator).toStringz); break;
     case "interpolation_order": lua_pushnumber(L, GlobalConfig.interpolation_order); break;
     case "interpolation_delay": lua_pushnumber(L, GlobalConfig.interpolation_delay); break;
+    case "suppress_radial_reconstruction_at_xaxis": lua_pushboolean(L, GlobalConfig.suppress_radial_reconstruction_at_xaxis); break;
     case "thermo_interpolator": lua_pushstring(L, thermo_interpolator_name(GlobalConfig.thermo_interpolator).toStringz); break;
     case "allow_reconstruction_for_energy_modes": lua_pushboolean(L, GlobalConfig.allow_reconstruction_for_energy_modes); break;
     case "apply_limiter": lua_pushboolean(L, GlobalConfig.apply_limiter); break;
@@ -340,6 +343,7 @@ extern(C) int configGet(lua_State* L)
     case "viscous_factor_increment": lua_pushnumber(L, GlobalConfig.viscous_factor_increment); break;
     case "viscous_delay": lua_pushnumber(L, GlobalConfig.viscous_delay); break;
     case "shear_stress_relative_limit": lua_pushnumber(L, GlobalConfig.shear_stress_relative_limit); break;
+    case "apply_shear_stress_relative_limit": lua_pushboolean(L, GlobalConfig.apply_shear_stress_relative_limit); break;
     case "viscous_signal_factor": lua_pushnumber(L, GlobalConfig.viscous_signal_factor); break;
     case "turbulent_signal_factor": lua_pushnumber(L, GlobalConfig.turbulent_signal_factor); break;
     case "mass_diffusion_model": lua_pushstring(L, massDiffusionModelName(GlobalConfig.mass_diffusion_model).toStringz); break;

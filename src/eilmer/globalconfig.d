@@ -533,6 +533,11 @@ final class GlobalConfig {
     shared static double interpolation_delay = 0.0;
     // We may elect to suppress reconstruction in particular zones always.
     static BlockZone[] suppress_reconstruction_zones;
+    // For structured-grid blocks in axisymmetric simulations,
+    // we may wish to suppress the reconstruction as we approach the x-axis.
+    // Faces along the x-axis and the first row off the axis are flagged.
+    // Faces normal to the x-axis are not flagged. 
+    shared static bool suppress_radial_reconstruction_at_xaxis = false;
     // Default flow-data reconstruction includes interpolation of density 
     // and internal energy.  Other options for the thermodunamic properties
     // to be interpolated are pressure+temperature, density+temperature and
@@ -635,7 +640,8 @@ final class GlobalConfig {
     // stresses were limited to physically-more-reasonable values.
     // Also, for leading edged of sharp plates, the continuum model leads to
     // unreasonably large shear stresses that cannot be true in the physical world.
-    shared static double shear_stress_relative_limit = 0.25;
+    shared static double shear_stress_relative_limit = 1.0;
+    shared static bool apply_shear_stress_relative_limit = false;
     //
     shared static MassDiffusionModel mass_diffusion_model = MassDiffusionModel.none;
     static MassDiffusion massDiffusion;
@@ -847,6 +853,7 @@ public:
     int interpolation_order;
     double interpolation_delay;
     BlockZone[] suppress_reconstruction_zones;
+    bool suppress_radial_reconstruction_at_xaxis;
     InterpolateOption thermo_interpolator;
     bool allow_reconstruction_for_energy_modes;
     bool apply_limiter;
@@ -881,6 +888,7 @@ public:
     bool suppress_reconstruction_at_captured_shocks;
     double viscous_factor;
     double shear_stress_relative_limit;
+    bool apply_shear_stress_relative_limit;
     MassDiffusionModel mass_diffusion_model;
     MassDiffusion massDiffusion;
     bool constant_lewis_number;
@@ -973,6 +981,7 @@ public:
         foreach (bz; GlobalConfig.suppress_reconstruction_zones) {
             suppress_reconstruction_zones ~= new BlockZone(bz);
         }
+        suppress_radial_reconstruction_at_xaxis = GlobalConfig.suppress_radial_reconstruction_at_xaxis;
         thermo_interpolator = GlobalConfig.thermo_interpolator;
         allow_reconstruction_for_energy_modes = GlobalConfig.allow_reconstruction_for_energy_modes;
         apply_limiter = GlobalConfig.apply_limiter;
@@ -1010,6 +1019,7 @@ public:
         suppress_reconstruction_at_captured_shocks =
             GlobalConfig.suppress_reconstruction_at_captured_shocks;
         shear_stress_relative_limit = GlobalConfig.shear_stress_relative_limit;
+        apply_shear_stress_relative_limit = GlobalConfig.apply_shear_stress_relative_limit;
         viscous_factor = GlobalConfig.viscous_factor;
         mass_diffusion_model = GlobalConfig.mass_diffusion_model;
         constant_lewis_number = GlobalConfig.constant_lewis_number;
@@ -1279,6 +1289,7 @@ void read_config_file()
     mixin(update_enum("flux_calculator", "flux_calculator", "flux_calculator_from_name"));
     mixin(update_int("interpolation_order", "interpolation_order"));
     mixin(update_double("interpolation_delay", "interpolation_delay"));
+    mixin(update_bool("suppress_radial_reconstruction_at_xaxis", "suppress_radial_reconstruction_at_xaxis"));
     mixin(update_enum("thermo_interpolator", "thermo_interpolator", "thermo_interpolator_from_name"));
     mixin(update_bool("allow_reconstruction_for_energy_modes", "allow_reconstruction_for_energy_modes"));
     mixin(update_bool("apply_limiter", "apply_limiter"));
@@ -1340,6 +1351,7 @@ void read_config_file()
         writeln("  flux_calculator: ", flux_calculator_name(GlobalConfig.flux_calculator));
         writeln("  interpolation_order: ", GlobalConfig.interpolation_order);
         writeln("  interpolation_delay: ", GlobalConfig.interpolation_delay);
+        writeln("  suppress_radial_reconstruction_at_xaxis: ", GlobalConfig.suppress_radial_reconstruction_at_xaxis);
         writeln("  thermo_interpolator: ", thermo_interpolator_name(GlobalConfig.thermo_interpolator));
         writeln("  apply_limiter: ", GlobalConfig.apply_limiter);
         writeln("  unstructured_limiter: ", unstructured_limiter_name(GlobalConfig.unstructured_limiter));
@@ -1373,6 +1385,7 @@ void read_config_file()
     mixin(update_double("viscous_delay", "viscous_delay"));
     mixin(update_double("viscous_factor_increment", "viscous_factor_increment"));
     mixin(update_double("shear_stress_relative_limit", "shear_stress_relative_limit"));
+    mixin(update_bool("apply_shear_stress_relative_limit", "apply_shear_stress_relative_limit"));
     mixin(update_enum("mass_diffusion_model", "mass_diffusion_model", "massDiffusionModelFromName"));
     mixin(update_bool("constant_lewis_number", "constant_lewis_number"));
     mixin(update_bool("species_specific_lewis_numbers", "species_specific_lewis_numbers"));
@@ -1405,6 +1418,7 @@ void read_config_file()
         writeln("  viscous_delay: ", GlobalConfig.viscous_delay);
         writeln("  viscous_factor_increment: ", GlobalConfig.viscous_factor_increment);
         writeln("  shear_stress_relative_limit: ", GlobalConfig.shear_stress_relative_limit);
+        writeln("  apply_shear_stress_relative_limit: ", GlobalConfig.apply_shear_stress_relative_limit);
         writeln("  mass_diffusion_model: ", massDiffusionModelName(GlobalConfig.mass_diffusion_model));
         writeln("  constant_lewis_number: ", GlobalConfig.constant_lewis_number);
         writeln("  species_specific_lewis_numbers: ", GlobalConfig.species_specific_lewis_numbers);

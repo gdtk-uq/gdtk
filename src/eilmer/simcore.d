@@ -110,6 +110,72 @@ double[] userPad_copy;
 
 //----------------------------------------------------------------------------
 
+version(mpi_parallel) {
+    void MPI_Sync_tasks()
+    // This function is essentially an MPI_Barrier with check for liveness.
+    // The MPI library does not have any timeout on MPI_Barrier so we first
+    // use the nonblocking communication to test that our neighbour is still 
+    // responding within a reasonable time.
+    // If a neighbour does not respond within the timeout period, call a halt.
+    {
+        int my_rank = GlobalConfig.mpi_rank_for_local_task;
+        //
+        // Look to neighbour on left for incoming message.
+        int left_rank = (my_rank == 0) ? GlobalConfig.mpi_size-1 : my_rank-1;
+        int incoming_tag = left_rank;
+        MPI_Request receive_request;
+        int[1] incoming_buffer;
+        MPI_Irecv(incoming_buffer.ptr, 1, MPI_INT, left_rank, incoming_tag,
+                  MPI_COMM_WORLD, &receive_request);
+        //
+        // Send message to neighbour on right.
+        MPI_Request send_request;
+        int outgoing_tag = my_rank;
+        int right_rank = (my_rank == GlobalConfig.mpi_size-1) ? 0 : my_rank+1;
+        int[1] outgoing_buffer;
+        outgoing_buffer[0] = my_rank;
+        MPI_Isend(outgoing_buffer.ptr, 1, MPI_INT, right_rank, outgoing_tag,
+                  MPI_COMM_WORLD, &send_request);
+        //
+        // Wait for message to be sent.
+        long timeout_msecs = 10000; // Surely 10 seconds will be enough.
+        SysTime startTime = Clock.currTime();
+        MPI_Status send_status;
+        int send_flag = 0;
+        while (!send_flag) {
+            int ierr = MPI_Test(&send_request, &send_flag, &send_status);
+            long elapsedTime_msecs = (Clock.currTime() - startTime).total!"msecs"();
+            if (elapsedTime_msecs > timeout_msecs) {
+                // We do not expect our job to recover gracefully from this point.
+                writeln("MPI_Sync_tasks time-out waiting to send. my_rank=%d, right_rank=%d",
+                        my_rank, right_rank);
+                MPI_Abort(MPI_COMM_WORLD, 3);
+            }
+        }
+        //
+        // Wait for expected message be received.
+        startTime = Clock.currTime();
+        MPI_Status receive_status;
+        int receive_flag = 0;
+        while (!receive_flag) {
+            int ierr = MPI_Test(&receive_request, &receive_flag, &receive_status);
+            long elapsedTime_msecs = (Clock.currTime() - startTime).total!"msecs"();
+            if (elapsedTime_msecs > timeout_msecs) {
+                // We do not expect our job to recover gracefully from this point.
+                writeln("MPI_Sync_tasks time-out waiting for receive. my_rank=%d, left_rank=%d",
+                        my_rank, left_rank);
+                MPI_Abort(MPI_COMM_WORLD, 3);
+            }
+        }
+        //
+        // At this point, we know that this rank and its left-neighbour are alive,
+        // so we wait for everyone to come to the same conclusion.
+        MPI_Barrier(MPI_COMM_WORLD);
+    } // end MPI_Sync_tasks()
+}
+
+//----------------------------------------------------------------------------
+
 void init_simulation(int tindx, int nextLoadsIndx,
                      int maxCPUs, int threadsPerMPITask, int maxWallClock)
 {
@@ -176,7 +242,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
             GlobalConfig.mpi_rank_for_block[blkid] = taskid;
             if (taskid == my_rank) { localFluidBlocks ~= globalFluidBlocks[blkid]; }
         }
-        MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Sync_tasks();
         if (localFluidBlocks.length == 0) {
             writefln("MPI-task with rank %d has no FluidBlocks. Quitting.", my_rank);
             MPI_Abort(MPI_COMM_WORLD, 2);
@@ -247,7 +313,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
     }
     SimState.time = time_array[0]; // Pick one; they should all be the same.
     //
-    version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
+    version(mpi_parallel) { MPI_Sync_tasks(); }
     //
     // Now that the cells for all gas blocks have been initialized,
     // we can sift through the boundary condition effects and
@@ -349,16 +415,16 @@ void init_simulation(int tindx, int nextLoadsIndx,
     //
     // All cells are in place, so now we can initialise any history cell files.
     if (GlobalConfig.is_master_task) { ensure_directory_is_present(histDir); }
-    version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
+    version(mpi_parallel) { MPI_Sync_tasks(); }
     init_history_cell_files();
     //
     // create the loads directory, maybe
     if (GlobalConfig.write_loads && (SimState.current_loads_tindx == 0)) {
         if (GlobalConfig.is_master_task) { ensure_directory_is_present("loads"); }
-        version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
+        version(mpi_parallel) { MPI_Sync_tasks(); }
         init_loads_times_file();
     }
-    version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
+    version(mpi_parallel) { MPI_Sync_tasks(); }
 
     // For the shock fitting grid motion, we need to assign radial positions for all vertices
     if (GlobalConfig.grid_motion == GlobalConfig.grid_motion.shock_fitting) {
@@ -503,7 +569,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
     GC.collect();
     GC.minimize();
     //
-    version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
+    version(mpi_parallel) { MPI_Sync_tasks(); }
     if (GlobalConfig.verbosity_level > 0) {
         auto myStats = GC.stats();
         auto heapUsed = to!double(myStats.usedSize)/(2^^20);
@@ -512,7 +578,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
                  GlobalConfig.mpi_rank_for_local_task, heapUsed, heapFree, heapUsed+heapFree);
         stdout.flush();
     }
-    version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
+    version(mpi_parallel) { MPI_Sync_tasks(); }
     if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) {
         // For reporting wall-clock time, convert to seconds with precision of milliseconds.
         double wall_clock_elapsed = to!double((Clock.currTime() - SimState.wall_clock_start).total!"msecs"())/1000.0;
@@ -528,7 +594,7 @@ void write_solution_files()
         writeln("Write flow solution.");
         stdout.flush();
     }
-    version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
+    version(mpi_parallel) { MPI_Sync_tasks(); }
     SimState.current_tindx = SimState.current_tindx + 1;
     ensure_directory_is_present(make_path_name!"flow"(SimState.current_tindx));
     auto job_name = GlobalConfig.base_file_name;
@@ -677,7 +743,7 @@ int integrate_in_time(double target_time_as_requested)
     number L2_residual = to!number(0.0);
     ConservedQuantities Linf_residuals = new ConservedQuantities(GlobalConfig.gmodel_master.n_species,
                                                                  GlobalConfig.gmodel_master.n_modes);
-    version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
+    version(mpi_parallel) { MPI_Sync_tasks(); }
     if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) {
         writeln("Integrate in time.");
         stdout.flush();
@@ -797,7 +863,7 @@ int integrate_in_time(double target_time_as_requested)
                     writeln(writer.data);
                     stdout.flush();
                 }
-                version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
+                version(mpi_parallel) { MPI_Sync_tasks(); }
                 if (GlobalConfig.report_residuals) {
                     // We also compute the residual information and write to screen
                     auto wallClock2 = 1.0e-3*(Clock.currTime() - SimState.wall_clock_start).total!"msecs"();
@@ -843,7 +909,7 @@ int integrate_in_time(double target_time_as_requested)
                         stdout.flush();
                     }
                 } // end if report_residuals
-                version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
+                version(mpi_parallel) { MPI_Sync_tasks(); }
             } // end if (step...
             //
             // 4.0 (Occasionally) Write out an intermediate solution
@@ -1761,13 +1827,13 @@ void gasdynamic_explicit_increment_with_fixed_grid()
     }
     // We've put this detector step here because it needs the ghost-cell data
     // to be current, as it should be just after a call to apply_convective_bc().
-    //if (GlobalConfig.flux_calculator == FluxCalculator.adaptive_hanel_ausmdv ||
-    //    GlobalConfig.flux_calculator == FluxCalculator.adaptive_hlle_roe ||
-    //    GlobalConfig.flux_calculator == FluxCalculator.adaptive_efm_ausmdv) {
-    foreach (blk; parallel(localFluidBlocksBySize,1)) {
-	if (blk.active) { blk.detect_shock_points(); }
+    if (GlobalConfig.flux_calculator == FluxCalculator.adaptive_hanel_ausmdv ||
+        GlobalConfig.flux_calculator == FluxCalculator.adaptive_hlle_roe ||
+        GlobalConfig.flux_calculator == FluxCalculator.adaptive_efm_ausmdv) {
+	foreach (blk; parallel(localFluidBlocksBySize,1)) {
+	    if (blk.active) { blk.detect_shock_points(); }
+	}
     }
-    //}
     foreach (blk; parallel(localFluidBlocksBySize,1)) {
         if (blk.active) { blk.convective_flux_phase0(allow_high_order_interpolation, gtl); }
     }
@@ -2351,7 +2417,8 @@ void gasdynamic_explicit_increment_with_moving_grid()
     // We've put this detector step here because it needs the ghost-cell data
     // to be current, as it should be just after a call to apply_convective_bc().
     if (GlobalConfig.flux_calculator == FluxCalculator.adaptive_hanel_ausmdv ||
-        GlobalConfig.flux_calculator == FluxCalculator.adaptive_hlle_roe) {
+        GlobalConfig.flux_calculator == FluxCalculator.adaptive_hlle_roe ||
+        GlobalConfig.flux_calculator == FluxCalculator.adaptive_efm_ausmdv) {
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
             if (blk.active) { blk.detect_shock_points(); }
         }

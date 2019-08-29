@@ -446,7 +446,7 @@ function FluidBlock:new(o)
    fluidBlocks[#(fluidBlocks)+1] = o
    o.label = o.label or string.format("FluidBlock-%d", o.id)
    if fluidBlocksDict[o.label] then
-      error('Have previously defined a fluidBlock with label "' .. o.label .. '"', 2)
+      error('Have previously defined a FluidBlock with label "' .. o.label .. '"', 2)
    end
    fluidBlocksDict[o.label] = o.id
    -- Set to -1 if NOT part of a fluid-block-array, otherwise use supplied value
@@ -783,79 +783,89 @@ function identifyBlockConnections(blockList, excludeList, tolerance)
    end -- for _,A
 end
 
-function FluidBlockArray(t)
-   -- We will embed the FluidBlockArray identity in the individual blocks
-   -- and we would like that identity to start from 0 for the D code.
-   local arrayId = #(fluidBlockArrays)
-   --
-   -- Expect one table as argument, with named fields.
-   -- Returns an array of FluidBlocks defined over a single region.
-   local flag = checkAllowedNames(t, {"grid", "initialState", "fillCondition",
+-- Class for FluidBlock-Array objects.
+FBArray = {
+   myType = "FBArray"
+}
+
+function FBArray:new(o)
+   local flag = type(self)=='table' and self.myType=='FBArray'
+   if not flag then
+      error("Make sure that you are using FBArray:new{} and not FBArray.new{}", 2)
+   end
+   o = o or {}
+   local flag = checkAllowedNames(o, {"grid", "initialState", "fillCondition",
 				      "active", "label", "omegaz", "bcList",
 				      "nib", "njb", "nkb"})
    if not flag then
-      error("Invalid name for item supplied to FluidBlockArray.", 2)
+      error("Invalid name for item supplied to FBArray constructor.", 2)
    end
-   t.label = t.label or string.format("FluidBlockArray-%d", arrayId)
-   if fluidBlockArraysDict[t.label] then
-      error('Have previously defined a fluidBlockArray with label "' .. t.label .. '"', 2)
+   setmetatable(o, self)
+   self.__index = self
+   -- We will embed the FBArray identity in the individual blocks
+   -- and we would like that identity to start from 0 for the D code.
+   o.id = #(fluidBlockArrays)
+   --
+   o.label = o.label or string.format("FluidBlockArray-%d", o.id)
+   if fluidBlockArraysDict[o.label] then
+      error('Have previously defined a FBArray with label "' .. o.label .. '"', 2)
    end
-   fluidBlockArraysDict[t.label] = arrayId
-   if not t.grid then
-      error("You need to supply a grid to FluidBlockArray.", 2)
+   fluidBlockArraysDict[o.label] = o.id
+   if not o.grid then
+      error("You need to supply a grid to FBArray constructor.", 2)
    end
-   if (not t.grid.get_type) or t.grid:get_type() ~= "structured_grid" then
-      error("You need to supply a structured_grid to FluidBlockArray.", 2)
+   if (not o.grid.get_type) or o.grid:get_type() ~= "structured_grid" then
+      error("You need to supply a structured_grid to FBArray constructor.", 2)
    end
-   if not t.initialState then
+   if not o.initialState then
       -- try old name
-      t.initialState = t.fillCondition
+      o.initialState = o.fillCondition
    end
-   if not t.initialState then
-      error("You need supply an initialState to FluidBlockArray.", 2)
+   if not o.initialState then
+      error("You need supply an initialState to FBArray constructor.", 2)
    end
-   t.omegaz = t.omegaz or 0.0
-   t.bcList = t.bcList or {} -- boundary conditions
+   o.omegaz = o.omegaz or 0.0
+   o.bcList = o.bcList or {} -- boundary conditions
    for _,face in ipairs(faceList(config.dimensions)) do
-      t.bcList[face] = t.bcList[face] or WallBC_WithSlip:new()
+      o.bcList[face] = o.bcList[face] or WallBC_WithSlip:new()
    end
-   t.xforceList = t.xforceList or {}
+   o.xforceList = o.xforceList or {}
    -- Numbers of subblocks in each coordinate direction
-   t.nib = t.nib or 1
-   t.njb = t.njb or 1
-   t.nkb = t.nkb or 1
+   o.nib = o.nib or 1
+   o.njb = o.njb or 1
+   o.nkb = o.nkb or 1
    if config.dimensions == 2 then
-      t.nkb = 1
+      o.nkb = 1
    end
    -- Extract some information from the StructuredGrid
    -- Note 0-based indexing for vertices and cells in the D-domain.
-   local nic_total = t.grid:get_niv() - 1
-   local dnic = math.floor(nic_total/t.nib)
-   local njc_total = t.grid:get_njv() - 1
-   local dnjc = math.floor(njc_total/t.njb)
-   local nkc_total = t.grid:get_nkv() - 1
-   local dnkc = math.floor(nkc_total/t.nkb)
+   local nic_total = o.grid:get_niv() - 1
+   local dnic = math.floor(nic_total/o.nib)
+   local njc_total = o.grid:get_njv() - 1
+   local dnjc = math.floor(njc_total/o.njb)
+   local nkc_total = o.grid:get_nkv() - 1
+   local dnkc = math.floor(nkc_total/o.nkb)
    if config.dimensions == 2 then
       nkc_total = 1
       dnkc = 1
    end
-   local blockArray = {} -- will be a multi-dimensional array indexed as [i][j][k]
-   local blockCollection = {} -- will be a single-dimensional array
+   o.blockArray = {} -- will be a multi-dimensional array indexed as [i][j][k]
+   o.blockCollection = {} -- will be a single-dimensional array
    local nic_remaining = nic_total
    local i0 = 0
-   for ib = 1, t.nib do
-      blockArray[ib] = {}
-      local nic = math.floor(nic_remaining/(t.nib-ib+1))
-      if (ib == t.nib) then
+   for ib = 1, o.nib do
+      o.blockArray[ib] = {}
+      local nic = math.floor(nic_remaining/(o.nib-ib+1))
+      if (ib == o.nib) then
          -- On last block, just use what's left
          nic = nic_remaining
       end
       nic_remaining = nic_remaining - nic
       local njc_remaining = njc_total
       local j0 = 0
-      for jb = 1, t.njb do
-         local njc = math.floor(njc_remaining/(t.njb-jb+1))
-	 if (jb == t.njb) then
+      for jb = 1, o.njb do
+         local njc = math.floor(njc_remaining/(o.njb-jb+1))
+	 if (jb == o.njb) then
 	    njc = njc_remaining
 	 end
          njc_remaining = njc_remaining - njc
@@ -863,68 +873,66 @@ function FluidBlockArray(t)
 	    -- 2D flow
             print("ib=", ib, "jb= ", jb)
             print("i0= ", i0, " nic= ", nic, " j0= ", j0, " njc= ", njc)
-	    local subgrid = t.grid:subgrid(i0,nic+1,j0,njc+1)
+	    local subgrid = o.grid:subgrid(i0,nic+1,j0,njc+1)
 	    local bcList = {north=WallBC_WithSlip:new(), east=WallBC_WithSlip:new(),
 			    south=WallBC_WithSlip:new(), west=WallBC_WithSlip:new()}
 	    if ib == 1 then
-	       bcList[west] = t.bcList[west]
+	       bcList[west] = o.bcList[west]
 	    end
-	    if ib == t.nib then
-	       bcList[east] = t.bcList[east]
+	    if ib == o.nib then
+	       bcList[east] = o.bcList[east]
 	    end
 	    if jb == 1 then
-	       bcList[south] = t.bcList[south]
+	       bcList[south] = o.bcList[south]
 	    end
-	    if jb == t.njb then
-	       bcList[north] = t.bcList[north]
+	    if jb == o.njb then
+	       bcList[north] = o.bcList[north]
 	    end
-	    local new_block = FluidBlock:new{grid=subgrid, omegaz=t.omegaz,
-                                             initialState=t.initialState,
+	    local new_block = FluidBlock:new{grid=subgrid, omegaz=o.omegaz,
+                                             initialState=o.initialState,
                                              bcList=bcList,
-                                             fluidBlockArrayId=arrayId
-            }
-	    blockArray[ib][jb] = new_block
-	    blockCollection[#blockCollection+1] = new_block
+                                             fluidBlockArrayId=o.id}
+	    o.blockArray[ib][jb] = new_block
+	    o.blockCollection[#o.blockCollection+1] = new_block
 	 else
 	    -- 3D flow, need one more level in the array
-	    blockArray[ib][jb] = {}
+	    o.blockArray[ib][jb] = {}
             local nkc_remaining = nkc_total
             local k0 = 0
-	    for kb = 1, t.nkb do
-               local nkc = math.floor(nkc_remaining/(t.nkb-kb+1))
-               if (kb == t.nkb) then
+	    for kb = 1, o.nkb do
+               local nkc = math.floor(nkc_remaining/(o.nkb-kb+1))
+               if (kb == o.nkb) then
                   nkc = nkc_remaining
                end
                nkc_remaining = nkc_remaining - nkc
-	       local subgrid = t.grid:subgrid(i0,nic+1,j0,njc+1,k0,nkc+1)
+	       local subgrid = o.grid:subgrid(i0,nic+1,j0,njc+1,k0,nkc+1)
 	       local bcList = {north=WallBC_WithSlip:new(), east=WallBC_WithSlip:new(),
 			       south=WallBC_WithSlip:new(), west=WallBC_WithSlip:new(),
 			       top=WallBC_WithSlip:new(), bottom=WallBC_WithSlip:new()}
 	       if ib == 1 then
-		  bcList[west] = t.bcList[west]
+		  bcList[west] = o.bcList[west]
 	       end
-	       if ib == t.nib then
-		  bcList[east] = t.bcList[east]
+	       if ib == o.nib then
+		  bcList[east] = o.bcList[east]
 	       end
 	       if jb == 1 then
-		  bcList[south] = t.bcList[south]
+		  bcList[south] = o.bcList[south]
 	       end
-	       if jb == t.njb then
-		  bcList[north] = t.bcList[north]
+	       if jb == o.njb then
+		  bcList[north] = o.bcList[north]
 	       end
 	       if kb == 1 then
-		  bcList[bottom] = t.bcList[bottom]
+		  bcList[bottom] = o.bcList[bottom]
 	       end
-	       if kb == t.nkb then
-		  bcList[top] = t.bcList[top]
+	       if kb == o.nkb then
+		  bcList[top] = o.bcList[top]
 	       end
-	       local new_block = FluidBlock:new{grid=subgrid, omegaz=t.omegaz,
-                                                initialState=t.initialState,
+	       local new_block = FluidBlock:new{grid=subgrid, omegaz=o.omegaz,
+                                                initialState=o.initialState,
                                                 bcList=bcList,
-                                                fluidBlockArrayId=arrayId,
-               }
-	       blockArray[ib][jb][kb] = new_block
-	       blockCollection[#blockCollection+1] = new_block
+                                                fluidBlockArrayId=o.id,}
+	       o.blockArray[ib][jb][kb] = new_block
+	       o.blockCollection[#o.blockCollection+1] = new_block
                -- Prepare k0 at end of loop, ready for next iteration
                k0 = k0 + nkc
 	    end -- kb loop
@@ -936,34 +944,34 @@ function FluidBlockArray(t)
       i0 = i0 + nic
    end -- ib loop
    -- Make the inter-subblock connections
-   if #blockCollection > 1 then
-      identifyBlockConnections(blockCollection)
+   if #o.blockCollection > 1 then
+      identifyBlockConnections(o.blockCollection)
    end
    --
-   -- Retain meta-information about fluidBlockArray
+   -- Retain meta-information about the new FluidBlockArray
    -- for use later in the user-defined functions, during simulation.
    -- Note that the index of this array starts at 1 (in the Lua way).
-   fluidBlockArrays[#fluidBlockArrays+1] = {
-      id=arrayId,
-      label=t.label,
-      nib=t.nib, njb=t.njb, nkb=t.nkb,
-      blockArray=blockArray,
-      blockCollection=blockCollection
-   }
+   fluidBlockArrays[#fluidBlockArrays+1] = o
    --
-   return blockArray
-end -- FluidBlockArray
+   return o
+end -- FBArray:new
 
-function fluidBlockArrayToJson(t)
-   local str = string.format('"fluid_block_array_%d": {\n', t.id)
-   str = str .. string.format('    "nib": %d,\n', t.nib)
-   str = str .. string.format('    "njb": %d,\n', t.njb)
-   str = str .. string.format('    "nkb": %d,\n', t.nkb)
+-- Retain the original behaviour.
+function FluidBlockArray(t)
+   o = FBArray:new(t)
+   return o.blockArray
+end
+
+function FBArray:tojson()
+   local str = string.format('"fluid_block_array_%d": {\n', self.id)
+   str = str .. string.format('    "nib": %d,\n', self.nib)
+   str = str .. string.format('    "njb": %d,\n', self.njb)
+   str = str .. string.format('    "nkb": %d,\n', self.nkb)
    str = str .. string.format('    "blockIds": [ ')
-   for ib=1,#(t.blockCollection)-1 do
-      str = str .. string.format('%d, ', t.blockCollection[ib].id)
+   for ib=1,#(self.blockCollection)-1 do
+      str = str .. string.format('%d, ', self.blockCollection[ib].id)
    end
-   str = str .. string.format('%d ]\n', t.blockCollection[#t.blockCollection].id)
+   str = str .. string.format('%d ]\n', self.blockCollection[#self.blockCollection].id)
    str = str .. '},\n'
    return str
 end
@@ -1360,9 +1368,15 @@ end
 function mpiDistributeBlocks(args)
    -- Assign blocks to MPI tasks,
    -- keeping a record of the MPI rank (or task) for every block.
+   -- This record is stored in the global variable mpiTasks.
    --
    if args and not(type(args) == "table") then
       error("mpiDistributeBlocks expects its arguments in single table with named fields", 2);
+   end
+   args = args or {}
+   local flag = checkAllowedNames(args, {"ntasks", "dist", "preassign"})
+   if not flag then
+      error("Invalid name for item supplied to mpiDistributeBlocks.", 2)
    end
    --
    local nBlocks = #fluidBlocks
@@ -1444,6 +1458,11 @@ function mpiDistributeBlocks(args)
    else
       error('Did not select one of "round-robin" or "load-balance". for mpiDistributeBlocks', 2) 
    end
+   -- Assign the newly-constructed list to the global variable
+   -- for later use in writing the job.mpimap file.
+   mpiTasks = mpiTaskList
+   -- Finally, return the list as we have always done, however,
+   -- we expect that the caller will ignore this return value.
    return mpiTaskList
 end
    
@@ -1669,8 +1688,6 @@ function write_config_file(fileName)
    f:write(string.format('"dimensions": %d,\n', config.dimensions))
    f:write(string.format('"axisymmetric": %s,\n',
 			 tostring(config.axisymmetric)))
-   f:write(string.format('"interpolation_order": %d,\n', config.interpolation_order))
-   f:write(string.format('"interpolation_delay": %.18e,\n', config.interpolation_delay))
    f:write(string.format('"strang_splitting": "%s",\n', config.strang_splitting))
    f:write(string.format('"gasdynamic_update_scheme": "%s",\n',
 			 config.gasdynamic_update_scheme))
@@ -1708,6 +1725,10 @@ function write_config_file(fileName)
 
    f:write(string.format('"high_order_flux_calculator": %s,\n', tostring(config.high_order_flux_calculator)))
    f:write(string.format('"flux_calculator": "%s",\n', config.flux_calculator))
+   f:write(string.format('"interpolation_order": %d,\n', config.interpolation_order))
+   f:write(string.format('"interpolation_delay": %.18e,\n', config.interpolation_delay))
+   f:write(string.format('"suppress_radial_reconstruction_at_xaxis": %s,\n',
+                         tostring(config.suppress_radial_reconstruction_at_xaxis)))
    f:write(string.format('"thermo_interpolator": "%s",\n', 
 			 string.lower(config.thermo_interpolator)))
    f:write(string.format('"allow_reconstruction_for_energy_modes": %s,\n', 
@@ -1747,6 +1768,7 @@ function write_config_file(fileName)
 			 tostring(config.suppress_reconstruction_at_captured_shocks)))
    f:write(string.format('"viscous_delay": %.18e,\n', config.viscous_delay))
    f:write(string.format('"shear_stress_relative_limit": %.18e,\n', config.shear_stress_relative_limit))
+   f:write(string.format('"apply_shear_stress_relative_limit": %s,\n', tostring(config.apply_shear_stress_relative_limit)))
    f:write(string.format('"mass_diffusion_model": "%s",\n',
 			 string.lower(config.mass_diffusion_model)))
    f:write(string.format('"constant_lewis_number": %s,\n', tostring(config.constant_lewis_number)))
@@ -1875,7 +1897,7 @@ function write_config_file(fileName)
    f:write(string.format('"nsolidblock": %d,\n', #solidBlocks))
 
    for i = 1, #fluidBlockArrays do
-      f:write(fluidBlockArrayToJson(fluidBlockArrays[i]))
+      f:write(fluidBlockArrays[i]:tojson())
    end
    for i = 1, #fluidBlocks do
       f:write(fluidBlocks[i]:tojson())
@@ -1910,7 +1932,7 @@ end
 
 function write_mpimap_file(fileName)
    if not mpiTasks then
-      mpiTasks = mpiDistributeBlocks()
+      mpiDistributeBlocks()
    end
    local f = assert(io.open(fileName, "w"))
    f:write("# indx mpiTask\n")

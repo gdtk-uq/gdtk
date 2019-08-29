@@ -271,7 +271,8 @@ public:
         auto sfb = cast(SFluidBlock) this;
         if (sfb) {
             // Some special processing for Structured-grid blocks.
-            if (myConfig.dimensions == 2 && myConfig.axisymmetric) {
+            if (myConfig.suppress_radial_reconstruction_at_xaxis &&
+                myConfig.dimensions == 2 && myConfig.axisymmetric) {
                 immutable double tol = 1.0e-9;
                 // Work along each boundary and suppress reconstruction for faces that are
                 // on the axis of symmetry or just one off the axis (but parallel to the axis).

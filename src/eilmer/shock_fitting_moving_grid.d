@@ -878,6 +878,7 @@ number scalar_reconstruction(number x1, number x2, number x3, number h1, number 
     number eps = 1.0e-12;
     number reconstructed_value;
     if (johnston_reconstruction) {
+        /+
         // This is a special one sided reconstruction presented in Ian Johnston's thesis. 
         number delta_theta = 2*(x2-x1)/(h1+h2);
         number delta_cross = 2*(x3-x2)/(h2+h3);
@@ -885,6 +886,17 @@ number scalar_reconstruction(number x1, number x2, number x3, number h1, number 
         number s = (2*(delta_cross)*(delta_theta)+eps)/((delta_cross)*(delta_cross)+(delta_theta)*(delta_theta)+eps);
         number delta_1 = s/2 * ((1-s*kappa)*delta_cross + (1+s*kappa)*delta_theta);
         reconstructed_value =  x1 - (delta_1 * 0.5*h1);
+        +/
+        // The more accurate reconstruction scheme from Johnston, which is more accurate for the schemes where there is no discontinuity at the boundary due to the selective upwinding bias.
+        number kappa = 0.5;
+        number delta_circleminus_f2 = (x2 - x1) / (h1 + h2);
+        number delta_circleplus_f2 = (x3 - x2) / (h2 + h3);
+        number delta_minus_f2 = (x2 - x1);
+        number delta_plus_f2 = (x3 - x2);
+        number s_f2 = (2 * delta_plus_f2 * delta_minus_f2 + eps) / (delta_plus_f2 * delta_plus_f2 + delta_minus_f2 * delta_minus_f2 + eps);
+        number delta_1 = (s_f2 / 2.0) * ((1 - s_f2 * kappa) * delta_circleplus_f2 + (1 + s_f2 * kappa) * delta_circleminus_f2);
+        number delta_2 = 2 * (x1 - g1) / (h1 + h1);
+        reconstructed_value = x1 - h1 * (sgn(abs(delta_1) - abs(delta_2)) * (delta_2 - delta_1) + delta_1 + delta_2);
     }
     else {
         // linear one-sided reconstruction function 

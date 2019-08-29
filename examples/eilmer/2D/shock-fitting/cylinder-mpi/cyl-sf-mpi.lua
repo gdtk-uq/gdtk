@@ -42,7 +42,7 @@ identifyBlockConnections()
 
 -- Set a few more config options
 config.flux_calculator = "ausmdv"
-mpiTasks = mpiDistributeBlocks{ntasks=8, dist="load-balance", preassign={[0]=1}}
+mpiDistributeBlocks{ntasks=8, dist="load-balance", preassign={[0]=1}}
 config.report_invalid_cells = false
 config.gasdynamic_update_scheme = "moving-grid-2-stage"
 config.max_time = (radius*2)/u_inf * 20 -- 16 flow lengths

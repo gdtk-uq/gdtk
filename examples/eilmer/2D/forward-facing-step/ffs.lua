@@ -46,7 +46,7 @@ blk2 = FluidBlockArray{grid=grid2, nib=4, njb=4,
 identifyBlockConnections()
 
 -- The number of MPI tasks needs to match the mpirun command.
-mpiTasks = mpiDistributeBlocks{ntasks=3}
+mpiDistributeBlocks{ntasks=3}
 config.max_time = 5.0e-3  -- seconds
 config.max_step = 6000
 config.dt_plot = 1.0e-3

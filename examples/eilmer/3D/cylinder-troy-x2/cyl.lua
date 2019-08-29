@@ -155,4 +155,6 @@ config.max_time = my_max_time
 config.max_step = 40000
 config.dt_init = 1.0e-9
 config.cfl_value = 0.5
+config.cfl_count = 3 -- needed for stability 2019-08-22
+config.flowstate_limits_max_temp = 51000.0 -- to suppress warnings 2019-08-22
 config.dt_plot = my_max_time/10

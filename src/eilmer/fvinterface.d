@@ -671,16 +671,23 @@ public:
                     if (myConfig.dimensions == 3) { tau_wz = mu_effective * grad.omega[2]; } 
                 }
             }
-            // Apply limits to the component values.
-            tau_xx = copysign(fmin(fabs(tau_xx),shear_stress_limit), tau_xx);
-            tau_yy = copysign(fmin(fabs(tau_yy),shear_stress_limit), tau_yy);
-            tau_zz = copysign(fmin(fabs(tau_zz),shear_stress_limit), tau_zz);
-            tau_xy = copysign(fmin(fabs(tau_xy),shear_stress_limit), tau_xy);
-            tau_xz = copysign(fmin(fabs(tau_xz),shear_stress_limit), tau_xz);
-            tau_yz = copysign(fmin(fabs(tau_yz),shear_stress_limit), tau_yz);
-            qx = copysign(fmin(fabs(qx),heat_transfer_limit), qx);
-            qy = copysign(fmin(fabs(qy),heat_transfer_limit), qy);
-            qz = copysign(fmin(fabs(qz),heat_transfer_limit), qz);
+            if (myConfig.apply_shear_stress_relative_limit) {
+                version(complex_numbers) {
+                    // Do not try to limit the component values.
+                    // Something in this limiting plays havoc with the complex derivatives.
+                } else {
+                    // Apply limits to the component values.
+                    tau_xx = copysign(fmin(fabs(tau_xx),shear_stress_limit), tau_xx);
+                    tau_yy = copysign(fmin(fabs(tau_yy),shear_stress_limit), tau_yy);
+                    tau_zz = copysign(fmin(fabs(tau_zz),shear_stress_limit), tau_zz);
+                    tau_xy = copysign(fmin(fabs(tau_xy),shear_stress_limit), tau_xy);
+                    tau_xz = copysign(fmin(fabs(tau_xz),shear_stress_limit), tau_xz);
+                    tau_yz = copysign(fmin(fabs(tau_yz),shear_stress_limit), tau_yz);
+                    qx = copysign(fmin(fabs(qx),heat_transfer_limit), qx);
+                    qy = copysign(fmin(fabs(qy),heat_transfer_limit), qy);
+                    qz = copysign(fmin(fabs(qz),heat_transfer_limit), qz);
+                }
+            } // end if apply_shear_stress_relative_limit
             //
             // Combine into fluxes: store as the dot product (F.n).
             number nx = n.x;

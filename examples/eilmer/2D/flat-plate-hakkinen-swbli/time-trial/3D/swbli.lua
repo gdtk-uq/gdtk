@@ -38,7 +38,7 @@ bc_map = {SUP_IN=InFlowBC_Supersonic:new{flowState=inflow},
 applyGridproBoundaryConditions(gpro_pty, blk_list, bc_map)
 
 --------------------- MPI Setup ---------------------
-mpiTasks = mpiDistributeBlocks{ntasks=4, dist="load-balance"}
+mpiDistributeBlocks{ntasks=4, dist="load-balance"}
 
 mm = 1.0e-3 -- metres per mm
 L2 = 90.0*mm
