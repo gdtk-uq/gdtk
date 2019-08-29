@@ -852,10 +852,11 @@ public:
 		    dt_allow_parab = cfl_value / signal_parab;
 		    first = false;
 		} else {
-		    dt_allow_hyp = fmax(dt_allow_hyp, cfl_value / signal_hyp);
+		    if (myConfig.super_step_hyperbolic) dt_allow_hyp = fmax(dt_allow_hyp, cfl_value / signal_hyp);
+		    else dt_allow_hyp = fmin(dt_allow_hyp, cfl_value / signal_hyp);		    
 		    dt_allow_parab = fmin(dt_allow_parab, cfl_value / signal_parab);
 		}
-		dt_allow = dt_allow_hyp; // FIXME: Kyle D. 26/07/2019
+		dt_allow = dt_allow_hyp;
       	    } else {
 		// no STS
 		dt_allow_hyp = 0;
