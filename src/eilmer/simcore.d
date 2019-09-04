@@ -1301,24 +1301,15 @@ void determine_time_step_size()
             // Now, change the actual time step, as needed.
             if (SimState.dt_allow <= SimState.dt_global) {
                 // If we need to reduce the time step, do it immediately.
-                //SimState.dt_global = SimState.dt_allow;
+                SimState.dt_global = SimState.dt_allow;
 	    } else {
                 // Make the transitions to larger time steps gentle.
 		SimState.dt_global = min(SimState.dt_global*1.5, SimState.dt_allow);
 		// The user may supply, explicitly, a maximum time-step size.
                 SimState.dt_global = min(SimState.dt_global, GlobalConfig.dt_max);
 	    }
-            if (SimState.dt_allow_parab <= SimState.dt_global_parab) {
-                // If we need to reduce the time step, do it immediately.
-                //SimState.dt_global_parab = SimState.dt_allow_parab;
-            } else {
-                // Make the transitions to larger time steps gentle.
-                SimState.dt_global_parab = min(SimState.dt_global_parab*1.5, SimState.dt_allow_parab);
-                // The user may supply, explicitly, a maximum time-step size.
-                SimState.dt_global_parab = min(SimState.dt_global_parab, GlobalConfig.dt_max);
-            }
-	    //SimState.dt_global = SimState.dt_allow;
-	    //SimState.dt_global_parab = SimState.dt_allow_parab;
+ 	    SimState.dt_global = SimState.dt_allow;
+	    SimState.dt_global_parab = SimState.dt_allow_parab;
 	} else if (GlobalConfig.with_local_time_stepping) { SimState.dt_global = SimState.dt_allow; }
 	else { // do some global time-stepping checks
             if (SimState.step == 0) {
@@ -1581,19 +1572,20 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
     }
     
     // store as an int for looping later
-    int S = to!int(s);
-
+    //int S = to!int(s);
+    int S;
     // if S is less than 1 then just set S = 1 (Euler step)
-    if (S <= 1) {
-	S = 1;
-	s = 1;
-	SimState.dt_global = SimState.dt_global_parab;
+    if (s <= 1) {
+	S = 2;
+	s = 2;
     }
-    else {
-	// since we round S down to the nearest odd integer we should alter the time-step to be consistent
-	SimState.dt_global = SimState.dt_global_parab * (S*S+S)/(2.0);
+    else {    // store as an int for looping later
+	S = to!int(s);
     }
-
+    
+    // since we round S down to the nearest odd integer we should alter the time-step to be consistent
+    SimState.dt_global = SimState.dt_global_parab * (S*S+S)/(2.0);
+    
     // for temporal MMS uncomment the following lines
     //S = 4;
     //s = 4;
@@ -3024,3 +3016,4 @@ void finalize_simulation()
         writeln("Step= ", SimState.step, " final-t= ", SimState.time);
     }
 } // end finalize_simulation()
+
