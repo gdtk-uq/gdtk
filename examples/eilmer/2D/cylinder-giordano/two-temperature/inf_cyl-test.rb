@@ -55,6 +55,6 @@ class TestInfCyl < Test::Unit::TestCase
     values['T_v'] = items[columns['T_v']-1].to_f
     #
     assert((values['T_tr'] - 2536.4).abs < 20.0, "Failed to see correct translational T.")
-    assert((values['T_v'] - 2349.0).abs < 60.0, "Failed to see correct vibrational T.")
+    assert((values['T_v'] - 2398.0).abs < 60.0, "Failed to see correct vibrational T.")
   end
 end
