@@ -40,7 +40,7 @@ identifyBlockConnections()
 
 -- Set a few more config options
 config.flux_calculator = "ausmdv"
-config.gasdynamic_update_scheme = "moving-grid-1-stage"
+config.gasdynamic_update_scheme = "moving-grid-2-stage"
 config.max_time = (radius*2)/u_inf * 20 -- 16 flow lengths
 config.max_step = 400000
 config.cfl_value = 0.5
