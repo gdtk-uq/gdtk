@@ -413,12 +413,30 @@ public:
             auto cL = iface.left_cell;
             auto cR = iface.right_cell;
             if (cL && cR) {
+                // We have two cells interacting.
+                // Compare the relative gas velocities.
                 number uL = geom.dot(cL.fs.vel, iface.n);
                 number uR = geom.dot(cR.fs.vel, iface.n);
                 number aL = cL.fs.gas.a;
                 number aR = cR.fs.gas.a;
                 number a_min = (aL < aR) ? aL : aR;
                 iface.fs.S = ((uR - uL)/a_min) < tol;
+            } else if (cL) {
+                // We have left-cell with a wall on the right.
+                // Use the gas velocity relative to the wall.
+                Vector3 vel; vel.set(cL.fs.vel);
+                vel.add(iface.gvel, to!number(-1.0));
+                number uL = geom.dot(vel, iface.n);
+                number aL = cL.fs.gas.a;
+                iface.fs.S = ((-uL)/aL) < tol;
+            } else if (cR) {
+                // We have a right-cell with a wall on the left.
+                // Use the gas velocity relative to the wall.
+                Vector3 vel; vel.set(cR.fs.vel);
+                vel.add(iface.gvel, to!number(-1.0));
+                number uR = geom.dot(vel, iface.n);
+                number aR = cR.fs.gas.a;
+                iface.fs.S = (uR/aR) < tol;
             } else {
                 iface.fs.S = 0;
             }
