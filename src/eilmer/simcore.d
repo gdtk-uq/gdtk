@@ -1284,10 +1284,13 @@ void determine_time_step_size()
         }
         version(mpi_parallel) {
             double my_dt_allow = SimState.dt_allow;
+            double my_dt_allow_parab = SimState.dt_allow_parab;
             double my_cfl_max = SimState.cfl_max;
             MPI_Allreduce(MPI_IN_PLACE, &my_dt_allow, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+	    MPI_Allreduce(MPI_IN_PLACE, &my_dt_allow_parab, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
             MPI_Allreduce(MPI_IN_PLACE, &my_cfl_max, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
             SimState.dt_allow = my_dt_allow;
+            SimState.dt_allow_parab = my_dt_allow_parab;
             SimState.cfl_max = my_cfl_max;
         }
 	if (GlobalConfig.with_super_time_stepping) { 
