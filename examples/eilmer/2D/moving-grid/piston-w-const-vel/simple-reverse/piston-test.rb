@@ -28,7 +28,7 @@ class TestPiston < Test::Unit::TestCase
         steps = items[1].to_i
       end
     end
-    assert((steps - 506).abs < 3, "Failed to take correct number of steps.")
+    assert((steps - 506).abs < 10, "Failed to take correct number of steps.")
   end
 
   def test_2_post

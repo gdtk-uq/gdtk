@@ -37,7 +37,7 @@ class TestSod < Test::Unit::TestCase
 
   def test_2_post_shock_region
     ref = {'rho'=>0.2647, 'p'=>30.2e3, 'T'=>398.0, 'velx'=>293.0}
-    cmd = 'e4shared --post --job=sod --tindx-plot=last --add-vars="mach" --probe=0.8,0.025,0.025'
+    cmd = 'e4shared --post --job=sod --tindx-plot=last --add-vars="mach" --probe=0.78,0.025,0.025'
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
     lines = o.split("\n")

@@ -539,6 +539,11 @@ final class GlobalConfig {
     // Faces along the x-axis and the first row off the axis are flagged.
     // Faces normal to the x-axis are not flagged. 
     shared static bool suppress_radial_reconstruction_at_xaxis = false;
+    // We will activate the shock detector if selected features need it.
+    shared static bool do_shock_detect = false;
+    // We might optionally want to suppress reconstruction at faces at shocks.
+    // Presently, we need to opt-in to this feature. 2019-09-04, PJ
+    shared static bool suppress_reconstruction_at_shocks = false;
     // Default flow-data reconstruction includes interpolation of density 
     // and internal energy.  Other options for the thermodunamic properties
     // to be interpolated are pressure+temperature, density+temperature and
@@ -856,6 +861,7 @@ public:
     double interpolation_delay;
     BlockZone[] suppress_reconstruction_zones;
     bool suppress_radial_reconstruction_at_xaxis;
+    bool suppress_reconstruction_at_shocks;
     InterpolateOption thermo_interpolator;
     bool allow_reconstruction_for_energy_modes;
     bool apply_limiter;
@@ -985,6 +991,7 @@ public:
             suppress_reconstruction_zones ~= new BlockZone(bz);
         }
         suppress_radial_reconstruction_at_xaxis = GlobalConfig.suppress_radial_reconstruction_at_xaxis;
+        suppress_reconstruction_at_shocks = GlobalConfig.suppress_reconstruction_at_shocks;
         thermo_interpolator = GlobalConfig.thermo_interpolator;
         allow_reconstruction_for_energy_modes = GlobalConfig.allow_reconstruction_for_energy_modes;
         apply_limiter = GlobalConfig.apply_limiter;
@@ -1294,6 +1301,7 @@ void read_config_file()
     mixin(update_int("interpolation_order", "interpolation_order"));
     mixin(update_double("interpolation_delay", "interpolation_delay"));
     mixin(update_bool("suppress_radial_reconstruction_at_xaxis", "suppress_radial_reconstruction_at_xaxis"));
+    mixin(update_bool("suppress_reconstruction_at_shocks", "suppress_reconstruction_at_shocks"));
     mixin(update_enum("thermo_interpolator", "thermo_interpolator", "thermo_interpolator_from_name"));
     mixin(update_bool("allow_reconstruction_for_energy_modes", "allow_reconstruction_for_energy_modes"));
     mixin(update_bool("apply_limiter", "apply_limiter"));
@@ -1357,6 +1365,8 @@ void read_config_file()
         writeln("  interpolation_order: ", GlobalConfig.interpolation_order);
         writeln("  interpolation_delay: ", GlobalConfig.interpolation_delay);
         writeln("  suppress_radial_reconstruction_at_xaxis: ", GlobalConfig.suppress_radial_reconstruction_at_xaxis);
+        writeln("  do_shock_detect: ", GlobalConfig.do_shock_detect);
+        writeln("  suppress_reconstruction_at_shocks: ", GlobalConfig.suppress_reconstruction_at_shocks);
         writeln("  thermo_interpolator: ", thermo_interpolator_name(GlobalConfig.thermo_interpolator));
         writeln("  apply_limiter: ", GlobalConfig.apply_limiter);
         writeln("  unstructured_limiter: ", unstructured_limiter_name(GlobalConfig.unstructured_limiter));
@@ -1888,6 +1898,19 @@ void configCheckPoint1()
         GlobalConfig.apply_bcs_in_parallel) {
         writeln("NOTE: apply_bcs_in_parallel is set to false when shock_fitting is used.");
         GlobalConfig.apply_bcs_in_parallel = false;
+    }
+    if (!GlobalConfig.do_shock_detect) {
+        if (GlobalConfig.suppress_reconstruction_at_shocks) {
+            GlobalConfig.do_shock_detect = true;
+        }
+        if (GlobalConfig.flux_calculator == FluxCalculator.adaptive_hanel_ausmdv ||
+            GlobalConfig.flux_calculator == FluxCalculator.adaptive_hlle_roe ||
+            GlobalConfig.flux_calculator == FluxCalculator.adaptive_efm_ausmdv) {
+            GlobalConfig.do_shock_detect = true;
+        }
+        if (GlobalConfig.do_shock_detect) {
+            writeln("NOTE: turning on shock detector.");
+        }
     }
     return;
 } // end configCheckPoint1()

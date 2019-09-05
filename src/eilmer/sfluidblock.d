@@ -2031,7 +2031,8 @@ public:
                     } else {
                         Rght.copy_values_from(cR0.fs);
                     }
-                    if (do_reconstruction && !IFace.in_suppress_reconstruction_zone) {
+                    if (do_reconstruction && !IFace.in_suppress_reconstruction_zone &&
+                        !(myConfig.suppress_reconstruction_at_shocks && IFace.fs.S)) {
                         if ((i == imin) && !(bc[Face.west].ghost_cell_data_available)) {
                             one_d.interp_l0r2(IFace, cR0, cR1, cR0.iLength, cR1.iLength, Lft, Rght);
                         } else if ((i == imin+1) && !(bc[Face.west].ghost_cell_data_available)) {
@@ -2081,7 +2082,8 @@ public:
                     } else {
                         Rght.copy_values_from(cR0.fs);
                     }
-                    if (do_reconstruction && !IFace.in_suppress_reconstruction_zone) {
+                    if (do_reconstruction && !IFace.in_suppress_reconstruction_zone &&
+                        !(myConfig.suppress_reconstruction_at_shocks && IFace.fs.S)) {
                         if ((j == jmin) && !(bc[Face.south].ghost_cell_data_available)) {
                             one_d.interp_l0r2(IFace, cR0, cR1, cR0.jLength, cR1.jLength, Lft, Rght);
                         } else if ((j == jmin+1) && !(bc[Face.south].ghost_cell_data_available)) {
@@ -2134,7 +2136,8 @@ public:
                     } else {
                         Rght.copy_values_from(cR0.fs);
                     }
-                    if (do_reconstruction && !IFace.in_suppress_reconstruction_zone) {
+                    if (do_reconstruction && !IFace.in_suppress_reconstruction_zone &&
+                        !(myConfig.suppress_reconstruction_at_shocks && IFace.fs.S)) {
                         if ((k == kmin) && !(bc[Face.bottom].ghost_cell_data_available)) {
                             one_d.interp_l0r2(IFace, cR0, cR1, cR0.kLength, cR1.kLength, Lft, Rght);
                         } else if ((k == kmin+1) && !(bc[Face.bottom].ghost_cell_data_available)) {

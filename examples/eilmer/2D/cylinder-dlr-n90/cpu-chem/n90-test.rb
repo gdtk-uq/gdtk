@@ -44,7 +44,7 @@ class TestCone20 < Test::Unit::TestCase
     # as it was computed on PJ's computer 2019-05-25.
     refs = {'rho'=>1.9090e-02, 'vel.x'=>5.797e+02, 'p'=>5.3735e+04,
             'massf_N'=>1.749e-02, 'T'=>9.3205e+03}
-    tols = {'rho'=>0.01, 'vel.x'=>0.1, 'p'=>0.01, 'massf_N'=>0.1, 'T'=>0.01}
+    tols = {'rho'=>0.01, 'vel.x'=>0.1, 'p'=>0.01, 'massf_N'=>0.15, 'T'=>0.01}
     columns = {}
     values = {}
     lines = o.split("\n")
