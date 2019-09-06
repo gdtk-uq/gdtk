@@ -1730,6 +1730,8 @@ function write_config_file(fileName)
                          tostring(config.suppress_radial_reconstruction_at_xaxis)))
    f:write(string.format('"suppress_reconstruction_at_shocks": %s,\n',
                          tostring(config.suppress_reconstruction_at_shocks)))
+   f:write(string.format('"suppress_reconstruction_at_boundaries": %s,\n',
+			 tostring(config.suppress_reconstruction_at_boundaries)))
    f:write(string.format('"thermo_interpolator": "%s",\n', 
 			 string.lower(config.thermo_interpolator)))
    f:write(string.format('"allow_reconstruction_for_energy_modes": %s,\n', 
@@ -1763,10 +1765,6 @@ function write_config_file(fileName)
    f:write(string.format('"spatial_deriv_locn": "%s",\n', config.spatial_deriv_locn))
    f:write(string.format('"include_ghost_cells_in_spatial_deriv_clouds": %s,\n',
 			 tostring(config.include_ghost_cells_in_spatial_deriv_clouds)))
-   f:write(string.format('"suppress_reconstruction_at_boundaries": %s,\n',
-			 tostring(config.suppress_reconstruction_at_boundaries)))
-   f:write(string.format('"suppress_reconstruction_at_captured_shocks": %s,\n',
-			 tostring(config.suppress_reconstruction_at_captured_shocks)))
    f:write(string.format('"viscous_delay": %.18e,\n', config.viscous_delay))
    f:write(string.format('"shear_stress_relative_limit": %.18e,\n', config.shear_stress_relative_limit))
    f:write(string.format('"apply_shear_stress_relative_limit": %s,\n', tostring(config.apply_shear_stress_relative_limit)))

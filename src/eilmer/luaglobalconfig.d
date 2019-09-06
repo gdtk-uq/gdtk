@@ -131,6 +131,8 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_int_field("interpolation_order", "interpolation_order"));
     mixin(get_bool_field("suppress_radial_reconstruction_at_xaxis", "suppress_radial_reconstruction_at_xaxis"));
     mixin(get_bool_field("suppress_reconstruction_at_shocks", "suppress_reconstruction_at_shocks"));
+    mixin(get_bool_field("suppress_reconstruction_at_captured_shocks", "suppress_reconstruction_at_shocks")); // old name
+    mixin(get_bool_field("suppress_reconstruction_at_boundaries", "suppress_reconstruction_at_boundaries"));
     mixin(get_double_field("interpolation_delay", "interpolation_delay"));
     mixin(get_enum_field("thermo_interpolator", "thermo_interpolator", "thermo_interpolator_from_name"));
     mixin(get_bool_field("allow_reconstruction_for_energy_modes", "allow_reconstruction_for_energy_modes"));
@@ -161,8 +163,6 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_enum_field("spatial_deriv_calc", "spatial_deriv_calc", "spatial_deriv_calc_from_name"));
     mixin(get_enum_field("spatial_deriv_locn", "spatial_deriv_locn", "spatial_deriv_locn_from_name"));
     mixin(get_bool_field("include_ghost_cells_in_spatial_deriv_clouds", "include_ghost_cells_in_spatial_deriv_clouds"));
-    mixin(get_bool_field("suppress_reconstruction_at_boundaries", "suppress_reconstruction_at_boundaries"));
-    mixin(get_bool_field("suppress_reconstruction_at_captured_shocks", "suppress_reconstruction_at_captured_shocks"));
     mixin(get_double_field("viscous_factor_increment", "viscous_factor_increment"));
     mixin(get_double_field("viscous_delay", "viscous_delay"));
     mixin(get_double_field("shear_stress_relative_limit", "shear_stress_relative_limit"));
@@ -310,6 +310,8 @@ extern(C) int configGet(lua_State* L)
     case "interpolation_delay": lua_pushnumber(L, GlobalConfig.interpolation_delay); break;
     case "suppress_radial_reconstruction_at_xaxis": lua_pushboolean(L, GlobalConfig.suppress_radial_reconstruction_at_xaxis); break;
     case "suppress_reconstruction_at_shocks": lua_pushboolean(L, GlobalConfig.suppress_reconstruction_at_shocks); break;
+    case "suppress_reconstruction_at_captured_shocks": lua_pushboolean(L, GlobalConfig.suppress_reconstruction_at_shocks); break; // old name
+    case "suppress_reconstruction_at_boundaries": lua_pushboolean(L, GlobalConfig.suppress_reconstruction_at_boundaries); break;
     case "thermo_interpolator": lua_pushstring(L, thermo_interpolator_name(GlobalConfig.thermo_interpolator).toStringz); break;
     case "allow_reconstruction_for_energy_modes": lua_pushboolean(L, GlobalConfig.allow_reconstruction_for_energy_modes); break;
     case "apply_limiter": lua_pushboolean(L, GlobalConfig.apply_limiter); break;
@@ -338,8 +340,6 @@ extern(C) int configGet(lua_State* L)
     case "spatial_deriv_calc": lua_pushstring(L, spatial_deriv_calc_name(GlobalConfig.spatial_deriv_calc).toStringz); break;
     case "spatial_deriv_locn": lua_pushstring(L, spatial_deriv_locn_name(GlobalConfig.spatial_deriv_locn).toStringz); break;
     case "include_ghost_cells_in_spatial_deriv_clouds": lua_pushboolean(L, GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds); break;
-    case "suppress_reconstruction_at_boundaries": lua_pushboolean(L, GlobalConfig.suppress_reconstruction_at_boundaries); break;
-    case "suppress_reconstruction_at_captured_shocks": lua_pushboolean(L, GlobalConfig.suppress_reconstruction_at_captured_shocks); break;
     case "viscous_factor_increment": lua_pushnumber(L, GlobalConfig.viscous_factor_increment); break;
     case "viscous_delay": lua_pushnumber(L, GlobalConfig.viscous_delay); break;
     case "shear_stress_relative_limit": lua_pushnumber(L, GlobalConfig.shear_stress_relative_limit); break;
