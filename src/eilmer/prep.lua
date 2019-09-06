@@ -2190,16 +2190,4 @@ function build_job_files(job)
    print("Done building files.")
 end
 
-
-if false then
-   -- Keep old names available, for now.
-   -- Once we purge all of the old names from the examples,
-   -- we should delete this code block
-   SBlock = FluidBlock
-   UBlock = FluidBlock
-   SBlockArray = FluidBlockArray
-   SSolidBlock = SolidBlock
-   SSolidBlockArray = SolidBlockArray
-end
-
 print("Done loading prep.lua")
