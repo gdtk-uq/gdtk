@@ -602,7 +602,7 @@ extern(C) int dotlabelSketch(lua_State* L)
     lua_getfield(L, 1, "font_family");
     if (!lua_isnil(L, -1)) {
         if (lua_isstring(L, -1)) {
-            colour = to!string(lua_tostring(L, -1));
+            fontFamily = to!string(lua_tostring(L, -1));
         } else {
             string errMsg = "Error in call to Sketch:text{}. Expected a string for font_family.";
             luaL_error(L, errMsg.toStringz());
