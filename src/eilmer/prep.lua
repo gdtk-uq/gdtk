@@ -2039,7 +2039,7 @@ function write_fluidBlockArrays_file(fileName)
    end
    f:write("} -- end fluidBlocksDict\n")
    --
-   f:write([[
+   local fnBodyStr = [[
 function is_in_FluidBlockArray(blkId, label)
    -- Returns true if a block is in a particular FluidBlockArray.
    local myfba = whichFluidBlockArrayLabel[blkId]
@@ -2052,7 +2052,8 @@ function is_in_FluidBlockArray(blkId, label)
       return false
    end
 end
-]])
+]]
+   f:write(fnBodyStr)
    --
    f:close()
 end -- function write_fluidBlockArrays_file
