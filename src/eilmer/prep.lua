@@ -2095,6 +2095,26 @@ function perform_spatial_gradient_consistency_check()
    end
 end
 
+function warn_if_blocks_not_connected()
+   -- It would be very unusual to have defined multiple FluidBlocks
+   -- and not have any connections between them.
+   -- Such an arrangement would be unintended, almost certainly.
+   if #fluidBlocks > 1 then
+      local n = 0
+      for _,blk in ipairs(fluidBlocks) do
+         for bndry,bc in pairs(blk.bcList) do
+            if string.find(bc.type, "exchange_") then
+               n = n + 1
+            end
+         end
+      end
+      if n == 0 then
+         print("WARNING: Did not find any inter-block connections.")
+         print("         Did you forget to call identifyBlockConnections()?")
+      end
+   end
+end
+
 function build_job_files(job)
    if #fluidBlocksForPrep == 0 then
       -- We'll set *all* blocks for processing.
@@ -2103,6 +2123,7 @@ function build_job_files(job)
       end
    end
    perform_spatial_gradient_consistency_check()
+   warn_if_blocks_not_connected()
    if buildMasterFiles then
       print("Build job files for ", job)
       os.execute("mkdir -p config")
