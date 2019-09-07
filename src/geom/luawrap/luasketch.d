@@ -347,6 +347,58 @@ extern(C) int polylineSketch(lua_State* L)
     return 0;
 } // end polylineSketch()
 
+extern(C) int arcSketch(lua_State *L)
+{
+    auto my_sketch = checkObj!(Sketch, SketchMT)(L, 1); // first argument "this"
+    lua_remove(L, 1); // remove first argument "this"
+    // Now, I'm expecting a table of arguments as the only item on the stack.
+    int narg = lua_gettop(L);
+    if (narg == 0 || !lua_istable(L, 1)) {
+        string errMsg = "Error in call to Sketch:arc{}.; " ~
+            "A table containing arguments is expected, but no table was found.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    //
+    lua_getfield(L, 1, "p0");
+    if (lua_isnil(L, -1)) {
+        string errMsg = "Error in call to Sketch:arc{}. No p0 entry found.";
+        luaL_error(L, errMsg.toStringz());
+    }
+    auto p0 = toVector3(L, -1);
+    lua_pop(L, 1); // dispose of p0 item
+    //
+    lua_getfield(L, 1, "p1");
+    if (lua_isnil(L, -1)) {
+        string errMsg = "Error in call to Sketch:arc{}. No p1 entry found.";
+        luaL_error(L, errMsg.toStringz());
+    }
+    auto p1 = toVector3(L, -1);
+    lua_pop(L, 1); // dispose of p1 item
+    //
+    lua_getfield(L, 1, "centre");
+    if (lua_isnil(L, -1)) {
+        string errMsg = "Error in call to Sketch:arc{}. No centre entry found.";
+        luaL_error(L, errMsg.toStringz());
+    }
+    auto pc = toVector3(L, -1);
+    lua_pop(L, 1); // dispose of centre item
+    //
+    bool dashed = false;
+    lua_getfield(L, 1, "dashed");
+    if (!lua_isnil(L, -1)) {
+        if (lua_isboolean(L, -1)) {
+            dashed = to!bool(lua_toboolean(L, -1));
+        } else {
+            string errMsg = "Error in call to Sketch:arc{}. Expected a bool for dashed.";
+            luaL_error(L, errMsg.toStringz());
+        }
+    }
+    lua_pop(L, 1); // dispose of dashed item
+    //
+    my_sketch.arc(p0, p1, pc, dashed);
+    return 0;
+} // end arcSketch()
+
 extern(C) int polygonSketch(lua_State* L)
 {
     auto my_sketch = checkObj!(Sketch, SketchMT)(L, 1); // first argument "this"
@@ -864,6 +916,8 @@ void registerSketch(lua_State* L)
     lua_setfield(L, -2, "set");
     lua_pushcfunction(L, &lineSketch);
     lua_setfield(L, -2, "line");
+    lua_pushcfunction(L, &arcSketch);
+    lua_setfield(L, -2, "arc");
     lua_pushcfunction(L, &textSketch);
     lua_setfield(L, -2, "text");
     lua_pushcfunction(L, &dotlabelSketch);
