@@ -1823,58 +1823,8 @@ public:
     @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        computeFluxesAndTemperatures(ftl, _gasCells, _gasIFaces, _solidCells, _solidIFaces);
+        auto myBC = blk.bc[which_boundary];
+        computeFluxesAndTemperatures(ftl, myBC.gasCells, myBC.faces, myBC.solidCells, myBC.solidIFaces);
     }
-
-private:
-    // Some private working arrays.
-    // We'll pack data into these can pass out
-    // to a routine that can compute the flux and
-    // temperatures that balance at the interface.
-    FVCell[] _gasCells;
-    FVInterface[] _gasIFaces;
-    SolidFVCell[] _solidCells;
-    SolidFVInterface[] _solidIFaces;
-
-public:
-    void initSolidCellsAndIFaces()
-    {
-        size_t i, j, k;
-        auto blk = solidBlocks[neighbourSolidBlk];
-        switch ( neighbourSolidFace ) {
-        case Face.south:
-            j = blk.jmin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    _solidCells ~= blk.getCell(i, j, k);
-                    _solidIFaces ~= _solidCells[$-1].iface[Face.south];
-                }
-            }
-            break;
-        default:
-            throw new Error("initSolidCellsAndIFaces() only implemented for SOUTH face.");
-        }
-    }
-
-    void initGasCellsAndIFaces()
-    {
-        auto blk = cast(SFluidBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
-        size_t i, j, k;
-        switch ( which_boundary ) {
-        case Face.north:
-            j = blk.jmax;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    _gasCells ~= blk.get_cell(i, j, k);
-                    _gasIFaces ~= _gasCells[$-1].iface[Face.north];
-                }
-            }
-            break;
-        default:
-            throw new Error("initGasCellsAndIFaces() only implemented for NORTH gas face.");
-        }
-    }
-
 
 } // end class BIE_TemperatureFromGasSolidInterface

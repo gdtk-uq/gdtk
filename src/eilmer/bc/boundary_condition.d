@@ -29,6 +29,8 @@ import fvcell;
 import fluidblock;
 import sfluidblock;
 import fluxcalc;
+import solidfvcell;
+import solidfvinterface;
 import bc.ghost_cell_effect;
 import bc.boundary_interface_effect;
 import bc.boundary_cell_effect;
@@ -117,6 +119,14 @@ public:
         FVCell[size_t] neighbour_block_cells;
         FVInterface[] neighbour_block_faces;
     }
+
+    // Working storage required when BC is a connection
+    // to solid domain.
+    // We need to keep these public because the sub-component BCs are going
+    // to poke and prod the data here as needed.
+    FVCell[] gasCells;
+    SolidFVCell[] solidCells;
+    SolidFVInterface[] solidIFaces;
 
 private:
     // Working storage for boundary flux derivatives
@@ -360,4 +370,39 @@ public:
                        luafname.toStringz, lua_tostring(myL, -1));
         }
     }
+
+    void initGasSolidWorkingSpace(int solidBlkId, int solidFaceId)
+    {
+        auto blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
+        size_t i, j, k;
+        switch (which_boundary) {
+        case Face.north:
+            j = blk.jmax;
+            for (k = blk.kmin; k <= blk.kmax; ++k) {
+                for (i = blk.imin; i <= blk.imax; ++i) {
+                    gasCells ~= blk.get_cell(i, j, k);
+                }
+            }
+            break;
+        default:
+            throw new Error("initGasSolidWorkingSpace() only implemented for NORTH gas face.");
+        }
+
+        auto solidBlk = solidBlocks[solidBlkId];
+        switch (solidFaceId) {
+        case Face.south:
+            j = solidBlk.jmin;
+            for (k = solidBlk.kmin; k <= solidBlk.kmax; ++k) {
+                for (i = solidBlk.imin; i <= solidBlk.imax; ++i) {
+                    solidCells ~= solidBlk.getCell(i, j, k);
+                    solidIFaces ~= solidCells[$-1].iface[Face.south];
+                }
+            }
+            break;
+        default:
+            throw new Error("initGasSolidWorkingSpace() only implemented for SOUTH solid face.");
+        }
+    }
+
 } // end class BoundaryCondition

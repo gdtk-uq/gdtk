@@ -171,6 +171,11 @@ public:
     // not @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
+        auto myBC = blk.bc[which_boundary];
+        computeFluxesAndTemperatures(ftl, myBC.gasCells, myBC.faces, myBC.solidCells, myBC.solidIFaces);
+        // RJG 2019-09-10:
+        // Disable non-isotropic code
+        /*
         if (blk.myConfig.solid_has_isotropic_properties) {
             computeFluxesAndTemperatures(ftl, _gasCells, _gasIFaces, _solidCells, _solidIFaces);
         }
@@ -178,9 +183,14 @@ public:
             computeFluxesAndTemperatures2(ftl, _gasCells, _gasIFaces, _solidCells, _solidIFaces,
                                          _T, _B, _A, _pivot);
         }
+        */
     }
 
 private:
+
+    // RJG 2019-09-10:
+    // Disable non-isotropic code
+    /*
     // Some private working arrays.
     // We'll pack data into these can pass out
     // to a routine that can compute the flux and
@@ -193,8 +203,12 @@ private:
     number[] _B;
     Matrix!number _A;
     int[] _pivot;
+    */
 
 public:
+    // RJG 2019-09-10:
+    // Disable non-isotropic code
+    /*
     void initSolidCellsAndIFaces()
     {
         size_t i, j, k;
@@ -242,6 +256,7 @@ public:
             throw new Error("initGasCellsAndIFaces() only implemented for NORTH gas face.");
         }
     }
+    */
 }
 
 class BFE_ConstFlux : BoundaryFluxEffect {

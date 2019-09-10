@@ -447,9 +447,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
                     auto mybfe = cast(BFE_EnergyFluxFromAdjacentSolid)bfe;
                     if (mybfe) {
                         if (GlobalConfig.in_mpi_context) { throw new Error("[TODO] not available in MPI context."); }
-                        auto adjSolidBC = to!BFE_EnergyFluxFromAdjacentSolid(mybfe);
-                        adjSolidBC.initGasCellsAndIFaces();
-                        adjSolidBC.initSolidCellsAndIFaces();
+                        bc.initGasSolidWorkingSpace(mybfe.neighbourSolidBlk, mybfe.neighbourSolidFace);
                     }
                 }
             }
@@ -461,9 +459,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
                     auto mybfe = cast(BFE_EnergyFluxFromAdjacentSolid)bfe;
                     if (mybfe) {
                         if (GlobalConfig.in_mpi_context) { throw new Error("[TODO] not available in MPI context."); }
-                        auto adjSolidBC = to!BFE_EnergyFluxFromAdjacentSolid(mybfe);
-                        adjSolidBC.initGasCellsAndIFaces();
-                        adjSolidBC.initSolidCellsAndIFaces();
+                        bc.initGasSolidWorkingSpace(mybfe.neighbourSolidBlk, mybfe.neighbourSolidFace);
                     }
                 }
             }
