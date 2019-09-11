@@ -80,7 +80,12 @@ blk2.bcList[north] = OutFlowBC_Simple:new{label="outflow-boundary"}
 blk3.bcList[north] = OutFlowBC_Simple:new{label="outflow-boundary"}
 blk4.bcList[north] = OutFlowBC_Simple:new{label="outflow-boundary"}
 
+-- We have a couple of sharp corners with strong expansions.
+srz0 = SuppressReconstructionZone:new{p0={x=-0.005,y=0.040}, p1={x=0.005,y=0.045}}
+-- srz1 = SuppressReconstructionZone:new{p0={x=0.008,y=0.020}, p1={x=0.010,y=0.022}}
+
 -- Do a little more setting of global data.
+config.suppress_radial_reconstruction_at_xaxis = true
 config.max_time = 80.0e-6  -- seconds
 config.max_step = 50000
 config.dt_init = 0.5e-8
