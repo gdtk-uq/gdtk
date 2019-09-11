@@ -120,6 +120,7 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_double_field("flowstate_limits_min_tke", "flowstate_limits.min_tke"));
     mixin(get_double_field("flowstate_limits_max_temp", "flowstate_limits.max_temp"));
     mixin(get_double_field("flowstate_limits_min_temp", "flowstate_limits.min_temp"));
+    mixin(get_double_field("flowstate_limits_min_pressure", "flowstate_limits.min_pressure"));
     mixin(get_bool_field("ignore_low_T_thermo_update_failure", "ignore_low_T_thermo_update_failure"));
     mixin(get_double_field("suggested_low_T_value", "suggested_low_T_value"));
     mixin(get_bool_field("adjust_invalid_cell_data", "adjust_invalid_cell_data"));
@@ -298,6 +299,7 @@ extern(C) int configGet(lua_State* L)
     case "flowstate_limits_min_tke": lua_pushnumber(L, GlobalConfig.flowstate_limits.min_tke); break;
     case "flowstate_limits_max_temp": lua_pushnumber(L, GlobalConfig.flowstate_limits.max_temp); break;
     case "flowstate_limits_min_temp": lua_pushnumber(L, GlobalConfig.flowstate_limits.min_temp); break;
+    case "flowstate_limits_min_pressure": lua_pushnumber(L, GlobalConfig.flowstate_limits.min_pressure); break;
     case "ignore_low_T_thermo_update_failure": lua_pushboolean(L, GlobalConfig.ignore_low_T_thermo_update_failure); break;
     case "suggested_low_T_value": lua_pushnumber(L, GlobalConfig.suggested_low_T_value); break;
     case "adjust_invalid_cell_data": lua_pushboolean(L, GlobalConfig.adjust_invalid_cell_data); break;

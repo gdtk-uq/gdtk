@@ -153,7 +153,8 @@ void compute_flux_at_left_wall(ref FlowState Rght, ref FVInterface IFace,
     number rhoR = Rght.gas.rho;
     number pR = Rght.gas.p;
     number tmp = (vstar - UbarR)*(g-1.0)/(2.0*sqrt(g))*sqrt(rhoR/pow(pR,1.0/g));
-    number pstar = pow(tmp, 2.0*g/(g-1.0));
+    number ptiny = myConfig.flowstate_limits.min_pressure;
+    number pstar = (tmp > 0.0) ? pow(tmp, 2.0*g/(g-1.0)) : ptiny;
     if (pstar > 1.1*pR) {
         // Shock wave processing. See PJ workbook notes 2010-05-22.
         number f(number ps)
@@ -239,7 +240,8 @@ void compute_flux_at_right_wall(ref FlowState Lft, ref FVInterface IFace,
     number rhoL = Lft.gas.rho;
     number pL = Lft.gas.p;
     number tmp = (UbarL - vstar)*(g-1.0)/(2.0*sqrt(g))*sqrt(rhoL/pow(pL,1.0/g));
-    number pstar = pow(tmp, 2.0*g/(g-1.0));
+    number ptiny = myConfig.flowstate_limits.min_pressure;
+    number pstar = (tmp > 0.0) ? pow(tmp, 2.0*g/(g-1.0)) : ptiny;
     if (pstar > 1.1*pL) {
         // Shock wave processing. See PJ workbook notes 2010-05-22.
         number f(number ps)

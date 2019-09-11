@@ -1277,6 +1277,7 @@ void read_config_file()
     mixin(update_double("flowstate_limits_min_tke", "flowstate_limits.min_tke"));
     mixin(update_double("flowstate_limits_max_temp", "flowstate_limits.max_temp"));
     mixin(update_double("flowstate_limits_min_temp", "flowstate_limits.min_temp"));
+    mixin(update_double("flowstate_limits_min_pressure", "flowstate_limits.min_pressure"));
     mixin(update_bool("ignore_low_T_thermo_update_failure", "ignore_low_T_thermo_update_failure"));
     mixin(update_double("suggested_low_T_value", "suggested_low_T_value"));
     mixin(update_bool("adjust_invalid_cell_data", "adjust_invalid_cell_data"));
