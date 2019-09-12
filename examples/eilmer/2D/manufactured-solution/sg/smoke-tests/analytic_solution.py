@@ -15,7 +15,7 @@
 
 from __future__ import print_function
 from sympy import *
-execfile('constants.txt')
+exec(open('./constants.txt').read())
 # Read case no.
 fp = open('case.txt', 'r');
 case_str = fp.readline().strip()
