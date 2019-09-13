@@ -577,17 +577,17 @@ public:
                         if (bc[Face.south].ghost_cell_data_available) {
                             IFace.left_cell = (myConfig.dimensions == 3) ? get_cell!()(i,j-1,k) : get_cell!()(i,j-1);
                         }
-                        IFace.right_cell = (myConfig.dimensions == 3) ? get_cell!()(i,j,k) : get_cell!()(i,j,k);
+                        IFace.right_cell = (myConfig.dimensions == 3) ? get_cell!()(i,j,k) : get_cell!()(i,j);
                     } else if (j == jmax+1) {
                         IFace.is_on_boundary = true;
                         IFace.bc_id = Face.north;
                         IFace.left_cell = (myConfig.dimensions == 3) ? get_cell!()(i,j-1,k) : get_cell!()(i,j-1);
                         if (bc[Face.north].ghost_cell_data_available) {
-                            IFace.right_cell = (myConfig.dimensions == 3) ? get_cell!()(i,j,k) : get_cell!()(i,j,k);
+                            IFace.right_cell = (myConfig.dimensions == 3) ? get_cell!()(i,j,k) : get_cell!()(i,j);
                         }
                     } else {
                         IFace.left_cell = (myConfig.dimensions == 3) ? get_cell!()(i,j-1,k) : get_cell!()(i,j-1);
-                        IFace.right_cell = (myConfig.dimensions == 3) ? get_cell!()(i,j,k) : get_cell!()(i,j,k);
+                        IFace.right_cell = (myConfig.dimensions == 3) ? get_cell!()(i,j,k) : get_cell!()(i,j);
                     }
                 } // j loop
             } // i loop
