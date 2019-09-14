@@ -34,7 +34,7 @@ command line:
 
 During execution, the script will run each of the grids in a
 separate subdirectory. The subdirectory names were graciously 
-suppliedby the Department of the Bleeding Obvious. Those names
+supplied by the Department of the Bleeding Obvious. Those names
 follow the format of ``ncellsxncells``.
 
 At the end of a succesful run, a set of files are produced that
@@ -65,9 +65,13 @@ case : integer
   versions of the manufactured solution, and whether or not
   a scaling function is applied. The scaling function may be used
   to de-emphasise any corner and edge effects and concentrate
-  the error on the interior of the domain. Allowable values are:
-  1 -- Euler case; 2 -- Navier-Stokes case; 3 -- Euler case with scaling;
-  and 4 -- Navier-Stokes case with scaling.
+  the error on the interior of the domain.
+  Allowable values are:
+  1 -- Euler case;
+  2 -- Navier-Stokes case;
+  3 -- Euler case with scaling;
+  4 -- Navier-Stokes case with scaling; and
+  5 -- Euler case for a supersonic duct.
 
 ncellsList : list
   This list gives the sequence of grids. Each grid is designated
