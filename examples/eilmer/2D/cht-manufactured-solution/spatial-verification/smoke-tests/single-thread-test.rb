@@ -10,7 +10,7 @@ require 'open3'
 
 class TestCHT_MMS_Spatial < Test::Unit::TestCase
   def test_0_prep
-    cmd = "python make_lua_files.py"
+    cmd = "python3 make_lua_files.py"
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
     cmd = "e4shared --prep --job=coupled-mms"
@@ -30,9 +30,9 @@ class TestCHT_MMS_Spatial < Test::Unit::TestCase
     assert_equal(s.success?, true)
     lines = o.split("\n")
     names = ['L1', 'L2', 'Linf']
-    refs = {'L1'=>1.3733388514985556e-01,
-            'L2'=>1.5760250513402219e-01,
-            'Linf'=>3.0469657765502234e-01}
+    refs = {'L1'=>1.3669e-01,
+            'L2'=>1.5784e-01,
+            'Linf'=>2.8837e-01}
     values = {'L1'=>0.0, 'L2'=>0.0, 'Linf'=>0.0}
     lines.each do |txt|
       if txt.match('Linf')
@@ -55,9 +55,9 @@ class TestCHT_MMS_Spatial < Test::Unit::TestCase
     assert_equal(s.success?, true)
     lines = o.split("\n")
     names = ['L1', 'L2', 'Linf']
-    refs = {'L1'=>1.5686653737239453e-01,
-            'L2'=>1.9360403909941618e-01,
-            'Linf'=>4.2435529004256978e-01}
+    refs = {'L1'=>1.5606e-01,
+            'L2'=>1.9248e-01,
+            'Linf'=>4.2376e-01}
     values = {'L1'=>0.0, 'L2'=>0.0, 'Linf'=>0.0}
     foundState = 0
     lines.each do |txt|

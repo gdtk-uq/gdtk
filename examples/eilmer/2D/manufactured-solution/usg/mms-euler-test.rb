@@ -11,7 +11,7 @@ require 'open3'
 
 class TestMMS_Euler_USG < Test::Unit::TestCase
   def test_0_prep
-    cmd = "python make_source_terms.py"
+    cmd = "python3 make_source_terms.py"
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
     cmd = "e4shared --prep --job=mms"

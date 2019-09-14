@@ -15,7 +15,7 @@ class TestMMS_Euler < Test::Unit::TestCase
     cmd = "cp case-euler.txt case.txt"
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
-    cmd = "python make_lua_files.py"
+    cmd = "python3 make_lua_files.py"
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
     cmd = "e4shared --prep --job=mms"
