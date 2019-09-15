@@ -5,6 +5,7 @@
 
 module gas.gas_state;
 
+import std.stdio;
 import std.conv;
 import std.math : isFinite;
 import nm.complex;
@@ -195,45 +196,44 @@ public:
     } // end copy_average_values_from()
 
     @nogc bool check_values(bool print_message=true) const
-    // Have commented out the print statements to ensure @nogc.
     {
         double RHOMIN = 0.0;
         double TMIN = 1.0;
         bool is_data_valid = true;
         if (!(isFinite(rho.re)) || rho < 1.01 * RHOMIN) {
-            // if (print_message) writeln("Density invalid: ", rho);
+            debug { if (print_message) writeln("Density invalid: ", rho); }
             is_data_valid = false;
         }
         if (!isFinite(T.re) || T < 1.01 * TMIN) {
-            // if (print_message) writeln("Temperature invalid: ", T);
+            debug { if (print_message) writeln("Temperature invalid: ", T); }
             is_data_valid = false;
         }
         auto nmodes = u_modes.length;
         foreach(imode; 0 .. nmodes) {
             if (!isFinite(T_modes[imode].re) || T_modes[imode] < 1.01 * TMIN) {
-                // if (print_message) writeln("Temperature[", imode, "] invalid: ", T_modes[imode]);
+                debug { if (print_message) writeln("Temperature[", imode, "] invalid: ", T_modes[imode]); }
                 is_data_valid = false;
             }
             if ( !isFinite(u_modes[imode].re) ) {
-                // if (print_message) writeln("Energy[", imode, "] invalid: ", u_modes[imode]);
+                debug { if (print_message) writeln("Energy[", imode, "] invalid: ", u_modes[imode]); }
                 is_data_valid = false;
             }
         }
         if (!isFinite(p.re)) {
-            // if (print_message) writeln("Total pressure invalid: ", p);
+            debug { if (print_message) writeln("Total pressure invalid: ", p); }
             is_data_valid = false;
         }
         if (!isFinite(p_e.re)) {
-            // if (print_message) writeln("Electron pressure invalid: ", p_e);
+            debug { if (print_message) writeln("Electron pressure invalid: ", p_e); }
             is_data_valid = false;
         }
         if (!isFinite(a.re)) {
-            // if (print_message) writeln("Sound speed invalid: ", a);
+            debug { if (print_message) writeln("Sound speed invalid: ", a); }
             is_data_valid = false;
         }
         number f_sum = 0.0; foreach(elem; massf) f_sum += elem;
         if (f_sum < 0.99 || f_sum > 1.01 || !isFinite(f_sum.re)) {
-            // if (print_message) writeln("Mass fraction sum bad: ", f_sum);
+            debug { if (print_message) writeln("Mass fraction sum bad: ", f_sum); }
             is_data_valid = false;
         }
         return is_data_valid;
