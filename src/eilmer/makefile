@@ -209,7 +209,7 @@ ifeq ($(DMD), dmd)
         DFLAGS := -profile -w -O -release -inline -boundscheck=off -version=flavour_profile
     endif
     ifeq ($(FLAVOUR), fast)
-        DFLAGS := -w -O -release -inline -boundscheck=off -version=flavour_fast
+        DFLAGS := -w -g -O -release -inline -boundscheck=off -version=flavour_fast
     endif
     OF := -of
     DVERSION := -version=
@@ -231,7 +231,7 @@ ifeq ($(DMD), ldmd2)
         DFLAGS := -profile -w -O -release -inline -boundscheck=off -version=flavour_profile
     endif
     ifeq ($(FLAVOUR), fast)
-        DFLAGS := -w -O -release -inline -boundscheck=off -version=flavour_fast
+        DFLAGS := -w -g -O -release -inline -boundscheck=off -version=flavour_fast
     endif
     OF := -of
     DVERSION := -version=
@@ -256,7 +256,7 @@ ifeq ($(DMD), ldc2)
         DFLAGS := -fprofile-generate -g -w -O -release -enable-inlining -boundscheck=off -d-version=flavour_profile
     endif
     ifeq ($(FLAVOUR), fast)
-        DFLAGS := -w -O -release -enable-inlining -boundscheck=off -d-version=flavour_fast
+        DFLAGS := -w -g -O -release -enable-inlining -boundscheck=off -d-version=flavour_fast
     endif
     OF := -of=
     DVERSION := -d-version=
