@@ -853,11 +853,7 @@ void evalRHS(double pseudoSimTime, int ftl)
     // We don't want to switch between flux calculator application while
     // doing the Frechet derivative, so we'll only search for shock points
     // at ftl = 0, which is when the F(U) evaluation is made.
-    if ( ftl == 0 &&
-         (GlobalConfig.flux_calculator == FluxCalculator.adaptive_hanel_ausmdv
-          || GlobalConfig.flux_calculator == FluxCalculator.adaptive_hlle_roe
-          || GlobalConfig.flux_calculator == FluxCalculator.adaptive_efm_ausmdv
-          || GlobalConfig.suppress_reconstruction_at_captured_shocks)) {
+    if (ftl == 0 && GlobalConfig.do_shock_detect) {
         foreach (blk; parallel(localFluidBlocks,1)) {
             blk.detect_shock_points();
         }

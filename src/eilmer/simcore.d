@@ -147,7 +147,7 @@ version(mpi_parallel) {
             long elapsedTime_msecs = (Clock.currTime() - startTime).total!"msecs"();
             if (elapsedTime_msecs > timeout_msecs) {
                 // We do not expect our job to recover gracefully from this point.
-                writeln("MPI_Sync_tasks time-out waiting to send. my_rank=%d, right_rank=%d",
+                writefln("MPI_Sync_tasks time-out waiting to send. my_rank=%d, right_rank=%d",
                         my_rank, right_rank);
                 MPI_Abort(MPI_COMM_WORLD, 3);
             }
@@ -162,7 +162,7 @@ version(mpi_parallel) {
             long elapsedTime_msecs = (Clock.currTime() - startTime).total!"msecs"();
             if (elapsedTime_msecs > timeout_msecs) {
                 // We do not expect our job to recover gracefully from this point.
-                writeln("MPI_Sync_tasks time-out waiting for receive. my_rank=%d, left_rank=%d",
+                writefln("MPI_Sync_tasks time-out waiting for receive. my_rank=%d, left_rank=%d",
                         my_rank, left_rank);
                 MPI_Abort(MPI_COMM_WORLD, 3);
             }
@@ -452,9 +452,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
                     auto mybfe = cast(BFE_EnergyFluxFromAdjacentSolid)bfe;
                     if (mybfe) {
                         if (GlobalConfig.in_mpi_context) { throw new Error("[TODO] not available in MPI context."); }
-                        auto adjSolidBC = to!BFE_EnergyFluxFromAdjacentSolid(mybfe);
-                        adjSolidBC.initGasCellsAndIFaces();
-                        adjSolidBC.initSolidCellsAndIFaces();
+                        bc.initGasSolidWorkingSpace(mybfe.neighbourSolidBlk, mybfe.neighbourSolidFace);
                     }
                 }
             }
@@ -466,9 +464,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
                     auto mybfe = cast(BFE_EnergyFluxFromAdjacentSolid)bfe;
                     if (mybfe) {
                         if (GlobalConfig.in_mpi_context) { throw new Error("[TODO] not available in MPI context."); }
-                        auto adjSolidBC = to!BFE_EnergyFluxFromAdjacentSolid(mybfe);
-                        adjSolidBC.initGasCellsAndIFaces();
-                        adjSolidBC.initSolidCellsAndIFaces();
+                        bc.initGasSolidWorkingSpace(mybfe.neighbourSolidBlk, mybfe.neighbourSolidFace);
                     }
                 }
             }

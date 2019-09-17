@@ -23,12 +23,19 @@ patch = makePatch{north=Arc:new{p0=c, p1=e, centre=a},
 		  east=Line:new{p0=d, p1=e},
 		  south=Arc:new{p0=b, p1=d, centre=a},
 		  west=Line:new{p0=b, p1=c}}
-nx = 80; ny = 40
+gfactor = 4
+nx = math.floor(20*gfactor); ny = math.floor(10*gfactor)
 grid0 = StructuredGrid:new{psurface=patch, niv=nx+1, njv=ny+1}
 -- Flow domain
+--[[
 bcList = {north=UserDefinedBC:new{fileName='udf-vortex-flow.lua'},
 	  east=OutFlowBC_Simple:new{},
 	  south=UserDefinedBC:new{fileName='udf-vortex-flow.lua'},
+	  west=UserDefinedBC:new{fileName='udf-vortex-flow.lua'}}
+--]]
+bcList = {north=WallBC_WithSlip1:new{},
+	  east=OutFlowBC_Simple:new{},
+	  south=WallBC_WithSlip1:new{},
 	  west=UserDefinedBC:new{fileName='udf-vortex-flow.lua'}}
 blk = FluidBlockArray{grid=grid0, nib=4, njb=1,
                       initialState=initial, bcList=bcList,

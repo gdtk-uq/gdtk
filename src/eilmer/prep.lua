@@ -1720,6 +1720,7 @@ function write_config_file(fileName)
    f:write(string.format('"flowstate_limits_min_tke": %.18e,\n', config.flowstate_limits_min_tke))
    f:write(string.format('"flowstate_limits_max_temp": %.18e,\n', config.flowstate_limits_max_temp))
    f:write(string.format('"flowstate_limits_min_temp": %.18e,\n', config.flowstate_limits_min_temp))
+   f:write(string.format('"flowstate_limits_min_pressure": %.18e,\n', config.flowstate_limits_min_pressure))
    f:write(string.format('"max_invalid_cells": %d,\n', config.max_invalid_cells))
    f:write(string.format('"adjust_invalid_cell_data": %s,\n', tostring(config.adjust_invalid_cell_data)))
    f:write(string.format('"report_invalid_cells": %s,\n', tostring(config.report_invalid_cells)))
@@ -1732,6 +1733,8 @@ function write_config_file(fileName)
                          tostring(config.suppress_radial_reconstruction_at_xaxis)))
    f:write(string.format('"suppress_reconstruction_at_shocks": %s,\n',
                          tostring(config.suppress_reconstruction_at_shocks)))
+   f:write(string.format('"suppress_reconstruction_at_boundaries": %s,\n',
+			 tostring(config.suppress_reconstruction_at_boundaries)))
    f:write(string.format('"thermo_interpolator": "%s",\n', 
 			 string.lower(config.thermo_interpolator)))
    f:write(string.format('"allow_reconstruction_for_energy_modes": %s,\n', 
@@ -1765,10 +1768,6 @@ function write_config_file(fileName)
    f:write(string.format('"spatial_deriv_locn": "%s",\n', config.spatial_deriv_locn))
    f:write(string.format('"include_ghost_cells_in_spatial_deriv_clouds": %s,\n',
 			 tostring(config.include_ghost_cells_in_spatial_deriv_clouds)))
-   f:write(string.format('"suppress_reconstruction_at_boundaries": %s,\n',
-			 tostring(config.suppress_reconstruction_at_boundaries)))
-   f:write(string.format('"suppress_reconstruction_at_captured_shocks": %s,\n',
-			 tostring(config.suppress_reconstruction_at_captured_shocks)))
    f:write(string.format('"viscous_delay": %.18e,\n', config.viscous_delay))
    f:write(string.format('"shear_stress_relative_limit": %.18e,\n', config.shear_stress_relative_limit))
    f:write(string.format('"apply_shear_stress_relative_limit": %s,\n', tostring(config.apply_shear_stress_relative_limit)))
@@ -2043,7 +2042,7 @@ function write_fluidBlockArrays_file(fileName)
    end
    f:write("} -- end fluidBlocksDict\n")
    --
-   f:write([[
+   local fnBodyStr = [[
 function is_in_FluidBlockArray(blkId, label)
    -- Returns true if a block is in a particular FluidBlockArray.
    local myfba = whichFluidBlockArrayLabel[blkId]
@@ -2056,7 +2055,8 @@ function is_in_FluidBlockArray(blkId, label)
       return false
    end
 end
-]])
+]]
+   f:write(fnBodyStr)
    --
    f:close()
 end -- function write_fluidBlockArrays_file
@@ -2098,6 +2098,26 @@ function perform_spatial_gradient_consistency_check()
    end
 end
 
+function warn_if_blocks_not_connected()
+   -- It would be very unusual to have defined multiple FluidBlocks
+   -- and not have any connections between them.
+   -- Such an arrangement would be unintended, almost certainly.
+   if #fluidBlocks > 1 then
+      local n = 0
+      for _,blk in ipairs(fluidBlocks) do
+         for bndry,bc in pairs(blk.bcList) do
+            if string.find(bc.type, "exchange_") then
+               n = n + 1
+            end
+         end
+      end
+      if n == 0 then
+         print("WARNING: Did not find any inter-block connections.")
+         print("         Did you forget to call identifyBlockConnections()?")
+      end
+   end
+end
+
 function build_job_files(job)
    if #fluidBlocksForPrep == 0 then
       -- We'll set *all* blocks for processing.
@@ -2106,6 +2126,7 @@ function build_job_files(job)
       end
    end
    perform_spatial_gradient_consistency_check()
+   warn_if_blocks_not_connected()
    if buildMasterFiles then
       print("Build job files for ", job)
       os.execute("mkdir -p config")
@@ -2192,18 +2213,6 @@ function build_job_files(job)
    --
    if #fluidBlocks == 0 then print("Warning: number of FluidBlocks is zero.") end
    print("Done building files.")
-end
-
-
-if false then
-   -- Keep old names available, for now.
-   -- Once we purge all of the old names from the examples,
-   -- we should delete this code block
-   SBlock = FluidBlock
-   UBlock = FluidBlock
-   SBlockArray = FluidBlockArray
-   SSolidBlock = SolidBlock
-   SSolidBlockArray = SolidBlockArray
 end
 
 print("Done loading prep.lua")

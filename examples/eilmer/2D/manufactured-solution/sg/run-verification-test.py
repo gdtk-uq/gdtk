@@ -122,7 +122,7 @@ def gatherResults(ncellsList):
 if __name__ == "__main__":
     import sys
     caseOptFile = sys.argv[1]
-    execfile(caseOptFile)
+    exec(open(caseOptFile).read())
     prepareCases(case, ncellsList, fluxCalc, derivCalc, blocking, threading)
     runCases(ncellsList)
     gatherResults(ncellsList)

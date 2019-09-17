@@ -125,6 +125,8 @@ void apply_structured_grid(SFluidBlock blk, double sim_time, int current_loads_t
             FVCell cell;
             FVInterface IFace;
             number cellWidthNormalToSurface;
+            // For structured blocks, all cell faces along a boundary point out or
+            // all faces point in, so just use a constant for the outsign value.
             final switch (bndary.which_boundary) {
             case Face.north:
                 j = blk.jmax;
@@ -133,7 +135,7 @@ void apply_structured_grid(SFluidBlock blk, double sim_time, int current_loads_t
                         cell = blk.get_cell!()(i,j,k);
                         IFace = cell.iface[Face.north];
                         cellWidthNormalToSurface = cell.jLength;
-                        compute_and_store_loads(IFace, bndary.outsigns[i], cellWidthNormalToSurface, sim_time, fname);
+                        compute_and_store_loads(IFace, 1, cellWidthNormalToSurface, sim_time, fname);
                     } // end i loop
                 } // end for k
                 break;
@@ -144,7 +146,7 @@ void apply_structured_grid(SFluidBlock blk, double sim_time, int current_loads_t
                         cell = blk.get_cell!()(i,j,k);
                         IFace = cell.iface[Face.east];
                         cellWidthNormalToSurface = cell.iLength;
-                        compute_and_store_loads(IFace, bndary.outsigns[i], cellWidthNormalToSurface, sim_time, fname);
+                        compute_and_store_loads(IFace, 1, cellWidthNormalToSurface, sim_time, fname);
                     } // end j loop
                 } // end for k
                 break;
@@ -154,8 +156,8 @@ void apply_structured_grid(SFluidBlock blk, double sim_time, int current_loads_t
                     for (i = blk.imin; i <= blk.imax; ++i) {
                         cell = blk.get_cell!()(i,j,k);
                         IFace = cell.iface[Face.south];
-                        cellWidthNormalToSurface = cell.jLength;                        
-                        compute_and_store_loads(IFace, bndary.outsigns[i], cellWidthNormalToSurface, sim_time, fname);
+                        cellWidthNormalToSurface = cell.jLength;
+                        compute_and_store_loads(IFace, -1, cellWidthNormalToSurface, sim_time, fname);
                     } // end i loop
                 } // end for k
                 break;
@@ -166,7 +168,7 @@ void apply_structured_grid(SFluidBlock blk, double sim_time, int current_loads_t
                         cell = blk.get_cell!()(i,j,k);
                         IFace = cell.iface[Face.west];
                         cellWidthNormalToSurface = cell.iLength;
-                        compute_and_store_loads(IFace, bndary.outsigns[i], cellWidthNormalToSurface, sim_time, fname);
+                        compute_and_store_loads(IFace, -1, cellWidthNormalToSurface, sim_time, fname);
                     } // end j loop
                 } // end for k
                 break;
@@ -177,7 +179,7 @@ void apply_structured_grid(SFluidBlock blk, double sim_time, int current_loads_t
                         cell = blk.get_cell!()(i,j,k);
                         IFace = cell.iface[Face.top];
                         cellWidthNormalToSurface = cell.kLength;
-                        compute_and_store_loads(IFace, bndary.outsigns[i], cellWidthNormalToSurface, sim_time, fname);
+                        compute_and_store_loads(IFace, 1, cellWidthNormalToSurface, sim_time, fname);
                     } // end j loop
                 } // end for i
                 break;
@@ -188,7 +190,7 @@ void apply_structured_grid(SFluidBlock blk, double sim_time, int current_loads_t
                         cell = blk.get_cell!()(i,j,k);
                         IFace = cell.iface[Face.bottom];
                         cellWidthNormalToSurface = cell.kLength;
-                        compute_and_store_loads(IFace, bndary.outsigns[i], cellWidthNormalToSurface, sim_time, fname);
+                        compute_and_store_loads(IFace, -1, cellWidthNormalToSurface, sim_time, fname);
                     } // end j loop
                 } // end for i
                 break;

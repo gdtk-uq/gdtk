@@ -733,10 +733,12 @@ public:
 	    L2_residual += fabs(cell.dUdt[0].momentum.y)^^2;
 	    L2_residual += fabs(cell.dUdt[0].momentum.z)^^2;
 	    L2_residual += fabs(cell.dUdt[0].total_energy)^^2;
-	    if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-		L2_residual += fabs(cell.dUdt[0].tke)^^2;
-		L2_residual += fabs(cell.dUdt[0].omega)^^2;
-	    } 
+	    version(komega) {
+		if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
+		    L2_residual += fabs(cell.dUdt[0].tke)^^2;
+		    L2_residual += fabs(cell.dUdt[0].omega)^^2;
+		}
+	    }
 	    L2_residual = sqrt(L2_residual);
         }
     } // end compute_Linf_residuals()

@@ -541,9 +541,10 @@ final class GlobalConfig {
     shared static bool suppress_radial_reconstruction_at_xaxis = false;
     // We will activate the shock detector if selected features need it.
     shared static bool do_shock_detect = false;
-    // We might optionally want to suppress reconstruction at faces at shocks.
-    // Presently, we need to opt-in to this feature. 2019-09-04, PJ
+    // We might optionally want to suppress reconstruction at faces at
+    // shocks and boundaries. Presently, we need to opt-in to these features.
     shared static bool suppress_reconstruction_at_shocks = false;
+    shared static bool suppress_reconstruction_at_boundaries = false;
     // Default flow-data reconstruction includes interpolation of density 
     // and internal energy.  Other options for the thermodunamic properties
     // to be interpolated are pressure+temperature, density+temperature and
@@ -630,8 +631,6 @@ final class GlobalConfig {
     shared static SpatialDerivCalc spatial_deriv_calc = SpatialDerivCalc.divergence;
     shared static SpatialDerivLocn spatial_deriv_locn = SpatialDerivLocn.vertices;
     shared static bool include_ghost_cells_in_spatial_deriv_clouds = true;
-    shared static bool suppress_reconstruction_at_boundaries = false;
-    shared static bool suppress_reconstruction_at_captured_shocks = false;
     //
     // A factor to scale the viscosity in order to achieve a soft start. 
     // The soft-start for viscous effects may be handy for impulsively-started flows.
@@ -862,6 +861,7 @@ public:
     BlockZone[] suppress_reconstruction_zones;
     bool suppress_radial_reconstruction_at_xaxis;
     bool suppress_reconstruction_at_shocks;
+    bool suppress_reconstruction_at_boundaries;
     InterpolateOption thermo_interpolator;
     bool allow_reconstruction_for_energy_modes;
     bool apply_limiter;
@@ -892,8 +892,6 @@ public:
     SpatialDerivCalc spatial_deriv_calc;
     SpatialDerivLocn spatial_deriv_locn;
     bool include_ghost_cells_in_spatial_deriv_clouds;
-    bool suppress_reconstruction_at_boundaries;
-    bool suppress_reconstruction_at_captured_shocks;
     double viscous_factor;
     double shear_stress_relative_limit;
     bool apply_shear_stress_relative_limit;
@@ -992,6 +990,7 @@ public:
         }
         suppress_radial_reconstruction_at_xaxis = GlobalConfig.suppress_radial_reconstruction_at_xaxis;
         suppress_reconstruction_at_shocks = GlobalConfig.suppress_reconstruction_at_shocks;
+        suppress_reconstruction_at_boundaries = GlobalConfig.suppress_reconstruction_at_boundaries;
         thermo_interpolator = GlobalConfig.thermo_interpolator;
         allow_reconstruction_for_energy_modes = GlobalConfig.allow_reconstruction_for_energy_modes;
         apply_limiter = GlobalConfig.apply_limiter;
@@ -1024,10 +1023,6 @@ public:
         spatial_deriv_locn = GlobalConfig.spatial_deriv_locn;
         include_ghost_cells_in_spatial_deriv_clouds = 
             GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds;
-        suppress_reconstruction_at_boundaries =
-            GlobalConfig.suppress_reconstruction_at_boundaries;
-        suppress_reconstruction_at_captured_shocks =
-            GlobalConfig.suppress_reconstruction_at_captured_shocks;
         shear_stress_relative_limit = GlobalConfig.shear_stress_relative_limit;
         apply_shear_stress_relative_limit = GlobalConfig.apply_shear_stress_relative_limit;
         viscous_factor = GlobalConfig.viscous_factor;
@@ -1290,6 +1285,7 @@ void read_config_file()
     mixin(update_double("flowstate_limits_min_tke", "flowstate_limits.min_tke"));
     mixin(update_double("flowstate_limits_max_temp", "flowstate_limits.max_temp"));
     mixin(update_double("flowstate_limits_min_temp", "flowstate_limits.min_temp"));
+    mixin(update_double("flowstate_limits_min_pressure", "flowstate_limits.min_pressure"));
     mixin(update_bool("ignore_low_T_thermo_update_failure", "ignore_low_T_thermo_update_failure"));
     mixin(update_double("suggested_low_T_value", "suggested_low_T_value"));
     mixin(update_bool("adjust_invalid_cell_data", "adjust_invalid_cell_data"));
@@ -1302,6 +1298,8 @@ void read_config_file()
     mixin(update_double("interpolation_delay", "interpolation_delay"));
     mixin(update_bool("suppress_radial_reconstruction_at_xaxis", "suppress_radial_reconstruction_at_xaxis"));
     mixin(update_bool("suppress_reconstruction_at_shocks", "suppress_reconstruction_at_shocks"));
+    mixin(update_bool("suppress_reconstruction_at_captured_shocks", "suppress_reconstruction_at_shocks")); // old name
+    mixin(update_bool("suppress_reconstruction_at_boundaries", "suppress_reconstruction_at_boundaries"));
     mixin(update_enum("thermo_interpolator", "thermo_interpolator", "thermo_interpolator_from_name"));
     mixin(update_bool("allow_reconstruction_for_energy_modes", "allow_reconstruction_for_energy_modes"));
     mixin(update_bool("apply_limiter", "apply_limiter"));
@@ -1367,6 +1365,7 @@ void read_config_file()
         writeln("  suppress_radial_reconstruction_at_xaxis: ", GlobalConfig.suppress_radial_reconstruction_at_xaxis);
         writeln("  do_shock_detect: ", GlobalConfig.do_shock_detect);
         writeln("  suppress_reconstruction_at_shocks: ", GlobalConfig.suppress_reconstruction_at_shocks);
+        writeln("  suppress_reconstruction_at_boundaries: ", GlobalConfig.suppress_reconstruction_at_boundaries);
         writeln("  thermo_interpolator: ", thermo_interpolator_name(GlobalConfig.thermo_interpolator));
         writeln("  apply_limiter: ", GlobalConfig.apply_limiter);
         writeln("  unstructured_limiter: ", unstructured_limiter_name(GlobalConfig.unstructured_limiter));
@@ -1395,8 +1394,6 @@ void read_config_file()
     mixin(update_enum("spatial_deriv_calc", "spatial_deriv_calc", "spatial_deriv_calc_from_name"));
     mixin(update_enum("spatial_deriv_locn", "spatial_deriv_locn", "spatial_deriv_locn_from_name"));
     mixin(update_bool("include_ghost_cells_in_spatial_deriv_clouds", "include_ghost_cells_in_spatial_deriv_clouds"));
-    mixin(update_bool("suppress_reconstruction_at_boundaries", "suppress_reconstruction_at_boundaries"));
-    mixin(update_bool("suppress_reconstruction_at_captured_shocks", "suppress_reconstruction_at_captured_shocks"));
     mixin(update_double("viscous_delay", "viscous_delay"));
     mixin(update_double("viscous_factor_increment", "viscous_factor_increment"));
     mixin(update_double("shear_stress_relative_limit", "shear_stress_relative_limit"));
@@ -1428,8 +1425,6 @@ void read_config_file()
         writeln("  spatial_deriv_calc: ", spatial_deriv_calc_name(GlobalConfig.spatial_deriv_calc));
         writeln("  spatial_deriv_locn: ", spatial_deriv_locn_name(GlobalConfig.spatial_deriv_locn));
         writeln("  include_ghost_cells_in_spatial_deriv_clouds: ", GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds);
-        writeln("  suppress_reconstruction_at_boundaries: ", GlobalConfig.suppress_reconstruction_at_boundaries);
-        writeln("  suppress_reconstruction_at_captured_shocks: ", GlobalConfig.suppress_reconstruction_at_captured_shocks);
         writeln("  viscous_delay: ", GlobalConfig.viscous_delay);
         writeln("  viscous_factor_increment: ", GlobalConfig.viscous_factor_increment);
         writeln("  shear_stress_relative_limit: ", GlobalConfig.shear_stress_relative_limit);

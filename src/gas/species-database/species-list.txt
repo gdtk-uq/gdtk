@@ -75,6 +75,9 @@ HNO3.lua      :	HNO3	 : nitric acid
 HO2.lua       :	HO2	 : hydroperoxyl
 HOCN.lua      :	HOCN	 : cyanic acid
 He.lua        :	He	 : helium
+He_plus.lua   : He+      : singly-ionized atomic helium
+Ne.lua        : Ne       : neon
+Ne_plus.lua   : Ne+      : singly-ionized atomic neon
 I2.lua        :	I2	 : iodine
 Kr.lua        :	Kr	 : krypton
 N.lua         :	N	 : monatomic nitrogen

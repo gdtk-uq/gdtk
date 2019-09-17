@@ -12,10 +12,12 @@
 # Scale the disturbance to reduce its magnitude away from the centre.
 # RJG, 06-June-2014
 # Re-worked completely to use sympy
+# PJ, 12-Sep-2019
+# Add case 5, supersonic duct
 
 from __future__ import print_function
 from sympy import *
-execfile('constants.txt')
+exec(open('./constants.txt').read())
 # Read case no.
 fp = open('case.txt', 'r');
 case_str = fp.readline().strip()
@@ -35,19 +37,41 @@ if case == 2 or case == 4:
     v0=90.0; vx=-20.0; vy=4.0; vxy=-11.0; avx=1.5; avy=1.0; avxy=0.9;
     p0=1.0e5; px=-0.3e5; py=0.2e5; pxy=-0.25e5; apx=1.0; apy=1.25; apxy=0.75
 
+if case == 5:
+    # Supersonic duct flow.  v is zero at north and south boundary
+    # Solution is also symmetric at the y=0 and y=L boundaries,
+    # consistent with the WallBC_WithSlip0 copying and reflection strategy.
+    rho0=1.0; rhox=0.15; rhoy=-0.1; rhoxy=0.0; arhox=1.0; arhoy=2.0; arhoxy=0.0;
+    u0=800.0; ux=50.0; uy=-30.0; uxy=0.0; aux=1.5; auy=2.0; auxy=0.0;
+    v0=0.0; vx=0.0; vy=40.0; vxy=0.0; avx=0.5; avy=2.0; avxy=0.5;
+    p0=1.0e5; px=0.2e5; py=0.5e5; pxy=0.0; apx=2.0; apy=2.0; apxy=0.0
+
 x, y, rho, u, v, p, S = symbols('x y rho u v p S')
 
-if case == 1 or case == 2:
+if case == 1 or case == 2 or case == 5:
+    # Full scale across domain.
     S = 1.0
 else:
+    # Reduce scale away from centre of domain.
     S = exp(-16.0*((x-L/2)*(x-L/2) + (y-L/2)*(y-L/2))/(L*L))
 
-rho = rho0 + S*rhox*sin(arhox*pi*x/L) + S*rhoy*cos(arhoy*pi*y/L) + \
-   S*rhoxy*cos(arhoxy*pi*x*y/(L*L));
-u =  u0 + S*ux*sin(aux*pi*x/L) + S*uy*cos(auy*pi*y/L) + S*uxy*cos(auxy*pi*x*y/(L*L));
-v =  v0 + S*vx*cos(avx*pi*x/L) + S*vy*sin(avy*pi*y/L) + S*vxy*cos(avxy*pi*x*y/(L*L));
-p =  p0 + S*px*cos(apx*pi*x/L) + S*py*sin(apy*pi*y/L) + S*pxy*sin(apxy*pi*x*y/(L*L));
-
+if case == 1 or case == 2 or case == 3 or case == 4:
+    # Classic cases have asymmetric flow fields.
+    rho = rho0 + S*rhox*sin(arhox*pi*x/L) + S*rhoy*cos(arhoy*pi*y/L) + \
+          S*rhoxy*cos(arhoxy*pi*x*y/(L*L))
+    u =  u0 + S*ux*sin(aux*pi*x/L) + S*uy*cos(auy*pi*y/L) + S*uxy*cos(auxy*pi*x*y/(L*L))
+    v =  v0 + S*vx*cos(avx*pi*x/L) + S*vy*sin(avy*pi*y/L) + S*vxy*cos(avxy*pi*x*y/(L*L))
+    p =  p0 + S*px*cos(apx*pi*x/L) + S*py*sin(apy*pi*y/L) + S*pxy*sin(apxy*pi*x*y/(L*L))
+elif case == 5:
+    # With ducted-flow case, we want symmetric functions about the lines y=0 and y=L.
+    rho = rho0 + S*rhox*sin(arhox*pi*x/L) + S*rhoy*cos(arhoy*pi*y/L) + \
+          S*rhoxy*cos(arhoxy*pi*x*y/(L*L))
+    u =  u0 + S*ux*sin(aux*pi*x/L) + S*uy*cos(auy*pi*y/L) + S*uxy*cos(auxy*pi*x*y/(L*L))
+    v =  S*vy - S*vy*cos(avy*pi*y/L)
+    p =  p0 + S*px*cos(apx*pi*x/L) + S*py*cos(apy*pi*y/L) + S*pxy*cos(apxy*pi*x*y/(L*L))
+else:
+    raise ValueError("Oops, unknown case.")
+    
 def ref_function(x1, y1, z1, t):
     inp = {x:x1, y:y1}
     rho1 = rho.subs(inp).evalf()

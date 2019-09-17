@@ -8,8 +8,8 @@ set ylabel "p/p_i"
 # set yrange [1.0:4.5]
 set key bottom right
 plot "radial_profile_0.dat" using 1:2 title "exact" with lines, \
-     "radial_profile_45.dat" using 1:2 title "45 degrees", \
-     "radial_profile_90.dat" using 1:2 title "exit plane"
+     "radial_profile_45.dat" using 1:2 title "45 degrees" with points pt 1, \
+     "radial_profile_90.dat" using 1:2 title "exit plane" with points pt 2
 
 set term postscript eps enhanced 20
 set output "radial_profile_vel.eps"
@@ -19,8 +19,8 @@ set ylabel "vel/vel_i"
 # set yrange [0.7:1.0]
 set key top right
 plot "radial_profile_0.dat" using 1:3 title "exact" with lines, \
-     "radial_profile_45.dat" using 1:3 title "45 degrees", \
-     "radial_profile_90.dat" using 1:3 title "90 degrees"
+     "radial_profile_45.dat" using 1:3 title "45 degrees" with points pt 1, \
+     "radial_profile_90.dat" using 1:3 title "90 degrees" with points pt 2
 
 set term postscript eps enhanced 20
 set output "radial_profile_T.eps"
@@ -30,5 +30,5 @@ set ylabel "T/T_i"
 # set yrange [1.0:1.7]
 set key bottom right
 plot "radial_profile_0.dat" using 1:5 title "exact" with lines, \
-     "radial_profile_45.dat" using 1:5 title "45 degrees", \
-     "radial_profile_90.dat" using 1:5 title "90 degrees"
+     "radial_profile_45.dat" using 1:5 title "45 degrees" with points pt 1, \
+     "radial_profile_90.dat" using 1:5 title "90 degrees" with points pt 2

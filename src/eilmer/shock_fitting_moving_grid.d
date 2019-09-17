@@ -896,7 +896,7 @@ number scalar_reconstruction(number x1, number x2, number x3, number h1, number 
         number s_f2 = (2 * delta_plus_f2 * delta_minus_f2 + eps) / (delta_plus_f2 * delta_plus_f2 + delta_minus_f2 * delta_minus_f2 + eps);
         number delta_1 = (s_f2 / 2.0) * ((1 - s_f2 * kappa) * delta_circleplus_f2 + (1 + s_f2 * kappa) * delta_circleminus_f2);
         number delta_2 = 2 * (x1 - g1) / (h1 + h1);
-        reconstructed_value = x1 - h1 * (sgn(abs(delta_1) - abs(delta_2)) * (delta_2 - delta_1) + delta_1 + delta_2);
+        reconstructed_value = x1 - h1 * (sgn(abs(delta_1.re) - abs(delta_2.re)) * (delta_2 - delta_1) + delta_1 + delta_2);
     }
     else {
         // linear one-sided reconstruction function 

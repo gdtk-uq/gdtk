@@ -979,7 +979,7 @@ public:
         // For some simulations we would like to have the boundaries to remain 1st order.
         if (myConfig.suppress_reconstruction_at_boundaries && IFace.is_on_boundary) { return; }
         // Enforce first order reconstruction for cells that capure the shocks,
-        if (GlobalConfig.suppress_reconstruction_at_captured_shocks && (Lft.S || Rght.S)) { return; }
+        if (myConfig.suppress_reconstruction_at_shocks && (Lft.S || Rght.S)) { return; }
         // else apply higher-order interpolation to all faces.
         if (allow_high_order_interpolation && (myConfig.interpolation_order > 1)) {
             // High-order reconstruction for some properties.
@@ -1186,7 +1186,7 @@ public:
         // For some simulations we would like to have the boundaries to remain 1st order.
         if (myConfig.suppress_reconstruction_at_boundaries && IFace.is_on_boundary) { return; }
         // Enforce first order reconstruction for cells that capure the shocks,
-        if (GlobalConfig.suppress_reconstruction_at_captured_shocks && Rght.S) { return; }
+        if (myConfig.suppress_reconstruction_at_shocks && Rght.S) { return; }
         // else apply higher-order interpolation to all faces.
         if (allow_high_order_interpolation && (myConfig.interpolation_order > 1)) {
             // High-order reconstruction for some properties.
@@ -1352,7 +1352,7 @@ public:
         // For some simulations we would like to have the boundaries to remain 1st order.
         if (myConfig.suppress_reconstruction_at_boundaries && IFace.is_on_boundary) { return; }
         // Enforce first order reconstruction for cells that capure the shocks,
-        if (GlobalConfig.suppress_reconstruction_at_captured_shocks && Lft.S) { return; }
+        if (myConfig.suppress_reconstruction_at_shocks && Lft.S) { return; }
         // else apply higher-order interpolation to all faces.
         if (allow_high_order_interpolation && (myConfig.interpolation_order > 1)) {
             // High-order reconstruction for some properties.
