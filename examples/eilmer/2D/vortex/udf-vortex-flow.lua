@@ -64,3 +64,9 @@ function interface(args)
    return fillTable({}, args.x, args.y)
 end
 
+-- The following function is for use in the postprocessing,
+-- when comparing against a reference solution.
+
+function refSoln(time, x, y, z)
+   return fillTable({}, x, y)
+end

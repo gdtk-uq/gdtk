@@ -23,7 +23,8 @@ patch = makePatch{north=Arc:new{p0=c, p1=e, centre=a},
 		  east=Line:new{p0=d, p1=e},
 		  south=Arc:new{p0=b, p1=d, centre=a},
 		  west=Line:new{p0=b, p1=c}}
-nx = 80; ny = 40
+gfactor = 4
+nx = math.floor(20*gfactor); ny = math.floor(10*gfactor)
 grid0 = StructuredGrid:new{psurface=patch, niv=nx+1, njv=ny+1}
 -- Flow domain
 --[[
