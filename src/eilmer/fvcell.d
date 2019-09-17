@@ -796,26 +796,28 @@ public:
         }
     } // end time_derivatives()
 
-    @nogc
-    void rkl1_stage_1_update_for_flow_on_fixed_grid(double dt, bool with_k_omega, int j, int s, bool with_local_time_stepping) 
+
+    void rkl1_stage_update_for_flow_on_fixed_grid1(double dt, bool with_k_omega, int j, int s, bool with_local_time_stepping) 
     {
         ConservedQuantities dUdt0;
         ConservedQuantities U0;
         ConservedQuantities U1;
         ConservedQuantities U2;
-	U0 = U[0];
-	U1 = U[1];
-	dUdt0 = dUdt[0];
-	
+        U0 = U[0];
+        U1 = U[1];
+        dUdt0 = dUdt[0];
+        
         // coefficients
-        double muj_tilde;
-	muj_tilde = (2.0*j-1.0)/j * 2.0/(s*s+s);
-	
-	U1.mass = U0.mass + muj_tilde*dt*dUdt0.mass;
-       	U1.momentum.set(U0.momentum.x + muj_tilde*dt*dUdt0.momentum.x,
+        double muj; double vuj; double muj_tilde;
+        muj_tilde = (2.0*j-1)/j * 2.0/(s*s+s);
+        muj = 1.0;
+        vuj = 0.0;
+        
+        U1.mass = U0.mass + muj_tilde*dt*dUdt0.mass;
+        U1.momentum.set(U0.momentum.x + muj_tilde*dt*dUdt0.momentum.x,
                         U0.momentum.y + muj_tilde*dt*dUdt0.momentum.y,
                         U0.momentum.z + muj_tilde*dt*dUdt0.momentum.z);
-	version(MHD) {
+        version(MHD) {
             if (myConfig.MHD) {
                 // Magnetic field
                 U1.B.set(U0.B.x + muj_tilde*dt*dUdt0.B.x,
@@ -853,41 +855,40 @@ public:
             }
         }
         // shuffle time-levels
-	U[0] = U0;
-	U[1] = U1;
-	return;
+        U[0] = U0;
+        U[1] = U1;
+        return;
     } // end rkl1_stage_update_for_flow_on_fixed_grid1()
-
-    @nogc
-    void rkl1_stage_j_update_for_flow_on_fixed_grid(double dt, bool with_k_omega, int j, int s, bool with_local_time_stepping) 
+    
+    void rkl1_stage_update_for_flow_on_fixed_grid2(double dt, bool with_k_omega, int j, int s, bool with_local_time_stepping) 
     {
-        ConservedQuantities dUdtj;
+        ConservedQuantities dUdt0;
         ConservedQuantities U0;
         ConservedQuantities U1;
         ConservedQuantities U2;
-	U0 = U[0];
-	U1 = U[1];
-	U2 = U[2];
-	dUdtj = dUdt[1];
-	
+        U0 = U[0];
+        U1 = U[1];
+        U2 = U[2];
+        dUdt0 = dUdt[1];
+        
         // coefficients
         double muj; double vuj; double muj_tilde;
-	muj_tilde = (2.0*j-1)/j * 2.0/(s*s+s);
-	muj = (2.0*j-1)/j;
-	vuj = (1.0-j)/j;
-	
-	U2.mass = muj*U1.mass + vuj*U0.mass + muj_tilde*dt*dUdtj.mass;
-       	U2.momentum.set(muj*U1.momentum.x + vuj*U0.momentum.x + muj_tilde*dt*dUdtj.momentum.x,
-                        muj*U1.momentum.y + vuj*U0.momentum.y + muj_tilde*dt*dUdtj.momentum.y,
-                        muj*U1.momentum.z + vuj*U0.momentum.z + muj_tilde*dt*dUdtj.momentum.z);
-	version(MHD) {
+        muj_tilde = (2.0*j-1)/j * 2.0/(s*s+s);
+        muj = (2.0*j-1)/j;
+        vuj = (1.0-j)/j;
+        
+        U2.mass = muj*U1.mass + vuj*U0.mass + muj_tilde*dt*dUdt0.mass;
+        U2.momentum.set(muj*U1.momentum.x + vuj*U0.momentum.x + muj_tilde*dt*dUdt0.momentum.x,
+                        muj*U1.momentum.y + vuj*U0.momentum.y + muj_tilde*dt*dUdt0.momentum.y,
+                        muj*U1.momentum.z + vuj*U0.momentum.z + muj_tilde*dt*dUdt0.momentum.z);
+        version(MHD) {
             if (myConfig.MHD) {
                 // Magnetic field
-                U2.B.set(muj*U1.B.x + vuj*U0.B.x + muj_tilde*dt*dUdtj.B.x,
-                         muj*U1.B.y + vuj*U0.B.y + muj_tilde*dt*dUdtj.B.y,
-                         muj*U1.B.z + vuj*U0.B.z + muj_tilde*dt*dUdtj.B.z);
+                U2.B.set(muj*U1.B.x + vuj*U0.B.x + muj_tilde*dt*dUdt0.B.x,
+                         muj*U1.B.y + vuj*U0.B.y + muj_tilde*dt*dUdt0.B.y,
+                         muj*U1.B.z + vuj*U0.B.z + muj_tilde*dt*dUdt0.B.z);
                 if (myConfig.divergence_cleaning) {
-                    U2.psi = muj*U1.psi + vuj*U0.psi + muj_tilde*dt*dUdtj.psi;
+                    U2.psi = muj*U1.psi + vuj*U0.psi + muj_tilde*dt*dUdt0.psi;
                     U2.psi *= divergence_damping_factor(dt, myConfig.c_h, myConfig.divB_damping_length);
                 }
             } else {
@@ -895,12 +896,12 @@ public:
                 U2.psi = 0.0;
             }
         }
-        U2.total_energy = muj*U1.total_energy + vuj*U0.total_energy + muj_tilde*dt*dUdtj.total_energy; 
+        U2.total_energy = muj*U1.total_energy + vuj*U0.total_energy + muj_tilde*dt*dUdt0.total_energy; 
         version(komega) {
             if (with_k_omega) {
-                U2.tke = muj*U1.tke + vuj*U0.tke + muj_tilde*dt*dUdtj.tke;
+                U2.tke = muj*U1.tke + vuj*U0.tke + muj_tilde*dt*dUdt0.tke;
                 U2.tke = fmax(U2.tke, 0.0);
-                U2.omega = muj*U1.omega + vuj*U0.omega + muj_tilde*dt*dUdtj.omega;
+                U2.omega = muj*U1.omega + vuj*U0.omega + muj_tilde*dt*dUdt0.omega;
                 U2.omega = fmax(U2.omega, U0.mass);
             } else {
                 U2.tke = U0.tke;
@@ -909,21 +910,167 @@ public:
         }
         version(multi_species_gas) {
             foreach(isp; 0 .. U2.massf.length) {
-                U2.massf[isp] = muj*U1.massf[isp] + vuj*U0.massf[isp] + muj_tilde*dt*dUdtj.massf[isp];
+                U2.massf[isp] = muj*U1.massf[isp] + vuj*U0.massf[isp] + muj_tilde*dt*dUdt0.massf[isp];
             }
         }
         version(multi_T_gas) {
             foreach(imode; 0 .. U2.energies.length) {
-                U2.energies[imode] = muj*U1.energies[imode] + vuj*U0.energies[imode] + muj_tilde*dt*dUdtj.energies[imode];
+                U2.energies[imode] = muj*U1.energies[imode] + vuj*U0.energies[imode] + muj_tilde*dt*dUdt0.energies[imode];
             }
         }
         // shuffle time-levels
-	U[0] = U0;
-	U[1] = U1;
-	U[2] = U2;
-	return;
+        U[0] = U0;
+        U[1] = U1;
+        U[2] = U2;
+        return;
     } // end rkl1_stage_update_for_flow_on_fixed_grid2()
+    
+    void rkl2_stage_update_for_flow_on_fixed_grid1(double dt, bool with_k_omega, int j, int s, bool with_local_time_stepping) 
+    {
+        ConservedQuantities dUdt0;
+        ConservedQuantities U0;
+        ConservedQuantities U1;
+        ConservedQuantities U2;
+        U0 = U[0];
+        U1 = U[1];
+        dUdt0 = dUdt[0];
+        
+        // coefficients
+        double muj; double vuj; double muj_tilde;
+        muj_tilde = 4.0/(3.0*(s*s+s-2.0));	
+        
+        U1.mass = U0.mass + muj_tilde*dt*dUdt0.mass;
+        U1.momentum.set(U0.momentum.x + muj_tilde*dt*dUdt0.momentum.x,
+                        U0.momentum.y + muj_tilde*dt*dUdt0.momentum.y,
+                        U0.momentum.z + muj_tilde*dt*dUdt0.momentum.z);
+        version(MHD) {
+            if (myConfig.MHD) {
+                // Magnetic field
+                U1.B.set(U0.B.x + muj_tilde*dt*dUdt0.B.x,
+                         U0.B.y + muj_tilde*dt*dUdt0.B.y,
+                         U0.B.z + muj_tilde*dt*dUdt0.B.z);
+                if (myConfig.divergence_cleaning) {
+                    U1.psi = U0.psi + muj_tilde*dt*dUdt0.psi;
+                    U1.psi *= divergence_damping_factor(dt, myConfig.c_h, myConfig.divB_damping_length);
+                }
+            } else {
+                U1.B.clear();
+                U1.psi = 0.0;
+            }
+        }
+        U1.total_energy = U0.total_energy + muj_tilde*dt*dUdt0.total_energy; 
+        version(komega) {
+            if (with_k_omega) {
+                U1.tke = U0.tke + muj_tilde*dt*dUdt0.tke;
+                U1.tke = fmax(U0.tke, 0.0);
+                U1.omega = U0.omega + muj_tilde*dt*dUdt0.omega;
+                U1.omega = fmax(U0.omega, U0.mass);
+            } else {
+                U1.tke = U0.tke;
+                U1.omega = U0.omega;
+            }
+        }
+        version(multi_species_gas) {
+            foreach(isp; 0 .. U0.massf.length) {
+                U1.massf[isp] = U0.massf[isp] + muj_tilde*dt*dUdt0.massf[isp];
+            }
+        }
+        version(multi_T_gas) {
+            foreach(imode; 0 .. U0.energies.length) {
+                U1.energies[imode] = U0.energies[imode] + muj_tilde*dt*dUdt0.energies[imode];
+            }
+        }
 
+        // make a copy of the initial conserved quantities
+        U[3].copy_values_from(U[0]);
+        return;
+    } // end rkl2_stage_update_for_flow_on_fixed_grid1()
+    
+    void rkl2_stage_update_for_flow_on_fixed_grid2(double dt, bool with_k_omega, int j, int s, bool with_local_time_stepping) 
+    {
+        ConservedQuantities dUdt0;
+        ConservedQuantities U0;
+        ConservedQuantities U1;
+        ConservedQuantities U2;
+        ConservedQuantities U3;
+        ConservedQuantities dUdtO;
+        U0 = U[0];
+        U1 = U[1];
+        U2 = U[2];
+        U3 = U[3];
+        dUdt0 = dUdt[1];
+        dUdtO = dUdt[0];
+        
+        // coefficients
+        double ajm1; double bj; double bjm1, bjm2; double muj; double vuj; double muj_tilde; double gam_tilde;
+
+        if (j == 2) {
+            bj = 1.0/3.0;
+            bjm1 = 1.0/3.0;
+            bjm2 = 1.0/3.0;
+        } else if (j == 3) {
+            bj = (j*j+j-2.0)/(2.0*j*(j+1.0));
+            bjm1 = 1.0/3.0;
+            bjm2 = 1.0/3.0;
+        } else if (j == 4) {
+            bj = (j*j+j-2.0)/(2.0*j*(j+1.0));
+            bjm1 = ((j-1.0)*(j-1.0)+(j-1.0)-2.0)/(2.0*(j-1.0)*((j-1.0)+1.0));
+            bjm2 = 1.0/3.0;
+        } else {
+            bj = (j*j+j-2.0)/(2.0*j*(j+1.0));
+            bjm1 = ((j-1.0)*(j-1.0)+(j-1.0)-2.0)/(2.0*(j-1.0)*((j-1.0)+1.0));
+            bjm2 = ((j-2.0)*(j-2.0)+(j-2.0)-2.0)/(2.0*(j-2.0)*((j-2.0)+1.0));
+        }
+        ajm1 = 1.0-bjm1;
+        muj_tilde = (4.0*(2.0*j-1.0))/(j*(s*s+s-2.0)) * (bj/bjm1);
+        gam_tilde = -ajm1*muj_tilde;
+        muj = (2*j-1.0)/(j) * (bj/bjm1);
+        vuj = -(j-1.0)/(j) * (bj/bjm2);
+
+        U2.mass = muj*U1.mass + vuj*U0.mass + (1.0-muj-vuj)*U3.mass + muj_tilde*dt*dUdt0.mass + gam_tilde*dt*dUdtO.mass;
+        U2.momentum.set(muj*U1.momentum.x + vuj*U0.momentum.x + (1.0-muj-vuj)*U3.momentum.x + muj_tilde*dt*dUdt0.momentum.x + gam_tilde*dt*dUdtO.momentum.x,
+                        muj*U1.momentum.y + vuj*U0.momentum.y + (1.0-muj-vuj)*U3.momentum.y + muj_tilde*dt*dUdt0.momentum.y + gam_tilde*dt*dUdtO.momentum.y,
+                        muj*U1.momentum.z + vuj*U0.momentum.z + (1.0-muj-vuj)*U3.momentum.z + muj_tilde*dt*dUdt0.momentum.z + gam_tilde*dt*dUdtO.momentum.z);
+        version(MHD) {
+            if (myConfig.MHD) {
+                // Magnetic field
+                U2.B.set(muj*U1.B.x + vuj*U0.B.x + (1.0-muj-vuj)*U3.B.x + muj_tilde*dt*dUdt0.B.x + gam_tilde*dt*dUdtO.B.x,
+                         muj*U1.B.y + vuj*U0.B.y + (1.0-muj-vuj)*U3.B.y + muj_tilde*dt*dUdt0.B.y + gam_tilde*dt*dUdtO.B.y,
+                         muj*U1.B.z + vuj*U0.B.z + (1.0-muj-vuj)*U3.B.z + muj_tilde*dt*dUdt0.B.z + gam_tilde*dt*dUdtO.B.z);
+                if (myConfig.divergence_cleaning) {
+                    U2.psi = muj*U1.psi + vuj*U0.psi + (1.0-muj-vuj)*U3.psi + muj_tilde*dt*dUdt0.psi + gam_tilde*dt*dUdtO.psi;
+                    U2.psi *= divergence_damping_factor(dt, myConfig.c_h, myConfig.divB_damping_length);
+                }
+            } else {
+                U2.B.clear();
+                U2.psi = 0.0;
+            }
+        }
+        U2.total_energy = muj*U1.total_energy + vuj*U0.total_energy + (1.0-muj-vuj)*U3.total_energy + muj_tilde*dt*dUdt0.total_energy + gam_tilde*dt*dUdtO.total_energy; 
+        version(komega) {
+            if (with_k_omega) {
+                U2.tke = muj*U1.tke + vuj*U0.tke + (1.0-muj-vuj)*U3.tke + muj_tilde*dt*dUdt0.tke + gam_tilde*dt*dUdtO.tke;
+                U2.tke = fmax(U2.tke, 0.0);
+                U2.omega = muj*U1.omega + vuj*U0.omega + (1.0-muj-vuj)*U3.omega + muj_tilde*dt*dUdt0.omega + gam_tilde*dt*dUdtO.omega;
+                U2.omega = fmax(U2.omega, U0.mass);
+            } else {
+                U2.tke = U0.tke;
+                U2.omega = U0.omega;
+            }
+        }
+        version(multi_species_gas) {
+            foreach(isp; 0 .. U2.massf.length) {
+                U2.massf[isp] = muj*U1.massf[isp] + vuj*U0.massf[isp] + (1.0-muj-vuj)*U3.massf[isp] + muj_tilde*dt*dUdt0.massf[isp] + gam_tilde*dt*dUdtO.massf[isp];
+            }
+        }
+        version(multi_T_gas) {
+            foreach(imode; 0 .. U2.energies.length) {
+                U2.energies[imode] = muj*U1.energies[imode] + vuj*U0.energies[imode] + muj_tilde*dt*dUdt0.energies[imode] + muj_tilde*dt*dUdt0.energies[imode] + gam_tilde*dt*dUdtO.energies[imode];
+            }
+        }
+	return;
+    } // end rkl2_stage_update_for_flow_on_fixed_grid2()
+    
     @nogc
     void stage_1_update_for_flow_on_fixed_grid(double dt, bool force_euler, bool with_k_omega, bool with_local_time_stepping) 
     {
@@ -948,6 +1095,8 @@ public:
             case GasdynamicUpdate.classic_rk3: gamma_1 = 0.5; break;
             case GasdynamicUpdate.tvd_rk3: gamma_1 = 1.0; break;
             case GasdynamicUpdate.denman_rk3: gamma_1 = 8.0/15.0; break;
+            case GasdynamicUpdate.rkl1:
+            case GasdynamicUpdate.rkl2: assert(false, "invalid option");
             }
         }
         U1.mass = U0.mass + dt*gamma_1*dUdt0.mass;
@@ -1033,6 +1182,8 @@ public:
         case GasdynamicUpdate.classic_rk3: gamma_1 = -1.0; gamma_2 = 2.0; break;
         case GasdynamicUpdate.tvd_rk3: gamma_1 = 0.25; gamma_2 = 0.25; break;
         case GasdynamicUpdate.denman_rk3: gamma_1 = -17.0/60.0; gamma_2 = 5.0/12.0; break;
+        case GasdynamicUpdate.rkl1:
+        case GasdynamicUpdate.rkl2: assert(false, "invalid option");
         }
         U2.mass = U_old.mass + dt*(gamma_1*dUdt0.mass + gamma_2*dUdt1.mass);
         U2.momentum.set(U_old.momentum.x + dt*(gamma_1*dUdt0.momentum.x + gamma_2*dUdt1.momentum.x),
@@ -1101,7 +1252,7 @@ public:
         final switch (myConfig.gasdynamic_update_scheme) {
         case GasdynamicUpdate.euler:
         case GasdynamicUpdate.moving_grid_1_stage:
-        case GasdynamicUpdate.moving_grid_2_stage:
+        case GasdynamicUpdate.moving_grid_2_stage:    
         case GasdynamicUpdate.pc:
         case GasdynamicUpdate.midpoint:
             assert(false, "invalid for 2-stage update.");
@@ -1109,6 +1260,8 @@ public:
         case GasdynamicUpdate.tvd_rk3: gamma_1 = 1.0/6.0; gamma_2 = 1.0/6.0; gamma_3 = 4.0/6.0; break;
             // FIX-ME: Check that we have Andrew Denman's scheme ported correctly.
         case GasdynamicUpdate.denman_rk3: gamma_1 = 0.0; gamma_2 = -5.0/12.0; gamma_3 = 3.0/4.0; break;
+        case GasdynamicUpdate.rkl1:
+        case GasdynamicUpdate.rkl2: assert(false, "invalid option");
         }
         U3.mass = U_old.mass + dt * (gamma_1*dUdt0.mass + gamma_2*dUdt1.mass + gamma_3*dUdt2.mass);
         U3.momentum.set(U_old.momentum.x + dt*(gamma_1*dUdt0.momentum.x + gamma_2*dUdt1.momentum.x +

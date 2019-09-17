@@ -1953,6 +1953,10 @@ void configCheckPoint3()
             throw new FlowSolverException(msg);
         }
     }
+    // make sure with_super_time_stepping flag is set to true when either rkl1 or rkl2 is selected
+    if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1 || GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl2) {
+        GlobalConfig.with_super_time_stepping = true;
+    }
     return;
 }
 

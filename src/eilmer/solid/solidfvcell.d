@@ -125,7 +125,9 @@ public:
             case GasdynamicUpdate.classic_rk3: gamma1 = 0.5; break;
             case GasdynamicUpdate.tvd_rk3: gamma1 = 1.0; break;
             case GasdynamicUpdate.denman_rk3: gamma1 = 8.0/15.0; break;
-           }    
+            case GasdynamicUpdate.rkl1:
+            case GasdynamicUpdate.rkl2: assert(false, "invalid option");
+            }    
 //    }
         e[1] = e[0] + dt*gamma1*dedt[0];
    }
@@ -143,6 +145,8 @@ public:
         case GasdynamicUpdate.classic_rk3: gamma1 = -1.0; gamma2 = 2.0; break;
         case GasdynamicUpdate.tvd_rk3: gamma1 = 0.25; gamma2 = 0.25; break;
         case GasdynamicUpdate.denman_rk3: gamma1 = -17.0/60.0; gamma2 = 5.0/12.0; break;
+        case GasdynamicUpdate.rkl1:
+        case GasdynamicUpdate.rkl2: assert(false, "invalid option");
         }
         e[2] = e[0] + dt*(gamma1*dedt[0] + gamma2*dedt[1]);
     }
@@ -163,6 +167,8 @@ public:
         case GasdynamicUpdate.tvd_rk3: gamma1 = 1.0/6.0; gamma2 = 1.0/6.0; gamma3 = 4.0/6.0; break;
             // FIX-ME: Check that we have Andrew Denman's scheme ported correctly.
         case GasdynamicUpdate.denman_rk3: gamma1 = 0.0; gamma2 = -5.0/12.0; gamma3 = 3.0/4.0; break;
+        case GasdynamicUpdate.rkl1:
+        case GasdynamicUpdate.rkl2: assert(false, "invalid option");
         }
         e[3] = e[0] + dt*(gamma1*dedt[0] + gamma2*dedt[1] + gamma3*dedt[2]);
     }

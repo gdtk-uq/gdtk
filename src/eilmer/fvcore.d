@@ -34,6 +34,8 @@ enum GasdynamicUpdate {
     classic_rk3,
     tvd_rk3,
     denman_rk3,
+    rkl1,
+    rkl2,
     moving_grid_1_stage,
     moving_grid_2_stage
 }
@@ -48,6 +50,8 @@ string gasdynamic_update_scheme_name(GasdynamicUpdate gdut)
     case GasdynamicUpdate.classic_rk3: return "classic-rk3";
     case GasdynamicUpdate.tvd_rk3: return "tvd-rk3";
     case GasdynamicUpdate.denman_rk3: return "denman-rk3";
+    case GasdynamicUpdate.rkl1: return "rkl1";
+    case GasdynamicUpdate.rkl2: return "rkl2";
     case GasdynamicUpdate.moving_grid_1_stage: return "moving_grid_1_stage";
     case GasdynamicUpdate.moving_grid_2_stage: return "moving_grid_2_stage";
     }
@@ -63,6 +67,8 @@ size_t number_of_stages_for_update_scheme(GasdynamicUpdate gdut)
     case GasdynamicUpdate.classic_rk3: return 3;
     case GasdynamicUpdate.tvd_rk3: return 3;
     case GasdynamicUpdate.denman_rk3: return 3;
+    case GasdynamicUpdate.rkl1: return 3;
+    case GasdynamicUpdate.rkl2: return 3;
     case GasdynamicUpdate.moving_grid_1_stage: return 1;
     case GasdynamicUpdate.moving_grid_2_stage: return 2;
     }
@@ -78,6 +84,8 @@ size_t final_index_for_update_scheme(GasdynamicUpdate gdut)
     case GasdynamicUpdate.classic_rk3: return 3;
     case GasdynamicUpdate.tvd_rk3: return 3;
     case GasdynamicUpdate.denman_rk3: return 3;
+    case GasdynamicUpdate.rkl1: return 3;
+    case GasdynamicUpdate.rkl2: return 3;
     case GasdynamicUpdate.moving_grid_1_stage: return 1;
     case GasdynamicUpdate.moving_grid_2_stage: return 2;
     }
@@ -98,6 +106,8 @@ GasdynamicUpdate update_scheme_from_name(string name)
     case "tvd-rk3": return GasdynamicUpdate.tvd_rk3;
     case "denman_rk3": return GasdynamicUpdate.denman_rk3;
     case "denman-rk3": return GasdynamicUpdate.denman_rk3;
+    case "rkl1": return GasdynamicUpdate.rkl1;
+    case "rkl2": return GasdynamicUpdate.rkl2;
     case "moving_grid_1_stage": return GasdynamicUpdate.moving_grid_1_stage;
     case "moving-grid-1-stage": return GasdynamicUpdate.moving_grid_1_stage;
     case "moving_grid_2_stage": return GasdynamicUpdate.moving_grid_2_stage;
