@@ -237,7 +237,11 @@ void init_simulation(int tindx, int nextLoadsIndx,
             GlobalConfig.mpi_rank_for_block[blkid] = taskid;
             if (taskid == my_rank) { localFluidBlocks ~= globalFluidBlocks[blkid]; }
         }
-        MPI_Sync_tasks();
+        version(mpi_timeouts) {
+            MPI_Sync_tasks();
+        } else {
+            MPI_Barrier(MPI_COMM_WORLD);
+        }
         if (localFluidBlocks.length == 0) {
             writefln("MPI-task with rank %d has no FluidBlocks. Quitting.", my_rank);
             MPI_Abort(MPI_COMM_WORLD, 2);
@@ -308,7 +312,13 @@ void init_simulation(int tindx, int nextLoadsIndx,
     }
     SimState.time = time_array[0]; // Pick one; they should all be the same.
     //
-    version(mpi_parallel) { MPI_Sync_tasks(); }
+    version(mpi_parallel) {
+        version(mpi_timeouts) {
+            MPI_Sync_tasks();
+        } else {
+            MPI_Barrier(MPI_COMM_WORLD);
+        }
+    }
     //
     // Now that the cells for all gas blocks have been initialized,
     // we can sift through the boundary condition effects and
@@ -410,17 +420,35 @@ void init_simulation(int tindx, int nextLoadsIndx,
     //
     // All cells are in place, so now we can initialise any history cell files.
     if (GlobalConfig.is_master_task) { ensure_directory_is_present(histDir); }
-    version(mpi_parallel) { MPI_Sync_tasks(); }
+    version(mpi_parallel) {
+        version(mpi_timeouts) {
+            MPI_Sync_tasks();
+        } else {
+            MPI_Barrier(MPI_COMM_WORLD);
+        }
+    }
     init_history_cell_files();
     //
     // create the loads directory, maybe
     if (GlobalConfig.write_loads && (SimState.current_loads_tindx == 0)) {
         if (GlobalConfig.is_master_task) { ensure_directory_is_present("loads"); }
-        version(mpi_parallel) { MPI_Sync_tasks(); }
+        version(mpi_parallel) {
+            version(mpi_timeouts) {
+                MPI_Sync_tasks();
+            } else {
+                MPI_Barrier(MPI_COMM_WORLD);
+            }
+        }
         init_loads_times_file();
     }
-    version(mpi_parallel) { MPI_Sync_tasks(); }
-
+    version(mpi_parallel) {
+        version(mpi_timeouts) {
+            MPI_Sync_tasks();
+        } else {
+            MPI_Barrier(MPI_COMM_WORLD);
+        }
+    }
+    //
     // For the shock fitting grid motion, we need to assign radial positions for all vertices
     if (GlobalConfig.grid_motion == GlobalConfig.grid_motion.shock_fitting) {
         foreach (myblk; localFluidBlocks) {
@@ -560,7 +588,13 @@ void init_simulation(int tindx, int nextLoadsIndx,
     GC.collect();
     GC.minimize();
     //
-    version(mpi_parallel) { MPI_Sync_tasks(); }
+    version(mpi_parallel) {
+        version(mpi_timeouts) {
+            MPI_Sync_tasks();
+        } else {
+            MPI_Barrier(MPI_COMM_WORLD);
+        }
+    }
     if (GlobalConfig.verbosity_level > 0) {
         auto myStats = GC.stats();
         auto heapUsed = to!double(myStats.usedSize)/(2^^20);
@@ -569,7 +603,13 @@ void init_simulation(int tindx, int nextLoadsIndx,
                  GlobalConfig.mpi_rank_for_local_task, heapUsed, heapFree, heapUsed+heapFree);
         stdout.flush();
     }
-    version(mpi_parallel) { MPI_Sync_tasks(); }
+    version(mpi_parallel) {
+        version(mpi_timeouts) {
+            MPI_Sync_tasks();
+        } else {
+            MPI_Barrier(MPI_COMM_WORLD);
+        }
+    }
     if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) {
         // For reporting wall-clock time, convert to seconds with precision of milliseconds.
         double wall_clock_elapsed = to!double((Clock.currTime() - SimState.wall_clock_start).total!"msecs"())/1000.0;
@@ -585,7 +625,13 @@ void write_solution_files()
         writeln("Write flow solution.");
         stdout.flush();
     }
-    version(mpi_parallel) { MPI_Sync_tasks(); }
+    version(mpi_parallel) {
+        version(mpi_timeouts) {
+            MPI_Sync_tasks();
+        } else {
+            MPI_Barrier(MPI_COMM_WORLD);
+        }
+    }
     SimState.current_tindx = SimState.current_tindx + 1;
     ensure_directory_is_present(make_path_name!"flow"(SimState.current_tindx));
     auto job_name = GlobalConfig.base_file_name;
@@ -734,7 +780,13 @@ int integrate_in_time(double target_time_as_requested)
     number L2_residual = to!number(0.0);
     ConservedQuantities Linf_residuals = new ConservedQuantities(GlobalConfig.gmodel_master.n_species,
                                                                  GlobalConfig.gmodel_master.n_modes);
-    version(mpi_parallel) { MPI_Sync_tasks(); }
+    version(mpi_parallel) {
+        version(mpi_timeouts) {
+            MPI_Sync_tasks();
+        } else {
+            MPI_Barrier(MPI_COMM_WORLD);
+        }
+    }
     if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) {
         writeln("Integrate in time.");
         stdout.flush();
@@ -852,7 +904,13 @@ int integrate_in_time(double target_time_as_requested)
                     writeln(writer.data);
                     stdout.flush();
                 }
-                version(mpi_parallel) { MPI_Sync_tasks(); }
+                version(mpi_parallel) {
+                    version(mpi_timeouts) {
+                        MPI_Sync_tasks();
+                    } else {
+                        MPI_Barrier(MPI_COMM_WORLD);
+                    }
+                }
                 if (GlobalConfig.report_residuals) {
                     // We also compute the residual information and write to screen
                     auto wallClock2 = 1.0e-3*(Clock.currTime() - SimState.wall_clock_start).total!"msecs"();
@@ -898,7 +956,13 @@ int integrate_in_time(double target_time_as_requested)
                         stdout.flush();
                     }
                 } // end if report_residuals
-                version(mpi_parallel) { MPI_Sync_tasks(); }
+                version(mpi_parallel) {
+                    version(mpi_timeouts) {
+                        MPI_Sync_tasks();
+                    } else {
+                        MPI_Barrier(MPI_COMM_WORLD);
+                    }
+                }
             } // end if (step...
             //
             // 4.0 (Occasionally) Write out an intermediate solution

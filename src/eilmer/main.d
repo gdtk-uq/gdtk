@@ -289,6 +289,11 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
             MPI_Barrier(MPI_COMM_WORLD);
             if (GlobalConfig.is_master_task) {
                 writefln("Parallelism: MPI-parallel, number of tasks %d", GlobalConfig.mpi_size);
+                version(mpi_timeouts) {
+                    writeln("With MPI timeouts.");
+                } else {
+                    writeln("No MPI timeouts.");
+                }
             }
             stdout.flush();
             // Give master_task a chance to be seen first.

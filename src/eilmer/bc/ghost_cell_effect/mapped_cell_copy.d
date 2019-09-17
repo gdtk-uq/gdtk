@@ -538,11 +538,16 @@ public:
                     buf[ii++] = c.kLength;
                     buf[ii++] = c.L_min;
                 }
-                MPI_Request send_request;
-                MPI_Isend(buf.ptr, to!int(ne), MPI_DOUBLE, outgoing_rank_list[i],
-                          outgoing_geometry_tag_list[i], MPI_COMM_WORLD, &send_request);
-                MPI_Status send_status;
-                MPI_Wait_a_while(&send_request, &send_status);
+                version(mpi_timeouts) {
+                    MPI_Request send_request;
+                    MPI_Isend(buf.ptr, to!int(ne), MPI_DOUBLE, outgoing_rank_list[i],
+                              outgoing_geometry_tag_list[i], MPI_COMM_WORLD, &send_request);
+                    MPI_Status send_status;
+                    MPI_Wait_a_while(&send_request, &send_status);
+                } else {
+                    MPI_Send(buf.ptr, to!int(ne), MPI_DOUBLE, outgoing_rank_list[i],
+                             outgoing_geometry_tag_list[i], MPI_COMM_WORLD);
+                }
             }
         } else { // not mpi_parallel
             // For a single process, nothing to be done because
@@ -558,7 +563,11 @@ public:
             foreach (i; 0 .. n_incoming) {
                 // Wait for non-blocking receive to complete.
                 // Once complete, copy the data back into the local context.
-                MPI_Wait_a_while(&incoming_geometry_request_list[i], &incoming_geometry_status_list[i]);
+                version(mpi_timeouts) {
+                    MPI_Wait_a_while(&incoming_geometry_request_list[i], &incoming_geometry_status_list[i]);
+                } else {
+                    MPI_Wait(&incoming_geometry_request_list[i], &incoming_geometry_status_list[i]);
+                }
                 auto buf = incoming_geometry_buf_list[i];
                 size_t ii = 0;
                 foreach (gi; ghost_cell_indices[incoming_block_list[i]][blk.id]) {
@@ -672,11 +681,16 @@ public:
                     buf[ii++] = fs.k_t;
                     buf[ii++] = to!double(fs.S);
                 }
-                MPI_Request send_request;
-                MPI_Isend(buf.ptr, to!int(ne), MPI_DOUBLE, outgoing_rank_list[i],
-                          outgoing_flowstate_tag_list[i], MPI_COMM_WORLD, &send_request);
-                MPI_Status send_status;
-                MPI_Wait_a_while(&send_request, &send_status);
+                version(mpi_timeouts) {
+                    MPI_Request send_request;
+                    MPI_Isend(buf.ptr, to!int(ne), MPI_DOUBLE, outgoing_rank_list[i],
+                              outgoing_flowstate_tag_list[i], MPI_COMM_WORLD, &send_request);
+                    MPI_Status send_status;
+                    MPI_Wait_a_while(&send_request, &send_status);
+                } else {
+                    MPI_Send(buf.ptr, to!int(ne), MPI_DOUBLE, outgoing_rank_list[i],
+                             outgoing_flowstate_tag_list[i], MPI_COMM_WORLD);
+                }
             }
         } else { // not mpi_parallel
             // For a single process, nothing to be done because
@@ -695,7 +709,11 @@ public:
             foreach (i; 0 .. n_incoming) {
                 // Wait for non-blocking receive to complete.
                 // Once complete, copy the data back into the local context.
-                MPI_Wait_a_while(&incoming_flowstate_request_list[i], &incoming_flowstate_status_list[i]);
+                version(mpi_timeouts) {
+                    MPI_Wait_a_while(&incoming_flowstate_request_list[i], &incoming_flowstate_status_list[i]);
+                } else {
+                    MPI_Wait(&incoming_flowstate_request_list[i], &incoming_flowstate_status_list[i]);
+                }
                 auto buf = incoming_flowstate_buf_list[i];
                 size_t ii = 0;
                 foreach (gi; ghost_cell_indices[incoming_block_list[i]][blk.id]) {
