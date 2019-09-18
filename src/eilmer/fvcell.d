@@ -632,10 +632,27 @@ public:
         }
         // Thermochemical species, if appropriate.
         version(multi_species_gas) {
-            uint nsp = (myConfig.sticky_electrons) ? gmodel.n_heavy : gmodel.n_species;
-            foreach(isp; 0 .. nsp) { fs.gas.massf[isp] = myU.massf[isp] * dinv; }
-            if (myConfig.sticky_electrons) { gmodel.balance_charge(fs.gas); }
-            if (gmodel.n_species > 1) { scale_mass_fractions(fs.gas.massf); }
+            try {
+		uint nsp = (myConfig.sticky_electrons) ? gmodel.n_heavy : gmodel.n_species;
+		foreach(isp; 0 .. nsp) { fs.gas.massf[isp] = myU.massf[isp] * dinv; }
+		if (myConfig.sticky_electrons) { gmodel.balance_charge(fs.gas); }
+		if (gmodel.n_species > 1) { scale_mass_fractions(fs.gas.massf); }
+	    } catch (GasModelException err) {
+		if (myConfig.adjust_invalid_cell_data) {
+		    data_is_bad = true;
+		    return -2;
+		} else {
+		    string msg = "Bad cell with mass fractions that do not add correctly.";
+		    debug {
+			msg ~= format("scale_mass_fractions exception with message:\n  %s", err.msg);
+			msg ~= format("The decode_conserved() failed for cell: %d\n", id);
+			msg ~= format("This cell is located at: %s\n", pos[0]);
+			msg ~= format("This cell is located in block: %d\n", myConfig.universe_blk_id);
+			msg ~= format("The gas state before thermo update is:\n   fs.gas %s", fs.gas);
+		    }
+		    throw new FlowSolverException(msg);
+		} // end if
+	    } // end catch
         }
         //
         // Fill out the other variables: P, T, a, and viscous transport coefficients.

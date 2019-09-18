@@ -823,11 +823,16 @@ public:
                 assert(ne == mapped_cell_ids.length, "oops, wrong length");
                 outgoing_cell_ids_tag = make_mpi_tag(blk.id, which_boundary, 0);
                 foreach (i; 0 .. ne) { outgoing_cell_ids_buf[i] = to!int(mapped_cell_ids[i]); }
-                MPI_Request send_request;
-                MPI_Isend(outgoing_cell_ids_buf.ptr, to!int(ne), MPI_INT, other_blk_rank,
-                          outgoing_cell_ids_tag, MPI_COMM_WORLD, &send_request);
-                MPI_Status send_status;
-                MPI_Wait_a_while(&send_request, &send_status);
+                version(mpi_timeouts) {
+                    MPI_Request send_request;
+                    MPI_Isend(outgoing_cell_ids_buf.ptr, to!int(ne), MPI_INT, other_blk_rank,
+                              outgoing_cell_ids_tag, MPI_COMM_WORLD, &send_request);
+                    MPI_Status send_status;
+                    MPI_Wait_a_while(&send_request, &send_status);
+                } else {
+                    MPI_Send(outgoing_cell_ids_buf.ptr, to!int(ne), MPI_INT, other_blk_rank,
+                             outgoing_cell_ids_tag, MPI_COMM_WORLD);
+                }
             } else {
                 // The other block happens to be in this MPI process so
                 // we know that we can just access the cell data directly
@@ -847,7 +852,11 @@ public:
             if (find(GlobalConfig.localBlockIds, other_blk.id).empty) {
                 // The other block is in another MPI process, go fetch the data via messages.
                 // Once complete, copy the data back into the local context.
-                MPI_Wait_a_while(&incoming_cell_ids_request, &incoming_cell_ids_status);
+                version(mpi_timeouts) {
+                    MPI_Wait_a_while(&incoming_cell_ids_request, &incoming_cell_ids_status);
+                } else {
+                    MPI_Wait(&incoming_cell_ids_request, &incoming_cell_ids_status);
+                }
                 size_t ne = ghost_cells.length;
                 outgoing_mapped_cell_ids.length = ne;
                 foreach (i; 0 .. ne) { outgoing_mapped_cell_ids[i] = to!size_t(incoming_cell_ids_buf[i]); }
@@ -940,11 +949,16 @@ public:
                     outgoing_geometry_buf[ii++] = c.kLength;
                     outgoing_geometry_buf[ii++] = c.L_min;
                 }
-                MPI_Request send_request;
-                MPI_Isend(outgoing_geometry_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
-                          outgoing_geometry_tag, MPI_COMM_WORLD, &send_request);
-                MPI_Status send_status;
-                MPI_Wait_a_while(&send_request, &send_status);
+                version(mpi_timeouts) {
+                    MPI_Request send_request;
+                    MPI_Isend(outgoing_geometry_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
+                              outgoing_geometry_tag, MPI_COMM_WORLD, &send_request);
+                    MPI_Status send_status;
+                    MPI_Wait_a_while(&send_request, &send_status);
+                } else {
+                    MPI_Send(outgoing_geometry_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
+                             outgoing_geometry_tag, MPI_COMM_WORLD);
+                }
             } else {
                 // The other block happens to be in this MPI process so
                 // we know that we can just access the cell data directly
@@ -966,7 +980,11 @@ public:
                 //
                 // Wait for non-blocking receive to complete.
                 // Once complete, copy the data back into the local context.
-                MPI_Wait_a_while(&incoming_geometry_request, &incoming_geometry_status);
+                version(mpi_timeouts) {
+                    MPI_Wait_a_while(&incoming_geometry_request, &incoming_geometry_status);
+                } else {
+                    MPI_Wait(&incoming_geometry_request, &incoming_geometry_status);
+                }
                 size_t ii = 0;
                 foreach (c; ghost_cells) {
                     foreach (j; 0 .. this_blk.myConfig.n_grid_time_levels) {
@@ -1138,11 +1156,16 @@ public:
                     outgoing_flowstate_buf[ii++] = fs.k_t;
                     outgoing_flowstate_buf[ii++] = to!double(fs.S);
                 }
-                MPI_Request send_request;
-                MPI_Isend(outgoing_flowstate_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
-                         outgoing_flowstate_tag, MPI_COMM_WORLD, &send_request);
-                MPI_Status send_status;
-                MPI_Wait_a_while(&send_request, &send_status);
+                version(mpi_timeouts) {
+                    MPI_Request send_request;
+                    MPI_Isend(outgoing_flowstate_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
+                              outgoing_flowstate_tag, MPI_COMM_WORLD, &send_request);
+                    MPI_Status send_status;
+                    MPI_Wait_a_while(&send_request, &send_status);
+                } else {
+                    MPI_Send(outgoing_flowstate_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
+                             outgoing_flowstate_tag, MPI_COMM_WORLD);
+                }
             } else {
                 // The other block happens to be in this MPI process so
                 // we know that we can just access the cell data directly
@@ -1171,7 +1194,11 @@ public:
                 //
                 // Wait for non-blocking receive to complete.
                 // Once complete, copy the data back into the local context.
-                MPI_Wait_a_while(&incoming_flowstate_request, &incoming_flowstate_status);
+                version(mpi_timeouts) {
+                    MPI_Wait_a_while(&incoming_flowstate_request, &incoming_flowstate_status);
+                } else {
+                    MPI_Wait(&incoming_flowstate_request, &incoming_flowstate_status);
+                }
                 size_t ii = 0;
                 foreach (c; ghost_cells) {
                     FlowState fs = c.fs;

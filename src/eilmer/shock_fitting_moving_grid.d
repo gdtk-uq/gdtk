@@ -35,25 +35,10 @@ import sfluidblock;
 import geom;
 import grid_motion;
 import bc;
-
-
-// Begin MPI_Wait_a_while- copied from PJs program used in the ghost cell data transfer. Prevents the program from locking up if something goes wrong in a process
 version(mpi_parallel) {
-    int MPI_Wait_a_while(MPI_Request* request, MPI_Status *status) {
-        int ierr = 0;
-        number timeout = 10000;
-        SysTime startTime = Clock.currTime();
-        int flag = 0;
-        while (!flag) {
-            ierr = MPI_Test(request, &flag, status);
-            number elapsedtime = (Clock.currTime() - startTime).total!"msecs"();
-            if (elapsedtime > timeout) {
-                throw new Exception("MPI has timed out");
-            }
-        }
-        return ierr;
-    }
+    import bc.ghost_cell_effect.full_face_copy : MPI_Wait_a_while;
 }
+
 
 // The mpi version of the program that will assign a normalised radial distance to each vertex. Could be more efficient, but only runs once so not really an issue.
 // Start assign_radial_dist_mpi
@@ -116,7 +101,11 @@ version(mpi_parallel) {
 
         // Wait for the receive request for the distance array to be completed
         if (requested_data) {
-            MPI_Wait(&MPI_incoming_dist_request, &MPI_incoming_dist_status);
+            version(mpi_timeouts) {
+                MPI_Wait_a_while(&MPI_incoming_dist_request, &MPI_incoming_dist_status);
+            } else {
+                MPI_Wait(&MPI_incoming_dist_request, &MPI_incoming_dist_status);
+            }
         }
         // This is where we get the proper radial position of all the vertices by adding the radial distance of the previous blocks to the local vertices 
         for (size_t k = blk.kmin; k <= krange; k++) {
@@ -135,7 +124,13 @@ version(mpi_parallel) {
         }
 
         // Wait for the receive request for the size of the chained_to array to be completed
-        if (requested_data) {MPI_Wait_a_while(&MPI_incoming_partner_request, &MPI_incoming_partner_status);}
+        if (requested_data) {
+            version(mpi_timeouts) {
+                MPI_Wait_a_while(&MPI_incoming_partner_request, &MPI_incoming_partner_status);
+            } else {
+                MPI_Wait(&MPI_incoming_partner_request, &MPI_incoming_partner_status);
+            }
+        }
 
         // Now we know how big the chained_to array is, call for it. We can't request it until we know how many elements it should have
         int[] chained_to = new int[no_partners];

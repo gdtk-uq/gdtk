@@ -24,6 +24,8 @@ GPP ?= g++
 FLAVOUR ?= debug
 
 PLATFORM ?= linux
+WITH_MPI ?= 0
+WITH_MPI_TIMEOUTS ?= 0
 WITH_SSS ?= 0
 WITH_SSC ?= 0
 WITH_OPENCL_GPU_CHEM ?= 0
@@ -298,6 +300,10 @@ endif
 # DIP1008 allows throwing of exceptions in @nogc code.
 DFLAGS += -dip1008
 DFLAGS += -I.. -I$(NM_DIR) -I$(UTIL_DIR) -I$(GEOM_DIR) -I$(GRID_DIR) -I$(GZIP_DIR)
+
+ifeq ($(WITH_MPI_TIMEOUTS),1)
+    DFLAGS += $(DVERSION)mpi_timeouts
+endif
 
 ifeq ($(DEBUG_CHEM),1)
     DFLAGS += $(DVERSION)debug_chem
