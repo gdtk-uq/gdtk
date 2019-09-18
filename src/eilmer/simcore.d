@@ -70,6 +70,7 @@ final class SimState {
     // for STS
     shared static double dt_global_parab;
     shared static double dt_allow_parab; 
+    shared static int s_RKL;
     //
     shared static double cfl_max;      // current max cfl determined by code
     shared static double dt_override = 0.0;  // A positive value will override a larger computed time step.
@@ -970,6 +971,23 @@ int integrate_in_time(double target_time_as_requested)
                         MPI_Barrier(MPI_COMM_WORLD);
                     }
                 }
+                if (GlobalConfig.with_super_time_stepping) {
+                    if (GlobalConfig.is_master_task) {
+                        auto writer2 = appender!string();
+                        formattedWrite(writer2, "SUPER-TIME-STEP: ");
+                        formattedWrite(writer2, "S= %d dtHYPER= %10.6e dtPARAB= %10.6e ",
+                                       SimState.s_RKL, SimState.dt_global, SimState.dt_global_parab);
+                        writeln(writer2.data);
+                        stdout.flush();
+                    }
+                } // end if with_super_time_stepping
+                version(mpi_parallel) {
+                    version(mpi_timeouts) {
+                        MPI_Sync_tasks();
+                    } else {
+                        MPI_Barrier(MPI_COMM_WORLD);
+                    }
+                }
             } // end if (step...
             //
             // 4.0 (Occasionally) Write out an intermediate solution
@@ -1649,6 +1667,8 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
     else {    // store as an int for looping later
 	s_RKL = to!int(stmp);
     }
+
+    SimState.s_RKL = s_RKL;
     
     // since we round S down to the nearest odd integer we should alter the time-step to be consistent
     //SimState.dt_global = SimState.dt_global_parab * (S*S+S)/(2.0); // RKL1
