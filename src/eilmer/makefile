@@ -51,7 +51,7 @@ endif
 
 
 
-PROGRAMS := e4shared
+PROGRAMS := e4shared e4monitor
 SHARE_FILES :=
 
 ifeq ($(WITH_SSS),1)
@@ -410,6 +410,9 @@ chemkin2eilmer:
 
 $(LIBLUA):
 	cd $(LUA_DIR); make $(PLATFORM) local
+
+e4monitor: e4monitor.d
+	$(DMD) $(DFLAGS) $(OF)e4monitor e4monitor.d $(DLINKFLAGS)
 
 e4shared: main.d $(EILMER_FILES) \
 	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \

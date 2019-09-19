@@ -183,6 +183,11 @@ void init_simulation(int tindx, int nextLoadsIndx,
     if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) {
         writeln("Begin init_simulation()...");
     }
+    if (GlobalConfig.is_master_task) {
+        string progressFile = "config/"~GlobalConfig.base_file_name~"-progress.txt";
+        std.file.write(progressFile, "0\n");
+    }
+    //
     SimState.maxWallClockSeconds = maxWallClock;
     SimState.wall_clock_start = Clock.currTime();
     read_config_file();  // most of the configuration is in here
@@ -893,6 +898,11 @@ int integrate_in_time(double target_time_as_requested)
             //
             // 3.0 Update the time record and (occasionally) print status.
             SimState.step = SimState.step + 1;
+            if (GlobalConfig.is_master_task) {
+                string progressFile = "config/"~GlobalConfig.base_file_name~"-progress.txt";
+                std.file.write(progressFile, format("%d\n", SimState.step));
+            }
+            //
             SimState.output_just_written = false;
             SimState.history_just_written = false;
             SimState.loads_just_written = false;
@@ -3113,6 +3123,10 @@ void finalize_simulation()
     GC.minimize();
     if (GlobalConfig.verbosity_level > 0  && GlobalConfig.is_master_task) {
         writeln("Step= ", SimState.step, " final-t= ", SimState.time);
+    }
+    if (GlobalConfig.is_master_task) {
+        string progressFile = "config/"~GlobalConfig.base_file_name~"-progress.txt";
+        std.file.write(progressFile, "done\n");
     }
 } // end finalize_simulation()
 
