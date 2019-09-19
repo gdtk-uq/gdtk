@@ -1,9 +1,14 @@
 // e4monitor.d
-// Program to monitor the progress of an Eilmer job
+// Program to monitor the progress of an Eilmer job in PBS
 // and to terminate that job if progress is not being made.
 //
 // PJ 2019-09-19, first experiments.
 //
+// From within your PBS batch script, start the monitor program
+// as a background process just before the main run command.
+// For example:
+// e4monitor --job=cone20 --startup=2 --period=1 &
+// mpirun -np 8 e4mpi --run --job=cone20 --verbosity=1
 
 import std.conv;
 import std.stdio;
@@ -13,6 +18,7 @@ import std.file;
 import std.string;
 import std.algorithm;
 import core.thread;
+import std.process;
 
 int main(string[] args)
 {
@@ -61,16 +67,30 @@ int main(string[] args)
         writef("monitor %d content \"%s\"", myCount, content);
         simulationDone = canFind(content, "done");
         if (simulationDone) {
-            writeln(" breaking loop.");
+            writeln(" simulation done, breaking loop.");
             break;
         }
+        //
         if (isNumeric(content)) { newStep = to!int(content); }
         bool progressing = newStep > oldStep;
         if (!progressing) { stalledCount += 1; } else { stalledCount = 0; }
         writefln(" %s", (progressing) ? "progressing" : "stalled");
+        //
         if (stalledCount > 10) {
-            writeln("monitor kill job");
-            // FIX ME with some real action here.
+            writeln("monitor delete job");
+            auto which_cmd = execute(["which", "qdel"]);
+            string pbs_jobid = environment.get("PBS_JOBID");
+            if ((which_cmd.status == 0) && (pbs_jobid !is null)) {
+                auto qdel_cmd = execute(["qdel", pbs_jobid]);
+                if (qdel_cmd.status == 0) {
+                    writeln("monitor qdel command succeeded");
+                } else {
+                    writeln("monitor qdel command failed");
+                    writeln(qdel_cmd.output);
+                }
+            } else {
+                writeln("monitor does not know how to delete job");
+            }
         }
         oldStep = newStep;
     }
@@ -92,4 +112,4 @@ string readTextWithRetries(string fileName)
         Thread.sleep(dur!("seconds")(1));
     }
     return content;
-}
+} // end readTextWithRetries
