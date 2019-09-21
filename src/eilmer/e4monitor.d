@@ -75,6 +75,7 @@ int main(string[] args)
         bool progressing = newStep > oldStep;
         if (!progressing) { stalledCount += 1; } else { stalledCount = 0; }
         writefln(" %s", (progressing) ? "progressing" : "stalled");
+        stdout.flush();
         //
         if (stalledCount > 10) {
             writeln("monitor delete job");
@@ -91,10 +92,12 @@ int main(string[] args)
             } else {
                 writeln("monitor does not know how to delete job");
             }
+            stdout.flush();
         }
         oldStep = newStep;
     }
     writeln("monitor done.");
+    stdout.flush();
     return 0;
 } // end main
 
