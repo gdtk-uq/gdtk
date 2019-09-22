@@ -35,7 +35,7 @@ enum Species {N2=0, N}
 class TwoTemperatureDissociatingNitrogen : GasModel {
 public:
 
-    this(lua_State* L)
+    this()
     {
         _n_species = 2;
         _is_plasma = false;
@@ -276,8 +276,7 @@ public:
         Cv += Q.massf[Species.N2] * (Cv_tr_rot + Cv_vib);
         // N contribution
         Cv_tr = transRotSpecHeatConstV(Species.N);
-        Cv += Q.massf[Species.N2] * Cv_tr_rot;
-
+        Cv += Q.massf[Species.N] * Cv_tr_rot;
         return Cv;
     }
     override number dhdT_const_p(in GasState Q)
