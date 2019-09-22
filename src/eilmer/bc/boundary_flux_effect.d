@@ -495,6 +495,9 @@ private:
             face.F.momentum.refy = fs.gas.p * face.n.y + fs.vel.y * mass_flux;
             face.F.momentum.refz = fs.gas.p * face.n.z + fs.vel.z * mass_flux;
             number utot = fs.gas.u + 0.5*dot(fs.vel,fs.vel);
+            version(multi_T_gas) {
+                foreach (umode; fs.gas.u_modes) { utot += umode; }
+            }
             version(komega) {
                 utot += fs.tke;
             }
