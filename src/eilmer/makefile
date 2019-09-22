@@ -208,10 +208,10 @@ ifeq ($(DMD), dmd)
         DFLAGS := -w -g -debug -version=flavour_debug
     endif
     ifeq ($(FLAVOUR), profile)
-        DFLAGS := -profile -w -O -release -inline -boundscheck=off -version=flavour_profile
+        DFLAGS := -profile -w -O -release -boundscheck=off -version=flavour_profile
     endif
     ifeq ($(FLAVOUR), fast)
-        DFLAGS := -w -g -O -release -inline -boundscheck=off -version=flavour_fast
+        DFLAGS := -w -g -O -release -boundscheck=off -version=flavour_fast
     endif
     OF := -of
     DVERSION := -version=
