@@ -185,7 +185,11 @@ void init_simulation(int tindx, int nextLoadsIndx,
     }
     if (GlobalConfig.is_master_task) {
         string progressFile = "config/"~GlobalConfig.base_file_name~"-progress.txt";
-        std.file.write(progressFile, "0\n");
+        try {
+            std.file.write(progressFile, "0\n");
+        } catch (Exception e) {
+            // do nothing
+        }
     }
     //
     SimState.maxWallClockSeconds = maxWallClock;
@@ -900,7 +904,11 @@ int integrate_in_time(double target_time_as_requested)
             SimState.step = SimState.step + 1;
             if (GlobalConfig.is_master_task) {
                 string progressFile = "config/"~GlobalConfig.base_file_name~"-progress.txt";
-                std.file.write(progressFile, format("%d\n", SimState.step));
+                try {
+                    std.file.write(progressFile, format("%d\n", SimState.step));
+                } catch (Exception e) {
+                    // do nothing
+                }
             }
             //
             SimState.output_just_written = false;
@@ -3126,7 +3134,11 @@ void finalize_simulation()
     }
     if (GlobalConfig.is_master_task) {
         string progressFile = "config/"~GlobalConfig.base_file_name~"-progress.txt";
-        std.file.write(progressFile, "done\n");
+        try {
+            std.file.write(progressFile, "done\n");
+        } catch (Exception e) {
+            // do nothing
+        }
     }
 } // end finalize_simulation()
 
