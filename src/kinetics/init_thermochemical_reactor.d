@@ -21,6 +21,7 @@ import gas.two_temperature_reacting_argon;
 import gas.ideal_dissociating_gas;
 import gas.fuel_air_mix;
 import gas.two_temperature_nitrogen;
+import gas.two_temperature_dissociating_nitrogen;
 import gas.vib_specific_nitrogen;
 import gas.two_temperature_air;
 import gas.pseudo_species_gas;
@@ -33,6 +34,7 @@ import kinetics.two_temperature_argon_kinetics;
 import kinetics.ideal_dissociating_gas_kinetics;
 import kinetics.fuel_air_mix_kinetics;
 import kinetics.two_temperature_nitrogen_kinetics;
+import kinetics.two_temperature_dissociating_nitrogen_kinetics;
 import kinetics.vib_specific_nitrogen_kinetics;
 import kinetics.two_temperature_air_kinetics;
 import kinetics.electronically_specific_kinetics;
@@ -63,6 +65,9 @@ ThermochemicalReactor init_thermochemical_reactor(GasModel gmodel, string fileNa
     }
     if ((cast(TwoTemperatureNitrogen) gmodel) !is null) {
         reactor = new VibRelaxNitrogen(fileName1, gmodel);
+    }
+    if ((cast(TwoTemperatureDissociatingNitrogen) gmodel) !is null) {
+        reactor = new TwoTemperatureDissociatingNitrogenKinetics(fileName1, fileName2, gmodel);
     }
     if ((cast(VibSpecificNitrogen) gmodel) !is null) {
         reactor = new VibSpecificNitrogenRelaxation(fileName1, gmodel);

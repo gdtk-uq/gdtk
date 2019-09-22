@@ -31,6 +31,7 @@ import gas.two_temperature_reacting_argon;
 import gas.ideal_dissociating_gas;
 import gas.two_temperature_air;
 import gas.two_temperature_nitrogen;
+import gas.two_temperature_dissociating_nitrogen : TwoTemperatureDissociatingNitrogen;
 import gas.vib_specific_nitrogen;
 import gas.fuel_air_mix;
 import gas.equilibrium_gas;
@@ -130,6 +131,9 @@ GasModel init_gas_model(string file_name="gas-model.lua")
         break;
     case "TwoTemperatureNitrogen":
         gm = new TwoTemperatureNitrogen();
+        break;
+    case "TwoTemperatureDissociatingNitrogen":  
+        gm = new TwoTemperatureDissociatingNitrogen();
         break;
     case "VibSpecificNitrogen":
         gm = new VibSpecificNitrogen();
