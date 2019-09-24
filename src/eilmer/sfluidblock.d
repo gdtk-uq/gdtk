@@ -2064,8 +2064,8 @@ public:
         } // for k
         // ifj interfaces are North-facing interfaces.
         for (size_t k = kmin; k <= kmax; ++k) {
-            for (size_t i = imin; i <= imax; ++i) {
-                for (size_t j = jmin; j <= jmax+1; ++j) {
+            for (size_t j = jmin; j <= jmax+1; ++j) {
+                for (size_t i = imin; i <= imax; ++i) {
                     auto IFace = get_ifj!()(i,j,k);
                     auto cL0 = get_cell!()(i,j-1,k); auto cL1 = get_cell!()(i,j-2,k);
                     auto cR0 = get_cell!()(i,j,k); auto cR1 = get_cell!()(i,j+1,k);
@@ -2117,9 +2117,9 @@ public:
         if (myConfig.dimensions == 2) return;
     
         // ifk interfaces are Top-facing interfaces.
-        for (size_t i = imin; i <= imax; ++i) {
+        for (size_t k = kmin; k <= kmax+1; ++k) {
             for (size_t j = jmin; j <= jmax; ++j) {
-                for (size_t k = kmin; k <= kmax+1; ++k) {
+                for (size_t i = imin; i <= imax; ++i) {
                     auto IFace = get_ifk!()(i,j,k);
                     auto cL0 = get_cell!()(i,j,k-1); auto cL1 = get_cell!()(i,j,k-2);
                     auto cR0 = get_cell!()(i,j,k); auto cR1 = get_cell!()(i,j,k+1);
