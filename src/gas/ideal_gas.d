@@ -65,6 +65,7 @@ public:
         // Compute derived parameters
         _Rgas = R_universal/_mol_masses[0];
         _Cv = _Rgas / (_gamma - 1.0);
+        _Cvinv = 1.0 / _Cv;
         _Cp = _Rgas*_gamma/(_gamma - 1.0);
         create_species_reverse_lookup();
     }
@@ -100,7 +101,7 @@ public:
             string msg = "Internal energy and/or density was negative for update_thermo_from_rhou."; 
             throw new GasModelException(msg);
         }
-        Q.T = Q.u/_Cv;
+        Q.T = Q.u*_Cvinv;
         Q.p = Q.rho*_Rgas*Q.T;
     }
     override void update_thermo_from_rhoT(GasState Q) const
@@ -191,6 +192,7 @@ private:
     double _Rgas; // J/kg/K
     double _gamma;   // ratio of specific heats
     double _Cv; // J/kg/K
+    double _Cvinv;
     double _Cp; // J/kg/K
     // Reference values for entropy
     double _s1;  // J/kg/K
