@@ -974,13 +974,12 @@ public:
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-        auto gmodel = blk.myConfig.gmodel;      
-        int nsp = gmodel.n_species;
+        uint nsp = blk.myConfig.n_species;
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
             FlowState fs = f.fs;
             version(multi_species_gas) {
-                for(int isp; isp<nsp; isp++) {
+                for(uint isp=0; isp<nsp; isp++) {
                     fs.gas.massf[isp] = massfAtWall[isp];   
                 }
             }
@@ -992,8 +991,7 @@ public:
         size_t i, j, k;
         FVCell cell;
         FVInterface IFace;
-        auto gmodel = blk.myConfig.gmodel;
-        int nsp = gmodel.n_species;
+        uint nsp = blk.myConfig.n_species;
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
 
@@ -1006,7 +1004,7 @@ public:
                     IFace = cell.iface[Face.north];
                     FlowState fs = IFace.fs;
                     version(multi_species_gas) {
-                        for(int isp; isp<nsp; isp++) {
+                        for(uint isp=0; isp<nsp; isp++) {
                             fs.gas.massf[isp] = massfAtWall[isp];   
                         }
                     }
@@ -1021,7 +1019,7 @@ public:
                     IFace = cell.iface[Face.east];
                     FlowState fs = IFace.fs;
                     version(multi_species_gas) {
-                        for(int isp; isp<nsp; isp++) {
+                        for(uint isp=0; isp<nsp; isp++) {
                             fs.gas.massf[isp] = massfAtWall[isp];   
                         }
                     }
@@ -1035,7 +1033,7 @@ public:
                     cell = blk.get_cell(i,j,k);
                     IFace = cell.iface[Face.south];
                     FlowState fs = IFace.fs;
-                    for(int isp; isp<nsp; isp++) {
+                    for(uint isp=0; isp<nsp; isp++) {
                         fs.gas.massf[isp] = massfAtWall[isp];   
                     }
                 } // end i loop
@@ -1049,7 +1047,7 @@ public:
                     IFace = cell.iface[Face.west];
                     FlowState fs = IFace.fs;
                     version(multi_species_gas) {
-                        for(int isp; isp<nsp; isp++) {
+                        for(uint isp=0; isp<nsp; isp++) {
                             fs.gas.massf[isp] = massfAtWall[isp];   
                         }
                     }
@@ -1064,7 +1062,7 @@ public:
                     IFace = cell.iface[Face.top];
                     FlowState fs = IFace.fs;
                     version(multi_species_gas) {
-                        for(int isp; isp<nsp; isp++) {
+                        for(uint isp=0; isp<nsp; isp++) {
                             fs.gas.massf[isp] = massfAtWall[isp];   
                         }
                     }
@@ -1079,7 +1077,7 @@ public:
                     IFace = cell.iface[Face.bottom];
                     FlowState fs = IFace.fs;
                     version(multi_species_gas) {
-                        for(int isp; isp<nsp; isp++) {
+                        for(uint isp=0; isp<nsp; isp++) {
                             fs.gas.massf[isp] = massfAtWall[isp];   
                         }
                     }

@@ -88,8 +88,8 @@ public:
         FVCell src_cell, dest_cell;
         FVCell cell_1, cell_2;
         auto gmodel = blk.myConfig.gmodel;
-        size_t nsp = gmodel.n_species;
-        size_t nmodes = gmodel.n_modes;
+        size_t nsp = blk.myConfig.n_species;
+        size_t nmodes = blk.myConfig.n_modes;
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
 

@@ -419,6 +419,9 @@ final class GlobalConfig {
     // Presumably, we won't be accessing this particular gas model from the 
     // individual block computations, so that parallel computations for the blocks
     // don't trip over each other.
+    static uint n_species;
+    static uint n_heavy;
+    static uint n_modes;
     static bool sticky_electrons = false; // Default to electrons being a separate species.
     // Setting sticky_electrons=true will signal to the flow solver that we carry electrons
     // in the gas model but do not treat them as a separate species in the transport equations.
@@ -932,6 +935,9 @@ public:
     bool ignition_zone_active;
 
     GasModel gmodel;
+    uint n_species;
+    uint n_heavy;
+    uint n_modes;
     bool sticky_electrons;
     bool include_quality;
     ThermochemicalReactor thermochemUpdate;
@@ -1062,6 +1068,9 @@ public:
         foreach (iz; GlobalConfig.ignition_zones) { ignition_zones ~= new IgnitionZone(iz); }
         //
         gmodel = init_gas_model(GlobalConfig.gas_model_file);
+        n_species = gmodel.n_species;
+        n_heavy = gmodel.n_heavy;
+        n_modes = gmodel.n_modes;
         sticky_electrons = GlobalConfig.sticky_electrons;
         if (mass_diffusion_model != MassDiffusionModel.none) {
             massDiffusion = initMassDiffusion(gmodel, sticky_electrons, mass_diffusion_model,
@@ -1214,6 +1223,9 @@ void read_config_file()
         if (multiT) { throw new Error("Cannot accommodate multi-temperature gas model."); }
     }
     GlobalConfig.gmodel_master = gm;
+    GlobalConfig.n_species = gm.n_species;
+    GlobalConfig.n_heavy = gm.n_heavy;
+    GlobalConfig.n_modes = gm.n_modes;
     mixin(update_string("udf_supervisor_file", "udf_supervisor_file"));
     mixin(update_int("user_pad_length", "user_pad_length"));
     GlobalConfig.userPad.length = GlobalConfig.user_pad_length;

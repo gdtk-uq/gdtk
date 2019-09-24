@@ -186,8 +186,7 @@ void compute_flux_at_left_wall(ref FlowState Rght, ref FVInterface IFace,
     F.momentum.set(pstar, to!number(0.0), to!number(0.0));
     F.total_energy = pstar * vstar;
     version(multi_species_gas) {
-        auto gm = myConfig.gmodel;
-        uint nsp = (myConfig.sticky_electrons) ? gm.n_heavy : gm.n_species;
+        uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
         foreach (i; 0 .. nsp) { F.massf[i] = 0.0; }
     }
     version(multi_T_gas) {
@@ -273,8 +272,7 @@ void compute_flux_at_right_wall(ref FlowState Lft, ref FVInterface IFace,
     F.momentum.set(pstar, to!number(0.0), to!number(0.0));
     F.total_energy = pstar * vstar;
     version(multi_species_gas) {
-        auto gm = myConfig.gmodel;
-        uint nsp = (myConfig.sticky_electrons) ? gm.n_heavy : gm.n_species;
+        uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
         foreach (i; 0 .. nsp) { F.massf[i] = 0.0; }
     }
     version(multi_T_gas) {
@@ -323,8 +321,7 @@ void set_flux_vector_in_local_frame(ref ConservedQuantities F, ref FlowState fs,
         F.omega = F.mass * fs.omega;  // pseudo vorticity
     }
     version(multi_species_gas) {
-        auto gm = myConfig.gmodel;
-        uint nsp = (myConfig.sticky_electrons) ? gm.n_heavy : gm.n_species;
+        uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
         foreach (isp; 0 .. nsp) { F.massf[isp] = F.mass*fs.gas.massf[isp]; }
     }
     version(multi_T_gas) {
@@ -476,7 +473,7 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
             F.omega = ru_half*Lft.omega;
         }
         version(multi_species_gas) {
-            uint nsp = (myConfig.sticky_electrons) ? gmodel.n_heavy : gmodel.n_species;
+            uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
             foreach (i; 0 .. nsp) { F.massf[i] = ru_half*Lft.gas.massf[i]; }
         }
         version(multi_T_gas) {
@@ -496,7 +493,7 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
             F.omega = ru_half*Rght.omega;
         }
         version(multi_species_gas) {
-            uint nsp = (myConfig.sticky_electrons) ? gmodel.n_heavy : gmodel.n_species;
+            uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
             foreach (i; 0 .. nsp) { F.massf[i] = ru_half*Rght.gas.massf[i]; }
         }
         version(multi_T_gas) {
@@ -524,7 +521,7 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
             F.omega -= d_ua*(rR*Rght.omega - rL*Lft.omega);
         }
         version(multi_species_gas) {
-            uint nsp = (myConfig.sticky_electrons) ? gmodel.n_heavy : gmodel.n_species;
+            uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
             foreach (i; 0 .. nsp) {
                 F.massf[i] -= d_ua*(rR*Rght.gas.massf[i] - rL*Lft.gas.massf[i]);
             }
@@ -618,7 +615,7 @@ void hanel(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
         F.omega = uLplus * rL * Lft.omega + uRminus * rR * Rght.omega;
     }
     version(multi_species_gas) {
-        uint nsp = (myConfig.sticky_electrons) ? gmodel.n_heavy : gmodel.n_species;
+        uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
         foreach (i; 0 .. nsp) {
             F.massf[i] = uLplus*rL*Lft.gas.massf[i] + uRminus*rR*Rght.gas.massf[i];
         }
@@ -747,7 +744,7 @@ void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
             F.omega = F.mass * Lft.omega;
         }
         version(multi_species_gas) {
-            uint nsp = (myConfig.sticky_electrons) ? gmodel.n_heavy : gmodel.n_species;
+            uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
             foreach (i; 0 .. nsp) { F.massf[i] = F.mass * Lft.gas.massf[i]; }
         }
         version(multi_T_gas) {
@@ -764,7 +761,7 @@ void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
             F.omega = F.mass * Rght.omega;
         }
         version(multi_species_gas) {
-            uint nsp = (myConfig.sticky_electrons) ? gmodel.n_heavy : gmodel.n_species;
+            uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
             foreach (i; 0 .. nsp) { F.massf[i] = F.mass * Rght.gas.massf[i]; }
         }
         version(multi_T_gas) {
@@ -1018,7 +1015,7 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
             F.omega = ru_half * Lft.omega;
         }
         version(multi_species_gas) {
-            uint nsp = (myConfig.sticky_electrons) ? gmodel.n_heavy : gmodel.n_species;
+            uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
             foreach (i; 0 .. nsp) { F.massf[i] = ru_half * Lft.gas.massf[i]; }
         }
         version(multi_T_gas) {
@@ -1038,7 +1035,7 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
             F.omega = ru_half * Rght.omega;
         }
         version(multi_species_gas) {
-            uint nsp = (myConfig.sticky_electrons) ? gmodel.n_heavy : gmodel.n_species;
+            uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
             foreach (i; 0 .. nsp) { F.massf[i] = ru_half * Rght.gas.massf[i]; }
         }
         version(multi_T_gas) {
@@ -1195,7 +1192,7 @@ void hlle(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalC
                 (brp*fBzL - blm*fBzR + fac1*dU[6])*iden);
         F.total_energy = (brp*fenergyL - blm*fenergyR + fac1*dU[7])*iden;
         version(multi_species_gas) {
-            uint nsp = (myConfig.sticky_electrons) ? gmodel.n_heavy : gmodel.n_species;
+            uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
             foreach (i; 0 .. nsp) {
                 F.massf[i] = F.mass * ((F.mass >= 0.0) ? Lft.gas.massf[i]: Rght.gas.massf[i]);
             }
@@ -1362,7 +1359,7 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalCo
             F.omega = F.mass*Lft.omega;
         }
         version(multi_species_gas) {
-            uint nsp = (myConfig.sticky_electrons) ? gmodel.n_heavy : gmodel.n_species;
+            uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
             foreach (i; 0 .. nsp) { F.massf[i] = F.mass*Lft.gas.massf[i]; }
         }
         version(multi_T_gas) {
@@ -1375,7 +1372,7 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalCo
             F.omega = F.mass*Rght.omega;
         }
         version(multi_species_gas) {
-            uint nsp = (myConfig.sticky_electrons) ? gmodel.n_heavy : gmodel.n_species;
+            uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
             foreach (i; 0 .. nsp) { F.massf[i] = F.mass*Rght.gas.massf[i]; }
         }
         version(multi_T_gas) {

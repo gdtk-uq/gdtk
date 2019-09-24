@@ -330,9 +330,9 @@ public:
         luaL_dostring(myL, "require 'lua_helper'");
         pushObj!(GasModel, GasModelMT)(myL, blk.myConfig.gmodel);
         lua_setglobal(myL, "gmodel");
-        lua_pushinteger(myL, blk.myConfig.gmodel.n_species);
+        lua_pushinteger(myL, blk.myConfig.n_species);
         lua_setglobal(myL, "n_species");
-        lua_pushinteger(myL, blk.myConfig.gmodel.n_modes);
+        lua_pushinteger(myL, blk.myConfig.n_modes);
         lua_setglobal(myL, "n_modes");
         if (GlobalConfig.user_pad_length > 0) {
             push_array_to_Lua(myL, GlobalConfig.userPad, "userPad");

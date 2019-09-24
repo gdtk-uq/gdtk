@@ -598,9 +598,8 @@ public:
     {
         version(mpi_parallel) {
             // Prepare to exchange geometry data for the boundary cells.
-            auto gmodel = blk.myConfig.gmodel;
-            size_t nspecies = gmodel.n_species();
-            size_t nmodes = gmodel.n_modes();
+            size_t nspecies = blk.myConfig.n_species;
+            size_t nmodes = blk.myConfig.n_modes;
             foreach (i; 0 .. n_incoming) {
                 // Exchange FlowState data for the boundary cells.
                 // To match the function over in flowstate.d
@@ -625,9 +624,8 @@ public:
     void exchange_flowstate_phase1(double t, int gtl, int ftl)
     {
         version(mpi_parallel) {
-            auto gmodel = blk.myConfig.gmodel;
-            size_t nspecies = gmodel.n_species();
-            size_t nmodes = gmodel.n_modes();
+            size_t nspecies = blk.myConfig.n_species;
+            size_t nmodes = blk.myConfig.n_modes;
             foreach (i; 0 .. n_outgoing) {
                 // Blocking send of this block's flow data
                 // to the corresponding non-blocking receive that was posted
@@ -703,9 +701,8 @@ public:
     void exchange_flowstate_phase2(double t, int gtl, int ftl)
     {
         version(mpi_parallel) {
-            auto gmodel = blk.myConfig.gmodel;
-            size_t nspecies = gmodel.n_species();
-            size_t nmodes = gmodel.n_modes();
+            size_t nspecies = blk.myConfig.n_species;
+            size_t nmodes = blk.myConfig.n_modes;
             foreach (i; 0 .. n_incoming) {
                 // Wait for non-blocking receive to complete.
                 // Once complete, copy the data back into the local context.

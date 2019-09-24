@@ -1030,9 +1030,8 @@ public:
                 // and over in gas_state.d
                 // @nogc void copy_values_from(ref const(GasState) other) 
                 //
-                auto gmodel = this_blk.myConfig.gmodel;
-                size_t nspecies = gmodel.n_species();
-                size_t nmodes = gmodel.n_modes();
+                size_t nspecies = this_blk.myConfig.n_species;
+                size_t nmodes = this_blk.myConfig.n_modes;
                 size_t ne = ghost_cells.length * (nmodes*3 + nspecies + 23);
                 if (incoming_flowstate_buf.length < ne) { incoming_flowstate_buf.length = ne; }
                 //
@@ -1097,9 +1096,8 @@ public:
                 //     quality = other.quality;
                 // }
                 //
-                auto gmodel = this_blk.myConfig.gmodel;
-                size_t nspecies = gmodel.n_species();
-                size_t nmodes = gmodel.n_modes();
+                size_t nspecies = this_blk.myConfig.n_species;
+                size_t nmodes = this_blk.myConfig.n_modes;
                 assert(outgoing_mapped_cells.length == ghost_cells.length,
                        "oops, mismatch in outgoing_mapped_cells and ghost_cells.");
                 //
@@ -1186,9 +1184,8 @@ public:
             if (find(GlobalConfig.localBlockIds, other_blk.id).empty) {
                 // The source block is in another MPI process, go fetch the data via messages.
                 //
-                auto gmodel = this_blk.myConfig.gmodel;
-                size_t nspecies = gmodel.n_species();
-                size_t nmodes = gmodel.n_modes();
+                size_t nspecies = this_blk.myConfig.n_species;
+                size_t nmodes = this_blk.myConfig.n_modes;
                 assert(outgoing_mapped_cells.length == ghost_cells.length,
                        "oops, mismatch in outgoing_mapped_cells and ghost_cells.");
                 //

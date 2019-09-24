@@ -299,7 +299,7 @@ public:
             }
         }
         version(multi_species_gas) {
-            auto nsp = myConfig.gmodel.n_species;
+            auto nsp = myConfig.n_species;
             if (nsp > 1) {
                 // Multiple species.
                 foreach (isp; 0 .. nsp) {
@@ -313,7 +313,7 @@ public:
         }
         // Interpolate on two of the thermodynamic quantities, 
         // and fill in the rest based on an EOS call. 
-        auto nmodes = myConfig.gmodel.n_modes;
+        auto nmodes = myConfig.n_modes;
         final switch (myConfig.thermo_interpolator) {
         case InterpolateOption.pt: 
             mixin(codeForLimits("gas.p", "p", "pPhi", "pMax", "pMin"));
@@ -416,7 +416,7 @@ public:
             }
         }
         version(multi_species_gas) {
-            auto nsp = myConfig.gmodel.n_species;
+            auto nsp = myConfig.n_species;
             if (nsp > 1) {
                 // Multiple species.
                 foreach (isp; 0 .. nsp) {
@@ -430,7 +430,7 @@ public:
         }
         // Interpolate on two of the thermodynamic quantities, 
         // and fill in the rest based on an EOS call. 
-        auto nmodes = myConfig.gmodel.n_modes;
+        auto nmodes = myConfig.n_modes;
         final switch (myConfig.thermo_interpolator) {
         case InterpolateOption.pt: 
             mixin(codeForLimits("gas.p", "p", "pPhi", "pMax", "pMin"));
@@ -513,7 +513,7 @@ public:
             }
         }
         version(multi_species_gas) {
-            auto nsp = myConfig.gmodel.n_species;
+            auto nsp = myConfig.n_species;
             if (nsp > 1) {
                 // Multiple species.
                 foreach (isp; 0 .. nsp) {
@@ -527,7 +527,7 @@ public:
         }
         // Interpolate on two of the thermodynamic quantities, 
         // and fill in the rest based on an EOS call. 
-        auto nmodes = myConfig.gmodel.n_modes;
+        auto nmodes = myConfig.n_modes;
         final switch (myConfig.thermo_interpolator) {
         case InterpolateOption.pt: 
             mixin(codeForGradients("gas.p", "p", "pMax", "pMin"));
@@ -632,7 +632,7 @@ public:
             }
         }
         version(multi_species_gas) {
-            auto nsp = myConfig.gmodel.n_species;
+            auto nsp = myConfig.n_species;
             if (nsp > 1) {
                 // Multiple species.
                 foreach (isp; 0 .. nsp) {
@@ -646,7 +646,7 @@ public:
         }
         // Interpolate on two of the thermodynamic quantities, 
         // and fill in the rest based on an EOS call. 
-        auto nmodes = myConfig.gmodel.n_modes;
+        auto nmodes = myConfig.n_modes;
         final switch (myConfig.thermo_interpolator) {
         case InterpolateOption.pt: 
             mixin(codeForLimits("gas.p", "p", "pPhi", "pMax", "pMin"));
@@ -778,7 +778,7 @@ public:
             }
         }
         version(multi_species_gas) {
-            auto nsp = myConfig.gmodel.n_species;
+            auto nsp = myConfig.n_species;
             if (nsp > 1) {
                 // Multiple species.
                 foreach (isp; 0 .. nsp) {
@@ -792,7 +792,7 @@ public:
         }
         // Interpolate on two of the thermodynamic quantities, 
         // and fill in the rest based on an EOS call. 
-        auto nmodes = myConfig.gmodel.n_modes;
+        auto nmodes = myConfig.n_modes;
         final switch (myConfig.thermo_interpolator) {
         case InterpolateOption.pt: 
             mixin(codeForLimits("gas.p", "p", "pPhi", "pMax", "pMin"));
@@ -880,7 +880,7 @@ public:
             }
         }
         version(multi_species_gas) {
-            auto nsp = myConfig.gmodel.n_species;
+            auto nsp = myConfig.n_species;
             if (nsp > 1) {
                 // Multiple species.
                 foreach (isp; 0 .. nsp) {
@@ -894,7 +894,7 @@ public:
         }
         // Interpolate on two of the thermodynamic quantities, 
         // and fill in the rest based on an EOS call. 
-        auto nmodes = myConfig.gmodel.n_modes;
+        auto nmodes = myConfig.n_modes;
         final switch (myConfig.thermo_interpolator) {
         case InterpolateOption.pt: 
             mixin(codeForGradients("gas.p", "p", "pMax", "pMin"));
@@ -966,8 +966,8 @@ public:
     // given information in both cells attached to this interface.
     {
         auto gmodel = myConfig.gmodel;
-        auto nsp = gmodel.n_species;
-        auto nmodes = gmodel.n_modes;
+        auto nsp = myConfig.n_species;
+        auto nmodes = myConfig.n_modes;
         FVCell cL0 = IFace.left_cell;
         FVCell cR0 = IFace.right_cell;
         // Low-order reconstruction just copies data from adjacent FV_Cell.
@@ -1175,8 +1175,8 @@ public:
     // given information in right-cell attached to this interface.
     {
         auto gmodel = myConfig.gmodel;
-        auto nsp = gmodel.n_species;
-        auto nmodes = gmodel.n_modes;
+        auto nsp = myConfig.n_species;
+        auto nmodes = myConfig.n_modes;
         FVCell cR0 = IFace.right_cell;
         // Low-order reconstruction just copies data from adjacent FV_Cell.
         // Even for high-order reconstruction, we depend upon this copy for
@@ -1341,8 +1341,8 @@ public:
     // given information in the left-cell attached to this interface.
     {
         auto gmodel = myConfig.gmodel;
-        auto nsp = gmodel.n_species;
-        auto nmodes = gmodel.n_modes;
+        auto nsp = myConfig.n_species;
+        auto nmodes = myConfig.n_modes;
         FVCell cL0 = IFace.left_cell;
         // Low-order reconstruction just copies data from adjacent FV_Cell.
         // Even for high-order reconstruction, we depend upon this copy for

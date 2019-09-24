@@ -98,8 +98,8 @@ public:
         area.length = myConfig.n_grid_time_levels;
         gvel = Vector3(0.0,0.0,0.0); // default to fixed grid
         auto gmodel = myConfig.gmodel;
-        int n_species = gmodel.n_species;
-        int n_modes = gmodel.n_modes;
+        uint n_species = myConfig.n_species;
+        uint n_modes = myConfig.n_modes;
         double T = 300.0;
         double[] T_modes; foreach(i; 0 .. n_modes) { T_modes ~= 300.0; }
         fs = new FlowState(gmodel, 100.0e3, T, T_modes, Vector3(0.0,0.0,0.0));
@@ -348,12 +348,12 @@ public:
             
             // massf
             version(multi_species_gas) {
-                auto gm = myConfig.gmodel;
-                uint nsp = (myConfig.sticky_electrons) ? gm.n_heavy : gm.n_species;
+                uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
                 foreach (isp; 0 .. nsp) {
                     grad.massf[isp][0] = 0.5*(cL0.grad.massf[isp][0]+cR0.grad.massf[isp][0]);
                     grad.massf[isp][1] = 0.5*(cL0.grad.massf[isp][1]+cR0.grad.massf[isp][1]);
-                    grad.massf[isp][2] = 0.5*(cL0.grad.massf[isp][2]+cR0.grad.massf[isp][2]);                        }
+                    grad.massf[isp][2] = 0.5*(cL0.grad.massf[isp][2]+cR0.grad.massf[isp][2]);
+                }
             }
             
             // T
@@ -430,8 +430,7 @@ public:
             
             // massf
             version(multi_species_gas) {
-                auto gm = myConfig.gmodel;
-                uint nsp = (myConfig.sticky_electrons) ? gm.n_heavy : gm.n_species;
+                uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
                 foreach (isp; 0 .. nsp) {
                     avgdotehat = 0.5*(cL0.grad.massf[isp][0]+cR0.grad.massf[isp][0])*ehatx +
                         0.5*(cL0.grad.massf[isp][1]+cR0.grad.massf[isp][1])*ehaty +
@@ -439,7 +438,8 @@ public:
                     jump = avgdotehat - (cR0.fs.gas.massf[isp] - cL0.fs.gas.massf[isp])/emag;
                     grad.massf[isp][0] = 0.5*(cL0.grad.massf[isp][0]+cR0.grad.massf[isp][0]) - jump*(nx/ndotehat);
                     grad.massf[isp][1] = 0.5*(cL0.grad.massf[isp][1]+cR0.grad.massf[isp][1]) - jump*(ny/ndotehat);
-                    grad.massf[isp][2] = 0.5*(cL0.grad.massf[isp][2]+cR0.grad.massf[isp][2]) - jump*(nz/ndotehat);                        }
+                    grad.massf[isp][2] = 0.5*(cL0.grad.massf[isp][2]+cR0.grad.massf[isp][2]) - jump*(nz/ndotehat);
+                }
             }
             
             // T
@@ -479,7 +479,7 @@ public:
     // Note that the gradient values need to be in place before calling this procedure.
     {
         auto gmodel = myConfig.gmodel;
-        uint n_species = (myConfig.sticky_electrons) ? gmodel.n_heavy : gmodel.n_species;
+        uint n_species = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
         double viscous_factor = myConfig.viscous_factor;
         number k_laminar = fs.gas.k;
         number mu_laminar = fs.gas.mu;

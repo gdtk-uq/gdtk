@@ -793,8 +793,7 @@ int integrate_in_time(double target_time_as_requested)
     //
     number mass_balance = to!number(0.0);
     number L2_residual = to!number(0.0);
-    ConservedQuantities Linf_residuals = new ConservedQuantities(GlobalConfig.gmodel_master.n_species,
-                                                                 GlobalConfig.gmodel_master.n_modes);
+    auto Linf_residuals = new ConservedQuantities(GlobalConfig.n_species, GlobalConfig.n_modes);
     version(mpi_parallel) {
         version(mpi_timeouts) {
             MPI_Sync_tasks();

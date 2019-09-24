@@ -146,12 +146,11 @@ public:
         // Assemble array storage for finite-volume cells, etc.
         bool lsq_workspace_at_vertices = (myConfig.viscous) && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
             && (myConfig.spatial_deriv_locn == SpatialDerivLocn.vertices);
-        auto gmodel = myConfig.gmodel;
-        uint nsp = (myConfig.sticky_electrons) ? gmodel.n_heavy : gmodel.n_species;
+        uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
         foreach (i, v; grid.vertices) {
             auto new_vtx = new FVVertex(myConfig, lsq_workspace_at_vertices, to!int(i));
             if (myConfig.unstructured_limiter == UnstructuredLimiter.mlp)
-                new_vtx.gradients = new LSQInterpGradients(nsp, gmodel.n_modes);
+                new_vtx.gradients = new LSQInterpGradients(nsp, myConfig.n_modes);
             new_vtx.pos[0] = v;
             vertices ~= new_vtx;
         }
@@ -321,7 +320,7 @@ public:
         // interpolation/reconstruction of flow quantities at left- and right- sides
         // of cell faces.
         // (Will be used for the convective fluxes).
-        auto nmodes = gmodel.n_modes;
+        auto nmodes = myConfig.n_modes;
         if (myConfig.use_extended_stencil) {
             foreach (c; cells) {
                 // First cell in the cloud is the cell itself.  Differences are taken about it.

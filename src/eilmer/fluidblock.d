@@ -166,8 +166,8 @@ public:
         this.ncells_expected = ncells;
         this.label = label;
         myConfig = dedicatedConfig[id];
-        Linf_residuals = new ConservedQuantities(dedicatedConfig[id].gmodel.n_species,
-                                                 dedicatedConfig[id].gmodel.n_modes);
+        Linf_residuals = new ConservedQuantities(dedicatedConfig[id].n_species,
+                                                 dedicatedConfig[id].n_modes);
         // Workspace for flux_calc method.
         Lft = new FlowState(dedicatedConfig[id].gmodel);
         Rght = new FlowState(dedicatedConfig[id].gmodel);
@@ -180,9 +180,9 @@ public:
         lua_setglobal(myL, "blkId");
         pushObj!(GasModel, GasModelMT)(myL, dedicatedConfig[id].gmodel);
         lua_setglobal(myL, "gmodel");
-        lua_pushinteger(myL, dedicatedConfig[id].gmodel.n_species);
+        lua_pushinteger(myL, dedicatedConfig[id].n_species);
         lua_setglobal(myL, "n_species");
-        lua_pushinteger(myL, dedicatedConfig[id].gmodel.n_modes);
+        lua_pushinteger(myL, dedicatedConfig[id].n_modes);
         lua_setglobal(myL, "n_modes");
         // Although we make the helper functions available within 
         // the block-specific Lua interpreter, we should use 

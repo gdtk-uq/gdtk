@@ -99,7 +99,7 @@ void evalPrimitiveJacobianVecProd(FluidBlock blk, size_t nPrimitive, number[] v,
         blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);
         blk.myConfig.gmodel.update_trans_coeffs(cell.fs.gas);
         blk.myConfig.gmodel.update_sound_speed(cell.fs.gas);
-        //foreach(isp; 0 .. blk.myConfig.gmodel.n_species) cell.fs.gas.massf[isp] = (cell.U[0].massf[isp] * (1.0/cell.fs.gas.rho));
+        //foreach(isp; 0 .. blk.myConfig.n_species) cell.fs.gas.massf[isp] = (cell.U[0].massf[isp] * (1.0/cell.fs.gas.rho));
         cellCount += nPrimitive;
     }    
     steadystate_core.evalRHS(0.0, 0);
@@ -328,8 +328,8 @@ void ghost_cell_connectivity_for_gradients(ref FluidBlock blk) {
 			    new_cell.global_id = cell.global_id;
 			    new_cell.is_interior_to_domain = cell.is_interior_to_domain;
 			    new_cell.in_turbulent_zone = cell.in_turbulent_zone;
-			    auto nsp = blk.myConfig.gmodel.n_species;
-			    auto nmodes = blk.myConfig.gmodel.n_modes;
+			    auto nsp = blk.myConfig.n_species;
+			    auto nmodes = blk.myConfig.n_modes;
 			    new_cell.gradients = new LSQInterpGradients(nsp, nmodes);
 			    new_cell.gradients.copy_values_from(cell.gradients);
 			    new_cell.dqdQ = cell.dqdQ;
@@ -502,8 +502,8 @@ void ghost_cell_connectivity_for_gradients(ref FluidBlock blk) {
 		    interior_cell = bface.right_cell;
 		}
 		if(ghost_cell.cell_cloud.length < 1) { // otherwise duplicates will collect each cell twice
-		    auto nsp = blk.myConfig.gmodel.n_species;
-		    auto nmodes = blk.myConfig.gmodel.n_modes;
+		    auto nsp = blk.myConfig.n_species;
+		    auto nmodes = blk.myConfig.n_modes;
 		    ghost_cell.gradients = new LSQInterpGradients(nsp, nmodes);
 		    ghost_cell.ws = new LSQInterpWorkspace();
 		    ghost_cell.cell_cloud ~= ghost_cell;
@@ -2011,7 +2011,7 @@ string computeFluxDerivativesAroundCell(string varName, string posInArray, bool 
         codeStr ~= "blk.myConfig.gmodel.update_thermo_from_rhop(pcell.fs.gas);";
         codeStr ~= "blk.myConfig.gmodel.update_trans_coeffs(pcell.fs.gas);";
         codeStr ~= "blk.myConfig.gmodel.update_sound_speed(pcell.fs.gas);";
-        //codeStr ~= "foreach(isp; 0 .. blk.myConfig.gmodel.n_species) pcell.fs.gas.massf[isp] = (pcell.U[0].massf[isp] * (1.0/pcell.fs.gas.rho));";
+        //codeStr ~= "foreach(isp; 0 .. blk.myConfig.n_species) pcell.fs.gas.massf[isp] = (pcell.U[0].massf[isp] * (1.0/pcell.fs.gas.rho));";
     }
     codeStr ~= "compute_flux(pcell, blk, orderOfJacobian, pcell.jacobian_cell_stencil, pcell.jacobian_face_stencil, blk.ifaceP);"; 
     //codeStr ~= "pcell.copy_values_from(cellSave, CopyDataOption.all);";
