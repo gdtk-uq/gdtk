@@ -710,83 +710,29 @@ public:
     //       1: End of stage-1.
     //       2: End of stage-2.
     {
-        number vol_inv = 1.0 / volume[gtl]; // Cell volume (inverted).
-        auto nf = iface.length;
-        number[10] area; // Assume this maximum number of faces.
-        ConservedQuantities*[10] myF; // Pointers to the fluxes for all of the faces.
-        if (nf > 10) { throw new Error("oops too many faces on the cell"); }
-        foreach(i; 0 .. nf) {
-            area[i] = outsign[i]*iface[i].area[gtl];
-            myF[i] = &(iface[i].F);
-        }
         auto my_dUdt = dUdt[ftl]; 
-    
-        // Time-derivative for Mass/unit volume.
-        number integral = 0.0;
-        foreach(i; 0 .. nf) { integral -= myF[i].mass*area[i]; }
-        my_dUdt.mass = vol_inv*integral + Q.mass;
-
-        // Time-derivative for Momentum/unit volume.
-        number integralx = 0.0; number integraly = 0.0; number integralz = 0.0;
-        foreach(i; 0 .. nf) {
-            integralx -= myF[i].momentum.x*area[i];
-            integraly -= myF[i].momentum.y*area[i];
-            if ((myConfig.dimensions == 3) || ( myConfig.MHD )) {
-                // require z-momentum for MHD even in 2D
-                integralz -= myF[i].momentum.z*area[i];
-            }
-        }
-        my_dUdt.momentum.set(vol_inv*integralx + Q.momentum.x,
-                             vol_inv*integraly + Q.momentum.y,
-                             vol_inv*integralz + Q.momentum.z);
+        //
+        // Mass.
+        number integral_mass = 0.0;
+        // Momentum.
+        number integral_momx = 0.0;
+        number integral_momy = 0.0;
+        number integral_momz = 0.0;
         version(MHD) {
-            if (myConfig.MHD) {
-                // Time-derivative for Magnetic Field/unit volume.
-                integralx = 0.0; integraly = 0.0; integralz = 0.0;
-                foreach(i; 0 .. nf) {
-                    integralx -= myF[i].B.x*area[i];
-                    integraly -= myF[i].B.y*area[i];
-                    integralz -= myF[i].B.z*area[i];
-                }
-                if (myConfig.MHD_static_field) { 
-                    // then the magnetic field won't change...
-                    my_dUdt.B.set(Q.B.x, Q.B.y, Q.B.z);
-                } else {
-                    my_dUdt.B.set(vol_inv*integralx + Q.B.x,
-                                  vol_inv*integraly + Q.B.y,
-                                  vol_inv*integralz + Q.B.z);
-                }
-                // Calculate divergence of the magnetic field here;
-                // not actually a time-derivatice but seems to be the best way to calculate it.
-                my_dUdt.divB = 0.0;
-                foreach(i; 0 .. nf) { my_dUdt.divB += myF[i].divB*area[i]; }
-                if (myConfig.divergence_cleaning) {
-                    integral = 0.0;
-                    foreach(i; 0 .. nf) { integral -= myF[i].psi*area[i]; }
-                    my_dUdt.psi = vol_inv*integral + Q.psi;
-                }
-            } else {
-                my_dUdt.B.clear();
-                my_dUdt.psi = 0.0;
-                my_dUdt.divB = 0.0;
-            }
+            // Magnetic Field.
+            number integral_Bx = 0.0;
+            number integral_By = 0.0;
+            number integral_Bz = 0.0;
+            // Divergence of the magnetic field; it is not actually a time-derivative 
+            // but seems to be the best way to calculate it. (Lachlan W.)
+            my_dUdt.divB = 0.0;
+            number integral_psi = 0.0;
         }
-        // Time-derivative for Total Energy/unit volume.
-        integral = 0.0;
-        foreach(i; 0 .. nf) { integral -= myF[i].total_energy*area[i]; }
-        my_dUdt.total_energy = vol_inv*integral + Q.total_energy;
+        // Total Energy.
+        number integral_E = 0.0;
         version(komega) {
-            if (with_k_omega) {
-                integral = 0.0;
-                foreach(i; 0 .. nf) { integral -= myF[i].tke*area[i]; }
-                my_dUdt.tke = vol_inv*integral + Q.tke;
-                integral = 0.0;
-                foreach(i; 0 .. nf) { integral -= myF[i].omega*area[i]; }
-                my_dUdt.omega = vol_inv*integral + Q.omega;
-            } else {
-                my_dUdt.tke = 0.0;
-                my_dUdt.omega = 0.0;
-            }
+            number integral_tke = 0.0;
+            number integral_omega = 0.0;
         }
         version(multi_species_gas) {
             // Time-derivative for individual species.
@@ -794,19 +740,103 @@ public:
             // volume of species isp and
             // the fluxes are mass/unit-time/unit-area.
             // Units of DmassfDt are 1/sec.
+            immutable uint max_species = 15;
+            number[max_species] integral_species;
             uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
-            foreach(isp; 0 .. nsp) {
-                integral = 0.0;
-                foreach(i; 0 .. nf) { integral -= myF[i].massf[isp]*area[i]; }
-                my_dUdt.massf[isp] = vol_inv*integral + Q.massf[isp];
-            }
+            if (nsp > max_species) { throw new Error("oops too many chemical species for work array"); }
+            foreach(j; 0 .. nsp) { integral_species[j] = 0.0; }
         }
         version(multi_T_gas) {
             // Individual energies.
-            foreach(imode; 0 .. iface[0].F.energies.length) {
-                integral = 0.0;
-                foreach(i; 0 .. nf) { integral -= myF[i].energies[imode]*area[i]; }
-                my_dUdt.energies[imode] = vol_inv*integral + Q.energies[imode];
+            immutable uint max_modes = 5;
+            number[max_modes] integral_modes;
+            uint nmodes = myConfig.n_modes;
+            if (nmodes > max_modes) { throw new Error("oops too many energy modes for work array"); }
+            foreach(j; 0 .. nmodes) { integral_modes[j] = 0.0; }
+        }
+        //
+        // Integrate the fluxes across the interfaces that bound the cell.
+        foreach(i; 0 .. iface.length) {
+            ConservedQuantities* myF = &(iface[i].F);
+            number area = outsign[i]*iface[i].area[gtl];
+            //
+            integral_mass -= myF.mass*area;
+            integral_momx -= myF.momentum.x*area;
+            integral_momy -= myF.momentum.y*area;
+            if ((myConfig.dimensions == 3) || ( myConfig.MHD )) {
+                // require z-momentum for MHD even in 2D
+                integral_momz -= myF.momentum.z*area;
+            }
+            version(MHD) {
+                if (myConfig.MHD) {
+                    integral_Bx -= myF.B.x*area;
+                    integral_By -= myF.B.y*area;
+                    integral_Bz -= myF.B.z*area;
+                    my_dUdt.divB += myF.divB*area;
+                    if (myConfig.divergence_cleaning) {
+                        integral_psi -= myF.psi*area;
+                    }
+                }
+            }
+            integral_E -= myF.total_energy*area;
+            version(komega) {
+                if (with_k_omega) {
+                    integral_tke -= myF.tke*area;
+                    integral_omega -= myF.omega*area;
+                }
+            }
+            version(multi_species_gas) {
+                foreach(j; 0 .. nsp) { integral_species[j] -= myF.massf[j]*area; }
+            }
+            version(multi_T_gas) {
+                foreach(j; 0 .. nmodes) { integral_modes[j] -= myF.energies[j]*area; }
+            }
+        } // end foreach iface
+        //
+        // Finally, evaluate the derivatives of conserved quantities.
+        // These are quantity-per-unit-volume.
+        number vol_inv = 1.0 / volume[gtl]; // Cell volume (inverted).
+        my_dUdt.mass = vol_inv*integral_mass + Q.mass;
+        my_dUdt.momentum.set(vol_inv*integral_momx + Q.momentum.x,
+                             vol_inv*integral_momy + Q.momentum.y,
+                             vol_inv*integral_momz + Q.momentum.z);
+        version(MHD) {
+            if (myConfig.MHD) {
+                if (myConfig.MHD_static_field) { 
+                    // then the magnetic field won't change...
+                    my_dUdt.B.set(Q.B.x, Q.B.y, Q.B.z);
+                } else {
+                    my_dUdt.B.set(vol_inv*integral_Bx + Q.B.x,
+                                  vol_inv*integral_By + Q.B.y,
+                                  vol_inv*integral_Bz + Q.B.z);
+                }
+                if (myConfig.divergence_cleaning) {
+                    my_dUdt.psi = vol_inv*integral_psi + Q.psi;
+                }
+            } else {
+                my_dUdt.B.clear();
+                my_dUdt.psi = 0.0;
+                my_dUdt.divB = 0.0;
+            }
+        }
+        my_dUdt.total_energy = vol_inv*integral_E + Q.total_energy;
+        version(komega) {
+            if (with_k_omega) {
+                my_dUdt.tke = vol_inv*integral_tke + Q.tke;
+                my_dUdt.omega = vol_inv*integral_omega + Q.omega;
+            } else {
+                my_dUdt.tke = 0.0;
+                my_dUdt.omega = 0.0;
+            }
+        }
+        version(multi_species_gas) {
+            foreach(j; 0 .. nsp) {
+                my_dUdt.massf[j] = vol_inv*integral_species[j] + Q.massf[j];
+            }
+        }
+        version(multi_T_gas) {
+            foreach(j; 0 .. nmodes) {
+                my_dUdt.energies[j] = vol_inv*integral_modes[j] + Q.energies[j];
             }
         }
     } // end time_derivatives()
