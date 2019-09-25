@@ -1048,8 +1048,8 @@ public:
                     qR += dRz*mygradR[2];
                 }
                 if (myConfig.extrema_clipping) {
-                    Lft."~tname~" = clip_to_limits!(number)(qL, qL0, qR0);
-                    Rght."~tname~" = clip_to_limits!(number)(qR, qL0, qR0);
+                    Lft."~tname~" = clip_to_limits(qL, qL0, qR0);
+                    Rght."~tname~" = clip_to_limits(qR, qL0, qR0);
                 } else {
                     Lft."~tname~" = qL;
                     Rght."~tname~" = qR;

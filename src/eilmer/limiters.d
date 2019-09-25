@@ -27,12 +27,12 @@ import nm.number;
     b *= s;
 }
 
-@nogc T clip_to_limits(T)(T q, T A, T B)
+@nogc number clip_to_limits(number q, number A, number B)
 // Returns q if q is between the values A and B, else
 // it returns the closer limit of the range [min(A,B), max(A,B)].
 {
-    T lower_limit = (A <= B) ? A : B;
-    T upper_limit = (A > B) ? A : B;
-    T qclipped = (q > lower_limit) ? q : lower_limit;
+    number lower_limit = (A <= B) ? A : B;
+    number upper_limit = (A > B) ? A : B;
+    number qclipped = (q > lower_limit) ? q : lower_limit;
     return (qclipped <= upper_limit) ? qclipped : upper_limit;
 }
