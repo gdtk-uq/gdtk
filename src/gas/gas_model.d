@@ -275,7 +275,7 @@ protected:
     double[] _electronic_energy;
 } // end class GasModel
 
-@nogc
+pragma(inline, true) @nogc
 void scale_mass_fractions(ref number[] massf, double tolerance=0.0,
                           double assert_error_tolerance=0.1)
 {

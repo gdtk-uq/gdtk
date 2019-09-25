@@ -56,6 +56,7 @@ public:
 
     //------------------------------------------------------------------------------
 
+    pragma(inline, true)
     @nogc void l2r2_prepare(number lenL1, number lenL0, number lenR0, number lenR1)
     // Set up intermediate data that depends only on the cell geometry.
     // It will remain constant when reconstructing the different scalar fields
@@ -72,24 +73,23 @@ public:
         two_lenR0_plus_lenR1 = (2.0*lenR0 + lenR1);
     } // end l2r2_prepare()
 
+    pragma(inline, true)
     @nogc void interp_l2r2_scalar(number qL1, number qL0, number qR0, number qR1,
                                   ref number qL, ref number qR)
     {
-        number delLminus, del, delRplus, sL, sR;
         // Set up differences and limiter values.
-        delLminus = (qL0 - qL1) * two_over_lenL0_plus_lenL1;
-        del = (qR0 - qL0) * two_over_lenR0_plus_lenL0;
-        delRplus = (qR1 - qR0) * two_over_lenR1_plus_lenR0;
+        number delLminus = (qL0 - qL1) * two_over_lenL0_plus_lenL1;
+        number del = (qR0 - qL0) * two_over_lenR0_plus_lenL0;
+        number delRplus = (qR1 - qR0) * two_over_lenR1_plus_lenR0;
+        // Presume unlimited high-order reconstruction.
+        number sL = 1.0;
+        number sR = 1.0;
         if (myConfig.apply_limiter) {
             // val Albada limiter as per Ian Johnston's thesis.
             sL = (delLminus*del + fabs(delLminus*del)) / 
                 (delLminus*delLminus + del*del + epsilon_van_albada);
             sR = (del*delRplus + fabs(del*delRplus)) / 
                 (del*del + delRplus*delRplus + epsilon_van_albada);
-        } else {
-            // Use unlimited high-order reconstruction.
-            sL = 1.0;
-            sR = 1.0;
         }
         // The actual high-order reconstruction, possibly limited.
         qL = qL0 + sL * aL0 * (del * two_lenL0_plus_lenL1 + delLminus * lenR0_);
@@ -117,14 +117,12 @@ public:
 
     @nogc void interp_l2r1_scalar(number qL1, number qL0, number qR0, ref number qL, ref number qR)
     {
-        number delLminus, del, sL;
-        delLminus = (qL0 - qL1) * two_over_lenL0_plus_lenL1;
-        del = (qR0 - qL0) * two_over_lenR0_plus_lenL0;
+        number delLminus = (qL0 - qL1) * two_over_lenL0_plus_lenL1;
+        number del = (qR0 - qL0) * two_over_lenR0_plus_lenL0;
+        number sL = 1.0;
         if (myConfig.apply_limiter) {
             sL = (delLminus*del + fabs(delLminus*del)) /
                 (delLminus*delLminus + del*del + epsilon_van_albada);
-        } else {
-            sL = 1.0;
         }
         qL = qL0 + sL * aL0 * (del * two_lenL0_plus_lenL1 + delLminus * lenR0_);
         if (myConfig.apply_limiter && (delLminus*del < 0.0)) {
@@ -151,14 +149,12 @@ public:
 
     @nogc void interp_l1r2_scalar(number qL0, number qR0, number qR1, ref number qL, ref number qR)
     {
-        number del, delRplus, sR;
-        del = (qR0 - qL0) * two_over_lenR0_plus_lenL0;
-        delRplus = (qR1 - qR0) * two_over_lenR1_plus_lenR0;
+        number del = (qR0 - qL0) * two_over_lenR0_plus_lenL0;
+        number delRplus = (qR1 - qR0) * two_over_lenR1_plus_lenR0;
+        number sR = 1.0;
         if (myConfig.apply_limiter) {
             sR = (del*delRplus + fabs(del*delRplus)) /
                 (del*del + delRplus*delRplus + epsilon_van_albada);
-        } else {
-            sR = 1.0;
         }
         qR = qR0 - sR * aR0 * (delRplus * lenL0_ + del * two_lenR0_plus_lenR1);
         if (myConfig.apply_limiter && (delRplus*del < 0.0)) {
