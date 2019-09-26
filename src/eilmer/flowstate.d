@@ -310,10 +310,10 @@ public:
             formattedWrite(writer, ", \"T_modes\": [");
             if (gas.T_modes.length > 0) { formattedWrite(writer, " %.18e", gas.T_modes[0].re); }
             foreach (i; 1 .. gas.T_modes.length) { formattedWrite(writer, ", %.18e", gas.T_modes[i].re); }
+            formattedWrite(writer, "]");
         }
         version(multi_species_gas) {
             // one or more mass fractions
-            formattedWrite(writer, "]");
             formattedWrite(writer, ", \"massf\": [ %.18e", gas.massf[0].re);
             foreach (i; 1 .. gas.massf.length) {
                 formattedWrite(writer, ", %.18e", gas.massf[i].re);
