@@ -86,9 +86,9 @@ public:
         number sR = 1.0;
         if (myConfig.apply_limiter) {
             // val Albada limiter as per Ian Johnston's thesis.
-            sL = (delLminus*del + fabs(delLminus*del)) / 
+            sL = (delLminus*del + fabs(delLminus*del) + epsilon_van_albada) / 
                 (delLminus*delLminus + del*del + epsilon_van_albada);
-            sR = (del*delRplus + fabs(del*delRplus)) / 
+            sR = (del*delRplus + fabs(del*delRplus) + epsilon_van_albada) / 
                 (del*del + delRplus*delRplus + epsilon_van_albada);
         }
         // The actual high-order reconstruction, possibly limited.
@@ -121,7 +121,7 @@ public:
         number del = (qR0 - qL0) * two_over_lenR0_plus_lenL0;
         number sL = 1.0;
         if (myConfig.apply_limiter) {
-            sL = (delLminus*del + fabs(delLminus*del)) /
+            sL = (delLminus*del + fabs(delLminus*del) + epsilon_van_albada) /
                 (delLminus*delLminus + del*del + epsilon_van_albada);
         }
         qL = qL0 + sL * aL0 * (del * two_lenL0_plus_lenL1 + delLminus * lenR0_);
@@ -153,7 +153,7 @@ public:
         number delRplus = (qR1 - qR0) * two_over_lenR1_plus_lenR0;
         number sR = 1.0;
         if (myConfig.apply_limiter) {
-            sR = (del*delRplus + fabs(del*delRplus)) /
+            sR = (del*delRplus + fabs(del*delRplus) + epsilon_van_albada) /
                 (del*del + delRplus*delRplus + epsilon_van_albada);
         }
         qR = qR0 - sR * aR0 * (delRplus * lenL0_ + del * two_lenR0_plus_lenR1);
