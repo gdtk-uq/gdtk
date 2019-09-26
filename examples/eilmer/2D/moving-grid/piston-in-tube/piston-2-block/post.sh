@@ -7,6 +7,10 @@ e4shared --post --job=pit2 --vtk-xml --tindx-plot=all
 # Run the custom post script to check our energy and mass balances
 e4shared --custom-script --script-file="balanceCheck.lua"
 
+# Generate reference data
+pushd ../analytic; ruby piston.rb > piston.data
+popd
+
 # Plot the trajectory
 gnuplot <<EOF
 set term postscript eps enhanced 20

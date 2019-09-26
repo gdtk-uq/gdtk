@@ -28,7 +28,7 @@ class TestPIT2 < Test::Unit::TestCase
         steps = items[1].to_i
       end
     end
-    assert((steps - 831).abs < 3, "Failed to take correct number of steps.")
+    assert((steps - 841).abs < 15, "Failed to take correct number of steps.")
   end
 
   def test_2_post
