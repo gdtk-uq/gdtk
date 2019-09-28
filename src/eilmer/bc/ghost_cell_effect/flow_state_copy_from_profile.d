@@ -82,6 +82,12 @@ public:
                     fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
                     dest_cell.fs.copy_values_from(fstate);
                     fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
+                    version(nghost3) {
+                        dest_cell = blk.get_cell(i,j+3,k);
+                        fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
+                        dest_cell.fs.copy_values_from(fstate);
+                        fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
+                    }
                 } // end i loop
             } // for k
             break;
@@ -97,6 +103,12 @@ public:
                     fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
                     dest_cell.fs.copy_values_from(fstate);
                     fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
+                    version(nghost3) {
+                        dest_cell = blk.get_cell(i+3,j,k);
+                        fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
+                        dest_cell.fs.copy_values_from(fstate);
+                        fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
+                    }
                 } // end j loop
             } // for k
             break;
@@ -112,6 +124,12 @@ public:
                     fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
                     dest_cell.fs.copy_values_from(fstate);
                     fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
+                    version(nghost3) {
+                        dest_cell = blk.get_cell(i,j-3,k);
+                        fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
+                        dest_cell.fs.copy_values_from(fstate);
+                        fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
+                    }
                 } // end i loop
             } // for k
             break;
@@ -127,6 +145,12 @@ public:
                     fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
                     dest_cell.fs.copy_values_from(fstate);
                     fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
+                    version(nghost3) {
+                        dest_cell = blk.get_cell(i-3,j,k);
+                        fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
+                        dest_cell.fs.copy_values_from(fstate);
+                        fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
+                    }
                 } // end j loop
             } // for k
             break;
@@ -142,6 +166,12 @@ public:
                     fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
                     dest_cell.fs.copy_values_from(fstate);
                     fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
+                    version(nghost3) {
+                        dest_cell = blk.get_cell(i,j,k+3);
+                        fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
+                        dest_cell.fs.copy_values_from(fstate);
+                        fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
+                    }
                 } // end j loop
             } // for i
             break;
@@ -157,6 +187,12 @@ public:
                     fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
                     dest_cell.fs.copy_values_from(fstate);
                     fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
+                    version(nghost3) {
+                        dest_cell = blk.get_cell(i,j,k-3);
+                        fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
+                        dest_cell.fs.copy_values_from(fstate);
+                        fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
+                    }
                 } // end j loop
             } // for i
             break;

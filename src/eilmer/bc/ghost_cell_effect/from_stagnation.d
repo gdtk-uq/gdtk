@@ -250,6 +250,10 @@ public:
                     dest_cell.fs.copy_values_from(inflow_condition);
                     dest_cell = blk.get_cell(i,j+2,k);
                     dest_cell.fs.copy_values_from(inflow_condition);
+                    version(nghost3) {
+                        dest_cell = blk.get_cell(i,j+3,k);
+                        dest_cell.fs.copy_values_from(inflow_condition);
+                    }
                 } // end i loop
             } // end k loop
             break;
@@ -318,6 +322,10 @@ public:
                     dest_cell.fs.copy_values_from(inflow_condition);
                     dest_cell = blk.get_cell(i+2,j,k);
                     dest_cell.fs.copy_values_from(inflow_condition);
+                    version(nghost3) {
+                        dest_cell = blk.get_cell(i+3,j,k);
+                        dest_cell.fs.copy_values_from(inflow_condition);
+                    }
                 } // end j loop
             } // end k loop
             break;
@@ -385,6 +393,10 @@ public:
                     dest_cell.fs.copy_values_from(inflow_condition);
                     dest_cell = blk.get_cell(i,j-2,k);
                     dest_cell.fs.copy_values_from(inflow_condition);
+                    version(nghost3) {
+                        dest_cell = blk.get_cell(i,j-3,k);
+                        dest_cell.fs.copy_values_from(inflow_condition);
+                    }
                 } // end i loop
             } // end k loop
             break;
@@ -453,6 +465,10 @@ public:
                     dest_cell.fs.copy_values_from(inflow_condition);
                     dest_cell = blk.get_cell(i-2,j,k);
                     dest_cell.fs.copy_values_from(inflow_condition);
+                    version(nghost3) {
+                        dest_cell = blk.get_cell(i-3,j,k);
+                        dest_cell.fs.copy_values_from(inflow_condition);
+                    }
                 } // end j loop
             } // end k loop
             break;
@@ -521,6 +537,10 @@ public:
                     dest_cell.fs.copy_values_from(inflow_condition);
                     dest_cell = blk.get_cell(i,j,k+2);
                     dest_cell.fs.copy_values_from(inflow_condition);
+                    version(nghost3) {
+                        dest_cell = blk.get_cell(i,j,k+3);
+                        dest_cell.fs.copy_values_from(inflow_condition);
+                    }
                 } // end i loop
             } // end j loop
             break;
@@ -588,6 +608,10 @@ public:
                     dest_cell.fs.copy_values_from(inflow_condition);
                     dest_cell = blk.get_cell(i,j,k-2);
                     dest_cell.fs.copy_values_from(inflow_condition);
+                    version(nghost3) {
+                        dest_cell = blk.get_cell(i,j,k-3);
+                        dest_cell.fs.copy_values_from(inflow_condition);
+                    }
                 } // end i loop
             } // end j loop
             break;

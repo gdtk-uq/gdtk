@@ -84,6 +84,12 @@ public:
                     dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
                     dest_cell.fs.gas.p = p_outside;
                     gmodel.update_thermo_from_pT(dest_cell.fs.gas);
+                    version(nghost3) {
+                        dest_cell = blk.get_cell(i,j+3,k);
+                        dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
+                        dest_cell.fs.gas.p = p_outside;
+                        gmodel.update_thermo_from_pT(dest_cell.fs.gas);
+                    }
                 } // end i loop
             } // for k
             break;
@@ -100,6 +106,12 @@ public:
                     dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
                     dest_cell.fs.gas.p = p_outside;
                     gmodel.update_thermo_from_pT(dest_cell.fs.gas);
+                    version(nghost3) {
+                        dest_cell = blk.get_cell(i+3,j,k);
+                        dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
+                        dest_cell.fs.gas.p = p_outside;
+                        gmodel.update_thermo_from_pT(dest_cell.fs.gas);
+                    }
                 } // end j loop
             } // for k
             break;
@@ -116,6 +128,12 @@ public:
                     dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
                     dest_cell.fs.gas.p = p_outside;
                     gmodel.update_thermo_from_pT(dest_cell.fs.gas);
+                    version(nghost3) {
+                        dest_cell = blk.get_cell(i,j-3,k);
+                        dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
+                        dest_cell.fs.gas.p = p_outside;
+                        gmodel.update_thermo_from_pT(dest_cell.fs.gas);
+                    }
                 } // end i loop
             } // for k
             break;
@@ -132,6 +150,12 @@ public:
                     dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
                     dest_cell.fs.gas.p = p_outside;
                     gmodel.update_thermo_from_pT(dest_cell.fs.gas);
+                    version(nghost3) {
+                        dest_cell = blk.get_cell(i-3,j,k);
+                        dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
+                        dest_cell.fs.gas.p = p_outside;
+                        gmodel.update_thermo_from_pT(dest_cell.fs.gas);
+                    }
                 } // end j loop
             } // for k
             break;
@@ -148,6 +172,12 @@ public:
                     dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
                     dest_cell.fs.gas.p = p_outside;
                     gmodel.update_thermo_from_pT(dest_cell.fs.gas);
+                    version(nghost3) {
+                        dest_cell = blk.get_cell(i,j,k+3);
+                        dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
+                        dest_cell.fs.gas.p = p_outside;
+                        gmodel.update_thermo_from_pT(dest_cell.fs.gas);
+                    }
                 } // end j loop
             } // for i
             break;
@@ -164,6 +194,12 @@ public:
                     dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
                     dest_cell.fs.gas.p = p_outside;
                     gmodel.update_thermo_from_pT(dest_cell.fs.gas);
+                    version(nghost3) {
+                        dest_cell = blk.get_cell(i,j,k-3);
+                        dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
+                        dest_cell.fs.gas.p = p_outside;
+                        gmodel.update_thermo_from_pT(dest_cell.fs.gas);
+                    }
                 } // end j loop
             } // for i
             break;

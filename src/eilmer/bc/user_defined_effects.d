@@ -15,6 +15,7 @@
 
 module bc.user_defined_effects;
 
+import std.conv;
 import std.string;
 import std.stdio;
 import nm.complex;
@@ -30,7 +31,7 @@ import flowstate;
 import fvcore;
 import fvcell;
 import fvinterface;
-import sfluidblock: SFluidBlock;
+import sfluidblock: SFluidBlock, n_ghost_cell_layers;
 import globalconfig;
 import globaldata;
 import luaflowstate;
@@ -58,29 +59,29 @@ public:
     override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
     {
         size_t j = 0, k = 0;
-        FVCell ghost0, ghost1;
+        FVCell[1] ghostCells;
         BoundaryCondition bc = blk.bc[which_boundary];
 	if (bc.outsigns[f.i_bndry] == 1) {
-	    ghost0 = f.right_cell;
+	    ghostCells[0] = f.right_cell;
 	} else {
-	    ghost0 = f.left_cell;
+	    ghostCells[0] = f.left_cell;
 	}
-	callGhostCellUDF(t, gtl, ftl, f.i_bndry, j, k, f, ghost0, ghost1);
+	callGhostCellUDF(t, gtl, ftl, f.i_bndry, j, k, f, ghostCells);
 	lua_gc(bc.myL, LUA_GCCOLLECT, 0);
-    }  // end apply_unstructured_grid()
+    }  // end apply_for_interface_unstructured_grid()
     
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         size_t j = 0, k = 0;
-        FVCell ghost0, ghost1;
+        FVCell[1] ghostCells;
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
             if (bc.outsigns[i] == 1) {
-                ghost0 = f.right_cell;
+                ghostCells[0] = f.right_cell;
             } else {
-                ghost0 = f.left_cell;
+                ghostCells[0] = f.left_cell;
             }
-            callGhostCellUDF(t, gtl, ftl, i, j, k, f, ghost0, ghost1);
+            callGhostCellUDF(t, gtl, ftl, i, j, k, f, ghostCells);
         } // end foreach face
         lua_gc(bc.myL, LUA_GCCOLLECT, 0);
     }  // end apply_unstructured_grid()
@@ -88,7 +89,7 @@ public:
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         size_t i, j, k;
-        FVCell ghostCell0, ghostCell1;
+        FVCell[n_ghost_cell_layers] ghostCells;
         FVInterface IFace;
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
@@ -98,12 +99,13 @@ public:
             j = blk.jmax;
             for (k = blk.kmin; k <= blk.kmax; ++k)  {
                 for (i = blk.imin; i <= blk.imax; ++i) {
-                    // ghostCell0 is closest to domain
-                    // ghostCell1 is one layer out.
-                    ghostCell0 = blk.get_cell(i,j+1,k);
-                    ghostCell1 = blk.get_cell(i,j+2,k);
-                    IFace = ghostCell0.iface[Face.south];
-                    callGhostCellUDF(t, gtl, ftl, i, j, k, IFace, ghostCell0, ghostCell1);
+                    // ghostCells[0] is closest to domain
+                    // ghostCells[1] is one layer out.
+                    ghostCells[0] = blk.get_cell(i,j+1,k);
+                    ghostCells[1] = blk.get_cell(i,j+2,k);
+                    version(nghost3) { ghostCells[2] = blk.get_cell(i,j+3,k); }
+                    IFace = ghostCells[0].iface[Face.south];
+                    callGhostCellUDF(t, gtl, ftl, i, j, k, IFace, ghostCells);
                 } // end i loop
             } // end k loop
             break;
@@ -111,10 +113,11 @@ public:
             i = blk.imax;
             for (k = blk.kmin; k <= blk.kmax; ++k) {
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    ghostCell0 = blk.get_cell(i+1,j,k);
-                    ghostCell1 = blk.get_cell(i+2,j,k);
-                    IFace = ghostCell0.iface[Face.west];
-                    callGhostCellUDF(t, gtl, ftl, i, j, k, IFace, ghostCell0, ghostCell1);
+                    ghostCells[0] = blk.get_cell(i+1,j,k);
+                    ghostCells[1] = blk.get_cell(i+2,j,k);
+                    version(nghost3) { ghostCells[2] = blk.get_cell(i+3,j,k); }
+                    IFace = ghostCells[0].iface[Face.west];
+                    callGhostCellUDF(t, gtl, ftl, i, j, k, IFace, ghostCells);
                 } // end j loop
             } // end k loop
             break;
@@ -122,10 +125,11 @@ public:
             j = blk.jmin;
             for (k = blk.kmin; k <= blk.kmax; ++k) {
                 for (i=blk.imin; i <= blk.imax; ++i) {
-                    ghostCell0 = blk.get_cell(i,j-1,k);
-                    ghostCell1 = blk.get_cell(i,j-2,k);
-                    IFace = ghostCell0.iface[Face.north];
-                    callGhostCellUDF(t, gtl, ftl, i, j, k, IFace, ghostCell0, ghostCell1);
+                    ghostCells[0] = blk.get_cell(i,j-1,k);
+                    ghostCells[1] = blk.get_cell(i,j-2,k);
+                    version(nghost3) { ghostCells[2] = blk.get_cell(i,j-3,k); }
+                    IFace = ghostCells[0].iface[Face.north];
+                    callGhostCellUDF(t, gtl, ftl, i, j, k, IFace, ghostCells);
                 } // end i loop
             } // end j loop
             break;
@@ -133,10 +137,11 @@ public:
             i = blk.imin;
             for (k = blk.kmin; k <= blk.kmax; ++k) {
                 for (j=blk.jmin; j <= blk.jmax; ++j) {
-                    ghostCell0 = blk.get_cell(i-1,j,k);
-                    ghostCell1 = blk.get_cell(i-2,j,k);
-                    IFace = ghostCell0.iface[Face.east];
-                    callGhostCellUDF(t, gtl, ftl, i, j, k, IFace, ghostCell0, ghostCell1);
+                    ghostCells[0] = blk.get_cell(i-1,j,k);
+                    ghostCells[1] = blk.get_cell(i-2,j,k);
+                    version(nghost3) { ghostCells[2] = blk.get_cell(i-3,j,k); }
+                    IFace = ghostCells[0].iface[Face.east];
+                    callGhostCellUDF(t, gtl, ftl, i, j, k, IFace, ghostCells);
                 } // end j loop
             } // end k loop
             break;
@@ -144,10 +149,11 @@ public:
             k = blk.kmax;
             for (i= blk.imin; i <= blk.imax; ++i) {
                 for (j=blk.jmin; j <= blk.jmax; ++j) {
-                    ghostCell0 = blk.get_cell(i,j,k+1);
-                    ghostCell1 = blk.get_cell(i,j,k+2);
-                    IFace = ghostCell0.iface[Face.bottom];
-                    callGhostCellUDF(t, gtl, ftl, i, j, k, IFace, ghostCell0, ghostCell1);
+                    ghostCells[0] = blk.get_cell(i,j,k+1);
+                    ghostCells[1] = blk.get_cell(i,j,k+2);
+                    version(nghost3) { ghostCells[2] = blk.get_cell(i,j,k+3); }
+                    IFace = ghostCells[0].iface[Face.bottom];
+                    callGhostCellUDF(t, gtl, ftl, i, j, k, IFace, ghostCells);
                 } // end j loop
             } // end i loop
             break;
@@ -155,10 +161,11 @@ public:
             k = blk.kmin;
             for (i = blk.imin; i <= blk.imax; ++i) {
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    ghostCell0 = blk.get_cell(i,j,k-1);
-                    ghostCell1 = blk.get_cell(i,j,k-2);
-                    IFace = ghostCell0.iface[Face.top];
-                    callGhostCellUDF(t, gtl, ftl, i, j, k, IFace, ghostCell0, ghostCell1);
+                    ghostCells[0] = blk.get_cell(i,j,k-1);
+                    ghostCells[1] = blk.get_cell(i,j,k-2);
+                    version(nghost3) { ghostCells[2] = blk.get_cell(i,j,k-3); }
+                    IFace = ghostCells[0].iface[Face.top];
+                    callGhostCellUDF(t, gtl, ftl, i, j, k, IFace, ghostCells);
                 } // end j loop
             } // end i loop
             break;
@@ -221,7 +228,7 @@ private:
 
     // not @nogc because of Lua functions
     void callGhostCellUDF(double t, int gtl, int ftl, size_t i, size_t j, size_t k,
-                          in FVInterface IFace, FVCell ghostCell0, FVCell ghostCell1)
+                          in FVInterface IFace, FVCell[] ghostCells)
     {
         // 1. Set up for calling function
         auto L = blk.bc[which_boundary].myL;
@@ -253,36 +260,31 @@ private:
         lua_pushinteger(L, j); lua_setfield(L, -2, "j");
         lua_pushinteger(L, k); lua_setfield(L, -2, "k");
         // Geometric information for the ghost cells (just outside the boundary).
-        lua_pushnumber(L, ghostCell0.pos[0].x); lua_setfield(L, -2, "gc0x"); // ghostcell0 x-coordinate
-        lua_pushnumber(L, ghostCell0.pos[0].y); lua_setfield(L, -2, "gc0y");
-        lua_pushnumber(L, ghostCell0.pos[0].z); lua_setfield(L, -2, "gc0z");
-        if (ghostCell1) {
-            lua_pushnumber(L, ghostCell1.pos[0].x); lua_setfield(L, -2, "gc1x");
-            lua_pushnumber(L, ghostCell1.pos[0].y); lua_setfield(L, -2, "gc1y");
-            lua_pushnumber(L, ghostCell1.pos[0].z); lua_setfield(L, -2, "gc1z");
+        foreach (ig; 0 .. ghostCells.length) {
+            lua_pushnumber(L, ghostCells[ig].pos[0].x); lua_setfield(L, -2, format("gc%dx", ig).toStringz);
+            lua_pushnumber(L, ghostCells[ig].pos[0].y); lua_setfield(L, -2, format("gc%dy", ig).toStringz);
+            lua_pushnumber(L, ghostCells[ig].pos[0].z); lua_setfield(L, -2, format("gc%dz", ig).toStringz);
         }
 
         // 2. Call LuaFunction and expect two tables of ghost cell flow state
         int number_args = 1;
-        int number_results = 1; // default to expecting 1 ghostCell table
-        if (ghostCell1) {
-            number_results = 2; // expecting two table of ghostCells
-        }
+        int number_results = to!int(ghostCells.length);
         if ( lua_pcall(L, number_args, number_results, 0) != 0 ) {
             luaL_error(L, "error running user-defined b.c. ghostCell function on boundaryId %d: %s\n",
                        which_boundary, lua_tostring(L, -1));
         }
 
         // 3. Grab Flowstate data from table and populate ghost cell
-        if (ghostCell1) {
-            // Stack positions for two ghost cells:
-            //    -2 :: ghostCell0
-            //    -1 :: ghostCell1
-            if (!tableEmpty(L, -2)) { putFlowStateIntoGhostCell(L, -2, ghostCell0); }
-            if (!tableEmpty(L, -1)) { putFlowStateIntoGhostCell(L, -1, ghostCell1); }
-        } else {
-            // Just the first ghost cell.
-            if (!tableEmpty(L, -1)) { putFlowStateIntoGhostCell(L, -1, ghostCell0); }
+        // Stack positions for ghost cells:
+        //    -3 :: ghostCell0  -2 :: ghostCell0  -1 :: ghostCell0
+        //    -2 :: ghostCell1  -1 :: ghostCell1
+        //    -1 :: ghostCell2
+        foreach (ig; 0 .. ghostCells.length) {
+            int stack_location = -(to!int(ghostCells.length-ig));
+            if (lua_isnil(L, stack_location)) { break; }
+            if (lua_istable(L, stack_location) && !tableEmpty(L, stack_location)) {
+                putFlowStateIntoGhostCell(L, stack_location, ghostCells[ig]);
+            }
         }
 
         // 4. Clear stack

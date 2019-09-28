@@ -40,7 +40,16 @@ import fluidblock;
 import bc;
 import grid_motion;
 
-enum n_ghost_cell_layers = 2; // Ghost-cell layers surround the active cells of a block.
+// Ghost-cell layers surround the active cells of a block.
+// For the high-order reconstruction right to the edge on
+// structured-grids, we will need a minimum number of ghost cells.
+version(nghost3) {
+    // For Lachlan's higher-order work, 2019.
+    enum n_ghost_cell_layers = 3;
+} else {
+    // "Traditional" value (since 1991).
+    enum n_ghost_cell_layers = 2;
+}
 
 // EPSILON parameter for numerical differentiation of flux jacobian
 // Value used based on Vanden and Orkwis (1996), AIAA J. 34:6 pp. 1125-1129
@@ -158,6 +167,7 @@ public:
         lua_pushinteger(myL, Face.west); lua_setglobal(myL, "west");
         lua_pushinteger(myL, Face.top); lua_setglobal(myL, "top");
         lua_pushinteger(myL, Face.bottom); lua_setglobal(myL, "bottom");
+        lua_pushinteger(myL, n_ghost_cell_layers); lua_setglobal(myL, "n_ghost_cell_layers");
         setSampleHelperFunctions(myL);
         // Note that the sampleFluidCell function can be expected to work only in serial mode.
         // Once it is called from a thread, other than the main thread, it may not
@@ -189,6 +199,7 @@ public:
         repr ~= ", nicell=" ~ to!string(nicell);
         repr ~= ", njcell=" ~ to!string(njcell);
         repr ~= ", nkcell=" ~ to!string(nkcell);
+        repr ~= ", n_ghost_cell_layers=" ~ to!string(n_ghost_cell_layers);
         repr ~= ", \n    bc=["~ face_name[0] ~ "=" ~ to!string(bc[0]);
         foreach (i; 1 .. (myConfig.dimensions == 3 ? 6 : 4)) {
             repr ~= ",\n        " ~ face_name[i] ~ "=" ~ to!string(bc[i]);
@@ -659,9 +670,11 @@ public:
                 i = imin;
                 get_cell!()(i-1,j,k).copy_values_from(get_cell!()(i,j,k), option);
                 get_cell!()(i-2,j,k).copy_values_from(get_cell!()(i+1,j,k), option);
+                version(nghost3) { get_cell!()(i-3,j,k).copy_values_from(get_cell!()(i+2,j,k), option); }
                 i = imax;
                 get_cell!()(i+1,j,k).copy_values_from(get_cell!()(i,j,k), option);
                 get_cell!()(i+2,j,k).copy_values_from(get_cell!()(i-1,j,k), option);
+                version(nghost3) { get_cell!()(i+3,j,k).copy_values_from(get_cell!()(i-2,j,k), option); }
             }
         }
         for (i = imin; i <= imax; ++i) {
@@ -669,9 +682,11 @@ public:
                 j = jmin;
                 get_cell!()(i,j-1,k).copy_values_from(get_cell!()(i,j,k), option);
                 get_cell!()(i,j-2,k).copy_values_from(get_cell!()(i,j+1,k), option);
+                version(nghost3) { get_cell!()(i,j-3,k).copy_values_from(get_cell!()(i,j+2,k), option); }
                 j = jmax;
                 get_cell!()(i,j+1,k).copy_values_from(get_cell!()(i,j,k), option);
                 get_cell!()(i,j+2,k).copy_values_from(get_cell!()(i,j-1,k), option);
+                version(nghost3) { get_cell!()(i,j+3,k).copy_values_from(get_cell!()(i,j-2,k), option); }
             }
         }
         if (myConfig.dimensions == 3) {
@@ -680,9 +695,11 @@ public:
                     k = kmin;
                     get_cell!()(i,j,k-1).copy_values_from(get_cell!()(i,j,k), option);
                     get_cell!()(i,j,k-2).copy_values_from(get_cell!()(i,j,k+1), option);
+                    version(nghost3) { get_cell!()(i,j,k-3).copy_values_from(get_cell!()(i,j,k+2), option); }
                     k = kmax;
                     get_cell!()(i,j,k+1).copy_values_from(get_cell!()(i,j,k), option);
                     get_cell!()(i,j,k+2).copy_values_from(get_cell!()(i,j,k-1), option);
+                    version(nghost3) { get_cell!()(i,j,k+3).copy_values_from(get_cell!()(i,j,k-2), option); }
                 }
             }
         } // end if dimensions == 3
@@ -706,6 +723,13 @@ public:
                 ghost_cell = get_cell!()(i-2,j,k);
                 extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                 ghost_cell.volume[gtl] = 2.0*cell_2.volume[gtl] - cell_2.volume[gtl];
+                version(nghost3) {
+                    cell_2 = cell_1;
+                    cell_1 = ghost_cell;
+                    ghost_cell = get_cell!()(i-3,j,k);
+                    extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
+                    ghost_cell.volume[gtl] = 2.0*cell_2.volume[gtl] - cell_2.volume[gtl];
+                }
                 i = imax;
                 cell_1 = get_cell!()(i,j,k);
                 cell_2 = get_cell!()(i-1,j,k);
@@ -717,6 +741,13 @@ public:
                 ghost_cell = get_cell!()(i+2,j,k);
                 extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                 ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
+                version(nghost3) {
+                    cell_2 = cell_1;
+                    cell_1 = ghost_cell;
+                    ghost_cell = get_cell!()(i+3,j,k);
+                    extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
+                    ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
+                }
             }
         }
         for (i = imin; i <= imax; ++i) {
@@ -732,6 +763,13 @@ public:
                 ghost_cell = get_cell!()(i,j-2,k);
                 extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                 ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
+                version(nghost3) {
+                    cell_2 = cell_1;
+                    cell_1 = ghost_cell;
+                    ghost_cell = get_cell!()(i,j-3,k);
+                    extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
+                    ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
+                }
                 j = jmax;
                 cell_1 = get_cell!()(i,j,k);
                 cell_2 = get_cell!()(i,j-1,k);
@@ -743,6 +781,13 @@ public:
                 ghost_cell = get_cell!()(i,j+2,k);
                 extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                 ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
+                version(nghost3) {
+                    cell_2 = cell_1;
+                    cell_1 = ghost_cell;
+                    ghost_cell = get_cell!()(i,j+3,k);
+                    extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
+                    ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
+                }
             }
         }
         if (myConfig.dimensions == 3) {
@@ -759,6 +804,13 @@ public:
                     ghost_cell = get_cell!()(i,j,k-2);
                     extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                     ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
+                    version(nghost3) {
+                        cell_2 = cell_1;
+                        cell_1 = ghost_cell;
+                        ghost_cell = get_cell!()(i,j,k-3);
+                        extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
+                        ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
+                    }
                     k = kmax;
                     cell_1 = get_cell!()(i,j,k);
                     cell_2 = get_cell!()(i,j,k-1);
@@ -770,6 +822,13 @@ public:
                     ghost_cell = get_cell!()(i,j,k+2);
                     extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                     ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
+                    version(nghost3) {
+                        cell_2 = cell_1;
+                        cell_1 = ghost_cell;
+                        ghost_cell = get_cell!()(i,j,k+3);
+                        extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
+                        ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
+                    }
                 }
             }
         } // end if dimensions == 3

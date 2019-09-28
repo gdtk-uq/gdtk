@@ -122,6 +122,16 @@ public:
                     if (blk.myConfig.MHD) {
                         reflect_normal_magnetic_field(dest_cell.fs, IFace);
                     }
+                    version(nghost3) {
+                        // ghost cell 3.
+                        src_cell = blk.get_cell(i,j-2,k);
+                        dest_cell = blk.get_cell(i,j+3,k);
+                        dest_cell.copy_values_from(src_cell, copy_opt);
+                        reflect_normal_velocity(dest_cell.fs, IFace);
+                        if (blk.myConfig.MHD) {
+                            reflect_normal_magnetic_field(dest_cell.fs, IFace);
+                        }
+                    }
                 } // end i loop
             } // for k
             break;
@@ -145,6 +155,16 @@ public:
                     reflect_normal_velocity(dest_cell.fs, IFace);
                     if (blk.myConfig.MHD) {
                         reflect_normal_magnetic_field(dest_cell.fs, IFace);
+                    }
+                    version(nghost3) {
+                        // ghost cell 3.
+                        src_cell = blk.get_cell(i-2,j,k);
+                        dest_cell = blk.get_cell(i+3,j,k);
+                        dest_cell.copy_values_from(src_cell, copy_opt);
+                        reflect_normal_velocity(dest_cell.fs, IFace);
+                        if (blk.myConfig.MHD) {
+                            reflect_normal_magnetic_field(dest_cell.fs, IFace);
+                        }
                     }
                 } // end j loop
             } // for k
@@ -170,6 +190,16 @@ public:
                     if (blk.myConfig.MHD) {
                         reflect_normal_magnetic_field(dest_cell.fs, IFace);
                     }
+                    version(nghost3) {
+                        // ghost cell 3.
+                        src_cell = blk.get_cell(i,j+2,k);
+                        dest_cell = blk.get_cell(i,j-3,k);
+                        dest_cell.copy_values_from(src_cell, copy_opt);
+                        reflect_normal_velocity(dest_cell.fs, IFace);
+                        if (blk.myConfig.MHD) {
+                            reflect_normal_magnetic_field(dest_cell.fs, IFace);
+                        }
+                    }
                 } // end i loop
             } // for k
             break;
@@ -193,6 +223,16 @@ public:
                     reflect_normal_velocity(dest_cell.fs, IFace);
                     if (blk.myConfig.MHD) {
                         reflect_normal_magnetic_field(dest_cell.fs, IFace);
+                    }
+                    version(nghost3) {
+                        // ghost cell 3.
+                        src_cell = blk.get_cell(i+2,j,k);
+                        dest_cell = blk.get_cell(i-3,j,k);
+                        dest_cell.copy_values_from(src_cell, copy_opt);
+                        reflect_normal_velocity(dest_cell.fs, IFace);
+                        if (blk.myConfig.MHD) {
+                            reflect_normal_magnetic_field(dest_cell.fs, IFace);
+                        }
                     }
                 } // end j loop
             } // for k
@@ -218,6 +258,16 @@ public:
                     if (blk.myConfig.MHD) {
                         reflect_normal_magnetic_field(dest_cell.fs, IFace);
                     }
+                    version(nghost3) {
+                        // ghost cell 3.
+                        src_cell = blk.get_cell(i,j,k-2);
+                        dest_cell = blk.get_cell(i,j,k+3);
+                        dest_cell.copy_values_from(src_cell, copy_opt);
+                        reflect_normal_velocity(dest_cell.fs, IFace);
+                        if (blk.myConfig.MHD) {
+                            reflect_normal_magnetic_field(dest_cell.fs, IFace);
+                        }
+                    }
                 } // end j loop
             } // for i
             break;
@@ -241,6 +291,16 @@ public:
                     reflect_normal_velocity(dest_cell.fs, IFace);
                     if (blk.myConfig.MHD) {
                         reflect_normal_magnetic_field(dest_cell.fs, IFace);
+                    }
+                    version(nghost3) {
+                        // ghost cell 3.
+                        src_cell = blk.get_cell(i,j,k+2);
+                        dest_cell = blk.get_cell(i,j,k-3);
+                        dest_cell.copy_values_from(src_cell, copy_opt);
+                        reflect_normal_velocity(dest_cell.fs, IFace);
+                        if (blk.myConfig.MHD) {
+                            reflect_normal_magnetic_field(dest_cell.fs, IFace);
+                        }
                     }
                 } // end j loop
             } // for i

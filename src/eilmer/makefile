@@ -38,6 +38,7 @@ MULTI_SPECIES_GAS ?= 1
 MULTI_T_GAS ?= 1
 MHD ?= 1
 KOMEGA ?= 1
+NGHOST3 ?= 0
 
 TECPLOT_BIN_DIR ?= unavailable
 TECPLOT_BIN_VERSION_STR = tecplot_unavailable
@@ -258,7 +259,7 @@ ifeq ($(DMD), ldc2)
         DFLAGS := -fprofile-generate -g -w -O -release -enable-inlining -boundscheck=off -d-version=flavour_profile
     endif
     ifeq ($(FLAVOUR), fast)
-        DFLAGS := -w -g -O -release -enable-inlining -boundscheck=off -d-version=flavour_fast
+        DFLAGS := -w -g -O -release -enable-inlining -boundscheck=off -d-version=flavour_fast -ffast-math -flto=full
     endif
     OF := -of=
     DVERSION := -d-version=
@@ -332,6 +333,10 @@ endif
 
 ifeq ($(KOMEGA),1)
     DFLAGS += $(DVERSION)komega
+endif
+
+ifeq ($(NGHOST3),1)
+    DFLAGS += $(DVERSION)nghost3
 endif
 
 default: $(PROGRAMS)
