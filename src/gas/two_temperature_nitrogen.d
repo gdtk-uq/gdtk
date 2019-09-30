@@ -138,6 +138,10 @@ public:
     {
         return Q.u + Q.u_modes[0] + Q.p/Q.rho;
     }
+    override number enthalpyPerSpeciesInMode(in GasState Q, int isp, int imode)
+    {
+        return (_R_N2*_theta_N2)/(exp(_theta_N2/Q.T_modes[imode]) - 1.0);
+    }
     override number entropy(in GasState Q) const
     {
         throw new GasModelException("entropy not implemented in TwoTemperatureNitrogen.");

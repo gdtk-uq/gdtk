@@ -269,14 +269,12 @@ public:
     override number dudT_const_v(in GasState Q)
     {
         number Cv = 0.0;
-        number Cv_tr, Cv_tr_rot, Cv_vib;
-        // N2 contribution
-        Cv_tr_rot = transRotSpecHeatConstV(Species.N2);
-        Cv_vib = vibSpecHeatConstV(Q.T_modes[0], Species.N2);
-        Cv += Q.massf[Species.N2] * (Cv_tr_rot + Cv_vib);
-        // N contribution
-        Cv_tr = transRotSpecHeatConstV(Species.N);
-        Cv += Q.massf[Species.N] * Cv_tr_rot;
+        number Cv_tr_rot, Cv_vib;
+        foreach (isp; 0 .. _n_species) {
+            Cv_tr_rot = transRotSpecHeatConstV(isp);
+            Cv_vib = vibSpecHeatConstV(Q.T_modes[0], isp);
+            Cv += Q.massf[isp] * (Cv_tr_rot + Cv_vib);
+        }
         return Cv;
     }
     override number dhdT_const_p(in GasState Q)
@@ -285,11 +283,10 @@ public:
         // are equal, that is, Cp_vib = Cv_vib
         number Cp = 0.0;
         number Cp_vib;
-        // N2 contribution
-        Cp_vib = vibSpecHeatConstV(Q.T_modes[0], Species.N2);
-        Cp += Q.massf[Species.N2] * (_Cp_tr_rot[Species.N2] + Cp_vib);
-        // N contribution
-        Cp += Q.massf[Species.N] * _Cp_tr_rot[Species.N];
+        foreach (isp; 0 .. _n_species) {
+            Cp_vib = vibSpecHeatConstV(Q.T_modes[0], isp);
+            Cp += Q.massf[isp] * (_Cp_tr_rot[isp] + Cp_vib);
+        }
 
         return Cp;
     }
@@ -312,6 +309,10 @@ public:
         number h = e + Q.p/Q.rho;
         return h;
     }
+    override number enthalpyPerSpeciesInMode(in GasState Q, int isp, int imode)
+    {
+        return vibEnergy(Q.T_modes[imode], isp);
+    }
     override number entropy(in GasState Q)
     {
         throw new GasModelException("entropy not implemented in TwoTemperatureNitrogen.");
@@ -332,7 +333,11 @@ public:
 
     @nogc number vibEnergy(in GasState Q, number Tve)
     {
-        return Q.massf[Species.N2] * vibEnergy(Tve, Species.N2);
+        number e_ve = 0.0;
+        foreach (isp; 0 .. _n_species) {
+            e_ve += Q.massf[isp] * vibEnergy(Tve, isp);
+        }
+        return e_ve;
     }
     
 private:
@@ -476,7 +481,11 @@ private:
 
     @nogc number vibSpecHeatConstV(in GasState Q, number Tve)
     {
-        return Q.massf[Species.N2] * vibSpecHeatConstV(Tve, Species.N2);
+        number Cv_vib = 0.0;
+        foreach (isp; 0 .. _n_species) {
+            Cv_vib += Q.massf[isp] * vibSpecHeatConstV(Tve, isp);
+        }
+        return Cv_vib;
     }
 
     @nogc number transRotSpecHeatConstV(int isp)

@@ -129,6 +129,12 @@ public:
         // but we need to be careful to override this for multi-component gases.
         return enthalpy(Q);
     }
+    @nogc number enthalpyPerSpeciesInMode(in GasState Q, int isp, int imode)
+    {
+        // For a single-species, one-temperature gas, provide a default implementation.
+        // This should be overridden for multi-temperature gases.
+        return to!number(0.0);
+    }
     @nogc abstract number entropy(in GasState Q);
     @nogc number entropy(in GasState Q, int isp)
     {

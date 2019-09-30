@@ -426,6 +426,10 @@ public:
         number h = e + Q.p/Q.rho;
         return h;
     }
+    override number enthalpyPerSpeciesInMode(in GasState Q, int isp, int imode)
+    {
+        return vibEnergy(Q.T_modes[imode], isp);
+    }
     override number entropy(in GasState Q)
     {
         throw new GasModelException("entropy not implemented in TwoTemperatureNitrogen.");
