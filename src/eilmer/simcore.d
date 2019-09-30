@@ -1358,8 +1358,7 @@ void determine_time_step_size()
         }
         // Second, reduce this estimate across all local blocks.
 	if (GlobalConfig.with_super_time_stepping) {
-	    if (GlobalConfig.super_step_hyperbolic) SimState.dt_allow = 0.0; // to be sure it is replaced.
-	    else SimState.dt_allow = double.max; // to be sure it is replaced.
+	    SimState.dt_allow = double.max; // to be sure it is replaced.
 	    SimState.cfl_max = 0.0; // to be sure it is replaced.
 	} else {
 	    SimState.dt_allow = double.max; //0.0; // to be sure it is replaced.
@@ -1369,8 +1368,7 @@ void determine_time_step_size()
         foreach (i, myblk; localFluidBlocks) { // serial loop
             if (myblk.active) { 
 		if (GlobalConfig.with_super_time_stepping) {
-		    if (GlobalConfig.super_step_hyperbolic) SimState.dt_allow = max(SimState.dt_allow, local_dt_allow[i]);
-		    else  SimState.dt_allow = min(SimState.dt_allow, local_dt_allow[i]);
+		    SimState.dt_allow = min(SimState.dt_allow, local_dt_allow[i]);
 		    SimState.dt_allow_parab = min(SimState.dt_allow_parab, local_dt_allow_parab[i]);
 		}
 		else SimState.dt_allow = min(SimState.dt_allow, local_dt_allow[i]); 
@@ -1662,40 +1660,79 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
     shared bool allow_high_order_interpolation = (SimState.time >= GlobalConfig.interpolation_delay);
     
     // compute number of sub-cycle stages (s)
-    double alpha = (SimState.dt_global)/(SimState.dt_global_parab);
-    double stmp;
-    if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1) {
-        stmp = 0.5*(-1.0+sqrt(1+8.0*alpha)); // RKL1 
-    } else {
-        stmp = 0.5*(-1.0+sqrt(9+16.0*alpha));  // RKL2
-    }
-    stmp = floor(stmp);
-    if (fmod(stmp, 2) == 0.0 && stmp != 1.0) {
-        stmp = stmp - 1.0;
-    }
-    
-    // store as an int
-    int s_RKL;
-    // if alpha is close to 1 such that S is less than 1 then just set s_RKL = 3
-    if (stmp <= 1) {
-	s_RKL = 3;
-        stmp = 3;
-    }
-    else {    // store as an int for looping later
-	s_RKL = to!int(stmp);
+    foreach (i, blk; parallel(localFluidBlocksBySize,1)) {
+        double dt_local_hyp = SimState.dt_global; // always take a super step equal to the allowable hyperbolic dt
+        double dt_local_parab;
+        // user can choose whether to use local allowable parabolic dt or global allowable parabolic dt
+        if (blk.myConfig.with_super_time_stepping_flexible_stages) dt_local_parab = blk.dt_parab;
+        else dt_local_parab = SimState.dt_global_parab;
+        double alpha = (dt_local_hyp)/(dt_local_parab);
+
+        double s_RKL;
+        if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1) {
+            s_RKL = 0.5*(-1.0+sqrt(1+8.0*alpha)); // RKL1 
+        } else {
+            s_RKL = 0.5*(-1.0+sqrt(9+16.0*alpha));  // RKL2
+        }
+        s_RKL = floor(s_RKL);
+        if (fmod(s_RKL, 2) == 0.0 && s_RKL != 1.0) {
+            s_RKL = s_RKL - 1.0;
+        }
+        
+        // if alpha is close to 1 such that S is less than 1 then just set s_RKL = 3
+        if (s_RKL <= 1) {
+            blk.s_RKL = 3;
+        }
+        else {    // store as an int for looping later
+            blk.s_RKL = to!int(s_RKL);
+        }
     }
 
-    SimState.s_RKL = s_RKL;
+    // we will store the maximum number of stages in the SimState object
+    SimState.s_RKL = 0;
+    foreach (i, blk; localFluidBlocks) {
+        SimState.s_RKL = max(SimState.s_RKL, blk.s_RKL);
+    }
+
+    // for temporal MMS uncomment the following lines
+    //SimState.s_RKL = 7;
+    //SimState.dt_global = GlobalConfig.dt_init;
+    //foreach (i, blk; localFluidBlocks) {
+    //    blk.s_RKL = SimState.s_RKL;
+    //}
+    
+    // if we have an MPI simulation, we will need to reduce this result across the tasks
+    version(mpi_parallel) {
+        version(mpi_timeouts) {
+            MPI_Sync_tasks();
+        } else {
+            MPI_Barrier(MPI_COMM_WORLD);
+        }
+    }
+    version(mpi_parallel) {
+        // Reduce residual values across MPI tasks.
+        int my_local_value = SimState.s_RKL;
+        MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+        SimState.s_RKL = my_local_value;
+    }
+    version(mpi_parallel) {
+        version(mpi_timeouts) {
+            MPI_Sync_tasks();
+        } else {
+            MPI_Barrier(MPI_COMM_WORLD);
+        }
+    }
     
     // since we round S down to the nearest odd integer we should alter the time-step to be consistent
-    //SimState.dt_global = SimState.dt_global_parab * (S*S+S)/(2.0); // RKL1
-    //SimState.dt_global = SimState.dt_global_parab * (S*S+S-2.0)/(4.0); // RKL2
-    
-    // for temporal MMS uncomment the following lines
-    //s_RKL = 7;
-    //stmp = 7;
-    //SimState.dt_global = GlobalConfig.dt_init;
-    
+    // note that this S is the number of stages we will increment the time in each sub-cycle
+    // WARNING: for with_super_time_stepping_flexible_stages = true each sub-cycle will NOT be time accurate
+    int S = SimState.s_RKL;
+    if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1) {
+        SimState.dt_global = SimState.dt_global_parab * (S*S+S)/(2.0); // RKL1
+    } else {
+        SimState.dt_global = SimState.dt_global_parab * (S*S+S-2.0)/(4.0); // RKL2
+    }
+
     // --------------------------------------------------
     // j = 1
     // --------------------------------------------------
@@ -1828,9 +1865,9 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 	bool force_euler = false;
 	foreach (cell; blk.cells) {
 	    if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1) {
-                cell.rkl1_stage_update_for_flow_on_fixed_grid1(local_dt_global, local_with_k_omega, 1, s_RKL, false); // RKL1 (j=1)
+                cell.rkl1_stage_update_for_flow_on_fixed_grid1(local_dt_global, local_with_k_omega, 1, blk.s_RKL, false); // RKL1 (j=1)
             } else {
-                cell.rkl2_stage_update_for_flow_on_fixed_grid1(local_dt_global, local_with_k_omega, 1, s_RKL, false); // RKL2 (j=1)
+                cell.rkl2_stage_update_for_flow_on_fixed_grid1(local_dt_global, local_with_k_omega, 1, blk.s_RKL, false); // RKL2 (j=1)
             }
             cell.decode_conserved(local_gtl, local_ftl+1, blk.omegaz);
 	} // end foreach cell
@@ -1887,17 +1924,23 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
     } // end if tight solid domain coupling.
 
     if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1) {
-        SimState.time = t0 + (2.0/(s_RKL*s_RKL+s_RKL))*SimState.dt_global; // RKL1
+        SimState.time = t0 + (2.0/(S*S+S))*SimState.dt_global; // RKL1
     } else {
-        SimState.time = t0 + (4.0/(3.0*(s_RKL*s_RKL+s_RKL-2.0)))*SimState.dt_global; // RKL2
+        SimState.time = t0 + (4.0/(3.0*(S*S+S-2.0)))*SimState.dt_global; // RKL2
     }
     // --------------------------------------------------
     // 2 <= j <= S
     // --------------------------------------------------
-    foreach (j; 2..s_RKL+1) {
+    //writeln("max: ", SimState.s_RKL+1);
+    foreach (j; 2..SimState.s_RKL+1) {
+
 	ftl = 1;
+  
+        foreach (blk; localFluidBlocks) {
+            if (j > blk.s_RKL+1) blk.active = false; 
+        }
         
-	// Preparation for the inviscid gas-dynamic flow update.
+        // Preparation for the inviscid gas-dynamic flow update.
 	foreach (blk; parallel(localFluidBlocksBySize,1)) {
 	    if (blk.active) {
 		blk.clear_fluxes_of_conserved_quantities();
@@ -1907,8 +1950,8 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 		}
 	    }
 	}
-	exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
-	if (GlobalConfig.apply_bcs_in_parallel) {
+        exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
+  	if (GlobalConfig.apply_bcs_in_parallel) {
 	    foreach (blk; parallel(localFluidBlocksBySize,1)) {
 		if (blk.active) { blk.applyPreReconAction(SimState.time, gtl, ftl); }
 	    }
@@ -2021,9 +2064,9 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 	    bool force_euler = false;
 	    foreach (cell; blk.cells) {
                 if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1) {
-                    cell.rkl1_stage_update_for_flow_on_fixed_grid2(local_dt_global, local_with_k_omega, j, s_RKL, false); // RKL1
+                    cell.rkl1_stage_update_for_flow_on_fixed_grid2(local_dt_global, local_with_k_omega, j, blk.s_RKL, false); // RKL1
                 } else {
-                    cell.rkl2_stage_update_for_flow_on_fixed_grid2(local_dt_global, local_with_k_omega, j, s_RKL, false);
+                    cell.rkl2_stage_update_for_flow_on_fixed_grid2(local_dt_global, local_with_k_omega, j, blk.s_RKL, false);
                 }
 		cell.decode_conserved(local_gtl, local_ftl+1, blk.omegaz);
 	    } // end foreach cell
@@ -2089,9 +2132,9 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 	    }
 	} // end foreach blk	
         if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1) {
-            SimState.time = t0 + ((j*j+j)/(s_RKL*s_RKL+s_RKL))*SimState.dt_global; // RKL1
+            SimState.time = t0 + ((j*j+j)/(S*S+S))*SimState.dt_global; // RKL1
         } else {
-            SimState.time = t0 + ((j*j+j-2.0)/(s_RKL*s_RKL+s_RKL-2.0))*SimState.dt_global; // RKL2
+            SimState.time = t0 + ((j*j+j-2.0)/(S*S+S-2.0))*SimState.dt_global; // RKL2
         }
     } // end foreach (J; 2..S+1)
     
@@ -2111,6 +2154,9 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
     } // end foreach sblk
     // Finally, update the globally known simulation time for the whole step.
     SimState.time = t0 + SimState.dt_global;
+    foreach (blk; parallel(localFluidBlocksBySize,1)) {
+        blk.active = true; 
+    }
 } // end gasdynamic_explicit_increment_with_fixed_grid()
 
 void gasdynamic_explicit_increment_with_fixed_grid()

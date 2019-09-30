@@ -452,7 +452,7 @@ final class GlobalConfig {
     shared static bool with_local_time_stepping = false;
     shared static int local_time_stepping_limit_factor = 10000;
     shared static bool with_super_time_stepping = false;
-    shared static bool super_step_hyperbolic = false;
+    shared static bool with_super_time_stepping_flexible_stages = false;
     
     // Parameter controlling Strang-splitting mode when simulating reacting flows
     shared static StrangSplittingMode strangSplitting = StrangSplittingMode.full_T_full_R;
@@ -840,7 +840,7 @@ public:
     bool with_local_time_stepping;
     int local_time_stepping_limit_factor;
     bool with_super_time_stepping;
-    bool super_step_hyperbolic;
+    bool with_super_time_stepping_flexible_stages;
     GridMotion grid_motion;
     string udf_grid_motion_file;
     size_t n_grid_time_levels;
@@ -970,7 +970,7 @@ public:
         with_local_time_stepping = GlobalConfig.with_local_time_stepping;
         local_time_stepping_limit_factor = GlobalConfig.local_time_stepping_limit_factor;
 	with_super_time_stepping = GlobalConfig.with_super_time_stepping;
-	super_step_hyperbolic = GlobalConfig.super_step_hyperbolic;
+        with_super_time_stepping_flexible_stages = GlobalConfig.with_super_time_stepping_flexible_stages;
         grid_motion = GlobalConfig.grid_motion;
         udf_grid_motion_file = GlobalConfig.udf_grid_motion_file;
         n_grid_time_levels = GlobalConfig.n_grid_time_levels;
@@ -1264,7 +1264,7 @@ void read_config_file()
     mixin(update_bool("with_local_time_stepping", "with_local_time_stepping"));
     mixin(update_int("local_time_stepping_limit_factor", "local_time_stepping_limit_factor"));
     mixin(update_bool("with_super_time_stepping", "with_super_time_stepping"));
-    mixin(update_bool("super_step_hyperbolic", "super_step_hyperbolic"));
+    mixin(update_bool("with_super_time_stepping_flexible_stages", "with_super_time_stepping_flexible_stages"));
     mixin(update_enum("grid_motion", "grid_motion", "grid_motion_from_name"));
     if (GlobalConfig.grid_motion == GridMotion.none) {
         GlobalConfig.n_grid_time_levels = 1;
@@ -1348,7 +1348,7 @@ void read_config_file()
         writeln("  with_local_time_stepping: ", GlobalConfig.with_local_time_stepping);
         writeln("  local_time_stepping_limit_factor: ", GlobalConfig.local_time_stepping_limit_factor);
 	writeln("  with_super_time_stepping: ", GlobalConfig.with_super_time_stepping);
-	writeln("  super-step_hyperbolic: ", GlobalConfig.super_step_hyperbolic);
+        writeln("  with_super_time_stepping_flexible_stages: ", GlobalConfig.with_super_time_stepping_flexible_stages);
 	writeln("  grid_motion: ", grid_motion_name(GlobalConfig.grid_motion));
         writeln("  write_vertex_velocities: ", GlobalConfig.write_vertex_velocities);
         writeln("  udf_grid_motion_file: ", to!string(GlobalConfig.udf_grid_motion_file));

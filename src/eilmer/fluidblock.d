@@ -86,7 +86,10 @@ public:
     // The following objects are used in the convective_flux method.
     FlowState Lft;
     FlowState Rght;
-
+    //
+    // Super-time-stepping parameters used when applying flexible stages per block
+    int s_RKL; // number of super-step
+    double dt_parab; // allowable parabolic time-step
     // list of vertex id's that makeup the fluidblock boundary
     // (used in the grid deformation methods in conjunction with
     // the shape sensitivity calculator).
@@ -832,15 +835,16 @@ public:
     // Compute the local time step limit for all cells in the block.
     // The overall time step is limited by the worst-case cell.
     {
-        double cfl_value = GlobalConfig.cfl_value;
-        double dt_local;
-        double cfl_local;
-        double signal;
-	// for STS
+        // for STS (hyp = hyperbolic/convective, parab = parabolic/viscous)
         double signal_hyp;
         double signal_parab;
 	double dt_allow_hyp;
 	double dt_allow_parab;
+        //
+        double cfl_value = GlobalConfig.cfl_value;
+        double dt_local;
+        double cfl_local;
+        double signal;
        	//
         double cfl_allow; // allowable CFL number, t_order dependent
         double dt_allow;
@@ -855,12 +859,13 @@ public:
         case 3: cfl_allow = 1.6; break;
         default: cfl_allow = 0.9;
         }
-        // when using residual smoothing (implicit) we should be able to achieve a higher stable CFL
+        // when using implicit residual smoothing we should be able to achieve a higher stable CFL
         // so let's relax the cfl_allow
         if (myConfig.residual_smoothing &&
             myConfig.with_local_time_stepping &&
             GlobalConfig.residual_smoothing_type == ResidualSmoothingType.implicit) cfl_allow *= 10.0;
-        int local_time_stepping_limit_factor = myConfig.local_time_stepping_limit_factor; // for local time-stepping we limit the larger time-steps by a factor of the smallest timestep
+        // for local time-stepping we limit the larger time-steps by a factor of the smallest timestep
+        int local_time_stepping_limit_factor = myConfig.local_time_stepping_limit_factor; 
         bool first = true;
         foreach(FVCell cell; cells) {
             signal = cell.signal_frequency();
@@ -872,12 +877,13 @@ public:
 		    dt_allow_parab = cfl_value / signal_parab;
 		    first = false;
 		} else {
-		    if (myConfig.super_step_hyperbolic) dt_allow_hyp = fmax(dt_allow_hyp, cfl_value / signal_hyp);
-		    else dt_allow_hyp = fmin(dt_allow_hyp, cfl_value / signal_hyp);		    
+                    dt_allow_hyp = fmin(dt_allow_hyp, cfl_value / signal_hyp);		    
 		    dt_allow_parab = fmin(dt_allow_parab, cfl_value / signal_parab);
 		}
-		dt_allow = dt_allow_hyp;
-      	    } else {
+		dt_allow = dt_allow_hyp; // set the allowable time-step based on hyperbolic time-step
+                // set the allowable parabolic time-step for each block
+                if (myConfig.with_super_time_stepping_flexible_stages) this.dt_parab = dt_allow_parab; 
+            } else {
 		// no STS
 		dt_allow_hyp = 0;
 		dt_allow_parab = 0;
