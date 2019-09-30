@@ -36,6 +36,8 @@ private:
     number two_lenL0_plus_lenL1;
     number two_lenR0_plus_lenR1;
     number w0, w1;
+    number wL_L2, wL_L1, wL_L0, wL_R0, wL_R1;
+    number wR_L1, wR_L0, wR_R0, wR_R1, wR_R2;
     LocalConfig myConfig;
 
 public:
@@ -56,11 +58,68 @@ public:
 
     //------------------------------------------------------------------------------
 
+    @nogc void l3r3_prepare(number lenL2, number lenL1, number lenL0,
+                            number lenR0, number lenR1, number lenR2)
+    // Set up intermediate data (Lagrange interpolation weights)
+    // that depend only on the cell geometry.
+    // They will remain constant when reconstructing the different scalar fields
+    // over the same set of cells.
+    {
+        // Positions of the cell centres relative to interpolation point.
+        number xL0 = -(0.5*lenL0);
+        number xL1 = -(lenL0 + 0.5*lenL1);
+        number xL2 = -(lenL0 + lenL1 + 0.5*lenL2);
+        number xR0 = 0.5*lenR0;
+        number xR1 = lenR0 + 0.5*lenR1;
+        number xR2 = lenR0 + lenR1 + 0.5*lenR2;
+        // Weights for Lagrangian interpolation at x=0.
+        wL_L2 = xL1*xL0*xR0*xR1/((xL2-xL1)*(xL2-xL0)*(xL2-xR0)*(xL2-xR1));
+        wL_L1 = xL2*xL0*xR0*xR1/((xL1-xL2)*(xL1-xL0)*(xL1-xR0)*(xL1-xR1));
+        wL_L0 = xL2*xL1*xR0*xR1/((xL0-xL2)*(xL0-xL1)*(xL0-xR0)*(xL0-xR1));
+        wL_R0 = xL2*xL1*xL0*xR1/((xR0-xL2)*(xR0-xL1)*(xR0-xL0)*(xR0-xR1));
+        wL_R1 = xL2*xL1*xL0*xR0/((xR1-xL2)*(xR1-xL1)*(xR1-xL0)*(xR1-xR0));
+        wR_L1 = xL0*xR0*xR1*xR2/((xL1-xL0)*(xL1-xR0)*(xL1-xR1)*(xL1-xR2));
+        wR_L0 = xL1*xR0*xR1*xR2/((xL0-xL1)*(xL0-xR0)*(xL0-xR1)*(xL0-xR2));
+        wR_R0 = xL1*xL0*xR1*xR2/((xR0-xL1)*(xR0-xL0)*(xR0-xR1)*(xR0-xR2));
+        wR_R1 = xL1*xL0*xR0*xR2/((xR1-xL1)*(xR1-xL0)*(xR1-xR0)*(xR1-xR2));
+        wR_R2 = xL1*xL0*xR0*xR1/((xR2-xL1)*(xR2-xL0)*(xR2-xR0)*(xR2-xR1));
+    } // end l3r3_prepare()
+
+    @nogc void interp_l3r3_scalar(number qL2, number qL1, number qL0,
+                                  number qR0, number qR1, number qR2,
+                                  ref number qL, ref number qR)
+    {
+        // Set up differences and limiter values.
+        number delLminus = (qL0 - qL1);
+        number del = (qR0 - qL0);
+        number delRplus = (qR1 - qR0);
+        // Presume unlimited high-order reconstruction.
+        number sL = 1.0;
+        number sR = 1.0;
+        if (myConfig.apply_limiter) {
+            // val Albada limiter as per Ian Johnston's thesis.
+            sL = (delLminus*del + fabs(delLminus*del) + epsilon_van_albada) / 
+                (delLminus*delLminus + del*del + epsilon_van_albada);
+            sR = (del*delRplus + fabs(del*delRplus) + epsilon_van_albada) / 
+                (del*del + delRplus*delRplus + epsilon_van_albada);
+        }
+        // The actual high-order reconstruction, possibly limited.
+        qL = qL0 + sL * (wL_L2*qL2 + wL_L1*qL1 + (wL_L0-1.0)*qL0 + wL_R0*qR0 + wL_R1*qR1);
+        qR = qR0 + sR * (wR_L1*qL1 + wR_L0*qL0 + (wR_R0-1.0)*qR0 + wR_R1*qR1 + wR_R2*qR2);
+        if (myConfig.extrema_clipping) {
+            // An extra limiting filter to ensure that we do not compute new extreme values.
+            // This was introduced to deal with very sharp transitions in species.
+            qL = clip_to_limits(qL, qL0, qR0);
+            qR = clip_to_limits(qR, qL0, qR0);
+        }
+    } // end of interp_l3r3_scalar()
+
     pragma(inline, true)
     @nogc void l2r2_prepare(number lenL1, number lenL0, number lenR0, number lenR1)
-    // Set up intermediate data that depends only on the cell geometry.
-    // It will remain constant when reconstructing the different scalar fields
+    // Set up intermediate data that depend only on the cell geometry.
+    // They will remain constant when reconstructing the different scalar fields
     // over the same set of cells.
+    // For piecewise parabolic reconstruction, see PJ workbook notes Jan 2001.
     {
         lenL0_ = lenL0;
         lenR0_ = lenR0;
@@ -194,6 +253,181 @@ public:
         if (myConfig.extrema_clipping) { q = clip_to_limits(q, q0, q1); }
         return q;
     }
+
+    //------------------------------------------------------------------------------
+    
+    @nogc
+    void interp_l3r3(ref FVInterface IFace,
+                     ref FVCell cL2, ref FVCell cL1, ref FVCell cL0,
+                     ref FVCell cR0, ref FVCell cR1, ref FVCell cR2,
+                     number cL2Length, number cL1Length, number cL0Length, 
+                     number cR0Length, number cR1Length, number cR2Length, 
+                     ref FlowState Lft, ref FlowState Rght)
+    {
+        auto gmodel = myConfig.gmodel;
+        uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
+        auto nmodes = myConfig.n_modes;
+        // High-order reconstruction for some properties.
+        if (myConfig.interpolate_in_local_frame) {
+            // Paul Petrie-Repar and Jason Qin have noted that the velocity needs
+            // to be reconstructed in the interface-local frame of reference so that
+            // the normal velocities are not messed up for mirror-image at walls.
+            // PJ 21-feb-2012
+            cL2.fs.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
+            cL1.fs.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
+            cL0.fs.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
+            cR0.fs.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
+            cR1.fs.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
+            cR2.fs.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
+        }
+        l3r3_prepare(cL2Length, cL1Length, cL0Length, cR0Length, cR1Length, cR2Length);
+        interp_l3r3_scalar(cL2.fs.vel.x, cL1.fs.vel.x, cL0.fs.vel.x,
+                           cR0.fs.vel.x, cR1.fs.vel.x, cR2.fs.vel.x,
+                           Lft.vel.refx, Rght.vel.refx);
+        interp_l3r3_scalar(cL2.fs.vel.y, cL1.fs.vel.y, cL0.fs.vel.y,
+                           cR0.fs.vel.y, cR1.fs.vel.y, cR2.fs.vel.y,
+                           Lft.vel.refy, Rght.vel.refy);
+        interp_l3r3_scalar(cL2.fs.vel.z, cL1.fs.vel.z, cL0.fs.vel.z,
+                           cR0.fs.vel.z, cR1.fs.vel.z, cR2.fs.vel.z,
+                           Lft.vel.refz, Rght.vel.refz);
+        version(MHD) {
+            if (myConfig.MHD) {
+                interp_l3r3_scalar(cL2.fs.B.x, cL1.fs.B.x, cL0.fs.B.x,
+                                   cR0.fs.B.x, cR1.fs.B.x, cR2.fs.B.x,
+                                   Lft.B.refx, Rght.B.refx);
+                interp_l3r3_scalar(cL2.fs.B.y, cL1.fs.B.y, cL0.fs.B.y,
+                                   cR0.fs.B.y, cR1.fs.B.y, cR2.fs.B.y,
+                                   Lft.B.refy, Rght.B.refy);
+                interp_l3r3_scalar(cL2.fs.B.z, cL1.fs.B.z, cL0.fs.B.z,
+                                   cR0.fs.B.z, cR1.fs.B.z, cR2.fs.B.z,
+                                   Lft.B.refz, Rght.B.refz);
+                if (myConfig.divergence_cleaning) {
+                    interp_l3r3_scalar(cL2.fs.psi, cL1.fs.psi, cL0.fs.psi,
+                                       cR0.fs.psi, cR1.fs.psi, cR2.fs.psi,
+                                       Lft.psi, Rght.psi);
+                }
+            }
+        }
+        version(komega) {
+            if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
+                interp_l3r3_scalar(cL2.fs.tke, cL1.fs.tke, cL0.fs.tke,
+                                   cR0.fs.tke, cR1.fs.tke, cR2.fs.tke,
+                                   Lft.tke, Rght.tke);
+                interp_l3r3_scalar(cL2.fs.omega, cL1.fs.omega, cL0.fs.omega,
+                                   cR0.fs.omega, cR1.fs.omega, cR2.fs.omega,
+                                   Lft.omega, Rght.omega);
+            }
+        }
+        auto gL2 = &(cL2.fs.gas); // Avoid construction of another object.
+        auto gL1 = &(cL1.fs.gas);
+        auto gL0 = &(cL0.fs.gas);
+        auto gR0 = &(cR0.fs.gas);
+        auto gR1 = &(cR1.fs.gas);
+        auto gR2 = &(cR2.fs.gas);
+        version(multi_species_gas) {
+            if (nsp > 1) {
+                // Multiple species.
+                foreach (isp; 0 .. nsp) {
+                    interp_l3r3_scalar(gL2.massf[isp], gL1.massf[isp], gL0.massf[isp],
+                                       gR0.massf[isp], gR1.massf[isp], gR2.massf[isp],
+                                       Lft.gas.massf[isp], Rght.gas.massf[isp]);
+                }
+                try {
+                    scale_mass_fractions(Lft.gas.massf); 
+                } catch(Exception e) {
+                    debug { writeln(e.msg); }
+                    Lft.gas.massf[] = gL0.massf[];
+                }
+                try {
+                    scale_mass_fractions(Rght.gas.massf);
+                } catch(Exception e) {
+                    debug { writeln(e.msg); }
+                    Rght.gas.massf[] = gR0.massf[];
+                }
+            } else {
+                // Only one possible mass-fraction value for a single species.
+                Lft.gas.massf[0] = 1.0;
+                Rght.gas.massf[0] = 1.0;
+            }
+        }
+        // Interpolate on two of the thermodynamic quantities, 
+        // and fill in the rest based on an EOS call. 
+        final switch (myConfig.thermo_interpolator) {
+        case InterpolateOption.pt: 
+            interp_l3r3_scalar(gL2.p, gL1.p, gL0.p, gR0.p, gR1.p, gR2.p, Lft.gas.p, Rght.gas.p);
+            interp_l3r3_scalar(gL2.T, gL1.T, gL0.T, gR0.T, gR1.T, gR2.T, Lft.gas.T, Rght.gas.T);
+            version(multi_T_gas) {
+                if (myConfig.allow_reconstruction_for_energy_modes) {
+                    foreach (i; 0 .. nmodes) {
+                        interp_l3r3_scalar(gL2.T_modes[i], gL1.T_modes[i], gL0.T_modes[i],
+                                           gR0.T_modes[i], gR1.T_modes[i], gR2.T_modes[i],
+                                           Lft.gas.T_modes[i], Rght.gas.T_modes[i]);
+                    }
+                } else {
+                    foreach (i; 0 .. nmodes) {
+                        Lft.gas.T_modes[i] = gL0.T_modes[i];
+                        Rght.gas.T_modes[i] = gR0.T_modes[i];
+                    }
+                }
+            }
+            mixin(codeForThermoUpdateBoth("pT"));
+            break;
+        case InterpolateOption.rhou:
+            interp_l3r3_scalar(gL2.rho, gL1.rho, gL0.rho, gR0.rho, gR1.rho, gR2.rho, Lft.gas.rho, Rght.gas.rho);
+            interp_l3r3_scalar(gL2.u, gL1.u, gL0.u, gR0.u, gR1.u, gR2.u, Lft.gas.u, Rght.gas.u);
+            version(multi_T_gas) {
+                if (myConfig.allow_reconstruction_for_energy_modes) {
+                    foreach (i; 0 .. nmodes) {
+                        interp_l3r3_scalar(gL2.u_modes[i], gL1.u_modes[i], gL0.u_modes[i],
+                                           gR0.u_modes[i], gR1.u_modes[i], gR2.u_modes[i],
+                                           Lft.gas.u_modes[i], Rght.gas.u_modes[i]);
+                    }
+                } else {
+                    foreach (i; 0 .. nmodes) {
+                        Lft.gas.u_modes[i] = gL0.u_modes[i];
+                        Rght.gas.u_modes[i] = gR0.u_modes[i];
+                    }
+                }
+            }
+            mixin(codeForThermoUpdateBoth("rhou"));
+            break;
+        case InterpolateOption.rhop:
+            interp_l3r3_scalar(gL2.rho, gL1.rho, gL0.rho, gR0.rho, gR1.rho, gR2.rho, Lft.gas.rho, Rght.gas.rho);
+            interp_l3r3_scalar(gL2.p, gL1.p, gL0.p, gR0.p, gR1.p, gR2.p, Lft.gas.p, Rght.gas.p);
+            mixin(codeForThermoUpdateBoth("rhop"));
+            break;
+        case InterpolateOption.rhot: 
+            interp_l3r3_scalar(gL2.rho, gL1.rho, gL0.rho, gR0.rho, gR1.rho, gR2.rho, Lft.gas.rho, Rght.gas.rho);
+            interp_l3r3_scalar(gL2.T, gL1.T, gL0.T, gR0.T, gR1.T, gR2.T, Lft.gas.T, Rght.gas.T);
+            version(multi_T_gas) {
+                if (myConfig.allow_reconstruction_for_energy_modes) {
+                    foreach (i; 0 .. nmodes) {
+                        interp_l3r3_scalar(gL2.T_modes[i], gL1.T_modes[i], gL0.T_modes[i],
+                                           gR0.T_modes[i], gR1.T_modes[i], gR2.T_modes[i],
+                                           Lft.gas.T_modes[i], Rght.gas.T_modes[i]);
+                    }
+                } else {
+                    foreach (i; 0 .. nmodes) {
+                        Lft.gas.T_modes[i] = gL0.T_modes[i];
+                        Rght.gas.T_modes[i] = gR0.T_modes[i];
+                    }
+                }
+            }
+            mixin(codeForThermoUpdateBoth("rhoT"));
+            break;
+        } // end switch thermo_interpolator
+        if (myConfig.interpolate_in_local_frame) {
+            // Undo the transformation made earlier. PJ 21-feb-2012
+            Lft.vel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
+            Rght.vel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
+            cL2.fs.vel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
+            cL1.fs.vel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
+            cL0.fs.vel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
+            cR0.fs.vel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
+            cR1.fs.vel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
+            cR2.fs.vel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
+        }
+    } // end interp_l3r3()
 
     //------------------------------------------------------------------------------
     
