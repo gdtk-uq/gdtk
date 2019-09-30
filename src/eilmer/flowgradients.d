@@ -67,6 +67,9 @@ public:
         number[3][] massf; // mass fraction derivatives
     }
     number[3] T; // Temperature derivatives
+    version(multi_T_gas) {
+        number[3][] T_modes;
+    }
     version(komega) {
         number[3] tke; // turbulence kinetic energy
         number[3] omega; // pseudo vorticity for k-omega turbulence
@@ -82,6 +85,9 @@ public:
             uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
             massf.length = nsp;
         }
+        version(multi_T_gas) {
+            T_modes.length = myConfig.n_modes;
+        }
     }
 
     this(const FlowGradients other)
@@ -92,6 +98,10 @@ public:
             foreach(isp; 0 .. other.massf.length) { massf[isp][] = other.massf[isp][]; }
         }
         T[] = other.T[];
+        version(multi_T_gas) {
+            T_modes.length = other.T_modes.length;
+            foreach (imode; 0 .. other.T_modes.length) { T_modes[imode][] = other.T_modes[imode][]; }
+        }
         version(komega) {
             tke[] = other.tke[];
             omega[] = other.omega[];
@@ -106,6 +116,9 @@ public:
             foreach (isp; 0 .. other.massf.length) { massf[isp][] = other.massf[isp][]; }
         }
         T[] = other.T[];
+        version(mulit_T_gas) {
+            foreach (imode; 0 .. other.T_modes.length) { T_modes[imode][] = other.T_modes[imode][]; }
+        }
         version(komega) {
             tke[] = other.tke[];
             omega[] = other.omega[];
@@ -120,6 +133,9 @@ public:
             foreach (isp; 0 .. massf.length) { massf[isp][] += other.massf[isp][]; }
         }
         T[] += other.T[];
+        version(multi_T_gas) {
+            foreach (imode; 0 .. T_modes.length) { T_modes[imode][] += other.T_modes[imode][]; }
+        }
         version(komega) {
             tke[] += other.tke[];
             omega[] += other.omega[];
@@ -134,6 +150,9 @@ public:
             foreach (isp; 0 .. massf.length) { massf[isp][] *= factor; }
         }
         T[] *= factor;
+        version(multi_T_gas) {
+            foreach (imode; 0 .. T_modes.length) { T_modes[imode][] *= factor; }
+        }
         version(komega) {
             tke[] *= factor;
             omega[] *= factor;
@@ -157,6 +176,11 @@ public:
             repr ~= "]";
         }
         repr ~= ", T=" ~ to!string(T);
+        version(multi_T_gas) {
+            repr ~= ", T_modes=[" ~ to!string(T_modes[0]);
+            foreach (i; 1 .. T_modes.length) repr ~= ", " ~ to!string(T_modes);
+            repr ~= "]";
+        }
         version(komega) {
             repr ~= ", tke=" ~ to!string(tke);
             repr ~= ", omega=" ~ to!string(omega);
@@ -231,6 +255,16 @@ public:
         T[0] = gradient_x * area_inv;
         T[1] = -gradient_y * area_inv;
         T[2] = 0.0;
+        //
+        version(multi_T_gas) {
+            size_t nmodes = cloud_fs[0].gas.T_modes.length;
+            foreach (imode; 0 .. nmodes) {
+                mixin(codeForGradients("gas.T_modes[imode]"));
+                T_modes[imode][0] = gradient_x * area_inv;
+                T_modes[imode][1] = -gradient_y * area_inv;
+                T_modes[imode][2] = 0.0;
+            }
+        }
         //
         version(multi_species_gas) {
             size_t nsp = cloud_fs[0].gas.massf.length;
@@ -427,6 +461,13 @@ public:
             vel[2][0] = 0.0; vel[2][1] = 0.0; vel[2][2] = 0.0;
         }
         mixin(codeForGradients("gas.T", "T"));
+        version(mulit_T_gas) {
+            // T_modes
+            size_t nmodes = cloud_fs[0].gas.T_modes.length;
+            foreach (imode; 0 .. nmodes) {
+                mixin(codeForGradients("gas.T_modes[imode]", "T_modes[imode]"));
+            }
+        }
         version(multi_species_gas) {
             // massf
             size_t nsp = cloud_fs[0].gas.massf.length;

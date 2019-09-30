@@ -24,7 +24,7 @@ public:
         number[] massf;    // mass fractions of species
     }
     version(multi_T_gas) {
-        number[] energies; // modal energies (mode 0 is usually transrotational)
+        number[] energies; // modal energies 
     }
     version(MHD) {
         Vector3 B;         // magnetic field, Tesla

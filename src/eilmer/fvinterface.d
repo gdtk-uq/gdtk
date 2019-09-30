@@ -480,6 +480,7 @@ public:
     {
         auto gmodel = myConfig.gmodel;
         uint n_species = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
+        uint n_modes = myConfig.n_modes;
         double viscous_factor = myConfig.viscous_factor;
         number k_laminar = fs.gas.k;
         number mu_laminar = fs.gas.mu;
@@ -502,7 +503,7 @@ public:
         number k_eff;
         number mu_eff;
         number lmbda;
-        // we would like to use the most up to date turbulent properties, so take averages of the neihgbouring cell values
+        // we would like to use the most up to date turbulent properties, so take averages of the neighbouring cell values
         if (left_cell && right_cell && left_cell.is_interior_to_domain && right_cell.is_interior_to_domain) {
             k_eff = viscous_factor * (k_laminar + 0.5*(left_cell.fs.k_t+right_cell.fs.k_t));
             mu_eff = viscous_factor * (mu_laminar + 0.5*(left_cell.fs.mu_t+right_cell.fs.mu_t));
@@ -540,7 +541,7 @@ public:
                 double Sc_t = myConfig.turbulence_schmidt_number;
                 number D_t; // = fs.mu_t / (fs.gas.rho * Sc_t)
                 // we would like to use the most up to date turbulent properties,
-                // so take averages of the neihgbouring cell values
+                // so take averages of the neighbouring cell values
                 if (left_cell && right_cell && left_cell.is_interior_to_domain && right_cell.is_interior_to_domain) {
                     D_t = 0.5*(left_cell.fs.mu_t+right_cell.fs.mu_t) / (fs.gas.rho * Sc_t);
                 } else if (left_cell && left_cell.is_interior_to_domain) {
@@ -623,6 +624,13 @@ public:
             number qx = k_eff * grad.T[0];
             number qy = k_eff * grad.T[1];
             number qz = k_eff * grad.T[2];
+            version(multi_T_gas) {
+                foreach (imode; 0 .. n_modes) {
+                    qx += viscous_factor * fs.gas.k_modes[imode] * grad.T_modes[imode][0];
+                    qy += viscous_factor * fs.gas.k_modes[imode] * grad.T_modes[imode][1];
+                    qz += viscous_factor * fs.gas.k_modes[imode] * grad.T_modes[imode][2];
+                }
+            }
             version(multi_species_gas) {
                 if (myConfig.turbulence_model != TurbulenceModel.none ||
                     myConfig.mass_diffusion_model != MassDiffusionModel.none ) {
@@ -633,9 +641,14 @@ public:
                         qy -= jy[isp] * h;
                         qz -= jz[isp] * h;
                         q_diffusion -= (jx[isp]*h*n.x + jy[isp]*h*n.y + jz[isp]*h*n.z);
+                        version(multi_T_gas) {
+                            foreach (imode; 0 .. n_modes) {
+                                number hMode = gmodel.enthalpyPerSpeciesInMode(fs.gas, cast(int)isp, cast(int)imode);
+                                q_diffusion -= (jx[isp]*hMode*n.x + jy[isp]*hMode*n.y + jz[isp]*hMode*n.z);
+                            }
+                        } // end multi_T_gas
                     }
-                    // [TODO] Rowan, modal enthalpies ?
-                }
+                } // multi_species_gas
             }
             version(komega) {
                 number tau_kx = 0.0;
@@ -718,7 +731,11 @@ public:
                     (tau_xz*fs.vel.x + tau_yz*fs.vel.y + tau_zz*fs.vel.z + qz)*nz;
             } // end if
             version(multi_T_gas) {
-                // [TODO] Rowan, Modal energy flux?
+                foreach (imode; 0 .. n_modes) {
+                    F.energies[imode] -= viscous_factor * fs.gas.k_modes[imode] * grad.T_modes[imode][0] * nx;
+                    F.energies[imode] -= viscous_factor * fs.gas.k_modes[imode] * grad.T_modes[imode][1] * ny;
+                    F.energies[imode] -= viscous_factor * fs.gas.k_modes[imode] * grad.T_modes[imode][2] * nz;
+                }
             }
             version(komega) {
                 if (myConfig.turbulence_model == TurbulenceModel.k_omega) {

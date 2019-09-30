@@ -318,7 +318,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
             cell.encode_conserved(0, 0, myblk.omegaz);
             // Even though the following call appears redundant at this point,
             // fills in some gas properties such as Prandtl number that is
-            // needed for both the cfd_check and the BaldwinLomax turbulence model.
+            // needed for both the cfl_check and the BaldwinLomax turbulence model.
             if (0 != cell.decode_conserved(0, 0, myblk.omegaz)) {
                 throw new FlowSolverException("Bad cell decode_conserved while initializing.");
             }
