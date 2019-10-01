@@ -1987,8 +1987,8 @@ public:
             } // for k
             // ifj interfaces are North-facing interfaces.
             for (size_t k = kmin; k <= kmax; ++k) {
-                for (size_t i = imin; i <= imax; ++i) {
-                    for (size_t j = jmin; j <= jmax+1; ++j) {
+                for (size_t j = jmin; j <= jmax+1; ++j) {
+                    for (size_t i = imin; i <= imax; ++i) {
                         auto IFace = get_ifj!()(i,j,k);
                         cL0 = get_cell!()(i,j-1,k); cL1 = get_cell!()(i,j-2,k); cL2 = get_cell!()(i,j-3,k);
                         cR0 = get_cell!()(i,j,k); cR1 = get_cell!()(i,j+1,k); cR2 = get_cell!()(i,j+2,k);
@@ -2019,9 +2019,9 @@ public:
             // ifk interfaces are Top-facing interfaces.
             if (!bc[Face.top].ghost_cell_data_available) { throw new Error("top ghost cell data missing"); }
             if (!bc[Face.bottom].ghost_cell_data_available) { throw new Error("bottom ghost cell data missing"); }
-            for (size_t i = imin; i <= imax; ++i) {
+            for (size_t k = kmin; k <= kmax+1; ++k) {
                 for (size_t j = jmin; j <= jmax; ++j) {
-                    for (size_t k = kmin; k <= kmax+1; ++k) {
+                    for (size_t i = imin; i <= imax; ++i) {
                         auto IFace = get_ifk!()(i,j,k);
                         cL0 = get_cell!()(i,j,k-1); cL1 = get_cell!()(i,j,k-2); cL2 = get_cell!()(i,j,k-3);
                         cR0 = get_cell!()(i,j,k); cR1 = get_cell!()(i,j,k+1); cR2 = get_cell!()(i,j,k+2);
