@@ -600,7 +600,7 @@ public:
             j = blk.jmax + 1;
             for (k = blk.kmin; k <= blk.kmax; ++k)  {
                 for (i = blk.imin; i <= blk.imax; ++i) {
-                    IFace = blk.get_ifj!()(i, j, k);
+                    IFace = blk.get_ifj(i, j, k);
                     callFluxUDF(t, gtl, ftl, i, j, k, IFace);
                 } // end i loop
             } // end k loop
@@ -609,7 +609,7 @@ public:
             i = blk.imax + 1;
             for (k = blk.kmin; k <= blk.kmax; ++k) {
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    IFace = blk.get_ifi!()(i, j, k);
+                    IFace = blk.get_ifi(i, j, k);
                     callFluxUDF(t, gtl, ftl, i, j, k, IFace);
                 } // end j loop
             } // end k loop
@@ -618,7 +618,7 @@ public:
             j = blk.jmin;
             for (k = blk.kmin; k <= blk.kmax; ++k) {
                 for (i=blk.imin; i <= blk.imax; ++i) {
-                    IFace = blk.get_ifj!()(i, j, k);
+                    IFace = blk.get_ifj(i, j, k);
                     callFluxUDF(t, gtl, ftl, i, j, k, IFace);
                 } // end i loop
             } // end j loop
@@ -627,7 +627,7 @@ public:
             i = blk.imin;
             for (k = blk.kmin; k <= blk.kmax; ++k) {
                 for (j=blk.jmin; j <= blk.jmax; ++j) {
-                    IFace = blk.get_ifi!()(i, j, k);
+                    IFace = blk.get_ifi(i, j, k);
                     callFluxUDF(t, gtl, ftl, i, j, k, IFace);
                 } // end j loop
             } // end k loop
@@ -636,7 +636,7 @@ public:
             k = blk.kmax + 1;
             for (i= blk.imin; i <= blk.imax; ++i) {
                 for (j=blk.jmin; j <= blk.jmax; ++j) {
-                    IFace = blk.get_ifk!()(i, j, k);
+                    IFace = blk.get_ifk(i, j, k);
                     callFluxUDF(t, gtl, ftl, i, j, k, IFace);
                 } // end j loop
             } // end i loop
@@ -645,7 +645,7 @@ public:
             k = blk.kmin;
             for (i = blk.imin; i <= blk.imax; ++i) {
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    IFace = blk.get_ifk!()(i, j, k);
+                    IFace = blk.get_ifk(i, j, k);
                     callFluxUDF(t, gtl, ftl, i, j, k, IFace);
                 } // end j loop
             } // end i loop

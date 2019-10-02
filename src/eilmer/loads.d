@@ -132,7 +132,7 @@ void apply_structured_grid(SFluidBlock blk, double sim_time, int current_loads_t
                 j = blk.jmax;
                 for (k = blk.kmin; k <= blk.kmax; ++k) {
                     for (i = blk.imin; i <= blk.imax; ++i) {
-                        cell = blk.get_cell!()(i,j,k);
+                        cell = blk.get_cell(i,j,k);
                         IFace = cell.iface[Face.north];
                         cellWidthNormalToSurface = cell.jLength;
                         compute_and_store_loads(IFace, 1, cellWidthNormalToSurface, sim_time, fname);
@@ -143,7 +143,7 @@ void apply_structured_grid(SFluidBlock blk, double sim_time, int current_loads_t
                 i = blk.imax;
                 for (k = blk.kmin; k <= blk.kmax; ++k) {
                     for (j = blk.jmin; j <= blk.jmax; ++j) {
-                        cell = blk.get_cell!()(i,j,k);
+                        cell = blk.get_cell(i,j,k);
                         IFace = cell.iface[Face.east];
                         cellWidthNormalToSurface = cell.iLength;
                         compute_and_store_loads(IFace, 1, cellWidthNormalToSurface, sim_time, fname);
@@ -154,7 +154,7 @@ void apply_structured_grid(SFluidBlock blk, double sim_time, int current_loads_t
                 j = blk.jmin;
                 for (k = blk.kmin; k <= blk.kmax; ++k) {
                     for (i = blk.imin; i <= blk.imax; ++i) {
-                        cell = blk.get_cell!()(i,j,k);
+                        cell = blk.get_cell(i,j,k);
                         IFace = cell.iface[Face.south];
                         cellWidthNormalToSurface = cell.jLength;
                         compute_and_store_loads(IFace, -1, cellWidthNormalToSurface, sim_time, fname);
@@ -165,7 +165,7 @@ void apply_structured_grid(SFluidBlock blk, double sim_time, int current_loads_t
                 i = blk.imin;
                 for (k = blk.kmin; k <= blk.kmax; ++k) {
                     for (j = blk.jmin; j <= blk.jmax; ++j) {
-                        cell = blk.get_cell!()(i,j,k);
+                        cell = blk.get_cell(i,j,k);
                         IFace = cell.iface[Face.west];
                         cellWidthNormalToSurface = cell.iLength;
                         compute_and_store_loads(IFace, -1, cellWidthNormalToSurface, sim_time, fname);
@@ -176,7 +176,7 @@ void apply_structured_grid(SFluidBlock blk, double sim_time, int current_loads_t
                 k = blk.kmax;
                 for (i = blk.imin; i <= blk.imax; ++i) {
                     for (j = blk.jmin; j <= blk.jmax; ++j) {
-                        cell = blk.get_cell!()(i,j,k);
+                        cell = blk.get_cell(i,j,k);
                         IFace = cell.iface[Face.top];
                         cellWidthNormalToSurface = cell.kLength;
                         compute_and_store_loads(IFace, 1, cellWidthNormalToSurface, sim_time, fname);
@@ -187,7 +187,7 @@ void apply_structured_grid(SFluidBlock blk, double sim_time, int current_loads_t
                 k = blk.kmin;
                 for (i = blk.imin; i <= blk.imax; ++i) {
                     for (j = blk.jmin; j <= blk.jmax; ++j) {
-                        cell = blk.get_cell!()(i,j,k);
+                        cell = blk.get_cell(i,j,k);
                         IFace = cell.iface[Face.bottom];
                         cellWidthNormalToSurface = cell.kLength;
                         compute_and_store_loads(IFace, -1, cellWidthNormalToSurface, sim_time, fname);

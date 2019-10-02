@@ -280,34 +280,34 @@ public:
                 // Work along each boundary and suppress reconstruction for faces that are
                 // on the axis of symmetry or just one off the axis (but parallel to the axis).
                 for (size_t i = sfb.imin; i <= sfb.imax; ++i) {
-                    auto f = sfb.get_ifj!()(i,sfb.jmin);
+                    auto f = sfb.get_ifj(i,sfb.jmin);
                     if (f.pos.y < tol) {
                         f.in_suppress_reconstruction_zone = true;
-                        auto f1 = sfb.get_ifj!()(i,sfb.jmin+1);
+                        auto f1 = sfb.get_ifj(i,sfb.jmin+1);
                         f1.in_suppress_reconstruction_zone = true;
                     }
                 }
                 for (size_t i = sfb.imin; i <= sfb.imax; ++i) {
-                    auto f = sfb.get_ifj!()(i,sfb.jmax+1);
+                    auto f = sfb.get_ifj(i,sfb.jmax+1);
                     if (f.pos.y < tol) {
                         f.in_suppress_reconstruction_zone = true;
-                        auto f1 = sfb.get_ifj!()(i,sfb.jmax);
+                        auto f1 = sfb.get_ifj(i,sfb.jmax);
                         f1.in_suppress_reconstruction_zone = true;
                     }
                 }
                 for (size_t j = sfb.jmin; j <= sfb.jmax; ++j) {
-                    auto f = sfb.get_ifi!()(sfb.imin,j);
+                    auto f = sfb.get_ifi(sfb.imin,j);
                     if (f.pos.y < tol) {
                         f.in_suppress_reconstruction_zone = true;
-                        auto f1 = sfb.get_ifi!()(sfb.imin+1,j);
+                        auto f1 = sfb.get_ifi(sfb.imin+1,j);
                         f1.in_suppress_reconstruction_zone = true;
                     }
                 }
                 for (size_t j = sfb.jmin; j <= sfb.jmax; ++j) {
-                    auto f = sfb.get_ifi!()(sfb.imax+1,j);
+                    auto f = sfb.get_ifi(sfb.imax+1,j);
                     if (f.pos.y < tol) {
                         f.in_suppress_reconstruction_zone = true;
-                        auto f1 = sfb.get_ifi!()(sfb.imax,j);
+                        auto f1 = sfb.get_ifi(sfb.imax,j);
                         f1.in_suppress_reconstruction_zone = true;
                     }
                 }

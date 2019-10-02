@@ -209,12 +209,14 @@ public:
         return to!string(repr);
     } // end toString()
 
-    @nogc size_t to_single_index()(size_t i, size_t j, size_t k) const
+    pragma(inline, true)
+    @nogc size_t to_single_index(size_t i, size_t j, size_t k) const
     {
         assert(i < _nidim && j < _njdim && k < _nkdim, "Index out of bounds.");
         return (k*_njdim + j)*_nidim + i; 
     }
 
+    pragma(inline, true)
     @nogc size_t[3] to_ijk_indices(size_t gid) const
     {
         size_t[3] ijk;
@@ -226,6 +228,7 @@ public:
         return ijk;
     }
 
+    pragma(inline, true)
     @nogc size_t ijk_0n_indices_to_cell_id(size_t i, size_t j, size_t k=0) const
     // ijk indices into the hypothetical block of active cells.
     // where 0<k<nkcell, 0<j<njcell, 0<i<nicell are the indices
@@ -238,6 +241,7 @@ public:
         return (k*njcell + j)*nicell + i;
     }
 
+    pragma(inline, true)
     @nogc size_t ijk_indices_to_cell_id(size_t i, size_t j, size_t k=0) const
     // ijk indices into the underlying block array.
     {
@@ -247,6 +251,7 @@ public:
         return (k*njcell + j)*nicell + i;
     }
     
+    pragma(inline, true)
     @nogc size_t[3] cell_id_to_ijk_indices(size_t id) const
     {
         size_t[3] ijk;
@@ -261,25 +266,30 @@ public:
         return ijk;
     } // end cell_id_to_ijk_indices()
 
-    @nogc ref FVCell get_cell()(size_t i, size_t j, size_t k=0) 
+    pragma(inline, true)
+    @nogc ref FVCell get_cell(size_t i, size_t j, size_t k=0) 
     {
-        return _ctr[to_single_index!()(i,j,k)];
+        return _ctr[to_single_index(i,j,k)];
     }
-    @nogc ref FVInterface get_ifi()(size_t i, size_t j, size_t k=0) 
+    pragma(inline, true)
+    @nogc ref FVInterface get_ifi(size_t i, size_t j, size_t k=0) 
     {
-        return _ifi[to_single_index!()(i,j,k)];
+        return _ifi[to_single_index(i,j,k)];
     }
-    @nogc ref FVInterface get_ifj()(size_t i, size_t j, size_t k=0)
+    pragma(inline, true)
+    @nogc ref FVInterface get_ifj(size_t i, size_t j, size_t k=0)
     {
-        return _ifj[to_single_index!()(i,j,k)];
+        return _ifj[to_single_index(i,j,k)];
     }
-    @nogc ref FVInterface get_ifk()(size_t i, size_t j, size_t k=0)
+    pragma(inline, true)
+    @nogc ref FVInterface get_ifk(size_t i, size_t j, size_t k=0)
     {
-        return _ifk[to_single_index!()(i,j,k)];
+        return _ifk[to_single_index(i,j,k)];
     }
-    @nogc ref FVVertex get_vtx()(size_t i, size_t j, size_t k=0)
+    pragma(inline, true)
+    @nogc ref FVVertex get_vtx(size_t i, size_t j, size_t k=0)
     {
-        return _vtx[to_single_index!()(i,j,k)];
+        return _vtx[to_single_index(i,j,k)];
     }
 
     @nogc
@@ -301,38 +311,38 @@ public:
         // north boundary
         foreach (k; kmin .. kmax+1) {
             foreach (i; imin .. imax+1) {
-                bc[Face.north].faces ~= get_ifj!()(i, jmax+1, k);
+                bc[Face.north].faces ~= get_ifj(i, jmax+1, k);
                 bc[Face.north].outsigns ~= 1;
             }
         }
         foreach (k; kmin .. kmax+1) {
             foreach (j; jmin .. jmax+1) {
-                bc[Face.east].faces ~= get_ifi!()(imax+1, j, k);
+                bc[Face.east].faces ~= get_ifi(imax+1, j, k);
                 bc[Face.east].outsigns ~= 1;
             }
         }
         foreach (k; kmin .. kmax+1) {
             foreach (i; imin .. imax+1) {
-                bc[Face.south].faces ~= get_ifj!()(i, jmin, k);
+                bc[Face.south].faces ~= get_ifj(i, jmin, k);
                 bc[Face.south].outsigns ~= -1;
             }
         }
         foreach (k; kmin .. kmax+1) {
             foreach (j; jmin .. jmax+1) {
-                bc[Face.west].faces ~= get_ifi!()(imin, j, k);
+                bc[Face.west].faces ~= get_ifi(imin, j, k);
                 bc[Face.west].outsigns ~= -1;
             }
         }
         if (myConfig.dimensions == 3) {
             foreach (j; jmin .. jmax+1) {
                 foreach (i; imin .. imax+1) {
-                    bc[Face.top].faces ~= get_ifk!()(i, j, kmax+1);
+                    bc[Face.top].faces ~= get_ifk(i, j, kmax+1);
                     bc[Face.top].outsigns ~= 1;
                 }
             }
             foreach (j; jmin .. jmax+1) {
                 foreach (i; imin .. imax+1) {
-                    bc[Face.bottom].faces ~= get_ifk!()(i, j, kmin);
+                    bc[Face.bottom].faces ~= get_ifk(i, j, kmin);
                     bc[Face.bottom].outsigns ~= -1;
                 }
             }
@@ -393,41 +403,41 @@ public:
             // a structured-grid block much as we would an unstructured-grid block.
             if (myConfig.dimensions == 2) {
                 foreach (j; jmin .. jmax+1) {
-                    foreach (i; imin .. imax+1) { cells ~= get_cell!()(i, j); }
+                    foreach (i; imin .. imax+1) { cells ~= get_cell(i, j); }
                 }
                 foreach (j; jmin .. jmax+2) {
-                    foreach (i; imin .. imax+2) { vertices ~= get_vtx!()(i, j); }
+                    foreach (i; imin .. imax+2) { vertices ~= get_vtx(i, j); }
                 }
                 foreach (j; jmin .. jmax+1) {
-                    foreach (i; imin .. imax+2) { faces ~= get_ifi!()(i, j); }
+                    foreach (i; imin .. imax+2) { faces ~= get_ifi(i, j); }
                 }
                 foreach (j; jmin .. jmax+2) {
-                    foreach (i; imin .. imax+1) { faces ~= get_ifj!()(i, j); }
+                    foreach (i; imin .. imax+1) { faces ~= get_ifj(i, j); }
                 }
             } else { // assume 3D
                 foreach (k; kmin .. kmax+1) {
                     foreach (j; jmin .. jmax+1) {
-                        foreach (i; imin .. imax+1) { cells ~= get_cell!()(i, j, k); }
+                        foreach (i; imin .. imax+1) { cells ~= get_cell(i, j, k); }
                     }
                 }
                 foreach (k; kmin .. kmax+2) {
                     foreach (j; jmin .. jmax+2) {
-                        foreach (i; imin .. imax+2) { vertices ~= get_vtx!()(i, j, k); }
+                        foreach (i; imin .. imax+2) { vertices ~= get_vtx(i, j, k); }
                     }
                 }
                 foreach (k; kmin .. kmax+1) {
                     foreach (j; jmin .. jmax+1) {
-                        foreach (i; imin .. imax+2) { faces ~= get_ifi!()(i, j, k); }
+                        foreach (i; imin .. imax+2) { faces ~= get_ifi(i, j, k); }
                     }
                 }
                 foreach (k; kmin .. kmax+1) {
                     foreach (j; jmin .. jmax+2) {
-                        foreach (i; imin .. imax+1) { faces ~= get_ifj!()(i, j, k); }
+                        foreach (i; imin .. imax+1) { faces ~= get_ifj(i, j, k); }
                     }
                 }
                 foreach (k; kmin .. kmax+2) {
                     foreach (j; jmin .. jmax+1) {
-                        foreach (i; imin .. imax+1) { faces ~= get_ifk!()(i, j, k); }
+                        foreach (i; imin .. imax+1) { faces ~= get_ifk(i, j, k); }
                     }
                 }
             } // end if dimensions
@@ -455,21 +465,21 @@ public:
         if (myConfig.dimensions == 2) {
             foreach (j; 0 .. _njdim) {
                 foreach (i; 0 .. _nidim) {
-                    auto c = get_cell!()(i, j); if (c.id == -1) { c.id = cell_id; ++cell_id; }
-                    auto f = get_ifi!()(i,j); if (f.id == -1) { f.id = face_id; ++face_id; }
-                    f = get_ifj!()(i,j); if (f.id == -1) { f.id = face_id; ++face_id; }
-                    auto v = get_vtx!()(i,j); if (v.id == -1) { v.id = vtx_id; ++vtx_id; }
+                    auto c = get_cell(i, j); if (c.id == -1) { c.id = cell_id; ++cell_id; }
+                    auto f = get_ifi(i,j); if (f.id == -1) { f.id = face_id; ++face_id; }
+                    f = get_ifj(i,j); if (f.id == -1) { f.id = face_id; ++face_id; }
+                    auto v = get_vtx(i,j); if (v.id == -1) { v.id = vtx_id; ++vtx_id; }
                 }
             }
         } else { // assume 3D
             foreach (k; 0 .. _nkdim) {
                 foreach (j; 0 .. _njdim) {
                     foreach (i; 0 .. _nidim) {
-                        auto c = get_cell!()(i, j, k); if (c.id == -1) { c.id = cell_id; ++cell_id; }
-                        auto f = get_ifi!()(i,j,k); if (f.id == -1) { f.id = face_id; ++face_id; }
-                        f = get_ifj!()(i,j,k); if (f.id == -1) { f.id = face_id; ++face_id; }
-                        f = get_ifk!()(i,j,k); if (f.id == -1) { f.id = face_id; ++face_id; }
-                        auto v = get_vtx!()(i,j,k); if (v.id == -1) { v.id = vtx_id; ++vtx_id; }
+                        auto c = get_cell(i, j, k); if (c.id == -1) { c.id = cell_id; ++cell_id; }
+                        auto f = get_ifi(i,j,k); if (f.id == -1) { f.id = face_id; ++face_id; }
+                        f = get_ifj(i,j,k); if (f.id == -1) { f.id = face_id; ++face_id; }
+                        f = get_ifk(i,j,k); if (f.id == -1) { f.id = face_id; ++face_id; }
+                        auto v = get_vtx(i,j,k); if (v.id == -1) { v.id = vtx_id; ++vtx_id; }
                     }
                 }
             }
@@ -498,24 +508,24 @@ public:
         for ( size_t k = kstart; k <= kend; ++k ) {
             for ( size_t j = jmin-1; j <= jmax+1; ++j ) {
                 for ( size_t i = imin-1; i <= imax+1; ++i ) {
-                    FVCell cell = get_cell!()(i,j,k);
+                    FVCell cell = get_cell(i,j,k);
                     cell.iface.length = 0; cell.outsign.length = 0;
-                    cell.iface ~= get_ifj!()(i,j+1,k); cell.outsign ~= 1.0; // north
-                    cell.iface ~= get_ifi!()(i+1,j,k); cell.outsign ~= 1.0; // east
-                    cell.iface ~= get_ifj!()(i,j,k); cell.outsign ~= -1.0; // south
-                    cell.iface ~= get_ifi!()(i,j,k); cell.outsign ~= -1.0; // west
+                    cell.iface ~= get_ifj(i,j+1,k); cell.outsign ~= 1.0; // north
+                    cell.iface ~= get_ifi(i+1,j,k); cell.outsign ~= 1.0; // east
+                    cell.iface ~= get_ifj(i,j,k); cell.outsign ~= -1.0; // south
+                    cell.iface ~= get_ifi(i,j,k); cell.outsign ~= -1.0; // west
                     cell.vtx.length = 0;
-                    cell.vtx ~= get_vtx!()(i,j,k);
-                    cell.vtx ~= get_vtx!()(i+1,j,k);
-                    cell.vtx ~= get_vtx!()(i+1,j+1,k);
-                    cell.vtx ~= get_vtx!()(i,j+1,k);
+                    cell.vtx ~= get_vtx(i,j,k);
+                    cell.vtx ~= get_vtx(i+1,j,k);
+                    cell.vtx ~= get_vtx(i+1,j+1,k);
+                    cell.vtx ~= get_vtx(i,j+1,k);
                     if (myConfig.dimensions == 3) {
-                        cell.iface ~= get_ifk!()(i,j,k+1); cell.outsign ~= 1.0; // top
-                        cell.iface ~= get_ifk!()(i,j,k); cell.outsign ~= -1.0; // bottom
-                        cell.vtx ~= get_vtx!()(i,j,k+1);
-                        cell.vtx ~= get_vtx!()(i+1,j,k+1);
-                        cell.vtx ~= get_vtx!()(i+1,j+1,k+1);
-                        cell.vtx ~= get_vtx!()(i,j+1,k+1);
+                        cell.iface ~= get_ifk(i,j,k+1); cell.outsign ~= 1.0; // top
+                        cell.iface ~= get_ifk(i,j,k); cell.outsign ~= -1.0; // bottom
+                        cell.vtx ~= get_vtx(i,j,k+1);
+                        cell.vtx ~= get_vtx(i+1,j,k+1);
+                        cell.vtx ~= get_vtx(i+1,j+1,k+1);
+                        cell.vtx ~= get_vtx(i,j+1,k+1);
                     } // end if
                 } // for i
             } // for j
@@ -534,34 +544,34 @@ public:
         for (size_t k = kmin; k <= kmax; ++k) {
             for (size_t j = jmin; j <= jmax; ++j) {
                 for (size_t i = imin; i <= imax+1; ++i) {
-                    auto IFace = get_ifi!()(i,j,k);
+                    auto IFace = get_ifi(i,j,k);
                     IFace.vtx.length = 0;
                     if (myConfig.dimensions == 3) {
-                        IFace.vtx ~= get_vtx!()(i,j,k);
-                        IFace.vtx ~= get_vtx!()(i,j+1,k);
-                        IFace.vtx ~= get_vtx!()(i,j+1,k+1);
-                        IFace.vtx ~= get_vtx!()(i,j,k+1);
+                        IFace.vtx ~= get_vtx(i,j,k);
+                        IFace.vtx ~= get_vtx(i,j+1,k);
+                        IFace.vtx ~= get_vtx(i,j+1,k+1);
+                        IFace.vtx ~= get_vtx(i,j,k+1);
                     } else {
-                        IFace.vtx ~= get_vtx!()(i,j);
-                        IFace.vtx ~= get_vtx!()(i,j+1);
+                        IFace.vtx ~= get_vtx(i,j);
+                        IFace.vtx ~= get_vtx(i,j+1);
                     }
                     if (i == imin) {
                         IFace.is_on_boundary = true;
                         IFace.bc_id = Face.west;
                         if (bc[Face.west].ghost_cell_data_available) {
-                            IFace.left_cell = (myConfig.dimensions == 3) ? get_cell!()(i-1,j,k) : get_cell!()(i-1,j);
+                            IFace.left_cell = (myConfig.dimensions == 3) ? get_cell(i-1,j,k) : get_cell(i-1,j);
                         }
-                        IFace.right_cell = (myConfig.dimensions == 3) ? get_cell!()(i,j,k) : get_cell!()(i,j);
+                        IFace.right_cell = (myConfig.dimensions == 3) ? get_cell(i,j,k) : get_cell(i,j);
                     } else if (i == imax+1) {
                         IFace.is_on_boundary = true;
                         IFace.bc_id = Face.east;
-                        IFace.left_cell = (myConfig.dimensions == 3) ? get_cell!()(i-1,j,k) : get_cell!()(i-1,j);
+                        IFace.left_cell = (myConfig.dimensions == 3) ? get_cell(i-1,j,k) : get_cell(i-1,j);
                         if (bc[Face.east].ghost_cell_data_available) {
-                            IFace.right_cell = (myConfig.dimensions == 3) ? get_cell!()(i,j,k) : get_cell!()(i,j);
+                            IFace.right_cell = (myConfig.dimensions == 3) ? get_cell(i,j,k) : get_cell(i,j);
                         }
                     } else {
-                        IFace.left_cell = (myConfig.dimensions == 3) ? get_cell!()(i-1,j,k) : get_cell!()(i-1,j);
-                        IFace.right_cell = (myConfig.dimensions == 3) ? get_cell!()(i,j,k) : get_cell!()(i,j);
+                        IFace.left_cell = (myConfig.dimensions == 3) ? get_cell(i-1,j,k) : get_cell(i-1,j);
+                        IFace.right_cell = (myConfig.dimensions == 3) ? get_cell(i,j,k) : get_cell(i,j);
                     }
                 } // i loop
             } // j loop
@@ -573,34 +583,34 @@ public:
         for (size_t k = kmin; k <= kmax; ++k) {
             for (size_t i = imin; i <= imax; ++i) {
                 for (size_t j = jmin; j <= jmax+1; ++j) {
-                    auto IFace = get_ifj!()(i,j,k);
+                    auto IFace = get_ifj(i,j,k);
                     IFace.vtx.length = 0;
                     if (myConfig.dimensions == 3) {
-                        IFace.vtx ~= get_vtx!()(i,j,k);
-                        IFace.vtx ~= get_vtx!()(i,j,k+1);
-                        IFace.vtx ~= get_vtx!()(i+1,j,k+1);
-                        IFace.vtx ~= get_vtx!()(i+1,j,k);
+                        IFace.vtx ~= get_vtx(i,j,k);
+                        IFace.vtx ~= get_vtx(i,j,k+1);
+                        IFace.vtx ~= get_vtx(i+1,j,k+1);
+                        IFace.vtx ~= get_vtx(i+1,j,k);
                     } else {
-                        IFace.vtx ~= get_vtx!()(i+1,j);
-                        IFace.vtx ~= get_vtx!()(i,j);
+                        IFace.vtx ~= get_vtx(i+1,j);
+                        IFace.vtx ~= get_vtx(i,j);
                     }
                     if (j == jmin) {
                         IFace.is_on_boundary = true;
                         IFace.bc_id = Face.south;
                         if (bc[Face.south].ghost_cell_data_available) {
-                            IFace.left_cell = (myConfig.dimensions == 3) ? get_cell!()(i,j-1,k) : get_cell!()(i,j-1);
+                            IFace.left_cell = (myConfig.dimensions == 3) ? get_cell(i,j-1,k) : get_cell(i,j-1);
                         }
-                        IFace.right_cell = (myConfig.dimensions == 3) ? get_cell!()(i,j,k) : get_cell!()(i,j);
+                        IFace.right_cell = (myConfig.dimensions == 3) ? get_cell(i,j,k) : get_cell(i,j);
                     } else if (j == jmax+1) {
                         IFace.is_on_boundary = true;
                         IFace.bc_id = Face.north;
-                        IFace.left_cell = (myConfig.dimensions == 3) ? get_cell!()(i,j-1,k) : get_cell!()(i,j-1);
+                        IFace.left_cell = (myConfig.dimensions == 3) ? get_cell(i,j-1,k) : get_cell(i,j-1);
                         if (bc[Face.north].ghost_cell_data_available) {
-                            IFace.right_cell = (myConfig.dimensions == 3) ? get_cell!()(i,j,k) : get_cell!()(i,j);
+                            IFace.right_cell = (myConfig.dimensions == 3) ? get_cell(i,j,k) : get_cell(i,j);
                         }
                     } else {
-                        IFace.left_cell = (myConfig.dimensions == 3) ? get_cell!()(i,j-1,k) : get_cell!()(i,j-1);
-                        IFace.right_cell = (myConfig.dimensions == 3) ? get_cell!()(i,j,k) : get_cell!()(i,j);
+                        IFace.left_cell = (myConfig.dimensions == 3) ? get_cell(i,j-1,k) : get_cell(i,j-1);
+                        IFace.right_cell = (myConfig.dimensions == 3) ? get_cell(i,j,k) : get_cell(i,j);
                     }
                 } // j loop
             } // i loop
@@ -612,29 +622,29 @@ public:
         for (size_t i = imin; i <= imax; ++i) {
             for (size_t j = jmin; j <= jmax; ++j) {
                 for (size_t k = kmin; k <= kmax+1; ++k) {
-                    auto IFace = get_ifk!()(i,j,k);
+                    auto IFace = get_ifk(i,j,k);
                     IFace.vtx.length = 0;
-                    IFace.vtx ~= get_vtx!()(i,j,k);
-                    IFace.vtx ~= get_vtx!()(i+1,j,k);
-                    IFace.vtx ~= get_vtx!()(i+1,j+1,k);
-                    IFace.vtx ~= get_vtx!()(i,j+1,k);
+                    IFace.vtx ~= get_vtx(i,j,k);
+                    IFace.vtx ~= get_vtx(i+1,j,k);
+                    IFace.vtx ~= get_vtx(i+1,j+1,k);
+                    IFace.vtx ~= get_vtx(i,j+1,k);
                     if (k == kmin) {
                         IFace.is_on_boundary = true;
                         IFace.bc_id = Face.bottom;
                         if (bc[Face.bottom].ghost_cell_data_available) {
-                            IFace.left_cell = get_cell!()(i,j,k-1);
+                            IFace.left_cell = get_cell(i,j,k-1);
                         }
-                        IFace.right_cell = get_cell!()(i,j,k);
+                        IFace.right_cell = get_cell(i,j,k);
                     } else if (k == kmax+1) {
                         IFace.is_on_boundary = true;
                         IFace.bc_id = Face.top;
-                        IFace.left_cell = get_cell!()(i,j,k-1);
+                        IFace.left_cell = get_cell(i,j,k-1);
                         if (bc[Face.top].ghost_cell_data_available) {
-                            IFace.right_cell = get_cell!()(i,j,k);
+                            IFace.right_cell = get_cell(i,j,k);
                         }
                     } else {
-                        IFace.left_cell = get_cell!()(i,j,k-1);
-                        IFace.right_cell = get_cell!()(i,j,k);
+                        IFace.left_cell = get_cell(i,j,k-1);
+                        IFace.right_cell = get_cell(i,j,k);
                     }
                 } // for k
             } // j loop
@@ -670,38 +680,38 @@ public:
         for (j = jmin; j <= jmax; ++j) {
             for (k = kmin; k <= kmax; ++k) {
                 i = imin;
-                get_cell!()(i-1,j,k).copy_values_from(get_cell!()(i,j,k), option);
-                get_cell!()(i-2,j,k).copy_values_from(get_cell!()(i+1,j,k), option);
-                version(nghost3) { get_cell!()(i-3,j,k).copy_values_from(get_cell!()(i+2,j,k), option); }
+                get_cell(i-1,j,k).copy_values_from(get_cell(i,j,k), option);
+                get_cell(i-2,j,k).copy_values_from(get_cell(i+1,j,k), option);
+                version(nghost3) { get_cell(i-3,j,k).copy_values_from(get_cell(i+2,j,k), option); }
                 i = imax;
-                get_cell!()(i+1,j,k).copy_values_from(get_cell!()(i,j,k), option);
-                get_cell!()(i+2,j,k).copy_values_from(get_cell!()(i-1,j,k), option);
-                version(nghost3) { get_cell!()(i+3,j,k).copy_values_from(get_cell!()(i-2,j,k), option); }
+                get_cell(i+1,j,k).copy_values_from(get_cell(i,j,k), option);
+                get_cell(i+2,j,k).copy_values_from(get_cell(i-1,j,k), option);
+                version(nghost3) { get_cell(i+3,j,k).copy_values_from(get_cell(i-2,j,k), option); }
             }
         }
         for (i = imin; i <= imax; ++i) {
             for (k = kmin; k <= kmax; ++k) {
                 j = jmin;
-                get_cell!()(i,j-1,k).copy_values_from(get_cell!()(i,j,k), option);
-                get_cell!()(i,j-2,k).copy_values_from(get_cell!()(i,j+1,k), option);
-                version(nghost3) { get_cell!()(i,j-3,k).copy_values_from(get_cell!()(i,j+2,k), option); }
+                get_cell(i,j-1,k).copy_values_from(get_cell(i,j,k), option);
+                get_cell(i,j-2,k).copy_values_from(get_cell(i,j+1,k), option);
+                version(nghost3) { get_cell(i,j-3,k).copy_values_from(get_cell(i,j+2,k), option); }
                 j = jmax;
-                get_cell!()(i,j+1,k).copy_values_from(get_cell!()(i,j,k), option);
-                get_cell!()(i,j+2,k).copy_values_from(get_cell!()(i,j-1,k), option);
-                version(nghost3) { get_cell!()(i,j+3,k).copy_values_from(get_cell!()(i,j-2,k), option); }
+                get_cell(i,j+1,k).copy_values_from(get_cell(i,j,k), option);
+                get_cell(i,j+2,k).copy_values_from(get_cell(i,j-1,k), option);
+                version(nghost3) { get_cell(i,j+3,k).copy_values_from(get_cell(i,j-2,k), option); }
             }
         }
         if (myConfig.dimensions == 3) {
             for (i = imin; i <= imax; ++i) {
                 for (j = jmin; j <= jmax; ++j) {
                     k = kmin;
-                    get_cell!()(i,j,k-1).copy_values_from(get_cell!()(i,j,k), option);
-                    get_cell!()(i,j,k-2).copy_values_from(get_cell!()(i,j,k+1), option);
-                    version(nghost3) { get_cell!()(i,j,k-3).copy_values_from(get_cell!()(i,j,k+2), option); }
+                    get_cell(i,j,k-1).copy_values_from(get_cell(i,j,k), option);
+                    get_cell(i,j,k-2).copy_values_from(get_cell(i,j,k+1), option);
+                    version(nghost3) { get_cell(i,j,k-3).copy_values_from(get_cell(i,j,k+2), option); }
                     k = kmax;
-                    get_cell!()(i,j,k+1).copy_values_from(get_cell!()(i,j,k), option);
-                    get_cell!()(i,j,k+2).copy_values_from(get_cell!()(i,j,k-1), option);
-                    version(nghost3) { get_cell!()(i,j,k+3).copy_values_from(get_cell!()(i,j,k-2), option); }
+                    get_cell(i,j,k+1).copy_values_from(get_cell(i,j,k), option);
+                    get_cell(i,j,k+2).copy_values_from(get_cell(i,j,k-1), option);
+                    version(nghost3) { get_cell(i,j,k+3).copy_values_from(get_cell(i,j,k-2), option); }
                 }
             }
         } // end if dimensions == 3
@@ -715,38 +725,38 @@ public:
         for (j = jmin; j <= jmax; ++j) {
             for (k = kmin; k <= kmax; ++k) {
                 i = imin;
-                auto cell_1 = get_cell!()(i,j,k);
-                auto cell_2 = get_cell!()(i+1,j,k);
-                auto ghost_cell = get_cell!()(i-1,j,k);
+                auto cell_1 = get_cell(i,j,k);
+                auto cell_2 = get_cell(i+1,j,k);
+                auto ghost_cell = get_cell(i-1,j,k);
                 extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                 ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                 cell_2 = cell_1;
                 cell_1 = ghost_cell;
-                ghost_cell = get_cell!()(i-2,j,k);
+                ghost_cell = get_cell(i-2,j,k);
                 extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                 ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                 version(nghost3) {
                     cell_2 = cell_1;
                     cell_1 = ghost_cell;
-                    ghost_cell = get_cell!()(i-3,j,k);
+                    ghost_cell = get_cell(i-3,j,k);
                     extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                     ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                 }
                 i = imax;
-                cell_1 = get_cell!()(i,j,k);
-                cell_2 = get_cell!()(i-1,j,k);
-                ghost_cell = get_cell!()(i+1,j,k);
+                cell_1 = get_cell(i,j,k);
+                cell_2 = get_cell(i-1,j,k);
+                ghost_cell = get_cell(i+1,j,k);
                 extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                 ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                 cell_2 = cell_1;
                 cell_1 = ghost_cell;
-                ghost_cell = get_cell!()(i+2,j,k);
+                ghost_cell = get_cell(i+2,j,k);
                 extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                 ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                 version(nghost3) {
                     cell_2 = cell_1;
                     cell_1 = ghost_cell;
-                    ghost_cell = get_cell!()(i+3,j,k);
+                    ghost_cell = get_cell(i+3,j,k);
                     extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                     ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                 }
@@ -755,38 +765,38 @@ public:
         for (i = imin; i <= imax; ++i) {
             for (k = kmin; k <= kmax; ++k) {
                 j = jmin;
-                auto cell_1 = get_cell!()(i,j,k);
-                auto cell_2 = get_cell!()(i,j+1,k);
-                auto ghost_cell = get_cell!()(i,j-1,k);
+                auto cell_1 = get_cell(i,j,k);
+                auto cell_2 = get_cell(i,j+1,k);
+                auto ghost_cell = get_cell(i,j-1,k);
                 extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                 ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                 cell_2 = cell_1;
                 cell_1 = ghost_cell;
-                ghost_cell = get_cell!()(i,j-2,k);
+                ghost_cell = get_cell(i,j-2,k);
                 extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                 ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                 version(nghost3) {
                     cell_2 = cell_1;
                     cell_1 = ghost_cell;
-                    ghost_cell = get_cell!()(i,j-3,k);
+                    ghost_cell = get_cell(i,j-3,k);
                     extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                     ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                 }
                 j = jmax;
-                cell_1 = get_cell!()(i,j,k);
-                cell_2 = get_cell!()(i,j-1,k);
-                ghost_cell = get_cell!()(i,j+1,k);
+                cell_1 = get_cell(i,j,k);
+                cell_2 = get_cell(i,j-1,k);
+                ghost_cell = get_cell(i,j+1,k);
                 extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                 ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                 cell_2 = cell_1;
                 cell_1 = ghost_cell;
-                ghost_cell = get_cell!()(i,j+2,k);
+                ghost_cell = get_cell(i,j+2,k);
                 extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                 ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                 version(nghost3) {
                     cell_2 = cell_1;
                     cell_1 = ghost_cell;
-                    ghost_cell = get_cell!()(i,j+3,k);
+                    ghost_cell = get_cell(i,j+3,k);
                     extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                     ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                 }
@@ -796,38 +806,38 @@ public:
             for (i = imin; i <= imax; ++i) {
                 for (j = jmin; j <= jmax; ++j) {
                     k = kmin;
-                    auto cell_1 = get_cell!()(i,j,k);
-                    auto cell_2 = get_cell!()(i,j,k+1);
-                    auto ghost_cell = get_cell!()(i,j,k-1);
+                    auto cell_1 = get_cell(i,j,k);
+                    auto cell_2 = get_cell(i,j,k+1);
+                    auto ghost_cell = get_cell(i,j,k-1);
                     extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                     ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                     cell_2 = cell_1;
                     cell_1 = ghost_cell;
-                    ghost_cell = get_cell!()(i,j,k-2);
+                    ghost_cell = get_cell(i,j,k-2);
                     extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                     ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                     version(nghost3) {
                         cell_2 = cell_1;
                         cell_1 = ghost_cell;
-                        ghost_cell = get_cell!()(i,j,k-3);
+                        ghost_cell = get_cell(i,j,k-3);
                         extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                         ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                     }
                     k = kmax;
-                    cell_1 = get_cell!()(i,j,k);
-                    cell_2 = get_cell!()(i,j,k-1);
-                    ghost_cell = get_cell!()(i,j,k+1);
+                    cell_1 = get_cell(i,j,k);
+                    cell_2 = get_cell(i,j,k-1);
+                    ghost_cell = get_cell(i,j,k+1);
                     extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                     ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                     cell_2 = cell_1;
                     cell_1 = ghost_cell;
-                    ghost_cell = get_cell!()(i,j,k+2);
+                    ghost_cell = get_cell(i,j,k+2);
                     extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                     ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                     version(nghost3) {
                         cell_2 = cell_1;
                         cell_1 = ghost_cell;
-                        ghost_cell = get_cell!()(i,j,k+3);
+                        ghost_cell = get_cell(i,j,k+3);
                         extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                         ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                     }
@@ -881,21 +891,21 @@ public:
             // First, i-faces
             for (i = imin; i <= imax+1; ++i) {
                 for (j = jmin; j <= jmax; ++j) {
-                    FVInterface face = get_ifi!()(i,j);
+                    FVInterface face = get_ifi(i,j);
                     // Points nearby.
                     if (i == imin) {
                         // west boundary
-                        FVInterface D = get_ifj!()(i,j);
-                        FVCell E = get_cell!()(i,j);
-                        FVInterface F = get_ifj!()(i,j+1);
+                        FVInterface D = get_ifj(i,j);
+                        FVCell E = get_cell(i,j);
+                        FVInterface F = get_ifj(i,j+1);
                         // Retain locations and references to flow states for later.
                         face.cloud_pos = [&(face.pos), &(D.pos), &(E.pos[gtl]), &(F.pos)];
                         face.cloud_fs = [face.fs, D.fs, E.fs, F.fs];
                     } else if (i == imax+1) {
                         // east boundary
-                        FVInterface A = get_ifj!()(i-1,j+1);
-                        FVCell B = get_cell!()(i-1,j);
-                        FVInterface C = get_ifj!()(i-1,j);
+                        FVInterface A = get_ifj(i-1,j+1);
+                        FVCell B = get_cell(i-1,j);
+                        FVInterface C = get_ifj(i-1,j);
                         // Retain locations and references to flow states for later.
                         if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
                             face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos[gtl]), &(C.pos)];
@@ -906,12 +916,12 @@ public:
                         }
                     } else {
                         // interior face
-                        FVInterface A = get_ifj!()(i-1,j+1);
-                        FVCell B = get_cell!()(i-1,j);
-                        FVInterface C = get_ifj!()(i-1,j);
-                        FVInterface D = get_ifj!()(i,j);
-                        FVCell E = get_cell!()(i,j);
-                        FVInterface F = get_ifj!()(i,j+1);
+                        FVInterface A = get_ifj(i-1,j+1);
+                        FVCell B = get_cell(i-1,j);
+                        FVInterface C = get_ifj(i-1,j);
+                        FVInterface D = get_ifj(i,j);
+                        FVCell E = get_cell(i,j);
+                        FVInterface F = get_ifj(i,j+1);
                         // Retain locations and references to flow states for later.
                         if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
                             face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos[gtl]), &(C.pos), 
@@ -928,21 +938,21 @@ public:
             // Now, j-faces
             for (i = imin; i <= imax; ++i) {
                 for (j = jmin; j <= jmax+1; ++j) {
-                    FVInterface face = get_ifj!()(i,j);
+                    FVInterface face = get_ifj(i,j);
                     // Points nearby.
                     if (j == jmin) {
                         // south boundary
-                        FVInterface D = get_ifi!()(i+1,j);
-                        FVCell E = get_cell!()(i,j);
-                        FVInterface F = get_ifi!()(i,j);
+                        FVInterface D = get_ifi(i+1,j);
+                        FVCell E = get_cell(i,j);
+                        FVInterface F = get_ifi(i,j);
                         // Retain locations and references to flow states for later.
                         face.cloud_pos = [&(face.pos), &(D.pos), &(E.pos[gtl]), &(F.pos)];
                         face.cloud_fs = [face.fs, D.fs, E.fs, F.fs];
                     } else if (j == jmax+1) {
                         // north boundary
-                        FVInterface A = get_ifi!()(i,j-1);
-                        FVCell B = get_cell!()(i,j-1);
-                        FVInterface C = get_ifi!()(i+1,j-1);
+                        FVInterface A = get_ifi(i,j-1);
+                        FVCell B = get_cell(i,j-1);
+                        FVInterface C = get_ifi(i+1,j-1);
                         // Retain locations and references to flow states for later.
                         if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
                             face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos[gtl]), &(C.pos)];
@@ -953,12 +963,12 @@ public:
                         }
                     } else {
                         // interior face
-                        FVInterface A = get_ifi!()(i,j-1);
-                        FVCell B = get_cell!()(i,j-1);
-                        FVInterface C = get_ifi!()(i+1,j-1);
-                        FVInterface D = get_ifi!()(i+1,j);
-                        FVCell E = get_cell!()(i,j);
-                        FVInterface F = get_ifi!()(i,j);
+                        FVInterface A = get_ifi(i,j-1);
+                        FVCell B = get_cell(i,j-1);
+                        FVInterface C = get_ifi(i+1,j-1);
+                        FVInterface D = get_ifi(i+1,j);
+                        FVCell E = get_cell(i,j);
+                        FVInterface F = get_ifi(i,j);
                         // Retain locations and references to flow states for later.
                         face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos[gtl]), &(C.pos), 
                                           &(D.pos), &(E.pos[gtl]), &(F.pos)];
@@ -980,26 +990,26 @@ public:
             for (i = imin; i <= imax+1; ++i) {
                 for (j = jmin; j <= jmax; ++j) {
                     for (k = kmin; k <= kmax; ++k) {
-                        FVInterface face = get_ifi!()(i,j,k);
+                        FVInterface face = get_ifi(i,j,k);
                         // Points nearby.
                         if (i == imin) {
                             // west boundary
-                            FVInterface F = get_ifj!()(i,j+1,k);
-                            FVInterface G = get_ifj!()(i,j,k);
-                            FVInterface H = get_ifk!()(i,j,k+1);
-                            FVInterface I = get_ifk!()(i,j,k);
-                            FVCell J = get_cell!()(i,j,k);
+                            FVInterface F = get_ifj(i,j+1,k);
+                            FVInterface G = get_ifj(i,j,k);
+                            FVInterface H = get_ifk(i,j,k+1);
+                            FVInterface I = get_ifk(i,j,k);
+                            FVCell J = get_cell(i,j,k);
                             // Retain locations and references to flow states for later.
                             face.cloud_pos = [&(face.pos), &(F.pos), &(G.pos), &(H.pos),
                                               &(I.pos), &(J.pos[gtl])];
                             face.cloud_fs = [face.fs, F.fs, G.fs, H.fs, I.fs, J.fs];
                         } else if (i == imax+1) {
                             // east boundary
-                            FVInterface A = get_ifj!()(i-1,j+1,k);
-                            FVInterface B = get_ifj!()(i-1,j,k);
-                            FVInterface C = get_ifk!()(i-1,j,k+1);
-                            FVInterface D = get_ifk!()(i-1,j,k);
-                            FVCell E = get_cell!()(i-1,j,k);
+                            FVInterface A = get_ifj(i-1,j+1,k);
+                            FVInterface B = get_ifj(i-1,j,k);
+                            FVInterface C = get_ifk(i-1,j,k+1);
+                            FVInterface D = get_ifk(i-1,j,k);
+                            FVCell E = get_cell(i-1,j,k);
                             // Retain locations and references to flow states for later.
                             if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
                                 face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos),
@@ -1012,16 +1022,16 @@ public:
                             }
                         } else {
                             // interior face
-                            FVInterface A = get_ifj!()(i-1,j+1,k);
-                            FVInterface B = get_ifj!()(i-1,j,k);
-                            FVInterface C = get_ifk!()(i-1,j,k+1);
-                            FVInterface D = get_ifk!()(i-1,j,k);
-                            FVCell E = get_cell!()(i-1,j,k);
-                            FVInterface F = get_ifj!()(i,j+1,k);
-                            FVInterface G = get_ifj!()(i,j,k);
-                            FVInterface H = get_ifk!()(i,j,k+1);
-                            FVInterface I = get_ifk!()(i,j,k);
-                            FVCell J = get_cell!()(i,j,k);
+                            FVInterface A = get_ifj(i-1,j+1,k);
+                            FVInterface B = get_ifj(i-1,j,k);
+                            FVInterface C = get_ifk(i-1,j,k+1);
+                            FVInterface D = get_ifk(i-1,j,k);
+                            FVCell E = get_cell(i-1,j,k);
+                            FVInterface F = get_ifj(i,j+1,k);
+                            FVInterface G = get_ifj(i,j,k);
+                            FVInterface H = get_ifk(i,j,k+1);
+                            FVInterface I = get_ifk(i,j,k);
+                            FVCell J = get_cell(i,j,k);
                             // Retain locations and references to flow states for later.
                             if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
                                 face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]), 
@@ -1042,26 +1052,26 @@ public:
             for (i = imin; i <= imax; ++i) {
                 for (j = jmin; j <= jmax+1; ++j) {
                     for (k = kmin; k <= kmax; ++k) {
-                        FVInterface face = get_ifj!()(i,j,k);
+                        FVInterface face = get_ifj(i,j,k);
                         // Points nearby.
                         if (j == jmin) {
                             // south boundary
-                            FVInterface F = get_ifi!()(i+1,j,k);
-                            FVInterface G = get_ifi!()(i,j,k);
-                            FVInterface H = get_ifk!()(i,j,k+1);
-                            FVInterface I = get_ifk!()(i,j,k);
-                            FVCell J = get_cell!()(i,j,k);
+                            FVInterface F = get_ifi(i+1,j,k);
+                            FVInterface G = get_ifi(i,j,k);
+                            FVInterface H = get_ifk(i,j,k+1);
+                            FVInterface I = get_ifk(i,j,k);
+                            FVCell J = get_cell(i,j,k);
                             // Retain locations and references to flow states for later.
                             face.cloud_pos = [&(face.pos), &(F.pos), &(G.pos), &(H.pos),
                                               &(I.pos), &(J.pos[gtl])];
                             face.cloud_fs = [face.fs, F.fs, G.fs, H.fs, I.fs, J.fs];
                         } else if (j == jmax+1) {
                             // north boundary
-                            FVInterface A = get_ifi!()(i+1,j-1,k);
-                            FVInterface B = get_ifi!()(i,j-1,k);
-                            FVInterface C = get_ifk!()(i,j-1,k+1);
-                            FVInterface D = get_ifk!()(i,j-1,k);
-                            FVCell E = get_cell!()(i,j-1,k);
+                            FVInterface A = get_ifi(i+1,j-1,k);
+                            FVInterface B = get_ifi(i,j-1,k);
+                            FVInterface C = get_ifk(i,j-1,k+1);
+                            FVInterface D = get_ifk(i,j-1,k);
+                            FVCell E = get_cell(i,j-1,k);
                             // Retain locations and references to flow states for later.
                             if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
                                 face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos),
@@ -1074,16 +1084,16 @@ public:
                             }
                         } else {
                             // interior face
-                            FVInterface A = get_ifi!()(i+1,j-1,k);
-                            FVInterface B = get_ifi!()(i,j-1,k);
-                            FVInterface C = get_ifk!()(i,j-1,k+1);
-                            FVInterface D = get_ifk!()(i,j-1,k);
-                            FVCell E = get_cell!()(i,j-1,k);
-                            FVInterface F = get_ifi!()(i+1,j,k);
-                            FVInterface G = get_ifi!()(i,j,k);
-                            FVInterface H = get_ifk!()(i,j,k+1);
-                            FVInterface I = get_ifk!()(i,j,k);
-                            FVCell J = get_cell!()(i,j,k);
+                            FVInterface A = get_ifi(i+1,j-1,k);
+                            FVInterface B = get_ifi(i,j-1,k);
+                            FVInterface C = get_ifk(i,j-1,k+1);
+                            FVInterface D = get_ifk(i,j-1,k);
+                            FVCell E = get_cell(i,j-1,k);
+                            FVInterface F = get_ifi(i+1,j,k);
+                            FVInterface G = get_ifi(i,j,k);
+                            FVInterface H = get_ifk(i,j,k+1);
+                            FVInterface I = get_ifk(i,j,k);
+                            FVCell J = get_cell(i,j,k);
                             // Retain locations and references to flow states for later.
                             if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
                                 face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]), 
@@ -1104,26 +1114,26 @@ public:
             for (i = imin; i <= imax; ++i) {
                 for (j = jmin; j <= jmax; ++j) {
                     for (k = kmin; k <= kmax+1; ++k) {
-                        FVInterface face = get_ifk!()(i,j,k);
+                        FVInterface face = get_ifk(i,j,k);
                         // Points nearby.
                         if (k == kmin) {
                             // bottom boundary
-                            FVInterface F = get_ifj!()(i,j+1,k);
-                            FVInterface G = get_ifj!()(i,j,k);
-                            FVInterface H = get_ifi!()(i+1,j,k);
-                            FVInterface I = get_ifi!()(i,j,k);
-                            FVCell J = get_cell!()(i,j,k);
+                            FVInterface F = get_ifj(i,j+1,k);
+                            FVInterface G = get_ifj(i,j,k);
+                            FVInterface H = get_ifi(i+1,j,k);
+                            FVInterface I = get_ifi(i,j,k);
+                            FVCell J = get_cell(i,j,k);
                             // Retain locations and references to flow states for later.
                             face.cloud_pos = [&(face.pos), &(F.pos), &(G.pos), &(H.pos),
                                               &(I.pos), &(J.pos[gtl])];
                             face.cloud_fs = [face.fs, F.fs, G.fs, H.fs, I.fs, J.fs];
                         } else if (k == kmax+1) {
                             // top boundary
-                            FVInterface A = get_ifj!()(i,j+1,k-1);
-                            FVInterface B = get_ifj!()(i,j,k-1);
-                            FVInterface C = get_ifi!()(i+1,j,k-1);
-                            FVInterface D = get_ifi!()(i,j,k-1);
-                            FVCell E = get_cell!()(i,j,k-1);
+                            FVInterface A = get_ifj(i,j+1,k-1);
+                            FVInterface B = get_ifj(i,j,k-1);
+                            FVInterface C = get_ifi(i+1,j,k-1);
+                            FVInterface D = get_ifi(i,j,k-1);
+                            FVCell E = get_cell(i,j,k-1);
                             // Retain locations and references to flow states for later.
                             if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
                                 face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos),
@@ -1136,16 +1146,16 @@ public:
                             }
                         } else {
                             // interior face
-                            FVInterface A = get_ifj!()(i,j+1,k-1);
-                            FVInterface B = get_ifj!()(i,j,k-1);
-                            FVInterface C = get_ifi!()(i+1,j,k-1);
-                            FVInterface D = get_ifi!()(i,j,k-1);
-                            FVCell E = get_cell!()(i,j,k-1);
-                            FVInterface F = get_ifj!()(i,j+1,k);
-                            FVInterface G = get_ifj!()(i,j,k);
-                            FVInterface H = get_ifi!()(i+1,j,k);
-                            FVInterface I = get_ifi!()(i,j,k);
-                            FVCell J = get_cell!()(i,j,k);
+                            FVInterface A = get_ifj(i,j+1,k-1);
+                            FVInterface B = get_ifj(i,j,k-1);
+                            FVInterface C = get_ifi(i+1,j,k-1);
+                            FVInterface D = get_ifi(i,j,k-1);
+                            FVCell E = get_cell(i,j,k-1);
+                            FVInterface F = get_ifj(i,j+1,k);
+                            FVInterface G = get_ifj(i,j,k);
+                            FVInterface H = get_ifi(i+1,j,k);
+                            FVInterface I = get_ifi(i,j,k);
+                            FVCell J = get_cell(i,j,k);
                             // Retain locations and references to flow states for later.
                             if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
                                 face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]), 
@@ -1174,12 +1184,12 @@ public:
             for ( i = imin+1; i <= imax; ++i ) {
                 for ( j = jmin+1; j <= jmax; ++j ) {
                     // Secondary-cell centre is a primary-cell vertex.
-                    FVVertex vtx = get_vtx!()(i,j);
+                    FVVertex vtx = get_vtx(i,j);
                     // These are the corners of the secondary cell.
-                    FVCell A = get_cell!()(i,j-1);
-                    FVCell B = get_cell!()(i,j);
-                    FVCell C = get_cell!()(i-1,j);
-                    FVCell D = get_cell!()(i-1,j-1);
+                    FVCell A = get_cell(i,j-1);
+                    FVCell B = get_cell(i,j);
+                    FVCell C = get_cell(i-1,j);
+                    FVCell D = get_cell(i-1,j-1);
                     // Retain locations and references to flow states for later.
                     vtx.cloud_pos = [&(A.pos[gtl]), &(B.pos[gtl]), &(C.pos[gtl]), &(D.pos[gtl])];
                     vtx.cloud_fs = [A.fs, B.fs, C.fs, D.fs];
@@ -1189,45 +1199,45 @@ public:
             // East boundary
             i = imax+1;
             for (j = jmin+1; j <= jmax; ++j) {
-                FVVertex vtx = get_vtx!()(i,j);
-                FVInterface A = get_ifi!()(i,j-1);
-                FVInterface B = get_ifi!()(i,j);
-                FVCell C = get_cell!()(i-1,j);
-                FVCell D = get_cell!()(i-1,j-1);
+                FVVertex vtx = get_vtx(i,j);
+                FVInterface A = get_ifi(i,j-1);
+                FVInterface B = get_ifi(i,j);
+                FVCell C = get_cell(i-1,j);
+                FVCell D = get_cell(i-1,j-1);
                 vtx.cloud_pos = [&(A.pos), &(B.pos), &(C.pos[gtl]), &(D.pos[gtl])];
                 vtx.cloud_fs = [A.fs, B.fs, C.fs, D.fs];
             } // j loop
             // West boundary
             i = imin;
             for (j = jmin+1; j <= jmax; ++j) {
-                FVVertex vtx = get_vtx!()(i,j);
+                FVVertex vtx = get_vtx(i,j);
                 // These are the corners of the secondary cell.
-                FVCell A = get_cell!()(i,j-1);
-                FVCell B = get_cell!()(i,j);
-                FVInterface C = get_ifi!()(i,j);
-                FVInterface D = get_ifi!()(i,j-1);
+                FVCell A = get_cell(i,j-1);
+                FVCell B = get_cell(i,j);
+                FVInterface C = get_ifi(i,j);
+                FVInterface D = get_ifi(i,j-1);
                 vtx.cloud_pos = [&(A.pos[gtl]), &(B.pos[gtl]), &(C.pos), &(D.pos)];
                 vtx.cloud_fs = [A.fs, B.fs, C.fs, D.fs];
             } // j loop
             // North boundary
             j = jmax+1;
             for (i = imin+1; i <= imax; ++i) {
-                FVVertex vtx = get_vtx!()(i,j);
-                FVCell A = get_cell!()(i,j-1);
-                FVInterface B = get_ifj!()(i,j);
-                FVInterface C = get_ifj!()(i-1,j);
-                FVCell D = get_cell!()(i-1,j-1);
+                FVVertex vtx = get_vtx(i,j);
+                FVCell A = get_cell(i,j-1);
+                FVInterface B = get_ifj(i,j);
+                FVInterface C = get_ifj(i-1,j);
+                FVCell D = get_cell(i-1,j-1);
                 vtx.cloud_pos = [&(A.pos[gtl]), &(B.pos), &(C.pos), &(D.pos[gtl])];
                 vtx.cloud_fs = [A.fs, B.fs, C.fs, D.fs];
             } // i loop
             // South boundary
             j = jmin;
             for (i = imin+1; i <= imax; ++i) {
-                FVVertex vtx = get_vtx!()(i,j);
-                FVInterface A = get_ifj!()(i,j);
-                FVCell B = get_cell!()(i,j);
-                FVCell C = get_cell!()(i-1,j);
-                FVInterface D = get_ifj!()(i-1,j);
+                FVVertex vtx = get_vtx(i,j);
+                FVInterface A = get_ifj(i,j);
+                FVCell B = get_cell(i,j);
+                FVCell C = get_cell(i-1,j);
+                FVInterface D = get_ifj(i-1,j);
                 vtx.cloud_pos = [&(A.pos), &(B.pos[gtl]), &(C.pos[gtl]), &(D.pos)];
                 vtx.cloud_fs = [A.fs, B.fs, C.fs, D.fs];
             } // i loop
@@ -1237,40 +1247,40 @@ public:
             // North-east corner
             {
                 i = imax+1; j = jmax+1;
-                FVVertex vtx = get_vtx!()(i,j);
-                FVInterface A = get_ifi!()(i,j-1);
-                FVInterface B = get_ifj!()(i-1,j);
-                FVCell C = get_cell!()(i-1,j-1);
+                FVVertex vtx = get_vtx(i,j);
+                FVInterface A = get_ifi(i,j-1);
+                FVInterface B = get_ifj(i-1,j);
+                FVCell C = get_cell(i-1,j-1);
                 vtx.cloud_pos = [&(A.pos), &(B.pos), &(C.pos[gtl])];
                 vtx.cloud_fs = [A.fs, B.fs, C.fs];
             }
             // South-east corner
             {
                 i = imax+1; j = jmin;
-                FVVertex vtx = get_vtx!()(i,j);
-                FVInterface A = get_ifi!()(i,j);
-                FVCell B = get_cell!()(i-1,j);
-                FVInterface C = get_ifj!()(i-1,j);
+                FVVertex vtx = get_vtx(i,j);
+                FVInterface A = get_ifi(i,j);
+                FVCell B = get_cell(i-1,j);
+                FVInterface C = get_ifj(i-1,j);
                 vtx.cloud_pos = [&(A.pos), &(B.pos[gtl]), &(C.pos)];
                 vtx.cloud_fs = [A.fs, B.fs, C.fs];
             }
             // South-west corner
             {
                 i = imin; j = jmin;
-                FVVertex vtx = get_vtx!()(i,j);
-                FVInterface A = get_ifj!()(i,j);
-                FVCell B = get_cell!()(i,j);
-                FVInterface C = get_ifi!()(i,j);
+                FVVertex vtx = get_vtx(i,j);
+                FVInterface A = get_ifj(i,j);
+                FVCell B = get_cell(i,j);
+                FVInterface C = get_ifi(i,j);
                 vtx.cloud_pos = [&(A.pos), &(B.pos[gtl]), &(C.pos)];
                 vtx.cloud_fs = [A.fs, B.fs, C.fs];
             }
             // North-west corner
             {
                 i = imin; j = jmax+1;
-                FVVertex vtx = get_vtx!()(i,j);
-                FVCell A = get_cell!()(i,j-1);
-                FVInterface B = get_ifj!()(i,j);
-                FVInterface C = get_ifi!()(i,j-1);
+                FVVertex vtx = get_vtx(i,j);
+                FVCell A = get_cell(i,j-1);
+                FVInterface B = get_ifj(i,j);
+                FVInterface C = get_ifi(i,j-1);
                 vtx.cloud_pos = [&(A.pos[gtl]), &(B.pos), &(C.pos)];
                 vtx.cloud_fs = [A.fs, B.fs, C.fs];
             }
@@ -1279,15 +1289,15 @@ public:
             for ( i = imin; i <= imax-1; ++i ) {
                 for ( j = jmin; j <= jmax-1; ++j ) {
                     for ( k = kmin; k <= kmax-1; ++k ) {
-                        FVVertex vtx = get_vtx!()(i+1,j+1,k+1);
-                        FVCell c0 = get_cell!()(i,j,k);
-                        FVCell c1 = get_cell!()(i+1,j,k);
-                        FVCell c2 = get_cell!()(i+1,j+1,k);
-                        FVCell c3 = get_cell!()(i,j+1,k);
-                        FVCell c4 = get_cell!()(i,j,k+1);
-                        FVCell c5 = get_cell!()(i+1,j,k+1);
-                        FVCell c6 = get_cell!()(i+1,j+1,k+1);
-                        FVCell c7 = get_cell!()(i,j+1,k+1);
+                        FVVertex vtx = get_vtx(i+1,j+1,k+1);
+                        FVCell c0 = get_cell(i,j,k);
+                        FVCell c1 = get_cell(i+1,j,k);
+                        FVCell c2 = get_cell(i+1,j+1,k);
+                        FVCell c3 = get_cell(i,j+1,k);
+                        FVCell c4 = get_cell(i,j,k+1);
+                        FVCell c5 = get_cell(i+1,j,k+1);
+                        FVCell c6 = get_cell(i+1,j+1,k+1);
+                        FVCell c7 = get_cell(i,j+1,k+1);
                         vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos[gtl]), &(c3.pos[gtl]),
                                          &(c4.pos[gtl]), &(c5.pos[gtl]), &(c6.pos[gtl]), &(c7.pos[gtl])];
                         vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs, c6.fs, c7.fs];
@@ -1298,15 +1308,15 @@ public:
             i = imax;
             for ( j = jmin; j <= jmax-1; ++j ) {
                 for ( k = kmin; k <= kmax-1; ++k ) {
-                    FVVertex vtx = get_vtx!()(i+1,j+1,k+1);
-                    FVCell c0 = get_cell!()(i,j,k);
-                    FVInterface c1 = get_ifi!()(i+1,j,k);
-                    FVInterface c2 = get_ifi!()(i+1,j+1,k);
-                    FVCell c3 = get_cell!()(i,j+1,k);
-                    FVCell c4 = get_cell!()(i,j,k+1);
-                    FVInterface c5 = get_ifi!()(i+1,j,k+1);
-                    FVInterface c6 = get_ifi!()(i+1,j+1,k+1);
-                    FVCell c7 = get_cell!()(i,j+1,k+1);
+                    FVVertex vtx = get_vtx(i+1,j+1,k+1);
+                    FVCell c0 = get_cell(i,j,k);
+                    FVInterface c1 = get_ifi(i+1,j,k);
+                    FVInterface c2 = get_ifi(i+1,j+1,k);
+                    FVCell c3 = get_cell(i,j+1,k);
+                    FVCell c4 = get_cell(i,j,k+1);
+                    FVInterface c5 = get_ifi(i+1,j,k+1);
+                    FVInterface c6 = get_ifi(i+1,j+1,k+1);
+                    FVCell c7 = get_cell(i,j+1,k+1);
                     vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos), &(c2.pos), &(c3.pos[gtl]),
                                      &(c4.pos[gtl]), &(c5.pos), &(c6.pos), &(c7.pos[gtl])];
                     vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs, c6.fs, c7.fs];
@@ -1316,15 +1326,15 @@ public:
             i = imin - 1;
             for ( j = jmin; j <= jmax-1; ++j ) {
                 for ( k = kmin; k <= kmax-1; ++k ) {
-                    FVVertex vtx = get_vtx!()(i+1,j+1,k+1);
-                    FVInterface c0 = get_ifi!()(i+1,j,k);
-                    FVCell c1 = get_cell!()(i+1,j,k);
-                    FVCell c2 = get_cell!()(i+1,j+1,k);
-                    FVInterface c3 = get_ifi!()(i+1,j+1,k);
-                    FVInterface c4 = get_ifi!()(i+1,j,k+1);
-                    FVCell c5 = get_cell!()(i+1,j,k+1);
-                    FVCell c6 = get_cell!()(i+1,j+1,k+1);
-                    FVInterface c7 = get_ifi!()(i+1,j+1,k+1);
+                    FVVertex vtx = get_vtx(i+1,j+1,k+1);
+                    FVInterface c0 = get_ifi(i+1,j,k);
+                    FVCell c1 = get_cell(i+1,j,k);
+                    FVCell c2 = get_cell(i+1,j+1,k);
+                    FVInterface c3 = get_ifi(i+1,j+1,k);
+                    FVInterface c4 = get_ifi(i+1,j,k+1);
+                    FVCell c5 = get_cell(i+1,j,k+1);
+                    FVCell c6 = get_cell(i+1,j+1,k+1);
+                    FVInterface c7 = get_ifi(i+1,j+1,k+1);
                     vtx.cloud_pos = [&(c0.pos), &(c1.pos[gtl]), &(c2.pos[gtl]), &(c3.pos),
                                      &(c4.pos), &(c5.pos[gtl]), &(c6.pos[gtl]), &(c7.pos)];
                     vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs, c6.fs, c7.fs];
@@ -1334,15 +1344,15 @@ public:
             j = jmax;
             for ( i = imin; i <= imax-1; ++i ) {
                 for ( k = kmin; k <= kmax-1; ++k ) {
-                    FVVertex vtx = get_vtx!()(i+1,j+1,k+1);
-                    FVCell c0 = get_cell!()(i,j,k);
-                    FVCell c1 = get_cell!()(i+1,j,k);
-                    FVInterface c2 = get_ifj!()(i+1,j+1,k);
-                    FVInterface c3 = get_ifj!()(i,j+1,k);
-                    FVCell c4 = get_cell!()(i,j,k+1);
-                    FVCell c5 = get_cell!()(i+1,j,k+1);
-                    FVInterface c6 = get_ifj!()(i+1,j+1,k+1);
-                    FVInterface c7 = get_ifj!()(i,j+1,k+1);
+                    FVVertex vtx = get_vtx(i+1,j+1,k+1);
+                    FVCell c0 = get_cell(i,j,k);
+                    FVCell c1 = get_cell(i+1,j,k);
+                    FVInterface c2 = get_ifj(i+1,j+1,k);
+                    FVInterface c3 = get_ifj(i,j+1,k);
+                    FVCell c4 = get_cell(i,j,k+1);
+                    FVCell c5 = get_cell(i+1,j,k+1);
+                    FVInterface c6 = get_ifj(i+1,j+1,k+1);
+                    FVInterface c7 = get_ifj(i,j+1,k+1);
                     vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos), &(c3.pos),
                                      &(c4.pos[gtl]), &(c5.pos[gtl]), &(c6.pos), &(c7.pos)];
                     vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs, c6.fs, c7.fs];
@@ -1352,15 +1362,15 @@ public:
             j = jmin - 1;
             for ( i = imin; i <= imax-1; ++i ) {
                 for ( k = kmin; k <= kmax-1; ++k ) {
-                    FVVertex vtx = get_vtx!()(i+1,j+1,k+1);
-                    FVInterface c0 = get_ifj!()(i,j+1,k);
-                    FVInterface c1 = get_ifj!()(i+1,j+1,k);
-                    FVCell c2 = get_cell!()(i+1,j+1,k);
-                    FVCell c3 = get_cell!()(i,j+1,k);
-                    FVInterface c4 = get_ifj!()(i,j+1,k+1);
-                    FVInterface c5 = get_ifj!()(i+1,j+1,k+1);
-                    FVCell c6 = get_cell!()(i+1,j+1,k+1);
-                    FVCell c7 = get_cell!()(i,j+1,k+1);
+                    FVVertex vtx = get_vtx(i+1,j+1,k+1);
+                    FVInterface c0 = get_ifj(i,j+1,k);
+                    FVInterface c1 = get_ifj(i+1,j+1,k);
+                    FVCell c2 = get_cell(i+1,j+1,k);
+                    FVCell c3 = get_cell(i,j+1,k);
+                    FVInterface c4 = get_ifj(i,j+1,k+1);
+                    FVInterface c5 = get_ifj(i+1,j+1,k+1);
+                    FVCell c6 = get_cell(i+1,j+1,k+1);
+                    FVCell c7 = get_cell(i,j+1,k+1);
                     vtx.cloud_pos = [&(c0.pos), &(c1.pos), &(c2.pos[gtl]), &(c3.pos[gtl]),
                                      &(c4.pos), &(c5.pos), &(c6.pos[gtl]), &(c7.pos[gtl])];
                     vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs, c6.fs, c7.fs];
@@ -1370,15 +1380,15 @@ public:
             k = kmax;
             for ( i = imin; i <= imax-1; ++i ) {
                 for ( j = jmin; j <= jmax-1; ++j ) {
-                    FVVertex vtx = get_vtx!()(i+1,j+1,k+1);
-                    FVCell c0 = get_cell!()(i,j,k);
-                    FVCell c1 = get_cell!()(i+1,j,k);
-                    FVCell c2 = get_cell!()(i+1,j+1,k);
-                    FVCell c3 = get_cell!()(i,j+1,k);
-                    FVInterface c4 = get_ifk!()(i,j,k+1);
-                    FVInterface c5 = get_ifk!()(i+1,j,k+1);
-                    FVInterface c6 = get_ifk!()(i+1,j+1,k+1);
-                    FVInterface c7 = get_ifk!()(i,j+1,k+1);
+                    FVVertex vtx = get_vtx(i+1,j+1,k+1);
+                    FVCell c0 = get_cell(i,j,k);
+                    FVCell c1 = get_cell(i+1,j,k);
+                    FVCell c2 = get_cell(i+1,j+1,k);
+                    FVCell c3 = get_cell(i,j+1,k);
+                    FVInterface c4 = get_ifk(i,j,k+1);
+                    FVInterface c5 = get_ifk(i+1,j,k+1);
+                    FVInterface c6 = get_ifk(i+1,j+1,k+1);
+                    FVInterface c7 = get_ifk(i,j+1,k+1);
                     vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos[gtl]), &(c3.pos[gtl]),
                                      &(c4.pos), &(c5.pos), &(c6.pos), &(c7.pos)];
                     vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs, c6.fs, c7.fs];
@@ -1388,15 +1398,15 @@ public:
             k = kmin - 1;
             for ( i = imin; i <= imax-1; ++i ) {
                 for ( j = jmin; j <= jmax-1; ++j ) {
-                    FVVertex vtx = get_vtx!()(i+1,j+1,k+1);
-                    FVInterface c0 = get_ifk!()(i,j,k+1);
-                    FVInterface c1 = get_ifk!()(i+1,j,k+1);
-                    FVInterface c2 = get_ifk!()(i+1,j+1,k+1);
-                    FVInterface c3 = get_ifk!()(i,j+1,k+1);
-                    FVCell c4 = get_cell!()(i,j,k+1);
-                    FVCell c5 = get_cell!()(i+1,j,k+1);
-                    FVCell c6 = get_cell!()(i+1,j+1,k+1);
-                    FVCell c7 = get_cell!()(i,j+1,k+1);
+                    FVVertex vtx = get_vtx(i+1,j+1,k+1);
+                    FVInterface c0 = get_ifk(i,j,k+1);
+                    FVInterface c1 = get_ifk(i+1,j,k+1);
+                    FVInterface c2 = get_ifk(i+1,j+1,k+1);
+                    FVInterface c3 = get_ifk(i,j+1,k+1);
+                    FVCell c4 = get_cell(i,j,k+1);
+                    FVCell c5 = get_cell(i+1,j,k+1);
+                    FVCell c6 = get_cell(i+1,j+1,k+1);
+                    FVCell c7 = get_cell(i,j+1,k+1);
                     vtx.cloud_pos = [&(c0.pos), &(c1.pos), &(c2.pos), &(c3.pos),
                                      &(c4.pos[gtl]), &(c5.pos[gtl]), &(c6.pos[gtl]), &(c7.pos[gtl])];
                     vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs, c6.fs, c7.fs];
@@ -1406,13 +1416,13 @@ public:
             // Bottom-South edge [0]-->[1]
             j = jmin; k = kmin;         
             for ( i = imin+1; i <= imax; ++i ) {
-                FVVertex vtx = get_vtx!()(i,j,k);
-                FVCell c0 = get_cell!()(i-1,j,k);
-                FVCell c1 = get_cell!()(i,j,k);
-                FVInterface c2 = get_ifj!()(i-1,j,k);
-                FVInterface c3 = get_ifk!()(i-1,j,k);
-                FVInterface c4 = get_ifj!()(i,j,k);
-                FVInterface c5 = get_ifk!()(i,j,k);
+                FVVertex vtx = get_vtx(i,j,k);
+                FVCell c0 = get_cell(i-1,j,k);
+                FVCell c1 = get_cell(i,j,k);
+                FVInterface c2 = get_ifj(i-1,j,k);
+                FVInterface c3 = get_ifk(i-1,j,k);
+                FVInterface c4 = get_ifj(i,j,k);
+                FVInterface c5 = get_ifk(i,j,k);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos),
                                  &(c3.pos), &(c4.pos), &(c5.pos)];
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
@@ -1420,13 +1430,13 @@ public:
             // Bottom-North edge [3]-->[2]
             j = jmax; k = kmin;
             for ( i = imin+1; i <= imax; ++i ) {
-                FVVertex vtx = get_vtx!()(i,j+1,k);
-                FVCell c0 = get_cell!()(i-1,j,k);
-                FVCell c1 = get_cell!()(i,j,k);
-                FVInterface c2 = get_ifj!()(i-1,j+1,k);
-                FVInterface c3 = get_ifk!()(i-1,j,k);
-                FVInterface c4 = get_ifj!()(i,j+1,k);
-                FVInterface c5 = get_ifk!()(i,j,k);
+                FVVertex vtx = get_vtx(i,j+1,k);
+                FVCell c0 = get_cell(i-1,j,k);
+                FVCell c1 = get_cell(i,j,k);
+                FVInterface c2 = get_ifj(i-1,j+1,k);
+                FVInterface c3 = get_ifk(i-1,j,k);
+                FVInterface c4 = get_ifj(i,j+1,k);
+                FVInterface c5 = get_ifk(i,j,k);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos),
                                  &(c3.pos), &(c4.pos), &(c5.pos)];
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
@@ -1434,13 +1444,13 @@ public:
             // Bottom-West edge [0]-->[3]
             i = imin; k = kmin;
             for ( j = jmin+1; j <= jmax; ++j ) {
-                FVVertex vtx = get_vtx!()(i,j,k);
-                FVCell c0 = get_cell!()(i,j-1,k);
-                FVCell c1 = get_cell!()(i,j,k);
-                FVInterface c2 = get_ifi!()(i,j-1,k);
-                FVInterface c3 = get_ifk!()(i,j-1,k);
-                FVInterface c4 = get_ifi!()(i,j,k);
-                FVInterface c5 = get_ifk!()(i,j,k);
+                FVVertex vtx = get_vtx(i,j,k);
+                FVCell c0 = get_cell(i,j-1,k);
+                FVCell c1 = get_cell(i,j,k);
+                FVInterface c2 = get_ifi(i,j-1,k);
+                FVInterface c3 = get_ifk(i,j-1,k);
+                FVInterface c4 = get_ifi(i,j,k);
+                FVInterface c5 = get_ifk(i,j,k);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos),
                                  &(c3.pos), &(c4.pos), &(c5.pos)];
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
@@ -1448,13 +1458,13 @@ public:
             // Bottom-East edge [1]-->[2]
             i = imax; k = kmin;
             for ( j = jmin+1; j <= jmax; ++j ) {
-                FVVertex vtx = get_vtx!()(i+1,j,k);
-                FVCell c0 = get_cell!()(i,j-1,k);
-                FVCell c1 = get_cell!()(i,j,k);
-                FVInterface c2 = get_ifi!()(i+1,j-1,k);
-                FVInterface c3 = get_ifk!()(i,j-1,k);
-                FVInterface c4 = get_ifi!()(i+1,j,k);
-                FVInterface c5 = get_ifk!()(i,j,k);
+                FVVertex vtx = get_vtx(i+1,j,k);
+                FVCell c0 = get_cell(i,j-1,k);
+                FVCell c1 = get_cell(i,j,k);
+                FVInterface c2 = get_ifi(i+1,j-1,k);
+                FVInterface c3 = get_ifk(i,j-1,k);
+                FVInterface c4 = get_ifi(i+1,j,k);
+                FVInterface c5 = get_ifk(i,j,k);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos),
                                  &(c3.pos), &(c4.pos), &(c5.pos)];
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
@@ -1463,13 +1473,13 @@ public:
             // Top-South edge [4]-->[5]
             j = jmin; k = kmax;
             for ( i = imin+1; i <= imax; ++i ) {
-                FVVertex vtx = get_vtx!()(i,j,k+1);
-                FVCell c0 = get_cell!()(i-1,j,k);
-                FVCell c1 = get_cell!()(i,j,k);
-                FVInterface c2 = get_ifj!()(i-1,j,k);
-                FVInterface c3 = get_ifk!()(i-1,j,k+1);
-                FVInterface c4 = get_ifj!()(i,j,k);
-                FVInterface c5 = get_ifk!()(i,j,k+1);
+                FVVertex vtx = get_vtx(i,j,k+1);
+                FVCell c0 = get_cell(i-1,j,k);
+                FVCell c1 = get_cell(i,j,k);
+                FVInterface c2 = get_ifj(i-1,j,k);
+                FVInterface c3 = get_ifk(i-1,j,k+1);
+                FVInterface c4 = get_ifj(i,j,k);
+                FVInterface c5 = get_ifk(i,j,k+1);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos),
                                  &(c3.pos), &(c4.pos), &(c5.pos)];
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
@@ -1477,13 +1487,13 @@ public:
             // Top-North edge [7]-->[6]
             j = jmax; k = kmax;
             for ( i = imin+1; i <= imax; ++i ) {
-                FVVertex vtx = get_vtx!()(i,j+1,k+1);
-                FVCell c0 = get_cell!()(i-1,j,k);
-                FVCell c1 = get_cell!()(i,j,k);
-                FVInterface c2 = get_ifj!()(i-1,j+1,k);
-                FVInterface c3 = get_ifk!()(i-1,j,k+1);
-                FVInterface c4 = get_ifj!()(i,j+1,k);
-                FVInterface c5 = get_ifk!()(i,j,k+1);
+                FVVertex vtx = get_vtx(i,j+1,k+1);
+                FVCell c0 = get_cell(i-1,j,k);
+                FVCell c1 = get_cell(i,j,k);
+                FVInterface c2 = get_ifj(i-1,j+1,k);
+                FVInterface c3 = get_ifk(i-1,j,k+1);
+                FVInterface c4 = get_ifj(i,j+1,k);
+                FVInterface c5 = get_ifk(i,j,k+1);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos),
                                  &(c3.pos), &(c4.pos), &(c5.pos)];
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
@@ -1491,13 +1501,13 @@ public:
             // Top-West edge [4]-->[7]
             i = imin; k = kmax;
             for ( j = jmin+1; j <= jmax; ++j ) {
-                FVVertex vtx = get_vtx!()(i,j,k+1);
-                FVCell c0 = get_cell!()(i,j-1,k);
-                FVCell c1 = get_cell!()(i,j,k);
-                FVInterface c2 = get_ifi!()(i,j-1,k);
-                FVInterface c3 = get_ifk!()(i,j-1,k+1);
-                FVInterface c4 = get_ifi!()(i,j,k);
-                FVInterface c5 = get_ifk!()(i,j,k+1);
+                FVVertex vtx = get_vtx(i,j,k+1);
+                FVCell c0 = get_cell(i,j-1,k);
+                FVCell c1 = get_cell(i,j,k);
+                FVInterface c2 = get_ifi(i,j-1,k);
+                FVInterface c3 = get_ifk(i,j-1,k+1);
+                FVInterface c4 = get_ifi(i,j,k);
+                FVInterface c5 = get_ifk(i,j,k+1);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos),
                                  &(c3.pos), &(c4.pos), &(c5.pos)];
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
@@ -1505,13 +1515,13 @@ public:
             // Top-East edge [5]-->[6]
             i = imax; k = kmax;
             for ( j = jmin+1; j <= jmax; ++j ) {
-                FVVertex vtx = get_vtx!()(i+1,j,k+1);
-                FVCell c0 = get_cell!()(i,j-1,k);
-                FVCell c1 = get_cell!()(i,j,k);
-                FVInterface c2 = get_ifi!()(i+1,j-1,k);
-                FVInterface c3 = get_ifk!()(i,j-1,k+1);
-                FVInterface c4 = get_ifi!()(i+1,j,k);
-                FVInterface c5 = get_ifk!()(i,j,k+1);
+                FVVertex vtx = get_vtx(i+1,j,k+1);
+                FVCell c0 = get_cell(i,j-1,k);
+                FVCell c1 = get_cell(i,j,k);
+                FVInterface c2 = get_ifi(i+1,j-1,k);
+                FVInterface c3 = get_ifk(i,j-1,k+1);
+                FVInterface c4 = get_ifi(i+1,j,k);
+                FVInterface c5 = get_ifk(i,j,k+1);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos),
                                  &(c3.pos), &(c4.pos), &(c5.pos)];
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
@@ -1520,13 +1530,13 @@ public:
             // South-West edge [0]-->[4]
             i = imin; j = jmin;
             for ( k = kmin+1; k <= kmax; ++k ) {
-                FVVertex vtx = get_vtx!()(i,j,k);
-                FVCell c0 = get_cell!()(i,j,k-1);
-                FVCell c1 = get_cell!()(i,j,k);
-                FVInterface c2 = get_ifi!()(i,j,k-1);
-                FVInterface c3 = get_ifj!()(i,j,k-1);
-                FVInterface c4 = get_ifi!()(i,j,k);
-                FVInterface c5 = get_ifj!()(i,j,k);
+                FVVertex vtx = get_vtx(i,j,k);
+                FVCell c0 = get_cell(i,j,k-1);
+                FVCell c1 = get_cell(i,j,k);
+                FVInterface c2 = get_ifi(i,j,k-1);
+                FVInterface c3 = get_ifj(i,j,k-1);
+                FVInterface c4 = get_ifi(i,j,k);
+                FVInterface c5 = get_ifj(i,j,k);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos),
                                  &(c3.pos), &(c4.pos), &(c5.pos)];
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
@@ -1534,13 +1544,13 @@ public:
             // South-East edge [1]-->[5]
             i = imax; j = jmin;
             for ( k = kmin+1; k <= kmax; ++k ) {
-                FVVertex vtx = get_vtx!()(i+1,j,k);
-                FVCell c0 = get_cell!()(i,j,k-1);
-                FVCell c1 = get_cell!()(i,j,k);
-                FVInterface c2 = get_ifi!()(i+1,j,k-1);
-                FVInterface c3 = get_ifj!()(i,j,k-1);
-                FVInterface c4 = get_ifi!()(i+1,j,k);
-                FVInterface c5 = get_ifj!()(i,j,k);
+                FVVertex vtx = get_vtx(i+1,j,k);
+                FVCell c0 = get_cell(i,j,k-1);
+                FVCell c1 = get_cell(i,j,k);
+                FVInterface c2 = get_ifi(i+1,j,k-1);
+                FVInterface c3 = get_ifj(i,j,k-1);
+                FVInterface c4 = get_ifi(i+1,j,k);
+                FVInterface c5 = get_ifj(i,j,k);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos),
                                  &(c3.pos), &(c4.pos), &(c5.pos)];
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
@@ -1548,13 +1558,13 @@ public:
             // North-East edge [2]-->[6]
             i = imax; j = jmax;
             for ( k = kmin+1; k <= kmax; ++k ) {
-                FVVertex vtx = get_vtx!()(i+1,j+1,k);
-                FVCell c0 = get_cell!()(i,j,k-1);
-                FVCell c1 = get_cell!()(i,j,k);
-                FVInterface c2 = get_ifi!()(i+1,j,k-1);
-                FVInterface c3 = get_ifj!()(i,j+1,k-1);
-                FVInterface c4 = get_ifi!()(i+1,j,k);
-                FVInterface c5 = get_ifj!()(i,j+1,k);
+                FVVertex vtx = get_vtx(i+1,j+1,k);
+                FVCell c0 = get_cell(i,j,k-1);
+                FVCell c1 = get_cell(i,j,k);
+                FVInterface c2 = get_ifi(i+1,j,k-1);
+                FVInterface c3 = get_ifj(i,j+1,k-1);
+                FVInterface c4 = get_ifi(i+1,j,k);
+                FVInterface c5 = get_ifj(i,j+1,k);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos),
                                  &(c3.pos), &(c4.pos), &(c5.pos)];
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
@@ -1562,13 +1572,13 @@ public:
             // North-West edge [3]-->[7]
             i = imin; j = jmax;
             for ( k = kmin+1; k <= kmax; ++k ) {
-                FVVertex vtx = get_vtx!()(i,j+1,k);
-                FVCell c0 = get_cell!()(i,j,k-1);
-                FVCell c1 = get_cell!()(i,j,k);
-                FVInterface c2 = get_ifi!()(i,j,k-1);
-                FVInterface c3 = get_ifj!()(i,j+1,k-1);
-                FVInterface c4 = get_ifi!()(i,j,k);
-                FVInterface c5 = get_ifj!()(i,j+1,k);
+                FVVertex vtx = get_vtx(i,j+1,k);
+                FVCell c0 = get_cell(i,j,k-1);
+                FVCell c1 = get_cell(i,j,k);
+                FVInterface c2 = get_ifi(i,j,k-1);
+                FVInterface c3 = get_ifj(i,j+1,k-1);
+                FVInterface c4 = get_ifi(i,j,k);
+                FVInterface c5 = get_ifj(i,j+1,k);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos),
                                  &(c3.pos), &(c4.pos), &(c5.pos)];
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
@@ -1577,88 +1587,88 @@ public:
             // South-West-Bottom corner [0]
             i = imin; j = jmin; k = kmin;
             {
-                FVVertex vtx = get_vtx!()(i,j,k);
-                FVCell c0 = get_cell!()(i,j,k);
-                FVInterface c1 = get_ifi!()(i,j,k);
-                FVInterface c2 = get_ifj!()(i,j,k);
-                FVInterface c3 = get_ifk!()(i,j,k);
+                FVVertex vtx = get_vtx(i,j,k);
+                FVCell c0 = get_cell(i,j,k);
+                FVInterface c1 = get_ifi(i,j,k);
+                FVInterface c2 = get_ifj(i,j,k);
+                FVInterface c3 = get_ifk(i,j,k);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos), &(c2.pos), &(c3.pos)];
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs];
             }
             // South-East-Bottom corner [1]
             i = imax; j = jmin; k = kmin;
             {
-                FVVertex vtx = get_vtx!()(i+1,j,k);
-                FVCell c0 = get_cell!()(i,j,k);
-                FVInterface c1 = get_ifi!()(i+1,j,k);
-                FVInterface c2 = get_ifj!()(i,j,k);
-                FVInterface c3 = get_ifk!()(i,j,k);
+                FVVertex vtx = get_vtx(i+1,j,k);
+                FVCell c0 = get_cell(i,j,k);
+                FVInterface c1 = get_ifi(i+1,j,k);
+                FVInterface c2 = get_ifj(i,j,k);
+                FVInterface c3 = get_ifk(i,j,k);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos), &(c2.pos), &(c3.pos)];
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs];
             }
             // North-East-Bottom corner [2]
             i = imax; j = jmax; k = kmin;
             {
-                FVVertex vtx = get_vtx!()(i+1,j+1,k);
-                FVCell c0 = get_cell!()(i,j,k);
-                FVInterface c1 = get_ifi!()(i+1,j,k);
-                FVInterface c2 = get_ifj!()(i,j+1,k);
-                FVInterface c3 = get_ifk!()(i,j,k);
+                FVVertex vtx = get_vtx(i+1,j+1,k);
+                FVCell c0 = get_cell(i,j,k);
+                FVInterface c1 = get_ifi(i+1,j,k);
+                FVInterface c2 = get_ifj(i,j+1,k);
+                FVInterface c3 = get_ifk(i,j,k);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos), &(c2.pos), &(c3.pos)];
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs];
             }
             // North-West-Bottom corner [3]
             i = imin; j = jmax; k = kmin;
             {
-                FVVertex vtx = get_vtx!()(i,j+1,k);
-                FVCell c0 = get_cell!()(i,j,k);
-                FVInterface c1 = get_ifi!()(i,j,k);
-                FVInterface c2 = get_ifj!()(i,j+1,k);
-                FVInterface c3 = get_ifk!()(i,j,k);
+                FVVertex vtx = get_vtx(i,j+1,k);
+                FVCell c0 = get_cell(i,j,k);
+                FVInterface c1 = get_ifi(i,j,k);
+                FVInterface c2 = get_ifj(i,j+1,k);
+                FVInterface c3 = get_ifk(i,j,k);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos), &(c2.pos), &(c3.pos)];
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs];
             }
             // South-West-Top corner [4]
             i = imin; j = jmin; k = kmax;
             {
-                FVVertex vtx = get_vtx!()(i,j,k+1);
-                FVCell c0 = get_cell!()(i,j,k);
-                FVInterface c1 = get_ifi!()(i,j,k);
-                FVInterface c2 = get_ifj!()(i,j,k);
-                FVInterface c3 = get_ifk!()(i,j,k+1);
+                FVVertex vtx = get_vtx(i,j,k+1);
+                FVCell c0 = get_cell(i,j,k);
+                FVInterface c1 = get_ifi(i,j,k);
+                FVInterface c2 = get_ifj(i,j,k);
+                FVInterface c3 = get_ifk(i,j,k+1);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos), &(c2.pos), &(c3.pos)];
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs];
             }
             // South-East-Top corner [5]
             i = imax; j = jmin; k = kmax;
             {
-                FVVertex vtx = get_vtx!()(i+1,j,k+1);
-                FVCell c0 = get_cell!()(i,j,k);
-                FVInterface c1 = get_ifi!()(i+1,j,k);
-                FVInterface c2 = get_ifj!()(i,j,k);
-                FVInterface c3 = get_ifk!()(i,j,k+1);
+                FVVertex vtx = get_vtx(i+1,j,k+1);
+                FVCell c0 = get_cell(i,j,k);
+                FVInterface c1 = get_ifi(i+1,j,k);
+                FVInterface c2 = get_ifj(i,j,k);
+                FVInterface c3 = get_ifk(i,j,k+1);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos), &(c2.pos), &(c3.pos)];
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs];
             }
             // North-East-Top corner [6]
             i = imax; j = jmax; k = kmax;
             {
-                FVVertex vtx = get_vtx!()(i+1,j+1,k+1);
-                FVCell c0 = get_cell!()(i,j,k);
-                FVInterface c1 = get_ifi!()(i+1,j,k);
-                FVInterface c2 = get_ifj!()(i,j+1,k);
-                FVInterface c3 = get_ifk!()(i,j,k+1);
+                FVVertex vtx = get_vtx(i+1,j+1,k+1);
+                FVCell c0 = get_cell(i,j,k);
+                FVInterface c1 = get_ifi(i+1,j,k);
+                FVInterface c2 = get_ifj(i,j+1,k);
+                FVInterface c3 = get_ifk(i,j,k+1);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos), &(c2.pos), &(c3.pos)];
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs];
             }
             // North-West-Top corner [7]
             i = imin; j = jmax; k = kmax;
             {
-                FVVertex vtx = get_vtx!()(i,j+1,k+1);
-                FVCell c0 = get_cell!()(i,j,k);
-                FVInterface c1 = get_ifi!()(i,j,k);
-                FVInterface c2 = get_ifj!()(i,j+1,k);
-                FVInterface c3 = get_ifk!()(i,j,k+1);
+                FVVertex vtx = get_vtx(i,j+1,k+1);
+                FVCell c0 = get_cell(i,j,k);
+                FVInterface c1 = get_ifi(i,j,k);
+                FVInterface c2 = get_ifj(i,j+1,k);
+                FVInterface c3 = get_ifk(i,j,k+1);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos), &(c2.pos), &(c3.pos)];
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs];
             }
@@ -1682,7 +1692,7 @@ public:
             for (size_t k = kmin; k <= kmax+1; ++k) {
                 for (size_t j = jmin; j <= jmax+1; ++j) {
                     for (size_t i = imin; i <= imax+1; ++i) {
-                        auto vtx = get_vtx!()(i,j,k);
+                        auto vtx = get_vtx(i,j,k);
                         auto src_vtx = grid[i-imin,j-jmin,k-kmin];
                         vtx.pos[gtl].set(src_vtx);
                     } // for i
@@ -1699,7 +1709,7 @@ public:
             }
             for (size_t j = jmin; j <= jmax+1; ++j) {
                 for (size_t i = imin; i <= imax+1; ++i) {
-                    auto vtx = get_vtx!()(i,j);
+                    auto vtx = get_vtx(i,j);
                     auto src_vtx = grid[i-imin,j-jmin];
                     vtx.pos[gtl].set(src_vtx.x, src_vtx.y, to!number(0.0));
                 } // for i
@@ -1716,7 +1726,7 @@ public:
         for (size_t k = kmin; k <= kmaxrange; ++k) {
             for (size_t j = jmin; j <= jmax+1; ++j) {
                 for (size_t i = imin; i <= imax+1; ++i) {
-                    auto vtx = get_vtx!()(i,j,k);
+                    auto vtx = get_vtx(i,j,k);
                     auto dest_vtx = grid[i-imin,j-jmin,k-kmin];
                     dest_vtx.set(vtx.pos[gtl]);
                 } // for i
@@ -1789,7 +1799,7 @@ public:
             for ( size_t k = kmin; k <= kmax; ++k ) {
                 for ( size_t j = jmin; j <= jmax; ++j ) {
                     for ( size_t i = imin; i <= imax; ++i ) {
-                        get_cell!()(i,j,k).read_values_from_raw_binary(fin, overwrite_geometry_data);
+                        get_cell(i,j,k).read_values_from_raw_binary(fin, overwrite_geometry_data);
                     }
                 }
             }
@@ -1846,7 +1856,7 @@ public:
                 for ( size_t j = jmin; j <= jmax; ++j ) {
                     for ( size_t i = imin; i <= imax; ++i ) {
                         line = byLine.front; byLine.popFront();
-                        get_cell!()(i,j,k).scan_values_from_string(line, variableNames, useFixedOrder,
+                        get_cell(i,j,k).scan_values_from_string(line, variableNames, useFixedOrder,
                                                                 myConfig.gmodel, overwrite_geometry_data);
                     } // for i
                 } // for j
@@ -1884,7 +1894,7 @@ public:
             for ( size_t k = kmin; k <= kmax; ++k ) {
                 for ( size_t j = jmin; j <= jmax; ++j ) {
                     for ( size_t i = imin; i <= imax; ++i ) {
-                        get_cell!()(i,j,k).write_values_to_raw_binary(outfile);
+                        get_cell(i,j,k).write_values_to_raw_binary(outfile);
                     }
                 }
             }
@@ -1907,7 +1917,7 @@ public:
             for ( size_t k = kmin; k <= kmax; ++k ) {
                 for ( size_t j = jmin; j <= jmax; ++j ) {
                     for ( size_t i = imin; i <= imax; ++i ) {
-                        outfile.compress(" " ~ get_cell!()(i,j,k).write_values_to_string() ~ "\n");
+                        outfile.compress(" " ~ get_cell(i,j,k).write_values_to_string() ~ "\n");
                     }
                 }
             }
@@ -1922,9 +1932,9 @@ public:
         // Assume that the west-face ghost cells have appropriate data.
         for ( size_t k = kmin; k <= kmax; ++k ) {
             for ( size_t j = jmin; j <= jmax; ++j ) {
-                auto src_cell = get_cell!()(imin-1,j,k);
+                auto src_cell = get_cell(imin-1,j,k);
                 for ( size_t i = imin; i <= imax; ++i ) {
-                    auto dest_cell = get_cell!()(i,j,k);
+                    auto dest_cell = get_cell(i,j,k);
                     dest_cell.copy_values_from(src_cell, CopyDataOption.all_flow);
                 }
             }
@@ -1963,9 +1973,9 @@ public:
             for (size_t k = kmin; k <= kmax; ++k) {
                 for (size_t j = jmin; j <= jmax; ++j) {
                     for (size_t i = imin; i <= imax+1; ++i) {
-                        auto IFace = get_ifi!()(i,j,k);
-                        cL0 = get_cell!()(i-1,j,k); cL1 = get_cell!()(i-2,j,k); cL2 = get_cell!()(i-3,j,k);
-                        cR0 = get_cell!()(i,j,k); cR1 = get_cell!()(i+1,j,k); cR2 = get_cell!()(i+2,j,k);
+                        auto IFace = get_ifi(i,j,k);
+                        cL0 = get_cell(i-1,j,k); cL1 = get_cell(i-2,j,k); cL2 = get_cell(i-3,j,k);
+                        cR0 = get_cell(i,j,k); cR1 = get_cell(i+1,j,k); cR2 = get_cell(i+2,j,k);
                         // Low-order reconstruction just copies data from adjacent FV_Cell.
                         // Even for high-order reconstruction, we depend upon this copy for
                         // the viscous-transport and diffusion coefficients.
@@ -1991,9 +2001,9 @@ public:
             for (size_t k = kmin; k <= kmax; ++k) {
                 for (size_t j = jmin; j <= jmax+1; ++j) {
                     for (size_t i = imin; i <= imax; ++i) {
-                        auto IFace = get_ifj!()(i,j,k);
-                        cL0 = get_cell!()(i,j-1,k); cL1 = get_cell!()(i,j-2,k); cL2 = get_cell!()(i,j-3,k);
-                        cR0 = get_cell!()(i,j,k); cR1 = get_cell!()(i,j+1,k); cR2 = get_cell!()(i,j+2,k);
+                        auto IFace = get_ifj(i,j,k);
+                        cL0 = get_cell(i,j-1,k); cL1 = get_cell(i,j-2,k); cL2 = get_cell(i,j-3,k);
+                        cR0 = get_cell(i,j,k); cR1 = get_cell(i,j+1,k); cR2 = get_cell(i,j+2,k);
                         // Low-order reconstruction just copies data from adjacent FV_Cell.
                         // Even for high-order reconstruction, we depend upon this copy for
                         // the viscous-transport and diffusion coefficients.
@@ -2024,9 +2034,9 @@ public:
             for (size_t k = kmin; k <= kmax+1; ++k) {
                 for (size_t j = jmin; j <= jmax; ++j) {
                     for (size_t i = imin; i <= imax; ++i) {
-                        auto IFace = get_ifk!()(i,j,k);
-                        cL0 = get_cell!()(i,j,k-1); cL1 = get_cell!()(i,j,k-2); cL2 = get_cell!()(i,j,k-3);
-                        cR0 = get_cell!()(i,j,k); cR1 = get_cell!()(i,j,k+1); cR2 = get_cell!()(i,j,k+2);
+                        auto IFace = get_ifk(i,j,k);
+                        cL0 = get_cell(i,j,k-1); cL1 = get_cell(i,j,k-2); cL2 = get_cell(i,j,k-3);
+                        cR0 = get_cell(i,j,k); cR1 = get_cell(i,j,k+1); cR2 = get_cell(i,j,k+2);
                         // Low-order reconstruction just copies data from adjacent FV_Cell.
                         // Even for high-order reconstruction, we depend upon this copy for
                         // the viscous-transport and diffusion coefficients.
@@ -2059,9 +2069,9 @@ public:
         for (size_t k = kmin; k <= kmax; ++k) {
             for (size_t j = jmin; j <= jmax; ++j) {
                 for (size_t i = imin; i <= imax+1; ++i) {
-                    auto IFace = get_ifi!()(i,j,k);
-                    auto cL0 = get_cell!()(i-1,j,k); auto cL1 = get_cell!()(i-2,j,k);
-                    auto cR0 = get_cell!()(i,j,k); auto cR1 = get_cell!()(i+1,j,k);
+                    auto IFace = get_ifi(i,j,k);
+                    auto cL0 = get_cell(i-1,j,k); auto cL1 = get_cell(i-2,j,k);
+                    auto cR0 = get_cell(i,j,k); auto cR1 = get_cell(i+1,j,k);
                     // Low-order reconstruction just copies data from adjacent FV_Cell.
                     // Even for high-order reconstruction, we depend upon this copy for
                     // the viscous-transport and diffusion coefficients.
@@ -2110,9 +2120,9 @@ public:
         for (size_t k = kmin; k <= kmax; ++k) {
             for (size_t j = jmin; j <= jmax+1; ++j) {
                 for (size_t i = imin; i <= imax; ++i) {
-                    auto IFace = get_ifj!()(i,j,k);
-                    auto cL0 = get_cell!()(i,j-1,k); auto cL1 = get_cell!()(i,j-2,k);
-                    auto cR0 = get_cell!()(i,j,k); auto cR1 = get_cell!()(i,j+1,k);
+                    auto IFace = get_ifj(i,j,k);
+                    auto cL0 = get_cell(i,j-1,k); auto cL1 = get_cell(i,j-2,k);
+                    auto cR0 = get_cell(i,j,k); auto cR1 = get_cell(i,j+1,k);
                     // Low-order reconstruction just copies data from adjacent FV_Cell.
                     // Even for high-order reconstruction, we depend upon this copy for
                     // the viscous-transport and diffusion coefficients.
@@ -2164,9 +2174,9 @@ public:
         for (size_t k = kmin; k <= kmax+1; ++k) {
             for (size_t j = jmin; j <= jmax; ++j) {
                 for (size_t i = imin; i <= imax; ++i) {
-                    auto IFace = get_ifk!()(i,j,k);
-                    auto cL0 = get_cell!()(i,j,k-1); auto cL1 = get_cell!()(i,j,k-2);
-                    auto cR0 = get_cell!()(i,j,k); auto cR1 = get_cell!()(i,j,k+1);
+                    auto IFace = get_ifk(i,j,k);
+                    auto cL0 = get_cell(i,j,k-1); auto cL1 = get_cell(i,j,k-2);
+                    auto cR0 = get_cell(i,j,k); auto cR1 = get_cell(i,j,k+1);
                     // Low-order reconstruction just copies data from adjacent FV_Cell.
                     // Even for high-order reconstruction, we depend upon this copy for
                     // the viscous-transport and diffusion coefficients.
@@ -2226,19 +2236,19 @@ public:
     @nogc void copy_current_corner_coords()
     {
         if (myConfig.dimensions == 2) {
-            FVVertex vtx00 = get_vtx!()(imin,jmin);
+            FVVertex vtx00 = get_vtx(imin,jmin);
             corner_coords[0] = vtx00.pos[0].x.re;
             corner_coords[1] = vtx00.pos[0].y.re;
             corner_coords[2] = vtx00.pos[0].z.re;
-            FVVertex vtx10 = get_vtx!()(imax+1,jmin);
+            FVVertex vtx10 = get_vtx(imax+1,jmin);
             corner_coords[3] = vtx10.pos[0].x.re;
             corner_coords[4] = vtx10.pos[0].y.re;
             corner_coords[5] = vtx10.pos[0].z.re;
-            FVVertex vtx11 = get_vtx!()(imax+1,jmax+1);
+            FVVertex vtx11 = get_vtx(imax+1,jmax+1);
             corner_coords[6] = vtx11.pos[0].x.re;
             corner_coords[7] = vtx11.pos[0].y.re;
             corner_coords[8] = vtx11.pos[0].z.re;
-            FVVertex vtx01 = get_vtx!()(imin,jmax+1);
+            FVVertex vtx01 = get_vtx(imin,jmax+1);
             corner_coords[9] = vtx01.pos[0].x.re;
             corner_coords[10] = vtx01.pos[0].y.re;
             corner_coords[11] = vtx01.pos[0].z.re;
@@ -2259,35 +2269,35 @@ public:
             corner_coords[22] = vtx01.pos[0].y.re;
             corner_coords[23] = vtx01.pos[0].z.re;
         } else {
-            FVVertex vtx000 = get_vtx!()(imin,jmin,kmin);
+            FVVertex vtx000 = get_vtx(imin,jmin,kmin);
             corner_coords[0] = vtx000.pos[0].x.re;
             corner_coords[1] = vtx000.pos[0].y.re;
             corner_coords[2] = vtx000.pos[0].z.re;
-            FVVertex vtx100 = get_vtx!()(imax+1,jmin,kmin);
+            FVVertex vtx100 = get_vtx(imax+1,jmin,kmin);
             corner_coords[3] = vtx100.pos[0].x.re;
             corner_coords[4] = vtx100.pos[0].y.re;
             corner_coords[5] = vtx100.pos[0].z.re;
-            FVVertex vtx110 = get_vtx!()(imax+1,jmax+1,kmin);
+            FVVertex vtx110 = get_vtx(imax+1,jmax+1,kmin);
             corner_coords[6] = vtx110.pos[0].x.re;
             corner_coords[7] = vtx110.pos[0].y.re;
             corner_coords[8] = vtx110.pos[0].z.re;
-            FVVertex vtx010 = get_vtx!()(imin,jmax+1,kmin);
+            FVVertex vtx010 = get_vtx(imin,jmax+1,kmin);
             corner_coords[9] = vtx010.pos[0].x.re;
             corner_coords[10] = vtx010.pos[0].y.re;
             corner_coords[11] = vtx010.pos[0].z.re;
-            FVVertex vtx001 = get_vtx!()(imin,jmin,kmax+1);
+            FVVertex vtx001 = get_vtx(imin,jmin,kmax+1);
             corner_coords[12] = vtx001.pos[0].x.re;
             corner_coords[13] = vtx001.pos[0].y.re;
             corner_coords[14] = vtx001.pos[0].z.re;
-            FVVertex vtx101 = get_vtx!()(imax+1,jmin,kmax+1);
+            FVVertex vtx101 = get_vtx(imax+1,jmin,kmax+1);
             corner_coords[15] = vtx101.pos[0].x.re;
             corner_coords[16] = vtx101.pos[0].y.re;
             corner_coords[17] = vtx101.pos[0].z.re;
-            FVVertex vtx111 = get_vtx!()(imax+1,jmax+1,kmax+1);
+            FVVertex vtx111 = get_vtx(imax+1,jmax+1,kmax+1);
             corner_coords[18] = vtx111.pos[0].x.re;
             corner_coords[19] = vtx111.pos[0].y.re;
             corner_coords[20] = vtx111.pos[0].z.re;
-            FVVertex vtx011 = get_vtx!()(imin,jmax+1,kmax+1);
+            FVVertex vtx011 = get_vtx(imin,jmax+1,kmax+1);
             corner_coords[21] = vtx011.pos[0].x.re;
             corner_coords[22] = vtx011.pos[0].y.re;
             corner_coords[23] = vtx011.pos[0].z.re;

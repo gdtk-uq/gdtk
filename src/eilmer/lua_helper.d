@@ -143,7 +143,7 @@ extern(C) int luafn_sampleFluidCell(lua_State *L)
     FVCell cell;
     if (sblk) {
         try {
-            cell = sblk.get_cell!()(i, j, k);
+            cell = sblk.get_cell(i, j, k);
         } catch (Exception e) {
             string msg = format("Failed to locate vertex[%d,%d,%d] in block %d.", i, j, k, blkId);
             luaL_error(L, msg.toStringz);
@@ -180,9 +180,9 @@ extern(C) int luafn_sampleFluidFace(lua_State *L)
     auto ublk = cast(UFluidBlock) globalFluidBlocks[blkId];
     try {
         switch (which_face) {
-        case "i": face = sblk.get_ifi!()(i, j, k); break;
-        case "j": face = sblk.get_ifj!()(i, j, k); break;
-        case "k": face = sblk.get_ifk!()(i, j, k); break;
+        case "i": face = sblk.get_ifi(i, j, k); break;
+        case "j": face = sblk.get_ifj(i, j, k); break;
+        case "k": face = sblk.get_ifk(i, j, k); break;
         case "u": face = ublk.faces[i]; break; // unstructured grid
         default:
             string msg = "You have asked for an unknown type of face.";

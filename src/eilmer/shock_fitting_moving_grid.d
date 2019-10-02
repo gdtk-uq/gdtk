@@ -63,8 +63,8 @@ version(mpi_parallel) {
         for (size_t k = blk.kmin; k <= krange; k++) {
             for (size_t j = blk.jmin; j <= blk.jmax+1; j++) {
                 for (size_t i = blk.imax; i >= blk.imin; i--) {
-                    vtx = blk.get_vtx!()(i, j, k);
-                    vtx_prev = blk.get_vtx!()(i+1, j, k);
+                    vtx = blk.get_vtx(i, j, k);
+                    vtx_prev = blk.get_vtx(i+1, j, k);
                     Vector3 delta = vtx.pos[0] - vtx_prev.pos[0];
                     local_dist[(blk.jmax - blk.jmin + 2) * (k - blk.kmin) + (j - blk.jmin)] += geom.abs(delta);
                     vtx.radial_pos_norm = local_dist[(blk.jmax - blk.jmin + 2) * (k - blk.kmin) + (j - blk.jmin)];
@@ -111,7 +111,7 @@ version(mpi_parallel) {
         for (size_t k = blk.kmin; k <= krange; k++) {
             for (size_t j = blk.jmin; j <= blk.jmax+1; j++) {
                 for (size_t i = blk.imin; i <= blk.imax+1; i++) {
-                    vtx = blk.get_vtx!()(i, j, k);
+                    vtx = blk.get_vtx(i, j, k);
                     vtx.radial_pos_norm += total_dist[(blk.jmax - blk.jmin + 2) * (k - blk.kmin) + (j - blk.jmin)];
                 }
             }
@@ -191,7 +191,7 @@ version(mpi_parallel) {
         for (size_t k = blk.kmin; k <= krange; k++) {
             for (size_t j = blk.jmin; j <= blk.jmax+1; j++) {
                 for (size_t i = blk.imin; i <= blk.imax+1; i++) {
-                    vtx = blk.get_vtx!()(i, j, k);
+                    vtx = blk.get_vtx(i, j, k);
                     vtx.radial_pos_norm /= total_dist[(blk.jmax - blk.jmin + 2) * (k - blk.kmin) + (j - blk.jmin)];
                     if (j == blk.jmin) {
                     }
@@ -241,8 +241,8 @@ void assign_radial_dist(SFluidBlock blk) {
             last_block = false;
             while (last_block == false) {
                 for ( size_t i = blk.imin; i <= blk.imax; ++i ) {
-                    vtx = blk.get_vtx!()(i, j, k);
-                    vtx_next = blk.get_vtx!()(i+1, j, k);
+                    vtx = blk.get_vtx(i, j, k);
+                    vtx_next = blk.get_vtx(i+1, j, k);
                     delta = vtx_next.pos[0] - vtx.pos[0];
                     radial_dist += geom.abs(delta);
                 }
@@ -280,15 +280,15 @@ void assign_radial_dist(SFluidBlock blk) {
                       + should never move apart due to having different velocities.
                     ++/
                     if (i == blk.imax+1) {
-                        blk.get_vtx!()(i, j, k).radial_pos_norm = block_crossover_value;
+                        blk.get_vtx(i, j, k).radial_pos_norm = block_crossover_value;
                     }
                     else {
-                        vtx = blk.get_vtx!()(i, j, k);
-                        vtx_next = blk.get_vtx!()(i+1, j, k);
+                        vtx = blk.get_vtx(i, j, k);
+                        vtx_next = blk.get_vtx(i+1, j, k);
                         delta = vtx.pos[0] - vtx_next.pos[0];
                         vtx.radial_pos_norm = geom.abs(delta) / radial_dist + vtx_next.radial_pos_norm;
                     }
-                    if (i == blk.imin) block_crossover_value = blk.get_vtx!()(i, j, k).radial_pos_norm;
+                    if (i == blk.imin) block_crossover_value = blk.get_vtx(i, j, k).radial_pos_norm;
                 }
                 if (blk.bc[Face.west].type == "exchange_over_full_face") {
                     auto ffeBC = cast(GhostCellFullFaceCopy) blk.bc[Face.west].preReconAction[0];
@@ -327,7 +327,7 @@ Vector3[] shock_fitting_vertex_velocities(SFluidBlock blk) {
     for ( size_t k = blk.kmin; k <= krangemax; ++k ) {
         for ( size_t j = blk.jmin; j <= blk.jmax+1; ++j ) {    
             for ( size_t i = blk.imin; i <= blk.imax+1; ++i ) {
-                vtx = blk.get_vtx!()(i,j,k);
+                vtx = blk.get_vtx(i,j,k);
                 vtx.vel[0].clear();
             }
         }
@@ -373,7 +373,7 @@ Vector3[] shock_fitting_vertex_velocities(SFluidBlock blk) {
     for ( size_t k = blk.kmin; k <= krangemax; ++k ) {
         for ( size_t j = blk.jmin; j <= blk.jmax+1; ++j ) {
             size_t i = blk.imin;
-            vtx = blk.get_vtx!()(i,j,k);
+            vtx = blk.get_vtx(i,j,k);
 
             number rho_east = 0.0, p_east;   
             Vector3 u_east, numerator;    
@@ -392,9 +392,9 @@ Vector3[] shock_fitting_vertex_velocities(SFluidBlock blk) {
                     else if ((j-jOffSet) > blk.jmax && blk.bc[Face.north].type != "exchange_over_full_face") {} // Do nothing
                     else {
                         // Normal cell  
-                        cell[numcells] = blk.get_cell!()(i, j-jOffSet, k-kOffSet);
-                        cell_R1[numcells] = blk.get_cell!()(i+1, j-jOffSet, k-kOffSet);
-                        cell_R2[numcells++] = blk.get_cell!()(i+2, j-jOffSet, k-kOffSet);
+                        cell[numcells] = blk.get_cell(i, j-jOffSet, k-kOffSet);
+                        cell_R1[numcells] = blk.get_cell(i+1, j-jOffSet, k-kOffSet);
+                        cell_R2[numcells++] = blk.get_cell(i+2, j-jOffSet, k-kOffSet);
                     }
                 }
             }
@@ -564,12 +564,12 @@ void populate_ghost_cell_interface_geometry(SFluidBlock blk) {
                 // Construct the outgoing array
                 size_t i = 0;
                 for (size_t k = blk.kmin; k <= krangemax; k++) {
-                    outgoing_cells[i++] = blk.get_cell!()(blk.imin, blk.jmin, k).iface[Face.west].n.x;
-                    outgoing_cells[i++] = blk.get_cell!()(blk.imin, blk.jmin, k).iface[Face.west].n.y;
-                    outgoing_cells[i++] = blk.get_cell!()(blk.imin, blk.jmin, k).iface[Face.west].n.z;
-                    outgoing_cells[i++] = blk.get_cell!()(blk.imin, blk.jmin, k).iface[Face.west].pos.x;
-                    outgoing_cells[i++] = blk.get_cell!()(blk.imin, blk.jmin, k).iface[Face.west].pos.y;
-                    outgoing_cells[i++] = blk.get_cell!()(blk.imin, blk.jmin, k).iface[Face.west].pos.z;
+                    outgoing_cells[i++] = blk.get_cell(blk.imin, blk.jmin, k).iface[Face.west].n.x;
+                    outgoing_cells[i++] = blk.get_cell(blk.imin, blk.jmin, k).iface[Face.west].n.y;
+                    outgoing_cells[i++] = blk.get_cell(blk.imin, blk.jmin, k).iface[Face.west].n.z;
+                    outgoing_cells[i++] = blk.get_cell(blk.imin, blk.jmin, k).iface[Face.west].pos.x;
+                    outgoing_cells[i++] = blk.get_cell(blk.imin, blk.jmin, k).iface[Face.west].pos.y;
+                    outgoing_cells[i++] = blk.get_cell(blk.imin, blk.jmin, k).iface[Face.west].pos.z;
                 }
 
                 mpi_send_tag = make_mpi_tag(neighbour, 2, 0);
@@ -579,8 +579,8 @@ void populate_ghost_cell_interface_geometry(SFluidBlock blk) {
                 MPI_Wait(&MPI_incoming_request, &MPI_incoming_status);
                 i = 0;
                 for (size_t k = blk.kmin; k <= krangemax; k++) {
-                    blk.get_cell!()(blk.imin, blk.jmin-1, k).iface[Face.west].n.set(incoming_cells[i], incoming_cells[i+1], incoming_cells[i+2]);
-                    blk.get_cell!()(blk.imin, blk.jmin-1, k).iface[Face.west].pos.set(incoming_cells[i+3], incoming_cells[i+4], incoming_cells[i+5]);
+                    blk.get_cell(blk.imin, blk.jmin-1, k).iface[Face.west].n.set(incoming_cells[i], incoming_cells[i+1], incoming_cells[i+2]);
+                    blk.get_cell(blk.imin, blk.jmin-1, k).iface[Face.west].pos.set(incoming_cells[i+3], incoming_cells[i+4], incoming_cells[i+5]);
                     i += 6;
                 }
             }
@@ -588,14 +588,14 @@ void populate_ghost_cell_interface_geometry(SFluidBlock blk) {
             else { // Neighbour block is local in the mpi context
                 SFluidBlock neighbour_blk = cast(SFluidBlock) globalFluidBlocks[neighbour];
                 for (size_t k = blk.kmin; k <= krangemax; k++) {
-                blk.get_cell!()(blk.imin, blk.jmin-1, k) = neighbour_blk.get_cell!()(neighbour_blk.imin, neighbour_blk.jmax, k);
+                blk.get_cell(blk.imin, blk.jmin-1, k) = neighbour_blk.get_cell(neighbour_blk.imin, neighbour_blk.jmax, k);
                 }
             }
         }
         else {
             SFluidBlock neighbour_blk = cast(SFluidBlock) globalFluidBlocks[neighbour];
             for (size_t k = blk.kmin; k <= krangemax; k++) {
-                blk.get_cell!()(blk.imin, blk.jmin-1, k) = neighbour_blk.get_cell!()(neighbour_blk.imin, neighbour_blk.jmax, k);
+                blk.get_cell(blk.imin, blk.jmin-1, k) = neighbour_blk.get_cell(neighbour_blk.imin, neighbour_blk.jmax, k);
             }
         }
     }
@@ -622,12 +622,12 @@ void populate_ghost_cell_interface_geometry(SFluidBlock blk) {
                 // Construct the outgoing array
                 size_t i = 0;
                 for (size_t k = blk.kmin; k <= krangemax; k++) {
-                    outgoing_cells[i++] = blk.get_cell!()(blk.imin, blk.jmax, k).iface[Face.west].n.x;
-                    outgoing_cells[i++] = blk.get_cell!()(blk.imin, blk.jmax, k).iface[Face.west].n.y;
-                    outgoing_cells[i++] = blk.get_cell!()(blk.imin, blk.jmax, k).iface[Face.west].n.z;
-                    outgoing_cells[i++] = blk.get_cell!()(blk.imin, blk.jmax, k).iface[Face.west].pos.x;
-                    outgoing_cells[i++] = blk.get_cell!()(blk.imin, blk.jmax, k).iface[Face.west].pos.y;
-                    outgoing_cells[i++] = blk.get_cell!()(blk.imin, blk.jmax, k).iface[Face.west].pos.z;
+                    outgoing_cells[i++] = blk.get_cell(blk.imin, blk.jmax, k).iface[Face.west].n.x;
+                    outgoing_cells[i++] = blk.get_cell(blk.imin, blk.jmax, k).iface[Face.west].n.y;
+                    outgoing_cells[i++] = blk.get_cell(blk.imin, blk.jmax, k).iface[Face.west].n.z;
+                    outgoing_cells[i++] = blk.get_cell(blk.imin, blk.jmax, k).iface[Face.west].pos.x;
+                    outgoing_cells[i++] = blk.get_cell(blk.imin, blk.jmax, k).iface[Face.west].pos.y;
+                    outgoing_cells[i++] = blk.get_cell(blk.imin, blk.jmax, k).iface[Face.west].pos.z;
                 }
 
                 mpi_send_tag = make_mpi_tag(neighbour, 1, 0);
@@ -636,8 +636,8 @@ void populate_ghost_cell_interface_geometry(SFluidBlock blk) {
                 MPI_Wait(&MPI_incoming_request, &MPI_incoming_status);
                 i = 0;
                 for (size_t k = blk.kmin; k <= krangemax; k++) {
-                    blk.get_cell!()(blk.imin, blk.jmax+1, k).iface[Face.west].n.set(incoming_cells[i], incoming_cells[i+1], incoming_cells[i+2]);
-                    blk.get_cell!()(blk.imin, blk.jmax+1, k).iface[Face.west].pos.set(incoming_cells[i+3], incoming_cells[i+4], incoming_cells[i+5]);
+                    blk.get_cell(blk.imin, blk.jmax+1, k).iface[Face.west].n.set(incoming_cells[i], incoming_cells[i+1], incoming_cells[i+2]);
+                    blk.get_cell(blk.imin, blk.jmax+1, k).iface[Face.west].pos.set(incoming_cells[i+3], incoming_cells[i+4], incoming_cells[i+5]);
                     i += 6;
                 }
             }
@@ -646,14 +646,14 @@ void populate_ghost_cell_interface_geometry(SFluidBlock blk) {
             else {
                 SFluidBlock neighbour_blk = cast(SFluidBlock) globalFluidBlocks[neighbour];
                 for (size_t k = blk.kmin; k <= krangemax; k++) {
-                    blk.get_cell!()(blk.imin, blk.jmax+1, k) = neighbour_blk.get_cell!()(neighbour_blk.imin, neighbour_blk.jmin, k);
+                    blk.get_cell(blk.imin, blk.jmax+1, k) = neighbour_blk.get_cell(neighbour_blk.imin, neighbour_blk.jmin, k);
                 }
             }
         }
         else {
             SFluidBlock neighbour_blk = cast(SFluidBlock) globalFluidBlocks[neighbour];
             for (size_t k = blk.kmin; k <= krangemax; k++) {
-                blk.get_cell!()(blk.imin, blk.jmax+1, k) = neighbour_blk.get_cell!()(neighbour_blk.imin, neighbour_blk.jmin, k);
+                blk.get_cell(blk.imin, blk.jmax+1, k) = neighbour_blk.get_cell(neighbour_blk.imin, neighbour_blk.jmin, k);
             }
         }
     }
@@ -696,7 +696,7 @@ void get_ghost_vertex_positions(SFluidBlock blk) {
                 // Unpack the vertex positions
                 for (size_t k = blk.kmin; k <= krange; k++) {
                     for (size_t j = blk.jmin; j <= blk.jmax+1; j++) {
-                        Vector3 vtx_pos = blk.get_vtx!()(blk.imin+1, j, k).pos[0];
+                        Vector3 vtx_pos = blk.get_vtx(blk.imin+1, j, k).pos[0];
                         outgoing_cells[i++] = vtx_pos.x;
                         outgoing_cells[i++] = vtx_pos.y;
                         outgoing_cells[i++] = vtx_pos.z;
@@ -713,7 +713,7 @@ void get_ghost_vertex_positions(SFluidBlock blk) {
                 i = 0;
                 for (size_t k = blk.kmin; k <= krange; k++) {
                     for (size_t j = blk.jmin; j <= blk.jmax+1; j++) {
-                        blk.get_vtx!()(blk.imin-1, j, k).pos[0].set(incoming_cells[i++], incoming_cells[i++], incoming_cells[i++]);
+                        blk.get_vtx(blk.imin-1, j, k).pos[0].set(incoming_cells[i++], incoming_cells[i++], incoming_cells[i++]);
                     }
                 }
             }
@@ -722,7 +722,7 @@ void get_ghost_vertex_positions(SFluidBlock blk) {
                 auto neighbour_blk = cast(SFluidBlock) globalFluidBlocks[neighbour];
                 for (size_t k = blk.kmin; k <= krange; k++) {
                     for (size_t j = blk.jmin; j <= blk.jmax+1; j++) {
-                        blk.get_vtx!()(blk.imin-1, j, k).pos[0] = neighbour_blk.get_vtx!()(neighbour_blk.imax, j, k).pos[0];
+                        blk.get_vtx(blk.imin-1, j, k).pos[0] = neighbour_blk.get_vtx(neighbour_blk.imax, j, k).pos[0];
                     }
                 }
             }
@@ -732,7 +732,7 @@ void get_ghost_vertex_positions(SFluidBlock blk) {
             auto neighbour_blk = cast(SFluidBlock) globalFluidBlocks[neighbour];
             for (size_t k = krange; k <= krange; k++) {
                 for (size_t j = blk.jmin; j <= blk.jmax+1; j++) {
-                    blk.get_vtx!()(blk.imin-1, j, k).pos[0] = neighbour_blk.get_vtx!()(neighbour_blk.imax, j, k).pos[0];
+                    blk.get_vtx(blk.imin-1, j, k).pos[0] = neighbour_blk.get_vtx(neighbour_blk.imax, j, k).pos[0];
                 }
             }
         }
@@ -740,7 +740,7 @@ void get_ghost_vertex_positions(SFluidBlock blk) {
     else { // There's no real vertex here- we'll just extrapolate it out based on the last 2 vertex locations.
         for (size_t k = krange; k <= krange; k++) {
             for (size_t j = blk.jmin; j <= blk.jmax+1; j++) {
-                blk.get_vtx!()(blk.imin-1, j, k).pos[0] = blk.get_vtx!()(blk.imin, j, k).pos[0] + (blk.get_vtx!()(blk.imin, j, k).pos[0] - blk.get_vtx!()(blk.imin+1, j, k).pos[0]);
+                blk.get_vtx(blk.imin-1, j, k).pos[0] = blk.get_vtx(blk.imin, j, k).pos[0] + (blk.get_vtx(blk.imin, j, k).pos[0] - blk.get_vtx(blk.imin+1, j, k).pos[0]);
             }
         }
     }
@@ -774,7 +774,7 @@ void get_ghost_vertex_positions(SFluidBlock blk) {
                 // Unpack the vertex positions
                 for (size_t k = blk.kmin; k <= krange; k++) {
                     for (size_t j = blk.jmin; j <= blk.jmax+1; j++) {
-                        Vector3 vtx_pos = blk.get_vtx!()(blk.imax, j, k).pos[0];
+                        Vector3 vtx_pos = blk.get_vtx(blk.imax, j, k).pos[0];
                         outgoing_cells[i++] = vtx_pos.x;
                         outgoing_cells[i++] = vtx_pos.y;
                         outgoing_cells[i++] = vtx_pos.z;
@@ -791,7 +791,7 @@ void get_ghost_vertex_positions(SFluidBlock blk) {
                 i = 0;
                 for (size_t k = blk.kmin; k <= krange; k++) {
                     for (size_t j = blk.jmin; j <= blk.jmax+1; j++) {
-                        blk.get_vtx!()(blk.imax+2, j, k).pos[0].set(incoming_cells[i++], incoming_cells[i++], incoming_cells[i++]);
+                        blk.get_vtx(blk.imax+2, j, k).pos[0].set(incoming_cells[i++], incoming_cells[i++], incoming_cells[i++]);
                     }
                 }
             }
@@ -800,7 +800,7 @@ void get_ghost_vertex_positions(SFluidBlock blk) {
                 auto neighbour_blk = cast(SFluidBlock) globalFluidBlocks[neighbour];
                 for (size_t k = blk.kmin; k <= krange; k++) {
                     for (size_t j = blk.jmin; j <= blk.jmax+1; j++) {
-                        blk.get_vtx!()(blk.imax+2, j, k).pos[0] = neighbour_blk.get_vtx!()(neighbour_blk.imin+1, j, k).pos[0];
+                        blk.get_vtx(blk.imax+2, j, k).pos[0] = neighbour_blk.get_vtx(neighbour_blk.imin+1, j, k).pos[0];
                     }
                 }
             }
@@ -810,7 +810,7 @@ void get_ghost_vertex_positions(SFluidBlock blk) {
             auto neighbour_blk = cast(SFluidBlock) globalFluidBlocks[neighbour];
             for (size_t k = blk.kmin; k <= krange; k++) {
                 for (size_t j = blk.jmin; j <= blk.jmax+1; j++) {
-                    blk.get_vtx!()(blk.imax+2, j, k).pos[0] = neighbour_blk.get_vtx!()(neighbour_blk.imin+1, j, k).pos[0];
+                    blk.get_vtx(blk.imax+2, j, k).pos[0] = neighbour_blk.get_vtx(neighbour_blk.imin+1, j, k).pos[0];
                 }
             }
         }
@@ -818,7 +818,7 @@ void get_ghost_vertex_positions(SFluidBlock blk) {
     else { // There's no real vertex here- we'll just extrapolate it out based on the last 2 vertex locations
         for (size_t k = blk.kmin; k <= krange; k++) {
             for (size_t j = blk.jmin; j <= blk.jmax+1; j++) {
-                blk.get_vtx!()(blk.imax+2, j, k).pos[0] = blk.get_vtx!()(blk.imax+1, j, k).pos[0] + (blk.get_vtx!()(blk.imax+1, j, k).pos[0] - blk.get_vtx!()(blk.imax, j, k).pos[0]);
+                blk.get_vtx(blk.imax+2, j, k).pos[0] = blk.get_vtx(blk.imax+1, j, k).pos[0] + (blk.get_vtx(blk.imax+1, j, k).pos[0] - blk.get_vtx(blk.imax, j, k).pos[0]);
             }
         }
     }
