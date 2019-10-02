@@ -493,6 +493,8 @@ public:
         }
         // With the ranges above and in the following nested loops,
         // we make connections for the first layer of ghost cells, also.
+        // These connections of faces to the first layer of ghost cells
+        // are used in the user-defined_effects.d, to pick up boundary faces.
         for ( size_t k = kstart; k <= kend; ++k ) {
             for ( size_t j = jmin-1; j <= jmax+1; ++j ) {
                 for ( size_t i = imin-1; i <= imax+1; ++i ) {
@@ -722,13 +724,13 @@ public:
                 cell_1 = ghost_cell;
                 ghost_cell = get_cell!()(i-2,j,k);
                 extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
-                ghost_cell.volume[gtl] = 2.0*cell_2.volume[gtl] - cell_2.volume[gtl];
+                ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                 version(nghost3) {
                     cell_2 = cell_1;
                     cell_1 = ghost_cell;
                     ghost_cell = get_cell!()(i-3,j,k);
                     extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
-                    ghost_cell.volume[gtl] = 2.0*cell_2.volume[gtl] - cell_2.volume[gtl];
+                    ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                 }
                 i = imax;
                 cell_1 = get_cell!()(i,j,k);
