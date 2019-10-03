@@ -125,16 +125,35 @@ void main(string[] args)
     foreach (blkId, taskId; taskIds) {
         f.writefln("%4d %4d", blkId, taskId);
     }
+
+    if (performSweep) {
+        writeln("Performing sweep of ntasks.");
+        f = File("load-balance-report.txt", "w");
+        f.writefln("# 1:ntasks  2:delta-cell-count 3:packing-quality 4:speedup");
+        foreach (n; sweepMin .. sweepMax+1) {
+            distributeBlocksToTasks(n, blockLoads, taskMap, taskLoads, taskIds);
+            auto minLoad = taskLoads.minElement;
+            auto maxLoad = taskLoads.maxElement;
+            auto deltaCells = maxLoad - minLoad;
+            double pq = 1.0 - to!double(maxLoad - minLoad)/maxLoad;
+            double speedup = to!double(sum(taskLoads))/maxLoad;
+            f.writefln("%03d  %d  %12.6f  %12.6f", n, deltaCells, pq, speedup);
+        }
+        f.close();
+    }
+    
     writeln("Done.");
 }
 
 
 
 void distributeBlocksToTasks(int nTasks, Tuple!(int,int)[] blockLoads,
-                             int[][] taskMap, int[] taskLoads, int[] taskIds)
+                             ref int[][] taskMap, ref int[] taskLoads, int[] taskIds)
 {
     taskLoads.length = nTasks;
     taskLoads[] = 0;
+    taskMap.length = nTasks;
+    foreach (ref task; taskMap) task.length = 0;
 
     foreach (bLoad; blockLoads) {
         // The algorithm is:
