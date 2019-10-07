@@ -864,6 +864,12 @@ void evalRHS(double pseudoSimTime, int ftl)
     foreach (blk; parallel(localFluidBlocks,1)) {
         blk.convective_flux_phase0(allow_high_order_interpolation, gtl);
     }
+
+    // for unstructured blocks we need to transfer the convective gradients before the flux calc
+    if (allow_high_order_interpolation && (GlobalConfig.interpolation_order > 1)) {
+        exchange_ghost_cell_boundary_convective_gradient_data(pseudoSimTime, to!int(gtl), to!int(ftl));
+    }
+    
     foreach (blk; parallel(localFluidBlocks,1)) {
         blk.convective_flux_phase1(allow_high_order_interpolation, gtl);
     }

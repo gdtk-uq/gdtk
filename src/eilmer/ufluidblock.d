@@ -759,6 +759,7 @@ public:
     // Make use of the flow gradients to actually do the high-order reconstruction
     // and then compute fluxes of conserved quantities at all faces.
     {
+        //
         if (allow_high_order_interpolation && (myConfig.interpolation_order > 1)) {
             // Fill in gradients for ghost cells so that left- and right- cells at all faces,
             // including those along block boundaries, have the latest gradient values.
@@ -768,30 +769,9 @@ public:
                 bool found_mapped_cell_bc = false;
                 foreach (gce; bcond.preReconAction) {
                     auto mygce = cast(GhostCellMappedCellCopy)gce;
-                    if (mygce && !myConfig.in_mpi_context) {
+                    if (mygce) {
                         found_mapped_cell_bc = true;
-                        // There is a mapped-cell backing the ghost cell, so we can copy its gradients.
-                        foreach (i, f; bcond.faces) {
-                            // Only FVCell objects in an unstructured-grid are expected to have
-                            // precomputed gradients.  There will be an initialized reference
-                            // in the FVCell object of a structured-grid block, so we need to
-                            // test and avoid copying from such a reference.
-                            auto mapped_cell_grad = mygce.get_mapped_cell(i).gradients;
-                            if (bcond.outsigns[i] == 1) {
-                                if (mapped_cell_grad) {
-                                    f.right_cell.gradients.copy_values_from(mapped_cell_grad);
-                                } else {
-                                    // Fall back to looking over the face for suitable gradient data.
-                                    f.right_cell.gradients.copy_values_from(f.left_cell.gradients);
-                                }
-                            } else {
-                                if (mapped_cell_grad) {
-                                    f.left_cell.gradients.copy_values_from(mapped_cell_grad);
-                                } else {
-                                    f.left_cell.gradients.copy_values_from(f.right_cell.gradients);
-                                }
-                            }
-                        } // end foreach f
+                        // we have already transferred the cell gradients for mapped cells
                     } // end if (mygce)
                 } // end foreach gce
                 if (!found_mapped_cell_bc) {

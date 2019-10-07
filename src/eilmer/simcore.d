@@ -1650,6 +1650,41 @@ void exchange_ghost_cell_boundary_data(double t, int gtl, int ftl)
     }
 } // end exchange_ghost_cell_boundary_data()
 
+void exchange_ghost_cell_boundary_convective_gradient_data(double t, int gtl, int ftl)
+// We have hoisted the exchange of ghost-cell data out of the GhostCellEffect class
+// that used to live only inside the boundary condition attached to a block.
+// The motivation for allowing this leakage of abstraction is that the MPI
+// exchange of messages requires a coordination of actions that spans blocks.
+// Sigh...  2017-01-24 PJ
+// p.s. The data for that coordination is still buried in the FullFaceCopy class.
+// No need to have all its guts hanging out.
+{
+    foreach (blk; localFluidBlocks) {
+        foreach(bc; blk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce1 = cast(GhostCellMappedCellCopy) gce;
+                if (mygce1) { mygce1.exchange_convective_gradient_phase0(t, gtl, ftl); }
+            }
+        }
+    }
+    foreach (blk; localFluidBlocks) {
+        foreach(bc; blk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce1 = cast(GhostCellMappedCellCopy) gce;
+                if (mygce1) { mygce1.exchange_convective_gradient_phase1(t, gtl, ftl); }
+            }
+        }
+    }
+    foreach (blk; localFluidBlocks) {
+        foreach(bc; blk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce1 = cast(GhostCellMappedCellCopy) gce;
+                if (mygce1) { mygce1.exchange_convective_gradient_phase2(t, gtl, ftl); }
+            }
+        }
+    }
+} // end exchange_ghost_cell_boundary_convective_gradient_data()
+
 //----------------------------------------------------------------------------
 void sts_gasdynamic_explicit_increment_with_fixed_grid()
 {
@@ -1777,6 +1812,12 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
     foreach (blk; parallel(localFluidBlocksBySize,1)) {
 	if (blk.active) { blk.convective_flux_phase0(allow_high_order_interpolation, gtl); }
     }
+
+    // for unstructured blocks we need to transfer the convective gradients before the flux calc
+    if (allow_high_order_interpolation && (GlobalConfig.interpolation_order > 1)) {
+        exchange_ghost_cell_boundary_convective_gradient_data(SimState.time, gtl, ftl);
+    }
+    
     foreach (blk; parallel(localFluidBlocksBySize,1)) {
 	if (blk.active) { blk.convective_flux_phase1(allow_high_order_interpolation, gtl); }
     }
@@ -1976,6 +2017,12 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 	foreach (blk; parallel(localFluidBlocksBySize,1)) {
 	    if (blk.active) { blk.convective_flux_phase0(allow_high_order_interpolation, gtl); }
 	}
+
+        // for unstructured blocks we need to transfer the convective gradients before the flux calc
+        if (allow_high_order_interpolation && (GlobalConfig.interpolation_order > 1)) {
+            exchange_ghost_cell_boundary_convective_gradient_data(SimState.time, gtl, ftl);
+        }
+        
 	foreach (blk; parallel(localFluidBlocksBySize,1)) {
 	    if (blk.active) { blk.convective_flux_phase1(allow_high_order_interpolation, gtl); }
 	}
@@ -2218,6 +2265,12 @@ void gasdynamic_explicit_increment_with_fixed_grid()
     foreach (blk; parallel(localFluidBlocksBySize,1)) {
         if (blk.active) { blk.convective_flux_phase0(allow_high_order_interpolation, gtl); }
     }
+
+    // for unstructured blocks we need to transfer the convective gradients before the flux calc
+    if (allow_high_order_interpolation && (GlobalConfig.interpolation_order > 1)) {
+        exchange_ghost_cell_boundary_convective_gradient_data(SimState.time, gtl, ftl);
+    }
+
     foreach (blk; parallel(localFluidBlocksBySize,1)) {
         if (blk.active) { blk.convective_flux_phase1(allow_high_order_interpolation, gtl); }
     }
@@ -2402,6 +2455,12 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
             if (blk.active) { blk.convective_flux_phase0(allow_high_order_interpolation, gtl); }
         }
+
+        // for unstructured blocks we need to transfer the convective gradients before the flux calc
+        if (allow_high_order_interpolation && (GlobalConfig.interpolation_order > 1)) {
+            exchange_ghost_cell_boundary_convective_gradient_data(SimState.time, gtl, ftl);
+        }
+
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
             if (blk.active) { blk.convective_flux_phase1(allow_high_order_interpolation, gtl); }
         }
@@ -2581,6 +2640,12 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
             if (blk.active) { blk.convective_flux_phase0(allow_high_order_interpolation, gtl); }
         }
+
+        // for unstructured blocks we need to transfer the convective gradients before the flux calc
+        if (allow_high_order_interpolation && (GlobalConfig.interpolation_order > 1)) {
+            exchange_ghost_cell_boundary_convective_gradient_data(SimState.time, gtl, ftl);
+        }
+
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
             if (blk.active) { blk.convective_flux_phase1(allow_high_order_interpolation, gtl); }
         }
@@ -2805,6 +2870,12 @@ void gasdynamic_explicit_increment_with_moving_grid()
     foreach (blk; parallel(localFluidBlocksBySize,1)) {
         if (blk.active) { blk.convective_flux_phase0(allow_high_order_interpolation, gtl); }
     }
+
+    // for unstructured blocks we need to transfer the convective gradients before the flux calc
+    if (allow_high_order_interpolation && (GlobalConfig.interpolation_order > 1)) {
+        exchange_ghost_cell_boundary_convective_gradient_data(SimState.time, gtl, ftl);
+    }
+    
     foreach (blk; parallel(localFluidBlocksBySize,1)) {
         if (blk.active) { blk.convective_flux_phase1(allow_high_order_interpolation, gtl); }
     }
@@ -2976,6 +3047,12 @@ void gasdynamic_explicit_increment_with_moving_grid()
             if (blk.active) { blk.convective_flux_phase0(allow_high_order_interpolation, 0); }
             // FIX-ME PJ 2018-07-25 Should this be gtl rather than 0?
         }
+
+        // for unstructured blocks we need to transfer the convective gradients before the flux calc
+        if (allow_high_order_interpolation && (GlobalConfig.interpolation_order > 1)) {
+            exchange_ghost_cell_boundary_convective_gradient_data(SimState.time, gtl, ftl);
+        }
+        
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
             if (blk.active) { blk.convective_flux_phase1(allow_high_order_interpolation, 0); }
             // FIX-ME PJ 2018-07-25 Should this be gtl rather than 0?
