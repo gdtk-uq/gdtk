@@ -1685,6 +1685,41 @@ void exchange_ghost_cell_boundary_convective_gradient_data(double t, int gtl, in
     }
 } // end exchange_ghost_cell_boundary_convective_gradient_data()
 
+void exchange_ghost_cell_boundary_viscous_gradient_data(double t, int gtl, int ftl)
+// We have hoisted the exchange of ghost-cell data out of the GhostCellEffect class
+// that used to live only inside the boundary condition attached to a block.
+// The motivation for allowing this leakage of abstraction is that the MPI
+// exchange of messages requires a coordination of actions that spans blocks.
+// Sigh...  2017-01-24 PJ
+// p.s. The data for that coordination is still buried in the FullFaceCopy class.
+// No need to have all its guts hanging out.
+{
+    foreach (blk; localFluidBlocks) {
+        foreach(bc; blk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce1 = cast(GhostCellMappedCellCopy) gce;
+                if (mygce1) { mygce1.exchange_viscous_gradient_phase0(t, gtl, ftl); }
+            }
+        }
+    }
+    foreach (blk; localFluidBlocks) {
+        foreach(bc; blk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce1 = cast(GhostCellMappedCellCopy) gce;
+                if (mygce1) { mygce1.exchange_viscous_gradient_phase1(t, gtl, ftl); }
+            }
+        }
+    }
+    foreach (blk; localFluidBlocks) {
+        foreach(bc; blk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce1 = cast(GhostCellMappedCellCopy) gce;
+                if (mygce1) { mygce1.exchange_viscous_gradient_phase2(t, gtl, ftl); }
+            }
+        }
+    }
+} // end exchange_ghost_cell_boundary_viscous_gradient_data()
+
 //----------------------------------------------------------------------------
 void sts_gasdynamic_explicit_increment_with_fixed_grid()
 {
@@ -1831,45 +1866,63 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 	}
     }
     if (GlobalConfig.viscous && !GlobalConfig.separate_update_for_viscous_terms) {
-	if (GlobalConfig.apply_bcs_in_parallel) {
-	    foreach (blk; parallel(localFluidBlocksBySize,1)) {
-		if (blk.active) {
-		    blk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, gtl, ftl);
-		    blk.applyPreSpatialDerivActionAtBndryCells(SimState.time, gtl, ftl);
-		}
-	    }
-	} else {
-	    foreach (blk; localFluidBlocksBySize) {
-		if (blk.active) {
-		    blk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, gtl, ftl);
-		    blk.applyPreSpatialDerivActionAtBndryCells(SimState.time, gtl, ftl);
-		}
-	    }
-	}
-	foreach (blk; parallel(localFluidBlocksBySize,1)) {
-	    if (blk.active) {
-		blk.flow_property_spatial_derivatives(gtl); 
-		blk.estimate_turbulence_viscosity();
-	    }
-	}
-	// we exchange boundary data at this point to ensure the
-	// ghost cells along block-block boundaries have the most
-	// recent mu_t and k_t values.
-	exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
-	foreach (blk; parallel(localFluidBlocksBySize,1)) {
-	    if (blk.active) {         
-		blk.viscous_flux();
-	    }
-	}
-	if (GlobalConfig.apply_bcs_in_parallel) {
-	    foreach (blk; parallel(localFluidBlocksBySize,1)) {
-		if (blk.active) { blk.applyPostDiffFluxAction(SimState.time, gtl, ftl); }
-	    }
-	} else {
-	    foreach (blk; localFluidBlocksBySize) {
-		if (blk.active) { blk.applyPostDiffFluxAction(SimState.time, gtl, ftl); }
-	    }
-	}
+        if (GlobalConfig.apply_bcs_in_parallel) {
+            foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                if (blk.active) {
+                    blk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, gtl, ftl);
+                    blk.applyPreSpatialDerivActionAtBndryCells(SimState.time, gtl, ftl);
+                }
+            }
+        } else {
+            foreach (blk; localFluidBlocksBySize) {
+                if (blk.active) {
+                    blk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, gtl, ftl);
+                    blk.applyPreSpatialDerivActionAtBndryCells(SimState.time, gtl, ftl);
+                }
+            }
+        }
+        foreach (blk; parallel(localFluidBlocksBySize,1)) {
+            if (blk.active) {
+                blk.flow_property_spatial_derivatives(gtl); 
+            }
+        }
+        // for unstructured blocks employing the cell-centered spatial (/viscous) gradient method,
+        // we need to transfer the viscous gradients before the flux calc
+        exchange_ghost_cell_boundary_viscous_gradient_data(SimState.time, gtl, ftl);
+        foreach (blk; parallel(localFluidBlocksBySize,1)) {
+            if (blk.active) {
+                // we need to average cell-centered spatial (/viscous) gradients to get approximations of the gradients
+                // at the cell interfaces before the viscous flux calculation.
+                if (blk.myConfig.spatial_deriv_locn == SpatialDerivLocn.cells) {
+                    foreach(f; blk.faces) {
+                        f.average_cell_deriv_values(0);
+                    }
+                }
+            }
+        }
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            if (blk.active) {
+                blk.estimate_turbulence_viscosity();
+            }
+        }
+        // we exchange boundary data at this point to ensure the
+        // ghost cells along block-block boundaries have the most
+        // recent mu_t and k_t values.
+        exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
+        foreach (blk; parallel(localFluidBlocksBySize,1)) {
+            if (blk.active) {
+                blk.viscous_flux();
+            }
+        }
+        if (GlobalConfig.apply_bcs_in_parallel) {
+            foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                if (blk.active) { blk.applyPostDiffFluxAction(SimState.time, gtl, ftl); }
+            }
+        } else {
+            foreach (blk; localFluidBlocksBySize) {
+                if (blk.active) { blk.applyPostDiffFluxAction(SimState.time, gtl, ftl); }
+            }
+        }
     } // end if viscous
     foreach (i, blk; parallel(localFluidBlocksBySize,1)) {
 	if (!blk.active) continue;
@@ -2035,47 +2088,65 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 		if (blk.active) { blk.applyPostConvFluxAction(SimState.time, gtl, ftl); }
 	    }
 	}
-	if (GlobalConfig.viscous && !GlobalConfig.separate_update_for_viscous_terms) {
-	    if (GlobalConfig.apply_bcs_in_parallel) {
-		foreach (blk; parallel(localFluidBlocksBySize,1)) {
-		    if (blk.active) {
-			blk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, gtl, ftl);
-			blk.applyPreSpatialDerivActionAtBndryCells(SimState.time, gtl, ftl);
-		    }
-		}
-	    } else {
-		foreach (blk; localFluidBlocksBySize) {
-		    if (blk.active) {
-			blk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, gtl, ftl);
-			blk.applyPreSpatialDerivActionAtBndryCells(SimState.time, gtl, ftl);
-		    }
-		}
-	    }
-	    foreach (blk; parallel(localFluidBlocksBySize,1)) {
-		if (blk.active) {
-		    blk.flow_property_spatial_derivatives(gtl); 
-		    blk.estimate_turbulence_viscosity();
-		}
-	    }
-	    // we exchange boundary data at this point to ensure the
-	    // ghost cells along block-block boundaries have the most
-	    // recent mu_t and k_t values.
-	    exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
-	    foreach (blk; parallel(localFluidBlocksBySize,1)) {
-		if (blk.active) {         
-		    blk.viscous_flux();
-		}
-	    }
-	    if (GlobalConfig.apply_bcs_in_parallel) {
-		foreach (blk; parallel(localFluidBlocksBySize,1)) {
-		    if (blk.active) { blk.applyPostDiffFluxAction(SimState.time, gtl, ftl); }
-		}
-	    } else {
-		foreach (blk; localFluidBlocksBySize) {
-		    if (blk.active) { blk.applyPostDiffFluxAction(SimState.time, gtl, ftl); }
-		}
-	    }
-	} // end if viscous
+        if (GlobalConfig.viscous && !GlobalConfig.separate_update_for_viscous_terms) {
+            if (GlobalConfig.apply_bcs_in_parallel) {
+                foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                    if (blk.active) {
+                        blk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, gtl, ftl);
+                        blk.applyPreSpatialDerivActionAtBndryCells(SimState.time, gtl, ftl);
+                    }
+                }
+            } else {
+                foreach (blk; localFluidBlocksBySize) {
+                    if (blk.active) {
+                        blk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, gtl, ftl);
+                        blk.applyPreSpatialDerivActionAtBndryCells(SimState.time, gtl, ftl);
+                    }
+                }
+            }
+            foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                if (blk.active) {
+                    blk.flow_property_spatial_derivatives(gtl); 
+                }
+            }
+            // for unstructured blocks employing the cell-centered spatial (/viscous) gradient method,
+            // we need to transfer the viscous gradients before the flux calc
+            exchange_ghost_cell_boundary_viscous_gradient_data(SimState.time, gtl, ftl);
+            foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                if (blk.active) {
+                    // we need to average cell-centered spatial (/viscous) gradients to get approximations of the gradients
+                    // at the cell interfaces before the viscous flux calculation.
+                    if (blk.myConfig.spatial_deriv_locn == SpatialDerivLocn.cells) {
+                        foreach(f; blk.faces) {
+                            f.average_cell_deriv_values(0);
+                        }
+                    }
+                }
+            }
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                if (blk.active) {
+                    blk.estimate_turbulence_viscosity();
+                }
+            }
+            // we exchange boundary data at this point to ensure the
+            // ghost cells along block-block boundaries have the most
+            // recent mu_t and k_t values.
+            exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
+            foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                if (blk.active) {
+                    blk.viscous_flux();
+                }
+            }
+            if (GlobalConfig.apply_bcs_in_parallel) {
+                foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                    if (blk.active) { blk.applyPostDiffFluxAction(SimState.time, gtl, ftl); }
+                }
+            } else {
+                foreach (blk; localFluidBlocksBySize) {
+                    if (blk.active) { blk.applyPostDiffFluxAction(SimState.time, gtl, ftl); }
+                }
+            }
+        } // end if viscous
 	foreach (i, blk; parallel(localFluidBlocksBySize,1)) {
 	    if (!blk.active) continue;
 	    int local_ftl = ftl;
@@ -2302,16 +2373,34 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
             if (blk.active) {
                 blk.flow_property_spatial_derivatives(gtl); 
+            }
+        }
+        // for unstructured blocks employing the cell-centered spatial (/viscous) gradient method,
+        // we need to transfer the viscous gradients before the flux calc
+        exchange_ghost_cell_boundary_viscous_gradient_data(SimState.time, gtl, ftl);
+        foreach (blk; parallel(localFluidBlocksBySize,1)) {
+            if (blk.active) {
+                // we need to average cell-centered spatial (/viscous) gradients to get approximations of the gradients
+                // at the cell interfaces before the viscous flux calculation.
+                if (blk.myConfig.spatial_deriv_locn == SpatialDerivLocn.cells) {
+                    foreach(f; blk.faces) {
+                        f.average_cell_deriv_values(0);
+                    }
+                }
+            }
+        }
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            if (blk.active) {
                 blk.estimate_turbulence_viscosity();
-	    }
-	}
-	// we exchange boundary data at this point to ensure the
-	// ghost cells along block-block boundaries have the most
-	// recent mu_t and k_t values.
-	exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
-	foreach (blk; parallel(localFluidBlocksBySize,1)) {
-	    if (blk.active) {         
-		blk.viscous_flux();
+            }
+        }
+        // we exchange boundary data at this point to ensure the
+        // ghost cells along block-block boundaries have the most
+        // recent mu_t and k_t values.
+        exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
+        foreach (blk; parallel(localFluidBlocksBySize,1)) {
+            if (blk.active) {
+                blk.viscous_flux();
             }
         }
         if (GlobalConfig.apply_bcs_in_parallel) {
@@ -2489,21 +2578,39 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                     }
                 }
             }
-	    foreach (blk; parallel(localFluidBlocksBySize,1)) {
-		if (blk.active) {
-		    blk.flow_property_spatial_derivatives(gtl); 
-		    blk.estimate_turbulence_viscosity();
-		}
-	    }
-	    // we exchange boundary data at this point to ensure the
-	    // ghost cells along block-block boundaries have the most
-	    // recent mu_t and k_t values.
-	    exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
-	    foreach (blk; parallel(localFluidBlocksBySize,1)) {
-		if (blk.active) {         
-		    blk.viscous_flux();
-		}
-	    }
+            foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                if (blk.active) {
+                    blk.flow_property_spatial_derivatives(gtl); 
+                }
+            }
+            // for unstructured blocks employing the cell-centered spatial (/viscous) gradient method,
+            // we need to transfer the viscous gradients before the flux calc
+            exchange_ghost_cell_boundary_viscous_gradient_data(SimState.time, gtl, ftl);
+            foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                if (blk.active) {
+                    // we need to average cell-centered spatial (/viscous) gradients to get approximations of the gradients
+                    // at the cell interfaces before the viscous flux calculation.
+                    if (blk.myConfig.spatial_deriv_locn == SpatialDerivLocn.cells) {
+                        foreach(f; blk.faces) {
+                            f.average_cell_deriv_values(0);
+                        }
+                    }
+                }
+            }
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                if (blk.active) {
+                    blk.estimate_turbulence_viscosity();
+                }
+            }
+            // we exchange boundary data at this point to ensure the
+            // ghost cells along block-block boundaries have the most
+            // recent mu_t and k_t values.
+            exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
+            foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                if (blk.active) {
+                    blk.viscous_flux();
+                }
+            }
             if (GlobalConfig.apply_bcs_in_parallel) {
                 foreach (blk; parallel(localFluidBlocksBySize,1)) {
                     if (blk.active) { blk.applyPostDiffFluxAction(SimState.time, gtl, ftl); }
@@ -2674,21 +2781,39 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                     }
                 }
             }
-	    foreach (blk; parallel(localFluidBlocksBySize,1)) {
-		if (blk.active) {
-		    blk.flow_property_spatial_derivatives(gtl); 
-		    blk.estimate_turbulence_viscosity();
-		}
-	    }
-	    // we exchange boundary data at this point to ensure the
-	    // ghost cells along block-block boundaries have the most
-	    // recent mu_t and k_t values.
-	    exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
-	    foreach (blk; parallel(localFluidBlocksBySize,1)) {
-		if (blk.active) {         
-		    blk.viscous_flux();
-		}
-	    }
+            foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                if (blk.active) {
+                    blk.flow_property_spatial_derivatives(gtl); 
+                }
+            }
+            // for unstructured blocks employing the cell-centered spatial (/viscous) gradient method,
+            // we need to transfer the viscous gradients before the flux calc
+            exchange_ghost_cell_boundary_viscous_gradient_data(SimState.time, gtl, ftl);
+            foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                if (blk.active) {
+                    // we need to average cell-centered spatial (/viscous) gradients to get approximations of the gradients
+                    // at the cell interfaces before the viscous flux calculation.
+                    if (blk.myConfig.spatial_deriv_locn == SpatialDerivLocn.cells) {
+                        foreach(f; blk.faces) {
+                            f.average_cell_deriv_values(0);
+                        }
+                    }
+                }
+            }
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                if (blk.active) {
+                    blk.estimate_turbulence_viscosity();
+                }
+            }
+            // we exchange boundary data at this point to ensure the
+            // ghost cells along block-block boundaries have the most
+            // recent mu_t and k_t values.
+            exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
+            foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                if (blk.active) {
+                    blk.viscous_flux();
+                }
+            }
             if (GlobalConfig.apply_bcs_in_parallel) {
                 foreach (blk; parallel(localFluidBlocksBySize,1)) {
                     if (blk.active) { blk.applyPostDiffFluxAction(SimState.time, gtl, ftl); }
@@ -2907,16 +3032,34 @@ void gasdynamic_explicit_increment_with_moving_grid()
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
             if (blk.active) {
                 blk.flow_property_spatial_derivatives(gtl); 
+            }
+        }
+        // for unstructured blocks employing the cell-centered spatial (/viscous) gradient method,
+        // we need to transfer the viscous gradients before the flux calc
+        exchange_ghost_cell_boundary_viscous_gradient_data(SimState.time, gtl, ftl);
+        foreach (blk; parallel(localFluidBlocksBySize,1)) {
+            if (blk.active) {
+                // we need to average cell-centered spatial (/viscous) gradients to get approximations of the gradients
+                // at the cell interfaces before the viscous flux calculation.
+                if (blk.myConfig.spatial_deriv_locn == SpatialDerivLocn.cells) {
+                    foreach(f; blk.faces) {
+                        f.average_cell_deriv_values(0);
+                    }
+                }
+            }
+        }
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            if (blk.active) {
                 blk.estimate_turbulence_viscosity();
-	    }
-	}
-	// we exchange boundary data at this point to ensure the
-	// ghost cells along block-block boundaries have the most
-	// recent mu_t and k_t values.
-	exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
-	foreach (blk; parallel(localFluidBlocksBySize,1)) {
-	    if (blk.active) {         
-		blk.viscous_flux();
+            }
+        }
+        // we exchange boundary data at this point to ensure the
+        // ghost cells along block-block boundaries have the most
+        // recent mu_t and k_t values.
+        exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
+        foreach (blk; parallel(localFluidBlocksBySize,1)) {
+            if (blk.active) {
+                blk.viscous_flux();
             }
         }
         if (GlobalConfig.apply_bcs_in_parallel) {
@@ -3082,21 +3225,39 @@ void gasdynamic_explicit_increment_with_moving_grid()
                     }
                 }
             }
-	    foreach (blk; parallel(localFluidBlocksBySize,1)) {
-		if (blk.active) {
-		    blk.flow_property_spatial_derivatives(gtl); 
-		    blk.estimate_turbulence_viscosity();
-		}
-	    }
-	    // we exchange boundary data at this point to ensure the
-	    // ghost cells along block-block boundaries have the most
-	    // recent mu_t and k_t values.
-	    exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
-	    foreach (blk; parallel(localFluidBlocksBySize,1)) {
-		if (blk.active) {         
-		    blk.viscous_flux();
-		}
-	    }
+            foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                if (blk.active) {
+                    blk.flow_property_spatial_derivatives(gtl); 
+                }
+            }
+            // for unstructured blocks employing the cell-centered spatial (/viscous) gradient method,
+            // we need to transfer the viscous gradients before the flux calc
+            exchange_ghost_cell_boundary_viscous_gradient_data(SimState.time, gtl, ftl);
+            foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                if (blk.active) {
+                    // we need to average cell-centered spatial (/viscous) gradients to get approximations of the gradients
+                    // at the cell interfaces before the viscous flux calculation.
+                    if (blk.myConfig.spatial_deriv_locn == SpatialDerivLocn.cells) {
+                        foreach(f; blk.faces) {
+                            f.average_cell_deriv_values(0);
+                        }
+                    }
+                }
+            }
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                if (blk.active) {
+                    blk.estimate_turbulence_viscosity();
+                }
+            }
+            // we exchange boundary data at this point to ensure the
+            // ghost cells along block-block boundaries have the most
+            // recent mu_t and k_t values.
+            exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
+            foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                if (blk.active) {
+                    blk.viscous_flux();
+                }
+            }
             if (GlobalConfig.apply_bcs_in_parallel) {
                 foreach (blk; parallel(localFluidBlocksBySize,1)) {
                     if (blk.active) { blk.applyPostDiffFluxAction(SimState.time, gtl, ftl); }

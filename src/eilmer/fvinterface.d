@@ -327,50 +327,54 @@ public:
     @nogc
     void average_cell_deriv_values(int gtl)
     {
+        // if the interface is along a boundary that doesn't have a mapping to
+        // a cell in a neighbouring block, i.e. the interface is along a domain
+        // boundary, then we just copy the gradient from the cell-center to the interface.
         if (left_cell.is_interior_to_domain == false ||
             right_cell.is_interior_to_domain == false) {
-            FVCell cL0 = left_cell;
-            FVCell cR0 = right_cell;
+            FVCell c;
+            if (left_cell.is_interior_to_domain == false) c = right_cell;
+            else c = left_cell;
             // vel-x
-            grad.vel[0][0] = 0.5*(cL0.grad.vel[0][0]+cR0.grad.vel[0][0]);
-            grad.vel[0][1] = 0.5*(cL0.grad.vel[0][1]+cR0.grad.vel[0][1]);
-            grad.vel[0][2] = 0.5*(cL0.grad.vel[0][2]+cR0.grad.vel[0][2]);
+            grad.vel[0][0] = c.grad.vel[0][0];
+            grad.vel[0][1] = c.grad.vel[0][1];
+            grad.vel[0][2] = c.grad.vel[0][2];
             
             // vel-y
-            grad.vel[1][0] = 0.5*(cL0.grad.vel[1][0]+cR0.grad.vel[1][0]);
-            grad.vel[1][1] = 0.5*(cL0.grad.vel[1][1]+cR0.grad.vel[1][1]);
-            grad.vel[1][2] = 0.5*(cL0.grad.vel[1][2]+cR0.grad.vel[1][2]);
+            grad.vel[1][0] = c.grad.vel[1][0];
+            grad.vel[1][1] = c.grad.vel[1][1];
+            grad.vel[1][2] = c.grad.vel[1][2];
             
             // vel-z
-            grad.vel[2][0] = 0.5*(cL0.grad.vel[2][0]+cR0.grad.vel[2][0]);
-            grad.vel[2][1] = 0.5*(cL0.grad.vel[2][1]+cR0.grad.vel[2][1]);
-            grad.vel[2][2] = 0.5*(cL0.grad.vel[2][2]+cR0.grad.vel[2][2]);
+            grad.vel[2][0] = c.grad.vel[2][0];
+            grad.vel[2][1] = c.grad.vel[2][1];
+            grad.vel[2][2] = c.grad.vel[2][2];
             
             // massf
             version(multi_species_gas) {
                 uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
                 foreach (isp; 0 .. nsp) {
-                    grad.massf[isp][0] = 0.5*(cL0.grad.massf[isp][0]+cR0.grad.massf[isp][0]);
-                    grad.massf[isp][1] = 0.5*(cL0.grad.massf[isp][1]+cR0.grad.massf[isp][1]);
-                    grad.massf[isp][2] = 0.5*(cL0.grad.massf[isp][2]+cR0.grad.massf[isp][2]);
+                    grad.massf[isp][0] = c.grad.massf[isp][0];
+                    grad.massf[isp][1] = c.grad.massf[isp][1];
+                    grad.massf[isp][2] = c.grad.massf[isp][2];
                 }
             }
             
             // T
-            grad.T[0] = 0.5*(cL0.grad.T[0]+cR0.grad.T[0]);
-            grad.T[1] = 0.5*(cL0.grad.T[1]+cR0.grad.T[1]);
-            grad.T[2] = 0.5*(cL0.grad.T[2]+cR0.grad.T[2]);
+            grad.T[0] = c.grad.T[0];
+            grad.T[1] = c.grad.T[1];
+            grad.T[2] = c.grad.T[2];
             
             version(komega) {
                 // tke
-                grad.tke[0] = 0.5*(cL0.grad.tke[0]+cR0.grad.tke[0]);
-                grad.tke[1] = 0.5*(cL0.grad.tke[1]+cR0.grad.tke[1]);
-                grad.tke[2] = 0.5*(cL0.grad.tke[2]+cR0.grad.tke[2]);
+                grad.tke[0] = c.grad.tke[0];
+                grad.tke[1] = c.grad.tke[1];
+                grad.tke[2] = c.grad.tke[2];
                 
                 // omega
-                grad.omega[0] = 0.5*(cL0.grad.omega[0]+cR0.grad.omega[0]);
-                grad.omega[1] = 0.5*(cL0.grad.omega[1]+cR0.grad.omega[1]);
-                grad.omega[2] = 0.5*(cL0.grad.omega[2]+cR0.grad.omega[2]);
+                grad.omega[0] = c.grad.omega[0];
+                grad.omega[1] = c.grad.omega[1];
+                grad.omega[2] = c.grad.omega[2];
             }
         } else {
             number qL; number qR;

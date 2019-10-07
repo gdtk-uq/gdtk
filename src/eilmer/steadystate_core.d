@@ -883,10 +883,12 @@ void evalRHS(double pseudoSimTime, int ftl)
         foreach (blk; parallel(localFluidBlocks,1)) {
             blk.flow_property_spatial_derivatives(0);
         }
+        // for unstructured blocks employing the cell-centered spatial (/viscous) gradient method,
+        // we need to transfer the viscous gradients before the flux calc
+        exchange_ghost_cell_boundary_viscous_gradient_data(pseudoSimTime, to!int(gtl), to!int(ftl));
         foreach (blk; parallel(localFluidBlocks,1)) {
-            blk.exchange_boundary_spatial_deriv_data(0);
-        }
-        foreach (blk; parallel(localFluidBlocks,1)) {
+            // we need to average cell-centered spatial (/viscous) gradients to get approximations of the gradients
+            // at the cell interfaces before the viscous flux calculation.
             if (blk.myConfig.spatial_deriv_locn == SpatialDerivLocn.cells) {
                 foreach(f; blk.faces) {
                     f.average_cell_deriv_values(0);

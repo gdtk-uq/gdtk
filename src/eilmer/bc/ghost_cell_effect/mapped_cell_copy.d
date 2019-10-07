@@ -89,6 +89,10 @@ public:
         MPI_Request[] incoming_convective_gradient_request_list;
         MPI_Status[] incoming_convective_gradient_status_list;
         double[][] outgoing_convective_gradient_buf_list, incoming_convective_gradient_buf_list;
+        int[] outgoing_viscous_gradient_tag_list, incoming_viscous_gradient_tag_list;
+        MPI_Request[] incoming_viscous_gradient_request_list;
+        MPI_Status[] incoming_viscous_gradient_status_list;
+        double[][] outgoing_viscous_gradient_buf_list, incoming_viscous_gradient_buf_list;
     }
     //
     // Parameters for the calculation of the mapped-cell location.
@@ -270,6 +274,7 @@ public:
                 incoming_geometry_tag_list.length = 0;
                 incoming_flowstate_tag_list.length = 0;
                 incoming_convective_gradient_tag_list.length = 0;
+                incoming_viscous_gradient_tag_list.length = 0;
                 foreach (src_blk_id; 0 .. nblks) {
                     size_t nc = src_cell_ids[src_blk_id][blk.id].length;
                     if (nc > 0) {
@@ -279,6 +284,7 @@ public:
                         incoming_geometry_tag_list ~= make_mpi_tag(to!int(src_blk_id), 99, 1);
                         incoming_flowstate_tag_list ~= make_mpi_tag(to!int(src_blk_id), 99, 2);
                         incoming_convective_gradient_tag_list ~= make_mpi_tag(to!int(src_blk_id), 99, 3);
+                        incoming_viscous_gradient_tag_list ~= make_mpi_tag(to!int(src_blk_id), 99, 4);
                     }
                 }
                 n_incoming = incoming_block_list.length;
@@ -291,6 +297,9 @@ public:
                 incoming_convective_gradient_request_list.length = n_incoming;
                 incoming_convective_gradient_status_list.length = n_incoming;
                 incoming_convective_gradient_buf_list.length = n_incoming;
+                incoming_viscous_gradient_request_list.length = n_incoming;
+                incoming_viscous_gradient_status_list.length = n_incoming;
+                incoming_viscous_gradient_buf_list.length = n_incoming;
                 //
                 // Outgoing messages will carry data from source cells in the current block,
                 // to be copied into ghost cells in another block.
@@ -300,6 +309,7 @@ public:
                 outgoing_geometry_tag_list.length = 0;
                 outgoing_flowstate_tag_list.length = 0;
                 outgoing_convective_gradient_tag_list.length = 0;
+                outgoing_viscous_gradient_tag_list.length = 0;
                 foreach (dest_blk_id; 0 .. nblks) {
                     size_t nc = src_cell_ids[blk.id][dest_blk_id].length;
                     if (nc > 0) {
@@ -309,12 +319,14 @@ public:
                         outgoing_geometry_tag_list ~= make_mpi_tag(to!int(blk.id), 99, 1);
                         outgoing_flowstate_tag_list ~= make_mpi_tag(to!int(blk.id), 99, 2);
                         outgoing_convective_gradient_tag_list ~= make_mpi_tag(to!int(blk.id), 99, 3);
+                        outgoing_viscous_gradient_tag_list ~= make_mpi_tag(to!int(blk.id), 99, 4);
                     }
                 }
                 n_outgoing = outgoing_block_list.length;
                 outgoing_geometry_buf_list.length = n_outgoing;
                 outgoing_flowstate_buf_list.length = n_outgoing;
                 outgoing_convective_gradient_buf_list.length = n_outgoing;
+                outgoing_viscous_gradient_buf_list.length = n_outgoing;
                 //
                 
                 //
@@ -1108,6 +1120,175 @@ public:
             }
         }
     } // end exchange_convective_gradient_phase2()
+
+        // not @nogc
+    void exchange_viscous_gradient_phase0(double t, int gtl, int ftl)
+    {
+        version(mpi_parallel) {
+            // Prepare to exchange geometry data for the boundary cells.
+            size_t nspecies = blk.myConfig.n_species;
+            size_t nmodes = blk.myConfig.n_modes;
+            foreach (i; 0 .. n_incoming) {
+                // Exchange cell-centered viscous gradients for the boundary cells.
+                // the size of the buffer should match up with that of lsqinterp.d
+                size_t nitems = 12;
+                version(komega) { nitems += 6; }
+                size_t ne = incoming_ncells_list[i] * (nmodes*3 + nspecies*3 + nitems);
+                if (incoming_viscous_gradient_buf_list[i].length < ne) { incoming_viscous_gradient_buf_list[i].length = ne; }
+                // Post non-blocking receive for flowstate data that we expect to receive later
+                // from the src_blk MPI process.
+                MPI_Irecv(incoming_viscous_gradient_buf_list[i].ptr, to!int(ne), MPI_DOUBLE, incoming_rank_list[i],
+                          incoming_viscous_gradient_tag_list[i], MPI_COMM_WORLD, &incoming_viscous_gradient_request_list[i]);
+            }
+        } else { // not mpi_parallel
+            // For a single process, nothing to be done because
+            // we know that we can just access the data directly
+            // in the final phase.
+        }
+    } // end exchange_viscous_gradient_phase0()
+
+    // not @nogc
+    void exchange_viscous_gradient_phase1(double t, int gtl, int ftl)
+    {
+        version(mpi_parallel) {
+            size_t nspecies = blk.myConfig.n_species;
+            size_t nmodes = blk.myConfig.n_modes;
+            foreach (i; 0 .. n_outgoing) {
+                // Blocking send of this block's flow data
+                // to the corresponding non-blocking receive that was posted
+                // at in src_blk MPI process.
+                size_t nitems = 12;
+                version(komega) { nitems += 6; }
+                size_t ne = outgoing_ncells_list[i] * (nmodes*3 + nspecies*3 + nitems);
+                if (outgoing_viscous_gradient_buf_list[i].length < ne) { outgoing_viscous_gradient_buf_list[i].length = ne; }
+                auto buf = outgoing_viscous_gradient_buf_list[i];
+                size_t ii = 0;
+                foreach (cid; src_cell_ids[blk.id][outgoing_block_list[i]]) {
+                    auto c = blk.cells[cid].grad;
+                    // velocity
+                    buf[ii++] = c.vel[0][0];
+                    buf[ii++] = c.vel[0][1];
+                    buf[ii++] = c.vel[0][2];
+                    buf[ii++] = c.vel[1][0];
+                    buf[ii++] = c.vel[1][1];
+                    buf[ii++] = c.vel[1][2];
+                    buf[ii++] = c.vel[2][0];
+                    buf[ii++] = c.vel[2][1];
+                    buf[ii++] = c.vel[2][2];
+                    // rho, p, T, u
+                    buf[ii++] = c.T[0];
+                    buf[ii++] = c.T[1];
+                    buf[ii++] = c.T[2];
+                    // tke, omega
+                    version(komega) {
+                        buf[ii++] = c.tke[0];
+                        buf[ii++] = c.tke[1];
+                        buf[ii++] = c.tke[2];
+                        buf[ii++] = c.omega[0];
+                        buf[ii++] = c.omega[1];
+                        buf[ii++] = c.omega[2];
+                    }
+                    // multi-species
+                    version(multi_species_gas) {
+                        foreach (j; 0 .. nspecies) {
+                            buf[ii++] = c.massf[j][0];
+                            buf[ii++] = c.massf[j][1];
+                            buf[ii++] = c.massf[j][2];
+                        }
+                    }
+                    // multi-T
+                    version(multi_T_gas) {
+                        foreach (j; 0 .. nmodes) {
+                            buf[ii++] = c.T_modes[j][0];
+                            buf[ii++] = c.T_modes[j][1];
+                            buf[ii++] = c.T_modes[j][2];
+                        }
+                    }
+                }
+                version(mpi_timeouts) {
+                    MPI_Request send_request;
+                    MPI_Isend(buf.ptr, to!int(ne), MPI_DOUBLE, outgoing_rank_list[i],
+                              outgoing_viscous_gradient_tag_list[i], MPI_COMM_WORLD, &send_request);
+                    MPI_Status send_status;
+                    MPI_Wait_a_while(&send_request, &send_status);
+                } else {
+                    MPI_Send(buf.ptr, to!int(ne), MPI_DOUBLE, outgoing_rank_list[i],
+                             outgoing_viscous_gradient_tag_list[i], MPI_COMM_WORLD);
+                }
+            }
+        } else { // not mpi_parallel
+            // For a single process, nothing to be done because
+            // we know that we can just access the data directly
+            // in the final phase.
+        }
+    } // end exchange_viscous_gradient_phase1()
+
+    // not @nogc
+    void exchange_viscous_gradient_phase2(double t, int gtl, int ftl)
+    {
+        version(mpi_parallel) {
+            size_t nspecies = blk.myConfig.n_species;
+            size_t nmodes = blk.myConfig.n_modes;
+            foreach (i; 0 .. n_incoming) {
+                // Wait for non-blocking receive to complete.
+                // Once complete, copy the data back into the local context.
+                version(mpi_timeouts) {
+                    MPI_Wait_a_while(&incoming_viscous_gradient_request_list[i], &incoming_viscous_gradient_status_list[i]);
+                } else {
+                    MPI_Wait(&incoming_viscous_gradient_request_list[i], &incoming_viscous_gradient_status_list[i]);
+                }
+                auto buf = incoming_viscous_gradient_buf_list[i];
+                size_t ii = 0;
+                foreach (gi; ghost_cell_indices[incoming_block_list[i]][blk.id]) {
+                    auto c = ghost_cells[gi].grad;
+                    // velocity
+                    c.vel[0][0] = buf[ii++];
+                    c.vel[0][1] = buf[ii++];
+                    c.vel[0][2] = buf[ii++];
+                    c.vel[1][0] = buf[ii++];
+                    c.vel[1][1] = buf[ii++];
+                    c.vel[1][2] = buf[ii++];
+                    c.vel[2][0] = buf[ii++];
+                    c.vel[2][1] = buf[ii++];
+                    c.vel[2][2] = buf[ii++];
+                    // T
+                    c.T[0] = buf[ii++];
+                    c.T[1] = buf[ii++];
+                    c.T[2] = buf[ii++];
+                    // tke, omega
+                    version(komega) {
+                        c.tke[0] = buf[ii++];
+                        c.tke[1] = buf[ii++];
+                        c.tke[2] = buf[ii++];
+                        c.omega[0] = buf[ii++];
+                        c.omega[1] = buf[ii++];
+                        c.omega[2] = buf[ii++];
+                    }
+                    // multi-species
+                    version(multi_species_gas) {
+                        foreach (j; 0 .. nspecies) {
+                            c.massf[j][0] = buf[ii++];
+                            c.massf[j][1] = buf[ii++];
+                            c.massf[j][2] = buf[ii++];
+                        }
+                    }
+                    // multi-T
+                    version(multi_T_gas) {
+                        foreach (j; 0 .. nmodes) {
+                            c.T_modes[j][0] = buf[ii++];
+                            c.T_modes[j][1] = buf[ii++];
+                            c.T_modes[j][2] = buf[ii++];
+                        }
+                    }
+                }
+            }
+        } else { // not mpi_parallel
+            // For a single process, just access the data directly.
+            foreach (i, mygc; ghost_cells) {
+                mygc.grad.copy_values_from(mapped_cells[i].grad);
+            }
+        }
+    } // end exchange_viscous_gradient_phase2()
 
     override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
     {
