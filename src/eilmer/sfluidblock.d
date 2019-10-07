@@ -40,17 +40,6 @@ import fluidblock;
 import bc;
 import grid_motion;
 
-// Ghost-cell layers surround the active cells of a block.
-// For the high-order reconstruction right to the edge on
-// structured-grids, we will need a minimum number of ghost cells.
-version(nghost3) {
-    // For Lachlan's higher-order work, 2019.
-    enum n_ghost_cell_layers = 3;
-} else {
-    // "Traditional" value (since 1991).
-    enum n_ghost_cell_layers = 2;
-}
-
 // EPSILON parameter for numerical differentiation of flux jacobian
 // Value used based on Vanden and Orkwis (1996), AIAA J. 34:6 pp. 1125-1129
 immutable double EPSILON = 1.0e-8;
@@ -104,18 +93,20 @@ private:
 public:
     this(int blk_id, size_t nicell, size_t njcell, size_t nkcell, string label)
     {
-        super(blk_id, Grid_t.structured_grid, nicell*njcell*nkcell, label);
+        super(blk_id, Grid_t.structured_grid, nicell*njcell*nkcell,
+              GlobalConfig.n_ghost_cell_layers, label);
+        this.n_ghost_cell_layers = GlobalConfig.n_ghost_cell_layers;
         this.nicell = nicell;
         this.njcell = njcell;
         this.nkcell = nkcell;
         // Fill in other data sizes.
-        _nidim = nicell + 2 * n_ghost_cell_layers;
-        _njdim = njcell + 2 * n_ghost_cell_layers;
+        _nidim = nicell + 2 * GlobalConfig.n_ghost_cell_layers;
+        _njdim = njcell + 2 * GlobalConfig.n_ghost_cell_layers;
         // Indices, in each grid direction for the active cells.
         // These limits are inclusive. The mincell and max cell
         // are both within the active set of cells.
-        imin = n_ghost_cell_layers; imax = imin + nicell - 1;
-        jmin = n_ghost_cell_layers; jmax = jmin + njcell - 1;
+        imin = GlobalConfig.n_ghost_cell_layers; imax = imin + nicell - 1;
+        jmin = GlobalConfig.n_ghost_cell_layers; jmax = jmin + njcell - 1;
         if ( GlobalConfig.dimensions == 2 ) {
             // In 2D simulations, the k range is from 0 to 0 for the
             // storage arrays of cells and relevant faces.
@@ -128,11 +119,10 @@ public:
         } else {
             // In 3D simulations the k index is just like the i and j indices.
             _nkdim = nkcell + 2 * n_ghost_cell_layers;
-            kmin = n_ghost_cell_layers; kmax = kmin + nkcell - 1;
+            kmin = GlobalConfig.n_ghost_cell_layers; kmax = kmin + nkcell - 1;
         }
         // Workspace for flux_calc method.
         one_d = new OneDInterpolator(dedicatedConfig[id]);
-
     } // end constructor
 
     this(int blk_id, JSONValue json_data)
@@ -677,16 +667,17 @@ public:
         // linear extrapolation used for the positions and volumes in the next section.
         // [TODO] -- think about this carefully.
         auto option = CopyDataOption.cell_lengths_only;
+        bool nghost3 = (n_ghost_cell_layers == 3);
         for (j = jmin; j <= jmax; ++j) {
             for (k = kmin; k <= kmax; ++k) {
                 i = imin;
                 get_cell(i-1,j,k).copy_values_from(get_cell(i,j,k), option);
                 get_cell(i-2,j,k).copy_values_from(get_cell(i+1,j,k), option);
-                version(nghost3) { get_cell(i-3,j,k).copy_values_from(get_cell(i+2,j,k), option); }
+                if (nghost3) { get_cell(i-3,j,k).copy_values_from(get_cell(i+2,j,k), option); }
                 i = imax;
                 get_cell(i+1,j,k).copy_values_from(get_cell(i,j,k), option);
                 get_cell(i+2,j,k).copy_values_from(get_cell(i-1,j,k), option);
-                version(nghost3) { get_cell(i+3,j,k).copy_values_from(get_cell(i-2,j,k), option); }
+                if (nghost3) { get_cell(i+3,j,k).copy_values_from(get_cell(i-2,j,k), option); }
             }
         }
         for (i = imin; i <= imax; ++i) {
@@ -694,11 +685,11 @@ public:
                 j = jmin;
                 get_cell(i,j-1,k).copy_values_from(get_cell(i,j,k), option);
                 get_cell(i,j-2,k).copy_values_from(get_cell(i,j+1,k), option);
-                version(nghost3) { get_cell(i,j-3,k).copy_values_from(get_cell(i,j+2,k), option); }
+                if (nghost3) { get_cell(i,j-3,k).copy_values_from(get_cell(i,j+2,k), option); }
                 j = jmax;
                 get_cell(i,j+1,k).copy_values_from(get_cell(i,j,k), option);
                 get_cell(i,j+2,k).copy_values_from(get_cell(i,j-1,k), option);
-                version(nghost3) { get_cell(i,j+3,k).copy_values_from(get_cell(i,j-2,k), option); }
+                if (nghost3) { get_cell(i,j+3,k).copy_values_from(get_cell(i,j-2,k), option); }
             }
         }
         if (myConfig.dimensions == 3) {
@@ -707,11 +698,11 @@ public:
                     k = kmin;
                     get_cell(i,j,k-1).copy_values_from(get_cell(i,j,k), option);
                     get_cell(i,j,k-2).copy_values_from(get_cell(i,j,k+1), option);
-                    version(nghost3) { get_cell(i,j,k-3).copy_values_from(get_cell(i,j,k+2), option); }
+                    if (nghost3) { get_cell(i,j,k-3).copy_values_from(get_cell(i,j,k+2), option); }
                     k = kmax;
                     get_cell(i,j,k+1).copy_values_from(get_cell(i,j,k), option);
                     get_cell(i,j,k+2).copy_values_from(get_cell(i,j,k-1), option);
-                    version(nghost3) { get_cell(i,j,k+3).copy_values_from(get_cell(i,j,k-2), option); }
+                    if (nghost3) { get_cell(i,j,k+3).copy_values_from(get_cell(i,j,k-2), option); }
                 }
             }
         } // end if dimensions == 3
@@ -735,7 +726,7 @@ public:
                 ghost_cell = get_cell(i-2,j,k);
                 extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                 ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
-                version(nghost3) {
+                if (nghost3) {
                     cell_2 = cell_1;
                     cell_1 = ghost_cell;
                     ghost_cell = get_cell(i-3,j,k);
@@ -753,7 +744,7 @@ public:
                 ghost_cell = get_cell(i+2,j,k);
                 extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                 ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
-                version(nghost3) {
+                if (nghost3) {
                     cell_2 = cell_1;
                     cell_1 = ghost_cell;
                     ghost_cell = get_cell(i+3,j,k);
@@ -775,7 +766,7 @@ public:
                 ghost_cell = get_cell(i,j-2,k);
                 extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                 ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
-                version(nghost3) {
+                if (nghost3) {
                     cell_2 = cell_1;
                     cell_1 = ghost_cell;
                     ghost_cell = get_cell(i,j-3,k);
@@ -793,7 +784,7 @@ public:
                 ghost_cell = get_cell(i,j+2,k);
                 extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                 ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
-                version(nghost3) {
+                if (nghost3) {
                     cell_2 = cell_1;
                     cell_1 = ghost_cell;
                     ghost_cell = get_cell(i,j+3,k);
@@ -816,7 +807,7 @@ public:
                     ghost_cell = get_cell(i,j,k-2);
                     extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                     ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
-                    version(nghost3) {
+                    if (nghost3) {
                         cell_2 = cell_1;
                         cell_1 = ghost_cell;
                         ghost_cell = get_cell(i,j,k-3);
@@ -834,7 +825,7 @@ public:
                     ghost_cell = get_cell(i,j,k+2);
                     extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                     ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
-                    version(nghost3) {
+                    if (nghost3) {
                         cell_2 = cell_1;
                         cell_1 = ghost_cell;
                         ghost_cell = get_cell(i,j,k+3);

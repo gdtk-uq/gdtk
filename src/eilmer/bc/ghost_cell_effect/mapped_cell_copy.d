@@ -372,6 +372,7 @@ public:
             size_t i, j, k;
             auto blk = cast(SFluidBlock) this.blk;
             assert(blk !is null, "Oops, this should be an SFluidBlock object.");
+            bool nghost3 = (blk.n_ghost_cell_layers == 3);
             final switch (which_boundary) {
             case Face.north:
                 j = blk.jmax;
@@ -379,7 +380,7 @@ public:
                     for (i = blk.imin; i <= blk.imax; ++i) {
                         ghost_cells ~= blk.get_cell(i,j+1,k);
                         ghost_cells ~= blk.get_cell(i,j+2,k);
-                        version(nghost3) { ghost_cells ~= blk.get_cell(i,j+3,k); }
+                        if (nghost3) { ghost_cells ~= blk.get_cell(i,j+3,k); }
                     } // end i loop
                 } // for k
                 break;
@@ -389,7 +390,7 @@ public:
                     for (j = blk.jmin; j <= blk.jmax; ++j) {
                         ghost_cells ~= blk.get_cell(i+1,j,k);
                         ghost_cells ~= blk.get_cell(i+2,j,k);
-                        version(nghost3) { ghost_cells ~= blk.get_cell(i+3,j,k); }
+                        if (nghost3) { ghost_cells ~= blk.get_cell(i+3,j,k); }
                     } // end j loop
                 } // for k
                 break;
@@ -399,7 +400,7 @@ public:
                     for (i = blk.imin; i <= blk.imax; ++i) {
                         ghost_cells ~= blk.get_cell(i,j-1,k);
                         ghost_cells ~= blk.get_cell(i,j-2,k);
-                        version(nghost3) { ghost_cells ~= blk.get_cell(i,j-3,k); }
+                        if (nghost3) { ghost_cells ~= blk.get_cell(i,j-3,k); }
                     } // end i loop
                 } // for k
                 break;
@@ -409,7 +410,7 @@ public:
                     for (j = blk.jmin; j <= blk.jmax; ++j) {
                         ghost_cells ~= blk.get_cell(i-1,j,k);
                         ghost_cells ~= blk.get_cell(i-2,j,k);
-                        version(nghost3) { ghost_cells ~= blk.get_cell(i-3,j,k); }
+                        if (nghost3) { ghost_cells ~= blk.get_cell(i-3,j,k); }
                     } // end j loop
                 } // for k
                 break;
@@ -419,7 +420,7 @@ public:
                     for (j = blk.jmin; j <= blk.jmax; ++j) {
                         ghost_cells ~= blk.get_cell(i,j,k+1);
                         ghost_cells ~= blk.get_cell(i,j,k+2);
-                        version(nghost3) { ghost_cells ~= blk.get_cell(i,j,k+3); }
+                        if (nghost3) { ghost_cells ~= blk.get_cell(i,j,k+3); }
                     } // end j loop
                 } // for i
                 break;
@@ -429,7 +430,7 @@ public:
                     for (j = blk.jmin; j <= blk.jmax; ++j) {
                         ghost_cells ~= blk.get_cell(i,j,k-1);
                         ghost_cells ~= blk.get_cell(i,j,k-2);
-                        version(nghost3) { ghost_cells ~= blk.get_cell(i,j,k-3); }
+                        if (nghost3) { ghost_cells ~= blk.get_cell(i,j,k-3); }
                     } // end j loop
                 } // for i
                 break;

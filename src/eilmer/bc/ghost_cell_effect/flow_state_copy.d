@@ -72,6 +72,7 @@ public:
         FVInterface dest_face;
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
+        bool nghost3 = (blk.n_ghost_cell_layers == 3);
 
         final switch (which_boundary) {
         case Face.north:
@@ -82,7 +83,7 @@ public:
                     dest_cell.fs.copy_values_from(fstate);
                     dest_cell = blk.get_cell(i,j+2,k);
                     dest_cell.fs.copy_values_from(fstate);
-                    version(nghost3) {
+                    if (nghost3) {
                         dest_cell = blk.get_cell(i,j+3,k);
                         dest_cell.fs.copy_values_from(fstate);
                     }
@@ -97,7 +98,7 @@ public:
                     dest_cell.fs.copy_values_from(fstate);
                     dest_cell = blk.get_cell(i+2,j,k);
                     dest_cell.fs.copy_values_from(fstate);
-                    version(nghost3) {
+                    if (nghost3) {
                         dest_cell = blk.get_cell(i+3,j,k);
                         dest_cell.fs.copy_values_from(fstate);
                     }
@@ -112,7 +113,7 @@ public:
                     dest_cell.fs.copy_values_from(fstate);
                     dest_cell = blk.get_cell(i,j-2,k);
                     dest_cell.fs.copy_values_from(fstate);
-                    version(nghost3) {
+                    if (nghost3) {
                         dest_cell = blk.get_cell(i,j-3,k);
                         dest_cell.fs.copy_values_from(fstate);
                     }
@@ -127,7 +128,7 @@ public:
                     dest_cell.fs.copy_values_from(fstate);
                     dest_cell = blk.get_cell(i-2,j,k);
                     dest_cell.fs.copy_values_from(fstate);
-                    version(nghost3) {
+                    if (nghost3) {
                         dest_cell = blk.get_cell(i-3,j,k);
                         dest_cell.fs.copy_values_from(fstate);
                     }
@@ -142,7 +143,7 @@ public:
                     dest_cell.fs.copy_values_from(fstate);
                     dest_cell = blk.get_cell(i,j,k+2);
                     dest_cell.fs.copy_values_from(fstate);
-                    version(nghost3) {
+                    if (nghost3) {
                         dest_cell = blk.get_cell(i,j,k+3);
                         dest_cell.fs.copy_values_from(fstate);
                     }
@@ -157,7 +158,7 @@ public:
                     dest_cell.fs.copy_values_from(fstate);
                     dest_cell = blk.get_cell(i,j,k-2);
                     dest_cell.fs.copy_values_from(fstate);
-                    version(nghost3) {
+                    if (nghost3) {
                         dest_cell = blk.get_cell(i,j,k-3);
                         dest_cell.fs.copy_values_from(fstate);
                     }

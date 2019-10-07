@@ -31,7 +31,7 @@ import flowstate;
 import fvcore;
 import fvcell;
 import fvinterface;
-import sfluidblock: SFluidBlock, n_ghost_cell_layers;
+import sfluidblock: SFluidBlock;
 import globalconfig;
 import globaldata;
 import luaflowstate;
@@ -89,10 +89,11 @@ public:
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         size_t i, j, k;
-        FVCell[n_ghost_cell_layers] ghostCells;
+        FVCell[3] ghostCells;
         FVInterface IFace;
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
+        bool nghost3 = (blk.n_ghost_cell_layers == 3);
 
         final switch (which_boundary) {
         case Face.north:
@@ -103,7 +104,7 @@ public:
                     // ghostCells[1] is one layer out.
                     ghostCells[0] = blk.get_cell(i,j+1,k);
                     ghostCells[1] = blk.get_cell(i,j+2,k);
-                    version(nghost3) { ghostCells[2] = blk.get_cell(i,j+3,k); }
+                    if (nghost3) { ghostCells[2] = blk.get_cell(i,j+3,k); }
                     IFace = ghostCells[0].iface[Face.south];
                     callGhostCellUDF(t, gtl, ftl, i, j, k, IFace, ghostCells);
                 } // end i loop
@@ -115,7 +116,7 @@ public:
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     ghostCells[0] = blk.get_cell(i+1,j,k);
                     ghostCells[1] = blk.get_cell(i+2,j,k);
-                    version(nghost3) { ghostCells[2] = blk.get_cell(i+3,j,k); }
+                    if (nghost3) { ghostCells[2] = blk.get_cell(i+3,j,k); }
                     IFace = ghostCells[0].iface[Face.west];
                     callGhostCellUDF(t, gtl, ftl, i, j, k, IFace, ghostCells);
                 } // end j loop
@@ -127,7 +128,7 @@ public:
                 for (i=blk.imin; i <= blk.imax; ++i) {
                     ghostCells[0] = blk.get_cell(i,j-1,k);
                     ghostCells[1] = blk.get_cell(i,j-2,k);
-                    version(nghost3) { ghostCells[2] = blk.get_cell(i,j-3,k); }
+                    if (nghost3) { ghostCells[2] = blk.get_cell(i,j-3,k); }
                     IFace = ghostCells[0].iface[Face.north];
                     callGhostCellUDF(t, gtl, ftl, i, j, k, IFace, ghostCells);
                 } // end i loop
@@ -139,7 +140,7 @@ public:
                 for (j=blk.jmin; j <= blk.jmax; ++j) {
                     ghostCells[0] = blk.get_cell(i-1,j,k);
                     ghostCells[1] = blk.get_cell(i-2,j,k);
-                    version(nghost3) { ghostCells[2] = blk.get_cell(i-3,j,k); }
+                    if (nghost3) { ghostCells[2] = blk.get_cell(i-3,j,k); }
                     IFace = ghostCells[0].iface[Face.east];
                     callGhostCellUDF(t, gtl, ftl, i, j, k, IFace, ghostCells);
                 } // end j loop
@@ -151,7 +152,7 @@ public:
                 for (j=blk.jmin; j <= blk.jmax; ++j) {
                     ghostCells[0] = blk.get_cell(i,j,k+1);
                     ghostCells[1] = blk.get_cell(i,j,k+2);
-                    version(nghost3) { ghostCells[2] = blk.get_cell(i,j,k+3); }
+                    if (nghost3) { ghostCells[2] = blk.get_cell(i,j,k+3); }
                     IFace = ghostCells[0].iface[Face.bottom];
                     callGhostCellUDF(t, gtl, ftl, i, j, k, IFace, ghostCells);
                 } // end j loop
@@ -163,7 +164,7 @@ public:
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     ghostCells[0] = blk.get_cell(i,j,k-1);
                     ghostCells[1] = blk.get_cell(i,j,k-2);
-                    version(nghost3) { ghostCells[2] = blk.get_cell(i,j,k-3); }
+                    if (nghost3) { ghostCells[2] = blk.get_cell(i,j,k-3); }
                     IFace = ghostCells[0].iface[Face.top];
                     callGhostCellUDF(t, gtl, ftl, i, j, k, IFace, ghostCells);
                 } // end j loop
@@ -232,7 +233,8 @@ private:
     {
         // 1. Set up for calling function
         auto L = blk.bc[which_boundary].myL;
-        // 1a. Place function to call at TOS
+        bool nghost3 = (blk.n_ghost_cell_layers == 3);
+       // 1a. Place function to call at TOS
         lua_getglobal(L, "ghostCells");
         // 1b. Then put arguments (as single table) at TOS
         lua_newtable(L);
@@ -260,7 +262,7 @@ private:
         lua_pushinteger(L, j); lua_setfield(L, -2, "j");
         lua_pushinteger(L, k); lua_setfield(L, -2, "k");
         // Geometric information for the ghost cells (just outside the boundary).
-        foreach (ig; 0 .. ghostCells.length) {
+        foreach (ig; 0 .. blk.n_ghost_cell_layers) {
             lua_pushnumber(L, ghostCells[ig].pos[0].x); lua_setfield(L, -2, format("gc%dx", ig).toStringz);
             lua_pushnumber(L, ghostCells[ig].pos[0].y); lua_setfield(L, -2, format("gc%dy", ig).toStringz);
             lua_pushnumber(L, ghostCells[ig].pos[0].z); lua_setfield(L, -2, format("gc%dz", ig).toStringz);
@@ -268,7 +270,7 @@ private:
 
         // 2. Call LuaFunction and expect two tables of ghost cell flow state
         int number_args = 1;
-        int number_results = to!int(ghostCells.length);
+        int number_results = to!int(blk.n_ghost_cell_layers);
         if ( lua_pcall(L, number_args, number_results, 0) != 0 ) {
             luaL_error(L, "error running user-defined b.c. ghostCell function on boundaryId %d: %s\n",
                        which_boundary, lua_tostring(L, -1));
@@ -279,8 +281,8 @@ private:
         //    -3 :: ghostCell0  -2 :: ghostCell0  -1 :: ghostCell0
         //    -2 :: ghostCell1  -1 :: ghostCell1
         //    -1 :: ghostCell2
-        foreach (ig; 0 .. ghostCells.length) {
-            int stack_location = -(to!int(ghostCells.length-ig));
+        foreach (ig; 0 .. blk.n_ghost_cell_layers) {
+            int stack_location = -(to!int(blk.n_ghost_cell_layers-ig));
             if (lua_isnil(L, stack_location)) { break; }
             if (lua_istable(L, stack_location) && !tableEmpty(L, stack_location)) {
                 putFlowStateIntoGhostCell(L, stack_location, ghostCells[ig]);

@@ -77,6 +77,7 @@ public:
     // for this block in the local process.
     size_t ncells_expected;
     size_t globalCellIdStart = 0; // needed to compute globalCellId
+    size_t n_ghost_cell_layers;
     //
     // Sometimes we need to look up cells and faces that are attached to a vertex.
     size_t[][] cellIndexListPerVertex;
@@ -162,11 +163,12 @@ public:
     Matrix!number V;
     }
 
-    this(int id, Grid_t grid_type, size_t ncells, string label)
+    this(int id, Grid_t grid_type, size_t ncells, size_t n_ghost_cell_layers, string label)
     {
         this.id = id;
         this.grid_type = grid_type;
         this.ncells_expected = ncells;
+        this.n_ghost_cell_layers = n_ghost_cell_layers;
         this.label = label;
         myConfig = dedicatedConfig[id];
         Linf_residuals = new ConservedQuantities(dedicatedConfig[id].n_species,

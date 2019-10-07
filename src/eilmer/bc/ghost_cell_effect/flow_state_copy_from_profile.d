@@ -68,6 +68,7 @@ public:
         FlowState fstate;
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
+        bool nghost3 = (blk.n_ghost_cell_layers == 3);
 
         final switch (which_boundary) {
         case Face.north:
@@ -82,7 +83,7 @@ public:
                     fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
                     dest_cell.fs.copy_values_from(fstate);
                     fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
-                    version(nghost3) {
+                    if (nghost3) {
                         dest_cell = blk.get_cell(i,j+3,k);
                         fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
                         dest_cell.fs.copy_values_from(fstate);
@@ -103,7 +104,7 @@ public:
                     fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
                     dest_cell.fs.copy_values_from(fstate);
                     fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
-                    version(nghost3) {
+                    if (nghost3) {
                         dest_cell = blk.get_cell(i+3,j,k);
                         fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
                         dest_cell.fs.copy_values_from(fstate);
@@ -124,7 +125,7 @@ public:
                     fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
                     dest_cell.fs.copy_values_from(fstate);
                     fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
-                    version(nghost3) {
+                    if (nghost3) {
                         dest_cell = blk.get_cell(i,j-3,k);
                         fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
                         dest_cell.fs.copy_values_from(fstate);
@@ -145,7 +146,7 @@ public:
                     fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
                     dest_cell.fs.copy_values_from(fstate);
                     fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
-                    version(nghost3) {
+                    if (nghost3) {
                         dest_cell = blk.get_cell(i-3,j,k);
                         fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
                         dest_cell.fs.copy_values_from(fstate);
@@ -166,7 +167,7 @@ public:
                     fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
                     dest_cell.fs.copy_values_from(fstate);
                     fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
-                    version(nghost3) {
+                    if (nghost3) {
                         dest_cell = blk.get_cell(i,j,k+3);
                         fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
                         dest_cell.fs.copy_values_from(fstate);
@@ -187,7 +188,7 @@ public:
                     fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
                     dest_cell.fs.copy_values_from(fstate);
                     fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
-                    version(nghost3) {
+                    if (nghost3) {
                         dest_cell = blk.get_cell(i,j,k-3);
                         fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
                         dest_cell.fs.copy_values_from(fstate);

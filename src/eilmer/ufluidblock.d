@@ -51,7 +51,8 @@ public:
     {
         label = getJSONstring(json_data, "label", "");
         ncells = getJSONint(json_data, "ncells", 0);
-        super(id, Grid_t.unstructured_grid, ncells, label);
+        // For an unstructured-grid, n_ghost_cell_layers=1
+        super(id, Grid_t.unstructured_grid, ncells, 1, label);
         nvertices = getJSONint(json_data, "nvertices", 0);
         nfaces = getJSONint(json_data, "nfaces", 0);
         nboundaries = getJSONint(json_data, "nboundaries", 0);
@@ -83,6 +84,7 @@ public:
         lua_pushinteger(myL, Face.west); lua_setglobal(myL, "west");
         lua_pushinteger(myL, Face.top); lua_setglobal(myL, "top");
         lua_pushinteger(myL, Face.bottom); lua_setglobal(myL, "bottom");
+        lua_pushinteger(myL, n_ghost_cell_layers); lua_setglobal(myL, "n_ghost_cell_layers");
     } // end init_lua_globals()
 
     override void init_boundary_conditions(JSONValue json_data)

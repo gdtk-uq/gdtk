@@ -73,6 +73,7 @@ public:
         auto gmodel = blk.myConfig.gmodel;
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
+        bool nghost3 = (blk.n_ghost_cell_layers == 3);
 
         final switch (which_boundary) {
         case Face.north:
@@ -92,7 +93,7 @@ public:
                     dest_cell.fs.gas.T = T_outside;
                     foreach(ref elem; dest_cell.fs.gas.T_modes) { elem = T_outside; } 
                     gmodel.update_thermo_from_pT(dest_cell.fs.gas);
-                    version(nghost3) {
+                    if (nghost3) {
                         dest_cell = blk.get_cell(i,j+3,k);
                         dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
                         dest_cell.fs.gas.p = p_outside;
@@ -120,7 +121,7 @@ public:
                     dest_cell.fs.gas.T = T_outside;
                     foreach(ref elem; dest_cell.fs.gas.T_modes) { elem = T_outside; } 
                     gmodel.update_thermo_from_pT(dest_cell.fs.gas);
-                    version(nghost3) {
+                    if (nghost3) {
                         dest_cell = blk.get_cell(i+3,j,k);
                         dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
                         dest_cell.fs.gas.p = p_outside;
@@ -148,7 +149,7 @@ public:
                     dest_cell.fs.gas.T = T_outside;
                     foreach(ref elem; dest_cell.fs.gas.T_modes) { elem = T_outside; } 
                     gmodel.update_thermo_from_pT(dest_cell.fs.gas);
-                    version(nghost3) {
+                    if (nghost3) {
                         dest_cell = blk.get_cell(i,j-3,k);
                         dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
                         dest_cell.fs.gas.p = p_outside;
@@ -176,7 +177,7 @@ public:
                     dest_cell.fs.gas.T = T_outside;
                     foreach(ref elem; dest_cell.fs.gas.T_modes) { elem = T_outside; } 
                     gmodel.update_thermo_from_pT(dest_cell.fs.gas);
-                    version(nghost3) {
+                    if (nghost3) {
                         dest_cell = blk.get_cell(i-3,j,k);
                         dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
                         dest_cell.fs.gas.p = p_outside;
@@ -204,7 +205,7 @@ public:
                     dest_cell.fs.gas.T = T_outside;
                     foreach(ref elem; dest_cell.fs.gas.T_modes) { elem = T_outside; } 
                     gmodel.update_thermo_from_pT(dest_cell.fs.gas);
-                    version(nghost3) {
+                    if (nghost3) {
                         dest_cell = blk.get_cell(i,j,k+3);
                         dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
                         dest_cell.fs.gas.p = p_outside;
@@ -232,7 +233,7 @@ public:
                     dest_cell.fs.gas.T = T_outside;
                     foreach(ref elem; dest_cell.fs.gas.T_modes) { elem = T_outside; } 
                     gmodel.update_thermo_from_pT(dest_cell.fs.gas);
-                    version(nghost3) {
+                    if (nghost3) {
                         dest_cell = blk.get_cell(i,j,k-3);
                         dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
                         dest_cell.fs.gas.p = p_outside;

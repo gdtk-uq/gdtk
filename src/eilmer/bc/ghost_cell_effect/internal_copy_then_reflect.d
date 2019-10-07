@@ -99,6 +99,7 @@ public:
         auto copy_opt = CopyDataOption.minimal_flow;
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
+        bool nghost3 = (blk.n_ghost_cell_layers == 3);
 
         final switch (which_boundary) {
         case Face.north:
@@ -122,7 +123,7 @@ public:
                     if (blk.myConfig.MHD) {
                         reflect_normal_magnetic_field(dest_cell.fs, IFace);
                     }
-                    version(nghost3) {
+                    if (nghost3) {
                         // ghost cell 3.
                         src_cell = blk.get_cell(i,j-2,k);
                         dest_cell = blk.get_cell(i,j+3,k);
@@ -156,7 +157,7 @@ public:
                     if (blk.myConfig.MHD) {
                         reflect_normal_magnetic_field(dest_cell.fs, IFace);
                     }
-                    version(nghost3) {
+                    if (nghost3) {
                         // ghost cell 3.
                         src_cell = blk.get_cell(i-2,j,k);
                         dest_cell = blk.get_cell(i+3,j,k);
@@ -190,7 +191,7 @@ public:
                     if (blk.myConfig.MHD) {
                         reflect_normal_magnetic_field(dest_cell.fs, IFace);
                     }
-                    version(nghost3) {
+                    if (nghost3) {
                         // ghost cell 3.
                         src_cell = blk.get_cell(i,j+2,k);
                         dest_cell = blk.get_cell(i,j-3,k);
@@ -224,7 +225,7 @@ public:
                     if (blk.myConfig.MHD) {
                         reflect_normal_magnetic_field(dest_cell.fs, IFace);
                     }
-                    version(nghost3) {
+                    if (nghost3) {
                         // ghost cell 3.
                         src_cell = blk.get_cell(i+2,j,k);
                         dest_cell = blk.get_cell(i-3,j,k);
@@ -258,7 +259,7 @@ public:
                     if (blk.myConfig.MHD) {
                         reflect_normal_magnetic_field(dest_cell.fs, IFace);
                     }
-                    version(nghost3) {
+                    if (nghost3) {
                         // ghost cell 3.
                         src_cell = blk.get_cell(i,j,k-2);
                         dest_cell = blk.get_cell(i,j,k+3);
@@ -292,7 +293,7 @@ public:
                     if (blk.myConfig.MHD) {
                         reflect_normal_magnetic_field(dest_cell.fs, IFace);
                     }
-                    version(nghost3) {
+                    if (nghost3) {
                         // ghost cell 3.
                         src_cell = blk.get_cell(i,j,k+2);
                         dest_cell = blk.get_cell(i,j,k-3);

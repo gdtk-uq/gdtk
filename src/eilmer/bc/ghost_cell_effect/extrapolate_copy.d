@@ -92,6 +92,7 @@ public:
         size_t nmodes = blk.myConfig.n_modes;
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
+        bool nghost3 = (blk.n_ghost_cell_layers == 3);
 
         final switch (which_boundary) {
         case Face.north:
@@ -181,7 +182,7 @@ public:
                         }
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
                         dest_cell.fs.k_t = 2.0*cell_1.fs.k_t - cell_2.fs.k_t;
-                        version(nghost3) {
+                        if (nghost3) {
                             // FIX-ME just a fudge for now, PJ 2019-09-28
                             dest_cell = blk.get_cell(i,j+3,k);
                             src_cell = blk.get_cell(i,j+2,k);
@@ -194,7 +195,7 @@ public:
                         dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
                         dest_cell = blk.get_cell(i,j+2,k);
                         dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
-                        version(nghost3) {
+                        if (nghost3) {
                             dest_cell = blk.get_cell(i,j+3,k);
                             dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
                         }
@@ -289,7 +290,7 @@ public:
                         }
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
                         dest_cell.fs.k_t = 2.0*cell_1.fs.k_t - cell_2.fs.k_t;
-                        version(nghost3) {
+                        if (nghost3) {
                             // FIX-ME just a fudge for now, PJ 2019-09-28
                             dest_cell = blk.get_cell(i+3,j,k);
                             src_cell = blk.get_cell(i+2,j,k);
@@ -302,7 +303,7 @@ public:
                         dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
                         dest_cell = blk.get_cell(i+2,j,k);
                         dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
-                        version(nghost3) {
+                        if (nghost3) {
                             dest_cell = blk.get_cell(i+3,j,k);
                             dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
                         }
@@ -397,7 +398,7 @@ public:
                         }
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
                         dest_cell.fs.k_t = 2.0*cell_1.fs.k_t - cell_2.fs.k_t;
-                        version(nghost3) {
+                        if (nghost3) {
                             // FIX-ME just a fudge for now, PJ 2019-09-28
                             dest_cell = blk.get_cell(i,j-3,k);
                             src_cell = blk.get_cell(i,j-2,k);
@@ -409,7 +410,7 @@ public:
                         dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
                         dest_cell = blk.get_cell(i,j-2,k);
                         dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
-                        version(nghost3) {
+                        if (nghost3) {
                             dest_cell = blk.get_cell(i,j-3,k);
                             dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
                         }
@@ -504,7 +505,7 @@ public:
                         }
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
                         dest_cell.fs.k_t = 2.0*cell_1.fs.k_t - cell_2.fs.k_t;
-                        version(nghost3) {
+                        if (nghost3) {
                             // FIX-ME just a fudge for now, PJ 2019-09-28
                             dest_cell = blk.get_cell(i-3,j,k);
                             src_cell = blk.get_cell(i-2,j,k);
@@ -517,7 +518,7 @@ public:
                         dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
                         dest_cell = blk.get_cell(i-2,j,k);
                         dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
-                        version(nghost3) {
+                        if (nghost3) {
                             dest_cell = blk.get_cell(i-3,j,k);
                             dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
                         }
@@ -612,7 +613,7 @@ public:
                         }
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
                         dest_cell.fs.k_t = 2.0*cell_1.fs.k_t - cell_2.fs.k_t;
-                        version(nghost3) {
+                        if (nghost3) {
                             // FIX-ME just a fudge for now, PJ 2019-09-28
                             dest_cell = blk.get_cell(i,j,k+3);
                             src_cell = blk.get_cell(i,j,k+2);
@@ -625,7 +626,7 @@ public:
                         dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
                         dest_cell = blk.get_cell(i,j,k+2);
                         dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
-                        version(nghost3) {
+                        if (nghost3) {
                             dest_cell = blk.get_cell(i,j,k+3);
                             dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
                         }
@@ -720,7 +721,7 @@ public:
                         }
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
                         dest_cell.fs.k_t = 2.0*cell_1.fs.k_t - cell_2.fs.k_t;
-                        version(nghost3) {
+                        if (nghost3) {
                             // FIX-ME just a fudge for now, PJ 2019-09-28
                             dest_cell = blk.get_cell(i,j,k-3);
                             src_cell = blk.get_cell(i,j,k-2);
@@ -732,7 +733,7 @@ public:
                         dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
                         dest_cell = blk.get_cell(i,j,k-2);
                         dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
-                        version(nghost3) {
+                        if (nghost3) {
                             dest_cell = blk.get_cell(i,j,k-3);
                             dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
                         }

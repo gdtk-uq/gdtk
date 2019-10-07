@@ -38,7 +38,7 @@ import json_helper;
 import globaldata;
 import flowstate;
 import fluidblock;
-import sfluidblock: SFluidBlock, n_ghost_cell_layers;
+import sfluidblock: SFluidBlock;
 import ufluidblock: UFluidBlock;
 import ssolidblock;
 import bc;
@@ -469,6 +469,15 @@ final class GlobalConfig {
     shared static string udf_grid_motion_file = "dummy-grid-motion-file.txt";
     static lua_State* master_lua_State;
     shared static size_t n_grid_time_levels = 1;
+
+    // The number of ghost-cell layers is adjustable for structured-grid blocks.
+    // Ghost-cell layers surround the active cells of a block.
+    // For the high-order reconstruction right to the edge on
+    // structured-grids, we will need a minimum number of ghost cells.
+    // 2 is the classic number of layers (since 1991), allowing piece-wise-parabolic reconstruction.
+    // 3 will allow higher-order reconstruction for Lachlan's work.
+    shared static int n_ghost_cell_layers = 2;
+    // The number of ghost-cell layers for unstructured-grid blocks is always assumed to be 1.
 
     // Shock-fitting
     //
@@ -1304,6 +1313,7 @@ void read_config_file()
     mixin(update_bool("report_invalid_cells", "report_invalid_cells"));
     mixin(update_int("max_invalid_cells", "max_invalid_cells"));
     //
+    mixin(update_int("n_ghost_cell_layers", "n_ghost_cell_layers"));
     mixin(update_bool("high_order_flux_calculator", "high_order_flux_calculator"));
     mixin(update_enum("flux_calculator", "flux_calculator", "flux_calculator_from_name"));
     mixin(update_int("interpolation_order", "interpolation_order"));
@@ -1370,6 +1380,7 @@ void read_config_file()
         writeln("  report_invalid_cells: ", GlobalConfig.report_invalid_cells);
         writeln("  max_invalid_cells: ", GlobalConfig.max_invalid_cells);
         //
+        writeln("  n_ghost_cell_layers: ", GlobalConfig.n_ghost_cell_layers);
         writeln("  high_order_flux_calculator: ", GlobalConfig.high_order_flux_calculator);
         writeln("  flux_calculator: ", flux_calculator_name(GlobalConfig.flux_calculator));
         writeln("  interpolation_order: ", GlobalConfig.interpolation_order);
@@ -1942,6 +1953,12 @@ void configCheckPoint2()
             throw new FlowSolverException(msg);
         }
     }
+    if (GlobalConfig.high_order_flux_calculator) {
+        if (GlobalConfig.n_ghost_cell_layers < 3) {
+            writeln("Increasing n_ghost_cell_layers to 3.");
+            GlobalConfig.n_ghost_cell_layers = 3;
+        }
+    }
     return;
 } // end configCheckPoint2()
 
@@ -2006,8 +2023,10 @@ void init_master_lua_State()
     // Set some globally available constants for the Lua state.
     lua_pushnumber(L, GlobalConfig.nFluidBlocks);
     lua_setglobal(L, "nFluidBlocks");
-    lua_pushnumber(L, n_ghost_cell_layers);
-    lua_setglobal(L, "nGhostCellLayers");
+    lua_pushnumber(L, GlobalConfig.n_ghost_cell_layers);
+    lua_setglobal(L, "n_ghost_cell_layers"); // interpreters for blocks use this name
+    lua_pushnumber(L, GlobalConfig.n_ghost_cell_layers);
+    lua_setglobal(L, "nGhostCellLayers"); // keep both names
     // Give the user a table that holds information about
     // all of the blocks in the full simulation.
     // Note that not all of these blocks may be fully present

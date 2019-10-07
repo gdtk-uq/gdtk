@@ -31,6 +31,7 @@ import solidprops;
 
 class SSolidBlock : SolidBlock {
 public:
+    size_t n_ghost_cell_layers;
     size_t nicell;
     size_t njcell;
     size_t nkcell;
@@ -61,6 +62,7 @@ public:
     this(int id, size_t nicell, size_t njcell, size_t nkcell, string label)
     {
         super(id, label);
+        this.n_ghost_cell_layers = GlobalConfig.n_ghost_cell_layers;
         this.nicell = nicell;
         this.njcell = njcell;
         this.nkcell = nkcell;
@@ -80,6 +82,7 @@ public:
 
     override void initLuaGlobals()
     {
+        lua_pushinteger(myL, n_ghost_cell_layers); lua_setglobal(myL, "n_ghost_cell_layers");
         lua_pushinteger(myL, nicell); lua_setglobal(myL, "nicell");
         lua_pushinteger(myL, njcell); lua_setglobal(myL, "njcell");
         lua_pushinteger(myL, nkcell); lua_setglobal(myL, "nkcell");

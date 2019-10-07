@@ -128,6 +128,7 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_bool_field("report_invalid_cells", "report_invalid_cells"));
     mixin(get_int_field("max_invalid_cells", "max_invalid_cells"));
     //
+    mixin(get_int_field("n_ghost_cell_layers","n_ghost_cell_layers"));
     mixin(get_bool_field("high_order_flux_calculator", "high_order_flux_calculator"));
     mixin(get_enum_field("flux_calculator", "flux_calculator", "flux_calculator_from_name"));
     mixin(get_int_field("interpolation_order", "interpolation_order"));
@@ -308,6 +309,7 @@ extern(C) int configGet(lua_State* L)
     case "report_invalid_cells": lua_pushboolean(L, GlobalConfig.report_invalid_cells); break;
     case "max_invalid_cells": lua_pushnumber(L, GlobalConfig.max_invalid_cells); break;
         //
+    case "n_ghost_cell_layers": lua_pushnumber(L, GlobalConfig.n_ghost_cell_layers); break;
     case "high_order_flux_calculator": lua_pushboolean(L, GlobalConfig.high_order_flux_calculator); break;
     case "flux_calculator": lua_pushstring(L, flux_calculator_name(GlobalConfig.flux_calculator).toStringz); break;
     case "interpolation_order": lua_pushnumber(L, GlobalConfig.interpolation_order); break;

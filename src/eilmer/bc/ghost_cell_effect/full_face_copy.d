@@ -143,6 +143,7 @@ public:
         // that occurs for this ghost-cell effect.
         this_blk = cast(SFluidBlock) blk;
         if (!this_blk) { throw new Error("Destination FlowBlock must be a structured-grid block."); }
+        bool nghost3 = (this_blk.n_ghost_cell_layers == 3);
         other_blk = cast(SFluidBlock) neighbourBlock;
         if (!other_blk) { throw new Error("Source FlowBlock must be a structured-grid block."); }
         other_face = neighbourFace;
@@ -166,35 +167,35 @@ public:
                     i_dest = i + this_blk.imin;
                     ghost_cells ~= this_blk.get_cell(i_dest,j_dest+1);
                     ghost_cells ~= this_blk.get_cell(i_dest,j_dest+2);
-                    version(nghost3) { ghost_cells ~= this_blk.get_cell(i_dest,j_dest+3); }
+                    if (nghost3) { ghost_cells ~= this_blk.get_cell(i_dest,j_dest+3); }
                     switch (other_face) {
                     case Face.north:
                         j_src = other_blk.njcell - 1; 
                         i_src = other_blk.nicell - i - 1;
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1);
-                        version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-2); }
+                        if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-2); }
                         break;
                     case Face.east:
                         i_src = other_blk.nicell - 1; 
                         j_src = i;
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src);
-                        version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-2,j_src); }
+                        if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-2,j_src); }
                         break;
                     case Face.south:
                         j_src = 0; 
                         i_src = i;
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1);
-                        version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+2); }
+                        if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+2); }
                         break;
                     case Face.west:
                         i_src = 0; 
                         j_src = other_blk.njcell - i - 1;
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src,k_src);
-                        version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+2,j_src,k_src); }
+                        if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+2,j_src,k_src); }
                         break;
                     default:
                         assert(false, "Incorrect boundary connection, source face.");
@@ -207,35 +208,35 @@ public:
                     j_dest = j + this_blk.jmin;
                     ghost_cells ~= this_blk.get_cell(i_dest+1,j_dest);
                     ghost_cells ~= this_blk.get_cell(i_dest+2,j_dest);
-                    version(nghost3) { ghost_cells ~= this_blk.get_cell(i_dest+3,j_dest); }
+                    if (nghost3) { ghost_cells ~= this_blk.get_cell(i_dest+3,j_dest); }
                     switch (other_face) {
                     case Face.north:
                         j_src = other_blk.njcell - 1; 
                         i_src = j;
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1);
-                        version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-2); }
+                        if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-2); }
                         break;
                     case Face.east:
                         i_src = other_blk.nicell - 1; 
                         j_src = other_blk.njcell - j - 1;
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src);
-                        version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-2,j_src); }
+                        if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-2,j_src); }
                         break;
                     case Face.south:
                         j_src = 0; 
                         i_src = other_blk.nicell - j - 1;
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1);
-                        version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+2); }
+                        if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+2); }
                         break;
                     case Face.west:
                         i_src = 0; 
                         j_src = j;
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src);
-                        version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+2,j_src); }
+                        if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+2,j_src); }
                         break;
                     default:
                         assert(false, "Incorrect boundary connection, source face.");
@@ -248,35 +249,35 @@ public:
                     i_dest = i + this_blk.imin;
                     ghost_cells ~= this_blk.get_cell(i_dest,j_dest-1);
                     ghost_cells ~= this_blk.get_cell(i_dest,j_dest-2);
-                    version(nghost3) { ghost_cells ~= this_blk.get_cell(i_dest,j_dest-3); }
+                    if (nghost3) { ghost_cells ~= this_blk.get_cell(i_dest,j_dest-3); }
                     switch (other_face) {
                     case Face.north:
                         j_src = other_blk.njcell - 1; 
                         i_src = i;
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1);
-                        version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-2); }
+                        if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-2); }
                         break;
                     case Face.east:
                         i_src = other_blk.nicell - 1; 
                         j_src = other_blk.njcell - i - 1;
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src);
-                        version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-2,j_src); }
+                        if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-2,j_src); }
                         break;
                     case Face.south:
                         j_src = 0; 
                         i_src = other_blk.nicell - i - 1;
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1);
-                        version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+2); }
+                        if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+2); }
                         break;
                     case Face.west:
                         i_src = 0; 
                         j_src = i;
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src);
-                        version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+2,j_src); }
+                        if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+2,j_src); }
                         break;
                     default:
                         assert(false, "Incorrect boundary connection, source face.");
@@ -289,35 +290,35 @@ public:
                     j_dest = j + this_blk.jmin;
                     ghost_cells ~= this_blk.get_cell(i_dest-1,j_dest);
                     ghost_cells ~= this_blk.get_cell(i_dest-2,j_dest);
-                    version(nghost3) { ghost_cells ~= this_blk.get_cell(i_dest-3,j_dest); }
+                    if (nghost3) { ghost_cells ~= this_blk.get_cell(i_dest-3,j_dest); }
                     switch (other_face) {
                     case Face.north:
                         j_src = other_blk.njcell - 1; 
                         i_src = other_blk.nicell - j - 1;
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1);
-                        version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-2); }
+                        if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-2); }
                         break;
                     case Face.east:
                         i_src = other_blk.nicell - 1; 
                         j_src = j;
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src);
-                        version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-2,j_src); }
+                        if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-2,j_src); }
                         break;
                     case Face.south:
                         j_src = 0; 
                         i_src = j;
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1);
-                        version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+2); }
+                        if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+2); }
                         break;
                     case Face.west:
                         i_src = 0; 
                         j_src = other_blk.njcell - j - 1;
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src);
-                        version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+2,j_src); }
+                        if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+2,j_src); }
                         break;
                     default:
                         assert(false, "Incorrect boundary connection, source face.");
@@ -339,7 +340,7 @@ public:
                         k_dest = k + this_blk.kmin;
                         ghost_cells ~= this_blk.get_cell(i_dest,j_dest+1,k_dest);
                         ghost_cells ~= this_blk.get_cell(i_dest,j_dest+2,k_dest);
-                        version(nghost3) { ghost_cells ~= this_blk.get_cell(i_dest,j_dest+3,k_dest); }
+                        if (nghost3) { ghost_cells ~= this_blk.get_cell(i_dest,j_dest+3,k_dest); }
                         final switch (other_face) {
                         case Face.north:
                             j_src = other_blk.njcell - 1; 
@@ -351,7 +352,7 @@ public:
                             }
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1,k_src);
-                            version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-2,k_src); }
+                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-2,k_src); }
                             break;
                         case Face.east:
                             i_src = other_blk.nicell - 1; 
@@ -363,7 +364,7 @@ public:
                             }
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src,k_src);
-                            version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-2,j_src,k_src); }
+                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-2,j_src,k_src); }
                             break;
                         case Face.south:
                             j_src = 0; 
@@ -375,7 +376,7 @@ public:
                             }
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1,k_src);
-                            version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+2,k_src); }
+                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+2,k_src); }
                             break;
                         case Face.west:
                             i_src = 0; 
@@ -387,7 +388,7 @@ public:
                             }
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src,k_src);
-                            version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+2,j_src,k_src); }
+                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+2,j_src,k_src); }
                             break;
                         case Face.top:
                             k_src = other_blk.nkcell - 1; 
@@ -399,7 +400,7 @@ public:
                             }
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-1);
-                            version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-2); }
+                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-2); }
                             break;
                         case Face.bottom:
                             k_src = 0; 
@@ -411,7 +412,7 @@ public:
                             }
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+1);
-                            version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+2); }
+                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+2); }
                         } // end switch (other_face)
                     } // k loop
                 } // i loop
@@ -424,7 +425,7 @@ public:
                         k_dest = k + this_blk.kmin;
                         ghost_cells ~= this_blk.get_cell(i_dest+1,j_dest,k_dest);
                         ghost_cells ~= this_blk.get_cell(i_dest+2,j_dest,k_dest);
-                        version(nghost3) { ghost_cells ~= this_blk.get_cell(i_dest+3,j_dest,k_dest); }
+                        if (nghost3) { ghost_cells ~= this_blk.get_cell(i_dest+3,j_dest,k_dest); }
                         final switch (other_face) {
                         case Face.north:
                             j_src = other_blk.njcell - 1; 
@@ -436,7 +437,7 @@ public:
                             }
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1,k_src);
-                            version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-2,k_src); }
+                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-2,k_src); }
                             break;
                         case Face.east:
                             i_src = other_blk.nicell - 1; 
@@ -448,7 +449,7 @@ public:
                             }
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src,k_src);
-                            version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-2,j_src,k_src); }
+                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-2,j_src,k_src); }
                             break;
                         case Face.south:
                             j_src = 0; 
@@ -460,7 +461,7 @@ public:
                             }
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1,k_src);
-                            version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+2,k_src); }
+                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+2,k_src); }
                             break;
                         case Face.west:
                             i_src = 0; 
@@ -472,7 +473,7 @@ public:
                             }
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src,k_src);
-                            version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+2,j_src,k_src); }
+                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+2,j_src,k_src); }
                             break;
                         case Face.top:
                             k_src = other_blk.nkcell - 1; 
@@ -484,7 +485,7 @@ public:
                             }
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-1);
-                            version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-2); }
+                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-2); }
                             break;
                         case Face.bottom:
                             k_src = 0; 
@@ -496,7 +497,7 @@ public:
                             }
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+1);
-                            version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+2); }
+                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+2); }
                         } // end switch (other_face)
                     } // k loop
                 } // j loop
@@ -509,7 +510,7 @@ public:
                         k_dest = k + this_blk.kmin;
                         ghost_cells ~= this_blk.get_cell(i_dest,j_dest-1,k_dest);
                         ghost_cells ~= this_blk.get_cell(i_dest,j_dest-2,k_dest);
-                        version(nghost3) { ghost_cells ~= this_blk.get_cell(i_dest,j_dest-3,k_dest); }
+                        if (nghost3) { ghost_cells ~= this_blk.get_cell(i_dest,j_dest-3,k_dest); }
                         final switch (other_face) {
                         case Face.north:
                             j_src = other_blk.njcell - 1; 
@@ -521,7 +522,7 @@ public:
                             }
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1,k_src);
-                            version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-2,k_src); }
+                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-2,k_src); }
                             break;
                         case Face.east:
                             i_src = other_blk.nicell - 1; 
@@ -533,7 +534,7 @@ public:
                             }
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src,k_src);
-                            version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-2,j_src,k_src); }
+                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-2,j_src,k_src); }
                             break;
                         case Face.south:
                             j_src = 0; 
@@ -545,7 +546,7 @@ public:
                             }
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1,k_src);
-                            version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+2,k_src); }
+                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+2,k_src); }
                             break;
                         case Face.west:
                             i_src = 0; 
@@ -557,7 +558,7 @@ public:
                             }
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src,k_src);
-                            version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+2,j_src,k_src); }
+                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+2,j_src,k_src); }
                             break;
                         case Face.top:
                             k_src = other_blk.nkcell - 1; 
@@ -569,7 +570,7 @@ public:
                             }
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-1);
-                            version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-2); }
+                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-2); }
                             break;
                         case Face.bottom:
                             k_src = 0; 
@@ -581,7 +582,7 @@ public:
                             }
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+1);
-                            version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+2); }
+                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+2); }
                         } // end switch (other_face)
                     } // k loop
                 } // i loop
@@ -594,7 +595,7 @@ public:
                         k_dest = k + this_blk.kmin;
                         ghost_cells ~= this_blk.get_cell(i_dest-1,j_dest,k_dest);
                         ghost_cells ~= this_blk.get_cell(i_dest-2,j_dest,k_dest);
-                        version(nghost3) { ghost_cells ~= this_blk.get_cell(i_dest-3,j_dest,k_dest); }
+                        if (nghost3) { ghost_cells ~= this_blk.get_cell(i_dest-3,j_dest,k_dest); }
                         final switch (other_face) {
                         case Face.north:
                             j_src = other_blk.njcell - 1; 
@@ -606,7 +607,7 @@ public:
                             }
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1,k_src);
-                            version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-2,k_src); }
+                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-2,k_src); }
                             break;
                         case Face.east:
                             i_src = other_blk.nicell - 1; 
@@ -618,7 +619,7 @@ public:
                             }
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src,k_src);
-                            version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-2,j_src,k_src); }
+                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-2,j_src,k_src); }
                             break;
                         case Face.south:
                             j_src = 0; 
@@ -630,7 +631,7 @@ public:
                             }
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1,k_src);
-                            version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+2,k_src); }
+                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+2,k_src); }
                             break;
                         case Face.west:
                             i_src = 0; 
@@ -642,7 +643,7 @@ public:
                             }
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src,k_src);
-                            version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+2,j_src,k_src); }
+                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+2,j_src,k_src); }
                             break;
                         case Face.top:
                             k_src = other_blk.nkcell - 1; 
@@ -654,7 +655,7 @@ public:
                             }
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-1);
-                            version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-2); }
+                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-2); }
                             break;
                         case Face.bottom:
                             k_src = 0; 
@@ -666,7 +667,7 @@ public:
                             }
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+1);
-                            version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+2); }
+                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+2); }
                         } // end switch (other_face)
                     } // k loop
                 } // j loop
@@ -679,7 +680,7 @@ public:
                         i_dest = i + this_blk.imin;
                         ghost_cells ~= this_blk.get_cell(i_dest,j_dest,k_dest+1);
                         ghost_cells ~= this_blk.get_cell(i_dest,j_dest,k_dest+2);
-                        version(nghost3) { ghost_cells ~= this_blk.get_cell(i_dest,j_dest,k_dest+3); }
+                        if (nghost3) { ghost_cells ~= this_blk.get_cell(i_dest,j_dest,k_dest+3); }
                         final switch (other_face) {
                         case Face.north:
                             j_src = other_blk.njcell - 1; 
@@ -691,7 +692,7 @@ public:
                             }
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1,k_src);
-                            version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-2,k_src); }
+                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-2,k_src); }
                             break;
                         case Face.east:
                             i_src = other_blk.nicell - 1; 
@@ -703,7 +704,7 @@ public:
                             }
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src,k_src);
-                            version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-2,j_src,k_src); }
+                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-2,j_src,k_src); }
                             break;
                         case Face.south:
                             j_src = 0; 
@@ -715,7 +716,7 @@ public:
                             }
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1,k_src);
-                            version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+2,k_src); }
+                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+2,k_src); }
                             break;
                         case Face.west:
                             i_src = 0; 
@@ -727,7 +728,7 @@ public:
                             }
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src,k_src);
-                            version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+2,j_src,k_src); }
+                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+2,j_src,k_src); }
                             break;
                         case Face.top:
                             k_src = other_blk.nkcell - 1; 
@@ -739,7 +740,7 @@ public:
                             }
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-1);
-                            version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-2); }
+                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-2); }
                             break;
                         case Face.bottom:
                             k_src = 0; 
@@ -751,7 +752,7 @@ public:
                             }
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+1);
-                            version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+2); }
+                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+2); }
                         } // end switch (other_face)
                     } // i loop
                 } // j loop
@@ -764,7 +765,7 @@ public:
                         i_dest = i + this_blk.imin;
                         ghost_cells ~= this_blk.get_cell(i_dest,j_dest,k_dest-1);
                         ghost_cells ~= this_blk.get_cell(i_dest,j_dest,k_dest-2);
-                        version(nghost3) { ghost_cells ~= this_blk.get_cell(i_dest,j_dest,k_dest-3); }
+                        if (nghost3) { ghost_cells ~= this_blk.get_cell(i_dest,j_dest,k_dest-3); }
                         final switch (other_face) {
                         case Face.north:
                             j_src = other_blk.njcell - 1; 
@@ -776,7 +777,7 @@ public:
                             }
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1,k_src);
-                            version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-2,k_src); }
+                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-2,k_src); }
                             break;
                         case Face.east:
                             i_src = other_blk.nicell - 1; 
@@ -788,7 +789,7 @@ public:
                             }
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src,k_src);
-                            version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-2,j_src,k_src); }
+                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-2,j_src,k_src); }
                             break;
                         case Face.south:
                             j_src = 0; 
@@ -800,7 +801,7 @@ public:
                             }
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1,k_src);
-                            version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+2,k_src); }
+                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+2,k_src); }
                             break;
                         case Face.west:
                             i_src = 0; 
@@ -812,7 +813,7 @@ public:
                             }
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src,k_src);
-                            version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+2,j_src,k_src); }
+                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+2,j_src,k_src); }
                             break;
                         case Face.top:
                             k_src = other_blk.nkcell - 1; 
@@ -824,7 +825,7 @@ public:
                             }
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-1);
-                            version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-2); }
+                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-2); }
                             break;
                         case Face.bottom:
                             k_src = 0; 
@@ -836,7 +837,7 @@ public:
                             }
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+1);
-                            version(nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+2); }
+                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+2); }
                         } // end switch other_face
                     } // i loop
                 } // j loop
