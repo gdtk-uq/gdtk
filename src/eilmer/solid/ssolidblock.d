@@ -16,6 +16,8 @@ import nm.complex;
 import nm.number;
 import std.json;
 import util.lua;
+import nm.rsla;
+import fvcore;
 import json_helper;
 import gzip;
 import geom;
@@ -672,7 +674,10 @@ public:
         for ( size_t i = imin; i <= imax+1; ++i ) {
             for ( size_t j = jmin; j <= jmax+1; ++j ) {
                 SolidFVVertex vtx = getVtx(i, j);
-                gradients_T_div(vtx);
+                if (myConfig.spatial_deriv_calc == SpatialDerivCalc.divergence)
+                    { gradients_T_div(vtx); }
+                else // myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares
+                    { gradients_T_lsq(vtx); }
             } // j loop
         } // i loop
     }
@@ -773,4 +778,132 @@ void gradients_T_div(SolidFVVertex vtx)
 
     vtx.dTdx = gradient_x * areaInv;
     vtx.dTdy = -gradient_y * areaInv;
+}
+
+@nogc
+void gradients_T_lsq(SolidFVVertex vtx)
+{
+    size_t n = vtx.cloud_pos.length;
+    number[12] weights2;
+    size_t loop_init;
+    loop_init = 0; // All points count.
+    //
+    // Calculate weights used in the least-squares gradient calculation.
+    // These are the square of the weights on the original linear constraint eqns.
+    // These weights are calculated with the current interface/vertex
+    // as the reference point (pos).
+    // For the "faces" spatial location we are expecting the primary point
+    // (i.e. the face at which we are calculating the gradients) to be in
+    // the first cloud position. 
+    number x0 = vtx.pos.x; number y0 = vtx.pos.y; number z0 = vtx.pos.z;
+    //if (myConfig.dimensions == 2) {
+    foreach (i; loop_init .. n) {
+        number dx = vtx.cloud_pos[i].x - x0;
+        number dy = vtx.cloud_pos[i].y - y0;
+        weights2[i] = 1.0/(dx*dx+dy*dy);
+    }
+    //} else { //3D
+    //    foreach (i; loop_init .. n) {
+    //        number dx = vtx.cloud_pos[i].x - x0;
+    //        number dy = vtx.cloud_pos[i].y - y0;
+    //        number dz = vtx.cloud_pos[i].z - z0;
+    //        weights2[i] = 1.0/(dx*dx+dy*dy+dz*dz);
+    //    }
+    //}
+    x0 = 0.0; y0 = 0.0; z0 = 0.0;
+    foreach (i; 0 .. n) {
+        x0 += vtx.cloud_pos[i].x; y0 += vtx.cloud_pos[i].y; z0 += vtx.cloud_pos[i].z;
+    }
+    x0 /= n; y0 /= n; z0 /= n; // midpoint
+    
+    number[12] dx, dy, dz;
+    //
+    // Assemble and invert the normal matrix.
+    // We'll reuse the resulting inverse for each flow-field quantity.
+    //if (myConfig.dimensions == 3) {
+    //    number[6][3] xTx; // normal matrix, augmented to give 6 entries per row
+    //    number xx = 0.0; number xy = 0.0; number xz = 0.0;
+    //    number yy = 0.0; number yz = 0.0; number zz = 0.0;
+    //    foreach (i; loop_init .. n) {
+    //        dx[i] = vtx.cloud_pos[i].x - x0;
+    //        dy[i] = vtx.cloud_pos[i].y - y0;
+    //        dz[i] = vtx.cloud_pos[i].z - z0;
+    //        xx += weights2[i]*dx[i]*dx[i];
+    //        xy += weights2[i]*dx[i]*dy[i];
+    //        xz += weights2[i]*dx[i]*dz[i];
+    //        yy += weights2[i]*dy[i]*dy[i];
+    //        yz += weights2[i]*dy[i]*dz[i];
+    //        zz += weights2[i]*dz[i]*dz[i];
+    //    }
+    //    xTx[0][0] = xx; xTx[0][1] = xy; xTx[0][2] = xz;
+    //    xTx[1][0] = xy; xTx[1][1] = yy; xTx[1][2] = yz;
+    //    xTx[2][0] = xz; xTx[2][1] = yz; xTx[2][2] = zz;
+    //    xTx[0][3] = 1.0; xTx[0][4] = 0.0; xTx[0][5] = 0.0;
+    //    xTx[1][3] = 0.0; xTx[1][4] = 1.0; xTx[1][5] = 0.0;
+    //    xTx[2][3] = 0.0; xTx[2][4] = 0.0; xTx[2][5] = 1.0;
+    //    double very_small_value = 1.0e-16*(normInf!(3,3,6,number)(xTx).re)^^3;
+    //    if (0 != computeInverse!(3,3,6,number)(xTx, very_small_value)) {
+    //        throw new FlowSolverException("Failed to invert LSQ normal matrix");
+    //        // Assume that the rows are linearly dependent 
+    //        // because the sample points are coplanar or colinear.
+    //    }
+    //    // Prepare final weights for later use in the reconstruction phase.
+    //    foreach (i; loop_init .. n) {
+    //        ws.wx[i] = xTx[0][3]*dx[i] + xTx[0][4]*dy[i] + xTx[0][5]*dz[i];
+    //        ws.wx[i] *= weights2[i];
+    //        ws.wy[i] = xTx[1][3]*dx[i] + xTx[1][4]*dy[i] + xTx[1][5]*dz[i];
+    //        ws.wy[i] *= weights2[i];
+    //        ws.wz[i] = xTx[2][3]*dx[i] + xTx[2][4]*dy[i] + xTx[2][5]*dz[i];
+    //        ws.wz[i] *= weights2[i];
+    //    }
+    //} else {
+    // dimensions == 2
+    number[4][2] xTx; // normal matrix, augmented to give 4 entries per row
+    number xx = 0.0; number xy = 0.0; number yy = 0.0;
+    foreach (i; loop_init .. n) {
+        dx[i] = vtx.cloud_pos[i].x - x0;
+        dy[i] = vtx.cloud_pos[i].y - y0;
+        xx += weights2[i]*dx[i]*dx[i];
+        xy += weights2[i]*dx[i]*dy[i];
+        yy += weights2[i]*dy[i]*dy[i];
+    }
+    xTx[0][0] = xx; xTx[0][1] = xy;
+    xTx[1][0] = xy; xTx[1][1] = yy;
+    xTx[0][2] = 1.0; xTx[0][3] = 0.0;
+    xTx[1][2] = 0.0; xTx[1][3] = 1.0;
+    double very_small_value = 1.0e-16*(normInf!(2,2,4,number)(xTx).re)^^2;
+    if (0 != computeInverse!(2,2,4,number)(xTx, very_small_value)) {
+        throw new FlowSolverException("Failed to invert LSQ normal matrix");
+        // Assume that the rows are linearly dependent 
+        // because the sample points are colinear.
+    }
+    number[12] wx, wy, wz; 
+    // Prepare final weights for later use in the reconstruction phase.
+    foreach (i; loop_init .. n) {
+        wx[i] = xTx[0][2]*dx[i] + xTx[0][3]*dy[i];
+        wx[i] *= weights2[i];
+        wy[i] = xTx[1][2]*dx[i] + xTx[1][3]*dy[i];
+        wy[i] *= weights2[i];
+        wz[i] = 0.0;
+    }
+    //}
+    
+    //size_t dimensions = myConfig.dimensions;
+    //
+    number T0;
+    number[3] gradT;
+    T0 = 0.0;
+    foreach (i; loop_init .. n) { T0 += *(vtx.cloud_T[i]); }
+    T0 /= n;
+    gradT[0] = 0.0; gradT[1] = 0.0; gradT[2] = 0.0;
+    foreach (i; loop_init .. n) {
+        number dT = *(vtx.cloud_T[i]) - T0;
+        gradT[0] += wx[i] * dT;
+        gradT[1] += wy[i] * dT;
+        //if (dimensions == 3) { gradT[2] += wz[i] * dq; }
+    }
+     
+    vtx.dTdx = gradT[0];
+    vtx.dTdy = gradT[1];
+    
 }
