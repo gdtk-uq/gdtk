@@ -16,7 +16,14 @@ function ghostCells(args)
    fillTable(ghost0, args.gc0x, args.gc0y,t)
    ghost1 = {}
    fillTable(ghost1, args.gc1x, args.gc1y,t)
-   return ghost0, ghost1
+   if not args.gc2x then
+      -- The third ghost cell seems to not exist.
+      return ghost0, ghost1
+   else
+      ghost2 = {}
+      fillTable(ghost2, args.gc2x, args.gc2y,t)
+      return ghost0, ghost1, ghost2
+   end
 end
 
 function interface(args)

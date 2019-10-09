@@ -13,7 +13,7 @@
 # RJG, 06-June-2014
 # Re-worked completely to use sympy
 # PJ, 12-Sep-2019
-# Add case 5, supersonic duct
+# Add case 5 (supersonic duct) and case 6 (pure-1D flow)
 
 from __future__ import print_function
 from sympy import *
@@ -46,13 +46,19 @@ if case == 5:
     v0=0.0; vx=0.0; vy=40.0; vxy=0.0; avx=0.5; avy=2.0; avxy=0.5;
     p0=1.0e5; px=0.2e5; py=0.5e5; pxy=0.0; apx=2.0; apy=2.0; apxy=0.0
 
+if case == 6:
+    # Supersonic flow as for case 1, but with variation only in x-direction.
+    rho0=1.0; rhox=0.15; rhoy=0.0; rhoxy=0.0; arhox=1.0; arhoy=0.0; arhoxy=0.0;
+    u0=800.0; ux=50.0; uy=0.0; uxy=0.0; aux=1.5; auy=0.6; auxy=0.0;
+    v0=0.0; vx=0.0; vy=0.0; vxy=0.0; avx=0.5; avy=2.0/3; avxy=0.0;
+    p0=1.0e5; px=0.2e5; py=0.0; pxy=0.0; apx=2.0; apy=1.0; apxy=0.0
+
 x, y, rho, u, v, p, S = symbols('x y rho u v p S')
 
-if case == 1 or case == 2 or case == 5:
-    # Full scale across domain.
-    S = 1.0
-else:
-    # Reduce scale away from centre of domain.
+# Full scale across domain as default.
+S = 1.0
+if case == 3 or case == 4:
+    # Reduce scale of disturbance away from centre of domain.
     S = exp(-16.0*((x-L/2)*(x-L/2) + (y-L/2)*(y-L/2))/(L*L))
 
 if case == 1 or case == 2 or case == 3 or case == 4:
@@ -69,6 +75,12 @@ elif case == 5:
     u =  u0 + S*ux*sin(aux*pi*x/L) + S*uy*cos(auy*pi*y/L) + S*uxy*cos(auxy*pi*x*y/(L*L))
     v =  S*vy - S*vy*cos(avy*pi*y/L)
     p =  p0 + S*px*cos(apx*pi*x/L) + S*py*cos(apy*pi*y/L) + S*pxy*cos(apxy*pi*x*y/(L*L))
+elif case == 6:
+    # For high-order test, we want flow and variation only in x-direction.
+    rho = rho0 + S*rhox*sin(arhox*pi*x/L)
+    u =  u0 + S*ux*sin(aux*pi*x/L)
+    v =  0.0
+    p =  p0 + S*px*cos(apx*pi*x/L)
 else:
     raise ValueError("Oops, unknown case.")
     

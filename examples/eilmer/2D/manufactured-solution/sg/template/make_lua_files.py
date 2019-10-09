@@ -22,7 +22,7 @@ from analytic_solution import *
 import re
 from sympy.utilities.codegen import codegen
 
-if case == 1 or case == 3 or case == 5:
+if case == 1 or case == 3 or case == 5 or case == 6:
     mu = 0.0
     k = 0.0
 
