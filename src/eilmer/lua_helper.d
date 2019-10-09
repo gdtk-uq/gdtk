@@ -247,6 +247,9 @@ void pushFluidCellToTable(lua_State* L, int tblIdx, ref const(FVCell) cell,
     lua_pushnumber(L, cell.pos[gtl].y); lua_setfield(L, tblIdx, "y");
     lua_pushnumber(L, cell.pos[gtl].z); lua_setfield(L, tblIdx, "z");
     lua_pushnumber(L, cell.volume[gtl]); lua_setfield(L, tblIdx, "vol");
+    lua_pushnumber(L, cell.iLength); lua_setfield(L, tblIdx, "iLength");
+    lua_pushnumber(L, cell.jLength); lua_setfield(L, tblIdx, "jLength");
+    lua_pushnumber(L, cell.kLength); lua_setfield(L, tblIdx, "kLength");
     pushFlowStateToTable(L, tblIdx, cell.fs, gmodel);
 } // end pushFluidCellToTable()
 

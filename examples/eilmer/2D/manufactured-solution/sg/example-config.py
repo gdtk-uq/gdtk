@@ -1,4 +1,4 @@
-case = 5
+case = 6
 ncellsList = [8, 16, 32]
 fluxCalc = 'ausmdv'
 derivCalc = 'divergence'
