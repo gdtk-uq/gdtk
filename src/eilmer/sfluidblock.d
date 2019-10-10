@@ -1917,6 +1917,32 @@ public:
         if (myConfig.verbosity_level > 1) { writeln("write_solution(): Done block ", id); }
     } // end write_solution()
 
+    override void write_residuals(string filename)
+    {
+        auto outfile = new GzipOut(filename);
+        auto writer = appender!string();
+        formattedWrite(writer, "structured_grid_residuals 1.0\n");
+        formattedWrite(writer, "label: %s\n", label);
+        // RJG: Fix me, we'll need to make this variable based on conservation
+        //      equations being solved.
+        //      For now, assume the simplest: single-species ideal gas in two dimensions
+        formattedWrite(writer, "variables: %d\n", 4);
+        string[] varnames = ["density", "x-momentum", "y-momentum", "energy"];
+        foreach (var; varnames) {
+            formattedWrite(writer, " \"%s\"", var);
+        }
+        formattedWrite(writer, "\n");
+        formattedWrite(writer, "dimensions: %d\n", myConfig.dimensions);
+        formattedWrite(writer, "nicell: %d\n", nicell);
+        formattedWrite(writer, "njcell: %d\n", njcell);
+        formattedWrite(writer, "nkcell: %d\n", nkcell);
+        outfile.compress(writer.data);
+        foreach (cell; cells) {
+            outfile.compress(" " ~ cell.write_residuals_to_string() ~ "\n");
+        }
+        outfile.finish();
+    }
+
     @nogc
     override void propagate_inflow_data_west_to_east()
     {

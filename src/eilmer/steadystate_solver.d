@@ -165,5 +165,13 @@ void main(string[] args)
     }
 
     iterate_to_steady_state(snapshotStart, maxCPUs);
+    
+    /* Write residuals to file before exit. */
+    ensure_directory_is_present("residuals");
+    foreach (blk; localFluidBlocks) {
+        auto fileName = format!"residuals/%s.residuals.b%04d.gz"(jobName, blk.id);
+        blk.write_residuals(fileName);
+    }
+
     writeln("Done simulation.");
 }

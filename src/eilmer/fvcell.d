@@ -469,6 +469,21 @@ public:
                                 myConfig.divergence_cleaning, myConfig.radiation);
     } // end write_values_to_raw_binary()
 
+    string write_residuals_to_string() const
+    {
+        auto writer = appender!string();
+        version(complex_numbers) {
+            formattedWrite(writer, "%.18e %.18e %.18e %.18e",
+                           -dUdt[0].mass.re, -dUdt[0].momentum.x.re,
+                           -dUdt[0].momentum.y.re, -dUdt[0].total_energy.re);
+        } else {
+            formattedWrite(writer, "%.18e %.18e %.18e %.18e",
+                           -dUdt[0].mass, -dUdt[0].momentum.x,
+                           -dUdt[0].momentum.y, -dUdt[0].total_energy);
+        }
+        return writer.data;
+    }
+
     @nogc
     void encode_conserved(int gtl, int ftl, double omegaz)
     // gtl = grid time level
