@@ -2004,8 +2004,8 @@ public:
                             !(myConfig.suppress_reconstruction_at_shocks && IFace.fs.S)) {
                             one_d.interp_l3r3(IFace,
                                               cL2, cL1, cL0, cR0, cR1, cR2,
-                                              cL2.iLength, cL1.iLength, cL0.iLength,
-                                              cR0.iLength, cR1.iLength, cR2.iLength,
+                                              cL2.jLength, cL1.jLength, cL0.jLength,
+                                              cR0.jLength, cR1.jLength, cR2.jLength,
                                               Lft, Rght);
                         }
                         IFace.fs.copy_average_values_from(Lft, Rght);
@@ -2037,8 +2037,8 @@ public:
                             !(myConfig.suppress_reconstruction_at_shocks && IFace.fs.S)) {
                             one_d.interp_l3r3(IFace,
                                               cL2, cL1, cL0, cR0, cR1, cR2,
-                                              cL2.iLength, cL1.iLength, cL0.iLength,
-                                              cR0.iLength, cR1.iLength, cR2.iLength,
+                                              cL2.kLength, cL1.kLength, cL0.kLength,
+                                              cR0.kLength, cR1.kLength, cR2.kLength,
                                               Lft, Rght);
                         }
                         IFace.fs.copy_average_values_from(Lft, Rght);
