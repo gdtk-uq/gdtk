@@ -641,8 +641,8 @@ function closeEnough(vA, vB, tolerance)
 end
 
 function connectBlocks(blkA, faceA, blkB, faceB, orientation)
-   print("connectBlocks: blkA=", blkA.id, "faceA=", faceA, 
-	 "blkB=", blkB.id, "faceB=", faceB, "orientation=", orientation)
+   print("connectBlocks: blkA.id=", blkA.id, "faceA=", faceA, 
+	 "blkB.id=", blkB.id, "faceB=", faceB, "orientation=", orientation)
    if blkA.grid:get_type() ~= "structured_grid" or blkB.grid:get_type() ~= "structured_grid" then
       error("connectBlocks() Works only for structured-grid blocks.", 2)
    end
