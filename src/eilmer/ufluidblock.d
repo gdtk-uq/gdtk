@@ -732,6 +732,39 @@ public:
         outfile.finish();
     }
 
+    version(shape_sensitivity) {
+        override void write_adjoint_variables(string filename)
+        {
+            auto outfile = new GzipOut(filename);
+            auto writer = appender!string();
+            formattedWrite(writer, "unstructured_grid_adjoint_variables 1.0\n");
+            formattedWrite(writer, "label: %s\n", label);
+            // RJG: Fix me, we'll need to make this variable based on conservation
+            //      equations being solved.
+            //      For now, assume the simplest: single-species ideal gas in two dimensions
+            formattedWrite(writer, "variables: %d\n", 4);
+            string[] varnames = ["density", "x-momentum", "y-momentum", "total-energy"];
+            foreach (var; varnames) {
+                formattedWrite(writer, " \"%s\"", var);
+            }
+            formattedWrite(writer, "\n");
+            formattedWrite(writer, "dimensions: %d\n", myConfig.dimensions);
+            formattedWrite(writer, "ncells: %d\n", ncells);
+            outfile.compress(writer.data);
+            // RJG: FIX ME
+            //      As per hard-coded assumption made above.
+            int np = 4;
+            foreach (i; 0 .. ncells) {
+                auto s = format!"%.18e %.18e %.18e %.18e\n"(psi[np*i+MASS].re,
+                                                            psi[np*i+X_MOM].re,
+                                                            psi[np*i+Y_MOM].re,
+                                                            psi[np*i+TOT_ENERGY].re);
+                outfile.compress(s);
+            }
+            outfile.finish();
+        }
+    }
+
     @nogc
     override void propagate_inflow_data_west_to_east()
     {

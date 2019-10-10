@@ -219,6 +219,9 @@ public:
     abstract double read_solution(string filename, bool overwrite_geometry_data);
     abstract void write_solution(string filename, double sim_time);
     abstract void write_residuals(string filename);
+    version(shape_sensitivity) {
+        abstract void write_adjoint_variables(string filename);
+    }
     @nogc abstract void propagate_inflow_data_west_to_east();
     @nogc abstract void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0);
     @nogc abstract void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0);

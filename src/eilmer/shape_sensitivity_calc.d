@@ -542,12 +542,14 @@ void main(string[] args) {
         else
             rpcGMRES_solve0(nPrimitive);
         
-        /* Write out adjoint variables for visualisation */ 
-
+        /* Write out adjoint variables for visualisation and to eilmer native format*/ 
+        ensure_directory_is_present("adjoint-solution");
         foreach (myblk; localFluidBlocks) {
             write_adjoint_variables_to_file(myblk, nPrimitive, jobName);
+            auto fileName = format!"adjoint-solution/%s.adjoint_vars.b%04d.gz"(jobName, myblk.id);
+            myblk.write_adjoint_variables(fileName);
         }
-        
+
         /* clear some expensive data structures from memory */
 
         foreach (myblk; parallel(localFluidBlocks,1)) {

@@ -1943,6 +1943,13 @@ public:
         outfile.finish();
     }
 
+    version(shape_sensitivity) {
+        override void write_adjoint_variables(string filename)
+        {
+            throw new FlowSolverException("write_adjoint_variables not implemented for Structured blocks.");
+        }
+    }
+
     @nogc
     override void propagate_inflow_data_west_to_east()
     {
