@@ -2472,7 +2472,7 @@ number objective_function_evaluation(int gtl=0, string bndaryForSurfaceIntergral
                     } else {
                         cell = f.right_cell;
                     }
-                    myblk.locObjFcn += cell.fs.gas.p*f.area[gtl];//*f.n.x;
+                    myblk.locObjFcn += cell.fs.gas.p*f.area[gtl]*f.n.x;
                 }
             }
         }
