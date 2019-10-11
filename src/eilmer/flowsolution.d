@@ -758,6 +758,77 @@ public:
         } // foreach i
     } // end subtract_ref_soln()
 
+    void read_extra_vars_from_file(string filename, string[] extraVars)
+    {
+        string[] tokens;
+        auto byLine = new GzipByLine(filename);
+        auto line = byLine.front; byLine.popFront();
+        string format_version;
+        string dummyName;
+        final switch (gridType) {
+        case Grid_t.structured_grid:
+            formattedRead(line, "%s  %s", &dummyName, &format_version);
+            break;
+        case Grid_t.unstructured_grid:
+            formattedRead(line, "%s %s", &dummyName, &format_version);
+        }
+        if (format_version != "1.0") {
+            string msg = text("BlockFlow.read_extra_vars_from_file(): " ~
+                              "format version found: " ~ format_version);
+            throw new FlowSolverException(msg); 
+        }
+        // Throw away label line.
+        byLine.popFront();
+        // Throw away variables line.
+        byLine.popFront();
+        // Read actual list of variables.
+        line = byLine.front; byLine.popFront();
+        string[] varNames = line.strip().split();
+        if (varNames.length != extraVars.length) {
+            string msg = text("BlockFlow.read_extra_vars_from_file(): " ~
+                              "number of variables in file does not match user-supplied variables list.");
+            throw new FlowSolverException(msg); 
+        }
+        foreach (var; extraVars) {
+            variableIndex[var] = variableNames.length;
+            variableNames ~= var;
+        }
+        line = byLine.front; byLine.popFront();
+        formattedRead(line, "dimensions: %d", &dimensions);
+        final switch (gridType) {
+        case Grid_t.structured_grid:
+            line = byLine.front; byLine.popFront();
+            formattedRead(line, "nicell: %d", &nic);
+            line = byLine.front; byLine.popFront();
+            formattedRead(line, "njcell: %d", &njc);
+            line = byLine.front; byLine.popFront();
+            formattedRead(line, "nkcell: %d", &nkc);
+            ncells = nic*njc*nkc;
+            break;
+        case Grid_t.unstructured_grid:
+            line = byLine.front; byLine.popFront();
+            formattedRead(line, "ncells: %d", &ncells);
+            nic = ncells; njc = 1; nkc = 1;
+        }
+        if (_data.length != ncells) {
+            string msg = text("BlockFlow.read_extra_vars_from_file(): " ~
+                              "number of cells in file does not match number of existing cells in block.");
+            throw new FlowSolverException(msg); 
+        }
+        // Scan the remainder of the file, extracting our data.
+        // Assume it is in standard cell order.
+        foreach (i; 0 .. ncells) {
+            line = byLine.front; byLine.popFront();
+            tokens = line.strip().split();
+            assert(tokens.length == extraVars.length,
+                   "wrong number of items for variable data");
+            foreach (ivar; 0 .. extraVars.length) {
+                _data[i] ~= to!double(tokens[ivar]);
+            }
+        } // foreach i
+        byLine.range.f.close();
+    } // end read_extra_vars_from_file
+
 private:
     double[][] _data;
 } // end class BlockFlow

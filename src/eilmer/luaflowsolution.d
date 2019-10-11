@@ -742,6 +742,51 @@ extern(C) int get_sgrid(lua_State* L)
 
 }
 
+extern(C) int read_extra_vars(lua_State* L)
+{
+    auto fsol = checkFlowSolution(L, 1);
+    if (!lua_istable(L, 2)) {
+        string errMsg = "Error in call to FlowSolution:read_extra_vars.";
+        errMsg ~= " A table is expected as first (and only) argument to the method.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    
+    string bfn;
+    lua_getfield(L, 2, "basefilename");
+    if (lua_isnil(L, -1)) {
+        string errMsg = "Error in call to FlowSolution:read_extra_vars.";
+        errMsg ~= " A field for 'basefilename' should be supplied as a string.";
+        throw new LuaInputException(errMsg);
+    }
+    else {
+        bfn = to!string(luaL_checkstring(L, -1));
+    }
+    lua_pop(L, 1);
+
+    string[] vars;
+    lua_getfield(L, 2, "vars");
+    if (!lua_istable(L, -1)) {
+        string errMsg = "Error in call to FlowSolution:read_extra_vars.";
+        errMsg ~= " A field for 'vars' should be supplied as a table.\n";
+        throw new LuaInputException(errMsg);
+    }
+    int nEntries = to!int(lua_objlen(L, -1));
+    foreach (i; 1 .. nEntries+1) {
+        lua_rawgeti(L, -1, i);
+        vars ~= to!string(luaL_checkstring(L, -1));
+        lua_pop(L, 1);
+    }
+    lua_pop(L, 1);
+
+    foreach (ib, ref blk; fsol.flowBlocks) {
+        string fname = format!"%s.b%04d.gz"(bfn, ib);
+        blk.read_extra_vars_from_file(fname, vars);
+    }
+
+    return 0;
+}
+
+
 void registerFlowSolution(lua_State* L)
 {
     luaL_newmetatable(L, FlowSolutionMT.toStringz);
@@ -799,6 +844,8 @@ void registerFlowSolution(lua_State* L)
     // Alias get_sgrid == sgrid
     lua_pushcfunction(L, &get_sgrid);
     lua_setfield(L, -2, "sgrid");
+    lua_pushcfunction(L, &read_extra_vars);
+    lua_setfield(L, -2, "read_extra_vars");
     // Make class visible
     lua_setglobal(L, FlowSolutionMT.toStringz);
 } // end registerFlowSolution()
