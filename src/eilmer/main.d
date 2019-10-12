@@ -256,6 +256,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
         if (GlobalConfig.is_master_task) {
             writeln("Eilmer 4.0 compressible-flow simulation code.");
             writeln("Revision: PUT_REVISION_STRING_HERE");
+            writeln("Compiler-name: PUT_COMPILER_NAME_HERE");
             //
             write("Build-flavour: ");
             version(flavour_debug) { writeln("debug"); }

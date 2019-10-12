@@ -420,8 +420,9 @@ e4shared: main.d $(EILMER_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 	$(NM_FILES) $(UTIL_FILES) \
 	$(GASDYN_FILES) $(NM_LUA_FILES)
-	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' main.d > \
-		main_with_rev_string.d
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
+		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
+		main.d > main_with_rev_string.d
 	$(DMD) $(DFLAGS) $(OF)e4shared \
 		$(DVERSION)$(TECPLOT_BIN_VERSION_STR) \
 		main_with_rev_string.d \
@@ -439,8 +440,9 @@ e4zshared: main.d $(EILMER_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 	$(NM_FILES) $(UTIL_FILES) \
 	$(GASDYN_FILES) $(NM_LUA_FILES)
-	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' main.d > \
-		main_complex_with_rev_string.d
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
+		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
+		main.d > main_complex_with_rev_string.d
 	$(DMD) $(DFLAGS) $(OF)e4zshared \
 		$(DVERSION)complex_numbers \
 		$(DVERSION)$(TECPLOT_BIN_VERSION_STR) \
@@ -460,8 +462,9 @@ e4mpi: main.d $(EILMER_FILES) \
 	$(NM_FILES) $(UTIL_FILES) \
 	$(GASDYN_FILES) $(NM_LUA_FILES)
 	cd $(OPENMPI_DIR); gen/setup.sh
-	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' main.d > \
-		mpi_main_with_rev_string.d
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
+		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
+		main.d > mpi_main_with_rev_string.d
 	$(DMD) $(DFLAGS) $(OF)e4mpi \
 		$(DVERSION)mpi_parallel \
 		-I$(OPENMPI_DIR) $(MPI_LIB_DIRS_SEARCH) \
@@ -479,8 +482,9 @@ e4sss: steadystate_solver.d steadystate_core.d shape_sensitivity_core.d $(EILMER
 	$(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 	$(NM_FILES) $(UTIL_FILES) $(NM_LUA_FILES)
-	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' steadystate_solver.d > \
-		steadystate_solver_with_rev_string.d
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
+		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
+		steadystate_solver.d > steadystate_solver_with_rev_string.d
 	$(DMD) $(DFLAGS) $(OF)e4sss \
 		$(DVERSION)steady_state \
 		$(DVERSION)shape_sensitivity \
@@ -498,8 +502,9 @@ e4zsss: steadystate_solver.d steadystate_core.d shape_sensitivity_core.d $(EILME
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 	$(NM_FILES) $(UTIL_FILES) \
 	$(GASDYN_FILES) $(NM_LUA_FILES)
-	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' steadystate_solver.d > \
-		steadystate_solver_complex_with_rev_string.d
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
+		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
+		steadystate_solver.d > steadystate_solver_complex_with_rev_string.d
 	$(DMD) $(DFLAGS) $(OF)e4zsss \
 		$(DVERSION)complex_numbers \
 		$(DVERSION)steady_state \
@@ -518,8 +523,9 @@ e4ssc: shape_sensitivity_calc.d shape_sensitivity_core.d steadystate_core.d $(EI
 	$(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 	$(NM_FILES) $(UTIL_FILES) $(NM_LUA_FILES)
-	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' shape_sensitivity_calc.d > \
-		shape_sensitivity_calc_with_rev_string.d
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
+		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
+		shape_sensitivity_calc.d > shape_sensitivity_calc_with_rev_string.d
 	$(DMD) $(DFLAGS) $(OF)e4ssc \
 		$(DVERSION)complex_numbers \
 		$(DVERSION)shape_sensitivity \
@@ -534,8 +540,9 @@ e4ssc: shape_sensitivity_calc.d shape_sensitivity_core.d steadystate_core.d $(EI
 		$(DLINKFLAGS)
 
 e4opt: optdriver.d /
-	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' optdriver.d > \
-		optdriver_with_rev_string.d
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
+		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
+		optdriver.d > optdriver_with_rev_string.d
 	$(DMD)  $(OF)e4opt optdriver_with_rev_string.d
 
 e4loadbalance: loadbalance.d $(EILMER_FILES) \
@@ -543,8 +550,9 @@ e4loadbalance: loadbalance.d $(EILMER_FILES) \
 	$(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 	$(NM_FILES) $(UTIL_FILES) $(NM_LUA_FILES)
-	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' loadbalance.d > \
-		loadbalance_with_rev_string.d
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
+		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
+		loadbalance.d > loadbalance_with_rev_string.d
 	$(DMD) $(DFLAGS) $(OF)e4loadbalance \
 		loadbalance_with_rev_string.d $(EILMER_FILES) \
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
@@ -558,8 +566,9 @@ eilmer-opencl-gpu-chem: main.d opencl_gpu_chem.d $(EILMER_FILES) \
 	$(GAS_FILES) $(LIBLUA) $(GZIP_FILES) $(OPENCL_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 	$(NM_FILES) $(UTIL_FILES) $(NM_LUA_FILES) $(GASDYN_FILES)
-	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' main.d > \
-		main_with_rev_string.d
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
+		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
+		main.d > main_with_rev_string.d
 	$(DMD) $(DFLAGS) $(OF)eilmer-opencl-gpu-chem \
 		$(DVERSION)gpu_chem $(DVERSION)opencl_gpu_chem \
 		main_with_rev_string.d $(EILMER_FILES) opencl_gpu_chem.d \
@@ -574,8 +583,9 @@ eilmer-cuda-gpu-chem: main.d cuda_gpu_chem.d alpha_qss_kernel_cuda_tmplt.cu $(EI
 	$(GAS_FILES) $(LIBLUA) $(GZIP_FILES) $(CUDA_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 	$(NM_FILES) $(UTIL_FILES) $(NM_LUA_FILES) $(GASDYN_FILES)
-	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' main.d > \
-		main_with_rev_string.d
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
+		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
+		main.d > main_with_rev_string.d
 	$(NVCC) --shared -o libcudakernel.so alpha_qss_kernel_cuda_tmplt.cu \
 		--compiler-options '-fPIC'
 	$(DMD) $(DFLAGS) $(OF)eilmer-cuda-gpu-chem \
