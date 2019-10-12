@@ -2351,7 +2351,7 @@ string cell_data_as_string(ref const(Vector3) pos, number volume, ref const(Flow
             }
             if (fs.gas.u_modes.length > 0) { formattedWrite(writer, " %.18e", dt_therm); }
         }
-        formattedWrite(writer, " %.18e", dt_local);
+        if (with_local_timestepping) formattedWrite(writer, " %.18e", dt_local);
     } else {
         // version double_numbers
         formattedWrite(writer, "%.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e",
