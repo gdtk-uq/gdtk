@@ -30,5 +30,10 @@ end
 
 config.max_time = 50 * tau
 config.max_step = 60000
--- config.dt_init = 1.0e-6
 config.dt_plot = tau
+config.apply_limiter = false
+config.extrema_clipping = false
+if true then
+   config.high_order_flux_calculator = true
+   config.cfl_value = 0.25
+end
