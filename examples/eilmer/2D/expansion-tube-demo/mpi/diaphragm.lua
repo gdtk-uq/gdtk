@@ -60,3 +60,7 @@ function ghostCells(args)
 end
 
 
+function interface(args)
+   return sampleFluidCell(blkId, args.i, args.j, args.k)
+end
+
