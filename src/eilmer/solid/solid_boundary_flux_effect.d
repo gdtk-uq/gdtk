@@ -106,10 +106,23 @@ public:
             }
             break;
         case Face.top:
-            throw new Error("[TODO] ZeroFlux bc not implemented for TOP face.");
+            k = blk.kmax + 1;
+            for (i = blk.imin; i <= blk.imax; ++i) {
+                for (j = blk.jmin; j <= blk.jmax; ++j) {
+                    IFace = blk.getIfk(i, j, k);
+                    IFace.flux = 0.0;
+                }
+            }
+            break;
         case Face.bottom:
-            throw new Error("[TODO] ZeroFlux bc not implemented for BOTTOM face.");
-
+            k = blk.kmin;
+            for (i = blk.imin; i <= blk.imax; ++i) {
+                for (j = blk.jmin; j <= blk.jmax; ++j) {
+                    IFace = blk.getIfk(i, j, k);
+                    IFace.flux = 0.0;
+                }
+            }
+            break;
         }
     }
 }
@@ -165,13 +178,26 @@ public:
             }
             break;
         case Face.top:
-            throw new Error("[TODO] ConstantFlux bc not implemented for TOP face.");
+            k = blk.kmax + 1;
+            for (i = blk.imin; i <= blk.imax; ++i) {
+                for (j = blk.jmin; j <= blk.jmax; ++j) {
+                    IFace = blk.getIfk(i, j, k);
+                    IFace.flux = _fluxValue;
+                }
+            }
+            break;
         case Face.bottom:
-            throw new Error("[TODO] ConstantFlux bc not implemented for BOTTOM face.");
-
+            k = blk.kmin;
+            for (i = blk.imin; i <= blk.imax; ++i) {
+                for (j = blk.jmin; j <= blk.jmax; ++j) {
+                    IFace = blk.getIfk(i, j, k);
+                    IFace.flux = _fluxValue;
+                }
+            }
+            break;
         }
     }
-
+    
 private:
     double _fluxValue;
 }
@@ -251,10 +277,23 @@ public:
             }
             break;
         case Face.top:
-            throw new Error("[TODO] UDF flux bc not implemented for TOP face.");
+            k = blk.kmax + 1;
+            for (i = blk.imin; i <= blk.imax; ++i) {
+                for (j = blk.jmin; j <= blk.jmax; ++j) {
+                    IFace = blk.getIfk(i, j, k);
+                    callSolidFluxUDF(t, tLevel, i, j, k, IFace, "top");
+                } // end j loop
+            } // end for i
+            break;
         case Face.bottom:
-            throw new Error("[TODO] UDF flux bc not implemented for BOTTOM face.");
-
+            k = blk.kmin;
+            for (i = blk.imin; i <= blk.imax; ++i) {
+                for (j = blk.jmin; j <= blk.jmax; ++j) {
+                    IFace = blk.getIfk(i, j, k);
+                    callSolidFluxUDF(t, tLevel, i, j, k, IFace, "bottom");
+                } // end j loop
+            } // end for i
+            break;       
         }
     }
 

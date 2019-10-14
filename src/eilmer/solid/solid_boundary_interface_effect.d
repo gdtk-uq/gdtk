@@ -114,14 +114,26 @@ public:
             }
             break;
         case Face.top:
-            throw new Error("[TODO] FixedT bc not implemented for TOP face.");
+            k = blk.kmax + 1;
+            for (i = blk.imin; i <= blk.imax; ++i) {
+                for (j = blk.jmin; j <= blk.jmax; ++j) {
+                    IFace = blk.getIfk(i, j, k);
+                    IFace.T = _Twall;
+                } // end j loop
+            } // end for i
+            break;
         case Face.bottom:
-            throw new Error("[TODO] FixedT bc not implemented for BOTTOM face.");
-
-        }
-
+            k = blk.kmin;
+            for (i = blk.imin; i <= blk.imax; ++i) {
+                for (j = blk.jmin; j <= blk.jmax; ++j) {
+                    IFace = blk.getIfk(i, j, k);
+                    IFace.T = _Twall;
+                } // end j loop
+            } // end for i
+            break;
+        }   
     }
-
+    
 private:
     double _Twall;
 }
@@ -181,12 +193,26 @@ public:
             }
             break;
         case Face.top:
-            throw new Error("[TODO] CopyAdjacentCellT bc not implemented for TOP face.");
+            k = blk.kmax + 1;
+            for (i = blk.imin; i <= blk.imax; ++i) {
+                for (j = blk.jmin; j <= blk.jmax; ++j) {
+                    cell = blk.getCell(i, j, k-1);
+                    IFace = blk.getIfk(i, j, k);
+                    IFace.T = cell.T;
+                } // end j loop
+            } // end for i
+            break;
         case Face.bottom:
-            throw new Error("[TODO] CopyAdjacentCellT bc not implemented for BOTTOM face.");
-
+            k = blk.kmin;
+            for (i = blk.imin; i <= blk.imax; ++i) {
+                for (j = blk.jmin; j <= blk.jmax; ++j) {
+                    cell = blk.getCell(i, j, k);
+                    IFace = blk.getIfk(i, j, k);
+                    IFace.T = cell.T;
+                } // end j loop
+            } // end for i
+            break;
         }
-
     }
 }
 
@@ -264,13 +290,26 @@ public:
             }
             break;
         case Face.top:
-            throw new Error("[TODO] FixedT bc not implemented for TOP face.");
+            k = blk.kmax + 1;
+            for (i = blk.imin; i <= blk.imax; ++i) {
+                for (j = blk.jmin; j <= blk.jmax; ++j) {
+                    IFace = blk.getIfk(i, j, k);
+                    callSolidIfaceUDF(t, tLevel, i, j, k, IFace, "top");
+                } // end j loop
+            } // end for i
+            break;
         case Face.bottom:
-            throw new Error("[TODO] FixedT bc not implemented for BOTTOM face.");
-
+            k = blk.kmin;
+            for (i = blk.imin; i <= blk.imax; ++i) {
+                for (j = blk.jmin; j <= blk.jmax; ++j) {
+                    IFace = blk.getIfk(i, j, k);
+                    callSolidIfaceUDF(t, tLevel, i, j, k, IFace, "bottom");
+                } // end j loop
+            } // end for i
+            break;
         }
     }
-
+    
     void callSolidIfaceUDF(double t, int tLevel, size_t i, size_t j, size_t k,
                            SolidFVInterface IFace, string boundaryName)
     {
@@ -383,8 +422,69 @@ public:
                 throw new Error("SolidBFE_ConnectionBoundary: boundary not available in 2D.");
             }
         }
-        else {
-            throw new Error("SolidBFE_ConnectionBoundary not implemented for 3D.");
+        else { // 3D
+            switch (whichBoundary) {
+            case Face.north:
+                throw new Error("SolidBFE_ConnectionBoundary not implemented for NORTH faces.");
+            case Face.east:
+                switch (neighbourFace) {
+                case Face.north:
+                    throw new Error("SolidBFE_ConnectionBoundary not implemented for EAST-NORTH connections.");
+                case Face.east:
+                    throw new Error("SolidBFE_ConnectionBoundary not implemented for EAST-EAST connections.");
+                case Face.south:
+                    throw new Error("SolidBFE_ConnectionBoundary not implemented for EAST-SOUTH connections.");
+                case Face.top:
+                    throw new Error("SolidBFE_ConnectionBoundary not implemented for EAST-SOUTH connections.");
+                case Face.bottom:
+                    throw new Error("SolidBFE_ConnectionBoundary not implemented for EAST-SOUTH connections.");
+                case Face.west:
+                    for (k = blk.kmin; k <= blk.kmax; ++k) {
+                        for (j = blk.jmin; j <= blk.jmax; ++j) {
+                            Lft = blk.getCell(blk.imax, j, k);
+                            Rght = neighbourBlk.getCell(neighbourBlk.imin, j, k);
+                            IFace = blk.getIfi(blk.imax+1, j, k);
+                            computeBoundaryFlux(Lft, Rght, IFace,
+                                                Lft.sp.k, Rght.sp.k);
+                        }
+                    }
+                    break;
+                default:
+                    throw new Error("SolidBFE_ConnectionBoundary: connection type not available in 2D.");
+                }
+                break;
+            case Face.south:
+                throw new Error("SolidBFE_ConnectionBoundary not implemented for SOUTH faces.");        
+            case Face.west:
+                switch (neighbourFace) {
+                case Face.north:
+                    throw new Error("SolidBFE_ConnectionBoundary not implemented for WEST-NORTH connections.");
+                case Face.east:
+                    for (k = blk.kmin; k <= blk.kmax; ++k) {
+                        for (j = blk.jmin; j <= blk.jmax; ++j) {
+                            Lft = neighbourBlk.getCell(neighbourBlk.imax, j, k);
+                            Rght = blk.getCell(blk.imin, j, k);
+                            IFace = blk.getIfi(blk.imin, j, k);
+                            computeBoundaryFlux(Lft, Rght, IFace,
+                                                Lft.sp.k, Rght.sp.k);
+                        }
+                    }
+                    break;
+                case Face.south:
+                    throw new Error("SolidBFE_ConnectionBoundary not implemented for WEST-SOUTH connections.");
+                case Face.west:
+                    throw new Error("SolidBFE_ConnectionBoundary not implemented for WEST-WEST connections.");
+                case Face.top:
+                    throw new Error("SolidBFE_ConnectionBoundary not implemented for EAST-SOUTH connections.");
+                case Face.bottom:
+                    throw new Error("SolidBFE_ConnectionBoundary not implemented for EAST-SOUTH connections.");
+                default:
+                    throw new Error("SolidBFE_ConnectionBoundary: boundary connection not available in 2D.");
+                }
+                break;
+            default:
+                throw new Error("SolidBFE_ConnectionBoundary: boundary not available in 3D.");
+            }
         }
     }
 

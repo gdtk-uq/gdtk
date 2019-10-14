@@ -27,21 +27,24 @@ import solidfvinterface;
 void computeFluxesAndTemperatures(int ftl, FVCell[] gasCells, FVInterface[] gasIFaces,
                                   SolidFVCell[] solidCells, SolidFVInterface[] solidIFaces)
 {
-    number dxG, dyG, dnG, dxS, dyS, dnS;
-    number kG_dnG, kS_dnS, cosA, cosB;
+    number dxG, dyG, dzG, dnG, dxS, dyS, dzS, dnS;
+    number kG_dnG, kS_dnS, cosA, cosB, cosC;
     number T, q;
 
     foreach ( i; 0 .. gasCells.length ) {
         cosA = gasIFaces[i].n.x;
         cosB = gasIFaces[i].n.y;
-
+        cosC = gasIFaces[i].n.z;
+        
         dxG = gasIFaces[i].pos.x - gasCells[i].pos[0].x;
         dyG = gasIFaces[i].pos.y - gasCells[i].pos[0].y;
-        dnG = fabs(cosA*dxG + cosB*dyG);
+        dzG = gasIFaces[i].pos.z - gasCells[i].pos[0].z;
+        dnG = fabs(cosA*dxG + cosB*dyG + cosC*dzG);
 
         dxS = solidIFaces[i].pos.x - solidCells[i].pos.x;
         dyS = solidIFaces[i].pos.y - solidCells[i].pos.y;
-        dnS = fabs(cosA*dxS + cosB*dyS);
+        dzS = solidIFaces[i].pos.z - solidCells[i].pos.z;
+        dnS = fabs(cosA*dxS + cosB*dyS + cosC*dzS);
 
         kG_dnG = gasCells[i].fs.gas.k / dnG;
         kS_dnS = solidCells[i].sp.k / dnS;

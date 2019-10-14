@@ -425,6 +425,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
         mySolidBlk.readSolution(make_file_name!"solid"(job_name, mySolidBlk.id, tindx, "gz"));
         mySolidBlk.computePrimaryCellGeometricData();
         mySolidBlk.assignVtxLocationsForDerivCalc();
+        mySolidBlk.setupSpatialDerivativeCalc();
     }
     if (solidBlocks.length > 0) {
         initPropertiesAtSolidInterfaces(solidBlocks);

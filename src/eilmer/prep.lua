@@ -1043,7 +1043,7 @@ function SolidBlock:new(o)
    o.nic = o.grid:get_niv() - 1
    o.njc = o.grid:get_njv() - 1
    if config.dimensions == 3 then
-      o.nkc = o.grid.get_nkv() - 1
+      o.nkc = o.grid:get_nkv() - 1
    else
       o.nkc = 1
    end

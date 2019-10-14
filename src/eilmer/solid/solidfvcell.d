@@ -99,7 +99,7 @@ public:
         SolidFVInterface IFs = iface[Face.south];
         SolidFVInterface IFw = iface[Face.west];
         SolidFVInterface IFt, IFb;
-        if (dimensions == 3) {
+         if (dimensions == 3) {
             IFt = iface[Face.top];
             IFb = iface[Face.bottom];
         }
@@ -110,6 +110,9 @@ public:
         // Sum up fluxes (of form q.n)
         integral = -IFe.flux * IFe.area - IFn.flux * IFn.area
             + IFw.flux * IFw.area + IFs.flux * IFs.area;
+        if (dimensions == 3) {
+            integral += (-IFt.flux * IFt.area + IFb.flux * IFb.area);
+        }
         dedt[ftl] = volInv * integral + Q;
     }
     void stage1Update(double dt)
