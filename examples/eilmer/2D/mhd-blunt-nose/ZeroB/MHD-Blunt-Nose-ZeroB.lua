@@ -16,29 +16,31 @@ P0 = 1.
 T0 = 220.
 
 function Static(x, y, z)
-	 --This will describe the magnetic field created by a 2D magnetic dipole, modelled by superimposing the magnetic field of 2 infinite length current carrying wires. Returns a flowstate object.
-	 --Set static properties
-	 P0 = 5.
-	 T0 = 220.
+   -- This will describe the magnetic field created by a 2D magnetic dipole,
+   -- modelled by superimposing the magnetic field of 2 infinite length
+   -- current carrying wires. Returns a flowstate object.
+   --Set static properties
+   P0 = 5.
+   T0 = 220.
 
-	 --Location of wires
-	 wire1x = 0.
-	 wire1y = 1e-6
-	 wire2x = 0.
-	 wire2y = -1e-6
+   --Location of wires
+   wire1x = 0.
+   wire1y = 1e-6
+   wire2x = 0.
+   wire2y = -1e-6
 
-	 --Current in wires (scale until resultant magnetic field is at desired magnitude
-	 I = 0.
+   --Current in wires (scale until resultant magnetic field is at desired magnitude
+   I = 0.
 
-	 --Magnetic Field
-	 r1 = ((x - wire1x)^2 + (y - wire1y)^2)^0.5
-	 r2 = ((x - wire2x)^2 + (y - wire2y)^2)^0.5
-	 B01 = I / (2. * math.pi * r1)
-	 B02 = -I / (2. * math.pi * r2)
+   --Magnetic Field
+   r1 = ((x - wire1x)^2 + (y - wire1y)^2)^0.5
+   r2 = ((x - wire2x)^2 + (y - wire2y)^2)^0.5
+   B01 = I / (2. * math.pi * r1)
+   B02 = -I / (2. * math.pi * r2)
 
-	 B0y = (x - wire1x) / r1 * B01 + (x - wire2x) / r2 * B02
-	 B0x = -(y - wire1y) * B01 / r1 - (y - wire2y) / r2 * B02
-	 return FlowState:new{p = P0, T = T0, Bx = B0x, By = B0y}
+   B0y = (x - wire1x) / r1 * B01 + (x - wire2x) / r2 * B02
+   B0x = -(y - wire1y) * B01 / r1 - (y - wire2y) / r2 * B02
+   return FlowState:new{p=P0, T=T0, Bx=B0x, By=B0y}
 end
 
 --Create the inflow state
@@ -46,7 +48,7 @@ velin = 6283.
 Tin = 438.
 Pin = 53.
 
-Inflow = FlowState:new{p = Pin, T = Tin, velx = velin}
+Inflow = FlowState:new{p=Pin, T=Tin, velx=velin}
 
 --Create simulation domain- currently 2D case
 --Radius of blunt nose
@@ -85,19 +87,22 @@ inversecluster = RobertsFunction:new{end0=true, end1=false, beta=1.01}
 --Create patches
 nx = 100
 ny = 100
-grid1 = StructuredGrid:new{psurface = makePatch{north=eb, east=ab, south=da, west=de}, cfList = {north=cluster, south=cluster}, niv=nx + 1, njv=ny + 1}
-grid2 = StructuredGrid:new{psurface = makePatch{north=be, east=fe, south=cf, west=cb}, cfList = {north=inversecluster, south=inversecluster},niv= nx + 1, njv=ny + 1}
+grid1 = StructuredGrid:new{psurface=makePatch{north=eb,east=ab,south=da,west=de},
+                           cfList={north=cluster,south=cluster}, niv=nx+1, njv=ny+1}
+grid2 = StructuredGrid:new{psurface=makePatch{north=be,east=fe,south=cf,west=cb},
+                           cfList={north=inversecluster,south=inversecluster},
+                           niv= nx+1, njv=ny+1}
 
 --Create blocks
-blk_1 = FluidBlock:new{grid = grid1, initialState = Static}
-blk_2 = FluidBlock:new{grid = grid2, initialState = Static}
+blk_1 = FluidBlock:new{grid=grid1, initialState=Static}
+blk_2 = FluidBlock:new{grid=grid2, initialState=Static}
 
 --Set boundary conditions
 identifyBlockConnections()
 blk_1.bcList[east] = WallBC_WithSlip:new{}
-blk_1.bcList[west] = InFlowBC_Supersonic:new{flowState = Inflow}
+blk_1.bcList[west] = InFlowBC_Supersonic:new{flowState=Inflow}
 blk_2.bcList[west] = WallBC_WithSlip:new{}
-blk_2.bcList[east] = OutFlowBC_Simple:new{}
+blk_2.bcList[east] = OutFlowBC_SimpleExtrapolate:new{}
 
 --set global time-stepping data
 config.max_step = 1e7
@@ -105,3 +110,4 @@ config.dt_init = 1.0e-8
 config.dt_max = 1.0e-5
 config.max_time = 2.0e-4
 config.dt_plot = 0.05 * config.max_time
+config.stringent_cfl = true
