@@ -16,7 +16,8 @@ end
 print("L=", L)
 patch = CoonsPatch:new{p00={x=0,y=0}, p10={x=L,y=0},
                        p11={x=L,y=L}, p01={x=0,y=L}}
-ncells = 80
+ncells = math.floor(80*2)
+print("ncells=", ncells)
 grid0 = StructuredGrid:new{psurface=patch, niv=ncells+1, njv=ncells+1}
 -- Flow domain consists of a square grid of blocks and wraps around at
 -- the edges of the box so that the flow is effectively periodic in x and y.
@@ -33,7 +34,7 @@ config.max_step = 60000
 config.dt_plot = tau
 config.apply_limiter = false
 config.extrema_clipping = false
-if true then
+if false then
    config.high_order_flux_calculator = true
    config.cfl_value = 0.25
 end

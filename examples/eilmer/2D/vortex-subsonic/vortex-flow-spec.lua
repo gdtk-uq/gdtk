@@ -38,6 +38,9 @@ print('a0=', a0, 'eps=', eps, 'v(r=1)=', v_at1, 'tau=', tau)
 -- Bulk advection velocity
 velx_inf = a0; vely_inf = a0
 
+-- When setting the initial flow state and filling ghost cells,
+-- we need a function that returns the needed data in a table
+-- with specific keys.
 function fillTable(tbl, x, y)
    local xbar = x - x_centre
    local ybar = y - y_centre
@@ -57,4 +60,14 @@ function fillTable(tbl, x, y)
    return tbl
 end
 
-
+-- When subtracting the reference solution, we need a table of values
+-- where the entries have keys that match the names of variables in
+-- the flow solution file.
+function refSoln(t, x, y, z)
+   tbl = {}
+   fillTable(tbl, x, y)
+   tbl.rho = tbl.p/(Rgas*tbl.T)
+   tbl['vel.x'] = tbl.velx
+   tbl['vel.y'] = tbl.vely
+   return tbl
+end
