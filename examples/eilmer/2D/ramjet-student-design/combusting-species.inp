@@ -1,2 +1,3 @@
-model = 'thermally perfect gas'
+model = 'ThermallyPerfectGas'
 species = {'O', 'O2', 'N2', 'H', 'H2', 'H2O', 'HO2', 'OH', 'H2O2'}
+options = {transport_database='prefer-chemkin', database='prefer-grimech'}
