@@ -852,8 +852,10 @@ public:
     {
         bool[size_t] connectedCells;
         foreach (iFace; cells[i].face_id_list) {
-            connectedCells[faces[iFace].left_cell.id] = true;
-            connectedCells[faces[iFace].right_cell.id] = true;
+            if (faces[iFace].left_cell) 
+                connectedCells[faces[iFace].left_cell.id] = true;
+            if (faces[iFace].right_cell) 
+                connectedCells[faces[iFace].right_cell.id] = true;
         }
         return connectedCells.keys.dup;
     }
