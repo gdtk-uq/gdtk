@@ -40,7 +40,8 @@ void fill_interior(ref Vector3[] vertices,
         size_t[] face_id_list = [faceIndices[makeFaceTag([id_j, id_jp1])],
                                  faceIndices[makeFaceTag([id_jp1, id_mid])],
                                  faceIndices[makeFaceTag([id_mid, id_j])]];
-        cells ~= new USGCell(USGCell_type.triangle, vtx_id_list, face_id_list, [1,1,1]);
+        size_t id = cells.length;
+        cells ~= new USGCell(USGCell_type.triangle, id, vtx_id_list, face_id_list, [1,1,1]);
     }
     
     writeln("[TODO] Write the actual paver code");

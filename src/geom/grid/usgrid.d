@@ -192,30 +192,34 @@ public:
 class USGCell {
 public:
     USGCell_type cell_type;
+    size_t id;
     size_t[] vtx_id_list;
     size_t[] face_id_list;
     int[] outsign_list; // +1 face normal is outward; -1 face normal is inward
 
-    this(const USGCell_type cell_type, const size_t[] vtx_id_list,
+    this(const USGCell_type cell_type, size_t id, const size_t[] vtx_id_list,
          const size_t[] face_id_list, const int[] outsign_list)
     {
+        this.id = id;
         this.cell_type = cell_type;
         this.vtx_id_list = vtx_id_list.dup();
         this.face_id_list = face_id_list.dup();
         this.outsign_list = outsign_list.dup();
     }
 
-    this(const USGCell other)
+    this(const USGCell other, size_t id)
     {
+        id = other.id;
         cell_type = other.cell_type;
         vtx_id_list = other.vtx_id_list.dup();
         face_id_list = other.face_id_list.dup();
         outsign_list = other.outsign_list.dup();
     }
 
-    this(string str)
+    this(string str, size_t id)
     // Defines the format for input from a text stream.
     {
+        this.id = id;
         auto tokens = str.strip().split();
         int itok = 0;
         cell_type = cell_type_from_name(tokens[itok++]);
@@ -239,7 +243,7 @@ public:
         }
     } // end constructor from string
 
-    this(ref File fin)
+    this(ref File fin, size_t id)
     // constructor from raw binary file content
     {
         int[1] buf1;
@@ -398,7 +402,7 @@ public:
             faceIndices[makeFaceTag(f.vtx_id_list)] = faces.length;
             faces ~= new USGFace(f);
         }
-        foreach(c; other.cells) { cells ~= new USGCell(c); }
+        foreach(id, c; other.cells) { cells ~= new USGCell(c, id); }
         foreach(b; other.boundaries) { boundaries ~= new BoundaryFaceSet(b); }
         niv = vertices.length; njv = 1; nkv = 1;
     } // end constructor from another
@@ -484,13 +488,13 @@ public:
             faceIndices[makeFaceTag(vtx_id_list)] = faces.length;
             this.faces ~= new USGFace(vtx_id_list);
         }
-        foreach(c; CELL_LIST){
+        foreach(id, c; CELL_LIST){
             c.auto_cell_type();
             if(c.cell_type != "quad"){
                 throw new Error(text("paver generated a non-quad cell"));
             } else {
                 USGCell_type cell_type = cell_type_from_name(c.cell_type);
-                this.cells ~= new USGCell(cell_type, c.point_IDs, c.face_IDs, c.outsigns);
+                this.cells ~= new USGCell(cell_type, id, c.point_IDs, c.face_IDs, c.outsigns);
             }
         }
         niv = vertices.length; njv = 1; nkv = 1;
@@ -582,7 +586,8 @@ public:
                                        jface_id[i][j], // south
                                        iface_id[i][j]]; // west
                     auto outsigns = [+1, +1, -1, -1];
-                    auto my_cell = new USGCell(USGCell_type.quad, cell_vertices,
+                    size_t id = cells.length;
+                    auto my_cell = new USGCell(USGCell_type.quad, id, cell_vertices,
                                                cell_faces, outsigns);
                     cells ~= my_cell;
                     // Now that we have the new cell, we can make the connections
@@ -724,7 +729,8 @@ public:
                                            kface_id[i][j][k+1], // top
                                            kface_id[i][j][k]]; // bottom
                         auto outsigns = [-1, +1, +1, -1, +1, -1];
-                        auto my_cell = new USGCell(USGCell_type.hexahedron, cell_vertices,
+                        size_t id = cells.length;
+                        auto my_cell = new USGCell(USGCell_type.hexahedron, id, cell_vertices,
                                                    cell_faces, outsigns);
                         cells ~= my_cell;
                         // Now that we have the new cell, we can make the connections
@@ -842,6 +848,16 @@ public:
         foreach(i; 0 .. nvtx) { vtx_list_copy[i] = cells[indx].vtx_id_list[i]; }
     }
 
+    size_t[] get_connected_cell_ids_for_cell(size_t i)
+    {
+        bool[size_t] connectedCells;
+        foreach (iFace; cells[i].face_id_list) {
+            connectedCells[faces[iFace].left_cell.id] = true;
+            connectedCells[faces[iFace].right_cell.id] = true;
+        }
+        return connectedCells.keys.dup;
+    }
+
     override Grid get_boundary_grid(size_t boundary_indx)
     // Returns the grid defining a particular boundary of the original grid.
     // For an 3D block, a 2D surface grid will be returned, with index directions
@@ -883,7 +899,8 @@ public:
             }
             size_t[] newCell_face_id_list; // empty
             int[] newCell_outsign_list; // empty
-            new_grid.cells ~= new USGCell(new_cell_type, faces[fid].vtx_id_list,
+            size_t id = new_grid.cells.length;
+            new_grid.cells ~= new USGCell(new_cell_type, id, faces[fid].vtx_id_list,
                                           newCell_face_id_list, newCell_outsign_list);
         }
         return new_grid;
@@ -1004,17 +1021,18 @@ public:
         cells[id].face_id_list[2] = if2_id;
         cells[id].outsign_list[0] = -1;
 
-        cells ~= new USGCell(USGCell_type.triangle,
+        auto nc1_id = cells.length;
+        cells ~= new USGCell(USGCell_type.triangle, nc1_id,
                              [vtxList[0], ctrId, vtxList[2]],
                              [if0_id, if2_id, cells[id].face_id_list[2]],
                              [1, -1, 1]);
-        auto nc1_id = cells.length-1;
 
-        cells ~= new USGCell(USGCell_type.triangle,
+        auto nc2_id = cells.length;
+        cells ~= new USGCell(USGCell_type.triangle, nc2_id,
                              [vtxList[0], vtxList[1], ctrId],
                              [cells[id].face_id_list[0], if1_id, if0_id],
                              [1, 1, -1]);
-        auto nc2_id = cells.length-1;
+
 
         ncells = cells.length;
 
@@ -1078,7 +1096,7 @@ public:
         cells.length = 0;
         foreach (i; 0 .. ncells) {
             line = byLine.front; byLine.popFront();
-            cells ~= new USGCell(line);
+            cells ~= new USGCell(line, i);
         }
         line = byLine.front; byLine.popFront();
         formattedRead(line, "boundaries: %d", &nboundaries);
@@ -1131,7 +1149,7 @@ public:
             faces ~= myFace;
         }
         cells.length = 0;
-        foreach (i; 0 .. ncells) { cells ~= new USGCell(fin); }
+        foreach (i; 0 .. ncells) { cells ~= new USGCell(fin, i); }
         boundaries.length = 0;
         foreach (i; 0 .. nboundaries) { boundaries ~= new BoundaryFaceSet(fin); }
     } // end read_from_raw_binary_file()
@@ -1185,7 +1203,7 @@ public:
             // Once we have created the full list of vertices, we will be able to make
             // the set of faces and then come back to filling in the face_id_list and
             // outsign_list for each cell.
-            cells[indx] = new USGCell(cell_type, vtx_id_list, face_id_list, outsign_list);
+            cells[indx] = new USGCell(cell_type, indx, vtx_id_list, face_id_list, outsign_list);
         } // end foreach i .. ncells
         foreach(i; 0 .. cells.length) {
             if (!cells[i]) { writeln("Warning: uninitialized cell at index: ", i); }
@@ -2012,7 +2030,7 @@ public:
                     new_outsign_list ~= c.outsign_list[j];
                 }
             }
-            cells ~= new USGCell(c.cell_type, new_vtx_id_list,
+            cells ~= new USGCell(c.cell_type, i, new_vtx_id_list,
                                  new_face_id_list, new_outsign_list);
         }
         ncells = cells.length;

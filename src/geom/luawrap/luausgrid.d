@@ -67,6 +67,20 @@ extern(C) int get_vtx_id_list_for_cell(lua_State* L)
     return 1;
 }
 
+extern(C) int get_connected_cell_ids_for_cell(lua_State* L)
+{
+    int narg = lua_gettop(L);
+    auto grid = checkObj!(UnstructuredGrid, UnstructuredGridMT)(L, 1);
+    size_t iCell = to!size_t(luaL_checkint(L, 2)); // Note that we expect 0 <= i < ncells
+    auto cellList = grid.get_connected_cell_ids_for_cell(iCell);
+    lua_newtable(L);
+    foreach (i, id; cellList) {
+        lua_pushinteger(L, id);
+        lua_rawseti(L, -2, cast(int)(i+1));
+    }
+    return 1;
+}
+
 extern(C) int get_nfaces(lua_State* L)
 {
     int narg = lua_gettop(L); // assume narg == 1; This is a getter
@@ -366,6 +380,8 @@ void registerUnstructuredGrid(lua_State* L)
     lua_setfield(L, -2, "get_vtx");
     lua_pushcfunction(L, &get_vtx_id_list_for_cell);
     lua_setfield(L, -2, "get_vtx_id_list_for_cell");
+    lua_pushcfunction(L, &get_connected_cell_ids_for_cell);
+    lua_setfield(L, -2, "get_connected_cell_ids_for_cell");
     lua_pushcfunction(L, &cellVolume!(UnstructuredGrid, UnstructuredGridMT));
     lua_setfield(L, -2, "cellVolume");
     lua_pushcfunction(L, &cellCentroid!(UnstructuredGrid, UnstructuredGridMT));
