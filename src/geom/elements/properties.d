@@ -5,6 +5,7 @@ module geom.elements.properties;
 
 import std.math;
 import std.conv;
+import geom.geometry_exception;
 import geom.elements.nomenclature;
 import geom.elements.vector3;
 import nm.complex;
@@ -644,7 +645,7 @@ void hex_cell_properties(ref const(Vector3) p0, ref const(Vector3) p1,
     }
     if ( volume < 0.0 ) {
         // Something has gone wrong with our geometry.
-        assert(0, "significant negative volume.");
+        throw new GeometryException("significant negative volume.");
     }
     //    
     moment /= volume; // to get overall centroid

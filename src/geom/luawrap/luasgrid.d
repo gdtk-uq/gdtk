@@ -343,7 +343,7 @@ extern(C) int newStructuredGrid(lua_State* L)
     case 1: grid = new StructuredGrid(mypath, niv, cf); break;
     case 2: grid = new StructuredGrid(psurface, niv, njv, cfList); break;
     case 3: grid = new StructuredGrid(pvolume, niv, njv, nkv, cfList); break;
-    default: assert(0);
+    default: throw new GeometryException("invalid number of dimensions");
     }
     structuredGridStore ~= pushObj!(StructuredGrid, StructuredGridMT)(L, grid);
     return 1;

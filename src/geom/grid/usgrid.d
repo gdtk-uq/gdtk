@@ -224,7 +224,7 @@ public:
         int itok = 0;
         cell_type = cell_type_from_name(tokens[itok++]);
         if (cell_type == USGCell_type.none) {
-            throw new Exception("Unexpected cell type from line: " ~ str);
+            throw new GeometryException("Unexpected cell type from line: " ~ str);
         }
         auto junk = tokens[itok++]; // "vtx"
         vtx_id_list.length = to!int(tokens[itok++]);
@@ -250,7 +250,7 @@ public:
         fin.rawRead(buf1);
         cell_type = to!USGCell_type(buf1[0]);
         if (cell_type == USGCell_type.none) {
-            throw new Exception("Unexpected cell type: " ~ to!string(cell_type));
+            throw new GeometryException("Unexpected cell type: " ~ to!string(cell_type));
         }
         fin.rawRead(buf1); vtx_id_list.length = buf1[0];
         foreach(i; 0 .. vtx_id_list.length) { fin.rawRead(buf1); vtx_id_list[i] = buf1[0]; }
@@ -870,7 +870,7 @@ public:
     {
         int new_dimensions = dimensions - 1;
         if (new_dimensions < 1 || new_dimensions > 2) {
-            throw new Exception(format("Invalid new_dimensions=%d", new_dimensions));
+            throw new GeometryException(format("Invalid new_dimensions=%d", new_dimensions));
         }
         BoundaryFaceSet bfs = boundaries[boundary_indx];
         UnstructuredGrid new_grid = new UnstructuredGrid(new_dimensions, bfs.tag);
@@ -897,7 +897,7 @@ public:
                 new_cell_type = USGCell_type.quad;
                 break;
             default:
-                throw new Exception("Did not know what to do with this number of vertices.");
+                throw new GeometryException("Did not know what to do with this number of vertices.");
             }
             size_t[] newCell_face_id_list; // empty
             int[] newCell_outsign_list; // empty
@@ -1192,7 +1192,7 @@ public:
             foreach(j; 1 .. tokens.length-1) { vtx_id_list ~= to!size_t(tokens[j]); }
             USGCell_type cell_type = convert_cell_type(vtk_element_type);
             if (cell_type == USGCell_type.none) {
-                throw new Exception("unknown element type for line: "~to!string(lineContent));
+                throw new GeometryException("unknown element type for line: "~to!string(lineContent));
             }
             if (cell_type == USGCell_type.wedge && expect_gmsh_order_for_wedges) {
                 // We assume that we have picked up the vertex indices for a wedge
@@ -1264,7 +1264,7 @@ public:
                     if (n.z < 0.0) { reverse(c.vtx_id_list); }
                     break;
                 default:
-                    throw new Exception("invalid cell type for 2D grid");
+                    throw new GeometryException("invalid cell type for 2D grid");
                 } // end switch
             } // end foreach c
         } // end if (dimensions == 2)
@@ -1331,17 +1331,17 @@ public:
                                                       vmid, cell_centroid) < 0.0);
                 break;
             default:
-                throw new Exception("invalid number of corners on face.");
+                throw new GeometryException("invalid number of corners on face.");
             }
             if (onLeft) {
                 if (faces[face_indx].left_cell) {
-                    throw new Exception("face already has a left cell");
+                    throw new GeometryException("face already has a left cell");
                 }
                 faces[face_indx].left_cell = cell;
                 cell.outsign_list ~=  1;
             } else {
                 if (faces[face_indx].right_cell) {
-                    throw new Exception("face already has a right cell");
+                    throw new GeometryException("face already has a right cell");
                 }
                 faces[face_indx].right_cell = cell;
                 cell.outsign_list ~= -1;
@@ -1373,7 +1373,7 @@ public:
                     add_face_to_cell(cell, [3,0], centroid); // west
                     break;
                 default:
-                    throw new Exception("invalid cell type in 2D");
+                    throw new GeometryException("invalid cell type in 2D");
                 }
             } else {
                 assert(dimensions == 3, "invalid dimensions");
@@ -1407,7 +1407,7 @@ public:
                     add_face_to_cell(cell, [3,0,4], centroid);
                     break;
                 default:
-                    throw new Exception("invalid cell type in 3D");
+                    throw new GeometryException("invalid cell type in 3D");
                 }
             }
             Vector3 varea = vectorAreaOfCell(cell);
@@ -1419,7 +1419,7 @@ public:
                     errMsg ~= format("\n    j=%d outsign=%d vectorArea=%s", j, cell.outsign_list[j],
                                      vectorAreaOfFacet(faces[fid].vtx_id_list));
                 }
-                throw new Exception(errMsg);
+                throw new GeometryException(errMsg);
             }
         } // end foreach cell
         nfaces = faces.length;
@@ -1451,12 +1451,12 @@ public:
                     } else if ((!my_face.left_cell) && my_face.right_cell) {
                         outsign_list ~= -1;
                     } else {
-                        throw new Exception("appears to be an interior face");
+                        throw new GeometryException("appears to be an interior face");
                     }
                     face_id_list ~= face_indx;
                     my_face.is_on_boundary = true;
                 } else {
-                    throw new Exception("cannot find face in collection");
+                    throw new GeometryException("cannot find face in collection");
                 }
             } // end foreach j
             boundaries ~= new BoundaryFaceSet(tag, face_id_list, outsign_list);
@@ -1495,7 +1495,7 @@ public:
         double relTol=1.0e-9; double absTol=1.0e-9;
         if (!approxEqualVectors(varea, Vector3(0,0,0), relTol, absTol)) {
             string errMsg = format("SU2 grid has non-zero bounding vector area=", varea);
-            throw new Exception(errMsg);
+            throw new GeometryException(errMsg);
         }
         //
         // If we arrive here, the import of the SU2 grid seems to have been successful
@@ -2054,7 +2054,7 @@ public:
                     faces[fid].right_cell = c;
                     break;
                 default:
-                    assert(0, "Oops, we seem to have an invalid value for outsign.");
+                    throw new GeometryException("Oops, we seem to have an invalid value for outsign.");
                 }
             }
         }

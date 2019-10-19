@@ -45,7 +45,7 @@ public:
         case 1: ncells = niv-1; break;
         case 2: ncells = (niv-1)*(njv-1); break;
         case 3: ncells = (niv-1)*(njv-1)*(nkv-1); break;
-        default: assert(0);
+        default: throw new GeometryException("invalid number of dimensions");
         }
         nvertices = niv*njv*nkv;
         vertices.length = nvertices;
@@ -193,7 +193,7 @@ public:
             assert (j < njc, text("index j=", j, " is invalid, njc=", njc));
             assert (k < nkc, text("index k=", k, " is invalid, nkc=", nkc));
             break;
-        default: assert(0);
+        default: throw new GeometryException("invalid number of dimensions");
         }
     }
     body {
@@ -212,7 +212,7 @@ public:
                         vtx_id[single_index(i+1,j,k+1)], 
                         vtx_id[single_index(i+1,j+1,k+1)],
                         vtx_id[single_index(i,j+1,k+1)]];
-        default: assert(0);
+        default: throw new GeometryException("invalid number of dimensions");
         }
     } // end get_vtx_id_list_for_cell()
 
@@ -244,7 +244,7 @@ public:
             vtx_list_copy[7] = vtx_id[single_index(i,j+1,k+1)];
             nvtx = 8;
             break;
-        default: assert(0);
+        default: throw new GeometryException("invalid number of dimensions");
         }
     } // end copy_vtx_id_list_for_cell()
 
@@ -255,7 +255,7 @@ public:
         case 1: nic = niv-1; njc = 1; nkc = 1; break;
         case 2: nic = niv-1; njc = njv-1; nkc = 1; break;
         case 3: nic = niv-1; njc = njv-1; nkc = njv-1; break;
-        default: assert(0);
+        default: throw new GeometryException("invalid number of dimensions");
         }
         size_t k = indx / (nic*njc);
         indx -= k * (nic * njc);
@@ -273,7 +273,7 @@ public:
         case 1: nic = niv-1; njc = 1; nkc = 1; break;
         case 2: nic = niv-1; njc = njv-1; nkc = 1; break;
         case 3: nic = niv-1; njc = njv-1; nkc = njv-1; break;
-        default: assert(0);
+        default: throw new GeometryException("invalid number of dimensions");
         }
         size_t k = indx / (nic*njc);
         indx -= k * (nic * njc);
@@ -330,7 +330,7 @@ public:
                 new_niv = niv; new_njv = njv; new_nkv = 1; new_label ~= "-bottom"; break;
             } // end switch boundary_indx
         } else {
-            throw new Exception("Extraction from 2D grid not implemented yet.");
+            throw new GeometryException("Extraction from 2D grid not implemented yet.");
         }
         // 2. prepare the empty grid.
         auto bgrid = new StructuredGrid(new_niv, new_njv, new_nkv, label);
@@ -369,7 +369,7 @@ public:
                 break;
             } // end switch boundary_indx
         } else {
-            throw new Exception("Extraction from 2D grid not implemented yet.");
+            throw new GeometryException("Extraction from 2D grid not implemented yet.");
         }
         return bgrid;
     } // end get_boundary_grid()
@@ -397,7 +397,7 @@ public:
                 new_nic = niv-1; new_njc = njv-1; new_nkc = 1; break;
             } // end switch boundary_indx
         } else {
-            throw new Exception("Extraction from 2D grid not implemented yet.");
+            throw new GeometryException("Extraction from 2D grid not implemented yet.");
         }
         cellList.length = new_nic * new_njc * new_nkc;
         if (dimensions == 3) {
@@ -435,7 +435,7 @@ public:
                 break;
             } // end switch boundary_indx
         } else {
-            throw new Exception("Extraction from 2D grid not implemented yet.");
+            throw new GeometryException("Extraction from 2D grid not implemented yet.");
         }
         return cellList;
     } // end get_list_of_boundary_cells()
@@ -549,9 +549,9 @@ public:
             }
         }
         if (dimensions == 0) {
-            throw new Exception(format("Invalid number of vertices" ~
-                                       " niv=%d, njv=%d, nkv=%d.",
-                                       niv, njv, nkv));
+            throw new GeometryException(format("Invalid number of vertices" ~
+                                               " niv=%d, njv=%d, nkv=%d.",
+                                               niv, njv, nkv));
         }
         if (nkv == 1) {
             if (njv == 1) {
@@ -867,7 +867,7 @@ public:
         case 1: ncells = niv-1; break;
         case 2: ncells = (niv-1)*(njv-1); break;
         case 3: ncells = (niv-1)*(njv-1)*(nkv-1); break;
-        default: assert(0);
+        default: throw new GeometryException("invalid number of dimensions");
         }
         nvertices = niv*njv*nkv;
         vertices.length = nvertices;

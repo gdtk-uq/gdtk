@@ -11,7 +11,7 @@ import std.math;
 import std.format;
 import std.conv;
 import std.algorithm: canFind, sort, reverse, remove; 
-
+import geom;
 
 
 /*-----------------------------------Section 1----------------------------------*/
@@ -338,7 +338,7 @@ void closed_row_check(Point[] surface)
     //note that node properties must be assigned to check this
     foreach(point;surface){
         if (point.pointL.pointR !is point){
-            throw new Exception(format("this point is not linked correctly: \n %s", point.print()));
+            throw new GeometryException(format("this point is not linked correctly: \n %s", point.print()));
         }
     }
 }
@@ -690,7 +690,7 @@ void adjust_row_ends(Point[] surface, double initial_size,  bool boundary)
                 node.node_cat = "row end";
                 writeln("matching row end enforced");
                 row_end_list ~= node;
-            } else {//throw new Exception(text("the node we wanted to enforce as a matching row                         end had too big of an angle... si is rejected"));
+            } else {//throw new GeometryException(text("the node we wanted to enforce as a matching row                         end had too big of an angle... si is rejected"));
             }
         }
         //asserting additional row ends to manage cell size reduction
@@ -988,7 +988,7 @@ Point[] generate_new_row(Point[] surface)
             break;
         }
     }
-    if(start_node is null){throw new Exception("there are not 2 consecutive side nodes in this row");}
+    if(start_node is null){throw new GeometryException("there are not 2 consecutive side nodes in this row");}
 
     //construct order from start node
     for(size_t i = start_node.rowID; i < n; ++i){

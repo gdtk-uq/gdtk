@@ -131,8 +131,9 @@ class Grid {
         if (dimensions == 2) {
             switch (nvtx) {
             case 3:
-                xyplane_triangle_cell_properties(vertices[vtx_ids[0]], vertices[vtx_ids[1]], vertices[vtx_ids[2]],
-                                                  centroid, volume, iLen, jLen, Lmin);
+                xyplane_triangle_cell_properties(vertices[vtx_ids[0]], vertices[vtx_ids[1]],
+                                                 vertices[vtx_ids[2]],
+                                                 centroid, volume, iLen, jLen, Lmin);
                 return;
             case 4:
                 xyplane_quad_cell_properties(vertices[vtx_ids[0]], vertices[vtx_ids[1]],
@@ -181,7 +182,7 @@ class Grid {
         size_t nvtx; size_t[8] vtx_id;
         copy_vtx_id_list_for_cell(vtx_id, nvtx, i);
         switch (dimensions) {
-        case 1: throw new Exception("cell search not implemented for 1D grids");
+        case 1: throw new GeometryException("cell search not implemented for 1D grids");
         case 2:
             switch (nvtx) {
             case 3:
@@ -193,7 +194,7 @@ class Grid {
                                              vertices[vtx_id[2]], vertices[vtx_id[3]], p);
                 break;
             default:
-                assert(0);
+                throw new GeometryException("invalid cell type in 2D");
             } // end switch (vtx_id.length)
             break;
         case 3:
@@ -219,10 +220,10 @@ class Grid {
                                            vertices[vtx_id[4]], vertices[vtx_id[5]], p); 
                 break;
             default:
-                assert(0);
+                throw new GeometryException("invalid cell type in 3D");
             } // end switch (vtx_id.length)
             break;
-        default: assert(0);
+        default: throw new GeometryException("invalid number of dimensions");
         } // end switch (dimensions)
         return inside_cell;
     } // end point_is_inside_cell()
@@ -280,7 +281,7 @@ class Grid {
         if (dimensions == 2) { nbinz = 1; }
         // Numbers of bins in each coordinate direction.
         if (nbinx < 1 || nbiny < 1 || nbinz < 1) {
-            throw new Exception("Need to have nbinx, nbiny and nbinz >= 1");
+            throw new GeometryException("Need to have nbinx, nbiny and nbinz >= 1");
         }
         nbx = nbinx; nby = nbiny; nbz = nbinz;
         // Determine the bounding box for the grid.
