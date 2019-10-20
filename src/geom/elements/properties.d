@@ -412,7 +412,7 @@ void pyramid_properties(ref const(Vector3) p0, ref const(Vector3) p1,
     tetrahedron_properties(p3, p0, pmB, p4, tet_centroid, tet_volume);
     volume += tet_volume; tet_centroid *= tet_volume; moment.add(tet_centroid);
     //    
-    moment /= volume; // to get overall centroid
+    if (fabs(volume) > 0.0) { moment /= volume; } // to get overall centroid
     centroid = moment;
     //
     return; 
@@ -451,7 +451,7 @@ void pyramid_properties(ref const(Vector3) p0, ref const(Vector3) p1,
     tetrahedron_properties(p3, p0, pmB, p4, tet_centroid, tet_volume);
     volume += tet_volume; tet_centroid *= tet_volume; moment.add(tet_centroid);
     //    
-    moment /= volume; // to get overall centroid
+    if (fabs(volume) > 0.0) { moment /= volume; } // to get overall centroid
     centroid = moment;
     //
     double third = 1.0/3.0;
@@ -500,7 +500,7 @@ void wedge_properties(ref const(Vector3) p0, ref const(Vector3) p1,
     tetrahedron_properties(p3, p4, p5, centroid, sub_centroid, sub_volume);
     volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
     //    
-    moment /= volume; // to get overall centroid
+    if (fabs(volume) > 0.0) { moment /= volume; } // to get overall centroid
     centroid = moment;
     //
     return; 
@@ -538,7 +538,7 @@ void wedge_properties(ref const(Vector3) p0, ref const(Vector3) p1,
     tetrahedron_properties(p3, p4, p5, centroid, sub_centroid, sub_volume);
     volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
     //    
-    moment /= volume; // to get overall centroid
+    if (fabs(volume) > 0.0) { moment /= volume; } // to get overall centroid
     centroid = moment;
     //
     double third = 1.0/3.0;
@@ -643,12 +643,8 @@ void hex_cell_properties(ref const(Vector3) p0, ref const(Vector3) p1,
         // That code should test the value of volume, on return.
         volume = 0.0;
     }
-    if ( volume < 0.0 ) {
-        // Something has gone wrong with our geometry.
-        throw new GeometryException("significant negative volume.");
-    }
     //    
-    moment /= volume; // to get overall centroid
+    if (fabs(volume) > 0.0) { moment /= volume; } // to get overall centroid
     centroid = moment;
     return; 
 } // end hex_cell_properties()

@@ -3,9 +3,11 @@
 module geom.volume.tfivolume;
 
 import std.conv;
+import std.format;
 import nm.complex;
 import nm.number;
 
+import geom.geometry_exception;
 import geom.elements;
 import geom.gpath;
 import geom.surface;
@@ -80,6 +82,7 @@ public:
             throw new Error(text("TFIVolume open at corner 7 p= ", p[7],
                                  " p_alt1= ", p_alt1," p_alt2= ", p_alt2));
         }
+        checkVolume();
     } // end generic constructor
 
     // Wire-Frame constructor TODO
@@ -87,15 +90,15 @@ public:
     // Simple-Box constructor
     this(in Vector3[] p)
     {
-        foreach(i; 0 .. 8) this.p[i] = p[i].dup();
+        foreach(i; 0 .. 8) { this.p[i] = p[i].dup(); }
         faces[Face.north] = new CoonsPatch(p[3], p[2], p[6], p[7]);
         faces[Face.south] = new CoonsPatch(p[0], p[1], p[5], p[4]);
         faces[Face.east] = new CoonsPatch(p[1], p[2], p[6], p[5]);
         faces[Face.west] = new CoonsPatch(p[0], p[3], p[7], p[4]);
         faces[Face.top] = new CoonsPatch(p[4], p[5], p[6], p[7]);
         faces[Face.bottom] = new CoonsPatch(p[0], p[1], p[2], p[3]);
-        // Since we have constructed from the corners, the volume should be closed.
-        // Don't bother testing.
+        // Don't bother testing for open corners.
+        checkVolume();
     } // end constructor
 
     // Surface-extrusion constructor TODO
@@ -103,8 +106,8 @@ public:
     // Copy constructor
     this(ref const(TFIVolume) other)
     {
-        foreach(i; 0 .. 6) this.faces[i] = other.faces[i].dup();
-        foreach(i; 0 .. 8) this.p[i] = other.p[i].dup();
+        foreach(i; 0 .. 6) { this.faces[i] = other.faces[i].dup(); }
+        foreach(i; 0 .. 8) { this.p[i] = other.p[i].dup(); }
     } // end copy constructor
 
     override TFIVolume dup() const
@@ -137,10 +140,25 @@ public:
     override string toString() const
     {
         string repr = "TFIVolume(faces=[" ~ to!string(faces[0]);
-        foreach(i; 1 .. 6) repr ~= ", " ~ to!string(faces[i]);
+        foreach(i; 1 .. 6) { repr ~= ", " ~ to!string(faces[i]); }
         repr ~= "])";
         return repr;
     } // end toString
+
+private:
+    void checkVolume()
+    {
+        // Compute the volume of the hexahedron, as defined by the corners of the block.
+        // This should give a rough and ready test for an ill-defined block. 
+        number volume, iLength, jLength, kLength;
+        Vector3 centroid;
+        hex_cell_properties(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7],
+                            centroid, volume, iLength, jLength, kLength);
+        if (volume <= 0.0) {
+            string msg = format("Apparently-invalid volume (%g) for hex block.", volume);
+            throw new GeometryException(msg);
+        }
+    }
 } // end class TFIVolume
 
 version(tfivolume_test) {
