@@ -1172,7 +1172,48 @@ function SolidBlockArray(t)
 	    blockArray[ib][jb] = new_block
 	    blockCollection[#blockCollection+1] = new_block
 	 else
-	    error("SolidBlockArray not implemented for 3D.")
+	    -- error("SolidBlockArray not implemented for 3D.")
+             -- 3D flow, need one more level in the array
+	    blockArray[ib][jb] = {}
+            local nkc_remaining = nkc_total
+            local k0 = 0
+	    for kb = 1, t.nkb do
+               local k0 = (kb-1) * dnkc
+               local nkc = math.floor(nkc_remaining/(t.nkb-kb+1))
+               if (kb == t.nkb) then
+                  nkc = nkc_remaining
+               end
+               nkc_remaining = nkc_remaining - nkc
+	       local subgrid = t.grid:subgrid(i0,dnic+1,j0,dnjc+1,k0,dnkc+1)
+	       local bcList = {north=SolidAdiabaticBC:new{}, east=SolidAdiabaticBC:new{},
+			       south=SolidAdiabaticBC:new{}, west=SolidAdiabaticBC:new{},
+			       top=SolidAdiabaticBC:new{}, bottom=SolidAdiabaticBC:new{}}
+	       if ib == 1 then
+		  bcList[west] = t.bcList[west]
+	       end
+	       if ib == t.nib then
+		  bcList[east] = t.bcList[east]
+	       end
+	       if jb == 1 then
+		  bcList[south] = t.bcList[south]
+	       end
+	       if jb == t.njb then
+		  bcList[north] = t.bcList[north]
+	       end
+	       if kb == 1 then
+		  bcList[bottom] = t.bcList[bottom]
+	       end
+	       if kb == t.nkb then
+		  bcList[top] = t.bcList[top]
+	       end
+	       local new_block = SolidBlock:new{grid=subgrid, properties=t.properties,
+                                             initTemperature=t.initTemperature,
+                                             bcList=bcList}
+	       blockArray[ib][jb][kb] = new_block
+	       blockCollection[#blockCollection+1] = new_block
+               -- Prepare k0 at end of loop, ready for next iteration
+               --k0 = k0 + nkc
+	    end -- kb loop
 	 end -- dimensions
       end -- jb loop
    end -- ib loop
