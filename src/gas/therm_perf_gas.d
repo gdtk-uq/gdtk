@@ -57,14 +57,18 @@ public:
         _Cv.length = _n_species;
         _h.length = _n_species;
         _s.length = _n_species;
+        _molef.length = _n_species;
         // 1. Initialise gas constants from molecular mass
+        //    and grab charge.
         _R.length = _n_species;
         _mol_masses.length = _n_species;
+        _charge.length = n_species;
         foreach (isp; 0 .. _n_species) {
             lua_getglobal(L, "db");
             lua_getfield(L, -1, _species_names[isp].toStringz);
             _mol_masses[isp] = getDouble(L, -1, "M");
             _R[isp] = R_universal/_mol_masses[isp];
+            _charge[isp] = getInt(L, -1, "charge");
             lua_pop(L, 1);
             lua_pop(L, 1);
         }
@@ -406,22 +410,32 @@ public:
         return _curves[isp].eval_s(Q.T);
     }
 
-    override void balance_charge(GasState Q) const
+    override void balance_charge(GasState Q)
     {
         if (_is_plasma) {
-            throw new Error("[FIX-ME] Not yet implemented.");
+            massf2molef(Q, _molef);
+            number molefIons = 0.0;
+            // Loop to n_species - 1 so that we do NOT include electron 
+            // in counting up ionic contributions.
+            foreach (isp; 0 .. _n_species-1) {
+                molefIons += _charge[isp] * _molef[isp];
+            }
+            // Now set electron mole fraction to balance
+            _molef[_n_species-1] = molefIons;
+            molef2massf(_molef, Q);
         }
     }
 
 private:
     double[] _R;
+    double[] _charge;
     PerfectGasMixEOS _pgMixEOS;
     ThermallyPerfectGasMixEOS _tpgMixEOS;
     CEAThermo[] _curves;
     WilkeMixingViscosity _viscModel;
     WilkeMixingThermCond _thermCondModel;
     // Working array space
-    number[] _Cp, _Cv, _h, _s;
+    number[] _Cp, _Cv, _h, _s, _molef;
 } // end class ThermallyPerfectGas
 
 

@@ -247,7 +247,7 @@ public:
     }
 
     @nogc
-    void balance_charge(GasState Q) const
+    void balance_charge(GasState Q)
     {
         // The flow solver may call upon this function for plasmas,
         // when it wants the electron fraction updated so that it
