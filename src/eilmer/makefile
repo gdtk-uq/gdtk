@@ -338,7 +338,8 @@ default: $(PROGRAMS)
 	@echo "Source code revision string $(REVISION_STRING)"
 	@echo "Eilmer4 simulation code built."
 
-install: $(PROGRAMS) $(LUA_MODULES) prep.lua prep-gas prep-chem chemkin2eilmer $(SHARE_FILES) ugrid_partition
+install: $(PROGRAMS) $(LUA_MODULES) prep.lua prep-gas prep-chem chemkin2eilmer \
+		$(SHARE_FILES) ugrid_partition
 	- mkdir -p $(INSTALL_DIR)
 	- mkdir -p $(BUILD_DIR)/bin
 	- mkdir -p $(BUILD_DIR)/lib
@@ -354,6 +355,8 @@ install: $(PROGRAMS) $(LUA_MODULES) prep.lua prep-gas prep-chem chemkin2eilmer $
 	chmod +x $(BUILD_DIR)/bin/e4console.tcl
 	cp e4compact.rb $(BUILD_DIR)/bin/e4compact
 	chmod +x $(BUILD_DIR)/bin/e4compact
+	cp xtdata.rb $(BUILD_DIR)/bin/xtdata.rb
+	chmod +x $(BUILD_DIR)/bin/xtdata.rb
 ifneq "$(SHARE_FILES)" ""
 	cp $(SHARE_FILES) $(BUILD_DIR)/share
 endif
