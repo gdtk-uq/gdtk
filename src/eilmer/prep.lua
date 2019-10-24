@@ -683,9 +683,11 @@ function connectBlocks(blkA, faceA, blkB, faceB, orientation)
 	 error(msg, 2)
       end
    elseif blkA.myType == "SolidBlock" and blkB.myType == "SolidBlock" then
-      -- Presently only handle EAST-WEST and WEST-EAST connections
-      if ( (faceA == east and faceB == west) or ( faceA == west and faceB == east) ) then
-	 blkA.bcList[faceA] = SolidConnectionBoundaryBC:new{otherBlock=blkB.id,
+      -- Presently only handle EAST-WEST and WEST-EAST, NORTH-SOUTH and SOUTH-NORTH, TOP-BOTTOM and BOTTOM-TOP connections
+      if ( (faceA == east and faceB == west) or ( faceA == west and faceB == east) or
+            (faceA == north and faceB == south) or (faceA == south and faceB == north) or
+         (faceA == top and faceB == bottom) or (faceA == bottom and faceB == top) ) then
+         blkA.bcList[faceA] = SolidConnectionBoundaryBC:new{otherBlock=blkB.id,
 							    otherFace=faceB,
 							    orientation=orientation}
 	 blkB.bcList[faceB] = SolidConnectionBoundaryBC:new{otherBlock=blkA.id,
@@ -733,15 +735,16 @@ function identifyBlockConnections(blockList, excludeList, tolerance)
    -- excludeList: list of pairs of SFluidBlock objects that should not be
    --    included in the search for connections.
    -- tolerance: spatial tolerance for the colocation of vertices
+
    local myBlockList = {}
    if ( blockList ) then
       for k,v in pairs(blockList) do myBlockList[k] = v end
    else -- Use the global gas blocks list
       for k,v in pairs(fluidBlocks) do myBlockList[k] = v end
+      for _,v in pairs(solidBlocks) do myBlockList[#myBlockList+1] = v end
    end
-   -- Add solid domain block to search
-   for _,blk in ipairs(solidBlocks) do myBlockList[#myBlockList+1] = blk end
    excludeList = excludeList or {}
+   
    -- Put UFluidBlock objects into the exclude list because they don't
    -- have a simple topology that can always be matched to an SFluidBlock.
    for _,A in ipairs(myBlockList) do
@@ -766,7 +769,7 @@ function identifyBlockConnections(blockList, excludeList, tolerance)
 	       end
 	    else
 	       -- print("   3D test")
-	       for vtxPairs,connection in pairs(connections3D) do
+               for vtxPairs,connection in pairs(connections3D) do
 		  if verticesAreCoincident(A, B, vtxPairs, tolerance) then
 		     local faceA, faceB, orientation = unpack(connection)
 		     connectBlocks(A, faceA, B, faceB, orientation)
@@ -1137,21 +1140,27 @@ function SolidBlockArray(t)
    end
    local blockArray = {} -- will be a multi-dimensional array indexed as [i][j][k]
    local blockCollection = {} -- will be a single-dimensional array
+   local nic_remaining = nic_total
+   local i0 = 0
    for ib = 1, t.nib do
       blockArray[ib] = {}
-      local i0 = (ib-1) * dnic
+      local nic = math.floor(nic_remaining/(t.nib-ib+1))
       if (ib == t.nib) then
 	 -- Last block has to pick up remaining cells.
-	 dnic = nic_total - i0
+         nic = nic_remaining
       end
+      nic_remaining = nic_remaining - nic
+      local njc_remaining = njc_total
+      local j0 = 0
       for jb = 1, t.njb do
-	 local j0 = (jb-1) * dnjc
+         local njc = math.floor(njc_remaining/(t.njb-jb+1))
 	 if (jb == t.njb) then
-	    dnjc = njc_total - j0
+	    njc = njc_remaining
 	 end
+         njc_remaining = njc_remaining - njc
 	 if config.dimensions == 2 then
 	    -- 2D flow
-	    local subgrid = t.grid:subgrid(i0,dnic+1,j0,dnjc+1)
+	    local subgrid = t.grid:subgrid(i0,nic+1,j0,njc+1)
 	    local bcList = {north=SolidAdiabaticBC:new{}, east=SolidAdiabaticBC:new{},
 			    south=SolidAdiabaticBC:new{}, west=SolidAdiabaticBC:new{}}
 	    if ib == 1 then
@@ -1178,13 +1187,12 @@ function SolidBlockArray(t)
             local nkc_remaining = nkc_total
             local k0 = 0
 	    for kb = 1, t.nkb do
-               local k0 = (kb-1) * dnkc
                local nkc = math.floor(nkc_remaining/(t.nkb-kb+1))
                if (kb == t.nkb) then
                   nkc = nkc_remaining
                end
                nkc_remaining = nkc_remaining - nkc
-	       local subgrid = t.grid:subgrid(i0,dnic+1,j0,dnjc+1,k0,dnkc+1)
+	       local subgrid = t.grid:subgrid(i0,nic+1,j0,njc+1,k0,nkc+1)
 	       local bcList = {north=SolidAdiabaticBC:new{}, east=SolidAdiabaticBC:new{},
 			       south=SolidAdiabaticBC:new{}, west=SolidAdiabaticBC:new{},
 			       top=SolidAdiabaticBC:new{}, bottom=SolidAdiabaticBC:new{}}
@@ -1212,10 +1220,14 @@ function SolidBlockArray(t)
 	       blockArray[ib][jb][kb] = new_block
 	       blockCollection[#blockCollection+1] = new_block
                -- Prepare k0 at end of loop, ready for next iteration
-               --k0 = k0 + nkc
+               k0 = k0 + nkc
 	    end -- kb loop
 	 end -- dimensions
+         -- Prepare j0 at end of loop, ready for next iteration
+         j0 = j0 + njc
       end -- jb loop
+      -- Prepare i0 at end of loop, ready for next iteration
+      i0 = i0 + nic
    end -- ib loop
    -- Make the inter-subblock connections
    if #blockCollection > 1 then
