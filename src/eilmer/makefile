@@ -174,7 +174,7 @@ GZIP_FILES := $(GZIP_DIR)/gzip.d
 OPENCL_DIR := ../extern/opencl.d/source
 OPENCL_FILES := $(OPENCL_DIR)/cl.d
 
-CUDA_LIB_DIR ?= /usr/local/cuda-7.5/lib64
+CUDA_LIB_DIR ?= /usr/local/cuda/lib64
 CUDA_DIR := ../extern/cuda.d/source/cuda_d
 CUDA_FILES := $(CUDA_DIR)/cublas_api.d \
 	$(CUDA_DIR)/cublasXt.d \

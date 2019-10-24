@@ -81,14 +81,16 @@ print "setting up M equation"
 
 with open('workfile', 'w') as f:
     for i in linspace(0, num_reac-1, num_reac):
+        i = int(i)
         if MM[i][0] == 0:
             pass
         else:
-            i = int(i)
+            #i = int(i)
             f.write('MM[idx+numcell*')
             f.write(str(int(i)))
             f.write(']=')
             for j in linspace(0, num_spec-1, num_spec):
+                j = int(j)
                 if MM[i][1+j] == 0.0:
                     pass
                 else:
@@ -124,6 +126,7 @@ with open('workfile', 'w') as f:
             j = int(j)            
             vji[i][j] = vji_pp[i][j] - vji_p[i][j]
     for j in linspace(0, num_spec-1, num_spec):
+        j = int(j)
         zero_count = 0
         value = 'q[idx+numcell*'
         s = str(value)
@@ -131,6 +134,7 @@ with open('workfile', 'w') as f:
         f.write(str(int(j)))
         f.write(']=')
         for i in linspace(0, num_reac-1, num_reac):
+            i = int(i)            
             if vji[i][j] == 0:
                 zero_count += 1
                 pass
@@ -199,6 +203,7 @@ with open('workfile', 'w') as f:
             j = int(j)            
             vji[i][j] = vji_pp[i][j] - vji_p[i][j]
     for j in linspace(0, num_spec-1, num_spec):
+        j = int(j)
         zero_count = 0
         value = 'p[idx+numcell*'
         s = str(value)
@@ -206,6 +211,7 @@ with open('workfile', 'w') as f:
         f.write(str(int(j)))
         f.write(']=')
         for i in linspace(0, num_reac-1, num_reac):
+            i = int(i)
             if vji[i][j] == 0:
                 zero_count += 1
                 pass
