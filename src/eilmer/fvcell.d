@@ -713,6 +713,16 @@ public:
                 throw new FlowSolverException(msg);
             } // end if
         } // end catch
+        //
+        if (myConfig.radiation_energy_dump_allowed &&
+            fs.gas.T > myConfig.radiation_energy_dump_temperature_limit) {
+            // Dump excess energy and blame radiation.
+            fs.gas.T = myConfig.radiation_energy_dump_temperature_limit;
+            gmodel.update_thermo_from_rhoT(fs.gas);
+            encode_conserved(gtl, ftl, omegaz);
+            gmodel.update_sound_speed(fs.gas);
+            if (myConfig.viscous) gmodel.update_trans_coeffs(fs.gas);
+        }
         return 0; // success
     } // end decode_conserved()
 

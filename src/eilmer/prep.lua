@@ -1850,6 +1850,8 @@ function write_config_file(fileName)
    f:write(string.format('"ignition_time_start": %.18e,\n', config.ignition_time_start))
    f:write(string.format('"ignition_time_stop": %.18e,\n', config.ignition_time_stop))
    f:write(string.format('"energy_exchange_file": "%s",\n', config.energy_exchange_file))
+   f:write(string.format('"radiation_energy_dump_allowed": %s,\n', tostring(config.radiation_energy_dump_allowed)))
+   f:write(string.format('"radiation_energy_dump_temperature_limit": %.18e,\n', config.radiation_energy_dump_temperature_limit))
 
    f:write(string.format('"control_count": %d,\n', config.control_count))
    f:write(string.format('"nfluidblock": %d,\n', #(fluidBlocks)))

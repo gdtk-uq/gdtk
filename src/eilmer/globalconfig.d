@@ -697,6 +697,8 @@ final class GlobalConfig {
     shared static string energy_exchange_file = "energy-exchange.lua";
     // JJ Hoste's Turbulence-Chemistry Interaction model
     shared static TCIModel tci_model = TCIModel.none;
+    shared static bool radiation_energy_dump_allowed = false;
+    shared static double radiation_energy_dump_temperature_limit = 30000.0;
 
     // Parameters controlling other simulation options
     //
@@ -937,6 +939,8 @@ public:
     double T_frozen_energy;
     BlockZone[] reaction_zones;
     TCIModel tci_model;
+    bool radiation_energy_dump_allowed;
+    double radiation_energy_dump_temperature_limit;
 
     double ignition_time_start;
     double ignition_time_stop;
@@ -1070,6 +1074,8 @@ public:
         T_frozen_energy = GlobalConfig.T_frozen_energy;
         foreach (rz; GlobalConfig.reaction_zones) { reaction_zones ~= new BlockZone(rz); }
         tci_model = GlobalConfig.tci_model;
+        radiation_energy_dump_allowed = GlobalConfig.radiation_energy_dump_allowed;
+        radiation_energy_dump_temperature_limit = GlobalConfig.radiation_energy_dump_temperature_limit;
         //
         ignition_time_start = GlobalConfig.ignition_time_start;
         ignition_time_stop = GlobalConfig.ignition_time_stop;
@@ -1494,6 +1500,8 @@ void read_config_file()
     mixin(update_double("ignition_time_start", "ignition_time_start"));
     mixin(update_double("ignition_time_stop", "ignition_time_stop"));
     mixin(update_string("energy_exchange_file", "energy_exchange_file"));
+    mixin(update_bool("radiation_energy_dump_allowed", "radiation_energy_dump_allowed"));
+    mixin(update_double("radiation_energy_dump_temperature_limit", "radiation_energy_dump_temperature_limit"));
           
     if (GlobalConfig.verbosity_level > 1) {
         writeln("  reacting: ", GlobalConfig.reacting);
@@ -1505,6 +1513,8 @@ void read_config_file()
         writeln("  ignition_time_start: ", GlobalConfig.ignition_time_start);
         writeln("  ignition_time_stop: ", GlobalConfig.ignition_time_start);
         writeln("  energy_exchange_file: ", GlobalConfig.energy_exchange_file);
+        writeln("  radiation_energy_dump_allowed: ", GlobalConfig.radiation_energy_dump_allowed);
+        writeln("  radiation_energy_dump_temperature_limit: ", GlobalConfig.radiation_energy_dump_temperature_limit);
     }
 
     // Parameters controlling other simulation options

@@ -198,6 +198,8 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_double_field("ignition_time_start", "ignition_time_start"));
     mixin(get_double_field("ignition_time_stop", "ignition_time_stop"));
     mixin(get_string_field("energy_exchange_file", "energy_exchange_file"));
+    mixin(get_bool_field("radiation_energy_dump_allowed", "radiation_energy_dump_allowed"));
+    mixin(get_double_field("radiation_energy_dump_temperature_limit", "radiation_energy_dump_temperature_limit"));
     //
     mixin(get_int_field("max_step", "max_step"));
     mixin(get_int_field("halt_now", "halt_now"));
@@ -378,6 +380,8 @@ extern(C) int configGet(lua_State* L)
     case "ignition_time_start": lua_pushnumber(L, GlobalConfig.ignition_time_start); break;
     case "ignition_time_stop": lua_pushnumber(L, GlobalConfig.ignition_time_stop); break;
     case "energy_exchange_file": lua_pushstring(L, GlobalConfig.energy_exchange_file.toStringz); break;
+    case "radiation_energy_dump_allowed": lua_pushboolean(L, GlobalConfig.radiation_energy_dump_allowed); break;
+    case "radiation_energy_dump_temperature_limit": lua_pushnumber(L, GlobalConfig.radiation_energy_dump_temperature_limit); break;
         //
     case "max_step": lua_pushnumber(L, GlobalConfig.max_step); break;
     case "halt_now": lua_pushnumber(L, GlobalConfig.halt_now); break;
