@@ -641,6 +641,7 @@ function closeEnough(vA, vB, tolerance)
 end
 
 function connectBlocks(blkA, faceA, blkB, faceB, orientation)
+   -- Make a "full-face" connection between a pair of Block objects.
    print("connectBlocks: blkA.id=", blkA.id, "faceA=", faceA, 
 	 "blkB.id=", blkB.id, "faceB=", faceB, "orientation=", orientation)
    if blkA.grid:get_type() ~= "structured_grid" or blkB.grid:get_type() ~= "structured_grid" then
@@ -683,7 +684,8 @@ function connectBlocks(blkA, faceA, blkB, faceB, orientation)
 	 error(msg, 2)
       end
    elseif blkA.myType == "SolidBlock" and blkB.myType == "SolidBlock" then
-      -- Presently only handle EAST-WEST and WEST-EAST, NORTH-SOUTH and SOUTH-NORTH, TOP-BOTTOM and BOTTOM-TOP connections
+      -- Presently only handle EAST-WEST and WEST-EAST, NORTH-SOUTH and SOUTH-NORTH,
+      -- TOP-BOTTOM and BOTTOM-TOP connections
       if ( (faceA == east and faceB == west) or ( faceA == west and faceB == east) or
             (faceA == north and faceB == south) or (faceA == south and faceB == north) or
          (faceA == top and faceB == bottom) or (faceA == bottom and faceB == top) ) then
@@ -729,28 +731,30 @@ end
 
 function identifyBlockConnections(blockList, excludeList, tolerance)
    -- Identify block connections by trying to match corner points.
-   -- Parameters:
+   -- Parameters (all optional):
    -- blockList: the list of SFluidBlock objects to be included in the search.
    --    If nil, the whole collection is searched.
    -- excludeList: list of pairs of SFluidBlock objects that should not be
    --    included in the search for connections.
    -- tolerance: spatial tolerance for the colocation of vertices
-
+   --
    local myBlockList = {}
-   if ( blockList ) then
-      for k,v in pairs(blockList) do myBlockList[k] = v end
-   else -- Use the global gas blocks list
-      for k,v in pairs(fluidBlocks) do myBlockList[k] = v end
-      for _,v in pairs(solidBlocks) do myBlockList[#myBlockList+1] = v end
+   if blockList then
+      -- The caller has provided a list of Blocks to bound the search.
+      for _,v in ipairs(blockList) do myBlockList[#myBlockList+1] = v end
+   else
+      -- The caller has not provided a list; use the global blocks lists.
+      for _,v in ipairs(fluidBlocks) do myBlockList[#myBlockList+1] = v end
+      for _,v in ipairs(solidBlocks) do myBlockList[#myBlockList+1] = v end
    end
    excludeList = excludeList or {}
-   
    -- Put UFluidBlock objects into the exclude list because they don't
    -- have a simple topology that can always be matched to an SFluidBlock.
    for _,A in ipairs(myBlockList) do
       if A.grid:get_type() == "unstructured_grid" then excludeList[#excludeList+1] = A end
    end
    tolerance = tolerance or 1.0e-6
+   --
    for _,A in ipairs(myBlockList) do
       for _,B in ipairs(myBlockList) do
 	 if (A ~= B) and (not isPairInList({A, B}, excludeList)) then
@@ -784,7 +788,7 @@ function identifyBlockConnections(blockList, excludeList, tolerance)
 	 end -- if (A ~= B...
       end -- for _,B
    end -- for _,A
-end
+end -- identifyBlockConnections
 
 -- Class for FluidBlock-Array objects.
 FBArray = {
