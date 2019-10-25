@@ -746,6 +746,7 @@ public:
                 size_t ii = 0;
                 foreach (gi; ghost_cell_indices[incoming_block_list[i]][blk.id]) {
                     auto c = ghost_cells[gi];
+                    c.is_interior_to_domain = true;
                     FlowState fs = c.fs;
                     GasState gs = fs.gas;
                     gs.rho = buf[ii++];

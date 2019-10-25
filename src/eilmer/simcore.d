@@ -1700,6 +1700,8 @@ void exchange_ghost_cell_boundary_viscous_gradient_data(double t, int gtl, int f
             foreach (gce; bc.preReconAction) {
                 auto mygce1 = cast(GhostCellMappedCellCopy) gce;
                 if (mygce1) { mygce1.exchange_viscous_gradient_phase0(t, gtl, ftl); }
+                auto mygce2 = cast(GhostCellFullFaceCopy) gce;
+                if (mygce2) { mygce2.exchange_viscous_gradient_phase0(t, gtl, ftl); }
             }
         }
     }
@@ -1708,6 +1710,8 @@ void exchange_ghost_cell_boundary_viscous_gradient_data(double t, int gtl, int f
             foreach (gce; bc.preReconAction) {
                 auto mygce1 = cast(GhostCellMappedCellCopy) gce;
                 if (mygce1) { mygce1.exchange_viscous_gradient_phase1(t, gtl, ftl); }
+                auto mygce2 = cast(GhostCellFullFaceCopy) gce;
+                if (mygce2) { mygce2.exchange_viscous_gradient_phase1(t, gtl, ftl); }
             }
         }
     }
@@ -1716,6 +1720,8 @@ void exchange_ghost_cell_boundary_viscous_gradient_data(double t, int gtl, int f
             foreach (gce; bc.preReconAction) {
                 auto mygce1 = cast(GhostCellMappedCellCopy) gce;
                 if (mygce1) { mygce1.exchange_viscous_gradient_phase2(t, gtl, ftl); }
+                auto mygce2 = cast(GhostCellFullFaceCopy) gce;
+                if (mygce2) { mygce2.exchange_viscous_gradient_phase2(t, gtl, ftl); }
             }
         }
     }

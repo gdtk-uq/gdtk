@@ -368,6 +368,8 @@ public:
             && (myConfig.spatial_deriv_locn == SpatialDerivLocn.faces);
         bool lsq_workspace_at_vertices = (myConfig.viscous) && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
             && (myConfig.spatial_deriv_locn == SpatialDerivLocn.vertices);
+        bool lsq_workspace_at_cells = (myConfig.viscous) && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
+            && (myConfig.spatial_deriv_locn == SpatialDerivLocn.cells);
         try {
             // Create the cell and interface objects for the entire structured block.
             // This includes the layer of surrounding ghost cells.
@@ -379,7 +381,7 @@ public:
             // Providing such access brings the structured-grid code a little closer
             // to the flavour of the unstructured-grid code.
             foreach (gid; 0 .. ntot) {
-                _ctr ~= new FVCell(myConfig);
+                _ctr ~= new FVCell(myConfig,  lsq_workspace_at_cells);
                 _ifi ~= new FVInterface(myConfig, lsq_workspace_at_faces);
                 _ifj ~= new FVInterface(myConfig, lsq_workspace_at_faces);
                 if ( myConfig.dimensions == 3 ) {
@@ -848,11 +850,16 @@ public:
                 foreach(iface; faces) {
                     iface.grad.set_up_workspace_leastsq(iface.cloud_pos, iface.pos, false, iface.ws_grad);
                 }       
-            } else { // myConfig.spatial_deriv_locn == vertices
+            } else if (myConfig.spatial_deriv_locn == SpatialDerivLocn.vertices){
                 foreach(vtx; vertices) {
                     vtx.grad.set_up_workspace_leastsq(vtx.cloud_pos, vtx.pos[gtl], true, vtx.ws_grad);
                 }
+            } else { // myConfig.spatial_deriv_locn == cells
+                foreach(cell; cells) {
+                    cell.grad.set_up_workspace_leastsq(cell.cloud_pos, cell.pos[gtl], false, cell.ws_grad);
+                }
             }
+
         }
     } // end compute_least_squares_setup()
 
@@ -866,9 +873,37 @@ public:
             store_references_for_derivative_calc_at_faces(gtl);
             break;
         case SpatialDerivLocn.cells:
-            assert(0, "spatial_deriv_locn at cells not implemented for the structured solver.");
+            store_references_for_derivative_calc_at_cells(gtl);
+            break;
         }
     } // end store_references_for_derivative_calc()
+    
+    void store_references_for_derivative_calc_at_cells(size_t gtl)
+    {
+        // This locations is only valid for the weighted least squares calculation.
+        foreach (c; cells) {
+            // First cell in the cloud is the cell itself.  Differences are taken about it.
+            c.cloud_pos ~= &(c.pos[0]);
+            c.cloud_fs ~= c.fs;
+            // Subsequent cells are the surrounding interfaces.
+            foreach (i, f; c.iface) {
+                c.cloud_pos ~= &(f.pos);
+                c.cloud_fs ~= f.fs;
+            } // end foreach face
+        }
+        // We will also need derivative storage in ghostcells because the special
+        // interface gradient averaging functions will expect to be able to access the gradients
+        // either side of each interface.
+        // We will be able to get these gradients from the mapped-cells
+        // in an adjoining block.
+        foreach (bci; bc) {
+            if (bci.ghost_cell_data_available) {
+                foreach (c; bci.ghostcells) {
+                    c.grad = new FlowGradients(myConfig);
+                }
+            }
+        }
+    } // end store_references_for_derivative_calc_at_faces
 
     void store_references_for_derivative_calc_at_faces(size_t gtl)
     {
