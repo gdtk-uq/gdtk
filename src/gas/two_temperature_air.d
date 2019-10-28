@@ -444,9 +444,10 @@ public:
 
     @nogc number vibElecEnergy(number Tve, int isp)
     {
-        // The electron possess only energy in translation
+        // The electron possess only energy in translation and this is its contribution
+        // in the vibroelectronic mode
         if (isp == Species.eminus)
-            return to!number(0.0);
+            return (3./2.)*_R[isp]*Tve;
         number h_at_Tve = enthalpyFromCurveFits(Tve, isp);
         number h_ve = h_at_Tve - _Cp_tr_rot[isp]*(Tve - T_REF) - _del_hf[isp];
         return h_ve;
@@ -456,8 +457,6 @@ public:
     {
         number e_ve = 0.0;
         foreach (isp; 0 .. _n_species) {
-            if (isp == Species.eminus)
-                continue;
             e_ve += Q.massf[isp] * vibElecEnergy(Tve, isp);
         }
         return e_ve;
@@ -602,7 +601,7 @@ private:
     @nogc number vibElecSpecHeatConstV(number Tve, int isp)
     {
         if (isp == Species.eminus)
-            return to!number(0.0);
+            return (3./2.)*_R[isp];
         else
             return CpFromCurveFits(Tve, isp) - _Cp_tr_rot[isp];
     }
@@ -611,8 +610,6 @@ private:
     {
         number Cv_vib = 0.0;
         foreach (isp; 0 .. _n_species) {
-            if (isp == Species.eminus)
-                continue;
             Cv_vib += Q.massf[isp] * vibElecSpecHeatConstV(Tve, isp);
         }
         return Cv_vib;
@@ -620,7 +617,10 @@ private:
 
     @nogc number transRotSpecHeatConstV(int isp)
     {
-        return to!number(_Cp_tr_rot[isp] - _R[isp]);
+        if (isp == Species.eminus) 
+            return to!number(0.0);
+        else 
+            return to!number(_Cp_tr_rot[isp] - _R[isp]);
     }
 
     @nogc number transRotSpecHeatConstV(in GasState Q)
