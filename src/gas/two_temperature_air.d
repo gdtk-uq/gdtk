@@ -258,7 +258,7 @@ public:
     {
         _pgMixEOS.update_density(Q);
         Q.u = transRotEnergy(Q);
-        Q.u_modes[0] = vibEnergy(Q, Q.T_modes[0]);
+        Q.u_modes[0] = vibElecEnergy(Q, Q.T_modes[0]);
     }
 
     override void update_thermo_from_rhou(GasState Q)
@@ -277,7 +277,7 @@ public:
         // Next, we can compute Q.T_modes by iteration.
         // We'll use a Newton method since the function
         // should vary smoothly at the polynomial breaks.
-        Q.T_modes[0] = vibTemperature(Q);
+        Q.T_modes[0] = vibElecTemperature(Q);
         // Now we can compute pressure from the perfect gas
         // equation of state.
         _pgMixEOS.update_pressure(Q);
@@ -287,7 +287,7 @@ public:
     {
         _pgMixEOS.update_pressure(Q);
         Q.u = transRotEnergy(Q); 
-        Q.u_modes[0] = vibEnergy(Q, Q.T_modes[0]);
+        Q.u_modes[0] = vibElecEnergy(Q, Q.T_modes[0]);
     }
     
     override void update_thermo_from_rhop(GasState Q)
@@ -296,7 +296,7 @@ public:
         // in addition to density and pressure.
         _pgMixEOS.update_temperature(Q);
         Q.u = transRotEnergy(Q);
-        Q.u_modes[0] = vibEnergy(Q, Q.T_modes[0]);
+        Q.u_modes[0] = vibElecEnergy(Q, Q.T_modes[0]);
     }
 
     override void update_thermo_from_ps(GasState Q, number s)
@@ -372,7 +372,7 @@ public:
                 sumB += _molef[jsp]*_Delta_11[isp][jsp];
             }
             k_rot += _molef[isp]/sumB;
-            number Cp_vib = vibSpecHeatConstV(Q.T_modes[0], isp);
+            number Cp_vib = vibElecSpecHeatConstV(Q.T_modes[0], isp);
             k_vib += (Cp_vib*_mol_masses[isp]/R_universal)*_molef[isp]/sumB;
         }
         k_rot *= 2.3901e-8*kB_erg;
@@ -390,7 +390,7 @@ public:
         number Cv_tr_rot, Cv_vib;
         foreach (isp; 0 .. _n_species) {
             Cv_tr_rot = transRotSpecHeatConstV(isp);
-            Cv_vib = vibSpecHeatConstV(Q.T_modes[0], isp);
+            Cv_vib = vibElecSpecHeatConstV(Q.T_modes[0], isp);
             Cv += Q.massf[isp] * (Cv_tr_rot + Cv_vib);
         } 
         return Cv;
@@ -402,7 +402,7 @@ public:
         number Cp = 0.0;
         number Cp_vib;
         foreach (isp; 0 .. _n_species) {
-            Cp_vib = vibSpecHeatConstV(Q.T_modes[0], isp);
+            Cp_vib = vibElecSpecHeatConstV(Q.T_modes[0], isp);
             Cp += Q.massf[isp] * (_Cp_tr_rot[isp] + Cp_vib);
         }
         return Cp;
@@ -422,13 +422,13 @@ public:
     }
     override number enthalpy(in GasState Q)
     {
-        number e = transRotEnergy(Q) + vibEnergy(Q, Q.T_modes[0]);
+        number e = transRotEnergy(Q) + vibElecEnergy(Q, Q.T_modes[0]);
         number h = e + Q.p/Q.rho;
         return h;
     }
     override number enthalpyPerSpeciesInMode(in GasState Q, int isp, int imode)
     {
-        return vibEnergy(Q.T_modes[imode], isp);
+        return vibElecEnergy(Q.T_modes[imode], isp);
     }
     override number entropy(in GasState Q)
     {
@@ -442,21 +442,23 @@ public:
         }
     }
 
-    @nogc number vibEnergy(number Tve, int isp)
+    @nogc number vibElecEnergy(number Tve, int isp)
     {
+        // The electron possess only energy in translation
+        if (isp == Species.eminus)
+            return to!number(0.0);
         number h_at_Tve = enthalpyFromCurveFits(Tve, isp);
-        if (isp == Species.eminus) {
-            return h_at_Tve;
-        }
         number h_ve = h_at_Tve - _Cp_tr_rot[isp]*(Tve - T_REF) - _del_hf[isp];
         return h_ve;
     }
 
-    @nogc number vibEnergy(in GasState Q, number Tve)
+    @nogc number vibElecEnergy(in GasState Q, number Tve)
     {
         number e_ve = 0.0;
         foreach (isp; 0 .. _n_species) {
-            e_ve += Q.massf[isp] * vibEnergy(Tve, isp);
+            if (isp == Species.eminus)
+                continue;
+            e_ve += Q.massf[isp] * vibElecEnergy(Tve, isp);
         }
         return e_ve;
     }
@@ -597,16 +599,21 @@ private:
         return e_tr_rot;
     }
 
-    @nogc number vibSpecHeatConstV(number Tve, int isp)
+    @nogc number vibElecSpecHeatConstV(number Tve, int isp)
     {
-        return CpFromCurveFits(Tve, isp) - _Cp_tr_rot[isp];
+        if (isp == Species.eminus)
+            return to!number(0.0);
+        else
+            return CpFromCurveFits(Tve, isp) - _Cp_tr_rot[isp];
     }
 
-    @nogc number vibSpecHeatConstV(in GasState Q, number Tve)
+    @nogc number vibElecSpecHeatConstV(in GasState Q, number Tve)
     {
         number Cv_vib = 0.0;
-        foreach (isp; molecularSpecies) {
-            Cv_vib += Q.massf[isp] * vibSpecHeatConstV(Tve, isp);
+        foreach (isp; 0 .. _n_species) {
+            if (isp == Species.eminus)
+                continue;
+            Cv_vib += Q.massf[isp] * vibElecSpecHeatConstV(Tve, isp);
         }
         return Cv_vib;
     }
@@ -625,7 +632,7 @@ private:
         return Cv;
     }
 
-    @nogc number vibTemperature(in GasState Q)
+    @nogc number vibElecTemperature(in GasState Q)
     {
         int MAX_ITERATIONS = 20;
         // We'll keep adjusting our temperature estimate
@@ -634,7 +641,7 @@ private:
         
         // Take the supplied T_modes[0] as the initial guess.
         number T_guess = Q.T_modes[0];
-        number f_guess = vibEnergy(Q, T_guess) - Q.u_modes[0];
+        number f_guess = vibElecEnergy(Q, T_guess) - Q.u_modes[0];
         // Before iterating, check if the supplied guess is
         // good enough. Define good enough as 1/100th of a Joule.
         double E_TOL = 0.01;
@@ -647,13 +654,13 @@ private:
         int count = 0;
         number Cv, dT;
         foreach (iter; 0 .. MAX_ITERATIONS) {
-            Cv = vibSpecHeatConstV(Q, T_guess);
+            Cv = vibElecSpecHeatConstV(Q, T_guess);
             dT = -f_guess/Cv;
             T_guess += dT;
             if (fabs(dT) < TOL) {
                 break;
             }
-            f_guess = vibEnergy(Q, T_guess) - Q.u_modes[0];
+            f_guess = vibElecEnergy(Q, T_guess) - Q.u_modes[0];
             count++;
         }
         

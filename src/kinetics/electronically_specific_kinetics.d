@@ -121,7 +121,7 @@ final class ElectronicallySpecificKinetics : ThermochemicalReactor {
         // of the temperatures associated with internal structure.
         // Now we can adjust the transrotational energy, given that
         // some of it was redistributed to other internal structure energy bins.
-        _macro_Q.u_modes[0] = _macroAirModel.vibEnergy(_macro_Q, _macro_Q.T_modes[0]);
+        _macro_Q.u_modes[0] = _macroAirModel.vibElecEnergy(_macro_Q, _macro_Q.T_modes[0]);
         _macro_Q.u = uTotal - _macro_Q.u_modes[0];
         try {
             _macroAirModel.update_thermo_from_rhou(_macro_Q);
@@ -453,8 +453,8 @@ private:
         foreach (isp; _macroAirModel.molecularSpecies) {
             // Vibrational energy exchange via collisions.
             number tau = evalRelaxationTime(Q, isp);
-            number evStar = _macroAirModel.vibEnergy(Q.T, isp);
-            number ev = _macroAirModel.vibEnergy(Q.T_modes[0], isp);
+            number evStar = _macroAirModel.vibElecEnergy(Q.T, isp);
+            number ev = _macroAirModel.vibElecEnergy(Q.T_modes[0], isp);
             rate += Q.massf[isp] * (evStar - ev)/tau;
             // Vibrational energy change due to chemical reactions.
             number chemRate = 0.0;
