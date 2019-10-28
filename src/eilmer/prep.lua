@@ -642,8 +642,14 @@ end
 
 function connectBlocks(blkA, faceA, blkB, faceB, orientation)
    -- Make a "full-face" connection between a pair of Block objects.
-   print("connectBlocks: blkA.id=", blkA.id, "faceA=", faceA, 
-	 "blkB.id=", blkB.id, "faceB=", faceB, "orientation=", orientation)
+   -- The connection is made by attaching boundary conditions
+   -- to each block that reference the other block.
+   if false then
+      -- To reduce visual clutter at prep time, don't use the following print statement.
+      -- It may still be useful for debugging.
+      print("connectBlocks: blkA.id=", blkA.id, "faceA=", faceA, 
+            "blkB.id=", blkB.id, "faceB=", faceB, "orientation=", orientation)
+   end
    if blkA.grid:get_type() ~= "structured_grid" or blkB.grid:get_type() ~= "structured_grid" then
       error("connectBlocks() Works only for structured-grid blocks.", 2)
    end
