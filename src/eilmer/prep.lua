@@ -884,8 +884,11 @@ function FBArray:new(o)
          njc_remaining = njc_remaining - njc
 	 if config.dimensions == 2 then
 	    -- 2D flow
-            print("ib=", ib, "jb= ", jb)
-            print("i0= ", i0, " nic= ", nic, " j0= ", j0, " njc= ", njc)
+            if false then
+               -- May activate print statements for debug.
+               print("ib=", ib, "jb= ", jb)
+               print("i0= ", i0, " nic= ", nic, " j0= ", j0, " njc= ", njc)
+            end
 	    local subgrid = o.grid:subgrid(i0,nic+1,j0,njc+1)
 	    local bcList = {north=WallBC_WithSlip:new(), east=WallBC_WithSlip:new(),
 			    south=WallBC_WithSlip:new(), west=WallBC_WithSlip:new()}
@@ -2213,7 +2216,10 @@ function build_job_files(job)
       os.execute("mkdir -p solid/t0000")
    end
    for i, id in ipairs(fluidBlocksForPrep) do
-      print("FluidBlock id=", id)
+      if false then
+         -- May activate print statement for debug.
+         print("FluidBlock id=", id)
+      end
       local idx = id+1
       local fileName = "grid/t0000/" .. job .. string.format(".grid.b%04d.t0000", id)
       if (config.grid_format == "gziptext") then
