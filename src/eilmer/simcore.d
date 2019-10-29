@@ -185,8 +185,11 @@ void init_simulation(int tindx, int nextLoadsIndx,
     }
     if (GlobalConfig.is_master_task) {
         string progressFile = "config/"~GlobalConfig.base_file_name~"-progress.txt";
+        string residualsFile = "config/"~GlobalConfig.base_file_name~"-residuals.txt";
         try {
             std.file.write(progressFile, "0\n");
+            std.file.write(residualsFile, "# 1:step 2:WC 3:mass 4:x-mom 5:y-mom"~
+                           " 6:z-mom 7:energy 8:L2 9:mass-balance\n");
         } catch (Exception e) {
             // do nothing
         }
@@ -938,8 +941,8 @@ int integrate_in_time(double target_time_as_requested)
                     }
                 }
                 if (GlobalConfig.report_residuals) {
-                    // We also compute the residual information and write to screen
-                    auto wallClock2 = 1.0e-3*(Clock.currTime() - SimState.wall_clock_start).total!"msecs"();
+                    // We also compute the residual information and write to residuals file.
+                    // These data can be used to monitor the progress of a steady-state calculation.
                     compute_mass_balance(mass_balance);
 		    compute_L2_residual(L2_residual);
                     compute_Linf_residuals(Linf_residuals);
@@ -968,18 +971,13 @@ int integrate_in_time(double target_time_as_requested)
                         L2_residual = my_local_value;
 		    }
                     if (GlobalConfig.is_master_task) {
-                        auto writer2 = appender!string();
-                        formattedWrite(writer2, "RESIDUALS: step= %7d WC= %.8f ",
-                                       SimState.step, wallClock2);
-                        formattedWrite(writer2, "MASS: %10.6e X-MOM: %10.6e Y-MOM: %10.6e Z-MOM: %10.6e ENERGY: %10.6e ",
-                                       Linf_residuals.mass, Linf_residuals.momentum.x,
-                                       Linf_residuals.momentum.y, Linf_residuals.momentum.z, Linf_residuals.total_energy);
-                        formattedWrite(writer2, "L2: %10.6e ",
-                                       fabs(L2_residual));
-                        formattedWrite(writer2, "MASS_BALANCE: %10.6e",
-                                       fabs(mass_balance));
-                        writeln(writer2.data);
-                        stdout.flush();
+                        string residualsFile = "config/"~GlobalConfig.base_file_name~"-residuals.txt";
+                        string txt = format("%7d %.3f %10.6e %10.6e %10.6e %10.6e %10.6e %10.6e %10.6e\n",
+                                            SimState.step, wall_clock_elapsed, Linf_residuals.mass,
+                                            Linf_residuals.momentum.x, Linf_residuals.momentum.y,
+                                            Linf_residuals.momentum.z, Linf_residuals.total_energy,
+                                            fabs(L2_residual), fabs(mass_balance));
+                        std.file.append(residualsFile, txt);
                     }
                 } // end if report_residuals
                 version(mpi_parallel) {
