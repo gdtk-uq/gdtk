@@ -2200,7 +2200,7 @@ function build_job_files(job)
    perform_spatial_gradient_consistency_check()
    warn_if_blocks_not_connected()
    if buildMasterFiles then
-      print("Build job files for ", job)
+      print("Build files for job:", job)
       os.execute("mkdir -p config")
       write_config_file("config/" .. job .. ".config")
       write_control_file("config/" .. job .. ".control")
