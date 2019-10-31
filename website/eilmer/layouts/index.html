@@ -1,0 +1,14 @@
+{{ partial "head.html" . }}
+<body class="{{ .Site.Params.themeColor }} {{if .Site.Params.layoutReverse}}layout-reverse{{end}}">
+
+{{ partial "sidebar.html" . }}
+
+   <div class="content container">
+   <h1 class="post-title">
+   {{ .Title }}
+   </h1>
+    {{ .Content }}
+   </div>
+
+  </body>
+</html>

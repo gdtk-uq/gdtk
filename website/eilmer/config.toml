@@ -1,0 +1,16 @@
+baseURL = "http://cfcfd.mechmining.uq.edu.au/eilmer/"
+languageCode = "en-us"
+title = "Eilmer"
+theme = "hyde"
+canonifyURLs = true
+
+[params]
+  description = "An open source compressible flow simulation tool, built in the D programming language."
+  author = "Peter A. Jacobs and Rowan J. Gollan"
+
+[menu]
+
+   [[menu.main]]
+      name = "Users' Reference Manual"
+      url = "/html/users-reference-manual.html"
+      weight = 25

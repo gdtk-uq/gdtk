@@ -1,0 +1,22 @@
+= Configuration options
+
+There are a large number of configuration options
+that can be set in the input script.
+The options are set in the input script by adding
+lines of the form:
+
+ config.option = value
+
+Here are all of the available configuration options and the default
+values if left unset.
+Note you do not have to set all of these values in the
+input script.
+In a typical input script, one might set 10-15 input variables.
+
+[[horizontal]]
+`config.title` :: Title for the simulation +
+                  _string_, default: `"Eilmer4 simulation"`
+`config.dimensions` :: Spatial dimensionality, 2 or 3. +
+                  _int_, default: `2`
+
+
