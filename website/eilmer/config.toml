@@ -11,6 +11,6 @@ canonifyURLs = true
 [menu]
 
    [[menu.main]]
-      name = "Reference Guide"
-      url = "/html/reference-guide.html"
+      name = "Users' Reference Manual"
+      url = "/html/users-reference-manual.html"
       weight = 25

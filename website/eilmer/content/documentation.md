@@ -19,9 +19,9 @@ The user guide for **foamMesh** is also available:
 
 Reference Guides
 ----------------
-There are Reference Guides for boths users and developers:
+There are Reference Manuals for boths users and developers:
 
-- [Eilmer Reference Guide for Users, v4.0](/html/reference-guide.html)
+- [Eilmer Reference Manual for Users, v4.0](/html/users-reference-manual.html)
 
 
 
