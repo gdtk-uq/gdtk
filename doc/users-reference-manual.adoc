@@ -1,0 +1,16 @@
+= Eilmer Reference Manual for Users, v4.0
+Rowan J. Gollan; Peter A. Jacobs
+2019-10-31
+:toc: right
+:stylesheet: readthedocs.css
+:sectnums:
+
+:leveloffset: +1
+
+include::eilmer/config-options-user.adoc[]
+include::eilmer/flow-state-user.adoc[]
+include::eilmer/fluid-block-user.adoc[]
+
+:leveloffset: -1
+
+
