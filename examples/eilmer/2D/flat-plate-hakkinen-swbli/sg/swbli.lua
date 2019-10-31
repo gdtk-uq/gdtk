@@ -1,8 +1,10 @@
 -- swbli.lua
--- Anand V, 10-October-2015 and Peter J, 2016-11-02
 -- Model of Hakkinen et al's 1959 experiment.
-
-config.title = "Shock Wave Boundary Layer Interaction"
+--
+-- Anand V, 10-October-2015 and Peter J, 2016-11-02
+-- Update to use FBArray, PJ 2019-10-26
+--
+config.title = 'Shock Wave Boundary Layer Interaction'
 print(config.title)
 config.dimensions = 2
 
@@ -12,7 +14,7 @@ u_inf = 514.0 -- m/s
 T_inf = 164.4 -- degree K
 
 nsp, nmodes = setGasModel('ideal-air-gas-model.lua')
-print("GasModel set to ideal air. nsp= ", nsp, " nmodes= ", nmodes)
+print('GasModel set to ideal air. nsp= ', nsp, ' nmodes= ', nmodes)
 inflow = FlowState:new{p=p_inf, velx=u_inf, T=T_inf}
 
 -- Flow domain.
@@ -65,22 +67,18 @@ grid2 = StructuredGrid:new{psurface=patch2, niv=2*ni0+1, njv=nj0+1,
 --
 -- Build the flow blocks and attach boundary conditions.
 --
-blk0 = FluidBlockArray{grid=grid0, initialState=inflow, nib=1, njb=2,
-		       bcList={west=InFlowBC_Supersonic:new{flowState=inflow},
-			       north=WallBC_WithSlip:new{},
-			       south=WallBC_WithSlip:new{}}}
-blk1 = FluidBlockArray{grid=grid1, initialState=inflow, nib=7, njb=2,
-		       bcList={south=WallBC_NoSlip_Adiabatic:new{},
-			       north=WallBC_WithSlip:new{}}}
-blk2 = FluidBlockArray{grid=grid2, initialState=inflow, nib=2, njb=2,
-		       bcList={south=WallBC_NoSlip_Adiabatic:new{},
-			       north=WallBC_WithSlip:new{},
-			       east=OutFlowBC_FixedPT:new{p_outside=p_inf,
-							  T_outside=T_inf}}}
+blk0 = FBArray:new{grid=grid0, initialState=inflow, nib=1, njb=2,
+                   bcList={west=InFlowBC_Supersonic:new{flowState=inflow}}}
+blk1 = FBArray:new{grid=grid1, initialState=inflow, nib=7, njb=2,
+                   bcList={south=WallBC_NoSlip_Adiabatic:new{}}}
+blk2 = FBArray:new{grid=grid2, initialState=inflow, nib=2, njb=2,
+                   bcList={south=WallBC_NoSlip_Adiabatic:new{},
+                           east=OutFlowBC_FixedPT:new{p_outside=p_inf,
+                                                      T_outside=T_inf}}}
 identifyBlockConnections()
 
 mpiDistributeBlocks{ntasks=4}
-config.gasdynamic_update_scheme = "classic-rk3"
+config.gasdynamic_update_scheme = 'classic-rk3'
 config.flux_calculator = 'adaptive'
 config.viscous = true
 config.spatial_deriv_calc = 'divergence'
