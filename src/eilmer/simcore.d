@@ -188,8 +188,9 @@ void init_simulation(int tindx, int nextLoadsIndx,
         string residualsFile = "config/"~GlobalConfig.base_file_name~"-residuals.txt";
         try {
             std.file.write(progressFile, "0\n");
-            std.file.write(residualsFile, "# 1:step 2:WC 3:mass 4:x-mom 5:y-mom"~
-                           " 6:z-mom 7:energy 8:L2 9:mass-balance\n");
+            // Label columns of residuals for reference by gnuplot.
+            std.file.write(residualsFile, "step WC mass x-mom y-mom"~
+                           " z-mom energy L2 mass-balance\n");
         } catch (Exception e) {
             // do nothing
         }
