@@ -156,27 +156,38 @@ A valid pressure value 'T' is not found in arguments.
 The value should be a number.`;
     double T = getNumberFromTable(L, tblindx, "T", true, double.init, true, errMsg);
 
+    // If we have a multi-temperature gas, then we must also find an entry for
+    // T_modes.
+    double[] T_modes;
+    if (managedGasModel.n_modes >= 1) {
+        lua_getfield(L, tblindx, "T_modes");
+        if (lua_isnil(L, -1)) {
+            errMsg = "Error in call to makeFlowStateFromTable.\n";
+            errMsg ~= "T_modes is not set in table, but we have a multi-temperature gas.\n";
+            throw new LuaInputException(errMsg);
+        }
+
+        // Next test for T_modes and see if it is a scalar or an array.
+        if (lua_isnumber(L, -1)) {
+            double Tval = lua_tonumber(L, -1);
+            foreach (i; 0 .. managedGasModel.n_modes) { T_modes ~= Tval; }
+        } else if (lua_istable(L, -1)) {
+            getArrayOfDoubles(L, tblindx, "T_modes", T_modes);
+            if ( T_modes.length != managedGasModel.n_modes ) {
+                errMsg = "Error in call to makeFlowStateFromTable.";
+                errMsg ~= "Length of T_modes vector does not match number of modes in gas model.";
+                errMsg ~= format("T_modes.length= %d; n_modes= %d\n", T_modes.length, managedGasModel.n_modes);
+                throw new LuaInputException(errMsg);
+            }
+        } else {
+            foreach (i; 0 .. managedGasModel.n_modes) { T_modes ~= T; }
+        }
+        lua_pop(L, 1);
+    }
+
     // Now everything else is optional. If it has been set, then we will 
     // ensure that it can be retrieved correctly, or signal the user.
 
-    // Next test for T_modes and see if it is a scalar or an array.
-    double[] T_modes;
-    lua_getfield(L, tblindx, "T_modes");
-    if (lua_isnumber(L, -1)) {
-        double Tval = lua_tonumber(L, -1);
-        foreach (i; 0 .. managedGasModel.n_modes) { T_modes ~= Tval; }
-    } else if (lua_istable(L, -1)) {
-        getArrayOfDoubles(L, tblindx, "T_modes", T_modes);
-        if ( T_modes.length != managedGasModel.n_modes ) {
-            errMsg = "Error in call to makeFlowStateFromTable.";
-            errMsg ~= "Length of T_modes vector does not match number of modes in gas model.";
-            errMsg ~= format("T_modes.length= %d; n_modes= %d\n", T_modes.length, managedGasModel.n_modes);
-            throw new LuaInputException(errMsg);
-        }
-    } else {
-        foreach (i; 0 .. managedGasModel.n_modes) { T_modes ~= T; }
-    }
-    lua_pop(L, 1);
     // Values related to velocity.
     double velx = 0.0;
     double vely = 0.0;
