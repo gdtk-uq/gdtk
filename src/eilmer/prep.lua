@@ -250,25 +250,24 @@ function FlowState:new(o)
       FlowState.nSpecies = nsp
       FlowState.speciesNames = names
       FlowState.nModes = nmodes
-      -- Patch a couple of the default values, to be consistent with the GasModel
+      -- Patch the massf default values, to be consistent with the GasModel
       local massf = {[names[1]]=1.0, }
       for i = 2, nsp do massf[names[i]] = 0.0 end
       FlowState_defaults.massf = massf
-      local T_modes = {}
-      for i = 1, nmodes do T_modes[#T_modes+1] = FlowState_defaults.T end
-      FlowState_defaults.T_modes = T_modes
+      -- Set T_modes to nil deliberately in defaults as we want user
+      -- to set this.
+      FlowState_defaults.T_modes = nil
    end
    -- Now, fill in default values for the FlowState object being constructed.
    -- If an item is not already present, copy the default value into the object,
-   -- being careful to make new tables for massf and T_modes.
+   -- being careful to make new table for massf.
+   -- RJG, 2019-11-03: We do not make defaults for T_modes. 
+   -- We'll require the user to set this explicitly.
    for k, v in pairs(FlowState_defaults) do
       if o[k] == nil then
 	 if k == "massf" then
 	    o.massf = {}
 	    for species, fraction in pairs(v) do o.massf[species] = fraction end
-	 elseif k == "T_modes" then
-	    o.T_modes = {}
-	    for i,temperature in ipairs(v) do o.T_modes[i] = temperature end
 	 else
 	    o[k] = v
 	 end
@@ -290,10 +289,7 @@ function FlowState:new(o)
    Q.massf = massf
    if FlowState.nModes > 0 then
       if o.T_modes == nil then
-	 -- We did not receive any T_modes, assume in equilibrium with T.
-	 local T_modes = {}
-	 for i = 1, FlowState.nModes do T_modes[#T_modes] = o.T end
-	 o.T_modes = T_modes
+         error(string.format("No values for T_modes supplied, but n_modes= %d.", FlowState.nModes))
       else
 	 -- We have been given something, which is expected
 	 -- to be either an array or a single number.
