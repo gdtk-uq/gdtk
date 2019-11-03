@@ -180,7 +180,7 @@ public:
 
         _Cp_tr_rot.length = _n_species;
         foreach (isp; 0 .. _n_species) {
-            if (isp == Species.eminus) {
+            if (_species_ids[isp] == Species.eminus) {
                 // The electron translation is governed by T_ve,
                 // so it has no energy contribution in the T_tr mode.
                 _Cp_tr_rot[isp] = 0.0;
@@ -269,7 +269,7 @@ public:
         number sumA = 0.0;
         number sumB = 0.0;
         foreach (isp; 0 .. _n_species) {
-            if (isp == Species.eminus) continue;
+            if (_species_ids[isp] == Species.eminus) continue;
             sumA += Q.massf[isp]*(_Cp_tr_rot[isp]*T_REF - _del_hf[isp]);
             sumB += Q.massf[isp]*(_Cp_tr_rot[isp] - _R[isp]);
         }
@@ -446,7 +446,7 @@ public:
     {
         // The electron possess only energy in translation and this is its contribution
         // in the vibroelectronic mode
-        if (isp == Species.eminus)
+        if (_species_ids[isp] == Species.eminus)
             return (3./2.)*_R[isp]*Tve;
         number h_at_Tve = enthalpyFromCurveFits(Tve, isp);
         number h_ve = h_at_Tve - _Cp_tr_rot[isp]*(Tve - T_REF) - _del_hf[isp];
@@ -592,6 +592,7 @@ private:
     {
         number e_tr_rot = 0.0;
         foreach (isp; 0 .. _n_species) {
+            if (_species_ids[isp] == Species.eminus) continue;
             number h_tr_rot = _Cp_tr_rot[isp]*(Q.T - T_REF) + _del_hf[isp];
             e_tr_rot += Q.massf[isp]*(h_tr_rot - _R[isp]*Q.T);
         }
@@ -600,7 +601,7 @@ private:
 
     @nogc number vibElecSpecHeatConstV(number Tve, int isp)
     {
-        if (isp == Species.eminus)
+        if (_species_ids[isp] == Species.eminus)
             return (3./2.)*_R[isp];
         else
             return CpFromCurveFits(Tve, isp) - _Cp_tr_rot[isp];
@@ -617,7 +618,7 @@ private:
 
     @nogc number transRotSpecHeatConstV(int isp)
     {
-        if (isp == Species.eminus) 
+        if (_species_ids[isp] == Species.eminus) 
             return to!number(0.0);
         else 
             return to!number(_Cp_tr_rot[isp] - _R[isp]);
