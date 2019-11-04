@@ -1,0 +1,37 @@
+= FlowSolution
+
+In a preparation script, the `FlowSolution` object is used
+to initialise the domain with a flow field from another 
+(completed) job.
+
+[[FlowSolution,`FlowSolution`]]
+ FlowSolution:new{jobName, dir, tindx, nBlocks}
+
+[horizontal]
+`jobName` :: base file name for completed simulation +
+             _string_, no default
+`dir` :: directory containing completed simulation +
+         It is often easy to use relative paths if the simulation is nearyby. +
+          _string_, no default
+`tindx` :: time index at which to read flow field from completed simulation +
+          _int_ or _string_, provide an integer for the time index,
+          or to get the last flow field, one can supply the special
+          string `"last"`.
+
+`nBlocks` :: number of blocks in completed simulation. +
+             Note that if you provide a value _smaller_ than the
+             total number of blocks in the completed simulation,
+             then only blocks up to `nBlocks-1` will be used
+             to initialise the flow field. A use case for this would
+             if one only want to use some inflow portion of the
+             domain when intialising a new simulation. +
+             _int_, no default.
+
+Example of use:
+
+ initial = FlowSolution:new{jobName='sphere', dir='../inviscid',
+                            tindx=10, nBlocks=4}
+
+
+
+

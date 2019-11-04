@@ -10,6 +10,7 @@ Rowan J. Gollan; Peter A. Jacobs
 include::eilmer/config-options-user.adoc[]
 include::eilmer/flow-state-user.adoc[]
 include::eilmer/fluid-block-user.adoc[]
+include::eilmer/flowsolution_user.adoc[]
 
 :leveloffset: -1
 
