@@ -324,64 +324,171 @@ public:
         double kB = Boltzmann_constant;
         number T = Q.T;
         number mylogT = log(Q.T);
-        foreach (isp; 0 .. _n_species) {
-            foreach (jsp; 0 .. isp+1) {
-                number expnt = _A_22[isp][jsp]*(mylogT)^^2 + _B_22[isp][jsp]*mylogT + _C_22[isp][jsp];
-                number pi_Omega_22 = exp(_D_22[isp][jsp])*pow(T, expnt); 
-                _Delta_22[isp][jsp] = (16./5)*1.546e-20*sqrt(2.0*_mu[isp][jsp]/(to!double(PI)*_R_U_cal*T))*pi_Omega_22;
+        number Te = Q.T_modes[0];
+        number mylogTe = log(Te);
+        if ( _n_species == 5 ) {
+            foreach (isp; 0 .. _n_species) {
+                foreach (jsp; 0 .. isp+1) {
+                    number expnt = _A_22[isp][jsp]*(mylogT)^^2 + _B_22[isp][jsp]*mylogT + _C_22[isp][jsp];
+                    number pi_Omega_22 = exp(_D_22[isp][jsp])*pow(T, expnt); 
+                    _Delta_22[isp][jsp] = (16./5)*1.546e-20*sqrt(2.0*_mu[isp][jsp]/(to!double(PI)*_R_U_cal*T))*pi_Omega_22;
+                    _Delta_22[jsp][isp] = _Delta_22[isp][jsp];
+                }
+            }
+        }
+        else {
+            // electron present.
+            // Compute heavy-particle collision integrals with heavy-particle translation temperature
+            // and those involving electron with electron temperature.
+            foreach (isp; 0 .. _n_species-1) {
+                foreach (jsp; 0 .. isp+1) {
+                    number expnt = _A_22[isp][jsp]*(mylogT)^^2 + _B_22[isp][jsp]*mylogT + _C_22[isp][jsp];
+                    number pi_Omega_22 = exp(_D_22[isp][jsp])*pow(T, expnt); 
+                    _Delta_22[isp][jsp] = (16./5)*1.546e-20*sqrt(2.0*_mu[isp][jsp]/(to!double(PI)*_R_U_cal*T))*pi_Omega_22;
+                    _Delta_22[jsp][isp] = _Delta_22[isp][jsp];
+                }
+            }
+            auto isp = _n_species - 1;
+            foreach (jsp; 0 .. _n_species) {
+                number expnt = _A_22[isp][jsp]*(mylogTe)^^2 + _B_22[isp][jsp]*mylogTe + _C_22[isp][jsp];
+                number pi_Omega_22 = exp(_D_22[isp][jsp])*pow(Te, expnt); 
+                _Delta_22[isp][jsp] = (16./5)*1.546e-20*sqrt(2.0*_mu[isp][jsp]/(to!double(PI)*_R_U_cal*Te))*pi_Omega_22;
                 _Delta_22[jsp][isp] = _Delta_22[isp][jsp];
             }
         }
+
+        // Compute mixture viscosity.
         number sumA = 0.0;
         number sumB;
-        foreach (isp; 0 .. n_species) {
-            sumB = 0.0;
-            foreach (jsp; 0 .. n_species) {
-                sumB += _molef[jsp]*_Delta_22[isp][jsp];
+        if (_n_species == 5) {
+            foreach (isp; 0 .. _n_species) {
+                sumB = 0.0;
+                foreach (jsp; 0 .. _n_species) {
+                    sumB += _molef[jsp]*_Delta_22[isp][jsp];
+                }
+                sumA += _particleMass[isp]*_molef[isp]/sumB;
             }
-            sumA += _particleMass[isp]*_molef[isp]/sumB;
+            Q.mu = sumA * (1.0e-3/1.0e-2); // convert g/(cm.s) -> kg/(m.s)
         }
-        Q.mu = sumA * (1.0e-3/1.0e-2); // convert g/(cm.s) -> kg/(m.s)
-        
-        // k = k_tr + k_rot
-        sumA = 0.0;
-        foreach (isp; 0 .. _n_species) {
-            sumB = 0.0;
-            foreach (jsp; 0 .. n_species) {
-                sumB += _alpha[isp][jsp]*_molef[jsp]*_Delta_22[isp][jsp];
+        else {
+            // electron present.
+            // An additional term is required in the mixture viscosity.
+            foreach (isp; 0 .. _n_species-1) {
+                sumB = 0.0;
+                foreach (jsp; 0 .. _n_species-1) {
+                    sumB += _molef[jsp]*_Delta_22[isp][jsp];
+                }
+                sumB += _molef[_n_species-1]*_Delta_22[isp][_n_species-1];
+                sumA += _particleMass[isp]*_molef[isp]/sumB;
             }
-            sumA += _molef[isp]/sumB;
+            sumB = 0.0;
+            foreach (jsp; 0 .. _n_species) {
+                sumB += _molef[jsp]*_Delta_22[_n_species-1][jsp];
+            }
+            sumA += _particleMass[_n_species-1]*_molef[_n_species-1]/sumB;
+            Q.mu = sumA * (1.0e-3/1.0e-2); // convert g/(cm.s) -> kg/(m.s)
+        }
+
+        // Compute component thermal conductivities
+        // k in transrotational = k_tr + k_rot
+        // k in vibroelectronic = k_ve + k_E
+        // 1. k_tr
+        sumA = 0.0;
+        if (_n_species == 5) {
+            foreach (isp; 0 .. _n_species) {
+                sumB = 0.0;
+                foreach (jsp; 0 .. n_species) {
+                    sumB += _alpha[isp][jsp]*_molef[jsp]*_Delta_22[isp][jsp];
+                }
+                sumA += _molef[isp]/sumB;
+            }
+        }
+        else {
+            // electron present.
+            foreach (isp; 0 .. _n_species-1) {
+                sumB = 0.0;
+                foreach (jsp; 0 .. n_species-1) {
+                    sumB += _alpha[isp][jsp]*_molef[jsp]*_Delta_22[isp][jsp];
+                }
+                sumB += 3.54*_molef[_n_species-1]*_Delta_22[isp][_n_species-1];
+                sumA += _molef[isp]/sumB;
+            }
         }
         double kB_erg = 1.38066e-16; // erg/K
         number k_tr = 2.3901e-8*(15./4.)*kB_erg*sumA;
         k_tr *= (4.184/1.0e-2); // cal/(cm.s.K) --> J/(m.s.K)
 
-        foreach (isp; 0 .. _n_species) {
-            foreach (jsp; 0 .. isp+1) {
-                number expnt = _A_11[isp][jsp]*(mylogT)^^2 + _B_11[isp][jsp]*mylogT + _C_11[isp][jsp];
-                number pi_Omega_11 = exp(_D_11[isp][jsp])*pow(T, expnt); 
-                _Delta_11[isp][jsp] = (8.0/3)*1.546e-20*sqrt(2.0*_mu[isp][jsp]/(to!double(PI)*_R_U_cal*T))*pi_Omega_11;
+        // 2. k_rot
+        if (_n_species == 5) {
+            foreach (isp; 0 .. _n_species) {
+                foreach (jsp; 0 .. isp+1) {
+                    number expnt = _A_11[isp][jsp]*(mylogT)^^2 + _B_11[isp][jsp]*mylogT + _C_11[isp][jsp];
+                    number pi_Omega_11 = exp(_D_11[isp][jsp])*pow(T, expnt); 
+                    _Delta_11[isp][jsp] = (8.0/3)*1.546e-20*sqrt(2.0*_mu[isp][jsp]/(to!double(PI)*_R_U_cal*T))*pi_Omega_11;
+                    _Delta_11[jsp][isp] = _Delta_11[isp][jsp];
+                }
+            }
+        }
+        else {
+            // electron present.
+            // Compute heavy-particle collision integrals with heavy-particle translation temperature
+            // and those involving electron with electron temperature.
+            foreach (isp; 0 .. _n_species-1) {
+                foreach (jsp; 0 .. isp+1) {
+                    number expnt = _A_11[isp][jsp]*(mylogT)^^2 + _B_11[isp][jsp]*mylogT + _C_11[isp][jsp];
+                    number pi_Omega_11 = exp(_D_11[isp][jsp])*pow(T, expnt); 
+                    _Delta_11[isp][jsp] = (8.0/3)*1.546e-20*sqrt(2.0*_mu[isp][jsp]/(to!double(PI)*_R_U_cal*T))*pi_Omega_11;
+                    _Delta_11[jsp][isp] = _Delta_11[isp][jsp];
+                }
+            }
+            auto isp = _n_species - 1;
+            foreach (jsp; 0 .. _n_species) {
+                number expnt = _A_11[isp][jsp]*(mylogTe)^^2 + _B_11[isp][jsp]*mylogTe + _C_11[isp][jsp];
+                number pi_Omega_11 = exp(_D_11[isp][jsp])*pow(Te, expnt); 
+                _Delta_11[isp][jsp] = (8.0/3)*1.546e-20*sqrt(2.0*_mu[isp][jsp]/(to!double(PI)*_R_U_cal*Te))*pi_Omega_11;
                 _Delta_11[jsp][isp] = _Delta_11[isp][jsp];
             }
         }
+
         number k_rot = 0.0;
-        number k_vib = 0.0;
+        number k_vib_e = 0.0;
         foreach (isp; molecularSpecies) {
             sumB = 0.0;
-            foreach (jsp; 0 .. _n_species) {
-                sumB += _molef[jsp]*_Delta_11[isp][jsp];
+            if (_n_species == 5) {
+                foreach (jsp; 0 .. _n_species) {
+                    sumB += _molef[jsp]*_Delta_11[isp][jsp];
+                }
+            }
+            else {
+                foreach (jsp; 0 .. _n_species-1) {
+                    sumB += _molef[jsp]*_Delta_11[isp][jsp];
+                }
+                sumB += _molef[_n_species-1]*_Delta_11[isp][_n_species-1];
             }
             k_rot += _molef[isp]/sumB;
             number Cp_vib = vibElecSpecHeatConstV(Q.T_modes[0], isp);
-            k_vib += (Cp_vib*_mol_masses[isp]/R_universal)*_molef[isp]/sumB;
+            k_vib_e += (Cp_vib*_mol_masses[isp]/R_universal)*_molef[isp]/sumB;
         }
         k_rot *= 2.3901e-8*kB_erg;
         k_rot *= (4.184/1.0e-2); // cal/(cm.s.K) --> J/(m.s.K)
         Q.k = k_tr + k_rot;
 
-        k_vib *= 2.3901e-8*kB_erg;
-        k_vib *= (4.184/1.0e-2); // cal/(cm.s.K) --> J/(m.s.K)
-        Q.k_modes[0] = k_vib;
+        k_vib_e *= 2.3901e-8*kB_erg;
+        k_vib_e *= (4.184/1.0e-2); // cal/(cm.s.K) --> J/(m.s.K)
+
+        number k_E = 0.0;
+        if (_n_species > 5) {
+            // electron present.
+            sumB = 0.0;
+            foreach (jsp; 0 .. _n_species-1) {
+                sumB += 1.45*_molef[jsp]*_Delta_22[_n_species-1][jsp];
+            }
+            sumB += _molef[_n_species-1]*_Delta_22[_n_species-1][_n_species-1];
+            k_E = _molef[_n_species-1]/sumB;
+            k_E *= 2.3901e-8*(15./4.)*kB_erg;
+            k_E *= (4.184/1.0e-2); // cal/(cm.s.K) --> J/(m.s.K)
+        }
+        Q.k_modes[0] = k_vib_e + k_E;
     }
 
     override number dudT_const_v(in GasState Q)
