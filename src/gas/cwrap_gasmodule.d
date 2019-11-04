@@ -90,6 +90,18 @@ extern (C) char* gas_model_species_name(int gm_i, int isp, char* dest_name, int 
     }
 }
 
+extern (C) int gas_model_mol_masses(int gm_i, double* mm)
+{
+    // Return the species molecular mass as an array.
+    try {
+        foreach(i, mass; gas_models[gm_i].mol_masses) { mm[i] = mass; }
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
 extern (C) int gas_state_new(int gm_i)
 {
     try {
@@ -162,6 +174,45 @@ extern (C) double gas_state_get_scalar_field(int gs_i, char* field_name)
     }
 }
 
+extern (C) int gas_state_set_array_field(int gs_i, char* field_name, double* values, int n)
+{
+    try {
+        GasState gs = gas_states[gs_i];
+        string name = to!string(field_name); 
+        switch (name) {
+        case "massf":
+            foreach (i; 0 .. n) { gs.massf[i] = values[i]; }
+            break;
+        default:
+            string msg = format("Unknown field name: %s", name);
+            throw new Exception(msg);
+        }
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern (C) int gas_state_get_array_field(int gs_i, char* field_name, double* values, int n)
+{
+    try {
+        GasState gs = gas_states[gs_i];
+        string name = to!string(field_name);
+        switch (name) {
+        case "massf":
+            foreach (i; 0 .. n) { values[i] = gs.massf[i]; }
+            break;
+        default:
+            string msg = format("Unknown field name: %s", name);
+            throw new Exception(msg);
+        }
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
 
 extern (C) int gas_model_gas_state_update_thermo_from_pT(int gm_i, int gs_i)
 {
