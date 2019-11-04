@@ -116,7 +116,7 @@ public:
             foreach (isp; 0 .. other.massf.length) { massf[isp][] = other.massf[isp][]; }
         }
         T[] = other.T[];
-        version(mulit_T_gas) {
+        version(multi_T_gas) {
             foreach (imode; 0 .. other.T_modes.length) { T_modes[imode][] = other.T_modes[imode][]; }
         }
         version(komega) {
