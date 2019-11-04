@@ -15,6 +15,7 @@ from gasmodule import GasModel, GasState
 gmodel = GasModel("sample-data/ideal-air-gas-model.lua")
 print("gmodel=", gmodel)
 print("n_species=", gmodel.n_species, "n_modes=", gmodel.n_modes)
+print("species_names=", gmodel.species_names)
 
 Q = GasState(gmodel)
 print("freshly minted Q=", Q)

@@ -11,6 +11,7 @@ ffi.cdef("""
     int gas_model_new(char* file_name);
     int gas_model_n_species(int gm_i);
     int gas_model_n_modes(int gm_i);
+    char* gas_model_species_name(int gm_i, int isp, char* name, int n);
 
     int gas_state_new(int gm_i);
     int gas_state_set_scalar_field(int gs_i, char* field_name, double value);
@@ -30,6 +31,13 @@ class GasModel(object):
     def __init__(self, file_name):
         self.file_name = file_name
         self.id = so.gas_model_new(bytes(self.file_name, 'utf-8'))
+        self._n_species = so.gas_model_n_species(self.id)
+        self._n_modes = so.gas_model_n_modes(self.id)
+        self.species_names = []
+        for i in range(self._n_species):
+            buf = ffi.new("char[]", b'\000'*32)
+            so.gas_model_species_name(self.id, i, buf, 32)
+            self.species_names.append(ffi.string(buf).decode('utf-8'))
         return
 
     def __str__(self):
@@ -37,12 +45,10 @@ class GasModel(object):
         return text
     
     @property
-    def n_species(self):
-        return so.gas_model_n_species(self.id)
+    def n_species(self): return self._n_species
     
     @property
-    def n_modes(self):
-        return so.gas_model_n_modes(self.id)
+    def n_modes(self): return self._n_modes
 
     def update_thermo_from_pT(self, gstate):
         flag = so.gas_model_gas_state_update_thermo_from_pT(self.id, gstate.id)

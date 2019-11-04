@@ -7,10 +7,13 @@
 // PJ 2019-07-24: just enough to try integration with the gas makefile.
 //
 
+import core.runtime;
+import core.stdc.string;
+import std.string;
 import std.stdio;
 import std.format;
 import std.conv;
-import core.runtime;
+import std.algorithm;
 
 import gas.gas_model;
 import gas.gas_state;
@@ -71,6 +74,19 @@ extern (C) int gas_model_n_modes(int gm_i)
     } catch (Exception e) {
         writeln("Exception message: ", e.msg);
         return -1;
+    }
+}
+
+extern (C) char* gas_model_species_name(int gm_i, int isp, char* dest_name, int n)
+{
+    // The isp-th species name will be copied into char* array.
+    // It is presumed that sufficient space (n chars, including \0) was allocated previously.
+    try {
+        char* src_name = cast(char*) gas_models[gm_i].species_name(isp).toStringz;
+        return strncpy(dest_name, src_name, n);
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return cast(char*) 0;
     }
 }
 
