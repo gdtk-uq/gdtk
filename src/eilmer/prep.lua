@@ -341,11 +341,13 @@ function FlowState:__tostring()
       str = str .. '["' ..tostring(k) .. '"]=' .. tostring(v) .. ', '
    end
    str = str .. "}"
-   str = str .. ", T_modes={"
-   for i, v in ipairs(self.T_modes) do
-      str = str .. tostring(v) .. ", "
+   if self.T_modes then
+      str = str .. ", T_modes={"
+      for i, v in ipairs(self.T_modes) do
+         str = str .. tostring(v) .. ", "
+      end
+      str = str .. "}"
    end
-   str = str .. "}"
    str = str .. ", p_e=" .. tostring(self.p_e)
    str = str .. ", velx=" .. tostring(self.velx)
    str = str .. ", vely=" .. tostring(self.vely)
