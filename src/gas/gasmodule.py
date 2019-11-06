@@ -36,8 +36,8 @@ class GasModel(object):
         self.file_name = file_name
         self.id = so.gas_model_new(bytes(self.file_name, 'utf-8'))
         self.species_names = []
+        buf = ffi.new("char[]", b'\000'*32)
         for i in range(self.n_species):
-            buf = ffi.new("char[]", b'\000'*32)
             so.gas_model_species_name(self.id, i, buf, 32)
             self.species_names.append(ffi.string(buf).decode('utf-8'))
         return
