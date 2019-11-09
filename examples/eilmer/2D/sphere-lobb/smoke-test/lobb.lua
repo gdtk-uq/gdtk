@@ -49,6 +49,9 @@ end
 config.max_step = 80000
 config.dt_init = 1.0e-11
 config.cfl_value = 0.2
+config.adjust_invalid_cell_data = true
+config.report_invalid_cells = false
+config.max_invalid_cells = 10
 config.dt_plot = config.max_time/10
 
 -- The initial condition may be one of:
