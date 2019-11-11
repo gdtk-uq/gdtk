@@ -59,7 +59,7 @@ test_scripts << "2D/cylinder-giordano/two-temperature/inf_cyl-test.rb"
 test_scripts << "3D/simple-ramp/sg/ramp-test.rb"
 test_scripts << "2D/cylinder-dlr-n90/cpu-chem/n90-test.rb"
 test_scripts << "2D/binary-diffusion/bd-test.rb"
-# test_scripts << "2D/sphere-lobb/smoke-test/lobb.test"
+test_scripts << "2D/sphere-lobb/smoke-test/lobb-test.rb"
 # test_scripts << "2D/radiating-cylinder/Argon/MC/cyl.test"
 test_scripts << "2D/nozzle-shock-tunnel-t4m4/t4m4-test.rb"
 if long_tests then
