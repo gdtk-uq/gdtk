@@ -1,18 +1,21 @@
 #! /usr/bin/env ruby
 # n90-test.rb
 # This exercises the nonequilibrium thermochemistry with the flow of
-# dissociating nitrogen over a cylinder.
-# PJ, 2015-11-10, 2019-05-25, 2019-06-24
+# dissociating nitrogen over a cylinder -- Chemkin thermochemistry.
+# PJ, 2015-11-10, 2019-11-12
 #
 require 'test/unit'
 require 'open3'
 
-class TestN90 < Test::Unit::TestCase
+class TestN90Chemkin < Test::Unit::TestCase
   def test_0_prep
     cmd = "prep-gas nitrogen-2sp.inp nitrogen-2sp.lua"
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
-    cmd = "prep-chem nitrogen-2sp.lua nitrogen-2sp-2r.lua e4-chem.lua"
+    cmd = "chemkin2eilmer n2-dissociation.inp nitrogen-2sp.lua n2-dissociation.lua"
+    o, e, s = Open3.capture3(*cmd.split)
+    assert_equal(s.success?, true)
+    cmd = "prep-chem nitrogen-2sp.lua n2-dissociation.lua e4-chem.lua"
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
     cmd = "e4shared --prep --job=n90"
@@ -41,9 +44,9 @@ class TestN90 < Test::Unit::TestCase
     assert_equal(s.success?, true)
     names = ['rho', 'vel.x', 'p', 'massf_N', 'T']
     # The following values were extracted from the solution, with a nicer grid,
-    # as it was computed on PJ's computer 2019-05-25.
-    refs = {'rho'=>1.9090e-02, 'vel.x'=>5.797e+02, 'p'=>5.3735e+04,
-            'massf_N'=>1.749e-02, 'T'=>9.3205e+03}
+    # as it was computed on PJ's computer 2019-11-12.
+    refs = {'rho'=>1.870e-02, 'vel.x'=>5.924e+02, 'p'=>5.353e+04,
+            'massf_N'=>2.098e-02, 'T'=>9.448e+03}
     tols = {'rho'=>0.01, 'vel.x'=>0.1, 'p'=>0.01, 'massf_N'=>0.15, 'T'=>0.01}
     columns = {}
     values = {}
