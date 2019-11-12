@@ -453,8 +453,12 @@ bool checkAllowedNames(lua_State* L, int tblIndx, string[] allowedNames)
         // next key is left on stack at -2, value at -1
         string key = to!string(lua_tostring(L, -2));
         if (!canFind(allowedNames, key)) {
-            writeln("Warning: Invalid name: ", key);
+            writeln("checkAllowedNames found invalid key: ", key);
             namesOk = false;
+            // We stop on the first invalid key because continuing on may
+            // lead to a failure message for next, and loss of the location information.
+            // The resulting error message is really confusing to the user.. 
+            break;
         }
         lua_pop(L, 1); // discard value but keep key for next
     } // end while
