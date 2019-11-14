@@ -63,6 +63,8 @@ test_scripts << "2D/binary-diffusion/bd-test.rb"
 test_scripts << "2D/sphere-lobb/smoke-test/lobb-test.rb"
 # test_scripts << "2D/radiating-cylinder/Argon/MC/cyl.test"
 test_scripts << "2D/nozzle-shock-tunnel-t4m4/t4m4-test.rb"
+test_scripts << "2D/cylinder-axial-flow/sg/cyl50-sg-test.rb"
+test_scripts << "2D/cylinder-axial-flow/usg/cyl50-usg-test.rb"
 if long_tests then
   puts "Do long tests as well as short tests..."
   # test_scripts << "2D/turb-flat-plate/turb_flat_plate.test"

@@ -26,7 +26,7 @@ myCFList = {north=clusterx, east=clustery, south=clusterx, west=clustery}
 grd = StructuredGrid:new{psurface=AOPatch:new{p00=a, p10=b, p11=c, p01=d},
 			 cfList=myCFList, niv=51, njv=51}
 
--- Assemble the block from the grid and boundary data.
+-- Assemble the blocks from the grid and boundary data.
 blks = FluidBlockArray{grid=grd, nib=2, njb=2, 
 		       initialState=inflow,
 		       bcList={north=InFlowBC_Supersonic:new{flowState=inflow},
