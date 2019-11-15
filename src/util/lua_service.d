@@ -455,9 +455,9 @@ bool checkAllowedNames(lua_State* L, int tblIndx, string[] allowedNames)
         if (!canFind(allowedNames, key)) {
             writeln("checkAllowedNames found invalid key: ", key);
             namesOk = false;
-            // We stop on the first invalid key because continuing on may
-            // lead to a failure message for next, and loss of the location information.
-            // The resulting error message is really confusing to the user.. 
+            // We stop on the first invalid key because continuing on may lead
+            // to a failure message for next, and loss of the location information.
+            // The resulting error message is really confusing to the user. 
             break;
         }
         lua_pop(L, 1); // discard value but keep key for next

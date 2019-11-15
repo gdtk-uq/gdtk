@@ -338,7 +338,13 @@ public:
             vol = xyplane_area;
         }
         if (vol < 0.0) {
-            debug { msg ~= format("Negative cell volume for cell[", id, "]= ", vol); }
+            msg = "Negative cell volume";
+            debug {
+                msg ~= format(" for cell[%d]= %g\n", id, vol);
+                foreach (i; 0 .. vtx.length) {
+                    msg ~= format("   vtx[%d].pos[%d]=%s\n", i, gtl, vtx[i].pos[gtl].toString);
+                }
+            }
             throw new FlowSolverException(msg);
         }
         volume[gtl] = vol;
