@@ -502,17 +502,19 @@ public:
         return _data[single_index(i,j,k)][variableIndex[varName]];
     }
 
-    string variable_names_as_string(bool with_column_pos=false)
+    string variable_names_as_string(bool with_column_pos=false,
+                                    bool with_quote_chars=false,
+                                    bool as_comment=false)
     {
         auto writer = appender!string();
-        formattedWrite(writer, "#");
+        if (as_comment) { formattedWrite(writer, "#"); }
         foreach (i, name; variableNames) {
-            if (with_column_pos) {
-                formattedWrite(writer, " %d:%s", i+1, name);
-            }
-            else {
-                formattedWrite(writer, " \"%s\"", name);
-            }
+            string txt = name;
+            // Gnuplot column numbers start at 1.
+            if (with_column_pos) { txt = format("%d:%s", i+1, txt); }
+            if (with_quote_chars) { txt = format("\"%s\"", txt); }
+            if ((i==0 && as_comment) || (i>0)) { formattedWrite(writer, " "); }
+            formattedWrite(writer, "%s", txt);
         }
         return writer.data;
     }
