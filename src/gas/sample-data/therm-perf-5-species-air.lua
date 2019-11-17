@@ -3,6 +3,7 @@ species = {'N2', 'O2', 'NO', 'N', 'O', }
 db = {}
 db.N2 = {}
 db.N2.M = 0.0280134
+db.N2.charge = 0
 db.N2.sigma = 3.621
 db.N2.epsilon = 97.530
 db.N2.Lewis = 1.152
@@ -112,6 +113,7 @@ db.N2.thermoCoeffs = {
 }
 db.O2 = {}
 db.O2.M = 0.0319988
+db.O2.charge = 0
 db.O2.sigma = 3.458
 db.O2.epsilon = 107.400
 db.O2.Lewis = 1.086
@@ -221,6 +223,7 @@ db.O2.thermoCoeffs = {
 }
 db.NO = {}
 db.NO.M = 0.0300061
+db.NO.charge = 0
 db.NO.sigma = 3.621
 db.NO.epsilon = 97.530
 db.NO.Lewis = 1.0
@@ -330,6 +333,7 @@ db.NO.thermoCoeffs = {
 }
 db.N = {}
 db.N.M = 0.0140067
+db.N.charge = 0
 db.N.sigma = 3.298 
 db.N.epsilon = 71.400 
 db.N.Lewis = 1.0
@@ -423,6 +427,7 @@ db.N.thermoCoeffs = {
 }
 db.O = {}
 db.O.M = 0.0159994
+db.O.charge = 0
 db.O.sigma = 2.750
 db.O.epsilon = 80.000
 db.O.Lewis = 0.712
