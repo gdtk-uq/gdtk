@@ -23,7 +23,7 @@ BEGIN {
     print "rho_D=", rho_D, " u_D=", u_D
 }
 
-$1 != "#" {
+NR > 1 {
     # We are approaching the wall from outside the boundary layer.
     y = y_offset - $2;
     rho = $5;

@@ -51,7 +51,7 @@ class TestPiston < Test::Unit::TestCase
         # once I have extracted values from it, get out.
         break
       end
-      if txt.match('^# ') then
+      if txt.match('pos.x') then
         found_comment_line = true
       end
     end
