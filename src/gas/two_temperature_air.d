@@ -42,7 +42,7 @@ enum Species {N=0, O, N2, O2, NO, Nplus, Oplus, N2plus, O2plus, NOplus, eminus}
     case "O2+": return Species.O2plus;
     case "NO+": return Species.NOplus;
     case "e-": return Species.eminus;
-    default: assert(0, "Oops, invalid species name.");
+    default: throw new Error("invalid species name.");
     } // end switch
 } // end getSpeciesId
 
@@ -708,8 +708,10 @@ private:
 
     @nogc number vibElecSpecHeatConstV(number Tve, int isp)
     {
-        if (_species_ids[isp] == Species.eminus)
-            return (3./2.)*_R[isp];
+        if (_species_ids[isp] == Species.eminus) {
+            number result = (3./2.)*_R[isp];
+            return result;
+        }
         else
             return CpFromCurveFits(Tve, isp) - _Cp_tr_rot[isp];
     }
