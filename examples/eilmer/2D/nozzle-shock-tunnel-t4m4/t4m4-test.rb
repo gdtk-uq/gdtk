@@ -48,7 +48,7 @@ class TestT4M4 < Test::Unit::TestCase
     f.close
     myT_list = []; vel_list = []; density_list = []
     lines.each do |txt|
-      if !txt.match(/^#/) then
+      if !txt.match(/pos.x/) then
         items = txt.split(' ')
         ypos = items[1].to_f
         if ypos > 0.044 then break end
