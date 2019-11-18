@@ -1,4 +1,4 @@
-// cwrap_gasmodule.d
+// gasmodule_cwrap.d
 //
 // This particular module will be compiled into a loadable library and
 // provides a C-level API for the GasModel and GasState classes

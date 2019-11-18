@@ -80,23 +80,31 @@ include gas_files.mk
 
 # ----------------------------------------------------------------------
 # Here begins the list of targets, starting with the top-level actions.
-#
-# The default target is test, because that is most likely your interest
-# if you are invoking this makefile from within the gas models directory.
 # ----------------------------------------------------------------------
+
+build: gas-calc prep_gas.lua species-database/species-database.lua \
+		species-database/species-list.txt species_data_converter.lua \
+		libgasmodule.so gasmodule.py gasmodule.rb
+	- mkdir -p $(BUILD_DIR)/bin
+	cp gas-calc $(BUILD_DIR)/bin/
+	cp prep_gas.lua $(BUILD_DIR)/bin/prep-gas; chmod +x $(BUILD_DIR)/bin/prep-gas
+	cp species_data_converter.lua $(BUILD_DIR)/bin/species-data-converter; \
+		chmod +x $(BUILD_DIR)/bin/species-data-converter
+	- mkdir -p $(BUILD_DIR)/data
+	cp species-database/species-database.lua $(BUILD_DIR)/data/
+	cp species-database/species-list.txt $(BUILD_DIR)/data/
+	- mkdir -p $(BUILD_DIR)/lib
+	cp libgasmodule.so $(BUILD_DIR)/lib/
+	cp gasmodule.py $(BUILD_DIR)/lib/
+	cp gasmodule.rb $(BUILD_DIR)/lib/
+
+install: build
+	- mkdir -p $(INSTALL_DIR)
+	@echo "Installing to $(INSTALL_DIR)"
+	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
 
 test: $(TEST_PROGRAMS) gas-calc
 	tclsh gas-package-test.tcl
-
-install: gas-calc build-prep-gas species-data-converter \
-		libgasmodule.so gasmodule.py gasmodule.rb
-	- mkdir -p $(INSTALL_DIR)
-	cp gas-calc $(BUILD_DIR)/bin/
-	@echo "Installing to $(INSTALL_DIR)"
-	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
-	cp libgasmodule.so $(INSTALL_DIR)/lib/
-	cp gasmodule.py $(INSTALL_DIR)/lib/
-	cp gasmodule.rb $(INSTALL_DIR)/lib/
 
 demo: ${DEMO_PROGRAMS}
 	echo "Demo programs built."
@@ -125,37 +133,25 @@ clean:
 
 # Specific targets for individual artefacts.
 
-build-prep-gas: prep_gas.lua species-database.lua
-	- mkdir -p $(BUILD_DIR)/bin
-	cp prep_gas.lua $(BUILD_DIR)/bin/prep-gas; chmod +x $(BUILD_DIR)/bin/prep-gas
-	- mkdir -p $(BUILD_DIR)/data
-	cp species-database/species-database.lua $(BUILD_DIR)/data/
-	cp species-database/species-list.txt $(BUILD_DIR)/data/
-
 gas-calc: luagas_model.d $(LIBLUA) $(GAS_FILES) $(GAS_LUA_FILES) $(NM_FILES) \
 	$(UTIL_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES)
 	dmd -ofgas-calc -dip1008 -version=gas_calc $(DFLAGS) \
 		$(GAS_FILES) $(GAS_LUA_FILES) $(NM_FILES) $(UTIL_FILES) $(KINETICS_FILES) \
 		$(KINETICS_LUA_FILES) $(DLINKFLAGS)
 
-libgasmodule.so: cwrap_gasmodule.d $(LIBLUA) $(GAS_FILES) $(GAS_LUA_FILES) $(NM_FILES) \
+libgasmodule.so: gasmodule_cwrap.d $(LIBLUA) $(GAS_FILES) $(GAS_LUA_FILES) $(NM_FILES) \
 	$(UTIL_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES)
-	dmd -c cwrap_gasmodule.d -fPIC -dip1008 $(DFLAGS) \
+	dmd -c gasmodule_cwrap.d -fPIC -dip1008 $(DFLAGS) \
 		$(GAS_FILES) $(NM_FILES) $(UTIL_FILES) $(KINETICS_FILES)
-	dmd -oflibgasmodule.so cwrap_gasmodule.o -shared -defaultlib=libphobos2.so \
+	dmd -oflibgasmodule.so gasmodule_cwrap.o -shared -defaultlib=libphobos2.so \
 		-dip1008 \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		-L-rpath=$(INSTALL_DIR)/lib $(DLINKFLAGS)
 
-species-data-converter: species_data_converter.lua
-	- mkdir -p $(BUILD_DIR)/bin
-	cp species_data_converter.lua $(BUILD_DIR)/bin/species-data-converter; \
-		chmod +x $(BUILD_DIR)/bin/species-data-converter
-
 $(LIBLUA):
 	cd $(LUA); make linux local
 
-species-database.lua :
+species-database/species-database.lua :
 	cd species-database; make species-database.lua
 
 # Some demo targets. These are left over from the early days of development.
