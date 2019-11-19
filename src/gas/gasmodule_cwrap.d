@@ -77,16 +77,17 @@ extern (C) int gas_model_n_modes(int gm_i)
     }
 }
 
-extern (C) char* gas_model_species_name(int gm_i, int isp, char* dest_name, int n)
+extern (C) int gas_model_species_name(int gm_i, int isp, char* dest_name, int n)
 {
     // The isp-th species name will be copied into char* array.
     // It is presumed that sufficient space (n chars, including \0) was allocated previously.
     try {
         char* src_name = cast(char*) gas_models[gm_i].species_name(isp).toStringz;
-        return strncpy(dest_name, src_name, n);
+        strncpy(dest_name, src_name, n);
+        return 0;
     } catch (Exception e) {
         writeln("Exception message: ", e.msg);
-        return cast(char*) 0;
+        return -1;
     }
 }
 
@@ -144,33 +145,33 @@ extern (C) int gas_state_set_scalar_field(int gs_i, char* field_name, double val
     }
 }
 
-extern (C) double gas_state_get_scalar_field(int gs_i, char* field_name)
+extern (C) int gas_state_get_scalar_field(int gs_i, char* field_name, double* value)
 {
     try {
         GasState gs = gas_states[gs_i];
         string name = to!string(field_name);
-        double value = 0.0;
+        *value = 0.0;
         switch (name) {
         case "rho":
-            value = gs.rho;
+            *value = gs.rho;
             break;
         case "p":
-            value = gs.p;
+            *value = gs.p;
             break;
         case "T":
-            value = gs.T;
+            *value = gs.T;
             break;
         case "u":
-            value = gs.u;
+            *value = gs.u;
             break;
         default:
             string msg = format("Unknown field name: %s", name);
             throw new Exception(msg);
         }
-        return value;
+        return 0;
     } catch (Exception e) {
         writeln("Exception message: ", e.msg);
-        return 0.0;
+        return -1;
     }
 }
 

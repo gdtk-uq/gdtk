@@ -12,12 +12,12 @@ ffi.cdef("""
     int gas_model_new(char* file_name);
     int gas_model_n_species(int gm_i);
     int gas_model_n_modes(int gm_i);
-    char* gas_model_species_name(int gm_i, int isp, char* name, int n);
+    int gas_model_species_name(int gm_i, int isp, char* name, int n);
     int gas_model_mol_masses(int gm_i, double* mm);
 
     int gas_state_new(int gm_i);
     int gas_state_set_scalar_field(int gs_i, char* field_name, double value);
-    double gas_state_get_scalar_field(int gs_i, char* field_name);
+    int gas_state_get_scalar_field(int gs_i, char* field_name, double* value);
     int gas_state_set_array_field(int gs_i, char* field_name, double* values, int n);
     int gas_state_get_array_field(int gs_i, char* field_name, double* values, int n);
 
@@ -97,7 +97,10 @@ class GasState(object):
     
     @property
     def rho(self):
-        return so.gas_state_get_scalar_field(self.id, b"rho")
+        valuep = ffi.new("double *")
+        flag = so.gas_state_get_scalar_field(self.id, b"rho", valuep)
+        if flag < 0: raise Exception("could not get density.")
+        return valuep[0]
     @rho.setter
     def rho(self, value):
         flag = so.gas_state_set_scalar_field(self.id, b"rho", value)
@@ -106,7 +109,10 @@ class GasState(object):
     
     @property
     def p(self):
-        return so.gas_state_get_scalar_field(self.id, b"p")
+        valuep = ffi.new("double *")
+        flag = so.gas_state_get_scalar_field(self.id, b"p", valuep)
+        if flag < 0: raise Exception("could not get pressure.")
+        return valuep[0]
     @p.setter
     def p(self, value):
         flag = so.gas_state_set_scalar_field(self.id, b"p", value)
@@ -115,7 +121,10 @@ class GasState(object):
     
     @property
     def T(self):
-        return so.gas_state_get_scalar_field(self.id, b"T")
+        valuep = ffi.new("double *")
+        flag = so.gas_state_get_scalar_field(self.id, b"T", valuep)
+        if flag < 0: raise Exception("could not get temperature.")
+        return valuep[0]
     @T.setter
     def T(self, value):
         flag = so.gas_state_set_scalar_field(self.id, b"T", value)
@@ -124,7 +133,10 @@ class GasState(object):
     
     @property
     def u(self):
-        return so.gas_state_get_scalar_field(self.id, b"u")
+        valuep = ffi.new("double *")
+        flag = so.gas_state_get_scalar_field(self.id, b"u", valuep)
+        if flag < 0: raise Exception("could not get internal energy.")
+        return valuep[0]
     @u.setter
     def u(self, value):
         flag = so.gas_state_set_scalar_field(self.id, b"u", value)

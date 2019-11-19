@@ -14,12 +14,12 @@ module Gasmodule
   extern 'int gas_model_new(char* file_name)'
   extern 'int gas_model_n_species(int gm_i)'
   extern 'int gas_model_n_modes(int gm_i)'
-  extern 'char* gas_model_species_name(int gm_i, int isp, char* name, int n)'
+  extern 'int gas_model_species_name(int gm_i, int isp, char* name, int n)'
   extern 'int gas_model_mol_masses(int gm_i, double* mm)'
 
   extern 'int gas_state_new(int gm_i)'
   extern 'int gas_state_set_scalar_field(int gs_i, char* field_name, double value)'
-  extern 'double gas_state_get_scalar_field(int gs_i, char* field_name)'
+  extern 'int gas_state_get_scalar_field(int gs_i, char* field_name, double* value)'
   extern 'int gas_state_set_array_field(int gs_i, char* field_name, double* values, int n)'
   extern 'int gas_state_get_array_field(int gs_i, char* field_name, double* values, int n)'
 
@@ -105,7 +105,10 @@ class GasState
   end
     
   def rho()
-    Gasmodule.gas_state_get_scalar_field(@id, "rho")
+    valuep = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE)
+    flag = Gasmodule.gas_state_get_scalar_field(@id, "rho", valuep)
+    if flag < 0 then raise "could not get density." end
+    return valuep[0, valuep.size].unpack("d")[0]
   end
   def rho=(value)
     flag = Gasmodule.gas_state_set_scalar_field(@id, "rho", value)
@@ -113,7 +116,10 @@ class GasState
   end
     
   def p()
-    Gasmodule.gas_state_get_scalar_field(@id, "p")
+    valuep = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE)
+    flag = Gasmodule.gas_state_get_scalar_field(@id, "p", valuep)
+    if flag < 0 then raise "could not get pressure." end
+    return valuep[0, valuep.size].unpack("d")[0]
   end
   def p=(value)
     flag = Gasmodule.gas_state_set_scalar_field(@id, "p", value)
@@ -121,7 +127,10 @@ class GasState
   end
     
   def T()
-    Gasmodule.gas_state_get_scalar_field(@id, "T")
+    valuep = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE)
+    flag = Gasmodule.gas_state_get_scalar_field(@id, "T", valuep)
+    if flag < 0 then raise "could not get temperature." end
+    return valuep[0, valuep.size].unpack("d")[0]
   end
   def T=(value)
     flag = Gasmodule.gas_state_set_scalar_field(@id, "T", value)
@@ -129,7 +138,10 @@ class GasState
   end
     
   def u()
-    Gasmodule.gas_state_get_scalar_field(@id, "u")
+    valuep = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE)
+    flag = Gasmodule.gas_state_get_scalar_field(@id, "u", valuep)
+    if flag < 0 then raise "could not get internal energy." end
+    return valuep[0, valuep.size].unpack("d")[0]
   end
   def u=(value)
     flag = Gasmodule.gas_state_set_scalar_field(@id, "u", value)
