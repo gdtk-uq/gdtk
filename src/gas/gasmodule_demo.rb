@@ -38,3 +38,7 @@ Q.update_trans_coeffs()
 puts "after update thermo from rhou"
 puts "  Q.rho=%g p=%g T=%g u=%g massf=%s a=%g k=%g mu=%g" %
       [Q.rho, Q.p, Q.T, Q.u, Q.massf, Q.a, Q.k, Q.mu]
+
+puts "Some derived properties"
+puts "Q.Cv=%g Q.Cp=%g Q.R=%g Q.enthalpy=%g Q.entropy=%g Q.molecular_mass=%g" %
+     [Q.Cv, Q.Cp, Q.R, Q.enthalpy, Q.entropy, Q.molecular_mass]

@@ -326,3 +326,127 @@ extern (C) int gas_model_gas_state_update_trans_coeffs(int gm_i, int gs_i)
         return -1;
     }
 }
+
+extern (C) int gas_model_gas_state_Cv(int gm_i, int gs_i, double* result)
+{
+    try {
+        *result = gas_models[gm_i].Cv(gas_states[gs_i]);
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern (C) int gas_model_gas_state_Cp(int gm_i, int gs_i, double* result)
+{
+    try {
+        *result = gas_models[gm_i].Cp(gas_states[gs_i]);
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern (C) int gas_model_gas_state_dpdrho_const_T(int gm_i, int gs_i, double* result)
+{
+    try {
+        *result = gas_models[gm_i].dpdrho_const_T(gas_states[gs_i]);
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern (C) int gas_model_gas_state_R(int gm_i, int gs_i, double* result)
+{
+    try {
+        *result = gas_models[gm_i].R(gas_states[gs_i]);
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern (C) int gas_model_gas_state_internal_energy(int gm_i, int gs_i, double* result)
+{
+    try {
+        *result = gas_models[gm_i].internal_energy(gas_states[gs_i]);
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern (C) int gas_model_gas_state_enthalpy(int gm_i, int gs_i, double* result)
+{
+    try {
+        *result = gas_models[gm_i].enthalpy(gas_states[gs_i]);
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern (C) int gas_model_gas_state_entropy(int gm_i, int gs_i, double* result)
+{
+    try {
+        *result = gas_models[gm_i].entropy(gas_states[gs_i]);
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern (C) int gas_model_gas_state_molecular_mass(int gm_i, int gs_i, double* result)
+{
+    try {
+        *result = gas_models[gm_i].molecular_mass(gas_states[gs_i]);
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern (C) int gas_model_gas_state_enthalpy_isp(int gm_i, int gs_i, int isp,
+                                                double* result)
+{
+    try {
+        *result = gas_models[gm_i].enthalpy(gas_states[gs_i], isp);
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern (C) int gas_model_gas_state_entropy_isp(int gm_i, int gs_i, int isp,
+                                               double* result)
+{
+    try {
+        *result = gas_models[gm_i].entropy(gas_states[gs_i], isp);
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern (C) int gas_model_gas_state_gibbs_free_energy_isp(int gm_i, int gs_i, int isp,
+                                                         double* result)
+{
+    try {
+        *result = gas_models[gm_i].gibbs_free_energy(gas_states[gs_i], isp);
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}

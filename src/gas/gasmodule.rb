@@ -31,6 +31,19 @@ module Gasmodule
   extern 'int gas_model_gas_state_update_thermo_from_hs(int gm_i, int gs_i, double h, double s)'
   extern 'int gas_model_gas_state_update_sound_speed(int gm_i, int gs_i)'
   extern 'int gas_model_gas_state_update_trans_coeffs(int gm_i, int gs_i)'
+
+  extern 'int gas_model_gas_state_Cv(int gm_i, int gs_i, double* result)'
+  extern 'int gas_model_gas_state_Cp(int gm_i, int gs_i, double* result)'
+  extern 'int gas_model_gas_state_dpdrho_const_T(int gm_i, int gs_i, double* result)'
+  extern 'int gas_model_gas_state_R(int gm_i, int gs_i, double* result)'
+  extern 'int gas_model_gas_state_internal_energy(int gm_i, int gs_i, double* result)'
+  extern 'int gas_model_gas_state_enthalpy(int gm_i, int gs_i, double* result)'
+  extern 'int gas_model_gas_state_entropy(int gm_i, int gs_i, double* result)'
+  extern 'int gas_model_gas_state_molecular_mass(int gm_i, int gs_i, double* result)'
+
+  extern 'int gas_model_gas_state_enthalpy_isp(int gm_i, int gs_i, int isp, double* result)'
+  extern 'int gas_model_gas_state_entropy_isp(int gm_i, int gs_i, int isp, double* result)'
+  extern 'int gas_model_gas_state_gibbs_free_energy_isp(int gm_i, int gs_i, int isp, double* result)'
 end
 
 puts "Initialize the gas module."
@@ -103,6 +116,55 @@ class GasModel
   def update_trans_coeffs(gstate)
     flag = Gasmodule.gas_model_gas_state_update_trans_coeffs(@id, gstate.id)
     if flag < 0 then raise "could not update transport coefficients." end
+  end
+
+  def Cv(gstate)
+    valuep = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE)
+    flag = Gasmodule.gas_model_gas_state_Cv(@id, gstate.id, valuep)
+    if flag < 0 then raise "could not compute Cv." end
+    return valuep[0, valuep.size].unpack("d")[0]
+  end
+  def Cp(gstate)
+    valuep = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE)
+    flag = Gasmodule.gas_model_gas_state_Cp(@id, gstate.id, valuep)
+    if flag < 0 then raise "could not compute Cp." end
+    return valuep[0, valuep.size].unpack("d")[0]
+  end
+  def dpdrho_const_T(gstate)
+    valuep = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE)
+    flag = Gasmodule.gas_model_gas_state_dpdrho_const_T(@id, gstate.id, valuep)
+    if flag < 0 then raise "could not compute dpdrho_const_T." end
+    return valuep[0, valuep.size].unpack("d")[0]
+  end
+  def R(gstate)
+    valuep = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE)
+    flag = Gasmodule.gas_model_gas_state_R(@id, gstate.id, valuep)
+    if flag < 0 then raise "could not compute R." end
+    return valuep[0, valuep.size].unpack("d")[0]
+  end
+  def internal_energy(gstate)
+    valuep = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE)
+    flag = Gasmodule.gas_model_gas_state_internal_energy(@id, gstate.id, valuep)
+    if flag < 0 then raise "could not compute internal energy." end
+    return valuep[0, valuep.size].unpack("d")[0]
+  end
+  def enthalpy(gstate)
+    valuep = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE)
+    flag = Gasmodule.gas_model_gas_state_enthalpy(@id, gstate.id, valuep)
+    if flag < 0 then raise "could not compute enthalpy." end
+    return valuep[0, valuep.size].unpack("d")[0]
+  end
+  def entropy(gstate)
+    valuep = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE)
+    flag = Gasmodule.gas_model_gas_state_entropy(@id, gstate.id, valuep)
+    if flag < 0 then raise "could not compute entropy." end
+    return valuep[0, valuep.size].unpack("d")[0]
+  end
+  def molecular_mass(gstate)
+    valuep = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE)
+    flag = Gasmodule.gas_model_gas_state_molecular_mass(@id, gstate.id, valuep)
+    if flag < 0 then raise "could not compute molecular mass." end
+    return valuep[0, valuep.size].unpack("d")[0]
   end
 end
 
@@ -287,5 +349,30 @@ class GasState
   end
   def update_trans_coeffs()
     @gmodel.update_trans_coeffs(self)
+  end
+
+  def Cv()
+    @gmodel.Cv(self)
+  end
+  def Cp()
+    @gmodel.Cp(self)
+  end
+  def dpdrho_const_T()
+    @gmodel.dpdrho_const_T(self)
+  end
+  def R()
+    @gmodel.R(self)
+  end
+  def internal_energy()
+    @gmodel.internal_energy(self)
+  end
+  def enthalpy()
+    @gmodel.enthalpy(self)
+  end
+  def entropy()
+    @gmodel.entropy(self)
+  end
+  def molecular_mass()
+    @gmodel.molecular_mass(self)
   end
 end

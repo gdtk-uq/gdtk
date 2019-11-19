@@ -139,7 +139,7 @@ public:
     @nogc number entropy(in GasState Q, int isp)
     {
         // For the single-species gases, provide a default implementation
-        // but we need to be carefule to override this for multi-component gases.
+        // but we need to be careful to override this for multi-component gases.
         return entropy(Q);
     }
 

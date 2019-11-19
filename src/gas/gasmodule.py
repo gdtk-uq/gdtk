@@ -29,6 +29,19 @@ ffi.cdef("""
     int gas_model_gas_state_update_thermo_from_hs(int gm_i, int gs_i, double h, double s);
     int gas_model_gas_state_update_sound_speed(int gm_i, int gs_i);
     int gas_model_gas_state_update_trans_coeffs(int gm_i, int gs_i);
+
+    int gas_model_gas_state_Cv(int gm_i, int gs_i, double* result);
+    int gas_model_gas_state_Cp(int gm_i, int gs_i, double* result);
+    int gas_model_gas_state_dpdrho_const_T(int gm_i, int gs_i, double* result);
+    int gas_model_gas_state_R(int gm_i, int gs_i, double* result);
+    int gas_model_gas_state_internal_energy(int gm_i, int gs_i, double* result);
+    int gas_model_gas_state_enthalpy(int gm_i, int gs_i, double* result);
+    int gas_model_gas_state_entropy(int gm_i, int gs_i, double* result);
+    int gas_model_gas_state_molecular_mass(int gm_i, int gs_i, double* result);
+
+    int gas_model_gas_state_enthalpy_isp(int gm_i, int gs_i, int isp, double* result);
+    int gas_model_gas_state_entropy_isp(int gm_i, int gs_i, int isp, double* result);
+    int gas_model_gas_state_gibbs_free_energy_isp(int gm_i, int gs_i, int isp, double* result);
 """)
 so = ffi.dlopen("libgasmodule.so")
 so.cwrap_gas_module_init()
@@ -68,41 +81,75 @@ class GasModel(object):
         flag = so.gas_model_gas_state_update_thermo_from_pT(self.id, gstate.id)
         if flag < 0: raise Exception("could not update thermo from p,T.")
         return
-
     def update_thermo_from_rhou(self, gstate):
         flag = so.gas_model_gas_state_update_thermo_from_rhou(self.id, gstate.id)
         if flag < 0: raise Exception("could not update thermo from rho,u.")
         return
-
     def update_thermo_from_rhoT(self, gstate):
         flag = so.gas_model_gas_state_update_thermo_from_rhoT(self.id, gstate.id)
         if flag < 0: raise Exception("could not update thermo from rho,T.")
         return
-
     def update_thermo_from_rhop(self, gstate):
         flag = so.gas_model_gas_state_update_thermo_from_rhop(self.id, gstate.id)
         if flag < 0: raise Exception("could not update thermo from rho,p.")
         return
-
     def update_thermo_from_ps(self, gstate, s):
         flag = so.gas_model_gas_state_update_thermo_from_rhop(self.id, gstate.id, s)
         if flag < 0: raise Exception("could not update thermo from p,s.")
         return
-
     def update_thermo_from_hs(self, gstate, h, s):
         flag = so.gas_model_gas_state_update_thermo_from_rhop(self.id, gstate.id, h, s)
         if flag < 0: raise Exception("could not update thermo from h,s.")
         return
-
     def update_sound_speed(self, gstate):
         flag = so.gas_model_gas_state_update_sound_speed(self.id, gstate.id)
         if flag < 0: raise Exception("could not update sound speed.")
         return
-
     def update_trans_coeffs(self, gstate):
         flag = so.gas_model_gas_state_update_trans_coeffs(self.id, gstate.id)
         if flag < 0: raise Exception("could not update transport coefficients.")
         return
+
+    def Cv(self, gstate):
+        valuep = ffi.new("double *")
+        flag = so.gas_model_gas_state_Cv(self.id, gstate.id, valuep)
+        if flag < 0: raise Exception("could not compute Cv.")
+        return valuep[0]
+    def Cp(self, gstate):
+        valuep = ffi.new("double *")
+        flag = so.gas_model_gas_state_Cp(self.id, gstate.id, valuep)
+        if flag < 0: raise Exception("could not compute Cp.")
+        return valuep[0]
+    def dpdrho_const_T(self, gstate):
+        valuep = ffi.new("double *")
+        flag = so.gas_model_gas_state_dpdrho_const_T(self.id, gstate.id, valuep)
+        if flag < 0: raise Exception("could not compute dpdrho_const_T.")
+        return valuep[0]
+    def R(self, gstate):
+        valuep = ffi.new("double *")
+        flag = so.gas_model_gas_state_R(self.id, gstate.id, valuep)
+        if flag < 0: raise Exception("could not compute R.")
+        return valuep[0]
+    def internal_energy(self, gstate):
+        valuep = ffi.new("double *")
+        flag = so.gas_model_gas_state_internal_energy(self.id, gstate.id, valuep)
+        if flag < 0: raise Exception("could not compute internal energy.")
+        return valuep[0]
+    def enthalpy(self, gstate):
+        valuep = ffi.new("double *")
+        flag = so.gas_model_gas_state_enthalpy(self.id, gstate.id, valuep)
+        if flag < 0: raise Exception("could not compute enthalpy.")
+        return valuep[0]
+    def entropy(self, gstate):
+        valuep = ffi.new("double *")
+        flag = so.gas_model_gas_state_entropy(self.id, gstate.id, valuep)
+        if flag < 0: raise Exception("could not compute entropy.")
+        return valuep[0]
+    def molecular_mass(self, gstate):
+        valuep = ffi.new("double *")
+        flag = so.gas_model_gas_state_molecular_mass(self.id, gstate.id, valuep)
+        if flag < 0: raise Exception("could not compute molecular mass.")
+        return valuep[0]
 
 
 class GasState(object):
@@ -285,3 +332,29 @@ class GasState(object):
     def update_trans_coeffs(self):
         self.gmodel.update_trans_coeffs(self)
         return
+
+    @property
+    def Cv(self):
+        return self.gmodel.Cv(self)
+    @property
+    def Cp(self):
+        return self.gmodel.Cp(self)
+    @property
+    def dpdrho_const_T(self):
+        return self.gmodel.dpdrho_const_T(self)
+    @property
+    def R(self):
+        return self.gmodel.R(self)
+    @property
+    def internal_energy(self):
+        return self.gmodel.internal_energy(self)
+    @property
+    def enthalpy(self):
+        return self.gmodel.enthalpy(self)
+    @property
+    def entropy(self):
+        return self.gmodel.entropy(self)
+    @property
+    def molecular_mass(self):
+        return self.gmodel.molecular_mass(self)
+
