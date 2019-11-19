@@ -208,7 +208,7 @@ ifeq ($(DMD), dmd)
         DFLAGS := -w -g -debug -version=flavour_debug
     endif
     ifeq ($(FLAVOUR), profile)
-        DFLAGS := -profile -w -O -release -boundscheck=off -version=flavour_profile
+        DFLAGS := -profile -w -g -O -release -boundscheck=off -version=flavour_profile
     endif
     ifeq ($(FLAVOUR), fast)
         DFLAGS := -w -g -O -release -boundscheck=off -version=flavour_fast
@@ -398,7 +398,7 @@ clean:
 	- cd $(GRID_DIR); make clean
 
 prep-gas:
-	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) build-prep-gas
+	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) build-prep-gas
 
 ugrid_partition:
 	cd $(GRID_DIR); make BUILD_DIR=$(BUILD_DIR) ugrid_partition
@@ -622,7 +622,7 @@ libcudakernel.so: libcudakernel.so
 # Fortran bits -- we need a bit of a hack
 
 $(GAS_DIR)/ideal_air_fortran.o: $(GAS_DIR)/ideal_air_fortran.f
-	cd $(GAS_DIR); gfortran -c -ffree-form ideal_air_fortran.f
+	cd $(GAS_DIR); gfortran -c -ffree-form -fPIC ideal_air_fortran.f
 
 $(KINETICS_DIR)/pseudosp_solve_ode.o: $(KINETICS_DIR)/pseudosp_solve_ode.f90
 	cd $(KINETICS_DIR); gfortran -c pseudosp_solve_ode.f90
