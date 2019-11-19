@@ -25,6 +25,10 @@ ffi.cdef("""
     int gas_model_gas_state_update_thermo_from_rhou(int gm_i, int gs_i);
     int gas_model_gas_state_update_thermo_from_rhoT(int gm_i, int gs_i);
     int gas_model_gas_state_update_thermo_from_rhop(int gm_i, int gs_i);
+    int gas_model_gas_state_update_thermo_from_ps(int gm_i, int gs_i, double s);
+    int gas_model_gas_state_update_thermo_from_hs(int gm_i, int gs_i, double h, double s);
+    int gas_model_gas_state_update_sound_speed(int gm_i, int gs_i);
+    int gas_model_gas_state_update_trans_coeffs(int gm_i, int gs_i);
 """)
 so = ffi.dlopen("libgasmodule.so")
 so.cwrap_gas_module_init()
@@ -78,6 +82,26 @@ class GasModel(object):
     def update_thermo_from_rhop(self, gstate):
         flag = so.gas_model_gas_state_update_thermo_from_rhop(self.id, gstate.id)
         if flag < 0: raise Exception("could not update thermo from rho,p.")
+        return
+
+    def update_thermo_from_ps(self, gstate, s):
+        flag = so.gas_model_gas_state_update_thermo_from_rhop(self.id, gstate.id, s)
+        if flag < 0: raise Exception("could not update thermo from p,s.")
+        return
+
+    def update_thermo_from_hs(self, gstate, h, s):
+        flag = so.gas_model_gas_state_update_thermo_from_rhop(self.id, gstate.id, h, s)
+        if flag < 0: raise Exception("could not update thermo from h,s.")
+        return
+
+    def update_sound_speed(self, gstate):
+        flag = so.gas_model_gas_state_update_sound_speed(self.id, gstate.id)
+        if flag < 0: raise Exception("could not update sound speed.")
+        return
+
+    def update_trans_coeffs(self, gstate):
+        flag = so.gas_model_gas_state_update_trans_coeffs(self.id, gstate.id)
+        if flag < 0: raise Exception("could not update transport coefficients.")
         return
 
 
@@ -142,12 +166,34 @@ class GasState(object):
         flag = so.gas_state_set_scalar_field(self.id, b"u", value)
         if flag < 0: raise Exception("could not set internal energy.")
         return
+    
+    @property
+    def a(self):
+        valuep = ffi.new("double *")
+        flag = so.gas_state_get_scalar_field(self.id, b"a", valuep)
+        if flag < 0: raise Exception("could not get sound speed.")
+        return valuep[0]
+    
+    @property
+    def k(self):
+        valuep = ffi.new("double *")
+        flag = so.gas_state_get_scalar_field(self.id, b"k", valuep)
+        if flag < 0: raise Exception("could not get conductivity.")
+        return valuep[0]
+    
+    @property
+    def mu(self):
+        valuep = ffi.new("double *")
+        flag = so.gas_state_get_scalar_field(self.id, b"mu", valuep)
+        if flag < 0: raise Exception("could not get viscosity.")
+        return valuep[0]
 
     @property
     def massf(self):
         nsp = self.gmodel.n_species
         mf = ffi.new("double[]", [0.0]*nsp)
-        so.gas_state_get_array_field(self.id, b"massf", mf, nsp)
+        flag = so.gas_state_get_array_field(self.id, b"massf", mf, nsp)
+        if flag < 0: raise Exception("could not get mass-fractions.")
         return [mf[i] for i in range(nsp)]
     @massf.setter
     def massf(self, mf_given):
@@ -164,8 +210,56 @@ class GasState(object):
         if abs(sum(mf_list) - 1.0) > 1.0e-6:
             raise Exception("mass fractions do not sum to 1.")
         mf = ffi.new("double[]", mf_list)
-        so.gas_state_set_array_field(self.id, b"massf", mf, nsp)
+        flag = so.gas_state_set_array_field(self.id, b"massf", mf, nsp)
+        if flag < 0: raise Exception("could not set mass-fractions.")
         return mf_list
+
+    @property
+    def u_modes(self):
+        n = self.gmodel.n_modes
+        if n == 0: return []
+        um = ffi.new("double[]", [0.0]*n)
+        flag = so.gas_state_get_array_field(self.id, b"u_modes", um, nsp)
+        if flag < 0: raise Exception("could not get u_modes.")
+        return [um[i] for i in range(n)]
+    @u_modes.setter
+    def u_modes(self, um_given):
+        n = self.gmodel.n_modes
+        if n == 0: return []
+        if type(um_given) != type([]):
+            raise Exception("u_modes needs to be supplied as a list.")
+        um = ffi.new("double[]", um_given)
+        flag = so.gas_state_set_array_field(self.id, b"u_modes", um, n)
+        if flag < 0: raise Exception("could not set u_modes.")
+        return um_given
+
+    @property
+    def T_modes(self):
+        n = self.gmodel.n_modes
+        if n == 0: return []
+        Tm = ffi.new("double[]", [0.0]*n)
+        flag = so.gas_state_get_array_field(self.id, b"T_modes", Tm, nsp)
+        if flag < 0: raise Exception("could not get T_modes.")
+        return [um[i] for i in range(n)]
+    @T_modes.setter
+    def T_modes(self, Tm_given):
+        n = self.gmodel.n_modes
+        if n == 0: return []
+        if type(Tm_given) != type([]):
+            raise Exception("T_modes needs to be supplied as a list.")
+        Tm = ffi.new("double[]", Tm_given)
+        flag = so.gas_state_set_array_field(self.id, b"T_modes", Tm, n)
+        if flag < 0: raise Exception("could not set T_modes.")
+        return Tm_given
+
+    @property
+    def k_modes(self):
+        n = self.gmodel.k_modes
+        if n == 0: return []
+        km = ffi.new("double[]", [0.0]*n)
+        flag = so.gas_state_get_array_field(self.id, b"k_modes", km, nsp)
+        if flag < 0: raise Exception("could not get k_modes.")
+        return [km[i] for i in range(n)]
             
     def update_thermo_from_pT(self):
         self.gmodel.update_thermo_from_pT(self)
@@ -178,4 +272,16 @@ class GasState(object):
         return
     def update_thermo_from_rhop(self):
         self.gmodel.update_thermo_from_rhop(self)
+        return
+    def update_thermo_from_ps(self, s):
+        self.gmodel.update_thermo_from_ps(self, s)
+        return
+    def update_thermo_from_hs(self, h, s):
+        self.gmodel.update_thermo_from_hs(self, h, s)
+        return
+    def update_sound_speed(self):
+        self.gmodel.update_sound_speed(self)
+        return
+    def update_trans_coeffs(self):
+        self.gmodel.update_trans_coeffs(self)
         return

@@ -27,6 +27,10 @@ module Gasmodule
   extern 'int gas_model_gas_state_update_thermo_from_rhou(int gm_i, int gs_i)'
   extern 'int gas_model_gas_state_update_thermo_from_rhoT(int gm_i, int gs_i)'
   extern 'int gas_model_gas_state_update_thermo_from_rhop(int gm_i, int gs_i)'
+  extern 'int gas_model_gas_state_update_thermo_from_ps(int gm_i, int gs_i, double s)'
+  extern 'int gas_model_gas_state_update_thermo_from_hs(int gm_i, int gs_i, double h, double s)'
+  extern 'int gas_model_gas_state_update_sound_speed(int gm_i, int gs_i)'
+  extern 'int gas_model_gas_state_update_trans_coeffs(int gm_i, int gs_i)'
 end
 
 puts "Initialize the gas module."
@@ -83,6 +87,22 @@ class GasModel
   def update_thermo_from_rhop(gstate)
     flag = Gasmodule.gas_model_gas_state_update_thermo_from_rhop(@id, gstate.id)
     if flag < 0 then raise "could not update thermo from rho,p." end
+  end
+  def update_thermo_from_ps(gstate, s)
+    flag = Gasmodule.gas_model_gas_state_update_thermo_from_ps(@id, gstate.id, s)
+    if flag < 0 then raise "could not update thermo from p,s." end
+  end
+  def update_thermo_from_hs(gstate, h, s)
+    flag = Gasmodule.gas_model_gas_state_update_thermo_from_hs(@id, gstate.id, h, s)
+    if flag < 0 then raise "could not update thermo from h,s." end
+  end
+  def update_sound_speed(gstate)
+    flag = Gasmodule.gas_model_gas_state_update_sound_speed(@id, gstate.id)
+    if flag < 0 then raise "could not update sound speed." end
+  end
+  def update_trans_coeffs(gstate)
+    flag = Gasmodule.gas_model_gas_state_update_trans_coeffs(@id, gstate.id)
+    if flag < 0 then raise "could not update transport coefficients." end
   end
 end
 
@@ -147,11 +167,33 @@ class GasState
     flag = Gasmodule.gas_state_set_scalar_field(@id, "u", value)
     if flag < 0 then raise "could not set internal energy." end
   end
+    
+  def a()
+    valuep = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE)
+    flag = Gasmodule.gas_state_get_scalar_field(@id, "a", valuep)
+    if flag < 0 then raise "could not get sound speed." end
+    return valuep[0, valuep.size].unpack("d")[0]
+  end
+    
+  def k()
+    valuep = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE)
+    flag = Gasmodule.gas_state_get_scalar_field(@id, "k", valuep)
+    if flag < 0 then raise "could not get conductivity." end
+    return valuep[0, valuep.size].unpack("d")[0]
+  end
+    
+  def mu()
+    valuep = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE)
+    flag = Gasmodule.gas_state_get_scalar_field(@id, "mu", valuep)
+    if flag < 0 then raise "could not get viscosity." end
+    return valuep[0, valuep.size].unpack("d")[0]
+  end
 
   def massf()
     nsp = @gmodel.n_species
     mf = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE*nsp)
-    Gasmodule.gas_state_get_array_field(@id, "massf", mf, nsp)
+    flag = Gasmodule.gas_state_get_array_field(@id, "massf", mf, nsp)
+    if flag < 0 then raise "could not get mass-fractions." end
     return mf[0, mf.size].unpack("d*")
   end
   def massf=(mf_given)
@@ -172,12 +214,56 @@ class GasState
     if (mf_sum - 1.0).abs > 1.0e-6 then
       raise "mass fractions do not sum to 1."
     end
-    # mf = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE*nsp)
     mf = mf_array.pack("d*")
-    Gasmodule.gas_state_set_array_field(@id, "massf", mf, nsp)
+    flag = Gasmodule.gas_state_set_array_field(@id, "massf", mf, nsp)
+    if flag < 0 then raise "could not set mass-fractions." end
     return mf_array
   end
-  
+
+  def u_modes()
+    n = @gmodel.n_modes
+    um = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE*n)
+    flag = Gasmodule.gas_state_get_array_field(@id, "u_modes", um, n)
+    if flag < 0 then raise "could not get u_modes." end
+    return um[0, um.size].unpack("d*")
+  end
+  def u_modes=(um_given)
+    n = @gmodel.n_modes
+    if um_given.class == [].class then
+      raise "u_modes needs to be supplied as an array."
+    end
+    um = um_given.pack("d*")
+    flag = Gasmodule.gas_state_set_array_field(@id, "u_modes", um, n)
+    if flag < 0 then raise "could not set u_modes." end
+    return um_given
+  end
+
+  def T_modes()
+    n = @gmodel.n_modes
+    myTm = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE*n)
+    flag = Gasmodule.gas_state_get_array_field(@id, "T_modes", myTm, n)
+    if flag < 0 then raise "could not get T_modes." end
+    return myTm[0, myTm.size].unpack("d*")
+  end
+  def T_modes=(myTm_given)
+    n = @gmodel.n_modes
+    if myTm_given.class == [].class then
+      raise "T_modes needs to be supplied as an array."
+    end
+    myTm = myTm_given.pack("d*")
+    flag = Gasmodule.gas_state_set_array_field(@id, "T_modes", myTm, n)
+    if flag < 0 then raise "could not set T_modes." end
+    return myTm_given
+  end
+ 
+  def k_modes()
+    n = @gmodel.n_modes
+    km = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE*n)
+    flag = Gasmodule.gas_state_get_array_field(@id, "k_modes", km, n)
+    if flag < 0 then raise "could not get k_modes." end
+    return km[0, km.size].unpack("d*")
+  end
+ 
   def update_thermo_from_pT()
     @gmodel.update_thermo_from_pT(self)
   end
@@ -189,5 +275,17 @@ class GasState
   end
   def update_thermo_from_rhop()
     @gmodel.update_thermo_from_rhop(self)
+  end
+  def update_thermo_from_ps(s)
+    @gmodel.update_thermo_from_ps(self, s)
+  end
+  def update_thermo_from_hs(h, s)
+    @gmodel.update_thermo_from_hs(self, h, s)
+  end
+  def update_sound_speed()
+    @gmodel.update_sound_speed(self)
+  end
+  def update_trans_coeffs()
+    @gmodel.update_trans_coeffs(self)
   end
 end

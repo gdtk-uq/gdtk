@@ -135,7 +135,7 @@ extern (C) int gas_state_set_scalar_field(int gs_i, char* field_name, double val
             gs.u = value;
             break;
         default:
-            string msg = format("Unknown field name: %s", name);
+            string msg = format("Cannot set field name: %s", name);
             throw new Exception(msg);
         }
         return 0;
@@ -164,8 +164,17 @@ extern (C) int gas_state_get_scalar_field(int gs_i, char* field_name, double* va
         case "u":
             *value = gs.u;
             break;
+        case "a":
+            *value = gs.a;
+            break;
+        case "k":
+            *value = gs.k;
+            break;
+        case "mu":
+            *value = gs.mu;
+            break;
         default:
-            string msg = format("Unknown field name: %s", name);
+            string msg = format("Unavailable field name: %s", name);
             throw new Exception(msg);
         }
         return 0;
@@ -184,8 +193,14 @@ extern (C) int gas_state_set_array_field(int gs_i, char* field_name, double* val
         case "massf":
             foreach (i; 0 .. n) { gs.massf[i] = values[i]; }
             break;
+        case "u_modes":
+            foreach (i; 0 .. n) { gs.u_modes[i] = values[i]; }
+            break;
+        case "T_modes":
+            foreach (i; 0 .. n) { gs.T_modes[i] = values[i]; }
+            break;
         default:
-            string msg = format("Unknown field name: %s", name);
+            string msg = format("Cannot set field name: %s", name);
             throw new Exception(msg);
         }
         return 0;
@@ -204,8 +219,17 @@ extern (C) int gas_state_get_array_field(int gs_i, char* field_name, double* val
         case "massf":
             foreach (i; 0 .. n) { values[i] = gs.massf[i]; }
             break;
+        case "u_modes":
+            foreach (i; 0 .. n) { values[i] = gs.u_modes[i]; }
+            break;
+        case "T_modes":
+            foreach (i; 0 .. n) { values[i] = gs.T_modes[i]; }
+            break;
+        case "k_modes":
+            foreach (i; 0 .. n) { values[i] = gs.k_modes[i]; }
+            break;
         default:
-            string msg = format("Unknown field name: %s", name);
+            string msg = format("Unavailable field name: %s", name);
             throw new Exception(msg);
         }
         return 0;
@@ -252,6 +276,50 @@ extern (C) int gas_model_gas_state_update_thermo_from_rhop(int gm_i, int gs_i)
 {
     try {
         gas_models[gm_i].update_thermo_from_rhop(gas_states[gs_i]);
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern (C) int gas_model_gas_state_update_thermo_from_ps(int gm_i, int gs_i, double s)
+{
+    try {
+        gas_models[gm_i].update_thermo_from_ps(gas_states[gs_i], s);
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern (C) int gas_model_gas_state_update_thermo_from_hs(int gm_i, int gs_i, double h, double s)
+{
+    try {
+        gas_models[gm_i].update_thermo_from_hs(gas_states[gs_i], h, s);
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern (C) int gas_model_gas_state_update_sound_speed(int gm_i, int gs_i)
+{
+    try {
+        gas_models[gm_i].update_sound_speed(gas_states[gs_i]);
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern (C) int gas_model_gas_state_update_trans_coeffs(int gm_i, int gs_i)
+{
+    try {
+        gas_models[gm_i].update_trans_coeffs(gas_states[gs_i]);
         return 0;
     } catch (Exception e) {
         writeln("Exception message: ", e.msg);

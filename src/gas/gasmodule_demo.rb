@@ -22,12 +22,19 @@ puts "mol_masses= #{gmodel.mol_masses}"
 Q = GasState.new(gmodel)
 puts "freshly minted Q= #{Q}"
 Q.rho=1.1; Q.p=1.0e5; Q.T=300.0; Q.u=1.44e6; Q.massf=[1.0]
-puts "after setting some values Q.rho= %g, p=%g, T=%g, u=%g, massf=%s" %
-      [Q.rho, Q.p, Q.T, Q.u, Q.massf]
+puts "after setting some values"
+puts "  Q.rho=%g p=%g T=%g u=%g massf=%s a=%g k=%g mu=%g" %
+      [Q.rho, Q.p, Q.T, Q.u, Q.massf, Q.a, Q.k, Q.mu]
 gmodel.update_thermo_from_pT(Q) # the way that we do the update in D
-puts "after update thermo from pT Q.rho=%g, p=%g, T=%g, u=%g, massf=%s" %
-      [Q.rho, Q.p, Q.T, Q.u, Q.massf]
+gmodel.update_sound_speed(Q)
+gmodel.update_trans_coeffs(Q)
+puts "after update thermo from pT"
+puts "  Q.rho=%g p=%g T=%g u=%g massf=%s a=%g k=%g mu=%g" %
+      [Q.rho, Q.p, Q.T, Q.u, Q.massf, Q.a, Q.k, Q.mu]
 Q.p = 3000.0; Q.T=99.0; Q.massf={'air'=>1.0}
 Q.update_thermo_from_rhou() # update another way
-puts "after update thermo from rhou Q.rho=%g, p=%g, T=%g, u=%g, massf=%s" %
-      [Q.rho, Q.p, Q.T, Q.u, Q.massf]
+Q.update_sound_speed()
+Q.update_trans_coeffs()
+puts "after update thermo from rhou"
+puts "  Q.rho=%g p=%g T=%g u=%g massf=%s a=%g k=%g mu=%g" %
+      [Q.rho, Q.p, Q.T, Q.u, Q.massf, Q.a, Q.k, Q.mu]
