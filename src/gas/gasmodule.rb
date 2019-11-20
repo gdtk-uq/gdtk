@@ -46,7 +46,6 @@ module Gasmodule
   extern 'int gas_model_gas_state_gibbs_free_energy_isp(int gm_i, int gs_i, int isp, double* result)'
 end
 
-puts "Initialize the gas module."
 Gasmodule.cwrap_gas_module_init()
 
 # Service classes that wrap the C-API in a nice Ruby API...
