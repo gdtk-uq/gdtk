@@ -484,7 +484,7 @@ e4sss: steadystate_solver.d steadystate_core.d shape_sensitivity_core.d $(EILMER
 	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
 	$(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-	$(NM_FILES) $(UTIL_FILES) $(NM_LUA_FILES)
+	$(NM_FILES) $(UTIL_FILES) $(GASDYN_FILES) $(NM_LUA_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		steadystate_solver.d > steadystate_solver_with_rev_string.d
@@ -496,7 +496,7 @@ e4sss: steadystate_solver.d steadystate_core.d shape_sensitivity_core.d $(EILMER
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
 		$(GAS_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) \
-		$(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES) \
+		$(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(GASDYN_FILES) $(NM_LUA_FILES) \
 		$(DLINKFLAGS)
 
 e4zsss: steadystate_solver.d steadystate_core.d shape_sensitivity_core.d $(EILMER_FILES) \
@@ -525,7 +525,7 @@ e4ssc: shape_sensitivity_calc.d shape_sensitivity_core.d steadystate_core.d $(EI
 	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
 	$(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-	$(NM_FILES) $(UTIL_FILES) $(NM_LUA_FILES)
+	$(NM_FILES) $(UTIL_FILES) $(GASDYN_FILES) $(NM_LUA_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		shape_sensitivity_calc.d > shape_sensitivity_calc_with_rev_string.d
@@ -539,7 +539,7 @@ e4ssc: shape_sensitivity_calc.d shape_sensitivity_core.d steadystate_core.d $(EI
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
 		$(GAS_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) \
-		$(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES) \
+		$(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(GASDYN_FILES) $(NM_LUA_FILES) \
 		$(DLINKFLAGS)
 
 e4opt: optdriver.d /
