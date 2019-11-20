@@ -12,22 +12,22 @@ from gasmodule import GasModel, GasState
 gasModelFile = 'O2-gas-model.lua'
 gmodel = GasModel(gasModelFile)
 
-Q = GasState(gmodel)
-Q.p = 1.0e5 # Pa
-Q.massf = {"O2":1.0}
+q = GasState(gmodel)
+q.p = 1.0e5 # Pa
+q.massf = {"O2":1.0}
 
 outputFile = 'O2-thermo.dat'
 print("Opening file for writing: %s" % outputFile)
 f = open(outputFile, "w")
 f.write("#  1:T[K]      2:Cp[J/kg/K]     3:h[J/kg]\n")
 
-Tlow = 200.0
+lowT = 200.0
 dT = 100.0
 
 for i in range(199):
-    Q.T = dT*i + Tlow
-    Q.update_thermo_from_pT()
-    f.write(" %12.6e %12.6e %12.6e\n" % (Q.T, Q.Cp, Q.enthalpy))
+    q.T = dT*i + lowT
+    q.update_thermo_from_pT()
+    f.write(" %12.6e %12.6e %12.6e\n" % (q.T, q.Cp, q.enthalpy))
 
 f.close()
 print("File closed. Done.")

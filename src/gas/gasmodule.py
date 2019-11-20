@@ -94,11 +94,11 @@ class GasModel(object):
         if flag < 0: raise Exception("could not update thermo from rho,p.")
         return
     def update_thermo_from_ps(self, gstate, s):
-        flag = so.gas_model_gas_state_update_thermo_from_rhop(self.id, gstate.id, s)
+        flag = so.gas_model_gas_state_update_thermo_from_ps(self.id, gstate.id, s)
         if flag < 0: raise Exception("could not update thermo from p,s.")
         return
     def update_thermo_from_hs(self, gstate, h, s):
-        flag = so.gas_model_gas_state_update_thermo_from_rhop(self.id, gstate.id, h, s)
+        flag = so.gas_model_gas_state_update_thermo_from_hs(self.id, gstate.id, h, s)
         if flag < 0: raise Exception("could not update thermo from h,s.")
         return
     def update_sound_speed(self, gstate):
