@@ -2,7 +2,7 @@
 nelmin_test.lua
 Serves as a test and demonstration.
 
-peterj@helmholtz ~/dgd/src/nml $ gas-calc nelmin_test.lua
+peterj@helmholtz ~/dgd/src/lib $ gas-calc nelmin_test.lua
 test 1: simple quadratic with zero at (1, 1, ...)
 actual f(1.000, 1.000, 1.000, 1.000)=1.642e-10
 convergence-flag = 	false

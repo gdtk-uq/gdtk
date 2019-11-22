@@ -150,7 +150,7 @@ LUA_MODULES += $(UTIL_DIR)/lua_helper.lua \
 NM_DIR := ../nm
 include $(NM_DIR)/nm_files.mk
 
-NML_DIR := ../nml
+NML_DIR := ../lib
 include $(NML_DIR)/nml_files.mk
 
 GAS_DIR := ../gas
