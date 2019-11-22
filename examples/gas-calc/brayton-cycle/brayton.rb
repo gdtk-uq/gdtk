@@ -10,7 +10,7 @@
 #
 # Peter J and Rowan G. 2019-11-21
 $LOAD_PATH << '~/dgdinst/lib'
-require 'gasmodule'
+require 'eilmer/gas'
 
 gasModelFile = "thermal-air-gas-model.lua"
 # gasModelFile = "ideal-air-gas-model.lua" # Alternative 

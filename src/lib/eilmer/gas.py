@@ -1,4 +1,4 @@
-# gasmodule.py
+# gas.py
 # A Python wrapper for GasModel and GasState classes.
 # PJ 2019-07-24: start of experiment with FFI.
 #    2019-07-25: added Python wrapper
@@ -7,7 +7,7 @@ from cffi import FFI
 
 ffi = FFI()
 ffi.cdef("""
-    int cwrap_gas_module_init();
+    int cwrap_gas_init();
 
     int gas_model_new(char* file_name);
     int gas_model_n_species(int gm_i);
@@ -43,8 +43,8 @@ ffi.cdef("""
     int gas_model_gas_state_entropy_isp(int gm_i, int gs_i, int isp, double* result);
     int gas_model_gas_state_gibbs_free_energy_isp(int gm_i, int gs_i, int isp, double* result);
 """)
-so = ffi.dlopen("libgasmodule.so")
-so.cwrap_gas_module_init()
+so = ffi.dlopen("libgas.so")
+so.cwrap_gas_init()
 
 # Service classes that wrap the C-API in a nice Pythonic API...
 

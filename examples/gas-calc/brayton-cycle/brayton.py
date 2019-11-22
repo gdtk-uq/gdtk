@@ -9,7 +9,7 @@
 # $ python3 brayton.rb
 #
 # Peter J and Rowan G. 2019-11-21
-from gasmodule import GasModel, GasState
+from eilmer.gas import GasModel, GasState
 
 gasModelFile = "thermal-air-gas-model.lua"
 # gasModelFile = "ideal-air-gas-model.lua" # Alternative 

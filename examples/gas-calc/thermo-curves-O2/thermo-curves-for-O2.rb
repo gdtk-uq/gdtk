@@ -8,7 +8,7 @@
 # $ ruby thermo-curves-for-O2.rb
 #
 $LOAD_PATH << '~/dgdinst/lib'
-require 'gasmodule'
+require 'eilmer/gas'
 
 gasModelFile = 'O2-gas-model.lua'
 gmodel = GasModel.new(gasModelFile)

@@ -1,4 +1,4 @@
-// gasmodule_cwrap.d
+// gas_cwrap.d
 //
 // This particular module will be compiled into a loadable library and
 // provides a C-level API for the GasModel and GasState classes
@@ -24,7 +24,7 @@ import gas.init_gas_model;
 GasModel[] gas_models;
 GasState[] gas_states;
 
-extern (C) int cwrap_gas_module_init()
+extern (C) int cwrap_gas_init()
 {
     Runtime.initialize();
     gas_models.length = 0;

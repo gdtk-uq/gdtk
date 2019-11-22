@@ -124,7 +124,7 @@ include gas_files.mk
 
 build: gas-calc prep_gas.lua species-database/species-database.lua \
 		species-database/species-list.txt species_data_converter.lua \
-		libgasmodule.so gasmodule.py gasmodule.rb
+		libgas.so 
 	- mkdir -p $(BUILD_DIR)/bin
 	cp gas-calc $(BUILD_DIR)/bin/
 	cp prep_gas.lua $(BUILD_DIR)/bin/prep-gas; chmod +x $(BUILD_DIR)/bin/prep-gas
@@ -134,9 +134,8 @@ build: gas-calc prep_gas.lua species-database/species-database.lua \
 	cp species-database/species-database.lua $(BUILD_DIR)/data/
 	cp species-database/species-list.txt $(BUILD_DIR)/data/
 	- mkdir -p $(BUILD_DIR)/lib
-	cp libgasmodule.so $(BUILD_DIR)/lib/
-	cp gasmodule.py $(BUILD_DIR)/lib/
-	cp gasmodule.rb $(BUILD_DIR)/lib/
+	cp libgas.so $(BUILD_DIR)/lib/
+	cp -r ../lib/* $(BUILD_DIR)/lib/
 
 build-prep-gas: prep_gas.lua species-database/species-database.lua \
 		species-database/species-list.txt species_data_converter.lua
@@ -189,11 +188,11 @@ gas-calc: luagas_model.d $(LIBLUA) $(GAS_FILES) $(GAS_LUA_FILES) $(NM_FILES) \
 		$(GAS_FILES) $(GAS_LUA_FILES) $(NM_FILES) $(UTIL_FILES) $(KINETICS_FILES) \
 		$(KINETICS_LUA_FILES) $(DLINKFLAGS)
 
-libgasmodule.so: gasmodule_cwrap.d $(LIBLUA) $(GAS_FILES) $(GAS_LUA_FILES) $(NM_FILES) \
+libgas.so: gas_cwrap.d $(LIBLUA) $(GAS_FILES) $(GAS_LUA_FILES) $(NM_FILES) \
 	$(UTIL_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES)
-	$(DMD) -c gasmodule_cwrap.d $(PIC) $(DFLAGS) \
+	$(DMD) -c gas_cwrap.d $(PIC) $(DFLAGS) \
 		$(GAS_FILES) $(NM_FILES) $(UTIL_FILES) $(KINETICS_FILES)
-	$(DMD) $(OF)libgasmodule.so gasmodule_cwrap.o $(DFLAGS) \
+	$(DMD) $(OF)libgas.so gas_cwrap.o $(DFLAGS) \
 		-shared -defaultlib=libphobos2.so \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		-L-rpath=$(INSTALL_DIR)/lib $(DLINKFLAGS)

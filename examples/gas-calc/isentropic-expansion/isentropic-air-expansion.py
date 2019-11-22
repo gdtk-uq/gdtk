@@ -7,7 +7,7 @@
 # Python port, PJ, 2019-11-21
 # 
 import math
-from gasmodule import GasModel, GasState
+from eilmer.gas import GasModel, GasState
 
 gmodel = GasModel('ideal-air-gas-model.lua')
 q = GasState(gmodel)
