@@ -34,7 +34,7 @@ config.max_step = 60000
 config.dt_plot = tau
 config.apply_limiter = false
 config.extrema_clipping = false
-if false then
-   config.high_order_flux_calculator = true
+if true then
+   config.interpolation_order = 3
    config.cfl_value = 0.25
 end

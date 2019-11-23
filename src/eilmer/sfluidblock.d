@@ -2022,7 +2022,16 @@ public:
         //
         bool do_reconstruction = allow_high_order_interpolation && (myConfig.interpolation_order > 1);
         //
-        if (myConfig.high_order_flux_calculator && n_ghost_cell_layers == 3) {
+        if (myConfig.high_order_flux_calculator) {
+            throw new Error("Lachlan, your alpha-split flux-calculator goes here.");
+            // return; // Our work is done.
+        } // end if (high_order_flux_calculator)
+        //
+        if (myConfig.interpolation_order == 3) {
+            //
+            // A form of high-order flux calculation built on
+            // reconstruction via Lagrangian interpolation across a 6-cell stencil.
+            //
             if (!bc[Face.north].ghost_cell_data_available) { throw new Error("north ghost cell data missing"); }
             if (!bc[Face.south].ghost_cell_data_available) { throw new Error("south ghost cell data missing"); }
             if (!bc[Face.west].ghost_cell_data_available) { throw new Error("west ghost cell data missing"); }
@@ -2085,7 +2094,7 @@ public:
                 } // i loop
             } // for k
     
-            if (myConfig.dimensions == 2) return;
+            if (myConfig.dimensions == 2) return; // Our work is done.
     
             // ifk interfaces are Top-facing interfaces.
             if (!bc[Face.top].ghost_cell_data_available) { throw new Error("top ghost cell data missing"); }
@@ -2117,11 +2126,11 @@ public:
                     } // for k 
                 } // j loop
             } // i loop
-            return;
-        } // end if (high_order_flux_calculator)
+            return; // Our work is done.
+        } // end if (interpolation_order == 3)
         //
-        // Continue with the flux calculation being done in the classic
-        // (piecewise-parabolic) reconstruction,
+        // If we have not left already, continue with the flux calculation
+        // being done in the classic (piecewise-parabolic) reconstruction,
         // followed by flux calculation from Left,Right conditions.
         //
         // ifi interfaces are East-facing interfaces.
@@ -2227,7 +2236,7 @@ public:
             } // i loop
         } // for k
     
-        if (myConfig.dimensions == 2) return;
+        if (myConfig.dimensions == 2) return; // Our work is done.
     
         // ifk interfaces are Top-facing interfaces.
         for (size_t k = kmin; k <= kmax+1; ++k) {

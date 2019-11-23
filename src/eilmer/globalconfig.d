@@ -534,12 +534,15 @@ final class GlobalConfig {
     // Default flux calculator is the adaptive mix of (diffusive) Hanel and AUSMDV.
     shared static FluxCalculator flux_calculator = FluxCalculator.adaptive_hanel_ausmdv;
     // 
-    // Low order reconstruction (1) uses just the cell-centre data as left- and right-
-    // flow properties in the convective flux calculation.
-    // High-order reconstruction (2) adds a correction term to the cell-centre values
-    // to approach something like a piecewise-quadratic interpolation between the
-    // cell centres for structured-grids and a linear model across a cloud of cell 
-    // centres for unstructured-grids.
+    // We use interpolation and reconstruction to mean the same.
+    // It comes in a number of flavours:
+    // 1. Low order uses just the cell-centre data as left- and right-
+    //    flow properties in the convective flux calculation.
+    // 2. adds a correction term to the cell-centre values, to approach something like
+    //    a piecewise-quadratic interpolation between the cell centres for structured-grids
+    //    and a linear model across a cloud of cell centres for unstructured-grids.
+    // 3. high-order reconstruction on structured-grids using Lagrangian interpolation
+    //    across a 6-cell stencil.  Must be used with ghost-cell-based boundary conditions.
     shared static int interpolation_order = 2; 
     // We have the option to start a calculation without high-order reconstruction
     // and later activate it, presumably once the difficult flow has passed.
