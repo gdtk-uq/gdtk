@@ -2023,8 +2023,59 @@ public:
         bool do_reconstruction = allow_high_order_interpolation && (myConfig.interpolation_order > 1);
         //
         if (myConfig.high_order_flux_calculator) {
-            throw new Error("Lachlan, your alpha-split flux-calculator goes here.");
-            // return; // Our work is done.
+            for (size_t k = kmin; k <= kmax; ++k) {
+                for (size_t j = jmin; j <= jmax; ++j) {
+                    for (size_t i = imin; i <= imax+1; ++i) {
+                        auto IFace = get_ifi(i,j,k);
+                        FlowState[4] stencil;
+                        int location = 0;
+                        
+                        if ((i == imin) && bc[Face.west].convective_flux_computed_in_bc) continue;
+                        if ((i == imax+1) && bc[Face.east].convective_flux_computed_in_bc) continue;
+
+                        stencil = [get_cell(i-2, j, k).fs, get_cell(i-1, j, k).fs, get_cell(i, j, k).fs, get_cell(i+1, j, k).fs];
+                        ASF_242(stencil, IFace, myConfig);
+
+                    }
+                }
+            }
+            // ifj interfaces are North-facing interfaces.
+            for (size_t k = kmin; k <= kmax; ++k) {
+                for (size_t i = imin; i <= imax; ++i) {
+                    for (size_t j = jmin; j <= jmax+1; ++j) {
+                        auto IFace = get_ifj(i,j,k);
+                        
+                        FlowState[4] stencil;
+                        int location = 0;
+                        
+                        if ((j == jmin) && bc[Face.south].convective_flux_computed_in_bc) continue;
+                        if ((j == jmax+1) && bc[Face.north].convective_flux_computed_in_bc) continue;
+
+                        stencil = [get_cell(i, j-2, k).fs, get_cell(i, j-1, k).fs, get_cell(i, j, k).fs, get_cell(i, j+1, k).fs];
+                        ASF_242(stencil, IFace, myConfig);
+                    }
+                }
+            }
+    
+            if (myConfig.dimensions == 2) return;
+
+            // ifj interfaces are top-facing interfaces.
+            for (size_t i = imin; i <= imax; ++i) {
+                for (size_t j = jmin; i <= jmax; ++j) {
+                    for (size_t k = kmin; k <= kmax+1; ++k) {
+                        auto IFace = get_ifk(i,j,k);
+                        
+                        FlowState[4] stencil;
+                        
+                        if ((k == kmin) && bc[Face.bottom].convective_flux_computed_in_bc) continue;
+                        if ((k == kmax+1) && bc[Face.top].convective_flux_computed_in_bc) continue;
+
+                        stencil = [get_cell(i, j, k-2).fs, get_cell(i, j, k-1).fs, get_cell(i, j, k).fs, get_cell(i, j, k+1).fs];
+                        ASF_242(stencil, IFace, myConfig);
+                    }
+                }
+            }
+            return; 
         } // end if (high_order_flux_calculator)
         //
         if (myConfig.interpolation_order == 3) {
