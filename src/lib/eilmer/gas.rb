@@ -44,6 +44,9 @@ module Gas
   extern 'int gas_model_gas_state_enthalpy_isp(int gm_i, int gs_i, int isp, double* result)'
   extern 'int gas_model_gas_state_entropy_isp(int gm_i, int gs_i, int isp, double* result)'
   extern 'int gas_model_gas_state_gibbs_free_energy_isp(int gm_i, int gs_i, int isp, double* result)'
+
+  extern 'int gas_model_massf2molef(int gm_i, double* massf, double* molef)'
+  extern 'int gas_model_molef2massf(int gm_i, double* molef, double* massf)'
 end
 
 Gas.cwrap_gas_init()

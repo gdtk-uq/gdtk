@@ -42,6 +42,9 @@ ffi.cdef("""
     int gas_model_gas_state_enthalpy_isp(int gm_i, int gs_i, int isp, double* result);
     int gas_model_gas_state_entropy_isp(int gm_i, int gs_i, int isp, double* result);
     int gas_model_gas_state_gibbs_free_energy_isp(int gm_i, int gs_i, int isp, double* result);
+
+    int gas_model_massf2molef(int gm_i, double* massf, double* molef);
+    int gas_model_molef2massf(int gm_i, double* molef, double* massf);
 """)
 so = ffi.dlopen("libgas.so")
 so.cwrap_gas_init()
@@ -151,7 +154,61 @@ class GasModel(object):
         if flag < 0: raise Exception("could not compute molecular mass.")
         return valuep[0]
 
+    def enthalpy_isp(self, gstate, isp):
+        valuep = ffi.new("double *")
+        flag = so.gas_model_gas_state_enthalpy_isp(self.id, gstate.id, isp, valuep)
+        if flag < 0: raise Exception("could not compute enthalpy for species.")
+        return valuep[0]
+    def entropy_isp(self, gstate, isp):
+        valuep = ffi.new("double *")
+        flag = so.gas_model_gas_state_entropy_isp(self.id, gstate.id, isp, valuep)
+        if flag < 0: raise Exception("could not compute entropy for species.")
+        return valuep[0]
+    def enthalpy_isp(self, gstate, isp):
+        valuep = ffi.new("double *")
+        flag = so.gas_model_gas_state_gibbs_free_energy_isp(self.id, gstate.id, isp, valuep)
+        if flag < 0: raise Exception("could not compute gibbs free energy for species.")
+        return valuep[0]
 
+    def massf2molef(self, massf_given):
+        nsp = self.n_species
+        if type(massf_given) == type([]):
+            massf_list = massf_given.copy()
+            assert massf_list.len == self.n_species, "incorrect massf list length"
+        elif type(massf_given) == type({}):
+            massf_list = []
+            for name in self.species_names:
+                if name in massf_given.keys():
+                    massf_list.append(massf_given[name])
+                else:
+                    massf_list.append(0.0)
+        if abs(sum(massf_list) - 1.0) > 1.0e-6:
+            raise Exception("mass fractions do not sum to 1.")
+        my_massf = ffi.new("double[]", massf_list)
+        my_molef = ffi.new("double[]", [0.0]*self.n_species)
+        so.gas_model_massf2molef(self.id, my_massf, my_molef)
+        return [my_molef[i] for i in range(self.n_species)]
+
+    def molef2massf(self, molef_given):
+        nsp = self.n_species
+        if type(molef_given) == type([]):
+            molef_list = molef_given.copy()
+            assert molef_list.len == self.n_species, "incorrect molef list length"
+        elif type(molef_given) == type({}):
+            molef_list = []
+            for name in self.species_names:
+                if name in molef_given.keys():
+                    molef_list.append(molef_given[name])
+                else:
+                    molef_list.append(0.0)
+        if abs(sum(molef_list) - 1.0) > 1.0e-6:
+            raise Exception("mole fractions do not sum to 1.")
+        my_molef = ffi.new("double[]", molef_list)
+        my_massf = ffi.new("double[]", [0.0]*self.n_species)
+        so.gas_model_molef2massf(self.id, my_molef, my_massf)
+        return [my_massf[i] for i in range(self.n_species)]
+
+    
 class GasState(object):
     def __init__(self, gmodel):
         self.gmodel = gmodel
@@ -357,4 +414,11 @@ class GasState(object):
     @property
     def molecular_mass(self):
         return self.gmodel.molecular_mass(self)
+
+    def enthalpy_isp(self, isp):
+        return self.gmodel.enthalpy_isp(self, isp)
+    def entropy_isp(self, isp):
+        return self.gmodel.entropy_isp(self, isp)
+    def molecular_mass_isp(self, isp):
+        return self.gmodel.molecular_mass_isp(self, isp)
 

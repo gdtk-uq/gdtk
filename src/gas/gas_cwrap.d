@@ -450,3 +450,37 @@ extern (C) int gas_model_gas_state_gibbs_free_energy_isp(int gm_i, int gs_i, int
         return -1;
     }
 }
+
+extern (C) int gas_model_massf2molef(int gm_i, double* massf, double* molef)
+{
+    try {
+        double[] my_massf, my_molef;
+        auto nsp = gas_models[gm_i].n_species;
+        my_massf.length = nsp;
+        my_molef.length = nsp;
+        foreach (i; 0 .. nsp) { my_massf[i] = massf[i]; }
+        massf2molef(my_massf, gas_models[gm_i].mol_masses, my_molef);
+        foreach (i; 0 .. nsp) { molef[i] = my_molef[i]; }
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern (C) int gas_model_molef2massf(int gm_i, double* molef, double* massf)
+{
+    try {
+        double[] my_massf, my_molef;
+        auto nsp = gas_models[gm_i].n_species;
+        my_massf.length = nsp;
+        my_molef.length = nsp;
+        foreach (i; 0 .. nsp) { my_molef[i] = molef[i]; }
+        massf2molef(my_molef, gas_models[gm_i].mol_masses, my_massf);
+        foreach (i; 0 .. nsp) { massf[i] = my_massf[i]; }
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
