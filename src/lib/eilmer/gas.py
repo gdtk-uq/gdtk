@@ -45,6 +45,9 @@ ffi.cdef("""
 
     int gas_model_massf2molef(int gm_i, double* massf, double* molef);
     int gas_model_molef2massf(int gm_i, double* molef, double* massf);
+
+    int chemical_reactor_new(char* file_name, int gm_i);
+    int chemical_reactor_gas_state_update(int cr_i, int gs_i, double t_interval, double* dt_suggest);
 """)
 so = ffi.dlopen("libgas.so")
 so.cwrap_gas_init()
@@ -174,7 +177,7 @@ class GasModel(object):
         nsp = self.n_species
         if type(massf_given) == type([]):
             massf_list = massf_given.copy()
-            assert massf_list.len == self.n_species, "incorrect massf list length"
+            assert len(massf_list) == self.n_species, "incorrect massf list length"
         elif type(massf_given) == type({}):
             massf_list = []
             for name in self.species_names:
@@ -193,7 +196,7 @@ class GasModel(object):
         nsp = self.n_species
         if type(molef_given) == type([]):
             molef_list = molef_given.copy()
-            assert molef_list.len == self.n_species, "incorrect molef list length"
+            assert len(molef_list) == self.n_species, "incorrect molef list length"
         elif type(molef_given) == type({}):
             molef_list = []
             for name in self.species_names:
@@ -422,3 +425,21 @@ class GasState(object):
     def molecular_mass_isp(self, isp):
         return self.gmodel.molecular_mass_isp(self, isp)
 
+
+class ChemicalReactor(object):
+    def __init__(self, file_name, gmodel):
+        self.file_name = file_name
+        self.gmodel = gmodel
+        self.id = so.chemical_reactor_new(bytes(self.file_name, 'utf-8'), self.gmodel.id)
+
+    def __str__(self):
+        text = 'ChemicalReactor(file="%s", id=%d)' % (self.file_name, self.id)
+        return text
+
+    def update_state(self, gstate, t_interval, dt_suggest):
+        dt_suggestp = ffi.new("double *")
+        dt_suggestp[0] = dt_suggest
+        flag = so.chemical_reactor_gas_state_update(self.id, gstate.id,
+                                                    t_interval, dt_suggestp)
+        if flag < 0: raise Exception("could not update state.")
+        return dt_suggestp[0]

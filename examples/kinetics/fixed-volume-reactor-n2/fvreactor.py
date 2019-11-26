@@ -9,10 +9,10 @@
 # To run:
 #   $python3 fvreactor.py
 
-from eilmer.gas import GasModel, GasState
+from eilmer.gas import GasModel, GasState, ChemicalReactor
 
 gm = GasModel("nitrogen-2sp.lua")
-# chemUpdate = ChemistryUpdate(filename="chem.lua", gasmodel=gm)
+chem_update = ChemicalReactor("chem.lua", gm)
 
 q = GasState(gm)
 q.p = 1.0e5 # Pa
@@ -31,13 +31,12 @@ f.write('# 1:t(s)  2:T(K)  3:p(Pa)  4:massf_N2  5:massf_N  6:X_N2  7:X_N\n')
 f.write("%10.3e %10.3f %10.3e %20.12e %20.12e %20.12e %20.12e\n" %
         (t, q.T, q.p, q.massf[0], q.massf[1], molef['N2'], molef['N']))
 while t <= tFinal:
-   # dtSuggest = chemUpdate.updateState(Q, dt, dtSuggest, gm)
-   t = t + dt
-   # dt = dtSuggest # uncomment this to get quicker stepping
-   q.update_thermo_from_rhou()
-   # conc = gm.massf2conc(q) # FIX-ME Why concentration?
-   conc = [1.0, 0.0] # dummy values
-   f.write("%10.3e %10.3f %10.3e %20.12e %20.12e %20.12e %20.12e\n" %
-           (t, q.T, q.p, q.massf[0], q.massf[1], conc[0], conc[1]))
+    dtSuggest = chem_update.update_state(q, dt, dtSuggest)
+    t = t + dt
+    # dt = dtSuggest # uncomment this to get quicker stepping
+    q.update_thermo_from_rhou()
+    molef_list = gm.massf2molef(q.massf)
+    f.write("%10.3e %10.3f %10.3e %20.12e %20.12e %20.12e %20.12e\n" %
+            (t, q.T, q.p, q.massf[0], q.massf[1], molef_list[0], molef_list[1]))
 f.close()
 print("# Done.")

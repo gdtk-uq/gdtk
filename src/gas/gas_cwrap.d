@@ -19,10 +19,14 @@ import gas.gas_model;
 import gas.gas_state;
 import gas.init_gas_model;
 
+import kinetics.thermochemical_reactor;
+import kinetics.chemistry_update;
+
 // We will accumulate GasModel and GasState objects in these arrays
 // and use the indices as handles in the scripting language.
 GasModel[] gas_models;
 GasState[] gas_states;
+ChemistryUpdate[] chemical_reactors;
 
 extern (C) int cwrap_gas_init()
 {
@@ -41,6 +45,8 @@ shared static ~this()
 {
     // writeln("libgasmodule.so shared static ~this");
 }
+
+//---------------------------------------------------------------------------
 
 extern (C) int gas_model_new(char* file_name)
 {
@@ -102,6 +108,8 @@ extern (C) int gas_model_mol_masses(int gm_i, double* mm)
         return -1;
     }
 }
+
+//---------------------------------------------------------------------------
 
 extern (C) int gas_state_new(int gm_i)
 {
@@ -238,6 +246,8 @@ extern (C) int gas_state_get_array_field(int gs_i, char* field_name, double* val
         return -1;
     }
 }
+
+//---------------------------------------------------------------------------
 
 extern (C) int gas_model_gas_state_update_thermo_from_pT(int gm_i, int gs_i)
 {
@@ -478,6 +488,40 @@ extern (C) int gas_model_molef2massf(int gm_i, double* molef, double* massf)
         foreach (i; 0 .. nsp) { my_molef[i] = molef[i]; }
         massf2molef(my_molef, gas_models[gm_i].mol_masses, my_massf);
         foreach (i; 0 .. nsp) { massf[i] = my_massf[i]; }
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+//---------------------------------------------------------------------------
+
+extern (C) int chemical_reactor_new(char* file_name, int gm_i)
+{
+    try {
+        auto cr = new ChemistryUpdate(to!string(file_name), gas_models[gm_i]);
+        chemical_reactors ~= cr;
+        return to!int(chemical_reactors.length - 1);
+    } catch (Exception e) {
+        writeln("Failed to construct a new ChemistryUpdate.");
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern (C) int chemical_reactor_gas_state_update(int cr_i, int gs_i,
+                                                 double t_interval,
+                                                 double* dt_suggest)
+{
+    try {
+        double dummyDouble;
+        // Extra parameters are not considered, presently. PJ 2017-04-22, 2019-11-26
+        double[maxParams] params;
+        double my_dt_suggest = *dt_suggest;
+        chemical_reactors[cr_i](gas_states[gs_i], t_interval, my_dt_suggest,
+                                dummyDouble, params);
+        *dt_suggest = my_dt_suggest;
         return 0;
     } catch (Exception e) {
         writeln("Exception message: ", e.msg);
