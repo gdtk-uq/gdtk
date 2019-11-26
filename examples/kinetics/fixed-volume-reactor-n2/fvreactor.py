@@ -17,8 +17,7 @@ chem_update = ChemicalReactor("chem.lua", gm)
 q = GasState(gm)
 q.p = 1.0e5 # Pa
 q.T = 4000.0 # degree K
-molef = {'N2':2/3, 'N':1/3}
-q.massf = gm.molef2massf(molef)
+q.molef = {'N2':2/3, 'N':1/3}
 q.update_thermo_from_pT()
 
 tFinal = 200.0e-6 # s
@@ -29,14 +28,13 @@ print("# Start integration")
 f = open("fvreactor.data", 'w')
 f.write('# 1:t(s)  2:T(K)  3:p(Pa)  4:massf_N2  5:massf_N  6:X_N2  7:X_N\n')
 f.write("%10.3e %10.3f %10.3e %20.12e %20.12e %20.12e %20.12e\n" %
-        (t, q.T, q.p, q.massf[0], q.massf[1], molef['N2'], molef['N']))
+        (t, q.T, q.p, q.massf[0], q.massf[1], q.conc[0], q.conc[1]))
 while t <= tFinal:
     dtSuggest = chem_update.update_state(q, dt, dtSuggest)
     t = t + dt
     # dt = dtSuggest # uncomment this to get quicker stepping
     q.update_thermo_from_rhou()
-    molef_list = gm.massf2molef(q.massf)
     f.write("%10.3e %10.3f %10.3e %20.12e %20.12e %20.12e %20.12e\n" %
-            (t, q.T, q.p, q.massf[0], q.massf[1], molef_list[0], molef_list[1]))
+            (t, q.T, q.p, q.massf[0], q.massf[1], q.conc[0], q.conc[1]))
 f.close()
 print("# Done.")

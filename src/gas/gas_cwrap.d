@@ -486,8 +486,38 @@ extern (C) int gas_model_molef2massf(int gm_i, double* molef, double* massf)
         my_massf.length = nsp;
         my_molef.length = nsp;
         foreach (i; 0 .. nsp) { my_molef[i] = molef[i]; }
-        massf2molef(my_molef, gas_models[gm_i].mol_masses, my_massf);
+        molef2massf(my_molef, gas_models[gm_i].mol_masses, my_massf);
         foreach (i; 0 .. nsp) { massf[i] = my_massf[i]; }
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern (C) int gas_model_gas_state_get_molef(int gm_i, int gs_i, double* molef)
+{
+    try {
+        double[] my_molef;
+        auto nsp = gas_models[gm_i].n_species;
+        my_molef.length = nsp;
+        massf2molef(gas_states[gs_i].massf, gas_models[gm_i].mol_masses, my_molef);
+        foreach (i; 0 .. nsp) { molef[i] = my_molef[i]; }
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern (C) int gas_model_gas_state_get_conc(int gm_i, int gs_i, double* conc)
+{
+    try {
+        double[] my_conc;
+        auto nsp = gas_models[gm_i].n_species;
+        my_conc.length = nsp;
+        gas_models[gm_i].massf2conc(gas_states[gs_i], my_conc);
+        foreach (i; 0 .. nsp) { conc[i] = my_conc[i]; }
         return 0;
     } catch (Exception e) {
         writeln("Exception message: ", e.msg);

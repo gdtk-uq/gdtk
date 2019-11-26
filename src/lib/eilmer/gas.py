@@ -45,6 +45,8 @@ ffi.cdef("""
 
     int gas_model_massf2molef(int gm_i, double* massf, double* molef);
     int gas_model_molef2massf(int gm_i, double* molef, double* massf);
+    int gas_model_gas_state_get_molef(int gm_i, int gs_i, double* molef);
+    int gas_model_gas_state_get_conc(int gm_i, int gs_i, double* conc);
 
     int chemical_reactor_new(char* file_name, int gm_i);
     int chemical_reactor_gas_state_update(int cr_i, int gs_i, double t_interval, double* dt_suggest);
@@ -320,6 +322,30 @@ class GasState(object):
         flag = so.gas_state_set_array_field(self.id, b"massf", mf, nsp)
         if flag < 0: raise Exception("could not set mass-fractions.")
         return mf_list
+
+    @property
+    def molef(self):
+        nsp = self.gmodel.n_species
+        mf = ffi.new("double[]", [0.0]*nsp)
+        flag = so.gas_model_gas_state_get_molef(self.gmodel.id, self.id, mf)
+        if flag < 0: raise Exception("could not get mole-fractions.")
+        return [mf[i] for i in range(nsp)]
+    @molef.setter
+    def molef(self, molef_given):
+        nsp = self.gmodel.n_species
+        mf_list = self.gmodel.molef2massf(molef_given)
+        mf = ffi.new("double[]", mf_list)
+        flag = so.gas_state_set_array_field(self.id, b"massf", mf, nsp)
+        if flag < 0: raise Exception("could not set mass-fractions from mole-fractions.")
+        return None
+
+    @property
+    def conc(self):
+        nsp = self.gmodel.n_species
+        myconc = ffi.new("double[]", [0.0]*nsp)
+        flag = so.gas_model_gas_state_get_conc(self.gmodel.id, self.id, myconc)
+        if flag < 0: raise Exception("could not get concentrations.")
+        return [myconc[i] for i in range(nsp)]
 
     @property
     def u_modes(self):
