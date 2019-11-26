@@ -26,7 +26,7 @@ dt = 1.0e-6
 dtSuggest = 1.0e-11
 print("# Start integration")
 f = open("fvreactor.data", 'w')
-f.write('# 1:t(s)  2:T(K)  3:p(Pa)  4:massf_N2  5:massf_N  6:X_N2  7:X_N\n')
+f.write('# 1:t(s)  2:T(K)  3:p(Pa)  4:massf_N2  5:massf_N  6:conc_N2  7:conc_N\n')
 f.write("%10.3e %10.3f %10.3e %20.12e %20.12e %20.12e %20.12e\n" %
         (t, q.T, q.p, q.massf[0], q.massf[1], q.conc[0], q.conc[1]))
 while t <= tFinal:

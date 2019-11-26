@@ -19,7 +19,7 @@ dt = 1.0e-6
 dtSuggest = 1.0e-11
 print("# Start integration")
 f = assert(io.open("fvreactor.data", 'w'))
-f:write('# 1:t(s)  2:T(K)  3:p(Pa)  4:massf_N2  5:massf_N  6:X_N2  7:X_N\n')
+f:write('# 1:t(s)  2:T(K)  3:p(Pa)  4:massf_N2  5:massf_N  6:conc_N2  7:conc_N\n')
 f:write(string.format("%10.3e %10.3f %10.3e %20.12e %20.12e %20.12e %20.12e\n",
                       t, Q.T, Q.p, Q.massf.N2, Q.massf.N, conc.N2, conc.N))
 while t <= tFinal do
