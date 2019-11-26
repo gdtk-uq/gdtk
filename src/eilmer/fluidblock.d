@@ -33,6 +33,7 @@ import lua_helper;
 import grid_motion;
 import grid_deform;
 import sfluidblock; // needed for some special-case processing, below
+import shockdetectors;
 
 // To distinguish ghost cells from active cells, we start their id values at
 // an arbitrarily high value.  It seem high to me (PJ) but feel free to adjust it
@@ -408,47 +409,11 @@ public:
     void detect_shock_points()
     // Detects shocks by looking for compression between adjacent cells.
     //
-    // The velocity component normal to the cell interfaces
-    // is used as the indicating variable.
     {
-        // Change in normalised velocity to indicate a shock.
-        // A value of -0.05 has been found suitable to detect the levels of
-        // shock compression observed in the "sod" and "cone20" test cases.
-        // It may need to be tuned for other situations, especially when
-        // viscous effects are important.
         double tol = myConfig.compression_tolerance;
         // First, work across interfaces and locate shocks using the (local) normal velocity.
         foreach (iface; faces) {
-            auto cL = iface.left_cell;
-            auto cR = iface.right_cell;
-            if (cL && cR) {
-                // We have two cells interacting.
-                // Compare the relative gas velocities.
-                number uL = geom.dot(cL.fs.vel, iface.n);
-                number uR = geom.dot(cR.fs.vel, iface.n);
-                number aL = cL.fs.gas.a;
-                number aR = cR.fs.gas.a;
-                number a_min = (aL < aR) ? aL : aR;
-                iface.fs.S = ((uR - uL)/a_min) < tol;
-            } else if (cL) {
-                // We have left-cell with a wall on the right.
-                // Use the gas velocity relative to the wall.
-                Vector3 vel; vel.set(cL.fs.vel);
-                vel.add(iface.gvel, to!number(-1.0));
-                number uL = geom.dot(vel, iface.n);
-                number aL = cL.fs.gas.a;
-                iface.fs.S = ((-uL)/aL) < tol;
-            } else if (cR) {
-                // We have a right-cell with a wall on the left.
-                // Use the gas velocity relative to the wall.
-                Vector3 vel; vel.set(cR.fs.vel);
-                vel.add(iface.gvel, to!number(-1.0));
-                number uR = geom.dot(vel, iface.n);
-                number aR = cR.fs.gas.a;
-                iface.fs.S = (uR/aR) < tol;
-            } else {
-                iface.fs.S = 0;
-            }
+            iface.fs.S = PJ_ShockDetector(iface, tol);
         }
         // Finally, mark cells as shock points if any of their interfaces are shock points.
         foreach (cell; cells) {

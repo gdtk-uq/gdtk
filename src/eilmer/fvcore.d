@@ -345,3 +345,29 @@ ResidualSmoothingType residual_smoothing_type_from_name(string name)
         throw new FlowSolverException("Invalid residual smoothing type name");
     }
 }
+
+// Symbolic names for the shock detectors 
+enum ShockDetector {
+    PJ,
+    Ducros 
+}
+
+@nogc
+string shock_detector_name(ShockDetector sd)
+{
+    final switch ( sd ) {
+    case ShockDetector.PJ: return "PJ";
+    case ShockDetector.Ducros: return "Ducros";
+    }
+}
+
+@nogc
+ShockDetector shock_detector_from_name(string name)
+{
+    switch ( name ) {
+    case "PJ": return ShockDetector.PJ;
+    case "Ducros": return ShockDetector.Ducros;
+    default:
+        throw new FlowSolverException("Invalid shock detector name: ");
+    }
+}

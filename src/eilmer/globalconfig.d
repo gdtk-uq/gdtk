@@ -597,6 +597,7 @@ final class GlobalConfig {
     // the values may need to be tuned for other cases, especially where
     // viscous effects are important.
     shared static double compression_tolerance = -0.30;
+    shared static ShockDetector shock_detector = ShockDetector.PJ;
 
     // With this flag on, the energy equation is modified such that
     // an artificial compressibility form of equations is solved.
@@ -888,6 +889,7 @@ public:
     double shear_tolerance;
     double M_inf;
     double compression_tolerance;
+    ShockDetector shock_detector;
     bool artificial_compressibility;
     double ac_alpha;
 
@@ -1022,6 +1024,7 @@ public:
         shear_tolerance = GlobalConfig.shear_tolerance;
         M_inf = GlobalConfig.M_inf;
         compression_tolerance = GlobalConfig.compression_tolerance;
+        shock_detector = GlobalConfig.shock_detector;
         //
         artificial_compressibility = GlobalConfig.artificial_compressibility;
         ac_alpha = GlobalConfig.ac_alpha;
@@ -1340,6 +1343,8 @@ void read_config_file()
     mixin(update_double("shear_tolerance", "shear_tolerance"));
     mixin(update_double("M_inf", "M_inf"));
     mixin(update_double("compression_tolerance", "compression_tolerance"));
+    mixin(update_enum("shock_detector", "shock_detector", "shock_detector_from_name"));
+    mixin(update_enum("flux_calculator", "flux_calculator", "flux_calculator_from_name"));
     mixin(update_bool("artificial_compressibility", "artificial_compressibility"));
     mixin(update_double("ac_alpha", "ac_alpha"));
     mixin(update_bool("MHD", "MHD"));
@@ -1406,6 +1411,7 @@ void read_config_file()
         writeln("  shear_tolerance: ", GlobalConfig.shear_tolerance);
         writeln("  M_inf: ", GlobalConfig.M_inf);
         writeln("  compression_tolerance: ", GlobalConfig.compression_tolerance);
+        writeln("  shock_detector: ", shock_detector_name(GlobalConfig.shock_detector));
         //
         writeln("  MHD: ", GlobalConfig.MHD);
         writeln("  MHD_static_field: ", GlobalConfig.MHD_static_field);
