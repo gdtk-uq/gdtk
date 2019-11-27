@@ -12,9 +12,9 @@ from eilmer.gas import GasModel, GasState
 gasModelFile = 'O2-gas-model.lua'
 gmodel = GasModel(gasModelFile)
 
-q = GasState(gmodel)
-q.p = 1.0e5 # Pa
-q.massf = {"O2":1.0}
+gs = GasState(gmodel)
+gs.p = 1.0e5 # Pa
+gs.massf = {"O2":1.0}
 
 outputFile = 'O2-thermo.dat'
 print("Opening file for writing: %s" % outputFile)
@@ -25,9 +25,9 @@ lowT = 200.0
 dT = 100.0
 
 for i in range(199):
-    q.T = dT*i + lowT
-    q.update_thermo_from_pT()
-    f.write(" %12.6e %12.6e %12.6e\n" % (q.T, q.Cp, q.enthalpy))
+    gs.T = dT*i + lowT
+    gs.update_thermo_from_pT()
+    f.write(" %12.6e %12.6e %12.6e\n" % (gs.T, gs.Cp, gs.enthalpy))
 
 f.close()
 print("File closed. Done.")

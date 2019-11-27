@@ -12,9 +12,9 @@
 gasModelFile = 'thermally-perfect-N2-O2.lua'
 gmodel = GasModel:new{gasModelFile}
 
-Q = GasState:new{gmodel}
-Q.p = 1.0e5 -- Pa
-Q.massf = {N2=0.78, O2=0.22} -- a good approximation for the composition of air
+gs = GasState:new{gmodel}
+gs.p = 1.0e5 -- Pa
+gs.massf = {N2=0.78, O2=0.22} -- a good approximation for the composition of air
 
 outputFile = 'trans-props-air.dat'
 print("Opening file for writing: ", outputFile)
@@ -26,10 +26,10 @@ Thigh = 20000.0
 dT = 100.0
 
 for T=Tlow,Thigh,dT do
-   Q.T = T
-   gmodel:updateThermoFromPT(Q)
-   gmodel:updateTransCoeffs(Q)
-   f:write(string.format(" %12.6e %12.6e %12.6e\n", T, Q.mu, Q.k))
+   gs.T = T
+   gmodel:updateThermoFromPT(gs)
+   gmodel:updateTransCoeffs(gs)
+   f:write(string.format(" %12.6e %12.6e %12.6e\n", T, gs.mu, gs.k))
 end
 
 f:close()

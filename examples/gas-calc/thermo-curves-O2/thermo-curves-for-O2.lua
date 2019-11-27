@@ -11,9 +11,9 @@
 gasModelFile = 'O2-gas-model.lua'
 gmodel = GasModel:new{gasModelFile}
 
-Q = GasState:new{gmodel}
-Q.p = 1.0e5 -- Pa
-Q.massf = {O2=1.0}
+gs = GasState:new{gmodel}
+gs.p = 1.0e5 -- Pa
+gs.massf = {O2=1.0}
 
 outputFile = 'O2-thermo.dat'
 print("Opening file for writing: ", outputFile)
@@ -25,10 +25,10 @@ Thigh = 20000.0
 dT = 100.0
 
 for T=Tlow,Thigh,dT do
-   Q.T = T
-   gmodel:updateThermoFromPT(Q)
-   Cp = gmodel:Cp(Q)
-   h = gmodel:enthalpy(Q)
+   gs.T = T
+   gmodel:updateThermoFromPT(gs)
+   Cp = gmodel:Cp(gs)
+   h = gmodel:enthalpy(gs)
    f:write(string.format(" %12.6e %12.6e %12.6e\n", T, Cp, h))
 end
 

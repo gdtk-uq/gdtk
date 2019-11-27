@@ -22,35 +22,35 @@ else
 end
 
 print("Compute cycle states:")
-Q = {} -- We will build up a table of gas states
+gs = {} -- We will build up a table of gas states
 h = {} -- and enthalpies.
 for i=1,4 do
-   Q[i] = GasState:new{gmodel}
-   Q[i].massf = air_massf
+   gs[i] = GasState:new{gmodel}
+   gs[i].massf = air_massf
    h[i] = 0.0
 end
 
 print("   Start with ambient air")
-Q[1].p = 100.0e3; Q[1].T = 300.0
-gmodel:updateThermoFromPT(Q[1])
-s12 = gmodel:entropy(Q[1])
-h[1] = gmodel:enthalpy(Q[1])
+gs[1].p = 100.0e3; gs[1].T = 300.0
+gmodel:updateThermoFromPT(gs[1])
+s12 = gmodel:entropy(gs[1])
+h[1] = gmodel:enthalpy(gs[1])
 
 print("   Isentropic compression with a pressure ratio of 8")
-Q[2].p = 8 * Q[1].p
-gmodel:updateThermoFromPS(Q[2], s12)
-h[2] = gmodel:enthalpy(Q[2])
+gs[2].p = 8 * gs[1].p
+gmodel:updateThermoFromPS(gs[2], s12)
+h[2] = gmodel:enthalpy(gs[2])
 
 print("   Constant pressure heat addition to T=1300K")
-Q[3].p = Q[2].p; Q[3].T = 1300.0
-gmodel:updateThermoFromPT(Q[3])
-h[3] = gmodel:enthalpy(Q[3])
-s34 = gmodel:entropy(Q[3])
+gs[3].p = gs[2].p; gs[3].T = 1300.0
+gmodel:updateThermoFromPT(gs[3])
+h[3] = gmodel:enthalpy(gs[3])
+s34 = gmodel:entropy(gs[3])
 
 print("   Isentropic expansion to ambient pressure")
-Q[4].p = Q[1].p
-gmodel:updateThermoFromPS(Q[4], s34)
-h[4] = gmodel:enthalpy(Q[4])
+gs[4].p = gs[1].p
+gmodel:updateThermoFromPS(gs[4], s34)
+h[4] = gmodel:enthalpy(gs[4])
 
 print("")
 print("State   Pressure Temperature   Enthalpy")
@@ -58,7 +58,7 @@ print("             kPa           K      kJ/kg")
 print("---------------------------------------")
 for i=1,4 do
    print(string.format(" %4d %10.2f  %10.2f %10.2f",
-		       i, Q[i].p/1000, Q[i].T, h[i]/1000))
+		       i, gs[i].p/1000, gs[i].T, h[i]/1000))
 end
 print("---------------------------------------")
 print("")

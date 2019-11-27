@@ -14,9 +14,9 @@ require 'eilmer/gas'
 gasModelFile = 'thermally-perfect-N2-O2.lua'
 gmodel = GasModel.new(gasModelFile)
 
-q = GasState.new(gmodel)
-q.p = 1.0e5 # Pa
-q.massf = {"N2"=>0.78, "O2"=>0.22} # approximation for the composition of air
+gs = GasState.new(gmodel)
+gs.p = 1.0e5 # Pa
+gs.massf = {"N2"=>0.78, "O2"=>0.22} # approximation for the composition of air
 
 outputFile = 'trans-props-air.dat'
 puts "Opening file for writing: %s" % outputFile
@@ -27,10 +27,10 @@ lowT = 200.0
 dT = 100.0
 
 (0..198).each do |i|
-  q.T = dT*i + lowT
-  q.update_thermo_from_pT()
-  q.update_trans_coeffs()
-  f.write(" %12.6e %12.6e %12.6e\n" % [q.T, q.mu, q.k])
+  gs.T = dT*i + lowT
+  gs.update_thermo_from_pT()
+  gs.update_trans_coeffs()
+  f.write(" %12.6e %12.6e %12.6e\n" % [gs.T, gs.mu, gs.k])
 end
 
 f.close()

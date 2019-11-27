@@ -19,26 +19,26 @@ puts "n_species= #{gmodel.n_species}, n_modes= #{gmodel.n_modes}"
 puts "species_names= #{gmodel.species_names}"
 puts "mol_masses= #{gmodel.mol_masses}"
 
-q = GasState.new(gmodel)
-puts "freshly minted q= #{q}"
-q.rho=1.1; q.p=1.0e5; q.T=300.0; q.u=1.44e6; q.massf=[1.0]
+gs = GasState.new(gmodel)
+puts "freshly minted gs= #{gs}"
+gs.rho=1.1; gs.p=1.0e5; gs.T=300.0; gs.u=1.44e6; gs.massf=[1.0]
 puts "after setting some values"
-puts "  q.rho=%g p=%g T=%g u=%g massf=%s a=%g k=%g mu=%g" %
-      [q.rho, q.p, q.T, q.u, q.massf, q.a, q.k, q.mu]
-gmodel.update_thermo_from_pT(q) # the way that we do the update in D
-gmodel.update_sound_speed(q)
-gmodel.update_trans_coeffs(q)
+puts "  gs.rho=%g p=%g T=%g u=%g massf=%s a=%g k=%g mu=%g" %
+      [gs.rho, gs.p, gs.T, gs.u, gs.massf, gs.a, gs.k, gs.mu]
+gmodel.update_thermo_from_pT(gs) # the way that we do the update in D
+gmodel.update_sound_speed(gs)
+gmodel.update_trans_coeffs(gs)
 puts "after update thermo from pT"
-puts "  q.rho=%g p=%g T=%g u=%g massf=%s a=%g k=%g mu=%g" %
-      [q.rho, q.p, q.T, q.u, q.massf, q.a, q.k, q.mu]
-q.p = 3000.0; q.T=99.0; q.massf={'air'=>1.0}
-q.update_thermo_from_rhou() # update another way
-q.update_sound_speed()
-q.update_trans_coeffs()
+puts "  gs.rho=%g p=%g T=%g u=%g massf=%s a=%g k=%g mu=%g" %
+      [gs.rho, gs.p, gs.T, gs.u, gs.massf, gs.a, gs.k, gs.mu]
+gs.p = 3000.0; gs.T=99.0; gs.massf={'air'=>1.0}
+gs.update_thermo_from_rhou() # update another way
+gs.update_sound_speed()
+gs.update_trans_coeffs()
 puts "after update thermo from rhou"
-puts "  q.rho=%g p=%g T=%g u=%g massf=%s a=%g k=%g mu=%g" %
-      [q.rho, q.p, q.T, q.u, q.massf, q.a, q.k, q.mu]
+puts "  gs.rho=%g p=%g T=%g u=%g massf=%s a=%g k=%g mu=%g" %
+      [gs.rho, gs.p, gs.T, gs.u, gs.massf, gs.a, gs.k, gs.mu]
 
 puts "Some derived properties"
-puts "q.Cv=%g q.Cp=%g q.R=%g q.enthalpy=%g q.entropy=%g q.molecular_mass=%g" %
-     [q.Cv, q.Cp, q.R, q.enthalpy, q.entropy, q.molecular_mass]
+puts "gs.Cv=%g Cp=%g R=%g enthalpy=%g entropy=%g molecular_mass=%g" %
+     [gs.Cv, gs.Cp, gs.R, gs.enthalpy, gs.entropy, gs.molecular_mass]

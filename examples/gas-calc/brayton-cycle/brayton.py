@@ -22,37 +22,37 @@ else:
     air_massf = {"N2":0.78, "O2":0.22}
 
 print("Compute cycle states:")
-q = [] # We will build up a list of gas states
+gs = [] # We will build up a list of gas states
 h = [] # and enthalpies.
 # Note that we want to use indices consistent with the Lua script,
 # so we set up 5 elements but ignore the one with 0 index.
 for i in range(5):
-    q.append(GasState(gmodel))
+    gs.append(GasState(gmodel))
     h.append(0.0)
 for i in range(1,5):
-    q[i].massf = air_massf
+    gs[i].massf = air_massf
 
 print("   Start with ambient air")
-q[1].p = 100.0e3; q[1].T = 300.0
-q[1].update_thermo_from_pT()
-s12 = q[1].entropy
-h[1] = q[1].enthalpy
+gs[1].p = 100.0e3; gs[1].T = 300.0
+gs[1].update_thermo_from_pT()
+s12 = gs[1].entropy
+h[1] = gs[1].enthalpy
 
 print("   Isentropic compression with a pressure ratio of 8")
-q[2].p = 8 * q[1].p
-q[2].update_thermo_from_ps(s12)
-h[2] = q[2].enthalpy
+gs[2].p = 8 * gs[1].p
+gs[2].update_thermo_from_ps(s12)
+h[2] = gs[2].enthalpy
 
 print("   Constant pressure heat addition to T=1300K")
-q[3].p = q[2].p; q[3].T = 1300.0
-q[3].update_thermo_from_pT()
-h[3] = q[3].enthalpy
-s34 = q[3].entropy
+gs[3].p = gs[2].p; gs[3].T = 1300.0
+gs[3].update_thermo_from_pT()
+h[3] = gs[3].enthalpy
+s34 = gs[3].entropy
 
 print("   Isentropic expansion to ambient pressure")
-q[4].p = q[1].p
-q[4].update_thermo_from_ps(s34)
-h[4] = q[4].enthalpy
+gs[4].p = gs[1].p
+gs[4].update_thermo_from_ps(s34)
+h[4] = gs[4].enthalpy
 
 print("")
 print("State   Pressure Temperature   Enthalpy")
@@ -60,7 +60,7 @@ print("             kPa           K      kJ/kg")
 print("---------------------------------------")
 for i in range(1,5):
     print(" %4d %10.2f  %10.2f %10.2f" %
-	  (i, q[i].p/1000, q[i].T, h[i]/1000))
+	  (i, gs[i].p/1000, gs[i].T, h[i]/1000))
 print("---------------------------------------")
 print("")
 print("Cycle performance:")
