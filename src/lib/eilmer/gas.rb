@@ -50,7 +50,7 @@ module Gas
   extern 'int gas_model_gas_state_get_molef(int gm_i, int gs_i, double* molef)'
   extern 'int gas_model_gas_state_get_conc(int gm_i, int gs_i, double* conc)'
 
-  extern 'int thermochemical_reactor_new(char* file_name, int gm_i)'
+  extern 'int thermochemical_reactor_new(int gm_i, char* filename1, char* filename2)'
   extern 'int thermochemical_reactor_gas_state_update(int cr_i, int gs_i, double t_interval, double* dt_suggest)'
 end
 
@@ -492,15 +492,16 @@ class ThermochemicalReactor
   include Gas
   attr_reader :id
   
-  def initialize(file_name, gmodel)
-    @file_name = file_name
+  def initialize(gmodel, filename1, filename2="")
+    @filename1 = filename1
+    @filename2 = filename2
     @gmodel = gmodel
-    @id = Gas.thermochemical_reactor_new(file_name, gmodel.id)
+    @id = Gas.thermochemical_reactor_new(gmodel.id, filename1, filename2)
   end
 
   def to_s()
-    text = "ThermochemicalReactor(file=#{@file_name}"
-    text << ", id=#{@id}, gmodel.id=#{@gmodel.id})"
+    text = "ThermochemicalReactor(id=#{@id}, gmodel.id=#{@gmodel.id}"
+    text << " file1=#{@filename1}, file2=#{@filename2})"
   end
     
   def update_state(gstate, t_interval, dt_suggest)

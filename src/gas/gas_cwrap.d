@@ -528,10 +528,11 @@ extern (C) int gas_model_gas_state_get_conc(int gm_i, int gs_i, double* conc)
 
 //---------------------------------------------------------------------------
 
-extern (C) int thermochemical_reactor_new(char* file_name, int gm_i)
+extern (C) int thermochemical_reactor_new(int gm_i, char* filename1, char* filename2)
 {
     try {
-        auto cr = init_thermochemical_reactor(gas_models[gm_i], to!string(file_name));
+        auto cr = init_thermochemical_reactor(gas_models[gm_i], to!string(filename1),
+                                              to!string(filename2));
         thermochemical_reactors ~= cr;
         return to!int(thermochemical_reactors.length - 1);
     } catch (Exception e) {

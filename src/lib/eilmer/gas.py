@@ -48,7 +48,7 @@ ffi.cdef("""
     int gas_model_gas_state_get_molef(int gm_i, int gs_i, double* molef);
     int gas_model_gas_state_get_conc(int gm_i, int gs_i, double* conc);
 
-    int thermochemical_reactor_new(char* file_name, int gm_i);
+    int thermochemical_reactor_new(int gm_i, char* filename1, char* filename2);
     int thermochemical_reactor_gas_state_update(int cr_i, int gs_i, double t_interval, double* dt_suggest);
 """)
 so = ffi.dlopen("libgas.so")
@@ -455,14 +455,17 @@ class GasState(object):
 
 
 class ThermochemicalReactor(object):
-    def __init__(self, file_name, gmodel):
-        self.file_name = file_name
+    def __init__(self, gmodel, filename1, filename2=""):
+        self.filename1 = filename1
+        self.filename2 = filename2
         self.gmodel = gmodel
-        self.id = so.thermochemical_reactor_new(bytes(self.file_name, 'utf-8'), self.gmodel.id)
+        self.id = so.thermochemical_reactor_new(self.gmodel.id,
+                                                bytes(self.filename1, 'utf-8'),
+                                                bytes(self.filename2, 'utf-8'))
 
     def __str__(self):
-        text = 'ThermochemicalReactor(file="%s", id=%d, gmodel.id=%d)' % \
-            (self.file_name, self.id, self.gmodel.id)
+        text = 'ThermochemicalReactor(id=%d, gmodel.id=%d, file1="%s", file2="%s")' % \
+            (self.id, self.gmodel.id, self.filename1, self.filename2)
         return text
 
     def update_state(self, gstate, t_interval, dt_suggest):
