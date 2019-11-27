@@ -50,8 +50,8 @@ module Gas
   extern 'int gas_model_gas_state_get_molef(int gm_i, int gs_i, double* molef)'
   extern 'int gas_model_gas_state_get_conc(int gm_i, int gs_i, double* conc)'
 
-  extern 'int chemical_reactor_new(char* file_name, int gm_i)'
-  extern 'int chemical_reactor_gas_state_update(int cr_i, int gs_i, double t_interval, double* dt_suggest)'
+  extern 'int thermochemical_reactor_new(char* file_name, int gm_i)'
+  extern 'int thermochemical_reactor_gas_state_update(int cr_i, int gs_i, double t_interval, double* dt_suggest)'
 end
 
 Gas.cwrap_gas_init()
@@ -488,25 +488,25 @@ class GasState
 end
 
 
-class ChemicalReactor
+class ThermochemicalReactor
   include Gas
   attr_reader :id
   
   def initialize(file_name, gmodel)
     @file_name = file_name
     @gmodel = gmodel
-    @id = Gas.chemical_reactor_new(file_name, gmodel.id)
+    @id = Gas.thermochemical_reactor_new(file_name, gmodel.id)
   end
 
   def to_s()
-    text = "ChemicalReactor(file=#{@file_name}"
+    text = "ThermochemicalReactor(file=#{@file_name}"
     text << ", id=#{@id}, gmodel.id=#{@gmodel.id})"
   end
     
   def update_state(gstate, t_interval, dt_suggest)
     dt_suggestp = [dt_suggest].pack("d*")
-    flag = Gas.chemical_reactor_gas_state_update(@id, gstate.id,
-                                                 t_interval, dt_suggestp)
+    flag = Gas.thermochemical_reactor_gas_state_update(@id, gstate.id,
+                                                       t_interval, dt_suggestp)
     if flag < 0 then raise "could not update state." end
     return dt_suggestp[0, dt_suggestp.size].unpack("d")[0]
   end

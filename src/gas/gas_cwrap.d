@@ -20,19 +20,20 @@ import gas.gas_state;
 import gas.init_gas_model;
 
 import kinetics.thermochemical_reactor;
-import kinetics.chemistry_update;
+import kinetics.init_thermochemical_reactor;
 
 // We will accumulate GasModel and GasState objects in these arrays
 // and use the indices as handles in the scripting language.
 GasModel[] gas_models;
 GasState[] gas_states;
-ChemistryUpdate[] chemical_reactors;
+ThermochemicalReactor[] thermochemical_reactors;
 
 extern (C) int cwrap_gas_init()
 {
     Runtime.initialize();
     gas_models.length = 0;
     gas_states.length = 0;
+    thermochemical_reactors.length = 0;
     return 0;
 }
 
@@ -527,30 +528,30 @@ extern (C) int gas_model_gas_state_get_conc(int gm_i, int gs_i, double* conc)
 
 //---------------------------------------------------------------------------
 
-extern (C) int chemical_reactor_new(char* file_name, int gm_i)
+extern (C) int thermochemical_reactor_new(char* file_name, int gm_i)
 {
     try {
-        auto cr = new ChemistryUpdate(to!string(file_name), gas_models[gm_i]);
-        chemical_reactors ~= cr;
-        return to!int(chemical_reactors.length - 1);
+        auto cr = init_thermochemical_reactor(gas_models[gm_i], to!string(file_name));
+        thermochemical_reactors ~= cr;
+        return to!int(thermochemical_reactors.length - 1);
     } catch (Exception e) {
-        writeln("Failed to construct a new ChemistryUpdate.");
+        writeln("Failed to construct a new ThermochemicalReactor.");
         writeln("Exception message: ", e.msg);
         return -1;
     }
 }
 
-extern (C) int chemical_reactor_gas_state_update(int cr_i, int gs_i,
-                                                 double t_interval,
-                                                 double* dt_suggest)
+extern (C) int thermochemical_reactor_gas_state_update(int cr_i, int gs_i,
+                                                       double t_interval,
+                                                       double* dt_suggest)
 {
     try {
         double dummyDouble;
         // Extra parameters are not considered, presently. PJ 2017-04-22, 2019-11-26
         double[maxParams] params;
         double my_dt_suggest = *dt_suggest;
-        chemical_reactors[cr_i](gas_states[gs_i], t_interval, my_dt_suggest,
-                                dummyDouble, params);
+        thermochemical_reactors[cr_i](gas_states[gs_i], t_interval, my_dt_suggest,
+                                      dummyDouble, params);
         *dt_suggest = my_dt_suggest;
         return 0;
     } catch (Exception e) {

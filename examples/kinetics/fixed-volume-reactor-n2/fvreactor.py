@@ -9,10 +9,10 @@
 # To run:
 #   $ python3 fvreactor.py
 
-from eilmer.gas import GasModel, GasState, ChemicalReactor
+from eilmer.gas import GasModel, GasState, ThermochemicalReactor
 
 gm = GasModel("nitrogen-2sp.lua")
-chem_update = ChemicalReactor("chem.lua", gm)
+reactor = ThermochemicalReactor("chem.lua", gm)
 
 q = GasState(gm)
 q.p = 1.0e5 # Pa
@@ -30,7 +30,7 @@ f.write('# 1:t(s)  2:T(K)  3:p(Pa)  4:massf_N2  5:massf_N  6:conc_N2  7:conc_N\n
 f.write("%10.3e %10.3f %10.3e %20.12e %20.12e %20.12e %20.12e\n" %
         (t, q.T, q.p, q.massf[0], q.massf[1], q.conc[0], q.conc[1]))
 while t <= tFinal:
-    dtSuggest = chem_update.update_state(q, dt, dtSuggest)
+    dtSuggest = reactor.update_state(q, dt, dtSuggest)
     t = t + dt
     # dt = dtSuggest # uncomment this to get quicker stepping
     q.update_thermo_from_rhou()

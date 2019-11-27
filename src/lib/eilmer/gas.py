@@ -48,8 +48,8 @@ ffi.cdef("""
     int gas_model_gas_state_get_molef(int gm_i, int gs_i, double* molef);
     int gas_model_gas_state_get_conc(int gm_i, int gs_i, double* conc);
 
-    int chemical_reactor_new(char* file_name, int gm_i);
-    int chemical_reactor_gas_state_update(int cr_i, int gs_i, double t_interval, double* dt_suggest);
+    int thermochemical_reactor_new(char* file_name, int gm_i);
+    int thermochemical_reactor_gas_state_update(int cr_i, int gs_i, double t_interval, double* dt_suggest);
 """)
 so = ffi.dlopen("libgas.so")
 so.cwrap_gas_init()
@@ -454,21 +454,21 @@ class GasState(object):
         return self.gmodel.gibbs_free_energy_isp(self, isp)
 
 
-class ChemicalReactor(object):
+class ThermochemicalReactor(object):
     def __init__(self, file_name, gmodel):
         self.file_name = file_name
         self.gmodel = gmodel
-        self.id = so.chemical_reactor_new(bytes(self.file_name, 'utf-8'), self.gmodel.id)
+        self.id = so.thermochemical_reactor_new(bytes(self.file_name, 'utf-8'), self.gmodel.id)
 
     def __str__(self):
-        text = 'ChemicalReactor(file="%s", id=%d, gmodel.id=%d)' % \
+        text = 'ThermochemicalReactor(file="%s", id=%d, gmodel.id=%d)' % \
             (self.file_name, self.id, self.gmodel.id)
         return text
 
     def update_state(self, gstate, t_interval, dt_suggest):
         dt_suggestp = ffi.new("double *")
         dt_suggestp[0] = dt_suggest
-        flag = so.chemical_reactor_gas_state_update(self.id, gstate.id,
-                                                    t_interval, dt_suggestp)
+        flag = so.thermochemical_reactor_gas_state_update(self.id, gstate.id,
+                                                          t_interval, dt_suggestp)
         if flag < 0: raise Exception("could not update state.")
         return dt_suggestp[0]
