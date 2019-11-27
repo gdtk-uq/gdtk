@@ -31,13 +31,12 @@ import fvcore: FlowSolverException;
 import globalconfig;
 import simcore;
 import util.lua;
+import geom.luawrap;
 import luaglobalconfig;
 import luaflowstate;
 import luaflowsolution;
-import geom.luawrap;
 import luasolidprops;
 import postprocess;
-import luaflowsolution;
 import luaidealgasflow;
 import luagasflow;
 version(mpi_parallel) {

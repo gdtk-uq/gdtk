@@ -8,7 +8,7 @@ BEGIN {
     shock_found = 0;
 }
 
-$1 != "#" { # for any non-comment line, do something
+NR > 1 { # skip the label line then do something
     p_new = $9;
     x_new = $1;
     y_new = $2;

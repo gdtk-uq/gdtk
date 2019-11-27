@@ -150,7 +150,7 @@ LUA_MODULES += $(UTIL_DIR)/lua_helper.lua \
 NM_DIR := ../nm
 include $(NM_DIR)/nm_files.mk
 
-NML_DIR := ../nml
+NML_DIR := ../lib
 include $(NML_DIR)/nml_files.mk
 
 GAS_DIR := ../gas
@@ -208,7 +208,7 @@ ifeq ($(DMD), dmd)
         DFLAGS := -w -g -debug -version=flavour_debug
     endif
     ifeq ($(FLAVOUR), profile)
-        DFLAGS := -profile -w -O -release -boundscheck=off -version=flavour_profile
+        DFLAGS := -profile -w -g -O -release -boundscheck=off -version=flavour_profile
     endif
     ifeq ($(FLAVOUR), fast)
         DFLAGS := -w -g -O -release -boundscheck=off -version=flavour_fast
@@ -398,7 +398,7 @@ clean:
 	- cd $(GRID_DIR); make clean
 
 prep-gas:
-	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) build-prep-gas
+	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) build-prep-gas
 
 ugrid_partition:
 	cd $(GRID_DIR); make BUILD_DIR=$(BUILD_DIR) ugrid_partition
@@ -484,7 +484,7 @@ e4sss: steadystate_solver.d steadystate_core.d shape_sensitivity_core.d $(EILMER
 	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
 	$(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-	$(NM_FILES) $(UTIL_FILES) $(NM_LUA_FILES)
+	$(NM_FILES) $(UTIL_FILES) $(GASDYN_FILES) $(NM_LUA_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		steadystate_solver.d > steadystate_solver_with_rev_string.d
@@ -496,7 +496,7 @@ e4sss: steadystate_solver.d steadystate_core.d shape_sensitivity_core.d $(EILMER
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
 		$(GAS_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) \
-		$(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES) \
+		$(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(GASDYN_FILES) $(NM_LUA_FILES) \
 		$(DLINKFLAGS)
 
 e4zsss: steadystate_solver.d steadystate_core.d shape_sensitivity_core.d $(EILMER_FILES) \
@@ -525,7 +525,7 @@ e4ssc: shape_sensitivity_calc.d shape_sensitivity_core.d steadystate_core.d $(EI
 	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
 	$(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-	$(NM_FILES) $(UTIL_FILES) $(NM_LUA_FILES)
+	$(NM_FILES) $(UTIL_FILES) $(GASDYN_FILES) $(NM_LUA_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		shape_sensitivity_calc.d > shape_sensitivity_calc_with_rev_string.d
@@ -539,7 +539,7 @@ e4ssc: shape_sensitivity_calc.d shape_sensitivity_core.d steadystate_core.d $(EI
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
 		$(GAS_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) \
-		$(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES) \
+		$(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(GASDYN_FILES) $(NM_LUA_FILES) \
 		$(DLINKFLAGS)
 
 e4opt: optdriver.d /
@@ -551,7 +551,7 @@ e4opt: optdriver.d /
 e4loadbalance: loadbalance.d $(EILMER_FILES) \
 	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
 	$(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
-	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+	$(KINETICS_FILES) $(GASDYN_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 	$(NM_FILES) $(UTIL_FILES) $(NM_LUA_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
@@ -561,7 +561,7 @@ e4loadbalance: loadbalance.d $(EILMER_FILES) \
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
 		$(GAS_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) \
-		$(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES) \
+		$(GASDYN_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES) \
 		$(DLINKFLAGS)
 
 eilmer-opencl-gpu-chem: main.d opencl_gpu_chem.d $(EILMER_FILES) \
@@ -622,7 +622,7 @@ libcudakernel.so: libcudakernel.so
 # Fortran bits -- we need a bit of a hack
 
 $(GAS_DIR)/ideal_air_fortran.o: $(GAS_DIR)/ideal_air_fortran.f
-	cd $(GAS_DIR); gfortran -c -ffree-form ideal_air_fortran.f
+	cd $(GAS_DIR); gfortran -c -ffree-form -fPIC ideal_air_fortran.f
 
 $(KINETICS_DIR)/pseudosp_solve_ode.o: $(KINETICS_DIR)/pseudosp_solve_ode.f90
 	cd $(KINETICS_DIR); gfortran -c pseudosp_solve_ode.f90

@@ -37,24 +37,64 @@ LIBLUA := $(LUA)/lib/liblua.a
 LIBLUAPATH := $(LUA)/lib
 ifeq ($(DMD), dmd)
     ifeq ($(FLAVOUR), debug)
-        DFLAGS := -w -g -debug
+        DFLAGS := -w -g -debug -version=flavour_debug
     endif
     ifeq ($(FLAVOUR), profile)
-        DFLAGS := -profile -w -O -release -inline -boundscheck=off
+        DFLAGS := -profile -w -g -O -release -boundscheck=off -version=flavour_profile
     endif
     ifeq ($(FLAVOUR), fast)
-        DFLAGS := -w -O -release -inline -boundscheck=off
+        DFLAGS := -w -g -O -release -boundscheck=off -version=flavour_fast
     endif
+    PIC := -fPIC
+    DVERSION := -version=
     OF := -of
     DLINKFLAGS := -L-L$(LIBLUAPATH) -L-llua -L-ldl
 endif
 ifeq ($(DMD), ldmd2)
-    DFLAGS := -w -O -release -inline -boundscheck=off
+    ifeq ($(FLAVOUR), debug)
+        DFLAGS := -w -g -debug -version=flavour_debug
+    endif
+    ifeq ($(FLAVOUR), profile)
+        DFLAGS := -profile -w -g -O -release -inline -boundscheck=off -version=flavour_profile
+    endif
+    ifeq ($(FLAVOUR), fast)
+        DFLAGS := -w -g -O -release -inline -boundscheck=off -version=flavour_fast
+    endif
+    PIC := -fPIC
+    DVERSION := -version=
     OF := -of
     DLINKFLAGS := -L-L$(LIBLUAPATH) -L-llua -L-ldl
 endif
+ifeq ($(DMD), ldc2)
+    ifeq ($(FLAVOUR), debug)
+        DFLAGS := -w -g -d-debug -d-version=flavour_debug
+    endif
+    ifeq ($(FLAVOUR), profile)
+        # -fprofile-generate will result in profraw files being written
+        # that may be viewed, showing the top 10 functions with internal block counts
+        # llvm-profdata show -text -topn=10 <profraw-file>
+        DFLAGS := -fprofile-generate -g -w -O -release -enable-inlining -boundscheck=off -d-version=flavour_profile
+    endif
+    ifeq ($(FLAVOUR), fast)
+        DFLAGS := -w -g -O -release -enable-inlining -boundscheck=off -d-version=flavour_fast -ffast-math -flto=full
+    endif
+    PIC := --relocation-model=pic
+    DVERSION := -d-version=
+    OF := -of=
+    DLINKFLAGS := -L-L$(LIBLUAPATH) -L-llua -L-ldl
+endif
 ifeq ($(DMD), gdc)
-    DFLAGS := -Wall -O2 -frelease -fno-debug
+    ifeq ($(FLAVOUR), debug)
+        DFLAGS := -Wall -Og -g -version=flavour_debug
+    endif
+    ifeq ($(FLAVOUR), profile)
+        DFLAGS := -Wall -O2 -frelease -fno-debug -version=flavour_profile
+    endif
+    ifeq ($(FLAVOUR), fast)
+        DFLAGS := -Wall -O2 -frelease -fno-debug -version=flavour_fast
+    endif
+    PIC := -fPIC
+    DVERSION := -version=
     OF := -o
     DLINKFLAGS := -L$(LIBLUAPATH) $(LIBLUA) -ldl
 endif
@@ -80,23 +120,40 @@ include gas_files.mk
 
 # ----------------------------------------------------------------------
 # Here begins the list of targets, starting with the top-level actions.
-#
-# The default target is test, because that is most likely your interest
-# if you are invoking this makefile from within the gas models directory.
 # ----------------------------------------------------------------------
+
+build: gas-calc prep_gas.lua species-database/species-database.lua \
+		species-database/species-list.txt species_data_converter.lua \
+		libgas.so 
+	- mkdir -p $(BUILD_DIR)/bin
+	cp gas-calc $(BUILD_DIR)/bin/
+	cp prep_gas.lua $(BUILD_DIR)/bin/prep-gas; chmod +x $(BUILD_DIR)/bin/prep-gas
+	cp species_data_converter.lua $(BUILD_DIR)/bin/species-data-converter; \
+		chmod +x $(BUILD_DIR)/bin/species-data-converter
+	- mkdir -p $(BUILD_DIR)/data
+	cp species-database/species-database.lua $(BUILD_DIR)/data/
+	cp species-database/species-list.txt $(BUILD_DIR)/data/
+	- mkdir -p $(BUILD_DIR)/lib
+	cp libgas.so $(BUILD_DIR)/lib/
+	cp -r ../lib/* $(BUILD_DIR)/lib/
+
+build-prep-gas: prep_gas.lua species-database/species-database.lua \
+		species-database/species-list.txt species_data_converter.lua
+	- mkdir -p $(BUILD_DIR)/bin
+	cp prep_gas.lua $(BUILD_DIR)/bin/prep-gas; chmod +x $(BUILD_DIR)/bin/prep-gas
+	cp species_data_converter.lua $(BUILD_DIR)/bin/species-data-converter; \
+		chmod +x $(BUILD_DIR)/bin/species-data-converter
+	- mkdir -p $(BUILD_DIR)/data
+	cp species-database/species-database.lua $(BUILD_DIR)/data/
+	cp species-database/species-list.txt $(BUILD_DIR)/data/
+
+install: build
+	- mkdir -p $(INSTALL_DIR)
+	@echo "Installing to $(INSTALL_DIR)"
+	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
 
 test: $(TEST_PROGRAMS) gas-calc
 	tclsh gas-package-test.tcl
-
-install: gas-calc build-prep-gas species-data-converter \
-		libgasmodule.so gasmodule.py gasmodule.rb
-	- mkdir -p $(INSTALL_DIR)
-	cp gas-calc $(BUILD_DIR)/bin/
-	@echo "Installing to $(INSTALL_DIR)"
-	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
-	cp libgasmodule.so $(INSTALL_DIR)/lib/
-	cp gasmodule.py $(INSTALL_DIR)/lib/
-	cp gasmodule.rb $(INSTALL_DIR)/lib/
 
 demo: ${DEMO_PROGRAMS}
 	echo "Demo programs built."
@@ -125,37 +182,25 @@ clean:
 
 # Specific targets for individual artefacts.
 
-build-prep-gas: prep_gas.lua species-database.lua
-	- mkdir -p $(BUILD_DIR)/bin
-	cp prep_gas.lua $(BUILD_DIR)/bin/prep-gas; chmod +x $(BUILD_DIR)/bin/prep-gas
-	- mkdir -p $(BUILD_DIR)/data
-	cp species-database/species-database.lua $(BUILD_DIR)/data/
-	cp species-database/species-list.txt $(BUILD_DIR)/data/
-
 gas-calc: luagas_model.d $(LIBLUA) $(GAS_FILES) $(GAS_LUA_FILES) $(NM_FILES) \
 	$(UTIL_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES)
-	dmd -ofgas-calc -dip1008 -version=gas_calc $(DFLAGS) \
+	$(DMD) $(OF)gas-calc $(DVERSION)gas_calc $(DFLAGS) \
 		$(GAS_FILES) $(GAS_LUA_FILES) $(NM_FILES) $(UTIL_FILES) $(KINETICS_FILES) \
 		$(KINETICS_LUA_FILES) $(DLINKFLAGS)
 
-libgasmodule.so: cwrap_gasmodule.d $(LIBLUA) $(GAS_FILES) $(GAS_LUA_FILES) $(NM_FILES) \
+libgas.so: gas_cwrap.d $(LIBLUA) $(GAS_FILES) $(GAS_LUA_FILES) $(NM_FILES) \
 	$(UTIL_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES)
-	dmd -c cwrap_gasmodule.d -fPIC -dip1008 $(DFLAGS) \
+	$(DMD) -c gas_cwrap.d $(PIC) $(DFLAGS) \
 		$(GAS_FILES) $(NM_FILES) $(UTIL_FILES) $(KINETICS_FILES)
-	dmd -oflibgasmodule.so cwrap_gasmodule.o -shared -defaultlib=libphobos2.so \
-		-dip1008 \
+	$(DMD) $(OF)libgas.so gas_cwrap.o $(DFLAGS) \
+		-shared -defaultlib=libphobos2.so \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		-L-rpath=$(INSTALL_DIR)/lib $(DLINKFLAGS)
-
-species-data-converter: species_data_converter.lua
-	- mkdir -p $(BUILD_DIR)/bin
-	cp species_data_converter.lua $(BUILD_DIR)/bin/species-data-converter; \
-		chmod +x $(BUILD_DIR)/bin/species-data-converter
 
 $(LIBLUA):
 	cd $(LUA); make linux local
 
-species-database.lua :
+species-database/species-database.lua :
 	cd species-database; make species-database.lua
 
 # Some demo targets. These are left over from the early days of development.
@@ -207,156 +252,156 @@ univariate_lut_demo: univariate_lut_demo.d $(LIBLUA) $(UTIL_FILES) $(NM_FILES)
 # Individual test targets
 
 cea_therm_cond_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 chemkin_therm_cond_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 chemkin_viscosity_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 cea_viscosity_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 cea_thermo_curves_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 cea_thermo_curves_complex_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=cea_thermo_curves_test -version=complex_numbers \
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)cea_thermo_curves_test $(DVERSION)complex_numbers \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 
 init_gas_model_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 init_gas_model_complex_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=init_gas_model_test -version=complex_numbers \
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)init_gas_model_test $(DVERSION)complex_numbers \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 ideal_gas_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 ideal_gas_complex_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=ideal_gas_test -version=complex_numbers \
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)ideal_gas_test $(DVERSION)complex_numbers \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 ideal_helium_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 cubic_gas_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 cea_gas_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 perf_gas_mix_eos_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 sutherland_therm_cond_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 sutherland_viscosity_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 therm_perf_gas_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 therm_perf_gas_mix_eos_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 very_viscous_air_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 wilke_mixing_therm_cond_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 wilke_mixing_viscosity_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 co2gas_sw_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 uniform_lut_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 uniform_lut_plus_ideal_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 adaptive_lut_CEA_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 lut_comp_demo: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA) lut_comp_demo.d
-	$(DMD) $(OF)$@ -debug -g -w -dip1008 lut_comp_demo.d \
+	$(DMD) $(OF)$@ $(DFLAGS) lut_comp_demo.d \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 ideal_air_proxy_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 powers_aslam_gas_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 vib_specific_nitrogen_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 two_temperature_reacting_argon_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 ideal_dissociating_gas_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 fuel_air_mix_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 equilibrium_gas_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 steam_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 pseudo_species_gas_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 electronically_specific_gas_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 two_temperature_gasgiant_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 gasgiant_transport_properties_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	$(DMD) $(OF)$@ -debug -g -w -dip1008 -version=$@ \
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 # Fortran bits

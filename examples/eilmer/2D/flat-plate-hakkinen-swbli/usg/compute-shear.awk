@@ -14,7 +14,7 @@ BEGIN {
     print("# x(m)  tau_w(Pa)  Cf   y_plus")
 }
 
-$1 != "#" {
+NR > 1 {
     x = $1; y = $2; rho = $5; velx = $6; mu = $11; k = $12
     dvelxdy = (velx - 0.0) / y # Assuming that the wall is straight down at y=0
     tau_w = mu * dvelxdy    # wall shear stress

@@ -15,7 +15,7 @@ BEGIN {
     print("# x(m) St.Re^1/2");
 }
 
-$1 != "#" {
+NR > 1 {
     x = $1; q = $5;
     Rex = rho_inf*u_inf*x/mu_inf
     St = q/(rho_inf*u_inf*specific_heat*(T_0 - T_wall))

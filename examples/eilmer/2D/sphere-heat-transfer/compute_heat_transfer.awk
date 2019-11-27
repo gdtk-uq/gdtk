@@ -8,7 +8,7 @@ BEGIN {
     print "# theta_degrees  q_W/m^^2  q/q_stag"
 }
 
-$1 != "#" {
+NR > 1 {
     x = $1; y = $2; r = sqrt(x*x + y*y);
     dr = r - R_sphere
     theta = atan2(y, -x); # hemisphere centred on (0,0) nose in -x direction

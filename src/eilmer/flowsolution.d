@@ -30,7 +30,7 @@ import std.json;
 import std.file;
 import gzip;
 import fileutil;
-import util.lua;
+
 import nm.complex;
 import nm.number;
 import geom;
@@ -40,6 +40,15 @@ import fvcore;
 import globalconfig;
 import json_helper;
 import core.stdc.stdlib : exit;
+
+import util.lua;
+import geom.luawrap;
+import gas.luagas_model;
+import luaglobalconfig;
+import luaflowstate;
+import luaflowsolution;
+import luaidealgasflow;
+import luagasflow;
 
 
 class FlowSolution {
@@ -229,6 +238,20 @@ public:
     {
         lua_State* L = luaL_newstate();
         luaL_openlibs(L);
+        registerVector3(L);
+        registerGlobalConfig(L);
+        registerFlowSolution(L);
+        registerFlowState(L);
+        registerPaths(L);
+        registerGpathUtils(L);
+        registerSurfaces(L);
+        registerVolumes(L);
+        registerUnivariateFunctions(L);
+        registerStructuredGrid(L);
+        registerUnstructuredGrid(L);
+        registerGasModel(L, LUA_GLOBALSINDEX);
+        registeridealgasflowFunctions(L);
+        registergasflowFunctions(L);
         if ( luaL_dofile(L, toStringz(fileName)) != 0 ) {
             writeln("Problem in the user-supplied Lua script: ", fileName);
             string errMsg = to!string(lua_tostring(L, -1));
@@ -502,17 +525,19 @@ public:
         return _data[single_index(i,j,k)][variableIndex[varName]];
     }
 
-    string variable_names_as_string(bool with_column_pos=false)
+    string variable_names_as_string(bool with_column_pos=false,
+                                    bool with_quote_chars=false,
+                                    bool as_comment=false)
     {
         auto writer = appender!string();
-        formattedWrite(writer, "#");
+        if (as_comment) { formattedWrite(writer, "#"); }
         foreach (i, name; variableNames) {
-            if (with_column_pos) {
-                formattedWrite(writer, " %d:%s", i+1, name);
-            }
-            else {
-                formattedWrite(writer, " \"%s\"", name);
-            }
+            string txt = name;
+            // Gnuplot column numbers start at 1.
+            if (with_column_pos) { txt = format("%d:%s", i+1, txt); }
+            if (with_quote_chars) { txt = format("\"%s\"", txt); }
+            if ((i==0 && as_comment) || (i>0)) { formattedWrite(writer, " "); }
+            formattedWrite(writer, "%s", txt);
         }
         return writer.data;
     }

@@ -1381,3 +1381,87 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalCo
     }
 } // end roe()
 
+@nogc
+void ASF_242(FlowState[] stencil, ref FVInterface IFace, ref LocalConfig myConfig) {
+    // Start by substracting interface velocities and transforming to local frame; it is unlikely we will be using moving grids with this solver, but harm in including this.
+
+    auto gmodel = myConfig.gmodel;
+    ConservedQuantities F = IFace.F;
+    foreach (cell; stencil) {
+
+        cell.vel.refx -= IFace.gvel.x;
+        cell.vel.refy -= IFace.gvel.y;
+        cell.vel.refz -= IFace.gvel.z;
+
+        cell.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
+    }
+
+    // Define the v,w functions as prescribed by White et al. 2012 for the simple convective fluxes
+
+    number[4][10] v, w; 
+
+    foreach (i, cell; stencil) {
+        v[0][i] = cell.gas.rho;
+        w[0][i] = cell.vel.x;
+        v[1][i] = cell.vel.x * cell.gas.rho;
+        w[1][i] = cell.vel.x;
+        v[2][i] = cell.vel.y * cell.gas.rho;
+        w[2][i] = cell.vel.x;
+        v[3][i] = cell.vel.z * cell.gas.rho;
+        w[3][i] = cell.vel.x;
+        v[4][i] = gmodel.internal_energy(cell.gas) * cell.gas.rho;
+        w[4][i] = cell.vel.x;
+        v[5][i] = cell.vel.x * cell.vel.x * cell.gas.rho;
+        w[5][i] = cell.vel.x;
+        v[6][i] = cell.vel.y * cell.vel.y * cell.gas.rho;
+        w[6][i] = cell.vel.x;
+        v[7][i] = cell.vel.z * cell.vel.z * cell.gas.rho;
+        w[7][i] = cell.vel.x;
+        v[8][i] = cell.gas.p;
+        w[8][i] = cell.vel.x;
+        v[9][i] = cell.gas.p;
+        w[9][i] = 1;
+    }
+
+    // Prepare the conservative and product rule fluxes arrays
+    number[10] f_c, f_e;
+
+    // Calculate conservative and product rule fluxes
+    foreach (i ; 0 .. 10) {
+        f_c[i] = (1.0 / 12.0) * (-v[i][0] * w[i][0] + 7.0 * v[i][1] * w[i][1] + 7.0 * v[i][2] * w[i][2] - v[i][3] * w[i][3]);
+
+        f_e[i] = (1.0 / 12.0) * (-v[i][0] * w[i][2] - v[i][2] * w[i][0] + 8 * v[i][1] * w[i][2] + 8 * v[i][2] * w[i][1] - v[i][1] * w[i][3] - v[i][3] * w[i][1]);
+    }
+
+    // Define the splitting values as per White et al, in the conservative skew-symmetric form of Honein and Moin.
+    number alpha_mass = 1.0, alpha_mom = 0.5, alpha_ie = 0.5, alpha_ke = 0.0, alpha_p = 0.0;
+
+    // Calculate the final flux values of the simple quantities mass, momentum and energy
+    F.mass = (alpha_mass * f_c[0] + (1.0 - alpha_mass) * f_e[0]);
+    F.momentum.set((alpha_mom * f_c[1] + (1.0 - alpha_mom) * f_e[1]) + (alpha_p * f_c[9] + (1.0 - alpha_p) * f_e[9]),
+           (alpha_mom * f_c[2] + (1.0 - alpha_mom) * f_e[2]), (alpha_mom * f_c[3] + (1.0 - alpha_mom) * f_e[3]));
+
+    F.total_energy = (alpha_ie * f_c[4] + (1.0 - alpha_ie) * f_e[4] + (1.0 / 2.0) * (alpha_ke * f_c[5] + (1.0 - alpha_ke) * f_e[5] + alpha_ke * f_c[6] +
+           (1.0 - alpha_ke) * f_e[6] + alpha_ke * f_c[7] + (1.0 - alpha_ke) * f_e[7]) + alpha_p * f_c[8] + (1.0 - alpha_p) * f_e[8]);
+
+    // Bit of a placeholder for multi_species_gas
+    F.massf[0] = F.mass;
+
+    // Account for interface movement- probably shouldn't happen in this but check it anyway
+    // Total energy flux due to interface movement
+    number v_sqr = IFace.gvel.x*IFace.gvel.x + IFace.gvel.y*IFace.gvel.y + IFace.gvel.z*IFace.gvel.z; 
+    F.total_energy += 0.5 * F.mass * v_sqr + F.momentum.dot(IFace.gvel);
+    // Flux of momentum: Add component for interface velocity then
+    // rotate back to the global frame of reference.
+    Vector3 momentum_increment;
+    momentum_increment.set(IFace.gvel); momentum_increment *= F.mass;
+    F.momentum += momentum_increment;
+    F.momentum.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
+    // Also, transform the interface (grid) velocity and magnetic field.
+    IFace.gvel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
+
+    // Transform back to the global frame
+    foreach (cell; stencil) {
+        cell.vel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
+    }
+}

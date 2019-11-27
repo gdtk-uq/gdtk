@@ -204,7 +204,7 @@ public:
         debug {
             callCEA(Q, 0.0, 0.0, "pT", false);
         } else {
-            assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
+            throw new Exception("not implemented for @nogc. PJ 2018-09-23");
         }
     }
     override void update_thermo_from_rhou(GasState Q) const
@@ -212,7 +212,7 @@ public:
         debug {
             callCEA(Q, 0.0, 0.0, "rhoe", false);
         } else {
-            assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
+            throw new Exception("not implemented for @nogc. PJ 2018-09-23");
         }
     }
     override void update_thermo_from_rhoT(GasState Q) const
@@ -220,7 +220,7 @@ public:
         debug {
             callCEA(Q, 0.0, 0.0, "rhoT", false);
         } else {
-            assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
+            throw new Exception("not implemented for @nogc. PJ 2018-09-23");
         }
     }
     override void update_thermo_from_rhop(GasState Q) const
@@ -233,7 +233,7 @@ public:
         debug {
             callCEA(Q, 0.0, s.re, "ps", false);
         } else {
-            assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
+            throw new Exception("not implemented for @nogc. PJ 2018-09-23");
         }
     }
     override void update_thermo_from_hs(GasState Q, number h, number s) const
@@ -247,7 +247,7 @@ public:
         debug {
             callCEA(Q, 0.0, 0.0, "pT", false);
         } else {
-            assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
+            throw new Exception("not implemented for @nogc. PJ 2018-09-23");
         }
     }
     override void update_trans_coeffs(GasState Q)
@@ -255,7 +255,7 @@ public:
         debug {
             callCEA(Q, 0.0, 0.0, "pT", true);
         } else {
-            assert(0, "Oops, not implemented for @nogc. PJ 2018-09-23");
+            throw new Exception("not implemented for @nogc. PJ 2018-09-23");
         }
     }
 

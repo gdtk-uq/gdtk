@@ -1788,9 +1788,11 @@ function write_config_file(fileName)
    f:write(string.format('"adjust_invalid_cell_data": %s,\n', tostring(config.adjust_invalid_cell_data)))
    f:write(string.format('"report_invalid_cells": %s,\n', tostring(config.report_invalid_cells)))
 
-   if config.high_order_flux_calculator and config.n_ghost_cell_layers < 3 then
-      print("Increasing config.n_ghost_cell_layers to 3 (structured-grid).")
-      config.n_ghost_cell_layers = 3
+   if config.n_ghost_cell_layers < 3 then
+      if config.high_order_flux_calculator or (config.interpolation_order == 3) then
+         print("Increasing config.n_ghost_cell_layers to 3 (structured-grid).")
+         config.n_ghost_cell_layers = 3
+      end
    end
    f:write(string.format('"n_ghost_cell_layers": %d,\n', config.n_ghost_cell_layers))
    f:write(string.format('"high_order_flux_calculator": %s,\n', tostring(config.high_order_flux_calculator)))

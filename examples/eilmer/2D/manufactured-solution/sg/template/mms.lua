@@ -137,6 +137,6 @@ config.stringent_cfl = true
 config.apply_limiter = false
 config.extrema_clipping = false
 if case == 6 then
-   -- Try 5-point reconstruction
-   config.high_order_flux_calculator = true
+   -- Try 5-point Lagrangian reconstruction
+   config.interpolation_order = 3
 end

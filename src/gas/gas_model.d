@@ -139,7 +139,7 @@ public:
     @nogc number entropy(in GasState Q, int isp)
     {
         // For the single-species gases, provide a default implementation
-        // but we need to be carefule to override this for multi-component gases.
+        // but we need to be careful to override this for multi-component gases.
         return entropy(Q);
     }
 
@@ -191,7 +191,8 @@ public:
     final void massf2conc(GasState Q, number[] conc) const
     in {
         debug {
-            assert(Q.massf.length == conc.length, brokenPreCondition("Inconsistent array lengths."));
+            assert(Q.massf.length == conc.length,
+                   brokenPreCondition("Inconsistent array lengths."));
         }
     }
     body {
@@ -208,7 +209,8 @@ public:
     final void conc2massf(const(number[]) conc, GasState Q) const
     in {
         debug {
-            assert(Q.massf.length == conc.length, brokenPreCondition("Inconsistent array lengths."));
+            assert(Q.massf.length == conc.length,
+                   brokenPreCondition("Inconsistent array lengths."));
         }
     }
     body {
@@ -257,7 +259,7 @@ public:
         //
         if (_is_plasma) {
             // ... such that we should never arrive here.
-            throw new Error("Your gas model does not handle the setting of the electron mass-fraction.");
+            throw new Error("Gas model does not set the electron mass-fraction.");
         }
     }
     

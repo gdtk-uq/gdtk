@@ -16,7 +16,7 @@ end
 print("L=", L)
 patch = CoonsPatch:new{p00={x=0,y=0}, p10={x=L,y=0},
                        p11={x=L,y=L}, p01={x=0,y=L}}
-ncells = math.floor(80*2)
+ncells = math.floor(80*1)
 print("ncells=", ncells)
 grid0 = StructuredGrid:new{psurface=patch, niv=ncells+1, njv=ncells+1}
 -- Flow domain consists of a square grid of blocks and wraps around at
@@ -35,6 +35,12 @@ config.dt_plot = tau
 config.apply_limiter = false
 config.extrema_clipping = false
 if false then
-   config.high_order_flux_calculator = true
+   -- 6-cell stencil with Lagrange interpolation
+   config.interpolation_order = 3
    config.cfl_value = 0.25
+end
+if true then
+   -- Lachlan's alpha-split scheme
+   config.high_order_flux_calculator = true
+   config.cfl_value = 0.10
 end

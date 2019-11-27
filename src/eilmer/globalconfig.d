@@ -534,12 +534,15 @@ final class GlobalConfig {
     // Default flux calculator is the adaptive mix of (diffusive) Hanel and AUSMDV.
     shared static FluxCalculator flux_calculator = FluxCalculator.adaptive_hanel_ausmdv;
     // 
-    // Low order reconstruction (1) uses just the cell-centre data as left- and right-
-    // flow properties in the convective flux calculation.
-    // High-order reconstruction (2) adds a correction term to the cell-centre values
-    // to approach something like a piecewise-quadratic interpolation between the
-    // cell centres for structured-grids and a linear model across a cloud of cell 
-    // centres for unstructured-grids.
+    // We use interpolation and reconstruction to mean the same.
+    // It comes in a number of flavours:
+    // 1. Low order uses just the cell-centre data as left- and right-
+    //    flow properties in the convective flux calculation.
+    // 2. adds a correction term to the cell-centre values, to approach something like
+    //    a piecewise-quadratic interpolation between the cell centres for structured-grids
+    //    and a linear model across a cloud of cell centres for unstructured-grids.
+    // 3. high-order reconstruction on structured-grids using Lagrangian interpolation
+    //    across a 6-cell stencil.  Must be used with ghost-cell-based boundary conditions.
     shared static int interpolation_order = 2; 
     // We have the option to start a calculation without high-order reconstruction
     // and later activate it, presumably once the difficult flow has passed.
@@ -1930,7 +1933,9 @@ void configCheckPoint1()
 {
     if (GlobalConfig.grid_motion == GridMotion.shock_fitting &&
         GlobalConfig.apply_bcs_in_parallel) {
-        writeln("NOTE: apply_bcs_in_parallel is set to false when shock_fitting is used.");
+        if (GlobalConfig.is_master_task) {
+            writeln("NOTE: apply_bcs_in_parallel is set to false when shock_fitting is used.");
+        }
         GlobalConfig.apply_bcs_in_parallel = false;
     }
     if (!GlobalConfig.do_shock_detect) {
@@ -1942,7 +1947,7 @@ void configCheckPoint1()
             GlobalConfig.flux_calculator == FluxCalculator.adaptive_efm_ausmdv) {
             GlobalConfig.do_shock_detect = true;
         }
-        if (GlobalConfig.do_shock_detect) {
+        if (GlobalConfig.do_shock_detect && GlobalConfig.is_master_task) {
             writeln("NOTE: turning on shock detector.");
         }
     }
@@ -1971,7 +1976,9 @@ void configCheckPoint2()
     }
     if (GlobalConfig.high_order_flux_calculator) {
         if (GlobalConfig.n_ghost_cell_layers < 3) {
-            writeln("Increasing n_ghost_cell_layers to 3.");
+            if (GlobalConfig.is_master_task) {
+                writeln("Increasing n_ghost_cell_layers to 3.");
+            }
             GlobalConfig.n_ghost_cell_layers = 3;
         }
     }
@@ -1998,8 +2005,10 @@ void configCheckPoint3()
             throw new FlowSolverException(msg);
         }
     }
-    // make sure with_super_time_stepping flag is set to true when either rkl1 or rkl2 is selected
-    if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1 || GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl2) {
+    // The super_time_stepping is associated with two particular update schemes:
+    // rkl1, rkl2.
+    if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1 ||
+        GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl2) {
         GlobalConfig.with_super_time_stepping = true;
     }
     return;
@@ -2007,7 +2016,7 @@ void configCheckPoint3()
 
 void configCheckPoint4()
 {
-    // the shape sensitivity calculator shouldn't apply diffuse_bcs_on_init_flag
+    // The shape sensitivity calculator shouldn't apply diffuse_bcs_on_init_flag.
     version(shape_sensitivity) {
         GlobalConfig.n_grid_time_levels = 3;
     } 

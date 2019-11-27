@@ -357,13 +357,21 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
         } else {
             outFile = stdout;
         }
+        bool header_written = false;
         foreach (tindx; tindx_list_to_plot) {
             writeln("  tindx= ", tindx);
             auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nFluidBlocks);
             soln.add_aux_variables(addVarsList);
             if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
             //
-            outFile.writeln(soln.flowBlocks[0].variable_names_as_string(true));
+            if (!header_written) {
+                // Gnuplot column labels.
+                outFile.writeln(soln.flowBlocks[0].variable_names_as_string(true));
+                header_written = true;
+            } else {
+                // Gnuplot datasets are separated by two blank lines.
+                outFile.write("\n\n");
+            }
             foreach (sliceStr; sliceListStr.split(";")) {
                 auto rangeStrings = sliceStr.split(",");
                 auto blk_range = decode_range_indices(rangeStrings[0], 0, soln.nBlocks);
@@ -679,6 +687,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
         } else {
             outFile = stdout;
         }
+        bool header_written = false;
         extractLineStr = extractLineStr.strip();
         extractLineStr = extractLineStr.replaceAll(regex("\""), "");
         foreach (tindx; tindx_list_to_plot) {
@@ -686,7 +695,14 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
             auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nFluidBlocks);
             soln.add_aux_variables(addVarsList);
             if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
-            outFile.writeln(soln.flowBlocks[0].variable_names_as_string(true));
+            if (!header_written) {
+                // Gnuplot column labels.
+                outFile.writeln(soln.flowBlocks[0].variable_names_as_string(true));
+                header_written = true;
+            } else {
+                // Gnuplot 2 blank lines separates datasets.
+                outFile.write("\n\n");
+            }
             size_t[2][] cells_found; // accumulate the identies of the cells found here
             foreach(lineStr; extractLineStr.split(";")) {
                 auto items = lineStr.split(",");
@@ -719,13 +735,21 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
         } else {
             outFile = stdout;
         }
+        bool header_written = false;
         extractSolidLineStr = extractSolidLineStr.strip();
         extractSolidLineStr = extractSolidLineStr.replaceAll(regex("\""), "");
         foreach (tindx; tindx_list_to_plot) {
             writeln("  tindx= ", tindx);
             auto soln = new SolidSolution(jobName, ".", tindx, GlobalConfig.nSolidBlocks);
             if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
-            outFile.writeln(soln.solidBlocks[0].variable_names_as_string(true));
+            if (!header_written) {
+                // Gnuplot column labels.
+                outFile.writeln(soln.solidBlocks[0].variable_names_as_string(true));
+                header_written = true;
+            } else {
+                // Gnuplot 2 blank lines separates datasets.
+                outFile.write("\n\n");
+            }
             size_t[2][] cells_found; // accumulate the identies of the cells found here
             foreach(lineStr; extractSolidLineStr.split(";")) {
                 auto items = lineStr.split(",");

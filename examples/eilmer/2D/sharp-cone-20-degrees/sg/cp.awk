@@ -15,7 +15,7 @@ BEGIN {
     print "# t,ms cp"
 }
 
-$1 != "#" {
+NR > 1 {
     t = $1; p = $10
     print t*1000.0, (p - p_inf)/q_inf
 }
