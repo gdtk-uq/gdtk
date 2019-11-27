@@ -47,6 +47,11 @@ module Gas
 
   extern 'int gas_model_massf2molef(int gm_i, double* massf, double* molef)'
   extern 'int gas_model_molef2massf(int gm_i, double* molef, double* massf)'
+  extern 'int gas_model_gas_state_get_molef(int gm_i, int gs_i, double* molef)'
+  extern 'int gas_model_gas_state_get_conc(int gm_i, int gs_i, double* conc)'
+
+  extern 'int chemical_reactor_new(char* file_name, int gm_i)'
+  extern 'int chemical_reactor_gas_state_update(int cr_i, int gs_i, double t_interval, double* dt_suggest)'
 end
 
 Gas.cwrap_gas_init()
@@ -71,7 +76,7 @@ class GasModel
   end
 
   def to_s()
-    "GasModel(file=\"#{@file_name}\", id=#{@id})"
+    "GasModel(file=\"#{@file_name}\", id=#{@id}, species=#{@species_names})"
   end
   
   def n_species()
@@ -168,6 +173,73 @@ class GasModel
     if flag < 0 then raise "could not compute molecular mass." end
     return valuep[0, valuep.size].unpack("d")[0]
   end
+
+  def enthalpy_isp(gstate, isp)
+    valuep = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE)
+    flag = Gas.gas_model_gas_state_enthalpy_isp(@id, gstate.id, isp, valuep)
+    if flag < 0 then raise "could not compute enthalpy for species." end
+    return valuep[0, valuep.size].unpack("d")[0]
+  end
+  def entropy_isp(gstate, isp)
+    valuep = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE)
+    flag = Gas.gas_model_gas_state_entropy_isp(@id, gstate.id, isp, valuep)
+    if flag < 0 then raise "could not compute entropy for species." end
+    return valuep[0, valuep.size].unpack("d")[0]
+  end
+  def gibbs_free_energy_isp(gstate, isp)
+    valuep = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE)
+    flag = Gas.gas_model_gas_state_gibbs_free_energy_isp(@id, gstate.id, isp, valuep)
+    if flag < 0 then raise "could not compute gibbs free energy for species." end
+    return valuep[0, valuep.size].unpack("d")[0]
+  end
+
+  def massf2molef(massf_given)
+    nsp = Gas.gas_model_n_species(@id)
+    if massf_given.class == [].class then
+      massf_array = massf_given
+    elsif massf_given.class == {}.class then
+      massf_array = []
+      @species_names.each do |name|
+        if massf_given.has_key?(name) then
+          massf_array << massf_given[name]
+        else
+          massf_array << 0.0
+        end
+      end
+    end
+    mf_sum = 0.0; massf_array.each do |mfi| mf_sum += mfi end
+    if (mf_sum - 1.0).abs > 1.0e-6 then
+      raise "mass fractions do not sum to 1."
+    end
+    my_massf = massf_array.pack("d*")
+    my_molef = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE*nsp)
+    Gas.gas_model_massf2molef(@id, my_massf, my_molef)
+    return my_molef[0, my_molef.size].unpack("d*")
+  end
+
+  def molef2massf(molef_given)
+    nsp = Gas.gas_model_n_species(@id)
+    if molef_given.class == [].class then
+      molef_array = molef_given
+    elsif molef_given.class == {}.class then
+      molef_array = []
+      @species_names.each do |name|
+        if molef_given.has_key?(name) then
+          molef_array << molef_given[name]
+        else
+          molef_array << 0.0
+        end
+      end
+    end
+    mf_sum = 0.0; molef_array.each do |mfi| mf_sum += mfi end
+    if (mf_sum - 1.0).abs > 1.0e-6 then
+      raise "mole fractions do not sum to 1."
+    end
+    my_molef = molef_array.pack("d*")
+    my_massf = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE*nsp)
+    Gas.gas_model_molef2massf(@id, my_molef, my_massf)
+    return my_massf[0, my_massf.size].unpack("d*")
+  end
 end
 
 
@@ -185,6 +257,7 @@ class GasState
     text << ", p=#{self.p}"
     text << ", T=#{self.T}"
     text << ", u=#{self.u}"
+    text << ", massf=#{self.massf}"
     text << ", id=#{@id}, gmodel.id=#{@gmodel.id})"
   end
     
@@ -284,6 +357,31 @@ class GasState
     return mf_array
   end
 
+  def molef()
+    nsp = @gmodel.n_species
+    mf = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE*nsp)
+    flag = Gas.gas_model_gas_state_get_molef(@gmodel.id, @id, mf)
+    if flag < 0 then raise "could not get mole-fractions." end
+    return mf[0, mf.size].unpack("d*")
+  end
+  def molef=(molef_given)
+    nsp = @gmodel.n_species
+    mf_array = @gmodel.molef2massf(molef_given)
+    mf = mf_array.pack("d*")
+    flag = Gas.gas_state_set_array_field(@id, "massf", mf, nsp)
+    if flag < 0 then raise "could not set mass-fractions from mole-fractions." end
+    # At this point, we may not have the mole-fractions as an array.
+    return nil
+  end
+
+  def conc()
+    nsp = @gmodel.n_species
+    mc = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE*nsp)
+    flag = Gas.gas_model_gas_state_get_conc(@gmodel.id, @id, mc)
+    if flag < 0 then raise "could not get concentrations." end
+    return mc[0, mc.size].unpack("d*")
+  end
+
   def u_modes()
     n = @gmodel.n_modes
     um = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE*n)
@@ -376,5 +474,40 @@ class GasState
   end
   def molecular_mass()
     @gmodel.molecular_mass(self)
+  end
+
+  def enthalpy_isp(isp)
+    @gmodel.enthalpy(self, isp)
+  end
+  def entropy_isp(isp)
+    @gmodel.entropy(self, isp)
+  end
+  def gibbs_free_energy_isp(isp)
+    @gmodel.gibbs_free_energy(self, isp)
+  end
+end
+
+
+class ChemicalReactor
+  include Gas
+  attr_reader :id
+  
+  def initialize(file_name, gmodel)
+    @file_name = file_name
+    @gmodel = gmodel
+    @id = Gas.chemical_reactor_new(file_name, gmodel.id)
+  end
+
+  def to_s()
+    text = "ChemicalReactor(file=#{@file_name}"
+    text << ", id=#{@id}, gmodel.id=#{@gmodel.id})"
+  end
+    
+  def update_state(gstate, t_interval, dt_suggest)
+    dt_suggestp = [dt_suggest].pack("d*")
+    flag = Gas.chemical_reactor_gas_state_update(@id, gstate.id,
+                                                 t_interval, dt_suggestp)
+    if flag < 0 then raise "could not update state." end
+    return dt_suggestp[0, dt_suggestp.size].unpack("d")[0]
   end
 end

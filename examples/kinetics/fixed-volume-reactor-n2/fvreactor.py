@@ -1,4 +1,4 @@
-# fvreactor.lua
+# fvreactor.py
 # A simple fixed-volume reactor.
 # PJ & RJG 2019-11-25
 #
@@ -7,7 +7,7 @@
 #   $ prep-chem nitrogen-2sp.lua nitrogen-2sp-2r.lua chem.lua
 #
 # To run:
-#   $python3 fvreactor.py
+#   $ python3 fvreactor.py
 
 from eilmer.gas import GasModel, GasState, ChemicalReactor
 

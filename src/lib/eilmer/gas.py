@@ -68,7 +68,8 @@ class GasModel(object):
         return
 
     def __str__(self):
-        text = 'GasModel(file="%s", id=%d)' % (self.file_name, self.id)
+        text = 'GasModel(file="%s", id=%d, species=%s)' % \
+            (self.file_name, self.id, self.species_names)
         return text
     
     @property
@@ -169,7 +170,7 @@ class GasModel(object):
         flag = so.gas_model_gas_state_entropy_isp(self.id, gstate.id, isp, valuep)
         if flag < 0: raise Exception("could not compute entropy for species.")
         return valuep[0]
-    def enthalpy_isp(self, gstate, isp):
+    def gibbs_free_energy_isp(self, gstate, isp):
         valuep = ffi.new("double *")
         flag = so.gas_model_gas_state_gibbs_free_energy_isp(self.id, gstate.id, isp, valuep)
         if flag < 0: raise Exception("could not compute gibbs free energy for species.")
@@ -337,6 +338,7 @@ class GasState(object):
         mf = ffi.new("double[]", mf_list)
         flag = so.gas_state_set_array_field(self.id, b"massf", mf, nsp)
         if flag < 0: raise Exception("could not set mass-fractions from mole-fractions.")
+        # At this point, we may not have the mole-fractions as a list.
         return None
 
     @property
@@ -448,8 +450,8 @@ class GasState(object):
         return self.gmodel.enthalpy_isp(self, isp)
     def entropy_isp(self, isp):
         return self.gmodel.entropy_isp(self, isp)
-    def molecular_mass_isp(self, isp):
-        return self.gmodel.molecular_mass_isp(self, isp)
+    def gibbs_free_energy_isp(self, isp):
+        return self.gmodel.gibbs_free_energy_isp(self, isp)
 
 
 class ChemicalReactor(object):
@@ -459,7 +461,8 @@ class ChemicalReactor(object):
         self.id = so.chemical_reactor_new(bytes(self.file_name, 'utf-8'), self.gmodel.id)
 
     def __str__(self):
-        text = 'ChemicalReactor(file="%s", id=%d)' % (self.file_name, self.id)
+        text = 'ChemicalReactor(file="%s", id=%d, gmodel.id=%d)' % \
+            (self.file_name, self.id, self.gmodel.id)
         return text
 
     def update_state(self, gstate, t_interval, dt_suggest):
