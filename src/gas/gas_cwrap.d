@@ -1,8 +1,8 @@
 // gas_cwrap.d
 //
 // This particular module will be compiled into a loadable library and
-// provides a C-level API for the GasModel and GasState classes
-// that may be called from any language with a C-foreign-function-interface.
+// provides a C-level API for the GasModel, GasState and ThermochemicalReactor
+// classes that may be called from any language with a C-foreign-function-interface.
 //
 // PJ 2019-07-24: just enough to try integration with the gas makefile.
 //
@@ -21,6 +21,9 @@ import gas.init_gas_model;
 
 import kinetics.thermochemical_reactor;
 import kinetics.init_thermochemical_reactor;
+
+import gasflow;
+
 
 // We will accumulate GasModel and GasState objects in these arrays
 // and use the indices as handles in the scripting language.
@@ -560,3 +563,21 @@ extern (C) int thermochemical_reactor_gas_state_update(int cr_i, int gs_i,
         return -1;
     }
 }
+
+//---------------------------------------------------------------------------
+
+extern(C) int gasflow_shock_ideal(int state1_id, double Vs, int state2_id, int gm_id,
+                                  double* results)
+{
+    try {
+        double[] my_results = shock_ideal(gas_states[state1_id], Vs,
+                                          gas_states[state2_id], gas_models[gm_id]);
+        results[0] = my_results[0];
+        results[1] = my_results[1];
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+

@@ -50,6 +50,8 @@ ffi.cdef("""
 
     int thermochemical_reactor_new(int gm_i, char* filename1, char* filename2);
     int thermochemical_reactor_gas_state_update(int cr_i, int gs_i, double t_interval, double* dt_suggest);
+
+    int gasflow_shock_ideal(int state1_id, double Vs, int state2_id, int gm_id, double* results);
 """)
 so = ffi.dlopen("libgas.so")
 so.cwrap_gas_init()
@@ -225,6 +227,7 @@ class GasState(object):
         text += ', p=%g' % self.p
         text += ', T=%g' % self.T
         text += ', u=%g' % self.u
+        text += ', a=%g' % self.a
         text += ', massf=%s' % str(self.massf)
         text += ', id=%d, gmodel.id=%d)' % (self.id, self.gmodel.id)
         return text
@@ -475,3 +478,21 @@ class ThermochemicalReactor(object):
                                                           t_interval, dt_suggestp)
         if flag < 0: raise Exception("could not update state.")
         return dt_suggestp[0]
+
+#------------------------------------------------------------------------------------
+
+class GasFlow(object):
+    def __init__(self, gmodel):
+        self.gmodel = gmodel
+
+    def __str__(self):
+        return "GasFlow(gmodel.id=%d)" % self.gmodel.id
+
+    def ideal_shock(self, state1, vs, state2):
+        my_results = ffi.new("double[]", [0.0]*2)
+        flag = so.gasflow_shock_ideal(state1.id, vs, state2.id, self.gmodel.id, my_results)
+        if flag < 0: raise Exception("failed to compute ideal shock jump.")
+        v2 = my_results[0]
+        vg = my_results[1]
+        return [v2, vg]
+        

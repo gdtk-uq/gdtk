@@ -116,6 +116,9 @@ include $(NM_DIR)/nm_files.mk
 KINETICS_DIR := ../kinetics
 include $(KINETICS_DIR)/kinetics_files.mk
 
+GASDYN_DIR := ../gasdyn
+include $(GASDYN_DIR)/gasdyn_files.mk
+
 include gas_files.mk
 
 # ----------------------------------------------------------------------
@@ -188,13 +191,14 @@ gas-calc: luagas_model.d $(LIBLUA) $(GAS_FILES) $(GAS_LUA_FILES) $(NM_FILES) \
 		$(GAS_FILES) $(GAS_LUA_FILES) $(NM_FILES) $(UTIL_FILES) $(KINETICS_FILES) \
 		$(KINETICS_LUA_FILES) $(DLINKFLAGS)
 
-libgas.so: gas_cwrap.d $(LIBLUA) $(GAS_FILES) $(GAS_LUA_FILES) $(NM_FILES) \
-	$(UTIL_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES)
+libgas.so: gas_cwrap.d $(LIBLUA) $(GAS_FILES) $(KINETICS_FILES) \
+	$(NM_FILES) $(UTIL_FILES) $(GASDYN_FILES) \
+	$(GAS_LUA_FILES) $(KINETICS_LUA_FILES)
 	$(DMD) -c gas_cwrap.d $(PIC) $(DFLAGS) \
-		$(GAS_FILES) $(NM_FILES) $(UTIL_FILES) $(KINETICS_FILES)
+		$(GAS_FILES) $(KINETICS_FILES) $(GASDYN_FILES) $(NM_FILES) $(UTIL_FILES)
 	$(DMD) $(OF)libgas.so gas_cwrap.o $(DFLAGS) \
 		-shared -defaultlib=libphobos2.so \
-		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
+		$(GAS_FILES) $(KINETICS_FILES) $(GASDYN_FILES) $(NM_FILES) $(UTIL_FILES) \
 		-L-rpath=$(INSTALL_DIR)/lib $(DLINKFLAGS)
 
 $(LIBLUA):
