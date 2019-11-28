@@ -17,6 +17,7 @@
  * 26-Feb-2012 : functions moved out of estcj.py to this module.
  * 02-May-2013 : added more expansion_to_throat_calculation function from
  *               Matt McGilvray's gun tunnel version of nenzfr. -Chris James
+ * Version: (D code)
  * 2017-Mar-09 : Ported to D by PJ
  *
  * [TODO] change to using Brent's function solver rather than Ridder's.

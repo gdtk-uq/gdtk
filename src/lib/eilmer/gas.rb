@@ -54,9 +54,14 @@ module Gas
   extern 'int thermochemical_reactor_gas_state_update(int cr_i, int gs_i, double t_interval,
                                                       double* dt_suggest)'
 
-  extern 'int gasflow_shock_ideal(int state1_id, double Vs, int state2_id, int gm_id, double* results)'
+  extern 'int gasflow_shock_ideal(int state1_id, double Vs, int state2_id, int gm_id,
+                                  double* results)'
   extern 'int gasflow_normal_shock(int state1_id, double Vs, int state2_id, int gm_id,
                                    double* results, double rho_tol, double T_tol)'
+  extern 'int gasflow_normal_shock_p2p1(int state1_id, double p2p1, int state2_id, int gm_id,
+                                        double* results)'
+  extern 'int gasflow_reflected_shock(int state2_id, double vg, int state5_id, int gm_id,
+                                      double* results)'
 end
 
 Gas.cwrap_gas_init()
@@ -543,7 +548,21 @@ class GasFlow
     my_results = [0.0, 0.0].pack("d*")
     flag = Gas.gasflow_normal_shock(state1.id, vs, state2.id, @gmodel.id, my_results,
                                     rho_tol, t_tol)
-    if flag < 0 then raise "failed to compute normal shock jump." end
+    if flag < 0 then raise "failed to compute normal shock jump from shock speed." end
     return my_results[0, my_results.size].unpack("dd")
+  end
+    
+  def normal_shock_p2p1(state1, p2p1, state2)
+    my_results = [0.0, 0.0, 0.0].pack("d*")
+    flag = Gas.gasflow_normal_shock_p2p1(state1.id, p2p1, state2.id, @gmodel.id, my_results)
+    if flag < 0 then raise "failed to compute normal shock jump from pressure ratio." end
+    return my_results[0, my_results.size].unpack("ddd")
+  end
+    
+  def reflected_shock(state2, vg, state5)
+    my_results = [0.0].pack("d")
+    flag = Gas.gasflow_reflected_shock(state2.id, vg, state5.id, @gmodel.id, my_results)
+    if flag < 0 then raise "failed to compute reflected shock." end
+    return my_results[0, my_results.size].unpack("d")[0]
   end
 end

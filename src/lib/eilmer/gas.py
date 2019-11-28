@@ -52,9 +52,14 @@ ffi.cdef("""
     int thermochemical_reactor_gas_state_update(int cr_i, int gs_i, double t_interval,
                                                 double* dt_suggest);
 
-    int gasflow_shock_ideal(int state1_id, double Vs, int state2_id, int gm_id, double* results);
+    int gasflow_shock_ideal(int state1_id, double Vs, int state2_id, int gm_id,
+                            double* results);
     int gasflow_normal_shock(int state1_id, double Vs, int state2_id, int gm_id,
                              double* results, double rho_tol, double T_tol);
+    int gasflow_normal_shock_p2p1(int state1_id, double p2p1, int state2_id, int gm_id,
+                                  double* results);
+    int gasflow_reflected_shock(int state2_id, double vg, int state5_id, int gm_id,
+                                double* results);
 """)
 so = ffi.dlopen("libgas.so")
 so.cwrap_gas_init()
@@ -507,3 +512,21 @@ class GasFlow(object):
         v2 = my_results[0]
         vg = my_results[1]
         return [v2, vg]
+
+    def normal_shock_p2p1(self, state1, p2p1, state2):
+        my_results = ffi.new("double[]", [0.0]*3)
+        flag = so.gasflow_normal_shock_p2p1(state1.id, p2p1, state2.id, self.gmodel.id,
+                                            my_results)
+        if flag < 0: raise Exception("failed to compute normal shock jump from p2p1.")
+        vs = my_results[0]
+        v2 = my_results[1]
+        vg = my_results[2]
+        return [vs, v2, vg]
+
+    def reflected_shock(self, state2, vg, state5):
+        my_results = ffi.new("double[]", [0.0])
+        flag = so.gasflow_reflected_shock(state2.id, vg, state5.id, self.gmodel.id,
+                                          my_results)
+        if flag < 0: raise Exception("failed to compute reflected shock.")
+        vr = my_results[0]
+        return vr

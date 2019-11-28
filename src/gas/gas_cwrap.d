@@ -596,4 +596,34 @@ extern(C) int gasflow_normal_shock(int state1_id, double Vs, int state2_id, int 
         return -1;
     }
 }
+
+extern(C) int gasflow_normal_shock_p2p1(int state1_id, double p2p1, int state2_id, int gm_id,
+                                        double* results)
+{
+    try {
+        double[] my_results = normal_shock_p2p1(gas_states[state1_id], p2p1,
+                                                gas_states[state2_id], gas_models[gm_id]);
+        results[0] = my_results[0];
+        results[1] = my_results[1];
+        results[2] = my_results[2];
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern(C) int gasflow_reflected_shock(int state2_id, double vg, int state5_id, int gm_id,
+                                      double* results)
+{
+    try {
+        double Vr_b = reflected_shock(gas_states[state2_id], vg,
+                                      gas_states[state5_id], gas_models[gm_id]);
+        results[0] = Vr_b;
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
     
