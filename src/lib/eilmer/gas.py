@@ -49,9 +49,12 @@ ffi.cdef("""
     int gas_model_gas_state_get_conc(int gm_i, int gs_i, double* conc);
 
     int thermochemical_reactor_new(int gm_i, char* filename1, char* filename2);
-    int thermochemical_reactor_gas_state_update(int cr_i, int gs_i, double t_interval, double* dt_suggest);
+    int thermochemical_reactor_gas_state_update(int cr_i, int gs_i, double t_interval,
+                                                double* dt_suggest);
 
     int gasflow_shock_ideal(int state1_id, double Vs, int state2_id, int gm_id, double* results);
+    int gasflow_normal_shock(int state1_id, double Vs, int state2_id, int gm_id,
+                             double* results, double rho_tol, double T_tol);
 """)
 so = ffi.dlopen("libgas.so")
 so.cwrap_gas_init()
@@ -495,4 +498,12 @@ class GasFlow(object):
         v2 = my_results[0]
         vg = my_results[1]
         return [v2, vg]
-        
+
+    def normal_shock(self, state1, vs, state2, rho_tol=1.0e-6, T_tol=0.1):
+        my_results = ffi.new("double[]", [0.0]*2)
+        flag = so.gasflow_normal_shock(state1.id, vs, state2.id, self.gmodel.id, my_results,
+                                       rho_tol, T_tol)
+        if flag < 0: raise Exception("failed to compute normal shock jump.")
+        v2 = my_results[0]
+        vg = my_results[1]
+        return [v2, vg]

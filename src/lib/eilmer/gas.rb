@@ -51,9 +51,12 @@ module Gas
   extern 'int gas_model_gas_state_get_conc(int gm_i, int gs_i, double* conc)'
 
   extern 'int thermochemical_reactor_new(int gm_i, char* filename1, char* filename2)'
-  extern 'int thermochemical_reactor_gas_state_update(int cr_i, int gs_i, double t_interval, double* dt_suggest)'
+  extern 'int thermochemical_reactor_gas_state_update(int cr_i, int gs_i, double t_interval,
+                                                      double* dt_suggest)'
 
   extern 'int gasflow_shock_ideal(int state1_id, double Vs, int state2_id, int gm_id, double* results)'
+  extern 'int gasflow_normal_shock(int state1_id, double Vs, int state2_id, int gm_id,
+                                   double* results, double rho_tol, double T_tol)'
 end
 
 Gas.cwrap_gas_init()
@@ -533,6 +536,14 @@ class GasFlow
     my_results = [0.0, 0.0].pack("d*")
     flag = Gas.gasflow_shock_ideal(state1.id, vs, state2.id, @gmodel.id, my_results)
     if flag < 0 then raise "failed to compute ideal shock jump." end
+    return my_results[0, my_results.size].unpack("dd")
+  end
+    
+  def normal_shock(state1, vs, state2, rho_tol=1.0e-6, t_tol=0.1)
+    my_results = [0.0, 0.0].pack("d*")
+    flag = Gas.gasflow_normal_shock(state1.id, vs, state2.id, @gmodel.id, my_results,
+                                    rho_tol, t_tol)
+    if flag < 0 then raise "failed to compute normal shock jump." end
     return my_results[0, my_results.size].unpack("dd")
   end
 end

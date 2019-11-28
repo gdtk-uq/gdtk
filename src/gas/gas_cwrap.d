@@ -581,3 +581,19 @@ extern(C) int gasflow_shock_ideal(int state1_id, double Vs, int state2_id, int g
     }
 }
 
+extern(C) int gasflow_normal_shock(int state1_id, double Vs, int state2_id, int gm_id,
+                                   double* results, double rho_tol, double T_tol)
+{
+    try {
+        double[] my_results = normal_shock(gas_states[state1_id], Vs,
+                                           gas_states[state2_id], gas_models[gm_id],
+                                           rho_tol, T_tol);
+        results[0] = my_results[0];
+        results[1] = my_results[1];
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+    
