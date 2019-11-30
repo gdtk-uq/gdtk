@@ -62,6 +62,16 @@ module Gas
                                         double* results)'
   extern 'int gasflow_reflected_shock(int state2_id, double vg, int state5_id, int gm_id,
                                       double* results)'
+
+  extern 'int gasflow_expand_from_stagnation(int state0_id, double p_over_p0, int state1_id,
+                                             int gm_id, double* results)'
+  extern 'int gasflow_expand_to_mach(int state0_id, double mach, int state1_id,
+                                     int gm_id, double* results)'
+  extern 'int gasflow_total_condition(int state1_id, double v1, int state0_id, int gm_id)'
+  extern 'int gasflow_pitot_condition(int state1_id, double v1, int state2pitot_id, int gm_id)'
+  extern 'int gasflow_steady_flow_with_area_change(int state1_id, double v1, double a2_over_a1,
+                                                   int state2_id, int gm_id, double tol,
+                                                   double* results)'
 end
 
 Gas.cwrap_gas_init()
@@ -563,6 +573,44 @@ class GasFlow
     my_results = [0.0].pack("d")
     flag = Gas.gasflow_reflected_shock(state2.id, vg, state5.id, @gmodel.id, my_results)
     if flag < 0 then raise "failed to compute reflected shock." end
+    return my_results[0, my_results.size].unpack("d")[0]
+  end
+    
+  def expand_from_stagnation(state0, p_over_p0, state1)
+    my_results = [0.0].pack("d")
+    flag = Gas.gasflow_expand_from_stagnation(state0.id, p_over_p0, state1.id,
+                                              @gmodel.id, my_results)
+    if flag < 0 then raise "failed to compute expansion from stagnation." end
+    return my_results[0, my_results.size].unpack("d")[0]
+  end
+    
+  def expand_to_mach(state0, mach, state1)
+    my_results = [0.0].pack("d")
+    flag = Gas.gasflow_expand_to_mach(state0.id, mach, state1.id,
+                                      @gmodel.id, my_results)
+    if flag < 0 then raise "failed to compute expansion to mach number." end
+    return my_results[0, my_results.size].unpack("d")[0]
+  end
+    
+  def total_condition(state1, v1, state0)
+    flag = Gas.gasflow_total_condition(state1.id, v1, state0.id, @gmodel.id)
+    if flag < 0 then raise "failed to compute total condition." end
+    return nil
+  end
+    
+  def pitot_condition(state1, v1, state2pitot)
+    flag = Gas.gasflow_pitot_condition(state1.id, v1, state2pitot.id, @gmodel.id)
+    if flag < 0 then raise "failed to compute pitot condition." end
+    return nil
+  end
+    
+  def steady_flow_with_area_change(state1, v1, area2_over_area1, state2,
+                                   tol=1.0e-4)
+    my_results = [0.0].pack("d")
+    flag = Gas.gasflow_steady_flow_with_area_change(state1.id, v1, area2_over_area1,
+                                                    state2.id, @gmodel.id, tol,
+                                                    my_results)
+    if flag < 0 then raise "failed to compute steady flow with area change." end
     return my_results[0, my_results.size].unpack("d")[0]
   end
 end

@@ -52,14 +52,24 @@ ffi.cdef("""
     int thermochemical_reactor_gas_state_update(int cr_i, int gs_i, double t_interval,
                                                 double* dt_suggest);
 
-    int gasflow_shock_ideal(int state1_id, double Vs, int state2_id, int gm_id,
+    int gasflow_shock_ideal(int state1_id, double vs, int state2_id, int gm_id,
                             double* results);
-    int gasflow_normal_shock(int state1_id, double Vs, int state2_id, int gm_id,
+    int gasflow_normal_shock(int state1_id, double vs, int state2_id, int gm_id,
                              double* results, double rho_tol, double T_tol);
     int gasflow_normal_shock_p2p1(int state1_id, double p2p1, int state2_id, int gm_id,
                                   double* results);
     int gasflow_reflected_shock(int state2_id, double vg, int state5_id, int gm_id,
                                 double* results);
+
+    int gasflow_expand_from_stagnation(int state0_id, double p_over_p0, int state1_id,
+                                       int gm_id, double* results);
+    int gasflow_expand_to_mach(int state0_id, double mach, int state1_id,
+                               int gm_id, double* results);
+    int gasflow_total_condition(int state1_id, double v1, int state0_id, int gm_id);
+    int gasflow_pitot_condition(int state1_id, double v1, int state2pitot_id, int gm_id);
+    int gasflow_steady_flow_with_area_change(int state1_id, double v1, double a2_over_a1,
+                                             int state2_id, int gm_id, double tol,
+                                             double* results);
 """)
 so = ffi.dlopen("libgas.so")
 so.cwrap_gas_init()
@@ -530,3 +540,39 @@ class GasFlow(object):
         if flag < 0: raise Exception("failed to compute reflected shock.")
         vr = my_results[0]
         return vr
+
+    def expand_from_stagnation(self, state0, p_over_p0, state1):
+        my_results = ffi.new("double[]", [0.0])
+        flag = so.gasflow_expand_from_stagnation(state0.id, p_over_p0, state1.id,
+                                                 self.gmodel.id, my_results)
+        if flag < 0: raise Exception("failed to compute expansion from stagnation.")
+        v = my_results[0]
+        return v
+
+    def expand_to_mach(self, state0, mach, state1):
+        my_results = ffi.new("double[]", [0.0])
+        flag = so.gasflow_expand_to_mach(state0.id, mach, state1.id,
+                                         self.gmodel.id, my_results)
+        if flag < 0: raise Exception("failed to compute expansion to mach number.")
+        v = my_results[0]
+        return v
+
+    def total_condition(self, state1, v1, state0):
+        flag = so.gasflow_total_condition(state1.id, v1, state0.id, self.gmodel.id)
+        if flag < 0: raise Exception("failed to compute total condition.")
+        return
+
+    def pitot_condition(self, state1, v1, state2pitot):
+        flag = so.gasflow_pitot_condition(state1.id, v1, state2pitot.id, self.gmodel.id)
+        if flag < 0: raise Exception("failed to compute pitot condition.")
+        return
+
+    def steady_flow_with_area_change(self, state1, v1, area2_over_area1, state2,
+                                     tol=1.0e-4):
+        my_results = ffi.new("double[]", [0.0])
+        flag = so.gasflow_steady_flow_with_area_change(state1.id, v1, area2_over_area1,
+                                                       state2.id, self.gmodel.id, tol,
+                                                       my_results)
+        if flag < 0: raise Exception("failed to compute steady flow with area change.")
+        v2 = my_results[0]
+        return v2
