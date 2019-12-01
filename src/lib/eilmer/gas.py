@@ -639,7 +639,7 @@ class GasFlow(object):
         v2_c = my_results[1]
         return theta_c, v2_c
 
-    def beta_cone(self, state1, v1, theta, state2):
+    def beta_cone(self, state1, v1, theta):
         my_results = ffi.new("double[]", [0.0])
         flag = so.gasflow_beta_cone(state1.id, v1, theta,
                                     self.gmodel.id, my_results)
