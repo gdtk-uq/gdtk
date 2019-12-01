@@ -118,7 +118,12 @@ extern (C) int gas_model_mol_masses(int gm_i, double* mm)
 extern (C) int gas_state_new(int gm_i)
 {
     try {
-        GasState gs = new GasState(gas_models[gm_i]);
+        GasModel gm = gas_models[gm_i];
+        GasState gs = new GasState(gm);
+        // For a single-species gas, the user often ignores the mass-fraction array.
+        // Let's set the single mass fraction to 1,
+        // so that we do not have to NaN being printed.
+        if (gm.n_species == 1) { gs.massf[0] = 1.0; }
         gas_states ~= gs;
         return to!int(gas_states.length - 1);
     } catch (Exception e) {
