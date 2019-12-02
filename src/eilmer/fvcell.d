@@ -1764,26 +1764,31 @@ public:
         double C_lim = 0.875;
         double beta_star = 0.09;
 
-        number dudx, dudy, dvdx, dvdy;
-        final switch (myConfig.spatial_deriv_locn) {
-        case SpatialDerivLocn.vertices:
-            mixin(avg_over_vtx_list("grad.vel[0][0]", "dudx"));
-            mixin(avg_over_vtx_list("grad.vel[0][1]", "dudy"));
-            mixin(avg_over_vtx_list("grad.vel[1][0]", "dvdx"));
-            mixin(avg_over_vtx_list("grad.vel[1][1]", "dvdy"));
-            break;
-        case SpatialDerivLocn.faces:
-            mixin(avg_over_iface_list("grad.vel[0][0]", "dudx"));
-            mixin(avg_over_iface_list("grad.vel[0][1]", "dudy"));
-            mixin(avg_over_iface_list("grad.vel[1][0]", "dvdx"));
-            mixin(avg_over_iface_list("grad.vel[1][1]", "dvdy"));
-            break;
-        case SpatialDerivLocn.cells:
-            dudx = grad.vel[0][0];
-            dudy = grad.vel[0][1];
-            dvdx = grad.vel[1][0];
-            dvdy = grad.vel[1][1];
-        } // end switch (myConfig.spatial_deriv_locn)
+        //number dudx, dudy, dvdx, dvdy;
+        //final switch (myConfig.spatial_deriv_locn) {
+        //case SpatialDerivLocn.vertices:
+        //    mixin(avg_over_vtx_list("grad.vel[0][0]", "dudx"));
+        //    mixin(avg_over_vtx_list("grad.vel[0][1]", "dudy"));
+        //    mixin(avg_over_vtx_list("grad.vel[1][0]", "dvdx"));
+        //    mixin(avg_over_vtx_list("grad.vel[1][1]", "dvdy"));
+        //    break;
+        //case SpatialDerivLocn.faces:
+        //    mixin(avg_over_iface_list("grad.vel[0][0]", "dudx"));
+        //    mixin(avg_over_iface_list("grad.vel[0][1]", "dudy"));
+        //    mixin(avg_over_iface_list("grad.vel[1][0]", "dvdx"));
+        //    mixin(avg_over_iface_list("grad.vel[1][1]", "dvdy"));
+        //    break;
+        //case SpatialDerivLocn.cells:
+        //    dudx = grad.vel[0][0];
+        //    dudy = grad.vel[0][1];
+        //    dvdx = grad.vel[1][0];
+        //    dvdy = grad.vel[1][1];
+        //} // end switch (myConfig.spatial_deriv_locn)
+
+        number dudx = grad.vel[0][0];
+        number dudy = grad.vel[0][1];
+        number dvdx = grad.vel[1][0];
+        number dvdy = grad.vel[1][1];
         if ( myConfig.dimensions == 2 ) {
             // 2D cartesian or 2D axisymmetric
             if ( myConfig.axisymmetric ) {
@@ -1800,30 +1805,35 @@ public:
                     + 0.5 * (dudy + dvdx) * (dudy + dvdx);
             }
         } else {
+            number dudz = grad.vel[0][2];
+            number dvdz = grad.vel[1][2];
+            number dwdx = grad.vel[2][0];
+            number dwdy = grad.vel[2][1];
+            number dwdz = grad.vel[2][2];
             // 3D cartesian
-            number dudz, dvdz, dwdx, dwdy, dwdz;
-            final switch (myConfig.spatial_deriv_locn) {
-            case SpatialDerivLocn.vertices:
-                mixin(avg_over_vtx_list("grad.vel[0][2]", "dudz"));
-                mixin(avg_over_vtx_list("grad.vel[1][2]", "dvdz"));
-                mixin(avg_over_vtx_list("grad.vel[2][0]", "dwdx"));
-                mixin(avg_over_vtx_list("grad.vel[2][1]", "dwdy"));
-                mixin(avg_over_vtx_list("grad.vel[2][2]", "dwdz"));
-                break;
-            case SpatialDerivLocn.faces:
-                mixin(avg_over_iface_list("grad.vel[0][2]", "dudz"));
-                mixin(avg_over_iface_list("grad.vel[1][2]", "dvdz"));
-                mixin(avg_over_iface_list("grad.vel[2][0]", "dwdx"));
-                mixin(avg_over_iface_list("grad.vel[2][1]", "dwdy"));
-                mixin(avg_over_iface_list("grad.vel[2][2]", "dwdz"));
-                break;
-            case SpatialDerivLocn.cells:
-                dudz = grad.vel[0][2];
-                dvdz = grad.vel[1][2];
-                dwdx = grad.vel[2][0];
-                dwdy = grad.vel[2][1];
-                dwdz = grad.vel[2][2];
-            } // end switch (myConfig.spatial_deriv_locn)
+            //number dudz, dvdz, dwdx, dwdy, dwdz;
+            //final switch (myConfig.spatial_deriv_locn) {
+            //case SpatialDerivLocn.vertices:
+            //    mixin(avg_over_vtx_list("grad.vel[0][2]", "dudz"));
+            //    mixin(avg_over_vtx_list("grad.vel[1][2]", "dvdz"));
+            //    mixin(avg_over_vtx_list("grad.vel[2][0]", "dwdx"));
+            //    mixin(avg_over_vtx_list("grad.vel[2][1]", "dwdy"));
+            //    mixin(avg_over_vtx_list("grad.vel[2][2]", "dwdz"));
+            //    break;
+            //case SpatialDerivLocn.faces:
+            //    mixin(avg_over_iface_list("grad.vel[0][2]", "dudz"));
+            //    mixin(avg_over_iface_list("grad.vel[1][2]", "dvdz"));
+            //    mixin(avg_over_iface_list("grad.vel[2][0]", "dwdx"));
+            //    mixin(avg_over_iface_list("grad.vel[2][1]", "dwdy"));
+            //    mixin(avg_over_iface_list("grad.vel[2][2]", "dwdz"));
+            //    break;
+            //case SpatialDerivLocn.cells:
+            //    dudz = grad.vel[0][2];
+            //    dvdz = grad.vel[1][2];
+            //    dwdx = grad.vel[2][0];
+            //    dwdy = grad.vel[2][1];
+            //    dwdz = grad.vel[2][2];
+            //} // end switch (myConfig.spatial_deriv_locn)
             S_bar_squared =  dudx*dudx + dvdy*dvdy + dwdz*dwdz
                 - 4.0/9.0*(dudx + dvdy + dwdz)*(dudx + dvdy + dwdz)
                 + 0.5 * (dudy + dvdx) * (dudy + dvdx)
@@ -1953,8 +1963,8 @@ public:
             Q_romega = 0.0;
             return;
         }
-        number dudx, dudy, dvdx, dvdy;
-        number dtkedx, dtkedy, domegadx, domegady;
+        //number dudx, dudy, dvdx, dvdy;
+        //number dtkedx, dtkedy, domegadx, domegady;
         double alpha = 0.52;
         double beta_0 = 0.0708;
         number beta;
@@ -1963,37 +1973,46 @@ public:
         number cross_diff;
         double sigma_d = 0.0;
         number WWS, X_w, f_beta;
-        final switch (myConfig.spatial_deriv_locn) {
-        case SpatialDerivLocn.vertices:
-            mixin(avg_over_vtx_list("grad.vel[0][0]", "dudx"));
-            mixin(avg_over_vtx_list("grad.vel[0][1]", "dudy"));
-            mixin(avg_over_vtx_list("grad.vel[1][0]", "dvdx"));
-            mixin(avg_over_vtx_list("grad.vel[1][1]", "dvdy"));
-            mixin(avg_over_vtx_list("grad.tke[0]", "dtkedx"));
-            mixin(avg_over_vtx_list("grad.tke[1]", "dtkedy"));
-            mixin(avg_over_vtx_list("grad.omega[0]", "domegadx"));
-            mixin(avg_over_vtx_list("grad.omega[1]", "domegady"));
-            break;
-        case SpatialDerivLocn.faces:
-            mixin(avg_over_iface_list("grad.vel[0][0]", "dudx"));
-            mixin(avg_over_iface_list("grad.vel[0][1]", "dudy"));
-            mixin(avg_over_iface_list("grad.vel[1][0]", "dvdx"));
-            mixin(avg_over_iface_list("grad.vel[1][1]", "dvdy"));
-            mixin(avg_over_iface_list("grad.tke[0]", "dtkedx"));
-            mixin(avg_over_iface_list("grad.tke[1]", "dtkedy"));
-            mixin(avg_over_iface_list("grad.omega[0]", "domegadx"));
-            mixin(avg_over_iface_list("grad.omega[1]", "domegady"));
-            break;
-        case SpatialDerivLocn.cells:
-            dudx = grad.vel[0][0];
-            dudy = grad.vel[0][1];
-            dvdx = grad.vel[1][0];
-            dvdy = grad.vel[1][1];
-            dtkedx = grad.tke[0];
-            dtkedy = grad.tke[1];
-            domegadx = grad.omega[0];
-            domegady = grad.omega[1];
-        } // end switch (myConfig.spatial_deriv_locn)
+
+        number dudx = grad.vel[0][0];
+        number dudy = grad.vel[0][1];
+        number dvdx = grad.vel[1][0];
+        number dvdy = grad.vel[1][1];
+        number dtkedx = grad.tke[0];
+        number dtkedy = grad.tke[1];
+        number domegadx = grad.omega[0];
+        number domegady = grad.omega[1];
+        //final switch (myConfig.spatial_deriv_locn) {
+        //case SpatialDerivLocn.vertices:
+        //    mixin(avg_over_vtx_list("grad.vel[0][0]", "dudx"));
+        //    mixin(avg_over_vtx_list("grad.vel[0][1]", "dudy"));
+        //    mixin(avg_over_vtx_list("grad.vel[1][0]", "dvdx"));
+        //    mixin(avg_over_vtx_list("grad.vel[1][1]", "dvdy"));
+        //    mixin(avg_over_vtx_list("grad.tke[0]", "dtkedx"));
+        //    mixin(avg_over_vtx_list("grad.tke[1]", "dtkedy"));
+        //    mixin(avg_over_vtx_list("grad.omega[0]", "domegadx"));
+        //    mixin(avg_over_vtx_list("grad.omega[1]", "domegady"));
+        //    break;
+        //case SpatialDerivLocn.faces:
+        //    mixin(avg_over_iface_list("grad.vel[0][0]", "dudx"));
+        //    mixin(avg_over_iface_list("grad.vel[0][1]", "dudy"));
+        //    mixin(avg_over_iface_list("grad.vel[1][0]", "dvdx"));
+        //    mixin(avg_over_iface_list("grad.vel[1][1]", "dvdy"));
+        //    mixin(avg_over_iface_list("grad.tke[0]", "dtkedx"));
+        //    mixin(avg_over_iface_list("grad.tke[1]", "dtkedy"));
+        //    mixin(avg_over_iface_list("grad.omega[0]", "domegadx"));
+        //    mixin(avg_over_iface_list("grad.omega[1]", "domegady"));
+        //    break;
+        //case SpatialDerivLocn.cells:
+        //    dudx = grad.vel[0][0];
+        //    dudy = grad.vel[0][1];
+        //    dvdx = grad.vel[1][0];
+        //    dvdy = grad.vel[1][1];
+        //    dtkedx = grad.tke[0];
+        //    dtkedy = grad.tke[1];
+        //    domegadx = grad.omega[0];
+        //    domegady = grad.omega[1];
+        //} // end switch (myConfig.spatial_deriv_locn)
         if ( myConfig.dimensions == 2 ) {
             // 2D cartesian or 2D axisymmetric
             if ( myConfig.axisymmetric ) {
@@ -2018,37 +2037,44 @@ public:
             }
             cross_diff = dtkedx * domegadx + dtkedy * domegady ;
         } else {
+            number dudz = grad.vel[0][2];
+            number dvdz = grad.vel[1][2];
+            number dwdx = grad.vel[2][0];
+            number dwdy = grad.vel[2][1];
+            number dwdz = grad.vel[2][2];
+            number dtkedz = grad.tke[2];
+            number domegadz = grad.omega[2];
             // 3D cartesian
-            number dudz, dvdz, dwdx, dwdy, dwdz;
-            number dtkedz, domegadz;
-            final switch (myConfig.spatial_deriv_locn) {
-            case SpatialDerivLocn.vertices:
-                mixin(avg_over_vtx_list("grad.vel[0][2]", "dudz"));
-                mixin(avg_over_vtx_list("grad.vel[1][2]", "dvdz"));
-                mixin(avg_over_vtx_list("grad.vel[2][0]", "dwdx"));
-                mixin(avg_over_vtx_list("grad.vel[2][1]", "dwdy"));
-                mixin(avg_over_vtx_list("grad.vel[2][2]", "dwdz"));
-                mixin(avg_over_vtx_list("grad.tke[2]", "dtkedz"));
-                mixin(avg_over_vtx_list("grad.omega[2]", "domegadz"));
-                break;
-            case SpatialDerivLocn.faces:
-                mixin(avg_over_iface_list("grad.vel[0][2]", "dudz"));
-                mixin(avg_over_iface_list("grad.vel[1][2]", "dvdz"));
-                mixin(avg_over_iface_list("grad.vel[2][0]", "dwdx"));
-                mixin(avg_over_iface_list("grad.vel[2][1]", "dwdy"));
-                mixin(avg_over_iface_list("grad.vel[2][2]", "dwdz"));
-                mixin(avg_over_iface_list("grad.tke[2]", "dtkedz"));
-                mixin(avg_over_iface_list("grad.omega[2]", "domegadz"));
-                break;
-            case SpatialDerivLocn.cells:
-                dudz = grad.vel[0][2];
-                dvdz = grad.vel[1][2];
-                dwdx = grad.vel[2][0];
-                dwdy = grad.vel[2][1];
-                dwdz = grad.vel[2][2];
-                dtkedz = grad.tke[2];
-                domegadz = grad.omega[2];
-            } // end switch (myConfig.spatial_deriv_locn)
+            //number dudz, dvdz, dwdx, dwdy, dwdz;
+            //number dtkedz, domegadz;
+            //final switch (myConfig.spatial_deriv_locn) {
+            //case SpatialDerivLocn.vertices:
+            //    mixin(avg_over_vtx_list("grad.vel[0][2]", "dudz"));
+            //    mixin(avg_over_vtx_list("grad.vel[1][2]", "dvdz"));
+            //    mixin(avg_over_vtx_list("grad.vel[2][0]", "dwdx"));
+            //    mixin(avg_over_vtx_list("grad.vel[2][1]", "dwdy"));
+            //    mixin(avg_over_vtx_list("grad.vel[2][2]", "dwdz"));
+            //    mixin(avg_over_vtx_list("grad.tke[2]", "dtkedz"));
+            //    mixin(avg_over_vtx_list("grad.omega[2]", "domegadz"));
+            //    break;
+            //case SpatialDerivLocn.faces:
+            //    mixin(avg_over_iface_list("grad.vel[0][2]", "dudz"));
+            //    mixin(avg_over_iface_list("grad.vel[1][2]", "dvdz"));
+            //    mixin(avg_over_iface_list("grad.vel[2][0]", "dwdx"));
+            //    mixin(avg_over_iface_list("grad.vel[2][1]", "dwdy"));
+            //    mixin(avg_over_iface_list("grad.vel[2][2]", "dwdz"));
+            //    mixin(avg_over_iface_list("grad.tke[2]", "dtkedz"));
+            //    mixin(avg_over_iface_list("grad.omega[2]", "domegadz"));
+            //    break;
+            //case SpatialDerivLocn.cells:
+            //    dudz = grad.vel[0][2];
+            //    dvdz = grad.vel[1][2];
+            //    dwdx = grad.vel[2][0];
+            //    dwdy = grad.vel[2][1];
+            //    dwdz = grad.vel[2][2];
+            //    dtkedz = grad.tke[2];
+            //    domegadz = grad.omega[2];
+            //} // end switch (myConfig.spatial_deriv_locn)
             P_K = 2.0 * fs.mu_t * (dudx*dudx + dvdy*dvdy + dwdz*dwdz)
                 - 2.0/3.0 * fs.mu_t * (dudx + dvdy + dwdz) * (dudx + dvdy + dwdz)
                 - 2.0/3.0 * fs.gas.rho * tke * (dudx + dvdy + dwdz)
@@ -2171,24 +2197,25 @@ public:
         if (myConfig.axisymmetric) {
             // For viscous, axisymmetric flow:
             number v_over_y = fs.vel.y / pos[0].y;
-            number dudx; 
-            number dvdy; 
-            final switch (myConfig.spatial_deriv_locn) {
-            case SpatialDerivLocn.vertices:
-                mixin(avg_over_vtx_list("grad.vel[0][0]", "dudx"));
-                mixin(avg_over_vtx_list("grad.vel[1][1]", "dvdy"));
-                break;
-            case SpatialDerivLocn.faces:
-                mixin(avg_over_iface_list("grad.vel[0][0]", "dudx"));
-                mixin(avg_over_iface_list("grad.vel[1][1]", "dvdy"));
-                break;
-            case SpatialDerivLocn.cells:
-                dudx = grad.vel[0][0];
-                dvdy = grad.vel[1][1];
-            } // end switch (myConfig.spatial_deriv_locn)
-            number mu; mixin(avg_over_iface_list("fs.gas.mu", "mu"));
-            number mu_t; mixin(avg_over_iface_list("fs.mu_t", "mu_t"));
-            mu += mu_t;
+            number dudx=grad.vel[0][0]; 
+            number dvdy=grad.vel[1][1]; 
+            //final switch (myConfig.spatial_deriv_locn) {
+            //case SpatialDerivLocn.vertices:
+            //    mixin(avg_over_vtx_list("grad.vel[0][0]", "dudx"));
+            //    mixin(avg_over_vtx_list("grad.vel[1][1]", "dvdy"));
+            //    break;
+            //case SpatialDerivLocn.faces:
+            //    mixin(avg_over_iface_list("grad.vel[0][0]", "dudx"));
+            //    mixin(avg_over_iface_list("grad.vel[1][1]", "dvdy"));
+            //    break;
+            //case SpatialDerivLocn.cells:
+            //    dudx = grad.vel[0][0];
+            //    dvdy = grad.vel[1][1];
+            //} // end switch (myConfig.spatial_deriv_locn)
+            //number mu; mixin(avg_over_iface_list("fs.gas.mu", "mu")); // NNG FIXME?
+            //number mu_t; mixin(avg_over_iface_list("fs.mu_t", "mu_t"));  // NNG Possible Bug
+            //mu += fs.mu_t;
+            number mu  = fs.gas.mu + fs.mu_t;
             mu *= myConfig.viscous_factor;
             number lmbda = -2.0/3.0 * mu;
             number tau_00 = 2.0 * mu * v_over_y + lmbda * (dudx + dvdy + v_over_y);
@@ -2312,6 +2339,23 @@ public:
         }
         return fabs( f_rad - f_rad_org ) / f_rad_org;
     } // end rad_scaling_ratio()
+
+    @nogc
+    void average_vertex_deriv_values()
+    {
+        grad.copy_values_from(vtx[0].grad);
+        foreach (i; 1 .. vtx.length) grad.accumulate_values_from(vtx[i].grad);
+        grad.scale_values_by(to!number(1.0/vtx.length));
+    } // end average_vertex_deriv_values()
+
+    @nogc
+    void average_interface_deriv_values()
+    {
+        grad.copy_values_from(iface[0].grad);
+        foreach (i; 1 .. iface.length) grad.accumulate_values_from(iface[i].grad);
+        grad.scale_values_by(to!number(1.0/iface.length));
+    } // end average_interface_deriv_values()
+
 
 } // end class FVCell
 

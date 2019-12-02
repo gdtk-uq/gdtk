@@ -492,6 +492,9 @@ public:
         return number_of_invalid_cells;
     } // end count_invalid_cells()
 
+    // Per discussion with PJ/KD on 191129 most of this routine is on the chopping block (NNG)
+    // Possibly move to lsq Cell centered gradients only, followed to average_cell_deriv_values
+    // on faces in simcore AFTER calling exchange_ghost_cell_boundary_viscous_gradient_data
     @nogc
     void flow_property_spatial_derivatives(int gtl)
     {
@@ -515,10 +518,20 @@ public:
                     vtx.grad.gradients_leastsq(vtx.cloud_fs, vtx.cloud_pos, vtx.ws_grad);
                 }
             }
+
+            // We've finished computing gradients at vertices, now copy them around if needed
+            // Interfaces need them for reconstruction/viscous fluxes
             foreach (iface; faces) {
                 iface.average_vertex_deriv_values();
             }
+            // Turbulence models will need cell centered gradients (also for axisymmetric!)
+            if (myConfig.axisymmetric || (myConfig.turbulence_model != TurbulenceModel.none)){
+                foreach (cell; cells) {
+                    cell.average_vertex_deriv_values();
+                }
+            }
             break;
+
         case SpatialDerivLocn.faces:
             if (myConfig.dimensions == 2) {
                 final switch (myConfig.spatial_deriv_calc) {
@@ -545,11 +558,22 @@ public:
                     }
                 } // end switch
             } // end if (myConfig.dimensions)
+
+            // Finished computing gradients at interfaces, now copy them around if needed
+            // Turbulence models and axisymmetric source terms need cell centered gradients
+            if (myConfig.axisymmetric || (myConfig.turbulence_model != TurbulenceModel.none)){
+                foreach (cell; cells) {
+                    cell.average_interface_deriv_values();
+                }
+            }
             break;
+
         case SpatialDerivLocn.cells:
             foreach(cell; cells) {
                 cell.grad.gradients_leastsq(cell.cloud_fs, cell.cloud_pos, cell.ws_grad);
             }
+            // Cell centered gradients are transformed to interfaces in simcore.
+
         } // end switch (myConfig.spatial_deriv_locn)
     } // end flow_property_spatial_derivatives()
 
