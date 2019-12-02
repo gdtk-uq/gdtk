@@ -118,7 +118,12 @@ extern (C) int gas_model_mol_masses(int gm_i, double* mm)
 extern (C) int gas_state_new(int gm_i)
 {
     try {
-        GasState gs = new GasState(gas_models[gm_i]);
+        GasModel gm = gas_models[gm_i];
+        GasState gs = new GasState(gm);
+        // For a single-species gas, the user often ignores the mass-fraction array.
+        // Let's set the single mass fraction to 1,
+        // so that we do not have to NaN being printed.
+        if (gm.n_species == 1) { gs.massf[0] = 1.0; }
         gas_states ~= gs;
         return to!int(gas_states.length - 1);
     } catch (Exception e) {
@@ -566,14 +571,15 @@ extern (C) int thermochemical_reactor_gas_state_update(int cr_i, int gs_i,
 
 //---------------------------------------------------------------------------
 
-extern(C) int gasflow_shock_ideal(int state1_id, double Vs, int state2_id, int gm_id,
-                                  double* results)
+extern(C)
+int gasflow_shock_ideal(int state1_id, double vs, int state2_id, int gm_id,
+                        double* results)
 {
     try {
-        double[] my_results = shock_ideal(gas_states[state1_id], Vs,
+        double[] my_results = shock_ideal(gas_states[state1_id], vs,
                                           gas_states[state2_id], gas_models[gm_id]);
-        results[0] = my_results[0];
-        results[1] = my_results[1];
+        results[0] = my_results[0]; // v2
+        results[1] = my_results[1]; // vg
         return 0;
     } catch (Exception e) {
         writeln("Exception message: ", e.msg);
@@ -581,15 +587,16 @@ extern(C) int gasflow_shock_ideal(int state1_id, double Vs, int state2_id, int g
     }
 }
 
-extern(C) int gasflow_normal_shock(int state1_id, double Vs, int state2_id, int gm_id,
-                                   double* results, double rho_tol, double T_tol)
+extern(C)
+int gasflow_normal_shock(int state1_id, double vs, int state2_id, int gm_id,
+                         double* results, double rho_tol, double T_tol)
 {
     try {
-        double[] my_results = normal_shock(gas_states[state1_id], Vs,
+        double[] my_results = normal_shock(gas_states[state1_id], vs,
                                            gas_states[state2_id], gas_models[gm_id],
                                            rho_tol, T_tol);
-        results[0] = my_results[0];
-        results[1] = my_results[1];
+        results[0] = my_results[0]; // v2
+        results[1] = my_results[1]; // vg
         return 0;
     } catch (Exception e) {
         writeln("Exception message: ", e.msg);
@@ -597,15 +604,16 @@ extern(C) int gasflow_normal_shock(int state1_id, double Vs, int state2_id, int 
     }
 }
 
-extern(C) int gasflow_normal_shock_p2p1(int state1_id, double p2p1, int state2_id, int gm_id,
-                                        double* results)
+extern(C)
+int gasflow_normal_shock_p2p1(int state1_id, double p2p1, int state2_id, int gm_id,
+                              double* results)
 {
     try {
         double[] my_results = normal_shock_p2p1(gas_states[state1_id], p2p1,
                                                 gas_states[state2_id], gas_models[gm_id]);
-        results[0] = my_results[0];
-        results[1] = my_results[1];
-        results[2] = my_results[2];
+        results[0] = my_results[0]; // v1
+        results[1] = my_results[1]; // v2
+        results[2] = my_results[2]; // vg
         return 0;
     } catch (Exception e) {
         writeln("Exception message: ", e.msg);
@@ -613,17 +621,180 @@ extern(C) int gasflow_normal_shock_p2p1(int state1_id, double p2p1, int state2_i
     }
 }
 
-extern(C) int gasflow_reflected_shock(int state2_id, double vg, int state5_id, int gm_id,
-                                      double* results)
+extern(C)
+int gasflow_reflected_shock(int state2_id, double vg, int state5_id, int gm_id,
+                            double* results)
 {
     try {
-        double Vr_b = reflected_shock(gas_states[state2_id], vg,
+        double vr_b = reflected_shock(gas_states[state2_id], vg,
                                       gas_states[state5_id], gas_models[gm_id]);
-        results[0] = Vr_b;
+        results[0] = vr_b;
         return 0;
     } catch (Exception e) {
         writeln("Exception message: ", e.msg);
         return -1;
     }
 }
-    
+
+extern(C)
+int gasflow_expand_from_stagnation(int state0_id, double p_over_p0, int state1_id,
+                                   int gm_id, double* results)
+{
+    try {
+        double v = expand_from_stagnation(gas_states[state0_id], p_over_p0,
+                                          gas_states[state1_id], gas_models[gm_id]);
+        results[0] = v;
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern(C)
+int gasflow_expand_to_mach(int state0_id, double mach, int state1_id,
+                           int gm_id, double* results)
+{
+    try {
+        double v = expand_to_mach(gas_states[state0_id], mach,
+                                  gas_states[state1_id], gas_models[gm_id]);
+        results[0] = v;
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern(C)
+int gasflow_total_condition(int state1_id, double v1, int state0_id, int gm_id)
+{
+    try {
+        total_condition(gas_states[state1_id], v1,
+                        gas_states[state0_id], gas_models[gm_id]);
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern(C)
+int gasflow_pitot_condition(int state1_id, double v1, int state2pitot_id, int gm_id)
+{
+    try {
+        pitot_condition(gas_states[state1_id], v1,
+                        gas_states[state2pitot_id], gas_models[gm_id]);
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern(C)
+int gasflow_steady_flow_with_area_change(int state1_id, double v1, double a2_over_a1,
+                                         int state2_id, int gm_id, double tol,
+                                         double* results)
+{
+    try {
+        double v2 = steady_flow_with_area_change(gas_states[state1_id], v1, a2_over_a1,
+                                                 gas_states[state2_id], gas_models[gm_id],
+                                                 tol);
+        results[0] = v2;
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern(C)
+int gasflow_finite_wave_dp(int state1_id, double v1, char* characteristic, double p2,
+                           int state2_id, int gm_id, int steps, double* results)
+{
+    try {
+        double v2 = finite_wave_dp(gas_states[state1_id], v1, to!string(characteristic), p2,
+                                   gas_states[state2_id], gas_models[gm_id], steps);
+        results[0] = v2;
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern(C)
+int gasflow_finite_wave_dv(int state1_id, double v1, char* characteristic, double v2_target,
+                           int state2_id, int gm_id, int steps, double Tmin, double* results)
+{
+    try {
+        double v2 = finite_wave_dv(gas_states[state1_id], v1, to!string(characteristic), v2_target,
+                                   gas_states[state2_id], gas_models[gm_id], steps, Tmin);
+        results[0] = v2;
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern(C)
+int gasflow_theta_oblique(int state1_id, double v1, double beta,
+                          int state2_id, int gm_id, double* results)
+{
+    try {
+        double[] my_results = theta_oblique(gas_states[state1_id], v1, beta,
+                                            gas_states[state2_id], gas_models[gm_id]);
+        results[0] = my_results[0]; // theta
+        results[1] = my_results[1]; // v2
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern(C)
+int gasflow_beta_oblique(int state1_id, double v1, double theta,
+                          int gm_id, double* results)
+{
+    try {
+        double beta = beta_oblique(gas_states[state1_id], v1, theta, gas_models[gm_id]);
+        results[0] = beta;
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern(C)
+int gasflow_theta_cone(int state1_id, double v1, double beta,
+                       int state_c_id, int gm_id, double* results)
+{
+    try {
+        double[2] my_results = theta_cone(gas_states[state1_id], v1, beta,
+                                          gas_states[state_c_id], gas_models[gm_id]);
+        results[0] = my_results[0]; // theta_c 
+        results[1] = my_results[1]; // v2_c
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern(C)
+int gasflow_beta_cone(int state1_id, double v1, double theta,
+                      int gm_id, double* results)
+{
+    try {
+        double beta = beta_cone(gas_states[state1_id], v1, theta, gas_models[gm_id]);
+        results[0] = beta;
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}

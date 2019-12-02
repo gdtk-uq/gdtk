@@ -52,14 +52,39 @@ ffi.cdef("""
     int thermochemical_reactor_gas_state_update(int cr_i, int gs_i, double t_interval,
                                                 double* dt_suggest);
 
-    int gasflow_shock_ideal(int state1_id, double Vs, int state2_id, int gm_id,
+    int gasflow_shock_ideal(int state1_id, double vs, int state2_id, int gm_id,
                             double* results);
-    int gasflow_normal_shock(int state1_id, double Vs, int state2_id, int gm_id,
+    int gasflow_normal_shock(int state1_id, double vs, int state2_id, int gm_id,
                              double* results, double rho_tol, double T_tol);
     int gasflow_normal_shock_p2p1(int state1_id, double p2p1, int state2_id, int gm_id,
                                   double* results);
     int gasflow_reflected_shock(int state2_id, double vg, int state5_id, int gm_id,
                                 double* results);
+
+    int gasflow_expand_from_stagnation(int state0_id, double p_over_p0, int state1_id,
+                                       int gm_id, double* results);
+    int gasflow_expand_to_mach(int state0_id, double mach, int state1_id,
+                               int gm_id, double* results);
+    int gasflow_total_condition(int state1_id, double v1, int state0_id, int gm_id);
+    int gasflow_pitot_condition(int state1_id, double v1, int state2pitot_id, int gm_id);
+    int gasflow_steady_flow_with_area_change(int state1_id, double v1, double a2_over_a1,
+                                             int state2_id, int gm_id, double tol,
+                                             double* results);
+
+    int gasflow_finite_wave_dp(int state1_id, double v1, char* characteristic, double p2,
+                               int state2_id, int gm_id, int steps, double* results);
+    int gasflow_finite_wave_dv(int state1_id, double v1, char* characteristic, double v2_target,
+                               int state2_id, int gm_id, int steps, double Tmin, double* results);
+
+    int gasflow_theta_oblique(int state1_id, double v1, double beta,
+                              int state2_id, int gm_id, double* results);
+    int gasflow_beta_oblique(int state1_id, double v1, double theta,
+                             int gm_id, double* results);
+
+    int gasflow_theta_cone(int state1_id, double v1, double beta,
+                           int state_c_id, int gm_id, double* results);
+    int gasflow_beta_cone(int state1_id, double v1, double theta,
+                          int gm_id, double* results);
 """)
 so = ffi.dlopen("libgas.so")
 so.cwrap_gas_init()
@@ -530,3 +555,94 @@ class GasFlow(object):
         if flag < 0: raise Exception("failed to compute reflected shock.")
         vr = my_results[0]
         return vr
+
+    def expand_from_stagnation(self, state0, p_over_p0, state1):
+        my_results = ffi.new("double[]", [0.0])
+        flag = so.gasflow_expand_from_stagnation(state0.id, p_over_p0, state1.id,
+                                                 self.gmodel.id, my_results)
+        if flag < 0: raise Exception("failed to compute expansion from stagnation.")
+        v = my_results[0]
+        return v
+
+    def expand_to_mach(self, state0, mach, state1):
+        my_results = ffi.new("double[]", [0.0])
+        flag = so.gasflow_expand_to_mach(state0.id, mach, state1.id,
+                                         self.gmodel.id, my_results)
+        if flag < 0: raise Exception("failed to compute expansion to mach number.")
+        v = my_results[0]
+        return v
+
+    def total_condition(self, state1, v1, state0):
+        flag = so.gasflow_total_condition(state1.id, v1, state0.id, self.gmodel.id)
+        if flag < 0: raise Exception("failed to compute total condition.")
+        return
+
+    def pitot_condition(self, state1, v1, state2pitot):
+        flag = so.gasflow_pitot_condition(state1.id, v1, state2pitot.id, self.gmodel.id)
+        if flag < 0: raise Exception("failed to compute pitot condition.")
+        return
+
+    def steady_flow_with_area_change(self, state1, v1, area2_over_area1, state2,
+                                     tol=1.0e-4):
+        my_results = ffi.new("double[]", [0.0])
+        flag = so.gasflow_steady_flow_with_area_change(state1.id, v1, area2_over_area1,
+                                                       state2.id, self.gmodel.id, tol,
+                                                       my_results)
+        if flag < 0: raise Exception("failed to compute steady flow with area change.")
+        v2 = my_results[0]
+        return v2
+
+    def finite_wave_dp(self, state1, v1, characteristic, p2, state2, steps=100):
+        char_name = bytes(characteristic, 'utf-8')
+        my_results = ffi.new("double[]", [0.0])
+        flag = so.gasflow_finite_wave_dp(state1.id, v1, char_name, p2,
+                                         state2.id, self.gmodel.id, steps,
+                                         my_results)
+        if flag < 0: raise Exception("failed to compute (unsteady) finite wave dp.")
+        v2 = my_results[0]
+        return v2
+
+    def finite_wave_dv(self, state1, v1, characteristic, v2_target, state2,
+                       steps=100, t_min=200.0):
+        char_name = bytes(characteristic, 'utf-8')
+        my_results = ffi.new("double[]", [0.0])
+        flag = so.gasflow_finite_wave_dv(state1.id, v1, char_name, v2_target,
+                                         state2.id, self.gmodel.id, steps, t_min,
+                                         my_results)
+        if flag < 0: raise Exception("failed to compute (unsteady) finite wave dv.")
+        v2 = my_results[0]
+        return v2
+
+    def theta_oblique(self, state1, v1, beta, state2):
+        my_results = ffi.new("double[]", [0.0, 0.0])
+        flag = so.gasflow_theta_oblique(state1.id, v1, beta,
+                                        state2.id, self.gmodel.id, my_results)
+        if flag < 0: raise Exception("failed to compute theta oblique.")
+        theta = my_results[0]
+        v2 = my_results[1]
+        return theta, v2
+
+    def beta_oblique(self, state1, v1, theta):
+        my_results = ffi.new("double[]", [0.0])
+        flag = so.gasflow_beta_oblique(state1.id, v1, theta,
+                                       self.gmodel.id, my_results)
+        if flag < 0: raise Exception("failed to compute beta oblique.")
+        beta = my_results[0]
+        return beta
+
+    def theta_cone(self, state1, v1, beta, state_c):
+        my_results = ffi.new("double[]", [0.0, 0.0])
+        flag = so.gasflow_theta_cone(state1.id, v1, beta,
+                                     state_c.id, self.gmodel.id, my_results)
+        if flag < 0: raise Exception("failed to compute theta cone.")
+        theta_c = my_results[0]
+        v2_c = my_results[1]
+        return theta_c, v2_c
+
+    def beta_cone(self, state1, v1, theta):
+        my_results = ffi.new("double[]", [0.0])
+        flag = so.gasflow_beta_cone(state1.id, v1, theta,
+                                    self.gmodel.id, my_results)
+        if flag < 0: raise Exception("failed to compute beta cone.")
+        beta = my_results[0]
+        return beta

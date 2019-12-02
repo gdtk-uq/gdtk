@@ -62,6 +62,31 @@ module Gas
                                         double* results)'
   extern 'int gasflow_reflected_shock(int state2_id, double vg, int state5_id, int gm_id,
                                       double* results)'
+
+  extern 'int gasflow_expand_from_stagnation(int state0_id, double p_over_p0, int state1_id,
+                                             int gm_id, double* results)'
+  extern 'int gasflow_expand_to_mach(int state0_id, double mach, int state1_id,
+                                     int gm_id, double* results)'
+  extern 'int gasflow_total_condition(int state1_id, double v1, int state0_id, int gm_id)'
+  extern 'int gasflow_pitot_condition(int state1_id, double v1, int state2pitot_id, int gm_id)'
+  extern 'int gasflow_steady_flow_with_area_change(int state1_id, double v1, double a2_over_a1,
+                                                   int state2_id, int gm_id, double tol,
+                                                   double* results)'
+  
+  extern 'int gasflow_finite_wave_dp(int state1_id, double v1, char* characteristic, double p2,
+                                     int state2_id, int gm_id, int steps, double* results)'
+  extern 'int gasflow_finite_wave_dv(int state1_id, double v1, char* characteristic, double v2_target,
+                                     int state2_id, int gm_id, int steps, double Tmin, double* results)'
+
+  extern 'int gasflow_theta_oblique(int state1_id, double v1, double beta,
+                                    int state2_id, int gm_id, double* results)'
+  extern 'int gasflow_beta_oblique(int state1_id, double v1, double theta,
+                                   int gm_id, double* results)'
+
+  extern 'int gasflow_theta_cone(int state1_id, double v1, double beta,
+                                 int state_c_id, int gm_id, double* results)'
+  extern 'int gasflow_beta_cone(int state1_id, double v1, double theta,
+                                int gm_id, double* results)'
 end
 
 Gas.cwrap_gas_init()
@@ -541,7 +566,7 @@ class GasFlow
     my_results = [0.0, 0.0].pack("d*")
     flag = Gas.gasflow_shock_ideal(state1.id, vs, state2.id, @gmodel.id, my_results)
     if flag < 0 then raise "failed to compute ideal shock jump." end
-    return my_results[0, my_results.size].unpack("dd")
+    return my_results[0, my_results.size].unpack("dd") # [v2, vg]
   end
     
   def normal_shock(state1, vs, state2, rho_tol=1.0e-6, t_tol=0.1)
@@ -549,20 +574,109 @@ class GasFlow
     flag = Gas.gasflow_normal_shock(state1.id, vs, state2.id, @gmodel.id, my_results,
                                     rho_tol, t_tol)
     if flag < 0 then raise "failed to compute normal shock jump from shock speed." end
-    return my_results[0, my_results.size].unpack("dd")
+    return my_results[0, my_results.size].unpack("dd") # [v2, vg]
   end
     
   def normal_shock_p2p1(state1, p2p1, state2)
     my_results = [0.0, 0.0, 0.0].pack("d*")
     flag = Gas.gasflow_normal_shock_p2p1(state1.id, p2p1, state2.id, @gmodel.id, my_results)
     if flag < 0 then raise "failed to compute normal shock jump from pressure ratio." end
-    return my_results[0, my_results.size].unpack("ddd")
+    return my_results[0, my_results.size].unpack("ddd") # [vs, v2, vg]
   end
     
   def reflected_shock(state2, vg, state5)
     my_results = [0.0].pack("d")
     flag = Gas.gasflow_reflected_shock(state2.id, vg, state5.id, @gmodel.id, my_results)
     if flag < 0 then raise "failed to compute reflected shock." end
-    return my_results[0, my_results.size].unpack("d")[0]
+    return my_results[0, my_results.size].unpack("d")[0] # vr
+  end
+    
+  def expand_from_stagnation(state0, p_over_p0, state1)
+    my_results = [0.0].pack("d")
+    flag = Gas.gasflow_expand_from_stagnation(state0.id, p_over_p0, state1.id,
+                                              @gmodel.id, my_results)
+    if flag < 0 then raise "failed to compute expansion from stagnation." end
+    return my_results[0, my_results.size].unpack("d")[0] # v
+  end
+    
+  def expand_to_mach(state0, mach, state1)
+    my_results = [0.0].pack("d")
+    flag = Gas.gasflow_expand_to_mach(state0.id, mach, state1.id,
+                                      @gmodel.id, my_results)
+    if flag < 0 then raise "failed to compute expansion to mach number." end
+    return my_results[0, my_results.size].unpack("d")[0] # v
+  end
+    
+  def total_condition(state1, v1, state0)
+    flag = Gas.gasflow_total_condition(state1.id, v1, state0.id, @gmodel.id)
+    if flag < 0 then raise "failed to compute total condition." end
+    return nil
+  end
+    
+  def pitot_condition(state1, v1, state2pitot)
+    flag = Gas.gasflow_pitot_condition(state1.id, v1, state2pitot.id, @gmodel.id)
+    if flag < 0 then raise "failed to compute pitot condition." end
+    return nil
+  end
+    
+  def steady_flow_with_area_change(state1, v1, area2_over_area1, state2,
+                                   tol=1.0e-4)
+    my_results = [0.0].pack("d")
+    flag = Gas.gasflow_steady_flow_with_area_change(state1.id, v1, area2_over_area1,
+                                                    state2.id, @gmodel.id, tol,
+                                                    my_results)
+    if flag < 0 then raise "failed to compute steady flow with area change." end
+    return my_results[0, my_results.size].unpack("d")[0] # v2
+  end
+    
+  def finite_wave_dp(state1, v1, characteristic, p2, state2, steps=100)
+    my_results = [0.0].pack("d")
+    flag = Gas.gasflow_finite_wave_dp(state1.id, v1, characteristic, p2,
+                                      state2.id, @gmodel.id, steps,
+                                      my_results)
+    if flag < 0 then raise "failed to compute (unsteady) finite wave dp." end
+    return my_results[0, my_results.size].unpack("d")[0] # v2
+  end
+    
+  def finite_wave_dv(state1, v1, characteristic, v2_target, state2, steps=100,
+                     t_min=200.0)
+    my_results = [0.0].pack("d")
+    flag = Gas.gasflow_finite_wave_dv(state1.id, v1, characteristic, v2_target,
+                                      state2.id, @gmodel.id, steps, t_min,
+                                      my_results)
+    if flag < 0 then raise "failed to compute (unsteady) finite wave dv." end
+    return my_results[0, my_results.size].unpack("d")[0] # v2
+  end
+    
+  def theta_oblique(state1, v1, beta, state2)
+    my_results = [0.0, 0.0].pack("dd")
+    flag = Gas.gasflow_theta_oblique(state1.id, v1, beta, state2.id, @gmodel.id,
+                                     my_results)
+    if flag < 0 then raise "failed to compute theta oblique." end
+    return my_results[0, my_results.size].unpack("dd") # [theta, v2]
+  end
+    
+  def beta_oblique(state1, v1, theta)
+    my_results = [0.0].pack("d")
+    flag = Gas.gasflow_beta_oblique(state1.id, v1, theta, @gmodel.id,
+                                    my_results)
+    if flag < 0 then raise "failed to compute beta oblique." end
+    return my_results[0, my_results.size].unpack("d")[0] # beta
+  end
+    
+  def theta_cone(state1, v1, beta, state_c)
+    my_results = [0.0, 0.0].pack("dd")
+    flag = Gas.gasflow_theta_cone(state1.id, v1, beta, state_c.id, @gmodel.id,
+                                  my_results)
+    if flag < 0 then raise "failed to compute theta oblique." end
+    return my_results[0, my_results.size].unpack("dd") # [theta_c, v_c]
+  end
+    
+  def beta_cone(state1, v1, theta_c)
+    my_results = [0.0].pack("d")
+    flag = Gas.gasflow_beta_cone(state1.id, v1, theta_c, @gmodel.id,
+                                 my_results)
+    if flag < 0 then raise "failed to compute beta oblique." end
+    return my_results[0, my_results.size].unpack("d")[0] # beta
   end
 end

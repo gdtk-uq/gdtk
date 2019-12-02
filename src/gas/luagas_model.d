@@ -1205,6 +1205,10 @@ void registerGasModel(lua_State* L, int tblIdx)
 }
 
 version(gas_calc) {
+    import luaidealgasflow;
+    import luagasflow;
+    import nm.luabbla;
+
     int main(string[] args) {
         if ( args.length < 2 ) {
             writeln("ERROR: Wrong number of arguments.");
@@ -1224,6 +1228,9 @@ version(gas_calc) {
         version(with_dvode) {
             registerPseudoSpeciesKinetics(L, LUA_GLOBALSINDEX);
         }
+        registeridealgasflowFunctions(L);
+        registergasflowFunctions(L);
+        registerBBLA(L);
         // Pass on command line args to user's scripts.
         lua_newtable(L);
         int argIdx = 1;

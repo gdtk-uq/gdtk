@@ -185,15 +185,19 @@ clean:
 
 # Specific targets for individual artefacts.
 
-gas-calc: luagas_model.d $(LIBLUA) $(GAS_FILES) $(GAS_LUA_FILES) $(NM_FILES) \
-	$(UTIL_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES)
+gas-calc: luagas_model.d $(LIBLUA) $(GAS_FILES) $(GAS_LUA_FILES) \
+	$(NM_FILES) $(NM_LUA_FILES) $(UTIL_FILES) \
+	$(KINETICS_FILES) $(KINETICS_LUA_FILES) \
+	$(GASDYN_FILES) $(GASDYN_LUA_FILES)
 	$(DMD) $(OF)gas-calc $(DVERSION)gas_calc $(DFLAGS) \
-		$(GAS_FILES) $(GAS_LUA_FILES) $(NM_FILES) $(UTIL_FILES) $(KINETICS_FILES) \
-		$(KINETICS_LUA_FILES) $(DLINKFLAGS)
+		$(GAS_FILES) $(GAS_LUA_FILES) \
+		$(NM_FILES) $(NM_LUA_FILES) $(UTIL_FILES) \
+		$(KINETICS_FILES) $(KINETICS_LUA_FILES) \
+		$(GASDYN_FILES) $(GASDYN_LUA_FILES) \
+		$(DLINKFLAGS)
 
 libgas.so: gas_cwrap.d $(LIBLUA) $(GAS_FILES) $(KINETICS_FILES) \
-	$(NM_FILES) $(UTIL_FILES) $(GASDYN_FILES) \
-	$(GAS_LUA_FILES) $(KINETICS_LUA_FILES)
+	$(NM_FILES) $(UTIL_FILES) $(GASDYN_FILES)
 	$(DMD) -c gas_cwrap.d $(PIC) $(DFLAGS) \
 		$(GAS_FILES) $(KINETICS_FILES) $(GASDYN_FILES) $(NM_FILES) $(UTIL_FILES)
 	$(DMD) $(OF)libgas.so gas_cwrap.o $(DFLAGS) \
