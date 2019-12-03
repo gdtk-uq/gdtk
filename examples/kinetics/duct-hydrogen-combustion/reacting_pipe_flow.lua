@@ -8,8 +8,10 @@
 --    2016-03-19 adapted from reacting-pipe-flow.py for Eilmer3
 --    2018-04-21 updated to use current gas model and reaction calls
 --
--- Invoke with the command line:
--- $ e4shared --custom-post --script-file=reacting_pipe_flow.lua
+-- Run with the commands:
+-- $ prep-gas combusting-species.inp h2-o2-n2-9sp.lua
+-- $ prep-chem h2-o2-n2-9sp.lua Bittker-Scullin.lua h2-o2-n2-9sp-18r.lua
+-- $ gas-calc reacting_pipe_flow.lua
 
 -------------------------------------------------------------
 -- Things that we'll make use of shortly.
@@ -105,7 +107,7 @@ for j=1, nsteps do
       [0.0,    rho*v,      1.0, 0.0  ] * [dv    ] = [-dp_chem      ]
       [v*Etot, rho*Etot+p, 0.0, rho*v]   [dp_gda]   [-rho*v*du_chem]
       [dfdr,   0.0,       -1.0, dfdu ]   [du_gda]   [0.0           ]
-   --]=]
+   ]=]
    -- Compute the accommodation increments using expressions from Maxima.
    local denom = rho*rho*v*v - dfdr*rho*rho - dfdu*p
    local drho = (dp_chem - du_chem*dfdu)*rho*rho / denom

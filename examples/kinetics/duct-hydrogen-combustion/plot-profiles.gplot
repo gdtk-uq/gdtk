@@ -11,8 +11,7 @@ set xlabel 'Distance (m)'
 set ylabel 'Mass fraction'
 set xrange [0.0:0.1]
 set yrange [0.0:0.04]
-plot 'profile.data' using 1:25 title 'eilmer' with lines linestyle 1,\
-     'reacting-pipe-flow.transcript' using 1:7 title 'pipe-flow' with lines linestyle 2, \
+plot 'reacting-pipe-flow.transcript' using 1:7 title 'pipe-flow' with lines linestyle 1, \
      'bittker-scullin-massf.data' using 1:3 title 'Bittker-Scullin' with points linestyle 16
 
 set output 'H2O_production.eps'
@@ -24,9 +23,8 @@ set xlabel 'Distance (m)'
 set ylabel 'Mass fraction'
 set xrange [0.0:0.1]
 set yrange [0.0:0.20]
-plot 'profile.data' using 1:23 title 'eilmer' with lines linestyle 1,\
-     'reacting-pipe-flow.transcript' using 1:8 title 'pipe-flow' with lines linestyle 2, \
-     'bittker-scullin-massf.data' using 1:4 title 'Bittker-Scullin' with points linestyle 16
+plot 'reacting-pipe-flow.transcript' using 1:8 title 'pipe-flow' with lines ls 1, \
+     'bittker-scullin-massf.data' using 1:4 title 'Bittker-Scullin' with points ls 16
 
 set output 'T-development.eps'
 set style line 1 linewidth 3.0
@@ -37,9 +35,8 @@ set xlabel 'Distance (m)'
 set ylabel 'T (K)'
 set xrange [0.0:0.1]
 set yrange [1500.0:3000.0]
-plot 'profile.data' using 1:29 title 'eilmer' with lines linestyle 1,\
-     'reacting-pipe-flow.transcript' using 1:4 title 'pipe-flow' with lines linestyle 2, \
-     'bittker-scullin-massf.data' using 1:11 title 'Bittker-Scullin' with points linestyle 16
+plot 'reacting-pipe-flow.transcript' using 1:4 title 'pipe-flow' with lines ls 1, \
+     'bittker-scullin-massf.data' using 1:11 title 'Bittker-Scullin' with points ls 16
 
 set output 'p-development.eps'
 set style line 1 linewidth 3.0
@@ -50,7 +47,6 @@ set xlabel 'Distance (m)'
 set ylabel 'p (kPa)'
 set xrange [0.0:0.1]
 set yrange [90.0:160.0]
-plot 'profile.data' using 1:($9/1000) title 'eilmer' with lines linestyle 1,\
-     'reacting-pipe-flow.transcript' using 1:($3/1000) title 'pipe-flow' with lines linestyle 2, \
-     'bittker-scullin-massf.data' using 1:($12/1000) title 'Bittker-Scullin' with points linestyle 16
+plot 'reacting-pipe-flow.transcript' using 1:($3/1000) title 'pipe-flow' with lines ls 1, \
+     'bittker-scullin-massf.data' using 1:($12/1000) title 'Bittker-Scullin' with points ls 16
 
