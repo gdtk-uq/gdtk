@@ -116,7 +116,7 @@ for j=1, nsteps do
                        - dfdu*dp_chem*p) / denom
    local du_gda = -(du_chem*rho*rho*v*v - du_chem*dfdr*rho*rho - dp_chem*p) / denom
    if debug then 
-      print("# drho=", drho, "dv=", dv, "dp_gda=", dp_gda, "du_gda=", de_gda)
+      print("# drho=", drho, "dv=", dv, "dp_gda=", dp_gda, "du_gda=", du_gda)
       print("# residuals=", v*drho + rho*dv, rho*v*dv + dp_gda + dp_chem,
             v*Etot*drho + (rho*Etot+p)*dv + rho*v*du_gda + rho*v*du_chem,
             dfdr*drho - dp_gda + dfdu*du_gda)

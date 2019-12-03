@@ -20,6 +20,7 @@ ffi.cdef("""
     int gas_state_get_scalar_field(int gs_i, char* field_name, double* value);
     int gas_state_set_array_field(int gs_i, char* field_name, double* values, int n);
     int gas_state_get_array_field(int gs_i, char* field_name, double* values, int n);
+    int gas_state_copy_values(int gs_to_i, int gs_from_i);
 
     int gas_model_gas_state_update_thermo_from_pT(int gm_i, int gs_i);
     int gas_model_gas_state_update_thermo_from_rhou(int gm_i, int gs_i);
@@ -120,7 +121,7 @@ class GasModel(object):
         mm = ffi.new("double[]", [0.0]*self.n_species)
         so.gas_model_mol_masses(self.id, mm)
         return [mm[i] for i in range(self.n_species)]
-    
+        
     def update_thermo_from_pT(self, gstate):
         flag = so.gas_model_gas_state_update_thermo_from_pT(self.id, gstate.id)
         if flag < 0: raise Exception("could not update thermo from p,T.")
@@ -431,6 +432,11 @@ class GasState(object):
         flag = so.gas_state_get_array_field(self.id, b"k_modes", km, nsp)
         if flag < 0: raise Exception("could not get k_modes.")
         return [km[i] for i in range(n)]
+
+    def copy_values(self, gstate):
+        flag = so.gas_state_copy_values(self.id, gstate.id)
+        if flag < 0: raise Exception("could not copy values.")
+        return
             
     def update_thermo_from_pT(self):
         self.gmodel.update_thermo_from_pT(self)

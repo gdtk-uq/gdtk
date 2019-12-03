@@ -256,6 +256,17 @@ extern (C) int gas_state_get_array_field(int gs_i, char* field_name, double* val
     }
 }
 
+extern (C) int gas_state_copy_values(int gs_to_i, int gs_from_i)
+{
+    try {
+        gas_states[gs_to_i].copy_values_from(gas_states[gs_from_i]);
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
 //---------------------------------------------------------------------------
 
 extern (C) int gas_model_gas_state_update_thermo_from_pT(int gm_i, int gs_i)

@@ -22,6 +22,7 @@ module Gas
   extern 'int gas_state_get_scalar_field(int gs_i, char* field_name, double* value)'
   extern 'int gas_state_set_array_field(int gs_i, char* field_name, double* values, int n)'
   extern 'int gas_state_get_array_field(int gs_i, char* field_name, double* values, int n)'
+  extern 'int gas_state_copy_values(int gs_to_i, int gs_from_i)'
 
   extern 'int gas_model_gas_state_update_thermo_from_pT(int gm_i, int gs_i)'
   extern 'int gas_model_gas_state_update_thermo_from_rhou(int gm_i, int gs_i)'
@@ -281,6 +282,7 @@ end
 class GasState
   include Gas
   attr_reader :id
+  attr_reader :gmodel
   
   def initialize(gmodel)
     @gmodel = gmodel
@@ -461,7 +463,13 @@ class GasState
     if flag < 0 then raise "could not get k_modes." end
     return km[0, km.size].unpack("d*")
   end
- 
+
+  def copy_values(gstate)
+    flag = Gas.gas_state_copy_values(self.id, gstate.id)
+    if flag < 0 then raise "could not copy values" end
+    return nil
+  end
+  
   def update_thermo_from_pT()
     @gmodel.update_thermo_from_pT(self)
   end
