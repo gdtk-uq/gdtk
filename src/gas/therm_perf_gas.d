@@ -92,7 +92,7 @@ public:
             lua_getglobal(L, "db");
             lua_getfield(L, -1, _species_names[isp].toStringz);
             lua_getfield(L, -1, "thermoCoeffs");
-            _curves ~= createCEAThermo(L, _R[isp]);
+            _curves ~= new CEAThermoCurve(L, _R[isp]);
             lua_pop(L, 1);
             lua_pop(L, 1);
             lua_pop(L, 1);
@@ -431,7 +431,7 @@ private:
     double[] _charge;
     PerfectGasMixEOS _pgMixEOS;
     ThermallyPerfectGasMixEOS _tpgMixEOS;
-    CEAThermo[] _curves;
+    CEAThermoCurve[] _curves;
     WilkeMixingViscosity _viscModel;
     WilkeMixingThermCond _thermCondModel;
     // Working array space

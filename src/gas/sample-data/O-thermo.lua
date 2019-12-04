@@ -5,9 +5,9 @@
 
 CEA_coeffs = {
   nsegments = 3,
+  T_break_points = {200.0, 1000.0, 6000.0, 20000.0},
+  T_blend_ranges = {400.0, 1000.0, 1000.0},
   segment0 = {
-    T_upper = 1000.0,
-    T_lower = 200.0,
     coeffs = {
       -7953.6113,
       160.7177787,
@@ -21,8 +21,6 @@ CEA_coeffs = {
     },
   },
   segment1 = {
-    T_upper = 6000.0,
-    T_lower = 1000.0,
     coeffs = {
       261902.0262,
       -729.872203,
@@ -36,8 +34,6 @@ CEA_coeffs = {
     },
   },
   segment2 = {
-    T_upper = 20000.0,
-    T_lower = 6000.0,
     coeffs = {
       177900426.4,
       -108232.8257,

@@ -51,7 +51,7 @@ immutable double T_bracket_high = 100000.0; // K
 +/
 class ThermallyPerfectGasMixEOS : EVT_EOS {
 public:
-    this(double[] R, CEAThermo[] curves)
+    this(double[] R, CEAThermoCurve[] curves)
     {
         _R = R.dup;
         _curves = curves.dup;
@@ -139,7 +139,7 @@ public:
     } // end update_temperature()
 private:
     double[] _R;
-    CEAThermo[] _curves;
+    CEAThermoCurve[] _curves;
     // Private working arrays
     number[] _energy;
 
@@ -313,13 +313,13 @@ private:
 ThermallyPerfectGasMixEOS createThermallyPerfectGasMixEOS(string[] species, lua_State* L)
 {
     double[] R = new double[species.length];
-    CEAThermo[] curves;
+    CEAThermoCurve[] curves;
     foreach ( isp, s; species ) {
         lua_getfield(L, LUA_GLOBALSINDEX, s.toStringz);
         double M = getDouble(L, -1, "M");
         R[isp] = R_universal/M;
         lua_getfield(L, -1, "cea_thermo");
-        curves ~= createCEAThermo(L, R[isp]);
+        curves ~= new CEAThermoCurve(L, R[isp]);
         lua_pop(L, 1);
         lua_pop(L, 1);
     }
