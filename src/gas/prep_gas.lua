@@ -142,16 +142,22 @@ function writeCeaThermoCoeffs(f, sp, db, optsTable)
    f:write(string.format("db['%s'].thermoCoeffs = {\n", sp))
    f:write(string.format("  origin = '%s',\n", t.origin))
    f:write(string.format("  nsegments = %d, \n", t.nsegments))
+   f:write("  T_break_points = { ")
+   for _,T in ipairs(t.T_break_points) do
+      f:write(string.format("%.1f, ", T))
+   end
+   f:write("},\n")
+   f:write("  T_blend_ranges = { ")
+   for _,T in ipairs(t.T_blend_ranges) do
+      f:write(string.format("%.1f, ", T))
+   end
+   f:write("},\n")
    for i=0,t.nsegments-1 do
       seg = "segment"..i
       f:write(string.format("  segment%d = {\n", i))
-      f:write(string.format("    T_lower = %.1f,\n", t[seg].T_lower))
-      f:write(string.format("    T_upper = %.1f,\n", t[seg].T_upper))
-      f:write("    coeffs = {\n")
-      for _,c in ipairs(t[seg].coeffs) do
-	 f:write(string.format("      % -12.9e,\n", c))
+      for _,c in ipairs(t[seg]) do
+	 f:write(string.format("   % -12.9e,\n", c))
       end
-      f:write("    }\n")
       f:write("  },\n")
    end
    f:write("}\n")

@@ -33,10 +33,8 @@ public:
             getArrayOfDoubles(L, -1, "T_blend_ranges", _T_blends);
             foreach (i; 0 .. nseg) {
                 auto key = format("segment%d", i);
-                lua_getfield(L, -1, key.toStringz);
-                getArrayOfDoubles(L, -1, "coeffs", coeffs);
+                getArrayOfDoubles(L, -1, key, coeffs);
                 _coeffs[i][] = coeffs[];
-                lua_pop(L, 1);
             }
         }
         catch (Exception e) {
