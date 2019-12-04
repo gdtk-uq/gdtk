@@ -13,27 +13,44 @@ db['e-'].gamma = {
    description = '(ideal) ratio of specific heats at room temperature',
    reference = 'Cp/Cv from CEA2 at room temperature'
 }
--- The coefficients are the same over all temperature ranges
--- as given by CEA (which makes sense because there is no
--- internal energy storage in an electron), so we can just
--- use one range.
+
 db['e-'].ceaThermoCoeffs = {
-   nsegments = 1,
+   nsegments = 3,
+   T_break_points = {298.15, 1000.0, 6000.0, 20000.0},
+   T_blend_ranges = {400.0, 1000.0},
    segment0 = {
-      T_lower = 298.15,
-      T_upper = 20000.0,
-      coeffs = {
-	 0.000000000e+00,
-	 0.000000000e+00,
-	 2.500000000e+00,
-	 0.000000000e+00,
-	 0.000000000e+00,
-	 0.000000000e+00,
-	 0.000000000e+00,
-	-7.453750000e+02,
-	-1.172081224e+01
-      }
-   }
+      0.000000000e+00,
+      0.000000000e+00,
+      2.500000000e+00,
+      0.000000000e+00,
+      0.000000000e+00,
+      0.000000000e+00,
+      0.000000000e+00,
+     -7.453750000e+02,
+     -1.172081224e+01
+   },
+   segment1 = {
+      0.000000000e+00,
+      0.000000000e+00,
+      2.500000000e+00,
+      0.000000000e+00,
+      0.000000000e+00,
+      0.000000000e+00,
+      0.000000000e+00,
+     -7.453750000e+02,
+     -1.172081224e+01
+   },
+   segment2 = {
+      0.000000000e+00,
+      0.000000000e+00,
+      2.500000000e+00,
+      0.000000000e+00,
+      0.000000000e+00,
+      0.000000000e+00,
+      0.000000000e+00,
+     -7.453750000e+02,
+     -1.172081224e+01
+   },
 }
 
 
