@@ -1,5 +1,5 @@
 /**
- * Solve a nonlinear equation f(x)=0 using Newton's method.
+3 * Solve a nonlinear equation f(x)=0 using Newton's method.
  *
  * Caller needs to supply f(x) and f'(x).
  *
@@ -37,7 +37,10 @@ import nm.nm_exception : NumericalMethodException;
 
 @nogc
 T solve(alias f, alias dfdx, T)(T x0, T xMin, T xMax, double tol=1.0e-9)
-    if ( is(typeof(f(0.0)) == double) && is(typeof(dfdx(0.0)) == double) )
+    if ( (is(typeof(f(0.0)) == double) && is(typeof(dfdx(0.0)) == double)) ||
+         (is(typeof(f(0.0)) == float) && is(typeof(dfdx(0.0)) == float)) ||
+         (is(typeof(f(Complex!double(0.0))) == Complex!double) &&
+          is(typeof(dfdx(Complex!double(0.0))) == Complex!double)) )
 {
     const int MAXIT = 30; // maximum number of iterations
     T xL = xMin;
@@ -115,7 +118,7 @@ version(newton_test) {
         assert(fabs(solve!(test_fun_1, test_dfun_1, number)(to!number(1.0), to!number(-5.0), to!number(5.0)) - 1.732051) < 1.0e-5,
                failedUnitTest());
 
-        /*
+
         @nogc number test_fun_2(number x, number a) {
             return a*x + sin(x) - exp(x);
         }
@@ -131,7 +134,6 @@ version(newton_test) {
         }
         assert(fabs(solve!(test_fun_3, test_dfun_3, number)(to!number(0.2), to!number(0.0), to!number(1.0)) - 0.3604217) < 1.0e-5,
                failedUnitTest());
-        */
         return 0;
     }
 }

@@ -29,7 +29,7 @@ TEST_PROGRAMS := bbla_test bbla_complex_test \
 	smla_test smla_complex_test \
 	rsla_test rsla_complex_test \
 	luabbla_test complex_number_test \
-	newton_test
+	newton_test newton_complex_test
 
 LUA := ../../extern/lua-5.1.4
 LIBLUA := $(LUA)/lib/liblua.a
