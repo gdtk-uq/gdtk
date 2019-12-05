@@ -141,7 +141,7 @@ private:
             _a[] = _coeffs[0][];
             return;
         }
-        if (T > (_T_breaks[$-1] + 0.5*_T_blends[$-1])) {
+        if (T > (_T_breaks[$-2] + 0.5*_T_blends[$-1])) {
             _a[] = _coeffs[$-1][];
             return;
         }

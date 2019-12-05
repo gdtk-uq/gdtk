@@ -23,8 +23,10 @@ import std.stdio;
 import std.string;
 import std.conv;
 import core.stdc.stdlib : exit;
+import nm.nm_exception : NumericalMethodException;
 import nm.complex;
 import nm.number;
+import nm.newton : solve;
 import util.lua;
 import util.lua_service;
 
@@ -55,22 +57,20 @@ public:
     {
         _R = R.dup;
         _curves = curves.dup;
-        _energy.length = R.length;
+        _vals.length = R.length;
         
     }
     override void update_energy(ref GasState Q)
     {
-        foreach ( isp, ref e; _energy ) {
+        foreach ( isp, ref e; _vals ) {
             e = _curves[isp].eval_h(Q.T) - _R[isp]*Q.T;
         }
-        Q.u = mass_average(Q, _energy);
+        Q.u = mass_average(Q, _vals);
     }
     override void update_temperature(ref GasState Q)
     {
         number Tsave = Q.T; // Keep a copy for diagnostics purpose.
-        // We'll adjust the temperature estimate until the energy is within TOL Joules.
-        // Surely 1/1000 of a Joule is sufficient precision when we are talking of megaJoules.
-        double TOL = 1.0e-3;
+        double TOL = 1.0e-9;
         // The "target" energy is the value we will iterate to find.
         // We search (via a numerical method) for the temperature
         // value that gives this target energy.
@@ -91,25 +91,45 @@ public:
         }
         number T2 = T1 + delT;
 
-        if (bracket(T1, T2, e_tgt, Q, to!number(T_MIN)) == -1) {
-            // We have a fall back if our aggressive search failed.
-            // We apply a very conservative range:
-            T1 = T_bracket_low;
-            T2 = T_bracket_high;
-            if (bracket(T1, T2, e_tgt, Q, to!number(T_MIN)) == -1) {
-                string msg = "The 'bracket' function failed to find temperature values";
+        number zeroFn(number T)
+        {
+            Q.T = T;
+            update_energy(Q);
+            /*
+            debug {
+                writefln("T= %.3f  u= %.3e  Fn= %.6e ", T, Q.u, e_tgt - Q.u);
+            }
+            */
+            return e_tgt - Q.u;
+        }
+        
+        number dzdT(number T)
+        {
+            // We evaluate Cv.
+            foreach ( isp, ref Cv; _vals ) {
+                Cv = _curves[isp].eval_Cp(T) - _R[isp];
+            }
+            return -1.0*mass_average(Q, _vals);
+        }
+
+        try {
+            Q.T = solve!(zeroFn, dzdT)(Tsave, T1, T2, TOL);
+        }
+        catch (NumericalMethodException e) {
+            // If we fail, we'll have a second attempt with an extended temperature range.
+            try {
+                Q.T = solve!(zeroFn, dzdT)(Tsave, to!number(T_MIN), to!number(T_MAX), TOL);
+            }
+            catch (NumericalMethodException e) {
+                string msg = "There was a problem iterating to find temperature";
                 debug {
-                    msg ~= "\nthat bracketed the zero function in ThermallyPerfectGasMixEOS.eval_temperature().\n";
-                    msg ~= format("The final values are: T1 = %12.6f and T2 = %12.6f\n", T1, T2);
+                    msg ~= "\nin function ThermallyPerfectGasMix.eval_temperature().\n";
                     msg ~= format("The initial temperature guess was: %12.6f\n", Tsave);
                     msg ~= format("The target energy value was: %12.6f\n", e_tgt);
-                    msg ~= format("The bracket limits were: low=%12.6f  high=%12.6f\n", T_bracket_low, T_bracket_high);
-                    Q.T = 20.0;
-                    update_energy(Q);
-                    msg ~= format("Energy at 20.0: %12.6f\n", Q.u);
-                    Q.T = 100000.0;
-                    update_energy(Q);
-                    msg ~= format("Energy at 100000.0: %12.6f\n", Q.u);
+                    msg ~= format("The GasState is currently:\n");
+                    msg ~= Q.toString() ~ "\n";
+                    msg ~= "The message from the solve function is:\n";
+                    msg ~= e.msg;
                 }
                 // If we fail, leave temperature at value upon entry to method.
                 Q.T = Tsave;
@@ -117,196 +137,13 @@ public:
                 throw new GasModelException(msg);
             }
         }
-        try {
-            Q.T = solve(T1, T2, TOL, e_tgt, Q);
-        }
-        catch ( Exception e ) {
-            string msg = "There was a problem iterating to find temperature";
-            debug {
-                msg ~= "\nin function ThermallyPerfectGasMix.eval_temperature().\n";
-                msg ~= format("The initial temperature guess was: %12.6f\n", Tsave);
-                msg ~= format("The target energy value was: %12.6f\n", e_tgt);
-                msg ~= format("The GasState is currently:\n");
-                msg ~= Q.toString() ~ "\n";
-                msg ~= "The message from the solve function is:\n";
-                msg ~= e.msg;
-            }
-            // If we fail, leave temperature at value upon entry to method.
-            Q.T = Tsave;
-            update_energy(Q);
-            throw new GasModelException(msg);
-        }
     } // end update_temperature()
 private:
     double[] _R;
     CEAThermoCurve[] _curves;
-    // Private working arrays
-    number[] _energy;
+    // Private working array
+    number[] _vals;
 
-    //--------------------------------------------------------------------------------
-    // Bracketing and solve functions copied in from nm/bracketing.d and nm/brent.d
-    // and explicitly specialized for the temperature update.
-    //
-    // Originally, we would call the solving functions, passing to them a delegate f,
-    // and let them determine T such that f(T)=0, however, creating a delegate involves
-    // memory allocation and we suspect that it hinders parallel calculations.
-    //
-    // PJ, 10-Sep-2016
-
-    import std.math;
-    import std.algorithm;
-
-    @nogc number zeroFun(number T, number e_tgt, ref GasState Q)
-    // Helper function for update_temperature.
-    {
-        Q.T = T;
-        update_energy(Q);
-        return e_tgt - Q.u;
-    }
-
-    @nogc
-    int bracket(ref number x1, ref number x2, number e_tgt, ref GasState Q,
-                number x1_min = -1.0e99, number x2_max = +1.0e99,
-                int max_try=50, double factor=1.6)
-    {
-        if ( x1 == x2 ) {
-            throw new GasModelException("Bad initial range given to bracket.");
-        }
-        number f1 = zeroFun(x1, e_tgt, Q);
-        number f2 = zeroFun(x2, e_tgt, Q);
-        for ( int i = 0; i < max_try; ++i ) {
-            if ( f1*f2 < 0.0 ) return 0; // we have success
-            if ( abs(f1) < abs(f2) ) {
-                x1 += factor * (x1 - x2);
-                //prevent the bracket from being expanded beyond a specified domain
-                version(complex_numbers) {
-                    x1 = nm.complex.fmax(x1_min, x1);
-                } else {
-                    x1 = std.math.fmax(x1_min, x1);
-                }
-                f1 = zeroFun(x1, e_tgt, Q);
-            } else {
-                x2 += factor * (x2 - x1);
-                version(complex_numbers) {
-                    x2 = nm.complex.fmin(x2_max, x2);
-                } else {
-                    x2 = std.math.fmin(x2_max, x2);
-                }
-                f2 = zeroFun(x2, e_tgt, Q);
-            }
-        }
-        // If we leave the loop here, we were unsuccessful.
-        return -1;
-    } // end bracket()
-
-    /**
-     * Locate a root of f(x) known to lie between x1 and x2. The method
-     * is guaranteed to converge (according to Brent) given the initial 
-     * x values bound the solution. The method uses root bracketing,
-     * bisection and inverse quadratic interpolation.
-     *
-     * Params:
-     *    f: user-supplied function f(x)
-     *    x1: first end of range
-     *    x2: other end of range
-     *    tol: minimum size for range
-     *
-     * Returns:
-     *    b, a point near the root.
-     */
-    @nogc
-    number solve(number x1, number x2, double tol, number e_tgt, ref GasState Q) 
-    {
-        const int ITMAX = 100;           // Maximum allowed number of iterations
-        const double EPS=double.epsilon; // Machine floating-point precision
-        number a = x1;
-        number b = x2;
-        number fa = zeroFun(a, e_tgt, Q);
-        number fb = zeroFun(b, e_tgt, Q);
-        if (abs(fa) == 0.0) { return a; }
-        if (abs(fb) == 0.0) { return b; }
-        if (fa * fb > 0.0) {
-            // Supplied bracket does not encompass zero of the function.
-            string msg = "Root must be bracketed by x1 and x2";
-            debug { msg ~= format("\nx1=%g f(x1)=%g x2=%g f(x2)=%g\n", x1, fa, x2, fb); }
-            throw new GasModelException(msg);
-        }
-        number c = b;
-        number fc = fb;
-        // Define d, e outside the loop body so that
-        // they don't get initialized to nan each pass.
-        number d, e;
-        foreach (iter; 0 .. ITMAX) {
-            if ((fb > 0.0 && fc > 0.0) || (fb < 0.0 && fc < 0.0)) {
-                // On first pass fc==fb and we expect to enter here.
-                c = a;
-                fc = fa;
-                e = d = b-a;
-            }
-            if (abs(fc) < abs(fb)) {
-                a = b;
-                b = c;
-                c = a;
-                fa = fb;
-                fb = fc;
-                fc = fa;
-            }
-            // Convergence check
-            number tol1 = 2.0*EPS*abs(b)+0.5*tol;
-            number xm = 0.5*(c-b);
-            if (abs(xm) <= tol1 || fb == 0.0) {
-                // If converged, let's return the best estimate
-                return b;
-            }
-            if (abs(e) >= tol1 && abs(fa) > abs(fb)) {
-                // Attempt inverse quadratic interpolation for new bound
-                number p, q;
-                number s = fb/fa;
-                if (a == c) {
-                    p = 2.0*xm*s;
-                    q = 1.0-s;
-                } else {
-                    q = fa/fc;
-                    number r = fb/fc;
-                    p = s*(2.0*xm*q*(q-r)-(b-a)*(r-1.0));
-                    q = (q-1.0)*(r-1.0)*(s-1.0);
-                }
-                // Check whether quadratic interpolation is in bounds
-                if (p > 0.0) { q = -q; }
-                p = abs(p);
-                number min1 = 3.0*xm*q-abs(tol1*q);
-                number min2 = abs(e*q);
-                if (2.0*p < (min1 < min2 ? min1 : min2)) {
-                    // Accept interpolation
-                    e = d;
-                    d = p/q;
-                } else {
-                    // Interpolation failed, use bisection
-                    d = xm;
-                    e = d;
-                }
-            } else {
-                // Bounds decreasing too slowly, use bisection
-                d = xm;
-                e = d;
-            }
-            // Move last guess to a
-            a = b;
-            fa = fb;
-            // Evaluate new trial root
-            if (abs(d) > tol1) {
-                b += d;
-            } else {
-                version(complex_numbers) {
-                    b += nm.complex.copysign(tol1, xm);
-                } else {
-                    b += std.math.copysign(tol1, xm);
-                }
-            }
-            fb = zeroFun(b, e_tgt, Q);      
-        }
-        throw new GasModelException("Maximum number of iterations exceeded in solve.");
-    } // end solve()
 } // end class ThermallyPerfectGasMixEOS
 
 
@@ -341,9 +178,6 @@ version(therm_perf_gas_mix_eos_test) {
         tpgm.update_energy(Q);
         assert(approxEqual(1031849.875, Q.u, 1.0e-6), failedUnitTest());
         // Now set T a little off, say 1500.0.
-        // Using Newton iterations, finding a temperature near the
-        // CEA polynomial breaks was problematic. Brent's method
-        // should do better.
         Q.T = 1500.0;
         tpgm.update_temperature(Q);
         assert(approxEqual(1000.0, Q.T, 1.0e-6), failedUnitTest());

@@ -39,6 +39,7 @@ immutable double SMALL_MOLE_FRACTION = 1.0e-15;
 immutable double MIN_MASS_FRACTION = 1.0e-30;
 immutable double MIN_MOLES = 1.0e-30;
 immutable double T_MIN = 20.0;
+immutable double T_MAX = 100000.0;
 immutable double MASSF_ERROR_TOL = 1.0e-6;
 
 immutable string[] equilibriumEnergyModeNames = ["equilibrium",
