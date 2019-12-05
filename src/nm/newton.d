@@ -47,7 +47,7 @@ T solve(alias f, alias dfdx, T)(T x0, T xMin, T xMax, double tol=1.0e-9)
     T xH = xMax;
     T fL = f(xL);
     T fH = f(xH);
-    if ( (fL < 0.0 && fH < 0.0) || (fL > 0.0 && fH < 0.0) ) {
+    if ( (fL > 0.0 && fH > 0.0) || (fL < 0.0 && fH < 0.0) ) {
         string msg = "Root must be bracketed in call to nm.newton.solve";
         throw new NumericalMethodException(msg);
     }
