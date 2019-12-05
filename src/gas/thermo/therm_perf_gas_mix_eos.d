@@ -83,7 +83,7 @@ public:
         // should not change too much. If it does, there should
         // be enough robustness in the bracketing and
         // the function-solving method to handle this.
-        number delT = 100.0;
+        number delT = 1000.0;
         version(complex_numbers) {
             number T1 = nm.complex.fmax(Q.T - 0.5*delT, to!number(T_MIN));
         } else {
