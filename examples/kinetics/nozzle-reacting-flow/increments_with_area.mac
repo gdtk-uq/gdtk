@@ -1,0 +1,12 @@
+/* increments_with_area.mac
+ * Compute the solution of the system of linear equations symbolically.
+ * PJ, 2019-12-04
+ *
+ * maxima -b increments_with_area.mac > increments_with_area.transcript
+ */
+
+eq1: v*A*drho + rho*A*dv + rho*v*dA= 0;
+eq2: rho*v*dv + dp_gda = -dp_chem;
+eq3: v*e0*A*drho + rho*(e0+p/rho)*A*dv + rho*v*A*du_gda + rho*v*(e0+p/rho)*dA = -rho*v*A*du_chem;
+eq4: dfdr*drho - dp_gda + dfdu*du_gda = 0;
+soln: solve([eq1, eq2, eq3, eq4], [drho, dv, dp_gda, du_gda]);

@@ -1,0 +1,45 @@
+
+Maxima 5.41.0 http://maxima.sourceforge.net
+using Lisp GNU Common Lisp (GCL) GCL 2.6.12
+Distributed under the GNU Public License. See the file COPYING.
+Dedicated to the memory of William Schelter.
+The function bug_report() provides bug reporting information.
+(%i1) batch("increments_with_area.mac")
+
+read and interpret file: #p/home/peterj/work/kinetics/duct-hydrogen-combustion/increments_with_area.mac
+(%i2) eq1:v*A*drho+rho*A*dv+rho*v*dA = 0
+(%o2)                 dA rho v + A drho v + A dv rho = 0
+(%i3) eq2:rho*v*dv+dp_gda = -dp_chem
+(%o3)                    dv rho v + dp_gda = - dp_chem
+(%i4) eq3:v*e0*A*drho+rho*(e0+p/rho)*A*dv+rho*v*A*du_gda+rho*v*(e0+p/rho)*dA
+           = (-rho)*v*A*du_chem
+           p
+(%o4) dA (--- + e0) rho v + A du_gda rho v + A drho e0 v
+          rho
+                                               p
+                                      + A dv (--- + e0) rho = - A du_chem rho v
+                                              rho
+(%i5) eq4:dfdr*drho-dp_gda+dfdu*du_gda = 0
+(%o5)                dfdu du_gda + dfdr drho - dp_gda = 0
+(%i6) soln:solve([eq1,eq2,eq3,eq4],[drho,dv,dp_gda,du_gda])
+                       3  2                                 2
+                 dA rho  v  + A (dfdu du_chem - dp_chem) rho
+(%o6) [[drho = - --------------------------------------------, 
+                           2  2             2
+                      A rho  v  - A dfdr rho  - A dfdu p
+                 2
+     (dA dfdr rho  + A (dfdu du_chem - dp_chem) rho + dA dfdu p) v
+dv = -------------------------------------------------------------, 
+                       2  2             2
+                  A rho  v  - A dfdr rho  - A dfdu p
+                        3                     2                   2
+dp_gda = - ((dA dfdr rho  + A dfdu du_chem rho  + dA dfdu p rho) v
+                     2
+ - A dfdr dp_chem rho  - A dfdu dp_chem p)
+       2  2             2
+/(A rho  v  - A dfdr rho  - A dfdu p), 
+                          2              2                     2
+du_gda = - ((A du_chem rho  + dA p rho) v  - A dfdr du_chem rho  - A dp_chem p)
+       2  2             2
+/(A rho  v  - A dfdr rho  - A dfdu p)]]
+(%o6)                      increments_with_area.mac
