@@ -1,5 +1,6 @@
 NM_DIR ?= .
 NM_FILES := $(NM_DIR)/package.d \
+	$(NM_DIR)/nm_exception.d \
 	$(NM_DIR)/number.d \
 	$(NM_DIR)/complex.d \
 	$(NM_DIR)/bbla.d \
@@ -9,6 +10,7 @@ NM_FILES := $(NM_DIR)/package.d \
 	$(NM_DIR)/gaussquad.d \
 	$(NM_DIR)/linesearch.d \
 	$(NM_DIR)/nelmin.d \
+	$(NM_DIR)/newton.d \
 	$(NM_DIR)/newtoncotes.d \
 	$(NM_DIR)/ridder.d \
 	$(NM_DIR)/rungekutta.d \

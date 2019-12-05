@@ -28,7 +28,8 @@ TEST_PROGRAMS := bbla_test bbla_complex_test \
 	rungekutta_test rungekutta_complex_test \
 	smla_test smla_complex_test \
 	rsla_test rsla_complex_test \
-	luabbla_test complex_number_test
+	luabbla_test complex_number_test \
+	newton_test
 
 LUA := ../../extern/lua-5.1.4
 LIBLUA := $(LUA)/lib/liblua.a
@@ -160,6 +161,14 @@ luabbla_test: luabbla.d bbla.d complex.d number.d $(UTIL_FILES) $(LIBLUA) $(UTIL
 
 complex_number_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	dmd -of$@ -debug -g -w -version=complex_number_test -version=complex_numbers \
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+
+newton_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
+	dmd -of$@ -debug -g -w -dip1008 -version=$@ \
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+
+newton_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
+	dmd -of$@ -debug -g -w -dip1008 -version=newton_test -version=complex_numbers \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 # Some demo targets. These are left over from the early days of development.
