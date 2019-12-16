@@ -9,6 +9,8 @@
 -- This is a proof of concept code.
 --
 -- Typical use:
+-- $ gas-calc poshax.lua
+-- or
 -- $ e4shared --custom-post --script-file=poshax.lua
 --
 -------------------------------------------------------------------------
@@ -150,7 +152,7 @@ for j=1, nsteps do
       [0.0,    rho*v,      1.0, 0.0  ] * [dv    ] = [-dp_chem      ]
       [v*Etot, rho*Etot+p, 0.0, rho*v]   [dp_gda]   [-rho*v*du_chem]
       [dfdr,   0.0,       -1.0, dfdu ]   [du_gda]   [0.0           ]
-   --]=]
+   ]=]
    -- Compute the accommodation increments using expressions from Maxima.
    local denom = rho*rho*v*v - dfdr*rho*rho - dfdu*p
    local drho = (dp_chem - du_chem*dfdu)*rho*rho / denom
