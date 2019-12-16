@@ -611,6 +611,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
         // write out the loads
         if ( (step % writeLoadsCount) == 0 || finalStep ) {
             write_boundary_loads_to_file(pseudoSimTime, step);
+            update_loads_times_file(pseudoSimTime, step);
         }
         
         if ( (step % GlobalConfig.print_count) == 0 || finalStep ) {
