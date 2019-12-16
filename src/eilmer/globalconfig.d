@@ -709,6 +709,7 @@ final class GlobalConfig {
     shared static int max_step = 100;      // iteration limit
     shared static int t_level;             // time level within update
     shared static int halt_now = 0;        // flag for premature halt
+    shared static int write_loads_at_step = -1; // flag for premature writing of loads files
     shared static int print_count = 20; // Number of steps between writing messages to console.
     shared static int control_count = 10; // Number of steps between rereading .control file.
 
@@ -1774,6 +1775,7 @@ void read_control_file()
     mixin(update_double("dt_plot", "dt_plot"));
     mixin(update_double("dt_history", "dt_history"));
     mixin(update_double("dt_loads", "dt_loads"));
+    mixin(update_int("write_loads_at_step", "write_loads_at_step"));
     mixin(update_int("halt_now", "halt_now"));
     //
     if (GlobalConfig.verbosity_level > 1) {
@@ -1794,6 +1796,7 @@ void read_control_file()
         writeln("  dt_plot: ", GlobalConfig.dt_plot);
         writeln("  dt_history: ", GlobalConfig.dt_history);
         writeln("  dt_loads: ", GlobalConfig.dt_loads);
+        writeln("  write_loads_at_step: ", GlobalConfig.write_loads_at_step);
         writeln("  halt_now: ", GlobalConfig.halt_now);
     }
     

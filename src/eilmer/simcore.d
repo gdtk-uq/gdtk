@@ -1026,7 +1026,7 @@ int integrate_in_time(double target_time_as_requested)
                 GC.minimize();
             }
             if (GlobalConfig.write_loads &&
-                (SimState.time >= SimState.t_loads) && !SimState.loads_just_written) {
+                ( ((SimState.time >= SimState.t_loads) && !SimState.loads_just_written) || SimState.step == GlobalConfig.write_loads_at_step )) {
                 write_boundary_loads_to_file(SimState.time, SimState.current_loads_tindx);
                 update_loads_times_file(SimState.time, SimState.current_loads_tindx);
                 SimState.loads_just_written = true;
