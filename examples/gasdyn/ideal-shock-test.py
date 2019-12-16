@@ -10,7 +10,7 @@ from eilmer.gas import GasModel, GasState, GasFlow
 
 gmodel = GasModel('ideal-air-gas-model.lua')
 state1 = GasState(gmodel)
-state1.p = 100.0e3 # Pa
+state1.p = 125.0e3 # Pa
 state1.T = 300.0 # K
 state1.update_thermo_from_pT()
 state1.update_sound_speed()

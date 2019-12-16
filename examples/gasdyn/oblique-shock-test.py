@@ -6,6 +6,10 @@
 # PJ, 2019-12-01
 # 
 import math
+def approxEqual(a, b):
+    result = math.isclose(a, b, rel_tol=1.0e-2, abs_tol=1.0e-5)
+    # print("a=",a, "b=",b, "rel=",(a-b)/b, "abs=",a-b, "result=",result) 
+    return result
 from eilmer.gas import GasModel, GasState, GasFlow
 
 m1 = 1.5
@@ -33,3 +37,4 @@ print("  state2: %s" % state2)
 print("Oblique shock angle from deflection.")
 beta2 = flow.beta_oblique(state1, v1, theta)
 print("  beta2(degrees)=%g" % (beta2*180/math.pi))
+assert approxEqual(beta, beta2), "shock wave angle fail"
