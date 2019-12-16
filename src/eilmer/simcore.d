@@ -3416,6 +3416,7 @@ void finalize_simulation()
         if (GlobalConfig.udf_supervisor_file.length > 0) { call_UDF_at_write_to_file(); }
     }
     if (!SimState.history_just_written) { write_history_cells_to_files(SimState.time); }
+    if (!SimState.loads_just_written) { write_boundary_loads_to_file(SimState.time, SimState.current_loads_tindx); }
     GC.collect();
     GC.minimize();
     if (GlobalConfig.verbosity_level > 0  && GlobalConfig.is_master_task) {
