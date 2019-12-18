@@ -39,7 +39,13 @@ double getJSONdouble(JSONValue jsonData, string key, double defaultValue)
 {
     double value;
     try {
-        value = to!double(jsonData[key].floating);
+        auto json_val = jsonData[key];
+        // We wish to accept value like 0.0 or 0
+        if (json_val.type() == JSONType.float_) {
+            value = json_val.floating;
+        } else {
+            value = to!double(json_val.str);
+        }
     } catch (Exception e) {
         value = defaultValue;
     }
@@ -77,7 +83,12 @@ double[] getJSONdoublearray(JSONValue jsonData, string key, double[] defaultValu
     try {
         auto json_values = jsonData[key].array;
         foreach (json_val; json_values) {
-            value ~= to!double(json_val.floating);
+            // We wish to accept value like 0.0 or 0
+            if (json_val.type() == JSONType.float_) {
+                value ~= json_val.floating;
+            } else {
+                value ~= to!double(json_val.str);
+            }
         }
     } catch (Exception e) {
         value = defaultValue;
