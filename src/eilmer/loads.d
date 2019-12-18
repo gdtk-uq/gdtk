@@ -92,14 +92,12 @@ string generate_boundary_load_file(int blkid, int current_loads_tindx, double si
     // generate data file -- naming format tindx_groupname.dat
     string fname = format("%s/t%04d/b%04d.t%04d.%s.dat", loadsDir, current_loads_tindx,
                           blkid, current_loads_tindx, group);
-    // check if file exists already, if not create file
-    if (!exists(fname)) {
-        auto f = File(fname, "w");
-        f.writeln("# t = ", sim_time);
-        f.writeln("# 1:pos.x 2:pos.y 3:pos.z 4:area 5:q_total 6:q_cond 7:q_diff 8:tau 9:l_tau 10:m_tau 11:n_tau 12:sigma "~
-                  "13:n.x 14:n.y 15:n.z 16:T 17:Re_wall 18:y+ 19:cellWidthNormalToSurface 20:outsign");
-        f.close();
-    }
+    // reate file
+    auto f = File(fname, "w");
+    f.writeln("# t = ", sim_time);
+    f.writeln("# 1:pos.x 2:pos.y 3:pos.z 4:area 5:q_total 6:q_cond 7:q_diff 8:tau 9:l_tau 10:m_tau 11:n_tau 12:sigma "~
+              "13:n.x 14:n.y 15:n.z 16:T 17:Re_wall 18:y+ 19:cellWidthNormalToSurface 20:outsign");
+    f.close();
     return fname;
 } // end generate_boundary_load_file()
 
