@@ -1366,7 +1366,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             
             // Prepare 'w' with (I/dt)(P^-1)v term;
             foreach (blk; parallel(localFluidBlocks,1)) {
-                double dtInv = 1.0/dt;
+                //double dtInv = 1.0/dt;
                 foreach (idx; 0..blk.w.length) blk.w[idx] = dtInv*blk.zed[idx];
             }
             
