@@ -20,6 +20,9 @@ ffi.cdef("""
     int gas_state_get_scalar_field(int gs_i, char* field_name, double* value);
     int gas_state_set_array_field(int gs_i, char* field_name, double* values, int n);
     int gas_state_get_array_field(int gs_i, char* field_name, double* values, int n);
+    int gas_state_get_ceaSavedData_field(int gs_i, char* field_name, double* value);
+    int gas_state_get_ceaSavedData_massf(int gs_i, char* species_name, double* value);
+    int gas_state_get_ceaSavedData_species_names(int gs_i, char* dest_str, int n);
     int gas_state_copy_values(int gs_to_i, int gs_from_i);
 
     int gas_model_gas_state_update_thermo_from_pT(int gm_i, int gs_i);
@@ -432,6 +435,29 @@ class GasState(object):
         flag = so.gas_state_get_array_field(self.id, b"k_modes", km, nsp)
         if flag < 0: raise Exception("could not get k_modes.")
         return [km[i] for i in range(n)]
+    
+    @property
+    def ceaSavedData(self):
+        my_data = {}
+        scalar_fields = ["p", "rho", "u", "h", "T", "a",
+                         "Mmass", "Rgas", "gamma", "Cp",
+                         "s", "k", "mu"]
+        valuep = ffi.new("double *")
+        for name in scalar_fields:
+            flag = so.gas_state_get_ceaSavedData_field(self.id, bytes(name, 'utf-8'), valuep)
+            if flag < 0: raise Exception("could not get ceaSavedData field %s." % name)
+            my_data[name] = valuep[0]
+        buf = ffi.new("char[]", b'\000'*1024)
+        flag = so.gas_state_get_ceaSavedData_species_names(self.id, buf, 1024)
+        if flag < 0: raise Exception("could not get ceaSavedData species_names.")
+        cea_species_names = ffi.string(buf).decode('utf-8').split("\t")
+        massf_data = {}
+        for name in cea_species_names:
+            flag = so.gas_state_get_ceaSavedData_massf(self.id, bytes(name, 'utf-8'), valuep)
+            if flag < 0: raise Exception("could not get ceaSavedData massf[%s]." % name)
+            massf_data[name] = valuep[0]
+        my_data["massf"] = massf_data
+        return my_data
 
     def copy_values(self, gstate):
         flag = so.gas_state_copy_values(self.id, gstate.id)

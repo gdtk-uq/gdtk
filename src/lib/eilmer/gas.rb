@@ -22,6 +22,9 @@ module Gas
   extern 'int gas_state_get_scalar_field(int gs_i, char* field_name, double* value)'
   extern 'int gas_state_set_array_field(int gs_i, char* field_name, double* values, int n)'
   extern 'int gas_state_get_array_field(int gs_i, char* field_name, double* values, int n)'
+  extern 'int gas_state_get_ceaSavedData_field(int gs_i, char* field_name, double* value)'
+  extern 'int gas_state_get_ceaSavedData_massf(int gs_i, char* species_name, double* value)'
+  extern 'int gas_state_get_ceaSavedData_species_names(int gs_i, char* dest_str, int n)'
   extern 'int gas_state_copy_values(int gs_to_i, int gs_from_i)'
 
   extern 'int gas_model_gas_state_update_thermo_from_pT(int gm_i, int gs_i)'
@@ -462,6 +465,31 @@ class GasState
     flag = Gas.gas_state_get_array_field(@id, "k_modes", km, n)
     if flag < 0 then raise "could not get k_modes." end
     return km[0, km.size].unpack("d*")
+  end
+
+  def ceaSavedData()
+    my_data = {}
+    scalar_fields = ["p", "rho", "u", "h", "T", "a",
+                     "Mmass", "Rgas", "gamma", "Cp",
+                     "s", "k", "mu"]
+    valuep = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE)
+    scalar_fields.each do |name|
+      flag = Gas.gas_state_get_ceaSavedData_field(@id, name, valuep)
+      if flag < 0 then raise "could not get ceaSavedData field %s."%[name] end
+      my_data[name] = valuep[0, valuep.size].unpack("d")[0]
+    end
+    buf = Fiddle::Pointer.malloc(1024)
+    flag = Gas.gas_state_get_ceaSavedData_species_names(@id, buf, 1024)
+    if flag < 0 then raise "could not get ceaSavedData species names." end
+    cea_species_names = buf.to_s.split("\t")
+    massf_data = {}
+    cea_species_names.each do |name|
+      flag = Gas.gas_state_get_ceaSavedData_massf(@id, name, valuep)
+      if flag < 0 then raise "could not get ceaSavedData massf[%s]."%[name] end
+      massf_data[name] = valuep[0, valuep.size].unpack("d")[0]
+    end
+    my_data["massf"] = massf_data
+    return my_data
   end
 
   def copy_values(gstate)

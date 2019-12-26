@@ -53,6 +53,7 @@ state6 = GasState.new(gmodel)
 v6 = flow.expand_to_mach(state5s, 1.0001, state6)
 puts "  v6=%g Mach=%g" % [v6, v6/state6.a]
 puts "  state6: %s" % [state6]
+puts "  ceaSavedData=%s" % [state6.ceaSavedData]
 
 puts "Something like Mach 4 nozzle"
 state7 = GasState.new(gmodel)

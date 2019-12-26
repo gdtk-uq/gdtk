@@ -70,6 +70,7 @@ state6 = GasState(gmodel)
 v6 = flow.expand_to_mach(state5s, 1.0001, state6)
 print("  v6=%g Mach=%g" % (v6, v6/state6.a))
 print("  state6: %s" % state6)
+print("  ceaSavedData=%s" % state6.ceaSavedData)
 assert approxEqual(v6, 1155.8), "v6 number after expand_to_mach fail"
 assert approxEqual(v6/state6.a, 1.0001), "mach number after expand_to_mach fail"
 assert approxEqual(state6.p, 19.32e6), "p6 number after expand_to_mach fail"

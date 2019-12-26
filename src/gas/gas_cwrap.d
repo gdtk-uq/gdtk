@@ -256,6 +256,90 @@ extern (C) int gas_state_get_array_field(int gs_i, char* field_name, double* val
     }
 }
 
+extern (C) int gas_state_get_ceaSavedData_field(int gs_i, char* field_name, double* value)
+{
+    try {
+        GasState gs = gas_states[gs_i];
+        string name = to!string(field_name);
+        *value = 0.0;
+        switch (name) {
+        case "rho":
+            *value = gs.ceaSavedData.rho;
+            break;
+        case "p":
+            *value = gs.ceaSavedData.p;
+            break;
+        case "T":
+            *value = gs.ceaSavedData.T;
+            break;
+        case "u":
+            *value = gs.ceaSavedData.u;
+            break;
+        case "h":
+            *value = gs.ceaSavedData.h;
+            break;
+        case "Mmass":
+            *value = gs.ceaSavedData.Mmass;
+            break;
+        case "Rgas":
+            *value = gs.ceaSavedData.Rgas;
+            break;
+        case "gamma":
+            *value = gs.ceaSavedData.gamma;
+            break;
+        case "a":
+            *value = gs.ceaSavedData.a;
+            break;
+        case "Cp":
+            *value = gs.ceaSavedData.Cp;
+            break;
+        case "s":
+            *value = gs.ceaSavedData.s;
+            break;
+        case "k":
+            *value = gs.ceaSavedData.k;
+            break;
+        case "mu":
+            *value = gs.ceaSavedData.mu;
+            break;
+        default:
+            string msg = format("Unavailable field name: %s", name);
+            throw new Exception(msg);
+        }
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern (C) int gas_state_get_ceaSavedData_massf(int gs_i, char* species_name, double* value)
+{
+    try {
+        GasState gs = gas_states[gs_i];
+        string name = to!string(species_name);
+        *value = gs.ceaSavedData.massf[name];
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern (C) int gas_state_get_ceaSavedData_species_names(int gs_i, char* dest_str, int n)
+{
+    // All of the species names will be copied into char* array.
+    // It is presumed that sufficient space (n chars, including \0) was allocated previously.
+    try {
+        string src_str = gas_states[gs_i].ceaSavedData.massf.keys().join("\t");
+        strncpy(dest_str, src_str.toStringz, n);
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
 extern (C) int gas_state_copy_values(int gs_to_i, int gs_from_i)
 {
     try {
