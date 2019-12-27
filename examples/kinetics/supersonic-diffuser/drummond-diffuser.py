@@ -146,7 +146,7 @@ while x < x_end:
     gas1.u = gas1.u + du_gda
     gas1.update_thermo_from_rhou()
     if debug:
-        print("# At new point for step ", j, ": gas1.p=", gas1.p,
+        print("# At new point for x1=", x1, ": gas1.p=", gas1.p,
               "p1_check=", p1_check, 
               "rel_error=", abs(gas1.p-p1_check)/p1_check)
     # Have now finished the chemical and gas-dynamic update.
