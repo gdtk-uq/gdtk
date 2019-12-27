@@ -440,7 +440,7 @@ number steady_flow_with_area_change(const(GasState)state1, number V1, number A2_
     GasState total_cond = new GasState(state1);
     total_condition(state1, V1, total_cond, gm);
     number p2p1_max = total_cond.p/state1.p;
-    number p2p1_min = 0.001;
+    number p2p1_min = 0.0001;
     // Establish a suitable bracket for the pressure ratio.
     // [TODO] When setting up the initial guess for pressure ratio,
     // we could probably do better with the ideal relation between M and A/Astar.
