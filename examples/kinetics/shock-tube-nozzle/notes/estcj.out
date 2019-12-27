@@ -1,0 +1,26 @@
+estcj: Equilibrium Shock Tube Conditions
+Input parameters:
+    Gas is air, p1: 80000 Pa, T1: 300 K, us: 2890.35 m/s
+State 1: pre-shock condition
+    p: 80000 Pa, T: 300 K, a: 347.21 m/s
+    rho: 0.92898 kg/m^3, e: -88591 J/kg, s: 6934.5 J/kg.K
+    R: 287.053 J/kg.K, k: 1.3999, C_v: 717.747 J/kg
+    mu: 1.874600e-005 Pa.s, Pr: 0.71377
+State 2: post-shock condition.
+    p: 6.7987e+006 Pa, T: 3392.3 K, a: 1091.3 m/s
+    rho: 6.9181 kg/m^3, e: 3.1166e+006 J/kg, s: 8565.8 J/kg.K
+    R: 289.698 J/kg.K, k: 1.2118, C_v: 1594.5 J/kg
+    mu: 1.009800e-004 Pa.s, Pr: 0.65086
+    u2: 388.124 m/s, ug: 2502.23 m/s
+State 5: reflected-shock condition.
+    p: 6.1101e+007 Pa, T: 5747.3 K, a: 1484.6 m/s
+    rho: 34.174 kg/m^3, e: 7.0306e+006 J/kg, s: 8962.1 J/kg.K
+    R: 311.092 J/kg.K, k: 1.2327, C_v: 2048.91 J/kg
+    mu: 1.538300e-004 Pa.s, Pr: 0.64894
+    ur: 634.917 m/s
+State 5s: equilibrium condition (relaxation to pe)
+    p: 3.747e+007 Pa, T: 5298.8 K, a: 1414.4 m/s
+    rho: 22.952 kg/m^3, e: 6.3532e+006 J/kg, s: 8962.6 J/kg.K
+    R: 308.096 J/kg.K, k: 1.2255, C_v: 2111.5 J/kg
+    mu: 1.440600e-004 Pa.s, Pr: 0.64161
+Enthalpy difference (H5s - H1): 7.98821e+006 J/kg
