@@ -77,16 +77,26 @@ print("#   state7: %s" % state7)
 print("# Part B. Nonequilibrium nozzle flow.")
 from eilmer.gas import ThermochemicalReactor
 
+# Approximation of the T4 Mach 6 nozzle profile as straight segments.
+# The following are the transition points, derived from Wilson's nenzf file.
+xi = [0.0, 0.150, 0.280, 0.468, 0.671, 0.984] # metres
+ri = [1.0, 4.0,   6.232, 8.44,  9.92,  11.268] # ratio r/r_throat
+
 def duct_area(x):
-    # *Rough* approximation of the T4 Mach 6 nozzle, conical profile.
-    r_throat = 12.7e-3
-    r_exit = 143.1e-3 # to get area ratio 127, as in Wilson's calculation
-    L = 1.0
-    if x < 0:
-        r = r_throat
+    "Returns A/A_throat for x im metres."
+    if x < xi[0]:
+        r = ri[0]
+    elif x < xi[1]:
+        xx = (x-xi[0])/(xi[1]-xi[0]); r = ri[0]*(1.0-xx) + ri[1]*xx
+    elif x < xi[2]:
+        xx = (x-xi[1])/(xi[2]-xi[1]); r = ri[1]*(1.0-xx) + ri[2]*xx
+    elif x < xi[3]:
+        xx = (x-xi[2])/(xi[3]-xi[2]); r = ri[2]*(1.0-xx) + ri[3]*xx
+    elif x < xi[4]:
+        xx = (x-xi[3])/(xi[4]-xi[3]); r = ri[3]*(1.0-xx) + ri[4]*xx
     else:
-        r = r_throat*(1.0-x/L) + r_exit*x/L
-    return math.pi*r*r
+        xx = (x-xi[4])/(xi[5]-xi[4]); r = ri[4]*(1.0-xx) + ri[5]*xx
+    return r*r
 
 # Things that we'll make use of shortly.
 sample_header = "# x(m) A(m**2) rho(kg/m**3) p(Pa) T(degK) e(J/kg) v(m/s) " + \
@@ -134,7 +144,6 @@ gas0 = GasState(gmodel2)
 gas0.p = state6.p
 x = 0.0 # m  (location of start of expansion)
 area = duct_area(x)
-area_throat = area # remember for later use in summary
 gas0.T = state6.T
 mf = {'N2':state6.ceaSavedData['massf']['N2'],
       'O2':state6.ceaSavedData['massf']['O2'],
@@ -181,7 +190,7 @@ t = 0 # time is in seconds
 t_final = 0.8e-3 # long enough to convect past exit
 t_inc = 1.0e-9 # start small
 t_inc_max = 1.0e-6
-x_end = 1.0
+x_end = 0.984 # metres
 while x < x_end:
     # At the start of the step...
     rho = gas0.rho; T = gas0.T; p = gas0.p; u = gas0.u
@@ -257,6 +266,6 @@ print("#   density (kg/m^3)", gas1.rho)
 print("#   velocity (m/s)", v1)
 print("#   Mach", v1/gas1.a)
 print("#   rho*v^2 (kPa)", gas1.rho*v1*v1/1000)
-print("#   area ratio", area1/area_throat)
+print("#   area ratio", area1)
 print("#   species=", gmodel2.species_names)
 print("#   massf=", gas1.massf)

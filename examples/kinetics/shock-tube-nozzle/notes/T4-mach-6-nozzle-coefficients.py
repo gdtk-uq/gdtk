@@ -1,0 +1,27 @@
+# Area coefficients from Wilson's nenzf input file.
+# Back out the nozzle radii at the transition points.
+# $ python3 T4-mach-6-nozzle-coefficients.py
+# PJ 2019-12-28
+"""
+peterj@helmholtz ~/Desktop $ python3 T4-mach-6-nozzle-coefficients.py
+ATP2: 16.0 16.00000025
+ATP3: 38.837825 38.8378232
+ATP4: 71.23359592 71.23360356255999
+ATP5: 71.23360356255999 98.40639932660999
+Exit: 126.97475678976
+"""
+
+B1=1.000000e+00;  B2=4.000000e-01;  B3=4.000000e-02  
+B4=2.029529e+00;  B5=4.891910e-01;  B6=2.947825e-02
+B11=8.664130e+00;  B12=6.914069e-01;  B13=1.379375e-02
+B18=2.528059e+01;  B19=7.331439e-01;  B20=5.315344e-03
+B25=4.941441e+01;  B26=6.056218e-01;  B27=1.855621e-03
+
+ATP2=1.500000e+01;  ATP3=2.800000e+01;  ATP4=4.680000e+01;  ATP5=6.710000e+01
+ATPE=98.4
+
+print("ATP2:", B1+B2*ATP2+B3*ATP2**2, B4+B5*ATP2+B6*ATP2**2)
+print("ATP3:", B4+B5*ATP3+B6*ATP3**2, B11+B12*ATP3+B13*ATP3**2)
+print("ATP4:", B11+B12*ATP4+B13*ATP4**2, B18+B19*ATP4+B20*ATP4**2)
+print("ATP5:", B18+B19*ATP4+B20*ATP4**2, B25+B26*ATP5+B27*ATP5**2)
+print("Exit:", B25+B26*ATPE+B27*ATPE**2)
