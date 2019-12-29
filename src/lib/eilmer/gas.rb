@@ -1,5 +1,7 @@
 # gas.rb
-# A Ruby wrapper for GasModel and GasState classes.
+# A Ruby wrapper for GasModel, GasState and ThermochemicalReactor classes.
+# It also wraps the simple 1D flow calculations such as shocks and expansions.
+#
 # PJ 2019-07-24: start of experiment.
 #    2019-07-27: add Ruby wrapping code
 #

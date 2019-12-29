@@ -1,1 +1,1 @@
-__all__ = ['gas']
+__all__ = ['gas', 'ideal_gas_flow', 'zero_solvers']

@@ -1,5 +1,7 @@
 # gas.py
-# A Python wrapper for GasModel and GasState classes.
+# A Python wrapper for GasModel, GasState and ThermochemicalReactor classes.
+# It also wraps the simple 1D flow calculations such as shocks and expansions.
+#
 # PJ 2019-07-24: start of experiment with FFI.
 #    2019-07-25: added Python wrapper
 #
