@@ -109,13 +109,13 @@ def r2_r1(M1, g=1.4):
     denom = 2.0 + (g - 1.0) *M1**2
     return numer / denom
 
-def u2_u1(M1, g=1.4):
+def v2_v1(M1, g=1.4):
     """
-    Velocity ratio u2/u1 across a normal shock.
+    Velocity ratio v2/v1 across a normal shock.
 
     M1: Mach number of incoming flow
     g: ratio of specific heats
-    Returns: u2/u1
+    Returns: v2/v1
     """
     return 1 / r2_r1(M1, g)
 
@@ -354,13 +354,13 @@ def r2_r1_obl(M1, beta, g=1.4):
     denom = 2.0 + (g - 1.0) * m1sb**2
     return numer / denom
 
-def u2_u1_obl(M1, beta, g=1.4):
+def v2_v1_obl(M1, beta, g=1.4):
     """
-    Flow-speed ratio u2/u1 across an oblique shock.
+    Flow-speed ratio v2/v1 across an oblique shock.
 
     M1: upstream Mach number
     beta: shock angle with respect to initial flow direction (radians)
-    Returns: u2/u1
+    Returns: v2/v1
     """
     return sqrt((sin(beta) / r2_r1_obl(M1, beta, g))**2 + (cos(beta))**2)
 
@@ -480,7 +480,7 @@ def theta_cone(V1, p1, T1, beta, R=287.1, g=1.4):
     M2 = M2_obl(M1, beta, theta_s, g)
     assert M2 > 1.0
     rho2 = rho1 * r2_r1_obl(M1, beta, g)
-    V2 = V1 * u2_u1_obl(M1, beta, g)
+    V2 = V1 * v2_v1_obl(M1, beta, g)
     p2 = p1 * p2_p1_obl(M1, beta, g)
     T2 = T1 * T2_T1_obl(M1, beta, g)
     h2 = T2 * C_p

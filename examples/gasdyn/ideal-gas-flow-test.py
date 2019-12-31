@@ -68,10 +68,10 @@ print("Expected: T2/T1=1.249, p2/p1=2.088, r2/r1=1.673 (approx. normal-shock tab
 assert approxEqual(igf.T2_T1_obl(M, beta), 1.249), "oblique shock, temperature ratio" 
 assert approxEqual(igf.p2_p1_obl(M, beta), 2.088), "oblique shock, pressure ratio" 
 assert approxEqual(igf.r2_r1_obl(M, beta), 1.673), "oblique shock, density ratio" 
-print("u2/u1=%g, p02/p01=%g" % 
-      (igf.u2_u1_obl(M, beta), igf.p02_p01_obl(M, beta)))
-print("Expected: u2/u1=0.8304=sin(B)/sin(B-d)*r1/r2")
-assert approxEqual(igf.u2_u1_obl(M, beta), 0.8304), "oblique shock, velocity ratio" 
+print("v2/v1=%g, p02/p01=%g" % 
+      (igf.v2_v1_obl(M, beta), igf.p02_p01_obl(M, beta)))
+print("Expected: v2/v1=0.8304=sin(B)/sin(B-d)*r1/r2")
+assert approxEqual(igf.v2_v1_obl(M, beta), 0.8304), "oblique shock, velocity ratio" 
 print("")
 #
 M1 = 1.5; p1 = 100.0e3; T1 = 300.0; R = 287.1; g = 1.4; rho1 = p1/(R*T1)
