@@ -1,0 +1,5 @@
+-- ionizing-argon-model.inp
+-- Ionizing argon single-temperature.
+model = 'ThermallyPerfectGas'
+species = {'Ar', 'Ar+', 'e-'}
+
