@@ -11,6 +11,7 @@ module nm.newton;
 
 import std.math;
 import nm.complex;
+import std.format;
 
 /**
  * Locate a root of f(x) using Newton's method.
@@ -100,7 +101,8 @@ T solve(alias f, alias dfdx, T)(T x0, T xMin, T xMax, double tol=1.0e-9)
         }
     }
     // When successful, we should never reach here.
-    string msg = "Newton method failed to converge in " ~ MAXIT ~ " iterations.";
+    string msg = "Newton method failed to converge";
+    debug { msg ~= format(" in %d iterations.", MAXIT); }
     throw new NumericalMethodException(msg);
 }
 

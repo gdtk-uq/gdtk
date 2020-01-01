@@ -70,7 +70,7 @@ public:
     override void update_temperature(ref GasState Q)
     {
         number Tsave = Q.T; // Keep a copy for diagnostics purpose.
-        double TOL = 1.0e-9;
+        double TOL = 1.0e-3;
         // The "target" energy is the value we will iterate to find.
         // We search (via a numerical method) for the temperature
         // value that gives this target energy.
@@ -123,7 +123,7 @@ public:
             catch (NumericalMethodException e) {
                 string msg = "There was a problem iterating to find temperature";
                 debug {
-                    msg ~= "\nin function ThermallyPerfectGasMix.eval_temperature().\n";
+                    msg ~= "\nin function ThermallyPerfectGasMix.update_temperature().\n";
                     msg ~= format("The initial temperature guess was: %12.6f\n", Tsave);
                     msg ~= format("The target energy value was: %12.6f\n", e_tgt);
                     msg ~= format("The GasState is currently:\n");
