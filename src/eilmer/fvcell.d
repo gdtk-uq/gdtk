@@ -1567,8 +1567,7 @@ public:
                     msg ~= format("The flow timestep is: %12.6e\n", dt);
                     msg ~= format("The initial attempted dt_chem is: %12.6e\n", dt_chem_save);
                     version(debug_chem) {
-                        msg ~= format("The gas state BEFORE the failed update was:\n %s", savedGasState);
-                        msg ~= "\n";
+                        msg ~= format("The gas state BEFORE thermochemUpdate was:\n %s\n", savedGasState);
                     }
                     msg ~= format("The gas state AFTER the failed update is:\n   fs.gas %s", fs.gas);
                 }
@@ -1590,7 +1589,10 @@ public:
                 msg ~= format("This cell is located in block: %d\n", myConfig.universe_blk_id);
                 msg ~= "This failure occurred when trying to update the thermo state after\n";
                 msg ~= "computing the species change due to chemical reactions.\n";
-                msg ~= format("The gas state after the failed update is:\n   fs.gas %s", fs.gas);
+                version(debug_chem) {
+                    msg ~= format("The gas state BEFORE thermochemUpdate was:\n %s\n", savedGasState);
+                }
+                msg ~= format("The present gas state is:\n   fs.gas %s", fs.gas);
             }
             throw new FlowSolverException(msg);
         }
