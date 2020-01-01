@@ -71,6 +71,16 @@ public:
     {
         number Tsave = Q.T; // Keep a copy for diagnostics purpose.
         double TOL = 1.0e-3;
+        //
+        // PJ 2020-01-01
+        // Hack to cover over low energy problems with large ionization fractions.
+        // Should not be needed if things are being solved well.
+        //   number u_original = Q.u;
+        //   Q.T = to!number(T_MIN+1.0);
+        //   update_energy(Q);
+        //   if (u_original > Q.u) { Q.u = u_original; }
+        // End of hack.
+        //
         // The "target" energy is the value we will iterate to find.
         // We search (via a numerical method) for the temperature
         // value that gives this target energy.
@@ -126,6 +136,9 @@ public:
                     msg ~= "\nin function ThermallyPerfectGasMix.update_temperature().\n";
                     msg ~= format("The initial temperature guess was: %12.6f\n", Tsave);
                     msg ~= format("The target energy value was: %12.6f\n", e_tgt);
+                    msg ~= format("zeroFn(Tsave)=%g\n", zeroFn(Tsave));
+                    msg ~= format("zeroFn(T_MIN)=%g\n", zeroFn(to!number(T_MIN)));
+                    msg ~= format("zeroFn(T_MAX)=%g\n", zeroFn(to!number(T_MAX)));
                     msg ~= format("The GasState is currently:\n");
                     msg ~= Q.toString() ~ "\n";
                     msg ~= "The message from the solve function is:\n";
