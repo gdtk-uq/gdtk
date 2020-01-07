@@ -383,9 +383,11 @@ Vector3[] shock_fitting_vertex_velocities(SFluidBlock blk) {
             }
             number shock_detect = abs(inflow.gas.rho - (rho_east/numcells))/fmax(inflow.gas.rho, (rho_east/numcells));
             if (shock_detect < SHOCK_DETECT_THRESHOLD) { 
-                // We don't think there's a shock here, so set vertex velocity to the maximum, U+a.
+                // We don't think there's a shock here, so set vertex velocity to the maximum, U+a. Be careful with choice of direction, particularly in the y direction.
+                // If we apply a blanket +a or -a, either the top or bottom boundary will drift away
+                number y_factor = (vtx.pos[0].y >= 0) ? -1.0 : 1.0;
                 exact_vel.set(inflow.vel.x + inflow.gas.a,
-                              -1.0*(inflow.vel.y+inflow.gas.a),
+                              y_factor*(inflow.vel.y+inflow.gas.a),
                               (blk.myConfig.dimensions == 3) ? inflow.vel.z+inflow.gas.a: to!number(0.0));
             } else {
                 // We do have a shock here
@@ -481,7 +483,7 @@ void assign_slave_velocities(SFluidBlock blk, Vector3[] velocity_array) {
 
                 // Find its radial direction and point it in that direction
                 unit_d = correct_direction([vtx_left.pos[0], vtx.pos[0], vtx_right.pos[0]]);
-                vtx.vel[0] = unit_d * dot(vtx.vel[0], unit_d);
+                vtx.vel[0] = unit_d * dot(unit_d, vtx.vel[0]);
             }
         }
     }
