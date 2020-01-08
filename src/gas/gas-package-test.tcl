@@ -52,6 +52,10 @@ test therm-perf-gas-test {Testing therm_perf_gas.d} -body {
     exec ./therm_perf_gas_test
 } -result {} -returnCodes {0}
 
+test therm-perf-gas-equil-test {Testing therm_perf_gas_equil.d} -body {
+    exec ./therm_perf_gas_equil_test
+} -result {} -returnCodes {0}
+
 test very-viscous-air-test {Testing very_viscous_air.d} -body {
     exec ./very_viscous_air_test
 } -result {} -returnCodes {0}

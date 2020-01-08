@@ -7,6 +7,7 @@ INSTALL_DIR ?= $(HOME)/e3bin
 BUILD_DIR ?= ../../build
 
 TEST_PROGRAMS := chemistry_update_test \
+		equilibrium_update_test \
 		rate_constant_test \
 		reaction_test \
 		reaction_mechanism_test \
@@ -63,6 +64,11 @@ ${LIBLUA}:
 	cd ${LUA_DIR}; make $(PLATFORM) local
 
 chemistry_update_test: $(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
+	dmd -of$@ -debug -g -dip1008 -version=$@ \
+		$(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \
+		$(LIBLUA) $(DLINKFLAGS)
+
+equilibrium_update_test: $(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
 	dmd -of$@ -debug -g -dip1008 -version=$@ \
 		$(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(LIBLUA) $(DLINKFLAGS)

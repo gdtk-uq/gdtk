@@ -17,6 +17,7 @@ import gas.ideal_helium;
 import gas.cubic_gas;
 import gas.cea_gas;
 import gas.therm_perf_gas;
+import gas.therm_perf_gas_equil;
 import gas.very_viscous_air;
 import gas.co2gas;
 import gas.co2gas_sw;
@@ -89,6 +90,9 @@ GasModel init_gas_model(string file_name="gas-model.lua")
         break;
     case "ThermallyPerfectGas":
         gm = new ThermallyPerfectGas(L);
+        break;
+    case "ThermallyPerfectGasEquilibrium":
+        gm = new ThermallyPerfectGasEquilibrium(L);
         break;
     case "VeryViscousAir":
         gm = new VeryViscousAir(L);

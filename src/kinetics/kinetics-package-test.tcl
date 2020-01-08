@@ -12,6 +12,10 @@ test chemistry-update-test {Testing chemistry_update.d} -body {
     exec ./chemistry_update_test
 } -result {} -returnCodes {0}
 
+test equilibrium-update-test {Testing equilibrium_update.d} -body {
+    exec ./equilibrium_update_test
+} -result {} -returnCodes {0}
+
 test rate-constant-test {Testing rate_constant.d} -body {
     exec ./rate_constant_test
 } -result {} -returnCodes {0}

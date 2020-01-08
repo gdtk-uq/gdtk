@@ -3,6 +3,7 @@ KINETICS_FILES := $(KINETICS_DIR)/package.d \
 	$(KINETICS_DIR)/thermochemical_reactor.d \
 	$(KINETICS_DIR)/init_thermochemical_reactor.d \
 	$(KINETICS_DIR)/chemistry_update.d \
+	$(KINETICS_DIR)/equilibrium_update.d \
 	$(KINETICS_DIR)/electronic_update.d \
 	$(KINETICS_DIR)/electronically_specific_kinetics.d \
 	$(KINETICS_DIR)/ideal_dissociating_gas_kinetics.d \
