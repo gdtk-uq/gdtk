@@ -13,11 +13,10 @@ db['H2'].epsilon = 38.00000000
 db['H2'].Lewis = 0.317
 db['H2'].thermoCoeffs = {
   origin = 'CEA',
-  nsegments = 3, 
+  nsegments = 3,
+  T_break_points = {200.0, 1000.0, 6000.0, 20000.0},
+  T_blend_ranges = {400.0, 1000.0},
   segment0 = {
-    T_lower = 200.0,
-    T_upper = 1000.0,
-    coeffs = {
        4.078323210e+04,
       -8.009186040e+02,
        8.214702010e+00,
@@ -27,12 +26,8 @@ db['H2'].thermoCoeffs = {
        3.368093490e-12,
        2.682484665e+03,
       -3.043788844e+01,
-    }
   },
   segment1 = {
-    T_lower = 1000.0,
-    T_upper = 6000.0,
-    coeffs = {
        5.608128010e+05,
       -8.371504740e+02,
        2.975364532e+00,
@@ -42,12 +37,8 @@ db['H2'].thermoCoeffs = {
       -3.606994100e-15,
        5.339824410e+03,
       -2.202774769e+00,
-    }
   },
   segment2 = {
-    T_lower = 6000.0,
-    T_upper = 20000.0,
-    coeffs = {
        4.966884120e+08,
       -3.147547149e+05,
        7.984121880e+01,
@@ -57,7 +48,6 @@ db['H2'].thermoCoeffs = {
        1.605461756e-16,
        2.488433516e+06,
       -6.695728110e+02,
-    }
   },
 }
 db['H2'].viscosity = {
@@ -126,10 +116,9 @@ db['I2'].Lewis = 1.0
 db['I2'].thermoCoeffs = {
   origin = 'CEA',
   nsegments = 2, 
+  T_break_points = {200.0, 1000.0, 6000.0},
+  T_blend_ranges = {400.0},
   segment0 = {
-    T_lower = 200.0,
-    T_upper = 1000.0,
-    coeffs = {
       -5.087968770e+03,
       -1.249585210e+01,
        4.504219090e+00,
@@ -139,12 +128,8 @@ db['I2'].thermoCoeffs = {
       -2.337541043e-14,
        6.213469810e+03,
        5.583836940e+00,
-    }
   },
   segment1 = {
-    T_lower = 1000.0,
-    T_upper = 6000.0,
-    coeffs = {
       -5.632594160e+06,
        1.793961560e+04,
       -1.723055169e+01,
@@ -154,7 +139,6 @@ db['I2'].thermoCoeffs = {
       -1.960461713e-14,
       -1.068505292e+05,
        1.600531883e+02,
-    }
   },
 }
 db['I2'].viscosity = {
@@ -223,10 +207,9 @@ db['HI'].Lewis = 1.0
 db['HI'].thermoCoeffs = {
   origin = 'CEA',
   nsegments = 2, 
+  T_break_points = {200.0, 1000.0, 6000.0},
+  T_blend_ranges = {400.0},
   segment0 = {
-    T_lower = 200.0,
-    T_upper = 1000.0,
-    coeffs = {
        1.872881730e+04,
       -3.431788840e+02,
        5.956712430e+00,
@@ -236,12 +219,8 @@ db['HI'].thermoCoeffs = {
        2.839734003e-12,
        3.682950720e+03,
       -8.149756090e+00,
-    }
   },
   segment1 = {
-    T_lower = 1000.0,
-    T_upper = 6000.0,
-    coeffs = {
        4.724921450e+05,
       -1.923465741e+03,
        5.758048970e+00,
@@ -251,7 +230,6 @@ db['HI'].thermoCoeffs = {
        4.611614790e-16,
        1.394857037e+04,
       -1.182487652e+01,
-    }
   },
 }
 db['HI'].viscosity = {
