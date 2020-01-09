@@ -396,7 +396,7 @@ class GasState(object):
         n = self.gmodel.n_modes
         if n == 0: return []
         um = ffi.new("double[]", [0.0]*n)
-        flag = so.gas_state_get_array_field(self.id, b"u_modes", um, nsp)
+        flag = so.gas_state_get_array_field(self.id, b"u_modes", um, n)
         if flag < 0: raise Exception("could not get u_modes.")
         return [um[i] for i in range(n)]
     @u_modes.setter
@@ -417,7 +417,7 @@ class GasState(object):
         Tm = ffi.new("double[]", [0.0]*n)
         flag = so.gas_state_get_array_field(self.id, b"T_modes", Tm, n)
         if flag < 0: raise Exception("could not get T_modes.")
-        return [um[i] for i in range(n)]
+        return [Tm[i] for i in range(n)]
     @T_modes.setter
     def T_modes(self, Tm_given):
         n = self.gmodel.n_modes
