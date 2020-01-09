@@ -347,6 +347,14 @@ class GasState(object):
         flag = so.gas_state_get_array_field(self.id, b"massf", mf, nsp)
         if flag < 0: raise Exception("could not get mass-fractions.")
         return [mf[i] for i in range(nsp)]
+    @property
+    def massf_as_dict(self):
+        nsp = self.gmodel.n_species
+        names = self.gmodel.species_names
+        mf = self.massf
+        result = {}
+        for i in range(nsp): result[names[i]] = mf[i]
+        return result
     @massf.setter
     def massf(self, mf_given):
         nsp = self.gmodel.n_species
@@ -373,6 +381,14 @@ class GasState(object):
         flag = so.gas_model_gas_state_get_molef(self.gmodel.id, self.id, mf)
         if flag < 0: raise Exception("could not get mole-fractions.")
         return [mf[i] for i in range(nsp)]
+    @property
+    def molef_as_dict(self):
+        nsp = self.gmodel.n_species
+        names = self.gmodel.species_names
+        mf = self.molef
+        result = {}
+        for i in range(nsp): result[names[i]] = mf[i]
+        return result
     @molef.setter
     def molef(self, molef_given):
         nsp = self.gmodel.n_species
@@ -390,6 +406,14 @@ class GasState(object):
         flag = so.gas_model_gas_state_get_conc(self.gmodel.id, self.id, myconc)
         if flag < 0: raise Exception("could not get concentrations.")
         return [myconc[i] for i in range(nsp)]
+    @property
+    def conc_as_dict(self):
+        nsp = self.gmodel.n_species
+        names = self.gmodel.species_names
+        conc_list = self.conc
+        result = {}
+        for i in range(nsp): result[names[i]] = conc_list[i]
+        return result
 
     @property
     def u_modes(self):

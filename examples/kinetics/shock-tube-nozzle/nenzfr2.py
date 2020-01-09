@@ -103,13 +103,10 @@ sample_header = "# x(m) A(m**2) rho(kg/m**3) p(Pa) T(degK) e(J/kg) v(m/s) " + \
                 "massf_N2 massf_O2 massf_N massf_O massf_NO dt_suggest(s) mdot(kg/s)"
 
 def sample_data(x, area, v, gas, dt_suggest):
+    mf = gas.massf_as_dict
     return "%g %g %g %g %g %g %g %g %g %g %g %g %g %g" % \
         (x, area, gas.rho, gas.p, gas.T, gas.u, v,
-         gas.massf[gas.gmodel.species_names.index("N2")],
-         gas.massf[gas.gmodel.species_names.index("O2")],
-         gas.massf[gas.gmodel.species_names.index("N")],
-         gas.massf[gas.gmodel.species_names.index("O")],
-         gas.massf[gas.gmodel.species_names.index("NO")],
+         mf["N2"], mf["O2"], mf["N"], mf["O"], mf["NO"],
          dt_suggest, gas.rho*v*area)
 
 def eos_derivatives(gas0, gmodel, tol=0.0001):
