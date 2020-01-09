@@ -70,7 +70,7 @@ public:
     override void update_temperature(ref GasState Q)
     {
         number Tsave = Q.T; // Keep a copy for diagnostics purpose.
-        double TOL = 1.0e-3;
+        double TOL = 1.0e-6;
         //
         // PJ 2020-01-01
         // Hack to cover over low energy problems with large ionization fractions.
