@@ -1,1 +1,1 @@
-__all__ = ['kernel']
+__all__ = ['kernel', 'unit_process']

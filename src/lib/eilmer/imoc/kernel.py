@@ -23,8 +23,8 @@ nodes = [] # Storage for the Nodes
 
 
 class Node(object):
-    __slots__ = ['valid_data', 'indx',
-                 'x', 'y', 'nu', 'mach', 'theta',
+    __slots__ = ['indx', 'x', 'y',
+                 'nu', 'mach', 'theta',
                  'cplus_up', 'cplus_down',
                  'cminus_up', 'cminus_down',
                  'czero_up', 'czero_down']
@@ -41,7 +41,6 @@ class Node(object):
         We store the new Node in the nodes list at indx.
         If indx is not supplied, the new Node is appended to nodes.
         """
-        self.valid_data = False
         if indx is None: indx = len(nodes)
         self.indx = indx 
         self.x = x; self.y = y
@@ -60,7 +59,7 @@ class Node(object):
         A string representation of a Node.
         """
         strng = "Node(indx=%d, x=%g, y=%g" % (self.indx, self.x, self.y)
-        strng += ", nu=%g, mach=%g, theta=%d" % (self.nu, self.mach, self.theta)
+        strng += ", nu=%g, mach=%g, theta=%g" % (self.nu, self.mach, self.theta)
         strng += ", cplus_up=%d, cplus_down=%d" % (self.cplus_up, self.cplus_down)
         strng += ", cminus_up=%d, cminus_down=%d" % (self.cminus_up, self.cminus_down)
         strng += ", czero_up=%d, czero_down=%d)" % (self.czero_up, self.czero_down)
