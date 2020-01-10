@@ -451,15 +451,10 @@ void init_simulation(int tindx, int nextLoadsIndx,
     //
     // create the loads directory, maybe
     if (GlobalConfig.write_loads && (SimState.current_loads_tindx == 0)) {
-        if (GlobalConfig.is_master_task) { ensure_directory_is_present("loads"); }
-        version(mpi_parallel) {
-            version(mpi_timeouts) {
-                MPI_Sync_tasks();
-            } else {
-                MPI_Barrier(MPI_COMM_WORLD);
-            }
+        if (GlobalConfig.is_master_task) {
+            ensure_directory_is_present("loads");
+            init_loads_times_file();
         }
-        init_loads_times_file();
     }
     version(mpi_parallel) {
         version(mpi_timeouts) {
@@ -1026,9 +1021,12 @@ int integrate_in_time(double target_time_as_requested)
                 GC.minimize();
             }
             if (GlobalConfig.write_loads &&
-                ( ((SimState.time >= SimState.t_loads) && !SimState.loads_just_written) || SimState.step == GlobalConfig.write_loads_at_step )) {
+                ( ((SimState.time >= SimState.t_loads) && !SimState.loads_just_written) ||
+                  SimState.step == GlobalConfig.write_loads_at_step )) {
                 write_boundary_loads_to_file(SimState.time, SimState.current_loads_tindx);
-                update_loads_times_file(SimState.time, SimState.current_loads_tindx);
+                if (GlobalConfig.is_master_task) {
+                    update_loads_times_file(SimState.time, SimState.current_loads_tindx);
+                }
                 SimState.loads_just_written = true;
                 SimState.current_loads_tindx = SimState.current_loads_tindx + 1;
                 SimState.t_loads = SimState.t_loads + GlobalConfig.dt_loads;
