@@ -268,7 +268,7 @@ def cminus_wall(fn_wall, node1, node4):
         pm4 = pm1 - (th4-th1)
         if kernel.axisymmetric:
             if y1 < 1.0e-6:
-                raise RuntimeError("Interior: initial node is too close to axis.")
+                raise RuntimeError("cminus_wall: initial node is too close to axis.")
             # Axisymmetric components.
             axiterm1 = sin(mu1)*sin(th1)/y1
             if y4 < 1.0e-6:
@@ -297,4 +297,88 @@ def cminus_wall(fn_wall, node1, node4):
         n4.cminus_up = node1; n1.cminus_down = node4
     else:
         n4.cminus_down = node1; n1.cminus_up = node4
+    return n4
+
+
+def cplus_wall(fn_wall, node2, node4):
+    """
+    Returns a point on the wall, computed from one initial point.
+
+    fn_wall: user-supplied function defining wall y=f(x)
+    node2: index of initial point along C+ characteristic
+    node4: index of solution point (may have a value of -1)
+    If -1 is specified as the index for node4, a new node will be
+    created for the solution point.
+    """
+    if not callable(fn_wall):
+        raise RuntimeError("cplus_wall expects a callable function for fn_wall.")
+    n2 = kernel.nodes[node2]
+    x2 = n2.x; y2 = n2.y; pm2 = n2.nu; th2 = n2.theta; m2 = n2.mach
+    # Mach angles
+    mu2 = asin(1/m2)
+    # Use point 2 to get the streamline direction cosines.
+    xStream = cos(th2); yStream = sin(th2)
+    # Guess at the solution point properties.
+    # The position may be way off but it is used as part of
+    # the convergence check a little further on.
+    x4 = x2; y4 = y2
+    th4 = th2; mu4 = mu2
+    # Compute the solution point position and flow properties.
+    converged = False
+    iteration_count =0
+    while (not converged) and (iteration_count < max_iteration):
+        x4_old = x4; y4_old = y4
+        # Locate solution point by assuming straight-line segments.
+        sinCplus = 0.5*(sin(th2+mu2) + sin(th4+mu4))
+        cosCplus = 0.5*(cos(th2+mu2) + cos(th4+mu4))
+        #
+        x4, y4 = wall_position(fn_wall, x2, y2, cosCplus, sinCplus)
+        dx = x4-x4_old; dy = y4-y4_old
+        change_in_position = sqrt(dx*dx + dy*dy)
+        #
+        # Lengths of the characteristic segment.
+        dx = x4-x2; dy = y4-y2
+        lengthCminus = sqrt(dx*dx + dy*dy)
+        dot_product = dx*xStream + dy*yStream
+        if dot_product < 0.0:
+            directionCplus = -1
+        else:
+            directionCplus = +1
+        #
+        # Update flow properties at solution point
+        # First, assume 2D planar geometry then add
+        # axisymmetric contributions if flag is set.
+        th4 = atan(wall_slope(fn_wall, x4))
+        pm4 = pm2 + (th4-th2)
+        if kernel.axisymmetric:
+            if y4 < 1.0e-6:
+                raise RuntimeError("cplus_wall: new node is too close to axis.")
+            # Axisymmetric components.
+            axiterm4 = sin(mu4)*sin(th4)/y4
+            if y2 < 1.0e-6:
+                axiterm2 = axiterm4
+            else:
+                axiterm2 = sin(mu2)*sin(th2)/y2
+            #
+            integralCplus = 0.5*directionCplus*lengthCplus*(axiterm2+axiterm4)
+            # Include axisymmetric components.
+            pm4 += integralCplus
+        #
+        iteration_count += 1
+        converged = change_in_position < position_tolerance
+    # Save the solution-point properties and connect the 
+    # node into the characteristic mesh.
+    if node4 == -1:
+        n4 = kernel.Node()
+        node4 = n4.indx
+    else:
+        n4 = nodes[node4]
+    m4 = igf.PM2(pm4, kernel.g)
+    n4.x = x4; n4.y = y4; n4.nu = pm4; n4.theta = th4; n4.mach = m4
+    # We assume that the principal flow direction
+    # is in the positive x-direction.
+    if x4 > x2:
+        n4.cplus_up = node2; n2.cplus_down = node4
+    else:
+        n4.cplus_down = node2; n2.cplus_up = node4
     return n4

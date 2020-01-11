@@ -47,7 +47,7 @@ assert (n10.cplus_up == n9.indx) and (n9.cplus_down == n10.indx), \
     "interior node, cplus connection"
 
 print("Make a new, wall node along a C- characteristic.")
-def wall0(x): return 0.0;
+def wall0(x): return 0.0
 n16 = unit.cminus_wall(wall0, n10.indx, -1)
 print("n16=", n16)
 print("n10=", n10)
@@ -68,5 +68,19 @@ assert (nXX.cminus_up == n10.indx) and (n10.cminus_down == nXX.indx), \
     "insert node on C- char, cminus connection A"
 assert (n16.cminus_up == nXX.indx) and (nXX.cminus_down == n16.indx), \
     "insert node on C- char, cminus connection B"
+
+print("Make a new, wall node along a C+ characteristic.")
+def wall1(x): return 0.267949*x+0.111638
+n49 = kernel.Node(x=0.194488, y=0.142442, nu=PM1(1.83558), mach=1.83558, theta=0.261799)
+n57 = unit.cplus_wall(wall1, n49.indx, -1)
+print("n49=", n49)
+print("n57=", n57)
+assert approxEqual(n57.theta, 0.261799), "cplus wall node, flow angle" 
+assert approxEqual(n57.nu, 0.379608), "cplus wall node, PM function" 
+assert approxEqual(n57.mach, 1.83558), "cplus wall node, mach number" 
+assert approxEqual(n57.x, 0.220358), "cplus wall node, x position" 
+assert approxEqual(n57.y, 0.170683), "cplus wall node, y position" 
+assert (n57.cplus_up == n49.indx) and (n49.cplus_down == n57.indx), \
+    "cplus wall node, cplus connection"
 
 print("Done.")
