@@ -44,8 +44,8 @@ public:
         _n_modes = 1;
         _species_names.length = 3;
         _species_names[Species.Ar] = "Ar";
-        _species_names[Species.Ar_plus] = "Ar_plus";
-        _species_names[Species.e_minus] = "e_minus";
+        _species_names[Species.Ar_plus] = "Ar+";
+        _species_names[Species.e_minus] = "e-";
         _mol_masses.length = 3;
         _mol_masses[Species.Ar] = 39.948e-3; // Units are kg/mol
         _mol_masses[Species.e_minus] = 5.485799e-7; // Units are kg/mol
@@ -64,7 +64,7 @@ public:
     {
         char[] repr;
         repr ~= "TwoTemperatureReactingArgon =(";
-        repr ~= "species=[\"Ar\", \"Ar_plus\", \"e_minus\"]";
+        repr ~= "species=[\"Ar\", \"Ar+\", \"e-\"]";
         repr ~= ", Mmass=[" ~ to!string(_mol_masses[Species.Ar]);
         repr ~= "," ~ to!string(_mol_masses[Species.Ar_plus]);
         repr ~= "," ~ to!string(_mol_masses[Species.e_minus]) ~ "]";
