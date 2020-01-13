@@ -134,6 +134,7 @@ public:
         this(blk_id, nicell, njcell, nkcell, label);
         active = getJSONbool(json_data, "active", true);
         omegaz = getJSONdouble(json_data, "omegaz", 0.0);
+        may_be_turbulent = getJSONbool(json_data, "may_be_turbulent", true);
     } // end constructor from json
 
     @nogc override int get_interpolation_order()
@@ -186,6 +187,7 @@ public:
         repr ~= ", active=" ~ to!string(active);
         repr ~= ", grid_type=\"" ~ gridTypeName(grid_type) ~ "\"";
         repr ~= ", omegaz=" ~ to!string(omegaz);
+        repr ~= ", may_be_turbulent=" ~ to!string(may_be_turbulent);
         repr ~= ", nicell=" ~ to!string(nicell);
         repr ~= ", njcell=" ~ to!string(njcell);
         repr ~= ", nkcell=" ~ to!string(nkcell);

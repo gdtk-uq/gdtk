@@ -58,6 +58,7 @@ public:
         nboundaries = getJSONint(json_data, "nboundaries", 0);
         active = getJSONbool(json_data, "active", true);
         omegaz = getJSONdouble(json_data, "omegaz", 0.0);
+        may_be_turbulent = getJSONbool(json_data, "may_be_turbulent", true);
         // Workspace for flux_calc method.
         lsq = new LsqInterpolator(dedicatedConfig[id]);
     } // end constructor from json
@@ -108,6 +109,7 @@ public:
         repr ~= ", active=" ~ to!string(active);
         repr ~= ", grid_type=\"" ~ gridTypeName(grid_type) ~ "\"";
         repr ~= ", omegaz=" ~ to!string(omegaz);
+        repr ~= ", may_be_turbulent=" ~ to!string(may_be_turbulent);
         repr ~= ", ncells=" ~ to!string(ncells);
         repr ~= ", nvertices=" ~ to!string(nvertices);
         repr ~= ", nfaces=" ~ to!string(nfaces);

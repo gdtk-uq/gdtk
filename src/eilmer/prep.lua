@@ -430,7 +430,7 @@ function FluidBlock:new(o)
    end
    o = o or {}
    flag = checkAllowedNames(o, {"grid", "initialState", "fillCondition", "active",
-                                "label", "omegaz", "bcList", "bcDict",
+                                "label", "omegaz", "may_be_turbulent", "bcList", "bcDict",
                                 "hcellList", "xforceList", "fluidBlockArrayId"})
    if not flag then
       error("Invalid name for item supplied to FluidBlock constructor.", 2)
@@ -461,6 +461,9 @@ function FluidBlock:new(o)
       o.active = true
    end
    o.omegaz = o.omegaz or 0.0
+   if o.may_be_turbulent == nil then
+      o.may_be_turbulent = true
+   end
    if o.bcList then
       o.bcList = deepclone(o.bcList, false)
    else
@@ -539,6 +542,7 @@ function FluidBlock:tojson()
    str = str .. string.format('    "active": %s,\n', tostring(self.active))
    str = str .. string.format('    "fluidBlockArrayId": %d,\n', self.fluidBlockArrayId)
    str = str .. string.format('    "omegaz": %.18e,\n', self.omegaz)
+   str = str .. string.format('    "may_be_turbulent": %s,\n', tostring(self.may_be_turbulent))
    str = str .. string.format('    "grid_type": "%s",\n', self.grid:get_type())
    if self.grid:get_type() == "structured_grid" then
       str = str .. string.format('    "nic": %d,\n', self.nic)

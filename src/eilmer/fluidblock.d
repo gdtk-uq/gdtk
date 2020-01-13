@@ -56,6 +56,8 @@ public:
     // The active flag is used principally for the block-marching calculation,
     // where we want to integrate a few blocks at a time.
     //
+    bool may_be_turbulent; // if true, the selected turbulence model is active
+                           // within this block.
     double omegaz; // Angular velocity (in rad/s) of the rotating frame.
                    // There is only one component, about the z-axis.
     number mass_balance; // domain mass balance used to monitor for steady state
@@ -348,15 +350,19 @@ public:
         size_t total_cells_in_turbulent_zones = 0;
         size_t total_cells = 0;
         foreach(cell; cells) {
-            if ( myConfig.turbulent_zones.length > 0 ) {
-                cell.in_turbulent_zone = false;
-                foreach(tz; myConfig.turbulent_zones) {
-                    if ( tz.is_inside(cell.pos[gtl], myConfig.dimensions) ) {
-                        cell.in_turbulent_zone = true;
-                    }
-                } // foreach tz
+            if (may_be_turbulent) {
+                if ( myConfig.turbulent_zones.length > 0 ) {
+                    cell.in_turbulent_zone = false;
+                    foreach(tz; myConfig.turbulent_zones) {
+                        if ( tz.is_inside(cell.pos[gtl], myConfig.dimensions) ) {
+                            cell.in_turbulent_zone = true;
+                        }
+                    } // foreach tz
+                } else {
+                    cell.in_turbulent_zone = true;
+                }
             } else {
-                cell.in_turbulent_zone = true;
+                cell.in_turbulent_zone = false;
             }
             total_cells_in_turbulent_zones += (cell.in_turbulent_zone ? 1: 0);
             total_cells += 1;
