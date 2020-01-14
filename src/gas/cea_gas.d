@@ -106,14 +106,15 @@ public:
         create_species_reverse_lookup();
         //
         // Make sure that all of the pieces are in place to run CEA calculations.
-        _cea_exe_path = expandTilde(environment.get("CEA_EXE_PATH", "~/e3bin/cea2"));
-        _cea_cases_path = expandTilde(environment.get("CEA_CASES_PATH", "~/e3bin/cea-cases"));
+        string dgdinst = expandTilde(environment.get("DGD", "~/dgdinst"));
+        _cea_exe_path = buildPath(dgdinst, "bin", "cea2");
+        _cea_cases_path = buildPath(dgdinst, "share", "cea-cases");
         // writeln("_cea_exe_path=", _cea_exe_path); // DEBUG
         if (!exists(_cea_exe_path)) {
             throw new Exception("Cannot find cea2 exe file.");
         }
         if (!exists("thermo.lib") || getSize("thermo.lib") == 0) {
-            string ceaThermoFile = buildNormalizedPath(_cea_cases_path, "thermo.inp");
+            string ceaThermoFile = buildPath(_cea_cases_path, "thermo.inp");
             if (!exists(ceaThermoFile)) {
                 throw new Exception("Cannot find cea2 thermo.inp file.");
             }
@@ -121,7 +122,7 @@ public:
             runCEAProgram("thermo", false);
         }
         if (!exists("trans.lib") || getSize("trans.lib") == 0) {
-            string ceaTransFile = buildNormalizedPath(_cea_cases_path, "trans.inp");
+            string ceaTransFile = buildPath(_cea_cases_path, "trans.inp");
             if (!exists(ceaTransFile)) {
                 throw new Exception("Cannot find cea2 trans.inp file.");
             }
