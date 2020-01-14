@@ -9,6 +9,12 @@ require 'open3'
 
 class TestLobb < Test::Unit::TestCase
   def test_0_prep
+    cmd = "cp #{ENV['DGD_REPO']}/examples/kinetics/air-chemistry-1T/air-5sp-1T.inp air-5sp.inp"
+    o, e, s = Open3.capture3(*cmd.split)
+    assert_equal(s.success?, true)
+    cmd = "cp #{ENV['DGD_REPO']}/examples/kinetics/air-chemistry-1T/GuptaEtAl-air-reactions.lua ."
+    o, e, s = Open3.capture3(*cmd.split)
+    assert_equal(s.success?, true)
     cmd = "prep-gas air-5sp.inp air-5sp.lua"
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
