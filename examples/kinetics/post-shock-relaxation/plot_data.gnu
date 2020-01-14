@@ -17,7 +17,7 @@ set mytics 2
 set grid xtics ytics mxtics mytics
 set label 1 "T/T_{{/Symbol \245}}" at 0.2,21
 set label 2 "{/Symbol r}/{/Symbol r}_{{/Symbol \245}}" at 0.2,8
-plot "air-Mach_12.3.data" u ($1*100):($2/300.0) t 'poshax.lua' w l lt 1 lw 2, \
+plot "air-Mach_12.3.data" u ($1*100):($2/300.0) t 'poshax' w l lt 1 lw 2, \
      "ref-data/marrone_fig4_T_ratio.g3data" u 1:2 t 'Marrone 1963' w l lt 2 lw 2, \
      "air-Mach_12.3.data" u ($1*100):($4/1.539e-03) notitle w l lt 1 lw 2, \
      "ref-data/marrone_fig4_rho_ratio.g3data" u 1:2 notitle w l lt 2 lw 2
@@ -54,7 +54,7 @@ set grid nomxtics nomytics
 set format y "10^{%L}"
 set key bottom right
 plot "ref-data/marrone_fig3_N2.g3data" using 1:2 title 'Marrone 1963' w l lt 2 lw 2, \
-     "air-Mach_12.3.data" u ($1*100):($8/4.092e-01)  title 'poshax.lua' w l lt 1 lw 2, \
+     "air-Mach_12.3.data" u ($1*100):($8/4.092e-01)  title 'poshax' w l lt 1 lw 2, \
      "ref-data/marrone_fig3_O2.g3data" using 1:2 notitle w l lt 2 lw 2, \
      "air-Mach_12.3.data" u ($1*100):($10/4.092e-01) notitle w l lt 1 lw 2, \
      "ref-data/marrone_fig3_NO.g3data" using 1:2 notitle w l lt 2 lw 2, \

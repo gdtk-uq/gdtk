@@ -11,7 +11,7 @@
 # This is a proof of concept code, that you will probably adapt.
 #
 # Typical use:
-# $ python3 poshax.lua
+# $ python3 poshax.py
 #
 #------------------------------------------------------------------
 from eilmer.gas import GasModel, GasState, GasFlow, ThermochemicalReactor
