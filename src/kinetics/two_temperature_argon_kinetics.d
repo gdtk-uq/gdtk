@@ -32,7 +32,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
     {
         super(gmodel); // hang on to a reference to the gas model
         // We need to pick a number of pieces out of the gas-model file, again.
-        // Although they exist in the GasModel object, they are private.
+        // Although some already exist in the GasModel object, they are private.
         auto L = init_lua_State();
         doLuaFile(L, fname);
         lua_getglobal(L, "TwoTemperatureReactingArgon");
@@ -40,8 +40,8 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         _integration_method = getStringWithDefault(L, -1, "integration_method", "Backward_Euler");
         _T_min_for_reaction = getDoubleWithDefault(L, -1, "T_min_for_reaction", 3000.0);
         _n_step_suggest = getIntWithDefault(L, -1, "n_step_suggest", 1);
-        _Newton_Raphson_tol = getDoubleWithDefault(L, -1, "Newton_Raphson_tol", 1.0e-6);
-        _max_iter_newton = getIntWithDefault(L, -1, "max_iter_newton", 10);
+        _Newton_Raphson_tol = getDoubleWithDefault(L, -1, "Newton_Raphson_tol", 1.0e-10);
+        _max_iter_newton = getIntWithDefault(L, -1, "max_iter_newton", 30);
         lua_close(L);
     }
     
@@ -171,7 +171,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
             _gmodel.numden2massf(numden, Q);
             _gmodel.update_thermo_from_rhou(Q);
             _gmodel.update_sound_speed(Q);
-        } // end if Q.T > 3000
+        } // end if Q.T > _T_min_for_reaction
     } // end opCall()
     
     private:

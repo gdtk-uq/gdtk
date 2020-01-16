@@ -54,7 +54,7 @@ public:
         lua_getglobal(L, "TwoTemperatureReactingArgon");
         // [TODO] test that we actually have the table as item -1
         // Now, pull out the remaining numeric value parameters.
-        _ion_tol = getDouble(L, -1, "ion_tol");
+        _ion_tol = getDoubleWithDefault(L, -1, "ion_tol", 1.0e-15);
         lua_pop(L, 1); // dispose of the table
         // Compute derived parameters
         create_species_reverse_lookup();
