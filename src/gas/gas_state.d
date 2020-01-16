@@ -1,4 +1,5 @@
 /** 
+ * The GasState class defines the data storage for a blob of gas.
  *
  * Authors: Rowan G. and Peter J.
  */

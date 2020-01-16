@@ -2,22 +2,26 @@
  * gas_model.d
  *
  * Contents: The gas model file has a number of parts.
- *   1. The GasModel base class for specifying how
- *      specific gas models should behave.
- *   2. The GasState class which specifies the storage arrangement
- *      for the data defining a gas state.
- *   3. Utility functions to transform mass-fraction and mole-fraction
- *      data arrays.
- *   4. Fill-in functions for gas model classes that don't implement
- *      some of the functions declared in the base class.
+ *   1. The GasModel base class for specifying how specific gas models should behave.
+ *   2. Utility functions to transform mass-fraction and mole-fraction data arrays.
+ *   3. Fill-in functions for gas model classes that don't implement some of
+ *      the functions declared in the base class.
+ * Note that GasState class, which specifies the storage arrangement for the data
+ * defining a gas state is in a separate module.
  *
  * Authors: Peter J. and Rowan G.
- * Version: 2014-06-22, first cut, exploring the options.
- *          2015--2016, lots of experiments
- *          2017-01-06, introduce ChemicalReactor base class
- *          2017-11-10, move ThermochemicalReactor to its own module in kinetics package
- *          2018-06-02, adapted to complex numbers for Kyle
+ * Versions:
+ *   2014-06-22, first cut, exploring the options.
+ *   2015--2016, lots of experiments
+ *   2017-01-06, introduce ChemicalReactor base class
+ *   2017-11-10, move ThermochemicalReactor to its own module in kinetics package
+ *   2018-06-02, adapted to complex numbers for Kyle
  */
+
+
+//----------------------------------------------------------------------------------------
+// PART 1. The GasModel class
+//----------------------------------------------------------------------------------------
 
 module gas.gas_model;
 
@@ -122,7 +126,7 @@ public:
     @nogc abstract number dhdT_const_p(in GasState Q);
     @nogc abstract number dpdrho_const_T(in GasState Q);
     @nogc abstract number gas_constant(in GasState Q);
-    @nogc abstract number internal_energy(in GasState Q);
+    @nogc abstract number internal_energy(in GasState Q); // u+sum(u_modes)
     @nogc abstract number enthalpy(in GasState Q);
     @nogc number enthalpy(in GasState Q, int isp)
     {
@@ -284,6 +288,11 @@ protected:
     double[] _electronic_energy;
 } // end class GasModel
 
+
+//----------------------------------------------------------------------------------------
+// PART 2. Utility functions to transform mass-fraction and mole-fraction data arrays.
+//----------------------------------------------------------------------------------------
+
 pragma(inline, true) @nogc
 void scale_mass_fractions(ref number[] massf, double tolerance=0.0,
                           double assert_error_tolerance=0.1)
@@ -394,7 +403,7 @@ body {
 
 
 //----------------------------------------------------------------------------------------
-// PART 4. Fill-in functions for gas models that don't define all functions
+// PART 3. Fill-in functions for gas models that don't define all functions
 //         specified in the base class GasModel
 //----------------------------------------------------------------------------------------
 
