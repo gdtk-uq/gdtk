@@ -135,6 +135,7 @@ extern(C) int thermoPT(lua_State* L)
         throw new Error(errMsg);
     }
     gm.update_thermo_from_pT(Q);
+    gm.update_sound_speed(Q);
     setGasStateInTable(L, gm, 2, Q);
     return 0;
 }
@@ -163,6 +164,7 @@ extern(C) int thermoRHOU(lua_State* L)
         throw new Error(errMsg);
     }
     gm.update_thermo_from_rhou(Q);
+    gm.update_sound_speed(Q);
     setGasStateInTable(L, gm, 2, Q);
     return 0;
 }
@@ -191,6 +193,7 @@ extern(C) int thermoRHOT(lua_State* L)
         throw new Error(errMsg);
     }
     gm.update_thermo_from_rhoT(Q);
+    gm.update_sound_speed(Q);
     setGasStateInTable(L, gm, 2, Q);
     return 0;
 }
@@ -219,6 +222,7 @@ extern(C) int thermoRHOP(lua_State* L)
         throw new Error(errMsg);
     }
     gm.update_thermo_from_rhop(Q);
+    gm.update_sound_speed(Q);
     setGasStateInTable(L, gm, 2, Q);
     return 0;
 }
@@ -239,6 +243,7 @@ extern(C) int thermoPS(lua_State* L)
     }
     number s = lua_tonumber(L, 3);
     gm.update_thermo_from_ps(Q, s);
+    gm.update_sound_speed(Q);
     setGasStateInTable(L, gm, 2, Q);
     return 0;
 }
@@ -251,16 +256,17 @@ extern(C) int thermoHS(lua_State* L)
     number h = lua_tonumber(L, 3);
     number s = lua_tonumber(L, 4);
     gm.update_thermo_from_hs(Q, h, s);
+    gm.update_sound_speed(Q);
     setGasStateInTable(L, gm, 2, Q);
     return 0;
 }
 
 extern(C) int soundSpeed(lua_State* L)
 {
-   auto gm = checkGasModel(L, 1);
-   auto Q = new GasState(gm);
-   getGasStateFromTable(L, gm, 2, Q);
-   if ( Q.T <= 0.0 || isNaN(Q.T) ) {
+    auto gm = checkGasModel(L, 1);
+    auto Q = new GasState(gm);
+    getGasStateFromTable(L, gm, 2, Q);
+    if ( Q.T <= 0.0 || isNaN(Q.T) ) {
         string errMsg = "ERROR: when calling 'updateSoundSpeed'\n";
         errMsg ~= "        The supplied temperature value is negative, 0 or has not been set.\n";
         errMsg ~= "        Check that the 'T' field is set with a valid value.\n";
@@ -268,10 +274,10 @@ extern(C) int soundSpeed(lua_State* L)
         errMsg ~= Q.toString();
         errMsg ~= "\nBailing out\n";
         throw new Error(errMsg);
-   }
-   gm.update_sound_speed(Q);
-   setGasStateInTable(L, gm, 2, Q);
-   return 0;
+    }
+    gm.update_sound_speed(Q);
+    setGasStateInTable(L, gm, 2, Q);
+    return 0;
 }
 
 extern(C) int transCoeffs(lua_State* L)

@@ -25,14 +25,13 @@ print("after setting some values")
 print("  gs.rho=%g p=%g T=%g u=%g massf=%s a=%g k=%g mu=%g" %
       (gs.rho, gs.p, gs.T, gs.u, gs.massf, gs.a, gs.k, gs.mu))
 gmodel.update_thermo_from_pT(gs) # the way that we do the update in D
-gmodel.update_sound_speed(gs)
+gmodel.update_sound_speed(gs) # not necessary from Python but is available
 gmodel.update_trans_coeffs(gs)
 print("after update thermo from pT")
 print("  gs.rho=%g p=%g T=%g u=%g massf=%s a=%g k=%g mu=%g" %
       (gs.rho, gs.p, gs.T, gs.u, gs.massf, gs.a, gs.k, gs.mu))
 gs.p=3000.0; gs.T=99.0; gs.massf={'air':1.0}
 gs.update_thermo_from_rhou() # update another way
-gs.update_sound_speed()
 gs.update_trans_coeffs()
 print("after update thermo from rhou")
 print("  gs.rho=%g p=%g T=%g u=%g massf=%s a=%g k=%g mu=%g" %

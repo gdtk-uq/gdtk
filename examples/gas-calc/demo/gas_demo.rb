@@ -26,14 +26,13 @@ puts "after setting some values"
 puts "  gs.rho=%g p=%g T=%g u=%g massf=%s a=%g k=%g mu=%g" %
       [gs.rho, gs.p, gs.T, gs.u, gs.massf, gs.a, gs.k, gs.mu]
 gmodel.update_thermo_from_pT(gs) # the way that we do the update in D
-gmodel.update_sound_speed(gs)
+gmodel.update_sound_speed(gs) # not necessary from Ruby but is available
 gmodel.update_trans_coeffs(gs)
 puts "after update thermo from pT"
 puts "  gs.rho=%g p=%g T=%g u=%g massf=%s a=%g k=%g mu=%g" %
       [gs.rho, gs.p, gs.T, gs.u, gs.massf, gs.a, gs.k, gs.mu]
 gs.p = 3000.0; gs.T=99.0; gs.massf={'air'=>1.0}
 gs.update_thermo_from_rhou() # update another way
-gs.update_sound_speed()
 gs.update_trans_coeffs()
 puts "after update thermo from rhou"
 puts "  gs.rho=%g p=%g T=%g u=%g massf=%s a=%g k=%g mu=%g" %

@@ -26,7 +26,6 @@ while true do
   gs.update_thermo_from_ps(s0)
   h1 = gs.enthalpy
   v1 = Math.sqrt(2*(h0 - h1))
-  gs.update_sound_speed()
   m1 = v1/gs.a
   if m1 >= mach_tgt then
     puts "Stopping at Mach=%g" % [m1]

@@ -136,26 +136,32 @@ class GasModel
   def update_thermo_from_pT(gstate)
     flag = Gas.gas_model_gas_state_update_thermo_from_pT(@id, gstate.id)
     if flag < 0 then raise "could not update thermo from p,T." end
+    update_sound_speed(gstate)
   end
   def update_thermo_from_rhou(gstate)
     flag = Gas.gas_model_gas_state_update_thermo_from_rhou(@id, gstate.id)
     if flag < 0 then raise "could not update thermo from rho,u." end
+    update_sound_speed(gstate)
   end
   def update_thermo_from_rhoT(gstate)
     flag = Gas.gas_model_gas_state_update_thermo_from_rhoT(@id, gstate.id)
     if flag < 0 then raise "could not update thermo from rho,T." end
+    update_sound_speed(gstate)
   end
   def update_thermo_from_rhop(gstate)
     flag = Gas.gas_model_gas_state_update_thermo_from_rhop(@id, gstate.id)
     if flag < 0 then raise "could not update thermo from rho,p." end
+    update_sound_speed(gstate)
   end
   def update_thermo_from_ps(gstate, s)
     flag = Gas.gas_model_gas_state_update_thermo_from_ps(@id, gstate.id, s)
     if flag < 0 then raise "could not update thermo from p,s." end
+    update_sound_speed(gstate)
   end
   def update_thermo_from_hs(gstate, h, s)
     flag = Gas.gas_model_gas_state_update_thermo_from_hs(@id, gstate.id, h, s)
     if flag < 0 then raise "could not update thermo from h,s." end
+    update_sound_speed(gstate)
   end
   def update_sound_speed(gstate)
     flag = Gas.gas_model_gas_state_update_sound_speed(@id, gstate.id)

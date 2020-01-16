@@ -130,26 +130,32 @@ class GasModel(object):
     def update_thermo_from_pT(self, gstate):
         flag = so.gas_model_gas_state_update_thermo_from_pT(self.id, gstate.id)
         if flag < 0: raise Exception("could not update thermo from p,T.")
+        self.update_sound_speed(gstate)
         return
     def update_thermo_from_rhou(self, gstate):
         flag = so.gas_model_gas_state_update_thermo_from_rhou(self.id, gstate.id)
         if flag < 0: raise Exception("could not update thermo from rho,u.")
+        self.update_sound_speed(gstate)
         return
     def update_thermo_from_rhoT(self, gstate):
         flag = so.gas_model_gas_state_update_thermo_from_rhoT(self.id, gstate.id)
         if flag < 0: raise Exception("could not update thermo from rho,T.")
+        self.update_sound_speed(gstate)
         return
     def update_thermo_from_rhop(self, gstate):
         flag = so.gas_model_gas_state_update_thermo_from_rhop(self.id, gstate.id)
         if flag < 0: raise Exception("could not update thermo from rho,p.")
+        self.update_sound_speed(gstate)
         return
     def update_thermo_from_ps(self, gstate, s):
         flag = so.gas_model_gas_state_update_thermo_from_ps(self.id, gstate.id, s)
         if flag < 0: raise Exception("could not update thermo from p,s.")
+        self.update_sound_speed(gstate)
         return
     def update_thermo_from_hs(self, gstate, h, s):
         flag = so.gas_model_gas_state_update_thermo_from_hs(self.id, gstate.id, h, s)
         if flag < 0: raise Exception("could not update thermo from h,s.")
+        self.update_sound_speed(gstate)
         return
     def update_sound_speed(self, gstate):
         flag = so.gas_model_gas_state_update_sound_speed(self.id, gstate.id)

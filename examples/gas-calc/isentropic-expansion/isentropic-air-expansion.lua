@@ -23,7 +23,6 @@ while true do
    gmodel:updateThermoFromPS(gs, s0)
    h1 = gmodel:enthalpy(gs)
    v1 = math.sqrt(2*(h0 - h1))
-   gmodel:updateSoundSpeed(gs)
    m1 = v1/gs.a
    if m1 >= mach_tgt then
       print(string.format("Stopping at Mach=%g", m1))
