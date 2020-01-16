@@ -57,6 +57,7 @@ public:
     double[string] massf;
     double k; // thermal conductivity, W/m/K
     double mu; // viscosity, Pa.s
+    string previous_problemType = ""; // "pT", "rhoT", etc
     
     this(const CEASavedData other) {
         this.copy_values_from(other);
@@ -78,6 +79,7 @@ public:
         foreach (key; other.massf.byKey()) { this.massf[key] = other.massf[key]; }
         this.mu = other.mu;
         this.k = other.k;
+        this.previous_problemType = other.previous_problemType;
     }
 } // end CEASavedData
 
@@ -243,18 +245,27 @@ public:
     }
     override void update_sound_speed(GasState Q) const
     {
-        // It's not really a separate operation since all other updates will
-        // also get a new estimate of sound speed.
+        // We presume that the thermo update has just (previously) been done.
+        // It's not really a separate operation since all thermo updates will
+        // also get a new estimate of sound speed, but we do it again.
+        if (Q.ceaSavedData.previous_problemType.length == 0) {
+            throw new Exception("Seems that we have not called CEA before.");
+        }
         debug {
-            callCEA(Q, 0.0, 0.0, "pT", false);
+            callCEA(Q, 0.0, 0.0, Q.ceaSavedData.previous_problemType, false);
         } else {
             throw new Exception("not implemented for @nogc. PJ 2018-09-23");
         }
     }
     override void update_trans_coeffs(GasState Q)
     {
+        // We presume that the thermo update has just (previously) been done.
+        // Repeat it but do the transport coefficients this time.
+        if (Q.ceaSavedData.previous_problemType.length == 0) {
+            throw new Exception("Seems that we have not called CEA before.");
+        }
         debug {
-            callCEA(Q, 0.0, 0.0, "pT", true);
+            callCEA(Q, 0.0, 0.0, Q.ceaSavedData.previous_problemType, true);
         } else {
             throw new Exception("not implemented for @nogc. PJ 2018-09-23");
         }
@@ -392,7 +403,7 @@ private:
             writer.put("problem case=CEAGas tp");
             if (_withIons) { writer.put(" ions"); }
             writer.put("\n");
-            assert(Q.p > 0.0 && Q.T > 0.0, "CEAGas: Invalid pT");
+            if (!(Q.p > 0.0 && Q.T > 0.0)) { throw new Exception("CEAGas: Invalid pT"); }
             writer.put(format("   p(bar)      %e\n", Q.p / 1.0e5));
             writer.put(format("   t(k)        %e\n", Q.T));
             break;
@@ -400,7 +411,7 @@ private:
             writer.put("problem case=CEAGas vu");
             if (_withIons) { writer.put(" ions"); }
             writer.put("\n");
-            assert(Q.rho > 0.0, "CEAGas: Invalid rho");
+            if (!(Q.rho > 0.0)) { throw new Exception("CEAGas: Invalid rho"); }
             writer.put(format("   rho,kg/m**3 %e\n", Q.rho));
             // R_universal is in J/mol/K and u from flow solver is in J/kg
             writer.put(format("   u/r         %e\n", Q.u/R_universal/1000.0));
@@ -409,7 +420,7 @@ private:
             writer.put("problem case=CEAGas tv");
             if (_withIons) { writer.put(" ions"); }
             writer.put("\n");
-            assert(Q.rho > 0.0 && Q.T > 0.0, "CEAGas: Invalid rhoT");
+            if (!(Q.rho > 0.0 && Q.T > 0.0)) { throw new Exception("CEAGas: Invalid rhoT"); }
             writer.put(format("   rho,kg/m**3 %e\n", Q.rho));
             writer.put(format("   t(k)        %e\n", Q.T));
             break;
@@ -417,7 +428,7 @@ private:
             writer.put("problem case=CEAGas ps");
             if (_withIons) { writer.put(" ions"); }
             writer.put("\n");
-            assert(Q.p > 0.0, "CEAGas: Invalid p");
+            if (!(Q.p > 0.0)) { throw new Exception("CEAGas: Invalid p"); }
             writer.put(format("   p(bar)      %e\n", Q.p / 1.0e5));
             // R_universal is in J/mol/K and s from flow solver is in J/kg/K
             writer.put(format("   s/r         %e\n", s/R_universal/1000.0));
@@ -521,6 +532,7 @@ private:
             if ( sname !in Q.ceaSavedData.massf )
                 Q.ceaSavedData.massf[sname] = 0.0;
         }
+        Q.ceaSavedData.previous_problemType = problemType;
         //
         // Put the relevant pieces of the scanned data into the GasState object.
         switch (problemType) {
