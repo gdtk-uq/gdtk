@@ -79,7 +79,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
             // too low.
             // Let's put a lower limit of 200K for the temperature of the heavy particles.
             number u_available = _u_total - 3.0/2.0*_Rgas*200.0;
-            number alpha_max = fmin(1.0, u_available/(Q.T_modes[0] + _Rgas*_theta_ion));
+            number alpha_max = fmin(1.0, u_available/(_Rgas*(Q.T_modes[0]+_theta_ion)));
             _n_e_max = alpha_max * _n_total;
             _u_min_heavy_particles = 3.0/2.0*_Rgas*200.0;
 
