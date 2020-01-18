@@ -42,7 +42,7 @@ immutable string[] validFlowStateFields = ["p", "T", "T_modes", "p_e",
                                            "mu", "k", 
                                            "velx", "vely", "velz",
                                            "Bx", "By", "Bz", "psi", "divB",
-                                           "tke", "omega", "mu_t", "k_t", "S"];
+                                           "turb", "mu_t", "k_t", "S"];
 static const(FlowState)[] flowStateStore;
 
 // Makes it a little more consistent to make this
@@ -243,8 +243,9 @@ The value should be a number.`;
     double psi = getNumberFromTable(L, tblindx, "psi", false, 0.0, true, format(errMsgTmplt, "psi"));
     
     // Values related to k-omega model.
-    double tke = getNumberFromTable(L, tblindx, "tke", false, 0.0, true, format(errMsgTmplt, "tke"));
-    double omega = getNumberFromTable(L, tblindx, "omega", false, 1.0, true, format(errMsgTmplt, "omega"));
+    double[] turb_init;
+    getArrayOfDoubles(L, tblindx, "turb", turb_init);
+    double[2] turb = turb_init;
     double mu_t = getNumberFromTable(L, tblindx, "mu_t", false, 0.0, true, format(errMsgTmplt, "mu_t"));
     double k_t = getNumberFromTable(L, tblindx, "k_t", false, 0.0, true, format(errMsgTmplt, "k_t"));
 
@@ -252,7 +253,7 @@ The value should be a number.`;
     int S = getIntegerFromTable(L, tblindx, "S", false, 0, true, format(errMsgTmplt, "S"));
 
     auto fs = new FlowState(managedGasModel, p, T, T_modes, vel, massf, quality, B,
-                            psi, divB, tke, omega, mu_t, k_t, S);
+                            psi, divB, turb, mu_t, k_t, S);
     return fs;
 } // end makeFlowStateFromTable()
     
@@ -292,6 +293,15 @@ lua_setfield(L, tblIdx, "` ~ var ~`");`;
 string pushFSVar(string var)
 {
 return `lua_pushnumber(L, fs.` ~ var ~ `);
+lua_setfield(L, tblIdx, "` ~ var ~`");`;
+}
+
+string pushFSVarArray(string var)
+{
+    return `lua_newtable(L);
+foreach (i, val; fs.` ~ var ~ `) {
+    lua_pushnumber(L, val); lua_rawseti(L, -2,to!int(i+1));
+}
 lua_setfield(L, tblIdx, "` ~ var ~`");`;
 }
 
@@ -336,8 +346,7 @@ void pushFlowStateToTable(lua_State* L, int tblIdx, in FlowState fs, GasModel gm
         mixin(pushGasVarArray("k_modes"));
     }
     version(komega) {
-        mixin(pushFSVar("tke"));
-        mixin(pushFSVar("omega"));
+        mixin(pushFSVarArray("turb"));
     }
     mixin(pushFSVar("mu_t"));
     mixin(pushFSVar("k_t"));
@@ -393,6 +402,18 @@ if ( lua_istable(L, -1 ) ) {
 }
 lua_pop(L, 1);`;
 }
+
+string checkFSVarArray(string var)
+{
+    return `lua_getfield(L, 2, "`~var~`");
+if ( lua_istable(L, -1 ) ) {
+    double[] arr;
+    getArrayOfDoubles(L, -2, "`~var~`", arr);
+    foreach(i; 0 .. arr.length) fs.`~var~`[i] = arr[i];
+}
+lua_pop(L, 1);`;
+}
+
 
 string checkFSVar(string var)
 {
@@ -485,8 +506,7 @@ extern(C) int fromTable(lua_State* L)
 
     // Now look turbulence quantities
     version(komega) {
-        mixin(checkFSVar("tke"));
-        mixin(checkFSVar("omega"));
+        mixin(checkFSVarArray("turb"));
     }
     mixin(checkFSVar("mu_t"));
     mixin(checkFSVar("k_t"));

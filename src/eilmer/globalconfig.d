@@ -60,7 +60,6 @@ enum FlowVar {
     psi, quality, p, a, mu, k,
     mu_t, k_t, S,
     Q_rad_org, f_rad_org, Q_rE_rad,
-    tke, omega,
     dt_local, dt_chem, u, T, dt_therm
 };
 
@@ -92,8 +91,6 @@ string flowVarName(FlowVar var)
     case FlowVar.Q_rad_org: return "Q_rad_org";
     case FlowVar.f_rad_org: return "f_rad_org";
     case FlowVar.Q_rE_rad: return "Q_rE_rad";
-    case FlowVar.tke: return "tke";
-    case FlowVar.omega: return "omega";
     case FlowVar.dt_local: return "dt_local";
     case FlowVar.dt_chem: return "dt_chem";
     case FlowVar.u: return "u";
@@ -106,6 +103,7 @@ string massfName(GasModel gmodel, int i) {
     name = tr(name, " \t", "--", "s"); // Replace internal whitespace with dashes.
     return "massf[" ~ to!string(i) ~ "]-" ~ to!string(name);
 }
+string turb_varName(int i) { string[2] tvnames=["tke", "omega"]; return tvnames[i];} 
 string k_modesName(int i) { return "k_modes[" ~ to!string(i) ~ "]"; }
 string u_modesName(int i) { return "u_modes[" ~ to!string(i) ~ "]"; }
 string T_modesName(int i) { return "T_modes[" ~ to!string(i) ~ "]"; }
@@ -825,7 +823,7 @@ final class GlobalConfig {
                      flowVarName(FlowVar.f_rad_org),
                      flowVarName(FlowVar.Q_rE_rad)];
         }
-        list ~= [flowVarName(FlowVar.tke), flowVarName(FlowVar.omega)];
+        foreach(i; 0 .. 2) list ~= turb_varName(i); // Todo: Generalise (NNG)
         foreach(i; 0 .. gmodel_master.n_species) { list ~= [massfName(gmodel_master, i)]; }
         if (gmodel_master.n_species > 1) { list ~= flowVarName(FlowVar.dt_chem); }
         list ~= [flowVarName(FlowVar.u), flowVarName(FlowVar.T)];

@@ -172,8 +172,8 @@ public:
                     cell = blk.get_cell(i,j,k);
                     iface = cell.iface[Face.north];
                     version(komega) {
-                        cell.fs.tke = iface.fs.tke;
-                        cell.fs.omega = iface.fs.omega;
+                        cell.fs.turb[0] = iface.fs.turb[0];
+                        cell.fs.turb[1] = iface.fs.turb[1];
                     }
                 } // end i loop
             } // for k
@@ -185,8 +185,8 @@ public:
                     cell = blk.get_cell(i,j,k);
                     iface = cell.iface[Face.east];
                     version(komega) {
-                        cell.fs.tke = iface.fs.tke;
-                        cell.fs.omega = iface.fs.omega;
+                        cell.fs.turb[0] = iface.fs.turb[0];
+                        cell.fs.turb[1] = iface.fs.turb[1];
                     }
                 } // end j loop
             } // for k
@@ -198,8 +198,8 @@ public:
                     cell = blk.get_cell(i,j,k);
                     iface = cell.iface[Face.south];
                     version(komega) {
-                        cell.fs.tke = iface.fs.tke;
-                        cell.fs.omega = iface.fs.omega;
+                        cell.fs.turb[0] = iface.fs.turb[0];
+                        cell.fs.turb[1] = iface.fs.turb[1];
                     }
                 } // end i loop
             } // for k
@@ -211,8 +211,8 @@ public:
                     cell = blk.get_cell(i,j,k);
                     iface = cell.iface[Face.west];
                     version(komega) {
-                        cell.fs.tke = iface.fs.tke;
-                        cell.fs.omega = iface.fs.omega;
+                        cell.fs.turb[0] = iface.fs.turb[0];
+                        cell.fs.turb[1] = iface.fs.turb[1];
                     }
                 } // end j loop
             } // for k
@@ -224,8 +224,8 @@ public:
                     cell = blk.get_cell(i,j,k);
                     iface = cell.iface[Face.top];
                     version(komega) {
-                        cell.fs.tke = iface.fs.tke;
-                        cell.fs.omega = iface.fs.omega;
+                        cell.fs.turb[0] = iface.fs.turb[0];
+                        cell.fs.turb[1] = iface.fs.turb[1];
                     }
                 } // end j loop
             } // for i
@@ -237,8 +237,8 @@ public:
                     cell = blk.get_cell(i,j,k);
                     iface = cell.iface[Face.bottom];
                     version(komega) {
-                        cell.fs.tke = iface.fs.tke;
-                        cell.fs.omega = iface.fs.omega;
+                        cell.fs.turb[0] = iface.fs.turb[0];
+                        cell.fs.turb[1] = iface.fs.turb[1];
                     }
                 } // end j loop
             } // for i

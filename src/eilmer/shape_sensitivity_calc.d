@@ -852,8 +852,8 @@ void main(string[] args) {
                 tmp[1][0] = cell.fs.vel.x.im/EPS.im;
                 tmp[2][0] = cell.fs.vel.y.im/EPS.im;
                 tmp[3][0] = cell.fs.gas.p.im/EPS.im;
-                tmp[4][0] = cell.fs.tke.im/EPS.im;
-                tmp[5][0] = cell.fs.omega.im/EPS.im;
+                tmp[4][0] = cell.fs.turb[0].im/EPS.im;
+                tmp[5][0] = cell.fs.turb[1].im/EPS.im;
                     
                 cell.U[1].copy_values_from(cell.U[0]);
                 cell.U[1].momentum.refx += EPS;
@@ -862,8 +862,8 @@ void main(string[] args) {
                 tmp[1][1] = cell.fs.vel.x.im/EPS.im;
                 tmp[2][1] = cell.fs.vel.y.im/EPS.im;
                 tmp[3][1] = cell.fs.gas.p.im/EPS.im;
-                tmp[4][1] = cell.fs.tke.im/EPS.im;
-                tmp[5][1] = cell.fs.omega.im/EPS.im;
+                tmp[4][1] = cell.fs.turb[0].im/EPS.im;
+                tmp[5][1] = cell.fs.turb[1].im/EPS.im;
                 
                 cell.U[1].copy_values_from(cell.U[0]);
                 cell.U[1].momentum.refy += EPS;
@@ -872,8 +872,8 @@ void main(string[] args) {
                 tmp[1][2] = cell.fs.vel.x.im/EPS.im;
                 tmp[2][2] = cell.fs.vel.y.im/EPS.im;
                 tmp[3][2] = cell.fs.gas.p.im/EPS.im;
-                tmp[4][2] = cell.fs.tke.im/EPS.im;
-                tmp[5][2] = cell.fs.omega.im/EPS.im;
+                tmp[4][2] = cell.fs.turb[0].im/EPS.im;
+                tmp[5][2] = cell.fs.turb[1].im/EPS.im;
                 
                 cell.U[1].copy_values_from(cell.U[0]);
                 cell.U[1].total_energy += EPS;
@@ -882,8 +882,8 @@ void main(string[] args) {
                 tmp[1][3] = cell.fs.vel.x.im/EPS.im;
                 tmp[2][3] = cell.fs.vel.y.im/EPS.im;
                 tmp[3][3] = cell.fs.gas.p.im/EPS.im;
-                tmp[4][3] = cell.fs.tke.im/EPS.im;
-                tmp[5][3] = cell.fs.omega.im/EPS.im;
+                tmp[4][3] = cell.fs.turb[0].im/EPS.im;
+                tmp[5][3] = cell.fs.turb[1].im/EPS.im;
                 
                 cell.U[1].copy_values_from(cell.U[0]);
                 cell.U[1].tke += EPS;
@@ -892,8 +892,8 @@ void main(string[] args) {
                 tmp[1][4] = cell.fs.vel.x.im/EPS.im;
                 tmp[2][4] = cell.fs.vel.y.im/EPS.im;
                 tmp[3][4] = cell.fs.gas.p.im/EPS.im;
-                tmp[4][4] = cell.fs.tke.im/EPS.im;
-                tmp[5][4] = cell.fs.omega.im/EPS.im;
+                tmp[4][4] = cell.fs.turb[0].im/EPS.im;
+                tmp[5][4] = cell.fs.turb[1].im/EPS.im;
                 
                 cell.U[1].copy_values_from(cell.U[0]);
                 cell.U[1].omega += EPS;
@@ -902,8 +902,8 @@ void main(string[] args) {
                 tmp[1][5] = cell.fs.vel.x.im/EPS.im;
                 tmp[2][5] = cell.fs.vel.y.im/EPS.im;
                 tmp[3][5] = cell.fs.gas.p.im/EPS.im;
-                tmp[4][5] = cell.fs.tke.im/EPS.im;
-                tmp[5][5] = cell.fs.omega.im/EPS.im;
+                tmp[4][5] = cell.fs.turb[0].im/EPS.im;
+                tmp[5][5] = cell.fs.turb[1].im/EPS.im;
                 
                 writeln("ref: ", cell.id, ", ", tmp);
             }

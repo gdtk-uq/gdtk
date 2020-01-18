@@ -286,12 +286,12 @@ public:
         }
         //
         version(komega) {
-            mixin(codeForGradients("tke"));
+            mixin(codeForGradients("turb[0]"));
             tke[0] = gradient_x * area_inv;
             tke[1] = -gradient_y * area_inv;
             tke[2] = 0.0;
             //
-            mixin(codeForGradients("omega"));
+            mixin(codeForGradients("turb[1]"));
             omega[0] = gradient_x * area_inv;
             omega[1] = -gradient_y * area_inv;
             omega[2] = 0.0;
@@ -483,8 +483,8 @@ public:
             }
         }
         version(komega) {
-            mixin(codeForGradients("tke", "tke"));
-            mixin(codeForGradients("omega", "omega"));
+            mixin(codeForGradients("turb[0]", "tke"));
+            mixin(codeForGradients("turb[1]", "omega"));
         }
     } // end gradients_leastsq()
 

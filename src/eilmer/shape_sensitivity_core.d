@@ -92,8 +92,8 @@ void evalPrimitiveJacobianVecProd(FluidBlock blk, size_t nPrimitive, number[] v,
         if ( blk.myConfig.dimensions == 3 )
             cell.fs.vel.refz += EPS*v[cellCount+blk.Z_MOM];
         if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
-            cell.fs.tke += EPS*v[cellCount+blk.TKE];
-            cell.fs.omega += EPS*v[cellCount+blk.OMEGA];
+            cell.fs.turb[0] += EPS*v[cellCount+blk.TKE];
+            cell.fs.turb[1] += EPS*v[cellCount+blk.OMEGA];
         }
                 
         blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);
@@ -598,8 +598,8 @@ string computeGhostCellDerivatives(string varName, string posInArray, bool inclu
     codeStr ~= "}";
     codeStr ~= "qP[blk.TOT_ENERGY] = pcell.fs.gas.p;";
     codeStr ~= "if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {";
-    codeStr ~= "qP[blk.TKE] = pcell.fs.tke;";
-    codeStr ~= "qP[blk.OMEGA] = pcell.fs.omega;";
+    codeStr ~= "qP[blk.TKE] = pcell.fs.turb[0];";
+    codeStr ~= "qP[blk.OMEGA] = pcell.fs.turb[1];";
     codeStr ~= "}";
     codeStr ~= "bcells[0].copy_values_from(blk.cellSave, CopyDataOption.all);";
     codeStr ~= "if(blk.bc[bface.bc_id].preReconAction.length > 0) {";
@@ -675,9 +675,9 @@ void fill_boundary_conditions(FluidBlock blk, size_t np, size_t orderOfJacobian,
                 mixin(computeGhostCellDerivatives("gas.p", "blk.TOT_ENERGY", true));
                 if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
                     // 4th perturbation: k
-                    mixin(computeGhostCellDerivatives("tke", "blk.TKE", false));
+                    mixin(computeGhostCellDerivatives("turb[0]", "blk.TKE", false));
                     // 5th perturbation: omega
-                    mixin(computeGhostCellDerivatives("omega", "blk.OMEGA", false));
+                    mixin(computeGhostCellDerivatives("turb[1]", "blk.OMEGA", false));
                 }
 		
 		pcell.dqdQ = dqdQ;
@@ -735,9 +735,9 @@ void apply_boundary_conditions(ref SMatrix!number A, FluidBlock blk, size_t np, 
                 mixin(computeGhostCellDerivatives("gas.p", "blk.TOT_ENERGY", true));
                 if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
                     // 4th perturbation: k
-                    mixin(computeGhostCellDerivatives("tke", "blk.TKE", false));
+                    mixin(computeGhostCellDerivatives("turb[0]", "blk.TKE", false));
                     // 5th perturbation: omega
-                    mixin(computeGhostCellDerivatives("omega", "blk.OMEGA", false));
+                    mixin(computeGhostCellDerivatives("turb[1]", "blk.OMEGA", false));
                 }
 
 		///////
@@ -825,9 +825,9 @@ void apply_boundary_conditions(ref SMatrix!number A, FluidBlock blk, size_t np, 
                 mixin(computeFluxDerivativesAroundCell("gas.p", "blk.TOT_ENERGY", true));
                 if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
                     // 4th perturbation: k
-                    mixin(computeFluxDerivativesAroundCell("tke", "blk.TKE", false));
+                    mixin(computeFluxDerivativesAroundCell("turb[0]", "blk.TKE", false));
                     // 5th perturbation: omega
-                    mixin(computeFluxDerivativesAroundCell("omega", "blk.OMEGA", false));
+                    mixin(computeFluxDerivativesAroundCell("turb[1]", "blk.OMEGA", false));
                 } 
   
                 foreach(bcell; pcell.jacobian_cell_stencil) {
@@ -918,14 +918,14 @@ void apply_boundary_conditions(ref SMatrix!number A, FluidBlock blk, size_t np, 
 				blk.Minv[blk.TOT_ENERGY,blk.TKE] = -(gamma-1.0); 
 				blk.Minv[blk.TOT_ENERGY,blk.OMEGA] = to!number(0.0);
 				// fifth row
-				blk.Minv[blk.TKE,blk.MASS] = -bcells[0].fs.tke/bcells[0].fs.gas.rho;
+				blk.Minv[blk.TKE,blk.MASS] = -bcells[0].fs.turb[0]/bcells[0].fs.gas.rho;
 				blk.Minv[blk.TKE,blk.X_MOM] = to!number(0.0);
 				blk.Minv[blk.TKE,blk.Y_MOM] = to!number(0.0);
 				blk.Minv[blk.TKE,blk.TOT_ENERGY] = to!number(0.0);
 				blk.Minv[blk.TKE,blk.TKE] = 1.0/bcells[0].fs.gas.rho;
 				blk.Minv[blk.TKE,blk.OMEGA] = to!number(0.0);
 				// sixth row
-				blk.Minv[blk.OMEGA,blk.MASS] = -bcells[0].fs.omega/bcells[0].fs.gas.rho;
+				blk.Minv[blk.OMEGA,blk.MASS] = -bcells[0].fs.turb[1]/bcells[0].fs.gas.rho;
 				blk.Minv[blk.OMEGA,blk.X_MOM] = to!number(0.0);
 				blk.Minv[blk.OMEGA,blk.Y_MOM] = to!number(0.0);
 				blk.Minv[blk.OMEGA,blk.TOT_ENERGY] = to!number(0.0);
@@ -1351,9 +1351,9 @@ void form_external_flow_jacobian_block_phase3(ref SMatrix!number A, FluidBlock b
                         mixin(computeFluxDerivativesAroundCell("gas.p", "blk.TOT_ENERGY", true));
                         if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
                             // 4th perturbation: k
-                            mixin(computeFluxDerivativesAroundCell("tke", "blk.TKE", false));
+                            mixin(computeFluxDerivativesAroundCell("turb[0]", "blk.TKE", false));
                             // 5th perturbation: omega
-                            mixin(computeFluxDerivativesAroundCell("omega", "blk.OMEGA", false));
+                            mixin(computeFluxDerivativesAroundCell("turb[1]", "blk.OMEGA", false));
                         }
                         
                         foreach(cell; pcell.jacobian_cell_stencil) {
@@ -1425,8 +1425,8 @@ void construct_flow_jacobian_for_boundary_cells(FVCell pcell, FVCell icell, Flui
         mixin(computeFluxDerivativesAroundCell("vel.refz", "blk.Z_MOM", false));
     mixin(computeFluxDerivativesAroundCell("gas.p", "blk.TOT_ENERGY", true));
     if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
-        mixin(computeFluxDerivativesAroundCell("tke", "blk.TKE", false));
-        mixin(computeFluxDerivativesAroundCell("omega", "blk.OMEGA", false));
+        mixin(computeFluxDerivativesAroundCell("turb[0]", "blk.TKE", false));
+        mixin(computeFluxDerivativesAroundCell("turb[1]", "blk.OMEGA", false));
     }
 
     // compute cell residual sensitivities (flow Jacobian entries) by integrating interface flux sensitivities
@@ -1745,9 +1745,9 @@ void compute_flow_jacobian_rows_for_cell(ref SMatrix!number A, ref size_t aa_idx
     mixin(computeFluxDerivativesAroundCell("gas.p", "blk.TOT_ENERGY", true));
     if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
         // 4th perturbation: tke
-        mixin(computeFluxDerivativesAroundCell("tke", "blk.TKE", false));
+        mixin(computeFluxDerivativesAroundCell("turb[0]", "blk.TKE", false));
         // 5th perturbation: omega
-        mixin(computeFluxDerivativesAroundCell("omega", "blk.OMEGA", false));
+        mixin(computeFluxDerivativesAroundCell("turb[1]", "blk.OMEGA", false));
     }
     // transform the face flux Jacobians from primitive to conservative form
     if (transformToConserved) {
@@ -1802,14 +1802,14 @@ void compute_flow_jacobian_rows_for_cell(ref SMatrix!number A, ref size_t aa_idx
                 blk.Minv[blk.TOT_ENERGY,blk.TKE] = -(gamma-1.0);
                 blk.Minv[blk.TOT_ENERGY,blk.OMEGA] = to!number(0.0);
                 // fifth row
-                blk.Minv[blk.TKE,blk.MASS] = -pcell.fs.tke/pcell.fs.gas.rho;
+                blk.Minv[blk.TKE,blk.MASS] = -pcell.fs.turb[0]/pcell.fs.gas.rho;
                 blk.Minv[blk.TKE,blk.X_MOM] = to!number(0.0);
                 blk.Minv[blk.TKE,blk.Y_MOM] = to!number(0.0);
                 blk.Minv[blk.TKE,blk.TOT_ENERGY] = to!number(0.0);
                 blk.Minv[blk.TKE,blk.TKE] = 1.0/pcell.fs.gas.rho;
                 blk.Minv[blk.TKE,blk.OMEGA] = to!number(0.0);
                 // sixth row
-                blk.Minv[blk.OMEGA,blk.MASS] = -pcell.fs.omega/pcell.fs.gas.rho;
+                blk.Minv[blk.OMEGA,blk.MASS] = -pcell.fs.turb[1]/pcell.fs.gas.rho;
                 blk.Minv[blk.OMEGA,blk.X_MOM] = to!number(0.0);
                 blk.Minv[blk.OMEGA,blk.Y_MOM] = to!number(0.0);
                 blk.Minv[blk.OMEGA,blk.TOT_ENERGY] = to!number(0.0);
@@ -1892,14 +1892,14 @@ void compute_flow_jacobian_rows_for_cell(ref SMatrix!number A, ref size_t aa_idx
                 blk.Minv[blk.TOT_ENERGY,blk.TKE] = -(gamma-1.0);
                 blk.Minv[blk.TOT_ENERGY,blk.OMEGA] = to!number(0.0);
                 // fifth row
-                blk.Minv[blk.TKE,blk.MASS] = -pcell.fs.tke/pcell.fs.gas.rho;
+                blk.Minv[blk.TKE,blk.MASS] = -pcell.fs.turb[0]/pcell.fs.gas.rho;
                 blk.Minv[blk.TKE,blk.X_MOM] = to!number(0.0);
                 blk.Minv[blk.TKE,blk.Y_MOM] = to!number(0.0);
                 blk.Minv[blk.TKE,blk.TOT_ENERGY] = to!number(0.0);
                 blk.Minv[blk.TKE,blk.TKE] = 1.0/pcell.fs.gas.rho;
                 blk.Minv[blk.TKE,blk.OMEGA] = to!number(0.0);
                 // sixth row
-                blk.Minv[blk.OMEGA,blk.MASS] = -pcell.fs.omega/pcell.fs.gas.rho;
+                blk.Minv[blk.OMEGA,blk.MASS] = -pcell.fs.turb[1]/pcell.fs.gas.rho;
                 blk.Minv[blk.OMEGA,blk.X_MOM] = to!number(0.0);
                 blk.Minv[blk.OMEGA,blk.Y_MOM] = to!number(0.0);
                 blk.Minv[blk.OMEGA,blk.TOT_ENERGY] = to!number(0.0);

@@ -316,9 +316,9 @@ void set_flux_vector_in_local_frame(ref ConservedQuantities F, ref FlowState fs,
     F.momentum.set(F.mass*vn + p, F.mass*vt1, F.mass*vt2);
     F.total_energy = F.mass*(u+ke) + p*vn;
     version(komega) {
-        F.total_energy += fs.tke;
-        F.tke = F.mass * fs.tke;  // turbulence kinetic energy
-        F.omega = F.mass * fs.omega;  // pseudo vorticity
+        F.total_energy += fs.turb[0]; // TODO: Generalise to tke function (NNG)
+        F.tke = F.mass * fs.turb[0];  // turbulence kinetic energy
+        F.omega = F.mass * fs.turb[1];  // pseudo vorticity
     }
     version(multi_species_gas) {
         uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
@@ -398,7 +398,7 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
     number aL = Lft.gas.a;
     number keL = 0.5*(uL*uL + vL*vL + wL*wL);
     number HL = eL + pLrL + keL;
-    version(komega) { HL += Lft.tke; }
+    version(komega) { HL += Lft.turb[0]; } // Generalise to TKE function (NNG)
     //
     number rR = Rght.gas.rho;
     number pR = Rght.gas.p;
@@ -410,7 +410,7 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
     number aR = Rght.gas.a;
     number keR = 0.5*(uR*uR + vR*vR + wR*wR);
     number HR = eR + pRrR + keR;
-    version(komega) { HR += Rght.tke; }
+    version(komega) { HR += Rght.turb[0]; } // Generalise to tke function (NNG)
     //
     // This is the main part of the flux calculator.
     // Weighting parameters (eqn 32) for velocity splitting.
@@ -469,8 +469,8 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
         F.momentum.set(ru2_half+p_half, ru_half*vL, ru_half*wL);
         F.total_energy = ru_half*HL;
         version(komega) {
-            F.tke = ru_half*Lft.tke;
-            F.omega = ru_half*Lft.omega;
+            F.tke = ru_half*Lft.turb[0];
+            F.omega = ru_half*Lft.turb[1];
         }
         version(multi_species_gas) {
             uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
@@ -489,8 +489,8 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
         F.momentum.set(ru2_half+p_half, ru_half*vR, ru_half*wR);
         F.total_energy = ru_half*HR;
         version(komega) {
-            F.tke = ru_half*Rght.tke;
-            F.omega = ru_half*Rght.omega;
+            F.tke = ru_half*Rght.turb[0];
+            F.omega = ru_half*Rght.turb[1];
         }
         version(multi_species_gas) {
             uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
@@ -517,8 +517,8 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
         F.momentum.refz -= d_ua*(rR*wR - rL*wL);
         F.total_energy -= d_ua*(rR*HR - rL*HL);
         version(komega) {
-            F.tke -= d_ua*(rR*Rght.tke - rL*Lft.tke);
-            F.omega -= d_ua*(rR*Rght.omega - rL*Lft.omega);
+            F.tke -= d_ua*(rR*Rght.turb[0] - rL*Lft.turb[0]);
+            F.omega -= d_ua*(rR*Rght.turb[1] - rL*Lft.turb[1]);
         }
         version(multi_species_gas) {
             uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
@@ -559,7 +559,7 @@ void hanel(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
     number aL = Lft.gas.a;
     number keL = 0.5*(uL*uL + vL*vL + wL*wL);
     number HL = eL + pLrL + keL;
-    version(komega) { HL += Lft.tke; }
+    version(komega) { HL += Lft.turb[0]; } // Generalise to tke function (NNG)
     //
     number rR = Rght.gas.rho;
     number pR = Rght.gas.p;
@@ -571,7 +571,7 @@ void hanel(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
     number aR = Rght.gas.a;
     number keR = 0.5*(uR*uR + vR*vR + wR*wR);
     number HR = eR + pRrR + keR;
-    version(komega) { HR += Rght.tke; }
+    version(komega) { HR += Rght.turb[0]; } // Generalise to tke function (NNG)
     //
     number am = fmax(aL, aR);
     number ML = uL / am;
@@ -611,8 +611,8 @@ void hanel(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
                    uLplus * rL * wL + uRminus * rR * wR);
     F.total_energy = uLplus * rL * HL + uRminus * rR * HR;
     version(komega) {
-        F.tke = uLplus * rL * Lft.tke + uRminus * rR * Rght.tke;
-        F.omega = uLplus * rL * Lft.omega + uRminus * rR * Rght.omega;
+        F.tke = uLplus * rL * Lft.turb[0] + uRminus * rR * Rght.turb[0];
+        F.omega = uLplus * rL * Lft.turb[1] + uRminus * rR * Rght.turb[1];
     }
     version(multi_species_gas) {
         uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
@@ -673,7 +673,7 @@ void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
     presL = Lft.gas.p;
     eL = gmodel.internal_energy(Lft.gas);
     hL = eL + presL/rhoL;
-    version(komega) { hL += Lft.tke; } // bundle turbulent energy, PJ 2017-06-17
+    version(komega) { hL += Lft.turb[0]; } // bundle turbulent energy, PJ 2017-06-17
     tL = Lft.gas.T;
     vnL = Lft.vel.x;
     vpL = Lft.vel.y;
@@ -683,7 +683,7 @@ void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
     presR = Rght.gas.p;
     eR = gmodel.internal_energy(Rght.gas);
     hR = eR + presR/rhoR;
-    version(komega) { hR += Rght.tke; }
+    version(komega) { hR += Rght.turb[0]; }
     tR = Rght.gas.T;
     vnR = Rght.vel.x;
     vpR = Rght.vel.y;
@@ -740,8 +740,8 @@ void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
     // EFM approach where there can be fluxes from both sides.
     if (F.mass > 0.0) {
         version(komega) {
-            F.tke = F.mass * Lft.tke;
-            F.omega = F.mass * Lft.omega;
+            F.tke = F.mass * Lft.turb[0];
+            F.omega = F.mass * Lft.turb[1];
         }
         version(multi_species_gas) {
             uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
@@ -757,8 +757,8 @@ void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
         // F.energies[$-1] += (F.mass) * Lft.gas.p_e / Lft.gas.rho; [TODO]
     } else {
         version(komega) {
-            F.tke = F.mass * Rght.tke;
-            F.omega = F.mass * Rght.omega;
+            F.tke = F.mass * Rght.turb[0];
+            F.omega = F.mass * Rght.turb[1];
         }
         version(multi_species_gas) {
             uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
@@ -938,7 +938,7 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
     number aL = Lft.gas.a;
     number keL = 0.5 * (uL * uL + vL * vL + wL * wL);
     number HL = eL + pL/rL + keL;
-    version(komega) { HL += Lft.tke; }
+    version(komega) { HL += Lft.turb[0]; }
     //
     number rR = Rght.gas.rho;
     number pR = Rght.gas.p;
@@ -949,7 +949,7 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
     number aR = Rght.gas.a;
     number keR = 0.5 * (uR * uR + vR * vR + wR * wR);
     number HR = eR + pR/rR + keR;
-    version(komega) { HR += Rght.tke; }
+    version(komega) { HR += Rght.turb[0]; }
     //
     // This is the main part of the flux calculator.
     //
@@ -1011,8 +1011,8 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
         F.momentum.set(ru2_half+p_half, ru_half*vL, ru_half*wL);
         F.total_energy = ru_half * HL;
         version(komega) {
-            F.tke = ru_half * Lft.tke;
-            F.omega = ru_half * Lft.omega;
+            F.tke = ru_half * Lft.turb[0];
+            F.omega = ru_half * Lft.turb[1];
         }
         version(multi_species_gas) {
             uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
@@ -1031,8 +1031,8 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
         F.momentum.set(ru2_half+p_half, ru_half*vR, ru_half*wR);
         F.total_energy = ru_half * HR;
         version(komega) {
-            F.tke = ru_half * Rght.tke;
-            F.omega = ru_half * Rght.omega;
+            F.tke = ru_half * Rght.turb[0];
+            F.omega = ru_half * Rght.turb[1];
         }
         version(multi_species_gas) {
             uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
@@ -1231,7 +1231,7 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalCo
     number aL = Lft.gas.a;
     number keL = 0.5*(uL*uL + vL*vL + wL*wL);
     number HL = eL + pLrL + keL;
-    version(komega) { HL += Lft.tke; }
+    version(komega) { HL += Lft.turb[0]; }
     //
     number rR = Rght.gas.rho;
     number pR = Rght.gas.p;
@@ -1243,7 +1243,7 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalCo
     number aR = Rght.gas.a;
     number keR = 0.5*(uR*uR + vR*vR + wR*wR);
     number HR = eR + pRrR + keR;
-    version(komega) { HR += Rght.tke; }
+    version(komega) { HR += Rght.turb[0]; }
 
     // averaged gamma
     number gL = gmodel.gamma(Lft.gas);
@@ -1355,8 +1355,8 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalCo
     if (F.mass >= 0.0) {
         /* Wind is blowing from the left */
         version(komega) {
-            F.tke = F.mass*Lft.tke;
-            F.omega = F.mass*Lft.omega;
+            F.tke = F.mass*Lft.turb[0];
+            F.omega = F.mass*Lft.turb[1];
         }
         version(multi_species_gas) {
             uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
@@ -1368,8 +1368,8 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalCo
     } else {
         /* Wind is blowing from the right */
         version(komega) {
-            F.tke = F.mass*Rght.tke;
-            F.omega = F.mass*Rght.omega;
+            F.tke = F.mass*Rght.turb[0];
+            F.omega = F.mass*Rght.turb[1];
         }
         version(multi_species_gas) {
             uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;

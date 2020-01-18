@@ -460,7 +460,7 @@ public:
                 avgdotehat = 0.5*(cL0.grad.tke[0]+cR0.grad.tke[0])*ehatx +
                     0.5*(cL0.grad.tke[1]+cR0.grad.tke[1])*ehaty +
                     0.5*(cL0.grad.tke[2]+cR0.grad.tke[2])*ehatz;
-                jump = avgdotehat - (cR0.fs.tke - cL0.fs.tke)/emag;
+                jump = avgdotehat - (cR0.fs.turb[0] - cL0.fs.turb[0])/emag;
                 grad.tke[0] = 0.5*(cL0.grad.tke[0]+cR0.grad.tke[0]) - jump*(nx/ndotehat);
                 grad.tke[1] = 0.5*(cL0.grad.tke[1]+cR0.grad.tke[1]) - jump*(ny/ndotehat);
                 grad.tke[2] = 0.5*(cL0.grad.tke[2]+cR0.grad.tke[2]) - jump*(nz/ndotehat);
@@ -469,7 +469,7 @@ public:
                 avgdotehat = 0.5*(cL0.grad.omega[0]+cR0.grad.omega[0])*ehatx +
                     0.5*(cL0.grad.omega[1]+cR0.grad.omega[1])*ehaty +
                     0.5*(cL0.grad.omega[2]+cR0.grad.omega[2])*ehatz;
-                jump = avgdotehat - (cR0.fs.omega - cL0.fs.omega)/emag;
+                jump = avgdotehat - (cR0.fs.turb[1] - cL0.fs.turb[1])/emag;
                 grad.omega[0] = 0.5*(cL0.grad.omega[0]+cR0.grad.omega[0]) - jump*(nx/ndotehat);
                 grad.omega[1] = 0.5*(cL0.grad.omega[1]+cR0.grad.omega[1]) - jump*(ny/ndotehat);
                 grad.omega[2] = 0.5*(cL0.grad.omega[2]+cR0.grad.omega[2]) - jump*(nz/ndotehat);
@@ -663,13 +663,13 @@ public:
                 number tau_wz = 0.0;
                 if ( myConfig.turbulence_model == TurbulenceModel.k_omega &&
                      !(myConfig.axisymmetric && (Ybar <= 1.0e-10)) ) {
-                    // Turbulence contribution to the shear stresses.
-                    tau_xx -= 2.0/3.0 * fs.gas.rho * fs.tke;
-                    tau_yy -= 2.0/3.0 * fs.gas.rho * fs.tke;
-                    if (myConfig.dimensions == 3) { tau_zz -= 2.0/3.0 * fs.gas.rho * fs.tke; }
+                    // Turbulence contribution to the shear stresses. TODO: tke function (NNG)
+                    tau_xx -= 2.0/3.0 * fs.gas.rho * fs.turb[0];
+                    tau_yy -= 2.0/3.0 * fs.gas.rho * fs.turb[0];
+                    if (myConfig.dimensions == 3) { tau_zz -= 2.0/3.0 * fs.gas.rho * fs.turb[0]; }
                     // Turbulence contribution to heat transfer.
                     number sigma_star = 0.6;
-                    number mu_effective = fs.gas.mu + sigma_star * fs.gas.rho * fs.tke / fs.omega;
+                    number mu_effective = fs.gas.mu + sigma_star * fs.gas.rho * fs.turb[0] / fs.turb[1];
                     // Apply a limit on mu_effective in the same manner as that applied to mu_t.
                     mu_effective = fmin(mu_effective, myConfig.max_mu_t_factor * fs.gas.mu);
                     qx += mu_effective * grad.tke[0];
@@ -680,7 +680,7 @@ public:
                     tau_ky = mu_effective * grad.tke[1];
                     if (myConfig.dimensions == 3) { tau_kz = mu_effective * grad.tke[2]; }
                     number sigma = 0.5;
-                    mu_effective = fs.gas.mu + sigma * fs.gas.rho * fs.tke / fs.omega;
+                    mu_effective = fs.gas.mu + sigma * fs.gas.rho * fs.turb[0] / fs.turb[1];
                     // Apply a limit on mu_effective in the same manner as that applied to mu_t.
                     mu_effective = fmin(mu_effective, myConfig.max_mu_t_factor * fs.gas.mu);
                     tau_wx = mu_effective * grad.omega[0]; 

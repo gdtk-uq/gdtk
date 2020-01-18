@@ -1082,6 +1082,30 @@ public:
         }
     } // end exchange_geometry_phase2()
 
+    @nogc
+    size_t flowstate_buffer_entry_size(const LocalConfig myConfig){
+        /*
+        Compute the amount of space needed for one flowstate in the SEND/RECV buffer 
+        Previously, this code was duplicated in two places, and it was easy to 
+        get bitten by not changing both at once when adding things to the flowstate variables
+
+        Note: This routine must be kept consistent with the buffer packing in exchange_flowstate
+        phases 1 and 2
+        @author: Nick N. Gibbons
+        */
+
+        size_t nspecies = myConfig.n_species;
+        size_t nmodes = myConfig.n_modes;
+
+        size_t nitems = 16;
+        nitems += nmodes*3;
+        nitems += nspecies;
+        version(MHD) { nitems += 5; }
+        version(komega) { nitems += 2; } // TODO: Generalise (NNG)
+
+        return nitems;
+    }
+
     // not @nogc
     void exchange_flowstate_phase0(double t, int gtl, int ftl)
     {
@@ -1097,9 +1121,11 @@ public:
                 // and over in gas_state.d
                 // @nogc void copy_values_from(ref const(GasState) other) 
                 //
-                size_t nspecies = this_blk.myConfig.n_species;
-                size_t nmodes = this_blk.myConfig.n_modes;
-                size_t ne = ghost_cells.length * (nmodes*3 + nspecies + 23);
+                //size_t nspecies = this_blk.myConfig.n_species;
+                //size_t nmodes = this_blk.myConfig.n_modes;
+                //size_t ne = ghost_cells.length * (nmodes*3 + nspecies + 23);
+                size_t fs_size = flowstate_buffer_entry_size(this_blk.myConfig);
+                size_t ne = ghost_cells.length * fs_size;
                 if (incoming_flowstate_buf.length < ne) { incoming_flowstate_buf.length = ne; }
                 //
                 // Post non-blocking receive for geometry data that we expect to receive later
@@ -1171,10 +1197,13 @@ public:
                 // Blocking send of this block's flow data
                 // to the corresponding non-blocking receive that was posted
                 // in the other MPI process.
-                size_t nitems = 16;
-                version(MHD) { nitems += 5; }
-                version(komega) { nitems += 2; }
-                size_t ne = ghost_cells.length * (nmodes*3 + nspecies + nitems);
+                //size_t nitems = 16;
+                //version(MHD) { nitems += 5; }
+                //version(komega) { nitems += 2; }
+                //size_t ne = ghost_cells.length * (nmodes*3 + nspecies + nitems);
+
+                size_t fs_size = flowstate_buffer_entry_size(this_blk.myConfig);
+                size_t ne = ghost_cells.length * fs_size;
                 if (outgoing_flowstate_buf.length < ne) { outgoing_flowstate_buf.length = ne; }
                 outgoing_flowstate_tag = make_mpi_tag(blk.id, which_boundary, 0);
                 size_t ii = 0;
@@ -1214,8 +1243,8 @@ public:
                         outgoing_flowstate_buf[ii++] = fs.divB;
                     }
                     version(komega) {
-                        outgoing_flowstate_buf[ii++] = fs.tke;
-                        outgoing_flowstate_buf[ii++] = fs.omega;
+                        outgoing_flowstate_buf[ii++] = fs.turb[0];
+                        outgoing_flowstate_buf[ii++] = fs.turb[1];
                     }
                     outgoing_flowstate_buf[ii++] = fs.mu_t;
                     outgoing_flowstate_buf[ii++] = fs.k_t;
@@ -1301,8 +1330,8 @@ public:
                         fs.divB = incoming_flowstate_buf[ii++];
                     }
                     version(komega) {
-                        fs.tke = incoming_flowstate_buf[ii++];
-                        fs.omega = incoming_flowstate_buf[ii++];
+                        fs.turb[0] = incoming_flowstate_buf[ii++];
+                        fs.turb[1] = incoming_flowstate_buf[ii++];
                     }
                     fs.mu_t = incoming_flowstate_buf[ii++];
                     fs.k_t = incoming_flowstate_buf[ii++];

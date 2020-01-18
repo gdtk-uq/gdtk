@@ -294,8 +294,8 @@ public:
         }
         version(komega) {
             if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                mixin(codeForLimits("tke", "tke", "tkePhi", "tkeMax", "tkeMin"));
-                mixin(codeForLimits("omega", "omega", "omegaPhi", "omegaMax", "omegaMin"));
+                mixin(codeForLimits("turb[0]", "tke", "tkePhi", "tkeMax", "tkeMin"));
+                mixin(codeForLimits("turb[1]", "omega", "omegaPhi", "omegaMax", "omegaMin"));
             }
         }
         version(multi_species_gas) {
@@ -411,8 +411,8 @@ public:
         }
         version(komega) {
             if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                mixin(codeForLimits("tke", "tke", "tkePhi", "tkeMax", "tkeMin"));
-                mixin(codeForLimits("omega", "omega", "omegaPhi", "omegaMax", "omegaMin"));
+                mixin(codeForLimits("turb[0]", "tke", "tkePhi", "tkeMax", "tkeMin"));
+                mixin(codeForLimits("turb[1]", "omega", "omegaPhi", "omegaMax", "omegaMin"));
             }
         }
         version(multi_species_gas) {
@@ -508,8 +508,8 @@ public:
         }
         version(komega) {
             if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                mixin(codeForGradients("tke", "tke", "tkeMax", "tkeMin"));
-                mixin(codeForGradients("omega", "omega", "omegaMax", "omegaMin"));
+                mixin(codeForGradients("turb[0]", "tke", "tkeMax", "tkeMin"));
+                mixin(codeForGradients("turb[1]", "omega", "omegaMax", "omegaMin"));
             }
         }
         version(multi_species_gas) {
@@ -627,8 +627,8 @@ public:
         }
         version(komega) {
             if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                mixin(codeForLimits("tke", "tke", "tkePhi", "tkeMax", "tkeMin"));
-                mixin(codeForLimits("omega", "omega", "omegaPhi", "omegaMax", "omegaMin"));
+                mixin(codeForLimits("turb[0]", "tke", "tkePhi", "tkeMax", "tkeMin"));
+                mixin(codeForLimits("turb[1]", "omega", "omegaPhi", "omegaMax", "omegaMin"));
             }
         }
         version(multi_species_gas) {
@@ -773,8 +773,8 @@ public:
         }
         version(komega) {
             if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                mixin(codeForLimits("tke", "tke", "tkePhi", "tkeMax", "tkeMin"));
-                mixin(codeForLimits("omega", "omega", "omegaPhi", "omegaMax", "omegaMin"));
+                mixin(codeForLimits("turb[0]", "tke", "tkePhi", "tkeMax", "tkeMin"));
+                mixin(codeForLimits("turb[1]", "omega", "omegaPhi", "omegaMax", "omegaMin"));
             }
         }
         version(multi_species_gas) {
@@ -875,8 +875,8 @@ public:
         }
         version(komega) {
             if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                mixin(codeForGradients("tke", "tke", "tkeMax", "tkeMin"));
-                mixin(codeForGradients("omega", "omega", "omegaMax", "omegaMin"));
+                mixin(codeForGradients("turb[0]", "tke", "tkeMax", "tkeMin"));
+                mixin(codeForGradients("turb[1]", "omega", "omegaMax", "omegaMin"));
             }
         }
         version(multi_species_gas) {
@@ -1073,8 +1073,8 @@ public:
             }
             version(komega) {
                 if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                    mixin(codeForReconstruction("tke", "tke", "tke", "tkePhi"));
-                    mixin(codeForReconstruction("omega", "omega", "omega", "omegaPhi"));
+                    mixin(codeForReconstruction("turb[0]", "tke", "turb[0]", "tkePhi"));
+                    mixin(codeForReconstruction("turb[1]", "omega", "turb[1]", "omegaPhi"));
                 }
             }
             version(multi_species_gas) {
@@ -1252,8 +1252,8 @@ public:
             }
             version(komega) {
                 if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                    mixin(codeForReconstruction("tke", "tke", "tke", "tkePhi"));
-                    mixin(codeForReconstruction("omega", "omega", "omega", "omegaPhi"));
+                    mixin(codeForReconstruction("turb[0]", "tke", "turb[0]", "tkePhi"));
+                    mixin(codeForReconstruction("turb[1]", "omega", "turb[1]", "omegaPhi"));
                 }
             }
             version(multi_species_gas) {
@@ -1418,8 +1418,8 @@ public:
             }
             version(komega) {
                 if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                    mixin(codeForReconstruction("tke", "tke", "tke", "tkePhi"));
-                    mixin(codeForReconstruction("omega", "omega", "omega", "omegaPhi"));
+                    mixin(codeForReconstruction("turb[0]", "tke", "turb[0]", "tkePhi"));
+                    mixin(codeForReconstruction("turb[1]", "omega", "turb[1]", "omegaPhi"));
                 }
             }
             version(multi_species_gas) {

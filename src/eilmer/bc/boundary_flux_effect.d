@@ -499,15 +499,15 @@ private:
                 foreach (umode; fs.gas.u_modes) { utot += umode; }
             }
             version(komega) {
-                utot += fs.tke;
+                utot += fs.turb[0]; // TODO: Generalise to tke function NNG
             }
             face.F.total_energy = mass_flux*utot + fs.gas.p*dot(fs.vel,face.n);
             // [TODO] PJ 2018-10-24 check that fs.vel is the correct velocity
             // to use for pressure-work flowing across the face.
             // [TODO] PJ 2018-10-25 consider rothalpy flavour for rotating frame
             version(komega) {
-                face.F.tke = mass_flux * fs.tke;
-                face.F.omega = mass_flux * fs.omega;
+                face.F.tke = mass_flux * fs.turb[0];
+                face.F.omega = mass_flux * fs.turb[1];
             }
             version(MHD) {
                 // [TODO] PJ 2018-10-25 MHD?

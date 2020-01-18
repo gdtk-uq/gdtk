@@ -514,9 +514,9 @@ public:
         myU.total_energy = fs.gas.rho*(u + ke);
         version(komega) {
             if (with_k_omega) {
-                myU.tke = fs.gas.rho * fs.tke;
-                myU.omega = fs.gas.rho * fs.omega;
-                myU.total_energy += fs.gas.rho * fs.tke;
+                myU.tke = fs.gas.rho * fs.turb[0];
+                myU.omega = fs.gas.rho * fs.turb[1];
+                myU.total_energy += fs.gas.rho * fs.turb[0]; // Replace with tke function (NNG)
             } else {
                 myU.tke = 0.0;
                 myU.omega = fs.gas.rho * 1.0;
@@ -624,19 +624,19 @@ public:
         number u = rE * dinv;
         version(komega) {
             if (with_k_omega && allow_k_omega_update) {
-                fs.tke = myU.tke * dinv;
-                fs.omega = myU.omega * dinv;
+                fs.turb[0] = myU.tke * dinv;
+                fs.turb[1] = myU.omega * dinv;
                 // for stability, we enforce tke and omega to be positive.
                 // This approach is referred to as clipping in Chisholm's (2007) thesis:
                 // A fully coupled Newton-Krylov solver with a one-equation turbulence model.
                 // to prevent division by 0.0 set variables to a very small positive value.
-                if (fs.tke < 0.0) fs.tke = 1.0e-10;
-                if (fs.omega < 0.0) fs.omega = 1.0e-10;
+                if (fs.turb[0] < 0.0) fs.turb[0] = 1.0e-10;
+                if (fs.turb[1] < 0.0) fs.turb[1] = 1.0e-10;
             } else {
-                fs.tke = 0.0;
-                fs.omega = 1.0;
+                fs.turb[0] = 0.0;
+                fs.turb[1] = 1.0;
             }
-            u -= fs.tke;
+            u -= fs.turb[0]; // replace with tke function (NNG)
         }
         // Remove kinetic energy for bulk flow.
         number ke = 0.5*(fs.vel.x*fs.vel.x + fs.vel.y*fs.vel.y + fs.vel.z*fs.vel.z);
@@ -1523,7 +1523,7 @@ public:
             // for this gas model thermochemical reactor we need turbulence info
             if (params.length < 1) { throw new Error("params vector too short."); }
             version(komega) {
-                params[0]=fs.omega;
+                params[0]=fs.turb[1];
             } else {
                 throw new Error("FuelAirMix needs komega capability.");
             }
@@ -1679,7 +1679,7 @@ public:
             bool with_k_omega = (myConfig.turbulence_model == TurbulenceModel.k_omega && 
                                  !myConfig.separate_update_for_k_omega_source);
             if (with_k_omega) { 
-                number turbulent_signal = myConfig.turbulent_signal_factor*fs.omega;
+                number turbulent_signal = myConfig.turbulent_signal_factor*fs.turb[1];
                 signal = fmax(signal, turbulent_signal); 
 		this.signal_parab = fmax(signal, turbulent_signal);
             }
@@ -1843,12 +1843,15 @@ public:
                 + 0.5 * (dvdz + dwdy) * (dvdz + dwdy);
         }
         S_bar_squared = fmax(0.0, S_bar_squared);
-        number omega_t = fmax(fs.omega, C_lim*sqrt(2.0*S_bar_squared/beta_star));
-        fs.mu_t = fs.gas.rho * fs.tke / omega_t;
+        number tke = fs.turb[0];
+        number omega = fs.turb[1];
+        number omega_t = fmax(omega, C_lim*sqrt(2.0*S_bar_squared/beta_star));
+        fs.mu_t = fs.gas.rho * tke / omega_t;
         number Pr_t = myConfig.turbulence_prandtl_number;
         fs.k_t = gmodel.Cp(fs.gas) * fs.mu_t / Pr_t;
     } // end turbulence_viscosity_k_omega()
 
+/*  // This routine seems to be unused? (NNG)
     @nogc
     void update_k_omega_properties(double dt) 
     {
@@ -1945,6 +1948,7 @@ public:
             }
         } // End of Newton-solve loop for implicit update scheme
     } // end update_k_omega_properties()
+*/
 
     @nogc
     void k_omega_time_derivatives(ref number Q_rtke, ref number Q_romega, number tke, number omega) 
@@ -2214,8 +2218,8 @@ public:
             //    dudx = grad.vel[0][0];
             //    dvdy = grad.vel[1][1];
             //} // end switch (myConfig.spatial_deriv_locn)
-            //number mu; mixin(avg_over_iface_list("fs.gas.mu", "mu")); // NNG FIXME?
-            //number mu_t; mixin(avg_over_iface_list("fs.mu_t", "mu_t"));  // NNG Possible Bug
+            //number mu; mixin(avg_over_iface_list("fs.gas.mu", "mu")); // Why was this here? (NNG)
+            //number mu_t; mixin(avg_over_iface_list("fs.mu_t", "mu_t"));  // Possible Bug (NNG)
             //mu += fs.mu_t;
             number mu  = fs.gas.mu + fs.mu_t;
             mu *= myConfig.viscous_factor;
@@ -2232,7 +2236,7 @@ public:
             if (with_k_omega) {
                 number Q_tke = 0.0; number Q_omega = 0.0;
                 if ( in_turbulent_zone ) {
-                    this.k_omega_time_derivatives(Q_tke, Q_omega, fs.tke, fs.omega);
+                    this.k_omega_time_derivatives(Q_tke, Q_omega, fs.turb[0], fs.turb[1]);
                 }
                 Q.tke += Q_tke; Q.omega += Q_omega;
             }
@@ -2396,7 +2400,7 @@ string cell_data_as_string(ref const(Vector3) pos, number volume, ref const(Flow
         formattedWrite(writer, " %.18e %.18e %d", fs.mu_t.re, fs.k_t.re, fs.S);
         if (radiation) { formattedWrite(writer, " %.18e %.18e %.18e", Q_rad_org.re, f_rad_org.re, Q_rE_rad.re); }
         version(komega) {
-            formattedWrite(writer, " %.18e %.18e", fs.tke.re, fs.omega.re);
+            formattedWrite(writer, " %.18e %.18e", fs.turb[0].re, fs.turb[1].re);
         } else {
             formattedWrite(writer, " %.18e %.18e", 0.0, 1.0);
         }
@@ -2434,7 +2438,7 @@ string cell_data_as_string(ref const(Vector3) pos, number volume, ref const(Flow
         formattedWrite(writer, " %.18e %.18e %d", fs.mu_t, fs.k_t, fs.S);
         if (radiation) { formattedWrite(writer, " %.18e %.18e %.18e", Q_rad_org, f_rad_org, Q_rE_rad); }
         version(komega) {
-            formattedWrite(writer, " %.18e %.18e", fs.tke, fs.omega);
+            formattedWrite(writer, " %.18e %.18e", fs.turb[0], fs.turb[1]);
         } else {
             formattedWrite(writer, " %.18e %.18e", 0.0, 1.0);
         }
@@ -2499,7 +2503,7 @@ void cell_data_to_raw_binary(ref File fout,
             fout.rawWrite(dbl3);
         }
         version(komega) {
-            dbl2[0] = fs.tke.re; dbl2[1] = fs.omega.re; fout.rawWrite(dbl2);
+            dbl2[0] = fs.turb[0].re; dbl2[1] = fs.turb[1].re; fout.rawWrite(dbl2);
         } else {
             dbl2[0] = 0.0; dbl2[1] = 1.0; fout.rawWrite(dbl2);
         }
@@ -2549,7 +2553,7 @@ void cell_data_to_raw_binary(ref File fout,
             fout.rawWrite(dbl3);
         }
         version(komega) {
-            dbl2[0] = fs.tke; dbl2[1] = fs.omega; fout.rawWrite(dbl2);
+            dbl2[0] = fs.turb[0]; dbl2[1] = fs.turb[1]; fout.rawWrite(dbl2);
         } else {
             dbl2[0] = 0.0; dbl2[1] = 1.0; fout.rawWrite(dbl2);
         }
@@ -2643,8 +2647,8 @@ void scan_cell_data_from_fixed_order_string
             Q_rad_org = 0.0; f_rad_org = 0.0; Q_rE_rad = 0.0;
         }
         version(komega) {
-            fs.tke = Complex!double(items.front); items.popFront();
-            fs.omega = Complex!double(items.front); items.popFront();
+            fs.turb[0] = Complex!double(items.front); items.popFront();
+            fs.turb[1] = Complex!double(items.front); items.popFront();
         } else {
             items.popFront(); items.popFront(); // discard k, omega
         }
@@ -2731,8 +2735,8 @@ void scan_cell_data_from_fixed_order_string
             Q_rad_org = 0.0; f_rad_org = 0.0; Q_rE_rad = 0.0;
         }
         version(komega) {
-            fs.tke = to!double(items.front); items.popFront();
-            fs.omega = to!double(items.front); items.popFront();
+            fs.turb[0] = to!double(items.front); items.popFront();
+            fs.turb[1] = to!double(items.front); items.popFront();
         } else {
             items.popFront(); items.popFront(); // discard k, omega
         }
@@ -2828,8 +2832,9 @@ void scan_cell_data_from_variable_order_string
         Q_rad_org = 0.0; f_rad_org = 0.0; Q_rE_rad = 0.0;
     }
     version(komega) {
-        fs.tke = values[countUntil(varNameList, flowVarName(FlowVar.tke))];
-        fs.omega = values[countUntil(varNameList, flowVarName(FlowVar.omega))];
+        foreach(i; 0 .. fs.turb.length) {
+            fs.turb[i] = values[countUntil(varNameList, turb_varName(to!int(i)))];
+        }
     }
     version(multi_species_gas) {
         foreach(i; 0 .. fs.gas.massf.length) {
@@ -2909,7 +2914,7 @@ void raw_binary_to_cell_data(ref File fin,
         }
         fin.rawRead(dbl2); // tke, omega
         version(komega) {
-            fs.tke = dbl2[0]; fs.omega = dbl2[1];
+            fs.turb[0] = dbl2[0]; fs.turb[1] = dbl2[1];
         }
         version(multi_species_gas) {
             foreach (i; 0 .. fs.gas.massf.length) {
@@ -2974,7 +2979,7 @@ void raw_binary_to_cell_data(ref File fin,
         }
         fin.rawRead(dbl2); // k, omega discarded
         version(komega) {
-            fs.tke = dbl2[0]; fs.omega = dbl2[1];
+            fs.turb[0] = dbl2[0]; fs.turb[1] = dbl2[1];
         }
         version(multi_species_gas) {
             fin.rawRead(fs.gas.massf);

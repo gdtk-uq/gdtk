@@ -310,12 +310,12 @@ public:
         }
         version(komega) {
             if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                interp_l3r3_scalar(cL2.fs.tke, cL1.fs.tke, cL0.fs.tke,
-                                   cR0.fs.tke, cR1.fs.tke, cR2.fs.tke,
-                                   Lft.tke, Rght.tke);
-                interp_l3r3_scalar(cL2.fs.omega, cL1.fs.omega, cL0.fs.omega,
-                                   cR0.fs.omega, cR1.fs.omega, cR2.fs.omega,
-                                   Lft.omega, Rght.omega);
+                interp_l3r3_scalar(cL2.fs.turb[0], cL1.fs.turb[0], cL0.fs.turb[0],
+                                   cR0.fs.turb[0], cR1.fs.turb[0], cR2.fs.turb[0],
+                                   Lft.turb[0], Rght.turb[0]);
+                interp_l3r3_scalar(cL2.fs.turb[1], cL1.fs.turb[1], cL0.fs.turb[1],
+                                   cR0.fs.turb[1], cR1.fs.turb[1], cR2.fs.turb[1],
+                                   Lft.turb[1], Rght.turb[1]);
             }
         }
         auto gL2 = &(cL2.fs.gas); // Avoid construction of another object.
@@ -475,10 +475,10 @@ public:
         }
         version(komega) {
             if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                interp_l2r2_scalar(cL1.fs.tke, cL0.fs.tke, cR0.fs.tke, cR1.fs.tke,
-                                   Lft.tke, Rght.tke);
-                interp_l2r2_scalar(cL1.fs.omega, cL0.fs.omega, cR0.fs.omega, cR1.fs.omega,
-                                   Lft.omega, Rght.omega);
+                interp_l2r2_scalar(cL1.fs.turb[0], cL0.fs.turb[0], cR0.fs.turb[0], cR1.fs.turb[0],
+                                   Lft.turb[0], Rght.turb[0]);
+                interp_l2r2_scalar(cL1.fs.turb[1], cL0.fs.turb[1], cR0.fs.turb[1], cR1.fs.turb[1],
+                                   Lft.turb[1], Rght.turb[1]);
             }
         }
         auto gL1 = &(cL1.fs.gas); // Avoid construction of another object.
@@ -616,8 +616,8 @@ public:
         }
         version(komega) {
             if ( myConfig.turbulence_model == TurbulenceModel.k_omega ) {
-                interp_l2r1_scalar(cL1.fs.tke, cL0.fs.tke, cR0.fs.tke, Lft.tke, Rght.tke);
-                interp_l2r1_scalar(cL1.fs.omega, cL0.fs.omega, cR0.fs.omega, Lft.omega, Rght.omega);
+                interp_l2r1_scalar(cL1.fs.turb[0], cL0.fs.turb[0], cR0.fs.turb[0], Lft.turb[0], Rght.turb[0]);
+                interp_l2r1_scalar(cL1.fs.turb[1], cL0.fs.turb[1], cR0.fs.turb[1], Lft.turb[1], Rght.turb[1]);
             }
         }
         auto gL1 = &(cL1.fs.gas); auto gL0 = &(cL0.fs.gas); auto gR0 = &(cR0.fs.gas);
@@ -734,8 +734,8 @@ public:
         }
         version(komega) {
             if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                interp_l1r2_scalar(cL0.fs.tke, cR0.fs.tke, cR1.fs.tke, Lft.tke, Rght.tke);
-                interp_l1r2_scalar(cL0.fs.omega, cR0.fs.omega, cR1.fs.omega, Lft.omega, Rght.omega);
+                interp_l1r2_scalar(cL0.fs.turb[0], cR0.fs.turb[0], cR1.fs.turb[0], Lft.turb[0], Rght.turb[0]);
+                interp_l1r2_scalar(cL0.fs.turb[1], cR0.fs.turb[1], cR1.fs.turb[1], Lft.turb[1], Rght.turb[1]);
             }
         }
         auto gL0 = &(cL0.fs.gas); auto gR0 = &(cR0.fs.gas); auto gR1 = &(cR1.fs.gas);
@@ -853,8 +853,8 @@ public:
         }
         version(komega) {
             if ( myConfig.turbulence_model == TurbulenceModel.k_omega ) {
-                Lft.tke = weight_scalar(cL0.fs.tke, cL1.fs.tke);
-                Lft.omega = weight_scalar(cL0.fs.omega, cL1.fs.omega);
+                Lft.turb[0] = weight_scalar(cL0.fs.turb[0], cL1.fs.turb[0]);
+                Lft.turb[1] = weight_scalar(cL0.fs.turb[1], cL1.fs.turb[1]);
             }
         }
         auto gL1 = &(cL1.fs.gas); auto gL0 = &(cL0.fs.gas);
@@ -960,8 +960,8 @@ public:
         }
         version(komega) {
             if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                Rght.tke = weight_scalar(cR0.fs.tke, cR1.fs.tke);
-                Rght.omega = weight_scalar(cR0.fs.omega, cR1.fs.omega);
+                Rght.turb[0] = weight_scalar(cR0.fs.turb[0], cR1.fs.turb[0]);
+                Rght.turb[1] = weight_scalar(cR0.fs.turb[1], cR1.fs.turb[1]);
             }
         }
         auto gR0 = &(cR0.fs.gas); auto gR1 = &(cR1.fs.gas);

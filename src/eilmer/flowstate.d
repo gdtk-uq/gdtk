@@ -37,8 +37,7 @@ public:
         number divB;   // divergence of the magnetic field
     }
     version(komega) {
-        number tke;    // turbulent kinetic energy 0.5(u'^2+v'^2+w'^2)
-        number omega;  // turbulence 'frequency' in k-omega model
+        number[2] turb; // turbulence primitives (presently k, omega only)
     }
     number mu_t;   // turbulence viscosity
     number k_t;    // turbulence thermal-conductivity
@@ -53,7 +52,7 @@ public:
          in double quality_init=1.0,
          in Vector3 B_init=Vector3(0.0,0.0,0.0),
          in double psi_init=0.0, in double divB_init=1.0,
-         in double tke_init=0.0, in double omega_init=1.0,
+         in double[2] turb_init=[0.0, 1.0],
          in double mu_t_init=0.0, in double k_t_init=0.0,
          in int S_init=0)
     {
@@ -66,8 +65,8 @@ public:
             divB = divB_init;
         }
         version(komega) {
-            tke = tke_init;
-            omega = omega_init;
+            turb[0] = turb_init[0];
+            turb[1] = turb_init[1];
         }
         mu_t = mu_t_init;
         k_t = k_t_init;
@@ -85,8 +84,8 @@ public:
             divB = other.divB;
         }
         version(komega) {
-            tke = other.tke;
-            omega = other.omega;
+            turb[0] = other.turb[0];
+            turb[1] = other.turb[1];
         }
         mu_t = other.mu_t;
         k_t = other.k_t;
@@ -105,8 +104,8 @@ public:
             divB = other.divB;
         }
         version(komega) {
-            tke = other.tke;
-            omega = other.omega;
+            turb[0] = other.turb[0];
+            turb[1] = other.turb[1];
         }
         mu_t = other.mu_t;
         k_t = other.k_t;
@@ -123,8 +122,8 @@ public:
             divB = 0.0;
         }
         version(komega) {
-            tke = 0.0;
-            omega = 1.0;
+            turb[0] = 0.0;
+            turb[1] = 1.0;
         }
         mu_t = 0.0;
         k_t = 0.0;
@@ -159,8 +158,8 @@ public:
             divB = getJSONdouble(json_data, "divB", 0.0);
         }
         version(komega) {
-            tke = getJSONdouble(json_data, "tke", 0.0);
-            omega = getJSONdouble(json_data, "omega", 1.0);
+            turb[0] = getJSONdouble(json_data, "tke", 0.0);
+            turb[1] = getJSONdouble(json_data, "omega", 1.0);
         }
         mu_t = getJSONdouble(json_data, "mu_t", 0.0);
         k_t = getJSONdouble(json_data, "k_t", 0.0);
@@ -185,8 +184,8 @@ public:
             divB = other.divB;
         }
         version(komega) {
-            tke = other.tke;
-            omega = other.omega;
+            turb[0] = other.turb[0];
+            turb[1] = other.turb[1];
         }
         mu_t = other.mu_t;
         k_t = other.k_t;
@@ -209,8 +208,8 @@ public:
             divB = 0.5 * (fs0.divB + fs1.divB);
         }
         version(komega) {
-            tke = 0.5 * (fs0.tke + fs1.tke);
-            omega = 0.5 * (fs0.omega + fs1.omega);
+            turb[0] = 0.5 * (fs0.turb[0] + fs1.turb[0]);
+            turb[1] = 0.5 * (fs0.turb[1] + fs1.turb[1]);
         }
         mu_t = 0.5 * (fs0.mu_t + fs1.mu_t);
         k_t = 0.5 * (fs0.k_t + fs1.k_t);
@@ -240,8 +239,8 @@ public:
             divB = 0.0;
         }
         version(komega) {
-            tke = 0.0;
-            omega = 0.0;
+            turb[0] = 0.0;
+            turb[1] = 0.0;
         }
         mu_t = 0.0;
         k_t = 0.0;
@@ -254,8 +253,8 @@ public:
                 divB += other.divB;
             }
             version(komega) {
-                tke += other.tke;
-                omega += other.omega;
+                turb[0] += other.turb[0];
+                turb[1] += other.turb[1];
             }
             mu_t += other.mu_t;
             k_t += other.k_t;
@@ -269,8 +268,8 @@ public:
             divB *= scale;
         }
         version(komega) {
-            tke *= scale;
-            omega *= scale;
+            turb[0] *= scale;
+            turb[1] *= scale;
         }
         mu_t *= scale;
         k_t *= scale;
@@ -289,8 +288,8 @@ public:
             repr ~= ", divB=" ~ to!string(psi);
         }
         version(komega) {
-            repr ~= ", tke=" ~ to!string(tke);
-            repr ~= ", omega=" ~ to!string(omega);
+            repr ~= ", tke=" ~ to!string(turb[0]);
+            repr ~= ", omega=" ~ to!string(turb[1]);
         }
         repr ~= ", mu_t=" ~ to!string(mu_t);
         repr ~= ", k_t=" ~ to!string(k_t);
@@ -332,8 +331,8 @@ public:
             formattedWrite(writer, ", \"divB\": %.18e", divB.re);
         }
         version(komega) {
-            formattedWrite(writer, ", \"tke\": %.18e", tke.re);
-            formattedWrite(writer, ", \"omega\": %.18e", omega.re);
+            formattedWrite(writer, ", \"tke\": %.18e", turb[0].re);
+            formattedWrite(writer, ", \"omega\": %.18e", turb[1].re);
         }
         formattedWrite(writer, ", \"mu_t\": %.18e", mu_t.re);
         formattedWrite(writer, ", \"k_t\": %.18e", k_t.re);
@@ -361,24 +360,24 @@ public:
             is_data_valid = false;
         }
         version(komega) {
-            if (!isFinite(tke.re)) {
-                debug { writeln("Turbulence KE invalid number ", tke); }
+            if (!isFinite(turb[0].re)) {
+                debug { writeln("Turbulence KE invalid number ", turb[0]); }
                 is_data_valid = false;
             }
-            if (tke < flowstate_limits.min_tke) {
-                debug { writeln("Turbulence KE below minimum ", tke); }
+            if (turb[0] < flowstate_limits.min_tke) {
+                debug { writeln("Turbulence KE below minimum ", turb[0]); }
                 is_data_valid = false;
             }
-            if (tke > flowstate_limits.max_tke) {
-                debug { writeln("Turbulence KE above maximum ", tke); }
+            if (turb[0] > flowstate_limits.max_tke) {
+                debug { writeln("Turbulence KE above maximum ", turb[0]); }
                 is_data_valid = false;
             }
-            if (!isFinite(omega.re)) {
-                debug { writeln("Turbulence frequency invalid number ", omega); }
+            if (!isFinite(turb[1].re)) {
+                debug { writeln("Turbulence frequency invalid number ", turb[1]); }
                 is_data_valid = false;
             }
-            if (omega <= 0.0) {
-                debug { writeln("Turbulence frequency nonpositive ", omega); }
+            if (turb[1] <= 0.0) {
+                debug { writeln("Turbulence frequency nonpositive ", turb[1]); }
                 is_data_valid = false;
             }
         }

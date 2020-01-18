@@ -222,8 +222,8 @@ private:
         ghostCell.fs.vel.refy = getNumberFromTable(L, tblIdx, "vely", false, 0.0);
         ghostCell.fs.vel.refz = getNumberFromTable(L, tblIdx, "velz", false, 0.0);
         version(komega) {
-            ghostCell.fs.tke = getNumberFromTable(L, tblIdx, "tke", false, 0.0);
-            ghostCell.fs.omega = getNumberFromTable(L, tblIdx, "omega", false, 1.0);
+            ghostCell.fs.turb[0] = getNumberFromTable(L, tblIdx, "tke", false, 0.0);
+            ghostCell.fs.turb[1] = getNumberFromTable(L, tblIdx, "omega", false, 1.0);
         }
     }
 
@@ -473,13 +473,13 @@ private:
         version(komega) {
             lua_getfield(L, tblIdx, "tke");
             if ( !lua_isnil(L, -1) ) {
-                fs.tke = getDouble(L, tblIdx, "tke");
+                fs.turb[0] = getDouble(L, tblIdx, "tke");
             }
             lua_pop(L, 1);
 
             lua_getfield(L, tblIdx, "omega");
             if ( !lua_isnil(L, -1) ) {
-                fs.omega = getDouble(L, tblIdx, "omega");
+                fs.turb[1] = getDouble(L, tblIdx, "omega");
             }
         }
 
@@ -724,13 +724,13 @@ private:
             /*
               lua_getfield(L, tblIdx, "tke");
               if ( !lua_isnil(L, -1) ) {
-              fs.tke = getDouble(L, tblIdx, "tke");
+              fs.turb[0] = getDouble(L, tblIdx, "tke");
               }
               lua_pop(L, 1);
 
               lua_getfield(L, tblIdx, "omega");
               if ( !lua_isnil(L, -1) ) {
-              fs.omega = getDouble(L, tblIdx, "omega");
+              fs.turb[1] = getDouble(L, tblIdx, "omega");
               }
               lua_pop(L, 1);
             */

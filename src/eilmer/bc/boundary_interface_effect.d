@@ -1230,20 +1230,20 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
 	    if (bc.outsigns[f.i_bndry] == 1) {
 		number d0 = distance_between(f.left_cell.pos[gtl], f.pos);
 		if (f.left_cell.in_turbulent_zone) {
-		    f.fs.omega = ideal_omega_at_wall(f.left_cell, d0);
-		    f.fs.tke = 0.0;
+		    f.fs.turb[1] = ideal_omega_at_wall(f.left_cell, d0);
+		    f.fs.turb[0] = 0.0;
 		} else {
-		    f.fs.omega = f.left_cell.fs.omega;
-		    f.fs.tke = f.left_cell.fs.tke;
+		    f.fs.turb[1] = f.left_cell.fs.turb[1];
+		    f.fs.turb[0] = f.left_cell.fs.turb[0];
 		}
 	    } else {
 		number d0 = distance_between(f.right_cell.pos[gtl], f.pos);
 		if (f.right_cell.in_turbulent_zone) {
-		    f.fs.omega = ideal_omega_at_wall(f.right_cell, d0);
-		    f.fs.tke = 0.0;
+		    f.fs.turb[1] = ideal_omega_at_wall(f.right_cell, d0);
+		    f.fs.turb[0] = 0.0;
 		} else {
-		    f.fs.omega = f.right_cell.fs.omega;
-		    f.fs.tke = f.right_cell.fs.tke;
+		    f.fs.turb[1] = f.right_cell.fs.turb[1];
+		    f.fs.turb[0] = f.right_cell.fs.turb[0];
 		}
 	    }
 	}
@@ -1257,20 +1257,20 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
                 if (bc.outsigns[i] == 1) {
                     number d0 = distance_between(f.left_cell.pos[gtl], f.pos);
                     if (f.left_cell.in_turbulent_zone) {
-                        f.fs.omega = ideal_omega_at_wall(f.left_cell, d0);
-                        f.fs.tke = 0.0;
+                        f.fs.turb[1] = ideal_omega_at_wall(f.left_cell, d0);
+                        f.fs.turb[0] = 0.0;
                     } else {
-                        f.fs.omega = f.left_cell.fs.omega;
-                        f.fs.tke = f.left_cell.fs.tke;
+                        f.fs.turb[1] = f.left_cell.fs.turb[1];
+                        f.fs.turb[0] = f.left_cell.fs.turb[0];
                     }
                 } else {
                     number d0 = distance_between(f.right_cell.pos[gtl], f.pos);
                     if (f.right_cell.in_turbulent_zone) {
-                        f.fs.omega = ideal_omega_at_wall(f.right_cell, d0);
-                        f.fs.tke = 0.0;
+                        f.fs.turb[1] = ideal_omega_at_wall(f.right_cell, d0);
+                        f.fs.turb[0] = 0.0;
                     } else {
-                        f.fs.omega = f.right_cell.fs.omega;
-                        f.fs.tke = f.right_cell.fs.tke;
+                        f.fs.turb[1] = f.right_cell.fs.turb[1];
+                        f.fs.turb[0] = f.right_cell.fs.turb[0];
                     }
                 }
             } // end foreach face
@@ -1296,8 +1296,8 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
                         IFace = cell.iface[Face.north];
                         number d0 = distance_between(cell.pos[gtl], IFace.pos);
                         FlowState fs = IFace.fs;
-                        fs.tke = 0.0;
-                        fs.omega = ideal_omega_at_wall(cell, d0);
+                        fs.turb[0] = 0.0;
+                        fs.turb[1] = ideal_omega_at_wall(cell, d0);
                     } // end i loop
                 } // end for k
                 break;
@@ -1309,8 +1309,8 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
                         IFace = cell.iface[Face.east];
                         number d0 = distance_between(cell.pos[gtl], IFace.pos);
                         FlowState fs = IFace.fs;
-                        fs.tke = 0.0;
-                        fs.omega = ideal_omega_at_wall(cell, d0);
+                        fs.turb[0] = 0.0;
+                        fs.turb[1] = ideal_omega_at_wall(cell, d0);
                     } // end j loop
                 } // end for k
                 break;
@@ -1322,8 +1322,8 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
                         IFace = cell.iface[Face.south];
                         number d0 = distance_between(cell.pos[gtl], IFace.pos);
                         FlowState fs = IFace.fs;
-                        fs.tke = 0.0;
-                        fs.omega = ideal_omega_at_wall(cell, d0);
+                        fs.turb[0] = 0.0;
+                        fs.turb[1] = ideal_omega_at_wall(cell, d0);
                     } // end i loop
                 } // end for k
                 break;
@@ -1335,8 +1335,8 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
                         IFace = cell.iface[Face.west];
                         number d0 = distance_between(cell.pos[gtl], IFace.pos);
                         FlowState fs = IFace.fs;
-                        fs.tke = 0.0;
-                        fs.omega = ideal_omega_at_wall(cell, d0);
+                        fs.turb[0] = 0.0;
+                        fs.turb[1] = ideal_omega_at_wall(cell, d0);
                     } // end j loop
                 } // end for k
                 break;
@@ -1348,8 +1348,8 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
                         IFace = cell.iface[Face.top];
                         number d0 = distance_between(cell.pos[gtl], IFace.pos);
                         FlowState fs = IFace.fs;
-                        fs.tke = 0.0;
-                        fs.omega = ideal_omega_at_wall(cell, d0);
+                        fs.turb[0] = 0.0;
+                        fs.turb[1] = ideal_omega_at_wall(cell, d0);
                     } // end j loop
                 } // end for i
                 break;
@@ -1361,8 +1361,8 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
                         IFace = cell.iface[Face.bottom];
                         number d0 = distance_between(cell.pos[gtl], IFace.pos);
                         FlowState fs = IFace.fs;
-                        fs.tke = 0.0;
-                        fs.omega = ideal_omega_at_wall(cell, d0);
+                        fs.turb[0] = 0.0;
+                        fs.turb[1] = ideal_omega_at_wall(cell, d0);
                     } // end j loop
                 } // end for i
                 break;
@@ -1758,8 +1758,8 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
         version(komega) {
             // Assign updated values of tke and omega to IFace.fs for
             // later copying to boundary cells.
-            IFace.fs.tke = tke;
-            IFace.fs.omega = omega;
+            IFace.fs.turb[0] = tke;
+            IFace.fs.turb[1] = omega;
         }
         return;
     } // end wall_function()

@@ -624,6 +624,31 @@ public:
         }
     } // end exchange_geometry_phase2()
 
+    @nogc
+    size_t flowstate_buffer_entry_size(const LocalConfig myConfig){
+        /*
+        Compute the amount of space needed for one flowstate in the SEND/RECV buffer 
+        Previously, this code was duplicated in two places, and it was easy to 
+        get bitten by not changing both at once when adding things to the flowstate variables
+
+        Note: This routine must be kept consistent with the buffer packing in exchange_flowstate
+        phases 1 and 2
+        @author: Nick N. Gibbons
+        */
+
+        size_t nspecies = myConfig.n_species;
+        size_t nmodes = myConfig.n_modes;
+
+        size_t nitems = 16;
+        nitems += nmodes*3;
+        nitems += nspecies;
+        version(MHD) { nitems += 5; }
+        version(komega) { nitems += 2; } // TODO: Generalise (NNG)
+
+        return nitems;
+    }
+
+
     // not @nogc
     void exchange_flowstate_phase0(double t, int gtl, int ftl)
     {
@@ -637,7 +662,9 @@ public:
                 // void copy_values_from(in FlowState other)
                 // and over in gas_state.d
                 // @nogc void copy_values_from(ref const(GasState) other) 
-                size_t ne = incoming_ncells_list[i] * (nmodes*3 + nspecies + 23);
+                //size_t ne = incoming_ncells_list[i] * (nmodes*3 + nspecies + 23);
+                size_t fs_size = flowstate_buffer_entry_size(blk.myConfig);
+                size_t ne = incoming_ncells_list[i] * fs_size;
                 if (incoming_flowstate_buf_list[i].length < ne) { incoming_flowstate_buf_list[i].length = ne; }
                 // Post non-blocking receive for flowstate data that we expect to receive later
                 // from the src_blk MPI process.
@@ -661,10 +688,11 @@ public:
                 // Blocking send of this block's flow data
                 // to the corresponding non-blocking receive that was posted
                 // at in src_blk MPI process.
-                size_t nitems = 16;
-                version(MHD) { nitems += 5; }
-                version(komega) { nitems += 2; }
-                size_t ne = outgoing_ncells_list[i] * (nmodes*3 + nspecies + nitems);
+                //size_t nitems = 16;
+                //version(MHD) { nitems += 5; }
+                //version(komega) { nitems += 2; }
+                size_t fs_size = flowstate_buffer_entry_size(blk.myConfig);
+                size_t ne = outgoing_ncells_list[i] * fs_size;
                 if (outgoing_flowstate_buf_list[i].length < ne) { outgoing_flowstate_buf_list[i].length = ne; }
                 auto buf = outgoing_flowstate_buf_list[i];
                 size_t ii = 0;
@@ -703,8 +731,8 @@ public:
                         buf[ii++] = fs.divB;
                     }
                     version(komega) {
-                        buf[ii++] = fs.tke;
-                        buf[ii++] = fs.omega;
+                        buf[ii++] = fs.turb[0];
+                        buf[ii++] = fs.turb[1];
                     }
                     buf[ii++] = fs.mu_t;
                     buf[ii++] = fs.k_t;
@@ -780,8 +808,8 @@ public:
                         fs.divB = buf[ii++];
                     }
                     version(komega) {
-                        fs.tke = buf[ii++];
-                        fs.omega = buf[ii++];
+                        fs.turb[0] = buf[ii++];
+                        fs.turb[1]= buf[ii++];
                     }
                     fs.mu_t = buf[ii++];
                     fs.k_t = buf[ii++];

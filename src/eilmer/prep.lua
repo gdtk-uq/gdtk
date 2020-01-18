@@ -314,6 +314,7 @@ function FlowState:new(o)
    o.a = Q.a
    o.mu = Q.mu
    o.k = Q.k
+   o.turb = initTurbulence(o, config.turbulence_model)
    setmetatable(o, self)
    self.__index = self
    return o
@@ -327,7 +328,7 @@ function FlowState:toJSONString()
 			     quality=self.quality, massf=self.massf,
 			     velx=self.velx, vely=self.vely, velz=self.velz,
 			     Bx=self.Bx, By=self.By, Bz=self.Bz, psi=self.psi, divB=self.divB,
-			     tke=self.tke, omega=self.omega, mu_t=self.mu_t, k_t=self.k_t,
+			     turb=self.turb, mu_t=self.mu_t, k_t=self.k_t,
 			     S=self.S}
    return fs:toJSONString()
 end
@@ -357,13 +358,34 @@ function FlowState:__tostring()
    str = str .. ", Bz=" .. tostring(self.Bz)
    str = str .. ", psi=" .. tostring(self.psi)
    str = str .. ", divB=" .. tostring(self.divB)
-   str = str .. ", tke=" .. tostring(self.tke)
-   str = str .. ", omega=" .. tostring(self.omega)
+   str = str .. ", turb={"
+   for k, v in pairs(self.turb) do
+      str = str .. tostring(v) .. ', '
+   end
+   str = str .. "}"
    str = str .. ", mu_t=" .. tostring(self.mu_t)
    str = str .. ", k_t=" .. tostring(self.k_t)
    str = str .. ", S=" .. tostring(self.S)
    str = str .. "}"
    return str
+end
+
+function initTurbulence(fs, turbulence_model_name)
+    -- Setup dynamic turbulent primitive array and check user inputs
+    if turbulence_model_name == "none" then
+        -- Check to ensure the user hasn't tried defining any turbulence stuff
+        if fs.tke~=0.0 then error(string.format("Turbulence model is none but tke set: %.18e", tke)) end
+        if fs.omega~=1.0 then error(string.format("Turbulence model is none but omega set: %.18e", omega)) end
+        turb = {0.0, 1.0}
+    elseif turbulence_model_name == "k_omega" then -- Add check to make sure tke/omega defined
+        -- Check to ensure the user has tried defining turbulence stuff (Bad idea I think)
+        -- if tke==0.0 then error(string.format("Turbulence model is k_omega but no tke set!", tke)) end
+        -- if omega==1.0 then error(string.format("Turbulence model is k_omega but no omega set!",omega)) end
+        turb = {fs.tke, fs.omega}
+    else
+        error(string.format("Unsupported turbulence model: %s", turbulence_model_name))
+    end
+    return turb
 end
 
 -- ---------------------------------------------------------------------------------------
