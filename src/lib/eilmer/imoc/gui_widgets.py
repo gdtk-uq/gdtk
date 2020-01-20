@@ -100,7 +100,7 @@ cfg['node_indx'] = {}
 cfg['object_id'] = {}
 cfg['display_dialog_for_coincident_nodes'] = True
 cfg['pick_action'] = "select_node" # others select_corner_1, pick_corner_2
-selected_nodes = []
+cfg['selected_nodes'] = []
 
 def init_widgets():
     """
@@ -182,11 +182,15 @@ def init_widgets():
     menu_file = Menu(menubar)
     menubar.add_cascade(menu=menu_file, label='File')
     menu_file.add_command(label='Source file...', command=sourceFile)
+    menu_file.add_command(label='Save node data...', command=saveDataFile)
+    menu_file.add_command(label='Save view as Postscript...', command=savePostscriptFile)
     menu_file.add_command(label='Quit', command=quitProgram)
     menu_edit = Menu(menubar)
     menubar.add_cascade(menu=menu_edit, label='Edit')
-    menu_edit.add_command(label='Clear list of selected nodes', command=clearSelectedNodes)
-    menu_edit.add_command(label='Delete selected nodes', command=deleteSelectedNodes)
+    menu_edit.add_command(label='Clear list of selected nodes',
+                          command=clearSelectedNodesList)
+    menu_edit.add_command(label='Delete selected nodes from mesh',
+                          command=deleteSelectedNodesFromMesh)
     menu_compute = Menu(menubar)
     menubar.add_cascade(menu=menu_compute, label='Compute')
     menu_compute.add_command(label='Interior node', command=computeInteriorNode)
@@ -208,28 +212,55 @@ def init_widgets():
     # Some bindings.
     c.bind('<Button-1>', pickSomething)
     c.bind('<Motion>', displayCoords)
+    # Pressing ESC key clears list of selected nodes.
+    root.bind('<Escape>', clearSelectedNodesList)
     #
     # For the convenience of the user, leave the focus in the canvas widget
     c.focus()
     cfg['pick_action'] = 'select_node'
-    showStatusMsg("Ready to select node.")
+    showStatusMsg("Ready.")
     return
 
 def sourceFile():
-    filename = filedialog.askopenfilename()
+    filename = filedialog.askopenfilename(title="Open user script")
     print("source file:", filename)
     f = open(filename, 'r')
     content = f.read()
     # We are going to trust the content of the file.
     exec(content, globals(), locals())
+    refreshDisplay()
     return
 
+def saveDataFile():
+    filename = filedialog.asksaveasfilename(title="Save node data as")
+    print("data file:", filename)
+    f = open(filename, 'w')
+    for node in kernel.nodes:
+        f.write("%s\n" % str(node))
+    f.write("mesh_indx_list=[\n")
+    n = len(kernel.mesh_nodes)
+    for i in range(n):
+        f.write("%d" % kernel.mesh_nodes[i].indx)
+        if i+1 < n:
+            f.write(",")
+            ws = "\n" if (i+1) % 10 == 0 else " "
+            f.write(ws)
+    f.write("\n]\n")
+    return
+
+def savePostscriptFile():
+    filename = filedialog.asksaveasfilename(title="Save view as Postscript")
+    print("postscript file:", filename)
+    c = cfg['canvas']
+    c.postscript(file=filename)
+    return
+    
 def quitProgram():
     result = messagebox.askyesno(
         message="Quit program?",
         icon='question', title='IMOC',
         type='yesno')
-    if result: sys.exit()
+    if result: root.destroy()
     return
 
 def aboutProgram():
@@ -254,8 +285,8 @@ def pickSomething(event):
     cx = c.canvasx(event.x); cy = c.canvasy(event.y)
     x = world_x(cx); y = world_y(cy)
     if cfg['pick_action'] == 'select_node':
-        showStatusMsg("select node near x=%.3g y=%.3g" % (x, y))
-        print("[TODO] finish pickSomething for selecting a node")
+        showStatusMsg("Try to select node at x=%.3g y=%.3g" % (x, y))
+        selectNode(c, cx, cy)
     elif cfg['pick_action'] == 'pick_corner_1':
         showStatusMsg("Lower-left corner for zoom x=%.3g y=%.3g" % (x, y))
         cfg['zoom_x1'] = x; cfg['zoom_y1'] = y
@@ -268,6 +299,30 @@ def pickSomething(event):
         refreshDisplay()
     else:
         print("Oops, should not have arrived here (in pickSomething).")
+    return
+
+def selectNode(canvas, cx, cy):
+    objectList = list(canvas.find_overlapping(cx, cy, cx, cy))
+    objectList.reverse()
+    print("DEBUG objectList=", objectList)
+    foundNodeIndices = []
+    for obj in objectList:
+        if canvas.type(obj) == "oval": foundNodeIndices.append(cfg['node_indx'][obj])
+    print("DEBUG foundNodeIndices=", foundNodeIndices)
+    if len(foundNodeIndices) > 1 and cfg['display_dialog_for_coincident_nodes']:
+        print("[TODO] Put up a list of the possible nodes so that the user can select one.")
+    try:
+        # Just take the top node for now.
+        cfg['selected_nodes'].append(foundNodeIndices[0])
+        showStatusMsg("Selected nodes: %s" % cfg['selected_nodes'])
+    except IndexError:
+        pass
+    return
+
+def clearSelectedNodesList(event=None):
+    # We need to accept an event for the key-binding.
+    cfg['selected_nodes'] = []
+    showStatusMsg("Selected nodes: %s" % cfg['selected_nodes'])
     return
 
 def startZoom():
@@ -418,12 +473,8 @@ def refreshDisplay():
     plotMesh()
     return
 
-def deleteSelectedNodes():
-    print("[TODO] complete deleteSelectedNodes")
-    return
-
-def clearSelectedNodes():
-    print("[TODO] clearSelectedNodes")
+def deleteSelectedNodesFromMesh():
+    print("[TODO] complete deleteSelectedNodesFromMesh")
     return
 
 def computeInteriorNode():
