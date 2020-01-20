@@ -76,7 +76,7 @@ bez_points = {
    Vector3:new{x=5.118100e-01, y=6.611000e-02}}
 
 -- The throat-region is the constant-area section up to the
--- start of the xonical expansion.
+-- start of the conical expansion.
 throat_region = CoonsPatch:new{
    p00=Vector3:new{x=-L_thr, y=0.0},
    p10=Vector3:new{x=x_start, y=0.0},
