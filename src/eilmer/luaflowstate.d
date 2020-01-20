@@ -244,7 +244,21 @@ The value should be a number.`;
     
     // Values related to k-omega model.
     double[] turb_init;
-    getArrayOfDoubles(L, tblindx, "turb", turb_init);
+    lua_getfield(L, tblindx, "turb");
+    if (lua_isnil(L, -1)) {
+        turb_init.length = 2;
+        turb_init[0] = 0.0;
+        turb_init[1] = 1.0;
+        lua_pop(L, 1);
+    } else if (lua_istable(L, -1)) {
+        lua_pop(L, 1); // get turb off the stack, getArrayOfDoubles will make its own copy
+        getArrayOfDoubles(L, tblindx, "turb", turb_init);
+    } else {
+        lua_pop(L, 1);
+        errMsg = "Error in call to makeFlowStateFromTable.\n";
+        errMsg ~= "turb field not valid";
+        throw new LuaInputException(errMsg);
+    }
     double[2] turb = turb_init;
     double mu_t = getNumberFromTable(L, tblindx, "mu_t", false, 0.0, true, format(errMsgTmplt, "mu_t"));
     double k_t = getNumberFromTable(L, tblindx, "k_t", false, 0.0, true, format(errMsgTmplt, "k_t"));
