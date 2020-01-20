@@ -45,6 +45,9 @@ assert (n10.cminus_up == n3.indx) and (n3.cminus_down == n10.indx), \
     "interior node, cminus connection"
 assert (n10.cplus_up == n9.indx) and (n9.cplus_down == n10.indx), \
     "interior node, cplus connection"
+kernel.mesh_nodes.append(n3)
+kernel.mesh_nodes.append(n9)
+kernel.mesh_nodes.append(n10)
 
 print("Make a new, wall node along a C- characteristic.")
 def wall0(x): return 0.0
