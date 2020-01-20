@@ -61,6 +61,7 @@ assert approxEqual(n16.x, 0.101234), "cminus wall node, x position"
 assert approxEqual(n16.y, 0.0), "cminus wall node, y position" 
 assert (n16.cminus_up == n10.indx) and (n10.cminus_down == n16.indx), \
     "cminus wall node, cminus connection"
+kernel.mesh_nodes.append(n16)
 
 print("Insert a node on that C- characteristic.")
 nXX = unit.insert(n10.indx, n16.indx, -1, 0.5)
@@ -71,6 +72,7 @@ assert (nXX.cminus_up == n10.indx) and (n10.cminus_down == nXX.indx), \
     "insert node on C- char, cminus connection A"
 assert (n16.cminus_up == nXX.indx) and (nXX.cminus_down == n16.indx), \
     "insert node on C- char, cminus connection B"
+kernel.mesh_nodes.append(nXX)
 
 print("Make a new, wall node along a C+ characteristic.")
 def wall1(x): return 0.267949*x+0.111638
@@ -85,6 +87,8 @@ assert approxEqual(n57.x, 0.220358), "cplus wall node, x position"
 assert approxEqual(n57.y, 0.170683), "cplus wall node, y position" 
 assert (n57.cplus_up == n49.indx) and (n49.cplus_down == n57.indx), \
     "cplus wall node, cplus connection"
+kernel.mesh_nodes.append(n49)
+kernel.mesh_nodes.append(n57)
 
 kernel.walls = [wall0, wall1]
 
