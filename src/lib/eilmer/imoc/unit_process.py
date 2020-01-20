@@ -167,7 +167,8 @@ def insert(node1, node2, node4, alpha):
     n4.theta = (1-alpha)*n1.theta + alpha*n2.theta
     n4.mach = igf.PM2(n4.nu, kernel.g)
     # Connect into the mesh only if nodes 1 and 2 are adjacent.
-    print("node1=", node1, "n1.cminus_down=", n1.cminus_down, "node2=", node2, "n2.cminus_up=", n2.cminus_up)
+    print("node1=", node1, "n1.cminus_down=", n1.cminus_down,
+          "node2=", node2, "n2.cminus_up=", n2.cminus_up)
     if (n1.cplus_down == node2) and (n2.cplus_up == node1) and (n1.cplus_down != -1):
         n4.cplus_up = node1; n1.cplus_down = node4
         n2.cplus_up = node4; n4.cplus_down = node2
