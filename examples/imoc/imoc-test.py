@@ -86,4 +86,6 @@ assert approxEqual(n57.y, 0.170683), "cplus wall node, y position"
 assert (n57.cplus_up == n49.indx) and (n49.cplus_down == n57.indx), \
     "cplus wall node, cplus connection"
 
+kernel.walls = [wall0, wall1]
+
 print("Done.")

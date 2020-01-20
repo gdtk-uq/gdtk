@@ -22,6 +22,8 @@ axisymmetric = False
 nodes = [] # Storage for the Node objects.
 mesh_nodes = [] # Nodes that have been added to the characteristics mesh.
 
+walls = [] # Storage for the user-defined functions that specify the walls.
+
 class Node(object):
     __slots__ = ['indx', 'x', 'y',
                  'theta', 'nu', 'mach',

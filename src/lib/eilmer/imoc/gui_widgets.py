@@ -23,6 +23,9 @@ from tkinter import ttk
 from tkinter import filedialog
 from tkinter import messagebox
 
+import eilmer.imoc.kernel as kernel
+import eilmer.imoc.unit_process as unit
+
 cfg = {}
 cfg["node_file"] = ""
 cfg["plot_file"] = ""
@@ -42,6 +45,7 @@ cfg["canvas_y_offset"] = 40
 cfg["same_scales"] = True
 cfg["x_min"] = 0.0; cfg["x_max"] = 1.2
 cfg["y_min"] = 0.0; cfg["y_max"] = 1.0
+cfg['zoom_x1'] = None; cfg['zoom_y1'] = None
 
 def set_xy_ranges(xmin=0.0, ymin=0.0, xmax=1.2, ymax=1.0):
     """
@@ -79,11 +83,11 @@ def set_xy_tics(dx=0.2, dy=0.2):
     return
 
 def canvas_x(world_x):
-    return (world_x - cfg["xmin"])*cfg["x_scale"] + cfg["canvas_x_offset"]
+    return (world_x - cfg["x_min"])*cfg["x_scale"] + cfg["canvas_x_offset"]
 
 def canvas_y(world_y):
     return cfg["canvas_y_size"] - cfg["canvas_x_offset"] - \
-        (world_y - cfg["y_min"])*cfg["yscale"]
+        (world_y - cfg["y_min"])*cfg["y_scale"]
 
 def world_x(canvas_x):
     return (canvas_x - cfg["canvas_x_offset"])/cfg["x_scale"] + cfg["x_min"]
@@ -96,7 +100,7 @@ cfg["show_node_numbers"] = False
 cfg["show_char_mesh"] = True
 cfg["show_stream_lines"] = True
 cfg["display_dialog_for_coincident_nodes"] = True
-cfg["pick_action"] = "pick_node"
+cfg["pick_action"] = "select_node" # others select_corner_1, pick_corner_2
 selected_nodes = []
 
 def init_widgets():
@@ -109,8 +113,8 @@ def init_widgets():
     root.title("Isentropic Method of Characteristics")
     root.columnconfigure(0, weight=1)
     root.rowconfigure(0, weight=1)
-    cfg["canvas_x_size"] = int(0.8 * int(root.tk.eval("winfo screenwidth .")))
-    cfg["canvas_y_size"] = int(0.8 * int(root.tk.eval("winfo screenheight .")))
+    cfg["canvas_x_size"] = int(0.7 * int(root.tk.eval("winfo screenwidth .")))
+    cfg["canvas_y_size"] = int(0.7 * int(root.tk.eval("winfo screenheight .")))
     set_xy_ranges()
     set_xy_tics()
     root.geometry("+20+20") # place near top-left of screen
@@ -173,19 +177,33 @@ def init_widgets():
     menubar = Menu(root)
     root['menu'] = menubar
     menu_file = Menu(menubar)
-    menu_help = Menu(menubar)
     menubar.add_cascade(menu=menu_file, label='File')
     menu_file.add_command(label='Source file...', command=sourceFile)
     menu_file.add_command(label='Quit', command=quitProgram)
+    menu_edit = Menu(menubar)
+    menubar.add_cascade(menu=menu_edit, label='Edit')
+    menu_edit.add_command(label='Clear list of selected nodes', command=clearSelectedNodes)
+    menu_edit.add_command(label='Delete selected nodes', command=deleteSelectedNodes)
+    menu_compute = Menu(menubar)
+    menubar.add_cascade(menu=menu_compute, label='Compute')
+    menu_compute.add_command(label='Interior node', command=computeInteriorNode)
+    menu_compute.add_command(label='C- to Wall 0', command=computeCminusWall0)
+    menu_plot = Menu(menubar)
+    menubar.add_cascade(menu=menu_plot, label='Plot')
+    menu_plot.add_command(label='Refresh', command=refreshDisplay)
+    menu_plot.add_command(label='Zoom', command=startZoom)
+    menu_help = Menu(menubar)
     menubar.add_cascade(menu=menu_help, label='Help')
     menu_help.add_command(label='About', command=aboutProgram)
     #
     # Some bindings.
-    c.bind("<Button-1>", selectNode)
+    c.bind("<Button-1>", pickSomething)
     c.bind("<Motion>", displayCoords)
     #
     # For the convenience of the user, leave the focus in the canvas widget
     c.focus()
+    cfg["pick_action"] = "select_node"
+    showStatusMsg("Ready to select node.")
     return
 
 def sourceFile():
@@ -212,16 +230,141 @@ def aboutProgram():
         type='ok')
     return
 
-def selectNode(event):
-    # [TODO] locate nearest node and add it to the selected_nodes list.
-    x = world_x(cfg['canvas'].canvasx(event.x))
-    y = world_y(cfg['canvas'].canvasy(event.y))
-    status_msg.set("select node x=%.3g y=%.3g" % (x, y))
+def showStatusMsg(text):
+    status_msg.set(text)
+    return
+
+def pickSomething(event):
+    """
+    B1 event in the canvas picks one of:
+        a node (this is the default pick_action)
+        lower-left corner of zoom range
+        upper-right corner of zoom-range
+    """
+    c = cfg['canvas']
+    cx = c.canvasx(event.x); cy = c.canvasy(event.y)
+    x = world_x(cx); y = world_y(cy)
+    if cfg['pick_action'] == 'select_node':
+        showStatusMsg("select node near x=%.3g y=%.3g" % (x, y))
+        print("[TODO] finish pickSomething for selecting a node")
+    elif cfg['pick_action'] == 'pick_corner_1':
+        showStatusMsg("Lower-left corner for zoom x=%.3g y=%.3g" % (x, y))
+        cfg['zoom_x1'] = x; cfg['zoom_y1'] = y
+        cfg['pick_action'] = 'pick_corner_2'
+    elif cfg['pick_action'] == 'pick_corner_2':
+        showStatusMsg("Upper-right corner for zoom x=%.3g y=%.3g" % (x, y))
+        set_xy_ranges(cfg['zoom_x1'], cfg['zoom_y1'], x, y)
+        cfg['pick_action'] = 'select_node' # Return to default pick action.
+        eraseCursors()
+        refreshDisplay()
+    else:
+        print("Oops, should not have arrived here (in pickSomething).")
+    return
+
+def startZoom():
+    cfg["pick_action"] = "pick_corner_1"
     return
 
 def displayCoords(event):
-    x = world_x(cfg['canvas'].canvasx(event.x))
-    y = world_y(cfg['canvas'].canvasy(event.y))
-    coord_x.set("%.3g" % x)
-    coord_y.set("%.3g" % y)
+    """
+    On mouse movement in the canvas, update the displayed cursor position.
+    Usually, this is just a text form in the status line, however,
+    display cross-hair cursor if we are picking the corners of a zoom window.
+    """
+    c = cfg['canvas']
+    cx = c.canvasx(event.x); cy = c.canvasy(event.y)
+    x = world_x(cx); y = world_y(cy)
+    coord_x.set("%.3g" % x); coord_y.set("%.3g" % y)
+
+    c_x_min = c.canvasx(canvas_x(cfg['x_min']))
+    c_y_min = c.canvasy(canvas_y(cfg['y_min']))
+    c_x_max = c.canvasx(canvas_x(cfg['x_max']))
+    c_y_max = c.canvasy(canvas_y(cfg['y_max']))
+    if cfg['pick_action'] == 'pick_corner_1':
+        c.delete("cursor1")
+        c.create_line(cx, c_y_min, cx, c_y_max, fill='red', tags='cursor1')
+        c.create_line(c_x_min, cy, c_x_max, cy, fill='red', tags='cursor1')
+    if cfg['pick_action'] == 'pick_corner_2':
+        c.delete("cursor2")
+        c.create_line(cx, c_y_min, cx, c_y_max, fill='red', tags='cursor2')
+        c.create_line(c_x_min, cy, c_x_max, cy, fill='red', tags='cursor2')
+    return
+
+def eraseCursors():
+    c = cfg['canvas']
+    c.delete('cursor1')
+    c.delete('cursor2')
+    return
+
+def plotAxes():
+    """
+    Draw a set of axes and tic marks onto the canvas.
+    """
+    c = cfg['canvas']
+    xmin = cfg['x_min']; xmax = cfg['x_max']
+    ymin = cfg['y_min']; ymax = cfg['y_max']
+    dx = cfg['dx']; dy = cfg['dy']
+    #
+    c.delete('axes')
+    x1 = canvas_x(xmin); y1 = canvas_y(ymin)
+    x2 = canvas_x(xmax); y2 = canvas_y(ymin)
+    c.create_line(x1, y1, x2, y2, fill='black', tags='axes')
+    x2 = canvas_x(xmin); y2 = canvas_y(ymax)
+    c.create_line(x1, y1, x2, y2, fill='black', tags='axes')
+    #
+    eps = 1.0e-6 # something small
+    x = xmin
+    while x <= xmax+eps:
+        x1 = canvas_x(x); y1 = canvas_y(ymin)
+        c.create_line(x1, y1, x1, y1+5, fill='black', tags='axes')
+        c.create_text(x1, y1+10, text="%.3g"%x, fill='black', tags='axes', anchor=N)
+        x += cfg['dx']
+    y = ymin
+    while y <= ymax+eps:
+        x1 = canvas_x(xmin); y1 = canvas_y(y)
+        c.create_line(x1, y1, x1-5, y1, fill='black', tags='axes')
+        c.create_text(x1-10, y1, text="%.3g"%y, fill='black', tags='axes', anchor=E)
+        y += cfg['dy']
+    return
+
+def eraseAxes():
+    cfg['canvas'].delete('axes')
+    return
+
+def plotWalls():
+    c = cfg['canvas']
+    c.delete('walls')
+    xmin = cfg['x_min']; xmax = cfg['x_max']
+    n = 100
+    dx = (xmax - xmin)/n
+    for wall in kernel.walls:
+        x = xmin
+        x1 = canvas_x(x); y1 = canvas_y(wall(x))
+        for i in range(n):
+            xnew = x+dx
+            x2 = canvas_x(xnew); y2 = canvas_y(wall(xnew))
+            c.create_line(x1, y1, x2, y2, fill='blue', tags='walls')
+            x, x1, y1 = xnew, x2, y2
+    return
+
+def deleteSelectedNodes():
+    print("[TODO] complete deleteSelectedNodes")
+    return
+
+def clearSelectedNodes():
+    print("[TODO] clearSelectedNodes")
+    return
+
+def computeInteriorNode():
+    print("[TODO] computeInteriorNode")
+    return
+
+def computeCminusWall0():
+    print("[TODO] complete computeCminusWall0")
+    return
+
+def refreshDisplay():
+    print("[TODO] complete refreshDisplay")
+    plotAxes()
+    plotWalls()
     return
