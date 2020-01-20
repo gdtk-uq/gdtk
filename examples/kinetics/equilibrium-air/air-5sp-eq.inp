@@ -1,0 +1,3 @@
+model = 'thermally perfect gas'
+equilibrium = true
+species = {'N2', 'O2', 'N', 'O', 'NO'}
