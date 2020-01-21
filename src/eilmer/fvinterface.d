@@ -673,8 +673,8 @@ public:
                     // Apply a limit on mu_effective in the same manner as that applied to mu_t.
                     mu_effective = fmin(mu_effective, myConfig.max_mu_t_factor * fs.gas.mu);
                     qx += mu_effective * grad.turb[0][0];
-                    qy += mu_effective * grad.turb[1][1];
-                    if (myConfig.dimensions == 3) { qz += mu_effective * grad.turb[1][2]; }
+                    qy += mu_effective * grad.turb[0][1];
+                    if (myConfig.dimensions == 3) { qz += mu_effective * grad.turb[0][2]; }
                     // Turbulence transport of the turbulence properties themselves.
                     tau_kx = mu_effective * grad.turb[0][0]; 
                     tau_ky = mu_effective * grad.turb[0][1];
