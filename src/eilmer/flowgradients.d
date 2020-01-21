@@ -102,8 +102,7 @@ public:
             foreach (imode; 0 .. other.T_modes.length) { T_modes[imode][] = other.T_modes[imode][]; }
         }
         version(komega) {
-            turb[0][] = other.turb[0][];
-            turb[1][] = other.turb[1][];
+            foreach(i; 0 .. turb.length) turb[i][] = other.turb[i][];
         }
     }
 
@@ -119,8 +118,7 @@ public:
             foreach (imode; 0 .. other.T_modes.length) { T_modes[imode][] = other.T_modes[imode][]; }
         }
         version(komega) {
-            turb[0][] = other.turb[0][];
-            turb[1][] = other.turb[1][];
+            foreach(i; 0 .. turb.length) turb[i][] = other.turb[i][]; 
         }
     }
 
@@ -136,8 +134,7 @@ public:
             foreach (imode; 0 .. T_modes.length) { T_modes[imode][] += other.T_modes[imode][]; }
         }
         version(komega) {
-            turb[0][] += other.turb[0][];
-            turb[1][] += other.turb[1][];
+            foreach(i; 0 .. turb.length) turb[i][] += other.turb[i][]; 
         }
     }
 
@@ -153,8 +150,7 @@ public:
             foreach (imode; 0 .. T_modes.length) { T_modes[imode][] *= factor; }
         }
         version(komega) {
-            turb[0][] *= factor;
-            turb[1][] *= factor;
+            foreach(i; 0 .. turb.length) turb[i][] *= factor;
         }
     }
 
@@ -285,15 +281,13 @@ public:
         }
         //
         version(komega) {
-            mixin(codeForGradients("turb[0]"));
-            turb[0][0] = gradient_x * area_inv;
-            turb[0][1] = -gradient_y * area_inv;
-            turb[0][2] = 0.0;
+            foreach(tidx; 0 .. turb.length){
+                mixin(codeForGradients("turb[tidx]"));
+                turb[tidx][0] = gradient_x * area_inv;
+                turb[tidx][1] = -gradient_y * area_inv;
+                turb[tidx][2] = 0.0;
+            }
             //
-            mixin(codeForGradients("turb[1]"));
-            turb[1][0] = gradient_x * area_inv;
-            turb[1][1] = -gradient_y * area_inv;
-            turb[1][2] = 0.0;
         }
     } // end gradients_xy_div()
 
@@ -482,8 +476,9 @@ public:
             }
         }
         version(komega) {
-            mixin(codeForGradients("turb[0]", "turb[0]"));
-            mixin(codeForGradients("turb[1]", "turb[1]"));
+            foreach(tidx; 0 .. turb.length){
+                mixin(codeForGradients("turb[tidx]", "turb[tidx]"));
+            }
         }
     } // end gradients_leastsq()
 
