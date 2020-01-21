@@ -825,20 +825,41 @@ public:
         }
     } // end exchange_flowstate_phase2()
 
+    @nogc
+    size_t convective_gradient_buffer_entry_size(const LocalConfig myConfig){
+        /*
+        Compute the amount of space needed for one gradient in the SEND/RECV buffer 
+
+        Note: This routine must be kept consistent with the buffer packing in
+        exchange_convective_gradient phases 1 and 2
+        @author: Nick N. Gibbons
+        */
+
+        size_t nspecies = myConfig.n_species;
+        size_t nmodes = myConfig.n_modes;
+        size_t nitems = 42;
+        version(MHD) { nitems += 24; }
+        version(komega) { nitems += 12; }
+        nitems += nmodes*12;
+        nitems += nspecies*6;
+        return nitems;
+    }
+
     // not @nogc
     void exchange_convective_gradient_phase0(double t, int gtl, int ftl)
     {
         version(mpi_parallel) {
             // Prepare to exchange geometry data for the boundary cells.
-            size_t nspecies = blk.myConfig.n_species;
-            size_t nmodes = blk.myConfig.n_modes;
+            //size_t nspecies = blk.myConfig.n_species;
+            //size_t nmodes = blk.myConfig.n_modes;
             foreach (i; 0 .. n_incoming) {
                 // Exchange cell-centered convective gradients for the boundary cells.
                 // the size of the buffer should match up with that of lsqinterp.d
-                size_t nitems = 42;
-                version(MHD) { nitems += 24; }
-                version(komega) { nitems += 12; }
-                size_t ne = incoming_ncells_list[i] * (nmodes*12 + nspecies*6 + nitems);
+                //size_t nitems = 42;
+                //version(MHD) { nitems += 24; }
+                //version(komega) { nitems += 12; }
+                size_t grad_size = convective_gradient_buffer_entry_size(blk.myConfig);
+                size_t ne = incoming_ncells_list[i] * grad_size;
                 if (incoming_convective_gradient_buf_list[i].length < ne) { incoming_convective_gradient_buf_list[i].length = ne; }
                 // Post non-blocking receive for flowstate data that we expect to receive later
                 // from the src_blk MPI process.
@@ -862,10 +883,11 @@ public:
                 // Blocking send of this block's flow data
                 // to the corresponding non-blocking receive that was posted
                 // at in src_blk MPI process.
-                size_t nitems = 42;
-                version(MHD) { nitems += 24; }
-                version(komega) { nitems += 12; }
-                size_t ne = outgoing_ncells_list[i] * (nmodes*12 + nspecies*6 + nitems);
+                //size_t nitems = 42;
+                //version(MHD) { nitems += 24; }
+                //version(komega) { nitems += 12; }
+                size_t grad_size = convective_gradient_buffer_entry_size(blk.myConfig);
+                size_t ne = outgoing_ncells_list[i] * grad_size;
                 if (outgoing_convective_gradient_buf_list[i].length < ne) { outgoing_convective_gradient_buf_list[i].length = ne; }
                 auto buf = outgoing_convective_gradient_buf_list[i];
                 size_t ii = 0;
@@ -1150,6 +1172,25 @@ public:
         }
     } // end exchange_convective_gradient_phase2()
 
+    @nogc
+    size_t viscous_gradient_buffer_entry_size(const LocalConfig myConfig){
+        /*
+        Compute the amount of space needed for one gradient in the SEND/RECV buffer 
+
+        Note: This routine must be kept consistent with the buffer packing in exchange_viscous_gradient
+        phases 1 and 2
+        @author: Nick N. Gibbons
+        */
+
+        size_t nspecies = myConfig.n_species;
+        size_t nmodes = myConfig.n_modes;
+        size_t nitems = 12;
+        version(komega) { nitems += 6; }
+        nitems += nmodes*3;
+        nitems += nspecies*3;
+        return nitems;
+    }
+
         // not @nogc
     void exchange_viscous_gradient_phase0(double t, int gtl, int ftl)
     {
@@ -1160,9 +1201,10 @@ public:
             foreach (i; 0 .. n_incoming) {
                 // Exchange cell-centered viscous gradients for the boundary cells.
                 // the size of the buffer should match up with that of lsqinterp.d
-                size_t nitems = 12;
-                version(komega) { nitems += 6; }
-                size_t ne = incoming_ncells_list[i] * (nmodes*3 + nspecies*3 + nitems);
+                //size_t nitems = 12;
+                //version(komega) { nitems += 6; }
+                size_t grad_size = viscous_gradient_buffer_entry_size(blk.myConfig);
+                size_t ne = incoming_ncells_list[i] * grad_size;
                 if (incoming_viscous_gradient_buf_list[i].length < ne) { incoming_viscous_gradient_buf_list[i].length = ne; }
                 // Post non-blocking receive for flowstate data that we expect to receive later
                 // from the src_blk MPI process.
@@ -1186,9 +1228,10 @@ public:
                 // Blocking send of this block's flow data
                 // to the corresponding non-blocking receive that was posted
                 // at in src_blk MPI process.
-                size_t nitems = 12;
-                version(komega) { nitems += 6; }
-                size_t ne = outgoing_ncells_list[i] * (nmodes*3 + nspecies*3 + nitems);
+                //size_t nitems = 12;
+                //version(komega) { nitems += 6; }
+                size_t grad_size = viscous_gradient_buffer_entry_size(blk.myConfig);
+                size_t ne = outgoing_ncells_list[i] * grad_size;
                 if (outgoing_viscous_gradient_buf_list[i].length < ne) { outgoing_viscous_gradient_buf_list[i].length = ne; }
                 auto buf = outgoing_viscous_gradient_buf_list[i];
                 size_t ii = 0;
@@ -1210,12 +1253,12 @@ public:
                     buf[ii++] = c.T[2];
                     // tke, omega
                     version(komega) {
-                        buf[ii++] = c.tke[0];
-                        buf[ii++] = c.tke[1];
-                        buf[ii++] = c.tke[2];
-                        buf[ii++] = c.omega[0];
-                        buf[ii++] = c.omega[1];
-                        buf[ii++] = c.omega[2];
+                        buf[ii++] = c.turb[0][0];
+                        buf[ii++] = c.turb[0][1];
+                        buf[ii++] = c.turb[0][2];
+                        buf[ii++] = c.turb[1][0];
+                        buf[ii++] = c.turb[1][1];
+                        buf[ii++] = c.turb[1][2];
                     }
                     // multi-species
                     version(multi_species_gas) {
@@ -1286,12 +1329,12 @@ public:
                     c.T[2] = buf[ii++];
                     // tke, omega
                     version(komega) {
-                        c.tke[0] = buf[ii++];
-                        c.tke[1] = buf[ii++];
-                        c.tke[2] = buf[ii++];
-                        c.omega[0] = buf[ii++];
-                        c.omega[1] = buf[ii++];
-                        c.omega[2] = buf[ii++];
+                        c.turb[0][0] = buf[ii++];
+                        c.turb[0][1] = buf[ii++];
+                        c.turb[0][2] = buf[ii++];
+                        c.turb[1][0] = buf[ii++];
+                        c.turb[1][1] = buf[ii++];
+                        c.turb[1][2] = buf[ii++];
                     }
                     // multi-species
                     version(multi_species_gas) {

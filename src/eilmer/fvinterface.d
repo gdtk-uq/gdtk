@@ -367,14 +367,14 @@ public:
             
             version(komega) {
                 // tke
-                grad.tke[0] = c.grad.tke[0];
-                grad.tke[1] = c.grad.tke[1];
-                grad.tke[2] = c.grad.tke[2];
+                grad.turb[0][0] = c.grad.turb[0][0];
+                grad.turb[0][1] = c.grad.turb[0][1];
+                grad.turb[0][2] = c.grad.turb[0][2];
                 
                 // omega
-                grad.omega[0] = c.grad.omega[0];
-                grad.omega[1] = c.grad.omega[1];
-                grad.omega[2] = c.grad.omega[2];
+                grad.turb[1][0] = c.grad.turb[1][0];
+                grad.turb[1][1] = c.grad.turb[1][1];
+                grad.turb[1][2] = c.grad.turb[1][2];
             }
         } else {
             number qL; number qR;
@@ -457,22 +457,22 @@ public:
             
             version(komega) {
                 // tke
-                avgdotehat = 0.5*(cL0.grad.tke[0]+cR0.grad.tke[0])*ehatx +
-                    0.5*(cL0.grad.tke[1]+cR0.grad.tke[1])*ehaty +
-                    0.5*(cL0.grad.tke[2]+cR0.grad.tke[2])*ehatz;
+                avgdotehat = 0.5*(cL0.grad.turb[0][0]+cR0.grad.turb[0][0])*ehatx +
+                    0.5*(cL0.grad.turb[0][1]+cR0.grad.turb[0][1])*ehaty +
+                    0.5*(cL0.grad.turb[0][2]+cR0.grad.turb[0][2])*ehatz;
                 jump = avgdotehat - (cR0.fs.turb[0] - cL0.fs.turb[0])/emag;
-                grad.tke[0] = 0.5*(cL0.grad.tke[0]+cR0.grad.tke[0]) - jump*(nx/ndotehat);
-                grad.tke[1] = 0.5*(cL0.grad.tke[1]+cR0.grad.tke[1]) - jump*(ny/ndotehat);
-                grad.tke[2] = 0.5*(cL0.grad.tke[2]+cR0.grad.tke[2]) - jump*(nz/ndotehat);
+                grad.turb[0][0] = 0.5*(cL0.grad.turb[0][0]+cR0.grad.turb[0][0]) - jump*(nx/ndotehat);
+                grad.turb[0][1] = 0.5*(cL0.grad.turb[0][1]+cR0.grad.turb[0][1]) - jump*(ny/ndotehat);
+                grad.turb[0][2] = 0.5*(cL0.grad.turb[0][2]+cR0.grad.turb[0][2]) - jump*(nz/ndotehat);
                 
                 // omega
-                avgdotehat = 0.5*(cL0.grad.omega[0]+cR0.grad.omega[0])*ehatx +
-                    0.5*(cL0.grad.omega[1]+cR0.grad.omega[1])*ehaty +
-                    0.5*(cL0.grad.omega[2]+cR0.grad.omega[2])*ehatz;
+                avgdotehat = 0.5*(cL0.grad.turb[1][0]+cR0.grad.turb[1][0])*ehatx +
+                    0.5*(cL0.grad.turb[1][1]+cR0.grad.turb[1][1])*ehaty +
+                    0.5*(cL0.grad.turb[1][2]+cR0.grad.turb[1][2])*ehatz;
                 jump = avgdotehat - (cR0.fs.turb[1] - cL0.fs.turb[1])/emag;
-                grad.omega[0] = 0.5*(cL0.grad.omega[0]+cR0.grad.omega[0]) - jump*(nx/ndotehat);
-                grad.omega[1] = 0.5*(cL0.grad.omega[1]+cR0.grad.omega[1]) - jump*(ny/ndotehat);
-                grad.omega[2] = 0.5*(cL0.grad.omega[2]+cR0.grad.omega[2]) - jump*(nz/ndotehat);
+                grad.turb[1][0] = 0.5*(cL0.grad.turb[1][0]+cR0.grad.turb[1][0]) - jump*(nx/ndotehat);
+                grad.turb[1][1] = 0.5*(cL0.grad.turb[1][1]+cR0.grad.turb[1][1]) - jump*(ny/ndotehat);
+                grad.turb[1][2] = 0.5*(cL0.grad.turb[1][2]+cR0.grad.turb[1][2]) - jump*(nz/ndotehat);
             }
         }
     } // end average_cell_spatial_derivs()
@@ -672,20 +672,20 @@ public:
                     number mu_effective = fs.gas.mu + sigma_star * fs.gas.rho * fs.turb[0] / fs.turb[1];
                     // Apply a limit on mu_effective in the same manner as that applied to mu_t.
                     mu_effective = fmin(mu_effective, myConfig.max_mu_t_factor * fs.gas.mu);
-                    qx += mu_effective * grad.tke[0];
-                    qy += mu_effective * grad.tke[1];
-                    if (myConfig.dimensions == 3) { qz += mu_effective * grad.tke[2]; }
+                    qx += mu_effective * grad.turb[0][0];
+                    qy += mu_effective * grad.turb[1][1];
+                    if (myConfig.dimensions == 3) { qz += mu_effective * grad.turb[1][2]; }
                     // Turbulence transport of the turbulence properties themselves.
-                    tau_kx = mu_effective * grad.tke[0]; 
-                    tau_ky = mu_effective * grad.tke[1];
-                    if (myConfig.dimensions == 3) { tau_kz = mu_effective * grad.tke[2]; }
+                    tau_kx = mu_effective * grad.turb[0][0]; 
+                    tau_ky = mu_effective * grad.turb[0][1];
+                    if (myConfig.dimensions == 3) { tau_kz = mu_effective * grad.turb[0][2]; }
                     number sigma = 0.5;
                     mu_effective = fs.gas.mu + sigma * fs.gas.rho * fs.turb[0] / fs.turb[1];
                     // Apply a limit on mu_effective in the same manner as that applied to mu_t.
                     mu_effective = fmin(mu_effective, myConfig.max_mu_t_factor * fs.gas.mu);
-                    tau_wx = mu_effective * grad.omega[0]; 
-                    tau_wy = mu_effective * grad.omega[1]; 
-                    if (myConfig.dimensions == 3) { tau_wz = mu_effective * grad.omega[2]; } 
+                    tau_wx = mu_effective * grad.turb[1][0]; 
+                    tau_wy = mu_effective * grad.turb[1][1]; 
+                    if (myConfig.dimensions == 3) { tau_wz = mu_effective * grad.turb[1][2]; } 
                 }
             }
             if (myConfig.apply_shear_stress_relative_limit) {

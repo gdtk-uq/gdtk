@@ -71,8 +71,7 @@ public:
         number[3][] T_modes;
     }
     version(komega) {
-        number[3] tke; // turbulence kinetic energy
-        number[3] omega; // pseudo vorticity for k-omega turbulence
+        number[3][2] turb; // turbulence primitive variables 
     }
 private:
     LocalConfig myConfig;
@@ -103,8 +102,8 @@ public:
             foreach (imode; 0 .. other.T_modes.length) { T_modes[imode][] = other.T_modes[imode][]; }
         }
         version(komega) {
-            tke[] = other.tke[];
-            omega[] = other.omega[];
+            turb[0][] = other.turb[0][];
+            turb[1][] = other.turb[1][];
         }
     }
 
@@ -120,8 +119,8 @@ public:
             foreach (imode; 0 .. other.T_modes.length) { T_modes[imode][] = other.T_modes[imode][]; }
         }
         version(komega) {
-            tke[] = other.tke[];
-            omega[] = other.omega[];
+            turb[0][] = other.turb[0][];
+            turb[1][] = other.turb[1][];
         }
     }
 
@@ -137,8 +136,8 @@ public:
             foreach (imode; 0 .. T_modes.length) { T_modes[imode][] += other.T_modes[imode][]; }
         }
         version(komega) {
-            tke[] += other.tke[];
-            omega[] += other.omega[];
+            turb[0][] += other.turb[0][];
+            turb[1][] += other.turb[1][];
         }
     }
 
@@ -154,8 +153,8 @@ public:
             foreach (imode; 0 .. T_modes.length) { T_modes[imode][] *= factor; }
         }
         version(komega) {
-            tke[] *= factor;
-            omega[] *= factor;
+            turb[0][] *= factor;
+            turb[1][] *= factor;
         }
     }
 
@@ -182,8 +181,8 @@ public:
             repr ~= "]";
         }
         version(komega) {
-            repr ~= ", tke=" ~ to!string(tke);
-            repr ~= ", omega=" ~ to!string(omega);
+            repr ~= ", tke=" ~ to!string(turb[0]);
+            repr ~= ", omega=" ~ to!string(turb[1]);
         }
         repr ~= ")";
         return to!string(repr);
@@ -287,14 +286,14 @@ public:
         //
         version(komega) {
             mixin(codeForGradients("turb[0]"));
-            tke[0] = gradient_x * area_inv;
-            tke[1] = -gradient_y * area_inv;
-            tke[2] = 0.0;
+            turb[0][0] = gradient_x * area_inv;
+            turb[0][1] = -gradient_y * area_inv;
+            turb[0][2] = 0.0;
             //
             mixin(codeForGradients("turb[1]"));
-            omega[0] = gradient_x * area_inv;
-            omega[1] = -gradient_y * area_inv;
-            omega[2] = 0.0;
+            turb[1][0] = gradient_x * area_inv;
+            turb[1][1] = -gradient_y * area_inv;
+            turb[1][2] = 0.0;
         }
     } // end gradients_xy_div()
 
@@ -483,8 +482,8 @@ public:
             }
         }
         version(komega) {
-            mixin(codeForGradients("turb[0]", "tke"));
-            mixin(codeForGradients("turb[1]", "omega"));
+            mixin(codeForGradients("turb[0]", "turb[0]"));
+            mixin(codeForGradients("turb[1]", "turb[1]"));
         }
     } // end gradients_leastsq()
 

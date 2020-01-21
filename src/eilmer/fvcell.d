@@ -1984,10 +1984,10 @@ public:
         number dudy = grad.vel[0][1];
         number dvdx = grad.vel[1][0];
         number dvdy = grad.vel[1][1];
-        number dtkedx = grad.tke[0];
-        number dtkedy = grad.tke[1];
-        number domegadx = grad.omega[0];
-        number domegady = grad.omega[1];
+        number dtkedx = grad.turb[0][0];
+        number dtkedy = grad.turb[0][1];
+        number domegadx = grad.turb[1][0];
+        number domegady = grad.turb[1][1];
         //final switch (myConfig.spatial_deriv_locn) {
         //case SpatialDerivLocn.vertices:
         //    mixin(avg_over_vtx_list("grad.vel[0][0]", "dudx"));
@@ -2048,8 +2048,8 @@ public:
             number dwdx = grad.vel[2][0];
             number dwdy = grad.vel[2][1];
             number dwdz = grad.vel[2][2];
-            number dtkedz = grad.tke[2];
-            number domegadz = grad.omega[2];
+            number dtkedz = grad.turb[0][2];
+            number domegadz = grad.turb[1][2];
             // 3D cartesian
             //number dudz, dvdz, dwdx, dwdy, dwdz;
             //number dtkedz, domegadz;

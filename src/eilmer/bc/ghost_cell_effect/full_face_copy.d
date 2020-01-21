@@ -1356,6 +1356,25 @@ public:
         // Done with copying from source cells.
     } // end exchange_flowstate_phase2()
 
+    @nogc
+    size_t viscous_gradient_buffer_entry_size(const LocalConfig myConfig){
+        /*
+        Compute the amount of space needed for one gradient in the SEND/RECV buffer 
+
+        Note: This routine must be kept consistent with the buffer packing in exchange_viscous_gradient
+        phases 1 and 2
+        @author: Nick N. Gibbons
+        */
+
+        size_t nspecies = myConfig.n_species;
+        size_t nmodes = myConfig.n_modes;
+        size_t nitems = 12;
+        version(komega) { nitems += 6; }
+        nitems += nmodes*3;
+        nitems += nspecies*3;
+        return nitems;
+    }
+
     // not @nogc
     void exchange_viscous_gradient_phase0(double t, int gtl, int ftl)
     {
@@ -1371,11 +1390,12 @@ public:
                 // and over in gas_state.d
                 // @nogc void copy_values_from(ref const(GasState) other) 
                 //
-                size_t nspecies = this_blk.myConfig.n_species;
-                size_t nmodes = this_blk.myConfig.n_modes;
-                size_t nitems = 12;
-                version(komega) { nitems += 6; }
-                size_t ne = ghost_cells.length * (nmodes*3 + nspecies*3 + nitems);
+                //size_t nspecies = this_blk.myConfig.n_species;
+                //size_t nmodes = this_blk.myConfig.n_modes;
+                //size_t nitems = 12;
+                //version(komega) { nitems += 6; }
+                size_t grad_size = viscous_gradient_buffer_entry_size(this_blk.myConfig);
+                size_t ne = ghost_cells.length * grad_size;
                 if (incoming_viscous_gradient_buf.length < ne) { incoming_viscous_gradient_buf.length = ne; }
                 //
                 // Post non-blocking receive for geometry data that we expect to receive later
@@ -1447,9 +1467,10 @@ public:
                 // Blocking send of this block's flow data
                 // to the corresponding non-blocking receive that was posted
                 // in the other MPI process.
-                size_t nitems = 12;
-                version(komega) { nitems += 6; }
-                size_t ne = ghost_cells.length * (nmodes*3 + nspecies*3 + nitems);
+                //size_t nitems = 12;
+                //version(komega) { nitems += 6; }
+                size_t grad_size = viscous_gradient_buffer_entry_size(this_blk.myConfig);
+                size_t ne = ghost_cells.length * grad_size;
                 if (outgoing_viscous_gradient_buf.length < ne) { outgoing_viscous_gradient_buf.length = ne; }
                 outgoing_viscous_gradient_tag = make_mpi_tag(blk.id, which_boundary, 2);
                 auto buf = outgoing_viscous_gradient_buf;
@@ -1471,12 +1492,12 @@ public:
                     buf[ii++] = c.grad.T[2];
                     // tke, omega
                     version(komega) {
-                        buf[ii++] = c.grad.tke[0];
-                        buf[ii++] = c.grad.tke[1];
-                        buf[ii++] = c.grad.tke[2];
-                        buf[ii++] = c.grad.omega[0];
-                        buf[ii++] = c.grad.omega[1];
-                        buf[ii++] = c.grad.omega[2];
+                        buf[ii++] = c.grad.turb[0][0];
+                        buf[ii++] = c.grad.turb[0][1];
+                        buf[ii++] = c.grad.turb[0][2];
+                        buf[ii++] = c.grad.turb[1][0];
+                        buf[ii++] = c.grad.turb[1][1];
+                        buf[ii++] = c.grad.turb[1][2];
                     }
                     // multi-species
                     version(multi_species_gas) {
@@ -1556,12 +1577,12 @@ public:
                     c.grad.T[2] = buf[ii++];
                     // tke, omega
                     version(komega) {
-                        c.grad.tke[0] = buf[ii++];
-                        c.grad.tke[1] = buf[ii++];
-                        c.grad.tke[2] = buf[ii++];
-                        c.grad.omega[0] = buf[ii++];
-                        c.grad.omega[1] = buf[ii++];
-                        c.grad.omega[2] = buf[ii++];
+                        c.grad.turb[0][0] = buf[ii++];
+                        c.grad.turb[0][1] = buf[ii++];
+                        c.grad.turb[0][2] = buf[ii++];
+                        c.grad.turb[1][0] = buf[ii++];
+                        c.grad.turb[1][1] = buf[ii++];
+                        c.grad.turb[1][2] = buf[ii++];
                     }
                     // multi-species
                     version(multi_species_gas) {
