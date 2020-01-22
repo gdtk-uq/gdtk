@@ -420,6 +420,7 @@ gasModels["IDEAL GAS"] = gasModels["IDEALGAS"]
 -- Thermally perfect gas and aliases
 gasModels["THERMALLYPERFECTGAS"] = {writeFn=writeThermPerfGas, DName="ThermallyPerfectGas"}
 gasModels["THERMALLY PERFECT GAS"] = gasModels["THERMALLYPERFECTGAS"]
+gasModels["THERMALLY PERFECT GAS EQUILIBRIUM"] = {writeFn=writeThermPerfGas, DName="ThermallyPerfectGasEquilibrium"}
 -- CO2
 gasModels["CO2GAS"] = {writeFn=writeCO2Gas, DName = "CO2Gas"}
 gasModels["CO2GASSW"] = {writeFn = writeCO2GasSW, DName = "CO2GasSW"}

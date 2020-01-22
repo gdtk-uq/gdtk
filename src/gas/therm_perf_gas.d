@@ -426,7 +426,7 @@ public:
         }
     }
 
-private:
+protected:
     double[] _R;
     double[] _charge;
     PerfectGasMixEOS _pgMixEOS;
