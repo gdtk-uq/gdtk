@@ -771,7 +771,7 @@ public:
             // volume of species isp and
             // the fluxes are mass/unit-time/unit-area.
             // Units of DmassfDt are 1/sec.
-            immutable uint max_species = 15;
+            immutable uint max_species = 32;
             number[max_species] integral_species;
             uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
             if (nsp > max_species) { throw new Error("oops too many chemical species for work array"); }
