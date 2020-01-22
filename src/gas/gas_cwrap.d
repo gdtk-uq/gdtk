@@ -260,6 +260,9 @@ extern (C) int gas_state_get_ceaSavedData_field(int gs_i, char* field_name, doub
 {
     try {
         GasState gs = gas_states[gs_i];
+        if (gs.ceaSavedData is null) {
+            throw new Exception("No available ceaSavedData.");
+        }
         string name = to!string(field_name);
         *value = 0.0;
         switch (name) {
