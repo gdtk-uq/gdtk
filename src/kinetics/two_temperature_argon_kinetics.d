@@ -57,9 +57,6 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         }
         // There are changes only if the gas is hot enough.
         if (Q.T > _T_min_for_reaction) {
-            int NumberSteps = cast(int) fmax(floor(tInterval/dtChemSuggest), 1.0);
-            _chem_dt = tInterval/NumberSteps;
-            dtChemSuggest = _chem_dt; // Remember this value for the next call.
             //
             // Determine the current number densities.
             number[3] numden;
@@ -82,74 +79,109 @@ final class UpdateArgonFrac : ThermochemicalReactor {
             number alpha_max = fmin(1.0, u_available/(_Rgas*(Q.T_modes[0]+_theta_ion)));
             _n_e_max = alpha_max * _n_total;
             _u_min_heavy_particles = 3.0/2.0*_Rgas*200.0;
-
-            // Pack the state vector, ready for the integrator.
-            number[2] y; y[0] = n_e; y[1] = Q.u;
-
-            // The following items are needed for Backward-Euler step
-            number[2] y_prev; y_prev[0] = n_e; y_prev[1] = Q.u;
-            // Perturbation sizes for the finite-difference Jacobian.
-            double[2] h = [1.0e-6*_n_total, 1.0e-6*_u_total];
-
-            foreach (n; 0 .. NumberSteps) {
-                switch (_integration_method) {
-                case "Forward_Euler":
-                    number[2] myF = F(y, Q);
-                    foreach (i; 0 .. 2) { y[i] += _chem_dt * myF[i]; }
-                    if (!state_vector_is_within_limits(y)) {
-                        string msg = "State vector not within limits";
-                        debug { msg ~= format("\n    y=[%g,%g]", y[0], y[1]); }
+            //
+            // Retain a copy of the initial state, in case we restart
+            // the integration with more, smaller time time steps.
+            number initial_n_e = n_e;
+            number initial_translational_energy = Q.u;
+            //
+            // Start with the suggested time step size.
+            int NumberSteps = cast(int) fmax(floor(tInterval/dtChemSuggest), 1.0);
+            number[2] y;
+            int integration_attempt = 0;
+            bool finished_integration = false;
+            while (!finished_integration) {
+                ++integration_attempt;
+                try {
+                    // Integrate across the interval with fixed time steps.
+                    _chem_dt = tInterval/NumberSteps;
+                    // Pack the state vector, ready for the integrator.
+                    y[0] = initial_n_e;
+                    y[1] = initial_translational_energy;
+                    //
+                    switch (_integration_method) {
+                    case "Forward_Euler":
+                        foreach (n; 0 .. NumberSteps) {
+                            number[2] myF = F(y, Q);
+                            foreach (i; 0 .. 2) { y[i] += _chem_dt * myF[i]; }
+                            if (!state_vector_is_within_limits(y)) {
+                                string msg = "State vector not within limits";
+                                debug { msg ~= format("\n    y=[%g,%g]", y[0], y[1]); }
+                                throw new ThermochemicalReactorUpdateException(msg);
+                            }
+                        } // end foreach n
+                        break;
+                    case "Backward_Euler":
+                        // Perturbation sizes for the finite-difference Jacobian.
+                        double[2] h = [1.0e-6*_n_total, 1.0e-6*_u_total];
+                        number[2] y_prev; y_prev[0] = y[0]; y_prev[1] = y[1];
+                        foreach (n; 0 .. NumberSteps) {
+                            double norm_error = 1.0e50; // something large that will be replaced
+                            int iter = 0;
+                            do {
+                                number[2][2] J = Jacobian(y, y_prev, h, Q);
+                                number[2] rhs = BackEuler_F(y, y_prev, Q);
+                                number[2] dy; solve2(J, rhs, dy);
+                                foreach (i; 0 .. 2) { y[i] -= dy[i]; }
+                                if (!state_vector_is_within_limits(y)) {
+                                    string msg = "State vector not within limits";
+                                    debug { msg ~= format("\n    y=[%g,%g] iter=%d", y[0], y[1], iter); }
+                                    throw new ThermochemicalReactorUpdateException(msg);
+                                }
+                                number[2] error = BackEuler_F(y, y_prev, Q);
+                                norm_error = fabs(error[0].re/(_n_total.re+1.0)) + fabs(error[1].re/(_u_total.re+1.0));
+                                ++iter;
+                            } while (norm_error > _Newton_Raphson_tol && iter < _max_iter_newton);
+                            if (norm_error > _Newton_Raphson_tol) {
+                                string msg = "Backward-Euler Newton iteration did not converge.";
+                                debug { msg ~= format("\n    norm_error=%g iter=%d", norm_error, iter); }
+                                throw new ThermochemicalReactorUpdateException(msg);
+                            }
+                            foreach (i; 0 .. 2) { y_prev[i] = y[i]; } // needed for next time step
+                        } // end foreach n
+                        break;
+                    case "RK4":
+                        number[2] k1, k2_in, k2, k3_in, k3, k4_in, k4;
+                        foreach (n; 0 .. NumberSteps) {
+                            number[2] myF = F(y, Q);
+                            foreach (i; 0 .. 2) { k1[i] = _chem_dt * myF[i]; }
+                            foreach (i; 0 .. 2) { k2_in[i] = y[i] + k1[i]/2.0; }
+                            myF = F(k2_in, Q);
+                            foreach (i; 0 .. 2) { k2[i] = _chem_dt * myF[i]; }
+                            foreach (i; 0 .. 2) { k3_in[i] = y[i] + k2[i]/2.0; }
+                            myF = F(k3_in, Q);
+                            foreach (i; 0 .. 2) { k3[i] = _chem_dt * myF[i]; }
+                            foreach (i; 0 .. 2) { k4_in[i] = y[i] + k3[i]; }
+                            myF = F(k4_in, Q);
+                            foreach (i; 0 .. 2) { k4[i] = _chem_dt * myF[i]; }
+                            foreach (i; 0 .. 2) { y[i] += 1.0/6.0*(k1[i]+2.0*k2[i]+2.0*k3[i]+k4[i]); }
+                            if (!state_vector_is_within_limits(y)) {
+                                string msg = "State vector not within limits";
+                                debug { msg ~= format("\n    y=[%g,%g]", y[0], y[1]); }
+                                throw new ThermochemicalReactorUpdateException(msg);
+                            }
+                        } // end foreach n
+                        break;
+                    default:
+                        throw new Exception("Invalid ODE update selection.");
+                    } // end switch _integration_method
+                    finished_integration = true;
+                    if (integration_attempt == 1) {
+                        // [TODO] Suince we had success on the first attempt,
+                        // we should consider increasing the time step size.
+                    }
+                } catch(Exception e) {
+                    if (integration_attempt < 10) {
+                        // We will allow a retry with a small time step.
+                        NumberSteps *= 2;
+                    } else {
+                        // We have taken too many attempts and have continued to fail.
+                        string msg = "Thermochemical update fails after several attempts.";
+                        debug { msg ~= text("\n Previous exception message: ", e.msg); }
                         throw new ThermochemicalReactorUpdateException(msg);
                     }
-                    break;
-                case "Backward_Euler":
-                    double norm_error = 1.0e50; // something large that will be replaced
-                    int iter = 0;
-                    do {
-                        number[2][2] J = Jacobian(y, y_prev, h, Q);
-                        number[2] rhs = BackEuler_F(y, y_prev, Q);
-                        number[2] dy; solve2(J, rhs, dy);
-                        foreach (i; 0 .. 2) { y[i] -= dy[i]; }
-                        if (!state_vector_is_within_limits(y)) {
-                            string msg = "State vector not within limits";
-                            debug { msg ~= format("\n    y=[%g,%g] iter=%d", y[0], y[1], iter); }
-                            throw new ThermochemicalReactorUpdateException(msg);
-                        }
-                        number[2] error = BackEuler_F(y, y_prev, Q);
-                        norm_error = fabs(error[0].re/(_n_total.re+1.0)) + fabs(error[1].re/(_u_total.re+1.0));
-                        ++iter;
-                    } while (norm_error > _Newton_Raphson_tol && iter < _max_iter_newton);
-                    if (norm_error > _Newton_Raphson_tol) {
-                        string msg = "Backward-Euler Newton iteration did not converge.";
-                        debug { msg ~= format("\n    norm_error=%g iter=%d", norm_error, iter); }
-                        throw new ThermochemicalReactorUpdateException(msg);
-                    }
-                    foreach (i; 0 .. 2) { y_prev[i] = y[i]; } // needed for next time step
-                    break;
-                case "RK4":
-                    number[2] k1, k2_in, k2, k3_in, k3, k4_in, k4;
-                    number[2] myF = F(y, Q);
-                    foreach (i; 0 .. 2) { k1[i] = _chem_dt * myF[i]; }
-                    foreach (i; 0 .. 2) { k2_in[i] = y[i] + k1[i]/2.0; }
-                    myF = F(k2_in, Q);
-                    foreach (i; 0 .. 2) { k2[i] = _chem_dt * myF[i]; }
-                    foreach (i; 0 .. 2) { k3_in[i] = y[i] + k2[i]/2.0; }
-                    myF = F(k3_in, Q);
-                    foreach (i; 0 .. 2) { k3[i] = _chem_dt * myF[i]; }
-                    foreach (i; 0 .. 2) { k4_in[i] = y[i] + k3[i]; }
-                    myF = F(k4_in, Q);
-                    foreach (i; 0 .. 2) { k4[i] = _chem_dt * myF[i]; }
-                    foreach (i; 0 .. 2) { y[i] += 1.0/6.0*(k1[i]+2.0*k2[i]+2.0*k3[i]+k4[i]); }
-                    if (!state_vector_is_within_limits(y)) {
-                        string msg = "State vector not within limits";
-                        debug { msg ~= format("\n    y=[%g,%g]", y[0], y[1]); }
-                        throw new ThermochemicalReactorUpdateException(msg);
-                    }
-                    break;
-                default:
-                    throw new ThermochemicalReactorUpdateException("Invalid ODE update selection.");
-                } // end switch
-            } // end foreach n
+                }
+            } // end while !finished_integration
 
             // Unpack the results.
             n_e = y[0];
@@ -179,6 +211,9 @@ final class UpdateArgonFrac : ThermochemicalReactor {
             _gmodel.numden2massf(numden, Q);
             _gmodel.update_thermo_from_rhou(Q);
             _gmodel.update_sound_speed(Q);
+            //
+            // Remember the size of the successful time step for the next call.
+            dtChemSuggest = _chem_dt;
         } // end if Q.T > _T_min_for_reaction
     } // end opCall()
     
