@@ -16,7 +16,7 @@ module kinetics.two_temperature_argon_kinetics;
 import std.stdio : writeln;
 import std.format;
 import std.math;
-import std.conv : to;
+import std.conv;
 import nm.complex;
 import nm.number;
 import nm.bbla;
@@ -36,11 +36,11 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         auto L = init_lua_State();
         doLuaFile(L, fname);
         lua_getglobal(L, "TwoTemperatureReactingArgon");
-        _ion_tol = getDoubleWithDefault(L, -1, "ion_tol", 1.0e-15);
+        _ion_tol = getDoubleWithDefault(L, -1, "ion_tol", 0.0);
         _integration_method = getStringWithDefault(L, -1, "integration_method", "Backward_Euler");
         _T_min_for_reaction = getDoubleWithDefault(L, -1, "T_min_for_reaction", 3000.0);
-        _n_step_suggest = getIntWithDefault(L, -1, "n_step_suggest", 1);
-        _Newton_Raphson_tol = getDoubleWithDefault(L, -1, "Newton_Raphson_tol", 1.0e-10);
+        _n_step_suggest = getIntWithDefault(L, -1, "n_step_suggest", 10);
+        _Newton_Raphson_tol = getDoubleWithDefault(L, -1, "Newton_Raphson_tol", 1.0e-6); // relative error
         _max_iter_newton = getIntWithDefault(L, -1, "max_iter_newton", 30);
         lua_close(L);
     }
@@ -57,9 +57,6 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         }
         // There are changes only if the gas is hot enough.
         if (Q.T > _T_min_for_reaction) {
-            int NumberSteps = cast(int) fmax(floor(tInterval/dtChemSuggest), 1.0);
-            _chem_dt = tInterval/NumberSteps;
-            dtChemSuggest = _chem_dt; // Remember this value for the next call.
             //
             // Determine the current number densities.
             number[3] numden;
@@ -82,66 +79,109 @@ final class UpdateArgonFrac : ThermochemicalReactor {
             number alpha_max = fmin(1.0, u_available/(_Rgas*(Q.T_modes[0]+_theta_ion)));
             _n_e_max = alpha_max * _n_total;
             _u_min_heavy_particles = 3.0/2.0*_Rgas*200.0;
-
-            // Pack the state vector, ready for the integrator.
-            number[2] y; y[0] = n_e; y[1] = Q.u;
-
-            // The following items are needed for Backward-Euler step
-            number[2] y_prev; y_prev[0] = n_e; y_prev[1] = Q.u;
-            // Perturbation sizes for the finite-difference Jacobian
-            double[2] h = [1.0e10, 1.0e-5]; // working: [1.0e10, 1.0e0]; 
-
-            foreach (n; 0 .. NumberSteps) {
-                switch (_integration_method) {
-                case "Forward_Euler":
-                    number[2] myF = F(y, Q);
-                    foreach (i; 0 .. 2) { y[i] = y[i] + _chem_dt * myF[i]; }
-                    limit_state_vector(y);
-                    break;
-                case "Backward_Euler":
-                    double norm_error = 1.0e50; // something large that will be replaced
-                    int iter = 0;
-                    do {
-                        number[2][2] J = Jacobian(y, y_prev, h, Q);
-                        number[2] rhs = BackEuler_F(y, y_prev, Q);
-                        number[2] dy; solve2(J, rhs, dy);
-                        number[2] y_new;
-                        double scale = 1.0; // First attempt at full scale.
-                        do {
-                            foreach (i; 0 .. 2) { y_new[i] = y[i] - scale*dy[i]; }
-                            scale /= 10.0; // for next pass
-                        } while (!state_vector_is_within_limits(y_new) && scale > 0.001);
-                        limit_state_vector(y_new);
-                        foreach (i; 0 .. 2) { y[i] = y_new[i]; }
-                        number[2] error = BackEuler_F(y, y_prev, Q);
-                        norm_error = fabs(error[0].re/_n_total.re) + fabs(error[1].re/_u_total.re);
-                        ++iter;
-                    } while (norm_error > _Newton_Raphson_tol && iter < _max_iter_newton);
-                    foreach (i; 0 .. 2) { y_prev[i] = y[i]; } // needed for next step
-                    break;
-                case "RK4":
-                    number[2] k1, k2_in, k2, k3_in, k3, k4_in, k4;
-                    number[2] myF = F(y, Q);
-                    foreach (i; 0 .. 2) { k1[i] = _chem_dt * myF[i]; }
-                    foreach (i; 0 .. 2) { k2_in[i] = y[i] + k1[i]/2.0; }
-                    limit_state_vector(k2_in);
-                    myF = F(k2_in, Q);
-                    foreach (i; 0 .. 2) { k2[i] = _chem_dt * myF[i]; }
-                    foreach (i; 0 .. 2) { k3_in[i] = y[i] + k2[i]/2.0; }
-                    limit_state_vector(k3_in);
-                    myF = F(k3_in, Q);
-                    foreach (i; 0 .. 2) { k3[i] = _chem_dt * myF[i]; }
-                    foreach (i; 0 .. 2) { k4_in[i] = y[i] + k3[i]; }
-                    limit_state_vector(k4_in);
-                    myF = F(k4_in, Q);
-                    foreach (i; 0 .. 2) { k4[i] = _chem_dt * myF[i]; }
-                    foreach (i; 0 .. 2) { y[i] = y[i] + 1.0/6.0*(k1[i]+2.0*k2[i]+2.0*k3[i]+k4[i]); }
-                    limit_state_vector(y);
-                    break;
-                default:
-                    throw new Error("Invalid ODE update selection.");
-                } // end switch
-            } // end foreach n
+            //
+            // Retain a copy of the initial state, in case we restart
+            // the integration with more, smaller time time steps.
+            number initial_n_e = n_e;
+            number initial_translational_energy = Q.u;
+            //
+            // Start with the suggested time step size.
+            int NumberSteps = cast(int) fmax(floor(tInterval/dtChemSuggest), 1.0);
+            number[2] y;
+            int integration_attempt = 0;
+            bool finished_integration = false;
+            while (!finished_integration) {
+                ++integration_attempt;
+                try {
+                    // Integrate across the interval with fixed time steps.
+                    _chem_dt = tInterval/NumberSteps;
+                    // Pack the state vector, ready for the integrator.
+                    y[0] = initial_n_e;
+                    y[1] = initial_translational_energy;
+                    //
+                    switch (_integration_method) {
+                    case "Forward_Euler":
+                        foreach (n; 0 .. NumberSteps) {
+                            number[2] myF = F(y, Q);
+                            foreach (i; 0 .. 2) { y[i] += _chem_dt * myF[i]; }
+                            if (!state_vector_is_within_limits(y)) {
+                                string msg = "State vector not within limits";
+                                debug { msg ~= format("\n    y=[%g,%g]", y[0], y[1]); }
+                                throw new ThermochemicalReactorUpdateException(msg);
+                            }
+                        } // end foreach n
+                        break;
+                    case "Backward_Euler":
+                        // Perturbation sizes for the finite-difference Jacobian.
+                        double[2] h = [1.0e-6*_n_total, 1.0e-6*_u_total];
+                        number[2] y_prev; y_prev[0] = y[0]; y_prev[1] = y[1];
+                        foreach (n; 0 .. NumberSteps) {
+                            double norm_error = 1.0e50; // something large that will be replaced
+                            int iter = 0;
+                            do {
+                                number[2][2] J = Jacobian(y, y_prev, h, Q);
+                                number[2] rhs = BackEuler_F(y, y_prev, Q);
+                                number[2] dy; solve2(J, rhs, dy);
+                                foreach (i; 0 .. 2) { y[i] -= dy[i]; }
+                                if (!state_vector_is_within_limits(y)) {
+                                    string msg = "State vector not within limits";
+                                    debug { msg ~= format("\n    y=[%g,%g] iter=%d", y[0], y[1], iter); }
+                                    throw new ThermochemicalReactorUpdateException(msg);
+                                }
+                                number[2] error = BackEuler_F(y, y_prev, Q);
+                                norm_error = fabs(error[0].re/(_n_total.re+1.0)) + fabs(error[1].re/(_u_total.re+1.0));
+                                ++iter;
+                            } while (norm_error > _Newton_Raphson_tol && iter < _max_iter_newton);
+                            if (norm_error > _Newton_Raphson_tol) {
+                                string msg = "Backward-Euler Newton iteration did not converge.";
+                                debug { msg ~= format("\n    norm_error=%g iter=%d", norm_error, iter); }
+                                throw new ThermochemicalReactorUpdateException(msg);
+                            }
+                            foreach (i; 0 .. 2) { y_prev[i] = y[i]; } // needed for next time step
+                        } // end foreach n
+                        break;
+                    case "RK4":
+                        number[2] k1, k2_in, k2, k3_in, k3, k4_in, k4;
+                        foreach (n; 0 .. NumberSteps) {
+                            number[2] myF = F(y, Q);
+                            foreach (i; 0 .. 2) { k1[i] = _chem_dt * myF[i]; }
+                            foreach (i; 0 .. 2) { k2_in[i] = y[i] + k1[i]/2.0; }
+                            myF = F(k2_in, Q);
+                            foreach (i; 0 .. 2) { k2[i] = _chem_dt * myF[i]; }
+                            foreach (i; 0 .. 2) { k3_in[i] = y[i] + k2[i]/2.0; }
+                            myF = F(k3_in, Q);
+                            foreach (i; 0 .. 2) { k3[i] = _chem_dt * myF[i]; }
+                            foreach (i; 0 .. 2) { k4_in[i] = y[i] + k3[i]; }
+                            myF = F(k4_in, Q);
+                            foreach (i; 0 .. 2) { k4[i] = _chem_dt * myF[i]; }
+                            foreach (i; 0 .. 2) { y[i] += 1.0/6.0*(k1[i]+2.0*k2[i]+2.0*k3[i]+k4[i]); }
+                            if (!state_vector_is_within_limits(y)) {
+                                string msg = "State vector not within limits";
+                                debug { msg ~= format("\n    y=[%g,%g]", y[0], y[1]); }
+                                throw new ThermochemicalReactorUpdateException(msg);
+                            }
+                        } // end foreach n
+                        break;
+                    default:
+                        throw new Exception("Invalid ODE update selection.");
+                    } // end switch _integration_method
+                    finished_integration = true;
+                    if (integration_attempt == 1) {
+                        // [TODO] Suince we had success on the first attempt,
+                        // we should consider increasing the time step size.
+                    }
+                } catch(Exception e) {
+                    if (integration_attempt < 10) {
+                        // We will allow a retry with a small time step.
+                        NumberSteps *= 2;
+                    } else {
+                        // We have taken too many attempts and have continued to fail.
+                        string msg = "Thermochemical update fails after several attempts.";
+                        debug { msg ~= text("\n Previous exception message: ", e.msg); }
+                        throw new ThermochemicalReactorUpdateException(msg);
+                    }
+                }
+            } // end while !finished_integration
 
             // Unpack the results.
             n_e = y[0];
@@ -171,6 +211,9 @@ final class UpdateArgonFrac : ThermochemicalReactor {
             _gmodel.numden2massf(numden, Q);
             _gmodel.update_thermo_from_rhou(Q);
             _gmodel.update_sound_speed(Q);
+            //
+            // Remember the size of the successful time step for the next call.
+            dtChemSuggest = _chem_dt;
         } // end if Q.T > _T_min_for_reaction
     } // end opCall()
     
@@ -201,19 +244,10 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         // We do this so that we always work the rate calculations from
         // a physically realizable state.
         //
-        if (n_e <= 0.0) {
+        if (n_e < 0.0) {
             // Do not let the number of electrons go negative.
-            // Force the numbers back to something physically realizable.
-            // mass
-            n_Ar = _n_total;
-            n_e = 0.0;
-            // energy
-            Q.u = _u_total;
-            Q.u_modes[0] = 0.0;
-            // temperature
-            T =  2.0/3.0*Q.u/_Rgas;
-            Q.T = T;
-            Q.T_modes[0] = T;
+            string msg = "Electron number density tried to go negative.";
+            throw new Exception(msg);
         } else if (alpha < _ion_tol) {
             Te = Q.T;
         } else {
@@ -231,6 +265,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
 
         //=====================================================================
         // Rate constants for ionisation reactions.
+        Te = fmax(Te, 3000.0); // PJ, 2020-01-22, Having Te drop low is a problem for kre.
         number kfA = 1.68e-26*T*sqrt(T)*(_theta_A1star/T+2)*exp(-_theta_A1star/T);
         number kfe = 3.75e-22*Te*sqrt(Te)*(_theta_A1star/Te+2)*exp(-_theta_A1star/Te);
         number krA = 5.8e-49*(_theta_A1star/T+2)*exp((_theta_ion-_theta_A1star)/T);
@@ -309,19 +344,15 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         J[1][0] = col1[1]; J[1][1] = col2[1];
         number det = J[0][0]*J[1][1] - J[0][1]*J[1][0];
         if (fabs(det) < 1.0e-20) {
-            debug {
-                writeln("Jacobian appears singular.");
-                writeln("J=", J, " y=", y, " y_prev=", y_prev);
-                writeln("current Q=", Q);
-            }
-            throw new ThermochemicalReactorUpdateException("Effectively singular Jacobian.");
+            string msg = "Jacobian appears singular.";
+            debug { msg ~= text(" J=", J, " y=", y, " y_prev=", y_prev, "current Q=", Q); }
+            throw new ThermochemicalReactorUpdateException(msg);
         }
         return J;
     }
 
     @nogc
-    void solve2(ref const(number[2][2]) a, ref const(number[2]) b,
-                ref number[2] x)
+    void solve2(ref const(number[2][2]) a, ref const(number[2]) b, ref number[2] x)
     {
         number det = a[0][0]*a[1][1] - a[0][1]*a[1][0];
         x[0] = -(a[0][1]*b[1] - a[1][1]*b[0])/det;
@@ -335,30 +366,12 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         if (y[0] < 0.0) { result = false; }
         if (y[0] > _n_e_max) { result = false; }
         if (y[1] < _u_min_heavy_particles) { result = false; }
-        if (y[1] > _u_total) { result = false; }
+        // Allow for finite-difference perturbations when evaluating Jacobian.
+        if (y[1] > _u_total*1.01) { result = false; }
         return result;
     }
-    
-    @nogc
-    void limit_state_vector(ref number[2] y)
-    {
-        if (y[0] < 0.0) {
-            y[0] = 0.0; // electron number density
-            y[1] = _u_total; // translational energy of heavy particles
-        }
-        if (y[0] > _n_e_max) {
-            y[0] = _n_e_max;
-        }
-        if (y[1] < _u_min_heavy_particles) {
-            y[1] = _u_min_heavy_particles;
-        }
-        if (y[1] > _u_total) {
-            y[0] = 0.0;
-            y[1] = _u_total;
-        }
-    }
 
-    private:
+private:
     double _m_Ar = 6.6335209e-26; // mass of argon (kg)
     double _m_e = 9.10938e-31; // mass of electron (kg)
     double _Kb = Boltzmann_constant;
@@ -386,7 +399,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
     number _u_min_heavy_particles;
 
     double _chem_dt;
-    } // end class UpdateArgonFrac
+} // end class UpdateArgonFrac
 
 
 version(two_temperature_argon_kinetics_test) {
