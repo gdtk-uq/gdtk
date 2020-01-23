@@ -113,7 +113,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
                         break;
                     case "Backward_Euler":
                         // Perturbation sizes for the finite-difference Jacobian.
-                        double[2] h = [1.0e-6*_n_total, 1.0e-6*_u_total];
+                        number[2] h = [1.0e-6*_n_total, 1.0e-6*_u_total];
                         number[2] y_prev; y_prev[0] = y[0]; y_prev[1] = y[1];
                         foreach (n; 0 .. NumberSteps) {
                             double norm_error = 1.0e50; // something large that will be replaced
@@ -330,7 +330,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
 
     @nogc
     number[2][2] Jacobian(ref const(number[2]) y, ref const(number[2]) y_prev,
-                          ref const(double[2]) h, GasState Q)
+                          ref const(number[2]) h, GasState Q)
     {
         number[2] myF0 = BackEuler_F(y, y_prev, Q);
         number[2] yph0; yph0[0] = y[0]+h[0]; yph0[1] = y[1]; // y plus increment in index 0
