@@ -9,7 +9,7 @@
  * Authors: Daniel Smith, Rory Kelly and Peter J.
  * Version: 19-July-2017: initial cut.
  *          12-Feb-2019: code clean up and viscous transport coefficients
- *          23-Jan-2020: make kinetics more robust.
+ *          23-Jan-2020: consistent internal energy functions.
  */
 
 module gas.two_temperature_reacting_argon;

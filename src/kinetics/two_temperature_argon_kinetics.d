@@ -9,6 +9,7 @@
  * Authors: Daniel Smith, Rory Kelly and Peter J.
  * Version: 19-July-2017: initial cut.
  *          11-Feb-2019: rebuild to remove use of Matrix class
+ *          23-Jan-2020: adaptive time step
  */
 
 module kinetics.two_temperature_argon_kinetics;
@@ -168,13 +169,14 @@ final class UpdateArgonFrac : ThermochemicalReactor {
                     } // end switch _integration_method
                     finished_integration = true;
                     if (integration_attempt == 1) {
-                        // [TODO] Suince we had success on the first attempt,
-                        // we should consider increasing the time step size.
+                        // Success on the first attempt.
+                        // Increase the time step a little, for next call.
+                        _chem_dt *= 1.1;
                     }
                 } catch(Exception e) {
                     if (integration_attempt < 10) {
-                        // We will allow a retry with a small time step.
-                        NumberSteps *= 2;
+                        // We will allow a retry with a smaller time step.
+                        NumberSteps *= 3;
                     } else {
                         // We have taken too many attempts and have continued to fail.
                         string msg = "Thermochemical update fails after several attempts.";
