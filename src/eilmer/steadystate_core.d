@@ -779,8 +779,8 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
 		}
 		outFile.writef("%.16e \n", cell.gradients.pPhi.re);
 		if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
-		    outFile.writef("%.16e \n", cell.gradients.tkePhi.re);
-		    outFile.writef("%.16e \n", cell.gradients.omegaPhi.re);
+		    outFile.writef("%.16e \n", cell.gradients.turbPhi[0].re);
+		    outFile.writef("%.16e \n", cell.gradients.turbPhi[1].re);
 		}
 	    }
 	}

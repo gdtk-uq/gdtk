@@ -3998,11 +3998,11 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
 		    if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
 			line = outFile.readln().strip();
 			token = line.split();
-			cell.gradients.tkePhi = to!double(token[0]);
+			cell.gradients.turbPhi[0] = to!double(token[0]);
 			
 			line = outFile.readln().strip();
 			token = line.split();
-			cell.gradients.omegaPhi = to!double(token[0]);
+			cell.gradients.turbPhi[1] = to!double(token[0]);
 		    }
 		}
 	    }

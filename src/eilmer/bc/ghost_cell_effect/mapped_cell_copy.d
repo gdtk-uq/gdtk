@@ -939,18 +939,18 @@ public:
                     buf[ii++] = c.uMax;
                     // tke, omega
                     version(komega) {
-                        buf[ii++] = c.tke[0];
-                        buf[ii++] = c.tke[1];
-                        buf[ii++] = c.tke[2];
-                        buf[ii++] = c.tkePhi;
-                        buf[ii++] = c.tkeMin;
-                        buf[ii++] = c.tkeMax;
-                        buf[ii++] = c.omega[0];
-                        buf[ii++] = c.omega[1];
-                        buf[ii++] = c.omega[2];
-                        buf[ii++] = c.omegaPhi;
-                        buf[ii++] = c.omegaMin;
-                        buf[ii++] = c.omegaMax;
+                        buf[ii++] = c.turb[0][0];
+                        buf[ii++] = c.turb[0][1];
+                        buf[ii++] = c.turb[0][2];
+                        buf[ii++] = c.turbPhi[0];
+                        buf[ii++] = c.turbMin[0];
+                        buf[ii++] = c.turbMax[0];
+                        buf[ii++] = c.turb[1][0];
+                        buf[ii++] = c.turb[1][1];
+                        buf[ii++] = c.turb[1][2];
+                        buf[ii++] = c.turbPhi[1];
+                        buf[ii++] = c.turbMin[1];
+                        buf[ii++] = c.turbMax[1];
                     }
                     // MHD
                     version(MHD) {
@@ -1092,18 +1092,18 @@ public:
                     c.uMax = buf[ii++];
                     // tke, omega
                     version(komega) {
-                        c.tke[0] = buf[ii++];
-                        c.tke[1] = buf[ii++];
-                        c.tke[2] = buf[ii++];
-                        c.tkePhi = buf[ii++];
-                        c.tkeMin = buf[ii++];
-                        c.tkeMax = buf[ii++];
-                        c.omega[0] = buf[ii++];
-                        c.omega[1] = buf[ii++];
-                        c.omega[2] = buf[ii++];
-                        c.omegaPhi = buf[ii++];
-                        c.omegaMin = buf[ii++];
-                        c.omegaMax = buf[ii++];
+                        c.turb[0][0] = buf[ii++];
+                        c.turb[0][1] = buf[ii++];
+                        c.turb[0][2] = buf[ii++];
+                        c.turbPhi[0] = buf[ii++];
+                        c.turbMin[0] = buf[ii++];
+                        c.turbMax[0] = buf[ii++];
+                        c.turb[1][0] = buf[ii++];
+                        c.turb[1][1] = buf[ii++];
+                        c.turb[1][2] = buf[ii++];
+                        c.turbPhi[1] = buf[ii++];
+                        c.turbMin[1] = buf[ii++];
+                        c.turbMax[1] = buf[ii++];
                     }
                     // MHD
                     version(MHD) {
