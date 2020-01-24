@@ -9,6 +9,7 @@
  * Authors: Daniel Smith, Rory Kelly and Peter J.
  * Version: 19-July-2017: initial cut.
  *          11-Feb-2019: rebuild to remove use of Matrix class
+ *          23-Jan-2020: adaptive time step
  */
 
 module kinetics.two_temperature_argon_kinetics;
@@ -39,6 +40,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         _ion_tol = getDoubleWithDefault(L, -1, "ion_tol", 0.0);
         _integration_method = getStringWithDefault(L, -1, "integration_method", "Backward_Euler");
         _T_min_for_reaction = getDoubleWithDefault(L, -1, "T_min_for_reaction", 3000.0);
+        _Te_default = getDoubleWithDefault(L, -1, "Te_default", 10000.0);
         _n_step_suggest = getIntWithDefault(L, -1, "n_step_suggest", 10);
         _Newton_Raphson_tol = getDoubleWithDefault(L, -1, "Newton_Raphson_tol", 1.0e-6); // relative error
         _max_iter_newton = getIntWithDefault(L, -1, "max_iter_newton", 30);
@@ -69,7 +71,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
             // Note, also, that n_e == n_Ar_plus.
             _n_total = n_e + n_Ar;
             number alpha = n_e/_n_total;
-            _u_total = 3.0/2.0*_Rgas*(Q.T+alpha*Q.T_modes[0])+alpha*_Rgas*_theta_ion;
+            _u_total = Q.u + Q.u_modes[0];
             //
             // Given the amount of energy, we have a limit to the number of ions
             // that can be formed before driving the energy of the heavy particles
@@ -167,13 +169,14 @@ final class UpdateArgonFrac : ThermochemicalReactor {
                     } // end switch _integration_method
                     finished_integration = true;
                     if (integration_attempt == 1) {
-                        // [TODO] Suince we had success on the first attempt,
-                        // we should consider increasing the time step size.
+                        // Success on the first attempt.
+                        // Increase the time step a little, for next call.
+                        _chem_dt *= 1.1;
                     }
                 } catch(Exception e) {
                     if (integration_attempt < 10) {
-                        // We will allow a retry with a small time step.
-                        NumberSteps *= 2;
+                        // We will allow a retry with a smaller time step.
+                        NumberSteps *= 3;
                     } else {
                         // We have taken too many attempts and have continued to fail.
                         string msg = "Thermochemical update fails after several attempts.";
@@ -183,13 +186,13 @@ final class UpdateArgonFrac : ThermochemicalReactor {
                 }
             } // end while !finished_integration
 
-            // Unpack the results.
-            n_e = y[0];
-            Q.u = y[1];
+            // Unpack the results, clipping round-off errors.
+            n_e = fmax(y[0], 0.0);
+            Q.u = fmin(y[1], _u_total);
             // Reconstruct the other parts of the flow state.
             if (n_e > 0.0) {
                 n_Ar = _n_total - n_e;
-                Q.u_modes[0] = _u_total - Q.u;    
+                Q.u_modes[0] = fmax(_u_total-Q.u, 0.0);
             } else {
                 // Do not let the number of electrons go negative.
                 // Force the numbers back to something physically realizable.
@@ -202,7 +205,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
                 //energy
                 //temperature
                 Q.T = 2.0/3.0*Q.u/_Rgas;
-                Q.T_modes[0] = Q.T;
+                Q.T_modes[0] = _Te_default;
             }
             
             // Must update the mass fractions before updating the gas state from rho and u...
@@ -228,34 +231,24 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         // [1] translational energy of heavy particles
         number[2] y_dash; y_dash[0] = 0.0; y_dash[1] = 0.0;
 
-        // Unpack the state vector.
-        number n_e = y[0];
-        number n_Ar = _n_total - n_e;
-        Q.u = y[1];
-        Q.u_modes[0] = _u_total - Q.u;
-
-        // Convenient variables
-        number alpha = n_e/(_n_total);
-        number Te;
-        number T = Q.T;
-
         // Update the GasState from state vector.
         //
         // We do this so that we always work the rate calculations from
         // a physically realizable state.
-        //
+        number n_e = y[0];
         if (n_e < 0.0) {
             // Do not let the number of electrons go negative.
             string msg = "Electron number density tried to go negative.";
             throw new Exception(msg);
-        } else if (alpha < _ion_tol) {
-            Te = Q.T;
-        } else {
-            Te = Q.T_modes[0];
         }
+        number n_Ar = _n_total - n_e;
+        // There might be round-off error.
+        Q.u = fmin(y[1], _u_total);
+        Q.u_modes[0] = fmax(_u_total-Q.u, 0.0);
         //
-        if (Q.u_modes[0] == 0.0) { Te = T; } // belts and braces
-        //
+        number alpha = n_e/(_n_total);
+        number Te = (alpha > _ion_tol) ? Q.T_modes[0] : _Te_default;
+        number T = Q.T;
         // Must update the mass fractions before updating the gas state from rho and u...
         // Number density of Argon+ is the same as electron number density.
         number[3] nden; nden[0] = n_Ar; nden[1] = n_e; nden[2] = n_e;
@@ -265,7 +258,9 @@ final class UpdateArgonFrac : ThermochemicalReactor {
 
         //=====================================================================
         // Rate constants for ionisation reactions.
-        Te = fmax(Te, 3000.0); // PJ, 2020-01-22, Having Te drop low is a problem for kre.
+        // PJ, 2020-01-22, Having Te drop low is a problem for kre,
+        // so we might over-write it locally.
+        Te = fmax(Te, 3000.0);
         number kfA = 1.68e-26*T*sqrt(T)*(_theta_A1star/T+2)*exp(-_theta_A1star/T);
         number kfe = 3.75e-22*Te*sqrt(Te)*(_theta_A1star/Te+2)*exp(-_theta_A1star/Te);
         number krA = 5.8e-49*(_theta_A1star/T+2)*exp((_theta_ion-_theta_A1star)/T);
@@ -322,6 +317,8 @@ final class UpdateArgonFrac : ThermochemicalReactor {
     @nogc
     number[2] BackEuler_F(ref const(number[2]) y, ref const(number[2]) y_prev, GasState Q)
     {
+        // When the value of y satisfies the backward Euler-update formula,
+        // the output vector will have zero for each element.
         number[2] myF = F(y, Q);
         number[2] output;
         foreach (i; 0 .. 2) { output[i] = y_prev[i] - y[i] + _chem_dt*myF[i]; }
@@ -332,6 +329,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
     number[2][2] Jacobian(ref const(number[2]) y, ref const(number[2]) y_prev,
                           ref const(number[2]) h, GasState Q)
     {
+        // Compute dG/dy, where G is the backward Euler update function (above).
         number[2] myF0 = BackEuler_F(y, y_prev, Q);
         number[2] yph0; yph0[0] = y[0]+h[0]; yph0[1] = y[1]; // y plus increment in index 0
         number[2] myF1 = BackEuler_F(yph0, y_prev, Q);
@@ -354,6 +352,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
     @nogc
     void solve2(ref const(number[2][2]) a, ref const(number[2]) b, ref number[2] x)
     {
+        // Solves the matrix equation Ax=b.
         number det = a[0][0]*a[1][1] - a[0][1]*a[1][0];
         x[0] = -(a[0][1]*b[1] - a[1][1]*b[0])/det;
         x[1] = (a[0][0]*b[1] - a[1][0]*b[0])/det;
@@ -382,6 +381,7 @@ private:
     // Adjustable parameters, will be set in the constructor.
     string _integration_method;
     double _T_min_for_reaction; // degrees K
+    double _Te_default;
     double _ion_tol;
     int _n_step_suggest; // number of substeps to take if dtChemSuggest<0.0
     double _Newton_Raphson_tol;
@@ -416,7 +416,7 @@ version(two_temperature_argon_kinetics_test) {
         auto gd = new GasState(3, 1);
         gd.p = 1.0e5;
         gd.T = 300.0;
-        gd.T_modes[0] = 300;
+        gd.T_modes[0] = 300.0;
         gd.massf[0] = 1.0; gd.massf[1] = 0.0; gd.massf[2] = 0.0;
 
         // Need molar masses to determine alpha
@@ -438,7 +438,7 @@ version(two_temperature_argon_kinetics_test) {
         // Pre-shock conditions
         //==============================
         double rho1 = 0.0213657;
-        double T1 = 300;
+        double T1 = 300.0;
         double p1 = 1333.22;
         double u1 = 6.1e3;
         double M1 = 18.91;
@@ -447,7 +447,7 @@ version(two_temperature_argon_kinetics_test) {
         auto gs = new GasState(3, 1);
         gs.p = p1 * 446.735124;
         gs.T = T1 * 112.620756;
-        gs.T_modes[0] = gs.T;
+        gs.T_modes[0] = T1; // presume that the electron temperature has not jumped
         gs.massf[0] = 1.0; gs.massf[1] = 0.0; gs.massf[2] = 0.0;
         gm.update_thermo_from_pT(gs);
         gm.update_sound_speed(gs); // (not necessary)
@@ -484,7 +484,7 @@ version(two_temperature_argon_kinetics_test) {
         auto argonChemUpdate = new UpdateArgonFrac(modelFileName, gm);
         double[maxParams] params; // ignore
         double dtThermSuggest; // ignore
-        double dtChemSuggest = 1.0e-11; // To give 100 steps per integration interval. 
+        double dtChemSuggest = dt; // To give 100 steps per integration interval. 
         //
         foreach (i; 1 .. maxsteps) {
             // Perform the chemistry update

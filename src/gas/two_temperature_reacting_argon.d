@@ -9,6 +9,7 @@
  * Authors: Daniel Smith, Rory Kelly and Peter J.
  * Version: 19-July-2017: initial cut.
  *          12-Feb-2019: code clean up and viscous transport coefficients
+ *          23-Jan-2020: consistent internal energy functions.
  */
 
 module gas.two_temperature_reacting_argon;
@@ -55,6 +56,7 @@ public:
         // [TODO] test that we actually have the table as item -1
         // Now, pull out the remaining numeric value parameters.
         _ion_tol = getDoubleWithDefault(L, -1, "ion_tol", 0.0);
+        _Te_default = getDoubleWithDefault(L, -1, "Te_default", 10000.0);
         lua_pop(L, 1); // dispose of the table
         // Compute derived parameters
         create_species_reverse_lookup();
@@ -75,41 +77,38 @@ public:
     override void update_thermo_from_pT(GasState Q) const 
     {
         number alpha = ionisation_fraction_from_mass_fractions(Q);
-        if (Q.T <= 0.0 || Q.p <= 0.0) {
+        if (Q.T <= 0.0 || Q.p <= 0.0 || Q.T_modes[0] <= 0.0) {
             string msg = "Temperature and/or pressure was negative for update_thermo_from_pT."; 
             debug { msg ~= format("\nQ=%s\n", Q); }
             throw new GasModelException(msg);
         }
-        number Te = Q.T; // Assume electron temperature is the same as heavy-particle T.
+        number Te = Q.T_modes[0]; // electron temperature
         Q.rho = Q.p/(_Rgas*(Q.T + alpha*Te));
-        Q.u = 3.0/2.0*_Rgas*Q.T;
-        Q.T_modes[0] = Te;
-        Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Te + alpha*_Rgas*_theta_ion;
+        Q.u = 3.0/2.0*_Rgas*Q.T; // thermal energy of the heavy particles
+        Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Te + alpha*_Rgas*_theta_ion; // electron energy
     }
     override void update_thermo_from_rhou(GasState Q) const
     {
         number alpha = ionisation_fraction_from_mass_fractions(Q);
-        if (Q.u <= 0.0 || Q.rho <= 0.0) {
+        if (Q.u <= 0.0 || Q.rho <= 0.0 || Q.u_modes[0] < 0.0) {
             string msg = "Internal energy and/or density was negative for update_thermo_from_rhou.";
             debug { msg ~= format("\nQ=%s\n", Q); }
             throw new GasModelException(msg);
         }
         Q.T = 2.0/3.0*Q.u/_Rgas;
-        number Te;
-        if (alpha > 0.0) {
+        number Te = _Te_default; // in case alpha == 0.0
+        if (alpha > _ion_tol) {
             Te = (Q.u_modes[0]/alpha-_Rgas*_theta_ion)*2.0/3.0/_Rgas;
-            if (Te > 500.0e3) { Te = 500.0e3; }
-            if (Te < 20.0) { Te = 20.0; }
-        } else {
-            Te = Q.T;
         }
+        if (Te > 500.0e3) { Te = 500.0e3; }
+        if (Te < 200.0) { Te = 200.0; }
         Q.p = Q.rho*_Rgas*(Q.T+alpha*Te);
         Q.T_modes[0] = Te;
     }
     override void update_thermo_from_rhoT(GasState Q) const
     {
         number alpha = ionisation_fraction_from_mass_fractions(Q);
-        if (Q.T <= 0.0 || Q.rho <= 0.0) {
+        if (Q.T <= 0.0 || Q.rho <= 0.0 || Q.T_modes[0] <= 0.0) {
             string msg = "Temperature and/or density was negative for update_thermo_from_rhoT."; 
             debug { msg ~= format("\nQ=%s\n", Q); }
             throw new GasModelException(msg);
@@ -121,7 +120,7 @@ public:
     }
     override void update_thermo_from_rhop(GasState Q) const
     {
-        // Assume Q.T_modes[0] is set independently, and is correct.
+        // Assume Q.T_modes[0] remains fixed.
         number alpha = ionisation_fraction_from_mass_fractions(Q);
         if (Q.p <= 0.0 || Q.rho <= 0.0) {
             string msg = "Pressure and/or density was negative for update_thermo_from_rhop."; 
@@ -142,14 +141,13 @@ public:
     }
     override void update_sound_speed(GasState Q) const
     {
-        if (Q.T <= 0.0) {
+        if (Q.T <= 0.0 || Q.T_modes[0] < 0.0) {
             string msg = "Temperature was negative for update_sound_speed."; 
             debug { msg ~= format("\nQ=%s\n", Q); }
             throw new GasModelException(msg);
         }
-        // Assume that the properties for argon atoms, ignoring dissociation.
-        number _gamma = dhdT_const_p(Q)/dudT_const_v(Q);
-        Q.a = sqrt(_gamma*_Rgas*Q.T);
+        number alpha = ionisation_fraction_from_mass_fractions(Q);
+        Q.a = sqrt(5/3*_Rgas*(Q.T + alpha*Q.T_modes[0]));
     }
     override void update_trans_coeffs(GasState Q)
     {
@@ -184,11 +182,11 @@ public:
     }
     override number internal_energy(in GasState Q) const
     {
-        return Q.u;
+        return Q.u + Q.u_modes[0];
     }
     override number enthalpy(in GasState Q) const
     {
-        return Q.u + Q.p/Q.rho;
+        return Q.u + Q.u_modes[0] + Q.p/Q.rho;
     }
     override number entropy(in GasState Q) const
     {
@@ -214,7 +212,8 @@ private:
     double _Cv = 312.0;
     double _theta_ion = 183100.0;
     double _theta_A1star = 135300.0;
-    double _ion_tol; // set from value in Lua file
+    double _ion_tol = 0.0; // may be over-ridden from value in Lua file
+    double _Te_default = 10000.0; // may be over-ridden for a specific situation
     double _e_mass_over_ion_mass; // set once mol masses are set in constructor
 } // end class
 
@@ -232,7 +231,7 @@ version(two_temperature_reacting_argon_test) {
         auto gd = new GasState(3, 1);
         gd.p = 1.0e5;
         gd.T = 300.0;
-        gd.T_modes[0] = 300;
+        gd.T_modes[0] = 300.0;
         gd.massf[Species.Ar] = 1.0;
         gd.massf[Species.Ar_plus] = 0.0;
         gd.massf[Species.e_minus] = 0.0;
@@ -256,7 +255,8 @@ version(two_temperature_reacting_argon_test) {
         assert(approxEqual(gd.u, my_u, 1.0e-3), failedUnitTest());
 
         number my_Cp = gm.dhdT_const_p(gd);
-        number my_a = sqrt(my_Cp/my_Cv*208.0*300.0);
+        number alpha = gm.ionisation_fraction_from_mass_fractions(gd);
+        number my_a = sqrt(5/3*208.0*(gd.T + alpha*gd.T_modes[0]));
         assert(approxEqual(gd.a, my_a, 1.0e-3), failedUnitTest());
 
         gm.update_trans_coeffs(gd);

@@ -3,22 +3,25 @@
 -- X3 Argon Experimental test flow over spherical model.
 -- Daniel Smith, November 2019
 -- PJ, 2019-12-31, adjustments for Eilmer4
+--     2020-01-17, use Daniel's 2T gas model
 
 config.title = "X3_Finite_Rate_Argon"
 config.axisymmetric = true
 
-nsp, nmodes, gm = setGasModel("ionizing-argon-model.lua")
+nsp, nmodes, gm = setGasModel("argon-gas-2T.lua")
 config.reacting = true
-config.reactions_file = "ionizing-argon-reactor.lua"
+config.reactions_file = "argon-gas-2T.lua"
 
 -- Define flow conditions
 p_inf = 342.0 -- Pa
 T_inf = 280.0 -- degrees K
-v_inf = 5728.0 -- flow speed, m/s (original 5728.0)
+v_inf = 5728.0 -- flow speed, m/s
 mf_inf = {['Ar']=1.0, ['Ar+']=0.0, ['e-']=0.0}
 
-inflow = FlowState:new{p=p_inf, T=T_inf, velx=v_inf, massf=mf_inf}
-initial = FlowState:new{p=0.3*p_inf, T=T_inf, velx=0.6*v_inf, massf=mf_inf}
+inflow = FlowState:new{p=p_inf, T=T_inf, T_modes={T_inf},
+                       velx=v_inf, massf=mf_inf}
+initial = FlowState:new{p=0.3*p_inf, T=T_inf, T_modes={T_inf},
+                        velx=0.6*v_inf, massf=mf_inf}
 
 --geometry
 nnEW = 30                         
@@ -67,6 +70,9 @@ config.sticky_electrons = true -- just wanted to try it
 config.cfl_value = 0.05 -- to get better chemistry-gas-dynamics coupling
 
 config.max_time = 100.0e-6
-config.max_step = 100000
+config.max_step = 200000
 config.dt_plot = config.max_time/50.0
-config.dt_init = 2.0e-9
+config.dt_init = 1.0e-9
+
+config.max_invalid_cells = 10
+config.adjust_invalid_cell_data = true
