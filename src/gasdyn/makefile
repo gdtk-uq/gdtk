@@ -31,6 +31,9 @@ include $(GAS_DIR)/gas_files.mk
 KINETICS_DIR := ../kinetics
 include $(KINETICS_DIR)/kinetics_files.mk
 
+CEQ_DIR := ../extern/ceq/source
+include $(CEQ_DIR)/ceq_files.mk
+
 # For development work, we have put on -debug and -unittest.
 DFLAGS := -w -debug -unittest -g -dip1008 -I..
 OF := -of
@@ -52,9 +55,13 @@ clean:
 	- cd $(LUA_DIR); make clean
 	- cd $(GAS_DIR); make clean; rm libgas.a
 	- cd $(KINETICS_DIR); make clean
+	- cd $(CEQ_DIR); make clean
 
 $(LIBLUA):
 	cd $(LUA_DIR); make linux local
+
+$(CEQ_FILES):
+	cd $(CEQ_DIR); make
 
 idealgasflow_demo: idealgasflow_demo.d idealgasflow.d $(NM_FILES) $(LIBLUA) \
 	$(UTIL_FILES)
@@ -70,21 +77,21 @@ luaidealgasflow_demo: luaidealgasflow_demo.d $(NM_FILES) $(LIBLUA) \
 		$(NM_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA)
 
 gasflow_demo: gasflow_demo.d gasflow.d idealgasflow.d $(NM_FILES) $(LIBLUA) \
-	$(UTIL_FILES) $(GASDYN_FILES) $(GAS_FILES) $(KINETICS_FILES)
+	$(UTIL_FILES) $(GASDYN_FILES) $(GAS_FILES) $(CEQ_FILES) $(KINETICS_FILES)
 	dmd $(DFLAGS) $(OF)gasflow_demo \
 		gasflow_demo.d gasflow.d idealgasflow.d gasflowexception.d \
 		$(NM_FILES) $(UTIL_FILES) \
-		$(GAS_FILES) $(KINETICS_FILES) $(DLINKFLAGS_LUA)
+		$(GAS_FILES) $(CEQ_FILES) $(KINETICS_FILES) $(DLINKFLAGS_LUA)
 
 luagasflow_demo: luagasflow_demo.d luagasflow.d luaidealgasflow.d \
 	gasflow.d idealgasflow.d \
 	$(NM_FILES) $(LIBLUA) \
-	$(UTIL_FILES) $(GASDYN_FILES) $(GAS_FILES) $(GAS_LUA_FILES) \
+	$(UTIL_FILES) $(GASDYN_FILES) $(GAS_FILES) $(CEQ_FILES) $(GAS_LUA_FILES) \
 	$(KINETICS_FILES) $(KINETICS_LUA_FILES)
 	dmd $(DFLAGS) $(OF)luagasflow_demo \
 		luagasflow_demo.d luagasflow.d luaidealgasflow.d \
 		gasflow.d idealgasflow.d gasflowexception.d \$(NM_FILES) $(UTIL_FILES) \
-		$(GAS_FILES) $(GAS_LUA_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES) \
+		$(GAS_FILES) $(CEQ_FILES) $(GAS_LUA_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES) \
 		$(DLINKFLAGS_LUA)
 
 #--------------------------------------------------------------------------

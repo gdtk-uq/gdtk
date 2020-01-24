@@ -59,17 +59,18 @@ version(equilibrium_update_test) {
     import gas.therm_perf_gas_equil;
 
     int main() {
-        auto gm = new ThermallyPerfectGasEquilibrium("../gas/sample-data/therm-perf-5-species-air.lua");
+        auto gm = new ThermallyPerfectGasEquilibrium("../gas/sample-data/therm-perf-equil-5-species-air.lua");
         auto gd = new GasState(5, 0);
-        assert(approxEqual(3.621, gm.LJ_sigmas[0]), failedUnitTest());
-        assert(approxEqual(97.530, gm.LJ_epsilons[0]), failedUnitTest());
 
-        gd.p = 1.0e6;
-        gd.T = 2000.0;
-        gd.massf = [0.2, 0.2, 0.2, 0.2, 0.2];
+        gd.p = 0.1*101.35e3;
+        gd.T = 2500.0;
+        gd.massf = [0.74311527, 0.25688473, 0.0, 0.0, 0.0];
         gm.update_thermo_from_pT(gd);
-        assert(approxEqual(11801825.6, gd.u, 1.0e-6), failedUnitTest());
-        assert(approxEqual(1.2840117, gd.rho, 1.0e-6), failedUnitTest());
+        assert(approxEqual(0.7321963 , gd.massf[0], 1.0e-6)); 
+        assert(approxEqual(0.23281198, gd.massf[1], 1.0e-6));
+        assert(approxEqual(0.0, gd.massf[2], 1.0e-6));
+        assert(approxEqual(0.01160037, gd.massf[3], 1.0e-6));
+        assert(approxEqual(0.02339135, gd.massf[4], 1.0e-6));
 
         return 0;
     }
