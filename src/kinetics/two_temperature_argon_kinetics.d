@@ -381,7 +381,7 @@ private:
     // Adjustable parameters, will be set in the constructor.
     string _integration_method;
     double _T_min_for_reaction; // degrees K
-    double _Te_default;
+    number _Te_default;
     double _ion_tol;
     int _n_step_suggest; // number of substeps to take if dtChemSuggest<0.0
     double _Newton_Raphson_tol;
