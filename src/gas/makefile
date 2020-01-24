@@ -120,6 +120,9 @@ include $(KINETICS_DIR)/kinetics_files.mk
 GASDYN_DIR := ../gasdyn
 include $(GASDYN_DIR)/gasdyn_files.mk
 
+CEQ_DIR := ../extern/ceq/source
+include $(CEQ_DIR)/ceq_files.mk
+
 include gas_files.mk
 
 # ----------------------------------------------------------------------
@@ -180,6 +183,7 @@ clean:
 	- rm ./ideal-air-gas-model.lua ./cea-lut-air-version-test.lua
 	- rm ./uniform-lut-plus-ideal-air-gas-model.lua
 	- cd $(LUA); make clean
+	- cd $(CEQ_DIR); make clean
 	- rm $(KINETICS_DIR)/pseudosp_solve_ode.o
 	- rm $(KINETICS_DIR)/pseudosp_rhs_ode.o
 	- rm $(KINETICS_DIR)/dvode.o
@@ -190,12 +194,12 @@ clean:
 gas-calc: luagas_model.d $(LIBLUA) $(GAS_FILES) $(GAS_LUA_FILES) \
 	$(NM_FILES) $(NM_LUA_FILES) $(UTIL_FILES) \
 	$(KINETICS_FILES) $(KINETICS_LUA_FILES) \
-	$(GASDYN_FILES) $(GASDYN_LUA_FILES)
+	$(GASDYN_FILES) $(GASDYN_LUA_FILES) ceq
 	$(DMD) $(OF)gas-calc $(DVERSION)gas_calc $(DFLAGS) \
 		$(GAS_FILES) $(GAS_LUA_FILES) \
 		$(NM_FILES) $(NM_LUA_FILES) $(UTIL_FILES) \
 		$(KINETICS_FILES) $(KINETICS_LUA_FILES) \
-		$(GASDYN_FILES) $(GASDYN_LUA_FILES) \
+		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(CEQ_FILES) \
 		$(DLINKFLAGS)
 
 libgas.so: gas_cwrap.d $(LIBLUA) $(GAS_FILES) $(KINETICS_FILES) \
@@ -209,6 +213,9 @@ libgas.so: gas_cwrap.d $(LIBLUA) $(GAS_FILES) $(KINETICS_FILES) \
 
 $(LIBLUA):
 	cd $(LUA); make linux local
+
+ceq:
+	cd $(CEQ_DIR); make
 
 species-database/species-database.lua :
 	cd species-database; make species-database.lua

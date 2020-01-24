@@ -17,6 +17,7 @@ import nm.number;
 import gas.gas_model;
 import gas.gas_state;
 import gas.therm_perf_gas;
+import ceq;
 
 class ThermallyPerfectGasEquilibrium: ThermallyPerfectGas {
 public:
@@ -24,7 +25,6 @@ public:
     // Construct the model from parameters that are contained in a Lua interpreter,
     // but delegate all of the hard work to Rowan's ThermallyPerfectGas.
     {
-        writeln("Warning! Equilibrium gas model under construction.");
         super(L);
 
         // Build arrays to mimic pyeq memory management
@@ -51,6 +51,24 @@ public:
         this(L);
         lua_close(L); // We no longer need the Lua interpreter.
     } // end constructor from a Lua file
+
+    override void update_thermo_from_pT(GasState Q) 
+    {
+        int error;
+        massf2molef(Q, X0); 
+        error = ceq.pt(Q.p,Q.T,X0ptr,nsp,nel,lewisptr,Mptr,aptr,X1ptr,0);
+        molef2massf(X1, Q);
+        _pgMixEOS.update_density(Q);
+        _tpgMixEOS.update_energy(Q);
+
+    }
+
+private:
+    int nel,nsp;
+    double[string][] element_map;
+    string[] element_set;
+    double[] a,X0,X1,lewis;
+    double* aptr, X0ptr, X1ptr, lewisptr, Mptr, Tptr;
 
     void compile_lewis_array(lua_State* L, ref double[] _lewis){
         /*
@@ -90,7 +108,6 @@ public:
         double[string] species_elements;
 
         foreach(species; _species_names){
-            writeln(species);
             species_elements.clear();
             lua_getglobal(L, "db");
             lua_getfield(L, -1, species.toStringz);
@@ -159,13 +176,6 @@ public:
         }
         return;
     }
-
-private:
-    int nel,nsp;
-    double[string][] element_map;
-    string[] element_set;
-    double[] a,X0,X1,lewis;
-    double* aptr, X0ptr, X1ptr, lewisptr, Mptr, Tptr;
 
 } // end class ThermallyPerfectGasEquilibrium
 
