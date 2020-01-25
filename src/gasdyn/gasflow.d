@@ -100,6 +100,7 @@ number[] normal_shock(const(GasState) state1, number Vs, GasState state2,
 {
     // Assume a chemically-frozen gas, so copy mass-fractions and the like from state1.
     state2.copy_values_from(state1);
+    gm.update_thermo_from_pT(state2);
     // Initial guess via ideal gas relations.
     number[] velocities = shock_ideal(state1, Vs, state2, gm);
     number V2 = velocities[0]; number Vg = velocities[1];
@@ -195,6 +196,7 @@ number[] normal_shock_p2p1(const(GasState) state1, number p2p1,
  */
 {
     state2.copy_values_from(state1);
+    gm.update_thermo_from_pT(state2);
     // Initial guess via ideal gas relations.
     number g = gm.gamma(state1);
     number Ms = sqrt(1+(g+1)/2/g*(p2p1-1.0));
@@ -232,6 +234,7 @@ number reflected_shock(const(GasState) state2, number Vg,
 {
     // Assume a chemically-frozen gas, so copy mass-fractions and the like.
     state5.copy_values_from(state2);
+    gm.update_thermo_from_pT(state5);
     // As an initial guess, 
     // assume that we have a very strong shock in an ideal gas.
     number gam = gm.gamma(state2);
@@ -330,6 +333,7 @@ number expand_to_mach(const(GasState) state0, number mach,
     number total_enthalpy = gm.enthalpy(state0);
     number s0 = gm.entropy(state0);
     state1.copy_values_from(state0);
+    gm.update_thermo_from_pT(state1);
     number p_over_p0_guess1 = 1.0;
     number p_over_p0_guess2 = 0.90;
     // [TODO] Could probably do better with ideal gas guess.
@@ -371,6 +375,7 @@ void total_condition(const(GasState) state1, number V1,
     number H1 = gm.enthalpy(state1) + 0.5*V1*V1;
     number s1 = gm.entropy(state1);
     state0.copy_values_from(state1);
+    gm.update_thermo_from_pT(state0);
     auto error_in_total_enthalpy = delegate(number x) {
         // The enthalpy at the stagnation condition should match
         // the total enthalpy of the stream.
@@ -432,6 +437,7 @@ number steady_flow_with_area_change(const(GasState)state1, number V1, number A2_
  */
 {
     state2.copy_values_from(state1);
+    gm.update_thermo_from_pT(state2);
     gm.update_sound_speed(state2);
     number M1 = abs(V1)/state2.a;
     number V2 = V1;
@@ -520,6 +526,7 @@ number finite_wave_dp(const(GasState) state1, number V1,
 {
     // Assume a chemically-frozen gas, so copy mass-fractions and the like from state1.
     state2.copy_values_from(state1);
+    gm.update_thermo_from_pT(state2);
     //
     number V2 = V1;
     number p1 = state1.p;
@@ -630,6 +637,7 @@ number[] theta_oblique(const(GasState) state1, number V1, number beta,
     number V1_n = V1 * sin(beta);
     number V_t = V1 * cos(beta);
     state2.copy_values_from(state1);
+    gm.update_thermo_from_pT(state2);
     gm.update_sound_speed(state2);
     number M1_n = V1 / state2.a; // normal Mach number coming into shock
     if ((M1_n-1.0) < -1.0e-6) {
