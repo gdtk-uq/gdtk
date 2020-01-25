@@ -247,7 +247,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         Q.u_modes[0] = fmax(_u_total-Q.u, 0.0);
         //
         number alpha = n_e/(_n_total);
-        number Te = (alpha > _ion_tol) ? Q.T_modes[0] : _Te_default;
+        number Te = (alpha > _ion_tol) ? Q.T_modes[0] : to!number(_Te_default);
         number T = Q.T;
         // Must update the mass fractions before updating the gas state from rho and u...
         // Number density of Argon+ is the same as electron number density.
@@ -381,7 +381,7 @@ private:
     // Adjustable parameters, will be set in the constructor.
     string _integration_method;
     double _T_min_for_reaction; // degrees K
-    number _Te_default;
+    double _Te_default;
     double _ion_tol;
     int _n_step_suggest; // number of substeps to take if dtChemSuggest<0.0
     double _Newton_Raphson_tol;
