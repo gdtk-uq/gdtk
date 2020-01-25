@@ -66,7 +66,7 @@ def neg_thrust(tindx):
     Input:
     tindx : integer specifying which loads file
     """
-    fileName = 'loads/t%04d-loads.dat' % tindx
+    fileName = 'loads/t%04d/b0001.t%04d.loads.dat' % (tindx, tindx)
     print("Estimating thrust from loads file ", fileName)
     f = open(fileName, 'r')
     thrustx = 0.0
@@ -76,8 +76,8 @@ def neg_thrust(tindx):
         if len(items) < 11: break
         # r = float(items[1]) # 2:pos.y
         dA = float(items[3]) # 4:area per radian for axisymmetric simulation
-        nx = float(items[10]) # 11:n.x
-        p = float(items[9]) # 10:sigma
+        nx = float(items[12]) # 13:n.x
+        p = float(items[11]) # 12:sigma
         thrustx = thrustx + 2*math.pi*dA*nx*p
     return thrustx
     

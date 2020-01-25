@@ -135,4 +135,4 @@ config.dt_init = 1.0e-7
 config.dt_plot = 0.1e-3
 config.dt_history = 10.0e-6
 config.dt_loads = 1.0e-3
-
+config.write_loads = true

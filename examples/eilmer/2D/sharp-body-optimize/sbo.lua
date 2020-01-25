@@ -103,5 +103,6 @@ config.max_step = 2500
 config.dt_init = 1.0e-6
 config.dt_plot = config.max_time/10.0
 config.dt_loads = config.max_time/10.0
+config.write_loads = true
 
 dofile("sketch-domain.lua")
