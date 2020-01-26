@@ -20,6 +20,9 @@
 -- Updated 2016-07-31
 --    Updated for eilmer4
 
+options = {}
+options.H2_O2_only = false
+
 Config{
    odeStep = {method='alpha-qss'},
    tightTempCoupling = true
@@ -342,5 +345,15 @@ Reaction{
    fr={'Arrhenius', A=0.10e12, n=0.0, C=1409.0},
    label='r60'
 }
+
+if options.H2_O2_only then
+   includedReactions = {
+      'r1', 'r2', 'r3', 'r4', 'r9', 'r12',
+      'r14', 'r15', 'r16', 'r17', 'r18', 'r19',
+      'r20', 'r21', 'r22', 'r23', 'r24', 'r25',
+      'r26', 'r27', 'r28', 'r29', 'r30', 'r31',
+      'r32', 'r34', 'r35', 'r60' }
+   selectOnlyReactionsWithLabel(includedReactions)
+end
 
 
