@@ -112,8 +112,8 @@ void evalPrimitiveJacobianVecProd(FluidBlock blk, size_t nPrimitive, number[] v,
             p[cellCount+blk.Z_MOM] = -cell.dUdt[0].momentum.z.im/EPS.im;
         p[cellCount+blk.TOT_ENERGY] = -cell.dUdt[0].total_energy.im/EPS.im;
         if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
-            p[cellCount+blk.TKE] = -cell.dUdt[0].tke.im/EPS.im;
-            p[cellCount+blk.OMEGA] = -cell.dUdt[0].omega.im/EPS.im;
+            p[cellCount+blk.TKE] = -cell.dUdt[0].rhoturb[0].im/EPS.im;
+            p[cellCount+blk.OMEGA] = -cell.dUdt[0].rhoturb[1].im/EPS.im;
         }
         cellCount += nPrimitive;
     }
@@ -145,8 +145,8 @@ void evalConservativeJacobianVecProd(FluidBlock blk, size_t nConserved, number[]
             cell.U[1].momentum.refz += EPS*v[cellCount+blk.Z_MOM];
         cell.U[1].total_energy += EPS*v[cellCount+blk.TOT_ENERGY];
         if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
-            cell.U[1].tke += EPS*v[cellCount+blk.TKE];
-            cell.U[1].omega += EPS*v[cellCount+blk.OMEGA];
+            cell.U[1].rhoturb[0] += EPS*v[cellCount+blk.TKE];
+            cell.U[1].rhoturb[1] += EPS*v[cellCount+blk.OMEGA];
         }
         cell.decode_conserved(0, 1, 0.0);
         cellCount += nConserved;
@@ -161,8 +161,8 @@ void evalConservativeJacobianVecProd(FluidBlock blk, size_t nConserved, number[]
             p[cellCount+blk.Z_MOM] = -cell.dUdt[1].momentum.z.im/EPS.im;
         p[cellCount+blk.TOT_ENERGY] = -cell.dUdt[1].total_energy.im/EPS.im;
         if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
-            p[cellCount+blk.TKE] = -cell.dUdt[1].tke.im/EPS.im;
-            p[cellCount+blk.OMEGA] = -cell.dUdt[1].omega.im/EPS.im;
+            p[cellCount+blk.TKE] = -cell.dUdt[1].rhoturb[0].im/EPS.im;
+            p[cellCount+blk.OMEGA] = -cell.dUdt[1].rhoturb[1].im/EPS.im;
         }
         cellCount += nConserved;
     }
@@ -2025,8 +2025,8 @@ string computeFluxDerivativesAroundCell(string varName, string posInArray, bool 
     codeStr ~= "}";
     codeStr ~= "iface.dFdU[blk.TOT_ENERGY][" ~ posInArray ~ "] = blk.ifaceP[i].F.total_energy.im/EPS.im;";
     codeStr ~= "if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {";
-    codeStr ~= "iface.dFdU[blk.TKE][" ~ posInArray ~ "] = blk.ifaceP[i].F.tke.im/EPS.im;";
-    codeStr ~= "iface.dFdU[blk.OMEGA][" ~ posInArray ~ "] = blk.ifaceP[i].F.omega.im/EPS.im;";        
+    codeStr ~= "iface.dFdU[blk.TKE][" ~ posInArray ~ "] = blk.ifaceP[i].F.rhoturb[0].im/EPS.im;";
+    codeStr ~= "iface.dFdU[blk.OMEGA][" ~ posInArray ~ "] = blk.ifaceP[i].F.rhoturb[1].im/EPS.im;";        
     codeStr ~= "}";
     codeStr ~= "}";
     codeStr ~= "foreach (i, cell; pcell.jacobian_cell_stencil) {";
@@ -2039,8 +2039,8 @@ string computeFluxDerivativesAroundCell(string varName, string posInArray, bool 
     codeStr ~= "}";
     codeStr ~= "cell.dQdU[blk.TOT_ENERGY][" ~ posInArray ~ "] = cell.Q.total_energy.im/EPS.im;";
     codeStr ~= "if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {";
-    codeStr ~= "cell.dQdU[blk.TKE][" ~ posInArray ~ "] = cell.Q.tke.im/EPS.im;";
-    codeStr ~= "cell.dQdU[blk.OMEGA][" ~ posInArray ~ "] = cell.Q.omega.im/EPS.im;";        
+    codeStr ~= "cell.dQdU[blk.TKE][" ~ posInArray ~ "] = cell.Q.rhoturb[0].im/EPS.im;";
+    codeStr ~= "cell.dQdU[blk.OMEGA][" ~ posInArray ~ "] = cell.Q.rhoturb[1].im/EPS.im;";        
     codeStr ~= "}";
     codeStr ~= "}";
     codeStr ~= "pcell.copy_values_from(blk.cellSave, CopyDataOption.all);";
@@ -2443,8 +2443,8 @@ void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref
                 myblk.rT[i, j*nPrimitive+myblk.TOT_ENERGY] = to!number((-cell.dUdt[ftl].total_energy.im)/(EPS.im));                
                 
                 if (myblk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                    myblk.rT[i, j*nPrimitive+myblk.TKE] = to!number((-cell.dUdt[ftl].tke.im)/(EPS.im));
-                    myblk.rT[i, j*nPrimitive+myblk.OMEGA] = to!number((-cell.dUdt[ftl].omega.im)/(EPS.im));
+                    myblk.rT[i, j*nPrimitive+myblk.TKE] = to!number((-cell.dUdt[ftl].rhoturb[0].im)/(EPS.im));
+                    myblk.rT[i, j*nPrimitive+myblk.OMEGA] = to!number((-cell.dUdt[ftl].rhoturb[1].im)/(EPS.im));
                 }
             }
         }

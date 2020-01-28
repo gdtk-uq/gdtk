@@ -32,8 +32,7 @@ public:
         number divB;       // divergence of the magnetic field
     }
     version(komega) {
-        number tke;        // turbulent kinetic energy
-        number omega;      // omega from k-omega turbulence model
+        number[2] rhoturb;    // turbulent conserved 
     }
 
     this(int n_species, int n_modes)
@@ -67,8 +66,8 @@ public:
             divB = other.divB;
         }
         version(komega) {
-            tke = other.tke;
-            omega = other.omega;
+            rhoturb[0] = other.rhoturb[0];
+            rhoturb[1] = other.rhoturb[1];
         }
     }
 
@@ -90,8 +89,8 @@ public:
             divB = src.divB;
         }
         version(komega) {
-            tke = src.tke;
-            omega = src.omega;
+            rhoturb[0] = src.rhoturb[0];
+            rhoturb[1] = src.rhoturb[1];
         }
     }
 
@@ -113,8 +112,8 @@ public:
             divB = 0.0;
         }
         version(komega) {
-            tke = 0.0;
-            omega = 0.0;
+            rhoturb[0] = 0.0;
+            rhoturb[1] = 0.0;
         }
     }
 
@@ -136,8 +135,8 @@ public:
             divB += other.divB * factor;
         }
         version(komega) {
-            tke += other.tke * factor;
-            omega += other.omega * factor;
+            rhoturb[0] += other.rhoturb[0] * factor;
+            rhoturb[1] += other.rhoturb[1] * factor;
         }
     }
 
@@ -159,8 +158,8 @@ public:
             divB *= factor;
         }
         version(komega) {
-            tke *= factor;
-            omega *= factor;
+            rhoturb[0] *= factor;
+            rhoturb[1] *= factor;
         }
     }
 
@@ -183,8 +182,8 @@ public:
             repr ~= ", divB-" ~ to!string(divB);
         }
         version(komega) {
-            repr ~= ", tke=" ~ to!string(tke);
-            repr ~= ", omega=" ~ to!string(omega);
+            repr ~= ", tke=" ~ to!string(rhoturb[0]);
+            repr ~= ", omega=" ~ to!string(rhoturb[1]);
         }
         repr ~= ")";
         return to!string(repr);

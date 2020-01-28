@@ -514,12 +514,12 @@ public:
         myU.total_energy = fs.gas.rho*(u + ke);
         version(komega) {
             if (with_k_omega) {
-                myU.tke = fs.gas.rho * fs.turb[0];
-                myU.omega = fs.gas.rho * fs.turb[1];
+                myU.rhoturb[0] = fs.gas.rho * fs.turb[0];
+                myU.rhoturb[1] = fs.gas.rho * fs.turb[1];
                 myU.total_energy += fs.gas.rho * fs.turb[0]; // Replace with tke function (NNG)
             } else {
-                myU.tke = 0.0;
-                myU.omega = fs.gas.rho * 1.0;
+                myU.rhoturb[0] = 0.0;
+                myU.rhoturb[1] = fs.gas.rho * 1.0;
             }
         }
         version(MHD) {
@@ -624,8 +624,8 @@ public:
         number u = rE * dinv;
         version(komega) {
             if (with_k_omega && allow_k_omega_update) {
-                fs.turb[0] = myU.tke * dinv;
-                fs.turb[1] = myU.omega * dinv;
+                fs.turb[0] = myU.rhoturb[0] * dinv;
+                fs.turb[1] = myU.rhoturb[1] * dinv;
                 // for stability, we enforce tke and omega to be positive.
                 // This approach is referred to as clipping in Chisholm's (2007) thesis:
                 // A fully coupled Newton-Krylov solver with a one-equation turbulence model.
@@ -762,8 +762,8 @@ public:
         // Total Energy.
         number integral_E = 0.0;
         version(komega) {
-            number integral_tke = 0.0;
-            number integral_omega = 0.0;
+            number[2] integral_rhoturb;
+            foreach(ref t; integral_rhoturb) t = 0.0;
         }
         version(multi_species_gas) {
             // Time-derivative for individual species.
@@ -812,8 +812,8 @@ public:
             integral_E -= myF.total_energy*area;
             version(komega) {
                 if (with_k_omega) {
-                    integral_tke -= myF.tke*area;
-                    integral_omega -= myF.omega*area;
+                    integral_rhoturb[0] -= myF.rhoturb[0]*area;
+                    integral_rhoturb[1] -= myF.rhoturb[1]*area;
                 }
             }
             version(multi_species_gas) {
@@ -853,11 +853,11 @@ public:
         my_dUdt.total_energy = vol_inv*integral_E + Q.total_energy;
         version(komega) {
             if (with_k_omega) {
-                my_dUdt.tke = vol_inv*integral_tke + Q.tke;
-                my_dUdt.omega = vol_inv*integral_omega + Q.omega;
+                my_dUdt.rhoturb[0] = vol_inv*integral_rhoturb[0] + Q.rhoturb[0];
+                my_dUdt.rhoturb[1] = vol_inv*integral_rhoturb[1] + Q.rhoturb[1];
             } else {
-                my_dUdt.tke = 0.0;
-                my_dUdt.omega = 0.0;
+                my_dUdt.rhoturb[0] = 0.0;
+                my_dUdt.rhoturb[1] = 0.0;
             }
         }
         version(multi_species_gas) {
@@ -911,13 +911,13 @@ public:
         U1.total_energy = U0.total_energy + muj_tilde*dt*dUdt0.total_energy; 
         version(komega) {
             if (with_k_omega) {
-                U1.tke = U0.tke + muj_tilde*dt*dUdt0.tke;
-                U1.tke = fmax(U0.tke, 0.0);
-                U1.omega = U0.omega + muj_tilde*dt*dUdt0.omega;
-                U1.omega = fmax(U0.omega, U0.mass);
+                U1.rhoturb[0] = U0.rhoturb[0] + muj_tilde*dt*dUdt0.rhoturb[0];
+                U1.rhoturb[0] = fmax(U0.rhoturb[0], 0.0);
+                U1.rhoturb[1] = U0.rhoturb[1] + muj_tilde*dt*dUdt0.rhoturb[1];
+                U1.rhoturb[1] = fmax(U0.rhoturb[1], U0.mass);
             } else {
-                U1.tke = U0.tke;
-                U1.omega = U0.omega;
+                U1.rhoturb[0] = U0.rhoturb[0];
+                U1.rhoturb[1] = U0.rhoturb[1];
             }
         }
         version(multi_species_gas) {
@@ -975,13 +975,13 @@ public:
         U2.total_energy = muj*U1.total_energy + vuj*U0.total_energy + muj_tilde*dt*dUdt0.total_energy; 
         version(komega) {
             if (with_k_omega) {
-                U2.tke = muj*U1.tke + vuj*U0.tke + muj_tilde*dt*dUdt0.tke;
-                U2.tke = fmax(U2.tke, 0.0);
-                U2.omega = muj*U1.omega + vuj*U0.omega + muj_tilde*dt*dUdt0.omega;
-                U2.omega = fmax(U2.omega, U0.mass);
+                U2.rhoturb[0] = muj*U1.rhoturb[0] + vuj*U0.rhoturb[0] + muj_tilde*dt*dUdt0.rhoturb[0];
+                U2.rhoturb[0] = fmax(U2.rhoturb[0], 0.0);
+                U2.rhoturb[1] = muj*U1.rhoturb[1] + vuj*U0.rhoturb[1] + muj_tilde*dt*dUdt0.rhoturb[1];
+                U2.rhoturb[1] = fmax(U2.rhoturb[1], U0.mass);
             } else {
-                U2.tke = U0.tke;
-                U2.omega = U0.omega;
+                U2.rhoturb[0] = U0.rhoturb[0];
+                U2.rhoturb[1] = U0.rhoturb[1];
             }
         }
         version(multi_species_gas) {
@@ -1037,13 +1037,13 @@ public:
         U1.total_energy = U0.total_energy + muj_tilde*dt*dUdt0.total_energy; 
         version(komega) {
             if (with_k_omega) {
-                U1.tke = U0.tke + muj_tilde*dt*dUdt0.tke;
-                U1.tke = fmax(U0.tke, 0.0);
-                U1.omega = U0.omega + muj_tilde*dt*dUdt0.omega;
-                U1.omega = fmax(U0.omega, U0.mass);
+                U1.rhoturb[0] = U0.rhoturb[0] + muj_tilde*dt*dUdt0.rhoturb[0];
+                U1.rhoturb[0] = fmax(U0.rhoturb[0], 0.0);
+                U1.rhoturb[1] = U0.rhoturb[1] + muj_tilde*dt*dUdt0.rhoturb[1];
+                U1.rhoturb[1] = fmax(U0.rhoturb[1], U0.mass);
             } else {
-                U1.tke = U0.tke;
-                U1.omega = U0.omega;
+                U1.rhoturb[0] = U0.rhoturb[0];
+                U1.rhoturb[1] = U0.rhoturb[1];
             }
         }
         version(multi_species_gas) {
@@ -1125,13 +1125,13 @@ public:
         U2.total_energy = muj*U1.total_energy + vuj*U0.total_energy + (1.0-muj-vuj)*U3.total_energy + muj_tilde*dt*dUdt0.total_energy + gam_tilde*dt*dUdtO.total_energy; 
         version(komega) {
             if (with_k_omega) {
-                U2.tke = muj*U1.tke + vuj*U0.tke + (1.0-muj-vuj)*U3.tke + muj_tilde*dt*dUdt0.tke + gam_tilde*dt*dUdtO.tke;
-                U2.tke = fmax(U2.tke, 0.0);
-                U2.omega = muj*U1.omega + vuj*U0.omega + (1.0-muj-vuj)*U3.omega + muj_tilde*dt*dUdt0.omega + gam_tilde*dt*dUdtO.omega;
-                U2.omega = fmax(U2.omega, U0.mass);
+                U2.rhoturb[0] = muj*U1.rhoturb[0] + vuj*U0.rhoturb[0] + (1.0-muj-vuj)*U3.rhoturb[0] + muj_tilde*dt*dUdt0.rhoturb[0] + gam_tilde*dt*dUdtO.rhoturb[0];
+                U2.rhoturb[0] = fmax(U2.rhoturb[0], 0.0);
+                U2.rhoturb[1] = muj*U1.rhoturb[1] + vuj*U0.rhoturb[1] + (1.0-muj-vuj)*U3.rhoturb[1] + muj_tilde*dt*dUdt0.rhoturb[1] + gam_tilde*dt*dUdtO.rhoturb[1];
+                U2.rhoturb[1] = fmax(U2.rhoturb[1], U0.mass);
             } else {
-                U2.tke = U0.tke;
-                U2.omega = U0.omega;
+                U2.rhoturb[0] = U0.rhoturb[0];
+                U2.rhoturb[1] = U0.rhoturb[1];
             }
         }
         version(multi_species_gas) {
@@ -1203,10 +1203,10 @@ public:
         U1.total_energy = U0.total_energy + dt * gamma_1 * dUdt0.total_energy;
         version(komega) {
             if (with_k_omega) {
-                U1.tke = U0.tke + dt * gamma_1 * dUdt0.tke;
-                U1.tke = fmax(U1.tke, 0.0);
-                U1.omega = U0.omega + dt * gamma_1 * dUdt0.omega;
-                U1.omega = fmax(U1.omega, U0.mass);
+                U1.rhoturb[0] = U0.rhoturb[0] + dt * gamma_1 * dUdt0.rhoturb[0];
+                U1.rhoturb[0] = fmax(U1.rhoturb[0], 0.0);
+                U1.rhoturb[1] = U0.rhoturb[1] + dt * gamma_1 * dUdt0.rhoturb[1];
+                U1.rhoturb[1] = fmax(U1.rhoturb[1], U0.mass);
                 // ...assuming a minimum value of 1.0 for omega
                 // It may occur (near steps in the wall) that a large flux of romega
                 // through one of the cell interfaces causes romega within the cell
@@ -1217,8 +1217,8 @@ public:
                 // if they are convected past a corner with a strong expansion,
                 // there will be an unreasonably-large flux out of the cell.
             } else {
-                U1.tke = U0.tke;
-                U1.omega = U0.omega;
+                U1.rhoturb[0] = U0.rhoturb[0];
+                U1.rhoturb[1] = U0.rhoturb[1];
             }
         }
         version(multi_species_gas) {
@@ -1284,13 +1284,13 @@ public:
         U2.total_energy = U_old.total_energy + dt*(gamma_1*dUdt0.total_energy + gamma_2*dUdt1.total_energy);
         version(komega) {
             if (with_k_omega) {
-                U2.tke = U_old.tke + dt*(gamma_1*dUdt0.tke + gamma_2*dUdt1.tke);
-                U2.tke = fmax(U2.tke, 0.0);
-                U2.omega = U_old.omega + dt*(gamma_1*dUdt0.omega + gamma_2*dUdt1.omega);
-                U2.omega = fmax(U2.omega, U_old.mass);
+                U2.rhoturb[0] = U_old.rhoturb[0] + dt*(gamma_1*dUdt0.rhoturb[0] + gamma_2*dUdt1.rhoturb[0]);
+                U2.rhoturb[0] = fmax(U2.rhoturb[0], 0.0);
+                U2.rhoturb[1] = U_old.rhoturb[1] + dt*(gamma_1*dUdt0.rhoturb[1] + gamma_2*dUdt1.rhoturb[1]);
+                U2.rhoturb[1] = fmax(U2.rhoturb[1], U_old.mass);
             } else {
-                U2.tke = U_old.tke;
-                U2.omega = U_old.omega;
+                U2.rhoturb[0] = U_old.rhoturb[0];
+                U2.rhoturb[1] = U_old.rhoturb[1];
             }
         }
         version(multi_species_gas) {
@@ -1363,14 +1363,14 @@ public:
             dt*(gamma_1*dUdt0.total_energy + gamma_2*dUdt1.total_energy + gamma_3*dUdt2.total_energy);
         version(komega) {
             if (with_k_omega) {
-                U3.tke = U_old.tke + dt*(gamma_1*dUdt0.tke + gamma_2*dUdt1.tke + gamma_3*dUdt2.tke);
-                U3.tke = fmax(U3.tke, 0.0);
-                U3.omega = U_old.omega + dt*(gamma_1*dUdt0.omega + gamma_2*dUdt1.omega +
-                                             gamma_3*dUdt2.omega);
-                U3.omega = fmax(U3.omega, U_old.mass);
+                U3.rhoturb[0] = U_old.rhoturb[0] + dt*(gamma_1*dUdt0.rhoturb[0] + gamma_2*dUdt1.rhoturb[0] + gamma_3*dUdt2.rhoturb[0]);
+                U3.rhoturb[0] = fmax(U3.rhoturb[0], 0.0);
+                U3.rhoturb[1] = U_old.rhoturb[1] + dt*(gamma_1*dUdt0.rhoturb[1] + gamma_2*dUdt1.rhoturb[1] +
+                                             gamma_3*dUdt2.rhoturb[1]);
+                U3.rhoturb[1] = fmax(U3.rhoturb[1], U_old.mass);
             } else {
-                U3.tke = U_old.tke;
-                U3.omega = U_old.omega;
+                U3.rhoturb[0] = U_old.rhoturb[0];
+                U3.rhoturb[1] = U_old.rhoturb[1];
             }
         }
         version(multi_species_gas) {
@@ -1418,13 +1418,13 @@ public:
         U1.total_energy = vr*(U0.total_energy + dt*gamma_1*dUdt0.total_energy);
         version(komega) {
             if (with_k_omega) {
-                U1.tke = vr*(U0.tke + dt*gamma_1*dUdt0.tke);
-                U1.tke = fmax(U1.tke, 0.0);
-                U1.omega = vr*(U0.omega + dt*gamma_1*dUdt0.omega);
-                U1.omega = fmax(U1.omega, U0.mass);
+                U1.rhoturb[0] = vr*(U0.rhoturb[0] + dt*gamma_1*dUdt0.rhoturb[0]);
+                U1.rhoturb[0] = fmax(U1.rhoturb[0], 0.0);
+                U1.rhoturb[1] = vr*(U0.rhoturb[1] + dt*gamma_1*dUdt0.rhoturb[1]);
+                U1.rhoturb[1] = fmax(U1.rhoturb[1], U0.mass);
             } else {
-                U1.tke = U0.tke;
-                U1.omega = U0.omega;
+                U1.rhoturb[0] = U0.rhoturb[0];
+                U1.rhoturb[1] = U0.rhoturb[1];
             }
         }
         version(multi_species_gas) {
@@ -1478,13 +1478,13 @@ public:
                                    dt*(gamma_1*dUdt0.total_energy + gamma_2*dUdt1.total_energy));
         version(komega) {
             if (with_k_omega) {
-                U2.tke = vol_inv*(v_old*U0.tke + dt*(gamma_1*dUdt0.tke + gamma_2*dUdt1.tke));
-                U2.tke = fmax(U2.tke, 0.0);
-                U2.omega = vol_inv*(v_old*U0.omega + dt*(gamma_1*dUdt0.omega + gamma_2*dUdt1.omega));
-                U2.omega = fmax(U2.omega, U0.mass);
+                U2.rhoturb[0] = vol_inv*(v_old*U0.rhoturb[0] + dt*(gamma_1*dUdt0.rhoturb[0] + gamma_2*dUdt1.rhoturb[0]));
+                U2.rhoturb[0] = fmax(U2.rhoturb[0], 0.0);
+                U2.rhoturb[1] = vol_inv*(v_old*U0.rhoturb[1] + dt*(gamma_1*dUdt0.rhoturb[1] + gamma_2*dUdt1.rhoturb[1]));
+                U2.rhoturb[1] = fmax(U2.rhoturb[1], U0.mass);
             } else {
-                U2.tke = vol_inv * (v_old * U0.tke);
-                U2.omega = vol_inv * (v_old * U0.omega);
+                U2.rhoturb[0] = vol_inv * (v_old * U0.rhoturb[0]);
+                U2.rhoturb[1] = vol_inv * (v_old * U0.rhoturb[1]);
             }
         }
         version(multi_species_gas) {
@@ -2139,8 +2139,8 @@ public:
             Q.B.clear();
         }
         version(komega) {
-            Q.tke = 0.0;
-            Q.omega = 0.0;
+            Q.rhoturb[0] = 0.0;
+            Q.rhoturb[1] = 0.0;
         }
         version(multi_species_gas) {
             foreach(ref elem; Q.massf) { elem = 0.0; }
@@ -2238,7 +2238,7 @@ public:
                 if ( in_turbulent_zone ) {
                     this.k_omega_time_derivatives(Q_tke, Q_omega, fs.turb[0], fs.turb[1]);
                 }
-                Q.tke += Q_tke; Q.omega += Q_omega;
+                Q.rhoturb[0] += Q_tke; Q.rhoturb[1] += Q_omega;
             }
         }
 

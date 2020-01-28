@@ -743,8 +743,8 @@ public:
             }
             version(komega) {
                 if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                    F.tke -= tau_kx * nx + tau_ky * ny + tau_kz * nz;
-                    F.omega -= tau_wx * nx + tau_wy * ny + tau_wz * nz;
+                    F.rhoturb[0] -= tau_kx * nx + tau_ky * ny + tau_kz * nz;
+                    F.rhoturb[1] -= tau_wx * nx + tau_wy * ny + tau_wz * nz;
                 }
             }
             version(multi_species_gas) {
@@ -850,8 +850,8 @@ public:
                 if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
                     number tau_kn = 0.0; // [TODO] PJ, 2018-05-05, talk to Wilson
                     number tau_wn = 0.0;
-                    F.tke -= tau_kn;
-                    F.omega -= tau_wn;
+                    F.rhoturb[0] -= tau_kn;
+                    F.rhoturb[1] -= tau_wn;
                 }
             }
             version(multi_species_gas) {

@@ -506,8 +506,8 @@ private:
             // to use for pressure-work flowing across the face.
             // [TODO] PJ 2018-10-25 consider rothalpy flavour for rotating frame
             version(komega) {
-                face.F.tke = mass_flux * fs.turb[0];
-                face.F.omega = mass_flux * fs.turb[1];
+                face.F.rhoturb[0] = mass_flux * fs.turb[0];
+                face.F.rhoturb[1] = mass_flux * fs.turb[1];
             }
             version(MHD) {
                 // [TODO] PJ 2018-10-25 MHD?
@@ -528,8 +528,8 @@ private:
             face.F.total_energy = fs.gas.p*dot(face.gvel,face.n);
             // [TODO] PJ 2018-10-25 consider rothalpy flavour for rotating frame
             version(komega) {
-                face.F.tke = 0.0;
-                face.F.omega = 0.0;
+                face.F.rhoturb[0] = 0.0;
+                face.F.rhoturb[1] = 0.0;
             }
             version(MHD) {
                 // [TODO] PJ 2018-10-25 MHD?

@@ -100,8 +100,8 @@ void extractRestartInfoFromTimesFile(string jobName, ref RestartInfo[] times)
                 restartInfo.residuals.momentum.refz = to!double(tokens[5+Z_MOM]);
             restartInfo.residuals.total_energy = to!double(tokens[5+TOT_ENERGY]);
             if ( GlobalConfig.turbulence_model == TurbulenceModel.k_omega ) {
-                restartInfo.residuals.tke = to!double(tokens[5+TKE]);
-                restartInfo.residuals.omega = to!double(tokens[5+OMEGA]);
+                restartInfo.residuals.rhoturb[0] = to!double(tokens[5+TKE]);
+                restartInfo.residuals.rhoturb[1] = to!double(tokens[5+OMEGA]);
             }
             times ~= restartInfo;
         }
@@ -241,8 +241,8 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
                             cell.U[1].momentum.refz = cell.U[0].momentum.z + blk.dU[cellCount+Z_MOM];
                         cell.U[1].total_energy = cell.U[0].total_energy + blk.dU[cellCount+TOT_ENERGY];
                         if ( local_with_k_omega ) {
-                            cell.U[1].tke = cell.U[0].tke + blk.dU[cellCount+TKE];
-                            cell.U[1].omega = cell.U[0].omega + blk.dU[cellCount+OMEGA];
+                            cell.U[1].rhoturb[0] = cell.U[0].rhoturb[0] + blk.dU[cellCount+TKE];
+                            cell.U[1].rhoturb[1] = cell.U[0].rhoturb[1] + blk.dU[cellCount+OMEGA];
                         }
                         // enforce mass fraction of 1 for single species gas
                         if (blk.myConfig.n_species == 1) {
@@ -314,8 +314,8 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
                         blk.FU[cellCount+Z_MOM] = -cell.dUdt[0].momentum.z;
                     blk.FU[cellCount+TOT_ENERGY] = -cell.dUdt[0].total_energy;
                     if ( local_with_k_omega ) {
-                        blk.FU[cellCount+TKE] = -cell.dUdt[0].tke;
-                        blk.FU[cellCount+OMEGA] = -cell.dUdt[0].omega;
+                        blk.FU[cellCount+TKE] = -cell.dUdt[0].rhoturb[0];
+                        blk.FU[cellCount+OMEGA] = -cell.dUdt[0].rhoturb[1];
                     }
                     cellCount += nConserved;
                 }
@@ -331,8 +331,8 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
             writefln("Z-MOMENTUM:     %.12e", maxResiduals.momentum.z);
         writefln("ENERGY:         %.12e", maxResiduals.total_energy);
         if ( with_k_omega ) {
-            writefln("TKE:            %.12e", maxResiduals.tke);
-            writefln("OMEGA:          %.12e", maxResiduals.omega);
+            writefln("TKE:            %.12e", maxResiduals.rhoturb[0]);
+            writefln("OMEGA:          %.12e", maxResiduals.rhoturb[1]);
         }
         
         string refResidFname = jobName ~ "-ref-residuals.saved";
@@ -349,7 +349,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
                             maxResiduals.total_energy);
         }
         if ( with_k_omega ) {
-            refResid.writef(" %.18e %.18e", maxResiduals.tke, maxResiduals.omega);
+            refResid.writef(" %.18e %.18e", maxResiduals.rhoturb[0], maxResiduals.rhoturb[1]);
         }
         refResid.write("\n");
         refResid.close();
@@ -373,8 +373,8 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
             maxResiduals.momentum.refz = to!double(tokens[1+Z_MOM]);
         maxResiduals.total_energy = to!double(tokens[1+TOT_ENERGY]);
         if ( with_k_omega ) {
-            maxResiduals.tke = to!double(tokens[1+TKE]);
-            maxResiduals.omega = to!double(tokens[1+OMEGA]);
+            maxResiduals.rhoturb[0] = to!double(tokens[1+TKE]);
+            maxResiduals.rhoturb[1] = to!double(tokens[1+OMEGA]);
         }
         
         // We also need to determine how many snapshots have already been written
@@ -506,8 +506,8 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
                         cell.U[1].momentum.refz = cell.U[0].momentum.z + blk.dU[cellCount+Z_MOM];
                     cell.U[1].total_energy = cell.U[0].total_energy + blk.dU[cellCount+TOT_ENERGY];
                     if ( local_with_k_omega ) {
-                        cell.U[1].tke = cell.U[0].tke + blk.dU[cellCount+TKE];
-                        cell.U[1].omega = cell.U[0].omega + blk.dU[cellCount+OMEGA];
+                        cell.U[1].rhoturb[0] = cell.U[0].rhoturb[0] + blk.dU[cellCount+TKE];
+                        cell.U[1].rhoturb[1] = cell.U[0].rhoturb[1] + blk.dU[cellCount+OMEGA];
                     }
                     // enforce mass fraction of 1 for single species gas
                     if (blk.myConfig.n_species == 1) {
@@ -600,8 +600,8 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
                           currResiduals.total_energy, currResiduals.total_energy/maxResiduals.total_energy);
             if ( with_k_omega ) {
                 fResid.writef("%20.16e  %20.16e  %20.16e  %20.16e  ",
-                              currResiduals.tke, currResiduals.tke/maxResiduals.tke,
-                              currResiduals.omega, currResiduals.omega/maxResiduals.omega);
+                              currResiduals.rhoturb[0], currResiduals.rhoturb[0]/maxResiduals.rhoturb[0],
+                              currResiduals.rhoturb[1], currResiduals.rhoturb[1]/maxResiduals.rhoturb[1]);
             }
             fResid.writef("%20.16e ", fabs(mass_balance.re));
             fResid.write("\n");
@@ -632,8 +632,8 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
                 formattedWrite(writer, "  z-mom          %10.6e    %10.6e\n", currResiduals.momentum.z, currResiduals.momentum.z/maxResiduals.momentum.z);
             formattedWrite(writer, "  total-energy   %10.6e    %10.6e\n", currResiduals.total_energy, currResiduals.total_energy/maxResiduals.total_energy);
             if ( with_k_omega ) {
-                formattedWrite(writer, "  tke            %10.6e    %10.6e\n", currResiduals.tke, currResiduals.tke/maxResiduals.tke);
-                formattedWrite(writer, "  omega          %10.6e    %10.6e\n", currResiduals.omega, currResiduals.omega/maxResiduals.omega);
+                formattedWrite(writer, "  tke            %10.6e    %10.6e\n", currResiduals.rhoturb[0], currResiduals.rhoturb[0]/maxResiduals.rhoturb[0]);
+                formattedWrite(writer, "  omega          %10.6e    %10.6e\n", currResiduals.rhoturb[1], currResiduals.rhoturb[1]/maxResiduals.rhoturb[1]);
             }
             writeln(writer.data);
         }
@@ -966,8 +966,8 @@ void evalRealMatVecProd(double pseudoSimTime, double sigma)
                 cell.U[1].momentum.refz += sigma*blk.zed[cellCount+Z_MOM];
             cell.U[1].total_energy += sigma*blk.zed[cellCount+TOT_ENERGY];
             if ( local_with_k_omega ) {
-                cell.U[1].tke += sigma*blk.zed[cellCount+TKE];
-                cell.U[1].omega += sigma*blk.zed[cellCount+OMEGA];
+                cell.U[1].rhoturb[0] += sigma*blk.zed[cellCount+TKE];
+                cell.U[1].rhoturb[1] += sigma*blk.zed[cellCount+OMEGA];
             }
             cell.decode_conserved(0, 1, 0.0);
             cellCount += nConserved;
@@ -985,8 +985,8 @@ void evalRealMatVecProd(double pseudoSimTime, double sigma)
                 blk.zed[cellCount+Z_MOM] = (-cell.dUdt[1].momentum.z - blk.FU[cellCount+Z_MOM])/(sigma);
             blk.zed[cellCount+TOT_ENERGY] = (-cell.dUdt[1].total_energy - blk.FU[cellCount+TOT_ENERGY])/(sigma);
             if ( local_with_k_omega ) {
-                blk.zed[cellCount+TKE] = (-cell.dUdt[1].tke - blk.FU[cellCount+TKE])/(sigma);
-                blk.zed[cellCount+OMEGA] = (-cell.dUdt[1].omega - blk.FU[cellCount+OMEGA])/(sigma);
+                blk.zed[cellCount+TKE] = (-cell.dUdt[1].rhoturb[0] - blk.FU[cellCount+TKE])/(sigma);
+                blk.zed[cellCount+OMEGA] = (-cell.dUdt[1].rhoturb[1] - blk.FU[cellCount+OMEGA])/(sigma);
             }
             cellCount += nConserved;
         }
@@ -1021,8 +1021,8 @@ void evalComplexMatVecProd(double pseudoSimTime, double sigma)
                     cell.U[1].momentum.refz += complex(0.0, sigma*blk.zed[cellCount+Z_MOM].re);
                 cell.U[1].total_energy += complex(0.0, sigma*blk.zed[cellCount+TOT_ENERGY].re);
                 if ( local_with_k_omega ) {
-                    cell.U[1].tke += complex(0.0, sigma*blk.zed[cellCount+TKE].re);
-                    cell.U[1].omega += complex(0.0, sigma*blk.zed[cellCount+OMEGA].re);
+                    cell.U[1].rhoturb[0] += complex(0.0, sigma*blk.zed[cellCount+TKE].re);
+                    cell.U[1].rhoturb[1] += complex(0.0, sigma*blk.zed[cellCount+OMEGA].re);
                 }
                 cell.decode_conserved(0, 1, 0.0);
                 cellCount += nConserved;
@@ -1040,8 +1040,8 @@ void evalComplexMatVecProd(double pseudoSimTime, double sigma)
                     blk.zed[cellCount+Z_MOM] = -cell.dUdt[1].momentum.z.im/(sigma);
                 blk.zed[cellCount+TOT_ENERGY] = -cell.dUdt[1].total_energy.im/(sigma);
                 if ( local_with_k_omega ) {
-                    blk.zed[cellCount+TKE] = -cell.dUdt[1].tke.im/(sigma);
-                    blk.zed[cellCount+OMEGA] = -cell.dUdt[1].omega.im/(sigma);
+                    blk.zed[cellCount+TKE] = -cell.dUdt[1].rhoturb[0].im/(sigma);
+                    blk.zed[cellCount+OMEGA] = -cell.dUdt[1].rhoturb[1].im/(sigma);
                 }
                 // we must explicitly remove the complex-perturbation for the turbulent properties - failing to do so
                 // will cause imaginary values to leak into the flowstate variables (outside of the Frechet derivative).
@@ -1132,8 +1132,8 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             blk.maxRate.momentum.refz = 0.0;
         blk.maxRate.total_energy = 0.0;
         if ( local_with_k_omega ) {
-            blk.maxRate.tke = 0.0;
-            blk.maxRate.omega = 0.0;
+            blk.maxRate.rhoturb[0] = 0.0;
+            blk.maxRate.rhoturb[1] = 0.0;
         }
         foreach (cell; blk.cells) {
             blk.FU[cellCount+MASS] = -cell.dUdt[0].mass;
@@ -1143,8 +1143,8 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 blk.FU[cellCount+Z_MOM] = -cell.dUdt[0].momentum.z;
             blk.FU[cellCount+TOT_ENERGY] = -cell.dUdt[0].total_energy;
             if ( local_with_k_omega ) {
-                blk.FU[cellCount+TKE] = -cell.dUdt[0].tke;
-                blk.FU[cellCount+OMEGA] = -cell.dUdt[0].omega;
+                blk.FU[cellCount+TKE] = -cell.dUdt[0].rhoturb[0];
+                blk.FU[cellCount+OMEGA] = -cell.dUdt[0].rhoturb[1];
             }
             cellCount += nConserved;
 
@@ -1155,8 +1155,8 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 blk.maxRate.momentum.refz = fmax(blk.maxRate.momentum.z, fabs(cell.dUdt[0].momentum.z));
             blk.maxRate.total_energy = fmax(blk.maxRate.total_energy, fabs(cell.dUdt[0].total_energy));
             if ( local_with_k_omega ) {
-                blk.maxRate.tke = fmax(blk.maxRate.tke, fabs(cell.dUdt[0].tke));
-                blk.maxRate.omega = fmax(blk.maxRate.omega, fabs(cell.dUdt[0].omega));
+                blk.maxRate.rhoturb[0] = fmax(blk.maxRate.rhoturb[0], fabs(cell.dUdt[0].rhoturb[0]));
+                blk.maxRate.rhoturb[1] = fmax(blk.maxRate.rhoturb[1], fabs(cell.dUdt[0].rhoturb[1]));
             }
         }
     }
@@ -1175,8 +1175,8 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             maxMomZ = fmax(maxMomZ, blk.maxRate.momentum.z);
         maxEnergy = fmax(maxEnergy, blk.maxRate.total_energy);
         if ( with_k_omega ) {
-            maxTke = fmax(maxTke, blk.maxRate.tke);
-            maxOmega = fmax(maxOmega, blk.maxRate.omega);
+            maxTke = fmax(maxTke, blk.maxRate.rhoturb[0]);
+            maxOmega = fmax(maxOmega, blk.maxRate.rhoturb[1]);
         }
     }
     // Place some guards when time-rate-of-changes are very small.
@@ -1202,8 +1202,8 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 blk.maxRate.momentum.refz = maxMomZ;
             blk.maxRate.total_energy = maxEnergy;
             if ( local_with_k_omega ) {
-                blk.maxRate.tke = maxTke;
-                blk.maxRate.omega = maxOmega;
+                blk.maxRate.rhoturb[0] = maxTke;
+                blk.maxRate.rhoturb[1] = maxOmega;
             }
         }
         else { // just scale by 1
@@ -1214,8 +1214,8 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 blk.maxRate.momentum.refz = 1.0;
             blk.maxRate.total_energy = 1.0;
             if ( local_with_k_omega ) {
-                blk.maxRate.tke = 1.0; 
-                blk.maxRate.omega = 1.0; 
+                blk.maxRate.rhoturb[0] = 1.0; 
+                blk.maxRate.rhoturb[1] = 1.0; 
             }
         }
     }
@@ -1285,8 +1285,8 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 blk.r0[cellCount+Z_MOM] = -(1./blk.maxRate.momentum.z)*blk.FU[cellCount+Z_MOM];
             blk.r0[cellCount+TOT_ENERGY] = -(1./blk.maxRate.total_energy)*blk.FU[cellCount+TOT_ENERGY];
             if ( local_with_k_omega ) {
-                blk.r0[cellCount+TKE] = -(1./blk.maxRate.tke)*blk.FU[cellCount+TKE];
-                blk.r0[cellCount+OMEGA] = -(1./blk.maxRate.omega)*blk.FU[cellCount+OMEGA];
+                blk.r0[cellCount+TKE] = -(1./blk.maxRate.rhoturb[0])*blk.FU[cellCount+TKE];
+                blk.r0[cellCount+OMEGA] = -(1./blk.maxRate.rhoturb[1])*blk.FU[cellCount+OMEGA];
             }
             cellCount += nConserved;
         }
@@ -1325,8 +1325,8 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                         blk.v[cellCount+Z_MOM] *= (blk.maxRate.momentum.z);
                     blk.v[cellCount+TOT_ENERGY] *= (blk.maxRate.total_energy);
                     if ( local_with_k_omega ) {
-                        blk.v[cellCount+TKE] *= (blk.maxRate.tke);
-                        blk.v[cellCount+OMEGA] *= (blk.maxRate.omega);
+                        blk.v[cellCount+TKE] *= (blk.maxRate.rhoturb[0]);
+                        blk.v[cellCount+OMEGA] *= (blk.maxRate.rhoturb[1]);
                     }
                     cellCount += nConserved;
                 }
@@ -1390,8 +1390,8 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                         blk.w[cellCount+Z_MOM] *= (1./blk.maxRate.momentum.z);
                     blk.w[cellCount+TOT_ENERGY] *= (1./blk.maxRate.total_energy);
                     if ( local_with_k_omega ) {
-                        blk.w[cellCount+TKE] *= (1./blk.maxRate.tke);
-                        blk.w[cellCount+OMEGA] *= (1./blk.maxRate.omega);
+                        blk.w[cellCount+TKE] *= (1./blk.maxRate.rhoturb[0]);
+                        blk.w[cellCount+OMEGA] *= (1./blk.maxRate.rhoturb[1]);
                     }
                     cellCount += nConserved;
                 }
@@ -1493,8 +1493,8 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                     blk.zed[cellCount+Z_MOM] *= (blk.maxRate.momentum.z);
                 blk.zed[cellCount+TOT_ENERGY] *= (blk.maxRate.total_energy);
                 if ( local_with_k_omega ) {
-                    blk.zed[cellCount+TKE] *= (blk.maxRate.tke);
-                    blk.zed[cellCount+OMEGA] *= (blk.maxRate.omega);
+                    blk.zed[cellCount+TKE] *= (blk.maxRate.rhoturb[0]);
+                    blk.zed[cellCount+OMEGA] *= (blk.maxRate.rhoturb[1]);
                 }
                 cellCount += nConserved;
             }
@@ -1567,8 +1567,8 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                     blk.r0[cellCount+Z_MOM] *= (1.0/blk.maxRate.momentum.z);
                 blk.r0[cellCount+TOT_ENERGY] *= (1.0/blk.maxRate.total_energy);
                 if ( local_with_k_omega ) {
-                    blk.r0[cellCount+TKE] *= (1.0/blk.maxRate.tke);
-                    blk.r0[cellCount+OMEGA] *= (1.0/blk.maxRate.omega);
+                    blk.r0[cellCount+TKE] *= (1.0/blk.maxRate.rhoturb[0]);
+                    blk.r0[cellCount+OMEGA] *= (1.0/blk.maxRate.rhoturb[1]);
                 }
                 cellCount += nConserved;
             }
@@ -1612,8 +1612,8 @@ void max_residuals(ConservedQuantities residuals)
             blk.residuals.momentum.refz = fabs(blk.residuals.momentum.z);
         blk.residuals.total_energy = fabs(blk.residuals.total_energy);
         if ( local_with_k_omega ) {
-            blk.residuals.tke = fabs(blk.residuals.tke);
-            blk.residuals.omega = fabs(blk.residuals.omega);
+            blk.residuals.rhoturb[0] = fabs(blk.residuals.rhoturb[0]);
+            blk.residuals.rhoturb[1] = fabs(blk.residuals.rhoturb[1]);
         }
         number massLocal, xMomLocal, yMomLocal, zMomLocal, energyLocal, tkeLocal, omegaLocal;
         foreach (cell; blk.cells) {
@@ -1623,8 +1623,8 @@ void max_residuals(ConservedQuantities residuals)
             zMomLocal = cell.dUdt[0].momentum.z;
             energyLocal = cell.dUdt[0].total_energy;
             if ( local_with_k_omega ) {
-                tkeLocal = cell.dUdt[0].tke;
-                omegaLocal = cell.dUdt[0].omega;
+                tkeLocal = cell.dUdt[0].rhoturb[0];
+                omegaLocal = cell.dUdt[0].rhoturb[1];
             }
             blk.residuals.mass = fmax(blk.residuals.mass, massLocal);
             blk.residuals.momentum.refx = fmax(blk.residuals.momentum.x, xMomLocal);
@@ -1633,8 +1633,8 @@ void max_residuals(ConservedQuantities residuals)
                 blk.residuals.momentum.refz = fmax(blk.residuals.momentum.z, zMomLocal);
             blk.residuals.total_energy = fmax(blk.residuals.total_energy, energyLocal);
             if ( local_with_k_omega ) {
-                blk.residuals.tke = fmax(blk.residuals.tke, tkeLocal);
-                blk.residuals.omega = fmax(blk.residuals.omega, omegaLocal);
+                blk.residuals.rhoturb[0] = fmax(blk.residuals.rhoturb[0], tkeLocal);
+                blk.residuals.rhoturb[1] = fmax(blk.residuals.rhoturb[1], omegaLocal);
             }
         }
     }
@@ -1647,8 +1647,8 @@ void max_residuals(ConservedQuantities residuals)
             residuals.momentum.refz = fmax(residuals.momentum.z, blk.residuals.momentum.z);
         residuals.total_energy = fmax(residuals.total_energy, blk.residuals.total_energy);
         if ( with_k_omega ) {
-            residuals.tke = fmax(residuals.tke, blk.residuals.tke);
-            residuals.omega = fmax(residuals.omega, blk.residuals.omega);
+            residuals.rhoturb[0] = fmax(residuals.rhoturb[0], blk.residuals.rhoturb[0]);
+            residuals.rhoturb[1] = fmax(residuals.rhoturb[1], blk.residuals.rhoturb[1]);
         }
     }
 }
@@ -1674,7 +1674,7 @@ void rewrite_times_file(RestartInfo[] times)
                      rInfo.residuals.total_energy);
         }
         if ( GlobalConfig.turbulence_model == TurbulenceModel.k_omega ) {
-            f.writef(" %.18e %.18e", rInfo.residuals.tke, rInfo.residuals.omega);
+            f.writef(" %.18e %.18e", rInfo.residuals.rhoturb[0], rInfo.residuals.rhoturb[1]);
         }
         f.write("\n");
     }
