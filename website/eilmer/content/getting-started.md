@@ -23,7 +23,7 @@ The core solver and its modules are mainly written in the
 D programming language for speed and the benefits of compile-time checking. 
 The pre- and post-processing modes make use of the Lua scripting language
 so that we get flexibility and convenient customization.
-There is also a little Tcl/Tk used in the automated testing scripts.
+There is also some Ruby a little Tcl/Tk used in the automated testing scripts.
 
 To run simulations, you need an executable version of the Eilmer program.
 <!--- RJG, 2018-05-23: Commented out while tarball unavailable in lead-up
@@ -74,6 +74,7 @@ To build Eilmer, you will require:
 
 Additionally, if you want to run the test suite, you will require:
 
+  + Ruby package
   + TCL package
   + the Python sympy package
 
@@ -129,6 +130,15 @@ the appropriate places. Some example lines from a .bashrc file are:
     export PATH=$PATH:$DGD/bin
     export DGD_LUA_PATH=$DGD/lib/?.lua
     export DGD_LUA_CPATH=$DGD/lib/?.so
+    
+
+To use the gas models as a loadable library in Python and Ruby,
+you should set the following environment variables, also.
+
+    export PYTHONPATH=${PYTHONPATH}:${DGD}/lib
+    export RUBYPATH=${RUBYPATH}:${DGD}/lib
+    export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${DGD}/lib
+
 
 Remember to refresh your current shell (or log out and log back in) so
 that your newly configured environment is available.
