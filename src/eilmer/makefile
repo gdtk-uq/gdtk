@@ -402,7 +402,7 @@ clean:
 	- cd $(CEQ_DIR); make clean
 
 prep-gas:
-	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) build
+	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) build-prep-gas
 
 ugrid_partition:
 	cd $(GRID_DIR); make BUILD_DIR=$(BUILD_DIR) ugrid_partition

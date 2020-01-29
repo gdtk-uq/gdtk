@@ -129,23 +129,28 @@ include gas_files.mk
 # Here begins the list of targets, starting with the top-level actions.
 # ----------------------------------------------------------------------
 
-build: gas-calc prep_gas.lua species-database/species-database.lua \
-		species-database/species-list.txt species_data_converter.lua \
-		build-uniform-lut.py libgas.so
+# prep-gas and its database is required by the Eilmer flow solver.
+build-prep-gas: prep_gas.lua species-database/species-database.lua \
+		species-database/species-list.txt species_data_converter.lua
 	- mkdir -p $(BUILD_DIR)/bin
-	cp gas-calc $(BUILD_DIR)/bin/
 	cp prep_gas.lua $(BUILD_DIR)/bin/prep-gas; chmod +x $(BUILD_DIR)/bin/prep-gas
-	cp build-uniform-lut.py $(BUILD_DIR)/bin/build-uniform-lut; chmod +x $(BUILD_DIR)/bin/build-uniform-lut
 	cp species_data_converter.lua $(BUILD_DIR)/bin/species-data-converter; \
 		chmod +x $(BUILD_DIR)/bin/species-data-converter
 	- mkdir -p $(BUILD_DIR)/data
 	cp species-database/species-database.lua $(BUILD_DIR)/data/
 	cp species-database/species-list.txt $(BUILD_DIR)/data/
+
+# The following are not required by the Eilmer flow solver but
+# they are useful for building stand-alone flow-analysis programs.
+build-libgas: libgas.so gas-calc build-uniform-lut.py
+	- mkdir -p $(BUILD_DIR)/bin
+	cp gas-calc $(BUILD_DIR)/bin/
+	cp build-uniform-lut.py $(BUILD_DIR)/bin/build-uniform-lut; chmod +x $(BUILD_DIR)/bin/build-uniform-lut
 	- mkdir -p $(BUILD_DIR)/lib
 	cp libgas.so $(BUILD_DIR)/lib/
 	cp -r ../lib/* $(BUILD_DIR)/lib/
 
-install: build
+install: build-prep-gas build-libgas
 	- mkdir -p $(INSTALL_DIR)
 	@echo "Installing to $(INSTALL_DIR)"
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
