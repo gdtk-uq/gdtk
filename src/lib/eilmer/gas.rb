@@ -305,8 +305,14 @@ class GasState
     text << ", p=#{self.p}"
     text << ", T=#{self.T}"
     text << ", u=#{self.u}"
+    if @gmodel.n_modes > 0 then
+      text << ", T_modes=#{self.T_modes}"
+      text << ", u_modes=#{self.u_modes}"
+    end
     text << ", a=#{self.a}"
-    text << ", massf=#{self.massf}"
+    if @gmodel.n_species > 1 then
+      text << ", massf=#{self.massf}"
+    end
     text << ", id=#{@id}, gmodel.id=#{@gmodel.id})"
   end
     

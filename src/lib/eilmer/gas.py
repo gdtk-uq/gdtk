@@ -272,8 +272,12 @@ class GasState(object):
         text += ', p=%g' % self.p
         text += ', T=%g' % self.T
         text += ', u=%g' % self.u
+        if self.gmodel.n_modes > 0:
+            text += ', T_modes=%s' % self.T_modes
+            text += ', u_modes=%s' % self.u_modes
         text += ', a=%g' % self.a
-        text += ', massf=%s' % str(self.massf)
+        if self.gmodel.n_species > 1:
+            text += ', massf=%s' % str(self.massf)
         text += ', id=%d, gmodel.id=%d)' % (self.id, self.gmodel.id)
         return text
     

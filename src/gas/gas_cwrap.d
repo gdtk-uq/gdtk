@@ -14,6 +14,7 @@ import std.stdio;
 import std.format;
 import std.conv;
 import std.algorithm;
+import std.math;
 
 import gas.gas_model;
 import gas.gas_state;
@@ -359,7 +360,21 @@ extern (C) int gas_state_copy_values(int gs_to_i, int gs_from_i)
 extern (C) int gas_model_gas_state_update_thermo_from_pT(int gm_i, int gs_i)
 {
     try {
-        gas_models[gm_i].update_thermo_from_pT(gas_states[gs_i]);
+        GasModel gm = gas_models[gm_i];
+        GasState gs = gas_states[gs_i];
+        bool valid = true;
+        if (!isFinite(gs.p)) { valid = false; }
+        if (!isFinite(gs.T)) { valid = false; }
+        foreach (i; 0 .. gm.n_modes) {
+            if (!isFinite(gs.T_modes[i])) { valid = false; }
+        }
+        if (gm.n_species > 1) {
+            foreach (i; 0 .. gm.n_species) {
+                if (!isFinite(gs.massf[i])) { valid = false; }
+            }
+        }
+        if (!valid) { throw new Exception("Gas state is not valid for pT update."); }
+        gm.update_thermo_from_pT(gs);
         return 0;
     } catch (Exception e) {
         writeln("Exception message: ", e.msg);
@@ -370,7 +385,21 @@ extern (C) int gas_model_gas_state_update_thermo_from_pT(int gm_i, int gs_i)
 extern (C) int gas_model_gas_state_update_thermo_from_rhou(int gm_i, int gs_i)
 {
     try {
-        gas_models[gm_i].update_thermo_from_rhou(gas_states[gs_i]);
+        GasModel gm = gas_models[gm_i];
+        GasState gs = gas_states[gs_i];
+        bool valid = true;
+        if (!isFinite(gs.rho)) { valid = false; }
+        if (!isFinite(gs.u)) { valid = false; }
+        foreach (i; 0 .. gm.n_modes) {
+            if (!isFinite(gs.u_modes[i])) { valid = false; }
+        }
+        if (gm.n_species > 1) {
+            foreach (i; 0 .. gm.n_species) {
+                if (!isFinite(gs.massf[i])) { valid = false; }
+            }
+        }
+        if (!valid) { throw new Exception("Gas state is not valid for rhou update."); }
+        gm.update_thermo_from_rhou(gs);
         return 0;
     } catch (Exception e) {
         writeln("Exception message: ", e.msg);
@@ -381,7 +410,21 @@ extern (C) int gas_model_gas_state_update_thermo_from_rhou(int gm_i, int gs_i)
 extern (C) int gas_model_gas_state_update_thermo_from_rhoT(int gm_i, int gs_i)
 {
     try {
-        gas_models[gm_i].update_thermo_from_rhoT(gas_states[gs_i]);
+        GasModel gm = gas_models[gm_i];
+        GasState gs = gas_states[gs_i];
+        bool valid = true;
+        if (!isFinite(gs.rho)) { valid = false; }
+        if (!isFinite(gs.T)) { valid = false; }
+        foreach (i; 0 .. gm.n_modes) {
+            if (!isFinite(gs.T_modes[i])) { valid = false; }
+        }
+        if (gm.n_species > 1) {
+            foreach (i; 0 .. gm.n_species) {
+                if (!isFinite(gs.massf[i])) { valid = false; }
+            }
+        }
+        if (!valid) { throw new Exception("Gas state is not valid for rhoT update."); }
+        gm.update_thermo_from_rhoT(gs);
         return 0;
     } catch (Exception e) {
         writeln("Exception message: ", e.msg);
@@ -392,7 +435,18 @@ extern (C) int gas_model_gas_state_update_thermo_from_rhoT(int gm_i, int gs_i)
 extern (C) int gas_model_gas_state_update_thermo_from_rhop(int gm_i, int gs_i)
 {
     try {
-        gas_models[gm_i].update_thermo_from_rhop(gas_states[gs_i]);
+        GasModel gm = gas_models[gm_i];
+        GasState gs = gas_states[gs_i];
+        bool valid = true;
+        if (!isFinite(gs.rho)) { valid = false; }
+        if (!isFinite(gs.p)) { valid = false; }
+        if (gm.n_species > 1) {
+            foreach (i; 0 .. gm.n_species) {
+                if (!isFinite(gs.massf[i])) { valid = false; }
+            }
+        }
+        if (!valid) { throw new Exception("Gas state is not valid for rhop update."); }
+        gm.update_thermo_from_rhop(gs);
         return 0;
     } catch (Exception e) {
         writeln("Exception message: ", e.msg);
@@ -403,7 +457,18 @@ extern (C) int gas_model_gas_state_update_thermo_from_rhop(int gm_i, int gs_i)
 extern (C) int gas_model_gas_state_update_thermo_from_ps(int gm_i, int gs_i, double s)
 {
     try {
-        gas_models[gm_i].update_thermo_from_ps(gas_states[gs_i], s);
+        GasModel gm = gas_models[gm_i];
+        GasState gs = gas_states[gs_i];
+        bool valid = true;
+        if (!isFinite(s)) { valid = false; }
+        if (!isFinite(gs.p)) { valid = false; }
+        if (gm.n_species > 1) {
+            foreach (i; 0 .. gm.n_species) {
+                if (!isFinite(gs.massf[i])) { valid = false; }
+            }
+        }
+        if (!valid) { throw new Exception("Gas state is not valid for ps update."); }
+        gm.update_thermo_from_ps(gs, s);
         return 0;
     } catch (Exception e) {
         writeln("Exception message: ", e.msg);
@@ -414,7 +479,18 @@ extern (C) int gas_model_gas_state_update_thermo_from_ps(int gm_i, int gs_i, dou
 extern (C) int gas_model_gas_state_update_thermo_from_hs(int gm_i, int gs_i, double h, double s)
 {
     try {
-        gas_models[gm_i].update_thermo_from_hs(gas_states[gs_i], h, s);
+        GasModel gm = gas_models[gm_i];
+        GasState gs = gas_states[gs_i];
+        bool valid = true;
+        if (!isFinite(s)) { valid = false; }
+        if (!isFinite(h)) { valid = false; }
+        if (gm.n_species > 1) {
+            foreach (i; 0 .. gm.n_species) {
+                if (!isFinite(gs.massf[i])) { valid = false; }
+            }
+        }
+        if (!valid) { throw new Exception("Gas state is not valid for hs update."); }
+        gm.update_thermo_from_hs(gs, h, s);
         return 0;
     } catch (Exception e) {
         writeln("Exception message: ", e.msg);
@@ -425,7 +501,19 @@ extern (C) int gas_model_gas_state_update_thermo_from_hs(int gm_i, int gs_i, dou
 extern (C) int gas_model_gas_state_update_sound_speed(int gm_i, int gs_i)
 {
     try {
-        gas_models[gm_i].update_sound_speed(gas_states[gs_i]);
+        GasModel gm = gas_models[gm_i];
+        GasState gs = gas_states[gs_i];
+        bool valid = true;
+        if (!isFinite(gs.rho)) { valid = false; }
+        if (!isFinite(gs.p)) { valid = false; }
+        if (!isFinite(gs.T)) { valid = false; }
+        if (gm.n_species > 1) {
+            foreach (i; 0 .. gm.n_species) {
+                if (!isFinite(gs.massf[i])) { valid = false; }
+            }
+        }
+        if (!valid) { throw new Exception("Gas state is not valid for sound_speed update."); }
+        gm.update_sound_speed(gs);
         return 0;
     } catch (Exception e) {
         writeln("Exception message: ", e.msg);
@@ -436,7 +524,19 @@ extern (C) int gas_model_gas_state_update_sound_speed(int gm_i, int gs_i)
 extern (C) int gas_model_gas_state_update_trans_coeffs(int gm_i, int gs_i)
 {
     try {
-        gas_models[gm_i].update_trans_coeffs(gas_states[gs_i]);
+        GasModel gm = gas_models[gm_i];
+        GasState gs = gas_states[gs_i];
+        bool valid = true;
+        if (!isFinite(gs.rho)) { valid = false; }
+        if (!isFinite(gs.p)) { valid = false; }
+        if (!isFinite(gs.T)) { valid = false; }
+        if (gm.n_species > 1) {
+            foreach (i; 0 .. gm.n_species) {
+                if (!isFinite(gs.massf[i])) { valid = false; }
+            }
+        }
+        if (!valid) { throw new Exception("Gas state is not valid for trans_coeffs update."); }
+        gm.update_trans_coeffs(gs);
         return 0;
     } catch (Exception e) {
         writeln("Exception message: ", e.msg);
