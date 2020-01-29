@@ -147,7 +147,7 @@ public:
             throw new GasModelException(msg);
         }
         number alpha = ionisation_fraction_from_mass_fractions(Q);
-        Q.a = sqrt(5/3*_Rgas*(Q.T + alpha*Q.T_modes[0]));
+        Q.a = sqrt(5./3.*_Rgas*(Q.T + alpha*Q.T_modes[0]));
     }
     override void update_trans_coeffs(GasState Q)
     {

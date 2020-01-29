@@ -44,6 +44,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         _n_step_suggest = getIntWithDefault(L, -1, "n_step_suggest", 10);
         _Newton_Raphson_tol = getDoubleWithDefault(L, -1, "Newton_Raphson_tol", 1.0e-6); // relative error
         _max_iter_newton = getIntWithDefault(L, -1, "max_iter_newton", 30);
+        _argon_argon_rate_multiplier = getIntWithDefault(L, -1, "argon_argon_rate_multiplier", 1);
         lua_close(L);
     }
     
@@ -261,9 +262,9 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         // PJ, 2020-01-22, Having Te drop low is a problem for kre,
         // so we might over-write it locally.
         Te = fmax(Te, 3000.0);
-        number kfA = 1.68e-26*T*sqrt(T)*(_theta_A1star/T+2)*exp(-_theta_A1star/T);
+        number kfA = 1.68e-26*T*sqrt(T)*(_theta_A1star/T+2)*exp(-_theta_A1star/T)*_argon_argon_rate_multiplier;
         number kfe = 3.75e-22*Te*sqrt(Te)*(_theta_A1star/Te+2)*exp(-_theta_A1star/Te);
-        number krA = 5.8e-49*(_theta_A1star/T+2)*exp((_theta_ion-_theta_A1star)/T);
+        number krA = 5.8e-49*(_theta_A1star/T+2)*exp((_theta_ion-_theta_A1star)/T)*_argon_argon_rate_multiplier;
         number kre = 1.29e-44*(_theta_A1star/Te+2)*exp((_theta_ion-_theta_A1star)/Te);
 
         // Determine the current rate of ionisation.
@@ -386,6 +387,7 @@ private:
     int _n_step_suggest; // number of substeps to take if dtChemSuggest<0.0
     double _Newton_Raphson_tol;
     int _max_iter_newton; // limit the number of Newton iterations for backard Euler
+    double _argon_argon_rate_multiplier; // increases the argon-argon rate constant by this factor
 
     // The following items are constants for the duration
     // of the update for our abstract isolated reactor.
