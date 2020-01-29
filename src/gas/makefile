@@ -145,16 +145,6 @@ build: gas-calc prep_gas.lua species-database/species-database.lua \
 	cp libgas.so $(BUILD_DIR)/lib/
 	cp -r ../lib/* $(BUILD_DIR)/lib/
 
-build-prep-gas: prep_gas.lua species-database/species-database.lua \
-		species-database/species-list.txt species_data_converter.lua
-	- mkdir -p $(BUILD_DIR)/bin
-	cp prep_gas.lua $(BUILD_DIR)/bin/prep-gas; chmod +x $(BUILD_DIR)/bin/prep-gas
-	cp species_data_converter.lua $(BUILD_DIR)/bin/species-data-converter; \
-		chmod +x $(BUILD_DIR)/bin/species-data-converter
-	- mkdir -p $(BUILD_DIR)/data
-	cp species-database/species-database.lua $(BUILD_DIR)/data/
-	cp species-database/species-list.txt $(BUILD_DIR)/data/
-
 install: build
 	- mkdir -p $(INSTALL_DIR)
 	@echo "Installing to $(INSTALL_DIR)"
