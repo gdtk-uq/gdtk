@@ -588,6 +588,28 @@ extern (C) int gas_model_gas_state_R(int gm_i, int gs_i, double* result)
     }
 }
 
+extern (C) int gas_model_gas_state_gamma(int gm_i, int gs_i, double* result)
+{
+    try {
+        *result = gas_models[gm_i].gamma(gas_states[gs_i]);
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern (C) int gas_model_gas_state_Prandtl(int gm_i, int gs_i, double* result)
+{
+    try {
+        *result = gas_models[gm_i].Prandtl(gas_states[gs_i]);
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
 extern (C) int gas_model_gas_state_internal_energy(int gm_i, int gs_i, double* result)
 {
     try {

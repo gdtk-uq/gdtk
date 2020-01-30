@@ -42,6 +42,8 @@ module Gas
   extern 'int gas_model_gas_state_Cp(int gm_i, int gs_i, double* result)'
   extern 'int gas_model_gas_state_dpdrho_const_T(int gm_i, int gs_i, double* result)'
   extern 'int gas_model_gas_state_R(int gm_i, int gs_i, double* result)'
+  extern 'int gas_model_gas_state_gamma(int gm_i, int gs_i, double* result)'
+  extern 'int gas_model_gas_state_Prandtl(int gm_i, int gs_i, double* result)'
   extern 'int gas_model_gas_state_internal_energy(int gm_i, int gs_i, double* result)'
   extern 'int gas_model_gas_state_enthalpy(int gm_i, int gs_i, double* result)'
   extern 'int gas_model_gas_state_entropy(int gm_i, int gs_i, double* result)'
@@ -194,6 +196,18 @@ class GasModel
     valuep = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE)
     flag = Gas.gas_model_gas_state_R(@id, gstate.id, valuep)
     if flag < 0 then raise "could not compute R." end
+    return valuep[0, valuep.size].unpack("d")[0]
+  end
+  def gamma(gstate)
+    valuep = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE)
+    flag = Gas.gas_model_gas_state_gamma(@id, gstate.id, valuep)
+    if flag < 0 then raise "could not compute gamma." end
+    return valuep[0, valuep.size].unpack("d")[0]
+  end
+  def Prandtl(gstate)
+    valuep = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE)
+    flag = Gas.gas_model_gas_state_Prandtl(@id, gstate.id, valuep)
+    if flag < 0 then raise "could not compute Prandtl." end
     return valuep[0, valuep.size].unpack("d")[0]
   end
   def internal_energy(gstate)
@@ -548,6 +562,12 @@ class GasState
   end
   def R()
     @gmodel.R(self)
+  end
+  def gamma()
+    @gmodel.gamma(self)
+  end
+  def Prandtl()
+    @gmodel.Prandtl(self)
   end
   def internal_energy()
     @gmodel.internal_energy(self)

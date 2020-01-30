@@ -40,6 +40,8 @@ ffi.cdef("""
     int gas_model_gas_state_Cp(int gm_i, int gs_i, double* result);
     int gas_model_gas_state_dpdrho_const_T(int gm_i, int gs_i, double* result);
     int gas_model_gas_state_R(int gm_i, int gs_i, double* result);
+    int gas_model_gas_state_gamma(int gm_i, int gs_i, double* result);
+    int gas_model_gas_state_Prandtl(int gm_i, int gs_i, double* result);
     int gas_model_gas_state_internal_energy(int gm_i, int gs_i, double* result);
     int gas_model_gas_state_enthalpy(int gm_i, int gs_i, double* result);
     int gas_model_gas_state_entropy(int gm_i, int gs_i, double* result);
@@ -185,6 +187,16 @@ class GasModel(object):
         valuep = ffi.new("double *")
         flag = so.gas_model_gas_state_R(self.id, gstate.id, valuep)
         if flag < 0: raise Exception("could not compute R.")
+        return valuep[0]
+    def gamma(self, gstate):
+        valuep = ffi.new("double *")
+        flag = so.gas_model_gas_state_gamma(self.id, gstate.id, valuep)
+        if flag < 0: raise Exception("could not compute gamma.")
+        return valuep[0]
+    def Prandtl(self, gstate):
+        valuep = ffi.new("double *")
+        flag = so.gas_model_gas_state_Prandtl(self.id, gstate.id, valuep)
+        if flag < 0: raise Exception("could not compute Prandtl.")
         return valuep[0]
     def internal_energy(self, gstate):
         valuep = ffi.new("double *")
@@ -537,6 +549,12 @@ class GasState(object):
     @property
     def R(self):
         return self.gmodel.R(self)
+    @property
+    def gamma(self):
+        return self.gmodel.gamma(self)
+    @property
+    def Prandtl(self):
+        return self.gmodel.Prandtl(self)
     @property
     def internal_energy(self):
         return self.gmodel.internal_energy(self)
