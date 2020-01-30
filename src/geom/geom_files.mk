@@ -24,6 +24,7 @@ GEOM_D_FILES := \
 	$(GEOM_DIR)/surface/coonspatch.d \
 	$(GEOM_DIR)/surface/aopatch.d \
 	$(GEOM_DIR)/surface/channelpatch.d \
+	$(GEOM_DIR)/surface/expandingchannelpatch.d \
 	$(GEOM_DIR)/surface/sweptpathpatch.d \
 	$(GEOM_DIR)/surface/meshpatch.d \
 	$(GEOM_DIR)/surface/subrangedsurface.d \

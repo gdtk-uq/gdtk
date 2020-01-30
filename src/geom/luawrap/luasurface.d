@@ -24,6 +24,7 @@ import geom.luawrap.luasgrid;
 immutable string CoonsPatchMT = "CoonsPatch";
 immutable string AOPatchMT = "AOPatch";
 immutable string ChannelPatchMT = "ChannelPatch";
+immutable string ExpandingChannelPatchMT = "ExpandingChannelPatch";
 immutable string SweptPathPatchMT = "SweptPathPatch";
 immutable string MeshPatchMT = "MeshPatch";
 immutable string LuaFnSurfaceMT = "LuaFnSurface";
@@ -42,6 +43,8 @@ ParametricSurface checkSurface(lua_State* L, int index) {
         return checkObj!(AOPatch, AOPatchMT)(L, index);
     if ( isObjType(L, index, ChannelPatchMT ) )
         return checkObj!(ChannelPatch, ChannelPatchMT)(L, index);
+    if ( isObjType(L, index, ExpandingChannelPatchMT ) )
+        return checkObj!(ExpandingChannelPatch, ExpandingChannelPatchMT)(L, index);
     if ( isObjType(L, index, SweptPathPatchMT ) )
         return checkObj!(SweptPathPatch, SweptPathPatchMT)(L, index);
     if ( isObjType(L, index, MeshPatchMT ) )
@@ -361,6 +364,72 @@ extern(C) int make_bridging_path_ChannelPatch(lua_State* L)
     return 1;
 } // end make_bridging_path_ChannelPatch()
 
+/**
+ * This is the constructor for a ExpandingChannelPatch to be used from the Lua interface.
+ *
+ * At successful completion of this function, a new ExpandingChannelPatch object
+ * is pushed onto the Lua stack.
+ *
+ * Supported constructions are:
+ * -------------------------
+ * patch = ExpandingChannelPatch:new{south=sPath, north=nPath, west=wPath, east=ePath}
+ * --------------------------
+ */
+
+extern(C) int newExpandingChannelPatch(lua_State* L)
+{
+    int narg = lua_gettop(L);
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected ExpandingChannelPatch:new{}; ";
+        errMsg ~= "maybe you tried ExpandingChannelPatch.new{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if ( !lua_istable(L, 1) ) {
+        string errMsg = "Error in constructor ExpandingChannelPatch:new{}. " ~
+            "A table with input parameters is expected as the first argument.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    if (!checkAllowedNames(L, 1, ["north","south","west","east"])) {
+        string errMsg = "Error in call to ExpandingChannelPatch:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    // Look for south and north paths.
+    lua_getfield(L, 1, "south");
+    auto south = checkPath(L, -1);
+    if ( south is null ) {
+        string errMsg = "Error in constructor ExpandingChannelPatch:new{}. Couldn't find south Path.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_pop(L, 1);
+    lua_getfield(L, 1, "north");
+    auto north = checkPath(L, -1);
+    if ( north is null ) {
+        string errMsg = "Error in constructor ExpandingChannelPatch:new{}. Couldn't find north Path.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_pop(L, 1);
+    lua_getfield(L, 1, "west");
+    auto west = checkPath(L, -1);
+    if ( west is null ) {
+        string errMsg = "Error in constructor ExpandingChannelPatch:new{}. Couldn't find west Path.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_pop(L, 1);
+    lua_getfield(L, 1, "east");
+    auto east = checkPath(L, -1);
+    if ( east is null ) {
+        string errMsg = "Error in constructor ExpandingChannelPatch:new{}. Couldn't find east Path.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_pop(L, 1);
+
+    // Construct the actual surface.
+    auto cpatch = new ExpandingChannelPatch(south, north, west, east);
+    surfaceStore ~= pushObj!(ExpandingChannelPatch, ExpandingChannelPatchMT)(L, cpatch);
+    return 1;
+} // end newExpandingChannelPatch()
 
 /**
  * This is the constructor for a SweptPathPatch to be used from the Lua interface.
@@ -1037,6 +1106,26 @@ void registerSurfaces(lua_State* L)
 
     lua_setglobal(L, ChannelPatchMT.toStringz);
     lua_getglobal(L, ChannelPatchMT.toStringz); lua_setglobal(L, "ChannelSurface"); // alias
+
+    // Register the ExpandingChannelPatch object
+    luaL_newmetatable(L, ExpandingChannelPatchMT.toStringz);
+    
+    /* metatable.__index = metatable */
+    lua_pushvalue(L, -1); // duplicates the current metatable
+    lua_setfield(L, -2, "__index");
+
+    /* Register methods for use. */
+    lua_pushcfunction(L, &newExpandingChannelPatch);
+    lua_setfield(L, -2, "new");
+    lua_pushcfunction(L, &opCallSurface!(ExpandingChannelPatch, ExpandingChannelPatchMT));
+    lua_setfield(L, -2, "__call");
+    lua_pushcfunction(L, &opCallSurface!(ExpandingChannelPatch, ExpandingChannelPatchMT));
+    lua_setfield(L, -2, "eval");
+    lua_pushcfunction(L, &toStringObj!(ExpandingChannelPatch, ExpandingChannelPatchMT));
+    lua_setfield(L, -2, "__tostring");
+
+    lua_setglobal(L, ExpandingChannelPatchMT.toStringz);
+    lua_getglobal(L, ExpandingChannelPatchMT.toStringz); lua_setglobal(L, "ExpandingChannelSurface"); // alias
 
     // Register the SweptPathPatch object
     luaL_newmetatable(L, SweptPathPatchMT.toStringz);
