@@ -11,6 +11,8 @@
 module geom.surface.expandingchannelpatch;
 
 import std.conv;
+import nm.complex;
+import nm.number;
 import std.math;
 
 import geom.elements;
