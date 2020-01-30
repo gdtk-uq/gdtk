@@ -636,9 +636,17 @@ void init_simulation(int tindx, int nextLoadsIndx,
 
 void write_solution_files()
 {
+    SimState.current_tindx = SimState.current_tindx + 1;
     if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) {
         writeln("Write flow solution.");
         stdout.flush();
+    }
+    if (GlobalConfig.is_master_task) {
+        ensure_directory_is_present(make_path_name!"flow"(SimState.current_tindx));
+        ensure_directory_is_present(make_path_name!"solid"(SimState.current_tindx));
+        if (GlobalConfig.grid_motion != GridMotion.none) {
+            ensure_directory_is_present(make_path_name!"grid"(SimState.current_tindx));
+        }
     }
     version(mpi_parallel) {
         version(mpi_timeouts) {
@@ -647,20 +655,19 @@ void write_solution_files()
             MPI_Barrier(MPI_COMM_WORLD);
         }
     }
-    SimState.current_tindx = SimState.current_tindx + 1;
-    ensure_directory_is_present(make_path_name!"flow"(SimState.current_tindx));
+    wait_for_directory_to_be_present(make_path_name!"flow"(SimState.current_tindx));
     auto job_name = GlobalConfig.base_file_name;
     foreach (myblk; parallel(localFluidBlocksBySize,1)) {
         auto file_name = make_file_name!"flow"(job_name, myblk.id, SimState.current_tindx, GlobalConfig.flowFileExt);
         myblk.write_solution(file_name, SimState.time);
     }
-    ensure_directory_is_present(make_path_name!"solid"(SimState.current_tindx));
+    wait_for_directory_to_be_present(make_path_name!"solid"(SimState.current_tindx));
     foreach (ref mySolidBlk; solidBlocks) {
         auto fileName = make_file_name!"solid"(job_name, mySolidBlk.id, SimState.current_tindx, "gz");
         mySolidBlk.writeSolution(fileName, SimState.time);
     }
     if (GlobalConfig.grid_motion != GridMotion.none) {
-        ensure_directory_is_present(make_path_name!"grid"(SimState.current_tindx));
+        wait_for_directory_to_be_present(make_path_name!"grid"(SimState.current_tindx));
         if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) { writeln("Write grid"); }
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
             blk.sync_vertices_to_underlying_grid(0);
@@ -1023,6 +1030,16 @@ int integrate_in_time(double target_time_as_requested)
             if (GlobalConfig.write_loads &&
                 ( ((SimState.time >= SimState.t_loads) && !SimState.loads_just_written) ||
                   SimState.step == GlobalConfig.write_loads_at_step )) {
+                if (GlobalConfig.is_master_task) {
+                    init_current_loads_tindx_dir(SimState.current_loads_tindx);
+                }
+                version(mpi_parallel) {
+                    version(mpi_timeouts) {
+                        MPI_Sync_tasks();
+                    } else {
+                        MPI_Barrier(MPI_COMM_WORLD);
+                    }
+                }
                 write_boundary_loads_to_file(SimState.time, SimState.current_loads_tindx);
                 if (GlobalConfig.is_master_task) {
                     update_loads_times_file(SimState.time, SimState.current_loads_tindx);
@@ -3414,7 +3431,19 @@ void finalize_simulation()
         if (GlobalConfig.udf_supervisor_file.length > 0) { call_UDF_at_write_to_file(); }
     }
     if (!SimState.history_just_written) { write_history_cells_to_files(SimState.time); }
-    if (!SimState.loads_just_written) { write_boundary_loads_to_file(SimState.time, SimState.current_loads_tindx); }
+    if (!SimState.loads_just_written) {
+        if (GlobalConfig.is_master_task) {
+            init_current_loads_tindx_dir(SimState.current_loads_tindx);
+        }
+        version(mpi_parallel) {
+            version(mpi_timeouts) {
+                MPI_Sync_tasks();
+            } else {
+                MPI_Barrier(MPI_COMM_WORLD);
+            }
+        }
+        write_boundary_loads_to_file(SimState.time, SimState.current_loads_tindx);
+    }
     GC.collect();
     GC.minimize();
     if (GlobalConfig.verbosity_level > 0  && GlobalConfig.is_master_task) {

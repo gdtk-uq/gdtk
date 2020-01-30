@@ -10,7 +10,7 @@ import std.array;
 import std.format;
 import std.string;
 import fvcore: FlowSolverException;
-
+import core.thread;
 
 string make_path_name(string mytype)(int tindx)
 // Build a pathname for "grid" and "flow" subdirectories.
@@ -41,4 +41,16 @@ void ensure_directory_is_present(string dir_name)
         string msg = text("Failed to ensure directory is present: ", dir_name);
         throw new FlowSolverException(msg);
     }
+}
+
+void wait_for_directory_to_be_present(string dir_name)
+{
+    int nChecks = 30;
+    int waitTime = 100; // msecs
+    foreach (i; 0 .. nChecks) {
+        if (exists(dir_name) && isDir(dir_name)) return;
+        Thread.sleep(dur!("msecs")( waitTime ));
+    }
+    string msg = text("Failed to ensure directory is present: ", dir_name);
+    throw new FlowSolverException(msg);
 }
