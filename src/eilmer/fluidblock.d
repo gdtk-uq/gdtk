@@ -680,8 +680,9 @@ public:
 	    L2_residual += fabs(cell.dUdt[0].total_energy)^^2;
 	    version(komega) {
 		if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-		    L2_residual += fabs(cell.dUdt[0].rhoturb[0])^^2;
-		    L2_residual += fabs(cell.dUdt[0].rhoturb[1])^^2;
+            foreach (rt; cell.dUdt[0].rhoturb) {
+                L2_residual += fabs(rt)^^2;
+            }
 		}
 	    }
 	    L2_residual = sqrt(L2_residual);
