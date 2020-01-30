@@ -275,6 +275,7 @@ extern(C) int soundSpeed(lua_State* L)
         errMsg ~= "\nBailing out\n";
         throw new Error(errMsg);
     }
+    if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(Q); }
     gm.update_sound_speed(Q);
     setGasStateInTable(L, gm, 2, Q);
     return 0;
@@ -282,10 +283,10 @@ extern(C) int soundSpeed(lua_State* L)
 
 extern(C) int transCoeffs(lua_State* L)
 {
-   auto gm = checkGasModel(L, 1);
-   auto Q = new GasState(gm);
-   getGasStateFromTable(L, gm, 2, Q); 
-   if ( Q.T <= 0.0 || isNaN(Q.T) ) {
+    auto gm = checkGasModel(L, 1);
+    auto Q = new GasState(gm);
+    getGasStateFromTable(L, gm, 2, Q); 
+    if ( Q.T <= 0.0 || isNaN(Q.T) ) {
         string errMsg = "ERROR: when calling 'updateTransCoeffs'\n";
         errMsg ~= "        The supplied temperature value is negative, 0 or has not been set.\n";
         errMsg ~= "        Check that the 'T' field is set with a valid value.\n";
@@ -293,10 +294,11 @@ extern(C) int transCoeffs(lua_State* L)
         errMsg ~= Q.toString();
         errMsg ~= "\nBailing out\n";
         throw new Error(errMsg);
-   }
-   gm.update_trans_coeffs(Q);
-   setGasStateInTable(L, gm, 2, Q);
-   return 0;
+    }
+    if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(Q); }
+    gm.update_trans_coeffs(Q);
+    setGasStateInTable(L, gm, 2, Q);
+    return 0;
 }
 
 // We don't wrap dudT_const_v as we do Cv in its place.
@@ -629,7 +631,8 @@ void getSpeciesValsFromTable(lua_State* L, GasModel gm, int idx,
         string key = to!string(lua_tostring(L, -2));
         auto isp = gm.species_index(key);
         if (isp == -1) {
-            string errMsg = format("Species name used in %s table does not exist: %s\n", tabName, key);
+            string errMsg = format("Species name used in %s table does not exist: %s\n",
+                                   tabName, key);
             lua_pop(L, 1);
             throw new LuaInputException(errMsg);
         }
@@ -651,7 +654,8 @@ void getSpeciesValsFromTable(lua_State* L, GasModel gm, int idx,
         } else if ( lua_isnil(L, -1) ) {
             vals[isp] = 0.0;
         } else {
-            string errMsg = format("The value for species '%s' in the %s table is not a number.\n", gm.species_name(isp), tabName);
+            string errMsg = format("The value for species '%s' in the %s table is not a number.\n",
+                                   gm.species_name(isp), tabName);
             lua_pop(L, 1);
             throw new LuaInputException(errMsg);
         }
@@ -954,7 +958,53 @@ void getGasStateFromTable(lua_State* L, GasModel gm, int idx, GasState Q)
         throw new Error(errMsg);
     }
     lua_pop(L, 1);
-}
+
+    lua_getfield(L, idx, "ceaSavedData");
+    if ( lua_istable(L, -1) && Q.ceaSavedData ) {
+        int ceaSavedDataIdx = lua_gettop(L);
+        lua_getfield(L, ceaSavedDataIdx, "p");
+        if ( lua_isnumber(L, -1) ) { Q.ceaSavedData.p = lua_tonumber(L, -1); }
+        lua_pop(L, 1);
+        lua_getfield(L, ceaSavedDataIdx, "rho");
+        if ( lua_isnumber(L, -1) ) { Q.ceaSavedData.rho = lua_tonumber(L, -1); }
+        lua_pop(L, 1);
+        lua_getfield(L, ceaSavedDataIdx, "u");
+        if ( lua_isnumber(L, -1) ) { Q.ceaSavedData.u = lua_tonumber(L, -1); }
+        lua_pop(L, 1);
+        lua_getfield(L, ceaSavedDataIdx, "h");
+        if ( lua_isnumber(L, -1) ) { Q.ceaSavedData.h = lua_tonumber(L, -1); }
+        lua_pop(L, 1);
+        lua_getfield(L, ceaSavedDataIdx, "T");
+        if ( lua_isnumber(L, -1) ) { Q.ceaSavedData.T = lua_tonumber(L, -1); }
+        lua_pop(L, 1);
+        lua_getfield(L, ceaSavedDataIdx, "a");
+        if ( lua_isnumber(L, -1) ) { Q.ceaSavedData.a = lua_tonumber(L, -1); }
+        lua_pop(L, 1);
+        lua_getfield(L, ceaSavedDataIdx, "Mmass");
+        if ( lua_isnumber(L, -1) ) { Q.ceaSavedData.Mmass = lua_tonumber(L, -1); }
+        lua_pop(L, 1);
+        lua_getfield(L, ceaSavedDataIdx, "Rgas");
+        if ( lua_isnumber(L, -1) ) { Q.ceaSavedData.Rgas = lua_tonumber(L, -1); }
+        lua_pop(L, 1);
+        lua_getfield(L, ceaSavedDataIdx, "gamma");
+        if ( lua_isnumber(L, -1) ) { Q.ceaSavedData.gamma = lua_tonumber(L, -1); }
+        lua_pop(L, 1);
+        lua_getfield(L, ceaSavedDataIdx, "Cp");
+        if ( lua_isnumber(L, -1) ) { Q.ceaSavedData.Cp = lua_tonumber(L, -1); }
+        lua_pop(L, 1);
+        lua_getfield(L, ceaSavedDataIdx, "s");
+        if ( lua_isnumber(L, -1) ) { Q.ceaSavedData.s = lua_tonumber(L, -1); }
+        lua_pop(L, 1);
+        lua_getfield(L, ceaSavedDataIdx, "k");
+        if ( lua_isnumber(L, -1) ) { Q.ceaSavedData.k = lua_tonumber(L, -1); }
+        lua_pop(L, 1);
+        lua_getfield(L, ceaSavedDataIdx, "mu");
+        if ( lua_isnumber(L, -1) ) { Q.ceaSavedData.mu = lua_tonumber(L, -1); }
+        lua_pop(L, 1);
+        // We skip the table of mass fractions within the ceaSavedData.
+    }
+    lua_pop(L, 1);
+} // end getGasStateFromTable()
 
 void setGasStateInTable(lua_State* L, GasModel gm, int idx, const(GasState) Q)
 {
@@ -1071,8 +1121,7 @@ void setGasStateInTable(lua_State* L, GasModel gm, int idx, const(GasState) Q)
 
         lua_setfield(L, idx, "ceaSavedData");
     }
-
-}
+} // end setGasStateInTable()
 
 extern(C) int printValues(lua_State* L)
 {
