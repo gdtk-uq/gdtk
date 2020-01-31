@@ -1,0 +1,3 @@
+model = "thermally perfect gas"
+species = {'CO2', 'N2', 'Ar', 'O2', 'CO', 'O', 'C', 'N', 'C2', 'CN', 'NO', 'NCO', 'NO+', 'O2+', 'CO+', 'O+', 'C+', 'e-'}
+options= {database='prefer-grimech'}
