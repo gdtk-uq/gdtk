@@ -4,6 +4,8 @@ A1-.lua       : A1-	 : n1
 Ar.lua        :	Ar	 : argon
 Ar_plus.lua   :	Ar+	 : argon ion
 C.lua         :	C	 : carbon
+C_plus.lua    : C+   : carbon ion
+C2.lua        : C2   : dicarbon
 C2H.lua       :	C2H	 : ethynyl
 C2H2.lua      :	C2H2	 : ethyne
 C2H3.lua      :	C2H3	 : ethenyl radical
@@ -52,6 +54,7 @@ CH4.lua       :	CH4	 : methane
 CHO.lua       :	CHO	 : aldehyde (2)
 CN.lua        :	CN	 : cyanide
 CO.lua        :	CO	 : carbon monoxide
+CO_plus.lua   : CO+  : carbon monoxide ion
 CO2.lua       :	CO2	 : carbon dioxide
 H.lua         :	H	 : monatomic hydrogen
 H_plus.lua    :	H+	 : hydrogen ion (proton)
