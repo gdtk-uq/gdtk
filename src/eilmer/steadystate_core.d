@@ -611,8 +611,8 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
         // write out the loads
         if ( (step % writeLoadsCount) == 0 || finalStep || step == GlobalConfig.write_loads_at_step) {
             // TODO: will need to make only the master perform init for MPI implementation
-            init_current_loads_tindx_dir(SimState.current_loads_tindx);
-            wait_for_current_tindx_dir(SimState.current_loads_tindx);
+            init_current_loads_tindx_dir(step);
+            wait_for_current_tindx_dir(step);
             write_boundary_loads_to_file(pseudoSimTime, step);
             update_loads_times_file(pseudoSimTime, step);
         }
