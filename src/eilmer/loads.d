@@ -101,7 +101,8 @@ string generate_boundary_load_file(int blkid, int current_loads_tindx, double si
     auto f = File(fname, "w");
     f.writeln("# t = ", sim_time);
     f.writeln("# 1:pos.x 2:pos.y 3:pos.z 4:area 5:q_total 6:q_cond 7:q_diff 8:tau 9:l_tau 10:m_tau 11:n_tau 12:sigma "~
-              "13:n.x 14:n.y 15:n.z 16:T 17:Re_wall 18:y+ 19:cellWidthNormalToSurface 20:outsign");
+              "13:n.x 14:n.y 15:n.z 16:T 17:Re_wall 18:y+ 19:cellWidthNormalToSurface 20:outsign"~
+              " 21:rho 22:mu 23:a 24:vel.x 25:vel.y");
     f.close();
     return fname;
 } // end generate_boundary_load_file()
@@ -218,6 +219,8 @@ void compute_and_store_loads(FVInterface iface, int outsign, number cellWidthNor
     number T_wall = fs.gas.T;
     number a_wall = fs.gas.a;
     number rho_wall = fs.gas.rho;
+    number u_wall = fs.vel.x;
+    number v_wall = fs.vel.y;
     number sigma_wall, tau_wall, l_tau, m_tau, n_tau, Re_wall, nu_wall, u_star, y_plus;
     number q_total, q_cond, q_diff;
     if (GlobalConfig.viscous) {
@@ -282,11 +285,11 @@ void compute_and_store_loads(FVInterface iface, int outsign, number cellWidthNor
         y_plus = 0.0;
     }
     // store in file
-    auto writer = format("%20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %d\n",
+    auto writer = format("%20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %d %20.16e %20.16e %20.16e %20.16e %20.16e\n",
                          iface.pos.x.re, iface.pos.y.re, iface.pos.z.re, iface.area[0].re,
                          q_total.re, q_cond.re, q_diff.re, tau_wall.re, l_tau.re, m_tau.re, n_tau.re, sigma_wall.re,
-                         nx.re, ny.re, nz.re, T_wall.re, Re_wall.re, y_plus.re,
-                         cellWidthNormalToSurface.re, outsign);
+                         nx.re, ny.re, nz.re, T_wall.re, Re_wall.re, y_plus.re, 
+                         cellWidthNormalToSurface.re, outsign, rho_wall, mu_wall, a_wall, u_wall, v_wall);
     std.file.append(fname, writer);    
 } // end compute_and_store_loads()
 
