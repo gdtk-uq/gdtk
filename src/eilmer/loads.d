@@ -56,7 +56,7 @@ void init_current_loads_tindx_dir(int current_loads_tindx)
     ensure_directory_is_present(dirName);
 }
 
-void ensure_current_tindx_dir(int current_loads_tindx)
+void wait_for_current_tindx_dir(int current_loads_tindx)
 {
     string dirName = format("%s/t%04d", loadsDir, current_loads_tindx);
     wait_for_directory_to_be_present(dirName);
@@ -75,7 +75,6 @@ void update_loads_times_file(double sim_time, int current_loads_tindx)
 }
 
 void write_boundary_loads_to_file(double sim_time, int current_loads_tindx) {
-    ensure_current_tindx_dir(current_loads_tindx);
     foreach (blk; localFluidBlocks) {
         if (blk.active) {
             final switch (blk.grid_type) {

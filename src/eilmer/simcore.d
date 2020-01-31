@@ -1041,6 +1041,7 @@ int integrate_in_time(double target_time_as_requested)
                         MPI_Barrier(MPI_COMM_WORLD);
                     }
                 }
+                wait_for_current_tindx_dir(SimState.current_loads_tindx);
                 write_boundary_loads_to_file(SimState.time, SimState.current_loads_tindx);
                 if (GlobalConfig.is_master_task) {
                     update_loads_times_file(SimState.time, SimState.current_loads_tindx);
@@ -3443,6 +3444,7 @@ void finalize_simulation()
                 MPI_Barrier(MPI_COMM_WORLD);
             }
         }
+        wait_for_current_tindx_dir(SimState.current_loads_tindx);
         write_boundary_loads_to_file(SimState.time, SimState.current_loads_tindx);
     }
     GC.collect();
