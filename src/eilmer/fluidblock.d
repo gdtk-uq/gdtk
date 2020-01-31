@@ -684,7 +684,6 @@ public:
 		    L2_residual += fabs(cell.dUdt[0].rhoturb[1])^^2;
 		}
 	    }
-	    L2_residual = sqrt(L2_residual);
         }
     } // end compute_Linf_residuals()
 

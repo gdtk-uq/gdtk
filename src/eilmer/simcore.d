@@ -973,6 +973,7 @@ int integrate_in_time(double target_time_as_requested)
                         MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
                         L2_residual = my_local_value;
 		    }
+                    L2_residual = sqrt(L2_residual);
                     if (GlobalConfig.is_master_task) {
                         string residualsFile = "config/"~GlobalConfig.base_file_name~"-residuals.txt";
                         string txt = format("%7d %.3f %10.6e %10.6e %10.6e %10.6e %10.6e %10.6e %10.6e\n",
