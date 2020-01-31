@@ -366,15 +366,11 @@ public:
             grad.T[2] = c.grad.T[2];
             
             version(komega) {
-                // tke
-                grad.turb[0][0] = c.grad.turb[0][0];
-                grad.turb[0][1] = c.grad.turb[0][1];
-                grad.turb[0][2] = c.grad.turb[0][2];
-                
-                // omega
-                grad.turb[1][0] = c.grad.turb[1][0];
-                grad.turb[1][1] = c.grad.turb[1][1];
-                grad.turb[1][2] = c.grad.turb[1][2];
+                foreach(i; 0 .. grad.turb.length) {
+                    grad.turb[i][0] = c.grad.turb[i][0];
+                    grad.turb[i][1] = c.grad.turb[i][1];
+                    grad.turb[i][2] = c.grad.turb[i][2];
+                }
             }
         } else {
             number qL; number qR;
@@ -456,23 +452,15 @@ public:
             grad.T[2] = 0.5*(cL0.grad.T[2]+cR0.grad.T[2]) - jump*(nz/ndotehat);
             
             version(komega) {
-                // tke
-                avgdotehat = 0.5*(cL0.grad.turb[0][0]+cR0.grad.turb[0][0])*ehatx +
-                    0.5*(cL0.grad.turb[0][1]+cR0.grad.turb[0][1])*ehaty +
-                    0.5*(cL0.grad.turb[0][2]+cR0.grad.turb[0][2])*ehatz;
-                jump = avgdotehat - (cR0.fs.turb[0] - cL0.fs.turb[0])/emag;
-                grad.turb[0][0] = 0.5*(cL0.grad.turb[0][0]+cR0.grad.turb[0][0]) - jump*(nx/ndotehat);
-                grad.turb[0][1] = 0.5*(cL0.grad.turb[0][1]+cR0.grad.turb[0][1]) - jump*(ny/ndotehat);
-                grad.turb[0][2] = 0.5*(cL0.grad.turb[0][2]+cR0.grad.turb[0][2]) - jump*(nz/ndotehat);
-                
-                // omega
-                avgdotehat = 0.5*(cL0.grad.turb[1][0]+cR0.grad.turb[1][0])*ehatx +
-                    0.5*(cL0.grad.turb[1][1]+cR0.grad.turb[1][1])*ehaty +
-                    0.5*(cL0.grad.turb[1][2]+cR0.grad.turb[1][2])*ehatz;
-                jump = avgdotehat - (cR0.fs.turb[1] - cL0.fs.turb[1])/emag;
-                grad.turb[1][0] = 0.5*(cL0.grad.turb[1][0]+cR0.grad.turb[1][0]) - jump*(nx/ndotehat);
-                grad.turb[1][1] = 0.5*(cL0.grad.turb[1][1]+cR0.grad.turb[1][1]) - jump*(ny/ndotehat);
-                grad.turb[1][2] = 0.5*(cL0.grad.turb[1][2]+cR0.grad.turb[1][2]) - jump*(nz/ndotehat);
+                foreach(i; 0 .. fs.turb.length){
+                    avgdotehat = 0.5*(cL0.grad.turb[i][0]+cR0.grad.turb[i][0])*ehatx +
+                        0.5*(cL0.grad.turb[i][1]+cR0.grad.turb[i][1])*ehaty +
+                        0.5*(cL0.grad.turb[i][2]+cR0.grad.turb[i][2])*ehatz;
+                    jump = avgdotehat - (cR0.fs.turb[i] - cL0.fs.turb[i])/emag;
+                    grad.turb[i][0] = 0.5*(cL0.grad.turb[i][0]+cR0.grad.turb[i][0]) - jump*(nx/ndotehat);
+                    grad.turb[i][1] = 0.5*(cL0.grad.turb[i][1]+cR0.grad.turb[i][1]) - jump*(ny/ndotehat);
+                    grad.turb[i][2] = 0.5*(cL0.grad.turb[i][2]+cR0.grad.turb[i][2]) - jump*(nz/ndotehat);
+                }
             }
         }
     } // end average_cell_spatial_derivs()
@@ -675,6 +663,7 @@ public:
                     qx += mu_effective * grad.turb[0][0];
                     qy += mu_effective * grad.turb[0][1];
                     if (myConfig.dimensions == 3) { qz += mu_effective * grad.turb[0][2]; }
+
                     // Turbulence transport of the turbulence properties themselves.
                     tau_kx = mu_effective * grad.turb[0][0]; 
                     tau_ky = mu_effective * grad.turb[0][1];

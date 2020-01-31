@@ -514,8 +514,7 @@ public:
         myU.total_energy = fs.gas.rho*(u + ke);
         version(komega) {
             if (with_k_omega) {
-                myU.rhoturb[0] = fs.gas.rho * fs.turb[0];
-                myU.rhoturb[1] = fs.gas.rho * fs.turb[1];
+                foreach(i; 0 .. fs.turb.length) myU.rhoturb[i] = fs.gas.rho * fs.turb[i];
                 myU.total_energy += fs.gas.rho * fs.turb[0]; // Replace with tke function (NNG)
             } else {
                 myU.rhoturb[0] = 0.0;
@@ -624,16 +623,16 @@ public:
         number u = rE * dinv;
         version(komega) {
             if (with_k_omega && allow_k_omega_update) {
-                fs.turb[0] = myU.rhoturb[0] * dinv;
-                fs.turb[1] = myU.rhoturb[1] * dinv;
-                // for stability, we enforce tke and omega to be positive.
-                // This approach is referred to as clipping in Chisholm's (2007) thesis:
-                // A fully coupled Newton-Krylov solver with a one-equation turbulence model.
-                // to prevent division by 0.0 set variables to a very small positive value.
-                if (fs.turb[0] < 0.0) fs.turb[0] = 1.0e-10;
-                if (fs.turb[1] < 0.0) fs.turb[1] = 1.0e-10;
+                foreach(i; 0 .. fs.turb.length) {
+                    // for stability, we enforce tke and omega to be positive.
+                    // This approach is referred to as clipping in Chisholm's (2007) thesis:
+                    // A fully coupled Newton-Krylov solver with a one-equation turbulence model.
+                    // to prevent division by 0.0 set variables to a very small positive value.
+                    fs.turb[i] = myU.rhoturb[i] * dinv;
+                    if (fs.turb[i] < 0.0) fs.turb[i] = 1.0e-10;
+                }
             } else {
-                fs.turb[0] = 0.0;
+                fs.turb[0] = 0.0; // replace with "set_default" method
                 fs.turb[1] = 1.0;
             }
             u -= fs.turb[0]; // replace with tke function (NNG)
@@ -812,8 +811,9 @@ public:
             integral_E -= myF.total_energy*area;
             version(komega) {
                 if (with_k_omega) {
-                    integral_rhoturb[0] -= myF.rhoturb[0]*area;
-                    integral_rhoturb[1] -= myF.rhoturb[1]*area;
+                    foreach(j; 0 .. myF.rhoturb.length) {
+                        integral_rhoturb[j] -= myF.rhoturb[j]*area;
+                    }
                 }
             }
             version(multi_species_gas) {
@@ -853,11 +853,13 @@ public:
         my_dUdt.total_energy = vol_inv*integral_E + Q.total_energy;
         version(komega) {
             if (with_k_omega) {
-                my_dUdt.rhoturb[0] = vol_inv*integral_rhoturb[0] + Q.rhoturb[0];
-                my_dUdt.rhoturb[1] = vol_inv*integral_rhoturb[1] + Q.rhoturb[1];
+                foreach(i; 0 .. my_dUdt.rhoturb.length) {
+                    my_dUdt.rhoturb[i] = vol_inv*integral_rhoturb[i] + Q.rhoturb[i];
+                }
             } else {
-                my_dUdt.rhoturb[0] = 0.0;
-                my_dUdt.rhoturb[1] = 0.0;
+                foreach(i; 0 .. my_dUdt.rhoturb.length) {
+                    my_dUdt.rhoturb[i] = 0.0;
+                }
             }
         }
         version(multi_species_gas) {
@@ -2139,8 +2141,7 @@ public:
             Q.B.clear();
         }
         version(komega) {
-            Q.rhoturb[0] = 0.0;
-            Q.rhoturb[1] = 0.0;
+            foreach(ref rt; Q.rhoturb) { rt = 0.0; }
         }
         version(multi_species_gas) {
             foreach(ref elem; Q.massf) { elem = 0.0; }

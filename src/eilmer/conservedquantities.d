@@ -66,8 +66,7 @@ public:
             divB = other.divB;
         }
         version(komega) {
-            rhoturb[0] = other.rhoturb[0];
-            rhoturb[1] = other.rhoturb[1];
+            rhoturb = other.rhoturb.dup;
         }
     }
 
@@ -89,8 +88,7 @@ public:
             divB = src.divB;
         }
         version(komega) {
-            rhoturb[0] = src.rhoturb[0];
-            rhoturb[1] = src.rhoturb[1];
+            rhoturb[] = src.rhoturb[];
         }
     }
 
@@ -112,8 +110,7 @@ public:
             divB = 0.0;
         }
         version(komega) {
-            rhoturb[0] = 0.0;
-            rhoturb[1] = 0.0;
+            foreach(ref rt; rhoturb) { rt = 0.0; }
         }
     }
 
@@ -135,8 +132,7 @@ public:
             divB += other.divB * factor;
         }
         version(komega) {
-            rhoturb[0] += other.rhoturb[0] * factor;
-            rhoturb[1] += other.rhoturb[1] * factor;
+            foreach(i; 0 .. rhoturb.length) { rhoturb[i] += other.rhoturb[i] * factor; }
         }
     }
 
@@ -158,8 +154,7 @@ public:
             divB *= factor;
         }
         version(komega) {
-            rhoturb[0] *= factor;
-            rhoturb[1] *= factor;
+            foreach(ref rt; energies) { rt *= factor; }
         }
     }
 
@@ -182,8 +177,7 @@ public:
             repr ~= ", divB-" ~ to!string(divB);
         }
         version(komega) {
-            repr ~= ", tke=" ~ to!string(rhoturb[0]);
-            repr ~= ", omega=" ~ to!string(rhoturb[1]);
+            repr ~= ", turb=" ~ to!string(rhoturb);
         }
         repr ~= ")";
         return to!string(repr);
