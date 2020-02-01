@@ -1,4 +1,4 @@
-DGD_DOC ?= ../../../dgd-doc
+DGD_DOC ?= ../../../dgd-docs
 PDFS := eilmer-user-guide \
 	geometry-user-guide \
 	gas-user-guide \
@@ -16,7 +16,7 @@ clean:
 	cd ../../doc; make clean
 	- rm -r static
 	- rm -r public
-	
+
 images:
 	- mkdir static/images
 	cp ../../images/* static/images/
