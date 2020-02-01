@@ -69,8 +69,7 @@ main code, a C compiler for building the Lua interpreter, and
 a Fortran-2003 compiler for building some of the thermochemical models.
 
 You may use the reference DMD compiler or the GDC or LDMD2 compilers.
-We have been developing with the recent DMD32 and DMD64 compilers, 
-from version 2.073.
+We have been developing with the recent DMD32 and DMD64 compilers.
 For the C and Fortran compilers, we use gcc and gfortran.
 
 Beyond having a standard Linux system with recent compilers,
