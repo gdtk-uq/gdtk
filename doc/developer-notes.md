@@ -21,7 +21,7 @@ Whenever there are multiple branches, someone needs to maintain them
 and merge code from one to the other. 
 We don't wish to pay that price, yet.
 
-So, given that we have a linear history, 
+So, given that we have a linear history of the master branch, 
 what's the best way to develop against it?
 
 I like to work on a single issue in any one development session. 
@@ -47,10 +47,8 @@ Typically I use the commands:
     $ rsync -av --delete ~/dgd/examples/eilmer/ .
     $ ./eilmer-test.tcl
 
-Have dinner, or at least a cup of tea, while waiting about half an hour 
-for the full set to complete on my slow workstation. 
-On a modern system the tests might take only 15 minutes but 
-then I wouldn't get a good chance to relax with dinner.
+Have dinner, or at least a cup of tea, while waiting about an hour 
+for the full set to complete on my.
 
 Fix any tests that complain and retest.
 
@@ -59,12 +57,17 @@ that I haven't broken any other code, I'm ready to commit.
 
 ## Making a commit
 
+The following was written when using Mercurial
+as our revision control system.
+With the move to git, this process will need some revision itself.
+For a good introduction to git, look at https://www.atlassian.com/git
+
 Before making the commit, I look to see if there are any other commits 
 that have appeared since the start of my session and, 
 if there are any, pull them.
 I usually also update but there is a finite probability that 
 the other commits will interfere with my new code.
-If that happens, the merge tool usually does a good job 
+If that happens, the rebase/merge tool usually does a good job 
 of integrating the pulled changes into my current tree of files.
 Often, there are no files to be merged and the update proceeds cleanly 
 but I now need to check that code is still working.
@@ -74,13 +77,13 @@ Occasionally, I decide to commit my new stuff immediately and
 then run the tests to check that my assumption that all is good 
 is really true.
 
-So, I make my commit on top of the full history 
-of the bitbucket repository, thus keeping a linear history.
+So, I make my commit on top of the full history of the bitbucket repository,
+thus keeping a linear history in the master branch.
 If you browse the actual revision history, you will see 
 various small branches followed by merges where 
 different developers have made commits in parallel.
 Sometimes, if the parallel work has been done on distinct files, 
-the merge is trivially done by the Mercurial revision control system.
+the merge is trivially done by the revision control system.
 Sometimes edits collide and someone has to manually check/do the merge.
 It's nice to avoid this extra work.
 
@@ -148,20 +151,15 @@ Here is the content of my `.emacs` file:
     (add-to-list 'auto-mode-alist '("\\.lua$" . lua-mode))
     (add-to-list 'interpreter-mode-alist '("lua" . lua-mode))
 
-### Mercurial
+### Git configuration
+I did the following:
 
-Here is the content of my `.hgrc` file:
+    peterj@helmholtz ~ $ git config --global user.name "Peter Jacobs"
+    peterj@helmholtz ~ $ git config --global user.email "peterj@mech.uq.edu.au"
 
-    peterj@helmholtz ~ $ cat .hgrc 
-    [ui]
-    username = Peter Jacobs <peterj@mech.uq.edu.au>
-    
-    [extensions]
-    hgext.convert =
-
-Note that the 'username' is very explicit: it leaves no doubt as
+Note that the user.name is very explicit: it leaves no doubt as
 to who to blame!
-On a more serious note, please use your full name in the 'username' field.
+On a more serious note, please use your full name for user.name.
 This will help identifying the contributors to the code over 
 the long-term history of development.
 

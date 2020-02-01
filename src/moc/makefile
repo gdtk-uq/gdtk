@@ -49,7 +49,7 @@ LIBLUAPATH := $(LUA_DIR)/lib
 # The install destination.
 INSTALL_DIR ?= $(HOME)/dgdinst
 
-REVISION_STRING := $(shell hg identify --id --num --branch --tags)
+REVISION_STRING := $(shell git rev-parse --short HEAD)
 
 ifeq ($(DMD), dmd)
     # (1) For debug build.

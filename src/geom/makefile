@@ -5,7 +5,7 @@ DMD ?= dmd
 PLATFORM ?= linux
 INSTALL_DIR ?= $(HOME)/dgdinst
 BUILD_DIR := ../../build
-REVISION_STRING := $(shell hg identify --id --num --branch --tags)
+REVISION_STRING := $(shell git rev-parse --short HEAD)
 
 TEST_PROGRAMS := vector3_test vector3_complex_test \
 	projection_test projection_complex_test \

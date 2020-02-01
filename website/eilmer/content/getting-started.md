@@ -58,7 +58,7 @@ To build Eilmer, you will require:
   + The gfortran compiler (and 32-bit libraries)
       + gfortran and gfortran-multilib on Debian/Ubuntu/Mint
       + gcc-gfortran on RedHat/CentOS/Fedora
-  + mercurial (to clone the repository) 
+  + git (to clone the repository) 
   + readline development package:
       + libreadline-dev on Debian/Ubuntu/Mint
       + readline-devel on RedHat/CentOS/Fedora
@@ -91,11 +91,11 @@ Mac OSX is available [here](/mac-install).
 ## Getting the source code
 
 The full source code for Eilmer4 and a set of examples can be found in a public repository
-on [bitbucket](https://bitbucket.org/cfcfd/dgd).
-To get your own copy, use the Mercurial revision control client to clone the repository 
+on [bitbucket](https://bitbucket.org/cfcfd/dgd-git).
+To get your own copy, use the git revision control client to clone the repository 
 with something like the following command:
 
-    hg clone https://bitbucket.org/cfcfd/dgd dgd
+    git clone https://bitbucket.org/cfcfd/dgd-git dgd
 
 and within a couple of minutes, depending on the speed of your network connection,
 you should have your own copy of the full source tree and the complete repository history.
@@ -175,7 +175,7 @@ Then use `make` to coordinate the compiling and installing as before:
 
     cd dgd/src/eilmer
     make clean
-    hg pull -u -v
+    git pull -v
     make install
 
 

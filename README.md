@@ -32,8 +32,8 @@ where the bounding geometry is not too complex.
 * Parallel computation in a shared-memory context.
 * High-temperature nonequilibrium thermochemistry.
 * GPU acceleration of the finite-rate chemistry.
-* Dense-gas thermodynamic models and rotating frames of reference for
-  turbomachine modelling.
+* A selection of thermochemical models.
+* Rotating frame of reference for turbomachine modelling.
 * Turbulence models.
 * Conjugate heat transfer to solid surfaces and heat flow within 
   solid objects.
@@ -68,8 +68,8 @@ a Linux environment with a fairly recent D compiler for building the
 main code, a C compiler for building the Lua interpreter, and
 a Fortran-2003 compiler for building some of the thermochemical models.
 
-You may use the reference DMD compiler or the GDC or LDMD2 compilers.
-We have been developing with the recent DMD32 and DMD64 compilers.
+You may use the reference DMD compiler or the LDC/LDMD2 compilers.
+We have been developing with the recent versions of the DMD64 and LDC compilers.
 For the C and Fortran compilers, we use gcc and gfortran.
 
 Beyond having a standard Linux system with recent compilers,
@@ -124,5 +124,5 @@ who has written what part of the code.
 The commit history is place to go to see further details. 
 
 ## Chief Gardeners
-Peter Jacobs and Rowan Gollan, 2015-08-31 -- 2018-01-16
+Peter Jacobs and Rowan Gollan, 2015-08-31 -- 2020-02-01
 

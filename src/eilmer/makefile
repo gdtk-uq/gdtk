@@ -204,7 +204,7 @@ INSTALL_DIR ?= $(HOME)/dgdinst
 # The build destination sits locally for present
 BUILD_DIR := ../../build
 
-REVISION_STRING := $(shell hg identify --id --num --branch --tags)
+REVISION_STRING := $(shell git rev-parse --short HEAD)
 
 ifeq ($(DMD), dmd)
     ifeq ($(FLAVOUR), debug)

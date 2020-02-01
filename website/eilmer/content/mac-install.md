@@ -27,9 +27,9 @@ the codes in the DGD collection.
    
     $ brew install gedit
 
-5. Install mercurial
+5. Install git
    
-    $ brew install mercurial
+    $ brew install git
 
 6. Install dmd
 

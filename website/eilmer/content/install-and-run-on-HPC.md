@@ -199,8 +199,8 @@ Jobs on raijin are submitted using `qsub`.
 
 ### Compiling
 
-Mercurial is not installed on this cluster. You may either install
-it yourself on the cluster, or just synch the source code across
+If git is not installed on this cluster, you may either install
+it yourself, or just synch the source code across
 from elsewhere. The second option is probably easiest. Use 'rsync'
 to copy the source code from your own machine onto the cluster.
 
