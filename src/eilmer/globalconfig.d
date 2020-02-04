@@ -47,6 +47,7 @@ import solid_udf_source_terms;
 import grid_motion;
 import mass_diffusion;
 import loads;
+import turbulence;
 
 // ----------------------------------------------------------------------
 // Flow variables, as they might appear in the data files.
@@ -142,16 +143,16 @@ StrangSplittingMode strangSplittingModeFromName(string name)
 // Symbolic names for turbulence models.
 enum TurbulenceModel { none, baldwin_lomax, k_omega, spalart_allmaras }
 
-@nogc
-string turbulence_model_name(TurbulenceModel i)
-{
-    final switch (i) {
-    case TurbulenceModel.none: return "none";
-    case TurbulenceModel.baldwin_lomax: return "baldwin_lomax";
-    case TurbulenceModel.k_omega: return "k_omega";
-    case TurbulenceModel.spalart_allmaras: return "spalart_allmaras";
-    }
-} // end turbulence_model_name()
+//@nogc
+//string turbulence_model_name(TurbulenceModel i)
+//{
+//    final switch (i) {
+//    case TurbulenceModel.none: return "none";
+//    case TurbulenceModel.baldwin_lomax: return "baldwin_lomax";
+//    case TurbulenceModel.k_omega: return "k_omega";
+//    case TurbulenceModel.spalart_allmaras: return "spalart_allmaras";
+//    }
+//} // end turbulence_model_name()
 
 @nogc
 TurbulenceModel turbulence_model_from_name(string name)
@@ -668,6 +669,7 @@ final class GlobalConfig {
     shared static bool species_specific_lewis_numbers = false;
     shared static double lewis_number = 1.0;
 
+    shared static string turbulence_model_name = "none";
     shared static TurbulenceModel turbulence_model = TurbulenceModel.none;
     shared static double turbulence_prandtl_number = 0.89;
     shared static double turbulence_schmidt_number = 0.75;
@@ -675,6 +677,7 @@ final class GlobalConfig {
     shared static double transient_mu_t_factor = 1.0;
     shared static bool limit_tke_production = false;
     shared static double tke_production_limit_in_kelvins = 5.0;
+    static TurbulenceModelObject turb_model;
     static BlockZone[] turbulent_zones;
 
     // Indicate presence of user-defined source terms
@@ -926,6 +929,7 @@ public:
     bool separate_update_for_viscous_terms;
     bool separate_update_for_k_omega_source;
 
+    string turbulence_model_name;
     TurbulenceModel turbulence_model;
     double turbulence_prandtl_number;
     double turbulence_schmidt_number;
@@ -933,6 +937,7 @@ public:
     double transient_mu_t_factor;
     bool limit_tke_production;
     double tke_production_limit_in_kelvins;
+    TurbulenceModelObject turb_model;
     BlockZone[] turbulent_zones;
 
     bool udf_source_terms;
@@ -1062,6 +1067,7 @@ public:
         separate_update_for_viscous_terms = GlobalConfig.separate_update_for_viscous_terms;
         separate_update_for_k_omega_source = GlobalConfig.separate_update_for_k_omega_source;
         //
+        turbulence_model_name = GlobalConfig.turbulence_model_name;
         turbulence_model = GlobalConfig.turbulence_model;
         turbulence_prandtl_number = GlobalConfig.turbulence_prandtl_number;
         turbulence_schmidt_number = GlobalConfig.turbulence_schmidt_number;
@@ -1069,6 +1075,7 @@ public:
         transient_mu_t_factor = GlobalConfig.transient_mu_t_factor;
         limit_tke_production = GlobalConfig.limit_tke_production;
         tke_production_limit_in_kelvins = GlobalConfig.tke_production_limit_in_kelvins;
+        turb_model = GlobalConfig.turb_model.dup;
         foreach (bz; GlobalConfig.turbulent_zones) { turbulent_zones ~= new BlockZone(bz); }
         //
         udf_source_terms = GlobalConfig.udf_source_terms;
@@ -1441,6 +1448,7 @@ void read_config_file()
     mixin(update_double("lewis_number", "lewis_number"));
     mixin(update_bool("separate_update_for_viscous_terms", "separate_update_for_viscous_terms"));
     mixin(update_bool("separate_update_for_k_omega_source", "separate_update_for_k_omega_source"));
+    mixin(update_string("turbulence_model", "turbulence_model_name"));
     mixin(update_enum("turbulence_model", "turbulence_model", "turbulence_model_from_name"));
     version(komega) {
         // Can accommodate the k_omega turbulence model.
@@ -1455,6 +1463,7 @@ void read_config_file()
     mixin(update_double("transient_mu_t_factor", "transient_mu_t_factor"));
     mixin(update_bool("limit_tke_production", "limit_tke_production"));
     mixin(update_double("tke_production_limit_in_kelvins", "tke_production_limit_in_kelvins"));
+    GlobalConfig.turb_model = init_turbulence_model(GlobalConfig.turbulence_model_name, jsonData);
     if (GlobalConfig.verbosity_level > 1) {
         writeln("  viscous: ", GlobalConfig.viscous);
         writeln("  use_viscosity_from_cells: ", GlobalConfig.use_viscosity_from_cells);
@@ -1472,13 +1481,14 @@ void read_config_file()
         writeln("  lewis_number: ", GlobalConfig.lewis_number);
         writeln("  separate_update_for_viscous_terms: ", GlobalConfig.separate_update_for_viscous_terms);
         writeln("  separate_update_for_k_omega_source: ", GlobalConfig.separate_update_for_k_omega_source);
-        writeln("  turbulence_model: ", turbulence_model_name(GlobalConfig.turbulence_model));
+        writeln("  turbulence_model: ", GlobalConfig.turbulence_model_name);
         writeln("  turbulence_prandtl_number: ", GlobalConfig.turbulence_prandtl_number);
         writeln("  turbulence_schmidt_number: ", GlobalConfig.turbulence_schmidt_number);
         writeln("  max_mu_t_factor: ", GlobalConfig.max_mu_t_factor);
         writeln("  transient_mu_t_factor: ", GlobalConfig.transient_mu_t_factor);
         writeln("  limit_tke_production: ", GlobalConfig.limit_tke_production);
         writeln("  tke_production_limit_in_kelvins: ", GlobalConfig.tke_production_limit_in_kelvins);
+        writeln("  nturb equations: ", GlobalConfig.turb_model.nturb);
     }
 
     configCheckPoint3();

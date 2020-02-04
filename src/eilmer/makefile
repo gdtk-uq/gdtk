@@ -94,7 +94,7 @@ EILMER_CORE_FILES := simcore.d \
 	gas_solid_interface.d \
 	flowsolution.d grid_motion.d \
 	shock_fitting_moving_grid.d history.d loads.d special_block_init.d \
-	mass_diffusion.d tecplot_writer.d shockdetectors.d
+	mass_diffusion.d tecplot_writer.d shockdetectors.d turbulence.d
 
 EILMER_LUA_FILES := luaglobalconfig.d lua_helper.d \
 	luaflowsolution.d luaflowstate.d user_defined_source_terms.d

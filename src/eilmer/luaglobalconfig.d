@@ -181,6 +181,7 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_bool_field("separate_update_for_viscous_terms", "separate_update_for_viscous_terms"));
     mixin(get_bool_field("separate_update_for_k_omega_source", "separate_update_for_k_omega_source"));
     //
+    mixin(get_string_field("turbulence_model", "turbulence_model_name"));
     mixin(get_enum_field("turbulence_model", "turbulence_model", "turbulence_model_from_name"));
     mixin(get_double_field("turbulence_prandtl_number", "turbulence_prandtl_number"));
     mixin(get_double_field("turbulence_schmidt_number", "turbulence_schmidt_number"));
@@ -365,7 +366,7 @@ extern(C) int configGet(lua_State* L)
     case "separate_update_for_viscous_terms": lua_pushboolean(L, GlobalConfig.separate_update_for_viscous_terms); break;
     case "separate_update_for_k_omega_source": lua_pushboolean(L, GlobalConfig.separate_update_for_k_omega_source); break;
         //
-    case "turbulence_model": lua_pushstring(L, turbulence_model_name(GlobalConfig.turbulence_model).toStringz); break;
+    case "turbulence_model": lua_pushstring(L, GlobalConfig.turbulence_model_name.toStringz); break;
     case "turbulence_prandtl_number": lua_pushnumber(L, GlobalConfig.turbulence_prandtl_number); break;
     case "turbulence_schmidt_number": lua_pushnumber(L, GlobalConfig.turbulence_schmidt_number); break;
     case "max_mu_t_factor": lua_pushnumber(L, GlobalConfig.max_mu_t_factor); break;
