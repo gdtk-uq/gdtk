@@ -301,7 +301,7 @@ def PM2(nu, g=1.4):
 # beta is shock angle wrt on-coming stream direction (in radians)
 # theta is flow deflection wrt on-coming stream (in radians)
 
-def beta_obl(M1, theta, g=1.4):
+def beta_obl(M1, theta, g=1.4, tol=1.0e-6):
     """
     Oblique shock wave angle.
 
@@ -309,9 +309,29 @@ def beta_obl(M1, theta, g=1.4):
     theta: flow deflection angle (radians)
     Returns: shock angle with respect to initial flow direction (radians)
     """
+    if M1 < 1.0: raise Exception("M1 is subsonic")
+    sign_beta = -1 if theta < 0.0 else 1
+    theta = abs(theta)
     b1 = asin(1.0/M1); b2 = b1 * 1.05
     def f_to_solve(beta): return theta_obl(M1, beta, g) - theta
-    return solve(f_to_solve, b1, b2)
+    f1 = f_to_solve(b1)
+    if abs(f1) < tol: return sign_beta * b1
+    f2 = f_to_solve(b2)
+    if abs(f2) < tol: return sign_beta * b2
+    return sign_beta * solve(f_to_solve, b1, b2, tol=tol)
+
+def beta_obl2(M1, p2_p1, g=1.4):
+    """
+    Oblique shock wave angle.
+
+    M1: upstream Mach number
+    p2_p1: static pressure ratio p2/p1 across the oblique shock
+    Returns: shock angle with respect to initial flow direction (radians)
+    """
+    if M1 < 1.0: raise Exception("M1 is subsonic: %g" % M1)
+    if p2_p1 < 1.0: raise Exception("Invalid p2_p1: %g" % p2_p1)
+    dum1 = sqrt(((g+1.0)*p2_p1+g-1.0)/2.0/g)
+    return asin(dum1/M1)
 
 def theta_obl(M1, beta, g=1.4):
     """
@@ -321,7 +341,8 @@ def theta_obl(M1, beta, g=1.4):
     beta: shock angle with respect to initial flow direction (radians)
     Returns: theta, flow deflection angle (radians)
     """
-    m1sb = M1 * sin(beta)
+    m1sb = M1 * abs(sin(beta))
+    if m1sb < 1.0: raise Exception("Subsonic normal Mach number: %g" % m1sb)
     t1 = 2.0 / tan(beta) * (m1sb**2 - 1.0) 
     t2 = M1**2 * (g + cos(2.0 * beta)) + 2.0
     theta = atan(t1/t2)
@@ -335,7 +356,8 @@ def M2_obl(M1, beta, theta, g=1.4):
     beta: shock angle with respect to initial flow direction (radians)
     Returns: M2, Mach number in flow after the shock
     """
-    m1sb = M1 * sin(beta)
+    m1sb = M1 * abs(sin(beta))
+    if m1sb < 1.0: raise Exception("Subsonic normal Mach number: %g" % m1sb)
     numer = 1.0 + (g - 1.0) * 0.5 * m1sb**2
     denom = g * m1sb**2 - (g - 1.0) * 0.5
     m2 = sqrt(numer / denom / (sin(beta - theta))**2 )
@@ -349,10 +371,21 @@ def r2_r1_obl(M1, beta, g=1.4):
     beta: shock angle with respect to initial flow direction (radians)
     Returns: r2/r1
     """
-    m1sb = M1 * sin(beta)
+    m1sb = M1 * abs(sin(beta))
+    if m1sb < 1.0: raise Exception("Subsonic normal Mach number: %g" % m1sb)
     numer = (g + 1.0) * m1sb**2
     denom = 2.0 + (g - 1.0) * m1sb**2
     return numer / denom
+
+def vn2_vn1_obl(M1, beta, g=1.4):
+    """
+    Normal velocity ratio vn1/vn2 across an oblique shock.
+
+    M1: upstream Mach number
+    beta: shock angle with respect to initial flow direction (radians)
+    Returns: v2/v1
+    """
+    return 1.0/r2_r1_obl(M1, beta, g=g)
 
 def v2_v1_obl(M1, beta, g=1.4):
     """
@@ -372,7 +405,8 @@ def p2_p1_obl(M1, beta, g=1.4):
     beta: shock angle with respect to initial flow direction (radians)
     Returns: p2/p1
     """
-    m1sb = M1 * sin(beta)
+    m1sb = M1 * abs(sin(beta))
+    if m1sb < 1.0: raise Exception("Subsonic normal Mach number: %g" % m1sb)
     return 1.0 + 2.0 * g / (g + 1.0) * (m1sb**2 - 1.0)
 
 def T2_T1_obl(M1, beta, g=1.4):
@@ -393,7 +427,8 @@ def p02_p01_obl(M1, beta, g=1.4):
     beta: shock angle with respect to initial flow direction (radians)
     Returns: p02/p01
     """
-    m1sb = M1 * sin(beta)
+    m1sb = M1 * abs(sin(beta))
+    if m1sb < 1.0: raise Exception("Subsonic normal Mach number: %g" % m1sb)
     t1 = (g + 1.0) / (2.0 * g * m1sb**2 - (g - 1.0)) 
     t2 = (g + 1.0) * m1sb**2 / (2.0 + (g - 1.0) * m1sb**2)
     return t1**(1.0/(g-1.0)) * t2**(g/(g-1.0))

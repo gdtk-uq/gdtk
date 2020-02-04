@@ -60,10 +60,8 @@ Object representing turbulence model in laminar flow.
 */
 class noTurbulenceModel : TurbulenceModelObject {
     this (const JSONValue config){
-        writeln("In no turbulence model class constructor.");
     }
     this (noTurbulenceModel other){
-        writeln("In no turbulence model dup class constructor.");
     }
 
     // This seems weird but is apparently idiomatic?
@@ -149,16 +147,12 @@ class kwTurbulenceModel : TurbulenceModelObject {
         this.Pr_t = Pr_t;
         this.axisymmetric = axisymmetric;
         this.dimensions = dimensions;
-        writeln("Pr_t =", Pr_t);
-        writeln("axisymmetric =", axisymmetric);
-        writeln("dimensions =", dimensions);
     }
     @nogc final override string modelName() const {return "k_omega";}
     @nogc final override size_t nturb() const {return 2;}
     @nogc final override bool isTurbulent() const {return true;}
 
     final override kwTurbulenceModel dup() {
-        writeln("Called kw dup method");
         return new kwTurbulenceModel(this);
     }
 
