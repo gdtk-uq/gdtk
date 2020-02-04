@@ -38,7 +38,19 @@ public:
 
     override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
     {
-	throw new Error("GhostCellFixedP.apply_for_interface_unstructured_grid() not yet implemented");
+        FVCell src_cell, ghost0;
+        BoundaryCondition bc = blk.bc[which_boundary];
+        auto gmodel = blk.myConfig.gmodel;
+    	if (bc.outsigns[f.i_bndry] == 1) {
+	    src_cell = f.left_cell;
+	    ghost0 = f.right_cell;
+	} else {
+	    src_cell = f.right_cell;
+	    ghost0 = f.left_cell;
+	}
+       ghost0.fs.copy_values_from(src_cell.fs);
+       ghost0.fs.gas.p = p_outside;
+       gmodel.update_thermo_from_pT(ghost0.fs.gas);
     }
 
     @nogc
