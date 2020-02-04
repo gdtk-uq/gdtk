@@ -234,7 +234,7 @@ function FlowState:new(o)
       error("Invalid name for item supplied to FlowState constructor.", 2)
    end
    -- We want to make consistent values/calculations in the context
-   -- of an initialized gas model, but we only want one such gas model and gas state.
+   -- of an initialized gas model, so go fetch that model from GlobalConfig.
    if FlowState.gm == nil then
       local gm = getGasModel()
       local nsp = gm:nSpecies()

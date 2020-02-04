@@ -478,18 +478,30 @@ extern(C) int configGetByKey(lua_State* L)
 
 extern(C) int setGasModel(lua_State* L)
 {
-    string fname = to!string(luaL_checkstring(L, 1));
-    GlobalConfig.gas_model_file = fname;
-    GlobalConfig.gmodel_master = init_gas_model(fname);
-    lua_pushinteger(L, GlobalConfig.gmodel_master.n_species);
-    lua_pushinteger(L, GlobalConfig.gmodel_master.n_modes);
-    GasModelStore ~= pushObj!(GasModel, GasModelMT)(L, GlobalConfig.gmodel_master);
-    return 3;
-    
+    if (lua_isstring(L, 1)) {
+        string fname = to!string(luaL_checkstring(L, 1));
+        GlobalConfig.gas_model_file = fname;
+        GlobalConfig.gmodel_master = init_gas_model(fname);
+        lua_settop(L, 0); // clear the stack
+        lua_pushinteger(L, GlobalConfig.gmodel_master.n_species);
+        lua_pushinteger(L, GlobalConfig.gmodel_master.n_modes);
+        GasModelStore ~= pushObj!(GasModel, GasModelMT)(L, GlobalConfig.gmodel_master);
+        return 3;
+    } else {
+        string msg = "setGasModel expects a string as the name of the gas model file.";
+        luaL_error(L, msg.toStringz);
+        return 0;
+    }
 }
 
 extern(C) int getGasModel(lua_State* L)
 {
+    if (GlobalConfig.gmodel_master is null) {
+        string msg = "The master gas model appears to be uninitialized. "~
+            "You should initialize it with setGasModel().";
+        luaL_error(L, msg.toStringz);
+    }
+    lua_settop(L, 0); // clear the stack
     pushObj!(GasModel, GasModelMT)(L, GlobalConfig.gmodel_master);
     return 1;
 }
