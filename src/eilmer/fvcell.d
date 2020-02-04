@@ -515,7 +515,7 @@ public:
         version(komega) {
             if (with_k_omega) {
                 foreach(i; 0 .. fs.turb.length) myU.rhoturb[i] = fs.gas.rho * fs.turb[i];
-                myU.total_energy += fs.gas.rho * fs.turb[0]; // Replace with tke function (NNG)
+                myU.total_energy += fs.gas.rho * myConfig.turb_model.turbulent_kinetic_energy(fs);
             } else {
                 myU.rhoturb[0] = 0.0;
                 myU.rhoturb[1] = fs.gas.rho * 1.0;
@@ -635,7 +635,7 @@ public:
                 fs.turb[0] = 0.0; // replace with "set_default" method
                 fs.turb[1] = 1.0;
             }
-            u -= fs.turb[0]; // replace with tke function (NNG)
+            u -= myConfig.turb_model.turbulent_kinetic_energy(fs);
         }
         // Remove kinetic energy for bulk flow.
         number ke = 0.5*(fs.vel.x*fs.vel.x + fs.vel.y*fs.vel.y + fs.vel.z*fs.vel.z);

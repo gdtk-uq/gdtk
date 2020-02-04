@@ -499,15 +499,14 @@ private:
                 foreach (umode; fs.gas.u_modes) { utot += umode; }
             }
             version(komega) {
-                utot += fs.turb[0]; // TODO: Generalise to tke function NNG
+                utot += blk.myConfig.turb_model.turbulent_kinetic_energy(fs);
             }
             face.F.total_energy = mass_flux*utot + fs.gas.p*dot(fs.vel,face.n);
             // [TODO] PJ 2018-10-24 check that fs.vel is the correct velocity
             // to use for pressure-work flowing across the face.
             // [TODO] PJ 2018-10-25 consider rothalpy flavour for rotating frame
             version(komega) {
-                face.F.rhoturb[0] = mass_flux * fs.turb[0];
-                face.F.rhoturb[1] = mass_flux * fs.turb[1];
+                foreach (i; 0 .. face.F.rhoturb.length) { face.F.rhoturb[i] = mass_flux * fs.turb[i]; }
             }
             version(MHD) {
                 // [TODO] PJ 2018-10-25 MHD?
@@ -528,8 +527,7 @@ private:
             face.F.total_energy = fs.gas.p*dot(face.gvel,face.n);
             // [TODO] PJ 2018-10-25 consider rothalpy flavour for rotating frame
             version(komega) {
-                face.F.rhoturb[0] = 0.0;
-                face.F.rhoturb[1] = 0.0;
+                foreach (i; 0 .. face.F.rhoturb.length) { face.F.rhoturb[i] = 0.0; }
             }
             version(MHD) {
                 // [TODO] PJ 2018-10-25 MHD?

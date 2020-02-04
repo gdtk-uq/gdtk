@@ -242,7 +242,7 @@ class kwTurbulenceModel : TurbulenceModelObject {
     }
 
     @nogc final override number turbulent_kinetic_energy(const FlowState fs) const {
-        number tke=fs.turb[0];
+        number tke = fs.turb[0];
         return tke;
     }
 

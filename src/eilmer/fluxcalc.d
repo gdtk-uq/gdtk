@@ -314,7 +314,7 @@ void set_flux_vector_in_local_frame(ref ConservedQuantities F, ref FlowState fs,
     F.momentum.set(F.mass*vn + p, F.mass*vt1, F.mass*vt2);
     F.total_energy = F.mass*(u+ke) + p*vn;
     version(komega) {
-        F.total_energy += fs.turb[0]; // TODO: Generalise to tke function (NNG)
+        F.total_energy += myConfig.turb_model.turbulent_kinetic_energy(fs);
         foreach(i; 0 .. F.rhoturb.length) { F.rhoturb[i] = F.mass * fs.turb[i]; }
     }
     version(multi_species_gas) {
@@ -395,7 +395,7 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
     number aL = Lft.gas.a;
     number keL = 0.5*(uL*uL + vL*vL + wL*wL);
     number HL = eL + pLrL + keL;
-    version(komega) { HL += Lft.turb[0]; } // Generalise to TKE function (NNG)
+    version(komega) { HL += myConfig.turb_model.turbulent_kinetic_energy(Lft); }
     //
     number rR = Rght.gas.rho;
     number pR = Rght.gas.p;
@@ -407,7 +407,7 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
     number aR = Rght.gas.a;
     number keR = 0.5*(uR*uR + vR*vR + wR*wR);
     number HR = eR + pRrR + keR;
-    version(komega) { HR += Rght.turb[0]; } // Generalise to tke function (NNG)
+    version(komega) { HR += myConfig.turb_model.turbulent_kinetic_energy(Rght); }
     //
     // This is the main part of the flux calculator.
     // Weighting parameters (eqn 32) for velocity splitting.
@@ -553,7 +553,7 @@ void hanel(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
     number aL = Lft.gas.a;
     number keL = 0.5*(uL*uL + vL*vL + wL*wL);
     number HL = eL + pLrL + keL;
-    version(komega) { HL += Lft.turb[0]; } // Generalise to tke function (NNG)
+    version(komega) { HL += myConfig.turb_model.turbulent_kinetic_energy(Lft); }
     //
     number rR = Rght.gas.rho;
     number pR = Rght.gas.p;
@@ -565,7 +565,7 @@ void hanel(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
     number aR = Rght.gas.a;
     number keR = 0.5*(uR*uR + vR*vR + wR*wR);
     number HR = eR + pRrR + keR;
-    version(komega) { HR += Rght.turb[0]; } // Generalise to tke function (NNG)
+    version(komega) { HR += myConfig.turb_model.turbulent_kinetic_energy(Rght); }
     //
     number am = fmax(aL, aR);
     number ML = uL / am;
@@ -668,7 +668,7 @@ void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
     presL = Lft.gas.p;
     eL = gmodel.internal_energy(Lft.gas);
     hL = eL + presL/rhoL;
-    version(komega) { hL += Lft.turb[0]; } // bundle turbulent energy, PJ 2017-06-17
+    version(komega) { hL += myConfig.turb_model.turbulent_kinetic_energy(Lft); } // bundle turbulent energy, PJ 2017-06-17
     tL = Lft.gas.T;
     vnL = Lft.vel.x;
     vpL = Lft.vel.y;
@@ -678,7 +678,7 @@ void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
     presR = Rght.gas.p;
     eR = gmodel.internal_energy(Rght.gas);
     hR = eR + presR/rhoR;
-    version(komega) { hR += Rght.turb[0]; }
+    version(komega) { hR += myConfig.turb_model.turbulent_kinetic_energy(Rght); }
     tR = Rght.gas.T;
     vnR = Rght.vel.x;
     vpR = Rght.vel.y;
@@ -931,7 +931,7 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
     number aL = Lft.gas.a;
     number keL = 0.5 * (uL * uL + vL * vL + wL * wL);
     number HL = eL + pL/rL + keL;
-    version(komega) { HL += Lft.turb[0]; }
+    version(komega) { HL += myConfig.turb_model.turbulent_kinetic_energy(Lft); }
     //
     number rR = Rght.gas.rho;
     number pR = Rght.gas.p;
@@ -942,7 +942,7 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
     number aR = Rght.gas.a;
     number keR = 0.5 * (uR * uR + vR * vR + wR * wR);
     number HR = eR + pR/rR + keR;
-    version(komega) { HR += Rght.turb[0]; }
+    version(komega) { HR += myConfig.turb_model.turbulent_kinetic_energy(Rght); }
     //
     // This is the main part of the flux calculator.
     //
@@ -1222,7 +1222,7 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalCo
     number aL = Lft.gas.a;
     number keL = 0.5*(uL*uL + vL*vL + wL*wL);
     number HL = eL + pLrL + keL;
-    version(komega) { HL += Lft.turb[0]; }
+    version(komega) { HL += myConfig.turb_model.turbulent_kinetic_energy(Lft); }
     //
     number rR = Rght.gas.rho;
     number pR = Rght.gas.p;
@@ -1234,7 +1234,7 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalCo
     number aR = Rght.gas.a;
     number keR = 0.5*(uR*uR + vR*vR + wR*wR);
     number HR = eR + pRrR + keR;
-    version(komega) { HR += Rght.turb[0]; }
+    version(komega) { HR += myConfig.turb_model.turbulent_kinetic_energy(Rght); }
 
     // averaged gamma
     number gL = gmodel.gamma(Lft.gas);
