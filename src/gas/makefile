@@ -207,7 +207,7 @@ libgas.so: gas_cwrap.d $(LIBLUA) $(GAS_FILES) $(KINETICS_FILES) \
 		-L-rpath=$(INSTALL_DIR)/lib $(DLINKFLAGS)
 
 $(LIBLUA):
-	cd $(LUA); make linux local
+	cd $(LUA); make $(PLATFORM) local
 
 $(CEQ_FILES):
 	cd $(CEQ_DIR); make
