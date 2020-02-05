@@ -37,7 +37,7 @@ class TurbulenceModelObject{
     @nogc abstract number turbulent_signal_frequency(const FlowState fs) const;
     @nogc abstract number turbulent_kinetic_energy(const FlowState fs) const;
     @nogc abstract string primitive_variable_name(size_t i) const;
-    @nogc abstract number primitive_variable_defaults(size_t i) const;
+    @nogc abstract number turb_limits(size_t i) const;
     @nogc abstract number viscous_transport_coefficient(size_t i) const;
 
     // Common methods
@@ -102,7 +102,7 @@ class noTurbulenceModel : TurbulenceModelObject {
         return "";
     }
 
-    @nogc final override number primitive_variable_defaults(size_t i) const {
+    @nogc final override number turb_limits(size_t i) const {
         number def = 0.0;
         return def;
     }
@@ -250,8 +250,8 @@ class kwTurbulenceModel : TurbulenceModelObject {
         return _varnames[i];
     }
 
-    @nogc final override number primitive_variable_defaults(size_t i) const {
-        return _vardefaults[i];
+    @nogc final override number turb_limits(size_t i) const {
+        return _varlimits[i];
     }
 
     @nogc final override number viscous_transport_coefficient(size_t i) const {
@@ -265,7 +265,7 @@ private:
     immutable bool axisymmetric;
     immutable int dimensions;
     immutable string[2] _varnames = ["tke", "omega"];
-    immutable number[2] _vardefaults = [0.0, 1.0];
+    immutable number[2] _varlimits = [0.0, 1.0];
 }
 
 
