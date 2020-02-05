@@ -914,9 +914,9 @@ public:
         version(komega) {
             if (with_k_omega) {
                 U1.rhoturb[0] = U0.rhoturb[0] + muj_tilde*dt*dUdt0.rhoturb[0];
-                U1.rhoturb[0] = fmax(U0.rhoturb[0], 0.0);
+                U1.rhoturb[0] = fmax(U1.rhoturb[0], 0.0);
                 U1.rhoturb[1] = U0.rhoturb[1] + muj_tilde*dt*dUdt0.rhoturb[1];
-                U1.rhoturb[1] = fmax(U0.rhoturb[1], U0.mass);
+                U1.rhoturb[1] = fmax(U1.rhoturb[1], U0.mass);
             } else {
                 U1.rhoturb[0] = U0.rhoturb[0];
                 U1.rhoturb[1] = U0.rhoturb[1];
@@ -1040,9 +1040,9 @@ public:
         version(komega) {
             if (with_k_omega) {
                 U1.rhoturb[0] = U0.rhoturb[0] + muj_tilde*dt*dUdt0.rhoturb[0];
-                U1.rhoturb[0] = fmax(U0.rhoturb[0], 0.0);
+                U1.rhoturb[0] = fmax(U1.rhoturb[0], 0.0);
                 U1.rhoturb[1] = U0.rhoturb[1] + muj_tilde*dt*dUdt0.rhoturb[1];
-                U1.rhoturb[1] = fmax(U0.rhoturb[1], U0.mass);
+                U1.rhoturb[1] = fmax(U1.rhoturb[1], U0.mass);
             } else {
                 U1.rhoturb[0] = U0.rhoturb[0];
                 U1.rhoturb[1] = U0.rhoturb[1];
