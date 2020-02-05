@@ -204,7 +204,7 @@ libgas.so: gas_cwrap.d $(LIBLUA) $(GAS_FILES) $(KINETICS_FILES) \
 	$(DMD) $(OF)libgas.so gas_cwrap.o $(DFLAGS) \
 		-shared -defaultlib=libphobos2.so \
 		$(GAS_FILES) $(KINETICS_FILES) $(GASDYN_FILES) $(NM_FILES) $(UTIL_FILES) $(CEQ_FILES) \
-		-L-rpath=$(INSTALL_DIR)/lib $(DLINKFLAGS)
+		-L-L=$(INSTALL_DIR)/lib $(DLINKFLAGS)
 
 $(LIBLUA):
 	cd $(LUA); make $(PLATFORM) local
