@@ -58,15 +58,88 @@ version(complex_numbers){
     {
         throw new Error("Do not use with complex numbers.");
     }
+    override void update_thermo_from_pT(GasState Q) 
+    {
+        throw new Error("Do not use with complex numbers.");
+    }
+
+    override void update_thermo_from_rhou(GasState Q)
+    {
+        throw new Error("Do not use with complex numbers.");
+    }
+
+    override void update_thermo_from_rhoT(GasState Q)
+    {
+        throw new Error("Do not use with complex numbers.");
+    }
+
+    override void update_thermo_from_rhop(GasState Q)
+    {
+        throw new Error("Do not use with complex numbers.");
+    }
+
+    override void update_thermo_from_ps(GasState Q, number s)
+    {
+        throw new Error("Do not use with complex numbers.");
+    }
+
+    override void update_thermo_from_hs(GasState Q, number h, number s)
+    {
+        throw new Error("Do not use with complex numbers.");
+    }
 } else {
     override void update_thermo_from_pT(GasState Q) 
     {
         int error;
+
         massf2molef(Q, X0); 
         error = ceq.pt(Q.p,Q.T,X0ptr,nsp,nel,lewisptr,Mptr,aptr,X1ptr,0);
+        if (error!=0) throw new GasModelException("ceq.pt convergence failure");
         molef2massf(X1, Q);
+
         _pgMixEOS.update_density(Q);
         _tpgMixEOS.update_energy(Q);
+    }
+
+    override void update_thermo_from_rhou(GasState Q)
+    {
+        int error;
+
+        massf2molef(Q, X0); 
+        error = ceq.rhou(Q.rho,Q.u,X0ptr,nsp,nel,lewisptr,Mptr,aptr,X1ptr,&Q.T,0);
+        if (error!=0) throw new GasModelException("ceq.rhou convergence failure");
+        molef2massf(X1, Q);
+
+        //_tpgMixEOS.update_temperature(Q); // T Already set
+        _pgMixEOS.update_pressure(Q);
+    }
+
+    override void update_thermo_from_rhoT(GasState Q)
+    {
+        throw new Error("Not Implemented Error (therm_perf_gas_equil): update_thermo_from_rhoT");
+    }
+
+    override void update_thermo_from_rhop(GasState Q)
+    {
+        throw new Error("Not Implemented Error (therm_perf_gas_equil): update_thermo_from_rhop");
+    }
+
+    override void update_thermo_from_ps(GasState Q, number s)
+    {
+        int error;
+
+        massf2molef(Q, X0); 
+        error = ceq.ps(Q.p,s,X0ptr,nsp,nel,lewisptr,Mptr,aptr,X1ptr,&Q.T,0);
+        if (error!=0) throw new GasModelException("ceq.ps convergence failure");
+        molef2massf(X1, Q);
+
+        _tpgMixEOS.update_energy(Q);
+        _pgMixEOS.update_density(Q);
+    }
+
+    override void update_thermo_from_hs(GasState Q, number h, number s)
+    {
+        throw new Error("Not Implemented Error (therm_perf_gas_equil): update_thermo_from_hs");
     }
 }
 
@@ -197,17 +270,49 @@ version(therm_perf_gas_equil_test) {
         fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
         //
         auto gm = new ThermallyPerfectGasEquilibrium("sample-data/therm-perf-equil-5-species-air.lua");
-        auto gd = new GasState(5, 0);
 
-        gd.p = 0.1*101.35e3;
-        gd.T = 2500.0;
-        gd.massf = [0.74311527, 0.25688473, 0.0, 0.0, 0.0];
-        gm.update_thermo_from_pT(gd);
-        assert(approxEqual(0.7321963 , gd.massf[0], 1.0e-6)); 
-        assert(approxEqual(0.23281198, gd.massf[1], 1.0e-6));
-        assert(approxEqual(0.0, gd.massf[2], 1.0e-6));
-        assert(approxEqual(0.01160037, gd.massf[3], 1.0e-6));
-        assert(approxEqual(0.02339135, gd.massf[4], 1.0e-6));
+        auto gs1 = new GasState(5, 0);
+        gs1.p = 0.1*101.35e3;
+        gs1.T = 2500.0;
+        gs1.massf = [0.74311527, 0.25688473, 0.0, 0.0, 0.0];
+        
+        writeln("Test pt ...");
+        gm.update_thermo_from_pT(gs1);
+        assert(approxEqual(0.7321963 , gs1.massf[0], 1.0e-6)); 
+        assert(approxEqual(0.23281198, gs1.massf[1], 1.0e-6));
+        assert(approxEqual(0.0, gs1.massf[2], 1.0e-6));
+        assert(approxEqual(0.01160037, gs1.massf[3], 1.0e-6));
+        assert(approxEqual(0.02339135, gs1.massf[4], 1.0e-6));
+        writeln("... Passed\n");
+
+        auto gs2 = new GasState(5, 0);
+        gs2.rho = 0.0139638507337;
+        gs2.u = 2131154.032665843;
+        gs2.massf = [0.74311527, 0.25688473, 0.0, 0.0, 0.0];
+
+        writeln("Test rhou ...");
+        gm.update_thermo_from_rhou(gs2);
+        assert(approxEqual(0.7321963 , gs2.massf[0], 1.0e-6)); 
+        assert(approxEqual(0.23281198, gs2.massf[1], 1.0e-6));
+        assert(approxEqual(0.0, gs2.massf[2], 1.0e-6));
+        assert(approxEqual(0.01160037, gs2.massf[3], 1.0e-6));
+        assert(approxEqual(0.02339135, gs2.massf[4], 1.0e-6));
+        assert(approxEqual(2500.0, gs2.T, 1.0e-6));
+        writeln("... Passed\n");
+
+        writeln("Test ps ...");
+        auto gs3 = new GasState(5, 0);
+        gs3.p = 10135.0;
+        double st = 10057.06820621123;
+        gs3.massf = [0.74311527, 0.25688473, 0.0, 0.0, 0.0];
+        gm.update_thermo_from_ps(gs3, st);
+        assert(approxEqual(0.7321963 , gs3.massf[0], 1.0e-6)); 
+        assert(approxEqual(0.23281198, gs3.massf[1], 1.0e-6));
+        assert(approxEqual(0.0, gs3.massf[2], 1.0e-6));
+        assert(approxEqual(0.01160037, gs3.massf[3], 1.0e-6));
+        assert(approxEqual(0.02339135, gs3.massf[4], 1.0e-6));
+        assert(approxEqual(2500.0, gs3.T, 1.0e-6));
+        writeln("... Passed\n");
 
         return 0;
     } // end main()

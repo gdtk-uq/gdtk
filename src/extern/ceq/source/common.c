@@ -13,6 +13,24 @@ const double TRACELIMIT=1e-6;   // Trace species limiter (for ns/n)
 const double tol=1e-9;
 const int attempts=50;
 
+double update_limit_factor(double x, double dx, double fac){
+    /*
+    Compute lambda for variable updates, checking for dx==0.0 hardware exception
+    Inputs:
+        x      : reference quantity
+        dx     : proposed raw change in quantity 
+        fac    : limit parameter  
+    Outputs:
+        lambda : update limit factor, generally x' = x + lambda*dx
+    */
+    double lambda;
+    if (dx==0.0) return 1.0;
+    lambda = fmin(1.0, fac*fabs(x)/fabs(dx));
+    return lambda;
+}
+
+
+
 // FIXME: Should bi0 be increased if the species get unlocked? Maybe you need to keep a bi00
 void handle_trace_species_locking(double* a, double n, int nsp, int nel, double* ns, double* bi0, double* dlnns, int verbose){
     /*

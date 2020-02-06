@@ -26,8 +26,8 @@ static void Assemble_Matrices(double* a,double* bi0,double* G0_RTs,double p,doub
     /*
     Construct Iteration Matrix for reduced Newton Rhapson step, (eqn 2.24 and 2.26 from cea_I)
     */
-    double lnns, lnn, lnp, akjaijnj, akjnjmuj, mus_RTj, bk;
-    double nss, nsmus, coeffsum;
+    double lnn, lnp, akjaijnj, akjnjmuj, mus_RTj, bk;
+    double nss, nsmus;
     int k,neq,i,j,s;
     neq = nel+1;
     lnn = log(n);
@@ -171,23 +171,23 @@ static void update_unknowns(double* S,double* dlnns,int nsp,int nel,double* ns,d
         ns : vector of species mole/mixtures [nsp]
         n  : pointer to total moles/mixture (passed by reference!) [1]
     */
-    int s,i;
-    double lnns,lnn,n_copy,lambda,newns,rdlnns,bi;
+    int s;
+    double lnns,lnn,n_copy,lambda,newns,rdlnns;
     const char pstring[] = "  s: %d lnns: % f rdlnns: % f dlnns: %f TR: % e lambda: % f\n"; 
 
     lnn = log(*n); // compute the log of the thing n is pointing to
-    lambda = fmin(1.0, 0.5*fabs(lnn)/fabs(S[0]));
+    lambda = update_limit_factor(lnn, S[0], 0.5);
     n_copy = exp(lnn + lambda*S[0]); 
     *n = n_copy;   // thing pointed to by n set to exp(lnn + S[0]);
 
     for (s=0; s<nsp; s++){
         if (ns[s]==0.0) {
-            if (verbose>1) printf(pstring, s, -1.0/0.0, 0.0, dlnns[s], 0.0, 0.0);
+            if (verbose>1) printf(pstring, s, 0.0, 0.0, dlnns[s], 0.0, 0.0);
             dlnns[s] = 0.0;
             continue;
         }
         lnns = log(ns[s]);
-        lambda = fmin(1.0, 0.5*fabs(lnn)/fabs(dlnns[s]));
+        lambda = update_limit_factor(lnn, dlnns[s], 0.5);
         newns = exp(lnns + lambda*dlnns[s]);
         rdlnns = log(newns) - lnns;
         ns[s] = newns;

@@ -43,6 +43,13 @@ static void Assemble_Matrices(double* a,double* bi0, double rho0,double u0,doubl
 
     // Equation 2.45: k-> equation index, i-> variable index
     for (k=0; k<nel; k++){
+        if (bi0[k]<1e-16) { // Check for missing missing element equations and Lock
+            for (i=0; i<neq; i++) A[k*neq+i] = 0.0;
+            A[k*neq + k+1] = 1.0;   
+            B[k] = 0.0;
+            continue;
+        }
+
         bk = 0.0; for (s=0; s<nsp; s++) bk += a[k*nsp + s]*ns[s];
 
         for (i=0; i<nel; i++){
@@ -55,6 +62,7 @@ static void Assemble_Matrices(double* a,double* bi0, double rho0,double u0,doubl
         akjnjmuj = 0.0;
         akjnjUj = 0.0;
         for (j=0; j<nsp; j++){
+            if (ns[j]==0.0) continue;
             mus_RTj = G0_RTs[j] + log(rho0*ns[j]*Ru*T/1e5);
             akjnjmuj += a[k*nsp+j]*ns[j]*mus_RTj;
             akjnjUj  += a[k*nsp+j]*ns[j]*U0_RTs[j];
@@ -69,6 +77,7 @@ static void Assemble_Matrices(double* a,double* bi0, double rho0,double u0,doubl
     njUjmuj= 0.0;
 
     for (j=0; j<nsp; j++){
+        if (ns[j]==0.0) continue;
         mus_RTj = G0_RTs[j] + log(rho0*ns[j]*Ru*T/1e5);
         njCvj += ns[j]*Cv0_Rs[j];
         njUj2 += ns[j]*U0_RTs[j]*U0_RTs[j];
@@ -86,6 +95,7 @@ static void Assemble_Matrices(double* a,double* bi0, double rho0,double u0,doubl
     }
 
     //for (i=0; i<neq; i++){
+    //    printf("   |");
     //    for (j=0; j<neq; j++){
     //        printf("%f ", A[i*neq+j]);
     //    }
@@ -125,6 +135,7 @@ static void species_corrections(double* S,double* a,double* G0_RTs,double* U0_RT
     //}
     
     for (s=0; s<nsp; s++) {
+        if (ns[s]==0.0) { dlnns[s] = 0.0; continue;}
         mus_RTs = G0_RTs[s] + log(rho0*ns[s]*Ru*T/1e5);
 
         aispii = 0.0;
@@ -186,20 +197,21 @@ static void update_unknowns(double* S,double* dlnns,int nsp,double* ns,double* T
     double lnns,lnT,n,lnn,lambda;
     const char pstring[] = "  s: %d lnns: % f rdlnns: % f dlnns: %f TR: % e lambda: % f\n"; 
     lnT = log(*T); // compute the log of the thing T is pointing to
-    lambda = fmin(1.0, 0.5*fabs(lnT)/fabs(S[0]));
+    lambda = update_limit_factor(lnT, S[0], 0.5);
     *T = exp(lnT + lambda*S[0]); // thing pointed to by T set to exp(lnT + S[0]);
     n = *np;
     lnn=log(n);
 
     for (s=0; s<nsp; s++){
         if (ns[s]==0.0) {
-            if (verbose>1) printf(pstring, s, -1.0/0.0, 0.0, dlnns[s], 0.0, 0.0);
+            if (verbose>1) printf(pstring, s, 0.0, 0.0, dlnns[s], 0.0, 0.0);
             dlnns[s] = 0.0;
             continue;
         }
         lnns = log(ns[s]);
-        lambda = fmin(1.0, fabs(lnn)/fabs(dlnns[s]));
+        lambda = update_limit_factor(lnn, dlnns[s], 1.0);
         ns[s] = exp(lnns + lambda*dlnns[s]);
+        if (verbose>1) printf(pstring, s, lnns, lambda*dlnns[s], dlnns[s], 0.0, lambda);
     }
     n = 0.0; for (s=0; s<nsp; s++) n+=ns[s];
     *np = n;
@@ -265,8 +277,8 @@ int solve_rhou(double rho,double u,double* X0,int nsp,int nel,double* lewis,doub
         Teq: Equilibrium Temperature 
     */
     double *A, *B, *S, *G0_RTs, *U0_RTs, *Cv0_Rs, *ns, *bi0, *dlnns; // Dynamic arrays
-    int neq,s,i,k,errorcode,ntrace;
-    double M0,n,M1,errorL2,errorL22,thing,T,errorrms;
+    int neq,s,i,k,errorcode;
+    double n,M1,T,errorrms;
 
     errorcode=0;
     neq= nel+1;

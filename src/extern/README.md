@@ -9,4 +9,4 @@ Where and when did we take snapshots:
 * OpenMPI https://github.com/DlangScience/OpenMPI 2017-06-05
 * gzip
 * opencl.d
-* ceq: https://github.com/uqngibbo/ceq (2020-01-24)
+* ceq: https://github.com/uqngibbo/ceq (d2dc8c9: 2020-02-06)
