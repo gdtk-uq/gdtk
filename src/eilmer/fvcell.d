@@ -761,7 +761,7 @@ public:
         // Total Energy.
         number integral_E = 0.0;
         version(komega) {
-            number[2] integral_rhoturb; // FIXME: dynamic for looping (NNG)
+            number[2] integral_rhoturb;
             foreach(ref t; integral_rhoturb) t = 0.0;
         }
         version(multi_species_gas) {
