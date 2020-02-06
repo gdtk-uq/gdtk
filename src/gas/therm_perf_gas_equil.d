@@ -58,10 +58,6 @@ version(complex_numbers){
     {
         throw new Error("Do not use with complex numbers.");
     }
-    override void update_thermo_from_pT(GasState Q) 
-    {
-        throw new Error("Do not use with complex numbers.");
-    }
 
     override void update_thermo_from_rhou(GasState Q)
     {
