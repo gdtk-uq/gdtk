@@ -17,6 +17,7 @@ import nm.complex;
 
 /*
 Abstract base class defines functions all turbulence models must have:
+ - Consider adding an immutable int MAX_TURBULENT_EQUATIONS to control compile time sizing.
 
 */
 class TurbulenceModelObject{
@@ -38,7 +39,7 @@ class TurbulenceModelObject{
     @nogc abstract number turbulent_kinetic_energy(const FlowState fs) const;
     @nogc abstract string primitive_variable_name(size_t i) const;
     @nogc abstract number turb_limits(size_t i) const;
-    @nogc abstract number viscous_transport_coefficient(size_t i) const;
+    @nogc abstract number viscous_transport_coeff(const FlowState fs, size_t i) const;
 
     // Common methods
     override string toString() const
@@ -106,7 +107,7 @@ class noTurbulenceModel : TurbulenceModelObject {
         number def = 0.0;
         return def;
     }
-    @nogc final override number viscous_transport_coefficient(size_t i) const {
+    @nogc final override number viscous_transport_coeff(const FlowState fs, size_t i) const {
         number mu_eff = 0.0;
         return mu_eff;
     }
@@ -254,10 +255,14 @@ class kwTurbulenceModel : TurbulenceModelObject {
         return _varlimits[i];
     }
 
-    @nogc final override number viscous_transport_coefficient(size_t i) const {
-        // For line 657 of fvinterface bit where kw have slightly different transport coefficients 
-        number mu_eff = 0.0;
-        return mu_eff;
+    @nogc final override number viscous_transport_coeff(const FlowState fs, size_t i) const {
+        /*
+        For line 657 of fvinterface, where k and w have slightly different transport coefficients 
+        
+        */ 
+        number sigma = _sigmas[i];
+        number mu_effective = fs.gas.mu + sigma * fs.gas.rho * fs.turb[0] / fs.turb[1];
+        return mu_effective;
     }
 
 private:
@@ -266,6 +271,7 @@ private:
     immutable int dimensions;
     immutable string[2] _varnames = ["tke", "omega"];
     immutable number[2] _varlimits = [0.0, 1.0];
+    immutable number[2] _sigmas = [0.6, 0.5];
 }
 
 

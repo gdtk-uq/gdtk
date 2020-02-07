@@ -643,18 +643,13 @@ public:
                 } // multi_species_gas
             }
             version(komega) {
-                number tau_kx = 0.0;
-                number tau_ky = 0.0;
-                number tau_kz = 0.0;
-                number tau_wx = 0.0;
-                number tau_wy = 0.0;
-                number tau_wz = 0.0;
                 if ( myConfig.turbulence_model == TurbulenceModel.k_omega &&
                      !(myConfig.axisymmetric && (Ybar <= 1.0e-10)) ) {
                     // Turbulence contribution to the shear stresses. TODO: tke function (NNG)
                     tau_xx -= 2.0/3.0 * fs.gas.rho * fs.turb[0];
                     tau_yy -= 2.0/3.0 * fs.gas.rho * fs.turb[0];
                     if (myConfig.dimensions == 3) { tau_zz -= 2.0/3.0 * fs.gas.rho * fs.turb[0]; }
+
                     // Turbulence contribution to heat transfer.
                     number sigma_star = 0.6;
                     number mu_effective = fs.gas.mu + sigma_star * fs.gas.rho * fs.turb[0] / fs.turb[1];
@@ -664,17 +659,6 @@ public:
                     qy += mu_effective * grad.turb[0][1];
                     if (myConfig.dimensions == 3) { qz += mu_effective * grad.turb[0][2]; }
 
-                    // Turbulence transport of the turbulence properties themselves.
-                    tau_kx = mu_effective * grad.turb[0][0]; 
-                    tau_ky = mu_effective * grad.turb[0][1];
-                    if (myConfig.dimensions == 3) { tau_kz = mu_effective * grad.turb[0][2]; }
-                    number sigma = 0.5;
-                    mu_effective = fs.gas.mu + sigma * fs.gas.rho * fs.turb[0] / fs.turb[1];
-                    // Apply a limit on mu_effective in the same manner as that applied to mu_t.
-                    mu_effective = fmin(mu_effective, myConfig.max_mu_t_factor * fs.gas.mu);
-                    tau_wx = mu_effective * grad.turb[1][0]; 
-                    tau_wy = mu_effective * grad.turb[1][1]; 
-                    if (myConfig.dimensions == 3) { tau_wz = mu_effective * grad.turb[1][2]; } 
                 }
             }
             if (myConfig.apply_shear_stress_relative_limit) {
@@ -731,9 +715,24 @@ public:
                 }
             }
             version(komega) {
-                if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                    F.rhoturb[0] -= tau_kx * nx + tau_ky * ny + tau_kz * nz;
-                    F.rhoturb[1] -= tau_wx * nx + tau_wy * ny + tau_wz * nz;
+                if ( myConfig.turbulence_model == TurbulenceModel.k_omega &&
+                     !(myConfig.axisymmetric && (Ybar <= 1.0e-10)) ) {
+
+                    // Turbulence transport of the turbulence properties themselves.
+                    foreach(i; 0 .. myConfig.turb_model.nturb){
+                        number tau_tx = 0.0;
+                        number tau_ty = 0.0;
+                        number tau_tz = 0.0;
+
+                        number mu_effective = myConfig.turb_model.viscous_transport_coeff(fs, i);
+                        // Apply a limit on mu_effective in the same manner as that applied to mu_t.
+                        mu_effective = fmin(mu_effective, myConfig.max_mu_t_factor * fs.gas.mu);
+                        tau_tx = mu_effective * grad.turb[i][0]; 
+                        tau_ty = mu_effective * grad.turb[i][1];
+                        if (myConfig.dimensions == 3) { tau_tz = mu_effective * grad.turb[i][2]; }
+
+                        F.rhoturb[i] -= tau_tx * nx + tau_ty * ny + tau_tz * nz;
+                    }
                 }
             }
             version(multi_species_gas) {

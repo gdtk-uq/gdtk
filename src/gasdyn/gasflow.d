@@ -500,6 +500,159 @@ number steady_flow_with_area_change(const(GasState)state1, number V1, number A2_
 } // end steady_flow_with_area_change()
 
 
+number[] osher_riemann(const(GasState) stateL, const(GasState) stateR,
+                       double velL, double velR,
+                       GasState stateLstar, GasState stateRstar, GasState stateX0,
+                       GasModel gm)
+/**
+ * Osher-type solution to the Riemann problem.
+ *
+ * Input:
+ *   stateL: reference to Left initial Gas state (given)
+ *   stateR: reference to Right initial Gas state (given)
+ *   velL: velocity associated with Left gas
+ *   velR: velocity associated with Right gas
+ *   stateLstar: reference to Left pocessed Gas state (to be estimated)
+ *   stateRstar: reference to Right pocessed Gas state (to be estimated)
+ *   stateX0: reference to processed state at x=0 (to be estimated)
+ *   gm: the gas model in use
+ *
+ * Returns: the dynamic array [pstar, wstar, wL, wR, velX0], containing the post-shock gas speeds,
+ *   pstar: pressure at the contact surface
+ *   wstar: speed of contact surface
+ *   wL: speed of Left wave
+ *   wR: speed of Right wave
+ *   velX0 : velocity of gas at x=0
+ *
+ * Notes:
+ *   (0) This function requires that we are working with an ideal gas.
+ *   (1) For speeds, positive is to the right.
+ *   (2) We assume that the Left and Right states have valid sound speeds.
+ */
+{
+    // Assume a chemically-frozen gas, so
+    // copy mass-fractions and the like from the initial states.
+    stateLstar.copy_values_from(stateL);
+    gm.update_thermo_from_pT(stateLstar);
+    stateRstar.copy_values_from(stateR);
+    gm.update_thermo_from_pT(stateRstar);
+    //
+    // Estimate properties of effective ideal gas.
+    number rhoL = stateL.rho; number rhoR = stateR.rho;
+    number f = sqrt(rhoL)/(sqrt(rhoL)+sqrt(rhoR));
+    number g = f*gm.gamma(stateL) + (1.0-f)*gm.gamma(stateR);
+    number gm1 = g-1.0; number gp1 = g+1.0;
+    //
+    // Riemann invariants for the left and right waves, assuming ideal gas model.
+    number aL = stateL.a; number aR = stateR.a;
+    number UbarL = velL + 2.0*aL/gm1;
+    number UbarR = velR - 2.0*aR/gm1;
+    //
+    // Compute for contact surface velocity and pressure.
+    number pL = stateL.p; number pR = stateR.p;
+    number Z = aR/aL * pow(pL/pR, gm1/(2*g));
+    number wstar = (UbarL*Z + UbarR)/(1+Z);
+    number tmp = gm1*(UbarL-UbarR)/(2.0*aL*(1.0+Z));
+    number pstar = pL * pow(tmp, 2.0*g/gm1);
+    //
+    // Intermediate states:
+    // Sound speeds from Riemann invariants.
+    number aLstar = (UbarL-wstar)*gm1*0.5;
+    number aRstar = (wstar-UbarR)*gm1*0.5;
+    // Internal energies from sound speeds, assuming ideal gas model.
+    number uLstar = aLstar*aLstar/(g*gm1);
+    number uRstar = aRstar*aRstar/(g*gm1);
+    // Density from ideal-gas equation of state.
+    number rhoLstar = pstar/(gm1*uLstar);
+    number rhoRstar = pstar/(gm1*uRstar);
+    //
+    // Wave speeds assuming acoustic unless shown to be a shock.
+    number wL = velL - aL;
+    if (pstar > pL) {
+        // Shock running left..
+        wL = velL - sqrt(0.5*gp1*pL/rhoL * (pstar/pL + gm1/gp1));
+    }
+    number wR = velR + aR;
+    if (pstar > pR) {
+        // Shock running right.
+        wR = velR + sqrt(0.5*gp1*pR/rhoR * (pstar/pR + gm1/gp1));
+    }
+    //
+    // Pack away data for the intermediate states.
+    stateLstar.rho = rhoLstar; stateLstar.u = uLstar;
+    gm.update_thermo_from_rhou(stateLstar);
+    gm.update_sound_speed(stateLstar);
+    stateRstar.rho = rhoRstar; stateRstar.u = uRstar;
+    gm.update_thermo_from_rhou(stateRstar);
+    gm.update_sound_speed(stateRstar);
+    //
+    // Interpolate state at x=0.
+    number velX0;
+    if (wstar >= 0.0) {
+        // Wind blows to the right so we evaluate using L and L*.
+        stateX0.copy_values_from(stateL); // to get mass fractions
+        if (pstar > pL) {
+            // Left-running wave is a shock.
+            if (wL >= 0.0) {
+                // All waves running right; use state L.
+                stateX0.rho = rhoL; stateX0.u = stateL.u; velX0 = velL;
+            } else {
+                // Shock is running left, contact is running right.
+                stateX0.rho = rhoLstar; stateX0.u = uLstar; velX0 = wstar;
+            }
+        } else {
+            // Left-running wave is a rarefaction.
+            if ((velL-aL) >= 0.0) {
+                // All waves running to right; use state L.
+                stateX0.rho = rhoL; stateX0.u = stateL.u; velX0 = velL;
+            } else if (wstar-aLstar > 0.0) {
+                // Rarefaction straddles the interface.
+                // Interpolate within the expansion.
+                number frac = (aL-velL)/(aL-velL+wstar-aLstar);
+                stateX0.rho = (1.0-frac)*rhoL + frac*rhoLstar;
+                stateX0.u = (1.0-frac)*stateL.u + frac*uLstar;
+                velX0 = (1.0-frac)*velL + frac*wstar;
+            } else {
+                // Entire rarefaction is running left; use state L*.
+                stateX0.rho = rhoLstar; stateX0.u = uLstar; velX0 = wstar;
+            }
+        }
+    } else {
+        // Wind blows to left so we evaluate using R* and R.
+        stateX0.copy_values_from(stateR); // to get mass fractions
+        if (pstar > pR) {
+            // Right-running wave is a shock.
+            if (wR <= 0.0) {
+                // All waves running left; use state R.
+                stateX0.rho = rhoR; stateX0.u = stateR.u; velX0 = velR;
+            } else {
+                // Shock is running right, contact is running left.
+                stateX0.rho = rhoRstar; stateX0.u = uRstar; velX0 = wstar;
+            }
+        } else {
+            // Right-running wave is a rarefaction.
+            if ((velR+aR) <= 0.0) {
+                // All waves running to left; use state R.
+                stateX0.rho = rhoR; stateX0.u = stateR.u; velX0 = velR;
+            } else if (wstar+aRstar < 0.0) {
+                // Rarefaction straddles the interface.
+                // Interpolate within the expansion.
+                number frac = (aR+velR)/(aR+velL-wstar-aLstar);
+                stateX0.rho = (1.0-frac)*rhoR + frac*rhoRstar;
+                stateX0.u = (1.0-frac)*stateR.u + frac*uRstar;
+                velX0 = (1.0-frac)*velR + frac*wstar;
+            } else {
+                // Entire rarefaction is running right; use state R*.
+                stateX0.rho = rhoRstar; stateX0.u = uRstar; velX0 = wstar;
+            }
+        }
+    }
+    gm.update_thermo_from_rhou(stateX0);
+    //
+    return [pstar, wstar, wL, wR, velX0];
+} // end osher_riemann()
+
+
 //------------------------------------------------------------------------
 // Finite-strength waves along characteristic lines.
 

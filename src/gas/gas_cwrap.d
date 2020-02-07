@@ -960,6 +960,27 @@ int gasflow_finite_wave_dv(int state1_id, double v1, char* characteristic, doubl
 }
 
 extern(C)
+int gasflow_osher_riemann(int stateL_id, int stateR_id, double velL, double velR,
+                          int stateLstar_id, int stateRstar_id,
+                          int stateX0_id, int gm_id, double* results)
+{
+    try {
+        double[] my_results = osher_riemann(gas_states[stateL_id], gas_states[stateR_id], velL, velR,
+                                            gas_states[stateLstar_id], gas_states[stateRstar_id],
+                                            gas_states[stateX0_id], gas_models[gm_id]);
+        results[0] = my_results[0]; // pstar
+        results[1] = my_results[1]; // wstar
+        results[2] = my_results[2]; // wL
+        results[3] = my_results[3]; // wR
+        results[4] = my_results[4]; // velX0
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern(C)
 int gasflow_theta_oblique(int state1_id, double v1, double beta,
                           int state2_id, int gm_id, double* results)
 {

@@ -84,6 +84,10 @@ ffi.cdef("""
     int gasflow_finite_wave_dv(int state1_id, double v1, char* characteristic, double v2_target,
                                int state2_id, int gm_id, int steps, double Tmin, double* results);
 
+    int gasflow_osher_riemann(int stateL_id, int stateR_id, double velL, double velR,
+                              int stateLstar_id, int stateRstar_id,
+                              int stateX0_id, int gm_id, double* results);
+
     int gasflow_theta_oblique(int state1_id, double v1, double beta,
                               int state2_id, int gm_id, double* results);
     int gasflow_beta_oblique(int state1_id, double v1, double theta,
@@ -698,6 +702,19 @@ class GasFlow(object):
         if flag < 0: raise Exception("failed to compute (unsteady) finite wave dv.")
         v2 = my_results[0]
         return v2
+
+    def osher_riemann(self, stateL, stateR, velL, velR, stateLstar, stateRstar, stateX0):
+        my_results = ffi.new("double[]", [0.0]*5)
+        flag = so.gasflow_osher_riemann(stateL.id, stateR.id, velL, velR,
+                                        stateLstar.id, stateRstar.id,
+                                        stateX0.id, self.gmodel.id, my_results)
+        if flag < 0: raise Exception("failed to compute solution to Riemann problem.")
+        pstar = my_results[0]
+        wstar = my_results[1]
+        wL = my_results[2]
+        wR = my_results[3]
+        velX0 = my_results[4]
+        return [pstar, wstar, wL, wR, velX0]
 
     def theta_oblique(self, state1, v1, beta, state2):
         my_results = ffi.new("double[]", [0.0, 0.0])
