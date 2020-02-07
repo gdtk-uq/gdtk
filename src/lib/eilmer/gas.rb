@@ -86,6 +86,10 @@ module Gas
   extern 'int gasflow_finite_wave_dv(int state1_id, double v1, char* characteristic, double v2_target,
                                      int state2_id, int gm_id, int steps, double Tmin, double* results)'
 
+  extern 'int gasflow_osher_riemann(int stateL_id, int stateR_id, double velL, double velR,
+                                    int stateLstar_id, int stateRstar_id,
+                                    int stateX0_id, int gm_id, double* results)'
+  
   extern 'int gasflow_theta_oblique(int state1_id, double v1, double beta,
                                     int state2_id, int gm_id, double* results)'
   extern 'int gasflow_beta_oblique(int state1_id, double v1, double theta,
@@ -716,6 +720,15 @@ class GasFlow
                                       my_results)
     if flag < 0 then raise "failed to compute (unsteady) finite wave dv." end
     return my_results[0, my_results.size].unpack("d")[0] # v2
+  end
+    
+  def osher_riemann(stateL, stateR, velL, velR, stateLstar, stateRstar, stateX0)
+    my_results = [0.0, 0.0, 0.0, 0.0, 0.0].pack("d*")
+    flag = Gas.gasflow_osher_riemann(stateL.id, stateR.id, velL, velR,
+                                     stateLstar.id, stateRstar.id,
+                                     stateX0.id, @gmodel.id, my_results)
+    if flag < 0 then raise "failed to compute solution to Riemann problem." end
+    return my_results[0, my_results.size].unpack("ddddd") # [pstar, wstar, wL, wR, velX0]
   end
     
   def theta_oblique(state1, v1, beta, state2)
