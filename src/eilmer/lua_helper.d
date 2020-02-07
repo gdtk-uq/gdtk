@@ -130,7 +130,7 @@ extern(C) int luafn_sampleFluidCell(lua_State *L)
 {
     // Get arguments from lua_stack
     auto blkId = lua_tointeger(L, 1);
-    if (!canFind(GlobalConfig.localBlockIds, blkId)) {
+    if (!canFind(GlobalConfig.localFluidBlockIds, blkId)) {
         string msg = format("Block id %d is not local to process.", blkId);
         luaL_error(L, msg.toStringz);
     }
@@ -166,7 +166,7 @@ extern(C) int luafn_sampleFluidFace(lua_State *L)
     // Get arguments from lua_stack
     string which_face = to!string(lua_tostring(L, 1));
     auto blkId = lua_tointeger(L, 2);
-    if (!canFind(GlobalConfig.localBlockIds, blkId)) {
+    if (!canFind(GlobalConfig.localFluidBlockIds, blkId)) {
         string msg = format("Block id %d is not local to process.", blkId);
         luaL_error(L, msg.toStringz);
     }

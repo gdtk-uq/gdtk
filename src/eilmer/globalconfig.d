@@ -401,7 +401,7 @@ final class GlobalConfig {
     shared static int mpi_rank_for_local_task = 0;
     shared static bool is_master_task = true; // In an MPI run, only one task will be master.
     shared static int[] mpi_rank_for_block; // To know where each block has been assigned.
-    shared static int[] localBlockIds; // We will search this array to see if the block is local.
+    shared static int[] localFluidBlockIds; // We will search this array to see if the fluid block is local.
     //
     shared static string base_file_name = "job"; // Change this to suit at run time.
     shared static string grid_format = "gziptext"; // alternative is "rawbinary"

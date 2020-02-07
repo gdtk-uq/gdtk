@@ -80,7 +80,7 @@ version(mpi_parallel) {
         if (blk.bc[Face.east].type == "exchange_over_full_face") {
             GhostCellFullFaceCopy ffeBC = cast(GhostCellFullFaceCopy) blk.bc[Face.east].preReconAction[0];
             east_neighbour = ffeBC.neighbourBlock.id;
-            if (find(GlobalConfig.localBlockIds, east_neighbour).empty) {
+            if (find(GlobalConfig.localFluidBlockIds, east_neighbour).empty) {
                 //Block is non-local in the mpi context, request some data
                 requested_data = true;
                 int mpi_dist_recv_tag = make_mpi_tag(east_neighbour, 4, 0);
@@ -150,7 +150,7 @@ version(mpi_parallel) {
         if (blk.bc[Face.west].type == "exchange_over_full_face") {
             GhostCellFullFaceCopy ffeBC = cast(GhostCellFullFaceCopy) blk.bc[Face.west].preReconAction[0];
             west_neighbour = ffeBC.neighbourBlock.id;
-            if (find(GlobalConfig.localBlockIds, west_neighbour).empty) {
+            if (find(GlobalConfig.localFluidBlockIds, west_neighbour).empty) {
                 sent_data = true;
                 int ne = to!int(total_dist_send.length);
                 int mpi_dist_send_tag = make_mpi_tag(blk.id, 4, 0);
@@ -507,7 +507,7 @@ void populate_ghost_cell_interface_geometry(SFluidBlock blk) {
         GhostCellFullFaceCopy ffeBC = cast(GhostCellFullFaceCopy) blk.bc[Face.south].preReconAction[0];
         int neighbour = ffeBC.neighbourBlock.id;
         version(mpi_parallel) {
-            if (find(GlobalConfig.localBlockIds, neighbour).empty) {
+            if (find(GlobalConfig.localFluidBlockIds, neighbour).empty) {
                 MPI_Request MPI_incoming_request;
                 MPI_Status MPI_incoming_status;
                 int mpi_recv_tag, mpi_send_tag, ne, neighbour_rank;
@@ -562,7 +562,7 @@ void populate_ghost_cell_interface_geometry(SFluidBlock blk) {
         GhostCellFullFaceCopy ffeBC = cast(GhostCellFullFaceCopy) blk.bc[Face.north].preReconAction[0];
         int neighbour = ffeBC.neighbourBlock.id;
         version(mpi_parallel) {
-            if (find(GlobalConfig.localBlockIds, neighbour).empty) {
+            if (find(GlobalConfig.localFluidBlockIds, neighbour).empty) {
                 MPI_Request MPI_incoming_request;
                 MPI_Status MPI_incoming_status;
                 int mpi_recv_tag, mpi_send_tag, ne, neighbour_rank;
@@ -628,7 +628,7 @@ void get_ghost_vertex_positions(SFluidBlock blk) {
         int neighbour = ffeBC.neighbourBlock.id;
         // Check if the block is local in the mpi sense
         version(mpi_parallel) {
-            if (find(GlobalConfig.localBlockIds, neighbour).empty) {
+            if (find(GlobalConfig.localFluidBlockIds, neighbour).empty) {
                 // We must exchange information using MPI
                 MPI_Request MPI_incoming_request;
                 MPI_Status MPI_incoming_status;
@@ -698,7 +698,7 @@ void get_ghost_vertex_positions(SFluidBlock blk) {
         int neighbour = ffeBC.neighbourBlock.id;
         // Check if the block is local in the mpi sense
         version(mpi_parallel) {
-            if (find(GlobalConfig.localBlockIds, neighbour).empty) {
+            if (find(GlobalConfig.localFluidBlockIds, neighbour).empty) {
                 // We must exchange information using MPI
                 MPI_Request MPI_incoming_request;
                 MPI_Status MPI_incoming_status;

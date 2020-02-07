@@ -29,7 +29,7 @@ void init_history_cell_files()
     foreach (hcell; GlobalConfig.hcells) {
         auto blkId = hcell[0];
         auto cellId = hcell[1];
-        if (find(GlobalConfig.localBlockIds, blkId).empty) { continue; }
+        if (find(GlobalConfig.localFluidBlockIds, blkId).empty) { continue; }
         if ( cellId >= globalFluidBlocks[blkId].cells.length ) {
             string errMsg = "ERROR: init_history_cell_files()\n";
             errMsg ~= format("The requested history cell index %d is not valid for block %d.\n", cellId, blkId);
@@ -79,7 +79,7 @@ void write_history_cells_to_files(double sim_time)
     foreach (hcell; GlobalConfig.hcells) {
         auto blkId = hcell[0];
         auto cellId = hcell[1];
-        if (find(GlobalConfig.localBlockIds, blkId).empty) { continue; }
+        if (find(GlobalConfig.localFluidBlockIds, blkId).empty) { continue; }
         auto cell = globalFluidBlocks[blkId].cells[cellId];
         auto writer = appender!string();
         formattedWrite(writer, "%.18e %s\n", sim_time, cell.write_values_to_string());

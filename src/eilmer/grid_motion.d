@@ -329,7 +329,7 @@ extern(C) int luafn_getVtxPosition(lua_State *L)
 {
     // Get arguments from lua_stack
     auto blkId = lua_tointeger(L, 1);
-    if (!canFind(GlobalConfig.localBlockIds, blkId)) {
+    if (!canFind(GlobalConfig.localFluidBlockIds, blkId)) {
         string msg = format("Block id %d is not local to process.", blkId);
         luaL_error(L, msg.toStringz);
     }
@@ -365,7 +365,7 @@ extern(C) int luafn_getVtxPositionXYZ(lua_State *L)
 {
     // Get arguments from lua_stack
     auto blkId = lua_tointeger(L, 1);
-    if (!canFind(GlobalConfig.localBlockIds, blkId)) {
+    if (!canFind(GlobalConfig.localFluidBlockIds, blkId)) {
         string msg = format("Block id %d is not local to process.", blkId);
         luaL_error(L, msg.toStringz);
     }
@@ -400,7 +400,7 @@ extern(C) int luafn_getVtxPositionVector3(lua_State *L)
 {
     // Get arguments from lua_stack
     auto blkId = lua_tointeger(L, 1);
-    if (!canFind(GlobalConfig.localBlockIds, blkId)) {
+    if (!canFind(GlobalConfig.localFluidBlockIds, blkId)) {
         string msg = format("Block id %d is not local to process.", blkId);
         luaL_error(L, msg.toStringz);
     }
@@ -479,7 +479,7 @@ extern(C) int luafn_setVtxVelocitiesForBlock(lua_State* L)
     // Expect two arguments: 1. a block id
     //                       2. a Vector3 object or table with x,y,z fields.
     auto blkId = lua_tointeger(L, 1);
-    if (!canFind(GlobalConfig.localBlockIds, blkId)) {
+    if (!canFind(GlobalConfig.localFluidBlockIds, blkId)) {
         string msg = format("Block id %d is not local to process.", blkId);
         luaL_error(L, msg.toStringz);
     }
@@ -507,7 +507,7 @@ extern(C) int luafn_setVtxVelocitiesForBlockXYZ(lua_State* L)
     //                        3. y velocity
     //                        4. z velocity
     auto blkId = lua_tointeger(L, 1);
-    if (!canFind(GlobalConfig.localBlockIds, blkId)) {
+    if (!canFind(GlobalConfig.localFluidBlockIds, blkId)) {
         string msg = format("Block id %d is not local to process.", blkId);
         luaL_error(L, msg.toStringz);
     }
@@ -550,7 +550,7 @@ extern(C) int luafn_setVtxVelocitiesForRotatingBlock(lua_State* L)
     //                             3. a Vector3/table with x,y,z fields (optional) 
     int narg = lua_gettop(L);
     auto blkId = lua_tointeger(L, 1);
-    if (!canFind(GlobalConfig.localBlockIds, blkId)) {
+    if (!canFind(GlobalConfig.localFluidBlockIds, blkId)) {
         string msg = format("Block id %d is not local to process.", blkId);
         luaL_error(L, msg.toStringz);
     }
@@ -611,7 +611,7 @@ extern(C) int luafn_setVtxVelocitiesByCorners(lua_State* L)
     //                                  (optional)
     int narg = lua_gettop(L);
     auto blkId = lua_tointeger(L, 1);
-    if (!canFind(GlobalConfig.localBlockIds, blkId)) {
+    if (!canFind(GlobalConfig.localFluidBlockIds, blkId)) {
         string msg = format("Block id %d is not local to process.", blkId);
         luaL_error(L, msg.toStringz);
     }
@@ -734,7 +734,7 @@ extern(C) int luafn_setVtxVelocitiesByQuad(lua_State* L)
         luaL_error(L, "setVtxVelocitiesByQuad expected to receive a integer for blkId.");
     }
     lua_pop(L, 1); // discard item
-    if (!canFind(GlobalConfig.localBlockIds, blkId)) {
+    if (!canFind(GlobalConfig.localFluidBlockIds, blkId)) {
         string msg = format("Block id %d is not local to process.", blkId);
         luaL_error(L, msg.toStringz);
     }
@@ -866,7 +866,7 @@ extern(C) int luafn_setVtxVelocitiesByCornersReg(lua_State* L)
     size_t i, j, k;
     Vector3 velw, vele, veln, vels, vel;
     auto blk = cast(SFluidBlock) globalFluidBlocks[blkId];
-    if (!canFind(GlobalConfig.localBlockIds, blkId)) {
+    if (!canFind(GlobalConfig.localFluidBlockIds, blkId)) {
         string msg = format("Block id %d is not local to process.", blkId);
         luaL_error(L, msg.toStringz);
     }
@@ -995,7 +995,7 @@ extern(C) int luafn_setVtxVelocity(lua_State* L)
     int narg = lua_gettop(L);
     auto vel = toVector3(L, 1);
     auto blkId = lua_tointeger(L, 2);
-    if (!canFind(GlobalConfig.localBlockIds, blkId)) {
+    if (!canFind(GlobalConfig.localFluidBlockIds, blkId)) {
         string msg = format("Block id %d is not local to process.", blkId);
         luaL_error(L, msg.toStringz);
     }
@@ -1084,7 +1084,7 @@ extern(C) int luafn_setVtxVelocityXYZ(lua_State* L)
     double vely = lua_tonumber(L, 2);
     double velz = lua_tonumber(L, 3);
     auto blkId = lua_tointeger(L, 4);
-    if (!canFind(GlobalConfig.localBlockIds, blkId)) {
+    if (!canFind(GlobalConfig.localFluidBlockIds, blkId)) {
         string msg = format("Block id %d is not local to process.", blkId);
         luaL_error(L, msg.toStringz);
     }

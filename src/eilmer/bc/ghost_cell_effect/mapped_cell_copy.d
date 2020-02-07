@@ -341,7 +341,7 @@ public:
                         string faceTag =  makeFaceTag(my_vtx_list);
                         auto src_blk_id = mapped_cells_list[blk.id][faceTag].blkId;
                         auto src_cell_id = mapped_cells_list[blk.id][faceTag].cellId;
-                        if (!find(GlobalConfig.localBlockIds, src_blk_id).empty) {
+                        if (!find(GlobalConfig.localFluidBlockIds, src_blk_id).empty) {
                             mapped_cells ~= globalFluidBlocks[src_blk_id].cells[src_cell_id];
                         } else {
                             auto msg = format("block id %d is not in localFluidBlocks", src_blk_id);

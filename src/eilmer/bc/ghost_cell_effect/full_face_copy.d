@@ -849,7 +849,7 @@ public:
         } // end if dimensions == ...
         //
         version(mpi_parallel) {
-            if (find(GlobalConfig.localBlockIds, other_blk.id).empty) {
+            if (find(GlobalConfig.localFluidBlockIds, other_blk.id).empty) {
                 // The other block is in another MPI process, go fetch the data via messages.
                 //
                 // For this particular GhostCellEffect, we are expecting somewhat symmetric
@@ -881,7 +881,7 @@ public:
     void set_up_cell_mapping_phase1()
     {
         version(mpi_parallel) {
-            if (find(GlobalConfig.localBlockIds, other_blk.id).empty) {
+            if (find(GlobalConfig.localFluidBlockIds, other_blk.id).empty) {
                 // The other block is in another MPI process, go fetch the data via messages.
                 // Blocking send to corresponding non-blocking receive that was posted
                 // at in other_blk MPI process.
@@ -916,7 +916,7 @@ public:
     void set_up_cell_mapping_phase2()
     {
         version(mpi_parallel) {
-            if (find(GlobalConfig.localBlockIds, other_blk.id).empty) {
+            if (find(GlobalConfig.localFluidBlockIds, other_blk.id).empty) {
                 // The other block is in another MPI process, go fetch the data via messages.
                 // Once complete, copy the data back into the local context.
                 version(mpi_timeouts) {
@@ -963,7 +963,7 @@ public:
     void exchange_geometry_phase0()
     {
         version(mpi_parallel) {
-            if (find(GlobalConfig.localBlockIds, other_blk.id).empty) {
+            if (find(GlobalConfig.localFluidBlockIds, other_blk.id).empty) {
                 // The other block is in another MPI process, go fetch the geometry data via messages.
                 //
                 // Prepare to exchange geometry data for the boundary cells.
@@ -993,7 +993,7 @@ public:
     void exchange_geometry_phase1()
     {
         version(mpi_parallel) {
-            if (find(GlobalConfig.localBlockIds, other_blk.id).empty) {
+            if (find(GlobalConfig.localFluidBlockIds, other_blk.id).empty) {
                 // The other block is in another MPI process, go fetch the data via messages.
                 //
                 // Blocking send of this block's geometry data
@@ -1042,7 +1042,7 @@ public:
     void exchange_geometry_phase2()
     {
         version(mpi_parallel) {
-            if (find(GlobalConfig.localBlockIds, other_blk.id).empty) {
+            if (find(GlobalConfig.localFluidBlockIds, other_blk.id).empty) {
                 // The other block is in another MPI process, go fetch the data via messages.
                 //
                 // Wait for non-blocking receive to complete.
@@ -1110,7 +1110,7 @@ public:
     void exchange_flowstate_phase0(double t, int gtl, int ftl)
     {
         version(mpi_parallel) {
-            if (find(GlobalConfig.localBlockIds, other_blk.id).empty) {
+            if (find(GlobalConfig.localFluidBlockIds, other_blk.id).empty) {
                 // The other block is in another MPI process, go fetch the data via messages.
                 // For this particular GhostCellEffect, we are expecting somewhat symmetric
                 // interaction with the other MPI process.
@@ -1150,7 +1150,7 @@ public:
     void exchange_flowstate_phase1(double t, int gtl, int ftl)
     {
         version(mpi_parallel) {
-            if (find(GlobalConfig.localBlockIds, other_blk.id).empty) {
+            if (find(GlobalConfig.localFluidBlockIds, other_blk.id).empty) {
                 // The other block is in another MPI process, go fetch the data via messages.
                 // For this particular GhostCellEffect, we are expecting somewhat symmetric
                 // interaction with the other MPI process.
@@ -1277,7 +1277,7 @@ public:
     void exchange_flowstate_phase2(double t, int gtl, int ftl)
     {
         version(mpi_parallel) {
-            if (find(GlobalConfig.localBlockIds, other_blk.id).empty) {
+            if (find(GlobalConfig.localFluidBlockIds, other_blk.id).empty) {
                 // The source block is in another MPI process, go fetch the data via messages.
                 //
                 size_t nspecies = this_blk.myConfig.n_species;
@@ -1379,7 +1379,7 @@ public:
     void exchange_viscous_gradient_phase0(double t, int gtl, int ftl)
     {
         version(mpi_parallel) {
-            if (find(GlobalConfig.localBlockIds, other_blk.id).empty) {
+            if (find(GlobalConfig.localFluidBlockIds, other_blk.id).empty) {
                 // The other block is in another MPI process, go fetch the data via messages.
                 // For this particular GhostCellEffect, we are expecting somewhat symmetric
                 // interaction with the other MPI process.
@@ -1420,7 +1420,7 @@ public:
     void exchange_viscous_gradient_phase1(double t, int gtl, int ftl)
     {
         version(mpi_parallel) {
-            if (find(GlobalConfig.localBlockIds, other_blk.id).empty) {
+            if (find(GlobalConfig.localFluidBlockIds, other_blk.id).empty) {
                 // The other block is in another MPI process, go fetch the data via messages.
                 // For this particular GhostCellEffect, we are expecting somewhat symmetric
                 // interaction with the other MPI process.
@@ -1543,7 +1543,7 @@ public:
     void exchange_viscous_gradient_phase2(double t, int gtl, int ftl)
     {
         version(mpi_parallel) {
-            if (find(GlobalConfig.localBlockIds, other_blk.id).empty) {
+            if (find(GlobalConfig.localFluidBlockIds, other_blk.id).empty) {
                 // The source block is in another MPI process, go fetch the data via messages.
                 //
                 size_t nspecies = this_blk.myConfig.n_species;

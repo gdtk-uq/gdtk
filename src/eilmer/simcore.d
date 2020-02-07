@@ -269,7 +269,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
         // There is only one process and it deals with all blocks.
         foreach (blk; globalFluidBlocks) { localFluidBlocks ~= blk; }
     }
-    foreach (blk; localFluidBlocks) { GlobalConfig.localBlockIds ~= blk.id; }
+    foreach (blk; localFluidBlocks) { GlobalConfig.localFluidBlockIds ~= blk.id; }
     //
     // Local blocks may be handled with thread-parallelism.
     auto nBlocksInThreadParallel = max(localFluidBlocks.length, GlobalConfig.nSolidBlocks);
@@ -573,7 +573,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
         lua_setglobal(L, "mpi_rank_for_local_task");
         lua_pushboolean(L, GlobalConfig.is_master_task);
         lua_setglobal(L, "is_master_task");
-        push_array_to_Lua(L, GlobalConfig.localBlockIds, "localBlockIds");
+        push_array_to_Lua(L, GlobalConfig.localFluidBlockIds, "localFluidBlockIds");
         if (GlobalConfig.user_pad_length > 0) {
             push_array_to_Lua(L, GlobalConfig.userPad, "userPad");
         }
@@ -1181,7 +1181,7 @@ void synchronize_corner_coords_for_all_blocks()
         foreach (blk; globalFluidBlocks) {
             auto sblk = cast(SFluidBlock) blk;
             if (!sblk) { continue; }
-            if (canFind(GlobalConfig.localBlockIds, sblk.id)) {
+            if (canFind(GlobalConfig.localFluidBlockIds, sblk.id)) {
                 // We can see this inside this block to get valid coordinate values.
                 sblk.copy_current_corner_coords();
             } else {
