@@ -20,13 +20,12 @@ class Line(Path):
     __slots__ = ['p0', 'p1']
 
     def __init__(self, p0, p1):
-        self.p0 = p0
-        self.p1 = p1
+        self.p0 = Vector3(p0)
+        self.p1 = Vector3(p1)
         return
 
     def __str__(self):
-        text = "Line(p0=%s, p1=%s)" % (self.p0, self.p1)
-        return text
+        return "Line(p0={}, p1={})".format(self.p0, self.p1)
     
     def __call__(self, t):
         return self.p0*(1-t) + self.p1*t
@@ -41,14 +40,13 @@ class Arc(Path):
     __slots__ = ['a', 'b', 'c']
 
     def __init__(self, a, b, c):
-        self.a = a
-        self.b = b
-        self.c = c
+        self.a = Vector3(a)
+        self.b = Vector3(b)
+        self.c = Vector3(c)
         return
 
-    def __str__(self):
-        text = "Arc(a=%s, b=%s, c=%s)" % (self.a, self.b, self.c)
-        return text
+    def __repr__(self):
+        return "Arc(a={}, b={}, c={})".format(self.a, self.b, self.c)
 
     def __call__(self, t):
         p, L = self.evaluate_position_and_length(t)
@@ -97,7 +95,58 @@ class Arc(Path):
 
 
 class Polyline(Path):
-    pass
+    """
+    Collection of Path segments.
+    """
+    __slots__ = ['segments', 't_values', 'isclosed']
+
+    def __init__(self, segments, closed=False, tolerance=1.0e-10):
+        self.segments = []
+        for seg in segments: self.segments.append(seg)
+        self.isclosed = closed
+        if self.isclosed:
+            p0 = self.segments[0](0.0)
+            p1 = self.segments[-1](1.0)
+            if (abs(p1-p0) > tolerance):
+                self.segments.append(Line(p0,p1))
+        self.reset_breakpoints()
+        return
+
+    def reset_breakpoints(self):
+        self.t_values = []
+        t_total = 0.0
+        for seg in self.segments:
+            t_total += seg.length()
+            self.t_values.append(t_total)
+        for i in range(len(self.t_values)): self.t_values[i] /= t_total
+        return
+    
+    def __repr__(self):
+        text = "Polyline(segments=["
+        n = len(self.segments)
+        for i in range(n):
+            text += '{}'.format(self.segments[i])
+            text += ', ' if i < n-1 else ']'
+        return text
+    
+    def __call__(self, t):
+        n = len(self.segments)
+        if n == 1: return self.segments[0](t)
+        i = 0
+        while (i < n) and (t < self.t_values[i]): i += 1
+        i = min(i, n-1)
+        if i == 0:
+            t_local = t/self.t_values[0]
+        else:
+            t_local = (t-self.t_values[i-1])/(self.t_values[i]-self.t_values[i-1])
+        return self.segments[i](t_local)
+
+    def length(self):
+        L = 0.0
+        for seg in self.segments: L += seg.length()
+        return L
+    
+    # end class Polyline
 
 
 class ArcLengthParameterizedPath(Path):

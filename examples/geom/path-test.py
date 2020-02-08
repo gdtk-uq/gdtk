@@ -4,7 +4,7 @@
 
 import math
 from eilmer.geom.vector3 import Vector3
-from eilmer.geom.path import Line, Arc
+from eilmer.geom.path import Line, Arc, Polyline
 
 def approxEqual(a, b):
     result = math.isclose(a, b, rel_tol=1.0e-2, abs_tol=1.0e-5)
@@ -42,5 +42,10 @@ assert approxEqual(d.y, math.sqrt(2)), "Arc evaluation y-component"
 assert approxEqual(d.z, 0.0), "Arc evaluation z-component"
 print("arc_abc.length()=", arc_abc.length())
 assert approxEqual(arc_abc.length(), math.pi), "Arc length()"
+
+e = Polyline([Line(p0=[-math.pi,2.0],p1=[0.0,2.0]), arc_abc])
+print("e=", e)
+f = e(0.5)
+print("e(0.5)=", e(0.5))
 
 print("Done.")
