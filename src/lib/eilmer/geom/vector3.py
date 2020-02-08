@@ -6,7 +6,7 @@ PJ, 2020-02-05
 """
 
 import math
-
+import numbers
 
 class Vector3(object):
     """
@@ -46,11 +46,14 @@ class Vector3(object):
                 self.z = 0.0
             else:
                 self.z = z
+        if not(isinstance(self.x, numbers.Real) and
+               isinstance(self.y, numbers.Real) and
+               isinstance(self.z, numbers.Real)):
+            raise Exception("Elements should be Real numbers.")
         return
 
-    def __str__(self):
-        text = "Vector3(x=%g, y=%g, z=%g)" % (self.x, self.y, self.z)
-        return text
+    def __repr__(self):
+        return "Vector3(x={}, y={}, z={})".format(self.x, self.y, self.z)
 
     def __abs__(self):
         return math.sqrt(self.x**2 + self.y**2 + self.z**2)
@@ -77,39 +80,33 @@ class Vector3(object):
         return self
 
     def __mul__(self, other):
-        if isinstance(other, float) or isinstance(other, int):
-            result = Vector3(self.x*other, self.y*other, self.z*other)
+        if isinstance(other, numbers.Real):
+            return Vector3(self.x*other, self.y*other, self.z*other)
         else:
-            raise Exception("__mul__ expected a number for other.")
-        return result
+            return NotImplemented
 
     def __rmul__(self, other):
-        if isinstance(other, float) or isinstance(other, int):
-            result = Vector3(self.x*other, self.y*other, self.z*other)
-        else:
-            raise Exception("__rmul__ expected a number for other.")
-        return result
+        return self * other
 
     def __imul__(self, other):
-        if isinstance(other, float) or isinstance(other, int):
+        if isinstance(other, numbers.Real):
             self.x *= other; self.y *= other; self.z *= other
+            return self
         else:
-            raise Exception("__imul__ expected a number for other.")
-        return self
+            return NotImplemented
 
     def __truediv__(self, other):
-        if isinstance(other, float) or isinstance(other, int):
-            result = Vector3(self.x/other, self.y/other, self.z/other)
+        if isinstance(other, numbers.Real):
+            return Vector3(self.x/other, self.y/other, self.z/other)
         else:
-            raise Exception("__trudiv__ expected a number for other.")
-        return result
+            return NotImplemented
 
     def __itruediv__(self, other):
-        if isinstance(other, float) or isinstance(other, int):
+        if isinstance(other, numbers.Real):
             self.x /= other; self.y /= other; self.z /= other
+            return self
         else:
-            raise Exception("__itruediv__ expected a number for other.")
-        return self
+            return NotImplemented
     
     def normalize(self):
         mag = abs(self)
@@ -117,7 +114,10 @@ class Vector3(object):
         return
 
     def dot(self, other):
-        return self.x*other.x + self.y*other.y + self.z*other.z
+        if isinstance(other, Vector3):
+            return self.x*other.x + self.y*other.y + self.z*other.z
+        else:
+            raise Exception("dot() not implemented for {}".format(type(other)))
         
     def transform_to_local_frame(self, n, t1, t2, c=None):
         """
