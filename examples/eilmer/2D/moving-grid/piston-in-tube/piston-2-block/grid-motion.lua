@@ -6,7 +6,7 @@ function assignVtxVelocities(t, dt)
    local xdot = userPad[2]
    local zeroVel = Vector3:new{x=0, y=0}
    local pSpeedVec = Vector3:new{x=xdot, y=0}
-   for _,blkId in ipairs(localBlockIds) do
+   for _,blkId in ipairs(localFluidBlockIds) do
       if blkId == 0 then
          setVtxVelocitiesByCorners(blkId, zeroVel, pSpeedVec, pSpeedVec, zeroVel)
       end
