@@ -24,7 +24,7 @@ class Line(Path):
         self.p1 = Vector3(p1)
         return
 
-    def __str__(self):
+    def __repr__(self):
         return "Line(p0={}, p1={})".format(self.p0, self.p1)
     
     def __call__(self, t):
@@ -150,4 +150,69 @@ class Polyline(Path):
 
 
 class ArcLengthParameterizedPath(Path):
-    pass
+    """
+    A Path reparameterized such that equal increments in t correspond 
+    to approximately equal increments in arc length.
+    """
+    __slots__ = ['underlying_path', 'arc_lengths', 't_values', '_n']
+
+    def __init__(self, underlying_path, n=1000):
+        if isinstance(underlying_path, Path):
+            self.underlying_path = underlying_path
+            if n < 1: raise RuntimeError("Should have at least one arc-length sample.")
+            self._n = n
+            self.set_arc_lengths()
+        else:
+            raise NotImplementedError("underlying_path should be a type of Path")
+        return
+
+    def set_arc_lengths(self):
+        """
+        Compute the arc lengths for a number of sample points along the Path
+        (in equally-spaced values of t) so that these can later be used to do
+        a reverse interpolation on the evaluation parameter.
+        """
+        dt = 1.0/self._n
+        L = 0.0
+        self.arc_lengths = [0.0,]
+        self.t_values = [0.0,]
+        p0 = self.underlying_path(0.0)
+        for i in range(1, self._n+1):
+            p1 = self.underlying_path(dt*i)
+            L += abs(p1-p0)
+            self.arc_lengths.append(L)
+            self.t_values.append(dt*i)
+            p0 = p1
+        return
+
+    def underlying_t(self, t):
+        """
+        Search the pieces of arc length to find the piece containing the
+        desired point and then interpolate the local value of t for that piece.
+        """
+        # The incoming parameter value, t, is proportional to arc_length fraction.
+        if t < 0.0: return 0.0
+        if t > 1.0: return 1.0
+        L_target = t * self.arc_lengths[-1]
+        # Starting from the right-hand end,
+        # let's try to find a point to the left of L_target.
+        # If the value is out of range, this should just result in
+        # us extrapolating one of the end segments -- that's OK.
+        i = self._n - 1
+        while (L_target < self.arc_lengths[i]) and (i > 0): i -= 1
+        frac = (L_target - self.arc_lengths[i]) / \
+               (self.arc_lengths[i+1]-self.arc_lengths[i])
+        return (1.0-frac)*self.t_values[i] + frac*self.t_values[i+1]
+    
+    def __repr__(self):
+        return "ArcLengthParameterizedPath(underlying_path={}, n={})".format(
+            self.underlying_path, self._n)
+    
+    def __call__(self, t):
+        return self.underlying_path(self.underlying_t(t))
+
+    def length(self):
+        return self.underlying_path.length()
+    
+    # end class ArcLengthParameterizedPath
+
