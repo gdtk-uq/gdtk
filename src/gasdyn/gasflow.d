@@ -500,6 +500,122 @@ number steady_flow_with_area_change(const(GasState)state1, number V1, number A2_
 } // end steady_flow_with_area_change()
 
 
+//------------------------------------------------------------------------
+// Finite-strength waves along characteristic lines.
+
+number finite_wave_dp(const(GasState) state1, number V1,
+                      string characteristic, number p2,
+                      GasState state2, GasModel gm, int steps=100)
+/**
+ * Process the gas isentropically, following a characteristic line.
+ *
+ * See Section 7.6 Finite Nonlinear Waves in JD Anderson's text
+ * Modern Compressible Flow.
+ *
+ * Input:
+ *   state1: initial gas state
+ *   V1: initial gas velocity, in m/s
+ *   characteristic: is either 'cplus' or 'cminus'
+ *   p2: target pressure after processing, in Pa
+ *   state2: reference to the final gas state (to be computed)
+ *   gm: reference to the current gas model
+ *   steps: number of small steps to take through the process
+ *
+ * Returns: flow velocity after processing.
+ */
+{
+    // Assume a chemically-frozen gas, so copy mass-fractions and the like from state1.
+    state2.copy_values_from(state1);
+    gm.update_thermo_from_pT(state2);
+    //
+    number V2 = V1;
+    number p1 = state1.p;
+    number s1 = gm.entropy(state1);
+    //
+    number dV;
+    number dp = (p2 - state1.p)/steps;
+    // Use more than the requested number of steps if p2 < dp, 
+    // to prevent an overshoot into -ve pressure. (Chris James)
+    while (p2 < abs(dp)) {
+        steps = to!int(steps * 1.1);
+        dp = (p2 - state1.p)/steps;
+    }
+    state2.p = p1+0.5*dp; // effectively mid-point of next step
+    gm.update_thermo_from_ps(state2, s1);        
+    gm.update_sound_speed(state2);        
+    foreach (i; 0 .. steps) {
+        number rhoa = state2.rho * state2.a;
+        if (characteristic == "cminus") {
+            dV = dp / rhoa;
+        } else {
+            dV = -dp / rhoa;
+        }
+        V2 += dV;
+        state2.p += dp;  // prepare for next step
+        gm.update_thermo_from_ps(state2, s1);
+        gm.update_sound_speed(state2);
+    }
+    // back up to the correct end-point
+    state2.p -= 0.5 * dp;
+    gm.update_thermo_from_ps(state2, s1);
+    gm.update_sound_speed(state2);
+    return V2;
+} // end finite_wave_dp()
+
+
+number finite_wave_dv(const(GasState) state1, number V1,
+                      string characteristic, number V2_target,
+                      GasState state2, GasModel gm,
+                      int steps=100, double Tmin=200.0)
+/**
+ * Process the gas isentropically, following a characteristic line.
+ *
+ * See Section 7.6 Finite Nonlinear Waves in JD Anderson's text
+ * Modern Compressible Flow.
+ *
+ * Input:
+ *   state1: initial gas state
+ *   V1: initial gas velocity, in m/s
+ *   characteristic: is either 'cplus' or 'cminus'
+ *   V2_target: desired velocity after processing, in m/s
+ *     Note that we may not reach the requested velocity before pressure 
+ *     and temperature become too small.
+ *   state2: reference to the final gas state (to be computed)
+ *   gm: reference to the current gas model
+ *   steps: number of small steps to take through the process
+ *   Tmin: temperature (in Kelvin) below which we terminate the process.
+ *     We have this minimum to avoid problems with the thermodynamic
+ *     polynomials of CEA2 program.  If you really want to work with very low
+ *     temperatures, it's probably best to use an ideal gas model.
+ *
+ * Returns: flow velocity after processing.
+ */
+{
+    number V2 = V1;
+    number dV = (V2_target - V1)/steps;
+    number s1 = gm.entropy(state1);
+    state2.copy_values_from(state1);
+    gm.update_sound_speed(state2);
+    foreach (i; 0 .. steps) {
+        number rhoa = state2.rho * state2.a;
+        number dp;
+        if (characteristic == "cminus") {
+            dp = dV * rhoa;
+        } else {
+            dp = -dV * rhoa;
+        }
+        V2 += dV;
+        state2.p += dp;
+        gm.update_thermo_from_ps(state2, s1);
+        gm.update_sound_speed(state2);
+        if (state2.T < Tmin) { break; }
+    }
+    return V2;
+} // end finite_wave_dv()
+
+
+//------------------------------------------------------------------------
+
 number[] osher_riemann(const(GasState) stateL, const(GasState) stateR,
                        double velL, double velR,
                        GasState stateLstar, GasState stateRstar, GasState stateX0,
@@ -517,7 +633,7 @@ number[] osher_riemann(const(GasState) stateL, const(GasState) stateR,
  *   stateX0: reference to processed state at x=0 (to be estimated)
  *   gm: the gas model in use
  *
- * Returns: the dynamic array [pstar, wstar, wL, wR, velX0], containing the post-shock gas speeds,
+ * Returns: the dynamic array [pstar, wstar, wL, wR, velX0], containing
  *   pstar: pressure at the contact surface
  *   wstar: speed of contact surface
  *   wL: speed of Left wave
@@ -648,123 +764,10 @@ number[] osher_riemann(const(GasState) stateL, const(GasState) stateR,
         }
     }
     gm.update_thermo_from_rhou(stateX0);
+    gm.update_sound_speed(stateX0);
     //
     return [pstar, wstar, wL, wR, velX0];
 } // end osher_riemann()
-
-
-//------------------------------------------------------------------------
-// Finite-strength waves along characteristic lines.
-
-number finite_wave_dp(const(GasState) state1, number V1,
-                      string characteristic, number p2,
-                      GasState state2, GasModel gm, int steps=100)
-/**
- * Process the gas isentropically, following a characteristic line.
- *
- * See Section 7.6 Finite Nonlinear Waves in JD Anderson's text
- * Modern Compressible Flow.
- *
- * Input:
- *   state1: initial gas state
- *   V1: initial gas velocity, in m/s
- *   characteristic: is either 'cplus' or 'cminus'
- *   p2: target pressure after processing, in Pa
- *   state2: reference to the final gas state (to be computed)
- *   gm: reference to the current gas model
- *   steps: number of small steps to take through the process
- *
- * Returns: flow velocity after processing.
- */
-{
-    // Assume a chemically-frozen gas, so copy mass-fractions and the like from state1.
-    state2.copy_values_from(state1);
-    gm.update_thermo_from_pT(state2);
-    //
-    number V2 = V1;
-    number p1 = state1.p;
-    number s1 = gm.entropy(state1);
-    //
-    number dV;
-    number dp = (p2 - state1.p)/steps;
-    // Use more than the requested number of steps if p2 < dp, 
-    // to prevent an overshoot into -ve pressure. (Chris James)
-    while (p2 < abs(dp)) {
-        steps = to!int(steps * 1.1);
-        dp = (p2 - state1.p)/steps;
-    }
-    state2.p = p1+0.5*dp; // effectively mid-point of next step
-    gm.update_thermo_from_ps(state2, s1);        
-    gm.update_sound_speed(state2);        
-    foreach (i; 0 .. steps) {
-        number rhoa = state2.rho * state2.a;
-        if (characteristic == "cminus") {
-            dV = dp / rhoa;
-        } else {
-            dV = -dp / rhoa;
-        }
-        V2 += dV;
-        state2.p += dp;  // prepare for next step
-        gm.update_thermo_from_ps(state2, s1);
-        gm.update_sound_speed(state2);
-    }
-    // back up to the correct end-point
-    state2.p -= 0.5 * dp;
-    gm.update_thermo_from_ps(state2, s1);
-    gm.update_sound_speed(state2);
-    return V2;
-} // end finite_wave_dp()
-
-
-number finite_wave_dv(const(GasState) state1, number V1,
-                      string characteristic, number V2_target,
-                      GasState state2, GasModel gm,
-                      int steps=100, double Tmin=200.0)
-/**
- * Process the gas isentropically, following a characteristic line.
- *
- * See Section 7.6 Finite Nonlinear Waves in JD Anderson's text
- * Modern Compressible Flow.
- *
- * Input:
- *   state1: initial gas state
- *   V1: initial gas velocity, in m/s
- *   characteristic: is either 'cplus' or 'cminus'
- *   V2_target: desired velocity after processing, in m/s
- *     Note that we may not reach the requested velocity before pressure 
- *     and temperature become too small.
- *   state2: reference to the final gas state (to be computed)
- *   gm: reference to the current gas model
- *   steps: number of small steps to take through the process
- *   Tmin: temperature (in Kelvin) below which we terminate the process.
- *     We have this minimum to avoid problems with the thermodynamic
- *     polynomials of CEA2 program.  If you really want to work with very low
- *     temperatures, it's probably best to use an ideal gas model.
- *
- * Returns: flow velocity after processing.
- */
-{
-    number V2 = V1;
-    number dV = (V2_target - V1)/steps;
-    number s1 = gm.entropy(state1);
-    state2.copy_values_from(state1);
-    gm.update_sound_speed(state2);
-    foreach (i; 0 .. steps) {
-        number rhoa = state2.rho * state2.a;
-        number dp;
-        if (characteristic == "cminus") {
-            dp = dV * rhoa;
-        } else {
-            dp = -dV * rhoa;
-        }
-        V2 += dV;
-        state2.p += dp;
-        gm.update_thermo_from_ps(state2, s1);
-        gm.update_sound_speed(state2);
-        if (state2.T < Tmin) { break; }
-    }
-    return V2;
-} // end finite_wave_dv()
 
 
 //------------------------------------------------------------------------
