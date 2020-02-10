@@ -402,6 +402,7 @@ final class GlobalConfig {
     shared static bool is_master_task = true; // In an MPI run, only one task will be master.
     shared static int[] mpi_rank_for_block; // To know where each block has been assigned.
     shared static int[] localFluidBlockIds; // We will search this array to see if the fluid block is local.
+    shared static int[] localSolidBlockIds; // We will search this array to see if the solid block is local.
     //
     shared static string base_file_name = "job"; // Change this to suit at run time.
     shared static string grid_format = "gziptext"; // alternative is "rawbinary"
@@ -1719,12 +1720,12 @@ void read_config_file()
         dedicatedSolidConfig ~= new LocalConfig(i);
     }
     foreach (i; 0 .. GlobalConfig.nSolidBlocks) {
-        solidBlocks ~= new SSolidBlock(i, jsonData["solid_block_" ~ to!string(i)]);
+        localSolidBlocks ~= new SSolidBlock(i, jsonData["solid_block_" ~ to!string(i)]);
         if (GlobalConfig.verbosity_level > 1) {
-            writeln("  SolidBlock[", i, "]: ", solidBlocks[i]);
+            writeln("  SolidBlock[", i, "]: ", localSolidBlocks[i]);
         }
     }
-    foreach (sblk; solidBlocks) {
+    foreach (sblk; localSolidBlocks) {
         sblk.initLuaGlobals();
         sblk.initBoundaryConditions(jsonData["solid_block_" ~ to!string(sblk.id)]);
         if ( GlobalConfig.udfSolidSourceTerms ) {

@@ -48,7 +48,7 @@ public:
 
     this(int id, int boundary, string description)
     {
-        blk = solidBlocks[id];
+        blk = localSolidBlocks[id];
         whichBoundary = boundary;
         desc = description;
     }

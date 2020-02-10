@@ -44,7 +44,7 @@ void initSolidLooseCouplingUpdate()
 {
     int ncells = 0;
     int m = GlobalConfig.sdluOptions.maxGMRESIterations;
-    foreach (sblk; solidBlocks) {
+    foreach (sblk; localSolidBlocks) {
         ncells += sblk.activeCells.length;
     }
     r0 = new Matrix!number(ncells, 1);
@@ -71,7 +71,7 @@ Matrix!number eval_dedts(Matrix!number eip1, int ftl, double sim_time)
 { 
     auto n = eip1.nrows;
     Matrix!number ret = zeros!number(n, 1); // array that will be returned (empty - to be populated)
-    foreach (sblk; parallel(solidBlocks, 1)) {
+    foreach (sblk; parallel(localSolidBlocks, 1)) {
         if (!sblk.active) continue;
         sblk.applyPreSpatialDerivAction(sim_time, ftl);
         sblk.clearSources(); 
@@ -79,16 +79,16 @@ Matrix!number eval_dedts(Matrix!number eip1, int ftl, double sim_time)
         sblk.computeFluxes();
     }
     if (GlobalConfig.apply_bcs_in_parallel) {
-        foreach (sblk; parallel(solidBlocks, 1)) {
+        foreach (sblk; parallel(localSolidBlocks, 1)) {
             if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
         }
     } else {
-        foreach (sblk; solidBlocks) {
+        foreach (sblk; localSolidBlocks) {
             if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
         }
     }
     int i = 0;
-    foreach (sblk; parallel(solidBlocks, 1)) {
+    foreach (sblk; parallel(localSolidBlocks, 1)) {
         foreach (scell; sblk.activeCells) { 
             if (GlobalConfig.udfSolidSourceTerms) {
                 addUDFSourceTermsToSolidCell(sblk.myL, scell, sim_time);
@@ -110,7 +110,7 @@ Matrix!number e_vec(int ftl)
 // Returns: Matrix of numbers
 {
     number[] test1;
-    foreach (sblk; solidBlocks){ 
+    foreach (sblk; localSolidBlocks){ 
         foreach(scell; sblk.activeCells){
             test1 ~= scell.e[ftl];
         }
@@ -326,7 +326,7 @@ void post(Matrix!number eip1, Matrix!number dei)
 // Returns: none
 {
     int i = 0;
-    foreach (sblk; solidBlocks){ 
+    foreach (sblk; localSolidBlocks){ 
         foreach(scell; sblk.activeCells){
             number eicell = eip1[i, 0];
             scell.e[0] = eicell;
@@ -344,7 +344,7 @@ void solid_domains_backward_euler_update(double sim_time, double dt_global)
     writeln("== Begin Step ==");
     auto t0 = Clock.currTime();
     int n = 0;
-    foreach (sblk; parallel(solidBlocks, 1)) {
+    foreach (sblk; parallel(localSolidBlocks, 1)) {
         foreach (scell; sblk.activeCells) {
             if (sim_time-dt_global == 0){ 
                 // initialise e0 values

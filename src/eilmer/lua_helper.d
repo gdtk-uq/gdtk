@@ -282,12 +282,16 @@ extern(C) int luafn_sampleSolidCell(lua_State *L)
 {
     // Get arguments from lua_stack
     auto blkId = lua_tointeger(L, 1);
+    if (!canFind(GlobalConfig.localSolidBlockIds, blkId)) {
+        string msg = format("Block id %d is not local to process.", blkId);
+        luaL_error(L, msg.toStringz);
+    }
     auto i = lua_tointeger(L, 2);
     auto j = lua_tointeger(L, 3);
     auto k = lua_tointeger(L, 4);
 
     // Grab the appropriate cell
-    auto cell = solidBlocks[blkId].getCell(i, j, k);
+    auto cell = localSolidBlocks[blkId].getCell(i, j, k);
     
     // Return the interesting bits as a table.
     lua_newtable(L);

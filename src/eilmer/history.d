@@ -55,10 +55,10 @@ void init_history_cell_files()
         auto blkId = hcell[0];
         auto cellId = hcell[1];
         if (GlobalConfig.in_mpi_context) { throw new Error("[TODO] not available in MPI context."); }
-        if (cellId >= solidBlocks[blkId].activeCells.length) {
+        if (cellId >= localSolidBlocks[blkId].activeCells.length) {
             string errMsg = "ERROR: init_history_cell_files()\n";
             errMsg ~= format("The requested history cell index %d is not valid for solid block %d.\n", cellId, blkId);
-            errMsg ~= format("This solid block only has %d cells.\n", solidBlocks[blkId].activeCells.length);
+            errMsg ~= format("This solid block only has %d cells.\n", localSolidBlocks[blkId].activeCells.length);
             throw new FlowSolverException(errMsg);
         }
         string fname = format("%s/%s-solid-blk-%d-cell-%d.dat", 
@@ -97,7 +97,7 @@ void write_history_cells_to_files(double sim_time)
         if (GlobalConfig.in_mpi_context) { throw new Error("[TODO] not available in MPI context."); }
         string fname = format("%s/%s-solid-blk-%d-cell-%d.dat", 
                               histDir, GlobalConfig.base_file_name, blkId, cellId);
-        auto cell = solidBlocks[blkId].activeCells[cellId];
+        auto cell = localSolidBlocks[blkId].activeCells[cellId];
         auto writer = appender!string();
         formattedWrite(writer, "%.18e %s\n", sim_time,
                        cell.writeValuesToString());
