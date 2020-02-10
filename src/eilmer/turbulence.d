@@ -38,6 +38,7 @@ class TurbulenceModelObject{
     @nogc abstract number turbulent_conductivity(const FlowState fs, GasModel gm) const;
     @nogc abstract number turbulent_signal_frequency(const FlowState fs) const;
     @nogc abstract number turbulent_kinetic_energy(const FlowState fs) const;
+    @nogc abstract number[3] turbulent_kinetic_energy_transport(const FlowState fs, const FlowGradients grad) const;
     @nogc abstract string primitive_variable_name(size_t i) const;
     @nogc abstract number turb_limits(size_t i) const;
     @nogc abstract number viscous_transport_coeff(const FlowState fs, size_t i) const;
@@ -101,6 +102,15 @@ class noTurbulenceModel : TurbulenceModelObject {
         return tke;
     }
 
+    @nogc final override
+    number[3] turbulent_kinetic_energy_transport(const FlowState fs, const FlowGradients grad) const {
+        number[3] qtke;
+        qtke[0] = 0.0;
+        qtke[1] = 0.0;
+        qtke[2] = 0.0;
+        return qtke;
+    }
+
     @nogc final override string primitive_variable_name(size_t i) const {
         return "";
     }
@@ -137,22 +147,24 @@ class kwTurbulenceModel : TurbulenceModelObject {
         number Pr_t = getJSONdouble(config, "turbulence_prandtl_number", 0.89);
         bool axisymmetric = getJSONbool(config, "axisymmetric", false);
         int dimensions = getJSONint(config, "dimensions", 2);
-        this(Pr_t, axisymmetric, dimensions);
+        number max_mu_t_factor = getJSONdouble(config, "max_mu_t_factor", 300.0);
+        this(Pr_t, axisymmetric, dimensions, max_mu_t_factor);
     }
 
     this (kwTurbulenceModel other){
         //writeln("In kw turbulence model dup class constructor.");
         // This constructir can access other's private variables
         // because they are the same class
-        this(other.Pr_t, other.axisymmetric, other.dimensions);
+        this(other.Pr_t, other.axisymmetric, other.dimensions, other.max_mu_t_factor);
         return;
     }
 
-    this (number Pr_t, bool axisymmetric, int dimensions) {
+    this (number Pr_t, bool axisymmetric, int dimensions, number max_mu_t_factor) {
         //writeln("In kw turbulence model specific class constructor");
         this.Pr_t = Pr_t;
         this.axisymmetric = axisymmetric;
         this.dimensions = dimensions;
+        this.max_mu_t_factor = max_mu_t_factor ;
     }
     @nogc final override string modelName() const {return "k_omega";}
     @nogc final override size_t nturb() const {return 2;}
@@ -252,6 +264,20 @@ class kwTurbulenceModel : TurbulenceModelObject {
         return tke;
     }
 
+    @nogc final override
+    number[3] turbulent_kinetic_energy_transport(const FlowState fs, const FlowGradients grad) const {
+        // k-w uses the same expression for \overline{rho uj" 0.5 ui" ui"} as in the tke equation
+        // taken from fvinterface viscous_flux_calc
+        number mu_effective = viscous_transport_coeff(fs, 0);
+        mu_effective = fmin(mu_effective, max_mu_t_factor * fs.gas.mu);
+
+        number[3] qtke;
+        qtke[0] = mu_effective * grad.turb[0][0];
+        qtke[1] = mu_effective * grad.turb[0][1];
+        qtke[2] = mu_effective * grad.turb[0][2];
+        return qtke;
+    }
+
     @nogc final override string primitive_variable_name(size_t i) const {
         return _varnames[i];
     }
@@ -279,6 +305,7 @@ private:
     immutable number Pr_t;
     immutable bool axisymmetric;
     immutable int dimensions;
+    immutable number max_mu_t_factor;
     immutable string[2] _varnames = ["tke", "omega"];
     immutable number[2] _varlimits = [0.0, 1.0];
     immutable number[2] _sigmas = [0.6, 0.5];

@@ -645,20 +645,17 @@ public:
             version(komega) {
                 if ( myConfig.turbulence_model == TurbulenceModel.k_omega &&
                      !(myConfig.axisymmetric && (Ybar <= 1.0e-10)) ) {
-                    // Turbulence contribution to the shear stresses. TODO: tke function (NNG)
-                    tau_xx -= 2.0/3.0 * fs.gas.rho * fs.turb[0];
-                    tau_yy -= 2.0/3.0 * fs.gas.rho * fs.turb[0];
-                    if (myConfig.dimensions == 3) { tau_zz -= 2.0/3.0 * fs.gas.rho * fs.turb[0]; }
+                    // Turbulence contribution to the shear stresses.
+                    number tke = myConfig.turb_model.turbulent_kinetic_energy(fs);
+                    tau_xx -= 2.0/3.0 * fs.gas.rho * tke;
+                    tau_yy -= 2.0/3.0 * fs.gas.rho * tke;
+                    if (myConfig.dimensions == 3) { tau_zz -= 2.0/3.0 * fs.gas.rho * tke; }
 
-                    // Turbulence contribution to heat transfer.
-                    number sigma_star = 0.6;
-                    number mu_effective = fs.gas.mu + sigma_star * fs.gas.rho * fs.turb[0] / fs.turb[1];
-                    // Apply a limit on mu_effective in the same manner as that applied to mu_t.
-                    mu_effective = fmin(mu_effective, myConfig.max_mu_t_factor * fs.gas.mu);
-                    qx += mu_effective * grad.turb[0][0];
-                    qy += mu_effective * grad.turb[0][1];
-                    if (myConfig.dimensions == 3) { qz += mu_effective * grad.turb[0][2]; }
-
+                    // Turbulent transport of turbulent kinetic energy 
+                    number[3] qtke = myConfig.turb_model.turbulent_kinetic_energy_transport(fs, grad);
+                    qx += qtke[0];
+                    qy += qtke[1];
+                    if (myConfig.dimensions == 3) { qz += qtke[2]; }
                 }
             }
             if (myConfig.apply_shear_stress_relative_limit) {
