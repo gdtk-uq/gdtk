@@ -445,7 +445,7 @@ public:
     {
         int number_of_invalid_cells = 0;
         foreach(cell; cells) {
-            if (cell.data_is_bad || cell.fs.check_data(cell.pos[0], myConfig.flowstate_limits) == false) {
+            if (cell.data_is_bad || cell.fs.check_data(cell.pos[0], myConfig) == false) {
                 ++number_of_invalid_cells;
                 if (myConfig.report_invalid_cells) {
                     writefln("count_invalid_cells: block_id=%d, cell_id=%d at pos %s\n",
@@ -463,7 +463,7 @@ public:
                         auto face = cell.iface[i];
                         auto other_cell = (cell.outsign[i] == 1) ? face.right_cell : face.left_cell;
                         if (other_cell && other_cell.contains_flow_data &&
-                            other_cell.fs.check_data(other_cell.pos[gtl], myConfig.flowstate_limits)) {
+                            other_cell.fs.check_data(other_cell.pos[gtl], myConfig)) {
                             neighbour_flows ~= other_cell.fs;
                         }
                     }

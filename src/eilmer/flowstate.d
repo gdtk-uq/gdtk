@@ -65,8 +65,7 @@ public:
             divB = divB_init;
         }
         version(komega) {
-            turb[0] = turb_init[0];
-            turb[1] = turb_init[1];
+            foreach (i; 0 .. turb.length) turb[i] = turb_init[i];
         }
         mu_t = mu_t_init;
         k_t = k_t_init;
@@ -84,8 +83,7 @@ public:
             divB = other.divB;
         }
         version(komega) {
-            turb[0] = other.turb[0];
-            turb[1] = other.turb[1];
+            foreach (i; 0 .. turb.length) turb[i] = other.turb[i];
         }
         mu_t = other.mu_t;
         k_t = other.k_t;
@@ -104,8 +102,7 @@ public:
             divB = other.divB;
         }
         version(komega) {
-            turb[0] = other.turb[0];
-            turb[1] = other.turb[1];
+            foreach (i; 0 .. turb.length) turb[i] = other.turb[i];
         }
         mu_t = other.mu_t;
         k_t = other.k_t;
@@ -122,8 +119,7 @@ public:
             divB = 0.0;
         }
         version(komega) {
-            turb[0] = 0.0;
-            turb[1] = 1.0;
+            foreach (i; 0 .. turb.length) turb[i] = 0.0;
         }
         mu_t = 0.0;
         k_t = 0.0;
@@ -158,8 +154,9 @@ public:
             divB = getJSONdouble(json_data, "divB", 0.0);
         }
         version(komega) {
-            turb[0] = getJSONdouble(json_data, "tke", 0.0);
-            turb[1] = getJSONdouble(json_data, "omega", 1.0);
+            double[] turb_in;
+            turb_in = getJSONdoublearray(json_data, "turb", []);
+            foreach (i; 0 .. turb.length) turb[i] = turb_in[i];
         }
         mu_t = getJSONdouble(json_data, "mu_t", 0.0);
         k_t = getJSONdouble(json_data, "k_t", 0.0);
@@ -184,8 +181,7 @@ public:
             divB = other.divB;
         }
         version(komega) {
-            turb[0] = other.turb[0];
-            turb[1] = other.turb[1];
+            foreach(i; 0 .. turb.length) turb[i] =  other.turb[i];
         }
         mu_t = other.mu_t;
         k_t = other.k_t;
@@ -208,8 +204,7 @@ public:
             divB = 0.5 * (fs0.divB + fs1.divB);
         }
         version(komega) {
-            turb[0] = 0.5 * (fs0.turb[0] + fs1.turb[0]);
-            turb[1] = 0.5 * (fs0.turb[1] + fs1.turb[1]);
+            foreach (i; 0 .. turb.length) turb[i] =  0.5 * (fs0.turb[i] + fs1.turb[i]);
         }
         mu_t = 0.5 * (fs0.mu_t + fs1.mu_t);
         k_t = 0.5 * (fs0.k_t + fs1.k_t);
@@ -239,8 +234,7 @@ public:
             divB = 0.0;
         }
         version(komega) {
-            turb[0] = 0.0;
-            turb[1] = 0.0;
+            foreach(i; 0 .. turb.length) turb[i] = 0.0;
         }
         mu_t = 0.0;
         k_t = 0.0;
@@ -253,8 +247,7 @@ public:
                 divB += other.divB;
             }
             version(komega) {
-                turb[0] += other.turb[0];
-                turb[1] += other.turb[1];
+                foreach (i; 0 .. turb.length) turb[i] += other.turb[i];
             }
             mu_t += other.mu_t;
             k_t += other.k_t;
@@ -268,8 +261,7 @@ public:
             divB *= scale;
         }
         version(komega) {
-            turb[0] *= scale;
-            turb[1] *= scale;
+            foreach (i; 0 .. turb.length) turb[i] *= scale;
         }
         mu_t *= scale;
         k_t *= scale;
@@ -288,8 +280,7 @@ public:
             repr ~= ", divB=" ~ to!string(psi);
         }
         version(komega) {
-            repr ~= ", tke=" ~ to!string(turb[0]);
-            repr ~= ", omega=" ~ to!string(turb[1]);
+            repr ~= ", turb=" ~ to!string(turb);
         }
         repr ~= ", mu_t=" ~ to!string(mu_t);
         repr ~= ", k_t=" ~ to!string(k_t);
@@ -331,8 +322,10 @@ public:
             formattedWrite(writer, ", \"divB\": %.18e", divB.re);
         }
         version(komega) {
-            formattedWrite(writer, ", \"tke\": %.18e", turb[0].re);
-            formattedWrite(writer, ", \"omega\": %.18e", turb[1].re);
+            formattedWrite(writer, ", \"turb\": [");
+            if (turb.length > 0) { formattedWrite(writer, " %.18e", turb[0].re); }
+            foreach (i; 1 .. turb.length) { formattedWrite(writer, ", %.18e", turb[i].re); }
+            formattedWrite(writer, "]");
         }
         formattedWrite(writer, ", \"mu_t\": %.18e", mu_t.re);
         formattedWrite(writer, ", \"k_t\": %.18e", k_t.re);
@@ -342,8 +335,9 @@ public:
     } // end toJSONString()
 
     @nogc
-    bool check_data(ref Vector3 pos, ref const(FlowStateLimits) flowstate_limits) const
+    bool check_data(ref Vector3 pos, ref const(LocalConfig) lc) const
     {
+        auto flowstate_limits = lc.flowstate_limits;
         bool is_data_valid = gas.check_values(true);
         if (fabs(vel.x) > flowstate_limits.max_velocity ||
             fabs(vel.y) > flowstate_limits.max_velocity ||
@@ -360,25 +354,8 @@ public:
             is_data_valid = false;
         }
         version(komega) {
-            if (!isFinite(turb[0].re)) {
-                debug { writeln("Turbulence KE invalid number ", turb[0]); }
-                is_data_valid = false;
-            }
-            if (turb[0] < flowstate_limits.min_tke) {
-                debug { writeln("Turbulence KE below minimum ", turb[0]); }
-                is_data_valid = false;
-            }
-            if (turb[0] > flowstate_limits.max_tke) {
-                debug { writeln("Turbulence KE above maximum ", turb[0]); }
-                is_data_valid = false;
-            }
-            if (!isFinite(turb[1].re)) {
-                debug { writeln("Turbulence frequency invalid number ", turb[1]); }
-                is_data_valid = false;
-            }
-            if (turb[1] <= 0.0) {
-                debug { writeln("Turbulence frequency nonpositive ", turb[1]); }
-                is_data_valid = false;
+            if (!lc.turb_model.is_valid(flowstate_limits, turb)) {
+            is_data_valid = false;
             }
         }
         if (!is_data_valid) {
