@@ -296,8 +296,9 @@ public:
         }
         version(komega) {
             if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                mixin(codeForLimits("turb[0]", "turb[0]", "turbPhi[0]", "turbMax[0]", "turbMin[0]"));
-                mixin(codeForLimits("turb[1]", "turb[1]", "turbPhi[1]", "turbMax[1]", "turbMin[1]"));
+                foreach (it; 0 .. turb.length) {
+                mixin(codeForLimits("turb[it]","turb[it]","turbPhi[it]","turbMax[it]","turbMin[it]"));
+                }
             }
         }
         version(multi_species_gas) {
@@ -413,8 +414,9 @@ public:
         }
         version(komega) {
             if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                mixin(codeForLimits("turb[0]", "turb[0]", "turbPhi[0]", "turbMax[0]", "turbMin[0]"));
-                mixin(codeForLimits("turb[1]", "turb[1]", "turbPhi[1]", "turbMax[1]", "turbMin[1]"));
+                foreach (it; 0 .. turb.length) {
+                mixin(codeForLimits("turb[it]","turb[it]","turbPhi[it]","turbMax[it]","turbMin[it]"));
+                }
             }
         }
         version(multi_species_gas) {
@@ -510,8 +512,9 @@ public:
         }
         version(komega) {
             if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                mixin(codeForGradients("turb[0]", "turb[0]", "turbMax[0]", "turbMin[0]"));
-                mixin(codeForGradients("turb[1]", "turb[1]", "turbMax[1]", "turbMin[1]"));
+                foreach (it; 0 .. turb.length) {
+                mixin(codeForGradients("turb[it]","turb[it]","turbMax[it]","turbMin[it]"));
+                }
             }
         }
         version(multi_species_gas) {
@@ -629,8 +632,9 @@ public:
         }
         version(komega) {
             if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                mixin(codeForLimits("turb[0]", "turb[0]", "turbPhi[0]", "turbMax[0]", "turbMin[0]"));
-                mixin(codeForLimits("turb[1]", "turb[1]", "turbPhi[1]", "turbMax[1]", "turbMin[1]"));
+                foreach (it; 0 .. turb.length) {
+                mixin(codeForLimits("turb[it]","turb[it]","turbPhi[it]","turbMax[it]","turbMin[it]"));
+                }
             }
         }
         version(multi_species_gas) {
@@ -775,8 +779,9 @@ public:
         }
         version(komega) {
             if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                mixin(codeForLimits("turb[0]", "turb[0]", "turbPhi[0]", "turbMax[0]", "turbMin[0]"));
-                mixin(codeForLimits("turb[1]", "turb[1]", "turbPhi[1]", "turbMax[1]", "turbMin[1]"));
+                foreach (it; 0 .. turb.length) {
+                mixin(codeForLimits("turb[it]","turb[it]","turbPhi[it]","turbMax[it]","turbMin[it]"));
+                }
             }
         }
         version(multi_species_gas) {
@@ -877,8 +882,9 @@ public:
         }
         version(komega) {
             if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                mixin(codeForGradients("turb[0]", "turb[0]", "turbMax[0]", "turbMin[0]"));
-                mixin(codeForGradients("turb[1]", "turb[1]", "turbMax[1]", "turbMin[1]"));
+                foreach (it; 0 .. turb.length) {
+                mixin(codeForGradients("turb[it]","turb[it]","turbMax[it]","turbMin[it]"));
+                }
             }
         }
         version(multi_species_gas) {
@@ -970,6 +976,7 @@ public:
         auto gmodel = myConfig.gmodel;
         auto nsp = myConfig.n_species;
         auto nmodes = myConfig.n_modes;
+        auto nturb = myConfig.turb_model.nturb;
         FVCell cL0 = IFace.left_cell;
         FVCell cR0 = IFace.right_cell;
         // Low-order reconstruction just copies data from adjacent FV_Cell.
@@ -1075,8 +1082,9 @@ public:
             }
             version(komega) {
                 if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                    mixin(codeForReconstruction("turb[0]", "turb[0]", "turb[0]", "turbPhi[0]"));
-                    mixin(codeForReconstruction("turb[1]", "turb[1]", "turb[1]", "turbPhi[1]"));
+                    foreach (it; 0 .. nturb) {
+                    mixin(codeForReconstruction("turb[it]","turb[it]","turb[it]","turbPhi[it]"));
+                    }
                 }
             }
             version(multi_species_gas) {
@@ -1179,6 +1187,7 @@ public:
         auto gmodel = myConfig.gmodel;
         auto nsp = myConfig.n_species;
         auto nmodes = myConfig.n_modes;
+        auto nturb = myConfig.turb_model.nturb;
         FVCell cR0 = IFace.right_cell;
         // Low-order reconstruction just copies data from adjacent FV_Cell.
         // Even for high-order reconstruction, we depend upon this copy for
@@ -1254,8 +1263,9 @@ public:
             }
             version(komega) {
                 if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                    mixin(codeForReconstruction("turb[0]", "turb[0]", "turb[0]", "turbPhi[0]"));
-                    mixin(codeForReconstruction("turb[1]", "turb[1]", "turb[1]", "turbPhi[1]"));
+                    foreach (it; 0 .. nturb) {
+                    mixin(codeForReconstruction("turb[it]","turb[it]","turb[it]","turbPhi[it]"));
+                    }
                 }
             }
             version(multi_species_gas) {
@@ -1345,6 +1355,7 @@ public:
         auto gmodel = myConfig.gmodel;
         auto nsp = myConfig.n_species;
         auto nmodes = myConfig.n_modes;
+        auto nturb = myConfig.turb_model.nturb;
         FVCell cL0 = IFace.left_cell;
         // Low-order reconstruction just copies data from adjacent FV_Cell.
         // Even for high-order reconstruction, we depend upon this copy for
@@ -1420,8 +1431,9 @@ public:
             }
             version(komega) {
                 if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                    mixin(codeForReconstruction("turb[0]", "turb[0]", "turb[0]", "turbPhi[0]"));
-                    mixin(codeForReconstruction("turb[1]", "turb[1]", "turb[1]", "turbPhi[1]"));
+                    foreach (it; 0 .. nturb) {
+                    mixin(codeForReconstruction("turb[it]","turb[it]","turb[it]","turbPhi[it]"));
+                    }
                 }
             }
             version(multi_species_gas) {

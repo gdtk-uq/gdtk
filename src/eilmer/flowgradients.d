@@ -177,8 +177,10 @@ public:
             repr ~= "]";
         }
         version(komega) {
-            repr ~= ", tke=" ~ to!string(turb[0]);
-            repr ~= ", omega=" ~ to!string(turb[1]);
+            repr ~= ", turb=[";
+            if (turb.length>0) repr ~= to!string(turb[0]);
+            foreach (i; 1 .. turb.length) repr ~= ", " ~ to!string(turb[i]);
+            repr ~= "]";
         }
         repr ~= ")";
         return to!string(repr);
