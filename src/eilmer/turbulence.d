@@ -11,6 +11,7 @@ import std.json;
 import flowstate;
 import flowgradients;
 import gas;
+import fvcore;
 import json_helper;
 import nm.number;
 import nm.complex;
@@ -40,6 +41,7 @@ class TurbulenceModelObject{
     @nogc abstract string primitive_variable_name(size_t i) const;
     @nogc abstract number turb_limits(size_t i) const;
     @nogc abstract number viscous_transport_coeff(const FlowState fs, size_t i) const;
+    @nogc abstract bool is_valid(const FlowStateLimits fsl, const number[] turb) const;
 
     // Common methods
     override string toString() const
@@ -110,6 +112,9 @@ class noTurbulenceModel : TurbulenceModelObject {
     @nogc final override number viscous_transport_coeff(const FlowState fs, size_t i) const {
         number mu_eff = 0.0;
         return mu_eff;
+    }
+    @nogc final override bool is_valid(const FlowStateLimits fsl, const number[] turb) const {
+        return true;
     }
 }
 
@@ -265,6 +270,11 @@ class kwTurbulenceModel : TurbulenceModelObject {
         return mu_effective;
     }
 
+    @nogc final override bool is_valid(const FlowStateLimits fsl, const number[] turb) const {
+        bool isvalid = is_tke_valid(fsl, turb[0]) && is_omega_valid(turb[1]);
+        return isvalid;
+    }
+
 private:
     immutable number Pr_t;
     immutable bool axisymmetric;
@@ -272,6 +282,35 @@ private:
     immutable string[2] _varnames = ["tke", "omega"];
     immutable number[2] _varlimits = [0.0, 1.0];
     immutable number[2] _sigmas = [0.6, 0.5];
+
+    @nogc bool is_tke_valid(const FlowStateLimits flowstate_limits, const number tke) const {
+        if (!isFinite(tke.re)) {
+            debug { writeln("Turbulence KE invalid number ", tke); }
+            return false;
+        }
+        if (tke < flowstate_limits.min_tke) {
+            debug { writeln("Turbulence KE below minimum ", tke); }
+            return false;
+        }
+        if (tke > flowstate_limits.max_tke) {
+            debug { writeln("Turbulence KE above maximum ", tke); }
+            return false;
+        }
+        return true;
+    }
+
+    @nogc bool is_omega_valid(const number omega) const {
+        if (!isFinite(omega.re)) {
+            debug { writeln("Turbulence frequency invalid number ", omega); }
+            return false;
+        }
+        if (omega <= 0.0) {
+            debug { writeln("Turbulence frequency nonpositive ", omega); }
+            return false;
+        }
+        return true;
+    }
+
 }
 
 

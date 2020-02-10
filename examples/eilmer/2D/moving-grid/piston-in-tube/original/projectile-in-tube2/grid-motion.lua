@@ -12,7 +12,7 @@
 --    User pad gives us a way of storing data between different interpreters
 --    within our simulation, i.e. the velocity data I have calculated in
 --    udf-process.lua is available here to move the mesh
--- 2. localBlockIds:
+-- 2. localFluidBlockIds:
 --    This allows us to cycle through the blocks within this particular
 --    process. This is required for the MPI implementation where we do not
 --    have access to the blocks that are not being computed within this
@@ -35,7 +35,7 @@ function assignVtxVelocities(sim_time, dt)
    xdot = userPad[2]
    zeroVel = Vector3:new{x=0.0, y=0.0}
    pSpeedVec = Vector3:new{x=xdot, y=0.0}
-   for _,blkId in ipairs(localBlockIds) do
+   for _,blkId in ipairs(localFluidBlockIds) do
       if blkId == 0 then
          setVtxVelocitiesByCorners(blkId, zeroVel, pSpeedVec, pSpeedVec, zeroVel)
       end
