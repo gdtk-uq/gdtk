@@ -133,7 +133,7 @@ class Polyline(Path):
         n = len(self.segments)
         if n == 1: return self.segments[0](t)
         i = 0
-        while (i < n) and (t < self.t_values[i]): i += 1
+        while (i < n) and (t > self.t_values[i]): i += 1
         i = min(i, n-1)
         if i == 0:
             t_local = t/self.t_values[0]

@@ -45,11 +45,22 @@ assert approxEqual(arc_abc.length(), math.pi), "Arc length()"
 
 e = Polyline([Line(p0=[-math.pi,2.0],p1=[0.0,2.0]), arc_abc])
 print("e=", e)
+f = e(0.0)
+assert approxEqual(f.x, -math.pi), "Polyline evaluation x-component" 
+assert approxEqual(f.y, 2.0), "Polyline evaluation y-component" 
+assert approxEqual(f.z, 0.0), "Polyline evaluation z-component"
+print("f=e(0.0)=", f)
 f = e(0.5)
 assert approxEqual(f.x, 0.0), "Polyline evaluation x-component" 
 assert approxEqual(f.y, 2.0), "Polyline evaluation y-component" 
 assert approxEqual(f.z, 0.0), "Polyline evaluation z-component"
 print("f=e(0.5)=", f)
+f = e(1.0)
+assert approxEqual(f.x, 2.0), "Polyline evaluation x-component" 
+assert approxEqual(f.y, 0.0), "Polyline evaluation y-component" 
+assert approxEqual(f.z, 0.0), "Polyline evaluation z-component"
+print("f=e(1.0)=", f)
+
 
 g = ArcLengthParameterizedPath(e)
 print("g=", g)
