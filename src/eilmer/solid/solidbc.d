@@ -57,7 +57,7 @@ public:
 
     this(int blkId, int boundary, bool _setsFluxDirectly)
     {
-        blk = solidBlocks[blkId];
+        blk = localSolidBlocks[blkId];
         whichBoundary = boundary;
         setsFluxDirectly = _setsFluxDirectly;
     }

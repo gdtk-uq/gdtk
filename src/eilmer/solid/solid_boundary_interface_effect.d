@@ -55,7 +55,7 @@ public:
     string desc;
     
     this(int id, int boundary, string description) {
-        blk = solidBlocks[id];
+        blk = localSolidBlocks[id];
         whichBoundary = boundary;
         desc = description;
     }
@@ -360,7 +360,7 @@ public:
          int otherBlock, int otherFace, int orient)
     {
         super(id, boundary, "ConnectionBoundary");
-        neighbourBlk = solidBlocks[otherBlock];
+        neighbourBlk = localSolidBlocks[otherBlock];
         neighbourFace = otherFace;
         neighbourOrientation = orient;
     }

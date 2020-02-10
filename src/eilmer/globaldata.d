@@ -22,7 +22,7 @@ import loads;
 // Global collections of blocks for the simulation, as a whole.
 // For the fluid blocks, not all may be present in the local MPI task (Linux process).
 __gshared static FluidBlock[] globalFluidBlocks;
-__gshared static SSolidBlock[] solidBlocks;
+__gshared static SSolidBlock[] globalSolidBlocks;
 
 // Collections of blocks that we can iterate over in parallel.
 // The current (shared-memory) parallel code is based on having one FluidBlock object
@@ -31,6 +31,8 @@ __gshared static SSolidBlock[] solidBlocks;
 // which may have several threads running within it.
 __gshared static FluidBlock[] localFluidBlocks;
 __gshared static FluidBlock[] localFluidBlocksBySize; // sorted largest to smallest  
+__gshared static SSolidBlock[] localSolidBlocks;
+__gshared static SSolidBlock[] localSolidBlocksBySize; // sorted largest to smallest  
 
 // We also need to have a dedicated set of configuration parameters for each thread
 // so that there is no need to have memory barriers guarding their access.
