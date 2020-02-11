@@ -2256,20 +2256,21 @@ void compute_flux(FVCell pcell, FluidBlock blk, size_t orderOfJacobian, ref FVCe
 
 	//writeln("SPATIAL GRAD AVG CHECKS OUT");
 	//writeln("STAGE 4");
-        final switch (blk.myConfig.turbulence_model) {
-        case TurbulenceModel.none:
-            foreach (cell; cell_list) cell.turbulence_viscosity_zero();
-            break;
-        case TurbulenceModel.baldwin_lomax:
-            throw new FlowSolverException("need to port baldwin_lomax_turbulence_model");
-        case TurbulenceModel.spalart_allmaras:
-            throw new FlowSolverException("Should implement Spalart-Allmaras some day.");
-        case TurbulenceModel.k_omega:
-            foreach (cell; cell_list) cell.turbulence_viscosity_k_omega();
-            break;
-        }
+        //final switch (blk.myConfig.turbulence_model) {
+        //case TurbulenceModel.none:
+        //    foreach (cell; cell_list) cell.turbulence_viscosity_zero();
+        //    break;
+        //case TurbulenceModel.baldwin_lomax:
+        //    throw new FlowSolverException("need to port baldwin_lomax_turbulence_model");
+        //case TurbulenceModel.spalart_allmaras:
+        //    throw new FlowSolverException("Should implement Spalart-Allmaras some day.");
+        //case TurbulenceModel.k_omega:
+        //    foreach (cell; cell_list) cell.turbulence_viscosity_k_omega();
+        //    break;
+        //}
 
         foreach (cell; cell_list) {
+            cell.turbulence_viscosity();
             cell.turbulence_viscosity_factor(blk.myConfig.transient_mu_t_factor);
             cell.turbulence_viscosity_limit(blk.myConfig.max_mu_t_factor);
             cell.turbulence_viscosity_zero_if_not_in_zone();

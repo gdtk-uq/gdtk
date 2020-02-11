@@ -1676,14 +1676,11 @@ public:
                 * 1.0/(L_min^^2) * myConfig.viscous_signal_factor;
         }
         this.signal_parab = signal - this.signal_hyp; // store parabolic signal for STS
-	version(komega) {
-            bool with_k_omega = (myConfig.turbulence_model == TurbulenceModel.k_omega && 
-                                 !myConfig.separate_update_for_k_omega_source);
-            if (with_k_omega) { 
-                number turbulent_signal = myConfig.turbulent_signal_factor*fs.turb[1];
-                signal = fmax(signal, turbulent_signal); 
-		this.signal_parab = fmax(signal, turbulent_signal);
-            }
+        version(komega) {
+            number turbulent_signal = myConfig.turb_model.turbulent_signal_frequency(fs);
+            turbulent_signal *= myConfig.turbulent_signal_factor;
+            signal = fmax(signal, turbulent_signal); 
+            this.signal_parab = fmax(signal, turbulent_signal); // FIXME: Kyle (Should be signal_parab?)
         }
         version(MHD) {
             if (myConfig.MHD) {
@@ -1753,6 +1750,15 @@ public:
     }
 
     version(komega) {
+    @nogc
+    void turbulence_viscosity() 
+    {
+        auto gmodel = myConfig.gmodel;
+        fs.mu_t = myConfig.turb_model.turbulent_viscosity(fs, grad, pos[0].y); // fixme to use dwall
+        fs.k_t = myConfig.turb_model.turbulent_conductivity(fs, gmodel);
+    } 
+
+    /*
     @nogc
     void turbulence_viscosity_k_omega() 
     {
@@ -1851,6 +1857,7 @@ public:
         number Pr_t = myConfig.turbulence_prandtl_number;
         fs.k_t = gmodel.Cp(fs.gas) * fs.mu_t / Pr_t;
     } // end turbulence_viscosity_k_omega()
+    */
 
 /*  // This routine seems to be unused? (NNG)
     @nogc

@@ -202,10 +202,7 @@ class kwTurbulenceModel : TurbulenceModelObject {
           - Copied from fvcell.d function turbulence_viscosity_k_omega
 
         */
-        /*
         number S_bar_squared;
-        double C_lim = 0.875;
-        double beta_star = 0.09;
 
         number dudx = grad.vel[0][0];
         number dudy = grad.vel[0][1];
@@ -244,14 +241,11 @@ class kwTurbulenceModel : TurbulenceModelObject {
         number omega = fs.turb[1];
         number omega_t = fmax(omega, C_lim*sqrt(2.0*S_bar_squared/beta_star));
         number mu_t = fs.gas.rho * tke / omega_t;
-        */
-        number mu_t = 0.0;
         return mu_t;
     }
     @nogc final override number turbulent_conductivity(const FlowState fs, GasModel gm) const {
         // Warning: Make sure fs.mu_t is up to date before calling this method
-        //number k_t = gm.Cp(fs.gas) * fs.mu_t / Pr_t;
-        number k_t = 0.0;
+        number k_t = gm.Cp(fs.gas) * fs.mu_t / Pr_t;
         return k_t;
     }
     @nogc final override number turbulent_signal_frequency(const FlowState fs) const {
@@ -309,6 +303,8 @@ private:
     immutable string[2] _varnames = ["tke", "omega"];
     immutable number[2] _varlimits = [0.0, 1.0];
     immutable number[2] _sigmas = [0.6, 0.5];
+    immutable double C_lim = 0.875;
+    immutable double beta_star = 0.09;
 
     @nogc bool is_tke_valid(const FlowStateLimits flowstate_limits, const number tke) const {
         if (!isFinite(tke.re)) {
