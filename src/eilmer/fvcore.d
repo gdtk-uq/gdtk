@@ -145,12 +145,6 @@ GridMotion grid_motion_from_name(string name)
 // [TODO] think about the following...
 enum CopyDataOption { all, minimal_flow, all_flow, grid, cell_lengths_only }
 
-// Minimum values for turbulent kinetic energy (m^2/s^2) and frequency (1/s)
-// for applying limiters in the k-omega model.
-enum
-    small_tke = 0.1,
-    small_omega = 1.0;
-
 // Symbolic names for the types of flow-data reconstruction.
 enum InterpolateOption { pt, rhou, rhop, rhot }
 

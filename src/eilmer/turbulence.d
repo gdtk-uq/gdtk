@@ -33,7 +33,7 @@ class TurbulenceModelObject{
 
     // Methods to be overridden.
     abstract TurbulenceModelObject dup();
-    @nogc abstract void compute_source_terms(const FlowState fs,const FlowGradients grad, const number dwall, ref number[] source) const;
+    @nogc abstract void source_terms(const FlowState fs,const FlowGradients grad, const number dwall, ref number[2] source) const;
     @nogc abstract number turbulent_viscosity(const FlowState fs, const FlowGradients grad, const number dwall) const;
     @nogc abstract number turbulent_conductivity(const FlowState fs, GasModel gm) const;
     @nogc abstract number turbulent_signal_frequency(const FlowState fs) const;
@@ -78,8 +78,8 @@ class noTurbulenceModel : TurbulenceModelObject {
     }
 
     @nogc final override
-    void compute_source_terms(const FlowState fs,const FlowGradients grad, const number dwall, 
-                              ref number[] source) const {
+    void source_terms(const FlowState fs,const FlowGradients grad, const number dwall, 
+                              ref number[2] source) const {
         return; 
     }
 
@@ -175,8 +175,8 @@ class kwTurbulenceModel : TurbulenceModelObject {
     }
 
     @nogc final override
-    void compute_source_terms(const FlowState fs,const FlowGradients grad, const number dwall,
-                              ref number[] source) const {
+    void source_terms(const FlowState fs,const FlowGradients grad, const number dwall,
+                              ref number[2] source) const {
         /*
         Compute k-omega source terms.
         
@@ -190,7 +190,101 @@ class kwTurbulenceModel : TurbulenceModelObject {
         Jul 2014: Port to D by PJ
         Feb 2020: Moved here from fvcell "k_omega_time_derivatives" function (NNG)
         */
-        // FIXME: You'll need a source_term_limits method 
+        double alpha = 0.52;
+        double beta_0 = 0.0708;
+        number beta;
+        double beta_star = 0.09;
+        number P_K, D_K, P_W, D_W;
+        number cross_diff;
+        double sigma_d = 0.0;
+        number WWS, X_w, f_beta;
+
+        number dudx = grad.vel[0][0];
+        number dudy = grad.vel[0][1];
+        number dvdx = grad.vel[1][0];
+        number dvdy = grad.vel[1][1];
+        number dtkedx = grad.turb[0][0];
+        number dtkedy = grad.turb[0][1];
+        number domegadx = grad.turb[1][0];
+        number domegady = grad.turb[1][1];
+        number tke = fs.turb[0];
+        number omega = fs.turb[1];
+        if ( dimensions == 2 ) {
+            // 2D cartesian or 2D axisymmetric
+            if ( axisymmetric ) {
+                // 2D axisymmetric
+                //number v_over_y = fs.vel.y / pos[0].y;
+                number v_over_y = fs.vel.y / dwall;
+                // JP.Nap correction from 03-May-2007 (-v_over_y in parentheses)
+                // P_K -= 0.6667 * mu_t * v_over_y * (dudx+dvdy-v_over_y);
+                // Wilson Chan correction to JP Nap's version (13 Dec 2008)
+                P_K = 2.0 * fs.mu_t * (dudx*dudx + dvdy*dvdy)
+                    + fs.mu_t * (dudy + dvdx) * (dudy + dvdx)
+                    - 2.0/3.0 * fs.mu_t * (dudx + dvdy + v_over_y)
+                    * (dudx + dvdy + v_over_y)
+                    + 2.0 * fs.mu_t * (v_over_y) * (v_over_y)
+                    - 2.0/3.0 * fs.gas.rho * tke * (dudx + dvdy + v_over_y);
+                WWS = 0.25 * (dvdx - dudy) * (dvdx - dudy) * v_over_y ;
+            } else {
+                // 2D cartesian
+                P_K = 1.3333 * fs.mu_t * (dudx*dudx - dudx*dvdy + dvdy*dvdy)
+                    + fs.mu_t * (dudy + dvdx) * (dudy + dvdx)
+                    - 0.66667 * fs.gas.rho * tke * (dudx + dvdy);
+                WWS = 0.0 ;
+            }
+            cross_diff = dtkedx * domegadx + dtkedy * domegady ;
+        } else {
+            number dudz = grad.vel[0][2];
+            number dvdz = grad.vel[1][2];
+            number dwdx = grad.vel[2][0];
+            number dwdy = grad.vel[2][1];
+            number dwdz = grad.vel[2][2];
+            number dtkedz = grad.turb[0][2];
+            number domegadz = grad.turb[1][2];
+            // 3D cartesian
+            P_K = 2.0 * fs.mu_t * (dudx*dudx + dvdy*dvdy + dwdz*dwdz)
+                - 2.0/3.0 * fs.mu_t * (dudx + dvdy + dwdz) * (dudx + dvdy + dwdz)
+                - 2.0/3.0 * fs.gas.rho * tke * (dudx + dvdy + dwdz)
+                + fs.mu_t * (dudy + dvdx) * (dudy + dvdx)
+                + fs.mu_t * (dudz + dwdx) * (dudz + dwdx)
+                + fs.mu_t * (dvdz + dwdy) * (dvdz + dwdy) ;
+            cross_diff = dtkedx * domegadx + dtkedy * domegady + dtkedz * domegadz ;
+            WWS = 0.25 * (dudy - dvdx) * (dudy - dvdx) * dwdz
+                + 0.25 * (dudz - dwdx) * (dudz - dwdx) * dvdy
+                + 0.25 * (dvdz - dwdy) * (dvdz - dwdy) * dudx
+                + 0.25 * (dudy - dvdx) * (dvdz - dwdy) * (dwdx + dudz)
+                + 0.25 * (dudz - dwdx) * (dwdy - dvdz) * (dudy + dvdx)
+                + 0.25 * (dvdx - dudy) * (dudz - dwdx) * (dwdy + dvdx) ;
+        } // end if myConfig.dimensions
+
+        D_K = beta_star * fs.gas.rho * tke * omega;
+    
+        // Apply a limit to the tke production as suggested by Jeff White, November 2007.
+        const double P_OVER_D_LIMIT = 25.0;
+        P_K = fmin(P_K, P_OVER_D_LIMIT*D_K);
+
+        if ( cross_diff > 0 ) sigma_d = 0.125;
+        P_W = alpha * omega / fmax(tke, small_tke) * P_K +
+            sigma_d * fs.gas.rho / fmax(omega, small_omega) * cross_diff;
+
+        X_w = fabs(WWS / pow(beta_star*omega, 3)) ;
+        f_beta = (1.0 + 85.0 * X_w) / (1.0 + 100.0 * X_w) ;
+        beta = beta_0 * f_beta;
+        D_W = beta * fs.gas.rho * omega * omega;
+
+        source[0] = P_K - D_K;
+        source[1] = P_W - D_W;
+
+        // Note: This appears to be unused. Consider bringing it back if needed.
+        // It will complicate the interface a bit...
+        //if (myConfig.limit_tke_production) {
+        //    // Apply a final limit on the rate of tke production, related to the local thermodynamic energy
+        //    double dt = SimState.dt_global;
+        //    double deltaT = myConfig.tke_production_limit_in_kelvins;
+        //    number Cv = myConfig.gmodel.Cv(fs.gas);
+        //    number maxRateBasedOnLimit = fs.gas.rho*Cv*deltaT/dt;
+        //    Q_rtke = fmin(maxRateBasedOnLimit, Q_rtke);
+        //}
         return; 
     }
 
@@ -202,6 +296,8 @@ class kwTurbulenceModel : TurbulenceModelObject {
           - Copied from fvcell.d function turbulence_viscosity_k_omega
 
         */
+        double C_lim = 0.875;
+        double beta_star = 0.09;
         number S_bar_squared;
 
         number dudx = grad.vel[0][0];
@@ -303,8 +399,8 @@ private:
     immutable string[2] _varnames = ["tke", "omega"];
     immutable number[2] _varlimits = [0.0, 1.0];
     immutable number[2] _sigmas = [0.6, 0.5];
-    immutable double C_lim = 0.875;
-    immutable double beta_star = 0.09;
+    immutable number small_tke = 0.1;
+    immutable number small_omega = 1.0;
 
     @nogc bool is_tke_valid(const FlowStateLimits flowstate_limits, const number tke) const {
         if (!isFinite(tke.re)) {
