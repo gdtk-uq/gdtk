@@ -67,8 +67,9 @@ void diffuseWallBCsIntoBlock(FluidBlock blk, int nPasses, double Twall)
                 cell.fs.vel.set(face.fs.vel);
                 if (cell.in_turbulent_zone) {
                     version(komega) {
-                        cell.fs.turb[0] = face.fs.turb[0];
-                        cell.fs.turb[1] = face.fs.turb[1];
+                        foreach(it; 0 .. cell.fs.turb.length){
+                            cell.fs.turb[it] = face.fs.turb[it];
+                        }
                     }
                     cell.fs.mu_t = face.fs.mu_t;
                     cell.fs.k_t = face.fs.k_t;
@@ -131,7 +132,9 @@ void diffuseWallBCsIntoBlock(FluidBlock blk, int nPasses, double Twall)
                     vely_avg += face.right_cell.fs.vel.y;
                     velz_avg += face.right_cell.fs.vel.z;
                     version(komega) {
-                        foreach(i; 0 .. turb_avg.length) turb_avg[i] += face.right_cell.fs.turb[i];
+                        foreach(i; 0 .. face.right_cell.fs.turb.length){
+                            turb_avg[i] += face.right_cell.fs.turb[i];
+                        }
                     }
                     mu_t_avg += face.right_cell.fs.mu_t;
                     k_t_avg += face.right_cell.fs.k_t;
@@ -144,7 +147,9 @@ void diffuseWallBCsIntoBlock(FluidBlock blk, int nPasses, double Twall)
                     vely_avg += face.left_cell.fs.vel.y;
                     velz_avg += face.left_cell.fs.vel.z;
                     version(komega) {
-                        foreach(i; 0 .. turb_avg.length) turb_avg[i] += face.left_cell.fs.turb[i];
+                        foreach(i; 0 .. face.left_cell.fs.turb.length) {
+                            turb_avg[i] += face.left_cell.fs.turb[i];
+                        }
                     }
                     mu_t_avg += face.left_cell.fs.mu_t;
                     k_t_avg += face.left_cell.fs.k_t;
@@ -157,7 +162,7 @@ void diffuseWallBCsIntoBlock(FluidBlock blk, int nPasses, double Twall)
             cell.fs.vel.refz = velz_avg / nNbrCells;
             if (cell.in_turbulent_zone) {
                 version(komega) {
-                    foreach(i; 0 .. turb_avg.length) cell.fs.turb[i] = turb_avg[i]/nNbrCells;
+                    foreach(i; 0 .. cell.fs.turb.length) cell.fs.turb[i] = turb_avg[i]/nNbrCells;
                 }
                 cell.fs.mu_t = mu_t_avg / nNbrCells;
                 cell.fs.k_t = k_t_avg / nNbrCells;
