@@ -43,6 +43,7 @@ class TurbulenceModelObject{
     @nogc abstract number turb_limits(size_t i) const;
     @nogc abstract number viscous_transport_coeff(const FlowState fs, size_t i) const;
     @nogc abstract bool is_valid(const FlowStateLimits fsl, const number[] turb) const;
+    @nogc abstract number gmres_scaling_factor(size_t i) const;
 
     // Common methods
     override string toString() const
@@ -125,6 +126,10 @@ class noTurbulenceModel : TurbulenceModelObject {
     }
     @nogc final override bool is_valid(const FlowStateLimits fsl, const number[] turb) const {
         return true;
+    }
+    @nogc final override number gmres_scaling_factor(size_t i) const {
+        number fac = 1.0;
+        return fac;
     }
 }
 
@@ -391,11 +396,16 @@ class kwTurbulenceModel : TurbulenceModelObject {
         return isvalid;
     }
 
+    @nogc final override number gmres_scaling_factor(size_t i) const {
+        return _gmres_scaling_factor[i];
+    }
+
 private:
     immutable number Pr_t;
     immutable bool axisymmetric;
     immutable int dimensions;
     immutable number max_mu_t_factor;
+    immutable number[2] _gmres_scaling_factor = [1.0, 1000.0];
     immutable string[2] _varnames = ["tke", "omega"];
     immutable number[2] _varlimits = [0.0, 1.0];
     immutable number[2] _sigmas = [0.6, 0.5];
