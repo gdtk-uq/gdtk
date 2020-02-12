@@ -22,13 +22,13 @@ print("Set up a collection of cells representing the gas within the duct.")
 #      i-1   i-1    i     i    i+1   i+1   i+2
 #       |           |           |           |
 #   ----+-----------+-----------+-----------+----
-n = 10
+n = 200
 cells = [Cell(gmodel) for i in range(n)]
 faces = [Face(gmodel) for i in range(n+1)]
 
 print("Quasi-one-dimensional duct is defined by its area at position x.")
 def Area(x): return 1.0 # metres^2
-dx = 0.01 # metres
+dx = 1.0/n # metres
 for i in range(n+1):
     x = dx * i
     faces[i].x = x
@@ -46,17 +46,28 @@ for i in range(n):
     gas.update_thermo_from_pT()
     cells[i].encode_conserved()
 
-for i in range(n):
-    print(i, cells[i])
+def write_flow_data(fp, t, cdata):
+    "Write flow data for this instant in a format suitable for gnuplot."
+    for i in range(len(cdata)):
+        ci = cdata[i]
+        fp.write("%d\t%g\t%g\t%g\t%g\t%g\t%g\n" %
+                 (i, ci.x, t, ci.gas.p, ci.gas.T, ci.gas.rho, ci.vel))
+    fp.write("\n")
+    return
+
+t = 0.0 # time, in seconds
+fp = open('xt.data', 'w')
+write_flow_data(fp, t, cells)
 
 print("Start time stepping.")
 # Leave the cells at the ends as ghost-cells, with fixed properties,
 # and update all of the interior cells over a small time step.
-dt = 1.0e-6 # seconds
-n_steps = 10
+dt = 0.5e-6 # time step, in seconds
+n_steps = 1200
+plot_steps = 20
 gsLstar = GasState(gmodel)
 gsRstar = GasState(gmodel)
-for j in range(n_steps):
+for j in range(1, n_steps+1):
     # Phase 1: compute flow states at interior faces.
     for i in range(1,n):
         pstar, wstar, wL, wR, faces[i].vel = \
@@ -65,23 +76,32 @@ for j in range(n_steps):
                                gsLstar, gsRstar, faces[i].gas)
     # Phase 2: Update interior cells.
     for i in range(1,n-1):
+        # Local names for quantities.
         ci = cells[i]; fi = faces[i]; fip1 = faces[i+1]
-        vol = ci.vol; areai = fi.area; areaip1 = fip1.area
+        vol = ci.vol; Ai = fi.area; Aip1 = fip1.area
         rhoi = fi.gas.rho; rhoip1 = fip1.gas.rho
-        veli = fi.vel; velip1 = fip1.vel
-        mass_dt = (rhoi*veli*areai - rhoip1*velip1*areaip1)/vol
+        vi = fi.vel; vip1 = fip1.vel
         pi = fi.gas.p; pip1 = fip1.gas.p
-        momentum_dt = (pi*areai - pip1*areaip1 + ci.gas.p*(areaip1-areai) +
-                       rhoi*(veli**2)*areai - rhoip1*(velip1**2)*areaip1)/vol
-        hi = pi/rhoi + fi.gas.u + 0.5*(veli**2)
-        hip1 = pip1/rhoip1 + fip1.gas.u + 0.5*(velip1**2)
-        energy_dt = (rhoi*hi*areai - rhoip1*hip1*areaip1)/vol
+        hi = pi/rhoi + fi.gas.u + 0.5*(vi**2)
+        hip1 = pip1/rhoip1 + fip1.gas.u + 0.5*(vip1**2)
+        # Mass fluxes at the faces.
+        mfluxi = rhoi*vi*Ai
+        mfluxip1 = rhoip1*vip1*Aip1
+        # Rate of accumulation within the cell.
+        mass_dt = (mfluxi - mfluxip1)/vol
+        momentum_dt = (pi*Ai - pip1*Aip1 + ci.gas.p*(Aip1-Ai) +
+                       mfluxi*vi - mfluxip1*vip1)/vol
+        energy_dt = (mfluxi*hi - mfluxip1*hip1)/vol
+        # Euler update for conserved quantities.
         ci.mass += dt * mass_dt
         ci.momentum += dt * momentum_dt
         ci.energy += dt * energy_dt
         ci.decode_conserved()
-    # end of time step
-
-for i in range(n):
-    print(i, cells[i])
+    t += dt
+    if (j % plot_steps) == 0: write_flow_data(fp, t, cells)
+    print("end of time step %d, t=%g seconds" % (j, t))
+fp.close()
+fp = open('final.data', 'w')
+write_flow_data(fp, t, cells)
+fp.close()
    
