@@ -1680,10 +1680,10 @@ void read_config_file()
         string gridType = getJSONstring(jsonDataForBlock, "grid_type", "");
         switch (gridType) {
         case "structured_grid": 
-            globalFluidBlocks ~= new SFluidBlock(i, jsonDataForBlock);
+            globalBlocks ~= new SFluidBlock(i, jsonDataForBlock);
             break;
         case "unstructured_grid":
-            globalFluidBlocks ~= new UFluidBlock(i, jsonDataForBlock);
+            globalBlocks ~= new UFluidBlock(i, jsonDataForBlock);
             dedicatedConfig[i].stringent_cfl = true; // for signal_frequency calc in FVCell.
             break;
         default:
@@ -1691,20 +1691,22 @@ void read_config_file()
                                    i, gridType));
         } // end switch gridType
     }
-    foreach (blk; globalFluidBlocks) {
-        blk.init_lua_globals();
+    foreach (blk; globalBlocks) {
+        auto fluidblk = cast(FluidBlock) blk;
+        assert(fluidblk !is null, "Oops, this should be a FluidBlock object.");
+        fluidblk.init_lua_globals();
         if (GlobalConfig.user_pad_length > 0) {
-            push_array_to_Lua(blk.myL, GlobalConfig.userPad, "userPad");
+            push_array_to_Lua(fluidblk.myL, GlobalConfig.userPad, "userPad");
         }
-        blk.init_boundary_conditions(jsonData["block_" ~ to!string(blk.id)]);
+        fluidblk.init_boundary_conditions(jsonData["block_" ~ to!string(fluidblk.id)]);
         if (GlobalConfig.udf_source_terms) {
-            luaL_dofile(blk.myL, GlobalConfig.udf_source_terms_file.toStringz);
+            luaL_dofile(fluidblk.myL, GlobalConfig.udf_source_terms_file.toStringz);
         }
     } 
     // After fully constructing blocks and their boundary conditions,
     // we can optionally print their representation for checking.
     if (GlobalConfig.verbosity_level > 1) {
-        foreach (i, blk; globalFluidBlocks) { writeln("  Block[", i, "]: ", blk); }
+        foreach (i, blk; globalBlocks) { writeln("  Block[", i, "]: ", blk); }
     }
     // Read in any blocks in the solid domain.
     GlobalConfig.udfSolidSourceTerms = getJSONbool(jsonData, "udf_solid_source_terms", false);
@@ -2069,13 +2071,15 @@ void init_master_lua_State()
     // Note that not all of these blocks may be fully present
     // in an MPI-parallel simulation.
     lua_newtable(L);
-    foreach (i, blk; globalFluidBlocks) {
+    foreach (i, blk; globalBlocks) {
+        auto fluidblk = cast(FluidBlock) blk;
+        assert(fluidblk !is null, "Oops, this should be a FluidBlock object.");
         lua_newtable(L);
-        lua_pushnumber(L, blk.cells.length);
+        lua_pushnumber(L, fluidblk.cells.length);
         lua_setfield(L, -2, "nCells");
-        lua_pushnumber(L, blk.vertices.length);
+        lua_pushnumber(L, fluidblk.vertices.length);
         lua_setfield(L, -2, "nVertices");
-        if ( blk.grid_type == Grid_t.structured_grid ) {
+        if ( fluidblk.grid_type == Grid_t.structured_grid ) {
             auto sblk = cast(SFluidBlock) blk;
             assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
             lua_pushnumber(L, sblk.nicell);

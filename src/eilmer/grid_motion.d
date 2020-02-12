@@ -339,7 +339,7 @@ extern(C) int luafn_getVtxPosition(lua_State *L)
     //
     // Grab the appropriate vtx
     FVVertex vtx;
-    auto sblk = cast(SFluidBlock) globalFluidBlocks[blkId];
+    auto sblk = cast(SFluidBlock) globalBlocks[blkId];
     if (sblk) {
         try {
             vtx = sblk.get_vtx(i, j, k);
@@ -375,7 +375,7 @@ extern(C) int luafn_getVtxPositionXYZ(lua_State *L)
     //
     // Grab the appropriate vtx
     FVVertex vtx;
-    auto sblk = cast(SFluidBlock) globalFluidBlocks[blkId];
+    auto sblk = cast(SFluidBlock) globalBlocks[blkId];
     if (sblk) {
         try {
             vtx = sblk.get_vtx(i, j, k);
@@ -410,7 +410,7 @@ extern(C) int luafn_getVtxPositionVector3(lua_State *L)
     //
     // Grab the appropriate vtx
     FVVertex vtx;
-    auto sblk = cast(SFluidBlock) globalFluidBlocks[blkId];
+    auto sblk = cast(SFluidBlock) globalBlocks[blkId];
     if (sblk) {
         try {
             vtx = sblk.get_vtx(i, j, k);
@@ -485,7 +485,9 @@ extern(C) int luafn_setVtxVelocitiesForBlock(lua_State* L)
     }
     auto vel = toVector3(L, 2);
 
-    foreach ( vtx; globalFluidBlocks[blkId].vertices ) {
+    auto blk = cast(FluidBlock) globalBlocks[blkId];
+    assert(blk !is null, "Oops, this should be a FluidBlock object.");
+    foreach ( vtx; blk.vertices ) {
         /* We assume that we'll only update grid positions
            at the start of the increment. This should work
            well except in the most critical cases of time
@@ -515,7 +517,9 @@ extern(C) int luafn_setVtxVelocitiesForBlockXYZ(lua_State* L)
     double vely = lua_tonumber(L, 3);
     double velz = lua_tonumber(L, 4);
 
-    foreach ( vtx; globalFluidBlocks[blkId].vertices ) {
+    auto blk = cast(FluidBlock) globalBlocks[blkId];
+    assert(blk !is null, "Oops, this should be a FluidBlock object.");
+    foreach ( vtx; blk.vertices ) {
         /* We assume that we'll only update grid positions
            at the start of the increment. This should work
            well except in the most critical cases of time
@@ -557,9 +561,11 @@ extern(C) int luafn_setVtxVelocitiesForRotatingBlock(lua_State* L)
     double omega = lua_tonumber(L, 2);
     double velx, vely;
 
+    auto blk = cast(FluidBlock) globalBlocks[blkId];
+    assert(blk !is null, "Oops, this should be a FluidBlock object.");
     if ( narg == 2 ) {
         // assume rotation about Z-axis 
-        foreach ( vtx; globalFluidBlocks[blkId].vertices ) {
+        foreach ( vtx; blk.vertices ) {
             velx = - omega * vtx.pos[0].y.re;
             vely =   omega * vtx.pos[0].x.re;
             vtx.vel[0].set(velx, vely, 0.0);
@@ -567,7 +573,7 @@ extern(C) int luafn_setVtxVelocitiesForRotatingBlock(lua_State* L)
     }
     else if ( narg == 3 ) {
         auto axis = toVector3(L, 3);
-        foreach ( vtx; globalFluidBlocks[blkId].vertices ) {
+        foreach ( vtx; blk.vertices ) {
             velx = - omega * (vtx.pos[0].y.re - axis.y.re);
             vely =   omega * (vtx.pos[0].x.re - axis.x.re);
             vtx.vel[0].set(velx, vely, 0.0);
@@ -615,7 +621,7 @@ extern(C) int luafn_setVtxVelocitiesByCorners(lua_State* L)
         string msg = format("Block id %d is not local to process.", blkId);
         luaL_error(L, msg.toStringz);
     }
-    auto blk = cast(SFluidBlock) globalFluidBlocks[blkId];
+    auto blk = cast(SFluidBlock) globalBlocks[blkId];
     // get corner velocities
     Vector3 p00vel = toVector3(L, 2);
     Vector3 p10vel = toVector3(L, 3);
@@ -738,7 +744,8 @@ extern(C) int luafn_setVtxVelocitiesByQuad(lua_State* L)
         string msg = format("Block id %d is not local to process.", blkId);
         luaL_error(L, msg.toStringz);
     }
-    auto blk = globalFluidBlocks[blkId];
+    auto blk = cast(FluidBlock) globalBlocks[blkId];
+    assert(blk !is null, "Oops, this should be a FluidBlock object.");
     // Get corner positions and velocities for the quadrilateral.
     Vector3 p00, p10, p11, p01, vel00, vel10, vel11, vel01;
     lua_getfield(L, 1, "p00");
@@ -865,7 +872,7 @@ extern(C) int luafn_setVtxVelocitiesByCornersReg(lua_State* L)
     auto blkId = lua_tointeger(L, 1);
     size_t i, j, k;
     Vector3 velw, vele, veln, vels, vel;
-    auto blk = cast(SFluidBlock) globalFluidBlocks[blkId];
+    auto blk = cast(SFluidBlock) globalBlocks[blkId];
     if (!canFind(GlobalConfig.localFluidBlockIds, blkId)) {
         string msg = format("Block id %d is not local to process.", blkId);
         luaL_error(L, msg.toStringz);
@@ -1002,7 +1009,7 @@ extern(C) int luafn_setVtxVelocity(lua_State* L)
 
     if (narg == 3) {
         auto vtxId = lua_tointeger(L, 3);
-        auto ublk = cast(UFluidBlock) globalFluidBlocks[blkId];
+        auto ublk = cast(UFluidBlock) globalBlocks[blkId];
         if (ublk) {
             try {
                 ublk.vertices[vtxId].vel[0].set(vel);
@@ -1018,7 +1025,7 @@ extern(C) int luafn_setVtxVelocity(lua_State* L)
     } else if (narg == 4) {
         auto i = lua_tointeger(L, 3);
         auto j = lua_tointeger(L, 4);
-        auto sblk = cast(SFluidBlock) globalFluidBlocks[blkId];
+        auto sblk = cast(SFluidBlock) globalBlocks[blkId];
         if (sblk) {
             try {
                 sblk.get_vtx(i,j).vel[0].set(vel);
@@ -1035,7 +1042,7 @@ extern(C) int luafn_setVtxVelocity(lua_State* L)
         auto i = lua_tointeger(L, 3);
         auto j = lua_tointeger(L, 4);
         auto k = lua_tointeger(L, 5);
-        auto sblk = cast(SFluidBlock) globalFluidBlocks[blkId];
+        auto sblk = cast(SFluidBlock) globalBlocks[blkId];
         if (sblk) {
             try {
                 sblk.get_vtx(i,j,k).vel[0].set(vel);
@@ -1091,7 +1098,7 @@ extern(C) int luafn_setVtxVelocityXYZ(lua_State* L)
 
     if (narg == 5) {
         auto vtxId = lua_tointeger(L, 5);
-        auto ublk = cast(UFluidBlock) globalFluidBlocks[blkId];
+        auto ublk = cast(UFluidBlock) globalBlocks[blkId];
         if (ublk) {
             try {
                 ublk.vertices[vtxId].vel[0].set(velx, vely, velz);
@@ -1107,7 +1114,7 @@ extern(C) int luafn_setVtxVelocityXYZ(lua_State* L)
     } else if (narg == 6) {
         auto i = lua_tointeger(L, 5);
         auto j = lua_tointeger(L, 6);
-        auto sblk = cast(SFluidBlock) globalFluidBlocks[blkId];
+        auto sblk = cast(SFluidBlock) globalBlocks[blkId];
         if (sblk) {
             try {
                 sblk.get_vtx(i,j).vel[0].set(velx, vely, velz);
@@ -1124,7 +1131,7 @@ extern(C) int luafn_setVtxVelocityXYZ(lua_State* L)
         auto i = lua_tointeger(L, 5);
         auto j = lua_tointeger(L, 6);
         auto k = lua_tointeger(L, 7);
-        auto sblk = cast(SFluidBlock) globalFluidBlocks[blkId];
+        auto sblk = cast(SFluidBlock) globalBlocks[blkId];
         if (sblk) {
             try {
                 sblk.get_vtx(i,j,k).vel[0].set(velx, vely, velz);

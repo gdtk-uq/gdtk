@@ -97,7 +97,8 @@ public:
     
     this(int id, int boundary, string description)
     {
-        blk = globalFluidBlocks[id];
+        blk = cast(FluidBlock) globalBlocks[id];
+        assert(blk !is null, "Oops, this should be a FluidBlock object.");
         which_boundary = boundary;
         desc = description;
     }
