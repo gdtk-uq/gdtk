@@ -44,6 +44,7 @@ class TurbulenceModelObject{
     @nogc abstract number viscous_transport_coeff(const FlowState fs, size_t i) const;
     @nogc abstract bool is_valid(const FlowStateLimits fsl, const number[] turb) const;
     @nogc abstract number gmres_scaling_factor(size_t i) const;
+    @nogc abstract number tke_rhoturb_derivatives(const FlowState fs, size_t i) const;
 
     // Common methods
     override string toString() const
@@ -130,6 +131,10 @@ class noTurbulenceModel : TurbulenceModelObject {
     @nogc final override number gmres_scaling_factor(size_t i) const {
         number fac = 1.0;
         return fac;
+    }
+    @nogc final override number tke_rhoturb_derivatives(const FlowState fs, size_t i) const {
+        number dtke_drhoturb = 0.0;
+        return dtke_drhoturb;
     }
 }
 
@@ -399,6 +404,10 @@ class kwTurbulenceModel : TurbulenceModelObject {
     @nogc final override number gmres_scaling_factor(size_t i) const {
         return _gmres_scaling_factor[i];
     }
+    @nogc final override number tke_rhoturb_derivatives(const FlowState fs, size_t i) const {
+        number dtke_drhoturb = _rhocoeffs[i];
+        return dtke_drhoturb;
+    }
 
 private:
     immutable number Pr_t;
@@ -409,6 +418,7 @@ private:
     immutable string[2] _varnames = ["tke", "omega"];
     immutable number[2] _varlimits = [0.0, 1.0];
     immutable number[2] _sigmas = [0.6, 0.5];
+    immutable number[2] _rhocoeffs = [1.0, 0.0];
     immutable number small_tke = 0.1;
     immutable number small_omega = 1.0;
 

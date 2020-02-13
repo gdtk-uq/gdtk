@@ -80,7 +80,7 @@ void evalPrimitiveJacobianVecProd(FluidBlock blk, size_t nPrimitive, number[] v,
     //size_t TKE = tkeIdx;
     //size_t OMEGA = omegaIdx;
     
-    with_k_omega = (blk.myConfig.turbulence_model == TurbulenceModel.k_omega);
+    size_t nturb = blk.myConfig.turb_model.nturb;
     blk.clear_fluxes_of_conserved_quantities();
     foreach (cell; blk.cells) cell.clear_source_vector();
     int cellCount = 0;
@@ -91,9 +91,8 @@ void evalPrimitiveJacobianVecProd(FluidBlock blk, size_t nPrimitive, number[] v,
         cell.fs.gas.p += EPS*v[cellCount+blk.TOT_ENERGY];
         if ( blk.myConfig.dimensions == 3 )
             cell.fs.vel.refz += EPS*v[cellCount+blk.Z_MOM];
-        if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
-            cell.fs.turb[0] += EPS*v[cellCount+blk.TKE];
-            cell.fs.turb[1] += EPS*v[cellCount+blk.OMEGA];
+        foreach(it; 0 .. nturb){
+            cell.fs.turb[it] += EPS*v[cellCount+blk.TKE+it];
         }
                 
         blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);
@@ -111,9 +110,8 @@ void evalPrimitiveJacobianVecProd(FluidBlock blk, size_t nPrimitive, number[] v,
         if ( blk.myConfig.dimensions == 3 )
             p[cellCount+blk.Z_MOM] = -cell.dUdt[0].momentum.z.im/EPS.im;
         p[cellCount+blk.TOT_ENERGY] = -cell.dUdt[0].total_energy.im/EPS.im;
-        if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
-            p[cellCount+blk.TKE] = -cell.dUdt[0].rhoturb[0].im/EPS.im;
-            p[cellCount+blk.OMEGA] = -cell.dUdt[0].rhoturb[1].im/EPS.im;
+        foreach(it; 0 .. nturb){
+            p[cellCount+blk.TKE+it] = -cell.dUdt[0].rhoturb[it].im/EPS.im;
         }
         cellCount += nPrimitive;
     }
@@ -132,7 +130,7 @@ void evalConservativeJacobianVecProd(FluidBlock blk, size_t nConserved, number[]
     //size_t OMEGA = omegaIdx;
 
     // We perform a Frechet derivative to evaluate J*D^(-1)v
-    with_k_omega = (blk.myConfig.turbulence_model == TurbulenceModel.k_omega);
+    size_t nturb = blk.myConfig.turb_model.nturb;
     blk.clear_fluxes_of_conserved_quantities();
     foreach (cell; blk.cells) cell.clear_source_vector();
     int cellCount = 0;
@@ -144,9 +142,8 @@ void evalConservativeJacobianVecProd(FluidBlock blk, size_t nConserved, number[]
         if ( blk.myConfig.dimensions == 3 )
             cell.U[1].momentum.refz += EPS*v[cellCount+blk.Z_MOM];
         cell.U[1].total_energy += EPS*v[cellCount+blk.TOT_ENERGY];
-        if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
-            cell.U[1].rhoturb[0] += EPS*v[cellCount+blk.TKE];
-            cell.U[1].rhoturb[1] += EPS*v[cellCount+blk.OMEGA];
+        foreach(it; 0 .. nturb){
+            cell.U[1].rhoturb[it] += EPS*v[cellCount+blk.TKE+it];
         }
         cell.decode_conserved(0, 1, 0.0);
         cellCount += nConserved;
@@ -160,9 +157,8 @@ void evalConservativeJacobianVecProd(FluidBlock blk, size_t nConserved, number[]
         if ( blk.myConfig.dimensions == 3 )
             p[cellCount+blk.Z_MOM] = -cell.dUdt[1].momentum.z.im/EPS.im;
         p[cellCount+blk.TOT_ENERGY] = -cell.dUdt[1].total_energy.im/EPS.im;
-        if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
-            p[cellCount+blk.TKE] = -cell.dUdt[1].rhoturb[0].im/EPS.im;
-            p[cellCount+blk.OMEGA] = -cell.dUdt[1].rhoturb[1].im/EPS.im;
+        foreach(it; 0 .. nturb){
+            p[cellCount+blk.TKE+it] = -cell.dUdt[1].rhoturb[it].im/EPS.im;
         }
         cellCount += nConserved;
     }
@@ -597,9 +593,8 @@ string computeGhostCellDerivatives(string varName, string posInArray, bool inclu
     codeStr ~= "qP[blk.Z_MOM] = pcell.fs.vel.z;";
     codeStr ~= "}";
     codeStr ~= "qP[blk.TOT_ENERGY] = pcell.fs.gas.p;";
-    codeStr ~= "if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {";
-    codeStr ~= "qP[blk.TKE] = pcell.fs.turb[0];";
-    codeStr ~= "qP[blk.OMEGA] = pcell.fs.turb[1];";
+    codeStr ~= "foreach(it; 0 .. blk.myConfig.turb_model.nturb){";
+    codeStr ~= "qP[blk.TKE+it] = pcell.fs.turb[it];";
     codeStr ~= "}";
     codeStr ~= "bcells[0].copy_values_from(blk.cellSave, CopyDataOption.all);";
     codeStr ~= "if(blk.bc[bface.bc_id].preReconAction.length > 0) {";
@@ -616,9 +611,8 @@ string computeGhostCellDerivatives(string varName, string posInArray, bool inclu
     codeStr ~= "dqdQ[blk.Z_MOM][" ~ posInArray ~ "] = qP[blk.Z_MOM].im/(EPS.im);";
     codeStr ~= "}";
     codeStr ~= "dqdQ[blk.TOT_ENERGY][" ~ posInArray ~ "] = qP[blk.TOT_ENERGY].im/(EPS.im);";         
-    codeStr ~= "if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {";
-    codeStr ~= "dqdQ[blk.TKE][" ~ posInArray ~ "] = qP[blk.TKE].im/(EPS.im);";
-    codeStr ~= "dqdQ[blk.OMEGA][" ~ posInArray ~ "] = qP[blk.OMEGA].im/(EPS.im);";
+    codeStr ~= "foreach(it; 0 .. blk.myConfig.turb_model.nturb){";
+    codeStr ~= "dqdQ[blk.TKE+it][" ~ posInArray ~ "] = qP[blk.TKE+it].im/(EPS.im);";
     codeStr ~= "}";
     return codeStr;
 }
@@ -673,11 +667,9 @@ void fill_boundary_conditions(FluidBlock blk, size_t np, size_t orderOfJacobian,
                     mixin(computeGhostCellDerivatives("vel.refz", "blk.Z_MOM", false));
                 // 3rd perturbation: P
                 mixin(computeGhostCellDerivatives("gas.p", "blk.TOT_ENERGY", true));
-                if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                    // 4th perturbation: k
-                    mixin(computeGhostCellDerivatives("turb[0]", "blk.TKE", false));
-                    // 5th perturbation: omega
-                    mixin(computeGhostCellDerivatives("turb[1]", "blk.OMEGA", false));
+                foreach(ii; 0 .. blk.myConfig.turb_model.nturb) {
+                    // 4th/5th perturbation: k/omega
+                    mixin(computeGhostCellDerivatives("turb[ii]", "blk.TKE+ii", false));
                 }
 		
 		pcell.dqdQ = dqdQ;
@@ -733,11 +725,9 @@ void apply_boundary_conditions(ref SMatrix!number A, FluidBlock blk, size_t np, 
                     mixin(computeGhostCellDerivatives("vel.refz", "blk.Z_MOM", false));
                 // 3rd perturbation: P
                 mixin(computeGhostCellDerivatives("gas.p", "blk.TOT_ENERGY", true));
-                if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                    // 4th perturbation: k
-                    mixin(computeGhostCellDerivatives("turb[0]", "blk.TKE", false));
-                    // 5th perturbation: omega
-                    mixin(computeGhostCellDerivatives("turb[1]", "blk.OMEGA", false));
+                foreach(ii; 0 .. blk.myConfig.turb_model.nturb){
+                    // 4th/5th perturbation: k/omega
+                    mixin(computeGhostCellDerivatives("turb[ii]", "blk.TKE+ii", false));
                 }
 
 		///////
@@ -823,11 +813,9 @@ void apply_boundary_conditions(ref SMatrix!number A, FluidBlock blk, size_t np, 
                     mixin(computeFluxDerivativesAroundCell("vel.refz", "blk.Z_MOM", false));
                 // 3rd perturbation: P
                 mixin(computeFluxDerivativesAroundCell("gas.p", "blk.TOT_ENERGY", true));
-                if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                    // 4th perturbation: k
-                    mixin(computeFluxDerivativesAroundCell("turb[0]", "blk.TKE", false));
-                    // 5th perturbation: omega
-                    mixin(computeFluxDerivativesAroundCell("turb[1]", "blk.OMEGA", false));
+                foreach(ii; 0 .. blk.myConfig.turb_model.nturb){ 
+                    // 4th/5th perturbation: k/omega
+                    mixin(computeFluxDerivativesAroundCell("turb[ii]", "blk.TKE+ii", false));
                 } 
   
                 foreach(bcell; pcell.jacobian_cell_stencil) {
@@ -904,42 +892,34 @@ void apply_boundary_conditions(ref SMatrix!number A, FluidBlock blk, size_t np, 
 				blk.Minv[blk.Z_MOM,blk.Z_MOM] = 1.0/bcells[0].fs.gas.rho;
 				blk.Minv[blk.Z_MOM,blk.TOT_ENERGY] = to!number(0.0);
 			    }
-			    
-			    if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
-				blk.Minv[blk.MASS,blk.TKE] = to!number(0.0);
-				blk.Minv[blk.MASS,blk.OMEGA] = to!number(0.0);
-				// second row
-				blk.Minv[blk.X_MOM,blk.TKE] = to!number(0.0);
-				blk.Minv[blk.X_MOM,blk.OMEGA] = to!number(0.0);
-				// third row
-				blk.Minv[blk.Y_MOM,blk.TKE] = to!number(0.0);
-				blk.Minv[blk.Y_MOM,blk.OMEGA] = to!number(0.0);
-				// fourth row
-				blk.Minv[blk.TOT_ENERGY,blk.TKE] = -(gamma-1.0); 
-				blk.Minv[blk.TOT_ENERGY,blk.OMEGA] = to!number(0.0);
-				// fifth row
-				blk.Minv[blk.TKE,blk.MASS] = -bcells[0].fs.turb[0]/bcells[0].fs.gas.rho;
-				blk.Minv[blk.TKE,blk.X_MOM] = to!number(0.0);
-				blk.Minv[blk.TKE,blk.Y_MOM] = to!number(0.0);
-				blk.Minv[blk.TKE,blk.TOT_ENERGY] = to!number(0.0);
-				blk.Minv[blk.TKE,blk.TKE] = 1.0/bcells[0].fs.gas.rho;
-				blk.Minv[blk.TKE,blk.OMEGA] = to!number(0.0);
-				// sixth row
-				blk.Minv[blk.OMEGA,blk.MASS] = -bcells[0].fs.turb[1]/bcells[0].fs.gas.rho;
-				blk.Minv[blk.OMEGA,blk.X_MOM] = to!number(0.0);
-				blk.Minv[blk.OMEGA,blk.Y_MOM] = to!number(0.0);
-				blk.Minv[blk.OMEGA,blk.TOT_ENERGY] = to!number(0.0);
-				blk.Minv[blk.OMEGA,blk.TKE] = to!number(0.0);
-				blk.Minv[blk.OMEGA,blk.OMEGA] = 1.0/bcells[0].fs.gas.rho;
+
+                auto tm = blk.myConfig.turb_model;
+                auto fs = bcells[0].fs;
+                foreach(it; 0 .. tm.nturb){
+                blk.Minv[blk.MASS,blk.TKE+it] = to!number(0.0); // second row
+				blk.Minv[blk.X_MOM,blk.TKE+it] = to!number(0.0); // third row
+				blk.Minv[blk.Y_MOM,blk.TKE+it] = to!number(0.0);
+                number dtke_drhoturb = tm.tke_rhoturb_derivatives(fs,it);
+				blk.Minv[blk.TOT_ENERGY,blk.TKE+it] = -(gamma-1.0)*dtke_drhoturb;// fourth row
+                }
 				
+                foreach(jt; 0 .. tm.nturb) { // fifth/sixth row
+				blk.Minv[blk.TKE+jt,blk.MASS] = -bcells[0].fs.turb[jt]/bcells[0].fs.gas.rho;
+				blk.Minv[blk.TKE+jt,blk.X_MOM] = to!number(0.0);
+				blk.Minv[blk.TKE+jt,blk.Y_MOM] = to!number(0.0);
+				blk.Minv[blk.TKE+jt,blk.TOT_ENERGY] = to!number(0.0);
+                    foreach(it; 0 .. tm.nturb) {
+                    number delta = (it==jt) ? 1.0 : 0.0;
+                    blk.Minv[blk.TKE+jt,blk.TKE+it] = delta/bcells[0].fs.gas.rho;
+                    }
+                }
 				if (blk.myConfig.dimensions == 3) {
-				    blk.Minv[blk.Z_MOM,blk.TKE] = to!number(0.0);
-				    blk.Minv[blk.Z_MOM,blk.OMEGA] = to!number(0.0);
-				    blk.Minv[blk.TKE,blk.Z_MOM] = to!number(0.0);
-				    blk.Minv[blk.OMEGA,blk.Z_MOM] = to!number(0.0);
+                    foreach(it; 0 .. tm.nturb) {
+				    blk.Minv[blk.Z_MOM,blk.TKE+it] = to!number(0.0);
+				    blk.Minv[blk.TKE+it,blk.Z_MOM] = to!number(0.0);
+                    }
 				}
-			    }
-			    
+
 			    //writeln(blk.Minv);
 			    //number[][] tmp;
 			    //tmp.length = np;
@@ -1349,11 +1329,9 @@ void form_external_flow_jacobian_block_phase3(ref SMatrix!number A, FluidBlock b
                             mixin(computeFluxDerivativesAroundCell("vel.refz", "blk.Z_MOM", false));
                         // 3rd perturbation: P
                         mixin(computeFluxDerivativesAroundCell("gas.p", "blk.TOT_ENERGY", true));
-                        if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                            // 4th perturbation: k
-                            mixin(computeFluxDerivativesAroundCell("turb[0]", "blk.TKE", false));
-                            // 5th perturbation: omega
-                            mixin(computeFluxDerivativesAroundCell("turb[1]", "blk.OMEGA", false));
+                        foreach(ii; 0 .. blk.myConfig.turb_model.nturb){
+                            // 4th perturbation: k/omega
+                            mixin(computeFluxDerivativesAroundCell("turb[ii]", "blk.TKE+ii", false));
                         }
                         
                         foreach(cell; pcell.jacobian_cell_stencil) {
@@ -1424,9 +1402,8 @@ void construct_flow_jacobian_for_boundary_cells(FVCell pcell, FVCell icell, Flui
     if ( blk.myConfig.dimensions == 3 )
         mixin(computeFluxDerivativesAroundCell("vel.refz", "blk.Z_MOM", false));
     mixin(computeFluxDerivativesAroundCell("gas.p", "blk.TOT_ENERGY", true));
-    if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
-        mixin(computeFluxDerivativesAroundCell("turb[0]", "blk.TKE", false));
-        mixin(computeFluxDerivativesAroundCell("turb[1]", "blk.OMEGA", false));
+    foreach(ii; 0 .. blk.myConfig.turb_model.nturb){
+        mixin(computeFluxDerivativesAroundCell("turb[ii]", "blk.TKE+ii", false));
     }
 
     // compute cell residual sensitivities (flow Jacobian entries) by integrating interface flux sensitivities
@@ -1743,11 +1720,9 @@ void compute_flow_jacobian_rows_for_cell(ref SMatrix!number A, ref size_t aa_idx
         mixin(computeFluxDerivativesAroundCell("vel.refz", "blk.Z_MOM", false));
     // 3rd perturbation: P
     mixin(computeFluxDerivativesAroundCell("gas.p", "blk.TOT_ENERGY", true));
-    if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
-        // 4th perturbation: tke
-        mixin(computeFluxDerivativesAroundCell("turb[0]", "blk.TKE", false));
-        // 5th perturbation: omega
-        mixin(computeFluxDerivativesAroundCell("turb[1]", "blk.OMEGA", false));
+    foreach(ii; 0 .. blk.myConfig.turb_model.nturb) {
+        // 4th/5th perturbation: tke/omega
+        mixin(computeFluxDerivativesAroundCell("turb[ii]", "blk.TKE+ii", false));
     }
     // transform the face flux Jacobians from primitive to conservative form
     if (transformToConserved) {
@@ -1788,41 +1763,34 @@ void compute_flow_jacobian_rows_for_cell(ref SMatrix!number A, ref size_t aa_idx
                 blk.Minv[blk.Z_MOM,blk.Z_MOM] = 1.0/pcell.fs.gas.rho;
                 blk.Minv[blk.Z_MOM,blk.TOT_ENERGY] = to!number(0.0);
             }
-            
-            if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                blk.Minv[blk.MASS,blk.TKE] = to!number(0.0);
-                blk.Minv[blk.MASS,blk.OMEGA] = to!number(0.0);
-                // second row
-                blk.Minv[blk.X_MOM,blk.TKE] = to!number(0.0);
-                blk.Minv[blk.X_MOM,blk.OMEGA] = to!number(0.0);
-                // third row
-                blk.Minv[blk.Y_MOM,blk.TKE] = to!number(0.0);
-                blk.Minv[blk.Y_MOM,blk.OMEGA] = to!number(0.0);
-                // fourth row
-                blk.Minv[blk.TOT_ENERGY,blk.TKE] = -(gamma-1.0);
-                blk.Minv[blk.TOT_ENERGY,blk.OMEGA] = to!number(0.0);
-                // fifth row
-                blk.Minv[blk.TKE,blk.MASS] = -pcell.fs.turb[0]/pcell.fs.gas.rho;
-                blk.Minv[blk.TKE,blk.X_MOM] = to!number(0.0);
-                blk.Minv[blk.TKE,blk.Y_MOM] = to!number(0.0);
-                blk.Minv[blk.TKE,blk.TOT_ENERGY] = to!number(0.0);
-                blk.Minv[blk.TKE,blk.TKE] = 1.0/pcell.fs.gas.rho;
-                blk.Minv[blk.TKE,blk.OMEGA] = to!number(0.0);
-                // sixth row
-                blk.Minv[blk.OMEGA,blk.MASS] = -pcell.fs.turb[1]/pcell.fs.gas.rho;
-                blk.Minv[blk.OMEGA,blk.X_MOM] = to!number(0.0);
-                blk.Minv[blk.OMEGA,blk.Y_MOM] = to!number(0.0);
-                blk.Minv[blk.OMEGA,blk.TOT_ENERGY] = to!number(0.0);
-                blk.Minv[blk.OMEGA,blk.TKE] = to!number(0.0);
-                blk.Minv[blk.OMEGA,blk.OMEGA] = 1.0/pcell.fs.gas.rho;
 
-                if (blk.myConfig.dimensions == 3) {
-                    blk.Minv[blk.Z_MOM,blk.TKE] = to!number(0.0);
-                    blk.Minv[blk.Z_MOM,blk.OMEGA] = to!number(0.0);
-                    blk.Minv[blk.TKE,blk.Z_MOM] = to!number(0.0);
-                    blk.Minv[blk.OMEGA,blk.Z_MOM] = to!number(0.0);
+            auto tm = blk.myConfig.turb_model;
+            auto fs = pcell.fs;
+            foreach(it; 0 .. tm.nturb){
+            blk.Minv[blk.MASS,blk.TKE+it] = to!number(0.0); // second row
+            blk.Minv[blk.X_MOM,blk.TKE+it] = to!number(0.0); // third row
+            blk.Minv[blk.Y_MOM,blk.TKE+it] = to!number(0.0);
+            number dtke_drhoturb = tm.tke_rhoturb_derivatives(fs,it);
+            blk.Minv[blk.TOT_ENERGY,blk.TKE+it] = -(gamma-1.0)*dtke_drhoturb; // fourth row
+            }
+            
+            foreach(jt; 0 .. tm.nturb) { // fifth/sixth row
+            blk.Minv[blk.TKE+jt,blk.MASS] = -pcell.fs.turb[jt]/pcell.fs.gas.rho;
+            blk.Minv[blk.TKE+jt,blk.X_MOM] = to!number(0.0);
+            blk.Minv[blk.TKE+jt,blk.Y_MOM] = to!number(0.0);
+            blk.Minv[blk.TKE+jt,blk.TOT_ENERGY] = to!number(0.0);
+                foreach(it; 0 .. tm.nturb) {
+                number delta = (it==jt) ? 1.0 : 0.0;
+                blk.Minv[blk.TKE+jt,blk.TKE+it] = delta/pcell.fs.gas.rho;
                 }
             }
+            if (blk.myConfig.dimensions == 3) {
+                foreach(it; 0 .. tm.nturb) {
+                blk.Minv[blk.Z_MOM,blk.TKE+it] = to!number(0.0);
+                blk.Minv[blk.TKE+it,blk.Z_MOM] = to!number(0.0);
+                }
+            }
+            
             //number[][] tmp;
             //tmp.length = np;
             //foreach (ref a; tmp) a.length = np;
@@ -1878,41 +1846,34 @@ void compute_flow_jacobian_rows_for_cell(ref SMatrix!number A, ref size_t aa_idx
                 blk.Minv[blk.Z_MOM,blk.Z_MOM] = 1.0/pcell.fs.gas.rho;
                 blk.Minv[blk.Z_MOM,blk.TOT_ENERGY] = to!number(0.0);
             }
-            
-            if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                blk.Minv[blk.MASS,blk.TKE] = to!number(0.0);
-                blk.Minv[blk.MASS,blk.OMEGA] = to!number(0.0);
-                // second row
-                blk.Minv[blk.X_MOM,blk.TKE] = to!number(0.0);
-                blk.Minv[blk.X_MOM,blk.OMEGA] = to!number(0.0);
-                // third row
-                blk.Minv[blk.Y_MOM,blk.TKE] = to!number(0.0);
-                blk.Minv[blk.Y_MOM,blk.OMEGA] = to!number(0.0);
-                // fourth row
-                blk.Minv[blk.TOT_ENERGY,blk.TKE] = -(gamma-1.0);
-                blk.Minv[blk.TOT_ENERGY,blk.OMEGA] = to!number(0.0);
-                // fifth row
-                blk.Minv[blk.TKE,blk.MASS] = -pcell.fs.turb[0]/pcell.fs.gas.rho;
-                blk.Minv[blk.TKE,blk.X_MOM] = to!number(0.0);
-                blk.Minv[blk.TKE,blk.Y_MOM] = to!number(0.0);
-                blk.Minv[blk.TKE,blk.TOT_ENERGY] = to!number(0.0);
-                blk.Minv[blk.TKE,blk.TKE] = 1.0/pcell.fs.gas.rho;
-                blk.Minv[blk.TKE,blk.OMEGA] = to!number(0.0);
-                // sixth row
-                blk.Minv[blk.OMEGA,blk.MASS] = -pcell.fs.turb[1]/pcell.fs.gas.rho;
-                blk.Minv[blk.OMEGA,blk.X_MOM] = to!number(0.0);
-                blk.Minv[blk.OMEGA,blk.Y_MOM] = to!number(0.0);
-                blk.Minv[blk.OMEGA,blk.TOT_ENERGY] = to!number(0.0);
-                blk.Minv[blk.OMEGA,blk.TKE] = to!number(0.0);
-                blk.Minv[blk.OMEGA,blk.OMEGA] = 1.0/pcell.fs.gas.rho;
 
-                if (blk.myConfig.dimensions == 3) {
-                    blk.Minv[blk.Z_MOM,blk.TKE] = to!number(0.0);
-                    blk.Minv[blk.Z_MOM,blk.OMEGA] = to!number(0.0);
-                    blk.Minv[blk.TKE,blk.Z_MOM] = to!number(0.0);
-                    blk.Minv[blk.OMEGA,blk.Z_MOM] = to!number(0.0);
+            auto tm = blk.myConfig.turb_model;
+            auto fs = pcell.fs;
+            foreach(it; 0 .. tm.nturb){
+            blk.Minv[blk.MASS,blk.TKE+it] = to!number(0.0); // second row
+            blk.Minv[blk.X_MOM,blk.TKE+it] = to!number(0.0); // third row
+            blk.Minv[blk.Y_MOM,blk.TKE+it] = to!number(0.0);
+            number dtke_drhoturb = tm.tke_rhoturb_derivatives(fs,it);
+            blk.Minv[blk.TOT_ENERGY,blk.TKE+it] = -(gamma-1.0)*dtke_drhoturb; // fourth row
+            }
+            
+            foreach(jt; 0 .. tm.nturb) { // fifth/sixth row
+            blk.Minv[blk.TKE+jt,blk.MASS] = -pcell.fs.turb[jt]/pcell.fs.gas.rho;
+            blk.Minv[blk.TKE+jt,blk.X_MOM] = to!number(0.0);
+            blk.Minv[blk.TKE+jt,blk.Y_MOM] = to!number(0.0);
+            blk.Minv[blk.TKE+jt,blk.TOT_ENERGY] = to!number(0.0);
+                foreach(it; 0 .. tm.nturb) {
+                number delta = (it==jt) ? 1.0 : 0.0;
+                blk.Minv[blk.TKE+jt,blk.TKE+it] = delta/pcell.fs.gas.rho;
                 }
             }
+            if (blk.myConfig.dimensions == 3) {
+                foreach(it; 0 .. tm.nturb) {
+                blk.Minv[blk.Z_MOM,blk.TKE+it] = to!number(0.0);
+                blk.Minv[blk.TKE+it,blk.Z_MOM] = to!number(0.0);
+                }
+            }
+            
 	    //number[][] tmp;
             //tmp.length = np;
             //foreach (ref a; tmp) a.length = np;
@@ -2024,9 +1985,8 @@ string computeFluxDerivativesAroundCell(string varName, string posInArray, bool 
     codeStr ~= "iface.dFdU[blk.Z_MOM][" ~ posInArray ~ "] = blk.ifaceP[i].F.momentum.z.im/EPS.im;";
     codeStr ~= "}";
     codeStr ~= "iface.dFdU[blk.TOT_ENERGY][" ~ posInArray ~ "] = blk.ifaceP[i].F.total_energy.im/EPS.im;";
-    codeStr ~= "if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {";
-    codeStr ~= "iface.dFdU[blk.TKE][" ~ posInArray ~ "] = blk.ifaceP[i].F.rhoturb[0].im/EPS.im;";
-    codeStr ~= "iface.dFdU[blk.OMEGA][" ~ posInArray ~ "] = blk.ifaceP[i].F.rhoturb[1].im/EPS.im;";        
+    codeStr ~= "foreach(it; 0 .. blk.myConfig.turb_model.nturb){";
+    codeStr ~= "iface.dFdU[blk.TKE+it][" ~ posInArray ~ "] = blk.ifaceP[i].F.rhoturb[it].im/EPS.im;";
     codeStr ~= "}";
     codeStr ~= "}";
     codeStr ~= "foreach (i, cell; pcell.jacobian_cell_stencil) {";
@@ -2038,9 +1998,8 @@ string computeFluxDerivativesAroundCell(string varName, string posInArray, bool 
     codeStr ~= "cell.dQdU[blk.Z_MOM][" ~ posInArray ~ "] = cell.Q.momentum.z.im/EPS.im;";
     codeStr ~= "}";
     codeStr ~= "cell.dQdU[blk.TOT_ENERGY][" ~ posInArray ~ "] = cell.Q.total_energy.im/EPS.im;";
-    codeStr ~= "if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {";
-    codeStr ~= "cell.dQdU[blk.TKE][" ~ posInArray ~ "] = cell.Q.rhoturb[0].im/EPS.im;";
-    codeStr ~= "cell.dQdU[blk.OMEGA][" ~ posInArray ~ "] = cell.Q.rhoturb[1].im/EPS.im;";        
+    codeStr ~= "foreach(it; 0 .. blk.myConfig.turb_model.nturb){";
+    codeStr ~= "cell.dQdU[blk.TKE+it][" ~ posInArray ~ "] = cell.Q.rhoturb[it].im/EPS.im;";
     codeStr ~= "}";
     codeStr ~= "}";
     codeStr ~= "pcell.copy_values_from(blk.cellSave, CopyDataOption.all);";
@@ -2442,10 +2401,8 @@ void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref
                 if (myblk.myConfig.dimensions == 3) 
                     myblk.rT[i, j*nPrimitive+myblk.Z_MOM] = to!number((-cell.dUdt[ftl].momentum.z.im)/(EPS.im));
                 myblk.rT[i, j*nPrimitive+myblk.TOT_ENERGY] = to!number((-cell.dUdt[ftl].total_energy.im)/(EPS.im));                
-                
-                if (myblk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                    myblk.rT[i, j*nPrimitive+myblk.TKE] = to!number((-cell.dUdt[ftl].rhoturb[0].im)/(EPS.im));
-                    myblk.rT[i, j*nPrimitive+myblk.OMEGA] = to!number((-cell.dUdt[ftl].rhoturb[1].im)/(EPS.im));
+                foreach(it; 0 .. myblk.myConfig.turb_model.nturb){
+                    myblk.rT[i, j*nPrimitive+myblk.TKE+it] = to!number((-cell.dUdt[ftl].rhoturb[it].im)/(EPS.im));
                 }
             }
         }
@@ -3996,14 +3953,10 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
 		    token = line.split();
 		    cell.gradients.pPhi = to!double(token[0]);
 		    
-		    if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
+            foreach(it; 0 .. blk.myConfig.turb_model.nturb){
 			line = outFile.readln().strip();
 			token = line.split();
-			cell.gradients.turbPhi[0] = to!double(token[0]);
-			
-			line = outFile.readln().strip();
-			token = line.split();
-			cell.gradients.turbPhi[1] = to!double(token[0]);
+			cell.gradients.turbPhi[it] = to!double(token[0]);
 		    }
 		}
 	    }
