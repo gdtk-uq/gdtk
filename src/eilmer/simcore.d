@@ -272,7 +272,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
         // There is only one process and it deals with all blocks.
         foreach (blk; globalBlocks) {
             auto myblk = cast(FluidBlock) blk;           
-            if (blk) { localFluidBlocks ~= myblk; }
+            if (myblk) { localFluidBlocks ~= myblk; }
         }
     }
     foreach (blk; localFluidBlocks) { GlobalConfig.localFluidBlockIds ~= blk.id; }
@@ -435,6 +435,12 @@ void init_simulation(int tindx, int nextLoadsIndx,
         initGPUChem();
     }
     //
+    // For now there is only one process and it deals with all solid blocks.
+    foreach (blk; globalBlocks) {
+        auto sblk = cast(SSolidBlock) blk;           
+        if (sblk) { localSolidBlocks ~= sblk; }
+    }
+
     foreach (ref mySolidBlk; localSolidBlocks) {
         mySolidBlk.assembleArrays();
         mySolidBlk.bindFacesAndVerticesToCells();

@@ -1035,9 +1035,10 @@ function SolidBlock:new(o)
    setmetatable(o, self)
    self.__index = self
    -- Make a record of the new block for later construction of the config file.
-   -- Note that we want the block id to start at zero for the D code.
+   -- Note that we want the solidblock ids to continue on from the fluidblocks.
+   -- We are assuming the fluidblocks have already been created
    print("Adding new solid block.")
-   o.id = #solidBlocks
+   o.id = #solidBlocks + #fluidBlocks
    solidBlocks[#solidBlocks+1] = o
    -- Must have a grid and initial temperature
    if not o.grid then

@@ -39,7 +39,7 @@ public:
     this(int id, string label)
     {
         super(id, label);
-        myConfig = dedicatedSolidConfig[id];
+        myConfig = dedicatedConfig[id];
     }
 
     override string toString() const { return "SolidBlock(id=" ~ to!string(id) ~ ")"; }

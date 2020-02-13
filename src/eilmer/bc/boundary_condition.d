@@ -29,6 +29,7 @@ import fvcell;
 import fluidblock;
 import sfluidblock;
 import fluxcalc;
+import ssolidblock;
 import solidfvcell;
 import solidfvinterface;
 import bc.ghost_cell_effect;
@@ -389,8 +390,9 @@ public:
         default:
             throw new Error("initGasSolidWorkingSpace() only implemented for NORTH gas face.");
         }
+        auto solidBlk = cast(SSolidBlock) globalBlocks[solidBlkId];
+        assert(solidBlk !is null, "Oops, this should be a SSolidBlock object.");
 
-        auto solidBlk = localSolidBlocks[solidBlkId];
         switch (solidFaceId) {
         case Face.south:
             j = solidBlk.jmin;

@@ -437,6 +437,7 @@ final class GlobalConfig {
     
     shared static bool include_quality = false; // if true, we include quality in the solution file  
 
+    shared static int nBlocks = 0; // Number of blocks in the overall simulation (nFluidBlocks + nSolidBlocks).
     shared static int nFluidBlocks = 0; // Number of fluid blocks in the overall simulation.
     shared static int nSolidBlocks = 0; // Number of solid blocks in the overall simulation.
     shared static int dimensions = 2; // default is 2, other valid option is 3
@@ -1712,29 +1713,33 @@ void read_config_file()
     GlobalConfig.udfSolidSourceTerms = getJSONbool(jsonData, "udf_solid_source_terms", false);
     GlobalConfig.udfSolidSourceTermsFile = jsonData["udf_solid_source_terms_file"].str;
     GlobalConfig.nSolidBlocks = getJSONint(jsonData, "nsolidblock", 0);
+    GlobalConfig.nBlocks = GlobalConfig.nFluidBlocks + GlobalConfig.nSolidBlocks;
     if (GlobalConfig.verbosity_level > 1) {
         writeln("  nSolidBlocks: ", GlobalConfig.nSolidBlocks);
         writeln("  udf_solid_source_terms: ", GlobalConfig.udfSolidSourceTerms);
         writeln("  udf_solid_source_terms_file: ", to!string(GlobalConfig.udfSolidSourceTermsFile));
     }
     // Set up dedicated copies of the configuration parameters for the threads.
-    foreach (i; 0 .. GlobalConfig.nSolidBlocks) {
-        dedicatedSolidConfig ~= new LocalConfig(i);
+    foreach (int i; GlobalConfig.nFluidBlocks .. GlobalConfig.nBlocks) {
+        dedicatedConfig ~= new LocalConfig(i);
     }
-    foreach (i; 0 .. GlobalConfig.nSolidBlocks) {
-        localSolidBlocks ~= new SSolidBlock(i, jsonData["solid_block_" ~ to!string(i)]);
+    // Note that we want the solidblock ids to continue on from the fluidblock ids.
+    foreach (int i; GlobalConfig.nFluidBlocks .. GlobalConfig.nBlocks) {
+        globalBlocks ~= new SSolidBlock(i, jsonData["solid_block_" ~ to!string(i)]);
         if (GlobalConfig.verbosity_level > 1) {
-            writeln("  SolidBlock[", i, "]: ", localSolidBlocks[i]);
+            writeln("  SolidBlock[", i, "]: ", globalBlocks[i]);
         }
     }
-    foreach (sblk; localSolidBlocks) {
+    foreach (int i; GlobalConfig.nFluidBlocks .. GlobalConfig.nBlocks) {
+        // Note that we want the solidblock ids to continue on from the fluidblocks.
+        auto sblk = cast(SSolidBlock) globalBlocks[i];
+        assert(sblk !is null, "Oops, this should be a SolidBlock object.");        
         sblk.initLuaGlobals();
         sblk.initBoundaryConditions(jsonData["solid_block_" ~ to!string(sblk.id)]);
         if ( GlobalConfig.udfSolidSourceTerms ) {
             initUDFSolidSourceTerms(sblk.myL, GlobalConfig.udfSolidSourceTermsFile);
         }
     }
-
     // Now that the blocks are configured, we can initialize
     // the lua_State that holds the user's functions
     // for simulation supervision and for defining grid motion.
@@ -1748,7 +1753,6 @@ void read_config_file()
     if (GlobalConfig.grid_motion == GridMotion.user_defined) {
         doLuaFile(GlobalConfig.master_lua_State, GlobalConfig.udf_grid_motion_file);
     }
-
 } // end read_config_file()
 
 void read_control_file()
@@ -1900,9 +1904,6 @@ void read_control_file()
     
     // Propagate new values to the local copies of config.
     foreach (localConfig; dedicatedConfig) {
-        localConfig.update_control_parameters();
-    }
-    foreach (localConfig; dedicatedSolidConfig) {
         localConfig.update_control_parameters();
     }
 
@@ -2071,8 +2072,8 @@ void init_master_lua_State()
     // Note that not all of these blocks may be fully present
     // in an MPI-parallel simulation.
     lua_newtable(L);
-    foreach (i, blk; globalBlocks) {
-        auto fluidblk = cast(FluidBlock) blk;
+    foreach (i; 0..GlobalConfig.nFluidBlocks) {
+        auto fluidblk = cast(FluidBlock) globalBlocks[i];
         assert(fluidblk !is null, "Oops, this should be a FluidBlock object.");
         lua_newtable(L);
         lua_pushnumber(L, fluidblk.cells.length);
@@ -2080,7 +2081,7 @@ void init_master_lua_State()
         lua_pushnumber(L, fluidblk.vertices.length);
         lua_setfield(L, -2, "nVertices");
         if ( fluidblk.grid_type == Grid_t.structured_grid ) {
-            auto sblk = cast(SFluidBlock) blk;
+            auto sblk = cast(SFluidBlock) fluidblk;
             assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
             lua_pushnumber(L, sblk.nicell);
             lua_setfield(L, -2, "niCells");

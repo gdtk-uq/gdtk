@@ -38,7 +38,7 @@ public:
 
     this(string jobName, string dir, int tindx, size_t nBlocks)
     {
-        foreach (ib; 0 .. nBlocks) {
+        foreach (int ib; GlobalConfig.nFluidBlocks .. GlobalConfig.nBlocks) {
             string fileName;
             // Presently, don't allow moving grid for solid domain,
             // so tindx is always 0 for solid-grid

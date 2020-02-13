@@ -55,7 +55,8 @@ public:
     string desc;
     
     this(int id, int boundary, string description) {
-        blk = localSolidBlocks[id];
+        blk = cast(SSolidBlock) globalBlocks[id];
+        assert(blk !is null, "Oops, this should be a SSolidBlock object.");
         whichBoundary = boundary;
         desc = description;
     }
@@ -360,7 +361,8 @@ public:
          int otherBlock, int otherFace, int orient)
     {
         super(id, boundary, "ConnectionBoundary");
-        neighbourBlk = localSolidBlocks[otherBlock];
+        neighbourBlk = cast(SSolidBlock) globalBlocks[otherBlock];
+        assert(neighbourBlk !is null, "Oops, this should be a SSolidBlock object.");
         neighbourFace = otherFace;
         neighbourOrientation = orient;
     }

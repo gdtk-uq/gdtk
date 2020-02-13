@@ -26,6 +26,7 @@ import luaflowstate;
 import globalconfig;
 import globaldata;
 import solidfvcell;
+import ssolidblock;
 import sfluidblock;
 import ufluidblock;
 import fluidblock;
@@ -297,7 +298,9 @@ extern(C) int luafn_sampleSolidCell(lua_State *L)
     auto k = lua_tointeger(L, 4);
 
     // Grab the appropriate cell
-    auto cell = localSolidBlocks[blkId].getCell(i, j, k);
+    auto blk = cast(SSolidBlock) globalBlocks[blkId];
+    assert(blk !is null, "Oops, this should be a SSolidBlock object.");
+    auto cell = blk.getCell(i, j, k);
     
     // Return the interesting bits as a table.
     lua_newtable(L);

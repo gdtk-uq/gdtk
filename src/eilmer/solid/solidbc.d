@@ -57,7 +57,8 @@ public:
 
     this(int blkId, int boundary, bool _setsFluxDirectly)
     {
-        blk = localSolidBlocks[blkId];
+        blk = cast(SSolidBlock) globalBlocks[blkId];
+        assert(blk !is null, "Oops, this should be a SSolidBlock object.");
         whichBoundary = boundary;
         setsFluxDirectly = _setsFluxDirectly;
     }

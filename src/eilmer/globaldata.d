@@ -40,7 +40,6 @@ __gshared static SSolidBlock[] localSolidBlocksBySize; // sorted largest to smal
 // so that there is no need to have memory barriers guarding their access.
 // There will be one of these LocalConfig objects per block.
 __gshared static LocalConfig[] dedicatedConfig;
-__gshared static LocalConfig[] dedicatedSolidConfig;
 
 // We store the computed run time loads globally
 // so that we may make these available in the
