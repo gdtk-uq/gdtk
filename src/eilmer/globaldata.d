@@ -5,6 +5,8 @@
  * Versions: 2014-07-18 : first cut.
  *           2015-22-04 : added containers for solid blocks
  *           2017-01-17 : Added globalFluidBlocks for the MPI-parallel.
+ *           2020-02-11 : Removed globalFluidBlocks & globalSolidBlocks; 
+ *                        replaced with globalBlocks (Kyle A. Damm).
  */
 
 module globaldata;
@@ -12,6 +14,7 @@ module globaldata;
 import globalconfig;
 import fluidblock;
 import ssolidblock;
+import block;
 import loads;
 
 // For this globally-accessible data we use the __gshared storage class
@@ -21,8 +24,7 @@ import loads;
 
 // Global collections of blocks for the simulation, as a whole.
 // For the fluid blocks, not all may be present in the local MPI task (Linux process).
-__gshared static FluidBlock[] globalFluidBlocks;
-__gshared static SSolidBlock[] globalSolidBlocks;
+__gshared static Block[] globalBlocks;
 
 // Collections of blocks that we can iterate over in parallel.
 // The current (shared-memory) parallel code is based on having one FluidBlock object

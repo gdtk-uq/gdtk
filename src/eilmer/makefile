@@ -90,7 +90,7 @@ EILMER_CORE_FILES := simcore.d \
 	fluxcalc.d onedinterp.d flowgradients.d lsqinterp.d limiters.d \
 	conservedquantities.d flowstate.d \
 	globalconfig.d globaldata.d \
-	fluidblock.d sfluidblock.d ufluidblock.d \
+	block.d fluidblock.d sfluidblock.d ufluidblock.d \
 	gas_solid_interface.d \
 	flowsolution.d grid_motion.d \
 	shock_fitting_moving_grid.d history.d loads.d special_block_init.d \

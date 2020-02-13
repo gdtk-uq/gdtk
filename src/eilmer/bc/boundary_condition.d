@@ -165,7 +165,8 @@ public:
     this(int id, int boundary, bool isWallWithViscousEffects=true,
          bool ghostCellDataAvailable=true, double _emissivity=0.0)
     {
-        blk = globalFluidBlocks[id];  // pick the relevant block out of the collection
+        blk = cast(FluidBlock) globalBlocks[id];  // pick the relevant block out of the collection
+        assert(blk !is null, "Oops, this should be a FluidBlock object.");
         which_boundary = boundary;
         type = "";
         group = "";

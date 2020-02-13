@@ -254,7 +254,10 @@ void init_simulation(int tindx, int nextLoadsIndx,
                 MPI_Abort(MPI_COMM_WORLD, 2);
             }
             GlobalConfig.mpi_rank_for_block[blkid] = taskid;
-            if (taskid == my_rank) { localFluidBlocks ~= globalFluidBlocks[blkid]; }
+            if (taskid == my_rank) {
+                auto blk = cast(FluidBlock) globalBlocks[blkid];
+                if (blk) { localFluidBlocks ~= blk; }
+            }
         }
         version(mpi_timeouts) {
             MPI_Sync_tasks();
@@ -267,7 +270,10 @@ void init_simulation(int tindx, int nextLoadsIndx,
         }
     } else {
         // There is only one process and it deals with all blocks.
-        foreach (blk; globalFluidBlocks) { localFluidBlocks ~= blk; }
+        foreach (blk; globalBlocks) {
+            auto myblk = cast(FluidBlock) blk;           
+            if (blk) { localFluidBlocks ~= myblk; }
+        }
     }
     foreach (blk; localFluidBlocks) { GlobalConfig.localFluidBlockIds ~= blk.id; }
     //
@@ -305,8 +311,16 @@ void init_simulation(int tindx, int nextLoadsIndx,
         myblk.compute_primary_cell_geometric_data(0);
     }
     // Note that the global id is across all processes, not just the local collection of blocks.
-    foreach (i, myblk; globalFluidBlocks) {
-        myblk.globalCellIdStart = (i == 0) ? 0 : globalFluidBlocks[i-1].globalCellIdStart + globalFluidBlocks[i-1].ncells_expected;
+    foreach (i, blk; globalBlocks) {
+        auto fluidblk = cast(FluidBlock) blk;
+        if (fluidblk) {
+            if ( i == 0 ) {
+                fluidblk.globalCellIdStart = 0;
+            } else {
+                auto prev_fluidblk = cast(FluidBlock) globalBlocks[i-1];
+                fluidblk.globalCellIdStart = prev_fluidblk.globalCellIdStart + prev_fluidblk.ncells_expected;
+            }
+        }
     }
     shared double[] time_array;
     time_array.length = localFluidBlocks.length;
@@ -717,7 +731,8 @@ void march_over_blocks()
             gasBlockArray[i][j].length = nkb;
             foreach (k; 0 .. nkb) {
                 int gid = k + nkb*(j + njb*i);
-                gasBlockArray[i][j][k] = globalFluidBlocks[gid];
+                auto fluidblk = cast(FluidBlock) globalBlocks[gid];
+                if (fluidblk) { gasBlockArray[i][j][k] = fluidblk; }
             }
         }
     }
@@ -1178,7 +1193,7 @@ void synchronize_corner_coords_for_all_blocks()
     // Presently, the corner coordinates are only meaningful for structured-grid blocks.
     version(mpi_parallel) {
         // In MPI context, we can only see a subset of the block data.
-        foreach (blk; globalFluidBlocks) {
+        foreach (blk; globalBlocks) {
             auto sblk = cast(SFluidBlock) blk;
             if (!sblk) { continue; }
             if (canFind(GlobalConfig.localFluidBlockIds, sblk.id)) {
@@ -1190,7 +1205,7 @@ void synchronize_corner_coords_for_all_blocks()
             }
         }
         // Now, propagate the valid coordinates across all tasks.
-        foreach (blk; globalFluidBlocks) {
+        foreach (blk; globalBlocks) {
             auto sblk = cast(SFluidBlock) blk;
             if (sblk) {
                 MPI_Allreduce(MPI_IN_PLACE, sblk.corner_coords.ptr, sblk.corner_coords.length,
@@ -1199,7 +1214,7 @@ void synchronize_corner_coords_for_all_blocks()
         }
     } else {
         // In shared-memory, we can see all blocks.
-        foreach (blk; globalFluidBlocks) {
+        foreach (blk; globalBlocks) {
             auto sblk = cast(SFluidBlock) blk;
             if (sblk) { sblk.copy_current_corner_coords(); }
         }
@@ -1572,7 +1587,7 @@ void set_grid_velocities()
                             assert(inflow_vertex_velocities.length == (sblk.jmax - sblk.jmin + 2), "the vertex velocity array is the wrong size");
 
                             foreach (indx; sblk.inflow_partners) {
-                                assign_slave_velocities(cast(SFluidBlock) globalFluidBlocks[indx], inflow_vertex_velocities);
+                                assign_slave_velocities(cast(SFluidBlock) globalBlocks[indx], inflow_vertex_velocities);
                             }
                         }
                     }

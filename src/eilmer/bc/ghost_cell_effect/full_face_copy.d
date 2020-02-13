@@ -117,7 +117,8 @@ public:
          ref const(double[]) Rmatrix)
     {
         super(id, boundary, "FullFaceCopy");
-        neighbourBlock = globalFluidBlocks[otherBlock];
+        neighbourBlock = cast(FluidBlock) globalBlocks[otherBlock];
+        assert(neighbourBlock !is null, "Oops, this should be a FluidBlock object.");
         neighbourFace = otherFace;
         neighbourOrientation = orient;
         this.reorient_vector_quantities = reorient_vector_quantities;

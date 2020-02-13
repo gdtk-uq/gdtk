@@ -1,6 +1,8 @@
 // fluidblock.d
 // Base class for blocks of cells, for use within the Eilmer flow solver.
 // Peter J. 2014-07-18 first cut.
+// Now a derived class from the Block base class
+// Kyle A. Damm 2020-02-11
 
 module fluidblock;
 
@@ -34,6 +36,7 @@ import grid_motion;
 import grid_deform;
 import sfluidblock; // needed for some special-case processing, below
 import shockdetectors;
+import block;
 
 // To distinguish ghost cells from active cells, we start their id values at
 // an arbitrarily high value.  It seem high to me (PJ) but feel free to adjust it
@@ -44,18 +47,9 @@ enum ghost_cell_start_id = 1_000_000_000;
 // The flow solver handles structured- and unstructured-grid blocks via this base class.
 // Mostly, we view the block as an unstructured bag of cells because that requires least
 // knowledge in the calling code.
-class FluidBlock {
+class FluidBlock : Block {
 public:
-    int id; // block identifier: assumed to be the same as the block number.
     Grid_t grid_type; // structured or unstructured
-    string label;
-    LocalConfig myConfig;
-    lua_State* myL;
-    //
-    bool active; // if true, block participates in the time integration
-    // The active flag is used principally for the block-marching calculation,
-    // where we want to integrate a few blocks at a time.
-    //
     bool may_be_turbulent; // if true, the selected turbulence model is active
                            // within this block.
     double omegaz; // Angular velocity (in rad/s) of the rotating frame.
@@ -168,11 +162,10 @@ public:
 
     this(int id, Grid_t grid_type, size_t ncells, size_t n_ghost_cell_layers, string label)
     {
-        this.id = id;
+        super(id, label);
         this.grid_type = grid_type;
         this.ncells_expected = ncells;
         this.n_ghost_cell_layers = n_ghost_cell_layers;
-        this.label = label;
         myConfig = dedicatedConfig[id];
         Linf_residuals = new ConservedQuantities(dedicatedConfig[id].n_species,
                                                  dedicatedConfig[id].n_modes);
@@ -181,11 +174,7 @@ public:
         Rght = new FlowState(dedicatedConfig[id].gmodel);
         // Lua interpreter for the block. 
         // It will be available for computing user-defined source terms.
-        myL = luaL_newstate();
-        luaL_openlibs(myL);
         registerGasModel(myL, LUA_GLOBALSINDEX);
-        lua_pushinteger(myL, id);
-        lua_setglobal(myL, "blkId");
         pushObj!(GasModel, GasModelMT)(myL, dedicatedConfig[id].gmodel);
         lua_setglobal(myL, "gmodel");
         lua_pushinteger(myL, dedicatedConfig[id].n_species);
@@ -201,7 +190,7 @@ public:
 
     ~this()
     {
-        lua_close(myL);
+       lua_close(myL);
     }
 
     override string toString() const { return "Block(id=" ~ to!string(id) ~ ")"; }

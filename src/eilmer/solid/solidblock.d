@@ -8,6 +8,9 @@
  *
  * Author: Rowan G. and Peter J.
  * Date: 2015-22-04
+ *
+ * Now a derived class from the Block base class
+ * Kyle A. Damm 2020-02-11
  */
 
 module solidblock;
@@ -22,30 +25,21 @@ import globalconfig;
 import solidfvcell;
 import solidbc;
 import solidprops;
+import block;
 
-
-class SolidBlock {
+class SolidBlock : Block {
 public:
-    int id; // block identifier
-    string label;
-    LocalConfig myConfig;
-    bool active; // if true, block participates in time integration
     double energyResidual; // monitor this for steady state
     Vector3 energyResidualLoc; // location of worst case
     int hncell; // number of history cells
-    lua_State* myL;
 
     SolidFVCell[] activeCells; // collection of references to active cells in the domain
     SolidBoundaryCondition[] bc; // collection of references to boundary conditions
 
     this(int id, string label)
     {
-        this.id = id;
-        this.label = label;
+        super(id, label);
         myConfig = dedicatedSolidConfig[id];
-        myL = luaL_newstate();
-        luaL_openlibs(myL);
-        lua_pushinteger(myL, id); lua_setglobal(myL, "blkId");
     }
 
     override string toString() const { return "SolidBlock(id=" ~ to!string(id) ~ ")"; }

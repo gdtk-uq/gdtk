@@ -249,7 +249,7 @@ void assign_radial_dist(SFluidBlock blk) {
                     // There is another block to go through
                     auto ffeBC = cast(GhostCellFullFaceCopy) blk.bc[Face.east].preReconAction[0];
                     int neighbourBlock = ffeBC.neighbourBlock.id;
-                    auto next_blk = cast(SFluidBlock) globalFluidBlocks[neighbourBlock];
+                    auto next_blk = cast(SFluidBlock) globalBlocks[neighbourBlock];
                     blk = next_blk;
                 } else {
                     // No more blocks to go through
@@ -284,7 +284,7 @@ void assign_radial_dist(SFluidBlock blk) {
                 if (blk.bc[Face.west].type == "exchange_over_full_face") {
                     auto ffeBC = cast(GhostCellFullFaceCopy) blk.bc[Face.west].preReconAction[0];
                     int neighbourBlock =  ffeBC.neighbourBlock.id;
-                    auto next_blk = cast(SFluidBlock) globalFluidBlocks[neighbourBlock];
+                    auto next_blk = cast(SFluidBlock) globalBlocks[neighbourBlock];
                     blk = next_blk;
                 } else {
                     last_block = true;
@@ -546,13 +546,13 @@ void populate_ghost_cell_interface_geometry(SFluidBlock blk) {
                 }
             } else {
                 // Neighbour block is local in the mpi context
-                SFluidBlock neighbour_blk = cast(SFluidBlock) globalFluidBlocks[neighbour];
+                SFluidBlock neighbour_blk = cast(SFluidBlock) globalBlocks[neighbour];
                 for (size_t k = blk.kmin; k <= krangemax; k++) {
                     blk.get_cell(blk.imin, blk.jmin-1, k) = neighbour_blk.get_cell(neighbour_blk.imin, neighbour_blk.jmax, k);
                 }
             }
         } else {
-            SFluidBlock neighbour_blk = cast(SFluidBlock) globalFluidBlocks[neighbour];
+            SFluidBlock neighbour_blk = cast(SFluidBlock) globalBlocks[neighbour];
             for (size_t k = blk.kmin; k <= krangemax; k++) {
                 blk.get_cell(blk.imin, blk.jmin-1, k) = neighbour_blk.get_cell(neighbour_blk.imin, neighbour_blk.jmax, k);
             }
@@ -601,13 +601,13 @@ void populate_ghost_cell_interface_geometry(SFluidBlock blk) {
                 }
             } else {
                 // Neighbour block is local in the mpi context
-                SFluidBlock neighbour_blk = cast(SFluidBlock) globalFluidBlocks[neighbour];
+                SFluidBlock neighbour_blk = cast(SFluidBlock) globalBlocks[neighbour];
                 for (size_t k = blk.kmin; k <= krangemax; k++) {
                     blk.get_cell(blk.imin, blk.jmax+1, k) = neighbour_blk.get_cell(neighbour_blk.imin, neighbour_blk.jmin, k);
                 }
             }
         } else {
-            SFluidBlock neighbour_blk = cast(SFluidBlock) globalFluidBlocks[neighbour];
+            SFluidBlock neighbour_blk = cast(SFluidBlock) globalBlocks[neighbour];
             for (size_t k = blk.kmin; k <= krangemax; k++) {
                 blk.get_cell(blk.imin, blk.jmax+1, k) = neighbour_blk.get_cell(neighbour_blk.imin, neighbour_blk.jmin, k);
             }
@@ -667,7 +667,7 @@ void get_ghost_vertex_positions(SFluidBlock blk) {
                 }
             } else {
                 // Block is local in the mpi context- we can just grab the neighbours info
-                auto neighbour_blk = cast(SFluidBlock) globalFluidBlocks[neighbour];
+                auto neighbour_blk = cast(SFluidBlock) globalBlocks[neighbour];
                 for (size_t k = blk.kmin; k <= krange; k++) {
                     for (size_t j = blk.jmin; j <= blk.jmax+1; j++) {
                         blk.get_vtx(blk.imin-1, j, k).pos[0] = neighbour_blk.get_vtx(neighbour_blk.imax, j, k).pos[0];
@@ -675,7 +675,7 @@ void get_ghost_vertex_positions(SFluidBlock blk) {
                 }
             }
         } else {
-            auto neighbour_blk = cast(SFluidBlock) globalFluidBlocks[neighbour];
+            auto neighbour_blk = cast(SFluidBlock) globalBlocks[neighbour];
             for (size_t k = krange; k <= krange; k++) {
                 for (size_t j = blk.jmin; j <= blk.jmax+1; j++) {
                     blk.get_vtx(blk.imin-1, j, k).pos[0] = neighbour_blk.get_vtx(neighbour_blk.imax, j, k).pos[0];
@@ -737,7 +737,7 @@ void get_ghost_vertex_positions(SFluidBlock blk) {
                 }
             } else {
                 // Block is local in the mpi context- we can just grab the neighbours info
-                auto neighbour_blk = cast(SFluidBlock) globalFluidBlocks[neighbour];
+                auto neighbour_blk = cast(SFluidBlock) globalBlocks[neighbour];
                 for (size_t k = blk.kmin; k <= krange; k++) {
                     for (size_t j = blk.jmin; j <= blk.jmax+1; j++) {
                         blk.get_vtx(blk.imax+2, j, k).pos[0] = neighbour_blk.get_vtx(neighbour_blk.imin+1, j, k).pos[0];
@@ -745,7 +745,7 @@ void get_ghost_vertex_positions(SFluidBlock blk) {
                 }
             }
         } else {
-            auto neighbour_blk = cast(SFluidBlock) globalFluidBlocks[neighbour];
+            auto neighbour_blk = cast(SFluidBlock) globalBlocks[neighbour];
             for (size_t k = blk.kmin; k <= krange; k++) {
                 for (size_t j = blk.jmin; j <= blk.jmax+1; j++) {
                     blk.get_vtx(blk.imax+2, j, k).pos[0] = neighbour_blk.get_vtx(neighbour_blk.imin+1, j, k).pos[0];

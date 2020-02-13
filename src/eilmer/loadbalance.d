@@ -20,6 +20,7 @@ import std.typecons;
 
 import globaldata;
 import globalconfig;
+import fluidblock;
 
 void main(string[] args)
 {
@@ -110,8 +111,10 @@ void main(string[] args)
     // We simply use the cell count as an estimate of load.
     Tuple!(int,int)[] blockLoads;
     blockLoads.length = GlobalConfig.nFluidBlocks;
-    foreach (iblk, blk; globalFluidBlocks) {
-        int ncells = to!int(globalFluidBlocks[iblk].ncells_expected);
+    foreach (iblk, blk; globalBlocks) {
+        auto fluidblk = cast(FluidBlock) globalBlocks[iblk];
+        assert(blk !is null, "Oops, this should be a FluidBlock object.");
+        int ncells = to!int(fluidblk.ncells_expected);
         blockLoads[iblk] = tuple(to!int(iblk), ncells);
     }
     sort!("a[1] > b[1]")(blockLoads);

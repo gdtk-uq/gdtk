@@ -28,6 +28,7 @@ import globaldata;
 import solidfvcell;
 import sfluidblock;
 import ufluidblock;
+import fluidblock;
 
 // -----------------------------------------------------
 // Functions to synchronise an array in the Dlang domain with a table in Lua
@@ -85,7 +86,8 @@ extern(C) int luafn_infoFluidBlock(lua_State *L)
 {
     // Expect FluidBlock index on the lua_stack.
     auto blkId = lua_tointeger(L, 1);
-    auto blk = globalFluidBlocks[blkId];
+    auto blk = cast(FluidBlock) globalBlocks[blkId];
+    assert(blk !is null, "Oops, this should be a FluidBlock object.");
     // Return the interesting bits as a table.
     lua_newtable(L);
     int tblIdx = lua_gettop(L);
@@ -139,7 +141,7 @@ extern(C) int luafn_sampleFluidCell(lua_State *L)
     auto k = lua_tointeger(L, 4);
 
     // Grab the appropriate cell
-    auto sblk = cast(SFluidBlock) globalFluidBlocks[blkId];
+    auto sblk = cast(SFluidBlock) globalBlocks[blkId];
     FVCell cell;
     if (sblk) {
         try {
@@ -157,7 +159,9 @@ extern(C) int luafn_sampleFluidCell(lua_State *L)
     // Return the interesting bits as a table.
     lua_newtable(L);
     int tblIdx = lua_gettop(L);
-    pushFluidCellToTable(L, tblIdx, cell, 0, globalFluidBlocks[blkId].myConfig.gmodel);
+    auto blk = cast(FluidBlock) globalBlocks[blkId];
+    assert(blk !is null, "Oops, this should be a FluidBlock object.");
+    pushFluidCellToTable(L, tblIdx, cell, 0, blk.myConfig.gmodel);
     return 1;
 } // end luafn_sampleFluidCell()
 
@@ -176,8 +180,8 @@ extern(C) int luafn_sampleFluidFace(lua_State *L)
 
     FVInterface face;
     // Grab the appropriate face
-    auto sblk = cast(SFluidBlock) globalFluidBlocks[blkId];
-    auto ublk = cast(UFluidBlock) globalFluidBlocks[blkId];
+    auto sblk = cast(SFluidBlock) globalBlocks[blkId];
+    auto ublk = cast(UFluidBlock) globalBlocks[blkId];
     try {
         switch (which_face) {
         case "i": face = sblk.get_ifi(i, j, k); break;
@@ -195,7 +199,9 @@ extern(C) int luafn_sampleFluidFace(lua_State *L)
     // Return the interesting bits as a table.
     lua_newtable(L);
     int tblIdx = lua_gettop(L);
-    pushFluidFaceToTable(L, tblIdx, face, 0, globalFluidBlocks[blkId].myConfig.gmodel);
+    auto blk = cast(FluidBlock) globalBlocks[blkId];
+    assert(blk !is null, "Oops, this should be a FluidBlock object.");
+    pushFluidFaceToTable(L, tblIdx, face, 0, blk.myConfig.gmodel);
     return 1;
 } // end luafn_sampleFluidFace()
 

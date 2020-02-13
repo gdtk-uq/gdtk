@@ -21,6 +21,7 @@ import fvcell;
 import fileutil;
 import solidfvcell;
 import solidblock;
+import fluidblock;
 
 string histDir = "hist";
 
@@ -29,11 +30,13 @@ void init_history_cell_files()
     foreach (hcell; GlobalConfig.hcells) {
         auto blkId = hcell[0];
         auto cellId = hcell[1];
+        auto blk = cast(FluidBlock) globalBlocks[blkId];
+        assert(blk !is null, "Oops, this should be a FluidBlock object.");
         if (find(GlobalConfig.localFluidBlockIds, blkId).empty) { continue; }
-        if ( cellId >= globalFluidBlocks[blkId].cells.length ) {
+        if ( cellId >= blk.cells.length ) {
             string errMsg = "ERROR: init_history_cell_files()\n";
             errMsg ~= format("The requested history cell index %d is not valid for block %d.\n", cellId, blkId);
-            errMsg ~= format("This block only has %d cells.\n", globalFluidBlocks[blkId].cells.length);
+            errMsg ~= format("This block only has %d cells.\n", blk.cells.length);
             throw new FlowSolverException(errMsg);
         }
         string basicName = format("%s-blk-%d-cell-%d.dat", GlobalConfig.base_file_name, blkId, cellId);
@@ -80,7 +83,9 @@ void write_history_cells_to_files(double sim_time)
         auto blkId = hcell[0];
         auto cellId = hcell[1];
         if (find(GlobalConfig.localFluidBlockIds, blkId).empty) { continue; }
-        auto cell = globalFluidBlocks[blkId].cells[cellId];
+        auto blk = cast(FluidBlock) globalBlocks[blkId];
+        assert(blk !is null, "Oops, this should be a FluidBlock object.");
+        auto cell = blk.cells[cellId];
         auto writer = appender!string();
         formattedWrite(writer, "%.18e %s\n", sim_time, cell.write_values_to_string());
         string basicName = format("%s-blk-%d-cell-%d.dat", GlobalConfig.base_file_name, blkId, cellId);
