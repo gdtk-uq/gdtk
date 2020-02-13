@@ -323,14 +323,10 @@ void main(string[] args) {
 		    token = line.split();
 		    cell.gradients.pPhi = to!double(token[0]);
 		    
-		    if (blk.myConfig.turbulence_model == TurbulenceModel.k_omega) {
+            foreach(it; 0 .. blk.myConfig.turb_model.nturb){
 			line = outFile.readln().strip();
 			token = line.split();
-			cell.gradients.turbPhi[0] = to!double(token[0]);
-			
-			line = outFile.readln().strip();
-			token = line.split();
-			cell.gradients.turbPhi[1] = to!double(token[0]);
+			cell.gradients.turbPhi[it] = to!double(token[0]);
 		    }
 		}
 	    }
