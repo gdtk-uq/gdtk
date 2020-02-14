@@ -513,13 +513,10 @@ public:
         number ke = 0.5*(fs.vel.x*fs.vel.x + fs.vel.y*fs.vel.y+fs.vel.z*fs.vel.z);
         myU.total_energy = fs.gas.rho*(u + ke);
         version(komega) {
-            if (with_k_omega) {
-                foreach(i; 0 .. fs.turb.length) myU.rhoturb[i] = fs.gas.rho * fs.turb[i];
-                myU.total_energy += fs.gas.rho * myConfig.turb_model.turbulent_kinetic_energy(fs);
-            } else {
-                myU.rhoturb[0] = 0.0;
-                myU.rhoturb[1] = fs.gas.rho * 1.0;
+            foreach(i; 0 .. myConfig.turb_model.nturb){
+                myU.rhoturb[i] = fs.gas.rho * fs.turb[i];
             }
+            myU.total_energy += fs.gas.rho * myConfig.turb_model.turbulent_kinetic_energy(fs);
         }
         version(MHD) {
             if (myConfig.MHD) {
@@ -622,8 +619,8 @@ public:
         // Internal energy is what remains.
         number u = rE * dinv;
         version(komega) {
-            if (with_k_omega && allow_k_omega_update) {
-                foreach(i; 0 .. fs.turb.length) {
+            if (allow_k_omega_update) {
+                foreach(i; 0 .. myConfig.turb_model.nturb) {
                     // for stability, we enforce tke and omega to be positive.
                     // This approach is referred to as clipping in Chisholm's (2007) thesis:
                     // A fully coupled Newton-Krylov solver with a one-equation turbulence model.
@@ -631,9 +628,6 @@ public:
                     fs.turb[i] = myU.rhoturb[i] * dinv;
                     if (fs.turb[i] < 0.0) fs.turb[i] = 1.0e-10;
                 }
-            } else {
-                fs.turb[0] = 0.0;
-                fs.turb[1] = 1.0;
             }
             u -= myConfig.turb_model.turbulent_kinetic_energy(fs);
         }
@@ -761,6 +755,7 @@ public:
         // Total Energy.
         number integral_E = 0.0;
         version(komega) {
+            size_t nturb = myConfig.turb_model.nturb;
             number[2] integral_rhoturb;
             foreach(ref t; integral_rhoturb) t = 0.0;
         }
@@ -810,10 +805,8 @@ public:
             }
             integral_E -= myF.total_energy*area;
             version(komega) {
-                if (with_k_omega) {
-                    foreach(j; 0 .. myF.rhoturb.length) {
-                        integral_rhoturb[j] -= myF.rhoturb[j]*area;
-                    }
+                foreach(j; 0 .. nturb) {
+                    integral_rhoturb[j] -= myF.rhoturb[j]*area;
                 }
             }
             version(multi_species_gas) {
@@ -852,14 +845,8 @@ public:
         }
         my_dUdt.total_energy = vol_inv*integral_E + Q.total_energy;
         version(komega) {
-            if (with_k_omega) {
-                foreach(i; 0 .. my_dUdt.rhoturb.length) {
-                    my_dUdt.rhoturb[i] = vol_inv*integral_rhoturb[i] + Q.rhoturb[i];
-                }
-            } else {
-                foreach(i; 0 .. my_dUdt.rhoturb.length) {
-                    my_dUdt.rhoturb[i] = 0.0;
-                }
+            foreach(i; 0 .. nturb) {
+                my_dUdt.rhoturb[i] = vol_inv*integral_rhoturb[i] + Q.rhoturb[i];
             }
         }
         version(multi_species_gas) {
@@ -912,14 +899,9 @@ public:
         }
         U1.total_energy = U0.total_energy + muj_tilde*dt*dUdt0.total_energy; 
         version(komega) {
-            if (with_k_omega) {
-                foreach (i; 0 .. U0.rhoturb.length){
-                    U1.rhoturb[i] = U0.rhoturb[i] + muj_tilde*dt*dUdt0.rhoturb[i];
-                    U1.rhoturb[i] = fmax(U1.rhoturb[i],  U0.mass * myConfig.turb_model.turb_limits(i));
-                }
-            } else {
-                U1.rhoturb[0] = U0.rhoturb[0];
-                U1.rhoturb[1] = U0.rhoturb[1];
+        foreach(i; 0 .. myConfig.turb_model.nturb){
+                U1.rhoturb[i] = U0.rhoturb[i] + muj_tilde*dt*dUdt0.rhoturb[i];
+                U1.rhoturb[i] = fmax(U1.rhoturb[i],  U0.mass * myConfig.turb_model.turb_limits(i));
             }
         }
         version(multi_species_gas) {
@@ -976,14 +958,9 @@ public:
         }
         U2.total_energy = muj*U1.total_energy + vuj*U0.total_energy + muj_tilde*dt*dUdt0.total_energy; 
         version(komega) {
-            if (with_k_omega) {
-                foreach (i; 0 .. U0.rhoturb.length){
-                    U2.rhoturb[i] = muj*U1.rhoturb[i] + vuj*U0.rhoturb[i] + muj_tilde*dt*dUdt0.rhoturb[i];
-                    U2.rhoturb[i] = fmax(U2.rhoturb[i],  U0.mass * myConfig.turb_model.turb_limits(i));
-                }
-            } else {
-                U2.rhoturb[0] = U0.rhoturb[0];
-                U2.rhoturb[1] = U0.rhoturb[1];
+        foreach(i; 0 .. myConfig.turb_model.nturb){
+                U2.rhoturb[i] = muj*U1.rhoturb[i] + vuj*U0.rhoturb[i] + muj_tilde*dt*dUdt0.rhoturb[i];
+                U2.rhoturb[i] = fmax(U2.rhoturb[i],  U0.mass * myConfig.turb_model.turb_limits(i));
             }
         }
         version(multi_species_gas) {
@@ -1038,14 +1015,9 @@ public:
         }
         U1.total_energy = U0.total_energy + muj_tilde*dt*dUdt0.total_energy; 
         version(komega) {
-            if (with_k_omega) {
-                foreach (i; 0 .. U0.rhoturb.length){
-                    U1.rhoturb[i] = U0.rhoturb[i] + muj_tilde*dt*dUdt0.rhoturb[i];
-                    U1.rhoturb[i] = fmax(U1.rhoturb[i], U0.mass * myConfig.turb_model.turb_limits(i));
-                }
-            } else {
-                U1.rhoturb[0] = U0.rhoturb[0];
-                U1.rhoturb[1] = U0.rhoturb[1];
+            foreach(i; 0 .. myConfig.turb_model.nturb){
+                U1.rhoturb[i] = U0.rhoturb[i] + muj_tilde*dt*dUdt0.rhoturb[i];
+                U1.rhoturb[i] = fmax(U1.rhoturb[i], U0.mass * myConfig.turb_model.turb_limits(i));
             }
         }
         version(multi_species_gas) {
@@ -1126,14 +1098,9 @@ public:
         }
         U2.total_energy = muj*U1.total_energy + vuj*U0.total_energy + (1.0-muj-vuj)*U3.total_energy + muj_tilde*dt*dUdt0.total_energy + gam_tilde*dt*dUdtO.total_energy; 
         version(komega) {
-            if (with_k_omega) {
-                foreach (i; 0 .. U0.rhoturb.length){
-                    U2.rhoturb[i] = muj*U1.rhoturb[i] + vuj*U0.rhoturb[i] + (1.0-muj-vuj)*U3.rhoturb[i] + muj_tilde*dt*dUdt0.rhoturb[i] + gam_tilde*dt*dUdtO.rhoturb[i];
-                    U2.rhoturb[i] = fmax(U2.rhoturb[i], U0.mass * myConfig.turb_model.turb_limits(i));
-                }
-            } else {
-                U2.rhoturb[0] = U0.rhoturb[0];
-                U2.rhoturb[1] = U0.rhoturb[1];
+            foreach(i; 0 .. myConfig.turb_model.nturb){
+                U2.rhoturb[i] = muj*U1.rhoturb[i] + vuj*U0.rhoturb[i] + (1.0-muj-vuj)*U3.rhoturb[i] + muj_tilde*dt*dUdt0.rhoturb[i] + gam_tilde*dt*dUdtO.rhoturb[i];
+                U2.rhoturb[i] = fmax(U2.rhoturb[i], U0.mass * myConfig.turb_model.turb_limits(i));
             }
         }
         version(multi_species_gas) {
@@ -1204,11 +1171,10 @@ public:
         }
         U1.total_energy = U0.total_energy + dt * gamma_1 * dUdt0.total_energy;
         version(komega) {
-            if (with_k_omega) {
-                foreach (i; 0 .. U0.rhoturb.length){
-                    U1.rhoturb[i] = U0.rhoturb[i] + dt * gamma_1 * dUdt0.rhoturb[i];
-                    U1.rhoturb[i] = fmax(U1.rhoturb[i], U0.mass * myConfig.turb_model.turb_limits(i));
-                }
+            foreach(i; 0 .. myConfig.turb_model.nturb){
+                U1.rhoturb[i] = U0.rhoturb[i] + dt * gamma_1 * dUdt0.rhoturb[i];
+                U1.rhoturb[i] = fmax(U1.rhoturb[i], U0.mass * myConfig.turb_model.turb_limits(i));
+            }
                 // ...assuming a minimum value of 1.0 for omega
                 // It may occur (near steps in the wall) that a large flux of romega
                 // through one of the cell interfaces causes romega within the cell
@@ -1218,10 +1184,6 @@ public:
                 // These large values of omega will be convected along the wall and,
                 // if they are convected past a corner with a strong expansion,
                 // there will be an unreasonably-large flux out of the cell.
-            } else {
-                U1.rhoturb[0] = U0.rhoturb[0];
-                U1.rhoturb[1] = U0.rhoturb[1];
-            }
         }
         version(multi_species_gas) {
             uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
@@ -1285,14 +1247,9 @@ public:
         }
         U2.total_energy = U_old.total_energy + dt*(gamma_1*dUdt0.total_energy + gamma_2*dUdt1.total_energy);
         version(komega) {
-            if (with_k_omega) {
-                foreach (i; 0 .. U_old.rhoturb.length){
-                    U2.rhoturb[i] = U_old.rhoturb[i] + dt*(gamma_1*dUdt0.rhoturb[i] + gamma_2*dUdt1.rhoturb[i]);
-                    U2.rhoturb[i] = fmax(U2.rhoturb[i], U_old.mass * myConfig.turb_model.turb_limits(i));
-                }
-            } else {
-                U2.rhoturb[0] = U_old.rhoturb[0];
-                U2.rhoturb[1] = U_old.rhoturb[1];
+            foreach(i; 0 .. myConfig.turb_model.nturb){
+                U2.rhoturb[i] = U_old.rhoturb[i] + dt*(gamma_1*dUdt0.rhoturb[i] + gamma_2*dUdt1.rhoturb[i]);
+                U2.rhoturb[i] = fmax(U2.rhoturb[i], U_old.mass * myConfig.turb_model.turb_limits(i));
             }
         }
         version(multi_species_gas) {
@@ -1364,14 +1321,9 @@ public:
         U3.total_energy = U_old.total_energy + 
             dt*(gamma_1*dUdt0.total_energy + gamma_2*dUdt1.total_energy + gamma_3*dUdt2.total_energy);
         version(komega) {
-            if (with_k_omega) {
-                foreach (i; 0 .. U_old.rhoturb.length){
-                    U3.rhoturb[i] = U_old.rhoturb[i] + dt*(gamma_1*dUdt0.rhoturb[i] + gamma_2*dUdt1.rhoturb[i] + gamma_3*dUdt2.rhoturb[i]);
-                    U3.rhoturb[i] = fmax(U3.rhoturb[i], U_old.mass * myConfig.turb_model.turb_limits(i));
-                }
-            } else {
-                U3.rhoturb[0] = U_old.rhoturb[0];
-                U3.rhoturb[1] = U_old.rhoturb[1];
+            foreach(i; 0 .. myConfig.turb_model.nturb){
+                U3.rhoturb[i] = U_old.rhoturb[i] + dt*(gamma_1*dUdt0.rhoturb[i] + gamma_2*dUdt1.rhoturb[i] + gamma_3*dUdt2.rhoturb[i]);
+                U3.rhoturb[i] = fmax(U3.rhoturb[i], U_old.mass * myConfig.turb_model.turb_limits(i));
             }
         }
         version(multi_species_gas) {
@@ -1418,14 +1370,9 @@ public:
         }
         U1.total_energy = vr*(U0.total_energy + dt*gamma_1*dUdt0.total_energy);
         version(komega) {
-            if (with_k_omega) {
-                foreach (i; 0 .. U0.rhoturb.length){
-                    U1.rhoturb[i] = vr*(U0.rhoturb[i] + dt*gamma_1*dUdt0.rhoturb[i]);
-                    U1.rhoturb[i] = fmax(U1.rhoturb[i], U0.mass * myConfig.turb_model.turb_limits(i));
-                }
-            } else {
-                U1.rhoturb[0] = U0.rhoturb[0];
-                U1.rhoturb[1] = U0.rhoturb[1];
+            foreach(i; 0 .. myConfig.turb_model.nturb){
+                U1.rhoturb[i] = vr*(U0.rhoturb[i] + dt*gamma_1*dUdt0.rhoturb[i]);
+                U1.rhoturb[i] = fmax(U1.rhoturb[i], U0.mass * myConfig.turb_model.turb_limits(i));
             }
         }
         version(multi_species_gas) {
@@ -1478,14 +1425,9 @@ public:
         U2.total_energy = vol_inv*(v_old*U0.total_energy +
                                    dt*(gamma_1*dUdt0.total_energy + gamma_2*dUdt1.total_energy));
         version(komega) {
-            if (with_k_omega) {
-                foreach (i; 0 .. U0.rhoturb.length){
-                    U2.rhoturb[i] = vol_inv*(v_old*U0.rhoturb[i] + dt*(gamma_1*dUdt0.rhoturb[i] + gamma_2*dUdt1.rhoturb[i]));
-                    U2.rhoturb[i] = fmax(U2.rhoturb[i], U0.mass * myConfig.turb_model.turb_limits(i));
-                }
-            } else {
-                U2.rhoturb[0] = vol_inv * (v_old * U0.rhoturb[0]);
-                U2.rhoturb[1] = vol_inv * (v_old * U0.rhoturb[1]);
+            foreach(i; 0 .. myConfig.turb_model.nturb){
+                U2.rhoturb[i] = vol_inv*(v_old*U0.rhoturb[i] + dt*(gamma_1*dUdt0.rhoturb[i] + gamma_2*dUdt1.rhoturb[i]));
+                U2.rhoturb[i] = fmax(U2.rhoturb[i], U0.mass * myConfig.turb_model.turb_limits(i));
             }
         }
         version(multi_species_gas) {
