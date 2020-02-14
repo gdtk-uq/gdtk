@@ -1,0 +1,3 @@
+# We may have the cea2 directory in extern/ but we do not distribute it with dgd.
+cea2/
+
