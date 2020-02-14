@@ -295,10 +295,8 @@ public:
             }
         }
         version(komega) {
-            if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                foreach (it; 0 .. turb.length) {
+            foreach (it; 0 .. myConfig.turb_model.nturb) {
                 mixin(codeForLimits("turb[it]","turb[it]","turbPhi[it]","turbMax[it]","turbMin[it]"));
-                }
             }
         }
         version(multi_species_gas) {
@@ -413,10 +411,8 @@ public:
             }
         }
         version(komega) {
-            if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                foreach (it; 0 .. turb.length) {
+            foreach (it; 0 .. myConfig.turb_model.nturb) {
                 mixin(codeForLimits("turb[it]","turb[it]","turbPhi[it]","turbMax[it]","turbMin[it]"));
-                }
             }
         }
         version(multi_species_gas) {
@@ -511,10 +507,8 @@ public:
             }
         }
         version(komega) {
-            if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                foreach (it; 0 .. turb.length) {
+            foreach (it; 0 .. myConfig.turb_model.nturb) {
                 mixin(codeForGradients("turb[it]","turb[it]","turbMax[it]","turbMin[it]"));
-                }
             }
         }
         version(multi_species_gas) {
@@ -631,10 +625,8 @@ public:
             }
         }
         version(komega) {
-            if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                foreach (it; 0 .. turb.length) {
+            foreach (it; 0 .. myConfig.turb_model.nturb) {
                 mixin(codeForLimits("turb[it]","turb[it]","turbPhi[it]","turbMax[it]","turbMin[it]"));
-                }
             }
         }
         version(multi_species_gas) {
@@ -778,10 +770,8 @@ public:
             }
         }
         version(komega) {
-            if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                foreach (it; 0 .. turb.length) {
+            foreach (it; 0 .. myConfig.turb_model.nturb) {
                 mixin(codeForLimits("turb[it]","turb[it]","turbPhi[it]","turbMax[it]","turbMin[it]"));
-                }
             }
         }
         version(multi_species_gas) {
@@ -881,10 +871,8 @@ public:
             }
         }
         version(komega) {
-            if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                foreach (it; 0 .. turb.length) {
+            foreach (it; 0 .. myConfig.turb_model.nturb) {
                 mixin(codeForGradients("turb[it]","turb[it]","turbMax[it]","turbMin[it]"));
-                }
             }
         }
         version(multi_species_gas) {
@@ -1081,10 +1069,8 @@ public:
                 }
             }
             version(komega) {
-                if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                    foreach (it; 0 .. nturb) {
+            foreach (it; 0 .. myConfig.turb_model.nturb) {
                     mixin(codeForReconstruction("turb[it]","turb[it]","turb[it]","turbPhi[it]"));
-                    }
                 }
             }
             version(multi_species_gas) {
@@ -1262,10 +1248,8 @@ public:
                 }
             }
             version(komega) {
-                if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                    foreach (it; 0 .. nturb) {
+                foreach (it; 0 .. myConfig.turb_model.nturb) {
                     mixin(codeForReconstruction("turb[it]","turb[it]","turb[it]","turbPhi[it]"));
-                    }
                 }
             }
             version(multi_species_gas) {
@@ -1430,10 +1414,8 @@ public:
                 }
             }
             version(komega) {
-                if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                    foreach (it; 0 .. nturb) {
+                foreach (it; 0 .. myConfig.turb_model.nturb) {
                     mixin(codeForReconstruction("turb[it]","turb[it]","turb[it]","turbPhi[it]"));
-                    }
                 }
             }
             version(multi_species_gas) {

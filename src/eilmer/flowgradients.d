@@ -178,8 +178,8 @@ public:
         }
         version(komega) {
             repr ~= ", turb=[";
-            if (turb.length>0) repr ~= to!string(turb[0]);
-            foreach (i; 1 .. turb.length) repr ~= ", " ~ to!string(turb[i]);
+            if (myConfig.turb_model.nturb>0) repr ~= to!string(turb[0]);
+            foreach (i; 1 .. myConfig.turb_model.nturb) repr ~= ", " ~ to!string(turb[i]);
             repr ~= "]";
         }
         repr ~= ")";
@@ -283,7 +283,7 @@ public:
         }
         //
         version(komega) {
-            foreach(tidx; 0 .. turb.length){
+            foreach(tidx; 0 .. myConfig.turb_model.nturb){
                 mixin(codeForGradients("turb[tidx]"));
                 turb[tidx][0] = gradient_x * area_inv;
                 turb[tidx][1] = -gradient_y * area_inv;
@@ -478,7 +478,7 @@ public:
             }
         }
         version(komega) {
-            foreach(tidx; 0 .. turb.length){
+            foreach(tidx; 0 .. myConfig.turb_model.nturb){
                 mixin(codeForGradients("turb[tidx]", "turb[tidx]"));
             }
         }
