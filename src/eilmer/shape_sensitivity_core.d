@@ -3800,17 +3800,12 @@ void write_adjoint_variables_to_file(FluidBlock blk, size_t np, string jobName) 
             outFile.writef("%.16f \n", blk.psi[np*i+blk.TOT_ENERGY].re);
         }
  
-        if ( blk.myConfig.turbulence_model == TurbulenceModel.k_omega ) {
-            outFile.writef("SCALARS adjoint_tke double \n");
+        foreach (it; 0 .. blk.myConfig.turb_model.nturb){
+            auto tname = blk.myConfig.turb_model.primitive_variable_name(it);
+            outFile.writef("SCALARS adjoint_%s double \n",tname);
             outFile.writef("LOOKUP_TABLE default \n");
             foreach(i; 0..ncells) { 
-                outFile.writef("%.16f \n", blk.psi[np*i+blk.TKE].re);
-            }
-            
-            outFile.writef("SCALARS adjoint_omega double \n");
-            outFile.writef("LOOKUP_TABLE default \n");
-            foreach(i; 0..ncells) { 
-                outFile.writef("%.16f \n", blk.psi[np*i+blk.OMEGA].re);
+                outFile.writef("%.16f \n", blk.psi[np*i+blk.TKE+it].re);
             }
         }
     }

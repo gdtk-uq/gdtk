@@ -1102,7 +1102,7 @@ public:
         nitems += nmodes*3;
         nitems += nspecies;
         version(MHD) { nitems += 5; }
-        version(komega) { nitems += 2; } // TODO: Generalise (NNG)
+        version(komega) { nitems += myConfig.turb_model.nturb; }
 
         return nitems;
     }
@@ -1205,6 +1205,7 @@ public:
 
                 size_t fs_size = flowstate_buffer_entry_size(this_blk.myConfig);
                 size_t ne = ghost_cells.length * fs_size;
+                size_t nturb = this_blk.myConfig.turb_model.nturb;
                 if (outgoing_flowstate_buf.length < ne) { outgoing_flowstate_buf.length = ne; }
                 outgoing_flowstate_tag = make_mpi_tag(blk.id, which_boundary, 0);
                 size_t ii = 0;
@@ -1244,8 +1245,7 @@ public:
                         outgoing_flowstate_buf[ii++] = fs.divB;
                     }
                     version(komega) {
-                        outgoing_flowstate_buf[ii++] = fs.turb[0];
-                        outgoing_flowstate_buf[ii++] = fs.turb[1];
+                        foreach (j; 0 .. nturb) outgoing_flowstate_buf[ii++] = fs.turb[j];
                     }
                     outgoing_flowstate_buf[ii++] = fs.mu_t;
                     outgoing_flowstate_buf[ii++] = fs.k_t;
@@ -1283,6 +1283,7 @@ public:
                 //
                 size_t nspecies = this_blk.myConfig.n_species;
                 size_t nmodes = this_blk.myConfig.n_modes;
+                size_t nturb = this_blk.myConfig.turb_model.nturb;
                 assert(outgoing_mapped_cells.length == ghost_cells.length,
                        "oops, mismatch in outgoing_mapped_cells and ghost_cells.");
                 //
@@ -1331,8 +1332,7 @@ public:
                         fs.divB = incoming_flowstate_buf[ii++];
                     }
                     version(komega) {
-                        fs.turb[0] = incoming_flowstate_buf[ii++];
-                        fs.turb[1] = incoming_flowstate_buf[ii++];
+                        foreach(j; 0 .. nturb) fs.turb[j] = incoming_flowstate_buf[ii++];
                     }
                     fs.mu_t = incoming_flowstate_buf[ii++];
                     fs.k_t = incoming_flowstate_buf[ii++];
@@ -1370,7 +1370,7 @@ public:
         size_t nspecies = myConfig.n_species;
         size_t nmodes = myConfig.n_modes;
         size_t nitems = 12;
-        version(komega) { nitems += 6; }
+        version(komega) { nitems += myConfig.turb_model.nturb*3; }
         nitems += nmodes*3;
         nitems += nspecies*3;
         return nitems;
@@ -1462,6 +1462,7 @@ public:
                 //
                 size_t nspecies = this_blk.myConfig.n_species;
                 size_t nmodes = this_blk.myConfig.n_modes;
+                size_t nturb = this_blk.myConfig.turb_model.nturb;
                 assert(outgoing_mapped_cells.length == ghost_cells.length,
                        "oops, mismatch in outgoing_mapped_cells and ghost_cells.");
                 //
@@ -1493,12 +1494,11 @@ public:
                     buf[ii++] = c.grad.T[2];
                     // tke, omega
                     version(komega) {
-                        buf[ii++] = c.grad.turb[0][0];
-                        buf[ii++] = c.grad.turb[0][1];
-                        buf[ii++] = c.grad.turb[0][2];
-                        buf[ii++] = c.grad.turb[1][0];
-                        buf[ii++] = c.grad.turb[1][1];
-                        buf[ii++] = c.grad.turb[1][2];
+                        foreach (j; 0 .. nturb) {
+                            buf[ii++] = c.grad.turb[j][0];
+                            buf[ii++] = c.grad.turb[j][1];
+                            buf[ii++] = c.grad.turb[j][2];
+                        }
                     }
                     // multi-species
                     version(multi_species_gas) {
@@ -1549,6 +1549,7 @@ public:
                 //
                 size_t nspecies = this_blk.myConfig.n_species;
                 size_t nmodes = this_blk.myConfig.n_modes;
+                size_t nturb = this_blk.myConfig.turb_model.nturb;
                 assert(outgoing_mapped_cells.length == ghost_cells.length,
                        "oops, mismatch in outgoing_mapped_cells and ghost_cells.");
                 //
@@ -1578,12 +1579,11 @@ public:
                     c.grad.T[2] = buf[ii++];
                     // tke, omega
                     version(komega) {
-                        c.grad.turb[0][0] = buf[ii++];
-                        c.grad.turb[0][1] = buf[ii++];
-                        c.grad.turb[0][2] = buf[ii++];
-                        c.grad.turb[1][0] = buf[ii++];
-                        c.grad.turb[1][1] = buf[ii++];
-                        c.grad.turb[1][2] = buf[ii++];
+                        foreach (j; 0 .. nturb) {
+                            c.grad.turb[j][0] = buf[ii++];
+                            c.grad.turb[j][1] = buf[ii++];
+                            c.grad.turb[j][2] = buf[ii++];
+                        }
                     }
                     // multi-species
                     version(multi_species_gas) {

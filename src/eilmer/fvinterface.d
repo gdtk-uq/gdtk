@@ -366,7 +366,7 @@ public:
             grad.T[2] = c.grad.T[2];
             
             version(komega) {
-                foreach(i; 0 .. grad.turb.length) {
+                foreach(i; 0 .. myConfig.turb_model.nturb) {
                     grad.turb[i][0] = c.grad.turb[i][0];
                     grad.turb[i][1] = c.grad.turb[i][1];
                     grad.turb[i][2] = c.grad.turb[i][2];
@@ -452,7 +452,7 @@ public:
             grad.T[2] = 0.5*(cL0.grad.T[2]+cR0.grad.T[2]) - jump*(nz/ndotehat);
             
             version(komega) {
-                foreach(i; 0 .. fs.turb.length){
+                foreach(i; 0 .. myConfig.turb_model.nturb) {
                     avgdotehat = 0.5*(cL0.grad.turb[i][0]+cR0.grad.turb[i][0])*ehatx +
                         0.5*(cL0.grad.turb[i][1]+cR0.grad.turb[i][1])*ehaty +
                         0.5*(cL0.grad.turb[i][2]+cR0.grad.turb[i][2])*ehatz;

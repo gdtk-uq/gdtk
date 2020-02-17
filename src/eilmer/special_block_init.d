@@ -67,7 +67,7 @@ void diffuseWallBCsIntoBlock(FluidBlock blk, int nPasses, double Twall)
                 cell.fs.vel.set(face.fs.vel);
                 if (cell.in_turbulent_zone) {
                     version(komega) {
-                        foreach(it; 0 .. cell.fs.turb.length){
+                        foreach(it; 0 .. blk.myConfig.turb_model.nturb){
                             cell.fs.turb[it] = face.fs.turb[it];
                         }
                     }
@@ -132,7 +132,7 @@ void diffuseWallBCsIntoBlock(FluidBlock blk, int nPasses, double Twall)
                     vely_avg += face.right_cell.fs.vel.y;
                     velz_avg += face.right_cell.fs.vel.z;
                     version(komega) {
-                        foreach(i; 0 .. face.right_cell.fs.turb.length){
+                        foreach(i; 0 .. blk.myConfig.turb_model.nturb){
                             turb_avg[i] += face.right_cell.fs.turb[i];
                         }
                     }
@@ -147,7 +147,7 @@ void diffuseWallBCsIntoBlock(FluidBlock blk, int nPasses, double Twall)
                     vely_avg += face.left_cell.fs.vel.y;
                     velz_avg += face.left_cell.fs.vel.z;
                     version(komega) {
-                        foreach(i; 0 .. face.left_cell.fs.turb.length) {
+                        foreach(i; 0 .. blk.myConfig.turb_model.nturb) {
                             turb_avg[i] += face.left_cell.fs.turb[i];
                         }
                     }
@@ -162,7 +162,7 @@ void diffuseWallBCsIntoBlock(FluidBlock blk, int nPasses, double Twall)
             cell.fs.vel.refz = velz_avg / nNbrCells;
             if (cell.in_turbulent_zone) {
                 version(komega) {
-                    foreach(i; 0 .. cell.fs.turb.length) cell.fs.turb[i] = turb_avg[i]/nNbrCells;
+                    foreach(i; 0 .. blk.myConfig.turb_model.nturb) cell.fs.turb[i] = turb_avg[i]/nNbrCells;
                 }
                 cell.fs.mu_t = mu_t_avg / nNbrCells;
                 cell.fs.k_t = k_t_avg / nNbrCells;

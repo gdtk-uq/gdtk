@@ -90,6 +90,7 @@ public:
         auto gmodel = blk.myConfig.gmodel;
         size_t nsp = blk.myConfig.n_species;
         size_t nmodes = blk.myConfig.n_modes;
+        size_t nturb = blk.myConfig.turb_model.nturb;
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         bool nghost3 = (blk.n_ghost_cell_layers == 3);
@@ -139,8 +140,9 @@ public:
                             dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
                         }
                         version(komega) {
-                            dest_cell.fs.turb[0] = 2.0*cell_1.fs.turb[0] - cell_2.fs.turb[0];
-                            dest_cell.fs.turb[1] = 2.0*cell_1.fs.turb[1] - cell_2.fs.turb[1];
+                            foreach(it; 0 .. nturb) {
+                                dest_cell.fs.turb[it] = 2.0*cell_1.fs.turb[it] - cell_2.fs.turb[it];
+                            }
                         }
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
                         dest_cell.fs.k_t = 2.0*cell_1.fs.k_t - cell_2.fs.k_t;
@@ -177,8 +179,9 @@ public:
                             dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
                         }
                         version(komega) {
-                            dest_cell.fs.turb[0] = 2.0*cell_1.fs.turb[0] - cell_2.fs.turb[0];
-                            dest_cell.fs.turb[1] = 2.0*cell_1.fs.turb[1] - cell_2.fs.turb[1];
+                            foreach(it; 0 .. nturb) {
+                                dest_cell.fs.turb[it] = 2.0*cell_1.fs.turb[it] - cell_2.fs.turb[it];
+                            }
                         }
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
                         dest_cell.fs.k_t = 2.0*cell_1.fs.k_t - cell_2.fs.k_t;
@@ -247,8 +250,9 @@ public:
                             dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
                         }
                         version(komega) {
-                            dest_cell.fs.turb[0] = 2.0*cell_1.fs.turb[0] - cell_2.fs.turb[0];
-                            dest_cell.fs.turb[1] = 2.0*cell_1.fs.turb[1] - cell_2.fs.turb[1];
+                            foreach(it; 0 .. nturb) {
+                                dest_cell.fs.turb[it] = 2.0*cell_1.fs.turb[it] - cell_2.fs.turb[it];
+                            }
                         }
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
                         dest_cell.fs.k_t = 2.0*cell_1.fs.k_t - cell_2.fs.k_t;
@@ -285,8 +289,9 @@ public:
                             dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
                         }
                         version(komega) {
-                            dest_cell.fs.turb[0] = 2.0*cell_1.fs.turb[0] - cell_2.fs.turb[0];
-                            dest_cell.fs.turb[1] = 2.0*cell_1.fs.turb[1] - cell_2.fs.turb[1];
+                            foreach(it; 0 .. nturb) {
+                                dest_cell.fs.turb[it] = 2.0*cell_1.fs.turb[it] - cell_2.fs.turb[it];
+                            }
                         }
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
                         dest_cell.fs.k_t = 2.0*cell_1.fs.k_t - cell_2.fs.k_t;
@@ -355,8 +360,9 @@ public:
                             dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
                         }
                         version(komega) {
-                            dest_cell.fs.turb[0] = 2.0*cell_1.fs.turb[0] - cell_2.fs.turb[0];
-                            dest_cell.fs.turb[1] = 2.0*cell_1.fs.turb[1] - cell_2.fs.turb[1];
+                            foreach(it; 0 .. nturb) {
+                                dest_cell.fs.turb[it] = 2.0*cell_1.fs.turb[it] - cell_2.fs.turb[it];
+                            }
                         }
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
                         dest_cell.fs.k_t = 2.0*cell_1.fs.k_t - cell_2.fs.k_t;
@@ -393,8 +399,9 @@ public:
                             dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
                         }
                         version(komega) {
-                            dest_cell.fs.turb[0] = 2.0*cell_1.fs.turb[0] - cell_2.fs.turb[0];
-                            dest_cell.fs.turb[1] = 2.0*cell_1.fs.turb[1] - cell_2.fs.turb[1];
+                            foreach(it; 0 .. nturb) {
+                                dest_cell.fs.turb[it] = 2.0*cell_1.fs.turb[it] - cell_2.fs.turb[it];
+                            }
                         }
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
                         dest_cell.fs.k_t = 2.0*cell_1.fs.k_t - cell_2.fs.k_t;
@@ -462,8 +469,9 @@ public:
                             dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
                         }
                         version(komega) {
-                            dest_cell.fs.turb[0] = 2.0*cell_1.fs.turb[0] - cell_2.fs.turb[0];
-                            dest_cell.fs.turb[1] = 2.0*cell_1.fs.turb[1] - cell_2.fs.turb[1];
+                            foreach(it; 0 .. nturb) {
+                                dest_cell.fs.turb[it] = 2.0*cell_1.fs.turb[it] - cell_2.fs.turb[it];
+                            }
                         }
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
                         dest_cell.fs.k_t = 2.0*cell_1.fs.k_t - cell_2.fs.k_t;
@@ -500,8 +508,9 @@ public:
                             dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
                         }
                         version(komega) {
-                            dest_cell.fs.turb[0] = 2.0*cell_1.fs.turb[0] - cell_2.fs.turb[0];
-                            dest_cell.fs.turb[1] = 2.0*cell_1.fs.turb[1] - cell_2.fs.turb[1];
+                            foreach(it; 0 .. nturb) {
+                                dest_cell.fs.turb[it] = 2.0*cell_1.fs.turb[it] - cell_2.fs.turb[it];
+                            }
                         }
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
                         dest_cell.fs.k_t = 2.0*cell_1.fs.k_t - cell_2.fs.k_t;
@@ -570,8 +579,9 @@ public:
                             dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
                         }
                         version(komega) {
-                            dest_cell.fs.turb[0] = 2.0*cell_1.fs.turb[0] - cell_2.fs.turb[0];
-                            dest_cell.fs.turb[1] = 2.0*cell_1.fs.turb[1] - cell_2.fs.turb[1];
+                            foreach(it; 0 .. nturb) {
+                                dest_cell.fs.turb[it] = 2.0*cell_1.fs.turb[it] - cell_2.fs.turb[it];
+                            }
                         }
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
                         dest_cell.fs.k_t = 2.0*cell_1.fs.k_t - cell_2.fs.k_t;
@@ -608,8 +618,9 @@ public:
                             dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
                         }
                         version(komega) {
-                            dest_cell.fs.turb[0] = 2.0*cell_1.fs.turb[0] - cell_2.fs.turb[0];
-                            dest_cell.fs.turb[1] = 2.0*cell_1.fs.turb[1] - cell_2.fs.turb[1];
+                            foreach(it; 0 .. nturb) {
+                                dest_cell.fs.turb[it] = 2.0*cell_1.fs.turb[it] - cell_2.fs.turb[it];
+                            }
                         }
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
                         dest_cell.fs.k_t = 2.0*cell_1.fs.k_t - cell_2.fs.k_t;
@@ -678,8 +689,9 @@ public:
                             dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
                         }
                         version(komega) {
-                            dest_cell.fs.turb[0] = 2.0*cell_1.fs.turb[0] - cell_2.fs.turb[0];
-                            dest_cell.fs.turb[1] = 2.0*cell_1.fs.turb[1] - cell_2.fs.turb[1];
+                            foreach(it; 0 .. nturb) {
+                                dest_cell.fs.turb[it] = 2.0*cell_1.fs.turb[it] - cell_2.fs.turb[it];
+                            }
                         }
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
                         dest_cell.fs.k_t = 2.0*cell_1.fs.k_t - cell_2.fs.k_t;
@@ -716,8 +728,9 @@ public:
                             dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
                         }
                         version(komega) {
-                            dest_cell.fs.turb[0] = 2.0*cell_1.fs.turb[0] - cell_2.fs.turb[0];
-                            dest_cell.fs.turb[1] = 2.0*cell_1.fs.turb[1] - cell_2.fs.turb[1];
+                            foreach(it; 0 .. nturb) {
+                                dest_cell.fs.turb[it] = 2.0*cell_1.fs.turb[it] - cell_2.fs.turb[it];
+                            }
                         }
                         dest_cell.fs.mu_t = 2.0*cell_1.fs.mu_t - cell_2.fs.mu_t;
                         dest_cell.fs.k_t = 2.0*cell_1.fs.k_t - cell_2.fs.k_t;

@@ -645,7 +645,7 @@ public:
         nitems += nmodes*3;
         nitems += nspecies;
         version(MHD) { nitems += 5; }
-        version(komega) { nitems += 2; } // TODO: Generalise (NNG)
+        version(komega) { nitems += myConfig.turb_model.nturb; }
 
         return nitems;
     }
@@ -686,6 +686,7 @@ public:
         version(mpi_parallel) {
             size_t nspecies = blk.myConfig.n_species;
             size_t nmodes = blk.myConfig.n_modes;
+            size_t nturb = blk.myConfig.turb_model.nturb;
             foreach (i; 0 .. n_outgoing) {
                 // Blocking send of this block's flow data
                 // to the corresponding non-blocking receive that was posted
@@ -733,8 +734,7 @@ public:
                         buf[ii++] = fs.divB;
                     }
                     version(komega) {
-                        buf[ii++] = fs.turb[0];
-                        buf[ii++] = fs.turb[1];
+                        foreach (j; 0 .. nturb) { buf[ii++] = fs.turb[j]; }
                     }
                     buf[ii++] = fs.mu_t;
                     buf[ii++] = fs.k_t;
@@ -764,6 +764,7 @@ public:
         version(mpi_parallel) {
             size_t nspecies = blk.myConfig.n_species;
             size_t nmodes = blk.myConfig.n_modes;
+            size_t nturb = blk.myConfig.turb_model.nturb;
             foreach (i; 0 .. n_incoming) {
                 // Wait for non-blocking receive to complete.
                 // Once complete, copy the data back into the local context.
@@ -810,8 +811,7 @@ public:
                         fs.divB = buf[ii++];
                     }
                     version(komega) {
-                        fs.turb[0] = buf[ii++];
-                        fs.turb[1]= buf[ii++];
+                        foreach (j; 0 .. nturb) { fs.turb[j] = buf[ii++]; }
                     }
                     fs.mu_t = buf[ii++];
                     fs.k_t = buf[ii++];
@@ -841,7 +841,7 @@ public:
         size_t nmodes = myConfig.n_modes;
         size_t nitems = 42;
         version(MHD) { nitems += 24; }
-        version(komega) { nitems += 12; }
+        version(komega) { nitems += myConfig.turb_model.nturb*6; }
         nitems += nmodes*12;
         nitems += nspecies*6;
         return nitems;
@@ -881,6 +881,7 @@ public:
         version(mpi_parallel) {
             size_t nspecies = blk.myConfig.n_species;
             size_t nmodes = blk.myConfig.n_modes;
+            size_t nturb = blk.myConfig.turb_model.nturb;
             foreach (i; 0 .. n_outgoing) {
                 // Blocking send of this block's flow data
                 // to the corresponding non-blocking receive that was posted
@@ -941,18 +942,14 @@ public:
                     buf[ii++] = c.uMax;
                     // tke, omega
                     version(komega) {
-                        buf[ii++] = c.turb[0][0];
-                        buf[ii++] = c.turb[0][1];
-                        buf[ii++] = c.turb[0][2];
-                        buf[ii++] = c.turbPhi[0];
-                        buf[ii++] = c.turbMin[0];
-                        buf[ii++] = c.turbMax[0];
-                        buf[ii++] = c.turb[1][0];
-                        buf[ii++] = c.turb[1][1];
-                        buf[ii++] = c.turb[1][2];
-                        buf[ii++] = c.turbPhi[1];
-                        buf[ii++] = c.turbMin[1];
-                        buf[ii++] = c.turbMax[1];
+                        foreach(j; 0 .. nturb) {
+                            buf[ii++] = c.turb[j][0];
+                            buf[ii++] = c.turb[j][1];
+                            buf[ii++] = c.turb[j][2];
+                            buf[ii++] = c.turbPhi[j];
+                            buf[ii++] = c.turbMin[j];
+                            buf[ii++] = c.turbMax[j];
+                        }
                     }
                     // MHD
                     version(MHD) {
@@ -1036,6 +1033,7 @@ public:
         version(mpi_parallel) {
             size_t nspecies = blk.myConfig.n_species;
             size_t nmodes = blk.myConfig.n_modes;
+            size_t nturb = blk.myConfig.turb_model.nturb;
             foreach (i; 0 .. n_incoming) {
                 // Wait for non-blocking receive to complete.
                 // Once complete, copy the data back into the local context.
@@ -1094,18 +1092,14 @@ public:
                     c.uMax = buf[ii++];
                     // tke, omega
                     version(komega) {
-                        c.turb[0][0] = buf[ii++];
-                        c.turb[0][1] = buf[ii++];
-                        c.turb[0][2] = buf[ii++];
-                        c.turbPhi[0] = buf[ii++];
-                        c.turbMin[0] = buf[ii++];
-                        c.turbMax[0] = buf[ii++];
-                        c.turb[1][0] = buf[ii++];
-                        c.turb[1][1] = buf[ii++];
-                        c.turb[1][2] = buf[ii++];
-                        c.turbPhi[1] = buf[ii++];
-                        c.turbMin[1] = buf[ii++];
-                        c.turbMax[1] = buf[ii++];
+                        foreach (j; 0 .. nturb){
+                            c.turb[j][0] = buf[ii++];
+                            c.turb[j][1] = buf[ii++];
+                            c.turb[j][2] = buf[ii++];
+                            c.turbPhi[j] = buf[ii++];
+                            c.turbMin[j] = buf[ii++];
+                            c.turbMax[j] = buf[ii++];
+                        }
                     }
                     // MHD
                     version(MHD) {
@@ -1187,7 +1181,7 @@ public:
         size_t nspecies = myConfig.n_species;
         size_t nmodes = myConfig.n_modes;
         size_t nitems = 12;
-        version(komega) { nitems += 6; }
+        version(komega) { nitems += myConfig.turb_model.nturb*3; }
         nitems += nmodes*3;
         nitems += nspecies*3;
         return nitems;
@@ -1226,6 +1220,7 @@ public:
         version(mpi_parallel) {
             size_t nspecies = blk.myConfig.n_species;
             size_t nmodes = blk.myConfig.n_modes;
+            size_t nturb = blk.myConfig.turb_model.nturb;
             foreach (i; 0 .. n_outgoing) {
                 // Blocking send of this block's flow data
                 // to the corresponding non-blocking receive that was posted
@@ -1255,12 +1250,11 @@ public:
                     buf[ii++] = c.T[2];
                     // tke, omega
                     version(komega) {
-                        buf[ii++] = c.turb[0][0];
-                        buf[ii++] = c.turb[0][1];
-                        buf[ii++] = c.turb[0][2];
-                        buf[ii++] = c.turb[1][0];
-                        buf[ii++] = c.turb[1][1];
-                        buf[ii++] = c.turb[1][2];
+                        foreach (j; 0 .. nturb) {
+                            buf[ii++] = c.turb[j][0];
+                            buf[ii++] = c.turb[j][1];
+                            buf[ii++] = c.turb[j][2];
+                        }
                     }
                     // multi-species
                     version(multi_species_gas) {
@@ -1303,6 +1297,7 @@ public:
         version(mpi_parallel) {
             size_t nspecies = blk.myConfig.n_species;
             size_t nmodes = blk.myConfig.n_modes;
+            size_t nturb = blk.myConfig.turb_model.nturb;
             foreach (i; 0 .. n_incoming) {
                 // Wait for non-blocking receive to complete.
                 // Once complete, copy the data back into the local context.
@@ -1331,12 +1326,11 @@ public:
                     c.T[2] = buf[ii++];
                     // tke, omega
                     version(komega) {
-                        c.turb[0][0] = buf[ii++];
-                        c.turb[0][1] = buf[ii++];
-                        c.turb[0][2] = buf[ii++];
-                        c.turb[1][0] = buf[ii++];
-                        c.turb[1][1] = buf[ii++];
-                        c.turb[1][2] = buf[ii++];
+                        foreach (j; 0 .. nturb){
+                            c.turb[j][0] = buf[ii++];
+                            c.turb[j][1] = buf[ii++];
+                            c.turb[j][2] = buf[ii++];
+                        }
                     }
                     // multi-species
                     version(multi_species_gas) {
