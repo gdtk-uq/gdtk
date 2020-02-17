@@ -117,8 +117,9 @@ public:
             argon_gas.update_thermo_from_rhoT(Q_argon);
             // Internal energy is a weighted average.
             Q.u = Q.massf[0]*Q_ideal.u + argon_massf*Q_argon.u;
-            Q.u_modes[0] = Q_argon.u_modes[0];
+            Q.u_modes[0] = argon_massf*Q_argon.u_modes[0];
         } else if (with_argon) {
+            // argon_massf very close to 1.0
             Q.rho = Q_argon.rho;
             Q.u = Q_argon.u;
             Q.u_modes[0] = Q_argon.u_modes[0];
@@ -149,6 +150,7 @@ public:
             ideal_gas.update_thermo_from_rhou(Q_ideal);
             Q_argon.u = Q.u;
             Q_argon.u_modes[0] = Q.u_modes[0];
+            Q_argon.T_modes[0] = Q.T_modes[0]; // will remain fixed
             Q_argon.massf[0] = Q.massf[1]/argon_massf;
             Q_argon.massf[1] = Q.massf[2]/argon_massf;
             Q_argon.massf[2] = Q.massf[3]/argon_massf;
@@ -172,9 +174,11 @@ public:
             Q.p = Q_ideal.p + Q_argon.p;
             Q.T = T;
         } else if (with_argon) {
+            // argon_massf very close to 1.0
             Q_argon.rho = Q.rho;
             Q_argon.u = Q.u;
             Q_argon.u_modes[0] = Q.u_modes[0];
+            Q_argon.T_modes[0] = Q.T_modes[0]; // will remain fixed
             Q_argon.massf[0] = Q.massf[1]/argon_massf;
             Q_argon.massf[1] = Q.massf[2]/argon_massf;
             Q_argon.massf[2] = Q.massf[3]/argon_massf;
@@ -214,8 +218,9 @@ public:
         if (with_argon && with_ideal) {
             Q.p = Q_argon.p + Q_ideal.p; // partial pressures add
             Q.u = Q.massf[0]*Q_ideal.u + argon_massf*Q_argon.u;
-            Q.u_modes[0] = Q_argon.u_modes[0];
+            Q.u_modes[0] = argon_massf*Q_argon.u_modes[0];
         } else if (with_argon) {
+            // argon_massf very close to 1.0
             Q.p = Q_argon.p;
             Q.u = Q_argon.u;
             Q.u_modes[0] = Q_argon.u_modes[0];
@@ -265,8 +270,9 @@ public:
             ideal_gas.update_thermo_from_rhoT(Q_ideal);
             Q.T = T;
             Q.u = Q.massf[0]*Q_ideal.u + argon_massf*Q_argon.u;
-            Q.u_modes[0] = Q_argon.u_modes[0];
+            Q.u_modes[0] = argon_massf*Q_argon.u_modes[0];
         } else if (with_argon) {
+            // argon_massf very close to 1.0
             Q_argon.rho = Q.rho; Q_argon.p = Q.p;
             Q_argon.massf[0] = Q.massf[1]/argon_massf;
             Q_argon.massf[1] = Q.massf[2]/argon_massf;
