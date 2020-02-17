@@ -29,6 +29,7 @@ import gas.ideal_air_proxy;
 import gas.powers_aslam_gas;
 import gas.pseudo_species_gas;
 import gas.two_temperature_reacting_argon;
+import gas.two_temperature_argon_plus_ideal;
 import gas.ideal_dissociating_gas;
 import gas.two_temperature_air;
 import gas.two_temperature_nitrogen;
@@ -126,6 +127,9 @@ GasModel init_gas_model(string file_name="gas-model.lua")
         break;
     case "TwoTemperatureReactingArgon":
         gm = new TwoTemperatureReactingArgon(L);
+        break;
+    case "TwoTemperatureArgonPlusIdealGas":
+        gm = new TwoTemperatureArgonPlusIdealGas(L);
         break;
     case "IdealDissociatingGas":
         gm = new IdealDissociatingGas(L);

@@ -225,7 +225,7 @@ public:
             Q.u = Q_lut.u;
         } else {
             Q_ideal.rho = Q.rho; Q_ideal.p = Q.p;
-            lut_gas.update_thermo_from_rhop(Q_ideal);
+            ideal_gas.update_thermo_from_rhop(Q_ideal);
             Q.T = Q_ideal.T;
             Q.u = Q_ideal.u;
         }

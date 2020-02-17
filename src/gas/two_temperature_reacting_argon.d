@@ -256,7 +256,7 @@ version(two_temperature_reacting_argon_test) {
 
         number my_Cp = gm.dhdT_const_p(gd);
         number alpha = gm.ionisation_fraction_from_mass_fractions(gd);
-        number my_a = sqrt(5/3*208.0*(gd.T + alpha*gd.T_modes[0]));
+        number my_a = sqrt(5.0/3.0*208.0*(gd.T + alpha*gd.T_modes[0]));
         assert(approxEqual(gd.a, my_a, 1.0e-3), failedUnitTest());
 
         gm.update_trans_coeffs(gd);

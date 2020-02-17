@@ -53,7 +53,7 @@ test therm-perf-gas-test {Testing therm_perf_gas.d} -body {
 } -result {} -returnCodes {0}
 
 test therm-perf-gas-equil-test {Testing therm_perf_gas_equil.d} -body {
-    exec ./therm_perf_gas_equil_test
+    exec ./therm_perf_gas_equil_test > LOGFILE_THERM_PERF_EQUIL_TEST
 } -result {} -returnCodes {0}
 
 test very-viscous-air-test {Testing very_viscous_air.d} -body {
@@ -72,7 +72,7 @@ test adaptive-lut-test {Testing adaptive_lut.d} -body {
     exec ./adaptive_lut_CEA_test
 } -result {} -returnCodes {0}
 
-test uniform-lut-plus_ideal-test {Testing uniform_lut_plus_ideal.d} -body {
+test uniform-lut-plus-ideal-test {Testing uniform_lut_plus_ideal.d} -body {
     exec cp sample-data/uniform-lut-plus-ideal-air-gas-model.lua ./uniform-lut-plus-ideal-air-gas-model.lua
     exec cp sample-data/cea-lut-air-version-test.lua ./cea-lut-air-version-test.lua
     exec cp sample-data/ideal-air-gas-model.lua ./ideal-air-gas-model.lua
@@ -97,6 +97,13 @@ test ideal-dissociating-gas-test {Testing ideal_dissociating_gas.d} -body {
 
 test two-temperature-reacting-argon-test {Testing Daniel's two-T argon gas model} -body {
     exec ./two_temperature_reacting_argon_test
+} -result {} -returnCodes {0}
+
+test two-temperature-argon-plus-ideal-test {Testing two_temperature_argon_plus_ideal.d} -body {
+    exec cp sample-data/two-temperature-argon-plus-ideal-air-gas-model.lua ./two-temperature-argon-plus-ideal-air-gas-model.lua
+    exec cp sample-data/two-temperature-reacting-argon-model.lua ./two-temperature-reacting-argon-model.lua
+    exec cp sample-data/ideal-air-gas-model.lua ./ideal-air-gas-model.lua
+    exec ./two_temperature_argon_plus_ideal_test > LOGFILE_TWO_TEMPERATURE_ARGON_PLUS_IDEAL_TEST
 } -result {} -returnCodes {0}
 
 test steam-test {Testing steam.d} -body {

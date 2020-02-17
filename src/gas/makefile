@@ -26,7 +26,7 @@ TEST_PROGRAMS := chemkin_therm_cond_test chemkin_viscosity_test cea_therm_cond_t
 	therm_perf_gas_mix_eos_test very_viscous_air_test \
 	co2gas_sw_test uniform_lut_test uniform_lut_plus_ideal_test \
 	adaptive_lut_CEA_test ideal_air_proxy_test \
-        two_temperature_reacting_argon_test \
+        two_temperature_reacting_argon_test two_temperature_argon_plus_ideal_test \
 	steam_test \
 	init_gas_model_complex_test ideal_gas_complex_test cea_thermo_curves_complex_test \
 	pseudo_species_gas_test vib_specific_nitrogen_test \
@@ -177,6 +177,8 @@ clean:
 	- rm tmp.inp tmp.out tmp.plt
 	- rm ./ideal-air-gas-model.lua ./cea-lut-air-version-test.lua
 	- rm ./uniform-lut-plus-ideal-air-gas-model.lua
+	- rm ./two-temperature-reacting-argon-model.lua
+	- rm ./two-temperature-argon-plus-ideal-air-gas-model.lua
 	- cd $(LUA); make clean
 	- cd $(CEQ_DIR); make clean
 	- rm $(KINETICS_DIR)/pseudosp_solve_ode.o
@@ -385,6 +387,10 @@ vib_specific_nitrogen_test: $(GAS_FILES) $(CEQ_FILES) $(KINETICS_FILES) $(UTIL_F
 		$(GAS_FILES) $(CEQ_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 two_temperature_reacting_argon_test: $(GAS_FILES) $(CEQ_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
+		$(GAS_FILES) $(CEQ_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
+
+two_temperature_argon_plus_ideal_test: $(GAS_FILES) $(CEQ_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
 	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(CEQ_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
