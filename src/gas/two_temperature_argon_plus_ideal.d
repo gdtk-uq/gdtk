@@ -141,19 +141,20 @@ public:
         if (with_argon && with_ideal) {
             Q_ideal.rho = Q.massf[0]*Q.rho;
             Q_argon.rho = argon_massf*Q.rho;
-            // Need to determine the temperature at which the individual energies sum
-            // to the mixture internal energy.
-            // Freeze the electron energy and temperature.
-            // Let's assume that the form of the internal energies is similar,
-            // such that we can just form an average T from the known energy.
-            Q_ideal.u = Q.u;
-            ideal_gas.update_thermo_from_rhou(Q_ideal);
-            Q_argon.u = Q.u;
-            Q_argon.u_modes[0] = Q.u_modes[0];
+            Q_argon.u_modes[0] = Q.u_modes[0]/argon_massf;
             Q_argon.T_modes[0] = Q.T_modes[0]; // will remain fixed
             Q_argon.massf[0] = Q.massf[1]/argon_massf;
             Q_argon.massf[1] = Q.massf[2]/argon_massf;
             Q_argon.massf[2] = Q.massf[3]/argon_massf;
+            // Need to determine the temperature at which the thermal energies sum
+            // to the mixture thermal energy.
+            // Freeze the electron energy and temperature.
+            // Let's assume that the form of the internal energies is similar,
+            // such that we can just form an average T from the known energy.
+            // This is only used as an initial guess.
+            Q_ideal.u = Q.u/Q.massf[0];
+            ideal_gas.update_thermo_from_rhou(Q_ideal);
+            Q_argon.u = Q.u/argon_massf;
             argon_gas.update_thermo_from_rhou(Q_argon);
             // Initial guess for Temperature
             number T = Q.massf[0]*Q_ideal.T + argon_massf*Q_argon.T;
@@ -175,9 +176,9 @@ public:
             Q.T = T;
         } else if (with_argon) {
             // argon_massf very close to 1.0
-            Q_argon.rho = Q.rho;
-            Q_argon.u = Q.u;
-            Q_argon.u_modes[0] = Q.u_modes[0];
+            Q_argon.rho = Q.rho*argon_massf;
+            Q_argon.u = Q.u/argon_massf;
+            Q_argon.u_modes[0] = Q.u_modes[0]/argon_massf;
             Q_argon.T_modes[0] = Q.T_modes[0]; // will remain fixed
             Q_argon.massf[0] = Q.massf[1]/argon_massf;
             Q_argon.massf[1] = Q.massf[2]/argon_massf;
@@ -186,7 +187,9 @@ public:
             Q.p = Q_argon.p;
             Q.T = Q_argon.T;
         } else {
-            Q_ideal.rho = Q.rho; Q_ideal.u = Q.u;
+            // ideal massf very close to 1.0
+            Q_ideal.rho = Q.rho*Q.massf[0];
+            Q_ideal.u = Q.u/Q.massf[0];
             ideal_gas.update_thermo_from_rhou(Q_ideal);
             Q.p = Q_ideal.p;
             Q.T = Q_ideal.T;
