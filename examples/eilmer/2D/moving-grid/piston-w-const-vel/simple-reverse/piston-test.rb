@@ -47,7 +47,7 @@ class TestPiston < Test::Unit::TestCase
         # Next line is my data line and...
         items = txt.split(' ')
         posx = items[0].to_f; velx = items[5].to_f
-        p = items[8].to_f; temp = items[19].to_f
+        p = items[8].to_f; temp = items[17].to_f
         # once I have extracted values from it, get out.
         break
       end

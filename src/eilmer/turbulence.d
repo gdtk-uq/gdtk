@@ -15,6 +15,7 @@ import fvcore;
 import json_helper;
 import nm.number;
 import nm.complex;
+import globalconfig;
 
 /*
 Abstract base class defines functions all turbulence models must have:
@@ -65,10 +66,9 @@ Object representing turbulence model in laminar flow.
 
 */
 class noTurbulenceModel : TurbulenceModelObject {
-    this (const JSONValue config){
-    }
-    this (noTurbulenceModel other){
-    }
+    this (){}
+    this (const JSONValue config){}    // Used in GlobalConfig constructor 
+    this (noTurbulenceModel other){}   // Used in dup, in localconfig constructor
 
     // This seems weird but is apparently idiomatic?
     @nogc final override string modelName() const {return "none";}
@@ -150,27 +150,29 @@ Object representating the wilcox k-omega turbulence model.
 
 */
 class kwTurbulenceModel : TurbulenceModelObject {
-    this (const JSONValue config){
-        //writeln("In k_omega turbulence model class constructor.");
+    this (){
+        number Pr_t            = GlobalConfig.turbulence_prandtl_number;
+        bool axisymmetric      = GlobalConfig.axisymmetric;
+        int dimensions         = GlobalConfig.dimensions;
+        number max_mu_t_factor = GlobalConfig.max_mu_t_factor;
+        this(Pr_t, axisymmetric, dimensions, max_mu_t_factor);
+    }
 
+    this (const JSONValue config){
         // What to do about default values? inherit from globalconfig??? Throw an error if not found?
-        number Pr_t = getJSONdouble(config, "turbulence_prandtl_number", 0.89);
-        bool axisymmetric = getJSONbool(config, "axisymmetric", false);
-        int dimensions = getJSONint(config, "dimensions", 2);
+        number Pr_t            = getJSONdouble(config, "turbulence_prandtl_number", 0.89);
+        bool axisymmetric      = getJSONbool(config, "axisymmetric", false);
+        int dimensions         = getJSONint(config, "dimensions", 2);
         number max_mu_t_factor = getJSONdouble(config, "max_mu_t_factor", 300.0);
         this(Pr_t, axisymmetric, dimensions, max_mu_t_factor);
     }
 
     this (kwTurbulenceModel other){
-        //writeln("In kw turbulence model dup class constructor.");
-        // This constructir can access other's private variables
-        // because they are the same class
         this(other.Pr_t, other.axisymmetric, other.dimensions, other.max_mu_t_factor);
         return;
     }
 
     this (number Pr_t, bool axisymmetric, int dimensions, number max_mu_t_factor) {
-        //writeln("In kw turbulence model specific class constructor");
         this.Pr_t = Pr_t;
         this.axisymmetric = axisymmetric;
         this.dimensions = dimensions;
@@ -454,20 +456,49 @@ private:
 
 
 TurbulenceModelObject init_turbulence_model(const string turbulence_model_name, const JSONValue config)
-/*
-Interface for generating polymorphic turbulence models, similar to ../gas/init_gas_model.d
+    /*
+    Interface for generating polymorphic turbulence models, similar to ../gas/init_gas_model.d
+       - JSONValue version
 
-@author: Nick Gibbons
-*/
+    @author: Nick Gibbons
+    */
 {
     TurbulenceModelObject turbulence_model;
     switch (turbulence_model_name) {
     case "none":
         turbulence_model = new noTurbulenceModel(config);
         break;
+version(komega){
     case "k_omega":
         turbulence_model = new kwTurbulenceModel(config);
         break;
+}
+    default:
+        string errMsg = format("The turbulence model '%s' is not available.", turbulence_model_name);
+        throw new Error(errMsg);
+    }
+    return turbulence_model;
+} // end init_turbulence_model()
+
+TurbulenceModelObject init_turbulence_model(const string turbulence_model_name)
+    /*
+    Interface for generating polymorphic turbulence models, similar to ../gas/init_gas_model.d
+       - Default version. Be very careful with this, it just uses GlobalConfig values, whether
+       or not they have been set correctly yet! 
+
+    @author: Nick Gibbons
+    */
+{
+    TurbulenceModelObject turbulence_model;
+    switch (turbulence_model_name) {
+    case "none":
+        turbulence_model = new noTurbulenceModel();
+        break;
+version(komega){
+    case "k_omega":
+        turbulence_model = new kwTurbulenceModel();
+        break;
+}
     default:
         string errMsg = format("The turbulence model '%s' is not available.", turbulence_model_name);
         throw new Error(errMsg);

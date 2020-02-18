@@ -427,7 +427,8 @@ void write_initial_flow_file(string fileName, ref StructuredGrid grid,
                                             GlobalConfig.include_quality,
                                             GlobalConfig.MHD,
                                             GlobalConfig.divergence_cleaning,
-                                            GlobalConfig.radiation);
+                                            GlobalConfig.radiation,
+                                            GlobalConfig.turb_model.nturb);
                 }
             }
         }
@@ -477,7 +478,8 @@ void write_initial_flow_file(string fileName, ref StructuredGrid grid,
                                                                GlobalConfig.include_quality,
                                                                GlobalConfig.MHD,
                                                                GlobalConfig.divergence_cleaning,
-                                                               GlobalConfig.radiation) ~ "\n");
+                                                               GlobalConfig.radiation,
+                                                               GlobalConfig.turb_model.nturb) ~ "\n");
                 }
             }
         }
@@ -523,7 +525,8 @@ void write_initial_flow_file(string fileName, ref UnstructuredGrid grid,
                                     GlobalConfig.include_quality,
                                     GlobalConfig.MHD,
                                     GlobalConfig.divergence_cleaning,
-                                    GlobalConfig.radiation);
+                                    GlobalConfig.radiation,
+                                    GlobalConfig.turb_model.nturb);
         }
         outfile.close();
         break;
@@ -555,7 +558,8 @@ void write_initial_flow_file(string fileName, ref UnstructuredGrid grid,
                                                        GlobalConfig.include_quality,
                                                        GlobalConfig.MHD,
                                                        GlobalConfig.divergence_cleaning,
-                                                       GlobalConfig.radiation) ~ "\n");
+                                                       GlobalConfig.radiation,
+                                                       GlobalConfig.turb_model.nturb) ~ "\n");
         }
         outfile.finish();
     } // end switch flow_format
@@ -601,7 +605,8 @@ public:
                     (text, pos[$-1], volume, fstate[$-1],
                      Q_rad_org, f_rad_org, Q_rE_rad, GlobalConfig.with_local_time_stepping, dt_local, dt_chem, dt_therm,
                      GlobalConfig.include_quality, GlobalConfig.MHD,
-                     GlobalConfig.divergence_cleaning, GlobalConfig.radiation);
+                     GlobalConfig.divergence_cleaning, GlobalConfig.radiation,
+                     GlobalConfig.turb_model.nturb);
                 npoints += 1;
             }
             range.popFront();

@@ -17,6 +17,7 @@ import gas.luagas_model;
 import fvcore;
 import globalconfig;
 import mass_diffusion;
+import turbulence;
 
 // -------------------------------------------------------------------------------
 // Set GlobalConfig fields from a table.
@@ -189,6 +190,7 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_double_field("transient_mu_t_factor", "transient_mu_t_factor"));
     mixin(get_bool_field("limit_tke_production", "limit_tke_production"));
     mixin(get_double_field("tke_production_limit_in_kelvins", "tke_production_limit_in_kelvins"));
+    GlobalConfig.turb_model = init_turbulence_model(GlobalConfig.turbulence_model_name);
     //
     mixin(get_enum_field("tci_model", "tci_model", "tci_model_from_name"));
     //

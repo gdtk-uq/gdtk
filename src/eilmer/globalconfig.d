@@ -104,7 +104,6 @@ string massfName(GasModel gmodel, int i) {
     name = tr(name, " \t", "--", "s"); // Replace internal whitespace with dashes.
     return "massf[" ~ to!string(i) ~ "]-" ~ to!string(name);
 }
-string turb_varName(int i) { string[2] tvnames=["tke", "omega"]; return tvnames[i];} 
 string k_modesName(int i) { return "k_modes[" ~ to!string(i) ~ "]"; }
 string u_modesName(int i) { return "u_modes[" ~ to!string(i) ~ "]"; }
 string T_modesName(int i) { return "T_modes[" ~ to!string(i) ~ "]"; }
@@ -828,7 +827,7 @@ final class GlobalConfig {
                      flowVarName(FlowVar.f_rad_org),
                      flowVarName(FlowVar.Q_rE_rad)];
         }
-        foreach(i; 0 .. 2) list ~= turb_varName(i); // Todo: Generalise (NNG)
+        foreach(i; 0 .. turb_model.nturb) list ~= turb_model.primitive_variable_name(i);
         foreach(i; 0 .. gmodel_master.n_species) { list ~= [massfName(gmodel_master, i)]; }
         if (gmodel_master.n_species > 1) { list ~= flowVarName(FlowVar.dt_chem); }
         list ~= [flowVarName(FlowVar.u), flowVarName(FlowVar.T)];
@@ -2019,6 +2018,10 @@ void configCheckPoint3()
             msg ~= " is incompatible with the k-omega turbulence model.";
             throw new FlowSolverException(msg);
         }
+    }
+
+    if (GlobalConfig.turb_model is null) {
+        throw new FlowSolverException("Flowsolver started without a turbulence model");
     }
     // The super_time_stepping is associated with two particular update schemes:
     // rkl1, rkl2.

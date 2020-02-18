@@ -630,7 +630,8 @@ extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
                                                 GlobalConfig.include_quality,
                                                 GlobalConfig.MHD,
                                                 GlobalConfig.divergence_cleaning,
-                                                GlobalConfig.radiation);
+                                                GlobalConfig.radiation,
+                                                GlobalConfig.turb_model.nturb);
                     }
                 }
             }
@@ -701,7 +702,8 @@ extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
                                                                    GlobalConfig.include_quality,
                                                                    GlobalConfig.MHD,
                                                                    GlobalConfig.divergence_cleaning,
-                                                                   GlobalConfig.radiation) ~ "\n");
+                                                                   GlobalConfig.radiation,
+                                                                   GlobalConfig.turb_model.nturb) ~ "\n");
                     } // end foreach i
                 } // end foreach j
             } // end foreach k
@@ -794,7 +796,8 @@ extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
                                         GlobalConfig.include_quality,
                                         GlobalConfig.MHD,
                                         GlobalConfig.divergence_cleaning,
-                                        GlobalConfig.radiation);
+                                        GlobalConfig.radiation,
+                                        GlobalConfig.turb_model.nturb);
             }
             outfile.close();
         break;
@@ -848,7 +851,8 @@ extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
                                                            GlobalConfig.include_quality,
                                                            GlobalConfig.MHD,
                                                            GlobalConfig.divergence_cleaning,
-                                                           GlobalConfig.radiation) ~ "\n");
+                                                           GlobalConfig.radiation,
+                                                           GlobalConfig.turb_model.nturb) ~ "\n");
             } // end foreach i
             outfile.finish();
         }

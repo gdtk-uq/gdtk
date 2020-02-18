@@ -832,12 +832,11 @@ public:
                 // [TODO] Rowan, Modal energy flux?
             }
             version(komega) {
-                if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                    number tau_kn = 0.0; // [TODO] PJ, 2018-05-05, talk to Wilson
-                    number tau_wn = 0.0;
-                    F.rhoturb[0] -= tau_kn;
-                    F.rhoturb[1] -= tau_wn;
-                }
+                foreach(ref rt; F.rhoturb) rt=0.0;
+                //if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
+                //    number tau_kn = 0.0; // [TODO] PJ, 2018-05-05, talk to Wilson
+                //    number tau_wn = 0.0;
+                //}
             }
             version(multi_species_gas) {
                 if (myConfig.turbulence_model != TurbulenceModel.none ||

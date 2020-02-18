@@ -31,6 +31,7 @@ import globalconfig;
 import lsqinterp;
 import gas.fuel_air_mix;
 import simcore : SimState;
+import turbulence;
 
 
 version(debug_chem) {
@@ -425,10 +426,11 @@ public:
                  Q_rad_org, f_rad_org, Q_rE_rad,
                  myConfig.with_local_time_stepping, dt_local, dt_chem, dt_therm,
                  myConfig.include_quality, myConfig.MHD,
-                 myConfig.divergence_cleaning, myConfig.radiation);
+                 myConfig.divergence_cleaning, myConfig.radiation,
+                 myConfig.turb_model.nturb);
         } else {
             scan_cell_data_from_variable_order_string
-                (buffer, varNameList, gmodel,
+                (buffer, varNameList, gmodel, myConfig.turb_model,
                  new_pos, new_volume, fs,
                  Q_rad_org, f_rad_org, Q_rE_rad,
                  myConfig.with_local_time_stepping, dt_local, dt_chem, dt_therm,
@@ -450,7 +452,8 @@ public:
                                 Q_rad_org, f_rad_org, Q_rE_rad,
                                 myConfig.with_local_time_stepping, dt_local, dt_chem, dt_therm,
                                 myConfig.include_quality, myConfig.MHD,
-                                myConfig.divergence_cleaning, myConfig.radiation);
+                                myConfig.divergence_cleaning, myConfig.radiation,
+                                myConfig.turb_model.nturb);
         if (overwrite_geometry_data) {
             pos[0].set(new_pos);
             volume[0] = new_volume;
@@ -463,7 +466,8 @@ public:
                                    Q_rad_org, f_rad_org, Q_rE_rad,
                                    myConfig.with_local_time_stepping, dt_local, dt_chem, dt_therm,
                                    myConfig.include_quality, myConfig.MHD,
-                                   myConfig.divergence_cleaning, myConfig.radiation);
+                                   myConfig.divergence_cleaning, myConfig.radiation,
+                                   myConfig.turb_model.nturb);
     } // end write_values_to_string()
 
     void write_values_to_raw_binary(ref File fout) const
@@ -472,7 +476,8 @@ public:
                                 Q_rad_org, f_rad_org, Q_rE_rad,
                                 myConfig.with_local_time_stepping, dt_local, dt_chem, dt_therm,
                                 myConfig.include_quality, myConfig.MHD,
-                                myConfig.divergence_cleaning, myConfig.radiation);
+                                myConfig.divergence_cleaning, myConfig.radiation,
+                                myConfig.turb_model.nturb);
     } // end write_values_to_raw_binary()
 
     string write_residuals_to_string() const
@@ -1466,7 +1471,7 @@ public:
             // for this gas model thermochemical reactor we need turbulence info
             if (params.length < 1) { throw new Error("params vector too short."); }
             version(komega) {
-                params[0]=fs.turb[1];
+                params[0]=myConfig.turb_model.turbulent_signal_frequency(fs);
             } else {
                 throw new Error("FuelAirMix needs komega capability.");
             }
@@ -1936,7 +1941,7 @@ string cell_data_as_string(ref const(Vector3) pos, number volume, ref const(Flow
                            bool with_local_time_stepping, double dt_local, double dt_chem, double dt_therm,
                            bool include_quality,
                            bool MHDflag, bool divergence_cleaning,
-                           bool radiation)
+                           bool radiation, size_t nturb)
 {
     // We'll treat this function as the master definition of the data format.
     auto writer = appender!string();
@@ -1961,9 +1966,9 @@ string cell_data_as_string(ref const(Vector3) pos, number volume, ref const(Flow
         formattedWrite(writer, " %.18e %.18e %d", fs.mu_t.re, fs.k_t.re, fs.S);
         if (radiation) { formattedWrite(writer, " %.18e %.18e %.18e", Q_rad_org.re, f_rad_org.re, Q_rE_rad.re); }
         version(komega) {
-            formattedWrite(writer, " %.18e %.18e", fs.turb[0].re, fs.turb[1].re);
-        } else {
-            formattedWrite(writer, " %.18e %.18e", 0.0, 1.0);
+            foreach(it; 0 .. nturb){
+                formattedWrite(writer, " %.18e", fs.turb[it].re);
+            }
         }
         version(multi_species_gas) {
             foreach (massfvalue; fs.gas.massf) { formattedWrite(writer, " %.18e", massfvalue.re); } 
@@ -1999,9 +2004,9 @@ string cell_data_as_string(ref const(Vector3) pos, number volume, ref const(Flow
         formattedWrite(writer, " %.18e %.18e %d", fs.mu_t, fs.k_t, fs.S);
         if (radiation) { formattedWrite(writer, " %.18e %.18e %.18e", Q_rad_org, f_rad_org, Q_rE_rad); }
         version(komega) {
-            formattedWrite(writer, " %.18e %.18e", fs.turb[0], fs.turb[1]);
-        } else {
-            formattedWrite(writer, " %.18e %.18e", 0.0, 1.0);
+            foreach(it; 0 .. nturb){
+                formattedWrite(writer, " %.18e", fs.turb[it]);
+            }
         }
         version(multi_species_gas) {
             foreach (massfvalue; fs.gas.massf) { formattedWrite(writer, " %.18e", massfvalue); } 
@@ -2026,7 +2031,7 @@ void cell_data_to_raw_binary(ref File fout,
                              number Q_rad_org, number f_rad_org, number Q_rE_rad,
                              bool with_local_time_stepping, double dt_local, double dt_chem, double dt_therm,
                              bool include_quality, bool MHDflag, bool divergence_cleaning,
-                             bool radiation)
+                             bool radiation, size_t nturb)
 {
     // This function should match function cell_data_as_string()
     // which is considered the master definition of the data format.
@@ -2064,9 +2069,9 @@ void cell_data_to_raw_binary(ref File fout,
             fout.rawWrite(dbl3);
         }
         version(komega) {
-            dbl2[0] = fs.turb[0].re; dbl2[1] = fs.turb[1].re; fout.rawWrite(dbl2);
-        } else {
-            dbl2[0] = 0.0; dbl2[1] = 1.0; fout.rawWrite(dbl2);
+            foreach(it; 0 .. nturb){
+                dbl1[0] = fs.turb[it].re; fout.rawWrite(dbl1);
+            }
         }
         version(multi_species_gas) {
             foreach (mf; fs.gas.massf) { dbl1[0] = mf.re; fout.rawWrite(dbl1); } 
@@ -2114,9 +2119,9 @@ void cell_data_to_raw_binary(ref File fout,
             fout.rawWrite(dbl3);
         }
         version(komega) {
-            dbl2[0] = fs.turb[0]; dbl2[1] = fs.turb[1]; fout.rawWrite(dbl2);
-        } else {
-            dbl2[0] = 0.0; dbl2[1] = 1.0; fout.rawWrite(dbl2);
+            foreach(it; 0 .. nturb){
+                dbl1[0] = fs.turb[it]; fout.rawWrite(dbl1);
+            }
         }
         version(multi_species_gas) {
             fout.rawWrite(fs.gas.massf); 
@@ -2142,7 +2147,7 @@ void scan_cell_data_from_fixed_order_string
  ref Vector3 pos, ref number volume, ref FlowState fs,
  ref number Q_rad_org, ref number f_rad_org, ref number Q_rE_rad,
  bool with_local_time_stepping, ref double dt_local, ref double dt_chem, ref double dt_therm,
- bool include_quality, bool MHDflag, bool divergence_cleaning, bool radiation)
+ bool include_quality, bool MHDflag, bool divergence_cleaning, bool radiation, size_t nturb)
 {
     // This function needs to be kept consistent with cell_data_as_string() above.
     auto items = split(buffer);
@@ -2208,10 +2213,9 @@ void scan_cell_data_from_fixed_order_string
             Q_rad_org = 0.0; f_rad_org = 0.0; Q_rE_rad = 0.0;
         }
         version(komega) {
-            fs.turb[0] = Complex!double(items.front); items.popFront();
-            fs.turb[1] = Complex!double(items.front); items.popFront();
-        } else {
-            items.popFront(); items.popFront(); // discard k, omega
+            foreach(it; 0 .. nturb) {
+                fs.turb[it] = Complex!double(items.front); items.popFront();
+            }
         }
         version(multi_species_gas) {
             foreach(i; 0 .. fs.gas.massf.length) {
@@ -2296,10 +2300,9 @@ void scan_cell_data_from_fixed_order_string
             Q_rad_org = 0.0; f_rad_org = 0.0; Q_rE_rad = 0.0;
         }
         version(komega) {
-            fs.turb[0] = to!double(items.front); items.popFront();
-            fs.turb[1] = to!double(items.front); items.popFront();
-        } else {
-            items.popFront(); items.popFront(); // discard k, omega
+            foreach(it; 0 .. nturb) {
+                fs.turb[it] = to!double(items.front); items.popFront();
+            }
         }
         version(multi_species_gas) {
             foreach(i; 0 .. fs.gas.massf.length) {
@@ -2327,7 +2330,7 @@ void scan_cell_data_from_fixed_order_string
 } // end scan_values_from_fixed_order_string()
 
 void scan_cell_data_from_variable_order_string
-(string buffer, string[] varNameList, GasModel gmodel,
+(string buffer, string[] varNameList, GasModel gmodel, const ref TurbulenceModelObject tm,
  ref Vector3 pos, ref number volume, ref FlowState fs,
  ref number Q_rad_org, ref number f_rad_org, ref number Q_rE_rad,
  bool with_local_time_stepping, ref double dt_local, ref double dt_chem, ref double dt_therm,
@@ -2393,8 +2396,8 @@ void scan_cell_data_from_variable_order_string
         Q_rad_org = 0.0; f_rad_org = 0.0; Q_rE_rad = 0.0;
     }
     version(komega) {
-        foreach(i; 0 .. fs.turb.length) {
-            fs.turb[i] = values[countUntil(varNameList, turb_varName(to!int(i)))];
+        foreach(i; 0 .. tm.nturb) {
+            fs.turb[i] = values[countUntil(varNameList, tm.primitive_variable_name(i))];
         }
     }
     version(multi_species_gas) {
@@ -2424,7 +2427,7 @@ void raw_binary_to_cell_data(ref File fin,
                              ref number Q_rad_org, ref number f_rad_org, ref number Q_rE_rad,
                              bool with_local_time_stepping, ref double dt_local, ref double dt_chem, ref double dt_therm,
                              bool include_quality, bool MHDflag, bool divergence_cleaning,
-                             bool radiation)
+                             bool radiation, size_t nturb)
 {
     // This function needs to be kept consistent with cell_data_to_raw_binary() above.
     //
@@ -2475,7 +2478,9 @@ void raw_binary_to_cell_data(ref File fin,
         }
         fin.rawRead(dbl2); // tke, omega
         version(komega) {
-            fs.turb[0] = dbl2[0]; fs.turb[1] = dbl2[1];
+            foreach(i; 0 .. nturb){
+                fin.rawRead(dbl1); fs.turb[i] = dbl1[0];
+            }
         }
         version(multi_species_gas) {
             foreach (i; 0 .. fs.gas.massf.length) {
@@ -2538,9 +2543,10 @@ void raw_binary_to_cell_data(ref File fin,
         } else {
             Q_rad_org = 0.0; f_rad_org = 0.0; Q_rE_rad = 0.0;
         }
-        fin.rawRead(dbl2); // k, omega discarded
         version(komega) {
-            fs.turb[0] = dbl2[0]; fs.turb[1] = dbl2[1];
+            foreach(i; 0 .. nturb){
+                fin.rawRead(dbl1); fs.turb[i] = dbl1[0];
+            }
         }
         version(multi_species_gas) {
             fin.rawRead(fs.gas.massf);
