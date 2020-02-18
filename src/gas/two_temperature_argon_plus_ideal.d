@@ -1,6 +1,9 @@
 /**
  * two_temperature_argon_plus_ideal.d
- * Composite gas model for use in the CFD codes.
+ *
+ * Composite gas model of a generic ideal gas plus the ionizing argon gas.
+ * We will compute and carry the electron energy in the context
+ * of the argon-model species, only, ignoring the other ideal-gas species.
  *
  * Author: Peter J. and Rowan G.
  * Version: 2020-02-17.
@@ -36,12 +39,13 @@ public:
 
     this(lua_State *L) {
         _n_species = 4;
-        _n_modes = 1;
         _species_names.length = 4;
         _species_names[Species.ideal] = "ideal";
         _species_names[Species.Ar] = "Ar";
         _species_names[Species.Ar_plus] = "Ar+";
         _species_names[Species.e_minus] = "e-";
+        _n_modes = 1; // for storage of electron energy
+        //
         // Bring table to TOS
         lua_getglobal(L, "TwoTemperatureArgonPlusIdealGas");
         // There are just two file-names to be read from the composite-gas-model file.
@@ -51,6 +55,7 @@ public:
         ideal_gas = new IdealGas(L);
         doLuaFile(L, argon_file);
         argon_gas = new TwoTemperatureReactingArgon(L);
+        //
         _mol_masses.length = 4;
         _mol_masses[Species.ideal] = ideal_gas._mol_masses[0];
         _mol_masses[Species.Ar] = argon_gas._mol_masses[0];
@@ -117,7 +122,7 @@ public:
             argon_gas.update_thermo_from_rhoT(Q_argon);
             // Internal energy is a weighted average.
             Q.u = Q.massf[0]*Q_ideal.u + argon_massf*Q_argon.u;
-            Q.u_modes[0] = argon_massf*Q_argon.u_modes[0];
+            Q.u_modes[0] = Q_argon.u_modes[0]; // Just carry the electron energy, unscaled.
         } else if (with_argon) {
             // argon_massf very close to 1.0
             Q.rho = Q_argon.rho;
@@ -141,7 +146,7 @@ public:
         if (with_argon && with_ideal) {
             Q_ideal.rho = Q.massf[0]*Q.rho;
             Q_argon.rho = argon_massf*Q.rho;
-            Q_argon.u_modes[0] = Q.u_modes[0]/argon_massf;
+            Q_argon.u_modes[0] = Q.u_modes[0]; // unscaled electron energy
             Q_argon.T_modes[0] = Q.T_modes[0]; // will remain fixed
             Q_argon.massf[0] = Q.massf[1]/argon_massf;
             Q_argon.massf[1] = Q.massf[2]/argon_massf;
@@ -151,10 +156,11 @@ public:
             // Freeze the electron energy and temperature.
             // Let's assume that the form of the internal energies is similar,
             // such that we can just form an average T from the known energy.
-            // This is only used as an initial guess.
-            Q_ideal.u = Q.u/Q.massf[0];
+            // Although this might be a poor approximation, it is only used
+            // to get the initial guess for temperature.
+            Q_ideal.u = Q.u;
             ideal_gas.update_thermo_from_rhou(Q_ideal);
-            Q_argon.u = Q.u/argon_massf;
+            Q_argon.u = Q.u;
             argon_gas.update_thermo_from_rhou(Q_argon);
             // Initial guess for Temperature
             number T = Q.massf[0]*Q_ideal.T + argon_massf*Q_argon.T;
@@ -177,8 +183,8 @@ public:
         } else if (with_argon) {
             // argon_massf very close to 1.0
             Q_argon.rho = Q.rho*argon_massf;
-            Q_argon.u = Q.u/argon_massf;
-            Q_argon.u_modes[0] = Q.u_modes[0]/argon_massf;
+            Q_argon.u = Q.u;
+            Q_argon.u_modes[0] = Q.u_modes[0];
             Q_argon.T_modes[0] = Q.T_modes[0]; // will remain fixed
             Q_argon.massf[0] = Q.massf[1]/argon_massf;
             Q_argon.massf[1] = Q.massf[2]/argon_massf;
@@ -189,7 +195,7 @@ public:
         } else {
             // ideal massf very close to 1.0
             Q_ideal.rho = Q.rho*Q.massf[0];
-            Q_ideal.u = Q.u/Q.massf[0];
+            Q_ideal.u = Q.u;
             ideal_gas.update_thermo_from_rhou(Q_ideal);
             Q.p = Q_ideal.p;
             Q.T = Q_ideal.T;
@@ -221,7 +227,7 @@ public:
         if (with_argon && with_ideal) {
             Q.p = Q_argon.p + Q_ideal.p; // partial pressures add
             Q.u = Q.massf[0]*Q_ideal.u + argon_massf*Q_argon.u;
-            Q.u_modes[0] = argon_massf*Q_argon.u_modes[0];
+            Q.u_modes[0] = Q_argon.u_modes[0];
         } else if (with_argon) {
             // argon_massf very close to 1.0
             Q.p = Q_argon.p;
@@ -273,7 +279,7 @@ public:
             ideal_gas.update_thermo_from_rhoT(Q_ideal);
             Q.T = T;
             Q.u = Q.massf[0]*Q_ideal.u + argon_massf*Q_argon.u;
-            Q.u_modes[0] = argon_massf*Q_argon.u_modes[0];
+            Q.u_modes[0] = Q_argon.u_modes[0];
         } else if (with_argon) {
             // argon_massf very close to 1.0
             Q_argon.rho = Q.rho; Q_argon.p = Q.p;
@@ -519,11 +525,13 @@ public:
     }
     override @nogc number internal_energy(in GasState Q)
     {
-        return Q.u + Q.u_modes[0];
+        number argon_massf = Q.massf[1]+Q.massf[2]+Q.massf[3];
+        return Q.u + argon_massf*Q.u_modes[0];
     }
     override number enthalpy(in GasState Q)
     {
-        return Q.u + Q.u_modes[0] + Q.p/Q.rho;
+        number argon_massf = Q.massf[1]+Q.massf[2]+Q.massf[3];
+        return Q.u + argon_massf*Q.u_modes[0] + Q.p/Q.rho;
     }
     override number entropy(in GasState Q)
     {
@@ -550,6 +558,7 @@ public:
 
     @nogc number ionisation_fraction_from_mass_fractions(const(GasState) Q) const
     {
+        // Note that this is the ionization fraction within the argon species, only.
         number ions = Q.massf[Species.Ar_plus] / _mol_masses[Species.Ar_plus];
         number atoms = Q.massf[Species.Ar] / _mol_masses[Species.Ar];
         return ions/(ions+atoms);
