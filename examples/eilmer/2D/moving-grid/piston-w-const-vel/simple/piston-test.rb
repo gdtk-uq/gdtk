@@ -42,16 +42,24 @@ class TestPiston < Test::Unit::TestCase
     posx = nil; velx = nil; p = nil; temp=nil
     lines = o.split("\n")
     found_comment_line = false
+    col_posx = 0; col_velx = 0; col_p = 0; col_temp = 0
     lines.each do |txt|
       if found_comment_line then
         # Next line is my data line and...
         items = txt.split(' ')
-        posx = items[0].to_f; velx = items[5].to_f
-        p = items[8].to_f; temp = items[17].to_f
+        posx = items[col_posx-1].to_f
+        velx = items[col_velx-1].to_f
+        p = items[col_p-1].to_f
+        temp = items[col_temp-1].to_f
         # once I have extracted values from it, get out.
         break
       end
       if txt.match('pos.x') then
+        # Found variable names, extract gnuplot column numbers.
+        col_posx = txt.match(/(\d+):pos.x/)[1].to_i
+        col_temp = txt.match(/(\d+):T/)[1].to_i
+        col_velx = txt.match(/(\d+):vel.x/)[1].to_i
+        col_p = txt.match(/(\d+):p\s/)[1].to_i
         found_comment_line = true
       end
     end

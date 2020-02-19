@@ -47,14 +47,23 @@ class TestT4M4 < Test::Unit::TestCase
     lines = f.readlines
     f.close
     myT_list = []; vel_list = []; density_list = []
+    col_ypos = 0; col_T = 0; col_vel = 0; col_rho = 0
     lines.each do |txt|
-      if !txt.match(/pos.x/) then
+      if col_T > 0 then
+        # Have already identified column numbers, extract the data values.
         items = txt.split(' ')
-        ypos = items[1].to_f
+        ypos = items[col_ypos-1].to_f
         if ypos > 0.044 then break end
-        myT_list << items[19].to_f
-        vel_list << items[5].to_f
-        density_list << items[4].to_f
+        myT_list << items[col_T-1].to_f
+        vel_list << items[col_vel-1].to_f
+        density_list << items[col_rho-1].to_f
+      end
+      if txt.match(/pos.x/) then
+        # Found variable names, extract gnuplot column numbers.
+        col_ypos = txt.match(/(\d+):pos.y\s/)[1].to_i
+        col_T = txt.match(/(\d+):T\s/)[1].to_i
+        col_vel = txt.match(/(\d+):vel.x\s/)[1].to_i
+        col_rho = txt.match(/(\d+):rho\s/)[1].to_i
       end
     end
     assert(is_within_tolerance(mean(myT_list), 443.7, 0.01), "Failed to get correct temperature.")
