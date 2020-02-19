@@ -564,13 +564,15 @@ public:
         return ions/(ions+atoms);
     }
 
-private:
-    // This gas model is composed to two other gas models.
+public:
+    // This gas model is composed to two other gas models and the kinetics
+    // module will want access to these components.
     GasModel argon_gas;
     GasModel ideal_gas;
+    immutable double massf_tiny = 1.0e-6;
+private
     GasState Q_argon, Q_ideal;
     double _e_mass_over_ion_mass; // set once mol masses are set in constructor
-    immutable double massf_tiny = 1.0e-6;
 } // end class TwoTemperatureArgonPlusIdealGas
 
 version(two_temperature_argon_plus_ideal_test) {

@@ -14,6 +14,7 @@ KINETICS_FILES := $(KINETICS_DIR)/package.d \
 	$(KINETICS_DIR)/reaction_mechanism.d \
 	$(KINETICS_DIR)/two_temperature_air_kinetics.d \
 	$(KINETICS_DIR)/two_temperature_argon_kinetics.d \
+	$(KINETICS_DIR)/two_temperature_argon_with_ideal_gas.d \
 	$(KINETICS_DIR)/two_temperature_nitrogen_kinetics.d \
 	$(KINETICS_DIR)/two_temperature_dissociating_nitrogen_kinetics.d \
 	$(KINETICS_DIR)/vib_specific_nitrogen_kinetics.d \

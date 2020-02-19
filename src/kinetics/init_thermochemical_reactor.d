@@ -19,6 +19,7 @@ import gas.therm_perf_gas;
 import gas.therm_perf_gas_equil;
 import gas.powers_aslam_gas;
 import gas.two_temperature_reacting_argon;
+import gas.two_temperature_argon_plus_ideal;
 import gas.ideal_dissociating_gas;
 import gas.fuel_air_mix;
 import gas.two_temperature_nitrogen;
@@ -37,6 +38,7 @@ import kinetics.ideal_dissociating_gas_kinetics;
 import kinetics.fuel_air_mix_kinetics;
 import kinetics.two_temperature_nitrogen_kinetics;
 import kinetics.two_temperature_dissociating_nitrogen_kinetics;
+import kinetics.two_temperature_argon_with_ideal_gas;
 import kinetics.vib_specific_nitrogen_kinetics;
 import kinetics.two_temperature_air_kinetics;
 import kinetics.electronically_specific_kinetics;
@@ -61,6 +63,9 @@ ThermochemicalReactor init_thermochemical_reactor(GasModel gmodel, string fileNa
     }
     if ((cast(TwoTemperatureReactingArgon) gmodel) !is null) {
         reactor = new UpdateArgonFrac(fileName1, gmodel);
+    }
+    if ((cast(TwoTemperatureArgonPlusIdealGas) gmodel) !is null) {
+        reactor = new UpdateArgonFracWithIdeal(fileName1, gmodel);
     }
     if ((cast(IdealDissociatingGas) gmodel) !is null) {
         reactor = new UpdateIDG(fileName1, gmodel);

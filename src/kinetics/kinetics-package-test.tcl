@@ -28,11 +28,15 @@ test reaction-mechanism-test {Testing reaction_mechanism.d} -body {
     exec ./reaction_mechanism_test
 } -result {} -returnCodes {0}
 
-test two_temperature-argon-kinetics-test {Testing Daniel Smith's two-temperature argon reaction mechanism.} -body {
+test two-temperature-argon-kinetics-test {Testing Daniel Smith's two-temperature argon reaction mechanism.} -body {
     exec ./two_temperature_argon_kinetics_test
 } -result {} -returnCodes {0}
 
-test two_temperature-gasgiant-kinetics-test {Testing Daisy's two-temperature Gas-Giant reaction mechanism.} -body {
+test two-temperature-argon-with-ideal-gas-test {Testing Daniel Smith's two-temperature argon reaction mechanism with ideal-gas present.} -body {
+    exec ./two_temperature_argon_with_ideal_gas_test
+} -result {} -returnCodes {0}
+
+test two-temperature-gasgiant-kinetics-test {Testing Daisy's two-temperature Gas-Giant reaction mechanism.} -body {
     exec ./two_temperature_gasgiant_kinetics_test
 } -result {} -returnCodes {0}
 
