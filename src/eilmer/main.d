@@ -99,7 +99,7 @@ Argument:                            Comment:
   --verbosity=<int>                  defaults to 0
 
   --prep                             prepare config, grid and flow files
-  --only-blocks=\"blk-list\"         only prepare blocks in given list
+  --only-blocks=\"blk-list\"           only prepare blocks in given list
 
   --run                              run the simulation over time
   --tindx-start=<int>|last|9999      defaults to 0
@@ -109,7 +109,7 @@ Argument:                            Comment:
 longUsageMsg ~= to!string(totalCPUs) ~" on this machine
   --threads-per-mpi-task=<int>       (e4mpi) defaults to 1
   --max-wall-clock=<int>             in seconds
-  --report-residuals                 include residuals in console output
+  --report-residuals                 write residuals to file config/job-residuals.txt
 
   --post                             post-process simulation data
   --list-info                        report some details of this simulation
