@@ -832,8 +832,8 @@ function FBArray:new(o)
    end
    o = o or {}
    local flag = checkAllowedNames(o, {"grid", "initialState", "fillCondition",
-				      "active", "label", "omegaz", "bcList",
-				      "nib", "njb", "nkb"})
+				      "active", "label", "omegaz", "may_be_turbulent",
+                                      "bcList", "nib", "njb", "nkb"})
    if not flag then
       error("Invalid name for item supplied to FBArray constructor.", 2)
    end
@@ -862,6 +862,9 @@ function FBArray:new(o)
       error("You need supply an initialState to FBArray constructor.", 2)
    end
    o.omegaz = o.omegaz or 0.0
+   if o.may_be_turbulent == nil then
+      o.may_be_turbulent = true
+   end
    o.bcList = o.bcList or {} -- boundary conditions
    for _,face in ipairs(faceList(config.dimensions)) do
       o.bcList[face] = o.bcList[face] or WallBC_WithSlip:new()
@@ -930,6 +933,7 @@ function FBArray:new(o)
 	    end
 	    local new_block = FluidBlock:new{grid=subgrid, omegaz=o.omegaz,
                                              initialState=o.initialState,
+                                             may_be_turbulent=o.may_be_turbulent,
                                              bcList=bcList,
                                              fluidBlockArrayId=o.id}
 	    o.blockArray[ib][jb] = new_block
@@ -969,6 +973,7 @@ function FBArray:new(o)
 	       end
 	       local new_block = FluidBlock:new{grid=subgrid, omegaz=o.omegaz,
                                                 initialState=o.initialState,
+                                                may_be_turbulent=o.may_be_turbulent,
                                                 bcList=bcList,
                                                 fluidBlockArrayId=o.id,}
 	       o.blockArray[ib][jb][kb] = new_block
