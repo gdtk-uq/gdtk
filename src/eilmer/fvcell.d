@@ -1627,7 +1627,7 @@ public:
             number turbulent_signal = myConfig.turb_model.turbulent_signal_frequency(fs);
             turbulent_signal *= myConfig.turbulent_signal_factor;
             signal = fmax(signal, turbulent_signal); 
-            this.signal_parab = fmax(signal, turbulent_signal); // FIXME: Kyle (Should be signal_parab?)
+            this.signal_parab = fmax(signal_parab, turbulent_signal);
         }
         version(MHD) {
             if (myConfig.MHD) {
