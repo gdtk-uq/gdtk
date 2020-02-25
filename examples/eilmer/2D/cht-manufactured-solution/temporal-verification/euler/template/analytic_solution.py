@@ -3,7 +3,7 @@
 
 from sympy import *
 # constants: read from file
-execfile('constants.txt')
+exec(open('constants.txt').read())
 
 # Analytic function coefficients and constants
 TA = 300.0; TB = 0.2;

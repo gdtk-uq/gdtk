@@ -9,7 +9,7 @@
 
 from sympy import *
 # constants: read from file
-execfile('constants.txt')
+exec(open('constants.txt').read())
 Cv = Rgas/(gamma-1)
 
 
