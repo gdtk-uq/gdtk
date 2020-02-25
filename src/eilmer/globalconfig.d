@@ -742,7 +742,7 @@ final class GlobalConfig {
     shared static double dt_loads = 1.0e-3; // interval for writing loads on boundary groups
     // The following initialization preserves old behaviour
     // where only one group called loads was expected.
-    shared static string boundary_group_for_loads = "loads";
+    shared static string boundary_groups_for_loads = "loads";
     shared static string[] group_names_for_loads = ["loads"];
     shared static bool write_loads = false;
     shared static bool compute_run_time_loads = false;
@@ -1551,8 +1551,8 @@ void read_config_file()
     mixin(update_int("nkb", "nkb"));
     mixin(update_bool("propagate_inflow_data", "propagate_inflow_data"));
     mixin(update_bool("save_intermediate_results", "save_intermediate_results"));
-    mixin(update_string("boundary_group_for_loads", "boundary_group_for_loads"));
-    string[] group_names = GlobalConfig.boundary_group_for_loads.replace(" ","").split(",");
+    mixin(update_string("boundary_groups_for_loads", "boundary_groups_for_loads"));
+    string[] group_names = GlobalConfig.boundary_groups_for_loads.replace(" ","").split(",");
     foreach (name; group_names) {
         if (name.length > 0) { GlobalConfig.group_names_for_loads ~= name; }
     }
@@ -1571,7 +1571,7 @@ void read_config_file()
         writeln("  nkb: ", GlobalConfig.nkb);
         writeln("  propagate_inflow_data: ", GlobalConfig.propagate_inflow_data);
         writeln("  save_intermediate_results: ", GlobalConfig.save_intermediate_results);
-        writeln("  boundary_group_for_loads: ", GlobalConfig.boundary_group_for_loads);
+        writeln("  boundary_groups_for_loads: ", GlobalConfig.boundary_groups_for_loads);
         writeln("  group_names_for_loads: ", GlobalConfig.group_names_for_loads);
         writeln("  write_loads: ", GlobalConfig.write_loads);
         writeln("  thermionic_emission_bc_time_delay: ", GlobalConfig.thermionic_emission_bc_time_delay);

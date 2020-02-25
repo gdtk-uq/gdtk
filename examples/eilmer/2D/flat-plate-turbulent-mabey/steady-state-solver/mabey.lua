@@ -65,7 +65,7 @@ for i=1,4 do
 end
 
 -- loads settings
-config.boundary_group_for_loads = "wall" 
+config.boundary_groups_for_loads = "wall" 
 config.write_loads = true
 
 -- convective flux settings

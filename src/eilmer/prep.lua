@@ -1948,8 +1948,8 @@ function write_config_file(fileName)
 			 tostring(config.propagate_inflow_data)))
    f:write(string.format('"save_intermediate_results": %s,\n',
 			 tostring(config.save_intermediate_results)))
-   f:write(string.format('"boundary_group_for_loads": "%s",\n',
-			 config.boundary_group_for_loads))
+   f:write(string.format('"boundary_groups_for_loads": "%s",\n',
+			 config.boundary_groups_for_loads))
    f:write(string.format('"write_loads": %s,\n',
 			 tostring(config.write_loads)))
    f:write(string.format('"compute_run_time_loads": %s,\n',
