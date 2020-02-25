@@ -1994,7 +1994,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 		    k_cell = ijk_indices[2];
 		}
 		addUDFSourceTermsToCell(blk.myL, cell, local_gtl, 
-					local_sim_time, blk.myConfig.gmodel,
+					local_sim_time, blk.myConfig,
 					blk.id, i_cell, j_cell, k_cell);
 	    }
 	    cell.time_derivatives(local_gtl, local_ftl, local_with_k_omega);
@@ -2217,7 +2217,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 			k_cell = ijk_indices[2];
 		    }
 		    addUDFSourceTermsToCell(blk.myL, cell, local_gtl, 
-					local_sim_time, blk.myConfig.gmodel,
+					local_sim_time, blk.myConfig,
 					    blk.id, i_cell, j_cell, k_cell);
 		}
 		cell.time_derivatives(local_gtl, local_ftl, local_with_k_omega);
@@ -2483,7 +2483,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                     k_cell = ijk_indices[2];
                 }
                 addUDFSourceTermsToCell(blk.myL, cell, local_gtl, 
-                                        local_sim_time, blk.myConfig.gmodel,
+                                        local_sim_time, blk.myConfig,
                                         blk.id, i_cell, j_cell, k_cell);
             }
             cell.time_derivatives(local_gtl, local_ftl, local_with_k_omega);
@@ -2691,7 +2691,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                         k_cell = ijk_indices[2];
                     }
                     addUDFSourceTermsToCell(blk.myL, cell, local_gtl,
-                                            local_sim_time, blk.myConfig.gmodel,
+                                            local_sim_time, blk.myConfig,
                                             blk.id, i_cell, j_cell, k_cell);
                 }
                 cell.time_derivatives(local_gtl, local_ftl, local_with_k_omega);
@@ -2894,7 +2894,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                         k_cell = ijk_indices[2];
                     }
                     addUDFSourceTermsToCell(blk.myL, cell, local_gtl,
-                                            local_sim_time, blk.myConfig.gmodel,
+                                            local_sim_time, blk.myConfig,
                                             blk.id, i_cell, j_cell, k_cell);
                 }
                 cell.time_derivatives(local_gtl, local_ftl, local_with_k_omega);
@@ -3142,7 +3142,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
                     k_cell = ijk_indices[2];
                 }
                 addUDFSourceTermsToCell(blk.myL, cell, local_gtl, 
-                                        local_sim_time, blk.myConfig.gmodel,
+                                        local_sim_time, blk.myConfig,
                                         blk.id, i_cell, j_cell, k_cell);
             }
             cell.time_derivatives(local_gtl, local_ftl, local_with_k_omega);
@@ -3338,7 +3338,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
                         k_cell = ijk_indices[2];
                     }
                     addUDFSourceTermsToCell(blk.myL, cell, local_gtl,
-                                            local_sim_time, blk.myConfig.gmodel,
+                                            local_sim_time, blk.myConfig,
                                             blk.id, i_cell, j_cell, k_cell);
                 }
                 cell.time_derivatives(local_gtl, local_ftl, local_with_k_omega);

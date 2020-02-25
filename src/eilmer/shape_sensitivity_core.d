@@ -2282,7 +2282,7 @@ void compute_flux(FVCell pcell, FluidBlock blk, size_t orderOfJacobian, ref FVCe
                 k_cell = ijk_indices[2];
             }
             addUDFSourceTermsToCell(blk.myL, cell, 0, 
-                                    0.0, blk.myConfig.gmodel,
+                                    0.0, blk.myConfig,
                                     blk.id, i_cell, j_cell, k_cell);
         }
     }
@@ -2778,7 +2778,7 @@ void evalRHS(double pseudoSimTime, int ftl, int gtl, bool with_k_omega)
                     k_cell = ijk_indices[2];
                 }
                 addUDFSourceTermsToCell(blk.myL, cell, gtl, 
-                                        pseudoSimTime, blk.myConfig.gmodel,
+                                        pseudoSimTime, blk.myConfig,
                                         blk.id, i_cell, j_cell, k_cell);
             }
             cell.time_derivatives(gtl, ftl, local_with_k_omega);

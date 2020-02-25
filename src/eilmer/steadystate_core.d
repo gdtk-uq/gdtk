@@ -919,7 +919,7 @@ void evalRHS(double pseudoSimTime, int ftl)
                     k_cell = ijk_indices[2];
                 }
                 addUDFSourceTermsToCell(blk.myL, cell, 0, 
-                                        pseudoSimTime, blk.myConfig.gmodel,
+                                        pseudoSimTime, blk.myConfig,
                                         blk.id, i_cell, j_cell, k_cell);
             }
             cell.time_derivatives(0, ftl, local_with_k_omega);
