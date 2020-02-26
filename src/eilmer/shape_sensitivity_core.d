@@ -2263,11 +2263,10 @@ void compute_flux(FVCell pcell, FluidBlock blk, size_t orderOfJacobian, ref FVCe
 	    }
 	}
     }
-    bool local_with_k_omega = (blk.myConfig.turbulence_model == TurbulenceModel.k_omega);
     foreach (i, cell; cell_list) {
         cell.add_inviscid_source_vector(0, 0.0);
         if (blk.myConfig.viscous) {
-            cell.add_viscous_source_vector(local_with_k_omega);
+            cell.add_viscous_source_vector();
         }
         if (blk.myConfig.udf_source_terms) {
             size_t i_cell = cell.id;
@@ -2299,7 +2298,7 @@ void compute_flux(FVCell pcell, FluidBlock blk, size_t orderOfJacobian, ref FVCe
 }
 
 
-void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref number[] g, size_t nPrimitive, bool with_k_omega, number EPS, string jobName) {
+void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref number[] g, size_t nPrimitive, number EPS, string jobName) {
     size_t nDesignVars = design_variables.length;
     int gtl; int ftl; number objFcnEvalP; number objFcnEvalM; string varID; number dP; number P0;
 
@@ -2384,7 +2383,7 @@ void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref
             //    foreach ( j; 0..face.cloud_pos.length) writef("%d    %.16f    %.16f \n", face.id, face.ws_grad.wx[j], face.ws_grad.wy[j]); 
         }
         
-        //evalRHS(0.0, ftl, 0, with_k_omega);
+        //evalRHS(0.0, ftl, 0);
         steadystate_core.evalRHS(0.0, ftl);
         
         objFcnEvalP = objective_function_evaluation(0);
@@ -2710,7 +2709,7 @@ void collect_boundary_vertices(FluidBlock blk)
 /*  EVALUATE RHS @ gtl   */
 /*************************/
 /*
-void evalRHS(double pseudoSimTime, int ftl, int gtl, bool with_k_omega)
+void evalRHS(double pseudoSimTime, int ftl, int gtl)
 {
     foreach (blk; parallel(localFluidBlocks,1)) {
         blk.clear_fluxes_of_conserved_quantities();
@@ -2759,11 +2758,10 @@ void evalRHS(double pseudoSimTime, int ftl, int gtl, bool with_k_omega)
     }
 
     foreach (blk; parallel(localFluidBlocks,1)) {
-        bool local_with_k_omega = with_k_omega;
         foreach (i, cell; blk.cells) {
             cell.add_inviscid_source_vector(gtl, 0.0);
             if (blk.myConfig.viscous) {
-                cell.add_viscous_source_vector(local_with_k_omega);
+                cell.add_viscous_source_vector();
             }
             if (blk.myConfig.udf_source_terms) {
                 size_t i_cell = cell.id;
@@ -2781,7 +2779,7 @@ void evalRHS(double pseudoSimTime, int ftl, int gtl, bool with_k_omega)
                                         pseudoSimTime, blk.myConfig,
                                         blk.id, i_cell, j_cell, k_cell);
             }
-            cell.time_derivatives(gtl, ftl, local_with_k_omega);
+            cell.time_derivatives(gtl, ftl);
         }
     }
 }

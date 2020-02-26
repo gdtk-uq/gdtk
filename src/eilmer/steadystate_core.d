@@ -41,7 +41,6 @@ import loads;
 import shape_sensitivity_core : sss_preconditioner_initialisation, sss_preconditioner;
 
 static int fnCount = 0;
-static shared bool with_k_omega;
 
 // Module-local, global memory arrays and matrices
 number[] g0;
@@ -263,7 +262,6 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
                 if ( failedAttempt ) {
                     // return cell flow-states to their original state
                     foreach (blk; parallel(localFluidBlocks,1)) {
-                        bool local_with_k_omega = with_k_omega;
                         int cellCount = 0;
                         foreach (cell; blk.cells) {
                             cell.decode_conserved(0, 0, 0.0);
@@ -524,7 +522,6 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
             if ( failedAttempt ) {
 		// return cell flow-states to their original state
 		foreach (blk; parallel(localFluidBlocks,1)) {
-		    bool local_with_k_omega = with_k_omega;
 		    int cellCount = 0;
 		    foreach (cell; blk.cells) {
 			cell.decode_conserved(0, 0, 0.0);
@@ -900,11 +897,10 @@ void evalRHS(double pseudoSimTime, int ftl)
     }
 
     foreach (blk; parallel(localFluidBlocks,1)) {
-        bool local_with_k_omega = with_k_omega;
         foreach (i, cell; blk.cells) {
             cell.add_inviscid_source_vector(0, 0.0);
             if (blk.myConfig.viscous) {
-                cell.add_viscous_source_vector(local_with_k_omega);
+                cell.add_viscous_source_vector();
             }
             if (blk.myConfig.udf_source_terms) {
                 size_t i_cell = cell.id;
@@ -922,7 +918,7 @@ void evalRHS(double pseudoSimTime, int ftl)
                                         pseudoSimTime, blk.myConfig,
                                         blk.id, i_cell, j_cell, k_cell);
             }
-            cell.time_derivatives(0, ftl, local_with_k_omega);
+            cell.time_derivatives(0, ftl);
         }
     }
 }
@@ -1180,7 +1176,6 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     }
 
     foreach (blk; parallel(localFluidBlocks,1)) {
-        bool local_with_k_omega = with_k_omega;
         if (blk.myConfig.sssOptions.useScaling) {
             blk.maxRate.mass = maxMass;
             blk.maxRate.momentum.refx = maxMomX;

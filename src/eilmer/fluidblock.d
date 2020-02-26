@@ -669,11 +669,9 @@ public:
 	    L2_residual += fabs(cell.dUdt[0].momentum.z)^^2;
 	    L2_residual += fabs(cell.dUdt[0].total_energy)^^2;
 	    version(komega) {
-		if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-            foreach (rt; cell.dUdt[0].rhoturb) {
-                L2_residual += fabs(rt)^^2;
+            foreach(it; 0 .. myConfig.turb_model.nturb){
+                L2_residual += fabs(cell.dUdt[0].rhoturb[it])^^2;
             }
-		}
 	    }
         }
     } // end compute_Linf_residuals()

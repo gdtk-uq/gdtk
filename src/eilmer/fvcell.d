@@ -501,7 +501,6 @@ public:
     // ftl = flow time level
     {
         ConservedQuantities myU = U[ftl];
-        bool with_k_omega = (myConfig.turbulence_model == TurbulenceModel.k_omega);
         number myrho = fs.gas.rho;
         // Mass per unit volume.
         myU.mass = myrho;
@@ -566,7 +565,6 @@ public:
     {
         auto gmodel = myConfig.gmodel;
         ConservedQuantities myU = U[ftl];
-        bool with_k_omega = (myConfig.turbulence_model == TurbulenceModel.k_omega);
         // The conserved quantities are carried as quantity per unit volume.
         // mass / unit volume = density
         if (!(myU.mass > 0.0)) {
@@ -731,7 +729,7 @@ public:
     } // end decode_conserved()
 
     @nogc
-    void time_derivatives(int gtl, int ftl, bool with_k_omega) 
+    void time_derivatives(int gtl, int ftl) 
     // These are the spatial (RHS) terms in the semi-discrete governing equations.
     // gtl : (grid-time-level) flow derivatives are evaluated at this grid level
     // ftl : (flow-time-level) specifies where computed derivatives are to be stored.
@@ -867,7 +865,7 @@ public:
     } // end time_derivatives()
 
 
-    void rkl1_stage_update_for_flow_on_fixed_grid1(double dt, bool with_k_omega, int j, int s, bool with_local_time_stepping) 
+    void rkl1_stage_update_for_flow_on_fixed_grid1(double dt, int j, int s, bool with_local_time_stepping) 
     {
         ConservedQuantities dUdt0;
         ConservedQuantities U0;
@@ -925,7 +923,7 @@ public:
         return;
     } // end rkl1_stage_update_for_flow_on_fixed_grid1()
     
-    void rkl1_stage_update_for_flow_on_fixed_grid2(double dt, bool with_k_omega, int j, int s, bool with_local_time_stepping) 
+    void rkl1_stage_update_for_flow_on_fixed_grid2(double dt, int j, int s, bool with_local_time_stepping) 
     {
         ConservedQuantities dUdt0;
         ConservedQuantities U0;
@@ -985,7 +983,7 @@ public:
         return;
     } // end rkl1_stage_update_for_flow_on_fixed_grid2()
     
-    void rkl2_stage_update_for_flow_on_fixed_grid1(double dt, bool with_k_omega, int j, int s, bool with_local_time_stepping) 
+    void rkl2_stage_update_for_flow_on_fixed_grid1(double dt, int j, int s, bool with_local_time_stepping) 
     {
         ConservedQuantities dUdt0;
         ConservedQuantities U0;
@@ -1041,7 +1039,7 @@ public:
         return;
     } // end rkl2_stage_update_for_flow_on_fixed_grid1()
     
-    void rkl2_stage_update_for_flow_on_fixed_grid2(double dt, bool with_k_omega, int j, int s, bool with_local_time_stepping) 
+    void rkl2_stage_update_for_flow_on_fixed_grid2(double dt, int j, int s, bool with_local_time_stepping) 
     {
         ConservedQuantities dUdt0;
         ConservedQuantities U0;
@@ -1122,7 +1120,7 @@ public:
     } // end rkl2_stage_update_for_flow_on_fixed_grid2()
     
     @nogc
-    void stage_1_update_for_flow_on_fixed_grid(double dt, bool force_euler, bool with_k_omega, bool with_local_time_stepping) 
+    void stage_1_update_for_flow_on_fixed_grid(double dt, bool force_euler, bool with_local_time_stepping) 
     {
         // use the local-time step
         if (with_local_time_stepping) dt = this.dt_local;
@@ -1205,7 +1203,7 @@ public:
     } // end stage_1_update_for_flow_on_fixed_grid()
 
     @nogc
-    void stage_2_update_for_flow_on_fixed_grid(double dt, bool with_k_omega, bool with_local_time_stepping) 
+    void stage_2_update_for_flow_on_fixed_grid(double dt, bool with_local_time_stepping) 
     {
         // use the local-time step
         if (with_local_time_stepping) dt = this.dt_local;
@@ -1273,7 +1271,7 @@ public:
     } // end stage_2_update_for_flow_on_fixed_grid()
 
     @nogc
-    void stage_3_update_for_flow_on_fixed_grid(double dt, bool with_k_omega, bool with_local_time_stepping) 
+    void stage_3_update_for_flow_on_fixed_grid(double dt, bool with_local_time_stepping) 
     {
         // use the local-time step
         if (with_local_time_stepping) dt = this.dt_local;
@@ -1349,7 +1347,7 @@ public:
     } // end stage_3_update_for_flow_on_fixed_grid()
 
     @nogc
-    void stage_1_update_for_flow_on_moving_grid(double dt, bool with_k_omega, bool with_local_time_stepping) 
+    void stage_1_update_for_flow_on_moving_grid(double dt, bool with_local_time_stepping) 
     {
         // use the local-time step
         if (with_local_time_stepping) dt = this.dt_local;
@@ -1395,7 +1393,7 @@ public:
     } // end stage_1_update_for_flow_on_moving_grid()
 
     @nogc
-    void stage_2_update_for_flow_on_moving_grid(double dt, bool with_k_omega, bool with_local_time_stepping) 
+    void stage_2_update_for_flow_on_moving_grid(double dt, bool with_local_time_stepping) 
     {
         // use the local-time step
         if (with_local_time_stepping) dt = this.dt_local;
@@ -1782,7 +1780,7 @@ public:
     } // end add_inviscid_source_vector()
 
     @nogc
-    void add_viscous_source_vector(bool with_k_omega) 
+    void add_viscous_source_vector() 
     {
         if (myConfig.axisymmetric) {
             // For viscous, axisymmetric flow:

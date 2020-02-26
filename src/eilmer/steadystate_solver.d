@@ -141,8 +141,6 @@ void main(string[] args)
         blk.allocate_GMRES_workspace();
     }
 
-    with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega);
-
     if ( GlobalConfig.extrema_clipping ) {
         writeln("WARNING:");
         writeln("   extrema_clipping is set to true.");

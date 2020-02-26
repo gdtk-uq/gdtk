@@ -153,7 +153,6 @@ void main(string[] args) {
     else number EPS = -1.0;
     assert(EPS != -1.0, "Error: complex step size incorrectly set");
     writeln("/* Complex Step Size: ", EPS.im, ", i */");
-    with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega);
     
 
     /* Geometry parameterisation */
@@ -280,7 +279,6 @@ void main(string[] args) {
             myblk.OMEGA = omegaIdx;
         }
         
-        bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega);
         size_t nPrimitive; 
 
         nPrimitive = nConservedQuantities;  // density, velocity(x,y), pressure
@@ -579,7 +577,7 @@ void main(string[] args) {
             myblk.rT = new Matrix!number(designVars.length, nLocalCells*nPrimitive);
         }
 
-        compute_design_variable_partial_derivatives(designVars, g, nPrimitive, with_k_omega, EPS, jobName);
+        compute_design_variable_partial_derivatives(designVars, g, nPrimitive, EPS, jobName);
         
         // ---------------------
         // COMPUTE SENSITIVITIES
@@ -687,7 +685,6 @@ void main(string[] args) {
         }
 
         // set number of primitive variables
-        bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega);
         size_t nPrimitive; 
         nPrimitive = nConservedQuantities; //4;  // density, velocity(x,y), pressure
         //if (GlobalConfig.dimensions == 3) nPrimitive += 1; // velocity(z)
@@ -793,7 +790,6 @@ void main(string[] args) {
             myblk.OMEGA = omegaIdx;
         }
         
-        bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega);
         size_t nPrimitive; 
         nPrimitive = nConservedQuantities; //4;  // density, velocity(x,y), pressure
         //if (GlobalConfig.dimensions == 3) nPrimitive += 1; // velocity(z)
@@ -839,7 +835,6 @@ void main(string[] args) {
                 double[][] tmp;
                 tmp.length = nPrimitive;
                 foreach (ref a; tmp) a.length = nPrimitive;
-                with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega);
                 
                 cell.U[1].copy_values_from(cell.U[0]);
                 cell.U[1].mass += EPS;
@@ -1000,7 +995,6 @@ void main(string[] args) {
         }
         
         size_t nPrimitive; 
-        bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega);
         nPrimitive = nConservedQuantities; //4;  // density, velocity(x,y), pressure
         //if (GlobalConfig.dimensions == 3) nPrimitive += 1; // velocity(z)
         //if (with_k_omega) nPrimitive += 2; // tke, omega

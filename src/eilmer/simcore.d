@@ -1769,8 +1769,6 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 {
     shared double t0 = SimState.time;
     shared bool with_local_time_stepping = GlobalConfig.with_local_time_stepping;
-    shared bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) &&
-        !GlobalConfig.separate_update_for_k_omega_source;
     shared bool allow_high_order_interpolation = (SimState.time >= GlobalConfig.interpolation_delay);
     
     // compute number of sub-cycle stages (s)
@@ -1972,14 +1970,13 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 	if (!blk.active) continue;
 	int local_ftl = ftl;
 	int local_gtl = gtl;
-	bool local_with_k_omega = with_k_omega;
 	bool local_with_local_time_stepping = with_local_time_stepping;
 	double local_dt_global = SimState.dt_global;
 	double local_sim_time = SimState.time;
 	foreach (cell; blk.cells) {
 	    cell.add_inviscid_source_vector(local_gtl, blk.omegaz);
 	    if (blk.myConfig.viscous && !blk.myConfig.separate_update_for_viscous_terms) {
-		cell.add_viscous_source_vector(local_with_k_omega);
+		cell.add_viscous_source_vector();
 	    }
 	    if (blk.myConfig.udf_source_terms) { // [TODO] may want to apply serially
 		size_t i_cell = cell.id;
@@ -1997,15 +1994,15 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 					local_sim_time, blk.myConfig,
 					blk.id, i_cell, j_cell, k_cell);
 	    }
-	    cell.time_derivatives(local_gtl, local_ftl, local_with_k_omega);
+	    cell.time_derivatives(local_gtl, local_ftl);
 	}
 	if (blk.myConfig.residual_smoothing) { blk.residual_smoothing_dUdt(local_ftl); }
 	bool force_euler = false;
 	foreach (cell; blk.cells) {
 	    if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1) {
-                cell.rkl1_stage_update_for_flow_on_fixed_grid1(local_dt_global, local_with_k_omega, 1, blk.s_RKL, false); // RKL1 (j=1)
+                cell.rkl1_stage_update_for_flow_on_fixed_grid1(local_dt_global, 1, blk.s_RKL, false); // RKL1 (j=1)
             } else {
-                cell.rkl2_stage_update_for_flow_on_fixed_grid1(local_dt_global, local_with_k_omega, 1, blk.s_RKL, false); // RKL2 (j=1)
+                cell.rkl2_stage_update_for_flow_on_fixed_grid1(local_dt_global, 1, blk.s_RKL, false); // RKL2 (j=1)
             }
             cell.decode_conserved(local_gtl, local_ftl+1, blk.omegaz);
 	} // end foreach cell
@@ -2195,14 +2192,13 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 	    if (!blk.active) continue;
 	    int local_ftl = ftl;
 	    int local_gtl = gtl;
-	    bool local_with_k_omega = with_k_omega;
 	    bool local_with_local_time_stepping = with_local_time_stepping;
 	    double local_dt_global = SimState.dt_global;
 	    double local_sim_time = SimState.time;
 	    foreach (cell; blk.cells) {
 		cell.add_inviscid_source_vector(local_gtl, blk.omegaz);
 		if (blk.myConfig.viscous && !blk.myConfig.separate_update_for_viscous_terms) {
-		    cell.add_viscous_source_vector(local_with_k_omega);
+		    cell.add_viscous_source_vector();
 		}
 		if (blk.myConfig.udf_source_terms) { // [TODO] may want to apply serially
 		    size_t i_cell = cell.id;
@@ -2220,15 +2216,15 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 					local_sim_time, blk.myConfig,
 					    blk.id, i_cell, j_cell, k_cell);
 		}
-		cell.time_derivatives(local_gtl, local_ftl, local_with_k_omega);
+		cell.time_derivatives(local_gtl, local_ftl);
 	    }
 	    if (blk.myConfig.residual_smoothing) { blk.residual_smoothing_dUdt(local_ftl); }
 	    bool force_euler = false;
 	    foreach (cell; blk.cells) {
                 if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1) {
-                    cell.rkl1_stage_update_for_flow_on_fixed_grid2(local_dt_global, local_with_k_omega, j, blk.s_RKL, false); // RKL1
+                    cell.rkl1_stage_update_for_flow_on_fixed_grid2(local_dt_global, j, blk.s_RKL, false); // RKL1
                 } else {
-                    cell.rkl2_stage_update_for_flow_on_fixed_grid2(local_dt_global, local_with_k_omega, j, blk.s_RKL, false);
+                    cell.rkl2_stage_update_for_flow_on_fixed_grid2(local_dt_global, j, blk.s_RKL, false);
                 }
 		cell.decode_conserved(local_gtl, local_ftl+1, blk.omegaz);
 	    } // end foreach cell
@@ -2325,8 +2321,6 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 {
     shared double t0 = SimState.time;
     shared bool with_local_time_stepping = GlobalConfig.with_local_time_stepping;
-    shared bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) &&
-        !GlobalConfig.separate_update_for_k_omega_source;
     shared bool allow_high_order_interpolation = (SimState.time >= GlobalConfig.interpolation_delay);
     // Set the time-step coefficients for the stages of the update scheme.
     shared double c2 = 1.0; // default for predictor-corrector update
@@ -2461,14 +2455,13 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         if (!blk.active) continue;
         int local_ftl = ftl;
         int local_gtl = gtl;
-        bool local_with_k_omega = with_k_omega;
         bool local_with_local_time_stepping = with_local_time_stepping;
         double local_dt_global = SimState.dt_global;
         double local_sim_time = SimState.time;
         foreach (cell; blk.cells) {
             cell.add_inviscid_source_vector(local_gtl, blk.omegaz);
             if (blk.myConfig.viscous && !blk.myConfig.separate_update_for_viscous_terms) {
-                cell.add_viscous_source_vector(local_with_k_omega);
+                cell.add_viscous_source_vector();
             }
             if (blk.myConfig.udf_source_terms) { // [TODO] may want to apply serially
                 size_t i_cell = cell.id;
@@ -2486,13 +2479,13 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                                         local_sim_time, blk.myConfig,
                                         blk.id, i_cell, j_cell, k_cell);
             }
-            cell.time_derivatives(local_gtl, local_ftl, local_with_k_omega);
+            cell.time_derivatives(local_gtl, local_ftl);
         }
         if (blk.myConfig.residual_smoothing) { blk.residual_smoothing_dUdt(local_ftl); }
         bool force_euler = false;
         foreach (cell; blk.cells) {
             cell.stage_1_update_for_flow_on_fixed_grid(local_dt_global, force_euler,
-                                                       local_with_k_omega, local_with_local_time_stepping);
+                                                       local_with_local_time_stepping);
             cell.decode_conserved(local_gtl, local_ftl+1, blk.omegaz);
         } // end foreach cell
         local_invalid_cell_count[i] = blk.count_invalid_cells(local_gtl, local_ftl+1);
@@ -2669,14 +2662,13 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             if (!blk.active) continue;
             int local_ftl = ftl;
             int local_gtl = gtl;
-            bool local_with_k_omega = with_k_omega;
             bool local_with_local_time_stepping = with_local_time_stepping;
             double local_dt_global = SimState.dt_global;
             double local_sim_time = SimState.time;
             foreach (cell; blk.cells) {
                 cell.add_inviscid_source_vector(local_gtl, blk.omegaz);
                 if (blk.myConfig.viscous && !blk.myConfig.separate_update_for_viscous_terms) {
-                    cell.add_viscous_source_vector(local_with_k_omega);
+                    cell.add_viscous_source_vector();
                 }
                 if (blk.myConfig.udf_source_terms) {
                     size_t i_cell = cell.id;
@@ -2694,11 +2686,11 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                                             local_sim_time, blk.myConfig,
                                             blk.id, i_cell, j_cell, k_cell);
                 }
-                cell.time_derivatives(local_gtl, local_ftl, local_with_k_omega);
+                cell.time_derivatives(local_gtl, local_ftl);
             }
             if (blk.myConfig.residual_smoothing) { blk.residual_smoothing_dUdt(local_ftl); }
             foreach (cell; blk.cells) {
-                cell.stage_2_update_for_flow_on_fixed_grid(local_dt_global, local_with_k_omega, local_with_local_time_stepping);
+                cell.stage_2_update_for_flow_on_fixed_grid(local_dt_global, local_with_local_time_stepping);
                 cell.decode_conserved(local_gtl, local_ftl+1, blk.omegaz);
             } // end foreach cell
         local_invalid_cell_count[i] = blk.count_invalid_cells(local_gtl, local_ftl+1);
@@ -2872,14 +2864,13 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             if (!blk.active) continue;
             int local_ftl = ftl;
             int local_gtl = gtl;
-            bool local_with_k_omega = with_k_omega;
             bool local_with_local_time_stepping = with_local_time_stepping;
             double local_dt_global = SimState.dt_global;
             double local_sim_time = SimState.time;
             foreach (cell; blk.cells) {
                 cell.add_inviscid_source_vector(local_gtl, blk.omegaz);
                 if (blk.myConfig.viscous && !blk.myConfig.separate_update_for_viscous_terms) {
-                    cell.add_viscous_source_vector(local_with_k_omega);
+                    cell.add_viscous_source_vector();
                 }
                 if (blk.myConfig.udf_source_terms) {
                     size_t i_cell = cell.id;
@@ -2897,11 +2888,11 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                                             local_sim_time, blk.myConfig,
                                             blk.id, i_cell, j_cell, k_cell);
                 }
-                cell.time_derivatives(local_gtl, local_ftl, local_with_k_omega);
+                cell.time_derivatives(local_gtl, local_ftl);
             }
             if (blk.myConfig.residual_smoothing) { blk.residual_smoothing_dUdt(local_ftl); }
             foreach (cell; blk.cells) {
-                cell.stage_3_update_for_flow_on_fixed_grid(local_dt_global, local_with_k_omega, local_with_local_time_stepping);
+                cell.stage_3_update_for_flow_on_fixed_grid(local_dt_global, local_with_local_time_stepping);
                 cell.decode_conserved(local_gtl, local_ftl+1, blk.omegaz);
             } // end foreach cell
         local_invalid_cell_count[i] = blk.count_invalid_cells(local_gtl, local_ftl+1);
@@ -2978,8 +2969,6 @@ void gasdynamic_explicit_increment_with_moving_grid()
     // leave it fixed in this position for the corrector steps.
     shared double t0 = SimState.time;
     shared bool with_local_time_stepping = GlobalConfig.with_local_time_stepping;
-    shared bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) &&
-        !GlobalConfig.separate_update_for_k_omega_source;
     shared bool allow_high_order_interpolation = (SimState.time >= GlobalConfig.interpolation_delay);
     // Set the time-step coefficients for the stages of the update scheme.
     shared double c2 = 1.0; // same for 1-stage or 2-stage update
@@ -3120,14 +3109,13 @@ void gasdynamic_explicit_increment_with_moving_grid()
         if (!blk.active) continue;
         int local_ftl = ftl;
         int local_gtl = gtl;
-        bool local_with_k_omega = with_k_omega;
         bool local_with_local_time_stepping = with_local_time_stepping;
         double local_dt_global = SimState.dt_global;
         double local_sim_time = SimState.time;
         foreach (cell; blk.cells) {
             cell.add_inviscid_source_vector(local_gtl, blk.omegaz);
             if (blk.myConfig.viscous && !blk.myConfig.separate_update_for_viscous_terms) {
-                cell.add_viscous_source_vector(local_with_k_omega);
+                cell.add_viscous_source_vector();
             }
             if (blk.myConfig.udf_source_terms) { // [TODO] may want to apply serially
                 size_t i_cell = cell.id;
@@ -3145,9 +3133,9 @@ void gasdynamic_explicit_increment_with_moving_grid()
                                         local_sim_time, blk.myConfig,
                                         blk.id, i_cell, j_cell, k_cell);
             }
-            cell.time_derivatives(local_gtl, local_ftl, local_with_k_omega);
+            cell.time_derivatives(local_gtl, local_ftl);
             bool force_euler = false;
-            cell.stage_1_update_for_flow_on_moving_grid(local_dt_global, local_with_k_omega, local_with_local_time_stepping);
+            cell.stage_1_update_for_flow_on_moving_grid(local_dt_global, local_with_local_time_stepping);
             cell.decode_conserved(local_gtl, local_ftl+1, blk.omegaz);
         } // end foreach cell
         local_invalid_cell_count[i] = blk.count_invalid_cells(local_gtl, local_ftl+1);
@@ -3316,14 +3304,13 @@ void gasdynamic_explicit_increment_with_moving_grid()
             if (!blk.active) continue;
             int local_ftl = ftl;
             int local_gtl = gtl;
-            bool local_with_k_omega = with_k_omega;
             bool local_with_local_time_stepping = with_local_time_stepping;
             double local_dt_global = SimState.dt_global;
             double local_sim_time = SimState.time;
             foreach (cell; blk.cells) {
                 cell.add_inviscid_source_vector(local_gtl, blk.omegaz);
                 if (blk.myConfig.viscous && !blk.myConfig.separate_update_for_viscous_terms) {
-                    cell.add_viscous_source_vector(local_with_k_omega);
+                    cell.add_viscous_source_vector();
                 }
                 if (blk.myConfig.udf_source_terms) {
                     size_t i_cell = cell.id;
@@ -3341,8 +3328,8 @@ void gasdynamic_explicit_increment_with_moving_grid()
                                             local_sim_time, blk.myConfig,
                                             blk.id, i_cell, j_cell, k_cell);
                 }
-                cell.time_derivatives(local_gtl, local_ftl, local_with_k_omega);
-                cell.stage_2_update_for_flow_on_moving_grid(local_dt_global, local_with_k_omega, local_with_local_time_stepping);
+                cell.time_derivatives(local_gtl, local_ftl);
+                cell.stage_2_update_for_flow_on_moving_grid(local_dt_global, local_with_local_time_stepping);
                 cell.decode_conserved(local_gtl, local_ftl+1, blk.omegaz);
             } // end foreach cell
             local_invalid_cell_count[i] = blk.count_invalid_cells(local_gtl, local_ftl+1);
