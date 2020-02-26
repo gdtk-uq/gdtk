@@ -48,8 +48,8 @@ config.viscous_signal_factor = 0.2
 -----------------------
 config.write_loads = true
 config.dt_loads = config.max_time/N_solutions
-config.boundary_group_for_loads = "cylinder-wedge"
--- config.boundary_group_for_loads = "stagnation-line"
+config.boundary_groups_for_loads = "cylinder-wedge"
+-- config.boundary_groups_for_loads = "stagnation-line"
 
 -------------------
 -- Thermoionic emmision delay

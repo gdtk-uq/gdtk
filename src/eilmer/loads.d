@@ -110,7 +110,7 @@ string generate_boundary_load_file(int blkid, int current_loads_tindx, double si
 void apply_unstructured_grid(UFluidBlock blk, double sim_time, int current_loads_tindx)
 {
     foreach (bndary; blk.bc) {
-        if (canFind(GlobalConfig.boundary_group_for_loads, bndary.group)) {
+        if (canFind(GlobalConfig.group_names_for_loads, bndary.group)) {
             string fname = generate_boundary_load_file(blk.id, current_loads_tindx, sim_time, bndary.group);
             foreach (i, iface; bndary.faces) {
                 // cell width normal to surface
@@ -123,7 +123,7 @@ void apply_unstructured_grid(UFluidBlock blk, double sim_time, int current_loads
 
 void apply_structured_grid(SFluidBlock blk, double sim_time, int current_loads_tindx) {
     foreach (bndary; blk.bc) {
-        if (canFind(GlobalConfig.boundary_group_for_loads, bndary.group)) {
+        if (canFind(GlobalConfig.group_names_for_loads, bndary.group)) {
             string fname = generate_boundary_load_file(blk.id, current_loads_tindx, sim_time, bndary.group);
             size_t i, j, k;
             FVCell cell;

@@ -738,9 +738,13 @@ final class GlobalConfig {
     shared static bool fixed_time_step = false; // set true to fix dt_allow
 
     shared static double dt_plot = 1.0e-3; // interval for writing soln
+    shared static int write_flow_solution_at_step = -1; // flag for premature writing of flow solution files
     shared static double dt_history = 1.0e-3; // interval for writing sample
     shared static double dt_loads = 1.0e-3; // interval for writing loads on boundary groups
-    shared static string boundary_group_for_loads = "loads";
+    // The following initialization preserves old behaviour
+    // where only one group called loads was expected.
+    shared static string boundary_groups_for_loads = "loads";
+    shared static string[] group_names_for_loads = ["loads"];
     shared static bool write_loads = false;
     shared static bool compute_run_time_loads = false;
     shared static int run_time_loads_count = 100;
@@ -1548,7 +1552,11 @@ void read_config_file()
     mixin(update_int("nkb", "nkb"));
     mixin(update_bool("propagate_inflow_data", "propagate_inflow_data"));
     mixin(update_bool("save_intermediate_results", "save_intermediate_results"));
-    mixin(update_string("boundary_group_for_loads", "boundary_group_for_loads"));
+    mixin(update_string("boundary_groups_for_loads", "boundary_groups_for_loads"));
+    string[] group_names = GlobalConfig.boundary_groups_for_loads.replace(" ","").split(",");
+    foreach (name; group_names) {
+        if (name.length > 0) { GlobalConfig.group_names_for_loads ~= name; }
+    }
     mixin(update_bool("write_loads", "write_loads"));
     mixin(update_bool("compute_run_time_loads", "compute_run_time_loads"));
     mixin(update_int("run_time_loads_count", "run_time_loads_count"));
@@ -1564,7 +1572,8 @@ void read_config_file()
         writeln("  nkb: ", GlobalConfig.nkb);
         writeln("  propagate_inflow_data: ", GlobalConfig.propagate_inflow_data);
         writeln("  save_intermediate_results: ", GlobalConfig.save_intermediate_results);
-        writeln("  boundary_group_for_loads: ", GlobalConfig.boundary_group_for_loads);
+        writeln("  boundary_groups_for_loads: ", GlobalConfig.boundary_groups_for_loads);
+        writeln("  group_names_for_loads: ", GlobalConfig.group_names_for_loads);
         writeln("  write_loads: ", GlobalConfig.write_loads);
         writeln("  thermionic_emission_bc_time_delay: ", GlobalConfig.thermionic_emission_bc_time_delay);
     }
@@ -1790,6 +1799,7 @@ void read_control_file()
     mixin(update_double("dt_history", "dt_history"));
     mixin(update_double("dt_loads", "dt_loads"));
     mixin(update_int("write_loads_at_step", "write_loads_at_step"));
+    mixin(update_int("write_flow_solution_at_step", "write_flow_solution_at_step"));
     mixin(update_int("halt_now", "halt_now"));
     //
     if (GlobalConfig.verbosity_level > 1) {
@@ -1811,6 +1821,7 @@ void read_control_file()
         writeln("  dt_history: ", GlobalConfig.dt_history);
         writeln("  dt_loads: ", GlobalConfig.dt_loads);
         writeln("  write_loads_at_step: ", GlobalConfig.write_loads_at_step);
+        writeln("  write_flow_solution_at_step: ", GlobalConfig.write_flow_solution_at_step);
         writeln("  halt_now: ", GlobalConfig.halt_now);
     }
     

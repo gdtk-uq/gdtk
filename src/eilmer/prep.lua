@@ -1710,6 +1710,7 @@ function write_control_file(fileName)
    f:write(string.format('"dt_history": %.18e,\n', config.dt_history))
    f:write(string.format('"dt_loads": %.18e,\n', config.dt_loads))
    f:write(string.format('"write_loads_at_step": %d,\n', config.write_loads_at_step))
+   f:write(string.format('"write_flow_solution_at_step": %d,\n', config.write_flow_solution_at_step))
    f:write(string.format('"halt_now": %d,\n', config.halt_now))
    f:write('"steady_state_solver_options" : {\n')
    f:write(string.format('   "use_preconditioner": %s,\n', tostring(SteadyStateSolver.use_preconditioner)))
@@ -1948,8 +1949,8 @@ function write_config_file(fileName)
 			 tostring(config.propagate_inflow_data)))
    f:write(string.format('"save_intermediate_results": %s,\n',
 			 tostring(config.save_intermediate_results)))
-   f:write(string.format('"boundary_group_for_loads": "%s",\n',
-			 config.boundary_group_for_loads))
+   f:write(string.format('"boundary_groups_for_loads": "%s",\n',
+			 config.boundary_groups_for_loads))
    f:write(string.format('"write_loads": %s,\n',
 			 tostring(config.write_loads)))
    f:write(string.format('"compute_run_time_loads": %s,\n',

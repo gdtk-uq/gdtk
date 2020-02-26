@@ -207,6 +207,7 @@ extern(C) int configSetFromTable(lua_State* L)
     //
     mixin(get_int_field("max_step", "max_step"));
     mixin(get_int_field("write_loads_at_step", "write_loads_at_step"));
+    mixin(get_int_field("write_flow_solution_at_step", "write_flow_solution_at_step"));
     mixin(get_int_field("halt_now", "halt_now"));
     mixin(get_int_field("print_count", "print_count"));
     mixin(get_int_field("control_count", "control_count"));
@@ -222,7 +223,8 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_double_field("dt_plot", "dt_plot"));
     mixin(get_double_field("dt_history", "dt_history"));
     mixin(get_double_field("dt_loads", "dt_loads"));
-    mixin(get_string_field("boundary_group_for_loads", "boundary_group_for_loads"));
+    mixin(get_string_field("boundary_groups_for_loads", "boundary_groups_for_loads"));
+    mixin(get_string_field("boundary_group_for_loads", "boundary_groups_for_loads")); // old name singular
     mixin(get_bool_field("write_loads", "write_loads"));
     mixin(get_bool_field("compute_run_time_loads", "compute_run_time_loads"));
     mixin(get_int_field("run_time_loads_count", "run_time_loads_count"));
@@ -391,6 +393,7 @@ extern(C) int configGet(lua_State* L)
         //
     case "max_step": lua_pushnumber(L, GlobalConfig.max_step); break;
     case "write_loads_at_step": lua_pushnumber(L, GlobalConfig.write_loads_at_step); break;
+    case "write_flow_solution_at_step": lua_pushnumber(L, GlobalConfig.write_flow_solution_at_step); break;
     case "halt_now": lua_pushnumber(L, GlobalConfig.halt_now); break;
     case "print_count": lua_pushnumber(L, GlobalConfig.print_count); break;
     case "control_count": lua_pushnumber(L, GlobalConfig.control_count); break;
@@ -406,7 +409,8 @@ extern(C) int configGet(lua_State* L)
     case "dt_plot": lua_pushnumber(L, GlobalConfig.dt_plot); break;
     case "dt_history": lua_pushnumber(L, GlobalConfig.dt_history); break;
     case "dt_loads": lua_pushnumber(L, GlobalConfig.dt_loads); break;
-    case "boundary_group_for_loads": lua_pushstring(L, GlobalConfig.boundary_group_for_loads.toStringz); break;
+    case "boundary_groups_for_loads": lua_pushstring(L, GlobalConfig.boundary_groups_for_loads.toStringz); break;
+    case "boundary_group_for_loads": lua_pushstring(L, GlobalConfig.boundary_groups_for_loads.toStringz); break;
     case "write_loads": lua_pushboolean(L, GlobalConfig.write_loads); break;
     case "compute_run_time_loads": lua_pushboolean(L, GlobalConfig.compute_run_time_loads); break;
     case "run_time_loads_count": lua_pushnumber(L, GlobalConfig.run_time_loads_count); break;

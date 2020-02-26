@@ -633,7 +633,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
         }
 
         // Write out the flow field, if required
-        if ( (step % snapshotsCount) == 0 || finalStep ) {
+        if ( (step % snapshotsCount) == 0 || finalStep || step == GlobalConfig.write_flow_solution_at_step) {
             if ( !residualsUpToDate ) {
                 max_residuals(currResiduals);
                 residualsUpToDate = true;
