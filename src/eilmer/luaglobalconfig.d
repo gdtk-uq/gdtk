@@ -207,6 +207,7 @@ extern(C) int configSetFromTable(lua_State* L)
     //
     mixin(get_int_field("max_step", "max_step"));
     mixin(get_int_field("write_loads_at_step", "write_loads_at_step"));
+    mixin(get_int_field("write_flow_solution_at_step", "write_flow_solution_at_step"));
     mixin(get_int_field("halt_now", "halt_now"));
     mixin(get_int_field("print_count", "print_count"));
     mixin(get_int_field("control_count", "control_count"));
@@ -392,6 +393,7 @@ extern(C) int configGet(lua_State* L)
         //
     case "max_step": lua_pushnumber(L, GlobalConfig.max_step); break;
     case "write_loads_at_step": lua_pushnumber(L, GlobalConfig.write_loads_at_step); break;
+    case "write_flow_solution_at_step": lua_pushnumber(L, GlobalConfig.write_flow_solution_at_step); break;
     case "halt_now": lua_pushnumber(L, GlobalConfig.halt_now); break;
     case "print_count": lua_pushnumber(L, GlobalConfig.print_count); break;
     case "control_count": lua_pushnumber(L, GlobalConfig.control_count); break;

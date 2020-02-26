@@ -738,6 +738,7 @@ final class GlobalConfig {
     shared static bool fixed_time_step = false; // set true to fix dt_allow
 
     shared static double dt_plot = 1.0e-3; // interval for writing soln
+    shared static int write_flow_solution_at_step = -1; // flag for premature writing of flow solution files
     shared static double dt_history = 1.0e-3; // interval for writing sample
     shared static double dt_loads = 1.0e-3; // interval for writing loads on boundary groups
     // The following initialization preserves old behaviour
@@ -1798,6 +1799,7 @@ void read_control_file()
     mixin(update_double("dt_history", "dt_history"));
     mixin(update_double("dt_loads", "dt_loads"));
     mixin(update_int("write_loads_at_step", "write_loads_at_step"));
+    mixin(update_int("write_flow_solution_at_step", "write_flow_solution_at_step"));
     mixin(update_int("halt_now", "halt_now"));
     //
     if (GlobalConfig.verbosity_level > 1) {
@@ -1819,6 +1821,7 @@ void read_control_file()
         writeln("  dt_history: ", GlobalConfig.dt_history);
         writeln("  dt_loads: ", GlobalConfig.dt_loads);
         writeln("  write_loads_at_step: ", GlobalConfig.write_loads_at_step);
+        writeln("  write_flow_solution_at_step: ", GlobalConfig.write_flow_solution_at_step);
         writeln("  halt_now: ", GlobalConfig.halt_now);
     }
     

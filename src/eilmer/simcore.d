@@ -1032,6 +1032,11 @@ int integrate_in_time(double target_time_as_requested)
             } // end if (step...
             //
             // 4.0 (Occasionally) Write out an intermediate solution
+            if ( SimState.step == GlobalConfig.write_flow_solution_at_step ) {
+                write_solution_files();
+                GC.collect();
+                GC.minimize();
+            }
             if ((SimState.time >= SimState.t_plot) && !SimState.output_just_written) {
                 write_solution_files();
                 if (GlobalConfig.udf_supervisor_file.length > 0) { call_UDF_at_write_to_file(); }
