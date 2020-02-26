@@ -265,7 +265,7 @@ public:
         //
         version(multi_species_gas) {
             size_t nsp = cloud_fs[0].gas.massf.length;
-            if (myConfig.turbulence_model != TurbulenceModel.none ||
+            if (myConfig.turb_model.isTurbulent ||
                 myConfig.mass_diffusion_model != MassDiffusionModel.none) {
                 foreach(isp; 0 .. nsp) {
                     mixin(codeForGradients("gas.massf[isp]"));
@@ -466,7 +466,7 @@ public:
         version(multi_species_gas) {
             // massf
             size_t nsp = cloud_fs[0].gas.massf.length;
-            if (myConfig.turbulence_model != TurbulenceModel.none ||
+            if (myConfig.turb_model.isTurbulent ||
                 myConfig.mass_diffusion_model != MassDiffusionModel.none) {
                 foreach(isp; 0 .. nsp) {
                     mixin(codeForGradients("gas.massf[isp]", "massf[isp]"));

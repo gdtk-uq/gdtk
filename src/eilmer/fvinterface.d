@@ -529,7 +529,7 @@ public:
             //
             // We separate diffusion based on laminar or turbulent
             // and treat the differently.
-            if (myConfig.turbulence_model != TurbulenceModel.none) {
+            if (myConfig.turb_model.isTurbulent) {
                 double Sc_t = myConfig.turbulence_schmidt_number;
                 number D_t; // = fs.mu_t / (fs.gas.rho * Sc_t)
                 // we would like to use the most up to date turbulent properties,
@@ -624,7 +624,7 @@ public:
                 }
             }
             version(multi_species_gas) {
-                if (myConfig.turbulence_model != TurbulenceModel.none ||
+                if (myConfig.turb_model.isTurbulent ||
                     myConfig.mass_diffusion_model != MassDiffusionModel.none ) {
                     q_diffusion = to!number(0.0);
                     foreach (isp; 0 .. n_species) {
@@ -733,7 +733,7 @@ public:
                 }
             }
             version(multi_species_gas) {
-                if (myConfig.turbulence_model != TurbulenceModel.none ||
+                if (myConfig.turb_model.isTurbulent ||
                     myConfig.mass_diffusion_model != MassDiffusionModel.none) {
                     foreach (isp; 0 .. n_species) {
                         F.massf[isp] += jx[isp]*nx + jy[isp]*ny + jz[isp]*nz;
@@ -839,7 +839,7 @@ public:
                 //}
             }
             version(multi_species_gas) {
-                if (myConfig.turbulence_model != TurbulenceModel.none ||
+                if (myConfig.turb_model.isTurbulent ||
                     myConfig.mass_diffusion_model != MassDiffusionModel.none) {
                     // Mass diffusion done separately.
                     assert(0, "Oops, not implemented.");
