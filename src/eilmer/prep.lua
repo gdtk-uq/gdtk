@@ -374,13 +374,13 @@ function initTurbulence(fs, turbulence_model_name)
     -- Setup dynamic turbulent primitive array and check user inputs
     if turbulence_model_name == "none" then
         -- Check to ensure the user hasn't tried defining any turbulence stuff
-        if fs.tke~=0.0 then error(string.format("Turbulence model is none but tke set: %.18e", tke)) end
-        if fs.omega~=1.0 then error(string.format("Turbulence model is none but omega set: %.18e", omega)) end
+        if fs.tke~=0.0 then error(string.format("Turbulence model is none but tke set: %.18e", fs.tke)) end
+        if fs.omega~=1.0 then error(string.format("Turbulence model is none but omega set: %.18e", fs.omega)) end
         turb = {0.0, 1.0}
     elseif turbulence_model_name == "k_omega" then -- Add check to make sure tke/omega defined
         -- Check to ensure the user has tried defining turbulence stuff (Bad idea I think)
-        -- if tke==0.0 then error(string.format("Turbulence model is k_omega but no tke set!", tke)) end
-        -- if omega==1.0 then error(string.format("Turbulence model is k_omega but no omega set!",omega)) end
+        -- if fs.tke==0.0 then error(string.format("Turbulence model is k_omega but no tke set!", fs.tke)) end
+        -- if fs.omega==1.0 then error(string.format("Turbulence model is k_omega but no omega set!", fs.omega)) end
         turb = {fs.tke, fs.omega}
     else
         error(string.format("Unsupported turbulence model: %s", turbulence_model_name))
