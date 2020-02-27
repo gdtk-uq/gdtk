@@ -643,7 +643,7 @@ public:
                 } // multi_species_gas
             }
             version(komega) {
-                if ( myConfig.turbulence_model == TurbulenceModel.k_omega &&
+                if ( myConfig.turb_model.isTurbulent &&
                      !(myConfig.axisymmetric && (Ybar <= 1.0e-10)) ) {
                     // Turbulence contribution to the shear stresses.
                     number tke = myConfig.turb_model.turbulent_kinetic_energy(fs);
@@ -712,7 +712,7 @@ public:
                 }
             }
             version(komega) {
-                if ( myConfig.turbulence_model == TurbulenceModel.k_omega &&
+                if ( myConfig.turb_model.isTurbulent &&
                      !(myConfig.axisymmetric && (Ybar <= 1.0e-10)) ) {
 
                     // Turbulence transport of the turbulence properties themselves.
@@ -832,11 +832,7 @@ public:
                 // [TODO] Rowan, Modal energy flux?
             }
             version(komega) {
-                foreach(ref rt; F.rhoturb) rt=0.0;
-                //if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                //    number tau_kn = 0.0; // [TODO] PJ, 2018-05-05, talk to Wilson
-                //    number tau_wn = 0.0;
-                //}
+                foreach(ref rt; F.rhoturb) rt=0.0;// [TODO] PJ, 2018-05-05, talk to Wilson
             }
             version(multi_species_gas) {
                 if (myConfig.turb_model.isTurbulent ||

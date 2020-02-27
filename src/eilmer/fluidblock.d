@@ -357,7 +357,7 @@ public:
             total_cells += 1;
         } // foreach cell
         debug {
-            if (myConfig.turbulence_model != TurbulenceModel.none && 
+            if (myConfig.turb_model.isTurbulent && 
                 myConfig.verbosity_level >= 2) {
                 writeln("identify_turbulent_zones(): block ", id,
                         " cells inside zones = ", total_cells_in_turbulent_zones, 
@@ -373,20 +373,6 @@ public:
     @nogc
     void estimate_turbulence_viscosity()
     {
-        //final switch (myConfig.turbulence_model) {
-        //case TurbulenceModel.none:
-        //    foreach (cell; cells) { cell.turbulence_viscosity_zero(); }
-        //    return;
-        //case TurbulenceModel.baldwin_lomax:
-        //    throw new FlowSolverException("need to port baldwin_lomax_turbulence_model");
-        //case TurbulenceModel.spalart_allmaras:
-        //    throw new FlowSolverException("Should implement Spalart-Allmaras some day.");
-        //case TurbulenceModel.k_omega:
-        //    version(komega) {
-        //        foreach (cell; cells) { cell.turbulence_viscosity_k_omega(); }
-        //    }
-        //    break;
-        //} // end switch
         foreach (cell; cells) {
             cell.turbulence_viscosity();
             cell.turbulence_viscosity_factor(myConfig.transient_mu_t_factor);
@@ -521,7 +507,7 @@ public:
                 iface.average_vertex_deriv_values();
             }
             // Turbulence models will need cell centered gradients (also for axisymmetric!)
-            if (myConfig.axisymmetric || (myConfig.turbulence_model != TurbulenceModel.none)){
+            if (myConfig.axisymmetric || (myConfig.turb_model.isTurbulent)){
                 foreach (cell; cells) {
                     cell.average_vertex_deriv_values();
                 }
@@ -557,7 +543,7 @@ public:
 
             // Finished computing gradients at interfaces, now copy them around if needed
             // Turbulence models and axisymmetric source terms need cell centered gradients
-            if (myConfig.axisymmetric || (myConfig.turbulence_model != TurbulenceModel.none)){
+            if (myConfig.axisymmetric || (myConfig.turb_model.isTurbulent)){
                 foreach (cell; cells) {
                     cell.average_interface_deriv_values();
                 }

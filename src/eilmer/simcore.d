@@ -889,8 +889,8 @@ int integrate_in_time(double target_time_as_requested)
             // If using k-omega, we need to set mu_t and k_t BEFORE we call convective_update
             // because the convective update is where the interface values of mu_t and k_t are set.
             // only needs to be done on initial step, subsequent steps take care of setting these values 
-            if ((SimState.step == 0) && (GlobalConfig.turbulence_model == TurbulenceModel.k_omega)) {
-                k_omega_set_mu_and_k();
+            if ((SimState.step == 0) && GlobalConfig.turb_model.isTurbulent) {
+                set_mu_and_k();
             }
             //
             // 2.0 Attempt a time step.
@@ -1502,7 +1502,7 @@ void update_ch_for_divergence_cleaning()
     }
 } // end update_ch_for_divergence_cleaning()
 
-void k_omega_set_mu_and_k()
+void set_mu_and_k()
 {
     foreach (blk; parallel(localFluidBlocksBySize,1)) {
         if (blk.active) {
@@ -1510,7 +1510,7 @@ void k_omega_set_mu_and_k()
             blk.estimate_turbulence_viscosity();
         }
     }
-} // end k_omega_set_mu_and_k()
+} // end set_mu_and_k()
 
 void chemistry_step(double dt)
 {

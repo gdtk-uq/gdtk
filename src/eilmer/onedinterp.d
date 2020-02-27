@@ -309,13 +309,11 @@ public:
             }
         }
         version(komega) {
-            if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
                 foreach (it; 0 .. myConfig.turb_model.nturb){
                 interp_l3r3_scalar(cL2.fs.turb[it], cL1.fs.turb[it], cL0.fs.turb[it],
                                    cR0.fs.turb[it], cR1.fs.turb[it], cR2.fs.turb[it],
                                    Lft.turb[it], Rght.turb[it]);
                 }
-            }
         }
         auto gL2 = &(cL2.fs.gas); // Avoid construction of another object.
         auto gL1 = &(cL1.fs.gas);
@@ -473,12 +471,10 @@ public:
             }
         }
         version(komega) {
-            if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
                 foreach (it; 0 .. myConfig.turb_model.nturb){
                     interp_l2r2_scalar(cL1.fs.turb[it], cL0.fs.turb[it], cR0.fs.turb[it],
                                        cR1.fs.turb[it], Lft.turb[it], Rght.turb[it]);
                 }
-            }
         }
         auto gL1 = &(cL1.fs.gas); // Avoid construction of another object.
         auto gL0 = &(cL0.fs.gas);
@@ -614,12 +610,10 @@ public:
             }
         }
         version(komega) {
-            if ( myConfig.turbulence_model == TurbulenceModel.k_omega ) {
                 foreach (it; 0 .. myConfig.turb_model.nturb){
                     interp_l2r1_scalar(cL1.fs.turb[it], cL0.fs.turb[it], cR0.fs.turb[it],
                                        Lft.turb[it], Rght.turb[it]);
                 }
-            }
         }
         auto gL1 = &(cL1.fs.gas); auto gL0 = &(cL0.fs.gas); auto gR0 = &(cR0.fs.gas);
         version(multi_species_gas) {
@@ -734,12 +728,10 @@ public:
             }
         }
         version(komega) {
-            if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
                 foreach (it; 0 .. myConfig.turb_model.nturb){
                     interp_l1r2_scalar(cL0.fs.turb[it], cR0.fs.turb[it], cR1.fs.turb[it],
                                        Lft.turb[it], Rght.turb[it]);
                 }
-            }
         }
         auto gL0 = &(cL0.fs.gas); auto gR0 = &(cR0.fs.gas); auto gR1 = &(cR1.fs.gas);
         version(multi_species_gas) {
@@ -855,11 +847,9 @@ public:
             }
         }
         version(komega) {
-            if ( myConfig.turbulence_model == TurbulenceModel.k_omega ) {
                 foreach (it; 0 .. myConfig.turb_model.nturb){
                     Lft.turb[it] = weight_scalar(cL0.fs.turb[it], cL1.fs.turb[it]);
                 }
-            }
         }
         auto gL1 = &(cL1.fs.gas); auto gL0 = &(cL0.fs.gas);
         version(multi_species_gas) {
@@ -963,11 +953,9 @@ public:
             }
         }
         version(komega) {
-            if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
                 foreach (it; 0 .. myConfig.turb_model.nturb){
                     Rght.turb[it] = weight_scalar(cR0.fs.turb[it], cR1.fs.turb[it]);
                 }
-            }
         }
         auto gR0 = &(cR0.fs.gas); auto gR1 = &(cR1.fs.gas);
         version(multi_species_gas) {
