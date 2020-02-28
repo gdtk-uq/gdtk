@@ -119,6 +119,7 @@ static size_t totEnergyIdx;
 static size_t tkeIdx;
 static size_t omegaIdx;
 
+
 enum StrangSplittingMode { full_T_full_R, half_R_full_T_half_R }
 @nogc
 string strangSplittingModeName(StrangSplittingMode i)
@@ -1455,13 +1456,6 @@ void read_config_file()
     mixin(update_bool("separate_update_for_k_omega_source", "separate_update_for_k_omega_source"));
     mixin(update_string("turbulence_model", "turbulence_model_name"));
     mixin(update_enum("turbulence_model", "turbulence_model", "turbulence_model_from_name"));
-    version(komega) {
-        // Can accommodate the k_omega turbulence model.
-    } else {
-        if (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) {
-            throw new Error("The k-omega turbulence capability is not enabled.");
-        }
-    }
     mixin(update_double("turbulence_prandtl_number", "turbulence_prandtl_number"));
     mixin(update_double("turbulence_schmidt_number", "turbulence_schmidt_number"));
     mixin(update_double("max_mu_t_factor", "max_mu_t_factor"));
@@ -1936,10 +1930,10 @@ void setupIndicesForConservedQuantities()
         totEnergyIdx = 4;
         nConservedQuantities = 5;
     }
-    if ( GlobalConfig.turbulence_model == TurbulenceModel.k_omega ) {
+    if ( GlobalConfig.turb_model.nturb>0) {
         tkeIdx = nConservedQuantities;
         omegaIdx = tkeIdx + 1;
-        nConservedQuantities += 2;
+        nConservedQuantities += GlobalConfig.turb_model.nturb;
     }
     // TODO: Add this line when multi-species are handled correctly
     //       by steady-state solver.
@@ -2022,11 +2016,11 @@ void configCheckPoint3()
         }
     }
     // Check the compatibility of turbulence model selection and flux calculator.
-    if (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) {
+    if (GlobalConfig.turb_model.isTurbulent) {
         if (GlobalConfig.flux_calculator == FluxCalculator.hlle) {
             string msg = format("The selected flux calculator '%s'",
                                 flux_calculator_name(GlobalConfig.flux_calculator));
-            msg ~= " is incompatible with the k-omega turbulence model.";
+            msg ~= " is incompatible with an active turbulence model.";
             throw new FlowSolverException(msg);
         }
     }
