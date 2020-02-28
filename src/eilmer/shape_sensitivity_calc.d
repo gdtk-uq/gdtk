@@ -276,7 +276,6 @@ void main(string[] args) {
             myblk.Z_MOM = zMomIdx;
             myblk.TOT_ENERGY = totEnergyIdx;
             myblk.TKE = tkeIdx;
-            myblk.OMEGA = omegaIdx;
         }
         
         size_t nPrimitive; 
@@ -681,7 +680,6 @@ void main(string[] args) {
             myblk.Z_MOM = zMomIdx;
             myblk.TOT_ENERGY = totEnergyIdx;
             myblk.TKE = tkeIdx;
-            myblk.OMEGA = omegaIdx;
         }
 
         // set number of primitive variables
@@ -787,7 +785,6 @@ void main(string[] args) {
             myblk.Z_MOM = zMomIdx;
             myblk.TOT_ENERGY = totEnergyIdx;
             myblk.TKE = tkeIdx;
-            myblk.OMEGA = omegaIdx;
         }
         
         size_t nPrimitive; 
@@ -991,7 +988,6 @@ void main(string[] args) {
             myblk.Z_MOM = zMomIdx;
             myblk.TOT_ENERGY = totEnergyIdx;
             myblk.TKE = tkeIdx;
-            myblk.OMEGA = omegaIdx;
         }
         
         size_t nPrimitive; 

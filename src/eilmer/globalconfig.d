@@ -117,7 +117,6 @@ static size_t yMomIdx;
 static size_t zMomIdx;
 static size_t totEnergyIdx;
 static size_t tkeIdx;
-static size_t omegaIdx;
 
 
 enum StrangSplittingMode { full_T_full_R, half_R_full_T_half_R }
@@ -1932,7 +1931,6 @@ void setupIndicesForConservedQuantities()
     }
     if ( GlobalConfig.turb_model.nturb>0) {
         tkeIdx = nConservedQuantities;
-        omegaIdx = tkeIdx + 1;
         nConservedQuantities += GlobalConfig.turb_model.nturb;
     }
     // TODO: Add this line when multi-species are handled correctly

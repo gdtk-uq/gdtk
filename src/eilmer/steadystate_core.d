@@ -76,7 +76,6 @@ void extractRestartInfoFromTimesFile(string jobName, ref RestartInfo[] times)
     size_t Z_MOM = zMomIdx;
     size_t TOT_ENERGY = totEnergyIdx;
     size_t TKE = tkeIdx;
-    size_t OMEGA = omegaIdx;
 
     auto gmodel = GlobalConfig.gmodel_master;
     RestartInfo restartInfo = RestartInfo(gmodel.n_species, gmodel.n_modes);
@@ -154,7 +153,6 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
     size_t Z_MOM = zMomIdx;
     size_t TOT_ENERGY = totEnergyIdx;
     size_t TKE = tkeIdx;
-    size_t OMEGA = omegaIdx;
 
     shared double dt;
     double dtTrial, etaTrial;
@@ -192,7 +190,6 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
             blk.Z_MOM = zMomIdx;
             blk.TOT_ENERGY = totEnergyIdx;
             blk.TKE = tkeIdx;
-            blk.OMEGA = omegaIdx;
             sss_preconditioner_initialisation(blk, nConserved); 
         }
     }
@@ -941,7 +938,6 @@ void evalRealMatVecProd(double pseudoSimTime, double sigma)
     size_t Z_MOM = zMomIdx;
     size_t TOT_ENERGY = totEnergyIdx;
     size_t TKE = tkeIdx;
-    size_t OMEGA = omegaIdx;
 
     // We perform a Frechet derivative to evaluate J*D^(-1)v
     foreach (blk; parallel(localFluidBlocks,1)) {
@@ -994,7 +990,6 @@ void evalComplexMatVecProd(double pseudoSimTime, double sigma)
         size_t Z_MOM = zMomIdx;
         size_t TOT_ENERGY = totEnergyIdx;
         size_t TKE = tkeIdx;
-        size_t OMEGA = omegaIdx;
         
         // We perform a Frechet derivative to evaluate J*D^(-1)v
         foreach (blk; parallel(localFluidBlocks,1)) {
@@ -1086,7 +1081,6 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     size_t Z_MOM = zMomIdx;
     size_t TOT_ENERGY = totEnergyIdx;
     size_t TKE = tkeIdx;
-    size_t OMEGA = omegaIdx;
 
     number resid;
     

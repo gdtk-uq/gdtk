@@ -140,7 +140,6 @@ public:
         size_t Z_MOM;
         size_t TOT_ENERGY;
         size_t TKE;
-        size_t OMEGA;
     }
     
     version(steady_state)
