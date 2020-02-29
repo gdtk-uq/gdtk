@@ -25,8 +25,6 @@ function checkAllowedNames(myTable, allowedNames)
    return namesOk
 end
 
-NGHOST = 2
-
 require 'blk_conn'
 -- Let's pull the symbols out of the blk_conn module
 -- and make them global in this namespace
