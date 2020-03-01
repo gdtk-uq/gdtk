@@ -12,10 +12,10 @@ class TestBump < Test::Unit::TestCase
     cmd = "prep-gas ideal-air.inp ideal-air-gas-model.lua"
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
-    cmd = "e4shared --prep --job=bump --verbosity=1 --only-blocks=0..<48"
+    cmd = "e4shared --prep --job=bump --verbosity=1 --only-blocks=0..<96"
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
-    cmd = "e4shared --prep --job=bump --verbosity=1 --only-blocks=48..<96"
+    cmd = "e4shared --prep --job=bump --verbosity=1 --only-blocks=96..<192"
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
   end

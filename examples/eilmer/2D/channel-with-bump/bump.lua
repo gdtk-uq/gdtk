@@ -52,16 +52,16 @@ grid2 = StructuredGrid:new{psurface=patch2,
 			   cfList={north=rcfx2,east=rcfy,south=rcfx2,west=rcfy},
 			   niv=ni0+1, njv=nj0+1}
 -- Define the flow-solution blocks and set boundary conditions.
-blk0 = FluidBlockArray{grid=grid0, initialState=inflow, nib=16, njb=2,
-		       bcList={west=InFlowBC_Supersonic:new{flowState=inflow}}}
-blk1 = FluidBlockArray{grid=grid1, initialState=inflow, nib=16, njb=2}
-blk2 = FluidBlockArray{grid=grid2, initialState=inflow, nib=16, njb=2,
-		       bcList={east=OutFlowBC_Simple:new{}}}
+fba0 = FBArray:new{grid=grid0, initialState=inflow, nib=16, njb=4,
+                   bcList={west=InFlowBC_Supersonic:new{flowState=inflow}}}
+fba1 = FBArray:new{grid=grid1, initialState=inflow, nib=16, njb=4}
+fba2 = FBArray:new{grid=grid2, initialState=inflow, nib=16, njb=4,
+                   bcList={east=OutFlowBC_Simple:new{}}}
 identifyBlockConnections()
 
 config.block_marching = true
 config.nib = 48
-config.njb = 2
+config.njb = 4
 config.propagate_inflow_data = true
 config.flux_calculator = "adaptive"
 config.gasdynamic_update_scheme = "classic-rk3"

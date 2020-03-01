@@ -887,8 +887,9 @@ function FBArray:new(o)
       nkc_total = 1
       dnkc = 1
    end
-   o.blockArray = {} -- will be a multi-dimensional array indexed as [i][j][k]
-   o.blockCollection = {} -- will be a single-dimensional array
+   o.blockArray = {} -- will be a multi-dimensional array, indexed as [ib][jb][kb],
+                     -- with 1<=ib<=nib, 1<=jb<=njb, 1<=kb<=nkb
+   o.blockCollection = {} -- will be a single-dimensional array, also starting at 1
    local nic_remaining = nic_total
    local i0 = 0
    for ib = 1, o.nib do
@@ -1559,7 +1560,62 @@ function mpiDistributeBlocks(args)
    -- we expect that the caller will ignore this return value.
    return mpiTaskList
 end
-   
+
+function mpiDistributeFBArray(args)
+   -- For block-marching mode, assign blocks within a FBArray object to MPI tasks,
+   -- keeping a record of the MPI rank (or task) for every block.
+   -- This record is stored in the global variable mpiTasks.
+   --
+   if args and not(type(args) == "table") then
+      error("mpiDistributeFNArray expects its arguments in single table with named fields", 2);
+   end
+   args = args or {}
+   local flag = checkAllowedNames(args, {"fba", "ntasks"})
+   if not flag then
+      error("Invalid name for item supplied to mpiDistributeFBArray.", 2)
+   end
+   if (not args.fba) or (not (args.fba.myType and (args.fba.myType == "FBArray"))) then
+      error("Need to supply an FBArray object to mpiDistributeFBArray.", 2)
+   end
+   --
+   -- If nTasks is not given, assume that we want one per block in the j,k plane.
+   local nTasks = (args and args.ntasks) or (fba.njb*fba.nkb)
+   -- We really want to have balanced tasks, so check that we will be allocating
+   -- an equal number of blocks to each MPI task.
+   if not ((args.fba.njb*args.fba.nkb)%nTasks == 0) then
+      error("Number of blocks in jk plane does not divide nicely into nTasks")
+   end
+   -- The following list will eventually hold the MPI-rank for each FluidBlock.
+   -- We may have assigned MPI tasks to other FBArray objects previously.
+   local mpiTaskList = mpiTasks or {}
+   -- Entries in the table are of the form blockId:mpiRank
+   -- Remember that blockId and mpiRank values start at zero,
+   -- but the ib, jb, kb indices start at 1 and
+   -- the mpiTaskList starts at 1, to match fluidBlocks.
+   taskId = 0
+   for kb=1,args.fba.nkb do
+      for jb=1,args.fba.njb do
+         for ib=1,args.fba.nib do
+            if args.fba.nkb > 1 then
+               local blk = args.fba.blockArray[ib][jb][kb]
+               mpiTaskList[blk.id+1] = taskId
+            else
+               local blk = args.fba.blockArray[ib][jb]
+               mpiTaskList[blk.id+1] = taskId
+            end
+         end
+         taskId = taskId + 1
+         if taskId >= nTasks then taskId = 0 end
+      end
+   end
+   -- Assign the newly-constructed list to the global variable
+   -- for later use in writing the job.mpimap file.
+   mpiTasks = mpiTaskList
+   -- Finally, return the list as we have always done for mpiDistributeFluidBlocks,
+   -- however, we expect that the caller will ignore this return value.
+   return mpiTaskList
+end
+
 -- -----------------------------------------------------------------------
 
 -- Classes for construction of zones.
@@ -2039,7 +2095,16 @@ end
 
 function write_mpimap_file(fileName)
    if not mpiTasks then
-      mpiDistributeBlocks()
+      -- The user's input script has not set up mpiTasks, so we need to do it now.
+      if config.block_marching then
+         -- Work through the fluidBlockArrays and allocate MPI tasks for each block array.
+         for _,fba in ipairs(fluidBlockArrays) do
+            mpiDistributeFBArray{fba=fba, ntasks=fba.njb*fba.nkb}
+         end
+      else
+         -- Work through the single-dimensional fluidBlocks list
+         mpiDistributeBlocks()
+      end
    end
    local f = assert(io.open(fileName, "w"))
    f:write("# indx mpiTask\n")
