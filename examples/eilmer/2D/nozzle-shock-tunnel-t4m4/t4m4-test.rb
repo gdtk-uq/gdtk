@@ -21,7 +21,8 @@ class TestT4M4 < Test::Unit::TestCase
   end
 
   def test_1_run
-    cmd = "e4shared --run --job=t4m4 --verbosity=1 --max-cpus=4"
+    # cmd = "e4shared --run --job=t4m4 --verbosity=1 --max-cpus=4"
+    cmd = "mpirun -np 4 e4mpi --run --job=t4m4 --verbosity=1"
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
   end

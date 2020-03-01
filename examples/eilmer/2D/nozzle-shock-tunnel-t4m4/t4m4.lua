@@ -103,14 +103,14 @@ exp_grid = StructuredGrid:new{psurface=exp_region, niv=601, njv=41,
 			      cfList={west=y_cf, east=y_cf,
 				      south=x_cf, north=x_cf}}
 -- Divide the full domain into many blocks, mainly in the axial direction.
-throat_blk = FluidBlockArray{grid=throat_grid, initialState=inflow, label="throat",
-			     bcList={west=InFlowBC_Supersonic:new{flowState=inflow},
-				     north=WallBC_NoSlip_FixedT:new{Twall=300.0}}, 
-			     nib=1, njb=2}
-exp_blk = FluidBlockArray{grid=exp_grid, initialState=inflow, label="expansion",
-			  bcList={north=WallBC_NoSlip_FixedT:new{Twall=300.0},
-				  east=OutFlowBC_Simple:new{}}, 
-			  nib=30, njb=2}
+throat_fba = FBArray:new{grid=throat_grid, initialState=inflow, label="throat",
+                         bcList={west=InFlowBC_Supersonic:new{flowState=inflow},
+                                 north=WallBC_NoSlip_FixedT:new{Twall=300.0}}, 
+                         nib=1, njb=4}
+exp_fba = FBArray:new{grid=exp_grid, initialState=inflow, label="expansion",
+                      bcList={north=WallBC_NoSlip_FixedT:new{Twall=300.0},
+                              east=OutFlowBC_Simple:new{}}, 
+                      nib=30, njb=4}
 identifyBlockConnections()
 
 -- Set a few more config options
@@ -122,5 +122,5 @@ config.dt_init = 1.0e-9
 -- To accelerate the calculation...
 config.block_marching = true
 config.nib = 31
-config.njb = 2
+config.njb = 4
 config.propagate_inflow_data = true
