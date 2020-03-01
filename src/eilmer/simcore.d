@@ -705,10 +705,16 @@ void write_solution_files()
 
 void march_over_blocks()
 {
-    if (GlobalConfig.in_mpi_context) {
-        throw new FlowSolverException("March over blocks is not available in MPI-parallel calculations.");
+    // Notes:
+    // (1) We assume that the full collection of blocks was assembled
+    //     as a single structured block with indices 0<=i<nib, 0<=j<njb, 0<=k<nkb
+    //     and that blocks 0<=i<nib for a particular j,k are on one MPI task.
+    // (2) There may be more than on j,k slice on any MPI task.
+    // (3) We need to be careful that the local MPI task does not fiddle with
+    //     blocks assigned to another MPI task.
+    if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) {
+        writeln("March over blocks.");
     }
-    if (GlobalConfig.verbosity_level > 0) { writeln("March over blocks."); }
     // Organise the blocks into a regular array.
     int nib = GlobalConfig.nib;
     int njb = GlobalConfig.njb;
@@ -730,15 +736,25 @@ void march_over_blocks()
         throw new FlowSolverException(errMsg);
     }
     FluidBlock[][][] gasBlockArray;
+    bool[][][] gasBlockIsLocal;
     gasBlockArray.length = nib;
+    gasBlockIsLocal.length = nib;
     foreach (i; 0 .. nib) {
         gasBlockArray[i].length = njb;
+        gasBlockIsLocal[i].length = njb;
         foreach (j; 0 .. njb) {
             gasBlockArray[i][j].length = nkb;
+            gasBlockIsLocal[i][j].length = nkb;
             foreach (k; 0 .. nkb) {
                 int gid = k + nkb*(j + njb*i);
                 auto fluidblk = cast(FluidBlock) globalBlocks[gid];
-                if (fluidblk) { gasBlockArray[i][j][k] = fluidblk; }
+                if (fluidblk) {
+                    gasBlockArray[i][j][k] = fluidblk;
+                    gasBlockIsLocal[i][j][k] = canFind(GlobalConfig.localFluidBlockIds, fluidblk.id);
+                } else {
+                    string errMsg = text("march_over_blocks(): expected a FluidBlock with id=", gid);
+                    throw new FlowSolverException(errMsg);
+                }
             }
         }
     }
@@ -756,6 +772,7 @@ void march_over_blocks()
         // saving the original boundary conditions so that they can be restored.
         foreach (j; 0 .. njb) {
             foreach (k; 0 .. nkb) {
+                if (!gasBlockIsLocal[1][j][k]) { continue; } // skip over non-local blocks
                 gasBlockArray[1][j][k].bc[Face.east].pushExtrapolateCopyAction();
             }
         }
@@ -782,6 +799,7 @@ void march_over_blocks()
         // set downstream boundary condition for newly active slice to a simple outflow.
         foreach (j; 0 .. njb) {
             foreach (k; 0 .. nkb) {
+                if (!gasBlockIsLocal[i][j][k]) { continue; } // skip over non-local blocks.
                 gasBlockArray[i-2][j][k].active = false;
                 gasBlockArray[i-1][j][k].bc[Face.east].restoreOriginalActions();
                 gasBlockArray[i][j][k].active = true;
@@ -792,6 +810,7 @@ void march_over_blocks()
             exchange_ghost_cell_boundary_data(SimState.time, 0, 0);
             foreach (j; 0 .. njb) {
                 foreach (k; 0 .. nkb) {
+                    if (!gasBlockIsLocal[i][j][k]) { continue; } // skip over non-local blocks.
                     auto blk = gasBlockArray[i][j][k]; // our newly active block
                     // Get upstream flow data into ghost cells
                     blk.applyPreReconAction(SimState.time, 0, 0);
@@ -800,7 +819,9 @@ void march_over_blocks()
                 }
             }
         }
-        if (GlobalConfig.verbosity_level > 0) { writeln("march over blocks i=", i); }
+        if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) {
+            writeln("march over blocks i=", i);
+        }
         if (integrate_in_time(SimState.time+time_slice) != 0) {
             string msg = format("Integration failed for i=%d pair of block slices.", i);
             throw new FlowSolverException(msg);

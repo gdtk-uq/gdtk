@@ -501,23 +501,13 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
             MPI_Barrier(MPI_COMM_WORLD);
         }        
         if (GlobalConfig.block_marching) {
-            version(mpi_parallel) {
-                if (GlobalConfig.is_master_task) {
-                    writeln("Do not run a block-marching simulation with MPI parallelism.");
-                    stdout.flush();
-                }
-                exitFlag = 1;
-                return exitFlag;
-            } else { // NOT mpi_parallel
-                march_over_blocks();
-                finalize_simulation();
-            }
+            march_over_blocks();
         } else {
             if (integrate_in_time(GlobalConfig.max_time) != 0 && GlobalConfig.is_master_task) {
                 writeln("Note that integrate_in_time failed.");
             }
-            finalize_simulation();
         }
+        finalize_simulation();
         if (verbosityLevel > 0 && GlobalConfig.is_master_task) {
             writeln("Done simulation.");
         }
