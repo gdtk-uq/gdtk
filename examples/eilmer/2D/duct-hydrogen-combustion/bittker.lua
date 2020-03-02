@@ -30,10 +30,10 @@ grid0 = StructuredGrid:new{psurface=duct, niv=2001, njv=3}
 
 -- Block setup as an array of many blocks
 nib = 200; njb = 1
-blk0 = FluidBlockArray{grid=grid0, initialState=inflow, label='blk',
-		       bcList={east=OutFlowBC_Simple:new{},
-			       west=InFlowBC_Supersonic:new{flowState=inflow}},
-		       nib=nib, njb=njb}
+fba0 = FBArray:new{grid=grid0, initialState=inflow, label='blk',
+                   bcList={east=OutFlowBC_Simple:new{},
+                           west=InFlowBC_Supersonic:new{flowState=inflow}},
+                   nib=nib, njb=njb}
 
 -- Simulation setup
 config.block_marching = true

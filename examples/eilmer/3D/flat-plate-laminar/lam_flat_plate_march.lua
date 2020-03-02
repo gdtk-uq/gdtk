@@ -82,10 +82,10 @@ bcList={north=WallBC_NoSlip_FixedT:new{Twall=300.0},
 	west=InFlowBC_Supersonic:new{flowState=inflow},
 	bottom=WallBC_WithSlip:new{},
 	top=WallBC_WithSlip:new{}}
-blks = FluidBlockArray{grid=grd, nib=22, njb=2, nkb=1,
-		       bcList=bcList, initialState=inflow}
+blks = FBArray:new{grid=grd, nib=22, njb=4, nkb=1,
+                   bcList=bcList, initialState=inflow}
 
 config.block_marching = true
 config.nib = 22
-config.njb = 2
+config.njb = 4
 config.nkb = 1

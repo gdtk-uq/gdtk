@@ -1593,16 +1593,23 @@ function mpiDistributeFBArray(args)
    -- but the ib, jb, kb indices start at 1 and
    -- the mpiTaskList starts at 1, to match fluidBlocks.
    taskId = 0
-   for kb=1,args.fba.nkb do
-      for jb=1,args.fba.njb do
-         for ib=1,args.fba.nib do
-            if args.fba.nkb > 1 then
+   if config.dimensions == 3 then
+      for kb=1,args.fba.nkb do
+         for jb=1,args.fba.njb do
+            for ib=1,args.fba.nib do
                local blk = args.fba.blockArray[ib][jb][kb]
                mpiTaskList[blk.id+1] = taskId
-            else
-               local blk = args.fba.blockArray[ib][jb]
-               mpiTaskList[blk.id+1] = taskId
             end
+            taskId = taskId + 1
+            if taskId >= nTasks then taskId = 0 end
+         end
+      end
+   else
+      -- Presume 2D
+      for jb=1,args.fba.njb do
+         for ib=1,args.fba.nib do
+            local blk = args.fba.blockArray[ib][jb]
+            mpiTaskList[blk.id+1] = taskId
          end
          taskId = taskId + 1
          if taskId >= nTasks then taskId = 0 end
