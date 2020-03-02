@@ -2031,6 +2031,15 @@ void configCheckPoint3()
         }
     }
 
+    // Check the compatibility of update scheme and viscous flag.
+    if (GlobalConfig.viscous == false &&
+        (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1 || GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl2)) {
+        string msg = format("The selected gas dynamic update scheme '%s'",
+                            gasdynamic_update_scheme_name(GlobalConfig.gasdynamic_update_scheme));
+        msg ~= " is incompatible with an inviscid simulation.";
+        throw new FlowSolverException(msg);
+    }
+    
     if (GlobalConfig.turb_model is null) {
         throw new FlowSolverException("Flowsolver started without a turbulence model");
     }
