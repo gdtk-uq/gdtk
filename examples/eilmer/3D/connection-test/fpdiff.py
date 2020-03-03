@@ -11,7 +11,7 @@ PJ, 28-Sep-02
 """
 
 from __future__ import print_function
-import sys, os, string
+import sys, os
 
 def count_differences(filenameA, filenameB, tolerance=1.0e-9, do_print=0):
     """
@@ -31,10 +31,10 @@ def count_differences(filenameA, filenameB, tolerance=1.0e-9, do_print=0):
         if lineA == '' or lineB == '':
             break
         line_count += 1
-        lineA = string.strip(lineA)
-        lineB = string.strip(lineB)
-        numbersA = string.split(lineA)
-        numbersB = string.split(lineB)
+        lineA = lineA.strip()
+        lineB = lineB.strip()
+        numbersA = lineA.split()
+        numbersB = lineB.split()
         linediff = 0
         lenA = len(numbersA)
         lenB = len(numbersB)
@@ -47,8 +47,8 @@ def count_differences(filenameA, filenameB, tolerance=1.0e-9, do_print=0):
             # if itemA[0] == '#' or itemB[0] == '#':
             #     break
             try:
-                a = string.atof(itemA)
-                b = string.atof(itemB)
+                a = float(itemA)
+                b = float(itemB)
             except ValueError as e:
                 break
             if abs(a - b)/(0.5 * (abs(a) + abs(b)) + 1.0) > tolerance :
