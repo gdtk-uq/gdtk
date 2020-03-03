@@ -24,10 +24,10 @@ grid = StructuredGrid:new{psurface=bp.patch, niv=61, njv=41,
                           cfList={west=cf, east=cf}}
 
 -- We can leave east and south as slip-walls.
-blk0 = FluidBlockArray{grid=grid, initialState=initial, label="blk",
-		       bcList={west=InFlowBC_Supersonic:new{flowState=inflow},
-			       north=OutFlowBC_Simple:new{}}, 
-		       nib=1, njb=4}
+blks = FBArray:new{grid=grid, initialState=initial, label="blk",
+                   bcList={west=InFlowBC_Supersonic:new{flowState=inflow},
+                           north=OutFlowBC_Simple:new{}}, 
+                   nib=1, njb=4}
 
 -- Set a few more config options.
 -- To get a reasonable start, we needed to set dt_init.
