@@ -1,5 +1,5 @@
 #!/bin/bash
-# run-and-plot.sh
+# make-plot.sh
 # Display history for the fixed-volume-reactor simulation. 
 #
 # PJ & RG, 2018-04-21, 2019-11-26
@@ -7,6 +7,7 @@
 # Following one of these commands
 # $ gas-calc fvreactor.lua
 # $ python3 fvreactor.py
+# $ ruby fvreactor.rb
 
 gnuplot <<EOF
 set terminal postscript eps 20
