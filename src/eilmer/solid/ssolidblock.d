@@ -42,7 +42,8 @@ public:
     size_t kmin, kmax;
     size_t[] hicell, hjcell, hkcell; // locations of sample cells for history record
     SolidBoundaryCondition[] bc;
-
+    SolidFVCell[] cells;
+    
 private:
     StructuredGrid grid; // for reading and writing
 
@@ -82,6 +83,19 @@ public:
         active = getJSONbool(jsonData, "active", true);
     }
 
+    pragma(inline, true)
+    @nogc size_t ijk_0n_indices_to_cell_id(size_t i, size_t j, size_t k=0) const
+    // ijk indices into the hypothetical block of active cells.
+    // where 0<k<nkcell, 0<j<njcell, 0<i<nicell are the indices
+    // into the hypothetical block of active cells.
+    // This cell_id also the index into the single-dimensional cells array,
+    // that is held in the FluidBlock base class.
+    // Note that the hypothetical block of active cells is embedded in
+    // a larger array that includes surrounding layers of ghost cells.
+    {
+        return (k*njcell + j)*nicell + i;
+    }
+    
     override void initLuaGlobals()
     {
         lua_pushinteger(myL, n_ghost_cell_layers); lua_setglobal(myL, "n_ghost_cell_layers");
@@ -96,6 +110,10 @@ public:
         lua_pushinteger(myL, Face.bottom); lua_setglobal(myL, "bottom");
     }
 
+    void copy_values_from(SolidFVCell other) {
+
+    }
+    
     override void initBoundaryConditions(JSONValue jsonData)
     {
         foreach (boundary; 0 .. (myConfig.dimensions == 3 ? 6 : 4)) {
@@ -194,6 +212,21 @@ public:
                     _sifk ~= new SolidFVInterface(); _sifk[gid].id = gid;
                 }
             } // gid loop
+            // Now, assemble the lists of references to the cells, vertices and faces
+            // in standard order for a structured grid.
+            // These arrays are held by the FluidBlock base class and allow us to handle
+            // a structured-grid block much as we would an unstructured-grid block.
+            if (myConfig.dimensions == 2) {
+                foreach (j; jmin .. jmax+1) {
+                    foreach (i; imin .. imax+1) { cells ~= getCell(i, j); }
+                }
+            } else { // assume 3D
+                foreach (k; kmin .. kmax+1) {
+                    foreach (j; jmin .. jmax+1) {
+                        foreach (i; imin .. imax+1) { cells ~= getCell(i, j, k); }
+                    }
+                }
+            } // end if dimensions
         } catch (Error err) {
             writeln("Crapped out while assembling solid_block arrays.");
             writefln("nicell=%d njcell=%d nkcell=%d", nicell, njcell, nkcell);
@@ -1239,15 +1272,15 @@ public:
         } // end if (myConfig.dimensions
     }
     
-    override void applyPreSpatialDerivAction(double t, int tLevel)
+    override void applyPreSpatialDerivActionAtBndryFaces(double t, int tLevel)
     {
-        bc[Face.north].applyPreSpatialDerivAction(t, tLevel);
-        bc[Face.east].applyPreSpatialDerivAction(t, tLevel);
-        bc[Face.south].applyPreSpatialDerivAction(t, tLevel);
-        bc[Face.west].applyPreSpatialDerivAction(t, tLevel);
+        bc[Face.north].applyPreSpatialDerivActionAtBndryFaces(t, tLevel);
+        bc[Face.east].applyPreSpatialDerivActionAtBndryFaces(t, tLevel);
+        bc[Face.south].applyPreSpatialDerivActionAtBndryFaces(t, tLevel);
+        bc[Face.west].applyPreSpatialDerivActionAtBndryFaces(t, tLevel);
         if ( myConfig.dimensions == 3 ) {
-            bc[Face.top].applyPreSpatialDerivAction(t, tLevel);
-            bc[Face.bottom].applyPreSpatialDerivAction(t, tLevel);
+            bc[Face.top].applyPreSpatialDerivActionAtBndryFaces(t, tLevel);
+            bc[Face.bottom].applyPreSpatialDerivActionAtBndryFaces(t, tLevel);
         }
     }
 

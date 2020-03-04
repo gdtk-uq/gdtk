@@ -12,6 +12,7 @@ import std.conv;
 import util.lua;
 import geom;
 import json_helper;
+import solid_ghost_cell;
 import solid_boundary_interface_effect;
 import solid_boundary_flux_effect;
 import ssolidblock;
@@ -26,9 +27,13 @@ SolidBoundaryCondition makeSolidBCFromJson(JSONValue jsonData, int blk_id, int b
     newBC.type = getJSONstring(jsonData, "type", "");
     newBC.group = getJSONstring(jsonData, "group", "");
     // Assemble list of preSpatialDerivAction effects
-    auto preSpatialDerivActionList = jsonData["pre_spatial_deriv_action"].array;
-    foreach (jsonObj; preSpatialDerivActionList) {
-        newBC.preSpatialDerivAction ~= makeSolidBIEfromJson(jsonObj, blk_id, boundary);
+    auto preSpatialDerivActionAtBndryCellsList = jsonData["pre_spatial_deriv_action_at_bndry_cells"].array;
+    foreach (jsonObj; preSpatialDerivActionAtBndryCellsList) {
+        newBC.preSpatialDerivActionAtBndryCells ~= makeSolidGCEfromJson(jsonObj, blk_id, boundary);
+    }
+    auto preSpatialDerivActionAtBndryFacesList = jsonData["pre_spatial_deriv_action_at_bndry_faces"].array;
+    foreach (jsonObj; preSpatialDerivActionAtBndryFacesList) {
+        newBC.preSpatialDerivActionAtBndryFaces ~= makeSolidBIEfromJson(jsonObj, blk_id, boundary);
     }
     // Assemble list of postFluxAction effects
     auto postFluxActionList = jsonData["post_flux_action"].array;
@@ -52,7 +57,8 @@ public:
     // Sometimes it is convenient to think of individual boundaries
     // grouped together.
     string group;
-    SolidBoundaryInterfaceEffect[] preSpatialDerivAction;
+    SolidGhostCellEffect[] preSpatialDerivActionAtBndryCells;
+    SolidBoundaryInterfaceEffect[] preSpatialDerivActionAtBndryFaces;
     SolidBoundaryFluxEffect[] postFluxAction;
 
     this(int blkId, int boundary, bool _setsFluxDirectly)
@@ -68,13 +74,19 @@ public:
     }
     void postBCconstruction()
     {
-        foreach (bie; preSpatialDerivAction) bie.postBCconstruction();
+        foreach (sgce; preSpatialDerivActionAtBndryCells) sgce.postBCconstruction();
+        foreach (bie; preSpatialDerivActionAtBndryFaces) bie.postBCconstruction();
         foreach (bfe; postFluxAction) bfe.postBCconstruction();
     }
 
-    final void applyPreSpatialDerivAction(double t, int tLevel)
+    final void applyPreSpatialDerivActionAtBndryCells(double t, int tLevel)
     {
-        foreach (bie; preSpatialDerivAction) bie.apply(t, tLevel);
+        foreach (sgce; preSpatialDerivActionAtBndryCells) sgce.apply(t, tLevel);
+    }
+
+    final void applyPreSpatialDerivActionAtBndryFaces(double t, int tLevel)
+    {
+        foreach (bie; preSpatialDerivActionAtBndryFaces) bie.apply(t, tLevel);
     }
 
     final void applyPostFluxAction(double t, int tLevel)

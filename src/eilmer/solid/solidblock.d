@@ -54,7 +54,7 @@ public:
     abstract void writeSolution(string fileName, double simTime);
     abstract void computePrimaryCellGeometricData();
 
-    abstract void applyPreSpatialDerivAction(double t, int tLevel);
+    abstract void applyPreSpatialDerivActionAtBndryFaces(double t, int tLevel);
     abstract void applyPostFluxAction(double t, int tLevel);
     abstract void computeSpatialDerivatives(int ftl);
     abstract void computeFluxes();

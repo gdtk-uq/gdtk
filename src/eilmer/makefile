@@ -123,8 +123,10 @@ BC_FILES := bc/package.d \
 
 SOLID_FILES := solid/solidbc.d \
 	solid/solidblock.d \
+	solid/solid_ghost_cell.d \
 	solid/solid_boundary_flux_effect.d \
 	solid/solid_boundary_interface_effect.d \
+	solid/solid_full_face_copy.d \
 	solid/solid_loose_coupling_update.d \
 	solid/ssolidblock.d \
 	solid/solidfvcell.d \

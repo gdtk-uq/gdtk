@@ -1461,7 +1461,8 @@ SolidBoundaryCondition = {
    group = "",
    is_solid_domain_bc = true,
    setsFluxDirectly = false,
-   preSpatialDerivAction = {},
+   preSpatialDerivActionAtBndryCells = {},
+   preSpatialDerivActionAtBndryFaces = {},
    postFluxAction = {}
 }
 function SolidBoundaryCondition:new(o)
@@ -1477,11 +1478,18 @@ function SolidBoundaryCondition:tojson()
    str = str .. string.format('        "group": "%s", \n', self.group)
    str = str .. string.format('        "sets_flux_directly": %s,\n',
                               tostring(self.setsFluxDirectly))
-   str = str .. '        "pre_spatial_deriv_action": [\n'
-   for i,effect in ipairs(self.preSpatialDerivAction) do
+   str = str .. '        "pre_spatial_deriv_action_at_bndry_cells": [\n'
+   for i,effect in ipairs(self.preSpatialDerivActionAtBndryCells) do
       str = str .. effect:tojson()
       -- Extra code to deal with annoying JSON trailing comma deficiency
-      if i ~= #self.preSpatialDerivAction then str = str .. "," end
+      if i ~= #self.preSpatialDerivActionAtBndryCells then str = str .. "," end
+   end
+   str = str .. '\n        ],\n'
+   str = str .. '        "pre_spatial_deriv_action_at_bndry_faces": [\n'
+   for i,effect in ipairs(self.preSpatialDerivActionAtBndryFaces) do
+      str = str .. effect:tojson()
+      -- Extra code to deal with annoying JSON trailing comma deficiency
+      if i ~= #self.preSpatialDerivActionAtBndryFaces then str = str .. "," end
    end
    str = str .. '\n        ],\n'
    str = str .. '        "post_flux_action": [\n'
@@ -1498,7 +1506,7 @@ SolidFixedTBC = SolidBoundaryCondition:new()
 SolidFixedTBC.type = "SolidFixedT"
 function SolidFixedTBC:new(o)
    o = SolidBoundaryCondition.new(self, o)
-   o.preSpatialDerivAction = { SolidBIE_FixedT:new{Twall=o.Twall} }
+   o.preSpatialDerivActionAtBndryFaces = { SolidBIE_FixedT:new{Twall=o.Twall} }
    return o
 end
 
@@ -1506,7 +1514,7 @@ SolidAdiabaticBC = SolidBoundaryCondition:new()
 SolidAdiabaticBC.type = "SolidAdiabatic"
 function SolidAdiabaticBC:new(o)
    o = SolidBoundaryCondition.new(self, o)
-   o.preSpatialDerivAction = { SolidBIE_CopyAdjacentCellT:new{} }
+   o.preSpatialDerivActionAtBndryFaces = { SolidBIE_CopyAdjacentCellT:new{} }
    o.postFluxAction = { SolidBFE_ZeroFlux:new{} }
    o.setsFluxDirectly = true
    return o
@@ -1516,7 +1524,7 @@ SolidConstantFluxBC = SolidBoundaryCondition:new()
 SolidConstantFluxBC.type = "SolidConstantFlux"
 function SolidConstantFluxBC:new(o)
    o = SolidBoundaryCondition.new(self, o)
-   o.preSpatialDerivAction = { SolidBIE_CopyAdjacentCellT:new{} }
+   o.preSpatialDerivActionAtBndryFaces = { SolidBIE_CopyAdjacentCellT:new{} }
    o.postFluxAction = { SolidBFE_ConstantFlux:new{fluxValue=o.fluxValue} }
    o.setsFluxDirectly = true
    return o
@@ -1531,7 +1539,7 @@ function SolidUserDefinedBC:new(o)
       o.postFluxAction = { SolidBFE_UserDefined:new{fileName=o.fileName} }
       o.setsFluxDirectly = true
    else
-      o.preSpatialDerivAction = { SolidBIE_UserDefined:new{fileName=o.fileName} }
+      o.preSpatialDerivActionAtBndryFaces = { SolidBIE_UserDefined:new{fileName=o.fileName} }
    end
    return o
 end
@@ -1549,7 +1557,7 @@ SolidConnectionBoundaryBC.type = "SolidConnectionBoundary"
 function SolidConnectionBoundaryBC:new(o)
    o = SolidBoundaryCondition.new(self, o)
    o.setsFluxDirectly = true
-   o.preSpatialDerivAction = { SolidBIE_ConnectionBoundary:new{otherBlock=o.otherBlock,
+   o.preSpatialDerivActionAtBndryFaces = { SolidBIE_ConnectionBoundary:new{otherBlock=o.otherBlock,
 							       otherFace=o.otherFace,
 							       orientation=o.orientation} }
    return o

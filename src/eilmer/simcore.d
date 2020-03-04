@@ -1901,7 +1901,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
     }
     // And we'll do a first pass on solid domain bc's too in case we need up-to-date info.
     foreach (sblk; parallel(localSolidBlocks, 1)) {
-	if (sblk.active) { sblk.applyPreSpatialDerivAction(SimState.time, ftl); }
+	if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, ftl); }
     }
     // We've put this detector step here because it needs the ghost-cell data
     // to be current, as it should be just after a call to apply_convective_bc().
@@ -2123,7 +2123,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 	}
 	// And we'll do a first pass on solid domain bc's too in case we need up-to-date info.
 	foreach (sblk; parallel(localSolidBlocks, 1)) {
-	    if (sblk.active) { sblk.applyPreSpatialDerivAction(SimState.time, ftl); }
+	    if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, ftl); }
 	}
 	// We've put this detector step here because it needs the ghost-cell data
 	// to be current, as it should be just after a call to apply_convective_bc().
@@ -2388,7 +2388,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
     }
     // And we'll do a first pass on solid domain bc's too in case we need up-to-date info.
     foreach (sblk; parallel(localSolidBlocks, 1)) {
-        if (sblk.active) { sblk.applyPreSpatialDerivAction(SimState.time, ftl); }
+        if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, ftl); }
     }
     // We've put this detector step here because it needs the ghost-cell data
     // to be current, as it should be just after a call to apply_convective_bc().
@@ -2591,14 +2591,14 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         // Let's set up solid domain bc's also before changing any flow properties.
         if (GlobalConfig.apply_bcs_in_parallel) {
             foreach (sblk; parallel(localSolidBlocks, 1)) {
-                if (sblk.active) { sblk.applyPreSpatialDerivAction(SimState.time, ftl); }
+                if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, ftl); }
             }
             foreach (sblk; parallel(localSolidBlocks, 1)) {
                 if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl); }
             }
         } else {
             foreach (sblk; localSolidBlocks) {
-                if (sblk.active) { sblk.applyPreSpatialDerivAction(SimState.time, ftl); }
+                if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, ftl); }
             }
             foreach (sblk; localSolidBlocks) {
                 if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl); }
@@ -2793,14 +2793,14 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         // Let's set up solid domain bc's also before changing any flow properties.
         if (GlobalConfig.apply_bcs_in_parallel) {
             foreach (sblk; parallel(localSolidBlocks, 1)) {
-                if (sblk.active) { sblk.applyPreSpatialDerivAction(SimState.time, ftl); }
+                if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, ftl); }
             }
             foreach (sblk; parallel(localSolidBlocks, 1)) {
                 if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl); }
             }
         } else {
             foreach (sblk; localSolidBlocks) {
-                if (sblk.active) { sblk.applyPreSpatialDerivAction(SimState.time, ftl); }
+                if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, ftl); }
             }
             foreach (sblk; localSolidBlocks) {
                 if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl); }
@@ -3039,7 +3039,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
     }
     // And we'll do a first pass on solid domain bc's too in case we need up-to-date info.
     foreach (sblk; localSolidBlocks) {
-        if (sblk.active) { sblk.applyPreSpatialDerivAction(SimState.time, ftl); }
+        if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, ftl); }
     }
     foreach (sblk; localSolidBlocks) {
         if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl); }
@@ -3239,7 +3239,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
         }
         // Let's set up solid domain bc's also before changing any flow properties.
         foreach (sblk; localSolidBlocks) {
-            if (sblk.active) { sblk.applyPreSpatialDerivAction(SimState.time, ftl); }
+            if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, ftl); }
         }
         foreach (sblk; localSolidBlocks) {
             if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl); }

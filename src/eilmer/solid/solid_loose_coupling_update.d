@@ -73,7 +73,7 @@ Matrix!number eval_dedts(Matrix!number eip1, int ftl, double sim_time)
     Matrix!number ret = zeros!number(n, 1); // array that will be returned (empty - to be populated)
     foreach (sblk; parallel(localSolidBlocks, 1)) {
         if (!sblk.active) continue;
-        sblk.applyPreSpatialDerivAction(sim_time, ftl);
+        sblk.applyPreSpatialDerivActionAtBndryFaces(sim_time, ftl);
         sblk.clearSources(); 
         sblk.computeSpatialDerivatives(ftl); 
         sblk.computeFluxes();
