@@ -1,0 +1,13 @@
+# plot flow solution
+set term postscript eps 20 enhanced
+set output 'flow.eps'
+set ylabel 'Pressure, Pa'
+set xlabel 'x, m'
+set key top right
+#set format y "10^{%L}"
+
+plot 'flow.dat' using ($1):($3) with lines ls 1 title 'P', \
+     'init_flow.dat' using ($1):($3) with lines ls 2 title 'P_{initial}', \
+     'target_flow.dat' using ($1):($3) with lines ls 3 title 'P_{target}'
+
+
