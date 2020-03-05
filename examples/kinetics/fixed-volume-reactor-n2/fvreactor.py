@@ -20,7 +20,7 @@ gs.T = 4000.0 # degree K
 gs.molef = {'N2':2/3, 'N':1/3}
 gs.update_thermo_from_pT()
 
-tFinal = 200.0e-6 # s
+tFinal = 300.0e-6 # s
 t = 0.0
 dt = 1.0e-6
 dtSuggest = 1.0e-11

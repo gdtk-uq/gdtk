@@ -20,13 +20,13 @@ gs.T = 4000.0 # degree K
 gs.molef = {'N2'=>2.0/3, 'N'=>1.0/3}
 gs.update_thermo_from_pT()
 
-tFinal = 200.0e-6 # s
+tFinal = 300.0e-6 # s
 t = 0.0
 dt = 1.0e-6
 dtSuggest = 1.0e-11
 puts "# Start integration"
 f = open("fvreactor.data", 'w')
-f.write('# 1:t(s)  2:T(K)  3:p(Pa)  4:massf_N2  5:massf_N  6:conc_N2  7:conc_N\n')
+f.write("# 1:t(s)  2:T(K)  3:p(Pa)  4:massf_N2  5:massf_N  6:conc_N2  7:conc_N\n")
 f.write("%10.3e %10.3f %10.3e %20.12e %20.12e %20.12e %20.12e\n" %
         [t, gs.T, gs.p, gs.massf[0], gs.massf[1], gs.conc[0], gs.conc[1]])
 while t <= tFinal do

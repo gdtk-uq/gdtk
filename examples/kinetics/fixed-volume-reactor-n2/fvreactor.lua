@@ -13,7 +13,7 @@ gs.massf = gm:molef2massf(molef)
 gm:updateThermoFromPT(gs)
 conc = gm:massf2conc(gs)
 
-tFinal = 200.0e-6 -- s
+tFinal = 300.0e-6 -- s
 t = 0.0
 dt = 1.0e-6
 dtSuggest = 1.0e-11
