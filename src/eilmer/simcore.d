@@ -198,7 +198,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
     //
     SimState.maxWallClockSeconds = maxWallClock;
     SimState.wall_clock_start = Clock.currTime();
-    read_config_file();  // most of the configuration is in here
+    JSONValue config_jsonData = read_config_file();  // most of the configuration is in here
     read_control_file(); // some of the configuration is in here
     //
     version(enable_fp_exceptions) {
@@ -298,12 +298,27 @@ void init_simulation(int tindx, int nextLoadsIndx,
             // Remember the +1 for the main thread.
         }
     }
-    // At this point, note that we initialize the gas model, workspace
-    // and the grid and flow arrays for blocks that are in the current
+    // Now that we have finished assigning blocks to MPI tasks
+    // and have identified the FluidBlocks in the local context,
+    // we may finish the configuration of the blocks.
+    // Note that we initialize the gas model, workspace and
+    // the grid and flow arrays for blocks that are in the current
     // MPI-task or process, only.
     foreach (myblk; localFluidBlocks) {
         myblk.myConfig.init_gas_model_bits();
         myblk.init_workspace();
+        myblk.init_lua_globals();
+        if (GlobalConfig.user_pad_length > 0) {
+            push_array_to_Lua(myblk.myL, GlobalConfig.userPad, "userPad");
+        }
+        myblk.init_boundary_conditions(config_jsonData["block_" ~ to!string(myblk.id)]);
+        if (GlobalConfig.udf_source_terms) {
+            luaL_dofile(myblk.myL, GlobalConfig.udf_source_terms_file.toStringz);
+        }
+        // After fully constructing the blocks and its boundary conditions,
+        // we can optionally print their representation for checking.
+        if (GlobalConfig.verbosity_level > 1) {
+        writeln("  Block[", myblk.id, "]: ", myblk); }
     }
     foreach (myblk; parallel(localFluidBlocks,1)) {
         if (GlobalConfig.grid_motion != GridMotion.none) {

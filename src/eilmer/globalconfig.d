@@ -1204,7 +1204,7 @@ import gas.steam : Steam;
 import gas.electronically_specific_gas: ElectronicallySpecificGas;
 import gas.two_temperature_gasgiant: TwoTemperatureGasGiant;
 
-void read_config_file()
+JSONValue read_config_file()
 {
     if (GlobalConfig.verbosity_level > 1) writeln("Read config file.");
     string fileName = "config/" ~ GlobalConfig.base_file_name ~ ".config";
@@ -1699,23 +1699,10 @@ void read_config_file()
                                    i, gridType));
         } // end switch gridType
     }
-    foreach (blk; globalBlocks) {
-        auto fluidblk = cast(FluidBlock) blk;
-        assert(fluidblk !is null, "Oops, this should be a FluidBlock object.");
-        fluidblk.init_lua_globals();
-        if (GlobalConfig.user_pad_length > 0) {
-            push_array_to_Lua(fluidblk.myL, GlobalConfig.userPad, "userPad");
-        }
-        fluidblk.init_boundary_conditions(jsonData["block_" ~ to!string(fluidblk.id)]);
-        if (GlobalConfig.udf_source_terms) {
-            luaL_dofile(fluidblk.myL, GlobalConfig.udf_source_terms_file.toStringz);
-        }
-    } 
-    // After fully constructing blocks and their boundary conditions,
-    // we can optionally print their representation for checking.
-    if (GlobalConfig.verbosity_level > 1) {
-        foreach (i, blk; globalBlocks) { writeln("  Block[", i, "]: ", blk); }
-    }
+    // Defer the remaining configuration of the FluidBlocks until they have
+    // been assigned to their MPI tasks out in the main part of init_simulation()
+    // in simcore.d
+    //
     // Read in any blocks in the solid domain.
     GlobalConfig.udfSolidSourceTerms = getJSONbool(jsonData, "udf_solid_source_terms", false);
     GlobalConfig.udfSolidSourceTermsFile = jsonData["udf_solid_source_terms_file"].str;
@@ -1747,7 +1734,7 @@ void read_config_file()
             initUDFSolidSourceTerms(sblk.myL, GlobalConfig.udfSolidSourceTermsFile);
         }
     }
-    // Now that the blocks are configured, we can initialize
+    // Now that the blocks are partly configured, we can initialize
     // the lua_State that holds the user's functions
     // for simulation supervision and for defining grid motion.
     init_master_lua_State();
@@ -1760,6 +1747,9 @@ void read_config_file()
     if (GlobalConfig.grid_motion == GridMotion.user_defined) {
         doLuaFile(GlobalConfig.master_lua_State, GlobalConfig.udf_grid_motion_file);
     }
+    // We send this config-file data back because we have not yet finished
+    // the configuration activities for the blocks and their boundary conditions.
+    return jsonData;
 } // end read_config_file()
 
 void read_control_file()
