@@ -16,6 +16,9 @@ import json_helper;
 import nm.number;
 import nm.complex;
 import globalconfig;
+import geom;
+import fvcell;
+import fvinterface;
 
 /*
 Abstract base class defines functions all turbulence models must have:
@@ -46,6 +49,7 @@ class TurbulenceModelObject{
     @nogc abstract bool is_valid(const FlowStateLimits fsl, const number[] turb) const;
     @nogc abstract number gmres_scaling_factor(size_t i) const;
     @nogc abstract number tke_rhoturb_derivatives(const FlowState fs, size_t i) const;
+    @nogc abstract void set_flowstate_at_wall(const int gtl, const FVInterface IFace, const FVCell cell, ref FlowState fs) const;
 
     // Common methods
     override string toString() const
@@ -135,6 +139,17 @@ class noTurbulenceModel : TurbulenceModelObject {
     @nogc final override number tke_rhoturb_derivatives(const FlowState fs, size_t i) const {
         number dtke_drhoturb = 0.0;
         return dtke_drhoturb;
+    }
+
+    @nogc final override
+    void set_flowstate_at_wall(const int gtl, const FVInterface IFace, const FVCell cell, ref FlowState fs) const {
+        /* 
+            Set the interface value of each turbulent primitive,
+            given the nearest cell above it inside the flow domain
+        */
+        fs.turb[0] = 0.0;
+        fs.turb[1] = 0.0;
+        return;
     }
 }
 
@@ -411,6 +426,24 @@ class kwTurbulenceModel : TurbulenceModelObject {
         return dtke_drhoturb;
     }
 
+    @nogc final override 
+    void set_flowstate_at_wall(const int gtl, const FVInterface IFace, const FVCell cell, ref FlowState fs) const {
+        /* 
+            Set the interface value of each turbulent primitive,
+            given the nearest cell above it inside the flow domain
+        */
+        if (cell.in_turbulent_zone) {
+            number d0 = distance_between(cell.pos[gtl], IFace.pos);
+            fs.turb[1] = ideal_omega_at_wall(cell, d0);
+            fs.turb[0] = 0.0;
+        } else {
+            fs.turb[1] = cell.fs.turb[1];
+            fs.turb[0] = cell.fs.turb[0];
+        }
+        return;
+    }
+
+
 private:
     immutable number Pr_t;
     immutable bool axisymmetric;
@@ -450,6 +483,25 @@ private:
             return false;
         }
         return true;
+    }
+
+    @nogc const
+    number ideal_omega_at_wall(const FVCell cell, number d0)
+    // As recommended by Wilson Chan, we use Menter's correction
+    // for omega values at the wall. This appears as Eqn A12 in 
+    // Menter's paper.
+    // Reference:
+    // Menter (1994)
+    // Two-Equation Eddy-Viscosity Turbulence Models for
+    // Engineering Applications.
+    // AIAA Journal, 32:8, pp. 1598--1605
+    // Notes: Moved here from boundary_interface_effect.d (NNG)
+    {
+        auto wall_gas = cell.fs.gas;
+        // Note: d0 is half_cell_width_at_wall.
+        number nu = wall_gas.mu / wall_gas.rho;
+        double beta1 = 0.075;
+        return 10 * (6 * nu) / (beta1 * d0 * d0);
     }
 
 }

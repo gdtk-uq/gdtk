@@ -1229,25 +1229,11 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
         BoundaryCondition bc = blk.bc[which_boundary];
         version(komega) {
 	    if (bc.outsigns[f.i_bndry] == 1) {
-		number d0 = distance_between(f.left_cell.pos[gtl], f.pos);
-		if (f.left_cell.in_turbulent_zone) {
-		    f.fs.turb[1] = ideal_omega_at_wall(f.left_cell, d0);
-		    f.fs.turb[0] = 0.0;
-		} else {
-		    f.fs.turb[1] = f.left_cell.fs.turb[1];
-		    f.fs.turb[0] = f.left_cell.fs.turb[0];
-		}
+            blk.myConfig.turb_model.set_flowstate_at_wall(gtl, f, f.left_cell, f.fs);
 	    } else {
-		number d0 = distance_between(f.right_cell.pos[gtl], f.pos);
-		if (f.right_cell.in_turbulent_zone) {
-		    f.fs.turb[1] = ideal_omega_at_wall(f.right_cell, d0);
-		    f.fs.turb[0] = 0.0;
-		} else {
-		    f.fs.turb[1] = f.right_cell.fs.turb[1];
-		    f.fs.turb[0] = f.right_cell.fs.turb[0];
+            blk.myConfig.turb_model.set_flowstate_at_wall(gtl, f, f.right_cell, f.fs);
 		}
 	    }
-	}
     } // end apply_unstructured_grid()
     
     override void apply_unstructured_grid(double t, int gtl, int ftl)
@@ -1256,23 +1242,9 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
         version(komega) {
             foreach (i, f; bc.faces) {
                 if (bc.outsigns[i] == 1) {
-                    number d0 = distance_between(f.left_cell.pos[gtl], f.pos);
-                    if (f.left_cell.in_turbulent_zone) {
-                        f.fs.turb[1] = ideal_omega_at_wall(f.left_cell, d0);
-                        f.fs.turb[0] = 0.0;
-                    } else {
-                        f.fs.turb[1] = f.left_cell.fs.turb[1];
-                        f.fs.turb[0] = f.left_cell.fs.turb[0];
-                    }
+                    blk.myConfig.turb_model.set_flowstate_at_wall(gtl, f, f.left_cell, f.fs);
                 } else {
-                    number d0 = distance_between(f.right_cell.pos[gtl], f.pos);
-                    if (f.right_cell.in_turbulent_zone) {
-                        f.fs.turb[1] = ideal_omega_at_wall(f.right_cell, d0);
-                        f.fs.turb[0] = 0.0;
-                    } else {
-                        f.fs.turb[1] = f.right_cell.fs.turb[1];
-                        f.fs.turb[0] = f.right_cell.fs.turb[0];
-                    }
+                    blk.myConfig.turb_model.set_flowstate_at_wall(gtl, f, f.right_cell, f.fs);
                 }
             } // end foreach face
         }
@@ -1295,10 +1267,8 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
                     for (i = blk.imin; i <= blk.imax; ++i) {
                         cell = blk.get_cell(i,j,k);
                         IFace = cell.iface[Face.north];
-                        number d0 = distance_between(cell.pos[gtl], IFace.pos);
                         FlowState fs = IFace.fs;
-                        fs.turb[0] = 0.0;
-                        fs.turb[1] = ideal_omega_at_wall(cell, d0);
+                        blk.myConfig.turb_model.set_flowstate_at_wall(gtl, IFace, cell, fs);
                     } // end i loop
                 } // end for k
                 break;
@@ -1308,10 +1278,8 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
                     for (j = blk.jmin; j <= blk.jmax; ++j) {
                         cell = blk.get_cell(i,j,k);
                         IFace = cell.iface[Face.east];
-                        number d0 = distance_between(cell.pos[gtl], IFace.pos);
                         FlowState fs = IFace.fs;
-                        fs.turb[0] = 0.0;
-                        fs.turb[1] = ideal_omega_at_wall(cell, d0);
+                        blk.myConfig.turb_model.set_flowstate_at_wall(gtl, IFace, cell, fs);
                     } // end j loop
                 } // end for k
                 break;
@@ -1321,10 +1289,8 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
                     for (i = blk.imin; i <= blk.imax; ++i) {
                         cell = blk.get_cell(i,j,k);
                         IFace = cell.iface[Face.south];
-                        number d0 = distance_between(cell.pos[gtl], IFace.pos);
                         FlowState fs = IFace.fs;
-                        fs.turb[0] = 0.0;
-                        fs.turb[1] = ideal_omega_at_wall(cell, d0);
+                        blk.myConfig.turb_model.set_flowstate_at_wall(gtl, IFace, cell, fs);
                     } // end i loop
                 } // end for k
                 break;
@@ -1334,10 +1300,8 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
                     for (j = blk.jmin; j <= blk.jmax; ++j) {
                         cell = blk.get_cell(i,j,k);
                         IFace = cell.iface[Face.west];
-                        number d0 = distance_between(cell.pos[gtl], IFace.pos);
                         FlowState fs = IFace.fs;
-                        fs.turb[0] = 0.0;
-                        fs.turb[1] = ideal_omega_at_wall(cell, d0);
+                        blk.myConfig.turb_model.set_flowstate_at_wall(gtl, IFace, cell, fs);
                     } // end j loop
                 } // end for k
                 break;
@@ -1347,10 +1311,8 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
                     for (j = blk.jmin; j <= blk.jmax; ++j) {
                         cell = blk.get_cell(i,j,k);
                         IFace = cell.iface[Face.top];
-                        number d0 = distance_between(cell.pos[gtl], IFace.pos);
                         FlowState fs = IFace.fs;
-                        fs.turb[0] = 0.0;
-                        fs.turb[1] = ideal_omega_at_wall(cell, d0);
+                        blk.myConfig.turb_model.set_flowstate_at_wall(gtl, IFace, cell, fs);
                     } // end j loop
                 } // end for i
                 break;
@@ -1360,10 +1322,8 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
                     for (j = blk.jmin; j <= blk.jmax; ++j) {
                         cell = blk.get_cell(i,j,k);
                         IFace = cell.iface[Face.bottom];
-                        number d0 = distance_between(cell.pos[gtl], IFace.pos);
                         FlowState fs = IFace.fs;
-                        fs.turb[0] = 0.0;
-                        fs.turb[1] = ideal_omega_at_wall(cell, d0);
+                        blk.myConfig.turb_model.set_flowstate_at_wall(gtl, IFace, cell, fs);
                     } // end j loop
                 } // end for i
                 break;
@@ -1371,23 +1331,24 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
         }
     } // end apply()
 
-    @nogc
-    number ideal_omega_at_wall(in FVCell cell, number d0)
-    // As recommended by Wilson Chan, we use Menter's correction
-    // for omega values at the wall. This appears as Eqn A12 in 
-    // Menter's paper.
-    // Reference:
-    // Menter (1994)
-    // Two-Equation Eddy-Viscosity Turbulence Models for
-    // Engineering Applications.
-    // AIAA Journal, 32:8, pp. 1598--1605
-    {
-        auto wall_gas = cell.fs.gas;
-        // Note: d0 is half_cell_width_at_wall.
-        number nu = wall_gas.mu / wall_gas.rho;
-        double beta1 = 0.075;
-        return 10 * (6 * nu) / (beta1 * d0 * d0);
-    }
+
+    //@nogc
+    //number ideal_omega_at_wall(in FVCell cell, number d0)
+    //// As recommended by Wilson Chan, we use Menter's correction
+    //// for omega values at the wall. This appears as Eqn A12 in 
+    //// Menter's paper.
+    //// Reference:
+    //// Menter (1994)
+    //// Two-Equation Eddy-Viscosity Turbulence Models for
+    //// Engineering Applications.
+    //// AIAA Journal, 32:8, pp. 1598--1605
+    //{
+    //    auto wall_gas = cell.fs.gas;
+    //    // Note: d0 is half_cell_width_at_wall.
+    //    number nu = wall_gas.mu / wall_gas.rho;
+    //    double beta1 = 0.075;
+    //    return 10 * (6 * nu) / (beta1 * d0 * d0);
+    //}
 } // end class BIE_WallKOmega
 
 class BIE_WallFunction : BoundaryInterfaceEffect {

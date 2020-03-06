@@ -629,13 +629,13 @@ function WallBC_NoSlip_FixedT0:new(o)
    o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new(),
 					   FixedT:new{Twall=o.Twall},
 					   UpdateThermoTransCoeffs:new() }
-   if config.turbulence_model == "k_omega" then
+   if config.turbulence_model ~= "none" then
       o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallKOmega:new()
-      if o.wall_function then
-	 -- Only makes sense to add a wall function if the k-omega model is active.
-	 o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = 
-	    WallFunctionInterfaceEffect:new{thermal_condition='FIXED_T'}
-	 o.preSpatialDerivActionAtBndryCells = { WallFunctionCellEffect:new() }
+      if o.wall_function and config.turbulence_model == "k_omega" then
+         -- Only makes sense to add a wall function if the k-omega model is active.
+         o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = 
+            WallFunctionInterfaceEffect:new{thermal_condition='FIXED_T'}
+         o.preSpatialDerivActionAtBndryCells = { WallFunctionCellEffect:new() }
       end
    end
    if o.catalytic_type and o.catalytic_type ~= "none" then
