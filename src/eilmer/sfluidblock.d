@@ -121,10 +121,8 @@ public:
             _nkdim = nkcell + 2 * n_ghost_cell_layers;
             kmin = GlobalConfig.n_ghost_cell_layers; kmax = kmin + nkcell - 1;
         }
-        // Workspace for flux_calc method.
-        one_d = new OneDInterpolator(dedicatedConfig[id]);
     } // end constructor
-
+    
     this(int blk_id, JSONValue json_data)
     {
         nicell = getJSONint(json_data, "nic", 0);
@@ -136,6 +134,13 @@ public:
         omegaz = getJSONdouble(json_data, "omegaz", 0.0);
         may_be_turbulent = getJSONbool(json_data, "may_be_turbulent", true);
     } // end constructor from json
+
+    override void init_workspace()
+    {
+        super.init_workspace();
+        // Workspace for flux_calc method.
+        one_d = new OneDInterpolator(dedicatedConfig[id]);
+    }
 
     @nogc override int get_interpolation_order()
     {

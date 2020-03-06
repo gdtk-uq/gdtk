@@ -59,9 +59,14 @@ public:
         active = getJSONbool(json_data, "active", true);
         omegaz = getJSONdouble(json_data, "omegaz", 0.0);
         may_be_turbulent = getJSONbool(json_data, "may_be_turbulent", true);
+    } // end constructor from json
+
+    override void init_workspace()
+    {
+        super.init_workspace();
         // Workspace for flux_calc method.
         lsq = new LsqInterpolator(dedicatedConfig[id]);
-    } // end constructor from json
+    }
 
     @nogc override int get_interpolation_order()
     {

@@ -166,6 +166,10 @@ public:
         this.ncells_expected = ncells;
         this.n_ghost_cell_layers = n_ghost_cell_layers;
         myConfig = dedicatedConfig[id];
+    }
+
+    void init_workspace()
+    {
         Linf_residuals = new ConservedQuantities(dedicatedConfig[id].n_species,
                                                  dedicatedConfig[id].n_modes);
         // Workspace for flux_calc method.

@@ -1099,6 +1099,24 @@ public:
         ignition_zone_active = GlobalConfig.ignition_zone_active;
         foreach (iz; GlobalConfig.ignition_zones) { ignition_zones ~= new IgnitionZone(iz); }
         //
+        thermionic_emission_bc_time_delay = GlobalConfig.thermionic_emission_bc_time_delay;
+        //
+        verbosity_level = GlobalConfig.verbosity_level;
+        //
+        version (steady_state) {
+            sssOptions = GlobalConfig.sssOptions;
+        }
+        version (shape_sensitivity) {
+            sscOptions = GlobalConfig.sscOptions;
+        }
+        foreach (varName; GlobalConfig.flow_variable_list) { flow_variable_list ~= varName; }
+    } // end constructor
+
+    void init_gas_model_bits() 
+    {
+        // Some gas models are storage intensive, so we do not want to initialize them
+        // unless we really want to use them from the LocalConfig object.
+        // This function should be called for local blocks, only, within an MPI context.
         gmodel = init_gas_model(GlobalConfig.gas_model_file);
         n_species = gmodel.n_species;
         n_heavy = gmodel.n_heavy;
@@ -1113,19 +1131,7 @@ public:
         if (GlobalConfig.reacting) {
             thermochemUpdate = init_thermochemical_reactor(gmodel, GlobalConfig.reactions_file, GlobalConfig.energy_exchange_file);
         }
-        //
-        thermionic_emission_bc_time_delay = GlobalConfig.thermionic_emission_bc_time_delay;
-        //
-        verbosity_level = GlobalConfig.verbosity_level;
-        //
-        version (steady_state) {
-            sssOptions = GlobalConfig.sssOptions;
-        }
-        version (shape_sensitivity) {
-            sscOptions = GlobalConfig.sscOptions;
-        }
-        foreach (varName; GlobalConfig.flow_variable_list) { flow_variable_list ~= varName; }
-    } // end constructor
+    }
 
     void update_control_parameters()
     // to be used after reading job.control file.

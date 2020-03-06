@@ -298,8 +298,13 @@ void init_simulation(int tindx, int nextLoadsIndx,
             // Remember the +1 for the main thread.
         }
     }
-    // At this point, note that we initialize the grid and flow arrays for blocks
-    // that are in the current MPI-task or process, only.
+    // At this point, note that we initialize the gas model, workspace
+    // and the grid and flow arrays for blocks that are in the current
+    // MPI-task or process, only.
+    foreach (myblk; localFluidBlocks) {
+        myblk.myConfig.init_gas_model_bits();
+        myblk.init_workspace();
+    }
     foreach (myblk; parallel(localFluidBlocks,1)) {
         if (GlobalConfig.grid_motion != GridMotion.none) {
             myblk.init_grid_and_flow_arrays(make_file_name!"grid"(job_name, myblk.id, SimState.current_tindx,
