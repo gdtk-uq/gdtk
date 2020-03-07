@@ -1,0 +1,20 @@
+# vtk DataFile Version 2.0
+Points on shock
+ASCII
+DATASET POLYDATA
+POINTS 7 float
+-0.9e-3 8.9e-3 0.0
+3.7e-3 12.32e-3 0.0
+8.4e-3 15.7e-3 0.0
+12.4e-3 18.6e-3 0.0
+16.9e-3 21.4e-3 0.0
+23.8e-3 25.5e-3 0.0
+29.0e-3 28.1e-3 0.0
+VERTICES 7 14
+1 0
+1 1
+1 2
+1 3
+1 4
+1 5
+1 6
