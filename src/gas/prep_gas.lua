@@ -310,6 +310,27 @@ function writeThermPerfGas(f, species, db, optsTable)
       end
    end
 end
+
+function write2TAir(f, species, db, optsTable)
+   f:write("species = {")
+   for _,sp in ipairs(species) do
+      f:write(string.format("'%s', ", sp))
+   end
+   f:write("}\n\n")
+   f:write("db = {}\n")
+   for _,sp in ipairs(species) do
+      f:write(string.format("db['%s'] = {}\n", sp))
+      f:write(string.format("db['%s'].atomicConstituents = { ", sp))
+      for k,v in pairs(db[sp].atomicConstituents) do
+         f:write(string.format("%s=%d, ", k, v))
+      end
+      f:write("}\n")
+      f:write(string.format("db['%s'].charge = %d\n", sp, db[sp].charge))
+      writeCeaThermoCoeffs(f, sp, db, optsTable)
+   end
+end
+
+
 function writeCO2Gas(f, sp, db)
    -- This is the Bender Model, entropy Ref values, viscosity etc. are not needed
    if ( #sp > 1 ) then
@@ -421,6 +442,10 @@ gasModels["IDEAL GAS"] = gasModels["IDEALGAS"]
 gasModels["THERMALLYPERFECTGAS"] = {writeFn=writeThermPerfGas, DName="ThermallyPerfectGas"}
 gasModels["THERMALLY PERFECT GAS"] = gasModels["THERMALLYPERFECTGAS"]
 gasModels["THERMALLY PERFECT GAS EQUILIBRIUM"] = {writeFn=writeThermPerfGas, DName="ThermallyPerfectGasEquilibrium"}
+-- Two-temperature air and aliases
+gasModels["TWOTEMPERATUREAIR"] = {writeFn=write2TAir, DName="TwoTemperatureAir"}
+gasModels["TWO TEMPERATURE AIR"] = gasModels["TWOTEMPERATUREAIR"]
+gasModels["TWO-TEMPERATURE AIR"] = gasModels["TWOTEMPERATUREAIR"]
 -- CO2
 gasModels["CO2GAS"] = {writeFn=writeCO2Gas, DName = "CO2Gas"}
 gasModels["CO2GASSW"] = {writeFn = writeCO2GasSW, DName = "CO2GasSW"}
