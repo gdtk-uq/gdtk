@@ -12,6 +12,9 @@ include::eilmer/flow-state-user.adoc[]
 include::eilmer/fluid-block-user.adoc[]
 include::eilmer/flowsolution_user.adoc[]
 
+include::geom/grid/grid-user.adoc[]
+include::geom/grid/sgrid-user.adoc[]
+
 :leveloffset: -1
 
 

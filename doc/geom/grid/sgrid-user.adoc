@@ -1,0 +1,27 @@
+== StructuredGrid objects, methods and functions
+
+Here is the list of methods and functions that are specific
+to structured grids. The more general set of methods and
+functions that apply to all grids (structured and unstructured)
+are documented in <<grid-user>>.
+
+ StructuredGrid:joinGrid(otherGrid, joinLocation)
+
+Use this method to join another grid onto the current object.
+If successful, the current object is modified at the end of the
+operation. It will now contain both grids.
+
+The join grid operation assumes that the edge/face for joining
+is full-face matching and that the grid points are C0 continuous.
+The operation does not do extensive checks for badly formed joins.
+It relies on the caller to use this in a sensible manner.
+
+[horizontal]
+`otherGrid` :: second `StructuredGrid` to be joined
+`joinLocation` :: a _string_ specifying at which end of the current grid the other grid should be joined +
+                  allowable options are `"east"`, `"imax"`, `"north"` and `"jmax"`. Note that the first
+                  two are equivalent, and the last two are equivalent.
+
+
+
+
