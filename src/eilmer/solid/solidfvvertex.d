@@ -15,11 +15,4 @@ class SolidFVVertex {
 public:
     size_t id;
     Vector3 pos;
-    number areaxy;
-    number dTdx;
-    number dTdy;
-    number dTdz;
-    Vector3[] cloud_pos;
-    number*[] cloud_T;
-    number[12] wx, wy, wz;
 }

@@ -717,10 +717,10 @@ function connectBlocks(blkA, faceA, blkB, faceB, orientation)
       if ( (faceA == east and faceB == west) or ( faceA == west and faceB == east) or
             (faceA == north and faceB == south) or (faceA == south and faceB == north) or
          (faceA == top and faceB == bottom) or (faceA == bottom and faceB == top) ) then
-         blkA.bcList[faceA] = SolidConnectionBoundaryBC:new{otherBlock=blkB.id,
+         blkA.bcList[faceA] = SolidFullFaceCopyBoundaryBC:new{otherBlock=blkB.id,
 							    otherFace=faceB,
 							    orientation=orientation}
-	 blkB.bcList[faceB] = SolidConnectionBoundaryBC:new{otherBlock=blkA.id,
+	 blkB.bcList[faceB] = SolidFullFaceCopyBoundaryBC:new{otherBlock=blkA.id,
 							    otherFace=faceA,
 							    orientation=orientation}
       else

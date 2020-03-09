@@ -39,6 +39,7 @@ import ufluidblock;
 import ssolidblock;
 import solidprops;
 import solidfvinterface;
+import solid_full_face_copy;
 import solid_loose_coupling_update;
 import bc;
 import user_defined_source_terms;
@@ -468,7 +469,61 @@ void init_simulation(int tindx, int nextLoadsIndx,
         mySolidBlk.readGrid(make_file_name!"solid-grid"(job_name, mySolidBlk.id, 0, "gz")); // tindx==0 fixed grid
         mySolidBlk.readSolution(make_file_name!"solid"(job_name, mySolidBlk.id, tindx, "gz"));
         mySolidBlk.computePrimaryCellGeometricData();
-        mySolidBlk.assignVtxLocationsForDerivCalc();
+        mySolidBlk.assignCellLocationsForDerivCalc();
+    }
+    
+    // setup communication across blocks
+    foreach (myblk; localSolidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
+                auto mygce = cast(SolidGCE_SolidGhostCellFullFaceCopy)gce;
+                if (mygce) { mygce.set_up_cell_mapping_phase0(); }
+            }
+        }
+    }
+    foreach (myblk; localSolidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
+                auto mygce = cast(SolidGCE_SolidGhostCellFullFaceCopy)gce;
+                if (mygce) { mygce.set_up_cell_mapping_phase1(); }
+            }
+        }
+    }
+    foreach (myblk; localSolidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
+                auto mygce = cast(SolidGCE_SolidGhostCellFullFaceCopy)gce;
+                if (mygce) { mygce.set_up_cell_mapping_phase2(); }
+            }
+        }
+    }
+    foreach (myblk; localSolidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
+                auto mygce = cast(SolidGCE_SolidGhostCellFullFaceCopy)gce;
+                if (mygce) { mygce.exchange_solid_data_phase0(); }
+            }
+        }
+    }
+    foreach (myblk; localSolidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
+                auto mygce = cast(SolidGCE_SolidGhostCellFullFaceCopy)gce;
+                if (mygce) { mygce.exchange_solid_data_phase1(); }
+            }
+        }
+    }
+    foreach (myblk; localSolidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
+                auto mygce = cast(SolidGCE_SolidGhostCellFullFaceCopy)gce;
+                if (mygce) { mygce.exchange_solid_data_phase2(); }
+            }
+        }
+    }
+    // Now that we know the ghost-cell locations, we can set up the least-squares subproblems for
+    // calculation of temperature gradients for the solid solver with least-squares gradients.
+    foreach (ref mySolidBlk; localSolidBlocks) {
         mySolidBlk.setupSpatialDerivativeCalc();
     }
     if (localSolidBlocks.length > 0) {
@@ -1810,6 +1865,34 @@ void exchange_ghost_cell_boundary_viscous_gradient_data(double t, int gtl, int f
     }
 } // end exchange_ghost_cell_boundary_viscous_gradient_data()
 
+void exchange_ghost_cell_solid_boundary_data()
+{
+    foreach (myblk; localSolidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
+                auto mygce = cast(SolidGCE_SolidGhostCellFullFaceCopy)gce;
+                if (mygce) { mygce.exchange_solid_data_phase0(); }
+            }
+        }
+    }
+    foreach (myblk; localSolidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
+                auto mygce = cast(SolidGCE_SolidGhostCellFullFaceCopy)gce;
+                if (mygce) { mygce.exchange_solid_data_phase1(); }
+            }
+        }
+    }
+    foreach (myblk; localSolidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
+                auto mygce = cast(SolidGCE_SolidGhostCellFullFaceCopy)gce;
+                if (mygce) { mygce.exchange_solid_data_phase2(); }
+            }
+        }
+    }
+} // end exchange_ghost_cell_solid_boundary_data()
+
 //----------------------------------------------------------------------------
 void sts_gasdynamic_explicit_increment_with_fixed_grid()
 {
@@ -2078,9 +2161,13 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 	}
 	foreach (sblk; parallel(localSolidBlocks, 1)) {
 	    if (!sblk.active) continue;
+	    sblk.averageTemperatures();
 	    sblk.clearSources();
 	    sblk.computeSpatialDerivatives(ftl);
-	    sblk.computeFluxes();
+        }
+        exchange_ghost_cell_solid_boundary_data();
+        foreach (sblk; parallel(localSolidBlocks, 1)) {
+            sblk.computeFluxes();
 	}
 	if (GlobalConfig.apply_bcs_in_parallel) {
 	    foreach (sblk; parallel(localSolidBlocks, 1)) {
@@ -2300,9 +2387,13 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 	    }
 	    foreach (sblk; parallel(localSolidBlocks, 1)) {
 		if (!sblk.active) continue;
+                sblk.averageTemperatures();
 		sblk.clearSources();
 		sblk.computeSpatialDerivatives(ftl);
-		sblk.computeFluxes();
+            }
+            exchange_ghost_cell_solid_boundary_data();
+            foreach (sblk; parallel(localSolidBlocks, 1)) {
+                sblk.computeFluxes();
 	    }
 	    if (GlobalConfig.apply_bcs_in_parallel) {
 		foreach (sblk; parallel(localSolidBlocks, 1)) {
@@ -2560,8 +2651,12 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         }
         foreach (sblk; parallel(localSolidBlocks, 1)) {
             if (!sblk.active) continue;
+	    sblk.averageTemperatures();
             sblk.clearSources();
             sblk.computeSpatialDerivatives(ftl);
+        }
+        exchange_ghost_cell_solid_boundary_data();
+        foreach (sblk; parallel(localSolidBlocks, 1)) {
             sblk.computeFluxes();
         }
         if (GlobalConfig.apply_bcs_in_parallel) {
@@ -2761,8 +2856,12 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             // Do solid domain update IMMEDIATELY after at same flow time level
             foreach (sblk; parallel(localSolidBlocks, 1)) {
                 if (!sblk.active) continue;
+                sblk.averageTemperatures();
                 sblk.clearSources();
                 sblk.computeSpatialDerivatives(ftl);
+            }
+            exchange_ghost_cell_solid_boundary_data();
+            foreach (sblk; parallel(localSolidBlocks, 1)) {
                 sblk.computeFluxes();
             }
             if (GlobalConfig.apply_bcs_in_parallel) {
@@ -2963,8 +3062,12 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             // Do solid domain update IMMEDIATELY after at same flow time level
             foreach (sblk; parallel(localSolidBlocks, 1)) {
                 if (!sblk.active) continue;
+                sblk.averageTemperatures();
                 sblk.clearSources();
                 sblk.computeSpatialDerivatives(ftl);
+            }
+            exchange_ghost_cell_solid_boundary_data();
+            foreach (sblk; parallel(localSolidBlocks, 1)) {
                 sblk.computeFluxes();
             }
             if (GlobalConfig.apply_bcs_in_parallel) {
@@ -3205,9 +3308,13 @@ void gasdynamic_explicit_increment_with_moving_grid()
     // Next do solid domain update IMMEDIATELY after at same flow time level
     foreach (sblk; localSolidBlocks) {
         if (!sblk.active) continue;
+        sblk.averageTemperatures();
         sblk.clearSources();
         sblk.computeSpatialDerivatives(ftl);
         sblk.applyPostFluxAction(SimState.time, ftl);
+    }
+    exchange_ghost_cell_solid_boundary_data();
+    foreach (sblk; parallel(localSolidBlocks, 1)) {
         sblk.computeFluxes();
         sblk.applyPostFluxAction(SimState.time, ftl);
         foreach (scell; sblk.activeCells) {
@@ -3399,9 +3506,13 @@ void gasdynamic_explicit_increment_with_moving_grid()
         // Do solid domain update IMMEDIATELY after at same flow time level
         foreach (sblk; localSolidBlocks) {
             if (!sblk.active) continue;
+            sblk.averageTemperatures();
             sblk.clearSources();
             sblk.computeSpatialDerivatives(ftl);
             sblk.applyPostFluxAction(SimState.time, ftl);
+        }
+        exchange_ghost_cell_solid_boundary_data();
+        foreach (sblk; parallel(localSolidBlocks, 1)) {
             sblk.computeFluxes();
             sblk.applyPostFluxAction(SimState.time, ftl);
             foreach (scell; sblk.activeCells) {

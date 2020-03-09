@@ -65,13 +65,11 @@ version(mpi_parallel) {
 // ----------------------------------------------------------------------------------
 
 
-class SolidGhostCellFullFaceCopy : SolidGhostCellEffect {
+class SolidGCE_SolidGhostCellFullFaceCopy : SolidGhostCellEffect {
 public:
     SSolidBlock neighbourBlock;
     int neighbourFace;
     int neighbourOrientation;
-    bool reorient_vector_quantities;
-    double[] Rmatrix;
     // For each ghost cell associated with the boundary,
     // we will have a corresponding "mapped" or "source" cell
     // from which we will copy the flow conditions.
@@ -107,30 +105,20 @@ public:
     }
 
     this(int id, int boundary,
-         int otherBlock, int otherFace, int orient,
-         bool reorient_vector_quantities,
-         ref const(double[]) Rmatrix)
+         int otherBlock, int otherFace, int orient)
     {
         super(id, boundary, "SolidFullFaceCopy");
         neighbourBlock = cast(SSolidBlock) globalBlocks[otherBlock];
         assert(blk !is null, "Oops, this should be a SSolidBlock object.");
         neighbourFace = otherFace;
         neighbourOrientation = orient;
-        this.reorient_vector_quantities = reorient_vector_quantities;
-        this.Rmatrix = Rmatrix.dup();
     }
 
     override string toString() const
     { 
         string str = "FullFaceCopy(otherBlock=" ~ to!string(neighbourBlock.id) ~ 
             ", otherFace=" ~ to!string(neighbourFace) ~ 
-            ", orient=" ~ to!string(neighbourOrientation) ~
-            ", reorient_vector_quantities=" ~ to!string(reorient_vector_quantities) ~
-            ", Rmatrix=[";
-        foreach(i, v; Rmatrix) {
-            str ~= to!string(v);
-            str ~= (i < Rmatrix.length-1) ? ", " : "]";
-        }
+            ", orient=" ~ to!string(neighbourOrientation); 
         str ~= ")";
         return str;
     }
@@ -954,7 +942,7 @@ public:
             throw new FlowSolverException(msg);
         }
     }
-
+         
     // not @nogc because we may set length and use MPI_Irecv
     void exchange_solid_data_phase0()
     {
@@ -1053,7 +1041,7 @@ public:
             // For a single process,
             // we know that we can just access the data directly.
             foreach (i; 0 .. ghost_cells.length) {
-                //TODO: ghost_cells[i].copy_values_from(mapped_cells[i]);
+                ghost_cells[i].copy_values_from(mapped_cells[i]);
             }
         }
     } // end exchange_geometry_phase2()
@@ -1064,14 +1052,6 @@ public:
         // We presume that all of the exchange of data happened earlier,
         // and that the ghost cells have been filled with flow state data
         // from their respective source cells.
-        foreach (i; 0 .. ghost_cells.length) {
-            if (reorient_vector_quantities) {
-                // TODO: ghost_cells[i].fs.reorient_vector_quantities(Rmatrix);
-            }
-            // The following call to encode_conserved is needed
-            // for the block-marching process.
-            //TODO: ghost_cells[i].encode_conserved(gtl, ftl);
-        }
     } // end apply_structured_grid()
     
 } // end class GhostCellFullFaceCopy

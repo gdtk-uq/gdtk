@@ -218,12 +218,19 @@ public:
             // a structured-grid block much as we would an unstructured-grid block.
             if (myConfig.dimensions == 2) {
                 foreach (j; jmin .. jmax+1) {
-                    foreach (i; imin .. imax+1) { cells ~= getCell(i, j); }
+                    foreach (i; imin .. imax+1) {
+                        cells ~= getCell(i, j);
+                        cells[$-1].is_ghost = false;
+                    }
                 }
+                writeln("length: ", cells.length);
             } else { // assume 3D
                 foreach (k; kmin .. kmax+1) {
                     foreach (j; jmin .. jmax+1) {
-                        foreach (i; imin .. imax+1) { cells ~= getCell(i, j, k); }
+                        foreach (i; imin .. imax+1) {
+                            cells ~= getCell(i, j, k);
+                            cells[$-1].is_ghost = false;
+                        }
                     }
                 }
             } // end if dimensions
@@ -742,534 +749,25 @@ public:
 
     void setupSpatialDerivativeCalc()
     {
-        //if ( myConfig.dimensions == 3 ) {
-        //    throw new Error("computeSpatialDerivatives() not implemented for 3D yet.");
-        //}
-        
-        if ( myConfig.dimensions == 2 ) {
-            size_t k = 0;
-            for ( size_t i = imin; i <= imax+1; ++i ) {
-                for ( size_t j = jmin; j <= jmax+1; ++j ) {
-                    SolidFVVertex vtx = getVtx(i, j);
-                    if (myConfig.spatial_deriv_calc == SpatialDerivCalc.divergence)
-                        { }// nothing to do here
-                    else // myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares
-                        { gradients_T_lsq_setup(vtx, 2); }
-                } // j loop
-            } // i loop
-        } else { // 3D
-            for ( size_t i = imin; i <= imax+1; ++i ) {
-                for ( size_t j = jmin; j <= jmax+1; ++j ) {
-                    for ( size_t k = kmin; k <= kmax+1; ++k ) {
-                        SolidFVVertex vtx = getVtx(i, j, k);
-                        gradients_T_lsq_setup(vtx, 3);
-                    } // k loop
-                } // j loop
-            } // i loop
+        int dim = myConfig.dimensions;
+        foreach (c; cells) {
+            gradients_T_lsq_setup(c, dim);
         }
     }
 
-    override void assignVtxLocationsForDerivCalc()
+    override void assignCellLocationsForDerivCalc()
     {
-        // This code should follow very closesly the equivalent
-        // code in sblock.d.
-        size_t i, j, k;
-        if (myConfig.dimensions == 2) {
-            // First, do all of the internal secondary cells
-            for ( i = imin+1; i <= imax; ++i ) {
-                for ( j = jmin+1; j <= jmax; ++j ) {
-                    // Secondary-cell centre IS a primary-cell vertex
-                    // We are going to take a reference to this vertex
-                    // and store some information there in it's role
-                    // as a secondary-cell centre
-                    SolidFVVertex vtx = getVtx(i, j);
-                    // These are the corners of the secondary cell
-                    SolidFVCell A = getCell(i, j-1);
-                    SolidFVCell B = getCell(i, j);
-                    SolidFVCell C = getCell(i-1, j);
-                    SolidFVCell D = getCell(i-1, j-1);
-                    // Retain locations and pointers to cell temperature for later
-                    vtx.cloud_pos = [A.pos, B.pos, C.pos, D.pos];
-                    vtx.cloud_T = [&(A.T), &(B.T), &(C.T), &(D.T)];
-                } // j loop
-            } // i loop
-            // Half-cells along the edges of the block.
-            // East boundary
-            i = imax+1;
-            for (j = jmin+1; j <= jmax; ++j) {
-                SolidFVVertex vtx = getVtx(i, j);
-                SolidFVInterface A = getIfi(i, j-1);
-                SolidFVInterface B = getIfi(i, j);
-                SolidFVCell C = getCell(i-1, j);
-                SolidFVCell D = getCell(i-1, j-1);
-                vtx.cloud_pos = [A.pos, B.pos, C.pos, D.pos];
-                vtx.cloud_T = [&(A.T), &(B.T), &(C.T), &(D.T)];
-            } // j loop
-            // West boundary
-            i = imin;
-            for (j = jmin+1; j <= jmax; ++j ) {
-                SolidFVVertex vtx = getVtx(i, j);
-                SolidFVCell A = getCell(i, j-1);
-                SolidFVCell B = getCell(i, j);
-                SolidFVInterface C = getIfi(i, j);
-                SolidFVInterface D = getIfi(i, j-1);
-                vtx.cloud_pos = [A.pos, B.pos, C.pos, D.pos];
-                vtx.cloud_T = [&(A.T), &(B.T), &(C.T), &(D.T)];
-            } // j loop
-            // North boundary
-            j = jmax + 1;
-            for (i = imin+1; i <= imax; ++i) {
-                SolidFVVertex vtx = getVtx(i, j);
-                SolidFVCell A = getCell(i, j-1);
-                SolidFVInterface B = getIfj(i, j);
-                SolidFVInterface C = getIfj(i-1, j);
-                SolidFVCell D = getCell(i-1, j-1);
-                vtx.cloud_pos = [A.pos, B.pos, C.pos, D.pos];
-                vtx.cloud_T = [&(A.T), &(B.T), &(C.T), &(D.T)];
-            } // i loop
-            // South boundary
-            j = jmin;
-            for (i = imin+1; i <= imax; ++i) {
-                SolidFVVertex vtx = getVtx(i, j);
-                SolidFVInterface A = getIfj(i, j);
-                SolidFVCell B = getCell(i, j);
-                SolidFVCell C = getCell(i-1, j);
-                SolidFVInterface D = getIfj(i-1, j);
-                vtx.cloud_pos = [A.pos, B.pos, C.pos, D.pos];
-                vtx.cloud_T = [&(A.T), &(B.T), &(C.T), &(D.T)];
-            } // i loop
-            // For the corners, we are going to use the same divergence-theorem-based
-            // gradient calculator and let one edge collapse to a point, thus giving
-            // it a triangle to compute over.  This should be fine. 
-            // North-east corner
-            {
-                i = imax+1; j = jmax+1;
-                SolidFVVertex vtx = getVtx(i, j);
-                SolidFVInterface A = getIfi(i, j-1);
-                SolidFVInterface B = getIfj(i-1, j);
-                SolidFVCell C = getCell(i-1, j-1);
-                vtx.cloud_pos = [A.pos, B.pos, C.pos];
-                vtx.cloud_T = [&(A.T), &(B.T), &(C.T)];
-            }
-            // South-east corner
-            {
-                i = imax+1; j = jmin;
-                SolidFVVertex vtx = getVtx(i, j);
-                SolidFVInterface A = getIfi(i, j);
-                SolidFVCell B = getCell(i-1, j);
-                SolidFVInterface C = getIfj(i-1, j);
-                vtx.cloud_pos = [A.pos, B.pos, C.pos];
-                vtx.cloud_T = [&(A.T), &(B.T), &(C.T)];
-            }
-            // South-west corner
-            {
-                i = imin; j = jmin;
-                SolidFVVertex vtx = getVtx(i, j);
-                SolidFVInterface A = getIfj(i, j);
-                SolidFVCell B = getCell(i, j);
-                SolidFVInterface C = getIfi(i, j);
-                vtx.cloud_pos = [A.pos, B.pos, C.pos];
-                vtx.cloud_T = [&(A.T), &(B.T), &(C.T)];
-            }
-            // North-west corner
-            {
-                i = imin; j = jmax+1;
-                SolidFVVertex vtx = getVtx(i, j);
-                SolidFVCell A = getCell(i, j-1);
-                SolidFVInterface B = getIfj(i, j);
-                SolidFVInterface C = getIfi(i, j-1);
-                vtx.cloud_pos = [A.pos, B.pos, C.pos];
-                vtx.cloud_T = [&(A.T), &(B.T), &(C.T)];
-            }
-        } else { // Flow quantity derivatives for 3D.
-            // Internal secondary cell geometry information
-            for ( i = imin; i <= imax-1; ++i ) {
-                for ( j = jmin; j <= jmax-1; ++j ) {
-                    for ( k = kmin; k <= kmax-1; ++k ) {
-                        SolidFVVertex vtx = getVtx(i+1,j+1,k+1);
-                        SolidFVCell c0 = getCell(i,j,k);
-                        SolidFVCell c1 = getCell(i+1,j,k);
-                        SolidFVCell c2 = getCell(i+1,j+1,k);
-                        SolidFVCell c3 = getCell(i,j+1,k);
-                        SolidFVCell c4 = getCell(i,j,k+1);
-                        SolidFVCell c5 = getCell(i+1,j,k+1);
-                        SolidFVCell c6 = getCell(i+1,j+1,k+1);
-                        SolidFVCell c7 = getCell(i,j+1,k+1);
-                        vtx.cloud_pos = [c0.pos, c1.pos, c2.pos, c3.pos,
-                                         c4.pos, c5.pos, c6.pos, c7.pos];
-                        vtx.cloud_T = [&(c0.T), &(c1.T), &(c2.T), &(c3.T), &(c4.T), &(c5.T), &(c6.T), &(c7.T)];
-                    }
-                }
-            }
-            // East boundary secondary cell geometry information
-            i = imax;
-            for ( j = jmin; j <= jmax-1; ++j ) {
-                for ( k = kmin; k <= kmax-1; ++k ) {
-                    SolidFVVertex vtx = getVtx(i+1,j+1,k+1);
-                    SolidFVCell c0 = getCell(i,j,k);
-                    SolidFVInterface c1 = getIfi(i+1,j,k);
-                    SolidFVInterface c2 = getIfi(i+1,j+1,k);
-                    SolidFVCell c3 = getCell(i,j+1,k);
-                    SolidFVCell c4 = getCell(i,j,k+1);
-                    SolidFVInterface c5 = getIfi(i+1,j,k+1);
-                    SolidFVInterface c6 = getIfi(i+1,j+1,k+1);
-                    SolidFVCell c7 = getCell(i,j+1,k+1);
-                    vtx.cloud_pos = [c0.pos, c1.pos, c2.pos, c3.pos,
-                                     c4.pos, c5.pos, c6.pos, c7.pos];
-                    vtx.cloud_T = [&(c0.T), &(c1.T), &(c2.T), &(c3.T), &(c4.T), &(c5.T), &(c6.T), &(c7.T)];
-                }
-            }
-            // West boundary secondary cell geometry information
-            i = imin - 1;
-            for ( j = jmin; j <= jmax-1; ++j ) {
-                for ( k = kmin; k <= kmax-1; ++k ) {
-                    SolidFVVertex vtx = getVtx(i+1,j+1,k+1);
-                    SolidFVInterface c0 = getIfi(i+1,j,k);
-                    SolidFVCell c1 = getCell(i+1,j,k);
-                    SolidFVCell c2 = getCell(i+1,j+1,k);
-                    SolidFVInterface c3 = getIfi(i+1,j+1,k);
-                    SolidFVInterface c4 = getIfi(i+1,j,k+1);
-                    SolidFVCell c5 = getCell(i+1,j,k+1);
-                    SolidFVCell c6 = getCell(i+1,j+1,k+1);
-                    SolidFVInterface c7 = getIfi(i+1,j+1,k+1);
-                    vtx.cloud_pos = [c0.pos, c1.pos, c2.pos, c3.pos,
-                                     c4.pos, c5.pos, c6.pos, c7.pos];
-                    vtx.cloud_T = [&(c0.T), &(c1.T), &(c2.T), &(c3.T), &(c4.T), &(c5.T), &(c6.T), &(c7.T)];
-                }
-            }
-            // North boundary secondary cell geometry information
-            j = jmax;
-            for ( i = imin; i <= imax-1; ++i ) {
-                for ( k = kmin; k <= kmax-1; ++k ) {
-                    SolidFVVertex vtx = getVtx(i+1,j+1,k+1);
-                    SolidFVCell c0 = getCell(i,j,k);
-                    SolidFVCell c1 = getCell(i+1,j,k);
-                    SolidFVInterface c2 = getIfj(i+1,j+1,k);
-                    SolidFVInterface c3 = getIfj(i,j+1,k);
-                    SolidFVCell c4 = getCell(i,j,k+1);
-                    SolidFVCell c5 = getCell(i+1,j,k+1);
-                    SolidFVInterface c6 = getIfj(i+1,j+1,k+1);
-                    SolidFVInterface c7 = getIfj(i,j+1,k+1);
-                    vtx.cloud_pos = [c0.pos, c1.pos, c2.pos, c3.pos,
-                                     c4.pos, c5.pos, c6.pos, c7.pos];
-                    vtx.cloud_T = [&(c0.T), &(c1.T), &(c2.T), &(c3.T), &(c4.T), &(c5.T), &(c6.T), &(c7.T)];
-                }
-            }
-            // South boundary secondary cell geometry information
-            j = jmin - 1;
-            for ( i = imin; i <= imax-1; ++i ) {
-                for ( k = kmin; k <= kmax-1; ++k ) {
-                    SolidFVVertex vtx = getVtx(i+1,j+1,k+1);
-                    SolidFVInterface c0 = getIfj(i,j+1,k);
-                    SolidFVInterface c1 = getIfj(i+1,j+1,k);
-                    SolidFVCell c2 = getCell(i+1,j+1,k);
-                    SolidFVCell c3 = getCell(i,j+1,k);
-                    SolidFVInterface c4 = getIfj(i,j+1,k+1);
-                    SolidFVInterface c5 = getIfj(i+1,j+1,k+1);
-                    SolidFVCell c6 = getCell(i+1,j+1,k+1);
-                    SolidFVCell c7 = getCell(i,j+1,k+1);
-                    vtx.cloud_pos = [c0.pos, c1.pos, c2.pos, c3.pos,
-                                     c4.pos, c5.pos, c6.pos, c7.pos];
-                    vtx.cloud_T = [&(c0.T), &(c1.T), &(c2.T), &(c3.T), &(c4.T), &(c5.T), &(c6.T), &(c7.T)];
-                }
-            }
-            // Top boundary secondary cell geometry information
-            k = kmax;
-            for ( i = imin; i <= imax-1; ++i ) {
-                for ( j = jmin; j <= jmax-1; ++j ) {
-                    SolidFVVertex vtx = getVtx(i+1,j+1,k+1);
-                    SolidFVCell c0 = getCell(i,j,k);
-                    SolidFVCell c1 = getCell(i+1,j,k);
-                    SolidFVCell c2 = getCell(i+1,j+1,k);
-                    SolidFVCell c3 = getCell(i,j+1,k);
-                    SolidFVInterface c4 = getIfk(i,j,k+1);
-                    SolidFVInterface c5 = getIfk(i+1,j,k+1);
-                    SolidFVInterface c6 = getIfk(i+1,j+1,k+1);
-                    SolidFVInterface c7 = getIfk(i,j+1,k+1);
-                    vtx.cloud_pos = [c0.pos, c1.pos, c2.pos, c3.pos,
-                                     c4.pos, c5.pos, c6.pos, c7.pos];
-                    vtx.cloud_T = [&(c0.T), &(c1.T), &(c2.T), &(c3.T), &(c4.T), &(c5.T), &(c6.T), &(c7.T)];
-                }
-            }
-            // Bottom boundary secondary cell geometry information
-            k = kmin - 1;
-            for ( i = imin; i <= imax-1; ++i ) {
-                for ( j = jmin; j <= jmax-1; ++j ) {
-                    SolidFVVertex vtx = getVtx(i+1,j+1,k+1);
-                    SolidFVInterface c0 = getIfk(i,j,k+1);
-                    SolidFVInterface c1 = getIfk(i+1,j,k+1);
-                    SolidFVInterface c2 = getIfk(i+1,j+1,k+1);
-                    SolidFVInterface c3 = getIfk(i,j+1,k+1);
-                    SolidFVCell c4 = getCell(i,j,k+1);
-                    SolidFVCell c5 = getCell(i+1,j,k+1);
-                    SolidFVCell c6 = getCell(i+1,j+1,k+1);
-                    SolidFVCell c7 = getCell(i,j+1,k+1);
-                    vtx.cloud_pos = [c0.pos, c1.pos, c2.pos, c3.pos,
-                                     c4.pos, c5.pos, c6.pos, c7.pos];
-                    vtx.cloud_T = [&(c0.T), &(c1.T), &(c2.T), &(c3.T), &(c4.T), &(c5.T), &(c6.T), &(c7.T)];
-                }
-            }
-            // Now, do the 4 edges around the bottom face.
-            // Bottom-South edge [0]-->[1]
-            j = jmin; k = kmin;         
-            for ( i = imin+1; i <= imax; ++i ) {
-                SolidFVVertex vtx = getVtx(i,j,k);
-                SolidFVCell c0 = getCell(i-1,j,k);
-                SolidFVCell c1 = getCell(i,j,k);
-                SolidFVInterface c2 = getIfj(i-1,j,k);
-                SolidFVInterface c3 = getIfk(i-1,j,k);
-                SolidFVInterface c4 = getIfj(i,j,k);
-                SolidFVInterface c5 = getIfk(i,j,k);
-                vtx.cloud_pos = [c0.pos, c1.pos, c2.pos,
-                                 c3.pos, c4.pos, c5.pos];
-                vtx.cloud_T = [&(c0.T), &(c1.T), &(c2.T), &(c3.T), &(c4.T), &(c5.T)];
-            }
-            // Bottom-North edge [3]-->[2]
-            j = jmax; k = kmin;
-            for ( i = imin+1; i <= imax; ++i ) {
-                SolidFVVertex vtx = getVtx(i,j+1,k);
-                SolidFVCell c0 = getCell(i-1,j,k);
-                SolidFVCell c1 = getCell(i,j,k);
-                SolidFVInterface c2 = getIfj(i-1,j+1,k);
-                SolidFVInterface c3 = getIfk(i-1,j,k);
-                SolidFVInterface c4 = getIfj(i,j+1,k);
-                SolidFVInterface c5 = getIfk(i,j,k);
-                vtx.cloud_pos = [c0.pos, c1.pos, c2.pos,
-                                 c3.pos, c4.pos, c5.pos];
-                vtx.cloud_T = [&(c0.T), &(c1.T), &(c2.T), &(c3.T), &(c4.T), &(c5.T)];
-            }
-            // Bottom-West edge [0]-->[3]
-            i = imin; k = kmin;
-            for ( j = jmin+1; j <= jmax; ++j ) {
-                SolidFVVertex vtx = getVtx(i,j,k);
-                SolidFVCell c0 = getCell(i,j-1,k);
-                SolidFVCell c1 = getCell(i,j,k);
-                SolidFVInterface c2 = getIfi(i,j-1,k);
-                SolidFVInterface c3 = getIfk(i,j-1,k);
-                SolidFVInterface c4 = getIfi(i,j,k);
-                SolidFVInterface c5 = getIfk(i,j,k);
-                vtx.cloud_pos = [c0.pos, c1.pos, c2.pos,
-                                 c3.pos, c4.pos, c5.pos];
-                vtx.cloud_T = [&(c0.T), &(c1.T), &(c2.T), &(c3.T), &(c4.T), &(c5.T)];
-            }
-            // Bottom-East edge [1]-->[2]
-            i = imax; k = kmin;
-            for ( j = jmin+1; j <= jmax; ++j ) {
-                SolidFVVertex vtx = getVtx(i+1,j,k);
-                SolidFVCell c0 = getCell(i,j-1,k);
-                SolidFVCell c1 = getCell(i,j,k);
-                SolidFVInterface c2 = getIfi(i+1,j-1,k);
-                SolidFVInterface c3 = getIfk(i,j-1,k);
-                SolidFVInterface c4 = getIfi(i+1,j,k);
-                SolidFVInterface c5 = getIfk(i,j,k);
-                vtx.cloud_pos = [c0.pos, c1.pos, c2.pos,
-                                 c3.pos, c4.pos, c5.pos];
-                vtx.cloud_T = [&(c0.T), &(c1.T), &(c2.T), &(c3.T), &(c4.T), &(c5.T)];
-            }
-            // 4 edges around the top face.
-            // Top-South edge [4]-->[5]
-            j = jmin; k = kmax;
-            for ( i = imin+1; i <= imax; ++i ) {
-                SolidFVVertex vtx = getVtx(i,j,k+1);
-                SolidFVCell c0 = getCell(i-1,j,k);
-                SolidFVCell c1 = getCell(i,j,k);
-                SolidFVInterface c2 = getIfj(i-1,j,k);
-                SolidFVInterface c3 = getIfk(i-1,j,k+1);
-                SolidFVInterface c4 = getIfj(i,j,k);
-                SolidFVInterface c5 = getIfk(i,j,k+1);
-                vtx.cloud_pos = [c0.pos, c1.pos, c2.pos,
-                                 c3.pos, c4.pos, c5.pos];
-                vtx.cloud_T = [&(c0.T), &(c1.T), &(c2.T), &(c3.T), &(c4.T), &(c5.T)];
-            }
-            // Top-North edge [7]-->[6]
-            j = jmax; k = kmax;
-            for ( i = imin+1; i <= imax; ++i ) {
-                SolidFVVertex vtx = getVtx(i,j+1,k+1);
-                SolidFVCell c0 = getCell(i-1,j,k);
-                SolidFVCell c1 = getCell(i,j,k);
-                SolidFVInterface c2 = getIfj(i-1,j+1,k);
-                SolidFVInterface c3 = getIfk(i-1,j,k+1);
-                SolidFVInterface c4 = getIfj(i,j+1,k);
-                SolidFVInterface c5 = getIfk(i,j,k+1);
-                vtx.cloud_pos = [c0.pos, c1.pos, c2.pos,
-                                 c3.pos, c4.pos, c5.pos];
-                vtx.cloud_T = [&(c0.T), &(c1.T), &(c2.T), &(c3.T), &(c4.T), &(c5.T)];
-            }
-            // Top-West edge [4]-->[7]
-            i = imin; k = kmax;
-            for ( j = jmin+1; j <= jmax; ++j ) {
-                SolidFVVertex vtx = getVtx(i,j,k+1);
-                SolidFVCell c0 = getCell(i,j-1,k);
-                SolidFVCell c1 = getCell(i,j,k);
-                SolidFVInterface c2 = getIfi(i,j-1,k);
-                SolidFVInterface c3 = getIfk(i,j-1,k+1);
-                SolidFVInterface c4 = getIfi(i,j,k);
-                SolidFVInterface c5 = getIfk(i,j,k+1);
-                vtx.cloud_pos = [c0.pos, c1.pos, c2.pos,
-                                 c3.pos, c4.pos, c5.pos];
-                vtx.cloud_T = [&(c0.T), &(c1.T), &(c2.T), &(c3.T), &(c4.T), &(c5.T)];
-            }
-            // Top-East edge [5]-->[6]
-            i = imax; k = kmax;
-            for ( j = jmin+1; j <= jmax; ++j ) {
-                SolidFVVertex vtx = getVtx(i+1,j,k+1);
-                SolidFVCell c0 = getCell(i,j-1,k);
-                SolidFVCell c1 = getCell(i,j,k);
-                SolidFVInterface c2 = getIfi(i+1,j-1,k);
-                SolidFVInterface c3 = getIfk(i,j-1,k+1);
-                SolidFVInterface c4 = getIfi(i+1,j,k);
-                SolidFVInterface c5 = getIfk(i,j,k+1);
-                vtx.cloud_pos = [c0.pos, c1.pos, c2.pos,
-                                 c3.pos, c4.pos, c5.pos];
-                vtx.cloud_T = [&(c0.T), &(c1.T), &(c2.T), &(c3.T), &(c4.T), &(c5.T)];
-            }
-            // 4 edges running from bottom to top.
-            // South-West edge [0]-->[4]
-            i = imin; j = jmin;
-            for ( k = kmin+1; k <= kmax; ++k ) {
-                SolidFVVertex vtx = getVtx(i,j,k);
-                SolidFVCell c0 = getCell(i,j,k-1);
-                SolidFVCell c1 = getCell(i,j,k);
-                SolidFVInterface c2 = getIfi(i,j,k-1);
-                SolidFVInterface c3 = getIfj(i,j,k-1);
-                SolidFVInterface c4 = getIfi(i,j,k);
-                SolidFVInterface c5 = getIfj(i,j,k);
-                vtx.cloud_pos = [c0.pos, c1.pos, c2.pos,
-                                 c3.pos, c4.pos, c5.pos];
-                vtx.cloud_T = [&(c0.T), &(c1.T), &(c2.T), &(c3.T), &(c4.T), &(c5.T)];
-            }
-            // South-East edge [1]-->[5]
-            i = imax; j = jmin;
-            for ( k = kmin+1; k <= kmax; ++k ) {
-                SolidFVVertex vtx = getVtx(i+1,j,k);
-                SolidFVCell c0 = getCell(i,j,k-1);
-                SolidFVCell c1 = getCell(i,j,k);
-                SolidFVInterface c2 = getIfi(i+1,j,k-1);
-                SolidFVInterface c3 = getIfj(i,j,k-1);
-                SolidFVInterface c4 = getIfi(i+1,j,k);
-                SolidFVInterface c5 = getIfj(i,j,k);
-                vtx.cloud_pos = [c0.pos, c1.pos, c2.pos,
-                                 c3.pos, c4.pos, c5.pos];
-                vtx.cloud_T = [&(c0.T), &(c1.T), &(c2.T), &(c3.T), &(c4.T), &(c5.T)];
-            }
-            // North-East edge [2]-->[6]
-            i = imax; j = jmax;
-            for ( k = kmin+1; k <= kmax; ++k ) {
-                SolidFVVertex vtx = getVtx(i+1,j+1,k);
-                SolidFVCell c0 = getCell(i,j,k-1);
-                SolidFVCell c1 = getCell(i,j,k);
-                SolidFVInterface c2 = getIfi(i+1,j,k-1);
-                SolidFVInterface c3 = getIfj(i,j+1,k-1);
-                SolidFVInterface c4 = getIfi(i+1,j,k);
-                SolidFVInterface c5 = getIfj(i,j+1,k);
-                vtx.cloud_pos = [c0.pos, c1.pos, c2.pos,
-                                 c3.pos, c4.pos, c5.pos];
-                vtx.cloud_T = [&(c0.T), &(c1.T), &(c2.T), &(c3.T), &(c4.T), &(c5.T)];
-            }
-            // North-West edge [3]-->[7]
-            i = imin; j = jmax;
-            for ( k = kmin+1; k <= kmax; ++k ) {
-                SolidFVVertex vtx = getVtx(i,j+1,k);
-                SolidFVCell c0 = getCell(i,j,k-1);
-                SolidFVCell c1 = getCell(i,j,k);
-                SolidFVInterface c2 = getIfi(i,j,k-1);
-                SolidFVInterface c3 = getIfj(i,j+1,k-1);
-                SolidFVInterface c4 = getIfi(i,j,k);
-                SolidFVInterface c5 = getIfj(i,j+1,k);
-                vtx.cloud_pos = [c0.pos, c1.pos, c2.pos,
-                                 c3.pos, c4.pos, c5.pos];
-                vtx.cloud_T = [&(c0.T), &(c1.T), &(c2.T), &(c3.T), &(c4.T), &(c5.T)];
-            }
-            // Finally, the 8 corners.
-            // South-West-Bottom corner [0]
-            i = imin; j = jmin; k = kmin;
-            {
-                SolidFVVertex vtx = getVtx(i,j,k);
-                SolidFVCell c0 = getCell(i,j,k);
-                SolidFVInterface c1 = getIfi(i,j,k);
-                SolidFVInterface c2 = getIfj(i,j,k);
-                SolidFVInterface c3 = getIfk(i,j,k);
-                vtx.cloud_pos = [c0.pos, c1.pos, c2.pos, c3.pos];
-                vtx.cloud_T = [&(c0.T), &(c1.T), &(c2.T), &(c3.T)];
-            }
-            // South-East-Bottom corner [1]
-            i = imax; j = jmin; k = kmin;
-            {
-                SolidFVVertex vtx = getVtx(i+1,j,k);
-                SolidFVCell c0 = getCell(i,j,k);
-                SolidFVInterface c1 = getIfi(i+1,j,k);
-                SolidFVInterface c2 = getIfj(i,j,k);
-                SolidFVInterface c3 = getIfk(i,j,k);
-                vtx.cloud_pos = [c0.pos, c1.pos, c2.pos, c3.pos];
-                vtx.cloud_T = [&(c0.T), &(c1.T), &(c2.T), &(c3.T)];
-            }
-            // North-East-Bottom corner [2]
-            i = imax; j = jmax; k = kmin;
-            {
-                SolidFVVertex vtx = getVtx(i+1,j+1,k);
-                SolidFVCell c0 = getCell(i,j,k);
-                SolidFVInterface c1 = getIfi(i+1,j,k);
-                SolidFVInterface c2 = getIfj(i,j+1,k);
-                SolidFVInterface c3 = getIfk(i,j,k);
-                vtx.cloud_pos = [c0.pos, c1.pos, c2.pos, c3.pos];
-                vtx.cloud_T = [&(c0.T), &(c1.T), &(c2.T), &(c3.T)];
-            }
-            // North-West-Bottom corner [3]
-            i = imin; j = jmax; k = kmin;
-            {
-                SolidFVVertex vtx = getVtx(i,j+1,k);
-                SolidFVCell c0 = getCell(i,j,k);
-                SolidFVInterface c1 = getIfi(i,j,k);
-                SolidFVInterface c2 = getIfj(i,j+1,k);
-                SolidFVInterface c3 = getIfk(i,j,k);
-                vtx.cloud_pos = [c0.pos, c1.pos, c2.pos, c3.pos];
-                vtx.cloud_T = [&(c0.T), &(c1.T), &(c2.T), &(c3.T)];
-            }
-            // South-West-Top corner [4]
-            i = imin; j = jmin; k = kmax;
-            {
-                SolidFVVertex vtx = getVtx(i,j,k+1);
-                SolidFVCell c0 = getCell(i,j,k);
-                SolidFVInterface c1 = getIfi(i,j,k);
-                SolidFVInterface c2 = getIfj(i,j,k);
-                SolidFVInterface c3 = getIfk(i,j,k+1);
-                vtx.cloud_pos = [c0.pos, c1.pos, c2.pos, c3.pos];
-                vtx.cloud_T = [&(c0.T), &(c1.T), &(c2.T), &(c3.T)];
-            }
-            // South-East-Top corner [5]
-            i = imax; j = jmin; k = kmax;
-            {
-                SolidFVVertex vtx = getVtx(i+1,j,k+1);
-                SolidFVCell c0 = getCell(i,j,k);
-                SolidFVInterface c1 = getIfi(i+1,j,k);
-                SolidFVInterface c2 = getIfj(i,j,k);
-                SolidFVInterface c3 = getIfk(i,j,k+1);
-                vtx.cloud_pos = [c0.pos, c1.pos, c2.pos, c3.pos];
-                vtx.cloud_T = [&(c0.T), &(c1.T), &(c2.T), &(c3.T)];
-            }
-            // North-East-Top corner [6]
-            i = imax; j = jmax; k = kmax;
-            {
-                SolidFVVertex vtx = getVtx(i+1,j+1,k+1);
-                SolidFVCell c0 = getCell(i,j,k);
-                SolidFVInterface c1 = getIfi(i+1,j,k);
-                SolidFVInterface c2 = getIfj(i,j+1,k);
-                SolidFVInterface c3 = getIfk(i,j,k+1);
-                vtx.cloud_pos = [c0.pos, c1.pos, c2.pos, c3.pos];
-                vtx.cloud_T = [&(c0.T), &(c1.T), &(c2.T), &(c3.T)];
-            }
-            // North-West-Top corner [7]
-            i = imin; j = jmax; k = kmax;
-            {
-                SolidFVVertex vtx = getVtx(i,j+1,k+1);
-                SolidFVCell c0 = getCell(i,j,k);
-                SolidFVInterface c1 = getIfi(i,j,k);
-                SolidFVInterface c2 = getIfj(i,j+1,k);
-                SolidFVInterface c3 = getIfk(i,j,k+1);
-                vtx.cloud_pos = [c0.pos, c1.pos, c2.pos, c3.pos];
-                vtx.cloud_T = [&(c0.T), &(c1.T), &(c2.T), &(c3.T)];
-            }
-        } // end if (myConfig.dimensions
+        // This locations is only valid for the weighted least squares calculation.
+        foreach (c; cells) {
+            // First cell in the cloud is the cell itself.  Differences are taken about it.
+            c.cloud_pos ~= c.pos;
+            c.cloud_T ~= &(c.T);
+            // Subsequent cells are the surrounding interfaces.
+            foreach (i, f; c.iface) {
+                c.cloud_pos ~= f.pos;
+                c.cloud_T ~= &(f.T);
+            } // end foreach face
+        }
     }
     
     override void applyPreSpatialDerivActionAtBndryFaces(double t, int tLevel)
@@ -1298,38 +796,134 @@ public:
 
     override void computeSpatialDerivatives(int ftl)
     {
-        //if ( myConfig.dimensions == 3 ) {
-        //    throw new Error("computeSpatialDerivatives() not implemented for 3D yet.");
-        //}
-
-        if ( myConfig.dimensions == 2 ) {
-            size_t k = 0;
-            for ( size_t i = imin; i <= imax+1; ++i ) {
-                for ( size_t j = jmin; j <= jmax+1; ++j ) {
-                    SolidFVVertex vtx = getVtx(i, j);
-                    if (myConfig.spatial_deriv_calc == SpatialDerivCalc.divergence)
-                        { gradients_T_div(vtx); }
-                    else // myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares
-                        { gradients_T_lsq(vtx, 2); }
-                } // j loop
-            } // i loop
-        } else { // 3D
-            for ( size_t i = imin; i <= imax+1; ++i ) {
-                for ( size_t j = jmin; j <= jmax+1; ++j ) {
-                    for ( size_t k = kmin; k <= kmax+1; ++k ) {
-                        SolidFVVertex vtx = getVtx(i, j, k);
-                        gradients_T_lsq(vtx, 3);
-                    } // k loop
-                } // j loop
-            } // i loop
+        int dim = myConfig.dimensions;
+        foreach (c; cells) {
+            gradients_T_lsq(c, dim);
         }
     }
 
+    //@nogc
+    void averageCellDerivatives(SolidFVInterface f, SolidFVCell cL0, SolidFVCell cR0,ref number dTdx, ref number dTdy, ref number dTdz)
+    {
+        number qL; number qR;
+        // interface normal
+        number nx = f.n.x;
+        number ny = f.n.y;
+        number nz = f.n.z;
+        // vector from left-cell-centre to face midpoint
+        number rLx = f.pos.x - cL0.pos.x;
+        number rLy = f.pos.y - cL0.pos.y;
+        number rLz = f.pos.z - cL0.pos.z;
+        number rRx = f.pos.x - cR0.pos.x;
+        number rRy = f.pos.y - cR0.pos.y;
+        number rRz = f.pos.z - cR0.pos.z;
+        // vector from left-cell-centre to right-cell-centre
+        number ex = cR0.pos.x - cL0.pos.x;
+        number ey = cR0.pos.y - cL0.pos.y;
+        number ez = cR0.pos.z - cL0.pos.z;                
+        // ehat
+        number emag = sqrt(ex*ex + ey*ey + ez*ez);
+        number ehatx = ex/emag;
+        number ehaty = ey/emag;
+        number ehatz = ez/emag;                
+        // ndotehat
+        number ndotehat = nx*ehatx + ny*ehaty + nz*ehatz;
+        number avgdotehat;
+        number jump;
+            
+        avgdotehat = 0.5*(cL0.dTdx+cR0.dTdx)*ehatx +
+            0.5*(cL0.dTdy+cR0.dTdy)*ehaty +
+            0.5*(cL0.dTdz+cR0.dTdz)*ehatz;
+        jump = avgdotehat - (cR0.T - cL0.T)/emag;
+
+        if (cL0.is_ghost) {
+            dTdx = cR0.dTdx;
+            dTdy = cR0.dTdy;
+            dTdz = cR0.dTdz;
+        } else if (cR0.is_ghost) {
+            dTdx = cL0.dTdx;
+            dTdy = cL0.dTdy;
+            dTdz = cL0.dTdz;
+        } else {
+            dTdx = 0.5*(cL0.dTdx+cR0.dTdx) - jump*(nx/ndotehat);
+            dTdy = 0.5*(cL0.dTdy+cR0.dTdy) - jump*(ny/ndotehat);
+            dTdz = 0.5*(cL0.dTdz+cR0.dTdz) - jump*(nz/ndotehat);
+        }
+        //writeln(dTdx, ", ", cL0.T, ", ", cR0.T, ", ", cL0.dTdx, ", ", cR0.dTdx, ", ", cL0.is_ghost, ", ", cR0.is_ghost);
+        //writeln(cL0.pos, ", ", f.pos, ", ", cR0.pos);
+    } // end averageCellSpatialDerivatives()
+
+    void averageTemperatures() {
+        size_t i, j, k;
+        SolidFVInterface IFace;
+        SolidFVCell cellLeft, cellRight;
+        if ( myConfig.dimensions == 2 ) {
+            // East-facing interfaces
+            for ( j = jmin; j <= jmax; ++j ) {
+                for ( i = imin; i <= imax + 1; ++i ) {
+                    IFace = getIfi(i, j);
+                    cellLeft = getCell(i-1, j);
+                    cellRight = getCell(i, j);
+                    if (cellLeft.is_ghost || cellRight.is_ghost) { continue; }
+                    else { IFace.T = 0.5*(cellLeft.T + cellRight.T); }
+                }
+            }
+            // North-facing interfaces
+            for ( j = jmin; j <= jmax + 1; ++j ) {
+                for ( i = imin; i <= imax; ++i ) {
+                    IFace = getIfj(i, j);
+                    cellLeft = getCell(i, j-1);
+                    cellRight = getCell(i, j);
+                    if (cellLeft.is_ghost || cellRight.is_ghost) { continue; }
+                    else { IFace.T = 0.5*(cellLeft.T + cellRight.T); }
+                }
+            }
+        } else { // 3D
+            // ifi interfaces are west interfaces, with their unit normal pointing east.
+            for (k = kmin; k <= kmax; ++k) {
+                for (j = jmin; j <= jmax; ++j) {
+                    for (i = imin; i <= imax+1; ++i) {
+                        IFace = getIfi(i, j, k);
+                        cellLeft = getCell(i-1, j);
+                        cellRight = getCell(i, j);
+                        if (cellLeft.is_ghost || cellRight.is_ghost) { continue; }
+                        else { IFace.T = 0.5*(cellLeft.T + cellRight.T); }
+                    }  // i loop
+                } // j loop
+            } // k loop
+            
+            // ifj interfaces are south interfaces, with their unit normal pointing north.
+            for (k = kmin; k <= kmax; ++k) {
+                for (i = imin; i <= imax; ++i) {
+                    for (j = jmin; j <= jmax+1; ++j) {
+                        IFace = getIfj(i, j, k);
+                        cellLeft = getCell(i, j-1);
+                        cellRight = getCell(i, j);
+                        if (cellLeft.is_ghost || cellRight.is_ghost) { continue; }
+                        else { IFace.T = 0.5*(cellLeft.T + cellRight.T); }
+                    } // j loop
+                } // i loop
+            } // k loop
+            // ifk interfaces are bottom interfaces, with unit normal pointing to top.
+            for (i = imin; i <= imax; ++i) {
+                for (j = jmin; j <= jmax; ++j) {
+                    for (k = kmin; k <= kmax+1; ++k) {
+                        IFace = getIfk(i, j, k);
+                        cellLeft = getCell(i, j, k-1);
+                        cellRight = getCell(i, j, k);
+                        if (cellLeft.is_ghost || cellRight.is_ghost) { continue; }
+                        else { IFace.T = 0.5*(cellLeft.T + cellRight.T); }
+                    } // j loop
+                } // i loop
+            } // k loop
+        }
+    }
+    
     override void computeFluxes()
     {
         size_t i, j, k;
         SolidFVInterface IFace;
-        SolidFVVertex vtx1, vtx2, vtx3, vtx4;
+        SolidFVCell cellLeft, cellRight;
         number dTdx, dTdy, dTdz;
         number qx, qy, qz;
         if ( myConfig.dimensions == 2 ) {
@@ -1341,10 +935,9 @@ public:
                     if ( i == imax+1 && bc[Face.east].setsFluxDirectly )
                         continue;
                     IFace = getIfi(i, j);
-                    vtx1 = getVtx(i, j+1);
-                    vtx2 = getVtx(i, j);
-                    dTdx = 0.5*(vtx1.dTdx + vtx2.dTdx);
-                    dTdy = 0.5*(vtx1.dTdy + vtx2.dTdy);
+                    cellLeft = getCell(i-1, j);
+                    cellRight = getCell(i, j);
+                    averageCellDerivatives(IFace, cellLeft, cellRight, dTdx, dTdy, dTdz);
                     if (myConfig.solid_has_isotropic_properties) {
                         qx = -IFace.sp.k * dTdx;
                         qy = -IFace.sp.k * dTdy;
@@ -1354,6 +947,7 @@ public:
                         qy = -IFace.sp.k21 * dTdx - IFace.sp.k22 * dTdy;  
                     }
                     IFace.flux = qx * IFace.n.x + qy * IFace.n.y;
+                    //writeln(IFace.flux, ", ", dTdx);
                 }
             }
             // North-facing interfaces
@@ -1364,10 +958,9 @@ public:
                     if ( j == jmax+1 && bc[Face.north].setsFluxDirectly )
                         continue;
                     IFace = getIfj(i, j);
-                    vtx1 = getVtx(i, j);
-                    vtx2 = getVtx(i+1, j);
-                    dTdx = 0.5*(vtx1.dTdx + vtx2.dTdx);
-                    dTdy = 0.5*(vtx1.dTdy + vtx2.dTdy);
+                    cellLeft = getCell(i, j-1);
+                    cellRight = getCell(i, j);
+                    averageCellDerivatives(IFace, cellLeft, cellRight, dTdx, dTdy, dTdz);
                     if (myConfig.solid_has_isotropic_properties) {
                         qx = -IFace.sp.k * dTdx;
                         qy = -IFace.sp.k * dTdy;
@@ -1377,6 +970,7 @@ public:
                         qy = -IFace.sp.k21 * dTdx - IFace.sp.k22 * dTdy;  
                     }
                     IFace.flux = qx * IFace.n.x + qy * IFace.n.y;
+                    //writeln(IFace.flux, ", ", dTdx);
                 }
             }
         } else { // 3D
@@ -1389,13 +983,9 @@ public:
                     if ( i == imax+1 && bc[Face.east].setsFluxDirectly )
                         continue;
                     IFace = getIfi(i, j, k);
-                    vtx1 = getVtx(i,j,k);
-                    vtx2 = getVtx(i,j+1,k);
-                    vtx3 = getVtx(i,j+1,k+1);
-                    vtx4 = getVtx(i,j,k+1);
-                    dTdx = 0.25*(vtx1.dTdx + vtx2.dTdx + vtx3.dTdx + vtx4.dTdx);
-                    dTdy = 0.25*(vtx1.dTdy + vtx2.dTdy + vtx3.dTdy + vtx4.dTdy);
-                    dTdz = 0.25*(vtx1.dTdz + vtx2.dTdz + vtx3.dTdz + vtx4.dTdz);
+                    cellLeft = getCell(i-1, j);
+                    cellRight = getCell(i, j);
+                    averageCellDerivatives(IFace, cellLeft, cellRight, dTdx, dTdy, dTdz);
                     if (myConfig.solid_has_isotropic_properties) {
                         qx = -IFace.sp.k * dTdx;
                         qy = -IFace.sp.k * dTdy;
@@ -1407,6 +997,7 @@ public:
                         //qy = -IFace.sp.k21 * dTdx - IFace.sp.k22 * dTdy;
                     }
                     IFace.flux = qx * IFace.n.x + qy * IFace.n.y + qz * IFace.n.z;
+                    //writeln(IFace.flux, ", ", dTdx);
                     }  // i loop
                 } // j loop
             } // k loop
@@ -1420,13 +1011,9 @@ public:
                         if ( j == jmax+1 && bc[Face.north].setsFluxDirectly )
                             continue;
                         IFace = getIfj(i, j, k);
-                        vtx1 = getVtx(i,j,k);
-                        vtx2 = getVtx(i,j,k+1);
-                        vtx3 = getVtx(i+1,j,k+1);
-                        vtx4 = getVtx(i+1,j,k);
-                        dTdx = 0.25*(vtx1.dTdx + vtx2.dTdx + vtx3.dTdx + vtx4.dTdx);
-                        dTdy = 0.25*(vtx1.dTdy + vtx2.dTdy + vtx3.dTdy + vtx4.dTdy);
-                        dTdz = 0.25*(vtx1.dTdz + vtx2.dTdz + vtx3.dTdz + vtx4.dTdz);
+                        cellLeft = getCell(i, j-1);
+                        cellRight = getCell(i, j);
+                        averageCellDerivatives(IFace, cellLeft, cellRight, dTdx, dTdy, dTdz);
                         if (myConfig.solid_has_isotropic_properties) {
                             qx = -IFace.sp.k * dTdx;
                             qy = -IFace.sp.k * dTdy;
@@ -1438,6 +1025,7 @@ public:
                             //qy = -IFace.sp.k21 * dTdx - IFace.sp.k22 * dTdy;
                         }
                         IFace.flux = qx * IFace.n.x + qy * IFace.n.y + qz * IFace.n.z;
+                        //writeln(IFace.flux, ", ", dTdx);
                     } // j loop
                 } // i loop
             } // k loop
@@ -1450,13 +1038,9 @@ public:
                         if ( k == kmax+1 && bc[Face.top].setsFluxDirectly )
                             continue;
                         IFace = getIfk(i, j, k);
-                        vtx1 = getVtx(i,j,k);
-                        vtx2 = getVtx(i+1,j,k);
-                        vtx3 = getVtx(i+1,j+1,k);
-                        vtx4 = getVtx(i,j+1,k);
-                        dTdx = 0.25*(vtx1.dTdx + vtx2.dTdx + vtx3.dTdx + vtx4.dTdx);
-                        dTdy = 0.25*(vtx1.dTdy + vtx2.dTdy + vtx3.dTdy + vtx4.dTdy);
-                        dTdz = 0.25*(vtx1.dTdz + vtx2.dTdz + vtx3.dTdz + vtx4.dTdz);
+                        cellLeft = getCell(i, j, k-1);
+                        cellRight = getCell(i, j, k);
+                        averageCellDerivatives(IFace, cellLeft, cellRight, dTdx, dTdy, dTdz);
                         if (myConfig.solid_has_isotropic_properties) {
                             qx = -IFace.sp.k * dTdx;
                             qy = -IFace.sp.k * dTdy;
@@ -1468,6 +1052,7 @@ public:
                             //qy = -IFace.sp.k21 * dTdx - IFace.sp.k22 * dTdy;
                         }
                         IFace.flux = qx * IFace.n.x + qy * IFace.n.y + qz * IFace.n.z;
+                        //writeln(IFace.flux, ", ", dTdx);
                     } // j loop
                 } // i loop
             } // k loop
@@ -1480,50 +1065,14 @@ public:
     }
 }
 
-@nogc
-void gradients_T_div(SolidFVVertex vtx)
+//@nogc
+void gradients_T_lsq_setup(SolidFVCell c, int dimensions)
 {
-    // Number of corners in our polygon.
-    size_t n = vtx.cloud_pos.length;
-    // Compute our own estimate of *twice* the area in xy plane here.
-    // We can work with *twice* the area since it will cancel with
-    // factor of 1/2 that appears in the contour integral.
-    // Start with the contribution from the final segment of the bounding contour.
-    number areaxy = (vtx.cloud_pos[0].x + vtx.cloud_pos[n-1].x) *
-        (vtx.cloud_pos[0].y - vtx.cloud_pos[n-1].y);
-    // Accumulate the contributions from the other segments.
-    foreach (i; 0 .. n-1) {
-        areaxy += (vtx.cloud_pos[i+1].x + vtx.cloud_pos[i].x) *
-            (vtx.cloud_pos[i+1].y - vtx.cloud_pos[i].y);
-    }
-    number areaInv = 1.0 / areaxy;
-
-    // Apply the divergence theorem to flow properties.
-    //
-    // Start with the contribution from the final segment of the bounding contour.
-    number gradient_x = (*(vtx.cloud_T[0]) + *(vtx.cloud_T[n-1])) *
-        (vtx.cloud_pos[0].y - vtx.cloud_pos[n-1].y);
-    number gradient_y = (*(vtx.cloud_T[0]) + *(vtx.cloud_T[n-1])) *
-        (vtx.cloud_pos[0].x - vtx.cloud_pos[n-1].x);
-    // Accumulate the contributions from the other segments.
-    foreach (i; 0 .. n-1) {
-        gradient_x += (*(vtx.cloud_T[i+1]) + *(vtx.cloud_T[i])) *
-            (vtx.cloud_pos[i+1].y - vtx.cloud_pos[i].y);
-        gradient_y += (*(vtx.cloud_T[i+1]) + *(vtx.cloud_T[i])) *
-            (vtx.cloud_pos[i+1].x - vtx.cloud_pos[i].x);
-    }
-
-    vtx.dTdx = gradient_x * areaInv;
-    vtx.dTdy = -gradient_y * areaInv;
-}
-
-@nogc
-void gradients_T_lsq_setup(SolidFVVertex vtx, int dimensions)
-{
-    size_t n = vtx.cloud_pos.length;
+    size_t n = c.cloud_pos.length;
     number[12] weights2;
     size_t loop_init;
-    loop_init = 0; // All points count.
+    loop_init = 1; // All points count.
+    weights2[0] = 0.0; // and doesn't enter into the sum itself.
     //
     // Calculate weights used in the least-squares gradient calculation.
     // These are the square of the weights on the original linear constraint eqns.
@@ -1532,26 +1081,21 @@ void gradients_T_lsq_setup(SolidFVVertex vtx, int dimensions)
     // For the "faces" spatial location we are expecting the primary point
     // (i.e. the face at which we are calculating the gradients) to be in
     // the first cloud position. 
-    number x0 = vtx.pos.x; number y0 = vtx.pos.y; number z0 = vtx.pos.z;
+    number x0 = c.pos.x; number y0 = c.pos.y; number z0 = c.pos.z;
     if (dimensions == 2) {
         foreach (i; loop_init .. n) {
-            number dx = vtx.cloud_pos[i].x - x0;
-            number dy = vtx.cloud_pos[i].y - y0;
+            number dx = c.cloud_pos[i].x - x0;
+            number dy = c.cloud_pos[i].y - y0;
             weights2[i] = 1.0/(dx*dx+dy*dy);
         }
     } else { //3D
         foreach (i; loop_init .. n) {
-            number dx = vtx.cloud_pos[i].x - x0;
-            number dy = vtx.cloud_pos[i].y - y0;
-            number dz = vtx.cloud_pos[i].z - z0;
+            number dx = c.cloud_pos[i].x - x0;
+            number dy = c.cloud_pos[i].y - y0;
+            number dz = c.cloud_pos[i].z - z0;
             weights2[i] = 1.0/(dx*dx+dy*dy+dz*dz);
         }
     }
-    x0 = 0.0; y0 = 0.0; z0 = 0.0;
-    foreach (i; 0 .. n) {
-        x0 += vtx.cloud_pos[i].x; y0 += vtx.cloud_pos[i].y; z0 += vtx.cloud_pos[i].z;
-    }
-    x0 /= n; y0 /= n; z0 /= n; // midpoint
     
     number[12] dx, dy, dz;
     //
@@ -1563,9 +1107,9 @@ void gradients_T_lsq_setup(SolidFVVertex vtx, int dimensions)
         number xx = 0.0; number xy = 0.0; number xz = 0.0;
         number yy = 0.0; number yz = 0.0; number zz = 0.0;
         foreach (i; loop_init .. n) {
-            dx[i] = vtx.cloud_pos[i].x - x0;
-            dy[i] = vtx.cloud_pos[i].y - y0;
-            dz[i] = vtx.cloud_pos[i].z - z0;
+            dx[i] = c.cloud_pos[i].x - x0;
+            dy[i] = c.cloud_pos[i].y - y0;
+            dz[i] = c.cloud_pos[i].z - z0;
             xx += weights2[i]*dx[i]*dx[i];
             xy += weights2[i]*dx[i]*dy[i];
             xz += weights2[i]*dx[i]*dz[i];
@@ -1587,20 +1131,20 @@ void gradients_T_lsq_setup(SolidFVVertex vtx, int dimensions)
         }
         // Prepare final weights for later use in the reconstruction phase.
         foreach (i; loop_init .. n) {
-            vtx.wx[i] = xTx[0][3]*dx[i] + xTx[0][4]*dy[i] + xTx[0][5]*dz[i];
-            vtx.wx[i] *= weights2[i];
-            vtx.wy[i] = xTx[1][3]*dx[i] + xTx[1][4]*dy[i] + xTx[1][5]*dz[i];
-            vtx.wy[i] *= weights2[i];
-            vtx.wz[i] = xTx[2][3]*dx[i] + xTx[2][4]*dy[i] + xTx[2][5]*dz[i];
-            vtx.wz[i] *= weights2[i];
+            c.wx[i] = xTx[0][3]*dx[i] + xTx[0][4]*dy[i] + xTx[0][5]*dz[i];
+            c.wx[i] *= weights2[i];
+            c.wy[i] = xTx[1][3]*dx[i] + xTx[1][4]*dy[i] + xTx[1][5]*dz[i];
+            c.wy[i] *= weights2[i];
+            c.wz[i] = xTx[2][3]*dx[i] + xTx[2][4]*dy[i] + xTx[2][5]*dz[i];
+            c.wz[i] *= weights2[i];
         }
     } else {
         // dimensions == 2
         number[4][2] xTx; // normal matrix, augmented to give 4 entries per row
         number xx = 0.0; number xy = 0.0; number yy = 0.0;
         foreach (i; loop_init .. n) {
-            dx[i] = vtx.cloud_pos[i].x - x0;
-            dy[i] = vtx.cloud_pos[i].y - y0;
+            dx[i] = c.cloud_pos[i].x - x0;
+            dy[i] = c.cloud_pos[i].y - y0;
             xx += weights2[i]*dx[i]*dx[i];
             xy += weights2[i]*dx[i]*dy[i];
             yy += weights2[i]*dy[i]*dy[i];
@@ -1618,37 +1162,41 @@ void gradients_T_lsq_setup(SolidFVVertex vtx, int dimensions)
         //number[12] wx, wy, wz; 
         // Prepare final weights for later use in the reconstruction phase.
         foreach (i; loop_init .. n) {
-            vtx.wx[i] = xTx[0][2]*dx[i] + xTx[0][3]*dy[i];
-            vtx.wx[i] *= weights2[i];
-            vtx.wy[i] = xTx[1][2]*dx[i] + xTx[1][3]*dy[i];
-            vtx.wy[i] *= weights2[i];
-            vtx.wz[i] = 0.0;
+            c.wx[i] = xTx[0][2]*dx[i] + xTx[0][3]*dy[i];
+            c.wx[i] *= weights2[i];
+            c.wy[i] = xTx[1][2]*dx[i] + xTx[1][3]*dy[i];
+            c.wy[i] *= weights2[i];
+            c.wz[i] = 0.0;
         }
+        //writeln("wx: ", c.wx);
+        //writeln("wy: ", c.wy);
+        //writeln("wz: ", c.wz);
     }
 }
 
-@nogc
-void gradients_T_lsq(SolidFVVertex vtx, int dimensions)
+//@nogc
+void gradients_T_lsq(SolidFVCell c, int dimensions)
 {
-    size_t n = vtx.cloud_pos.length;
+    size_t n = c.cloud_pos.length;
     size_t loop_init;
-    loop_init = 0; // All points count.
+    loop_init = 1; // All points count.
  
     number T0;
     number[3] gradT;
-    T0 = 0.0;
-    foreach (i; loop_init .. n) { T0 += *(vtx.cloud_T[i]); }
-    T0 /= n;
+    T0 = *(c.cloud_T[0]);
     gradT[0] = 0.0; gradT[1] = 0.0; gradT[2] = 0.0;
+    //writeln(c.wx, ", ", c.wy);
     foreach (i; loop_init .. n) {
-        number dT = *(vtx.cloud_T[i]) - T0;
-        gradT[0] += vtx.wx[i] * dT;
-        gradT[1] += vtx.wy[i] * dT;
-        if (dimensions == 3) { gradT[2] += vtx.wz[i] * dT; }
+        //writeln(c.cloud_T[i], ", ", *(c.cloud_T[i]), ", ", c.cloud_pos[i]);
+        number dT = *(c.cloud_T[i]) - T0;
+        gradT[0] += c.wx[i] * dT;
+        gradT[1] += c.wy[i] * dT;
+        if (dimensions == 3) { gradT[2] += c.wz[i] * dT; }
     }
      
-    vtx.dTdx = gradT[0];
-    vtx.dTdy = gradT[1];
-    if (dimensions == 3) vtx.dTdz = gradT[2];
+    c.dTdx = gradT[0];
+    c.dTdy = gradT[1];
+    if (dimensions == 3) c.dTdz = gradT[2];
+    else { c.dTdz = 0.0; }
 }
 

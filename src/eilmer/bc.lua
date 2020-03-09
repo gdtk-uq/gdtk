@@ -1417,6 +1417,29 @@ function SolidBIE_ConnectionBoundary:tojson()
    return str
 end
 
+SolidGhostCellEffect = {
+   type = ""
+}
+function SolidGhostCellEffect:new(o)
+   o = o or {}
+   setmetatable(o, self)
+   self.__index = self
+   return o
+end
+
+SolidGCE_SolidGhostCellFullFaceCopy = SolidGhostCellEffect:new{otherBlock=-1,
+							       otherFace=nil,
+							       orientation=-1}
+SolidGCE_SolidGhostCellFullFaceCopy.type = "solid_full_face_copy"
+function SolidGCE_SolidGhostCellFullFaceCopy:tojson()
+   local str = string.format('          {"type" : "%s", ', self.type)
+   str = str .. string.format('"otherBlock" : %d, ', self.otherBlock)
+   str = str .. string.format('"otherFace" : "%s", ', self.otherFace)
+   str = str .. string.format('"orientation" : %d ', self.orientation)
+   str = str .. ' } '
+   return str
+end
+
 
 SolidBoundaryFluxEffect = {
    type = ""
@@ -1560,5 +1583,16 @@ function SolidConnectionBoundaryBC:new(o)
    o.preSpatialDerivActionAtBndryFaces = { SolidBIE_ConnectionBoundary:new{otherBlock=o.otherBlock,
 							       otherFace=o.otherFace,
 							       orientation=o.orientation} }
+   return o
+end
+
+SolidFullFaceCopyBoundaryBC = SolidBoundaryCondition:new()
+SolidFullFaceCopyBoundaryBC.type = "SolidFullFaceCopyBoundary"
+function SolidFullFaceCopyBoundaryBC:new(o)
+   o = SolidBoundaryCondition.new(self, o)
+   o.setsFluxDirectly = false
+   o.preSpatialDerivActionAtBndryCells = { SolidGCE_SolidGhostCellFullFaceCopy:new{otherBlock=o.otherBlock,
+                                                                                   otherFace=o.otherFace,
+                                                                                   orientation=o.orientation} }
    return o
 end

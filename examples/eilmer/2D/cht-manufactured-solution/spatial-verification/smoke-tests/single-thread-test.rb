@@ -30,9 +30,9 @@ class TestCHT_MMS_Spatial < Test::Unit::TestCase
     assert_equal(s.success?, true)
     lines = o.split("\n")
     names = ['L1', 'L2', 'Linf']
-    refs = {'L1'=>1.3669e-01,
-            'L2'=>1.5784e-01,
-            'Linf'=>2.8837e-01}
+    refs = {'L1'=>1.535024800974120751e-01,
+            'L2'=>2.105657110574111757e-01,
+            'Linf'=>8.343791649878085082e-01}
     values = {'L1'=>0.0, 'L2'=>0.0, 'Linf'=>0.0}
     lines.each do |txt|
       if txt.match('Linf')
@@ -55,9 +55,9 @@ class TestCHT_MMS_Spatial < Test::Unit::TestCase
     assert_equal(s.success?, true)
     lines = o.split("\n")
     names = ['L1', 'L2', 'Linf']
-    refs = {'L1'=>1.5606e-01,
-            'L2'=>1.9248e-01,
-            'Linf'=>4.2376e-01}
+    refs = {'L1'=>5.601069822072819449e-01,
+            'L2'=>7.483531389162372260e-01,
+            'Linf'=>1.768327973065368042e+00}
     values = {'L1'=>0.0, 'L2'=>0.0, 'Linf'=>0.0}
     foundState = 0
     lines.each do |txt|

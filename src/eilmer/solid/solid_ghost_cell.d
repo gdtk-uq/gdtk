@@ -35,16 +35,12 @@ SolidGhostCellEffect makeSolidGCEfromJson(JSONValue jsonData, int blk_id, int bo
     switch (sgceType) {
     case "solid_full_face_copy":
     case "solid_full_face_exchange_copy": // old name is also allowed
-        int otherBlock = getJSONint(jsonData, "other_block", -1);
-        string otherFaceName = getJSONstring(jsonData, "other_face", "none");
+        int otherBlock = getJSONint(jsonData, "otherBlock", -1);
+        string otherFaceName = getJSONstring(jsonData, "otherFace", "none");
         int neighbourOrientation = getJSONint(jsonData, "orientation", 0);
-        bool rvq = getJSONbool(jsonData, "reorient_vector_quantities", false);
-        double[] Rmatrix = getJSONdoublearray(jsonData, "Rmatrix",
-                                              [1.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,1.0]);
-        newSGCE = new SolidGhostCellFullFaceCopy(blk_id, boundary,
+        newSGCE = new SolidGCE_SolidGhostCellFullFaceCopy(blk_id, boundary,
                                            otherBlock, face_index(otherFaceName),
-                                           neighbourOrientation,
-                                           rvq, Rmatrix);
+                                           neighbourOrientation);
         break;
     default:
         string errMsg = format("ERROR: The SolidGhostCellEffect type: '%s' is unknown.", sgceType);

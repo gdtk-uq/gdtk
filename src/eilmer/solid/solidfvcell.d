@@ -42,7 +42,15 @@ public:
     // Connections
     SolidFVInterface[] iface;
     SolidFVVertex[] vtx;
-
+    // Cell-centered gradients
+    Vector3[] cloud_pos;
+    number*[] cloud_T;
+    number[12] wx, wy, wz;
+    number dTdx;
+    number dTdy;
+    number dTdz;
+    bool is_ghost = true;
+    
 private:
     LocalConfig myConfig;
 
@@ -55,6 +63,23 @@ public:
         dedt.length = myConfig.n_flow_time_levels;
     }
 
+    @nogc
+    void copy_values_from(SolidFVCell other) {
+        volume = other.volume;
+        areaxy = other.areaxy;
+        pos = other.pos;
+        sp = other.sp;
+        T = other.T;
+        foreach (i; 0..e.length) { e[i] = other.e[i] ; }
+        foreach (i; 0..dedt.length) { dedt[i] = other.dedt[i] ; }
+        de_prev = other.de_prev;
+        Q = other.Q;
+        dTdx = other.dTdx;
+        dTdy = other.dTdy;
+        dTdz = other.dTdz;
+        is_ghost = other.is_ghost;
+    }
+    
     void scanValuesFromString(string buffer)
     {
         auto items = split(buffer);
