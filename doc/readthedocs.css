@@ -179,7 +179,7 @@ p.lead { font-size: 1.21875em; line-height: 1.6; }
 div, dl, dt, dd, ul, ol, li, h1, h2, h3, #toctitle, .sidebarblock > .content > .title, h4, h5, h6, pre, form, p, blockquote, th, td { margin: 0; padding: 0; direction: ltr; }
 
 /* Default Link Styles */
-a { color: #ffffff; text-decoration: underline; line-height: inherit; }
+a { color: #465158; text-decoration: underline; line-height: inherit; }
 a:hover, a:focus { color: #ff0000; }
 a img { border: none; }
 
@@ -344,7 +344,7 @@ p a > code:hover { color: #373737; }
 #toc ul.sectlevel0 ul.sectlevel1 { margin: 0.5em 0; }
 #toc ul { font-family: ff-meta-web-pro-1, ff-meta-web-pro-2, Arial, "Helvetica Neue", sans-serif; list-style-type: none; color: #ffffff; }
 #toc li { line-height: 1.3334; margin-top: 0.3334em; }
-#toc a { text-decoration: none; }
+#toc a { color: #ffffff; text-decoration: none; }
 #toc a:active { text-decoration: underline; }
 
 #toctitle { color: #ffffff; font-size: 1.2em; }
