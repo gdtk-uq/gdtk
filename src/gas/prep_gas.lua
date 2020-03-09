@@ -326,6 +326,7 @@ function write2TAir(f, species, db, optsTable)
       end
       f:write("}\n")
       f:write(string.format("db['%s'].charge = %d\n", sp, db[sp].charge))
+      f:write(string.format("db['%s'].M = %.8e\n", sp, db[sp].M.value))
       writeCeaThermoCoeffs(f, sp, db, optsTable)
    end
 end
