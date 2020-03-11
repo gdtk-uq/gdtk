@@ -169,10 +169,13 @@ version(mpi_parallel) {
                 MPI_Abort(MPI_COMM_WORLD, 3);
             }
         }
+
         //
         // At this point, we know that this rank and its left-neighbour are alive,
         // so we wait for everyone to come to the same conclusion.
+
         MPI_Barrier(MPI_COMM_WORLD);
+
     } // end MPI_Sync_tasks()
 }
 
@@ -240,7 +243,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
         // Assign particular fluid blocks to this MPI task and keep a record
         // of the MPI rank for all blocks.
         int my_rank = GlobalConfig.mpi_rank_for_local_task;
-        GlobalConfig.mpi_rank_for_block.length = GlobalConfig.nFluidBlocks;
+        GlobalConfig.mpi_rank_for_block.length = GlobalConfig.nFluidBlocks + GlobalConfig.nSolidBlocks ;
         auto lines = readText("config/" ~ job_name ~ ".mpimap").splitLines();
         foreach (line; lines) {
             auto content = line.strip();
@@ -256,8 +259,10 @@ void init_simulation(int tindx, int nextLoadsIndx,
             }
             GlobalConfig.mpi_rank_for_block[blkid] = taskid;
             if (taskid == my_rank) {
-                auto blk = cast(FluidBlock) globalBlocks[blkid];
-                if (blk) { localFluidBlocks ~= blk; }
+                auto fblk = cast(FluidBlock) globalBlocks[blkid];
+                if (fblk) { localFluidBlocks ~= fblk; }
+                auto sblk = cast(SSolidBlock) globalBlocks[blkid];
+                if (sblk) { localSolidBlocks ~= sblk; }
             }
         }
         version(mpi_timeouts) {
@@ -272,14 +277,18 @@ void init_simulation(int tindx, int nextLoadsIndx,
     } else {
         // There is only one process and it deals with all blocks.
         foreach (blk; globalBlocks) {
-            auto myblk = cast(FluidBlock) blk;           
-            if (myblk) { localFluidBlocks ~= myblk; }
+            auto myfblk = cast(FluidBlock) blk;           
+            if (myfblk) { localFluidBlocks ~= myfblk; }
+            auto mysblk = cast(SSolidBlock) blk;           
+            if (mysblk) { localSolidBlocks ~= mysblk; }
         }
     }
     foreach (blk; localFluidBlocks) { GlobalConfig.localFluidBlockIds ~= blk.id; }
+    foreach (blk; localSolidBlocks) { GlobalConfig.localSolidBlockIds ~= blk.id; }
+
     //
     // Local blocks may be handled with thread-parallelism.
-    auto nBlocksInThreadParallel = max(localFluidBlocks.length, GlobalConfig.nSolidBlocks);
+    auto nBlocksInThreadParallel = localFluidBlocks.length + localSolidBlocks.length; // max(localFluidBlocks.length, GlobalConfig.nSolidBlocks);
     // There is no need to have more task threads than blocks local to the process.
     int extraThreadsInPool;
     version(mpi_parallel) {
@@ -456,12 +465,49 @@ void init_simulation(int tindx, int nextLoadsIndx,
         initGPUChem();
     }
     //
-    // For now there is only one process and it deals with all solid blocks.
-    foreach (blk; globalBlocks) {
-        auto sblk = cast(SSolidBlock) blk;           
-        if (sblk) { localSolidBlocks ~= sblk; }
+    /*
+    version(mpi_parallel) {
+        // Assign particular solid blocks to this MPI task and keep a record
+        // of the MPI rank for all blocks.
+        int my_rank = GlobalConfig.mpi_rank_for_local_task;
+        GlobalConfig.mpi_rank_for_block.length = GlobalConfig.nSolidBlocks;
+        auto lines = readText("config/" ~ job_name ~ ".mpimap").splitLines();
+        foreach (line; lines) {
+            auto content = line.strip();
+            if (content.startsWith("#")) continue; // Skip comment
+            auto tokens = content.split();
+            int blkid = to!int(tokens[0]);
+            int taskid = to!int(tokens[1]);
+            if (taskid >= GlobalConfig.mpi_size && GlobalConfig.is_master_task) {
+                writefln("Number of MPI tasks (%d) is insufficient for "~
+                         "taskid=%d that is associated with blockid=%d. Quitting.",
+                         GlobalConfig.mpi_size, taskid, blkid);
+                MPI_Abort(MPI_COMM_WORLD, 2);
+            }
+            GlobalConfig.mpi_rank_for_block[blkid] = taskid;
+            if (taskid == my_rank) {
+                auto blk = cast(SSolidBlock) globalBlocks[blkid];
+                if (blk) { localSolidBlocks ~= blk; }
+            }
+        }
+        version(mpi_timeouts) {
+            MPI_Sync_tasks();
+        } else {
+            MPI_Barrier(MPI_COMM_WORLD);
+        }
+        if (localSolidBlocks.length == 0) {
+            writefln("MPI-task with rank %d has no FluidBlocks. Quitting.", my_rank);
+            MPI_Abort(MPI_COMM_WORLD, 2);
+        }
+    } else {
+        // There is only one process and it deals with all blocks.
+        foreach (blk; globalBlocks) {
+            auto sblk = cast(SSolidBlock) blk;           
+            if (sblk) { localSolidBlocks ~= sblk; }
+        }
     }
-
+    */
+    // solid blocks assigned prior to this
     foreach (ref mySolidBlk; localSolidBlocks) {
         mySolidBlk.assembleArrays();
         mySolidBlk.bindFacesAndVerticesToCells();
@@ -471,7 +517,6 @@ void init_simulation(int tindx, int nextLoadsIndx,
         mySolidBlk.computePrimaryCellGeometricData();
         mySolidBlk.assignCellLocationsForDerivCalc();
     }
-    
     // setup communication across blocks
     foreach (myblk; localSolidBlocks) {
         foreach (bc; myblk.bc) {
@@ -584,7 +629,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
                 foreach (bfe; bc.postDiffFluxAction) {
                     auto mybfe = cast(BFE_EnergyFluxFromAdjacentSolid)bfe;
                     if (mybfe) {
-                        if (GlobalConfig.in_mpi_context) { throw new Error("[TODO] not available in MPI context."); }
+                        // REMOVED if (GlobalConfig.in_mpi_context) { throw new Error("[TODO] not available in MPI context."); }
                         bc.initGasSolidWorkingSpace(mybfe.neighbourSolidBlk, mybfe.neighbourSolidFace);
                     }
                 }
@@ -596,13 +641,14 @@ void init_simulation(int tindx, int nextLoadsIndx,
                 foreach (bfe; bc.postDiffFluxAction) {
                     auto mybfe = cast(BFE_EnergyFluxFromAdjacentSolid)bfe;
                     if (mybfe) {
-                        if (GlobalConfig.in_mpi_context) { throw new Error("[TODO] not available in MPI context."); }
+                        // REMOVED if (GlobalConfig.in_mpi_context) { throw new Error("[TODO] not available in MPI context."); }
                         bc.initGasSolidWorkingSpace(mybfe.neighbourSolidBlk, mybfe.neighbourSolidFace);
                     }
                 }
             }
         }
     }
+
     // For the MLP limiter (on unstructured grids only), we need access to the
     // gradients stored in the cloud of cells surrounding a vertex.
     if ((GlobalConfig.interpolation_order > 1) &&
@@ -612,6 +658,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
             if (ublock) { ublock.build_cloud_of_cell_references_at_each_vertex(); }
         }
     }
+
     //
     // We can apply a special initialisation to the flow field, if requested.
     // This will take viscous boundary conditions and diffuse them into the
@@ -623,6 +670,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
             diffuseWallBCsIntoBlock(myblk, GlobalConfig.nInitPasses, GlobalConfig.initTWall);
         }
     }
+
     //
     // We conditionally sort the local blocks, based on numbers of cells,
     // in an attempt to balance the load for shared-memory parallel runs.
@@ -644,6 +692,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
             localFluidBlocksBySize ~= localFluidBlocks[blkpair[0]]; // [0] holds the block id
         }
     }
+        
     //
     // Flags to indicate that the saved output is fresh.
     // On startup or restart, it is assumed to be so.
@@ -673,6 +722,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
             push_array_to_Lua(L, GlobalConfig.userPad, "userPad");
         }
     }
+
     if (GlobalConfig.user_pad_length > 0) {
         // At this point, userPad has been initialized with values
         // from the job.config file, even if there are no supervisory functions.
@@ -689,15 +739,19 @@ void init_simulation(int tindx, int nextLoadsIndx,
         JSONValue jsonData = parseJSON!string(content);
         initRunTimeLoads(jsonData["run_time_loads"]);
     }
+        
     //
     // We want to get the corner-coordinates for each block copied
     // in case the Lua functions try to use them.
     synchronize_corner_coords_for_all_blocks();
     //
+
+
     // Keep our memory foot-print small.
     GC.collect();
     GC.minimize();
     //
+
     version(mpi_parallel) {
         version(mpi_timeouts) {
             MPI_Sync_tasks();
@@ -705,6 +759,8 @@ void init_simulation(int tindx, int nextLoadsIndx,
             MPI_Barrier(MPI_COMM_WORLD);
         }
     }
+
+        
     if (GlobalConfig.verbosity_level > 0) {
         auto myStats = GC.stats();
         auto heapUsed = to!double(myStats.usedSize)/(2^^20);
@@ -713,6 +769,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
                  GlobalConfig.mpi_rank_for_local_task, heapUsed, heapFree, heapUsed+heapFree);
         stdout.flush();
     }
+
     version(mpi_parallel) {
         version(mpi_timeouts) {
             MPI_Sync_tasks();
@@ -726,6 +783,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
         writefln("Done init_simulation() at wall-clock(WC)= %.1f sec", wall_clock_elapsed);
         stdout.flush();
     }
+
     return;
 } // end init_simulation()
 
@@ -2155,10 +2213,6 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
     //
     if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.tight) {
 	// Next do solid domain update IMMEDIATELY after at same flow time level
-	if (GlobalConfig.in_mpi_context && localSolidBlocks.length > 0) {
-	    throw new Error("oops, should not be doing coupling with solid domains in MPI.");
-	    // [TODO] 2018-01-20 PJ should do something to lift this restriction.
-	}
 	foreach (sblk; parallel(localSolidBlocks, 1)) {
 	    if (!sblk.active) continue;
 	    sblk.averageTemperatures();
@@ -2167,6 +2221,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
         }
         exchange_ghost_cell_solid_boundary_data();
         foreach (sblk; parallel(localSolidBlocks, 1)) {
+            if (!sblk.active) continue;
             sblk.computeFluxes();
 	}
 	if (GlobalConfig.apply_bcs_in_parallel) {
@@ -2190,7 +2245,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 	    } // end foreach scell
 	} // end foreach sblk
     } // end if tight solid domain coupling.
-
+    
     if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1) {
         SimState.time = t0 + (2.0/(S*S+S))*SimState.dt_global; // RKL1
     } else {
@@ -2381,10 +2436,6 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 	//
 	if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.tight) {
 	    // Next do solid domain update IMMEDIATELY after at same flow time level
-	    if (GlobalConfig.in_mpi_context && localSolidBlocks.length > 0) {
-		throw new Error("oops, should not be doing coupling with solid domains in MPI.");
-		// [TODO] 2018-01-20 PJ should do something to lift this restriction.
-	    }
 	    foreach (sblk; parallel(localSolidBlocks, 1)) {
 		if (!sblk.active) continue;
                 sblk.averageTemperatures();
@@ -2393,6 +2444,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
             }
             exchange_ghost_cell_solid_boundary_data();
             foreach (sblk; parallel(localSolidBlocks, 1)) {
+                if (!sblk.active) continue;
                 sblk.computeFluxes();
 	    }
 	    if (GlobalConfig.apply_bcs_in_parallel) {
@@ -2645,10 +2697,6 @@ void gasdynamic_explicit_increment_with_fixed_grid()
     //
     if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.tight) {
         // Next do solid domain update IMMEDIATELY after at same flow time level
-        if (GlobalConfig.in_mpi_context && localSolidBlocks.length > 0) {
-            throw new Error("oops, should not be doing coupling with solid domains in MPI.");
-            // [TODO] 2018-01-20 PJ should do something to lift this restriction.
-        }
         foreach (sblk; parallel(localSolidBlocks, 1)) {
             if (!sblk.active) continue;
 	    sblk.averageTemperatures();
@@ -2657,6 +2705,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         }
         exchange_ghost_cell_solid_boundary_data();
         foreach (sblk; parallel(localSolidBlocks, 1)) {
+            if (!sblk.active) continue;
             sblk.computeFluxes();
         }
         if (GlobalConfig.apply_bcs_in_parallel) {
@@ -2862,6 +2911,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             }
             exchange_ghost_cell_solid_boundary_data();
             foreach (sblk; parallel(localSolidBlocks, 1)) {
+                if (!sblk.active) continue;
                 sblk.computeFluxes();
             }
             if (GlobalConfig.apply_bcs_in_parallel) {
@@ -3068,6 +3118,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             }
             exchange_ghost_cell_solid_boundary_data();
             foreach (sblk; parallel(localSolidBlocks, 1)) {
+                if (!sblk.active) continue;
                 sblk.computeFluxes();
             }
             if (GlobalConfig.apply_bcs_in_parallel) {
@@ -3315,6 +3366,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
     }
     exchange_ghost_cell_solid_boundary_data();
     foreach (sblk; parallel(localSolidBlocks, 1)) {
+        if (!sblk.active) continue;
         sblk.computeFluxes();
         sblk.applyPostFluxAction(SimState.time, ftl);
         foreach (scell; sblk.activeCells) {
@@ -3513,6 +3565,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
         }
         exchange_ghost_cell_solid_boundary_data();
         foreach (sblk; parallel(localSolidBlocks, 1)) {
+            if (!sblk.active) continue;
             sblk.computeFluxes();
             sblk.applyPostFluxAction(SimState.time, ftl);
             foreach (scell; sblk.activeCells) {

@@ -43,7 +43,7 @@ public:
     size_t[] hicell, hjcell, hkcell; // locations of sample cells for history record
     SolidBoundaryCondition[] bc;
     SolidFVCell[] cells;
-    
+
 private:
     StructuredGrid grid; // for reading and writing
 
@@ -51,7 +51,7 @@ private:
     size_t _njdim;
     size_t _nkdim;
 
-    SolidFVCell[] _ctr;
+    SolidFVCell[] _ctr;    
     SolidFVInterface[] _ifi;
     SolidFVInterface[] _ifj;
     SolidFVInterface[] _ifk;
@@ -802,7 +802,7 @@ public:
         }
     }
 
-    //@nogc
+    @nogc
     void averageCellDerivatives(SolidFVInterface f, SolidFVCell cL0, SolidFVCell cR0,ref number dTdx, ref number dTdy, ref number dTdz)
     {
         number qL; number qR;
@@ -849,8 +849,6 @@ public:
             dTdy = 0.5*(cL0.dTdy+cR0.dTdy) - jump*(ny/ndotehat);
             dTdz = 0.5*(cL0.dTdz+cR0.dTdz) - jump*(nz/ndotehat);
         }
-        //writeln(dTdx, ", ", cL0.T, ", ", cR0.T, ", ", cL0.dTdx, ", ", cR0.dTdx, ", ", cL0.is_ghost, ", ", cR0.is_ghost);
-        //writeln(cL0.pos, ", ", f.pos, ", ", cR0.pos);
     } // end averageCellSpatialDerivatives()
 
     void averageTemperatures() {
@@ -947,7 +945,6 @@ public:
                         qy = -IFace.sp.k21 * dTdx - IFace.sp.k22 * dTdy;  
                     }
                     IFace.flux = qx * IFace.n.x + qy * IFace.n.y;
-                    //writeln(IFace.flux, ", ", dTdx);
                 }
             }
             // North-facing interfaces
@@ -970,7 +967,6 @@ public:
                         qy = -IFace.sp.k21 * dTdx - IFace.sp.k22 * dTdy;  
                     }
                     IFace.flux = qx * IFace.n.x + qy * IFace.n.y;
-                    //writeln(IFace.flux, ", ", dTdx);
                 }
             }
         } else { // 3D
@@ -997,7 +993,6 @@ public:
                         //qy = -IFace.sp.k21 * dTdx - IFace.sp.k22 * dTdy;
                     }
                     IFace.flux = qx * IFace.n.x + qy * IFace.n.y + qz * IFace.n.z;
-                    //writeln(IFace.flux, ", ", dTdx);
                     }  // i loop
                 } // j loop
             } // k loop
@@ -1025,7 +1020,6 @@ public:
                             //qy = -IFace.sp.k21 * dTdx - IFace.sp.k22 * dTdy;
                         }
                         IFace.flux = qx * IFace.n.x + qy * IFace.n.y + qz * IFace.n.z;
-                        //writeln(IFace.flux, ", ", dTdx);
                     } // j loop
                 } // i loop
             } // k loop
@@ -1052,7 +1046,6 @@ public:
                             //qy = -IFace.sp.k21 * dTdx - IFace.sp.k22 * dTdy;
                         }
                         IFace.flux = qx * IFace.n.x + qy * IFace.n.y + qz * IFace.n.z;
-                        //writeln(IFace.flux, ", ", dTdx);
                     } // j loop
                 } // i loop
             } // k loop
@@ -1065,7 +1058,7 @@ public:
     }
 }
 
-//@nogc
+@nogc
 void gradients_T_lsq_setup(SolidFVCell c, int dimensions)
 {
     size_t n = c.cloud_pos.length;
@@ -1168,13 +1161,10 @@ void gradients_T_lsq_setup(SolidFVCell c, int dimensions)
             c.wy[i] *= weights2[i];
             c.wz[i] = 0.0;
         }
-        //writeln("wx: ", c.wx);
-        //writeln("wy: ", c.wy);
-        //writeln("wz: ", c.wz);
     }
 }
 
-//@nogc
+@nogc
 void gradients_T_lsq(SolidFVCell c, int dimensions)
 {
     size_t n = c.cloud_pos.length;
@@ -1185,9 +1175,7 @@ void gradients_T_lsq(SolidFVCell c, int dimensions)
     number[3] gradT;
     T0 = *(c.cloud_T[0]);
     gradT[0] = 0.0; gradT[1] = 0.0; gradT[2] = 0.0;
-    //writeln(c.wx, ", ", c.wy);
     foreach (i; loop_init .. n) {
-        //writeln(c.cloud_T[i], ", ", *(c.cloud_T[i]), ", ", c.cloud_pos[i]);
         number dT = *(c.cloud_T[i]) - T0;
         gradT[0] += c.wx[i] * dT;
         gradT[1] += c.wy[i] * dT;

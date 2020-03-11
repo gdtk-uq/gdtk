@@ -375,9 +375,11 @@ public:
 
     void initGasSolidWorkingSpace(int solidBlkId, int solidFaceId)
     {
+        //writeln(GlobalConfig.mpi_rank_for_local_task, ", ", solidBlkId);
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         size_t i, j, k;
+ 
         switch (which_boundary) {
         case Face.north:
             j = blk.jmax;
@@ -390,9 +392,16 @@ public:
         default:
             throw new Error("initGasSolidWorkingSpace() only implemented for NORTH gas face.");
         }
-        auto solidBlk = cast(SSolidBlock) globalBlocks[solidBlkId];
-        assert(solidBlk !is null, "Oops, this should be a SSolidBlock object.");
 
+        //auto solidBlk = cast(SSolidBlock) globalBlocks[solidBlkId];
+        //assert(solidBlk !is null, "Oops, this should be a SSolidBlock object.");
+        SSolidBlock solidBlk;
+        foreach (sblk; localSolidBlocks) {
+            if (sblk.id != solidBlkId) { continue; }
+            solidBlk = sblk;
+            break;
+        }
+        
         switch (solidFaceId) {
         case Face.south:
             j = solidBlk.jmin;
@@ -407,5 +416,4 @@ public:
             throw new Error("initGasSolidWorkingSpace() only implemented for SOUTH solid face.");
         }
     }
-
 } // end class BoundaryCondition

@@ -94,14 +94,10 @@ public:
         MPI_Request incoming_cell_ids_request;
         MPI_Status incoming_cell_ids_status;
         int[] outgoing_cell_ids_buf, incoming_cell_ids_buf;
-        int outgoing_geometry_tag, incoming_geometry_tag;
-        MPI_Request incoming_geometry_request;
-        MPI_Status incoming_geometry_status;
-        double[] outgoing_geometry_buf, incoming_geometry_buf;
-        int outgoing_flowstate_tag, incoming_flowstate_tag;
-        MPI_Request incoming_flowstate_request;
-        MPI_Status incoming_flowstate_status;
-        double[] outgoing_flowstate_buf, incoming_flowstate_buf;
+        int outgoing_solidstate_tag, incoming_solidstate_tag;
+        MPI_Request incoming_solidstate_request;
+        MPI_Status incoming_solidstate_status;
+        double[] outgoing_solidstate_buf, incoming_solidstate_buf;
     }
 
     this(int id, int boundary,
@@ -846,7 +842,7 @@ public:
                 //
                 // Post non-blocking receive for data that we expect to receive later
                 // from the other_blk MPI process.
-                incoming_cell_ids_tag = make_mpi_tag(other_blk.id, other_face, 0);
+                incoming_cell_ids_tag = make_mpi_tag(other_blk.id, other_face, 5);
                 MPI_Irecv(incoming_cell_ids_buf.ptr, to!int(ne), MPI_INT, other_blk_rank,
                           incoming_cell_ids_tag, MPI_COMM_WORLD, &incoming_cell_ids_request);
             } else {
@@ -872,7 +868,7 @@ public:
                 size_t ne = ghost_cells.length;
                 if (outgoing_cell_ids_buf.length < ne) { outgoing_cell_ids_buf.length = ne; }
                 assert(ne == mapped_cell_ids.length, "oops, wrong length");
-                outgoing_cell_ids_tag = make_mpi_tag(blk.id, which_boundary, 0);
+                outgoing_cell_ids_tag = make_mpi_tag(blk.id, which_boundary, 5);
                 foreach (i; 0 .. ne) { outgoing_cell_ids_buf[i] = to!int(mapped_cell_ids[i]); }
                 version(mpi_timeouts) {
                     MPI_Request send_request;
@@ -950,17 +946,17 @@ public:
             if (find(GlobalConfig.localSolidBlockIds, other_blk.id).empty) {
                 // The other block is in another MPI process, go fetch the geometry data via messages.
                 //
-                // Prepare to exchange geometry data for the boundary cells.
-                // To match .copy_values_from(mapped_cells[i], CopyDataOption.grid) as defined in fvcell.d.
+                // Prepare to exchange solid data for the boundary cells.
+                // To match .copy_values_from(mapped_cells[i]) as defined in solidfvcell.d.
                 //
-                size_t ne = ghost_cells.length * (this_blk.myConfig.n_grid_time_levels * 5 + 4);
-                if (incoming_geometry_buf.length < ne) { incoming_geometry_buf.length = ne; }
+                size_t ne = ghost_cells.length * (this_blk.myConfig.n_flow_time_levels * 2 + 24);
+                if (incoming_solidstate_buf.length < ne) { incoming_solidstate_buf.length = ne; }
                 //
                 // Post non-blocking receive for geometry data that we expect to receive later
                 // from the other_blk MPI process.
-                incoming_geometry_tag = make_mpi_tag(other_blk.id, other_face, 1);
-                MPI_Irecv(incoming_geometry_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
-                          incoming_geometry_tag, MPI_COMM_WORLD, &incoming_geometry_request);
+                incoming_solidstate_tag = make_mpi_tag(other_blk.id, other_face, 5);
+                MPI_Irecv(incoming_solidstate_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
+                          incoming_solidstate_tag, MPI_COMM_WORLD, &incoming_solidstate_request);
             } else {
                 // The source block happens to be in this MPI process so
                 // we know that we can just access the cell data directly
@@ -983,22 +979,51 @@ public:
                 // Blocking send of this block's geometry data
                 // to the corresponding non-blocking receive that was posted
                 // in the other MPI process.
-                outgoing_geometry_tag = make_mpi_tag(blk.id, which_boundary, 1);
-                size_t ne = ghost_cells.length * (this_blk.myConfig.n_grid_time_levels * 5 + 4);
-                if (outgoing_geometry_buf.length < ne) { outgoing_geometry_buf.length = ne; }
+                outgoing_solidstate_tag = make_mpi_tag(blk.id, which_boundary, 5);
+                size_t ne = ghost_cells.length * (this_blk.myConfig.n_grid_time_levels * 2 + 24);
+                if (outgoing_solidstate_buf.length < ne) { outgoing_solidstate_buf.length = ne; }
                 size_t ii = 0;
                 foreach (c; outgoing_mapped_cells) {
-                    // TODO: fill out this.
+                    foreach (j; 0 .. this_blk.myConfig.n_grid_time_levels) {
+                        outgoing_solidstate_buf[ii++] = c.e[j];
+                        outgoing_solidstate_buf[ii++] = c.dedt[j];
+                    }
+                    outgoing_solidstate_buf[ii++] = c.volume;
+                    outgoing_solidstate_buf[ii++] = c.areaxy;
+                    outgoing_solidstate_buf[ii++] = c.pos.x;
+                    outgoing_solidstate_buf[ii++] = c.pos.y;
+                    outgoing_solidstate_buf[ii++] = c.pos.z;
+                    outgoing_solidstate_buf[ii++] = c.sp.rho;
+                    outgoing_solidstate_buf[ii++] = c.sp.k;
+                    outgoing_solidstate_buf[ii++] = c.sp.Cp;
+                    outgoing_solidstate_buf[ii++] = c.sp.k11;
+                    outgoing_solidstate_buf[ii++] = c.sp.k12;
+                    outgoing_solidstate_buf[ii++] = c.sp.k13;
+                    outgoing_solidstate_buf[ii++] = c.sp.k21;
+                    outgoing_solidstate_buf[ii++] = c.sp.k22;
+                    outgoing_solidstate_buf[ii++] = c.sp.k23;
+                    outgoing_solidstate_buf[ii++] = c.sp.k31;
+                    outgoing_solidstate_buf[ii++] = c.sp.k32;
+                    outgoing_solidstate_buf[ii++] = c.sp.k33;
+                    outgoing_solidstate_buf[ii++] = c.T;
+                    outgoing_solidstate_buf[ii++] = c.de_prev;
+                    outgoing_solidstate_buf[ii++] = c.Q;
+                    outgoing_solidstate_buf[ii++] = c.dTdx;
+                    outgoing_solidstate_buf[ii++] = c.dTdy;
+                    outgoing_solidstate_buf[ii++] = c.dTdz;
+                    if (c.is_ghost) { outgoing_solidstate_buf[ii++] = 1.0; }
+                    else { outgoing_solidstate_buf[ii++] = -1.0; }
+
                 }
                 version(mpi_timeouts) {
                     MPI_Request send_request;
-                    MPI_Isend(outgoing_geometry_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
-                              outgoing_geometry_tag, MPI_COMM_WORLD, &send_request);
+                    MPI_Isend(outgoing_solidstate_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
+                              outgoing_solidstate_tag, MPI_COMM_WORLD, &send_request);
                     MPI_Status send_status;
                     MPI_Wait_a_while(&send_request, &send_status);
                 } else {
-                    MPI_Send(outgoing_geometry_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
-                             outgoing_geometry_tag, MPI_COMM_WORLD);
+                    MPI_Send(outgoing_solidstate_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
+                             outgoing_solidstate_tag, MPI_COMM_WORLD);
                 }
             } else {
                 // The other block happens to be in this MPI process so
@@ -1022,19 +1047,47 @@ public:
                 // Wait for non-blocking receive to complete.
                 // Once complete, copy the data back into the local context.
                 version(mpi_timeouts) {
-                    MPI_Wait_a_while(&incoming_geometry_request, &incoming_geometry_status);
+                    MPI_Wait_a_while(&incoming_solidstate_request, &incoming_solidstate_status);
                 } else {
-                    MPI_Wait(&incoming_geometry_request, &incoming_geometry_status);
+                    MPI_Wait(&incoming_solidstate_request, &incoming_solidstate_status);
                 }
                 size_t ii = 0;
                 foreach (c; ghost_cells) {
-                    // TODO: fill out this.
+                    foreach (j; 0 .. this_blk.myConfig.n_grid_time_levels) {
+                        c.e[j] = incoming_solidstate_buf[ii++];
+                        c.dedt[j] = incoming_solidstate_buf[ii++];
+                    }
+                    c.volume = incoming_solidstate_buf[ii++];
+                    c.areaxy = incoming_solidstate_buf[ii++];
+                    c.pos.refx = incoming_solidstate_buf[ii++];
+                    c.pos.refy = incoming_solidstate_buf[ii++];
+                    c.pos.refz = incoming_solidstate_buf[ii++];
+                    c.sp.rho = incoming_solidstate_buf[ii++];
+                    c.sp.k = incoming_solidstate_buf[ii++];
+                    c.sp.Cp = incoming_solidstate_buf[ii++];
+                    c.sp.k11 = incoming_solidstate_buf[ii++];
+                    c.sp.k12 = incoming_solidstate_buf[ii++];
+                    c.sp.k13 = incoming_solidstate_buf[ii++];
+                    c.sp.k21 = incoming_solidstate_buf[ii++];
+                    c.sp.k22 = incoming_solidstate_buf[ii++];
+                    c.sp.k23 = incoming_solidstate_buf[ii++];
+                    c.sp.k31 = incoming_solidstate_buf[ii++];
+                    c.sp.k32 = incoming_solidstate_buf[ii++];
+                    c.sp.k33 = incoming_solidstate_buf[ii++];
+                    c.T = incoming_solidstate_buf[ii++];
+                    c.de_prev = incoming_solidstate_buf[ii++];
+                    c.Q = incoming_solidstate_buf[ii++];
+                    c.dTdx = incoming_solidstate_buf[ii++];
+                    c.dTdy = incoming_solidstate_buf[ii++];
+                    c.dTdz = incoming_solidstate_buf[ii++];
+                    if ( incoming_solidstate_buf[ii++] > 0.0)  { c.is_ghost = true; }
+                    else { c.is_ghost = false; }
                 }
             } else {
                 // The other block happens to be in this MPI process so
                 // we know that we can just access the cell data directly.
                 foreach (i; 0 .. ghost_cells.length) {
-                    // TODO: ghost_cells[i].copy_values_from(mapped_cells[i]);
+                    ghost_cells[i].copy_values_from(mapped_cells[i]);
                 }
             }
         } else { // not mpi_parallel

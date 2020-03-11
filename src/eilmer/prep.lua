@@ -1092,6 +1092,7 @@ function SolidBlock:new(o)
    else
       o.nkc = 1
    end
+   o.ncells = o.nic * o.njc * o.nkc
    -- The following table p for the corner locations,
    -- is to be used later for testing for block connections.
    o.p = {}
@@ -1474,7 +1475,7 @@ function mpiDistributeBlocks(args)
       error("Invalid name for item supplied to mpiDistributeBlocks.", 2)
    end
    --
-   local nBlocks = #fluidBlocks
+   local nBlocks = #fluidBlocks + #solidBlocks
    -- If nTasks is not given, assume that we want one per block.
    local nTasks = (args and args.ntasks) or nBlocks
    nTasks = math.min(nTasks, nBlocks)
@@ -1508,7 +1509,12 @@ function mpiDistributeBlocks(args)
       local blksNcells = {}
       local totalCells = 0
       for i=1,nBlocks do
-         local blk = fluidBlocks[i]
+         local blk = null
+         if (i <= #fluidBlocks) then
+            blk = fluidBlocks[i]
+         else
+            blk = solidBlocks[i - #fluidBlocks]
+         end
          blksNcells[i] = {i, blk.ncells}
          totalCells = totalCells + blk.ncells
       end
@@ -1521,7 +1527,11 @@ function mpiDistributeBlocks(args)
       for ib=1,nBlocks do
          mpirank = mpiTaskList[ib]
          if mpirank >= 0 then
-            taskLoads[mpirank+1] = taskLoads[mpirank+1] + fluidBlocks[ib].ncells
+            if (ib <= #fluidBlocks) then
+               taskLoads[mpirank+1] = taskLoads[mpirank+1] + fluidBlocks[ib].ncells
+            else
+               taskLoads[mpirank+1] = taskLoads[mpirank+1] + solidBlocks[ib - #fluidBlocks].ncells
+            end
          end
       end
       -- Distribute remaining blocks.
@@ -2117,6 +2127,9 @@ function write_mpimap_file(fileName)
    f:write("# indx mpiTask\n")
    for i = 1, #(fluidBlocks) do
       f:write(string.format("%4d %4d\n", fluidBlocks[i].id, mpiTasks[i]))
+   end
+   for i = 1, #(solidBlocks) do
+      f:write(string.format("%4d %4d\n", solidBlocks[i].id, mpiTasks[i + #fluidBlocks]))
    end
    f:close()
 end
