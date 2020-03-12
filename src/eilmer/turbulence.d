@@ -25,10 +25,10 @@ Abstract base class defines functions all turbulence models must have:
  - Consider adding an immutable int MAX_TURBULENT_EQUATIONS to control compile time sizing.
 
 */
-class TurbulenceModelObject{
+class TurbulenceModel{
     this() {} // For some reason having this(); instead of this() {} didn't work??? 
     this (const JSONValue config){}
-    this (TurbulenceModelObject other){}
+    this (TurbulenceModel other){}
 
     // Property functions to be overridden.
     @nogc abstract string modelName() const;
@@ -36,7 +36,7 @@ class TurbulenceModelObject{
     @nogc abstract bool isTurbulent() const;
 
     // Methods to be overridden.
-    abstract TurbulenceModelObject dup();
+    abstract TurbulenceModel dup();
     @nogc abstract void source_terms(const FlowState fs,const FlowGradients grad, const number dwall, ref number[2] source) const;
     @nogc abstract number turbulent_viscosity(const FlowState fs, const FlowGradients grad, const number dwall) const;
     @nogc abstract number turbulent_conductivity(const FlowState fs, GasModel gm) const;
@@ -62,14 +62,14 @@ class TurbulenceModelObject{
     return to!string(repr);
     }
 
-} // end class TurbulenceModelObject
+} // end class TurbulenceModel
 
 /*
 Object representing turbulence model in laminar flow.
  Notes: This should give sensible answers such as mu_t=0.0 if asked
 
 */
-class noTurbulenceModel : TurbulenceModelObject {
+class noTurbulenceModel : TurbulenceModel {
     this (){}
     this (const JSONValue config){}    // Used in GlobalConfig constructor 
     this (noTurbulenceModel other){}   // Used in dup, in localconfig constructor
@@ -164,7 +164,7 @@ Object representating the wilcox k-omega turbulence model.
     Int. J. Numer. Meth. Fluids (2011)
 
 */
-class kwTurbulenceModel : TurbulenceModelObject {
+class kwTurbulenceModel : TurbulenceModel {
     this (){
         number Pr_t            = GlobalConfig.turbulence_prandtl_number;
         bool axisymmetric      = GlobalConfig.axisymmetric;
@@ -507,7 +507,7 @@ private:
 }
 
 
-TurbulenceModelObject init_turbulence_model(const string turbulence_model_name, const JSONValue config)
+TurbulenceModel init_turbulence_model(const string turbulence_model_name, const JSONValue config)
     /*
     Interface for generating polymorphic turbulence models, similar to ../gas/init_gas_model.d
        - JSONValue version
@@ -515,7 +515,7 @@ TurbulenceModelObject init_turbulence_model(const string turbulence_model_name, 
     @author: Nick Gibbons
     */
 {
-    TurbulenceModelObject turbulence_model;
+    TurbulenceModel turbulence_model;
     switch (turbulence_model_name) {
     case "none":
         turbulence_model = new noTurbulenceModel(config);
@@ -532,7 +532,7 @@ version(komega){
     return turbulence_model;
 } // end init_turbulence_model()
 
-TurbulenceModelObject init_turbulence_model(const string turbulence_model_name)
+TurbulenceModel init_turbulence_model(const string turbulence_model_name)
     /*
     Interface for generating polymorphic turbulence models, similar to ../gas/init_gas_model.d
        - Default version. Be very careful with this, it just uses GlobalConfig values, whether
@@ -541,7 +541,7 @@ TurbulenceModelObject init_turbulence_model(const string turbulence_model_name)
     @author: Nick Gibbons
     */
 {
-    TurbulenceModelObject turbulence_model;
+    TurbulenceModel turbulence_model;
     switch (turbulence_model_name) {
     case "none":
         turbulence_model = new noTurbulenceModel();

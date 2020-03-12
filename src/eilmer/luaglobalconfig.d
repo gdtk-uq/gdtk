@@ -183,7 +183,6 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_bool_field("separate_update_for_k_omega_source", "separate_update_for_k_omega_source"));
     //
     mixin(get_string_field("turbulence_model", "turbulence_model_name"));
-    mixin(get_enum_field("turbulence_model", "turbulence_model", "turbulence_model_from_name"));
     mixin(get_double_field("turbulence_prandtl_number", "turbulence_prandtl_number"));
     mixin(get_double_field("turbulence_schmidt_number", "turbulence_schmidt_number"));
     mixin(get_double_field("max_mu_t_factor", "max_mu_t_factor"));

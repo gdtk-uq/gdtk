@@ -2328,7 +2328,7 @@ void scan_cell_data_from_fixed_order_string
 } // end scan_values_from_fixed_order_string()
 
 void scan_cell_data_from_variable_order_string
-(string buffer, string[] varNameList, GasModel gmodel, const ref TurbulenceModelObject tm,
+(string buffer, string[] varNameList, GasModel gmodel, const ref TurbulenceModel tm,
  ref Vector3 pos, ref number volume, ref FlowState fs,
  ref number Q_rad_org, ref number f_rad_org, ref number Q_rE_rad,
  bool with_local_time_stepping, ref double dt_local, ref double dt_chem, ref double dt_therm,
