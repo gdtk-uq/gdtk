@@ -669,9 +669,9 @@ function WallBC_NoSlip_FixedT1:new(o)
    o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new(),
 					   FixedT:new{Twall=o.Twall},
 					   UpdateThermoTransCoeffs:new() }
-   if config.turbulence_model == "k_omega" then
+   if config.turbulence_model ~= "none" then
       o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallKOmega:new()
-      if o.wall_function then
+      if o.wall_function and o.turbulence_model == "k_omega" then
 	 -- Only makes sense to add a wall function if the k-omega model is active.
 	 o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = 
 	    WallFunctionInterfaceEffect:new{thermal_condition='FIXED_T'}
@@ -752,9 +752,9 @@ function WallBC_NoSlip_Adiabatic0:new(o)
    o.is_wall_with_viscous_effects = true
    o.preReconAction = { InternalCopyThenReflect:new() }
    o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new() }
-   if config.turbulence_model == "k_omega" then
+   if config.turbulence_model ~= "none" then
       o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallKOmega:new()
-      if o.wall_function then
+      if o.wall_function and o.turbulence_model == "k_omega" then
 	 -- Only makes sense to add a wall function if the k-omega model is active.
 	 o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = 
 	    WallFunctionInterfaceEffect:new{thermal_condition='ADIABATIC'}
@@ -790,9 +790,9 @@ function WallBC_NoSlip_Adiabatic1:new(o)
    o.is_wall_with_viscous_effects = true
    o.preReconAction = {}
    o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new() }
-   if config.turbulence_model == "k_omega" then
+   if config.turbulence_model ~= "none" then
       o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallKOmega:new()
-      if o.wall_function then
+      if o.wall_function and o.turbulence_model == "k_omega" then
 	 -- Only makes sense to add a wall function if the k-omega model is active.
 	 o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = 
 	    WallFunctionInterfaceEffect:new{thermal_condition='ADIABATIC'}
@@ -840,7 +840,7 @@ function WallBC_TranslatingSurface_FixedT:new(o)
 					   TranslatingSurface:new{v_trans=o.v_trans},
 					   FixedT:new{Twall=o.Twall},
 					   UpdateThermoTransCoeffs:new() }
-   if config.turbulence_model == "k_omega" then
+   if config.turbulence_model ~= "none" then
       o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallKOmega:new()
    end
    o.is_configured = true
@@ -874,7 +874,7 @@ function WallBC_TranslatingSurface_Adiabatic:new(o)
    o.v_trans.z = o.v_trans.z or 0.0
    o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(),
 					   TranslatingSurface:new{v_trans=o.v_trans} }
-   if config.turbulence_model == "k_omega" then
+   if config.turbulence_model ~= "none" then
       o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallKOmega:new()
    end
    o.is_configured = true
@@ -920,7 +920,7 @@ function WallBC_RotatingSurface_FixedT:new(o)
 					   RotatingSurface:new{r_omega=o.r_omega, centre=o.centre},
 					   FixedT:new{Twall=o.Twall},
 					   UpdateThermoTransCoeffs:new() }
-   if config.turbulence_model == "k_omega" then
+   if config.turbulence_model ~= "none" then
       o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallKOmega:new()
    end
    o.is_configured = true
@@ -964,7 +964,7 @@ function WallBC_RotatingSurface_Adiabatic:new(o)
    o.centre.z = o.centre.z or 0.0
    o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(),
 					   RotatingSurface:new{r_omega=o.r_omega, centre=o.centre} }
-   if config.turbulence_model == "k_omega" then
+   if config.turbulence_model ~= "none" then
       o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallKOmega:new()
    end
    o.is_configured = true
@@ -1358,7 +1358,7 @@ function WallBC_AdjacentToSolid:new(o)
                                                                                 otherFace=o.otherFace,
                                                                                 orientation=o.orientation},
                                            UpdateThermoTransCoeffs:new()}
-   if config.turbulence_model == "k_omega" then
+   if config.turbulence_model ~= "none" then
       o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallKOmega:new()
    end		
    o.postDiffFluxAction = { EnergyFluxFromAdjacentSolid:new{otherBlock=o.otherBlock,

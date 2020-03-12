@@ -580,7 +580,7 @@ private:
     double[] _particleMass;
     double[] _R;
     CEAThermoCurve[] _curves;
-    double[] _del_hf;
+    number[] _del_hf;
     double[] _Cp_tr_rot;
     number[][] _A_11, _B_11, _C_11, _D_11, _Delta_11, _alpha;
     number[][] _A_22, _B_22, _C_22, _D_22, _Delta_22, _mu;
