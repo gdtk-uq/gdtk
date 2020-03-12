@@ -78,8 +78,8 @@ BoundaryInterfaceEffect make_BIE_from_json(JSONValue jsonData, int blk_id, int b
     case "update_thermo_trans_coeffs":
         newBIE = new BIE_UpdateThermoTransCoeffs(blk_id, boundary);
         break;
-    case "wall_k_omega":
-        newBIE = new BIE_WallKOmega(blk_id, boundary);
+    case "wall_turbulent":
+        newBIE = new BIE_WallTurbulent(blk_id, boundary);
         break;
     case "wall_function_interface_effect":
         string thermalCond = getJSONstring(jsonData, "thermal_condition", "FIXED_T");
@@ -1213,15 +1213,15 @@ class BIE_UpdateThermoTransCoeffs : BoundaryInterfaceEffect {
     } // end apply()
 } // end class BIE_UpdateThermoTransCoeffs
 
-class BIE_WallKOmega : BoundaryInterfaceEffect {
+class BIE_WallTurbulent : BoundaryInterfaceEffect {
     this(int id, int boundary)
     {
-        super(id, boundary, "WallKOmega");
+        super(id, boundary, "WallTurbulent");
     }
 
     override string toString() const 
     {
-        return "WallKOmega()";
+        return "WallTurbulent()";
     }
 
     override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
@@ -1349,7 +1349,7 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
     //    double beta1 = 0.075;
     //    return 10 * (6 * nu) / (beta1 * d0 * d0);
     //}
-} // end class BIE_WallKOmega
+} // end class BIE_Turbulent
 
 class BIE_WallFunction : BoundaryInterfaceEffect {
     this(int id, int boundary, string thermalCond)
