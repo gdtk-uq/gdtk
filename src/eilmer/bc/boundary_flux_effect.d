@@ -612,7 +612,7 @@ public:
             throw new Error("Ar should be set!\n");                 
         } else if ( phi == 0.0){
             throw new Error("phi should be set!\n");
-        } else if (blk.myConfig.turbulence_model != TurbulenceModel.none) {
+        } else if (blk.myConfig.turb_model.isTurbulent) {
             throw new Error("WallBC_ThermionicEmission only implemented for laminar flow\n");
         } else {
 
@@ -734,7 +734,7 @@ public:
             number k_eff = viscous_factor * (IFace.fs.gas.k + IFace.fs.k_t);
             number dTdn = dT / dn;
             number q_total = k_eff * dTdn;
-            if (blk.myConfig.turbulence_model != TurbulenceModel.none ||
+            if (blk.myConfig.turb_model.isTurbulent ||
                 blk.myConfig.mass_diffusion_model != MassDiffusionModel.none) {
                 q_total -= IFace.q_diffusion;
             }
@@ -771,7 +771,7 @@ public:
         number k_eff = viscous_factor * (IFace.fs.gas.k + IFace.fs.k_t);
         number dTdn = dT / dn;
         number q_total = k_eff * dTdn;
-        if (blk.myConfig.turbulence_model != TurbulenceModel.none ||
+        if (blk.myConfig.turb_model.isTurbulent ||
             blk.myConfig.mass_diffusion_model != MassDiffusionModel.none) {
             q_total -= IFace.q_diffusion;
         }
