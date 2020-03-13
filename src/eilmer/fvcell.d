@@ -128,6 +128,8 @@ public:
                           // value for all of the update stages.
     // Data for computing residuals.
     number rho_at_start_of_step, rE_at_start_of_step;
+    // distance to nearest viscous wall (only computed if turb_model.needs_dwall)
+    number dwall; 
     // Shape sensitivity calculator workspace.
     version(shape_sensitivity) {
 	size_t[] pcell_global_coord_list;

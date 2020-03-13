@@ -34,6 +34,7 @@ class TurbulenceModel{
     @nogc abstract string modelName() const;
     @nogc abstract size_t nturb() const;
     @nogc abstract bool isTurbulent() const;
+    @nogc abstract bool needs_dwall() const;
 
     // Methods to be overridden.
     abstract TurbulenceModel dup();
@@ -78,6 +79,7 @@ class noTurbulenceModel : TurbulenceModel {
     @nogc final override string modelName() const {return "none";}
     @nogc final override size_t nturb() const {return 0;}
     @nogc final override bool isTurbulent() const {return false;}
+    @nogc final override bool needs_dwall() const {return false;}
 
     final override noTurbulenceModel dup() {
         return new noTurbulenceModel(this);
@@ -196,6 +198,7 @@ class kwTurbulenceModel : TurbulenceModel {
     @nogc final override string modelName() const {return "k_omega";}
     @nogc final override size_t nturb() const {return 2;}
     @nogc final override bool isTurbulent() const {return true;}
+    @nogc final override bool needs_dwall() const {return false;}
 
     final override kwTurbulenceModel dup() {
         return new kwTurbulenceModel(this);

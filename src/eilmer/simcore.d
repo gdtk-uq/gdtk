@@ -28,6 +28,7 @@ import util.lua_service;
 import lua_helper;
 import fileutil;
 import geom;
+import geom.misc.kdtree;
 import gas;
 import fvcore;
 import globalconfig;
@@ -746,6 +747,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
     synchronize_corner_coords_for_all_blocks();
     //
 
+    if (GlobalConfig.turb_model.needs_dwall) compute_wall_distances();
 
     // Keep our memory foot-print small.
     GC.collect();
@@ -777,6 +779,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
             MPI_Barrier(MPI_COMM_WORLD);
         }
     }
+
     if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) {
         // For reporting wall-clock time, convert to seconds with precision of milliseconds.
         double wall_clock_elapsed = to!double((Clock.currTime() - SimState.wall_clock_start).total!"msecs"())/1000.0;
@@ -3680,3 +3683,108 @@ void finalize_simulation()
     }
 } // end finalize_simulation()
 
+void compute_wall_distances() {
+    /*
+        Compute the distance from each cell to the nearest viscous wall,
+        for any turbulence models that need it.
+
+        @author: Nick Gibbons
+    */
+
+    // First count many viscous wall faces are in our local blocks
+    int nfaces = 0;
+    foreach (blk; localFluidBlocksBySize) {
+        foreach(bc; blk.bc) {
+            if (bc.is_wall_with_viscous_effects) nfaces+=bc.faces.length;
+        }
+    }
+
+    // Now pack their centroid positions into a special buffer
+    double[] facepos;
+    size_t ii=0;
+    facepos.length = nfaces*3;
+    int this_rank = GlobalConfig.mpi_rank_for_local_task;
+
+    foreach(blk; localFluidBlocksBySize) {
+        foreach(bc; blk.bc) {
+            if (bc.is_wall_with_viscous_effects){
+                foreach(face; bc.faces){
+                    version(complex_numbers){
+                    facepos[ii++] = face.pos.x.re;
+                    facepos[ii++] = face.pos.y.re;
+                    facepos[ii++] = face.pos.z.re;
+                    } else {
+                    facepos[ii++] = face.pos.x;
+                    facepos[ii++] = face.pos.y;
+                    facepos[ii++] = face.pos.z;
+                    }
+                }
+            }
+        }
+    }
+    // Now we need to accumulate faces from across the other MPI tasks
+    version(mpi_parallel) {
+        int my_rank = GlobalConfig.mpi_rank_for_local_task;
+        int mpi_worldsize = GlobalConfig.mpi_size;
+
+        int globalsize = to!int(facepos.length);
+        MPI_Allreduce(MPI_IN_PLACE,&globalsize,1,MPI_INT,MPI_SUM,MPI_COMM_WORLD);
+
+        double[] globalfacepos;
+        globalfacepos.length = globalsize;
+
+        int ngathered = 0;
+        double[] taskbuffer;
+        int ntask;
+        foreach (task; 0 .. mpi_worldsize){
+            if (my_rank == task) ntask = to!int(facepos.length);
+            MPI_Bcast(&ntask, 1, MPI_INT, task, MPI_COMM_WORLD);
+
+            taskbuffer.length = ntask;
+            if (my_rank == task) foreach(i; 0 .. ntask) taskbuffer[i] = facepos[i];
+            MPI_Bcast(taskbuffer.ptr, ntask, MPI_DOUBLE, task, MPI_COMM_WORLD);
+
+            foreach(i; 0 .. ntask) globalfacepos[ngathered+i] = taskbuffer[i];
+            ngathered += ntask;
+            taskbuffer.length=0;
+        }
+
+        // Now clean up by copying the globaldata back into facepos 
+        facepos.length = globalfacepos.length;
+        foreach(i; 0 .. globalfacepos.length)  facepos[i] = globalfacepos[i];
+        nfaces = to!int(facepos.length)/3;
+    }
+    
+    if (nfaces == 0) {
+        throw new Exception("Turbulence model requires wall distance, but no walls found!");
+    }
+    // These centroids need to be assembled into a kdtree
+    size_t totalfaces = nfaces;
+    KdNode!3[] nodes;
+    foreach(i; 0 .. nfaces) {
+        KdNode!3 node = {[facepos[3*i+0], facepos[3*i+1], facepos[3*i+2]]};
+        nodes ~= node;
+    }
+    auto root = makeTree(nodes);
+
+    // Now loop over the nodes in each of our local blocks and set dwall
+    foreach(blk; localFluidBlocksBySize) {
+        foreach(cell; blk.cells){
+            version(complex_numbers){
+            KdNode!3 cellnode = {[cell.pos[0].x.re,
+                                  cell.pos[0].y.re,
+                                  cell.pos[0].z.re]}; 
+            } else {
+            KdNode!3 cellnode = {[cell.pos[0].x,
+                                  cell.pos[0].y,
+                                  cell.pos[0].z]}; 
+            }
+            const(KdNode!3)* found = null;
+            double bestDist = 0.0;
+            size_t nVisited = 0;
+            root.nearest(cellnode, 0, found, bestDist, nVisited);
+            double dist = sqrt(bestDist);
+            cell.dwall = dist;
+        }
+    }
+}
