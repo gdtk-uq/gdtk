@@ -7,6 +7,7 @@
 
 import core.memory;
 import core.thread;
+import core.runtime;
 import core.stdc.stdlib : exit;
 import std.stdio;
 import std.string;
@@ -41,7 +42,6 @@ import luaidealgasflow;
 import luagasflow;
 version(mpi_parallel) {
     import mpi;
-    import mpi.util;
 }
 
 void moveFileToBackup(string fileName)
@@ -58,9 +58,8 @@ int main(string[] args)
     int exitFlag = 0; // Presume OK in the beginning.
     version(mpi_parallel) {
         // This preamble copied directly from the OpenMPI hello-world example.
-        int argc = cast(int)args.length;
-        auto argv = args.toArgv();
-        MPI_Init(&argc, &argv);
+        auto c_args = Runtime.cArgs;
+        MPI_Init(&(c_args.argc), &(c_args.argv));
         int rank, size;
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
         GlobalConfig.mpi_rank_for_local_task = rank;
