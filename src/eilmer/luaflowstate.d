@@ -242,15 +242,21 @@ The value should be a number.`;
     //Divergence cleaning parameter psi for MHD
     double psi = getNumberFromTable(L, tblindx, "psi", false, 0.0, true, format(errMsgTmplt, "psi"));
     
-    // Values related to k-omega model.
+    // Values related to turbulence modelling.
     double[] turb_init;
     lua_getfield(L, tblindx, "turb");
     if (lua_isnil(L, -1)) {
-        turb_init.length = 2;
-        turb_init[0] = 0.0;
-        turb_init[1] = 1.0;
-        lua_pop(L, 1);
+        auto tm = GlobalConfig.turb_model;
+        foreach(it; 0 .. tm.nturb){
+            string tvname = tm.primitive_variable_name(it);
+            double tv = getNumberFromTable(L, tblindx, tvname, false, 0.0, true, format(errMsgTmplt, tvname));
+            turb_init ~= tv;
+        }
+        foreach(it; tm.nturb .. 2){
+            turb_init ~= 0.0;
+        }
     } else if (lua_istable(L, -1)) {
+        // TODO: Consider making LUA always store tvariables by name
         lua_pop(L, 1); // get turb off the stack, getArrayOfDoubles will make its own copy
         getArrayOfDoubles(L, tblindx, "turb", turb_init);
     } else {
@@ -259,6 +265,7 @@ The value should be a number.`;
         errMsg ~= "turb field not valid";
         throw new LuaInputException(errMsg);
     }
+    if (turb_init.length != 2) throw new Error("Error in lua turb_init");
     double[2] turb = turb_init;
     double mu_t = getNumberFromTable(L, tblindx, "mu_t", false, 0.0, true, format(errMsgTmplt, "mu_t"));
     double k_t = getNumberFromTable(L, tblindx, "k_t", false, 0.0, true, format(errMsgTmplt, "k_t"));
