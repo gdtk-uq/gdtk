@@ -1178,6 +1178,7 @@ public:
     // https://github.com/su2code/SU2/wiki/Mesh-File
     // scale = unit length in metres
     {
+        writeln("Begin importing SU2 grid with scale=", scale);
         auto f = File(fileName, "r");
         string getHeaderContent(string target)
         // Helper function to proceed through file, line-by-line,
@@ -1203,10 +1204,11 @@ public:
         ncells = to!size_t(getHeaderContent("NELEM"));
         writeln("ncells=", ncells);
         cells.length = ncells;
+        bool stars_written = false;
         foreach(i; 0 .. ncells) {
             // For very large files, emit a character periodically,
             // to show that work is being done.
-            if ((i % 100_000) == 0) { stdout.write("*"); stdout.flush(); }
+            if ((i % 100_000) == 0) { stdout.write("*"); stdout.flush(); stars_written = true; }
             auto lineContent = f.readln().strip();
             // We are expecting the following items on the line:
             // a. vtk-element-type
@@ -1249,15 +1251,18 @@ public:
             // outsign_list for each cell.
             cells[indx] = new USGCell(cell_type, indx, vtx_id_list, face_id_list, outsign_list);
         } // end foreach i .. ncells
+        if (stars_written) { stdout.write("\n"); }
+        //
         size_t uninitialized_cell_count = 0;
         foreach(i; 0 .. cells.length) {
             if (!cells[i]) { ++uninitialized_cell_count; }
         }
         if (uninitialized_cell_count > 0) {
-            writefln("There are %d initialized cells and %d uninitialized cells.",
+            writefln("Warning: There are %d initialized cells and %d uninitialized cells.",
                      ncells, uninitialized_cell_count);
-            // [TODO] if we have any uninitialized cells,
-            // we should compress the array to eliminate empty elements.
+            // [TODO] If we have any uninitialized cells, we should
+            // compress the array to eliminate empty elements, however,
+            // the following code is tolerant of uninitialized cells.
         }
         //
         // Now, look for the vertices.
@@ -1268,25 +1273,39 @@ public:
         nvertices = to!size_t(getHeaderContent("NPOIN"));
         writeln("nvertices=", nvertices);
         vertices.length = nvertices;
+        stars_written = false;
         foreach(i; 0 .. nvertices) {
             // For very large files, emit a character periodically,
             // to show that work is being done.
-            if ((i % 100_000) == 0) { stdout.write("*"); stdout.flush(); }
+            if ((i % 100_000) == 0) { stdout.write("*"); stdout.flush(); stars_written = true; }
             auto tokens = f.readln().strip().split();
+            auto ntokens = tokens.length;
             double x=0.0; double y=0.0; double z = 0.0; size_t indx = 0;
+            // We expect to see a coordinate value for each dimension plus
+            // an integer index for the vertex.
+            // The index may or may notbe present.
             if (dimensions == 2) {
                 x = scale * to!double(tokens[0]);
                 y = scale * to!double(tokens[1]);
-                indx = to!size_t(tokens[2]);
+                if (ntokens == 3) {
+                    indx = to!size_t(tokens[2]);
+                } else {
+                    indx = i;
+                }
             } else {
                 assert(dimensions == 3, "invalid dimensions");
                 x = scale * to!double(tokens[0]);
                 y = scale * to!double(tokens[1]);
                 z = scale * to!double(tokens[2]);
-                indx = to!size_t(tokens[3]);
+                if (ntokens == 4) {
+                    indx = to!size_t(tokens[3]);
+                } else {
+                    indx = i;
+                }
             }
             vertices[indx].set(x, y, z);
         } // end foreach i .. nvertices
+        if (stars_written) { stdout.write("\n"); }
         //
         if (dimensions == 2) {
             // In 2D, the flow solver code assumes that the cycle of vertices
@@ -1406,10 +1425,11 @@ public:
         } // end add_face_to_cell()
         //
         writeln("Assemble faces to cells.");
+        stars_written = false;
         foreach(i, cell; cells) {
             // For a very large grid, emit a character periodically,
             // to show that work is being done.
-            if ((i % 100_000) == 0) { stdout.write("*"); stdout.flush(); }
+            if ((i % 100_000) == 0) { stdout.write("*"); stdout.flush(); stars_written = true; }
             if (!cell) continue;
             // Attach the faces to each cell. In 2D, faces are defined as lines.
             // As we progress along the line the face normal is pointing to the right.
@@ -1482,12 +1502,14 @@ public:
                 throw new GeometryException(errMsg);
             }
         } // end foreach cell
+        if (stars_written) { stdout.write("\n"); }
         nfaces = faces.length;
+        writeln("nfaces=", nfaces);
         //
         // Now that we have a full set of cells and faces,
         // make lists of the boundary faces.
         //
-        writeln("Boundary sets of faces.");
+        writeln("Boundary sets for faces.");
         foreach (myface; faces) { myface.is_on_boundary = false; } // will remark boundary faces below
         // Note that we do not rewind the file because
         // we expect the boundary sets last, always.
@@ -1562,7 +1584,7 @@ public:
         }
         //
         // If we arrive here, the import of the SU2 grid seems to have been successful
-        
+        writeln("Finished importing SU2 grid.");
         return;
     } // end read_from_su2_text_file()
 
