@@ -366,7 +366,7 @@ void pushFlowStateToTable(lua_State* L, int tblIdx, in FlowState fs, GasModel gm
     version(multi_T_gas) {
         mixin(pushGasVarArray("k_modes"));
     }
-    version(komega) {
+    version(turbulence) {
         mixin(pushFSVarArray("turb"));
     }
     mixin(pushFSVar("mu_t"));
@@ -526,7 +526,7 @@ extern(C) int fromTable(lua_State* L)
     }
 
     // Now look turbulence quantities
-    version(komega) {
+    version(turbulence) {
         mixin(checkFSVarArray("turb"));
     }
     mixin(checkFSVar("mu_t"));

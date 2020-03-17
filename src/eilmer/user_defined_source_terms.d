@@ -56,7 +56,7 @@ void addUDFSourceTermsToCell(lua_State* L, FVCell cell, size_t gtl,
     cell.Q.momentum.refy += getNumberFromTable(L, -1, "momentum_y", false, 0.0);
     cell.Q.momentum.refz += getNumberFromTable(L, -1, "momentum_z", false, 0.0);
     cell.Q.total_energy += getNumberFromTable(L, -1, "total_energy",false, 0.0);
-    version(komega) {
+    version(turbulence) {
         foreach(it; 0 .. myConfig.turb_model.nturb){
             string tname = myConfig.turb_model.primitive_variable_name(it);
             cell.Q.rhoturb[it] += getNumberFromTable(L, -1, tname, false, 0.0);

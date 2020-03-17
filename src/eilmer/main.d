@@ -277,10 +277,10 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
             } else {
                 write(" no-MHD");
             }
-            version(komega) {
-                write(" k-omega-turbulence");
+            version(turbulence) {
+                write(" turbulence");
             } else {
-                write(" no-k-omega");
+                write(" no-turbulence-modelling");
             }
             writeln(".");
         }

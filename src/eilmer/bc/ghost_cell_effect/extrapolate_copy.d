@@ -139,7 +139,7 @@ public:
                             dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
                             dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
                         }
-                        version(komega) {
+                        version(turbulence) {
                             foreach(it; 0 .. nturb) {
                                 dest_cell.fs.turb[it] = 2.0*cell_1.fs.turb[it] - cell_2.fs.turb[it];
                             }
@@ -178,7 +178,7 @@ public:
                             dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
                             dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
                         }
-                        version(komega) {
+                        version(turbulence) {
                             foreach(it; 0 .. nturb) {
                                 dest_cell.fs.turb[it] = 2.0*cell_1.fs.turb[it] - cell_2.fs.turb[it];
                             }
@@ -249,7 +249,7 @@ public:
                             dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
                             dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
                         }
-                        version(komega) {
+                        version(turbulence) {
                             foreach(it; 0 .. nturb) {
                                 dest_cell.fs.turb[it] = 2.0*cell_1.fs.turb[it] - cell_2.fs.turb[it];
                             }
@@ -288,7 +288,7 @@ public:
                             dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
                             dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
                         }
-                        version(komega) {
+                        version(turbulence) {
                             foreach(it; 0 .. nturb) {
                                 dest_cell.fs.turb[it] = 2.0*cell_1.fs.turb[it] - cell_2.fs.turb[it];
                             }
@@ -359,7 +359,7 @@ public:
                             dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
                             dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
                         }
-                        version(komega) {
+                        version(turbulence) {
                             foreach(it; 0 .. nturb) {
                                 dest_cell.fs.turb[it] = 2.0*cell_1.fs.turb[it] - cell_2.fs.turb[it];
                             }
@@ -398,7 +398,7 @@ public:
                             dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
                             dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
                         }
-                        version(komega) {
+                        version(turbulence) {
                             foreach(it; 0 .. nturb) {
                                 dest_cell.fs.turb[it] = 2.0*cell_1.fs.turb[it] - cell_2.fs.turb[it];
                             }
@@ -468,7 +468,7 @@ public:
                             dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
                             dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
                         }
-                        version(komega) {
+                        version(turbulence) {
                             foreach(it; 0 .. nturb) {
                                 dest_cell.fs.turb[it] = 2.0*cell_1.fs.turb[it] - cell_2.fs.turb[it];
                             }
@@ -507,7 +507,7 @@ public:
                             dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
                             dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
                         }
-                        version(komega) {
+                        version(turbulence) {
                             foreach(it; 0 .. nturb) {
                                 dest_cell.fs.turb[it] = 2.0*cell_1.fs.turb[it] - cell_2.fs.turb[it];
                             }
@@ -578,7 +578,7 @@ public:
                             dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
                             dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
                         }
-                        version(komega) {
+                        version(turbulence) {
                             foreach(it; 0 .. nturb) {
                                 dest_cell.fs.turb[it] = 2.0*cell_1.fs.turb[it] - cell_2.fs.turb[it];
                             }
@@ -617,7 +617,7 @@ public:
                             dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
                             dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
                         }
-                        version(komega) {
+                        version(turbulence) {
                             foreach(it; 0 .. nturb) {
                                 dest_cell.fs.turb[it] = 2.0*cell_1.fs.turb[it] - cell_2.fs.turb[it];
                             }
@@ -688,7 +688,7 @@ public:
                             dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
                             dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
                         }
-                        version(komega) {
+                        version(turbulence) {
                             foreach(it; 0 .. nturb) {
                                 dest_cell.fs.turb[it] = 2.0*cell_1.fs.turb[it] - cell_2.fs.turb[it];
                             }
@@ -727,7 +727,7 @@ public:
                             dest_cell.fs.B.refy = 2.0*cell_1.fs.B.y - cell_2.fs.B.y;
                             dest_cell.fs.B.refz = 2.0*cell_1.fs.B.z - cell_2.fs.B.z;
                         }
-                        version(komega) {
+                        version(turbulence) {
                             foreach(it; 0 .. nturb) {
                                 dest_cell.fs.turb[it] = 2.0*cell_1.fs.turb[it] - cell_2.fs.turb[it];
                             }

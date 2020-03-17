@@ -523,7 +523,7 @@ TurbulenceModel init_turbulence_model(const string turbulence_model_name, const 
     case "none":
         turbulence_model = new noTurbulenceModel(config);
         break;
-version(komega){
+version(turbulence){
     case "k_omega":
         turbulence_model = new kwTurbulenceModel(config);
         break;
@@ -549,7 +549,7 @@ TurbulenceModel init_turbulence_model(const string turbulence_model_name)
     case "none":
         turbulence_model = new noTurbulenceModel();
         break;
-version(komega){
+version(turbulence){
     case "k_omega":
         turbulence_model = new kwTurbulenceModel();
         break;

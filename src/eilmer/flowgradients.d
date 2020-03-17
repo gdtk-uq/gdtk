@@ -70,7 +70,7 @@ public:
     version(multi_T_gas) {
         number[3][] T_modes;
     }
-    version(komega) {
+    version(turbulence) {
         number[3][2] turb; // turbulence primitive variables 
     }
 private:
@@ -101,7 +101,7 @@ public:
             T_modes.length = other.T_modes.length;
             foreach (imode; 0 .. other.T_modes.length) { T_modes[imode][] = other.T_modes[imode][]; }
         }
-        version(komega) {
+        version(turbulence) {
             foreach(i; 0 .. turb.length) turb[i][] = other.turb[i][];
         }
     }
@@ -117,7 +117,7 @@ public:
         version(multi_T_gas) {
             foreach (imode; 0 .. other.T_modes.length) { T_modes[imode][] = other.T_modes[imode][]; }
         }
-        version(komega) {
+        version(turbulence) {
             foreach(i; 0 .. turb.length) turb[i][] = other.turb[i][]; 
         }
     }
@@ -133,7 +133,7 @@ public:
         version(multi_T_gas) {
             foreach (imode; 0 .. T_modes.length) { T_modes[imode][] += other.T_modes[imode][]; }
         }
-        version(komega) {
+        version(turbulence) {
             foreach(i; 0 .. turb.length) turb[i][] += other.turb[i][]; 
         }
     }
@@ -149,7 +149,7 @@ public:
         version(multi_T_gas) {
             foreach (imode; 0 .. T_modes.length) { T_modes[imode][] *= factor; }
         }
-        version(komega) {
+        version(turbulence) {
             foreach(i; 0 .. turb.length) turb[i][] *= factor;
         }
     }
@@ -176,7 +176,7 @@ public:
             foreach (i; 1 .. T_modes.length) repr ~= ", " ~ to!string(T_modes);
             repr ~= "]";
         }
-        version(komega) {
+        version(turbulence) {
             repr ~= ", turb=[";
             if (myConfig.turb_model.nturb>0) repr ~= to!string(turb[0]);
             foreach (i; 1 .. myConfig.turb_model.nturb) repr ~= ", " ~ to!string(turb[i]);
@@ -282,7 +282,7 @@ public:
             }
         }
         //
-        version(komega) {
+        version(turbulence) {
             foreach(tidx; 0 .. myConfig.turb_model.nturb){
                 mixin(codeForGradients("turb[tidx]"));
                 turb[tidx][0] = gradient_x * area_inv;
@@ -477,7 +477,7 @@ public:
                 }
             }
         }
-        version(komega) {
+        version(turbulence) {
             foreach(tidx; 0 .. myConfig.turb_model.nturb){
                 mixin(codeForGradients("turb[tidx]", "turb[tidx]"));
             }

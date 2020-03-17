@@ -36,7 +36,7 @@ public:
         number psi;    // divergence cleaning parameter
         number divB;   // divergence of the magnetic field
     }
-    version(komega) {
+    version(turbulence) {
         number[2] turb; // turbulence primitives (presently k, omega only)
     }
     number mu_t;   // turbulence viscosity
@@ -64,7 +64,7 @@ public:
             psi = psi_init;
             divB = divB_init;
         }
-        version(komega) {
+        version(turbulence) {
             foreach (i; 0 .. turb.length) turb[i] = turb_init[i];
         }
         mu_t = mu_t_init;
@@ -82,7 +82,7 @@ public:
             psi = other.psi;
             divB = other.divB;
         }
-        version(komega) {
+        version(turbulence) {
             foreach (i; 0 .. turb.length) turb[i] = other.turb[i];
         }
         mu_t = other.mu_t;
@@ -101,7 +101,7 @@ public:
             psi = other.psi;
             divB = other.divB;
         }
-        version(komega) {
+        version(turbulence) {
             foreach (i; 0 .. turb.length) turb[i] = other.turb[i];
         }
         mu_t = other.mu_t;
@@ -118,7 +118,7 @@ public:
             psi = 0.0;
             divB = 0.0;
         }
-        version(komega) {
+        version(turbulence) {
             foreach (i; 0 .. turb.length) turb[i] = 0.0;
         }
         mu_t = 0.0;
@@ -153,7 +153,7 @@ public:
             psi = getJSONdouble(json_data, "psi", 0.0);
             divB = getJSONdouble(json_data, "divB", 0.0);
         }
-        version(komega) {
+        version(turbulence) {
             double[] turb_in;
             turb_in = getJSONdoublearray(json_data, "turb", []);
             foreach (i; 0 .. turb.length) turb[i] = turb_in[i];
@@ -180,7 +180,7 @@ public:
             psi = other.psi;
             divB = other.divB;
         }
-        version(komega) {
+        version(turbulence) {
             foreach(i; 0 .. turb.length) turb[i] =  other.turb[i];
         }
         mu_t = other.mu_t;
@@ -203,7 +203,7 @@ public:
             psi = 0.5 * (fs0.psi + fs1.psi);
             divB = 0.5 * (fs0.divB + fs1.divB);
         }
-        version(komega) {
+        version(turbulence) {
             foreach (i; 0 .. turb.length) turb[i] =  0.5 * (fs0.turb[i] + fs1.turb[i]);
         }
         mu_t = 0.5 * (fs0.mu_t + fs1.mu_t);
@@ -233,7 +233,7 @@ public:
             psi = 0.0;
             divB = 0.0;
         }
-        version(komega) {
+        version(turbulence) {
             foreach(i; 0 .. turb.length) turb[i] = 0.0;
         }
         mu_t = 0.0;
@@ -246,7 +246,7 @@ public:
                 psi += other.psi;
                 divB += other.divB;
             }
-            version(komega) {
+            version(turbulence) {
                 foreach (i; 0 .. turb.length) turb[i] += other.turb[i];
             }
             mu_t += other.mu_t;
@@ -260,7 +260,7 @@ public:
             psi *= scale;
             divB *= scale;
         }
-        version(komega) {
+        version(turbulence) {
             foreach (i; 0 .. turb.length) turb[i] *= scale;
         }
         mu_t *= scale;
@@ -279,7 +279,7 @@ public:
             repr ~= ", psi=" ~ to!string(psi);
             repr ~= ", divB=" ~ to!string(psi);
         }
-        version(komega) {
+        version(turbulence) {
             repr ~= ", turb=" ~ to!string(turb);
         }
         repr ~= ", mu_t=" ~ to!string(mu_t);
@@ -321,7 +321,7 @@ public:
             formattedWrite(writer, ", \"psi\": %.18e", psi.re);
             formattedWrite(writer, ", \"divB\": %.18e", divB.re);
         }
-        version(komega) {
+        version(turbulence) {
             formattedWrite(writer, ", \"turb\": [");
             if (turb.length > 0) { formattedWrite(writer, " %.18e", turb[0].re); }
             foreach (i; 1 .. turb.length) { formattedWrite(writer, ", %.18e", turb[i].re); }
@@ -353,7 +353,7 @@ public:
             debug { writeln("Temperature above maximum ", gas.T); }
             is_data_valid = false;
         }
-        version(komega) {
+        version(turbulence) {
             if (!lc.turb_model.is_valid(flowstate_limits, turb)) {
             is_data_valid = false;
             }

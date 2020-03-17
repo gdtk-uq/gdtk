@@ -645,7 +645,7 @@ public:
         nitems += nmodes*3;
         nitems += nspecies;
         version(MHD) { nitems += 5; }
-        version(komega) { nitems += myConfig.turb_model.nturb; }
+        version(turbulence) { nitems += myConfig.turb_model.nturb; }
 
         return nitems;
     }
@@ -693,7 +693,7 @@ public:
                 // at in src_blk MPI process.
                 //size_t nitems = 16;
                 //version(MHD) { nitems += 5; }
-                //version(komega) { nitems += 2; }
+                //version(turbulence) { nitems += 2; }
                 size_t fs_size = flowstate_buffer_entry_size(blk.myConfig);
                 size_t ne = outgoing_ncells_list[i] * fs_size;
                 if (outgoing_flowstate_buf_list[i].length < ne) { outgoing_flowstate_buf_list[i].length = ne; }
@@ -733,7 +733,7 @@ public:
                         buf[ii++] = fs.psi;
                         buf[ii++] = fs.divB;
                     }
-                    version(komega) {
+                    version(turbulence) {
                         foreach (j; 0 .. nturb) { buf[ii++] = fs.turb[j]; }
                     }
                     buf[ii++] = fs.mu_t;
@@ -810,7 +810,7 @@ public:
                         fs.psi = buf[ii++];
                         fs.divB = buf[ii++];
                     }
-                    version(komega) {
+                    version(turbulence) {
                         foreach (j; 0 .. nturb) { fs.turb[j] = buf[ii++]; }
                     }
                     fs.mu_t = buf[ii++];
@@ -841,7 +841,7 @@ public:
         size_t nmodes = myConfig.n_modes;
         size_t nitems = 42;
         version(MHD) { nitems += 24; }
-        version(komega) { nitems += myConfig.turb_model.nturb*6; }
+        version(turbulence) { nitems += myConfig.turb_model.nturb*6; }
         nitems += nmodes*12;
         nitems += nspecies*6;
         return nitems;
@@ -859,7 +859,7 @@ public:
                 // the size of the buffer should match up with that of lsqinterp.d
                 //size_t nitems = 42;
                 //version(MHD) { nitems += 24; }
-                //version(komega) { nitems += 12; }
+                //version(turbulence) { nitems += 12; }
                 size_t grad_size = convective_gradient_buffer_entry_size(blk.myConfig);
                 size_t ne = incoming_ncells_list[i] * grad_size;
                 if (incoming_convective_gradient_buf_list[i].length < ne) { incoming_convective_gradient_buf_list[i].length = ne; }
@@ -888,7 +888,7 @@ public:
                 // at in src_blk MPI process.
                 //size_t nitems = 42;
                 //version(MHD) { nitems += 24; }
-                //version(komega) { nitems += 12; }
+                //version(turbulence) { nitems += 12; }
                 size_t grad_size = convective_gradient_buffer_entry_size(blk.myConfig);
                 size_t ne = outgoing_ncells_list[i] * grad_size;
                 if (outgoing_convective_gradient_buf_list[i].length < ne) { outgoing_convective_gradient_buf_list[i].length = ne; }
@@ -940,8 +940,8 @@ public:
                     buf[ii++] = c.uPhi;
                     buf[ii++] = c.uMin;
                     buf[ii++] = c.uMax;
-                    // tke, omega
-                    version(komega) {
+                    // formerly tke, omega
+                    version(turbulence) {
                         foreach(j; 0 .. nturb) {
                             buf[ii++] = c.turb[j][0];
                             buf[ii++] = c.turb[j][1];
@@ -1091,7 +1091,7 @@ public:
                     c.uMin = buf[ii++];
                     c.uMax = buf[ii++];
                     // tke, omega
-                    version(komega) {
+                    version(turbulence) {
                         foreach (j; 0 .. nturb){
                             c.turb[j][0] = buf[ii++];
                             c.turb[j][1] = buf[ii++];
@@ -1181,7 +1181,7 @@ public:
         size_t nspecies = myConfig.n_species;
         size_t nmodes = myConfig.n_modes;
         size_t nitems = 12;
-        version(komega) { nitems += myConfig.turb_model.nturb*3; }
+        version(turbulence) { nitems += myConfig.turb_model.nturb*3; }
         nitems += nmodes*3;
         nitems += nspecies*3;
         return nitems;
@@ -1198,7 +1198,7 @@ public:
                 // Exchange cell-centered viscous gradients for the boundary cells.
                 // the size of the buffer should match up with that of lsqinterp.d
                 //size_t nitems = 12;
-                //version(komega) { nitems += 6; }
+                //version(turbulence) { nitems += 6; }
                 size_t grad_size = viscous_gradient_buffer_entry_size(blk.myConfig);
                 size_t ne = incoming_ncells_list[i] * grad_size;
                 if (incoming_viscous_gradient_buf_list[i].length < ne) { incoming_viscous_gradient_buf_list[i].length = ne; }
@@ -1226,7 +1226,7 @@ public:
                 // to the corresponding non-blocking receive that was posted
                 // at in src_blk MPI process.
                 //size_t nitems = 12;
-                //version(komega) { nitems += 6; }
+                //version(turbulence) { nitems += 6; }
                 size_t grad_size = viscous_gradient_buffer_entry_size(blk.myConfig);
                 size_t ne = outgoing_ncells_list[i] * grad_size;
                 if (outgoing_viscous_gradient_buf_list[i].length < ne) { outgoing_viscous_gradient_buf_list[i].length = ne; }
@@ -1249,7 +1249,7 @@ public:
                     buf[ii++] = c.T[1];
                     buf[ii++] = c.T[2];
                     // tke, omega
-                    version(komega) {
+                    version(turbulence) {
                         foreach (j; 0 .. nturb) {
                             buf[ii++] = c.turb[j][0];
                             buf[ii++] = c.turb[j][1];
@@ -1325,7 +1325,7 @@ public:
                     c.T[1] = buf[ii++];
                     c.T[2] = buf[ii++];
                     // tke, omega
-                    version(komega) {
+                    version(turbulence) {
                         foreach (j; 0 .. nturb){
                             c.turb[j][0] = buf[ii++];
                             c.turb[j][1] = buf[ii++];

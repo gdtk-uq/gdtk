@@ -657,7 +657,7 @@ public:
 	    L2_residual += fabs(cell.dUdt[0].momentum.y)^^2;
 	    L2_residual += fabs(cell.dUdt[0].momentum.z)^^2;
 	    L2_residual += fabs(cell.dUdt[0].total_energy)^^2;
-	    version(komega) {
+	    version(turbulence) {
             foreach(it; 0 .. myConfig.turb_model.nturb){
                 L2_residual += fabs(cell.dUdt[0].rhoturb[it])^^2;
             }

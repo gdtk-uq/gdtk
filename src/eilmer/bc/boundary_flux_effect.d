@@ -499,14 +499,14 @@ private:
             version(multi_T_gas) {
                 foreach (umode; fs.gas.u_modes) { utot += umode; }
             }
-            version(komega) {
+            version(turbulence) {
                 utot += blk.myConfig.turb_model.turbulent_kinetic_energy(fs);
             }
             face.F.total_energy = mass_flux*utot + fs.gas.p*dot(fs.vel,face.n);
             // [TODO] PJ 2018-10-24 check that fs.vel is the correct velocity
             // to use for pressure-work flowing across the face.
             // [TODO] PJ 2018-10-25 consider rothalpy flavour for rotating frame
-            version(komega) {
+            version(turbulence) {
                 foreach (i; 0 .. blk.myConfig.turb_model.nturb) { face.F.rhoturb[i] = mass_flux * fs.turb[i]; }
             }
             version(MHD) {
@@ -527,7 +527,7 @@ private:
             face.F.momentum.set(face.n); face.F.momentum *= fs.gas.p;
             face.F.total_energy = fs.gas.p*dot(face.gvel,face.n);
             // [TODO] PJ 2018-10-25 consider rothalpy flavour for rotating frame
-            version(komega) {
+            version(turbulence) {
                 foreach (i; 0 .. blk.myConfig.turb_model.nturb) { face.F.rhoturb[i] = 0.0; }
             }
             version(MHD) {

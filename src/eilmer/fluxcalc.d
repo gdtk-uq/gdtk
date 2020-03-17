@@ -192,7 +192,7 @@ void compute_flux_at_left_wall(ref FlowState Rght, ref FVInterface IFace,
     version(multi_T_gas) {
         foreach (i; 0 .. F.energies.length) { F.energies[i] = 0.0; }
     }
-    version(komega) {
+    version(turbulence) {
         foreach (i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] = 0.0; }
     }
     version(MHD) {
@@ -277,7 +277,7 @@ void compute_flux_at_right_wall(ref FlowState Lft, ref FVInterface IFace,
     version(multi_T_gas) {
         foreach (i; 0 .. F.energies.length) { F.energies[i] = 0.0; }
     }
-    version(komega) {
+    version(turbulence) {
         foreach (i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] = 0.0; }
     }
     version(MHD) {
@@ -313,7 +313,7 @@ void set_flux_vector_in_local_frame(ref ConservedQuantities F, ref FlowState fs,
     F.mass = rho * vn; // The mass flux is relative to the moving interface.
     F.momentum.set(F.mass*vn + p, F.mass*vt1, F.mass*vt2);
     F.total_energy = F.mass*(u+ke) + p*vn;
-    version(komega) {
+    version(turbulence) {
         F.total_energy += myConfig.turb_model.turbulent_kinetic_energy(fs);
         foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] = F.mass * fs.turb[i]; }
     }
@@ -395,7 +395,7 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
     number aL = Lft.gas.a;
     number keL = 0.5*(uL*uL + vL*vL + wL*wL);
     number HL = eL + pLrL + keL;
-    version(komega) { HL += myConfig.turb_model.turbulent_kinetic_energy(Lft); }
+    version(turbulence) { HL += myConfig.turb_model.turbulent_kinetic_energy(Lft); }
     //
     number rR = Rght.gas.rho;
     number pR = Rght.gas.p;
@@ -407,7 +407,7 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
     number aR = Rght.gas.a;
     number keR = 0.5*(uR*uR + vR*vR + wR*wR);
     number HR = eR + pRrR + keR;
-    version(komega) { HR += myConfig.turb_model.turbulent_kinetic_energy(Rght); }
+    version(turbulence) { HR += myConfig.turb_model.turbulent_kinetic_energy(Rght); }
     //
     // This is the main part of the flux calculator.
     // Weighting parameters (eqn 32) for velocity splitting.
@@ -465,7 +465,7 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
         // Wind is blowing from the left.
         F.momentum.set(ru2_half+p_half, ru_half*vL, ru_half*wL);
         F.total_energy = ru_half*HL;
-        version(komega) {
+        version(turbulence) {
             foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] = ru_half*Lft.turb[i]; }
         }
         version(multi_species_gas) {
@@ -484,7 +484,7 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
         // Wind is blowing from the right.
         F.momentum.set(ru2_half+p_half, ru_half*vR, ru_half*wR);
         F.total_energy = ru_half*HR;
-        version(komega) {
+        version(turbulence) {
             foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] = ru_half*Rght.turb[i]; }
         }
         version(multi_species_gas) {
@@ -511,7 +511,7 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
         F.momentum.refy -= d_ua*(rR*vR - rL*vL);
         F.momentum.refz -= d_ua*(rR*wR - rL*wL);
         F.total_energy -= d_ua*(rR*HR - rL*HL);
-        version(komega) {
+        version(turbulence) {
             foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] -= d_ua*(rR*Rght.turb[i] - rL*Lft.turb[i]); }
         }
         version(multi_species_gas) {
@@ -553,7 +553,7 @@ void hanel(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
     number aL = Lft.gas.a;
     number keL = 0.5*(uL*uL + vL*vL + wL*wL);
     number HL = eL + pLrL + keL;
-    version(komega) { HL += myConfig.turb_model.turbulent_kinetic_energy(Lft); }
+    version(turbulence) { HL += myConfig.turb_model.turbulent_kinetic_energy(Lft); }
     //
     number rR = Rght.gas.rho;
     number pR = Rght.gas.p;
@@ -565,7 +565,7 @@ void hanel(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
     number aR = Rght.gas.a;
     number keR = 0.5*(uR*uR + vR*vR + wR*wR);
     number HR = eR + pRrR + keR;
-    version(komega) { HR += myConfig.turb_model.turbulent_kinetic_energy(Rght); }
+    version(turbulence) { HR += myConfig.turb_model.turbulent_kinetic_energy(Rght); }
     //
     number am = fmax(aL, aR);
     number ML = uL / am;
@@ -604,7 +604,7 @@ void hanel(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
                    uLplus * rL * vL + uRminus * rR * vR,
                    uLplus * rL * wL + uRminus * rR * wR);
     F.total_energy = uLplus * rL * HL + uRminus * rR * HR;
-    version(komega) {
+    version(turbulence) {
         foreach(i; 0 .. myConfig.turb_model.nturb) {
             F.rhoturb[i] = uLplus * rL * Lft.turb[i] + uRminus * rR * Rght.turb[i];
         }
@@ -668,7 +668,7 @@ void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
     presL = Lft.gas.p;
     eL = gmodel.internal_energy(Lft.gas);
     hL = eL + presL/rhoL;
-    version(komega) { hL += myConfig.turb_model.turbulent_kinetic_energy(Lft); } // bundle turbulent energy, PJ 2017-06-17
+    version(turbulence) { hL += myConfig.turb_model.turbulent_kinetic_energy(Lft); } // bundle turbulent energy, PJ 2017-06-17
     tL = Lft.gas.T;
     vnL = Lft.vel.x;
     vpL = Lft.vel.y;
@@ -678,7 +678,7 @@ void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
     presR = Rght.gas.p;
     eR = gmodel.internal_energy(Rght.gas);
     hR = eR + presR/rhoR;
-    version(komega) { hR += myConfig.turb_model.turbulent_kinetic_energy(Rght); }
+    version(turbulence) { hR += myConfig.turb_model.turbulent_kinetic_energy(Rght); }
     tR = Rght.gas.T;
     vnR = Rght.vel.x;
     vpR = Rght.vel.y;
@@ -734,7 +734,7 @@ void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
     // Such an approach may not be fully compatible with the
     // EFM approach where there can be fluxes from both sides.
     if (F.mass > 0.0) {
-        version(komega) {
+        version(turbulence) {
             foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] = F.mass * Lft.turb[i]; }
         }
         version(multi_species_gas) {
@@ -750,7 +750,7 @@ void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
         // Add electron pressure work term onto final energy mode
         // F.energies[$-1] += (F.mass) * Lft.gas.p_e / Lft.gas.rho; [TODO]
     } else {
-        version(komega) {
+        version(turbulence) {
             foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] = F.mass * Rght.turb[i]; }
         }
         version(multi_species_gas) {
@@ -931,7 +931,7 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
     number aL = Lft.gas.a;
     number keL = 0.5 * (uL * uL + vL * vL + wL * wL);
     number HL = eL + pL/rL + keL;
-    version(komega) { HL += myConfig.turb_model.turbulent_kinetic_energy(Lft); }
+    version(turbulence) { HL += myConfig.turb_model.turbulent_kinetic_energy(Lft); }
     //
     number rR = Rght.gas.rho;
     number pR = Rght.gas.p;
@@ -942,7 +942,7 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
     number aR = Rght.gas.a;
     number keR = 0.5 * (uR * uR + vR * vR + wR * wR);
     number HR = eR + pR/rR + keR;
-    version(komega) { HR += myConfig.turb_model.turbulent_kinetic_energy(Rght); }
+    version(turbulence) { HR += myConfig.turb_model.turbulent_kinetic_energy(Rght); }
     //
     // This is the main part of the flux calculator.
     //
@@ -1003,7 +1003,7 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
         // Wind is blowing from the left.
         F.momentum.set(ru2_half+p_half, ru_half*vL, ru_half*wL);
         F.total_energy = ru_half * HL;
-        version(komega) {
+        version(turbulence) {
             foreach(i; 0 ..  myConfig.turb_model.nturb) { F.rhoturb[i] = ru_half * Lft.turb[i]; }
         }
         version(multi_species_gas) {
@@ -1022,7 +1022,7 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
         // Wind is blowing from the right.
         F.momentum.set(ru2_half+p_half, ru_half*vR, ru_half*wR);
         F.total_energy = ru_half * HR;
-        version(komega) {
+        version(turbulence) {
             foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] = ru_half * Rght.turb[i]; }
         }
         version(multi_species_gas) {
@@ -1222,7 +1222,7 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalCo
     number aL = Lft.gas.a;
     number keL = 0.5*(uL*uL + vL*vL + wL*wL);
     number HL = eL + pLrL + keL;
-    version(komega) { HL += myConfig.turb_model.turbulent_kinetic_energy(Lft); }
+    version(turbulence) { HL += myConfig.turb_model.turbulent_kinetic_energy(Lft); }
     //
     number rR = Rght.gas.rho;
     number pR = Rght.gas.p;
@@ -1234,7 +1234,7 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalCo
     number aR = Rght.gas.a;
     number keR = 0.5*(uR*uR + vR*vR + wR*wR);
     number HR = eR + pRrR + keR;
-    version(komega) { HR += myConfig.turb_model.turbulent_kinetic_energy(Rght); }
+    version(turbulence) { HR += myConfig.turb_model.turbulent_kinetic_energy(Rght); }
 
     // averaged gamma
     number gL = gmodel.gamma(Lft.gas);
@@ -1345,7 +1345,7 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalCo
     // remaining fluxes
     if (F.mass >= 0.0) {
         /* Wind is blowing from the left */
-        version(komega) {
+        version(turbulence) {
             foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] = F.mass*Lft.turb[i]; }
         }
         version(multi_species_gas) {
@@ -1357,7 +1357,7 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalCo
         }
     } else {
         /* Wind is blowing from the right */
-        version(komega) {
+        version(turbulence) {
             foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] = F.mass*Rght.turb[i]; }
         }
         version(multi_species_gas) {

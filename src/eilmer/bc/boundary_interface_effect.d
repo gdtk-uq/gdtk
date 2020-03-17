@@ -1227,7 +1227,7 @@ class BIE_WallTurbulent : BoundaryInterfaceEffect {
     override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
     {
         BoundaryCondition bc = blk.bc[which_boundary];
-        version(komega) {
+        version(turbulence) {
 	    if (bc.outsigns[f.i_bndry] == 1) {
             blk.myConfig.turb_model.set_flowstate_at_wall(gtl, f, f.left_cell, f.fs);
 	    } else {
@@ -1239,7 +1239,7 @@ class BIE_WallTurbulent : BoundaryInterfaceEffect {
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         BoundaryCondition bc = blk.bc[which_boundary];
-        version(komega) {
+        version(turbulence) {
             foreach (i, f; bc.faces) {
                 if (bc.outsigns[i] == 1) {
                     blk.myConfig.turb_model.set_flowstate_at_wall(gtl, f, f.left_cell, f.fs);
@@ -1259,7 +1259,7 @@ class BIE_WallTurbulent : BoundaryInterfaceEffect {
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
 
-        version(komega) {
+        version(turbulence) {
             final switch (which_boundary) {
             case Face.north:
                 j = blk.jmax;
@@ -1717,7 +1717,7 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
         assert(mu_t >= 0.0, "mu_t lesser than zero");
         assert(omega > 0.0, "omega not greater than zero");
         number tke = omega * mu_t / cell.fs.gas.rho;
-        version(komega) {
+        version(turbulence) {
             // Assign updated values of tke and omega to IFace.fs for
             // later copying to boundary cells.
             IFace.fs.turb[0] = tke;

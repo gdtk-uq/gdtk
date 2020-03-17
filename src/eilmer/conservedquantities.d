@@ -31,7 +31,7 @@ public:
         number psi;        // divergence cleaning parameter for MHD
         number divB;       // divergence of the magnetic field
     }
-    version(komega) {
+    version(turbulence) {
         number[2] rhoturb;    // turbulent conserved 
     }
 
@@ -65,7 +65,7 @@ public:
             psi = other.psi;
             divB = other.divB;
         }
-        version(komega) {
+        version(turbulence) {
             rhoturb = other.rhoturb.dup;
         }
     }
@@ -87,7 +87,7 @@ public:
             psi = src.psi;
             divB = src.divB;
         }
-        version(komega) {
+        version(turbulence) {
             rhoturb[] = src.rhoturb[];
         }
     }
@@ -109,7 +109,7 @@ public:
             psi = 0.0;
             divB = 0.0;
         }
-        version(komega) {
+        version(turbulence) {
             foreach(ref rt; rhoturb) { rt = 0.0; }
         }
     }
@@ -131,7 +131,7 @@ public:
             psi += other.psi * factor;
             divB += other.divB * factor;
         }
-        version(komega) {
+        version(turbulence) {
             foreach(i; 0 .. rhoturb.length) { rhoturb[i] += other.rhoturb[i] * factor; }
         }
     }
@@ -153,7 +153,7 @@ public:
             psi *= factor;
             divB *= factor;
         }
-        version(komega) {
+        version(turbulence) {
             foreach(ref rt; energies) { rt *= factor; }
         }
     }
@@ -176,7 +176,7 @@ public:
             repr ~= ", psi=" ~ to!string(psi);
             repr ~= ", divB-" ~ to!string(divB);
         }
-        version(komega) {
+        version(turbulence) {
             repr ~= ", turb=" ~ to!string(rhoturb);
         }
         repr ~= ")";

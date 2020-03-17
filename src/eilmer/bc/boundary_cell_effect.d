@@ -172,7 +172,7 @@ public:
                 for (i = blk.imin; i <= blk.imax; ++i) {
                     cell = blk.get_cell(i,j,k);
                     iface = cell.iface[Face.north];
-                    version(komega) {
+                    version(turbulence) {
                         cell.fs.turb[0] = iface.fs.turb[0];
                         cell.fs.turb[1] = iface.fs.turb[1];
                     }
@@ -185,7 +185,7 @@ public:
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     cell = blk.get_cell(i,j,k);
                     iface = cell.iface[Face.east];
-                    version(komega) {
+                    version(turbulence) {
                         cell.fs.turb[0] = iface.fs.turb[0];
                         cell.fs.turb[1] = iface.fs.turb[1];
                     }
@@ -198,7 +198,7 @@ public:
                 for (i = blk.imin; i <= blk.imax; ++i) {
                     cell = blk.get_cell(i,j,k);
                     iface = cell.iface[Face.south];
-                    version(komega) {
+                    version(turbulence) {
                         cell.fs.turb[0] = iface.fs.turb[0];
                         cell.fs.turb[1] = iface.fs.turb[1];
                     }
@@ -211,7 +211,7 @@ public:
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     cell = blk.get_cell(i,j,k);
                     iface = cell.iface[Face.west];
-                    version(komega) {
+                    version(turbulence) {
                         cell.fs.turb[0] = iface.fs.turb[0];
                         cell.fs.turb[1] = iface.fs.turb[1];
                     }
@@ -224,7 +224,7 @@ public:
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     cell = blk.get_cell(i,j,k);
                     iface = cell.iface[Face.top];
-                    version(komega) {
+                    version(turbulence) {
                         cell.fs.turb[0] = iface.fs.turb[0];
                         cell.fs.turb[1] = iface.fs.turb[1];
                     }
@@ -237,7 +237,7 @@ public:
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     cell = blk.get_cell(i,j,k);
                     iface = cell.iface[Face.bottom];
-                    version(komega) {
+                    version(turbulence) {
                         cell.fs.turb[0] = iface.fs.turb[0];
                         cell.fs.turb[1] = iface.fs.turb[1];
                     }

@@ -1102,7 +1102,7 @@ public:
         nitems += nmodes*3;
         nitems += nspecies;
         version(MHD) { nitems += 5; }
-        version(komega) { nitems += myConfig.turb_model.nturb; }
+        version(turbulence) { nitems += myConfig.turb_model.nturb; }
 
         return nitems;
     }
@@ -1200,7 +1200,7 @@ public:
                 // in the other MPI process.
                 //size_t nitems = 16;
                 //version(MHD) { nitems += 5; }
-                //version(komega) { nitems += 2; }
+                //version(turbulence) { nitems += 2; }
                 //size_t ne = ghost_cells.length * (nmodes*3 + nspecies + nitems);
 
                 size_t fs_size = flowstate_buffer_entry_size(this_blk.myConfig);
@@ -1244,7 +1244,7 @@ public:
                         outgoing_flowstate_buf[ii++] = fs.psi;
                         outgoing_flowstate_buf[ii++] = fs.divB;
                     }
-                    version(komega) {
+                    version(turbulence) {
                         foreach (j; 0 .. nturb) outgoing_flowstate_buf[ii++] = fs.turb[j];
                     }
                     outgoing_flowstate_buf[ii++] = fs.mu_t;
@@ -1331,7 +1331,7 @@ public:
                         fs.psi = incoming_flowstate_buf[ii++];
                         fs.divB = incoming_flowstate_buf[ii++];
                     }
-                    version(komega) {
+                    version(turbulence) {
                         foreach(j; 0 .. nturb) fs.turb[j] = incoming_flowstate_buf[ii++];
                     }
                     fs.mu_t = incoming_flowstate_buf[ii++];
@@ -1370,7 +1370,7 @@ public:
         size_t nspecies = myConfig.n_species;
         size_t nmodes = myConfig.n_modes;
         size_t nitems = 12;
-        version(komega) { nitems += myConfig.turb_model.nturb*3; }
+        version(turbulence) { nitems += myConfig.turb_model.nturb*3; }
         nitems += nmodes*3;
         nitems += nspecies*3;
         return nitems;
@@ -1394,7 +1394,7 @@ public:
                 //size_t nspecies = this_blk.myConfig.n_species;
                 //size_t nmodes = this_blk.myConfig.n_modes;
                 //size_t nitems = 12;
-                //version(komega) { nitems += 6; }
+                //version(turbulence) { nitems += 6; }
                 size_t grad_size = viscous_gradient_buffer_entry_size(this_blk.myConfig);
                 size_t ne = ghost_cells.length * grad_size;
                 if (incoming_viscous_gradient_buf.length < ne) { incoming_viscous_gradient_buf.length = ne; }
@@ -1470,7 +1470,7 @@ public:
                 // to the corresponding non-blocking receive that was posted
                 // in the other MPI process.
                 //size_t nitems = 12;
-                //version(komega) { nitems += 6; }
+                //version(turbulence) { nitems += 6; }
                 size_t grad_size = viscous_gradient_buffer_entry_size(this_blk.myConfig);
                 size_t ne = ghost_cells.length * grad_size;
                 if (outgoing_viscous_gradient_buf.length < ne) { outgoing_viscous_gradient_buf.length = ne; }
@@ -1493,7 +1493,7 @@ public:
                     buf[ii++] = c.grad.T[1];
                     buf[ii++] = c.grad.T[2];
                     // tke, omega
-                    version(komega) {
+                    version(turbulence) {
                         foreach (j; 0 .. nturb) {
                             buf[ii++] = c.grad.turb[j][0];
                             buf[ii++] = c.grad.turb[j][1];
@@ -1577,8 +1577,8 @@ public:
                     c.grad.T[0] = buf[ii++];
                     c.grad.T[1] = buf[ii++];
                     c.grad.T[2] = buf[ii++];
-                    // tke, omega
-                    version(komega) {
+                    // formerly tke, omega
+                    version(turbulence) {
                         foreach (j; 0 .. nturb) {
                             c.grad.turb[j][0] = buf[ii++];
                             c.grad.turb[j][1] = buf[ii++];

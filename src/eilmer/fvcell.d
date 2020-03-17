@@ -518,7 +518,7 @@ public:
         number u = myConfig.gmodel.internal_energy(fs.gas);
         number ke = 0.5*(fs.vel.x*fs.vel.x + fs.vel.y*fs.vel.y+fs.vel.z*fs.vel.z);
         myU.total_energy = fs.gas.rho*(u + ke);
-        version(komega) {
+        version(turbulence) {
             foreach(i; 0 .. myConfig.turb_model.nturb){
                 myU.rhoturb[i] = fs.gas.rho * fs.turb[i];
             }
@@ -623,7 +623,7 @@ public:
         // Start with the total energy, then take out the other components.
         // Internal energy is what remains.
         number u = rE * dinv;
-        version(komega) {
+        version(turbulence) {
             if (allow_k_omega_update) {
                 foreach(i; 0 .. myConfig.turb_model.nturb) {
                     // for stability, we enforce tke and omega to be positive.
@@ -759,7 +759,7 @@ public:
         }
         // Total Energy.
         number integral_E = 0.0;
-        version(komega) {
+        version(turbulence) {
             size_t nturb = myConfig.turb_model.nturb;
             number[2] integral_rhoturb;
             foreach(ref t; integral_rhoturb) t = 0.0;
@@ -809,7 +809,7 @@ public:
                 }
             }
             integral_E -= myF.total_energy*area;
-            version(komega) {
+            version(turbulence) {
                 foreach(j; 0 .. nturb) {
                     integral_rhoturb[j] -= myF.rhoturb[j]*area;
                 }
@@ -849,7 +849,7 @@ public:
             }
         }
         my_dUdt.total_energy = vol_inv*integral_E + Q.total_energy;
-        version(komega) {
+        version(turbulence) {
             foreach(i; 0 .. nturb) {
                 my_dUdt.rhoturb[i] = vol_inv*integral_rhoturb[i] + Q.rhoturb[i];
             }
@@ -903,7 +903,7 @@ public:
             }
         }
         U1.total_energy = U0.total_energy + muj_tilde*dt*dUdt0.total_energy; 
-        version(komega) {
+        version(turbulence) {
         foreach(i; 0 .. myConfig.turb_model.nturb){
                 U1.rhoturb[i] = U0.rhoturb[i] + muj_tilde*dt*dUdt0.rhoturb[i];
                 U1.rhoturb[i] = fmax(U1.rhoturb[i],  U0.mass * myConfig.turb_model.turb_limits(i));
@@ -962,7 +962,7 @@ public:
             }
         }
         U2.total_energy = muj*U1.total_energy + vuj*U0.total_energy + muj_tilde*dt*dUdt0.total_energy; 
-        version(komega) {
+        version(turbulence) {
         foreach(i; 0 .. myConfig.turb_model.nturb){
                 U2.rhoturb[i] = muj*U1.rhoturb[i] + vuj*U0.rhoturb[i] + muj_tilde*dt*dUdt0.rhoturb[i];
                 U2.rhoturb[i] = fmax(U2.rhoturb[i],  U0.mass * myConfig.turb_model.turb_limits(i));
@@ -1019,7 +1019,7 @@ public:
             }
         }
         U1.total_energy = U0.total_energy + muj_tilde*dt*dUdt0.total_energy; 
-        version(komega) {
+        version(turbulence) {
             foreach(i; 0 .. myConfig.turb_model.nturb){
                 U1.rhoturb[i] = U0.rhoturb[i] + muj_tilde*dt*dUdt0.rhoturb[i];
                 U1.rhoturb[i] = fmax(U1.rhoturb[i], U0.mass * myConfig.turb_model.turb_limits(i));
@@ -1102,7 +1102,7 @@ public:
             }
         }
         U2.total_energy = muj*U1.total_energy + vuj*U0.total_energy + (1.0-muj-vuj)*U3.total_energy + muj_tilde*dt*dUdt0.total_energy + gam_tilde*dt*dUdtO.total_energy; 
-        version(komega) {
+        version(turbulence) {
             foreach(i; 0 .. myConfig.turb_model.nturb){
                 U2.rhoturb[i] = muj*U1.rhoturb[i] + vuj*U0.rhoturb[i] + (1.0-muj-vuj)*U3.rhoturb[i] + muj_tilde*dt*dUdt0.rhoturb[i] + gam_tilde*dt*dUdtO.rhoturb[i];
                 U2.rhoturb[i] = fmax(U2.rhoturb[i], U0.mass * myConfig.turb_model.turb_limits(i));
@@ -1175,7 +1175,7 @@ public:
             }
         }
         U1.total_energy = U0.total_energy + dt * gamma_1 * dUdt0.total_energy;
-        version(komega) {
+        version(turbulence) {
             foreach(i; 0 .. myConfig.turb_model.nturb){
                 U1.rhoturb[i] = U0.rhoturb[i] + dt * gamma_1 * dUdt0.rhoturb[i];
                 U1.rhoturb[i] = fmax(U1.rhoturb[i], U0.mass * myConfig.turb_model.turb_limits(i));
@@ -1251,7 +1251,7 @@ public:
             }
         }
         U2.total_energy = U_old.total_energy + dt*(gamma_1*dUdt0.total_energy + gamma_2*dUdt1.total_energy);
-        version(komega) {
+        version(turbulence) {
             foreach(i; 0 .. myConfig.turb_model.nturb){
                 U2.rhoturb[i] = U_old.rhoturb[i] + dt*(gamma_1*dUdt0.rhoturb[i] + gamma_2*dUdt1.rhoturb[i]);
                 U2.rhoturb[i] = fmax(U2.rhoturb[i], U_old.mass * myConfig.turb_model.turb_limits(i));
@@ -1325,7 +1325,7 @@ public:
         }
         U3.total_energy = U_old.total_energy + 
             dt*(gamma_1*dUdt0.total_energy + gamma_2*dUdt1.total_energy + gamma_3*dUdt2.total_energy);
-        version(komega) {
+        version(turbulence) {
             foreach(i; 0 .. myConfig.turb_model.nturb){
                 U3.rhoturb[i] = U_old.rhoturb[i] + dt*(gamma_1*dUdt0.rhoturb[i] + gamma_2*dUdt1.rhoturb[i] + gamma_3*dUdt2.rhoturb[i]);
                 U3.rhoturb[i] = fmax(U3.rhoturb[i], U_old.mass * myConfig.turb_model.turb_limits(i));
@@ -1374,7 +1374,7 @@ public:
             }
         }
         U1.total_energy = vr*(U0.total_energy + dt*gamma_1*dUdt0.total_energy);
-        version(komega) {
+        version(turbulence) {
             foreach(i; 0 .. myConfig.turb_model.nturb){
                 U1.rhoturb[i] = vr*(U0.rhoturb[i] + dt*gamma_1*dUdt0.rhoturb[i]);
                 U1.rhoturb[i] = fmax(U1.rhoturb[i], U0.mass * myConfig.turb_model.turb_limits(i));
@@ -1429,7 +1429,7 @@ public:
         }
         U2.total_energy = vol_inv*(v_old*U0.total_energy +
                                    dt*(gamma_1*dUdt0.total_energy + gamma_2*dUdt1.total_energy));
-        version(komega) {
+        version(turbulence) {
             foreach(i; 0 .. myConfig.turb_model.nturb){
                 U2.rhoturb[i] = vol_inv*(v_old*U0.rhoturb[i] + dt*(gamma_1*dUdt0.rhoturb[i] + gamma_2*dUdt1.rhoturb[i]));
                 U2.rhoturb[i] = fmax(U2.rhoturb[i], U0.mass * myConfig.turb_model.turb_limits(i));
@@ -1470,7 +1470,7 @@ public:
         if ((cast(FuelAirMix) myConfig.gmodel) !is null) {
             // for this gas model thermochemical reactor we need turbulence info
             if (params.length < 1) { throw new Error("params vector too short."); }
-            version(komega) {
+            version(turbulence) {
                 params[0]=myConfig.turb_model.turbulent_signal_frequency(fs);
             } else {
                 throw new Error("FuelAirMix needs komega capability.");
@@ -1623,7 +1623,7 @@ public:
                 * 1.0/(L_min^^2) * myConfig.viscous_signal_factor;
         }
         this.signal_parab = signal - this.signal_hyp; // store parabolic signal for STS
-        version(komega) {
+        version(turbulence) {
             number turbulent_signal = myConfig.turb_model.turbulent_signal_frequency(fs);
             turbulent_signal *= myConfig.turbulent_signal_factor;
             signal = fmax(signal, turbulent_signal); 
@@ -1696,7 +1696,7 @@ public:
         fs.k_t *= factor;
     }
 
-    version(komega) {
+    version(turbulence) {
     @nogc
     void turbulence_viscosity() 
     {
@@ -1709,7 +1709,7 @@ public:
     Old k-omega stuff moved (see NNG 11/02/20)
     */
 
-    } // end version(komega)
+    } // end version(turbulence)
     
     @nogc
     void clear_source_vector() 
@@ -1723,7 +1723,7 @@ public:
         version(MHD) {
             Q.B.clear();
         }
-        version(komega) {
+        version(turbulence) {
             foreach(ref rt; Q.rhoturb) { rt = 0.0; }
         }
         version(multi_species_gas) {
@@ -1801,8 +1801,8 @@ public:
             Q.momentum.refy -= tau_00 * areaxy[0] / volume[0];
         } // end if ( myConfig.axisymmetric )
 
-        version(komega) {
-            // Fixme: Replace pos[0].y with dwall (it's only used in axisymmetric atm anyway)
+        version(turbulence) {
+            // FIXME: Replace pos[0].y with dwall (it's only used in axisymmetric atm anyway)
             if (in_turbulent_zone) {
                 myConfig.turb_model.source_terms(fs, grad, pos[0].y, Q.rhoturb);
             }
@@ -1965,7 +1965,7 @@ string cell_data_as_string(ref const(Vector3) pos, number volume, ref const(Flow
         }
         formattedWrite(writer, " %.18e %.18e %d", fs.mu_t.re, fs.k_t.re, fs.S);
         if (radiation) { formattedWrite(writer, " %.18e %.18e %.18e", Q_rad_org.re, f_rad_org.re, Q_rE_rad.re); }
-        version(komega) {
+        version(turbulence) {
             foreach(it; 0 .. nturb){
                 formattedWrite(writer, " %.18e", fs.turb[it].re);
             }
@@ -2003,7 +2003,7 @@ string cell_data_as_string(ref const(Vector3) pos, number volume, ref const(Flow
         }
         formattedWrite(writer, " %.18e %.18e %d", fs.mu_t, fs.k_t, fs.S);
         if (radiation) { formattedWrite(writer, " %.18e %.18e %.18e", Q_rad_org, f_rad_org, Q_rE_rad); }
-        version(komega) {
+        version(turbulence) {
             foreach(it; 0 .. nturb){
                 formattedWrite(writer, " %.18e", fs.turb[it]);
             }
@@ -2068,7 +2068,7 @@ void cell_data_to_raw_binary(ref File fout,
             dbl3[0] = Q_rad_org.re; dbl3[1] = f_rad_org.re; dbl3[2] = Q_rE_rad.re;
             fout.rawWrite(dbl3);
         }
-        version(komega) {
+        version(turbulence) {
             foreach(it; 0 .. nturb){
                 dbl1[0] = fs.turb[it].re; fout.rawWrite(dbl1);
             }
@@ -2118,7 +2118,7 @@ void cell_data_to_raw_binary(ref File fout,
             dbl3[0] = Q_rad_org; dbl3[1] = f_rad_org; dbl3[2] = Q_rE_rad;
             fout.rawWrite(dbl3);
         }
-        version(komega) {
+        version(turbulence) {
             foreach(it; 0 .. nturb){
                 dbl1[0] = fs.turb[it]; fout.rawWrite(dbl1);
             }
@@ -2212,7 +2212,7 @@ void scan_cell_data_from_fixed_order_string
         } else {
             Q_rad_org = 0.0; f_rad_org = 0.0; Q_rE_rad = 0.0;
         }
-        version(komega) {
+        version(turbulence) {
             foreach(it; 0 .. nturb) {
                 fs.turb[it] = Complex!double(items.front); items.popFront();
             }
@@ -2299,7 +2299,7 @@ void scan_cell_data_from_fixed_order_string
         } else {
             Q_rad_org = 0.0; f_rad_org = 0.0; Q_rE_rad = 0.0;
         }
-        version(komega) {
+        version(turbulence) {
             foreach(it; 0 .. nturb) {
                 fs.turb[it] = to!double(items.front); items.popFront();
             }
@@ -2395,7 +2395,7 @@ void scan_cell_data_from_variable_order_string
     } else {
         Q_rad_org = 0.0; f_rad_org = 0.0; Q_rE_rad = 0.0;
     }
-    version(komega) {
+    version(turbulence) {
         foreach(i; 0 .. tm.nturb) {
             fs.turb[i] = values[countUntil(varNameList, tm.primitive_variable_name(i))];
         }
@@ -2477,7 +2477,7 @@ void raw_binary_to_cell_data(ref File fin,
             Q_rad_org = 0.0; f_rad_org = 0.0; Q_rE_rad = 0.0;
         }
         fin.rawRead(dbl2); // tke, omega
-        version(komega) {
+        version(turbulence) {
             foreach(i; 0 .. nturb){
                 fin.rawRead(dbl1); fs.turb[i] = dbl1[0];
             }
@@ -2543,7 +2543,7 @@ void raw_binary_to_cell_data(ref File fin,
         } else {
             Q_rad_org = 0.0; f_rad_org = 0.0; Q_rE_rad = 0.0;
         }
-        version(komega) {
+        version(turbulence) {
             foreach(i; 0 .. nturb){
                 fin.rawRead(dbl1); fs.turb[i] = dbl1[0];
             }

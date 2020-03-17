@@ -365,7 +365,7 @@ public:
             grad.T[1] = c.grad.T[1];
             grad.T[2] = c.grad.T[2];
             
-            version(komega) {
+            version(turbulence) {
                 foreach(i; 0 .. myConfig.turb_model.nturb) {
                     grad.turb[i][0] = c.grad.turb[i][0];
                     grad.turb[i][1] = c.grad.turb[i][1];
@@ -451,7 +451,7 @@ public:
             grad.T[1] = 0.5*(cL0.grad.T[1]+cR0.grad.T[1]) - jump*(ny/ndotehat);
             grad.T[2] = 0.5*(cL0.grad.T[2]+cR0.grad.T[2]) - jump*(nz/ndotehat);
             
-            version(komega) {
+            version(turbulence) {
                 foreach(i; 0 .. myConfig.turb_model.nturb) {
                     avgdotehat = 0.5*(cL0.grad.turb[i][0]+cR0.grad.turb[i][0])*ehatx +
                         0.5*(cL0.grad.turb[i][1]+cR0.grad.turb[i][1])*ehaty +
@@ -642,7 +642,7 @@ public:
                     }
                 } // multi_species_gas
             }
-            version(komega) {
+            version(turbulence) {
                 if ( myConfig.turb_model.isTurbulent &&
                      !(myConfig.axisymmetric && (Ybar <= 1.0e-10)) ) {
                     // Turbulence contribution to the shear stresses.
@@ -711,7 +711,7 @@ public:
                     F.energies[imode] -= viscous_factor * fs.gas.k_modes[imode] * grad.T_modes[imode][2] * nz;
                 }
             }
-            version(komega) {
+            version(turbulence) {
                 if ( myConfig.turb_model.isTurbulent &&
                      !(myConfig.axisymmetric && (Ybar <= 1.0e-10)) ) {
 
@@ -831,7 +831,7 @@ public:
             version(multi_T_gas) {
                 // [TODO] Rowan, Modal energy flux?
             }
-            version(komega) {
+            version(turbulence) {
                 foreach(ref rt; F.rhoturb) rt=0.0;// [TODO] PJ, 2018-05-05, talk to Wilson
             }
             version(multi_species_gas) {

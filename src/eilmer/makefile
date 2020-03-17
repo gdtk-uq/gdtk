@@ -37,7 +37,7 @@ WITH_DVODE ?= 0
 MULTI_SPECIES_GAS ?= 1
 MULTI_T_GAS ?= 1
 MHD ?= 1
-KOMEGA ?= 1
+TURBULENCE ?= 1
 
 TECPLOT_BIN_DIR ?= unavailable
 TECPLOT_BIN_VERSION_STR = tecplot_unavailable
@@ -335,8 +335,8 @@ ifeq ($(MHD),1)
     DFLAGS += $(DVERSION)MHD
 endif
 
-ifeq ($(KOMEGA),1)
-    DFLAGS += $(DVERSION)komega
+ifeq ($(TURBULENCE),1)
+    DFLAGS += $(DVERSION)turbulence
 endif
 
 default: $(PROGRAMS)

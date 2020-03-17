@@ -126,7 +126,7 @@ public:
         number BxMax, ByMax, BzMax, psiMax;
         number BxMin, ByMin, BzMin, psiMin;
     }
-    version(komega) {
+    version(turbulence) {
         number[3][2] turb;
         number[2] turbPhi;
         number[2] turbMax;
@@ -192,7 +192,7 @@ public:
             BxMax = other.BxMax; ByMax = other.ByMax; BzMax = other.BzMax; psiMax = other.psiMax;
             BxMin = other.BxMin; ByMin = other.ByMin; BzMin = other.BzMin; psiMin = other.psiMin;
         }
-        version(komega) {
+        version(turbulence) {
             foreach(i; 0 .. turb.length){
                 turb[i][] = other.turb[i][];
                 turbPhi[i] = other.turbPhi[i];
@@ -294,7 +294,7 @@ public:
                 }
             }
         }
-        version(komega) {
+        version(turbulence) {
             foreach (it; 0 .. myConfig.turb_model.nturb) {
                 mixin(codeForLimits("turb[it]","turb[it]","turbPhi[it]","turbMax[it]","turbMin[it]"));
             }
@@ -410,7 +410,7 @@ public:
                 }
             }
         }
-        version(komega) {
+        version(turbulence) {
             foreach (it; 0 .. myConfig.turb_model.nturb) {
                 mixin(codeForLimits("turb[it]","turb[it]","turbPhi[it]","turbMax[it]","turbMin[it]"));
             }
@@ -506,7 +506,7 @@ public:
                 }
             }
         }
-        version(komega) {
+        version(turbulence) {
             foreach (it; 0 .. myConfig.turb_model.nturb) {
                 mixin(codeForGradients("turb[it]","turb[it]","turbMax[it]","turbMin[it]"));
             }
@@ -624,7 +624,7 @@ public:
                 }
             }
         }
-        version(komega) {
+        version(turbulence) {
             foreach (it; 0 .. myConfig.turb_model.nturb) {
                 mixin(codeForLimits("turb[it]","turb[it]","turbPhi[it]","turbMax[it]","turbMin[it]"));
             }
@@ -769,7 +769,7 @@ public:
                 }
             }
         }
-        version(komega) {
+        version(turbulence) {
             foreach (it; 0 .. myConfig.turb_model.nturb) {
                 mixin(codeForLimits("turb[it]","turb[it]","turbPhi[it]","turbMax[it]","turbMin[it]"));
             }
@@ -870,7 +870,7 @@ public:
                 }
             }
         }
-        version(komega) {
+        version(turbulence) {
             foreach (it; 0 .. myConfig.turb_model.nturb) {
                 mixin(codeForGradients("turb[it]","turb[it]","turbMax[it]","turbMin[it]"));
             }
@@ -1068,7 +1068,7 @@ public:
                     }
                 }
             }
-            version(komega) {
+            version(turbulence) {
             foreach (it; 0 .. myConfig.turb_model.nturb) {
                     mixin(codeForReconstruction("turb[it]","turb[it]","turb[it]","turbPhi[it]"));
                 }
@@ -1247,7 +1247,7 @@ public:
                     }
                 }
             }
-            version(komega) {
+            version(turbulence) {
                 foreach (it; 0 .. myConfig.turb_model.nturb) {
                     mixin(codeForReconstruction("turb[it]","turb[it]","turb[it]","turbPhi[it]"));
                 }
@@ -1413,7 +1413,7 @@ public:
                     }
                 }
             }
-            version(komega) {
+            version(turbulence) {
                 foreach (it; 0 .. myConfig.turb_model.nturb) {
                     mixin(codeForReconstruction("turb[it]","turb[it]","turb[it]","turbPhi[it]"));
                 }
