@@ -71,6 +71,22 @@ USGCell_type convert_cell_type(int vtk_element_type)
 }
 
 @nogc
+int n_vertices_for_vtk_element(int vtk_element_type)
+{
+    switch (vtk_element_type) {
+    case VTKElement.triangle: return 3;
+    case VTKElement.quad: return 4;
+    case VTKElement.tetra: return 4;
+    case VTKElement.wedge: return 6;
+    case VTKElement.hexahedron: return 8;
+    case VTKElement.pyramid: return 5;
+    case VTKElement.line: return 2;
+    default:
+        return 0;
+    }
+}
+
+@nogc
 USGCell_type cell_type_from_name(string name)
 {
     switch (name) {
@@ -1180,19 +1196,45 @@ public:
         }
         dimensions = to!int(getHeaderContent("NDIME"));
         writeln("dimensions=", dimensions);
+        //
+        // Since we are not sure of the order of the blocks (elements or points),
+        // let's be safe and look from the beginning.
+        f.rewind();
         ncells = to!size_t(getHeaderContent("NELEM"));
         writeln("ncells=", ncells);
         cells.length = ncells;
         foreach(i; 0 .. ncells) {
+            // For very large files, emit a character periodically,
+            // to show that work is being done.
+            if ((i % 100_000) == 0) { stdout.write("*"); stdout.flush(); }
             auto lineContent = f.readln().strip();
+            // We are expecting the following items on the line:
+            // a. vtk-element-type
+            // b. vertex indices for the element
+            // c. cell index
+            // If the cell index is not available, use the current value of i.
             auto tokens = lineContent.split();
             int vtk_element_type = to!int(tokens[0]);
-            size_t indx = to!size_t(tokens[$-1]);
+            size_t indx = i; // default index if not provided on line
+            int nv_expected = n_vertices_for_vtk_element(vtk_element_type);
             size_t[] vtx_id_list;
-            foreach(j; 1 .. tokens.length-1) { vtx_id_list ~= to!size_t(tokens[j]); }
+            if (tokens.length == 2+nv_expected) {
+                // All items are present, including the cell index at the end.
+                indx = to!size_t(tokens[$-1]);
+                foreach(j; 1 .. tokens.length-1) { vtx_id_list ~= to!size_t(tokens[j]); }
+            } else if (tokens.length == 1+nv_expected) {
+                // Presume that the cell index is not available at the end of the line.
+                foreach(j; 1 .. tokens.length) { vtx_id_list ~= to!size_t(tokens[j]); }
+            } else {
+                string msg = "Incorrect number of items on line for element.";
+                msg ~= format("\nCell i: %d line:\"%s\"", i, lineContent);
+                throw new GeometryException(msg);
+            }
             USGCell_type cell_type = convert_cell_type(vtk_element_type);
             if (cell_type == USGCell_type.none) {
-                throw new GeometryException("unknown element type for line: "~to!string(lineContent));
+                string msg = "Unknown element type.";
+                msg ~= format("\nCell i: %d line:\"%s\"", i, lineContent);
+                throw new GeometryException(msg);
             }
             if (cell_type == USGCell_type.wedge && expect_gmsh_order_for_wedges) {
                 // We assume that we have picked up the vertex indices for a wedge
@@ -1207,15 +1249,29 @@ public:
             // outsign_list for each cell.
             cells[indx] = new USGCell(cell_type, indx, vtx_id_list, face_id_list, outsign_list);
         } // end foreach i .. ncells
+        size_t uninitialized_cell_count = 0;
         foreach(i; 0 .. cells.length) {
-            if (!cells[i]) { writeln("Warning: uninitialized cell at index: ", i); }
+            if (!cells[i]) { ++uninitialized_cell_count; }
+        }
+        if (uninitialized_cell_count > 0) {
+            writefln("There are %d initialized cells and %d uninitialized cells.",
+                     ncells, uninitialized_cell_count);
             // [TODO] if we have any uninitialized cells,
             // we should compress the array to eliminate empty elements.
         }
+        //
+        // Now, look for the vertices.
+        // It may be that the block of vertices is located in the SU2 file
+        // before the block that defines the elements, so let's look from
+        // the start of the file.
+        f.rewind();
         nvertices = to!size_t(getHeaderContent("NPOIN"));
         writeln("nvertices=", nvertices);
         vertices.length = nvertices;
         foreach(i; 0 .. nvertices) {
+            // For very large files, emit a character periodically,
+            // to show that work is being done.
+            if ((i % 100_000) == 0) { stdout.write("*"); stdout.flush(); }
             auto tokens = f.readln().strip().split();
             double x=0.0; double y=0.0; double z = 0.0; size_t indx = 0;
             if (dimensions == 2) {
@@ -1349,7 +1405,11 @@ public:
             return;
         } // end add_face_to_cell()
         //
+        writeln("Assemble faces to cells.");
         foreach(i, cell; cells) {
+            // For a very large grid, emit a character periodically,
+            // to show that work is being done.
+            if ((i % 100_000) == 0) { stdout.write("*"); stdout.flush(); }
             if (!cell) continue;
             // Attach the faces to each cell. In 2D, faces are defined as lines.
             // As we progress along the line the face normal is pointing to the right.
@@ -1427,7 +1487,10 @@ public:
         // Now that we have a full set of cells and faces,
         // make lists of the boundary faces.
         //
+        writeln("Boundary sets of faces.");
         foreach (myface; faces) { myface.is_on_boundary = false; } // will remark boundary faces below
+        // Note that we do not rewind the file because
+        // we expect the boundary sets last, always.
         nboundaries = to!size_t(getHeaderContent("NMARK"));
         foreach(i; 0 .. nboundaries) {
             string tag = getHeaderContent("MARKER_TAG");
@@ -1485,7 +1548,7 @@ public:
             nboundaries = boundaries.length;
         }
         //
-        // Check that the region bounded by the grid is closed.
+        writeln("Check that the region bounded by the grid is closed.");
         Vector3 varea = Vector3(0,0,0);
         foreach (b; boundaries) {
             foreach (j, fid; b.face_id_list) {
@@ -1499,6 +1562,7 @@ public:
         }
         //
         // If we arrive here, the import of the SU2 grid seems to have been successful
+        
         return;
     } // end read_from_su2_text_file()
 
