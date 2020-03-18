@@ -10,6 +10,16 @@ require 'billig'
 require 'lua_helper'
 local deepclone = lua_helper.deepclone
 
+-- sleep() function copied from http://lua-users.org/wiki/SleepFunction
+local clock = os.clock
+function sleep(n)  -- seconds
+   -- warning: clock can eventually wrap around for sufficiently large n
+   -- (whose value is platform dependent).  Even for n == 1, clock() - t0
+   -- might become negative on the second that clock wraps.
+   local t0 = clock()
+   while clock() - t0 <= n do end
+end
+
 function checkAllowedNames(myTable, allowedNames)
    local setOfNames = {}
    local namesOk = true
@@ -2320,6 +2330,7 @@ function build_job_files(job)
    if buildMasterFiles then
       print("Build files for job:", job)
       os.execute("mkdir -p config")
+      sleep(2) -- agni0 seems to be slow to make the directory
       write_config_file("config/" .. job .. ".config")
       write_control_file("config/" .. job .. ".control")
       write_times_file("config/" .. job .. ".times")
@@ -2333,6 +2344,7 @@ function build_job_files(job)
       os.execute("mkdir -p solid-grid/t0000")
       os.execute("mkdir -p solid/t0000")
    end
+   sleep(2) -- agni0 seems to be slow to make the directories
    for i, id in ipairs(fluidBlocksForPrep) do
       if false then
          -- May activate print statement for debug.
