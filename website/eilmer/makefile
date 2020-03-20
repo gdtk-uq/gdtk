@@ -10,7 +10,7 @@ build: $(PDFS) $(HTML) images
 	hugo
 
 sync:
-	rsync -zav public/ cfcfd:/opt/local/share/httpd/htdocs/eilmer/
+	rsync -zzav public/ cfcfd:/opt/local/share/httpd/htdocs/eilmer/
 
 clean:
 	cd ../../doc; make clean

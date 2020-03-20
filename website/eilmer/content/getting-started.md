@@ -70,7 +70,7 @@ To build Eilmer, you will require:
       + openmpi-devel on RedHat/CentOS/Fedora
   + plotutils development package:
       + libplot-dev on Debian/Ubuntu/Mint
-      + plotutils-devel on RedHat/CentOS/Fedora
+      + plotutils-devel on RedHat/CentOS/Fedora (for CentOS 8.x, enable PowerTools repo)
 
 Additionally, if you want to run the test suite, you will require:
 
