@@ -32,18 +32,19 @@ extern (C):
 
 // END AUTO
 
+static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION < 8)
+{
+    pragma(msg, "Version of Open MPI library is too early.");
+}
 enum OPEN_MPI = 1;
 
 /*
  * To accomodate programs written for MPI implementations that use a
  * straight ROMIO import
  */
-static if(OMPI_PROVIDE_MPI_FILE_INTERFACE)
-{
-    alias MPIO_Request = MPI_Request;
-    alias MPIO_Test = MPI_Test;
-    alias MPIO_Wait = MPI_Wait;
-}
+alias MPIO_Request = MPI_Request;
+alias MPIO_Test = MPI_Test;
+alias MPIO_Wait = MPI_Wait;
 
 /*
  * When initializing global pointers to Open MPI internally-defined
@@ -68,57 +69,39 @@ To OMPI_PREDEFINED_GLOBAL(To, alias global)()
 /*
  * MPI_Status
  */
-static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION < 6)
-{
-    struct ompi_status_public_t { 
-        int MPI_SOURCE;
-        int MPI_TAG;
-        int MPI_ERROR;
-        int _count;
+struct ompi_status_public_t {
+    /* These fields are publicly defined in the MPI specification.
+       User applications may freely read from these fields. */
+    int MPI_SOURCE;
+    int MPI_TAG;
+    int MPI_ERROR;
+    /* The following two fields are internal to the Open MPI
+       implementation and should not be accessed by MPI applications.
+       They are subject to change at any time.  These are not the
+       droids you're looking for. */
+    private
+    {
         int _cancelled;
-    }
-}
-else
-{
-    struct ompi_status_public_t {
-        /* These fields are publicly defined in the MPI specification.
-           User applications may freely read from these fields. */
-        int MPI_SOURCE;
-        int MPI_TAG;
-        int MPI_ERROR;
-        /* The following two fields are internal to the Open MPI
-           implementation and should not be accessed by MPI applications.
-           They are subject to change at any time.  These are not the
-           droids you're looking for. */
-        private
-        {
-            int _cancelled;
-            size_t _ucount;
-        }
+        size_t _ucount;
     }
 }
 
 /*
  * Typedefs (aliases)
  */
-static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION < 6)
-    alias MPI_Aint = OMPI_PTRDIFF_TYPE;
-else
-    alias MPI_Aint = OPAL_PTRDIFF_TYPE;
+alias MPI_Aint = OMPI_MPI_AINT_TYPE;
 alias MPI_Offset = OMPI_MPI_OFFSET_TYPE;
-static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION >= 8)
-    alias MPI_Count = OMPI_MPI_COUNT_TYPE;
+alias MPI_Count = OMPI_MPI_COUNT_TYPE;
 struct ompi_communicator_t;
 struct ompi_datatype_t;
 struct ompi_errhandler_t;
-static if(OMPI_PROVIDE_MPI_FILE_INTERFACE)
-    struct ompi_file_t;
+struct ompi_file_t;
 struct ompi_group_t;
 struct ompi_info_t;
 struct ompi_op_t;
 struct ompi_request_t;
 struct ompi_message_t;
-//struct ompi_status_public_t;
+// struct ompi_status_public_t;
 struct ompi_win_t;
 struct mca_base_var_enum_t;
 struct ompi_mpit_cvar_handle_t;
@@ -128,23 +111,18 @@ struct mca_base_pvar_session_t;
 alias MPI_Comm = ompi_communicator_t*;
 alias MPI_Datatype = ompi_datatype_t*;
 alias MPI_Errhandler = ompi_errhandler_t*;
-static if(OMPI_PROVIDE_MPI_FILE_INTERFACE)
-    alias MPI_File = ompi_file_t*;
+alias MPI_File = ompi_file_t*;
 alias MPI_Group = ompi_group_t*;
 alias MPI_Info = ompi_info_t*;
 alias MPI_Op = ompi_op_t*;
 alias MPI_Request = ompi_request_t*;
-static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION >= 8)
-    alias MPI_Message = ompi_message_t*;
+alias MPI_Message = ompi_message_t*;
 alias MPI_Status = ompi_status_public_t;
 alias MPI_Win = ompi_win_t*;
-static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION >= 8)
-{
-    alias MPI_T_enum = mca_base_var_enum_t*;
-    alias MPI_T_cvar_handle = ompi_mpit_cvar_handle_t*;
-    alias MPI_T_pvar_handle = mca_base_pvar_handle_t*;
-    alias MPI_T_pvar_session = mca_base_pvar_session_t*;
-}
+alias MPI_T_enum = mca_base_var_enum_t*;
+alias MPI_T_cvar_handle = ompi_mpit_cvar_handle_t*;
+alias MPI_T_pvar_handle = mca_base_pvar_handle_t*;
+alias MPI_T_pvar_session = mca_base_pvar_session_t*;
 
 /*
  * User typedefs
@@ -155,31 +133,17 @@ alias MPI_Delete_function = int function(MPI_Comm, int, void *, void *);
 alias MPI_Datarep_extent_function = int function(MPI_Datatype, MPI_Aint *, void *);
 alias MPI_Datarep_conversion_function = int function(void *, MPI_Datatype, int, void *, MPI_Offset, void *);
 alias MPI_Comm_errhandler_function = void function(MPI_Comm *, int *, ...);
-static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION < 6)
-    alias MPI_Comm_errhandler_fn = MPI_Comm_errhandler_function;
-else
-    deprecated alias MPI_Comm_errhandler_fn = MPI_Comm_errhandler_function;
+deprecated alias MPI_Comm_errhandler_fn = MPI_Comm_errhandler_function;
 
 
 /* This is a little hackish, but errhandler.h needs space for a
    MPI_File_errhandler_fn.  While it could just be removed, this
    allows us to maintain a stable ABI within OMPI, at least for
    apps that don't use MPI I/O. */
-static if(OMPI_PROVIDE_MPI_FILE_INTERFACE)
-{
-    alias ompi_file_errhandler_fn = void function(MPI_File *, int *, ...);
-    alias MPI_File_errhandler_function = ompi_file_errhandler_fn;
-}
-else
-{
-    struct ompi_file_t;
-    alias ompi_file_errhandler_fn = void function(ompi_file_t**, int*, ...);
-}
+alias ompi_file_errhandler_fn = void function(MPI_File *, int *, ...);
+alias MPI_File_errhandler_function = ompi_file_errhandler_fn;
 alias MPI_Win_errhandler_function = void function(MPI_Win*, int*, ...);
-static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION < 6)
-    alias MPI_Win_errhandler_fn = MPI_Win_errhandler_function;
-else
-    deprecated alias MPI_Win_errhandler_fn = MPI_Win_errhandler_function;
+deprecated alias MPI_Win_errhandler_fn = MPI_Win_errhandler_function;
 alias MPI_Handler_function = void function(MPI_Comm *, int *, ...);
 alias MPI_User_function = void function(void*, void*, int*, MPI_Datatype*);
 alias MPI_Comm_copy_attr_function = int function(MPI_Comm, int, void *, void *, void *, int *);
@@ -203,23 +167,12 @@ enum MPI_ANY_SOURCE         = -1;                      /* match any source rank 
 enum MPI_PROC_NULL          = -2;                      /* rank of null process */
 enum MPI_ROOT               = -4;                      /* special value for intercomms */
 enum MPI_ANY_TAG            = -1;                      /* match any message tag */
-static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION < 6)
-{
-    enum MPI_MAX_PROCESSOR_NAME = 256;     /* max proc. name length */
-    enum MPI_MAX_ERROR_STRING   = 256;     /* max error message length */
-    enum MPI_MAX_OBJECT_NAME    = 64;      /* max object name length */
-}
-else
-{
-    enum MPI_MAX_PROCESSOR_NAME = OPAL_MAX_PROCESSOR_NAME; /* max proc. name length */
-    enum MPI_MAX_ERROR_STRING   = OPAL_MAX_ERROR_STRING;   /* max error message length */
-    enum MPI_MAX_OBJECT_NAME    = OPAL_MAX_OBJECT_NAME;    /* max object name length */
-}
-static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION >= 8)
-    enum MPI_MAX_LIBRARY_VERSION_STRING = 256;             /* max length of library version string */
+enum MPI_MAX_PROCESSOR_NAME = OPAL_MAX_PROCESSOR_NAME; /* max proc. name length */
+enum MPI_MAX_ERROR_STRING   = OPAL_MAX_ERROR_STRING;   /* max error message length */
+enum MPI_MAX_OBJECT_NAME    = OPAL_MAX_OBJECT_NAME;    /* max object name length */
+enum MPI_MAX_LIBRARY_VERSION_STRING = 256;             /* max length of library version string */
 enum MPI_UNDEFINED          = -32766;                  /* undefined stuff */
-static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION >= 8)
-    enum MPI_DIST_GRAPH         = 3;
+enum MPI_DIST_GRAPH         = 3;
 enum MPI_CART               = 1;                       /* cartesian topology */
 enum MPI_GRAPH              = 2;                       /* graph topology */
 enum MPI_KEYVAL_INVALID     = -1;                      /* invalid key value */
@@ -227,33 +180,17 @@ enum MPI_KEYVAL_INVALID     = -1;                      /* invalid key value */
 /*
  * More constants
  */
-static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION >= 8)
-{
-    enum MPI_UNWEIGHTED           = cast(void*) 2;      /* unweighted graph */
-    enum MPI_WEIGHTS_EMPTY        = cast(void*) 3;      /* empty weights */
-}
+enum MPI_UNWEIGHTED           = cast(void*) 2;      /* unweighted graph */
+enum MPI_WEIGHTS_EMPTY        = cast(void*) 3;      /* empty weights */
 enum MPI_BOTTOM               = cast(void*) 0;      /* base reference address */
 enum MPI_IN_PLACE             = cast(void*) 1;      /* in place buffer */
 enum MPI_BSEND_OVERHEAD       = 128;                /* size of bsend header + ptr */
-static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION < 6)
-{
-    enum MPI_MAX_INFO_KEY         = 36;  /* max info key length */
-    enum MPI_MAX_INFO_VAL         = 256;  /* max info value length */
-}
-else
-{
-    enum MPI_MAX_INFO_KEY         = OPAL_MAX_INFO_KEY;  /* max info key length */
-    enum MPI_MAX_INFO_VAL         = OPAL_MAX_INFO_VAL;  /* max info value length */
-}
+enum MPI_MAX_INFO_KEY         = OPAL_MAX_INFO_KEY;  /* max info key length */
+enum MPI_MAX_INFO_VAL         = OPAL_MAX_INFO_VAL;  /* max info value length */
 enum MPI_ARGV_NULL            = cast(char**) 0;     /* NULL argument vector */
 enum MPI_ARGVS_NULL           = cast(char***) 0;    /* NULL argument vectors */
 enum MPI_ERRCODES_IGNORE      = cast(int*) 0;       /* don't return error codes */
-static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION < 6)
-    enum MPI_MAX_PORT_NAME    = 1024;
-else
-    enum MPI_MAX_PORT_NAME    = OPAL_MAX_PORT_NAME; /* max port name length */
-static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION < 8)
-    enum MPI_MAX_NAME_LEN     = MPI_MAX_PORT_NAME;
+enum MPI_MAX_PORT_NAME        = OPAL_MAX_PORT_NAME; /* max port name length */
 enum MPI_ORDER_C              = 0;                  /* C row major order */
 enum MPI_ORDER_FORTRAN        = 1;                  /* Fortran column major order */
 enum MPI_DISTRIBUTE_BLOCK     = 0;                  /* block distribution */
@@ -261,34 +198,29 @@ enum MPI_DISTRIBUTE_CYCLIC    = 1;                  /* cyclic distribution */
 enum MPI_DISTRIBUTE_NONE      = 2;                  /* not distributed */
 enum MPI_DISTRIBUTE_DFLT_DARG = -1;                 /* default distribution arg */
 
-static if(OMPI_PROVIDE_MPI_FILE_INTERFACE)
-{
-    /*
-     * Since these values are arbitrary to Open MPI; we might as well make
-     * them the same as ROMIO for ease of mapping.  These values taken
-     * from ROMIO's mpio.h file.
-     */
-    enum MPI_MODE_CREATE          =   1; /* ADIO_CREATE */
-    enum MPI_MODE_RDONLY          =   2; /* ADIO_RDONLY */
-    enum MPI_MODE_WRONLY          =   4; /* ADIO_WRONLY  */
-    enum MPI_MODE_RDWR            =   8; /* ADIO_RDWR  */
-    enum MPI_MODE_DELETE_ON_CLOSE =  16; /* ADIO_DELETE_ON_CLOSE */
-    enum MPI_MODE_UNIQUE_OPEN     =  32; /* ADIO_UNIQUE_OPEN */
-    enum MPI_MODE_EXCL            =  64; /* ADIO_EXCL */
-    enum MPI_MODE_APPEND          = 128; /* ADIO_APPEND */
-    enum MPI_MODE_SEQUENTIAL      = 256; /* ADIO_SEQUENTIAL */
+/*
+ * Since these values are arbitrary to Open MPI; we might as well make
+ * them the same as ROMIO for ease of mapping.  These values taken
+ * from ROMIO's mpio.h file.
+ */
+enum MPI_MODE_CREATE          =   1; /* ADIO_CREATE */
+enum MPI_MODE_RDONLY          =   2; /* ADIO_RDONLY */
+enum MPI_MODE_WRONLY          =   4; /* ADIO_WRONLY  */
+enum MPI_MODE_RDWR            =   8; /* ADIO_RDWR  */
+enum MPI_MODE_DELETE_ON_CLOSE =  16; /* ADIO_DELETE_ON_CLOSE */
+enum MPI_MODE_UNIQUE_OPEN     =  32; /* ADIO_UNIQUE_OPEN */
+enum MPI_MODE_EXCL            =  64; /* ADIO_EXCL */
+enum MPI_MODE_APPEND          = 128; /* ADIO_APPEND */
+enum MPI_MODE_SEQUENTIAL      = 256; /* ADIO_SEQUENTIAL */
 
-    enum MPI_DISPLACEMENT_CURRENT = -54278278;
+enum MPI_DISPLACEMENT_CURRENT = -54278278;
 
-    enum MPI_SEEK_SET             = 600;
-    enum MPI_SEEK_CUR             = 602;
-    enum MPI_SEEK_END             = 604;
+enum MPI_SEEK_SET             = 600;
+enum MPI_SEEK_CUR             = 602;
+enum MPI_SEEK_END             = 604;
 
-    static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION < 6)
-        enum MPI_MAX_DATAREP_STRING = 128;
-    else
-        enum MPI_MAX_DATAREP_STRING   = OPAL_MAX_DATAREP_STRING;
-}
+/* Max data representation length */
+enum MPI_MAX_DATAREP_STRING   = OPAL_MAX_DATAREP_STRING;
 
 /*
  * MPI-2 One-Sided Communications asserts
@@ -301,23 +233,21 @@ enum MPI_MODE_NOSUCCEED      =   16;
 
 enum MPI_LOCK_EXCLUSIVE      =    1;
 enum MPI_LOCK_SHARED         =    2;
-static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION >= 8)
-{
-    enum MPI_WIN_FLAVOR_CREATE   =    1;
-    enum MPI_WIN_FLAVOR_ALLOCATE =    2;
-    enum MPI_WIN_FLAVOR_DYNAMIC  =    3;
-    enum MPI_WIN_FLAVOR_SHARED   =    4;
 
-    enum MPI_WIN_UNIFIED         =    0;
-    enum MPI_WIN_SEPARATE        =    1;
-}
+enum MPI_WIN_FLAVOR_CREATE   =    1;
+enum MPI_WIN_FLAVOR_ALLOCATE =    2;
+enum MPI_WIN_FLAVOR_DYNAMIC  =    3;
+enum MPI_WIN_FLAVOR_SHARED   =    4;
+
+enum MPI_WIN_UNIFIED         =    0;
+enum MPI_WIN_SEPARATE        =    1;
+
 /*
  * Predefined attribute keyvals
  *
  * DO NOT CHANGE THE ORDER WITHOUT ALSO CHANGING THE ORDER IN
  * src/attribute/attribute_predefined.c and mpif.h.in.
  */
-static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION >= 8)
 enum {
     /* MPI-1 */
     MPI_TAG_UB,
@@ -343,29 +273,6 @@ enum {
     IMPI_HOST_SIZE,
     IMPI_HOST_COLOR
 }
-else enum {
-    /* MPI-1 */
-    MPI_TAG_UB,
-    MPI_HOST,
-    MPI_IO,
-    MPI_WTIME_IS_GLOBAL,
-
-    /* MPI-2 */
-    MPI_APPNUM,
-    MPI_LASTUSEDCODE,
-    MPI_UNIVERSE_SIZE,
-    MPI_WIN_BASE,
-    MPI_WIN_SIZE,
-    MPI_WIN_DISP_UNIT,
-
-    /* Even though these four are IMPI attributes, they need to be there
-       for all MPI jobs */
-    IMPI_CLIENT_SIZE,
-    IMPI_CLIENT_COLOR,
-    IMPI_HOST_SIZE,
-    IMPI_HOST_COLOR
-}
-
 
 /*
  * Error classes and codes
@@ -425,41 +332,31 @@ enum MPI_ERR_SPAWN                 = 50;
 enum MPI_ERR_UNSUPPORTED_DATAREP   = 51;
 enum MPI_ERR_UNSUPPORTED_OPERATION = 52;
 enum MPI_ERR_WIN                   = 53;
-static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION >= 8)
-{
-    enum MPI_T_ERR_MEMORY              = 54;
-    enum MPI_T_ERR_NOT_INITIALIZED     = 55;
-    enum MPI_T_ERR_CANNOT_INIT         = 56;
-    enum MPI_T_ERR_INVALID_INDEX       = 57;
-    enum MPI_T_ERR_INVALID_ITEM        = 58;
-    enum MPI_T_ERR_INVALID_HANDLE      = 59;
-    enum MPI_T_ERR_OUT_OF_HANDLES      = 60;
-    enum MPI_T_ERR_OUT_OF_SESSIONS     = 61;
-    enum MPI_T_ERR_INVALID_SESSION     = 62;
-    enum MPI_T_ERR_CVAR_SET_NOT_NOW    = 63;
-    enum MPI_T_ERR_CVAR_SET_NEVER      = 64;
-    enum MPI_T_ERR_PVAR_NO_STARTSTOP   = 65;
-    enum MPI_T_ERR_PVAR_NO_WRITE       = 66;
-    enum MPI_T_ERR_PVAR_NO_ATOMIC      = 67;
-    enum MPI_ERR_RMA_RANGE             = 68;
-    enum MPI_ERR_RMA_ATTACH            = 69;
-    enum MPI_ERR_RMA_FLAVOR            = 70;
-    enum MPI_ERR_RMA_SHARED            = 71;
+enum MPI_T_ERR_MEMORY              = 54;
+enum MPI_T_ERR_NOT_INITIALIZED     = 55;
+enum MPI_T_ERR_CANNOT_INIT         = 56;
+enum MPI_T_ERR_INVALID_INDEX       = 57;
+enum MPI_T_ERR_INVALID_ITEM        = 58;
+enum MPI_T_ERR_INVALID_HANDLE      = 59;
+enum MPI_T_ERR_OUT_OF_HANDLES      = 60;
+enum MPI_T_ERR_OUT_OF_SESSIONS     = 61;
+enum MPI_T_ERR_INVALID_SESSION     = 62;
+enum MPI_T_ERR_CVAR_SET_NOT_NOW    = 63;
+enum MPI_T_ERR_CVAR_SET_NEVER      = 64;
+enum MPI_T_ERR_PVAR_NO_STARTSTOP   = 65;
+enum MPI_T_ERR_PVAR_NO_WRITE       = 66;
+enum MPI_T_ERR_PVAR_NO_ATOMIC      = 67;
+enum MPI_ERR_RMA_RANGE             = 68;
+enum MPI_ERR_RMA_ATTACH            = 69;
+enum MPI_ERR_RMA_FLAVOR            = 70;
+enum MPI_ERR_RMA_SHARED            = 71;
+enum MPI_T_ERR_INVALID             = 72;
+enum MPI_T_ERR_INVALID_NAME        = 73;
     
-    /* for 1.8 these intentially overlap other error codes because MPI_ERR_LASTCODE
-       can not be changed in a release series*/
-    enum MPI_T_ERR_INVALID             = 70;
-    enum MPI_T_ERR_INVALID_NAME        = 71;
-    
-    /* Per MPI-3 p349 47, MPI_ERR_LASTCODE must be >= the last predefined
-       MPI_ERR_<foo> code.  So just set it equal to the last code --
-       MPI_ERR_RMA_SHARED, in this case. */
-    enum MPI_ERR_LASTCODE              = MPI_ERR_RMA_SHARED;
-}
-else static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION <= 8)
-    enum MPI_ERR_LASTCODE              = 54;
-
-enum MPI_ERR_SYSRESOURCE           = -2;
+/* Per MPI-3 p349 47, MPI_ERR_LASTCODE must be >= the last predefined
+   MPI_ERR_<foo> code.  Set the last code to allow some room for adding
+   error codes without breaking ABI. */
+enum MPI_ERR_LASTCODE              = 92;
 
 /*
  * Comparison results.  Don't change the order of these, the group
@@ -490,7 +387,6 @@ enum
  * Datatype combiners.
  * Do not change the order of these without also modifying mpif.h.in.
  */
-static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION >= 8)
 enum
 {
     MPI_COMBINER_NAMED,
@@ -513,100 +409,88 @@ enum
     MPI_COMBINER_RESIZED,
     MPI_COMBINER_HINDEXED_BLOCK
 }
-else enum
-{
-    MPI_COMBINER_NAMED,
-    MPI_COMBINER_DUP,
-    MPI_COMBINER_CONTIGUOUS,
-    MPI_COMBINER_VECTOR,
-    MPI_COMBINER_HVECTOR_INTEGER,
-    MPI_COMBINER_HVECTOR,
-    MPI_COMBINER_INDEXED,
-    MPI_COMBINER_HINDEXED_INTEGER,
-    MPI_COMBINER_HINDEXED,
-    MPI_COMBINER_INDEXED_BLOCK,
-    MPI_COMBINER_STRUCT_INTEGER,
-    MPI_COMBINER_STRUCT,
-    MPI_COMBINER_SUBARRAY,
-    MPI_COMBINER_DARRAY,
-    MPI_COMBINER_F90_REAL,
-    MPI_COMBINER_F90_COMPLEX,
-    MPI_COMBINER_F90_INTEGER,
-    MPI_COMBINER_RESIZED,
-}
 
-static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION >= 8)
-{
-    /*
-     * Communicator split type constants.
-     * Do not change the order of these without also modifying mpif.h.in
-     * (see also mpif-common.h.fin).
-     */
-    enum {
-        MPI_COMM_TYPE_SHARED
-    }
+/*
+ * Communicator split type constants.
+ * Do not change the order of these without also modifying mpif.h.in
+ * (see also mpif-common.h.fin).
+ */
+enum {
+      MPI_COMM_TYPE_SHARED,
+      OMPI_COMM_TYPE_HWTHREAD,
+      OMPI_COMM_TYPE_CORE,
+      OMPI_COMM_TYPE_L1CACHE,
+      OMPI_COMM_TYPE_L2CACHE,
+      OMPI_COMM_TYPE_L3CACHE,
+      OMPI_COMM_TYPE_SOCKET,
+      OMPI_COMM_TYPE_NUMA,
+      OMPI_COMM_TYPE_BOARD,
+      OMPI_COMM_TYPE_HOST,
+      OMPI_COMM_TYPE_CU,
+      OMPI_COMM_TYPE_CLUSTER
+}
+alias OMPI_COMM_TYPE_NODE = MPI_COMM_TYPE_SHARED;
     
-    /*
-     * MPIT Verbosity Levels
-     */
-    enum {
-        MPI_T_VERBOSITY_USER_BASIC,
-        MPI_T_VERBOSITY_USER_DETAIL,
-        MPI_T_VERBOSITY_USER_ALL,
-        MPI_T_VERBOSITY_TUNER_BASIC,
-        MPI_T_VERBOSITY_TUNER_DETAIL,
-        MPI_T_VERBOSITY_TUNER_ALL,
-        MPI_T_VERBOSITY_MPIDEV_BASIC,
-        MPI_T_VERBOSITY_MPIDEV_DETAIL,
-        MPI_T_VERBOSITY_MPIDEV_ALL
-    }
+/*
+ * MPIT Verbosity Levels
+ */
+enum {
+      MPI_T_VERBOSITY_USER_BASIC,
+      MPI_T_VERBOSITY_USER_DETAIL,
+      MPI_T_VERBOSITY_USER_ALL,
+      MPI_T_VERBOSITY_TUNER_BASIC,
+      MPI_T_VERBOSITY_TUNER_DETAIL,
+      MPI_T_VERBOSITY_TUNER_ALL,
+      MPI_T_VERBOSITY_MPIDEV_BASIC,
+      MPI_T_VERBOSITY_MPIDEV_DETAIL,
+      MPI_T_VERBOSITY_MPIDEV_ALL
+}
     
-    /*
-     * MPIT Scopes
-     */
-    enum {
-        MPI_T_SCOPE_CONSTANT,
-        MPI_T_SCOPE_READONLY,
-        MPI_T_SCOPE_LOCAL,
-        MPI_T_SCOPE_GROUP,
-        MPI_T_SCOPE_GROUP_EQ,
-        MPI_T_SCOPE_ALL,
-        MPI_T_SCOPE_ALL_EQ
-    }
+/*
+ * MPIT Scopes
+ */
+enum {
+      MPI_T_SCOPE_CONSTANT,
+      MPI_T_SCOPE_READONLY,
+      MPI_T_SCOPE_LOCAL,
+      MPI_T_SCOPE_GROUP,
+      MPI_T_SCOPE_GROUP_EQ,
+      MPI_T_SCOPE_ALL,
+      MPI_T_SCOPE_ALL_EQ
+}
     
-    /*
-     * MPIT Object Binding
-     */
-    enum {
-        MPI_T_BIND_NO_OBJECT,
-        MPI_T_BIND_MPI_COMM,
-        MPI_T_BIND_MPI_DATATYPE,
-        MPI_T_BIND_MPI_ERRHANDLER,
-        MPI_T_BIND_MPI_FILE,
-        MPI_T_BIND_MPI_GROUP,
-        MPI_T_BIND_MPI_OP,
-        MPI_T_BIND_MPI_REQUEST,
-        MPI_T_BIND_MPI_WIN,
-        MPI_T_BIND_MPI_MESSAGE,
-        MPI_T_BIND_MPI_INFO
-    }
+/*
+ * MPIT Object Binding
+ */
+enum {
+      MPI_T_BIND_NO_OBJECT,
+      MPI_T_BIND_MPI_COMM,
+      MPI_T_BIND_MPI_DATATYPE,
+      MPI_T_BIND_MPI_ERRHANDLER,
+      MPI_T_BIND_MPI_FILE,
+      MPI_T_BIND_MPI_GROUP,
+      MPI_T_BIND_MPI_OP,
+      MPI_T_BIND_MPI_REQUEST,
+      MPI_T_BIND_MPI_WIN,
+      MPI_T_BIND_MPI_MESSAGE,
+      MPI_T_BIND_MPI_INFO
+}
     
-    /*
-     * MPIT pvar classes
-     */
-    enum {
-        MPI_T_PVAR_CLASS_STATE,
-        MPI_T_PVAR_CLASS_LEVEL,
-        MPI_T_PVAR_CLASS_SIZE,
-        MPI_T_PVAR_CLASS_PERCENTAGE,
-        MPI_T_PVAR_CLASS_HIGHWATERMARK,
-        MPI_T_PVAR_CLASS_LOWWATERMARK,
-        MPI_T_PVAR_CLASS_COUNTER,
-        MPI_T_PVAR_CLASS_AGGREGATE,
-        MPI_T_PVAR_CLASS_TIMER,
-        MPI_T_PVAR_CLASS_GENERIC
-    }
-}//MPI 1.8+
+/*
+ * MPIT pvar classes
+ */
+enum {
+      MPI_T_PVAR_CLASS_STATE,
+      MPI_T_PVAR_CLASS_LEVEL,
+      MPI_T_PVAR_CLASS_SIZE,
+      MPI_T_PVAR_CLASS_PERCENTAGE,
+      MPI_T_PVAR_CLASS_HIGHWATERMARK,
+      MPI_T_PVAR_CLASS_LOWWATERMARK,
+      MPI_T_PVAR_CLASS_COUNTER,
+      MPI_T_PVAR_CLASS_AGGREGATE,
+      MPI_T_PVAR_CLASS_TIMER,
+      MPI_T_PVAR_CLASS_GENERIC
+}
 
 /*
  * NULL handles
@@ -620,32 +504,23 @@ alias MPI_OP_NULL = OMPI_PREDEFINED_GLOBAL!(MPI_Op, ompi_mpi_op_null);
 alias MPI_ERRHANDLER_NULL = OMPI_PREDEFINED_GLOBAL!(MPI_Errhandler, ompi_mpi_errhandler_null);
 alias MPI_INFO_NULL = OMPI_PREDEFINED_GLOBAL!(MPI_Info, ompi_mpi_info_null);
 alias MPI_WIN_NULL = OMPI_PREDEFINED_GLOBAL!(MPI_Win, ompi_mpi_win_null);
-static if(OMPI_PROVIDE_MPI_FILE_INTERFACE)
-{
-    alias MPI_FILE_NULL = OMPI_PREDEFINED_GLOBAL!(MPI_File, ompi_mpi_file_null);
-}
-static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION >= 8)
-{
-    enum MPI_T_ENUM_NULL = cast(MPI_T_enum) null;
+alias MPI_FILE_NULL = OMPI_PREDEFINED_GLOBAL!(MPI_File, ompi_mpi_file_null);
+enum MPI_T_ENUM_NULL = cast(MPI_T_enum) null;
     
-    /*
-     * MPI_INFO_ENV handle
-     */
-    alias MPI_INFO_ENV = OMPI_PREDEFINED_GLOBAL!(MPI_Info, ompi_mpi_info_env);
-}
+/*
+ * MPI_INFO_ENV handle
+ */
+alias MPI_INFO_ENV = OMPI_PREDEFINED_GLOBAL!(MPI_Info, ompi_mpi_info_env);
 
 enum MPI_STATUS_IGNORE = cast(MPI_Status*) 0;
 enum MPI_STATUSES_IGNORE = cast(MPI_Status*) 0;
 
-static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION >= 8)
-{
-    /*
-     * Special MPI_T handles
-     */
-    enum MPI_T_PVAR_ALL_HANDLES = cast(MPI_T_pvar_handle) -1;
-    enum MPI_T_PVAR_HANDLE_NULL = cast(MPI_T_pvar_handle) 0;
-    enum MPI_T_CVAR_HANDLE_NULL = cast(MPI_T_cvar_handle) 0;
-}
+/*
+ * Special MPI_T handles
+ */
+enum MPI_T_PVAR_ALL_HANDLES = cast(MPI_T_pvar_handle) -1;
+enum MPI_T_PVAR_HANDLE_NULL = cast(MPI_T_pvar_handle) 0;
+enum MPI_T_CVAR_HANDLE_NULL = cast(MPI_T_cvar_handle) 0;
 
 /* MPI-2 specifies that the name "MPI_TYPE_NULL_DELETE_FN" (and all
    related friends) must be accessible in C, C++, and Fortran. This is
@@ -653,21 +528,17 @@ static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION >= 8)
    linker symbol convention -- it results in two functions with
    different signatures that have the same name (i.e., both C and
    Fortran use the symbol MPI_TYPE_NULL_DELETE_FN).  So we have to
-#define the C names to be something else, so that they names are
- *accessed* through MPI_TYPE_NULL_DELETE_FN, but their actual symbol
- name is different.
+   #define the C names to be something else, so that they names are
+   *accessed* through MPI_TYPE_NULL_DELETE_FN, but their actual symbol
+   name is different.
 
- However, this file is included when the fortran wrapper functions
- are compiled in Open MPI, so we do *not* want these #defines in
- this case (i.e., we need the Fortran wrapper function to be
- compiled as MPI_TYPE_NULL_DELETE_FN).  So add some #if kinds of
- protection for this case. */
+   However, this file is included when the fortran wrapper functions
+   are compiled in Open MPI, so we do *not* want these #defines in
+   this case (i.e., we need the Fortran wrapper function to be
+   compiled as MPI_TYPE_NULL_DELETE_FN).  So add some #if kinds of
+   protection for this case. */
 
-static if ((OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION >= 8
-            && !is(typeof(OMPI_COMPILING_FORTRAN_WRAPPERS)))
-        ||
-        (OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION < 8
-         && !is(typeof(OMPI_COMPILING_F77_WRAPPERS))))
+static if (!is(typeof(OMPI_COMPILING_FORTRAN_WRAPPERS)))
 {
     alias MPI_NULL_DELETE_FN = OMPI_C_MPI_NULL_DELETE_FN;
     alias MPI_NULL_COPY_FN = OMPI_C_MPI_NULL_COPY_FN;
@@ -696,10 +567,7 @@ static if ((OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION >= 8
 }
 else
 {
-    static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION >= 8)
-        enum _TEST_ = OMPI_COMPILING_FORTRAN_WRAPPERS;
-    else static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION < 8)
-        enum _TEST_ = OMPI_COMPILING_F77_WRAPPERS;
+    enum _TEST_ = OMPI_COMPILING_FORTRAN_WRAPPERS;
 }
 
 int OMPI_C_MPI_TYPE_NULL_DELETE_FN( MPI_Datatype datatype,
@@ -783,13 +651,9 @@ extern __gshared
     struct ompi_predefined_request_t {}
     ompi_predefined_request_t ompi_request_null;
 
-    //unecessary and triggers a dmd out-of-order bug
-    //static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION >= 8)
-    //{
-        struct ompi_predefined_message_t {}
-        ompi_predefined_message_t ompi_message_null;
-        ompi_predefined_message_t ompi_message_no_proc;
-    //}
+    struct ompi_predefined_message_t {}
+    ompi_predefined_message_t ompi_message_null;
+    ompi_predefined_message_t ompi_message_no_proc;
 
     struct ompi_predefined_op_t {}
     ompi_predefined_op_t ompi_mpi_op_null;
@@ -806,14 +670,13 @@ extern __gshared
     ompi_predefined_op_t ompi_mpi_op_maxloc;
     ompi_predefined_op_t ompi_mpi_op_minloc;
     ompi_predefined_op_t ompi_mpi_op_replace;
-    static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION >= 8)
-        ompi_predefined_op_t ompi_mpi_op_no_op;
+    ompi_predefined_op_t ompi_mpi_op_no_op;
 
     struct ompi_predefined_datatype_t {}
     ompi_predefined_datatype_t ompi_mpi_datatype_null;
 
-    ompi_predefined_datatype_t ompi_mpi_lb; 
-    ompi_predefined_datatype_t ompi_mpi_ub;
+    // ompi_predefined_datatype_t ompi_mpi_lb; // not in recent MPI
+    // ompi_predefined_datatype_t ompi_mpi_ub; // not in recent MPI
     ompi_predefined_datatype_t ompi_mpi_char;
     ompi_predefined_datatype_t ompi_mpi_signed_char;
     ompi_predefined_datatype_t ompi_mpi_unsigned_char;
@@ -843,11 +706,7 @@ extern __gshared
     /*
      * Following are the Fortran datatypes
      */
-    static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION < 6
-            && OMPI_HAVE_FORTRAN_LOGICAL1)
-        ompi_predefined_datatype_t ompi_mpi_logic;
-    else
-        ompi_predefined_datatype_t ompi_mpi_logical;
+    ompi_predefined_datatype_t ompi_mpi_logical;
     ompi_predefined_datatype_t ompi_mpi_character;
     ompi_predefined_datatype_t ompi_mpi_integer;
     ompi_predefined_datatype_t ompi_mpi_real;
@@ -902,10 +761,9 @@ extern __gshared
     ompi_predefined_datatype_t ompi_mpi_uint64_t;
     ompi_predefined_datatype_t ompi_mpi_aint;
     ompi_predefined_datatype_t ompi_mpi_offset;
-    static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION >= 8)
-        ompi_predefined_datatype_t ompi_mpi_count;
+    ompi_predefined_datatype_t ompi_mpi_count;
     ompi_predefined_datatype_t ompi_mpi_c_bool;
-    ompi_predefined_datatype_t ompi_mpi_c_complex;
+    ompi_predefined_datatype_t ompi_mpi_c_complex; // not in v4.0.x header
     ompi_predefined_datatype_t ompi_mpi_c_float_complex;
     ompi_predefined_datatype_t ompi_mpi_c_double_complex;
     ompi_predefined_datatype_t ompi_mpi_c_long_double_complex;
@@ -923,9 +781,7 @@ extern __gshared
 
     struct ompi_predefined_info_t {}
     ompi_predefined_info_t ompi_mpi_info_null;
-    //unecessary and causes a DMD out-of-order bug
-    //static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION >= 8)
-        ompi_predefined_info_t ompi_mpi_info_env;
+    ompi_predefined_info_t ompi_mpi_info_env;
 
     MPI_Fint* MPI_F_STATUS_IGNORE;
     MPI_Fint* MPI_F_STATUSES_IGNORE;
@@ -939,8 +795,7 @@ alias MPI_COMM_SELF = OMPI_PREDEFINED_GLOBAL!(MPI_Comm, ompi_mpi_comm_self);
 
 alias MPI_GROUP_EMPTY = OMPI_PREDEFINED_GLOBAL!(MPI_Group, ompi_mpi_group_empty);
 
-static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION >= 8)
-    alias MPI_MESSAGE_NO_PROC = OMPI_PREDEFINED_GLOBAL!(MPI_Message, ompi_message_no_proc);
+alias MPI_MESSAGE_NO_PROC = OMPI_PREDEFINED_GLOBAL!(MPI_Message, ompi_message_no_proc);
 
 alias MPI_MAX = OMPI_PREDEFINED_GLOBAL!(MPI_Op, ompi_mpi_op_max);
 alias MPI_MIN = OMPI_PREDEFINED_GLOBAL!(MPI_Op, ompi_mpi_op_min);
@@ -955,8 +810,7 @@ alias MPI_BXOR = OMPI_PREDEFINED_GLOBAL!(MPI_Op, ompi_mpi_op_bxor);
 alias MPI_MAXLOC = OMPI_PREDEFINED_GLOBAL!(MPI_Op, ompi_mpi_op_maxloc);
 alias MPI_MINLOC = OMPI_PREDEFINED_GLOBAL!(MPI_Op, ompi_mpi_op_minloc);
 alias MPI_REPLACE = OMPI_PREDEFINED_GLOBAL!(MPI_Op, ompi_mpi_op_replace);
-static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION >= 8)
-    alias MPI_NO_OP = OMPI_PREDEFINED_GLOBAL!(MPI_Op, ompi_mpi_op_no_op);
+alias MPI_NO_OP = OMPI_PREDEFINED_GLOBAL!(MPI_Op, ompi_mpi_op_no_op);
 
 /* C datatypes */
 alias MPI_DATATYPE_NULL = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_datatype_null);
@@ -980,15 +834,10 @@ alias MPI_LONG_DOUBLE_INT = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_longd
 alias MPI_LONG_INT = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_long_int);
 alias MPI_SHORT_INT = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_short_int);
 alias MPI_2INT = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_2int);
-alias MPI_UB = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_ub);
-alias MPI_LB = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_lb);
+// alias MPI_UB = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_ub); // not in recent MPI
+// alias MPI_LB = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_lb); // not in recent MPI
 alias MPI_WCHAR = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_wchar);
-static if (OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION < 6)
-    static if (OMPI_HAVE_LONG_LONG)
-        private enum _HAVE_LONG = 1;
-    else
-        private enum _HAVE_LONG = 0;
-else static if (OPAL_HAVE_LONG_LONG)
+static if (OPAL_HAVE_LONG_LONG)
     private enum _HAVE_LONG = 1;
 else
     private enum _HAVE_LONG = 0;
@@ -1049,40 +898,34 @@ alias MPI_2REAL = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_2real);
 alias MPI_2DOUBLE_PRECISION = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_2dblprec);
 alias MPI_2INTEGER = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_2integer);
 
-static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION >= 6)
+/* New datatypes from the MPI 2.2 standard */
+alias MPI_INT8_T                = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_int8_t);
+alias MPI_UINT8_T               = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_uint8_t);
+alias MPI_INT16_T               = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_int16_t);
+alias MPI_UINT16_T              = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_uint16_t);
+alias MPI_INT32_T               = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_int32_t);
+alias MPI_UINT32_T              = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_uint32_t);
+alias MPI_INT64_T               = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_int64_t);
+alias MPI_UINT64_T              = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_uint64_t);
+alias MPI_AINT                  = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_aint);
+alias MPI_OFFSET                = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_offset);
+alias MPI_C_BOOL                = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_c_bool);
+static if (HAVE_FLOAT__COMPLEX)
 {
-    /* New datatypes from the MPI 2.2 standard */
-    alias MPI_INT8_T                = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_int8_t);
-    alias MPI_UINT8_T               = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_uint8_t);
-    alias MPI_INT16_T               = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_int16_t);
-    alias MPI_UINT16_T              = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_uint16_t);
-    alias MPI_INT32_T               = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_int32_t);
-    alias MPI_UINT32_T              = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_uint32_t);
-    alias MPI_INT64_T               = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_int64_t);
-    alias MPI_UINT64_T              = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_uint64_t);
-    alias MPI_AINT                  = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_aint);
-    alias MPI_OFFSET                = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_offset);
-    alias MPI_C_BOOL                = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_c_bool);
-    static if (HAVE_FLOAT__COMPLEX)
-    {
-        alias MPI_C_COMPLEX             = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_c_complex);
-        alias MPI_C_FLOAT_COMPLEX       = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_c_float_complex);
-    }
-    static if (HAVE_DOUBLE__COMPLEX)
-        alias MPI_C_DOUBLE_COMPLEX      = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_c_double_complex);
-    static if (HAVE_LONG_DOUBLE__COMPLEX)
-        alias MPI_C_LONG_DOUBLE_COMPLEX = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_c_long_double_complex);
-}
-static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION >= 8)
-{
-    alias MPI_CXX_BOOL              = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_cxx_bool);
-    alias MPI_CXX_FLOAT_COMPLEX     = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_cxx_cplex);
-    alias MPI_CXX_DOUBLE_COMPLEX    = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_cxx_dblcplex);
-    alias MPI_CXX_LONG_DOUBLE_COMPLEX = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_cxx_ldblcplex);
+    alias MPI_C_COMPLEX             = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_c_complex);
+    alias MPI_C_FLOAT_COMPLEX       = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_c_float_complex);
+ }
+static if (HAVE_DOUBLE__COMPLEX)
+    alias MPI_C_DOUBLE_COMPLEX      = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_c_double_complex);
+static if (HAVE_LONG_DOUBLE__COMPLEX)
+    alias MPI_C_LONG_DOUBLE_COMPLEX = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_c_long_double_complex);
+alias MPI_CXX_BOOL              = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_cxx_bool);
+alias MPI_CXX_FLOAT_COMPLEX     = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_cxx_cplex);
+alias MPI_CXX_DOUBLE_COMPLEX    = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_cxx_dblcplex);
+alias MPI_CXX_LONG_DOUBLE_COMPLEX = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_cxx_ldblcplex);
     
-    /* New datatypes from the 3.0 standard */
-    alias MPI_COUNT                 = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_count);
-}
+/* New datatypes from the 3.0 standard */
+alias MPI_COUNT                 = OMPI_PREDEFINED_GLOBAL!(MPI_Datatype, ompi_mpi_count);
 
 alias MPI_ERRORS_ARE_FATAL = OMPI_PREDEFINED_GLOBAL!(MPI_Errhandler, ompi_mpi_errors_are_fatal);
 alias MPI_ERRORS_RETURN = OMPI_PREDEFINED_GLOBAL!(MPI_Errhandler, ompi_mpi_errors_return);
@@ -1092,6 +935,11 @@ enum MPI_TYPECLASS_INTEGER  = 1;
 enum MPI_TYPECLASS_REAL     = 2;
 enum MPI_TYPECLASS_COMPLEX  = 3;
 
+/* Aint helper macros (MPI-3.1) */
+// #define MPI_Aint_add(base, disp) ((MPI_Aint) ((char *) (base) + (disp)))
+// #define MPI_Aint_diff(addr1, addr2) ((MPI_Aint) ((char *) (addr1) - (char *) (addr2)))
+// #define PMPI_Aint_add(base, disp) MPI_Aint_add(base, disp)
+// #define PMPI_Aint_diff(addr1, addr2) MPI_Aint_diff(addr1, addr2)
 
 /*
  * MPI API
@@ -1252,97 +1100,94 @@ int MPI_Fetch_and_op(void* origin_addr, void* result_addr, MPI_Datatype datatype
 int MPI_Iexscan(void* sendbuf, void* recvbuf, int count,
         MPI_Datatype datatype, MPI_Op op, MPI_Comm comm, MPI_Request* request);
 
-static if (OMPI_PROVIDE_MPI_FILE_INTERFACE)
-{
-    MPI_Fint MPI_File_c2f(MPI_File file);
-    MPI_File MPI_File_f2c(MPI_Fint file);
-    int MPI_File_call_errhandler(MPI_File fh, int errorcode);
-    int MPI_File_create_errhandler(MPI_File_errhandler_function* function_,
-            MPI_Errhandler* errhandler);
-    int MPI_File_set_errhandler( MPI_File file, MPI_Errhandler errhandler);
-    int MPI_File_get_errhandler( MPI_File file, MPI_Errhandler* errhandler);
-    int MPI_File_open(MPI_Comm comm, char* filename, int amode,
-            MPI_Info info, MPI_File* fh);
-    int MPI_File_close(MPI_File* fh);
-    int MPI_File_delete(char* filename, MPI_Info info);
-    int MPI_File_set_size(MPI_File fh, MPI_Offset size);
-    int MPI_File_preallocate(MPI_File fh, MPI_Offset size);
-    int MPI_File_get_size(MPI_File fh, MPI_Offset* size);
-    int MPI_File_get_group(MPI_File fh, MPI_Group* group);
-    int MPI_File_get_amode(MPI_File fh, int* amode);
-    int MPI_File_set_info(MPI_File fh, MPI_Info info);
-    int MPI_File_get_info(MPI_File fh, MPI_Info* info_used);
-    int MPI_File_set_view(MPI_File fh, MPI_Offset disp, MPI_Datatype etype,
-            MPI_Datatype filetype, char* datarep, MPI_Info info);
-    int MPI_File_get_view(MPI_File fh, MPI_Offset* disp,
-            MPI_Datatype* etype,
-            MPI_Datatype* filetype, char* datarep);
-    int MPI_File_read_at(MPI_File fh, MPI_Offset offset, void* buf,
-            int count, MPI_Datatype datatype, MPI_Status* status);
-    int MPI_File_read_at_all(MPI_File fh, MPI_Offset offset, void* buf,
-            int count, MPI_Datatype datatype, MPI_Status* status);
-    int MPI_File_write_at(MPI_File fh, MPI_Offset offset, void* buf,
-            int count, MPI_Datatype datatype, MPI_Status* status);
-    int MPI_File_write_at_all(MPI_File fh, MPI_Offset offset, void* buf,
-            int count, MPI_Datatype datatype, MPI_Status* status);
-    int MPI_File_iread_at(MPI_File fh, MPI_Offset offset, void* buf,
-            int count, MPI_Datatype datatype, MPI_Request* request);
-    int MPI_File_iwrite_at(MPI_File fh, MPI_Offset offset, void* buf,
-            int count, MPI_Datatype datatype, MPI_Request* request);
-    int MPI_File_read(MPI_File fh, void* buf, int count,
-            MPI_Datatype datatype, MPI_Status* status);
-    int MPI_File_read_all(MPI_File fh, void* buf, int count,
-            MPI_Datatype datatype, MPI_Status* status);
-    int MPI_File_write(MPI_File fh, void* buf, int count,
-            MPI_Datatype datatype, MPI_Status* status);
-    int MPI_File_write_all(MPI_File fh, void* buf, int count,
-            MPI_Datatype datatype, MPI_Status* status);
-    int MPI_File_iread(MPI_File fh, void* buf, int count,
-            MPI_Datatype datatype, MPI_Request* request);
-    int MPI_File_iwrite(MPI_File fh, void* buf, int count,
-            MPI_Datatype datatype, MPI_Request* request);
-    int MPI_File_seek(MPI_File fh, MPI_Offset offset, int whence);
-    int MPI_File_get_position(MPI_File fh, MPI_Offset* offset);
-    int MPI_File_get_byte_offset(MPI_File fh, MPI_Offset offset,
-            MPI_Offset* disp);
-    int MPI_File_read_shared(MPI_File fh, void* buf, int count,
-            MPI_Datatype datatype, MPI_Status* status);
-    int MPI_File_write_shared(MPI_File fh, void* buf, int count,
-            MPI_Datatype datatype, MPI_Status* status);
-    int MPI_File_iread_shared(MPI_File fh, void* buf, int count,
-            MPI_Datatype datatype, MPI_Request* request);
-    int MPI_File_iwrite_shared(MPI_File fh, void* buf, int count,
-            MPI_Datatype datatype, MPI_Request* request);
-    int MPI_File_read_ordered(MPI_File fh, void* buf, int count,
-            MPI_Datatype datatype, MPI_Status* status);
-    int MPI_File_write_ordered(MPI_File fh, void* buf, int count,
-            MPI_Datatype datatype, MPI_Status* status);
-    int MPI_File_seek_shared(MPI_File fh, MPI_Offset offset, int whence);
-    int MPI_File_get_position_shared(MPI_File fh, MPI_Offset* offset);
-    int MPI_File_read_at_all_begin(MPI_File fh, MPI_Offset offset, void* buf,
-            int count, MPI_Datatype datatype);
-    int MPI_File_read_at_all_end(MPI_File fh, void* buf, MPI_Status* status);
-    int MPI_File_write_at_all_begin(MPI_File fh, MPI_Offset offset, void* buf,
-            int count, MPI_Datatype datatype);
-    int MPI_File_write_at_all_end(MPI_File fh, void* buf, MPI_Status* status);
-    int MPI_File_read_all_begin(MPI_File fh, void* buf, int count,
-            MPI_Datatype datatype);
-    int MPI_File_read_all_end(MPI_File fh, void* buf, MPI_Status* status);
-    int MPI_File_write_all_begin(MPI_File fh, void* buf, int count,
-            MPI_Datatype datatype);
-    int MPI_File_write_all_end(MPI_File fh, void* buf, MPI_Status* status);
-    int MPI_File_read_ordered_begin(MPI_File fh, void* buf, int count,
-            MPI_Datatype datatype);
-    int MPI_File_read_ordered_end(MPI_File fh, void* buf, MPI_Status* status);
-    int MPI_File_write_ordered_begin(MPI_File fh, void* buf, int count,
-            MPI_Datatype datatype);
-    int MPI_File_write_ordered_end(MPI_File fh, void* buf, MPI_Status* status);
-    int MPI_File_get_type_extent(MPI_File fh, MPI_Datatype datatype,
-            MPI_Aint* extent);
-    int MPI_File_set_atomicity(MPI_File fh, int flag);
-    int MPI_File_get_atomicity(MPI_File fh, int* flag);
-    int MPI_File_sync(MPI_File fh);
-}/* #if OMPI_PROVIDE_MPI_FILE_INTERFACE */
+MPI_Fint MPI_File_c2f(MPI_File file);
+MPI_File MPI_File_f2c(MPI_Fint file);
+int MPI_File_call_errhandler(MPI_File fh, int errorcode);
+int MPI_File_create_errhandler(MPI_File_errhandler_function* function_,
+                               MPI_Errhandler* errhandler);
+int MPI_File_set_errhandler( MPI_File file, MPI_Errhandler errhandler);
+int MPI_File_get_errhandler( MPI_File file, MPI_Errhandler* errhandler);
+int MPI_File_open(MPI_Comm comm, char* filename, int amode,
+                  MPI_Info info, MPI_File* fh);
+int MPI_File_close(MPI_File* fh);
+int MPI_File_delete(char* filename, MPI_Info info);
+int MPI_File_set_size(MPI_File fh, MPI_Offset size);
+int MPI_File_preallocate(MPI_File fh, MPI_Offset size);
+int MPI_File_get_size(MPI_File fh, MPI_Offset* size);
+int MPI_File_get_group(MPI_File fh, MPI_Group* group);
+int MPI_File_get_amode(MPI_File fh, int* amode);
+int MPI_File_set_info(MPI_File fh, MPI_Info info);
+int MPI_File_get_info(MPI_File fh, MPI_Info* info_used);
+int MPI_File_set_view(MPI_File fh, MPI_Offset disp, MPI_Datatype etype,
+                      MPI_Datatype filetype, char* datarep, MPI_Info info);
+int MPI_File_get_view(MPI_File fh, MPI_Offset* disp,
+                      MPI_Datatype* etype,
+                      MPI_Datatype* filetype, char* datarep);
+int MPI_File_read_at(MPI_File fh, MPI_Offset offset, void* buf,
+                     int count, MPI_Datatype datatype, MPI_Status* status);
+int MPI_File_read_at_all(MPI_File fh, MPI_Offset offset, void* buf,
+                         int count, MPI_Datatype datatype, MPI_Status* status);
+int MPI_File_write_at(MPI_File fh, MPI_Offset offset, void* buf,
+                      int count, MPI_Datatype datatype, MPI_Status* status);
+int MPI_File_write_at_all(MPI_File fh, MPI_Offset offset, void* buf,
+                          int count, MPI_Datatype datatype, MPI_Status* status);
+int MPI_File_iread_at(MPI_File fh, MPI_Offset offset, void* buf,
+                      int count, MPI_Datatype datatype, MPI_Request* request);
+int MPI_File_iwrite_at(MPI_File fh, MPI_Offset offset, void* buf,
+                       int count, MPI_Datatype datatype, MPI_Request* request);
+int MPI_File_read(MPI_File fh, void* buf, int count,
+                  MPI_Datatype datatype, MPI_Status* status);
+int MPI_File_read_all(MPI_File fh, void* buf, int count,
+                      MPI_Datatype datatype, MPI_Status* status);
+int MPI_File_write(MPI_File fh, void* buf, int count,
+                   MPI_Datatype datatype, MPI_Status* status);
+int MPI_File_write_all(MPI_File fh, void* buf, int count,
+                       MPI_Datatype datatype, MPI_Status* status);
+int MPI_File_iread(MPI_File fh, void* buf, int count,
+                   MPI_Datatype datatype, MPI_Request* request);
+int MPI_File_iwrite(MPI_File fh, void* buf, int count,
+                    MPI_Datatype datatype, MPI_Request* request);
+int MPI_File_seek(MPI_File fh, MPI_Offset offset, int whence);
+int MPI_File_get_position(MPI_File fh, MPI_Offset* offset);
+int MPI_File_get_byte_offset(MPI_File fh, MPI_Offset offset,
+                             MPI_Offset* disp);
+int MPI_File_read_shared(MPI_File fh, void* buf, int count,
+                         MPI_Datatype datatype, MPI_Status* status);
+int MPI_File_write_shared(MPI_File fh, void* buf, int count,
+                          MPI_Datatype datatype, MPI_Status* status);
+int MPI_File_iread_shared(MPI_File fh, void* buf, int count,
+                          MPI_Datatype datatype, MPI_Request* request);
+int MPI_File_iwrite_shared(MPI_File fh, void* buf, int count,
+                           MPI_Datatype datatype, MPI_Request* request);
+int MPI_File_read_ordered(MPI_File fh, void* buf, int count,
+                          MPI_Datatype datatype, MPI_Status* status);
+int MPI_File_write_ordered(MPI_File fh, void* buf, int count,
+                           MPI_Datatype datatype, MPI_Status* status);
+int MPI_File_seek_shared(MPI_File fh, MPI_Offset offset, int whence);
+int MPI_File_get_position_shared(MPI_File fh, MPI_Offset* offset);
+int MPI_File_read_at_all_begin(MPI_File fh, MPI_Offset offset, void* buf,
+                               int count, MPI_Datatype datatype);
+int MPI_File_read_at_all_end(MPI_File fh, void* buf, MPI_Status* status);
+int MPI_File_write_at_all_begin(MPI_File fh, MPI_Offset offset, void* buf,
+                                int count, MPI_Datatype datatype);
+int MPI_File_write_at_all_end(MPI_File fh, void* buf, MPI_Status* status);
+int MPI_File_read_all_begin(MPI_File fh, void* buf, int count,
+                            MPI_Datatype datatype);
+int MPI_File_read_all_end(MPI_File fh, void* buf, MPI_Status* status);
+int MPI_File_write_all_begin(MPI_File fh, void* buf, int count,
+                             MPI_Datatype datatype);
+int MPI_File_write_all_end(MPI_File fh, void* buf, MPI_Status* status);
+int MPI_File_read_ordered_begin(MPI_File fh, void* buf, int count,
+                                MPI_Datatype datatype);
+int MPI_File_read_ordered_end(MPI_File fh, void* buf, MPI_Status* status);
+int MPI_File_write_ordered_begin(MPI_File fh, void* buf, int count,
+                                 MPI_Datatype datatype);
+int MPI_File_write_ordered_end(MPI_File fh, void* buf, MPI_Status* status);
+int MPI_File_get_type_extent(MPI_File fh, MPI_Datatype datatype,
+                             MPI_Aint* extent);
+int MPI_File_set_atomicity(MPI_File fh, int flag);
+int MPI_File_get_atomicity(MPI_File fh, int* flag);
+int MPI_File_sync(MPI_File fh);
 
 int MPI_Finalize();
 int MPI_Finalized(int* flag);
@@ -1414,14 +1259,11 @@ int MPI_Group_union(MPI_Group group1, MPI_Group group2,
         MPI_Group* newgroup);
 int MPI_Ibsend(void* buf, int count, MPI_Datatype datatype, int dest,
         int tag, MPI_Comm comm, MPI_Request* request);
-static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION >= 8)
-{
-    int MPI_Improbe(int source, int tag, MPI_Comm comm,
-        int* flag, MPI_Message* message,
-        MPI_Status* status);
-    int MPI_Imrecv(void* buf, int count, MPI_Datatype type,
-        MPI_Message* message, MPI_Request* request);
-}
+int MPI_Improbe(int source, int tag, MPI_Comm comm,
+                int* flag, MPI_Message* message,
+                MPI_Status* status);
+int MPI_Imrecv(void* buf, int count, MPI_Datatype type,
+               MPI_Message* message, MPI_Request* request);
 MPI_Fint MPI_Info_c2f(MPI_Info info);
 int MPI_Info_create(MPI_Info* info);
 int MPI_Info_delete(MPI_Info info, char* key);
@@ -1456,16 +1298,13 @@ int MPI_Issend(void* buf, int count, MPI_Datatype datatype, int dest,
         int tag, MPI_Comm comm, MPI_Request* request);
 int MPI_Is_thread_main(int* flag);
 int MPI_Lookup_name(char* service_name, MPI_Info info, char* port_name);
-static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION >= 8)
-{
-    MPI_Fint MPI_Message_c2f(MPI_Message message);
-    MPI_Message MPI_Message_f2c(MPI_Fint message);
-    int MPI_Mprobe(int source, int tag, MPI_Comm comm,
+MPI_Fint MPI_Message_c2f(MPI_Message message);
+MPI_Message MPI_Message_f2c(MPI_Fint message);
+int MPI_Mprobe(int source, int tag, MPI_Comm comm,
         MPI_Message* message,
         MPI_Status* status);
-    int MPI_Mrecv(void* buf, int count, MPI_Datatype type,
+int MPI_Mrecv(void* buf, int count, MPI_Datatype type,
         MPI_Message* message, MPI_Status* status);
-}
 int MPI_Neighbor_allgather(void* sendbuf, int sendcount, MPI_Datatype sendtype,
         void* recvbuf, int recvcount, MPI_Datatype recvtype,
         MPI_Comm comm);
@@ -1606,8 +1445,7 @@ int MPI_Status_f2c(MPI_Fint* f_status, MPI_Status* c_status);
 int MPI_Status_set_cancelled(MPI_Status* status, int flag);
 int MPI_Status_set_elements(MPI_Status* status, MPI_Datatype datatype,
         int count);
-static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION >= 8)
-    int MPI_Status_set_elements_x(MPI_Status* status, MPI_Datatype datatype,
+int MPI_Status_set_elements_x(MPI_Status* status, MPI_Datatype datatype,
         MPI_Count count);
 int MPI_Testall(int count, MPI_Request* array_of_requests, int* flag,
         MPI_Status* array_of_statuses);
@@ -1675,15 +1513,13 @@ int MPI_Type_get_envelope(MPI_Datatype type, int* num_integers,
         int* combiner);
 int MPI_Type_get_extent(MPI_Datatype type, MPI_Aint* lb,
         MPI_Aint* extent);
-static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION >= 8)
-    int MPI_Type_get_extent_x(MPI_Datatype type, MPI_Count* lb,
+int MPI_Type_get_extent_x(MPI_Datatype type, MPI_Count* lb,
         MPI_Count* extent);
 int MPI_Type_get_name(MPI_Datatype type, char* type_name,
         int* resultlen);
 int MPI_Type_get_true_extent(MPI_Datatype datatype, MPI_Aint* true_lb,
         MPI_Aint* true_extent);
-static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION >= 8)
-    int MPI_Type_get_true_extent_x(MPI_Datatype datatype, MPI_Count* true_lb,
+int MPI_Type_get_true_extent_x(MPI_Datatype datatype, MPI_Count* true_lb,
         MPI_Count* true_extent);
 int MPI_Type_indexed(int count, int* array_of_blocklengths,
         int* array_of_displacements,
@@ -1693,8 +1529,7 @@ int MPI_Type_set_attr(MPI_Datatype type, int type_keyval,
         void* attr_val);
 int MPI_Type_set_name(MPI_Datatype type, char* type_name);
 int MPI_Type_size(MPI_Datatype type, int* size);
-static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION >= 8)
-    int MPI_Type_size_x(MPI_Datatype type, MPI_Count* size);
+int MPI_Type_size_x(MPI_Datatype type, MPI_Count* size);
 int MPI_Type_vector(int count, int blocklength, int stride,
         MPI_Datatype oldtype, MPI_Datatype* newtype);
 int MPI_Unpack(void* inbuf, int insize, int* position,
@@ -1918,97 +1753,94 @@ int PMPI_Fetch_and_op(void* origin_addr, void* result_addr, MPI_Datatype datatyp
         int target_rank, MPI_Aint target_disp, MPI_Op op, MPI_Win win);
 int PMPI_Iexscan(void* sendbuf, void* recvbuf, int count,
         MPI_Datatype datatype, MPI_Op op, MPI_Comm comm, MPI_Request* request);
-static if (OMPI_PROVIDE_MPI_FILE_INTERFACE)
-{
-    MPI_Fint PMPI_File_c2f(MPI_File file);
-    MPI_File PMPI_File_f2c(MPI_Fint file);
-    int PMPI_File_call_errhandler(MPI_File fh, int errorcode);
-    int PMPI_File_create_errhandler(MPI_File_errhandler_function* function_,
-            MPI_Errhandler* errhandler);
-    int PMPI_File_set_errhandler( MPI_File file, MPI_Errhandler errhandler);
-    int PMPI_File_get_errhandler( MPI_File file, MPI_Errhandler* errhandler);
-    int PMPI_File_open(MPI_Comm comm, char* filename, int amode,
-            MPI_Info info, MPI_File* fh);
-    int PMPI_File_close(MPI_File* fh);
-    int PMPI_File_delete(char* filename, MPI_Info info);
-    int PMPI_File_set_size(MPI_File fh, MPI_Offset size);
-    int PMPI_File_preallocate(MPI_File fh, MPI_Offset size);
-    int PMPI_File_get_size(MPI_File fh, MPI_Offset* size);
-    int PMPI_File_get_group(MPI_File fh, MPI_Group* group);
-    int PMPI_File_get_amode(MPI_File fh, int* amode);
-    int PMPI_File_set_info(MPI_File fh, MPI_Info info);
-    int PMPI_File_get_info(MPI_File fh, MPI_Info* info_used);
-    int PMPI_File_set_view(MPI_File fh, MPI_Offset disp, MPI_Datatype etype,
-            MPI_Datatype filetype, char* datarep, MPI_Info info);
-    int PMPI_File_get_view(MPI_File fh, MPI_Offset* disp,
-            MPI_Datatype* etype,
-            MPI_Datatype* filetype, char* datarep);
-    int PMPI_File_read_at(MPI_File fh, MPI_Offset offset, void* buf,
-            int count, MPI_Datatype datatype, MPI_Status* status);
-    int PMPI_File_read_at_all(MPI_File fh, MPI_Offset offset, void* buf,
-            int count, MPI_Datatype datatype, MPI_Status* status);
-    int PMPI_File_write_at(MPI_File fh, MPI_Offset offset, void* buf,
-            int count, MPI_Datatype datatype, MPI_Status* status);
-    int PMPI_File_write_at_all(MPI_File fh, MPI_Offset offset, void* buf,
-            int count, MPI_Datatype datatype, MPI_Status* status);
-    int PMPI_File_iread_at(MPI_File fh, MPI_Offset offset, void* buf,
-            int count, MPI_Datatype datatype, MPI_Request* request);
-    int PMPI_File_iwrite_at(MPI_File fh, MPI_Offset offset, void* buf,
-            int count, MPI_Datatype datatype, MPI_Request* request);
-    int PMPI_File_read(MPI_File fh, void* buf, int count,
-            MPI_Datatype datatype, MPI_Status* status);
-    int PMPI_File_read_all(MPI_File fh, void* buf, int count,
-            MPI_Datatype datatype, MPI_Status* status);
-    int PMPI_File_write(MPI_File fh, void* buf, int count,
-            MPI_Datatype datatype, MPI_Status* status);
-    int PMPI_File_write_all(MPI_File fh, void* buf, int count,
-            MPI_Datatype datatype, MPI_Status* status);
-    int PMPI_File_iread(MPI_File fh, void* buf, int count,
-            MPI_Datatype datatype, MPI_Request* request);
-    int PMPI_File_iwrite(MPI_File fh, void* buf, int count,
-            MPI_Datatype datatype, MPI_Request* request);
-    int PMPI_File_seek(MPI_File fh, MPI_Offset offset, int whence);
-    int PMPI_File_get_position(MPI_File fh, MPI_Offset* offset);
-    int PMPI_File_get_byte_offset(MPI_File fh, MPI_Offset offset,
-            MPI_Offset* disp);
-    int PMPI_File_read_shared(MPI_File fh, void* buf, int count,
-            MPI_Datatype datatype, MPI_Status* status);
-    int PMPI_File_write_shared(MPI_File fh, void* buf, int count,
-            MPI_Datatype datatype, MPI_Status* status);
-    int PMPI_File_iread_shared(MPI_File fh, void* buf, int count,
-            MPI_Datatype datatype, MPI_Request* request);
-    int PMPI_File_iwrite_shared(MPI_File fh, void* buf, int count,
-            MPI_Datatype datatype, MPI_Request* request);
-    int PMPI_File_read_ordered(MPI_File fh, void* buf, int count,
-            MPI_Datatype datatype, MPI_Status* status);
-    int PMPI_File_write_ordered(MPI_File fh, void* buf, int count,
-            MPI_Datatype datatype, MPI_Status* status);
-    int PMPI_File_seek_shared(MPI_File fh, MPI_Offset offset, int whence);
-    int PMPI_File_get_position_shared(MPI_File fh, MPI_Offset* offset);
-    int PMPI_File_read_at_all_begin(MPI_File fh, MPI_Offset offset, void* buf,
-            int count, MPI_Datatype datatype);
-    int PMPI_File_read_at_all_end(MPI_File fh, void* buf, MPI_Status* status);
-    int PMPI_File_write_at_all_begin(MPI_File fh, MPI_Offset offset, void* buf,
-            int count, MPI_Datatype datatype);
-    int PMPI_File_write_at_all_end(MPI_File fh, void* buf, MPI_Status* status);
-    int PMPI_File_read_all_begin(MPI_File fh, void* buf, int count,
-            MPI_Datatype datatype);
-    int PMPI_File_read_all_end(MPI_File fh, void* buf, MPI_Status* status);
-    int PMPI_File_write_all_begin(MPI_File fh, void* buf, int count,
-            MPI_Datatype datatype);
-    int PMPI_File_write_all_end(MPI_File fh, void* buf, MPI_Status* status);
-    int PMPI_File_read_ordered_begin(MPI_File fh, void* buf, int count,
-            MPI_Datatype datatype);
-    int PMPI_File_read_ordered_end(MPI_File fh, void* buf, MPI_Status* status);
-    int PMPI_File_write_ordered_begin(MPI_File fh, void* buf, int count,
-            MPI_Datatype datatype);
-    int PMPI_File_write_ordered_end(MPI_File fh, void* buf, MPI_Status* status);
-    int PMPI_File_get_type_extent(MPI_File fh, MPI_Datatype datatype,
-            MPI_Aint* extent);
-    int PMPI_File_set_atomicity(MPI_File fh, int flag);
-    int PMPI_File_get_atomicity(MPI_File fh, int* flag);
-    int PMPI_File_sync(MPI_File fh);
-}/* #if OMPI_PROVIDE_MPI_FILE_INTERFACE */
+MPI_Fint PMPI_File_c2f(MPI_File file);
+MPI_File PMPI_File_f2c(MPI_Fint file);
+int PMPI_File_call_errhandler(MPI_File fh, int errorcode);
+int PMPI_File_create_errhandler(MPI_File_errhandler_function* function_,
+        MPI_Errhandler* errhandler);
+int PMPI_File_set_errhandler( MPI_File file, MPI_Errhandler errhandler);
+int PMPI_File_get_errhandler( MPI_File file, MPI_Errhandler* errhandler);
+int PMPI_File_open(MPI_Comm comm, char* filename, int amode,
+        MPI_Info info, MPI_File* fh);
+int PMPI_File_close(MPI_File* fh);
+int PMPI_File_delete(char* filename, MPI_Info info);
+int PMPI_File_set_size(MPI_File fh, MPI_Offset size);
+int PMPI_File_preallocate(MPI_File fh, MPI_Offset size);
+int PMPI_File_get_size(MPI_File fh, MPI_Offset* size);
+int PMPI_File_get_group(MPI_File fh, MPI_Group* group);
+int PMPI_File_get_amode(MPI_File fh, int* amode);
+int PMPI_File_set_info(MPI_File fh, MPI_Info info);
+int PMPI_File_get_info(MPI_File fh, MPI_Info* info_used);
+int PMPI_File_set_view(MPI_File fh, MPI_Offset disp, MPI_Datatype etype,
+        MPI_Datatype filetype, char* datarep, MPI_Info info);
+int PMPI_File_get_view(MPI_File fh, MPI_Offset* disp,
+        MPI_Datatype* etype,
+        MPI_Datatype* filetype, char* datarep);
+int PMPI_File_read_at(MPI_File fh, MPI_Offset offset, void* buf,
+        int count, MPI_Datatype datatype, MPI_Status* status);
+int PMPI_File_read_at_all(MPI_File fh, MPI_Offset offset, void* buf,
+        int count, MPI_Datatype datatype, MPI_Status* status);
+int PMPI_File_write_at(MPI_File fh, MPI_Offset offset, void* buf,
+        int count, MPI_Datatype datatype, MPI_Status* status);
+int PMPI_File_write_at_all(MPI_File fh, MPI_Offset offset, void* buf,
+        int count, MPI_Datatype datatype, MPI_Status* status);
+int PMPI_File_iread_at(MPI_File fh, MPI_Offset offset, void* buf,
+        int count, MPI_Datatype datatype, MPI_Request* request);
+int PMPI_File_iwrite_at(MPI_File fh, MPI_Offset offset, void* buf,
+        int count, MPI_Datatype datatype, MPI_Request* request);
+int PMPI_File_read(MPI_File fh, void* buf, int count,
+        MPI_Datatype datatype, MPI_Status* status);
+int PMPI_File_read_all(MPI_File fh, void* buf, int count,
+        MPI_Datatype datatype, MPI_Status* status);
+int PMPI_File_write(MPI_File fh, void* buf, int count,
+        MPI_Datatype datatype, MPI_Status* status);
+int PMPI_File_write_all(MPI_File fh, void* buf, int count,
+        MPI_Datatype datatype, MPI_Status* status);
+int PMPI_File_iread(MPI_File fh, void* buf, int count,
+        MPI_Datatype datatype, MPI_Request* request);
+int PMPI_File_iwrite(MPI_File fh, void* buf, int count,
+        MPI_Datatype datatype, MPI_Request* request);
+int PMPI_File_seek(MPI_File fh, MPI_Offset offset, int whence);
+int PMPI_File_get_position(MPI_File fh, MPI_Offset* offset);
+int PMPI_File_get_byte_offset(MPI_File fh, MPI_Offset offset,
+        MPI_Offset* disp);
+int PMPI_File_read_shared(MPI_File fh, void* buf, int count,
+        MPI_Datatype datatype, MPI_Status* status);
+int PMPI_File_write_shared(MPI_File fh, void* buf, int count,
+        MPI_Datatype datatype, MPI_Status* status);
+int PMPI_File_iread_shared(MPI_File fh, void* buf, int count,
+        MPI_Datatype datatype, MPI_Request* request);
+int PMPI_File_iwrite_shared(MPI_File fh, void* buf, int count,
+        MPI_Datatype datatype, MPI_Request* request);
+int PMPI_File_read_ordered(MPI_File fh, void* buf, int count,
+        MPI_Datatype datatype, MPI_Status* status);
+int PMPI_File_write_ordered(MPI_File fh, void* buf, int count,
+        MPI_Datatype datatype, MPI_Status* status);
+int PMPI_File_seek_shared(MPI_File fh, MPI_Offset offset, int whence);
+int PMPI_File_get_position_shared(MPI_File fh, MPI_Offset* offset);
+int PMPI_File_read_at_all_begin(MPI_File fh, MPI_Offset offset, void* buf,
+        int count, MPI_Datatype datatype);
+int PMPI_File_read_at_all_end(MPI_File fh, void* buf, MPI_Status* status);
+int PMPI_File_write_at_all_begin(MPI_File fh, MPI_Offset offset, void* buf,
+        int count, MPI_Datatype datatype);
+int PMPI_File_write_at_all_end(MPI_File fh, void* buf, MPI_Status* status);
+int PMPI_File_read_all_begin(MPI_File fh, void* buf, int count,
+        MPI_Datatype datatype);
+int PMPI_File_read_all_end(MPI_File fh, void* buf, MPI_Status* status);
+int PMPI_File_write_all_begin(MPI_File fh, void* buf, int count,
+        MPI_Datatype datatype);
+int PMPI_File_write_all_end(MPI_File fh, void* buf, MPI_Status* status);
+int PMPI_File_read_ordered_begin(MPI_File fh, void* buf, int count,
+        MPI_Datatype datatype);
+int PMPI_File_read_ordered_end(MPI_File fh, void* buf, MPI_Status* status);
+int PMPI_File_write_ordered_begin(MPI_File fh, void* buf, int count,
+        MPI_Datatype datatype);
+int PMPI_File_write_ordered_end(MPI_File fh, void* buf, MPI_Status* status);
+int PMPI_File_get_type_extent(MPI_File fh, MPI_Datatype datatype,
+        MPI_Aint* extent);
+int PMPI_File_set_atomicity(MPI_File fh, int flag);
+int PMPI_File_get_atomicity(MPI_File fh, int* flag);
+int PMPI_File_sync(MPI_File fh);
 int PMPI_Finalize();
 int PMPI_Finalized(int* flag);
 int PMPI_Free_mem(void* base);
@@ -2028,8 +1860,7 @@ int PMPI_Get_address(void* location, MPI_Aint* address);
 int PMPI_Get_count(MPI_Status* status, MPI_Datatype datatype, int* count);
 int PMPI_Get_elements(MPI_Status* status, MPI_Datatype datatype,
         int* count);
-static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION >= 8)
-    int PMPI_Get_elements_x(MPI_Status* status, MPI_Datatype datatype,
+int PMPI_Get_elements_x(MPI_Status* status, MPI_Datatype datatype,
         MPI_Count* count);
 int PMPI_Get(void* origin_addr, int origin_count,
         MPI_Datatype origin_datatype, int target_rank,
@@ -2081,14 +1912,11 @@ int PMPI_Group_union(MPI_Group group1, MPI_Group group2,
         MPI_Group* newgroup);
 int PMPI_Ibsend(void* buf, int count, MPI_Datatype datatype, int dest,
         int tag, MPI_Comm comm, MPI_Request* request);
-static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION >= 8)
-{
-    int PMPI_Improbe(int source, int tag, MPI_Comm comm,
+int PMPI_Improbe(int source, int tag, MPI_Comm comm,
         int* flag, MPI_Message* message,
         MPI_Status* status);
-    int PMPI_Imrecv(void* buf, int count, MPI_Datatype type,
+int PMPI_Imrecv(void* buf, int count, MPI_Datatype type,
         MPI_Message* message, MPI_Request* request);
-}
 MPI_Fint PMPI_Info_c2f(MPI_Info info);
 int PMPI_Info_create(MPI_Info* info);
 int PMPI_Info_delete(MPI_Info info, char* key);
@@ -2123,16 +1951,13 @@ int PMPI_Issend(void* buf, int count, MPI_Datatype datatype, int dest,
         int tag, MPI_Comm comm, MPI_Request* request);
 int PMPI_Is_thread_main(int* flag);
 int PMPI_Lookup_name(char* service_name, MPI_Info info, char* port_name);
-static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION >= 8)
-{
-    MPI_Fint PMPI_Message_c2f(MPI_Message message);
-    MPI_Message PMPI_Message_f2c(MPI_Fint message);
-    int PMPI_Mprobe(int source, int tag, MPI_Comm comm,
+MPI_Fint PMPI_Message_c2f(MPI_Message message);
+MPI_Message PMPI_Message_f2c(MPI_Fint message);
+int PMPI_Mprobe(int source, int tag, MPI_Comm comm,
         MPI_Message* message,
         MPI_Status* status);
-    int PMPI_Mrecv(void* buf, int count, MPI_Datatype type,
+int PMPI_Mrecv(void* buf, int count, MPI_Datatype type,
         MPI_Message* message, MPI_Status* status);
-}
 int PMPI_Neighbor_allgather(void* sendbuf, int sendcount, MPI_Datatype sendtype,
         void* recvbuf, int recvcount, MPI_Datatype recvtype,
         MPI_Comm comm);
@@ -2273,8 +2098,7 @@ int PMPI_Status_f2c(MPI_Fint* f_status, MPI_Status* c_status);
 int PMPI_Status_set_cancelled(MPI_Status* status, int flag);
 int PMPI_Status_set_elements(MPI_Status* status, MPI_Datatype datatype,
         int count);
-static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION >= 8)
-    int PMPI_Status_set_elements_x(MPI_Status* status, MPI_Datatype datatype,
+int PMPI_Status_set_elements_x(MPI_Status* status, MPI_Datatype datatype,
         MPI_Count count);
 int PMPI_Testall(int count, MPI_Request* array_of_requests, int* flag,
         MPI_Status* array_of_statuses);
@@ -2341,15 +2165,13 @@ int PMPI_Type_get_envelope(MPI_Datatype type, int* num_integers,
         int* combiner);
 int PMPI_Type_get_extent(MPI_Datatype type, MPI_Aint* lb,
         MPI_Aint* extent);
-static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION >= 8)
-    int PMPI_Type_get_extent_x(MPI_Datatype type, MPI_Count* lb,
+int PMPI_Type_get_extent_x(MPI_Datatype type, MPI_Count* lb,
         MPI_Count* extent);
 int PMPI_Type_get_name(MPI_Datatype type, char* type_name,
         int* resultlen);
 int PMPI_Type_get_true_extent(MPI_Datatype datatype, MPI_Aint* true_lb,
         MPI_Aint* true_extent);
-static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION >= 8)
-    int PMPI_Type_get_true_extent_x(MPI_Datatype datatype, MPI_Count* true_lb,
+int PMPI_Type_get_true_extent_x(MPI_Datatype datatype, MPI_Count* true_lb,
         MPI_Count* true_extent);
 int PMPI_Type_indexed(int count, int* array_of_blocklengths,
         int* array_of_displacements,
@@ -2359,8 +2181,7 @@ int PMPI_Type_set_attr(MPI_Datatype type, int type_keyval,
         void* attr_val);
 int PMPI_Type_set_name(MPI_Datatype type, char* type_name);
 int PMPI_Type_size(MPI_Datatype type, int* size);
-static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION >= 8)
-    int PMPI_Type_size_x(MPI_Datatype type, MPI_Count* size);
+int PMPI_Type_size_x(MPI_Datatype type, MPI_Count* size);
 int PMPI_Type_vector(int count, int blocklength, int stride,
         MPI_Datatype oldtype, MPI_Datatype* newtype);
 int PMPI_Unpack(void* inbuf, int insize, int* position,
@@ -2427,102 +2248,99 @@ int PMPI_Win_unlock_all(MPI_Win win);
 int PMPI_Win_wait(MPI_Win win);
 double PMPI_Wtick();
 double PMPI_Wtime();
-static if(OMPI_MAJOR_VERSION == 1 && OMPI_MINOR_VERSION >= 8)
-{
-    int PMPI_T_init_thread (int required, int* provided);
-    int PMPI_T_finalize ();
-    int PMPI_T_cvar_get_num (int* num_cvar);
-    int PMPI_T_cvar_get_info (int cvar_index, char* name, int* name_len,
-            int* verbosity, MPI_Datatype* datatype,
-            MPI_T_enum* enumtype, char* desc,
-            int* desc_len, int* bind, int* scope_);
-    int PMPI_T_cvar_get_index (char* name, int* cvar_index);
-    int PMPI_T_cvar_handle_alloc (int cvar_index, void* obj_handle,
-            MPI_T_cvar_handle* handle, int* count);
-    int PMPI_T_cvar_handle_free (MPI_T_cvar_handle* handle);
-    int PMPI_T_cvar_read (MPI_T_cvar_handle handle, void* buf);
-    int PMPI_T_cvar_write (MPI_T_cvar_handle handle, void* buf);
-    int PMPI_T_category_get_num(int* num_cat);
-    int PMPI_T_category_get_info(int cat_index, char* name, int* name_len,
-            char* desc, int* desc_len, int* num_cvars,
-            int* num_pvars, int* num_categories);
-    int PMPI_T_category_get_index (char* name, int* category_index);
-    int PMPI_T_category_get_cvars(int cat_index, int len, int* indices);
-    int PMPI_T_category_get_pvars(int cat_index, int len, int* indices);
-    int PMPI_T_category_get_categories(int cat_index, int len, int* indices);
-    int PMPI_T_category_changed(int* stamp);
+int PMPI_T_init_thread (int required, int* provided);
+int PMPI_T_finalize ();
+int PMPI_T_cvar_get_num (int* num_cvar);
+int PMPI_T_cvar_get_info (int cvar_index, char* name, int* name_len,
+        int* verbosity, MPI_Datatype* datatype,
+        MPI_T_enum* enumtype, char* desc,
+        int* desc_len, int* bind, int* scope_);
+int PMPI_T_cvar_get_index (char* name, int* cvar_index);
+int PMPI_T_cvar_handle_alloc (int cvar_index, void* obj_handle,
+        MPI_T_cvar_handle* handle, int* count);
+int PMPI_T_cvar_handle_free (MPI_T_cvar_handle* handle);
+int PMPI_T_cvar_read (MPI_T_cvar_handle handle, void* buf);
+int PMPI_T_cvar_write (MPI_T_cvar_handle handle, void* buf);
+int PMPI_T_category_get_num(int* num_cat);
+int PMPI_T_category_get_info(int cat_index, char* name, int* name_len,
+        char* desc, int* desc_len, int* num_cvars,
+        int* num_pvars, int* num_categories);
+int PMPI_T_category_get_index (char* name, int* category_index);
+int PMPI_T_category_get_cvars(int cat_index, int len, int* indices);
+int PMPI_T_category_get_pvars(int cat_index, int len, int* indices);
+int PMPI_T_category_get_categories(int cat_index, int len, int* indices);
+int PMPI_T_category_changed(int* stamp);
     
-    int PMPI_T_pvar_get_num(int* num_pvar);
-    int PMPI_T_pvar_get_info(int pvar_index, char* name, int* name_len,
-            int* verbosity, int* var_class, MPI_Datatype* datatype,
-            MPI_T_enum* enumtype, char* desc, int* desc_len, int* bind,
-            int* readonly, int* continuous, int* atomic);
-    int PMPI_T_pvar_get_index (char* name, int var_class, int* pvar_index);
-    int PMPI_T_pvar_session_create(MPI_T_pvar_session* session);
-    int PMPI_T_pvar_session_free(MPI_T_pvar_session* session);
-    int PMPI_T_pvar_handle_alloc(MPI_T_pvar_session session, int pvar_index,
-            void* obj_handle, MPI_T_pvar_handle* handle, int* count);
-    int PMPI_T_pvar_handle_free(MPI_T_pvar_session session, MPI_T_pvar_handle* handle);
-    int PMPI_T_pvar_start(MPI_T_pvar_session session, MPI_T_pvar_handle handle);
-    int PMPI_T_pvar_stop(MPI_T_pvar_session session, MPI_T_pvar_handle handle);
-    int PMPI_T_pvar_read(MPI_T_pvar_session session, MPI_T_pvar_handle handle,
-            void* buf);
-    int PMPI_T_pvar_write(MPI_T_pvar_session session, MPI_T_pvar_handle handle,
-            void* buf);
-    int PMPI_T_pvar_reset(MPI_T_pvar_session session, MPI_T_pvar_handle handle);
-    int PMPI_T_pvar_readreset(MPI_T_pvar_session session, MPI_T_pvar_handle handle,
-            void* buf);
-    int PMPI_T_enum_get_info(MPI_T_enum enumtype, int* num, char* name, int* name_len);
-    int PMPI_T_enum_get_item(MPI_T_enum enumtype, int index, int* value, char* name,
-            int* name_len);
-    
-    /*
-     *  Tool MPI API
-     */
-    int MPI_T_init_thread (int required, int* provided);
-    int MPI_T_finalize ();
-    int MPI_T_cvar_get_num (int* num_cvar);
-    int MPI_T_cvar_get_info (int cvar_index, char* name, int* name_len,
-            int* verbosity, MPI_Datatype* datatype,
-            MPI_T_enum* enumtype, char* desc,
-            int* desc_len, int* bind, int* scope_);
-    int MPI_T_cvar_get_index (char* name, int* cvar_index);
-    int MPI_T_cvar_handle_alloc (int cvar_index, void* obj_handle,
-            MPI_T_cvar_handle* handle, int* count);
-    int MPI_T_cvar_handle_free (MPI_T_cvar_handle* handle);
-    int MPI_T_cvar_read (MPI_T_cvar_handle handle, void* buf);
-    int MPI_T_cvar_write (MPI_T_cvar_handle handle, void* buf);
-    int MPI_T_category_get_num(int* num_cat);
-    int MPI_T_category_get_info(int cat_index, char* name, int* name_len,
-            char* desc, int* desc_len, int* num_cvars,
-            int* num_pvars, int* num_categories);
-    int MPI_T_category_get_index (char* name, int* category_index);
-    int MPI_T_category_get_cvars(int cat_index, int len, int* indices);
-    int MPI_T_category_get_pvars(int cat_index, int len, int* indices);
-    int MPI_T_category_get_categories(int cat_index, int len, int* indices);
-    int MPI_T_category_changed(int* stamp);
-    
-    int MPI_T_pvar_get_num(int* num_pvar);
-    int MPI_T_pvar_get_info(int pvar_index, char* name, int* name_len,
-            int* verbosity, int* var_class, MPI_Datatype* datatype,
-            MPI_T_enum* enumtype, char* desc, int* desc_len, int* bind,
-            int* readonly, int* continuous, int* atomic);
-    int MPI_T_pvar_get_index (char* name, int var_class, int* pvar_index);
-    int MPI_T_pvar_session_create(MPI_T_pvar_session* session);
-    int MPI_T_pvar_session_free(MPI_T_pvar_session* session);
-    int MPI_T_pvar_handle_alloc(MPI_T_pvar_session session, int pvar_index,
-            void* obj_handle, MPI_T_pvar_handle* handle, int* count);
-    int MPI_T_pvar_handle_free(MPI_T_pvar_session session, MPI_T_pvar_handle* handle);
-    int MPI_T_pvar_start(MPI_T_pvar_session session, MPI_T_pvar_handle handle);
-    int MPI_T_pvar_stop(MPI_T_pvar_session session, MPI_T_pvar_handle handle);
-    int MPI_T_pvar_read(MPI_T_pvar_session session, MPI_T_pvar_handle handle,
-            void* buf);
-    int MPI_T_pvar_write(MPI_T_pvar_session session, MPI_T_pvar_handle handle,
-            void* buf);
-    int MPI_T_pvar_reset(MPI_T_pvar_session session, MPI_T_pvar_handle handle);
-    int MPI_T_pvar_readreset(MPI_T_pvar_session session, MPI_T_pvar_handle handle,
-            void* buf);
-    int MPI_T_enum_get_info(MPI_T_enum enumtype, int* num, char* name, int* name_len);
-    int MPI_T_enum_get_item(MPI_T_enum enumtype, int index, int* value, char* name,
-            int* name_len);
-}
+int PMPI_T_pvar_get_num(int* num_pvar);
+int PMPI_T_pvar_get_info(int pvar_index, char* name, int* name_len,
+        int* verbosity, int* var_class, MPI_Datatype* datatype,
+        MPI_T_enum* enumtype, char* desc, int* desc_len, int* bind,
+        int* readonly, int* continuous, int* atomic);
+int PMPI_T_pvar_get_index (char* name, int var_class, int* pvar_index);
+int PMPI_T_pvar_session_create(MPI_T_pvar_session* session);
+int PMPI_T_pvar_session_free(MPI_T_pvar_session* session);
+int PMPI_T_pvar_handle_alloc(MPI_T_pvar_session session, int pvar_index,
+        void* obj_handle, MPI_T_pvar_handle* handle, int* count);
+int PMPI_T_pvar_handle_free(MPI_T_pvar_session session, MPI_T_pvar_handle* handle);
+int PMPI_T_pvar_start(MPI_T_pvar_session session, MPI_T_pvar_handle handle);
+int PMPI_T_pvar_stop(MPI_T_pvar_session session, MPI_T_pvar_handle handle);
+int PMPI_T_pvar_read(MPI_T_pvar_session session, MPI_T_pvar_handle handle,
+        void* buf);
+int PMPI_T_pvar_write(MPI_T_pvar_session session, MPI_T_pvar_handle handle,
+        void* buf);
+int PMPI_T_pvar_reset(MPI_T_pvar_session session, MPI_T_pvar_handle handle);
+int PMPI_T_pvar_readreset(MPI_T_pvar_session session, MPI_T_pvar_handle handle,
+        void* buf);
+int PMPI_T_enum_get_info(MPI_T_enum enumtype, int* num, char* name, int* name_len);
+int PMPI_T_enum_get_item(MPI_T_enum enumtype, int index, int* value, char* name,
+        int* name_len);
+
+/*
+ *  Tool MPI API
+ */
+int MPI_T_init_thread (int required, int* provided);
+int MPI_T_finalize ();
+int MPI_T_cvar_get_num (int* num_cvar);
+int MPI_T_cvar_get_info (int cvar_index, char* name, int* name_len,
+        int* verbosity, MPI_Datatype* datatype,
+        MPI_T_enum* enumtype, char* desc,
+        int* desc_len, int* bind, int* scope_);
+int MPI_T_cvar_get_index (char* name, int* cvar_index);
+int MPI_T_cvar_handle_alloc (int cvar_index, void* obj_handle,
+        MPI_T_cvar_handle* handle, int* count);
+int MPI_T_cvar_handle_free (MPI_T_cvar_handle* handle);
+int MPI_T_cvar_read (MPI_T_cvar_handle handle, void* buf);
+int MPI_T_cvar_write (MPI_T_cvar_handle handle, void* buf);
+int MPI_T_category_get_num(int* num_cat);
+int MPI_T_category_get_info(int cat_index, char* name, int* name_len,
+        char* desc, int* desc_len, int* num_cvars,
+        int* num_pvars, int* num_categories);
+int MPI_T_category_get_index (char* name, int* category_index);
+int MPI_T_category_get_cvars(int cat_index, int len, int* indices);
+int MPI_T_category_get_pvars(int cat_index, int len, int* indices);
+int MPI_T_category_get_categories(int cat_index, int len, int* indices);
+int MPI_T_category_changed(int* stamp);
+
+int MPI_T_pvar_get_num(int* num_pvar);
+int MPI_T_pvar_get_info(int pvar_index, char* name, int* name_len,
+       int* verbosity, int* var_class, MPI_Datatype* datatype,
+       MPI_T_enum* enumtype, char* desc, int* desc_len, int* bind,
+       int* readonly, int* continuous, int* atomic);
+int MPI_T_pvar_get_index (char* name, int var_class, int* pvar_index);
+int MPI_T_pvar_session_create(MPI_T_pvar_session* session);
+int MPI_T_pvar_session_free(MPI_T_pvar_session* session);
+int MPI_T_pvar_handle_alloc(MPI_T_pvar_session session, int pvar_index,
+        void* obj_handle, MPI_T_pvar_handle* handle, int* count);
+int MPI_T_pvar_handle_free(MPI_T_pvar_session session, MPI_T_pvar_handle* handle);
+int MPI_T_pvar_start(MPI_T_pvar_session session, MPI_T_pvar_handle handle);
+int MPI_T_pvar_stop(MPI_T_pvar_session session, MPI_T_pvar_handle handle);
+int MPI_T_pvar_read(MPI_T_pvar_session session, MPI_T_pvar_handle handle,
+        void* buf);
+int MPI_T_pvar_write(MPI_T_pvar_session session, MPI_T_pvar_handle handle,
+        void* buf);
+int MPI_T_pvar_reset(MPI_T_pvar_session session, MPI_T_pvar_handle handle);
+int MPI_T_pvar_readreset(MPI_T_pvar_session session, MPI_T_pvar_handle handle,
+        void* buf);
+int MPI_T_enum_get_info(MPI_T_enum enumtype, int* num, char* name, int* name_len);
+int MPI_T_enum_get_item(MPI_T_enum enumtype, int index, int* value, char* name,
+        int* name_len);

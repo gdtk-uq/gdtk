@@ -116,6 +116,7 @@ immutable types = [
     "OMPI_OFFSET_DATATYPE",
     "OMPI_MPI_COUNT_TYPE",
     "OPAL_PTRDIFF_TYPE",
+    "OMPI_MPI_AINT_TYPE",
     "ompi_fortran_bogus_type_t",
     "ompi_fortran_integer_t",
     "MPI_Fint",
