@@ -4,6 +4,7 @@ kd tree for nearest neighbour finding
 
 @author: Nick Gibbons
 */
+module geom.misc.kdtree;
 
 import std.stdio, std.algorithm, std.math, std.random;
  

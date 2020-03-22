@@ -3787,4 +3787,4 @@ void compute_wall_distances() {
             cell.dwall = dist;
         }
     }
-}
+} // end compute_wall_distances()
