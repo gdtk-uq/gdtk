@@ -55,48 +55,107 @@ Fix any tests that complain and retest.
 Once, I'm happy that things are working well and 
 that I haven't broken any other code, I'm ready to commit.
 
+## Version Control
+
+Eilmer uses the venerable distributed version control system git to manage its repository of source code.
+This repository is a hash-tree of changes hidden in the \.git directory next to the source files, which tracks every change made to every line of code, going back to the beginning of the project.
+Version control is critical to managing backups, finding bugs, and integrating work from multiple developers, so developing the code requires a bit of knowledge about how it works in addition to just knowing the terminal commands.
+If you're unfamiliar with git, it is a good idea to check out a tutorial such as https://www.atlassian.com/git, to get familiar with the basic concepts.
+The next few sections document outlines the basic recommended workflow for making changes to Eilmer.
+
+## Developing with git
+
+Before beginning any work, it is a good idea to start with a fresh pull of the repository.
+From inside an old dgd directory type:
+
+    $ git pull
+
+pull is a multipart command that checks the server where Eilmer is hosted online for new changes, integrates those changes into your local repo, and changes the source code in your dgd directory to match the newest version of each file.
+
+At this point you're free to make changes to the code, add new features, debug old issues, etc.
+git has many tools that might help you along the way, such as:
+
+    $ git status # shows files changed since last commit
+    $ git diff # shows differences between your current files and last commit
+    $ git log --graph --all # shows recent commits and history graph
+    $ git diff VERSIONHASH1 VERSIONHASH2 # shows changes between old commits
+    $ git stash # saves uncommitted changes so you can go back to the last commit
+    $ git stash pop # loads uncommitted changes from git stash
+    $ git checkout -- FILENAME # reverts FILENAME to last commit
+
+Once you've finished your changes and tested that they work, it is a good idea to run the automated tests in examples/eilmer:
+
+    $ cd examples/
+    $ cp -r eilmer eilmer.test
+    $ cd eilmer.test
+    $ ./eilmer-test.rb
+
+Running these tests requires all of the versions of eilmer (including the steady-state and complex number versions), as well as some extra dependencies such as python-sympy and ruby, and should take about a hour-and-a-half on a good machine.
+Once you're satisfied that your changes have not harmed the code in some way, it's time to commit them to your local copy of the repository, and push it back out to the server so other people can use your changes.
+
+## Adding Changes to the repository
+
+To start with, it is a good idea to run make clean and remove untracked files.
+This will clean up the output of git status and help you keep track of what's going on.
+
+    $ cd src/eilmer
+    $ make clean
+    $ git status
+
+The main issue with pushing changes to the repository is that someone else may have added commits there since you started working.
+To check for incoming changes use a git pull:
+
+    $ git pull
+
+If successful, this will add new changes into your repository and update the source code files to match them.
+If this is the case then skip ahead to the "Making a commit" section.
+However, if you have made changes to a file that is also set to be changed, git pull will abort and explain politely that it cannot continue.
+If this is the case you will need to perform a merge.
+
+## Merging
+
+Modern version control systems contain clever routines for automatically merging the changes in a file that has a diverging development history.
+The easiest way to perform a merge in git without making a commit is to stash your changes, pull the new changes and unstash them:
+
+    $ git stash
+    $ git pull
+    $ git stash pop
+
+Under the hood, git stash takes local changes you've made to the source code and stashes them into a temporary commit that is not added to the main development branch.
+If you were to check any of the files at that point you would find that they have been reset to how they were before you started working on them.
+Because of this, git pull will now complete, updating the files to bring in new changes.
+At this point git stash pop will automatically merge the conflicting changes together, slicing in the lines of code you changed into each file, using their shared ancestor as a reference point.
+ 
+Most commonly this merge will succeed automatically.
+However if your changes were to the same part of the same files you will get a merge conflict and the automerge will stop.
+Solving a merge conflict requires manually deciding which line of code should win at each contested point, by opening up the file and going to the contested lines and editing them yourself.
+
+Once the merge has been completed it may be a good idea to run the automated tests again, to make sure the automatic system has not broken the code.
+This is especially true in the case of a conflicted or messy merge, or if your changes were to an important part of the code that interacts with many other parts.
+Keeping up to date with the main repository and doing small frequent commits should reduce the risk of these issues, but sometimes they are unavoidable.
+
 ## Making a commit
 
-The following was written when using Mercurial
-as our revision control system.
-With the move to git, this process will need some revision itself.
-For a good introduction to git, look at https://www.atlassian.com/git
+When merging is complete it is time to commit the changes to your local copy of the repository.
+Take a look at git status to make sure that the changes are what you expect and then add the files to staging area and commit them.
+If you have added a new file to the code make sure to add it too, or it won't show up in other people's copies of the code!
 
-Before making the commit, I look to see if there are any other commits 
-that have appeared since the start of my session and, 
-if there are any, pull them.
-I usually also update but there is a finite probability that 
-the other commits will interfere with my new code.
-If that happens, the rebase/merge tool usually does a good job 
-of integrating the pulled changes into my current tree of files.
-Often, there are no files to be merged and the update proceeds cleanly 
-but I now need to check that code is still working.
-Sometimes I get a second cup of tea out of this, 
-as the automated tests run again.
-Occasionally, I decide to commit my new stuff immediately and 
-then run the tests to check that my assumption that all is good 
-is really true.
+    $ git add file1.d file2.d newfile.d
+    $ git commit -m "A commit message"
 
-So, I make my commit on top of the full history of the bitbucket repository,
-thus keeping a linear history in the master branch.
-If you browse the actual revision history, you will see 
-various small branches followed by merges where 
-different developers have made commits in parallel.
-Sometimes, if the parallel work has been done on distinct files, 
-the merge is trivially done by the revision control system.
-Sometimes edits collide and someone has to manually check/do the merge.
-It's nice to avoid this extra work.
+Make sure to add a good descriptive commit message, this will help other people understand what you have done, and help you in case you have to come back to this commit and debug anything.
 
-Once you have your commit with your new work sitting at the tip of your 
-copy of the repository, it's time to push it back to 
-the bitbucket hosted repository.
-There is a race condition at this point because other people will 
-proceed to do their development work at their own pace and 
-may push back their commits before you push yours.
-This occasionally happens but usually is not a big deal.
-Pull and update, and possibly merge again, then try to push back.
-So far, I've not needed to do this merge cycle more than twice, 
-but we'll see how things go as more people participate in the code development.
+At this point your repository should be in a state where it can be pushed to the master copy other people will pull down and use.
+A simple command to do this is:
+
+    $ git push
+
+The server will ask you for credentials, and if you are authorised, will attempt to push your changes.
+Rarely, someone may have performed a push since your last pull command, perhaps while you were doing a second round of tests.
+In this case git will prevent you from pushing and tell you to pull again.
+If this happens you will have to pull again and fix a divergent commit history, using either git merge or git rebase, then try git push.
+The best way to avoid this situation is to minimise the amount of time between git pull and git push.
+In the case of a complicated or messy merge that takes some time, simply run git pull again before committing to ensure that everything is up to date.
 
 ## What to commit and what not to commit
 
