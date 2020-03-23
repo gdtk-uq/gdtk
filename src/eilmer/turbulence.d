@@ -509,6 +509,236 @@ private:
 
 }
 
+/*
+Object representing the Spalart Allmaras turbulence model 
+ Notes: 
+  - The model here is taken from "Modifications and Clarifications
+    for the Implementation of the Spalart-Alllmaras Turbulence Model"
+    by Steven R. Allmaras, Forrester T. Johnson and Philippe R. Spalart
+    2012, ICCFD7 paper
+ - Model constants and nomenclature from "Simulation and Dynamics of
+   Hypersonic Turbulent Combustion", 2019 PhD Thesis by Nick Gibbons
+ - MODEL UNDER CONSTRUCTION: DO NOT USE!
+
+ @author: Nick Gibbons (n.gibbons@uq.edu.au)
+*/
+class saTurbulenceModel : TurbulenceModel {
+    this (){
+        number Pr_t            = GlobalConfig.turbulence_prandtl_number;
+        number max_mu_t_factor = GlobalConfig.max_mu_t_factor;
+        this(Pr_t, max_mu_t_factor);
+    }
+
+    this (const JSONValue config){
+        number Pr_t            = getJSONdouble(config, "turbulence_prandtl_number", 0.89);
+        number max_mu_t_factor = getJSONdouble(config, "max_mu_t_factor", 300.0);
+        this(Pr_t, max_mu_t_factor);
+    }
+
+    this (saTurbulenceModel other){
+        this(other.Pr_t, other.max_mu_t_factor);
+        return;
+    }
+
+    this (number Pr_t, number max_mu_t_factor) {
+        this.Pr_t = Pr_t;
+        this.max_mu_t_factor = max_mu_t_factor ;
+    }
+
+    @nogc final override string modelName() const {return "spalart_allmaras";}
+    @nogc final override size_t nturb() const {return 1;}
+    @nogc final override bool isTurbulent() const {return true;}
+    @nogc final override bool needs_dwall() const {return true;}
+
+    final override saTurbulenceModel dup() {
+        return new saTurbulenceModel(this);
+    }
+
+    @nogc final override
+    void source_terms(const FlowState fs,const FlowGradients grad, const number dwall, 
+                              ref number[2] source) const {
+        /*
+        Spalart Allmaras Source Terms:
+        Notes:
+           - This term consists of Production - Destruction +
+             compressible dissipation, the blue, red, and magenta terms
+             from Gibbons, 2019, equation 2.32
+        */
+
+        number nuhat = fs.turb[0];
+        number rho = fs.gas.rho;
+        number nu = fs.gas.mu/rho;
+        number chi = nuhat/nu;
+        number chi_cubed = chi*chi*chi;
+        number d = compute_d(fs, grad, dwall);
+
+        // FIXME: Axisymmetric velocity gradient corrections?
+        number Omega = 0.0;
+        foreach(i; 0 .. 3) foreach(j; 0 .. 3) Omega += 0.5*(grad.vel[i][j] - grad.vel[j][i]);
+        Omega = sqrt(2.0*Omega);
+
+        number fv1 = chi_cubed/(chi_cubed + cv1_cubed);
+        number fv2 = 1.0 - chi/(1.0 + chi*fv1);
+        number Sbar = nuhat/kappa/kappa/d/d*fv2;
+
+        // Clipping Equation: NNG 2.37
+        number Shat;
+        if (Sbar >= -cv2*Omega) {
+            Shat = Omega + Sbar;
+        } else {
+            number Sthing = Omega*(cv2*cv2*Omega + cv3*Sbar)/((cv3-2.0*cv2)*Omega - Sbar);
+            Shat = Omega + Sthing;
+        }
+        number ft2 = ct3*exp(-ct4*chi*chi);
+        number production = rho*cb1*(1.0 - ft2)*Shat*nuhat;
+
+        number r = fmin(nuhat/Shat/kappa/kappa/d/d, 10.0);
+        number g = r + cw2*(pow(r,6.0) - r);
+        number fw = (1.0 + cw3_to_the_sixth)/(pow(g,6.0) +  cw3_to_the_sixth);
+        fw = g*pow(fw, 1.0/6.0);
+        number destruction = rho*(cw1*fw - cb1/kappa/kappa*ft2)*(nuhat*nuhat/d/d);
+
+        // No axisymmetric corrections terms in dS/dxi dS/dxi
+        number nuhat_gradient_squared = 0.0;
+        foreach(i; 0 .. 3) nuhat_gradient_squared+=grad.turb[0][i]*grad.turb[0][i];
+        number dissipation = cb2/sigma*rho*nuhat_gradient_squared;
+
+        source[0] = production - destruction + dissipation;
+        return; 
+    }
+
+    @nogc final override number turbulent_viscosity(const FlowState fs, const FlowGradients grad, const number dwall) const {
+        /*
+        Compute the turbulent viscosity mu_t from the SA transport variable nuhat
+        See equation (1) from Allmaras (2012)
+        */ 
+        number nuhat = fs.turb[0];
+        number rho = fs.gas.rho;
+        number nu = fs.gas.mu/rho;
+        number chi = nuhat/nu;
+        number chi_cubed = chi*chi*chi;
+        number fv1 = chi_cubed/(chi_cubed + cv1_cubed);
+        number mu_t = rho*nuhat*fv1;
+        return mu_t;
+    }
+    @nogc final override number turbulent_conductivity(const FlowState fs, GasModel gm) const {
+        // Warning: Make sure fs.mu_t is up to date before calling this method
+        number k_t = gm.Cp(fs.gas) * fs.mu_t / Pr_t;
+        return k_t;
+    }
+
+    @nogc final override number turbulent_signal_frequency(const FlowState fs) const {
+        /*
+        The SA model doesn't really have an equivalent frequency...
+        Something to think about in the future
+        */ 
+        number turb_signal = 1e-99; // We never want this to be the limiting factor (1/s)
+        return turb_signal;
+    }
+
+    @nogc final override number turbulent_kinetic_energy(const FlowState fs) const {
+        /*
+        SA model assumes tke is small, there is a way to estimate it if need be
+        */ 
+        number tke=0.0;
+        return tke;
+    }
+
+    @nogc final override
+    number[3] turbulent_kinetic_energy_transport(const FlowState fs, const FlowGradients grad) const {
+        /*
+        Since tke==0 everywhere...
+        */ 
+        number[3] qtke;
+        qtke[0] = 0.0;
+        qtke[1] = 0.0;
+        qtke[2] = 0.0;
+        return qtke;
+    }
+
+    @nogc final override string primitive_variable_name(size_t i) const {
+        return _varnames[i];
+    }
+
+    @nogc final override number turb_limits(size_t i) const {
+        return _varlimits[i];
+    }
+
+    @nogc final override number viscous_transport_coeff(const FlowState fs, size_t i) const {
+        /*
+        Viscous diffusion of nuhat, the green term in Gibbons (2019) equation 2.32
+        */
+        number nuhat = fs.turb[0];
+        number rho = fs.gas.rho;
+        number nu = fs.gas.mu/rho;
+        number mu_eff = rho*(nu + nuhat)/sigma;
+        return mu_eff;
+    }
+
+    @nogc final override bool is_valid(const FlowStateLimits fsl, const number[] turb) const {
+        return is_nuhat_valid(turb[0]);
+    }
+
+    @nogc final override number gmres_scaling_factor(size_t i) const {
+        number fac = 1.0;
+        return fac;
+    }
+
+    @nogc final override number tke_rhoturb_derivatives(const FlowState fs, size_t i) const {
+        /*
+        Since tke is zero everywhere...
+        */
+        number dtke_drhoturb = 0.0;
+        return dtke_drhoturb;
+    }
+
+    @nogc final override
+    void set_flowstate_at_wall(const int gtl, const FVInterface IFace, const FVCell cell, ref FlowState fs) const {
+        /* 
+        nuhat is set to zero at no slip walls in accord with Allmaras (2012), eqn 7
+        */
+        fs.turb[0] = 0.0;
+        return;
+    }
+
+private:
+    immutable number Pr_t;
+    immutable number max_mu_t_factor;
+    immutable string[1] _varnames = ["nuhat"];
+    immutable number[1] _varlimits = [0.0];
+    immutable double sigma = 2.0/3.0;
+    immutable double cb1 = 0.1355;
+    immutable double cb2 = 0.622;
+    immutable double kappa = 0.41;
+    immutable double cw1 = cb1/kappa/kappa + (1+cb1)/sigma;
+    immutable double cw2 = 0.3;
+    immutable double cw3 = 2.0;
+    immutable double cw3_to_the_sixth = cw3*cw3*cw3*cw3*cw3*cw3;
+    immutable double cv1 = 7.1;
+    immutable double cv1_cubed = cv1*cv1*cv1;
+    immutable double cv2 = 0.7;
+    immutable double cv3 = 0.9;
+    immutable double ct1 = 1.0;
+    immutable double ct2 = 2.0;
+    immutable double ct3 = 1.2;
+    immutable double ct4 = 0.5;
+
+protected:
+    @nogc number compute_d(const FlowState fs, const FlowGradients grad, number dwall) const { return dwall; }
+
+    @nogc bool is_nuhat_valid(const number nuhat) const {
+        if (!isFinite(nuhat.re)) {
+            debug { writeln("Turbulence nuhat invalid number ", nuhat); }
+            return false;
+        }
+        if (nuhat < 0.0) {
+            debug { writeln("Turbulence nuhat below minimum 0.0"); }
+            return false;
+        }
+        return true;
+    }
+}
+
 
 TurbulenceModel init_turbulence_model(const string turbulence_model_name, const JSONValue config)
     /*
