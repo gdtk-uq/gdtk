@@ -38,8 +38,8 @@ class TurbulenceModel{
 
     // Methods to be overridden.
     abstract TurbulenceModel dup();
-    @nogc abstract void source_terms(const FlowState fs,const FlowGradients grad, const number dwall, ref number[2] source) const;
-    @nogc abstract number turbulent_viscosity(const FlowState fs, const FlowGradients grad, const number dwall) const;
+    @nogc abstract void source_terms(const FlowState fs,const FlowGradients grad, const number ybar, const number dwall, ref number[2] source) const;
+    @nogc abstract number turbulent_viscosity(const FlowState fs, const FlowGradients grad, const number ybar, const number dwall) const;
     @nogc abstract number turbulent_conductivity(const FlowState fs, GasModel gm) const;
     @nogc abstract number turbulent_signal_frequency(const FlowState fs) const;
     @nogc abstract number turbulent_kinetic_energy(const FlowState fs) const;
@@ -86,12 +86,12 @@ class noTurbulenceModel : TurbulenceModel {
     }
 
     @nogc final override
-    void source_terms(const FlowState fs,const FlowGradients grad, const number dwall, 
+    void source_terms(const FlowState fs,const FlowGradients grad, const number ybar, const number dwall,
                               ref number[2] source) const {
         return; 
     }
 
-    @nogc final override number turbulent_viscosity(const FlowState fs, const FlowGradients grad, const number dwall) const {
+    @nogc final override number turbulent_viscosity(const FlowState fs, const FlowGradients grad, const number ybar, const number dwall) const {
         number mu_t = 0.0;
         return mu_t;
     }
@@ -205,7 +205,7 @@ class kwTurbulenceModel : TurbulenceModel {
     }
 
     @nogc final override
-    void source_terms(const FlowState fs,const FlowGradients grad, const number dwall,
+    void source_terms(const FlowState fs,const FlowGradients grad, const number ybar, const number dwall,
                               ref number[2] source) const {
         /*
         Compute k-omega source terms.
@@ -244,7 +244,7 @@ class kwTurbulenceModel : TurbulenceModel {
             if ( axisymmetric ) {
                 // 2D axisymmetric
                 //number v_over_y = fs.vel.y / pos[0].y;
-                number v_over_y = fs.vel.y / dwall;
+                number v_over_y = fs.vel.y / ybar;
                 // JP.Nap correction from 03-May-2007 (-v_over_y in parentheses)
                 // P_K -= 0.6667 * mu_t * v_over_y * (dudx+dvdy-v_over_y);
                 // Wilson Chan correction to JP Nap's version (13 Dec 2008)
@@ -318,7 +318,7 @@ class kwTurbulenceModel : TurbulenceModel {
         return; 
     }
 
-    @nogc final override number turbulent_viscosity(const FlowState fs, const FlowGradients grad, const number dwall) const {
+    @nogc final override number turbulent_viscosity(const FlowState fs, const FlowGradients grad, const number ybar, const number dwall) const {
         /*
         Calculate mu_t, the turbulence viscosity.
 
@@ -339,7 +339,7 @@ class kwTurbulenceModel : TurbulenceModel {
             if ( axisymmetric ) {
                 // 2D axisymmetric
                 //number v_over_y = fs.vel.y / pos[0].y;
-                number v_over_y = fs.vel.y / dwall;
+                number v_over_y = fs.vel.y / ybar;
                 S_bar_squared = dudx*dudx + dvdy*dvdy + v_over_y*v_over_y
                     - 4.0/9.0 * (dudx + dvdy + v_over_y)
                     * (dudx + dvdy + v_over_y)
@@ -555,7 +555,7 @@ class saTurbulenceModel : TurbulenceModel {
     }
 
     @nogc final override
-    void source_terms(const FlowState fs,const FlowGradients grad, const number dwall, 
+    void source_terms(const FlowState fs,const FlowGradients grad, const number ybar, const number dwall,
                               ref number[2] source) const {
         /*
         Spalart Allmaras Source Terms:
@@ -572,7 +572,7 @@ class saTurbulenceModel : TurbulenceModel {
         number chi_cubed = chi*chi*chi;
         number d = compute_d(fs, grad, dwall);
 
-        // FIXME: Axisymmetric velocity gradient corrections?
+        // No axisymmetric corrections since W is antisymmetric
         number Omega = 0.0;
         foreach(i; 0 .. 3) foreach(j; 0 .. 3) Omega += 0.5*(grad.vel[i][j] - grad.vel[j][i]);
         Omega = sqrt(2.0*Omega);
@@ -607,7 +607,7 @@ class saTurbulenceModel : TurbulenceModel {
         return; 
     }
 
-    @nogc final override number turbulent_viscosity(const FlowState fs, const FlowGradients grad, const number dwall) const {
+    @nogc final override number turbulent_viscosity(const FlowState fs, const FlowGradients grad, const number ybar, const number dwall) const {
         /*
         Compute the turbulent viscosity mu_t from the SA transport variable nuhat
         See equation (1) from Allmaras (2012)

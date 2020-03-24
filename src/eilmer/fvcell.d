@@ -1701,7 +1701,7 @@ public:
     void turbulence_viscosity() 
     {
         auto gmodel = myConfig.gmodel;
-        fs.mu_t = myConfig.turb_model.turbulent_viscosity(fs, grad, pos[0].y); // fixme to use dwall
+        fs.mu_t = myConfig.turb_model.turbulent_viscosity(fs, grad, pos[0].y, dwall);
         fs.k_t = myConfig.turb_model.turbulent_conductivity(fs, gmodel);
     } 
 
@@ -1802,9 +1802,8 @@ public:
         } // end if ( myConfig.axisymmetric )
 
         version(turbulence) {
-            // FIXME: Replace pos[0].y with dwall (it's only used in axisymmetric atm anyway)
             if (in_turbulent_zone) {
-                myConfig.turb_model.source_terms(fs, grad, pos[0].y, Q.rhoturb);
+                myConfig.turb_model.source_terms(fs, grad, pos[0].y, dwall, Q.rhoturb);
             }
         }
 
