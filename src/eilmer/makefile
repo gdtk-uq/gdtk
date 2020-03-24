@@ -281,18 +281,18 @@ ifeq ($(DMD), ldc2)
         DLINKFLAGS += -L$(TECPLOT_BIN_DIR)/libtecio.so -L$(TECPLOT_BIN_DIR)/sys/libstdc++.so.6
     endif
 endif
-ifeq ($(DMD), gdc)
+ifeq ($(DMD), gdc-8)
     ifeq ($(FLAVOUR), debug)
-        DFLAGS := -Wall -Og -g -version=flavour_debug
+        DFLAGS := -Wall -Og -g -fversion=flavour_debug
     endif
     ifeq ($(FLAVOUR), profile)
-        DFLAGS := -Wall -O2 -frelease -fno-debug -version=flavour_profile
+        DFLAGS := -Wall -O2 -frelease -fno-debug -fversion=flavour_profile
     endif
     ifeq ($(FLAVOUR), fast)
-        DFLAGS := -Wall -O2 -frelease -fno-debug -version=flavour_fast
+        DFLAGS := -Wall -O2 -frelease -fno-debug -fversion=flavour_fast
     endif
     OF := -o
-    DVERSION := -version=
+    DVERSION := -fversion=
     DLINKFLAGS := -L$(LIBLUAPATH) -L-L$(CEQ_DIR)
     ifeq ($(findstring with_libplot,$(LIBPLOT_VERSION_STR)), with_libplot)
         DFLAGS := $(DFLAGS) $(DVERSION)$(LIBPLOT_VERSION_STR)
@@ -303,7 +303,12 @@ ifeq ($(DMD), gdc)
         DLINKFLAGS += $(TECPLOT_BIN_DIR)/libtecio.so $(TECPLOT_BIN_DIR)/sys/libstdc++.so.6
     endif
 endif
-# DIP1008 allows throwing of exceptions in @nogc code.
+# DIP1008 allows throwing of exceptions in @nogc code. Appeared in 2.079.0, 2018-03-01.
+# This rules out the use of gdc for compiling the code.
+# gdc-8 built on 2.069.2 with updates to 2016-01-15
+# gdc-9 built on 2.076.0 which appeared 2017-09-01
+# gdc-10 will back-port static foreach, which we also use.
+# Expect gdc-10 to be out in May 2020.
 DFLAGS += -dip1008
 DFLAGS += -I.. -I$(NM_DIR) -I$(UTIL_DIR) -I$(GEOM_DIR) -I$(GRID_DIR) -I$(GZIP_DIR)
 

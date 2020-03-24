@@ -103,18 +103,18 @@ ifeq ($(DMD), ldc2)
     OF := -of=
     DLINKFLAGS := -L-ldl
 endif
-ifeq ($(DMD), gdc)
+ifeq ($(DMD), gdc-8)
     ifeq ($(FLAVOUR), debug)
-        DFLAGS := -Wall -Og -g -version=flavour_debug
+        DFLAGS := -Wall -Og -g -fversion=flavour_debug
     endif
     ifeq ($(FLAVOUR), profile)
-        DFLAGS := -Wall -O2 -frelease -fno-debug -version=flavour_profile
+        DFLAGS := -Wall -O2 -frelease -fno-debug -fversion=flavour_profile
     endif
     ifeq ($(FLAVOUR), fast)
-        DFLAGS := -Wall -O2 -frelease -fno-debug -version=flavour_fast
+        DFLAGS := -Wall -O2 -frelease -fno-debug -fversion=flavour_fast
     endif
     PIC := -fPIC
-    DVERSION := -version=
+    DVERSION := -fversion=
     OF := -o
     DLINKFLAGS := -ldl
 endif
@@ -125,6 +125,7 @@ ifeq ($(WITH_DVODE),1)
 endif
 
 # DIP1008 allows throwing of exceptions in @nogc code.
+# See notes in src/eilmer/makefile.
 DFLAGS += -dip1008
 
 # ----------------------------------------------------------------------
