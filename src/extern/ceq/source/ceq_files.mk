@@ -1,8 +1,10 @@
 # object and source files needed to build ceq
+# Note that we list just the D-language source files.
 #
 CEQ_DIR ?= .
-CEQ_FILES := $(CEQ_DIR)/ceq.d \
-	$(CEQ_DIR)/ceq.o \
+CEQ_SRC_FILES := $(CEQ_DIR)/ceq.d
+
+CEQ_OBJ_FILES := $(CEQ_DIR)/ceq.o \
 	$(CEQ_DIR)/common.o \
 	$(CEQ_DIR)/linalg.o \
 	$(CEQ_DIR)/ps.o \

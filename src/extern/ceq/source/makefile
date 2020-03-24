@@ -4,6 +4,8 @@ INSTALL_DIR ?= $(HOME)/ceq
 
 all: thermo.o linalg.o common.o pt.o rhou.o ps.o ceq.o
 	$(CC) $(CFLAGS) -shared thermo.o linalg.o common.o pt.o rhou.o ps.o ceq.o -lm -o libceq.so
+	ar r libceq.a thermo.o linalg.o common.o pt.o rhou.o ps.o ceq.o
+	ranlib libceq.a
 
 thermo.o: thermo.c thermo.h
 	$(CC) $(CFLAGS) -c thermo.c
@@ -42,4 +44,4 @@ moduletests: thermo.c thermo.h thermo.o linalg.c linalg.h linalg.o
 
 clean: 
 	rm -rf *.o 
-	rm -rf libceq.so
+	rm -rf libceq.so libceq.a

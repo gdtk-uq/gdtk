@@ -26,6 +26,7 @@ GAS_DIR := ../gas
 include $(GAS_DIR)/gas_files.mk
 
 CEQ_DIR := ../extern/ceq/source
+LIBCEQ := $(CEQ_DIR)/libceq.a
 include $(CEQ_DIR)/ceq_files.mk
 
 include kinetics_files.mk
@@ -62,64 +63,64 @@ clean:
 	- rm two_temperature_argon_kinetics_test_results.data
 	- rm -r $(BUILD_DIR)/*
 	- cd $(LUA_DIR); make clean
-	- cd $(GAS_DIR); make clean; rm libgas.a
 	- cd $(CEQ_DIR); make clean
+	- rm $(GAS_DIR)/ideal_air_fortran.mod $(GAS_DIR)/ideal_air_fortran.o
 
 ${LIBLUA}:
 	cd ${LUA_DIR}; make $(PLATFORM) local
 
-$(CEQ_FILES):
+$(LIBCEQ):
 	cd $(CEQ_DIR); make
 
-chemistry_update_test: $(KINETICS_FILES) $(GAS_FILES) $(CEQ_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
+chemistry_update_test: $(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBCEQ) $(LIBLUA)
 	dmd -of$@ -debug -g -dip1008 -version=$@ \
-		$(KINETICS_FILES) $(GAS_FILES) $(CEQ_FILES) $(UTIL_FILES) $(NM_FILES) \
-		$(LIBLUA) $(DLINKFLAGS)
+		$(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) \
+		$(LIBCEQ) $(LIBLUA) $(DLINKFLAGS)
 
-equilibrium_update_test: $(KINETICS_FILES) $(GAS_FILES) $(CEQ_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
+equilibrium_update_test: $(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBCEQ) $(LIBLUA)
 	dmd -of$@ -debug -g -dip1008 -version=$@ \
-		$(KINETICS_FILES) $(GAS_FILES) $(CEQ_FILES) $(UTIL_FILES) $(NM_FILES) \
-		$(LIBLUA) $(DLINKFLAGS)
+		$(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) \
+		$(LIBCEQ) $(LIBLUA) $(DLINKFLAGS)
 
-rate_constant_test: $(KINETICS_FILES) $(GAS_FILES) $(CEQ_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
+rate_constant_test: $(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBCEQ) $(LIBLUA)
 	dmd -of$@ -debug -g -dip1008 -version=$@ \
-		$(KINETICS_FILES) $(GAS_FILES) $(CEQ_FILES) $(UTIL_FILES) $(NM_FILES) \
-		$(LIBLUA) $(DLINKFLAGS)
+		$(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) \
+		$(LIBCEQ) $(LIBLUA) $(DLINKFLAGS)
 
-reaction_test:  $(KINETICS_FILES) $(GAS_FILES) $(CEQ_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
+reaction_test:  $(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBCEQ) $(LIBLUA)
 	dmd -of$@ -debug -g -dip1008 -version=$@ \
-		$(KINETICS_FILES) $(GAS_FILES) $(CEQ_FILES) $(UTIL_FILES) $(NM_FILES) \
-		$(LIBLUA) $(DLINKFLAGS)
+		$(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) \
+		$(LIBCEQ) $(LIBLUA) $(DLINKFLAGS)
 
-reaction_mechanism_test:  $(KINETICS_FILES) $(GAS_FILES) $(CEQ_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
+reaction_mechanism_test:  $(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBCEQ) $(LIBLUA)
 	dmd -of$@ -debug -g -dip1008 -version=$@ \
-		$(KINETICS_FILES) $(GAS_FILES) $(CEQ_FILES) $(UTIL_FILES) $(NM_FILES) \
-		$(LIBLUA) $(DLINKFLAGS)
+		$(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) \
+		$(LIBCEQ) $(LIBLUA) $(DLINKFLAGS)
 
-two_temperature_argon_kinetics_test:  $(KINETICS_FILES) $(GAS_FILES) $(CEQ_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
+two_temperature_argon_kinetics_test:  $(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBCEQ) $(LIBLUA)
 	dmd -of$@ -debug -g -dip1008 -version=$@ \
-		$(KINETICS_FILES) $(GAS_FILES) $(CEQ_FILES) $(UTIL_FILES) $(NM_FILES) \
-		$(LIBLUA) $(DLINKFLAGS)
+		$(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) \
+		$(LIBCEQ) $(LIBLUA) $(DLINKFLAGS)
 
-two_temperature_argon_with_ideal_gas_test:  $(KINETICS_FILES) $(GAS_FILES) $(CEQ_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
+two_temperature_argon_with_ideal_gas_test:  $(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBCEQ) $(LIBLUA)
 	dmd -of$@ -debug -g -dip1008 -version=$@ \
-		$(KINETICS_FILES) $(GAS_FILES) $(CEQ_FILES) $(UTIL_FILES) $(NM_FILES) \
-		$(LIBLUA) $(DLINKFLAGS)
+		$(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) \
+		$(LIBCEQ) $(LIBLUA) $(DLINKFLAGS)
 
-pseudo_species_kinetics_test:  $(KINETICS_FILES) $(GAS_FILES) $(CEQ_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
+pseudo_species_kinetics_test:  $(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBCEQ) $(LIBLUA)
 	dmd -of$@ -debug -g -dip1008 -version=$@ \
-		$(KINETICS_FILES) $(GAS_FILES) $(CEQ_FILES) $(UTIL_FILES) $(NM_FILES) \
-		$(LIBLUA) $(DLINKFLAGS)
+		$(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) \
+		$(LIBCEQ) $(LIBLUA) $(DLINKFLAGS)
 
-electronically_specific_kinetics_test:  $(KINETICS_FILES) $(GAS_FILES) $(CEQ_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
+electronically_specific_kinetics_test:  $(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBCEQ) $(LIBLUA)
 	dmd -of$@ -debug -g -dip1008 -version=$@ \
-		$(KINETICS_FILES) $(GAS_FILES) $(CEQ_FILES) $(UTIL_FILES) $(NM_FILES) \
-		$(LIBLUA) $(DLINKFLAGS)
+		$(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) \
+		$(LIBCEQ) $(LIBLUA) $(DLINKFLAGS)
 
-two_temperature_gasgiant_kinetics_test:  $(KINETICS_FILES) $(GAS_FILES) $(CEQ_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
+two_temperature_gasgiant_kinetics_test:  $(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBCEQ) $(LIBLUA)
 	dmd -of$@ -debug -g -dip1008 -version=$@ \
-		$(KINETICS_FILES) $(GAS_FILES) $(CEQ_FILES) $(UTIL_FILES) $(NM_FILES) \
-		$(LIBLUA) $(DLINKFLAGS)
+		$(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) \
+		$(LIBCEQ) $(LIBLUA) $(DLINKFLAGS)
 
 
 #--------------------------------------------------------------------------
