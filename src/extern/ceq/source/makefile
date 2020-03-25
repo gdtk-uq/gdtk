@@ -3,7 +3,7 @@ CFLAGS := -I. -fPIC -Wall -std=c99
 INSTALL_DIR ?= $(HOME)/ceq
 
 all: thermo.o linalg.o common.o pt.o rhou.o ps.o ceq.o
-	$(CC) $(CFLAGS) -shared thermo.o linalg.o common.o pt.o rhou.o ps.o ceq.o -lm -o libceq.so
+	#$(CC) $(CFLAGS) -shared thermo.o linalg.o common.o pt.o rhou.o ps.o ceq.o -lm -o libceq.so
 	ar r libceq.a thermo.o linalg.o common.o pt.o rhou.o ps.o ceq.o
 	ranlib libceq.a
 
