@@ -17,12 +17,16 @@ import nm.number;
 
 class STMatrix(T) {
 public:
+    size_t nrows, ncols, nzentries;
     size_t[] i;
     size_t[] j;
     T[] val;
 
-    this(size_t nzentries)
+    this(size_t _nrows, size_t _ncols, size_t _nzentries)
     {
+        nrows = _nrows;
+        ncols = _ncols;
+        nzentries = _nzentries;
         i.length = nzentries;
         j.length = nzentries;
         val.length = nzentries;
@@ -43,7 +47,7 @@ STMatrix!T readFromMatrixMarketFile(T)(string fName)
     auto nrows = to!size_t(tks[0]);
     auto ncols = to!size_t(tks[1]);
     auto nzentries = to!size_t(tks[2]);
-    auto matrix = new STMatrix!T(nzentries);
+    auto matrix = new STMatrix!T(nrows, ncols, nzentries);
     // Now read all entries.
     // The MatrixMarket format allows duplicate entries for (i,j) BUT this code is specifically built for files from
     // the SuiteSparse collection. These matrices do NOT have duplicates, so we won't handle that case here.
