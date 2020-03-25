@@ -12,24 +12,20 @@ import core.stdc.stdlib : exit;
 import std.stdio;
 import std.string;
 import std.conv;
+import std.typecons : Tuple, tuple;
 import nm.complex;
 import nm.number;
 
 class STMatrix(T) {
 public:
     size_t nrows, ncols, nzentries;
-    size_t[] i;
-    size_t[] j;
-    T[] val;
+    T[Tuple!(size_t, size_t)] val;
 
     this(size_t _nrows, size_t _ncols, size_t _nzentries)
     {
         nrows = _nrows;
         ncols = _ncols;
         nzentries = _nzentries;
-        i.length = nzentries;
-        j.length = nzentries;
-        val.length = nzentries;
     }
 }
 
@@ -54,9 +50,10 @@ STMatrix!T readFromMatrixMarketFile(T)(string fName)
     foreach (k; 0 .. nzentries) {
         line = f.readln().strip();
         tks = line.split();
-        matrix.i[k] = to!size_t(tks[0]);
-        matrix.j[k] = to!size_t(tks[1]);
-        matrix.val[k] = to!T(tks[2]);
+        auto i = to!size_t(tks[0]) - 1; // Change 1- to 0-offset
+        auto j = to!size_t(tks[1]) - 1; // Change 1- to 0-offset
+        auto v = to!T(tks[2]);
+        matrix.val[tuple(i,j)] = v;
     }
     f.close();
     return matrix;
@@ -68,9 +65,8 @@ version(stmatrix_test) {
     int main() {
         string fName = "test_data/b1_ss.mtx";
         auto matrix = readFromMatrixMarketFile!double(fName);
-        assert(matrix.i[0] == 5, failedUnitTest());
-        assert(matrix.j[0] == 1, failedUnitTest());
-        assert(approxEqualNumbers(matrix.val[0], -0.03599942, 1.0e-7), failedUnitTest());
+        assert(approxEqualNumbers(matrix.val[tuple!(size_t,size_t)(4,0)], -0.03599942, 1.0e-7), failedUnitTest());
+        assert(approxEqualNumbers(matrix.val[tuple!(size_t,size_t)(6,6)], 1.0, 1.0e-7), failedUnitTest());
         return 0;
     }
 }
