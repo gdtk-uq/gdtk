@@ -18,14 +18,14 @@ import nm.number;
 
 class STMatrix(T) {
 public:
-    size_t nrows, ncols, nzentries;
+    size_t n_rows, n_cols, n_nzeros;
     T[Tuple!(size_t, size_t)] val;
 
-    this(size_t _nrows, size_t _ncols, size_t _nzentries)
+    this(size_t _n_rows, size_t _n_cols, size_t _n_nzeros)
     {
-        nrows = _nrows;
-        ncols = _ncols;
-        nzentries = _nzentries;
+        n_rows = _n_rows;
+        n_cols = _n_cols;
+        n_nzeros = _n_nzeros;
     }
 }
 
@@ -38,16 +38,16 @@ STMatrix!T readFromMatrixMarketFile(T)(string fName)
         line = f.readln().strip();
         if (line[0] != '%') break;
     }
-    // Read nrows, ncols, nzentries
+    // Read numer of rows, colums and non-zero entries
     auto tks = line.split();
-    auto nrows = to!size_t(tks[0]);
-    auto ncols = to!size_t(tks[1]);
-    auto nzentries = to!size_t(tks[2]);
-    auto matrix = new STMatrix!T(nrows, ncols, nzentries);
+    auto n_rows = to!size_t(tks[0]);
+    auto n_cols = to!size_t(tks[1]);
+    auto n_nzeros = to!size_t(tks[2]);
+    auto matrix = new STMatrix!T(n_rows, n_cols, n_nzeros);
     // Now read all entries.
     // The MatrixMarket format allows duplicate entries for (i,j) BUT this code is specifically built for files from
     // the SuiteSparse collection. These matrices do NOT have duplicates, so we won't handle that case here.
-    foreach (k; 0 .. nzentries) {
+    foreach (k; 0 .. n_nzeros) {
         line = f.readln().strip();
         tks = line.split();
         auto i = to!size_t(tks[0]) - 1; // Change 1- to 0-offset

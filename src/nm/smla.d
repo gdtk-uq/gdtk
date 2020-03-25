@@ -16,9 +16,12 @@ import std.math;
 import std.array;
 import core.memory;
 import std.algorithm : reduce;
+import std.algorithm.sorting : sort;
+import std.typecons : Tuple;
 import nm.bbla;
 import nm.complex;
 import nm.number;
+import nm.stmatrix;
 
 immutable double ESSENTIALLY_ZERO = 1.0e-50;
 
@@ -73,6 +76,44 @@ public:
         this(other.aa, other.ja, other.ia);
     }
 
+    this(STMatrix!T stMat)
+    {
+        // Use the average number of non-zeros per row to reserve an array size.
+        // This might help cut down on allocations while assembling a row.
+        auto n_nzAvgPerRow = stMat.n_nzeros / stMat.n_rows;
+        T[] ai;
+        size_t[] ji;
+        T[size_t] vi;
+        Tuple!(size_t, size_t)[] keysToRemove;
+        // We loop over all rows.
+        // Every row should have at least one non-zero entry, otherwise there's an issue with our matrix.
+        foreach (i; 0 .. stMat.n_rows) {
+            foreach (c, v; stMat.val) {
+                if (c[0] == i) {
+                    vi[c[1]] = v;
+                    keysToRemove ~= c;
+                }
+            }
+            // Add the collected values as a new row in the sparse matrix.
+            // We need to sort the entries in column-ascending order.
+            
+            ji = vi.keys;
+            sort(ji);
+            foreach (j; ji) ai ~= vi[j];
+            addRow(ai, ji);
+            // Remove the entries from the sparse triplet matrix that we just used
+            // to save looking through them again.
+            foreach (c; keysToRemove) {
+                stMat.val.remove(c);
+            }
+            // Prepare temporary containers for next loop.
+            ai.length = 0;
+            ji.length = 0;
+            keysToRemove.length = 0;
+            vi.clear;
+        }
+    }
+    
     void addRow(T[] ai, size_t[] ji) 
     {
         if ( ia.length == 0 )
@@ -1103,6 +1144,14 @@ version(smla_test) {
                                     [0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
                                     [0, 4, 8, 12, 16]);
         assert(approxEqualMatrix!number(z, w), failedUnitTest());
+
+        // Test initialisation from a sparse triplet matrix
+        string fName = "test_data/b1_ss.mtx";
+        auto matrix = readFromMatrixMarketFile!double(fName);
+        auto testMat = new SMatrix!double(matrix);
+        assert(approxEqualNumbers(testMat[4,0], -0.03599942, 1.0e-7), failedUnitTest());
+        assert(approxEqualNumbers(testMat[6,6], 1.0, 1.0e-7), failedUnitTest());
+        
         return 0;
     }
 }
