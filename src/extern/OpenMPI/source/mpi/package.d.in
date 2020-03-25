@@ -89,7 +89,10 @@ struct ompi_status_public_t {
 /*
  * Typedefs (aliases)
  */
-alias MPI_Aint = OMPI_MPI_AINT_TYPE;
+static if(OMPI_MAJOR_VERSION == 1)
+    alias MPI_Aint = OPAL_PTRDIFF_TYPE;
+else
+    alias MPI_Aint = OMPI_MPI_AINT_TYPE;
 alias MPI_Offset = OMPI_MPI_OFFSET_TYPE;
 alias MPI_Count = OMPI_MPI_COUNT_TYPE;
 struct ompi_communicator_t;
