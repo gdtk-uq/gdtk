@@ -29,7 +29,8 @@ TEST_PROGRAMS := bbla_test bbla_complex_test \
 	smla_test smla_complex_test \
 	rsla_test rsla_complex_test \
 	luabbla_test complex_number_test \
-	newton_test newton_complex_test
+	newton_test newton_complex_test \
+	stmatrix_test
 
 LUA := ../../extern/lua-5.1.4
 LIBLUA := $(LUA)/lib/liblua.a
@@ -171,6 +172,9 @@ newton_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	dmd -of$@ -debug -g -w -dip1008 -version=newton_test -version=complex_numbers \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
+stmatrix_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
+	dmd -of$@ -debug -g -w -dip1008 -version=$@ \
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 # Some demo targets. These are left over from the early days of development.
 # They should continue to work and provide a minimal example of how to get
 # going with particular modules.
