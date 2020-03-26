@@ -1696,7 +1696,6 @@ public:
         fs.k_t *= factor;
     }
 
-    version(turbulence) {
     @nogc
     void turbulence_viscosity() 
     {
@@ -1709,8 +1708,6 @@ public:
     Old k-omega stuff moved (see NNG 11/02/20)
     */
 
-    } // end version(turbulence)
-    
     @nogc
     void clear_source_vector() 
     // When doing the gasdynamic update stages, the source vector values

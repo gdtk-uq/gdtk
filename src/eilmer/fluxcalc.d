@@ -1434,7 +1434,9 @@ void ASF_242(FlowState[] stencil, ref FVInterface IFace, ref LocalConfig myConfi
            (1.0 - alpha_ke) * f_e[6] + alpha_ke * f_c[7] + (1.0 - alpha_ke) * f_e[7]) + alpha_p * f_c[8] + (1.0 - alpha_p) * f_e[8]);
 
     // Bit of a placeholder for multi_species_gas
+    version(multi_species_gas) {
     F.massf[0] = F.mass;
+    }
 
     // Account for interface movement- probably shouldn't happen in this but check it anyway
     // Total energy flux due to interface movement

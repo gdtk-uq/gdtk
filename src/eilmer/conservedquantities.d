@@ -154,7 +154,7 @@ public:
             divB *= factor;
         }
         version(turbulence) {
-            foreach(ref rt; energies) { rt *= factor; }
+            foreach(ref rt; rhoturb) { rt *= factor; }
         }
     }
 

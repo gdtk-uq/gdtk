@@ -376,11 +376,13 @@ public:
     @nogc
     void estimate_turbulence_viscosity()
     {
+        version(turbulence) { // Exit instantly if turbulence capability disabled 
         foreach (cell; cells) {
             cell.turbulence_viscosity();
             cell.turbulence_viscosity_factor(myConfig.transient_mu_t_factor);
             cell.turbulence_viscosity_limit(myConfig.max_mu_t_factor);
             cell.turbulence_viscosity_zero_if_not_in_zone();
+        }
         }
     } // end estimate_turbulence_viscosity()
 

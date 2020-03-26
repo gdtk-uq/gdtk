@@ -149,13 +149,15 @@ class noTurbulenceModel : TurbulenceModel {
             Set the interface value of each turbulent primitive,
             given the nearest cell above it inside the flow domain
         */
-        fs.turb[0] = 0.0;
-        fs.turb[1] = 0.0;
+        version(turbulence){
+            fs.turb[1] = cell.fs.turb[1];
+            fs.turb[0] = cell.fs.turb[0];
+        }
         return;
     }
 }
 
-
+version(turbulence){
 /*
 Object representating the wilcox k-omega turbulence model.
  Notes:
@@ -738,6 +740,8 @@ protected:
         return true;
     }
 }
+
+} // end version(turbulence)
 
 
 TurbulenceModel init_turbulence_model(const string turbulence_model_name, const JSONValue config)

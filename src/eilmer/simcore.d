@@ -1661,11 +1661,13 @@ void update_ch_for_divergence_cleaning()
 
 void set_mu_and_k()
 {
+    version(turbulence){
     foreach (blk; parallel(localFluidBlocksBySize,1)) {
         if (blk.active) {
 	    blk.flow_property_spatial_derivatives(0); 
             blk.estimate_turbulence_viscosity();
         }
+    }
     }
 } // end set_mu_and_k()
 
