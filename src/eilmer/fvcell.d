@@ -388,7 +388,10 @@ public:
             throw new FlowSolverException(msg);
         } // end switch
         if (volume[gtl] <= 0.0) {
-            debug { msg ~= format("Invalid volume %g for cell %d", volume[gtl], id); }
+            debug {
+                msg ~= format("Invalid volume %g for cell %d in block %d at pos %s",
+                              volume[gtl], id, myConfig.universe_blk_id, pos[gtl]);
+            }
             throw new FlowSolverException(msg);
         }
     } // end update_3D_geometric_data()
