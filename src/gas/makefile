@@ -145,15 +145,12 @@ build-prep-gas: prep_gas.lua species-database/species-database.lua \
 
 # The following are not required by the Eilmer flow solver but
 # they are useful for building stand-alone flow-analysis programs.
-# Actually, the shared-object libceq.so is required by Eilmer if
-# Eilmer is built with the LDC compiler (since 2020-03-24).
 build-libgas: libgas.so gas-calc build-uniform-lut.py $(LIBCEQ)
 	- mkdir -p $(BUILD_DIR)/bin
 	cp gas-calc $(BUILD_DIR)/bin/
 	cp build-uniform-lut.py $(BUILD_DIR)/bin/build-uniform-lut; chmod +x $(BUILD_DIR)/bin/build-uniform-lut
 	- mkdir -p $(BUILD_DIR)/lib
 	cp libgas.so $(BUILD_DIR)/lib/
-	cp $(LIBCEQ) $(BUILD_DIR)/lib/
 	cp $(CEQ_DIR)/libceq.so $(BUILD_DIR)/lib/
 	cp -r ../lib/* $(BUILD_DIR)/lib/
 

@@ -18,6 +18,7 @@ set module_names [list bbla bbla_complex luabbla \
                       rungekutta rungekutta_complex \
                       rsla rsla_complex \
                       smla smla_complex \
+                      stmatrix \
                       complex_number \
                       newton newton_complex ]
 

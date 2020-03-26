@@ -49,12 +49,15 @@ continue reading from "Setting up for first-time run" below.
 Our main development environment is Linux but the programs can be deployed on
 Linux, flavours of Unix such as MacOS-X, and MS-Windows.
 The main requirement is a D language compiler.
+Our recommendation is the the LLVM D compiler.
 The source code of the Lua interpreter is included in the Eilmer source code repository.
 
 To build Eilmer, you will require:
 
   + A C compiler (GNU compiler is a good option and standard on most systems)
-  + A D compiler (The DMD compiler is a good choice, ldmd2 works equally well)
+  + A D compiler  
+    Recommended: LLVM D compiler, `ldc`  
+    Binary releases for `ldc` at: https://github.com/ldc-developers/ldc/releases
   + The gfortran compiler (and 32-bit libraries)
       + gfortran and gfortran-multilib on Debian/Ubuntu/Mint
       + gcc-gfortran on RedHat/CentOS/Fedora
@@ -67,7 +70,10 @@ To build Eilmer, you will require:
       + ncurses-devel on RedHat/CentOS/Fedora
   + openmpi development package:
       + libopenmpi-dev on Debian/Ubuntu/Mint
-      + openmpi-devel on RedHat/CentOS/Fedora
+      + openmpi-devel on RedHat/CentOS/Fedora  
+        (after install on RedHat-family systems, load with `module load mpi/openmpi-x86_64`,
+        and you might like to place that in your `.bashrc` file so that it's loaded every 
+        time you start a session)
   + plotutils development package:
       + libplot-dev on Debian/Ubuntu/Mint
       + plotutils-devel on RedHat/CentOS/Fedora (for CentOS 8.x, enable PowerTools repo)

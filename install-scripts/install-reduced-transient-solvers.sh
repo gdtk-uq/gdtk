@@ -1,9 +1,10 @@
 #! /bin/bash
-# build-reduced-transient-solvers.sh
-# Build a reduced-capability, fast flavour of the transient solver.
+# install-reduced-transient-solvers.sh
+# Build and install a reduced-capability, fast flavour of the transient solver,
+# both shared-memory and MPI variants.
 # 
-DGDINST=${HOME}/dgdinst
-
+cd ${DGD_REPO}/src/eilmer
+#
 make clean
 if make DMD=ldmd2 FLAVOUR=fast WITH_MPI=1 MULTI_SPECIES_GAS=0 MULTI_T_GAS=0 MHD=0 TURBULENCE=0 install
 then

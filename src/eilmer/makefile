@@ -221,12 +221,12 @@ ifeq ($(DMD), dmd)
     endif
     OF := -of
     DVERSION := -version=
-    DLINKFLAGS := -L-L$(LIBLUAPATH) -L-L$(CEQ_DIR)
+    DLINKFLAGS := 
     ifeq ($(findstring with_libplot,$(LIBPLOT_VERSION_STR)), with_libplot)
         DFLAGS := $(DFLAGS) $(DVERSION)$(LIBPLOT_VERSION_STR)
         DLINKFLAGS := $(DLINKFLAGS) -L-lplot
     endif
-    DLINKFLAGS := $(DLINKFLAGS) -L-llua -L-lceq -L-ldl
+    DLINKFLAGS := $(DLINKFLAGS) -L-ldl
     ifneq ($(TECPLOT_BIN_DIR), unavailable)
         DLINKFLAGS += -L$(TECPLOT_BIN_DIR)/libtecio.so -L$(TECPLOT_BIN_DIR)/sys/libstdc++.so.6
     endif
@@ -243,12 +243,12 @@ ifeq ($(DMD), ldmd2)
     endif
     OF := -of
     DVERSION := -version=
-    DLINKFLAGS := -L-L$(LIBLUAPATH) -L-L$(CEQ_DIR)
+    DLINKFLAGS :=
     ifeq ($(findstring with_libplot,$(LIBPLOT_VERSION_STR)), with_libplot)
         DFLAGS := $(DFLAGS) $(DVERSION)$(LIBPLOT_VERSION_STR)
         DLINKFLAGS := $(DLINKFLAGS) -L-lplot
     endif
-    DLINKFLAGS := $(DLINKFLAGS) -L-llua -L-lceq -L-ldl
+    DLINKFLAGS := $(DLINKFLAGS) -L-ldl
     ifneq ($(TECPLOT_BIN_DIR), unavailable)
         DLINKFLAGS += -L$(TECPLOT_BIN_DIR)/libtecio.so -L$(TECPLOT_BIN_DIR)/sys/libstdc++.so.6
     endif
@@ -268,7 +268,7 @@ ifeq ($(DMD), ldc2)
     endif
     OF := -of=
     DVERSION := -d-version=
-    DLINKFLAGS := -L-L$(LIBLUAPATH) -L-L$(CEQ_DIR)
+    DLINKFLAGS :=
     #ifeq ($(FLAVOUR), profile)
     #    DLINKFLAGS := $(DLINKFLAGS) -Wl,-fprofile-generate
     #endif
@@ -276,7 +276,7 @@ ifeq ($(DMD), ldc2)
         DFLAGS := $(DFLAGS) $(DVERSION)$(LIBPLOT_VERSION_STR)
         DLINKFLAGS := $(DLINKFLAGS) -L-lplot
     endif
-    DLINKFLAGS := $(DLINKFLAGS) -L-llua -L-lceq -L-ldl
+    DLINKFLAGS := $(DLINKFLAGS) -L-ldl
     ifneq ($(TECPLOT_BIN_DIR), unavailable)
         DLINKFLAGS += -L$(TECPLOT_BIN_DIR)/libtecio.so -L$(TECPLOT_BIN_DIR)/sys/libstdc++.so.6
     endif
@@ -293,12 +293,12 @@ ifeq ($(DMD), gdc-8)
     endif
     OF := -o
     DVERSION := -fversion=
-    DLINKFLAGS := -L$(LIBLUAPATH) -L-L$(CEQ_DIR)
+    DLINKFLAGS :=
     ifeq ($(findstring with_libplot,$(LIBPLOT_VERSION_STR)), with_libplot)
         DFLAGS := $(DFLAGS) $(DVERSION)$(LIBPLOT_VERSION_STR)
         DLINKFLAGS := $(DLINKFLAGS) -lplot
     endif
-    DLINKFLAGS := $(DLINKFLAGS) -llua -lceq -ldl -lcurl
+    DLINKFLAGS := $(DLINKFLAGS) -ldl -lcurl
     ifneq ($(TECPLOT_BIN_DIR), unavailable)
         DLINKFLAGS += $(TECPLOT_BIN_DIR)/libtecio.so $(TECPLOT_BIN_DIR)/sys/libstdc++.so.6
     endif
@@ -449,6 +449,7 @@ e4shared: main.d $(EILMER_FILES) \
 		$(UTIL_FILES) $(NM_FILES) \
 		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) $(TECPLOT_FILES) \
+		$(LIBCEQ) $(LIBLUA) \
 		$(DLINKFLAGS)
 
 e4zshared: main.d $(EILMER_FILES) \
@@ -470,6 +471,7 @@ e4zshared: main.d $(EILMER_FILES) \
 		$(UTIL_FILES) $(NM_FILES) \
 		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) $(TECPLOT_FILES) \
+		$(LIBCEQ) $(LIBLUA) \
 		$(DLINKFLAGS)
 
 e4mpi: main.d $(EILMER_FILES) \
@@ -492,6 +494,7 @@ e4mpi: main.d $(EILMER_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) \
 		$(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) $(OPENMPI_FILES) \
+		$(LIBCEQ) $(LIBLUA) \
 		$(DLINKFLAGS) -L-lmpi
 
 e4sss: steadystate_solver.d steadystate_core.d shape_sensitivity_core.d $(EILMER_FILES) \
@@ -511,6 +514,7 @@ e4sss: steadystate_solver.d steadystate_core.d shape_sensitivity_core.d $(EILMER
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES) \
 		$(GAS_LUA_FILES) $(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
+		$(LIBCEQ) $(LIBLUA) \
 		$(DLINKFLAGS)
 
 e4zsss: steadystate_solver.d steadystate_core.d shape_sensitivity_core.d $(EILMER_FILES) \
@@ -533,6 +537,7 @@ e4zsss: steadystate_solver.d steadystate_core.d shape_sensitivity_core.d $(EILME
 		$(UTIL_FILES) $(NM_FILES) \
 		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) $(TECPLOT_FILES) \
+		$(LIBCEQ) $(LIBLUA) \
 		$(DLINKFLAGS)
 
 e4ssc: shape_sensitivity_calc.d shape_sensitivity_core.d steadystate_core.d $(EILMER_FILES) \
@@ -554,6 +559,7 @@ e4ssc: shape_sensitivity_calc.d shape_sensitivity_core.d steadystate_core.d $(EI
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES) \
 		$(GAS_LUA_FILES) $(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
+		$(LIBCEQ) $(LIBLUA) \
 		$(DLINKFLAGS)
 
 e4opt: optdriver.d /
@@ -576,6 +582,7 @@ e4loadbalance: loadbalance.d $(EILMER_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES) \
 		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(GAS_LUA_FILES) $(NM_LUA_FILES) \
+		$(LIBCEQ) $(LIBLUA) \
 		$(DLINKFLAGS)
 
 eilmer-opencl-gpu-chem: main.d opencl_gpu_chem.d $(EILMER_FILES) \
@@ -593,6 +600,7 @@ eilmer-opencl-gpu-chem: main.d opencl_gpu_chem.d $(EILMER_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) $(OPENCL_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES) \
 		$(GAS_LUA_FILES) $(NM_LUA_FILES) $(GASDYN_FILES) $(GASDYN_LUA_FILES) \
+		$(LIBCEQ) $(LIBLUA) \
 		$(DLINKFLAGS) -I$(OPENCL_DIR) -L-L/usr/lib64/nvidia -L-lOpenCL
 
 eilmer-cuda-gpu-chem: main.d cuda_gpu_chem.d alpha_qss_kernel_cuda_tmplt.cu $(EILMER_FILES) \
@@ -612,6 +620,7 @@ eilmer-cuda-gpu-chem: main.d cuda_gpu_chem.d alpha_qss_kernel_cuda_tmplt.cu $(EI
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) $(OPENCL_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES) \
 		$(GAS_LUA_FILES) $(NM_LUA_FILES) $(GASDYN_FILES) $(GASDYN_LUA_FILES) \
+		$(LIBCEQ) $(LIBLUA) \
 		$(DLINKFLAGS) -I$(CUDA_DIR) $(CUDA_FILES) -L-L$(CUDA_LIB_DIR) \
 		-L-lcuda -L-lcudart -L-L. -L-lcudakernel
 
