@@ -391,6 +391,10 @@ public:
             debug {
                 msg ~= format("Invalid volume %g for cell %d in block %d at pos %s",
                               volume[gtl], id, myConfig.universe_blk_id, pos[gtl]);
+                msg ~= format(" Lmin=%g vtx.length=%d", L_min, vtx.length);
+                foreach (i; 0 .. vtx.length) {
+                    msg ~= format(" vtx[%d].pos=%s", i, vtx[i].pos[gtl]);
+                }
             }
             throw new FlowSolverException(msg);
         }
