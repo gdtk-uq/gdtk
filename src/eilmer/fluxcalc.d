@@ -148,11 +148,11 @@ void compute_flux_at_left_wall(ref FlowState Rght, ref FVInterface IFace,
     number vR = Rght.vel.x;
     number g = myConfig.gmodel.gamma(Rght.gas);
     // Riemann invariant across left-running wave.
-    number UbarR = vR - 2.0*aR/(g-1.0);
+    number Jminus = vR - 2.0*aR/(g-1.0);
     // Set up to compute pressure at wall, pstar.
     number rhoR = Rght.gas.rho;
     number pR = Rght.gas.p;
-    number tmp = (vstar - UbarR)*(g-1.0)/(2.0*sqrt(g))*sqrt(rhoR/pow(pR,1.0/g));
+    number tmp = (vstar - Jminus)*(g-1.0)/(2.0*sqrt(g))*sqrt(rhoR/pow(pR,1.0/g));
     number ptiny = myConfig.flowstate_limits.min_pressure;
     number pstar = (tmp > 0.0) ? pow(tmp, 2.0*g/(g-1.0)) : ptiny;
     if (pstar > 1.1*pR) {
@@ -161,9 +161,9 @@ void compute_flux_at_left_wall(ref FlowState Rght, ref FVInterface IFace,
         {
             number xi = ps/pR;
             number M1sq = 1.0 + (g+1.0)/2.0/g*(xi-1.0);
-            number u1 = sqrt(M1sq)*aR;
-            number u2 = u1*((g-1.0)*M1sq+2.0)/((g+1.0)*M1sq);
-            return vstar - u1 + u2 - vR;
+            number v1 = sqrt(M1sq)*aR;
+            number v2 = v1*((g-1.0)*M1sq+2.0)/((g+1.0)*M1sq);
+            return vstar - v1 + v2 - vR;
         }
         int count = 0;
         number incr_pstar;
@@ -233,11 +233,11 @@ void compute_flux_at_right_wall(ref FlowState Lft, ref FVInterface IFace,
     number vL = Lft.vel.x;
     number g = myConfig.gmodel.gamma(Lft.gas);
     // Riemann invariant across left-running wave.
-    number UbarL = vL + 2.0*aL/(g-1.0);
+    number Jplus = vL + 2.0*aL/(g-1.0);
     // Set up to compute pressure at wall, pstar.
     number rhoL = Lft.gas.rho;
     number pL = Lft.gas.p;
-    number tmp = (UbarL - vstar)*(g-1.0)/(2.0*sqrt(g))*sqrt(rhoL/pow(pL,1.0/g));
+    number tmp = (Jplus - vstar)*(g-1.0)/(2.0*sqrt(g))*sqrt(rhoL/pow(pL,1.0/g));
     number ptiny = myConfig.flowstate_limits.min_pressure;
     number pstar = (tmp > 0.0) ? pow(tmp, 2.0*g/(g-1.0)) : ptiny;
     if (pstar > 1.1*pL) {
@@ -246,9 +246,9 @@ void compute_flux_at_right_wall(ref FlowState Lft, ref FVInterface IFace,
         {
             number xi = ps/pL;
             number M1sq = 1.0 + (g+1.0)/2.0/g*(xi-1.0);
-            number u1 = sqrt(M1sq)*aL;
-            number u2 = u1*((g-1.0)*M1sq+2.0)/((g+1.0)*M1sq);
-            return vstar + u1 - u2 - vL;
+            number v1 = sqrt(M1sq)*aL;
+            number v2 = v1*((g-1.0)*M1sq+2.0)/((g+1.0)*M1sq);
+            return vstar + v1 - v2 - vL;
         }
         int count = 0;
         number incr_pstar;
