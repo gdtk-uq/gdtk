@@ -981,6 +981,24 @@ int gasflow_osher_riemann(int stateL_id, int stateR_id, double velL, double velR
 }
 
 extern(C)
+int gasflow_lrivp(int stateL_id, int stateR_id, double velL, double velR,
+                  int gmL_id, int gmR_id, double* wstar, double* pstar)
+{
+    try {
+        double my_wstar = *wstar;
+        double my_pstar = *pstar;
+        lrivp(gas_states[stateL_id], gas_states[stateR_id], velL, velR,
+              gas_models[gmL_id], gas_models[gmR_id], my_wstar, my_pstar);
+        *wstar = my_wstar;
+        *pstar = my_pstar;
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern(C)
 int gasflow_theta_oblique(int state1_id, double v1, double beta,
                           int state2_id, int gm_id, double* results)
 {

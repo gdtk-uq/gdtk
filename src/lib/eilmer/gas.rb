@@ -89,6 +89,8 @@ module Gas
   extern 'int gasflow_osher_riemann(int stateL_id, int stateR_id, double velL, double velR,
                                     int stateLstar_id, int stateRstar_id,
                                     int stateX0_id, int gm_id, double* results)'
+  extern 'int gasflow_lrivp(int stateL_id, int stateR_id, double velL, double velR,
+                            int gmL_id, int gmR_id, double* wstar, double* pstar)'
   
   extern 'int gasflow_theta_oblique(int state1_id, double v1, double beta,
                                     int state2_id, int gm_id, double* results)'
@@ -729,6 +731,18 @@ class GasFlow
                                      stateX0.id, @gmodel.id, my_results)
     if flag < 0 then raise "failed to compute solution to Riemann problem." end
     return my_results[0, my_results.size].unpack("ddddd") # [pstar, wstar, wL, wR, velX0]
+  end
+    
+  def lrivp(stateL, stateR, velL, velR)
+    my_pstar = [0.0].pack("d")
+    my_wstar = [0.0].pack("d")
+    flag = Gas.gasflow_lrivp(stateL.id, stateR.id, velL, velR,
+                             stateL.gmodel.id, stateR.gmodel.id,
+                             my_wstar, my_pstar)
+    if flag < 0 then raise "failed to compute solution for lrivp." end
+    pstar = my_pstar[0, my_pstar.size].unpack("d")[0]
+    wstar = my_wstar[0, my_wstar.size].unpack("d")[0]
+    return [pstar, wstar]
   end
     
   def theta_oblique(state1, v1, beta, state2)

@@ -87,6 +87,8 @@ ffi.cdef("""
     int gasflow_osher_riemann(int stateL_id, int stateR_id, double velL, double velR,
                               int stateLstar_id, int stateRstar_id,
                               int stateX0_id, int gm_id, double* results);
+    int gasflow_lrivp(int stateL_id, int stateR_id, double velL, double velR,
+                      int gmL_id, int gmR_id, double* wstar, double* pstar);
 
     int gasflow_theta_oblique(int state1_id, double v1, double beta,
                               int state2_id, int gm_id, double* results);
@@ -715,6 +717,17 @@ class GasFlow(object):
         wR = my_results[3]
         velX0 = my_results[4]
         return [pstar, wstar, wL, wR, velX0]
+
+    def lrivp(self, stateL, stateR, velL, velR):
+        my_pstar = ffi.new("double[]", [0.0])
+        my_wstar = ffi.new("double[]", [0.0])
+        flag = so.gasflow_lrivp(stateL.id, stateR.id, velL, velR,
+                                stateL.gmodel.id, stateR.gmodel.id,
+                                my_wstar, my_pstar)
+        if flag < 0: raise Exception("failed to compute solution for lrivp.")
+        pstar = my_pstar[0]
+        wstar = my_wstar[0]
+        return [pstar, wstar]
 
     def theta_oblique(self, state1, v1, beta, state2):
         my_results = ffi.new("double[]", [0.0, 0.0])

@@ -616,8 +616,11 @@ number finite_wave_dv(const(GasState) state1, number V1,
 
 //------------------------------------------------------------------------
 
+immutable double near_zero_pressure = 1.0e-6; // in Pascals
+
+
 number[] osher_riemann(const(GasState) stateL, const(GasState) stateR,
-                       double velL, double velR,
+                       number velL, number velR,
                        GasState stateLstar, GasState stateRstar, GasState stateX0,
                        GasModel gm)
 /**
@@ -641,9 +644,23 @@ number[] osher_riemann(const(GasState) stateL, const(GasState) stateR,
  *   velX0 : velocity of gas at x=0
  *
  * Notes:
- *   (0) This function requires that we are working with an ideal gas.
+ *   (0) This function requires that we are working with an ideal-like gas.
  *   (1) For speeds, positive is to the right.
  *   (2) We assume that the Left and Right states have valid sound speeds.
+ *
+ * Background:
+ *   One of the original descriptions can be found in
+ *   Osher & Solomon (1982) while the more recent report
+ *   by Chakravarthy (1987) contains a brief description.
+ *   Both waves are considered to be isentropic whether
+ *   they are compressions or expansions.
+ *   We use the relations:
+ *   [1] p / rho**gamma = constant
+ *   [2] p = rho * u * (gamma - 1.0)
+ *   [3] J+ = constant = vel + 2 a / (gamma - 1) for the (vel-a) wave
+ *   Note that we integrate along a (vel+a) characteristic
+ *   through this (vel-a) wave.
+ *   [4] J- = constant = vel - 2 a / (gamma - 1) for the (vel+a) wave
  */
 {
     // Assume a chemically-frozen gas, so
@@ -661,20 +678,24 @@ number[] osher_riemann(const(GasState) stateL, const(GasState) stateR,
     //
     // Riemann invariants for the left and right waves, assuming ideal gas model.
     number aL = stateL.a; number aR = stateR.a;
-    number UbarL = velL + 2.0*aL/gm1;
-    number UbarR = velR - 2.0*aR/gm1;
+    number Jplus = velL + 2.0*aL/gm1;
+    number Jminus = velR - 2.0*aR/gm1;
     //
     // Compute for contact surface velocity and pressure.
     number pL = stateL.p; number pR = stateR.p;
     number Z = aR/aL * pow(pL/pR, gm1/(2*g));
-    number wstar = (UbarL*Z + UbarR)/(1+Z);
-    number tmp = gm1*(UbarL-UbarR)/(2.0*aL*(1.0+Z));
-    number pstar = pL * pow(tmp, 2.0*g/gm1);
+    number wstar = (Jplus*Z + Jminus)/(1+Z);
+    //
+    number pstar = near_zero_pressure;
+    if ((Jplus-Jminus) > 0.0) {
+        number tmp = gm1*(Jplus-Jminus)/(2.0*aL*(1.0+Z));
+        pstar = pL * pow(tmp, 2.0*g/gm1);
+    }
     //
     // Intermediate states:
     // Sound speeds from Riemann invariants.
-    number aLstar = (UbarL-wstar)*gm1*0.5;
-    number aRstar = (wstar-UbarR)*gm1*0.5;
+    number aLstar = (Jplus-wstar)*gm1*0.5;
+    number aRstar = (wstar-Jminus)*gm1*0.5;
     // Internal energies from sound speeds, assuming ideal gas model.
     number uLstar = aLstar*aLstar/(g*gm1);
     number uRstar = aRstar*aRstar/(g*gm1);
@@ -768,6 +789,61 @@ number[] osher_riemann(const(GasState) stateL, const(GasState) stateR,
     //
     return [pstar, wstar, wL, wR, velX0];
 } // end osher_riemann()
+
+
+void lrivp(const(GasState) stateL, const(GasState) stateR,
+           number velL, number velR, GasModel gmL, GasModel gmR,
+           ref number wstar, ref number pstar)
+/**
+ * Lagrangian flavour of the Riemann Initial Value Problem.
+ * This calculation is a core element of the Lagrangian 1D solver.
+ *
+ * Input:
+ *   stateL: reference to Left initial Gas state (given)
+ *   stateR: reference to Right initial Gas state (given)
+ *   velL: velocity associated with Left gas
+ *   velR: velocity associated with Right gas
+ *   gmL: the gas model for the Left gas
+ *   gmR: the gas model for the Right gas
+ *
+ * Output:
+ *   pstar: pressure at the contact surface
+ *   wstar: speed of contact surface
+ *
+ * Notes:
+ *   (0) This function requires that we are working with an ideal-like gas.
+ *   (1) For speeds, positive is to the right.
+ *   (2) We assume that the Left and Right states have valid sound speeds.
+ */
+{
+    // Estimate properties of effective ideal gas.
+    number rhoL = stateL.rho; number rhoR = stateR.rho;
+    number f = sqrt(rhoL)/(sqrt(rhoL)+sqrt(rhoR));
+    number g = f*gmL.gamma(stateL) + (1.0-f)*gmR.gamma(stateR);
+    number gm1 = g-1.0; number gp1 = g+1.0;
+    //
+    // Riemann invariants for the left and right waves, assuming ideal gas model.
+    number aL = stateL.a; number aR = stateR.a;
+    number Jplus = velL + 2.0*aL/gm1;
+    number Jminus = velR - 2.0*aR/gm1;
+    //
+    // Compute for contact surface velocity and pressure.
+    number pL = stateL.p; number pR = stateR.p;
+    number Z = aR/aL * pow(pL/pR, gm1/(2*g));
+    wstar = (Jplus*Z + Jminus)/(1+Z);
+    if ((Jplus-Jminus) > 0.0) {
+        // Normal solution.
+        number tmp = gm1*(Jplus-Jminus)/(2.0*aL*(1.0+Z));
+        pstar = pL * pow(tmp, 2.0*g/gm1);
+    } else {
+        // Near vacuum solution.
+        pstar = near_zero_pressure;
+    }
+    //
+    // [TODO] Newton steps for when we have strong shocks.
+    //
+    return;
+} // end lrivp()
 
 
 //------------------------------------------------------------------------
