@@ -156,7 +156,7 @@ void compute_flux_at_left_wall(ref FlowState Rght, ref FVInterface IFace,
     number ptiny = myConfig.flowstate_limits.min_pressure;
     number pstar = (tmp > 0.0) ? pow(tmp, 2.0*g/(g-1.0)) : ptiny;
     if (pstar > 1.1*pR) {
-        // Shock wave processing. See PJ workbook notes 2010-05-22.
+        // Shock wave processing. See PJ workbook notes 2019-05-22, pages 71-74.
         number f(number ps)
         {
             number xi = ps/pR;
@@ -241,7 +241,7 @@ void compute_flux_at_right_wall(ref FlowState Lft, ref FVInterface IFace,
     number ptiny = myConfig.flowstate_limits.min_pressure;
     number pstar = (tmp > 0.0) ? pow(tmp, 2.0*g/(g-1.0)) : ptiny;
     if (pstar > 1.1*pL) {
-        // Shock wave processing. See PJ workbook notes 2010-05-22.
+        // Shock wave processing. See PJ workbook notes 2019-05-22, pages 71-74.
         number f(number ps)
         {
             number xi = ps/pL;

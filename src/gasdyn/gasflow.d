@@ -879,7 +879,7 @@ void piston_at_left(const(GasState) stateR, number velR, GasModel gm,
     number tmp = (wstar - Jminus)*(g-1.0)/(2.0*sqrt(g))*sqrt(rhoR/pow(pR,1.0/g));
     pstar = (tmp > 0.0) ? pow(tmp, 2.0*g/(g-1.0)) : 0.0;
     if (pstar > 1.1*pR) {
-        // Shock wave processing. See PJ workbook notes 2010-05-22.
+        // Shock wave processing. See PJ workbook notes 2019-05-22, pages 71-74.
         number f(number ps)
         {
             number xi = ps/pR;
@@ -936,7 +936,7 @@ void piston_at_right(const(GasState) stateL, number velL, GasModel gm,
     number tmp = (Jplus - wstar)*(g-1.0)/(2.0*sqrt(g))*sqrt(rhoL/pow(pL,1.0/g));
     pstar = (tmp > 0.0) ? pow(tmp, 2.0*g/(g-1.0)) : 0.0;
     if (pstar > 1.1*pL) {
-        // Shock wave processing. See PJ workbook notes 2010-05-22.
+        // Shock wave processing. See PJ workbook notes 2019-05-22, pages 71-74.
         number f(number ps)
         {
             number xi = ps/pL;
