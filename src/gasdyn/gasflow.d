@@ -845,6 +845,120 @@ void lrivp(const(GasState) stateL, const(GasState) stateR,
     return;
 } // end lrivp()
 
+void piston_at_left(const(GasState) stateR, number velR, GasModel gm,
+                    number wstar, ref number pstar)
+/**
+ * Compute pressure at piston face with processing of the gas
+ * occuring through a right-running wave. 
+ * This calculation is a core element of the Lagrangian 1D solver.
+ *
+ * Input:
+ *   stateR: reference to Right initial Gas state (given)
+ *   velR: velocity associated with Right gas
+ *   gm: the gas model
+ *   wstar: speed of contact surface
+ *
+ * Output:
+ *   pstar: pressure at the contact surface
+ *
+ * Notes:
+ *   (0) This function requires that we are working with an ideal-like gas.
+ *   (1) For speeds, positive is to the right.
+ *   (2) We assume that the Right state has a valid sound speed.
+ */
+{
+    number pR = stateR.p;
+    number rhoR = stateR.rho;
+    number aR = stateR.a;
+    // Estimate properties of effective ideal gas.
+    number g = gm.gamma(stateR);
+    number gm1 = g-1.0; number gp1 = g+1.0;
+    // Riemann invariant for the left-running wave, assuming ideal gas model.
+    number Jminus = velR - 2.0*aR/gm1;
+    // Compute pressure at piston face.
+    number tmp = (wstar - Jminus)*(g-1.0)/(2.0*sqrt(g))*sqrt(rhoR/pow(pR,1.0/g));
+    pstar = (tmp > 0.0) ? pow(tmp, 2.0*g/(g-1.0)) : 0.0;
+    if (pstar > 1.1*pR) {
+        // Shock wave processing. See PJ workbook notes 2010-05-22.
+        number f(number ps)
+        {
+            number xi = ps/pR;
+            number M1sq = 1.0 + (g+1.0)/2.0/g*(xi-1.0);
+            number vel1 = sqrt(M1sq)*aR;
+            number vel2 = vel1*((g-1.0)*M1sq+2.0)/((g+1.0)*M1sq);
+            return wstar - vel1 + vel2 - velR;
+        }
+        int count = 0;
+        number incr_pstar;
+        do {
+            number f0 = f(pstar);
+            number dp = 0.001 * pstar;
+            number f1 = f(pstar+dp);
+            incr_pstar = -f0*dp/(f1-f0);
+            pstar += incr_pstar;
+            count += 1;
+        } while (fabs(incr_pstar)/pstar > 0.01 && count < 10);
+    }
+    return;
+} // end piston_at_left()
+
+void piston_at_right(const(GasState) stateL, number velL, GasModel gm,
+                     number wstar, ref number pstar)
+/**
+ * Compute pressure at piston face with processing of the gas
+ * occuring through a left-running wave. 
+ * This calculation is a core element of the Lagrangian 1D solver.
+ *
+ * Input:
+ *   stateL: reference to Left initial Gas state (given)
+ *   velL: velocity associated with Right gas
+ *   gm: the gas model
+ *   wstar: speed of contact surface
+ *
+ * Output:
+ *   pstar: pressure at the contact surface
+ *
+ * Notes:
+ *   (0) This function requires that we are working with an ideal-like gas.
+ *   (1) For speeds, positive is to the right.
+ *   (2) We assume that the Left state has a valid sound speed.
+ */
+{
+    number pL = stateL.p;
+    number rhoL = stateL.rho;
+    number aL = stateL.a;
+    // Estimate properties of effective ideal gas.
+    number g = gm.gamma(stateL);
+    number gm1 = g-1.0; number gp1 = g+1.0;
+    // Riemann invariant for the left-running wave, assuming ideal gas model.
+    number Jplus = velL + 2.0*aL/gm1;
+    // Compute pressure at piston face.
+    number tmp = (Jplus - wstar)*(g-1.0)/(2.0*sqrt(g))*sqrt(rhoL/pow(pL,1.0/g));
+    pstar = (tmp > 0.0) ? pow(tmp, 2.0*g/(g-1.0)) : 0.0;
+    if (pstar > 1.1*pL) {
+        // Shock wave processing. See PJ workbook notes 2010-05-22.
+        number f(number ps)
+        {
+            number xi = ps/pL;
+            number M1sq = 1.0 + (g+1.0)/2.0/g*(xi-1.0);
+            number vel1 = sqrt(M1sq)*aL;
+            number vel2 = vel1*((g-1.0)*M1sq+2.0)/((g+1.0)*M1sq);
+            return wstar + vel1 - vel2 - velL;
+        }
+        int count = 0;
+        number incr_pstar;
+        do {
+            number f0 = f(pstar);
+            number dp = 0.001 * pstar;
+            number f1 = f(pstar+dp);
+            incr_pstar = -f0*dp/(f1-f0);
+            pstar += incr_pstar;
+            count += 1;
+        } while (fabs(incr_pstar)/pstar > 0.01 && count < 10);
+    }
+    return;
+} // end piston_at_right()
+
 
 //------------------------------------------------------------------------
 // Oblique shock relations

@@ -999,6 +999,36 @@ int gasflow_lrivp(int stateL_id, int stateR_id, double velL, double velR,
 }
 
 extern(C)
+int gasflow_piston_at_left(int stateR_id, double velR, int gm_id,
+                           double wstar, double* pstar)
+{
+    try {
+        double my_pstar = *pstar;
+        piston_at_left(gas_states[stateR_id], velR, gas_models[gm_id], wstar, my_pstar);
+        *pstar = my_pstar;
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern(C)
+int gasflow_piston_at_right(int stateL_id, double velL, int gm_id,
+                            double wstar, double* pstar)
+{
+    try {
+        double my_pstar = *pstar;
+        piston_at_right(gas_states[stateL_id], velL, gas_models[gm_id], wstar, my_pstar);
+        *pstar = my_pstar;
+        return 0;
+    } catch (Exception e) {
+        writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern(C)
 int gasflow_theta_oblique(int state1_id, double v1, double beta,
                           int state2_id, int gm_id, double* results)
 {

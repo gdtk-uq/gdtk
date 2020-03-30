@@ -27,3 +27,11 @@ puts "Solve Lagrangian flavour of Riemann problem"
 flow = GasFlow.new(gmodel)
 pstar, wstar = flow.lrivp(state4, state1, 0.0, 0.0)
 puts "pstar=%g wstar=%g" % [pstar, wstar]
+
+puts "Solve piston-at-left problem (given constact-surface speed)"
+pstar = flow.piston_at_left(state1, 0.0, 293.4)
+puts "pstar=%g" % (pstar)
+
+puts "Solve piston-at-right problem (given constact-surface speed)"
+pstar = flow.piston_at_right(state4, 0.0, 293.4)
+puts "pstar=%g" % (pstar)

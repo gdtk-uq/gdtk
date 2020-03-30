@@ -89,6 +89,10 @@ ffi.cdef("""
                               int stateX0_id, int gm_id, double* results);
     int gasflow_lrivp(int stateL_id, int stateR_id, double velL, double velR,
                       int gmL_id, int gmR_id, double* wstar, double* pstar);
+    int gasflow_piston_at_left(int stateR_id, double velR, int gm_id, 
+                               double wstar, double* pstar);
+    int gasflow_piston_at_right(int stateL_id, double velL, int gm_id, 
+                                double wstar, double* pstar);
 
     int gasflow_theta_oblique(int state1_id, double v1, double beta,
                               int state2_id, int gm_id, double* results);
@@ -728,6 +732,20 @@ class GasFlow(object):
         pstar = my_pstar[0]
         wstar = my_wstar[0]
         return [pstar, wstar]
+
+    def piston_at_left(self, stateR, velR, wstar):
+        my_pstar = ffi.new("double[]", [0.0])
+        flag = so.gasflow_piston_at_left(stateR.id, velR, stateR.gmodel.id,
+                                         wstar, my_pstar)
+        if flag < 0: raise Exception("failed to compute solution for piston_at_left.")
+        return my_pstar[0]
+
+    def piston_at_right(self, stateL, velL, wstar):
+        my_pstar = ffi.new("double[]", [0.0])
+        flag = so.gasflow_piston_at_right(stateL.id, velL, stateL.gmodel.id,
+                                          wstar, my_pstar)
+        if flag < 0: raise Exception("failed to compute solution for piston_at_right.")
+        return my_pstar[0]
 
     def theta_oblique(self, state1, v1, beta, state2):
         my_results = ffi.new("double[]", [0.0, 0.0])
