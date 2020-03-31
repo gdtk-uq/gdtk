@@ -464,7 +464,7 @@ final class GlobalConfig {
     // order of the special interpolation applied at the shock fitting inflow boundary
     shared static int shock_fitting_interpolation_order = 1;
     // scaling factor applied to vertices in shock fitting simulations for stability
-    shared static double shock_fitting_scale_factor = 1.0;
+    shared static double shock_fitting_scale_factor = 0.5;
 
     // We might update some properties in with the main convective-terms
     // time-stepping function or we might choose to update them separately, 
