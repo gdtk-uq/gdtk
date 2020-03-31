@@ -31,11 +31,11 @@ flow = GasFlow(gmodel)
 pstar, wstar = flow.lrivp(state4, state1, 0.0, 0.0)
 print("pstar=%g wstar=%g" % (pstar, wstar))
 
-print("Solve piston-at-left problem (given constact-surface speed)")
+print("Solve piston-at-left problem (given contact-surface speed)")
 pstar = flow.piston_at_left(state1, 0.0, 293.4)
 print("pstar=%g" % pstar)
 
-print("Solve piston-at-right problem (given constact-surface speed)")
+print("Solve piston-at-right problem (given contact-surface speed)")
 pstar = flow.piston_at_right(state4, 0.0, 293.4)
 print("pstar=%g" % pstar)
 

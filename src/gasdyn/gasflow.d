@@ -19,6 +19,7 @@
  *               Matt McGilvray's gun tunnel version of nenzfr. -Chris James
  * Version: (D code)
  * 2017-Mar-09 : Ported to D by PJ
+ * 2019-2020: functions for quasi1D and Lagrangian calculations added by PJ
  *
  * [TODO] change to using Brent's function solver rather than Ridder's.
  */
@@ -790,9 +791,23 @@ number[] osher_riemann(const(GasState) stateL, const(GasState) stateR,
     return [pstar, wstar, wL, wR, velX0];
 } // end osher_riemann()
 
+number secant_iterate(alias f)(number pstar)
+{
+    int count = 0;
+    number incr_pstar;
+    do {
+        number f0 = f(pstar);
+        number dp = 0.001 * pstar;
+        number f1 = f(pstar+dp);
+        incr_pstar = -f0*dp/(f1-f0);
+        pstar += incr_pstar;
+        count += 1;
+    } while (fabs(incr_pstar)/pstar > 0.01 && count < 10);
+    return pstar;
+}
 
 void lrivp(const(GasState) stateL, const(GasState) stateR,
-           number velL, number velR, GasModel gmL, GasModel gmR,
+           number velL, number velR, GasModel gmodelL, GasModel gmodelR,
            ref number wstar, ref number pstar)
 /**
  * Lagrangian flavour of the Riemann Initial Value Problem.
@@ -803,8 +818,8 @@ void lrivp(const(GasState) stateL, const(GasState) stateR,
  *   stateR: reference to Right initial Gas state (given)
  *   velL: velocity associated with Left gas
  *   velR: velocity associated with Right gas
- *   gmL: the gas model for the Left gas
- *   gmR: the gas model for the Right gas
+ *   gmodelL: the gas model for the Left gas
+ *   gmodelR: the gas model for the Right gas
  *
  * Output:
  *   pstar: pressure at the contact surface
@@ -814,21 +829,28 @@ void lrivp(const(GasState) stateL, const(GasState) stateR,
  *   (0) This function requires that we are working with an ideal-like gas.
  *   (1) For speeds, positive is to the right.
  *   (2) We assume that the Left and Right states have valid sound speeds.
+ *   (3) Workbook references:
+ *       pages 71,72 2019-05-22
+ *       pages 36,37 2018-06-09
+ *       pages 46-49 2020-03-30
  */
 {
-    // Estimate properties of effective ideal gas.
     number rhoL = stateL.rho; number rhoR = stateR.rho;
-    number f = sqrt(rhoL)/(sqrt(rhoL)+sqrt(rhoR));
-    number g = f*gmL.gamma(stateL) + (1.0-f)*gmR.gamma(stateR);
-    number gm1 = g-1.0; number gp1 = g+1.0;
-    //
-    // Riemann invariants for the left and right waves, assuming ideal gas model.
+    number pL = stateL.p; number pR = stateR.p;
     number aL = stateL.a; number aR = stateR.a;
+    number gL = gmodelL.gamma(stateL); number gR = gmodelR.gamma(stateR);
+    //
+    // Stage 1: Assume a single ideal gas and weak (isentropic) waves.
+    // This is core of the Osher-type Riemann solver.
+    //
+    // Estimate properties of effective ideal gas.
+    number frac = sqrt(rhoL)/(sqrt(rhoL)+sqrt(rhoR));
+    number g = frac*gL + (1.0-frac)*gR;
+    number gm1 = g-1.0; number gp1 = g+1.0;
+    // Riemann invariants for the left and right waves, assuming ideal gas model.
     number Jplus = velL + 2.0*aL/gm1;
     number Jminus = velR - 2.0*aR/gm1;
-    //
-    // Compute for contact surface velocity and pressure.
-    number pL = stateL.p; number pR = stateR.p;
+    // Compute approximate contact surface velocity and pressure.
     number Z = aR/aL * pow(pL/pR, gm1/(2*g));
     wstar = (Jplus*Z + Jminus)/(1+Z);
     if ((Jplus-Jminus) > 0.0) {
@@ -840,8 +862,60 @@ void lrivp(const(GasState) stateL, const(GasState) stateR,
         pstar = near_zero_pressure;
     }
     //
-    // [TODO] Newton steps for when we have strong shocks.
+    // Stage 2: If need be, relax some assumptions.
+    // At this point, our approximate solution may be good enough but,
+    // if any of our assumptions for the direct solution are not correct,
+    // we can do make some iterative improvements.
     //
+    Jplus = velL + 2.0*aL/(gL-1.0);
+    number velLstar_fan(number ps) {
+        // Estimate gas velocity for isentropic wave running left.
+        number aLstar = aL * pow(ps/pL, (gL-1.0)/(2.0*gL));
+        return Jplus - 2.0*aLstar/(gL-1.0);
+    }
+    Jminus = velR - 2.0*aR/(gR-1.0);
+    number velRstar_fan(number ps) {
+        // Estimate gas velocity for isentropic wave running right.
+        number aRstar = aR * pow(ps/pR, (gR-1.0)/(2.0*gR));
+        return Jminus + 2.0*aRstar/(gR-1.0);
+    }
+    if ((fabs(gL-g)/g > 0.1) || (fabs(gR-g)/g > 0.1)) {
+        // The gases are quite different but assume both waves are isentropic.
+        number f0(number ps) { return velLstar_fan(ps) - velRstar_fan(ps); }
+        pstar = secant_iterate!(f0)(pstar);
+        wstar = velLstar_fan(pstar);
+    }
+    //
+    // Maybe one or both of the waves is reasonably strong compression.
+    bool left_wave_is_shock = pstar > 1.1*pL;
+    bool right_wave_is_shock = pstar > 1.1*pR;
+    number velLstar_shock(number ps) {
+        // Estimate gas velocity for shock running left.
+        number M1sq = 1.0 + (gL+1.0)/2.0/gL*(ps/pL-1.0);
+        number vel1 = sqrt(M1sq)*aL;
+        number vel2 = vel1*((gL-1.0)*M1sq+2.0)/((gL+1.0)*M1sq);
+        return vel2 - vel1 + velL;
+    }
+    number velRstar_shock(number ps) {
+        // Estimate gas velocity for shock running right.
+        number M1sq = 1.0 + (gR+1.0)/2.0/gR*(ps/pR-1.0);
+        number vel1 = sqrt(M1sq)*aR;
+        number vel2 = vel1*((gR-1.0)*M1sq+2.0)/((gR+1.0)*M1sq);
+        return vel1 - vel2 + velR;
+    }
+    if (left_wave_is_shock && right_wave_is_shock) {
+        number f1(number ps) { return velLstar_shock(ps) - velRstar_shock(ps); }
+        pstar = secant_iterate!(f1)(pstar);
+        wstar = velLstar_shock(pstar);
+    } else if (right_wave_is_shock) {
+        number f2(number ps) { return velLstar_fan(ps) - velRstar_shock(ps); }
+        pstar = secant_iterate!(f2)(pstar);
+        wstar = velLstar_fan(pstar);
+    } else if (left_wave_is_shock) {
+        number f3(number ps) { return velLstar_shock(ps) - velRstar_fan(ps); }
+        pstar = secant_iterate!(f3)(pstar);
+        wstar = velLstar_shock(pstar);
+    }
     return;
 } // end lrivp()
 
@@ -888,16 +962,7 @@ void piston_at_left(const(GasState) stateR, number velR, GasModel gm,
             number vel2 = vel1*((g-1.0)*M1sq+2.0)/((g+1.0)*M1sq);
             return wstar - vel1 + vel2 - velR;
         }
-        int count = 0;
-        number incr_pstar;
-        do {
-            number f0 = f(pstar);
-            number dp = 0.001 * pstar;
-            number f1 = f(pstar+dp);
-            incr_pstar = -f0*dp/(f1-f0);
-            pstar += incr_pstar;
-            count += 1;
-        } while (fabs(incr_pstar)/pstar > 0.01 && count < 10);
+        pstar = secant_iterate!(f)(pstar);
     }
     return;
 } // end piston_at_left()
@@ -945,16 +1010,7 @@ void piston_at_right(const(GasState) stateL, number velL, GasModel gm,
             number vel2 = vel1*((g-1.0)*M1sq+2.0)/((g+1.0)*M1sq);
             return wstar + vel1 - vel2 - velL;
         }
-        int count = 0;
-        number incr_pstar;
-        do {
-            number f0 = f(pstar);
-            number dp = 0.001 * pstar;
-            number f1 = f(pstar+dp);
-            incr_pstar = -f0*dp/(f1-f0);
-            pstar += incr_pstar;
-            count += 1;
-        } while (fabs(incr_pstar)/pstar > 0.01 && count < 10);
+        pstar = secant_iterate!(f)(pstar);
     }
     return;
 } // end piston_at_right()
