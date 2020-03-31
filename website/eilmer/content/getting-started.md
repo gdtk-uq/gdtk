@@ -114,12 +114,12 @@ To compile and install Eilmer, move into the eilmer source
 area and use `make` to coordinate the compiling and installing:
 
     cd dgd/src/eilmer
-    make install
+    make DMD=ldc2 install
 
 If you are on a Mac, you'll need to give the `make` command an
 extra hint:
 
-    make PLATFORM=macosx install
+    make DMD=ldc2 PLATFORM=macosx install
 
 ## Setting up for first-time run
 
