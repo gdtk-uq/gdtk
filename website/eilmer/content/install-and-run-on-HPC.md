@@ -30,6 +30,8 @@ the MPI version.
   of the D compiler installed in your own account and
   commit to updating the compiler on a regular basis.
   For optimised builds use the LLVM compiler.
+  Install notes for the LLVM D compiler (LDC) are
+  available [here](/installing-ldc).
 
 ## Goliath: EAIT Faculty Cluster
 

@@ -57,7 +57,8 @@ To build Eilmer, you will require:
   + A C compiler (GNU compiler is a good option and standard on most systems)
   + A D compiler  
     Recommended: LLVM D compiler, `ldc`  
-    Binary releases for `ldc` at: https://github.com/ldc-developers/ldc/releases
+    Binary releases for `ldc` at: https://github.com/ldc-developers/ldc/releases  
+    An install guide for the LDC compiler is available [here](/installing-ldc).
   + The gfortran compiler (and 32-bit libraries)
       + gfortran and gfortran-multilib on Debian/Ubuntu/Mint
       + gcc-gfortran on RedHat/CentOS/Fedora
