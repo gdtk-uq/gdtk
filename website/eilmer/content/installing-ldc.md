@@ -9,12 +9,15 @@ You need a D compiler to build Eilmer from source and we recommend
 the LDC compiler.
 If you have some linux chops, the install process is quite straightforward:
 
-  + Download the latest stable release from: https://github.com/ldc-developers/ldc/releases
+  + Download the latest stable release from:  
+  https://github.com/ldc-developers/ldc/releases
   + Unpack in an area of your choosing.
   + Set your `PATH` variable so that it can find the binaries in the `bin/` subdirectory
     of what you just unpacked.
 
 For those newer to linux, read on for a step-by-step walk through.
+Advanced users might just skip to the [bottom step]({{< relref "#for-advanced-users-of-the-loadable-library" >}}) about configuring
+your environment to use the loadable library.
 
 ### Step-by-step walk through for installing the LDC compiler
 
@@ -78,9 +81,12 @@ The first step involves the browser to find a package to download.
 5. Set your `PATH` variable so that it finds the LDC binaries.
 
    To do this, I add a line to my `.bashrc` file, which is a hidden file
-   sitting in my home directory. You will need to open an editor to make
-   the addition to that file. Let's try `gedit` in this example, but
-   any editor will do.
+   sitting in my home directory.
+   On a Debian-based system, the preferred place for modifications is
+   in the file `.bash_aliases`.
+   If you are using Ubuntu or Mint Linux, then you are using a Debian-based system.
+   You will need to open an editor to make the addition to that file.
+   Let's try `gedit` in this example, but any editor will do.
    
         cd
         gedit .bashrc
@@ -89,7 +95,7 @@ The first step involves the browser to find a package to download.
    version 1.20.1. I did, so I'll use that in this example. Adjust
    your line according to the version you downloaded.
    
-        export PATH=$PATH:$HOME/opt/ldc2-1.20.1-linux-x86_64/bin
+        export PATH=${PATH}:${HOME}/opt/ldc2-1.20.1-linux-x86_64/bin
 
    The `PATH` variable is what we call an environment variable.
    It configures a particular aspect of your working environment.
@@ -107,7 +113,7 @@ The first step involves the browser to find a package to download.
    Note that we *appended* the new search directory to what
    was already set in `PATH`.
    We did that with the expression
-   `$PATH:$HOME/opt/ldc2-1.20.1-linux-x86_64/bin`.
+   `${PATH}:${HOME}/opt/ldc2-1.20.1-linux-x86_64/bin`.
    This is important.
    Using the append expression, we preserve the system default `PATH` search
    directories.
@@ -125,3 +131,9 @@ The first step involves the browser to find a package to download.
    It is a dot followed by a space followed by the filename `.bashrc`.
    It is an instruction to process what appears in `.bashrc`.
 
+### For advanced users of the loadable library
+
+If you are using the loadable library, then you will also need to configure your
+`LD_LIBRARY_PATH`. Again make the appropriate change in `.bashrc` or equivalent:
+
+        export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${HOME}/opt/ldc2-1.20.1-linux-x86_64/lib
