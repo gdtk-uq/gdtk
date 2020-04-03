@@ -323,12 +323,14 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
         string ext = extension(jobName);
         if (!ext.empty && ext != ".lua") {
             writeln("If you are going to supply an extension for your job name, it needs to be \".lua\"");
-            return 1;
+            exitFlag = 1;
+            return exitFlag;
         }
         string dir = dirName(jobName);
         if (dir != ".") {
             writeln("You are expected to start with your job script in your working directory.");
-            return 1;
+            exitFlag = 1;
+            return exitFlag;
         }
         string bn = baseName(jobName);
         if (ext.length > 0) {
