@@ -8,7 +8,7 @@ DMD ?= dmd
 FLAVOUR ?= debug
 PLATFORM ?= linux
 
-PROGRAMS := l1d4
+PROGRAMS := l1d4 l1d4-prep
 
 L1D_FILES := config.d
 
@@ -178,6 +178,10 @@ l1d4: main.d $(L1D_FILES) \
 		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
 		$(LIBCEQ) $(LIBLUA) \
 		$(DLINKFLAGS)
+
+l1d4-prep: l1d4-prep.py
+	cp l1d4-prep.py l1d4-prep
+	chmod +x l1d4-prep
 
 #--------------------------------------------------------------------------
 # Fortran bits -- we need a bit of a hack
