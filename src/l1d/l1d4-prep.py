@@ -115,7 +115,7 @@ def printUsage():
 
 class GlobalConfig(object):
     """
-    Contains the tube and simulation control parameters.
+    Contains the simulation control parameters.
 
     The user's script should not create one of these
     but should specify the simulation parameters by
@@ -182,32 +182,6 @@ class GlobalConfig(object):
       Arranging good values may require some trial and error.
       Add entries to this list via the add_dt_plot function.
 
-    * xd_list: List of break-point tuples defining the tube wall.
-      Add elements to the list via the function add_break_point.
-      
-    * v_list: List of valve-point tuples defining the tube wall. 
-      Add elements to the list via the function add_valve_point.
-
-    * n: (int) The number of small segments that will be used to describe
-      the tube's area distribution internal to the simulation.
-      To enable a fast lookup process for the area calculation,
-      the area variation between equally-spaced x-positions is taken
-      to be linear.
-      The default value is 4000 and probably won't need to be changed
-      except for geometries with rapidly changing cross-sections.
-
-    * T_nominal: (float) The nominal wall temperature (in degrees K)
-      in the absence of a patch of differing temperature.
-
-    * T_patch_list: (list of tuples)
-      Regions of the tube wall that have temperature different to the 
-      nominal value can be specified via the function add_T_patch.
-
-    * loss_region_list: (list of tuples)
-      List of head-loss regions, usually associated
-      with sudden changes in tube cross-section and diaphragm stations.
-      Add regions via the function add_loss_region.
-
     * hloc_list: (list of floats)
       List of x-coordinates for the history locations.
       Add entries via the function add_history_loc.
@@ -216,13 +190,11 @@ class GlobalConfig(object):
 
     # We want to prevent the user's script from introducing new attributes
     # via typographical errors.
-    __slots__ = 'job_name', 'title', 'case_id', 'gas_model_files', 'gmodels', \
+    __slots__ = 'job_name', 'title', 'gas_model_files', 'gmodels', \
                 'reaction_scheme_files', 'reacting', \
                 'dt_init', 'cfl', 'dt_plot_list', \
-                'max_time', 'max_step', \
-                'x_order', 't_order', 'thermal_damping', \
-                'T_nominal', 'T_patch_list', 'loss_region_list', \
-                'xd_list', 'n', 'hloc_list', 'v_list'
+                'max_time', 'max_step', 'x_order', 't_order', \
+                'hloc_list'
     
     def __init__(self):
         """Accepts user-specified data and sets defaults. Make one only."""
@@ -245,138 +217,65 @@ class GlobalConfig(object):
         self.max_step = 10
         self.x_order = 2
         self.t_order = 2
-        # Tube definition is a list of (x,diameter) tuples
-        # defining the break-points of the tube wall.
-        # The transition_flag with a value of 1
-        # indicates linear transitions from break-point i to point i+1.
-        # The alternative is a cubic transition (I think).
-        self.xd_list = []
-        self.v_list = [] 
-        self.n = 4000
-        # Wall temperature is specified as a nominal value with
-        # patches of other temperatures.
-        self.T_nominal = 300.0  # Nominal tube-wall temperature in Kelvin
-        self.T_patch_list = []
-        # Head-losses are also spread over finite-length patches.
-        self.loss_region_list = []
         # History locations are collected in a list.
         self.hloc_list = []
         #
         GlobalConfig.count += 1
         return
 
-    def write_to_ini_file(self, fp):
+    def write(self, fp):
         """
-        Writes the configuration data to the specified file in .ini format.
+        Writes the configuration data to the specified file in JSON format.
         """
-        global slugList, pistonList, diaphragmList
-        fp.write("[global_config]\n")
-        fp.write("    title = %s\n" % self.title)
-        fp.write("    gas_model_files = %s\n" % self.gas_model_files)
-        fp.write("    reaction_scheme_files = %s\n" % self.reaction_scheme_files)
-        fp.write("    reacting = %s\n" % self.reacting)
-        fp.write("    max_time = %e\n" % self.max_time)
-        fp.write("    max_step = %d\n" % self.max_step)
-        fp.write("    dt_init = %e\n" % self.dt_init)
-        fp.write("    cfl = %e\n" % self.cfl)
-        fp.write("    x_order = %d\n" % self.x_order)
-        fp.write("    t_order = %d\n" % self.t_order)
+        global config, slugList, pistonList, diaphragmList
+        fp.write("{\n")
+        fp.write('title = %s\n' % self.title)
+        fp.write('gas_model_files = %s\n' % self.gas_model_files)
+        fp.write('reaction_scheme_files = %s\n' % self.reaction_scheme_files)
+        fp.write('reacting = %s\n' % self.reacting)
+        fp.write('max_time = %e\n' % self.max_time)
+        fp.write('max_step = %d\n' % self.max_step)
+        fp.write('dt_init = %e\n' % self.dt_init)
+        fp.write('cfl = %e\n' % self.cfl)
+        fp.write('x_order = %d\n' % self.x_order)
+        fp.write('t_order = %d\n' % self.t_order)
         #
         if len(config.dt_plot_list) == 0:
             # Since the user did not specify any, default to the end.
             self.add_dt_plot(0.0, config.max_time, config.max_time)
         n_dt_plot = len(self.dt_plot_list)
-        fp.write("    n_dt_plot = %d\n" % n_dt_plot)
-        fp.write("    t_change =");
+        fp.write('n_dt_plot = %d\n' % n_dt_plot)
+        fp.write('t_change =');
         for i in range(n_dt_plot):
-            fp.write(" %e" % config.dt_plot_list[i][0])
-        fp.write("\n")
-        fp.write("    dt_plot =");
+            fp.write(' %e' % config.dt_plot_list[i][0])
+        fp.write('\n')
+        fp.write('dt_plot =');
         for i in range(n_dt_plot):
-            fp.write(" %e" % config.dt_plot_list[i][1])
-        fp.write("\n")
-        fp.write("    dt_his =");
+            fp.write(' %e' % config.dt_plot_list[i][1])
+        fp.write('\n')
+        fp.write('dt_his =');
         for i in range(n_dt_plot):
-            fp.write(" %e" % config.dt_plot_list[i][2])
-        fp.write("\n")
+            fp.write(' %e' % config.dt_plot_list[i][2])
+        fp.write('\n')
         #
         n_hloc = len(config.hloc_list)
-        fp.write("    hloc_n = %d\n" % n_hloc)
-        fp.write("    hloc_x =")
+        fp.write('hloc_n = %d\n' % n_hloc)
+        fp.write('hloc_x =')
         for i in range(n_hloc):
-            fp.write(" %e" % config.hloc_list[i])
-        fp.write("\n")
+            fp.write(' %e' % config.hloc_list[i])
+        fp.write('\n')
         #
-        fp.write("    tube_n = %d\n" % config.n)
-        nseg = len(config.xd_list) - 1
-        fp.write("    tube_nseg = %d\n" % nseg)
-        fp.write("    tube_xb =")
-        for i in range(nseg+1):
-            fp.write(" %e" % config.xd_list[i][0])
-        fp.write("\n")
-        fp.write("    tube_d =")
-        for i in range(nseg+1):
-            fp.write(" %e" % config.xd_list[i][1])
-        fp.write("\n")
-        fp.write("    tube_linear =")
-        for i in range(nseg+1):
-            fp.write(" %d" % config.xd_list[i][2])
-        fp.write("\n")
-        #
-        nv = len(config.v_list);
-        fp.write("nv = %d\n" % nv)
-        fp.write("x_loc =")
-        for i in range(nv):
-          fp.write(" %e" % config.v_list[i][0])
-          fp.write("\n")
-          fp.write("d_max =")
-        for i in range(nv):
-          fp.write(" %e" % config.v_list[i][1])
-          fp.write("\n")
-          fp.write("n_points =")
-        for i in range(nv):
-          fp.write(" %d" % config.v_list[i][2])
-        fp.write("\n")
-        #
-        nKL = len(config.loss_region_list)
-        fp.write("    KL_n = %d\n" % nKL)
-        fp.write("    KL_xL =")
-        for i in range(nKL):
-            fp.write(" %e" % config.loss_region_list[i][0])
-        fp.write("\n")
-        fp.write("    KL_xR =")
-        for i in range(nKL):
-            fp.write(" %e" % config.loss_region_list[i][1])
-        fp.write("\n")
-        fp.write("    KL_K =")
-        for i in range(nKL):
-            fp.write(" %e" % config.loss_region_list[i][2])
-        fp.write("\n")
-        #
-        fp.write("    T_nominal = %e\n" % config.T_nominal)
-        nT = len(config.T_patch_list)
-        fp.write("    Tpatch_n = %d\n" % nT)
-        fp.write("    Tpatch_xL =")
-        for i in range(nT):
-            fp.write(" %e" % config.T_patch_list[i][0])
-        fp.write("\n")
-        fp.write("    Tpatch_xR =")
-        for i in range(nT):
-            fp.write(" %e" % config.T_patch_list[i][1])
-        fp.write("\n")
-        fp.write("    Tpatch_T =")
-        for i in range(nT):
-            fp.write(" %e" % config.T_patch_list[i][2])
-        fp.write("\n")
-        #
-        fp.write("    nslug = %d\n" % len(slugList))
-        fp.write("    npiston = %d\n" % len(pistonList))
-        fp.write("    ndiaphragm = %d\n" % len(diaphragmList))
+        fp.write('nslug = %d\n' % len(slugList))
+        fp.write('npiston = %d\n' % len(pistonList))
+        fp.write('ndiaphragm = %d\n' % len(diaphragmList))
+        for p in pistonList: p.write_config(fp)
+        for d in diaphragmList: d.write_config(fp)
+        for s in slugList: s.write_config(fp)
+        fp.write('}\n')
         return
     
 # We will create just one GlobalConfig object that the user can alter.
 config = GlobalConfig()
-
 
 # --------------------------------------------------------------------
 # The following functions are to provide convenient ways of setting
@@ -384,10 +283,11 @@ config = GlobalConfig()
 
 def add_gas_model(fileName):
     """
-    Initialize a GasModel in the GlobalConfig list.
+    Initialize and add a GasModel in the GlobalConfig list of gas models.
 
     :param FileName: (string) Name of the detailed-gas-model file.
     """
+    global config
     gmodel = GasModel(fileName)
     gmodel_id = len(config.gmodels)
     config.gmodels.append(gmodel)
@@ -418,10 +318,144 @@ def add_dt_plot(t_change, dt_plot, dt_his):
     return len(config.dt_plot_list)
 
 
+def add_history_loc(x):
+    """
+    Add a location to the history-location list in L{GlobalConfig}.
+
+    :param x: (float) x-coordinate, in metres, of the sample point.
+    :returns: Number of sample points defined so far.
+    """
+    global config
+    if isinstance(x, list):
+        config.hloc_list.extend(x)
+    else:
+        config.hloc_list.append(float(x))
+    return len(config.hloc_list)
+
+# --------------------------------------------------------------------
+
+class Tube(object):
+    """
+    Contains the tube specification.
+
+    The user's script should not create one of these
+    but should specify the tube details by calling the add_xxxx functions.
+    
+    The following attributes are available:
+
+    * n: (int) The number of small segments that will be used to describe
+      the tube's area distribution internal to the simulation.
+      To enable a fast lookup process for the area calculation,
+      the area variation between equally-spaced x-positions is taken
+      to be linear.
+      The default value is 4000 and probably won't need to be changed
+      except for geometries with rapidly changing cross-sections.
+
+    * xd_list: List of break-point tuples defining the tube wall.
+      Add elements to the list via the function add_break_point.
+
+    * T_nominal: (float) The nominal wall temperature (in degrees K)
+      in the absence of a patch of differing temperature.
+
+    * T_patch_list: (list of tuples)
+      Regions of the tube wall that have temperature different to the 
+      nominal value can be specified via the function add_T_patch.
+
+    * loss_region_list: (list of tuples)
+      List of head-loss regions, usually associated
+      with sudden changes in tube cross-section and diaphragm stations.
+      Add regions via the function add_loss_region.
+    """
+    count = 0
+
+    __slots__ = 'n', 'xd_list', 'T_nominal', 'T_patch_list', 'loss_region_list'
+    
+    def __init__(self):
+        """Accepts user-specified data and sets defaults. Make one only."""
+        if Tube.count >= 1:
+            raise Exception("Already have a Tube object defined.")
+        # Tube definition is a list of (x,diameter) tuples
+        # defining the break-points of the tube wall.
+        # The transition_flag with a value of 1
+        # indicates linear transitions from break-point i to point i+1.
+        # The alternative is a cubic transition (I think).
+        self.xd_list = []
+        self.n = 4000
+        # Wall temperature is specified as a nominal value with
+        # patches of other temperatures.
+        self.T_nominal = 300.0  # Nominal tube-wall temperature in Kelvin
+        self.T_patch_list = []
+        # Head-losses are also spread over finite-length patches.
+        self.loss_region_list = []
+        # History locations are collected in a list.
+        self.hloc_list = []
+        #
+        GlobalConfig.count += 1
+        return
+
+    def write(self, fp):
+        """
+        Writes the tube specification to the specified file, in small steps.
+        """
+        global tube
+        fp.write("    tube_n = %d\n" % tube.n)
+        nseg = len(tube.xd_list) - 1
+        fp.write("    tube_nseg = %d\n" % nseg)
+        fp.write("    tube_xb =")
+        for i in range(nseg+1):
+            fp.write(" %e" % tube.xd_list[i][0])
+        fp.write("\n")
+        fp.write("    tube_d =")
+        for i in range(nseg+1):
+            fp.write(" %e" % tube.xd_list[i][1])
+        fp.write("\n")
+        fp.write("    tube_linear =")
+        for i in range(nseg+1):
+            fp.write(" %d" % tube.xd_list[i][2])
+        fp.write("\n")
+        #
+        nKL = len(tube.loss_region_list)
+        fp.write("    KL_n = %d\n" % nKL)
+        fp.write("    KL_xL =")
+        for i in range(nKL):
+            fp.write(" %e" % tube.loss_region_list[i][0])
+        fp.write("\n")
+        fp.write("    KL_xR =")
+        for i in range(nKL):
+            fp.write(" %e" % tube.loss_region_list[i][1])
+        fp.write("\n")
+        fp.write("    KL_K =")
+        for i in range(nKL):
+            fp.write(" %e" % tube.loss_region_list[i][2])
+        fp.write("\n")
+        #
+        fp.write("    T_nominal = %e\n" % tube.T_nominal)
+        nT = len(tube.T_patch_list)
+        fp.write("    Tpatch_n = %d\n" % nT)
+        fp.write("    Tpatch_xL =")
+        for i in range(nT):
+            fp.write(" %e" % tube.T_patch_list[i][0])
+        fp.write("\n")
+        fp.write("    Tpatch_xR =")
+        for i in range(nT):
+            fp.write(" %e" % tube.T_patch_list[i][1])
+        fp.write("\n")
+        fp.write("    Tpatch_T =")
+        for i in range(nT):
+            fp.write(" %e" % tube.T_patch_list[i][2])
+        fp.write("\n")
+        return
+    
+# We will create just one Tube object that the user can alter.
+tube = Tube()
+
+# --------------------------------------------------------------------
+# The following functions are to provide convenient ways of setting
+# some of the Tube elements.
+
 def add_break_point(x, d, transition_flag=0):
     """
-    Add a break-point tuple to the tube-diameter description
-    contained in GlobalConfig.
+    Add a break-point tuple to the tube-diameter description.
 
     The tube is described as a set of (x,d)-coordinate pairs that
     define break points in the profile of the tube wall.
@@ -432,39 +466,21 @@ def add_break_point(x, d, transition_flag=0):
        this break-point and the next. 1=linear, 0=Hermite-cubic.
     :returns: Number of break points defined so far.
     """
-    global config
-    if len(config.xd_list) > 0:
+    global tube
+    if len(tube.xd_list) > 0:
         # Check that we are adding points monotonically in x.
-        if x > config.xd_list[-1][0]:
-            config.xd_list.append((x, d, transition_flag))
+        if x > tube.xd_list[-1][0]:
+            tube.xd_list.append((x, d, transition_flag))
         else:
             print("Warning: did not add new break-point (", x, d, ").")
     else:
-        config.xd_list.append((x, d, transition_flag))
-    return len(config.xd_list)
-    
-def add_valve_point(x_loc, d_max, n_points):
-    """
-    Adds a point for valve area variation
-    :param x_loc: (float) x-coordinate, in metres, of the valve point
-    :param d_max: (float) maximum diameter, in metres, of the tube wall at the valve-point.
-    :param n_points: (int) indicates the number of points on either end of the valve point to vary.
-    : returns: Number of valve points defined so far.
-    """
-    global config
-    if len(config.v_list) > 0:
-        # Check that we are adding points monotonically in x.
-        if x_loc > config.v_list[-1][0]:
-            config.v_list.append((x_loc, d_max, n_points))
-        else:
-            print("Warning: did not add new break-point (", x_loc, d_max, ").")
-    else:
-        config.v_list.append((x_loc, d_max, n_points))
-    return len(config.v_list)
+        tube.xd_list.append((x, d, transition_flag))
+    return len(tube.xd_list)
+
 
 def add_loss_region(xL, xR, K):
     """
-    Add a head-loss region to the tube description in L{GlobalConfig}.
+    Add a head-loss region to the tube description.
 
     There is a momentum-sink term much like the so-called minor-loss terms
     in the fluid mechanics text books.
@@ -477,13 +493,14 @@ def add_loss_region(xL, xR, K):
         reasonably smooth contraction such as the T4 main diaphragm station.
     :returns: Number of loss regions defined so far.
     """
+    global tube
     if xR < xL:
         # Keep x-values in increasing order
         xL, xR = xR, xL
     if abs(xR - xL) < 1.0e-3:
         print("Warning: loss region is very short: (", xL, xR, ")")
-    config.loss_region_list.append((xL, xR, K))
-    return len(config.loss_region_list)
+    tube.loss_region_list.append((xL, xR, K))
+    return len(tube.loss_region_list)
 
 
 def add_T_patch(xL, xR, T):
@@ -501,22 +518,8 @@ def add_T_patch(xL, xR, T):
         xL, xR = xR, xL
     if abs(xR - xL) < 1.0e-3:
         print("Warning: temperature patch is very short: (", xL, xR, ")")
-    config.T_patch_list.append((xL, xR, T))
-    return len(config.T_patch_list)
-
-
-def add_history_loc(x):
-    """
-    Add a location to the history-location list in L{GlobalConfig}.
-
-    :param x: (float) x-coordinate, in metres, of the sample point.
-    :returns: Number of sample points defined so far.
-    """
-    if isinstance(x, list):
-        config.hloc_list.extend(x)
-    else:
-        config.hloc_list.append(float(x))
-    return len(config.hloc_list)
+    tube.T_patch_list.append((xL, xR, T))
+    return len(tube.T_patch_list)
 
 
 #----------------------------------------------------------------------
@@ -545,7 +548,8 @@ class GasSlug(object):
     the gas-path via a call to the function assemble_gas_path.
     """
 
-    __slots__ = 'gas', 'gmodel', 'gmodel_id', 'vel', 'indx', 'label', 'xL', 'xR', \
+    __slots__ = 'indx', 'gas', 'gmodel', 'gmodel_id', \
+                'vel', 'label', 'xL', 'xR', \
                 'bcL', 'bcR', 'bcL_which_end', 'bcR_which_end', \
                 'nn', 'to_end_L', 'to_end_R', 'cluster_strength', \
                 'viscous_effects', 'adiabatic_flag', 'hcells'
@@ -575,9 +579,9 @@ class GasSlug(object):
         through end-condition objects that are attached during assembly
         of the gas path.
 
-        :param gnodel_id: (int) index of the gas-model file name.
+        :param gmodel_id: (int) index of the gas-model file name.
         :param p: (float) Pressure in Pa.
-        :param u: (float) Velocity in m/s.
+        :param vel: (float) Velocity in m/s.
         :param T: (float or list of floats) Temperature in degrees K.
         :param massf: Mass fractions supplied as a list of floats 
             or a dictionary of species names and floats. 
@@ -652,7 +656,7 @@ class GasSlug(object):
         slugList.append(self)
         return
 
-    def write_to_ini_file(self, fp):
+    def write_config(self, fp):
         """
         Writes the flow state information to the specified file.
         """
@@ -855,7 +859,7 @@ class Piston(object):
         pistonList.append(self)
         return
 
-    def write_to_ini_file(self, fp):
+    def write_config(self, fp):
         """
         Writes the piston information to the specified file.
         """
@@ -924,13 +928,6 @@ class Diaphragm(object):
             GasSlugs are interacting.
         :param dt_hold: (float) Time delay, in seconds, from rupture trigger
             to actual rupture.
-        :param dt_blend: (float) Time delay, in seconds, from rupture to a
-            blend event.
-            This models the mixing of the two gas slugs some time after
-            rupture of the diaphragm.
-            Blending events are seldom used so this is usually set to 0.0.
-        :param dx_blend: (float) Distance, in metres, over which blending occurs.
-            Set to 0.0 to have no effective blending.
         :param dxL: (float) The distance over which p is averaged on left of
             the diaphragm.  The pressure difference between the left-
             and right-sided of the diaphragm is used to trigger rupture.
@@ -950,10 +947,7 @@ class Diaphragm(object):
         self.x0 = x0
         self.p_burst = p_burst
         self.is_burst = is_burst
-        self.dt_hold = dt_hold + RSP_dt
-        self.dt_blend = dt_blend
-        self.dx_blend = dx_blend
-        self.RSP_dt = RSP_dt
+        self.dt_hold = dt_hold
         self.dxL = dxL
         self.dxR = dxR
         #
@@ -966,7 +960,7 @@ class Diaphragm(object):
         diaphragmList.append(self)
         return
 
-    def write_to_ini_file(self, fp):
+    def write_config(self, fp):
         """
         Writes the diaphragm information to the specified file.
         """
@@ -975,9 +969,6 @@ class Diaphragm(object):
         fp.write("    is_burst = %d\n" % self.is_burst)
         fp.write("    p_burst = %e\n" % self.p_burst)
         fp.write("    dt_hold = %e\n" % self.dt_hold)
-        fp.write("    dt_blend = %e\n" % self.dt_blend)
-        fp.write("    dx_blend = %e\n" % self.dx_blend)
-        fp.write("    RSP_dt = %e\n" % self.RSP_dt)
         if self.slugL != None:
             indx = self.slugL.indx
         else:
@@ -1201,21 +1192,25 @@ def connect_pair(cL, cR):
 
 # --------------------------------------------------------------------
 
-def write_parameter_file():
+def write_initial_files():
     """
-    Writes the traditional (ugly) input-parameter file
-    from the data that is stored in the GlobalConfig object and
-    the other lists of objects that make up the gas-path.
+    Writes the files needed for the main simulation code.
+
+    These files are found in the directory config.job_name.
     """
     global config
-    print("Begin write parameter file.")
-    if not os.path.exists('config'): os.mkdir('config')
-    fp = open('config/'+config.job_name+'.Lp', "w")
-    config.write_to_ini_file(fp)
-    for p in pistonList: p.write_to_ini_file(fp)
-    for d in diaphragmList: d.write_to_ini_file(fp)
-    for s in slugList: s.write_to_ini_file(fp)
-    print("End write parameter file.")
+    print("Begin write initial files.")
+    if not os.path.exists(config.job_name):
+        os.mkdir(config.job_name)
+    #
+    fp = open(config.job_name+'/config.json', 'w')
+    config.write(fp)
+    fp.close()
+    #
+    fp = open(config.job_name+'/tube.data', 'w')
+    tube.write(fp)
+    fp.close()
+    print("End write initial files.")
     return
 
 
@@ -1238,15 +1233,12 @@ if __name__ == '__main__':
         else:
             raise Exception("Job name is not specified.")
         config.job_name, ext = os.path.splitext(jobName)
-        if os.path.exists(jobName):
-            jobFileName = jobName
-        else:
-            jobFileName = config.job_name + ".py"
-        print("Job file name: %s" % jobFileName)
+        inputScriptName = config.job_name + ".py"
+        print("Input script file name: %s" % inputScriptName)
 
         # The user-specified input comes in the form of Python code.
         # It is up to the user to be careful; there is no security.
-        exec(compile(open(jobFileName, "rb").read(), jobFileName, 'exec'))
+        exec(compile(open(inputScriptName, "rb").read(), inputScriptName, 'exec'))
         print("Summary of components:")
         print("    gas slugs         :", len(slugList))
         print("    pistons           :", len(pistonList))
@@ -1256,7 +1248,7 @@ if __name__ == '__main__':
         print("    gas-gas interfaces:", len(interfaceList))
         if len(slugList) < 1:
             print("Warning: no gas slugs defined; this is unusual.")
-        write_parameter_file()
+        write_initial_files()
     print("Done.")
     sys.exit(0)
 
