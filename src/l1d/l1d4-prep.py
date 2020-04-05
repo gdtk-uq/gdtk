@@ -95,9 +95,12 @@ Globally-defined object
 #
 import sys
 import os
-sys.path.append("") # so that we can find user's scripts in current directory
 from getopt import getopt
+import math
+import numpy as np
 from eilmer.gas import GasModel, GasState, ThermochemicalReactor
+
+sys.path.append("") # so that we can find user's scripts in current directory
 
 shortOptions = "hf:"
 longOptions = ["help", "job="]
@@ -368,7 +371,7 @@ class Tube(object):
     """
     count = 0
 
-    __slots__ = 'n', 'xd_list', 'T_nominal', 'T_patch_list', 'loss_region_list'
+    __slots__ = 'n', 'x_list', 'd_list', 'T_nominal', 'T_patch_list', 'loss_region_list'
     
     def __init__(self):
         """Accepts user-specified data and sets defaults. Make one only."""
@@ -379,7 +382,8 @@ class Tube(object):
         # The transition_flag with a value of 1
         # indicates linear transitions from break-point i to point i+1.
         # The alternative is a cubic transition (I think).
-        self.xd_list = []
+        self.x_list = []
+        self.d_list = []
         self.n = 4000
         # Wall temperature is specified as a nominal value with
         # patches of other temperatures.
@@ -387,8 +391,6 @@ class Tube(object):
         self.T_patch_list = []
         # Head-losses are also spread over finite-length patches.
         self.loss_region_list = []
-        # History locations are collected in a list.
-        self.hloc_list = []
         #
         GlobalConfig.count += 1
         return
@@ -398,52 +400,44 @@ class Tube(object):
         Writes the tube specification to the specified file, in small steps.
         """
         global tube
-        fp.write("    tube_n = %d\n" % tube.n)
-        nseg = len(tube.xd_list) - 1
-        fp.write("    tube_nseg = %d\n" % nseg)
-        fp.write("    tube_xb =")
-        for i in range(nseg+1):
-            fp.write(" %e" % tube.xd_list[i][0])
-        fp.write("\n")
-        fp.write("    tube_d =")
-        for i in range(nseg+1):
-            fp.write(" %e" % tube.xd_list[i][1])
-        fp.write("\n")
-        fp.write("    tube_linear =")
-        for i in range(nseg+1):
-            fp.write(" %d" % tube.xd_list[i][2])
-        fp.write("\n")
+        nsegments = len(tube.x_list) - 1
+        assert len(tube.d_list) == nsegments+1, "Mismatch in tube.x_list, tube.d_list lengths."
+        if nsegments < 1:
+            raise Exception("You did not specify at least two points in your tube.")
+        xs = np.linspace(tube.x_list[0], tube.x_list[-1], num=tube.n+1)
+        ds = []
+        for x in xs:
+            iseg = nsegments
+            for i in range(nsegments):
+                if x <= tube.x_list[i]:
+                    iseg = i
+                    break
+            # Have selected the segment containing x.
+            frac = (x - tube.x_list[iseg-1]) / (tube.x_list[iseg] - tube.x_list[iseg-1])
+            d = (1.0-frac)*tube.d_list[iseg-1] + frac*tube.d_list[iseg]
+            ds.append(d)
         #
-        nKL = len(tube.loss_region_list)
-        fp.write("    KL_n = %d\n" % nKL)
-        fp.write("    KL_xL =")
-        for i in range(nKL):
-            fp.write(" %e" % tube.loss_region_list[i][0])
-        fp.write("\n")
-        fp.write("    KL_xR =")
-        for i in range(nKL):
-            fp.write(" %e" % tube.loss_region_list[i][1])
-        fp.write("\n")
-        fp.write("    KL_K =")
-        for i in range(nKL):
-            fp.write(" %e" % tube.loss_region_list[i][2])
-        fp.write("\n")
+        K_over_Ls = []
+        for x in xs:
+            value = 0.0
+            for region in tube.loss_region_list:
+                xL = region['xL']; xR = region['xR']
+                if x >= xL and x <= xR: value = region['K']/(xR-xL)
+            K_over_Ls.append(value)
         #
-        fp.write("    T_nominal = %e\n" % tube.T_nominal)
-        nT = len(tube.T_patch_list)
-        fp.write("    Tpatch_n = %d\n" % nT)
-        fp.write("    Tpatch_xL =")
-        for i in range(nT):
-            fp.write(" %e" % tube.T_patch_list[i][0])
-        fp.write("\n")
-        fp.write("    Tpatch_xR =")
-        for i in range(nT):
-            fp.write(" %e" % tube.T_patch_list[i][1])
-        fp.write("\n")
-        fp.write("    Tpatch_T =")
-        for i in range(nT):
-            fp.write(" %e" % tube.T_patch_list[i][2])
-        fp.write("\n")
+        Ts = []
+        for x in xs:
+            value = tube.T_nominal
+            for region in tube.T_patch_list:
+                xL = region['xL']; xR = region['xR']
+                if x >= xL and x <= xR: value = region['T']
+            Ts.append(value)
+        #
+        fp.write('# n= %d\n' % tube.n)
+        fp.write('# 1:x,m  2:d,m  3:area,m^2  4:K_over_L,1/m  5:Twall,K\n')
+        for i in range(len(xs)):
+            fp.write('%e %e %e %e %e\n' %
+                     (xs[i], ds[i], math.pi*(ds[i]**2)/4, K_over_Ls[i], Ts[i]))
         return
     
 # We will create just one Tube object that the user can alter.
@@ -453,29 +447,29 @@ tube = Tube()
 # The following functions are to provide convenient ways of setting
 # some of the Tube elements.
 
-def add_break_point(x, d, transition_flag=0):
+def add_break_point(x, d):
     """
     Add a break-point tuple to the tube-diameter description.
 
     The tube is described as a set of (x,d)-coordinate pairs that
     define break points in the profile of the tube wall.
+    You need at least 2 break points to define the tube.
+    Linear variation of diameter between the break points is assumed.
 
     :param x: (float) x-coordinate, in metres, of the break point
     :param d: (float) diameter, in metres, of the tube wall at the break-point.
-    :param transition_flag: (int) Indicates the variation in diameter between
-       this break-point and the next. 1=linear, 0=Hermite-cubic.
     :returns: Number of break points defined so far.
     """
     global tube
-    if len(tube.xd_list) > 0:
+    if len(tube.x_list) > 0:
         # Check that we are adding points monotonically in x.
-        if x > tube.xd_list[-1][0]:
-            tube.xd_list.append((x, d, transition_flag))
+        if x > tube.x_list[-1]:
+            tube.x_list.append(x); tube.d_list.append(d)
         else:
             print("Warning: did not add new break-point (", x, d, ").")
     else:
-        tube.xd_list.append((x, d, transition_flag))
-    return len(tube.xd_list)
+        tube.x_list.append(x); tube.d_list.append(d)
+    return len(tube.x_list)
 
 
 def add_loss_region(xL, xR, K):
@@ -499,7 +493,7 @@ def add_loss_region(xL, xR, K):
         xL, xR = xR, xL
     if abs(xR - xL) < 1.0e-3:
         print("Warning: loss region is very short: (", xL, xR, ")")
-    tube.loss_region_list.append((xL, xR, K))
+    tube.loss_region_list.append({'xL':xL, 'xR':xR, 'K':K})
     return len(tube.loss_region_list)
 
 
@@ -518,7 +512,7 @@ def add_T_patch(xL, xR, T):
         xL, xR = xR, xL
     if abs(xR - xL) < 1.0e-3:
         print("Warning: temperature patch is very short: (", xL, xR, ")")
-    tube.T_patch_list.append((xL, xR, T))
+    tube.T_patch_list.append({'xL':xL, 'xR':xR, 'T':T})
     return len(tube.T_patch_list)
 
 
