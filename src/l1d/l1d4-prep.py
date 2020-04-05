@@ -99,6 +99,7 @@ from getopt import getopt
 import math
 import numpy as np
 from eilmer.gas import GasModel, GasState, ThermochemicalReactor
+from eilmer import roberts
 
 sys.path.append("") # so that we can find user's scripts in current directory
 
@@ -524,6 +525,7 @@ def add_T_patch(xL, xR, T):
 # We will accumulate references to defined objects.
 slugList = []
 pistonList = []
+bcList = []
 diaphragmList = []
 interfaceList = []
 freeEndList = []
@@ -546,18 +548,20 @@ class GasSlug(object):
                 'vel', 'label', 'xL', 'xR', \
                 'bcL', 'bcR', 'bcL_which_end', 'bcR_which_end', \
                 'nn', 'to_end_L', 'to_end_R', 'cluster_strength', \
-                'viscous_effects', 'adiabatic_flag', 'hcells'
+                'viscous_effects', 'adiabatic_flag', 'hcells', \
+                'ifxs'
         
     def __init__(self,
                  gmodel_id = None,
                  p = 100.0e3,
                  vel = 0.0,
-                 T = [300.0,],
+                 T = 300.0,
+                 T_modes = [],
                  massf = [1.0,],
                  label="",
                  nn = 10,
-                 to_end_L=0,
-                 to_end_R=0,
+                 to_end_L=False,
+                 to_end_R=False,
                  cluster_strength=0.0,
                  viscous_effects=0, # several options, see Lp-file documentation
                  adiabatic_flag=0,
@@ -576,16 +580,17 @@ class GasSlug(object):
         :param gmodel_id: (int) index of the gas-model file name.
         :param p: (float) Pressure in Pa.
         :param vel: (float) Velocity in m/s.
-        :param T: (float or list of floats) Temperature in degrees K.
+        :param T: (float) Temperature in degrees K.
+        :param T_modes: (list of float) Temperatures, in K, for the other energy modes.
         :param massf: Mass fractions supplied as a list of floats 
             or a dictionary of species names and floats. 
             The number of mass fraction values should match the number 
             of species expected by the selected gas model.
         :param label: Optional (string) label for the gas slug.
         :param nn: (int) Number of cells within the gas slug.
-        :param to_end_L: (int) Flag to indicate that cells should 
+        :param to_end_L: (bool) Flag to indicate that cells should 
             be clustered to the left end.
-        :param to_end_R: (int) Flag to indicate that cells should
+        :param to_end_R: (bool) Flag to indicate that cells should
             be clustered to the right end.
         :param cluster_strength: (float) As this value approaches 1.0 from above,
             the clustering gets stronger.
@@ -612,7 +617,7 @@ class GasSlug(object):
         self.gas.p = p
         self.gas.massf = massf
         self.gas.T = T
-        self.gas.T_modes = [T,]*nmodes
+        self.gas.T_modes = T_modes
         self.gas.update_thermo_from_pT()
         self.gas.update_sound_speed()
         self.gas.update_trans_coeffs()
@@ -649,7 +654,7 @@ class GasSlug(object):
         #
         slugList.append(self)
         return
-
+    
     def write_config(self, fp):
         """
         Writes the flow state information to the specified file.
@@ -683,6 +688,22 @@ class GasSlug(object):
         for i in range(nsp):
             fp.write(" %e" % (self.gas.massf[i]))
         fp.write("\n")
+        return
+
+    def construct_cells_and_faces(self):
+        self.ifxs = roberts.distribute_points_1(self.xL, self.xR, self.nn,
+                                                self.to_end_L, self.to_end_R,
+                                                self.cluster_strength)
+        return
+    
+    def write_face_data(self, fp):
+        fp.write("# tindx 0\n")
+        fp.write("# end\n")
+        return
+
+    def write_cell_data(self, fp):
+        fp.write("# tindx 0\n")
+        fp.write("# end\n")
         return
 
 def boundary_control_string(other_object, other_object_which_end):
@@ -887,6 +908,10 @@ class Piston(object):
         fp.write("    x0 = %e\n" % self.x0)
         fp.write("    vel0 = %e\n" % self.vel0)
         return
+
+    def write_data(self, fp):
+        assert False, "TODO"
+        return
     
 #----------------------------------------------------------------------------
 
@@ -896,16 +921,14 @@ class Diaphragm(object):
     interaction of two GasSlugs.
     """
 
-    __slots__ = 'indx', 'x0', 'p_burst', 'is_burst', \
+    __slots__ = 'indx', 'bcindx', 'x0', 'p_burst', 'is_burst', \
                 'slugL', 'slugR', \
                 'slugL_which_end', 'slugR_which_end', \
-                'dt_hold', 'dt_blend', 'dx_blend', \
-                'RSP_dt', \
+                'dt_hold', \
                 'dxL', 'dxR', 'label'
     
     def __init__(self,
                  x0, p_burst, is_burst=0, dt_hold=0.0,
-                 dt_blend=0.0, dx_blend=0.0, RSP_dt=0.0, 
                  dxL=0.0, dxR=0.0, label=""):
         """
         Creates a diaphragm with specified properties.
@@ -932,8 +955,9 @@ class Diaphragm(object):
         :param label: A (string) label that will appear in the parameter file
             for this diaphragm.
         """
-        global diaphragmList
+        global diaphragmList, bcList
         self.indx = len(diaphragmList) # next available index
+        self.bcindx = len(bcList)
         if len(label) > 0:
             self.label = label
         else:
@@ -952,6 +976,7 @@ class Diaphragm(object):
         self.slugR_which_end = 'L'
         #
         diaphragmList.append(self)
+        bcList.append(self)
         return
 
     def write_config(self, fp):
@@ -979,6 +1004,10 @@ class Diaphragm(object):
         fp.write("    dxR = %e\n" % self.dxR)
         return
 
+    def write_data(self, fp):
+        assert False, "TODO"
+        return
+
 #-------------------------------------------------------------------------------
 
 class GasInterface(object):
@@ -991,7 +1020,7 @@ class GasInterface(object):
     function assemble_gas_path.
     """
 
-    __slots__ = 'x0', 'slugL', 'slugL_which_end', \
+    __slots__ = 'bcindx', 'x0', 'slugL', 'slugL_which_end', \
                 'slugR', 'slugR_which_end'
     
     def __init__(self, x0):
@@ -1000,13 +1029,19 @@ class GasInterface(object):
 
         :param x0: (float) Initial position, in metres.
         """
-        global interfaceList
+        global interfaceList, bcList
+        self.bcindx = len(bcList)
         self.x0 = x0
         self.slugL = None
         self.slugL_which_end = 'R'
         self.slugR = None
         self.slugR_which_end = 'L'
         interfaceList.append(self)
+        bcList.append(self)
+        return
+
+    def write_config(self, fp):
+        assert False, "TODO"
         return
     
 #----------------------------------------------------------------------------
@@ -1016,7 +1051,7 @@ class FreeEnd(object):
     Contains the information for a free-end condition.
     """
 
-    __slots__ = 'x0'
+    __slots__ = 'bcindx', 'x0'
     
     def __init__(self, x0):
         """
@@ -1024,9 +1059,15 @@ class FreeEnd(object):
 
         :param x0: (float) Initial position, in metres.
         """
-        global freeEndList
+        global freeEndList, bcList
+        self.bcindx = len(bcList)
         self.x0 = x0
         freeEndList.append(self)
+        bcList.append(self)
+        return
+
+    def write_config(self, fp):
+        assert False, "TODO"
         return
 
 # --------------------------------------------------------------------
@@ -1037,7 +1078,7 @@ class VelocityEnd(object):
     for a GasSlug.
     """
 
-    __slots__ = 'x0', 'vel'
+    __slots__ = 'bcindx', 'x0', 'vel'
     
     def __init__(self, x0, vel=0.0):
         """
@@ -1047,10 +1088,16 @@ class VelocityEnd(object):
         :param x0: (float) Initial position, in metres.
         :param v: (float) Velocity, in m/s, of the end-point of the GasSlug.
         """
-        global velocityEndList
+        global velocityEndList, bcList
+        self.bcindx = len(bcList)
         self.x0 = x0
         self.vel = vel
         velocityEndList.append(self)
+        bcList.append(self)
+        return
+
+    def write_config(self, fp):
+        assert False, "TODO"
         return
 
 # --------------------------------------------------------------------
@@ -1204,6 +1251,30 @@ def write_initial_files():
     fp = open(config.job_name+'/tube.data', 'w')
     tube.write(fp)
     fp.close()
+    #
+    for slug in slugList:
+        slug.construct_cells_and_faces()
+        fileName = config.job_name+'/slug-%04d-faces.data'.format(slug.indx) 
+        fp = open(fileName, 'w')
+        slug.write_face_data(fp)
+        fp.close()
+        fileName = config.job_name+'/slug-%04d-cells.data'.format(slug.indx) 
+        fp = open(fileName, 'w')
+        slug.write_cell_data(fp)
+        fp.close()
+    #
+    for piston in pistonList:
+        fileName = config.job_name+'/piston-%04d.data'.format(piston.indx) 
+        fp = open(fileName, 'w')
+        piston.write_data(fp)
+        fp.close()
+    #
+    for diaphragm in diaphragmList:
+        fileName = config.job_name+'/diaphragm-%04d.data'.format(diaphragm.indx) 
+        fp = open(fileName, 'w')
+        diaphragm.write_data(fp)
+        fp.close()
+    #
     print("End write initial files.")
     return
 
