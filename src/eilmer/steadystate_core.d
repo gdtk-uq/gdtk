@@ -293,6 +293,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
         writeln("Pre-step phase complete.");
     
         if ( nPreSteps <= 0 ) {
+            foreach (blk; parallel(localFluidBlocks,1)) blk.set_interpolation_order(interpOrderSave);
             // Take initial residual as max residual
             evalRHS(0.0, 0);
             max_residuals(maxResiduals);
