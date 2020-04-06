@@ -2401,6 +2401,7 @@ void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref
 /**************************/
 /*  OBJECTIVE FUNCTIONS   */
 /**************************/
+
 number objective_function_evaluation(int gtl=0, string bndaryForSurfaceIntergral = "objective_function_surface") {
 
     number ObjFcn = 0.0;    
@@ -2460,6 +2461,110 @@ void form_objective_function_sensitivity(FluidBlock blk, size_t np, number EPS, 
     }
 }
 
+/*
+number objective_function_evaluation(int gtl=0, string bndaryForSurfaceIntergral = "objective_function_surface") {
+    double pd, pt1, weight1, weight2;
+    int output;
+    
+    auto fR = File("scale.in", "r");
+    auto line = fR.readln().strip();
+    auto tokens = line.split();
+    output = to!int(tokens[0]);
+    pt1 = to!double(tokens[1]);
+    pd = to!double(tokens[2]);
+    weight1 = to!double(tokens[3]);
+    weight2 = to!double(tokens[4]);
+    number ObjFcn = 0.0;
+    
+    number obj1 = 0.0;
+    number obj2 = 0.0;
+    foreach (myblk; localFluidBlocks) {
+        myblk.locObjFcn = 0.0;
+        number pt3 = 0.0;   // total pressure at throat
+        number pavg1 = 0.0; // 
+        number pavg2 = 0.0; // denominator of second objective function
+        foreach(cell; myblk.cells) {
+            // find total pressure at inlet
+            number delx = cell.iLength;
+            number c = 1.5; // tolerance factor
+            if (cell.pos[0].x > 0.0 && cell.pos[0].x < c*delx) {
+                pt3 = cell.fs.gas.p + 0.5*cell.fs.gas.rho*(cell.fs.vel.x^^2 + cell.fs.vel.y^^2);
+                pavg1 += (cell.fs.gas.p - pd)^^2 * cell.fs.gas.rho* cell.areaxy[0] * (cell.fs.vel.x^^2 + cell.fs.vel.y^^2)^^0.5;
+                pavg2 += cell.fs.gas.rho* cell.areaxy[0] * (cell.fs.vel.x^^2 + cell.fs.vel.y^^2)^^0.5;
+                if (output) { writeln("xpos = ", cell.pos[0].x, ", ", "ypos = ", cell.pos[0].y, ", ", "total-p = ", pt3); }
+                myblk.locObjFcn += weight1*(1 - pt3/pt1) + weight2*pavg1/pavg2;
+                obj1 += weight1*(1 - pt3/pt1);
+                obj2 += weight2*pavg1/pavg2;
+            }
+        }
+    }
+    if (output) {
+        writeln("total pressure recovery contribution: ", obj1);
+        writeln("design pressure contribution: ", obj2);
+        writeln("total: ", obj1+obj2);
+    }
+    foreach ( myblk; localFluidBlocks) ObjFcn += myblk.locObjFcn;
+    return fabs(ObjFcn);
+}
+
+
+void form_objective_function_sensitivity(FluidBlock blk, size_t np, number EPS, string bndaryForSurfaceIntergral = "objective_function_surface") {
+
+    // for now we have hard coded the pressure drag in the x-direction as the objective function
+    size_t nLocalCells = blk.cells.length;
+    blk.f.length = nLocalCells * np;
+
+    foreach(cell; blk.cells) {
+        for ( size_t ip = 0; ip < np; ++ip ) {
+            blk.f[cell.id*np + ip] = 0.0;
+        }
+    }
+    
+    foreach (cell; blk.cells) {
+        number origValue; number ObjFcnM; number ObjFcnP; number h;
+	
+        // perturb density
+        origValue = cell.fs.gas.rho;
+        cell.fs.gas.rho = origValue + EPS;
+        blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);
+        blk.myConfig.gmodel.update_trans_coeffs(cell.fs.gas);
+        blk.myConfig.gmodel.update_sound_speed(cell.fs.gas);
+        ObjFcnP = objective_function_evaluation();
+        blk.f[cell.id*np + 0] = (ObjFcnP.im)/(EPS.im);
+        cell.fs.gas.rho = origValue;
+        
+        // perturb vel-x
+        origValue = cell.fs.vel.x;
+        cell.fs.vel.refx = origValue + EPS;
+        blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);
+        blk.myConfig.gmodel.update_trans_coeffs(cell.fs.gas);
+        blk.myConfig.gmodel.update_sound_speed(cell.fs.gas);
+        ObjFcnP = objective_function_evaluation();
+        blk.f[cell.id*np + 1] = (ObjFcnP.im)/(EPS.im);
+        cell.fs.vel.refx = origValue;
+        
+        // perturb vel-y
+        origValue = cell.fs.vel.y;
+        cell.fs.vel.refy = origValue + EPS;
+        blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);
+        blk.myConfig.gmodel.update_trans_coeffs(cell.fs.gas);
+        blk.myConfig.gmodel.update_sound_speed(cell.fs.gas);
+        ObjFcnP = objective_function_evaluation();
+        blk.f[cell.id*np + 2] = (ObjFcnP.im)/(EPS.im);
+        cell.fs.vel.refy = origValue;
+        
+        // perturb pressure
+        origValue = cell.fs.gas.p;
+        cell.fs.gas.p = origValue + EPS;
+        blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);
+        blk.myConfig.gmodel.update_trans_coeffs(cell.fs.gas);
+        blk.myConfig.gmodel.update_sound_speed(cell.fs.gas);
+        ObjFcnP = objective_function_evaluation();
+        blk.f[cell.id*np + 3] = (ObjFcnP.im)/(EPS.im);
+        cell.fs.gas.p = origValue;
+    }
+}
+*/
 /**********************************/
 /*  GRID PERTURBATION FUNCTIONs   */
 /**********************************/
