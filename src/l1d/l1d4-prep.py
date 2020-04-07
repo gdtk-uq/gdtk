@@ -98,6 +98,7 @@ import os
 from getopt import getopt
 import math
 import numpy as np
+import json
 from eilmer.gas import GasModel, GasState, ThermochemicalReactor
 from eilmer import roberts
 
@@ -194,8 +195,9 @@ class GlobalConfig(object):
 
     # We want to prevent the user's script from introducing new attributes
     # via typographical errors.
-    __slots__ = 'job_name', 'title', 'gas_model_files', 'gmodels', \
-                'reaction_scheme_files', 'reacting', \
+    __slots__ = 'job_name', 'title', \
+                'gas_model_files', 'gmodels', \
+                'reaction_files_1', 'reaction_files_2', 'reactors', 'reacting', \
                 'dt_init', 'cfl', 'dt_plot_list', \
                 'max_time', 'max_step', 'x_order', 't_order', \
                 'hloc_list'
@@ -209,13 +211,15 @@ class GlobalConfig(object):
         self.title = "Another L1d4 Simulation."
         self.gas_model_files = []
         self.gmodels = []
-        self.reaction_scheme_files = []
+        self.reaction_files_1 = []
+        self.reaction_files_2 = []
+        self.reactors = []
         self.reacting = False
         self.dt_init = 1.0e-6
         self.cfl = 0.5
         # If dt_plot_list is still an empty list when we write
         # the parameter file, just use the max_time value for
-        # both dt_plot and dt_his.  Fill in later.
+        # both dt_plot and dt_his.  Fill in later, when necessary.
         self.dt_plot_list = []
         self.max_time = 1.0e-3
         self.max_step = 10
@@ -232,48 +236,43 @@ class GlobalConfig(object):
         Writes the configuration data to the specified file in JSON format.
         """
         global config, slugList, pistonList, diaphragmList
-        # [TODO] proper JSON format
-        fp.write("config = {\n")
-        fp.write('  title = %s\n' % self.title)
-        fp.write('  gas_model_files = %s\n' % self.gas_model_files)
-        fp.write('  reaction_scheme_files = %s\n' % self.reaction_scheme_files)
-        fp.write('  reacting = %s\n' % self.reacting)
-        fp.write('  max_time = %e\n' % self.max_time)
-        fp.write('  max_step = %d\n' % self.max_step)
-        fp.write('  dt_init = %e\n' % self.dt_init)
-        fp.write('  cfl = %e\n' % self.cfl)
-        fp.write('  x_order = %d\n' % self.x_order)
-        fp.write('  t_order = %d\n' % self.t_order)
+        #
+        fp.write('"config": {\n')
+        fp.write('  "title": "%s",\n' % self.title)
+        fp.write('  "gas_model_files": %s,\n' % json.dumps(self.gas_model_files))
+        fp.write('  "reaction_files_1": %s,\n' % json.dumps(self.reaction_files_1))
+        fp.write('  "reaction_files_2": %s,\n' % json.dumps(self.reaction_files_2))
+        fp.write('  "reacting": %s,\n' % json.dumps(self.reacting))
+        fp.write('  "max_time": %e,\n' % self.max_time)
+        fp.write('  "max_step": %d,\n' % self.max_step)
+        fp.write('  "dt_init": %e,\n' % self.dt_init)
+        fp.write('  "cfl": %e,\n' % self.cfl)
+        fp.write('  "x_order": %d,\n' % self.x_order)
+        fp.write('  "t_order": %d,\n' % self.t_order)
         #
         if len(config.dt_plot_list) == 0:
             # Since the user did not specify any, default to the end.
             self.add_dt_plot(0.0, config.max_time, config.max_time)
         n_dt_plot = len(self.dt_plot_list)
-        fp.write('  n_dt_plot = %d\n' % n_dt_plot)
-        fp.write('  t_change =');
-        for i in range(n_dt_plot):
-            fp.write(' %e' % config.dt_plot_list[i][0])
-        fp.write('\n')
-        fp.write('  dt_plot =');
-        for i in range(n_dt_plot):
-            fp.write(' %e' % config.dt_plot_list[i][1])
-        fp.write('\n')
-        fp.write('  dt_his =');
-        for i in range(n_dt_plot):
-            fp.write(' %e' % config.dt_plot_list[i][2])
-        fp.write('\n')
+        fp.write('  "n_dt_plot": %d,\n' % n_dt_plot)
+        tlist = [self.dt_plot_list[i][0] for i in range(n_dt_plot)]
+        fp.write('  "t_change": %s,\n' % json.dumps(tlist))
+        tlist = [self.dt_plot_list[i][1] for i in range(n_dt_plot)]
+        fp.write('  "dt_plot": %s,\n' % json.dumps(tlist))
+        tlist = [self.dt_plot_list[i][2] for i in range(n_dt_plot)]
+        fp.write('  "dt_his": %s,\n' % json.dumps(tlist))
         #
         n_hloc = len(config.hloc_list)
-        fp.write('  hloc_n = %d\n' % n_hloc)
-        fp.write('  hloc_x =')
-        for i in range(n_hloc):
-            fp.write(' %e' % config.hloc_list[i])
-        fp.write('\n')
+        fp.write('  "hloc_n": %d,\n' % n_hloc)
+        xlist = [self.hloc_list[i] for i in range(n_hloc)]
+        fp.write('  "hloc_x": %s,\n' % json.dumps(xlist))
         #
-        fp.write('  nslug = %d\n' % len(slugList))
-        fp.write('  npiston = %d\n' % len(pistonList))
-        fp.write('  ndiaphragm = %d\n' % len(diaphragmList))
-        fp.write('}\n')
+        fp.write('  "nslug": %d,\n' % len(slugList))
+        fp.write('  "npiston": %d,\n' % len(pistonList))
+        fp.write('  "ndiaphragm": %d,\n' % len(diaphragmList))
+        fp.write('  "nec": %d\n' % len(ecList))
+        # Note, no comma after last item inside JSON dict
+        fp.write('},\n') # comma here because not the last item in file
         return
     
 # We will create just one GlobalConfig object that the user can alter.
@@ -283,7 +282,7 @@ config = GlobalConfig()
 # The following functions are to provide convenient ways of setting
 # some of the GlobalConfig elements.
 
-def add_gas_model(fileName):
+def add_gas_model(fileName, reaction_file_1="", reaction_file_2=""):
     """
     Initialize and add a GasModel in the GlobalConfig list of gas models.
 
@@ -293,6 +292,17 @@ def add_gas_model(fileName):
     gmodel = GasModel(fileName)
     gmodel_id = len(config.gmodels)
     config.gmodels.append(gmodel)
+    config.gas_model_files.append(fileName)
+    #
+    # ThermochemicalReactor is always associated with a particular GasModel.
+    if reaction_file_1:
+        reactor = ThermochemicalReactor(gmodel, reaction_file_1, reaction_file_2)
+    else:
+        reactor = None
+    config.reactors.append(reactor)
+    config.reaction_files_1.append(reaction_file_1)
+    config.reaction_files_2.append(reaction_file_2)
+    #
     return gmodel_id
 
 
@@ -546,9 +556,9 @@ class GasSlug():
     __slots__ = 'indx', 'label', \
                 'gas', 'gmodel', 'gmodel_id', \
                 'vel', 'xL', 'xR', \
-                'bcL', 'bcR', \
+                'ecL', 'ecR', \
                 'nn', 'to_end_L', 'to_end_R', 'cluster_strength', \
-                'viscous_effects', 'adiabatic_flag', 'hcells', \
+                'viscous_effects', 'adiabatic', 'hcells', \
                 'ifxs'
         
     def __init__(self,
@@ -563,8 +573,8 @@ class GasSlug():
                  to_end_L=False,
                  to_end_R=False,
                  cluster_strength=0.0,
-                 viscous_effects=0, # several options, see Lp-file documentation
-                 adiabatic_flag=0,
+                 viscous_effects=0, # several options were available in L1d3
+                 adiabatic=False,
                  hcells=[],
                  ):
         """
@@ -599,7 +609,7 @@ class GasSlug():
             0 = inviscid equations only;
             1 = include viscous source terms F_wall, loss, q,
             friction factor for pipe flow;
-        :param adiabatic_flag: (int) Flag to indicate that there should
+        :param adiabatic: (bool) Flag to indicate that there should
             be no heat transfer at the tube wall.
         :param hcells: Either the index (int) of a single cell or 
             a list of indices of cells for which the data are 
@@ -628,7 +638,7 @@ class GasSlug():
         self.cluster_strength = cluster_strength
         #
         self.viscous_effects = viscous_effects
-        self.adiabatic_flag = adiabatic_flag
+        self.adiabatic = adiabatic
         if isinstance(hcells,int):
             self.hcells=[hcells,]
         elif isinstance(hcells,list):
@@ -639,8 +649,8 @@ class GasSlug():
         #
         # Boundary object at each end of the slug will be
         # attached later when the gas-path is assembled.
-        self.bcL = None
-        self.bcR = None
+        self.ecL = None
+        self.ecR = None
         # The spatial limits of the gas slug will be determined later,
         # from the boundary-condition objects.
         self.xL = None
@@ -655,22 +665,20 @@ class GasSlug():
     
     def write_config(self, fp):
         """
-        Writes the flow state information to the specified file.
+        Writes the configuration data in JSON format.
         """
-        # [TODO] JSON format
-        fp.write("[slug-%d]\n" % self.indx)
-        fp.write("  label = %s\n" % self.label)
-        fp.write("  nn = %d\n" % self.nn)
-        fp.write("  viscous_effects = %d\n" % self.viscous_effects)
-        fp.write("  adiabatic_flag = %d\n" % self.adiabatic_flag)
-        # fp.write("    BC_L_id = %d\n" % self.bcL.ecindx)
-        # fp.write("    BC_R_id = %d\n" % self.bcR.ecindx)
+        fp.write('"slug_%d": {\n' % self.indx)
+        fp.write('  "label": %s,\n' % json.dumps(self.label))
+        fp.write('  "nn": %d,\n' % self.nn)
+        fp.write('  "viscous_effects": %d,\n' % self.viscous_effects)
+        fp.write('  "adiabatic": %s,\n' % json.dumps(self.adiabatic))
+        fp.write('  "ecL_id": %d,\n' % self.ecL.ecindx)
+        fp.write('  "ecR_id": %d,\n' % self.ecR.ecindx)
         hncell = len(self.hcells)
-        fp.write("  hncell = %d\n" % hncell)
-        fp.write("  hxcell =")
-        for i in range(hncell):
-            fp.write(" %d" % self.hcells[i])
-        fp.write("\n")
+        fp.write('  "hncell": %d,\n' % hncell)
+        fp.write('  "hxcells": %s\n' % json.dumps(self.hcells))
+        # Note no comma after last item in JSON dict.
+        fp.write('},\n') # presume that this dict not the last
         return
 
     def construct_cells_and_faces(self):
@@ -727,7 +735,7 @@ class Piston():
                 'front_seal_f', 'front_seal_area', \
                 'back_seal_f', 'back_seal_area', \
                 'p_restrain', 'is_restrain', 'with_brakes', 'brakes_on', \
-                'x_buffer', 'hit_buffer'
+                'x_buffer', 'hit_buffer', 'ecL', 'ecR'
     
     def __init__(self, m, d, xL0, xR0, vel0,
                  front_seal_f=0.0, front_seal_area=0.0,
@@ -816,6 +824,11 @@ class Piston():
         self.x_buffer = x_buffer
         self.hit_buffer = hit_buffer
         #
+        # Connections to boundary conditions will be made later,
+        # the gas path is assembled.
+        self.ecL = None
+        self.ecR = None
+        #
         # The Piston objects need an identity that can be
         # transferred to the main simulation program.
         global pistonList
@@ -825,28 +838,33 @@ class Piston():
 
     def write_config(self, fp):
         """
-        Write the piston configuration data.
+        Writes the configuration data in JSON format.
         """
-        assert False, "[TODO] JSON format"
-        fp.write("  indx= %d\n" % self.indx)
-        fp.write("  label = %s\n" % self.label)
-        fp.write("  front_seal_f = %e\n" % self.front_seal_f)
-        fp.write("  front_seal_area = %e\n" % self.front_seal_area)
-        fp.write("  back_seal_f = %e\n" % self.back_seal_f)
-        fp.write("  back_seal_area = %e\n" % self.back_seal_area)
-        fp.write("  mass = %e\n" % self.m)
-        fp.write("  diameter = %e\n" % self.d)
-        fp.write("  length = %e\n" % self.L)
-        fp.write("  p_restrain = %e\n" % self.p_restrain)
-        fp.write("  x_buffer = %e\n" % self.x_buffer)
-        fp.write("  with_brakes = %d\n" % self.with_brakes)
+        fp.write('"piston_%d": {\n' % self.indx)
+        fp.write('  "label": %s,\n' % json.dumps(self.label))
+
+        fp.write('  "nn": %d,\n' % self.nn)
+        fp.write('  "front_seal_f": %e,\n' % self.front_seal_f)
+        fp.write('  "front_seal_area": %e,\n' % self.front_seal_area)
+        fp.write('  "back_seal_f": %e,\n' % self.back_seal_f)
+        fp.write('  "back_seal_area": %e,\n' % self.back_seal_area)
+        fp.write('  "mass": %e,\n' % self.mass)
+        fp.write('  "diameter": %e,\n' % self.diameter)
+        fp.write('  "length": %e,\n' % self.L)
+        fp.write('  "p_restrain": %e,\n' % self.p_restrain)
+        fp.write('  "x_buffer": %e,\n' % self.x_buffer)
+        fp.write('  "with_brakes": %s,\n' % json.dumps(self.with_brakes))
+        fp.write('  "ecL_id": %d,\n' % self.ecL.ecindx)
+        fp.write('  "ecR_id": %d\n' % self.ecR.ecindx)
+        # Note no comma after last item in JSON dict.
+        fp.write('},\n') # presume that this dict not the last
         return
 
     def write_data(self, fp):
         """
         Write state data.
         """
-        assert False, "[TODO] JSON format"
+        assert False, "[TODO] GNUPlot format"
         fp.write("  x0 = %e\n" % self.x0)
         fp.write("  vel0 = %e\n" % self.vel0)
         fp.write("  is_restrain = %d\n" % self.is_restrain)
@@ -863,23 +881,23 @@ class EndCondition():
     This class holds just the connection data.
     """
     __slots__ = 'ecindx', \
-                'slugL', 'slugL_which_end', \
-                'slugR', 'slugR_which_end', \
-                'pistonL', 'pistonL_which_face', \
-                'pistonR', 'pistonR_which_face'
-    def __init__(self, slugL=None, slugL_which_end='R',
-                 slugR=None, slugR_which_end='L',
-                 pistonL=None, pistonL_which_face='R',
-                 pistonR=None, pistonR_which_face='L'):
+                'slugL', 'slugL_end', \
+                'slugR', 'slugR_end', \
+                'pistonL', 'pistonL_face', \
+                'pistonR', 'pistonR_face'
+    def __init__(self, slugL=None, slugL_end='R',
+                 slugR=None, slugR_end='L',
+                 pistonL=None, pistonL_face='R',
+                 pistonR=None, pistonR_face='L'):
         # The following may be reassigned during assembly.
         self.slugL = slugL
-        self.slugL_which_end = slugL_which_end
+        self.slugL_end = slugL_end
         self.slugR = slugR
-        self.slugR_which_end = slugR_which_end
+        self.slugR_end = slugR_end
         self.pistonL = pistonL
-        self.pistonL_which_face = pistonL_which_face
+        self.pistonL_face = pistonL_face
         self.pistonR = pistonR
-        self.pistonR_which_face = pistonR_which_face
+        self.pistonR_face = pistonR_face
         #
         # The EndCondition objects need an identity that can be
         # transferred to the main simulation program.
@@ -889,24 +907,24 @@ class EndCondition():
         return
 
     def json_str(self):
-        text = "[TODO] JSON format"
+        myDict = {}
         indx = -1
         if self.slugL: indx = self.slugL.indx
-        print("  left-slug-id = %d\n" % indx)
-        print("  left-slug-end-id = %s\n" % self.slugL_which_end)
+        myDict["left-slug-id"] = indx
+        myDict["left-slug-end-id"] =self.slugL_end
         indx = -1
         if self.slugR: indx = self.slugR.indx
-        print("  right-slug-id = %d\n" % indx)
-        write("  right-slug-end-id = %s\n" % self.slugR_which_end)
+        myDict["right-slug-id"] = indx
+        myDict["right-slug-end-id"] = self.slugR_end
         indx = -1
         if self.pistonL: indx = self.pistonL.indx
-        print("  left-piston-id = %d\n" % indx)
-        print("  left-piston-face-id = %s\n" % self.pistonL_which_face)
+        myDict["left-piston-id"] = indx
+        myDict["left-piston-face-id"] = self.pistonL_face
         indx = -1
         if self.pistonR: indx = self.pistonR.indx
-        print("  right-piston-id = %d\n" % indx)
-        print("  right-piston-face-id = %s\n" % self.pistonR_which_face)
-        return text
+        myDict["right-piston-id"] = indx
+        myDict["right-piston-face-id"] = self.pistonR_face
+        return json.dumps(myDict)
 
     
 class Diaphragm(EndCondition):
@@ -921,8 +939,8 @@ class Diaphragm(EndCondition):
     
     def __init__(self, x0, p_burst, is_burst=0, dt_hold=0.0,
                  dxL=0.0, dxR=0.0, label="",
-                 slugL=None, slugL_which_end='R',
-                 slugR=None, slugR_which_end='L'):
+                 slugL=None, slugL_end='R',
+                 slugR=None, slugR_end='L'):
         """
         Creates a diaphragm with specified properties.
 
@@ -948,8 +966,8 @@ class Diaphragm(EndCondition):
         :param label: A (string) label that will appear in the parameter file
             for this diaphragm.
         """
-        super().__init__(slugL=slugL, slugL_which_end=slugL_which_end,
-                         slugR=slugR, slugR_which_end=slugR_which_end)
+        super().__init__(slugL=slugL, slugL_end=slugL_end,
+                         slugR=slugR, slugR_end=slugR_end)
         if len(label) > 0:
             self.label = label
         else:
@@ -969,14 +987,16 @@ class Diaphragm(EndCondition):
         """
         Writes the diaphragm information to the specified file.
         """
-        assert False, "[TODO] JSON format"
-        fp.write("[diaphragm-%d]\n" % self.indx)
-        fp.write("  connections= %s" % super().json_str())
-        fp.write("  label = %s\n" % self.label)
-        fp.write("  p_burst = %e\n" % self.p_burst)
-        fp.write("  dt_hold = %e\n" % self.dt_hold)
-        fp.write("  dxL = %e\n" % self.dxL)
-        fp.write("  dxR = %e\n" % self.dxR)
+        fp.write('"end_condition_%d" = {\n' % self.ecindx)
+        fp.write('  "class": %s,\n' % json.dumps(self.__class__.__name__))
+        fp.write('  "label": %s,\n' % json.dumps(self.label))
+        fp.write('  "x0": %e,\n' % self.x0)
+        fp.write('  "p_burst": %e,\n' % self.p_burst)
+        fp.write('  "dt_hold": %e,\n' % self.dt_hold)
+        fp.write('  "dxL": %e,\n' % self.dxL)
+        fp.write('  "dxR": %e,\n' % self.dxR)
+        fp.write('  "connections": %s,\n' % self.json_str())
+        fp.write('},\n')
         return
 
     def write_data(self, fp):
@@ -996,22 +1016,29 @@ class GasInterface(EndCondition):
     __slots__ = 'x0'
     
     def __init__(self, x0,
-                 slugL=None, slugL_which_end='R',
-                 slugR=None, slugR_which_end='L'):
+                 slugL=None, slugL_end='R',
+                 slugR=None, slugR_end='L'):
         """
         Creates as interface between two gas slugs at specified location.
 
         :param x0: (float) Initial position, in metres.
         """
-        super().__init__(slugL=slugL, slugL_which_end=slugL_which_end,
-                         slugR=slugR, slugR_which_end=slugR_which_end)
+        super().__init__(slugL=slugL, slugL_end=slugL_end,
+                         slugR=slugR, slugR_end=slugR_end)
         self.x0 = x0
         global interfaceList
         interfaceList.append(self)
         return
 
     def write_config(self, fp):
-        assert False, "[TODO] JSON format"
+        """
+        Write in JSON format.
+        """
+        fp.write('"end_condition_%d" = {\n' % self.ecindx)
+        fp.write('  "class": %s,\n' % json.dumps(self.__class__.__name__))
+        fp.write('  "x0": %e,\n' % self.x0)
+        fp.write('  "connections": %s,\n' % self.json_str())
+        fp.write('},\n')
         return
     
 
@@ -1023,15 +1050,15 @@ class FreeEnd(EndCondition):
     __slots__ = 'x0'
     
     def __init__(self, x0,
-                 slugL=None, slugL_which_end='R',
-                 slugR=None, slugR_which_end='L'):
+                 slugL=None, slugL_end='R',
+                 slugR=None, slugR_end='L'):
         """
         Creates a GasSlug end-condition with a specified location.
 
         :param x0: (float) Initial position, in metres.
         """
-        super().__init__(slugL=slugL, slugL_which_end=slugL_which_end,
-                         slugR=slugR, slugR_which_end=slugR_which_end)
+        super().__init__(slugL=slugL, slugL_end=slugL_end,
+                         slugR=slugR, slugR_end=slugR_end)
         self.x0 = x0
         global freeEndList
         freeEndList.append(self)
@@ -1039,7 +1066,14 @@ class FreeEnd(EndCondition):
         return
 
     def write_config(self, fp):
-        assert False, "[TODO] JSON format"
+        """
+        Write in JSON format.
+        """
+        fp.write('"end_condition_%d" = {\n' % self.ecindx)
+        fp.write('  "class": %s,\n' % json.dumps(self.__class__.__name__))
+        fp.write('  "x0": %e,\n' % self.x0)
+        fp.write('  "connections": %s,\n' % self.json_str())
+        fp.write('},\n')
         return
 
 
@@ -1053,16 +1087,16 @@ class VelocityEnd(EndCondition):
     __slots__ = 'x0', 'vel'
     
     def __init__(self, x0, vel=0.0,
-                 slugL=None, slugL_which_end='R',
-                 slugR=None, slugR_which_end='L'):
+                 slugL=None, slugL_end='R',
+                 slugR=None, slugR_end='L'):
         """
         Creates a GasSlug end-condition with a specified location and velocity.
 
         :param x0: (float) Initial position, in metres.
         :param v: (float) Velocity, in m/s, of the end-point of the GasSlug.
         """
-        super().__init__(slugL=slugL, slugL_which_end=slugL_which_end,
-                         slugR=slugR, slugR_which_end=slugR_which_end)
+        super().__init__(slugL=slugL, slugL_end=slugL_end,
+                         slugR=slugR, slugR_end=slugR_end)
         self.x0 = x0
         self.vel = vel
         global velocityEndList
@@ -1070,7 +1104,15 @@ class VelocityEnd(EndCondition):
         return
 
     def write_config(self, fp):
-        assert False, "[TODO] JSON format"
+        """
+        Write in JSON format.
+        """
+        fp.write('"end_condition_%d" = {\n' % self.ecindx)
+        fp.write('  "class": %s,\n' % json.dumps(self.__class__.__name__))
+        fp.write('  "x0": %e,\n' % self.x0)
+        fp.write('  "vel": %e,\n' % self.vel)
+        fp.write('  "connections": %s,\n' % self.json_str())
+        fp.write('},\n')
         return
 
 
@@ -1082,10 +1124,10 @@ class PistonFace(EndCondition):
     __slots__ = 'x0'
     
     def __init__(self,
-                 slugL=None, slugL_which_end='R',
-                 slugR=None, slugR_which_end='L',
-                 pistonL=None, pistonL_which_face='R',
-                 pistonR=None, pistonR_which_face='L'):
+                 slugL=None, slugL_end='R',
+                 slugR=None, slugR_end='L',
+                 pistonL=None, pistonL_face='R',
+                 pistonR=None, pistonR_face='L'):
         """
         Creates a GasSlug end-condition with a specified location
         and velocity.
@@ -1099,17 +1141,23 @@ class PistonFace(EndCondition):
             raise Exception("Cannot have two gas slugs attached to a PistonFace.")
         if (pistonL): x0 = pistonL.xR
         if (pistonR): x0 = pistonR.xL
-        super().__init__(slugL=slugL, slugL_which_end=slugL_which_end,
-                         slugR=slugR, slugR_which_end=slugR_which_end,
-                         pistonL=pistonR, pistonL_which_face=pistonL_which_face,
-                         pistonR=pistonR, pistonR_which_face=pistonR_which_face)
+        super().__init__(slugL=slugL, slugL_end=slugL_end,
+                         slugR=slugR, slugR_end=slugR_end,
+                         pistonL=pistonR, pistonL_face=pistonL_face,
+                         pistonR=pistonR, pistonR_face=pistonR_face)
         global pistonFaceList
         pistonFaceList.append(self)
         return
 
     def write_config(self, fp):
-        assert False, "[TODO] JSON format"
-        fp.write(super().json_str())
+        """
+        Write in JSON format.
+        """
+        fp.write('"end_condition_%d" = {\n' % self.ecindx)
+        fp.write('  "class": %s,\n' % json.dumps(self.__class__.__name__))
+        fp.write('  "x0": %e,\n' % self.x0)
+        fp.write('  "connections": %s,\n' % self.json_str())
+        fp.write('},\n')
         return
 
 # --------------------------------------------------------------------
@@ -1145,8 +1193,8 @@ def assemble_gas_path(*components):
     # we can locate the ends of the gas slugs.
     for c in components:
         if isinstance(c, GasSlug):
-            c.xL = c.bcL.x0
-            c.xR = c.bcR.x0
+            c.xL = c.ecL.x0
+            c.xR = c.ecR.x0
     return
 
 
@@ -1163,65 +1211,65 @@ def connect_pair(cL, cR):
           " R:", cR.__class__.__name__)
 
     if isinstance(cL,VelocityEnd) and isinstance(cR, GasSlug):
-        cR.bcL = cL
+        cR.ecL = cL
         cL.slugR = cR
-        cL.slugR_which_end = 'L'
+        cL.slugR_end = 'L'
         print("  velocity-end <--> gas-slug is done")
     elif isinstance(cL,FreeEnd) and isinstance(cR, GasSlug):
-        cR.bcL = cL
+        cR.ecL = cL
         cL.slugR = cR
-        cL.slugR_which_end = 'L'
+        cL.slugR_end = 'L'
         print("  free-end <--> gas-slug is done")
     elif isinstance(cL,GasInterface) and isinstance(cR, GasSlug):
-        cR.bcL = cL
+        cR.ecL = cL
         cL.slugR = cR
-        cL.slugR_which_end = 'L'
+        cL.slugR_end = 'L'
         print("  gas-interface <--> gas-slug is done")
     elif isinstance(cL,Piston) and isinstance(cR, GasSlug):
-        pf = PistonFace(pistonL=cL, pistonL_which_face='R',
-                        slugR=cR, slugR_which_end='L')
-        cL.bcR = pf
-        cR.bcL = pf
+        pf = PistonFace(pistonL=cL, pistonL_face='R',
+                        slugR=cR, slugR_end='L')
+        cL.ecR = pf
+        cR.ecL = pf
     elif isinstance(cL,PistonFace) and isinstance(cR, GasSlug):
         cL.slugR = cR
-        cL.slugR_which_end = 'L'
-        cR.bcL = cL
+        cL.slugR_end = 'L'
+        cR.ecL = cL
         print("  piston-face <--> gas-slug is done")
     elif isinstance(cL,Diaphragm) and isinstance(cR, GasSlug):
         cL.slugR = cR
-        cL.slugR_which_end = 'L'
-        cR.bcL = cL
+        cL.slugR_end = 'L'
+        cR.ecL = cL
         print("  diaphragm <--> gas-slug is done")
     elif isinstance(cL,GasSlug) and isinstance(cR, VelocityEnd):
-        cL.bcR = cR
+        cL.ecR = cR
         cR.slugL = cL
-        cR.slugL_which_end = 'R'
+        cR.slugL_end = 'R'
         print("  gas-slug <--> velocity-end is done")
     elif isinstance(cL,GasSlug) and isinstance(cR, FreeEnd):
-        cL.bcR = cR
+        cL.ecR = cR
         cR.slugL = cL
-        cR.slugL_which_end = 'L'
+        cR.slugL_end = 'L'
         print("  gas-slug <--> free-end is done")
     elif isinstance(cL,GasSlug) and isinstance(cR, GasInterface):
-        cL.bcR = cR
+        cL.ecR = cR
         cL.xR = cR.x0
         cR.slugL = cL
-        cR.slugL_which_end = 'L'
+        cR.slugL_end = 'L'
         print("  gas-slug <--> gas-interface is done")
     elif isinstance(cL,GasSlug) and isinstance(cR, Piston):
-        pf = PistonFace(pistonR=cR, pistonR_which_face='L',
-                        slugL=cL, slugL_which_end='R')
-        cL.bcR = pf
-        cR.bcL = pf
+        pf = PistonFace(pistonR=cR, pistonR_face='L',
+                        slugL=cL, slugL_end='R')
+        cL.ecR = pf
+        cR.ecL = pf
     elif isinstance(cL,GasSlug) and isinstance(cR, PistonFace):
-        cL.bcR = cR
+        cL.ecR = cR
         cR.slugL = cL
-        cR.slugL_which_end = 'R'
+        cR.slugL_end = 'R'
         print("  gas-slug <--> piston-face is done")
     elif isinstance(cL,GasSlug) and isinstance(cR, Diaphragm):
-        cL.bcR = cR
+        cL.ecR = cR
         cR.slugL = cL
-        cR.slugL_which_end = 'R'
+        cR.slugL_end = 'R'
         print("  gas-slug <--> diaphragm is done")
     else:
         raise Exception("  Invalid pair to connect.")
@@ -1247,6 +1295,9 @@ def write_initial_files():
     for slug in slugList: slug.write_config(fp)
     for piston in pistonList: piston.write_config(fp)
     for diaphragm in diaphragmList: diaphragm.write_config(fp)
+    for ec in ecList: ec.write_config(fp)
+    # Previous entries all presume that they are not the last.
+    fp.write('"dummy_item": 0\n')
     fp.write('}\n')
     fp.close()
     #
