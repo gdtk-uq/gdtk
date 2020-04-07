@@ -39,9 +39,9 @@ Here is an example script for the Sod shock-tube problem::
     
     # Create the gas-path.
     left_wall = VelocityEnd(x0=0.0, vel=0.0)
-    driver_gas = GasSlug(p=100.0e3, vel=0.0, T=348.4, gmodel_id=my_gm, nn=200)
+    driver_gas = GasSlug(p=100.0e3, vel=0.0, T=348.4, gmodel_id=my_gm, ncells=200)
     interface = GasInterface(x0=0.5)
-    driven_gas = GasSlug(p=10.0e3, vel=0.0, T=278.7, gmodel_id=my_gm, nn=100)
+    driven_gas = GasSlug(p=10.0e3, vel=0.0, T=278.7, gmodel_id=my_gm, ncells=100)
     right_wall = VelocityEnd(x0=1.0, vel=0.0)
     assemble_gas_path(left_wall, driver_gas, interface, driven_gas, right_wall)
     
@@ -380,7 +380,8 @@ class Tube(object):
     """
     count = 0
 
-    __slots__ = 'n', 'x_list', 'd_list', 'T_nominal', 'T_patch_list', 'loss_region_list'
+    __slots__ = 'n', 'x_list', 'd_list', 'T_nominal', 'T_patch_list', 'loss_region_list', \
+                'xs', 'ds', 'K_over_Ls', 'Ts'
     
     def __init__(self):
         """Accepts user-specified data and sets defaults. Make one only."""
@@ -404,49 +405,77 @@ class Tube(object):
         Tube.count += 1
         return
 
+    def set_up_tables(self):
+        """
+        Set up the lists that define the "discretized" tube.
+        """
+        nsegments = len(self.x_list) - 1
+        assert len(self.d_list) == nsegments+1, "Mismatch in tube.x_list, tube.d_list lengths."
+        if nsegments < 1:
+            raise Exception("You did not specify at least two points in your tube.")
+        self.xs = np.linspace(tube.x_list[0], tube.x_list[-1], num=tube.n+1)
+        self.ds = []
+        for x in self.xs:
+            iseg = nsegments
+            for i in range(nsegments):
+                if x <= self.x_list[i]:
+                    iseg = i
+                    break
+            # Have selected the segment containing x.
+            frac = (x - self.x_list[iseg-1]) / (self.x_list[iseg] - self.x_list[iseg-1])
+            d = (1.0-frac)*self.d_list[iseg-1] + frac*self.d_list[iseg]
+            self.ds.append(d)
+        #
+        self.K_over_Ls = []
+        for x in self.xs:
+            value = 0.0
+            for region in self.loss_region_list:
+                xL = region['xL']; xR = region['xR']
+                if x >= xL and x <= xR: value = region['K']/(xR-xL)
+            self.K_over_Ls.append(value)
+        #
+        self.Ts = []
+        for x in self.xs:
+            value = self.T_nominal
+            for region in self.T_patch_list:
+                xL = region['xL']; xR = region['xR']
+                if x >= xL and x <= xR: value = region['T']
+            self.Ts.append(value)
+        #
+        return
+
+    def eval(self, x):
+        """
+        Computes tube cross-section properties at position x.
+        """
+        if x <= self.xs[0]:
+            d = self.ds[0]
+            K_over_L = self.K_over_Ls[0]
+            Twall = self.Ts[0]
+        elif x >= self.xs[-1]:
+            d = self.ds[-1]
+            K_over_L = self.K_over_Ls[-1]
+            Twall = self.Ts[-1]
+        else:
+            dx = self.xs[1] - self.xs[0]
+            i = int((x - self.xs[0])/dx)
+            frac = (x - self.xs[i])/dx
+            d = (1.0-frac)*self.ds[i] + frac*self.ds[i+1]
+            K_over_L = (1.0-frac)*self.K_over_Ls[i] + frac*self.K_over_Ls[i+1]
+            Twall = (1.0-frac)*self.Ts[i] + frac*self.Ts[i+1]
+        area = math.pi*(d**2)/4
+        return (d, area, K_over_L, Twall)
+    
     def write(self, fp):
         """
         Writes the tube specification to the specified file, in small steps.
         """
-        global tube
-        nsegments = len(tube.x_list) - 1
-        assert len(tube.d_list) == nsegments+1, "Mismatch in tube.x_list, tube.d_list lengths."
-        if nsegments < 1:
-            raise Exception("You did not specify at least two points in your tube.")
-        xs = np.linspace(tube.x_list[0], tube.x_list[-1], num=tube.n+1)
-        ds = []
-        for x in xs:
-            iseg = nsegments
-            for i in range(nsegments):
-                if x <= tube.x_list[i]:
-                    iseg = i
-                    break
-            # Have selected the segment containing x.
-            frac = (x - tube.x_list[iseg-1]) / (tube.x_list[iseg] - tube.x_list[iseg-1])
-            d = (1.0-frac)*tube.d_list[iseg-1] + frac*tube.d_list[iseg]
-            ds.append(d)
-        #
-        K_over_Ls = []
-        for x in xs:
-            value = 0.0
-            for region in tube.loss_region_list:
-                xL = region['xL']; xR = region['xR']
-                if x >= xL and x <= xR: value = region['K']/(xR-xL)
-            K_over_Ls.append(value)
-        #
-        Ts = []
-        for x in xs:
-            value = tube.T_nominal
-            for region in tube.T_patch_list:
-                xL = region['xL']; xR = region['xR']
-                if x >= xL and x <= xR: value = region['T']
-            Ts.append(value)
-        #
-        fp.write('# n= %d\n' % tube.n)
+        fp.write('# n= %d\n' % self.n) # n+1 points along tube to follow
         fp.write('# 1:x,m  2:d,m  3:area,m^2  4:K_over_L,1/m  5:Twall,K\n')
-        for i in range(len(xs)):
+        for i in range(len(self.xs)):
             fp.write('%e %e %e %e %e\n' %
-                     (xs[i], ds[i], math.pi*(ds[i]**2)/4, K_over_Ls[i], Ts[i]))
+                     (self.xs[i], self.ds[i], math.pi*(self.ds[i]**2)/4,
+                      self.K_over_Ls[i], self.Ts[i]))
         return
     
 # We will create just one Tube object that the user can alter.
@@ -557,7 +586,7 @@ class GasSlug():
                 'gas', 'gmodel', 'gmodel_id', \
                 'vel', 'xL', 'xR', \
                 'ecL', 'ecR', \
-                'nn', 'to_end_L', 'to_end_R', 'cluster_strength', \
+                'ncells', 'to_end_L', 'to_end_R', 'cluster_strength', \
                 'viscous_effects', 'adiabatic', 'hcells', \
                 'ifxs'
         
@@ -569,7 +598,7 @@ class GasSlug():
                  T_modes = [],
                  massf = [1.0,],
                  label="",
-                 nn = 10,
+                 ncells = 10,
                  to_end_L=False,
                  to_end_R=False,
                  cluster_strength=0.0,
@@ -597,7 +626,7 @@ class GasSlug():
             The number of mass fraction values should match the number 
             of species expected by the selected gas model.
         :param label: Optional (string) label for the gas slug.
-        :param nn: (int) Number of cells within the gas slug.
+        :param ncells: (int) Number of cells within the gas slug.
         :param to_end_L: (bool) Flag to indicate that cells should 
             be clustered to the left end.
         :param to_end_R: (bool) Flag to indicate that cells should
@@ -614,7 +643,7 @@ class GasSlug():
         :param hcells: Either the index (int) of a single cell or 
             a list of indices of cells for which the data are 
             to be written every dt_his seconds, as set by add_dt_plot.
-            Note that cells are indexed from 0 to nn-1.
+            Note that cells are indexed from 0 to ncells-1.
         """
         # Gas data related values
         self.gmodel_id = gmodel_id
@@ -632,7 +661,7 @@ class GasSlug():
         self.vel = vel
         self.label = label
         #
-        self.nn = nn
+        self.ncells = ncells
         self.to_end_L = to_end_L
         self.to_end_R = to_end_R
         self.cluster_strength = cluster_strength
@@ -669,7 +698,8 @@ class GasSlug():
         """
         fp.write('"slug_%d": {\n' % self.indx)
         fp.write('  "label": %s,\n' % json.dumps(self.label))
-        fp.write('  "nn": %d,\n' % self.nn)
+        fp.write('  "gmodel_id": %d,\n' % self.gmodel_id)
+        fp.write('  "ncells": %d,\n' % self.ncells)
         fp.write('  "viscous_effects": %d,\n' % self.viscous_effects)
         fp.write('  "adiabatic": %s,\n' % json.dumps(self.adiabatic))
         fp.write('  "ecL_id": %d,\n' % self.ecL.ecindx)
@@ -682,34 +712,56 @@ class GasSlug():
         return
 
     def construct_cells_and_faces(self):
-        self.ifxs = roberts.distribute_points_1(self.xL, self.xR, self.nn,
+        self.ifxs = roberts.distribute_points_1(self.xL, self.xR, self.ncells,
                                                 self.to_end_L, self.to_end_R,
                                                 self.cluster_strength)
         return
     
     def write_face_data(self, fp, tindx=0):
-        fp.write("# tindx %d\n" % tindx)
+        """
+        Write the initial state of all of the interfaces for the gas slug.
+        """
         if tindx == 0:
-            fp.write("# variables: \n")
-        # [TODO] finish it
-        fp.write("  initial_xL = %e\n" % self.xL)
-        fp.write("  initial_xR = %e\n" % self.xR)
+            fp.write("#   x   area\n")
+        fp.write("# tindx %d\n" % tindx)
+        for x in self.ifxs:
+            d, area, K_over_L, Twall = tube.eval(x)
+            fp.write("%e %e\n" % (x, area))
         fp.write("# end\n")
         return
 
     def write_cell_data(self, fp, tindx=0):
-        fp.write("# tindx %d\n" % tindx)
+        """
+        Write the initial state of the cells within the gas slug in GNUPlot format.
+        """
+        nsp = self.gmodel.n_species
+        nmodes = self.gmodel.n_modes
         if tindx == 0:
-            fp.write("# variables: \n")
-        # [TODO] finish it
-        fp.write("  initial_p = %e\n" % self.gas.p)
-        fp.write("  initial_vel = %e\n" % self.vel)
-        fp.write("  initial_T = %e\n" % self.gas.T)
+            fp.write('# xmid  volume  vel  L_bar  rho  p  T  a  u')
+            fp.write('  shear_stress  heat_flux')
+            for i in range(nsp): fp.write('  massf[%d]' % i)
+            if nsp > 1: fp.write('  dt_chem')
+            for i in range(nmodes): fp.write('  T_modes[%d]  u_modes[%d]' % (i, i))
+            if nmodes > 0: fp.write('  dt_therm')
+            fp.write('\n')
+        fp.write("# tindx %d\n" % tindx)
+        L_bar = 0.0; dt_chem = -1.0; dt_therm = -1.0
+        shear_stress=0.0; heat_flux = 0.0
+        for j in range(self.ncells):
+            xmid = 0.5*(self.ifxs[j+1] + self.ifxs[j])
+            d, area, K_over_L, Twall = tube.eval(xmid)
+            volume = area * (self.ifxs[j+1] - self.ifxs[j])
+            fp.write('%e %e %e %e\n' % (xmid, volume, self.vel, L_bar))
+            fp.write(" %e %e %e %e\n" % (self.gas.rho, self.gas.p, self.vel, self.gas.T))
+            fp.write(" %e %e %e %e\n" % (self.gas.a, self.gas.u, shear_stress, heat_flux))
+            for i in range(nsp): fp.write(" %e" % (self.gas.massf[i]))
+            if nsp > 1: fp.write(' %e' % dt_chem)
+            for i in range(nmodes):
+                fp.write(' %e %e' % (self.gas.T_modes[i], self.gas.u_modes[i]))
+            if nmodes > 0: fp.write(' %e' % dt_therm)
+            fp.write("\n")
         nsp = self.gmodel.n_species
         fp.write("  massf =")
-        for i in range(nsp):
-            fp.write(" %e" % (self.gas.massf[i]))
-        fp.write("\n")
         fp.write("# end\n")
         return
 
@@ -842,8 +894,6 @@ class Piston():
         """
         fp.write('"piston_%d": {\n' % self.indx)
         fp.write('  "label": %s,\n' % json.dumps(self.label))
-
-        fp.write('  "nn": %d,\n' % self.nn)
         fp.write('  "front_seal_f": %e,\n' % self.front_seal_f)
         fp.write('  "front_seal_area": %e,\n' % self.front_seal_area)
         fp.write('  "back_seal_f": %e,\n' % self.back_seal_f)
@@ -860,16 +910,15 @@ class Piston():
         fp.write('},\n') # presume that this dict not the last
         return
 
-    def write_data(self, fp):
+    def write_data(self, fp, tindx=0):
         """
         Write state data.
         """
-        assert False, "[TODO] GNUPlot format"
-        fp.write("  x0 = %e\n" % self.x0)
-        fp.write("  vel0 = %e\n" % self.vel0)
-        fp.write("  is_restrain = %d\n" % self.is_restrain)
-        fp.write("  brakes_on = %d\n" % self.brakes_on)
-        fp.write("  hit_buffer = %d\n" % self.hit_buffer)
+        if tindx == 0:
+            fp.write("# tindx  x  vel  is_restrain  brakes_on  hit_buffer\n")
+        fp.write("%d %e %e %d %d %d\n" %
+                 (tindx, self.x0, self.vel0,
+                  self.is_restrain, self.brakes_on, self.hit_buffer))
         return
     
 #----------------------------------------------------------------------------
@@ -999,9 +1048,13 @@ class Diaphragm(EndCondition):
         fp.write('},\n')
         return
 
-    def write_data(self, fp):
-        assert False, "[TODO] GNUPlot format"
-        fp.write("    is_burst = %d\n" % self.is_burst)
+    def write_data(self, fp, tindx=0):
+        """
+        Write state data.
+        """
+        if tindx == 0:
+            fp.write("# is_burst \n")
+        fp.write("%d %d\n" % (tindx, self.is_burst))
         return
 
 
@@ -1301,6 +1354,7 @@ def write_initial_files():
     fp.write('}\n')
     fp.close()
     #
+    tube.set_up_tables()
     fp = open(config.job_name+'/tube.data', 'w')
     tube.write(fp)
     fp.close()
@@ -1309,24 +1363,30 @@ def write_initial_files():
         slug.construct_cells_and_faces()
         fileName = config.job_name + ('/slug-%04d-faces.data' % slug.indx) 
         fp = open(fileName, 'w')
-        slug.write_face_data(fp)
+        slug.write_face_data(fp, 0)
         fp.close()
         fileName = config.job_name + ('/slug-%04d-cells.data' %  slug.indx) 
         fp = open(fileName, 'w')
-        slug.write_cell_data(fp)
+        slug.write_cell_data(fp, 0)
         fp.close()
     #
     for piston in pistonList:
         fileName = config.job_name + ('/piston-%04d.data' % piston.indx) 
         fp = open(fileName, 'w')
-        piston.write_data(fp)
+        piston.write_data(fp, 0)
         fp.close()
     #
     for diaphragm in diaphragmList:
         fileName = config.job_name + ('/diaphragm-%04d.data' % diaphragm.indx) 
         fp = open(fileName, 'w')
-        diaphragm.write_data(fp)
+        diaphragm.write_data(fp, 0)
         fp.close()
+    #
+    fileName = config.job_name + '/times.data'
+    fp = open(fileName, 'w')
+    fp.write('# tindx time\n')
+    fp.write('%d %e\n' % (0, 0.0))
+    fp.close()
     #
     print("End write initial files.")
     return
