@@ -1034,7 +1034,7 @@ class Diaphragm(EndCondition):
         """
         Writes the diaphragm information to the specified file.
         """
-        fp.write('"end_condition_%d" = {\n' % self.ecindx)
+        fp.write('"end_condition_%d": {\n' % self.ecindx)
         fp.write('  "class": %s,\n' % json.dumps(self.__class__.__name__))
         fp.write('  "label": %s,\n' % json.dumps(self.label))
         fp.write('  "x0": %e,\n' % self.x0)
@@ -1085,7 +1085,7 @@ class GasInterface(EndCondition):
         """
         Write in JSON format.
         """
-        fp.write('"end_condition_%d" = {\n' % self.ecindx)
+        fp.write('"end_condition_%d": {\n' % self.ecindx)
         fp.write('  "class": %s,\n' % json.dumps(self.__class__.__name__))
         fp.write('  "x0": %e,\n' % self.x0)
         fp.write('  "connections": %s\n' % self.json_str()) # no comma for last item
@@ -1120,7 +1120,7 @@ class FreeEnd(EndCondition):
         """
         Write in JSON format.
         """
-        fp.write('"end_condition_%d" = {\n' % self.ecindx)
+        fp.write('"end_condition_%d": {\n' % self.ecindx)
         fp.write('  "class": %s,\n' % json.dumps(self.__class__.__name__))
         fp.write('  "x0": %e,\n' % self.x0)
         fp.write('  "connections": %s\n' % self.json_str()) # no comma for last item
@@ -1158,7 +1158,7 @@ class VelocityEnd(EndCondition):
         """
         Write in JSON format.
         """
-        fp.write('"end_condition_%d" = {\n' % self.ecindx)
+        fp.write('"end_condition_%d": {\n' % self.ecindx)
         fp.write('  "class": %s,\n' % json.dumps(self.__class__.__name__))
         fp.write('  "x0": %e,\n' % self.x0)
         fp.write('  "vel": %e,\n' % self.vel)
@@ -1204,7 +1204,7 @@ class PistonFace(EndCondition):
         """
         Write in JSON format.
         """
-        fp.write('"end_condition_%d" = {\n' % self.ecindx)
+        fp.write('"end_condition_%d": {\n' % self.ecindx)
         fp.write('  "class": %s,\n' % json.dumps(self.__class__.__name__))
         fp.write('  "x0": %e,\n' % self.x0)
         fp.write('  "connections": %s\n' % self.json_str()) # no comma for last item

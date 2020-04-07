@@ -1,5 +1,6 @@
 // main.d for the Lagrangian 1D Gas Dynamics, also known as L1d4.
 //
+// PA Jacobs
 // 2020-04-05 Minimal code.
 // The intention today is that we build just enough to run
 // the Sod shock tube and David Gildfind's expanding test gas.
@@ -12,10 +13,8 @@ import std.path;
 import std.getopt;
 import std.conv;
 
-import geom;
-import gas;
-import gasflow;
 import config;
+import simcore;
 
 int main(string[] args)
 {
@@ -25,18 +24,15 @@ int main(string[] args)
     // Be careful when editing them and try to limit the line length
     // to something that is likely to easily fit on a console,
     // say 80 characters.
-    string briefUsageMsg = "Usage: l1d4... [OPTION]...
+    string briefUsageMsg = "Usage: l1d4-run... [OPTION]...
 Top-level arguments include the following.
 Argument:                            Comment:
 --------------------------------------------------------------------------------
   --job=<string>                     file names built from this string
-  --prep                             prepare config, grid and flow files
-  --run                              run the simulation over time
-  --post                             post-process simulation data
+  --tindx=<int>                      time index of the starting data (default 0)
   --help                             writes this help message
 --------------------------------------------------------------------------------
-For a more detailed help message, use --help or view the online help at
-http://cfcfd.mechmining.uq.edu.au/l1d/";
+";
     //
     if ( args.length < 2 ) {
         writeln("Too few arguments.");
@@ -48,17 +44,15 @@ http://cfcfd.mechmining.uq.edu.au/l1d/";
     //
     string jobName = "";
     int verbosityLevel = 1; // default to having a little information
-    bool prepFlag = false;
+    int tindxStart = 0;
     bool runFlag = false;
-    bool postFlag = false;
     bool helpWanted = false;
     try {
         getopt(args,
                "job", &jobName,
                "verbosity", &verbosityLevel,
-               "prep", &prepFlag,
                "run", &runFlag,
-               "post", &postFlag,
+               "tindx", &tindxStart,
                "help", &helpWanted
                );
     } catch (Exception e) {
@@ -91,8 +85,8 @@ http://cfcfd.mechmining.uq.edu.au/l1d/";
     if (jobName.length > 0) {
         // Clean up the jobName, by removing any extension or path details, if necessary.
         string ext = extension(jobName);
-        if (!ext.empty && ext != ".lua") {
-            writeln("If you are going to supply an extension for your job name, it needs to be \".lua\"");
+        if (!ext.empty && ext != ".py") {
+            writeln("If you are going to supply an extension for your job name, it needs to be \".py\"");
             exitFlag = 1;
             return exitFlag;
         }
@@ -110,15 +104,6 @@ http://cfcfd.mechmining.uq.edu.au/l1d/";
         }
     }
 
-    if (prepFlag) {
-        if (jobName.length == 0) {
-            writeln("Need to specify a job name.");
-            writeln(briefUsageMsg);
-            exitFlag = 1;
-            return exitFlag;
-        }
-    } // end if prepFlag
-
     if (runFlag) {
         if (jobName.length == 0) {
             writeln("Need to specify a job name.");
@@ -126,13 +111,13 @@ http://cfcfd.mechmining.uq.edu.au/l1d/";
             exitFlag = 1;
             return exitFlag;
         }
-        L1dConfig.base_file_name = jobName;
+        L1dConfig.job_name = jobName;
         L1dConfig.verbosity_level = verbosityLevel;
+        
+        init_simulation(tindxStart);
+        
         if (verbosityLevel > 0) { writeln("Done simulation."); }
     } // end if runFlag
-
-    if (postFlag) {
-    } // end if postFlag
 
     return exitFlag;
 } // end main

@@ -4,6 +4,7 @@
 module config;
 
 final class L1dConfig {
+public:
     shared static int verbosity_level = 1;
     // Messages have a hierarchy:
     // 0 : only error messages will be omitted
@@ -11,5 +12,5 @@ final class L1dConfig {
     // 2 : plus verbose init messages
     // 3 : plus verbose boundary condition messages
     //
-    shared static string base_file_name = "job"; // Change this to suit at run time.
+    shared static string job_name = "job"; // Change this to suit at run time.
 }
