@@ -15,7 +15,6 @@ import std.typecons;
 import core.stdc.stdlib : exit;
 import std.json;
 import std.file;
-import std.conv;
 import std.array;
 import std.format;
 
