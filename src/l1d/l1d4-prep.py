@@ -737,7 +737,7 @@ class GasSlug():
         nsp = self.gmodel.n_species
         nmodes = self.gmodel.n_modes
         if tindx == 0:
-            fp.write('# xmid  volume  vel  L_bar  rho  p  T  a  u')
+            fp.write('# xmid  volume  vel  L_bar  rho  p  T  u  a')
             fp.write('  shear_stress  heat_flux')
             for i in range(nsp): fp.write('  massf[%d]' % i)
             if nsp > 1: fp.write('  dt_chem')
@@ -751,17 +751,15 @@ class GasSlug():
             xmid = 0.5*(self.ifxs[j+1] + self.ifxs[j])
             d, area, K_over_L, Twall = tube.eval(xmid)
             volume = area * (self.ifxs[j+1] - self.ifxs[j])
-            fp.write('%e %e %e %e\n' % (xmid, volume, self.vel, L_bar))
-            fp.write(" %e %e %e %e\n" % (self.gas.rho, self.gas.p, self.vel, self.gas.T))
-            fp.write(" %e %e %e %e\n" % (self.gas.a, self.gas.u, shear_stress, heat_flux))
-            for i in range(nsp): fp.write(" %e" % (self.gas.massf[i]))
+            fp.write('%e %e %e %e' % (xmid, volume, self.vel, L_bar))
+            fp.write(' %e %e %e %e' % (self.gas.rho, self.gas.p, self.gas.T, self.gas.u))
+            fp.write(' %e %e %e' % (self.gas.a, shear_stress, heat_flux))
+            for i in range(nsp): fp.write(' %e' % (self.gas.massf[i]))
             if nsp > 1: fp.write(' %e' % dt_chem)
             for i in range(nmodes):
                 fp.write(' %e %e' % (self.gas.T_modes[i], self.gas.u_modes[i]))
             if nmodes > 0: fp.write(' %e' % dt_therm)
-            fp.write("\n")
-        nsp = self.gmodel.n_species
-        fp.write("  massf =")
+            fp.write('\n')
         fp.write("# end\n")
         return
 
@@ -1044,7 +1042,7 @@ class Diaphragm(EndCondition):
         fp.write('  "dt_hold": %e,\n' % self.dt_hold)
         fp.write('  "dxL": %e,\n' % self.dxL)
         fp.write('  "dxR": %e,\n' % self.dxR)
-        fp.write('  "connections": %s,\n' % self.json_str())
+        fp.write('  "connections": %s\n' % self.json_str()) # no comma for last item
         fp.write('},\n')
         return
 
@@ -1090,7 +1088,7 @@ class GasInterface(EndCondition):
         fp.write('"end_condition_%d" = {\n' % self.ecindx)
         fp.write('  "class": %s,\n' % json.dumps(self.__class__.__name__))
         fp.write('  "x0": %e,\n' % self.x0)
-        fp.write('  "connections": %s,\n' % self.json_str())
+        fp.write('  "connections": %s\n' % self.json_str()) # no comma for last item
         fp.write('},\n')
         return
     
@@ -1125,7 +1123,7 @@ class FreeEnd(EndCondition):
         fp.write('"end_condition_%d" = {\n' % self.ecindx)
         fp.write('  "class": %s,\n' % json.dumps(self.__class__.__name__))
         fp.write('  "x0": %e,\n' % self.x0)
-        fp.write('  "connections": %s,\n' % self.json_str())
+        fp.write('  "connections": %s\n' % self.json_str()) # no comma for last item
         fp.write('},\n')
         return
 
@@ -1164,7 +1162,7 @@ class VelocityEnd(EndCondition):
         fp.write('  "class": %s,\n' % json.dumps(self.__class__.__name__))
         fp.write('  "x0": %e,\n' % self.x0)
         fp.write('  "vel": %e,\n' % self.vel)
-        fp.write('  "connections": %s,\n' % self.json_str())
+        fp.write('  "connections": %s\n' % self.json_str()) # no comma for last item
         fp.write('},\n')
         return
 
@@ -1209,7 +1207,7 @@ class PistonFace(EndCondition):
         fp.write('"end_condition_%d" = {\n' % self.ecindx)
         fp.write('  "class": %s,\n' % json.dumps(self.__class__.__name__))
         fp.write('  "x0": %e,\n' % self.x0)
-        fp.write('  "connections": %s,\n' % self.json_str())
+        fp.write('  "connections": %s\n' % self.json_str()) # no comma for last item
         fp.write('},\n')
         return
 
