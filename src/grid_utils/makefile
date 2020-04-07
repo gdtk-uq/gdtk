@@ -7,6 +7,15 @@ PLATFORM ?= linux
 INSTALL_DIR ?= $(HOME)/dgdinst
 BUILD_DIR := ../../build
 
+ifeq ($(DMD), dmd)
+    DFLAGS := -w -g -O -release -inline -boundscheck=off
+endif
+ifeq ($(DMD), ldmd2)
+    DFLAGS := -w -g -O -release -enable-inlining -boundscheck=off -ffast-math -flto=full -dip1008
+endif
+ifeq ($(DMD), ldc2)
+    DFLAGS := -w -g -O -release -enable-inlining -boundscheck=off -ffast-math -flto=full -dip1008
+endif
 PROGRAMS := ugrid_partition
 
 clean:
@@ -18,6 +27,6 @@ install: $(PROGRAMS)
 	cp -r $(BUILD_DIR)/bin/$(PROGRAMS) $(INSTALL_DIR)/bin
 
 ugrid_partition: ugrid_partition.d
-	$(DMD) -w -g -O -release -inline -boundscheck=off ugrid_partition.d	
+	$(DMD) $(DFLAGS) ugrid_partition.d	
 	cp $(PROGRAMS) $(BUILD_DIR)/bin/	
 
