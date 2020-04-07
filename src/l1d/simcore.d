@@ -11,6 +11,7 @@ import std.string;
 import std.json;
 import std.file;
 
+import json_helper;
 import geom;
 import gas;
 import gasflow;

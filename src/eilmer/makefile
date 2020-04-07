@@ -85,7 +85,7 @@ ifeq ($(WITH_COMPLEX_NUMBERS),1)
 endif
 
 EILMER_CORE_FILES := simcore.d \
-	fileutil.d json_helper.d \
+	fileutil.d \
 	fvcore.d fvcell.d fvvertex.d fvinterface.d \
 	fluxcalc.d onedinterp.d flowgradients.d lsqinterp.d limiters.d \
 	conservedquantities.d flowstate.d \
