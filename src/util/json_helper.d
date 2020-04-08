@@ -63,6 +63,20 @@ bool getJSONbool(JSONValue jsonData, string key, bool defaultValue)
     return value;
 } // end getJSONbool()
 
+string[] getJSONstringarray(JSONValue jsonData, string key, string[] defaultValue)
+{
+    string[] value;
+    try {
+        auto json_values = jsonData[key].array;
+        foreach (json_val; json_values) {
+            value ~= to!string(json_val.str);
+        }
+    } catch (Exception e) {
+        value = defaultValue;
+    }
+    return value;
+} // end getJSONstringarray()
+
 int[] getJSONintarray(JSONValue jsonData, string key, int[] defaultValue)
 {
     int[] value;
