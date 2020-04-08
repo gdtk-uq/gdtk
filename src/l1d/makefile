@@ -10,7 +10,7 @@ PLATFORM ?= linux
 
 PROGRAMS := l1d4-run l1d4-prep
 
-L1D_FILES := config.d simcore.d tube.d gasslug.d piston.d endcondition.d 
+L1D_FILES := config.d simcore.d tube.d gasslug.d lcell.d piston.d endcondition.d 
 
 LUA_MODULES := 
 

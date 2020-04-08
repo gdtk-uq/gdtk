@@ -7,7 +7,6 @@ module simcore;
 import std.conv;
 import std.stdio;
 import std.string;
-//import std.typecons;
 import std.json;
 import std.file;
 
@@ -106,17 +105,15 @@ void init_simulation(int tindx_start)
     //
     foreach (i; 0 .. L1dConfig.nslugs) {
         auto myData = jsonData[format("slug_%d", i)];
-        writeln("slug[", i, "] json=", myData);
-        gasslugs ~= new GasSlug();
-        // [TODO] config
+        size_t indx = gasslugs.length;
+        gasslugs ~= new GasSlug(indx, myData);
         // [TODO] initial state
     }
     //
     foreach (i; 0 .. L1dConfig.npistons) {
         auto myData = jsonData[format("piston_%d", i)];
-        writeln("piston[", i, "] json=", myData);
-        pistons ~= new Piston();
-        // [TODO] config
+        size_t indx = pistons.length;
+        pistons ~= new Piston(indx, myData);
         // [TODO] initial state
     }
     //

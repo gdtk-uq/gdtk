@@ -705,8 +705,8 @@ class GasSlug():
         fp.write('  "ecL_id": %d,\n' % self.ecL.ecindx)
         fp.write('  "ecR_id": %d,\n' % self.ecR.ecindx)
         hncell = len(self.hcells)
-        fp.write('  "hncell": %d,\n' % hncell)
-        fp.write('  "hxcells": %s\n' % json.dumps(self.hcells))
+        fp.write('  "nhcells": %d,\n' % len(self.hcells))
+        fp.write('  "hcells": %s\n' % json.dumps(self.hcells))
         # Note no comma after last item in JSON dict.
         fp.write('},\n') # presume that this dict not the last
         return
@@ -781,13 +781,13 @@ class Piston():
     """
 
     __slots__ = 'indx', 'label', \
-                'm', 'd', 'L', 'xL0', 'xR0', 'x0', 'vel0', \
+                'mass', 'diam', 'L', 'xL0', 'xR0', 'x0', 'vel0', \
                 'front_seal_f', 'front_seal_area', \
                 'back_seal_f', 'back_seal_area', \
                 'p_restrain', 'is_restrain', 'with_brakes', 'brakes_on', \
                 'x_buffer', 'hit_buffer', 'ecL', 'ecR'
     
-    def __init__(self, m, d, xL0, xR0, vel0,
+    def __init__(self, mass, diam, xL0, xR0, vel0,
                  front_seal_f=0.0, front_seal_area=0.0,
                  back_seal_f=0.0, back_seal_area=0.0,
                  p_restrain=0.0, is_restrain=0,    
@@ -797,8 +797,8 @@ class Piston():
         """
         Create a piston with specified properties.
             
-        :param m: (float) Mass in kg.
-        :param d: (float) Face diameter, metres.
+        :param mass: (float) Mass of piston in kg.
+        :param diam: (float) Face diameter, metres.
         :param xL0: (float) Initial position of left-end, metres.
             The initial position of the piston centroid is set
             midway between xL0 and xR0 while piston length is the
@@ -847,13 +847,8 @@ class Piston():
             the event file.
         :param label: (string) A bit of text for corresponding line in the Lp file.
         """
-        if len(label) > 0:
-            self.label = label
-        else:
-            # Construct a simple label.
-            self.label = 'piston-' + str(self.indx)
-        self.m = m
-        self.d = d
+        self.mass = mass
+        self.diam = diam
         if xR0 < xL0:
             # We would like the x-values to be increasing to the right
             # but we really don't care if the piston length is zero.
@@ -883,6 +878,11 @@ class Piston():
         # transferred to the main simulation program.
         global pistonList
         self.indx = len(pistonList) # next available index
+        if len(label) > 0:
+            self.label = label
+        else:
+            # Construct a simple label.
+            self.label = 'piston-' + str(self.indx)
         pistonList.append(self)
         return
 
@@ -892,18 +892,23 @@ class Piston():
         """
         fp.write('"piston_%d": {\n' % self.indx)
         fp.write('  "label": %s,\n' % json.dumps(self.label))
+        fp.write('  "mass": %e,\n' % self.mass)
+        fp.write('  "diameter": %e,\n' % self.diam)
+        fp.write('  "length": %e,\n' % self.L)
         fp.write('  "front_seal_f": %e,\n' % self.front_seal_f)
         fp.write('  "front_seal_area": %e,\n' % self.front_seal_area)
         fp.write('  "back_seal_f": %e,\n' % self.back_seal_f)
         fp.write('  "back_seal_area": %e,\n' % self.back_seal_area)
-        fp.write('  "mass": %e,\n' % self.mass)
-        fp.write('  "diameter": %e,\n' % self.diameter)
-        fp.write('  "length": %e,\n' % self.L)
         fp.write('  "p_restrain": %e,\n' % self.p_restrain)
         fp.write('  "x_buffer": %e,\n' % self.x_buffer)
         fp.write('  "with_brakes": %s,\n' % json.dumps(self.with_brakes))
-        fp.write('  "ecL_id": %d,\n' % self.ecL.ecindx)
-        fp.write('  "ecR_id": %d\n' % self.ecR.ecindx)
+        # It may be that the piston has only one face connected.
+        ecindx = -1
+        if self.ecL: ecindx = self.ecL.ecindx
+        fp.write('  "ecL_id": %d,\n' % ecindx)
+        ecindx = -1
+        if self.ecR: ecindx = self.ecR.ecindx
+        fp.write('  "ecR_id": %d\n' % ecindx)
         # Note no comma after last item in JSON dict.
         fp.write('},\n') # presume that this dict not the last
         return
@@ -1190,8 +1195,12 @@ class PistonFace(EndCondition):
             raise Exception("Cannot have two pistons attached to a PistonFace.")
         if (not slugL) and (not slugR):
             raise Exception("Cannot have two gas slugs attached to a PistonFace.")
-        if (pistonL): x0 = pistonL.xR
-        if (pistonR): x0 = pistonR.xL
+        if (pistonL):
+            self.x0 = pistonL.xR0
+        elif (pistonR):
+            self.x0 = pistonR.xL0
+        else:
+            raise Exception("Could not find a position of a piston face.")
         super().__init__(slugL=slugL, slugL_end=slugL_end,
                          slugR=slugR, slugR_end=slugR_end,
                          pistonL=pistonR, pistonL_face=pistonL_face,
@@ -1277,10 +1286,12 @@ def connect_pair(cL, cR):
         cL.slugR_end = 'L'
         print("  gas-interface <--> gas-slug is done")
     elif isinstance(cL,Piston) and isinstance(cR, GasSlug):
+        print("  constructing a new PistonFace")
         pf = PistonFace(pistonL=cL, pistonL_face='R',
                         slugR=cR, slugR_end='L')
         cL.ecR = pf
         cR.ecL = pf
+        print("  piston <--> piston-face <--> gas-slug connections done")
     elif isinstance(cL,PistonFace) and isinstance(cR, GasSlug):
         cL.slugR = cR
         cL.slugR_end = 'L'
@@ -1308,10 +1319,12 @@ def connect_pair(cL, cR):
         cR.slugL_end = 'L'
         print("  gas-slug <--> gas-interface is done")
     elif isinstance(cL,GasSlug) and isinstance(cR, Piston):
+        print("  constructing a new PistonFace")
         pf = PistonFace(pistonR=cR, pistonR_face='L',
                         slugL=cL, slugL_end='R')
         cL.ecR = pf
         cR.ecL = pf
+        print("  gas-slug <--> piston-face <--> piston connections done")
     elif isinstance(cL,GasSlug) and isinstance(cR, PistonFace):
         cL.ecR = cR
         cR.slugL = cL
