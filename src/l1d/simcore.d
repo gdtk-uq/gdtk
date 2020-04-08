@@ -102,8 +102,7 @@ void init_simulation(int tindx_start)
         writeln("  necs= ", L1dConfig.necs);
     }
     //
-    tube1 = new Tube();
-    // [TODO] tube datails
+    tube1 = new Tube(L1dConfig.job_name~"/tube.data");
     //
     foreach (i; 0 .. L1dConfig.nslugs) {
         auto myData = jsonData[format("slug_%d", i)];
