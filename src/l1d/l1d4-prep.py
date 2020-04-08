@@ -246,7 +246,7 @@ class GlobalConfig(object):
         fp.write('  "max_time": %e,\n' % self.max_time)
         fp.write('  "max_step": %d,\n' % self.max_step)
         fp.write('  "dt_init": %e,\n' % self.dt_init)
-        fp.write('  "cfl": %e,\n' % self.cfl)
+        fp.write('  "cfl_value": %e,\n' % self.cfl)
         fp.write('  "x_order": %d,\n' % self.x_order)
         fp.write('  "t_order": %d,\n' % self.t_order)
         #
@@ -260,17 +260,17 @@ class GlobalConfig(object):
         tlist = [self.dt_plot_list[i][1] for i in range(n_dt_plot)]
         fp.write('  "dt_plot": %s,\n' % json.dumps(tlist))
         tlist = [self.dt_plot_list[i][2] for i in range(n_dt_plot)]
-        fp.write('  "dt_his": %s,\n' % json.dumps(tlist))
+        fp.write('  "dt_hist": %s,\n' % json.dumps(tlist))
         #
         n_hloc = len(config.hloc_list)
         fp.write('  "hloc_n": %d,\n' % n_hloc)
         xlist = [self.hloc_list[i] for i in range(n_hloc)]
         fp.write('  "hloc_x": %s,\n' % json.dumps(xlist))
         #
-        fp.write('  "nslug": %d,\n' % len(slugList))
-        fp.write('  "npiston": %d,\n' % len(pistonList))
-        fp.write('  "ndiaphragm": %d,\n' % len(diaphragmList))
-        fp.write('  "nec": %d\n' % len(ecList))
+        fp.write('  "nslugs": %d,\n' % len(slugList))
+        fp.write('  "npistons": %d,\n' % len(pistonList))
+        fp.write('  "ndiaphragms": %d,\n' % len(diaphragmList))
+        fp.write('  "necs": %d\n' % len(ecList))
         # Note, no comma after last item inside JSON dict
         fp.write('},\n') # comma here because not the last item in file
         return

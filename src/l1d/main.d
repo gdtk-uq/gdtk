@@ -45,13 +45,11 @@ Argument:                            Comment:
     string jobName = "";
     int verbosityLevel = 1; // default to having a little information
     int tindxStart = 0;
-    bool runFlag = false;
     bool helpWanted = false;
     try {
         getopt(args,
                "job", &jobName,
                "verbosity", &verbosityLevel,
-               "run", &runFlag,
                "tindx", &tindxStart,
                "help", &helpWanted
                );
@@ -103,21 +101,19 @@ Argument:                            Comment:
             jobName = bn;
         }
     }
+    if (jobName.length == 0) {
+        writeln("Need to specify a job name.");
+        writeln(briefUsageMsg);
+        exitFlag = 1;
+        return exitFlag;
+    }
+    L1dConfig.job_name = jobName;
+    L1dConfig.verbosity_level = verbosityLevel;
 
-    if (runFlag) {
-        if (jobName.length == 0) {
-            writeln("Need to specify a job name.");
-            writeln(briefUsageMsg);
-            exitFlag = 1;
-            return exitFlag;
-        }
-        L1dConfig.job_name = jobName;
-        L1dConfig.verbosity_level = verbosityLevel;
+    // Get to work.
+    init_simulation(tindxStart);
         
-        init_simulation(tindxStart);
-        
-        if (verbosityLevel > 0) { writeln("Done simulation."); }
-    } // end if runFlag
+    if (verbosityLevel > 0) { writeln("Done simulation."); }
 
     return exitFlag;
 } // end main
