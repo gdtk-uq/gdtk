@@ -963,7 +963,7 @@ class EndCondition():
         indx = -1
         if self.slugL: indx = self.slugL.indx
         myDict["left-slug-id"] = indx
-        myDict["left-slug-end-id"] =self.slugL_end
+        myDict["left-slug-end-id"] = self.slugL_end
         indx = -1
         if self.slugR: indx = self.slugR.indx
         myDict["right-slug-id"] = indx
@@ -1203,7 +1203,7 @@ class PistonFace(EndCondition):
             raise Exception("Could not find a position of a piston face.")
         super().__init__(slugL=slugL, slugL_end=slugL_end,
                          slugR=slugR, slugR_end=slugR_end,
-                         pistonL=pistonR, pistonL_face=pistonL_face,
+                         pistonL=pistonL, pistonL_face=pistonL_face,
                          pistonR=pistonR, pistonR_face=pistonR_face)
         global pistonFaceList
         pistonFaceList.append(self)
@@ -1314,9 +1314,8 @@ def connect_pair(cL, cR):
         print("  gas-slug <--> free-end is done")
     elif isinstance(cL,GasSlug) and isinstance(cR, GasInterface):
         cL.ecR = cR
-        cL.xR = cR.x0
         cR.slugL = cL
-        cR.slugL_end = 'L'
+        cR.slugL_end = 'R'
         print("  gas-slug <--> gas-interface is done")
     elif isinstance(cL,GasSlug) and isinstance(cR, Piston):
         print("  constructing a new PistonFace")

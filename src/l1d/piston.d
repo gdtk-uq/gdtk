@@ -46,6 +46,7 @@ public:
         if (L1dConfig.verbosity_level >= 3) {
             writeln("construct piston[", indx, "] from json=", jsonData);
         }
+        this.indx = indx;
         label = getJSONstring(jsonData, "label", "");
         mass = getJSONdouble(jsonData, "mass", 0.0);
         diam = getJSONdouble(jsonData, "diam", 0.0);

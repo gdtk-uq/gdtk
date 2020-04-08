@@ -20,6 +20,7 @@ import simcore; // has the core data arrays
 
 class GasSlug {
 public:
+    size_t indx;
     string label;
     size_t gmodel_id;
     GasModel gmodel;
@@ -38,6 +39,7 @@ public:
         if (L1dConfig.verbosity_level >= 3) {
             writeln("construct slug[", indx, "] from json=", jsonData);
         }
+        this.indx = indx;
         label = getJSONstring(jsonData, "label", "");
         gmodel_id = getJSONint(jsonData, "gmodel_id", 0);
         gmodel = gmodels[gmodel_id];

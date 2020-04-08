@@ -27,6 +27,7 @@ __gshared static Tube tube1;
 __gshared static Piston[] pistons;
 __gshared static GasSlug[] gasslugs;
 __gshared static EndCondition[] ecs;
+__gshared static Diaphragm[] diaphragms;
 
 
 void init_simulation(int tindx_start)
@@ -119,10 +120,31 @@ void init_simulation(int tindx_start)
     //
     foreach (i; 0 .. L1dConfig.necs) {
         auto myData = jsonData[format("end_condition_%d", i)];
-        writeln("end-condition[", i, "] json=", myData);
-        // [TODO] need specific classes
-        ecs ~= new EndCondition();
-        // [TODO] if diaphragm, read initial state
+        string ecClass = getJSONstring(myData, "class", "");
+        size_t indx = ecs.length;
+        switch (ecClass) {
+        case "Diaphragm":
+            auto myDia = new Diaphragm(indx, myData);
+            ecs ~= myDia;
+            diaphragms ~= myDia;
+            break;
+        case "GasInterface":
+            ecs ~= new GasInterface(indx, myData);
+            break;
+        case "FreeEnd":
+            ecs ~= new FreeEnd(indx, myData);
+            break;
+        case "VelocityEnd":
+            ecs ~= new VelocityEnd(indx, myData);
+            break;
+        case "PistonFace":
+            ecs ~= new PistonFace(indx, myData);
+            break;
+        default:
+            string msg = text("Unknown EndCondition: ", ecClass);
+            throw new Exception(msg);
+        }
+        // [TODO] work through diaphragms and read their initial state
     }
     return;
-}
+} // end init_simulation()
