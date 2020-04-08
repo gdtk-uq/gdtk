@@ -9,6 +9,8 @@ import std.conv;
 import std.stdio;
 import std.string;
 import std.json;
+import std.format;
+import std.algorithm;
 
 import json_helper;
 import geom;
@@ -19,6 +21,7 @@ import tube;
 import gasslug;
 import piston;
 import simcore;
+import misc;
 
 enum End { L, R };
 
@@ -80,6 +83,7 @@ public:
     double dt_hold;
     double dxL;
     double dxR;
+    bool is_burst;
     
     this(size_t indx, JSONValue jsonData)
     {
@@ -100,6 +104,27 @@ public:
         }
     } // end constructor
     
+    void read_data(File fp, int tindx=0)
+    {
+        string text = fp.readln().chomp();
+        while (text.canFind("#")) { text = fp.readln().chomp(); }
+        string[] items = text.split();
+        int myTindx = to!int(items[0]);
+        while (myTindx < tindx) {
+            text = fp.readln().chomp();
+            items = text.split();
+            myTindx = to!int(items[0]);
+        }
+        // We should be at the line that contains the requested tindx.
+        is_burst = (to!int(items[1]) == 1);
+    } // end read_data()
+
+    void write_data(File fp, int tindx=0)
+    {
+        if (tindx == 0) { fp.writeln("# tindx  is_burst"); }
+        fp.writeln(format("%d %d", tindx, ((is_burst)?1:0)));
+    } // end write_data()
+
 } // end class Diaphragm
 
 

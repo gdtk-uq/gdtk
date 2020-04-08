@@ -1,4 +1,7 @@
 // gasslug.d for the Lagrangian 1D Gas Dynamics, also known as L1d4.
+//
+// The GasSlug is the principal dynamic component of a simulation.
+//
 // PA Jacobs
 // 2020-04-08
 //
@@ -8,6 +11,8 @@ import std.conv;
 import std.stdio;
 import std.string;
 import std.json;
+import std.format;
+import std.range;
 
 import json_helper;
 import geom;
@@ -17,6 +22,7 @@ import config;
 import lcell;
 import endcondition;
 import simcore; // has the core data arrays
+import misc;
 
 class GasSlug {
 public:
@@ -33,6 +39,9 @@ public:
     EndCondition ecR;
     size_t nhcells;
     size_t[] hcells;
+
+    LFace[] faces;
+    LCell[] cells;
 
     this(size_t indx, JSONValue jsonData)
     {
@@ -60,6 +69,94 @@ public:
             writeln("  ecL_id= ", ecL_id);
             writeln("  ecR_id= ", ecR_id);
             writeln("  hcells= ", hcells);
-        }        
-    }
-}
+        }
+        //
+        foreach (i; 0 .. ncells+1) { faces ~= new LFace(); }
+        foreach (i; 0 .. ncells) { cells ~= new LCell(gmodel); }
+    } // end constructor
+    
+    void read_face_data(File fp, int tindx=0)
+    {
+        skip_to_data_at_tindx(fp, tindx);
+        foreach (i; 0 .. ncells+1) {
+            string text = fp.readln().chomp();
+            text.formattedRead!"%e %e"(faces[i].x, faces[i].area);
+        }
+    } // end read_face_data
+
+    void write_face_data(File fp, int tindx=0)
+    {
+        if (tindx == 0) { fp.writeln("#   x   area"); }
+        fp.writeln(format("# tindx %d", tindx));
+        foreach (i; 0 .. ncells+1) {
+            fp.writeln(format("%e %e", faces[i].x, faces[i].area));
+        }
+        fp.writeln("# end");
+    } // end write_face_data()
+
+    void read_cell_data(File fp, int tindx=0)
+    {
+        skip_to_data_at_tindx(fp, tindx);
+        int nsp = gmodel.n_species;
+        int nmodes = gmodel.n_modes;
+        foreach (j; 0 .. ncells) {
+            LCell c = cells[j];
+            string text = fp.readln().chomp();
+            string[] items = text.split();
+            int k = 0;
+            c.xmid = to!double(items[k]); k++;
+            c.volume = to!double(items[k]); k++;
+            c.vel = to!double(items[k]); k++;
+            c.L_bar = to!double(items[k]); k++;
+            c.gas.rho = to!double(items[k]); k++;
+            c.gas.p = to!double(items[k]); k++;
+            c.gas.T = to!double(items[k]); k++;
+            c.gas.u = to!double(items[k]); k++;
+            c.gas.a = to!double(items[k]); k++;
+            c.shear_stress = to!double(items[k]); k++;
+            c.heat_flux = to!double(items[k]); k++;
+            foreach (i; 0 .. nsp) {
+                c.gas.massf[i] = to!double(items[k]); k++;
+            }
+            if (nsp > 1) { c.dt_chem = to!double(items[k]); k++; }
+            foreach (i; 0 .. nmodes) {
+                c.gas.T_modes[i] = to!double(items[k]); k++;
+                c.gas.u_modes[i] = to!double(items[k]); k++;
+            }
+            if (nmodes > 0) { c.dt_therm = to!double(items[k]); k++; }
+        }
+    } // end read_cell_data()
+
+    void write_cell_data(File fp, int tindx=0)
+    {
+        int nsp = gmodel.n_species;
+        int nmodes = gmodel.n_modes;
+        if (tindx == 0) {
+            fp.write("# xmid  volume  vel  L_bar  rho  p  T  u  a");
+            fp.write("  shear_stress  heat_flux");
+            foreach (i; 0 .. nsp) { fp.write(format("  massf[%d]", i)); }
+            if (nsp > 1) { fp.write("  dt_chem"); }
+            foreach (i; 0 .. nmodes) {
+                fp.write(format("  T_modes[%d]  u_modes[%d]", i, i));
+            }
+            if (nmodes > 0) { fp.write("  dt_therm"); }
+            fp.write("\n");
+        }
+        fp.writeln(format("# tindx %d", tindx));
+        foreach (j; 0 .. ncells) {
+            LCell c = cells[j];
+            fp.write(format("%e %e %e %e", c.xmid, c.volume, c.vel, c.L_bar));
+            fp.write(format(" %e %e %e %e", c.gas.rho, c.gas.p, c.gas.T, c.gas.u));
+            fp.write(format(" %e %e %e", c.gas.a, c.shear_stress, c.heat_flux));
+            foreach (i; 0 .. nsp) { fp.write(format(" %e", c.gas.massf[i])); }
+            if (nsp > 1) { fp.write(format(" %e", c.dt_chem)); }
+            foreach (i; 0 .. nmodes) {
+                fp.write(format(" %e %e", c.gas.T_modes[i], c.gas.u_modes[i]));
+            }
+            if (nmodes > 0) { fp.write(format(" %e", c.dt_therm)); }
+            fp.write("\n");
+        }
+        fp.writeln("# end");
+    } // end write_cell_data()
+    
+} // end class GasSlug

@@ -18,6 +18,7 @@ import gasflow;
 import config;
 import tube;
 import gasslug;
+import lcell;
 import piston;
 import endcondition;
 
@@ -108,14 +109,12 @@ void init_simulation(int tindx_start)
         auto myData = jsonData[format("slug_%d", i)];
         size_t indx = gasslugs.length;
         gasslugs ~= new GasSlug(indx, myData);
-        // [TODO] initial state
     }
     //
     foreach (i; 0 .. L1dConfig.npistons) {
         auto myData = jsonData[format("piston_%d", i)];
         size_t indx = pistons.length;
         pistons ~= new Piston(indx, myData);
-        // [TODO] initial state
     }
     //
     foreach (i; 0 .. L1dConfig.necs) {
@@ -144,7 +143,53 @@ void init_simulation(int tindx_start)
             string msg = text("Unknown EndCondition: ", ecClass);
             throw new Exception(msg);
         }
-        // [TODO] work through diaphragms and read their initial state
+    }
+    //
+    // Work through dynamic components and read their initial state.
+    foreach (i, s; gasslugs) {
+        if (L1dConfig.verbosity_level >= 1) {
+            writeln("Initial state of slug ", i);
+        }
+        string fileName = L1dConfig.job_name ~ format("/slug-%04d-faces.data", i);
+        File fp = File(fileName, "r");
+        s.read_face_data(fp, 0);
+        fp.close();
+        fileName = L1dConfig.job_name ~ format("/slug-%04d-cells.data", i);
+        fp = File(fileName, "r");
+        s.read_cell_data(fp, 0);
+        fp.close();
+        if (L1dConfig.verbosity_level >= 1) {
+            LFace f = s.faces[$-1];
+            LCell c = s.cells[$-1];
+            writeln(format("  face[%d] x=%e area=%e", s.faces.length-1, f.x, f.area));
+            writeln(format("  cell[%d] xmid=%e p=%e T=%e vel=%e",
+                           s.cells.length-1, c.xmid, c.gas.p, c.gas.T, c.vel));
+        }
+    }
+    foreach (i, p; pistons) {
+        if (L1dConfig.verbosity_level >= 1) {
+            writeln("Initial state of piston ", i);
+        }
+        string fileName = L1dConfig.job_name ~ format("/piston-%04d.data", i);
+        File fp = File(fileName, "r");
+        p.read_data(fp, 0);
+        fp.close();
+        if (L1dConfig.verbosity_level >= 1) {
+            writeln(format("  x=%e, vel=%e is_restrain=%s brakes_on=%s hit_buffer=%s",
+                           p.x, p.vel, p.is_restrain, p.brakes_on, p.hit_buffer));
+        }
+    }
+    foreach (i, dia; diaphragms) {
+        if (L1dConfig.verbosity_level >= 1) {
+            writeln("Initial state of diaphragm (at EndCondition index)", dia.indx);
+        }
+        string fileName = L1dConfig.job_name ~ format("/diaphragm-%04d.data", i);
+        File fp = File(fileName, "r");
+        dia.read_data(fp, 0);
+        fp.close();
+        if (L1dConfig.verbosity_level >= 1) {
+            writeln(format("  is_burst=%s", dia.is_burst));
+        }
     }
     return;
 } // end init_simulation()

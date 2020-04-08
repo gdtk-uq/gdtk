@@ -8,6 +8,8 @@ import std.conv;
 import std.stdio;
 import std.string;
 import std.json;
+import std.format;
+import std.algorithm;
 
 import json_helper;
 import geom;
@@ -15,6 +17,7 @@ import gas;
 import gasflow;
 import config;
 import endcondition;
+import misc;
 
 
 class Piston {
@@ -77,4 +80,33 @@ public:
         }
     } // end Piston constructor
 
+    void read_data(File fp, int tindx=0)
+    {
+        string text = fp.readln().chomp();
+        while (text.canFind("#")) { text = fp.readln().chomp(); }
+        string[] items = text.split();
+        int myTindx = to!int(items[0]);
+        while (myTindx < tindx) {
+            text = fp.readln().chomp();
+            items = text.split();
+            myTindx = to!int(items[0]);
+        }
+        // We should be at the line that contains the requested tindx.
+        x = to!double(items[1]);
+        vel = to!double(items[2]);
+        is_restrain = (to!int(items[3]) == 1);
+        brakes_on = (to!int(items[4]) == 1);
+        hit_buffer = (to!int(items[5]) == 1);
+    } // end read_data()
+
+    void write_data(File fp, int tindx=0)
+    {
+        if (tindx == 0) {
+            fp.writeln("# tindx  x  vel  is_restrain  brakes_on  hit_buffer");
+        }
+        fp.writeln(format("%d %e %e %d %d %d", tindx, x, vel,
+                          ((is_restrain)?1:0), ((brakes_on)?1:0),
+                          ((hit_buffer)?1:0)));
+    } // end write_data()
+    
 } // end class Piston
