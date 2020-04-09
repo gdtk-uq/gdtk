@@ -53,6 +53,12 @@ include $(KINETICS_DIR)/kinetics_files.mk
 GASDYN_DIR := ../gasdyn
 include $(GASDYN_DIR)/gasdyn_files.mk
 
+GEOM_DIR := ../geom
+include $(GEOM_DIR)/geom_files.mk
+
+GZIP_DIR := ../extern/gzip
+GZIP_FILES := $(GZIP_DIR)/gzip.d
+
 include gas_files.mk
 
 ifeq ($(DMD), dmd)
@@ -197,26 +203,26 @@ clean:
 gas-calc: luagas_model.d $(LIBLUA) $(GAS_FILES) $(GAS_LUA_FILES) \
 	$(NM_FILES) $(NM_LUA_FILES) $(UTIL_FILES) \
 	$(KINETICS_FILES) $(KINETICS_LUA_FILES) \
-	$(GASDYN_FILES) $(GASDYN_LUA_FILES) \
+	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(GEOM_FILES) $(GZIP_FILES) \
 	$(CEQ_SRC_FILES) $(LIBCEQ)
 	$(DMD) -c $(OF)gas_calc.o $(DVERSION)gas_calc $(DFLAGS) \
 		$(GAS_FILES) $(GAS_LUA_FILES) \
 		$(NM_FILES) $(NM_LUA_FILES) $(UTIL_FILES) \
 		$(KINETICS_FILES) $(KINETICS_LUA_FILES) \
-		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(CEQ_SRC_FILES)
+		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(CEQ_SRC_FILES) $(GEOM_FILES) $(GZIP_FILES)
 	$(DMD) $(OF)gas-calc $(DFLAGS) gas_calc.o \
 		ideal_air_fortran.o $(LIBCEQ) $(LIBLUA) \
 		$(DLINKFLAGS)
 
 libgas.so: gas_cwrap.d $(LIBLUA) $(GAS_FILES) $(KINETICS_FILES) \
 	$(NM_FILES) $(UTIL_FILES) $(GASDYN_FILES) \
-	$(CEQ_SRC_FILES) $(LIBCEQ) 
+	$(CEQ_SRC_FILES) $(LIBCEQ) $(GEOM_FILES) $(GZIP_FILES) 
 	$(DMD) -c gas_cwrap.d $(PIC) $(DFLAGS) -op \
 		$(GAS_FILES) $(KINETICS_FILES) $(GASDYN_FILES) $(NM_FILES) \
-		$(UTIL_FILES) $(CEQ_SRC_FILES)
+		$(UTIL_FILES) $(CEQ_SRC_FILES) $(GEOM_FILES) $(GZIP_FILES)
 	$(DMD) $(OF)libgas.so gas_cwrap.o $(DFLAGS) -op -shared \
 		$(GAS_FILES) $(KINETICS_FILES) $(GASDYN_FILES) $(NM_FILES) \
-		$(UTIL_FILES) $(CEQ_SRC_FILES) \
+		$(UTIL_FILES) $(CEQ_SRC_FILES) $(GEOM_FILES) $(GZIP_FILES) \
 		$(LIBCEQ) $(LIBLUA) \
 		-L-L=$(INSTALL_DIR)/lib $(DLINKFLAGS)
 
