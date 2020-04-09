@@ -220,7 +220,7 @@ libgas.so: gas_cwrap.d $(LIBLUA) $(GAS_FILES) $(KINETICS_FILES) \
 	$(DMD) -c gas_cwrap.d $(PIC) $(DFLAGS) -op \
 		$(GAS_FILES) $(KINETICS_FILES) $(GASDYN_FILES) $(NM_FILES) \
 		$(UTIL_FILES) $(CEQ_SRC_FILES) $(GEOM_FILES) $(GZIP_FILES)
-	$(DMD) $(OF)libgas.so gas_cwrap.o $(DFLAGS) -op -shared \
+	$(DMD) $(OF)libgas.so gas_cwrap.o $(PIC) $(DFLAGS) -op -shared \
 		$(GAS_FILES) $(KINETICS_FILES) $(GASDYN_FILES) $(NM_FILES) \
 		$(UTIL_FILES) $(CEQ_SRC_FILES) $(GEOM_FILES) $(GZIP_FILES) \
 		$(LIBCEQ) $(LIBLUA) \
