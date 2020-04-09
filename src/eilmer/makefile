@@ -404,6 +404,8 @@ clean:
 	- rm dgd-for-mech4480.tgz
 	- cd $(OPENMPI_DIR); make clean
 	- cd $(LUA_DIR); make clean
+	- cd $(GEOM_DIR); make clean
+	- cd $(GZIP_DIR); make clean
 	- cd $(GAS_DIR); make clean; rm libgas.a
 	- cd $(KINETICS_DIR); make clean
 	- cd $(GRID_DIR); make clean

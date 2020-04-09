@@ -6,7 +6,7 @@
 cd ${DGD_REPO}/src/gas
 #
 make clean
-if make DMD=ldmd2 install
+if make DMD=dmd install
 then
     echo "Build and install successful for loadable module."
 else

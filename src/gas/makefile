@@ -195,6 +195,8 @@ clean:
 	- cd $(LUA); make clean
 	- cd $(CEQ_DIR); make clean
 	- cd $(UTIL_DIR); make clean
+	- cd $(GEOM_DIR); make clean
+	- cd $(GZIP_DIR); make clean
 	- cd $(NM_DIR); make clean
 	- cd $(KINETICS_DIR); make clean
 
