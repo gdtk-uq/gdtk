@@ -26,7 +26,7 @@ FLAVOUR ?= debug
 PLATFORM ?= linux
 WITH_MPI ?= 0
 WITH_MPI_TIMEOUTS ?= 0
-WITH_SSS ?= 0
+WITH_NK ?= 0
 WITH_SSC ?= 0
 WITH_OPENCL_GPU_CHEM ?= 0
 WITH_CUDA_GPU_CHEM ?= 0
@@ -54,8 +54,8 @@ endif
 PROGRAMS := e4shared e4monitor
 SHARE_FILES :=
 
-ifeq ($(WITH_SSS),1)
-    PROGRAMS += e4sss
+ifeq ($(WITH_NK),1)
+    PROGRAMS += e4-nk-shared
 endif
 
 ifeq ($(WITH_SSC),1)
@@ -65,6 +65,9 @@ endif
 
 ifeq ($(WITH_MPI),1)
     PROGRAMS += e4mpi e4loadbalance
+    ifeq ($(WITH_NK),1)
+        PROGRAMS += e4-nk-dist
+    endif
     MPI_LIBRARY_DIRS = $(shell mpicc --showme:libdirs)
     MPI_LIB_DIRS_SEARCH = $(foreach d, $(MPI_LIBRARY_DIRS), -L-L$d)
 endif
@@ -81,7 +84,6 @@ endif
 
 ifeq ($(WITH_COMPLEX_NUMBERS),1)
     PROGRAMS += e4zshared
-    PROGRAMS += e4zsss
 endif
 
 EILMER_CORE_FILES := simcore.d \
@@ -498,26 +500,6 @@ e4mpi: main.d $(EILMER_FILES) \
 		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) $(OPENMPI_FILES) \
 		$(LIBCEQ) $(LIBLUA) \
 		$(DLINKFLAGS) -L-lmpi
-
-e4sss: steadystate_solver.d steadystate_core.d shape_sensitivity_core.d $(EILMER_FILES) \
-	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
-	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBLUA) $(GZIP_FILES) \
-	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-	$(NM_FILES) $(UTIL_FILES) $(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
-	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
-		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
-		steadystate_solver.d > steadystate_solver_with_rev_string.d
-	$(DMD) $(DFLAGS) $(OF)e4sss \
-		$(DVERSION)steady_state \
-		$(DVERSION)shape_sensitivity \
-		steadystate_solver_with_rev_string.d steadystate_core.d shape_sensitivity_core.d \
-		$(EILMER_FILES) \
-		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
-		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
-		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES) \
-		$(GAS_LUA_FILES) $(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
-		$(LIBCEQ) $(LIBLUA) \
-		$(DLINKFLAGS)
 
 e4zsss: steadystate_solver.d steadystate_core.d shape_sensitivity_core.d $(EILMER_FILES) \
 	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
