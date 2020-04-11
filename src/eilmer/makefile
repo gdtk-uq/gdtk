@@ -501,7 +501,7 @@ e4mpi: main.d $(EILMER_FILES) \
 		$(LIBCEQ) $(LIBLUA) \
 		$(DLINKFLAGS) -L-lmpi
 
-e4zsss: steadystate_solver.d steadystate_core.d shape_sensitivity_core.d $(EILMER_FILES) \
+e4-nk-shared: nk_accelerator.d steadystate_core.d shape_sensitivity_core.d $(EILMER_FILES) \
 	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
 	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
@@ -509,12 +509,12 @@ e4zsss: steadystate_solver.d steadystate_core.d shape_sensitivity_core.d $(EILME
 	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
-		steadystate_solver.d > steadystate_solver_complex_with_rev_string.d
-	$(DMD) $(DFLAGS) $(OF)e4zsss \
+		nk_accelerator.d > nk_accelerator_with_string_subst.d
+	$(DMD) $(DFLAGS) $(OF)e4-nk-shared \
 		$(DVERSION)complex_numbers \
 		$(DVERSION)steady_state \
 		$(DVERSION)shape_sensitivity \
-		steadystate_solver_complex_with_rev_string.d steadystate_core.d shape_sensitivity_core.d \
+		nk_accelerator_with_string_subst.d steadystate_core.d shape_sensitivity_core.d \
 		$(EILMER_FILES) \
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
