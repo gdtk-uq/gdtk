@@ -100,14 +100,14 @@ SteadyStateSolver{
 
    -- Settings for start-up phase
    number_start_up_steps = 200,
-   cfl0 = 0.1,
+   cfl0 = 0.5,
    eta0 = 0.1,
    tau0 = 1.0,
    sigma0 = 1.0e-30,
    p0 = 0.5,
 
    -- Settings for inexact Newton phase
-   cfl1 = 1.0,
+   cfl1 = 10.0,
    tau1 = 1.0,
    sigma1 = 1.0e-30,
    eta1 = 0.01,
