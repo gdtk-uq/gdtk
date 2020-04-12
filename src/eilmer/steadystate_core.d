@@ -39,6 +39,10 @@ import conservedquantities;
 import postprocess : readTimesFile;
 import loads;
 import shape_sensitivity_core : sss_preconditioner_initialisation, sss_preconditioner;
+version(mpi_parallel) {
+    import mpi;
+}
+
 
 static int fnCount = 0;
 
@@ -1158,6 +1162,17 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             maxTurb[it] = fmax(maxTurb[it], blk.maxRate.rhoturb[it]);
         }
     }
+    // In distributed memory, reduce the max values and ensure everyone has a copy
+    version(mpi_parallel) {
+        MPI_Allreduce(MPI_IN_PLACE, &(maxMass.re), 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, &(maxMomX.re), 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, &(maxMomY.re), 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+        if (GlobalConfig.dimensions == 3) { MPI_Allreduce(MPI_IN_PLACE, &(maxMomZ.re), 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD); }
+        MPI_Allreduce(MPI_IN_PLACE, &(maxEnergy.re), 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+        foreach (it; 0 .. GlobalConfig.turb_model.nturb) {
+            MPI_Allreduce(MPI_IN_PLACE, &(maxTurb[it].re), 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+        }
+    }
     // Place some guards when time-rate-of-changes are very small.
     maxMass = fmax(maxMass, minNonDimVal);
     maxMomX = fmax(maxMomX, minNonDimVal);
@@ -1170,6 +1185,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         maxTurb[it] = fmax(maxTurb[it], minNonDimVal);
     }
 
+    // Get a copy of the maxes out to each block
     foreach (blk; parallel(localFluidBlocks,1)) {
         if (blk.myConfig.sssOptions.useScaling) {
             blk.maxRate.mass = maxMass;
@@ -1215,7 +1231,11 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     }
     
     double unscaledNorm2;
-    mixin(norm2_over_blocks("unscaledNorm2", "FU"));
+    mixin(dot_over_blocks("unscaledNorm2", "FU", "FU"));
+    version(mpi_parallel) {
+        MPI_Allreduce(MPI_IN_PLACE, &unscaledNorm2, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    }
+    unscaledNorm2 = sqrt(unscaledNorm2);
 
     foreach (blk; parallel(localFluidBlocks,1)) {
         size_t nturb = blk.myConfig.turb_model.nturb;
@@ -1267,9 +1287,13 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     }
 
     // Then compute v = r0/||r0||
-    number betaTmp;
-    mixin(norm2_over_blocks("betaTmp", "r0"));
-    number beta = betaTmp;
+    number beta;
+    mixin(dot_over_blocks("beta", "r0", "r0"));
+    version(mpi_parallel) {
+        MPI_Allreduce(MPI_IN_PLACE, &(beta.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, &(beta.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    }
+    beta = sqrt(beta);
     g0[0] = beta;
     foreach (blk; parallel(localFluidBlocks,1)) {
         foreach (k; 0 .. blk.nvars) {
@@ -1377,17 +1401,24 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                     // Extract column 'i'
                     foreach (k; 0 .. blk.nvars ) blk.v[k] = blk.V[k,i]; 
                 }
-                number H0_ij_tmp;
-                mixin(dot_over_blocks("H0_ij_tmp", "w", "v"));
-                number H0_ij = H0_ij_tmp;
+                number H0_ij;
+                mixin(dot_over_blocks("H0_ij", "w", "v"));
+                version(mpi_parallel) {
+                    MPI_Allreduce(MPI_IN_PLACE, &(H0_ij.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                    MPI_Allreduce(MPI_IN_PLACE, &(H0_ij.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                }
                 H0[i,j] = H0_ij;
                 foreach (blk; parallel(localFluidBlocks,1)) {
                     foreach (k; 0 .. blk.nvars) blk.w[k] -= H0_ij*blk.v[k]; 
                 }
             }
-            number H0_jp1j_tmp;
-            mixin(norm2_over_blocks("H0_jp1j_tmp", "w"));
-            number H0_jp1j = H0_jp1j_tmp;
+            number H0_jp1j;
+            mixin(dot_over_blocks("H0_jp1j", "w", "w"));
+            version(mpi_parallel) {
+                MPI_Allreduce(MPI_IN_PLACE, &(H0_jp1j.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                MPI_Allreduce(MPI_IN_PLACE, &(H0_jp1j.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+            }
+            H0_jp1j = sqrt(H0_jp1j);
             H0[j+1,j] = H0_jp1j;
         
             foreach (blk; parallel(localFluidBlocks,1)) {
@@ -1544,8 +1575,13 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             }
         }
 
-        mixin(norm2_over_blocks("betaTmp", "r0"));
-        beta = betaTmp;
+        mixin(dot_over_blocks("beta", "r0", "r0"));
+        version(mpi_parallel) {
+            MPI_Allreduce(MPI_IN_PLACE, &(beta.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+            MPI_Allreduce(MPI_IN_PLACE, &(beta.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        }
+        beta = sqrt(beta);
+
         // DEBUG: writefln("OUTER: ON RESTART beta= %e", beta);
         foreach (blk; parallel(localFluidBlocks,1)) {
             foreach (k; 0 .. blk.nvars) {
