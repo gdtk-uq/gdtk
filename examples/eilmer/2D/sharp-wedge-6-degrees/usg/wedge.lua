@@ -96,40 +96,40 @@ SBlock2UBlock(blk)
 -- Set simulation parameters
 config.interpolation_order = 2
 config.print_count = 1
+config.flux_calculator = "ausmdv"
 config.unstructured_limiter = "venkat"
+config.venkat_K_value = 0.3
 config.extrema_clipping = false
 SteadyStateSolver{
-   use_preconditioning = false,
+   use_preconditioner = true,
+   precondition_matrix_type = "ilu",
+   ilu_fill = 0,
+   frozen_preconditioner_count = 50,
+   use_scaling = true,
+   use_complex_matvec_eval = true,
    -- sigma = 1.0e-6, -- presently it's computed internally
-   number_pre_steps = 3,
-   number_total_steps = 500,
-   stop_on_relative_global_residual = 1.0e-13,
+   number_pre_steps = 5,
+   number_total_steps = 2000,
+   stop_on_relative_global_residual = 1.0e-12,
    -- Settings for FGMRES iterative solver
-   max_outer_iterations = 60,
---   number_inner_iterations = 10, -- not needed is preconditioning is false
+   max_outer_iterations = 20,
+   --   number_inner_iterations = 10, -- not needed is preconditioning is false
    max_restarts = 5,
    -- Settings for start-up phase
-   number_start_up_steps = 5,
-   cfl0 = 5.0,
+   number_start_up_steps = 0,
+   cfl0 = 1.0,
    eta0 = 0.5,
-   tau0 = 0.1,
-   sigma0 = 5.0e-6,
+   tau0 = 1.0,
+   sigma0 = 1.0e-30,
    -- Settings for inexact Newton phase
-   cfl1 = 100.0,
-   tau1 = 0.1,
-   sigma1 = 5.0e-6,
-   eta1 = 0.01,
-   eta1_min = 0.01,
+   cfl1 = 50.0,
+   tau1 = 1.0,
+   sigma1 = 1.0e-30,
+   eta1 = 0.1,
+   eta1_min = 0.1,
    eta_strategy = "constant",
    -- Settings control write-out
    snapshots_count = 10,
    number_total_snapshots = 5,
    write_diagnostics_count = 1
 }
-   
-
-
-
-
-
-
