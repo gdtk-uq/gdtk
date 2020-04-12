@@ -24,7 +24,7 @@ class TestMMS_Euler < Test::Unit::TestCase
   end
 
   def test_1_run
-    cmd = "e4zsss --job=mms"
+    cmd = "e4-nk-shared --job=mms"
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
     steps = 0

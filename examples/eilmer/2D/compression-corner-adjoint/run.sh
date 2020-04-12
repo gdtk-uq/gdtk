@@ -5,7 +5,7 @@ prep-gas ideal-air.inp ideal-air-gas-model.lua
 e4shared --prep --job=comp-corner
 
 # run flow solver
-e4zsss --job=comp-corner
+e4-nk-shared --job=comp-corner
 
 # post
 e4shared --job=comp-corner --post --tindx-plot=last --vtk-xml

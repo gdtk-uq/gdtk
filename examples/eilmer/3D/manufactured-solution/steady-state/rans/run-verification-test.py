@@ -45,7 +45,7 @@ def buildCaseStr(ncells, fluxCalc, derivCalc, derivLcn, blocking):
 def buildRunStr(threading):
     str = "python make_lua_files.py\n"
     str += "e4shared --job=mms --prep\n"
-    str += "e4zsss --job=mms"
+    str += "e4-nk-shared --job=mms"
     if threading == 'single':
         str += " --max-cpus=1"
     str += "\n"

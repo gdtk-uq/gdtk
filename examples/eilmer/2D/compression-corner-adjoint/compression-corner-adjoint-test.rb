@@ -17,7 +17,7 @@ class TestCompCorner < Test::Unit::TestCase
   end
 
   def test_1_run
-    cmd = "e4zsss --job=comp-corner --verbosity=1"
+    cmd = "e4-nk-shared --job=comp-corner --verbosity=1"
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
     cmd = "e4ssc --job=comp-corner --adjoint-method --adjoint-verification=true"
