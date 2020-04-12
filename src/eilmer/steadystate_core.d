@@ -806,10 +806,13 @@ double determine_initial_dt(double cflInit)
         foreach (cell; blk.cells) {
             signal = cell.signal_frequency();
             dt_local = cflInit / signal;
-            if ( first )
+            if (first) {
                 dt = dt_local;
-            else
+                first = false;
+            }
+            else {
                 dt = fmin(dt, dt_local);
+            }
         }
     }
     return dt;
@@ -824,10 +827,13 @@ double determine_min_cfl(double dt)
         foreach (cell; blk.cells) {
             signal = cell.signal_frequency();
             cfl_local = dt * signal;
-            if ( first )
+            if (first) {
                 cfl = cfl_local;
-            else
+                first = false;
+            }
+            else {
                 cfl = fmin(cfl, cfl_local);
+            }
         }
     }
     return cfl;
