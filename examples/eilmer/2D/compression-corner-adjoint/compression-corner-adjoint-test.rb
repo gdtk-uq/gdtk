@@ -33,7 +33,7 @@ class TestCompCorner < Test::Unit::TestCase
         steps = items[0].to_i
       end
     end
-    assert((steps - 9).abs < 1, "Failed to take correct number of restarts.")
+    assert((steps - 8).abs < 1, "Failed to take correct number of restarts.")
   end
 
   def test_2_adjoint
@@ -53,8 +53,8 @@ class TestCompCorner < Test::Unit::TestCase
         grad2 = items[1].to_f
       end
     end
-    assert((grad1 - -1.8592591111881458e+02).abs < 1.0e-10, "Failed to compute correct gradient for variable 1.")
-    assert((grad2 - -3.6778197321619359e+00).abs < 1.0e-10, "Failed to compute correct gradient for variable 2.")
+    assert((grad1 - -1.8659062612083432e+02).abs < 1.0e-10, "Failed to compute correct gradient for variable 1.")
+    assert((grad2 - -5.5752871219439157e+00).abs < 1.0e-10, "Failed to compute correct gradient for variable 2.")
   end
 
 end
