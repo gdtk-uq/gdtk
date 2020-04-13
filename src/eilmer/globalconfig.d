@@ -263,7 +263,7 @@ class IgnitionZone : BlockZone {
     }
 }
 
-version(steady_state) {
+version(nk_accelerator) {
 enum PreconditionMatrixType { block_diagonal, ilu }
 string preconditionMatrixTypeName(PreconditionMatrixType i)
 {
@@ -364,7 +364,7 @@ struct SteadyStateSolverOptions {
     int writeLoadsCount = 20;
 }
 
-} // end version(steady_state)
+} // end version(nk_accelerator)
 
 final class GlobalConfig {
     shared static bool in_mpi_context = false; // Usual context is thread-parallel only.
@@ -752,7 +752,7 @@ final class GlobalConfig {
         static GPUChem gpuChem;
     }
 
-    version (steady_state) {
+    version (nk_accelerator) {
         static SteadyStateSolverOptions sssOptions;
     }
 
@@ -943,7 +943,7 @@ public:
 
     int verbosity_level;
 
-    version (steady_state) {
+    version (nk_accelerator) {
         SteadyStateSolverOptions sssOptions;
     }
 
@@ -1072,7 +1072,7 @@ public:
         //
         verbosity_level = GlobalConfig.verbosity_level;
         //
-        version (steady_state) {
+        version (nk_accelerator) {
             sssOptions = GlobalConfig.sssOptions;
         }
         version (shape_sensitivity) {
@@ -1108,7 +1108,7 @@ public:
         stringent_cfl = GlobalConfig.stringent_cfl;
         viscous_signal_factor = GlobalConfig.viscous_signal_factor;
         turbulent_signal_factor = GlobalConfig.turbulent_signal_factor;
-        version (steady_state) {
+        version(nk_accelerator) {
             sssOptions = GlobalConfig.sssOptions;
         }
     }
@@ -1782,7 +1782,7 @@ void read_control_file()
         writeln("  halt_now: ", GlobalConfig.halt_now);
     }
     
-    version (steady_state) {
+    version(nk_accelerator) {
     auto sssOptions = jsonData["steady_state_solver_options"];
     GlobalConfig.sssOptions.usePreconditioner = getJSONbool(sssOptions, "use_preconditioner", GlobalConfig.sssOptions.usePreconditioner);
     GlobalConfig.sssOptions.frozenPreconditionerCount = getJSONint(sssOptions, "frozen_preconditioner_count", GlobalConfig.sssOptions.frozenPreconditionerCount);

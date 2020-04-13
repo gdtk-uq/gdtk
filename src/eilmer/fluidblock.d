@@ -142,9 +142,9 @@ public:
         size_t TKE;
     }
     
-    version(steady_state)
+    version(nk_accelerator)
     {
-    // Work-space for steady-state solver
+    // Work-space for Newton-Krylov accelerator
     // These arrays and matrices are directly tied to using the
     // GMRES iterative solver.
     SMatrix!number JcT; // transposed Jacobian (w.r.t conserved variables)
@@ -865,7 +865,7 @@ public:
         foreach(boundary; bc) { boundary.applyPostDiffFluxAction(t, gtl, ftl); }
     }
 
-    version(steady_state) {
+    version(nk_accelerator) {
     void allocate_GMRES_workspace()
     {
         size_t nConserved = nConservedQuantities;

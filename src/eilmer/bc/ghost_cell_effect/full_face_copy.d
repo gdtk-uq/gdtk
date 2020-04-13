@@ -994,44 +994,51 @@ public:
     void exchange_geometry_phase1()
     {
         version(mpi_parallel) {
-            if (find(GlobalConfig.localFluidBlockIds, other_blk.id).empty) {
-                // The other block is in another MPI process, go fetch the data via messages.
-                //
-                // Blocking send of this block's geometry data
-                // to the corresponding non-blocking receive that was posted
-                // in the other MPI process.
-                outgoing_geometry_tag = make_mpi_tag(blk.id, which_boundary, 1);
-                size_t ne = ghost_cells.length * (this_blk.myConfig.n_grid_time_levels * 5 + 4);
-                if (outgoing_geometry_buf.length < ne) { outgoing_geometry_buf.length = ne; }
-                size_t ii = 0;
-                foreach (c; outgoing_mapped_cells) {
-                    foreach (j; 0 .. this_blk.myConfig.n_grid_time_levels) {
-                        outgoing_geometry_buf[ii++] = c.pos[j].x;
-                        outgoing_geometry_buf[ii++] = c.pos[j].y;
-                        outgoing_geometry_buf[ii++] = c.pos[j].z;
-                        outgoing_geometry_buf[ii++] = c.volume[j];
-                        outgoing_geometry_buf[ii++] = c.areaxy[j];
-                    }
-                    outgoing_geometry_buf[ii++] = c.iLength;
-                    outgoing_geometry_buf[ii++] = c.jLength;
-                    outgoing_geometry_buf[ii++] = c.kLength;
-                    outgoing_geometry_buf[ii++] = c.L_min;
-                }
-                version(mpi_timeouts) {
-                    MPI_Request send_request;
-                    MPI_Isend(outgoing_geometry_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
-                              outgoing_geometry_tag, MPI_COMM_WORLD, &send_request);
-                    MPI_Status send_status;
-                    MPI_Wait_a_while(&send_request, &send_status);
-                } else {
-                    MPI_Send(outgoing_geometry_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
-                             outgoing_geometry_tag, MPI_COMM_WORLD);
-                }
-            } else {
-                // The other block happens to be in this MPI process so
-                // we know that we can just access the cell data directly
-                // in the final phase.
+            version(nk_accelerator) {
+                throw new Error("exchange_geometry_phase1: Full-face copy is not available for e4-nk-dist.");
             }
+            else {
+                if (find(GlobalConfig.localFluidBlockIds, other_blk.id).empty) {
+                    // The other block is in another MPI process, go fetch the data via messages.
+                    //
+                    // Blocking send of this block's geometry data
+                    // to the corresponding non-blocking receive that was posted
+                    // in the other MPI process.
+                    outgoing_geometry_tag = make_mpi_tag(blk.id, which_boundary, 1);
+                    size_t ne = ghost_cells.length * (this_blk.myConfig.n_grid_time_levels * 5 + 4);
+                    if (outgoing_geometry_buf.length < ne) { outgoing_geometry_buf.length = ne; }
+                    size_t ii = 0;
+                    foreach (c; outgoing_mapped_cells) {
+                        foreach (j; 0 .. this_blk.myConfig.n_grid_time_levels) {
+                            outgoing_geometry_buf[ii++] = c.pos[j].x;
+                            outgoing_geometry_buf[ii++] = c.pos[j].y;
+                            outgoing_geometry_buf[ii++] = c.pos[j].z;
+                            outgoing_geometry_buf[ii++] = c.volume[j];
+                            outgoing_geometry_buf[ii++] = c.areaxy[j];
+                        }
+                        outgoing_geometry_buf[ii++] = c.iLength;
+                        outgoing_geometry_buf[ii++] = c.jLength;
+                        outgoing_geometry_buf[ii++] = c.kLength;
+                        outgoing_geometry_buf[ii++] = c.L_min;
+                    }
+                    version(mpi_timeouts) {
+                        MPI_Request send_request;
+                        MPI_Isend(outgoing_geometry_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
+                                  outgoing_geometry_tag, MPI_COMM_WORLD, &send_request);
+                        MPI_Status send_status;
+                        MPI_Wait_a_while(&send_request, &send_status);
+                    } else {
+                        MPI_Send(outgoing_geometry_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
+                                 outgoing_geometry_tag, MPI_COMM_WORLD);
+                    }
+
+                } else {
+                    // The other block happens to be in this MPI process so
+                    // we know that we can just access the cell data directly
+                    // in the final phase.
+                }
+            } // END: version(!nk_accelerator)
+
         } else { // not mpi_parallel
             // For a single process,
             // we know that we can just access the data directly
@@ -1043,37 +1050,42 @@ public:
     void exchange_geometry_phase2()
     {
         version(mpi_parallel) {
-            if (find(GlobalConfig.localFluidBlockIds, other_blk.id).empty) {
-                // The other block is in another MPI process, go fetch the data via messages.
-                //
-                // Wait for non-blocking receive to complete.
-                // Once complete, copy the data back into the local context.
-                version(mpi_timeouts) {
-                    MPI_Wait_a_while(&incoming_geometry_request, &incoming_geometry_status);
-                } else {
-                    MPI_Wait(&incoming_geometry_request, &incoming_geometry_status);
-                }
-                size_t ii = 0;
-                foreach (c; ghost_cells) {
-                    foreach (j; 0 .. this_blk.myConfig.n_grid_time_levels) {
-                        c.pos[j].refx = incoming_geometry_buf[ii++];
-                        c.pos[j].refy = incoming_geometry_buf[ii++];
-                        c.pos[j].refz = incoming_geometry_buf[ii++];
-                        c.volume[j] = incoming_geometry_buf[ii++];
-                        c.areaxy[j] = incoming_geometry_buf[ii++];
-                    }
-                    c.iLength = incoming_geometry_buf[ii++];
-                    c.jLength = incoming_geometry_buf[ii++];
-                    c.kLength = incoming_geometry_buf[ii++];
-                    c.L_min = incoming_geometry_buf[ii++];
-                }
-            } else {
-                // The other block happens to be in this MPI process so
-                // we know that we can just access the cell data directly.
-                foreach (i; 0 .. ghost_cells.length) {
-                    ghost_cells[i].copy_values_from(mapped_cells[i], CopyDataOption.grid);
-                }
+            version(nk_accelerator) {
+                throw new Error("exchange_geometry_phase2: Full-face copy is not available for e4-nk-dist.");
             }
+            else {
+                if (find(GlobalConfig.localFluidBlockIds, other_blk.id).empty) {
+                    // The other block is in another MPI process, go fetch the data via messages.
+                    //
+                    // Wait for non-blocking receive to complete.
+                    // Once complete, copy the data back into the local context.
+                    version(mpi_timeouts) {
+                        MPI_Wait_a_while(&incoming_geometry_request, &incoming_geometry_status);
+                    } else {
+                        MPI_Wait(&incoming_geometry_request, &incoming_geometry_status);
+                    }
+                    size_t ii = 0;
+                    foreach (c; ghost_cells) {
+                        foreach (j; 0 .. this_blk.myConfig.n_grid_time_levels) {
+                            c.pos[j].refx = incoming_geometry_buf[ii++];
+                            c.pos[j].refy = incoming_geometry_buf[ii++];
+                            c.pos[j].refz = incoming_geometry_buf[ii++];
+                            c.volume[j] = incoming_geometry_buf[ii++];
+                            c.areaxy[j] = incoming_geometry_buf[ii++];
+                        }
+                        c.iLength = incoming_geometry_buf[ii++];
+                        c.jLength = incoming_geometry_buf[ii++];
+                        c.kLength = incoming_geometry_buf[ii++];
+                        c.L_min = incoming_geometry_buf[ii++];
+                    }
+                } else {
+                    // The other block happens to be in this MPI process so
+                    // we know that we can just access the cell data directly.
+                    foreach (i; 0 .. ghost_cells.length) {
+                        ghost_cells[i].copy_values_from(mapped_cells[i], CopyDataOption.grid);
+                    }
+                }
+            } 
         } else { // not mpi_parallel
             // For a single process,
             // we know that we can just access the data directly.
@@ -1151,121 +1163,127 @@ public:
     void exchange_flowstate_phase1(double t, int gtl, int ftl)
     {
         version(mpi_parallel) {
-            if (find(GlobalConfig.localFluidBlockIds, other_blk.id).empty) {
-                // The other block is in another MPI process, go fetch the data via messages.
-                // For this particular GhostCellEffect, we are expecting somewhat symmetric
-                // interaction with the other MPI process.
-                //
-                // Exchange FlowState data for the boundary cells.
-                // To match the function over in flowstate.d
-                // void copy_values_from(in FlowState other)
-                // {
-                //     gas.copy_values_from(other.gas);
-                //     vel.set(other.vel);
-                //     B.set(other.B);
-                //     psi = other.psi;
-                //     divB = other.divB;
-                //     tke = other.tke;
-                //     omega = other.omega;
-                //     mu_t = other.mu_t;
-                //     k_t = other.k_t;
-                //     S = other.S;
-                // }
-                // and over in gas_state.d
-                // @nogc void copy_values_from(ref const(GasState) other) 
-                // {
-                //     rho = other.rho;
-                //     p = other.p;
-                //     T = other.T;
-                //     u = other.u;
-                //     p_e = other.p_e;
-                //     a = other.a;
-                //     foreach (i; 0 .. u_modes.length) { u_modes[i] = other.u_modes[i]; }
-                //     foreach (i; 0 .. T_modes.length) { T_modes[i] = other.T_modes[i]; }
-                //     mu = other.mu;
-                //     k = other.k;
-                //     foreach (i; 0 .. k_modes.length) { k_modes[i] = other.k_modes[i]; }
-                //     sigma = other.sigma;
-                //     foreach (i; 0 .. massf.length) { massf[i] = other.massf[i]; }
-                //     quality = other.quality;
-                // }
-                //
-                size_t nspecies = this_blk.myConfig.n_species;
-                size_t nmodes = this_blk.myConfig.n_modes;
-                assert(outgoing_mapped_cells.length == ghost_cells.length,
-                       "oops, mismatch in outgoing_mapped_cells and ghost_cells.");
-                //
-                // Blocking send of this block's flow data
-                // to the corresponding non-blocking receive that was posted
-                // in the other MPI process.
-                //size_t nitems = 16;
-                //version(MHD) { nitems += 5; }
-                //version(turbulence) { nitems += 2; }
-                //size_t ne = ghost_cells.length * (nmodes*3 + nspecies + nitems);
-
-                size_t fs_size = flowstate_buffer_entry_size(this_blk.myConfig);
-                size_t ne = ghost_cells.length * fs_size;
-                size_t nturb = this_blk.myConfig.turb_model.nturb;
-                if (outgoing_flowstate_buf.length < ne) { outgoing_flowstate_buf.length = ne; }
-                outgoing_flowstate_tag = make_mpi_tag(blk.id, which_boundary, 0);
-                size_t ii = 0;
-                foreach (c; outgoing_mapped_cells) {
-                    FlowState fs = c.fs;
-                    GasState gs = fs.gas;
-                    outgoing_flowstate_buf[ii++] = gs.rho;
-                    outgoing_flowstate_buf[ii++] = gs.p;
-                    outgoing_flowstate_buf[ii++] = gs.T;
-                    outgoing_flowstate_buf[ii++] = gs.u;
-                    outgoing_flowstate_buf[ii++] = gs.p_e;
-                    outgoing_flowstate_buf[ii++] = gs.a;
-                    version(multi_T_gas) {
-                        foreach (j; 0 .. nmodes) { outgoing_flowstate_buf[ii++] = gs.u_modes[j]; }
-                        foreach (j; 0 .. nmodes) { outgoing_flowstate_buf[ii++] = gs.T_modes[j]; }
-                    }
-                    outgoing_flowstate_buf[ii++] = gs.mu;
-                    outgoing_flowstate_buf[ii++] = gs.k;
-                    version(multi_T_gas) { 
-                        foreach (j; 0 .. nmodes) { outgoing_flowstate_buf[ii++] = gs.k_modes[j]; }
-                    }
-                    outgoing_flowstate_buf[ii++] = gs.sigma;
-                    version(multi_species_gas) {
-                        foreach (j; 0 .. nspecies) { outgoing_flowstate_buf[ii++] = gs.massf[j]; }
-                    } else {
-                        outgoing_flowstate_buf[ii++] = 1.0; // single-species mass fraction
-                    }
-                    outgoing_flowstate_buf[ii++] = gs.quality;
-                    outgoing_flowstate_buf[ii++] = fs.vel.x;
-                    outgoing_flowstate_buf[ii++] = fs.vel.y;
-                    outgoing_flowstate_buf[ii++] = fs.vel.z;
-                    version(MHD) {
-                        outgoing_flowstate_buf[ii++] = fs.B.x;
-                        outgoing_flowstate_buf[ii++] = fs.B.y;
-                        outgoing_flowstate_buf[ii++] = fs.B.z;
-                        outgoing_flowstate_buf[ii++] = fs.psi;
-                        outgoing_flowstate_buf[ii++] = fs.divB;
-                    }
-                    version(turbulence) {
-                        foreach (j; 0 .. nturb) outgoing_flowstate_buf[ii++] = fs.turb[j];
-                    }
-                    outgoing_flowstate_buf[ii++] = fs.mu_t;
-                    outgoing_flowstate_buf[ii++] = fs.k_t;
-                    outgoing_flowstate_buf[ii++] = to!double(fs.S);
-                }
-                version(mpi_timeouts) {
-                    MPI_Request send_request;
-                    MPI_Isend(outgoing_flowstate_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
-                              outgoing_flowstate_tag, MPI_COMM_WORLD, &send_request);
-                    MPI_Status send_status;
-                    MPI_Wait_a_while(&send_request, &send_status);
-                } else {
-                    MPI_Send(outgoing_flowstate_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
-                             outgoing_flowstate_tag, MPI_COMM_WORLD);
-                }
-            } else {
-                // The other block happens to be in this MPI process so
-                // we know that we can just access the cell data directly
-                // in the final phase.
+            version(nk_accelerator) {
+                throw new Error("exchange_flowstate_phase1: Full-face copy is not available for e4-nk-dist.");
             }
+            else {
+                
+                if (find(GlobalConfig.localFluidBlockIds, other_blk.id).empty) {
+                    // The other block is in another MPI process, go fetch the data via messages.
+                    // For this particular GhostCellEffect, we are expecting somewhat symmetric
+                    // interaction with the other MPI process.
+                    //
+                    // Exchange FlowState data for the boundary cells.
+                    // To match the function over in flowstate.d
+                    // void copy_values_from(in FlowState other)
+                    // {
+                    //     gas.copy_values_from(other.gas);
+                    //     vel.set(other.vel);
+                    //     B.set(other.B);
+                    //     psi = other.psi;
+                    //     divB = other.divB;
+                    //     tke = other.tke;
+                    //     omega = other.omega;
+                    //     mu_t = other.mu_t;
+                    //     k_t = other.k_t;
+                    //     S = other.S;
+                    // }
+                    // and over in gas_state.d
+                    // @nogc void copy_values_from(ref const(GasState) other) 
+                    // {
+                    //     rho = other.rho;
+                    //     p = other.p;
+                    //     T = other.T;
+                    //     u = other.u;
+                    //     p_e = other.p_e;
+                    //     a = other.a;
+                    //     foreach (i; 0 .. u_modes.length) { u_modes[i] = other.u_modes[i]; }
+                    //     foreach (i; 0 .. T_modes.length) { T_modes[i] = other.T_modes[i]; }
+                    //     mu = other.mu;
+                    //     k = other.k;
+                    //     foreach (i; 0 .. k_modes.length) { k_modes[i] = other.k_modes[i]; }
+                    //     sigma = other.sigma;
+                    //     foreach (i; 0 .. massf.length) { massf[i] = other.massf[i]; }
+                    //     quality = other.quality;
+                    // }
+                    //
+                    size_t nspecies = this_blk.myConfig.n_species;
+                    size_t nmodes = this_blk.myConfig.n_modes;
+                    assert(outgoing_mapped_cells.length == ghost_cells.length,
+                           "oops, mismatch in outgoing_mapped_cells and ghost_cells.");
+                    //
+                    // Blocking send of this block's flow data
+                    // to the corresponding non-blocking receive that was posted
+                    // in the other MPI process.
+                    //size_t nitems = 16;
+                    //version(MHD) { nitems += 5; }
+                    //version(turbulence) { nitems += 2; }
+                    //size_t ne = ghost_cells.length * (nmodes*3 + nspecies + nitems);
+
+                    size_t fs_size = flowstate_buffer_entry_size(this_blk.myConfig);
+                    size_t ne = ghost_cells.length * fs_size;
+                    size_t nturb = this_blk.myConfig.turb_model.nturb;
+                    if (outgoing_flowstate_buf.length < ne) { outgoing_flowstate_buf.length = ne; }
+                    outgoing_flowstate_tag = make_mpi_tag(blk.id, which_boundary, 0);
+                    size_t ii = 0;
+                    foreach (c; outgoing_mapped_cells) {
+                        FlowState fs = c.fs;
+                        GasState gs = fs.gas;
+                        outgoing_flowstate_buf[ii++] = gs.rho;
+                        outgoing_flowstate_buf[ii++] = gs.p;
+                        outgoing_flowstate_buf[ii++] = gs.T;
+                        outgoing_flowstate_buf[ii++] = gs.u;
+                        outgoing_flowstate_buf[ii++] = gs.p_e;
+                        outgoing_flowstate_buf[ii++] = gs.a;
+                        version(multi_T_gas) {
+                            foreach (j; 0 .. nmodes) { outgoing_flowstate_buf[ii++] = gs.u_modes[j]; }
+                            foreach (j; 0 .. nmodes) { outgoing_flowstate_buf[ii++] = gs.T_modes[j]; }
+                        }
+                        outgoing_flowstate_buf[ii++] = gs.mu;
+                        outgoing_flowstate_buf[ii++] = gs.k;
+                        version(multi_T_gas) { 
+                            foreach (j; 0 .. nmodes) { outgoing_flowstate_buf[ii++] = gs.k_modes[j]; }
+                        }
+                        outgoing_flowstate_buf[ii++] = gs.sigma;
+                        version(multi_species_gas) {
+                            foreach (j; 0 .. nspecies) { outgoing_flowstate_buf[ii++] = gs.massf[j]; }
+                        } else {
+                            outgoing_flowstate_buf[ii++] = 1.0; // single-species mass fraction
+                        }
+                        outgoing_flowstate_buf[ii++] = gs.quality;
+                        outgoing_flowstate_buf[ii++] = fs.vel.x;
+                        outgoing_flowstate_buf[ii++] = fs.vel.y;
+                        outgoing_flowstate_buf[ii++] = fs.vel.z;
+                        version(MHD) {
+                            outgoing_flowstate_buf[ii++] = fs.B.x;
+                            outgoing_flowstate_buf[ii++] = fs.B.y;
+                            outgoing_flowstate_buf[ii++] = fs.B.z;
+                            outgoing_flowstate_buf[ii++] = fs.psi;
+                            outgoing_flowstate_buf[ii++] = fs.divB;
+                        }
+                        version(turbulence) {
+                            foreach (j; 0 .. nturb) outgoing_flowstate_buf[ii++] = fs.turb[j];
+                        }
+                        outgoing_flowstate_buf[ii++] = fs.mu_t;
+                        outgoing_flowstate_buf[ii++] = fs.k_t;
+                        outgoing_flowstate_buf[ii++] = to!double(fs.S);
+                    }
+                    version(mpi_timeouts) {
+                        MPI_Request send_request;
+                        MPI_Isend(outgoing_flowstate_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
+                                  outgoing_flowstate_tag, MPI_COMM_WORLD, &send_request);
+                        MPI_Status send_status;
+                        MPI_Wait_a_while(&send_request, &send_status);
+                    } else {
+                        MPI_Send(outgoing_flowstate_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
+                                 outgoing_flowstate_tag, MPI_COMM_WORLD);
+                    }
+                } else {
+                    // The other block happens to be in this MPI process so
+                    // we know that we can just access the cell data directly
+                    // in the final phase.
+                }
+            } // END: version(!nk_accelerator)
         } else { // not mpi_parallel
             // For a single process,
             // we know that we can just access the data directly
@@ -1421,117 +1439,122 @@ public:
     void exchange_viscous_gradient_phase1(double t, int gtl, int ftl)
     {
         version(mpi_parallel) {
-            if (find(GlobalConfig.localFluidBlockIds, other_blk.id).empty) {
-                // The other block is in another MPI process, go fetch the data via messages.
-                // For this particular GhostCellEffect, we are expecting somewhat symmetric
-                // interaction with the other MPI process.
-                //
-                // Exchange FlowState data for the boundary cells.
-                // To match the function over in flowstate.d
-                // void copy_values_from(in FlowState other)
-                // {
-                //     gas.copy_values_from(other.gas);
-                //     vel.set(other.vel);
-                //     B.set(other.B);
-                //     psi = other.psi;
-                //     divB = other.divB;
-                //     tke = other.tke;
-                //     omega = other.omega;
-                //     mu_t = other.mu_t;
-                //     k_t = other.k_t;
-                //     S = other.S;
-                // }
-                // and over in gas_state.d
-                // @nogc void copy_values_from(ref const(GasState) other) 
-                // {
-                //     rho = other.rho;
-                //     p = other.p;
-                //     T = other.T;
-                //     u = other.u;
-                //     p_e = other.p_e;
-                //     a = other.a;
-                //     foreach (i; 0 .. u_modes.length) { u_modes[i] = other.u_modes[i]; }
-                //     foreach (i; 0 .. T_modes.length) { T_modes[i] = other.T_modes[i]; }
-                //     mu = other.mu;
-                //     k = other.k;
-                //     foreach (i; 0 .. k_modes.length) { k_modes[i] = other.k_modes[i]; }
-                //     sigma = other.sigma;
-                //     foreach (i; 0 .. massf.length) { massf[i] = other.massf[i]; }
-                //     quality = other.quality;
-                // }
-                //
-                size_t nspecies = this_blk.myConfig.n_species;
-                size_t nmodes = this_blk.myConfig.n_modes;
-                size_t nturb = this_blk.myConfig.turb_model.nturb;
-                assert(outgoing_mapped_cells.length == ghost_cells.length,
-                       "oops, mismatch in outgoing_mapped_cells and ghost_cells.");
-                //
-                // Blocking send of this block's flow data
-                // to the corresponding non-blocking receive that was posted
-                // in the other MPI process.
-                //size_t nitems = 12;
-                //version(turbulence) { nitems += 6; }
-                size_t grad_size = viscous_gradient_buffer_entry_size(this_blk.myConfig);
-                size_t ne = ghost_cells.length * grad_size;
-                if (outgoing_viscous_gradient_buf.length < ne) { outgoing_viscous_gradient_buf.length = ne; }
-                outgoing_viscous_gradient_tag = make_mpi_tag(blk.id, which_boundary, 2);
-                auto buf = outgoing_viscous_gradient_buf;
-                size_t ii = 0;
-                foreach (c; outgoing_mapped_cells) {
-                    // velocity
-                    buf[ii++] = c.grad.vel[0][0];
-                    buf[ii++] = c.grad.vel[0][1];
-                    buf[ii++] = c.grad.vel[0][2];
-                    buf[ii++] = c.grad.vel[1][0];
-                    buf[ii++] = c.grad.vel[1][1];
-                    buf[ii++] = c.grad.vel[1][2];
-                    buf[ii++] = c.grad.vel[2][0];
-                    buf[ii++] = c.grad.vel[2][1];
-                    buf[ii++] = c.grad.vel[2][2];
-                    // rho, p, T, u
-                    buf[ii++] = c.grad.T[0];
-                    buf[ii++] = c.grad.T[1];
-                    buf[ii++] = c.grad.T[2];
-                    // tke, omega
-                    version(turbulence) {
-                        foreach (j; 0 .. nturb) {
-                            buf[ii++] = c.grad.turb[j][0];
-                            buf[ii++] = c.grad.turb[j][1];
-                            buf[ii++] = c.grad.turb[j][2];
-                        }
-                    }
-                    // multi-species
-                    version(multi_species_gas) {
-                        foreach (j; 0 .. nspecies) {
-                            buf[ii++] = c.grad.massf[j][0];
-                            buf[ii++] = c.grad.massf[j][1];
-                            buf[ii++] = c.grad.massf[j][2];
-                        }
-                    }
-                    // multi-T
-                    version(multi_T_gas) {
-                        foreach (j; 0 .. nmodes) {
-                            buf[ii++] = c.grad.T_modes[j][0];
-                            buf[ii++] = c.grad.T_modes[j][1];
-                            buf[ii++] = c.grad.T_modes[j][2];
-                        }
-                    }
-                }
-                version(mpi_timeouts) {
-                    MPI_Request send_request;
-                    MPI_Isend(buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
-                              outgoing_viscous_gradient_tag, MPI_COMM_WORLD, &send_request);
-                    MPI_Status send_status;
-                    MPI_Wait_a_while(&send_request, &send_status);
-                } else {
-                    MPI_Send(buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
-                             outgoing_viscous_gradient_tag, MPI_COMM_WORLD);
-                }
-            } else {
-                // The other block happens to be in this MPI process so
-                // we know that we can just access the cell data directly
-                // in the final phase.
+            version(nk_accelerator) {
+                throw new Error("exchange_viscous_gradient_phase1: Full-face copy is not available for e4-nk-dist.");
             }
+            else {
+                if (find(GlobalConfig.localFluidBlockIds, other_blk.id).empty) {
+                    // The other block is in another MPI process, go fetch the data via messages.
+                    // For this particular GhostCellEffect, we are expecting somewhat symmetric
+                    // interaction with the other MPI process.
+                    //
+                    // Exchange FlowState data for the boundary cells.
+                    // To match the function over in flowstate.d
+                    // void copy_values_from(in FlowState other)
+                    // {
+                    //     gas.copy_values_from(other.gas);
+                    //     vel.set(other.vel);
+                    //     B.set(other.B);
+                    //     psi = other.psi;
+                    //     divB = other.divB;
+                    //     tke = other.tke;
+                    //     omega = other.omega;
+                    //     mu_t = other.mu_t;
+                    //     k_t = other.k_t;
+                    //     S = other.S;
+                    // }
+                    // and over in gas_state.d
+                    // @nogc void copy_values_from(ref const(GasState) other) 
+                    // {
+                    //     rho = other.rho;
+                    //     p = other.p;
+                    //     T = other.T;
+                    //     u = other.u;
+                    //     p_e = other.p_e;
+                    //     a = other.a;
+                    //     foreach (i; 0 .. u_modes.length) { u_modes[i] = other.u_modes[i]; }
+                    //     foreach (i; 0 .. T_modes.length) { T_modes[i] = other.T_modes[i]; }
+                    //     mu = other.mu;
+                    //     k = other.k;
+                    //     foreach (i; 0 .. k_modes.length) { k_modes[i] = other.k_modes[i]; }
+                    //     sigma = other.sigma;
+                    //     foreach (i; 0 .. massf.length) { massf[i] = other.massf[i]; }
+                    //     quality = other.quality;
+                    // }
+                    //
+                    size_t nspecies = this_blk.myConfig.n_species;
+                    size_t nmodes = this_blk.myConfig.n_modes;
+                    size_t nturb = this_blk.myConfig.turb_model.nturb;
+                    assert(outgoing_mapped_cells.length == ghost_cells.length,
+                           "oops, mismatch in outgoing_mapped_cells and ghost_cells.");
+                    //
+                    // Blocking send of this block's flow data
+                    // to the corresponding non-blocking receive that was posted
+                    // in the other MPI process.
+                    //size_t nitems = 12;
+                    //version(turbulence) { nitems += 6; }
+                    size_t grad_size = viscous_gradient_buffer_entry_size(this_blk.myConfig);
+                    size_t ne = ghost_cells.length * grad_size;
+                    if (outgoing_viscous_gradient_buf.length < ne) { outgoing_viscous_gradient_buf.length = ne; }
+                    outgoing_viscous_gradient_tag = make_mpi_tag(blk.id, which_boundary, 2);
+                    auto buf = outgoing_viscous_gradient_buf;
+                    size_t ii = 0;
+                    foreach (c; outgoing_mapped_cells) {
+                        // velocity
+                        buf[ii++] = c.grad.vel[0][0];
+                        buf[ii++] = c.grad.vel[0][1];
+                        buf[ii++] = c.grad.vel[0][2];
+                        buf[ii++] = c.grad.vel[1][0];
+                        buf[ii++] = c.grad.vel[1][1];
+                        buf[ii++] = c.grad.vel[1][2];
+                        buf[ii++] = c.grad.vel[2][0];
+                        buf[ii++] = c.grad.vel[2][1];
+                        buf[ii++] = c.grad.vel[2][2];
+                        // rho, p, T, u
+                        buf[ii++] = c.grad.T[0];
+                        buf[ii++] = c.grad.T[1];
+                        buf[ii++] = c.grad.T[2];
+                        // tke, omega
+                        version(turbulence) {
+                            foreach (j; 0 .. nturb) {
+                                buf[ii++] = c.grad.turb[j][0];
+                                buf[ii++] = c.grad.turb[j][1];
+                                buf[ii++] = c.grad.turb[j][2];
+                            }
+                        }
+                        // multi-species
+                        version(multi_species_gas) {
+                            foreach (j; 0 .. nspecies) {
+                                buf[ii++] = c.grad.massf[j][0];
+                                buf[ii++] = c.grad.massf[j][1];
+                                buf[ii++] = c.grad.massf[j][2];
+                            }
+                        }
+                        // multi-T
+                        version(multi_T_gas) {
+                            foreach (j; 0 .. nmodes) {
+                                buf[ii++] = c.grad.T_modes[j][0];
+                                buf[ii++] = c.grad.T_modes[j][1];
+                                buf[ii++] = c.grad.T_modes[j][2];
+                            }
+                        }
+                    }
+                    version(mpi_timeouts) {
+                        MPI_Request send_request;
+                        MPI_Isend(buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
+                                  outgoing_viscous_gradient_tag, MPI_COMM_WORLD, &send_request);
+                        MPI_Status send_status;
+                        MPI_Wait_a_while(&send_request, &send_status);
+                    } else {
+                        MPI_Send(buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
+                                 outgoing_viscous_gradient_tag, MPI_COMM_WORLD);
+                    }
+                } else {
+                    // The other block happens to be in this MPI process so
+                    // we know that we can just access the cell data directly
+                    // in the final phase.
+                }
+            } // END: version(!nk_accelerator)
         } else { // not mpi_parallel
             // For a single process,
             // we know that we can just access the data directly

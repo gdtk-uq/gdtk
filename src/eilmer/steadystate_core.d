@@ -113,7 +113,7 @@ void extractRestartInfoFromTimesFile(string jobName, ref RestartInfo[] times)
 } 
 
 
-void iterate_to_steady_state(int snapshotStart, int maxCPUs)
+void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITask)
 {
     auto wallClockStart = Clock.currTime();
     bool withPTC = true;
@@ -158,9 +158,9 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
     size_t TOT_ENERGY = totEnergyIdx;
     size_t TKE = tkeIdx;
 
-    shared double dt;
+    double dt;
     double dtTrial, etaTrial;
-    shared bool failedAttempt;
+    int failedAttempt = 0;
     double pseudoSimTime = 0.0;
     double normOld, normNew;
     int snapshotsCount = GlobalConfig.sssOptions.snapshotsCount;
@@ -175,10 +175,20 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
     bool inexactNewtonPhase = false;
 
     // No need to have more task threads than blocks
-    auto nThreadsInPool = min(maxCPUs-1, GlobalConfig.nFluidBlocks-1);
-    defaultPoolThreads(nThreadsInPool);
-    writeln("Running with ", nThreadsInPool+1, " threads."); // +1 for main thread.
-
+    int extraThreadsInPool;
+    auto nBlocksInThreadParallel = localFluidBlocks.length;
+    version(mpi_parallel) {
+        extraThreadsInPool = min(threadsPerMPITask-1, nBlocksInThreadParallel-1);
+    } else {
+        extraThreadsInPool = min(maxCPUs-1, nBlocksInThreadParallel-1);
+    }
+    defaultPoolThreads(extraThreadsInPool);
+    version(mpi_parallel) {
+        writefln("MPI-task %d : running with %d threads.", GlobalConfig.mpi_rank_for_local_task, extraThreadsInPool+1);
+    }
+    else {
+        writefln("Single process running with %d threads.", extraThreadsInPool+1); // +1 for main thread.
+    }
     double normRef = 0.0;
     bool residualsUpToDate = false;
     bool finalStep = false;
@@ -203,6 +213,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
     // We only do a pre-step phase if we are starting from scratch.
     if ( snapshotStart == 0 ) {
         dt = determine_initial_dt(cfl0);
+        writefln("dt= %e", dt);
         // The initial residual is usually a poor choice for basing decisions about how the
         // residual is dropping, particularly when a constant initial condition is given.
         // A constant initial condition gives a zero residual everywhere in the interior
@@ -222,12 +233,23 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
                     rpcGMRES_solve(preStep, pseudoSimTime, dt, eta0, sigma0, usePreconditioner, normOld, nRestarts);
                 }
                 catch (FlowSolverException e) {
-                    writefln("Failed when attempting GMRES solve in pre-steps.");
+                    version(mpi_parallel) {
+                        writefln("Failed when attempting GMRES solve in pre-steps on task %d.", GlobalConfig.mpi_rank_for_local_task);
+                    }
+                    else {
+                        writeln("Failed when attempting GMRES solve in pre-steps.");
+                    }
                     writefln("attempt %d: dt= %e", attempt, dt);
-                    failedAttempt = true;
+                    failedAttempt = 1;
                     dt = 0.1*dt;
-                    break;
                 }
+                // Coordinate MPI tasks after try-catch statement in case one or more of the tasks encountered an exception.
+                version(mpi_parallel) {
+                    MPI_Allreduce(MPI_IN_PLACE, &failedAttempt, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+                    MPI_Allreduce(MPI_IN_PLACE, &dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+                }
+                if (failedAttempt > 0) { break; }
+                // end: coordination of MPI tasks
                 foreach (blk; parallel(localFluidBlocks,1)) {
                     size_t nturb = blk.myConfig.turb_model.nturb;
                     int cellCount = 0;
@@ -250,17 +272,28 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
                             cell.decode_conserved(0, 1, 0.0);
                         }
                         catch (FlowSolverException e) {
-                            writefln("Failed to provide sensible update.");
+                            version(mpi_parallel) {
+                                writefln("Failed to provide sensible update on task %d.", GlobalConfig.mpi_rank_for_local_task);
+                            }
+                            else {
+                                writeln("FAiled to provide sensible update.");
+                            }
                             writefln("attempt %d: dt= %e", attempt, dt);
-                            failedAttempt = true;
+                            failedAttempt = 1;
                             dt = 0.1*dt;
-                            break;
                         }
+                        // Coordinate MPI tasks after try-catch statement in case one or more of the tasks encountered an exception.
+                        version(mpi_parallel) {
+                            MPI_Allreduce(MPI_IN_PLACE, &failedAttempt, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+                            MPI_Allreduce(MPI_IN_PLACE, &dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+                        }
+                        if (failedAttempt > 0) { break; }
+                        // end: coordination of MPI tasks
                         cellCount += nConserved;
                     }
                 }
 
-                if ( failedAttempt ) {
+                if (failedAttempt > 0) {
                     // return cell flow-states to their original state
                     foreach (blk; parallel(localFluidBlocks,1)) {
                         int cellCount = 0;
@@ -281,22 +314,27 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
                 // If we got here, we can break the attempts loop.
                 break;
             }
-            if ( failedAttempt ) {
-                writefln("Pre-step failed: %d", SimState.step);
-                writeln("Bailing out!");
+            if (failedAttempt > 0) {
+                if (GlobalConfig.is_master_task) {
+                    writefln("Pre-step failed: %d", SimState.step);
+                    writeln("Bailing out!");
+                }
                 exit(1);
             }
-        
-            writefln("PRE-STEP  %d  ::  dt= %.3e  global-norm= %.12e", preStep, dt, normOld); 
+            if (GlobalConfig.is_master_task) {
+                writefln("PRE-STEP  %d  ::  dt= %.3e  global-norm= %.12e", preStep, dt, normOld);
+            }
             if ( normOld > normRef ) {
                 normRef = normOld;
                 max_residuals(maxResiduals);
             }
         }
 
-        writeln("Pre-step phase complete.");
+        if (GlobalConfig.is_master_task) {
+            writeln("Pre-step phase complete.");
+        }
     
-        if ( nPreSteps <= 0 ) {
+        if (nPreSteps <= 0) {
             foreach (blk; parallel(localFluidBlocks,1)) blk.set_interpolation_order(interpOrderSave);
             // Take initial residual as max residual
             evalRHS(0.0, 0);
@@ -317,44 +355,50 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
                     cellCount += nConserved;
                 }
             }
-            mixin(norm2_over_blocks("normRef", "FU"));
+            mixin(dot_over_blocks("normRef", "FU", "FU"));
+            version(mpi_parallel) {
+                MPI_Allreduce(MPI_IN_PLACE, &(normRef), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+            }
+            normRef = sqrt(normRef);
         }
-        writeln("Reference residuals are established as:");
-        writefln("GLOBAL:         %.12e", normRef);
-        writefln("MASS:           %.12e", maxResiduals.mass);
-        writefln("X-MOMENTUM:     %.12e", maxResiduals.momentum.x);
-        writefln("Y-MOMENTUM:     %.12e", maxResiduals.momentum.y);
-        if ( GlobalConfig.dimensions == 3 )
-            writefln("Z-MOMENTUM:     %.12e", maxResiduals.momentum.z);
-        writefln("ENERGY:         %.12e", maxResiduals.total_energy);
-        foreach(it; 0 .. GlobalConfig.turb_model.nturb) {
-            string tvname = capitalize(GlobalConfig.turb_model.primitive_variable_name(it));
-            writefln("%s:            %.12e",tvname, maxResiduals.rhoturb[it]);
-        }
+        if (GlobalConfig.is_master_task) {
+            writeln("Reference residuals are established as:");
+            writefln("GLOBAL:         %.12e", normRef);
+            writefln("MASS:           %.12e", maxResiduals.mass.re);
+            writefln("X-MOMENTUM:     %.12e", maxResiduals.momentum.x.re);
+            writefln("Y-MOMENTUM:     %.12e", maxResiduals.momentum.y.re);
+            if ( GlobalConfig.dimensions == 3 )
+                writefln("Z-MOMENTUM:     %.12e", maxResiduals.momentum.z.re);
+            writefln("ENERGY:         %.12e", maxResiduals.total_energy.re);
+            foreach(it; 0 .. GlobalConfig.turb_model.nturb) {
+                string tvname = capitalize(GlobalConfig.turb_model.primitive_variable_name(it));
+                writefln("%s:            %.12e",tvname, maxResiduals.rhoturb[it].re);
+            }
         
-        string refResidFname = jobName ~ "-ref-residuals.saved";
-        auto refResid = File(refResidFname, "w");
-        if ( GlobalConfig.dimensions == 2 ) {
-            refResid.writef("%.18e %.18e %.18e %.18e %.18e",
-                            normRef, maxResiduals.mass, maxResiduals.momentum.x,
-                            maxResiduals.momentum.y, maxResiduals.total_energy);
+            string refResidFname = jobName ~ "-ref-residuals.saved";
+            auto refResid = File(refResidFname, "w");
+            if ( GlobalConfig.dimensions == 2 ) {
+                refResid.writef("%.18e %.18e %.18e %.18e %.18e",
+                                normRef, maxResiduals.mass.re, maxResiduals.momentum.x.re,
+                                maxResiduals.momentum.y.re, maxResiduals.total_energy.re);
+            }
+            else {
+                refResid.writef("%.18e %.18e %.18e %.18e %.18e %.18e",
+                                normRef, maxResiduals.mass.re, maxResiduals.momentum.x.re,
+                                maxResiduals.momentum.y.re, maxResiduals.momentum.z.re,
+                                maxResiduals.total_energy.re);
+            }
+            foreach(it; 0 .. GlobalConfig.turb_model.nturb) {
+                refResid.writef(" %.18e", maxResiduals.rhoturb[it].re);
+            }
+            refResid.write("\n");
+            refResid.close();
         }
-        else {
-            refResid.writef("%.18e %.18e %.18e %.18e %.18e %.18e",
-                            normRef, maxResiduals.mass, maxResiduals.momentum.x,
-                            maxResiduals.momentum.y, maxResiduals.momentum.z,
-                            maxResiduals.total_energy);
-        }
-        foreach(it; 0 .. GlobalConfig.turb_model.nturb) {
-            refResid.writef(" %.18e", maxResiduals.rhoturb[it]);
-        }
-        refResid.write("\n");
-        refResid.close();
     }
 
     RestartInfo[] times;
 
-    if ( snapshotStart > 0 ) {
+    if (snapshotStart > 0 && GlobalConfig.is_master_task) {
         extractRestartInfoFromTimesFile(jobName, times);
         normOld = times[snapshotStart].globalResidual;
         // We need to read in the reference residual values from a file.
@@ -410,42 +454,43 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
         writefln("   pseudo-sim-time= %.6e dt= %.6e", pseudoSimTime, dt);  
     }
 
-
-    auto residFname = "e4sss.diagnostics.dat";
+    auto residFname = "e4-nk.diagnostics.dat";
     File fResid;
-    if ( snapshotStart == 0 ) {
-        // Open file for writing diagnostics
-        fResid = File(residFname, "w");
-        fResid.writeln("#  1: step");
-        fResid.writeln("#  2: pseudo-time");
-        fResid.writeln("#  3: dt");
-        fResid.writeln("#  4: CFL");
-        fResid.writeln("#  5: eta");
-        fResid.writeln("#  6: nRestarts");
-        fResid.writeln("#  7: nFnCalls");
-        fResid.writeln("#  8: wall-clock, s");
-        fResid.writeln("#  9: global-residual-abs");
-        fResid.writeln("# 10: global-residual-rel");
-        fResid.writefln("#  %02d: mass-abs", 11+2*MASS);
-        fResid.writefln("# %02d: mass-rel", 11+2*MASS+1);
-        fResid.writefln("# %02d: x-mom-abs", 11+2*X_MOM);
-        fResid.writefln("# %02d: x-mom-rel", 11+2*X_MOM+1);
-        fResid.writefln("# %02d: y-mom-abs", 11+2*Y_MOM);
-        fResid.writefln("# %02d: y-mom-rel", 11+2*Y_MOM+1);
-        if ( GlobalConfig.dimensions == 3 ) {
-            fResid.writefln("# %02d: z-mom-abs", 11+2*Z_MOM);
-            fResid.writefln("# %02d: z-mom-rel", 11+2*Z_MOM+1);
+    if (GlobalConfig.is_master_task) {
+        if ( snapshotStart == 0 ) {
+            // Open file for writing diagnostics
+            fResid = File(residFname, "w");
+            fResid.writeln("#  1: step");
+            fResid.writeln("#  2: pseudo-time");
+            fResid.writeln("#  3: dt");
+            fResid.writeln("#  4: CFL");
+            fResid.writeln("#  5: eta");
+            fResid.writeln("#  6: nRestarts");
+            fResid.writeln("#  7: nFnCalls");
+            fResid.writeln("#  8: wall-clock, s");
+            fResid.writeln("#  9: global-residual-abs");
+            fResid.writeln("# 10: global-residual-rel");
+            fResid.writefln("#  %02d: mass-abs", 11+2*MASS);
+            fResid.writefln("# %02d: mass-rel", 11+2*MASS+1);
+            fResid.writefln("# %02d: x-mom-abs", 11+2*X_MOM);
+            fResid.writefln("# %02d: x-mom-rel", 11+2*X_MOM+1);
+            fResid.writefln("# %02d: y-mom-abs", 11+2*Y_MOM);
+            fResid.writefln("# %02d: y-mom-rel", 11+2*Y_MOM+1);
+            if ( GlobalConfig.dimensions == 3 ) {
+                fResid.writefln("# %02d: z-mom-abs", 11+2*Z_MOM);
+                fResid.writefln("# %02d: z-mom-rel", 11+2*Z_MOM+1);
+            }
+            fResid.writefln("# %02d: energy-abs", 11+2*TOT_ENERGY);
+            fResid.writefln("# %02d: energy-rel", 11+2*TOT_ENERGY+1);
+            auto nt = GlobalConfig.turb_model.nturb;
+            foreach(it; 0 .. nt) {
+                string tvname = GlobalConfig.turb_model.primitive_variable_name(it);
+                fResid.writefln("# %02d: %s-abs", 11+2*(TKE+it), tvname);
+                fResid.writefln("# %02d: %s-rel", 11+2*(TKE+it)+1, tvname);
+            }
+            fResid.writeln("# %02d: mass-balance", 11+2*(TKE+nt)+2);
+            fResid.close();
         }
-        fResid.writefln("# %02d: energy-abs", 11+2*TOT_ENERGY);
-        fResid.writefln("# %02d: energy-rel", 11+2*TOT_ENERGY+1);
-        auto nt = GlobalConfig.turb_model.nturb;
-        foreach(it; 0 .. nt) {
-            string tvname = GlobalConfig.turb_model.primitive_variable_name(it);
-            fResid.writefln("# %02d: %s-abs", 11+2*(TKE+it), tvname);
-            fResid.writefln("# %02d: %s-rel", 11+2*(TKE+it)+1, tvname);
-        }
-        fResid.writeln("# %02d: mass-balance", 11+2*(TKE+nt)+2);
-        fResid.close();
     }
 
     // Begin Newton steps
@@ -479,17 +524,23 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
             }
         }
         foreach (attempt; 0 .. maxNumberAttempts) {
-            failedAttempt = false;
+            failedAttempt = 0;
             try {
                 rpcGMRES_solve(step, pseudoSimTime, dt, eta, sigma, usePreconditioner, normNew, nRestarts);
             }
             catch (FlowSolverException e) {
                 writefln("Failed when attempting GMRES solve in main steps.");
                 writefln("attempt %d: dt= %e", attempt, dt);
-                failedAttempt = true;
+                failedAttempt = 1;
                 dt = 0.1*dt;
-                continue;
             }
+            // Coordinate MPI tasks after try-catch statement in case one or more of the tasks encountered an exception.
+            version(mpi_parallel) {
+                MPI_Allreduce(MPI_IN_PLACE, &failedAttempt, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+                MPI_Allreduce(MPI_IN_PLACE, &dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+            }
+            if (failedAttempt > 0) { continue; }
+            
             foreach (blk; parallel(localFluidBlocks,1)) {
                 size_t nturb = blk.myConfig.turb_model.nturb;
                 int cellCount = 0;
@@ -513,15 +564,21 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
                     }
                     catch (FlowSolverException e) {
                         writefln("Failed attempt %d: dt= %e", attempt, dt);
-                        failedAttempt = true;
+                        failedAttempt = 1;
                         dt = 0.1*dt;
-                        break;
                     }
+                    // Coordinate MPI tasks after try-catch statement in case one or more of the tasks encountered an exception.
+                    version(mpi_parallel) {
+                        MPI_Allreduce(MPI_IN_PLACE, &failedAttempt, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+                        MPI_Allreduce(MPI_IN_PLACE, &dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+                    }
+                    if (failedAttempt > 0) { break; }
+                // end: coordination of MPI tasks
                     cellCount += nConserved;
                 }
             }
 
-            if ( failedAttempt ) {
+            if (failedAttempt > 0) {
 		// return cell flow-states to their original state
 		foreach (blk; parallel(localFluidBlocks,1)) {
 		    int cellCount = 0;
@@ -542,9 +599,11 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
             // If we got here, we can break the attempts loop.
             break;
         }
-        if ( failedAttempt ) {
-            writefln("Step failed: %d", step);
-            writeln("Bailing out!");
+        if (failedAttempt > 0) {
+            if (GlobalConfig.is_master_task) {
+                writefln("Step failed: %d", step);
+                writeln("Bailing out!");
+            }
             exit(1);
         }
 
@@ -553,21 +612,29 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
 
         // Check on some stopping criteria
         if ( step == nsteps ) {
-            writeln("STOPPING: Reached maximum number of steps.");
+            if (GlobalConfig.is_master_task) {
+                writeln("STOPPING: Reached maximum number of steps.");
+            }
             finalStep = true;
         }
         if ( normNew <= absGlobalResidReduction && step > nStartUpSteps ) {
-            writeln("STOPPING: The absolute global residual is below target value.");
-            writefln("          current value= %.12e   target value= %.12e", normNew, absGlobalResidReduction);
+            if (GlobalConfig.is_master_task) {
+                writeln("STOPPING: The absolute global residual is below target value.");
+                writefln("          current value= %.12e   target value= %.12e", normNew, absGlobalResidReduction);
+            }
             finalStep = true;
         }
         if ( normNew/normRef <= relGlobalResidReduction && step > nStartUpSteps ) {
-            writeln("STOPPING: The relative global residual is below target value.");
-            writefln("          current value= %.12e   target value= %.12e", normNew/normRef, relGlobalResidReduction);
+            if (GlobalConfig.is_master_task) {
+                writeln("STOPPING: The relative global residual is below target value.");
+                writefln("          current value= %.12e   target value= %.12e", normNew/normRef, relGlobalResidReduction);
+            }
             finalStep = true;
         }
         if (GlobalConfig.halt_now == 1) {
-            writeln("STOPPING: Halt set in control file.");
+            if (GlobalConfig.is_master_task) {
+                writeln("STOPPING: Halt set in control file.");
+            }
             finalStep = true;
         }
         
@@ -575,39 +642,45 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
         if ( (step % writeDiagnosticsCount) == 0 || finalStep ) {
             mass_balance = 0.0;
             compute_mass_balance(mass_balance);
+            version(mpi_parallel) {
+                MPI_Allreduce(MPI_IN_PLACE, &(mass_balance.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+            }
             cfl = determine_min_cfl(dt);
             // Write out residuals
             if ( !residualsUpToDate ) {
                 max_residuals(currResiduals);
                 residualsUpToDate = true;
             }
-            fResid = File(residFname, "a");
-            fResid.writef("%8d  %20.16e  %20.16e %20.16e %20.16e %3d %5d %.8f %20.16e  %20.16e  %20.16e  %20.16e  %20.16e  %20.16e  %20.16e  %20.16e ",
-                          step, pseudoSimTime, dt, cfl, eta, nRestarts, fnCount, wallClockElapsed, 
-                          normNew, normNew/normRef,
-                          currResiduals.mass, currResiduals.mass/maxResiduals.mass,
-                          currResiduals.momentum.x, currResiduals.momentum.x/maxResiduals.momentum.x,
-                          currResiduals.momentum.y, currResiduals.momentum.y/maxResiduals.momentum.y);
-            if ( GlobalConfig.dimensions == 3 )
-                fResid.writef("%20.16e  %20.16e  ", currResiduals.momentum.z, currResiduals.momentum.z/maxResiduals.momentum.z);
-            fResid.writef("%20.16e  %20.16e  ",
-                          currResiduals.total_energy, currResiduals.total_energy/maxResiduals.total_energy);
-            foreach(it; 0 .. GlobalConfig.turb_model.nturb){
+            if (GlobalConfig.is_master_task) {
+                fResid = File(residFname, "a");
+                fResid.writef("%8d  %20.16e  %20.16e %20.16e %20.16e %3d %5d %.8f %20.16e  %20.16e  %20.16e  %20.16e  %20.16e  %20.16e  %20.16e  %20.16e ",
+                              step, pseudoSimTime, dt, cfl, eta, nRestarts, fnCount, wallClockElapsed, 
+                              normNew, normNew/normRef,
+                              currResiduals.mass.re, currResiduals.mass.re/maxResiduals.mass.re,
+                              currResiduals.momentum.x.re, currResiduals.momentum.x.re/maxResiduals.momentum.x.re,
+                              currResiduals.momentum.y.re, currResiduals.momentum.y/maxResiduals.momentum.y.re);
+                if ( GlobalConfig.dimensions == 3 )
+                    fResid.writef("%20.16e  %20.16e  ", currResiduals.momentum.z.re, currResiduals.momentum.z.re/maxResiduals.momentum.z.re);
                 fResid.writef("%20.16e  %20.16e  ",
-                              currResiduals.rhoturb[it], currResiduals.rhoturb[it]/maxResiduals.rhoturb[it]);
+                              currResiduals.total_energy.re, currResiduals.total_energy.re/maxResiduals.total_energy.re);
+                foreach(it; 0 .. GlobalConfig.turb_model.nturb){
+                    fResid.writef("%20.16e  %20.16e  ",
+                                  currResiduals.rhoturb[it].re, currResiduals.rhoturb[it].re/maxResiduals.rhoturb[it].re);
+                }
+                fResid.writef("%20.16e ", fabs(mass_balance.re));
+                fResid.write("\n");
+                fResid.close();
             }
-            fResid.writef("%20.16e ", fabs(mass_balance.re));
-            fResid.write("\n");
-            fResid.close();
         }
 
         // write out the loads
         if ( (step % writeLoadsCount) == 0 || finalStep || step == GlobalConfig.write_loads_at_step) {
-            // TODO: will need to make only the master perform init for MPI implementation
-            init_current_loads_tindx_dir(step);
-            wait_for_current_tindx_dir(step);
-            write_boundary_loads_to_file(pseudoSimTime, step);
-            update_loads_times_file(pseudoSimTime, step);
+            if (GlobalConfig.is_master_task) {
+                init_current_loads_tindx_dir(step);
+                wait_for_current_tindx_dir(step);
+                write_boundary_loads_to_file(pseudoSimTime, step);
+                update_loads_times_file(pseudoSimTime, step);
+            }
         }
         
         if ( (step % GlobalConfig.print_count) == 0 || finalStep ) {
@@ -616,22 +689,23 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
                 max_residuals(currResiduals);
                 residualsUpToDate = true;
             }
-            auto writer = appender!string();
-
-            formattedWrite(writer, "STEP= %7d  pseudo-time=%10.3e dt=%10.3e cfl=%10.3e  WC=%.1f \n", step, pseudoSimTime, dt, cfl, wallClockElapsed);
-            formattedWrite(writer, "RESIDUALS        absolute        relative\n");
-            formattedWrite(writer, "  global         %10.6e    %10.6e\n", normNew, normNew/normRef);
-            formattedWrite(writer, "  mass           %10.6e    %10.6e\n", currResiduals.mass, currResiduals.mass/maxResiduals.mass);
-            formattedWrite(writer, "  x-mom          %10.6e    %10.6e\n", currResiduals.momentum.x, currResiduals.momentum.x/maxResiduals.momentum.x);
-            formattedWrite(writer, "  y-mom          %10.6e    %10.6e\n", currResiduals.momentum.y, currResiduals.momentum.y/maxResiduals.momentum.y);
-            if ( GlobalConfig.dimensions == 3 )
-                formattedWrite(writer, "  z-mom          %10.6e    %10.6e\n", currResiduals.momentum.z, currResiduals.momentum.z/maxResiduals.momentum.z);
-            formattedWrite(writer, "  total-energy   %10.6e    %10.6e\n", currResiduals.total_energy, currResiduals.total_energy/maxResiduals.total_energy);
-            foreach(it; 0 .. GlobalConfig.turb_model.nturb){
-                auto tvname = GlobalConfig.turb_model.primitive_variable_name(it);
-                formattedWrite(writer, "  %s            %10.6e    %10.6e\n", tvname, currResiduals.rhoturb[it], currResiduals.rhoturb[it]/maxResiduals.rhoturb[it]);
+            if (GlobalConfig.is_master_task) {
+                auto writer = appender!string();
+                formattedWrite(writer, "STEP= %7d  pseudo-time=%10.3e dt=%10.3e cfl=%10.3e  WC=%.1f \n", step, pseudoSimTime, dt, cfl, wallClockElapsed);
+                formattedWrite(writer, "RESIDUALS        absolute        relative\n");
+                formattedWrite(writer, "  global         %10.6e    %10.6e\n", normNew, normNew/normRef);
+                formattedWrite(writer, "  mass           %10.6e    %10.6e\n", currResiduals.mass.re, currResiduals.mass.re/maxResiduals.mass.re);
+                formattedWrite(writer, "  x-mom          %10.6e    %10.6e\n", currResiduals.momentum.x.re, currResiduals.momentum.x.re/maxResiduals.momentum.x.re);
+                formattedWrite(writer, "  y-mom          %10.6e    %10.6e\n", currResiduals.momentum.y.re, currResiduals.momentum.y.re/maxResiduals.momentum.y.re);
+                if ( GlobalConfig.dimensions == 3 )
+                    formattedWrite(writer, "  z-mom          %10.6e    %10.6e\n", currResiduals.momentum.z.re, currResiduals.momentum.z.re/maxResiduals.momentum.z.re);
+                formattedWrite(writer, "  total-energy   %10.6e    %10.6e\n", currResiduals.total_energy.re, currResiduals.total_energy.re/maxResiduals.total_energy.re);
+                foreach(it; 0 .. GlobalConfig.turb_model.nturb){
+                    auto tvname = GlobalConfig.turb_model.primitive_variable_name(it);
+                    formattedWrite(writer, "  %s            %10.6e    %10.6e\n", tvname, currResiduals.rhoturb[it].re, currResiduals.rhoturb[it].re/maxResiduals.rhoturb[it].re);
+                }
+                writeln(writer.data);
             }
-            writeln(writer.data);
         }
 
         // Write out the flow field, if required
@@ -640,14 +714,18 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
                 max_residuals(currResiduals);
                 residualsUpToDate = true;
             }
-            writefln("-----------------------------------------------------------------------");
-            writefln("Writing flow solution at step= %4d; pseudo-time= %6.3e", step, pseudoSimTime);
-            writefln("-----------------------------------------------------------------------\n");
+            if (GlobalConfig.is_master_task) {
+                writefln("-----------------------------------------------------------------------");
+                writefln("Writing flow solution at step= %4d; pseudo-time= %6.3e", step, pseudoSimTime);
+                writefln("-----------------------------------------------------------------------\n");
+            }
             nWrittenSnapshots++;
             if ( nWrittenSnapshots <= nTotalSnapshots ) {
-                ensure_directory_is_present(make_path_name!"flow"(nWrittenSnapshots));
+                if (GlobalConfig.is_master_task) { ensure_directory_is_present(make_path_name!"flow"(nWrittenSnapshots)); }
+                version(mpi_parallel) {
+                    MPI_Barrier(MPI_COMM_WORLD);
+                }
                 foreach ( iblk, blk; localFluidBlocks ) {
-                    // [TODO] PJ 2017-09-02 need to set the file extension properly (here and a few lines below).
                     auto fileName = make_file_name!"flow"(jobName, to!int(iblk), nWrittenSnapshots, "gz");
                     blk.write_solution(fileName, pseudoSimTime);
                 }
@@ -657,7 +735,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
                 restartInfo.globalResidual = normNew;
                 restartInfo.residuals = currResiduals;
                 times ~= restartInfo;
-                rewrite_times_file(times);
+                if (GlobalConfig.is_master_task) { rewrite_times_file(times); }
             }
             else {
                 // We need to shuffle all of the snapshots...
@@ -680,21 +758,21 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
                 restartInfo.globalResidual = normNew;
                 restartInfo.residuals = currResiduals;
                 times[$-1] = restartInfo;
-                rewrite_times_file(times);
+                if (GlobalConfig.is_master_task) { rewrite_times_file(times); }
             }
         }
 
-        if ( finalStep ) break;
+        if (finalStep) break;
         
-        if ( !inexactNewtonPhase && normNew/normRef < tau ) {
+        if (!inexactNewtonPhase && normNew/normRef < tau ) {
             // Switch to inexactNewtonPhase
             inexactNewtonPhase = true;
         }
 
         // Choose a new timestep and eta value.
         auto normRatio = normOld/normNew;
-        if ( inexactNewtonPhase ) {
-            if ( step < nStartUpSteps ) {
+        if (inexactNewtonPhase) {
+            if (step < nStartUpSteps) {
                 // Let's assume we're still letting the shock settle
                 // when doing low order steps, so we use a power of 0.75 as a default
                 double p0 =  GlobalConfig.sssOptions.p0;
@@ -706,25 +784,25 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
                 dtTrial = dt*pow(normOld/normNew, p1);
             }
             // Apply safeguards to dt
-            dtTrial = min(dtTrial, 2.0*dt);
-            dtTrial = max(dtTrial, 0.1*dt);
+            dtTrial = fmin(dtTrial, 2.0*dt);
+            dtTrial = fmax(dtTrial, 0.1*dt);
             dt = dtTrial;
         }
 
-        if ( step == nStartUpSteps ) {
+        if (step == nStartUpSteps) {
             // At the swap-over point from start-up phase to main phase
             // we need to do a few special things.
             // 1. Reset dt to user's choice for this new phase based on cfl1.
-            writefln("step= %d dt= %e  cfl1= %f", step, dt, cfl1);
+            if (GlobalConfig.is_master_task) { writefln("step= %d dt= %e  cfl1= %f", step, dt, cfl1); }
             dt = determine_initial_dt(cfl1);
-            writefln("after choosing new timestep: %e", dt);
+            if (GlobalConfig.is_master_task) { writefln("after choosing new timestep: %e", dt); }
             // 2. Reset the inexact Newton phase.
             //    We'll take some constant timesteps at the new dt
             //    until the residuals have dropped.
             inexactNewtonPhase = false;
         }
 
-        if ( step > nStartUpSteps ) {
+        if (step > nStartUpSteps) {
             // Adjust eta1 according to eta update strategy
             final switch (etaStrategy) {
             case EtaStrategy.constant:
@@ -763,9 +841,14 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
     // to machine precision - in these instances it is typically necessary to store the limiter 
     // values for further analysis.
     if (GlobalConfig.frozen_limiter) {
-	auto fileName = "frozen_limiter_values.dat";
-	auto outFile = File(fileName, "w");
+        string limValDir = "limiter-values";
+        if (GlobalConfig.is_master_task) { ensure_directory_is_present(limValDir); }
+        version(mpi_parallel) {
+            MPI_Barrier(MPI_COMM_WORLD);
+        }
 	foreach (blk; localFluidBlocks) {
+            string fileName = format("%s/limiter-values-b%04d.dat", limValDir, blk.id);
+            auto outFile = File(fileName, "w");
 	    foreach (cell; blk.cells) {
 		outFile.writef("%.16e \n", cell.gradients.rhoPhi.re);
 		outFile.writef("%.16e \n", cell.gradients.velxPhi.re);
@@ -774,12 +857,12 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
 		    outFile.writef("%.16e \n", cell.gradients.velzPhi.re);
 		}
 		outFile.writef("%.16e \n", cell.gradients.pPhi.re);
-        foreach(it; 0 .. blk.myConfig.turb_model.nturb){
+                foreach(it; 0 .. blk.myConfig.turb_model.nturb){
 		    outFile.writef("%.16e \n", cell.gradients.turbPhi[it].re);
 		}
 	    }
+            outFile.close();
 	}
-	outFile.close();
     } // end if (GlobalConfig.frozen_limiter)    
 }
 
@@ -861,7 +944,7 @@ void evalRHS(double pseudoSimTime, int ftl)
         }
     }
 
-    size_t gtl = 0;
+    int gtl = 0;
     bool allow_high_order_interpolation = true;
     foreach (blk; parallel(localFluidBlocks,1)) {
         blk.convective_flux_phase0(allow_high_order_interpolation, gtl);
@@ -869,7 +952,7 @@ void evalRHS(double pseudoSimTime, int ftl)
 
     // for unstructured blocks we need to transfer the convective gradients before the flux calc
     if (allow_high_order_interpolation && (GlobalConfig.interpolation_order > 1)) {
-        exchange_ghost_cell_boundary_convective_gradient_data(pseudoSimTime, to!int(gtl), to!int(ftl));
+        exchange_ghost_cell_boundary_convective_gradient_data(pseudoSimTime, gtl, ftl);
     }
     
     foreach (blk; parallel(localFluidBlocks,1)) {
@@ -881,6 +964,7 @@ void evalRHS(double pseudoSimTime, int ftl)
     if (GlobalConfig.viscous) {
         foreach (blk; localFluidBlocks) {
             blk.applyPreSpatialDerivActionAtBndryFaces(pseudoSimTime, 0, ftl);
+            blk.applyPreSpatialDerivActionAtBndryCells(SimState.time, gtl, ftl);
         }
         foreach (blk; parallel(localFluidBlocks,1)) {
             blk.flow_property_spatial_derivatives(0);
@@ -897,6 +981,12 @@ void evalRHS(double pseudoSimTime, int ftl)
                 }
             }
             blk.estimate_turbulence_viscosity();
+        }
+        // we exchange boundary data at this point to ensure the
+        // ghost cells along block-block boundaries have the most
+        // recent mu_t and k_t values.
+        exchange_ghost_cell_boundary_data(pseudoSimTime, gtl, ftl);
+        foreach (blk; parallel(localFluidBlocks,1)) {
             blk.viscous_flux();
         }
         foreach (blk; localFluidBlocks) {
@@ -1049,7 +1139,6 @@ void evalComplexMatVecProd(double pseudoSimTime, double sigma)
         throw new Error("Oops. Steady-State Solver setting: useComplexMatVecEval is not compatible with real-number version of the code.");
     }
 }
-
 
 
 string dot_over_blocks(string dot, string A, string B)
@@ -1658,6 +1747,26 @@ void max_residuals(ConservedQuantities residuals)
         residuals.total_energy = fmax(residuals.total_energy, blk.residuals.total_energy);
         foreach(it; 0 .. blk.myConfig.turb_model.nturb){
             residuals.rhoturb[it] = fmax(residuals.rhoturb[it], blk.residuals.rhoturb[it]);
+        }
+    }
+    version(mpi_parallel) {
+        // In MPI context, only the master task (rank 0) has collated the residuals
+        double maxResid;
+        MPI_Reduce(&(residuals.mass.re), &maxResid, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+        if (GlobalConfig.is_master_task) { residuals.mass.re = maxResid; }
+        MPI_Reduce(&(residuals.momentum.x.re), &maxResid, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+        if (GlobalConfig.is_master_task) { residuals.momentum.refx = to!number(maxResid); }
+        MPI_Reduce(&(residuals.momentum.y.re), &maxResid, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+        if (GlobalConfig.is_master_task) { residuals.momentum.refy = to!number(maxResid); }
+        if (GlobalConfig.dimensions == 3) {
+            MPI_Reduce(&(residuals.momentum.z.re), &maxResid, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+            if (GlobalConfig.is_master_task) { residuals.momentum.refz = to!number(maxResid); }
+        }
+        MPI_Reduce(&(residuals.total_energy.re), &maxResid, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+        if (GlobalConfig.is_master_task) { residuals.total_energy.re = maxResid; }
+        foreach (it; 0 .. GlobalConfig.turb_model.nturb) {
+            MPI_Reduce(&(residuals.rhoturb[it].re), &maxResid, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+            if (GlobalConfig.is_master_task) { residuals.rhoturb[it].re = maxResid; }
         }
     }
 }

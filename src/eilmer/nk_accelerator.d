@@ -18,7 +18,8 @@
  *   2020-04-11 : Renamed nk_accelerator.d and added MPI capability
  */
 
-import core.stdc.stdlib : exit;
+import core.thread;
+import core.runtime;
 import std.stdio;
 import std.file;
 import std.format;
@@ -42,7 +43,7 @@ import fluidblock;
 import sfluidblock;
 import globaldata;
 import globalconfig;
-import simcore;
+import simcore : init_simulation;
 import fvcore;
 import fileutil;
 import user_defined_source_terms;
@@ -54,9 +55,9 @@ version(mpi_parallel) {
     import mpi;
 }
 
-void main(string[] args)
+int main(string[] args)
 {
-    int exitFlag = 0;
+    int exitFlag;
     version(mpi_parallel) {
         // This preamble copied directly from the OpenMPI hello-world example.
         auto c_args = Runtime.cArgs;
@@ -103,10 +104,14 @@ void main(string[] args)
     msg ~= "  --max-wall-clock=<int>            in seconds\n";
     msg ~= "  --help                            writes this message\n";
 
-    if (args.length < 2 && GlobalConfig.is_master_task) {
-        writeln("Too few arguments.");
-        write(msg);
-        exit(1);
+    if (args.length < 2) {
+        if (GlobalConfig.is_master_task) {
+            writeln("Too few arguments.");
+            write(msg);
+            stdout.flush();
+        }
+        exitFlag = 1;
+        return exitFlag;
     }
     
     string jobName = "";
@@ -134,8 +139,10 @@ void main(string[] args)
             args = args[1 .. $]; // Dispose of program name in first argument
             foreach (arg; args) writeln("   arg: ", arg);
             write(msg);
-            exit(1);
+            stdout.flush();
         }
+        exitFlag = 1;
+        return exitFlag;
     }
     if (verbosityLevel > 0) {
         if (GlobalConfig.is_master_task) {
@@ -168,15 +175,23 @@ void main(string[] args)
     } else {
         writeln("Parallelism: Shared memory");
     }
-    if (helpWanted && GlobalConfig.is_master_task) {
-        write(msg);
-        exit(0);
+    if (helpWanted) {
+        if (GlobalConfig.is_master_task) {
+            write(msg);
+            stdout.flush();
+        }
+        exitFlag = 0;
+        return exitFlag;
     }
 
-    if (jobName.length == 0 && GlobalConfig.is_master_task) {
-        writeln("Need to specify a job name.");
-        write(msg);
-        exit(1);
+    if (jobName.length == 0) {
+        if (GlobalConfig.is_master_task) {
+            writeln("Need to specify a job name.");
+            write(msg);
+            stdout.flush();
+        }
+        exitFlag = 1;
+        return exitFlag;
     }
 
     GlobalConfig.base_file_name = jobName;
@@ -195,7 +210,7 @@ void main(string[] args)
         snapshotStart = to!int(snapshotStartStr);
     }
 
-    writefln("Initialising simulation from snapshot: %d", snapshotStart);
+    if (GlobalConfig.is_master_task) { writefln("Initialising simulation from snapshot: %d", snapshotStart); }
     init_simulation(snapshotStart, -1, maxCPUs, threadsPerMPITask, maxWallClock);
 
     // Additional memory allocation specific to steady-state solver
@@ -215,24 +230,41 @@ void main(string[] args)
 
     /* Check that items are implemented. */
     bool goodToProceed = true;
-    if (GlobalConfig.gmodel_master.n_species > 1 && GlobalConfig.is_master_task) {
-        writeln("Steady-state solver not implemented for multiple-species calculations.");
+    if (GlobalConfig.gmodel_master.n_species > 1) {
+        if (GlobalConfig.is_master_task) {
+            writeln("Newton-Krylov accelerator not implemented for multiple-species calculations.");
+            stdout.flush();
+        }
         goodToProceed = false;
     }
-    if (!goodToProceed && GlobalConfig.is_master_task) {
-        writeln("One or more options are not yet available for the steady-state solver.");
-        writeln("Bailing out!");
-        exit(1);
+    if (!goodToProceed) {
+        if (GlobalConfig.is_master_task) {
+            writeln("One or more options are not yet available for the Newton-Krylov accelerator.");
+            writeln("Bailing out!");
+            stdout.flush();
+        }
+        exitFlag = 1;
+        return exitFlag;
     }
 
-    iterate_to_steady_state(snapshotStart, maxCPUs);
+    iterate_to_steady_state(snapshotStart, maxCPUs, threadsPerMPITask);
     
     /* Write residuals to file before exit. */
-    ensure_directory_is_present("residuals");
+    if (GlobalConfig.is_master_task) {
+        ensure_directory_is_present("residuals");
+    }
+    version(mpi_parallel) {
+        MPI_Barrier(MPI_COMM_WORLD);
+    }
     foreach (blk; localFluidBlocks) {
         auto fileName = format!"residuals/%s.residuals.b%04d.gz"(jobName, blk.id);
         blk.write_residuals(fileName);
     }
 
-    writeln("Done simulation.");
+    if (GlobalConfig.is_master_task) {
+        writeln("Done simulation.");
+        stdout.flush();
+    }
+    exitFlag = 0;
+    return exitFlag;
 }

@@ -1205,36 +1205,36 @@ int integrate_in_time(double target_time_as_requested)
                     compute_Linf_residuals(Linf_residuals);
                     version(mpi_parallel) {
                         // Reduce residual values across MPI tasks.
-                        double my_local_value = Linf_residuals.mass;
+                        double my_local_value = Linf_residuals.mass.re;
                         MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-                        Linf_residuals.mass = my_local_value;
-                        my_local_value = Linf_residuals.momentum.x;
+                        Linf_residuals.mass.re = my_local_value;
+                        my_local_value = Linf_residuals.momentum.x.re;
                         MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-                        Linf_residuals.momentum.refx = my_local_value;
-                        my_local_value = Linf_residuals.momentum.y;
+                        Linf_residuals.momentum.refx = to!number(my_local_value);
+                        my_local_value = Linf_residuals.momentum.y.re;
                         MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-                        Linf_residuals.momentum.refy = my_local_value;
-                        my_local_value = Linf_residuals.momentum.z;
+                        Linf_residuals.momentum.refy = to!number(my_local_value);
+                        my_local_value = Linf_residuals.momentum.z.re;
                         MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-                        Linf_residuals.momentum.refz = my_local_value;
-                        my_local_value = Linf_residuals.total_energy;
+                        Linf_residuals.momentum.refz = to!number(my_local_value);
+                        my_local_value = Linf_residuals.total_energy.re;
                         MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-                        Linf_residuals.total_energy = my_local_value;
-                        my_local_value = mass_balance;
+                        Linf_residuals.total_energy.re = my_local_value;
+                        my_local_value = mass_balance.re;
                         MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-                        mass_balance = my_local_value;
-			my_local_value = L2_residual;
+                        mass_balance.re = my_local_value;
+			my_local_value = L2_residual.re;
                         MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-                        L2_residual = my_local_value;
+                        L2_residual.re = my_local_value;
 		    }
                     L2_residual = sqrt(L2_residual);
                     if (GlobalConfig.is_master_task) {
                         string residualsFile = "config/"~GlobalConfig.base_file_name~"-residuals.txt";
                         string txt = format("%7d %.3f %10.6e %10.6e %10.6e %10.6e %10.6e %10.6e %10.6e\n",
-                                            SimState.step, wall_clock_elapsed, Linf_residuals.mass,
-                                            Linf_residuals.momentum.x, Linf_residuals.momentum.y,
-                                            Linf_residuals.momentum.z, Linf_residuals.total_energy,
-                                            fabs(L2_residual), fabs(mass_balance));
+                                            SimState.step, wall_clock_elapsed, Linf_residuals.mass.re,
+                                            Linf_residuals.momentum.x.re, Linf_residuals.momentum.y.re,
+                                            Linf_residuals.momentum.z.re, Linf_residuals.total_energy.re,
+                                            fabs(L2_residual.re), fabs(mass_balance.re));
                         std.file.append(residualsFile, txt);
                     }
                 } // end if report_residuals
@@ -1791,40 +1791,45 @@ void set_grid_velocities()
                     SFluidBlock sblk = cast(SFluidBlock) blk;
                     
                     version(mpi_parallel) {
-                        // Define a new communication group- need to be real explicit with MPI
-                        assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
-                        MPI_Comm shock_fitting_comm;
-                        int communicator_tag = 0, local_rank;
-                        MPI_Comm_rank(MPI_COMM_WORLD, &local_rank);
-                        foreach (indx; sblk.inflow_partners) {
-                            communicator_tag += indx;
+                        version(nk_accelerator) {
+                            throw new Error("set_grid_velocities(): shock-fitting not available in e4-nk-dist.");
                         }
-                        MPI_Comm_split(MPI_COMM_WORLD, communicator_tag, local_rank, &shock_fitting_comm);
-                        // Define the variables that will be local to some processes
-                        int[2] is_master_block; // Bit passed around to determine master rank
-                        int[2] master_rank; // This contains the location of the shock fitted block
-                        int shock_fitting_rank; // Rank of local process
-                        double[] unpacked_vertex_velocities; // Array that will contain the vertex velocities broken into their spatial elements
-                        Vector3[] inflow_vertex_velocities, packed_vertex_velocities; // Array that will contain the vertex velocities in vector form
-                        MPI_Comm_rank(shock_fitting_comm, &shock_fitting_rank); // Assign the local rank
-                        is_master_block[1] = shock_fitting_rank;
+                        else {
+                            // Define a new communication group- need to be real explicit with MPI
+                            assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
+                            MPI_Comm shock_fitting_comm;
+                            int communicator_tag = 0, local_rank;
+                            MPI_Comm_rank(MPI_COMM_WORLD, &local_rank);
+                            foreach (indx; sblk.inflow_partners) {
+                                communicator_tag += indx;
+                            }
+                            MPI_Comm_split(MPI_COMM_WORLD, communicator_tag, local_rank, &shock_fitting_comm);
+                            // Define the variables that will be local to some processes
+                            int[2] is_master_block; // Bit passed around to determine master rank
+                            int[2] master_rank; // This contains the location of the shock fitted block
+                            int shock_fitting_rank; // Rank of local process
+                            double[] unpacked_vertex_velocities; // Array that will contain the vertex velocities broken into their spatial elements
+                            Vector3[] inflow_vertex_velocities, packed_vertex_velocities; // Array that will contain the vertex velocities in vector form
+                            MPI_Comm_rank(shock_fitting_comm, &shock_fitting_rank); // Assign the local rank
+                            is_master_block[1] = shock_fitting_rank;
 
-                        // Calculate the vertex velocities on the inflow boundary
-                        if (blk.active && blk.bc[Face.west].type == "inflow_shock_fitting") {
-                            is_master_block[0] = 1;     // Assign self as the master block
-                            inflow_vertex_velocities = shock_fitting_vertex_velocities(sblk);   // Do calculation
-                            assert(inflow_vertex_velocities.length == (sblk.jmax - sblk.jmin + 2), "the vertex velocity array is the wrong size");
-                            unpacked_vertex_velocities = unpack_vertex_velocities(inflow_vertex_velocities); // Unpack the vertex velocities to a form that can be read by MPI
-                        }
-
-                        MPI_Allreduce(is_master_block.ptr, master_rank.ptr, 2, MPI_2INT, MPI_MAXLOC, shock_fitting_comm);     // Tell everyone who their master is
-                        int ne = to!int(unpacked_vertex_velocities.length);     // Number of orders
-                        MPI_Bcast(&ne, 1, MPI_INT, master_rank[1], shock_fitting_comm);     // Let all the other blocks know how much space to set aside
-                        unpacked_vertex_velocities.length = ne;                             // Set aside that space
-                        MPI_Bcast(unpacked_vertex_velocities.ptr, ne, MPI_DOUBLE, master_rank[1], shock_fitting_comm);  // Master gives his orders
-                        packed_vertex_velocities = pack_vertex_velocities(unpacked_vertex_velocities);      // Put orders into usable format
-                        assign_slave_velocities(sblk, packed_vertex_velocities);    // Assign inner vertex velocities
-                        MPI_Comm_free(&shock_fitting_comm);
+                            // Calculate the vertex velocities on the inflow boundary
+                            if (blk.active && blk.bc[Face.west].type == "inflow_shock_fitting") {
+                                is_master_block[0] = 1;     // Assign self as the master block
+                                inflow_vertex_velocities = shock_fitting_vertex_velocities(sblk);   // Do calculation
+                                assert(inflow_vertex_velocities.length == (sblk.jmax - sblk.jmin + 2), "the vertex velocity array is the wrong size");
+                                unpacked_vertex_velocities = unpack_vertex_velocities(inflow_vertex_velocities); // Unpack the vertex velocities to a form that can be read by MPI
+                            }
+                            
+                            MPI_Allreduce(is_master_block.ptr, master_rank.ptr, 2, MPI_2INT, MPI_MAXLOC, shock_fitting_comm);     // Tell everyone who their master is
+                            int ne = to!int(unpacked_vertex_velocities.length);     // Number of orders
+                            MPI_Bcast(&ne, 1, MPI_INT, master_rank[1], shock_fitting_comm);     // Let all the other blocks know how much space to set aside
+                            unpacked_vertex_velocities.length = ne;                             // Set aside that space
+                            MPI_Bcast(unpacked_vertex_velocities.ptr, ne, MPI_DOUBLE, master_rank[1], shock_fitting_comm);  // Master gives his orders
+                            packed_vertex_velocities = pack_vertex_velocities(unpacked_vertex_velocities);      // Put orders into usable format
+                            assign_slave_velocities(sblk, packed_vertex_velocities);    // Assign inner vertex velocities
+                            MPI_Comm_free(&shock_fitting_comm);
+                        } // End version(!nk_accelerator)
                     }
                     else {
                         if (blk.active && blk.bc[Face.west].type == "inflow_shock_fitting" && SimState.time > GlobalConfig.shock_fitting_delay) {

@@ -160,6 +160,7 @@ public:
             jy = other.jy.dup();
             jz = other.jz.dup();
         }
+        // FIX-ME - KYLE -- there's a typo here. Not sure the intent.
         version(steadystate) {
             dFdU_L.length = 5; // number of conserved variables; FIX-ME for versions
             foreach (ref a; dFdU_L) a.length = 5;

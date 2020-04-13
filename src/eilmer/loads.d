@@ -370,30 +370,35 @@ void computeRunTimeLoads()
     // 3. make that sum available on all processes.
     // 4. place the array values back in our convenient data structure
     version(mpi_parallel) {
-        foreach (grpIdx, group; runTimeLoads) {
-            // Place local values in groupedLoads on each process
-            groupedLoads[grpIdx*6+0] = group.resultantForce.x;
-            groupedLoads[grpIdx*6+1] = group.resultantForce.y;
-            groupedLoads[grpIdx*6+2] = group.resultantForce.z;
-            groupedLoads[grpIdx*6+3] = group.resultantMoment.x;
-            groupedLoads[grpIdx*6+4] = group.resultantMoment.y;
-            groupedLoads[grpIdx*6+5] = group.resultantMoment.z;
+        version(nk_accelerator) {
+            throw new Error("computeRunTimeLoads(): not available in e4-nk-dist.");
         }
+        else {
+            foreach (grpIdx, group; runTimeLoads) {
+                // Place local values in groupedLoads on each process
+                groupedLoads[grpIdx*6+0] = group.resultantForce.x;
+                groupedLoads[grpIdx*6+1] = group.resultantForce.y;
+                groupedLoads[grpIdx*6+2] = group.resultantForce.z;
+                groupedLoads[grpIdx*6+3] = group.resultantMoment.x;
+                groupedLoads[grpIdx*6+4] = group.resultantMoment.y;
+                groupedLoads[grpIdx*6+5] = group.resultantMoment.z;
+            }
+            
+            // Make sure each process has updated its loads calculation complete
+            // before going on.
+            MPI_Barrier(MPI_COMM_WORLD);
 
-        // Make sure each process has updated its loads calculation complete
-        // before going on.
-        version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
+            MPI_Allreduce(MPI_IN_PLACE, groupedLoads.ptr, to!int(groupedLoads.length), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-        MPI_Allreduce(MPI_IN_PLACE, groupedLoads.ptr, to!int(groupedLoads.length), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-
-        foreach (grpIdx, ref group; runTimeLoads) {
-            group.resultantForce.refx = groupedLoads[grpIdx*6+0];
-            group.resultantForce.refy = groupedLoads[grpIdx*6+1];
-            group.resultantForce.refz = groupedLoads[grpIdx*6+2];
-            group.resultantMoment.refx = groupedLoads[grpIdx*6+3];
-            group.resultantMoment.refy = groupedLoads[grpIdx*6+4];
-            group.resultantMoment.refz = groupedLoads[grpIdx*6+5];
-        }
+            foreach (grpIdx, ref group; runTimeLoads) {
+                group.resultantForce.refx = groupedLoads[grpIdx*6+0];
+                group.resultantForce.refy = groupedLoads[grpIdx*6+1];
+                group.resultantForce.refz = groupedLoads[grpIdx*6+2];
+                group.resultantMoment.refx = groupedLoads[grpIdx*6+3];
+                group.resultantMoment.refy = groupedLoads[grpIdx*6+4];
+                group.resultantMoment.refz = groupedLoads[grpIdx*6+5];
+            }
+        } // END version(!nk_accelerator)
     } // end version(mpi_parallel)
 }
             

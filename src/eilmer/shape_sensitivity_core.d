@@ -4051,7 +4051,7 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
 	
 
         // run steady-state solver
-        iterate_to_steady_state(0, maxCPUs); // snapshotStart = 0
+        iterate_to_steady_state(0, maxCPUs, 1); // snapshotStart = 0, threadsPerMPITask = 1
         //GlobalConfig.report_residuals = true;
         //sim_time = 0.0;
         //integrate_in_time(GlobalConfig.max_time);

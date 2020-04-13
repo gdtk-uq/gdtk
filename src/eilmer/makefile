@@ -405,7 +405,7 @@ clean:
 	- rm e4opt optdriver_with_rev_string.d
 	- rm mpi_main_with_rev_string.d
 	- rm loadbalance_with_rev_string.d
-	- rm e4mpi e4loadbalance e4ssc e4zshared e4-nk-shared
+	- rm e4mpi e4loadbalance e4ssc e4zshared e4-nk-shared e4-nk-dist
 	- rm dgd-for-mech4480.tgz
 	- cd $(OPENMPI_DIR); make clean
 	- cd $(LUA_DIR); make clean
@@ -513,9 +513,9 @@ e4-nk-shared: nk_accelerator.d steadystate_core.d shape_sensitivity_core.d $(EIL
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		nk_accelerator.d > nk_accelerator_with_string_subst.d
-	$(DMD) $(DFLAGS) $(OF)e4-nk-shared \
+	$(DMD) $(DFLAGS) $(OF)$@ \
 		$(DVERSION)complex_numbers \
-		$(DVERSION)steady_state \
+		$(DVERSION)nk_accelerator \
 		$(DVERSION)shape_sensitivity \
 		nk_accelerator_with_string_subst.d steadystate_core.d shape_sensitivity_core.d \
 		$(EILMER_FILES) \
@@ -526,6 +526,31 @@ e4-nk-shared: nk_accelerator.d steadystate_core.d shape_sensitivity_core.d $(EIL
 		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) $(TECPLOT_FILES) \
 		$(LIBCEQ) $(LIBLUA) \
 		$(DLINKFLAGS)
+
+e4-nk-dist: nk_accelerator.d steadystate_core.d shape_sensitivity_core.d $(EILMER_FILES) \
+	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
+	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBLUA) $(GZIP_FILES) \
+	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+	$(NM_FILES) $(UTIL_FILES) \
+	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
+	cd $(OPENMPI_DIR); gen/setup.sh
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
+		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
+		nk_accelerator.d > mpi_nk_accelerator_with_string_subst.d
+	$(DMD) $(DFLAGS) $(OF)$@ \
+		$(DVERSION)mpi_parallel -I$(OPENMPI_DIR) $(MPI_LIB_DIRS_SEARCH) \
+		$(DVERSION)complex_numbers \
+		$(DVERSION)nk_accelerator \
+		$(DVERSION)shape_sensitivity \
+		mpi_nk_accelerator_with_string_subst.d steadystate_core.d shape_sensitivity_core.d \
+		$(EILMER_FILES) \
+		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
+		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
+		$(UTIL_FILES) $(NM_FILES) \
+		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) $(OPENMPI_FILES) \
+		$(LIBCEQ) $(LIBLUA) \
+		$(DLINKFLAGS) -L-lmpi
 
 e4ssc: shape_sensitivity_calc.d shape_sensitivity_core.d steadystate_core.d $(EILMER_FILES) \
 	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
@@ -538,7 +563,7 @@ e4ssc: shape_sensitivity_calc.d shape_sensitivity_core.d steadystate_core.d $(EI
 	$(DMD) $(DFLAGS) $(OF)e4ssc \
 		$(DVERSION)complex_numbers \
 		$(DVERSION)shape_sensitivity \
-		$(DVERSION)steady_state \
+		$(DVERSION)nk_accelerator \
 		shape_sensitivity_calc_with_rev_string.d \
 		shape_sensitivity_core.d steadystate_core.d \
 		$(EILMER_FILES) \
