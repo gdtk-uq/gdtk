@@ -165,7 +165,10 @@ public:
         pos.length = myConfig.n_grid_time_levels;
         volume.length = myConfig.n_grid_time_levels;
         areaxy.length = myConfig.n_grid_time_levels;
-        auto gmodel = myConfig.gmodel;
+
+        GasModel gmodel = cast(GasModel) myConfig.gmodel;
+        if (gmodel is null) { gmodel = GlobalConfig.gmodel_master; }
+        
         int n_species = myConfig.n_species;
         int n_modes = myConfig.n_modes;
         double T = 300.0;

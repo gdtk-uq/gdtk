@@ -29,6 +29,7 @@ import fluidblock;
 import sfluidblock;
 import gas;
 import bc;
+import bc.ghost_cell_effect.gas_solid_full_face_copy;
 
 @nogc
 void reflect_normal_velocity(ref FlowState fs, in FVInterface IFace)
@@ -152,6 +153,13 @@ GhostCellEffect make_GCE_from_json(JSONValue jsonData, int blk_id, int boundary)
                                              cmff, fname,
                                              transform_pos, c0, n, alpha, delta, lmc,
                                              rvq, Rmatrix);
+        break;
+    case "gas_solid_full_face_copy":
+        int otherBlock = getJSONint(jsonData, "otherBlock", -1);
+        string otherFaceName = getJSONstring(jsonData, "otherFace", "none");
+        int neighbourOrientation = getJSONint(jsonData, "orientation", 0);
+        newGCE = new GhostCellGasSolidFullFaceCopy(blk_id, boundary,
+                                                   otherBlock, face_index(otherFaceName),neighbourOrientation);
         break;
     case "user_defined":
         string fname = getJSONstring(jsonData, "filename", "none");

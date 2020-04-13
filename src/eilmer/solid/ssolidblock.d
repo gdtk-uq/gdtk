@@ -223,7 +223,6 @@ public:
                         cells[$-1].is_ghost = false;
                     }
                 }
-                writeln("length: ", cells.length);
             } else { // assume 3D
                 foreach (k; kmin .. kmax+1) {
                     foreach (j; jmin .. jmax+1) {
@@ -882,8 +881,8 @@ public:
                 for (j = jmin; j <= jmax; ++j) {
                     for (i = imin; i <= imax+1; ++i) {
                         IFace = getIfi(i, j, k);
-                        cellLeft = getCell(i-1, j);
-                        cellRight = getCell(i, j);
+                        cellLeft = getCell(i-1, j, k);
+                        cellRight = getCell(i, j, k);
                         if (cellLeft.is_ghost || cellRight.is_ghost) { continue; }
                         else { IFace.T = 0.5*(cellLeft.T + cellRight.T); }
                     }  // i loop
@@ -895,8 +894,8 @@ public:
                 for (i = imin; i <= imax; ++i) {
                     for (j = jmin; j <= jmax+1; ++j) {
                         IFace = getIfj(i, j, k);
-                        cellLeft = getCell(i, j-1);
-                        cellRight = getCell(i, j);
+                        cellLeft = getCell(i, j-1, k);
+                        cellRight = getCell(i, j, k);
                         if (cellLeft.is_ghost || cellRight.is_ghost) { continue; }
                         else { IFace.T = 0.5*(cellLeft.T + cellRight.T); }
                     } // j loop
@@ -979,8 +978,8 @@ public:
                     if ( i == imax+1 && bc[Face.east].setsFluxDirectly )
                         continue;
                     IFace = getIfi(i, j, k);
-                    cellLeft = getCell(i-1, j);
-                    cellRight = getCell(i, j);
+                    cellLeft = getCell(i-1, j, k);
+                    cellRight = getCell(i, j, k);
                     averageCellDerivatives(IFace, cellLeft, cellRight, dTdx, dTdy, dTdz);
                     if (myConfig.solid_has_isotropic_properties) {
                         qx = -IFace.sp.k * dTdx;
@@ -1006,8 +1005,8 @@ public:
                         if ( j == jmax+1 && bc[Face.north].setsFluxDirectly )
                             continue;
                         IFace = getIfj(i, j, k);
-                        cellLeft = getCell(i, j-1);
-                        cellRight = getCell(i, j);
+                        cellLeft = getCell(i, j-1, k);
+                        cellRight = getCell(i, j, k);
                         averageCellDerivatives(IFace, cellLeft, cellRight, dTdx, dTdy, dTdz);
                         if (myConfig.solid_has_isotropic_properties) {
                             qx = -IFace.sp.k * dTdx;

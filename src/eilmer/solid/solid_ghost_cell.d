@@ -24,6 +24,7 @@ import ssolidblock;
 import solidfvcell;
 import solidbc;
 import solid_full_face_copy;
+import solid_gas_full_face_copy;
 
 SolidGhostCellEffect makeSolidGCEfromJson(JSONValue jsonData, int blk_id, int boundary)
 {
@@ -41,6 +42,14 @@ SolidGhostCellEffect makeSolidGCEfromJson(JSONValue jsonData, int blk_id, int bo
         newSGCE = new SolidGCE_SolidGhostCellFullFaceCopy(blk_id, boundary,
                                            otherBlock, face_index(otherFaceName),
                                            neighbourOrientation);
+        break;
+    case "solid_gas_full_face_copy": 
+        int otherBlock = getJSONint(jsonData, "otherBlock", -1);
+        string otherFaceName = getJSONstring(jsonData, "otherFace", "none");
+        int neighbourOrientation = getJSONint(jsonData, "orientation", 0);
+        newSGCE = new GhostCellSolidGasFullFaceCopy(blk_id, boundary,
+                                                    otherBlock, face_index(otherFaceName),
+                                                    neighbourOrientation);
         break;
     default:
         string errMsg = format("ERROR: The SolidGhostCellEffect type: '%s' is unknown.", sgceType);

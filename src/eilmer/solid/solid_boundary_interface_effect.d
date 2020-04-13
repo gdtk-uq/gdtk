@@ -41,6 +41,9 @@ SolidBoundaryInterfaceEffect makeSolidBIEfromJson(JSONValue jsonData, int blk_id
         newBIE = new SolidBIE_ConnectionBoundary(blk_id, boundary,
                                                  otherBlk, face_index(otherFace), orientation);
         break;
+    case "temperature_and_flux_from_gas_solid_interface":
+        newBIE = new SolidBIE_TemperatureAndFluxFromSolidGasInterface(blk_id, boundary);
+        break;
     default:
         string errMsg = format("ERROR: The SolidBoundaryInterfaceEffect type: '%s' is unknown.", bieType);
         throw new Exception(errMsg);
@@ -662,3 +665,71 @@ public:
     }
 
 }
+
+class SolidBIE_TemperatureAndFluxFromSolidGasInterface : SolidBoundaryInterfaceEffect {
+public:
+    this(int id, int boundary)
+    {
+        super(id, boundary, "SolidGasInterface");
+    }
+
+    override void apply(double t, int tLevel)
+    {
+
+        auto myBC = blk.bc[whichBoundary];
+        number dxG, dyG, dzG, dnG, dxS, dyS, dzS, dnS;
+        number kG_dnG, kS_dnS, cosA, cosB, cosC;
+        number T, q;
+        int outsign;
+        
+        switch(whichBoundary){
+        case Face.north:
+            outsign = 1;
+            break;
+        case Face.east:
+            outsign = 1;
+            break;
+        case Face.south:
+            outsign = -1;
+            break;
+        case Face.west:
+            outsign = -1;
+            break;
+        case Face.top:
+            outsign = 1;
+            break;
+        case Face.bottom:
+            outsign = -1;
+            break;
+        default:
+            throw new Error("oops, wrong boundary id");
+        } // end switch
+
+        foreach ( i; 0 .. myBC.ifaces.length ) {
+            cosA = myBC.ifaces[i].n.x;
+            cosB = myBC.ifaces[i].n.y;
+            cosC = myBC.ifaces[i].n.z;
+            
+            dxG = myBC.ifaces[i].pos.x - myBC.gasCells[i].pos[0].x;
+            dyG = myBC.ifaces[i].pos.y - myBC.gasCells[i].pos[0].y;
+            dzG = myBC.ifaces[i].pos.z - myBC.gasCells[i].pos[0].z;
+            dnG = fabs(cosA*dxG + cosB*dyG + cosC*dzG);
+            
+            dxS = myBC.ifaces[i].pos.x - myBC.solidCells[i].pos.x;
+            dyS = myBC.ifaces[i].pos.y - myBC.solidCells[i].pos.y;
+            dzS = myBC.ifaces[i].pos.z - myBC.solidCells[i].pos.z;
+            dnS = fabs(cosA*dxS + cosB*dyS + cosC*dzS);
+            
+            kG_dnG = myBC.gasCells[i].fs.gas.k / dnG;
+            kS_dnS = myBC.solidCells[i].sp.k / dnS;
+            
+            T = (myBC.gasCells[i].fs.gas.T*kG_dnG + myBC.solidCells[i].T*kS_dnS) / (kG_dnG + kS_dnS);
+            q = -kG_dnG * (T - myBC.gasCells[i].fs.gas.T);
+
+            // Finally update properties in interfaces
+            myBC.ifaces[i].T = T;
+            myBC.ifaces[i].flux = outsign*q;
+        }
+    }
+}
+

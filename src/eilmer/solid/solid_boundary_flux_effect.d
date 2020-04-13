@@ -48,7 +48,8 @@ public:
 
     this(int id, int boundary, string description)
     {
-        blk = localSolidBlocks[id];
+        blk = cast(SSolidBlock) globalBlocks[id];
+        assert(blk !is null, "Oops, this should be a SolidBlock object.");
         whichBoundary = boundary;
         desc = description;
     }

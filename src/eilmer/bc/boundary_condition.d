@@ -127,8 +127,7 @@ public:
     // to poke and prod the data here as needed.
     FVCell[] gasCells;
     SolidFVCell[] solidCells;
-    SolidFVInterface[] solidIFaces;
-
+    FVInterface[] ifaces;
 private:
     // Working storage for boundary flux derivatives
     FlowState _Lft, _Rght;
@@ -272,7 +271,7 @@ public:
         postDiffFluxAction = savedPostDiffFluxAction.dup();
         savedPostDiffFluxAction.length = 0;
     }
-    
+
     final void applyPreReconAction(double t, int gtl, int ftl)
     {
         foreach ( gce; preReconAction ) gce.apply(t, gtl, ftl);
@@ -370,50 +369,6 @@ public:
         if ( luaL_dofile(myL, luafname.toStringz) != 0 ) {
             luaL_error(myL, "error while loading user-defined b.c. file '%s':\n %s\n",
                        luafname.toStringz, lua_tostring(myL, -1));
-        }
-    }
-
-    void initGasSolidWorkingSpace(int solidBlkId, int solidFaceId)
-    {
-        //writeln(GlobalConfig.mpi_rank_for_local_task, ", ", solidBlkId);
-        auto blk = cast(SFluidBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
-        size_t i, j, k;
- 
-        switch (which_boundary) {
-        case Face.north:
-            j = blk.jmax;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    gasCells ~= blk.get_cell(i, j, k);
-                }
-            }
-            break;
-        default:
-            throw new Error("initGasSolidWorkingSpace() only implemented for NORTH gas face.");
-        }
-
-        //auto solidBlk = cast(SSolidBlock) globalBlocks[solidBlkId];
-        //assert(solidBlk !is null, "Oops, this should be a SSolidBlock object.");
-        SSolidBlock solidBlk;
-        foreach (sblk; localSolidBlocks) {
-            if (sblk.id != solidBlkId) { continue; }
-            solidBlk = sblk;
-            break;
-        }
-        
-        switch (solidFaceId) {
-        case Face.south:
-            j = solidBlk.jmin;
-            for (k = solidBlk.kmin; k <= solidBlk.kmax; ++k) {
-                for (i = solidBlk.imin; i <= solidBlk.imax; ++i) {
-                    solidCells ~= solidBlk.getCell(i, j, k);
-                    solidIFaces ~= solidCells[$-1].iface[Face.south];
-                }
-            }
-            break;
-        default:
-            throw new Error("initGasSolidWorkingSpace() only implemented for SOUTH solid face.");
         }
     }
 } // end class BoundaryCondition

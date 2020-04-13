@@ -1351,7 +1351,10 @@ function WallBC_AdjacentToSolid:new(o)
    end
    o = BoundaryCondition.new(self, o)
    o.is_wall_with_viscous_effects = true
-   o.preReconAction = { InternalCopyThenReflect:new() }
+   o.preReconAction = { GasSolidFullFaceCopy:new{otherBlock=o.otherBlock,
+                                                 otherFace=o.otherFace,
+                                                 orientation=o.orientation},
+                        InternalCopyThenReflect:new() }
    o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(),
                                            ZeroVelocity:new(),
                                            TemperatureFromGasSolidInterface:new{otherBlock=o.otherBlock,
@@ -1380,6 +1383,13 @@ function SolidBoundaryInterfaceEffect:new(o)
    setmetatable(o, self)
    self.__index = self
    return o
+end
+
+SolidBIE_TemperatureAndFluxFromSolidGasInterface = SolidBoundaryInterfaceEffect:new{}
+SolidBIE_TemperatureAndFluxFromSolidGasInterface.type = "temperature_and_flux_from_gas_solid_interface"
+function SolidBIE_TemperatureAndFluxFromSolidGasInterface:tojson()
+   local str = string.format('          {"type": "%s"} ', self.type)
+   return str
 end
 
 SolidBIE_FixedT = SolidBoundaryInterfaceEffect:new{Twall=300.0}
@@ -1440,6 +1450,31 @@ function SolidGCE_SolidGhostCellFullFaceCopy:tojson()
    return str
 end
 
+SolidGasFullFaceCopy = SolidGhostCellEffect:new{otherBlock=-1,
+                                                otherFace=nil,
+                                                orientation=-1}
+SolidGasFullFaceCopy.type = "solid_gas_full_face_copy"
+function SolidGasFullFaceCopy:tojson()
+   local str = string.format('          {"type" : "%s", ', self.type)
+   str = str .. string.format('"otherBlock" : %d, ', self.otherBlock)
+   str = str .. string.format('"otherFace" : "%s", ', self.otherFace)
+   str = str .. string.format('"orientation" : %d ', self.orientation)
+   str = str .. ' } '
+   return str
+end
+
+GasSolidFullFaceCopy = SolidGhostCellEffect:new{otherBlock=-1,
+                                                otherFace=nil,
+                                                orientation=-1}
+GasSolidFullFaceCopy.type = "gas_solid_full_face_copy"
+function GasSolidFullFaceCopy:tojson()
+   local str = string.format('          {"type" : "%s", ', self.type)
+   str = str .. string.format('"otherBlock" : %d, ', self.otherBlock)
+   str = str .. string.format('"otherFace" : "%s", ', self.otherFace)
+   str = str .. string.format('"orientation" : %d ', self.orientation)
+   str = str .. ' } '
+   return str
+end
 
 SolidBoundaryFluxEffect = {
    type = ""
@@ -1572,6 +1607,10 @@ SolidAdjacentToGasBC.type = "SolidAdjacentToGas"
 function SolidAdjacentToGasBC:new(o)
    o = SolidBoundaryCondition.new(self, o)
    o.setsFluxDirectly = true
+   o.preSpatialDerivActionAtBndryCells = { SolidGasFullFaceCopy:new{otherBlock=o.otherBlock,
+                                                                    otherFace=o.otherFace,
+                                                                    orientation=o.orientation}}
+   o.preSpatialDerivActionAtBndryFaces = { SolidBIE_TemperatureAndFluxFromSolidGasInterface:new{}}
    return o
 end
 

@@ -17,6 +17,9 @@ import solid_boundary_interface_effect;
 import solid_boundary_flux_effect;
 import ssolidblock;
 import globaldata;
+import fvcell;
+import solidfvcell;
+import solidfvinterface;
 
 SolidBoundaryCondition makeSolidBCFromJson(JSONValue jsonData, int blk_id, int boundary,
                                            size_t nicell, size_t njcell, size_t nkcell)
@@ -60,7 +63,10 @@ public:
     SolidGhostCellEffect[] preSpatialDerivActionAtBndryCells;
     SolidBoundaryInterfaceEffect[] preSpatialDerivActionAtBndryFaces;
     SolidBoundaryFluxEffect[] postFluxAction;
-
+    FVCell[] gasCells;
+    SolidFVCell[] solidCells;
+    SolidFVInterface[] ifaces;
+    
     this(int blkId, int boundary, bool _setsFluxDirectly)
     {
         blk = cast(SSolidBlock) globalBlocks[blkId];

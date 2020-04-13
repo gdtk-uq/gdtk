@@ -41,6 +41,8 @@ import ssolidblock;
 import solidprops;
 import solidfvinterface;
 import solid_full_face_copy;
+import solid_gas_full_face_copy;
+import bc.ghost_cell_effect.gas_solid_full_face_copy;
 import solid_loose_coupling_update;
 import bc;
 import user_defined_source_terms;
@@ -623,33 +625,107 @@ void init_simulation(int tindx, int nextLoadsIndx,
     // Finally when both gas AND solid domains are setup..
     // Look for a solid-adjacent bc, if there is one,
     // then we can set up the cells and interfaces that
-    // internal to the bc. They are only known after this point.
-    if (GlobalConfig.apply_bcs_in_parallel) {
-        foreach (myblk; parallel(localFluidBlocks,1)) {
-            foreach (bc; myblk.bc) {
-                foreach (bfe; bc.postDiffFluxAction) {
-                    auto mybfe = cast(BFE_EnergyFluxFromAdjacentSolid)bfe;
-                    if (mybfe) {
-                        // REMOVED if (GlobalConfig.in_mpi_context) { throw new Error("[TODO] not available in MPI context."); }
-                        bc.initGasSolidWorkingSpace(mybfe.neighbourSolidBlk, mybfe.neighbourSolidFace);
-                    }
-                }
+    // internal to the bc. They are only known after this point.    
+    foreach (myblk; localFluidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce = cast(GhostCellGasSolidFullFaceCopy)gce;
+                if (mygce) { mygce.set_up_cell_mapping_phase0(); }
             }
         }
-    } else {
-        foreach (myblk; localFluidBlocks) {
-            foreach (bc; myblk.bc) {
-                foreach (bfe; bc.postDiffFluxAction) {
-                    auto mybfe = cast(BFE_EnergyFluxFromAdjacentSolid)bfe;
-                    if (mybfe) {
-                        // REMOVED if (GlobalConfig.in_mpi_context) { throw new Error("[TODO] not available in MPI context."); }
-                        bc.initGasSolidWorkingSpace(mybfe.neighbourSolidBlk, mybfe.neighbourSolidFace);
-                    }
-                }
+    }
+    
+    foreach (myblk; localSolidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
+                auto mygce = cast(GhostCellSolidGasFullFaceCopy)gce;
+                if (mygce) { mygce.set_up_cell_mapping_phase0(); }
+            }
+        }
+    }
+    
+    foreach (myblk; localFluidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce = cast(GhostCellGasSolidFullFaceCopy)gce;
+                if (mygce) { mygce.set_up_cell_mapping_phase1(); }
+            }
+        }
+    }
+    foreach (myblk; localSolidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
+                auto mygce = cast(GhostCellSolidGasFullFaceCopy)gce;
+                if (mygce) { mygce.set_up_cell_mapping_phase1(); }
+            }
+        }
+    }
+    foreach (myblk; localFluidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce = cast(GhostCellGasSolidFullFaceCopy)gce;
+                if (mygce) { mygce.set_up_cell_mapping_phase2(); }
+            }
+        }
+    }
+    foreach (myblk; localSolidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
+                auto mygce = cast(GhostCellSolidGasFullFaceCopy)gce;
+                if (mygce) { mygce.set_up_cell_mapping_phase2(); }
             }
         }
     }
 
+    foreach (myblk; localFluidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce = cast(GhostCellGasSolidFullFaceCopy)gce;
+                if (mygce) { mygce.exchange_solidstate_phase0(); }
+            }
+        }
+    }
+    foreach (myblk; localSolidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
+                auto mygce = cast(GhostCellSolidGasFullFaceCopy)gce;
+                if (mygce) { mygce.exchange_fluidstate_phase0(); }
+            }
+        }
+    }
+    foreach (myblk; localFluidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce = cast(GhostCellGasSolidFullFaceCopy)gce;
+                if (mygce) { mygce.exchange_fluidstate_phase1(); }
+            }
+        }
+    }
+    foreach (myblk; localSolidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
+                auto mygce = cast(GhostCellSolidGasFullFaceCopy)gce;
+                if (mygce) { mygce.exchange_solidstate_phase1(); }
+            }
+        }
+    }
+    foreach (myblk; localFluidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce = cast(GhostCellGasSolidFullFaceCopy)gce;
+                if (mygce) { mygce.exchange_solidstate_phase2(); }
+            }
+        }
+    }
+    foreach (myblk; localSolidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
+                auto mygce = cast(GhostCellSolidGasFullFaceCopy)gce;
+                if (mygce) { mygce.exchange_fluidstate_phase2(); }
+            }
+        }
+    }
+    
     // For the MLP limiter (on unstructured grids only), we need access to the
     // gradients stored in the cloud of cells surrounding a vertex.
     if ((GlobalConfig.interpolation_order > 1) &&
@@ -1956,6 +2032,59 @@ void exchange_ghost_cell_solid_boundary_data()
     }
 } // end exchange_ghost_cell_solid_boundary_data()
 
+
+void exchange_ghost_cell_gas_solid_boundary_data()
+{
+    foreach (myblk; localFluidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce = cast(GhostCellGasSolidFullFaceCopy)gce;
+                if (mygce) { mygce.exchange_solidstate_phase0(); }
+            }
+        }
+    }
+    foreach (myblk; localSolidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
+                auto mygce = cast(GhostCellSolidGasFullFaceCopy)gce;
+                if (mygce) { mygce.exchange_fluidstate_phase0(); }
+            }
+        }
+    }
+    foreach (myblk; localFluidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce = cast(GhostCellGasSolidFullFaceCopy)gce;
+                if (mygce) { mygce.exchange_fluidstate_phase1(); }
+            }
+        }
+    }
+    foreach (myblk; localSolidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
+                auto mygce = cast(GhostCellSolidGasFullFaceCopy)gce;
+                if (mygce) { mygce.exchange_solidstate_phase1(); }
+            }
+        }
+    }
+    foreach (myblk; localFluidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce = cast(GhostCellGasSolidFullFaceCopy)gce;
+                if (mygce) { mygce.exchange_solidstate_phase2(); }
+            }
+        }
+    }
+    foreach (myblk; localSolidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
+                auto mygce = cast(GhostCellSolidGasFullFaceCopy)gce;
+                if (mygce) { mygce.exchange_fluidstate_phase2(); }
+            }
+        }
+    }
+}
+
 //----------------------------------------------------------------------------
 void sts_gasdynamic_explicit_increment_with_fixed_grid()
 {
@@ -2056,6 +2185,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 	}
     }
     exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
+    exchange_ghost_cell_gas_solid_boundary_data();
     if (GlobalConfig.apply_bcs_in_parallel) {
 	foreach (blk; parallel(localFluidBlocksBySize,1)) {
 	    if (blk.active) { blk.applyPreReconAction(SimState.time, gtl, ftl); }
@@ -2143,6 +2273,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
         // ghost cells along block-block boundaries have the most
         // recent mu_t and k_t values.
         exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
+        exchange_ghost_cell_gas_solid_boundary_data();
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
             if (blk.active) {
                 blk.viscous_flux();
@@ -2225,6 +2356,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 	    sblk.computeSpatialDerivatives(ftl);
         }
         exchange_ghost_cell_solid_boundary_data();
+        exchange_ghost_cell_gas_solid_boundary_data();
         foreach (sblk; parallel(localSolidBlocks, 1)) {
             if (!sblk.active) continue;
             sblk.computeFluxes();
@@ -2279,7 +2411,8 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 	    }
 	}
         exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
-  	if (GlobalConfig.apply_bcs_in_parallel) {
+        exchange_ghost_cell_gas_solid_boundary_data();
+        if (GlobalConfig.apply_bcs_in_parallel) {
 	    foreach (blk; parallel(localFluidBlocksBySize,1)) {
 		if (blk.active) { blk.applyPreReconAction(SimState.time, gtl, ftl); }
 	    }
@@ -2366,6 +2499,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
             // ghost cells along block-block boundaries have the most
             // recent mu_t and k_t values.
             exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
+            exchange_ghost_cell_gas_solid_boundary_data();
             foreach (blk; parallel(localFluidBlocksBySize,1)) {
                 if (blk.active) {
                     blk.viscous_flux();
@@ -2545,6 +2679,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
     shared int ftl = 0; // time-level within the overall convective-update
     shared int gtl = 0; // grid time-level remains at zero for the non-moving grid
     exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
+    exchange_ghost_cell_gas_solid_boundary_data();
     if (GlobalConfig.apply_bcs_in_parallel) {
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
             if (blk.active) { blk.applyPreReconAction(SimState.time, gtl, ftl); }
@@ -2630,6 +2765,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         // ghost cells along block-block boundaries have the most
         // recent mu_t and k_t values.
         exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
+        exchange_ghost_cell_gas_solid_boundary_data();
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
             if (blk.active) {
                 blk.viscous_flux();
@@ -2748,6 +2884,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         ftl = 1;
         // We are relying on exchanging boundary data as a pre-reconstruction activity.
         exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
+        exchange_ghost_cell_gas_solid_boundary_data();
         if (GlobalConfig.apply_bcs_in_parallel) {
             foreach (blk; parallel(localFluidBlocksBySize,1)) {
                 if (blk.active) { blk.applyPreReconAction(SimState.time, gtl, ftl); }
@@ -2838,6 +2975,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             // ghost cells along block-block boundaries have the most
             // recent mu_t and k_t values.
             exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
+            exchange_ghost_cell_gas_solid_boundary_data();
             foreach (blk; parallel(localFluidBlocksBySize,1)) {
                 if (blk.active) {
                     blk.viscous_flux();
@@ -2955,6 +3093,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         ftl = 2;
         // We are relying on exchanging boundary data as a pre-reconstruction activity.
         exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
+        exchange_ghost_cell_gas_solid_boundary_data();
         if (GlobalConfig.apply_bcs_in_parallel) {
             foreach (blk; parallel(localFluidBlocksBySize,1)) {
                 if (blk.active) { blk.applyPreReconAction(SimState.time, gtl, ftl); }
@@ -3045,6 +3184,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             // ghost cells along block-block boundaries have the most
             // recent mu_t and k_t values.
             exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
+            exchange_ghost_cell_gas_solid_boundary_data();
             foreach (blk; parallel(localFluidBlocksBySize,1)) {
                 if (blk.active) {
                     blk.viscous_flux();

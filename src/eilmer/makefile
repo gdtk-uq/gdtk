@@ -118,6 +118,7 @@ BC_FILES := bc/package.d \
 	bc/ghost_cell_effect/from_stagnation.d \
 	bc/ghost_cell_effect/full_face_copy.d \
 	bc/ghost_cell_effect/mapped_cell_copy.d \
+	bc/ghost_cell_effect/gas_solid_full_face_copy.d \
 	bc/user_defined_effects.d \
 	bc/boundary_flux_effect.d \
 	bc/boundary_cell_effect.d \
@@ -128,6 +129,7 @@ SOLID_FILES := solid/solidbc.d \
 	solid/solid_ghost_cell.d \
 	solid/solid_boundary_flux_effect.d \
 	solid/solid_boundary_interface_effect.d \
+	solid/solid_gas_full_face_copy.d \
 	solid/solid_full_face_copy.d \
 	solid/solid_loose_coupling_update.d \
 	solid/ssolidblock.d \

@@ -692,53 +692,26 @@ function connectBlocks(blkA, faceA, blkB, faceB, orientation)
 						   orientation=orientation}
       -- [TODO] need to test for matching corner locations and consistent numbers of cells
    elseif blkA.myType == "FluidBlock" and blkB.myType == "SolidBlock" then
-      -- Presently, only handle faceA == NORTH, faceB == SOUTH
-      if faceA == north and faceB == south then
-	 blkA.bcList[faceA] = WallBC_AdjacentToSolid:new{otherBlock=blkB.id,
-							 otherFace=faceB,
-							 orientation=orientation}
-	 blkB.bcList[faceB] = SolidAdjacentToGasBC:new{otherBlock=blkA.id,
-						       otherFace=faceA,
-						       orientation=orientation}
-      else
-	 -- [TODO] Implement and handle other connection types.
-	 local msg = "The requested FluidBlock to SolidBlock connection is not available.\n"
-	 msg = msg .."FluidBlock-"..tostring(faceA).." :: SolidBlock-"..tostring(faceB)
-	 error(msg, 2)
-      end
+      blkA.bcList[faceA] = WallBC_AdjacentToSolid:new{otherBlock=blkB.id,
+                                                      otherFace=faceB,
+                                                      orientation=orientation}
+      blkB.bcList[faceB] = SolidAdjacentToGasBC:new{otherBlock=blkA.id,
+                                                    otherFace=faceA,
+                                                    orientation=orientation}
    elseif blkA.myType == "SolidBlock" and blkB.myType == "FluidBlock" then
-       -- Presently, only handle faceA == SOUTH, faceB == NORTH
-      if faceA == south and faceB == north then
-	 blkA.bcList[faceA] = SolidAdjacentToGasBC:new{otherBlock=blkB.id,
-						       otherFace=faceB,
-						       orientation=orientation}
-	 blkB.bcList[faceB] = WallBC_AdjacentToSolid:new{otherBlock=blkA.id,
-							 otherFace=faceA,
-							 orientation=orientation}
-      else
-	 -- [TODO] Implement and handle other connection types.
-	 local msg = "The requested SolidBlock to FluidBlock connection is not available.\n"
-	 msg = msg.."SolidBlock-"..tostring(faceA).." :: FluidBlock-"..tostring(faceB)
-	 error(msg, 2)
-      end
+      blkA.bcList[faceA] = SolidAdjacentToGasBC:new{otherBlock=blkB.id,
+                                                    otherFace=faceB,
+                                                    orientation=orientation}
+      blkB.bcList[faceB] = WallBC_AdjacentToSolid:new{otherBlock=blkA.id,
+                                                      otherFace=faceA,
+                                                      orientation=orientation}
    elseif blkA.myType == "SolidBlock" and blkB.myType == "SolidBlock" then
-      -- Presently only handle EAST-WEST and WEST-EAST, NORTH-SOUTH and SOUTH-NORTH,
-      -- TOP-BOTTOM and BOTTOM-TOP connections
-      if ( (faceA == east and faceB == west) or ( faceA == west and faceB == east) or
-            (faceA == north and faceB == south) or (faceA == south and faceB == north) or
-         (faceA == top and faceB == bottom) or (faceA == bottom and faceB == top) ) then
-         blkA.bcList[faceA] = SolidFullFaceCopyBoundaryBC:new{otherBlock=blkB.id,
-							    otherFace=faceB,
-							    orientation=orientation}
-	 blkB.bcList[faceB] = SolidFullFaceCopyBoundaryBC:new{otherBlock=blkA.id,
-							    otherFace=faceA,
-							    orientation=orientation}
-      else
-	 -- [TODO] Implement and handle other connection types for solid domains.
-	 local msg = "The requested SolidBlock to SolidBlock connection is not available.\n"
-	 msg = msg.."SolidBlock-"..tostring(faceA).." :: SolidBlock-"..tostring(faceB)
-	 error(msg, 2)
-      end
+      blkA.bcList[faceA] = SolidFullFaceCopyBoundaryBC:new{otherBlock=blkB.id,
+                                                           otherFace=faceB,
+                                                           orientation=orientation}
+      blkB.bcList[faceB] = SolidFullFaceCopyBoundaryBC:new{otherBlock=blkA.id,
+                                                           otherFace=faceA,
+                                                           orientation=orientation}
    end
 end
 
@@ -803,7 +776,7 @@ function identifyBlockConnections(blockList, excludeList, tolerance)
 	       for vtxPairs,connection in pairs(connections2D) do
 		  -- print("vtxPairs=", tostringVtxPairList(vtxPairs),
 		  --       "connection=", tostringConnection(connection)) -- DEBUG
-		  if verticesAreCoincident(A, B, vtxPairs, tolerance) then
+                  if verticesAreCoincident(A, B, vtxPairs, tolerance) then
 		     local faceA, faceB = unpack(connection)
 		     connectBlocks(A, faceA, B, faceB, 0)
 		     connectionCount = connectionCount + 1

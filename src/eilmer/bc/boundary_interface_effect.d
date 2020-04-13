@@ -1784,7 +1784,33 @@ public:
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         auto myBC = blk.bc[which_boundary];
-        computeFluxesAndTemperatures(ftl, myBC.gasCells, myBC.faces, myBC.solidCells, myBC.solidIFaces);
+        number dxG, dyG, dzG, dnG, dxS, dyS, dzS, dnS;
+        number kG_dnG, kS_dnS, cosA, cosB, cosC;
+        number T, q;
+        
+        foreach ( i; 0 .. myBC.ifaces.length ) {
+            cosA = myBC.ifaces[i].n.x;
+            cosB = myBC.ifaces[i].n.y;
+            cosC = myBC.ifaces[i].n.z;
+            
+            dxG = myBC.ifaces[i].pos.x - myBC.gasCells[i].pos[0].x;
+            dyG = myBC.ifaces[i].pos.y - myBC.gasCells[i].pos[0].y;
+            dzG = myBC.ifaces[i].pos.z - myBC.gasCells[i].pos[0].z;
+            dnG = fabs(cosA*dxG + cosB*dyG + cosC*dzG);
+            
+            dxS = myBC.ifaces[i].pos.x - myBC.solidCells[i].pos.x;
+            dyS = myBC.ifaces[i].pos.y - myBC.solidCells[i].pos.y;
+            dzS = myBC.ifaces[i].pos.z - myBC.solidCells[i].pos.z;
+            dnS = fabs(cosA*dxS + cosB*dyS + cosC*dzS);
+            
+            kG_dnG = myBC.gasCells[i].fs.gas.k / dnG;
+            kS_dnS = myBC.solidCells[i].sp.k / dnS;
+            
+            T = (myBC.gasCells[i].fs.gas.T*kG_dnG + myBC.solidCells[i].T*kS_dnS) / (kG_dnG + kS_dnS);
+
+            // Finally update properties in interfaces
+            myBC.ifaces[i].fs.gas.T = T;
+        }
     }
 
 } // end class BIE_TemperatureFromGasSolidInterface
