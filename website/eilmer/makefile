@@ -11,7 +11,7 @@ build: $(PDFS) $(HTML) images
 	hugo
 
 sync:
-	rsync -zzav public/ cfcfd:/opt/local/share/httpd/htdocs/eilmer/
+	rsync -zz -vrlt -p --chmod=Dg+s,ug+w,Fo-w,+X -g --groupmap=*:other public/ cfcfd:/opt/local/share/httpd/htdocs/eilmer/
 
 clean:
 	cd ../../doc; make clean
