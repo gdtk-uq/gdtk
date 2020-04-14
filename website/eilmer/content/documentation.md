@@ -85,8 +85,12 @@ Instead, check the User Guide for the definitive user input.
   Parallel performance of the forward-facing step revisited.
   Blunt-nosed cone for a real hypersonics application.
 
-- [Implementation of a compressible-flow simulation code in the D programming language](eilmer4-talk-nov-2015.pdf), November 2015.  
-  First real showing of the Eilmer4 code outside of the Centre for Hypersonics.
+- [Implementation of a compressible-flow simulation code in the D programming language](/pdfs/eilmer4-talk-nov-2015.pdf), November 2015.  
+  The 2nd Australasian Conference on Computational Mechanics, held at QUT,
+  was the first real showing of the Eilmer4 code outside of the Centre for Hypersonics.
+  A bit of history of the codes, finite-volume formulation, structure of the new code and a couple of examples.
+  The Zucrow and Hoffman sharp-nosed projectile example is shown in reasonable detail
+  so the the sections of the scripted input file can be described.
 
 - [Eilmer4: What’s happening?](/pdfs/eilmer4-talk-may-2015.pdf), May 2015.  
   PAJ seminar to Centre for Hypersonics research group on development of Eilmer4, one year in.
