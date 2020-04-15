@@ -171,10 +171,13 @@ public:
             double xL = faces[i].x;
             double xR = faces[i+1].x;
             LCell c = cells[i];
-            c.volume = 0.5*(faces[i].area+faces[i+1].area)*(xR-xL);
+            c.L = xR-xL;
+            c.volume = 0.5*(faces[i].area+faces[i+1].area)*(c.L);
             c.xmid = 0.5*(xR+xL);
             daKT = tube1.eval(c.xmid);
-            c.diam = daKT[0]; c.K_over_L = daKT[2]; c.Twall = daKT[3];
+            c.D = daKT[0];
+            c.K_over_L = daKT[2];
+            c.Twall = daKT[3];
         }
         return;
     } // end compute_areas_and_volumes()
@@ -196,7 +199,9 @@ public:
     @nogc
     void source_terms()
     {
-        // [TODO]
+        foreach (c; cells) {
+            c.source_terms(viscous_effects, adiabatic, gmodel);
+        }
         return;
     }
 
