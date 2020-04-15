@@ -724,7 +724,7 @@ public:
             kS_dnS = myBC.solidCells[i].sp.k / dnS;
             
             T = (myBC.gasCells[i].fs.gas.T*kG_dnG + myBC.solidCells[i].T*kS_dnS) / (kG_dnG + kS_dnS);
-            q = -kG_dnG * (T - myBC.gasCells[i].fs.gas.T);
+            q = -kS_dnS * (T - myBC.solidCells[i].T);
 
             // Finally update properties in interfaces
             myBC.ifaces[i].T = T;
