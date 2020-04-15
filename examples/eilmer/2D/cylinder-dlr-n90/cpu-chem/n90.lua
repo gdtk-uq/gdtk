@@ -6,10 +6,9 @@
 config.title = "Cylinder in dissociating nitrogen flow."
 print(config.title)
 
-nsp, nmodes = setGasModel('nitrogen-2sp.lua')
+nsp, nmodes, gmodel = setGasModel('nitrogen-2sp.lua')
 inflow = FlowState:new{p=500.0, T=700.0, velx=5000.0, massf={N2=1.0}}
 initial = FlowState:new{p=5.0, T=300.0, massf={N2=1.0}}
-print("GasModel set nsp= ", nsp, " nmodes= ", nmodes)
 Minf = inflow.velx / inflow.a
 print("Minf=", Minf)
 
