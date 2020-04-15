@@ -614,10 +614,10 @@ public:
                         c.volume[j].re = buf[ii++]; version(complex_numbers) { c.volume[j].im = buf[ii++]; }
                         c.areaxy[j].re = buf[ii++]; version(complex_numbers) { c.areaxy[j].im = buf[ii++]; }
                     }
-                    c.iLength.re = buf[ii++]; version(complex_number) { c.iLength.im = buf[ii++]; }
-                    c.jLength.re = buf[ii++]; version(complex_number) { c.jLength.im = buf[ii++]; }
-                    c.kLength.re = buf[ii++]; version(complex_number) { c.kLength.im = buf[ii++]; }
-                    c.L_min.re = buf[ii++]; version(complex_number) { c.L_min.im = buf[ii++]; }
+                    c.iLength.re = buf[ii++]; version(complex_numbers) { c.iLength.im = buf[ii++]; }
+                    c.jLength.re = buf[ii++]; version(complex_numbers) { c.jLength.im = buf[ii++]; }
+                    c.kLength.re = buf[ii++]; version(complex_numbers) { c.kLength.im = buf[ii++]; }
+                    c.L_min.re = buf[ii++]; version(complex_numbers) { c.L_min.im = buf[ii++]; }
                 }
             }
         } else { // not mpi_parallel
@@ -713,9 +713,9 @@ public:
                     GasState gs = fs.gas;
                     buf[ii++] = gs.rho.re; version(complex_numbers) { buf[ii++] = gs.rho.im; }
                     buf[ii++] = gs.p.re; version(complex_numbers) { buf[ii++] = gs.p.im; }
-                    buf[ii++] = gs.T.re;  version(complex_numbers) { buf[ii++] = gs.T.im; }
-                    buf[ii++] = gs.u.re;  version(complex_numbers) { buf[ii++] = gs.u.im; }
-                    buf[ii++] = gs.p_e.re;  version(complex_numbers) { buf[ii++] = gs.p_e.im; }
+                    buf[ii++] = gs.T.re; version(complex_numbers) { buf[ii++] = gs.T.im; }
+                    buf[ii++] = gs.u.re; version(complex_numbers) { buf[ii++] = gs.u.im; }
+                    buf[ii++] = gs.p_e.re; version(complex_numbers) { buf[ii++] = gs.p_e.im; }
                     buf[ii++] = gs.a.re; version(complex_numbers) { buf[ii++] = gs.a.im; }
                     version(multi_T_gas) {
                         foreach (j; 0 .. nmodes) { buf[ii++] = gs.u_modes[j].re; version(complex_numbers) { buf[ii++] = gs.u_modes[j].im; } }

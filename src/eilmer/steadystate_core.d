@@ -194,7 +194,6 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     bool finalStep = false;
     bool usePreconditioner = GlobalConfig.sssOptions.usePreconditioner;
     if (usePreconditioner) {
-        writeln("Initialising memory.");
         foreach (blk; localFluidBlocks) {
             // Make a block-local copy of conserved quantities info
             blk.nConserved = nConservedQuantities;
@@ -213,7 +212,6 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     // We only do a pre-step phase if we are starting from scratch.
     if ( snapshotStart == 0 ) {
         dt = determine_initial_dt(cfl0);
-        writefln("dt= %e", dt);
         // The initial residual is usually a poor choice for basing decisions about how the
         // residual is dropping, particularly when a constant initial condition is given.
         // A constant initial condition gives a zero residual everywhere in the interior
@@ -225,7 +223,11 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         // We can use a fixed timestep (typically small) and low-order reconstruction in this
         // pre-step phase.
 
-        writeln("Begin pre-iterations to establish sensible max residual.");
+        if (GlobalConfig.is_master_task) {
+            writeln("---------------------------------------------------------------");
+            writeln("  Begin pre-steps to establish sensible max residual.");
+            writeln("---------------------------------------------------------------");
+        }
         foreach (blk; parallel(localFluidBlocks,1)) blk.set_interpolation_order(1);
         foreach ( preStep; -nPreSteps .. 0 ) {
             foreach (attempt; 0 .. maxNumberAttempts) {
@@ -276,21 +278,19 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                                 writefln("Failed to provide sensible update on task %d.", GlobalConfig.mpi_rank_for_local_task);
                             }
                             else {
-                                writeln("FAiled to provide sensible update.");
+                                writeln("Failed to provide sensible update.");
                             }
                             writefln("attempt %d: dt= %e", attempt, dt);
                             failedAttempt = 1;
                             dt = 0.1*dt;
                         }
-                        // Coordinate MPI tasks after try-catch statement in case one or more of the tasks encountered an exception.
-                        version(mpi_parallel) {
-                            MPI_Allreduce(MPI_IN_PLACE, &failedAttempt, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-                            MPI_Allreduce(MPI_IN_PLACE, &dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-                        }
-                        if (failedAttempt > 0) { break; }
-                        // end: coordination of MPI tasks
                         cellCount += nConserved;
                     }
+                }
+                // Coordinate MPI tasks if one of them had a failed attempt.
+                version(mpi_parallel) {
+                    MPI_Allreduce(MPI_IN_PLACE, &failedAttempt, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+                    MPI_Allreduce(MPI_IN_PLACE, &dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
                 }
 
                 if (failedAttempt > 0) {
@@ -314,6 +314,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 // If we got here, we can break the attempts loop.
                 break;
             }
+
             if (failedAttempt > 0) {
                 if (GlobalConfig.is_master_task) {
                     writefln("Pre-step failed: %d", SimState.step);
@@ -333,7 +334,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         if (GlobalConfig.is_master_task) {
             writeln("Pre-step phase complete.");
         }
-    
+
         if (nPreSteps <= 0) {
             foreach (blk; parallel(localFluidBlocks,1)) blk.set_interpolation_order(interpOrderSave);
             // Take initial residual as max residual
@@ -567,17 +568,16 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                         failedAttempt = 1;
                         dt = 0.1*dt;
                     }
-                    // Coordinate MPI tasks after try-catch statement in case one or more of the tasks encountered an exception.
-                    version(mpi_parallel) {
-                        MPI_Allreduce(MPI_IN_PLACE, &failedAttempt, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-                        MPI_Allreduce(MPI_IN_PLACE, &dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-                    }
-                    if (failedAttempt > 0) { break; }
-                // end: coordination of MPI tasks
                     cellCount += nConserved;
                 }
             }
-
+            
+            // Coordinate MPI tasks after try-catch statement in case one or more of the tasks encountered an exception.
+            version(mpi_parallel) {
+                MPI_Allreduce(MPI_IN_PLACE, &failedAttempt, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+                MPI_Allreduce(MPI_IN_PLACE, &dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+            }
+            // end: coordination of MPI tasks
             if (failedAttempt > 0) {
 		// return cell flow-states to their original state
 		foreach (blk; parallel(localFluidBlocks,1)) {
@@ -725,8 +725,8 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 version(mpi_parallel) {
                     MPI_Barrier(MPI_COMM_WORLD);
                 }
-                foreach ( iblk, blk; localFluidBlocks ) {
-                    auto fileName = make_file_name!"flow"(jobName, to!int(iblk), nWrittenSnapshots, "gz");
+                foreach (blk; localFluidBlocks) {
+                    auto fileName = make_file_name!"flow"(jobName, blk.id, nWrittenSnapshots, "gz");
                     blk.write_solution(fileName, pseudoSimTime);
                 }
                 restartInfo.pseudoSimTime = pseudoSimTime;
@@ -740,15 +740,15 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             else {
                 // We need to shuffle all of the snapshots...
                 foreach ( iSnap; 2 .. nTotalSnapshots+1) {
-                    foreach ( iblk; 0 .. localFluidBlocks.length ) {
-                        auto fromName = make_file_name!"flow"(jobName, to!int(iblk), iSnap, "gz");
-                        auto toName = make_file_name!"flow"(jobName, to!int(iblk), iSnap-1, "gz");
+                    foreach (blk; localFluidBlocks) {
+                        auto fromName = make_file_name!"flow"(jobName, blk.id, iSnap, "gz");
+                        auto toName = make_file_name!"flow"(jobName, blk.id, iSnap-1, "gz");
                         rename(fromName, toName);
                     }
                 }
                 // ... and add the new snapshot.
-                foreach ( iblk, blk; localFluidBlocks ) {
-                    auto fileName = make_file_name!"flow"(jobName, to!int(iblk), nTotalSnapshots, "gz");        
+                foreach (blk; localFluidBlocks) {
+                    auto fileName = make_file_name!"flow"(jobName, blk.id, nTotalSnapshots, "gz");        
                     blk.write_solution(fileName, pseudoSimTime);
                 }
                 remove(times, 1);
@@ -954,7 +954,7 @@ void evalRHS(double pseudoSimTime, int ftl)
     if (allow_high_order_interpolation && (GlobalConfig.interpolation_order > 1)) {
         exchange_ghost_cell_boundary_convective_gradient_data(pseudoSimTime, gtl, ftl);
     }
-    
+
     foreach (blk; parallel(localFluidBlocks,1)) {
         blk.convective_flux_phase1(allow_high_order_interpolation, gtl);
     }
@@ -1204,6 +1204,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
 
     // 1. Evaluate r0, beta, v1
     evalRHS(pseudoSimTime, 0);
+
     // Store dUdt[0] as F(U)
     foreach (blk; parallel(localFluidBlocks,1)) {
         size_t nturb = blk.myConfig.turb_model.nturb;
@@ -1217,7 +1218,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         foreach(it; 0 .. nturb){
             blk.maxRate.rhoturb[it] = 0.0;
         }
-        foreach (cell; blk.cells) {
+        foreach (i, cell; blk.cells) {
             blk.FU[cellCount+MASS] = -cell.dUdt[0].mass;
             blk.FU[cellCount+X_MOM] = -cell.dUdt[0].momentum.x;
             blk.FU[cellCount+Y_MOM] = -cell.dUdt[0].momentum.y;
@@ -1228,8 +1229,17 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 blk.FU[cellCount+TKE+it] = -cell.dUdt[0].rhoturb[it];
             }
             cellCount += nConserved;
-
+            /*
+            if (blk.id == 0) {
+                writefln("i= %d, dUdt.mass= %e", i, cell.dUdt[0].mass.re);
+            }
+            */
             blk.maxRate.mass = fmax(blk.maxRate.mass, fabs(cell.dUdt[0].mass));
+            /*
+            if (blk.id == 0) {
+                writefln("i= %d, maxRate.mass= %e", i, blk.maxRate.mass.re);
+            }
+            */
             blk.maxRate.momentum.refx = fmax(blk.maxRate.momentum.x, fabs(cell.dUdt[0].momentum.x));
             blk.maxRate.momentum.refy = fmax(blk.maxRate.momentum.y, fabs(cell.dUdt[0].momentum.y));
             if ( blk.myConfig.dimensions == 3 )
@@ -1240,6 +1250,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             }
         }
     }
+
     number maxMass = 0.0;
     number maxMomX = 0.0;
     number maxMomY = 0.0;
@@ -1563,6 +1574,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 m = j+1;
                 // DEBUG:
                 //      writefln("OUTER: TOL ACHIEVED restart-count= %d iteration-count= %d, resid= %e", r, m, resid);
+                //      writefln("RANK %d: tolerance achieved on iteration: %d", GlobalConfig.mpi_rank_for_local_task, m);
                 break;
             }
         }
@@ -1632,6 +1644,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         if ( resid <= outerTol || r+1 == maxRestarts ) {
             // DEBUG:  writefln("resid= %e outerTol= %e  r+1= %d  maxRestarts= %d", resid, outerTol, r+1, maxRestarts);
             // DEBUG:  writefln("Breaking restart loop.");
+            // DEBUG:  writefln("RANK %d: breaking restart loop, resid= %e, r+1= %d", GlobalConfig.mpi_rank_for_local_task, resid, r+1);
             break;
         }
 
