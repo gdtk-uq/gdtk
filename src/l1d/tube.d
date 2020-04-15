@@ -46,6 +46,7 @@ public:
         }
     } // end constructor
 
+    @nogc
     double[4] eval(double x)
     {
         double d, K_over_L, Twall;
@@ -59,7 +60,7 @@ public:
             Twall = Ts[$-1];
         } else {
             double dx = xs[1] - xs[0];
-            int i = to!int(floor((x - xs[0])/dx));
+            int i = cast(int)floor((x - xs[0])/dx);
             double frac = (x - xs[i])/dx;
             d = (1.0-frac)*ds[i] + frac*ds[i+1];
             K_over_L = (1.0-frac)*K_over_Ls[i] + frac*K_over_Ls[i+1];

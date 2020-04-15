@@ -158,5 +158,111 @@ public:
         }
         fp.writeln("# end");
     } // end write_cell_data()
+
+    @nogc
+    void compute_areas_and_volumes()
+    {
+        double[4] daKT;
+        foreach (f; faces) {
+            daKT = tube1.eval(f.x);
+            f.area = daKT[1];
+        }
+        foreach (i; 0 .. cells.length) {
+            double xL = faces[i].x;
+            double xR = faces[i+1].x;
+            LCell c = cells[i];
+            c.volume = 0.5*(faces[i].area+faces[i+1].area)*(xR-xL);
+            c.xmid = 0.5*(xR+xL);
+            daKT = tube1.eval(c.xmid);
+            c.diam = daKT[0]; c.K_over_L = daKT[2]; c.Twall = daKT[3];
+        }
+        return;
+    } // end compute_areas_and_volumes()
+
+    @nogc
+    void encode_conserved()
+    {
+        foreach (c; cells) { c.encode_conserved(gmodel); }
+        return;
+    }
+
+    @nogc
+    void decode_conserved()
+    {
+        foreach (c; cells) { c.decode_conserved(gmodel); }
+        return;
+    }
+
+    @nogc
+    void source_terms()
+    {
+        // [TODO]
+        return;
+    }
+
+    @nogc
+    void apply_rivp()
+    {
+        // [TODO]
+        // For the moment, use cell-centre values as the left and right states.
+        // Need to consider the end conditions.
+        return;
+    } // end apply_rivp()
+
+    @nogc
+    void time_derivatives()
+    {
+        // [TODO]
+        return;
+    }
+
+    @nogc
+    void record_state()
+    {
+        // [TODO]
+        return;
+    }
+
+    @nogc
+    void restore_state()
+    {
+        // [TODO]
+        return;
+    }
+
+    @nogc
+    void predictor_step(double dt)
+    {
+        // [TODO]
+        return;
+    }
+
+    @nogc
+    void corrector_step(double dt)
+    {
+        // [TODO]
+        return;
+    }
+
+    @nogc
+    void chemical_increment(double dt)
+    {
+        // [TODO]
+        return;
+    }
     
+    @nogc
+    void check_cells()
+    {
+        // [TODO]
+        return;
+    }
+
+    @nogc
+    double compute_stable_time_step()
+    {
+        double dt_allowed;
+        return dt_allowed;
+    }
+
 } // end class GasSlug
