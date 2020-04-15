@@ -33,7 +33,7 @@ public:
     End slugL_end, slugR_end;
     Piston pistonL, pistonR;
     End pistonL_face, pistonR_face;
-    
+
     this(size_t indx, JSONValue jsonData)
     {
         if (L1dConfig.verbosity_level >= 3) {
@@ -71,9 +71,9 @@ public:
                     " face= ", pistonL_face);
             writeln("    pistonR_id= ", ((pistonR) ? to!int(pistonR.indx) : -1),
                     " face= ", pistonR_face);
-        }        
+        }
     } // end constructor
-    
+
 } // end class EndCondition
 
 
@@ -84,7 +84,7 @@ public:
     double dxL;
     double dxR;
     bool is_burst;
-    
+
     this(size_t indx, JSONValue jsonData)
     {
         if (L1dConfig.verbosity_level >= 1) {
@@ -103,7 +103,7 @@ public:
             writeln("  dxR= ", dxR);
         }
     } // end constructor
-    
+
     void read_data(File fp, int tindx=0)
     {
         string text = fp.readln().chomp();
@@ -139,7 +139,7 @@ public:
         auto connectionData = jsonData["connections"];
         super(indx, connectionData);
     } // end constructor
-    
+
 } // end class GasInterface
 
 
@@ -154,14 +154,14 @@ public:
         auto connectionData = jsonData["connections"];
         super(indx, connectionData);
     } // end constructor
-    
+
 } // end class FreeEnd
 
 
 class VelocityEnd : EndCondition {
 public:
     double vel;
-    
+
     this(size_t indx, JSONValue jsonData)
     {
         if (L1dConfig.verbosity_level >= 1) {
@@ -174,7 +174,7 @@ public:
             writeln("  vel= ", vel);
         }
     } // end constructor
-    
+
 } // end class VelocityEnd
 
 
@@ -192,5 +192,5 @@ public:
         auto connectionData = jsonData["connections"];
         super(indx, connectionData);
     } // end constructor
-    
+
 } // end class PistonFace

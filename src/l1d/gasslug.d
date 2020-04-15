@@ -74,7 +74,7 @@ public:
         foreach (i; 0 .. ncells+1) { faces ~= new LFace(); }
         foreach (i; 0 .. ncells) { cells ~= new LCell(gmodel); }
     } // end constructor
-    
+
     void read_face_data(File fp, int tindx=0)
     {
         skip_to_data_at_tindx(fp, tindx);
@@ -255,7 +255,7 @@ public:
         // [TODO]
         return;
     }
-    
+
     @nogc
     void check_cells()
     {

@@ -108,5 +108,5 @@ public:
                           ((is_restrain)?1:0), ((brakes_on)?1:0),
                           ((hit_buffer)?1:0)));
     } // end write_data()
-    
+
 } // end class Piston

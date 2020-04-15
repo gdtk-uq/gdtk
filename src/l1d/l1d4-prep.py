@@ -32,11 +32,11 @@ Here is an example script for the Sod shock-tube problem::
     # sod.py
     config.title = 'Sods ideal shock tube, 2020-04-04'
     my_gm = add_gas_model('ideal-air-gas-model.lua')
-    
+
     # Define the tube walls.
     add_break_point(0.0, 0.01)
     add_break_point(3.0, 0.01)
-    
+
     # Create the gas-path.
     left_wall = VelocityEnd(x0=0.0, vel=0.0)
     driver_gas = GasSlug(p=100.0e3, vel=0.0, T=348.4, gmodel_id=my_gm, ncells=200)
@@ -44,7 +44,7 @@ Here is an example script for the Sod shock-tube problem::
     driven_gas = GasSlug(p=10.0e3, vel=0.0, T=278.7, gmodel_id=my_gm, ncells=100)
     right_wall = VelocityEnd(x0=1.0, vel=0.0)
     assemble_gas_path(left_wall, driver_gas, interface, driven_gas, right_wall)
-    
+
     # Set some time-stepping parameters
     config.dt_init = 1.0e-7
     config.max_time = 0.6e-3
@@ -58,15 +58,15 @@ This script should define the gas path::
   .       |                        |                        |
   .       |                        |                        |
   .   left-wall                interface               right-wall
-    
+
 and can be invoked with the command::
 
     $ l1d4-prep -f sod
 
-Upon getting to the end of the user's script, this program should then write 
+Upon getting to the end of the user's script, this program should then write
 (1) a complete simulation parameter file (config/sod.config) in JSON format
 (2) A tube-definition file.
-(3) State files for pistons, diaphragms and gas slugs. 
+(3) State files for pistons, diaphragms and gas slugs.
 
 Note that Python is very picky about whitespace.  If you cut and paste the
 example from above, make sure that the lines start in the first column and
@@ -82,10 +82,10 @@ Globally-defined object
 
 .. Author: P.A. Jacobs
 
-.. Versions: 
+.. Versions:
    2005-Jun
    2006-Jul-24 Ported to Rowan's new C++ chemistry.
-   2010-Mar-May More reworking for L1d3 and 
+   2010-Mar-May More reworking for L1d3 and
                 the latest-greatest thermochemistry
    2012-Sep-Oct Much cleaning up and Sphinx docs.
    2020-Apr-04 L1d4 flavour started
@@ -126,11 +126,11 @@ class GlobalConfig(object):
     but should specify the simulation parameters by
     altering the attributes of the global object "config"
     that already exists by the time the user's script executes.
-    
+
     The following attributes are available:
 
     * title: Short title string for embedding in the parameter and solution files.
-    
+
     * gas_file_names: list of file names for the detailed gas models.
       There may be one or more, but you have to specify one when you
       make each GasSlug.
@@ -159,19 +159,19 @@ class GlobalConfig(object):
       sudden events such as diaphragm bursting, while a value as high as
       0.5 should be considered only for well-behaved flows.
 
-    * t_order: (int) 
+    * t_order: (int)
       1=Euler time-stepping. This is generally cheap and nasty.
       2=predictor-corrector time-stepping, nominally second order.
       This is the default setting.
       It is, however, twice as CPU intensive as Euler time-stepping.
 
-    * x_order: (int) 
+    * x_order: (int)
       1=use cell averages without high-order reconstruction.
       Use this only if the second-order calculation is showing problems.
       2=use limited reconstruction (nominally second order).
-      This is the default selection. 
+      This is the default selection.
 
-    * dt_plot_list: (list of tuples) 
+    * dt_plot_list: (list of tuples)
       Specifies the frequency of writing complete solutions
       (for later plotting, maybe) and also for the writing of data at
       history locations.
@@ -201,12 +201,12 @@ class GlobalConfig(object):
                 'dt_init', 'cfl', 'dt_plot_list', \
                 'max_time', 'max_step', 'x_order', 't_order', \
                 'hloc_list'
-    
+
     def __init__(self):
         """Accepts user-specified data and sets defaults. Make one only."""
         if GlobalConfig.count >= 1:
             raise Exception("Already have a GlobalConfig object defined.")
-        
+
         self.job_name = ""
         self.title = "Another L1d4 Simulation."
         self.gas_model_files = []
@@ -274,7 +274,7 @@ class GlobalConfig(object):
         # Note, no comma after last item inside JSON dict
         fp.write('},\n') # comma here because not the last item in file
         return
-    
+
 # We will create just one GlobalConfig object that the user can alter.
 config = GlobalConfig()
 
@@ -310,7 +310,7 @@ def add_dt_plot(t_change, dt_plot, dt_his):
     """
     Add a dt tuple to the dt_plot tuple list in GlobalConfig.
 
-    :param t_change: (float) The time, in seconds, 
+    :param t_change: (float) The time, in seconds,
         at which this dt_plot and dt_his should take effect.
     :param dt_plot: (float) Time interval between writing whole solutions
         for later plotting.
@@ -352,7 +352,7 @@ class Tube(object):
 
     The user's script should not create one of these
     but should specify the tube details by calling the add_xxxx functions.
-    
+
     The following attributes are available:
 
     * n: (int) The number of small segments that will be used to describe
@@ -370,7 +370,7 @@ class Tube(object):
       in the absence of a patch of differing temperature.
 
     * T_patch_list: (list of tuples)
-      Regions of the tube wall that have temperature different to the 
+      Regions of the tube wall that have temperature different to the
       nominal value can be specified via the function add_T_patch.
 
     * loss_region_list: (list of tuples)
@@ -382,7 +382,7 @@ class Tube(object):
 
     __slots__ = 'n', 'x_list', 'd_list', 'T_nominal', 'T_patch_list', 'loss_region_list', \
                 'xs', 'ds', 'K_over_Ls', 'Ts'
-    
+
     def __init__(self):
         """Accepts user-specified data and sets defaults. Make one only."""
         if Tube.count >= 1:
@@ -465,7 +465,7 @@ class Tube(object):
             Twall = (1.0-frac)*self.Ts[i] + frac*self.Ts[i+1]
         area = math.pi*(d**2)/4
         return (d, area, K_over_L, Twall)
-    
+
     def write(self, fp):
         """
         Writes the tube specification to the specified file, in small steps.
@@ -477,7 +477,7 @@ class Tube(object):
                      (self.xs[i], self.ds[i], math.pi*(self.ds[i]**2)/4,
                       self.K_over_Ls[i], self.Ts[i]))
         return
-    
+
 # We will create just one Tube object that the user can alter.
 tube = Tube()
 
@@ -558,7 +558,7 @@ def add_T_patch(xL, xR, T):
 # The following classes define the objects that will be assembled into
 # the gas path.
 # ---------------------------------------------------------------------
-  
+
 # We will accumulate references to defined objects.
 slugList = []
 pistonList = []
@@ -575,10 +575,10 @@ class GasSlug():
 
     The user may create more than one gas slug to describe the initial
     gas properties throughout the facility.
-    
+
     Note that a slug needs to have appropriate end-conditions.
     This is achieved by creating end-condition objects such as
-    FreeEnd and VelocityEnd objects and then assembling 
+    FreeEnd and VelocityEnd objects and then assembling
     the gas-path via a call to the function assemble_gas_path.
     """
 
@@ -589,7 +589,7 @@ class GasSlug():
                 'ncells', 'to_end_L', 'to_end_R', 'cluster_strength', \
                 'viscous_effects', 'adiabatic', 'hcells', \
                 'ifxs'
-        
+
     def __init__(self,
                  gmodel_id = None,
                  p = 100.0e3,
@@ -621,13 +621,13 @@ class GasSlug():
         :param vel: (float) Velocity in m/s.
         :param T: (float) Temperature in degrees K.
         :param T_modes: (list of float) Temperatures, in K, for the other energy modes.
-        :param massf: Mass fractions supplied as a list of floats 
-            or a dictionary of species names and floats. 
-            The number of mass fraction values should match the number 
+        :param massf: Mass fractions supplied as a list of floats
+            or a dictionary of species names and floats.
+            The number of mass fraction values should match the number
             of species expected by the selected gas model.
         :param label: Optional (string) label for the gas slug.
         :param ncells: (int) Number of cells within the gas slug.
-        :param to_end_L: (bool) Flag to indicate that cells should 
+        :param to_end_L: (bool) Flag to indicate that cells should
             be clustered to the left end.
         :param to_end_R: (bool) Flag to indicate that cells should
             be clustered to the right end.
@@ -640,8 +640,8 @@ class GasSlug():
             friction factor for pipe flow;
         :param adiabatic: (bool) Flag to indicate that there should
             be no heat transfer at the tube wall.
-        :param hcells: Either the index (int) of a single cell or 
-            a list of indices of cells for which the data are 
+        :param hcells: Either the index (int) of a single cell or
+            a list of indices of cells for which the data are
             to be written every dt_his seconds, as set by add_dt_plot.
             Note that cells are indexed from 0 to ncells-1.
         """
@@ -691,7 +691,7 @@ class GasSlug():
         self.indx = len(slugList) # next available index
         slugList.append(self)
         return
-    
+
     def write_config(self, fp):
         """
         Writes the configuration data in JSON format.
@@ -716,7 +716,7 @@ class GasSlug():
                                                 self.to_end_L, self.to_end_R,
                                                 self.cluster_strength)
         return
-    
+
     def write_face_data(self, fp, tindx=0):
         """
         Write the initial state of all of the interfaces for the gas slug.
@@ -764,7 +764,7 @@ class GasSlug():
         return
 
 #----------------------------------------------------------------------------
-    
+
 class Piston():
     """
     Contains the information for a piston.
@@ -776,7 +776,7 @@ class Piston():
       it is usually important to have some account of
       the friction caused by gas-seals and guide-rings that
       may be present on the piston.
-    * The f_decay parameter is used to model secondary diaphragms 
+    * The f_decay parameter is used to model secondary diaphragms
       in expansion tubes as pistons which lose their mass over time.
     """
 
@@ -786,17 +786,17 @@ class Piston():
                 'back_seal_f', 'back_seal_area', \
                 'p_restrain', 'is_restrain', 'with_brakes', 'brakes_on', \
                 'x_buffer', 'hit_buffer', 'ecL', 'ecR'
-    
+
     def __init__(self, mass, diam, xL0, xR0, vel0,
                  front_seal_f=0.0, front_seal_area=0.0,
                  back_seal_f=0.0, back_seal_area=0.0,
-                 p_restrain=0.0, is_restrain=0,    
-                 with_brakes=0, brakes_on=0,      
+                 p_restrain=0.0, is_restrain=0,
+                 with_brakes=0, brakes_on=0,
                  x_buffer=10.e6, hit_buffer = 0,
                  label=""):
         """
         Create a piston with specified properties.
-            
+
         :param mass: (float) Mass of piston in kg.
         :param diam: (float) Face diameter, metres.
         :param xL0: (float) Initial position of left-end, metres.
@@ -807,15 +807,15 @@ class Piston():
         :param vel0: (float) Initial velocity (of the centroid), m/s.
         :param front_seal_f: (float) friction coefficient.
             Typical value might be 0.2.
-        :param front_seal_area: (float) Seal area over which the front-side 
+        :param front_seal_area: (float) Seal area over which the front-side
             pressure acts.
-            This is the effective area over which the compressed gas pressed the 
+            This is the effective area over which the compressed gas pressed the
             front-side seal against the tube wall.
             Friction force is this area multiplied by downstream-pressure by
             friction coefficient.
-        :param back_seal_f: (float) friction coefficient. 
+        :param back_seal_f: (float) friction coefficient.
             A typical value might be 0.2.
-        :param back_seal_area: (float) Seal area over which the back-side 
+        :param back_seal_area: (float) Seal area over which the back-side
             pressure acts.
             Friction force is this area multiplied by downstream-pressure by
             friction coefficient.  This is for gun tunnel pistons that have
@@ -923,7 +923,7 @@ class Piston():
                  (tindx, self.x0, self.vel0,
                   self.is_restrain, self.brakes_on, self.hit_buffer))
         return
-    
+
 #----------------------------------------------------------------------------
 
 class EndCondition():
@@ -978,7 +978,7 @@ class EndCondition():
         myDict["right-piston-face-id"] = self.pistonR_face
         return json.dumps(myDict)
 
-    
+
 class Diaphragm(EndCondition):
     """
     Contains the information for a diaphragm which controls the
@@ -988,7 +988,7 @@ class Diaphragm(EndCondition):
     __slots__ = 'indx', \
                 'x0', 'p_burst', 'is_burst', \
                 'dt_hold', 'dxL', 'dxR', 'label'
-    
+
     def __init__(self, x0, p_burst, is_burst=0, dt_hold=0.0,
                  dxL=0.0, dxR=0.0, label="",
                  slugL=None, slugL_end='R',
@@ -1070,7 +1070,7 @@ class GasInterface(EndCondition):
     """
 
     __slots__ = 'x0'
-    
+
     def __init__(self, x0,
                  slugL=None, slugL_end='R',
                  slugR=None, slugR_end='L'):
@@ -1096,7 +1096,7 @@ class GasInterface(EndCondition):
         fp.write('  "connections": %s\n' % self.json_str()) # no comma for last item
         fp.write('},\n')
         return
-    
+
 
 class FreeEnd(EndCondition):
     """
@@ -1104,7 +1104,7 @@ class FreeEnd(EndCondition):
     """
 
     __slots__ = 'x0'
-    
+
     def __init__(self, x0,
                  slugL=None, slugL_end='R',
                  slugR=None, slugR_end='L'):
@@ -1141,7 +1141,7 @@ class VelocityEnd(EndCondition):
     """
 
     __slots__ = 'x0', 'vel'
-    
+
     def __init__(self, x0, vel=0.0,
                  slugL=None, slugL_end='R',
                  slugR=None, slugR_end='L'):
@@ -1178,7 +1178,7 @@ class PistonFace(EndCondition):
     """
 
     __slots__ = 'x0'
-    
+
     def __init__(self,
                  slugL=None, slugL_end='R',
                  slugR=None, slugR_end='L',
@@ -1261,7 +1261,7 @@ def assemble_gas_path(*components):
 def connect_pair(cL, cR):
     """
     Make the logical connection between a pair of components.
-    
+
     :param cL: is left object
     :param cR: is right object
 
@@ -1371,23 +1371,23 @@ def write_initial_files():
     #
     for slug in slugList:
         slug.construct_cells_and_faces()
-        fileName = config.job_name + ('/slug-%04d-faces.data' % slug.indx) 
+        fileName = config.job_name + ('/slug-%04d-faces.data' % slug.indx)
         fp = open(fileName, 'w')
         slug.write_face_data(fp, 0)
         fp.close()
-        fileName = config.job_name + ('/slug-%04d-cells.data' %  slug.indx) 
+        fileName = config.job_name + ('/slug-%04d-cells.data' %  slug.indx)
         fp = open(fileName, 'w')
         slug.write_cell_data(fp, 0)
         fp.close()
     #
     for piston in pistonList:
-        fileName = config.job_name + ('/piston-%04d.data' % piston.indx) 
+        fileName = config.job_name + ('/piston-%04d.data' % piston.indx)
         fp = open(fileName, 'w')
         piston.write_data(fp, 0)
         fp.close()
     #
     for diaphragm in diaphragmList:
-        fileName = config.job_name + ('/diaphragm-%04d.data' % diaphragm.indx) 
+        fileName = config.job_name + ('/diaphragm-%04d.data' % diaphragm.indx)
         fp = open(fileName, 'w')
         diaphragm.write_data(fp, 0)
         fp.close()
@@ -1440,5 +1440,3 @@ if __name__ == '__main__':
         write_initial_files()
     print("Done.")
     sys.exit(0)
-
-

@@ -70,5 +70,5 @@ public:
         double[4] daKT; daKT[0] = d; daKT[1] = area; daKT[2] = K_over_L; daKT[3] = Twall;
         return daKT;
     } // end eval()
-    
+
 } // end class Tube

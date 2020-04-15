@@ -29,7 +29,7 @@ public:
     {
         // Do nothing.
     }
-    
+
 } // end class LFace
 
 
@@ -76,8 +76,8 @@ public:
     double Q_mass;
     double Q_moment;
     double Q_energy;
-    
-    
+
+
     this(GasModel gm)
     {
         gas = new GasState(gm);
@@ -157,7 +157,7 @@ public:
         gmodel.update_trans_coeffs(gas_ref);
         double f = 0.0;
         if (viscous_effects == 2 && L_bar > 0.0) {
-            // Friction and heat flux based on a flat plate calculation 
+            // Friction and heat flux based on a flat plate calculation
 	    // No compressibility correction apart from
 	    // property evaluation at Eckert reference conditions
 	    // and adiabatic wall temperature based on recovery factor.
@@ -165,7 +165,7 @@ public:
             double Re_L = gas_ref.rho*L_bar*abs_vel/gas_ref.mu;
 	    f = f_flat_plate(Re_L);
 	} else {
-	    // Default: friction factor determined from 
+	    // Default: friction factor determined from
 	    // fully-developed pipe flow correlation.
             // Local Reynolds number based on diameter and reference conditions.
             double Re_D = gas_ref.rho*D*abs_vel/gas_ref.mu;
@@ -186,7 +186,7 @@ public:
 	} else {
 	    heat_flux = h * (T_wall_seen - T_aw); // * math.pi*D*length
 	}
-        // Shear stress and heat transfer act over the wall-constact surface. 
+        // Shear stress and heat transfer act over the wall-constact surface.
         Q_moment += shear_stress * PI*D*L;
         Q_energy += heat_flux * PI*D*L;
         //
@@ -232,13 +232,13 @@ double f_flat_plate(double Re)
     // Flat-plate friction factor with Re based on length along plate.
     // See Holman (1986) Heat Transfer, Eq 5.125 to 5.127
     double f;
-    if (Re < 1.0e4) { 
-	// Somewhat arbitrary lower Re limit to stop 
+    if (Re < 1.0e4) {
+	// Somewhat arbitrary lower Re limit to stop
 	// possibility of near-infinite friction and heat flux.
 	f = 8 * 0.332/sqrt(10000.0);
     } else if (Re < 5.0e5) {
         // Laminar regime
-	f = 8 * 0.332/sqrt(Re); 
+	f = 8 * 0.332/sqrt(Re);
     } else if (Re < 1.0e7) {
         // lower Re turbulent regime.
 	f = 8 * 0.0296*pow(Re, -0.2);
