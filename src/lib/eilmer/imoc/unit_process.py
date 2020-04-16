@@ -16,6 +16,7 @@ import eilmer.imoc.kernel as kernel
 import eilmer.ideal_gas_flow as igf
 from math import sin, cos, sqrt, asin, atan
 from eilmer.zero_solvers import secant as solve
+import numpy as np
 
 # Tolerances for convergence checks.
 max_iteration = 15
@@ -92,14 +93,16 @@ def interior(node1, node2, node4):
         pm4 = 0.5*(pm1+pm2) + 0.5*(th1-th2)
         th4 = 0.5*(pm1-pm2) + 0.5*(th1+th2)
         if kernel.axisymmetric:
-            if y1 < 1.0e-6 and y2 < 1.0e-6:
+            if y1 < 1.0e-6 and y2 < 1.0e-6 and x1 < x2:
                 raise RuntimeError("Interior: both nodes are too close to axis.")
             # Axisymmetric components.
-            if y1 < 1.0e-6:
+            if y1 == 0.0: axiterm1 = 0.0
+            elif y1 < 1.0e-6:
                 axiterm1 = sin(mu2)*sin(th2)/y2
             else:
                 axiterm1 = sin(mu1)*sin(th1)/y1
-            if y2 < 1.0e-6:
+            if y2 == 0.0: axiterm2 = 0.0
+            elif y2 < 1.0e-6:
                 axiterm2 = sin(mu1)*sin(th1)/y1
             else:
                 axiterm2 = sin(mu2)*sin(th2)/y2
@@ -383,3 +386,77 @@ def cplus_wall(fn_wall, node2, node4):
     else:
         n4.cplus_down = node2; n2.cplus_up = node4
     return n4
+
+def step_stream_node(node0, node4, dL):
+    """
+    Replicating PJs C code
+    This function calculates the next node along a streamline by the length dL
+    INPUTS:
+            node0 - index of starting node
+            node4 - index of solution point, specify -1 for new node
+            dL    - length the move along the streamline. A positive value will
+                    step downstream while a negative value will step upstream.
+    OUTPUT:
+            node4 - index of solution node
+    """
+    n0 = kernel.nodes[node0]
+    # Start by estimating the node4 data based on node0
+    x4 = n0.x + dL * cos(n0.theta)
+    y4 = n0.y + dL * sin(n0.theta)
+    th4 = n0.theta
+    pm4 = n0.nu
+    #
+    R = 0.9 * dL # Radius of influence for finding nodes
+    mu = 2.0 # Smoothing parameter for Shepard interpolation
+    # Find the near nodes
+    near_nodes = kernel.find_nodes_near(x4, y4, tol=R)
+    if len(near_nodes) == 0:
+        raise RuntimeError(f"No nearby nodes were found for node idx {node0}" \
+                           f" using a {dL:.5f}m length move")
+    # Using PJs format for data handling
+    x = np.zeros_like(near_nodes, dtype=np.float)
+    y = np.zeros_like(near_nodes, dtype=np.float)
+    nu = np.zeros_like(near_nodes, dtype=np.float)
+    theta = np.zeros_like(near_nodes, dtype=np.float)
+    for idx, node_idx in enumerate(near_nodes):
+        x[idx] = kernel.nodes[node_idx].x
+        y[idx] = kernel.nodes[node_idx].y
+        theta[idx] = kernel.nodes[node_idx].theta
+        nu[idx] = kernel.nodes[node_idx].nu
+    # Now calculate new solution point and flow properties
+    iteration_count = 0
+    converged = False
+    r = np.zeros_like(near_nodes)
+    Xi = np.zeros_like(near_nodes)
+    while (not converged) and (iteration_count < max_iteration):
+        x4_old = x4
+        y4_old = y4
+        r = np.sqrt(x**2 + y**2)
+        Xi = (1 - r / R)**mu
+        sum_Xi = np.sum(Xi)
+        w = Xi / sum_Xi
+        pm4 = np.sum(w * nu)
+        th4 = np.sum(w * theta)
+        sinCzero = 0.5 * ( sin(n0.theta) + sin(th4) )
+        cosCzero = 0.5 * ( cos(n0.theta) + cos(th4) )
+        x4 = n0.x + cosCzero * dL
+        y4 = n0.y + sinCzero * dL
+        change_in_position = sqrt((x4 - x4_old)**2 + (y4 - y4_old)**2)
+        iteration_count += 1
+        converged = change_in_position < position_tolerance
+    # Save the solution-point properties and connect the 
+    # node into the characteristic mesh.
+    if node4 == -1:
+        n4 = kernel.Node()
+        node4 = n4.indx
+    else:
+        n4 = kernel.nodes[node4]
+    m4 = igf.PM2(pm4, kernel.g)
+    n4.x = x4; n4.y = y4; n4.nu = pm4; n4.theta = th4; n4.mach = m4
+    if n4.x > n0.x:
+        n4.czero_up = node0
+        n0.czero_down = node4
+    else:
+        n4.czero_down = node0
+        n0.czero_up = node4
+    return node4
