@@ -14,9 +14,23 @@ Version:
 
 import eilmer.imoc.kernel as kernel
 import eilmer.ideal_gas_flow as igf
-from math import sin, cos, sqrt, asin, atan
+from math import sin, cos, sqrt, asin, atan, pow
 from eilmer.zero_solvers import secant as solve
 import numpy as np
+
+
+def theta_over_r(ma, mb, dx, g):
+    """
+    Estimate part of the axisymmetric source term from the
+    Mach number change along the axis, ma to mb over distance dx.
+
+    See PJ's workbook notes, 2020-04-16, page 62.
+    """
+    ex = (g+1)/(g-1)/2
+    num = ma*pow((1+0.5*(g-1)*(mb**2)), ex)
+    den = mb*pow((1+0.5*(g-1)*(ma**2)), ex)
+    return (sqrt(num/den)-1)/dx
+
 
 # Tolerances for convergence checks.
 max_iteration = 15
@@ -93,19 +107,23 @@ def interior(node1, node2, node4):
         pm4 = 0.5*(pm1+pm2) + 0.5*(th1-th2)
         th4 = 0.5*(pm1-pm2) + 0.5*(th1+th2)
         if kernel.axisymmetric:
-            if y1 < 1.0e-6 and y2 < 1.0e-6 and x1 < x2:
-                raise RuntimeError("Interior: both nodes are too close to axis.")
-            # Axisymmetric components.
-            if y1 == 0.0: axiterm1 = 0.0
-            elif y1 < 1.0e-6:
-                axiterm1 = sin(mu2)*sin(th2)/y2
+            # Axisymmetric components will need alternate evaluation at the axis.
+            if y1 < 1.0e-6 and y2 < 1.0e-6:
+                # Both nodes are close to the axis.
+                # Use the axial variation in Mach number to estimate theta/r,
+                # and use that for sin(th)/y.
+                th_over_r = theta_over_r(m2, m1, x1-x2, kernel.g)
+                axiterm1 = sin(mu1)*th_over_r
+                axiterm2 = sin(mu2)*th_over_r
             else:
-                axiterm1 = sin(mu1)*sin(th1)/y1
-            if y2 == 0.0: axiterm2 = 0.0
-            elif y2 < 1.0e-6:
-                axiterm2 = sin(mu1)*sin(th1)/y1
-            else:
-                axiterm2 = sin(mu2)*sin(th2)/y2
+                if y1 < 1.0e-6:
+                    axiterm1 = sin(mu1)*sin(th2)/y2
+                else:
+                    axiterm1 = sin(mu1)*sin(th1)/y1
+                if y2 < 1.0e-6:
+                    axiterm2 = sin(mu2)*sin(th1)/y1
+                else:
+                    axiterm2 = sin(mu2)*sin(th2)/y2
             #
             axiterm4 = sin(mu4)*sin(th4)/y4
             integralCminus = 0.5*directionCminus*lengthCminus*(axiterm1+axiterm4)
@@ -116,7 +134,7 @@ def interior(node1, node2, node4):
         #
         iteration_count += 1
         converged = change_in_position < position_tolerance
-    # Save the solution-point properties and connect the 
+    # Save the solution-point properties and connect the
     # node into the characteristic mesh.
     if node4 == -1:
         n4 = kernel.Node()
@@ -286,7 +304,7 @@ def cminus_wall(fn_wall, node1, node4):
         #
         iteration_count += 1
         converged = change_in_position < position_tolerance
-    # Save the solution-point properties and connect the 
+    # Save the solution-point properties and connect the
     # node into the characteristic mesh.
     if node4 == -1:
         n4 = kernel.Node()
@@ -370,7 +388,7 @@ def cplus_wall(fn_wall, node2, node4):
         #
         iteration_count += 1
         converged = change_in_position < position_tolerance
-    # Save the solution-point properties and connect the 
+    # Save the solution-point properties and connect the
     # node into the characteristic mesh.
     if node4 == -1:
         n4 = kernel.Node()
@@ -444,7 +462,7 @@ def step_stream_node(node0, node4, dL):
         change_in_position = sqrt((x4 - x4_old)**2 + (y4 - y4_old)**2)
         iteration_count += 1
         converged = change_in_position < position_tolerance
-    # Save the solution-point properties and connect the 
+    # Save the solution-point properties and connect the
     # node into the characteristic mesh.
     if node4 == -1:
         n4 = kernel.Node()
