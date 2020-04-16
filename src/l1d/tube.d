@@ -1,6 +1,11 @@
 // tube.d for the Lagrangian 1D Gas Dynamics, also known as L1d4.
 // PA Jacobs
-// 2020-04-08
+// 2020-04-08 Static tube definition.
+//
+// [TODO]
+//   Port Ingo's valve effects to this class.
+//   In L1d3, the valves were implemented partly as gas-slug end conditions.
+//   It might be cleaner for valves to be additions to this Tube class.
 //
 module tube;
 
