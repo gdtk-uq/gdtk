@@ -2,6 +2,7 @@ DGD_DOC ?= ../../../dgd-docs
 PDFS := eilmer-user-guide \
 	geometry-user-guide \
 	gas-user-guide \
+	reacting-gas-guide \
 	foammesh-user-guide \
 	presentations
 
@@ -41,6 +42,11 @@ gas-user-guide:
 	- mkdir -p static/pdfs
 	cd $(DGD_DOC)/gas/user-guide; make pdf
 	cp $(DGD_DOC)/gas/user-guide/gas-user-guide.pdf static/pdfs/
+
+reacting-gas-guide:
+	- mkdir -p static/pdfs
+	cd $(DGD_DOC)/gas/reacting-gas; make pdf
+	cp $(DGD_DOC)/gas/reacting-gas/reacting-gas-guide.pdf static/pdfs/
 
 foammesh-user-guide:
 	- mkdir -p static/pdfs

@@ -9,9 +9,10 @@ menu:
 
 The supporting documentation for **Eilmer** is available for download:
 
-- [Eilmer4 User Guide](/pdfs/eilmer-user-guide.pdf)
+- [Eilmer4 Flow Solver User Guide](/pdfs/eilmer-user-guide.pdf)
 - [Geometry Package User Guide](/pdfs/geometry-user-guide.pdf)
 - [Gas Package User Guide](/pdfs/gas-user-guide.pdf)
+- [Reacting Gas Thermochemistry with the thermally-perfect-gas model](/pdfs/reacting-gas-guide.pdf)
 
 The user guide for **foamMesh** is also available:
 
