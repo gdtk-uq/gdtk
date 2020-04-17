@@ -1489,19 +1489,41 @@ function mpiDistributeBlocks(args)
       end
    elseif option == "loadbalance" or option == "load-balance" then
       -- Load-balance procedure first sorts the blocks by size...
-      local blksNcells = {}
-      local totalCells = 0
-      for i=1,nBlocks do
+      -- first process fluidblocks
+      local fluidblksNcells = {}
+      local fluidtotalCells = 0
+      for i=1,#fluidBlocks do
          local blk = null
-         if (i <= #fluidBlocks) then
-            blk = fluidBlocks[i]
-         else
-            blk = solidBlocks[i - #fluidBlocks]
-         end
-         blksNcells[i] = {i, blk.ncells}
-         totalCells = totalCells + blk.ncells
+         blk = fluidBlocks[i]
+         fluidblksNcells[i] = {i, blk.ncells}
+         fluidtotalCells = fluidtotalCells + blk.ncells
       end
-      table.sort(blksNcells, function (a,b) return a[2] > b[2] end)
+      table.sort(fluidblksNcells, function (a,b) return a[2] > b[2] end)
+
+      -- next process solidblocks
+      local solidblksNcells = {}
+      local solidtotalCells = 0
+      for i=1,#solidBlocks do
+         local blk = null
+         blk = solidBlocks[i]
+         solidblksNcells[i] = {i+#fluidBlocks, blk.ncells}
+         solidtotalCells = solidtotalCells + blk.ncells
+      end
+      table.sort(solidblksNcells, function (a,b) return a[2] > b[2] end)
+
+      -- now append both tables together
+      -- we do this to ensure that every MPI task has at least one fluidblock
+      -- present when performing coupled fluid-solid domain problems otherwise
+      -- Eilmer balks on MPI processes that only have solidblocks present
+      local blksNcells = {}
+      for i=1,#fluidBlocks do
+         blksNcells[i] = fluidblksNcells[i]
+      end
+      for i=1,#solidBlocks do
+         blksNcells[i+#fluidBlocks] = solidblksNcells[i]
+      end
+      local totalCells = fluidtotalCells + solidtotalCells
+
       -- ...then distributes the blocks to the tasks,
       -- biggest block first into the task with the smallest load.
       -- We shall tally the loads, in number of cells, for each MPI task.
