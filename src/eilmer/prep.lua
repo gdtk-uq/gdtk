@@ -1492,10 +1492,8 @@ function mpiDistributeBlocks(args)
       -- first process fluidblocks
       local fluidblksNcells = {}
       local fluidtotalCells = 0
-      for i=1,#fluidBlocks do
-         local blk = null
-         blk = fluidBlocks[i]
-         fluidblksNcells[i] = {i, blk.ncells}
+      for i, blk in ipairs(fluidBlocks) do
+         fluidblksNcells[#fluidblksNcells+1] = {i, blk.ncells}
          fluidtotalCells = fluidtotalCells + blk.ncells
       end
       table.sort(fluidblksNcells, function (a,b) return a[2] > b[2] end)
@@ -1503,10 +1501,8 @@ function mpiDistributeBlocks(args)
       -- next process solidblocks
       local solidblksNcells = {}
       local solidtotalCells = 0
-      for i=1,#solidBlocks do
-         local blk = null
-         blk = solidBlocks[i]
-         solidblksNcells[i] = {i+#fluidBlocks, blk.ncells}
+      for i, blk in ipairs(solidBlocks) do
+         solidblksNcells[#solidblksNcells+1] = {i+#fluidBlocks, blk.ncells}
          solidtotalCells = solidtotalCells + blk.ncells
       end
       table.sort(solidblksNcells, function (a,b) return a[2] > b[2] end)
@@ -1516,12 +1512,8 @@ function mpiDistributeBlocks(args)
       -- present when performing coupled fluid-solid domain problems otherwise
       -- Eilmer balks on MPI processes that only have solidblocks present
       local blksNcells = {}
-      for i=1,#fluidBlocks do
-         blksNcells[i] = fluidblksNcells[i]
-      end
-      for i=1,#solidBlocks do
-         blksNcells[i+#fluidBlocks] = solidblksNcells[i]
-      end
+      for _, bNc in ipairs(fluidblksNcells) do blksNcells[#blksNcells+1] = bNc end
+      for _, bNc in ipairs(solidblksNcells) do blksNcells[#blksNcells+1] = bNc end
       local totalCells = fluidtotalCells + solidtotalCells
 
       -- ...then distributes the blocks to the tasks,
@@ -1540,8 +1532,8 @@ function mpiDistributeBlocks(args)
          end
       end
       -- Distribute remaining blocks.
-      for _,v in pairs(blksNcells) do
-         local ib = v[1]; local ncells = v[2]
+      for _,bNc in ipairs(blksNcells) do
+         local ib = bNc[1]; local ncells = bNc[2]
          if mpiTaskList[ib] < 0 then
             -- Add the so-far-unassigned block to the MPI task with smallest load.
             local indxSmallest = 1; local smallestLoad = taskLoads[1]
