@@ -15,7 +15,7 @@ import math
 
 def approxEqual(a, b):
     result = math.isclose(a, b, rel_tol=1.0e-2, abs_tol=1.0e-5)
-    # print("a=",a, "b=",b, "rel=",(a-b)/b, "abs=",a-b, "result=",result) 
+    # print("a=",a, "b=",b, "rel=",(a-b)/b, "abs=",a-b, "result=",result)
     return result
 
 print("Begin imoc test...")
@@ -36,10 +36,10 @@ n10 = unit.interior(n3.indx, n9.indx, -1)
 print("n3=", n3)
 print("n9=", n9)
 print("n10=", n10)
-assert approxEqual(n10.theta, 0.052360), "interior node, flow angle" 
-assert approxEqual(n10.nu, 0.170169), "interior node, PM function" 
-assert approxEqual(n10.mach, 1.42638), "interior node, mach number" 
-assert approxEqual(n10.x, 0.081977), "interior node, x position" 
+assert approxEqual(n10.theta, 0.052360), "interior node, flow angle"
+assert approxEqual(n10.nu, 0.170169), "interior node, PM function"
+assert approxEqual(n10.mach, 1.42638), "interior node, mach number"
+assert approxEqual(n10.x, 0.081977), "interior node, x position"
 assert approxEqual(n10.y, 0.017967), "interior node, y position"
 assert (n10.cminus_up == n3.indx) and (n3.cminus_down == n10.indx), \
     "interior node, cminus connection"
@@ -50,15 +50,16 @@ kernel.mesh_nodes.append(n9)
 kernel.mesh_nodes.append(n10)
 
 print("Make a new, wall node along a C- characteristic.")
-def wall0(x): return 0.0
+def f0(x): return 0.0
+wall0 = kernel.Wall(f0, 0.0, 1.0)
 n16 = unit.cminus_wall(wall0, n10.indx, -1)
 print("n16=", n16)
 print("n10=", n10)
-assert approxEqual(n16.theta, 0.0), "cminus wall node, flow angle" 
-assert approxEqual(n16.nu, 0.222529), "cminus wall node, PM function" 
-assert approxEqual(n16.mach, 1.52864), "cminus wall node, mach number" 
-assert approxEqual(n16.x, 0.101234), "cminus wall node, x position" 
-assert approxEqual(n16.y, 0.0), "cminus wall node, y position" 
+assert approxEqual(n16.theta, 0.0), "cminus wall node, flow angle"
+assert approxEqual(n16.nu, 0.222529), "cminus wall node, PM function"
+assert approxEqual(n16.mach, 1.52864), "cminus wall node, mach number"
+assert approxEqual(n16.x, 0.101234), "cminus wall node, x position"
+assert approxEqual(n16.y, 0.0), "cminus wall node, y position"
 assert (n16.cminus_up == n10.indx) and (n10.cminus_down == n16.indx), \
     "cminus wall node, cminus connection"
 kernel.mesh_nodes.append(n16)
@@ -75,16 +76,17 @@ assert (n16.cminus_up == nXX.indx) and (nXX.cminus_down == n16.indx), \
 kernel.mesh_nodes.append(nXX)
 
 print("Make a new, wall node along a C+ characteristic.")
-def wall1(x): return 0.267949*x+0.111638
+def f1(x): return 0.267949*x+0.111638
+wall1 = kernel.Wall(f1, 0.0, 1.0)
 n49 = kernel.Node(x=0.194488, y=0.142442, nu=PM1(1.83558), mach=1.83558, theta=0.261799)
 n57 = unit.cplus_wall(wall1, n49.indx, -1)
 print("n49=", n49)
 print("n57=", n57)
-assert approxEqual(n57.theta, 0.261799), "cplus wall node, flow angle" 
-assert approxEqual(n57.nu, 0.379608), "cplus wall node, PM function" 
-assert approxEqual(n57.mach, 1.83558), "cplus wall node, mach number" 
-assert approxEqual(n57.x, 0.220358), "cplus wall node, x position" 
-assert approxEqual(n57.y, 0.170683), "cplus wall node, y position" 
+assert approxEqual(n57.theta, 0.261799), "cplus wall node, flow angle"
+assert approxEqual(n57.nu, 0.379608), "cplus wall node, PM function"
+assert approxEqual(n57.mach, 1.83558), "cplus wall node, mach number"
+assert approxEqual(n57.x, 0.220358), "cplus wall node, x position"
+assert approxEqual(n57.y, 0.170683), "cplus wall node, y position"
 assert (n57.cplus_up == n49.indx) and (n49.cplus_down == n57.indx), \
     "cplus wall node, cplus connection"
 kernel.mesh_nodes.append(n49)

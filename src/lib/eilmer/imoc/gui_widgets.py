@@ -254,7 +254,7 @@ def savePostscriptFile():
     c = cfg['canvas']
     c.postscript(file=filename)
     return
-    
+
 def quitProgram():
     result = messagebox.askyesno(
         message="Quit program?",
@@ -409,7 +409,7 @@ def plotWalls():
 
 def plotMesh():
     """
-    Plot the nodes as circles with line segments indicating 
+    Plot the nodes as circles with line segments indicating
     the characteristic lines and streamlines.
     """
     c = cfg['canvas']

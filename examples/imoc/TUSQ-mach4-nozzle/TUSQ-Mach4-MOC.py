@@ -62,39 +62,32 @@ print(f"The nozzle exit node (node {nozz_exit_node}) has a Mach number of "
       + f"{kernel.nodes[nozz_exit_node].mach} and a theta of "
       + f"{kernel.nodes[nozz_exit_node].theta:.5f}")
 # Now, we are going to create our nozzle wall by following the streamline
-# from the nozzle exit point.
-# We are going to step upstream in 5mm increments
+# upstream from the nozzle exit point.
+# We are going to step upstream in 5mm increments.
 dL = -5.0e-3
-# We want to store our wall node indices for later reference
-nozz_wall_nodes = []
-nozz_wall_nodes.append(nozz_exit_node) # Nozzle exit node
-# I (FZ) haven't figured out a neater way of visually creating the nozzle
-# wall yet. Hence the global list creation.... PJ.... ideas??
-global wall_x
-global wall_y
-wall_x = []
-wall_y = []
-wall_x.append(kernel.nodes[nozz_exit_node].x)
-wall_y.append(kernel.nodes[nozz_exit_node].y)
-# Let's try starting a streamline......
+nozz_wall_nodes = [] # Store for later reference.
+nozz_wall_nodes.append(nozz_exit_node) # Start at nozzle exit node.
+# March upstream, until we reach the throat.
 while kernel.nodes[nozz_wall_nodes[-1]].x > 0.01:
     new_idx = unit.step_stream_node(nozz_wall_nodes[-1], -1, dL)
     nozz_wall_nodes.append(new_idx)
     kernel.mesh_nodes.append(kernel.nodes[new_idx])
-    wall_x.append(kernel.nodes[new_idx].x)
-    wall_y.append(kernel.nodes[new_idx].y)
+nozz_wall_nodes.reverse()
 # Now, we can do a check of the throat radius and see that this matches what
 # we are expecting from our analytical solution, it should be ~20mm.
 # The value will probably be slightly higher due to the way we defined the end
 # of the nozzle wall solution above
 print(f"The throat radius is approximately "
-      + f"{kernel.nodes[nozz_wall_nodes[-1]].y*1000:.2f} mm.")
-# Let's define the axis as a wall for clarity
-def wall0(x): return 0.0
-# And the create the nozzle wall - at this point in time this appears to be
-# the best method for the wall creation
-def wall1(x):
+      + f"{kernel.nodes[nozz_wall_nodes[0]].y*1000:.2f} mm.")
+
+# We just want the walls to appear as distinct items in the GUI.
+# The axis is the lower wall.
+def f0(x): return 0.0
+# And the create the upper (nozzle) wall as a closure around
+# the arrays of xs and ys.
+xs = np.array([kernel.mesh_nodes[i].x for i in nozz_wall_nodes])
+ys = np.array([kernel.mesh_nodes[i].y for i in nozz_wall_nodes])
+def f1(x, wall_x=xs, wall_y=ys):
     import numpy as np
-    if x < 0.01 or x > 0.48: pass
-    return np.interp(x, np.flip(wall_x), np.flip(wall_y))
-kernel.walls = [wall0, wall1]
+    return np.interp(x, wall_x, wall_y)
+kernel.walls = [kernel.Wall(f0, 0.0, 0.5), kernel.Wall(f1, 0.0, 0.5)]

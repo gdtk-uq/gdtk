@@ -5,11 +5,15 @@ This is a regrowth of the old IMOC code that was implemented in C.
 
 Author(s):
   Peter J.
-  Centre for Hypersonics,
-  School of Mechanical Engineering, U of Q.
+    Centre for Hypersonics,
+    School of Mechanical Engineering, U of Q.
+  F. Zander
+    University of Southern Queensland.
 
 Version:
   2020-01-09: Let's start coding in Python and see how it develops...
+  2020-04-14: Fabian Zander has joined the effort and has ported
+    functions needed for computing a nozzle profile.
 """
 
 import eilmer.imoc.kernel as kernel
@@ -35,6 +39,7 @@ def theta_over_r(ma, mb, dx, g):
 # Tolerances for convergence checks.
 max_iteration = 15
 position_tolerance = 1.0e-5
+
 
 def interior(node1, node2, node4):
     """
@@ -227,29 +232,18 @@ def wall_position(f, x0, y0, cosx, cosy):
     return x0+dL*cosx, y0+dL*cosy
 
 
-def wall_slope(f, x, dx=1.0e-6):
-    """
-    Returns ths slope of the point on the wall y=f(x).
-
-    f: function y=f(x) that defines the wall.
-    x: x-loacation of point on the wall
-    dx: increment for the finite-difference calculation
-    """
-    return (f(x+dx)-f(x))/dx
-
-
-def cminus_wall(fn_wall, node1, node4):
+def cminus_wall(wall, node1, node4):
     """
     Returns a point on the wall, computed from one initial point.
 
-    fn_wall: user-supplied function defining wall y=f(x)
+    fn_wall: user-supplied Wall object defining wall y=f(x)
     node1: index of initial point along C- characteristic
     node4: index of solution point (may have a value of -1)
     If -1 is specified as the index for node4, a new node will be
     created for the solution point.
     """
-    if not callable(fn_wall):
-        raise RuntimeError("cminus_wall expects a callable function for fn_wall.")
+    if wall.__class__ != kernel.Wall:
+        raise RuntimeError("cminus_wall expects a Wall object.")
     n1 = kernel.nodes[node1]
     x1 = n1.x; y1 = n1.y; pm1 = n1.nu; th1 = n1.theta; m1 = n1.mach
     # Mach angles
@@ -270,7 +264,7 @@ def cminus_wall(fn_wall, node1, node4):
         sinCminus = 0.5*(sin(th1-mu1) + sin(th4-mu4))
         cosCminus = 0.5*(cos(th1-mu1) + cos(th4-mu4))
         #
-        x4, y4 = wall_position(fn_wall, x1, y1, cosCminus, sinCminus)
+        x4, y4 = wall_position(wall, x1, y1, cosCminus, sinCminus)
         dx = x4-x4_old; dy = y4-y4_old
         change_in_position = sqrt(dx*dx + dy*dy)
         #
@@ -286,7 +280,7 @@ def cminus_wall(fn_wall, node1, node4):
         # Update flow properties at solution point
         # First, assume 2D planar geometry then add
         # axisymmetric contributions if flag is set.
-        th4 = atan(wall_slope(fn_wall, x4))
+        th4 = atan(wall.dfdx(x4))
         pm4 = pm1 - (th4-th1)
         if kernel.axisymmetric:
             if y1 < 1.0e-6:
@@ -322,18 +316,18 @@ def cminus_wall(fn_wall, node1, node4):
     return n4
 
 
-def cplus_wall(fn_wall, node2, node4):
+def cplus_wall(wall, node2, node4):
     """
     Returns a point on the wall, computed from one initial point.
 
-    fn_wall: user-supplied function defining wall y=f(x)
+    wall: user-supplied Wall object defining wall y=f(x)
     node2: index of initial point along C+ characteristic
     node4: index of solution point (may have a value of -1)
     If -1 is specified as the index for node4, a new node will be
     created for the solution point.
     """
-    if not callable(fn_wall):
-        raise RuntimeError("cplus_wall expects a callable function for fn_wall.")
+    if wall.__class__ != kernel.Wall:
+        raise RuntimeError("cplus_wall expects a Wall object.")
     n2 = kernel.nodes[node2]
     x2 = n2.x; y2 = n2.y; pm2 = n2.nu; th2 = n2.theta; m2 = n2.mach
     # Mach angles
@@ -354,7 +348,7 @@ def cplus_wall(fn_wall, node2, node4):
         sinCplus = 0.5*(sin(th2+mu2) + sin(th4+mu4))
         cosCplus = 0.5*(cos(th2+mu2) + cos(th4+mu4))
         #
-        x4, y4 = wall_position(fn_wall, x2, y2, cosCplus, sinCplus)
+        x4, y4 = wall_position(wall, x2, y2, cosCplus, sinCplus)
         dx = x4-x4_old; dy = y4-y4_old
         change_in_position = sqrt(dx*dx + dy*dy)
         #
@@ -370,7 +364,7 @@ def cplus_wall(fn_wall, node2, node4):
         # Update flow properties at solution point
         # First, assume 2D planar geometry then add
         # axisymmetric contributions if flag is set.
-        th4 = atan(wall_slope(fn_wall, x4))
+        th4 = atan(wall.dfdx(x4))
         pm4 = pm2 + (th4-th2)
         if kernel.axisymmetric:
             if y4 < 1.0e-6:
@@ -404,6 +398,7 @@ def cplus_wall(fn_wall, node2, node4):
     else:
         n4.cplus_down = node2; n2.cplus_up = node4
     return n4
+
 
 def step_stream_node(node0, node4, dL):
     """

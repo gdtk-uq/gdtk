@@ -46,7 +46,7 @@ class Node(object):
         If indx is not supplied, the new Node is appended to nodes.
         """
         if indx is None: indx = len(nodes)
-        self.indx = indx 
+        self.indx = indx
         self.x = x; self.y = y
         self.theta = theta; self.nu = nu; self.mach = mach
         self.cplus_up = cplus_up; self.cplus_down = cplus_down
@@ -101,3 +101,33 @@ def find_nodes_near(x, y, tol=0.0, max_count=30):
                 idx_near.append(idx)
             if len(idx_near) >= max_count: break
     return idx_near
+
+
+class Wall(object):
+    __slots__ = ['f', 'dfdx', 'x_min', 'x_max']
+
+    def __init__(self, f, x_min, x_max, dfdx=None, dx=1.0e-6):
+        """
+        Accept a user-supplied function f(x) to define the wall.
+        x_min, x_max: range of x that is of interest (for plotting).
+        Optionally, accept a function to define the slope of the wall.
+
+        If that function is not supplied,
+        we construct a finite-difference approximation.
+        """
+        if not callable(f):
+            raise RuntimeError("Expected a callable function for f.")
+        else:
+            self.f = f
+        if not dfdx:
+            # Construct a finite-difference approximation.
+            self.dfdx = lambda x, f=f, dx=dx: (f(x+dx)-f(x))/dx
+        elif callable(dfdx):
+            self.dfdx = dfdx
+        else:
+            raise RuntimeError("Expected a callable function for optional dfdx.")
+        self.x_min = x_min
+        self.x_max = x_max
+
+    def __call__(self, x):
+        return self.f(x)
