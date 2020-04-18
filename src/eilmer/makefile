@@ -372,6 +372,8 @@ install: $(PROGRAMS) $(LUA_MODULES) prep.lua prep-gas prep-chem chemkin2eilmer \
 	chmod +x $(BUILD_DIR)/bin/e4compact
 	cp xtdata.rb $(BUILD_DIR)/bin/xtdata.rb
 	chmod +x $(BUILD_DIR)/bin/xtdata.rb
+	cp e4forces.py $(BUILD_DIR)/bin/e4forces
+	chmod +x $(BUILD_DIR)/bin/e4forces
 ifneq "$(SHARE_FILES)" ""
 	cp $(SHARE_FILES) $(BUILD_DIR)/share
 endif
