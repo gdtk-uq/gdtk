@@ -14,7 +14,7 @@ Version:
 # The following string will be displayed in the Help/About dialog.
 versionString = \
 """Isentropic Method of Characteristics
-Version: 0.1, 2020-Jan-18."""
+Version: 0.2, 2020-Apr-19."""
 
 import sys
 import math
@@ -42,7 +42,7 @@ cfg['canvas_x_size'] = None # will be set when the root window exists
 cfg['canvas_y_size'] = None
 cfg['canvas_x_offset'] = 40
 cfg['canvas_y_offset'] = 40
-cfg['same_scales'] = True
+cfg['equal_scales'] = True
 cfg['x_min'] = 0.0; cfg['x_max'] = 1.2
 cfg['y_min'] = 0.0; cfg['y_max'] = 1.0
 cfg['zoom_x1'] = None; cfg['zoom_y1'] = None
@@ -67,7 +67,7 @@ def set_xy_scales():
     """
     xscale = (cfg['canvas_x_size']-cfg['canvas_x_offset']-10)/(cfg['x_max']-cfg['x_min'])
     yscale = (cfg['canvas_y_size']-cfg['canvas_y_offset']-10)/(cfg['y_max']-cfg['y_min'])
-    if cfg['same_scales']:
+    if cfg['equal_scales']:
         # Select the smaller scale, such that the full world-range fits.
         minscale = xscale if xscale < yscale else yscale
         cfg['x_scale'] = minscale; cfg['y_scale'] = minscale
@@ -127,9 +127,11 @@ def init_widgets():
     coord_x = StringVar(); coord_x.set("0.0")
     coord_y = StringVar(); coord_y.set("0.0")
     global var_show_node_numbers, var_show_char_mesh, var_show_streamlines
+    global var_equal_scales
     var_show_node_numbers = StringVar(); var_show_node_numbers.set(0)
     var_show_char_mesh = StringVar(); var_show_char_mesh.set(1)
     var_show_streamlines = StringVar(); var_show_streamlines.set(1)
+    var_equal_scales = StringVar(); var_equal_scales.set(cfg['equal_scales'])
     #
     # mf (master frame) will resize when the user pulls the edges.
     mf = ttk.Frame(root, padding="3 3 3 3")
@@ -198,7 +200,10 @@ def init_widgets():
     menu_plot = Menu(menubar)
     menubar.add_cascade(menu=menu_plot, label='Plot')
     menu_plot.add_command(label='Refresh', command=refreshDisplay)
-    menu_plot.add_command(label='Zoom', command=startZoom)
+    menu_plot.add_command(label='Zoom to cursor selection', command=startZoom)
+    menu_plot.add_command(label='Zoom to include all', command=zoomToIncludeAll)
+    menu_plot.add_checkbutton(label='Equal x,y-scales', variable=var_equal_scales,
+                              onvalue=1, offvalue=0, command=adjustScalesRefreshDisplay)
     menu_plot.add_checkbutton(label='Show node numbers', variable=var_show_node_numbers,
                               onvalue=1, offvalue=0, command=refreshDisplay)
     menu_plot.add_checkbutton(label='Show char mesh', variable=var_show_char_mesh,
@@ -297,6 +302,8 @@ def pickSomething(event):
         cfg['pick_action'] = 'select_node' # Return to default pick action.
         eraseCursors()
         refreshDisplay()
+        showStatusMsg("Zoom to selected range x=[%.3g, %.3g] y=[%.3g, %.3g]" %
+                      (cfg['zoom_x1'], x, cfg['zoom_y1'], y))
     else:
         print("Oops, should not have arrived here (in pickSomething).")
     return
@@ -363,6 +370,8 @@ def eraseCursors():
 def plotAxes():
     """
     Draw a set of axes and tic marks onto the canvas.
+
+    [TODO]: choose a good tic increment and display labelled tic marks.
     """
     c = cfg['canvas']
     xmin = cfg['x_min']; xmax = cfg['x_max']
@@ -394,10 +403,11 @@ def plotAxes():
 def plotWalls():
     c = cfg['canvas']
     c.delete('walls')
-    xmin = cfg['x_min']; xmax = cfg['x_max']
-    n = 100
-    dx = (xmax - xmin)/n
     for wall in kernel.walls:
+        xmin = max(cfg['x_min'], wall.x_min)
+        xmax = min(cfg['x_max'], wall.x_max)
+        n = 100
+        dx = (xmax - xmin)/n
         x = xmin
         x1 = canvas_x(x); y1 = canvas_y(wall(x))
         for i in range(n):
@@ -411,6 +421,8 @@ def plotMesh():
     """
     Plot the nodes as circles with line segments indicating
     the characteristic lines and streamlines.
+
+    [TODO]: Clip the drawing to the selected x,y-ranges.
     """
     c = cfg['canvas']
     c.delete('nodes'); c.delete('nodeids');
@@ -471,6 +483,32 @@ def refreshDisplay():
     plotAxes()
     plotWalls()
     plotMesh()
+    return
+
+def adjustScalesRefreshDisplay():
+    cfg['equal_scales'] = var_equal_scales.get() == "1"
+    set_xy_scales()
+    refreshDisplay()
+    return
+
+def zoomToIncludeAll():
+    x_min = 0.0; x_max = 0.0;
+    y_min = 0.0; y_max = 0.0;
+    for w in kernel.walls:
+        x = w.x_min; x_min = min(x_min, x); x_max = max(x_max, x);
+        y = w(x); y_min = min(y_min, y); y_max = max(y_max, y);
+        x = w.x_max; x_min = min(x_min, x); x_max = max(x_max, x);
+        y = w(x); y_min = min(y_min, y); y_max = max(y_max, y);
+    for n in kernel.nodes:
+        x = n.x; x_min = min(x_min, x); x_max = max(x_max, x);
+        y = n.y; y_min = min(y_min, y); y_max = max(y_max, y);
+    if x_max <= x_min: x_max = x_min + 1.0
+    if y_max <= y_min: y_max = y_min + 1.0
+    showStatusMsg("Zoom to include all x=[%.3g, %.3g] y=[%.3g, %.3g]" %
+                  (x_min, x_max, y_min, y_max))
+    set_xy_ranges(x_min, y_min, x_max, y_max)
+    eraseCursors()
+    refreshDisplay()
     return
 
 def deleteSelectedNodesFromMesh():
