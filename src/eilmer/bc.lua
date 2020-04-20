@@ -1350,6 +1350,7 @@ function WallBC_AdjacentToSolid:new(o)
       error("Invalid name for item supplied to WallBC_AdjacentToSolid constructor.", 2)
    end
    o = BoundaryCondition.new(self, o)
+   o.group = "adjacent_to_solid"
    o.is_wall_with_viscous_effects = true
    o.preReconAction = { GasSolidFullFaceCopy:new{otherBlock=o.otherBlock,
                                                  otherFace=o.otherFace,
