@@ -13,10 +13,65 @@ Note you do not have to set all of these values in the
 input script.
 In a typical input script, one might set 10-15 input variables.
 
+
 [[horizontal]]
-`config.title` :: Title for the simulation +
-                  _string_, default: `"Eilmer4 simulation"`
-`config.dimensions` :: Spatial dimensionality, 2 or 3. +
-                  _int_, default: `2`
+`config.title` ::
+    _string_, default: `"Eilmer4 simulation"` +
+    Title for the simulation
+
+`config.dimensions` ::
+     _int_, default: `2` +
+    Spatial dimensionality, 2 or 3
+
+`config.axisymmetric` ::
+    _bool_, default: `false` +
+    Sets axisymmetric mode for 2D geometries.
+    The axis of rotation aligns with the x-axis (at y=0).
+
+_Special initialisation configuration_
+
+[[hortizontal]]
+`config.diffuse_wall_bcs_on_init` ::
+    _bool_, default: `false` +
+    Set to diffuse(/blend) conditions at the wall
+    into the flow domain as an initial condition
+
+    
+`config.number_init_passes` ::
+    _int_, default: `30` +    
+    Set how many passes the diffusion is applied.
+    Each pass diffuses another layer of cells into domain.
+    So 10 passes would effect 10 layers of cells from the wall (in a structured grid).
+
+`config.wall_temperature_on_init` ::
+    _float_, default: `-1.0` +
+    Set the wall temperature to use when diffusing the wall conditions.
+    This value *_must_* be set when an adiabatic wall condition is selected
+    since there is no initial guess of the wall temperature.
+    If this value is set for a fixed temperature wall, then this value overrides
+    the wall temperature for the purposes of this diffusion-style initialisation.
+    It does not change the wall temperature selected in the boundary condition.
+    A value of `-1.0` indicates that this selection is not active and the wall
+    boundary temperature should be used. This is default action.
+
+The following lines are an example of using the diffusion-style initialisation.
+We assume an adiabatic wall and give a starting guess of 600.0 K for the wall temperature.
+The blending operation is performed 20 times in this example:
+
+ config.diffuse_wall_bcs_on_init = true
+ config.number_init_passes = 20
+ config.wall_temperature_on_init = 600.0
+
+In the collection of examples, the Mabey flat plate turbulent case makes use
+of this initialisation option. See: `dgd/examples/eilmer/2D/flat-plate-turbulent-mabey/steady-state-solver/mabey.lua`
+
+
+
+
+
+
+                                    
+
+
 
 
