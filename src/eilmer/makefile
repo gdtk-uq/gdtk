@@ -401,6 +401,7 @@ clean:
 	- rm main_with_rev_string.d
 	- rm main_complex_with_rev_string.d
 	- rm nk_accelerator_with_string_subst.d
+	- rm mpi_nk_accelerator_with_string_subst.d
 	- rm steadystate_solver_with_rev_string.d
 	- rm steadystate_solver_complex_with_rev_string.d
 	- rm shape_sensitivity_calc_with_rev_string.d
