@@ -292,42 +292,43 @@ void main(string[] args) {
 	
 	if (GlobalConfig.sscOptions.read_frozen_limiter_values_from_file) {
 	    //steadystate_core.evalRHS(0.0, 0); // fill in some values
-	    auto fileName = "frozen_limiter_values.dat";
-	    auto outFile = File(fileName, "r");
+            string limValDir = "limiter-values";
 	    foreach (blk; localFluidBlocks) {
+                string fileName = format("%s/limiter-values-b%04d.dat", limValDir, blk.id);
+                auto inFile = File(fileName, "r");
 		foreach (cell; blk.cells) {
-		    auto line = outFile.readln().strip();
+		    auto line = inFile.readln().strip();
 		    auto token = line.split();
 		    cell.gradients.rhoPhi = to!double(token[0]);
 		    
-		    line = outFile.readln().strip();
+		    line = inFile.readln().strip();
 		    token = line.split();
 		    cell.gradients.velxPhi = to!double(token[0]);
 		    
-		    line = outFile.readln().strip();
+		    line = inFile.readln().strip();
 		    token = line.split();
 		    cell.gradients.velyPhi = to!double(token[0]);
 
 		    if (blk.myConfig.dimensions == 3) {
-			line = outFile.readln().strip();
+			line = inFile.readln().strip();
 			token = line.split();
 			cell.gradients.velzPhi = to!double(token[0]);
 		    } else {
 			cell.gradients.velzPhi = 1.0;
 		    }
 
-		    line = outFile.readln().strip();
+		    line = inFile.readln().strip();
 		    token = line.split();
 		    cell.gradients.pPhi = to!double(token[0]);
 		    
-            foreach(it; 0 .. blk.myConfig.turb_model.nturb){
-			line = outFile.readln().strip();
+                    foreach(it; 0 .. blk.myConfig.turb_model.nturb){
+			line = inFile.readln().strip();
 			token = line.split();
 			cell.gradients.turbPhi[it] = to!double(token[0]);
 		    }
 		}
+                inFile.close();
 	    }
-	    outFile.close();
 	    GlobalConfig.frozen_limiter = true;
 	}
 
