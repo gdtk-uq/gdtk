@@ -7,6 +7,19 @@ Rowan J. Gollan; Peter A. Jacobs
 
 :leveloffset: +1
 
+In a nutshell, Eilmer is a gas flow simulation code.
+The set up of a simulation involves writing an input script
+that defines the domain of the gas flow as one or more FluidBlock objects
+with initial gas flow states and prescribed boundary conditions.
+Over small time steps, the code then updates the flow state
+in each cell within the flow domain
+according to the constraints of mass, momentum and energy,
+thus allowing the flow to evolve subject to the applied boundary conditions.
+The following sections provide brief details on many items that
+might go into your input script.
+Note that this document is for reference, after you have read the guides at
+http://cfcfd.mechmining.uq.edu.au/eilmer/documentation/
+
 include::eilmer/config-options-user.adoc[]
 include::eilmer/flow-state-user.adoc[]
 include::eilmer/fluid-block-user.adoc[]

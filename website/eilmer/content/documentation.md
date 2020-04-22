@@ -7,7 +7,10 @@ menu:
       weight: 15
 ---
 
-The supporting documentation for **Eilmer** is available for download:
+Guides
+------
+The principal documentation for **Eilmer** is available as a set
+of user guides in PDF:
 
 - [Eilmer4 Flow Solver User Guide](/pdfs/eilmer-user-guide.pdf)
 - [Geometry Package User Guide](/pdfs/geometry-user-guide.pdf)
@@ -18,9 +21,10 @@ The user guide for **foamMesh** is also available:
 
 - [foamMesh User Guide](/pdfs/foammesh-user-guide.pdf)
 
-Reference Guides
-----------------
-There are Reference Manuals for boths users and developers:
+Quick Reference
+---------------
+If you are in the thick of preparing an input script for a simulation,
+the online reference may be of use:
 
 - [Eilmer Reference Manual for Users, v4.0](/html/users-reference-manual.html)
 
