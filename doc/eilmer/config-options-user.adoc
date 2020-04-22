@@ -13,10 +13,6 @@ Note you do not have to set all of these values in the
 input script.
 In a typical input script, one might set 10-15 input variables.
 
-`config.title` ::
-    _string_, default: `"Eilmer4 simulation"` +
-    Title for the simulation
-
 
 == Geometry
 
@@ -137,8 +133,218 @@ In a typical input script, one might set 10-15 input variables.
   To obtain history data, you will also need to specify one or more history points.
 
 
-== Special initialisation configuration
+== Block marching
 
+[[hortizontal]]
+`config.block_marching` ::
+  _boolean_, default: `false` +
+  Normal time iteration proceeds on all blocks simultaneously, however,
+  such a time-marching calulation may be very expensive computationally.
+  Setting `config.block_marching=true` enables a sequencing of the time integration
+  such that at any one instant, only two slices of blocks are being integrated.
+  The i-direction is the marching direction and the assumed dominant (supersonic) flow direction.
+  The blocks are assumed to be in a regular array
+  with a fixed number of blocks in the j- and k-directions to the entire flow domain.
+
+`config.nib`, `config.njb`, `config.nkb` ::
+  _int_ default: `1`, `1`, `1` +
+  are the number of blocks in each index direction.
+  To make the best of block marching, you should have `config.nib` set to a fairly large number.
+  Since the array of blocks is assumed regular, you cannot have very complicated geometries.
+  Simple ducts, nozzles and plates are the intended applications.
+  As seen in the examples, it may be convenient to define the full domain with one or more calls
+  to the constructor `FBArray:new`.
+  There is a restriction that the overall flow domain be assembled as
+  a single structured array of `FlowBlock` objects.
+
+`config.propagate_inflow_data` ::
+  _boolean_, default: `false` +
+  By default, the integration begins in each set of blocks
+  from the initial gas state set up in the preparation phase of the simulation.
+  Some advantage may be gained following integration of the first block slices by initializing
+  subsequent block slices with the downstream (east boundary) flow states.
+  Setting `config.propagate_inflow_data=true` propagates these data across each new block slice,
+  before the integration process for the slice begins.
+
+`config.save_intermediate_results` ::
+  _boolean_, default: `false` +
+  Usually, a single set of solution files
+  (after marching over all block slices) is all that is required.
+  Sometimes, when debugging a troublesome calculation, it may be useful to have a solution
+  written after the time-integration process for each pair of block slices.
+  Set this parameter `true` to get these intermediate solutions written.
+
+
+== Spatial reconstruction
+
+[[hortizontal]]
+`config.interpolation_order` ::
+  _int_, default: `2` +
+  Before applying the flux calculator, high-order reconstruction is applied.
+  Setting `config.interpolation_order=1` results in no reconstruction
+  of intra-cell flow properties.
+
+`config.apply_limiter` ::
+  _boolean_, default: `true` +
+  By default, we apply a limiter to the flow-field reconstruction.
+
+`config.extrema_clipping` ::
+  _boolean_, default: `true` +
+  By default, we do extrema clipping at end of each scalar-field reconstruction.
+  Setting `config.extrema_clipping=false` suppresses clipping.
+
+`config.thermo_interpolator` ::
+  _string_, default: `'rhou'` +
+  String to choose the set of interpolation variables to use in the interpolation,
+  options are `'rhou'`, `'rhop'`, `'rhoT'` and `'pT'`.
+
+
+== Flux calculator
+
+[[hortizontal]]
+`config.flux_calculator` ::
+  _string_, default: `'adaptive_hanel_ausmdv'` +
+  Selects the flavour of the flux calculator.
+  Options are:
+
+  - `'efm'` A cheap and very diffusive scheme by Pullin and Macrossan.
+    For most hypersonic flows, it is too diffusive to be used for the whole flow field
+    but it does work very nicely in conjunction with AUSMDV,
+    especially for example, in the shock layer of a blunt-body flow.
+
+  - `'ausmdv'` A good all-round scheme with low-diffusion for supersonic flows.
+
+  - `'adaptive_efm_ausmdv'` A blend of the low-dissipation AUSMDV scheme
+     for the regions away from shocks
+     with the much more diffusive EFM used for cell interfaces near shocks.
+     It seems to work quite reliably for hypersonic flows that are a mix
+     of very strong shocks with mixed regions of subsonic and supersonic flow.
+     The blend is controlled by the parameters `config.compression_tolerance` and
+     `config.shear_tolerance` that are described below.
+
+  - `'ausm_plus_up'` Implemented from the description by MS Liou (2006).
+     It should be accurate and robust for all speed regimes.
+     It is the flux calculator of choice for very low Mach number flows,
+     where the fluid behaviour approaches the incompressible limit.
+     For best results, you should set the value of `M_inf`.
+
+  - `'hlle'` The Harten-Lax-vanLeer-Einfeldt (HLLE) scheme.
+     It is somewhat dissipative and is the only scheme usable with MHD terms.
+
+  - `'adaptive_hlle_ausmdv'` As for `'adaptive_efm_ausmdv'` but with the dissipative scheme
+     being the HLLE flux calculator.
+
+  - `'hanel'` The Hanel-Schwane-Seider scheme, from their 1987 paper.
+     It also dissipative and is somewhat better behaved than our EFM implementation.
+
+  - `'adaptive_hanel_ausmdv'` As for `'adaptive_efm_ausmdv'` but with the dissipative scheme
+     being the Hanel-Schwane-Seider flux calculator.
+
+  - `'roe'` The Phil Roe's classic linearized flux calculator.
+
+  - `'adaptive_hlle_roe'` A blend of Roe's low-dissipation scheme and
+     the more dissipative HLLE flux calculator.
+
+The default adaptive scheme is a good all-round scheme that uses AUSMDV away from
+shocks and Hanel-Schwane-Seider flux calculator near shocks.
+
+`config.compression_tolerance` ::
+  _float_, default: `-0.30` +
+   The value of relative velocity change (normalised by local sound-speed)
+   across a cell-interface that triggers the shock-point detector.
+   A negative value indicates a compression.
+   When an adaptive flux calculator is used and the shock detector is triggered,
+   the more-dissipative flux calculation will be used
+   in place of the default low-dissipation calculation.
+   A value of `-0.05` seems OK for the Sod shock tube and sharp-cone inviscid flow simulations,
+   however, a higher value is needed for cases with viscous boundary layers,
+   where it is important to not have too much numerical dissipation in the boundary layer region.
+
+`config.shear_tolerance` ::
+  _float_, default: `0.20` +
+  The value of the relative tangential-velocity change
+  (normalised by local sound speed) across a cell-interface that suppresses the use of the
+  high-dissipation flux calculator even if the
+  shock detector indicates that high-dissipation scheme should be used
+  within the adaptive flux calculator.
+  The default value is experimentally set at 0.20 to get smooth shocks
+  in the stagnation region of bluff bodies.
+  A smaller value (say, `0.05`) may be needed to get strongly expanding flows to behave
+  when regions of shear are also present.
+
+`config.M_inf` ::
+  _float_, default: `0.01` +
+  representative Mach number for the free stream.
+   Used by the `ausm_plus_up` flux calculator.
+
+
+== Viscous effects
+
+`config.viscous` ::
+  _boolean_, default: `false' +
+  If set `true`, viscous effects will be included in the simulation.
+
+`config.separate_update_for_viscous_terms` ::
+  _boolean_, default: `false` +
+  If set `true`, the update for the viscous transport terms is done separately
+  to the update for the convective terms.
+  By default the updates are done together in the gas-dynamic update procedure.
+
+`config.viscous_delay` ::
+  _float_, default: `0.0` +
+  The time (in seconds) to wait before applying the viscous terms.
+  This might come in handy when trying to start blunt-body simulations.
+
+`config.viscous_factor_increment` ::
+  _float_, default: `0.01` +
+  The per-time-step increment of the viscous effects, once simulation time exceeds
+  `config.viscous_delay`.
+
+`config.diffusion` ::
+  _boolean_, default `false` +
+  Set to \verb!true! to compute multicomponent diffusion of species.
+
+`config.turbulence_model` ::
+  _string_, default: `'none'` +
+  String specifying which model to use.
+  Options are: `'none'` `'k_omega'`
+
+`config.turbulence_prandtl_number` ::
+  _float_, default: `0.89`
+
+`config.turbulence_schmidt_number` ::
+  _float_, default: `0.75`
+
+`config.max_mu_t_factor` ::
+  _float_, default: `300` +
+  The turbulent viscosity is limited to laminar viscosity multiplied by this factor.
+
+`config.transient_mu_t_factor` ::
+  _float_, default: `1.0`
+
+
+== Thermo-chemistry
+
+`config.reacting` ::
+  _boolean_, default: `false` +
+  Set to \verb!true! to activate the finite-rate chemical reactions.
+
+`config.reactions_file` ::
+  _string_, default: `'chemistry.lua'` +
+  File name for reaction scheme configuration.
+
+`config.reaction_time_delay` ::
+  _float_, default: `0.0` +
+  Time after which finite-rate reactions are allowed to start.
+
+`config.T_frozen` ::
+  _float_, default: `300.0` +
+  Temperature (in degrees K) below which reactions are frozen.
+  The default value is `300.0` since most reaction schemes seem to be valid for temperatures
+  above this, however, you may have good reasons to set it higher or lower.
+
+
+== Special initialisation
 
 `config.diffuse_wall_bcs_on_init` ::
     _bool_, default: `false` +
@@ -172,3 +378,64 @@ The blending operation is performed 20 times in this example:
 
 In the collection of examples, the Mabey flat plate turbulent case makes use
 of this initialisation option. See: `dgd/examples/eilmer/2D/flat-plate-turbulent-mabey/steady-state-solver/mabey.lua`
+
+
+== Miscellaneous parameters
+
+`config.title` ::
+    _string_, default: `"Eilmer4 simulation"` +
+    Title for the simulation
+
+`config.adjust_invalid_cell_data` ::
+  _boolean_, default: `false` +
+  Usually, you will want the flow solver to provide
+  its best estimate for your flow, however, there are flow situations
+  for which the flow solver will not compute physically valid flow data.
+  If you encounter a difficult flow situation and are prepared to fudge over a few cells,
+  then set this parameter to `true` and `max_invalid_cells` to a non-zero value.
+  Be cautious when using this option and use it only when you have exhausted more
+  reasoned options.
+  If there is a problem that is more than just a difficult patch of flow that will blow by,
+  it may allow you to go further into a bad situation and get even more confused
+  about what the underlying issue really is.
+
+`config.max_invalid_cells` ::
+  _int_, default: `0` +
+  The maximum number of bad cells that will be tolerated on decoding conserved quantities.
+  If this number is exceeded, the simulation will stop.
+
+`config.report_invalid_cells` ::
+  _boolean_, default: `true` +
+  If you are stuck with having to fudge over cells, you probably
+  will want to know about them until, of course, that you don't.
+  Set this parameter to `false` to silence the reports of bad cells being fudged over.
+
+`config.apply_bcs_in_parallel` ::
+  _boolean_, default, `true` +
+  This will be the fastest calculation, however, some boundary
+  conditions, such as the shock-fitting need to cooperate across blocks and
+  so will have race conditions if applied in parallel.
+  If your simulation has such a boundary condition, set this parameter to `false`
+  to favour safety above speed.
+
+`config.udf_source_terms` ::
+  _boolean_, default: `false` +
+  Set to `true` to apply user-defined source terms, as supplied in a Lua file.
+
+`config.udf_source_terms_file` ::
+  _string_, default: "dummy-source-terms.txt" +
+  Name of the Lua file for the user-defined source terms.
+
+`config.print_count` ::
+  _int_, default: `20` +
+  Number of time steps between printing status information to the console.
+
+`config.control_count` ::
+  _int_, default: `10` +
+  Number of time steps between re-parsing the job`.control` file.
+  If the job`.control` has been edited, then the new values are used after re-parsing.
+
+`config.MHD` ::
+  _boolean_, default: `false` +
+  Set to `true` to make MHD physics active.
+
