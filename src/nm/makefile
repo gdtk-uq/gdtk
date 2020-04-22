@@ -16,7 +16,7 @@ DEMO_PROGRAMS := ridder_demo \
 	rungekutta_demo \
 	newtoncotes_demo \
 	gaussquad_demo \
-	bbla_demo 
+	bbla_demo
 
 TEST_PROGRAMS := bbla_test bbla_complex_test \
 	bracketing_test bracketing_complex_test \

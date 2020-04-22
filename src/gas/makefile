@@ -218,7 +218,7 @@ gas-calc: luagas_model.d $(LIBLUA) $(GAS_FILES) $(GAS_LUA_FILES) \
 
 libgas.so: gas_cwrap.d $(LIBLUA) $(GAS_FILES) $(KINETICS_FILES) \
 	$(NM_FILES) $(UTIL_FILES) $(GASDYN_FILES) \
-	$(CEQ_SRC_FILES) $(LIBCEQ) $(GEOM_FILES) $(GZIP_FILES) 
+	$(CEQ_SRC_FILES) $(LIBCEQ) $(GEOM_FILES) $(GZIP_FILES)
 	$(DMD) -c gas_cwrap.d $(PIC) $(DFLAGS) -op \
 		$(GAS_FILES) $(KINETICS_FILES) $(GASDYN_FILES) $(NM_FILES) \
 		$(UTIL_FILES) $(CEQ_SRC_FILES) $(GEOM_FILES) $(GZIP_FILES)
@@ -239,7 +239,7 @@ species-database/species-database.lua :
 
 # Some demo targets. These are left over from the early days of development.
 
-gas_model_demo: gas_model_demo.d $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA) 
+gas_model_demo: gas_model_demo.d $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
 	$(DMD) -g $(DFLAGS) gas_model_demo.d $(OF)gas_model_demo \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA) \
 		$(DLINKFLAGS)

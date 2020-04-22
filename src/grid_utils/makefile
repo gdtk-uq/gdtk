@@ -27,6 +27,5 @@ install: $(PROGRAMS)
 	cp -r $(BUILD_DIR)/bin/$(PROGRAMS) $(INSTALL_DIR)/bin
 
 ugrid_partition: ugrid_partition.d
-	$(DMD) $(DFLAGS) ugrid_partition.d	
-	cp $(PROGRAMS) $(BUILD_DIR)/bin/	
-
+	$(DMD) $(DFLAGS) ugrid_partition.d
+	cp $(PROGRAMS) $(BUILD_DIR)/bin/

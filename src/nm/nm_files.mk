@@ -21,4 +21,3 @@ NM_FILES := $(NM_DIR)/package.d \
 	$(NM_DIR)/univariate_lut.d
 
 NM_LUA_FILES := $(NM_DIR)/luabbla.d
-

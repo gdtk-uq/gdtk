@@ -94,7 +94,7 @@ test: $(TEST_PROGRAMS)
 demo: $(DEMO_PROGRAMS)
 	@echo "Demo codes built."
 
-install: foamMesh foam-mesh.lua 
+install: foamMesh foam-mesh.lua
 	- mkdir -p $(INSTALL_DIR)
 	- mkdir -p $(BUILD_DIR)/bin
 	- mkdir -p $(BUILD_DIR)/lib
@@ -127,7 +127,7 @@ foamMesh: foamMesh.d $(LIBLUA) $(GEOM_FILES) $(GEOM_LUA_FILES) $(GZIP_FILES) $(N
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' foamMesh.d > foamMesh_with_rev_string.d
 
 	dmd $(DFLAGS_LUA) foamMesh_with_rev_string.d $(OF)foamMesh \
-	$(GEOM_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA) 
+	$(GEOM_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA)
 
 # The test artefacts.
 
@@ -361,11 +361,11 @@ luaunifunction_demo: luawrap/luaunifunction_demo.d luawrap/luaunifunction.d \
 		luawrap/luaunifunction.d misc/univariatefunctions.d \
 		$(UTIL_FILES) $(DLINKFLAGS_LUA)
 
-luasgrid_demo: luawrap/luasgrid_demo.d $(GEOM_FILES) $(NM_FILES) $(GZIP_FILES) $(UTIL_FILES) 
+luasgrid_demo: luawrap/luasgrid_demo.d $(GEOM_FILES) $(NM_FILES) $(GZIP_FILES) $(UTIL_FILES)
 	dmd $(DFLAGS_LUA) luawrap/luasgrid_demo.d $(OF)luasgrid_demo \
 		$(GEOM_FILES) $(NM_FILES) $(GZIP_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA)
 
-luausgrid_demo: luawrap/luausgrid_demo.d $(GEOM_FILES) $(NM_FILES) $(GZIP_FILES) $(UTIL_FILES) 
+luausgrid_demo: luawrap/luausgrid_demo.d $(GEOM_FILES) $(NM_FILES) $(GZIP_FILES) $(UTIL_FILES)
 	dmd $(DFLAGS_LUA) luawrap/luausgrid_demo.d $(OF)luausgrid_demo \
 		$(GEOM_FILES) $(NM_FILES) $(GZIP_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA)
 
@@ -376,4 +376,3 @@ paver_demo: grid/paver_demo.d $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES)
 paver2d_demo: grid/paver2d_demo.d $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES)
 	dmd $(DFLAGS) grid/paver2d_demo.d $(OF)paver2d_demo \
 		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
-

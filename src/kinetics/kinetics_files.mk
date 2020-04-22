@@ -24,7 +24,7 @@ ifeq ($(WITH_DVODE),1)
     KINETICS_FILES += $(KINETICS_DIR)/pseudo_species_kinetics.d \
 	$(KINETICS_DIR)/dvode.o \
 	$(KINETICS_DIR)/pseudosp_solve_ode.o \
-	$(KINETICS_DIR)/pseudosp_rhs_ode.o 
+	$(KINETICS_DIR)/pseudosp_rhs_ode.o
 endif
 
 KINETICS_LUA_FILES := $(KINETICS_DIR)/luathermochemical_reactor.d \

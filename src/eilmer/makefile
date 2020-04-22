@@ -225,7 +225,7 @@ ifeq ($(DMD), dmd)
     endif
     OF := -of
     DVERSION := -version=
-    DLINKFLAGS := 
+    DLINKFLAGS :=
     ifeq ($(findstring with_libplot,$(LIBPLOT_VERSION_STR)), with_libplot)
         DFLAGS := $(DFLAGS) $(DVERSION)$(LIBPLOT_VERSION_STR)
         DLINKFLAGS := $(DLINKFLAGS) -L-lplot
