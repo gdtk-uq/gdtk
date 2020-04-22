@@ -111,7 +111,7 @@ The full list of options are described here.
 
 `may_be_turbulent` ::
   _bool_, default: `true` +
-// [TODO:PJ] Please add some description.
+  Normally, when a turbulence model is active, turbulent flow will be allowed in all blocks.
+  This parameter may be set `false` to suppress the turbulence actions for the block.
+  Use sparingly.
 
-  
-  
