@@ -13,12 +13,15 @@ Note you do not have to set all of these values in the
 input script.
 In a typical input script, one might set 10-15 input variables.
 
-
 [[horizontal]]
 `config.title` ::
     _string_, default: `"Eilmer4 simulation"` +
     Title for the simulation
 
+
+== Geometry
+
+[[horizontal]]
 `config.dimensions` ::
      _int_, default: `2` +
     Spatial dimensionality, 2 or 3
@@ -28,7 +31,116 @@ In a typical input script, one might set 10-15 input variables.
     Sets axisymmetric mode for 2D geometries.
     The axis of rotation aligns with the x-axis (at y=0).
 
-_Special initialisation configuration_
+
+== Time-stepping
+
+[[horizontal]]
+`config.cfl_value` ::
+  _float_, default: `0.5` +
+  The CFL number is ratio of the time-step divided by the time
+  for the fastest signal to cross a cell.
+  The time-step adjustment process tries to set the time-step for the overall simulation
+  to a value such that the maximum CFL number for any cell is at this `cfl_value`.
+  If you are having trouble with a simulation that has lots of sudden flow field changes,
+  decreasing the size of `cfl_value` may help.
+
+`config.gasdynamic_update_scheme` ::
+  _string_, default: `'predictor-corrector'` +
+  The options are: `'euler'`, `'pc'`, `'predictor-corrector'`,
+  `'midpoint'`, `'classic-rk3'`, `'tvd-rk3'`, `'denman-rk3'`,
+  `'moving-grid-1-stage'`, `'moving-grid-2-stage'`.
+  Note that `'pc'` is equivalent to `'predictor-corrector'`.
+  If you want time-accurate solutions, use a two- or three-stage stepping scheme,
+  otherwise, Euler stepping has less computational expense
+  but you may get less accuracy and the code will not be as robust for the same CFL value.
+  For example the shock front in the Sod shock tube example is quite noisy for Euler
+  stepping at CFL=0.85 but is quite neat with any of the two- or three-stage stepping schemes
+  at the same value of CFL.
+  The midpoint and predictor-corrector schemes produce a tidy shock up to CFL = 1.0
+  and the rk3 schemes still look tidy up to CFL = 1.2.
+  Note that you may use dashes or underscores when spelling the scheme names.
+
+`config.fixed_time_step` ::
+  _boolean_, default: `false` +
+  Normally, we allow the time step size to be determined from cell conditions and CFL number.
+  Setting `config.fixed_time_step=true` forces the time step size to be unchanged from
+  `config.dt_init`.
+
+`config.dt_init` ::
+  _float_, default: `1.0e-3` +
+  Although the computation of the time step size is automatic,
+  there might be cases where this process does not select a small enough value to get the
+  simulation started stably.
+  For the initial step, the user may override the computed value of time step by assigning
+  a suitably small value to `config.dt_init`.
+  This will then be the initial time step (in seconds) that will be used for the
+  first few steps of the simulation process.
+  Be careful to set a value small enough for the time-stepping to be stable.
+  Since the time stepping is synchronous across all parts of the flow domain,
+  this time step size should be smaller than half of the smallest time for a signal
+  (pressure wave) to cross any cell in the flow domain.
+  If you are sure that your geometric and boundary descriptions are correct but your simulation
+  fails for no clear reason, try setting the initial time step to a very small value.
+  For some simulations of viscous hypersonic flow on fine grids,
+  it is not unusual to require time steps to be as small as a nanosecond.
+
+`config.dt_max` ::
+  _float_, default: `1.0e-3` +
+  Maximum allowable time step (in seconds).
+  Sometimes, especially when strong source terms are at play, the CFL-based time-step
+  determination does not suitably limit the size of the allowable time step.
+  This parameter allows the user to limit the maximum time step directly.
+
+`config.viscous_signal_factor` ::
+  _float_, default: `1.0` +
+  By default, the full viscous effect for the signal
+  calculation will be used within the time-step calculation.
+  It has been suggested that the full viscous effect may not be needed
+  to ensure stable calculations for highly-resolved viscous calculations.
+  A value of `0.0` will completely suppress the viscous contribution to
+  the signal speed calculation but you may end up with unstable stepping.
+  It's a matter of _try a value and see_ if you get a larger time-step
+  while retaining a stable simulation.
+
+`config.stringent_cfl` ::
+  _boolean_, default: `false` +
+  The default action for structured grids is to use different cell widths
+  in each index direction.
+  Setting `config.stringent_cfl=true` will use the smallest cross-cell distance
+  in the time-step size check.
+
+`config.cfl_count` ::
+  _int_, default: `10` +
+  The number of time steps between checks of the size of the time step.
+  This check is expensive so we don't want to do it too frequently but, then,
+  we have to be careful that the flow does not develop suddenly and
+  the time step become unstable.
+
+`config.max_time` ::
+  _float_, default: `1.0e-3` +
+  The simulation will be terminated on reaching this value of time.
+
+`config.max_step` ::
+  _int_, default: `100` +
+  The simulation will be terminated on reaching this number of time steps.
+  You will almost certainly want to use a larger value, however,
+  a small value is a good way to test the starting process of a simulation, to see that
+  all seems to be in order.
+
+`config.dt_plot` ::
+  _float_, default: `1.0e-3` +
+  The whole flow solution will be written to disk when
+  this amount of simulation time has elapsed, and then again,
+  each occasion the same increment of simulation time has elapsed.
+
+`config.dt_history` ::
+  _float_, default: `1.0e-3` +
+  The history-point data will be written to disk repeatedly,
+  each time this increment of simulation time has elapsed.
+  To obtain history data, you will also need to specify one or more history points.
+
+
+== Special initialisation configuration
 
 [[hortizontal]]
 `config.diffuse_wall_bcs_on_init` ::
@@ -36,9 +148,8 @@ _Special initialisation configuration_
     Set to diffuse(/blend) conditions at the wall
     into the flow domain as an initial condition
 
-    
 `config.number_init_passes` ::
-    _int_, default: `30` +    
+    _int_, default: `30` +
     Set how many passes the diffusion is applied.
     Each pass diffuses another layer of cells into domain.
     So 10 passes would effect 10 layers of cells from the wall (in a structured grid).
@@ -64,14 +175,3 @@ The blending operation is performed 20 times in this example:
 
 In the collection of examples, the Mabey flat plate turbulent case makes use
 of this initialisation option. See: `dgd/examples/eilmer/2D/flat-plate-turbulent-mabey/steady-state-solver/mabey.lua`
-
-
-
-
-
-
-                                    
-
-
-
-

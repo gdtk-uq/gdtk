@@ -1,0 +1,47 @@
+= Monitoring a calculation
+
+While a calculation runs, its progress can be monitored in a couple of ways.
+By default, the simulation program occasionally writes to the console
+the time-step count, the current simulation time, the current size of time step,
+the current wall-clock time (`WC`), and estimates of the wall-clock time until the
+simulation reaches either the final simulation time (`WCtFT`) or the maximum allowed
+number of steps (`WCtMS`).
+For a simple simulation of a transient flow, this is often sufficent.
+
+For a simulation that is intended to progress toward a steady solution,
+you can monitor the residuals in the flow-field by specifying the `--report-residuals`
+command-line option when starting the simulation.
+With this option, the residuals for mass, momentum in each of the coordinate directions,
+energy, the L2 norm of the collection of residuals and the mass-balance, are written to
+the file `config/<job>-residuals.txt`.
+This file can be monitored by writing it to another console with `tail -f` or
+its content can be rendered graphically with GNUPlot.
+See `dgd/examples/eilmer/2D/lat-plate-hakkinen-swbli/sg-lts/` for a sample GNUPlot script
+for rendering of this data.
+
+For large MPI jobs, there is a risk that the part of the calculation will fail
+and leave other MPI tasks consuming compute resources while waiting for communication
+that will never come.
+We provide the `e4monitor` program that can periodically check the progress of a simulation and,
+if progress is not being made, terminate the calculation process forcefully.
+
+Progress is indicated by the simulation program writing the current time step number to the
+file `config/<job>-progress.txt`.
+This file is overwritten each time step.
+On completion of a simulation, the word `done` is written to that file.
+
+To use the e4monitor program in your batch scripts,
+start it just before using `mpirun` to start your simulation.
+
+  e4monitor --job=<string> [--startup=<int>] [--period=<int>]
+
+The default values for `startup` and `period` are 30 and 60 seconds respectively.
+With these values, the monitor program does not look at the progress file until
+30 seconds has elapsed.
+It subsequently checks every 60 seconds that the time-step count has increased.
+Set these parameters to suit your particular simulation.
+If the monitor program does not see progress for a few cycles, it issues a `kill`
+command for the mpirun process.
+If the simulation finishes successfully, the monitor program will see with word `done`
+and will also terminate.
+This should give a clean exit for your batch job.
