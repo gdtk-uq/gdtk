@@ -1,3 +1,77 @@
 [#FlowState]
 = FlowState objects
 
+Constructing a FlowState object is a way to collect the full set of data that
+is required for defining the flow state initially throughout a block and
+also for boundaries that have inflow.
+
+  FlowState:new{p, T, T_modes, massf, velx, vely, velz, tke, omega, mu_t, k_t}
+
+FlowState objects are always constructed in the context of a gas model
+that defines the set of chemical species and other parameters of the gas.
+For a quiescent, single-species gas the minimum data that you need to specify are:
+
+`p` ::
+  _float_, no default +
+  Gas pressure, in Pa.
+
+`T` ::
+  _float_, no default +
+  Gas temperature, in K.
+
+If the flow has nonzero velocity, you can specify the velocity components:
+
+`velx` ::
+  _float_, default 0.0 +
+  Velocity in x-direction, m/s.
+
+`vely` ::
+  _float_, default 0.0 +
+  Velocity in y-direction, m/s.
+
+`velz` ::
+  _float_, default 0.0 +
+  Velocity in z-direction, m/s.
+
+If the gas is composed of more than one chemical species, you will need to specify
+the mass-fractions of those species.
+
+`massf` ::
+  _table of named float values_ +
+  Mass fractions of the species specified as a table with named mass-fraction values.
+  The default is a table with the first species at mass-fraction 1.0 and all others at 0.0.
+  For example, the ideal-air gas model has a default `{'air'=1.0,}`.
+  You need specify only the species with nonzero mass fractions,
+  but that collection of specified values must add to 1.0.
+
+`T_modes` ::
+  _table of float values_ +
+  If the gas model has modes of internal energy storage beyond the usual thermal modes,
+  you may specify the temperatures corresponding to those energy modes.
+  If you do not provide a table, the default value for all modes will be `T`.
+
+When a turbulence model has been selected, you may also specify the local intensity as:
+
+`tke` ::
+  _float_ +
+  Turbulent kinetic energy.
+
+`omega` ::
+  _float_ +
+  Turbulent frequency.
+
+`mu_t` ::
+  _float_ +
+  Turbulent viscosity.
+
+`k_t` ::
+  _float_ +
+  Turbulent conductivity.
+
+Once a FlowState object has been constructed, you have access to the other GasState data
+via the usual Lua table access.
+For example you could access the local speed of sound and compute a mach number
+
+  inflow = FlowState:new{p=5.0e3, T=300.0, velx=1000.0}
+  mach = inflow.velx / inflow.a
+
