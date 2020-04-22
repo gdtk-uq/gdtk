@@ -31,7 +31,7 @@ version (opencl_gpu_chem) {
     import opencl_gpu_chem;
 }
 version (cuda_gpu_chem) {
-     import cuda_gpu_chem;      
+     import cuda_gpu_chem;
 }
 import json_helper;
 import globaldata;
@@ -387,7 +387,7 @@ final class GlobalConfig {
     // Note that the following reference to the GasModel is NOT shared.
     // Do not use this one from within a thread.
     static GasModel gmodel_master; // to provide GasModel access to the Lua domain
-    // Presumably, we won't be accessing this particular gas model from the 
+    // Presumably, we won't be accessing this particular gas model from the
     // individual block computations, so that parallel computations for the blocks
     // don't trip over each other.
     static uint n_species;
@@ -405,8 +405,8 @@ final class GlobalConfig {
     // The meaning of the data items is user-defined.
     shared static double[] userPad;
     shared static int user_pad_length = 0;
-    
-    shared static bool include_quality = false; // if true, we include quality in the solution file  
+
+    shared static bool include_quality = false; // if true, we include quality in the solution file
 
     shared static int nBlocks = 0; // Number of blocks in the overall simulation (nFluidBlocks + nSolidBlocks).
     shared static int nFluidBlocks = 0; // Number of fluid blocks in the overall simulation.
@@ -425,13 +425,13 @@ final class GlobalConfig {
     shared static int local_time_stepping_limit_factor = 10000;
     shared static bool with_super_time_stepping = false;
     shared static bool with_super_time_stepping_flexible_stages = false;
-    
+
     // Parameter controlling Strang-splitting mode when simulating reacting flows
     shared static StrangSplittingMode strangSplitting = StrangSplittingMode.full_T_full_R;
-    
+
     // Parameters controlling solid domain update
     shared static SolidDomainCoupling coupling_with_solid_domains = SolidDomainCoupling.tight;
-    shared static SolidDomainLooseUpdateOptions sdluOptions; 
+    shared static SolidDomainLooseUpdateOptions sdluOptions;
     shared static bool solid_has_isotropic_properties = true;
     shared static bool solid_has_homogeneous_properties = true;
 
@@ -466,16 +466,16 @@ final class GlobalConfig {
     shared static double shock_fitting_scale_factor = 0.5;
 
     // We might update some properties in with the main convective-terms
-    // time-stepping function or we might choose to update them separately, 
+    // time-stepping function or we might choose to update them separately,
     // like the chemistry update.
     shared static bool separate_update_for_viscous_terms = false;
     shared static bool separate_update_for_k_omega_source = false;
 
     // Some of the user-defined functionality depends on having access to all blocks
-    // from a single thread.  For safety, in those cases, do not use parallel loops. 
+    // from a single thread.  For safety, in those cases, do not use parallel loops.
     shared static bool apply_bcs_in_parallel = true;
-    
-    /// When decoding the array of conserved quantities, 
+
+    /// When decoding the array of conserved quantities,
     /// the temperature or the density may try to go negative.
     //
     /// If the density is OK but the update fails to find a valid temperature,
@@ -501,11 +501,11 @@ final class GlobalConfig {
     //
     // Parameters controlling the low-order flux calculators and the
     // preprocessing reconstruction/interpolation procedure.
-    // This is the "classic" arrangement for Eilmer so there are a lot of parameters. 
+    // This is the "classic" arrangement for Eilmer so there are a lot of parameters.
     //
     // Default flux calculator is the adaptive mix of (diffusive) Hanel and AUSMDV.
     shared static FluxCalculator flux_calculator = FluxCalculator.adaptive_hanel_ausmdv;
-    // 
+    //
     // We use interpolation and reconstruction to mean the same.
     // It comes in a number of flavours:
     // 1. Low order uses just the cell-centre data as left- and right-
@@ -515,7 +515,7 @@ final class GlobalConfig {
     //    and a linear model across a cloud of cell centres for unstructured-grids.
     // 3. high-order reconstruction on structured-grids using Lagrangian interpolation
     //    across a 6-cell stencil.  Must be used with ghost-cell-based boundary conditions.
-    shared static int interpolation_order = 2; 
+    shared static int interpolation_order = 2;
     // We have the option to start a calculation without high-order reconstruction
     // and later activate it, presumably once the difficult flow has passed.
     shared static double interpolation_delay = 0.0;
@@ -524,7 +524,7 @@ final class GlobalConfig {
     // For structured-grid blocks in axisymmetric simulations,
     // we may wish to suppress the reconstruction as we approach the x-axis.
     // Faces along the x-axis and the first row off the axis are flagged.
-    // Faces normal to the x-axis are not flagged. 
+    // Faces normal to the x-axis are not flagged.
     shared static bool suppress_radial_reconstruction_at_xaxis = false;
     // We will activate the shock detector if selected features need it.
     shared static bool do_shock_detect = false;
@@ -532,7 +532,7 @@ final class GlobalConfig {
     // shocks and boundaries. Presently, we need to opt-in to these features.
     shared static bool suppress_reconstruction_at_shocks = false;
     shared static bool suppress_reconstruction_at_boundaries = false;
-    // Default flow-data reconstruction includes interpolation of density 
+    // Default flow-data reconstruction includes interpolation of density
     // and internal energy.  Other options for the thermodunamic properties
     // to be interpolated are pressure+temperature, density+temperature and
     // density+pressure.
@@ -542,7 +542,7 @@ final class GlobalConfig {
     shared static bool extrema_clipping = true;
     shared static bool interpolate_in_local_frame = true; // only for structured-grid
     // The unstructured solver has a selection of limiters available
-    shared static UnstructuredLimiter unstructured_limiter = UnstructuredLimiter.venkat; 
+    shared static UnstructuredLimiter unstructured_limiter = UnstructuredLimiter.venkat;
     shared static int freeze_limiter_on_step = 2000;
     shared static bool frozen_limiter = false;
     // Allow the least-squares cloud of points (used to compute a cell-center gradient for
@@ -579,7 +579,7 @@ final class GlobalConfig {
     shared static bool artificial_compressibility = false;
     shared static double ac_alpha = 0.1;
 
-    // With this flag on, finite-rate evolution of the vibrational energies 
+    // With this flag on, finite-rate evolution of the vibrational energies
     // (and in turn the total energy) is computed.
     shared static bool thermal_energy_exchange = false;
 
@@ -588,7 +588,7 @@ final class GlobalConfig {
     shared static bool radiation = false;
     shared static int radiation_update_frequency; // = 1 for every time-step
     shared static bool radiation_scaling = false;
-    shared static bool halt_on_large_flow_change = false; 
+    shared static bool halt_on_large_flow_change = false;
     // Set to true to halt simulation when any monitor point sees a large flow change.
     shared static double tolerance_in_T;   // Temperature change for the flow change.
 
@@ -607,7 +607,7 @@ final class GlobalConfig {
 
     // Parameters controlling viscous/molecular transport
     //
-    shared static bool viscous = false; 
+    shared static bool viscous = false;
     // If true, viscous effects are included in the gas-dynamic update.
     shared static bool use_viscosity_from_cells = false;
     // Proper treatment of viscous effects at the walls implies using the viscous
@@ -620,7 +620,7 @@ final class GlobalConfig {
     shared static SpatialDerivLocn spatial_deriv_locn = SpatialDerivLocn.vertices;
     shared static bool include_ghost_cells_in_spatial_deriv_clouds = true;
     //
-    // A factor to scale the viscosity in order to achieve a soft start. 
+    // A factor to scale the viscosity in order to achieve a soft start.
     // The soft-start for viscous effects may be handy for impulsively-started flows.
     // A value of 1.0 means that the viscous effects are fully applied.
     shared static double viscous_factor = 1.0;
@@ -701,10 +701,10 @@ final class GlobalConfig {
     shared static double dt_init = 1.0e-3; // initial time step, set by user
     shared static double dt_max = 1.0e-3; // Maximum allowable time-step, after all other considerations.
     shared static double cfl_value = 0.5; // target CFL number (worst case) set by user
-    shared static bool stringent_cfl = false; 
+    shared static bool stringent_cfl = false;
     // If true, assume the worst with respect to cell geometry and wave speed.
     shared static double viscous_signal_factor = 1.0; // can reduce the viscous influence in CFL condition
-    shared static double turbulent_signal_factor = 1.0; // can reduce the turbulent omega influence in CFL condition   
+    shared static double turbulent_signal_factor = 1.0; // can reduce the turbulent omega influence in CFL condition
     shared static int cfl_count = 10;  // steps between checking time step size
     shared static bool fixed_time_step = false; // set true to fix dt_allow
 
@@ -721,7 +721,7 @@ final class GlobalConfig {
     shared static int run_time_loads_count = 100;
     shared static Tuple!(size_t, size_t)[] hcells;
     shared static Tuple!(size_t, size_t)[] solid_hcells;
-    
+
     shared static double energy_residual;      // to be monitored for steady state
     shared static Vector3 energy_residual_loc; // location of largest value
     shared static double mass_residual;
@@ -766,7 +766,7 @@ final class GlobalConfig {
     }
 
     shared static string[] flow_variable_list;
-    
+
     static string[] build_flow_variable_list()
     {
         // Returns a list of variable names in the order of the fixed-layout data files.
@@ -816,8 +816,8 @@ final class GlobalConfig {
 
 } // end class GlobalConfig
 
-// A place to store configuration parameters that are in memory that can be 
-// dedicated to a thread.   We will want to access them frequently 
+// A place to store configuration parameters that are in memory that can be
+// dedicated to a thread.   We will want to access them frequently
 // at the lower levels of the code without having to guard them with memory barriers.
 class LocalConfig {
 public:
@@ -952,8 +952,8 @@ public:
     }
 
     string[] flow_variable_list;
-    
-    this(int universe_blk_id) 
+
+    this(int universe_blk_id)
     {
         in_mpi_context = GlobalConfig.in_mpi_context;
         this.universe_blk_id = universe_blk_id;
@@ -1025,7 +1025,7 @@ public:
         spatial_deriv_from_many_points = GlobalConfig.spatial_deriv_from_many_points;
         spatial_deriv_calc = GlobalConfig.spatial_deriv_calc;
         spatial_deriv_locn = GlobalConfig.spatial_deriv_locn;
-        include_ghost_cells_in_spatial_deriv_clouds = 
+        include_ghost_cells_in_spatial_deriv_clouds =
             GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds;
         shear_stress_relative_limit = GlobalConfig.shear_stress_relative_limit;
         apply_shear_stress_relative_limit = GlobalConfig.apply_shear_stress_relative_limit;
@@ -1081,7 +1081,7 @@ public:
         foreach (varName; GlobalConfig.flow_variable_list) { flow_variable_list ~= varName; }
     } // end constructor
 
-    void init_gas_model_bits() 
+    void init_gas_model_bits()
     {
         // Some gas models are storage intensive, so we do not want to initialize them
         // unless we really want to use them from the LocalConfig object.
@@ -1195,7 +1195,7 @@ JSONValue read_config_file()
     }
     // Now that we have parsed JSON data, proceed to update those config values.
     // Note that some of the lines below are much longer than PJ would normally tolerate.
-    // The trade-off for ease of reading with one line per entry won out... 
+    // The trade-off for ease of reading with one line per entry won out...
     //
     mixin(update_string("title", "title"));
     mixin(update_double("start_time", "start_time"));
@@ -1236,7 +1236,7 @@ JSONValue read_config_file()
     mixin(update_string("udf_supervisor_file", "udf_supervisor_file"));
     mixin(update_int("user_pad_length", "user_pad_length"));
     GlobalConfig.userPad.length = GlobalConfig.user_pad_length;
-    double[] default_user_pad_data; 
+    double[] default_user_pad_data;
     foreach (i; 0 .. GlobalConfig.userPad.length) { default_user_pad_data ~= 0.0; }
     auto user_pad_data = getJSONdoublearray(jsonData, "user_pad_data", default_user_pad_data);
     foreach (i; 0 .. GlobalConfig.userPad.length) {
@@ -1492,7 +1492,7 @@ JSONValue read_config_file()
     mixin(update_string("energy_exchange_file", "energy_exchange_file"));
     mixin(update_bool("radiation_energy_dump_allowed", "radiation_energy_dump_allowed"));
     mixin(update_double("radiation_energy_dump_temperature_limit", "radiation_energy_dump_temperature_limit"));
-          
+
     if (GlobalConfig.verbosity_level > 1) {
         writeln("  reacting: ", GlobalConfig.reacting);
         writeln("  reactions_file: ", to!string(GlobalConfig.reactions_file));
@@ -1546,7 +1546,7 @@ JSONValue read_config_file()
     }
 
     configCheckPoint4();
-    
+
     int nhcell = getJSONint(jsonData, "nhcell", 0);
     foreach (i; 0 .. nhcell) {
         string jsonKey = format("history-cell-%d", i);
@@ -1568,7 +1568,7 @@ JSONValue read_config_file()
         Vector3 p1 = Vector3(zone_data[3], zone_data[4], zone_data[5]);
         GlobalConfig.reaction_zones ~= new BlockZone(p0, p1);
     }
-    
+
     int n_ignition_zones = getJSONint(jsonData, "n-ignition-zones", 0);
     foreach (i; 0 .. n_ignition_zones) {
         string jsonKey = format("ignition-zone-%d", i);
@@ -1596,38 +1596,38 @@ JSONValue read_config_file()
     }
 
     auto sdluOptions = jsonData["solid_domain_loose_update_options"];
-    GlobalConfig.sdluOptions.maxNewtonIterations = 
+    GlobalConfig.sdluOptions.maxNewtonIterations =
         getJSONint(sdluOptions, "max_newton_iterations", GlobalConfig.sdluOptions.maxNewtonIterations);
-    GlobalConfig.sdluOptions.toleranceNewtonUpdate = 
+    GlobalConfig.sdluOptions.toleranceNewtonUpdate =
         getJSONdouble(sdluOptions, "tolerance_newton_update", GlobalConfig.sdluOptions.toleranceNewtonUpdate);
-    GlobalConfig.sdluOptions.maxGMRESIterations = 
+    GlobalConfig.sdluOptions.maxGMRESIterations =
         getJSONint(sdluOptions, "max_gmres_iterations", GlobalConfig.sdluOptions.maxGMRESIterations);
-    GlobalConfig.sdluOptions.toleranceGMRESSolve = 
+    GlobalConfig.sdluOptions.toleranceGMRESSolve =
         getJSONdouble(sdluOptions, "tolerance_gmres_solve", GlobalConfig.sdluOptions.toleranceGMRESSolve);
-    GlobalConfig.sdluOptions.perturbationSize = 
+    GlobalConfig.sdluOptions.perturbationSize =
         getJSONdouble(sdluOptions, "perturbation_size", GlobalConfig.sdluOptions.perturbationSize);
 
     version (shape_sensitivity) {
     auto sscOptions = jsonData["shape_sensitivity_calculator_options"];
     GlobalConfig.sscOptions.pseudotime =
         getJSONbool(sscOptions, "pseudotime", GlobalConfig.sscOptions.pseudotime);
-    GlobalConfig.sscOptions.pseudotime_lhs_jacobian_order = 
+    GlobalConfig.sscOptions.pseudotime_lhs_jacobian_order =
         getJSONint(sscOptions, "pseudotime_lhs_jacobian_order", GlobalConfig.sscOptions.pseudotime_lhs_jacobian_order);
-    GlobalConfig.sscOptions.adjoint_precondition_matrix_order = 
+    GlobalConfig.sscOptions.adjoint_precondition_matrix_order =
         getJSONint(sscOptions, "adjoint_precondition_matrix_order", GlobalConfig.sscOptions.adjoint_precondition_matrix_order);
     GlobalConfig.sscOptions.read_frozen_limiter_values_from_file =
         getJSONbool(sscOptions, "read_frozen_limiter_values_from_file", GlobalConfig.sscOptions.read_frozen_limiter_values_from_file);
     GlobalConfig.sscOptions.epsilon =
         getJSONdouble(sscOptions, "epsilon", GlobalConfig.sscOptions.epsilon);
-    GlobalConfig.sscOptions.maxOuterIterations = 
+    GlobalConfig.sscOptions.maxOuterIterations =
         getJSONint(sscOptions, "maxOuterIterations", GlobalConfig.sscOptions.maxOuterIterations);
-    GlobalConfig.sscOptions.maxRestarts = 
+    GlobalConfig.sscOptions.maxRestarts =
         getJSONint(sscOptions, "maxRestarts", GlobalConfig.sscOptions.maxRestarts);
     GlobalConfig.sscOptions.cfl0 =
         getJSONdouble(sscOptions, "cfl0", GlobalConfig.sscOptions.cfl0);
     GlobalConfig.sscOptions.eta =
         getJSONdouble(sscOptions, "eta", GlobalConfig.sscOptions.eta);
-    GlobalConfig.sscOptions.stopOnRelativeGlobalResidual = 
+    GlobalConfig.sscOptions.stopOnRelativeGlobalResidual =
         getJSONdouble(sscOptions, "stop_on_relative_global_residual", GlobalConfig.sscOptions.stopOnRelativeGlobalResidual);
     GlobalConfig.sscOptions.tolBezierCurveFit =
         getJSONdouble(sscOptions, "tol_bezier_curve_fit", GlobalConfig.sscOptions.tolBezierCurveFit);
@@ -1640,7 +1640,7 @@ JSONValue read_config_file()
     // for which data will be written into the flow data files.
     // This list needs to be built before the block-local config is copied.
     foreach (vname; GlobalConfig.build_flow_variable_list()) { GlobalConfig.flow_variable_list ~= vname; }
-    
+
     // Now, configure blocks that make up the flow domain.
     //
     // This is done in phases.  The blocks need valid references to LocalConfig objects
@@ -1655,7 +1655,7 @@ JSONValue read_config_file()
         auto jsonDataForBlock = jsonData["block_" ~ to!string(i)];
         string gridType = getJSONstring(jsonDataForBlock, "grid_type", "");
         switch (gridType) {
-        case "structured_grid": 
+        case "structured_grid":
             globalBlocks ~= new SFluidBlock(i, jsonDataForBlock);
             break;
         case "unstructured_grid":
@@ -1695,7 +1695,7 @@ JSONValue read_config_file()
     foreach (int i; GlobalConfig.nFluidBlocks .. GlobalConfig.nBlocks) {
         // Note that we want the solidblock ids to continue on from the fluidblocks.
         auto sblk = cast(SSolidBlock) globalBlocks[i];
-        assert(sblk !is null, "Oops, this should be a SolidBlock object.");        
+        assert(sblk !is null, "Oops, this should be a SolidBlock object.");
         sblk.initLuaGlobals();
         sblk.initBoundaryConditions(jsonData["solid_block_" ~ to!string(sblk.id)]);
         if ( GlobalConfig.udfSolidSourceTerms ) {
@@ -1781,14 +1781,14 @@ void read_control_file()
         writeln("  write_flow_solution_at_step: ", GlobalConfig.write_flow_solution_at_step);
         writeln("  halt_now: ", GlobalConfig.halt_now);
     }
-    
+
     version(nk_accelerator) {
     auto sssOptions = jsonData["steady_state_solver_options"];
     GlobalConfig.sssOptions.usePreconditioner = getJSONbool(sssOptions, "use_preconditioner", GlobalConfig.sssOptions.usePreconditioner);
     GlobalConfig.sssOptions.frozenPreconditionerCount = getJSONint(sssOptions, "frozen_preconditioner_count", GlobalConfig.sssOptions.frozenPreconditionerCount);
     GlobalConfig.sssOptions.startPreconditioning = getJSONint(sssOptions, "start_preconditioning", GlobalConfig.sssOptions.startPreconditioning);
     GlobalConfig.sssOptions.iluFill = getJSONint(sssOptions, "ilu_fill", GlobalConfig.sssOptions.iluFill);
-    { 
+    {
         auto mySaveValue = GlobalConfig.sssOptions.preconditionMatrixType;
         try {
             string name = sssOptions["precondition_matrix_type"].str;
@@ -1799,24 +1799,24 @@ void read_control_file()
     }
     GlobalConfig.sssOptions.useScaling = getJSONbool(sssOptions, "use_scaling", GlobalConfig.sssOptions.useScaling);
     GlobalConfig.sssOptions.useComplexMatVecEval = getJSONbool(sssOptions, "use_complex_matvec_eval", GlobalConfig.sssOptions.useComplexMatVecEval);
-    GlobalConfig.sssOptions.nPreSteps = 
+    GlobalConfig.sssOptions.nPreSteps =
         getJSONint(sssOptions, "number_pre_steps", GlobalConfig.sssOptions.nPreSteps);
-    GlobalConfig.sssOptions.nTotalSteps = 
-        getJSONint(sssOptions, "number_total_steps", GlobalConfig.sssOptions.nTotalSteps);    
-    GlobalConfig.sssOptions.maxNumberAttempts = 
+    GlobalConfig.sssOptions.nTotalSteps =
+        getJSONint(sssOptions, "number_total_steps", GlobalConfig.sssOptions.nTotalSteps);
+    GlobalConfig.sssOptions.maxNumberAttempts =
         getJSONint(sssOptions, "max_number_attempts", GlobalConfig.sssOptions.maxNumberAttempts);
     GlobalConfig.sssOptions.stopOnRelGlobalResid =
         getJSONdouble(sssOptions, "stop_on_relative_global_residual", GlobalConfig.sssOptions.stopOnRelGlobalResid);
     GlobalConfig.sssOptions.stopOnAbsGlobalResid =
         getJSONdouble(sssOptions, "stop_on_absolute_global_residual", GlobalConfig.sssOptions.stopOnAbsGlobalResid);
-    GlobalConfig.sssOptions.maxOuterIterations = 
+    GlobalConfig.sssOptions.maxOuterIterations =
         getJSONint(sssOptions, "max_outer_iterations", GlobalConfig.sssOptions.maxOuterIterations);
-    GlobalConfig.sssOptions.maxRestarts = 
+    GlobalConfig.sssOptions.maxRestarts =
         getJSONint(sssOptions, "max_restarts", GlobalConfig.sssOptions.maxRestarts);
-    GlobalConfig.sssOptions.nInnerIterations = 
+    GlobalConfig.sssOptions.nInnerIterations =
         getJSONint(sssOptions, "number_inner_iterations", GlobalConfig.sssOptions.nInnerIterations);
     // Settings for start-up phase
-    GlobalConfig.sssOptions.nStartUpSteps = 
+    GlobalConfig.sssOptions.nStartUpSteps =
         getJSONint(sssOptions, "number_start_up_steps", GlobalConfig.sssOptions.nStartUpSteps);
     GlobalConfig.sssOptions.cfl0 =
         getJSONdouble(sssOptions, "cfl0", GlobalConfig.sssOptions.cfl0);
@@ -1837,7 +1837,7 @@ void read_control_file()
         getJSONdouble(sssOptions, "sigma1", GlobalConfig.sssOptions.sigma1);
     GlobalConfig.sssOptions.p1 =
         getJSONdouble(sssOptions, "p1", GlobalConfig.sssOptions.p1);
-    { 
+    {
         auto mySaveValue = GlobalConfig.sssOptions.etaStrategy;
         try {
             string name = sssOptions["eta_strategy"].str;
@@ -1859,16 +1859,16 @@ void read_control_file()
     GlobalConfig.sssOptions.alpha =
         getJSONdouble(sssOptions, "alpha", GlobalConfig.sssOptions.alpha);
     // Settings for writing out snapshots and diagnostics
-    GlobalConfig.sssOptions.snapshotsCount = 
+    GlobalConfig.sssOptions.snapshotsCount =
         getJSONint(sssOptions, "snapshots_count", GlobalConfig.sssOptions.snapshotsCount);
-    GlobalConfig.sssOptions.nTotalSnapshots = 
+    GlobalConfig.sssOptions.nTotalSnapshots =
         getJSONint(sssOptions, "number_total_snapshots", GlobalConfig.sssOptions.nTotalSnapshots);
-    GlobalConfig.sssOptions.writeDiagnosticsCount = 
+    GlobalConfig.sssOptions.writeDiagnosticsCount =
         getJSONint(sssOptions, "write_diagnostics_count", GlobalConfig.sssOptions.writeDiagnosticsCount);
-    GlobalConfig.sssOptions.writeLoadsCount = 
+    GlobalConfig.sssOptions.writeLoadsCount =
         getJSONint(sssOptions, "write_loads_count", GlobalConfig.sssOptions.writeLoadsCount);
     }
-    
+
     // Propagate new values to the local copies of config.
     foreach (localConfig; dedicatedConfig) {
         localConfig.update_control_parameters();
@@ -1995,7 +1995,7 @@ void configCheckPoint3()
         msg ~= " is incompatible with an inviscid simulation.";
         throw new FlowSolverException(msg);
     }
-    
+
     if (GlobalConfig.turb_model is null) {
         throw new FlowSolverException("Flowsolver started without a turbulence model");
     }
@@ -2013,7 +2013,7 @@ void configCheckPoint4()
     // The shape sensitivity calculator shouldn't apply diffuse_bcs_on_init_flag.
     version(shape_sensitivity) {
         GlobalConfig.n_grid_time_levels = 3;
-    } 
+    }
     return;
 }
 
@@ -2088,5 +2088,4 @@ void init_master_lua_State()
     setSampleHelperFunctions(L);
     setGridMotionHelperFunctions(L);
 } // end init_master_lua_State()
-
 
