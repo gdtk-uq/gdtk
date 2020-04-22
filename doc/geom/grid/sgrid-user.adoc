@@ -16,7 +16,7 @@ is full-face matching and that the grid points are C0 continuous.
 The operation does not do extensive checks for badly formed joins.
 It relies on the caller to use this in a sensible manner.
 
-[horizontal]
+
 `otherGrid` :: second `StructuredGrid` to be joined
 `joinLocation` :: a _string_ specifying at which end of the current grid the other grid should be joined +
                   allowable options are `"east"`, `"imax"`, `"north"` and `"jmax"`. Note that the first

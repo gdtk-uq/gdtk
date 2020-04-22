@@ -13,7 +13,6 @@ Note you do not have to set all of these values in the
 input script.
 In a typical input script, one might set 10-15 input variables.
 
-[[horizontal]]
 `config.title` ::
     _string_, default: `"Eilmer4 simulation"` +
     Title for the simulation
@@ -21,7 +20,6 @@ In a typical input script, one might set 10-15 input variables.
 
 == Geometry
 
-[[horizontal]]
 `config.dimensions` ::
      _int_, default: `2` +
     Spatial dimensionality, 2 or 3
@@ -34,7 +32,6 @@ In a typical input script, one might set 10-15 input variables.
 
 == Time-stepping
 
-[[horizontal]]
 `config.cfl_value` ::
   _float_, default: `0.5` +
   The CFL number is ratio of the time-step divided by the time
@@ -142,7 +139,7 @@ In a typical input script, one might set 10-15 input variables.
 
 == Special initialisation configuration
 
-[[hortizontal]]
+
 `config.diffuse_wall_bcs_on_init` ::
     _bool_, default: `false` +
     Set to diffuse(/blend) conditions at the wall
