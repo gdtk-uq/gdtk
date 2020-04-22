@@ -1,2 +1,117 @@
-= FluidBlock objects
+= Block objects
 
+== FluidBlock objects
+
+We decompose the fluid simulation domain into blocks.
+Our simplest decomposition would be one block to represent the entire domain).
+We call these units of decomposition `FluidBlocks`.
+The input script is largely focussed on configuring `FluidBlocks` to
+represent the fluid simulation domain.
+The configuration includes setting boundary conditions and the initial state.
+The full list of options are described here.
+
+ FluidBlock:new{grid, initialState,
+                bcList|bcDict,
+                active, label, omegaz, may_be_turbulent}
+
+`grid` ::
+  `StructuredGrid` or `UnstructuredGrid` object, no default +
+  A grid object must be supplied. The type of grid (structured
+  or unstructured) sets the type of block. The grid dimensions
+  should also be compatible with the global setting for dimenions.
+  (See: <<config-dimensions,`config.dimensions`>>)
+
+`initialState` ::
+  <<FlowState,`FlowState`>>, <<FlowSolution,`FlowSolution`>> or a user-defined function +
+  The fluid simulation domain requires an initial set of flow properties throughout
+  the domain.
+  These flow properties are set block-by-block using this `initialState` parameter.
+  There is no default: the user must supply something for this parameter. +
+   +
+  Most commonly, a <<FlowState,`FlowState`>> object is given as the initial state for
+  a block.
+  This sets spatially-uniform flow properties across the entire block. +
+   +
+  A <<FlowSolution,`FlowSolution`>> object might also be used to set the initial
+  flow state in a block.
+  Usually the `FlowSolution` comes from a previously completed simulation.
+  One use for this is to start a finer resolution calculation using
+  a coarser simulation.
+  Another use could be to do a staged simulation: when extending the domain
+  in a staged simulation, one might want to start with some blocks initialised
+  from an earlier truncated domain simulation.
+  The cells in the block are initialised by searching the `FlowSolution` for the
+  nearest corresponding cell in the _old_ solution and copying that value.
+  No attempt at interpolating based on nearby cells or mismatch in cell centres is made. +
+   +
+  A user-defined function can be provided as a Lua function.
+  This allows one to provide a spatially-varying initial state.
+  The function contract is: accepts `x`, `y` and `z` as parameters; returns a `FlowState`
+  object.
+  An example of initialising a shock tube with high and low pressure sections
+  is shown in the 3D Sod shock tube case. See: `dgd/examples/eilmer/3D/sod-shock-tube/sg/sod.lua`. That initialisation function is repeated here:
+
+   function tube_gas(x, y, z)
+      if x < 0.5 then
+         p = 1.0e5; T = 348.4
+      else
+         p = 1.0e4; T = 278.8
+      end
+   return FlowState:new{p=p, velx=0.0, vely=0.0, T=T}
+   end
+
+`bcList` ::
+  _table_: `{north=BCObject, east=BCObject, south=BCObject, west=BCObject, [top=BCObject, bottom=BCObject]}` +
+  The `bcList` is used to set boundary conditions on the faces of blocks
+  with an underlying structured grid.
+  Each table key accepts a boundary condition object.
+  If any table entry is missing, the default-supplied boundary condition
+  is a slip wall, `WallBC_WithSlip`.
+  In 3D, the `top` and `bottom` faces can also be set.
+  If a boundary is a connection, this can be explicitly set or you
+  can rely on the `identifyBlockConnections()` helper function to
+  make that connection for you.
+  That helper function is called _after_ the blocks have been configured.
+  An example to set a supersonic inflow on a west boundary, and
+  an outflow on the north boundary is:
+  
+   bcList={west=InFlowBC_SupersonicIn:new{flowState=inflow},
+           north=OutFlowBC_Simple:new{}}
+
+`bcDict` ::
+  _table_: `{tagA=BCObject, tagB=BCObject, ...}` +
+  The `bcDict` is used to set boundary conditions on faces of blocks with an
+  underlying unstructured grid.
+  The tag strings in the table should match the tags used in the underlying
+  unstructured grid.
+  If a boundary face is not set explicitly in this table, then a default
+  boundary condition of a slip wall is applied (`WallBC_WithSlip`).
+
+`active` ::
+  _bool_, default: `true` +
+  By default, blocks are marked as _active_ for inclusion in the simulation.
+  You could disable a block's participation in the simulation domain,
+  setting this parameter to false.
+  Be careful of how this block is connected to others if setting it
+  to _inactive_;
+  the flow state will not be updated in an _inactive_ block.
+
+`label` ::
+  _string_, default: `FluidBlock-<id>` +
+  Set this parameter to give the block a label.
+  This is a convenience for the user and might be useful for some
+  custom post-processing to work with blocks that have a
+  specific label.
+
+`omegaz` ::
+  _float_, default: `0.0` +
+  angular speed (in rad/s about the _z_-axis) for the rotating frame of reference. +
+  Useful for the calculation of flow in turbomachines.
+  The default value of 0.0 implies no rotating frame.
+
+`may_be_turbulent` ::
+  _bool_, default: `true` +
+// [TODO:PJ] Please add some description.
+
+  
+  

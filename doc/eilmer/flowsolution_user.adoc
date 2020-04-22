@@ -4,7 +4,6 @@ In a preparation script, the `FlowSolution` object is used
 to initialise the domain with a flow field from another 
 (completed) job.
 
-[[FlowSolution,`FlowSolution`]]
  FlowSolution:new{jobName, dir, tindx, nBlocks}
 
 `jobName` ::
