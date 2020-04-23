@@ -712,6 +712,10 @@ final class GlobalConfig {
     shared static int write_flow_solution_at_step = -1; // flag for premature writing of flow solution files
     shared static double dt_history = 1.0e-3; // interval for writing sample
     shared static double dt_loads = 1.0e-3; // interval for writing loads on boundary groups
+    // For controlling the writing of snapshots
+    shared static int snapshotCount = 1_000_000; // Set to something very large so that default behaviour
+                                                  // does not attempt to write snapshots.
+    shared static int nTotalSnapshots = 0; // By default, do not write any snapshots
     // The following initialization preserves old behaviour
     // where only one group called loads was expected.
     shared static string boundary_groups_for_loads = "loads";
@@ -1757,6 +1761,9 @@ void read_control_file()
     mixin(update_double("dt_loads", "dt_loads"));
     mixin(update_int("write_loads_at_step", "write_loads_at_step"));
     mixin(update_int("write_flow_solution_at_step", "write_flow_solution_at_step"));
+    mixin(update_int("snapshot_count", "snapshotCount"));
+    mixin(update_int("number_total_snapshots", "nTotalSnapshots"));
+
     mixin(update_int("halt_now", "halt_now"));
     //
     if (GlobalConfig.verbosity_level > 1) {
@@ -1779,6 +1786,8 @@ void read_control_file()
         writeln("  dt_loads: ", GlobalConfig.dt_loads);
         writeln("  write_loads_at_step: ", GlobalConfig.write_loads_at_step);
         writeln("  write_flow_solution_at_step: ", GlobalConfig.write_flow_solution_at_step);
+        writeln("  snapshot_count: ", GlobalConfig.snapshotCount);
+        writeln("  number_total_snapshots: ", GlobalConfig.nTotalSnapshots);
         writeln("  halt_now: ", GlobalConfig.halt_now);
     }
 

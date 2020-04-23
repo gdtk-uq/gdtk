@@ -95,7 +95,8 @@ final class SimState {
     // with an index that gets incremented each time we write a set of files.
     shared static int current_tindx;
     shared static int current_loads_tindx;
-
+    // Keep track of the snapshot output
+    shared static int nWrittenSnapshots;
     // For working out how long the simulation has been running.
     static SysTime wall_clock_start;
     static int maxWallClockSeconds;
@@ -915,6 +916,73 @@ void write_solution_files()
     }
 } // end write_solution_files()
 
+void write_snapshot_files()
+{
+    if (SimState.nWrittenSnapshots >= GlobalConfig.nTotalSnapshots) {
+        // We need to shuffle the existing snapshots down one slot
+        auto job_name = GlobalConfig.base_file_name;
+        foreach (iSnap; 1 .. GlobalConfig.nTotalSnapshots) {
+            foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                auto fromName = make_snapshot_file_name("flow", job_name, blk.id, iSnap, GlobalConfig.flowFileExt);
+                auto toName = make_snapshot_file_name("flow", job_name, blk.id, iSnap-1, GlobalConfig.flowFileExt);
+                rename(fromName, toName);
+            }
+            foreach (ref solidBlk; localSolidBlocks) {
+                auto fromName = make_snapshot_file_name("solid", job_name, solidBlk.id, iSnap, "gz");
+                auto toName = make_snapshot_file_name("solid", job_name, solidBlk.id, iSnap-1, "gz");
+                rename(fromName, toName);
+            }
+            if (GlobalConfig.grid_motion != GridMotion.none) {
+                foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                    auto fromName = make_snapshot_file_name("grid", job_name, blk.id, iSnap, GlobalConfig.gridFileExt);
+                    auto toName = make_snapshot_file_name("grid", job_name, blk.id, iSnap-1, GlobalConfig.gridFileExt);
+                    rename(fromName, toName);
+                }
+            }
+        }
+    }
+    
+    int snapshotIdx = (SimState.nWrittenSnapshots < GlobalConfig.nTotalSnapshots) ? SimState.nWrittenSnapshots : GlobalConfig.nTotalSnapshots-1;
+    if (GlobalConfig.is_master_task) {
+        ensure_directory_is_present(make_snapshot_path_name("flow", snapshotIdx));
+        ensure_directory_is_present(make_snapshot_path_name("solid", snapshotIdx));
+        if (GlobalConfig.grid_motion != GridMotion.none) {
+            ensure_directory_is_present(make_snapshot_path_name("grid", snapshotIdx));
+        }
+    }
+    
+    version(mpi_parallel) {
+        version(mpi_timeouts) {
+            MPI_Sync_tasks();
+        } else {
+            MPI_Barrier(MPI_COMM_WORLD);
+        }
+    }
+    wait_for_directory_to_be_present(make_snapshot_path_name("flow", snapshotIdx));
+    auto job_name = GlobalConfig.base_file_name;
+    foreach (myblk; parallel(localFluidBlocksBySize,1)) {
+        auto file_name = make_snapshot_file_name("flow", job_name, myblk.id, snapshotIdx, GlobalConfig.flowFileExt);
+        writefln("Writing block to file: %s", file_name);
+        myblk.write_solution(file_name, SimState.time);
+    }
+    wait_for_directory_to_be_present(make_snapshot_path_name("solid", snapshotIdx));
+    foreach (ref mySolidBlk; localSolidBlocks) {
+        auto fileName = make_snapshot_file_name("solid", job_name, mySolidBlk.id, snapshotIdx, "gz");
+        mySolidBlk.writeSolution(fileName, SimState.time);
+    }
+    if (GlobalConfig.grid_motion != GridMotion.none) {
+        wait_for_directory_to_be_present(make_snapshot_path_name("grid", snapshotIdx));
+        if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) { writeln("   Write grid"); }
+        foreach (blk; parallel(localFluidBlocksBySize,1)) {
+            blk.sync_vertices_to_underlying_grid(0);
+            auto fileName = make_snapshot_file_name("grid", job_name, blk.id, snapshotIdx, GlobalConfig.gridFileExt);
+            blk.write_underlying_grid(fileName);
+        }
+    }
+    SimState.nWrittenSnapshots = SimState.nWrittenSnapshots + 1;
+} // end write_snapshot_files()
+
+
 void march_over_blocks()
 {
     // Notes:
@@ -1279,7 +1347,19 @@ int integrate_in_time(double target_time_as_requested)
                 GC.minimize();
             }
             //
-            // 4.1 (Occasionally) Write out the cell history data and loads on boundary groups data
+            // 4.1 (Occasionally) Write out a snapshot
+            if ((SimState.step % GlobalConfig.snapshotCount) == 0) {
+                if (GlobalConfig.is_master_task) {
+                    writeln("***");
+                    writefln("*** Writing a snapshot: step= %4d, t= %6.3e", SimState.step, SimState.time);
+                    writeln("***");
+                }
+                write_snapshot_files();
+                GC.collect();
+                GC.minimize();
+            }
+            //
+            // 4.2 (Occasionally) Write out the cell history data and loads on boundary groups data
             if ((SimState.time >= SimState.t_history) && !SimState.history_just_written) {
                 write_history_cells_to_files(SimState.time);
                 SimState.history_just_written = true;

@@ -32,6 +32,16 @@ string make_file_name(string mytype)(string base_file_name, int blk_id, int tind
     return writer.data;
 }
 
+string make_snapshot_path_name(string type, int idx)
+{
+    return format!"%s/snapshot-%04d"(type, idx);
+}
+
+string make_snapshot_file_name(string type, string base_file_name, int blk_id, int idx, string ext)
+{
+    return format!"%s/snapshot-%04d/%s.%s.b%04d.snapshot.%04d.%s"(type, idx, base_file_name, type, blk_id, idx, ext);
+}
+
 void ensure_directory_is_present(string dir_name)
 {
     if (exists(dir_name) && isDir(dir_name)) return;
