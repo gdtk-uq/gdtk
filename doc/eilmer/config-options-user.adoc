@@ -379,7 +379,7 @@ In the collection of examples, the Mabey flat plate turbulent case makes use
 of this initialisation option. See: `dgd/examples/eilmer/2D/flat-plate-turbulent-mabey/steady-state-solver/mabey.lua`
 
 
-== Miscellaneous parameters
+== Miscellaneous
 
 `config.title` ::
     _string_, default: `"Eilmer4 simulation"` +

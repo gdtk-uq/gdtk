@@ -74,7 +74,7 @@ The full list of options are described here.
   That helper function is called _after_ the blocks have been configured.
   An example to set a supersonic inflow on a west boundary, and
   an outflow on the north boundary is:
-  
+
    bcList={west=InFlowBC_SupersonicIn:new{flowState=inflow},
            north=OutFlowBC_Simple:new{}}
 
@@ -114,4 +114,44 @@ The full list of options are described here.
   Normally, when a turbulence model is active, turbulent flow will be allowed in all blocks.
   This parameter may be set `false` to suppress the turbulence actions for the block.
   Use sparingly.
+
+== FluidBlock arrays
+
+To generate more than one FluidBlock on a single, structured grid, use
+
+ FBArray:new{grid, nib, njb, nkb,
+             initialState,
+             bcList|bcDict,
+             active, label, omegaz, may_be_turbulent}
+
+The entries to the table are mostly the same as for the construction of a single
+FluidBlock object.
+The extra arguments are:
+
+`nib` ::
+  _int_, default 1 +
+  The number of blocks in the i-index direction.
+
+`njb` ::
+  _int_, default 1 +
+  The number of blocks in the j-index direction.
+
+`nkb` ::
+  _int_, default 1 +
+  The number of blocks in the j-index direction.
+
+The table that is returned contains an arrays of all of the FluidBlock objects defined
+over the partitioned grid:
+
+`blockArray` ::
+  will be a multi-dimensional array, indexed as `[ib][jb][kb]`,
+  with `1<=ib<=nib`, `1<=jb<=njb`, `1<=kb<=nkb`.
+
+
+`blockCollection` ::
+  will be a single-dimensional array, also starting at 1.
+  Note that the index of the blocks within thos array follow the Lua convention
+  and will be different to the `id` assigned to the blocks, which will start at `0`,
+  and thus align with the D-language indexing.
+
 

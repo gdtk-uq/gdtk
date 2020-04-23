@@ -18,6 +18,26 @@ This file can be monitored by writing it to another console with `tail -f` or
 its content can be rendered graphically with GNUPlot.
 See `dgd/examples/eilmer/2D/lat-plate-hakkinen-swbli/sg-lts/` for a sample GNUPlot script
 for rendering of this data.
+The essential lines from that script are shown here.
+
+  job = "swbli"
+  period_seconds = 2.0
+  residuals_file = "./config/" . job ."-residuals.txt"
+  window_title = "Eilmer4 residuals for ".job
+  set term qt title window_title
+  set logscale y
+  bind "x" "end=1"
+  bind "q" "end=1"
+  end = 0
+  while( end==0 ) {
+    set multiplot layout 2,2
+    plot residuals_file using "step":"x-mom" with lines, \
+      residuals_file using "step":"y-mom" with lines
+    plot residuals_file using "step":"energy" with lines
+    plot residuals_file using "step":"mass" with lines
+    plot residuals_file using "step":"L2" with lines
+    pause period_seconds
+  }
 
 For large MPI jobs, there is a risk that the part of the calculation will fail
 and leave other MPI tasks consuming compute resources while waiting for communication
