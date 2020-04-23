@@ -43,6 +43,8 @@ double getJSONdouble(JSONValue jsonData, string key, double defaultValue)
         // We wish to accept value like 0.0 or 0
         if (json_val.type() == JSONType.float_) {
             value = json_val.floating;
+        } else if (json_val.type() == JSONType.integer) {
+            value = to!double(json_val.integer);
         } else {
             value = to!double(json_val.str);
         }
@@ -86,6 +88,7 @@ int[] getJSONintarray(JSONValue jsonData, string key, int[] defaultValue)
             value ~= to!int(json_val.integer);
         }
     } catch (Exception e) {
+        value.length = defaultValue.length;
         value[] = defaultValue[];
     }
     return value;
@@ -100,11 +103,14 @@ double[] getJSONdoublearray(JSONValue jsonData, string key, double[] defaultValu
             // We wish to accept value like 0.0 or 0
             if (json_val.type() == JSONType.float_) {
                 value ~= json_val.floating;
+            } else if (json_val.type() == JSONType.integer) {
+                value ~= to!double(json_val.integer);
             } else {
                 value ~= to!double(json_val.str);
             }
         }
     } catch (Exception e) {
+        value.length = defaultValue.length;
         value[] = defaultValue[];
     }
     return value;
