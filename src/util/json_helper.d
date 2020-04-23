@@ -86,7 +86,7 @@ int[] getJSONintarray(JSONValue jsonData, string key, int[] defaultValue)
             value ~= to!int(json_val.integer);
         }
     } catch (Exception e) {
-        value = defaultValue;
+        value[] = defaultValue[];
     }
     return value;
 } // end getJSONintarray()
@@ -105,7 +105,7 @@ double[] getJSONdoublearray(JSONValue jsonData, string key, double[] defaultValu
             }
         }
     } catch (Exception e) {
-        value = defaultValue;
+        value[] = defaultValue[];
     }
     return value;
 } // end getJSONdoublearray()
