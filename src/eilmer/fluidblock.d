@@ -802,8 +802,6 @@ public:
 		    dt_allow_parab = fmin(dt_allow_parab, cfl_value / signal_parab);
 		}
 		dt_allow = fmin(dt_allow_hyp, GlobalConfig.dt_max); // set the allowable time-step based on hyperbolic time-step
-                // set the allowable parabolic time-step for each block
-                if (myConfig.with_super_time_stepping_flexible_stages) this.dt_parab = dt_allow_parab; 
             } else {
 		// no STS
 		dt_allow_hyp = 0;
