@@ -10,6 +10,7 @@ import std.string;
 import std.json;
 import std.format;
 import std.algorithm;
+import std.math;
 
 import json_helper;
 import geom;
@@ -26,6 +27,7 @@ public:
     string label = "";
     double mass;  // mass, kg
     double diam;  // diameter, m
+    double area;  // m^2
     double L;     // length, m
     double x;     // position, m
     double vel;   // velocity, m/s
@@ -44,6 +46,14 @@ public:
     EndCondition ecL;
     EndCondition ecR;
 
+    bool is_restrain0;
+    bool brakes_on0;
+    bool hit_buffer0;
+    double x0;
+    double vel0;
+    double[2] dxdt;
+    double[2] dvdt;
+
     this(size_t indx, JSONValue jsonData)
     {
         if (L1dConfig.verbosity_level >= 3) {
@@ -53,6 +63,7 @@ public:
         label = getJSONstring(jsonData, "label", "");
         mass = getJSONdouble(jsonData, "mass", 0.0);
         diam = getJSONdouble(jsonData, "diam", 0.0);
+        area = 0.25*PI*diam*diam;
         L = getJSONdouble(jsonData, "length", 0.0);
         front_seal_f = getJSONdouble(jsonData, "front_seal_f", 0.0);
         front_seal_area = getJSONdouble(jsonData, "front_seal_area", 0.0);
@@ -67,6 +78,7 @@ public:
             writeln("Piston[", indx, "]:");
             writeln("  mass= ", mass);
             writeln("  diam= ", diam);
+            writeln("  area= ", area);
             writeln("  L= ", L);
             writeln("  front_seal_f= ", front_seal_f);
             writeln("  front_seal_area= ", front_seal_area);
@@ -112,35 +124,105 @@ public:
     @nogc
     void record_state()
     {
-        // [TODO]
+        is_restrain0 = is_restrain;
+        brakes_on0 = brakes_on;
+        hit_buffer0 = hit_buffer;
+        x0 = x;
+        vel0 = vel;
         return;
     }
 
     @nogc
     void restore_state()
     {
-        // [TODO]
+        is_restrain = is_restrain0;
+        brakes_on = brakes_on0;
+        hit_buffer = hit_buffer0;
+        x = x0;
+        vel = vel0;
         return;
     }
 
     @nogc
     void time_derivatives(int level)
     {
-        // [TODO] look at connected gas slugs and get pressure
+        // Pressure on each piston face.
+        double pL = 0.0;
+        if (ecL && ecL.slugL) {
+            pL = (ecL.slugL_end == End.L) ?
+                ecL.slugL.faces[0].p : ecL.slugL.faces[$-1].p;
+        }
+        double pR = 0.0;
+        if (ecR && ecR.slugR) {
+            pR = (ecR.slugR_end == End.L) ?
+                ecR.slugR.faces[0].p : ecR.slugR.faces[$-1].p;
+        }
+        // Pressures drive the piston dynamics.
+        if (is_restrain) {
+            if (pL > p_restrain) { is_restrain = false; }
+        }
+        if (is_restrain) {
+            dxdt[level] = 0.0;
+            dvdt[level] = 0.0;
+        }
+        // [TODO] brakes
+        // [TODO] buffer
+        // The (signed) pressure force.
+        double pressure_force = area*(pL-pR);
+        // The magnitude of the friction force from pressurized seals.
+        double friction_force = front_seal_f*front_seal_area*pR +
+            back_seal_f*back_seal_area*pL;
+        //
+        // Rate of change of velocity is acceleration.
+        immutable vel_tol = 1.0e-6;
+        if (vel > vel_tol) {
+            // Moving forward, apply full friction in reverse.
+            dvdt[level] = (pressure_force-friction_force)/mass;
+        } else if (vel < -vel_tol) {
+            // Moving backward, apply full friction forward.
+            dvdt[level] = (pressure_force+friction_force)/mass;
+        } else {
+            // We are effectively stationary.
+            if (fabs(pressure_force) > friction_force) {
+                // Pressure force overcomes friction.
+                dvdt[level] = (pressure_force > 0.0) ?
+                    (pressure_force-friction_force)/mass :
+                    (pressure_force+friction_force)/mass;
+            } else {
+                // Friction force dominates; let's remain stationary.
+                vel = 0.0; // Full stop.
+                dvdt[level] = 0.0;
+            } // end if sufficient pressure to accelerate
+        } // end if vel...
+        //
+        // Rate of change of position is velocity.
+        dxdt[level] = vel;
         return;
     }
 
     @nogc
     void predictor_step(double dt)
     {
-        // [TODO]
+        if (is_restrain || brakes_on) {
+            x = x0;
+            vel = vel0;
+        } else {
+            x = x0 + dxdt[0]*dt;
+            vel = vel0 + dvdt[0]*dt;
+        }
         return;
     }
 
     @nogc
     void corrector_step(double dt)
     {
-        // [TODO]
+        if (is_restrain || brakes_on) {
+            x = x0;
+            vel = vel0;
+        } else {
+            x = x0 + 0.5*(dxdt[0]+dxdt[1])*dt;
+            vel = vel0 + 0.5*(dvdt[0]+dvdt[1])*dt;
+        }
         return;
     }
 
