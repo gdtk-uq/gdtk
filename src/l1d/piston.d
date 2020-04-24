@@ -110,13 +110,6 @@ public:
     } // end write_data()
 
     @nogc
-    void time_derivatives()
-    {
-        // [TODO]
-        return;
-    }
-
-    @nogc
     void record_state()
     {
         // [TODO]
@@ -127,6 +120,13 @@ public:
     void restore_state()
     {
         // [TODO]
+        return;
+    }
+
+    @nogc
+    void time_derivatives(int level)
+    {
+        // [TODO] look at connected gas slugs and get pressure
         return;
     }
 

@@ -25,9 +25,39 @@ public:
 
     double x0;       // initial position for time step
     double[2] dxdt;  // time derivatives, predictor-corrector levels
+    double p;        // current pressure
+
     this()
     {
         // Do nothing.
+    }
+
+    @nogc
+    void record_state()
+    {
+        x0 = x;
+        return;
+    }
+
+    @nogc
+    void restore_state()
+    {
+        x = x0;
+        return;
+    }
+
+    @nogc
+    void predictor_step(double dt)
+    {
+        x = x0 + dxdt[0]*dt;
+        return;
+    }
+
+    @nogc
+    void corrector_step(double dt)
+    {
+        x = x0 + 0.5*(dxdt[0]+dxdt[1])*dt;
+        return;
     }
 
 } // end class LFace
@@ -59,19 +89,24 @@ public:
     double heat_flux;    // for reporting via solution file
     double dt_chem;      // saved suggested time step, s
     double dt_therm;
-
+    //
     // Conserved quantities.
     double mass;         // in kg
     double moment;       // x-momentum per unit volume, kg/(m^^2.s)
     double energy;       // total energy per unit volume, J/(m^^3)
+    //
     // Time derivatives for predictor-corrector time-stepping.
     double[2] dmassdt;
     double[2] dmomdt;
     double[2] dEdt;
+    double[2] dL_bardt;
+    //
     // Record of conserved variables for adaptive time stepping.
     double mass0;
     double moment0;
     double energy0;
+    double L_bar0;
+    //
     // Source terms accumulators.
     double Q_mass;
     double Q_moment;
@@ -112,6 +147,53 @@ public:
         gm.update_thermo_from_rhou(gas);
         gm.update_sound_speed(gas);
         gm.update_trans_coeffs(gas);
+        return;
+    }
+
+    @nogc
+    void record_state()
+    {
+        mass0 = mass;
+        moment0 = moment;
+        energy0 = energy;
+        L_bar0 = L_bar;
+        return;
+    }
+
+    @nogc
+    void restore_state(GasModel gm)
+    {
+        mass = mass0;
+        moment = moment0;
+        energy = energy0;
+        L_bar = L_bar0;
+        return;
+    }
+
+    @nogc
+    void predictor_step(double dt, GasModel gm)
+    {
+        mass = mass0 + dmassdt[0]*dt;
+        moment = moment0 + dmomdt[0]*dt;
+        energy = energy0 + dEdt[0]*dt;
+        L_bar = L_bar0 + dL_bardt[0]*dt;
+        return;
+    }
+
+    @nogc
+    void corrector_step(double dt, GasModel gm)
+    {
+        mass = mass0 + 0.5*(dmassdt[0]+dmassdt[1])*dt;
+        moment = moment0 + 0.5*(dmomdt[0]+dmomdt[1])*dt;
+        energy = energy0 + 0.5*(dEdt[0]+dEdt[1])*dt;
+        L_bar = L_bar0 + 0.5*(dL_bardt[0]+dL_bardt[1])*dt;
+        return;
+    }
+
+    @nogc
+    void chemical_increment(double dt, GasModel gmodel)
+    {
+        // [TODO]
         return;
     }
 

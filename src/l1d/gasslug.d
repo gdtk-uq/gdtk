@@ -13,6 +13,7 @@ import std.string;
 import std.json;
 import std.format;
 import std.range;
+import std.math;
 
 import json_helper;
 import geom;
@@ -197,76 +198,113 @@ public:
     }
 
     @nogc
-    void source_terms()
-    {
-        foreach (c; cells) {
-            c.source_terms(viscous_effects, adiabatic, gmodel);
-        }
-        return;
-    }
-
-    @nogc
-    void apply_rivp()
-    {
-        // [TODO]
-        // For the moment, use cell-centre values as the left and right states.
-        // Need to consider the end conditions.
-        return;
-    } // end apply_rivp()
-
-    @nogc
-    void time_derivatives()
-    {
-        // [TODO]
-        return;
-    }
-
-    @nogc
     void record_state()
     {
-        // [TODO]
+        foreach (f; faces) { f.record_state(); }
+        foreach (c; cells) { c.record_state(); }
         return;
     }
 
     @nogc
     void restore_state()
     {
-        // [TODO]
+        foreach (f; faces) { f.restore_state(); }
+        foreach (c; cells) { c.restore_state(gmodel); }
+        compute_areas_and_volumes();
+        foreach (c; cells) { c.decode_conserved(gmodel); }
+        return;
+    }
+
+    @nogc
+    void time_derivatives(int level)
+    {
+        // Compute face motion as Riemann subproblems.
+        // For the moment, use cell-centre values as the left and right states.
+        foreach (i, f; faces) {
+            // Need to consider the end conditions.
+            if (i == 0) {
+                // Left-most face.
+                // [TODO] other boundary conditions
+                LCell cR = cells[i];
+                piston_at_left(cR.gas, cR.vel, gmodel, 0.0, f.p);
+                f.dxdt[level] = 0.0;
+            } else if (i+1 == faces.length) {
+                // Right-most face.
+                // [TODO] other boundary conditions
+                LCell cL = cells[i-1];
+                piston_at_right(cL.gas, cL.vel, gmodel, 0.0, f.p);
+                f.dxdt[level] = 0.0;
+            } else {
+                // Interior face.
+                LCell cL = cells[i-1];
+                LCell cR = cells[i];
+                lrivp(cL.gas, cR.gas, cL.vel, cR.vel, gmodel, gmodel,
+                      f.dxdt[level], f.p);
+            }
+        }
+        foreach (c; cells) {
+            c.source_terms(viscous_effects, adiabatic, gmodel);
+        }
+        // Conservation equations determine our time derivatives.
+        foreach (i, c; cells) {
+            LFace fL = faces[i];
+            LFace fR = faces[i+1];
+            // Mass.
+            c.dmassdt[level] = c.Q_mass;
+            // Momentum -- force on cell
+            c.dmomdt[level] = fL.p*fL.area - fR.p*fR.area +
+                c.gas.p*(fR.area - fL.area) + c.Q_moment;
+            // Energy -- work done on cell
+            c.dEdt[level] = fL.p*fL.area*fL.dxdt[level] -
+                fR.p*fR.area*fR.dxdt[level] + c.Q_energy;
+            // Particle distance travelled.
+            c.dL_bardt[level] = fabs(c.vel);
+        }
         return;
     }
 
     @nogc
     void predictor_step(double dt)
     {
-        // [TODO]
+        foreach (f; faces) { f.predictor_step(dt); }
+        foreach (c; cells) { c.predictor_step(dt, gmodel); }
+        compute_areas_and_volumes();
+        foreach (c; cells) { c.decode_conserved(gmodel); }
         return;
     }
 
     @nogc
     void corrector_step(double dt)
     {
-        // [TODO]
+        foreach (f; faces) { f.corrector_step(dt); }
+        foreach (c; cells) { c.corrector_step(dt, gmodel); }
+        compute_areas_and_volumes();
+        foreach (c; cells) { c.decode_conserved(gmodel); }
         return;
     }
 
     @nogc
     void chemical_increment(double dt)
     {
-        // [TODO]
+        foreach (c; cells) { c.chemical_increment(dt, gmodel); }
         return;
     }
 
     @nogc
     int bad_cells()
     {
-        // [TODO]
+        foreach (i, c; cells) {
+            LFace fL = faces[i];
+            LFace fR = faces[i+1];
+            // [TODO]
+        }
         return 0;
     }
 
     @nogc
     double compute_stable_time_step()
     {
-        double dt_allowed;
+        double dt_allowed; // [TODO]
         return dt_allowed;
     }
 

@@ -232,7 +232,11 @@ void integrate_in_time(double target_time)
         }
         // 3. Record current state of dynamic components.
         foreach (p; pistons) { p.record_state(); }
-        foreach (s; gasslugs) { s.record_state(); s.encode_conserved(); }
+        foreach (s; gasslugs) {
+            s.compute_areas_and_volumes();
+            s.record_state();
+            s.encode_conserved();
+        }
         int attempt_number = 0;
         bool step_failed;
         do {
@@ -242,18 +246,16 @@ void integrate_in_time(double target_time)
                 // 4. Predictor update.
                 // 4.1 Apply the boundary conditions.
                 foreach (ec; ecs) {
-                    // check ec type and apply
+                    // [TODO] check ec type and apply
                 }
                 // 4.2 Update dynamics.
-                foreach (g; gasslugs) {
-                    g.apply_rivp();
-                    g.time_derivatives();
-                    g.predictor_step(sim_data.dt_global);
-                    g.decode_conserved();
-                    if (g.bad_cells() > 0) { throw new Exception("Bad cells"); }
+                foreach (s; gasslugs) {
+                    s.time_derivatives(0);
+                    s.predictor_step(sim_data.dt_global);
+                    if (s.bad_cells() > 0) { throw new Exception("Bad cells"); }
                 }
                 foreach (p; pistons) {
-                    p.time_derivatives();
+                    p.time_derivatives(0);
                     p.predictor_step(sim_data.dt_global);
                 }
             } catch (Exception e) {
@@ -268,18 +270,16 @@ void integrate_in_time(double target_time)
                     // 5. Corrector update.
                     // 5.1 Apply the boundary conditions.
                     foreach (ec; ecs) {
-                        // check ec type and apply
+                        // [TODO] check ec type and apply
                     }
                     // 5.2 Update dynamics.
-                    foreach (g; gasslugs) {
-                        g.apply_rivp();
-                        g.time_derivatives();
-                        g.corrector_step(sim_data.dt_global);
-                        g.decode_conserved();
-                        if (g.bad_cells() > 0) { throw new Exception("Bad cells"); }
+                    foreach (s; gasslugs) {
+                        s.time_derivatives(1);
+                        s.corrector_step(sim_data.dt_global);
+                        if (s.bad_cells() > 0) { throw new Exception("Bad cells"); }
                     }
                     foreach (p; pistons) {
-                        p.time_derivatives();
+                        p.time_derivatives(1);
                         p.corrector_step(sim_data.dt_global);
                     }
                 } catch (Exception e) {
