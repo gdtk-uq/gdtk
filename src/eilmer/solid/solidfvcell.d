@@ -140,6 +140,130 @@ public:
         }
         dedt[ftl] = volInv * integral + Q;
     }
+
+    
+    void stage1RKL1Update(double dt, int j, int s) 
+    {
+        number dedt0;
+        number e0;
+        number e1;
+        number e2;
+        e0 = e[0];
+        e1 = e[1];
+        dedt0 = dedt[0];
+        
+        // coefficients
+        double muj; double vuj; double muj_tilde;
+        muj_tilde = (2.0*j-1)/j * 2.0/(s*s+s);
+        muj = 1.0;
+        vuj = 0.0;
+        
+        e1 = e0 + muj_tilde*dt*dedt0;
+
+        // shuffle time-levels
+        e[0] = e0;
+        e[1] = e1;
+        return;
+    } // end rkl1_stage_update_for_flow_on_fixed_grid1()
+    
+    void stage2RKL1Update(double dt, int j, int s) 
+    {
+        number dedt0;
+        number e0;
+        number e1;
+        number e2;
+        e0 = e[0];
+        e1 = e[1];
+        e2 = e[2];
+        dedt0 = dedt[1];
+        
+        // coefficients
+        double muj; double vuj; double muj_tilde;
+        muj_tilde = (2.0*j-1)/j * 2.0/(s*s+s);
+        muj = (2.0*j-1)/j;
+        vuj = (1.0-j)/j;
+        
+        e2 = muj*e1 + vuj*e0 + muj_tilde*dt*dedt0;
+        // shuffle time-levels
+        e[0] = e0;
+        e[1] = e1;
+        e[2] = e2;
+        return;
+    } // end rkl1_stage_update_for_flow_on_fixed_grid2()
+    
+    void stage1RKL2Update(double dt, int j, int s) 
+    {
+        number dedt0;
+        number e0;
+        number e1;
+        number e2;
+        e0 = e[0];
+        e1 = e[1];
+        dedt0 = dedt[0];
+        
+        // coefficients
+        double muj; double vuj; double muj_tilde;
+        muj_tilde = 4.0/(3.0*(s*s+s-2.0));	
+        
+        e1 = e0 + muj_tilde*dt*dedt0;
+
+        // make a copy of the initial conserved quantities
+        e[0] = e0;
+        e[1] = e1;
+        e[2] = e2;
+        e[3] = e[0];
+        return;
+    } // end rkl2_stage_update_for_flow_on_fixed_grid1()
+    
+    void stage2RKL2Update(double dt, int j, int s) 
+    {
+        number dedt0;
+        number e0;
+        number e1;
+        number e2;
+        number e3;
+        number dedtO;
+        e0 = e[0];
+        e1 = e[1];
+        e2 = e[2];
+        e3 = e[3];
+        dedt0 = dedt[1];
+        dedtO = dedt[0];
+        
+        // coefficients
+        double ajm1; double bj; double bjm1, bjm2; double muj; double vuj; double muj_tilde; double gam_tilde;
+
+        if (j == 2) {
+            bj = 1.0/3.0;
+            bjm1 = 1.0/3.0;
+            bjm2 = 1.0/3.0;
+        } else if (j == 3) {
+            bj = (j*j+j-2.0)/(2.0*j*(j+1.0));
+            bjm1 = 1.0/3.0;
+            bjm2 = 1.0/3.0;
+        } else if (j == 4) {
+            bj = (j*j+j-2.0)/(2.0*j*(j+1.0));
+            bjm1 = ((j-1.0)*(j-1.0)+(j-1.0)-2.0)/(2.0*(j-1.0)*((j-1.0)+1.0));
+            bjm2 = 1.0/3.0;
+        } else {
+            bj = (j*j+j-2.0)/(2.0*j*(j+1.0));
+            bjm1 = ((j-1.0)*(j-1.0)+(j-1.0)-2.0)/(2.0*(j-1.0)*((j-1.0)+1.0));
+            bjm2 = ((j-2.0)*(j-2.0)+(j-2.0)-2.0)/(2.0*(j-2.0)*((j-2.0)+1.0));
+        }
+        ajm1 = 1.0-bjm1;
+        muj_tilde = (4.0*(2.0*j-1.0))/(j*(s*s+s-2.0)) * (bj/bjm1);
+        gam_tilde = -ajm1*muj_tilde;
+        muj = (2*j-1.0)/(j) * (bj/bjm1);
+        vuj = -(j-1.0)/(j) * (bj/bjm2);
+
+        e2 = muj*e1 + vuj*e0 + (1.0-muj-vuj)*e3 + muj_tilde*dt*dedt0 + gam_tilde*dt*dedtO;
+        e[0] = e0;
+        e[1] = e1;
+        e[2] = e2;
+	return;
+    } // end rkl2_stage_update_for_flow_on_fixed_grid2()
+
+    
     void stage1Update(double dt)
     {
         double gamma1 = 1.0; // Assume Euler

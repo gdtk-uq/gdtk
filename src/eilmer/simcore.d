@@ -2464,8 +2464,12 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 		    addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time);
 		}
 		scell.timeDerivatives(ftl, GlobalConfig.dimensions);
-		scell.stage1Update(dt_global);
-		scell.T = updateTemperature(scell.sp, scell.e[ftl+1]);
+                if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1 || euler_step) {
+                    scell.stage1RKL1Update(dt_global, 1, SimState.s_RKL); // RKL1 (j=1)
+                } else {
+                    scell.stage1RKL2Update(dt_global, 1, SimState.s_RKL); // RKL1 (j=1)
+                }
+                scell.T = updateTemperature(scell.sp, scell.e[ftl+1]);
 	    } // end foreach scell
 	} // end foreach sblk
     } // end if tight solid domain coupling.
@@ -2685,7 +2689,11 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 			addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time);
 		    }
 		    scell.timeDerivatives(ftl, GlobalConfig.dimensions);
-		    scell.stage1Update(dt_global);
+                    if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1 || euler_step) {
+                        scell.stage2RKL1Update(dt_global, 1, SimState.s_RKL); // RKL1 (j=1)
+                    } else {
+                        scell.stage2RKL2Update(dt_global, 1, SimState.s_RKL); // RKL2 (j=1)
+                    }
 		    scell.T = updateTemperature(scell.sp, scell.e[ftl+1]);
 		} // end foreach scell
 	    } // end foreach sblk
@@ -2697,6 +2705,14 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 		foreach (cell; blk.cells) { 
                     cell.U[0].copy_values_from(cell.U[1]);
                     cell.U[1].copy_values_from(cell.U[2]);
+                }
+	    }
+	} // end foreach blk	
+	foreach (sblk; parallel(localSolidBlocksBySize,1)) {
+	    if (sblk.active) {
+		foreach (scell; sblk.activeCells) { 
+                    scell.e[0] = scell.e[1];
+                    scell.e[1] = scell.e[2];
                 }
 	    }
 	} // end foreach blk	
@@ -2720,8 +2736,8 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
     //
     foreach (sblk; localSolidBlocks) {
         if (sblk.active) {
-            size_t end_indx = 1; // time-level holds current solution
-            foreach (scell; sblk.activeCells) { scell.e[0] = scell.e[end_indx]; }
+            //size_t end_indx = 1; // time-level holds current solution
+            foreach (scell; sblk.activeCells) { scell.e[0] = scell.e[idx]; }
         }
     } // end foreach sblk
     
