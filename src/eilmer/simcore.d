@@ -114,6 +114,9 @@ shared static int[] local_invalid_cell_count;
 // so we need a normal array for the MPI task to work with.
 double[] userPad_copy;
 
+// Keep a record of simulation time and dt for snapshots
+Tuple!(double, "t", double, "dt")[] snapshotInfo;
+
 //----------------------------------------------------------------------------
 
 version(mpi_parallel) {
@@ -918,6 +921,7 @@ void write_solution_files()
 
 void write_snapshot_files()
 {
+    if (snapshotInfo.length == 0) { snapshotInfo.length = GlobalConfig.nTotalSnapshots; }
     if (SimState.nWrittenSnapshots >= GlobalConfig.nTotalSnapshots) {
         // We need to shuffle the existing snapshots down one slot
         auto job_name = GlobalConfig.base_file_name;
@@ -939,10 +943,13 @@ void write_snapshot_files()
                     rename(fromName, toName);
                 }
             }
+            snapshotInfo[iSnap-1] = snapshotInfo[iSnap];
         }
     }
     
     int snapshotIdx = (SimState.nWrittenSnapshots < GlobalConfig.nTotalSnapshots) ? SimState.nWrittenSnapshots : GlobalConfig.nTotalSnapshots-1;
+    snapshotInfo[snapshotIdx] = tuple!("t", "dt")(SimState.time, SimState.dt_global);
+
     if (GlobalConfig.is_master_task) {
         ensure_directory_is_present(make_snapshot_path_name("flow", snapshotIdx));
         ensure_directory_is_present(make_snapshot_path_name("solid", snapshotIdx));
@@ -962,7 +969,6 @@ void write_snapshot_files()
     auto job_name = GlobalConfig.base_file_name;
     foreach (myblk; parallel(localFluidBlocksBySize,1)) {
         auto file_name = make_snapshot_file_name("flow", job_name, myblk.id, snapshotIdx, GlobalConfig.flowFileExt);
-        writefln("Writing block to file: %s", file_name);
         myblk.write_solution(file_name, SimState.time);
     }
     wait_for_directory_to_be_present(make_snapshot_path_name("solid", snapshotIdx));
@@ -979,6 +985,20 @@ void write_snapshot_files()
             blk.write_underlying_grid(fileName);
         }
     }
+    // Write out .snapshots file
+    // NOTE: We re-write this completely every time a snapshot is saved.
+    // This is not a performance hit because snapshots are infrequent,
+    // and this file with time records is small.
+    if (GlobalConfig.is_master_task) {
+        auto fname = format("config/%s.snapshots", GlobalConfig.base_file_name);
+        auto f = File(fname, "w");
+        f.writeln("# snapshot-indx sim_time dt_global");
+        foreach (idx, snap; snapshotInfo) {
+            f.writefln("%04d %.18e %.18e", idx, snap.t, snap.dt);
+        }
+        f.close();
+    }
+    
     SimState.nWrittenSnapshots = SimState.nWrittenSnapshots + 1;
 } // end write_snapshot_files()
 
