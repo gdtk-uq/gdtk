@@ -2690,9 +2690,9 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 		    }
 		    scell.timeDerivatives(ftl, GlobalConfig.dimensions);
                     if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1 || euler_step) {
-                        scell.stage2RKL1Update(dt_global, 1, SimState.s_RKL); // RKL1 (j=1)
+                        scell.stage2RKL1Update(dt_global, j, SimState.s_RKL); // RKL1 (j=1)
                     } else {
-                        scell.stage2RKL2Update(dt_global, 1, SimState.s_RKL); // RKL2 (j=1)
+                        scell.stage2RKL2Update(dt_global, j, SimState.s_RKL); // RKL2 (j=1)
                     }
 		    scell.T = updateTemperature(scell.sp, scell.e[ftl+1]);
 		} // end foreach scell
