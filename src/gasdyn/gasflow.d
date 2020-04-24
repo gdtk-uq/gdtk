@@ -12,7 +12,7 @@
  *   Conical shocks
  *
  * Authors: PA Jacobs, RJ Gollan
- * 
+ *
  * Version: (Python code)
  * 26-Feb-2012 : functions moved out of estcj.py to this module.
  * 02-May-2013 : added more expansion_to_throat_calculation function from
@@ -107,7 +107,7 @@ number[] normal_shock(const(GasState) state1, number Vs, GasState state2,
     number V2 = velocities[0]; number Vg = velocities[1];
     if (cast(CEAGas) gm !is null) {
         // The ideal gas estimate may have an unreasonably high value for temperature.
-        // I vaguely recall Malcolm McIntosh had a correlation with shock velocity or 
+        // I vaguely recall Malcolm McIntosh had a correlation with shock velocity or
         // Mach number for his adjustments to the ideal-gas initial guess, however,
         // this is Chris James' simple adjustment that seems to allow the calculation
         // to proceed.
@@ -236,13 +236,13 @@ number reflected_shock(const(GasState) state2, number Vg,
     // Assume a chemically-frozen gas, so copy mass-fractions and the like.
     state5.copy_values_from(state2);
     gm.update_thermo_from_pT(state5);
-    // As an initial guess, 
+    // As an initial guess,
     // assume that we have a very strong shock in an ideal gas.
     number gam = gm.gamma(state2);
     number density_ratio = (gam+1.0)/(gam-1.0);
     number Vr_a = Vg / density_ratio;
     number[] velocities = normal_shock(state2, Vr_a+Vg, state5, gm);
-    number V5 = velocities[0]; 
+    number V5 = velocities[0];
     // The objective function is the difference in speeds,
     // units are m/s.  A value of zero for this function means
     // that, as the shock propagates upstream with speed ur,
@@ -253,8 +253,8 @@ number reflected_shock(const(GasState) state2, number Vg,
     // Now, update this guess using the secant method.
     //
     number Vr_b = 1.1 * Vr_a;
-    velocities = normal_shock(state2, Vr_b+Vg, state5, gm); 
-    V5 = velocities[0]; 
+    velocities = normal_shock(state2, Vr_b+Vg, state5, gm);
+    V5 = velocities[0];
     number f_b = V5 - Vr_b;
     if (abs(f_a) < abs(f_b)) {
         swap(f_a, f_b);
@@ -359,7 +359,7 @@ number expand_to_mach(const(GasState) state0, number mach,
 } // end expand_to_mach()
 
 
-void total_condition(const(GasState) state1, number V1, 
+void total_condition(const(GasState) state1, number V1,
                      GasState state0, GasModel gm)
 /**
  * Given a free-stream condition and velocity,
@@ -395,7 +395,7 @@ void total_condition(const(GasState) state1, number V1,
 } // end total_condition()
 
 
-void pitot_condition(const(GasState) state1, number V1, 
+void pitot_condition(const(GasState) state1, number V1,
                      GasState state2pitot, GasModel gm)
 /**
  * Given a free-stream condition, compute the corresponding Pitot condition
@@ -535,15 +535,15 @@ number finite_wave_dp(const(GasState) state1, number V1,
     //
     number dV;
     number dp = (p2 - state1.p)/steps;
-    // Use more than the requested number of steps if p2 < dp, 
+    // Use more than the requested number of steps if p2 < dp,
     // to prevent an overshoot into -ve pressure. (Chris James)
     while (p2 < abs(dp)) {
         steps = to!int(steps * 1.1);
         dp = (p2 - state1.p)/steps;
     }
     state2.p = p1+0.5*dp; // effectively mid-point of next step
-    gm.update_thermo_from_ps(state2, s1);        
-    gm.update_sound_speed(state2);        
+    gm.update_thermo_from_ps(state2, s1);
+    gm.update_sound_speed(state2);
     foreach (i; 0 .. steps) {
         number rhoa = state2.rho * state2.a;
         if (characteristic == "cminus") {
@@ -579,7 +579,7 @@ number finite_wave_dv(const(GasState) state1, number V1,
  *   V1: initial gas velocity, in m/s
  *   characteristic: is either 'cplus' or 'cminus'
  *   V2_target: desired velocity after processing, in m/s
- *     Note that we may not reach the requested velocity before pressure 
+ *     Note that we may not reach the requested velocity before pressure
  *     and temperature become too small.
  *   state2: reference to the final gas state (to be computed)
  *   gm: reference to the current gas model
@@ -791,6 +791,7 @@ number[] osher_riemann(const(GasState) stateL, const(GasState) stateR,
     return [pstar, wstar, wL, wR, velX0];
 } // end osher_riemann()
 
+@nogc
 number secant_iterate(alias f)(number pstar)
 {
     int count = 0;
@@ -806,6 +807,7 @@ number secant_iterate(alias f)(number pstar)
     return pstar;
 }
 
+@nogc
 void lrivp(const(GasState) stateL, const(GasState) stateR,
            number velL, number velR, GasModel gmodelL, GasModel gmodelR,
            ref number wstar, ref number pstar)
@@ -919,11 +921,12 @@ void lrivp(const(GasState) stateL, const(GasState) stateR,
     return;
 } // end lrivp()
 
+@nogc
 void piston_at_left(const(GasState) stateR, number velR, GasModel gm,
                     number wstar, ref number pstar)
 /**
  * Compute pressure at piston face with processing of the gas
- * occuring through a right-running wave. 
+ * occuring through a right-running wave.
  * This calculation is a core element of the Lagrangian 1D solver.
  *
  * Input:
@@ -967,11 +970,12 @@ void piston_at_left(const(GasState) stateR, number velR, GasModel gm,
     return;
 } // end piston_at_left()
 
+@nogc
 void piston_at_right(const(GasState) stateL, number velL, GasModel gm,
                      number wstar, ref number pstar)
 /**
  * Compute pressure at piston face with processing of the gas
- * occuring through a left-running wave. 
+ * occuring through a left-running wave.
  * This calculation is a core element of the Lagrangian 1D solver.
  *
  * Input:
@@ -1046,7 +1050,7 @@ number[] theta_oblique(const(GasState) state1, number V1, number beta,
         throw new GasFlowException(format("theta_oblique(): subsonic inflow M1_n=%e", M1_n));
     }
     number[] velocities = normal_shock(state1, V1_n, state2, gm);
-    number V2_n = velocities[0]; number Vg_n = velocities[1]; 
+    number V2_n = velocities[0]; number Vg_n = velocities[1];
     number V2 = sqrt(V2_n * V2_n + V_t * V_t);
     number theta = beta - atan2(V2_n, V_t);
     return [theta, V2];
@@ -1074,7 +1078,7 @@ number beta_oblique(const(GasState) state1, number V1, number theta,
     number b2 = b1 * 1.05;
     auto error_in_theta = delegate(number beta_guess) {
         number[] shock_results = theta_oblique(state1, V1, beta_guess, state2, gm);
-        number theta_guess = shock_results[0]; number V2 = shock_results[1]; 
+        number theta_guess = shock_results[0]; number V2 = shock_results[1];
         number error_value = theta_guess - theta;
         return error_value;
     };
@@ -1243,7 +1247,7 @@ number beta_cone(const(GasState) state1, number V1, number theta, GasModel gm)
     number b2 = b1 * 1.05;
     auto error_in_theta = delegate(number beta_guess) {
         number[2] shock_results = theta_cone(state1, V1, beta_guess, state2, gm);
-        number theta_guess = shock_results[0]; number V2 = shock_results[1]; 
+        number theta_guess = shock_results[0]; number V2 = shock_results[1];
         number error_value = theta_guess - theta;
         return error_value;
     };
