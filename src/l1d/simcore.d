@@ -30,6 +30,17 @@ __gshared static GasSlug[] gasslugs;
 __gshared static EndCondition[] ecs;
 __gshared static Diaphragm[] diaphragms;
 
+struct SimulationData {
+    int step = 0;
+    int halt_now = 0;
+    double sim_time = 0.0;
+    double dt_global;
+    double t_plot;
+    double t_hist;
+}
+
+__gshared static SimulationData sim_data;
+
 
 void init_simulation(int tindx_start)
 {
@@ -84,6 +95,8 @@ void init_simulation(int tindx_start)
     L1dConfig.max_step = getJSONint(configData, "max_step", 0);
     L1dConfig.dt_init = getJSONdouble(configData, "dt_init", 0.0);
     L1dConfig.cfl_value = getJSONdouble(configData, "cfl_value", 0.0);
+    L1dConfig.cfl_count = getJSONint(configData, "cfl_count", 10);
+    L1dConfig.print_count = getJSONint(configData, "print_count", 20);
     L1dConfig.x_order = getJSONint(configData, "x_order", 0);
     L1dConfig.t_order = getJSONint(configData, "t_order", 0);
     L1dConfig.nslugs = getJSONint(configData, "nslugs", 0);
@@ -95,6 +108,8 @@ void init_simulation(int tindx_start)
         writeln("  max_step= ", L1dConfig.max_step);
         writeln("  dt_init= ", L1dConfig.dt_init);
         writeln("  cfl_value= ", L1dConfig.cfl_value);
+        writeln("  cfl_count= ", L1dConfig.cfl_count);
+        writeln("  print_count= ", L1dConfig.print_count);
         writeln("  x_order= ", L1dConfig.x_order);
         writeln("  t_order= ", L1dConfig.t_order);
         writeln("  nslugs= ", L1dConfig.nslugs);
@@ -193,3 +208,106 @@ void init_simulation(int tindx_start)
     }
     return;
 } // end init_simulation()
+
+
+void integrate_in_time(double target_time)
+{
+    sim_data.dt_global = L1dConfig.dt_init;
+    sim_data.sim_time = 0.0;
+    sim_data.t_plot = 1.0; // [TODO] L1dConfig.dt_plot[0];
+    sim_data.t_hist = 1.0; // [TODO]
+    //
+    // Main time loop.
+    while (sim_data.sim_time <= L1dConfig.max_time &&
+           sim_data.step <= L1dConfig.max_step &&
+           sim_data.halt_now == 0) {
+        // 1. Set the size of the time step.
+        if (sim_data.step == 0 ||
+            (sim_data.step/L1dConfig.cfl_count) * L1dConfig.cfl_count == sim_data.step) {
+            // check CFL and adjust sim_data.dt_global
+        }
+        // 2. Update state of end conditions.
+        foreach (ec; ecs) {
+            // check type and apply
+        }
+        // 3. Record current state of dynamic components.
+        foreach (p; pistons) { p.record_state(); }
+        foreach (s; gasslugs) { s.record_state(); s.encode_conserved(); }
+        int attempt_number = 0;
+        bool step_failed;
+        do {
+            ++attempt_number;
+            step_failed = false;
+            try {
+                // 4. Predictor update.
+                // 4.1 Apply the boundary conditions.
+                foreach (ec; ecs) {
+                    // check ec type and apply
+                }
+                // 4.2 Update dynamics.
+                foreach (g; gasslugs) {
+                    g.apply_rivp();
+                    g.time_derivatives();
+                    g.predictor_step(sim_data.dt_global);
+                    g.decode_conserved();
+                    if (g.bad_cells() > 0) { throw new Exception("Bad cells"); }
+                }
+                foreach (p; pistons) {
+                    p.time_derivatives();
+                    p.predictor_step(sim_data.dt_global);
+                }
+            } catch (Exception e) {
+                writeln("Predictor step failed.");
+                foreach (p; pistons) { p.restore_state(); }
+                foreach (s; gasslugs) { s.restore_state(); }
+                sim_data.dt_global *= 0.2;
+                continue;
+            }
+            if (L1dConfig.t_order == 2) {
+                try {
+                    // 5. Corrector update.
+                    // 5.1 Apply the boundary conditions.
+                    foreach (ec; ecs) {
+                        // check ec type and apply
+                    }
+                    // 5.2 Update dynamics.
+                    foreach (g; gasslugs) {
+                        g.apply_rivp();
+                        g.time_derivatives();
+                        g.corrector_step(sim_data.dt_global);
+                        g.decode_conserved();
+                        if (g.bad_cells() > 0) { throw new Exception("Bad cells"); }
+                    }
+                    foreach (p; pistons) {
+                        p.time_derivatives();
+                        p.corrector_step(sim_data.dt_global);
+                    }
+                } catch (Exception e) {
+                    writeln("Corrector step failed.");
+                    foreach (p; pistons) { p.restore_state(); }
+                    foreach (s; gasslugs) { s.restore_state(); }
+                    sim_data.dt_global *= 0.2;
+                    continue;
+                }
+            }
+            if (L1dConfig.reacting) {
+                foreach (s; gasslugs) { s.chemical_increment(sim_data.dt_global); }
+            }
+        } while (step_failed && attempt_number <= 3);
+        if (step_failed) {
+            throw new Exception("Step failed after 3 attempts.");
+        }
+        // 6. Update time and (maybe) write solution.
+        sim_data.step += 1;
+        sim_data.sim_time += sim_data.dt_global;
+        if (sim_data.sim_time >= sim_data.t_plot) {
+            // sim_time.t_plot += L1dConfig.dt_plot[0]; // [TODO] fix the selection
+            // Write state data gasslugs, diaphragms, pistons.
+        }
+        if (sim_data.sim_time >= sim_data.t_hist) {
+            // sim_time.t_hist += L1dConfig.dt_hist[0]; // [TODO] fix the selection
+            // Write flow data for some locations.
+        }
+    } // End main time loop.
+    return;
+} // end integrate_in_time()

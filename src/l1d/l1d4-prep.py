@@ -198,7 +198,7 @@ class GlobalConfig(object):
     __slots__ = 'job_name', 'title', \
                 'gas_model_files', 'gmodels', \
                 'reaction_files_1', 'reaction_files_2', 'reactors', 'reacting', \
-                'dt_init', 'cfl', 'dt_plot_list', \
+                'dt_init', 'cfl', 'cfl_count', 'print_count', 'dt_plot_list', \
                 'max_time', 'max_step', 'x_order', 't_order', \
                 'hloc_list'
 
@@ -217,6 +217,8 @@ class GlobalConfig(object):
         self.reacting = False
         self.dt_init = 1.0e-6
         self.cfl = 0.5
+        self.cfl_count = 10;
+        self.print_count = 20;
         # If dt_plot_list is still an empty list when we write
         # the parameter file, just use the max_time value for
         # both dt_plot and dt_his.  Fill in later, when necessary.
@@ -247,6 +249,8 @@ class GlobalConfig(object):
         fp.write('  "max_step": %d,\n' % self.max_step)
         fp.write('  "dt_init": %e,\n' % self.dt_init)
         fp.write('  "cfl_value": %e,\n' % self.cfl)
+        fp.write('  "cfl_count": %d,\n' % self.cfl_count)
+        fp.write('  "print_count": %d,\n' % self.print_count)
         fp.write('  "x_order": %d,\n' % self.x_order)
         fp.write('  "t_order": %d,\n' % self.t_order)
         #

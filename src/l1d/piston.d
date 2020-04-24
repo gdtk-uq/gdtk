@@ -109,4 +109,39 @@ public:
                           ((hit_buffer)?1:0)));
     } // end write_data()
 
+    @nogc
+    void time_derivatives()
+    {
+        // [TODO]
+        return;
+    }
+
+    @nogc
+    void record_state()
+    {
+        // [TODO]
+        return;
+    }
+
+    @nogc
+    void restore_state()
+    {
+        // [TODO]
+        return;
+    }
+
+    @nogc
+    void predictor_step(double dt)
+    {
+        // [TODO]
+        return;
+    }
+
+    @nogc
+    void corrector_step(double dt)
+    {
+        // [TODO]
+        return;
+    }
+
 } // end class Piston

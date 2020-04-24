@@ -257,10 +257,10 @@ public:
     }
 
     @nogc
-    void check_cells()
+    int bad_cells()
     {
         // [TODO]
-        return;
+        return 0;
     }
 
     @nogc

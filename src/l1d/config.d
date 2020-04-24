@@ -22,6 +22,8 @@ public:
     shared static int max_step;
     shared static double dt_init;
     shared static double cfl_value;
+    shared static int cfl_count;
+    shared static int print_count;
     shared static int x_order;
     shared static int t_order;
     shared static int n_dt_plot;
