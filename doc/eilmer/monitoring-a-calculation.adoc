@@ -62,7 +62,7 @@ It subsequently checks every 60 seconds that the time-step count has increased.
 Set these parameters to suit your particular simulation.
 If the monitor program does not see progress for a few cycles, it issues a `kill`
 command for the mpirun process.
-If the simulation finishes successfully, the monitor program will see with word `done`
+If the simulation finishes successfully, the monitor program will see the word `done`
 and will also terminate.
 This should give a clean exit for your batch job.
 
