@@ -21,6 +21,7 @@ import gas;
 import gasflow;
 import config;
 import lcell;
+import piston;
 import endcondition;
 import simcore; // has the core data arrays
 import misc;
@@ -224,16 +225,104 @@ public:
             // Need to consider the end conditions.
             if (i == 0) {
                 // Left-most face.
-                // [TODO] other boundary conditions
-                LCell cR = cells[i];
-                piston_at_left(cR.gas, cR.vel, gmodel, 0.0, f.p);
-                f.dxdt[level] = 0.0;
+                if (ecL) {
+                    if (cast(Diaphragm) ecL) {
+                        auto dia = cast(Diaphragm) ecL;
+                        if (dia.is_burst) {
+                            // Slugs interact as per GasInterface.
+                            LCell cR = cells[0];
+                            auto slugL =  dia.slugL;
+                            LCell cL = (dia.slugL_end == End.L) ?
+                                slugL.cells[0] : slugL.cells[$-1];
+                            lrivp(cL.gas, cR.gas, cL.vel, cR.vel, slugL.gmodel, gmodel,
+                                  f.dxdt[level], f.p);
+                        } else {
+                            // Diaphragm acts as a fixed wall.
+                            LCell cR = cells[0];
+                            piston_at_left(cR.gas, cR.vel, gmodel, 0.0, f.p);
+                            f.dxdt[level] = 0.0;
+                        }
+                    }
+                    if (cast(GasInterface) ecL) {
+                        auto my_ecL = cast(GasInterface) ecL;
+                        LCell cR = cells[0];
+                        auto slugL =  my_ecL.slugL;
+                        LCell cL = (my_ecL.slugL_end == End.L) ?
+                            slugL.cells[0] : slugL.cells[$-1];
+                        lrivp(cL.gas, cR.gas, cL.vel, cR.vel, slugL.gmodel, gmodel,
+                              f.dxdt[level], f.p);
+                    }
+                    if (cast(FreeEnd) ecL) {
+                        LCell cR = cells[0];
+                        f.p = cR.gas.p;
+                        f.dxdt[level] = cR.vel;
+                    }
+                    if (cast(VelocityEnd) ecL) {
+                        auto my_ecL = cast(VelocityEnd) ecL;
+                        LCell cR = cells[0];
+                        piston_at_left(cR.gas, cR.vel, gmodel, my_ecL.vel, f.p);
+                        f.dxdt[level] = my_ecL.vel;
+                    }
+                    if (cast(PistonFace) ecL) {
+                        auto my_ecL = cast(PistonFace) ecL;
+                        Piston piston = my_ecL.pistonL;
+                        LCell cR = cells[0];
+                        piston_at_left(cR.gas, cR.vel, gmodel, piston.vel, f.p);
+                        f.dxdt[level] = piston.vel;
+                    }
+                } else {
+                    throw new Error("Left end of gas slug does not have an end condition.");
+                }
             } else if (i+1 == faces.length) {
                 // Right-most face.
-                // [TODO] other boundary conditions
-                LCell cL = cells[i-1];
-                piston_at_right(cL.gas, cL.vel, gmodel, 0.0, f.p);
-                f.dxdt[level] = 0.0;
+                if (ecR) {
+                    if (cast(Diaphragm) ecR) {
+                        auto dia = cast(Diaphragm) ecR;
+                        if (dia.is_burst) {
+                            // Slugs interact as per GasInterface.
+                            LCell cL = cells[$-1];
+                            auto slugR =  dia.slugR;
+                            LCell cR = (dia.slugR_end == End.L) ?
+                                slugR.cells[0] : slugR.cells[$-1];
+                            lrivp(cL.gas, cR.gas, cL.vel, cR.vel, gmodel, slugR.gmodel,
+                                  f.dxdt[level], f.p);
+                        } else {
+                            // Diaphragm acts as a fixed wall.
+                            LCell cL = cells[$-1];
+                            piston_at_right(cL.gas, cL.vel, gmodel, 0.0, f.p);
+                            f.dxdt[level] = 0.0;
+                        }
+                    }
+                    if (cast(GasInterface) ecR) {
+                        auto my_ecR = cast(GasInterface) ecR;
+                        LCell cL = cells[$-1];
+                        auto slugR =  my_ecR.slugR;
+                        LCell cR = (my_ecR.slugR_end == End.L) ?
+                            slugR.cells[0] : slugR.cells[$-1];
+                        lrivp(cL.gas, cR.gas, cL.vel, cR.vel, gmodel, slugR.gmodel,
+                              f.dxdt[level], f.p);
+                    }
+                    if (cast(FreeEnd) ecR) {
+                        LCell cL = cells[$-1];
+                        f.p = cL.gas.p;
+                        f.dxdt[level] = cL.vel;
+                    }
+                    if (cast(VelocityEnd) ecR) {
+                        auto my_ecR = cast(VelocityEnd) ecR;
+                        LCell cL = cells[$-1];
+                        piston_at_right(cL.gas, cL.vel, gmodel, my_ecR.vel, f.p);
+                        f.dxdt[level] = my_ecR.vel;
+                    }
+                    if (cast(PistonFace) ecR) {
+                        auto my_ecR = cast(PistonFace) ecR;
+                        Piston piston = my_ecR.pistonR;
+                        LCell cL = cells[$-1];
+                        piston_at_left(cL.gas, cL.vel, gmodel, piston.vel, f.p);
+                        f.dxdt[level] = piston.vel;
+                    }
+                } else {
+                    throw new Error("Right end of gas slug does not have an end condition.");
+                }
             } else {
                 // Interior face.
                 LCell cL = cells[i-1];

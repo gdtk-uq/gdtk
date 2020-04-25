@@ -159,6 +159,9 @@ void init_simulation(int tindx_start)
             throw new Exception(msg);
         }
     }
+    // [TODO] I think that we now need to work through the end conditions
+    // and make connections from the connected gas slugs and pistons
+    // back to the relevant end conditions.
     //
     // Work through dynamic components and read their initial state.
     foreach (i, s; gasslugs) {
