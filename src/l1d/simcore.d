@@ -21,6 +21,7 @@ import gasslug;
 import lcell;
 import piston;
 import endcondition;
+import misc;
 
 __gshared static GasModel[] gmodels;
 __gshared static ThermochemicalReactor[] reactors;
@@ -37,6 +38,7 @@ struct SimulationData {
     double dt_global;
     double t_plot;
     double t_hist;
+    int tindx;
 }
 
 __gshared static SimulationData sim_data;
@@ -44,6 +46,7 @@ __gshared static SimulationData sim_data;
 
 void init_simulation(int tindx_start)
 {
+    sim_data.tindx = tindx_start;
     string dirName = L1dConfig.job_name;
     string configFileName = dirName~"/config.json";
     string content;
@@ -198,11 +201,11 @@ void init_simulation(int tindx_start)
         }
         string fileName = L1dConfig.job_name ~ format("/slug-%04d-faces.data", i);
         File fp = File(fileName, "r");
-        s.read_face_data(fp, 0);
+        s.read_face_data(fp, tindx_start);
         fp.close();
         fileName = L1dConfig.job_name ~ format("/slug-%04d-cells.data", i);
         fp = File(fileName, "r");
-        s.read_cell_data(fp, 0);
+        s.read_cell_data(fp, tindx_start);
         fp.close();
         if (L1dConfig.verbosity_level >= 1) {
             LFace f = s.faces[$-1];
@@ -218,7 +221,7 @@ void init_simulation(int tindx_start)
         }
         string fileName = L1dConfig.job_name ~ format("/piston-%04d.data", i);
         File fp = File(fileName, "r");
-        p.read_data(fp, 0);
+        p.read_data(fp, tindx_start);
         fp.close();
         if (L1dConfig.verbosity_level >= 1) {
             writeln(format("  x=%e, vel=%e is_restrain=%s brakes_on=%s hit_buffer=%s",
@@ -231,15 +234,17 @@ void init_simulation(int tindx_start)
         }
         string fileName = L1dConfig.job_name ~ format("/diaphragm-%04d.data", i);
         File fp = File(fileName, "r");
-        dia.read_data(fp, 0);
+        dia.read_data(fp, tindx_start);
         fp.close();
         if (L1dConfig.verbosity_level >= 1) {
             writeln(format("  is_burst=%s", dia.is_burst));
         }
     }
-    if (L1dConfig.verbosity_level >= 1) {
-        writeln("Finished initialization.");
-    }
+    sim_data.dt_global = L1dConfig.dt_init;
+    sim_data.sim_time = get_time_from_times_file(tindx_start);
+    sim_data.t_plot = 1.0; // [TODO] L1dConfig.dt_plot[0];
+    sim_data.t_hist = 1.0; // [TODO]
+    if (L1dConfig.verbosity_level >= 1) { writeln("Finished initialization."); }
     return;
 } // end init_simulation()
 
@@ -250,10 +255,6 @@ void integrate_in_time()
         writeln("Begin time integration to max_time=", L1dConfig.max_time);
     }
     sim_data.step = 0;
-    sim_data.dt_global = L1dConfig.dt_init;
-    sim_data.sim_time = 0.0;
-    sim_data.t_plot = 1.0; // [TODO] L1dConfig.dt_plot[0];
-    sim_data.t_hist = 1.0; // [TODO]
     //
     // Main time loop.
     while (sim_data.sim_time <= L1dConfig.max_time &&
@@ -344,12 +345,60 @@ void integrate_in_time()
         sim_data.sim_time += sim_data.dt_global;
         if (sim_data.sim_time >= sim_data.t_plot) {
             // sim_time.t_plot += L1dConfig.dt_plot[0]; // [TODO] fix the selection
-            // Write state data gasslugs, diaphragms, pistons.
+            write_state_gasslugs_pistons_diaphragms();
         }
         if (sim_data.sim_time >= sim_data.t_hist) {
             // sim_time.t_hist += L1dConfig.dt_hist[0]; // [TODO] fix the selection
-            // Write flow data for some locations.
+            write_data_at_history_locations();
         }
     } // End main time loop.
+    //
+    // Write a final time solution.
+    write_state_gasslugs_pistons_diaphragms();
     return;
 } // end integrate_in_time()
+
+
+void write_state_gasslugs_pistons_diaphragms()
+{
+    sim_data.tindx += 1;
+    string fileName = L1dConfig.job_name ~ "/times.data";
+    File fp = File(fileName, "a");
+    fp.writefln("%d %e\n", sim_data.tindx, sim_data.sim_time);
+    fp.close();
+    foreach (i, s; gasslugs) {
+        if (L1dConfig.verbosity_level >= 1) { writeln("Writing state data for slug ", i); }
+        fileName = L1dConfig.job_name ~ format("/slug-%04d-faces.data", i);
+        fp = File(fileName, "a");
+        s.write_face_data(fp, sim_data.tindx);
+        fp.close();
+        fileName = L1dConfig.job_name ~ format("/slug-%04d-cells.data", i);
+        fp = File(fileName, "a");
+        s.write_cell_data(fp, sim_data.tindx);
+        fp.close();
+    }
+    foreach (i, p; pistons) {
+        if (L1dConfig.verbosity_level >= 1) { writeln("Writing state of piston ", i); }
+        fileName = L1dConfig.job_name ~ format("/piston-%04d.data", i);
+        fp = File(fileName, "a");
+        p.write_data(fp, sim_data.tindx);
+        fp.close();
+    }
+    foreach (i, dia; diaphragms) {
+        if (L1dConfig.verbosity_level >= 1) {
+            writeln("Writing state of diaphragm (at EndCondition index)", dia.indx);
+        }
+        fileName = L1dConfig.job_name ~ format("/diaphragm-%04d.data", i);
+        fp = File(fileName, "a");
+        dia.write_data(fp, sim_data.tindx);
+        fp.close();
+    }
+    return;
+} // end write_state_gasslugs_pistons_diaphragms()
+
+
+void write_data_at_history_locations()
+{
+    // [TODO]
+    return;
+} // end write_data_at_history_locations()
