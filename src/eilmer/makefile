@@ -370,6 +370,8 @@ install: $(PROGRAMS) $(LUA_MODULES) prep.lua prep-gas prep-chem chemkin2eilmer \
 	chmod +x $(BUILD_DIR)/bin/e4console.tcl
 	cp e4compact.rb $(BUILD_DIR)/bin/e4compact
 	chmod +x $(BUILD_DIR)/bin/e4compact
+	cp e4-prep-restart.rb $(BUILD_DIR)/bin/e4-prep-restart
+	chmod +x $(BUILD_DIR)/bin/e4-prep-restart
 	cp xtdata.rb $(BUILD_DIR)/bin/xtdata.rb
 	chmod +x $(BUILD_DIR)/bin/xtdata.rb
 	cp e4forces.py $(BUILD_DIR)/bin/e4forces

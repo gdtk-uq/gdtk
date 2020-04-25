@@ -1,0 +1,68 @@
+= Restarting from a snapshot
+
+You may instruct Eilmer to make snapshots of the solution at every N steps.
+You can also choose how many snapshots to keep as the simulation progresses.
+This facility is useful for large simulations that are running on cluster
+computers.
+If something happens during the job run, having a snapshot might give you
+a point to return to such that you haven't lost too much compute time.
+To configure snapshots in your input script, add the following lines:
+
+  config.snapshot_count = 1000
+  config.number_total_snapshots = 2
+
+In this example, snapshots are written every 1000 steps and a total of two snapshots
+are kept.
+Say you simulation has run for 5692 steps.
+We would expect two snapshots in the `flow/` directory:
+
+  snapshot-0000, recorded at step 4000
+  snapshot-0001, recorded at step 5000
+  
+When the simulation gets to 6013 steps, the snapshots in the flow directory are:
+
+  snapshot-0000, recorded at step 5000
+  snapshot-0001, recorded at step 6000
+  
+You can see the pattern here.
+The largest snapshot index corresponds to the most
+recent snapshot.
+
+If your calculation is interrupted, you can restart from one of the snapshots.
+There is some file house-keeping required to insert the snapshot into the regular
+time series.
+The `e4-prep-restart` program takes care of that house-keeping effort.
+There are two modes for the `e4-prep-restart` program:
+
+ 1. to append a snapshot to the time series; or
+ 2. to replace a solution in the time series with a snapshot.
+ 
+The first mode is more common and so is the default action.
+Let's look at an example of appending one of our snapshots to the time series.
+
+  > e4-prep-restart --jobName=my_job --snapshot=1
+
+This will take the snapshot at index 1 and append it to the time series.
+You will get a message to the screen informing you of the new time index in the series.
+Take note of this new index as you will likely want to use that to instruct an
+Eilmer restart.
+For example, if the new time index is 9, we could restart an Eilmer job using:
+
+  > e4shared --job=my_job --run --tindx-start=9
+
+The other mode of operation for `e4-prep-restart` is to replace a solution in the time
+series with a snapshot.
+In this example, we replace the solution at index 5 with the snapshot 0:
+
+ > e4-prep-restart --jobName=my_job --snapshot=0 --replace=5
+
+Since we've replaced index 5 in the time series, it's likely we'd want to
+restart Eilmer from that point.
+Here is an example with MPI (on a cluster where number of processes is taken care of):
+
+ > mpirun e4mpi --jobName=my_job --run --tindx-start=5
+
+The `e4-prep-restart` program accepts a `--verbose` flag that will show you
+the house-keeping steps being performed.
+Some command help is available with the `--help` flag.
+

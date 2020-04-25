@@ -65,3 +65,4 @@ command for the mpirun process.
 If the simulation finishes successfully, the monitor program will see with word `done`
 and will also terminate.
 This should give a clean exit for your batch job.
+

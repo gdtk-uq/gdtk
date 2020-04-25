@@ -5,7 +5,8 @@ EILMER_DOC_FILES := $(LMR_DIR)/config-options-user.adoc \
 	$(LMR_DIR)/flowsolution_user.adoc \
 	$(LMR_DIR)/flow-state-user.adoc \
 	$(LMR_DIR)/fluid-block-user.adoc \
-	$(LMR_DIR)/monitoring-a-calculation.adoc
+	$(LMR_DIR)/monitoring-a-calculation.adoc \
+	$(LMR_DIR)/restarting-from-a-snapshot.adoc
 
 GEOM_DIR := geom
 GEOM_DOC_FILES := (GEOM_DIR)/grid/grid-user.adoc \
