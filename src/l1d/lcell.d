@@ -8,6 +8,7 @@
 //
 module lcell;
 
+import std.stdio;
 import std.math;
 import std.format;
 import std.algorithm;
@@ -124,7 +125,7 @@ public:
     {
         mass = gas.rho * volume;
         moment = mass * vel;
-        energy = gm.internal_energy(gas) + 0.5*vel^^2;
+        energy = mass * (gm.internal_energy(gas) + 0.5*vel^^2);
         return;
     }
 
@@ -133,9 +134,7 @@ public:
     {
         if (mass <= 0.0 || volume <= 0.0) {
             string msg = "Invalid mass or volume for cell";
-            debug {
-                msg ~= format(" mass=%g, volume=%g at x=%g", mass, volume, xmid);
-            }
+            debug { msg ~= format(" mass=%g, volume=%g at x=%g", mass, volume, xmid); }
             throw new Exception(msg);
         }
         gas.rho = mass/volume;

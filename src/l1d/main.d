@@ -112,6 +112,7 @@ Argument:                            Comment:
 
     // Get to work.
     init_simulation(tindxStart);
+    integrate_in_time();
 
     if (verbosityLevel > 0) { writeln("Done simulation."); }
 

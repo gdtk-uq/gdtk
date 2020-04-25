@@ -126,6 +126,9 @@ public:
                 c.gas.u_modes[i] = to!double(items[k]); k++;
             }
             if (nmodes > 0) { c.dt_therm = to!double(items[k]); k++; }
+            gmodel.update_thermo_from_pT(c.gas);
+            gmodel.update_sound_speed(c.gas);
+            gmodel.update_trans_coeffs(c.gas);
         }
     } // end read_cell_data()
 

@@ -159,10 +159,38 @@ void init_simulation(int tindx_start)
             throw new Exception(msg);
         }
     }
-    // [TODO] I think that we now need to work through the end conditions
-    // and make connections from the connected gas slugs and pistons
-    // back to the relevant end conditions.
-    //
+    // Work through the end conditions and make connections from the
+    // connected gas slugs and pistons back to the end conditions.
+    foreach (ec; ecs) {
+        if (ec.slugL) {
+            if (ec.slugL_end == End.L) {
+                ec.slugL.ecL = ec;
+            } else {
+                ec.slugL.ecR = ec;
+            }
+        }
+        if (ec.slugR) {
+            if (ec.slugR_end == End.L) {
+                ec.slugR.ecL = ec;
+            } else {
+                ec.slugR.ecR = ec;
+            }
+        }
+        if (ec.pistonL) {
+            if (ec.pistonL_face == End.L) {
+                ec.pistonL.ecL = ec;
+            } else {
+                ec.pistonL.ecR = ec;
+            }
+        }
+        if (ec.pistonR) {
+            if (ec.pistonR_face == End.L) {
+                ec.pistonR.ecL = ec;
+            } else {
+                ec.pistonR.ecR = ec;
+            }
+        }
+    }
     // Work through dynamic components and read their initial state.
     foreach (i, s; gasslugs) {
         if (L1dConfig.verbosity_level >= 1) {
@@ -209,12 +237,19 @@ void init_simulation(int tindx_start)
             writeln(format("  is_burst=%s", dia.is_burst));
         }
     }
+    if (L1dConfig.verbosity_level >= 1) {
+        writeln("Finished initialization.");
+    }
     return;
 } // end init_simulation()
 
 
-void integrate_in_time(double target_time)
+void integrate_in_time()
 {
+    if (L1dConfig.verbosity_level >= 1) {
+        writeln("Begin time integration to max_time=", L1dConfig.max_time);
+    }
+    sim_data.step = 0;
     sim_data.dt_global = L1dConfig.dt_init;
     sim_data.sim_time = 0.0;
     sim_data.t_plot = 1.0; // [TODO] L1dConfig.dt_plot[0];
@@ -224,6 +259,9 @@ void integrate_in_time(double target_time)
     while (sim_data.sim_time <= L1dConfig.max_time &&
            sim_data.step <= L1dConfig.max_step &&
            sim_data.halt_now == 0) {
+        if (L1dConfig.verbosity_level >= 1) {
+            writeln("Begin time step ", sim_data.step+1);
+        }
         // 1. Set the size of the time step.
         if (sim_data.step == 0 ||
             (sim_data.step/L1dConfig.cfl_count) * L1dConfig.cfl_count == sim_data.step) {
@@ -231,14 +269,14 @@ void integrate_in_time(double target_time)
         }
         // 2. Update state of end conditions.
         foreach (ec; ecs) {
-            // check type and apply
+            // [TODO] Diaphragms
         }
         // 3. Record current state of dynamic components.
         foreach (p; pistons) { p.record_state(); }
         foreach (s; gasslugs) {
             s.compute_areas_and_volumes();
-            s.record_state();
             s.encode_conserved();
+            s.record_state();
         }
         int attempt_number = 0;
         bool step_failed;
@@ -247,11 +285,11 @@ void integrate_in_time(double target_time)
             step_failed = false;
             try {
                 // 4. Predictor update.
-                // 4.1 Apply the boundary conditions.
+                // 4.1 Update the end conditions.
                 foreach (ec; ecs) {
-                    // [TODO] check ec type and apply
+                    // [TODO] Diaphragms
                 }
-                // 4.2 Update dynamics.
+                // 4.2 Update dynamic elements.
                 foreach (s; gasslugs) {
                     s.time_derivatives(0);
                     s.predictor_step(sim_data.dt_global);
@@ -263,19 +301,19 @@ void integrate_in_time(double target_time)
                 }
             } catch (Exception e) {
                 writeln("Predictor step failed.");
+                step_failed = true;
                 foreach (p; pistons) { p.restore_state(); }
                 foreach (s; gasslugs) { s.restore_state(); }
                 sim_data.dt_global *= 0.2;
-                continue;
             }
-            if (L1dConfig.t_order == 2) {
+            if (L1dConfig.t_order == 2 && !step_failed) {
                 try {
                     // 5. Corrector update.
-                    // 5.1 Apply the boundary conditions.
+                    // 5.1 Update the end conditions.
                     foreach (ec; ecs) {
-                        // [TODO] check ec type and apply
+                        // [TODO] Diaphragms
                     }
-                    // 5.2 Update dynamics.
+                    // 5.2 Update dynamic elements.
                     foreach (s; gasslugs) {
                         s.time_derivatives(1);
                         s.corrector_step(sim_data.dt_global);
@@ -287,16 +325,17 @@ void integrate_in_time(double target_time)
                     }
                 } catch (Exception e) {
                     writeln("Corrector step failed.");
+                    step_failed = true;
                     foreach (p; pistons) { p.restore_state(); }
                     foreach (s; gasslugs) { s.restore_state(); }
                     sim_data.dt_global *= 0.2;
                     continue;
                 }
             }
-            if (L1dConfig.reacting) {
+            if (L1dConfig.reacting && !step_failed) {
                 foreach (s; gasslugs) { s.chemical_increment(sim_data.dt_global); }
             }
-        } while (step_failed && attempt_number <= 3);
+        } while (step_failed && (attempt_number <= 3));
         if (step_failed) {
             throw new Exception("Step failed after 3 attempts.");
         }
