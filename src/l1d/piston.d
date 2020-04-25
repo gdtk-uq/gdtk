@@ -62,7 +62,7 @@ public:
         this.indx = indx;
         label = getJSONstring(jsonData, "label", "");
         mass = getJSONdouble(jsonData, "mass", 0.0);
-        diam = getJSONdouble(jsonData, "diam", 0.0);
+        diam = getJSONdouble(jsonData, "diameter", 0.0);
         area = 0.25*PI*diam*diam;
         L = getJSONdouble(jsonData, "length", 0.0);
         front_seal_f = getJSONdouble(jsonData, "front_seal_f", 0.0);
