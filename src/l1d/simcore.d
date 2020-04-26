@@ -39,6 +39,8 @@ struct SimulationData {
     double t_plot;
     double t_hist;
     int tindx;
+    int steps_since_last_plot_write;
+    int steps_since_last_hist_write;
 }
 
 __gshared static SimulationData sim_data;
@@ -102,6 +104,14 @@ void init_simulation(int tindx_start)
     L1dConfig.print_count = getJSONint(configData, "print_count", 20);
     L1dConfig.x_order = getJSONint(configData, "x_order", 0);
     L1dConfig.t_order = getJSONint(configData, "t_order", 0);
+    L1dConfig.n_dt_plot = getJSONint(configData, "n_dt_plot", 0);
+    L1dConfig.t_change.length = L1dConfig.n_dt_plot;
+    L1dConfig.dt_plot.length = L1dConfig.n_dt_plot;
+    L1dConfig.dt_hist.length = L1dConfig.n_dt_plot;
+    double[] dummy; foreach (i; 0 .. L1dConfig.n_dt_plot) { dummy ~= 0.0; }
+    L1dConfig.t_change[] = getJSONdoublearray(configData, "t_change", dummy);
+    L1dConfig.dt_plot[] = getJSONdoublearray(configData, "dt_plot", dummy);
+    L1dConfig.dt_hist[] = getJSONdoublearray(configData, "dt_hist", dummy);
     L1dConfig.nslugs = getJSONint(configData, "nslugs", 0);
     L1dConfig.npistons = getJSONint(configData, "npistons", 0);
     L1dConfig.ndiaphragms = getJSONint(configData, "ndiaphragms", 0);
@@ -115,6 +125,10 @@ void init_simulation(int tindx_start)
         writeln("  print_count= ", L1dConfig.print_count);
         writeln("  x_order= ", L1dConfig.x_order);
         writeln("  t_order= ", L1dConfig.t_order);
+        writeln("  n_dt_plot= ", L1dConfig.n_dt_plot);
+        writeln("  t_change= ", L1dConfig.t_change);
+        writeln("  dt_plot= ", L1dConfig.dt_plot);
+        writeln("  dt_hist= ", L1dConfig.dt_hist);
         writeln("  nslugs= ", L1dConfig.nslugs);
         writeln("  npistons= ", L1dConfig.npistons);
         writeln("  ndiaphragms= ", L1dConfig.ndiaphragms);
@@ -242,8 +256,10 @@ void init_simulation(int tindx_start)
     }
     sim_data.dt_global = L1dConfig.dt_init;
     sim_data.sim_time = get_time_from_times_file(tindx_start);
-    sim_data.t_plot = 1.0; // [TODO] L1dConfig.dt_plot[0];
-    sim_data.t_hist = 1.0; // [TODO]
+    sim_data.t_plot = get_dt_xxxx(L1dConfig.dt_plot, sim_data.sim_time);
+    sim_data.t_hist = get_dt_xxxx(L1dConfig.dt_hist, sim_data.sim_time);
+    sim_data.steps_since_last_plot_write = 0;
+    sim_data.steps_since_last_hist_write = 0;
     if (L1dConfig.verbosity_level >= 1) { writeln("Finished initialization."); }
     return;
 } // end init_simulation()
@@ -266,7 +282,7 @@ void integrate_in_time()
         // 1. Set the size of the time step.
         if (sim_data.step == 0 ||
             (sim_data.step/L1dConfig.cfl_count) * L1dConfig.cfl_count == sim_data.step) {
-            // check CFL and adjust sim_data.dt_global
+            // [TODO] check CFL and adjust sim_data.dt_global
         }
         // 2. Update state of end conditions.
         foreach (ec; ecs) {
@@ -344,17 +360,28 @@ void integrate_in_time()
         sim_data.step += 1;
         sim_data.sim_time += sim_data.dt_global;
         if (sim_data.sim_time >= sim_data.t_plot) {
-            // sim_time.t_plot += L1dConfig.dt_plot[0]; // [TODO] fix the selection
             write_state_gasslugs_pistons_diaphragms();
+            sim_data.t_plot += get_dt_xxxx(L1dConfig.dt_plot, sim_data.sim_time);
+            sim_data.steps_since_last_plot_write = 0;
+        } else {
+            sim_data.steps_since_last_plot_write++;
         }
         if (sim_data.sim_time >= sim_data.t_hist) {
-            // sim_time.t_hist += L1dConfig.dt_hist[0]; // [TODO] fix the selection
             write_data_at_history_locations();
+            sim_data.t_hist += get_dt_xxxx(L1dConfig.dt_hist, sim_data.sim_time);
+            sim_data.steps_since_last_hist_write = 0;
+        } else {
+            sim_data.steps_since_last_hist_write++;
         }
     } // End main time loop.
     //
     // Write a final time solution.
-    write_state_gasslugs_pistons_diaphragms();
+    if (sim_data.steps_since_last_plot_write > 0) {
+        write_state_gasslugs_pistons_diaphragms();
+    }
+    if (sim_data.steps_since_last_hist_write > 0) {
+        write_data_at_history_locations();
+    }
     return;
 } // end integrate_in_time()
 
@@ -362,6 +389,9 @@ void integrate_in_time()
 void write_state_gasslugs_pistons_diaphragms()
 {
     sim_data.tindx += 1;
+    if (L1dConfig.verbosity_level >= 1) {
+        writeln("Write state data at tindx=", sim_data.tindx);
+    }
     string fileName = L1dConfig.job_name ~ "/times.data";
     File fp = File(fileName, "a");
     fp.writefln("%d %e\n", sim_data.tindx, sim_data.sim_time);
