@@ -55,23 +55,7 @@ void init_simulation(int tindx_start)
     sim_data.wall_clock_start = Clock.currTime();
     //
     string dirName = L1dConfig.job_name;
-    string configFileName = dirName~"/config.json";
-    string content;
-    try {
-        content = readText(configFileName);
-    } catch (Exception e) {
-        string msg = text("Failed to read config file: ", configFileName);
-        msg ~= text(" Message is: ", e.msg);
-        throw new Exception(msg);
-    }
-    JSONValue jsonData;
-    try {
-        jsonData = parseJSON!string(content);
-    } catch (Exception e) {
-        string msg = text("Failed to parse JSON from config file: ", configFileName);
-        msg ~= text(" Message is: ", e.msg);
-        throw new Exception(msg);
-    }
+    JSONValue jsonData = readJSONfile(dirName~"/config.json");
     // Now that we have parsed JSON data, proceed to update those config values.
     auto configData = jsonData["config"];
     L1dConfig.title = getJSONstring(configData, "title", "");

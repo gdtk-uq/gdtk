@@ -7,7 +7,10 @@ module postprocess;
 import std.conv;
 import std.stdio;
 import std.string;
+import std.json;
+import std.file;
 
+import json_helper;
 import gas;
 import config;
 import tube;
@@ -16,19 +19,19 @@ import lcell;
 import piston;
 
 
-void generate_xt_dataset()
+void generate_xt_dataset(string varName, int tindxStart, int tindxEnd)
 {
     return;
 }
 
 
-void generate_time_slice()
+void extract_time_slice(int tindx)
 {
     return;
 }
 
 
-void generate_piston_history()
+void extract_piston_history(int pindx)
 {
     return;
 }

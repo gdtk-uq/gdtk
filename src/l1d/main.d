@@ -56,7 +56,7 @@ Postprocessing:
     //
     string jobName = "";
     int verbosityLevel = 1; // default to having a little information
-    int tindxStart = 0;
+    int tindx = 0;
     int tindxEnd = 0;
     bool xtData = false;
     bool timeSlice = false;
@@ -68,7 +68,7 @@ Postprocessing:
         getopt(args,
                "job", &jobName,
                "verbosity", &verbosityLevel,
-               "tindx", &tindxStart,
+               "tindx", &tindx,
                "time-slice", &timeSlice,
                "xt-data", &xtData,
                "var-name", &varName,
@@ -137,19 +137,19 @@ Postprocessing:
     // Get to work to do one task...
     if (xtData) {
         writeln("Postprocessing to produce an xt-dataset.");
-        generate_xt_dataset();
+        generate_xt_dataset(varName, tindx, tindxEnd);
         if (verbosityLevel > 0) { writeln("Done generating an xt-dataset."); }
     } else if (timeSlice) {
         writeln("Postprocessing to extract slug data at a time instant.");
-        generate_time_slice();
+        extract_time_slice(tindx);
         if (verbosityLevel > 0) { writeln("Done extracting a time-instant."); }
     } else if (pistonHistory) {
         writeln("Postprocessing to extract piston history.");
-        generate_piston_history();
+        extract_piston_history(pistonIndx);
         if (verbosityLevel > 0) { writeln("Done extracting a piston history."); }
     } else {
         writeln("Run a simulation.");
-        init_simulation(tindxStart);
+        init_simulation(tindx);
         integrate_in_time();
         if (verbosityLevel > 0) { writeln("Done simulation."); }
     }
