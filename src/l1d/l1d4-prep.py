@@ -216,9 +216,9 @@ class GlobalConfig(object):
         self.reactors = []
         self.reacting = False
         self.dt_init = 1.0e-6
-        self.cfl = 0.5
+        self.cfl = 0.25
         self.cfl_count = 10;
-        self.print_count = 20;
+        self.print_count = 50;
         # If dt_plot_list is still an empty list when we write
         # the parameter file, just use the max_time value for
         # both dt_plot and dt_his.  Fill in later, when necessary.

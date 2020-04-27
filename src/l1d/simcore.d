@@ -9,6 +9,7 @@ import std.stdio;
 import std.string;
 import std.json;
 import std.file;
+import std.datetime;
 
 import json_helper;
 import geom;
@@ -41,6 +42,7 @@ struct SimulationData {
     int tindx;
     int steps_since_last_plot_write;
     int steps_since_last_hist_write;
+    SysTime wall_clock_start;
 }
 
 __gshared static SimulationData sim_data;
@@ -49,6 +51,8 @@ __gshared static SimulationData sim_data;
 void init_simulation(int tindx_start)
 {
     sim_data.tindx = tindx_start;
+    sim_data.wall_clock_start = Clock.currTime();
+    //
     string dirName = L1dConfig.job_name;
     string configFileName = dirName~"/config.json";
     string content;
@@ -99,9 +103,9 @@ void init_simulation(int tindx_start)
     L1dConfig.max_time = getJSONdouble(configData, "max_time", 0.0);
     L1dConfig.max_step = getJSONint(configData, "max_step", 0);
     L1dConfig.dt_init = getJSONdouble(configData, "dt_init", 0.0);
-    L1dConfig.cfl_value = getJSONdouble(configData, "cfl_value", 0.0);
+    L1dConfig.cfl_value = getJSONdouble(configData, "cfl_value", 0.25);
     L1dConfig.cfl_count = getJSONint(configData, "cfl_count", 10);
-    L1dConfig.print_count = getJSONint(configData, "print_count", 20);
+    L1dConfig.print_count = getJSONint(configData, "print_count", 50);
     L1dConfig.x_order = getJSONint(configData, "x_order", 0);
     L1dConfig.t_order = getJSONint(configData, "t_order", 0);
     L1dConfig.n_dt_plot = getJSONint(configData, "n_dt_plot", 0);
@@ -260,7 +264,12 @@ void init_simulation(int tindx_start)
     sim_data.t_hist = get_dt_xxxx(L1dConfig.dt_hist, sim_data.sim_time);
     sim_data.steps_since_last_plot_write = 0;
     sim_data.steps_since_last_hist_write = 0;
-    if (L1dConfig.verbosity_level >= 1) { writeln("Finished initialization."); }
+    if (L1dConfig.verbosity_level >= 0) {
+        // For reporting wall-clock time, convert with precision of milliseconds.
+        auto elapsed_ms = (Clock.currTime() - sim_data.wall_clock_start).total!"msecs"();
+        double elapsed_s = to!double(elapsed_ms)/1000;
+        writefln("Finished initialization at WC=%.3f seconds", elapsed_s);
+    }
     return;
 } // end init_simulation()
 
@@ -276,7 +285,7 @@ void integrate_in_time()
     while (sim_data.sim_time <= L1dConfig.max_time &&
            sim_data.step <= L1dConfig.max_step &&
            sim_data.halt_now == 0) {
-        if (L1dConfig.verbosity_level >= 1) {
+        if (L1dConfig.verbosity_level >= 2) {
             writeln("Begin time step ", sim_data.step+1);
         }
         // 1. Set the size of the time step.
@@ -356,7 +365,21 @@ void integrate_in_time()
         if (step_failed) {
             throw new Exception("Step failed after 3 attempts.");
         }
-        // 6. Update time and (maybe) write solution.
+        // 6. Occasional console output.
+        if ((sim_data.step % L1dConfig.print_count) == 0) {
+            // For reporting wall-clock time, convert with precision of milliseconds.
+            auto elapsed_ms = (Clock.currTime() - sim_data.wall_clock_start).total!"msecs"();
+            double elapsed_s = to!double(elapsed_ms)/1000;
+            // [TODO] make a better estimate for non-zero starting sim times.
+            double WCtFT = (sim_data.sim_time > 0.0) ?
+                elapsed_s*(L1dConfig.max_time-sim_data.sim_time)/sim_data.sim_time : 0.0;
+            double WCtMS = (sim_data.step > 0) ?
+                (elapsed_s*(L1dConfig.max_step-sim_data.step))/sim_data.step : 0.0;
+            writefln("Step=%d t=%.3e dt=%.3e cfl=%.3f WC=%.1f WCtFT=%.1f WCtMS=%.1f",
+                     sim_data.step, sim_data.sim_time, sim_data.dt_global,
+                     L1dConfig.cfl_value, elapsed_s, WCtFT, WCtMS);
+        }
+        // 7. Update time and (maybe) write solution.
         sim_data.step += 1;
         sim_data.sim_time += sim_data.dt_global;
         if (sim_data.sim_time >= sim_data.t_plot) {
@@ -394,10 +417,10 @@ void write_state_gasslugs_pistons_diaphragms()
     }
     string fileName = L1dConfig.job_name ~ "/times.data";
     File fp = File(fileName, "a");
-    fp.writefln("%d %e\n", sim_data.tindx, sim_data.sim_time);
+    fp.writefln("%d %e", sim_data.tindx, sim_data.sim_time);
     fp.close();
     foreach (i, s; gasslugs) {
-        if (L1dConfig.verbosity_level >= 1) { writeln("Writing state data for slug ", i); }
+        if (L1dConfig.verbosity_level >= 2) { writeln("  Writing state data for slug ", i); }
         fileName = L1dConfig.job_name ~ format("/slug-%04d-faces.data", i);
         fp = File(fileName, "a");
         s.write_face_data(fp, sim_data.tindx);
@@ -408,15 +431,15 @@ void write_state_gasslugs_pistons_diaphragms()
         fp.close();
     }
     foreach (i, p; pistons) {
-        if (L1dConfig.verbosity_level >= 1) { writeln("Writing state of piston ", i); }
+        if (L1dConfig.verbosity_level >= 2) { writeln("  Writing state of piston ", i); }
         fileName = L1dConfig.job_name ~ format("/piston-%04d.data", i);
         fp = File(fileName, "a");
         p.write_data(fp, sim_data.tindx);
         fp.close();
     }
     foreach (i, dia; diaphragms) {
-        if (L1dConfig.verbosity_level >= 1) {
-            writeln("Writing state of diaphragm (at EndCondition index)", dia.indx);
+        if (L1dConfig.verbosity_level >= 2) {
+            writeln("  Writing state of diaphragm (at EndCondition index)", dia.indx);
         }
         fileName = L1dConfig.job_name ~ format("/diaphragm-%04d.data", i);
         fp = File(fileName, "a");
