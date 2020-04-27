@@ -264,7 +264,7 @@ void init_simulation(int tindx_start)
     sim_data.t_hist = get_dt_xxxx(L1dConfig.dt_hist, sim_data.sim_time);
     sim_data.steps_since_last_plot_write = 0;
     sim_data.steps_since_last_hist_write = 0;
-    if (L1dConfig.verbosity_level >= 0) {
+    if (L1dConfig.verbosity_level >= 1) {
         // For reporting wall-clock time, convert with precision of milliseconds.
         auto elapsed_ms = (Clock.currTime() - sim_data.wall_clock_start).total!"msecs"();
         double elapsed_s = to!double(elapsed_ms)/1000;
@@ -366,7 +366,8 @@ void integrate_in_time()
             throw new Exception("Step failed after 3 attempts.");
         }
         // 6. Occasional console output.
-        if ((sim_data.step % L1dConfig.print_count) == 0) {
+        if (L1dConfig.verbosity_level >= 1 &&
+            ((sim_data.step % L1dConfig.print_count) == 0)) {
             // For reporting wall-clock time, convert with precision of milliseconds.
             auto elapsed_ms = (Clock.currTime() - sim_data.wall_clock_start).total!"msecs"();
             double elapsed_s = to!double(elapsed_ms)/1000;
