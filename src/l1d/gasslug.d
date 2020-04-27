@@ -324,7 +324,7 @@ public:
                         auto my_ecR = cast(PistonFace) ecR;
                         Piston piston = my_ecR.pistonR;
                         LCell cL = cells[$-1];
-                        piston_at_left(cL.gas, cL.vel, gmodel, piston.vel, f.p);
+                        piston_at_right(cL.gas, cL.vel, gmodel, piston.vel, f.p);
                         f.dxdt[level] = piston.vel;
                     }
                 } else {
