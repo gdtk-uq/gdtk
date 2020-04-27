@@ -29,7 +29,7 @@ opts.each do |opt, arg|
   case opt
   when /-h/
     puts "Usage:"
-    puts "$ e4restart --job=<jobName> --snapshot=<s_index> ?--replace=<t_index>? ?--verbose?"
+    puts "$ e4-prep-restart --job=<jobName> --snapshot=<s_index> ?--replace=<t_index>? ?--verbose?"
     puts "Notes:"
     puts "We work with the snapshot specified by <s_index>."
     puts "The default action of this program is append the snapshot to the time series."
@@ -59,7 +59,7 @@ if snapshotIdx == -1
 end
 
 if jobName == ""
-  puts "ERROR: No jobName suplied. Use --jobName=myJob"
+  puts "ERROR: No <jobName> suplied. Use --job=my_job"
   exit 1
 end
 
