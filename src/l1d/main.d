@@ -15,6 +15,7 @@ import std.conv;
 
 import config;
 import simcore;
+import postprocess;
 
 int main(string[] args)
 {
@@ -28,8 +29,19 @@ int main(string[] args)
 Top-level arguments include the following.
 Argument:                            Comment:
 --------------------------------------------------------------------------------
+Run time and postprocessing:
   --job=<string>                     file names built from this string
   --tindx=<int>                      time index of the starting data (default 0)
+
+Postprocessing:
+  --time-slice                       generate a single-time slice for a variable
+  --xt-data                          generate an xt-dataset for a variable
+  --piston-history                   generate a history dataset for a piston
+  --var-name=<name>                  variable name
+  --tindx-end=<int>                  time index of the final data for xt-dataset
+  --pindx=<int>                      piston index for history generation
+  --output=<file-name>               write dataset to this file
+
   --help                             writes this help message
 --------------------------------------------------------------------------------
 ";
@@ -45,12 +57,24 @@ Argument:                            Comment:
     string jobName = "";
     int verbosityLevel = 1; // default to having a little information
     int tindxStart = 0;
+    int tindxEnd = 0;
+    bool xtData = false;
+    bool timeSlice = false;
+    bool pistonHistory = false;
+    int pistonIndx = 0;
     bool helpWanted = false;
+    string varName = "";
     try {
         getopt(args,
                "job", &jobName,
                "verbosity", &verbosityLevel,
                "tindx", &tindxStart,
+               "time-slice", &timeSlice,
+               "xt-data", &xtData,
+               "var-name", &varName,
+               "tindx-end", &tindxEnd,
+               "piston-history", &pistonHistory,
+               "pindx", &pistonIndx,
                "help", &helpWanted
                );
     } catch (Exception e) {
@@ -110,11 +134,24 @@ Argument:                            Comment:
     L1dConfig.job_name = jobName;
     L1dConfig.verbosity_level = verbosityLevel;
 
-    // Get to work.
-    init_simulation(tindxStart);
-    integrate_in_time();
-
-    if (verbosityLevel > 0) { writeln("Done simulation."); }
-
+    // Get to work to do one task...
+    if (xtData) {
+        writeln("Postprocessing to produce an xt-dataset.");
+        generate_xt_dataset();
+        if (verbosityLevel > 0) { writeln("Done generating an xt-dataset."); }
+    } else if (timeSlice) {
+        writeln("Postprocessing to extract slug data at a time instant.");
+        generate_time_slice();
+        if (verbosityLevel > 0) { writeln("Done extracting a time-instant."); }
+    } else if (pistonHistory) {
+        writeln("Postprocessing to extract piston history.");
+        generate_piston_history();
+        if (verbosityLevel > 0) { writeln("Done extracting a piston history."); }
+    } else {
+        writeln("Run a simulation.");
+        init_simulation(tindxStart);
+        integrate_in_time();
+        if (verbosityLevel > 0) { writeln("Done simulation."); }
+    }
     return exitFlag;
 } // end main
