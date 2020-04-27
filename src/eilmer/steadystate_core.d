@@ -677,8 +677,11 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         if ( (step % writeLoadsCount) == 0 || finalStep || step == GlobalConfig.write_loads_at_step) {
             if (GlobalConfig.is_master_task) {
                 init_current_loads_tindx_dir(step);
-                wait_for_current_tindx_dir(step);
-                write_boundary_loads_to_file(pseudoSimTime, step);
+            }
+            version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
+            wait_for_current_tindx_dir(step);
+            write_boundary_loads_to_file(pseudoSimTime, step);
+            if (GlobalConfig.is_master_task) {
                 update_loads_times_file(pseudoSimTime, step);
             }
         }
