@@ -216,7 +216,7 @@ class GlobalConfig(object):
         self.reactors = []
         self.reacting = False
         self.dt_init = 1.0e-6
-        self.cfl = 0.25
+        self.cfl = 0.5
         self.cfl_count = 10;
         self.print_count = 50;
         # If dt_plot_list is still an empty list when we write

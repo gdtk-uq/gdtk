@@ -14,6 +14,7 @@ import std.json;
 import std.format;
 import std.range;
 import std.math;
+import std.algorithm;
 
 import json_helper;
 import geom;
@@ -177,6 +178,9 @@ public:
             double xR = faces[i+1].x;
             LCell c = cells[i];
             c.L = xR-xL;
+            if (c.L <= 0.0) {
+                throw new Exception("Oops, adjacent faces have crossed over.");
+            }
             c.volume = 0.5*(faces[i].area+faces[i+1].area)*(c.L);
             c.xmid = 0.5*(xR+xL);
             daKT = tube1.eval(c.xmid);
@@ -385,19 +389,34 @@ public:
     @nogc
     int bad_cells()
     {
+        int bad_cell_count = 0;
         foreach (i, c; cells) {
-            LFace fL = faces[i];
-            LFace fR = faces[i+1];
-            // [TODO]
+            bool cell_is_bad = false;
+            if (c.L <= 0.0) { cell_is_bad = true; }
+            if (c.mass <= 0.0) { cell_is_bad = true; }
+            if (c.gas.rho <= 0.0) { cell_is_bad = true; }
+            if (c.gas.T <= 0.0) { cell_is_bad = true; }
+            if (c.gas.p <= 0.0) { cell_is_bad = true; }
+            if (cell_is_bad) {
+                bad_cell_count++;
+                debug { writeln("Bad cell at xmid=", c.xmid); }
+            }
         }
-        return 0;
+        return bad_cell_count;
     }
 
     @nogc
-    double compute_stable_time_step()
+    double suggested_time_step()
     {
-        double dt_allowed; // [TODO]
-        return dt_allowed;
+        LCell c = cells[0];
+        double signal_time = c.L / c.gas.a;
+        double smallest_transit_time = signal_time;
+        foreach (i; 1 .. cells.length) {
+            c = cells[i];
+            signal_time = c.L / c.gas.a;
+            smallest_transit_time = min(smallest_transit_time, signal_time);
+        }
+        return smallest_transit_time * L1dConfig.cfl_value;
     }
 
 } // end class GasSlug

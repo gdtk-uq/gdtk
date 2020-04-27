@@ -10,6 +10,7 @@ import std.string;
 import std.json;
 import std.file;
 import std.datetime;
+import std.algorithm;
 
 import json_helper;
 import geom;
@@ -103,7 +104,7 @@ void init_simulation(int tindx_start)
     L1dConfig.max_time = getJSONdouble(configData, "max_time", 0.0);
     L1dConfig.max_step = getJSONint(configData, "max_step", 0);
     L1dConfig.dt_init = getJSONdouble(configData, "dt_init", 0.0);
-    L1dConfig.cfl_value = getJSONdouble(configData, "cfl_value", 0.25);
+    L1dConfig.cfl_value = getJSONdouble(configData, "cfl_value", 0.5);
     L1dConfig.cfl_count = getJSONint(configData, "cfl_count", 10);
     L1dConfig.print_count = getJSONint(configData, "print_count", 50);
     L1dConfig.x_order = getJSONint(configData, "x_order", 0);
@@ -289,9 +290,20 @@ void integrate_in_time()
             writeln("Begin time step ", sim_data.step+1);
         }
         // 1. Set the size of the time step.
-        if (sim_data.step == 0 ||
-            (sim_data.step/L1dConfig.cfl_count) * L1dConfig.cfl_count == sim_data.step) {
-            // [TODO] check CFL and adjust sim_data.dt_global
+        if ((sim_data.step % L1dConfig.cfl_count) == 0) {
+            double dt_allowed = gasslugs[0].suggested_time_step();
+            foreach (i; 1 .. gasslugs.length) {
+                dt_allowed = min(dt_allowed, gasslugs[i].suggested_time_step());
+            }
+            if (dt_allowed < sim_data.dt_global) {
+                // Reduce immediately.
+                sim_data.dt_global = dt_allowed;
+            } else {
+                // Cautious increase, only if we have taken some steps.
+                if (sim_data.step > 0) {
+                    sim_data.dt_global += 0.5*(dt_allowed - sim_data.dt_global);
+                }
+            }
         }
         // 2. Update state of end conditions.
         foreach (ec; ecs) {
@@ -326,7 +338,7 @@ void integrate_in_time()
                     p.predictor_step(sim_data.dt_global);
                 }
             } catch (Exception e) {
-                writeln("Predictor step failed.");
+                writefln("Predictor step failed e.msg=%s", e.msg);
                 step_failed = true;
                 foreach (p; pistons) { p.restore_state(); }
                 foreach (s; gasslugs) { s.restore_state(); }
@@ -350,7 +362,7 @@ void integrate_in_time()
                         p.corrector_step(sim_data.dt_global);
                     }
                 } catch (Exception e) {
-                    writeln("Corrector step failed.");
+                    writefln("Corrector step failed e.msg=%s", e.msg);
                     step_failed = true;
                     foreach (p; pistons) { p.restore_state(); }
                     foreach (s; gasslugs) { s.restore_state(); }
