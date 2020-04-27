@@ -1180,23 +1180,7 @@ import gas.two_temperature_gasgiant: TwoTemperatureGasGiant;
 JSONValue read_config_file()
 {
     if (GlobalConfig.verbosity_level > 1) writeln("Read config file.");
-    string fileName = "config/" ~ GlobalConfig.base_file_name ~ ".config";
-    string content;
-    try {
-        content = readText(fileName);
-    } catch (Exception e) {
-        writeln("Failed to read config file: ", fileName);
-        writeln("Message is: ", e.msg);
-        exit(1);
-    }
-    JSONValue jsonData;
-    try {
-        jsonData = parseJSON!string(content);
-    } catch (Exception e) {
-        writeln("Failed to parse JSON from config file: ", fileName);
-        writeln("Message is: ", e.msg);
-        exit(1);
-    }
+    JSONValue jsonData = readJSONfile("config/"~GlobalConfig.base_file_name~".config");
     // Now that we have parsed JSON data, proceed to update those config values.
     // Note that some of the lines below are much longer than PJ would normally tolerate.
     // The trade-off for ease of reading with one line per entry won out...
@@ -1727,21 +1711,7 @@ JSONValue read_config_file()
 void read_control_file()
 {
     if (GlobalConfig.verbosity_level > 1) writeln("read_control_file()");
-    string fileName = "config/" ~ GlobalConfig.base_file_name ~ ".control";
-    string content;
-    try {
-        content = readText(fileName);
-    } catch (Exception e) {
-        writeln("Failed to read control file: ", fileName);
-        exit(1);
-    }
-    JSONValue jsonData;
-    try {
-        jsonData = parseJSON!string(content);
-    } catch (Exception e) {
-        writeln("Failed to parse JSON from control file: ", fileName);
-        exit(1);
-    }
+    JSONValue jsonData = readJSONfile("config/"~GlobalConfig.base_file_name~".control");
     mixin(update_double("dt_init", "dt_init"));
     mixin(update_double("dt_max", "dt_max"));
     mixin(update_double("cfl_value", "cfl_value"));

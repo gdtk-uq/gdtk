@@ -8,8 +8,31 @@
 module json_helper;
 
 import std.json;
+import std.file;
 import std.conv;
 import geom;
+
+JSONValue readJSONfile(string fileName)
+{
+    string content;
+    try {
+        content = readText(fileName);
+    } catch (Exception e) {
+        string msg = text("Failed to read JSON file: ", fileName);
+        msg ~= text(" Message is: ", e.msg);
+        throw new Exception(msg);
+    }
+    JSONValue jsonData;
+    try {
+        jsonData = parseJSON!string(content);
+    } catch (Exception e) {
+        string msg = text("Failed to parse JSON from file: ", fileName);
+        msg ~= text(" Message is: ", e.msg);
+        throw new Exception(msg);
+    }
+    return jsonData;
+} // end readJSONfile()
+
 
 // TODO: lots of repetition here, use templates.
 
