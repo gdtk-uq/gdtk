@@ -10,6 +10,8 @@ import std.string;
 import std.format;
 import std.json;
 import std.file;
+import std.algorithm;
+import std.math;
 
 import json_helper;
 import gas;
@@ -19,13 +21,64 @@ import gasslug;
 import lcell;
 import piston;
 import simcore;
+import misc;
 
 
-void generate_xt_dataset(string varName, int tindxStart, int tindxEnd)
+void generate_xt_dataset(string varName, int tindxStart, int tindxEnd, bool takeLog)
 {
-    writeln("Postprocessing to produce an xt-dataset.");
+    writeln("Postprocessing to produce an xt-dataset for flow variable=", varName);
+    double[int] times = readTimesFile();
+    int[] tindices = times.keys();
+    tindices.sort();
+    if (!tindices.canFind(tindxStart)) { tindxStart = tindices[0]; }
+    tindxEnd = min(tindxEnd, tindices[$-1]);
+    // We need just enough of the configuration to set up the gas slug array.
+    string dirName = L1dConfig.job_name;
+    JSONValue jsonData = readJSONfile(dirName~"/config.json");
+    auto configData = jsonData["config"];
+    L1dConfig.gas_model_files = getJSONstringarray(configData, "gas_model_files", []);
+    foreach (i, fileName; L1dConfig.gas_model_files) {
+        auto gm = init_gas_model(fileName);
+        gmodels ~= gm;
+    }
+    L1dConfig.nslugs = getJSONint(configData, "nslugs", 0);
+    foreach (i; 0 .. L1dConfig.nslugs) {
+        auto myData = jsonData[format("slug_%d", i)];
+        size_t indx = gasslugs.length;
+        gasslugs ~= new GasSlug(indx, myData);
+    }
+    // Build a GNUPlot-compatible file for each gas slug.
+    foreach (i, s; gasslugs) {
+        writeln("  Read state data for slug ", i);
+        File fp = File(L1dConfig.job_name~format("/slug-%04d-cells.data", i), "r");
+        File fpv = File(format("slug-%04d-xtdata-%s.data", i, varName), "w");
+        string header = format("# x  t  ");
+        if (takeLog) {
+            header ~= format("log10(%s)", varName);
+        } else {
+            header ~= varName;
+        }
+        fpv.writeln(header);
+        foreach (tindx; tindxStart .. tindxEnd+1) {
+            if (tindices.canFind(tindx)) {
+                writeln("  Get data for tindx=", tindx);
+                s.read_cell_data(fp, tindx);
+                foreach (c; s.cells) {
+                    double v;
+                    switch (varName) {
+                    case "p": v = c.gas.p; break;
+                    default: v = 0.0;
+                    }
+                    if (takeLog) { v = log10(v); }
+                    fpv.writefln("%e %e %e", c.xmid, times[tindx], v);
+                } // foreach c
+                fpv.writeln(""); // blank line after block of data
+            }
+        } // foreach tindx
+        fp.close();
+    } // foreach gasslug
     return;
-}
+} // end generate_xt_dataset()
 
 
 void extract_time_slice(int tindx)
@@ -47,7 +100,7 @@ void extract_time_slice(int tindx)
         gasslugs ~= new GasSlug(indx, myData);
     }
     foreach (i, s; gasslugs) {
-        writeln("Set up and read state data for slug ", i);
+        writeln("  Read state data for slug ", i);
         string fileName = L1dConfig.job_name ~ format("/slug-%04d-faces.data", i);
         File fp = File(fileName, "r");
         s.read_face_data(fp, tindx);
@@ -56,7 +109,7 @@ void extract_time_slice(int tindx)
         fp = File(fileName, "r");
         s.read_cell_data(fp, tindx);
         fp.close();
-        writeln("Writing state data for slug ", i);
+        writeln("  Writing state data for slug ", i);
         fileName = format("slug-%04d-tindx-%04d-faces.data", i, tindx);
         fp = File(fileName, "w");
         s.write_face_data(fp, tindx, true);
@@ -95,29 +148,3 @@ void assemble_piston_history(int pindx)
     fph.close();
     return;
 } // end assemble_piston_history()
-
-
-double[int] readTimesFile()
-{
-    // Returns the associative array of time values.
-    double[int] times;
-    string fileName = L1dConfig.job_name ~ "/times.data";
-    File fp = File(fileName, "r");
-    string txt = fp.readln().chomp(); // Discard header line
-    double previous_time = 0.0;
-    while (!fp.eof()) {
-        txt = fp.readln().chomp();
-        if (txt.length > 0) {
-            int tindx; double tme;
-            txt.formattedRead!"%d %e"(tindx, tme);
-            if (tme < previous_time) {
-                writeln("Warning: at tindx=%d, time=%e but previous=%e",
-                        tindx, tme, previous_time);
-            }
-            times[tindx] = tme;
-            previous_time = tme;
-        }
-    }
-    fp.close();
-    return times;
-} // end readTimesFile()

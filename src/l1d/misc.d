@@ -38,6 +38,7 @@ void skip_to_data_at_tindx(File fp, int tindx=0)
 
 double get_time_from_times_file(int tindx=0)
 {
+    // Returns the value of time at tindx.
     string fileName = L1dConfig.job_name ~ "/times.data";
     File fp = File(fileName, "r");
     string text = fp.readln().chomp();
@@ -52,3 +53,30 @@ double get_time_from_times_file(int tindx=0)
     // We should be at the line that contains the requested tindx.
     return to!double(items[1]);
 } // end get_time_from_times_file()
+
+
+double[int] readTimesFile()
+{
+    // Returns the associative array of all time values.
+    double[int] times;
+    string fileName = L1dConfig.job_name ~ "/times.data";
+    File fp = File(fileName, "r");
+    string txt = fp.readln().chomp(); // Discard header line
+    double previous_time = 0.0;
+    while (!fp.eof()) {
+        txt = fp.readln().chomp();
+        if (txt.length > 0) {
+            int tindx; double tme;
+            txt.formattedRead!"%d %e"(tindx, tme);
+            if (tme < previous_time) {
+                writeln("Warning: at tindx=%d, time=%e but previous=%e",
+                        tindx, tme, previous_time);
+            }
+            times[tindx] = tme;
+            previous_time = tme;
+        }
+    }
+    fp.close();
+    return times;
+} // end readTimesFile()
+

@@ -38,8 +38,11 @@ Argument:                            Comment:
 
   --tindx=<int>                      time index of the starting data (default 0)
   --tindx-end=<int>                  time index of the final data for xt-dataset
+                                       (default 9999)
   --pindx=<int>                      piston index for history generation
   --var-name=<name>                  flow variable name
+  --log10                            take logarithm of flow variable
+                                       Useful to get a better range for pressure.
 
   --verbosity=<int>                  level of commentary as the work is done
                                        0=very little written to console
@@ -63,9 +66,10 @@ Argument:                            Comment:
     bool pistonHistory = false;
     bool xtData = false;
     int tindx = 0;
-    int tindxEnd = 0;
+    int tindxEnd = 9999;
     int pistonIndx = 0;
     string varName = "";
+    bool takeLog = false;
     int verbosityLevel = 1; // default to commenting on major steps
     bool helpWanted = false;
     try {
@@ -79,6 +83,7 @@ Argument:                            Comment:
                "tindx-end", &tindxEnd,
                "pindx", &pistonIndx,
                "var-name", &varName,
+               "log10", &takeLog,
                "verbosity", &verbosityLevel,
                "help", &helpWanted
                );
@@ -149,7 +154,7 @@ Argument:                            Comment:
     } else if (pistonHistory) {
         assemble_piston_history(pistonIndx);
     } else if (xtData) {
-        generate_xt_dataset(varName, tindx, tindxEnd);
+        generate_xt_dataset(varName, tindx, tindxEnd, takeLog);
     } else {
         writeln("You did not ask for anything to be done.");
     }
