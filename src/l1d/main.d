@@ -25,7 +25,7 @@ int main(string[] args)
     // Be careful when editing them and try to limit the line length
     // to something that is likely to easily fit on a console,
     // say 80 characters.
-    string briefUsageMsg = "Usage: l1d4-run... [OPTION]...
+    string usageMsg = "Usage: l1d4 ... [OPTION]...
 Top-level arguments include the following.
 Argument:                            Comment:
 --------------------------------------------------------------------------------
@@ -54,7 +54,7 @@ Argument:                            Comment:
     //
     if ( args.length < 2 ) {
         writeln("Too few arguments.");
-        writeln(briefUsageMsg);
+        writeln(usageMsg);
         stdout.flush();
         exitFlag = 1;
         return exitFlag;
@@ -92,7 +92,7 @@ Argument:                            Comment:
         writeln("Arguments not processed: ");
         args = args[1 .. $]; // Dispose of program name in first argument.
         foreach (myarg; args) writeln("    arg: ", myarg);
-        writeln(briefUsageMsg);
+        writeln(usageMsg);
         stdout.flush();
         exitFlag = 1;
         return exitFlag;
@@ -108,7 +108,7 @@ Argument:                            Comment:
         version(flavour_fast) { writeln("fast"); }
     }
     if (helpWanted) {
-        writeln(briefUsageMsg);
+        writeln(usageMsg);
         stdout.flush();
         exitFlag = 0;
         return exitFlag;
@@ -137,7 +137,7 @@ Argument:                            Comment:
     }
     if (jobName.length == 0) {
         writeln("Need to specify a job name.");
-        writeln(briefUsageMsg);
+        writeln(usageMsg);
         exitFlag = 1;
         return exitFlag;
     }
