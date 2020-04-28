@@ -92,7 +92,7 @@ public:
         }
     } // end Piston constructor
 
-    void read_data(File fp, int tindx=0)
+    void read_data(File fp, int tindx)
     {
         string text = fp.readln().chomp();
         while (text.canFind("#")) { text = fp.readln().chomp(); }
@@ -111,9 +111,9 @@ public:
         hit_buffer = (to!int(items[5]) == 1);
     } // end read_data()
 
-    void write_data(File fp, int tindx=0)
+    void write_data(File fp, int tindx, bool write_header)
     {
-        if (tindx == 0) {
+        if (write_header) {
             fp.writeln("# tindx  x  vel  is_restrain  brakes_on  hit_buffer");
         }
         fp.writeln(format("%d %e %e %d %d %d", tindx, x, vel,

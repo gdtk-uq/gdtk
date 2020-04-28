@@ -4,7 +4,7 @@ Python program to set up a simulation for the Lagrangian 1D Flow Solver.
 
 It is intended for the user to define their particular facility and
 flow in terms of the data objects defined in this module.  As part of
-its initialization, this program will execute a user-specified input 
+its initialization, this program will execute a user-specified input
 script that contains, in Python, the user's code that defines both
 facility geometry and gas-path details.
 
@@ -721,11 +721,11 @@ class GasSlug():
                                                 self.cluster_strength)
         return
 
-    def write_face_data(self, fp, tindx=0):
+    def write_face_data(self, fp, tindx, write_header):
         """
         Write the initial state of all of the interfaces for the gas slug.
         """
-        if tindx == 0:
+        if write_header:
             fp.write("#   x   area\n")
         fp.write("# tindx %d\n" % tindx)
         for x in self.ifxs:
@@ -734,13 +734,13 @@ class GasSlug():
         fp.write("# end\n")
         return
 
-    def write_cell_data(self, fp, tindx=0):
+    def write_cell_data(self, fp, tindx, write_header):
         """
         Write the initial state of the cells within the gas slug in GNUPlot format.
         """
         nsp = self.gmodel.n_species
         nmodes = self.gmodel.n_modes
-        if tindx == 0:
+        if write_header:
             fp.write('# xmid  volume  vel  L_bar  rho  p  T  u  a')
             fp.write('  shear_stress  heat_flux')
             for i in range(nsp): fp.write('  massf[%d]' % i)
@@ -917,11 +917,11 @@ class Piston():
         fp.write('},\n') # presume that this dict not the last
         return
 
-    def write_data(self, fp, tindx=0):
+    def write_data(self, fp, tindx, write_header):
         """
         Write state data.
         """
-        if tindx == 0:
+        if write_header:
             fp.write("# tindx  x  vel  is_restrain  brakes_on  hit_buffer\n")
         fp.write("%d %e %e %d %d %d\n" %
                  (tindx, self.x0, self.vel0,
@@ -1055,11 +1055,11 @@ class Diaphragm(EndCondition):
         fp.write('},\n')
         return
 
-    def write_data(self, fp, tindx=0):
+    def write_data(self, fp, tindx, write_header):
         """
         Write state data.
         """
-        if tindx == 0:
+        if write_header:
             fp.write("# is_burst \n")
         fp.write("%d %d\n" % (tindx, self.is_burst))
         return
@@ -1377,23 +1377,23 @@ def write_initial_files():
         slug.construct_cells_and_faces()
         fileName = config.job_name + ('/slug-%04d-faces.data' % slug.indx)
         fp = open(fileName, 'w')
-        slug.write_face_data(fp, 0)
+        slug.write_face_data(fp, 0, True)
         fp.close()
         fileName = config.job_name + ('/slug-%04d-cells.data' %  slug.indx)
         fp = open(fileName, 'w')
-        slug.write_cell_data(fp, 0)
+        slug.write_cell_data(fp, 0, True)
         fp.close()
     #
     for piston in pistonList:
         fileName = config.job_name + ('/piston-%04d.data' % piston.indx)
         fp = open(fileName, 'w')
-        piston.write_data(fp, 0)
+        piston.write_data(fp, 0, True)
         fp.close()
     #
     for diaphragm in diaphragmList:
         fileName = config.job_name + ('/diaphragm-%04d.data' % diaphragm.indx)
         fp = open(fileName, 'w')
-        diaphragm.write_data(fp, 0)
+        diaphragm.write_data(fp, 0, True)
         fp.close()
     #
     fileName = config.job_name + '/times.data'

@@ -78,18 +78,18 @@ public:
         foreach (i; 0 .. ncells) { cells ~= new LCell(gmodel); }
     } // end constructor
 
-    void read_face_data(File fp, int tindx=0)
+    void read_face_data(File fp, int tindx)
     {
         skip_to_data_at_tindx(fp, tindx);
         foreach (i; 0 .. ncells+1) {
-            string text = fp.readln().chomp();
-            text.formattedRead!"%e %e"(faces[i].x, faces[i].area);
+            string txt = fp.readln().chomp();
+            txt.formattedRead!"%e %e"(faces[i].x, faces[i].area);
         }
     } // end read_face_data
 
-    void write_face_data(File fp, int tindx=0)
+    void write_face_data(File fp, int tindx, bool write_header)
     {
-        if (tindx == 0) { fp.writeln("#   x   area"); }
+        if (write_header) { fp.writeln("#   x   area"); }
         fp.writeln(format("# tindx %d", tindx));
         foreach (i; 0 .. ncells+1) {
             fp.writeln(format("%e %e", faces[i].x, faces[i].area));
@@ -97,15 +97,15 @@ public:
         fp.writeln("# end");
     } // end write_face_data()
 
-    void read_cell_data(File fp, int tindx=0)
+    void read_cell_data(File fp, int tindx)
     {
         skip_to_data_at_tindx(fp, tindx);
         int nsp = gmodel.n_species;
         int nmodes = gmodel.n_modes;
         foreach (j; 0 .. ncells) {
             LCell c = cells[j];
-            string text = fp.readln().chomp();
-            string[] items = text.split();
+            string txt = fp.readln().chomp();
+            string[] items = txt.split();
             int k = 0;
             c.xmid = to!double(items[k]); k++;
             c.volume = to!double(items[k]); k++;
@@ -133,11 +133,11 @@ public:
         }
     } // end read_cell_data()
 
-    void write_cell_data(File fp, int tindx=0)
+    void write_cell_data(File fp, int tindx, bool write_header)
     {
         int nsp = gmodel.n_species;
         int nmodes = gmodel.n_modes;
-        if (tindx == 0) {
+        if (write_header) {
             fp.write("# xmid  volume  vel  L_bar  rho  p  T  u  a");
             fp.write("  shear_stress  heat_flux");
             foreach (i; 0 .. nsp) { fp.write(format("  massf[%d]", i)); }

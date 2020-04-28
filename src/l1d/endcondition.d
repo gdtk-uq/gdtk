@@ -104,7 +104,7 @@ public:
         }
     } // end constructor
 
-    void read_data(File fp, int tindx=0)
+    void read_data(File fp, int tindx)
     {
         string text = fp.readln().chomp();
         while (text.canFind("#")) { text = fp.readln().chomp(); }
@@ -119,9 +119,9 @@ public:
         is_burst = (to!int(items[1]) == 1);
     } // end read_data()
 
-    void write_data(File fp, int tindx=0)
+    void write_data(File fp, int tindx, bool write_header)
     {
-        if (tindx == 0) { fp.writeln("# tindx  is_burst"); }
+        if (write_header) { fp.writeln("# tindx  is_burst"); }
         fp.writeln(format("%d %d", tindx, ((is_burst)?1:0)));
     } // end write_data()
 

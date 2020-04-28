@@ -8,7 +8,7 @@ DMD ?= dmd
 FLAVOUR ?= debug
 PLATFORM ?= linux
 
-PROGRAMS := l1d4-run l1d4-prep
+PROGRAMS := l1d4 l1d4-prep
 
 L1D_FILES := config.d simcore.d tube.d gasslug.d lcell.d \
 	piston.d endcondition.d misc.d postprocess.d
@@ -160,7 +160,7 @@ $(LIBLUA):
 $(LIBCEQ):
 	cd $(CEQ_DIR); make
 
-l1d4-run: main.d $(L1D_FILES) \
+l1d4: main.d $(L1D_FILES) \
 	$(GEOM_FILES) \
 	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
@@ -169,7 +169,7 @@ l1d4-run: main.d $(L1D_FILES) \
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		main.d > main_with_rev_string.d
-	$(DMD) $(DFLAGS) $(OF)l1d4-run \
+	$(DMD) $(DFLAGS) $(OF)l1d4 \
 		main_with_rev_string.d \
 		$(L1D_FILES) \
 		$(GEOM_FILES) \

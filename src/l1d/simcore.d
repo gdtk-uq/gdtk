@@ -420,18 +420,18 @@ void write_state_gasslugs_pistons_diaphragms()
         if (L1dConfig.verbosity_level >= 2) { writeln("  Writing state data for slug ", i); }
         fileName = L1dConfig.job_name ~ format("/slug-%04d-faces.data", i);
         fp = File(fileName, "a");
-        s.write_face_data(fp, sim_data.tindx);
+        s.write_face_data(fp, sim_data.tindx, false);
         fp.close();
         fileName = L1dConfig.job_name ~ format("/slug-%04d-cells.data", i);
         fp = File(fileName, "a");
-        s.write_cell_data(fp, sim_data.tindx);
+        s.write_cell_data(fp, sim_data.tindx, false);
         fp.close();
     }
     foreach (i, p; pistons) {
         if (L1dConfig.verbosity_level >= 2) { writeln("  Writing state of piston ", i); }
         fileName = L1dConfig.job_name ~ format("/piston-%04d.data", i);
         fp = File(fileName, "a");
-        p.write_data(fp, sim_data.tindx);
+        p.write_data(fp, sim_data.tindx, false);
         fp.close();
     }
     foreach (i, dia; diaphragms) {
@@ -440,7 +440,7 @@ void write_state_gasslugs_pistons_diaphragms()
         }
         fileName = L1dConfig.job_name ~ format("/diaphragm-%04d.data", i);
         fp = File(fileName, "a");
-        dia.write_data(fp, sim_data.tindx);
+        dia.write_data(fp, sim_data.tindx, false);
         fp.close();
     }
     return;
