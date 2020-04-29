@@ -214,6 +214,7 @@ FlowState_defaults = {
    divB = 0.0, -- magnetic field divergence parameter
    tke = 0.0, -- turbulent kinetic energy, (m/s)^^2
    omega = 1.0, -- turbulence frequency, 1/s
+   nuhat = 0.0, -- SA turbulent variable, (m^^2/s)
    mu_t = 0.0, -- turbulence viscosity, Pa.s
    k_t = 0.0, -- turbulence conductivity
    S = 0, -- shock indicator
@@ -237,7 +238,7 @@ function FlowState:new(o)
                                  "quality", "massf",
                                  "velx", "vely", "velz",
                                  "Bx", "By", "Bz", "psi", "divB",
-                                 "tke", "omega", "mu_t", "k_t", "S"})
+                                 "tke", "omega", "nuhat", "mu_t", "k_t", "S"})
    if not flag then
       error("Invalid name for item supplied to FlowState constructor.", 2)
    end
@@ -384,12 +385,15 @@ function initTurbulence(fs, turbulence_model_name)
         -- Check to ensure the user hasn't tried defining any turbulence stuff
         if fs.tke~=0.0 then error(string.format("Turbulence model is none but tke set: %.18e", fs.tke)) end
         if fs.omega~=1.0 then error(string.format("Turbulence model is none but omega set: %.18e", fs.omega)) end
+        if fs.nuhat~=0.0 then error(string.format("Turbulence model is none but nuhat set: %.18e", fs.nuhat)) end
         turb = {0.0, 1.0}
-    elseif turbulence_model_name == "k_omega" then -- Add check to make sure tke/omega defined
-        -- Check to ensure the user has tried defining turbulence stuff (Bad idea I think)
-        -- if fs.tke==0.0 then error(string.format("Turbulence model is k_omega but no tke set!", fs.tke)) end
-        -- if fs.omega==1.0 then error(string.format("Turbulence model is k_omega but no omega set!", fs.omega)) end
+    elseif turbulence_model_name == "k_omega" then
+        if fs.nuhat~=0.0 then error(string.format("Turbulence model is k_omega but nuhat set: %.18e", fs.nuhat)) end
         turb = {fs.tke, fs.omega}
+    elseif turbulence_model_name == "spalart_allmaras" then
+        if fs.tke~=0.0 then error(string.format("Turbulence model is spalart_allmaras but tke set: %.18e", fs.tke)) end
+        if fs.omega~=1.0 then error(string.format("Turbulence model is spalart_allmaras but omega set: %.18e", fs.omega)) end
+        turb = {fs.nuhat, 0.0}
     else
         error(string.format("Unsupported turbulence model: %s", turbulence_model_name))
     end

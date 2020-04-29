@@ -149,7 +149,7 @@ class noTurbulenceModel : TurbulenceModel {
             Set the interface value of each turbulent primitive,
             given the nearest cell above it inside the flow domain
         */
-        version(turbulence){
+        version(turbulence){ //TODO: ugly pls fix
             fs.turb[1] = cell.fs.turb[1];
             fs.turb[0] = cell.fs.turb[0];
         }
@@ -520,31 +520,26 @@ Object representing the Spalart Allmaras turbulence model
     2012, ICCFD7 paper
  - Model constants and nomenclature from "Simulation and Dynamics of
    Hypersonic Turbulent Combustion", 2019 PhD Thesis by Nick Gibbons
- - MODEL UNDER CONSTRUCTION: DO NOT USE!
 
  @author: Nick Gibbons (n.gibbons@uq.edu.au)
 */
 class saTurbulenceModel : TurbulenceModel {
     this (){
-        number Pr_t            = GlobalConfig.turbulence_prandtl_number;
-        number max_mu_t_factor = GlobalConfig.max_mu_t_factor;
-        this(Pr_t, max_mu_t_factor);
+        number Pr_t = GlobalConfig.turbulence_prandtl_number;
+        this(Pr_t);
     }
 
     this (const JSONValue config){
-        number Pr_t            = getJSONdouble(config, "turbulence_prandtl_number", 0.89);
-        number max_mu_t_factor = getJSONdouble(config, "max_mu_t_factor", 300.0);
-        this(Pr_t, max_mu_t_factor);
+        number Pr_t = getJSONdouble(config, "turbulence_prandtl_number", 0.89);
+        this(Pr_t);
     }
 
     this (saTurbulenceModel other){
-        this(other.Pr_t, other.max_mu_t_factor);
-        return;
+        this(other.Pr_t);
     }
 
-    this (number Pr_t, number max_mu_t_factor) {
+    this (number Pr_t) {
         this.Pr_t = Pr_t;
-        this.max_mu_t_factor = max_mu_t_factor ;
     }
 
     @nogc final override string modelName() const {return "spalart_allmaras";}
@@ -576,36 +571,50 @@ class saTurbulenceModel : TurbulenceModel {
 
         // No axisymmetric corrections since W is antisymmetric
         number Omega = 0.0;
-        foreach(i; 0 .. 3) foreach(j; 0 .. 3) Omega += 0.5*(grad.vel[i][j] - grad.vel[j][i]);
+        number Wij;
+        foreach(i; 0 .. 3) {
+            foreach(j; 0 .. 3) {
+                 Wij = 0.5*(grad.vel[i][j] - grad.vel[j][i]);
+                 Omega += Wij*Wij;
+            }
+        }
         Omega = sqrt(2.0*Omega);
 
         number fv1 = chi_cubed/(chi_cubed + cv1_cubed);
         number fv2 = 1.0 - chi/(1.0 + chi*fv1);
         number Sbar = nuhat/kappa/kappa/d/d*fv2;
 
-        // Clipping Equation: NNG 2.37
+        // Clipping Equation: NNG 2.37, Allmaras (11/12)
         number Shat;
+        number Sthing;
         if (Sbar >= -cv2*Omega) {
             Shat = Omega + Sbar;
         } else {
-            number Sthing = Omega*(cv2*cv2*Omega + cv3*Sbar)/((cv3-2.0*cv2)*Omega - Sbar);
+            Sthing = Omega*(cv2*cv2*Omega + cv3*Sbar)/((cv3-2.0*cv2)*Omega - Sbar);
             Shat = Omega + Sthing;
         }
         number ft2 = ct3*exp(-ct4*chi*chi);
         number production = rho*cb1*(1.0 - ft2)*Shat*nuhat;
 
-        number r = fmin(nuhat/Shat/kappa/kappa/d/d, 10.0);
+        number r;
+        if (Shat==0.0) {
+            r = 10.0;
+        } else {
+            r = fmin(nuhat/Shat/kappa/kappa/d/d, 10.0);
+        }
         number g = r + cw2*(pow(r,6.0) - r);
         number fw = (1.0 + cw3_to_the_sixth)/(pow(g,6.0) +  cw3_to_the_sixth);
         fw = g*pow(fw, 1.0/6.0);
         number destruction = rho*(cw1*fw - cb1/kappa/kappa*ft2)*(nuhat*nuhat/d/d);
 
-        // No axisymmetric corrections terms in dS/dxi dS/dxi
+        //// No axisymmetric corrections terms in dS/dxi dS/dxi
         number nuhat_gradient_squared = 0.0;
         foreach(i; 0 .. 3) nuhat_gradient_squared+=grad.turb[0][i]*grad.turb[0][i];
         number dissipation = cb2/sigma*rho*nuhat_gradient_squared;
 
-        source[0] = production - destruction + dissipation;
+        number T = production - destruction + dissipation;
+        source[0] = T;
+        source[1] = 0.0;
         return; 
     }
 
@@ -615,9 +624,9 @@ class saTurbulenceModel : TurbulenceModel {
         See equation (1) from Allmaras (2012)
         */ 
         number nuhat = fs.turb[0];
-        number rho = fs.gas.rho;
-        number nu = fs.gas.mu/rho;
-        number chi = nuhat/nu;
+        number rho= fs.gas.rho;
+        number mu = fs.gas.mu;
+        number chi = rho*nuhat/mu;
         number chi_cubed = chi*chi*chi;
         number fv1 = chi_cubed/(chi_cubed + cv1_cubed);
         number mu_t = rho*nuhat*fv1;
@@ -700,19 +709,21 @@ class saTurbulenceModel : TurbulenceModel {
         nuhat is set to zero at no slip walls in accord with Allmaras (2012), eqn 7
         */
         fs.turb[0] = 0.0;
+        fs.turb[1] = 0.0;
+        fs.mu_t = 0.0;
+        fs.k_t = 0.0;
         return;
     }
 
 private:
     immutable number Pr_t;
-    immutable number max_mu_t_factor;
     immutable string[1] _varnames = ["nuhat"];
     immutable number[1] _varlimits = [0.0];
     immutable double sigma = 2.0/3.0;
     immutable double cb1 = 0.1355;
     immutable double cb2 = 0.622;
     immutable double kappa = 0.41;
-    immutable double cw1 = cb1/kappa/kappa + (1+cb1)/sigma;
+    immutable double cw1 = cb1/kappa/kappa + (1.0+cb2)/sigma;
     immutable double cw2 = 0.3;
     immutable double cw3 = 2.0;
     immutable double cw3_to_the_sixth = cw3*cw3*cw3*cw3*cw3*cw3;
@@ -728,7 +739,7 @@ private:
 protected:
     @nogc number compute_d(const FlowState fs, const FlowGradients grad, number dwall) const { return dwall; }
 
-    @nogc bool is_nuhat_valid(const number nuhat) const {
+    @nogc final bool is_nuhat_valid(const number nuhat) const {
         if (!isFinite(nuhat.re)) {
             debug { writeln("Turbulence nuhat invalid number ", nuhat); }
             return false;
@@ -761,6 +772,9 @@ version(turbulence){
     case "k_omega":
         turbulence_model = new kwTurbulenceModel(config);
         break;
+    case "spalart_allmaras":
+        turbulence_model = new saTurbulenceModel(config);
+        break;
 }
     default:
         string errMsg = format("The turbulence model '%s' is not available.", turbulence_model_name);
@@ -786,6 +800,9 @@ TurbulenceModel init_turbulence_model(const string turbulence_model_name)
 version(turbulence){
     case "k_omega":
         turbulence_model = new kwTurbulenceModel();
+        break;
+    case "spalart_allmaras":
+        turbulence_model = new saTurbulenceModel();
         break;
 }
     default:
