@@ -894,7 +894,7 @@ public:
                     if (outgoing_solidstate_buf.length < ne) { outgoing_solidstate_buf.length = ne; }
                     size_t ii = 0;
                     foreach (c; outgoing_mapped_cells) {
-                        foreach (j; 0 .. this_blk.myConfig.n_grid_time_levels) {
+                        foreach (j; 0 .. this_blk.myConfig.n_flow_time_levels) {
                             outgoing_solidstate_buf[ii++] = c.e[j];
                             outgoing_solidstate_buf[ii++] = c.dedt[j];
                         }

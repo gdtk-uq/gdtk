@@ -55,6 +55,7 @@ public:
     abstract void computePrimaryCellGeometricData();
 
     abstract void applyPreSpatialDerivActionAtBndryFaces(double t, int tLevel);
+    abstract void applyPreSpatialDerivActionAtBndryCells(double t, int tLevel);
     abstract void applyPostFluxAction(double t, int tLevel);
     abstract void computeSpatialDerivatives(int ftl);
     abstract void computeFluxes();

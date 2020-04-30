@@ -2789,10 +2789,6 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             if (blk.active) { blk.applyPreReconAction(SimState.time, gtl, ftl); }
         }
     }
-    // And we'll do a first pass on solid domain bc's too in case we need up-to-date info.
-    foreach (sblk; parallel(localSolidBlocks, 1)) {
-        if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, ftl); }
-    }
     // We've put this detector step here because it needs the ghost-cell data
     // to be current, as it should be just after a call to apply_convective_bc().
     if (GlobalConfig.do_shock_detect) {
@@ -2865,7 +2861,6 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         // ghost cells along block-block boundaries have the most
         // recent mu_t and k_t values.
         exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
-        exchange_ghost_cell_gas_solid_boundary_data();
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
             if (blk.active) {
                 blk.viscous_flux();
@@ -2937,7 +2932,24 @@ void gasdynamic_explicit_increment_with_fixed_grid()
     }
     //
     if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.tight) {
-        // Next do solid domain update IMMEDIATELY after at same flow time level
+        // Next do solid domain update IMMEDIATELY after at same flow time leve
+        //exchange_ghost_cell_gas_solid_boundary_data();
+        if (GlobalConfig.apply_bcs_in_parallel) {
+            foreach (sblk; parallel(localSolidBlocks, 1)) {
+                if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, ftl); }
+            }
+            foreach (sblk; parallel(localSolidBlocks, 1)) {
+                if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryCells(SimState.time, ftl); }
+            }
+        } else {
+            foreach (sblk; localSolidBlocks) {
+                if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, ftl); }
+            }
+            foreach (sblk; localSolidBlocks) {
+                if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryCells(SimState.time, ftl); }
+            }
+        }
+
         foreach (sblk; parallel(localSolidBlocks, 1)) {
             if (!sblk.active) continue;
 	    sblk.averageTemperatures();
@@ -2992,22 +3004,6 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         } else {
             foreach (blk; localFluidBlocksBySize) {
                 if (blk.active) { blk.applyPreReconAction(SimState.time, gtl, ftl); }
-            }
-        }
-        // Let's set up solid domain bc's also before changing any flow properties.
-        if (GlobalConfig.apply_bcs_in_parallel) {
-            foreach (sblk; parallel(localSolidBlocks, 1)) {
-                if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, ftl); }
-            }
-            foreach (sblk; parallel(localSolidBlocks, 1)) {
-                if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl); }
-            }
-        } else {
-            foreach (sblk; localSolidBlocks) {
-                if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, ftl); }
-            }
-            foreach (sblk; localSolidBlocks) {
-                if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl); }
             }
         }
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
@@ -3075,7 +3071,6 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             // ghost cells along block-block boundaries have the most
             // recent mu_t and k_t values.
             exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
-            exchange_ghost_cell_gas_solid_boundary_data();
             foreach (blk; parallel(localFluidBlocksBySize,1)) {
                 if (blk.active) {
                     blk.viscous_flux();
@@ -3146,6 +3141,23 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         //
         if ( GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.tight ) {
             // Do solid domain update IMMEDIATELY after at same flow time level
+            //exchange_ghost_cell_gas_solid_boundary_data();
+            if (GlobalConfig.apply_bcs_in_parallel) {
+                foreach (sblk; parallel(localSolidBlocks, 1)) {
+                    if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, ftl); }
+            }
+                foreach (sblk; parallel(localSolidBlocks, 1)) {
+                    if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryCells(SimState.time, ftl); }
+                }
+            } else {
+                foreach (sblk; localSolidBlocks) {
+                    if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, ftl); }
+                }
+                foreach (sblk; localSolidBlocks) {
+                    if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryCells(SimState.time, ftl); }
+                }
+            }
+
             foreach (sblk; parallel(localSolidBlocks, 1)) {
                 if (!sblk.active) continue;
                 sblk.averageTemperatures();
@@ -3201,22 +3213,6 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         } else {
             foreach (blk; localFluidBlocksBySize) {
                 if (blk.active) { blk.applyPreReconAction(SimState.time, gtl, ftl); }
-            }
-        }
-        // Let's set up solid domain bc's also before changing any flow properties.
-        if (GlobalConfig.apply_bcs_in_parallel) {
-            foreach (sblk; parallel(localSolidBlocks, 1)) {
-                if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, ftl); }
-            }
-            foreach (sblk; parallel(localSolidBlocks, 1)) {
-                if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl); }
-            }
-        } else {
-            foreach (sblk; localSolidBlocks) {
-                if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, ftl); }
-            }
-            foreach (sblk; localSolidBlocks) {
-                if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl); }
             }
         }
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
@@ -3355,6 +3351,22 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         //
         if ( GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.tight ) {
             // Do solid domain update IMMEDIATELY after at same flow time level
+            exchange_ghost_cell_gas_solid_boundary_data();
+            if (GlobalConfig.apply_bcs_in_parallel) {
+                foreach (sblk; parallel(localSolidBlocks, 1)) {
+                    if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, ftl); }
+            }
+            foreach (sblk; parallel(localSolidBlocks, 1)) {
+                if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryCells(SimState.time, ftl); }
+            }
+            } else {
+                foreach (sblk; localSolidBlocks) {
+                    if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, ftl); }
+                }
+                foreach (sblk; localSolidBlocks) {
+                if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryCells(SimState.time, ftl); }
+                }
+            }
             foreach (sblk; parallel(localSolidBlocks, 1)) {
                 if (!sblk.active) continue;
                 sblk.averageTemperatures();

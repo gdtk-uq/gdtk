@@ -938,7 +938,7 @@ public:
                 }
                 size_t ii = 0;
                 foreach (c; myBC.solidCells) {
-                    foreach (j; 0 .. other_blk.myConfig.n_grid_time_levels) {
+                    foreach (j; 0 .. other_blk.myConfig.n_flow_time_levels) {
                         c.e[j] = incoming_solidstate_buf[ii++];
                         c.dedt[j] = incoming_solidstate_buf[ii++];
                     }

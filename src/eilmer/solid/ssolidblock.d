@@ -781,6 +781,18 @@ public:
         }
     }
 
+    override void applyPreSpatialDerivActionAtBndryCells(double t, int tLevel)
+    {
+        bc[Face.north].applyPreSpatialDerivActionAtBndryCells(t, tLevel);
+        bc[Face.east].applyPreSpatialDerivActionAtBndryCells(t, tLevel);
+        bc[Face.south].applyPreSpatialDerivActionAtBndryCells(t, tLevel);
+        bc[Face.west].applyPreSpatialDerivActionAtBndryCells(t, tLevel);
+        if ( myConfig.dimensions == 3 ) {
+            bc[Face.top].applyPreSpatialDerivActionAtBndryCells(t, tLevel);
+            bc[Face.bottom].applyPreSpatialDerivActionAtBndryCells(t, tLevel);
+        }
+    }
+    
     override void applyPostFluxAction(double t, int tLevel)
     {
         bc[Face.north].applyPostFluxAction(t, tLevel);
