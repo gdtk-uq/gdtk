@@ -1,74 +1,99 @@
 -- ramp.lua
--- KD, 24-July-2018
--- Supersonic Ramp from Marques and Pereira paper 
-
-config.title = "2D Supersonic Ramp, air at Mach 2.0"
+-- KD, 29-Nov-2017
+-- Supersonic Ramp from
+--
+-- Marques et al.
+-- Comparison of Matrix-free Acceleration Techniques in Compressible Navier-Stokes Calculations
+-- International Journal for Numerical Methods in Engineering
+-- 2004, DOI: 10.1002/nme.1076
+--
+config.title = "Supersonic Ramp"
 print(config.title)
 config.dimensions = 2
 
 -- set gas model
 setGasModel('ideal-air-gas-model.lua')
 
--- Define flow conditions
-g = 1.4 -- gamma
+-- inflow conditions
+g = 1.4   -- gamma
 R = 287.0 -- J/kg.K
 Mach = 2.0
-T_inf = 300.0 -- K
+T_inf = 300.0   -- K
 p_inf = 10000.0 -- Pa
-a = math.sqrt(g*R*T_inf)
-u_inf = Mach*a
-inflow  = FlowState:new{p=p_inf, velx=u_inf, vely=0.0, T=T_inf}
+a = math.sqrt(g*R*T_inf) -- speed of sound, m/s
+u_inf = Mach*a -- m/s
 
--- Define grid
-fileName = string.format("supersonic_ramp.su2")
-grid = UnstructuredGrid:new{filename=fileName, fmt="su2text", scale=1.0}
+inflow  = FlowState:new{p=p_inf, velx=u_inf, vely=0.0, T=T_inf}
+initial  = inflow
+
+nblocks = 4
+grids = {}
+for i=0,nblocks-1 do
+   --fileName = string.format("su2-grid/ramp_grid.su2", i)
+   fileName = string.format("su2-grid/block_%d_ramp_grid.su2", i) -- uncomment for multi-block simulations
+   grids[i] = UnstructuredGrid:new{filename=fileName, fmt="su2text", scale=1.0}
+end
 
 -- set boundary conditions (METIS_INTERIOR unused for single block simulations)
-my_bcDict = {INFLOW=InFlowBC_Supersonic:new{flowCondition=inflow},
-	     OUTFLOW=OutFlowBC_Simple:new{},
-	     PARALLEL=OutFlowBC_Simple:new{},
-	     WALL=WallBC_WithSlip:new{}}
+my_bcDict = {INFLOW         = InFlowBC_Supersonic:new{flowCondition=inflow},
+	     OUTFLOW        = OutFlowBC_Simple:new{},
+	     PARALLEL       = OutFlowBC_Simple:new{},
+	     WALL           = WallBC_WithSlip0:new{},
+	     METIS_INTERIOR = ExchangeBC_MappedCell:new{cell_mapping_from_file=true, list_mapped_cells=false}}
 
 -- Define fluidBlocks
-blk = UBlock:new{grid=grid, fillCondition=inflow, bcDict=my_bcDict}
+blks = {}
+for i=0,nblocks-1 do
+   blks[i] = FluidBlock:new{grid=grids[i], fillCondition=initial, bcDict=my_bcDict}
+end
 
--- Set simulation parameters
-config.unstructured_limiter = "van_albada"
-config.flux_calculator = "roe"
+-- output settings
 config.print_count = 40
--- Set reconstruction parameters
+
+-- invsicid flux calc settings
+config.flux_calculator = "ausmdv"
 config.interpolation_order = 2
 config.extrema_clipping = false
-config.use_extended_stencil = false
 config.apply_limiter = true
-config.suppress_reconstruction_at_boundaries = true
+config.unstructured_limiter = "venkat"
+config.venkat_K_value = 0.5
+config.freeze_limiter_on_step = 700
 config.thermo_interpolator = "rhop"
--- Set steady-state solver parameters
+
 SteadyStateSolver{
+   -- preconditioner
    use_preconditioner = true,
-   use_scaling = false,
+   precondition_matrix_type = "ilu",
+   ilu_fill = 0,
+   frozen_preconditioner_count = 50,
+
+   -- scaling
+   use_scaling = true,
    use_complex_matvec_eval = true,
-   -- sigma = 1.0e-6, -- presently it's computed internally
-   number_pre_steps = 0,
+
+   -- start-up and convergence settings
+   number_pre_steps = 10,
    number_total_steps = 2000,
-   stop_on_relative_global_residual = 1.0e-12,
-   -- Settings for FGMRES iterative solver
-   max_outer_iterations = 30,
-   --   number_inner_iterations = 10, -- not needed is preconditioning is false
-   max_restarts = 10,
+   stop_on_relative_global_residual = 1.0e-10,
+
+   -- GMRES settings
+   max_outer_iterations = 5,
+   max_restarts = 5,
+
    -- Settings for start-up phase
-   number_start_up_steps = 10,
+   number_start_up_steps = 150,
    cfl0 = 1.0,
-   eta0 = 0.5,
-   tau0 = 0.8,
-   sigma0 = 1.0e-50,
+   eta0 = 0.1,
+   tau0 = 1.0,
+   sigma0 = 1.0e-30,
+
    -- Settings for inexact Newton phase
-   cfl1 = 10.0,
-   tau1 = 0.8,
-   sigma1 = 1.0e-50,
-   eta1 = 0.01,
-   eta1_min = 0.01,
+   cfl1 = 1.0,
+   tau1 = 1.0,
+   sigma1 = 1.0e-30,
+   eta1 = 0.1,
    eta_strategy = "constant",
+
    -- Settings control write-out
    snapshots_count = 10,
    number_total_snapshots = 5,

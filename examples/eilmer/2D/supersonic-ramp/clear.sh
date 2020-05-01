@@ -1,3 +1,4 @@
 #!/bin/bash
 # clear.sh
-rm -r ideal-air-gas-model.lua plot solid grid hist flow loads *config *control *list *times *~ *bak *saved *mpimap *dat
+rm -r limiter-values residuals plot solid grid hist flow loads config
+rm *~ *bak *saved *dat ideal-air-gas-model.lua
