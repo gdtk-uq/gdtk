@@ -7,7 +7,7 @@
  *          by declaring some of the "in Vector3" parameters as "ref const(Vector3)".
  *          This has been somewhat successful, however, a few "in" parameters remain
  *          so that the vector arithmetic is a lot cleaner in the code.
- *          Effectively this hides the creation of Vector3 temporaries 
+ *          Effectively this hides the creation of Vector3 temporaries
  *          that would otherwise have to appear explicitly in the code.
  *          2017-11-26 Repackage to make better use of the file system with smaller files.
  *          2018-05-29 Complex numbers accommodated.
@@ -59,7 +59,7 @@ struct Vector3 {
                 _p[2] = p2;
             }
     } // end version complex_numbers
-    
+
     @nogc this(in Vector3 other)
     {
         _p[0] = other._p[0];
@@ -68,7 +68,7 @@ struct Vector3 {
     }
 
     // Postblit constructor (Alexandrescu Section 7.1.3.4) so that
-    // the copy of the struct can become completely independent of 
+    // the copy of the struct can become completely independent of
     // its source.
     this(this)
     {
@@ -82,30 +82,30 @@ struct Vector3 {
     @nogc @property number z() const { return _p[2]; }
     // Note that the following three properties hand out references
     // to the elements, so that we may change their values.
-    @nogc @property ref number refx() { return _p[0]; }
-    @nogc @property ref number refy() { return _p[1]; }
-    @nogc @property ref number refz() { return _p[2]; }
+    @nogc @property ref number refx() return { return _p[0]; }
+    @nogc @property ref number refy() return { return _p[1]; }
+    @nogc @property ref number refz() return { return _p[2]; }
 
     @property Vector3 dup() const
     {
         return Vector3(this);
     }
 
-    @nogc ref Vector3 set(ref const(Vector3) other)
+    @nogc ref Vector3 set(ref const(Vector3) other) return
     // Convenience function for setting the components of an existing object.
     {
         _p[0] = other._p[0]; _p[1] = other._p[1]; _p[2] = other._p[2];
         return this;
     }
 
-    @nogc ref Vector3 set(Vector3* other)
+    @nogc ref Vector3 set(Vector3* other) return
     // Convenience function for setting the components of an existing object.
     {
         _p[0] = other._p[0]; _p[1] = other._p[1]; _p[2] = other._p[2];
         return this;
     }
 
-    @nogc ref Vector3 set(number x, number y, number z=to!number(0.0))
+    @nogc ref Vector3 set(number x, number y, number z=to!number(0.0)) return
     // Convenience function for setting the components of an existing object.
     // Note that we may supply just the x,y coordinates.
     {
@@ -115,7 +115,7 @@ struct Vector3 {
 
     version(complex_numbers) {
         // We want to retain the flavour with double numbers.
-        @nogc ref Vector3 set(double x, double y, double z=0.0)
+        @nogc ref Vector3 set(double x, double y, double z=0.0) return
         // Convenience function for setting the components of an existing object.
         // Note that we may supply just the x,y coordinates.
         {
@@ -123,15 +123,15 @@ struct Vector3 {
             return this;
         }
     } // end version complex_numbers
-    
-    @nogc ref Vector3 clear()
+
+    @nogc ref Vector3 clear() return
     // Convenience function for setting-to-zero the components of an existing object.
     {
         _p[0] = 0.0; _p[1] = 0.0; _p[2] = 0.0;
         return this;
     }
 
-    @nogc ref Vector3 add(ref const(Vector3) other)
+    @nogc ref Vector3 add(ref const(Vector3) other) return
     // Convenience function for adding the components of an existing object.
     // This avoids the temporary associated with += (below)
     {
@@ -139,7 +139,7 @@ struct Vector3 {
         return this;
     }
 
-    @nogc ref Vector3 add(Vector3* other)
+    @nogc ref Vector3 add(Vector3* other) return
     // Convenience function for adding the components of an existing object.
     // This avoids the temporary associated with += (below)
     {
@@ -147,7 +147,7 @@ struct Vector3 {
         return this;
     }
 
-    @nogc ref Vector3 add(ref const(Vector3) other, number factor)
+    @nogc ref Vector3 add(ref const(Vector3) other, number factor) return
     // Convenience function for adding the components of an existing object, scaled.
     // This avoids the temporary associated with += (below)
     {
@@ -155,7 +155,7 @@ struct Vector3 {
         return this;
     }
 
-    @nogc ref Vector3 add(Vector3* other, number factor)
+    @nogc ref Vector3 add(Vector3* other, number factor) return
     // Convenience function for adding the components of an existing object, scaled.
     // This avoids the temporary associated with += (below)
     {
@@ -163,18 +163,18 @@ struct Vector3 {
         return this;
     }
 
-    @nogc ref Vector3 scale(number factor)
+    @nogc ref Vector3 scale(number factor) return
     // Convenience function for scaling the components of an existing object.
     // This avoids the temporary associated with *= (below)
     {
         _p[0] *= factor; _p[1] *= factor; _p[2] *= factor;
         return this;
     }
-    
+
     version(complex_numbers) {
         // We want to retain the flavour with double numbers.
 
-        @nogc ref Vector3 add(ref const(Vector3) other, double factor)
+        @nogc ref Vector3 add(ref const(Vector3) other, double factor) return
         // Convenience function for adding the components of an existing object, scaled.
         // This avoids the temporary associated with += (below)
         {
@@ -182,7 +182,7 @@ struct Vector3 {
             return this;
         }
 
-        @nogc ref Vector3 add(Vector3* other, double factor)
+        @nogc ref Vector3 add(Vector3* other, double factor) return
         // Convenience function for adding the components of an existing object, scaled.
         // This avoids the temporary associated with += (below)
         {
@@ -190,7 +190,7 @@ struct Vector3 {
             return this;
         }
 
-        @nogc ref Vector3 scale(double factor)
+        @nogc ref Vector3 scale(double factor) return
         // Convenience function for scaling the components of an existing object.
         // This avoids the temporary associated with *= (below)
         {
@@ -198,7 +198,7 @@ struct Vector3 {
             return this;
         }
     } // end version complex_numbers
-    
+
     string toString() const
     {
         return "Vector3(" ~ to!string(_p) ~ ")";
@@ -286,7 +286,7 @@ struct Vector3 {
             return result;
         }
     } // end version complex_numbers
-    
+
     Vector3 opBinary(string op)(in number rhs) const
         if (op == "/")
     {
@@ -408,7 +408,7 @@ struct Vector3 {
 
     @nogc number dot(ref const(Vector3) other) const
     {
-        return this._p[0] * other._p[0] + 
+        return this._p[0] * other._p[0] +
             this._p[1] * other._p[1] +
             this._p[2] * other._p[2];
     }
@@ -419,7 +419,7 @@ struct Vector3 {
      * Rotate v from the global xyz coordinate system into the local frame
      * defined by the orthogonal unit vectors n,t1,t2.
      *
-     * We assume, without checking, that these vectors do nicely define 
+     * We assume, without checking, that these vectors do nicely define
      * such a local system.
      */
     @nogc void transform_to_local_frame(ref const(Vector3) n,
@@ -513,7 +513,7 @@ struct Vector3 {
      * Compute mirror-image location for plane defined by point and normal.
      */
     @nogc ref Vector3 mirror_image(ref const(Vector3) point,
-                                   ref const(Vector3) normal)
+                                   ref const(Vector3) normal) return
     {
         Vector3 n = Vector3(normal.x, normal.y, normal.z); n.normalize();
         // Construct tangents to the plane.
@@ -530,7 +530,7 @@ struct Vector3 {
     /**
      * Rotate point about the z-axis by angle dtheta, in radians.
      */
-    @nogc ref Vector3 rotate_about_zaxis(double dtheta)
+    @nogc ref Vector3 rotate_about_zaxis(double dtheta) return
     {
         number x = _p[0];
         number y = _p[1];
@@ -544,7 +544,7 @@ struct Vector3 {
     /**
      * Alternative implementation for rotation in (x,y)-plane.
      */
-    @nogc ref Vector3 rotate2d(double dtheta)
+    @nogc ref Vector3 rotate2d(double dtheta) return
     {
         number x = _p[0];
         number y = _p[1];

@@ -48,7 +48,7 @@ int project_onto_plane(ref Vector3 q, ref const(Vector3) qr,
     // See Section 7.2 in
     // J. O'Rourke (1998)
     // Computational Geometry in C (2nd Ed.)
-    // Cambridge Uni Press 
+    // Cambridge Uni Press
     // See 3D CFD workbook p17, 25-Jan-2006
 
     // Define a plane Ax + By + Cz = D using the corners of the triangle abc.
@@ -68,11 +68,11 @@ int project_onto_plane(ref Vector3 q, ref const(Vector3) qr,
     } else {
         q = q + (numer/denom) * qr;
         return 0;  // point q has been projected onto the plane.
-    } 
+    }
 } // end project_onto_plane()
 
 /// Map space so that a neutral plane wraps onto a cylinder of radius H.
-ref Vector3 map_neutral_plane_to_cylinder(ref Vector3 p, number H)
+void map_neutral_plane_to_cylinder(ref Vector3 p, number H)
 {
     // The axis of the hypothetical cylinder coincides with the x-axis thus
     // H is also the distance of the neutral plane above the x-axis.
@@ -81,7 +81,7 @@ ref Vector3 map_neutral_plane_to_cylinder(ref Vector3 p, number H)
         number theta = p.y / H;
         p.set(p.x, p.z*sin(theta), p.z*cos(theta));
     }
-    return p;
+    return;
 }
 
 /**
@@ -95,10 +95,10 @@ ref Vector3 map_neutral_plane_to_cylinder(ref Vector3 p, number H)
  *  p0----p1
 */
 @nogc
-number[3] barycentricCoords(ref const(Vector3) p, ref const(Vector3) p0, 
-                            ref const(Vector3) p1, ref const(Vector3) p2) 
+number[3] barycentricCoords(ref const(Vector3) p, ref const(Vector3) p0,
+                            ref const(Vector3) p1, ref const(Vector3) p2)
 {
-    // Transcribe equations from Wikipedia article "Barycentric coordinate system", 
+    // Transcribe equations from Wikipedia article "Barycentric coordinate system",
     // subsection on "Conversion between barycentric and Cartesian coordinates".
     number[3] lmbda;
     number numer0 = (p1.y-p2.y)*(p.x-p2.x) + (p2.x-p1.x)*(p.y-p2.y);
@@ -136,7 +136,7 @@ bool is_outside_triangle(number[3] lmbda, double tol=1.0e-10)
 @nogc
 number[4] barycentricCoords(ref const(Vector3) p,
                             ref const(Vector3) p0, ref const(Vector3) p1,
-                            ref const(Vector3) p2, ref const(Vector3) p3) 
+                            ref const(Vector3) p2, ref const(Vector3) p3)
 {
     // Compute the normalized barycentric coordinates for a point within
     // a convex quadrilateral polygon, as described in Michael Floater's
@@ -208,7 +208,7 @@ version(projection_test) {
             Vector3 q0 = Vector3(q);
             // reset q vector
             q = Vector3(0.0, 0.0, 1.0); // start point
-            
+
             // Complex Step
             number hIm = complex(0.0, 1.0e-20); // complex step-size
             qr.refz += hIm; // perturb in complex plane
@@ -221,7 +221,7 @@ version(projection_test) {
             // reset q & qr vectors
             qr = Vector3(3.0, 3.0, -3.0); // direction
             q = Vector3(0.0, 0.0, 1.0); // start point
-                        
+
             // Real Step
             double hRe = 1.0e-06; // real step-size
             qr.refz += hRe; // perturb in real plane
@@ -230,11 +230,10 @@ version(projection_test) {
             qDerivReal[0] = (q.x.re-q0.x.re)/hRe;
             qDerivReal[1] = (q.y.re-q0.y.re)/hRe;
             qDerivReal[2] = (q.z.re-q0.z.re)/hRe;
-            
+
             foreach( idx; 0..3) assert(std.math.approxEqual(qDerivCmplx[idx], qDerivReal[idx]), failedUnitTest());
         }
-        
-        
+
         // projection onto a cylinder.
         Vector3 myp = Vector3(1.0, 1.0, 1.0);
         map_neutral_plane_to_cylinder(myp, to!number(1.0));
@@ -244,11 +243,11 @@ version(projection_test) {
         version(complex_numbers) {
             // store original projected point myp
             Vector3 myp0 = Vector3(myp);
-            
+
             // reset myp vector
             myp = Vector3(1.0, 1.0, 1.0); // start point
-            
-            // Complex Step 
+
+            // Complex Step
             myp.refz += hIm; // perturb in complex plane, reuse hIm
             map_neutral_plane_to_cylinder(myp, to!number(1.0));
             qDerivCmplx[0] = myp.x.im/hIm.im;
@@ -257,7 +256,7 @@ version(projection_test) {
 
             // reset myp vector
             myp = Vector3(1.0, 1.0, 1.0); // start point
-                        
+
             // Real Step
             myp.refz += hRe; // perturb in real plane, reuse hRe
             map_neutral_plane_to_cylinder(myp, to!number(1.0));
@@ -273,8 +272,8 @@ version(projection_test) {
         Vector3 p2 = Vector3(0.5, std.math.sin(60.0*std.math.PI/180.0));
         Vector3 p = (p0+p1+p2)/3.0;
         number[3] bcc = barycentricCoords(p, p0, p1, p2);
-        assert(approxEqual(bcc[0].re, 1.0/3.0), failedUnitTest()); 
-        assert(approxEqual(bcc[1].re, 1.0/3.0), failedUnitTest()); 
+        assert(approxEqual(bcc[0].re, 1.0/3.0), failedUnitTest());
+        assert(approxEqual(bcc[1].re, 1.0/3.0), failedUnitTest());
         assert(approxEqual(bcc[2].re, 1.0/3.0), failedUnitTest());
         assert(!is_outside_triangle(bcc), failedUnitTest());
         // Now move the point down to the bottom edge of the triangle.
@@ -293,8 +292,8 @@ version(projection_test) {
         Vector3 p3 = Vector3(0.0, 1.0);
         p = (p0+p1+p2+p3)/4.0;
         number[4] bcc4 = barycentricCoords(p, p0, p1, p2, p3);
-        assert(approxEqual(bcc4[0].re, 0.25), failedUnitTest()); 
-        assert(approxEqual(bcc4[1].re, 0.25), failedUnitTest()); 
+        assert(approxEqual(bcc4[0].re, 0.25), failedUnitTest());
+        assert(approxEqual(bcc4[1].re, 0.25), failedUnitTest());
         assert(approxEqual(bcc4[2].re, 0.25), failedUnitTest());
         assert(approxEqual(bcc4[3].re, 0.25), failedUnitTest());
         assert(!is_outside_quad(bcc4), failedUnitTest());
@@ -310,4 +309,3 @@ version(projection_test) {
         return 0;
     }
 } // end projection_test
-
