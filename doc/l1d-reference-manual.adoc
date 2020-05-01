@@ -99,105 +99,121 @@ Note you do not have to set all of these values in the input script.
   _string_, default: `""` +
   Short title string for embedding in the parameter and solution files.
 
-    * reacting: (bool) If set to True, Rowan's finite-rate chemistry will
-      be active.  (Default is False)
+`reacting` ::
+  _bool_, default: `False` +
+  If set to `True`, the finite-rate chemistry will be active.
 
-    * dt_init: (float) The size of the time-step that will be used for the
-      first few simulation steps.
-      After a few steps, the cfl condition takes over the determination
-      of a suitable time-step.
+`dt_init` ::
+  _float_, default: `1.0e-6` +
+  The size of the time-step that will be used for the first simulation step
+  unless the code determines that a smaller time-step is required..
+  After a few steps, the cfl condition takes over the determination
+  of a suitable time-step size.
 
-    * max_time: (float) The simulation will stop if it reaches this time.
-      It is most usual to use this critereon to stop the simulation.
+`max_time` ::
+  _float_, default: `1.0e-3` +
+  The simulation will stop if it reaches this time.
+  It is most usual to use this critereon to stop the simulation.
 
-    * max_step: The simulation will be stopped if it reaches
-      this number of steps.
-      This is mostly used to catch the problem of the calculation taking
-      a very long time (measured by one's patience), possibly because
-      the time-step size has decreased to an extremely small value.
+`max_step` ::
+  _int_, default: `10` +
+  The simulation will be stopped if it reaches this number of steps.
+  This is mostly used to catch the problem of the calculation taking
+  a very long time (measured by one's patience), possibly because
+  the time-step size has decreased to an extremely small value.
 
-    * cfl: (float) Largest allowable CFL number.
-      The time step is adjusted to ensure that this value is not exceeded
-      in any particular cell.
-      A typical value of 0.25 seems to work well for simulations with
-      sudden events such as diaphragm bursting, while a value as high as
-      0.5 should be considered only for well-behaved flows.
+`cfl` ::
+  _float_, default: `0.5` +
+  The ratio of the selected time-step size divided by the allowed time-step size.
+  The time-step size is adjusted to ensure that this value is not exceeded
+  in any particular cell.
+  A typical value of 0.25 seems to work well for simulations with
+  sudden events such as diaphragm bursting, while a value as high as
+  0.5 should be considered only for well-behaved flows.
 
-    * t_order: (int)
-      1=Euler time-stepping. This is generally cheap and nasty.
-      2=predictor-corrector time-stepping, nominally second order.
-      This is the default setting.
-      It is, however, twice as CPU intensive as Euler time-stepping.
+`t_order` ::
+  _int_, default: `2` +
+  1=Euler time-stepping. This is generally cheap and cheerful. +
+  2=predictor-corrector time-stepping, nominally second order.
+  It is, however, twice as CPU intensive as Euler time-stepping.
 
-    * x_order: (int)
-      1=use cell averages without high-order reconstruction.
-      Use this only if the second-order calculation is showing problems.
-      2=use limited reconstruction (nominally second order).
-      This is the default selection.
+`x_order` ::
+  _int_, default: `2` +
+  1=use cell averages without high-order reconstruction.
+  Use this only if the second-order calculation is showing problems. +
+  2=use limited reconstruction (nominally second order).
 
-    * dt_plot_list: (list of tuples)
-      Specifies the frequency of writing complete solutions
-      (for later plotting, maybe) and also for the writing of data at
-      history locations.
-      It may be convenient to have different frequencies of writing such
-      output at different stages of the simulation.
-      For example, free-piston driven shock tunnels have a fairly long
-      period during which the piston travels the length of the compression
-      tube and then a relatively short period, following diaphragm rupture,
-      when all the interesting things happen.
-      It is good to have low-frequency output during most of the compression
-      process and higher-frequency output starting just before diaphragm
-      rupture.
-      Arranging good values may require some trial and error.
-      Add entries to this list via the add_dt_plot function.
+`dt_plot_list` ::
+  _list of tuples_, default: `[]` +
+  Specifies the frequency of writing complete solutions
+  (for later plotting, maybe) and also for the writing of data at history locations.
+  It may be convenient to have different frequencies of writing such
+  output at different stages of the simulation.
+  For example, free-piston driven shock tunnels have a fairly long
+  period during which the piston travels the length of the compression
+  tube and then a relatively short period, following diaphragm rupture,
+  when all the interesting things happen.
+  It is good to have low-frequency output during most of the compression
+  process and higher-frequency output starting just before diaphragm rupture.
+  Arranging good values may require some trial and error.
+  Add entries to this list via the add_dt_plot function.
 
-    * hloc_list: (list of floats)
-      List of x-coordinates for the history locations.
-      Add entries via the function add_history_loc.
+`hloc_list` ::
+  _list of floats_, default `[]` +
+  List of x-coordinates for the history locations.
+  Add entries via the function add_history_loc.
+
 
 = Gas Models
+There may be one or more gas models involved in a simulation.
+You have to specify one when you make each GasSlug.
+To initialize a gas model, call the `add_gas_model` function.
 
-`gas_file_names` ::
-  _list of strings_, default: [] +
-  file names for the detailed gas models.
-  There may be one or more, but you have to specify one when you
-  make each GasSlug.
+  my_gm = add_gas_model(fileName)
 
-  add_gas_model(fileName)
+It accepts the name of the detailed gas model file and returns
+a reference to the initialized gas model object.
 
 
 = Tube
-There is a single tube object that contains the area, and loss specification.
+In a simulation, there is a single tube object that contains the area,
+and loss specification.
 The user's script does not create one of these objects directly
-but should specify the tube details by calling the add_xxxx functions.
+but should specify the tube details by calling the `add_xxxx` functions.
 
-The following attributes are available:
+The following attributes are stored in the Tube object:
 
-    * n: (int) The number of small segments that will be used to describe
-      the tube's area distribution internal to the simulation.
-      To enable a fast lookup process for the area calculation,
-      the area variation between equally-spaced x-positions is taken
-      to be linear.
-      The default value is 4000 and probably won't need to be changed
-      except for geometries with rapidly changing cross-sections.
+`n` ::
+  _int_, default: `4000` +
+  The number of small segments that will be used to describe
+  the tube's area distribution internal to the simulation.
+  To enable a fast lookup process for the area calculation,
+  the area variation between equally-spaced x-positions is taken
+  to be linear.
+  The default value probably won't need to be changed
+  except for geometries with rapidly changing cross-sections.
 
-    * xd_list: List of break-point tuples defining the tube wall.
-      Add elements to the list via the function add_break_point.
+`xd_list` ::
+  List of break-point tuples defining the tube wall.
+  Add elements to the list via the function `add_break_point`.
 
-    * T_nominal: (float) The nominal wall temperature (in degrees K)
-      in the absence of a patch of differing temperature.
+`T_nominal` ::
+  _float_, default `300.0` +
+  The nominal wall temperature (in degrees K)
+  in the absence of a patch of differing temperature.
 
-    * T_patch_list: (list of tuples)
-      Regions of the tube wall that have temperature different to the
-      nominal value can be specified via the function add_T_patch.
+`T_patch_list` ::
+  _list of tuples_ +
+  Regions of the tube wall that have temperature different to the
+  nominal value can be specified via the function `add_T_patch`.
 
-    * loss_region_list: (list of tuples)
-      List of head-loss regions, usually associated
-      with sudden changes in tube cross-section and diaphragm stations.
-      Add regions via the function add_loss_region.
+`loss_region_list` ::
+  _list of tuples_ +
+  List of head-loss regions, usually associated
+  with sudden changes in tube cross-section and diaphragm stations.
+  Add regions via the function `add_loss_region`.
 
-Add a break-point tuple to the tube-diameter description.
-
+== Diameter description
 The tube is described as a set of (x,d)-coordinate pairs that
 define break points in the profile of the tube wall.
 You need at least 2 break points to define the tube.
@@ -205,12 +221,16 @@ Linear variation of diameter between the break points is assumed.
 
   add_break_point(x, d)
 
-    :param x: (float) x-coordinate, in metres, of the break point
-    :param d: (float) diameter, in metres, of the tube wall at the break-point.
-    :returns: Number of break points defined so far.
+`x` ::
+  _float_ x-coordinate, in metres, of the break point.
 
-Add a head-loss region to the tube description.
+`d` ::
+  _float_ diameter, in metres, of the tube wall at the break-point.
 
+Returns the number of break points defined so far.
+
+
+== Head-loss regions
 There is a momentum-sink term much like the so-called minor-loss terms
 in the fluid mechanics text books.
 The effect of the loss is spread over a finite region so that the cells
@@ -218,226 +238,316 @@ are gradually affected as they pass through the region
 
   add_loss_region(xL, xR, K)
 
-    xL: (float) Left-end location, in metres, of the loss region.
-    xR: (float) Right-end location, in metres, of the loss region.
-    K: (float) Head-loss coefficient.  A value of 0.25 seems to be good for a
-        reasonably smooth contraction such as the T4 main diaphragm station.
-    returns: Number of loss regions defined so far.
+`xL` ::
+  _float_ Left-end location, in metres, of the loss region.
 
-Add a temperature patch for a region where the wall temperature
+`xR` ::
+  _float_ Right-end location, in metres, of the loss region.
+
+`K` ::
+  _float_ Head-loss coefficient.
+  A value of 0.25 seems to be good for a
+  reasonably smooth contraction such as the T4 main diaphragm station.
+
+Returns the number of loss regions defined so far.
+
+
+== Temperature patches
+These define sections of the tube where the wall temperature
 is different from the nominal value.
 
   add_T_patch(xL, xR, T)
 
-    :param xL: (float) Left-end location, in metres, of the loss region.
-    :param xR: (float) Right-end location, in metres, of the loss region.
-    :param T: (float) Wall temperature in degrees K.
-    :returns: Number of temperature patches defined so far.
+`xL` ::
+  _float_ Left-end location, in metres, of the loss region.
+
+`xR` ::
+  _float_ Right-end location, in metres, of the loss region.
+
+`T` ::
+  _float_ Wall temperature in degrees K.
+
+Returns the number of temperature patches defined so far.
 
 
 = Dynamic components
 
 == GasSlug
-Contains the gas properties and discretisation for each gas slug.
-
+The principal component is a simulation is a gas slug that
+move back and forth within the tube.
 The user may create more than one gas slug to describe the initial
 gas properties throughout the facility.
 
-Note that a slug needs to have appropriate end-conditions.
+Note that a slug needs to have appropriate left- and right-end conditions.
 This is achieved by creating end-condition objects such as
-FreeEnd and VelocityEnd objects and then assembling
-the gas-path via a call to the function assemble_gas_path.
+`FreeEnd` and `VelocityEnd` objects and then _assembling_ the gas-path
+via a call to the function `assemble_gas_path`.
 
 
-  GasSlug(gmodel_id = None,
-                 p = 100.0e3,
-                 vel = 0.0,
-                 T = 300.0,
-                 T_modes = [],
-                 massf = [1.0,],
-                 label="",
-                 ncells = 10,
-                 to_end_L=False,
-                 to_end_R=False,
-                 cluster_strength=0.0,
-                 viscous_effects=0, # several options were available in L1d3
-                 adiabatic=False,
-                 hcells=[],
-                 )
+  my_slug = GasSlug(gmodel_id=my_gm, p=100.0e3, T=300.0, vel=0.0, massf=[1.0,],
+                    ncells=10, cluster_strength=0.0,
+                    viscous_effects=0, adiabatic=False,
+                    hcells=[])
+
+Most parameters have default properties so that only the user
+needs to override the ones that they wish to set differently.
+Note that the locations of the ends of the slug are communicated
+through end-condition objects that are attached during assembly
+of the gas path.
+
+`gmodel_id` ::
+  _int_, default: None +
+  index of the gas-model file name.
+  You must specify a particular gas model.
+
+`p` ::
+  _float_, default `100.0e3` +
+  Pressure in Pa.
+
+`T` ::
+  _float_, default: `300.0` +
+  Thermal temperature, in degrees K.
+
+`T_modes` ::
+  _list of float_, default: []
+  Temperatures, in K, for the other internal energy modes, if relevant.
+  If the gas model does include other energy modes and
+  you do not specify values for them, the thermal temperature, `T`,
+  will be used.
+
+`massf` ::
+  Mass fractions supplied as a list of floats
+  or a dictionary of species names and floats.
+  The number of mass fraction values should match the number
+  of species expected by the selected gas model.
+  For a single species gas, the default `[1.0,]` is already set for you.
+
+`vel` ::
+  _float_, default: `0.0` +
+  Velocity in m/s.
+
+`label` ::
+  _string_, dafault: "" +
+  Optional label for the gas slug.
+
+`ncells` ::
+  _int_, default: 10 +
+  Number of cells within the gas slug.
+
+`to_end_L` ::
+  _bool_, default: `False` +
+  Flag to indicate that cells should be clustered to the left end.
+
+`to_end_R` ::
+  _bool_, default: `False` +
+  Flag to indicate that cells should be clustered to the right end.
+
+`cluster_strength` ::
+  _float_, default: `0.0` +
+  As this value approaches 1.0 from above, the clustering gets stronger.
+  A value of zero indicates no clustering.
+
+`viscous_effects` ::
+  _int_, default: `0` +
+  A nonzero value activates the viscous effects. +
+  `0` = inviscid equations only; +
+  `1` = include viscous source terms F_wall, loss, q, friction factor for pipe flow.
+
+`adiabatic` ::
+  _bool_, default: `False` +
+  Flag to indicate that there should be no heat transfer at the tube wall.
+
+`hcells` ::
+  Either the index (int) of a single cell or
+  a list of indices of cells for which the data are
+  to be written every dt_his seconds, as set by `add_dt_plot`.
+  Note that cells are indexed from `0` to `ncells-1`.
 
 
-        Most parameters have default properties so that only the user
-        needs to override the ones that they wish to set differently.
+== Piston
+The other dynamic component that may travel back and forth in the tube is a piston.
 
-        Note that the locations of the ends of the slug are communicated
-        through end-condition objects that are attached during assembly
-        of the gas path.
+  myp = Piston(mass, diam, xL0, xR0, vel0)
 
-        :param gmodel_id: (int) index of the gas-model file name.
-        :param p: (float) Pressure in Pa.
-        :param vel: (float) Velocity in m/s.
-        :param T: (float) Temperature in degrees K.
-        :param T_modes: (list of float) Temperatures, in K, for the other energy modes.
-        :param massf: Mass fractions supplied as a list of floats
-            or a dictionary of species names and floats.
-            The number of mass fraction values should match the number
-            of species expected by the selected gas model.
-        :param label: Optional (string) label for the gas slug.
-        :param ncells: (int) Number of cells within the gas slug.
-        :param to_end_L: (bool) Flag to indicate that cells should
-            be clustered to the left end.
-        :param to_end_R: (bool) Flag to indicate that cells should
-            be clustered to the right end.
-        :param cluster_strength: (float) As this value approaches 1.0 from above,
-            the clustering gets stronger.
-            A value of zero indicates no clustering.
-        :param viscous_effects: (int) A nonzero value activates the viscous effects.
-            0 = inviscid equations only;
-            1 = include viscous source terms F_wall, loss, q,
-            friction factor for pipe flow;
-        :param adiabatic: (bool) Flag to indicate that there should
-            be no heat transfer at the tube wall.
-        :param hcells: Either the index (int) of a single cell or
-            a list of indices of cells for which the data are
-            to be written every dt_his seconds, as set by add_dt_plot.
-            Note that cells are indexed from 0 to ncells-1.
+`mass` ::
+  _float_, no default +
+  Mass of piston in kg.
 
-= Piston
+`diam` ::
+  _float_, no default +
+  Face diameter, metres.
 
-  Piston(self, mass, diam, xL0, xR0, vel0,
-                 front_seal_f=0.0, front_seal_area=0.0,
-                 back_seal_f=0.0, back_seal_area=0.0,
-                 p_restrain=0.0, is_restrain=0,
-                 with_brakes=0, brakes_on=0,
-                 x_buffer=10.e6, hit_buffer = 0,
-                 label="")
+`xL0` ::
+  _float_, no default +
+  Initial position of left-end, metres.
+  The initial position of the piston centroid is set midway
+  between `xL0` and `xR0` while piston length is the difference `(xR0 - xL0)`.
 
-        :param mass: (float) Mass of piston in kg.
-        :param diam: (float) Face diameter, metres.
-        :param xL0: (float) Initial position of left-end, metres.
-            The initial position of the piston centroid is set
-            midway between xL0 and xR0 while piston length is the
-            difference (xR0 - xL0).
-        :param xR0: (float) Initial position of right-end, metres.
-        :param vel0: (float) Initial velocity (of the centroid), m/s.
-        :param front_seal_f: (float) friction coefficient.
-            Typical value might be 0.2.
-        :param front_seal_area: (float) Seal area over which the front-side
-            pressure acts.
-            This is the effective area over which the compressed gas pressed the
-            front-side seal against the tube wall.
-            Friction force is this area multiplied by downstream-pressure by
-            friction coefficient.
-        :param back_seal_f: (float) friction coefficient.
-            A typical value might be 0.2.
-        :param back_seal_area: (float) Seal area over which the back-side
-            pressure acts.
-            Friction force is this area multiplied by downstream-pressure by
-            friction coefficient.  This is for gun tunnel pistons that have
-            flexible skirts that are pressed onto the tube wall by the pushing gas.
-        :param p_restrain: (float) Pressure at which restraint will release.
-            Some machines, such as two-stage light-gas guns, will
-            hold the projectile in place with some form of mechanical
-            restraint until the pressure behind the piston reaches
-            a critical value.  The piston is then allowed to slide.
-        :param is_restrain: (int) Status flag for restraint.
-            0=free-to-move, 1=restrained, 2=predefined trajectory read from external file
-        :param with_brakes: (int) Flag to indicate the presence of brakes.
-            0=no-brakes, 1=piston-does-have-brakes.
-            Such brakes, as on the T4 shock tunnel, allow forward
-            motion of the piston but prevent backward motion by
-            locking the piston against the tube wall.
-        :param brakes_on: (int) Flag to indicate the state of the brakes.
-            0=off, 1=on.
-        :param x_buffer: (float) Position of the stopping buffer in metres.
-            This is the location of the piston centroid at which the piston
-            would strike the buffer (or brake, in HEG terminology).
-            Note that it is different to the location of the front of
-            the piston at strike.
-        :param hit_buffer: (int) Flag to indicate state of buffer interaction.
-            A value of 0 indicates that the piston has not (yet) hit the
-            buffer.
-            A value of 1 indicates that it has.
-            Details of the time and velocity of the strike are recorded in
-            the event file.
-        :param label: (string) A bit of text for corresponding line in the Lp file.
+`xR0` ::
+  _float_, no default +
+  Initial position of right-end, metres.
 
-    * The left- and right-end positions of the piston are
-      also used to locate the ends of adjoining GasSlugs.
-    * The basic piston model has inertia but no friction.
-      To make accurate simulations of a particular facility,
-      it is usually important to have some account of
-      the friction caused by gas-seals and guide-rings that
-      may be present on the piston.
+`vel0` ::
+  _float_, no default +
+  Initial velocity (of the centroid), m/s.
 
-= End Conditions
+`front_seal_f` ::
+  _float_, default: `0.0` +
+  friction coefficient. A typical value might be 0.2.
 
-== Diaphragm
-Creates a diaphragm with specified properties.
+`front_seal_area` ::
+  _float_, default: `0.0` +
+  Seal area over which the front-side pressure acts.
+  This is the effective area over which the compressed gas pressed the
+  front-side seal against the tube wall.
+  Friction force is this area multiplied by downstream-pressure by friction coefficient.
 
-Diaphragm(x0, p_burst, is_burst=0, dt_hold=0.0,
-                 dxL=0.0, dxR=0.0, label="",
-                 slugL=None, slugL_end='R',
-                 slugR=None, slugR_end='L')
+`back_seal_f` ::
+  _float_, default: `0.0` +
+  friction coefficient. A typical value might be 0.2.
 
-        The connections to GasSlugs are made later via the function
-        assemble_gas_path.
+`back_seal_area` ::
+  _float_, default: `0.0` +
+  Seal area over which the back-side pressure acts.
+  Friction force is this area multiplied by downstream-pressure by friction coefficient.
+  This is for gun tunnel pistons that have flexible skirts that are pressed
+  onto the tube wall by the pushing gas.
 
-        :param x0: (float) x-position in the tube, metres.
-            This value is used to determine the end-points of the GasSlugs.
-        :param p_burst: (float) Pressure, in Pa, at which rupture is triggered.
-        :param is_burst: (int) Flag to indicate the state of diaphragm.
-            A value of 0 indicates that the diaphragm is intact while
-            a value of 1 indicates that the diaphragm is ruptured and the
-            GasSlugs are interacting.
-        :param dt_hold: (float) Time delay, in seconds, from rupture trigger
-            to actual rupture.
-        :param dxL: (float) The distance over which p is averaged on left of
-            the diaphragm.  The pressure difference between the left-
-            and right-sided of the diaphragm is used to trigger rupture.
-            The default value of 0.0 will cause the pressure in the
-            gas cell immediately adjacent to the diaphragm to be used.
-        :param dxR: (float) The distance, in metres, over which p is averaged
-            on right-side of the diaphragm.
-        :param label: A (string) label that will appear in the parameter file
-            for this diaphragm.
+`p_restrain` ::
+  _float_, default: `0.0` +
+  Pressure at which restraint will release.
+  Some machines, such as two-stage light-gas guns, will
+  hold the projectile in place with some form of mechanical
+  restraint until the pressure behind the piston reaches a critical value.
+  The piston is then allowed to slide.
 
-== GasInterface
-Creates as interface between two gas slugs at specified location.
+`is_restrain` ::
+  _int_, default: `0` +
+  Status flag for restraint. 0=free-to-move, 1=restrained
 
-  GasInterface(x0,
-                 slugL=None, slugL_end='R',
-                 slugR=None, slugR_end='L')
+`with_brakes` ::
+  _bool_, default: False +
+  Flag to indicate the presence of brakes.
+  Such brakes, as on the T4 shock tunnel, allow forward
+  motion of the piston but prevent backward motion by
+  locking the piston against the tube wall.
 
-        x0: (float) Initial position, in metres.
+`brakes_on` ::
+  _int_, default: `0` +
+  Flag to indicate the state of the brakes.
+  `0`=off, `1`=on.
 
-== FreeEnd
-Creates a GasSlug end-condition with a specified location.
+`x_buffer` ::
+  _float_, default: `1.0e6` +
+  Position of the stopping buffer in metres.
+  This is the location of the piston centroid at which the piston
+  would strike the buffer (or brake, in HEG terminology).
+  Note that it is different to the location of the front of the piston at strike.
 
-  FreeEnd(x0,
-                 slugL=None, slugL_end='R',
-                 slugR=None, slugR_end='L')
+`hit_buffer` ::
+  _int_, default: `0` +
+  Flag to indicate state of buffer interaction.
+  A value of `0` indicates that the piston has not (yet) hit the buffer.
+  A value of `1` indicates that it has.
 
-        x0: (float) Initial position, in metres.
+Notes ::
+. The left- and right-end positions of the piston are
+  also used to locate the ends of adjoining GasSlugs.
 
-== VelocityEnd
-Creates a GasSlug end-condition with a specified location and velocity.
-
-  VelocityEnd(x0, vel=0.0,
-                 slugL=None, slugL_end='R',
-                 slugR=None, slugR_end='L')
+. The basic piston model has inertia but no friction.
+  To make accurate simulations of a particular facility,
+  it is usually important to have some account of
+  the friction caused by gas-seals and guide-rings that
+  may be present on the piston.
 
 
-        x0: (float) Initial position, in metres.
-        v: (float) Velocity, in m/s, of the end-point of the GasSlug.
+== End Conditions
+The end-conditions for the gas slugs provide on where the end of the gas slug
+is initially located, as well as what happens as the simulation proceeds.
+The general procedure is to define the end conditions and later make connections
+to the gas slugs by assembling the gas path.
 
-== PistonFace
-Creates a GasSlug end-condition at a piston face.
 
-  PistonFace(slugL=None, slugL_end='R',
-                 slugR=None, slugR_end='L',
-                 pistonL=None, pistonL_face='R',
-                 pistonR=None, pistonR_face='L')
+=== Diaphragm
+A diaphragm conditionally connects the adjacent ends of two gas slugs.
+
+  my_d = Diaphragm(x0, p_burst)
+
+`x0` ::
+  _float_, no default +
+  x-position in the tube, metres.
+  This value is used to locate the end-points of the gas slugs.
+
+`p_burst` ::
+  _float_, default: `0.0` +
+  Pressure, in Pa, at which rupture is triggered.
+
+`is_burst` ::
+  _int_: default `0` +
+  Flag to indicate the state of diaphragm.
+  A value of 0 indicates that the diaphragm is intact (with zero-velocity end condition
+  being effectively applied to both gas slugs) while a value of 1 indicates that
+  the diaphragm is ruptured and the gas slugs are interacting.
+
+`dt_hold` ::
+  _float_, default: `0.0` +
+  Time delay, in seconds, from rupture-trigger to actual rupture with the
+  gas slugs being allowed to interact.
+
+`dxL` ::
+  _float_: `0.0` +
+  The distance over which p is averaged on left of the diaphragm.
+  The pressure difference between the left- and right-sided of the diaphragm
+  is used to trigger rupture.
+  The default value of 0.0 will cause the pressure in the
+  gas cell immediately adjacent to the diaphragm to be used.
+
+`dxR` ::
+  _float_, default: `0.0` +
+  The distance, in metres, over which p is averaged on right-side of the diaphragm.
+
+
+=== GasInterface
+Connects two gas slugs at specified location.
+
+  my_if = GasInterface(x0)
+
+`x0` ::
+  _float_, no default +
+  Initial position, in metres.
+
+
+=== FreeEnd
+Initially locates the end of the gas slug but otherwise does not constrain it.
+
+  my_fe = FreeEnd(x0)
+
+`x0` ::
+  _float_, no default +
+  Initial position, in metres.
+
+
+=== VelocityEnd
+Specify the initial location and velocity of the end of a gas slug.
+To model a fixed wall, just specify a zero velocity.
+
+  my_ve = VelocityEnd(x0, vel=0.0)
+
+`x0` ::
+  _float_, no default +
+  Initial position, in metres.
+
+`vel` ::
+  _float_, no default +
+  Velocity, in m/s, of the end-point of the gas slug.
+
+
+=== PistonFace
+Objects of this class connect the end of a GasSlug to a Piston face.
+Normally, you do not need to construct these objects explicitly because
+the `assemble_gas_path` function will create and connect them implicitly.
+
+  PistonFace()
 
 
 = Assembling a gas path
@@ -447,27 +557,92 @@ to the following function.
 
   assemble_gas_path(*components):
 
+`components` ::
+  An arbitrary number of arguments representing
+  individual components or lists of components.
+  Each component may be a GasSlug, Piston, or any
+  other gas-path object, however, it doesn't always make sense
+  to connect arbitrary components.
+  For example, connecting a GasSlug to a Piston is reasonable
+  but connecting a Piston to a Diaphragm without an intervening
+  GasSlug does not make sense in the context of this simulation program.
 
-    :param components: An arbitrary number of arguments representing
-        individual components or lists of components.
-        Each component may be a GasSlug, Piston, or any
-        other gas-path object, however, it doesn't always make sense
-        to connect arbitrary components.
-        For example, connecting a GasSlug to a Piston is reasonable
-        but connecting a Piston to a Diaphragm without an intervening
-        GasSlug does not make sense in the context of this simulation
-        program.
+If you really want to make a connection manually, there is a function available
+to make the logical connection between a pair of components.
 
-  connect_pair(cL, cR):
-    """
-    Make the logical connection between a pair of components.
+  connect_pair(cL, cR)
 
-    :param cL: is left object
-    :param cR: is right object
+`cL` ::
+  component object on left
 
-    Usually called by assemble_gas_path.
+`cR` ::
+  component object on right
+
 
 = Command-line usage
+The Lagrangian simulation tools consist of two programs: `l1d4-prep` and `l1d4`.
+Before preparing a simulation, you need one or more detailed gas-model file(s) and,
+if relevant, one or more detailed chemistry files.
+These are set up as per Rowan's chemistry instructions.
+Once you have your gas-model file(s) and input script, as described above,
+you are ready to simulate.
+
+
+== Preparation of initial state
+The preprocessing program is written in Python and it accepts the name
+of your input script, also in Python.
+
+  $ l1d4-prep --job=<myjob>
+
+or
+
+  $ l1d4-prep --job=<myjob>.py
+
+If your input script, `<myjob>.py`, is successfully processed,
+a summary of the objects created and connected is printed to the console.
+The configuration data and the initial state of the simulation
+is written to a set of files in newly-created directory `<myjob>`.
+
+
+== Running a simulation
+Once the configuration and initial-state data are written,
+the main simulation code may be run.
+
+  $ l1d4 --run-simulation --job=<myjob>
+
+By default, the progress of the simulation is printed, in summary form, to the console.
+The state data for the gas slugs, pistons and diaphragms is appended periodically
+to the files in the `<myjob>` directory.
+In that directory, there is a `times.data` file that lists the time instants
+for each time index.
+
+
+== Postprocessing
+After the simulation has run to completion, the same executable program, `l1d4`,
+can be used to select data for display.
+
+
+=== Selecting a time-slice of gas-slug data.
+
+  $ l1d4 --time-slice --job=<myjob> --tindx=<int>
+
+The data for a particular time-instant will be written to files in the current directory.
+The format of these data files is compatible with GNUplot.
+
+
+=== History data for a piston.
+
+  $ l1d4 --piston-history --job=<myjob> --pindx=<int>
+
+The history data for a particular piston will be written to a file in the current directory.
+The format of this data file is compatible with GNUplot.
+
+=== Generating an xt-data plot.
+The history of gas-slug data, for a particular variable,
+over a range of time instants can be assembled into a xt-data set,
+with one GNUplot-compatible file for each gas slug.
+
+  $ l1d4 --xt-data --job=<myjob> --var-name=p --log10
 
 
 :leveloffset: -1

@@ -610,7 +610,7 @@ class Piston():
                  front_seal_f=0.0, front_seal_area=0.0,
                  back_seal_f=0.0, back_seal_area=0.0,
                  p_restrain=0.0, is_restrain=0,
-                 with_brakes=0, brakes_on=0,
+                 with_brakes=False, brakes_on=0,
                  x_buffer=10.e6, hit_buffer = 0,
                  label=""):
         """
