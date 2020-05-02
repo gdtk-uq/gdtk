@@ -1,0 +1,5 @@
+baseURL = "http://cfcfd.mechmining.uq.edu.au/"
+languageCode = "en-us"
+title = "GDTK"
+theme = "book"
+
