@@ -603,9 +603,12 @@ public:
                 double dt_chem, dt_therm, dt_local;
                 scan_cell_data_from_fixed_order_string
                     (txt, pos[$-1], volume, fstate[$-1],
-                     Q_rad_org, f_rad_org, Q_rE_rad, GlobalConfig.with_local_time_stepping, dt_local, dt_chem, dt_therm,
-                     GlobalConfig.include_quality, GlobalConfig.MHD,
-                     GlobalConfig.divergence_cleaning, GlobalConfig.radiation,
+                     Q_rad_org, f_rad_org, Q_rE_rad,
+                     GlobalConfig.with_local_time_stepping,
+                     dt_local, dt_chem, dt_therm,
+                     GlobalConfig.include_quality,
+                     GlobalConfig.MHD, GlobalConfig.divergence_cleaning,
+                     GlobalConfig.radiation,
                      GlobalConfig.turb_model.nturb);
                 npoints += 1;
             }
@@ -767,15 +770,35 @@ public:
         }
     } // end this()
 
-    void set_flowstate(FlowState fs, double t)
+    @nogc
+    void set_flowstate(FlowState fs, double t, GasModel gm)
     {
-        // Presently, just return a stepped history.
-        // [TODO] linearly interpolate flow state data.
+        // Find where we are in history and interpolate the flow state.
         size_t nt = times.length;
         size_t i = 0;
         while ((i < nt-1) && t > times[i+1]) { i++; }
-        i = min(i, fstate.length-1);
-        fs.copy_values_from(fstate[i]);
+        i = min(i, nt-1);
+        if (i < nt-1 && t <= times[$-1]) {
+            // Linearly interpolate between states i, i+1
+            double frac = (t-times[i])/(times[i+1]-times[i]);
+            fs.vel.refx = fstate[i].vel.x*(1.0-frac) + fstate[i+1].vel.x*frac;
+            fs.vel.refy = fstate[i].vel.y*(1.0-frac) + fstate[i+1].vel.y*frac;
+            fs.vel.refz = fstate[i].vel.z*(1.0-frac) + fstate[i+1].vel.z*frac;
+            fs.gas.p = fstate[i].gas.p*(1.0-frac) + fstate[i+1].gas.p*frac;
+            fs.gas.T = fstate[i].gas.T*(1.0-frac) + fstate[i+1].gas.T*frac;
+            foreach (j; 0 .. gm.n_species) {
+                fs.gas.massf[j] = fstate[i].gas.massf[j]*(1.0-frac) +
+                    fstate[i+1].gas.massf[j]*frac;
+            }
+            foreach (j; 0 .. gm.n_modes) {
+                fs.gas.T_modes[j] = fstate[i].gas.T_modes[j]*(1.0-frac) +
+                    fstate[i+1].gas.T_modes[j]*frac;
+            }
+            gm.update_thermo_from_pT(fs.gas);
+        } else {
+            // Keep condition constant beyond the largest time.
+            fs.copy_values_from(fstate[$-1]);
+        }
         return;
     } // end get_flowstate()
 

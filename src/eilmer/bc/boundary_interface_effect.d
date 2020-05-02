@@ -516,7 +516,8 @@ public:
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         BoundaryCondition bc = blk.bc[which_boundary];
-        fhistory.set_flowstate(my_fs, t);
+        auto gmodel = blk.myConfig.gmodel;
+        fhistory.set_flowstate(my_fs, t, gmodel);
         foreach (i, f; bc.faces) { f.fs.copy_values_from(my_fs); }
     }
 
@@ -528,7 +529,7 @@ public:
         auto gmodel = blk.myConfig.gmodel;
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
-        fhistory.set_flowstate(my_fs, t);
+        fhistory.set_flowstate(my_fs, t, gmodel);
 
         final switch (which_boundary) {
         case Face.north:

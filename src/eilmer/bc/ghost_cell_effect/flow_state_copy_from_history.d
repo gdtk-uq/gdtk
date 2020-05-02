@@ -46,7 +46,8 @@ public:
     {
         FVCell ghost0;
         BoundaryCondition bc = blk.bc[which_boundary];
-        fhistory.set_flowstate(my_fs, t);
+        auto gmodel = blk.myConfig.gmodel;
+        fhistory.set_flowstate(my_fs, t, gmodel);
         foreach (i, f; bc.faces) {
             if (bc.outsigns[i] == 1) {
                 ghost0 = f.right_cell;
@@ -67,7 +68,8 @@ public:
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         bool nghost3 = (blk.n_ghost_cell_layers == 3);
-        fhistory.set_flowstate(my_fs, t);
+        auto gmodel = blk.myConfig.gmodel;
+        fhistory.set_flowstate(my_fs, t, gmodel);
 
         final switch (which_boundary) {
         case Face.north:
