@@ -23,6 +23,7 @@ http://cfcfd.mechmining.uq.edu.au/eilmer/documentation/
 include::eilmer/config-options-user.adoc[]
 include::eilmer/flow-state-user.adoc[]
 include::eilmer/fluid-block-user.adoc[]
+include::eilmer/boundary-conditions.adoc[]
 include::eilmer/flowsolution_user.adoc[]
 
 include::geom/grid/grid-user.adoc[]

@@ -1,0 +1,69 @@
+= Boundary Conditions
+
+To complete a definition of a FluidBlock, boundary conditions for all
+block boundaries, need to be specified.
+These may be given as a list to the FluidBock constructor or
+they may be attached to particular boundaries of an already existing
+FluidBlock object.
+In the absence of your specification, the default boundary condition
+is a slip wall, `WallBC_WithSlip`.
+
+
+== Walls
+
+=== Slip wall
+
+=== No-slip, fixed-temperature
+
+=== No-slip, adiabatic
+
+=== Translating-surface, fixed-temperature
+
+=== Translating-surface, adiabatic
+
+=== Rotating-surface, fixed-temperature
+
+=== Rotating-surface, adiabatic
+
+
+== In Flow
+
+=== Simple supersonic
+
+=== Static profile
+
+=== Transient
+
+=== Constant flux
+
+=== Shock-fitting
+
+=== Isentropic from stagnation
+
+
+== Out Flow
+
+=== Simple flux
+
+=== Simple extrapolation
+
+=== Fixed pressure
+
+=== Fixed pressure and temperature
+
+
+== User Defined
+This is a get-out-of-jail boundary condition that allows you to do anything
+you wish to code (in Lua).
+
+
+== Inter-block Exchange
+
+=== Full block-face
+
+=== Mapped cell
+
+=== Full block-face followed by user-defined
+
+
+
