@@ -1,6 +1,6 @@
 -- prep.lua
 -- A place to put helper functions and classes for the preparation activities.
--- 
+--
 print("Loading prep.lua...")
 
 -- This module is not required by prep itself, but we load it here
@@ -97,7 +97,7 @@ sssOptionsHidden = { -- hidden from user
    write_diagnostics_count = 20,
    write_loads_count = 20,
 
-   __index = function (t, k) 
+   __index = function (t, k)
       return sssOptionsHidden[k]
    end,
    __newindex = function (t, k, v)
@@ -130,15 +130,15 @@ sscOptionsHidden = { -- hidden from user
    maxOuterIterations = 10,
    maxRestarts = 10,
    cfl0=1.0,
-   eta = 0.1, 
+   eta = 0.1,
    stop_on_relative_global_residual = 1.0e-99,
    -- Bezier curve fit parameters
    tol_bezier_curve_fit = 1.0e-06,
    max_steps_bezier_curve_fit = 10000,
    -- user-defined file
    user_defined_objective_file = "dummy-obj-file.lua",
-   
-   __index = function (t, k) 
+
+   __index = function (t, k)
       return sscOptionsHidden[k]
    end,
    __newindex = function (t, k, v)
@@ -167,7 +167,7 @@ sdluOptionsHidden = { -- hidden from user
    tolerance_gmres_solve = 1.0e-3,
    perturbation_size = 1.0e-2,
 
-   __index = function (t, k) 
+   __index = function (t, k)
       return sdluOptionsHidden[k]
    end,
    __newindex = function (t, k, v)
@@ -270,7 +270,7 @@ function FlowState:new(o)
    -- Now, fill in default values for the FlowState object being constructed.
    -- If an item is not already present, copy the default value into the object,
    -- being careful to make new table for massf.
-   -- RJG, 2019-11-03: We do not make defaults for T_modes. 
+   -- RJG, 2019-11-03: We do not make defaults for T_modes.
    -- We'll require the user to set this explicitly.
    for k, v in pairs(FlowState_defaults) do
       if o[k] == nil then
@@ -657,7 +657,7 @@ function SBlock2UBlock(blk)
 			 omegaz=blk.omegaz,
 			 bcList=bcList}
    local newId = ublk.id
-   local newLabel = ublk.label 
+   local newLabel = ublk.label
    -- Swap blocks in global list
    fluidBlocks[origId+1], fluidBlocks[newId+1] = fluidBlocks[newId+1], fluidBlocks[origId+1]
    -- Fix id and label of ublk
@@ -683,7 +683,7 @@ function connectBlocks(blkA, faceA, blkB, faceB, orientation)
    if false then
       -- To reduce visual clutter at prep time, don't use the following print statement.
       -- It may still be useful for debugging.
-      print("connectBlocks: blkA.id=", blkA.id, "faceA=", faceA, 
+      print("connectBlocks: blkA.id=", blkA.id, "faceA=", faceA,
             "blkB.id=", blkB.id, "faceB=", faceB, "orientation=", orientation)
    end
    if blkA.grid:get_type() ~= "structured_grid" or blkB.grid:get_type() ~= "structured_grid" then
@@ -723,7 +723,7 @@ function isPairInList(targetPair, pairList)
    local count = 0
    for _,v in ipairs(pairList) do
       if (v[1] == targetPair[1] and v[2] == targetPair[2]) or
-	 (v[2] == targetPair[1] and v[1] == targetPair[2]) 
+	 (v[2] == targetPair[1] and v[1] == targetPair[2])
       then
 	 count = count + 1
       end
@@ -1413,7 +1413,7 @@ function makeFlowStateFn(flowSol)
       end
       cell.fmt = "FlowState"
       -- The table for a cell's data should be enough to set the FlowState.
-      return flowSol:get_cell_data(cell) 
+      return flowSol:get_cell_data(cell)
    end
    return flowFn
 end
@@ -1554,7 +1554,7 @@ function mpiDistributeBlocks(args)
       local maxmpiLoads = (math.max(unpack(taskLoads)))
       local minmpiLoads = (math.min(unpack(taskLoads)))
       local mpiProcessors = math.max(unpack(mpiTaskList)) + 1
-      print("Load balancing - Distribute blocks to CPUs") 
+      print("Load balancing - Distribute blocks to CPUs")
       print(string.format("Number of processors   \t \t = %d", mpiProcessors))
       print(string.format("Ideal cell partitioning   \t = %d cells/proc", totalCells/mpiProcessors))
       print(string.format("Smallest partition factor \t = %.3f", minmpiLoads/(totalCells/mpiProcessors)))
@@ -1562,7 +1562,7 @@ function mpiDistributeBlocks(args)
       print(string.format("Largest processor load    \t = %.0f cells", maxmpiLoads))
 
    else
-      error('Did not select one of "round-robin" or "load-balance". for mpiDistributeBlocks', 2) 
+      error('Did not select one of "round-robin" or "load-balance". for mpiDistributeBlocks', 2)
    end
    -- Assign the newly-constructed list to the global variable
    -- for later use in writing the job.mpimap file.
@@ -1913,11 +1913,11 @@ function write_config_file(fileName)
                          tostring(config.suppress_reconstruction_at_shocks)))
    f:write(string.format('"suppress_reconstruction_at_boundaries": %s,\n',
 			 tostring(config.suppress_reconstruction_at_boundaries)))
-   f:write(string.format('"thermo_interpolator": "%s",\n', 
+   f:write(string.format('"thermo_interpolator": "%s",\n',
 			 string.lower(config.thermo_interpolator)))
-   f:write(string.format('"allow_reconstruction_for_energy_modes": %s,\n', 
+   f:write(string.format('"allow_reconstruction_for_energy_modes": %s,\n',
 			 tostring(config.allow_reconstruction_for_energy_modes)))
-   f:write(string.format('"interpolate_in_local_frame": %s,\n', 
+   f:write(string.format('"interpolate_in_local_frame": %s,\n',
 			 tostring(config.interpolate_in_local_frame)))
    f:write(string.format('"apply_limiter": %s,\n', tostring(config.apply_limiter)))
    f:write(string.format('"extrema_clipping": %s,\n', tostring(config.extrema_clipping)))
@@ -1935,7 +1935,7 @@ function write_config_file(fileName)
    f:write(string.format('"grid_motion": "%s",\n', tostring(config.grid_motion)))
    f:write(string.format('"write_vertex_velocities": %s,\n', tostring(config.write_vertex_velocities)))
    f:write(string.format('"udf_grid_motion_file": "%s",\n', tostring(config.udf_grid_motion_file)))
-   
+
    f:write(string.format('"shock_fitting_delay": %.18e,\n', config.shock_fitting_delay))
    f:write(string.format('"shock_fitting_interpolation_order": %d,\n', config.shock_fitting_interpolation_order))
    f:write(string.format('"shock_fitting_scale_factor": %.18e,\n', config.shock_fitting_scale_factor))
@@ -1958,7 +1958,7 @@ function write_config_file(fileName)
 
    f:write(string.format('"separate_update_for_viscous_terms": %s,\n',
 			 tostring(config.separate_update_for_viscous_terms)))
-   f:write(string.format('"separate_update_for_k_omega_source": %s,\n', 
+   f:write(string.format('"separate_update_for_k_omega_source": %s,\n',
 			 tostring(config.separate_update_for_k_omega_source)))
 
    f:write(string.format('"turbulence_model": "%s",\n',
@@ -2013,7 +2013,7 @@ function write_config_file(fileName)
    f:write(string.format('   "user_defined_objective_file": "%s"\n', tostring(ShapeSensitivityCalculator.user_defined_objective_file)))
    -- Note, also, no comma on last entry in JSON object. (^^^: Look up one line and check!)
    f:write('},\n')
-   
+
    f:write(string.format('"block_marching": %s,\n',
 			 tostring(config.block_marching)))
    f:write(string.format('"nib": %d,\n', config.nib))
@@ -2088,7 +2088,7 @@ function write_config_file(fileName)
    for i = 1, #solidBlocks do
       f:write(solidBlocks[i]:tojson())
    end
-  
+
    f:write('"dummy_entry_without_trailing_comma": 0\n') -- no comma on last entry
    f:write("}\n")
 

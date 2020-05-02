@@ -1,5 +1,5 @@
 -- Module for collecting constructed boundary conditions.
--- 
+--
 -- Authors: PJ and RJG
 -- Date: 2015-10-01
 --       Extracted from prep.lua (to be imported into prep.lua via require)
@@ -87,6 +87,15 @@ function FlowStateCopyFromProfile:tojson()
    local str = string.format('          {"type": "%s",', self.type)
    str = str .. string.format(' "filename": "%s",', self.filename)
    str = str .. string.format(' "match": "%s"', self.match)
+   str = str .. '}'
+   return str
+end
+
+FlowStateCopyFromHistory = GhostCellEffect:new{filename=nil}
+FlowStateCopyFromHistory.type = "flowstate_copy_from_history"
+function FlowStateCopyFromHistory:tojson()
+   local str = string.format('          {"type": "%s",', self.type)
+   str = str .. string.format(' "filename": "%s"', self.filename)
    str = str .. '}'
    return str
 end
@@ -238,6 +247,15 @@ function FlowStateCopyFromProfileToInterface:tojson()
    return str
 end
 
+FlowStateCopyFromHistoryToInterface = BoundaryInterfaceEffect:new{filename=nil}
+FlowStateCopyFromHistoryToInterface.type = "flow_state_copy_from_history_to_interface"
+function FlowStateCopyFromHistoryToInterface:tojson()
+   local str = string.format('          {"type": "%s",', self.type)
+   str = str .. string.format(' "filename": "%s"', self.filename)
+   str = str .. '}'
+   return str
+end
+
 ZeroVelocity = BoundaryInterfaceEffect:new()
 ZeroVelocity.type = "zero_velocity"
 function ZeroVelocity:tojson()
@@ -250,7 +268,7 @@ TranslatingSurface = BoundaryInterfaceEffect:new{v_trans=nil}
 TranslatingSurface.type = "translating_surface"
 function TranslatingSurface:tojson()
    local str = string.format('          {"type": "%s",', self.type)
-   str = str .. string.format(' "v_trans": [%.18e, %.18e, %.18e]', self.v_trans.x, 
+   str = str .. string.format(' "v_trans": [%.18e, %.18e, %.18e]', self.v_trans.x,
 			      self.v_trans.y, self.v_trans.z)
    str = str .. '}'
    return str
@@ -261,9 +279,9 @@ RotatingSurface = BoundaryInterfaceEffect:new{centre=nil, r_omega=nil}
 RotatingSurface.type = "rotating_surface"
 function RotatingSurface:tojson()
    local str = string.format('          {"type": "%s",', self.type)
-   str = str .. string.format(' "centre": [%.18e, %.18e, %.18e],', self.centre.x, 
+   str = str .. string.format(' "centre": [%.18e, %.18e, %.18e],', self.centre.x,
 			      self.centre.y, self.centre.z)
-   str = str .. string.format(' "r_omega": [%.18e, %.18e, %.18e]', self.r_omega.x, 
+   str = str .. string.format(' "r_omega": [%.18e, %.18e, %.18e]', self.r_omega.x,
 			      self.r_omega.y, self.r_omega.z)
    str = str .. '}'
    return str
@@ -469,7 +487,7 @@ function BoundaryCondition:new(o)
    if ( #o.preReconAction > 0 or
 	#o.postConvFluxAction > 0 or
 	#o.preSpatialDerivActionAtBndryFaces > 0 or
-	#o.preSpatialDerivActionAtBndryCells > 0 or   
+	#o.preSpatialDerivActionAtBndryCells > 0 or
 	#o.postDiffFluxAction > 0 ) then
       o.is_configured = true
    end
@@ -575,8 +593,8 @@ function WallBC_WithSlip1:new(o)
    return o
 end
 
--- Copy of WallBC_WithSlip for development/trialing of wall BCs 
--- for moving mesh simulations for walls with normal velocity 
+-- Copy of WallBC_WithSlip for development/trialing of wall BCs
+-- for moving mesh simulations for walls with normal velocity
 WallBC_WithSlip2 = BoundaryCondition:new()
 WallBC_WithSlip2.type = "wall_with_slip2"
 function WallBC_WithSlip2:new(o)
@@ -616,7 +634,7 @@ function WallBC_NoSlip_FixedT0:new(o)
                " and not WallBC_NoSlip_FixedT0.new{}", 2)
    end
    o = o or {}
-   flag = checkAllowedNames(o, {"Twall", "wall_function", 
+   flag = checkAllowedNames(o, {"Twall", "wall_function",
                                 "catalytic_type", "wall_massf_composition",
                                 "label", "group", "is_design_surface", "num_cntrl_pts"})
    if not flag then
@@ -633,7 +651,7 @@ function WallBC_NoSlip_FixedT0:new(o)
       o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallTurbulent:new()
       if o.wall_function and config.turbulence_model == "k_omega" then
          -- Only makes sense to add a wall function if the k-omega model is active.
-         o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = 
+         o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
             WallFunctionInterfaceEffect:new{thermal_condition='FIXED_T'}
          o.preSpatialDerivActionAtBndryCells = { WallFunctionCellEffect:new() }
       end
@@ -656,7 +674,7 @@ function WallBC_NoSlip_FixedT1:new(o)
                " and not WallBC_NoSlip_FixedT1.new{}", 2)
    end
    o = o or {}
-   flag = checkAllowedNames(o, {"Twall", "wall_function", 
+   flag = checkAllowedNames(o, {"Twall", "wall_function",
                                 "catalytic_type", "wall_massf_composition",
                                 "label", "group", "is_design_surface", "num_cntrl_pts"})
    if not flag then
@@ -673,7 +691,7 @@ function WallBC_NoSlip_FixedT1:new(o)
       o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallTurbulent:new()
       if o.wall_function and o.turbulence_model == "k_omega" then
 	 -- Only makes sense to add a wall function if the k-omega model is active.
-	 o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = 
+	 o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
 	    WallFunctionInterfaceEffect:new{thermal_condition='FIXED_T'}
 	 o.preSpatialDerivActionAtBndryCells = { WallFunctionCellEffect:new() }
       end
@@ -756,7 +774,7 @@ function WallBC_NoSlip_Adiabatic0:new(o)
       o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallTurbulent:new()
       if o.wall_function and o.turbulence_model == "k_omega" then
 	 -- Only makes sense to add a wall function if the k-omega model is active.
-	 o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = 
+	 o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
 	    WallFunctionInterfaceEffect:new{thermal_condition='ADIABATIC'}
 	 o.preSpatialDerivActionAtBndryCells = { WallFunctionCellEffect:new() }
       end
@@ -794,7 +812,7 @@ function WallBC_NoSlip_Adiabatic1:new(o)
       o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallTurbulent:new()
       if o.wall_function and o.turbulence_model == "k_omega" then
 	 -- Only makes sense to add a wall function if the k-omega model is active.
-	 o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = 
+	 o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
 	    WallFunctionInterfaceEffect:new{thermal_condition='ADIABATIC'}
 	 o.preSpatialDerivActionAtBndryCells = { WallFunctionCellEffect:new() }
       end
@@ -984,12 +1002,12 @@ function InFlowBC_Supersonic:new(o)
    if not flag then
       error("Invalid name for item supplied to InFlowBC_Supersonic constructor.", 2)
    end
-   if o.flowState == nil then o.flowState = o.flowCondition end -- look for old name 
+   if o.flowState == nil then o.flowState = o.flowCondition end -- look for old name
    o = BoundaryCondition.new(self, o)
    o.is_wall_with_viscous_effects = false
    o.preReconAction = { FlowStateCopy:new{flowState=o.flowState} }
    o.preSpatialDerivActionAtBndryFaces = { FlowStateCopyToInterface:new{flowState=o.flowState} }
-   o.is_configured = true      
+   o.is_configured = true
    return o
 end
 
@@ -1014,7 +1032,31 @@ function InFlowBC_StaticProfile:new(o)
    o.preSpatialDerivActionAtBndryFaces = {
       FlowStateCopyFromProfileToInterface:new{filename=o.filename, match=o.match}
    }
-   o.is_configured = true      
+   o.is_configured = true
+   return o
+end
+
+InFlowBC_Transient = BoundaryCondition:new()
+InFlowBC_Transient.type = "inflow_transient"
+function InFlowBC_Transient:new(o)
+   local flag = type(self)=='table' and self.type=='inflow_transient'
+   if not flag then
+      error("Make sure that you are using InFlowBC_Transient:new{}"..
+               " and not InFlowBC_Transient.new{}", 2)
+   end
+   o = o or {}
+   flag = checkAllowedNames(o, {"filename", "fileName", "label", "group"})
+   if not flag then
+      error("Invalid name for item supplied to InFlowBC_Transient constructor.", 2)
+   end
+   o = BoundaryCondition.new(self, o)
+   o.is_wall_with_viscous_effects = false
+   o.filename = o.filename or o.fileName
+   o.preReconAction = { FlowStateCopyFromHistory:new{filename=o.filename} }
+   o.preSpatialDerivActionAtBndryFaces = {
+      FlowStateCopyFromHistoryToInterface:new{filename=o.filename}
+   }
+   o.is_configured = true
    return o
 end
 
@@ -1031,7 +1073,7 @@ function InFlowBC_ConstFlux:new(o)
    if not flag then
       error("Invalid name for item supplied to InFlowBC_ConstFlux constructor.", 2)
    end
-   if o.flowState == nil then o.flowState = o.flowCondition end -- look for old name 
+   if o.flowState == nil then o.flowState = o.flowCondition end -- look for old name
    o = BoundaryCondition.new(self, o)
    o.is_wall_with_viscous_effects = false
    o.convective_flux_computed_in_bc = true
@@ -1055,7 +1097,7 @@ function InFlowBC_ShockFitting:new(o)
    if not flag then
       error("Invalid name for item supplied to InFlowBC_ShockFitting constructor.", 2)
    end
-   if o.flowState == nil then o.flowState = o.flowCondition end -- look for old name 
+   if o.flowState == nil then o.flowState = o.flowCondition end -- look for old name
    o = BoundaryCondition.new(self, o)
    o.is_wall_with_viscous_effects = false
    o.convective_flux_computed_in_bc = true
@@ -1082,7 +1124,7 @@ function InFlowBC_FromStagnation:new(o)
    if not flag then
       error("Invalid name for item supplied to InFlowBC_FromStagnation constructor.", 2)
    end
-   if o.stagnationState == nil then o.stagnationState = o.stagCondition end -- look for old name 
+   if o.stagnationState == nil then o.stagnationState = o.stagCondition end -- look for old name
    o.fileName = o.fileName or o.filename
    o = BoundaryCondition.new(self, o)
    o.is_wall_with_viscous_effects = false
@@ -1303,7 +1345,7 @@ function UserDefinedGhostCellBC:new(o)
    o.preSpatialDerivActionAtBndryFaces = {
       UserDefinedInterface:new{fileName=o.fileName},
       UpdateThermoTransCoeffs:new()
-   } 
+   }
    o.is_configured = true
    return o
 end
@@ -1364,7 +1406,7 @@ function WallBC_AdjacentToSolid:new(o)
                                            UpdateThermoTransCoeffs:new()}
    if config.turbulence_model ~= "none" then
       o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallTurbulent:new()
-   end		
+   end
    o.postDiffFluxAction = { EnergyFluxFromAdjacentSolid:new{otherBlock=o.otherBlock,
 							    otherFace=o.otherFace,
 							    orientation=o.orientation }

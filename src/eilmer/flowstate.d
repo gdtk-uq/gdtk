@@ -111,7 +111,7 @@ public:
 
     this(GasModel gm)
     {
-        gas = new GasState(gm, 100.0e3, 300.0, [1.0,], 1.0); 
+        gas = new GasState(gm, 100.0e3, 300.0, [1.0,], 1.0);
         vel.set(0.0,0.0,0.0);
         version(MHD) {
             B.set(0.0,0.0,0.0);
@@ -170,7 +170,7 @@ public:
         return new FlowState(this);
     }
 
-    @nogc 
+    @nogc
     void copy_values_from(in FlowState other)
     {
         gas.copy_values_from(other.gas);
@@ -188,7 +188,7 @@ public:
         S = other.S;
     }
 
-    @nogc 
+    @nogc
     void copy_average_values_from(in FlowState fs0, in FlowState fs1)
     // Avoids memory allocation, it's all in place.
     {
@@ -373,7 +373,7 @@ public:
         }
     }
 } // end class FlowState
- 
+
 void write_initial_flow_file(string fileName, ref StructuredGrid grid,
                              in FlowState fs, double t0, GasModel gmodel)
 // Keep in sync with SFluidBlock.write_solution.
@@ -383,7 +383,7 @@ void write_initial_flow_file(string fileName, ref StructuredGrid grid,
     auto njcell = grid.njv - 1;
     auto nkcell = grid.nkv - 1;
     if (GlobalConfig.dimensions == 2) nkcell = 1;
-    //  
+    //
     // Write the data for the whole structured block.
     switch (GlobalConfig.flow_format) {
     case "gziptext": goto default;
@@ -411,10 +411,10 @@ void write_initial_flow_file(string fileName, ref StructuredGrid grid,
                     Vector3 p110 = *grid[i+1,j+1,k];
                     Vector3 p010 = *grid[i,j+1,k];
                     // [TODO] provide better calculation using geom module.
-                    // For the moment, it doesn't matter greatly because the solver 
+                    // For the moment, it doesn't matter greatly because the solver
                     // will compute it's own approximations
                     auto pos = to!number(0.25)*(p000 + p100 + p110 + p010);
-                    number volume = 0.0; 
+                    number volume = 0.0;
                     if (GlobalConfig.dimensions == 3) {
                         Vector3 p001 = *grid[i,j,k+1];
                         Vector3 p101 = *grid[i+1,j,k+1];
@@ -461,10 +461,10 @@ void write_initial_flow_file(string fileName, ref StructuredGrid grid,
                     Vector3 p110 = *grid[i+1,j+1,k];
                     Vector3 p010 = *grid[i,j+1,k];
                     // [TODO] provide better calculation using geom module.
-                    // For the moment, it doesn't matter greatly because the solver 
+                    // For the moment, it doesn't matter greatly because the solver
                     // will compute it's own approximations
                     auto pos = to!number(0.25)*(p000 + p100 + p110 + p010);
-                    number volume = 0.0; 
+                    number volume = 0.0;
                     if (GlobalConfig.dimensions == 3) {
                         Vector3 p001 = *grid[i,j,k+1];
                         Vector3 p101 = *grid[i+1,j,k+1];
@@ -487,14 +487,14 @@ void write_initial_flow_file(string fileName, ref StructuredGrid grid,
     } // end switch flow_format
     return;
 } // end write_initial_flow_file() StructuredGrid version
- 
+
 void write_initial_flow_file(string fileName, ref UnstructuredGrid grid,
                              in FlowState fs, double t0, GasModel gmodel)
 // Keep in sync with UFluidBlock.write_solution.
 {
     // Numbers of cells derived from numbers of vertices in grid.
     auto ncells = grid.ncells;
-    //  
+    //
     // Write the data for the whole unstructured block.
     switch (GlobalConfig.flow_format) {
     case "gziptext": goto default;
@@ -518,7 +518,7 @@ void write_initial_flow_file(string fileName, ref UnstructuredGrid grid,
             Vector3 pos = Vector3(0.0, 0.0, 0.0);
             foreach (id; grid.cells[i].vtx_id_list) { pos += grid.vertices[id]; }
             pos /= to!number(grid.cells[i].vtx_id_list.length);
-            number volume = 0.0; 
+            number volume = 0.0;
             cell_data_to_raw_binary(outfile, pos, volume, fs,
                                     to!number(0.0), to!number(0.0), to!number(0.0),
                                     GlobalConfig.with_local_time_stepping, -1.0, -1.0, -1.0,
@@ -551,7 +551,7 @@ void write_initial_flow_file(string fileName, ref UnstructuredGrid grid,
             Vector3 pos = Vector3(0.0, 0.0, 0.0);
             foreach (id; grid.cells[i].vtx_id_list) { pos += grid.vertices[id]; }
             pos /= to!number(grid.cells[i].vtx_id_list.length);
-            number volume = 0.0; 
+            number volume = 0.0;
             outfile.compress(" " ~ cell_data_as_string(pos, volume, fs,
                                                        to!number(0.0), to!number(0.0), to!number(0.0),
                                                        GlobalConfig.with_local_time_stepping, -1.0, -1.0, -1.0,
@@ -572,7 +572,7 @@ class FlowProfile {
     // GhostCellFlowStateCopyFromProfile, BIE_FlowStateCopyFromProfile
     // There are non-obvious options for the match parameter in the constructor call.
     // See the switch statement in the compute_distance() function for some hints.
-    
+
 public:
     string fileName;
     string posMatch;
@@ -631,7 +631,7 @@ public:
             dy = my_pos.y.re - other_pos.y.re;
             dz = my_pos.z.re - other_pos.z.re;
             distance = sqrt(dx*dx + dy*dy + dz*dz);
-            break; 
+            break;
         case "xyA-to-xyA":
             // 2D or 3D; don't care about z-component of position.
             dx = my_pos.x.re - other_pos.x.re;
@@ -711,8 +711,63 @@ public:
             fs.vel.refy = vely_sign * vel_yz * my_pos.y.re / r;
             fs.vel.refz = vely_sign * vel_yz * my_pos.z.re / r;
             break;
-        default: 
+        default:
             throw new FlowSolverException("Invalid match option.");
         }
     }
 } // end class FlowProfile
+
+
+class FlowHistory {
+    // For use in the classes that implement the InflowBC_Transient boundary condition.
+    // GhostCellFlowStateCopyFromHistory, BIE_FlowStateCopyFromHistory
+
+public:
+    string fileName;
+    FlowState[] fstate;
+    double[] times;
+
+    this (string fileName)
+    {
+        this.fileName = fileName;
+        // Open filename and read all time and flow data.
+        auto gm = GlobalConfig.gmodel_master;
+        auto f = new File(fileName);
+        auto range = f.byLine();
+        auto line = range.front;
+        while (!line.empty) {
+            string text = to!string(line).chomp();
+            if (text.length > 0 && !canFind(text, "#")) {
+                // Assume that we have a line of data rather than variable names.
+                // item: 0 1     2     3     4 5 6       ...
+                // name: t vel.x vel.y vel.z p T massf[0]...
+                auto fs= new FlowState(gm);
+                double tme;
+                auto items = text.split();
+                tme = to!double(items[0]);
+                fs.vel.set(to!double(items[1]), to!double(items[2]), to!double(items[3]));
+                fs.gas.p = to!double(items[4]);
+                fs.gas.T = to!double(items[5]);
+                foreach (i; 0 .. gm.n_species) { fs.gas.massf[i] = to!double(items[6+i]); }
+                foreach (i; 0 .. gm.n_modes) { fs.gas.T_modes[i] = fs.gas.T; }
+                gm.update_thermo_from_pT(fs.gas);
+                times ~= tme;
+                fstate ~= fs;
+            }
+            range.popFront();
+            line = range.front;
+        } // end while
+    } // end this()
+
+    FlowState get_flowstate(double t)
+    {
+        assert(fstate.length > 0, "FlowHistory is empty.");
+        // Presently, just return a stepped history.
+        // [TODO] linearly interpolate flow state data.
+        int i = 0;
+        while (t < times[i]) { i++; }
+        i = min(i, fstate.length-1);
+        return fstate[i];
+    } // end get_flowstate()
+
+} // end FlowHistory

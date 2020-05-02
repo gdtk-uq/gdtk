@@ -1,6 +1,6 @@
-// flow_state_copy_from_profile.d
+// flow_state_copy_from_history.d
 
-module bc.ghost_cell_effect.flow_state_copy_from_profile;
+module bc.ghost_cell_effect.flow_state_copy_from_history;
 
 import std.json;
 import std.string;
@@ -22,23 +22,22 @@ import gas;
 import bc;
 
 
-class GhostCellFlowStateCopyFromProfile : GhostCellEffect {
+class GhostCellFlowStateCopyFromHistory : GhostCellEffect {
 public:
-    this(int id, int boundary, string fileName, string match)
+    this(int id, int boundary, string fileName)
     {
-        super(id, boundary, "flowStateCopyFromProfile");
-        fprofile = new FlowProfile(fileName, match);
+        super(id, boundary, "flowStateCopyFromHistory");
+        fhistory = new FlowHistory(fileName);
     }
 
     override string toString() const
     {
-        return format("flowStateCopyFromProfile(filename=\"%s\", match=\"%s\")",
-                      fprofile.fileName, fprofile.posMatch);
+        return format("flowStateCopyFromHistory(filename=\"%s\")", fhistory.fileName);
     }
 
     override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
     {
-	throw new Error("GhostCellFlowStateCopyFromProfile.apply_for_interface_unstructured_grid() not yet implemented");
+	throw new Error("GhostCellFlowStateCopyFromHistory.apply_for_interface_unstructured_grid() not yet implemented");
     }
 
     // not @nogc
@@ -52,16 +51,14 @@ public:
             } else {
                 ghost0 = f.left_cell;
             }
-            ghost0.fs.copy_values_from(fprofile.get_flowstate(ghost0.id, ghost0.pos[0]));
-            fprofile.adjust_velocity(ghost0.fs, ghost0.pos[0]);
+            ghost0.fs.copy_values_from(fhistory.get_flowstate(t));
         } // end foreach face
     } // end apply_unstructured_grid()
 
     // not @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        // Fill ghost cells with data from just inside the boundary
-        // using zero-order extrapolation (i.e. just copy the data).
+        // Fill ghost cells with data from just inside the boundary.
         size_t i, j, k;
         FVCell src_cell, dest_cell;
         FVInterface dest_face;
@@ -76,18 +73,13 @@ public:
             for (k = blk.kmin; k <= blk.kmax; ++k) {
                 for (i = blk.imin; i <= blk.imax; ++i) {
                     dest_cell = blk.get_cell(i,j+1,k);
-                    fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
+                    fstate = fhistory.get_flowstate(t);
                     dest_cell.fs.copy_values_from(fstate);
-                    fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
                     dest_cell = blk.get_cell(i,j+2,k);
-                    fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
                     dest_cell.fs.copy_values_from(fstate);
-                    fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
                     if (nghost3) {
                         dest_cell = blk.get_cell(i,j+3,k);
-                        fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
                         dest_cell.fs.copy_values_from(fstate);
-                        fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
                     }
                 } // end i loop
             } // for k
@@ -97,18 +89,13 @@ public:
             for (k = blk.kmin; k <= blk.kmax; ++k) {
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     dest_cell = blk.get_cell(i+1,j,k);
-                    fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
+                    fstate = fhistory.get_flowstate(t);
                     dest_cell.fs.copy_values_from(fstate);
-                    fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
                     dest_cell = blk.get_cell(i+2,j,k);
-                    fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
                     dest_cell.fs.copy_values_from(fstate);
-                    fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
                     if (nghost3) {
                         dest_cell = blk.get_cell(i+3,j,k);
-                        fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
                         dest_cell.fs.copy_values_from(fstate);
-                        fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
                     }
                 } // end j loop
             } // for k
@@ -118,18 +105,13 @@ public:
             for (k = blk.kmin; k <= blk.kmax; ++k) {
                 for (i = blk.imin; i <= blk.imax; ++i) {
                     dest_cell = blk.get_cell(i,j-1,k);
-                    fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
+                    fstate = fhistory.get_flowstate(t);
                     dest_cell.fs.copy_values_from(fstate);
-                    fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
                     dest_cell = blk.get_cell(i,j-2,k);
-                    fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
                     dest_cell.fs.copy_values_from(fstate);
-                    fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
                     if (nghost3) {
                         dest_cell = blk.get_cell(i,j-3,k);
-                        fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
                         dest_cell.fs.copy_values_from(fstate);
-                        fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
                     }
                 } // end i loop
             } // for k
@@ -139,18 +121,13 @@ public:
             for (k = blk.kmin; k <= blk.kmax; ++k) {
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     dest_cell = blk.get_cell(i-1,j,k);
-                    fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
+                    fstate = fhistory.get_flowstate(t);
                     dest_cell.fs.copy_values_from(fstate);
-                    fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
                     dest_cell = blk.get_cell(i-2,j,k);
-                    fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
                     dest_cell.fs.copy_values_from(fstate);
-                    fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
                     if (nghost3) {
                         dest_cell = blk.get_cell(i-3,j,k);
-                        fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
                         dest_cell.fs.copy_values_from(fstate);
-                        fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
                     }
                 } // end j loop
             } // for k
@@ -160,18 +137,13 @@ public:
             for (i = blk.imin; i <= blk.imax; ++i) {
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     dest_cell = blk.get_cell(i,j,k+1);
-                    fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
+                    fstate = fhistory.get_flowstate(t);
                     dest_cell.fs.copy_values_from(fstate);
-                    fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
                     dest_cell = blk.get_cell(i,j,k+2);
-                    fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
                     dest_cell.fs.copy_values_from(fstate);
-                    fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
                     if (nghost3) {
                         dest_cell = blk.get_cell(i,j,k+3);
-                        fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
                         dest_cell.fs.copy_values_from(fstate);
-                        fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
                     }
                 } // end j loop
             } // for i
@@ -181,18 +153,13 @@ public:
             for (i = blk.imin; i <= blk.imax; ++i) {
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     dest_cell = blk.get_cell(i,j,k-1);
-                    fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
+                    fstate = fhistory.get_flowstate(t);
                     dest_cell.fs.copy_values_from(fstate);
-                    fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
                     dest_cell = blk.get_cell(i,j,k-2);
-                    fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
                     dest_cell.fs.copy_values_from(fstate);
-                    fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
                     if (nghost3) {
                         dest_cell = blk.get_cell(i,j,k-3);
-                        fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
                         dest_cell.fs.copy_values_from(fstate);
-                        fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
                     }
                 } // end j loop
             } // for i
@@ -201,6 +168,6 @@ public:
     } // end apply_structured_grid()
 
 private:
-    FlowProfile fprofile;
+    FlowHistory fhistory;
 
-} // end class GhostCellFlowStateCopyFromProfile
+} // end class GhostCellFlowStateCopyFromHistory

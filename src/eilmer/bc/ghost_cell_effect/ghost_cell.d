@@ -66,7 +66,7 @@ void reflect_normal_magnetic_field(ref FlowState fs, in FVInterface IFace)
         fs.B.refx = -(fs.B.x);
         fs.B.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
         // Used for different boundary conditions in the divergence cleaning- not currently active
-        /*if (GlobalConfig.divergence_cleaning) { 
+        /*if (GlobalConfig.divergence_cleaning) {
                 fs.psi = fs.psi + GlobalConfig.c_h * (fs.B.refx - fs.B.x);
         }*/
     }
@@ -77,7 +77,7 @@ GhostCellEffect make_GCE_from_json(JSONValue jsonData, int blk_id, int boundary)
     string gceType = jsonData["type"].str;
     // At the point at which we call this function, we may be inside the block-constructor.
     // Don't attempt the use the block-owned gas model.
-    auto gmodel = GlobalConfig.gmodel_master; 
+    auto gmodel = GlobalConfig.gmodel_master;
     GhostCellEffect newGCE;
     switch (gceType) {
     case "internal_copy_then_reflect":
@@ -91,6 +91,10 @@ GhostCellEffect make_GCE_from_json(JSONValue jsonData, int blk_id, int boundary)
         string fname = getJSONstring(jsonData, "filename", "");
         string match = getJSONstring(jsonData, "match", "xyz");
         newGCE = new GhostCellFlowStateCopyFromProfile(blk_id, boundary, fname, match);
+        break;
+    case "flowstate_copy_from_history":
+        string fname = getJSONstring(jsonData, "filename", "");
+        newGCE = new GhostCellFlowStateCopyFromHistory(blk_id, boundary, fname);
         break;
     case "extrapolate_copy":
         int xOrder = getJSONint(jsonData, "x_order", 0);
@@ -118,7 +122,7 @@ GhostCellEffect make_GCE_from_json(JSONValue jsonData, int blk_id, int boundary)
         double relax_factor = getJSONdouble(jsonData, "relax_factor", 0.1);
         newGCE = new GhostCellFromStagnation(blk_id, boundary,
                                              stagnation_condition, fname,
-                                             direction_type, 
+                                             direction_type,
                                              Vector3(direction_x, direction_y, direction_z),
                                              alpha, beta,
                                              mass_flux, relax_factor);
@@ -198,7 +202,7 @@ public:
     void apply(double t, int gtl, int ftl)
     {
         final switch (blk.grid_type) {
-        case Grid_t.unstructured_grid: 
+        case Grid_t.unstructured_grid:
             apply_unstructured_grid(t, gtl, ftl);
             break;
         case Grid_t.structured_grid:
@@ -208,7 +212,7 @@ public:
     void apply_for_interface(double t, int gtl, int ftl, FVInterface f)
     {
         final switch (blk.grid_type) {
-        case Grid_t.unstructured_grid: 
+        case Grid_t.unstructured_grid:
             apply_for_interface_unstructured_grid(t, gtl, ftl, f);
             break;
         case Grid_t.structured_grid:
@@ -219,4 +223,3 @@ public:
     abstract void apply_unstructured_grid(double t, int gtl, int ftl);
     abstract void apply_structured_grid(double t, int gtl, int ftl);
 } // end class GhostCellEffect
-

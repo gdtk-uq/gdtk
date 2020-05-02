@@ -2,7 +2,7 @@
 //
 // Effects needed to compute viscous fluxes and the like.
 //
-// PJ and RG, 2015-04-28, initial code mainly from 
+// PJ and RG, 2015-04-28, initial code mainly from
 //    the break-up of the Fixed_T boundary condition.
 //
 
@@ -38,8 +38,8 @@ BoundaryInterfaceEffect make_BIE_from_json(JSONValue jsonData, int blk_id, int b
     string bieType = jsonData["type"].str;
     // At the point at which we call this function, we may be inside the block-constructor.
     // Don't attempt the use the block-owned gas model.
-    auto gmodel = GlobalConfig.gmodel_master; 
-    // If we need access to a gas model in here, 
+    auto gmodel = GlobalConfig.gmodel_master;
+    // If we need access to a gas model in here,
     // be sure to use GlobalConfig.gmodel_master.
     BoundaryInterfaceEffect newBIE;
     switch (bieType) {
@@ -54,6 +54,10 @@ BoundaryInterfaceEffect make_BIE_from_json(JSONValue jsonData, int blk_id, int b
         string fname = getJSONstring(jsonData, "filename", "");
         string match = getJSONstring(jsonData, "match", "xyz");
         newBIE = new BIE_FlowStateCopyFromProfile(blk_id, boundary, fname, match);
+        break;
+    case "flow_state_copy_from_history_to_interface":
+        string fname = getJSONstring(jsonData, "filename", "");
+        newBIE = new BIE_FlowStateCopyFromHistory(blk_id, boundary, fname);
         break;
     case "zero_velocity":
         newBIE = new BIE_ZeroVelocity(blk_id, boundary);
@@ -103,7 +107,7 @@ BoundaryInterfaceEffect make_BIE_from_json(JSONValue jsonData, int blk_id, int b
         throw new FlowSolverException(errMsg);
     }
     return newBIE;
-}
+} // end make_BIE_from_json()
 
 
 class BoundaryInterfaceEffect {
@@ -127,17 +131,17 @@ public:
     void apply(double t, int gtl, int ftl)
     {
         final switch (blk.grid_type) {
-        case Grid_t.unstructured_grid: 
+        case Grid_t.unstructured_grid:
             apply_unstructured_grid(t, gtl, ftl);
             break;
         case Grid_t.structured_grid:
             apply_structured_grid(t, gtl, ftl);
         }
-    }   
+    }
     void apply_for_interface(double t, int gtl, int ftl, FVInterface f)
     {
         final switch (blk.grid_type) {
-        case Grid_t.unstructured_grid: 
+        case Grid_t.unstructured_grid:
             apply_for_interface_unstructured_grid(t, gtl, ftl, f);
             break;
         case Grid_t.structured_grid:
@@ -156,7 +160,7 @@ class BIE_CopyCellData : BoundaryInterfaceEffect {
         super(id, boundary, "CopyCellData");
     }
 
-    override string toString() const 
+    override string toString() const
     {
         return "CopyCellData()";
     }
@@ -170,7 +174,7 @@ class BIE_CopyCellData : BoundaryInterfaceEffect {
 	    f.fs.copy_values_from(f.right_cell.fs);
 	}
     }
-    
+
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         BoundaryCondition bc = blk.bc[which_boundary];
@@ -182,7 +186,7 @@ class BIE_CopyCellData : BoundaryInterfaceEffect {
             }
         } // end foreach face
     }
-    
+
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         size_t i, j, k;
@@ -271,7 +275,7 @@ class BIE_FlowStateCopy : BoundaryInterfaceEffect {
         fstate = new FlowState(_fstate);
     }
 
-    override string toString() const 
+    override string toString() const
     {
         return "flowStateCopy(fstate=" ~ to!string(fstate) ~ ")";
     }
@@ -281,7 +285,7 @@ class BIE_FlowStateCopy : BoundaryInterfaceEffect {
         BoundaryCondition bc = blk.bc[which_boundary];
 	f.fs.copy_values_from(fstate);
     }
-    
+
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         BoundaryCondition bc = blk.bc[which_boundary];
@@ -289,7 +293,7 @@ class BIE_FlowStateCopy : BoundaryInterfaceEffect {
             f.fs.copy_values_from(fstate);
         } // end foreach face
     }
-    
+
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         size_t i, j, k;
@@ -383,7 +387,7 @@ public:
         fprofile = new FlowProfile(fileName, match);
     }
 
-    override string toString() const 
+    override string toString() const
     {
         return format("flowStateCopyFromProfile(filename=\"%s\", match=\"%s\")",
                       fprofile.fileName, fprofile.posMatch);
@@ -403,7 +407,7 @@ public:
             fprofile.adjust_velocity(f.fs, f.pos);
         }
     }
-    
+
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         size_t i, j, k;
@@ -489,20 +493,124 @@ private:
 } // end class BIE_FlowStateCopyFromProfile
 
 
+class BIE_FlowStateCopyFromHistory : BoundaryInterfaceEffect {
+public:
+    this(int id, int boundary, string fileName)
+    {
+        super(id, boundary, "flowStateCopyFromHistory");
+        fhistory = new FlowHistory(fileName);
+    }
+
+    override string toString() const
+    {
+        return format("flowStateCopyFromHistory(filename=\"%s\")", fhistory.fileName);
+    }
+
+    @nogc
+    override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        throw new Error("BIE_FlowStateCopyFromHistory.apply_for_interface_unstructured_grid() not yet implemented");
+    }
+
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
+    {
+        BoundaryCondition bc = blk.bc[which_boundary];
+        foreach (i, f; bc.faces) { f.fs.copy_values_from(fhistory.get_flowstate(t)); }
+    }
+
+    override void apply_structured_grid(double t, int gtl, int ftl)
+    {
+        size_t i, j, k;
+        FVCell cell;
+        FVInterface f;
+        auto gmodel = blk.myConfig.gmodel;
+        auto blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
+
+        final switch (which_boundary) {
+        case Face.north:
+            j = blk.jmax;
+            for (k = blk.kmin; k <= blk.kmax; ++k) {
+                for (i = blk.imin; i <= blk.imax; ++i) {
+                    cell = blk.get_cell(i,j,k);
+                    f = cell.iface[Face.north];
+                    f.fs.copy_values_from(fhistory.get_flowstate(t));
+                } // end i loop
+            } // end for k
+            break;
+        case Face.east:
+            i = blk.imax;
+            for (k = blk.kmin; k <= blk.kmax; ++k) {
+                for (j = blk.jmin; j <= blk.jmax; ++j) {
+                    cell = blk.get_cell(i,j,k);
+                    f = cell.iface[Face.east];
+                    f.fs.copy_values_from(fhistory.get_flowstate(t));
+                } // end j loop
+            } // end for k
+            break;
+        case Face.south:
+            j = blk.jmin;
+            for (k = blk.kmin; k <= blk.kmax; ++k) {
+                for (i = blk.imin; i <= blk.imax; ++i) {
+                    cell = blk.get_cell(i,j,k);
+                    f = cell.iface[Face.south];
+                    f.fs.copy_values_from(fhistory.get_flowstate(t));
+                } // end i loop
+            } // end for k
+            break;
+        case Face.west:
+            i = blk.imin;
+            for (k = blk.kmin; k <= blk.kmax; ++k) {
+                for (j = blk.jmin; j <= blk.jmax; ++j) {
+                    cell = blk.get_cell(i,j,k);
+                    f = cell.iface[Face.west];
+                    f.fs.copy_values_from(fhistory.get_flowstate(t));
+                } // end j loop
+            } // end for k
+            break;
+        case Face.top:
+            k = blk.kmax;
+            for (i = blk.imin; i <= blk.imax; ++i) {
+                for (j = blk.jmin; j <= blk.jmax; ++j) {
+                    cell = blk.get_cell(i,j,k);
+                    f = cell.iface[Face.top];
+                    f.fs.copy_values_from(fhistory.get_flowstate(t));
+                } // end j loop
+            } // end for i
+            break;
+        case Face.bottom:
+            k = blk.kmin;
+            for (i = blk.imin; i <= blk.imax; ++i) {
+                for (j = blk.jmin; j <= blk.jmax; ++j) {
+                    cell = blk.get_cell(i,j,k);
+                    f = cell.iface[Face.bottom];
+                    f.fs.copy_values_from(fhistory.get_flowstate(t));
+                } // end j loop
+            } // end for i
+            break;
+        } // end switch which_boundary
+    } // end apply()
+
+private:
+    FlowHistory fhistory;
+
+} // end class BIE_FlowStateCopyFromHistory
+
+
 class BIE_ZeroVelocity : BoundaryInterfaceEffect {
     this(int id, int boundary)
     {
         super(id, boundary, "ZeroVelocity");
     }
 
-    override string toString() const 
+    override string toString() const
     {
         return "ZeroVelocity()";
     }
 
     override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
     {
-        auto gmodel = blk.myConfig.gmodel;      
+        auto gmodel = blk.myConfig.gmodel;
         BoundaryCondition bc = blk.bc[which_boundary];
 	FlowState fs = f.fs;
 	fs.vel.refx = 0.0; fs.vel.refy = 0.0; fs.vel.refz = 0.0;
@@ -510,7 +618,7 @@ class BIE_ZeroVelocity : BoundaryInterfaceEffect {
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-        auto gmodel = blk.myConfig.gmodel;      
+        auto gmodel = blk.myConfig.gmodel;
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
             FlowState fs = f.fs;
@@ -609,7 +717,7 @@ class BIE_TranslatingSurface : BoundaryInterfaceEffect {
         this.v_trans = v_trans;
     }
 
-    override string toString() const 
+    override string toString() const
     {
         return "TranslatingSurface(v_trans=" ~ to!string(v_trans) ~ ")";
     }
@@ -718,9 +826,9 @@ class BIE_RotatingSurface : BoundaryInterfaceEffect {
         this.centre = centre;
     }
 
-    override string toString() const 
+    override string toString() const
     {
-        return "RotatingSurface(r_omega=" ~ to!string(r_omega) ~ 
+        return "RotatingSurface(r_omega=" ~ to!string(r_omega) ~
             ", centre=" ~ to!string(centre) ~ ")";
     }
 
@@ -825,14 +933,14 @@ public:
         this.Twall = Twall;
     }
 
-    override string toString() const 
+    override string toString() const
     {
         return "FixedT(Twall=" ~ to!string(Twall) ~ ")";
     }
 
     override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
     {
-        auto gmodel = blk.myConfig.gmodel;      
+        auto gmodel = blk.myConfig.gmodel;
         BoundaryCondition bc = blk.bc[which_boundary];
 	FlowState fs = f.fs;
 	fs.gas.T = Twall;
@@ -843,7 +951,7 @@ public:
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-        auto gmodel = blk.myConfig.gmodel;      
+        auto gmodel = blk.myConfig.gmodel;
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
             FlowState fs = f.fs;
@@ -953,16 +1061,16 @@ public:
 } // end class BIE_FixedT
 
 class BIE_FixedComposition : BoundaryInterfaceEffect {
-public:    
+public:
     double[] massfAtWall;
-    
+
     this(int id, int boundary, double[] massfAtWall)
     {
         super(id, boundary, "FixedComposition");
         this.massfAtWall = massfAtWall;
     }
 
-    override string toString() const 
+    override string toString() const
     {
         return "FixedComposition(massfAtWall=" ~ to!string(massfAtWall) ~ ")";
     }
@@ -981,7 +1089,7 @@ public:
             FlowState fs = f.fs;
             version(multi_species_gas) {
                 for(uint isp=0; isp<nsp; isp++) {
-                    fs.gas.massf[isp] = massfAtWall[isp];   
+                    fs.gas.massf[isp] = massfAtWall[isp];
                 }
             }
         } // end foreach face
@@ -1006,7 +1114,7 @@ public:
                     FlowState fs = IFace.fs;
                     version(multi_species_gas) {
                         for(uint isp=0; isp<nsp; isp++) {
-                            fs.gas.massf[isp] = massfAtWall[isp];   
+                            fs.gas.massf[isp] = massfAtWall[isp];
                         }
                     }
                 } // end i loop
@@ -1021,7 +1129,7 @@ public:
                     FlowState fs = IFace.fs;
                     version(multi_species_gas) {
                         for(uint isp=0; isp<nsp; isp++) {
-                            fs.gas.massf[isp] = massfAtWall[isp];   
+                            fs.gas.massf[isp] = massfAtWall[isp];
                         }
                     }
                 } // en for j loop
@@ -1035,7 +1143,7 @@ public:
                     IFace = cell.iface[Face.south];
                     FlowState fs = IFace.fs;
                     for(uint isp=0; isp<nsp; isp++) {
-                        fs.gas.massf[isp] = massfAtWall[isp];   
+                        fs.gas.massf[isp] = massfAtWall[isp];
                     }
                 } // end i loop
             } // end for k
@@ -1049,7 +1157,7 @@ public:
                     FlowState fs = IFace.fs;
                     version(multi_species_gas) {
                         for(uint isp=0; isp<nsp; isp++) {
-                            fs.gas.massf[isp] = massfAtWall[isp];   
+                            fs.gas.massf[isp] = massfAtWall[isp];
                         }
                     }
                 } // end j loop
@@ -1064,7 +1172,7 @@ public:
                     FlowState fs = IFace.fs;
                     version(multi_species_gas) {
                         for(uint isp=0; isp<nsp; isp++) {
-                            fs.gas.massf[isp] = massfAtWall[isp];   
+                            fs.gas.massf[isp] = massfAtWall[isp];
                         }
                     }
                 } // end j loop
@@ -1079,7 +1187,7 @@ public:
                     FlowState fs = IFace.fs;
                     version(multi_species_gas) {
                         for(uint isp=0; isp<nsp; isp++) {
-                            fs.gas.massf[isp] = massfAtWall[isp];   
+                            fs.gas.massf[isp] = massfAtWall[isp];
                         }
                     }
                 } // end j loop
@@ -1096,7 +1204,7 @@ class BIE_UpdateThermoTransCoeffs : BoundaryInterfaceEffect {
         super(id, boundary, "UpdateThermoTransCoeffs");
     }
 
-    override string toString() const 
+    override string toString() const
     {
         return "UpdateThermoTransCoeffs()";
     }
@@ -1126,7 +1234,7 @@ class BIE_UpdateThermoTransCoeffs : BoundaryInterfaceEffect {
             }
         } // end foreach face
     }
-    
+
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         size_t i, j, k;
@@ -1219,7 +1327,7 @@ class BIE_WallTurbulent : BoundaryInterfaceEffect {
         super(id, boundary, "WallTurbulent");
     }
 
-    override string toString() const 
+    override string toString() const
     {
         return "WallTurbulent()";
     }
@@ -1235,7 +1343,7 @@ class BIE_WallTurbulent : BoundaryInterfaceEffect {
 		}
 	    }
     } // end apply_unstructured_grid()
-    
+
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         BoundaryCondition bc = blk.bc[which_boundary];
@@ -1249,7 +1357,7 @@ class BIE_WallTurbulent : BoundaryInterfaceEffect {
             } // end foreach face
         }
     } // end apply_unstructured_grid()
-    
+
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         size_t i, j, k;
@@ -1335,7 +1443,7 @@ class BIE_WallTurbulent : BoundaryInterfaceEffect {
     //@nogc
     //number ideal_omega_at_wall(in FVCell cell, number d0)
     //// As recommended by Wilson Chan, we use Menter's correction
-    //// for omega values at the wall. This appears as Eqn A12 in 
+    //// for omega values at the wall. This appears as Eqn A12 in
     //// Menter's paper.
     //// Reference:
     //// Menter (1994)
@@ -1359,7 +1467,7 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
         _faces_need_to_be_flagged = true;
     }
 
-    override string toString() const 
+    override string toString() const
     {
         return "WallFunction_InterfaceEffect()";
     }
@@ -1373,7 +1481,7 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
     {
         throw new FlowSolverException("WallFunction_InterfaceEffect bc not implemented for unstructured grids.");
     }
-    
+
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         auto blk = cast(SFluidBlock) this.blk;
@@ -1447,7 +1555,7 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
                 for (i = blk.imin; i <= blk.imax; ++i) {
                     cell = blk.get_cell(i,j,k);
                     IFace = cell.iface[Face.north];
-                    wall_function(cell, IFace); 
+                    wall_function(cell, IFace);
                 } // end i loop
             } // end for k
             break;
@@ -1516,7 +1624,7 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
     {
         auto gmodel = blk.myConfig.gmodel;
         // Compute recovery factor
-        number cp = gmodel.Cp(cell.fs.gas); 
+        number cp = gmodel.Cp(cell.fs.gas);
         number Pr = cell.fs.gas.mu * cp / cell.fs.gas.k;
         number gas_constant = gmodel.R(cell.fs.gas);
         number recovery = pow(Pr, (1.0/3.0));
@@ -1525,7 +1633,7 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
         number cell_tangent0, cell_tangent1, face_tangent0, face_tangent1;
         Vector3 cellVel = cell.fs.vel;
         Vector3 faceVel = IFace.fs.vel;
-        cellVel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2); 
+        cellVel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
         faceVel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
         if ( blk.myConfig.dimensions == 2 ) {
             cell_tangent0 = sqrt( pow(cellVel.y, 2.0) + pow(cellVel.z, 2.0) );
@@ -1542,11 +1650,11 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
         // Compute wall gas properties from either ...
         number T_wall, rho_wall;
         if ( _isFixedTWall ) {
-            // ... user-specified wall temperature, or ... 
-            T_wall = IFace.fs.gas.T; 
+            // ... user-specified wall temperature, or ...
+            T_wall = IFace.fs.gas.T;
             rho_wall = IFace.fs.gas.rho;
         } else {
-            // ... using Crocco-Busemann relation (Eq 11) 
+            // ... using Crocco-Busemann relation (Eq 11)
             T_wall = cell.fs.gas.T + recovery * du * du / (2.0 * cp);
             // Update gas properties at the wall, assuming static pressure
             // at the wall is the same as that in the first wall cell
@@ -1556,7 +1664,7 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
             gmodel.update_trans_coeffs(IFace.fs.gas);
             rho_wall = IFace.fs.gas.rho;
         }
-        // Compute wall shear stess (and heat flux for fixed temperature wall) 
+        // Compute wall shear stess (and heat flux for fixed temperature wall)
         // using the surface stress tensor. This provides initial values to
         // solve for tau_wall and q_wall iteratively
         number wall_dist = distance_between(cell.pos[0], IFace.pos);
@@ -1571,7 +1679,7 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
             k_lam_wall = IFace.fs.gas.k;
             q_wall_old = k_lam_wall * dTdy;
         }
-        // Constants from Spalding's Law of the Wall theory and 
+        // Constants from Spalding's Law of the Wall theory and
         // Nichols' wall function implementation
         double kappa = 0.4;
         double B = 5.5;
@@ -1592,7 +1700,7 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
                 u_tau = sqrt( tau_wall_old / rho_wall );
                 u_plus = du / u_tau;
                 // Gamma, Beta, Qm and Phi (Eq 7)
-                Gam = recovery * u_tau * u_tau / (2.0 * cp * T_wall); 
+                Gam = recovery * u_tau * u_tau / (2.0 * cp * T_wall);
                 if ( _isFixedTWall ) {
                     Beta = q_wall_old * mu_lam_wall / (rho_wall*T_wall*k_lam_wall*u_tau);
                 } else {
@@ -1601,7 +1709,7 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
                 Q = sqrt(Beta*Beta + 4.0*Gam);
                 Phi = asin(-1.0 * Beta / Q);
                 // In the calculation of y+ defined by White and Christoph
-                // (Eq 9), the equation breaks down when the value of 
+                // (Eq 9), the equation breaks down when the value of
                 // asin((2.0*Gam*u_plus - Beta)/Q) goes larger than 1.0 or
                 // smaller than -1.0. For cases where we initialise the flow
                 // solution with high flow velocity, du (and hence u_plus)
@@ -1620,14 +1728,14 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
                 y_plus = u_plus + y_plus_white - exp(-1.0*kappa*B) * ( 1.0 + kappa*u_plus
                                                                            + pow((kappa*u_plus), 2.0) / 2.0
                                                                            + pow((kappa*u_plus), 3.0) / 6.0 );
-                // Calculate an updated value for the wall shear stress and heat flux 
+                // Calculate an updated value for the wall shear stress and heat flux
                 tau_wall = 1.0/rho_wall * pow(y_plus*mu_lam_wall/wall_dist, 2.0);
                 // Difference between old and new tau_wall and q_wall. Update old value
                 diff_tau = fabs(tau_wall - tau_wall_old);
                 tau_wall_old += 0.25 * (tau_wall - tau_wall_old);
                 // Limit number of iteration loops to 1000.
                 counter_tau++;
-                if (counter_tau > 1000) break; 
+                if (counter_tau > 1000) break;
             } // End of "while ( diff_tau > tolerance )" loop
             //
             if ( _isFixedTWall ) {
@@ -1638,15 +1746,15 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
                 q_wall_old += 0.25 * (q_wall - q_wall_old);
             } else {
                 // For adiabatic wall cases, we just break out of the q_wall loop.
-                break; 
-            } 
+                break;
+            }
             // Limit number of iteration loops to 1000.
             counter_q++;
-            if (counter_q > 1000) break; 
+            if (counter_q > 1000) break;
         } // End of "while ( diff_q > tolerance )" loop
         //
-        // Store wall shear stress and heat flux to be used later to replace viscous  
-        // stress in flux calculations. Also, for wall shear stress, transform value 
+        // Store wall shear stress and heat flux to be used later to replace viscous
+        // stress in flux calculations. Also, for wall shear stress, transform value
         // back to the global frame of reference.
         double reverse_flag0 = 1.0; double reverse_flag1 = 1.0;
         Vector3 local_tau_wall;
@@ -1662,7 +1770,7 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
                 IFace.tau_wall_y = -1.0 * reverse_flag0 * tau_wall * IFace.n.x;
                 IFace.tau_wall_z = 0.0;
             } else {
-                local_tau_wall = Vector3(to!number(0.0), 
+                local_tau_wall = Vector3(to!number(0.0),
                                          -1.0 * reverse_flag0 * tau_wall * cos(vt1_2_angle),
                                          -1.0 * reverse_flag1 * tau_wall * sin(vt1_2_angle));
             }
@@ -1736,7 +1844,7 @@ private:
 //       and important side-effect:
 //       IT ALSO SETS THE FLUX IN THE ADJACENT SOLID DOMAIN
 //       AT THE TIME IT IS CALLED.
-// TODO: We need to work out a way to coordinate this 
+// TODO: We need to work out a way to coordinate this
 //       interface effect (ie. the setting of temperature)
 //       with the flux effect. Ideally, we only want to compute
 //       the temperature/flux once per update. This will require
@@ -1747,14 +1855,14 @@ private:
 //       so that we can use it again in the boundary flux effect.
 //       It's no good storing the flux in the interface object since
 //       that will be changed during the diffusive flux calculation.
- 
+
 class BIE_TemperatureFromGasSolidInterface : BoundaryInterfaceEffect {
 public:
     int neighbourSolidBlk;
     int neighbourSolidFace;
     int neighbourOrientation;
 
-    this(int id, int boundary, 
+    this(int id, int boundary,
          int otherBlock, int otherFace, int orient)
     {
         super(id, boundary, "TemperatureFromGasSolidInterface");
@@ -1763,7 +1871,7 @@ public:
         neighbourOrientation = orient;
     }
 
-    override string toString() const 
+    override string toString() const
     {
         return "TemperatureFromGasSolidInterface()";
     }
@@ -1787,25 +1895,25 @@ public:
         number dxG, dyG, dzG, dnG, dxS, dyS, dzS, dnS;
         number kG_dnG, kS_dnS, cosA, cosB, cosC;
         number T, q;
-        
+
         foreach ( i; 0 .. myBC.ifaces.length ) {
             cosA = myBC.ifaces[i].n.x;
             cosB = myBC.ifaces[i].n.y;
             cosC = myBC.ifaces[i].n.z;
-            
+
             dxG = myBC.ifaces[i].pos.x - myBC.gasCells[i].pos[0].x;
             dyG = myBC.ifaces[i].pos.y - myBC.gasCells[i].pos[0].y;
             dzG = myBC.ifaces[i].pos.z - myBC.gasCells[i].pos[0].z;
             dnG = fabs(cosA*dxG + cosB*dyG + cosC*dzG);
-            
+
             dxS = myBC.ifaces[i].pos.x - myBC.solidCells[i].pos.x;
             dyS = myBC.ifaces[i].pos.y - myBC.solidCells[i].pos.y;
             dzS = myBC.ifaces[i].pos.z - myBC.solidCells[i].pos.z;
             dnS = fabs(cosA*dxS + cosB*dyS + cosC*dzS);
-            
+
             kG_dnG = myBC.gasCells[i].fs.gas.k / dnG;
             kS_dnS = myBC.solidCells[i].sp.k / dnS;
-            
+
             T = (myBC.gasCells[i].fs.gas.T*kG_dnG + myBC.solidCells[i].T*kS_dnS) / (kG_dnG + kS_dnS);
 
             // Finally update properties in interfaces
