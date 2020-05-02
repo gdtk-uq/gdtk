@@ -28,6 +28,7 @@ public:
     {
         super(id, boundary, "flowStateCopyFromHistory");
         fhistory = new FlowHistory(fileName);
+        my_fs = new FlowState(GlobalConfig.gmodel_master);
     }
 
     override string toString() const
@@ -45,13 +46,14 @@ public:
     {
         FVCell ghost0;
         BoundaryCondition bc = blk.bc[which_boundary];
+        fhistory.set_flowstate(my_fs, t);
         foreach (i, f; bc.faces) {
             if (bc.outsigns[i] == 1) {
                 ghost0 = f.right_cell;
             } else {
                 ghost0 = f.left_cell;
             }
-            ghost0.fs.copy_values_from(fhistory.get_flowstate(t));
+            ghost0.fs.copy_values_from(my_fs);
         } // end foreach face
     } // end apply_unstructured_grid()
 
@@ -62,10 +64,10 @@ public:
         size_t i, j, k;
         FVCell src_cell, dest_cell;
         FVInterface dest_face;
-        FlowState fstate;
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         bool nghost3 = (blk.n_ghost_cell_layers == 3);
+        fhistory.set_flowstate(my_fs, t);
 
         final switch (which_boundary) {
         case Face.north:
@@ -73,13 +75,12 @@ public:
             for (k = blk.kmin; k <= blk.kmax; ++k) {
                 for (i = blk.imin; i <= blk.imax; ++i) {
                     dest_cell = blk.get_cell(i,j+1,k);
-                    fstate = fhistory.get_flowstate(t);
-                    dest_cell.fs.copy_values_from(fstate);
+                    dest_cell.fs.copy_values_from(my_fs);
                     dest_cell = blk.get_cell(i,j+2,k);
-                    dest_cell.fs.copy_values_from(fstate);
+                    dest_cell.fs.copy_values_from(my_fs);
                     if (nghost3) {
                         dest_cell = blk.get_cell(i,j+3,k);
-                        dest_cell.fs.copy_values_from(fstate);
+                        dest_cell.fs.copy_values_from(my_fs);
                     }
                 } // end i loop
             } // for k
@@ -89,13 +90,12 @@ public:
             for (k = blk.kmin; k <= blk.kmax; ++k) {
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     dest_cell = blk.get_cell(i+1,j,k);
-                    fstate = fhistory.get_flowstate(t);
-                    dest_cell.fs.copy_values_from(fstate);
+                    dest_cell.fs.copy_values_from(my_fs);
                     dest_cell = blk.get_cell(i+2,j,k);
-                    dest_cell.fs.copy_values_from(fstate);
+                    dest_cell.fs.copy_values_from(my_fs);
                     if (nghost3) {
                         dest_cell = blk.get_cell(i+3,j,k);
-                        dest_cell.fs.copy_values_from(fstate);
+                        dest_cell.fs.copy_values_from(my_fs);
                     }
                 } // end j loop
             } // for k
@@ -105,13 +105,12 @@ public:
             for (k = blk.kmin; k <= blk.kmax; ++k) {
                 for (i = blk.imin; i <= blk.imax; ++i) {
                     dest_cell = blk.get_cell(i,j-1,k);
-                    fstate = fhistory.get_flowstate(t);
-                    dest_cell.fs.copy_values_from(fstate);
+                    dest_cell.fs.copy_values_from(my_fs);
                     dest_cell = blk.get_cell(i,j-2,k);
-                    dest_cell.fs.copy_values_from(fstate);
+                    dest_cell.fs.copy_values_from(my_fs);
                     if (nghost3) {
                         dest_cell = blk.get_cell(i,j-3,k);
-                        dest_cell.fs.copy_values_from(fstate);
+                        dest_cell.fs.copy_values_from(my_fs);
                     }
                 } // end i loop
             } // for k
@@ -121,13 +120,12 @@ public:
             for (k = blk.kmin; k <= blk.kmax; ++k) {
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     dest_cell = blk.get_cell(i-1,j,k);
-                    fstate = fhistory.get_flowstate(t);
-                    dest_cell.fs.copy_values_from(fstate);
+                    dest_cell.fs.copy_values_from(my_fs);
                     dest_cell = blk.get_cell(i-2,j,k);
-                    dest_cell.fs.copy_values_from(fstate);
+                    dest_cell.fs.copy_values_from(my_fs);
                     if (nghost3) {
                         dest_cell = blk.get_cell(i-3,j,k);
-                        dest_cell.fs.copy_values_from(fstate);
+                        dest_cell.fs.copy_values_from(my_fs);
                     }
                 } // end j loop
             } // for k
@@ -137,13 +135,12 @@ public:
             for (i = blk.imin; i <= blk.imax; ++i) {
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     dest_cell = blk.get_cell(i,j,k+1);
-                    fstate = fhistory.get_flowstate(t);
-                    dest_cell.fs.copy_values_from(fstate);
+                    dest_cell.fs.copy_values_from(my_fs);
                     dest_cell = blk.get_cell(i,j,k+2);
-                    dest_cell.fs.copy_values_from(fstate);
+                    dest_cell.fs.copy_values_from(my_fs);
                     if (nghost3) {
                         dest_cell = blk.get_cell(i,j,k+3);
-                        dest_cell.fs.copy_values_from(fstate);
+                        dest_cell.fs.copy_values_from(my_fs);
                     }
                 } // end j loop
             } // for i
@@ -153,13 +150,12 @@ public:
             for (i = blk.imin; i <= blk.imax; ++i) {
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     dest_cell = blk.get_cell(i,j,k-1);
-                    fstate = fhistory.get_flowstate(t);
-                    dest_cell.fs.copy_values_from(fstate);
+                    dest_cell.fs.copy_values_from(my_fs);
                     dest_cell = blk.get_cell(i,j,k-2);
-                    dest_cell.fs.copy_values_from(fstate);
+                    dest_cell.fs.copy_values_from(my_fs);
                     if (nghost3) {
                         dest_cell = blk.get_cell(i,j,k-3);
-                        dest_cell.fs.copy_values_from(fstate);
+                        dest_cell.fs.copy_values_from(my_fs);
                     }
                 } // end j loop
             } // for i
@@ -169,5 +165,5 @@ public:
 
 private:
     FlowHistory fhistory;
-
+    FlowState my_fs;
 } // end class GhostCellFlowStateCopyFromHistory

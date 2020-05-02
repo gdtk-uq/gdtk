@@ -594,15 +594,15 @@ public:
         auto line = range.front;
         int npoints = 0;
         while (!line.empty) {
-            string text = to!string(line);
-            if (!canFind(text, "#")) {
+            string txt = to!string(line);
+            if (!canFind(txt, "#")) {
                 // Assume that we have a line of data rather than variable names.
                 fstate ~= new FlowState(GlobalConfig.gmodel_master);
                 pos ~= Vector3();
                 number volume, Q_rad_org, f_rad_org, Q_rE_rad;
                 double dt_chem, dt_therm, dt_local;
                 scan_cell_data_from_fixed_order_string
-                    (text, pos[$-1], volume, fstate[$-1],
+                    (txt, pos[$-1], volume, fstate[$-1],
                      Q_rad_org, f_rad_org, Q_rE_rad, GlobalConfig.with_local_time_stepping, dt_local, dt_chem, dt_therm,
                      GlobalConfig.include_quality, GlobalConfig.MHD,
                      GlobalConfig.divergence_cleaning, GlobalConfig.radiation,
@@ -736,14 +736,19 @@ public:
         auto range = f.byLine();
         auto line = range.front;
         while (!line.empty) {
-            string text = to!string(line).chomp();
-            if (text.length > 0 && !canFind(text, "#")) {
+            string txt = to!string(line).chomp();
+            if (txt.length > 0 && !canFind(txt, "#")) {
                 // Assume that we have a line of data rather than variable names.
                 // item: 0 1     2     3     4 5 6       ...
                 // name: t vel.x vel.y vel.z p T massf[0]...
                 auto fs= new FlowState(gm);
                 double tme;
-                auto items = text.split();
+                auto items = txt.split();
+                if (items.length < 6+gm.n_species+gm.n_modes) {
+                    string msg = text("Did not find enough data on the line: \"",
+                                      txt, "\"");
+                    throw new Error(msg);
+                }
                 tme = to!double(items[0]);
                 fs.vel.set(to!double(items[1]), to!double(items[2]), to!double(items[3]));
                 fs.gas.p = to!double(items[4]);
@@ -757,17 +762,21 @@ public:
             range.popFront();
             line = range.front;
         } // end while
+        if (fstate.length < 2) {
+            throw new Error("FlowHistory is not properly initialized.");
+        }
     } // end this()
 
-    FlowState get_flowstate(double t)
+    void set_flowstate(FlowState fs, double t)
     {
-        assert(fstate.length > 0, "FlowHistory is empty.");
         // Presently, just return a stepped history.
         // [TODO] linearly interpolate flow state data.
-        int i = 0;
-        while (t < times[i]) { i++; }
+        size_t nt = times.length;
+        size_t i = 0;
+        while ((i < nt-1) && t > times[i+1]) { i++; }
         i = min(i, fstate.length-1);
-        return fstate[i];
+        fs.copy_values_from(fstate[i]);
+        return;
     } // end get_flowstate()
 
 } // end FlowHistory

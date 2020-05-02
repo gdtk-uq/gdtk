@@ -499,6 +499,7 @@ public:
     {
         super(id, boundary, "flowStateCopyFromHistory");
         fhistory = new FlowHistory(fileName);
+        my_fs = new FlowState(GlobalConfig.gmodel_master);
     }
 
     override string toString() const
@@ -515,7 +516,8 @@ public:
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         BoundaryCondition bc = blk.bc[which_boundary];
-        foreach (i, f; bc.faces) { f.fs.copy_values_from(fhistory.get_flowstate(t)); }
+        fhistory.set_flowstate(my_fs, t);
+        foreach (i, f; bc.faces) { f.fs.copy_values_from(my_fs); }
     }
 
     override void apply_structured_grid(double t, int gtl, int ftl)
@@ -526,6 +528,7 @@ public:
         auto gmodel = blk.myConfig.gmodel;
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
+        fhistory.set_flowstate(my_fs, t);
 
         final switch (which_boundary) {
         case Face.north:
@@ -534,7 +537,7 @@ public:
                 for (i = blk.imin; i <= blk.imax; ++i) {
                     cell = blk.get_cell(i,j,k);
                     f = cell.iface[Face.north];
-                    f.fs.copy_values_from(fhistory.get_flowstate(t));
+                    f.fs.copy_values_from(my_fs);
                 } // end i loop
             } // end for k
             break;
@@ -544,7 +547,7 @@ public:
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     cell = blk.get_cell(i,j,k);
                     f = cell.iface[Face.east];
-                    f.fs.copy_values_from(fhistory.get_flowstate(t));
+                    f.fs.copy_values_from(my_fs);
                 } // end j loop
             } // end for k
             break;
@@ -554,7 +557,7 @@ public:
                 for (i = blk.imin; i <= blk.imax; ++i) {
                     cell = blk.get_cell(i,j,k);
                     f = cell.iface[Face.south];
-                    f.fs.copy_values_from(fhistory.get_flowstate(t));
+                    f.fs.copy_values_from(my_fs);
                 } // end i loop
             } // end for k
             break;
@@ -564,7 +567,7 @@ public:
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     cell = blk.get_cell(i,j,k);
                     f = cell.iface[Face.west];
-                    f.fs.copy_values_from(fhistory.get_flowstate(t));
+                    f.fs.copy_values_from(my_fs);
                 } // end j loop
             } // end for k
             break;
@@ -574,7 +577,7 @@ public:
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     cell = blk.get_cell(i,j,k);
                     f = cell.iface[Face.top];
-                    f.fs.copy_values_from(fhistory.get_flowstate(t));
+                    f.fs.copy_values_from(my_fs);
                 } // end j loop
             } // end for i
             break;
@@ -584,7 +587,7 @@ public:
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     cell = blk.get_cell(i,j,k);
                     f = cell.iface[Face.bottom];
-                    f.fs.copy_values_from(fhistory.get_flowstate(t));
+                    f.fs.copy_values_from(my_fs);
                 } // end j loop
             } // end for i
             break;
@@ -593,7 +596,7 @@ public:
 
 private:
     FlowHistory fhistory;
-
+    FlowState my_fs;
 } // end class BIE_FlowStateCopyFromHistory
 
 
