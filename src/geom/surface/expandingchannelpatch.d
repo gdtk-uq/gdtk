@@ -2,7 +2,7 @@
 
 // This is Wilson Chan's specialized surface for nozzle expansion regions.
 // It was extracted from the nozzle.input.template in the nenzfr application.
-// [TODO] make it a little more general by using the south path 
+// [TODO] make it a little more general by using the south path
 // and not restricting the surface to the x,y-plane.
 // The intent is to make also a general ChannelPatch to complement CoonsPatch and AOPatch.
 // 2014-nov-18: Peter J.
@@ -25,7 +25,7 @@ public:
     Path cB; // north edge
     Path cC; // west edge
     Path cD; // east edge
-    
+
     this(const Path cA, const Path cB, const Path cC, const Path cD)
     {
         this.cA = cA.dup(); // south
@@ -33,7 +33,7 @@ public:
         this.cC = cC.dup(); // west
         this.cD = cD.dup(); // east
     }
-    
+
     this(ref const(ExpandingChannelPatch) other)
     {
         cA = other.cA.dup();
@@ -47,16 +47,16 @@ public:
         return new ExpandingChannelPatch(this.cA, this.cB, this.cC, this.cD);
     }
 
-    override Vector3 opCall(double r, double s) const 
+    override Vector3 opCall(double r, double s) const
     {
         // Define the expansion_region of a nozzle using a specialised Surface Function.
         // For viscous simulations, it is necessary to keep the cells near
         // the non-slip walls as orthogonal to the walls as possible. However,
-        // because the "AO" option in make_patch() does not give a grid that is 
+        // because the "AO" option in make_patch() does not give a grid that is
         // good enough for the nozzle geometry, a specialised surface function
         // has to be used. Points in the grid along the north, east and west
         // edges follow that specified by n_north, n_east and n_west. The rest
-        // of the other points in the grid are built by creating strips of 
+        // of the other points in the grid are built by creating strips of
         // quadratic Bezier curves that run from the nozzle wall to the axis.
         // The use of quadratic Bezier curves allows the generated points to
         // be orthogonal to the wall near the nozzle wall and orthogonal to
@@ -116,7 +116,7 @@ public:
             // Axis point (Bezier control point 3).
             auto axis_pt_x = mid_pt_x;
             auto axis_pt_y = 0.0;
-                
+
             // Generate t for quadratic Bezier curve equation.
             auto t = (1.0 - s);
 

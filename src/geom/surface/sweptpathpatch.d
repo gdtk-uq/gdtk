@@ -13,7 +13,7 @@ public:
     Path cA; // Path to sweep (think of it as a west edge)
     Path cB; // Path along which cA is swept (think of it as a south edge)
     Vector3 p00, p10, p11, p01;
-    
+
     this(const Path cA, const Path cB)
     {
         this.cA = cA.dup();
@@ -23,7 +23,7 @@ public:
         p01 = cB(0.0) + cA(1.0) - cA(0.0);
         p11 = cB(1.0) + cA(1.0) - cA(0.0);
     }
-    
+
     this(ref const(SweptPathPatch) other)
     {
         cA = other.cA.dup();
@@ -39,7 +39,7 @@ public:
         return new SweptPathPatch(this.cA, this.cB);
     }
 
-    override Vector3 opCall(double r, double s) const 
+    override Vector3 opCall(double r, double s) const
     {
         Vector3 p = cB(r) + cA(s) - cA(0.0);
         return p;

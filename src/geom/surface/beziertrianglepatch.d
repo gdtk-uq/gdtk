@@ -217,7 +217,7 @@ void writeBezierTriangleCtrlPtsAsVtkXml(BezierTrianglePatch btp, string fileName
     auto nPtsTotal = btp.B.length;
     auto n = btp.n;
     auto nCells = n^^2;
-    
+
     auto f = File(fileName, "w");
     f.writeln("<VTKFile type=\"UnstructuredGrid\" version=\"1.0\" header_type=\"UInt64\">");
     f.writeln("  <UnstructuredGrid>");
@@ -271,7 +271,7 @@ void writeBezierTriangleAsVtkXml(BezierTrianglePatch btp, string fileName, int n
     int nPtsTotal = nEdgePts*(nEdgePts+1)/2;
     int n = nEdgePts - 1;
     int nCells = (nEdgePts-1)^^2;
-    
+
     auto f = File(fileName, "w");
     f.writeln("<VTKFile type=\"UnstructuredGrid\" version=\"1.0\" header_type=\"UInt64\">");
     f.writeln("  <UnstructuredGrid>");
@@ -330,7 +330,7 @@ void writeBezierTriangleAsDat(BezierTrianglePatch btp, string fileName, int nEdg
     int nPtsTotal = nEdgePts*(nEdgePts+1)/2;
     int n = nEdgePts - 1;
     int nCells = (nEdgePts-1)^^2;
-    
+
     auto f = File(fileName, "w");
     f.writefln("%d",  nPtsTotal);
     foreach (i; iota(n, -1, -1)) {
@@ -360,7 +360,7 @@ BezierTrianglePatch bezierTriangleFromPointCloud(Vector3[] points, Vector3 p0, V
     //           /   \
     //       p2 +_____+ p0
     //   b(0,0,n)        b(n,0,0)
-    //  
+    //
 
     auto nCtrlPts = (n+1)*(n+2)/2;
     Vector3[] ctrlPts;
@@ -488,14 +488,14 @@ BezierTrianglePatch bezierTriangleFromPointCloud(Vector3[] points, Bezier b0, Be
 {
     double tol = 0.01;
     int maxSteps = 500;
-    // Edges and their directions are defined as: 
+    // Edges and their directions are defined as:
     // (_,_,_) = (u,v,w)
     // b_ = Bezier curve
-    // 
+    //
     //                     + (0,1,0)
     //              _0_   / \   *1
     //               /   /   \   \
-    //          b0--/   /     \   \--b2 
+    //          b0--/   /     \   \--b2
     //             /   /       \   \
     //            /   /         \   \
     //          1*   /           \  -0-
@@ -643,8 +643,7 @@ BezierTrianglePatch bezierTriangleFromPointCloud(Vector3[] points, Bezier b0, Be
                          distance_between(b2.B[0], b2.B[$-1]));
     dx[] = dp;
     success = nm.nelmin.minimize!(fMin, number)(d, f_min, n_fe, n_restart, dx, tol, maxSteps);
-    
-    
+
     size_t pos = 0;
     foreach (i; iota(n, -1, -1)) {
         foreach (j; iota(n-i, -1, -1)) {

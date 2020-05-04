@@ -71,7 +71,7 @@ public:
         return new MeshPatch(this.mesh);
     }
 
-    override Vector3 opCall(double r, double s) const 
+    override Vector3 opCall(double r, double s) const
     {
         // Interpolate within the background mesh.
         // This involves finding the relevant cell and

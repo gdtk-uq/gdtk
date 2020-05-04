@@ -78,13 +78,13 @@ public:
         return new CoonsPatch(this.south, this.north, this.west, this.east);
     }
 
-    override Vector3 opCall(double r, double s) const 
+    override Vector3 opCall(double r, double s) const
     {
-        Vector3 south_r = south(r); 
+        Vector3 south_r = south(r);
         Vector3 north_r = north(r);
-        Vector3 west_s = west(s); 
+        Vector3 west_s = west(s);
         Vector3 east_s = east(s);
-        Vector3 p = (1.0-s)*south_r + s*north_r + (1.0-r)*west_s + r*east_s - 
+        Vector3 p = (1.0-s)*south_r + s*north_r + (1.0-r)*west_s + r*east_s -
             ((1.0-r)*(1.0-s)*p00 + (1.0-r)*s*p01 + r*(1.0-s)*p10 + r*s*p11);
         return p;
     }

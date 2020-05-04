@@ -17,7 +17,7 @@ public:
     bool ruled;
     bool pure2D;
     Vector3 p00, p10, p11, p01;
-    
+
     this(const Path cA, const Path cB, bool ruled=false, bool pure2D=false)
     {
         this.cA = cA.dup();
@@ -29,7 +29,7 @@ public:
         p01 = cB(0.0);
         p11 = cB(1.0);
     }
-    
+
     this(ref const(ChannelPatch) other)
     {
         cA = other.cA.dup();
@@ -47,7 +47,7 @@ public:
         return new ChannelPatch(this.cA, this.cB, this.ruled, this.pure2D);
     }
 
-    override Vector3 opCall(double r, double s) const 
+    override Vector3 opCall(double r, double s) const
     {
         auto bridge_path = make_bridging_path(r);
         Vector3 p = bridge_path(s);
@@ -60,10 +60,10 @@ public:
         return "ChannelPatch(cA=" ~ to!string(cA) ~ ", cB=" ~ to!string(cB) ~
             ", ruled=" ~ to!string(ruled) ~ ", pure2D=" ~ to!string(pure2D) ~ ")";
     }
-    
+
     Path make_bridging_path(double r) const
     {
-        Vector3 cAr = cA(r); 
+        Vector3 cAr = cA(r);
         Vector3 cBr = cB(r);
         if (pure2D) { cAr.refz = 0.0; cBr.refz = 0.0; }
         if (ruled) {

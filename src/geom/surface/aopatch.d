@@ -20,7 +20,7 @@ class AOPatch : ParametricSurface {
     // The topology of the parametric surface is the same as that of the CoonsPatch.
     // The difference, however, is in the evaluation of points on the surface.
     // Here, points are interpolated within a background mesh that has been fitted
-    // with the Area-Orthogonality (AO) elliptic grid generator 
+    // with the Area-Orthogonality (AO) elliptic grid generator
     // described by Patrick M. Knupp "A Robust Elliptic Grid Generator"
     // J. Computational Physics Vol.100 pp409-418 (1992)
 public:
@@ -78,9 +78,9 @@ public:
                                  " p01_alt= ", p01_alt));
         }
         // The TFI grid is a fall-back way of evaluating a point on
-        // the surface and will be used when the parameter values 
+        // the surface and will be used when the parameter values
         // place us very close to a boundary.
-        // The coarse background mesh tends to cut across 
+        // The coarse background mesh tends to cut across
         // curved boundaries and so should not be used as our
         // guide near those boundaries.
         tfi_surface = new CoonsPatch(south, north, west, east);
