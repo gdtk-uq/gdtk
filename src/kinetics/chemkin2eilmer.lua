@@ -381,10 +381,11 @@ function main()
    -- 3. Similarly, we'll add space around third bodies
    --    that designate a pressure-dependent reaction.
    --    OH(+M) should transform to OH (+M)
+   -- 4. Convert species with (S) to _S
    --
    -- We handle these with an invocation of 'sed' and
    -- put the result in a temporary file, tmp.
-   sedCmd = string.format('sed -e "s/AR/Ar/g" -e "s/\\([A-Z0-9]\\)+\\([A-Z]\\)/\\1 + \\2/g" -e "s/(+M)/ (+M)/g" < %s > tmp', inFname)
+   sedCmd = string.format('sed -e "s/AR/Ar/g" -e "s/\\([A-Z0-9]\\)+\\([A-Z]\\)/\\1 + \\2/g" -e "s/(+M)/ (+M)/g" -e "s/(S)/_S/g" < %s > tmp', inFname)
    os.execute(sedCmd)
 
    -- -----------------------------------------
