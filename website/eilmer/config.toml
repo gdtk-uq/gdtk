@@ -1,4 +1,4 @@
-baseURL = "http://cfcfd.mechmining.uq.edu.au/eilmer/"
+baseURL = "http://cfcfd.mechmining.uq.edu.au/eilmer-old/"
 languageCode = "en-us"
 title = "Eilmer"
 theme = "hyde"
