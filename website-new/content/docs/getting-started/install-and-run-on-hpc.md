@@ -31,7 +31,7 @@ of the D compiler installed in your own account and
 commit to updating the compiler on a regular basis.
 For optimised builds use the LLVM compiler.
 Install notes for the LLVM D compiler (LDC) are
-available [here](/installing-ldc).
+available [here]({{< relref installing-ldc >}}).
 {{< /hint >}}
 
 ## Goliath: EAIT Faculty Cluster
@@ -65,7 +65,7 @@ I've named this file `run-on-goliath.slurm`.
     #SBATCH --job-name=my-MPI-job
     #SBATCH --nodes=1
     #SBATCH --ntasks=24
-    
+
     module load mpi/openmpi-x86_64
     mpirun e4mpi --job=myJob --run  > LOGFILE
 
@@ -85,7 +85,7 @@ wish to run the 24 cores of a single node.
     #SBATCH --nodes=1
     #SBATCH --ntasks=120
     #SBATCH --overcommit
-    
+
     module load mpi/openmpi-x86_64
     mpirun e4mpi --job=myJob --run  > LOGFILE
 
@@ -126,13 +126,13 @@ across 24 MPI tasks.
     #PBS -S /bin/bash
     #PBS -N my-MPI-job
     #PBS -A UQ-EAIT-MechMining
-    #PBS -l select=1:ncpus=24:mpiprocs=24:mem=10g 
+    #PBS -l select=1:ncpus=24:mpiprocs=24:mem=10g
     #PBS -l walltime=24:00:00
-    
+
     module purge
     module load gnu
     module load openmpi2_ib/2.0.2
-    
+
     cd $PBS_O_WORKDIR
     mpirun e4mpi --job=dbl-cone --run > LOGFILE
 
@@ -146,7 +146,7 @@ We use `qsub` to submit our job script:
 
     qsub run-on-tinaroo.qsub
 
-## Raijin: NCI Cluster 
+## Raijin: NCI Cluster
 
 *Hardware:* Fujitsu & Lenovo servers, Intel CPUs, mixed generation: older - 16 cores-per-node; newer 28 cores-per-node, InfiniBand interconnect
 
@@ -173,7 +173,7 @@ Here is a submit script where I've set up 16 MPI tasks for my job.
     #PBS -l ncpus=16
     #PBS -l mem=8GB
     #PBS -l wd
-    
+
     mpirun e4mpi --job=myJob --run > LOGFILE
 
 In the next example, I have set my job up to run in an oversubscribed mode.
@@ -186,7 +186,7 @@ Here I have 80 MPI tasks but I'd like to use only 16 CPUs.
     #PBS -l ncpus=16
     #PBS -l mem=8GB
     #PBS -l wd
-    
+
     mpirun --oversubscribe -n 80 e4mpi --job=myJob --run > LOGFILE-oversubscribed
 
 
@@ -213,7 +213,7 @@ add the following to the `.bashrc` file:
     module purge
     module load openmpi/gcc493
     module load readline
-    
+
     export DGD=$HOME/dgdinst
     export DGD_REPO=$HOME/dgd
     export PATH=$PATH:$DGD/bin
@@ -234,17 +234,18 @@ To install the MPI version:
 ### Running
 
 Where possible, try to use a full nodes at a time on NSCC. That means trying to set up your
-simulations to use 24 cores per node. Here is a job script that uses 3 nodes or 72 CPUs. 
+simulations to use 24 cores per node. Here is a job script that uses 3 nodes or 72 CPUs.
 
     #!/bin/bash
     #PBS -q normal
     #PBS -N MyJob
     #PBS -l select=3:ncpus=24:mem=72G:mpiprocs=24:ompthreads=1
     #PBS -l walltime=23:59:59
-    
+
     cd $PBS_O_WORKDIR
     mpirun e4mpi --job=MyJob --run > LogFile
 
 
 In this example, LogFile contains the log of Eilmer execution,
  which can provide useful info for status checking and debugging.
+

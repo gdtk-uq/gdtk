@@ -38,8 +38,8 @@ from the library.
 ## How to get started
 The complete repository is available on bitbucket: https://bitbucket.org/cfcfd/dgd-git
 
-It is worth browsing the Toolkit introduction
-and trying the starting exercise described [there]({{< relref toolkit >}}).
+It is worth browsing the [Getting started]({{< relref getting-started >}}) introduction
+and trying the starting exercise described there.
 
 
 ## License

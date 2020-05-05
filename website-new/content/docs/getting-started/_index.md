@@ -1,6 +1,6 @@
 ---
-title: "Toolkit"
-weight: 10
+title: "Getting started"
+weight: 50
 draft: false
 ---
 
@@ -60,7 +60,7 @@ To build Eilmer, you will require:
   + A D compiler
     Recommended: LLVM D compiler, `ldc`
     Binary releases for `ldc` at: https://github.com/ldc-developers/ldc/releases
-    An install guide for the LDC compiler is available [here](/installing-ldc).
+    An install guide for the LDC compiler is available [here]({{< relref installing-ldc >}}).
   + The gfortran compiler (and 32-bit libraries)
       + gfortran and gfortran-multilib on Debian/Ubuntu/Mint
       + gcc-gfortran on RedHat/CentOS/Fedora
@@ -96,7 +96,7 @@ For viewing and plotting results, we recommend:
 A guide to getting your development environment set up on
 Mac OSX is available
 <!--
-[here](/mac-install).
+[here]({{< relref mac-install >}}).
 -->
 
 
