@@ -17,7 +17,7 @@ Fractional = (P(".")   ) * (Digit^1)
 Decimal = 
      (Integer *              -- Integer
      (Fractional ^ -1)) +    -- Fractional
-     (S("+-") * Fractional)  -- Completely fractional number
+     (S("+-")^0 * Fractional)  -- Completely fractional number
 Scientific = 
      Decimal * -- Decimal number
      S("Ee") * -- E or e
