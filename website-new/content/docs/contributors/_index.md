@@ -6,7 +6,7 @@ draft: false
 
 # Contributors
 
-## Co-chief gardners
+## Co-chief gardeners
 
 
 
