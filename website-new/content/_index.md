@@ -21,18 +21,21 @@ There have been many more contributors to the project over the years,
 including colleagues at other universities, students and visitors.
 A list of some of those contributors is available [here]({{< relref contributors >}}).
 
-The principal components of the kit are:
-+ Eilmer, a simulation program for 2- and 3-dimensional gas flows.
-+ L1d, a program for the end-to-end simulation of free-piston-driven shock tunnels
-and expansion tubes.
-+ IMOC, an interactive program for the isentropic method for characteristics
-for 2-dimensional ideal gas flows.
+The principal tools in the kit are:
++ [Eilmer]({{< relref "docs/tools/eilmer/" >}}),
+  a simulation program for 2- and 3-dimensional gas flows.
++ [L1d]({{< relref "docs/tools/l1d/" >}}),
+  a program for the end-to-end simulation of free-piston-driven shock tunnels
+  and expansion tubes.
++ IMOC({{< relref "docs/tools/moc.md" >}}),
+  an interactive program for the isentropic method for characteristics
+  for 2-dimensional ideal gas flows.
 + A library of functions for the calculation of simple gas dynamic processes
-such as shocks and expansions in the presence of chemical reactions.
-This library may be used from within your Lua scripts,
-or a version of it may loaded into a Python or Ruby interpreter.
-The Poshax program is an example of a Python program that makes use of the functions
-from the library.
+  such as shocks and expansions in the presence of chemical reactions.
+  This library may be used from within your Lua scripts,
+  or a version of it may loaded into a Python or Ruby interpreter.
+  The Poshax program is an example of a Python program that makes use of the functions
+  from the library.
 
 
 ## How to get started

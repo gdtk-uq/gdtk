@@ -4,7 +4,7 @@ weight: 10
 
 # Eilmer: compressible flow simulation program
 
-![](/images/eilmer4-image-from-heather.png)
+![](/images/Kiock-Mach.png)
 
 ## What does Eilmer do
 
@@ -38,5 +38,13 @@ hypersonic inlets, turbomachinery and microcombustors.
 + Multiple block, structured and unstructured grids.
 + Native grid generation and import capability.
 + Unstructured-mesh partitioning via Metis.
+
+## Documentation
+
+- [Eilmer4 Flow Solver User Guide (PDF)](/pdfs/eilmer-user-guide.pdf)
+- [Geometry Package User Guide (PDF)](/pdfs/geometry-user-guide.pdf)
+- [Gas Package User Guide (PDF)](/pdfs/gas-user-guide.pdf)
+- [Reacting Gas Thermochemistry with the thermally-perfect-gas model (PDF)](/pdfs/reacting-gas-guide.pdf)
+- [Eilmer4 Reference Manual (HTML)](/html/users-reference-manual.html)
 
 
