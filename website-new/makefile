@@ -6,7 +6,8 @@ PDFS := eilmer-user-guide \
 	gas-user-guide \
 	reacting-gas-guide \
 	foammesh-user-guide \
-	presentations
+	presentations \
+	theses
 
 HTML := users-reference-manual.html l1d-reference-manual.html
 
@@ -77,3 +78,35 @@ presentations:
 	rsync -av $(DGD_DOC)/presentations/2018-07-cfh-seminar-rjg/tex/cfh-seminar-jul-2018.pdf static/pdfs/
 	rsync -av $(DGD_DOC)/presentations/2019-08-cfh-seminar-pj/eilmer-talk-pj-aug-2019.pdf static/pdfs/
 	rsync -av $(DGD_DOC)/presentations/2019-10-03-cfh-seminar-rjg/tex/cfh-seminar-oct-2019.pdf static/pdfs/
+
+theses:
+	- mkdir -p static/pdfs
+	rsync -av $(DGD_DOC)/theses/adriaan-window-MPhil-thesis-oct-2008.pdf static/pdfs/
+	rsync -av $(DGD_DOC)/theses/andrew-denman-PhD-thesis-jan-2007.pdf static/pdfs/
+	rsync -av $(DGD_DOC)/theses/ben-stewart-phd-thesis-oct-2004.pdf static/pdfs/
+	rsync -av $(DGD_DOC)/theses/brendan-oflaherty-phd-thesis-june-2012.pdf static/pdfs/
+	rsync -av $(DGD_DOC)/theses/carolyn-jacobs-phd-finalthesis-UQversion-aug-2011.pdf static/pdfs/
+	rsync -av $(DGD_DOC)/theses/charles-lilley-phd-thesis-jun-2005.pdf static/pdfs/
+	rsync -av $(DGD_DOC)/theses/chris-craddock-phd-thesis-aug-1999.pdf static/pdfs/
+	rsync -av $(DGD_DOC)/theses/dan-potter-phd-thesis-may-2011.pdf static/pdfs/
+	rsync -av $(DGD_DOC)/theses/david-gildfind-phd-thesis-oct-2012.pdf static/pdfs/
+	rsync -av $(DGD_DOC)/theses/dwishen-ramanah-mphil_thesis-jan-2007.pdf static/pdfs/
+	rsync -av $(DGD_DOC)/theses/elise-fahy-phd-thesis-dec-2016.pdf static/pdfs/
+	rsync -av $(DGD_DOC)/theses/haruko-ishikawa-phd-thesis-dec-1999.pdf static/pdfs/
+	rsync -av $(DGD_DOC)/theses/ian-johnston-honours-thesis-1994.pdf static/pdfs/
+	rsync -av $(DGD_DOC)/theses/ian-johnston-phd-thesis-jan-1999-export.pdf static/pdfs/
+	rsync -av $(DGD_DOC)/theses/james-faddy-masters-thesis-aug-2000.pdf static/pdfs/
+	rsync -av $(DGD_DOC)/theses/joseph-tang-PhD-thesis-jun-2008.pdf static/pdfs/
+	rsync -av $(DGD_DOC)/theses/kevin-austin-phd-thesis-june-2002.pdf static/pdfs/
+	rsync -av $(DGD_DOC)/theses/matt-mcgilvray-PhD-thesis-sep-2008.pdf static/pdfs/
+	rsync -av $(DGD_DOC)/theses/matthew-smith-PhD-thesis-june-2008.pdf static/pdfs/
+	rsync -av $(DGD_DOC)/theses/michael-elford-masters-thesis-sep-2005.pdf static/pdfs/
+	rsync -av $(DGD_DOC)/theses/michael-scott-phd-thesis-june-2006.pdf static/pdfs/
+	rsync -av $(DGD_DOC)/theses/n33694032_PhD_submission.pdf static/pdfs/
+	rsync -av $(DGD_DOC)/theses/neil-mudford-phd-thesis-production-of-pulsed-nozzle-flows.pdf static/pdfs/
+	rsync -av $(DGD_DOC)/theses/paul-petrie-repar-phd-thesis-dec-1997.pdf static/pdfs/
+	rsync -av $(DGD_DOC)/theses/peter-jacobs-phd-thesis-may-1987.pdf static/pdfs/
+	rsync -av $(DGD_DOC)/theses/richard-goozee-phd-thesis-apr-2003.pdf static/pdfs/
+	rsync -av $(DGD_DOC)/theses/rowan-gollan-PhD-thesis-feb-2009.pdf static/pdfs/
+	rsync -av $(DGD_DOC)/theses/vince-wheatley-masters-thesis-aug-2001.pdf static/pdfs/
+	rsync -av $(DGD_DOC)/theses/wilson-chan-phd-thesis-aug-2012.pdf static/pdfs/
