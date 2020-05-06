@@ -78,6 +78,7 @@ presentations:
 	rsync -av $(DGD_DOC)/presentations/2018-07-cfh-seminar-rjg/tex/cfh-seminar-jul-2018.pdf static/pdfs/
 	rsync -av $(DGD_DOC)/presentations/2019-08-cfh-seminar-pj/eilmer-talk-pj-aug-2019.pdf static/pdfs/
 	rsync -av $(DGD_DOC)/presentations/2019-10-03-cfh-seminar-rjg/tex/cfh-seminar-oct-2019.pdf static/pdfs/
+	rsync -av $(DGD_DOC)/presentations/2011-shock-tube-workshop/nenzfr-presentation-pj-iwstt-2011.pdf static/pdfs/
 
 theses:
 	- mkdir -p static/pdfs
