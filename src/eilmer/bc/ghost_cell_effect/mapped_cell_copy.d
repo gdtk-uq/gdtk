@@ -531,7 +531,7 @@ public:
             // Prepare to exchange geometry data for the boundary cells.
             foreach (i; 0 .. n_incoming) {
                 // To match .copy_values_from(mapped_cells[i], CopyDataOption.grid) as defined in fvcell.d.
-                size_t ne = incoming_ncells_list[i] * (blk.myConfig.n_grid_time_levels * 5 + 4);
+                size_t ne = incoming_ncells_list[i] * (blk.myConfig.n_grid_time_levels * 5 + 5);
                 version(complex_numbers) { ne *= 2; }
                 if (incoming_geometry_buf_list[i].length < ne) { incoming_geometry_buf_list[i].length = ne; }
                 // Post non-blocking receive for geometry data that we expect to receive later
@@ -554,7 +554,7 @@ public:
                 // Blocking send of this block's geometry data
                 // to the corresponding non-blocking receive that was posted
                 // at in src_blk MPI process.
-                size_t ne = outgoing_ncells_list[i] * (blk.myConfig.n_grid_time_levels * 5 + 4);
+                size_t ne = outgoing_ncells_list[i] * (blk.myConfig.n_grid_time_levels * 5 + 5);
                 version(complex_numbers) { ne *= 2; }
                 if (outgoing_geometry_buf_list[i].length < ne) { outgoing_geometry_buf_list[i].length = ne; }
                 auto buf = outgoing_geometry_buf_list[i];
@@ -572,6 +572,7 @@ public:
                     buf[ii++] = c.jLength.re; version(complex_numbers) { buf[ii++] = c.jLength.im; }
                     buf[ii++] = c.kLength.re; version(complex_numbers) { buf[ii++] = c.kLength.im; }
                     buf[ii++] = c.L_min.re; version(complex_numbers) { buf[ii++] = c.L_min.im; }
+                    buf[ii++] = c.L_max.re; version(complex_numbers) { buf[ii++] = c.L_max.im; }
                 }
                 version(mpi_timeouts) {
                     MPI_Request send_request;
@@ -618,6 +619,7 @@ public:
                     c.jLength.re = buf[ii++]; version(complex_numbers) { c.jLength.im = buf[ii++]; }
                     c.kLength.re = buf[ii++]; version(complex_numbers) { c.kLength.im = buf[ii++]; }
                     c.L_min.re = buf[ii++]; version(complex_numbers) { c.L_min.im = buf[ii++]; }
+                    c.L_max.re = buf[ii++]; version(complex_numbers) { c.L_max.im = buf[ii++]; }
                 }
             }
         } else { // not mpi_parallel

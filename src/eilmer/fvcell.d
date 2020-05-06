@@ -81,6 +81,7 @@ public:
     number jLength; // length in the j-index direction
     number kLength; // length in the k-index direction
     number L_min;   // minimum length scale for cell
+    number L_max;   // maximum length scale for cell
     // Connections
     FVInterface[] iface;  // references to defining interfaces of cell
     double[] outsign; // +1.0 if iface is outward-facing; -1.0 for an inward-facing iface
@@ -233,12 +234,14 @@ public:
             jLength = other.jLength;
             kLength = other.kLength;
             L_min = other.L_min;
+            L_max = other.L_max;
             break;
         case CopyDataOption.cell_lengths_only:
             iLength = other.iLength;
             jLength = other.jLength;
             kLength = other.kLength;
             L_min = other.L_min;
+            L_max = other.L_max;
             break;
         case CopyDataOption.all: 
         default:
@@ -255,6 +258,7 @@ public:
             jLength = other.jLength;
             kLength = other.kLength;
             L_min = other.L_min;
+            L_max = other.L_max;
             fs.copy_values_from(other.fs);
             Q.copy_values_from(other.Q);
             grad.copy_values_from(other.grad);
@@ -356,6 +360,7 @@ public:
         volume[gtl] = vol;
         areaxy[gtl] = xyplane_area;
         kLength = 0.0;
+        L_max = fmax(iLength, jLength);
     } // end update_2D_geometric_data()
 
     @nogc
@@ -401,6 +406,7 @@ public:
             }
             throw new FlowSolverException(msg);
         }
+        L_max = fmax(fmax(iLength, jLength), kLength);
     } // end update_3D_geometric_data()
     
     void replace_flow_data_with_average(in FVCell[] others) 

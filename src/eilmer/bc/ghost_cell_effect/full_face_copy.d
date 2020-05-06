@@ -970,7 +970,7 @@ public:
                 // Prepare to exchange geometry data for the boundary cells.
                 // To match .copy_values_from(mapped_cells[i], CopyDataOption.grid) as defined in fvcell.d.
                 //
-                size_t ne = ghost_cells.length * (this_blk.myConfig.n_grid_time_levels * 5 + 4);
+                size_t ne = ghost_cells.length * (this_blk.myConfig.n_grid_time_levels * 5 + 5);
                 if (incoming_geometry_buf.length < ne) { incoming_geometry_buf.length = ne; }
                 //
                 // Post non-blocking receive for geometry data that we expect to receive later
@@ -1005,7 +1005,7 @@ public:
                     // to the corresponding non-blocking receive that was posted
                     // in the other MPI process.
                     outgoing_geometry_tag = make_mpi_tag(blk.id, which_boundary, 1);
-                    size_t ne = ghost_cells.length * (this_blk.myConfig.n_grid_time_levels * 5 + 4);
+                    size_t ne = ghost_cells.length * (this_blk.myConfig.n_grid_time_levels * 5 + 5);
                     if (outgoing_geometry_buf.length < ne) { outgoing_geometry_buf.length = ne; }
                     size_t ii = 0;
                     foreach (c; outgoing_mapped_cells) {
@@ -1020,6 +1020,7 @@ public:
                         outgoing_geometry_buf[ii++] = c.jLength;
                         outgoing_geometry_buf[ii++] = c.kLength;
                         outgoing_geometry_buf[ii++] = c.L_min;
+                        outgoing_geometry_buf[ii++] = c.L_max;
                     }
                     version(mpi_timeouts) {
                         MPI_Request send_request;
@@ -1077,6 +1078,7 @@ public:
                         c.jLength = incoming_geometry_buf[ii++];
                         c.kLength = incoming_geometry_buf[ii++];
                         c.L_min = incoming_geometry_buf[ii++];
+                        c.L_max = incoming_geometry_buf[ii++];
                     }
                 } else {
                     // The other block happens to be in this MPI process so
