@@ -3,3 +3,5 @@ languageCode = "en-us"
 title = "GDTk"
 theme = "book"
 
+[params]
+  BookLogo = 'images/eilmer-icon-3.png'

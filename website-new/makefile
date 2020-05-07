@@ -25,6 +25,7 @@ clean:
 images:
 	- mkdir static/images
 	cp ../images/* static/images/
+	cp ../images/eilmer-icon-2.png static/favicon.png
 
 users-reference-manual.html:
 	- mkdir -p static/html
