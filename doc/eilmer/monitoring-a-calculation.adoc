@@ -1,4 +1,4 @@
-= Monitoring a calculation
+= Monitoring a simulation
 
 While a calculation runs, its progress can be monitored in a couple of ways.
 By default, the simulation program occasionally writes to the console
