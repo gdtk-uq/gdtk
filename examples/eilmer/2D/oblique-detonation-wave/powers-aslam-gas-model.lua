@@ -1,6 +1,6 @@
-model = "PowersAslamGas"
+model = "IdealGasAB"
 
-PowersAslamGas = {
+IdealGasAB = {
   R = 287,
   gamma = 6/5,
   q = 300000,

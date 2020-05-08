@@ -33,7 +33,7 @@ final class UpdateAB : ThermochemicalReactor {
         // Although they exist in the GasModel object, they are private.
         auto L = init_lua_State();
         doLuaFile(L, fname);
-        lua_getglobal(L, "PowersAslamGas");
+        lua_getglobal(L, "IdealGasAB");
         // Now, pull out the numeric value parameters.
         _alpha = getDouble(L, -1, "alpha");
         _Ti = getDouble(L, -1, "Ti");
