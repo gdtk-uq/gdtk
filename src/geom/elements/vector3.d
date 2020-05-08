@@ -18,6 +18,7 @@ import std.conv;
 import std.stdio;
 import std.math;
 import std.string;
+import std.json;
 import nm.complex;
 import nm.number;
 
@@ -735,3 +736,23 @@ version(vector3_test) {
         return 0;
     }
 } // end vector3_test
+
+Vector3 getJSONVector3(JSONValue jsonData, string key, Vector3 defaultValue)
+// Read a Vector3 value as an array of 3 floating-point values.
+{
+    Vector3 value;
+    try {
+        auto json_values = jsonData[key].array;
+        foreach (i, json_val; json_values) {
+            switch (i) {
+            case 0: value.refx = to!double(json_val.floating); break;
+            case 1: value.refy = to!double(json_val.floating); break;
+            case 2: value.refz = to!double(json_val.floating); break;
+            default:
+            }
+        }
+    } catch (Exception e) {
+        value = defaultValue;
+    }
+    return value;
+} // end getJSONVector3()

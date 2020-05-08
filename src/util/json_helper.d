@@ -10,7 +10,6 @@ module json_helper;
 import std.json;
 import std.file;
 import std.conv;
-import geom;
 
 JSONValue readJSONfile(string fileName)
 {
@@ -140,22 +139,3 @@ double[] getJSONdoublearray(JSONValue jsonData, string key, double[] defaultValu
 } // end getJSONdoublearray()
 
 
-Vector3 getJSONVector3(JSONValue jsonData, string key, Vector3 defaultValue)
-// Read a Vector3 value as an array of 3 floating-point values.
-{
-    Vector3 value;
-    try {
-        auto json_values = jsonData[key].array;
-        foreach (i, json_val; json_values) {
-            switch (i) {
-            case 0: value.refx = to!double(json_val.floating); break;
-            case 1: value.refy = to!double(json_val.floating); break;
-            case 2: value.refz = to!double(json_val.floating); break;
-            default:
-            }
-        }
-    } catch (Exception e) {
-        value = defaultValue;
-    }
-    return value;
-} // end getJSONVector3()
