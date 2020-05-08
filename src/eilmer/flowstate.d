@@ -595,7 +595,7 @@ public:
         int npoints = 0;
         while (!line.empty) {
             string txt = to!string(line);
-            if (!canFind(txt, "#")) {
+            if (!canFind(txt, "#") && !canFind(txt, "pos.x")) {
                 // Assume that we have a line of data rather than variable names.
                 fstate ~= new FlowState(GlobalConfig.gmodel_master);
                 pos ~= Vector3();
@@ -740,7 +740,7 @@ public:
         auto line = range.front;
         while (!line.empty) {
             string txt = to!string(line).chomp();
-            if (txt.length > 0 && !canFind(txt, "#")) {
+            if (txt.length > 0 && !canFind(txt, "#") && !canFind(txt, "vel.x")) {
                 // Assume that we have a line of data rather than variable names.
                 // item: 0 1     2     3     4 5 6       ...
                 // name: t vel.x vel.y vel.z p T massf[0]...
