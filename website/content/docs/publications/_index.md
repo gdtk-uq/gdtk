@@ -19,6 +19,7 @@ About the formulation, verificiation and validation of the hypersonic flow solve
 International Journal for Numercial Methods in Fluids, 73(1):19-57 (DOI: 10.1002/fld.3790)
 
 
+
 ## Other papers on development of Eilmer
 The following papers are about Eilmer4, Eilmer3, mb_cns code development.
 
@@ -57,11 +58,13 @@ The following papers are about Eilmer4, Eilmer3, mb_cns code development.
 1. Jacobs PA. (1991) Single-block Navier-Stokes integrator. ICASE Interim Report 18, 1991.
 
 
+
 ## Reference papers for L1d
 
 1. Jacobs PA. (1998) Shock tube modelling with L1d. The University of Queensland, Department of Mechanical Engineering Report 13/98, 1998.
 
 1. Jacobs PA. (1994) Quasi-one-dimensional modelling of a free-piston shock tunnel. AIAA Journal, 1994; 32(1):137-145.
+
 
 
 ## Reference papers for ESTCj and Pitot
@@ -84,6 +87,7 @@ These are the Python codes for the calculation of equilibrium shock tube and exp
 1. Jacobs PA, Gollan RG and Zander F, [Still using NENZF? That's so 1960s.](/pdfs/nenzfr-presentation-pj-iwstt-2011.pdf)  International Workshop on Shock Tube Technologies, March 2011, The University of Queensland.
 
 
+
 ## Theses associated with or using the codes
 These are Masters or PhD theses that have developed parts of the simulation codes or have made use of the codes.
 
@@ -104,6 +108,10 @@ These are Masters or PhD theses that have developed parts of the simulation code
 1. Porat, Hadas (2015) Measurement of radiative heat transfer in simulated Titan and Mars atmospheres in expansion tubes.  PhD Thesis, School of Mechancial and Mining Engineering, The University of Queensland.
 
 1. Sheikh, Umar (2014) Re-entry radiation aerothermodynamics in the vacuum ultraviolet.  PhD Thesis, School of Mechanical and Mining Engineering, The University of Queensland and Ecole Centrale Paris. doi:10.14264/uql.2014.305
+
+1. Wilson Y. K. Chan, Sarah A. Razzaqi, Michael K. Smart and Dylan J. Wise (2014) Freejet testing of the 75%-scale HIFiRE 7 REST scramjet engine. 19th AIAA International Space Planes and Hypersonic Systems and Technologies Conference, AIAA 2014-2931.
+
+1. Luke J. Doherty, Michael K. Smart, and David J. Mee (2014) Experimental Testing of an Airframe Integrated 3-D Scramjet at True Mach 10 Flight Conditions. 19th AIAA International Space Planes and Hypersonic Systems and Technologies Conference, AIAA 2014-2930.
 
 1. Al-Doori, Ghassan Fadil Lattif (2013) Investigation of refrigeration system steam ejector performance through experiments and computational simulations.  PhD Thesis, School of Mechanical and Electrical Engineering, University of Southern Queensland.
 
@@ -156,6 +164,7 @@ These are Masters or PhD theses that have developed parts of the simulation code
 1. Petrie-Repar, Paul (1997) Numerical simulation of diaphragm rupture.  PhD Thesis, Mechanical Engineering Department, The University of Queensland.
 
 
+
 ## Papers on applications of the codes
 The following papers have made use, in one way or another, of the flow-simulation codes.
 
@@ -179,15 +188,24 @@ The following papers have made use, in one way or another, of the flow-simulatio
 1. Ventura C, Sauret E, Jacobs PA, Petrie-Repar P, Gollan RG, van der Laan P. (2010) Adaption and use of a compressible flow code for turbomachinery design. 5th European Conference on Computational Fluid Dynamics ECCOMAS CFD 2010, European Community on Computational Methods in Applied Sciences: Lisbon, Portugal, 2010.
 
 
+
 ### Bluff-body and reacting compressible flows
 
-1. N Banerji, P Leyland, E Fahy and R Morgan (2017) Venus Entry Flow over a Decomposing Aeroshell in X2 Expansion Tube.  AIAA Journal of Thermophysics and Heat Transfer Article in advance, http://arc.aiaa.org DOI: 10.2514/1.T5172
+1. Yosheph Yang, Ikhyun Kim and Gisu Park (2020) Evaluation of blunt body velocity gradient at the shock tube end-wall. Acta Astronautica, 170 (2020) pages 570–576.
+
+1. N Banerji, P Leyland, E Fahy and R Morgan (2018) Earth Reentry Flow over a Phenolic Aeroshell in the X2 Expansion Tube.  AIAA Journal of Thermophysics and Heat Transfer, Vol. 32, No. 2 , http://arc.aiaa.org DOI: 10.2514/1.T5255
+
+1. N Banerji, P Leyland, E Fahy and R Morgan (2018) Venus Entry Flow over a Decomposing Aeroshell in X2 Expansion Tube.  AIAA Journal of Thermophysics and Heat Transfer, Vol. 32, No. 2 , http://arc.aiaa.org DOI: 10.2514/1.T5172
 
 1. F Zander, S. Lohle, H. Krag, S. Lemmens, R.J. Gollan and P.A. Jacobs (2017) Numerical flow analysis of the ISS re-entry. 7th European Conference on Space Debris ESA/ESOC, Darmstadt, Germany, April 2017.
+
+1. Han Wei, Richard G. Morgan, and Timothy J. McIntyre, Aaron M. Brandis and Christopher O. Johnston (2017) Experimental and Numerical Investigation of Air Radiation in Superorbital Expanding Flow. 47th AIAA Thermophysics Conference, AIAA Paper 2017-4531, https://doi.org/10.2514/6.2017-4531
 
 1. Elise Fahy, David Buttsworth, Rowan Gollan, Peter Jacobs, and Richard G. Morgan. (2016) Experimental and Computational Fluid Dynamics Studies of Superorbital Earth Re-entry", 46th AIAA Thermophysics Conference, AIAA AVIATION Forum, (AIAA 2016-3532) http://dx.doi.org/10.2514/6.2016-3532
 
 1. Gisu Park, Sudhir L. Gai, and Andrew J. Neely. (2016) Base Flow of Circular Cylinder at Hypersonic Speeds, AIAA Journal, Vol. 54, No. 2, pp. 458-468. http://dx.doi.org/10.2514/1.J054270
+
+1. Nikhil Banerji, Penelope Leyland and Richard G. Morgan (2016) Expansion Tunnel Ablation Testing in Venus Entry Conditions, 46th AIAA Thermophysics Conference, AIAA 2016-3231. https://doi.org/10.2514/6.2016-3231
 
 1. Amna Khraibut, Sudhir Gai, and Andrew J. Neely. (2015) Numerical Investigation of Bluntness Effects on Hypersonic Leading Edge Separation, 53rd AIAA Aerospace Sciences Meeting, AIAA SciTech Forum, (AIAA 2015-0984) http://dx.doi.org/10.2514/6.2015-0984
 
@@ -224,6 +242,7 @@ The following papers have made use, in one way or another, of the flow-simulatio
 1. Johnston IA, Jacobs PA. (1995) Hypersonic blunt body flows in reacting carbon dioxide. Twelfth Australasian Fluid Mechanics Conference, 1995.
 
 
+
 ### Transient ducted flows
 
 1. Xin Kang, Rowan J. Gollan, Peter A. Jacobs and Ananthanarayanan Veeraragavan (2017)  Numerical study of the effect of wall temperature profiles on the premixed methane–air flame dynamics in a narrow channel.  RSC Advances, Volume 7 Issue 63 pages 39940-39954.  DOI:10.1039/C7RA07265A
@@ -232,17 +251,25 @@ The following papers have made use, in one way or another, of the flow-simulatio
 
 1. Xin Kang, Rowan J. Gollan, Peter A. Jacobs, and Ananthanarayanan Veeraragavan (2017) On the influence of modelling choices on combustion in narrow channels. Computers and Fluids, 144 117-136. doi:10.1016/j.compfluid.2016.11.017
 
+1. Joseph S. Jewell, Christopher C. Huffman and Thomas J. Juliano (2017) Transient Startup Simulations for a Large Mach 6 Quiet Ludwieg Tube. 55th AIAA Aerospace Sciences Meeting, AIAA 2017-0743.
+
+1. Roger L. Kimmel, Matthew Borg, Joseph S. Jewell, King Yiu Lam, Rodney Bowersox, Ravi Srinivasan, Steven Fuchs, Thomas Mooney (2017) AFRL Ludwieg Tube Initial Performance. 55th AIAA Aerospace Sciences Meeting, AIAA 2017-0102.
+
 1. Won Keun Chang, Gisu Park, Yuin Jin, and Jongryul Byun (2016) Shock Impinging Effect on Ethylene Flameholding, Journal of Propulsion and Power, Vol. 32, No. 5 (2016), pp. 1230-1239. http://dx.doi.org/10.2514/1.B36007
 
 1. Kang, X., Gollan, R., Jacobs, P. A. and Veeraragavan, A. (2016) Suppression of instabilities in a premixed methane–air flame in a narrow channel via hydrogen/carbon monoxide addition. Combustion and Flame, 173 266-275. doi:10.1016/j.combustflame.2016.07.003
 
 1. Kang, X., Gollan, R. J., Jacobs, P. A. and Veeraragavan, A . (2016). On the effect of outflow boundary truncation for numerical simulation of narrow-channel flames. In: 20th Australasian Fluid Mechanics Conference. 20th Australasian Fluid Mechanics Conference, Perth, Australia, 5 – 8 December 2016.
 
-1. Denman, Zachary J., Chan, Wilson Y. K., Brieschenk, Stefan, Veeraragavan, Ananthanarayanan, Wheatley, Vincent and Smart, Michael K. (2016) Ignition experiments of hydrocarbons in a mach 8 shape-transitioning scramjet engine. Journal of Propulsion and Power, 32 6: 1462-1471. doi:10.2514/1.B36099
+1. Denman, Zachary J., Chan, Wilson Y. K., Brieschenk, Stefan, Veeraragavan, Ananthanarayanan, Wheatley, Vincent and Smart, Michael K. (2016) Ignition experiments of hydrocarbons in a Mach 8 shape-transitioning scramjet engine. Journal of Propulsion and Power, 32 6: 1462-1471. doi:10.2514/1.B36099
+
+1. Won Keun Chang, Gisu Park, Yuin Jin and Jongryul Byun (2016) Shock Impinging Effect on Ethylene Flameholding. Journal of Propulsion and Power, Vol. 32, No. 5, pages 1230-1239.
 
 1. Gisu Park, Chul Park, Yuin Jin, Hojin Choi, Jongryul Byun, and Kiyoung Hwang. (2015) Ethylene Transverse Jets in Supersonic Crossflows, Journal of Propulsion and Power, Vol. 31, No. 3, pp. 773-788. http://dx.doi.org/10.2514/1.B35323
 
 1. Kang, X., Gollan, R. J., Jacobs, P. A. and Veeraragavan, A. (2015). Numerical simulation of premixed methane/air flame dynamics in narrow channels. In: Yi Yang and Nigel Smith, The Australian Combustion Symposium 2015 Proceedings. Australian Combustion Symposium, Parkville, VIC, Australia, (388-391). 7-9 December 2015.
+
+1. Luke J. Doherty, Michael K. Smart, and David J. Mee (2015) Measurement of Three-Components of Force on an Airframe Integrated Scramjet at Mach 10. 20th AIAA International Space Planes and Hypersonic Systems and Technologies Conference, AIAA 2015-3523.
 
 1. Chan, Wilson Y. K., Mee, David J., Smart, Michael K. and Turner, James C. (2015) Drag reduction by boundary-layer combustion: effects of flow disturbances from rectangular-to-elliptical-shape-transition inlets. Journal of Propulsion and Power, 31 5: 1256-1267. doi:10.2514/1.B35335
 
@@ -277,6 +304,7 @@ The following papers have made use, in one way or another, of the flow-simulatio
 1. Jacobs PA, Craddock CS. (1999) Simulation and optimization of heated, inviscid flows in scramjet ducts. AIAA Journal of Propulsion and Power, 1999; 15(1):73-81.
 
 
+
 ### Other hypersonic reacting flows (steps, cavities, cones...)
 
 1. Jokic MD, Buttsworth DR, Balage S (2015) An Aerolance System for Hypersonic Flight. 7th Asia-Pacific International Symposium on Aerospace Technology, 25–27 November 2015, Cairns.
@@ -285,7 +313,11 @@ The following papers have made use, in one way or another, of the flow-simulatio
 
 1. Deepak N.R., Gai S.L., O’ Byrne S., Moss J.N. (2015) Hypersonic High-Enthalpy Flow in a Leading-Edge Separation. In: Bonazza R., Ranjan D. (eds) 29th International Symposium on Shock Waves 1. Springer, Cham.
 
+1. Amna Khraibut, Sudhir L. Gai and Andrew Neely (2015) Numerical Investigation of Bluntness Effects on Hypersonic Leading Edge Separation. 53rd AIAA Aerospace Sciences Meeting, AIAA 2015-0984.
+
 1. Khraibut A, Deepak NR, Gai SL, and Neely AJ (2014) Hypersonic Leading Edge Separation. 19th Australasian Fluid Mechanics Conference, Melbourne, Australia, 8-11 December 2014; Paper 80.
+
+1. Zachary J. Denman, Stefan Brieschenk, Anand Veeraragavan, Vincent Wheatley Michael K. Smart (2014) Experimental Design of a Cavity Flameholder in a Mach 8 Shape-Transitioning Scramjet. 19th AIAA International Space Planes and Hypersonic Systems and Technologies Conference, AIAA 2014-2953.
 
 1. O'Byrne S, Gai SL, Deepak NR, Krishna Y, Moss JN (2013) Characterization of a hypersonic low-density flow for separated flow investigations.  US Air Force Aerothermodynamics and Turbulence Portfolio Review, July 2013.
 
@@ -318,6 +350,7 @@ The following papers have made use, in one way or another, of the flow-simulatio
 1. Denman AJ, Jacobs PA, Mee DJ. (2005) Compressible, Turbulent Flow with Boundary-Layer Heat Addition. 43rd AIAA Aerospace Science Meeting and Exhibit, 2005. AIAA-Paper-2005-1097
 
 1. Barker P, Bishop A, Littleton B, Jacobs PA. and Rubinsztein-Dunlop, H. (1996) Flow tagging LEI velocimetry of supersonic flow. First Australian Conference on Laser Diagnostics in Fluid Mechanics and Combustion, 1996.
+
 
 
 ### Analysis of expansion-tube facilities
@@ -449,7 +482,16 @@ The following papers have made use, in one way or another, of the flow-simulatio
 1. Jacobs PA. (1994) Numerical simulation of transient hypervelocity flow in an expansion tube. Computers and Fluids, 1994; 32(1):77-101.
 
 
+
 ### Analysis of shock tubes, reflected-shock tunnels and gun tunnels
+
+1. Seong-Hyeon Park and Gisu Park (2020) Separation process of multi-spheres in hypersonic flow. Advances in Space Research, Vol. 65 (2020) pages 392–406.
+
+1. Ikhyun Kim, Gisu Park, Jae Jeong Na (2019) Experimental study of surface roughness effect on oxygen catalytic recombination. International Journal of Heat and Mass Transfer, Vol. 138 (2019) pages 916–922.
+
+1. Keunyeong Kim, Gisu Park and Sangwook Jin (2019) Flameholding characteristics of ethylene-fueled model scramjet in shock tunnel. Acta Astronautica, Vol. 161 (2019) pages 446–464.
+
+1. Eric Won Keun Chang, Sungmo Yang, Gisu Park and Hojin Choi (2018) Ethylene flame-holding in double ramp flows. Aerospace Science and Technology, Vol. 80 (2018) pages 413–423.
 
 1.  Steven W. Lewis, Ranjith Ravichandran, Rowan J. Gollan, Richard G. Morgan, Peter A. Jacobs, Timothy J. McIntyre and Anand Veeraragavan (2017) UQ/AOARD - Rapidly Expanding Nonequilibrium Flows. Annual Report, The University of Queensland, UQ-AOARD-RENF-AN-2017.
 
@@ -459,9 +501,16 @@ The following papers have made use, in one way or another, of the flow-simulatio
 
 1. Roger L. Kimmel, Matthew P. Borg, Joseph S. Jewell, KIng-Yiu Lam, Rodney D. Bowersox, Ravi Srinivasan, Steven Fuchs, and Thomas Mooney. (2017) AFRL Ludwieg Tube Initial Performance. 55th AIAA Aerospace Sciences Meeting, AIAA SciTech Forum,(AIAA 2017-0102) http://dx.doi.org/10.2514/6.2017-0102
 
+1. Timmy M. Cheung, Ferry F.J. Schrijer and Gisu Park (2016) Nitrogen Catalytic Recombination on Copper Oxide in Tertiary Gas Mixtures. Journal of Spacecraft and Rockets, Vol. Vol. 53, No. 4, pages 644-653.
+
 1. Klaus Hannemann, Katsuhiro Itoh, David J. Mee, Hans G. Hornung (2016) Free Piston Shock Tunnels HEG, HIEST, T4 and T5. Experimental Methods of Shock Wave Research Volume 9 of the series Shock Wave Science and Technology Reference Library pp 181-264.
 
 1. Denman, Zachary J., Wheatley, Vincent, Smart, Michael K. and Veeraragavan, Ananthanarayanan (2016) Supersonic combustion of hydrocarbons in a shape-transitioning hypersonic engine. Proceedings of the Combustion Institute, 36 2: 2883-2891. doi:10.1016/j.proci.2016.08.081
+
+1. Dylan J. Wise and Michael K. Smart (2015) Experimental Investigation of a Three-Dimensional
+Scramjet Engine at Mach 12. 20th AIAA International Space Planes and Hypersonic Systems and Technologies Conference, AIAA 2015-3650.
+
+1. Matthew McGilvray, Luke J. Doherty, Richard G. Morgan and David E. Gildfind (2015) T6: The Oxford University Stalker Tunnel. 20th AIAA International Space Planes and Hypersonic Systems and Technologies Conference, AIAA 2015-3545.
 
 1. Luke J. Doherty, Michael K. Smart, and David J. Mee. (2015) Experimental Testing of an Airframe-Integrated Three-Dimensional Scramjet at Mach 10, AIAA Journal, Vol. 53, No. 11 (2015), pp. 3196-3207. http://dx.doi.org/10.2514/1.J053785
 
