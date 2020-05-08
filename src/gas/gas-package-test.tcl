@@ -83,8 +83,8 @@ test ideal-air-proxy-test {Testing ideal_air_proxy.d} -body {
     exec ./ideal_air_proxy_test
 } -result {} -returnCodes {0}
 
-test powers-aslam-gas-test {Testing powers_aslam_gas.d} -body {
-    exec ./powers_aslam_gas_test
+test ideal-gas-ab-test {Testing ideal_gas_ab.d} -body {
+    exec ./ideal_gas_ab_test
 } -result {} -returnCodes {0}
 
 test vib-specific-nitrogen-test {Testing vib_specific_nitrogen.d} -body {

@@ -22,7 +22,7 @@ GAS_MODEL_FILES := $(GAS_DIR)/package.d \
 	$(GAS_DIR)/uniform_lut_plus_ideal.d \
 	$(GAS_DIR)/adaptive_lut_CEA.d \
 	$(GAS_DIR)/ideal_air_proxy.d \
-	$(GAS_DIR)/powers_aslam_gas.d \
+	$(GAS_DIR)/ideal_gas_ab.d \
 	$(GAS_DIR)/two_temperature_reacting_argon.d \
 	$(GAS_DIR)/two_temperature_argon_plus_ideal.d \
 	$(GAS_DIR)/ideal_dissociating_gas.d \

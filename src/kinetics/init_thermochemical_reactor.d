@@ -17,7 +17,7 @@ import kinetics.thermochemical_reactor;
 // We need to know about the schemes that are available.
 import gas.therm_perf_gas;
 import gas.therm_perf_gas_equil;
-import gas.powers_aslam_gas;
+import gas.ideal_gas_ab;
 import gas.two_temperature_reacting_argon;
 import gas.two_temperature_argon_plus_ideal;
 import gas.ideal_dissociating_gas;
@@ -58,7 +58,7 @@ ThermochemicalReactor init_thermochemical_reactor(GasModel gmodel, string fileNa
     if ((cast(ThermallyPerfectGasEquilibrium) gmodel) !is null) {
         reactor = new EquilibriumUpdate(fileName1, gmodel);
     }
-    if ((cast(PowersAslamGas) gmodel) !is null) {
+    if ((cast(IdealGasAB) gmodel) !is null) {
         reactor = new UpdateAB(fileName1, gmodel);
     }
     if ((cast(TwoTemperatureReactingArgon) gmodel) !is null) {

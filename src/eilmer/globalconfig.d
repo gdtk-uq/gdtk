@@ -1164,7 +1164,7 @@ import gas.sf6virial;
 import gas.uniform_lut;
 import gas.adaptive_lut_CEA;
 import gas.ideal_air_proxy;
-import gas.powers_aslam_gas;
+import gas.ideal_gas_ab;
 import gas.pseudo_species_gas;
 import gas.two_temperature_reacting_argon;
 import gas.ideal_dissociating_gas;

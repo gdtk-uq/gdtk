@@ -18,7 +18,7 @@ DEMO_PROGRAMS := gas_model_demo ideal_gas_demo co2_model_demo co2_sw_model_demo 
 TEST_PROGRAMS := chemkin_therm_cond_test chemkin_viscosity_test cea_therm_cond_test \
 	cea_thermo_curves_test cea_viscosity_test \
 	init_gas_model_test ideal_gas_test ideal_helium_test \
-	cubic_gas_test cea_gas_test powers_aslam_gas_test \
+	cubic_gas_test cea_gas_test ideal_gas_ab_test \
 	ideal_dissociating_gas_test fuel_air_mix_test equilibrium_gas_test \
 	perf_gas_mix_eos_test sutherland_therm_cond_test sutherland_viscosity_test \
 	wilke_mixing_therm_cond_test wilke_mixing_viscosity_test \
@@ -398,7 +398,7 @@ ideal_air_proxy_test: $(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL_FIL
 	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBCEQ) $(LIBLUA) $(DLINKFLAGS)
 
-powers_aslam_gas_test: $(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBCEQ) $(LIBLUA)
+ideal_gas_ab_test: $(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBCEQ) $(LIBLUA)
 	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBCEQ) $(LIBLUA) $(DLINKFLAGS)
 

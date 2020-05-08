@@ -26,7 +26,7 @@ import gas.uniform_lut;
 import gas.uniform_lut_plus_ideal;
 import gas.adaptive_lut_CEA;
 import gas.ideal_air_proxy;
-import gas.powers_aslam_gas;
+import gas.ideal_gas_ab;
 import gas.pseudo_species_gas;
 import gas.two_temperature_reacting_argon;
 import gas.two_temperature_argon_plus_ideal;
@@ -119,8 +119,8 @@ GasModel init_gas_model(string file_name="gas-model.lua")
     case "IdealAirProxy":
         gm = new IdealAirProxy(); // no further config in the Lua file
         break;
-    case "PowersAslamGas":
-        gm = new PowersAslamGas(L);
+    case "IdealGasAB":
+        gm = new IdealGasAB(L);
         break;
     case "PseudoSpeciesGas":
         gm = new PseudoSpeciesGas(L);

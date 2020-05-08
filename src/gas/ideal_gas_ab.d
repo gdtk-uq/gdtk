@@ -1,5 +1,5 @@
 /**
- * powers_aslam_gas.d
+ * ideal_gas_ab.d
  *
  * Two-component reacting gas as described in.
  * JM Powers and TD Aslam (2006)
@@ -10,11 +10,19 @@
  * This gas model is useful as a demonstration of building a custom
  * reacting gas model and as a flow-solver verification tool.
  *
+ * This binary reacting gas also appears in other works:
+ *
+ * Yee, H.C., Kotov, D.V., Wang, W. and Shu, C.-W. (2013)
+ * Spurious behavior of shock-capturing methods by the fractional
+ * step approach: Problems containing stiff source terms and discontinuities.
+ * Journal of Computational Physics, 241: pp. 266--291
+ *
  * Authors: Peter J. and Rowan G.
  * Version: 2017-01-07: initial cut.
+ *          2020-05-08: renamed IdealGasAB
  */
 
-module gas.powers_aslam_gas;
+module gas.ideal_gas_ab;
 
 import std.math;
 import std.stdio;
@@ -36,7 +44,7 @@ import gas.diffusion.therm_cond;
 
 // The basic gas model.
 
-class PowersAslamGas: GasModel {
+class IdealGasAB: GasModel {
 public:
 
     this(lua_State *L) {
@@ -47,7 +55,7 @@ public:
         _species_names[0] = "A";
         _species_names[1] = "B";
         // Bring table to TOS
-        lua_getglobal(L, "PowersAslamGas");
+        lua_getglobal(L, "IdealGasAB");
         // [TODO] test that we actually have the table as item -1
         // Now, pull out the remaining numeric value parameters.
         _Rgas = getDouble(L, -1, "R");
@@ -57,8 +65,6 @@ public:
         _gamma = getDouble(L, -1, "gamma");
         // Heat of reaction
         _q = getDouble(L, -1, "q");
-        _alpha = getDouble(L, -1, "alpha");
-        _Ti = getDouble(L, -1, "Ti");
         lua_pop(L, 1); // dispose of the table
         // Entropy reference, same as for IdealAir
         _s1 = 0.0;
@@ -73,14 +79,12 @@ public:
     override string toString() const
     {
         char[] repr;
-        repr ~= "PowersAslamGas =(";
+        repr ~= "IdealGasAB =(";
         repr ~= "species=[\"A\", \"B\"]";
         repr ~= ", Mmass=[" ~ to!string(_mol_masses[0]);
         repr ~= "," ~ to!string(_mol_masses[1]) ~ "]";
         repr ~= ", gamma=" ~ to!string(_gamma);
         repr ~= ", q=" ~ to!string(_q);
-        repr ~= ", alpha=" ~ to!string(_alpha);
-        repr ~= ", Ti=" ~ to!string(_Ti);
         repr ~= ")";
         return to!string(repr);
     }
@@ -170,22 +174,18 @@ private:
     // Molecular transport coefficents are zero.
     // Heat of reaction.
     double _q; // J/kg
-    // Reaction rate constant
-    double _alpha; // 1/s
-    // Ignition temperature
-    double _Ti; // degrees K
-} // end class PowersAslamGas
+} // end class IdealGasAB
 
 // Unit test of the basic gas model...
 
-version(powers_aslam_gas_test) {
+version(ideal_gas_ab_test) {
     import std.stdio;
     import util.msg_service;
 
     int main() {
         lua_State* L = init_lua_State();
-        doLuaFile(L, "sample-data/powers-aslam-gas-model.lua");
-        auto gm = new PowersAslamGas(L);
+        doLuaFile(L, "sample-data/ideal-gas-ab-model.lua");
+        auto gm = new IdealGasAB(L);
         lua_close(L);
         auto gd = new GasState(2, 0);
         gd.p = 1.0e5;

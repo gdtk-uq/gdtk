@@ -7,7 +7,7 @@
  * for verifying numerical algorithms.
  * AIAA Journal Vol. 44 No. 2 pages 337-344
  *
- * This kinetics file accompanies the gas model in gas/powers_alsam_gas.d
+ * This kinetics file accompanies the gas model in gas/ideal_gas_ab.d
  *
  * Authors: Peter J. and Rowan G.
  * Version: 2017-01-07: initial cut.
