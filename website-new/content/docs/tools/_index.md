@@ -10,6 +10,8 @@ The principal tools in the kit are:
 + [L1d]({{< relref "l1d/" >}}),
   a program for the end-to-end simulation of free-piston-driven shock tunnels
   and expansion tubes.
++ [foamMesh]({{< relref "foammesh" >}}),
+  A nice parametric grid-generation tool for OpenFOAM simulations.
 + [IMOC]({{< relref "moc.md" >}}),
   an interactive program for the isentropic method for characteristics
   for 2-dimensional ideal gas flows.
