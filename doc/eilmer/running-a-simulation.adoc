@@ -1,4 +1,4 @@
-# Running a simulation
+= Running a simulation
 
 The overall process of simulation of a gas flow is divided into
 three stages:
@@ -9,7 +9,7 @@ three stages:
 
 Information is passed from one stage to the next in data files.
 
-## Pre-processing
+== Pre-processing
 To start a simulation, we need a gas model,
 maybe a chemical-kinetics model for reacting flow,
 simulation configuration and control files, and
@@ -17,7 +17,7 @@ the initial grid and flow state.
 Generation of all of these data is the activity of
 the pre-processing (or preparation) stage.
 
-### `prep-gas` : gas model preparation
+=== `prep-gas` : gas model preparation
 The `prep-gas` program is used to take a brief description of
 the desired gas model used in the flow simulation and produce
 a detailed configuration gas model configuration file for
@@ -37,7 +37,7 @@ Usage:
  > prep-gas --list-available-species
 ```
 
-### `prep-chem` : chemistry scheme preparation
+=== `prep-chem` : chemistry scheme preparation
 `prep-chem` is used to take user created description of a chemistry
 scheme written in Lua and generate a detailed configuration file
 for eilmer to use at run-time. The use of `prep-chem` is shown here.
@@ -54,7 +54,7 @@ Options:
                  which is used to configure a GPU chemistry kernel.
 ```
 
-### `e4shared --prep` : pre-processing for flow simulation
+=== `e4shared --prep` : pre-processing for flow simulation
 Once the gas and chemistry files are prepared,
 the flow simulation process in divided into three stages,
 with preparation of the configuration, grid and initial flow-state files
@@ -72,7 +72,7 @@ during the calculations, however, it is more likely that increased verbosity
 is more useful during the simulation (run-time) stage.
 
 
-## Run-time
+== Run-time
 Now that the initial flow and grid files exist, it is time to run the main
 transient flow simulation process.
 The transient-flow simulation program comes in two main flavours.
@@ -86,7 +86,7 @@ Once you have graduated to running large, many-block simulations,
 it may be good to start
 using `e4mpi` across the nodes of a cluster computer.
 
-### Run a simulation, shared-memory
+=== Run a simulation, shared-memory
 ```
  > e4shared --run --job=name [OPTIONS]
 ```
@@ -100,7 +100,7 @@ with the relevant options being
   --report-residuals                 include residuals in console output
 ```
 
-### Run a simulation, MPI
+=== Run a simulation, MPI
 ```
  > mpirun -np <ntask> e4mpi --run --job=name [OPTIONS]
 ```
@@ -114,14 +114,14 @@ with the relevant options being
   --report-residuals                 include residuals in console output
 ```
 
-## Post-processing
+== Post-processing
 Once you have a large collection of numbers defining the flow field
 at various instances in its history, it will be stored in files with
 a format specific to Eilmer and mostly unknown to many data visualization tools.
 To make your data more accessible, you may rewrite it into formats
 known by the visualization tools or you may slice it into various subsets.
 
-### Post-processing using predefined actions
+=== Post-processing using predefined actions
 ```
  > e4shared --post --job=name [OPTIONS]
 ```
@@ -161,7 +161,7 @@ with the relevant options being
   --region="x0,y0,z0,x1,y1,z1"       limit norms calculation to a box
 ```
 
-### Post-processing using a user-supplied script
+=== Post-processing using a user-supplied script
 When none of the predefined post-processing operations are suitable,
 you may define your own, in Lua.
 The Eilmer4 program provides a number of service functions to the Lua interpreter

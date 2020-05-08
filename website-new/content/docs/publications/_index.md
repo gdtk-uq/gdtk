@@ -14,6 +14,10 @@ Applied Mechanics and Materials, vol 846, pp. 54-60
 Presented at 20th Australasian Fluid Mechanics Conference, Perth, 5--8 December, 2016.
 (DOI: 10.1002/fld.3790)
 
+3. Gollan, R.J. and Jacobs, P.A., 2013:
+About the formulation, verificiation and validation of the hypersonic flow solver Eilmer.
+International Journal for Numercial Methods in Fluids, 73(1):19-57 (DOI: 10.1002/fld.3790)
+
 
 ## Other papers on development of Eilmer
 The following papers are about Eilmer4, Eilmer3, mb_cns code development.

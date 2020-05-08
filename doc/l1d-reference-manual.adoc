@@ -1,6 +1,6 @@
 = L1d Reference Manual for Users, v4.0
 Peter A. Jacobs; Rowan J. Gollan
-2020-04-29
+2020-05-08
 :toc: right
 :stylesheet: readthedocs.css
 :sectnums:
@@ -583,10 +583,47 @@ to make the logical connection between a pair of components.
 The Lagrangian simulation tools consist of two programs: `l1d4-prep` and `l1d4`.
 Before preparing a simulation, you need one or more detailed gas-model file(s) and,
 if relevant, one or more detailed chemistry files.
-These are set up as per Rowan's chemistry instructions.
 Once you have your gas-model file(s) and input script, as described above,
 you are ready to simulate.
 
+== Preparation of gas files
+
+=== `prep-gas` : gas model preparation
+The `prep-gas` program is used to take a brief description of
+the desired gas model used in the flow simulation and produce
+a detailed configuration gas model configuration file for
+use by Eilmer at pre-processing and simulation stages.
+Its usage is shown here. Generally, one uses prep-gas
+in the first mode shown: with two arguments.
+The second mode simply lists available species in the
+Eilmer database and exits.
+
+```
+Usage:
+ > prep-gas input output
+
+   input    : a gas input file with user selections
+   output   : detailed gas file in format ready for Eilmer4.
+
+ > prep-gas --list-available-species
+```
+
+=== `prep-chem` : chemistry scheme preparation
+`prep-chem` is used to take user created description of a chemistry
+scheme written in Lua and generate a detailed configuration file
+for eilmer to use at run-time. The use of `prep-chem` is shown here.
+```
+Usage:
+ > prep-chem [--compact] gmodelfile cheminput output
+
+   gmodelfile  : a gas model file is required as input for context
+   cheminput   : input chemistry file in Lua format.
+   output      : output file in format ready for Eilmer4.
+
+Options:
+   --compact   : produce a text file called 'chem-compact-notation.inp'
+                 which is used to configure a GPU chemistry kernel.
+```
 
 == Preparation of initial state
 The preprocessing program is written in Python and it accepts the name
