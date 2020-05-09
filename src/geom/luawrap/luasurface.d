@@ -24,7 +24,7 @@ import geom.luawrap.luasgrid;
 immutable string CoonsPatchMT = "CoonsPatch";
 immutable string AOPatchMT = "AOPatch";
 immutable string ChannelPatchMT = "ChannelPatch";
-immutable string ExpandingChannelPatchMT = "ExpandingChannelPatch";
+immutable string NozzleExpansionPatchMT = "NozzleExpansionPatch";
 immutable string SweptPathPatchMT = "SweptPathPatch";
 immutable string MeshPatchMT = "MeshPatch";
 immutable string LuaFnSurfaceMT = "LuaFnSurface";
@@ -43,8 +43,8 @@ ParametricSurface checkSurface(lua_State* L, int index) {
         return checkObj!(AOPatch, AOPatchMT)(L, index);
     if ( isObjType(L, index, ChannelPatchMT ) )
         return checkObj!(ChannelPatch, ChannelPatchMT)(L, index);
-    if ( isObjType(L, index, ExpandingChannelPatchMT ) )
-        return checkObj!(ExpandingChannelPatch, ExpandingChannelPatchMT)(L, index);
+    if ( isObjType(L, index, NozzleExpansionPatchMT ) )
+        return checkObj!(NozzleExpansionPatch, NozzleExpansionPatchMT)(L, index);
     if ( isObjType(L, index, SweptPathPatchMT ) )
         return checkObj!(SweptPathPatch, SweptPathPatchMT)(L, index);
     if ( isObjType(L, index, MeshPatchMT ) )
@@ -98,7 +98,7 @@ extern(C) int luaWriteSurfaceAsVtkXml(lua_State *L)
 void getPaths(lua_State *L, string ctorName, out Path[string] paths)
 {
     string errMsgTmplt = "Error in call to %s:new. " ~
-        "The value set for the '%s' path was not of Path type."; 
+        "The value set for the '%s' path was not of Path type.";
     int index = 1;  // Assume that table is at index 1.
     string[] path_names = ["north", "east", "south", "west"];
     foreach (name; path_names) {
@@ -112,7 +112,7 @@ void getPaths(lua_State *L, string ctorName, out Path[string] paths)
 void getVector3s(lua_State *L, string ctorName, out Vector3[string] corners)
 {
     string errMsgTmplt = "Error in call to %s:new. " ~
-        "A value for the '%s' corner was not available."; 
+        "A value for the '%s' corner was not available.";
     int index = 1;  // Assume that table is at index 1.
     string[] corner_names = ["p00", "p10", "p11", "p01"];
     foreach (name; corner_names) {
@@ -152,7 +152,7 @@ void getRandS(lua_State* L, string ctorName,
  * Notes:
  * 1. See PJs diagram at top of geom.surface.d for ordering and labelling of
  *    paths and corners.
- * 2. No mix-n-match of constructors allowed. It is one of: 4 paths OR 4 corner points. 
+ * 2. No mix-n-match of constructors allowed. It is one of: 4 paths OR 4 corner points.
  *    If a path is found first, that constructor wins.
  *
  */
@@ -178,7 +178,7 @@ extern(C) int newCoonsPatch(lua_State* L)
     }
     // Look for a path. If found, proceed with construction from paths.
     lua_getfield(L, 1, "north");
-    if ( ! lua_isnil(L, -1) ) { 
+    if ( ! lua_isnil(L, -1) ) {
         lua_pop(L, 1);
         Path[string] paths;
         getPaths(L, "CoonsPatch", paths);
@@ -254,7 +254,7 @@ extern(C) int newAOPatch(lua_State* L)
     int ny = to!int(getNumberFromTable(L, 1, "ny", false, 10.0, true, format(errMsgTmplt, "ny")));
     // Look for a path. If found, proceed with construction from paths.
     lua_getfield(L, 1, "north");
-    if ( ! lua_isnil(L, -1) ) { 
+    if ( ! lua_isnil(L, -1) ) {
         lua_pop(L, 1);
         Path[string] paths;
         getPaths(L, "AOPatch", paths);
@@ -365,71 +365,71 @@ extern(C) int make_bridging_path_ChannelPatch(lua_State* L)
 } // end make_bridging_path_ChannelPatch()
 
 /**
- * This is the constructor for a ExpandingChannelPatch to be used from the Lua interface.
+ * This is the constructor for a NozzleExpansionPatch to be used from the Lua interface.
  *
- * At successful completion of this function, a new ExpandingChannelPatch object
+ * At successful completion of this function, a new NozzleExpansionPatch object
  * is pushed onto the Lua stack.
  *
  * Supported constructions are:
  * -------------------------
- * patch = ExpandingChannelPatch:new{south=sPath, north=nPath, west=wPath, east=ePath}
+ * patch = NozzleExpansionPatch:new{south=sPath, north=nPath, west=wPath, east=ePath}
  * --------------------------
  */
 
-extern(C) int newExpandingChannelPatch(lua_State* L)
+extern(C) int newNozzleExpansionPatch(lua_State* L)
 {
     int narg = lua_gettop(L);
     if ( !(narg == 2 && lua_istable(L, 1)) ) {
         // We did not get what we expected as arguments.
-        string errMsg = "Expected ExpandingChannelPatch:new{}; ";
-        errMsg ~= "maybe you tried ExpandingChannelPatch.new{}.";
+        string errMsg = "Expected NozzleExpansionPatch:new{}; ";
+        errMsg ~= "maybe you tried NozzleExpansionPatch.new{}.";
         luaL_error(L, errMsg.toStringz);
     }
     lua_remove(L, 1); // remove first argument "this"
     if ( !lua_istable(L, 1) ) {
-        string errMsg = "Error in constructor ExpandingChannelPatch:new{}. " ~
+        string errMsg = "Error in constructor NozzleExpansionPatch:new{}. " ~
             "A table with input parameters is expected as the first argument.";
         luaL_error(L, errMsg.toStringz);
     }
     if (!checkAllowedNames(L, 1, ["north","south","west","east"])) {
-        string errMsg = "Error in call to ExpandingChannelPatch:new{}. Invalid name in table.";
+        string errMsg = "Error in call to NozzleExpansionPatch:new{}. Invalid name in table.";
         luaL_error(L, errMsg.toStringz);
     }
     // Look for south and north paths.
     lua_getfield(L, 1, "south");
     auto south = checkPath(L, -1);
     if ( south is null ) {
-        string errMsg = "Error in constructor ExpandingChannelPatch:new{}. Couldn't find south Path.";
+        string errMsg = "Error in constructor NozzleExpansionPatch:new{}. Couldn't find south Path.";
         luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
     lua_getfield(L, 1, "north");
     auto north = checkPath(L, -1);
     if ( north is null ) {
-        string errMsg = "Error in constructor ExpandingChannelPatch:new{}. Couldn't find north Path.";
+        string errMsg = "Error in constructor NozzleExpansionPatch:new{}. Couldn't find north Path.";
         luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
     lua_getfield(L, 1, "west");
     auto west = checkPath(L, -1);
     if ( west is null ) {
-        string errMsg = "Error in constructor ExpandingChannelPatch:new{}. Couldn't find west Path.";
+        string errMsg = "Error in constructor NozzleExpansionPatch:new{}. Couldn't find west Path.";
         luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
     lua_getfield(L, 1, "east");
     auto east = checkPath(L, -1);
     if ( east is null ) {
-        string errMsg = "Error in constructor ExpandingChannelPatch:new{}. Couldn't find east Path.";
+        string errMsg = "Error in constructor NozzleExpansionPatch:new{}. Couldn't find east Path.";
         luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
 
     // Construct the actual surface.
-    auto cpatch = new ExpandingChannelPatch(south, north, west, east);
-    surfaceStore ~= pushObj!(ExpandingChannelPatch, ExpandingChannelPatchMT)(L, cpatch);
+    auto cpatch = new NozzleExpansionPatch(south, north, west, east);
+    surfaceStore ~= pushObj!(NozzleExpansionPatch, NozzleExpansionPatchMT)(L, cpatch);
     return 1;
-} // end newExpandingChannelPatch()
+} // end newNozzleExpansionPatch()
 
 /**
  * This is the constructor for a SweptPathPatch to be used from the Lua interface.
@@ -552,7 +552,7 @@ public:
     // things and that diddles with the Lua interpreter's internal state.
     // So the const on the lua_State pointer is more a statement that
     // "I'm not going to switch interpreters on you."
-    // Hence the ugly but (hopefully safe) casts where ever we get 
+    // Hence the ugly but (hopefully safe) casts where ever we get
     // the Lua interpreter to do something.
     // This is the best I can do for the moment.  PJ, 2014-04-22, 2015-02-27
     string luaFnName;
@@ -570,15 +570,15 @@ public:
     {
         return new LuaFnSurface(L, luaFnName);
     }
-    override Vector3 opCall(double r, double s) const 
+    override Vector3 opCall(double r, double s) const
     {
         // Call back to the Lua function.
         lua_getglobal(cast(lua_State*)L, luaFnName.toStringz);
         lua_pushnumber(cast(lua_State*)L, r);
         lua_pushnumber(cast(lua_State*)L, s);
         if ( lua_pcall(cast(lua_State*)L, 2, 1, 0) != 0 ) {
-            string errMsg = "Error in call to " ~ luaFnName ~ 
-                " from LuaFnSurface:opCall(): " ~ 
+            string errMsg = "Error in call to " ~ luaFnName ~
+                " from LuaFnSurface:opCall(): " ~
                 to!string(lua_tostring(cast(lua_State*)L, -1));
             luaL_error(cast(lua_State*)L, errMsg.toStringz);
         }
@@ -721,7 +721,7 @@ A table with input parameters is expected as the first argument.`;
  * -------------------------
  * patch = BezierPatch:new{points=Q}
  * --------------------------
- * 
+ *
  * points  : an array of points Q[n+1][m+1]
  */
 
@@ -785,7 +785,7 @@ extern(C) int newBezierPatch(lua_State* L)
     return 1;
 } // end newBezierPatch()
 
-extern(C) int luaWriteCtrlPtsAsVtkXml(lua_State *L) 
+extern(C) int luaWriteCtrlPtsAsVtkXml(lua_State *L)
 {
     int narg = lua_gettop(L);
     if (narg < 2) {
@@ -861,7 +861,7 @@ extern(C) int makePatch(lua_State* L)
  * -------------------------
  * patch = BezierTrianglePatch:new{points=Q, degree=n}
  * --------------------------
- * 
+ *
  * points  : a linear array of points Q
  * degree  : degree of patch
  *
@@ -1047,7 +1047,7 @@ void registerSurfaces(lua_State* L)
 {
     // Register the CoonsPatch object
     luaL_newmetatable(L, CoonsPatchMT.toStringz);
-    
+
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1); // duplicates the current metatable
     lua_setfield(L, -2, "__index");
@@ -1067,7 +1067,7 @@ void registerSurfaces(lua_State* L)
 
     // Register the AOPatch object
     luaL_newmetatable(L, AOPatchMT.toStringz);
-    
+
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1); // duplicates the current metatable
     lua_setfield(L, -2, "__index");
@@ -1087,7 +1087,7 @@ void registerSurfaces(lua_State* L)
 
     // Register the ChannelPatch object
     luaL_newmetatable(L, ChannelPatchMT.toStringz);
-    
+
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1); // duplicates the current metatable
     lua_setfield(L, -2, "__index");
@@ -1107,29 +1107,29 @@ void registerSurfaces(lua_State* L)
     lua_setglobal(L, ChannelPatchMT.toStringz);
     lua_getglobal(L, ChannelPatchMT.toStringz); lua_setglobal(L, "ChannelSurface"); // alias
 
-    // Register the ExpandingChannelPatch object
-    luaL_newmetatable(L, ExpandingChannelPatchMT.toStringz);
-    
+    // Register the Nozzleexpansionpatch object
+    luaL_newmetatable(L, NozzleExpansionPatchMT.toStringz);
+
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1); // duplicates the current metatable
     lua_setfield(L, -2, "__index");
 
     /* Register methods for use. */
-    lua_pushcfunction(L, &newExpandingChannelPatch);
+    lua_pushcfunction(L, &newNozzleExpansionPatch);
     lua_setfield(L, -2, "new");
-    lua_pushcfunction(L, &opCallSurface!(ExpandingChannelPatch, ExpandingChannelPatchMT));
+    lua_pushcfunction(L, &opCallSurface!(NozzleExpansionPatch, NozzleExpansionPatchMT));
     lua_setfield(L, -2, "__call");
-    lua_pushcfunction(L, &opCallSurface!(ExpandingChannelPatch, ExpandingChannelPatchMT));
+    lua_pushcfunction(L, &opCallSurface!(NozzleExpansionPatch, NozzleExpansionPatchMT));
     lua_setfield(L, -2, "eval");
-    lua_pushcfunction(L, &toStringObj!(ExpandingChannelPatch, ExpandingChannelPatchMT));
+    lua_pushcfunction(L, &toStringObj!(NozzleExpansionPatch, NozzleExpansionPatchMT));
     lua_setfield(L, -2, "__tostring");
 
-    lua_setglobal(L, ExpandingChannelPatchMT.toStringz);
-    lua_getglobal(L, ExpandingChannelPatchMT.toStringz); lua_setglobal(L, "ExpandingChannelSurface"); // alias
+    lua_setglobal(L, NozzleExpansionPatchMT.toStringz);
+    lua_getglobal(L, NozzleExpansionPatchMT.toStringz); lua_setglobal(L, "ExpandingChannelPatch"); // alias
 
     // Register the SweptPathPatch object
     luaL_newmetatable(L, SweptPathPatchMT.toStringz);
-    
+
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1); // duplicates the current metatable
     lua_setfield(L, -2, "__index");
@@ -1149,7 +1149,7 @@ void registerSurfaces(lua_State* L)
 
     // Register the MeshPatch object
     luaL_newmetatable(L, MeshPatchMT.toStringz);
-    
+
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1); // duplicates the current metatable
     lua_setfield(L, -2, "__index");
@@ -1188,7 +1188,7 @@ void registerSurfaces(lua_State* L)
 
     // Register the SubRangedSurface object
     luaL_newmetatable(L, SubRangedSurfaceMT.toStringz);
-    
+
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1); // duplicates the current metatable
     lua_setfield(L, -2, "__index");
@@ -1207,7 +1207,7 @@ void registerSurfaces(lua_State* L)
 
     // Register the BezierPatch object
     luaL_newmetatable(L, BezierPatchMT.toStringz);
-    
+
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1); // duplicates the current metatable
     lua_setfield(L, -2, "__index");
@@ -1236,7 +1236,7 @@ void registerSurfaces(lua_State* L)
 
     // Register the BezierTrianglePatch object
     luaL_newmetatable(L, BezierTrianglePatchMT.toStringz);
-    
+
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1); // duplicates the current metatable
     lua_setfield(L, -2, "__index");

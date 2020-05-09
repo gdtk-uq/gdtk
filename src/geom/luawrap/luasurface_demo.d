@@ -111,5 +111,3 @@ print("Done luasurface_demo.")
     }
     writeln("Done with luageom_demo.");
 }
-
-    

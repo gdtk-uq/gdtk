@@ -1,14 +1,11 @@
-// expandingchannelpatch.d
+// nozzleexpansionpatch.d
 
 // This is Wilson Chan's specialized surface for nozzle expansion regions.
 // It was extracted from the nozzle.input.template in the nenzfr application.
-// [TODO] make it a little more general by using the south path
-// and not restricting the surface to the x,y-plane.
-// The intent is to make also a general ChannelPatch to complement CoonsPatch and AOPatch.
 // 2014-nov-18: Peter J.
 // 2020-Jan-22: Kyle Lynch, ported to Eilmer4
 
-module geom.surface.expandingchannelpatch;
+module geom.surface.nozzleexpansionpatch;
 
 import std.conv;
 import nm.complex;
@@ -19,7 +16,7 @@ import geom.elements;
 import geom.gpath;
 import geom.surface.parametricsurface;
 
-class ExpandingChannelPatch : ParametricSurface {
+class NozzleExpansionPatch : ParametricSurface {
 public:
     Path cA; // south edge
     Path cB; // north edge
@@ -34,7 +31,7 @@ public:
         this.cD = cD.dup(); // east
     }
 
-    this(ref const(ExpandingChannelPatch) other)
+    this(ref const(NozzleExpansionPatch) other)
     {
         cA = other.cA.dup();
         cB = other.cB.dup();
@@ -42,9 +39,9 @@ public:
         cD = other.cD.dup();
     }
 
-    override ExpandingChannelPatch dup() const
+    override NozzleExpansionPatch dup() const
     {
-        return new ExpandingChannelPatch(this.cA, this.cB, this.cC, this.cD);
+        return new NozzleExpansionPatch(this.cA, this.cB, this.cC, this.cD);
     }
 
     override Vector3 opCall(double r, double s) const
@@ -130,10 +127,10 @@ public:
 
     override string toString() const
     {
-        return "ExpandingChannelPatch(cA=" ~ to!string(cA) ~ ", cB=" ~ to!string(cB) ~
+        return "Nozzleexpansionpatch(cA=" ~ to!string(cA) ~ ", cB=" ~ to!string(cB) ~
             ", cC=" ~ to!string(cC) ~ ", cD=" ~ to!string(cD) ~ ")";
     }
 
-} // end class ExpandingChannelPatch
+} // end class NozzleExpansionPatch
 
-// [TODO] version(expandingchannelpatch_test)
+// [TODO] version(nozzleexpansionpatch_test)
