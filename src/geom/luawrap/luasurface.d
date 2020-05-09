@@ -372,7 +372,7 @@ extern(C) int make_bridging_path_ChannelPatch(lua_State* L)
  *
  * Supported constructions are:
  * -------------------------
- * patch = NozzleExpansionPatch:new{south=sPath, north=nPath, west=wPath, east=ePath}
+ * patch = NozzleExpansionPatch:new{north=nPath}
  * --------------------------
  */
 
@@ -391,42 +391,41 @@ extern(C) int newNozzleExpansionPatch(lua_State* L)
             "A table with input parameters is expected as the first argument.";
         luaL_error(L, errMsg.toStringz);
     }
+    // Because of the history of this particular surface patch,
+    // we will allow the user to specify all of the edges but we will use only north.
     if (!checkAllowedNames(L, 1, ["north","south","west","east"])) {
         string errMsg = "Error in call to NozzleExpansionPatch:new{}. Invalid name in table.";
         luaL_error(L, errMsg.toStringz);
     }
-    // Look for south and north paths.
+    // Look for north path.
     lua_getfield(L, 1, "south");
-    auto south = checkPath(L, -1);
-    if ( south is null ) {
-        string errMsg = "Error in constructor NozzleExpansionPatch:new{}. Couldn't find south Path.";
-        luaL_error(L, errMsg.toStringz);
-    }
-    lua_pop(L, 1);
     lua_getfield(L, 1, "north");
     auto north = checkPath(L, -1);
-    if ( north is null ) {
+    if (north is null) {
         string errMsg = "Error in constructor NozzleExpansionPatch:new{}. Couldn't find north Path.";
         luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
+    auto south = checkPath(L, -1);
+    if (south) {
+        writeln("Warning in constructor NozzleExpansionPatch:new{}. Ignored south Path.");
+    }
+    lua_pop(L, 1);
     lua_getfield(L, 1, "west");
     auto west = checkPath(L, -1);
-    if ( west is null ) {
-        string errMsg = "Error in constructor NozzleExpansionPatch:new{}. Couldn't find west Path.";
-        luaL_error(L, errMsg.toStringz);
+    if (west) {
+        writeln("Warning in constructor NozzleExpansionPatch:new{}. Ignored west Path.");
     }
     lua_pop(L, 1);
     lua_getfield(L, 1, "east");
     auto east = checkPath(L, -1);
-    if ( east is null ) {
-        string errMsg = "Error in constructor NozzleExpansionPatch:new{}. Couldn't find east Path.";
-        luaL_error(L, errMsg.toStringz);
+    if (east) {
+        writeln("Warning in constructor NozzleExpansionPatch:new{}. Ignored east Path.");
     }
     lua_pop(L, 1);
 
     // Construct the actual surface.
-    auto cpatch = new NozzleExpansionPatch(south, north, west, east);
+    auto cpatch = new NozzleExpansionPatch(north);
     surfaceStore ~= pushObj!(NozzleExpansionPatch, NozzleExpansionPatchMT)(L, cpatch);
     return 1;
 } // end newNozzleExpansionPatch()

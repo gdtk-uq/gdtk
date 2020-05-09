@@ -1,10 +1,10 @@
--- t4m4b.lua : T4 Mach4B nozzle 
+-- t4m4b.lua : T4 Mach4B nozzle
 -- Tamara Sopek, 2020-11-04
 
 config.title = "T4 Mach4B nozzle with air in chemical equilibrium."
 print(config.title)
 config.dimensions = 2
-config.axisymmetric = true 
+config.axisymmetric = true
 config.viscous = true
 config.flux_calculator = "adaptive"
 --
@@ -12,7 +12,7 @@ config.max_time = 0.001 -- allow enough to reach steady state
 config.max_step = 1000000
 config.dt_init = 1.0e-11
 config.cfl_value = 0.4 -- default value is 0.5
--- 
+--
 config.block_marching = true -- to accelerate calculations, utilise block-marching capability.
 config.nib = 31
 config.njb = 2
@@ -46,7 +46,7 @@ state5s, V5s = gasflow.expand_from_stagnation(state5, 8.32/23.61)
 gm:updateThermoFromPT(state5s); gm:updateTransCoeffs(state5s)
 print("V5s=", V5s, " Mach=", V5s/state5s.a)
 print("state5s:"); printValues(state5s)
-print("(h5s-h1)=", gm:enthalpy(state5s) - gm:enthalpy(state1)) 
+print("(h5s-h1)=", gm:enthalpy(state5s) - gm:enthalpy(state1))
 --
 print("Expand to throat condition (Mach 1.0001)")
 state6, V6 = gasflow.expand_to_mach(state5s, 1.0001)
@@ -106,34 +106,28 @@ throat_region = CoonsPatch:new{
    p10=Vector3:new{x=x_start, y=0.0},
    p11=Vector3:new{x=x_start, y=y_throat},
    p01=Vector3:new{x=-L_thr, y=y_throat}}
--- Supersonic expansion
-a0 = Vector3:new{x=x_start, y=0.0}
-a1 = Vector3:new{x=x_start, y=y_throat}
-c0 = Vector3:new{x=bez_points[#bez_points].x, y=0.0}
-c1 = Vector3:new{x=bez_points[#bez_points].x, y=bez_points[#bez_points].y}
-exp_region = ExpandingChannelPatch:new{
-   south=Line:new{p0=a0, p1=c0},
-   north=Bezier:new{points=bez_points},
-   west=Line:new{p0=a0, p1=a1},
-   east=Line:new{p0=c0, p1=c1} }
+-- Supersonic expansion is fully defined by its north edge.
+exp_region = NozzleExpansionPatch:new{north=Bezier:new{points=bez_points}}
 -- Define structured grids for both regions.
 print "Building grid."
 x_cf_throat = RobertsFunction:new{end0=true, end1=true, beta=1.45792369398}
-x_cf = RobertsFunction:new{end0=false, end1=true, beta=1.1}
+-- Note that the Bezier wall has a natural clustering of points toward the throat.
+-- The following weak cluster function x_cf mitigates that clustering.
+x_cf = RobertsFunction:new{end0=false, end1=true, beta=1.5}
 y_cf = RobertsFunction:new{end0=false, end1=true, beta=1.02}
 throat_grid = StructuredGrid:new{psurface=throat_region, niv=49, njv=81,
 				 cfList={west=y_cf, east=y_cf,
 					 south=x_cf_throat, north=x_cf_throat}}
-exp_grid = StructuredGrid:new{psurface=exp_region, niv=1201, njv=81,
+exp_grid = StructuredGrid:new{psurface=exp_region, niv=751, njv=81,
 			      cfList={west=y_cf, east=y_cf,
 				      south=x_cf, north=x_cf}}
 -- Divide the full domain into many blocks, mainly in the axial direction.
 throat_fba = FBArray:new{grid=throat_grid, initialState=inflow, label="throat",
                          bcList={west=InFlowBC_Supersonic:new{flowState=inflow},
-                                 north=WallBC_NoSlip_FixedT:new{Twall=300.0}}, 
+                                 north=WallBC_NoSlip_FixedT:new{Twall=300.0}},
                          nib=1, njb=2}
 exp_fba = FBArray:new{grid=exp_grid, initialState=inflow, label="expansion",
                       bcList={north=WallBC_NoSlip_FixedT:new{Twall=300.0},
-                              east=OutFlowBC_Simple:new{}}, 
+                              east=OutFlowBC_Simple:new{}},
                       nib=30, njb=2}
 identifyBlockConnections()
