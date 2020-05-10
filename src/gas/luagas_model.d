@@ -1183,7 +1183,7 @@ void registerGasModel(lua_State* L, int tblIdx)
     lua_setfield(L, -2, "updateThermoFromRHOE"); // keep the old name, as well
     lua_pushcfunction(L, &thermoRHOT);
     lua_setfield(L, -2, "updateThermoFromRHOT");
-    lua_pushcfunction(L, &thermoRHOT);
+    lua_pushcfunction(L, &thermoRHOP);
     lua_setfield(L, -2, "updateThermoFromRHOP");
     lua_pushcfunction(L, &thermoPS);
     lua_setfield(L, -2, "updateThermoFromPS");
