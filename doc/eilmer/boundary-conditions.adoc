@@ -13,9 +13,13 @@ is a slip wall, `WallBC_WithSlip`.
 
 === Slip wall
 
-  WallBC_WithSlip:new{label, group}
+  WallBC_WithSlip:new{label, group, is_design_surface, num_cntrl_pts}
+  or
+  WallBC_WithSlip0:new{label, group, is_design_surface, num_cntrl_pts}
 
-Used where we want a solid wall with no viscous effects.
+is used where we want a solid wall with no viscous effects.
+The effect of the solid wall is achieved with the use of ghost cells and
+an appropriate reflection of the velocity vector.
 This is the default boundary condition where no other condition is specified.
 
 `label`::
@@ -28,31 +32,122 @@ This is the default boundary condition where no other condition is specified.
   It can be used to group the postprocessing of the data for several boundaries together.
   This might be for force and moment estimation, for example.
 
+`is_design_surface`::
+  _boolean_, default: `false` +
+  Flag to indicate that this surface is one of Kyle's design surfaces.
+
+`num_cntrl_pts`::
+  _int_, default: `0`
+
+There are variants to the basic wall condition.
+
+  WallBC_WithSlip1:new{label, group, is_design_surface, num_cntrl_pts}
+
+achieves a similar effect to WallBC_WithSlip0 but without the use of ghost cell data.
+To do this, the code makes use of one-sided flux-calculators at the boundary.
+You will need to specify this variant of the boundary condition for a moving-grid
+simulation where this boundary wall may have non-zero velocity.
+The one-sided flux calculators will correctly handle the normal component of the
+wall velocity while, effectively, the tangential velocity will be ignored.
+
+
+  WallBC_WithSlip2:new{label, group, is_design_surface, num_cntrl_pts}
+
+is Ingo's variant of WallBC_WithSlip for moving mesh simulations for walls
+with normal velocity.
+It uses ghost cells with appropriate velocity settings.
+
 
 === No-slip, fixed-temperature
 
-  WallBC_NoSlip_FixedT:new{Twall, label, group}
+  WallBC_NoSlip_FixedT:new{Twall, label, group, is_design_surface, num_cntrl_pts}
+  or
+  WallBC_NoSlip_FixedT0:new{Twall, label, group, is_design_surface, num_cntrl_pts}
 
-Used where we want viscous effects to impose a no-slip velocity
+is used where we want viscous effects to impose a no-slip velocity
 condition and a fixed wall temperature.
-We need to set `config.viscous=true` to make this boundary condition effective.
+The inviscid effect of the solid wall is achieved with the use of ghost cells and
+an appropriate reflection of the velocity vector.
+We need to set `config.viscous=true` to make the temperature-setting part
+of this boundary condition effective.
 
 `Twall`::
   The fixed wall temperature, in degrees K.
 
+`label`::
+  _string_, default "" +
+  A tag string that may be applied to the boundary.
+
+`group`::
+  _string_, default "" +
+  A tag or label for the group, to which this boundary belongs.
+  It can be used to group the postprocessing of the data for several boundaries together.
+  This might be for force and moment estimation, for example.
+
+
+  WallBC_NoSlip_FixedT1:new{Twall,
+     label, group, is_design_surface, num_cntrl_pts}
+
+is variant of the boundary condition that does not use ghost cells and
+is suitable for moving-grid simulations.
+
 
 === No-slip, adiabatic
 
-  WallBC_NoSlip_Adiabatic:new{label, group}
+  WallBC_NoSlip_Adiabatic:new{label, group, is_design_surface, num_cntrl_pts}
+  or
+  WallBC_NoSlip_Adiabatic0:new{label, group, is_design_surface, num_cntrl_pts}
 
-Used where we want viscous effects to impose no-slip at the wall
+is used where we want viscous effects to impose no-slip at the wall
 but where there is no heat transfer.
 We need to set `config.viscous=true` to make this boundary condition effective.
+
+`label`::
+  _string_, default "" +
+  A tag string that may be applied to the boundary.
+
+`group`::
+  _string_, default "" +
+  A tag or label for the group, to which this boundary belongs.
+  It can be used to group the postprocessing of the data for several boundaries together.
+  This might be for force and moment estimation, for example.
+
+
+  WallBC_NoSlip_Adiabatic1:new{label, group, is_design_surface, num_cntrl_pts}
+
+is variant of the boundary condition that does not use ghost cells and
+is suitable for moving-grid simulations.
 
 
 === Translating-surface, fixed-temperature
 
-  WallBC_TranslatingSurface_FixedT:new{Twall, v_trans, label, group}
+  WallBC_TranslatingSurface_FixedT:new{Twall, v_trans,
+     label, group, is_design_surface, num_cntrl_pts}
+
+Used where we want viscous effects to impose a specified translating velocity condition
+and a fixed wall temperature.
+By _translating_ we mean that the (flat) wall is moving tangential to the block boundary
+and that the grid defining the flow region is not moving.
+We need to set `config.viscous=true` to make this boundary condition fully effective.
+An example of use is Couette flow between moving plates.
+
+`Twall`::
+  The fixed wall temperature, in degrees K.
+
+`v_trans`::
+  _Vector3_, default: {x=0.0, y=0.0, z=0.0} +
+  Vector velocity of the translating wall.
+  The value may be specified as a table of three named (x,y,z) components.
+
+`label`::
+  _string_, default "" +
+  A tag string that may be applied to the boundary.
+
+`group`::
+  _string_, default "" +
+  A tag or label for the group, to which this boundary belongs.
+  It can be used to group the postprocessing of the data for several boundaries together.
+  This might be for force and moment estimation, for example.
 
 
 === Translating-surface, adiabatic
