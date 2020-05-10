@@ -33,6 +33,7 @@ import gas.two_temperature_gasgiant;
 import kinetics.chemistry_update;
 import kinetics.equilibrium_update;
 import kinetics.powers_aslam_kinetics;
+import kinetics.yee_kotov_kinetics;
 import kinetics.two_temperature_argon_kinetics;
 import kinetics.ideal_dissociating_gas_kinetics;
 import kinetics.fuel_air_mix_kinetics;
@@ -59,7 +60,13 @@ ThermochemicalReactor init_thermochemical_reactor(GasModel gmodel, string fileNa
         reactor = new EquilibriumUpdate(fileName1, gmodel);
     }
     if ((cast(IdealGasAB) gmodel) !is null) {
-        reactor = new UpdateAB(fileName1, gmodel);
+        auto ig = cast(IdealGasAB) gmodel;
+        if (ig.modelType == "Yee-Kotov") {
+            reactor = new UpdateAB_YeeKotov(fileName1, gmodel);
+        }
+        else {
+            reactor = new UpdateAB(fileName1, gmodel);
+        }
     }
     if ((cast(TwoTemperatureReactingArgon) gmodel) !is null) {
         reactor = new UpdateArgonFrac(fileName1, gmodel);
