@@ -13,43 +13,131 @@ is a slip wall, `WallBC_WithSlip`.
 
 === Slip wall
 
+  WallBC_WithSlip:new{label, group}
+
+Used where we want a solid wall with no viscous effects.
+This is the default boundary condition where no other condition is specified.
+
+`label`::
+  _string_, default "" +
+  A tag string that may be applied to the boundary.
+
+`group`::
+  _string_, default "" +
+  A tag or label for the group, to which this boundary belongs.
+  It can be used to group the postprocessing of the data for several boundaries together.
+  This might be for force and moment estimation, for example.
+
+
 === No-slip, fixed-temperature
+
+  WallBC_NoSlip_FixedT:new{Twall, label, group}
+
+Used where we want viscous effects to impose a no-slip velocity
+condition and a fixed wall temperature.
+We need to set `config.viscous=true` to make this boundary condition effective.
+
+`Twall`::
+  The fixed wall temperature, in degrees K.
+
 
 === No-slip, adiabatic
 
+  WallBC_NoSlip_Adiabatic:new{label, group}
+
+Used where we want viscous effects to impose no-slip at the wall
+but where there is no heat transfer.
+We need to set `config.viscous=true` to make this boundary condition effective.
+
+
 === Translating-surface, fixed-temperature
+
+  WallBC_TranslatingSurface_FixedT:new{Twall, v_trans, label, group}
+
 
 === Translating-surface, adiabatic
 
+  WallBC_TranslatingSurface_Adiabatic:new{v_trans, label, group}
+
+
 === Rotating-surface, fixed-temperature
+
+  WallBC_RotatingSurface_FixedT:new{Twall, r_omega, centre, label, group}
 
 === Rotating-surface, adiabatic
 
+  WallBC_RotatingSurface_Adiabatic:new{r_omega, centre, label, group}
 
-== In Flow
+
+== In-flow
 
 === Simple supersonic
 
+  InFlowBC_Supersonic:new{flowState, label, group}
+
+
 === Static profile
+
+  InFlowBC_StaticProfile:new{fileName, match, label, group}
+
 
 === Transient
 
+  InFlowBC_Transient:new{fileName, label, group}
+
+
 === Constant flux
+
+  InFlowBC_ConstFlux:new{flowState, label, group}
+
 
 === Shock-fitting
 
+  InFlowBC_ShockFitting:new{flowState, label, group}
+
+
 === Isentropic from stagnation
 
+  InFlowBC_FromStagnation:new{stagnationState, fileName,
+    direction_type, direction_x, direction_y, direction_z,
+    alpha, beta, mass_flux, relax_factor, label, group}
 
-== Out Flow
+
+== Out-flow
+
 
 === Simple flux
 
+  OutFlowBC_SimpleFlux:new{label, group}
+
+
 === Simple extrapolation
+
+  OutFlowBC_SimpleExtrapolate:new{xOrder, label, group}
+
 
 === Fixed pressure
 
+  OutFlowBC_FixedP:new{p_outside, label, group}
+
+
 === Fixed pressure and temperature
+
+  OutFlowBC_FixedPT:new{p_outside, T_outside, label, group}
+
+
+== Inter-block Exchange
+
+=== Full block-face
+
+  ExchangeBC_FullFace:new{otherBlock, otherFace, orientation,
+    reorient_vector_quantities, Rmatrix, label, group}
+
+
+=== Mapped cell
+
+  ExchangeBC_MappedCell:new{transform_position, c0, n, alpha, delta,
+    list_mapped_cells, reorient_vector_quantities, Rmatrix, label, group}
 
 
 == User Defined
@@ -57,13 +145,19 @@ This is a get-out-of-jail boundary condition that allows you to do anything
 you wish to code (in Lua).
 
 
-== Inter-block Exchange
+=== Setting ghost cells
 
-=== Full block-face
+   UserDefinedGhostCellBC:new{fileName, label, group, is_design_surface, num_cntrl_pts}
 
-=== Mapped cell
+
+=== Setting fluxes
+
+  UserDefinedFluxBC:new{fileName, funcName, label, group}
+
 
 === Full block-face followed by user-defined
 
+  ExchangeBC_FullFacePlusUDF:new{otherBlock, otherFace, orientation,
+    reorient_vector_quantities, Rmatrix, fileName, label, group}
 
 
