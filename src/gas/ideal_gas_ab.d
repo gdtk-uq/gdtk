@@ -46,7 +46,7 @@ import gas.diffusion.therm_cond;
 
 class IdealGasAB: GasModel {
 public:
-
+    string modelType = "Powers-Aslam";
     this(lua_State *L) {
         // Some parameters are fixed and some come from the gas model file.
         _n_species = 2;
@@ -57,6 +57,11 @@ public:
         // Bring table to TOS
         lua_getglobal(L, "IdealGasAB");
         // [TODO] test that we actually have the table as item -1
+        lua_getfield(L, -1, "type");
+        if (!lua_isnil(L, -1)) {
+            modelType = to!string(luaL_checkstring(L, -1));
+        }
+        lua_pop(L, 1);
         // Now, pull out the remaining numeric value parameters.
         _Rgas = getDouble(L, -1, "R");
         _mol_masses.length = 2;
