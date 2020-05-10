@@ -199,7 +199,7 @@ public:
     @nogc bool check_values(bool print_message=true) const
     {
         double RHOMIN = 0.0;
-        double TMIN = 1.0;
+        double TMIN = 0.0;
         bool is_data_valid = true;
         if (!(isFinite(rho.re)) || rho < 1.01 * RHOMIN) {
             debug { if (print_message) writeln("Density invalid: ", rho); }
