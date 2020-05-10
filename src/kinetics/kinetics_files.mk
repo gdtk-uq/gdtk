@@ -9,6 +9,7 @@ KINETICS_FILES := $(KINETICS_DIR)/package.d \
 	$(KINETICS_DIR)/ideal_dissociating_gas_kinetics.d \
 	$(KINETICS_DIR)/fuel_air_mix_kinetics.d \
 	$(KINETICS_DIR)/powers_aslam_kinetics.d \
+	$(KINETICS_DIR)/yee_kotov_kinetics.d \
 	$(KINETICS_DIR)/rate_constant.d \
 	$(KINETICS_DIR)/reaction.d \
 	$(KINETICS_DIR)/reaction_mechanism.d \
