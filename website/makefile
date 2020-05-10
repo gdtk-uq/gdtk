@@ -9,7 +9,7 @@ PDFS := eilmer-user-guide \
 	presentations \
 	theses
 
-HTML := users-reference-manual.html l1d-reference-manual.html
+HTML := eilmer-reference-manual.html l1d-reference-manual.html
 
 build: $(PDFS) $(HTML) images
 	hugo
@@ -27,7 +27,7 @@ images:
 	cp ../images/* static/images/
 	cp ../images/eilmer-icon-2.png static/favicon.png
 
-users-reference-manual.html:
+eilmer-reference-manual.html:
 	- mkdir -p static/html
 	cd ../doc; make $@
 	cp ../doc/$@ static/html/

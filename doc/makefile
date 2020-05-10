@@ -14,14 +14,14 @@ GEOM_DIR := geom
 GEOM_DOC_FILES := (GEOM_DIR)/grid/grid-user.adoc \
 	$(GEOM_DIR)/grid/sgrid-user.adoc
 
-all: users-reference-manual.html l1d-reference-manual.html
+all: eilmer-reference-manual.html l1d-reference-manual.html
 	@echo "Done."
 
-users-reference-manual.html: users-reference-manual.adoc $(EILMER_DOC_FILES)
-	asciidoctor users-reference-manual.adoc
+eilmer-reference-manual.html: eilmer-reference-manual.adoc $(EILMER_DOC_FILES)
+	asciidoctor eilmer-reference-manual.adoc
 
 l1d-reference-manual.html: l1d-reference-manual.adoc
 	asciidoctor l1d-reference-manual.adoc
 
 clean:
-	- rm users-reference-manual.html l1d-reference-manual.html
+	- rm eilmer-reference-manual.html l1d-reference-manual.html

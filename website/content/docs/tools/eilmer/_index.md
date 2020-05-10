@@ -45,6 +45,6 @@ hypersonic inlets, turbomachinery and microcombustors.
 - [Geometry Package User Guide (PDF)](/pdfs/geometry-user-guide.pdf)
 - [Gas Package User Guide (PDF)](/pdfs/gas-user-guide.pdf)
 - [Reacting Gas Thermochemistry with the thermally-perfect-gas model (PDF)](/pdfs/reacting-gas-guide.pdf)
-- [Eilmer4 Reference Manual (HTML)](/html/users-reference-manual.html)
+- [Eilmer4 Reference Manual (HTML)](/html/eilmer-reference-manual.html)
 
 
