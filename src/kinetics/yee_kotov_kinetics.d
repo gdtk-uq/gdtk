@@ -20,6 +20,7 @@
 
 module kinetics.yee_kotov_kinetics;
 
+import std.stdio;
 import std.math;
 import std.format;
 import nm.complex;
@@ -72,7 +73,7 @@ final class UpdateAB_YeeKotov : ThermochemicalReactor {
                          ref number[maxParams] params)
     {
         try {
-            massfUpdate(Q, tInterval, dtThermSuggest);
+            massfUpdate(Q, tInterval, dtChemSuggest);
         }
         catch (GasModelException err) {
             string msg = "The mass fraction update in the Yee-Kotov kinetics module failed.\n";
