@@ -183,34 +183,131 @@ We need to set `config.viscous=true` to make this boundary condition fully effec
 
 === Simple supersonic
 
-  InFlowBC_Supersonic:new{flowState, label, group}
+  InFlowBC_Supersonic:new{flowState}
+
+is used where we want to specify a fixed (supersonic) in-flow condition
+that gets copied into the ghost cells each time step.
+
+`flowState`::
+  <<FlowState,_FlowState_>> object that has been constructed earlier in your script.
 
 
 === Static profile
 
-  InFlowBC_StaticProfile:new{fileName, match, label, group}
+  InFlowBC_StaticProfile:new{fileName, match}
+
+is used where we want to specify an inflow condition that might vary
+in a complicated manner across the boundary.
+Data for the flow condition, on a per-cell basis, is contained in the specified file.
+It may be that the file is obtained from an earlier simulation, with a post-processing
+option like `--extract-line` used to write the file entries.
+Matching of the ghost cells to particular entries in the data file is controlled by
+the `match` string value,
+where the default is to match to the nearest location on all three coordinates
+of the ghost-cell position `match="xyz-to-xyz"`.
+
+.Other possible values are
+  * `"xyA-to-xyA"` For 2D or 3D simulations, don't care about z-component of position.
+  * `"AyA-to-AyA"` For 2D or 3D simulations, care about the y-component of position only.
+  * `"xy-to-xR"` Starting with a profile from a 2D simulation,
+    map it to a radial profile in a 3D simulation, considering the x-component
+    of the position of the ghost cells.
+  * `"Ay-to-AR"` Starting with a profile from a 2D simulation,
+    map it to a radial profile in a 3D simulation, ignoring the x-component
+    of the position of the ghost cells.
 
 
 === Transient
 
-  InFlowBC_Transient:new{fileName, label, group}
+  InFlowBC_Transient:new{fileName}
+
+is used  where we want to specify the time-varying inflow condition at the boundary.
+Data for the inflow condition,
+at particular time instants and assumed uniform across the full boundary,
+is contained in the specified file.
+The user needs to write this file according to the expected format encoded
+in the `FlowHistory` class, found toward the end of the `flowstate.d` module.
+Each data line will have the following space-delimited items:
+
+  time velx vely velz p T mass-fractions Tmodes (if any)
 
 
 === Constant flux
 
-  InFlowBC_ConstFlux:new{flowState, label, group}
+  InFlowBC_ConstFlux:new{flowState}
+
+is used where we want to specify directly the fluxes of mass, momentum and energy
+across the boundary faces.
+The fluxes are computed from the supplied <<FlowState,_FlowState_>>.
 
 
 === Shock-fitting
 
-  InFlowBC_ShockFitting:new{flowState, label, group}
+  InFlowBC_ShockFitting:new{flowState}
 
+is used where we want to have the inflow boundary be the location of a bow shock.
+The fluxes across the boundary are computed from the supplied flow condition and the boundary
+velocities are set to follow the shock.
+Note that we need to set `config.moving_grid=true` and select
+an appropriate gas-dynamic update scheme for the moving grid.
 
 === Isentropic from stagnation
 
   InFlowBC_FromStagnation:new{stagnationState, fileName,
     direction_type, direction_x, direction_y, direction_z,
-    alpha, beta, mass_flux, relax_factor, label, group}
+    alpha, beta, mass_flux, relax_factor}
+
+is used where we want a subsonic inflow with a particular stagnation pressure and
+temperature and a velocity _direction_ at the boundary.
+Note that many of the fields are shown with their default values,
+so you don't need to specify them.
+When applied at each time step, the average local pressure across the block boundary
+is used with the stagnation conditions to compute a stream-flow condition.
+Depending on the value for `direction_type`, the computed velocity's direction can be set
+
+* `"normal"` to the local boundary,
+* `"uniform"` in direction and aligned with direction vector whose components
+  are `direction_x`, `direction_y` and `direction_z`
+* `"radial"` radially-in through a cylindrical surface using flow angles
+  `alpha` and `beta`, or
+* `"axial"` axially-in through a circular surface using the same flow angles.
+
+For the case with a nonzero value specified for `mass_flux`,
+the current mass flux (per unit area) across the block face
+is computed and the nominal stagnation pressure is incremented
+such that the mass flux across the boundary relaxes toward the specified value.
+Note that when we select a nonzero mass flux, we no longer control the stagnation pressure.
+This will be adjusted to give the desired mass flux.
+The value for `relax_factor` adjusts the rate of convergence for this feedback mechanism.
+
+Note, that for multi-temperature simulations, all of the temperatures
+are set to be the same as the transrotational temperature.
+This should usually be a reasonable physical approximation because this boundary condition
+is typically used to simulate inflow from a reservoir, and stagnated flow in a reservoir
+has ample time to equilibriate at a common temperature.
+The implementation of this boundary condition may not be time accurate,
+particularly when large waves cross the boundary, however,
+it tends to work well in the steady-state limit.
+
+When `mass_flux` is zero and `fileName` is left as the default empty string,
+the specified FlowState is used as a constant stagnation condition.
+This may be modified by a user-defined function if `fileName` is a non-empty string
+that give the name of a Lua script containing a function with the name `stagnationPT`
+On every boundary condition application, this function receives a table of data
+(including the current simulation time)
+and returns values for stagnation pressure and temperature.
+
+Here is a minimal example:
+----
+function stagnationPT(args)
+   -- print("t=", args.t)
+   p0 = 500.0e3 -- Pascals
+   T0 = 300.0 -- Kelvin
+   return p0, T0
+end
+----
+The intention is that the user may program the stagnation pressure
+as more interesting functions of time.
 
 
 == Out-flow
@@ -218,22 +315,22 @@ We need to set `config.viscous=true` to make this boundary condition fully effec
 
 === Simple flux
 
-  OutFlowBC_SimpleFlux:new{label, group}
+  OutFlowBC_SimpleFlux:new{}
 
 
 === Simple extrapolation
 
-  OutFlowBC_SimpleExtrapolate:new{xOrder, label, group}
+  OutFlowBC_SimpleExtrapolate:new{xOrder}
 
 
 === Fixed pressure
 
-  OutFlowBC_FixedP:new{p_outside, label, group}
+  OutFlowBC_FixedP:new{p_outside}
 
 
 === Fixed pressure and temperature
 
-  OutFlowBC_FixedPT:new{p_outside, T_outside, label, group}
+  OutFlowBC_FixedPT:new{p_outside, T_outside}
 
 
 == Inter-block Exchange
@@ -241,13 +338,13 @@ We need to set `config.viscous=true` to make this boundary condition fully effec
 === Full block-face
 
   ExchangeBC_FullFace:new{otherBlock, otherFace, orientation,
-    reorient_vector_quantities, Rmatrix, label, group}
+    reorient_vector_quantities, Rmatrix}
 
 
 === Mapped cell
 
   ExchangeBC_MappedCell:new{transform_position, c0, n, alpha, delta,
-    list_mapped_cells, reorient_vector_quantities, Rmatrix, label, group}
+    list_mapped_cells, reorient_vector_quantities, Rmatrix}
 
 
 == User Defined
