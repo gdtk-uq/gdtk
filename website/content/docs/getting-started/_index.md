@@ -6,6 +6,11 @@ draft: false
 
 # Getting Started with the Programs in the Toolkit
 
+This introduction takes you through to running a simple simulation
+of supersonic flow over a sharp cone.
+It should take less than half an hour to do the full set up and run.
+
+
 ## Prerequisites: background
 
 This first section is about you, the user of the Gas Dynamics Toolkit.
@@ -16,6 +21,7 @@ and thermo-fluid-dynamics, at least to a second- or third-year university level.
 With the Toolkit code, we try to make the analysis of compressible, reacting flow accessible
 and reliable; we cannot make it trivial.
 
+
 ## Prerequisites: software
 
 The core Eilmer, and L1d solvers and their modules are mainly written in the
@@ -24,24 +30,9 @@ The pre- and post-processing modes make use of the Lua scripting language
 so that we get flexibility and convenient customization.
 There is also some Ruby a little Tcl/Tk used in the automated testing scripts.
 
-To run simulations, you need an executable version of the Eilmer program.
-<!--- RJG, 2018-05-23: Commented out while tarball unavailable in lead-up
-                       to 4.0 release
-You may get this executable file in the pre-built (tar-ball) package
-linked to from the [front page](/) of this web site.
-Alternatively,
---->
-You may build an executable version of the program from the source code, as described below.
+To run simulations, you need an executable versions of the Eilmer and/or L1d programs.
+You may build these executable programs from the source code, as described below.
 
-<!--- See comment above
-
-If building from source is your choice,
-continue reading the remainder of this section.
-If you will be happy running the pre-built version,
-go back to the [front page](/) and follow the links there,
-but then come back here to
-continue reading from "Setting up for first-time run" below.
---->
 
 ## Prerequisites: building from source
 
@@ -56,11 +47,13 @@ The source code of the Lua interpreter is included in the source code repository
 
 To build Eilmer, you will require:
 
-  + A C compiler (GNU compiler is a good option and standard on most systems)
-  + A D compiler
-    Recommended: LLVM D compiler, `ldc`
-    Binary releases for `ldc` at: https://github.com/ldc-developers/ldc/releases
-    An install guide for the LDC compiler is available [here]({{< relref installing-ldc >}}).
+  + D compilers
+      + The reference DMD64 compiler (`dmd`) is available from https://dlang.org.
+      + Binary releases for LLVM D compiler (`ldc2` and `ldmd2`)
+        may be found at: https://github.com/ldc-developers/ldc/releases
+      + An install guide for the LDC compiler is available [here]({{< relref installing-ldc >}}).
+  + A C compiler
+      + GNU compiler is a good option and comes standard on most systems.
   + The gfortran compiler (and 32-bit libraries)
       + gfortran and gfortran-multilib on Debian/Ubuntu/Mint
       + gcc-gfortran on RedHat/CentOS/Fedora
@@ -93,18 +86,15 @@ For viewing and plotting results, we recommend:
   + Gnuplot
 
 ### Installing on Mac OSX
+
 A guide to getting your development environment set up on
-Mac OSX is available
-<!--
-[here]({{< relref mac-install >}}).
--->
+Mac OSX is available [here]({{< relref mac-install >}}).
 
 
 ## Getting the source code
 
-The full source code for the toolkit programs,
-including Eilmer4 and a set of examples, can be found in a public repository
-on [bitbucket](https://bitbucket.org/cfcfd/dgd-git).
+The full source code for the toolkit programs, including a set of examples,
+can be found in a public repository on [bitbucket](https://bitbucket.org/cfcfd/dgd-git).
 To get your own copy, use the git revision control client to clone the repository
 with something like the following command:
 
@@ -112,6 +102,7 @@ with something like the following command:
 
 and within a couple of minutes, depending on the speed of your network connection,
 you should have your own copy of the full source tree and the complete repository history.
+
 
 ## Installing Eilmer
 
@@ -127,7 +118,36 @@ extra hint:
 
     make DMD=ldc2 PLATFORM=macosx install
 
-## Setting up for first-time run of Eilmer
+
+## Installing L1d (optional)
+
+L1d installs into the same location as Eilmer but, its source code
+is in a different location.
+To compile and install L1d, move into its source area and, again,
+use `make` to coordinate the compiling and installing:
+
+    cd dgd/src/l1d
+    make install
+
+
+## Installing the loadable library (optional)
+
+The loadable library consists of the gas module functions compiled into
+a dynamically loadable library and a collection of Python and Ruby modules
+for loading that library.
+Once installed, you should be able to use the gas functions from within
+a Python or Ruby interpreter.
+
+To compile and install the library and its supporting wrappers,
+move to the gas source directory and use `make` again.
+
+    cd dgd/src/gas
+    make install
+
+Note that the loadable library needs to be built with the DMD64 compiler.
+
+
+## Setting up for a first-time run of Eilmer
 
 We'll assume you are happy using the default install area `$HOME/dgdinst`.
 The next step is to configure your environment to use Eilmer.
@@ -157,7 +177,7 @@ Remember to refresh your current shell (or log out and log back in) so
 that your newly configured environment is available.
 
 
-## Running your first simulation
+## Running your first Eilmer simulation
 
 To test that everything has worked, you can exercise the flow
 solver to simulate the supersonic flow over a 20-deg cone.
@@ -180,15 +200,19 @@ The image below shows contours of pressure in the flow domain.
 
 ## Updating your installed version of Eilmer
 
-Because Eilmer is being actively developed, we will make frequent changes
+Because Eilmer, L1d and the toolkit functions are being actively developed,
+we will make frequent changes
 and additions to the source code and the examples.
-To update your copy of the program and examples, move into the eilmer source
-area and pull any new revisions into your local copy.
-Then use `make` to coordinate the compiling and installing as before:
+To update your copy of the repository,
+move into any directory within the working tree and pull any new revisions into your local copy.
 
     cd dgd/src/eilmer
     make clean
     git pull -v
+
+Then, to build a refreshed copy of Eilmer,
+use `make` to coordinate the compiling and installing as before:
+
     make install
 
 
