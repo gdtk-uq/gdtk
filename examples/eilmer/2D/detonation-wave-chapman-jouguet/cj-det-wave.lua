@@ -58,10 +58,17 @@ gamma = IdealGasAB.gamma
 u_u = 0.0
 Qu = GasState:new{gm}
 Qu.massf["A"] = 1.0; Qu.massf["B"] = 0.0
-Qu.rho = 1.0
-Qu.p = 1.0
-gm:updateThermoFromRHOP(Qu)
+Qu.rho = rho_ref
+Qu.T = T_ref
+gm:updateThermoFromRHOT(Qu)
 unburntState = FlowState:new{p=Qu.p, T=Qu.T, massf=Qu.massf, velx=u_u}
+print("")
+print("Conditions of unburnt gas:")
+print("u_u= ", u_u)
+print("rho_u= ", Qu.rho)
+print("p_u= ", Qu.p)
+print("T_u= ", Qu.T)
+print("")
 -- Burnt gas
 p_u = Qu.p; rho_u = Qu.rho
 b = -p_u - rho_u*q0*(gamma - 1)
@@ -116,9 +123,8 @@ FluidBlock:new{grid=grid, initialState=fillFn,
                bcList={west=InFlowBC_Supersonic:new{flowState=burntState}}}
 
 config.flux_calculator = "ausmdv"
-config.max_time = 1.8
+config.max_time = 1.8*S_K/S_cj -- Note: Kotov run to t/t_ref = 1.8
 config.max_step = 100000
-config.dt_init = 0.5e-3
+config.dt_init = config.max_time/4000.0
 config.fixed_time_step = true
-config.dt_max = 1.0
 config.dt_plot = config.max_time/10
