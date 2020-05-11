@@ -315,22 +315,46 @@ as more interesting functions of time.
 
 === Simple flux
 
+  OutFlowBC_Simple:new{}
+  or
   OutFlowBC_SimpleFlux:new{}
+
+is used where we want a (mostly) supersonic outflow condition.
+It should work with subsonic outflow as well, however, remember that you are
+deliberately ignoring information that may propagate into the domain from
+the real (physical) region that you have truncated.
+The outflow flux is determined from the flow state in the cell just inside the boundary.
+If the velocity in that cell tries to produce an influx of mass,
+the flux calculation switches to that of an impermeable wall.
 
 
 === Simple extrapolation
 
   OutFlowBC_SimpleExtrapolate:new{xOrder}
 
+is used where we want a (mostly) supersonic outflow condition.
+Flow data is effectively copied (`xOrder=0`) or linearly-extrapolated (`xOrder=1`)
+from just inside the boundary to the ghost cells just outside the boundary, every time step.
+In subsonic flow, this can lead to physically invalid behaviour.
+If you encounter strange flow behaviour that seems to start at this boundary and propagate
+upstream into your flow domain, try extending your simulated flow domain such that
+you eventually have an outflow boundary across which nothing exciting happens.
+
 
 === Fixed pressure
 
   OutFlowBC_FixedP:new{p_outside}
 
+is used where we want something like `OutFlowBC_Simple` but with a specified back pressure.
+This can be analogous to a vacuum pump that removes gas at the boundary to maintain
+a fixed pressure in the ghost cells.
+
 
 === Fixed pressure and temperature
 
   OutFlowBC_FixedPT:new{p_outside, T_outside}
+
+is like `OutFlowBC_FixedP`, above, but also sets the temperature in the ghost cells.
 
 
 == Inter-block Exchange
@@ -340,31 +364,135 @@ as more interesting functions of time.
   ExchangeBC_FullFace:new{otherBlock, otherFace, orientation,
     reorient_vector_quantities, Rmatrix}
 
+Usually, this boundary condition is applied implicitly, by calling the function
+`identifyBlockConnections`, for cases where one structured-grid block interfaces with another
+and the block boundaries are cleanly aligned,
+however, it can be applied manually for cases where you want the flow to be plumbed
+from one block face into another and the blocks are not geometrically aligned.
+A non-unity transformation matrix, `Rmatrix`,
+can be provided for cases where the flow vector quantities need to
+be reoriented when they are copied from the other boundary to this one.
+
+Note that this boundary condition is only for structured-grid blocks.
+If one or both of the blocks to be joined is based on an unstructured-grid,
+you will need to use the following `MappedCell` flavour of the exchange boundary condition.
+Also, if you have two structured-grid faces but the cells along each of the faces
+do not align, you will also need to use the `MappedCell` flavour.
+
+`otherBlock`::
+  _FluidBlock_ object, default: nil +
+  A reference to the other block that is joined to this boundary.
+
+`otherFace`::
+  _FaceLabel_, default: nil +
+  An enum value specifying the face on the other block, from which cell data will be copied.
+  Possible values are `north`, `east`, `south`, `west`, `bottom`, `top`.
+
+`orientation`::
+  _int_: default: `-1` +
+  Although there is only one possible orientation for face-to-face connections in 2D,
+  there are 4 possible ways to (rotationally) orient a face-to-face connection in 3D.
+
+`reorient_vector_quantities`::
+  _boolean_, default: `false` +
+  If true, vector quantities are multiplied by the `Rmatrix` as they are copied from
+  the source cell into the destination ghost cell.
+
+`Rmatrix`::
+  _array of float_, default: {1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0} +
+  This is a 3-by-3 matrix written in row-major format.
+  It is applied, in the usual matrix-vector multiply manner, to vector quantities
+  such as velocity and magnetic field.
+  The user is responsible for computing appropriate coefficients.
+
 
 === Mapped cell
 
   ExchangeBC_MappedCell:new{transform_position, c0, n, alpha, delta,
     list_mapped_cells, reorient_vector_quantities, Rmatrix}
 
+is something like the `ExchangeBC_FullFace` boundary condition but with a mapping
+of destination(ghost)-cell location to source-cell location.
+It allows us to stitch boundaries together, even if the cells do not align, one-for-one.
+The position of the source cell is computed by taking the position of the ghost cell,
+computing the solid-body rotation of `alpha` radians about the axis `n`
+through the point `c0`, then adding a displacement `delta`.
+This will accommodate general rigid-body transformations.
+
+`c0`::
+  _Vector3_, default: {x=0.0, y=0.0, z=0.0} +
+  Centre of rotation for position transformation.
+
+`n`::
+  _Vector3_ default: {x=0.0, y=0.0, z=1.0} +
+  Axis of rotation for the position transformation.
+
+`alpha`::
+  _float_, default: 0.0 +
+  Angle of rotation for the position transformation.
+  Right-hand rule gives the sense of direction.
+
+`delta`::
+  _Vector3_, default: {x=0.0, y=0.0, z=0.0} +
+  Translational displacement for the position transformation.
+
+`list_mapped_cells`::
+  _boolean_, default: `false` +
+  Flag to indicate whether we want the program to list the indices of the mapped cells
+  as they are located at run time.
+
+`reorient_vector_quantities`::
+  _boolean_, default: `false` +
+  If true, vector quantities are multiplied by the `Rmatrix` as they are copied from
+  the source cell into the destination ghost cell.
+
+`Rmatrix`::
+  _array of float_, default: {1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0} +
+  This is a 3-by-3 matrix written in row-major format.
+  It is applied, in the usual matrix-vector multiply manner, to vector quantities
+  such as velocity and magnetic field.
+  The user is responsible for computing appropriate coefficients.
+
 
 == User Defined
 This is a get-out-of-jail boundary condition that allows you to do anything
 you wish to code (in Lua).
+Please read the Appendix on these boundary conditions in the PDF User Guide before
+your first attempt to use them.
 
 
 === Setting ghost cells
 
-   UserDefinedGhostCellBC:new{fileName, label, group, is_design_surface, num_cntrl_pts}
+   UserDefinedGhostCellBC:new{fileName, label, group}
 
+is used to allow the user to define the ghost-cell flow properties and
+interface properties at run time.
+This is done via a set of functions defined by the user,
+written in the Lua programming language, and provided in the specified file.
 
 === Setting fluxes
 
   UserDefinedFluxBC:new{fileName, funcName, label, group}
 
+is used to allow the user to define the interface convective-fluxes at run time.
+This is done via a function defined by the user, written in the Lua programming language,
+and provided in the specified file.
+If the user does not specify the function name,
+`convectiveFlux` is used as the default name.
 
 === Full block-face followed by user-defined
 
   ExchangeBC_FullFacePlusUDF:new{otherBlock, otherFace, orientation,
     reorient_vector_quantities, Rmatrix, fileName, label, group}
+
+is used when you might conditionally want to exchange block-boundary data
+or do something else altogether.
+This boundary condition allows that by first doing a FullFace exchange of data and then
+calling upon your user-defined functions (as for `UserDefinedGhostCellBC`)
+to conditionally overwrite the data.
+This turns out to be a convenient way to implement diaphragm models
+for shock-tunnel simulations.
+Note that this boundary condition can work across MPI tasks
+but is only implemented for structured-grid blocks.
 
 
