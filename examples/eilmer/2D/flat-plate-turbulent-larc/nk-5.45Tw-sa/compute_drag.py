@@ -6,7 +6,6 @@ Compute wall drag from a set of loads files
 
 from numpy import array, argsort, concatenate
 from sys import argv
-from pylab import plot,show
 from glob import glob
 
 def number(thing):
