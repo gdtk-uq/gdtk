@@ -1,4 +1,6 @@
-= Monitoring a simulation
+= Run-time utilities
+
+== Monitoring a simulation
 
 While a calculation runs, its progress can be monitored in a couple of ways.
 By default, the simulation program occasionally writes to the console
@@ -53,7 +55,7 @@ On completion of a simulation, the word `done` is written to that file.
 To use the e4monitor program in your batch scripts,
 start it just before using `mpirun` to start your simulation.
 
-  e4monitor --job=<string> [--startup=<int>] [--period=<int>]
+  $ e4monitor --job=<jobName> ?--startup=<int>? ?--period=<int>?
 
 The default values for `startup` and `period` are 30 and 60 seconds respectively.
 With these values, the monitor program does not look at the progress file until
@@ -65,4 +67,27 @@ command for the mpirun process.
 If the simulation finishes successfully, the monitor program will see the word `done`
 and will also terminate.
 This should give a clean exit for your batch job.
+
+
+== Compacting a solution
+
+When running a transient-flow simulations with many blocks and
+saving the flow data at many time instants, you can end up with thousands of files.
+Although not usually a problem on your personal workstation,
+storing many small files on a shared supercomputer file system is likely to lead
+to trouble with your storage allocation.
+To mitigate this problem, there is a utility program to compact and restore job directories.
+
+  $ e4compact --job=<jobName> ?--verbose? ?--force? ?--restore?
+
+This program delegates most of the work to the tar command and
+will collect the many solution and grid files into a small set of archive files.
+Files that are successfully archived are removed from the directories and,
+if the directories are then empty, they are also removed.
+
+Notes::
+ * Existing archives will only be updated if the `--force|-f` option is specified.
+ * Option `--restore|-r` will extract files from archives and restore the directories.
+ * Option `--verbose|-v` will echo the tar commands as they are issued.
+
 

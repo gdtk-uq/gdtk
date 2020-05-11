@@ -7,7 +7,7 @@ EILMER_DOC_FILES := $(LMR_DIR)/config-options-user.adoc \
 	$(LMR_DIR)/fluid-block-user.adoc \
 	$(LMR_DIR)/boundary-conditions.adoc \
 	$(LMR_DIR)/running-a-simulation.adoc \
-	$(LMR_DIR)/monitoring-a-calculation.adoc \
+	$(LMR_DIR)/run-time-utilities.adoc \
 	$(LMR_DIR)/restarting-from-a-snapshot.adoc
 
 GEOM_DIR := geom

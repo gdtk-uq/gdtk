@@ -1,6 +1,6 @@
 = Eilmer Reference Manual for Users, v4.0
 Rowan J. Gollan; Peter A. Jacobs
-2020-05-08
+2020-05-11
 :toc: right
 :stylesheet: readthedocs.css
 :sectnums:
@@ -30,8 +30,8 @@ include::geom/grid/grid-user.adoc[]
 include::geom/grid/sgrid-user.adoc[]
 
 include::eilmer/running-a-simulation.adoc[]
-include::eilmer/monitoring-a-calculation.adoc[]
 include::eilmer/restarting-from-a-snapshot.adoc[]
+include::eilmer/run-time-utilities.adoc[]
 
 :leveloffset: -1
 
