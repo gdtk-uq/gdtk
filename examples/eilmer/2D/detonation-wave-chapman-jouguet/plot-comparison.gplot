@@ -1,0 +1,43 @@
+set term pdfcairo enhanced font "courier,15"
+xD = 10
+S_cj = 7.1247
+t_f = 1.8
+det_front = xD + S_cj*t_f
+set output "cj-det-wave-pressure.pdf"
+set xrange [0:30]
+set yrange [0:30]
+set mxtics
+set mytics
+set xlabel "x, -"
+set ylabel "pressure, -"
+set arrow 1 from det_front,0 to det_front,30 nohead lw 3 lc rgb "red"
+set key left font ",10"
+set label 1 sprintf("Detonation front\nx = %.3f", det_front) at det_front+0.5,22 font ",10"
+plot 'reference-solution-profile.data' u 1:9 t 'reference (10,000 cells)' w l lw 2 lc rgb "black", \
+     'profile.data' u 1:9 t '200 cells' w l lw 1.5 lt 2
+
+set output "cj-det-wave-unburnt-massf.pdf"
+set yrange [-0.2:1.2]
+set ylabel "mass fraction unburnt gas, -"
+unset arrow 1
+set arrow 2 from det_front,-0.2 to det_front,1.2 nohead lw 3 lc rgb "red"
+plot 'reference-solution-profile.data' u 1:16 t 'reference (10,000 cells)' w l lw 2 lc rgb "black", \
+     'profile.data' u 1:16 t '200 cells' w l lw 1.5 lt 2
+
+set output "cj-det-wave-temperature.pdf"
+set yrange [0:14]
+set ylabel "temperature, -"
+unset arrow 2
+set arrow 3 from det_front,0 to det_front,14 nohead lw 3 lc rgb "red"
+set key bottom
+plot 'reference-solution-profile.data' u 1:20 t 'reference (10,000 cells)' w l lw 2 lc rgb "black" , \
+     'profile.data' u 1:20 t '200 cells' w l lw 1.5 lt 2
+
+set output "cj-det-wave-density.pdf"
+set yrange [0.9:2.4]
+set ylabel "density, -"
+unset arrow 3
+set arrow 4 from det_front,1 to det_front,2.4 nohead lw 3 lc rgb "red"
+set key top
+plot 'reference-solution-profile.data' u 1:5 t 'reference (10,000 cells)' w l lw 2 lc rgb "black" , \
+     'profile.data' u 1:5 t '200 cells' w l lw 1.5 lt 2
