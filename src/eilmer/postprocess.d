@@ -366,7 +366,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
             //
             if (!header_written) {
                 // Gnuplot column labels.
-                outFile.writeln(soln.flowBlocks[0].variable_names_as_string(true));
+                outFile.writeln(soln.flowBlocks[0].variable_names_as_string(true, false, true));
                 header_written = true;
             } else {
                 // Gnuplot datasets are separated by two blank lines.
