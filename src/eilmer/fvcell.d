@@ -1816,7 +1816,7 @@ public:
 
         version(turbulence) {
             if (in_turbulent_zone) {
-                myConfig.turb_model.source_terms(fs, grad, pos[0].y, dwall, Q.rhoturb);
+                myConfig.turb_model.source_terms(fs, grad, pos[0].y, dwall, L_min, L_max, Q.rhoturb);
             }
         }
 

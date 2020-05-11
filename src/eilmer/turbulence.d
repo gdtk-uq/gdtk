@@ -38,7 +38,7 @@ class TurbulenceModel{
 
     // Methods to be overridden.
     abstract TurbulenceModel dup();
-    @nogc abstract void source_terms(const FlowState fs,const FlowGradients grad, const number ybar, const number dwall, ref number[2] source) const;
+    @nogc abstract void source_terms(const FlowState fs,const FlowGradients grad, const number ybar, const number dwall, const number L_min, const number L_max, ref number[2] source) const;
     @nogc abstract number turbulent_viscosity(const FlowState fs, const FlowGradients grad, const number ybar, const number dwall) const;
     @nogc abstract number turbulent_conductivity(const FlowState fs, GasModel gm) const;
     @nogc abstract number turbulent_signal_frequency(const FlowState fs) const;
@@ -86,8 +86,9 @@ class noTurbulenceModel : TurbulenceModel {
     }
 
     @nogc final override
-    void source_terms(const FlowState fs,const FlowGradients grad, const number ybar, const number dwall,
-                              ref number[2] source) const {
+    void source_terms(const FlowState fs,const FlowGradients grad, const number ybar,
+                      const number dwall, const number L_min, const number L_max,
+                      ref number[2] source) const {
         return; 
     }
 
@@ -207,8 +208,9 @@ class kwTurbulenceModel : TurbulenceModel {
     }
 
     @nogc final override
-    void source_terms(const FlowState fs,const FlowGradients grad, const number ybar, const number dwall,
-                              ref number[2] source) const {
+    void source_terms(const FlowState fs,const FlowGradients grad, const number ybar,
+                      const number dwall, const number L_min, const number L_max,
+                      ref number[2] source) const {
         /*
         Compute k-omega source terms.
         
@@ -542,18 +544,19 @@ class saTurbulenceModel : TurbulenceModel {
         this.Pr_t = Pr_t;
     }
 
-    @nogc final override string modelName() const {return "spalart_allmaras";}
+    @nogc override string modelName() const {return "spalart_allmaras";}
     @nogc final override size_t nturb() const {return 1;}
     @nogc final override bool isTurbulent() const {return true;}
     @nogc final override bool needs_dwall() const {return true;}
 
-    final override saTurbulenceModel dup() {
+    override saTurbulenceModel dup() {
         return new saTurbulenceModel(this);
     }
 
     @nogc final override
-    void source_terms(const FlowState fs,const FlowGradients grad, const number ybar, const number dwall,
-                              ref number[2] source) const {
+    void source_terms(const FlowState fs,const FlowGradients grad, const number ybar,
+                      const number dwall, const number L_min, const number L_max,
+                      ref number[2] source) const {
         /*
         Spalart Allmaras Source Terms:
         Notes:
@@ -567,7 +570,12 @@ class saTurbulenceModel : TurbulenceModel {
         number nu = fs.gas.mu/rho;
         number chi = nuhat/nu;
         number chi_cubed = chi*chi*chi;
-        number d = compute_d(fs, grad, dwall);
+        number fv1 = chi_cubed/(chi_cubed + cv1_cubed);
+        number fv2 = 1.0 - chi/(1.0 + chi*fv1);
+        number ft2 = ct3*exp(-ct4*chi*chi);
+        number nut = nuhat*fv1;
+
+        number d = compute_d(nut,nu,grad.vel,dwall,L_min,L_max,fv1,fv2,ft2);
 
         // No axisymmetric corrections since W is antisymmetric
         number Omega = 0.0;
@@ -580,11 +588,8 @@ class saTurbulenceModel : TurbulenceModel {
         }
         Omega = sqrt(2.0*Omega);
 
-        number fv1 = chi_cubed/(chi_cubed + cv1_cubed);
-        number fv2 = 1.0 - chi/(1.0 + chi*fv1);
-        number Sbar = nuhat/kappa/kappa/d/d*fv2;
-
         // Clipping Equation: NNG 2.37, Allmaras (11/12)
+        number Sbar = nuhat/kappa/kappa/d/d*fv2;
         number Shat;
         number Sthing;
         if (Sbar >= -cv2*Omega) {
@@ -593,7 +598,6 @@ class saTurbulenceModel : TurbulenceModel {
             Sthing = Omega*(cv2*cv2*Omega + cv3*Sbar)/((cv3-2.0*cv2)*Omega - Sbar);
             Shat = Omega + Sthing;
         }
-        number ft2 = ct3*exp(-ct4*chi*chi);
         number production = rho*cb1*(1.0 - ft2)*Shat*nuhat;
 
         number r;
@@ -715,7 +719,7 @@ class saTurbulenceModel : TurbulenceModel {
         return;
     }
 
-private:
+protected:
     immutable number Pr_t;
     immutable string[1] _varnames = ["nuhat"];
     immutable number[1] _varlimits = [0.0];
@@ -736,8 +740,12 @@ private:
     immutable double ct3 = 1.2;
     immutable double ct4 = 0.5;
 
-protected:
-    @nogc number compute_d(const FlowState fs, const FlowGradients grad, number dwall) const { return dwall; }
+    @nogc number
+    compute_d(const number nut, const number nu, const number[3][3] velgrad,
+              const number dwall, const number L_min, const number L_max,
+              const number fv1,  const number fv2, const number ft2) const {
+        return dwall;
+    }
 
     @nogc final bool is_nuhat_valid(const number nuhat) const {
         if (!isFinite(nuhat.re)) {
@@ -751,6 +759,92 @@ protected:
         return true;
     }
 }
+
+/*
+Object representing the IDDES high fidelity turbulence model
+ Notes:
+ - The model here is taken from "A Hybrid RANS-LES Approach with
+   Delayed-DES and Wall Modelled LES Capabilities"
+ - Model constants and nomenclature from "Simulation and Dynamics of
+   Hypersonic Turbulent Combustion", 2019 PhD Thesis by Nick Gibbons
+
+ @author: Nick Gibbons (n.gibbons@uq.edu.au)
+*/
+class iddesTurbulenceModel : saTurbulenceModel {
+    this (){
+        number Pr_t = GlobalConfig.turbulence_prandtl_number;
+        this(Pr_t);
+    }
+
+    this (const JSONValue config){
+        number Pr_t = getJSONdouble(config, "turbulence_prandtl_number", 0.89);
+        this(Pr_t);
+    }
+
+    this (iddesTurbulenceModel other){
+        this(other.Pr_t);
+    }
+
+    this (number Pr_t) {
+        super(Pr_t);
+    }
+
+    @nogc final override string modelName() const {return "iddes";}
+
+    final override iddesTurbulenceModel dup() {
+        return new iddesTurbulenceModel(this);
+    }
+private:
+    immutable double Cw = 0.15;
+    immutable double CDES = 0.65;
+    immutable double fwstar = 0.424;
+
+protected:
+    @nogc override number
+    compute_d(const number nut, const number nu, const number[3][3] velgrad,
+              const number dwall, const number L_min, const number L_max,
+              const number fv1,  const number fv2, const number ft2) const {
+    /*
+        IDDES uses a much more complicated definition of the turbulent length scale d,
+        that behaves like RANS close to walls and like LES far away, with some input
+        from the flow itself to trigger the transition.
+
+        See Equations 2.50 to 2.63 in Gibbons (2019)
+    */
+        number PSI_numerator = 1.0 - (cb1/cw1/kappa/kappa/fwstar*(ft2 + (1.0-ft2)*fv2));
+        number PSI_denominator = fv1*fmax(1e-10, 1.0-ft2);
+        number PSI = sqrt(fmin(1e2, PSI_numerator/PSI_denominator));
+
+        number S = 0.0;
+        foreach(i; 0 .. 3) foreach(j; 0 .. 3) S += velgrad[i][j]*velgrad[i][j];
+        S = sqrt(S);
+        number r_denominator = kappa*kappa*dwall*dwall*fmax(S, 1e-10);
+        number rdt = nut/r_denominator;
+        number rdl = nu/r_denominator;
+
+        number ct2rdt = 1.63*1.63*rdt;
+        number cl2rdl = 3.55*3.55*rdl;
+
+        number ft = tanh(pow(ct2rdt, 3.0));
+        number fl = tanh(pow(cl2rdl, 10.0));
+        number fe2 = 1.0 - fmax(ft, fl);
+
+        number alpha = 0.25 - dwall/L_max;
+        number fe1 = (alpha >= 0.0) ? 2.0*exp(-11.09*alpha*alpha) : 2.0*exp(-9.0*alpha*alpha);
+        number fe = fmax(fe1 - 1.0, 0.0)*PSI*fe2;
+
+        number fB = fmin(2.0*exp(-9.0*alpha*alpha), 1.0);
+        number fd = 1.0 - tanh(512.0*rdt*rdt*rdt);
+        number fh = fmax(1.0 - fd, fB);
+
+        number maxDelta = fmax(Cw*dwall, Cw*L_max);
+        maxDelta = fmax(maxDelta, L_min);
+        number dLES = fmin(maxDelta, L_max);
+        number d = fh*(1.0 + fe)*dwall + (1.0 - fh)*CDES*PSI*dLES;
+        return d;
+    }
+}
+
 
 } // end version(turbulence)
 
