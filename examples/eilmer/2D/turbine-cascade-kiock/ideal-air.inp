@@ -1,2 +1,2 @@
 model = "IdealGas"
-species = {'CO2'}
+species = {'air'}
