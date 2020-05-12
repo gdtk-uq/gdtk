@@ -4,7 +4,11 @@ weight: 10
 
 # Eilmer: compressible flow simulation program
 
-![](/images/Kiock-Mach.png)
+![](/images/kiock-mach-field.png)
+Transonic flow through a plane turbine cascade (Kiock et al., 1986).
+Simulation set up by Peter Blyton for Eilmer3 in 2011.
+This calculation with Eilmer4 in 2020.
+Visualization with Paraview.
 
 ## What does Eilmer do
 
