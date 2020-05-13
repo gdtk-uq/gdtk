@@ -537,6 +537,12 @@ public:
         number h = e + Q.p/Q.rho;
         return h;
     }
+     override number enthalpy(in GasState Q, int isp)
+    {
+        number h_tr_rot = _Cp_tr_rot[isp]*(Q.T - T_REF) + _del_hf[isp];
+        number h_v_e = vibElecEnergy(Q.T_modes[0], isp);
+        return h_tr_rot + h_v_e;
+    }
     override number enthalpyPerSpeciesInMode(in GasState Q, int isp, int imode)
     {
         return vibElecEnergy(Q.T_modes[imode], isp);
