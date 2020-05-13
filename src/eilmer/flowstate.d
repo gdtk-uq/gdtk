@@ -757,7 +757,7 @@ public:
                 fs.gas.p = to!double(items[4]);
                 fs.gas.T = to!double(items[5]);
                 foreach (i; 0 .. gm.n_species) { fs.gas.massf[i] = to!double(items[6+i]); }
-                foreach (i; 0 .. gm.n_modes) { fs.gas.T_modes[i] = fs.gas.T; }
+                foreach (i; 0 .. gm.n_modes) { fs.gas.T_modes[i] = to!double(items[6+gm.n_species+i]); }
                 gm.update_thermo_from_pT(fs.gas);
                 times ~= tme;
                 fstate ~= fs;
