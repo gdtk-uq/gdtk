@@ -728,12 +728,20 @@ class BIE_TranslatingSurface : BoundaryInterfaceEffect {
 
     override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
     {
-        throw new Error("BIE_TranslatingSurface.apply_for_interface_unstructured_grid() not implemented yet");
+        auto gmodel = blk.myConfig.gmodel;
+        BoundaryCondition bc = blk.bc[which_boundary];
+	FlowState fs = f.fs;
+        fs.vel.refx = v_trans.x; fs.vel.refy = v_trans.y; fs.vel.refz = v_trans.z;
     }
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-        throw new Error("BIE_TranslatingSurface.apply_unstructured_grid() not implemented yet");
+        auto gmodel = blk.myConfig.gmodel;
+        BoundaryCondition bc = blk.bc[which_boundary];
+        foreach (i, f; bc.faces) {
+            FlowState fs = f.fs;
+            fs.vel.refx = v_trans.x; fs.vel.refy = v_trans.y; fs.vel.refz = v_trans.z;
+        } // end foreach face
     }
 
     override void apply_structured_grid(double t, int gtl, int ftl)
