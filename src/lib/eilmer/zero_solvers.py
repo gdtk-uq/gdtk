@@ -13,7 +13,7 @@ Versions:
 
 Example transcript:
 
-$ python3 zero_solvers.py 
+$ python3 zero_solvers.py
 Begin zero_solvers self-test...
 
 Test function 1.
@@ -23,7 +23,7 @@ Solve f(x) = x^3 + x^2 - 3x -3 = 0 with initial
 guesses of x0 = 1 and x1 = 2.
 Begin function call secant()...
 
-Iteration 	 x0 		x1 		x2 	 f(x2) 
+Iteration 	 x0 		x1 		x2 	 f(x2)
 -----------------------------------------------------------------------
   1 	  1.000000 	 2.000000 	 1.571429 	 -1.364431e+00
   2 	  2.000000 	 1.571429 	 1.705411 	 -2.477451e-01
@@ -44,7 +44,7 @@ Solve f(x) = 3*x + sin(x) - e^x = 0 with initial
 guesses of x0 = 0 and x1 = 1.
 Begin function call secant()...
 
-Iteration 	 x0 		x1 		x2 	 f(x2) 
+Iteration 	 x0 		x1 		x2 	 f(x2)
 -----------------------------------------------------------------------
   1 	  1.000000 	 0.000000 	 0.470990 	 2.651588e-01
   2 	  0.000000 	 0.470990 	 0.372277 	 2.953367e-02

@@ -147,7 +147,7 @@ def p02_p01(M1, g=1.4):
     g: ratio of specific heats
     Returns: p02/p01
     """
-    t1 = (g + 1.0) / (2.0 * g * M1**2 - (g - 1.0)) 
+    t1 = (g + 1.0) / (2.0 * g * M1**2 - (g - 1.0))
     t2 = (g + 1.0) * M1**2 / (2.0 + (g - 1.0) * M1**2)
     return t1**(1.0/(g-1.0)) * t2**(g/(g-1.0))
 
@@ -191,7 +191,7 @@ def T0_T0star(M, g=1.4):
     M: initial Mach number
     g: ratio of specific heats
     Returns: T0/T0star where T0 is the total temperature of the initial flow
-        and T0star is the total temperature that would be achieved 
+        and T0star is the total temperature that would be achieved
         if enough heat is added to get to sonic conditions.
     """
     term1 = (g + 1.0) * M**2
@@ -215,11 +215,11 @@ def M_Rayleigh(T0T0star, g=1.4):
 def T_Tstar(M, g=1.4):
     """
     Static temperature ratio T/Tstar for Rayleigh-line flow.
- 
+
     M: initial Mach number
     g: ratio of specific heats
     Returns: T/Tstar where T is the static temperature of the initial flow
-      and Tstar is the static temperature that would be achieved 
+      and Tstar is the static temperature that would be achieved
       if enough heat is added to get to sonic conditions.
     """
     return M**2 * ( (1.0 + g) / (1.0 + g * M**2) )**2
@@ -227,11 +227,11 @@ def T_Tstar(M, g=1.4):
 def p_pstar(M, g=1.4):
     """
     Static pressure ratio p/pstar for Rayleigh-line flow.
- 
+
     M: initial Mach number
     g: ratio of specific heats
     Returns: p/pstar where p is the static pressure of the initial flow
-      and pstar is the static pressure that would be achieved 
+      and pstar is the static pressure that would be achieved
       if enough heat is added to get to sonic conditions.
     """
     return (1.0 + g) / (1.0 + g * M**2)
@@ -239,11 +239,11 @@ def p_pstar(M, g=1.4):
 def r_rstar(M, g=1.4):
     """
     Density ratio r/rstar for Rayleigh-line flow.
- 
+
     M: initial Mach number
     g: ratio of specific heats
     Returns: r/rstar where r is the density of the initial flow
-      and rstar is the density that would be achieved 
+      and rstar is the density that would be achieved
       if enough heat is added to get to sonic conditions.
     """
     return 1.0 / M**2 / (1.0 + g) * (1.0 + g * M**2)
@@ -251,11 +251,11 @@ def r_rstar(M, g=1.4):
 def p0_p0star(M, g=1.4):
     """
     Stagnation pressure ratio p0/p0star for Rayleigh-line flow.
- 
+
     M: initial Mach number
     g: ratio of specific heats
     Returns: p0/p0star where p0 is the total pressure of the initial flow
-      and p0star is the total pressure that would be achieved 
+      and p0star is the total pressure that would be achieved
       if enough heat is added to get to sonic conditions.
     """
     term1 = (2.0 + (g - 1.0) * M**2) / (g + 1.0)
@@ -343,7 +343,7 @@ def theta_obl(M1, beta, g=1.4):
     """
     m1sb = M1 * abs(sin(beta))
     if m1sb < 1.0: raise Exception("Subsonic normal Mach number: %g" % m1sb)
-    t1 = 2.0 / tan(beta) * (m1sb**2 - 1.0) 
+    t1 = 2.0 / tan(beta) * (m1sb**2 - 1.0)
     t2 = M1**2 * (g + cos(2.0 * beta)) + 2.0
     theta = atan(t1/t2)
     return theta
@@ -429,7 +429,7 @@ def p02_p01_obl(M1, beta, g=1.4):
     """
     m1sb = M1 * abs(sin(beta))
     if m1sb < 1.0: raise Exception("Subsonic normal Mach number: %g" % m1sb)
-    t1 = (g + 1.0) / (2.0 * g * m1sb**2 - (g - 1.0)) 
+    t1 = (g + 1.0) / (2.0 * g * m1sb**2 - (g - 1.0))
     t2 = (g + 1.0) * m1sb**2 / (2.0 + (g - 1.0) * m1sb**2)
     return t1**(1.0/(g-1.0)) * t2**(g/(g-1.0))
 

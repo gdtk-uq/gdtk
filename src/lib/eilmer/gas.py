@@ -89,9 +89,9 @@ ffi.cdef("""
                               int stateX0_id, int gm_id, double* results);
     int gasflow_lrivp(int stateL_id, int stateR_id, double velL, double velR,
                       int gmL_id, int gmR_id, double* wstar, double* pstar);
-    int gasflow_piston_at_left(int stateR_id, double velR, int gm_id, 
+    int gasflow_piston_at_left(int stateR_id, double velR, int gm_id,
                                double wstar, double* pstar);
-    int gasflow_piston_at_right(int stateL_id, double velL, int gm_id, 
+    int gasflow_piston_at_right(int stateL_id, double velL, int gm_id,
                                 double wstar, double* pstar);
 
     int gasflow_theta_oblique(int state1_id, double v1, double beta,
@@ -124,11 +124,11 @@ class GasModel(object):
         text = 'GasModel(file="%s", id=%d, species=%s)' % \
             (self.file_name, self.id, self.species_names)
         return text
-    
+
     @property
     def n_species(self):
         return so.gas_model_n_species(self.id)
-    
+
     @property
     def n_modes(self):
         return so.gas_model_n_modes(self.id)
@@ -138,7 +138,7 @@ class GasModel(object):
         mm = ffi.new("double[]", [0.0]*self.n_species)
         so.gas_model_mol_masses(self.id, mm)
         return [mm[i] for i in range(self.n_species)]
-        
+
     def update_thermo_from_pT(self, gstate):
         flag = so.gas_model_gas_state_update_thermo_from_pT(self.id, gstate.id)
         if flag < 0: raise Exception("could not update thermo from p,T.")
@@ -283,7 +283,7 @@ class GasModel(object):
         so.gas_model_molef2massf(self.id, my_molef, my_massf)
         return [my_massf[i] for i in range(self.n_species)]
 
-    
+
 class GasState(object):
     def __init__(self, gmodel):
         self.gmodel = gmodel
@@ -302,7 +302,7 @@ class GasState(object):
             text += ', massf=%s' % str(self.massf)
         text += ', id=%d, gmodel.id=%d)' % (self.id, self.gmodel.id)
         return text
-    
+
     @property
     def rho(self):
         valuep = ffi.new("double *")
@@ -314,7 +314,7 @@ class GasState(object):
         flag = so.gas_state_set_scalar_field(self.id, b"rho", value)
         if flag < 0: raise Exception("could not set density.")
         return
-    
+
     @property
     def p(self):
         valuep = ffi.new("double *")
@@ -326,7 +326,7 @@ class GasState(object):
         flag = so.gas_state_set_scalar_field(self.id, b"p", value)
         if flag < 0: raise Exception("could not set pressure.")
         return
-    
+
     @property
     def T(self):
         valuep = ffi.new("double *")
@@ -338,7 +338,7 @@ class GasState(object):
         flag = so.gas_state_set_scalar_field(self.id, b"T", value)
         if flag < 0: raise Exception("could not set temperature.")
         return
-    
+
     @property
     def u(self):
         valuep = ffi.new("double *")
@@ -350,21 +350,21 @@ class GasState(object):
         flag = so.gas_state_set_scalar_field(self.id, b"u", value)
         if flag < 0: raise Exception("could not set internal energy.")
         return
-    
+
     @property
     def a(self):
         valuep = ffi.new("double *")
         flag = so.gas_state_get_scalar_field(self.id, b"a", valuep)
         if flag < 0: raise Exception("could not get sound speed.")
         return valuep[0]
-    
+
     @property
     def k(self):
         valuep = ffi.new("double *")
         flag = so.gas_state_get_scalar_field(self.id, b"k", valuep)
         if flag < 0: raise Exception("could not get conductivity.")
         return valuep[0]
-    
+
     @property
     def mu(self):
         valuep = ffi.new("double *")
@@ -493,7 +493,7 @@ class GasState(object):
         flag = so.gas_state_get_array_field(self.id, b"k_modes", km, n)
         if flag < 0: raise Exception("could not get k_modes.")
         return [km[i] for i in range(n)]
-    
+
     @property
     def ceaSavedData(self):
         my_data = {}
@@ -521,7 +521,7 @@ class GasState(object):
         flag = so.gas_state_copy_values(self.id, gstate.id)
         if flag < 0: raise Exception("could not copy values.")
         return
-            
+
     def update_thermo_from_pT(self):
         self.gmodel.update_thermo_from_pT(self)
         return

@@ -80,7 +80,7 @@ module Gas
   extern 'int gasflow_steady_flow_with_area_change(int state1_id, double v1, double a2_over_a1,
                                                    int state2_id, int gm_id, double tol,
                                                    double* results)'
-  
+
   extern 'int gasflow_finite_wave_dp(int state1_id, double v1, char* characteristic, double p2,
                                      int state2_id, int gm_id, int steps, double* results)'
   extern 'int gasflow_finite_wave_dv(int state1_id, double v1, char* characteristic, double v2_target,
@@ -91,11 +91,11 @@ module Gas
                                     int stateX0_id, int gm_id, double* results)'
   extern 'int gasflow_lrivp(int stateL_id, int stateR_id, double velL, double velR,
                             int gmL_id, int gmR_id, double* wstar, double* pstar)'
-  extern 'int gasflow_piston_at_left(int stateR_id, double velR, int gm_id, 
+  extern 'int gasflow_piston_at_left(int stateR_id, double velR, int gm_id,
                                      double wstar, double* pstar)'
-  extern 'int gasflow_piston_at_right(int stateL_id, double velL, int gm_id, 
+  extern 'int gasflow_piston_at_right(int stateL_id, double velL, int gm_id,
                                       double wstar, double* pstar)'
-  
+
   extern 'int gasflow_theta_oblique(int state1_id, double v1, double beta,
                                     int state2_id, int gm_id, double* results)'
   extern 'int gasflow_beta_oblique(int state1_id, double v1, double theta,
@@ -115,7 +115,7 @@ class GasModel
   include Gas
   attr_reader :id
   attr_reader :species_names
-  
+
   def initialize(file_name)
     @file_name = file_name
     @id = Gas.gas_model_new(file_name)
@@ -131,7 +131,7 @@ class GasModel
   def to_s()
     "GasModel(file=\"#{@file_name}\", id=#{@id}, species=#{@species_names})"
   end
-  
+
   def n_species()
     Gas.gas_model_n_species(@id)
   end
@@ -339,7 +339,7 @@ class GasState
     end
     text << ", id=#{@id}, gmodel.id=#{@gmodel.id})"
   end
-    
+
   def rho()
     valuep = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE)
     flag = Gas.gas_state_get_scalar_field(@id, "rho", valuep)
@@ -350,7 +350,7 @@ class GasState
     flag = Gas.gas_state_set_scalar_field(@id, "rho", value)
     if flag < 0 then raise "could not set density." end
   end
-    
+
   def p()
     valuep = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE)
     flag = Gas.gas_state_get_scalar_field(@id, "p", valuep)
@@ -361,7 +361,7 @@ class GasState
     flag = Gas.gas_state_set_scalar_field(@id, "p", value)
     if flag < 0 then raise "could not set pressure." end
   end
-    
+
   def T()
     valuep = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE)
     flag = Gas.gas_state_get_scalar_field(@id, "T", valuep)
@@ -372,7 +372,7 @@ class GasState
     flag = Gas.gas_state_set_scalar_field(@id, "T", value)
     if flag < 0 then raise "could not set temperature." end
   end
-    
+
   def u()
     valuep = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE)
     flag = Gas.gas_state_get_scalar_field(@id, "u", valuep)
@@ -383,21 +383,21 @@ class GasState
     flag = Gas.gas_state_set_scalar_field(@id, "u", value)
     if flag < 0 then raise "could not set internal energy." end
   end
-    
+
   def a()
     valuep = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE)
     flag = Gas.gas_state_get_scalar_field(@id, "a", valuep)
     if flag < 0 then raise "could not get sound speed." end
     return valuep[0, valuep.size].unpack("d")[0]
   end
-    
+
   def k()
     valuep = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE)
     flag = Gas.gas_state_get_scalar_field(@id, "k", valuep)
     if flag < 0 then raise "could not get conductivity." end
     return valuep[0, valuep.size].unpack("d")[0]
   end
-    
+
   def mu()
     valuep = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE)
     flag = Gas.gas_state_get_scalar_field(@id, "mu", valuep)
@@ -496,7 +496,7 @@ class GasState
     if flag < 0 then raise "could not set T_modes." end
     return myTm_given
   end
- 
+
   def k_modes()
     n = @gmodel.n_modes
     km = Fiddle::Pointer.malloc(Fiddle::SIZEOF_DOUBLE*n)
@@ -535,7 +535,7 @@ class GasState
     if flag < 0 then raise "could not copy values" end
     return nil
   end
-  
+
   def update_thermo_from_pT()
     @gmodel.update_thermo_from_pT(self)
   end
@@ -607,7 +607,7 @@ end
 class ThermochemicalReactor
   include Gas
   attr_reader :id
-  
+
   def initialize(gmodel, filename1, filename2="")
     @filename1 = filename1
     @filename2 = filename2
@@ -619,7 +619,7 @@ class ThermochemicalReactor
     text = "ThermochemicalReactor(id=#{@id}, gmodel.id=#{@gmodel.id}"
     text << " file1=#{@filename1}, file2=#{@filename2})"
   end
-    
+
   def update_state(gstate, t_interval, dt_suggest)
     dt_suggestp = [dt_suggest].pack("d*")
     flag = Gas.thermochemical_reactor_gas_state_update(@id, gstate.id,
@@ -633,7 +633,7 @@ end
 
 class GasFlow
   include Gas
-  
+
   def initialize(gmodel)
     @gmodel = gmodel
   end
@@ -641,14 +641,14 @@ class GasFlow
   def to_s()
     text = "GasFlow(gmodel.id=#{@gmodel.id})"
   end
-    
+
   def ideal_shock(state1, vs, state2)
     my_results = [0.0, 0.0].pack("d*")
     flag = Gas.gasflow_shock_ideal(state1.id, vs, state2.id, @gmodel.id, my_results)
     if flag < 0 then raise "failed to compute ideal shock jump." end
     return my_results[0, my_results.size].unpack("dd") # [v2, vg]
   end
-    
+
   def normal_shock(state1, vs, state2, rho_tol=1.0e-6, t_tol=0.1)
     my_results = [0.0, 0.0].pack("d*")
     flag = Gas.gasflow_normal_shock(state1.id, vs, state2.id, @gmodel.id, my_results,
@@ -656,21 +656,21 @@ class GasFlow
     if flag < 0 then raise "failed to compute normal shock jump from shock speed." end
     return my_results[0, my_results.size].unpack("dd") # [v2, vg]
   end
-    
+
   def normal_shock_p2p1(state1, p2p1, state2)
     my_results = [0.0, 0.0, 0.0].pack("d*")
     flag = Gas.gasflow_normal_shock_p2p1(state1.id, p2p1, state2.id, @gmodel.id, my_results)
     if flag < 0 then raise "failed to compute normal shock jump from pressure ratio." end
     return my_results[0, my_results.size].unpack("ddd") # [vs, v2, vg]
   end
-    
+
   def reflected_shock(state2, vg, state5)
     my_results = [0.0].pack("d")
     flag = Gas.gasflow_reflected_shock(state2.id, vg, state5.id, @gmodel.id, my_results)
     if flag < 0 then raise "failed to compute reflected shock." end
     return my_results[0, my_results.size].unpack("d")[0] # vr
   end
-    
+
   def expand_from_stagnation(state0, p_over_p0, state1)
     my_results = [0.0].pack("d")
     flag = Gas.gasflow_expand_from_stagnation(state0.id, p_over_p0, state1.id,
@@ -678,7 +678,7 @@ class GasFlow
     if flag < 0 then raise "failed to compute expansion from stagnation." end
     return my_results[0, my_results.size].unpack("d")[0] # v
   end
-    
+
   def expand_to_mach(state0, mach, state1)
     my_results = [0.0].pack("d")
     flag = Gas.gasflow_expand_to_mach(state0.id, mach, state1.id,
@@ -686,19 +686,19 @@ class GasFlow
     if flag < 0 then raise "failed to compute expansion to mach number." end
     return my_results[0, my_results.size].unpack("d")[0] # v
   end
-    
+
   def total_condition(state1, v1, state0)
     flag = Gas.gasflow_total_condition(state1.id, v1, state0.id, @gmodel.id)
     if flag < 0 then raise "failed to compute total condition." end
     return nil
   end
-    
+
   def pitot_condition(state1, v1, state2pitot)
     flag = Gas.gasflow_pitot_condition(state1.id, v1, state2pitot.id, @gmodel.id)
     if flag < 0 then raise "failed to compute pitot condition." end
     return nil
   end
-    
+
   def steady_flow_with_area_change(state1, v1, area2_over_area1, state2,
                                    tol=1.0e-4)
     my_results = [0.0].pack("d")
@@ -708,7 +708,7 @@ class GasFlow
     if flag < 0 then raise "failed to compute steady flow with area change." end
     return my_results[0, my_results.size].unpack("d")[0] # v2
   end
-    
+
   def finite_wave_dp(state1, v1, characteristic, p2, state2, steps=100)
     my_results = [0.0].pack("d")
     flag = Gas.gasflow_finite_wave_dp(state1.id, v1, characteristic, p2,
@@ -717,7 +717,7 @@ class GasFlow
     if flag < 0 then raise "failed to compute (unsteady) finite wave dp." end
     return my_results[0, my_results.size].unpack("d")[0] # v2
   end
-    
+
   def finite_wave_dv(state1, v1, characteristic, v2_target, state2, steps=100,
                      t_min=200.0)
     my_results = [0.0].pack("d")
@@ -727,7 +727,7 @@ class GasFlow
     if flag < 0 then raise "failed to compute (unsteady) finite wave dv." end
     return my_results[0, my_results.size].unpack("d")[0] # v2
   end
-    
+
   def osher_riemann(stateL, stateR, velL, velR, stateLstar, stateRstar, stateX0)
     my_results = [0.0, 0.0, 0.0, 0.0, 0.0].pack("d*")
     flag = Gas.gasflow_osher_riemann(stateL.id, stateR.id, velL, velR,
@@ -736,7 +736,7 @@ class GasFlow
     if flag < 0 then raise "failed to compute solution to Riemann problem." end
     return my_results[0, my_results.size].unpack("ddddd") # [pstar, wstar, wL, wR, velX0]
   end
-    
+
   def lrivp(stateL, stateR, velL, velR)
     my_pstar = [0.0].pack("d")
     my_wstar = [0.0].pack("d")
@@ -748,7 +748,7 @@ class GasFlow
     wstar = my_wstar[0, my_wstar.size].unpack("d")[0]
     return [pstar, wstar]
   end
-    
+
   def piston_at_left(stateR, velR, wstar)
     my_pstar = [0.0].pack("d")
     flag = Gas.gasflow_piston_at_left(stateR.id, velR, stateR.gmodel.id,
@@ -756,7 +756,7 @@ class GasFlow
     if flag < 0 then raise "failed to compute solution for piston_at_left." end
     return my_pstar[0, my_pstar.size].unpack("d")[0]
   end
-    
+
   def piston_at_right(stateL, velL, wstar)
     my_pstar = [0.0].pack("d")
     flag = Gas.gasflow_piston_at_right(stateL.id, velL, stateL.gmodel.id,
@@ -764,7 +764,7 @@ class GasFlow
     if flag < 0 then raise "failed to compute solution for piston_at_right." end
     return my_pstar[0, my_pstar.size].unpack("d")[0]
   end
-    
+
   def theta_oblique(state1, v1, beta, state2)
     my_results = [0.0, 0.0].pack("dd")
     flag = Gas.gasflow_theta_oblique(state1.id, v1, beta, state2.id, @gmodel.id,
@@ -772,7 +772,7 @@ class GasFlow
     if flag < 0 then raise "failed to compute theta oblique." end
     return my_results[0, my_results.size].unpack("dd") # [theta, v2]
   end
-    
+
   def beta_oblique(state1, v1, theta)
     my_results = [0.0].pack("d")
     flag = Gas.gasflow_beta_oblique(state1.id, v1, theta, @gmodel.id,
@@ -780,7 +780,7 @@ class GasFlow
     if flag < 0 then raise "failed to compute beta oblique." end
     return my_results[0, my_results.size].unpack("d")[0] # beta
   end
-    
+
   def theta_cone(state1, v1, beta, state_c)
     my_results = [0.0, 0.0].pack("dd")
     flag = Gas.gasflow_theta_cone(state1.id, v1, beta, state_c.id, @gmodel.id,
@@ -788,7 +788,7 @@ class GasFlow
     if flag < 0 then raise "failed to compute theta oblique." end
     return my_results[0, my_results.size].unpack("dd") # [theta_c, v_c]
   end
-    
+
   def beta_cone(state1, v1, theta_c)
     my_results = [0.0].pack("d")
     flag = Gas.gasflow_beta_cone(state1.id, v1, theta_c, @gmodel.id,
