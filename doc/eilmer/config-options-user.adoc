@@ -301,7 +301,7 @@ shocks and Hanel-Schwane-Seider flux calculator near shocks.
 
 `config.diffusion` ::
   _boolean_, default `false` +
-  Set to \verb!true! to compute multicomponent diffusion of species.
+  Set to `true` to compute multicomponent diffusion of species.
 
 `config.turbulence_model` ::
   _string_, default: `'none'` +
@@ -326,7 +326,7 @@ shocks and Hanel-Schwane-Seider flux calculator near shocks.
 
 `config.reacting` ::
   _boolean_, default: `false` +
-  Set to \verb!true! to activate the finite-rate chemical reactions.
+  Set to `true` to activate the finite-rate chemical reactions.
 
 `config.reactions_file` ::
   _string_, default: `'chemistry.lua'` +
