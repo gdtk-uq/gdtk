@@ -592,6 +592,23 @@ class GasSlug():
         fp.write("# end\n")
         return
 
+    def write_history_loc_data(self, fp, x, t):
+        """
+        Write the initial state of the cell at the given x-location.
+
+        It may be that nothing is written, if the x-location is not
+        covered by a cell in the slug.
+        """
+        L_bar = 0.0; shear_stress=0.0; heat_flux = 0.0
+        for j in range(self.ncells):
+            if (x >= self.ifxs[j]) and (x <= self.ifxs[j+1]):
+                fp.write('%e %e %e' % (t, self.vel, L_bar))
+                fp.write(' %e %e %e %e' % (self.gas.rho, self.gas.p, self.gas.T, self.gas.u))
+                fp.write(' %e %e %e' % (self.gas.a, shear_stress, heat_flux))
+                fp.write('\n')
+                break;
+        return
+
 #----------------------------------------------------------------------------
 
 class Piston():
@@ -1143,6 +1160,13 @@ def write_initial_files():
     fp.write('# tindx time\n')
     fp.write('%d %e\n' % (0, 0.0))
     fp.close()
+    #
+    for i in range(len(config.hloc_list)):
+        fileName = config.job_name + ('/history-loc-%04d.data' % i)
+        fp = open(fileName, 'w')
+        fp.write('# 1:t  2:vel  3:L_bar  4:rho  5:p  6:T  7:u  8:a  9:shear_stress  10:heat_flux\n')
+        for slug in slugList: slug.write_history_loc_data(fp, config.hloc_list[i], 0.0)
+        fp.close()
     #
     print("End write initial files.")
     return

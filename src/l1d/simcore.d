@@ -101,6 +101,10 @@ void init_simulation(int tindx_start)
     L1dConfig.t_change[] = getJSONdoublearray(configData, "t_change", dummy);
     L1dConfig.dt_plot[] = getJSONdoublearray(configData, "dt_plot", dummy);
     L1dConfig.dt_hist[] = getJSONdoublearray(configData, "dt_hist", dummy);
+    L1dConfig.hloc_n = getJSONint(configData, "hloc_n", 0);
+    L1dConfig.hloc_x.length = L1dConfig.hloc_n;
+    dummy.length = L1dConfig.hloc_n; foreach (ref v; dummy) { v = 0.0; }
+    L1dConfig.hloc_x[] = getJSONdoublearray(configData, "hloc_x", dummy);
     L1dConfig.nslugs = getJSONint(configData, "nslugs", 0);
     L1dConfig.npistons = getJSONint(configData, "npistons", 0);
     L1dConfig.ndiaphragms = getJSONint(configData, "ndiaphragms", 0);
@@ -118,6 +122,7 @@ void init_simulation(int tindx_start)
         writeln("  t_change= ", L1dConfig.t_change);
         writeln("  dt_plot= ", L1dConfig.dt_plot);
         writeln("  dt_hist= ", L1dConfig.dt_hist);
+        writeln("  hloc_x= ", L1dConfig.hloc_x);
         writeln("  nslugs= ", L1dConfig.nslugs);
         writeln("  npistons= ", L1dConfig.npistons);
         writeln("  ndiaphragms= ", L1dConfig.ndiaphragms);
@@ -387,7 +392,7 @@ void integrate_in_time()
             sim_data.steps_since_last_plot_write++;
         }
         if (sim_data.sim_time >= sim_data.t_hist) {
-            write_data_at_history_locations();
+            write_data_at_history_locations(sim_data.sim_time);
             sim_data.t_hist += get_dt_xxxx(L1dConfig.dt_hist, sim_data.sim_time);
             sim_data.steps_since_last_hist_write = 0;
         } else {
@@ -400,7 +405,7 @@ void integrate_in_time()
         write_state_gasslugs_pistons_diaphragms();
     }
     if (sim_data.steps_since_last_hist_write > 0) {
-        write_data_at_history_locations();
+        write_data_at_history_locations(sim_data.sim_time);
     }
     return;
 } // end integrate_in_time()
@@ -447,8 +452,14 @@ void write_state_gasslugs_pistons_diaphragms()
 } // end write_state_gasslugs_pistons_diaphragms()
 
 
-void write_data_at_history_locations()
+void write_data_at_history_locations(double t)
 {
-    // [TODO]
+    foreach (i; 0 .. L1dConfig.hloc_n) {
+        string fileName = L1dConfig.job_name ~ format("/history-loc-%04d.data", i);
+        double x = L1dConfig.hloc_x[i];
+        File fp = File(fileName, "a");
+        foreach (s; gasslugs) { s.write_history_loc_data(fp, t, x); }
+        fp.close();
+    }
     return;
 } // end write_data_at_history_locations()

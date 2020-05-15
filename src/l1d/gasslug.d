@@ -165,6 +165,24 @@ public:
         fp.writeln("# end");
     } // end write_cell_data()
 
+    void write_history_loc_data(File fp, double t, double x)
+    {
+        // Write a subset of the data that will be common to all slugs,
+        // no matter what gas model is associated with this slug.
+        // It may be that nothing is written, if there is not a cell
+        // that covers the x-location.
+        foreach (j; 0 .. ncells) {
+            if ((x >= faces[j].x) && (x <= faces[j+1].x)) {
+                LCell c = cells[j];
+                fp.write(format("%e %e %e", t, c.vel, c.L_bar));
+                fp.write(format(" %e %e %e %e", c.gas.rho, c.gas.p, c.gas.T, c.gas.u));
+                fp.write(format(" %e %e %e", c.gas.a, c.shear_stress, c.heat_flux));
+                fp.write("\n");
+                break;
+            }
+        }
+    } // end write_history_loc_data()
+
     @nogc
     void compute_areas_and_volumes()
     {
