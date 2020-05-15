@@ -4,7 +4,7 @@ In a preparation script, the `FlowSolution` object is used
 to initialise the domain with a flow field from another 
 (completed) job.
 
- FlowSolution:new{jobName, dir, tindx, nBlocks}
+ FlowSolution:new{jobName, dir, tindx, nBlocks, gindx}
 
 `jobName` ::
     _string_, no default +
@@ -31,6 +31,17 @@ to initialise the domain with a flow field from another
     to initialise the flow field. A use case for this would
     if one only want to use some inflow portion of the
     domain when intialising a new simulation.
+
+`gindx` ::
+    _int_ or _string_, default = -1 +
+    grid time index at which to read the grid associated with the flow field +
+    For the default value of -1, the grid time index is synced with the `tindx`
+    choice. This is likely what you want for moving grids, and for non-moving
+    grids this will just pick up the grid at grid time index 0. +
+    A special use for this `gindx` parameter is when attempting to initialise
+    a moving grid simulation from a non-moving grid simulation. You can set the grid time
+    index explicitly to 0 so that the non-moving flow solution is read in with
+    its initial grid at grid time index 0.
 
 Example of use:
 

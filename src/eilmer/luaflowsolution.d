@@ -124,7 +124,31 @@ extern(C) int newFlowSolution(lua_State* L)
     }
     lua_pop(L, 1);
 
-    auto fsol = new FlowSolution(jobName, dir, tindx, nBlocks);
+    int gindx;
+    lua_getfield(L, 1, "gindx");
+    if ( lua_isnil(L, -1) ) {
+        gindx = -1;
+    } else if ( lua_isnumber(L, -1) ) {
+        gindx = to!int(luaL_checknumber(L, -1));
+    } else if ( lua_isstring(L, -1) ) {
+        string gindxStr = to!string(luaL_checkstring(L, -1));
+        if ( gindxStr == "last" ) {
+            gindx = tindx_list[$-1];
+        } else {
+            string errMsg = "Error in call to FlowSolution:new.\n";
+            errMsg ~= " A string value was passed to the field 'gindx', but the content was not valid.\n";
+            errMsg ~= " The only valid string field is 'last'.\n";
+            throw new LuaInputException(errMsg);
+        }
+    } else {
+        string errMsg = "Error in call to FlowSolution:new.";
+        errMsg ~= " A field for gindx was found, but the content was not valid.";
+        errMsg ~= " The gindx field, if given, should be an integer or the string 'last'.";
+        throw new LuaInputException(errMsg);
+    }
+    lua_pop(L, 1);
+    
+    auto fsol = new FlowSolution(jobName, dir, tindx, nBlocks, gindx);
     flowSolutionStore ~= pushObj!(FlowSolution, FlowSolutionMT)(L, fsol);
     return 1;
 } // end newFlowSolution()

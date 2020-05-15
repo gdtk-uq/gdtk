@@ -61,8 +61,11 @@ public:
     BlockFlow[] flowBlocks;
     Grid[] gridBlocks;
     
-    this(string jobName, string dir, int tindx, size_t nBlocks)
+    this(string jobName, string dir, int tindx, size_t nBlocks, int gindx=-1)
     {
+        // Default action is to set gindx to tindx. The default action
+        // is indicated by gindx = -1
+        gindx = (gindx == -1) ? tindx : gindx;
         // -- initialising JSONData
         // We need to set a few things here if we are constructing this object
         // in a custom-postprocessing context.
@@ -107,7 +110,7 @@ public:
             auto gridType = gridTypeFromName(gridTypeName);
             string fileName;
             if (GlobalConfig.grid_motion != GridMotion.none) {
-                fileName = make_file_name!"grid"(jobName, to!int(ib), tindx, gridFileExt);
+                fileName = make_file_name!"grid"(jobName, to!int(ib), gindx, gridFileExt);
             } else {
                 fileName = make_file_name!"grid"(jobName, to!int(ib), 0, gridFileExt);
             }
