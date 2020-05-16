@@ -1,7 +1,7 @@
 /** main.d
  * Eilmer 4.0 compressible-flow simulation code, top-level function.
  *
- * Author: Peter J. and Rowan G. 
+ * Author: Peter J. and Rowan G.
  * First code: 2015-02-05
  */
 
@@ -107,7 +107,7 @@ Argument:                            Comment:
   --max-cpus=<int>                   (e4shared) defaults to ";
 longUsageMsg ~= to!string(totalCPUs) ~" on this machine
   --threads-per-mpi-task=<int>       (e4mpi) defaults to 1
-  --max-wall-clock=<int>             in seconds
+  --max-wall-clock=<int>             in seconds, default 5days*24h/day*3600s/h
   --report-residuals                 write residuals to file config/job-residuals.txt
 
   --post                             post-process simulation data
@@ -116,7 +116,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
   --add-vars=\"mach,pitot\"            add variables to the flow solution data
                                      (just for postprocessing)
                                      Other variables include:
-                                     total-h, total-p, enthalpy, entropy, molef, conc, 
+                                     total-h, total-p, enthalpy, entropy, molef, conc,
                                      Tvib (for some gas models)
   --ref-soln=<filename>              Lua file for reference solution
   --vtk-xml                          produce XML VTK-format plot files
