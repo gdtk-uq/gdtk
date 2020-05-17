@@ -1,0 +1,52 @@
+= Gas-dynamic tool-kit for Python
+Peter A. Jacobs; Rowan J. Gollan
+2020-05-18
+:toc: right
+:stylesheet: readthedocs.css
+:sectnums:
+
+:leveloffset: +1
+
+The loadable library is accessible from Python and Ruby.
+It provides access to functions for the thermochemical gas model
+and, built on top of that, simple state-to-state and
+stream-tube flow analysis functions.
+There is also a collection of geometric functions.
+
+This is the reference manual for the Python flavour of the library and,
+because of the history of development, the library comes in the `eilmer` package.
+For example, to use the to set up a gas model and do a normal shock calculation
+from within your Python script, you might try the following:
+
+  from eilmer.gas import GasModel, GasState, GasFlow
+  #
+  gmodel = GasModel('cea-air5species-gas-model.lua')
+  state1 = GasState(gmodel)
+  state1.p = 80.0e3 # Pa
+  state1.T = 300.0 # K
+  state1.update_thermo_from_pT()
+  state1.update_sound_speed()
+  print("# Initial test gas:")
+  print("#   state1: %s" % state1)
+  #
+  print("# Normal shock, given shock speed")
+  vs = 2890.0
+  print("#   vs=%g" % vs)
+  state2 = GasState(gmodel)
+  flow = GasFlow(gmodel)
+  v2, vg = flow.normal_shock(state1, vs, state2)
+  print("#   v2=%g vg=%g" % (v2, vg))
+  print("#   state2: %s" % state2)
+
+If you have not yet read the
+http://cfcfd.mechmining.uq.edu.au/pdfs/gas-user-guide.pdf[Gas Models User Guide],
+this is a good time to do so.
+
+include::gas/gas-model.adoc[]
+include::gas/kinetics.adoc[]
+include::flow/ideal-gas.adoc[]
+include::flow/gas-flow.adoc[]
+include::geom/elements.adoc[]
+
+:leveloffset: -1
+

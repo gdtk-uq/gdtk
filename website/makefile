@@ -9,7 +9,9 @@ PDFS := eilmer-user-guide \
 	presentations \
 	theses
 
-HTML := eilmer-reference-manual.html l1d-reference-manual.html
+HTML := eilmer-reference-manual.html \
+	l1d-reference-manual.html \
+	library-reference-manual.html
 
 build: $(PDFS) $(HTML) images
 	hugo
@@ -33,6 +35,11 @@ eilmer-reference-manual.html:
 	cp ../doc/$@ static/html/
 
 l1d-reference-manual.html:
+	- mkdir -p static/html
+	cd ../doc; make $@
+	cp ../doc/$@ static/html/
+
+library-reference-manual.html:
 	- mkdir -p static/html
 	cd ../doc; make $@
 	cp ../doc/$@ static/html/

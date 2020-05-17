@@ -18,7 +18,9 @@ The principal tools in the kit are:
 + A library of functions for the calculation of simple gas dynamic processes
   such as shocks and expansions in the presence of chemical reactions.
   This library may be used from within your Lua scripts,
-  or a version of it may loaded into a Python or Ruby interpreter.
+  or a version of it may loaded into
+  a [Python]({{< relref "python-library.md" >}}) or
+  Ruby interpreter.
   The Poshax program is an example of a Python program that makes use of the functions
   from the library.
 

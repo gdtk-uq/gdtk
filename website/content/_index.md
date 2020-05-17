@@ -27,13 +27,15 @@ The principal tools in the kit are:
 + [L1d]({{< relref "docs/tools/l1d/" >}}),
   a program for the end-to-end simulation of free-piston-driven shock tunnels
   and expansion tubes.
-+ IMOC({{< relref "docs/tools/moc.md" >}}),
++ [IMOC]({{< relref "docs/tools/moc.md" >}}),
   an interactive program for the isentropic method for characteristics
   for 2-dimensional ideal gas flows.
 + A library of functions for the calculation of simple gas dynamic processes
   such as shocks and expansions in the presence of chemical reactions.
   This library may be used from within your Lua scripts,
-  or a version of it may loaded into a Python or Ruby interpreter.
+  or a version of it may loaded into
+  a [Python]({{< relref "docs/tools/python-library.md" >}}) or
+  Ruby interpreter.
   The Poshax program is an example of a Python program that makes use of the functions
   from the library.
 

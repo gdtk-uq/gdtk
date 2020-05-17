@@ -1,0 +1,12 @@
+= Geometric elements
+
+These functions are the Python equivalent for those found in the
+http://cfcfd.mechmining.uq.edu.au/pdfs/geometry-user-guide.pdf[Geometry User Guide].
+
+== Vector3
+
+== Path
+
+== Surface
+
+
