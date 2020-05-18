@@ -91,6 +91,8 @@ sssOptionsHidden = { -- hidden from user
    eta_ratio_per_step = 0.9,
    gamma = 0.9,
    alpha = 2.0,
+   limiter_freezing_residual_reduction = 1e-99,
+   limiter_freezing_count = 50,
    -- Options related to writing out snapshots and diagnostics
    snapshots_count = 10,
    number_total_snapshots = 5,
@@ -1819,6 +1821,8 @@ function write_control_file(fileName)
    f:write(string.format('   "eta_ratio_per_step": %.18e,\n', SteadyStateSolver.eta_ratio_per_step))
    f:write(string.format('   "gamma": %.18e,\n', SteadyStateSolver.gamma))
    f:write(string.format('   "alpha": %.18e,\n', SteadyStateSolver.alpha))
+   f:write(string.format('   "limiter_freezing_residual_reduction": %.18e,\n', SteadyStateSolver.limiter_freezing_residual_reduction))
+   f:write(string.format('   "limiter_freezing_count": %d,\n', SteadyStateSolver.limiter_freezing_count))
    f:write(string.format('   "snapshots_count": %d,\n', SteadyStateSolver.snapshots_count))
    f:write(string.format('   "number_total_snapshots": %d,\n', SteadyStateSolver.number_total_snapshots))
    f:write(string.format('   "write_diagnostics_count": %d,\n', SteadyStateSolver.write_diagnostics_count))

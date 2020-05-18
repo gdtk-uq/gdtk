@@ -357,6 +357,8 @@ struct SteadyStateSolverOptions {
     double etaRatioPerStep = 0.9;
     double gamma = 0.9;
     double alpha = 2.0;
+    double limiterFreezingResidReduction = 1e-99;
+    int limiterFreezingCount = 50;
     // Options related to writing out snapshots and diagnostics
     int snapshotsCount = 10;
     int nTotalSnapshots = 5;
@@ -1837,6 +1839,10 @@ void read_control_file()
         getJSONdouble(sssOptions, "gamma", GlobalConfig.sssOptions.gamma);
     GlobalConfig.sssOptions.alpha =
         getJSONdouble(sssOptions, "alpha", GlobalConfig.sssOptions.alpha);
+    GlobalConfig.sssOptions.limiterFreezingResidReduction =
+        getJSONdouble(sssOptions, "limiter_freezing_residual_reduction", GlobalConfig.sssOptions.limiterFreezingResidReduction);
+    GlobalConfig.sssOptions.limiterFreezingCount =
+        getJSONint(sssOptions, "limiter_freezing_count", GlobalConfig.sssOptions.limiterFreezingCount);
     // Settings for writing out snapshots and diagnostics
     GlobalConfig.sssOptions.snapshotsCount =
         getJSONint(sssOptions, "snapshots_count", GlobalConfig.sssOptions.snapshotsCount);

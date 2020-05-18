@@ -140,6 +140,10 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     double etaRatioPerStep = GlobalConfig.sssOptions.etaRatioPerStep;
     double gamma = GlobalConfig.sssOptions.gamma;
     double alpha = GlobalConfig.sssOptions.alpha;
+    double limiterFreezingResidReduction = GlobalConfig.sssOptions.limiterFreezingResidReduction;
+    int limiterFreezingCount = GlobalConfig.sssOptions.limiterFreezingCount;
+    int countsBeforeFreezing = 0;
+    bool limiterFreezingCondition = false;
 
     int interpOrderSave = GlobalConfig.interpolation_order;
     
@@ -609,7 +613,15 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
 
         pseudoSimTime += dt;
         wallClockElapsed = 1.0e-3*(Clock.currTime() - wallClockStart).total!"msecs"();  
-
+	
+	if (!limiterFreezingCondition && (normNew/normRef <= limiterFreezingResidReduction)) {
+	    countsBeforeFreezing++;
+	    if (countsBeforeFreezing >= limiterFreezingCount) {
+	        GlobalConfig.frozen_limiter = true;
+                limiterFreezingCondition = true;
+                writefln("=== limiter freezing condition met at step: %d ===", step);
+            }
+	}
         // Check on some stopping criteria
         if ( step == nsteps ) {
             if (GlobalConfig.is_master_task) {
@@ -630,8 +642,8 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 writefln("          current value= %.12e   target value= %.12e", normNew/normRef, relGlobalResidReduction);
             }
             finalStep = true;
-        }
-        if (GlobalConfig.halt_now == 1) {
+        }        
+	if (GlobalConfig.halt_now == 1) {
             if (GlobalConfig.is_master_task) {
                 writeln("STOPPING: Halt set in control file.");
             }
