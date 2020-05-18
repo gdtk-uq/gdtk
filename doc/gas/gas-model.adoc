@@ -1,3 +1,495 @@
-= Gas model
+= Gas model and state objects
+
+A number of gas models are encoded in D-language modules and are available via
+a generic interface.
+
+== GasModel
+
+  gmodel = GasModel(file_name)
+
+`file_name`::
+  _string_, no default +
+  Specifies the name of the detailed gas model configuration file.
+  This is a Lua format file, constructed as described in the
+  http://cfcfd.mechmining.uq.edu.au/pdfs/gas-user-guide.pdf[Gas Models User Guide].
+
+=== Properties
+
+  gmodel.id
+
+The index to the underlying D-language gas model that is initialized during construction
+of the Python GasModel object.
+
+
+  gmodel.n_species
+
+Is the number of chemical species in the gas model.
+
+
+  gmodel.species_names
+
+Is the list of the chemical species names in the gas model.
+It is a list of strings.
+The indices of the particular species may be useful for some of the method calls below.
+
+
+  gmodel.n_modes
+
+Is the number of internal energy modes (separate to the thermal internal energy)
+in the gas model.
+
+
+  gmodel.mol_masses
+
+Is a list of molecular masses in units of kg/m^3.
+
+
+=== Methods
+
+  gmodel.update_thermo_from_pT(gstate)
+
+Given a GasState object, and assuming that its pressure,
+temperature and mass fractions are set,
+compute the other thermodynamic properties of the gas state.
+Returns `None`.
+
+
+  gmodel.update_thermo_from_rhou(gstate)
+
+Given a GasState object, and assuming that its density,
+internal energy and mass fractions are set,
+compute the other thermodynamic properties of the gas state.
+Returns `None`.
+
+
+  gmodel.update_thermo_from_rhoT(gstate)
+
+Given a GasState object, and assuming that its density,
+temperature and mass fractions are set,
+compute the other thermodynamic properties of the gas state.
+Returns `None`.
+
+
+  gmodel.update_thermo_from_rhop(gstate)
+
+Given a GasState object, and assuming that its density,
+pressure and mass fractions are set,
+compute the other thermodynamic properties of the gas state.
+Returns `None`.
+
+
+  gmodel.update_thermo_from_ps(gstate, s)
+
+Given a GasState object and a value of entropy,
+and assuming that gas state pressure and mass fractions are set,
+compute the other thermodynamic properties of the gas state.
+The units of entropy, `s`, are J/kg.K.
+Returns `None`.
+
+
+  gmodel.update_thermo_from_hs(gstate, h, s)
+
+Given a GasState object and values of enthalpy and entropy,
+and assuming that gas state mass fractions are set,
+compute the other thermodynamic properties of the gas state.
+The units of enthalpy, `h`, are J/kg and the units of entropy, `s`, are J/kg.K.
+Returns `None`.
+
+
+  gmodel.update_sound_speed(gstate)
+
+The underlying D-language gas model has the sound-speed calculation
+separate to the other calculations for other thermodynamic properties.
+This function reflects that separation, hovever, the other Python
+methods mentiond above actually do update the sound-speed along with
+the other thermodynamic properties of the gas state.
+Returns `None`.
+
+
+  gmodel.update_trans_coeffs(gstate)
+
+Update the transport coefficients of viscosity and thermal conductivity.
+Returns `None`.
+
+
+  gmodel.Cv(gstate)
+
+Returns the specific heat capacity for a constant volume process, J/kg.K.
+
+
+  gmodel.Cp(gstate)
+
+Returns the specific heat capacity for a constant pressure process, J/kg.K.
+
+
+  gmodel.dpdrho_const_T(gstate)
+
+Returns the derivative. Equivalent to `RT` for a thermally perfect gas.
+
+
+  gmodel.R(gstate)
+
+Returns the gas constant for the gas state. Units are J/kg.K.
+
+
+  gmodel.gamma(gstate)
+
+Returns the ratio of specific heats for the gas state. Nondimensional.
+
+
+  gmodel.Prandtl(gstate)
+
+Returns the ratio of momentum diffusivity to thermal diffusivity. Nondimensional.
+
+
+  gmodel.internal_energy(gstate)
+
+Returns the full internal energy of the gas state.
+This is the sum of thermal internal energy and any other internal energy modes
+of the gas model.
+Units are J/kg.
+
+
+  gmodel.enthalpy(gstate)
+
+Returns the specific enthalpy of the gas state, in J/kg.
+
+
+  gmodel.entropy(gstate)
+
+Returns the specific entropy of the gas state, in J/kg.K.
+
+
+  gmodel.molecular_mass(gstate)
+
+Returns the molecular mass of the gas state, in kg/m^3.
+This is most useful for chemically-reacting gases where the value will
+change with mixture fractions of the species.
+
+
+  gmodel.enthalpy_isp(gstate, isp)
+
+Returns the specific enthalpy for a particular chemical species,
+at index `isp`, of the gas state.
+Units are J/kg.
+
+
+  gmodel.entropy_isp(gstate, isp)
+
+Returns the specific entropy for a particular chemical species,
+at index `isp`, of the gas state.
+Units are J/kg.K.
+
+
+  gmodel.gibbs_free_energy_isp(gstate, isp)
+
+Returns the Gibbs Free Energy value for a particular chemical species,
+at index `isp`, of the gas state.
+Units are J/kg.
+
+
+  gmodel.massf2molef(massf)
+
+Given the mass fractions of a gas mixture,
+returns the list of equivalent mole fractions.
+The mass-fraction values may be supplied in a dictionary.
+
+
+  gmodel.molef2massf(molef)
+
+Given the mole fractions of a gas mixture,
+returns the list of equivalent mass fractions.
+The mole-fraction values may be supplied in a dictionary.
+
+
+== GasState
+
+Any number of gas state onjects may be constructed in the context of a gas model.
+
+  gstate = GasState(gmodel)
+
+The gas state object retains a reference to the gas model used in its construction.
+
+
+
+=== Properties
+
+  gstate.id
+
+The index to the underlying D-language gas state that is initialized during
+the construction of the Python GasState object.
+
+
+  gstate.rho
+
+Gas density, in kg/m^3.
+This property may be used in an expression or a new value may be assigned.
+
+
+  gstate.p
+
+Gas pressure, in Pa.
+This property may be used in an expression or a new value may be assigned.
+
+
+  gstate.T
+
+Gas temperature, in K.
+This property may be used in an expression or a new value may be assigned.
+
+
+  gstate.u
+
+Thermal internal energy, in J/kg.
+This property may be used in an expression or a new value may be assigned.
+
+
+  gstate.a
+
+Sound speed, m/s.
+This property is read-only.
+
+
+  gstate.k
+
+Thermal conductivity, in W/m.K.
+This property is read-only.
+
+
+  gstate.mu
+
+Dynamic viscosity, Pa.s.
+This property is read-only.
+
+
+  gstate.massf
+
+Is a list of the mass fractions of the chemical species.
+It may be assigned a list with all of the species mass fraction values in order.
+It may also be assigned a dictionary, with named entries.
+In the dictionary form, you need provide only the non-zero values.
+In any case, the mass fractions should sum to `1.0`.
+
+
+  gstate.massf_as_dict
+
+Is a dictionary of named mass-fraction values.
+It is a read-only property.  You may, however, assign to the `massf` property.
+
+
+  gstate.molef
+
+Is a list of the mole fractions of the chemical species.
+It may be assigned a list with all of the species mass fraction values in order.
+It may also be assigned a dictionary, with named entries.
+In the dictionary form, you need provide only the non-zero values.
+In any case, the mole fractions should sum to `1.0`.
+
+  gstate.molef_as_dict
+
+Is a dictionary of named mole-fraction values.
+It is a read-only property.  You may, however, assign to the `molef` property.
+
+
+  gstate.conc
+
+Is a list of the concentrations, in mole/m^3, of the chemical species.
+It is a read-only property.
+
+
+  gstate.conc_as_dict
+
+Is a dictionary of named concentration values.
+It is a read-only property.
+
+
+  gstate.u_modes
+
+Is a list of internal-energy values for a multi-temperature gas.
+Units are J/kg.
+When assigning a list, the full list must be supplied.
+
+
+  gstate.T_modes
+
+Is a list of temperature values, in K, for a multi-temperature gas.
+When assigning a list, the full list must be supplied.
+
+
+  gstate.k_modes
+
+Is a list of thermal diffusivity coefficient values, in W/m.K, for a multi-temperature gas.
+It is a read-only property.
+
+
+  gstate.ceaSavedData
+
+Is a dictionary of the data saved from the call out to the CEA2 program
+that was made when updating the thermodynamic properties for the gas state
+of the equilibrium mixture.
+This property is specific to the CEAgas model.
+If it exists, it contains the entries:
+
+`"p"`:: static pressure, Pa
+`"rho"`:: density, kg/m^3
+`"u"`:: specific internal energy, J/kg
+`"h"`:: specific enthalpy, J/kg
+`"T"`:: temperature, K
+`"a"`:: sound speed, m/s
+`"Mmass"`:: average molecular mass of the equilibrium mixture, kg/mole
+`"Rgas"`:: effective gas constant, J/kg/K
+`"gamma"`:: effective ratio of specific heats
+`"Cp"`:: effective specific heat, constant pressure, J/kg
+`"s"`:: specific entropy, J/kg.K
+`"mu"`:: effective viscosity coefficient, Pa.s
+`"mass"`:: dictionary of mass-fraction values for the species in the equilibrium mixture.
+
+
+=== Methods
+
+  gstate.copy_values(other_gstate)
+
+Copy property values from the `other_gstate` object.
+It is assumed that the GasModel is the same for east of the GasState objects.
+
+
+  gstate.update_thermo_from_pT()
+
+Assuming that its pressure, temperature and mass fractions are set,
+compute the other thermodynamic properties of the gas state.
+Returns `None`.
+
+
+  gstate.update_thermo_from_rhou()
+
+Assuming that its density, internal energy and mass fractions are set,
+compute the other thermodynamic properties of the gas state.
+Returns `None`.
+
+
+  gstate.update_thermo_from_rhoT()
+
+Assuming that its density, temperature and mass fractions are set,
+compute the other thermodynamic properties of the gas state.
+Returns `None`.
+
+
+  gstate.update_thermo_from_rhop()
+
+Assuming that its density, pressure and mass fractions are set,
+compute the other thermodynamic properties of the gas state.
+Returns `None`.
+
+
+  gstate.update_thermo_from_ps(s)
+
+Given a value of entropy, and
+assuming that gas state pressure and mass fractions are set,
+compute the other thermodynamic properties of the gas state.
+The units of entropy, `s`, are J/kg.K.
+Returns `None`.
+
+
+  gstate.update_thermo_from_hs(h, s)
+
+Given values of enthalpy and entropy,
+and assuming that gas state mass fractions are set,
+compute the other thermodynamic properties of the gas state.
+The units of enthalpy, `h`, are J/kg and the units of entropy, `s`, are J/kg.K.
+Returns `None`.
+
+
+  gstate.update_sound_speed()
+
+The underlying D-language gas model has the sound-speed calculation
+separate to the other calculations for other thermodynamic properties.
+This function reflects that separation, hovever, the other Python
+methods mentiond above actually do update the sound-speed along with
+the other thermodynamic properties of the gas state.
+Returns `None`.
+
+
+  gstate.update_trans_coeffs()
+
+Update the transport coefficients of viscosity and thermal conductivity.
+Returns `None`.
+
+
+=== Other properties
+
+  gstate.Cv
+
+Returns the specific heat capacity for a constant volume process, J/kg.K.
+
+
+  gstate.Cp
+
+Returns the specific heat capacity for a constant pressure process, J/kg.K.
+
+
+  gstate.dpdrho_const_T
+
+Returns the derivative. Equivalent to `RT` for a thermally perfect gas.
+
+
+  gstate.R
+
+Returns the gas constant for the gas state. Units are J/kg.K.
+
+
+  gstate.gamma
+
+Returns the ratio of specific heats for the gas state. Nondimensional.
+
+
+  gmodel.Prandtl(gstate)
+
+Returns the ratio of momentum diffusivity to thermal diffusivity. Nondimensional.
+
+
+  gstate.internal_energy
+
+Returns the full internal energy of the gas state.
+This is the sum of thermal internal energy and any other internal energy modes
+of the gas model.
+Units are J/kg.
+
+
+  gstate.enthalpy
+
+Returns the specific enthalpy of the gas state, in J/kg.
+
+
+  gstate.entropy
+
+Returns the specific entropy of the gas state, in J/kg.K.
+
+
+  gstate.molecular_mass
+
+Returns the molecular mass of the gas state, in kg/m^3.
+This is most useful for chemically-reacting gases where the value will
+change with mixture fractions of the species.
+
+
+  gstate.enthalpy_isp(isp)
+
+Returns the specific enthalpy for a particular chemical species,
+at index `isp`, of the gas state.
+Units are J/kg.
+
+
+  gstate.entropy_isp(isp)
+
+Returns the specific entropy for a particular chemical species,
+at index `isp`, of the gas state.
+Units are J/kg.K.
+
+
+  gstate.gibbs_free_energy_isp(isp)
+
+Returns the Gibbs Free Energy value for a particular chemical species,
+at index `isp`, of the gas state.
+Units are J/kg.
 
 
