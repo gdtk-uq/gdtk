@@ -48,6 +48,7 @@ use the following function.
   v2, vg = flow.normal_shock(state1, vs, state2)
 
 Input:
+
 `state1`::
   _GasState_ object, no default. +
   The initial gas state, before passing through the shock.
@@ -73,11 +74,12 @@ The function returns a tuple of velocities.
   for the case where the shock in moving into a quiescent gas.
 
 
-For the case where the pressure ration is provided, use the function:
+For the case where the pressure ratio is provided, use the function:
 
   v2, vg = flow.normal_shock_p2p1(state1, p2p1, state2)
 
 Input:
+
 `state1`::
   _GasState_ object, no default. +
   The initial gas state, before passing through the shock.
@@ -108,6 +110,7 @@ we have the function:
   vr = flow.reflected_shock(state2, vg, state5)
 
 Input:
+
 `state1`::
   _GasState_ object, no default. +
   The state of the gas approaching the reflected-shock front.
@@ -124,62 +127,496 @@ Input:
 The function returns `vr`, the speed of the reflected shock (in m/s) in the lab frame.
 
 
-== Reversible flows
+== Reversible steady flow
+
+Allow a gas to expand through a steady isentropic process,
+from stagnation to a lower pressure.
 
   v = flow.expand_from_stagnation(state0, p_over_p0, state1)
 
+Input:
+
+`state0`::
+  _GasState_ object, no default. +
+  The initial stagnation state.
+
+`p_over_p0`::
+  _Float_, no default. +
+  The pressure of the expanded gas divided by the stagnation pressure.
+
+`state1`::
+  _GasState_ object, no default. +
+  The state of the gas after expansion.
+  Although you might expect `state1` as output, you need to construct it first
+  and pass it into the function to have its values mutated.
+
+The function returns `v`. the velocity (in m/s) of the expanded gas.
+
+
+Allow a gas to expand through a steady isentropic process,
+from stagnation to a particular Mach number.
 
   v = flow.expand_to_mach(state0, mach, state1)
 
+Input:
+
+`state0`::
+  _GasState_ object, no default. +
+  The initial stagnation state.
+
+`mach`::
+  _Float_, no default. +
+  The Mach number of the expanded gas.
+
+`state1`::
+  _GasState_ object, no default. +
+  The state of the gas after expansion.
+  Although you might expect `state1` as output, you need to construct it first
+  and pass it into the function to have its values mutated.
+
+The function returns `v`. the velocity (in m/s) of the expanded gas.
+
+
+Given a free-stream, compute the corresponding stagnation condition.
 
   flow.total_condition(state1, v1, state0)
+
+Input:
+
+`state1`::
+  _GasState_ object, no default. +
+  The free-stream state.
+
+`v1`::
+  _Float_, no default. +
+  The velocity (in m/s) of the free stream.
+
+`state0`::
+  _GasState_ object, no default. +
+  The stagnation state, following an isentropic compression from the free-stream state.
+  Although you might expect `state0` as output, you need to construct it first
+  and pass it into the function to have its values mutated.
 
 
 == Pitot probe flow
 
+Compute the state of gas at the stagnation point on a Pitot probe.
+For a subsonic free-stream flow, this will be the same as for an isentropic compression.
+For a supersonic flow, there will be a normal shock, followed by an isentropic compression.
+
   flow.pitot_condition(state1, v1, state2pitot)
 
+Input:
+
+`state1`::
+  _GasState_ object, no default. +
+  The free-stream state.
+
+`v1`::
+  _Float_, no default. +
+  The velocity (in m/s) of the free stream.
+
+`state2pitot`::
+  _GasState_ object, no default. +
+  The stagnation state at the probe tip, after compression from the free-stream state.
+  Although you might expect `state2pitot` as output, you need to construct it first
+  and pass it into the function to have its values mutated.
+
+
+== Steady flow in a duct
+
+Steady, isentropic flow through a variable-area duct.
+Internally, this function iterates guesses for the pressure ratio,
+in order to keep mass-flux equal.
 
   v2 = flow.steady_flow_with_area_change(state1, v1, area2_over_area1, state2,
                                          tol=1.0e-4)
 
+Input:
 
-== Incremental reversible flow
+`state1`::
+  _GasState_ object, no default. +
+  The state at point 1 in the duct.
+
+`v1`::
+  _Float_, no default. +
+  The velocity (in m/s) at point 1.
+
+`area2_over_area1`::
+  _Float_, no default. +
+  The ratio of areas of the two points.
+
+`state2`::
+  _GasState_ object, no default. +
+  The gas state at point 2.
+  Although you might expect `state2` as output, you need to construct it first
+  and pass it into the function to have its values mutated.
+
+`tol`::
+  _Float_, default `1.0e-4` +
+  Tolerance on the mass-flux error.
+
+
+== Unsteady reversible flow
+
+For compression and expansion processes that travel as a wave,
+the analysis steps along a characteristic trajectory that traverses the wave
+and integrates the effects numerically.
 
   v2 = flow.finite_wave_dp(state1, v1, characteristic, p2, state2,
                            steps=100)
 
+Input:
+
+`state1`::
+  _GasState_ object, no default. +
+  The state before wave processing.
+
+`v1`::
+  _Float_, no default. +
+  The velocity (in m/s) before wave processing.
+  Positive velocities are to the right.
+
+`characteristic`::
+  _string_, no default. +
+  Name of the characteristic trajectory that the integration process follows.
+  Options are `"cplus"` and `"cminus"`.
+  If the unsteady processing wave is moving left through the gas,
+  the integration follows a "cplus" characteristic trajectory
+  (from the left initial state to the right final state).
+
+`p2`::
+  _Float_, no default. +
+  The pressure (in Pa) after wave processing.
+
+`state2`::
+  _GasState_ object, no default. +
+  The gas state after wave processing.
+  Although you might expect `state2` as output, you need to construct it first
+  and pass it into the function to have its values mutated.
+
+`steps`::
+  _Int_, default: 100 +
+  The pressure change is divided into a number of steps and the effects
+  are integrated numerically.
+
+The function returns `v2`, the velocity of the gas following wave processing.
+
+
+For the cases where we know the velocity of the expanded gas,
+we can take steps in velocity to get to the expanded state.
 
   v2 = flow.finite_wave_dv(state1, v1, characteristic, v2_target, state2,
                            steps=100, t_min=200.0)
 
+Input:
+
+`state1`::
+  _GasState_ object, no default. +
+  The state before wave processing.
+
+`v1`::
+  _Float_, no default. +
+  The velocity (in m/s) before wave processing.
+
+`characteristic`::
+  _string_, no default. +
+  Name of the characteristic trajectory that the integration process follows.
+  Options are `"cplus"` and `"cminus"`.
+  If the unsteady processing wave is moving left through the gas,
+  the integration follows a "cplus" characteristic trajectory
+  (from the left initial state to the right final state).
+
+`v2_target`::
+  _Float_, no default. +
+  The expected velocity (in m/s) after wave processing.
+
+`state2`::
+  _GasState_ object, no default. +
+  The gas state after wave processing.
+  Although you might expect `state2` as output, you need to construct it first
+  and pass it into the function to have its values mutated.
+
+`steps`::
+  _Int_, default: 100 +
+  The velocity change is divided into a number of steps and the effects
+  are integrated numerically.
+
+`t_min`::
+  _Float_, default: 200.0 +
+  Minimum temperature (in degrees K) of the gas through the expansion.
+  Because we are stepping in velocity, it is easy to demand a final velocity that
+  can exceed the maximum velocity for a physically realizable expansion.
+  A typical symptom of demanding too strong an expansion is a negative temperature
+  for the expanded gas.
+
+The function returns `v2`, the velocity of the gas following wave processing.
+
 
 == Riemann problem
+
+The Riemann problem is at the core of our larger-scale CFD codes.
+Left and Right gas states are allowed to interact at their contact surface.
+Processing of each initial state is via a left-running wave (into the Left state) and
+a right-running wave (into the Right state).
+The results of wave processing are two intermediate states (labelled `star`)
+that have a common pressure and velocity at the contact surface.
+Osher's approximate Riemann solver assumes that both processing waves are isentropic.
 
   pstar, wstar, wL, wR, velX0 = flow.osher_riemann(stateL, stateR, velL, velR,
                                                    stateLstar, stateRstar, stateX0)
 
 
+Input:
+
+`stateL`::
+  _GasState_ object, no default. +
+  The state on the left of the contact surface.
+
+`stateR`::
+  _GasState_ object, no default. +
+  The state on the right of the contact surface.
+
+`velL`::
+  _Float_, no default. +
+  The velocity of the gas (in m/s) in the left initial state.
+
+`velR`::
+  _Float_, no default. +
+  The velocity of the gas (in m/s) in the right initial state.
+
+`stateLstar`::
+  _GasState_ object, no default. +
+  The left intermediate state after wave processing.
+
+`stateRstar`::
+  _GasState_ object, no default. +
+  The right intermediate state after wave processing.
+
+`stateX0`::
+  _GasState_ object, no default. +
+  The interpolated state at the initial contact-surface location, after wave processing.
+  As part of a flow simulation code, the details of this state may be used to compute
+  the flux of mass, momentum and energy across the initial constact-surface location.
+
+Although you might expect `stateLstar` and `statRstar` as output,
+you need to construct them first and pass them into the function
+to have their values mutated.
+
+The function returns:
+
+`pstar`::
+  _Float_ The common pressure at the contact surface between the intermediate states.
+
+`wstar`::
+  _Float_ The common velocity at the contact surface between the intermediate states.
+
+`wL`::
+  _Float_ The leading-edge wave speed of the left-moving wave.
+  If the wave is a compression, this is the shock speed.
+
+`wR`::
+  _Float_ The leading-edge wave speed of the right-moving wave.
+  If the wave is a compression, this is the shock speed.
+
+`velX0`::
+  _Float_ The velocity of the gas, interpolated at the initial location of the contact-surface.
+
+
+== Riemann subproblem for L1d
+
+The Lagrangian flow solver has a specialized Riemann solver at its core.
+
   pstar, wstar = flow.lrivp(stateL, stateR, velL, velR)
 
+Input:
+
+`stateL`::
+  _GasState_ object, no default. +
+  The state on the left of the contact surface.
+
+`stateR`::
+  _GasState_ object, no default. +
+  The state on the right of the contact surface.
+
+`velL`::
+  _Float_, no default. +
+  The velocity of the gas (in m/s) in the left initial state.
+
+`velR`::
+  _Float_, no default. +
+  The velocity of the gas (in m/s) in the right initial state.
+
+The function returns:
+
+`pstar`::
+  _Float_ The common pressure at the contact surface between the intermediate states.
+
+`wstar`::
+  _Float_ The common velocity at the contact surface between the intermediate states.
+
+
+When the gas is up against a solid face of a piston,
+we have the contact-surface velocity as known and
+we need to compute just the gas pressure at the contact-surface.
 
   pstar = flow.piston_at_left(stateR, velR, wstar)
+
+Input:
+
+`stateR`::
+  _GasState_ object, no default. +
+  The state on the right of the contact surface.
+
+`velR`::
+  _Float_, no default. +
+  The velocity of the gas (in m/s) in the right initial state.
+
+`wstar`::
+  _Float_, no default. +
+  The velocity (in m/s) of the gas at the contact (piston) surface.
+
+The function returns `pstar` (in Pa), the pressure at the contact surface.
 
 
   pstar = flow.piston_at_right(stateL, velL, wstar)
 
+Input:
+
+`stateL`::
+  _GasState_ object, no default. +
+  The state on the left of the contact surface.
+
+`velL`::
+  _Float_, no default. +
+  The velocity of the gas (in m/s) in the left initial state.
+
+`wstar`::
+  _Float_, no default. +
+  The velocity (in m/s) of the gas at the contact (piston) surface.
+
+The function returns `pstar` (in Pa), the pressure at the contact surface.
+
+
 
 == Oblique shock
 
+Oblique straight shocks are analysed by splitting the velocity
+into normal and tangential components.
+The shock angle, with respect to the initial stream direction, is `beta`.
+The streamline deflection angle is `theta`.
+
+Given a shock angle, we can get the flow state after shock processing directly.
+
   theta, v2 = flow.theta_oblique(state1, v1, beta, state2)
 
+Input:
+
+`state1`::
+  _GasState_ object, no default. +
+  The state before shock wave processing.
+
+`v1`::
+  _Float_, no default. +
+  The velocity of the gas (in m/s) before shock wave processing.
+
+`beta`::
+  _Float_, no default. +
+  Angle, in radians, of the shock with respect to the initial flow direction.
+
+`state2`::
+  _GasState_ object, no default. +
+  The gas state after wave processing.
+  Although you might expect `state2` as output, you need to construct it first
+  and pass it into the function to have its values mutated.
+
+The function returns `theta` the stream deflection angle (in radians) and
+`v2`, the speed of the gas in that deflected stream.
+
+
+When you know the deflection angle and you want the shock angle,
+use the following function.
+
   beta = flow.beta_oblique(state1, v1, theta)
+
+Input:
+
+`state1`::
+  _GasState_ object, no default. +
+  The state before shock wave processing.
+
+`v1`::
+  _Float_, no default. +
+  The velocity of the gas (in m/s) before shock wave processing.
+
+`theta`::
+  _Float_, no default. +
+  Deflection angle, in radians, of the streamlines through the shock.
+
+The function returns shock angle `beta` for the weak shock solution
+for the given streamline deflection angle.
+The flow is assumed to remain supersonic following the shock.
+The strong-shock solution, resulting in subsonic downstream flow,
+would be sensitive the (unspecified) details of whatever is downstream
+and supporting the shock.
 
 
 == Conical shock
 
+For the limits of thermochemically-frozen and thermochemical-equilibrium gases,
+there is a conical flow analysis for shock waves.
+
+Given the free-stream condition and a conical shock angle, the radial flow conditions
+can be integrated from just after the shock to the supporting conical body.
+The axis of the supporting cone is aligned with the free-stream direction.
+
   theta_c, v2_c = flow.theta_cone(state1, v1, beta, state_c)
 
+Input:
+
+`state1`::
+  _GasState_ object, no default. +
+  The free-stream state, before shock wave processing.
+
+`v1`::
+  _Float_, no default. +
+  The velocity of the gas (in m/s) in the free stream, before shock wave processing.
+
+`beta`::
+  _Float_, no default. +
+  Angle, in radians, of the conical shock with respect to the initial flow direction.
+
+`state_c`::
+  _GasState_ object, no default. +
+  The gas state at the cone surface.
+  Although you might expect `state_c` as output, you need to construct it first
+  and pass it into the function to have its values mutated.
+
+The function returns `theta_c` the stream deflection angle (in radians) at the cone surface and
+`v2_c`, the speed of the gas in that deflected stream up the conical surface.
+
+
+When you know the deflecting cone angle and you want the shock angle,
+use the following function.
 
   beta = flow.beta_cone(state1, v1, theta)
+
+Input:
+
+`state1`::
+  _GasState_ object, no default. +
+  The free-stream state, before shock wave processing.
+
+`v1`::
+  _Float_, no default. +
+  The velocity of the gas (in m/s) in the free stream, before shock wave processing.
+
+`theta`::
+  _Float_, no default. +
+  Angle, in radians, of the deflecting cone.
+
+The function returns shock angle `beta` for the weak shock solution.
+The flow is assumed to remain supersonic following the shock.
+A subsonic post-shock flow would be associated with a detached shock
+and the flow field would not match the assumed conical arrangement.
 
