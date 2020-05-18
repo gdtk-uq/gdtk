@@ -600,7 +600,7 @@ class ThermochemicalReactor(object):
             (self.id, self.gmodel.id, self.filename1, self.filename2)
         return text
 
-    def update_state(self, gstate, t_interval, dt_suggest):
+    def update_state(self, gstate, t_interval, dt_suggest=-1.0):
         dt_suggestp = ffi.new("double *")
         dt_suggestp[0] = dt_suggest
         flag = so.thermochemical_reactor_gas_state_update(self.id, gstate.id,

@@ -1,4 +1,11 @@
-= State-to-state processes for an ideal gas
+= State-to-state processes (ideal gas)
+
+If the calorically-perfect ideal gas model is sufficient for your analysis needs,
+there is simple set of ideal-gas relations collected into the `eilmer.ideal_gas`
+package.
+
+The following functions do not use the generalized gas models but assume a gas bahaviour
+for fixed ratio of specific heats.
 
 == Normal shock
 

@@ -1,2 +1,54 @@
 = Thermochemical kinetics
 
+If you have a gas model with several chemical species and/or with more than one temperature
+you may be interested in allowing the thermochamical processes to change the gas state in
+an otherwise isolated blob of gas.
+
+Before trying the following functions, you should read the
+http://cfcfd.mechmining.uq.edu.au/pdfs/reacting-gas-guide.pdf[Reacting Gas Guide].
+
+== ThermochemicalReactor objects
+
+ reactor = ThermochemicalReactor(gmodel, filename1, filename2="")
+
+`gmodel`::
+   _GasModel_ object, no default +
+   is a reference to a suitable gas model.
+   Not all gas models will have associated reactors but some,
+   such as the _ThermallyPerfectGas_ model do.
+
+`filename1`::
+  _string_, no default. +
+  File name for the detailed chemistry configuration file.
+
+`filename2`::
+  _string_, default: "" +
+  File name for the second detailed thermochemical configuration file.
+  Only a few files will require a second configuration file.
+
+== Methods
+To update the gas state over a finite interval of time, call
+
+  reactor.update_state(gstate, t_interval, dt_suggest)
+
+`gstate` ::
+  _GasState_ object, no default. +
+  The gas state which will be altered.
+  Because the hypothetical reactor is isolated, the density and internal energy
+  of the blob of gas will remain fixed, while other thermochemical properties,
+  including mass- and mole-fractions change.
+
+`t_interval`::
+  _Float_, no default. +
+  The time interval, in seconds, over which to evolve the gas state.
+
+`dt_suggest`::
+  _Float_, default -1.0 +
+  The suggested time step size for the thermochemical update.
+  The default value of `-1.0` indicates to the reactor that we have no godd idea and
+  that it should select something suitable.
+
+Returns the last successful time-step size,
+so that the value may be used in subsequent calls.
+
+

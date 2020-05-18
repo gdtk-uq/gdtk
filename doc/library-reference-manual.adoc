@@ -1,4 +1,4 @@
-= Gas-dynamic tool-kit for Python
+= Gas-dynamic library for Python
 Peter A. Jacobs; Rowan J. Gollan
 2020-05-18
 :toc: right
@@ -11,7 +11,6 @@ The loadable library is accessible from Python and Ruby.
 It provides access to functions for the thermochemical gas model
 and, built on top of that, simple state-to-state and
 stream-tube flow analysis functions.
-There is also a collection of geometric functions.
 
 This is the reference manual for the Python flavour of the library and,
 because of the history of development, the library comes in the `eilmer` package.
@@ -46,9 +45,8 @@ this is a good time to do so.
 
 include::gas/gas-model.adoc[]
 include::gas/kinetics.adoc[]
-include::flow/ideal-gas.adoc[]
 include::flow/gas-flow.adoc[]
-include::geom/elements.adoc[]
+include::flow/ideal-gas.adoc[]
 
 :leveloffset: -1
 

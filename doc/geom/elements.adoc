@@ -1,6 +1,6 @@
 = Geometric elements
 
-These functions are the Python equivalent for those found in the
+These functions are the Python equivalent of the Lua functions found in the
 http://cfcfd.mechmining.uq.edu.au/pdfs/geometry-user-guide.pdf[Geometry User Guide].
 
 == Vector3

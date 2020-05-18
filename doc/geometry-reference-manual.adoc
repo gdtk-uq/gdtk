@@ -1,0 +1,38 @@
+= Geometry library for Python
+Peter A. Jacobs; Ingo Jahn; Rowan J. Gollan
+2020-05-18
+:toc: right
+:stylesheet: readthedocs.css
+:sectnums:
+
+:leveloffset: +1
+
+The loadable library is accessible from Python and Ruby.
+It provides access to geometry functions for the construction of paths and surfaces
+compatible with those available in the Eilmer flow solver.
+
+This is the reference manual for the Python flavour of the library and,
+because of the history of development, the library comes in the `eilmer` package.
+For example, to construct a simple linear path element
+from within your Python script and then evaluate the midpoint on that line,
+you might try the following:
+
+----
+from eilmer.geom.vector3 import Vector3
+from eilmer.geom.path import *
+
+a = Vector3(0.0, 2.0)
+b = Vector3(2.0, 0.0)
+line_ab = Line(p0=a, p1=b)
+print("line_ab=", line_ab)
+c = line_ab(0.5)
+----
+
+If you have not yet read the
+http://cfcfd.mechmining.uq.edu.au/pdfs/geometry-user-guide.pdf[Geometry Package User Guide],
+this is a good time to do so.
+
+include::geom/elements.adoc[]
+
+:leveloffset: -1
+

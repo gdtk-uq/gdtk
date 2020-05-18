@@ -1,6 +1,185 @@
-= State-to-state flow processes for a general gas
+= State-to-state flow processes
+
+For processes involving the general gas models,
+flow analysis functions are collected as methods of the GasFlow class.
+An object of this class needs to be constructed
+in the context of a particular gas model.
+
+  flow = GasFlow(gmodel)
+
 
 == Normal shock
 
+For shock processing when we want to restrict the processing to the ideal-gas behaviour,
+use the following function.
+
+  v2, vg = flow.ideal_shock(state1, vs, state2)
+
+Input:
+
+`state1`::
+  _GasState_ object, no default. +
+  The initial gas state, before passing through the shock.
+
+`vs`::
+  _Float_, no default. +
+  Speed of gas, in m/s, coming into the shock (in a shock stationary frame),
+  or the speed of the shock into quiescent gas (lab frame).
+
+`state2`::
+  _GasState_ object, no default. +
+  The state of the gas after shock processing.
+  Although you might expect `state2` as output, you need to construct it first
+  and pass it into the function to have its values mutated.
+
+The function returns a tuple of velocities.
+
+`v2`::
+  _Float_ The post-shock gas speed, in m/s, relative to the shock front.
+
+`vg`::
+  _Float_ The post-shock gas speed, in m/s, in the lab frame,
+  for the case where the shock in moving into a quiescent gas.
+
+
+For shock processing with more general, but still chemically-frozen, gas behaviour,
+use the following function.
+
+  v2, vg = flow.normal_shock(state1, vs, state2)
+
+Input:
+`state1`::
+  _GasState_ object, no default. +
+  The initial gas state, before passing through the shock.
+
+`vs`::
+  _Float_, no default. +
+  Speed of gas, in m/s, coming into the shock (in a shock stationary frame),
+  or the speed of the shock into quiescent gas (lab frame).
+
+`state2`::
+  _GasState_ object, no default. +
+  The state of the gas after shock processing.
+  Although you might expect `state2` as output, you need to construct it first
+  and pass it into the function to have its values mutated.
+
+The function returns a tuple of velocities.
+
+`v2`::
+  _Float_ The post-shock gas speed, in m/s, relative to the shock front.
+
+`vg`::
+  _Float_ The post-shock gas speed, in m/s, in the lab frame,
+  for the case where the shock in moving into a quiescent gas.
+
+
+For the case where the pressure ration is provided, use the function:
+
+  v2, vg = flow.normal_shock_p2p1(state1, p2p1, state2)
+
+Input:
+`state1`::
+  _GasState_ object, no default. +
+  The initial gas state, before passing through the shock.
+
+`p2p1`::
+  _Float_, no default. +
+  Ratio of pressures p2/p1 across the shock.
+
+`state2`::
+  _GasState_ object, no default. +
+  The state of the gas after shock processing.
+  Although you might expect `state2` as output, you need to construct it first
+  and pass it into the function to have its values mutated.
+
+The function returns a tuple of velocities.
+
+`v2`::
+  _Float_ The post-shock gas speed, in m/s, relative to the shock front.
+
+`vg`::
+  _Float_ The post-shock gas speed, in m/s, in the lab frame,
+  for the case where the shock in moving into a quiescent gas.
+
+
+For a reflected shock, as would be observed in a shock tunnel,
+we have the function:
+
+  vr = flow.reflected_shock(state2, vg, state5)
+
+Input:
+`state1`::
+  _GasState_ object, no default. +
+  The state of the gas approaching the reflected-shock front.
+
+`vg`::
+  _Float_ The speed of the incoming gas (in m/s) in the lab frame.
+
+`state5`::
+  _GasState_ object, no default. +
+  The state of the gas after reflected-shock processing.
+  Although you might expect `state5` as output, you need to construct it first
+  and pass it into the function to have its values mutated.
+
+The function returns `vr`, the speed of the reflected shock (in m/s) in the lab frame.
+
+
+== Reversible flows
+
+  v = flow.expand_from_stagnation(state0, p_over_p0, state1)
+
+
+  v = flow.expand_to_mach(state0, mach, state1)
+
+
+  flow.total_condition(state1, v1, state0)
+
+
+== Pitot probe flow
+
+  flow.pitot_condition(state1, v1, state2pitot)
+
+
+  v2 = flow.steady_flow_with_area_change(state1, v1, area2_over_area1, state2,
+                                         tol=1.0e-4)
+
+
+== Incremental reversible flow
+
+  v2 = flow.finite_wave_dp(state1, v1, characteristic, p2, state2,
+                           steps=100)
+
+
+  v2 = flow.finite_wave_dv(state1, v1, characteristic, v2_target, state2,
+                           steps=100, t_min=200.0)
+
+
+== Riemann problem
+
+  pstar, wstar, wL, wR, velX0 = flow.osher_riemann(stateL, stateR, velL, velR,
+                                                   stateLstar, stateRstar, stateX0)
+
+
+  pstar, wstar = flow.lrivp(stateL, stateR, velL, velR)
+
+
+  pstar = flow.piston_at_left(stateR, velR, wstar)
+
+
+  pstar = flow.piston_at_right(stateL, velL, wstar)
+
+
 == Oblique shock
+
+  theta, v2 = flow.theta_oblique(state1, v1, beta, state2)
+
+  beta = flow.beta_oblique(state1, v1, theta)
+
+
+== Conical shock
+
+  theta_c, v2_c = flow.theta_cone(state1, v1, beta, state_c)
+
+
+  beta = flow.beta_cone(state1, v1, theta)
 

@@ -2,13 +2,21 @@
 title: Python library
 weight: 40
 ---
+## Loadable library for Python
+The loadable library comes with `eilmer` as top-level namespace.
+Within that namespace, there are packages for gas models,
+flow analysis, geometry construction and general numerical methods.
 
-# Gas-dynamic tool-kit for Python
+### Gas-dynamic functions
 
-This library provides access to functions for the thermochemical gas model
+This package provides access to functions for the thermochemical gas model
 and, built on top of that, simple state-to-state and
 stream-tube flow analysis functions.
-There is also a collection of geometric functions.
+
+### Geometry functions
+The collection of geometric functions is built to look like the Lua functions
+for constructing geometric objects in Eilmer.
+
 
 ## Getting started
 
@@ -30,6 +38,7 @@ that your newly configured environment is available.
 
 ## Documentation
 
-- [Reference Manual (HTML)](/html/library-reference-manual.html)
+- [Gas-dynamic Package Reference Manual (HTML)](/html/library-reference-manual.html)
+- [Geometry Package Reference Manual (HTML)](/html/geometry-reference-manual.html)
 
 
