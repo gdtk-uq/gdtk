@@ -7,7 +7,329 @@ package.
 The following functions do not use the generalized gas models but assume a gas bahaviour
 for fixed ratio of specific heats.
 
+To get access to the functions, import the module into your Python script.
+For example:
+
+----
+import eilmer.ideal_gas_flow as igf
+M = 2.0
+print("Normal shock jump...")
+print("Computed: M=%g: M2=%g, T2/T1=%g, p2/p1=%g, r2/r1=%g" %
+      (M, igf.m2_shock(M), igf.T2_T1(M), igf.p2_p1(M), igf.r2_r1(M)))
+print("Expected: M1=2, M2=0.5774, T2/T1=1.687, p2/p1=4.50, r2/r1=2.667")
+----
+
+
+== Isentropic/adiabatic steady flow
+
+  A_Astar(M, g=1.4)
+
+Input:
+
+`M`::
+  _Float_, no default. Mach number at area `A`, assuming sonic condition at area `Astar`
+
+`g`::
+  _Float_, default: 1.4 +
+  Ratio of specific heats
+
+Returns area ratio, `A/Astar`, for an isentropic, quasi-one-dimensional flow.
+
+
+  T0_T(M, g=1.4)
+
+Input:
+
+`M`::
+  _Float_, no default. Mach number.
+
+`g`::
+  _Float_, default: 1.4 +
+  Ratio of specific heats
+
+Returns `T0/T`, the ratio of total temperature over static temperature for adiabatic flow.
+
+
+  p0_p(M, g=1.4)
+
+Input:
+
+`M`::
+  _Float_, no default. Mach number.
+
+`g`::
+  _Float_, default: 1.4 +
+  Ratio of specific heats
+
+Returns `p0/p`, the ratio of total pressure over static pressure for isentropic flow.
+
+  r0_r(M, g=1.4)
+
+Input:
+
+`M`::
+  _Float_, no default. Mach number.
+
+`g`::
+  _Float_, default: 1.4 +
+  Ratio of specific heats
+
+Returns `rho0/rho`, the ratio of stagnation density over local for isentropic flow.
+
+
 == Normal shock
 
+  m2_shock(M1, g=1.4)
+
+Input:
+
+`M`::
+  _Float_, no default. Mach number.
+
+`g`::
+  _Float_, default: 1.4 +
+  Ratio of specific heats
+
+Returns `m2`, Mach number following the shock processing.
+
+
+  r2_r1(M1, g=1.4)
+
+Input:
+
+`M`::
+  _Float_, no default. Mach number.
+
+`g`::
+  _Float_, default: 1.4 +
+  Ratio of specific heats
+
+Returns density ratio, `r2/r1`, across a normal shock.
+
+
+  v2_v1(M1, g=1.4)
+
+Input:
+
+`M`::
+  _Float_, no default. Mach number.
+
+`g`::
+  _Float_, default: 1.4 +
+  Ratio of specific heats
+
+Returns velocity ratio, `v2/v1`, across a normal shock.
+
+
+  p2_p1(M1, g=1.4)
+
+Input:
+
+`M`::
+  _Float_, no default. Mach number.
+
+`g`::
+  _Float_, default: 1.4 +
+  Ratio of specific heats
+
+Returns static pressure ratio, `p2/p1`, across a normal shock.
+
+
+  T2_T1(M1, g=1.4)
+
+Input:
+
+`M`::
+  _Float_, no default. Mach number.
+
+`g`::
+  _Float_, default: 1.4 +
+  Ratio of specific heats
+
+Returns static temperature ratio, `T2/T1`, across a normal shock.
+
+
+  p02_p01(M1, g=1.4)
+
+Input:
+
+`M`::
+  _Float_, no default. Mach number.
+
+`g`::
+  _Float_, default: 1.4 +
+  Ratio of specific heats
+
+Returns stagnation pressure ratio, `p02/p01`, across a normal shock.
+
+
+  ds_Cv(M1, g=1.4)
+
+Input:
+
+`M`::
+  _Float_, no default. Mach number.
+
+`g`::
+  _Float_, default: 1.4 +
+  Ratio of specific heats
+
+Returns nondimensional entropy change, `ds/Cv`, across a normal shock.
+
+
+  pitot_p(p1, M1, g=1.4)
+
+Input:
+
+`M`::
+  _Float_, no default. Mach number.
+
+`g`::
+  _Float_, default: 1.4 +
+  Ratio of specific heats
+
+Returns pitot pressure for a specified Mach number free-stream flow.
+The value will have the same units as input `p1`.
+
+
+
+== Flow with heat addition.
+
+One-dimensional flow with heat addition is also known as
+Rayleigh-line flow.
+The flow starts with local Mach number, `M`, and (hypothetically) enough heat
+is added for the flow to reach sonic (`Mstar=1`) condition.
+
+  T0_T0star(M, g=1.4)
+
+Input:
+
+`M`::
+  _Float_, no default. initial Mach number.
+
+`g`::
+  _Float_, default: 1.4 +
+  Ratio of specific heats
+
+Returns `T0/T0star` where `T0` is the total temperature of the initial flow
+and `T0star` is the total temperature that would be achieved if enough heat
+is added to get to the sonic condition.
+
+
+  M_Rayleigh(T0T0star, g=1.4)
+
+Input:
+
+`T0T0star`::
+  _Float_, no default. T0/T0star where T0 is the total temperature of
+  the initial flow and T0star is the total temperature that would be
+  achieved if enough heat is added to get to the sonic condition.
+
+`g`::
+  _Float_, default: 1.4 +
+  Ratio of specific heats
+
+Returns the initial Mach number, `M`, of the flow.
+
+
+  T_Tstar(M, g=1.4)
+
+Input:
+
+`M`::
+  _Float_, no default. Mach number.
+
+`g`::
+  _Float_, default: 1.4 +
+  Ratio of specific heats
+
+Returns `T/Tstar` where `T` is the static temperature of the initial flow
+and `Tstar` is the static temperature that would be achieved if enough heat
+is added to get to sonic condition.
+
+
+  p_pstar(M, g=1.4)
+
+Input:
+
+`M`::
+  _Float_, no default. Mach number.
+
+`g`::
+  _Float_, default: 1.4 +
+  Ratio of specific heats
+
+Returns `p/pstar` where `p` is the static pressure of the initial flow
+and `pstar` is the static pressure that would be achieved if enough heat
+is added to get to sonic conditions.
+
+
+  r_rstar(M, g=1.4)
+
+Input:
+
+`M`::
+  _Float_, no default. Mach number.
+
+`g`::
+  _Float_, default: 1.4 +
+  Ratio of specific heats
+
+Returns density ratio, `rho/rhostar`, where `rho` is the density
+of the initial flow and `rhostar` is the density that would be achieved
+if enough heat is added to get to sonic conditions.
+
+
+  p0_p0star(M, g=1.4)
+
+Input:
+
+`M`::
+  _Float_, no default. Mach number.
+
+`g`::
+  _Float_, default: 1.4 +
+  Ratio of specific heats
+
+Returns `p0/p0star` where `p0` is the total pressure of the initial flow
+and `p0star` is the total pressure that would be achieved
+if enough heat is added to get to sonic conditions.
+
+== Supersonic turning
+
+  PM1(M, g=1.4)
+
+  PM2(nu, g=1.4)
+
+
 == Oblique shock
+
+  beta_obl(M1, theta, g=1.4, tol=1.0e-6)
+
+  beta_obl2(M1, p2_p1, g=1.4)
+
+  theta_obl(M1, beta, g=1.4)
+
+  M2_obl(M1, beta, theta, g=1.4)
+
+  r2_r1_obl(M1, beta, g=1.4)
+
+  vn2_vn1_obl(M1, beta, g=1.4)
+
+  v2_v1_obl(M1, beta, g=1.4)
+
+  p2_p1_obl(M1, beta, g=1.4)
+
+  T2_T1_obl(M1, beta, g=1.4)
+
+  p02_p01_obl(M1, beta, g=1.4)
+
+
+== Taylor-Maccoll cone flow
+
+  theta_cone(V1, p1, T1, beta, R=287.1, g=1.4)
+
+  beta_cone(V1, p1, T1, theta, R=287.1, g=1.4)
+
+  beta_cone2(M1, theta, R=287.1, g=1.4)
 
