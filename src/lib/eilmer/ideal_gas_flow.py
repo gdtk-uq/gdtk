@@ -151,9 +151,9 @@ def p02_p01(M1, g=1.4):
     t2 = (g + 1.0) * M1**2 / (2.0 + (g - 1.0) * M1**2)
     return t1**(1.0/(g-1.0)) * t2**(g/(g-1.0))
 
-def DS_Cv(M1, g=1.4):
+def ds_Cv(M1, g=1.4):
     """
-    Nodimensional entropy change ds across a normal shock.
+    Nondimensional entropy change ds/Cv across a normal shock.
 
     M1: Mach number of incoming flow
     g: ratio of specific heats Cp/Cv

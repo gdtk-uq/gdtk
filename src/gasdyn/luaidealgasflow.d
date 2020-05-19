@@ -18,7 +18,7 @@ import idealgasflow;
 // Name of metatable
 immutable string idealgasflowMT = "idealgasflow";
 
-/+ 
+/+
 Here is our prototype wrapped function, kept for reference.
 
 extern(C) int idealgasflow_A_Astar(lua_State* L)
@@ -80,7 +80,7 @@ string wrapfn(string fname, string[] args, int nreturn=1)
         code ~= "        double result = "~fname~"(";
         foreach(a; anames) { code ~= a~", "; } // a trailing comma is ok
         code ~= ");\n";
-        code ~= "        lua_pushnumber(L, result);\n";      
+        code ~= "        lua_pushnumber(L, result);\n";
         code ~= "        return 1;\n";
     } else {
         assert(nreturn>1, "oops, expected a positive number of return values.");
@@ -108,7 +108,7 @@ mixin(wrapfn("u2_u1", ["M1", "g=1.4"]));
 mixin(wrapfn("p2_p1", ["M1", "g=1.4"]));
 mixin(wrapfn("T2_T1", ["M1", "g=1.4"]));
 mixin(wrapfn("p02_p01", ["M1", "g=1.4"]));
-mixin(wrapfn("DS_Cv", ["M1", "g=1.4"]));
+mixin(wrapfn("ds_Cv", ["M1", "g=1.4"]));
 mixin(wrapfn("pitot_p", ["p1", "M1", "g=1.4"]));
 
 mixin(wrapfn("T0_T0star", ["M", "g=1.4"]));
@@ -148,7 +148,7 @@ void registeridealgasflowFunctions(lua_State* L)
 {
     // Register the idealgasflow table of functions.
     luaL_newmetatable(L, idealgasflowMT.toStringz);
-    
+
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1); // duplicates the current metatable
     lua_setfield(L, -2, "__index");
@@ -157,14 +157,14 @@ void registeridealgasflowFunctions(lua_State* L)
     mixin(registerfn("T0_T"));
     mixin(registerfn("p0_p"));
     mixin(registerfn("r0_r"));
-    
+
     mixin(registerfn("m2_shock"));
     mixin(registerfn("r2_r1"));
     mixin(registerfn("u2_u1"));
     mixin(registerfn("p2_p1"));
     mixin(registerfn("T2_T1"));
     mixin(registerfn("p02_p01"));
-    mixin(registerfn("DS_Cv"));
+    mixin(registerfn("ds_Cv"));
     mixin(registerfn("pitot_p"));
 
     mixin(registerfn("T0_T0star"));

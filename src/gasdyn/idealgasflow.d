@@ -63,7 +63,7 @@ double A_Astar(double M, double g=1.4)
 
 /**
  * Compute ratio of total (stagnation) temp to static temp
- * Input:  
+ * Input:
  *   M : Mach number
  *   g : ratio of specific heats
  */
@@ -81,7 +81,7 @@ double T0_T(double M, double g=1.4)
 double p0_p(double M, double g=1.4)
 {
     return pow(T0_T(M,g), g/(g-1.0));
-} 
+}
 
 /**
  * Compute ratio of stagnation density to free-stream density.
@@ -185,19 +185,19 @@ double T2_T1(double M1, double g=1.4)
  */
 double p02_p01(double M1, double g=1.4)
 {
-    double t1 = (g + 1.0) / (2.0 * g * M1^^2 - (g - 1.0)); 
+    double t1 = (g + 1.0) / (2.0 * g * M1^^2 - (g - 1.0));
     double t2 = (g + 1.0) * M1^^2 / (2.0 + (g - 1.0) * M1^^2);
     return t1^^(1.0/(g-1.0)) * t2^^(g/(g-1.0));
 }
 
 /**
- * Nodimensional entropy change ds across a normal shock.
+ * Nondimensional entropy change ds across a normal shock.
  * Input:
  *   M1: Mach number of incoming flow
  *   g: ratio of specific heats
  * Returns: ds/Cv
  */
-double DS_Cv(double M1, double g=1.4)
+double ds_Cv(double M1, double g=1.4)
 {
     double t1 = p2_p1(M1, g);
     double t2 = r2_r1(M1, g);
@@ -243,7 +243,7 @@ unittest {
  *   M: initial Mach number
  *   g: ratio of specific heats
  * Returns: T0/T0star where T0 is the total temperature of the initial flow
- *   and T0star is the total temperature that would be achieved 
+ *   and T0star is the total temperature that would be achieved
  *   if enough heat is added to get to sonic conditions.
  */
 double T0_T0star(double M, double g=1.4)
@@ -279,7 +279,7 @@ double M_Rayleigh(double T0T0star, double g=1.4)
  *   M: initial Mach number
  *   g: ratio of specific heats
  * Returns: T/Tstar where T is the static temperature of the initial flow
- *   and Tstar is the static temperature that would be achieved 
+ *   and Tstar is the static temperature that would be achieved
  *   if enough heat is added to get to sonic conditions.
  */
 double T_Tstar(double M, double g=1.4)
@@ -293,7 +293,7 @@ double T_Tstar(double M, double g=1.4)
  *   M: initial Mach number
  *   g: ratio of specific heats
  * Returns: p/pstar where p is the static pressure of the initial flow
- *   and pstar is the static pressure that would be achieved 
+ *   and pstar is the static pressure that would be achieved
  *   if enough heat is added to get to sonic conditions.
  */
 double p_pstar(double M, double g=1.4)
@@ -307,7 +307,7 @@ double p_pstar(double M, double g=1.4)
  *   M: initial Mach number
  *   g: ratio of specific heats
  * Returns: r/rstar where r is the density of the initial flow
- *   and rstar is the density that would be achieved 
+ *   and rstar is the density that would be achieved
  *   if enough heat is added to get to sonic conditions.
  */
 double r_rstar(double M, double g=1.4)
@@ -321,7 +321,7 @@ double r_rstar(double M, double g=1.4)
  *   M: initial Mach number
  *   g: ratio of specific heats
  * Returns: p0/p0star where p0 is the total pressure of the initial flow
- *   and p0star is the total pressure that would be achieved 
+ *   and p0star is the total pressure that would be achieved
  *   if enough heat is added to get to sonic conditions.
  */
 double p0_p0star(double M, double g=1.4)
@@ -350,7 +350,7 @@ unittest {
  * using eqn 4.40 (p134) in Anderson's 1990 text
  * Modern Compressible Flow With Historic Perspective, 2nd edition
  *
- * Note, nu = 0.0 when M = 1.0 
+ * Note, nu = 0.0 when M = 1.0
  * Inputs :
  * M : Mach number
  * g : ratio of specific heats
@@ -371,7 +371,7 @@ double PM1(double M,double g=1.4)
 
 /**
  * Calculate the Mach number given a Prandtl-Meyer function value.
- * Note, nu = 0.0 when M = 1.0 
+ * Note, nu = 0.0 when M = 1.0
  * Input:
  *   nu : Prandtl-Meyer function (radians)
  *   g  : ratio of specific heats
@@ -421,15 +421,15 @@ double PM2(double nu, double g=1.4, double tol=1.0e-6)
  * Input:
  *   Nu : Prandtl-Meyer function (radians)
  *   g  : ratio of specific heats
- */   
-double MFromNu_approximate(double nu,double g=1.4) 
+ */
+double MFromNu_approximate(double nu,double g=1.4)
 {
     double M = 0.0;
     double nu_d = nu * 180.0 / PI;
     if (nu_d < 0.0) {
         M = 0.0;
     } else if (nu_d < 5.0) {
-        M = 1.0 + 7.932e-2 * pow(nu_d, 2.0/3.0) * 
+        M = 1.0 + 7.932e-2 * pow(nu_d, 2.0/3.0) *
             (1.0 + nu_d * (3.681e-2 + nu_d * (-5.99e-3 + nu_d * 5.719e-4)) );
     } else if ( nu_d < 65.0 ) {
         M = 1.071 + nu_d * (3.968e-2 + nu_d * (-4.615e-4 + nu_d *
@@ -449,7 +449,7 @@ double MFromNu_approximate(double nu,double g=1.4)
  *   M : Mach number (M >= 1.0)
  * Returns Mach angle in radians.
  */
-double MachAngle(double M) 
+double MachAngle(double M)
 {
     if (M < 1.0) {
         throw new GasFlowException(text("MachAngle: subsonic Mach number: ", M));
@@ -507,7 +507,7 @@ double beta_obl(double M1, double theta, double g=1.4,double tol=1.0e-6)
     int sign_beta = (theta < 0.0) ? -1 : 1;
     theta = fabs(theta);
     auto f_to_solve = delegate(double beta){return theta_obl(M1, beta, g) - theta;};
-    //    
+    //
     double b1 = asin(1.0/M1); // the weakest shock is at the Mach angle
     double f1 = f_to_solve(b1);
     if (fabs(f1) < tol) return sign_beta*b1;
@@ -565,7 +565,7 @@ double theta_obl(double M1, double beta, double g=1.4)
                           " for M1=", M1, " beta=", beta);
         throw new GasFlowException(msg);
     } // end if
-    double t1 = 2.0 / tan(beta) * (M1n^^2 - 1.0); 
+    double t1 = 2.0 / tan(beta) * (M1n^^2 - 1.0);
     double t2 = M1^^2 * (g + cos(2.0 * beta)) + 2.0;
     return sign_beta*atan(t1/t2);
 } // end theta_obl()
@@ -633,9 +633,9 @@ double Vn2_Vn1_obl(double M1, double beta, double g=1.4)
 {
     double M1n = M1 * fabs(sin(beta));
     if (M1n < 1.0) {
-        throw new GasFlowException(text("Vn2_Vn1_obl: subsonic normal Mach number: ", M1n));       
+        throw new GasFlowException(text("Vn2_Vn1_obl: subsonic normal Mach number: ", M1n));
     }
-    return u2_u1(M1n,g);        
+    return u2_u1(M1n,g);
 }
 
 /**
@@ -771,7 +771,7 @@ double[] theta_cone(double V1, double p1, double T1, double beta,
     beta: shock wave angle wrt stream direction (in radians)
     R: gas constant
     g: ratio of specific heats
-    
+
     Returns:
     an array of [theta_c, V_c, p_c, T_c]
     where
@@ -784,8 +784,8 @@ double[] theta_cone(double V1, double p1, double T1, double beta,
     across theta until V_theta goes through zero.
     The cone surface corresponds to V_theta == 0.
 
-    .. Versions: 
-       08-Mar-2012 : PJ ideal-gas version adapted from the cea2_gas_flow.py. 
+    .. Versions:
+       08-Mar-2012 : PJ ideal-gas version adapted from the cea2_gas_flow.py.
        24-Jun-2012 : RJG added checks to catch the limiting case when beta < mu
                    : and a linear interpolation when beta is only slightly larger
                    : than mu (1% larger)
