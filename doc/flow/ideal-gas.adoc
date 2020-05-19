@@ -22,7 +22,7 @@ print("Expected: M1=2, M2=0.5774, T2/T1=1.687, p2/p1=4.50, r2/r1=2.667")
 
 == Isentropic/adiabatic steady flow
 
-  A_Astar(M, g=1.4)
+  igf.A_Astar(M, g=1.4)
 
 Input:
 
@@ -36,7 +36,7 @@ Input:
 Returns area ratio, `A/Astar`, for an isentropic, quasi-one-dimensional flow.
 
 
-  T0_T(M, g=1.4)
+  igf.T0_T(M, g=1.4)
 
 Input:
 
@@ -50,7 +50,7 @@ Input:
 Returns `T0/T`, the ratio of total temperature over static temperature for adiabatic flow.
 
 
-  p0_p(M, g=1.4)
+  igf.p0_p(M, g=1.4)
 
 Input:
 
@@ -63,7 +63,7 @@ Input:
 
 Returns `p0/p`, the ratio of total pressure over static pressure for isentropic flow.
 
-  r0_r(M, g=1.4)
+  igf.r0_r(M, g=1.4)
 
 Input:
 
@@ -79,7 +79,7 @@ Returns `rho0/rho`, the ratio of stagnation density over local for isentropic fl
 
 == Normal shock
 
-  m2_shock(M1, g=1.4)
+  igf.m2_shock(M1, g=1.4)
 
 Input:
 
@@ -93,7 +93,7 @@ Input:
 Returns `m2`, Mach number following the shock processing.
 
 
-  r2_r1(M1, g=1.4)
+  igf.r2_r1(M1, g=1.4)
 
 Input:
 
@@ -107,7 +107,7 @@ Input:
 Returns density ratio, `r2/r1`, across a normal shock.
 
 
-  v2_v1(M1, g=1.4)
+  igf.v2_v1(M1, g=1.4)
 
 Input:
 
@@ -121,7 +121,7 @@ Input:
 Returns velocity ratio, `v2/v1`, across a normal shock.
 
 
-  p2_p1(M1, g=1.4)
+  igf.p2_p1(M1, g=1.4)
 
 Input:
 
@@ -135,7 +135,7 @@ Input:
 Returns static pressure ratio, `p2/p1`, across a normal shock.
 
 
-  T2_T1(M1, g=1.4)
+  igf.T2_T1(M1, g=1.4)
 
 Input:
 
@@ -149,7 +149,7 @@ Input:
 Returns static temperature ratio, `T2/T1`, across a normal shock.
 
 
-  p02_p01(M1, g=1.4)
+  igf.p02_p01(M1, g=1.4)
 
 Input:
 
@@ -163,7 +163,7 @@ Input:
 Returns stagnation pressure ratio, `p02/p01`, across a normal shock.
 
 
-  ds_Cv(M1, g=1.4)
+  igf.ds_Cv(M1, g=1.4)
 
 Input:
 
@@ -177,7 +177,7 @@ Input:
 Returns nondimensional entropy change, `ds/Cv`, across a normal shock.
 
 
-  pitot_p(p1, M1, g=1.4)
+  igf.pitot_p(p1, M1, g=1.4)
 
 Input:
 
@@ -200,7 +200,7 @@ Rayleigh-line flow.
 The flow starts with local Mach number, `M`, and (hypothetically) enough heat
 is added for the flow to reach sonic (`Mstar=1`) condition.
 
-  T0_T0star(M, g=1.4)
+  igf.T0_T0star(M, g=1.4)
 
 Input:
 
@@ -216,7 +216,7 @@ and `T0star` is the total temperature that would be achieved if enough heat
 is added to get to the sonic condition.
 
 
-  M_Rayleigh(T0T0star, g=1.4)
+  igf.M_Rayleigh(T0T0star, g=1.4)
 
 Input:
 
@@ -232,7 +232,7 @@ Input:
 Returns the initial Mach number, `M`, of the flow.
 
 
-  T_Tstar(M, g=1.4)
+  igf.T_Tstar(M, g=1.4)
 
 Input:
 
@@ -248,7 +248,7 @@ and `Tstar` is the static temperature that would be achieved if enough heat
 is added to get to sonic condition.
 
 
-  p_pstar(M, g=1.4)
+  igf.p_pstar(M, g=1.4)
 
 Input:
 
@@ -264,7 +264,7 @@ and `pstar` is the static pressure that would be achieved if enough heat
 is added to get to sonic conditions.
 
 
-  r_rstar(M, g=1.4)
+  igf.r_rstar(M, g=1.4)
 
 Input:
 
@@ -280,7 +280,7 @@ of the initial flow and `rhostar` is the density that would be achieved
 if enough heat is added to get to sonic conditions.
 
 
-  p0_p0star(M, g=1.4)
+  igf.p0_p0star(M, g=1.4)
 
 Input:
 
@@ -297,39 +297,313 @@ if enough heat is added to get to sonic conditions.
 
 == Supersonic turning
 
-  PM1(M, g=1.4)
+  igf.PM1(M, g=1.4)
 
-  PM2(nu, g=1.4)
+Input:
+
+`M`::
+  _Float_, no default. Mach number.
+
+`g`::
+  _Float_, default: 1.4 +
+  Ratio of specific heats
+
+Returns Prandtl-Meyer function value, in radians.
+
+
+  igf.PM2(nu, g=1.4)
+
+Input:
+
+`nu`::
+  _Float_, no default. Prandtl-Meyer function value, in radians.
+
+`g`::
+  _Float_, default: 1.4 +
+  Ratio of specific heats
+
+Returns corresponding Mach number.
 
 
 == Oblique shock
 
-  beta_obl(M1, theta, g=1.4, tol=1.0e-6)
+  igf.beta_obl(M1, theta, g=1.4, tol=1.0e-6)
 
-  beta_obl2(M1, p2_p1, g=1.4)
+Input:
 
-  theta_obl(M1, beta, g=1.4)
+`M1`::
+  _Float_, no default. Mach number of gas before the shock.
 
-  M2_obl(M1, beta, theta, g=1.4)
+`theta`::
+  _Float_, no default. Steamline deflection angle, in radians.
 
-  r2_r1_obl(M1, beta, g=1.4)
+`g`::
+  _Float_, default: 1.4 +
+  Ratio of specific heats
 
-  vn2_vn1_obl(M1, beta, g=1.4)
+Returns shock angle, `beta` (in radians), with respect to the
+original stream direction.
 
-  v2_v1_obl(M1, beta, g=1.4)
 
-  p2_p1_obl(M1, beta, g=1.4)
+  igf.beta_obl2(M1, p2_p1, g=1.4)
 
-  T2_T1_obl(M1, beta, g=1.4)
+Input:
 
-  p02_p01_obl(M1, beta, g=1.4)
+`M1`::
+  _Float_, no default. Mach number of gas before the shock.
+
+`p2_p1`::
+  _Float_, no default. +
+  Static pressure ratio, `p2/p1`, across the shock.
+
+`g`::
+  _Float_, default: 1.4 +
+  Ratio of specific heats
+
+Returns shock angle, `beta` (in radians), with respect to the
+original stream direction.
+
+  igf.theta_obl(M1, beta, g=1.4)
+
+Input:
+
+`M1`::
+  _Float_, no default. Mach number of gas before the shock.
+
+`beta`::
+  _Float_, no default. +
+  Shock angle, in radians, relative to the original stream direction.
+
+`g`::
+  _Float_, default: 1.4 +
+  Ratio of specific heats
+
+Returns deflection angle of the stream, `theta` (in radians).
+
+
+  igf.M2_obl(M1, beta, theta, g=1.4)
+
+Input:
+
+`M1`::
+  _Float_, no default. Mach number of gas before the shock.
+
+`beta`::
+  _Float_, no default. +
+  Shock angle, in radians, relative to the original stream direction.
+
+`theta`::
+  _Float_, no default. Steamline deflection angle, in radians.
+
+`g`::
+  _Float_, default: 1.4 +
+  Ratio of specific heats
+
+Returns `M2`, Mach number in flow after the shock.
+
+
+  igf.r2_r1_obl(M1, beta, g=1.4)
+
+Input:
+
+`M1`::
+  _Float_, no default. Mach number of gas before the shock.
+
+`beta`::
+  _Float_, no default. +
+  Shock angle, in radians, relative to the original stream direction.
+
+`g`::
+  _Float_, default: 1.4 +
+  Ratio of specific heats
+
+Returns density ratio, `rho2/rho1` across an oblique shock.
+
+
+  igf.vn2_vn1_obl(M1, beta, g=1.4)
+
+Input:
+
+`M1`::
+  _Float_, no default. Mach number of gas before the shock.
+
+`beta`::
+  _Float_, no default. +
+  Shock angle, in radians, relative to the original stream direction.
+
+`g`::
+  _Float_, default: 1.4 +
+  Ratio of specific heats
+
+Returns normal-velocity ratio, `vn1/vn2`, across an oblique shock.
+
+
+  igf.v2_v1_obl(M1, beta, g=1.4)
+
+Input:
+
+`M1`::
+  _Float_, no default. Mach number of gas before the shock.
+
+`beta`::
+  _Float_, no default. +
+  Shock angle, in radians, relative to the original stream direction.
+
+`g`::
+  _Float_, default: 1.4 +
+  Ratio of specific heats
+
+Returns flow-speed ratio, `v2/v1`, across an oblique shock.
+
+
+  igf.p2_p1_obl(M1, beta, g=1.4)
+
+Input:
+
+`M1`::
+  _Float_, no default. Mach number of gas before the shock.
+
+`beta`::
+  _Float_, no default. +
+  Shock angle, in radians, relative to the original stream direction.
+
+`g`::
+  _Float_, default: 1.4 +
+  Ratio of specific heats
+
+Returns static pressure ratio, `p2/p1`, across an oblique shock.
+
+
+  igf.T2_T1_obl(M1, beta, g=1.4)
+
+Input:
+
+`M1`::
+  _Float_, no default. Mach number of gas before the shock.
+
+`beta`::
+  _Float_, no default. +
+  Shock angle, in radians, relative to the original stream direction.
+
+`g`::
+  _Float_, default: 1.4 +
+  Ratio of specific heats
+
+Returns static temperature ratio, `T2/T1`, across an oblique shock.
+
+
+  igf.p02_p01_obl(M1, beta, g=1.4)
+
+Input:
+
+`M1`::
+  _Float_, no default. Mach number of gas before the shock.
+
+`beta`::
+  _Float_, no default. +
+  Shock angle, in radians, relative to the original stream direction.
+
+`g`::
+  _Float_, default: 1.4 +
+  Ratio of specific heats
+
+Returns ratio of stagnation pressures, `p02/p01`, across an oblique shock.
+
 
 
 == Taylor-Maccoll cone flow
 
-  theta_cone(V1, p1, T1, beta, R=287.1, g=1.4)
+Compute the cone-surface angle and conditions given the shock wave angle.
+The computation starts with the oblique-shock jump and then integrates
+across theta until V_theta goes through zero.
+The cone surface corresponds to `V_theta == 0`.
 
-  beta_cone(V1, p1, T1, theta, R=287.1, g=1.4)
+  igf.theta_cone(V1, p1, T1, beta, R=287.1, g=1.4)
 
-  beta_cone2(M1, theta, R=287.1, g=1.4)
+Input:
+
+`V1`::
+  _Float_, no default. Speed of gas (in m/s) entering the shock.
+
+`p1`::
+  _Float_, no default. Static pressure of gas (in Pa) entering the shock.
+
+`T1`::
+  _Float_, no default. Static temperature of gas (in K) entering the shock.
+
+`beta`::
+  _Float_, no default. +
+  Shock angle, in radians, relative to the original stream direction.
+
+`R`::
+  _Float_, default: 287.1 +
+  Gas constant, in `J/kg.K`
+
+`g`::
+  _Float_, default: 1.4 +
+  Ratio of specific heats
+
+Returns tuple of (theta_c, V_c, p_c, T_c).
+
+`theta_c`::
+  stream deflection angle, in radians
+
+`V_c`::
+  the cone-surface speed of gas, in m/s
+
+`p_c`::
+  the cone-surface pressure, in Pa
+
+`T_c`::
+  the cone-surface static temperature, in K
+
+
+  igf.beta_cone(V1, p1, T1, theta, R=287.1, g=1.4)
+
+Input:
+
+`V1`::
+  _Float_, no default. Speed of gas (in m/s) entering the shock.
+
+`p1`::
+  _Float_, no default. Static pressure of gas (in Pa) entering the shock.
+
+`T1`::
+  _Float_, no default. Static temperature of gas (in K) entering the shock.
+
+`theta`::
+  _Float_, no default. +
+  Cone deflection angle, in radians.
+
+`R`::
+  _Float_, default: 287.1 +
+  Gas constant, in `J/kg.K`
+
+`g`::
+  _Float_, default: 1.4 +
+  Ratio of specific heats
+
+Returns `beta`, the shock wave angle (in radians) with respect to the free-stream flow direction.
+
+
+  igf.beta_cone2(M1, theta, R=287.1, g=1.4)
+
+Input:
+
+`M1`::
+  _Float_, no default. Mach number of gas entering the shock.
+
+`theta`::
+  _Float_, no default. +
+  Cone deflection angle, in radians.
+
+`R`::
+  _Float_, default: 287.1 +
+  Gas constant, in `J/kg.K`
+
+`g`::
+  _Float_, default: 1.4 +
+  Ratio of specific heats
+
+Returns `beta`, the shock wave angle (in radians) with respect to the free-stream flow direction.
 
