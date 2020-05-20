@@ -121,7 +121,7 @@ public:
             myTindx = to!int(items[0]);
         }
         // We should be at the line that contains the requested tindx.
-        state = to!DiaphragmState(items[1]);
+        state = to!DiaphragmState(to!int(items[1]));
     } // end read_data()
 
     void write_data(File fp, int tindx, bool write_header)

@@ -197,7 +197,9 @@ public:
             LCell c = cells[i];
             c.L = xR-xL;
             if (c.L <= 0.0) {
-                throw new Exception("Oops, adjacent faces have crossed over.");
+                string msg = "Oops, adjacent faces have crossed over.";
+                debug { msg ~= format(" xL=%g, xR=%g", xL, xR); }
+                throw new Exception(msg);
             }
             c.volume = 0.5*(faces[i].area+faces[i+1].area)*(c.L);
             c.xmid = 0.5*(xR+xL);

@@ -791,10 +791,6 @@ class Diaphragm(EndCondition):
         """
         super().__init__(slugL=slugL, slugL_end=slugL_end,
                          slugR=slugR, slugR_end=slugR_end)
-        if len(label) > 0:
-            self.label = label
-        else:
-            self.label = "diaphragm-" + str(self.indx)
         self.x0 = x0
         self.p_burst = p_burst
         self.state = state
@@ -803,6 +799,10 @@ class Diaphragm(EndCondition):
         self.dxR = dxR
         global diaphragmList
         self.indx = len(diaphragmList) # next available index
+        if len(label) > 0:
+            self.label = label
+        else:
+            self.label = "diaphragm-" + str(self.indx)
         diaphragmList.append(self)
         return
 
@@ -889,7 +889,6 @@ class FreeEnd(EndCondition):
         self.x0 = x0
         global freeEndList
         freeEndList.append(self)
-        ecList.append(self)
         return
 
     def write_config(self, fp):
@@ -1077,7 +1076,7 @@ def connect_pair(cL, cR):
     elif isinstance(cL,GasSlug) and isinstance(cR, FreeEnd):
         cL.ecR = cR
         cR.slugL = cL
-        cR.slugL_end = 'L'
+        cR.slugL_end = 'R'
         print("  gas-slug <--> free-end is done")
     elif isinstance(cL,GasSlug) and isinstance(cR, GasInterface):
         cL.ecR = cR
