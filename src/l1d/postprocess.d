@@ -83,6 +83,10 @@ void generate_xt_dataset(string varName, int tindxStart, int tindxEnd, bool take
 
 void extract_time_slice(int tindx)
 {
+    double[int] times = readTimesFile();
+    int[] tindices = times.keys();
+    tindices.sort();
+    tindx = min(max(tindx, tindices[0]), tindices[$-1]);
     writeln("Postprocessing to extract slug data at a tindx=", tindx);
     // We need just enough of the configuration to set up the gas slug array.
     string dirName = L1dConfig.job_name;
