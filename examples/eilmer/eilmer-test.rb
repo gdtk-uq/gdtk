@@ -2,15 +2,15 @@
 # eilmer-test.rb
 #
 # Smoke test the Eilmer4 code.
-# 
+#
 # Presently, we work through the specified directories and
-# explicitly invoke the test scripts that reside there. 
+# explicitly invoke the test scripts that reside there.
 # Short tests are those which may take up to 20 minutes on my workstation.
 # I don't want to wait more than an hour, or so, for the set of short tests
 # to run.
 #
 # Usage:
-# 1. ./eilmer-text.rb
+# 1. ./eilmer-test.rb
 # 2. ruby eilmer-test.rb
 #
 # PJ, 2011-01-11 Eilmer3 version
