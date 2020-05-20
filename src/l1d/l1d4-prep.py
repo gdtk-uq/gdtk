@@ -772,15 +772,19 @@ class Diaphragm(EndCondition):
     """
 
     __slots__ = 'indx', \
-                'x0', 'p_burst', 'is_burst', \
+                'x0', 'p_burst', 'state', \
                 'dt_hold', 'dxL', 'dxR', 'label'
 
-    def __init__(self, x0, p_burst, is_burst=0, dt_hold=0.0,
+    def __init__(self, x0, p_burst, state=0, dt_hold=0.0,
                  dxL=0.0, dxR=0.0, label="",
                  slugL=None, slugL_end='R',
                  slugR=None, slugR_end='L'):
         """
         Creates a diaphragm with specified properties.
+
+        state == 0, closed
+        state == 1, triggered by over-pressure
+        state == 2, open
 
         The connections to GasSlugs are made later via the function
         assemble_gas_path.
@@ -793,7 +797,7 @@ class Diaphragm(EndCondition):
             self.label = "diaphragm-" + str(self.indx)
         self.x0 = x0
         self.p_burst = p_burst
-        self.is_burst = is_burst
+        self.state = state
         self.dt_hold = dt_hold
         self.dxL = dxL
         self.dxR = dxR
@@ -823,8 +827,8 @@ class Diaphragm(EndCondition):
         Write state data.
         """
         if write_header:
-            fp.write("# is_burst \n")
-        fp.write("%d %d\n" % (tindx, self.is_burst))
+            fp.write("# tindx state \n")
+        fp.write("%d %d\n" % (tindx, self.state))
         return
 
 

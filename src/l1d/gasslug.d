@@ -253,7 +253,7 @@ public:
                 if (ecL) {
                     if (cast(Diaphragm) ecL) {
                         auto dia = cast(Diaphragm) ecL;
-                        if (dia.is_burst) {
+                        if (dia.state == DiaphragmState.open) {
                             // Slugs interact as per GasInterface.
                             LCell cR = cells[0];
                             auto slugL =  dia.slugL;
@@ -303,7 +303,7 @@ public:
                 if (ecR) {
                     if (cast(Diaphragm) ecR) {
                         auto dia = cast(Diaphragm) ecR;
-                        if (dia.is_burst) {
+                        if (dia.state == DiaphragmState.open) {
                             // Slugs interact as per GasInterface.
                             LCell cL = cells[$-1];
                             auto slugR =  dia.slugR;

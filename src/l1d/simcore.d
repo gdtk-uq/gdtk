@@ -245,7 +245,7 @@ void init_simulation(int tindx_start)
         dia.read_data(fp, tindx_start);
         fp.close();
         if (L1dConfig.verbosity_level >= 1) {
-            writeln(format("  is_burst=%s", dia.is_burst));
+            writeln(format("  state=%s", dia.state));
         }
     }
     sim_data.dt_global = L1dConfig.dt_init;
@@ -296,7 +296,10 @@ void integrate_in_time()
         }
         // 2. Update state of end conditions.
         foreach (ec; ecs) {
-            // [TODO] Diaphragms
+            auto dia = cast(Diaphragm) ec;
+            if (dia) {
+                if (dia) { dia.update_state(sim_data.sim_time); }
+            }
         }
         // 3. Record current state of dynamic components.
         foreach (p; pistons) { p.record_state(); }
@@ -314,7 +317,8 @@ void integrate_in_time()
                 // 4. Predictor update.
                 // 4.1 Update the end conditions.
                 foreach (ec; ecs) {
-                    // [TODO] Diaphragms
+                    auto dia = cast(Diaphragm) ec;
+                    if (dia) { dia.update_state(sim_data.sim_time); }
                 }
                 // 4.2 Update dynamic elements.
                 foreach (s; gasslugs) {

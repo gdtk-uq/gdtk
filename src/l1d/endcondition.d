@@ -11,6 +11,7 @@ import std.string;
 import std.json;
 import std.format;
 import std.algorithm;
+import std.math;
 
 import json_helper;
 import geom;
@@ -19,6 +20,7 @@ import gasflow;
 import config;
 import tube;
 import gasslug;
+import lcell;
 import piston;
 import simcore;
 import misc;
@@ -77,13 +79,16 @@ public:
 } // end class EndCondition
 
 
+enum DiaphragmState {closed=0, triggered=1, open=2};
+
 class Diaphragm : EndCondition {
 public:
     double p_burst;
     double dt_hold;
     double dxL;
     double dxR;
-    bool is_burst;
+    DiaphragmState state;
+    double t_open;
 
     this(size_t indx, JSONValue jsonData)
     {
@@ -116,15 +121,44 @@ public:
             myTindx = to!int(items[0]);
         }
         // We should be at the line that contains the requested tindx.
-        is_burst = (to!int(items[1]) == 1);
+        state = to!DiaphragmState(items[1]);
     } // end read_data()
 
     void write_data(File fp, int tindx, bool write_header)
     {
         if (write_header) { fp.writeln("# tindx  is_burst"); }
-        fp.writeln(format("%d %d", tindx, ((is_burst)?1:0)));
+        fp.writeln(format("%d %d", tindx, to!int(state)));
     } // end write_data()
 
+    void update_state(double t)
+    {
+        final switch (state) {
+        case DiaphragmState.closed:
+            double pL = 0.0;
+            if (slugL) {
+                LCell cL = (slugL_end == End.L) ? slugL.cells[0] : slugL.cells[$-1];
+                pL = cL.gas.p;
+            }
+            double pR = 0.0;
+            if (slugR) {
+                LCell cR = (slugR_end == End.L) ? slugR.cells[0] : slugR.cells[$-1];
+                pR = cR.gas.p;
+            }
+            if (fabs(pL-pR) > p_burst) {
+                t_open = t + dt_hold;
+                state = DiaphragmState.triggered;
+            }
+            break;
+        case DiaphragmState.triggered:
+            if (t > t_open) {
+                state = DiaphragmState.open;
+            }
+            break;
+        case DiaphragmState.open:
+            // do nothing
+            break;
+        }
+    } // end update_state()
 } // end class Diaphragm
 
 
