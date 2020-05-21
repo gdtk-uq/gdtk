@@ -1,7 +1,7 @@
 # sod-he-air.py
 config.title = 'Sods shock tube, helium driving equilibrium-air, 2020-05-20'
 gm_he = add_gas_model('ideal-helium-gas-model.lua')
-gm_air = add_gas_model('cea-lut-air-version-test.lua')
+gm_air = add_gas_model('cea-lut-air.lua')
 
 # Define the tube walls.
 add_break_point(0.0, 0.01)
