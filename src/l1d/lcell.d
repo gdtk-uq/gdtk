@@ -15,6 +15,7 @@ import std.algorithm;
 
 import geom;
 import gas;
+import kinetics;
 import gasflow;
 import config;
 
@@ -190,11 +191,49 @@ public:
     }
 
     @nogc
-    void chemical_increment(double dt, GasModel gmodel)
+    void chemical_increment(double dt, GasModel gmodel, ThermochemicalReactor reactor)
     {
-        // [TODO]
+        if (gas.T <= L1dConfig.T_frozen) return;
+        double[maxParams] params; // Not using these, but some gas models need them.
+        double dt_chem_save = dt_chem; // Keep a copy for reporting, if there is a failure.
+        try {
+            reactor(gas, dt, dt_chem, dt_therm, params);
+        } catch(ThermochemicalReactorUpdateException err) {
+            // It's probably worth one more try but setting dt_chem = -1.0 to give
+            // the ODE solver a fresh chance to find a good timestep.
+            dt_chem = -1.0;
+            try {
+                 reactor(gas, dt, dt_chem, dt_therm, params);
+            } catch(ThermochemicalReactorUpdateException err) {
+                string msg = "chemical_increment() failed.";
+                debug {
+                    msg ~= format("Caught: %s\n", err.msg);
+                    msg ~= format("This cell is located at: %s\n", xmid);
+                    msg ~= format("The flow timestep is: %12.6e\n", dt);
+                    msg ~= format("The initial attempted dt_chem is: %12.6e\n", dt_chem_save);
+                    msg ~= format("The gas state AFTER the failed update is:\n   gas %s", gas);
+                }
+                throw new ThermochemicalReactorUpdateException(msg);
+            }
+        }
+        // The update only changes mass fractions; we need to impose
+        // a thermodynamic constraint based on a call to the equation of state.
+        try {
+            gmodel.update_thermo_from_rhou(gas);
+        }
+        catch (Exception err) {
+            string msg = "chemical_increment() failed update_thermo_from_rhou";
+            debug {
+                msg ~= format("Caught %s", err.msg);
+                msg ~= format("This cell is located at: %s\n", xmid);
+                msg ~= "This failure occurred when trying to update the thermo state after\n";
+                msg ~= "computing the species change due to chemical reactions.\n";
+                msg ~= format("The present gas state is:\n   gas %s", gas);
+            }
+            throw new GasModelException(msg);
+        }
         return;
-    }
+    } // end chemical_increment()
 
     @nogc
     void source_terms(int viscous_effects, bool adiabatic, GasModel gmodel)

@@ -63,6 +63,7 @@ void init_simulation(int tindx_start)
     L1dConfig.reaction_files_1 = getJSONstringarray(configData, "reaction_files_1", []);
     L1dConfig.reaction_files_2 = getJSONstringarray(configData, "reaction_files_2", []);
     L1dConfig.reacting = getJSONbool(configData, "reacting", false);
+    L1dConfig.T_frozen = getJSONdouble(configData, "T_frozen", 300.0);
     if (L1dConfig.verbosity_level >= 1) {
         writeln("Config:");
         writefln("  title= \"%s\"", L1dConfig.title);
@@ -70,6 +71,7 @@ void init_simulation(int tindx_start)
         writeln("  reaction_files_1= ", L1dConfig.reaction_files_1);
         writeln("  reaction_files_2= ", L1dConfig.reaction_files_2);
         writeln("  reacting= ", L1dConfig.reacting);
+        writeln("  T_frozen= ", L1dConfig.T_frozen);
     }
     assert(L1dConfig.gas_model_files.length == L1dConfig.reaction_files_1.length &&
            L1dConfig.gas_model_files.length == L1dConfig.reaction_files_2.length,

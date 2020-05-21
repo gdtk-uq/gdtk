@@ -80,7 +80,8 @@ class GlobalConfig(object):
     # via typographical errors.
     __slots__ = 'job_name', 'title', \
                 'gas_model_files', 'gmodels', \
-                'reaction_files_1', 'reaction_files_2', 'reactors', 'reacting', \
+                'reaction_files_1', 'reaction_files_2', \
+                'reactors', 'reacting', 'T_frozen', \
                 'dt_init', 'cfl', 'cfl_count', 'print_count', 'dt_plot_list', \
                 'max_time', 'max_step', 'x_order', 't_order', \
                 'hloc_list'
@@ -98,6 +99,7 @@ class GlobalConfig(object):
         self.reaction_files_2 = []
         self.reactors = []
         self.reacting = False
+        self.T_frozen = 300.0
         self.dt_init = 1.0e-6
         self.cfl = 0.5
         self.cfl_count = 10;
@@ -128,6 +130,7 @@ class GlobalConfig(object):
         fp.write('  "reaction_files_1": %s,\n' % json.dumps(self.reaction_files_1))
         fp.write('  "reaction_files_2": %s,\n' % json.dumps(self.reaction_files_2))
         fp.write('  "reacting": %s,\n' % json.dumps(self.reacting))
+        fp.write('  "T_frozen": %e,\n' % self.T_frozen)
         fp.write('  "max_time": %e,\n' % self.max_time)
         fp.write('  "max_step": %d,\n' % self.max_step)
         fp.write('  "dt_init": %e,\n' % self.dt_init)

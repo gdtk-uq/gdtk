@@ -18,6 +18,7 @@ public:
     static string[] reaction_files_1;
     static string[] reaction_files_2;
     shared static bool reacting = false;
+    shared static double T_frozen;
     shared static double max_time;
     shared static int max_step;
     shared static double dt_init;

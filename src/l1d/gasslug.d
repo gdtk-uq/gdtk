@@ -19,6 +19,7 @@ import std.algorithm;
 import json_helper;
 import geom;
 import gas;
+import kinetics;
 import gasflow;
 import config;
 import lcell;
@@ -377,7 +378,7 @@ public:
             c.dL_bardt[level] = fabs(c.vel);
         }
         return;
-    }
+    } // end time_derivatives()
 
     @nogc
     void predictor_step(double dt)
@@ -402,7 +403,17 @@ public:
     @nogc
     void chemical_increment(double dt)
     {
-        foreach (c; cells) { c.chemical_increment(dt, gmodel); }
+        ThermochemicalReactor reactor = reactors[gmodel_id];
+        if (!reactor) return;
+        if (!(gmodel is reactor._gmodel)) {
+            throw new Error("Gas model objects do not match.");
+        }
+        foreach (c; cells) {
+            c.chemical_increment(dt, gmodel, reactor);
+            if (viscous_effects > 0) {
+                gmodel.update_trans_coeffs(c.gas);
+            }
+        }
         return;
     }
 
