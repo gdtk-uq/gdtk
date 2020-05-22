@@ -77,6 +77,10 @@ public:
         //
         foreach (i; 0 .. ncells+1) { faces ~= new LFace(); }
         foreach (i; 0 .. ncells) { cells ~= new LCell(gmodel); }
+        //
+        // Private workspace for quadratic reconstruction of flow data.
+        gsL = new GasState(gmodel);
+        gsR = new GasState(gmodel);
     } // end constructor
 
     void read_face_data(File fp, int tindx)
@@ -352,11 +356,45 @@ public:
                     throw new Error("Right end of gas slug does not have an end condition.");
                 }
             } else {
-                // Interior face.
-                LCell cL = cells[i-1];
-                LCell cR = cells[i];
-                lrivp(cL.gas, cR.gas, cL.vel, cR.vel, gmodel, gmodel,
-                      f.dxdt[level], f.p);
+                // Interior face i is between cell i-1 and i.
+                if (L1dConfig.x_order == 2) {
+                    // Do quadratic reconstruction.
+                    if (i == 1) {
+                        // Only one cell to the left.
+                        LCell cL0 = cells[i-1];
+                        LCell cR0 = cells[i];
+                        LCell cR1 = cells[i+1];
+                        velL = cL0.vel;
+                        gsL.copy_values_from(cL0.gas);
+                        interpR_prepare(cL0.L, cR0.L, cR1.L);
+                        interpR(cL0, cR0, cR1, gsR, velR);
+                    } else if (i == faces.length-2) {
+                        // Only one cell to the right.
+                        LCell cL1 = cells[i-2];
+                        LCell cL0 = cells[i-1];
+                        LCell cR0 = cells[i];
+                        interpL_prepare(cL1.L, cL0.L, cR0.L);
+                        interpL(cL1, cL0, cR0, gsL, velL);
+                        velR = cR0.vel;
+                        gsR.copy_values_from(cR0.gas);
+                    } else {
+                        // Assume at least two cells to the left and two to the right.
+                        LCell cL1 = cells[i-2];
+                        LCell cL0 = cells[i-1];
+                        LCell cR0 = cells[i];
+                        LCell cR1 = cells[i+1];
+                        interpL_prepare(cL1.L, cL0.L, cR0.L);
+                        interpL(cL1, cL0, cR0, gsL, velL);
+                        interpR_prepare(cL0.L, cR0.L, cR1.L);
+                        interpR(cL0, cR0, cR1, gsR, velR);
+                    }
+                    lrivp(gsL, gsR, velL, velR, gmodel, gmodel, f.dxdt[level], f.p);
+                } else {
+                    // Just use cell-centre values directly.
+                    LCell cL0 = cells[i-1];
+                    LCell cR0 = cells[i];
+                    lrivp(cL0.gas, cR0.gas, cL0.vel, cR0.vel, gmodel, gmodel, f.dxdt[level], f.p);
+                } // end if(x_order
             }
         }
         foreach (c; cells) {
@@ -450,4 +488,101 @@ public:
         return smallest_transit_time * L1dConfig.cfl_value;
     }
 
+    // Quadratic reconstruction functions adapted from Eilmer, 2020-05-22.
+    // For a sketch of the idea, see PJ workbook notes Jan 2001.
+
+    immutable double epsilon_van_albada = 1.0e-12;
+
+    @nogc
+    double interpL_scalar(double qL1, double qL0, double qR0)
+    {
+        double qL = qL0;
+        double delLminus = (qL0 - qL1) * two_over_lenL0_plus_lenL1;
+        double del = (qR0 - qL0) * two_over_lenR0_plus_lenL0;
+        double sL = (delLminus*del + fabs(delLminus*del) + epsilon_van_albada) /
+            (delLminus*delLminus + del*del + epsilon_van_albada);
+        qL = qL0 + sL * aL0 * (del * two_lenL0_plus_lenL1 + delLminus * lenR0);
+        qL = clip_to_limits(qL, qL0, qR0);
+        return qL;
+    }
+
+    @nogc
+    void interpL_prepare(double lenL1, double lenL0, double lenR0)
+    {
+        this.lenL0 = lenL0;
+        this.lenR0 = lenR0;
+        this.aL0 = 0.5 * lenL0 / (lenL1 + 2.0*lenL0 + lenR0);
+        this.two_over_lenL0_plus_lenL1 = 2.0 / (lenL0 + lenL1);
+        this.two_over_lenR0_plus_lenL0 = 2.0 / (lenR0 + lenL0);
+        this.two_lenL0_plus_lenL1 = (2.0*lenL0 + lenL1);
+    }
+
+    @nogc
+    double interpR_scalar(double qL0, double qR0, double qR1)
+    {
+        double del = (qR0 - qL0) * two_over_lenR0_plus_lenL0;
+        double delRplus = (qR1 - qR0) * two_over_lenR1_plus_lenR0;
+        double sR = (del*delRplus + fabs(del*delRplus) + epsilon_van_albada) /
+            (del*del + delRplus*delRplus + epsilon_van_albada);
+        double qR = qR0 - sR * aR0 * (delRplus * lenL0 + del * two_lenR0_plus_lenR1);
+        qR = clip_to_limits(qR, qL0, qR0);
+        return qR;
+    }
+
+    @nogc
+    void interpR_prepare(double lenL0, double lenR0, double lenR1)
+    {
+        this.lenL0 = lenL0;
+        this.lenR0 = lenR0;
+        this.aR0 = 0.5 * lenR0 / (lenL0 + 2.0*lenR0 + lenR1);
+        this.two_over_lenR0_plus_lenL0 = 2.0 / (lenR0 + lenL0);
+        this.two_over_lenR1_plus_lenR0 = 2.0 / (lenR1 + lenR0);
+        this.two_lenR0_plus_lenR1 = (2.0*lenR0 + lenR1);
+    }
+
+    @nogc
+    double clip_to_limits(double q, double A, double B)
+    // Returns q if q is between the values A and B, else
+    // it returns the closer limit of the range [min(A,B), max(A,B)].
+    {
+        double lower_limit = (A <= B) ? A : B;
+        double upper_limit = (A > B) ? A : B;
+        double qclipped = (q > lower_limit) ? q : lower_limit;
+        return (qclipped <= upper_limit) ? qclipped : upper_limit;
+    }
+
+    @nogc
+    void interpL(ref LCell cL1, ref LCell cL0, ref LCell cR0,
+                 ref GasState gasL, ref double velL)
+    {
+        interpL_prepare(cL1.L, cL0.L, cR0.L);
+        gasL.copy_values_from(cL0.gas);
+        gasL.rho = interpL_scalar(cL1.gas.rho, cL0.gas.rho, cR0.gas.rho);
+        gasL.T = interpL_scalar(cL1.gas.T, cL0.gas.T, cR0.gas.T);
+        velL = interpL_scalar(cL1.vel, cL0.vel, cR0.vel);
+        gmodel.update_thermo_from_rhoT(gasL);
+    }
+
+    @nogc
+    void interpR(ref LCell cL0, ref LCell cR0, ref LCell cR1,
+                 ref GasState gasR, ref double velR)
+    {
+        interpR_prepare(cL0.L, cR0.L, cR1.L);
+        gasR.copy_values_from(cR0.gas);
+        gasR.rho = interpL_scalar(cL0.gas.rho, cR0.gas.rho, cR1.gas.rho);
+        gasR.T = interpL_scalar(cL0.gas.T, cR0.gas.T, cR1.gas.T);
+        velR = interpR_scalar(cL0.vel, cR0.vel, cR1.vel);
+        gmodel.update_thermo_from_rhoT(gasR);
+    }
+
+private:
+    // Workspace for interpolation.
+    double lenL0, lenR0, aL0, aR0;
+    double two_over_lenL0_plus_lenL1;
+    double two_over_lenR0_plus_lenL0;
+    double two_over_lenR1_plus_lenR0;
+    double two_lenL0_plus_lenL1;
+    double two_lenR0_plus_lenR1;
+    double velL, velR;
+    GasState gsL, gsR;
 } // end class GasSlug
