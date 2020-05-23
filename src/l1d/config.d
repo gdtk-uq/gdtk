@@ -3,6 +3,9 @@
 
 module config;
 
+import std.conv;
+
+
 final class L1dConfig {
 public:
     shared static int verbosity_level = 1;
@@ -42,8 +45,9 @@ public:
 double get_dt_xxxx(shared double[] dt_array, double t)
 {
     assert(L1dConfig.t_change.length == dt_array.length, "Inconsistent array lengths.");
-    int i = 0;
-    while ((i < L1dConfig.t_change.length) && (t < L1dConfig.t_change[i])) { i++; }
+    assert(L1dConfig.t_change.length > 0, "Need at least one dt value in the array.");
+    int i = to!int(L1dConfig.t_change.length) - 1;
+    while ((i > 0) && (t < L1dConfig.t_change[i])) { i--; }
     double dt = (i < dt_array.length) ? dt_array[i] : dt_array[$-1];
     assert(dt > 0.0, "Zero dt for next state or history writing.");
     return dt;
