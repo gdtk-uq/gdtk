@@ -1,4 +1,4 @@
-# contout.gnuplot
+# contour.gnuplot
 # Make a contour map of the xt-datasets from both gas slugs.
 # Usage:
 # $ gnuplot < contour.gnuplot

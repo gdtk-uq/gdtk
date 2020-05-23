@@ -67,6 +67,9 @@ void generate_xt_dataset(string varName, int tindxStart, int tindxEnd, bool take
                     double v;
                     switch (varName) {
                     case "p": v = c.gas.p; break;
+                    case "T": v = c.gas.T; break;
+                    case "rho": v = c.gas.rho; break;
+                    case "vel": v = c.vel; break;
                     default: v = 0.0;
                     }
                     if (takeLog) { v = log10(v); }
