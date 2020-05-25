@@ -4014,9 +4014,9 @@ void compute_wall_distances() {
     }
     // These centroids need to be assembled into a kdtree
     size_t totalfaces = nfaces;
-    KdNode!3[] nodes;
+    Node[] nodes;
     foreach(i; 0 .. nfaces) {
-        KdNode!3 node = {[facepos[3*i+0], facepos[3*i+1], facepos[3*i+2]]};
+        Node node = {[facepos[3*i+0], facepos[3*i+1], facepos[3*i+2]]};
         nodes ~= node;
     }
     auto root = makeTree(nodes);
@@ -4025,18 +4025,18 @@ void compute_wall_distances() {
     foreach(blk; localFluidBlocksBySize) {
         foreach(cell; blk.cells){
             version(complex_numbers){
-            KdNode!3 cellnode = {[cell.pos[0].x.re,
-                                  cell.pos[0].y.re,
-                                  cell.pos[0].z.re]}; 
+            Node cellnode = {[cell.pos[0].x.re,
+                              cell.pos[0].y.re,
+                              cell.pos[0].z.re]}; 
             } else {
-            KdNode!3 cellnode = {[cell.pos[0].x,
-                                  cell.pos[0].y,
-                                  cell.pos[0].z]}; 
+            Node cellnode = {[cell.pos[0].x,
+                              cell.pos[0].y,
+                              cell.pos[0].z]}; 
             }
-            const(KdNode!3)* found = null;
+            const(Node)* found = null;
             double bestDist = 0.0;
             size_t nVisited = 0;
-            root.nearest(cellnode, 0, found, bestDist, nVisited);
+            root.fast_nearest(cellnode, 0, found, bestDist, nVisited);
             double dist = sqrt(bestDist);
             cell.dwall = dist;
         }

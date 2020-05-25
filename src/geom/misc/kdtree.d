@@ -1,6 +1,6 @@
 /*
-kd tree for nearest neighbour finding
- Based on example from https://rosettacode.org/wiki/K-d_tree#D
+3D kd tree for nearest neighbour finding
+ Based on examples from https://rosettacode.org/wiki/K-d_tree#D
 
 @author: Nick Gibbons
 */
@@ -8,82 +8,82 @@ module geom.misc.kdtree;
 
 import std.stdio, std.algorithm, std.math, std.random;
  
-struct KdNode(size_t dim) {
-    double[dim] x;
-    KdNode* left, right;
+struct Node {
+    double[3] x;
+    Node* left, right;
 }
+
+void quicksort(size_t idx)(Node[] nodes) pure nothrow @nogc {
+/*
+   Sketchy quicksort based on C implementation from:
+      https://rosettacode.org/wiki/Sorting_algorithms/Quicksort#D
+   The goal is to sort an array of nodes by one of their dimensions.
+   For example, quicksort!(0)(nodes) sorts by the x direction, index 0
+   quicksort!(1)(nodes) sorts by the y direction, index 1
+
+   @author: Nick Gibbons
+*/
+  size_t len = nodes.length;
+  if (len < 2) return;
  
-// See QuickSelect method.
-KdNode!dim* findMedian(size_t idx, size_t dim)(KdNode!dim[] nodes) pure nothrow @nogc {
-    auto start = nodes.ptr;
-    auto end = &nodes[$ - 1] + 1;
+  immutable double pivot = nodes[len / 2].x[idx];
  
-    if (end <= start)
-        return null;
-    if (end == start + 1)
-        return start;
+  size_t i, j;
+  for (i = 0, j = len - 1; ; i++, j--) {
+      while (nodes[i].x[idx] < pivot) i++;
+      while (nodes[j].x[idx] > pivot) j--;
  
-    auto md = start + (end - start) / 2;
+      if (i >= j) break;
  
-    while (true) {
-        immutable double pivot = md.x[idx];
+      swap(nodes[i].x, nodes[j].x);
+  }
  
-        swap(md.x, (end - 1).x); // Swaps the whole arrays x.
-        auto store = start;
-        foreach (p; start .. end) {
-            if (p.x[idx] < pivot) {
-                if (p != store)
-                    swap(p.x, store.x);
-                store++;
-            }
-        }
-        swap(store.x, (end - 1).x);
- 
-        // Median has duplicate values.
-        if (store.x[idx] == md.x[idx])
-            return md;
- 
-        if (store > md)
-            end = store;
-        else
-            start = store;
-    }
+  quicksort!(idx)(nodes[0 .. i]);
+  quicksort!(idx)(nodes[i .. $]);
 }
+
+Node* makeTree(size_t i = 0)(Node[] nodes) pure nothrow @nogc {
+    if (nodes.length==0) return null;
  
-KdNode!dim* makeTree(size_t dim, size_t i = 0)(KdNode!dim[] nodes)
-pure nothrow @nogc {
-    if (!nodes.length)
-        return null;
- 
-    auto n = nodes.findMedian!i;
-    if (n != null) {
-        enum i2 = (i + 1) % dim;
+    quicksort!(i)(nodes);
+    size_t medianIdx = nodes.length/2;
+    Node* n = &nodes[medianIdx];
+
+    // medianIdx will be zero if there is only element in nodes
+    // In that case we can just skip this bit and return n
+    if (medianIdx>0) { 
+        enum i2 = (i + 1) % 3;
         immutable size_t nPos = n - nodes.ptr;
-        n.left = makeTree!(dim, i2)(nodes[0 .. nPos]);
-        n.right = makeTree!(dim, i2)(nodes[nPos + 1 .. $]);
+        n.left = makeTree!(i2)(nodes[0 .. medianIdx]);
+        n.right = makeTree!(i2)(nodes[medianIdx + 1 .. $]);
     }
  
     return n;
 }
- 
-void nearest(size_t dim)(in KdNode!dim* root,
-                         in ref KdNode!dim nd,
-                         in size_t i,
-                         ref const(KdNode!dim)* best,
-                         ref double bestDist,
-                         ref size_t nVisited) pure nothrow @safe @nogc {
-    static double dist(in ref KdNode!dim a, in ref KdNode!dim b)
-    pure nothrow @nogc {
-        double result = 0;
-        static foreach (i; 0 .. dim)
-            result += (a.x[i] - b.x[i]) ^^ 2;
+
+double distance_squared(in ref Node a, in ref Node b) pure nothrow @nogc {
+        double result = (a.x[0] - b.x[0]) ^^ 2
+                      + (a.x[1] - b.x[1]) ^^ 2
+                      + (a.x[2] - b.x[2]) ^^ 2;
         return result;
     }
+ 
+void fast_nearest(in Node* root,
+                  in ref Node nd,
+                  in size_t i,
+                  ref const(Node)* best,
+                  ref double bestDist,
+                  ref size_t nVisited) pure nothrow @nogc {
+/*
+   Fast searching for nearest neighbour in 3D, modified from
+      https://rosettacode.org/wiki/Sorting_algorithms/Quicksort#D
+   Note that this routine returns "bestDist" the closest distance, SQUARED
+*/
  
     if (root == null)
         return;
  
-    immutable double d = dist(*root, nd);
+    immutable double d = distance_squared(*root, nd);
     immutable double dx = root.x[i] - nd.x[i];
     immutable double dx2 = dx ^^ 2;
     nVisited++;
@@ -97,39 +97,93 @@ void nearest(size_t dim)(in KdNode!dim* root,
     if (!bestDist)
         return;
  
-    immutable i2 = (i + 1 >= dim) ? 0 : i + 1;
+    immutable i2 = (i + 1 >= 3) ? 0 : i + 1;
  
-    nearest!dim(dx > 0 ? root.left : root.right,
-                nd, i2, best, bestDist, nVisited);
+    fast_nearest(dx > 0 ? root.left : root.right,
+                 nd, i2, best, bestDist, nVisited);
     if (dx2 >= bestDist)
         return;
-    nearest!dim(dx > 0 ? root.right : root.left,
+    fast_nearest(dx > 0 ? root.right : root.left,
                 nd, i2, best, bestDist, nVisited);
 }
- 
-void randPt(size_t dim)(ref KdNode!dim v, ref Xorshift rng)
-pure nothrow @safe @nogc {
-    static foreach (i; 0 .. dim)
-        v.x[i] = rng.uniform01;
+
+double slow_nearest(Node[] nodes, Node point){
+/*
+   Check the distance to the nearest point by literally checking all of them
+*/
+
+    double cx,cy,cz,dsq;
+    double dsqmin = 1e32;
+    foreach(node; nodes){
+        cx = (node.x[0] - point.x[0]);
+        cy = (node.x[1] - point.x[1]);
+        cz = (node.x[2] - point.x[2]);
+        dsq = cx*cx + cy*cy + cz*cz;
+        dsqmin = fmin(dsq, dsqmin);
+    }
+    return sqrt(dsqmin);
 }
  
-/// smallTest
+/// test sorting 
 unittest {
-    KdNode!2[] wp = [{[2, 3]}, {[5, 4]}, {[9, 6]},
-                   {[4, 7]}, {[8, 1]}, {[7, 2]}];
-    KdNode!2 thisPt = {[9, 2]};
+    Node[] nodes = [{[2, 3, 0]}, {[5, 4, 0]}, {[9, 6, 0]},
+                    {[4, 7, 0]}, {[8, 1, 0]}, {[7, 2, 0]}];
+    
+    Node[] targetnodesx= [{[2, 3, 0]}, {[4, 7, 0]}, {[5, 4, 0]}, 
+                         {[7, 2, 0]}, {[8, 1, 0]}, {[9, 6, 0]}];
+    Node[] targetnodesy= [{[8, 1, 0]}, {[7, 2, 0]}, {[2, 3, 0]},
+                          {[5, 4, 0]}, {[9, 6, 0]}, {[4, 7, 0]}];
+    quicksort!(0)(nodes);
+    assert(nodes==targetnodesx);
+    quicksort!(1)(nodes);
+    assert(nodes==targetnodesy);
+}
+
+/// test kdtree construction 
+unittest {
+    Node[] nodes = [{[2, 3, 1]}, {[5, 4, 2]}, {[9, 6, 3]},
+                    {[4, 7, 6]}, {[8, 1, 8]}, {[7, 2, 4]}];
+    
+    auto root = makeTree(nodes);
+    //writeln("            ", root.x);
+    //writeln("     ",root.left.x, root.right.x);
+    //writeln(root.left.left.x, root.left.right.x, root.right.left.x, root.right.right);
+    assert(root.left.x[0] <= root.x[0]);
+    assert(root.x[0] <= root.right.x[0]);
+    assert(root.left.left.x[1] <= root.left.x[1]);
+    assert(root.left.right.x[1] >= root.left.x[1]);
+    assert(root.right.left.x[1] <= root.right.x[1]);
+}
+
+// test nearest computation
+unittest {
+    Node[] nodes = [{[0.0, 4.0, 0.0]}, {[1.0, 4.0, 0.0]}, {[2.0, 4.0, 0.0]}, {[3.0, 4.0, 0.0]}, {[4.0, 4.0, 0.0]},
+                     {[0.0, 4.0, 2.0]}, {[1.0, 4.0, 2.0]}, {[2.0, 4.0, 2.0]}, {[3.0, 4.0, 2.0]}, {[4.0, 4.0, 2.0]},
+                     {[0.0, 4.0, 3.0]}, {[1.0, 4.0, 3.0]}, {[2.0, 4.0, 3.0]}, {[3.0, 4.0, 3.0]}, {[4.0, 4.0, 3.0]},
+                     {[0.0, 4.0, 4.0]}, {[1.0, 4.0, 4.0]}, {[2.0, 4.0, 4.0]}, {[3.0, 4.0, 4.0]}, {[4.0, 4.0, 4.0]},
+                     {[0.0, 4.0, 1.0]}, {[1.0, 4.0, 1.0]}, {[2.0, 4.0, 1.0]}, {[3.0, 4.0, 1.0]}, {[4.0, 4.0, 1.0]}];
  
-    auto root = makeTree(wp);
+    auto root = makeTree(nodes);
+    size_t ntests=100;
+    auto rng = Random(19920829);
+    double rngx,rngy,rngz;
+
+    foreach(n; 0 .. ntests){
+        rngx = uniform(0.0, 4.0, rng);
+        rngy = uniform(0.0, 4.0, rng);
+        rngz = uniform(0.0, 4.0, rng);
+        Node thisPt = {[rngx, rngy, rngz]};
+        double actual_distance = slow_nearest(nodes, thisPt);
  
-    const(KdNode!2)* found = null;
-    double bestDist = 0;
-    size_t nVisited = 0;
-    root.nearest(thisPt, 0, found, bestDist, nVisited);
+        const(Node)* found = null;
+        double bestDist = 0;
+        size_t nVisited = 0;
+        root.fast_nearest(thisPt, 0, found, bestDist, nVisited);
  
-    writefln("WP tree:\n  Searching for %s\n" ~
-             "  Found %s, dist = %g\n  Seen %d nodes.\n",
-             thisPt.x, found.x, sqrt(bestDist), nVisited);
-    assert(approxEqual(sqrt(bestDist), 1.41421, 1e-12));
+        writefln("point: %s, nearest: %s, dist = %g actual = %g",
+                 thisPt.x, found.x, sqrt(bestDist), actual_distance);
+        assert(approxEqual(sqrt(bestDist), actual_distance, 1e-12));
+    }
 }
 
 //int main() {return 0;}
