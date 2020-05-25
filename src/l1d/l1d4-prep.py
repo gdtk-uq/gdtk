@@ -142,14 +142,17 @@ class GlobalConfig(object):
         #
         if len(config.dt_plot_list) == 0:
             # Since the user did not specify any, default to the end.
-            self.add_dt_plot(0.0, config.max_time, config.max_time)
+            add_dt_plot(0.0, config.max_time, config.max_time)
         n_dt_plot = len(self.dt_plot_list)
+        assert n_dt_plot > 0, "Require at least one dt_plot to be specified."
         fp.write('  "n_dt_plot": %d,\n' % n_dt_plot)
         tlist = [self.dt_plot_list[i][0] for i in range(n_dt_plot)]
         fp.write('  "t_change": %s,\n' % json.dumps(tlist))
         tlist = [self.dt_plot_list[i][1] for i in range(n_dt_plot)]
+        assert min(tlist) > 0.0, "Require nonzero dt_plot values."
         fp.write('  "dt_plot": %s,\n' % json.dumps(tlist))
         tlist = [self.dt_plot_list[i][2] for i in range(n_dt_plot)]
+        assert min(tlist) > 0.0, "Require nonzero dt_hist values."
         fp.write('  "dt_hist": %s,\n' % json.dumps(tlist))
         #
         n_hloc = len(config.hloc_list)

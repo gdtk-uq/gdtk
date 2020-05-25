@@ -68,7 +68,7 @@ public:
             double dx = xs[1] - xs[0];
             int i = cast(int)floor((x - xs[0])/dx);
             double frac = (x - xs[i])/dx;
-            i = max(0, min(i, ds.length-2));
+            i = max(0, min(i, ds.length-2)); // deal with potential round-off error
             d = (1.0-frac)*ds[i] + frac*ds[i+1];
             K_over_L = (1.0-frac)*K_over_Ls[i] + frac*K_over_Ls[i+1];
             Twall = (1.0-frac)*Ts[i] + frac*Ts[i+1];
