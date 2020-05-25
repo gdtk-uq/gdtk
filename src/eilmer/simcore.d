@@ -921,6 +921,7 @@ void write_solution_files()
 
 void write_snapshot_files()
 {
+    if (GlobalConfig.nTotalSnapshots == 0) { return; }
     if (snapshotInfo.length == 0) { snapshotInfo.length = GlobalConfig.nTotalSnapshots; }
     if (SimState.nWrittenSnapshots >= GlobalConfig.nTotalSnapshots) {
         // We need to shuffle the existing snapshots down one slot

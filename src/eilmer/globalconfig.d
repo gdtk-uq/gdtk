@@ -715,8 +715,8 @@ final class GlobalConfig {
     shared static double dt_history = 1.0e-3; // interval for writing sample
     shared static double dt_loads = 1.0e-3; // interval for writing loads on boundary groups
     // For controlling the writing of snapshots
-    shared static int snapshotCount = 1_000_000; // Set to something very large so that default behaviour
-                                                  // does not attempt to write snapshots.
+    shared static int snapshotCount = 1_000_000_000; // Set to something very large so that default behaviour
+                                                     // does not attempt to write snapshots.
     shared static int nTotalSnapshots = 0; // By default, do not write any snapshots
     // The following initialization preserves old behaviour
     // where only one group called loads was expected.
