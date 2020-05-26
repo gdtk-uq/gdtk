@@ -33,6 +33,8 @@ include::eilmer/running-a-simulation.adoc[]
 include::eilmer/restarting-from-a-snapshot.adoc[]
 include::eilmer/run-time-utilities.adoc[]
 
+include::../examples/eilmer/catalogue-of-examples.adoc[]
+
 :leveloffset: -1
 
 

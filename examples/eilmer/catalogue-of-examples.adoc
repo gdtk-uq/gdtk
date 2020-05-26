@@ -1,0 +1,46 @@
+= Catalogue of examples
+
+In the source tree for Eilmer, there are a number of examples of the simulation
+code in action.
+These examples have been collected and maintained over many years.
+Some are well-tested and exercised, while others are more bleeding edge.
+The hope is that all of the examples offer launching points for you
+to start your own compressible flow simulations.
+
+A number of these examples replicate classic test cases
+in the CFD literature on compressible flows, or classic
+experiments in high-speed flow.
+The listing below provides a mapping directories in the source
+tree to the literature.
+They are grouped loosely by the type of flow/geometry configuration.
+This is not a perfect grouping because the world of compressible
+flow test cases is not always so easy to categorise.
+
+== External, inviscid flows of perfect gases
+
+== Internal, inviscid flows of perfect gases
+
+`*2D/forward-facing-step*`
+
+This example shows the flow of gas at Mach 3 over a forward-facing step in a duct.
+The test case was first proposed by Emery (1968) and is described as a two-dimensional step.
+However, in the literature, this test case is often cited for its use
+in the paper by Woodward and Colella (1984) which tested the capabilities of
+various difference schemes for treating strong shocks.
+They describe this case as a Mach 3 Wind Tunnel with a Step.
+
+References:
+
+1. *Emery* (1968), +
+   _An Evaluation of Several Differencing Methods for Inviscid Fluid Flow Problems_, +
+    Journal of Computational Physics, *2*: pp.306--331.
+2. *Woodward and Colella* (1984), +
+   _The Numerical Simulation of Two-Dimensional Fluid Flow with Strong Shocks_, +
+    Journal of Computational Physics, *54*: pp.115--173.
+
+
+== Laminar flows of perfect gases
+
+== Turbulent flows of perfect gases
+
+== High-temperature gas flows

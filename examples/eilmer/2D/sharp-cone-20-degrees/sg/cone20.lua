@@ -63,4 +63,7 @@ config.dt_plot = 1.5e-3
 config.dt_history = 10.0e-5
 config.extrema_clipping = false
 
+config.snapshot_count = 100
+config.number_total_snapshots = 3
+
 dofile("sketch-domain.lua")

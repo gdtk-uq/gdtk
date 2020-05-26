@@ -6,6 +6,8 @@
 
 module onedinterp;
 
+import std.string;
+import core.stdc.stdlib : exit;
 import std.math;
 import std.stdio;
 import nm.complex;
@@ -332,14 +334,26 @@ public:
                 try {
                     scale_mass_fractions(Lft.gas.massf); 
                 } catch(Exception e) {
-                    debug { writeln(e.msg); }
+                    debug {
+                        string msg = "Bad Lft reconstruction of mass fractions that do not add correctly.";
+                        msg ~= format("scale_mass_fraction exception with message:\n %s", e.msg);
+                        msg ~= format("The interface is located at: %s\n", IFace.pos);
+                        writeln(msg);
+                        exit(1);
+                    }
                     Lft.gas.massf[] = gL0.massf[];
                 }
                 try {
                     scale_mass_fractions(Rght.gas.massf);
                 } catch(Exception e) {
-                    debug { writeln(e.msg); }
+                    debug {
+                        string msg = "Bad Rght reconstruction of mass fractions that do not add correctly.";
+                        msg ~= format("scale_mass_fraction exception with message:\n %s", e.msg);
+                        msg ~= format("The interface is located at: %s\n", IFace.pos);
+                        writeln(msg);
+                    }
                     Rght.gas.massf[] = gR0.massf[];
+                    exit(1);
                 }
             } else {
                 // Only one possible mass-fraction value for a single species.
