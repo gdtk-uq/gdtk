@@ -140,59 +140,66 @@ public:
     {
         size_t i, j, k;
         SolidFVInterface IFace;
-
+        int outsign;
+        
         final switch (whichBoundary) {
         case Face.north:
+            outsign = 1;
             j = blk.jmax + 1;
             for (k = blk.kmin; k <= blk.kmax; ++k) {
                 for (i = blk.imin; i <= blk.imax; ++i) {
                     IFace = blk.getIfj(i, j, k);
-                    IFace.flux = _fluxValue;
+                    IFace.flux = outsign*_fluxValue;
                 }
             }
             break;
         case Face.east:
+            outsign = 1;
             i = blk.imax + 1;
             for (k = blk.kmin; k <= blk.kmax; ++k) {
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     IFace = blk.getIfi(i, j, k);
-                    IFace.flux = _fluxValue;
+                    IFace.flux = outsign*_fluxValue;
                 }
             }
             break;
         case Face.south:
+            outsign = -1;
             j = blk.jmin;
             for (k = blk.kmin; k <= blk.kmax; ++k) {
                 for (i = blk.imin; i <= blk.imax; ++i) {
                     IFace = blk.getIfj(i, j, k);
-                    IFace.flux = _fluxValue;
+                    IFace.flux = outsign*_fluxValue;
                 }
             }
             break;
         case Face.west:
+            outsign = -1;
             i = blk.imin;
             for (k = blk.kmin; k <= blk.kmax; ++k) {
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     IFace = blk.getIfi(i, j, k);
-                    IFace.flux = _fluxValue;
+                    IFace.flux = outsign*_fluxValue;
                 }
             }
             break;
         case Face.top:
+            outsign = 1;
             k = blk.kmax + 1;
             for (i = blk.imin; i <= blk.imax; ++i) {
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     IFace = blk.getIfk(i, j, k);
-                    IFace.flux = _fluxValue;
+                    IFace.flux = outsign*_fluxValue;
                 }
             }
             break;
         case Face.bottom:
+            outsign = -1;
             k = blk.kmin;
             for (i = blk.imin; i <= blk.imax; ++i) {
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     IFace = blk.getIfk(i, j, k);
-                    IFace.flux = _fluxValue;
+                    IFace.flux = outsign*_fluxValue;
                 }
             }
             break;
