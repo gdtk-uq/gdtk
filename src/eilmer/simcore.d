@@ -2708,14 +2708,14 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
                     cell.U[1].copy_values_from(cell.U[2]);
                 }
 	    }
-	} // end foreach blk	
-	foreach (sblk; parallel(localSolidBlocksBySize,1)) {
+	} // end foreach blk
+       	foreach (sblk; parallel(localSolidBlocks,1)) {
 	    if (sblk.active) {
-		foreach (scell; sblk.activeCells) { 
+                foreach (scell; sblk.activeCells) { 
                     scell.e[0] = scell.e[1];
                     scell.e[1] = scell.e[2];
                 }
-	    }
+            }
 	} // end foreach blk	
         if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1) {
             SimState.time = t0 + ((j*j+j)/(S*S+S))*dt_global; // RKL1
