@@ -539,6 +539,7 @@ final class GlobalConfig {
     // to be interpolated are pressure+temperature, density+temperature and
     // density+pressure.
     shared static InterpolateOption thermo_interpolator = InterpolateOption.rhou;
+    shared static bool allow_reconstruction_for_species = true;
     shared static bool allow_reconstruction_for_energy_modes = true;
     shared static bool apply_limiter = true;
     shared static bool extrema_clipping = true;
@@ -865,6 +866,7 @@ public:
     bool suppress_reconstruction_at_shocks;
     bool suppress_reconstruction_at_boundaries;
     InterpolateOption thermo_interpolator;
+    bool allow_reconstruction_for_species;
     bool allow_reconstruction_for_energy_modes;
     bool apply_limiter;
     bool extrema_clipping;
@@ -1001,6 +1003,7 @@ public:
         suppress_reconstruction_at_shocks = GlobalConfig.suppress_reconstruction_at_shocks;
         suppress_reconstruction_at_boundaries = GlobalConfig.suppress_reconstruction_at_boundaries;
         thermo_interpolator = GlobalConfig.thermo_interpolator;
+        allow_reconstruction_for_species = GlobalConfig.allow_reconstruction_for_species;
         allow_reconstruction_for_energy_modes = GlobalConfig.allow_reconstruction_for_energy_modes;
         apply_limiter = GlobalConfig.apply_limiter;
         extrema_clipping = GlobalConfig.extrema_clipping;
@@ -1311,6 +1314,7 @@ JSONValue read_config_file()
     mixin(update_bool("suppress_reconstruction_at_captured_shocks", "suppress_reconstruction_at_shocks")); // old name
     mixin(update_bool("suppress_reconstruction_at_boundaries", "suppress_reconstruction_at_boundaries"));
     mixin(update_enum("thermo_interpolator", "thermo_interpolator", "thermo_interpolator_from_name"));
+    mixin(update_bool("allow_reconstruction_for_species", "allow_reconstruction_for_species"));
     mixin(update_bool("allow_reconstruction_for_energy_modes", "allow_reconstruction_for_energy_modes"));
     mixin(update_bool("apply_limiter", "apply_limiter"));
     mixin(update_bool("extrema_clipping", "extrema_clipping"));
@@ -1380,6 +1384,8 @@ JSONValue read_config_file()
         writeln("  suppress_reconstruction_at_shocks: ", GlobalConfig.suppress_reconstruction_at_shocks);
         writeln("  suppress_reconstruction_at_boundaries: ", GlobalConfig.suppress_reconstruction_at_boundaries);
         writeln("  thermo_interpolator: ", thermo_interpolator_name(GlobalConfig.thermo_interpolator));
+        writeln("  allow_reconstruction_for_species: ", GlobalConfig.allow_reconstruction_for_species);
+        writeln("  allow_reconstruction_for_energy_modes: ", GlobalConfig.allow_reconstruction_for_energy_modes);
         writeln("  apply_limiter: ", GlobalConfig.apply_limiter);
         writeln("  unstructured_limiter: ", unstructured_limiter_name(GlobalConfig.unstructured_limiter));
         writeln("  freeze_limiter_on_step: ", GlobalConfig.freeze_limiter_on_step);

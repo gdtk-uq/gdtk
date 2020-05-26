@@ -324,21 +324,26 @@ public:
         version(multi_species_gas) {
             if (nsp > 1) {
                 // Multiple species.
-                foreach (isp; 0 .. nsp) {
-                    interp_l3r3_scalar(gL2.massf[isp], gL1.massf[isp], gL0.massf[isp],
-                                       gR0.massf[isp], gR1.massf[isp], gR2.massf[isp],
-                                       Lft.gas.massf[isp], Rght.gas.massf[isp]);
-                }
-                try {
-                    scale_mass_fractions(Lft.gas.massf);
-                } catch(Exception e) {
-                    debug { writeln(e.msg); }
+                if (myConfig.allow_reconstruction_for_species) {
+                    foreach (isp; 0 .. nsp) {
+                        interp_l3r3_scalar(gL2.massf[isp], gL1.massf[isp], gL0.massf[isp],
+                                           gR0.massf[isp], gR1.massf[isp], gR2.massf[isp],
+                                           Lft.gas.massf[isp], Rght.gas.massf[isp]);
+                    }
+                    try {
+                        scale_mass_fractions(Lft.gas.massf);
+                    } catch(Exception e) {
+                        debug { writeln(e.msg); }
+                        Lft.gas.massf[] = gL0.massf[];
+                    }
+                    try {
+                        scale_mass_fractions(Rght.gas.massf);
+                    } catch(Exception e) {
+                        debug { writeln(e.msg); }
+                        Rght.gas.massf[] = gR0.massf[];
+                    }
+                } else {
                     Lft.gas.massf[] = gL0.massf[];
-                }
-                try {
-                    scale_mass_fractions(Rght.gas.massf);
-                } catch(Exception e) {
-                    debug { writeln(e.msg); }
                     Rght.gas.massf[] = gR0.massf[];
                 }
             } else {
@@ -361,10 +366,8 @@ public:
                                            Lft.gas.T_modes[i], Rght.gas.T_modes[i]);
                     }
                 } else {
-                    foreach (i; 0 .. nmodes) {
-                        Lft.gas.T_modes[i] = gL0.T_modes[i];
-                        Rght.gas.T_modes[i] = gR0.T_modes[i];
-                    }
+                    Lft.gas.T_modes[] = gL0.T_modes[];
+                    Rght.gas.T_modes[] = gR0.T_modes[];
                 }
             }
             mixin(codeForThermoUpdateBoth("pT"));
@@ -380,10 +383,8 @@ public:
                                            Lft.gas.u_modes[i], Rght.gas.u_modes[i]);
                     }
                 } else {
-                    foreach (i; 0 .. nmodes) {
-                        Lft.gas.u_modes[i] = gL0.u_modes[i];
-                        Rght.gas.u_modes[i] = gR0.u_modes[i];
-                    }
+                    Lft.gas.u_modes[] = gL0.u_modes[];
+                    Rght.gas.u_modes[] = gR0.u_modes[];
                 }
             }
             mixin(codeForThermoUpdateBoth("rhou"));
@@ -404,10 +405,8 @@ public:
                                            Lft.gas.T_modes[i], Rght.gas.T_modes[i]);
                     }
                 } else {
-                    foreach (i; 0 .. nmodes) {
-                        Lft.gas.T_modes[i] = gL0.T_modes[i];
-                        Rght.gas.T_modes[i] = gR0.T_modes[i];
-                    }
+                    Lft.gas.T_modes[] = gL0.T_modes[];
+                    Rght.gas.T_modes[] = gR0.T_modes[];
                 }
             }
             mixin(codeForThermoUpdateBoth("rhoT"));
@@ -483,20 +482,25 @@ public:
         version(multi_species_gas) {
             if (nsp > 1) {
                 // Multiple species.
-                foreach (isp; 0 .. nsp) {
-                    interp_l2r2_scalar(gL1.massf[isp], gL0.massf[isp], gR0.massf[isp], gR1.massf[isp],
-                                       Lft.gas.massf[isp], Rght.gas.massf[isp]);
-                }
-                try {
-                    scale_mass_fractions(Lft.gas.massf);
-                } catch(Exception e) {
-                    debug { writeln(e.msg); }
+                if (myConfig.allow_reconstruction_for_species) {
+                    foreach (isp; 0 .. nsp) {
+                        interp_l2r2_scalar(gL1.massf[isp], gL0.massf[isp], gR0.massf[isp], gR1.massf[isp],
+                                           Lft.gas.massf[isp], Rght.gas.massf[isp]);
+                    }
+                    try {
+                        scale_mass_fractions(Lft.gas.massf);
+                    } catch(Exception e) {
+                        debug { writeln(e.msg); }
+                        Lft.gas.massf[] = gL0.massf[];
+                    }
+                    try {
+                        scale_mass_fractions(Rght.gas.massf);
+                    } catch(Exception e) {
+                        debug { writeln(e.msg); }
+                        Rght.gas.massf[] = gR0.massf[];
+                    }
+                } else {
                     Lft.gas.massf[] = gL0.massf[];
-                }
-                try {
-                    scale_mass_fractions(Rght.gas.massf);
-                } catch(Exception e) {
-                    debug { writeln(e.msg); }
                     Rght.gas.massf[] = gR0.massf[];
                 }
             } else {
@@ -518,10 +522,8 @@ public:
                                            gR1.T_modes[i], Lft.gas.T_modes[i], Rght.gas.T_modes[i]);
                     }
                 } else {
-                    foreach (i; 0 .. nmodes) {
-                        Lft.gas.T_modes[i] = gL0.T_modes[i];
-                        Rght.gas.T_modes[i] = gR0.T_modes[i];
-                    }
+                    Lft.gas.T_modes[] = gL0.T_modes[];
+                    Rght.gas.T_modes[] = gR0.T_modes[];
                 }
             }
             mixin(codeForThermoUpdateBoth("pT"));
@@ -536,10 +538,8 @@ public:
                                            gR1.u_modes[i], Lft.gas.u_modes[i], Rght.gas.u_modes[i]);
                     }
                 } else {
-                    foreach (i; 0 .. nmodes) {
-                        Lft.gas.u_modes[i] = gL0.u_modes[i];
-                        Rght.gas.u_modes[i] = gR0.u_modes[i];
-                    }
+                    Lft.gas.u_modes[] = gL0.u_modes[];
+                    Rght.gas.u_modes[] = gR0.u_modes[];
                 }
             }
             mixin(codeForThermoUpdateBoth("rhou"));
@@ -559,10 +559,8 @@ public:
                                            gR1.T_modes[i], Lft.gas.T_modes[i], Rght.gas.T_modes[i]);
                     }
                 } else {
-                    foreach (i; 0 .. nmodes) {
-                        Lft.gas.T_modes[i] = gL0.T_modes[i];
-                        Rght.gas.T_modes[i] = gR0.T_modes[i];
-                    }
+                    Lft.gas.T_modes[] = gL0.T_modes[];
+                    Rght.gas.T_modes[] = gR0.T_modes[];
                 }
             }
             mixin(codeForThermoUpdateBoth("rhoT"));
@@ -619,20 +617,25 @@ public:
         version(multi_species_gas) {
             if (nsp > 1) {
                 // Multiple species.
-                foreach (isp; 0 .. nsp) {
-                    interp_l2r1_scalar(gL1.massf[isp], gL0.massf[isp], gR0.massf[isp],
-                                       Lft.gas.massf[isp], Rght.gas.massf[isp]);
-                }
-                try {
-                    scale_mass_fractions(Lft.gas.massf);
-                } catch(Exception e) {
-                    debug { writeln(e.msg); }
+                if (myConfig.allow_reconstruction_for_species) {
+                    foreach (isp; 0 .. nsp) {
+                        interp_l2r1_scalar(gL1.massf[isp], gL0.massf[isp], gR0.massf[isp],
+                                           Lft.gas.massf[isp], Rght.gas.massf[isp]);
+                    }
+                    try {
+                        scale_mass_fractions(Lft.gas.massf);
+                    } catch(Exception e) {
+                        debug { writeln(e.msg); }
+                        Lft.gas.massf[] = gL0.massf[];
+                    }
+                    try {
+                        scale_mass_fractions(Rght.gas.massf);
+                    } catch(Exception e) {
+                        debug { writeln(e.msg); }
+                        Rght.gas.massf[] = gR0.massf[];
+                    }
+                } else {
                     Lft.gas.massf[] = gL0.massf[];
-                }
-                try {
-                    scale_mass_fractions(Rght.gas.massf);
-                } catch(Exception e) {
-                    debug { writeln(e.msg); }
                     Rght.gas.massf[] = gR0.massf[];
                 }
             } else {
@@ -648,9 +651,14 @@ public:
             interp_l2r1_scalar(gL1.p, gL0.p, gR0.p, Lft.gas.p, Rght.gas.p);
             interp_l2r1_scalar(gL1.T, gL0.T, gR0.T, Lft.gas.T, Rght.gas.T);
             version(multi_T_gas) {
-                foreach (i; 0 .. nmodes) {
-                    interp_l2r1_scalar(gL1.T_modes[i], gL0.T_modes[i], gR0.T_modes[i],
-                                       Lft.gas.T_modes[i], Rght.gas.T_modes[i]);
+                if (myConfig.allow_reconstruction_for_energy_modes) {
+                    foreach (i; 0 .. nmodes) {
+                        interp_l2r1_scalar(gL1.T_modes[i], gL0.T_modes[i], gR0.T_modes[i],
+                                           Lft.gas.T_modes[i], Rght.gas.T_modes[i]);
+                    }
+                } else {
+                    Lft.gas.T_modes[] = gL0.T_modes[];
+                    Rght.gas.T_modes[] = gR0.T_modes[];
                 }
             }
             mixin(codeForThermoUpdateBoth("pT"));
@@ -659,9 +667,14 @@ public:
             interp_l2r1_scalar(gL1.rho, gL0.rho, gR0.rho, Lft.gas.rho, Rght.gas.rho);
             interp_l2r1_scalar(gL1.u, gL0.u, gR0.u, Lft.gas.u, Rght.gas.u);
             version(multi_T_gas) {
-                foreach (i; 0 .. nmodes) {
-                    interp_l2r1_scalar(gL1.u_modes[i], gL0.u_modes[i], gR0.u_modes[i],
-                                       Lft.gas.u_modes[i], Rght.gas.u_modes[i]);
+                if (myConfig.allow_reconstruction_for_energy_modes) {
+                    foreach (i; 0 .. nmodes) {
+                        interp_l2r1_scalar(gL1.u_modes[i], gL0.u_modes[i], gR0.u_modes[i],
+                                           Lft.gas.u_modes[i], Rght.gas.u_modes[i]);
+                    }
+                } else {
+                    Lft.gas.u_modes[] = gL0.u_modes[];
+                    Rght.gas.u_modes[] = gR0.u_modes[];
                 }
             }
             mixin(codeForThermoUpdateBoth("rhou"));
@@ -675,9 +688,14 @@ public:
             interp_l2r1_scalar(gL1.rho, gL0.rho, gR0.rho, Lft.gas.rho, Rght.gas.rho);
             interp_l2r1_scalar(gL1.T, gL0.T, gR0.T, Lft.gas.T, Rght.gas.T);
             version(multi_T_gas) {
-                foreach (i; 0 .. nmodes) {
-                    interp_l2r1_scalar(gL1.T_modes[i], gL0.T_modes[i], gR0.T_modes[i],
-                                       Lft.gas.T_modes[i], Rght.gas.T_modes[i]);
+                if (myConfig.allow_reconstruction_for_energy_modes) {
+                    foreach (i; 0 .. nmodes) {
+                        interp_l2r1_scalar(gL1.T_modes[i], gL0.T_modes[i], gR0.T_modes[i],
+                                           Lft.gas.T_modes[i], Rght.gas.T_modes[i]);
+                    }
+                } else {
+                    Lft.gas.T_modes[] = gL0.T_modes[];
+                    Rght.gas.T_modes[] = gR0.T_modes[];
                 }
             }
             mixin(codeForThermoUpdateBoth("rhoT"));
@@ -737,20 +755,25 @@ public:
         version(multi_species_gas) {
             if (nsp > 1) {
                 // Multiple species.
-                foreach (isp; 0 .. nsp) {
-                    interp_l1r2_scalar(gL0.massf[isp], gR0.massf[isp], gR1.massf[isp],
-                                       Lft.gas.massf[isp], Rght.gas.massf[isp]);
-                }
-                try {
-                    scale_mass_fractions(Lft.gas.massf);
-                } catch(Exception e) {
-                    debug { writeln(e.msg); }
+                if (myConfig.allow_reconstruction_for_species) {
+                    foreach (isp; 0 .. nsp) {
+                        interp_l1r2_scalar(gL0.massf[isp], gR0.massf[isp], gR1.massf[isp],
+                                           Lft.gas.massf[isp], Rght.gas.massf[isp]);
+                    }
+                    try {
+                        scale_mass_fractions(Lft.gas.massf);
+                    } catch(Exception e) {
+                        debug { writeln(e.msg); }
+                        Lft.gas.massf[] = gL0.massf[];
+                    }
+                    try {
+                        scale_mass_fractions(Rght.gas.massf);
+                    } catch(Exception e) {
+                        debug { writeln(e.msg); }
+                        Rght.gas.massf[] = gR0.massf[];
+                    }
+                } else {
                     Lft.gas.massf[] = gL0.massf[];
-                }
-                try {
-                    scale_mass_fractions(Rght.gas.massf);
-                } catch(Exception e) {
-                    debug { writeln(e.msg); }
                     Rght.gas.massf[] = gR0.massf[];
                 }
             } else {
@@ -766,9 +789,14 @@ public:
             interp_l1r2_scalar(gL0.p, gR0.p, gR1.p, Lft.gas.p, Rght.gas.p);
             interp_l1r2_scalar(gL0.T, gR0.T, gR1.T, Lft.gas.T, Rght.gas.T);
             version(multi_T_gas) {
-                foreach (i; 0 .. nmodes) {
-                    interp_l1r2_scalar(gL0.T_modes[i], gR0.T_modes[i], gR1.T_modes[i],
-                                       Lft.gas.T_modes[i], Rght.gas.T_modes[i]);
+                if (myConfig.allow_reconstruction_for_energy_modes) {
+                    foreach (i; 0 .. nmodes) {
+                        interp_l1r2_scalar(gL0.T_modes[i], gR0.T_modes[i], gR1.T_modes[i],
+                                           Lft.gas.T_modes[i], Rght.gas.T_modes[i]);
+                    }
+                } else {
+                    Lft.gas.T_modes[] = gL0.T_modes[];
+                    Rght.gas.T_modes[] = gR0.T_modes[];
                 }
             }
             mixin(codeForThermoUpdateBoth("pT"));
@@ -777,9 +805,14 @@ public:
             interp_l1r2_scalar(gL0.rho, gR0.rho, gR1.rho, Lft.gas.rho, Rght.gas.rho);
             interp_l1r2_scalar(gL0.u, gR0.u, gR1.u, Lft.gas.u, Rght.gas.u);
             version(multi_T_gas) {
-                foreach (i; 0 .. nmodes) {
-                    interp_l1r2_scalar(gL0.u_modes[i], gR0.u_modes[i], gR1.u_modes[i],
-                                       Lft.gas.u_modes[i], Rght.gas.u_modes[i]);
+                if (myConfig.allow_reconstruction_for_energy_modes) {
+                    foreach (i; 0 .. nmodes) {
+                        interp_l1r2_scalar(gL0.u_modes[i], gR0.u_modes[i], gR1.u_modes[i],
+                                           Lft.gas.u_modes[i], Rght.gas.u_modes[i]);
+                    }
+                } else {
+                    Lft.gas.u_modes[] = gL0.u_modes[];
+                    Rght.gas.u_modes[] = gR0.u_modes[];
                 }
             }
             mixin(codeForThermoUpdateBoth("rhou"));
@@ -793,9 +826,14 @@ public:
             interp_l1r2_scalar(gL0.rho, gR0.rho, gR1.rho, Lft.gas.rho, Rght.gas.rho);
             interp_l1r2_scalar(gL0.T, gR0.T, gR1.T, Lft.gas.T, Rght.gas.T);
             version(multi_T_gas) {
-                foreach (i; 0 .. nmodes) {
-                    interp_l1r2_scalar(gL0.T_modes[i], gR0.T_modes[i], gR1.T_modes[i],
-                                       Lft.gas.T_modes[i], Rght.gas.T_modes[i]);
+                if (myConfig.allow_reconstruction_for_energy_modes) {
+                    foreach (i; 0 .. nmodes) {
+                        interp_l1r2_scalar(gL0.T_modes[i], gR0.T_modes[i], gR1.T_modes[i],
+                                           Lft.gas.T_modes[i], Rght.gas.T_modes[i]);
+                    }
+                } else {
+                    Lft.gas.T_modes[] = gL0.T_modes[];
+                    Rght.gas.T_modes[] = gR0.T_modes[];
                 }
             }
             mixin(codeForThermoUpdateBoth("rhoT"));
@@ -855,13 +893,17 @@ public:
         version(multi_species_gas) {
             if (nsp > 1) {
                 // Multiple species.
-                foreach (isp; 0 .. nsp) {
-                    Lft.gas.massf[isp] = weight_scalar(gL0.massf[isp], gL1.massf[isp]);
-                }
-                try {
-                    scale_mass_fractions(Lft.gas.massf);
-                } catch(Exception e) {
-                    debug { writeln(e.msg); }
+                if (myConfig.allow_reconstruction_for_species) {
+                    foreach (isp; 0 .. nsp) {
+                        Lft.gas.massf[isp] = weight_scalar(gL0.massf[isp], gL1.massf[isp]);
+                    }
+                    try {
+                        scale_mass_fractions(Lft.gas.massf);
+                    } catch(Exception e) {
+                        debug { writeln(e.msg); }
+                        Lft.gas.massf[] = gL0.massf[];
+                    }
+                } else {
                     Lft.gas.massf[] = gL0.massf[];
                 }
             } else {
@@ -876,8 +918,12 @@ public:
             Lft.gas.p = weight_scalar(gL0.p, gL1.p);
             Lft.gas.T = weight_scalar(gL0.T, gL1.T);
             version(multi_T_gas) {
-                foreach (i; 0 .. nmodes) {
-                    Lft.gas.T_modes[i] = weight_scalar(gL0.T_modes[i], gL1.T_modes[i]);
+                if (myConfig.allow_reconstruction_for_energy_modes) {
+                    foreach (i; 0 .. nmodes) {
+                        Lft.gas.T_modes[i] = weight_scalar(gL0.T_modes[i], gL1.T_modes[i]);
+                    }
+                } else {
+                    Lft.gas.T_modes[] = gL0.T_modes[];
                 }
             }
             mixin(codeForThermoUpdateLft("pT"));
@@ -886,8 +932,12 @@ public:
             Lft.gas.rho = weight_scalar(gL0.rho, gL1.rho);
             Lft.gas.u = weight_scalar(gL0.u, gL1.u);
             version(multi_T_gas) {
-                foreach (i; 0 .. nmodes) {
-                    Lft.gas.u_modes[i] = weight_scalar(gL0.u_modes[i], gL1.u_modes[i]);
+                if (myConfig.allow_reconstruction_for_energy_modes) {
+                    foreach (i; 0 .. nmodes) {
+                        Lft.gas.u_modes[i] = weight_scalar(gL0.u_modes[i], gL1.u_modes[i]);
+                    }
+                } else {
+                    Lft.gas.u_modes[] = gL0.u_modes[];
                 }
             }
             mixin(codeForThermoUpdateLft("rhou"));
@@ -901,8 +951,12 @@ public:
             Lft.gas.rho = weight_scalar(gL0.rho, gL1.rho);
             Lft.gas.T = weight_scalar(gL0.T, gL1.T);
             version(multi_T_gas) {
-                foreach (i; 0 .. nmodes) {
-                    Lft.gas.T_modes[i] = weight_scalar(gL0.T_modes[i], gL1.T_modes[i]);
+                if (myConfig.allow_reconstruction_for_energy_modes) {
+                    foreach (i; 0 .. nmodes) {
+                        Lft.gas.T_modes[i] = weight_scalar(gL0.T_modes[i], gL1.T_modes[i]);
+                    }
+                } else {
+                    Lft.gas.T_modes[] = gL0.T_modes[];
                 }
             }
             mixin(codeForThermoUpdateLft("rhoT"));
@@ -961,13 +1015,17 @@ public:
         version(multi_species_gas) {
             if (nsp > 1) {
                 // Multiple species.
-                foreach (isp; 0 .. nsp) {
-                    Rght.gas.massf[isp] = weight_scalar(gR0.massf[isp], gR1.massf[isp]);
-                }
-                try {
-                    scale_mass_fractions(Rght.gas.massf);
-                } catch(Exception e) {
-                    debug { writeln(e.msg); }
+                if (myConfig.allow_reconstruction_for_species) {
+                    foreach (isp; 0 .. nsp) {
+                        Rght.gas.massf[isp] = weight_scalar(gR0.massf[isp], gR1.massf[isp]);
+                    }
+                    try {
+                        scale_mass_fractions(Rght.gas.massf);
+                    } catch(Exception e) {
+                        debug { writeln(e.msg); }
+                        Rght.gas.massf[] = gR0.massf[];
+                    }
+                } else {
                     Rght.gas.massf[] = gR0.massf[];
                 }
             } else {
@@ -982,8 +1040,12 @@ public:
             Rght.gas.p = weight_scalar(gR0.p, gR1.p);
             Rght.gas.T = weight_scalar(gR0.T, gR1.T);
             version(multi_T_gas) {
-                foreach (i; 0 .. nmodes) {
-                    Rght.gas.T_modes[i] = weight_scalar(gR0.T_modes[i], gR1.T_modes[i]);
+                if (myConfig.allow_reconstruction_for_energy_modes) {
+                    foreach (i; 0 .. nmodes) {
+                        Rght.gas.T_modes[i] = weight_scalar(gR0.T_modes[i], gR1.T_modes[i]);
+                    }
+                } else {
+                    Rght.gas.T_modes[] = gR0.T_modes[];
                 }
             }
             mixin(codeForThermoUpdateRght("pT"));
@@ -992,8 +1054,12 @@ public:
             Rght.gas.rho = weight_scalar(gR0.rho, gR1.rho);
             Rght.gas.u = weight_scalar(gR0.u, gR1.u);
             version(multi_T_gas) {
-                foreach (i; 0 .. nmodes) {
-                    Rght.gas.u_modes[i] = weight_scalar(gR0.u_modes[i], gR1.u_modes[i]);
+                if (myConfig.allow_reconstruction_for_energy_modes) {
+                    foreach (i; 0 .. nmodes) {
+                        Rght.gas.u_modes[i] = weight_scalar(gR0.u_modes[i], gR1.u_modes[i]);
+                    }
+                } else {
+                    Rght.gas.u_modes[] = gR0.u_modes[];
                 }
             }
             mixin(codeForThermoUpdateRght("rhou"));
@@ -1007,8 +1073,12 @@ public:
             Rght.gas.rho = weight_scalar(gR0.rho, gR1.rho);
             Rght.gas.T = weight_scalar(gR0.T, gR1.T);
             version(multi_T_gas) {
-                foreach (i; 0 .. nmodes) {
-                    Rght.gas.T_modes[i] = weight_scalar(gR0.T_modes[i], gR1.T_modes[i]);
+                if (myConfig.allow_reconstruction_for_energy_modes) {
+                    foreach (i; 0 .. nmodes) {
+                        Rght.gas.T_modes[i] = weight_scalar(gR0.T_modes[i], gR1.T_modes[i]);
+                    }
+                } else {
+                    Rght.gas.T_modes[] = gR0.T_modes[];
                 }
             }
             mixin(codeForThermoUpdateRght("rhoT"));

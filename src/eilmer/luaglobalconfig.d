@@ -139,6 +139,7 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_bool_field("suppress_reconstruction_at_boundaries", "suppress_reconstruction_at_boundaries"));
     mixin(get_double_field("interpolation_delay", "interpolation_delay"));
     mixin(get_enum_field("thermo_interpolator", "thermo_interpolator", "thermo_interpolator_from_name"));
+    mixin(get_bool_field("allow_reconstruction_for_species", "allow_reconstruction_for_species"));
     mixin(get_bool_field("allow_reconstruction_for_energy_modes", "allow_reconstruction_for_energy_modes"));
     mixin(get_bool_field("apply_limiter", "apply_limiter"));
     mixin(get_bool_field("extrema_clipping", "extrema_clipping"));
@@ -231,7 +232,7 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_int_field("run_time_loads_count", "run_time_loads_count"));
     //
     mixin(get_bool_field("diffuse_wall_bcs_on_init", "diffuseWallBCsOnInit"));
-    mixin(get_int_field("number_init_passes", "nInitPasses")); 
+    mixin(get_int_field("number_init_passes", "nInitPasses"));
     mixin(get_double_field("wall_temperature_on_init", "initTWall"));
     //
     mixin(get_bool_field("block_marching", "block_marching"));
@@ -294,7 +295,7 @@ extern(C) int configGet(lua_State* L)
     case "c_h": lua_pushnumber(L, GlobalConfig.c_h); break;
     case "divB_damping_length": lua_pushnumber(L, GlobalConfig.divB_damping_length); break;
         //
-    case "strang_splitting" : lua_pushstring(L, strangSplittingModeName(GlobalConfig.strangSplitting).toStringz); break;    
+    case "strang_splitting" : lua_pushstring(L, strangSplittingModeName(GlobalConfig.strangSplitting).toStringz); break;
     case "gasdynamic_update_scheme": lua_pushstring(L, gasdynamic_update_scheme_name(GlobalConfig.gasdynamic_update_scheme).toStringz); break;
     case "residual_smoothing": lua_pushboolean(L, GlobalConfig.residual_smoothing); break;
     case "residual_smoothing_weight": lua_pushnumber(L, GlobalConfig.residual_smoothing_weight); break;
@@ -329,6 +330,7 @@ extern(C) int configGet(lua_State* L)
     case "suppress_reconstruction_at_captured_shocks": lua_pushboolean(L, GlobalConfig.suppress_reconstruction_at_shocks); break; // old name
     case "suppress_reconstruction_at_boundaries": lua_pushboolean(L, GlobalConfig.suppress_reconstruction_at_boundaries); break;
     case "thermo_interpolator": lua_pushstring(L, thermo_interpolator_name(GlobalConfig.thermo_interpolator).toStringz); break;
+    case "allow_reconstruction_for_species": lua_pushboolean(L, GlobalConfig.allow_reconstruction_for_species); break;
     case "allow_reconstruction_for_energy_modes": lua_pushboolean(L, GlobalConfig.allow_reconstruction_for_energy_modes); break;
     case "apply_limiter": lua_pushboolean(L, GlobalConfig.apply_limiter); break;
     case "extrema_clipping": lua_pushboolean(L, GlobalConfig.extrema_clipping); break;
@@ -435,7 +437,7 @@ extern(C) int configGet(lua_State* L)
     case "udf_solid_source_terms": lua_pushboolean(L, GlobalConfig.udfSolidSourceTerms); break;
         //
     case "thermionic_emission_bc_time_delay": lua_pushnumber(L, GlobalConfig.thermionic_emission_bc_time_delay); break;
-        //       
+        //
     default: lua_pushnil(L);
     }
     return 1;
@@ -480,7 +482,7 @@ extern(C) int configGetByKey(lua_State* L)
     // Just remove table and delegate to configGet.
     lua_remove(L, 1);
     return configGet(L);
-} 
+}
 
 //------------------------------------------------------------------------
 // Functions related to the managed gas model.
