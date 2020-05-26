@@ -41,7 +41,7 @@ private:
     LocalConfig myConfig;
 
 public:
-    this(LocalConfig myConfig) 
+    this(LocalConfig myConfig)
     {
         this.myConfig = myConfig;
     }
@@ -98,9 +98,9 @@ public:
         number sR = 1.0;
         if (myConfig.apply_limiter) {
             // val Albada limiter as per Ian Johnston's thesis.
-            sL = (delLminus*del + fabs(delLminus*del) + epsilon_van_albada) / 
+            sL = (delLminus*del + fabs(delLminus*del) + epsilon_van_albada) /
                 (delLminus*delLminus + del*del + epsilon_van_albada);
-            sR = (del*delRplus + fabs(del*delRplus) + epsilon_van_albada) / 
+            sR = (del*delRplus + fabs(del*delRplus) + epsilon_van_albada) /
                 (del*del + delRplus*delRplus + epsilon_van_albada);
         }
         // The actual high-order reconstruction, possibly limited.
@@ -145,9 +145,9 @@ public:
         number sR = 1.0;
         if (myConfig.apply_limiter) {
             // val Albada limiter as per Ian Johnston's thesis.
-            sL = (delLminus*del + fabs(delLminus*del) + epsilon_van_albada) / 
+            sL = (delLminus*del + fabs(delLminus*del) + epsilon_van_albada) /
                 (delLminus*delLminus + del*del + epsilon_van_albada);
-            sR = (del*delRplus + fabs(del*delRplus) + epsilon_van_albada) / 
+            sR = (del*delRplus + fabs(del*delRplus) + epsilon_van_albada) /
                 (del*del + delRplus*delRplus + epsilon_van_albada);
         }
         // The actual high-order reconstruction, possibly limited.
@@ -255,13 +255,13 @@ public:
     }
 
     //------------------------------------------------------------------------------
-    
+
     @nogc
     void interp_l3r3(ref FVInterface IFace,
                      ref FVCell cL2, ref FVCell cL1, ref FVCell cL0,
                      ref FVCell cR0, ref FVCell cR1, ref FVCell cR2,
-                     number cL2Length, number cL1Length, number cL0Length, 
-                     number cR0Length, number cR1Length, number cR2Length, 
+                     number cL2Length, number cL1Length, number cL0Length,
+                     number cR0Length, number cR1Length, number cR2Length,
                      ref FlowState Lft, ref FlowState Rght)
     {
         auto gmodel = myConfig.gmodel;
@@ -330,7 +330,7 @@ public:
                                        Lft.gas.massf[isp], Rght.gas.massf[isp]);
                 }
                 try {
-                    scale_mass_fractions(Lft.gas.massf); 
+                    scale_mass_fractions(Lft.gas.massf);
                 } catch(Exception e) {
                     debug { writeln(e.msg); }
                     Lft.gas.massf[] = gL0.massf[];
@@ -347,10 +347,10 @@ public:
                 Rght.gas.massf[0] = 1.0;
             }
         }
-        // Interpolate on two of the thermodynamic quantities, 
-        // and fill in the rest based on an EOS call. 
+        // Interpolate on two of the thermodynamic quantities,
+        // and fill in the rest based on an EOS call.
         final switch (myConfig.thermo_interpolator) {
-        case InterpolateOption.pt: 
+        case InterpolateOption.pt:
             interp_l3r3_scalar(gL2.p, gL1.p, gL0.p, gR0.p, gR1.p, gR2.p, Lft.gas.p, Rght.gas.p);
             interp_l3r3_scalar(gL2.T, gL1.T, gL0.T, gR0.T, gR1.T, gR2.T, Lft.gas.T, Rght.gas.T);
             version(multi_T_gas) {
@@ -393,7 +393,7 @@ public:
             interp_l3r3_scalar(gL2.p, gL1.p, gL0.p, gR0.p, gR1.p, gR2.p, Lft.gas.p, Rght.gas.p);
             mixin(codeForThermoUpdateBoth("rhop"));
             break;
-        case InterpolateOption.rhot: 
+        case InterpolateOption.rhot:
             interp_l3r3_scalar(gL2.rho, gL1.rho, gL0.rho, gR0.rho, gR1.rho, gR2.rho, Lft.gas.rho, Rght.gas.rho);
             interp_l3r3_scalar(gL2.T, gL1.T, gL0.T, gR0.T, gR1.T, gR2.T, Lft.gas.T, Rght.gas.T);
             version(multi_T_gas) {
@@ -427,12 +427,12 @@ public:
     } // end interp_l3r3()
 
     //------------------------------------------------------------------------------
-    
+
     @nogc
     void interp_l2r2(ref FVInterface IFace,
                      ref FVCell cL1, ref FVCell cL0, ref FVCell cR0, ref FVCell cR1,
-                     number cL1Length, number cL0Length, 
-                     number cR0Length, number cR1Length, 
+                     number cL1Length, number cL0Length,
+                     number cR0Length, number cR1Length,
                      ref FlowState Lft, ref FlowState Rght)
     {
         auto gmodel = myConfig.gmodel;
@@ -488,7 +488,7 @@ public:
                                        Lft.gas.massf[isp], Rght.gas.massf[isp]);
                 }
                 try {
-                    scale_mass_fractions(Lft.gas.massf); 
+                    scale_mass_fractions(Lft.gas.massf);
                 } catch(Exception e) {
                     debug { writeln(e.msg); }
                     Lft.gas.massf[] = gL0.massf[];
@@ -505,10 +505,10 @@ public:
                 Rght.gas.massf[0] = 1.0;
             }
         }
-        // Interpolate on two of the thermodynamic quantities, 
-        // and fill in the rest based on an EOS call. 
+        // Interpolate on two of the thermodynamic quantities,
+        // and fill in the rest based on an EOS call.
         final switch (myConfig.thermo_interpolator) {
-        case InterpolateOption.pt: 
+        case InterpolateOption.pt:
             interp_l2r2_scalar(gL1.p, gL0.p, gR0.p, gR1.p, Lft.gas.p, Rght.gas.p);
             interp_l2r2_scalar(gL1.T, gL0.T, gR0.T, gR1.T, Lft.gas.T, Rght.gas.T);
             version(multi_T_gas) {
@@ -549,7 +549,7 @@ public:
             interp_l2r2_scalar(gL1.p, gL0.p, gR0.p, gR1.p, Lft.gas.p, Rght.gas.p);
             mixin(codeForThermoUpdateBoth("rhop"));
             break;
-        case InterpolateOption.rhot: 
+        case InterpolateOption.rhot:
             interp_l2r2_scalar(gL1.rho, gL0.rho, gR0.rho, gR1.rho, Lft.gas.rho, Rght.gas.rho);
             interp_l2r2_scalar(gL1.T, gL0.T, gR0.T, gR1.T, Lft.gas.T, Rght.gas.T);
             version(multi_T_gas) {
@@ -641,10 +641,10 @@ public:
                 Rght.gas.massf[0] = 1.0;
             }
         }
-        // Interpolate on two of the thermodynamic quantities, 
-        // and fill in the rest based on an EOS call. 
+        // Interpolate on two of the thermodynamic quantities,
+        // and fill in the rest based on an EOS call.
         final switch (myConfig.thermo_interpolator) {
-        case InterpolateOption.pt: 
+        case InterpolateOption.pt:
             interp_l2r1_scalar(gL1.p, gL0.p, gR0.p, Lft.gas.p, Rght.gas.p);
             interp_l2r1_scalar(gL1.T, gL0.T, gR0.T, Lft.gas.T, Rght.gas.T);
             version(multi_T_gas) {
@@ -671,7 +671,7 @@ public:
             interp_l2r1_scalar(gL1.p, gL0.p, gR0.p, Lft.gas.p, Rght.gas.p);
             mixin(codeForThermoUpdateBoth("rhop"));
             break;
-        case InterpolateOption.rhot: 
+        case InterpolateOption.rhot:
             interp_l2r1_scalar(gL1.rho, gL0.rho, gR0.rho, Lft.gas.rho, Rght.gas.rho);
             interp_l2r1_scalar(gL1.T, gL0.T, gR0.T, Lft.gas.T, Rght.gas.T);
             version(multi_T_gas) {
@@ -759,10 +759,10 @@ public:
                 Rght.gas.massf[0] = 1.0;
             }
         }
-        // Interpolate on two of the thermodynamic quantities, 
-        // and fill in the rest based on an EOS call. 
+        // Interpolate on two of the thermodynamic quantities,
+        // and fill in the rest based on an EOS call.
         final switch (myConfig.thermo_interpolator) {
-        case InterpolateOption.pt: 
+        case InterpolateOption.pt:
             interp_l1r2_scalar(gL0.p, gR0.p, gR1.p, Lft.gas.p, Rght.gas.p);
             interp_l1r2_scalar(gL0.T, gR0.T, gR1.T, Lft.gas.T, Rght.gas.T);
             version(multi_T_gas) {
@@ -789,7 +789,7 @@ public:
             interp_l1r2_scalar(gL0.p, gR0.p, gR1.p, Lft.gas.p, Rght.gas.p);
             mixin(codeForThermoUpdateBoth("rhop"));
             break;
-        case InterpolateOption.rhot: 
+        case InterpolateOption.rhot:
             interp_l1r2_scalar(gL0.rho, gR0.rho, gR1.rho, Lft.gas.rho, Rght.gas.rho);
             interp_l1r2_scalar(gL0.T, gR0.T, gR1.T, Lft.gas.T, Rght.gas.T);
             version(multi_T_gas) {
@@ -869,10 +869,10 @@ public:
                 Lft.gas.massf[0] = 1.0;
             }
         }
-        // Interpolate on two of the thermodynamic quantities, 
-        // and fill in the rest based on an EOS call. 
+        // Interpolate on two of the thermodynamic quantities,
+        // and fill in the rest based on an EOS call.
         final switch (myConfig.thermo_interpolator) {
-        case InterpolateOption.pt: 
+        case InterpolateOption.pt:
             Lft.gas.p = weight_scalar(gL0.p, gL1.p);
             Lft.gas.T = weight_scalar(gL0.T, gL1.T);
             version(multi_T_gas) {
@@ -897,7 +897,7 @@ public:
             Lft.gas.p = weight_scalar(gL0.p, gL1.p);
             mixin(codeForThermoUpdateLft("rhop"));
             break;
-        case InterpolateOption.rhot: 
+        case InterpolateOption.rhot:
             Lft.gas.rho = weight_scalar(gL0.rho, gL1.rho);
             Lft.gas.T = weight_scalar(gL0.T, gL1.T);
             version(multi_T_gas) {
@@ -975,10 +975,10 @@ public:
                 Rght.gas.massf[0] = 1.0;
             }
         }
-        // Interpolate on two of the thermodynamic quantities, 
-        // and fill in the rest based on an EOS call. 
+        // Interpolate on two of the thermodynamic quantities,
+        // and fill in the rest based on an EOS call.
         final switch (myConfig.thermo_interpolator) {
-        case InterpolateOption.pt: 
+        case InterpolateOption.pt:
             Rght.gas.p = weight_scalar(gR0.p, gR1.p);
             Rght.gas.T = weight_scalar(gR0.T, gR1.T);
             version(multi_T_gas) {
@@ -1003,7 +1003,7 @@ public:
             Rght.gas.p = weight_scalar(gR0.p, gR1.p);
             mixin(codeForThermoUpdateRght("rhop"));
             break;
-        case InterpolateOption.rhot: 
+        case InterpolateOption.rhot:
             Rght.gas.rho = weight_scalar(gR0.rho, gR1.rho);
             Rght.gas.T = weight_scalar(gR0.T, gR1.T);
             version(multi_T_gas) {
@@ -1028,7 +1028,7 @@ public:
 
 // Helper functions for code generation.
 // If an EOS call fails, fall back to just copying cell-centre data.
-// This does presume that the cell-centre data is valid. 
+// This does presume that the cell-centre data is valid.
 string codeForThermoUpdateLft(string funname)
 {
     string code = "

@@ -258,7 +258,7 @@ class IgnitionZone : BlockZone {
         Tig = other.Tig;
     }
     override string toString() {
-        return text("IgnitionZone(p0=", to!string(p0), ", p1=", to!string(p1), 
+        return text("IgnitionZone(p0=", to!string(p0), ", p1=", to!string(p1),
                     ", Tig=", Tig, ")");
     }
 }
@@ -2073,4 +2073,3 @@ void init_master_lua_State()
     setSampleHelperFunctions(L);
     setGridMotionHelperFunctions(L);
 } // end init_master_lua_State()
-
