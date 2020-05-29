@@ -791,6 +791,10 @@ number[] osher_riemann(const(GasState) stateL, const(GasState) stateR,
     return [pstar, wstar, wL, wR, velX0];
 } // end osher_riemann()
 
+// The following two function solvers are used in lrivp (below)
+// to get approximate estimates of the intermediate pressure
+// such that the velocity estimates after each wave are equal.
+
 @nogc
 number secant_iterate(alias f)(number pstar)
 {
@@ -805,6 +809,30 @@ number secant_iterate(alias f)(number pstar)
         count += 1;
     } while (fabs(incr_pstar)/pstar > 0.01 && count < 10);
     return pstar;
+}
+
+@nogc
+number bisect_iterate(alias f)(number p0, number p1)
+{
+    int count = 0;
+    number f0 = f(p0);
+    number f1 = f(p1);
+    if (f0*f1 > 0.0) {
+        throw new Exception("Does not bracket an odd number of roots.");
+    }
+    number pmid = 0.5*(p0+p1);
+    number fmid = f(pmid);
+    do {
+        if (f0*fmid < 0.0) {
+            p1 = pmid; f1 = fmid;
+        } else {
+            p0 = pmid; f0 = fmid;
+        }
+        pmid = 0.5*(p0+p1);
+        fmid = f(pmid);
+        count += 1;
+    } while ((fabs(p1-p0)/pmid > 0.01) && (fabs(fmid) > 0.001));
+    return pmid;
 }
 
 @nogc
@@ -935,14 +963,17 @@ void lrivp(const(GasState) stateL, const(GasState) stateR,
     if (left_wave_is_shock && right_wave_is_shock) {
         number f1(number ps) { return velLstar_shock(ps) - velRstar_shock(ps); }
         pstar = secant_iterate!(f1)(pstar);
+        if (pstar < 0.0) { pstar = bisect_iterate!(f1)(0.1*pstar_save, 10.0*pstar_save); }
         wstar = velLstar_shock(pstar);
     } else if (right_wave_is_shock) {
         number f2(number ps) { return velLstar_fan(ps) - velRstar_shock(ps); }
         pstar = secant_iterate!(f2)(pstar);
+        if (pstar < 0.0) { pstar = bisect_iterate!(f2)(pL, pR); }
         wstar = velLstar_fan(pstar);
     } else if (left_wave_is_shock) {
         number f3(number ps) { return velLstar_shock(ps) - velRstar_fan(ps); }
         pstar = secant_iterate!(f3)(pstar);
+        if (pstar < 0.0) { pstar = bisect_iterate!(f3)(pL, pR); }
         wstar = velLstar_shock(pstar);
     }
     if (isNaN(wstar) || isNaN(pstar) || pstar <= 0.0) {

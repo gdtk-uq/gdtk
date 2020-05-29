@@ -396,11 +396,13 @@ public:
                     lrivp(cL0.gas, cR0.gas, cL0.vel, cR0.vel, gmodel, gmodel, f.dxdt[level], f.p);
                 } // end if(x_order
             }
-            debug {
-                if (isNaN(f.dxdt[level]) || isNaN(f.p) || f.p < 0.0) {
-                    writeln("Bad Riemann solve i=", i, " f.x=", f.x, " level=", level);
-                    writeln("    f.dxdt=", f.dxdt[level], " f.p=", f.p);
+            if (isNaN(f.dxdt[level]) || isNaN(f.p) || f.p < 0.0) {
+                string msg = "Bad Riemann solve.";
+                debug {
+                    msg ~= text(" i=", i, " f.x=", f.x, " level=", level);
+                    msg ~= text(" f.dxdt=", f.dxdt[level], " f.p=", f.p);
                 }
+                throw new Exception(msg);
             }
         } // end foreach f
         foreach (c; cells) {
