@@ -147,11 +147,13 @@ public:
             if (fabs(pL-pR) > p_burst) {
                 t_open = t + dt_hold;
                 state = DiaphragmState.triggered;
+                writefln("Diaphragm at ec_indx=%d triggered at t=%g.", indx, t);
             }
             break;
         case DiaphragmState.triggered:
             if (t > t_open) {
                 state = DiaphragmState.open;
+                writefln("Diaphragm at ec_indx=%d open at t=%g.", indx, t);
             }
             break;
         case DiaphragmState.open:

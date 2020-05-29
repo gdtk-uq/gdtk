@@ -1129,7 +1129,6 @@ def write_initial_files():
     config.write(fp)
     for slug in slugList: slug.write_config(fp)
     for piston in pistonList: piston.write_config(fp)
-    for diaphragm in diaphragmList: diaphragm.write_config(fp)
     for ec in ecList: ec.write_config(fp)
     # Previous entries all presume that they are not the last.
     fp.write('"dummy_item": 0\n')

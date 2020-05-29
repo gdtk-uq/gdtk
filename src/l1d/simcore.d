@@ -299,9 +299,7 @@ void integrate_in_time()
         // 2. Update state of end conditions.
         foreach (ec; ecs) {
             auto dia = cast(Diaphragm) ec;
-            if (dia) {
-                if (dia) { dia.update_state(sim_data.sim_time); }
-            }
+            if (dia) { dia.update_state(sim_data.sim_time); }
         }
         // 3. Record current state of dynamic components.
         foreach (p; pistons) { p.record_state(); }

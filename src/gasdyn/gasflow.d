@@ -863,6 +863,19 @@ void lrivp(const(GasState) stateL, const(GasState) stateR,
         // Near vacuum solution.
         pstar = near_zero_pressure;
     }
+    if (isNaN(wstar) || isNaN(pstar) || pstar <= 0.0) {
+        string msg = "Riemann solve fail at stage 1.";
+        debug {
+            msg ~= text(" wstar=", wstar, " pstar=", pstar);
+            msg ~= text(" Z=", Z, " Jplus=", Jplus, " Jminus=", Jminus);
+            msg ~= text(" stateL=", stateL);
+            msg ~= text(" stateR=", stateR);
+            msg ~= text(" velL=", velL, " velR=", velR);
+        }
+        throw new GasFlowException(msg);
+    }
+    number pstar_save = pstar;
+    number wstar_save = wstar;
     //
     // Stage 2: If need be, relax some assumptions.
     // At this point, our approximate solution may be good enough but,
@@ -887,6 +900,20 @@ void lrivp(const(GasState) stateL, const(GasState) stateR,
         pstar = secant_iterate!(f0)(pstar);
         wstar = velLstar_fan(pstar);
     }
+    if (isNaN(wstar) || isNaN(pstar) || pstar <= 0.0) {
+        debug {
+            writeln("Riemann solve fail at end stage 2.");
+            writeln(" wstar=", wstar, " pstar=", pstar);
+            writeln(" Jplus=", Jplus, " Jminus=", Jminus);
+            writeln(" stateL=", stateL);
+            writeln(" stateR=", stateR);
+            writeln(" velL=", velL, " velR=", velR);
+        }
+        pstar = pstar_save;
+        wstar = wstar_save;
+    }
+    pstar_save = pstar;
+    wstar_save = wstar;
     //
     // Maybe one or both of the waves is reasonably strong compression.
     bool left_wave_is_shock = pstar > 1.1*pL;
@@ -917,6 +944,18 @@ void lrivp(const(GasState) stateL, const(GasState) stateR,
         number f3(number ps) { return velLstar_shock(ps) - velRstar_fan(ps); }
         pstar = secant_iterate!(f3)(pstar);
         wstar = velLstar_shock(pstar);
+    }
+    if (isNaN(wstar) || isNaN(pstar) || pstar <= 0.0) {
+        debug {
+            writeln("Riemann solve fail at end stage 3.");
+            writeln(" wstar=", wstar, " pstar=", pstar);
+            writeln(" Jplus=", Jplus, " Jminus=", Jminus);
+            writeln(" stateL=", stateL);
+            writeln(" stateR=", stateR);
+            writeln(" velL=", velL, " velR=", velR);
+        }
+        pstar = pstar_save;
+        wstar = wstar_save;
     }
     return;
 } // end lrivp()
