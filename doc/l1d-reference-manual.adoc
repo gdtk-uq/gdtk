@@ -103,6 +103,10 @@ Note you do not have to set all of these values in the input script.
   _bool_, default: `False` +
   If set to `True`, the finite-rate chemistry will be active.
 
+`T_frozen` ::
+  _float_, default: `300.0` +
+  Temperature above which finite-rate reactions may happen.
+
 `dt_init` ::
   _float_, default: `1.0e-6` +
   The size of the time-step that will be used for the first simulation step
@@ -397,7 +401,7 @@ The other dynamic component that may travel back and forth in the tube is a pist
 
 `front_seal_area` ::
   _float_, default: `0.0` +
-  Seal area over which the front-side pressure acts.
+  Seal area (in m^2) over which the front-side pressure acts.
   This is the effective area over which the compressed gas pressed the
   front-side seal against the tube wall.
   Friction force is this area multiplied by downstream-pressure by friction coefficient.
@@ -408,14 +412,14 @@ The other dynamic component that may travel back and forth in the tube is a pist
 
 `back_seal_area` ::
   _float_, default: `0.0` +
-  Seal area over which the back-side pressure acts.
+  Seal area (in m^2) over which the back-side pressure acts.
   Friction force is this area multiplied by downstream-pressure by friction coefficient.
   This is for gun tunnel pistons that have flexible skirts that are pressed
   onto the tube wall by the pushing gas.
 
 `p_restrain` ::
   _float_, default: `0.0` +
-  Pressure at which restraint will release.
+  Pressure (in Pa) at which restraint will release.
   Some machines, such as two-stage light-gas guns, will
   hold the projectile in place with some form of mechanical
   restraint until the pressure behind the piston reaches a critical value.
@@ -428,14 +432,23 @@ The other dynamic component that may travel back and forth in the tube is a pist
 `with_brakes` ::
   _bool_, default: False +
   Flag to indicate the presence of brakes.
-  Such brakes, as on the T4 shock tunnel, allow forward
-  motion of the piston but prevent backward motion by
-  locking the piston against the tube wall.
+  Such brakes, as on the T4 shock tunnel, allow free forward
+  motion of the piston but try to prevent backward motion by
+  applying a large frictional force at the tube wall.
 
 `brakes_on` ::
   _int_, default: `0` +
   Flag to indicate the state of the brakes.
   `0`=off, `1`=on.
+
+`brakes_friction_force` ::
+  _float_, default: `0.0` +
+  The maximum friction force (in Newtons) that the brakes can apply when they are on.
+  This is modelled on the sliding-shoe brakes of the T4 shock tunnel,
+  which are activated by the piston trying to travel backwards up the compression tube.
+  The user will need to supply an estimate of this value,
+  possibly by considering the frontal area of the piston and
+  the maximum pressure that the brakes are expected to hold before slipping.
 
 `x_buffer` ::
   _float_, default: `1.0e6` +
@@ -494,6 +507,7 @@ A diaphragm conditionally connects the adjacent ends of two gas slugs.
   Time delay, in seconds, from rupture-trigger to actual rupture with the
   gas slugs being allowed to interact.
 
+////
 `dxL` ::
   _float_: `0.0` +
   The distance over which p is averaged on left of the diaphragm.
@@ -505,7 +519,7 @@ A diaphragm conditionally connects the adjacent ends of two gas slugs.
 `dxR` ::
   _float_, default: `0.0` +
   The distance, in metres, over which p is averaged on right-side of the diaphragm.
-
+////
 
 === GasInterface
 Connects two gas slugs at specified location.

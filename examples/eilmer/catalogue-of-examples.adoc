@@ -1,4 +1,12 @@
-= Catalogue of examples
+= Catalogue of Eilmer examples
+
+The Eilmer code gardeners
+2020-05-30
+:toc: right
+:stylesheet: readthedocs.css
+:sectnums:
+
+:leveloffset: +1
 
 In the source tree for Eilmer, there are a number of examples of the simulation
 code in action.
@@ -44,3 +52,7 @@ References:
 == Turbulent flows of perfect gases
 
 == High-temperature gas flows
+
+:leveloffset: -1
+
+
