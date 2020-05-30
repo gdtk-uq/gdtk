@@ -22,6 +22,7 @@ LIBRARY_DOC_FILES := flow/gas-flow.adoc \
 	geom/elements.adoc
 
 all: eilmer-reference-manual.html \
+	eilmer-catalog-of-examples.html \
 	l1d-reference-manual.html \
 	library-reference-manual.html \
 	geometry-reference-manual.html
@@ -29,6 +30,9 @@ all: eilmer-reference-manual.html \
 
 eilmer-reference-manual.html: eilmer-reference-manual.adoc $(EILMER_DOC_FILES)
 	asciidoctor eilmer-reference-manual.adoc
+
+eilmer-catalog-of-examples.html: eilmer-catalog-of-examples.adoc
+	asciidoctor eilmer-catalog-of-examples.adoc
 
 l1d-reference-manual.html: l1d-reference-manual.adoc
 	asciidoctor l1d-reference-manual.adoc
@@ -41,6 +45,7 @@ geometry-reference-manual.html: geometry-reference-manual.adoc $(GEOM_DOC_FILES)
 
 clean:
 	- rm eilmer-reference-manual.html \
+		eilmer-catalog-of-examples.html \
 		l1d-reference-manual.html \
 		library-reference-manual.html \
 		geometry-reference-manual.html

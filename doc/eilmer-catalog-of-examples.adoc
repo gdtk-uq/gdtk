@@ -1,0 +1,40 @@
+= Catalogue of Eilmer examples
+The Eilmer code gardeners
+2020-05-30
+:toc: right
+:stylesheet: readthedocs.css
+:sectnums:
+
+:leveloffset: +1
+
+In the source tree for Eilmer, there are a number of examples of the simulation
+code in action.
+These examples have been collected and maintained over many years.
+Some are well-tested and exercised, while others are more bleeding edge.
+The hope is that all of the examples offer launching points for you
+to start your own compressible flow simulations.
+
+A number of these examples replicate classic test cases
+in the CFD literature on compressible flows, or classic
+experiments in high-speed flow.
+The listing below provides a mapping directories in the source
+tree to the literature.
+They are grouped loosely by the type of flow/geometry configuration.
+This is not a perfect grouping because the world of compressible
+flow test cases is not always so easy to categorise.
+
+= External, inviscid flows of perfect gases
+
+= Internal, inviscid flows of perfect gases
+
+include::../examples/eilmer/2D/forward-facing-step/readme.adoc[]
+
+= Laminar flows of perfect gases
+
+= Turbulent flows of perfect gases
+
+= High-temperature gas flows
+
+:leveloffset: -1
+
+
