@@ -39,6 +39,7 @@ public:
     bool is_restrain;
     bool with_brakes;
     bool brakes_on;
+    double brakes_friction_force; // in N
     double x_buffer;
     bool hit_buffer;
     int ecL_id;
@@ -70,8 +71,9 @@ public:
         back_seal_f = getJSONdouble(jsonData, "back_seal_f", 0.0);
         back_seal_area = getJSONdouble(jsonData, "back_seal_area", 0.0);
         p_restrain = getJSONdouble(jsonData, "p_restrain", 0.0);
-        x_buffer = getJSONdouble(jsonData, "x_buffer", 0.0);
+        x_buffer = getJSONdouble(jsonData, "x_buffer", 1.0e6);
         with_brakes = getJSONbool(jsonData, "with_brakes", false);
+        brakes_friction_force = getJSONdouble(jsonData, "brakes_friction_force", 0.0);
         ecL_id = getJSONint(jsonData, "ecL_id", -1);
         ecR_id = getJSONint(jsonData, "ecR_id", -1);
         if (L1dConfig.verbosity_level >= 1) {
@@ -87,6 +89,7 @@ public:
             writeln("  p_restrain= ", p_restrain);
             writeln("  x_buffer= ", x_buffer);
             writeln("  with_brakes= ", with_brakes);
+            writeln("  brakes_friction_force= ", brakes_friction_force);
             writeln("  ecL_id= ", ecL_id);
             writeln("  ecR_id= ", ecR_id);
         }
@@ -143,6 +146,17 @@ public:
         return;
     }
 
+    void check_for_buffer_strike(double t)
+    {
+        if ((x > x_buffer) && (vel > 0.0)) {
+            vel = 0.0;
+            writefln("Buffer strike by Piston[%d] at time %e with speed %e",
+                     indx, t, vel);
+            hit_buffer = true;
+        }
+        return;
+    }
+
     @nogc
     void time_derivatives(int level)
     {
@@ -165,13 +179,18 @@ public:
             dxdt[level] = 0.0;
             dvdt[level] = 0.0;
         }
-        // [TODO] brakes
-        // [TODO] buffer
         // The (signed) pressure force.
         double pressure_force = area*(pL-pR);
         // The magnitude of the friction force from pressurized seals.
         double friction_force = front_seal_f*front_seal_area*pR +
             back_seal_f*back_seal_area*pL;
+        // Brakes modelled on those used on T4 shock tunnel.
+        if (with_brakes && vel < 0.0) {
+            brakes_on = true;
+            friction_force += brakes_friction_force;
+        } else {
+            brakes_on = false;
+        }
         //
         // Rate of change of velocity is acceleration.
         immutable vel_tol = 1.0e-6;
@@ -198,7 +217,7 @@ public:
         // Rate of change of position is velocity.
         dxdt[level] = vel;
         return;
-    }
+    } // end time_derivatives()
 
     @nogc
     void predictor_step(double dt)

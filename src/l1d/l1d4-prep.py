@@ -626,14 +626,15 @@ class Piston():
                 'mass', 'diam', 'L', 'xL0', 'xR0', 'x0', 'vel0', \
                 'front_seal_f', 'front_seal_area', \
                 'back_seal_f', 'back_seal_area', \
-                'p_restrain', 'is_restrain', 'with_brakes', 'brakes_on', \
+                'p_restrain', 'is_restrain', \
+                'with_brakes', 'brakes_on', 'brakes_friction_force', \
                 'x_buffer', 'hit_buffer', 'ecL', 'ecR'
 
     def __init__(self, mass, diam, xL0, xR0, vel0,
                  front_seal_f=0.0, front_seal_area=0.0,
                  back_seal_f=0.0, back_seal_area=0.0,
                  p_restrain=0.0, is_restrain=0,
-                 with_brakes=False, brakes_on=0,
+                 with_brakes=False, brakes_on=0, brakes_friction_force=0.0,
                  x_buffer=10.e6, hit_buffer = 0,
                  label=""):
         """
@@ -658,6 +659,7 @@ class Piston():
         self.is_restrain = is_restrain
         self.with_brakes = with_brakes
         self.brakes_on = brakes_on
+        self.brakes_friction_force = brakes_friction_force
         self.x_buffer = x_buffer
         self.hit_buffer = hit_buffer
         #
@@ -694,6 +696,7 @@ class Piston():
         fp.write('  "p_restrain": %e,\n' % self.p_restrain)
         fp.write('  "x_buffer": %e,\n' % self.x_buffer)
         fp.write('  "with_brakes": %s,\n' % json.dumps(self.with_brakes))
+        fp.write('  "brakes_friction_force": %e,\n' % self.brakes_friction_force)
         # It may be that the piston has only one face connected.
         ecindx = -1
         if self.ecL: ecindx = self.ecL.ecindx

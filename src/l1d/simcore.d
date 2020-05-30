@@ -296,7 +296,9 @@ void integrate_in_time()
                 }
             }
         }
-        // 2. Update state of end conditions.
+        // 2.1 Check Piston and buffer.
+        foreach (p; pistons) { p.check_for_buffer_strike(sim_data.sim_time); }
+        // 2.2 Update state of end conditions.
         foreach (ec; ecs) {
             auto dia = cast(Diaphragm) ec;
             if (dia) { dia.update_state(sim_data.sim_time); }
