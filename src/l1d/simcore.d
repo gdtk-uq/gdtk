@@ -11,6 +11,7 @@ import std.json;
 import std.file;
 import std.datetime;
 import std.algorithm;
+import std.range;
 
 import json_helper;
 import geom;
@@ -26,6 +27,10 @@ import endcondition;
 import misc;
 
 __gshared static GasModel[] gmodels;
+__gshared static uint overall_species_count;
+__gshared static uint[][] overall_species_index;
+__gshared static uint overall_modes_count;
+__gshared static uint[][] overall_modes_index;
 __gshared static ThermochemicalReactor[] reactors;
 __gshared static Tube tube1;
 __gshared static Piston[] pistons;
@@ -76,11 +81,16 @@ void init_simulation(int tindx_start)
     assert(L1dConfig.gas_model_files.length == L1dConfig.reaction_files_1.length &&
            L1dConfig.gas_model_files.length == L1dConfig.reaction_files_2.length,
            "Lengths of gas model and reaction file lists are inconsistent.");
-    foreach (i, fileName; L1dConfig.gas_model_files) {
+    overall_species_count = 0;
+    foreach (gi, fileName; L1dConfig.gas_model_files) {
         auto gm = init_gas_model(fileName);
         gmodels ~= gm;
-        auto fn1 = L1dConfig.reaction_files_1[i];
-        auto fn2 = L1dConfig.reaction_files_2[i];
+        overall_species_index ~= array(iota(overall_species_count, overall_species_count+gm.n_species));
+        overall_species_count += gm.n_species;
+        overall_modes_index ~= array(iota(overall_modes_count, overall_modes_count+gm.n_modes));
+        overall_modes_count += gm.n_modes;
+        auto fn1 = L1dConfig.reaction_files_1[gi];
+        auto fn2 = L1dConfig.reaction_files_2[gi];
         if (fn1.length > 0) {
             reactors ~= init_thermochemical_reactor(gm, fn1, fn2);
         } else {

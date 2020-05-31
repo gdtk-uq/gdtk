@@ -182,6 +182,14 @@ public:
                 fp.write(format("%e %e %e", t, c.vel, c.L_bar));
                 fp.write(format(" %e %e %e %e", c.gas.rho, c.gas.p, c.gas.T, c.gas.u));
                 fp.write(format(" %e %e %e", c.gas.a, c.shear_stress, c.heat_flux));
+                double[] massf; massf.length = overall_species_count;
+                foreach (ref mf; massf) { mf = 0.0; }
+                foreach (i, mf; c.gas.massf) { massf[overall_species_index[gmodel_id][i]] = mf; }
+                foreach (mf; massf) { fp.write(format(" %e", mf)); }
+                double[] Tmodes; Tmodes.length = overall_modes_count;
+                foreach (ref tm; Tmodes) { tm = 0.0; }
+                foreach (i, tm; c.gas.T_modes) { Tmodes[overall_modes_index[gmodel_id][i]] = tm; }
+                foreach (tm; Tmodes) { fp.write(format(" %e", tm)); }
                 fp.write("\n");
                 break;
             }

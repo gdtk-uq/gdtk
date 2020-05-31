@@ -80,6 +80,8 @@ class GlobalConfig(object):
     # via typographical errors.
     __slots__ = 'job_name', 'title', \
                 'gas_model_files', 'gmodels', \
+                'overall_species_count', 'overall_species_index', \
+                'overall_modes_count', 'overall_modes_index', \
                 'reaction_files_1', 'reaction_files_2', \
                 'reactors', 'reacting', 'T_frozen', \
                 'dt_init', 'cfl', 'cfl_count', 'print_count', 'dt_plot_list', \
@@ -95,6 +97,11 @@ class GlobalConfig(object):
         self.title = "Another L1d4 Simulation."
         self.gas_model_files = []
         self.gmodels = []
+        # History points will have to deal with species from all gas models.
+        self.overall_species_count = 0
+        self.overall_species_index = []
+        self.overall_modes_count = 0
+        self.overall_modes_index = []
         self.reaction_files_1 = []
         self.reaction_files_2 = []
         self.reactors = []
@@ -186,6 +193,12 @@ def add_gas_model(fileName, reaction_file_1="", reaction_file_2=""):
     gmodel_id = len(config.gmodels)
     config.gmodels.append(gmodel)
     config.gas_model_files.append(fileName)
+    nsp = gmodel.n_species
+    config.overall_species_index.append([config.overall_species_count+i for i in range(nsp)])
+    config.overall_species_count += nsp
+    nmodes = gmodel.n_modes
+    config.overall_modes_index.append([config.overall_modes_count+i for i in range(nmodes)])
+    config.overall_modes_count += nmodes
     #
     # ThermochemicalReactor is always associated with a particular GasModel.
     if reaction_file_1:
@@ -611,6 +624,16 @@ class GasSlug():
                 fp.write('%e %e %e' % (t, self.vel, L_bar))
                 fp.write(' %e %e %e %e' % (self.gas.rho, self.gas.p, self.gas.T, self.gas.u))
                 fp.write(' %e %e %e' % (self.gas.a, shear_stress, heat_flux))
+                massf = [0.0,]*config.overall_species_count
+                gs_massf = self.gas.massf
+                for i in range(len(gs_massf)):
+                    massf[config.overall_species_index[self.gmodel_id][i]] = gs_massf[i]
+                for mf in massf: fp.write(' %e' % mf)
+                Tmodes = [0.0,]*config.overall_modes_count
+                gs_Tmodes = self.gas.T_modes
+                for i in range(len(gs_Tmodes)):
+                    Tmodes[config.overall_modes_index[self.gmodel_id][i]] = gs_Tmodes[i]
+                for Tmode in Tmodes: fp.write(' %e' % Tmode)
                 fp.write('\n')
                 break;
         return
@@ -1175,7 +1198,18 @@ def write_initial_files():
     for i in range(len(config.hloc_list)):
         fileName = config.job_name + ('/history-loc-%04d.data' % i)
         fp = open(fileName, 'w')
-        fp.write('# 1:t  2:vel  3:L_bar  4:rho  5:p  6:T  7:u  8:a  9:shear_stress  10:heat_flux\n')
+        fp.write('# 1:t  2:vel  3:L_bar  4:rho  5:p  6:T  7:u  8:a  9:shear_stress  10:heat_flux')
+        column_count = 11
+        for gi in range(len(config.gmodels)):
+            species_names = config.gmodels[gi].species_names
+            for i in range(config.gmodels[gi].n_species):
+                fp.write('  %d:gas-%d-massf-%s' % (column_count, gi, species_names[i]))
+                column_count += 1
+        for gi in range(len(config.gmodels)):
+            for i in range(config.gmodels[gi].n_modes):
+                fp.write('  %d:gas-%d-Tmode[%d]' % (column_count, gi, i))
+                column_count += 1
+        fp.write('\n')
         for slug in slugList: slug.write_history_loc_data(fp, config.hloc_list[i], 0.0)
         fp.close()
     #
