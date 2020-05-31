@@ -3,39 +3,34 @@
 Python program to set up a simulation for the Lagrangian 1D Flow Solver.
 
 It is intended for the user to define their particular facility and
-flow in terms of the data objects defined in this module.  As part of
-its initialization, this program will execute a user-specified input
-script that contains, in Python, the user's code that defines both
-facility geometry and gas-path details.
+flow in terms of the data objects defined in this module.
+As part of its initialization, this program will read and execute
+a user-specified input script that contains, in Python,
+the code that defines the facility geometry and gas-path details.
 
-Usage::
+Usage:
+  $ l1d4-prep --job=<jobName>
 
-    $ l1d4-prep --job=<job>
-
-The simulation control data is then organised via the classes:
-GlobalData, GasSlug, Piston and Diaphragm.  These classes
-provide places to store the configuration information and their
-function/method names appear as commands in the user's
+The simulation control data is then organised via the classes
+GlobalConfig, GasSlug, Piston, EndCondition and its subclasses.
+These classes provide places to store the configuration information
+and their function/method names appear as commands in the user's
 job description file.
 
+Note that config is a reference to the global configuration information
+describing the simulation.  There is one such variable set up by the
+main program and the user's script should directly set the attributes
+of this variable to adjust settings for the simulation.
 
-Globally-defined object
------------------------
+Author:
+  P.A. Jacobs
 
-* gconfig: Contains the Global Configuration information describing the simulation.
-  Note that there is one such variable set up by the main program and
-  the user's script should directly set the attributes of this variable
-  to adjust settings for the simulation.
-
-.. Author: P.A. Jacobs
-
-.. Versions:
-   2005-Jun
-   2006-Jul-24 Ported to Rowan's new C++ chemistry.
-   2010-Mar-May More reworking for L1d3 and
-                the latest-greatest thermochemistry
-   2012-Sep-Oct Much cleaning up and Sphinx docs.
-   2020-Apr-04 L1d4 flavour started
+Versions:
+  2005-Jun     First Python code
+  2006-Jul-24  Ported to Rowan's new C++ chemistry
+  2010-Mar-May More reworking for L1d3 and the latest-greatest thermochemistry
+  2012-Sep-Oct Much cleaning up and Sphinx docs.
+  2020-Apr-04  L1d4 flavour started
 """
 
 # ----------------------------------------------------------------------
