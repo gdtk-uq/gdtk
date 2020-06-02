@@ -162,8 +162,9 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     size_t TOT_ENERGY = totEnergyIdx;
     size_t TKE = tkeIdx;
 
+    double cfl, cflTrial;
     double dt;
-    double dtTrial, etaTrial;
+    double etaTrial;
     int failedAttempt = 0;
     double pseudoSimTime = 0.0;
     double normOld, normNew;
@@ -215,7 +216,8 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
 
     // We only do a pre-step phase if we are starting from scratch.
     if ( snapshotStart == 0 ) {
-        dt = determine_initial_dt(cfl0);
+        cfl = cfl0;
+        dt = determine_dt(cfl);
         // The initial residual is usually a poor choice for basing decisions about how the
         // residual is dropping, particularly when a constant initial condition is given.
         // A constant initial condition gives a zero residual everywhere in the interior
@@ -247,7 +249,8 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                     }
                     writefln("attempt %d: dt= %e", attempt, dt);
                     failedAttempt = 1;
-                    dt = 0.1*dt;
+                    cfl = 0.1*cfl;
+                    dt = determine_dt(cfl);
                 }
                 // Coordinate MPI tasks after try-catch statement in case one or more of the tasks encountered an exception.
                 version(mpi_parallel) {
@@ -286,7 +289,8 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                             }
                             writefln("attempt %d: dt= %e", attempt, dt);
                             failedAttempt = 1;
-                            dt = 0.1*dt;
+                            cfl = 0.1*cfl;
+                            dt = determine_dt(cfl);
                         }
                         cellCount += nConserved;
                     }
@@ -436,7 +440,6 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     }
 
     double wallClockElapsed;
-    double cfl;
     RestartInfo restartInfo;
 
     // We need to do some configuration based on whether we are starting from scratch,
@@ -537,7 +540,8 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 writefln("Failed when attempting GMRES solve in main steps.");
                 writefln("attempt %d: dt= %e", attempt, dt);
                 failedAttempt = 1;
-                dt = 0.1*dt;
+                cfl = 0.1*cfl;
+                dt = determine_dt(cfl);
             }
             // Coordinate MPI tasks after try-catch statement in case one or more of the tasks encountered an exception.
             version(mpi_parallel) {
@@ -570,7 +574,8 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                     catch (FlowSolverException e) {
                         writefln("Failed attempt %d: dt= %e", attempt, dt);
                         failedAttempt = 1;
-                        dt = 0.1*dt;
+                        cfl = 0.1*cfl;
+                        dt = determine_dt(cfl);
                     }
                     cellCount += nConserved;
                 }
@@ -657,7 +662,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             version(mpi_parallel) {
                 MPI_Allreduce(MPI_IN_PLACE, &(mass_balance.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
             }
-            cfl = determine_min_cfl(dt);
+            dt = determine_dt(cfl);
             // Write out residuals
             if ( !residualsUpToDate ) {
                 max_residuals(currResiduals);
@@ -699,7 +704,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         }
         
         if ( (step % GlobalConfig.print_count) == 0 || finalStep ) {
-            cfl = determine_min_cfl(dt);
+            dt = determine_dt(cfl);
             if ( !residualsUpToDate ) {
                 max_residuals(currResiduals);
                 residualsUpToDate = true;
@@ -791,25 +796,26 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 // Let's assume we're still letting the shock settle
                 // when doing low order steps, so we use a power of 0.75 as a default
                 double p0 =  GlobalConfig.sssOptions.p0;
-                dtTrial = dt*pow(normOld/normNew, p0);
+                cflTrial = cfl*pow(normOld/normNew, p0);
             }
             else {
                 // We use a power of 1.0 as a default
                 double p1 =  GlobalConfig.sssOptions.p1;
-                dtTrial = dt*pow(normOld/normNew, p1);
+                cflTrial = cfl*pow(normOld/normNew, p1);
             }
             // Apply safeguards to dt
-            dtTrial = fmin(dtTrial, 2.0*dt);
-            dtTrial = fmax(dtTrial, 0.1*dt);
-            dt = dtTrial;
-        }
+            cflTrial = fmin(cflTrial, 2.0*cfl);
+            cflTrial = fmax(cflTrial, 0.1*cfl);
+            cfl = cflTrial;
+         }
 
         if (step == nStartUpSteps) {
             // At the swap-over point from start-up phase to main phase
             // we need to do a few special things.
             // 1. Reset dt to user's choice for this new phase based on cfl1.
             if (GlobalConfig.is_master_task) { writefln("step= %d dt= %e  cfl1= %f", step, dt, cfl1); }
-            dt = determine_initial_dt(cfl1);
+            cfl = cfl1;
+            dt = determine_dt(cfl);
             if (GlobalConfig.is_master_task) { writefln("after choosing new timestep: %e", dt); }
             // 2. Reset the inexact Newton phase.
             //    We'll take some constant timesteps at the new dt
@@ -895,7 +901,7 @@ void allocate_global_workspace()
     Q1 = new Matrix!number(mOuter+1, mOuter+1);
 }
 
-double determine_initial_dt(double cflInit)
+double determine_dt(double cflInit)
 {
     double signal, dt_local, dt;
     bool first = true;

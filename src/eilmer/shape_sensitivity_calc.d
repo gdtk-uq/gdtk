@@ -425,7 +425,7 @@ void main(string[] args) {
         
         if (GlobalConfig.sscOptions.pseudotime) {
             double CFL = GlobalConfig.sscOptions.cfl0;
-            double dt = steadystate_core.determine_initial_dt(CFL);
+            double dt = steadystate_core.determine_dt(CFL);
 
             int interpolation_order = 2;
             final switch (GlobalConfig.sscOptions.pseudotime_lhs_jacobian_order) {

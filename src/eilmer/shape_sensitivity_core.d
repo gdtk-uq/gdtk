@@ -3226,7 +3226,7 @@ void rpcGMRES_solve1(size_t nPrimitive) {
     size_t nRestarts;
     size_t r;
     double CFL = GlobalConfig.sscOptions.cfl0;
-    double dt = steadystate_core.determine_initial_dt(CFL);
+    double dt = steadystate_core.determine_dt(CFL);
     
     // allocate GMRES arrays attached to the block objectcs
     foreach (blk; localFluidBlocks) {
