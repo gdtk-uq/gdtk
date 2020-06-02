@@ -9,12 +9,12 @@ set y2tics
 set y2label 'eta'
 set y2range [0:1]
 set key font ",15"
-plot 'e4sss.diagnostics.dat' u 1:10 t 'global' w lines lw 2.5, \
-     'e4sss.diagnostics.dat' u 1:12 t 'mass' w lines lw 2.5, \
-     'e4sss.diagnostics.dat' u 1:14 t 'x-mom' w lines lw 2.5, \
-     'e4sss.diagnostics.dat' u 1:16 t 'y-mom' w lines lw 2.5, \
-     'e4sss.diagnostics.dat' u 1:18 t 'energy' w lines lw 2.5 lc 7, \
-     'e4sss.diagnostics.dat' u 1:5 axes x1y2 t 'eta' w lines lw 2
+plot 'e4-nk.diagnostics.dat' u 1:10 t 'global' w lines lw 2.5, \
+     'e4-nk.diagnostics.dat' u 1:12 t 'mass' w lines lw 2.5, \
+     'e4-nk.diagnostics.dat' u 1:14 t 'x-mom' w lines lw 2.5, \
+     'e4-nk.diagnostics.dat' u 1:16 t 'y-mom' w lines lw 2.5, \
+     'e4-nk.diagnostics.dat' u 1:18 t 'energy' w lines lw 2.5 lc 7, \
+     'e4-nk.diagnostics.dat' u 1:5 axes x1y2 t 'eta' w lines lw 2
 pause 0.5
 bind "x" "exit gnuplot"
 reread

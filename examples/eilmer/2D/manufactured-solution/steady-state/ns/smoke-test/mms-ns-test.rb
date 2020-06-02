@@ -35,7 +35,7 @@ class TestMMS_NS < Test::Unit::TestCase
         steps = items[1].to_i
       end
     end
-    assert((steps - 120).abs < 3, "Failed to take correct number of steps.")
+    assert((steps - 126).abs < 3, "Failed to take correct number of steps.")
   end
 
   def test_2_check_norms
