@@ -113,8 +113,8 @@ To compile Eilmer4 with MPI enabled on tinaroo, do:
     module purge
     module load gnu
     module load openmpi2_ib/2.0.2
-    cd dgd/src/eilmer
-    ./build-transient-solvers.sh
+    cd dgd/src/install-scripts
+    ./install-transient-solvers.sh
 
 ### Running
 Where possible, try to use a full node at once on tinaroo.
@@ -146,51 +146,83 @@ We use `qsub` to submit our job script:
 
     qsub run-on-tinaroo.qsub
 
-## Raijin: NCI Cluster
+## Gadi: NCI Cluster
 
-*Hardware:* Fujitsu & Lenovo servers, Intel CPUs, mixed generation: older - 16 cores-per-node; newer 28 cores-per-node, InfiniBand interconnect
+*Hardware:* Fujitsu servers, Intel 'Cascade Lake' processors: 48 cores-per-node (two 24-core CPUs), 192 Gigabytes of RAM per node, HDR InfiniBand interconnect
 
-*Operating system:* CentOS Linux 6.9
+*Operating system:* Linux, CentOS 8
 
-*Queue system:* PBS
+*Queue system:* PBSPro
+
+### An example setup in `.bash_profile`
+Here, I include what I have added to the end of my `.bash_profile` file on gadi.
+It sets my environment up to compile and run Eilmer.
+Note also that I configure access to a locally installed version of the ldc2 compiler.
+
+    export DGD=${HOME}/dgdinst
+    append_path PATH ${DGD}/bin
+    append_path PATH ${HOME}/opt/ldc2/bin
+    append_path PYTHONPATH ${DGD}/lib
+     
+    export DGD_LUA_PATH=$DGD/lib/?.lua
+    export DGD_LUA_CPATH=$DGD/lib/?.so
+    
+    module load openmpi/4.0.2
 
 ### Compiling
 
-On raijin, you will only need to load the openmpi module. I have
-had success with the 1.8 version.
+On gadi, you will need the ldc2 compiler installed locally.
+In terms of modules, you only need to load the openmpi module.
+I have had success with the 4.0.2 version.
 
-    module load openmpi/1.8
+    module load openmpi/4.0.2
+    
+As described for other systems, use the `install-transient-solvers.sh` script to
+get an optimised build of the distributed-memory (MPI) transient solver.
+
+    cd dgd/src/install-scripts
+    ./install-transient-solvers.sh
 
 ### Running
 
-Like the other large parallel clusters, you will need to use CPUs in multiples of 16 or 28 if you span multiple nodes.
-Here is a submit script where I've set up 16 MPI tasks for my job.
+As is common on large cluster computers, you will need to request the entire node CPU resources if your job spans multiple nodes. On gadi, that means CPU request numbers are in multiples of 48.
+Here is a submit script where I've set up 192 MPI tasks for my job.
 
     #!/bin/bash
     #PBS -N my-MPI-job
     #PBS -P dc7
     #PBS -l walltime=00:30:00
-    #PBS -l ncpus=16
-    #PBS -l mem=8GB
+    #PBS -l ncpus=192
+    #PBS -l mem=200GB
     #PBS -l wd
+    #PBS -l storage=scratch/dc7
 
     mpirun e4mpi --job=myJob --run > LOGFILE
 
+Jobs on gadi are submitted using `qsub`.
+
+Take note about the `storage` directive that appears in the submission script.
+It is strongly encouraged on gadi to set up your jobs in the `scratch` area associated with your
+project.
+On gadi, you need to request explicit access to the `scratch` area in your submission
+script so that filesystem is available to your job.
+The `storage` directive used to request that access.
+
 In the next example, I have set my job up to run in an oversubscribed mode.
-Here I have 80 MPI tasks but I'd like to use only 16 CPUs.
+Here I have 80 MPI tasks but I'd like to use only 48 CPUs.
 
     #!/bin/bash
     #PBS -N my-oversubscribed-MPI-job
     #PBS -P dc7
     #PBS -l walltime=00:30:00
-    #PBS -l ncpus=16
-    #PBS -l mem=8GB
+    #PBS -l ncpus=48
+    #PBS -l mem=50GB
     #PBS -l wd
+    #PBS -l storage=scratch/dc7
 
     mpirun --oversubscribe -n 80 e4mpi --job=myJob --run > LOGFILE-oversubscribed
 
 
-Jobs on raijin are submitted using `qsub`.
 
 ## NSCC Cluster in Singapore
 
