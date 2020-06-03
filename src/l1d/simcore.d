@@ -409,6 +409,7 @@ void integrate_in_time()
         }
         if (sim_data.sim_time >= sim_data.t_hist) {
             write_data_at_history_locations(sim_data.sim_time);
+            write_energies(sim_data.sim_time);
             sim_data.t_hist += get_dt_xxxx(L1dConfig.dt_hist, sim_data.sim_time);
             sim_data.steps_since_last_hist_write = 0;
         } else {
@@ -422,6 +423,7 @@ void integrate_in_time()
     }
     if (sim_data.steps_since_last_hist_write > 0) {
         write_data_at_history_locations(sim_data.sim_time);
+        write_energies(sim_data.sim_time);
     }
     return;
 } // end integrate_in_time()
@@ -479,3 +481,24 @@ void write_data_at_history_locations(double t)
     }
     return;
 } // end write_data_at_history_locations()
+
+
+void write_energies(double t)
+{
+    string fileName = L1dConfig.job_name ~ format("/energies.data");
+    File fp = File(fileName, "a");
+    fp.write(format("%e", t));
+    double e_total = 0.0;
+    foreach (s; gasslugs) {
+        double e = s.energy;
+        fp.write(format(" %e", e));
+        e_total += e;
+    }
+    foreach (p; pistons) {
+        double e = p.energy;
+        fp.write(format(" %e", e));
+        e_total += e;
+    }
+    fp.write(format(" %e\n", e_total));
+    fp.close();
+} // end write_energies()

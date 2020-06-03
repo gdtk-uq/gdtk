@@ -633,6 +633,19 @@ class GasSlug():
                 break;
         return
 
+    @property
+    def energy(self):
+        """
+        Returns total energy within slug of gas.
+        """
+        e = 0.0
+        for j in range(self.ncells):
+            xmid = 0.5*(self.ifxs[j+1] + self.ifxs[j])
+            d, area, K_over_L, Twall = tube.eval(xmid)
+            volume = area * (self.ifxs[j+1] - self.ifxs[j])
+            e += volume*self.gas.rho*(self.gas.internal_energy + 0.5*self.vel*self.vel)
+        return e
+
 #----------------------------------------------------------------------------
 
 class Piston():
@@ -736,6 +749,13 @@ class Piston():
                  (tindx, self.x0, self.vel0,
                   self.is_restrain, self.brakes_on, self.hit_buffer))
         return
+
+    @property
+    def energy(self):
+        """
+        Returns kinetic energy.
+        """
+        return 0.5*self.mass*self.vel0*self.vel0
 
 #----------------------------------------------------------------------------
 
@@ -1207,6 +1227,25 @@ def write_initial_files():
         fp.write('\n')
         for slug in slugList: slug.write_history_loc_data(fp, config.hloc_list[i], 0.0)
         fp.close()
+    #
+    fileName = config.job_name + '/energies.data'
+    fp = open(fileName, 'w')
+    fp.write('# time')
+    for i in range(len(slugList)): fp.write(' slug-%d' % i)
+    for i in range(len(pistonList)): fp.write(' piston-%d' % i)
+    fp.write(' total\n')
+    fp.write('%e' % 0.0)
+    e_total = 0.0
+    for s in slugList:
+        e = s.energy
+        fp.write(' %e' % e)
+        e_total += e
+    for p in pistonList:
+        e = p.energy
+        fp.write(' %e' % e)
+        e_total += e
+    fp.write(' %e\n' % e_total)
+    fp.close()
     #
     print("End write initial files.")
     return

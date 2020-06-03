@@ -124,6 +124,12 @@ public:
                           ((hit_buffer)?1:0)));
     } // end write_data()
 
+    @nogc @property
+    double energy()
+    {
+        return mass*0.5*vel*vel;
+    }
+
     @nogc
     void record_state()
     {

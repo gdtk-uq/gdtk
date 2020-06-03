@@ -196,6 +196,16 @@ public:
         }
     } // end write_history_loc_data()
 
+    @nogc @property
+    double energy()
+    {
+        double e = 0.0;
+        foreach (c; cells) {
+            e += c.volume*c.gas.rho*(gmodel.internal_energy(c.gas) + 0.5*c.vel*c.vel);
+        }
+        return e;
+    }
+
     @nogc
     void compute_areas_and_volumes()
     {
