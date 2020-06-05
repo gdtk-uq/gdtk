@@ -61,4 +61,15 @@ class TestSod < Test::Unit::TestCase
     assert((values['T'] - 398.0).abs < 1.0, "Incorrect post-shock temperature.")
   end
 
+  def test_3_energies
+    f = File.new("sod/energies.data", "r")
+    txt = f.readlines
+    f.close
+    items = txt[1].split(' ')
+    e0 = items[-1].to_f
+    items = txt[-1].split(' ')
+    e1 = items[-1].to_f
+    assert((e1 - e0).abs/e0 < 0.0001, "Failed to conserve energy.")
+  end
+
 end

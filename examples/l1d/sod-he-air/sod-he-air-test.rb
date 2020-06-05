@@ -67,4 +67,15 @@ class TestSod < Test::Unit::TestCase
     assert((values['rho'] - 0.347342).abs < 0.001, "Incorrect post-shock density.")
   end
 
+  def test_3_energies
+    f = File.new("sod-he-air/energies.data", "r")
+    txt = f.readlines
+    f.close
+    items = txt[1].split(' ')
+    e0 = items[-1].to_f
+    items = txt[-1].split(' ')
+    e1 = items[-1].to_f
+    assert((e1 - e0).abs/e0 < 0.0001, "Failed to conserve energy.")
+  end
+
 end

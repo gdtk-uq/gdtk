@@ -48,4 +48,15 @@ class TestPiston < Test::Unit::TestCase
     assert((v - 276.7).abs < 1.0, "Failed to reach correct velocity.")
   end
 
+  def test_3_energies
+    f = File.new("piston/energies.data", "r")
+    txt = f.readlines
+    f.close
+    items = txt[1].split(' ')
+    e0 = items[-1].to_f
+    items = txt[-1].split(' ')
+    e1 = items[-1].to_f
+    assert((e1 - e0).abs/e0 < 0.0001, "Failed to conserve energy.")
+  end
+
 end
