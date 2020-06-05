@@ -38,9 +38,17 @@ public:
 
     override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
     {
-	throw new Error("GhostCellFlowStateCopyFromProfile.apply_for_interface_unstructured_grid() not yet implemented");
+        FVCell ghost0;
+        BoundaryCondition bc = blk.bc[which_boundary];
+        if (bc.outsigns[f.i_bndry] == 1) {
+            ghost0 = f.right_cell;
+        } else {
+            ghost0 = f.left_cell;
+        }
+        ghost0.fs.copy_values_from(fprofile.get_flowstate(ghost0.id, ghost0.pos[0]));
+        fprofile.adjust_velocity(ghost0.fs, ghost0.pos[0]);
     }
-
+    
     // not @nogc
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
