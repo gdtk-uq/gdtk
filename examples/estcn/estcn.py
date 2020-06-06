@@ -112,7 +112,7 @@ def reflected_shock_tube_calculation(gasModel, p1, T1, Vs, pe, pp_on_pe, area_ra
     #
     if PRINT_STATUS: print('Write pre-shock condition.')
     state1 = GasState(gasModel)
-    state1.p = p1; state1.T = T1
+    state1.p = p1; state1.T = T1; state1.update_thermo_from_pT()
     H1 = state1.internal_energy + state1.p/state1.rho
     result = {'state1':state1, 'H1':H1}
     #
@@ -134,28 +134,30 @@ def reflected_shock_tube_calculation(gasModel, p1, T1, Vs, pe, pp_on_pe, area_ra
     result['Vr'] = Vr
     #
     if PRINT_STATUS: print('Start calculation of isentropic relaxation.')
-    state5s = GasState(gasModel)
+    state5s = GasState(gasModel); state5s.copy_values(state5)
     # entropy is set, then pressure is relaxed via an isentropic process
     if pe==None:
         state5s.p = state5.p
     else:
         state5s.p = pe
-    state5.update_thermo_from_ps(state5.s)
+    state5s.update_thermo_from_ps(state5.entropy)
     result['state5s'] = state5s
-    H5s = state5s.e + state5s.p/state5s.rho # stagnation enthalpy
+    H5s = state5s.internal_energy + state5s.p/state5s.rho # stagnation enthalpy
     result['H5s'] = H5s
     #
     if task in ['stn','stnp']:
         if PRINT_STATUS: print('Start isentropic relaxation to throat (Mach 1)')
         def error_at_throat(x, s5s=state5s):
             "Returns Mach number error as pressure is changed."
-            state, V = flow.expand_from_stagnation(x, s5s)
+            state = GasState(gasModel)
+            V = flow.expand_from_stagnation(s5s, x, state)
             return (V/state.a) - 1.0
         x6 = secant(error_at_throat, 0.95, 0.90, tol=1.0e-4)
         if x6 == 'FAIL':
             print("Failed to find throat conditions iteratively.")
             x6 = 1.0
-        state6, V6 = flow.expand_from_stagnation(x6, state5s)
+        state6 = GasState(gasModel)
+        V6 = flow.expand_from_stagnation(state5s, x6, state6)
         mflux6 = state6.rho * V6  # mass flux per unit area, at throat
         result['state6'] = state6
         result['V6'] = V6
@@ -168,7 +170,8 @@ def reflected_shock_tube_calculation(gasModel, p1, T1, Vs, pe, pp_on_pe, area_ra
             def error_at_exit(x, s5s=state5s, s6=state6, mflux_throat=mflux6,
                               area_ratio=area_ratio):
                 "Returns mass_flux error as pressure is changed."
-                state, V = flow.expand_from_stagnation(x, s5s)
+                state = GasState(gasModel)
+                V = flow.expand_from_stagnation(s5s, x, state)
                 mflux = state.rho * V * area_ratio
                 if MY_DEBUG:
                     print("x=", x, "p=", state.p, "T=", state.T, "V=", V, \
@@ -181,10 +184,12 @@ def reflected_shock_tube_calculation(gasModel, p1, T1, Vs, pe, pp_on_pe, area_ra
             if x7 == 'FAIL':
                 print("Failed to find exit conditions iteratively.")
                 x7 = x6
-            state7, V7 = flow.expand_from_stagnation(x7, state5s)
+            state7 = GasState(gasModel)
+            V7 = flow.expand_from_stagnation(state5s, x7, state7)
             mflux7 = state7.rho * V7 * area_ratio
             result['area_ratio'] = area_ratio
-            state7_pitot = pitot_condition(state7, V7)
+            state7_pitot = GasState(gasModel)
+            flow.pitot_condition(state7, V7, state7_pitot)
             result['state7'] = state7
             result['V7'] = V7
             result['mflux7'] = mflux7
@@ -194,8 +199,10 @@ def reflected_shock_tube_calculation(gasModel, p1, T1, Vs, pe, pp_on_pe, area_ra
             # The exit pitot pressure has to be the same as that measured
             def error_at_exit(x, s5s=state5s, s6=state6, pp_pe=pp_on_pe):
                 "Returns pitot pressure error as static pressure is changed."
-                state1, V = flow.expand_from_stagnation(x, s5s)
-                state2 = pitot_condition(state1, V)
+                state1 = GasState(gasModel)
+                V = flow.expand_from_stagnation(s5s, x, state1)
+                state2 = GasState(gasModel)
+                flow.pitot_condition(state1, V, state2)
                 if MY_DEBUG:
                     print("x=", x, "pitot_to_supply=", state2.p/s5s.p, \
                           "relative error=", (state2.p/s5s.p - pp_pe)/pp_pe)
@@ -208,9 +215,11 @@ def reflected_shock_tube_calculation(gasModel, p1, T1, Vs, pe, pp_on_pe, area_ra
             if x7 == 'FAIL':
                 print("Failed to find exit conditions iteratively.")
                 x7 = x6
-            state7, V7 = expand_from_stagnation(x7, state5s)
+            state7 = GasState(gasModel)
+            V7 = flow.expand_from_stagnation(state5s, x7, state7)
             result['area_ratio'] = mflux6/(state7.rho * V7)
-            state7_pitot = pitot_condition(state7, V7)
+            state7_pitot = GasState(gasModel)
+            flow.pitot_condition(state7, V7, state7_pitot)
             #mflux7 = mflux6
             result['state7'] = state7
             result['V7'] = V7
@@ -322,26 +331,26 @@ def main():
         result = reflected_shock_tube_calculation(gasModel,
             p1, T1, Vs, pe, pp_on_pe, area_ratio, task=task)
         fout.write('State 1: pre-shock condition\n')
-        result['state1'].write_state(fout)
+        fout.write(str(result['state1'])+'\n')
         fout.write('State 2: post-shock condition.\n')
-        result['state2'].write_state(fout)
+        fout.write(str(result['state2'])+'\n')
         fout.write('  V2: %g m/s, Vg: %g m/s\n' % (result['V2'],result['Vg']) )
         if task in ['st', 'stn', 'stnp']:
             fout.write('State 5: reflected-shock condition.\n')
-            result['state5'].write_state(fout)
+            fout.write(str(result['state5'])+'\n')
             fout.write('  Vr: %g m/s\n' % (result['Vr'],) )
             fout.write('State 5s: equilibrium condition (relaxation to pe)\n')
-            result['state5s'].write_state(fout)
+            fout.write(str(result['state5s'])+'\n')
             fout.write('Enthalpy difference (H5s - H1): %g J/kg\n' %
                        ((result['H5s'] - result['H1']),) )
             if task in ['stn','stnp']:
                 # shock tube plus nozzle, expand gas isentropically, stopping at area_ratio
                 fout.write('State 6: Nozzle-throat condition (relaxation to M=1)\n')
-                result['state6'].write_state(fout)
+                fout.write(str(result['state6'])+'\n')
                 fout.write('  V6: %g m/s, M6: %g, mflux6: %g kg/s/m**2\n' %
                            (result['V6'], result['V6']/result['state6'].a, result['mflux6'],) )
                 fout.write('State 7: Nozzle-exit condition (relaxation to correct mass flux)\n')
-                result['state7'].write_state(fout)
+                fout.write(str(result['state7'])+'\n')
                 fout.write('  V7: %g m/s, M7: %g, mflux7: %g kg/s/m**2, area_ratio: %g, pitot: %g Pa\n' %
                            (result['V7'], result['V7']/result['state7'].a, result['mflux7'],
                             result['area_ratio'], result['pitot7'],) )
@@ -350,36 +359,39 @@ def main():
         fout.write('Input parameters:\n')
         fout.write('  gasFileName is %s, p1: %g Pa, T1: %g K, V1: %g m/s\n'
                    % (opt.gasFileName, p1, T1, V1) )
-        state1 = gasModel.make_gas_from_name(gasName)
-        state1.set_pT(p1, T1)
-        state0 = total_condition(state1, V1)
+        state1 = GasState(gasModel)
+        state1.p1; state1.T1; state1.update_thermo_from_pT()
+        state0 = GasState(gasModel)
+        flow.total_condition(state1, V1, state0)
         fout.write('Total condition:\n')
-        state0.write_state(fout)
+        fout.write(str(state0)+'\n')
     elif task in ['pitot', 'PITOT', 'Pitot']:
         fout.write('Input parameters:\n')
         fout.write('  gasFileName is %s, p1: %g Pa, T1: %g K, V1: %g m/s\n'
                    % (opt.gasFileName, p1, T1, V1) )
-        state1 = gasModel.make_gas_from_name(gasName)
-        state1.set_pT(p1, T1)
-        state0 = pitot_condition(state1, V1)
+        state1 = GasState(gasModel)
+        state1.p1; state1.T1; state1.update_thermo_from_pT()
+        state0 = GasState(gasModel)
+        flow.pitot_condition(state1, V1, state0)
         fout.write('Pitot condition:\n')
-        state0.write_state(fout)
+        fout.write(str(state0)+'\n')
     elif task in ['cone', 'CONE', 'Cone']:
         fout.write('Input parameters:\n')
         fout.write('  gasFileName is %s, p1: %g Pa, T1: %g K, V1: %g m/s, sigma: %g degrees\n'
                    % (opt.gasFileName, p1, T1, V1, cone_half_angle_deg) )
         state1 = GasState(gasModel)
-        state1.set_pT(p1, T1)
+        state1.p1; state1.T1; state1.update_thermo_from_pT()
         fout.write('Free-stream condition:\n')
-        state1.write_state(fout)
-        cone_half_angle_rad = cone_half_angle_deg*math.pi/180.0
+        fout.write(str(state1)+'\n')
+        cone_half_angle_rad = math.radians(cone_half_angle_deg)
         beta_rad = flow.beta_cone(state1, V1, cone_half_angle_rad)
-        theta_c, V_cone_surface, state2 = flow.theta_cone(state1, V1, beta_rad)
+        state2 = GasState(gasModel)
+        theta_c, V_cone_surface = flow.theta_cone(state1, V1, beta_rad, state2)
         assert abs(theta_c - cone_half_angle_rad) < 0.001
-        fout.write('Shock angle: %g (rad), %g (deg)\n' % (beta_rad, beta_rad*180.0/math.pi))
+        fout.write('Shock angle: %g (rad), %g (deg)\n' % (beta_rad, math.degrees(beta_rad)))
         fout.write('Cone-surface velocity: %g m/s\n' % (V_cone_surface,))
         fout.write('Cone-surface condition:\n')
-        state2.write_state(fout)
+        fout.write(str(state2)+'\n')
     #
     if outFileName is None:
         pass
