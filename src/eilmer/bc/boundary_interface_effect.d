@@ -393,10 +393,12 @@ public:
                       fprofile.fileName, fprofile.posMatch);
     }
 
-    @nogc
+    //@nogc
     override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
     {
-        throw new Error("BIE_FlowStateCopyFromProfile.apply_for_interface_unstructured_grid() not yet implemented");
+        BoundaryCondition bc = blk.bc[which_boundary];
+        f.fs.copy_values_from(fprofile.get_flowstate(f.id, f.pos));
+        fprofile.adjust_velocity(f.fs, f.pos);
     }
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
