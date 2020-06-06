@@ -155,6 +155,7 @@ build-libgas: libgas.so gas-calc build-uniform-lut.py $(LIBCEQ)
 	- mkdir -p $(BUILD_DIR)/bin
 	cp gas-calc $(BUILD_DIR)/bin/
 	cp build-uniform-lut.py $(BUILD_DIR)/bin/build-uniform-lut; chmod +x $(BUILD_DIR)/bin/build-uniform-lut
+	cp ../../examples/estcn/estcn.py $(BUILD_DIR)/bin/estcn; chmod +x $(BUILD_DIR)/bin/estcn
 	- mkdir -p $(BUILD_DIR)/lib
 	cp libgas.so $(BUILD_DIR)/lib/
 	cp $(CEQ_DIR)/libceq.so $(BUILD_DIR)/lib/

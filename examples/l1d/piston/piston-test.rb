@@ -29,7 +29,7 @@ class TestPiston < Test::Unit::TestCase
         sim_time = sim_time_items[1].to_f
       end
     end
-    assert((sim_time - 0.03931).abs < 0.001, "Inorrect sim_time at step 700.")
+    assert((sim_time - 0.03931).abs < 0.001, "Incorrect sim_time at step 700.")
   end
 
   def test_2_post
