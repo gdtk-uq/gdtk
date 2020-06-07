@@ -366,7 +366,7 @@ def main():
         fout.write('  gasFileName is %s, p1: %g Pa, T1: %g K, V1: %g m/s\n'
                    % (gasFileName, p1, T1, V1) )
         state1 = GasState(gasModel)
-        state1.p1; state1.T1; state1.update_thermo_from_pT()
+        state1.p = p1; state1.T = T1; state1.update_thermo_from_pT()
         state0 = GasState(gasModel)
         flow.total_condition(state1, V1, state0)
         fout.write('Total condition:\n')
@@ -376,7 +376,7 @@ def main():
         fout.write('  gasFileName is %s, p1: %g Pa, T1: %g K, V1: %g m/s\n'
                    % (gasFileName, p1, T1, V1) )
         state1 = GasState(gasModel)
-        state1.p1; state1.T1; state1.update_thermo_from_pT()
+        state1.p = p1; state1.T = T1; state1.update_thermo_from_pT()
         state0 = GasState(gasModel)
         flow.pitot_condition(state1, V1, state0)
         fout.write('Pitot condition:\n')
@@ -386,7 +386,7 @@ def main():
         fout.write('  gasFileName is %s, p1: %g Pa, T1: %g K, V1: %g m/s, sigma: %g degrees\n'
                    % (gasFileName, p1, T1, V1, cone_half_angle_deg) )
         state1 = GasState(gasModel)
-        state1.p1; state1.T1; state1.update_thermo_from_pT()
+        state1.p = p1; state1.T = T1; state1.update_thermo_from_pT()
         fout.write('Free-stream condition:\n')
         fout.write('  '+str(state1)+'\n')
         cone_half_angle_rad = math.radians(cone_half_angle_deg)
