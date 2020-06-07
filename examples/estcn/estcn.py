@@ -89,14 +89,17 @@ from eilmer.zero_solvers import secant
 
 # ----------------------------------------------------------------------------
 
-def reflected_shock_tube_calculation(gasModel, p1, T1, Vs, pe, pp_on_pe, area_ratio, task):
+def reflected_shock_tube_calculation(gasModel, flow,
+                                     p1, T1, Vs, pe, pp_on_pe, area_ratio,
+                                     task):
     """
     Runs the reflected-shock-tube calculation from initial fill conditions
     observed shock speed and equilibrium pressure.
 
     This function may be imported into other applications (such as nenzfr).
 
-    gasModel: pointer to the gas model
+    gasModel: gas model object
+    flow: flow functions object
     p1: fill pressure of gas initially filling shock tube
     T1: fill temperature of gas initially filling shock tube
     Vs: observed incident shock speed
@@ -108,7 +111,6 @@ def reflected_shock_tube_calculation(gasModel, p1, T1, Vs, pe, pp_on_pe, area_ra
     task: one of 'ishock', 'st', 'stn', 'stnp'
     """
     PRINT_STATUS = True  # the start of each stage of the computation is noted.
-    flow = GasFlow(gasModel)
     #
     if PRINT_STATUS: print('Write pre-shock condition.')
     state1 = GasState(gasModel)
@@ -136,10 +138,8 @@ def reflected_shock_tube_calculation(gasModel, p1, T1, Vs, pe, pp_on_pe, area_ra
     if PRINT_STATUS: print('Start calculation of isentropic relaxation.')
     state5s = GasState(gasModel); state5s.copy_values(state5)
     # entropy is set, then pressure is relaxed via an isentropic process
-    if pe==None:
-        state5s.p = state5.p
-    else:
-        state5s.p = pe
+    state5s.p = state5.p if pe == None else pe
+    if MY_DEBUG: print("state5.entropy=", state5.entropy)
     state5s.update_thermo_from_ps(state5.entropy)
     result['state5s'] = state5s
     H5s = state5s.internal_energy + state5s.p/state5s.rho # stagnation enthalpy
@@ -152,8 +152,9 @@ def reflected_shock_tube_calculation(gasModel, p1, T1, Vs, pe, pp_on_pe, area_ra
             state = GasState(gasModel)
             V = flow.expand_from_stagnation(s5s, x, state)
             return (V/state.a) - 1.0
-        x6 = secant(error_at_throat, 0.95, 0.90, tol=1.0e-4)
-        if x6 == 'FAIL':
+        try:
+            x6 = secant(error_at_throat, 0.95, 0.90, tol=1.0e-4)
+        except RuntimeError:
             print("Failed to find throat conditions iteratively.")
             x6 = 1.0
         state6 = GasState(gasModel)
@@ -164,7 +165,7 @@ def reflected_shock_tube_calculation(gasModel, p1, T1, Vs, pe, pp_on_pe, area_ra
         result['mflux6'] = mflux6
         #
         if task == 'stn':
-            if PRINT_STATUS: print('Start isentropic relaxation to nozzle exit.')
+            if PRINT_STATUS: print('Start isentropic relaxation to nozzle exit of given area.')
             # The mass flux going through the nozzle exit has to be the same
             # as that going through the nozzle throat.
             def error_at_exit(x, s5s=state5s, s6=state6, mflux_throat=mflux6,
@@ -179,9 +180,10 @@ def reflected_shock_tube_calculation(gasModel, p1, T1, Vs, pe, pp_on_pe, area_ra
                 return (mflux-mflux_throat)/mflux_throat
             # It appears that we need a pretty good starting guess for the pressure ratio.
             # Maybe a low value is OK.
-            x7 = secant(error_at_exit, 0.001*x6, 0.00005*x6, tol=1.0e-4,
-                        limits=[1.0/state5s.p,1.0])
-            if x7 == 'FAIL':
+            try:
+                x7 = secant(error_at_exit, 0.001*x6, 0.00005*x6, tol=1.0e-4,
+                            limits=[1.0/state5s.p,1.0])
+            except RuntimeError:
                 print("Failed to find exit conditions iteratively.")
                 x7 = x6
             state7 = GasState(gasModel)
@@ -210,9 +212,10 @@ def reflected_shock_tube_calculation(gasModel, p1, T1, Vs, pe, pp_on_pe, area_ra
             # We need a low starting guess for the pressure ratio.
             #x7 = secant(error_at_exit, 0.001*x6, 0.00005*x6, tol=1.0e-4)
             # Changed the tolerance on 25/07/2011 in order to get the M8 nozzle to work (shot 10803)
-            x7 = secant(error_at_exit, 0.001*x6, 0.00005*x6, tol=2.0e-4,
-                        limits=[1.0/state5s.p,1.0])
-            if x7 == 'FAIL':
+            try:
+                x7 = secant(error_at_exit, 0.001*x6, 0.00005*x6, tol=2.0e-4,
+                            limits=[1.0/state5s.p,1.0])
+            except RuntimeError:
                 print("Failed to find exit conditions iteratively.")
                 x7 = x6
             state7 = GasState(gasModel)
@@ -220,7 +223,6 @@ def reflected_shock_tube_calculation(gasModel, p1, T1, Vs, pe, pp_on_pe, area_ra
             result['area_ratio'] = mflux6/(state7.rho * V7)
             state7_pitot = GasState(gasModel)
             flow.pitot_condition(state7, V7, state7_pitot)
-            #mflux7 = mflux6
             result['state7'] = state7
             result['V7'] = V7
             result['mflux7'] = mflux6
@@ -275,8 +277,7 @@ def main():
     opt, args = op.parse_args()
     #
     task = opt.task
-    gasModel = GasModel(opt.gasFileName)
-    flow = GasFlow(gasModel)
+    gasFileName = opt.gasFileName
     p1 = opt.p1
     T1 = opt.T1
     V1 = opt.V1
@@ -287,9 +288,12 @@ def main():
     cone_half_angle_deg = opt.cone_half_angle_deg
     outFileName = opt.outFileName
     if MY_DEBUG:
-        print('estcn:', opt.gasFileName, p1, T1, V1, Vs, pe, area_ratio, outFileName)
+        print('estcn: ', opt.gasFileName, p1, T1, V1, Vs, pe, area_ratio, outFileName)
     #
     bad_input = False
+    if not os.path.exists(gasFileName):
+        print("Gas model file "+gasFileName+" seems not to exist.")
+        bad_input = True
     if p1 is None:
         print("Need to supply a float value for p1.")
         bad_input = True
@@ -323,34 +327,36 @@ def main():
         fout = open(outFileName+'-estcn.dat','w')
     fout.write('estcn: Equilibrium Shock Tube Conditions, with Nozzle\n')
     fout.write('Version: %s\n' % VERSION_STRING)
+    gasModel = GasModel(gasFileName)
+    flow = GasFlow(gasModel)
     #
     if task in ['st', 'stn', 'stnp', 'ishock']:
         fout.write('Input parameters:\n')
         fout.write('  gasFileName is %s, p1: %g Pa, T1: %g K, Vs: %g m/s\n'
-                   % (opt.gasFileName, p1, T1, Vs) )
-        result = reflected_shock_tube_calculation(gasModel,
+                   % (gasFileName, p1, T1, Vs) )
+        result = reflected_shock_tube_calculation(gasModel, flow,
             p1, T1, Vs, pe, pp_on_pe, area_ratio, task=task)
         fout.write('State 1: pre-shock condition\n')
-        fout.write(str(result['state1'])+'\n')
+        fout.write('  '+str(result['state1'])+'\n')
         fout.write('State 2: post-shock condition.\n')
-        fout.write(str(result['state2'])+'\n')
+        fout.write('  '+str(result['state2'])+'\n')
         fout.write('  V2: %g m/s, Vg: %g m/s\n' % (result['V2'],result['Vg']) )
         if task in ['st', 'stn', 'stnp']:
             fout.write('State 5: reflected-shock condition.\n')
-            fout.write(str(result['state5'])+'\n')
+            fout.write('  '+str(result['state5'])+'\n')
             fout.write('  Vr: %g m/s\n' % (result['Vr'],) )
             fout.write('State 5s: equilibrium condition (relaxation to pe)\n')
-            fout.write(str(result['state5s'])+'\n')
+            fout.write('  '+str(result['state5s'])+'\n')
             fout.write('Enthalpy difference (H5s - H1): %g J/kg\n' %
                        ((result['H5s'] - result['H1']),) )
             if task in ['stn','stnp']:
                 # shock tube plus nozzle, expand gas isentropically, stopping at area_ratio
                 fout.write('State 6: Nozzle-throat condition (relaxation to M=1)\n')
-                fout.write(str(result['state6'])+'\n')
+                fout.write('  '+str(result['state6'])+'\n')
                 fout.write('  V6: %g m/s, M6: %g, mflux6: %g kg/s/m**2\n' %
                            (result['V6'], result['V6']/result['state6'].a, result['mflux6'],) )
                 fout.write('State 7: Nozzle-exit condition (relaxation to correct mass flux)\n')
-                fout.write(str(result['state7'])+'\n')
+                fout.write('  '+str(result['state7'])+'\n')
                 fout.write('  V7: %g m/s, M7: %g, mflux7: %g kg/s/m**2, area_ratio: %g, pitot: %g Pa\n' %
                            (result['V7'], result['V7']/result['state7'].a, result['mflux7'],
                             result['area_ratio'], result['pitot7'],) )
@@ -358,31 +364,31 @@ def main():
     elif task in ['total', 'TOTAL', 'Total']:
         fout.write('Input parameters:\n')
         fout.write('  gasFileName is %s, p1: %g Pa, T1: %g K, V1: %g m/s\n'
-                   % (opt.gasFileName, p1, T1, V1) )
+                   % (gasFileName, p1, T1, V1) )
         state1 = GasState(gasModel)
         state1.p1; state1.T1; state1.update_thermo_from_pT()
         state0 = GasState(gasModel)
         flow.total_condition(state1, V1, state0)
         fout.write('Total condition:\n')
-        fout.write(str(state0)+'\n')
+        fout.write('  '+str(state0)+'\n')
     elif task in ['pitot', 'PITOT', 'Pitot']:
         fout.write('Input parameters:\n')
         fout.write('  gasFileName is %s, p1: %g Pa, T1: %g K, V1: %g m/s\n'
-                   % (opt.gasFileName, p1, T1, V1) )
+                   % (gasFileName, p1, T1, V1) )
         state1 = GasState(gasModel)
         state1.p1; state1.T1; state1.update_thermo_from_pT()
         state0 = GasState(gasModel)
         flow.pitot_condition(state1, V1, state0)
         fout.write('Pitot condition:\n')
-        fout.write(str(state0)+'\n')
+        fout.write('  '+str(state0)+'\n')
     elif task in ['cone', 'CONE', 'Cone']:
         fout.write('Input parameters:\n')
         fout.write('  gasFileName is %s, p1: %g Pa, T1: %g K, V1: %g m/s, sigma: %g degrees\n'
-                   % (opt.gasFileName, p1, T1, V1, cone_half_angle_deg) )
+                   % (gasFileName, p1, T1, V1, cone_half_angle_deg) )
         state1 = GasState(gasModel)
         state1.p1; state1.T1; state1.update_thermo_from_pT()
         fout.write('Free-stream condition:\n')
-        fout.write(str(state1)+'\n')
+        fout.write('  '+str(state1)+'\n')
         cone_half_angle_rad = math.radians(cone_half_angle_deg)
         beta_rad = flow.beta_cone(state1, V1, cone_half_angle_rad)
         state2 = GasState(gasModel)
@@ -391,7 +397,7 @@ def main():
         fout.write('Shock angle: %g (rad), %g (deg)\n' % (beta_rad, math.degrees(beta_rad)))
         fout.write('Cone-surface velocity: %g m/s\n' % (V_cone_surface,))
         fout.write('Cone-surface condition:\n')
-        fout.write(str(state2)+'\n')
+        fout.write('  '+str(state2)+'\n')
     #
     if outFileName is None:
         pass
