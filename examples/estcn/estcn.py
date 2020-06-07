@@ -79,7 +79,7 @@ Versions
 06-Jun-2020 PJ: Renamed to estcn, updated to use the loadable library from Eilmer4
 """
 
-VERSION_STRING = "06-Jun-2020"
+VERSION_STRING = "08-Jun-2020"
 MY_DEBUG  = False  # some detailed data is output to help debugging
 
 import sys, os, math
@@ -91,7 +91,7 @@ from eilmer.zero_solvers import secant
 
 def reflected_shock_tube_calculation(gasModel, flow,
                                      p1, T1, Vs, pe, pp_on_pe, area_ratio,
-                                     task):
+                                     task, print_status=True):
     """
     Runs the reflected-shock-tube calculation from initial fill conditions
     observed shock speed and equilibrium pressure.
@@ -109,16 +109,16 @@ def reflected_shock_tube_calculation(gasModel, flow,
     area_ratio: specify this ratio if we want the supersonic nozzle expansion
         to proceed to a particular quasi-one-dimensional area ratio.
     task: one of 'ishock', 'st', 'stn', 'stnp'
+    print_status: if True, the start of each stage of the computation is noted.
     """
-    PRINT_STATUS = True  # the start of each stage of the computation is noted.
     #
-    if PRINT_STATUS: print('Write pre-shock condition.')
+    if print_status: print('Write pre-shock condition.')
     state1 = GasState(gasModel)
     state1.p = p1; state1.T = T1; state1.update_thermo_from_pT()
     H1 = state1.internal_energy + state1.p/state1.rho
     result = {'state1':state1, 'H1':H1}
     #
-    if PRINT_STATUS: print('Start incident-shock calculation.')
+    if print_status: print('Start incident-shock calculation.')
     state2 = GasState(gasModel)
     (V2,Vg) = flow.normal_shock(state1, Vs, state2)
     result['state2'] = state2
@@ -129,13 +129,13 @@ def reflected_shock_tube_calculation(gasModel, flow,
         # We want post-incident-shock conditions only.
         return result
     #
-    if PRINT_STATUS: print('Start reflected-shock calculation.')
+    if print_status: print('Start reflected-shock calculation.')
     state5 = GasState(gasModel)
     Vr = flow.reflected_shock(state2, Vg, state5)
     result['state5'] = state5
     result['Vr'] = Vr
     #
-    if PRINT_STATUS: print('Start calculation of isentropic relaxation.')
+    if print_status: print('Start calculation of isentropic relaxation.')
     state5s = GasState(gasModel); state5s.copy_values(state5)
     # entropy is set, then pressure is relaxed via an isentropic process
     state5s.p = state5.p if pe == None else pe
@@ -146,7 +146,7 @@ def reflected_shock_tube_calculation(gasModel, flow,
     result['H5s'] = H5s
     #
     if task in ['stn','stnp']:
-        if PRINT_STATUS: print('Start isentropic relaxation to throat (Mach 1)')
+        if print_status: print('Start isentropic relaxation to throat (Mach 1)')
         def error_at_throat(x, s5s=state5s):
             "Returns Mach number error as pressure is changed."
             state = GasState(gasModel)
@@ -165,7 +165,7 @@ def reflected_shock_tube_calculation(gasModel, flow,
         result['mflux6'] = mflux6
         #
         if task == 'stn':
-            if PRINT_STATUS: print('Start isentropic relaxation to nozzle exit of given area.')
+            if print_status: print('Start isentropic relaxation to nozzle exit of given area.')
             # The mass flux going through the nozzle exit has to be the same
             # as that going through the nozzle throat.
             def error_at_exit(x, s5s=state5s, s6=state6, mflux_throat=mflux6,
@@ -197,7 +197,7 @@ def reflected_shock_tube_calculation(gasModel, flow,
             result['mflux7'] = mflux7
             result['pitot7'] = state7_pitot.p
         elif task == 'stnp':
-            if PRINT_STATUS: print('Start isentropic relaxation to nozzle exit pitot pressure.')
+            if print_status: print('Start isentropic relaxation to nozzle exit pitot pressure.')
             # The exit pitot pressure has to be the same as that measured
             def error_at_exit(x, s5s=state5s, s6=state6, pp_pe=pp_on_pe):
                 "Returns pitot pressure error as static pressure is changed."
@@ -229,7 +229,7 @@ def reflected_shock_tube_calculation(gasModel, flow,
             result['pitot7'] = state7_pitot.p
             if MY_DEBUG: print("area_ratio=", area_ratio, "pitot7=", state7_pitot.p)
     #
-    if PRINT_STATUS: print('Done with reflected shock tube calculation.')
+    if print_status: print('Done with reflected shock tube calculation.')
     return result
 
 #--------------------------------------------------------------------
@@ -321,16 +321,12 @@ def main():
     if bad_input:
         return -2
     #
-    if outFileName is None:
-        fout = sys.stdout
-    else:
-        fout = open(outFileName+'-estcn.dat','w')
-    fout.write('estcn: Equilibrium Shock Tube Conditions, with Nozzle\n')
-    fout.write('Version: %s\n' % VERSION_STRING)
+    fout = open(outFileName+'-estcn.dat','w') if outFileName else sys.stdout
     gasModel = GasModel(gasFileName)
     flow = GasFlow(gasModel)
     #
     if task in ['st', 'stn', 'stnp', 'ishock']:
+        # Some form of shock processing
         fout.write('Input parameters:\n')
         fout.write('  gasFileName is %s, p1: %g Pa, T1: %g K, Vs: %g m/s\n'
                    % (gasFileName, p1, T1, Vs) )
@@ -342,6 +338,7 @@ def main():
         fout.write('  '+str(result['state2'])+'\n')
         fout.write('  V2: %g m/s, Vg: %g m/s\n' % (result['V2'],result['Vg']) )
         if task in ['st', 'stn', 'stnp']:
+            # Reflected-shock and, maybe, more
             fout.write('State 5: reflected-shock condition.\n')
             fout.write('  '+str(result['state5'])+'\n')
             fout.write('  Vr: %g m/s\n' % (result['Vr'],) )
@@ -350,7 +347,7 @@ def main():
             fout.write('Enthalpy difference (H5s - H1): %g J/kg\n' %
                        ((result['H5s'] - result['H1']),) )
             if task in ['stn','stnp']:
-                # shock tube plus nozzle, expand gas isentropically, stopping at area_ratio
+                # Shock tube plus nozzle, expand gas isentropically to nozzle exit
                 fout.write('State 6: Nozzle-throat condition (relaxation to M=1)\n')
                 fout.write('  '+str(result['state6'])+'\n')
                 fout.write('  V6: %g m/s, M6: %g, mflux6: %g kg/s/m**2\n' %
@@ -362,6 +359,7 @@ def main():
                             result['area_ratio'], result['pitot7'],) )
                 fout.write('  pitot7_on_p5s: %g\n' % (result['pitot7']/result['state5s'].p,) )
     elif task in ['total', 'TOTAL', 'Total']:
+        # Isentropic total-pressure condition from free stream
         fout.write('Input parameters:\n')
         fout.write('  gasFileName is %s, p1: %g Pa, T1: %g K, V1: %g m/s\n'
                    % (gasFileName, p1, T1, V1) )
@@ -372,6 +370,7 @@ def main():
         fout.write('Total condition:\n')
         fout.write('  '+str(state0)+'\n')
     elif task in ['pitot', 'PITOT', 'Pitot']:
+        # Pitot condition from free stream
         fout.write('Input parameters:\n')
         fout.write('  gasFileName is %s, p1: %g Pa, T1: %g K, V1: %g m/s\n'
                    % (gasFileName, p1, T1, V1) )
@@ -382,6 +381,7 @@ def main():
         fout.write('Pitot condition:\n')
         fout.write('  '+str(state0)+'\n')
     elif task in ['cone', 'CONE', 'Cone']:
+        # Conical shock processing from free stream
         fout.write('Input parameters:\n')
         fout.write('  gasFileName is %s, p1: %g Pa, T1: %g K, V1: %g m/s, sigma: %g degrees\n'
                    % (gasFileName, p1, T1, V1, cone_half_angle_deg) )
@@ -399,19 +399,16 @@ def main():
         fout.write('Cone-surface condition:\n')
         fout.write('  '+str(state2)+'\n')
     #
-    if outFileName is None:
-        pass
-    else:
-        fout.close()
+    if outFileName: fout.close()
     return 0
 
 # -------------------------------------------------------------------
 
 if __name__ == '__main__':
+    print("Equilibrium Shock Tube Conditions, with Nozzle")
+    print("  Version:", VERSION_STRING)
     if len(sys.argv) <= 1:
-        print("Equilibrium Shock Tube Conditions, with Nozzle")
-        print("   Version:", VERSION_STRING)
-        print("   To see some useful hints, invoke this program with option --help.")
+        print("  To see some useful hints, invoke this program with option --help.")
         sys.exit(0)
     return_flag = main()
     sys.exit(return_flag)
