@@ -58,11 +58,11 @@ public:
     double k; // thermal conductivity, W/m/K
     double mu; // viscosity, Pa.s
     string previous_problemType = ""; // "pT", "rhoT", etc
-    
+
     this(const CEASavedData other) {
         this.copy_values_from(other);
     }
-    
+
     void copy_values_from(const CEASavedData other)
     {
         this.p = other.p;
@@ -136,7 +136,7 @@ public:
             throw new Error("Do not use with complex numbers.");
         }
     } // end constructor
-    
+
     this(lua_State *L) {
         // Construct from information in a Lua table.
         lua_getglobal(L, "CEAGas"); // Bring that table to TOS
@@ -170,7 +170,7 @@ public:
         foreach (sname; speciesList) {
             if (canFind(sname, "+")) { withIons = true; }
             if (canFind(sname, "-")) { withIons = true; }
-        }       
+        }
         this(name, speciesList, reactants, inputUnits, trace, withIons);
     } // end constructor from a Lua file
 
@@ -202,7 +202,7 @@ public:
     // All of the update functions call up CEA behind the scene
     // to do the real calculations.
 
-    override void update_thermo_from_pT(GasState Q) const 
+    override void update_thermo_from_pT(GasState Q) const
     {
         debug {
             callCEA(Q, 0.0, 0.0, "pT", false);
@@ -230,7 +230,7 @@ public:
     {
         throw new Exception("CEAGas update_thermo_from_rhop not implemented.");
     }
-    
+
     override void update_thermo_from_ps(GasState Q, number s) const
     {
         debug {
@@ -252,7 +252,9 @@ public:
             throw new Exception("Seems that we have not called CEA before.");
         }
         debug {
-            callCEA(Q, 0.0, 0.0, Q.ceaSavedData.previous_problemType, false);
+            string problemType = Q.ceaSavedData.previous_problemType;
+            if (problemType == "ps") { problemType = "pT"; }
+            callCEA(Q, 0.0, 0.0, problemType, false);
         } else {
             throw new Exception("not implemented for @nogc. PJ 2018-09-23");
         }
@@ -265,7 +267,9 @@ public:
             throw new Exception("Seems that we have not called CEA before.");
         }
         debug {
-            callCEA(Q, 0.0, 0.0, Q.ceaSavedData.previous_problemType, true);
+            string problemType = Q.ceaSavedData.previous_problemType;
+            if (problemType == "ps") { problemType = "pT"; }
+            callCEA(Q, 0.0, 0.0, problemType, true);
         } else {
             throw new Exception("not implemented for @nogc. PJ 2018-09-23");
         }
@@ -434,7 +438,7 @@ private:
             writer.put(format("   s/r         %e\n", s/R_universal/1000.0));
             writer.put(format("   t(k)        %e\n", Q.T));
             break;
-        default: 
+        default:
             throw new Exception("Unknown problemType for CEA.");
         }
         // Select the gas components for CEA.
@@ -557,7 +561,7 @@ private:
             Q.u = Q.ceaSavedData.u;
             Q.a = Q.ceaSavedData.a;
             break;
-        default: 
+        default:
             throw new Exception("Unknown problemType for CEA.");
         }
         Q.mu = Q.ceaSavedData.mu;

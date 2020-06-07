@@ -34,21 +34,56 @@ class TestESTCN < Test::Unit::TestCase
         velocity = items[1].to_f
       end
       # The last thing that we do is look for the pressure and temperature.
-      if found_state_7 then
+      if found_state_7 && pressure == 0.0 then
         items = txt.split(', ')
         pressure_item = items[1]
         pressure = pressure_item.split('=')[-1].to_f
         temperature_item = items[2]
         temperature = temperature_item.split('=')[-1].to_f
-        break
       end
       if txt.match('State 7') then
         found_state_7 = true
       end
     end
     assert((enthalpy - 5.42908e+06).abs/5.42908e+06 < 1.0e-3, "Incorrect enthalpy.")
-    assert((pressure - 93702.4).abs/94702.4 < 1.0e-3, "Incorrect pressure.")
+    assert((pressure - 93702.4).abs/93702.4 < 1.0e-3, "Incorrect pressure.")
     assert((temperature - 1283.6).abs/1283.6 < 1.0e-3, "Incorrect temperature.")
+    assert((velocity - 2950.34).abs/2950.34 < 1.0e-3, "Incorrect velocity.")
+  end
+
+  def test_2_shock_tunnel_cea2_gas
+    cmd = "estcn  --task=stn --gas=cea-air5species-gas-model.lua --T1=300 --p1=125.0e3 --Vs=2414 --pe=34.37e6 --ar=27.0"
+    o, e, s = Open3.capture3(*cmd.split)
+    assert_equal(s.success?, true)
+    enthalpy = 0.0; velocity = 0.0
+    found_state_7 = false
+    pressure = 0.0; temperature = 0.0
+    lines = o.split("\n")
+    lines.each do |txt|
+      if txt.match('Enthalpy difference') then
+        items = txt.split(' ')
+        enthalpy = items[-2].to_f
+      end
+      if txt.match('V7') then
+        items = txt.split(' ')
+        velocity = items[1].to_f
+      end
+      # The last thing that we do is look for the pressure and temperature.
+      if found_state_7 && pressure == 0.0 then
+        items = txt.split(', ')
+        pressure_item = items[1]
+        pressure = pressure_item.split('=')[-1].to_f
+        temperature_item = items[2]
+        temperature = temperature_item.split('=')[-1].to_f
+      end
+      if txt.match('State 7') then
+        found_state_7 = true
+      end
+    end
+    assert((enthalpy - 5.43258e+06).abs/5.43258e+06 < 1.0e-3, "Incorrect enthalpy.")
+    assert((pressure - 93940.5).abs/93940.5 < 1.0e-3, "Incorrect pressure.")
+    assert((temperature - 1280.98).abs/1280.98 < 1.0e-3, "Incorrect temperature.")
+    assert((velocity - 2949.81).abs/2949.81 < 1.0e-3, "Incorrect velocity.")
   end
 
 end
