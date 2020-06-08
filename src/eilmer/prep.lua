@@ -907,6 +907,12 @@ function FBArray:new(o)
                print("ib=", ib, "jb= ", jb)
                print("i0= ", i0, " nic= ", nic, " j0= ", j0, " njc= ", njc)
             end
+            if nic < 1 then
+               error(string.format("Invalid nic=%d while making subgrid ib=%d, jb=%d", nic, ib, jb), 2)
+            end
+            if njc < 1 then
+               error(string.format("Invalid njc=%d while making subgrid ib=%d, jb=%d", njc, ib, jb), 2)
+            end
 	    local subgrid = o.grid:subgrid(i0,nic+1,j0,njc+1)
 	    local bcList = {north=WallBC_WithSlip:new(), east=WallBC_WithSlip:new(),
 			    south=WallBC_WithSlip:new(), west=WallBC_WithSlip:new()}
@@ -940,6 +946,15 @@ function FBArray:new(o)
                   nkc = nkc_remaining
                end
                nkc_remaining = nkc_remaining - nkc
+               if nic < 1 then
+                  error(string.format("Invalid nic=%d while making subgrid ib=%d, jb=%d, kb=%d", nic, ib, jb, kb), 2)
+               end
+               if njc < 1 then
+                  error(string.format("Invalid njc=%d while making subgrid ib=%d, jb=%d, kb=%d", njc, ib, jb, kb), 2)
+               end
+               if nkc < 1 then
+                  error(string.format("Invalid nkc=%d while making subgrid ib=%d, jb=%d, kb=%d", nkc, ib, jb, kb), 2)
+               end
 	       local subgrid = o.grid:subgrid(i0,nic+1,j0,njc+1,k0,nkc+1)
 	       local bcList = {north=WallBC_WithSlip:new(), east=WallBC_WithSlip:new(),
 			       south=WallBC_WithSlip:new(), west=WallBC_WithSlip:new(),

@@ -290,12 +290,36 @@ public:
                            size_t k0=0, size_t nk=1) const
     // Partition on vertex indices.
     {
-        if (i0+ni > niv)
+        switch (dimensions) {
+        case 1:
+            if (ni < 2 || nj != 1 || nk != 1) {
+                throw new Error(text("Sgrid.subgrid invalid ni=", ni, " nj=", nj, " nk=", nk,
+                                     " for dimensions==1"));
+            }
+            break;
+        case 2:
+            if (ni < 2 || nj < 2 || nk != 1) {
+                throw new Error(text("Sgrid.subgrid invalid ni=", ni, " nj=", nj, " nk=", nk,
+                                     " for dimensions==2"));
+            }
+            break;
+        case 3:
+            if (ni < 2 || nj < 2 || nk < 2) {
+                throw new Error(text("Sgrid.subgrid invalid ni=", ni, " nj=", nj, " nk=", nk,
+                                     " for dimensions==3"));
+            }
+            break;
+        default: throw new GeometryException("invalid number of dimensions");
+        }
+        if (i0+ni > niv) {
             throw new Error(text("Sgrid.subgrid overrun i0=",i0,", ni=",ni,", niv=",niv));
-        if (j0+nj > njv)
+        }
+        if (j0+nj > njv) {
             throw new Error(text("Sgrid.subgrid overrun j0=",j0,", nj=",nj,", njv=",njv));
-        if (k0+nk > nkv)
+        }
+        if (k0+nk > nkv) {
             throw new Error(text("Sgrid.subgrid overrun k0=",k0,", nk=",nk,", nkv=",nkv));
+        }
         auto new_grd = new StructuredGrid(ni, nj, nk);
         foreach (i; 0 .. ni) {
             foreach (j; 0 .. nj) {
