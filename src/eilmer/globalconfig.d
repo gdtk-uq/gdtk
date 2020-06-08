@@ -338,6 +338,9 @@ struct SteadyStateSolverOptions {
     int maxOuterIterations = 10;
     int maxRestarts = 10;
     int nInnerIterations = 5;
+    double cfl_max = 1.0;
+    double cfl_growth_rate = 2.5;
+    bool residual_based_cfl_scheduling = true;
     // Options for start-up phase
     int nStartUpSteps = 5;
     double p0 = 0.75;
@@ -1805,6 +1808,11 @@ void read_control_file()
     // Settings for start-up phase
     GlobalConfig.sssOptions.nStartUpSteps =
         getJSONint(sssOptions, "number_start_up_steps", GlobalConfig.sssOptions.nStartUpSteps);
+    GlobalConfig.sssOptions.residual_based_cfl_scheduling = getJSONbool(sssOptions, "residual_based_cfl_scheduling", GlobalConfig.sssOptions.residual_based_cfl_scheduling);
+    GlobalConfig.sssOptions.cfl_growth_rate =
+        getJSONdouble(sssOptions, "cfl_growth_rate", GlobalConfig.sssOptions.cfl_growth_rate);
+    GlobalConfig.sssOptions.cfl_max =
+        getJSONdouble(sssOptions, "cfl_max", GlobalConfig.sssOptions.cfl_max);
     GlobalConfig.sssOptions.cfl0 =
         getJSONdouble(sssOptions, "cfl0", GlobalConfig.sssOptions.cfl0);
     GlobalConfig.sssOptions.eta0 =

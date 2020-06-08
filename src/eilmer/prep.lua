@@ -74,6 +74,9 @@ sssOptionsHidden = { -- hidden from user
    number_inner_iterations = 5,
    -- Options for start-up phase
    number_start_up_steps = 5,
+   cfl_growth_rate = 2.0,
+   cfl_max = 1.0,
+   residual_based_cfl_scheduling = true,
    cfl0 = 1.0,
    eta0 = 0.5,
    tau0 = 0.1,
@@ -1805,6 +1808,9 @@ function write_control_file(fileName)
    f:write(string.format('   "max_restarts": %d,\n', SteadyStateSolver.max_restarts))
    f:write(string.format('   "number_inner_iterations": %d,\n', SteadyStateSolver.number_inner_iterations))
    f:write(string.format('   "number_start_up_steps": %d,\n', SteadyStateSolver.number_start_up_steps))
+   f:write(string.format('   "residual_based_cfl_scheduling": %s,\n', tostring(SteadyStateSolver.residual_based_cfl_scheduling)))
+   f:write(string.format('   "cfl_growth_rate": %.18e,\n', SteadyStateSolver.cfl_growth_rate))
+   f:write(string.format('   "cfl_max": %.18e,\n', SteadyStateSolver.cfl_max))
    f:write(string.format('   "cfl0": %.18e,\n', SteadyStateSolver.cfl0))
    f:write(string.format('   "eta0": %.18e,\n', SteadyStateSolver.eta0))
    f:write(string.format('   "tau0": %.18e,\n', SteadyStateSolver.tau0))

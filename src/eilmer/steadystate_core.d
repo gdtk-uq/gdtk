@@ -124,6 +124,10 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     double relGlobalResidReduction = GlobalConfig.sssOptions.stopOnRelGlobalResid;
     double absGlobalResidReduction = GlobalConfig.sssOptions.stopOnAbsGlobalResid;
 
+    double cfl_max = GlobalConfig.sssOptions.cfl_max;
+    double cfl_growth_rate = GlobalConfig.sssOptions.cfl_growth_rate;
+    bool residual_based_cfl_scheduling = GlobalConfig.sssOptions.residual_based_cfl_scheduling;
+    
     // Settings for start-up phase
     double cfl0 = GlobalConfig.sssOptions.cfl0;
     double tau0 = GlobalConfig.sssOptions.tau0;
@@ -791,24 +795,30 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
 
         // Choose a new timestep and eta value.
         auto normRatio = normOld/normNew;
-        if (inexactNewtonPhase) {
-            if (step < nStartUpSteps) {
-                // Let's assume we're still letting the shock settle
-                // when doing low order steps, so we use a power of 0.75 as a default
-                double p0 =  GlobalConfig.sssOptions.p0;
-                cflTrial = cfl*pow(normOld/normNew, p0);
+        if (residual_based_cfl_scheduling) { 
+            if (inexactNewtonPhase) {
+                if (step < nStartUpSteps) {
+                    // Let's assume we're still letting the shock settle
+                    // when doing low order steps, so we use a power of 0.75 as a default
+                    double p0 =  GlobalConfig.sssOptions.p0;
+                    cflTrial = cfl*pow(normOld/normNew, p0);
+                }
+                else {
+                    // We use a power of 1.0 as a default
+                    double p1 =  GlobalConfig.sssOptions.p1;
+                    cflTrial = cfl*pow(normOld/normNew, p1);
+                }
+                // Apply safeguards to dt
+                cflTrial = fmin(cflTrial, 2.0*cfl);
+                cflTrial = fmax(cflTrial, 0.1*cfl);
+                cfl = cflTrial;
             }
-            else {
-                // We use a power of 1.0 as a default
-                double p1 =  GlobalConfig.sssOptions.p1;
-                cflTrial = cfl*pow(normOld/normNew, p1);
-            }
-            // Apply safeguards to dt
-            cflTrial = fmin(cflTrial, 2.0*cfl);
-            cflTrial = fmax(cflTrial, 0.1*cfl);
-            cfl = cflTrial;
-         }
-
+        } else { // linear CFL growth
+            if (step <= nStartUpSteps) { cflTrial = cfl_growth_rate * step + cfl0; }
+            else { cflTrial = cfl_growth_rate * (step - nStartUpSteps) + cfl1; }
+            cfl = fmin(cflTrial, cfl_max);
+        }
+        
         if (step == nStartUpSteps) {
             // At the swap-over point from start-up phase to main phase
             // we need to do a few special things.
