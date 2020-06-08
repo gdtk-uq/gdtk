@@ -272,8 +272,11 @@ public:
         switch (dimensions) {
         case 1: nic = niv-1; njc = 1; nkc = 1; break;
         case 2: nic = niv-1; njc = njv-1; nkc = 1; break;
-        case 3: nic = niv-1; njc = njv-1; nkc = njv-1; break;
+        case 3: nic = niv-1; njc = njv-1; nkc = nkv-1; break;
         default: throw new GeometryException("invalid number of dimensions");
+        }
+        if (nic == 0 || njc == 0 || nkc == 0) {
+            throw new GeometryException("Zero cells in at least one direction.");
         }
         size_t k = indx / (nic*njc);
         indx -= k * (nic * njc);
