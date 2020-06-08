@@ -38,7 +38,7 @@ public:
         int dim = 3;
         if (nkv == 1) {
             if (njv == 1) { dim = 1; } else { dim = 2; }
-        } 
+        }
         super(Grid_t.structured_grid, dim, label);
         this.niv = niv; this.njv = njv; this.nkv = nkv;
         switch (dim) {
@@ -125,7 +125,7 @@ public:
     {
         return new StructuredGrid(this);
     }
-        
+
     override Vector3* opIndex(size_t i, size_t j, size_t k=0)
     in {
         assert (i < niv, text("index i=", i, " is invalid, niv=", niv));
@@ -205,11 +205,11 @@ public:
                         vtx_id[single_index(i+1,j+1,k)],
                         vtx_id[single_index(i,j+1,k)]];
         case 3: return [vtx_id[single_index(i,j,k)],
-                        vtx_id[single_index(i+1,j,k)], 
+                        vtx_id[single_index(i+1,j,k)],
                         vtx_id[single_index(i+1,j+1,k)],
                         vtx_id[single_index(i,j+1,k)],
                         vtx_id[single_index(i,j,k+1)],
-                        vtx_id[single_index(i+1,j,k+1)], 
+                        vtx_id[single_index(i+1,j,k+1)],
                         vtx_id[single_index(i+1,j+1,k+1)],
                         vtx_id[single_index(i,j+1,k+1)]];
         default: throw new GeometryException("invalid number of dimensions");
@@ -235,11 +235,11 @@ public:
             break;
         case 3:
             vtx_list_copy[0] = vtx_id[single_index(i,j,k)];
-            vtx_list_copy[1] = vtx_id[single_index(i+1,j,k)]; 
+            vtx_list_copy[1] = vtx_id[single_index(i+1,j,k)];
             vtx_list_copy[2] = vtx_id[single_index(i+1,j+1,k)];
             vtx_list_copy[3] = vtx_id[single_index(i,j+1,k)];
             vtx_list_copy[4] = vtx_id[single_index(i,j,k+1)];
-            vtx_list_copy[5] = vtx_id[single_index(i+1,j,k+1)]; 
+            vtx_list_copy[5] = vtx_id[single_index(i+1,j,k+1)];
             vtx_list_copy[6] = vtx_id[single_index(i+1,j+1,k+1)];
             vtx_list_copy[7] = vtx_id[single_index(i,j+1,k+1)];
             nvtx = 8;
@@ -470,7 +470,7 @@ public:
             double s = to!double(j) / (njv - 1);
             foreach (i; 0 .. niv) {
                 double r = to!double(i) / (niv - 1);
-                double sdash = (1.0-r) * sWest[j] + r * sEast[j]; 
+                double sdash = (1.0-r) * sWest[j] + r * sEast[j];
                 double rdash = (1.0-s) * rSouth[i] + s * rNorth[i];
                 Vector3 p = surf(rdash, sdash);
                 this[i,j,k].set(p);
@@ -509,11 +509,11 @@ public:
                 double s = to!double(j) / (njv - 1);
                 foreach (i; 0 .. niv) {
                     double r = to!double(i) / (niv - 1);
-                    double tdash = (1.0-r)*(1.0-s)*t04[k] + r*s*t26[k] + 
+                    double tdash = (1.0-r)*(1.0-s)*t04[k] + r*s*t26[k] +
                         (1.0-s)*r*t15[k] + s*(1.0-r)*t37[k];
-                    double sdash = (1.0-t)*(1.0-r)*s03[j] + t*r*s56[j] + 
+                    double sdash = (1.0-t)*(1.0-r)*s03[j] + t*r*s56[j] +
                         (1.0-t)*r*s12[j] + t*(1-r)*s47[j];
-                    double rdash = (1.0-s)*(1.0-t)*r01[i] + s*t*r76[i] + 
+                    double rdash = (1.0-s)*(1.0-t)*r01[i] + s*t*r76[i] +
                         (1.0-s)*t*r45[i] + s*(1.0-t)*r32[i];
                     Vector3 p = pvolume(rdash, sdash, tdash);
                     this[i,j,k].set(p);
@@ -596,7 +596,7 @@ public:
         formattedRead(line, "structured_grid %s", &format_version);
         if (format_version != "1.0") {
             throw new Error("StructuredGrid.read_from_gzip_file(): " ~
-                            "format version found: " ~ format_version); 
+                            "format version found: " ~ format_version);
         }
         line = byLine.front; byLine.popFront();
         formattedRead(line, "label: %s", &label);
@@ -647,7 +647,7 @@ public:
         f.rawRead(found_header);
         if (found_header != expected_header) {
             throw new Error("StructuredGrid.read_from_raw_binary_file(): " ~
-                            "unexpected header: " ~ to!string(found_header)); 
+                            "unexpected header: " ~ to!string(found_header));
         }
         int[1] buf1; f.rawRead(buf1);
         int label_length = buf1[0];
@@ -703,7 +703,7 @@ public:
             foreach (j; 0 .. njv) {
                 foreach (i; 0 .. niv) {
                     writer = appender!string();
-                    formattedWrite(writer, "%.18e %.18e %.18e\n", 
+                    formattedWrite(writer, "%.18e %.18e %.18e\n",
                                    this[i,j,k].x.re, this[i,j,k].y.re, this[i,j,k].z.re);
                     f.compress(writer.data);
                 }
@@ -749,7 +749,7 @@ public:
         foreach (k; 0 .. nkv) {
             foreach (j; 0 .. njv) {
                 foreach (i; 0 .. niv) {
-                    f.writefln("%.18e %.18e %.18e", 
+                    f.writefln("%.18e %.18e %.18e",
                                this[i,j,k].x.re, this[i,j,k].y.re, this[i,j,k].z.re);
                 }
             }
@@ -759,7 +759,7 @@ public:
     /**
      * joinGrid is used to join a supplied grid with
      * the current grid.
-     * 
+     *
      * Parameters:
      *   gridToJoin   : the supplied grid to be joined with "this" (parent grid)
      *   joinLocation :  is w.r.t "this" grid.
@@ -791,7 +791,7 @@ public:
             errMsg ~= "The specified joinLocation = " ~ joinLocation ~ " is not supported.\n";
             throw new Error(errMsg);
         }
-            
+
         // Begin by testing if this join is possible
         if (dimensions != 2) {
             throw new Error("StructuredGrid.joinGrid only implemented for 2D grids.");
@@ -860,7 +860,7 @@ public:
         }
         if ( (joinLocation == "north") || (joinLocation == "jmax") ) {
             // -1 because we don't duplicate the coincident vertices at the join
-            njv += gridToJoin.njv - 1; 
+            njv += gridToJoin.njv - 1;
         }
 
         switch (dimensions) {
@@ -898,7 +898,7 @@ public:
                 }
             }
         }
-        // Make the vtx_id list up-to-date 
+        // Make the vtx_id list up-to-date
         size_t ivtx = 0;
         foreach (k; 0 .. nkv) {
             foreach (j; 0 .. njv) {
@@ -979,7 +979,7 @@ public:
 //
 // This is intended primarily to avoid the bad behaviour of VTK
 // when it is reading Float32 values that are *too* small.
-// We have also come across unreasonably-small float values 
+// We have also come across unreasonably-small float values
 // in the context of reading GridPro files.
 @nogc double uflowz(double q, double tiny=1.0e-30)
 {
@@ -990,7 +990,7 @@ public:
 // Legacy-format VTK lines use spaces as delimiters.
 string[] read_VTK_header_line(string target, File f)
 {
-    bool found = false; 
+    bool found = false;
     string[] tokens;
     while (!found) {
         auto line = f.readln();
@@ -1001,7 +1001,7 @@ string[] read_VTK_header_line(string target, File f)
             found = true; break;
         }
     }
-    if (!found) { 
+    if (!found) {
         throw new Error(text("Did not find ", target, " while reading VTK grid file"));
     }
     return tokens;
@@ -1016,11 +1016,11 @@ Reads a complete Gridpro grid file, returns a list of StructuredGrids.
 A complete Gridpro grid file contains multiple blocks. This function
 will read through all blocks and store them as StructuredGrid objects.
 These are returned by the function. Gridpro builds grids in the same
-dimensions as the supplied geometry. Care should be taken with 
+dimensions as the supplied geometry. Care should be taken with
 Gridpro grids built from CAD geometries which may typically be
 in millimetres. In this case, the required 'scale' would be 0.001
 to convert to metres for use in Eilmer.
-    
+
 :param fileName: name of Gridpro grid file
 :param scale: a scale to convert supplied coordinates to metres
 :returns: list of StructuredGrid object(s)
@@ -1245,7 +1245,7 @@ version(sgrid_test) {
         auto p11 = Vector3(1.0, 1.1);
         auto p01 = Vector3(0.0, 1.1);
         auto my_patch = new CoonsPatch(p00, p10, p11, p01);
-        auto cf = [new LinearFunction(), new LinearFunction(), 
+        auto cf = [new LinearFunction(), new LinearFunction(),
                    new LinearFunction(), new LinearFunction()];
         auto my_grid = new StructuredGrid(my_patch, 11, 21, cf);
         assert(approxEqualVectors(*my_grid[5,5], Vector3(0.5, 0.35, 0.0)),
