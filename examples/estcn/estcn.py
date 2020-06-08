@@ -90,7 +90,7 @@ from eilmer.zero_solvers import secant
 # ----------------------------------------------------------------------------
 
 def reflected_shock_tube_calculation(gasModel, flow,
-                                     p1, T1, Vs, pe, pp_on_pe, area_ratio,
+                                     p1, T1, massf, Vs, pe, pp_on_pe, area_ratio,
                                      task, print_status=True):
     """
     Runs the reflected-shock-tube calculation from initial fill conditions
@@ -114,7 +114,8 @@ def reflected_shock_tube_calculation(gasModel, flow,
     #
     if print_status: print('Write pre-shock condition.')
     state1 = GasState(gasModel)
-    state1.p = p1; state1.T = T1; state1.update_thermo_from_pT()
+    state1.p = p1; state1.T = T1; state1.massf = massf
+    state1.update_thermo_from_pT()
     H1 = state1.internal_energy + state1.p/state1.rho
     result = {'state1':state1, 'H1':H1}
     #
@@ -258,6 +259,12 @@ def main():
                   help=("shock tube fill pressure or static pressure, in Pa"))
     op.add_option('--T1', dest='T1', type='float', default=None,
                   help=("shock tube fill temperature, in degrees K"))
+    op.add_option('--molef', dest='molef_str', type='string', default=None,
+                  help=("mole fractions of gas model species,"
+                        " provided as a comma-separated list of float values"))
+    op.add_option('--massf', dest='massf_str', type='string', default=None,
+                  help=("mass fractions of gas model species,"
+                        " provided as a comma-separated list of float values"))
     op.add_option('--V1', dest='V1', type='float', default=None,
                   help=("initial speed of gas in lab frame [default: %default], in m/s"))
     op.add_option('--Vs', dest='Vs', type='float', default=None,
@@ -280,6 +287,8 @@ def main():
     gasFileName = opt.gasFileName
     p1 = opt.p1
     T1 = opt.T1
+    molef_str = opt.molef_str
+    massf_str = opt.massf_str
     V1 = opt.V1
     Vs = opt.Vs
     pe = opt.pe
@@ -325,13 +334,30 @@ def main():
     gasModel = GasModel(gasFileName)
     flow = GasFlow(gasModel)
     #
+    massf = [1.0,] # default for nspecies == 1
+    if gasModel.n_species > 1:
+        if molef_str:
+            molef = [float(s) for s in molef_str.split(',')]
+            if abs(sum(molef)-1.0) > 1.0e-6:
+                print("Mole fractions do not sum to 1.0; molef=", molef)
+                return -2
+            massf = gasModel.molef2massf(molef)
+        elif massf_str:
+            massf = [float(s) for s in massf_str.split(',')]
+            if abs(sum(massf)-1.0) > 1.0e-6:
+                print("Mass fractions do not sum to 1.0; massf=", massf)
+                return -2
+        else:
+            print("Gas model requires species fractions but none supplied.")
+            return -2
+    #
     if task in ['st', 'stn', 'stnp', 'ishock']:
         # Some form of shock processing
         fout.write('Input parameters:\n')
-        fout.write('  gasFileName is %s, p1: %g Pa, T1: %g K, Vs: %g m/s\n'
-                   % (gasFileName, p1, T1, Vs) )
-        result = reflected_shock_tube_calculation(gasModel, flow,
-            p1, T1, Vs, pe, pp_on_pe, area_ratio, task=task)
+        fout.write('  gasFileName is %s, p1: %g Pa, T1: %g K, massf=%s, Vs: %g m/s\n'
+                   % (gasFileName, p1, T1, massf, Vs) )
+        result = reflected_shock_tube_calculation(gasModel, flow, \
+                    p1, T1, massf, Vs, pe, pp_on_pe, area_ratio, task=task)
         fout.write('State 1: pre-shock condition\n')
         fout.write('  '+str(result['state1'])+'\n')
         fout.write('State 2: post-shock condition.\n')
@@ -361,37 +387,40 @@ def main():
     elif task in ['total', 'TOTAL', 'Total']:
         # Isentropic total-pressure condition from free stream
         fout.write('Input parameters:\n')
-        fout.write('  gasFileName is %s, p1: %g Pa, T1: %g K, V1: %g m/s\n'
-                   % (gasFileName, p1, T1, V1) )
+        fout.write('  gasFileName is %s, p1: %g Pa, T1: %g K, massf: %s, V1: %g m/s\n'
+                   % (gasFileName, p1, T1, massf, V1) )
         state1 = GasState(gasModel)
-        state1.p = p1; state1.T = T1; state1.update_thermo_from_pT()
-        state0 = GasState(gasModel)
+        state1.p = p1; state1.T = T1; state1.massf = massf
+        state1.update_thermo_from_pT()
+        state0 = GasState(gasModel); state0.copy_values(state1)
         flow.total_condition(state1, V1, state0)
         fout.write('Total condition:\n')
         fout.write('  '+str(state0)+'\n')
     elif task in ['pitot', 'PITOT', 'Pitot']:
         # Pitot condition from free stream
         fout.write('Input parameters:\n')
-        fout.write('  gasFileName is %s, p1: %g Pa, T1: %g K, V1: %g m/s\n'
-                   % (gasFileName, p1, T1, V1) )
+        fout.write('  gasFileName is %s, p1: %g Pa, T1: %g K, massf: %s V1: %g m/s\n'
+                   % (gasFileName, p1, T1, massf, V1) )
         state1 = GasState(gasModel)
-        state1.p = p1; state1.T = T1; state1.update_thermo_from_pT()
-        state0 = GasState(gasModel)
+        state1.p = p1; state1.T = T1; state1.massf = massf
+        state1.update_thermo_from_pT()
+        state0 = GasState(gasModel); state0.copy_values(state1)
         flow.pitot_condition(state1, V1, state0)
         fout.write('Pitot condition:\n')
         fout.write('  '+str(state0)+'\n')
     elif task in ['cone', 'CONE', 'Cone']:
         # Conical shock processing from free stream
         fout.write('Input parameters:\n')
-        fout.write('  gasFileName is %s, p1: %g Pa, T1: %g K, V1: %g m/s, sigma: %g degrees\n'
-                   % (gasFileName, p1, T1, V1, cone_half_angle_deg) )
+        fout.write('  gasFileName is %s, p1: %g Pa, T1: %g K, massf: %s, V1: %g m/s, sigma: %g degrees\n'
+                   % (gasFileName, p1, T1, massf, V1, cone_half_angle_deg) )
         state1 = GasState(gasModel)
-        state1.p = p1; state1.T = T1; state1.update_thermo_from_pT()
+        state1.p = p1; state1.T = T1; state1.massf = massf
+        state1.update_thermo_from_pT()
         fout.write('Free-stream condition:\n')
         fout.write('  '+str(state1)+'\n')
         cone_half_angle_rad = math.radians(cone_half_angle_deg)
         beta_rad = flow.beta_cone(state1, V1, cone_half_angle_rad)
-        state2 = GasState(gasModel)
+        state2 = GasState(gasModel); state2.copy_values(state1)
         theta_c, V_cone_surface = flow.theta_cone(state1, V1, beta_rad, state2)
         assert abs(theta_c - cone_half_angle_rad) < 0.001
         fout.write('Shock angle: %g (rad), %g (deg)\n' % (beta_rad, math.degrees(beta_rad)))
