@@ -1,11 +1,13 @@
 ---
-title: Python library
+title: Python library and programs
 weight: 40
 ---
 ## Loadable library for Python
 The loadable library comes with `eilmer` as top-level namespace.
 Within that namespace, there are packages for gas models,
 flow analysis, geometry construction and general numerical methods.
+There are also a number of application programs that may be used
+from the command line.
 
 ### Gas-dynamic functions
 
@@ -17,6 +19,20 @@ stream-tube flow analysis functions.
 The collection of geometric functions is built to look like the Lua functions
 for constructing geometric objects in Eilmer.
 
+### Application programs
+Programs built upon the loadable library:
++ [IMOC]({{< relref "moc.md" >}}),
+  an interactive program for the isentropic method for characteristics
+  for 2-dimensional ideal gas flows.
++ [ESTCN]({{< relref "estcn.md" >}}),
+  Calculator for equilibrium shock tunnel conditions, with nozzle.
++ [build-uniform-lut]({{< relref "build-lut.md" >}}),
+  Assemble a look-up-table gas model, based on CEA2 calculations
+  for a gas mixture in thermochemical equilibrium.
++ [NENZF2]({{< relref "nenzf2.md" >}}),
+  Calculation of Nonequilibrium Nozzle Flow with finite-rate chemistry.
++ [Poshax]({{< relref "poshax.md" >}}),
+  Calculation of Post-Shock Relaxing flow.
 
 ## Getting started
 
@@ -26,7 +42,12 @@ the source code directory for the gas models.
     cd dgd/src/gas
     make install
 
-You should set the following environment variables, also.
+Note that this command will also install the Python application programs
+to the `${DGD}/bin` directory.
+
+If you have not already done so,
+you should set the following environment variables
+so that the Python interpreter can find the library.
 
     export PYTHONPATH=${PYTHONPATH}:${DGD}/lib
     export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${DGD}/lib
