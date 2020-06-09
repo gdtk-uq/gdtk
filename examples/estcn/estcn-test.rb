@@ -43,11 +43,9 @@ class TestESTCN < Test::Unit::TestCase
         velocity = items[1].to_f
       end
       if found_state_7 && pressure == 0.0 then
-        items = txt.split(', ')
-        pressure_item = items[1]
-        pressure = pressure_item.split('=')[-1].to_f
-        temperature_item = items[2]
-        temperature = temperature_item.split('=')[-1].to_f
+        items = txt.split(' ')
+        pressure = items[1].to_f
+        temperature = items[4].to_f
       end
       if txt.match('State 7') then
         # Note that we want the data from the following line.
@@ -78,11 +76,9 @@ class TestESTCN < Test::Unit::TestCase
         velocity = items[1].to_f
       end
       if found_state_7 && pressure == 0.0 then
-        items = txt.split(', ')
-        pressure_item = items[1]
-        pressure = pressure_item.split('=')[-1].to_f
-        temperature_item = items[2]
-        temperature = temperature_item.split('=')[-1].to_f
+        items = txt.split(' ')
+        pressure = items[1].to_f
+        temperature = items[4].to_f
       end
       if txt.match('State 7') then
         # Note that we want the data from the following line.
@@ -109,11 +105,9 @@ class TestESTCN < Test::Unit::TestCase
         velocity = items[4].to_f
       end
       if found_state_2 && pressure == 0.0 then
-        items = txt.split(', ')
-        pressure_item = items[1]
-        pressure = pressure_item.split('=')[-1].to_f
-        temperature_item = items[2]
-        temperature = temperature_item.split('=')[-1].to_f
+        items = txt.split(' ')
+        pressure = items[1].to_f
+        temperature = items[4].to_f
       end
       if txt.match('State 2') then
         # Note that we want the data from the following line.
@@ -139,11 +133,9 @@ class TestESTCN < Test::Unit::TestCase
         velocity = items[4].to_f
       end
       if found_state_2 && pressure == 0.0 then
-        items = txt.split(', ')
-        pressure_item = items[1]
-        pressure = pressure_item.split('=')[-1].to_f
-        temperature_item = items[2]
-        temperature = temperature_item.split('=')[-1].to_f
+        items = txt.split(' ')
+        pressure = items[1].to_f
+        temperature = items[4].to_f
       end
       if txt.match('State 2') then
         # Note that we want the data from the following line.
@@ -160,11 +152,9 @@ class TestESTCN < Test::Unit::TestCase
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
     lines = o.split("\n")
-    items = lines[-1].split(', ')
-    pressure_item = items[1]
-    pressure = pressure_item.split('=')[-1].to_f
-    temperature_item = items[2]
-    temperature = temperature_item.split('=')[-1].to_f
+    items = lines[-2].split(' ')
+    pressure= items[1].to_f
+    temperature = items[4].to_f
     assert((pressure - 2.1462e+06).abs/2.1462e+06 < 1.0e-3, "Incorrect pressure.")
     assert((temperature - 3875.76).abs/3875.76 < 1.0e-3, "Incorrect temperature.")
   end
@@ -174,11 +164,9 @@ class TestESTCN < Test::Unit::TestCase
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
     lines = o.split("\n")
-    items = lines[-1].split(', ')
-    pressure_item = items[1]
-    pressure = pressure_item.split('=')[-1].to_f
-    temperature_item = items[2]
-    temperature = temperature_item.split('=')[-1].to_f
+    items = lines[-2].split(' ')
+    pressure = items[1].to_f
+    temperature = items[4].to_f
     angle_deg = 0.0
     lines.each do |txt|
       if txt.match('Shock angle') then
@@ -196,11 +184,9 @@ class TestESTCN < Test::Unit::TestCase
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
     lines = o.split("\n")
-    items = lines[-1].split(', ')
-    pressure_item = items[1]
-    pressure = pressure_item.split('=')[-1].to_f
-    temperature_item = items[2]
-    temperature = temperature_item.split('=')[-1].to_f
+    items = lines[-2].split(' ')
+    pressure = items[1].to_f
+    temperature = items[4].to_f
     assert((pressure - 3.4273e+07).abs/3.4273e+07 < 1.0e-3, "Incorrect pressure.")
     assert((temperature - 4160.5).abs/4160.5 < 1.0e-3, "Incorrect temperature.")
   end
@@ -219,11 +205,9 @@ class TestESTCN < Test::Unit::TestCase
         velocity = items[4].to_f
       end
       if found_state_2 && pressure == 0.0 then
-        items = txt.split(', ')
-        pressure_item = items[1]
-        pressure = pressure_item.split('=')[-1].to_f
-        temperature_item = items[2]
-        temperature = temperature_item.split('=')[-1].to_f
+        items = txt.split(' ')
+        pressure = items[1].to_f
+        temperature = items[4].to_f
       end
       if txt.match('State 2') then
         # Note that we want the data from the following line.

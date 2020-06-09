@@ -235,6 +235,20 @@ def reflected_shock_tube_calculation(gasModel, flow,
 
 #--------------------------------------------------------------------
 
+def str_with_units(gs, lead_str='  '):
+    """
+    Returns a string describing the gas state.  Quantities and units.
+    """
+    result = lead_str+'p: %g Pa, T: %g K, rho: %g kg/m**3, u: %g J/kg, h: %g J/kg' % \
+             (gs.p, gs.T, gs.rho, gs.internal_energy, gs.enthalpy)
+    result += '\n'+lead_str+'R: %g J/(kg.K), gam: %g, Cp: %g J/(kg.K), a: %g m/s, s: %g J/(kg.K)' % \
+              (gs.R, gs.gamma, gs.Cp, gs.a, gs.entropy)
+    if gs.gmodel.type_str == "CEAGas":
+        result += '\n'+lead_str+('CEA-massf: %s' % gs.ceaSavedData['massf'])
+    return result
+
+#--------------------------------------------------------------------
+
 def main():
     """
     The application gets information from the command options,
@@ -359,27 +373,27 @@ def main():
         result = reflected_shock_tube_calculation(gasModel, flow, \
                     p1, T1, massf, Vs, pe, pp_on_pe, area_ratio, task=task)
         fout.write('State 1: pre-shock condition\n')
-        fout.write('  '+str(result['state1'])+'\n')
+        fout.write(str_with_units(result['state1'])+'\n')
         fout.write('State 2: post-shock condition.\n')
-        fout.write('  '+str(result['state2'])+'\n')
+        fout.write(str_with_units(result['state2'])+'\n')
         fout.write('  V2: %g m/s, Vg: %g m/s\n' % (result['V2'],result['Vg']) )
         if task in ['st', 'stn', 'stnp']:
             # Reflected-shock and, maybe, more
             fout.write('State 5: reflected-shock condition.\n')
-            fout.write('  '+str(result['state5'])+'\n')
+            fout.write(str_with_units(result['state5'])+'\n')
             fout.write('  Vr: %g m/s\n' % (result['Vr'],) )
             fout.write('State 5s: equilibrium condition (relaxation to pe)\n')
-            fout.write('  '+str(result['state5s'])+'\n')
+            fout.write(str_with_units(result['state5s'])+'\n')
             fout.write('Enthalpy difference (H5s - H1): %g J/kg\n' %
                        ((result['H5s'] - result['H1']),) )
             if task in ['stn','stnp']:
                 # Shock tube plus nozzle, expand gas isentropically to nozzle exit
                 fout.write('State 6: Nozzle-throat condition (relaxation to M=1)\n')
-                fout.write('  '+str(result['state6'])+'\n')
+                fout.write(str_with_units(result['state6'])+'\n')
                 fout.write('  V6: %g m/s, M6: %g, mflux6: %g kg/s/m**2\n' %
                            (result['V6'], result['V6']/result['state6'].a, result['mflux6'],) )
                 fout.write('State 7: Nozzle-exit condition (relaxation to correct mass flux)\n')
-                fout.write('  '+str(result['state7'])+'\n')
+                fout.write(str_with_units(result['state7'])+'\n')
                 fout.write('  V7: %g m/s, M7: %g, mflux7: %g kg/s/m**2, area_ratio: %g, pitot: %g Pa\n' %
                            (result['V7'], result['V7']/result['state7'].a, result['mflux7'],
                             result['area_ratio'], result['pitot7'],) )
@@ -395,7 +409,7 @@ def main():
         state0 = GasState(gasModel); state0.copy_values(state1)
         flow.total_condition(state1, V1, state0)
         fout.write('Total condition:\n')
-        fout.write('  '+str(state0)+'\n')
+        fout.write(str_with_units(state0)+'\n')
     elif task in ['pitot', 'PITOT', 'Pitot']:
         # Pitot condition from free stream
         fout.write('Input parameters:\n')
@@ -407,7 +421,7 @@ def main():
         state0 = GasState(gasModel); state0.copy_values(state1)
         flow.pitot_condition(state1, V1, state0)
         fout.write('Pitot condition:\n')
-        fout.write('  '+str(state0)+'\n')
+        fout.write(str_with_units(state0)+'\n')
     elif task in ['cone', 'CONE', 'Cone']:
         # Conical shock processing from free stream
         fout.write('Input parameters:\n')
@@ -417,7 +431,7 @@ def main():
         state1.p = p1; state1.T = T1; state1.massf = massf
         state1.update_thermo_from_pT()
         fout.write('Free-stream condition:\n')
-        fout.write('  '+str(state1)+'\n')
+        fout.write(str_with_units(state1)+'\n')
         cone_half_angle_rad = math.radians(cone_half_angle_deg)
         beta_rad = flow.beta_cone(state1, V1, cone_half_angle_rad)
         state2 = GasState(gasModel); state2.copy_values(state1)
@@ -426,7 +440,7 @@ def main():
         fout.write('Shock angle: %g (rad), %g (deg)\n' % (beta_rad, math.degrees(beta_rad)))
         fout.write('Cone-surface velocity: %g m/s\n' % (V_cone_surface,))
         fout.write('Cone-surface condition:\n')
-        fout.write('  '+str(state2)+'\n')
+        fout.write(str_with_units(state2)+'\n')
     #
     if outFileName: fout.close()
     return 0
