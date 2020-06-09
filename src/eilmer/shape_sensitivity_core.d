@@ -4288,10 +4288,21 @@ void ilu_preconditioner(ref FluidBlock blk, size_t np, double dt, size_t orderOf
     blk.myConfig.interpolation_order = 1;
     /* form conservative Jacobian transpose */
     local_flow_jacobian_transpose(blk.P, blk, np, 1, EPS, true, true);
-    number dtInv = 1.0/dt;
-    foreach (i; 0 .. np*blk.cells.length) {
-        blk.P[i,i] = blk.P[i,i] + dtInv;
+    //number dtInv = 1.0/dt;
+    //foreach (i; 0 .. np*blk.cells.length) {
+    //    blk.P[i,i] = blk.P[i,i] + dtInv;
+    //}
+    
+    foreach (i, cell; blk.cells) {
+        number dtInv;
+        if (GlobalConfig.with_local_time_stepping) { dtInv = 1.0/cell.dt_local; }
+        else { dtInv = 1.0/dt; }
+        foreach (j; 0..np) {
+            ulong idx = i*np + j;
+            blk.P[idx,idx] = blk.P[idx,idx] + dtInv;
+        }
     }
+
     
     /* perform ILU0 decomposition */
     int level_of_fill_in = blk.myConfig.sssOptions.iluFill;

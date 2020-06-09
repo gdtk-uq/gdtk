@@ -913,19 +913,19 @@ void allocate_global_workspace()
 
 double determine_dt(double cflInit)
 {
-    double signal, dt_local, dt;
+    double signal, dt;
     bool first = true;
 
     foreach (blk; localFluidBlocks) {
         foreach (cell; blk.cells) {
             signal = cell.signal_frequency();
-            dt_local = cflInit / signal;
+            cell.dt_local = cflInit / signal;
             if (first) {
-                dt = dt_local;
+                dt = cell.dt_local;
                 first = false;
             }
             else {
-                dt = fmin(dt, dt_local);
+                dt = fmin(dt, cell.dt_local);
             }
         }
     }
@@ -1399,7 +1399,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     H0.zeros();
     H1.zeros();
 
-    double dtInv = 1.0/dt;
+    //double dtInv = 1.0/dt;
 
     // We'll scale r0 against these max rates of change.
     // r0 = b - A*x0
@@ -1499,10 +1499,24 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             }
             
             // Prepare 'w' with (I/dt)(P^-1)v term;
-            foreach (blk; parallel(localFluidBlocks,1)) {
+            //foreach (blk; parallel(localFluidBlocks,1)) {
                 //double dtInv = 1.0/dt;
-                foreach (idx; 0..blk.w.length) blk.w[idx] = dtInv*blk.zed[idx];
+                //foreach (idx; 0..blk.w.length) blk.w[idx] = dtInv*blk.zed[idx];
+            //}
+
+            // Prepare 'w' with (I/dt)(P^-1)v term;
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                foreach (i, cell; blk.cells) {
+                    foreach (k; 0..nConserved) {
+                        ulong idx = i*nConserved + k;
+                        number dtInv;
+                        if (GlobalConfig.with_local_time_stepping) { dtInv = 1.0/cell.dt_local; }
+                        else { dtInv = 1.0/dt; }
+                        blk.w[idx] = dtInv*blk.zed[idx];
+                    }
+                }
             }
+
             
             // Evaluate Jz and place in z
             evalJacobianVecProd(pseudoSimTime, sigma);
