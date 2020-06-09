@@ -12,6 +12,7 @@ ffi.cdef("""
     int cwrap_gas_init();
 
     int gas_model_new(char* file_name);
+    int gas_model_type_str(int gm_i, char* dest_str, int n);
     int gas_model_n_species(int gm_i);
     int gas_model_n_modes(int gm_i);
     int gas_model_species_name(int gm_i, int isp, char* name, int n);
@@ -124,6 +125,12 @@ class GasModel(object):
         text = 'GasModel(file="%s", id=%d, species=%s)' % \
             (self.file_name, self.id, self.species_names)
         return text
+
+    @property
+    def type_str(self):
+        buf = ffi.new("char[]", b'\000'*32)
+        so.gas_model_type_str(self.id, buf, 32)
+        return ffi.string(buf).decode('utf-8')
 
     @property
     def n_species(self):

@@ -28,6 +28,7 @@ import gas.physical_constants;
 class VeryViscousAir: GasModel {
 public:
     this() {
+        type_str = "VeryViscousAir";
         // Default model is mostly initialized in the private data below.
         _n_species = 1;
         _n_modes = 0;

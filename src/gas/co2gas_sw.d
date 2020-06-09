@@ -41,6 +41,7 @@ class CO2GasSW: GasModel {
 public:
 
     this() {
+        type_str = "CO2GasSW";
         // Default model is mostly initialized in the private data below.
         _n_species = 1;
         _n_modes = 0;

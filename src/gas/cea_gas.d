@@ -90,6 +90,7 @@ public:
     this(string mixtureName, string[] speciesList, double[string] reactants,
          string inputUnits, double trace, bool withIons)
     {
+        type_str = "CEAGas";
         // In the context of Rowan's perfect gas mix, the CEA gas is a strange beast.
         // We will hide it's internal species behind a single pseudo-species that
         // we will call by the mixtureName.  It will not have a fixed molecular mass.

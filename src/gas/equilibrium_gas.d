@@ -21,7 +21,7 @@ import core.stdc.stdlib : exit;
 import nm.complex;
 import nm.number;
 import nm.bracketing;
-import nm.brent; 
+import nm.brent;
 
 import gas.gas_model;
 import gas.gas_state;
@@ -47,7 +47,8 @@ public:
     this(lua_State *L)
     // Construct model from parameters contained in a Lua interpreter.
     {
-        super(L); 
+        super(L);
+        type_str = "EquilibriumGas";
     } // end constructor
 
     this(in string fname)
@@ -67,7 +68,7 @@ public:
         return to!string(repr);
     }
 
-    override void update_thermo_from_pT(GasState Q) 
+    override void update_thermo_from_pT(GasState Q)
     {
         super.update_thermo_from_pT(Q); // [TODO] replace with Hugh's functions
     }
@@ -89,7 +90,7 @@ public:
     }
 
     // [TODO] other functions from therm_perf_gas.d, as needed.
-    
+
 } // end class EquilibriumGas
 
 // Unit test of the basic gas model...
@@ -103,7 +104,7 @@ version(equilibrium_gas_test) {
         auto gd = new GasState(5, 0);
         assert(approxEqual(3.621, gm.LJ_sigmas[0]), failedUnitTest());
         assert(approxEqual(97.530, gm.LJ_epsilons[0]), failedUnitTest());
-               
+
         gd.p = 1.0e6;
         gd.T = 2000.0;
         gd.massf = [0.2, 0.2, 0.2, 0.2, 0.2];

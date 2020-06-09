@@ -29,6 +29,7 @@ class CubicGas: GasModel {
 public:
 
     this(lua_State *L) {
+        type_str = "CubicGas";
         _n_species = 1;
         _n_modes = 0;
         // Bring table to TOS

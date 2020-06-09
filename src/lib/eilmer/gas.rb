@@ -14,6 +14,7 @@ module Gas
   extern 'int cwrap_gas_init()'
 
   extern 'int gas_model_new(char* file_name)'
+  extern 'int gas_model_type_str(int gm_i, char* dest_str, int n)'
   extern 'int gas_model_n_species(int gm_i)'
   extern 'int gas_model_n_modes(int gm_i)'
   extern 'int gas_model_species_name(int gm_i, int isp, char* name, int n)'
@@ -132,6 +133,11 @@ class GasModel
     "GasModel(file=\"#{@file_name}\", id=#{@id}, species=#{@species_names})"
   end
 
+  def type_str()
+    buf = Fiddle::Pointer.malloc(32)
+    Gas.gas_model_type_str(@id, buf, 32)
+    return buf.to_s
+  end
   def n_species()
     Gas.gas_model_n_species(@id)
   end

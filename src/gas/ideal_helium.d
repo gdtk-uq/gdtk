@@ -35,6 +35,7 @@ public:
 
     this()
     {
+        type_str = "IdealHelium";
         _n_species = 1;
         _n_modes = 0;
         _species_names.length = 1;

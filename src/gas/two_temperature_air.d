@@ -54,6 +54,7 @@ public:
     int[] molecularSpecies;
     this(lua_State* L)
     {
+        type_str = "TwoTemperatureAir";
         getArrayOfStrings(L, LUA_GLOBALSINDEX, "species", _species_names);
         _n_species = to!uint(_species_names.length);
         _n_modes = 1;

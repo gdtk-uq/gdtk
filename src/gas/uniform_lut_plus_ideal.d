@@ -33,6 +33,7 @@ class UniformLUTPlusIdealGas: GasModel {
 public:
 
     this(lua_State *L) {
+        type_str = "UniformLUTPlusIdealGas";
         _n_species = 2;
         _n_modes = 0;
         _species_names.length = 2;

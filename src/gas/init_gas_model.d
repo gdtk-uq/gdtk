@@ -140,7 +140,7 @@ GasModel init_gas_model(string file_name="gas-model.lua")
     case "TwoTemperatureNitrogen":
         gm = new TwoTemperatureNitrogen();
         break;
-    case "TwoTemperatureDissociatingNitrogen":  
+    case "TwoTemperatureDissociatingNitrogen":
         gm = new TwoTemperatureDissociatingNitrogen();
         break;
     case "VibSpecificNitrogen":
@@ -177,7 +177,7 @@ version(init_gas_model_test) {
         import std.conv;
         import nm.complex;
         import nm.number;
-        
+
         // Methods for testing gas state class
         import gas.gas_state;
         auto gd = new GasState(2, 1);

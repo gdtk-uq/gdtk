@@ -21,7 +21,7 @@ import core.stdc.stdlib : exit;
 import nm.complex;
 import nm.number;
 import nm.bracketing;
-import nm.brent; 
+import nm.brent;
 
 import gas.gas_model;
 import gas.gas_state;
@@ -44,8 +44,9 @@ import kinetics.reaction;
 class FuelAirMix: ThermallyPerfectGas {
 public:
     this(lua_State *L) {
-        super(L); 
-        lua_getglobal(L, "FuelAirMix"); 
+        super(L);
+        type_str = "FuelAirMix";
+        lua_getglobal(L, "FuelAirMix");
         // Now, pull out the numeric value parameters.
         _A_edm = getDouble(L, -1, "Aedm");
         _B_edm = getDouble(L, -1, "Bedm");
@@ -67,7 +68,7 @@ private:
     //settings specific to EDM model
     double _A_edm;
     double _B_edm;
-    bool _laminar_limit;        
+    bool _laminar_limit;
 } // end class FuelAirMix
 
 // Unit test of the basic gas model...
@@ -100,7 +101,7 @@ version(fuel_air_mix_test) {
         double my_rho = 1.0e5 / (287.0 * 300.0);
         assert(approxEqual(gd.rho, my_rho, 1.0e-4), failedUnitTest());
         double my_Cv = gm.dudT_const_v(gd);
-        double my_u = my_Cv*300.0 - 0.25*300000.0; 
+        double my_u = my_Cv*300.0 - 0.25*300000.0;
         assert(approxEqual(gd.u, my_u, 1.0e-3), failedUnitTest());
         double my_Cp = gm.dhdT_const_p(gd);
         double my_a = sqrt(my_Cp/my_Cv*287.0*300.0);

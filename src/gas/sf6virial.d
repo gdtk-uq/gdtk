@@ -35,6 +35,7 @@ import gas.diffusion.sutherland_therm_cond;
 class SF6Virial:GasModel {
 public:
     this() {
+        type_str = "SF6Virial";
         // Default model is mostly initialized in the private data below.
         _n_species = 1;
         _n_modes = 0;

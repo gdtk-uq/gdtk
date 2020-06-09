@@ -60,8 +60,22 @@ extern (C) int gas_model_new(char* file_name)
         gas_models ~= gm;
         return to!int(gas_models.length - 1);
     } catch (Exception e) {
-        writeln("Failed to construct a new GasModel.");
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Failed to construct a new GasModel.");
+        stderr.writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern (C) int gas_model_type_str(int gm_i, char* dest_str, int n)
+{
+    // The gas model's type string will be copied into char* array.
+    // It is presumed that sufficient space (n chars, including \0) was allocated previously.
+    try {
+        char* src_str = cast(char*) gas_models[gm_i].type_str.toStringz;
+        strncpy(dest_str, src_str, n);
+        return 0;
+    } catch (Exception e) {
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -72,7 +86,7 @@ extern (C) int gas_model_n_species(int gm_i)
         int n = to!int(gas_models[gm_i].n_species);
         return n;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -83,7 +97,7 @@ extern (C) int gas_model_n_modes(int gm_i)
         int n = to!int(gas_models[gm_i].n_modes);
         return n;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -97,7 +111,7 @@ extern (C) int gas_model_species_name(int gm_i, int isp, char* dest_name, int n)
         strncpy(dest_name, src_name, n);
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -109,7 +123,7 @@ extern (C) int gas_model_mol_masses(int gm_i, double* mm)
         foreach(i, mass; gas_models[gm_i].mol_masses) { mm[i] = mass; }
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -128,8 +142,8 @@ extern (C) int gas_state_new(int gm_i)
         gas_states ~= gs;
         return to!int(gas_states.length - 1);
     } catch (Exception e) {
-        writeln("Failed to construct a new GasState.");
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Failed to construct a new GasState.");
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -138,7 +152,7 @@ extern (C) int gas_state_set_scalar_field(int gs_i, char* field_name, double val
 {
     try {
         GasState gs = gas_states[gs_i];
-        string name = to!string(field_name); 
+        string name = to!string(field_name);
         switch (name) {
         case "rho":
             gs.rho = value;
@@ -158,7 +172,7 @@ extern (C) int gas_state_set_scalar_field(int gs_i, char* field_name, double val
         }
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -197,7 +211,7 @@ extern (C) int gas_state_get_scalar_field(int gs_i, char* field_name, double* va
         }
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -206,7 +220,7 @@ extern (C) int gas_state_set_array_field(int gs_i, char* field_name, double* val
 {
     try {
         GasState gs = gas_states[gs_i];
-        string name = to!string(field_name); 
+        string name = to!string(field_name);
         switch (name) {
         case "massf":
             foreach (i; 0 .. n) { gs.massf[i] = values[i]; }
@@ -223,7 +237,7 @@ extern (C) int gas_state_set_array_field(int gs_i, char* field_name, double* val
         }
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -252,7 +266,7 @@ extern (C) int gas_state_get_array_field(int gs_i, char* field_name, double* val
         }
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -312,7 +326,7 @@ extern (C) int gas_state_get_ceaSavedData_field(int gs_i, char* field_name, doub
         }
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -325,7 +339,7 @@ extern (C) int gas_state_get_ceaSavedData_massf(int gs_i, char* species_name, do
         *value = gs.ceaSavedData.massf[name];
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -339,7 +353,7 @@ extern (C) int gas_state_get_ceaSavedData_species_names(int gs_i, char* dest_str
         strncpy(dest_str, src_str.toStringz, n);
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -350,7 +364,7 @@ extern (C) int gas_state_copy_values(int gs_to_i, int gs_from_i)
         gas_states[gs_to_i].copy_values_from(gas_states[gs_from_i]);
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -377,7 +391,7 @@ extern (C) int gas_model_gas_state_update_thermo_from_pT(int gm_i, int gs_i)
         gm.update_thermo_from_pT(gs);
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -402,7 +416,7 @@ extern (C) int gas_model_gas_state_update_thermo_from_rhou(int gm_i, int gs_i)
         gm.update_thermo_from_rhou(gs);
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -427,7 +441,7 @@ extern (C) int gas_model_gas_state_update_thermo_from_rhoT(int gm_i, int gs_i)
         gm.update_thermo_from_rhoT(gs);
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -449,7 +463,7 @@ extern (C) int gas_model_gas_state_update_thermo_from_rhop(int gm_i, int gs_i)
         gm.update_thermo_from_rhop(gs);
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -471,7 +485,7 @@ extern (C) int gas_model_gas_state_update_thermo_from_ps(int gm_i, int gs_i, dou
         gm.update_thermo_from_ps(gs, s);
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -493,7 +507,7 @@ extern (C) int gas_model_gas_state_update_thermo_from_hs(int gm_i, int gs_i, dou
         gm.update_thermo_from_hs(gs, h, s);
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -516,7 +530,7 @@ extern (C) int gas_model_gas_state_update_sound_speed(int gm_i, int gs_i)
         gm.update_sound_speed(gs);
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -539,7 +553,7 @@ extern (C) int gas_model_gas_state_update_trans_coeffs(int gm_i, int gs_i)
         gm.update_trans_coeffs(gs);
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -550,7 +564,7 @@ extern (C) int gas_model_gas_state_Cv(int gm_i, int gs_i, double* result)
         *result = gas_models[gm_i].Cv(gas_states[gs_i]);
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -561,7 +575,7 @@ extern (C) int gas_model_gas_state_Cp(int gm_i, int gs_i, double* result)
         *result = gas_models[gm_i].Cp(gas_states[gs_i]);
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -572,7 +586,7 @@ extern (C) int gas_model_gas_state_dpdrho_const_T(int gm_i, int gs_i, double* re
         *result = gas_models[gm_i].dpdrho_const_T(gas_states[gs_i]);
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -583,7 +597,7 @@ extern (C) int gas_model_gas_state_R(int gm_i, int gs_i, double* result)
         *result = gas_models[gm_i].R(gas_states[gs_i]);
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -594,7 +608,7 @@ extern (C) int gas_model_gas_state_gamma(int gm_i, int gs_i, double* result)
         *result = gas_models[gm_i].gamma(gas_states[gs_i]);
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -605,7 +619,7 @@ extern (C) int gas_model_gas_state_Prandtl(int gm_i, int gs_i, double* result)
         *result = gas_models[gm_i].Prandtl(gas_states[gs_i]);
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -616,7 +630,7 @@ extern (C) int gas_model_gas_state_internal_energy(int gm_i, int gs_i, double* r
         *result = gas_models[gm_i].internal_energy(gas_states[gs_i]);
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -627,7 +641,7 @@ extern (C) int gas_model_gas_state_enthalpy(int gm_i, int gs_i, double* result)
         *result = gas_models[gm_i].enthalpy(gas_states[gs_i]);
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -638,7 +652,7 @@ extern (C) int gas_model_gas_state_entropy(int gm_i, int gs_i, double* result)
         *result = gas_models[gm_i].entropy(gas_states[gs_i]);
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -649,7 +663,7 @@ extern (C) int gas_model_gas_state_molecular_mass(int gm_i, int gs_i, double* re
         *result = gas_models[gm_i].molecular_mass(gas_states[gs_i]);
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -661,7 +675,7 @@ extern (C) int gas_model_gas_state_enthalpy_isp(int gm_i, int gs_i, int isp,
         *result = gas_models[gm_i].enthalpy(gas_states[gs_i], isp);
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -673,7 +687,7 @@ extern (C) int gas_model_gas_state_entropy_isp(int gm_i, int gs_i, int isp,
         *result = gas_models[gm_i].entropy(gas_states[gs_i], isp);
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -685,7 +699,7 @@ extern (C) int gas_model_gas_state_gibbs_free_energy_isp(int gm_i, int gs_i, int
         *result = gas_models[gm_i].gibbs_free_energy(gas_states[gs_i], isp);
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -702,7 +716,7 @@ extern (C) int gas_model_massf2molef(int gm_i, double* massf, double* molef)
         foreach (i; 0 .. nsp) { molef[i] = my_molef[i]; }
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -719,7 +733,7 @@ extern (C) int gas_model_molef2massf(int gm_i, double* molef, double* massf)
         foreach (i; 0 .. nsp) { massf[i] = my_massf[i]; }
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -734,7 +748,7 @@ extern (C) int gas_model_gas_state_get_molef(int gm_i, int gs_i, double* molef)
         foreach (i; 0 .. nsp) { molef[i] = my_molef[i]; }
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -749,7 +763,7 @@ extern (C) int gas_model_gas_state_get_conc(int gm_i, int gs_i, double* conc)
         foreach (i; 0 .. nsp) { conc[i] = my_conc[i]; }
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -764,8 +778,8 @@ extern (C) int thermochemical_reactor_new(int gm_i, char* filename1, char* filen
         thermochemical_reactors ~= cr;
         return to!int(thermochemical_reactors.length - 1);
     } catch (Exception e) {
-        writeln("Failed to construct a new ThermochemicalReactor.");
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Failed to construct a new ThermochemicalReactor.");
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -784,7 +798,7 @@ extern (C) int thermochemical_reactor_gas_state_update(int cr_i, int gs_i,
         *dt_suggest = my_dt_suggest;
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -802,7 +816,7 @@ int gasflow_shock_ideal(int state1_id, double vs, int state2_id, int gm_id,
         results[1] = my_results[1]; // vg
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -819,7 +833,7 @@ int gasflow_normal_shock(int state1_id, double vs, int state2_id, int gm_id,
         results[1] = my_results[1]; // vg
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -836,7 +850,7 @@ int gasflow_normal_shock_p2p1(int state1_id, double p2p1, int state2_id, int gm_
         results[2] = my_results[2]; // vg
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -851,7 +865,7 @@ int gasflow_reflected_shock(int state2_id, double vg, int state5_id, int gm_id,
         results[0] = vr_b;
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -866,7 +880,7 @@ int gasflow_expand_from_stagnation(int state0_id, double p_over_p0, int state1_i
         results[0] = v;
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -881,7 +895,7 @@ int gasflow_expand_to_mach(int state0_id, double mach, int state1_id,
         results[0] = v;
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -894,7 +908,7 @@ int gasflow_total_condition(int state1_id, double v1, int state0_id, int gm_id)
                         gas_states[state0_id], gas_models[gm_id]);
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -907,7 +921,7 @@ int gasflow_pitot_condition(int state1_id, double v1, int state2pitot_id, int gm
                         gas_states[state2pitot_id], gas_models[gm_id]);
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -924,7 +938,7 @@ int gasflow_steady_flow_with_area_change(int state1_id, double v1, double a2_ove
         results[0] = v2;
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -939,7 +953,7 @@ int gasflow_finite_wave_dp(int state1_id, double v1, char* characteristic, doubl
         results[0] = v2;
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -954,7 +968,7 @@ int gasflow_finite_wave_dv(int state1_id, double v1, char* characteristic, doubl
         results[0] = v2;
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -975,7 +989,7 @@ int gasflow_osher_riemann(int stateL_id, int stateR_id, double velL, double velR
         results[4] = my_results[4]; // velX0
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -993,7 +1007,7 @@ int gasflow_lrivp(int stateL_id, int stateR_id, double velL, double velR,
         *pstar = my_pstar;
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -1008,7 +1022,7 @@ int gasflow_piston_at_left(int stateR_id, double velR, int gm_id,
         *pstar = my_pstar;
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -1023,7 +1037,7 @@ int gasflow_piston_at_right(int stateL_id, double velL, int gm_id,
         *pstar = my_pstar;
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -1039,7 +1053,7 @@ int gasflow_theta_oblique(int state1_id, double v1, double beta,
         results[1] = my_results[1]; // v2
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -1053,7 +1067,7 @@ int gasflow_beta_oblique(int state1_id, double v1, double theta,
         results[0] = beta;
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -1065,11 +1079,11 @@ int gasflow_theta_cone(int state1_id, double v1, double beta,
     try {
         double[2] my_results = theta_cone(gas_states[state1_id], v1, beta,
                                           gas_states[state_c_id], gas_models[gm_id]);
-        results[0] = my_results[0]; // theta_c 
+        results[0] = my_results[0]; // theta_c
         results[1] = my_results[1]; // v2_c
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }
@@ -1083,7 +1097,7 @@ int gasflow_beta_cone(int state1_id, double v1, double theta,
         results[0] = beta;
         return 0;
     } catch (Exception e) {
-        writeln("Exception message: ", e.msg);
+        stderr.writeln("Exception message: ", e.msg);
         return -1;
     }
 }

@@ -52,6 +52,7 @@ class IdealAirProxy: GasModel {
 public:
 
     this() {
+        type_str = "IdealAirProxy";
         // This proxy class delegates most tasks to the Fortran module.
         iaf_init();
         // but a few things are set in the D-domain, as well.

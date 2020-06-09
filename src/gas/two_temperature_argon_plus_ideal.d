@@ -38,6 +38,7 @@ class TwoTemperatureArgonPlusIdealGas: GasModel {
 public:
 
     this(lua_State *L) {
+        type_str = "TwoTemperatureArgonPlusIdealGas";
         _n_species = 4;
         _species_names.length = 4;
         _species_names[Species.ideal] = "ideal";

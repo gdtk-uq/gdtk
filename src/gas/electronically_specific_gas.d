@@ -33,6 +33,7 @@ public:
     int[] molecularSpecies;
     this(lua_State *L)
     {
+        type_str = "ElectronicallySpecificGas";
         auto electronicCompFilename = getString(L,LUA_GLOBALSINDEX, "electronic_species_filename");
         auto macroSpeciesFilename = getString(L,LUA_GLOBALSINDEX, "macro_species_filename");
 

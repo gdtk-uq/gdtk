@@ -26,7 +26,7 @@ public:
     // but delegate all of the hard work to Rowan's ThermallyPerfectGas.
     {
         super(L);
-
+        type_str = "ThermallyPerfectGasEquilibrium";
         // Build arrays to mimic pyeq memory management
         compile_lewis_array(L, lewis);
         compile_element_map(L, element_map);

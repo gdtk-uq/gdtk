@@ -29,6 +29,7 @@ class IdealGas: GasModel {
 public:
 
     this(lua_State *L) {
+        type_str = "IdealGas";
         _n_species = 1;
         _n_modes = 0;
         // Bring table to TOS
@@ -50,7 +51,7 @@ public:
         lua_getfield(L, -1, "viscosity");
         _viscModel = createViscosityModel(L);
         lua_pop(L, 1);
-        
+
         lua_getfield(L, -1, "thermCondModel");
         auto model = getString(L, -1, "model");
         if ( model == "constPrandtl" ) {

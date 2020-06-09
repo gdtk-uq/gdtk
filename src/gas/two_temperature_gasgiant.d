@@ -42,6 +42,7 @@ public:
     
     this()
     {
+        type_str = "TwoTemperatureGasGiant";
         _n_species = 6;
         _n_modes = 1;
         _species_names.length = _n_species;

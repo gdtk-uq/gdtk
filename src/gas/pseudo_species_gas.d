@@ -42,6 +42,7 @@ class PseudoSpeciesGas : GasModel {
 public:
     this(lua_State *L)
     {
+        type_str = "PseudoSpeciesGas";
         auto nPseudoSpecies = getInt(L, LUA_GLOBALSINDEX, "number_pseudo_species");
         _n_species = cast(uint) nPseudoSpecies;
         _n_modes = 0;

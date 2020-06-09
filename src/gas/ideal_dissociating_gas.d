@@ -39,6 +39,7 @@ class IdealDissociatingGas: GasModel {
 public:
 
     this(lua_State *L) {
+        type_str = "IdealDissociatingGas";
         // Some parameters are fixed and some come from the gas model file.
         _n_species = 2;
         _n_modes = 0;
@@ -57,7 +58,7 @@ public:
         _T_d = getDouble(L, -1, "T_d"); // characteristic dissociation temperature, K
         _rho_d = getDouble(L, -1, "rho_d"); // characteristic density, g/cm^3
         // Rate constants follow.
-        _C1 = getDouble(L, -1, "C1"); 
+        _C1 = getDouble(L, -1, "C1");
         _n1 = getDouble(L, -1, "n1");
         _C2 = getDouble(L, -1, "C2");
         _n2 = getDouble(L, -1, "n2");
@@ -86,7 +87,7 @@ public:
         return to!string(repr);
     }
 
-    override void update_thermo_from_pT(GasState Q) const 
+    override void update_thermo_from_pT(GasState Q) const
     {
         number alpha = Q.massf[1];
         Q.rho = Q.p/(Q.T*_Rnn*(1+alpha));
@@ -110,7 +111,7 @@ public:
         Q.T = Q.p/(Q.rho*(1+alpha)*_Rnn*Q.T);
         Q.u = _Rnn*alpha*_T_d + _Rnn*3*Q.T;
     }
-    
+
     override void update_thermo_from_ps(GasState Q, number s) const
     {
         // For frozen composition.
@@ -218,7 +219,7 @@ version(ideal_dissociating_gas_test) {
         number my_rho = 1.0e5 / (Rgas * 300.0);
         assert(approxEqual(gd.rho, my_rho, 1.0e-4), failedUnitTest());
         number my_Cv = gm.dudT_const_v(gd);
-        number my_u = my_Cv*300.0; 
+        number my_u = my_Cv*300.0;
         assert(approxEqual(gd.u, my_u, 1.0e-3), failedUnitTest());
         number my_Cp = gm.dhdT_const_p(gd);
         number my_a = sqrt(my_Cp/my_Cv*Rgas*300.0);
@@ -238,7 +239,7 @@ version(ideal_dissociating_gas_test) {
         number dtSuggest; // to receive value
         reactor(gd, 1.0e-3, dtSuggest, params);
         */
-        
+
         return 0;
     } // end main
 }

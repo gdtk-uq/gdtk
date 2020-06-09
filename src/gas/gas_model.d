@@ -61,6 +61,7 @@ class GasModelException : Exception {
 
 class GasModel {
 public:
+    string type_str = ""; // To be replaced when constructing a specific model.
     @nogc @property bool is_plasma() const { return _is_plasma; }
     @nogc @property uint n_species() const { return _n_species; }
     @nogc @property uint n_heavy() const {

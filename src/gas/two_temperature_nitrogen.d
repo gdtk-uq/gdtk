@@ -25,6 +25,7 @@ class TwoTemperatureNitrogen : GasModel {
 public:
     this()
     {
+        type_str = "TwoTemperatureNitrogen";
         _n_species = 1;
         _n_modes = 1;
         _species_names.length = 1;

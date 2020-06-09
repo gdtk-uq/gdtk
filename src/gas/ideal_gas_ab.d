@@ -48,6 +48,7 @@ class IdealGasAB: GasModel {
 public:
     string modelType = "Powers-Aslam";
     this(lua_State *L) {
+        type_str = "IdealGasAB";
         // Some parameters are fixed and some come from the gas model file.
         _n_species = 2;
         _n_modes = 0;

@@ -37,6 +37,7 @@ public:
 
     this()
     {
+        type_str = "TwoTemperatureDissociatingNitrogen";
         _n_species = 2;
         _is_plasma = false;
         _n_modes = 1;

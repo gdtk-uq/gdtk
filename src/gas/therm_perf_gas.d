@@ -43,6 +43,7 @@ public:
     this(lua_State* L)
     // Construct the model from parameters that are contained in a Lua interpreter.
     {
+        type_str = "ThermallyPerfectGas";
         getArrayOfStrings(L, LUA_GLOBALSINDEX, "species", _species_names);
         _n_species = cast(uint) _species_names.length;
         _n_modes = 0; // Single temperature gas

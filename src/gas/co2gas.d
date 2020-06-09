@@ -35,6 +35,7 @@ import gas.diffusion.sutherland_therm_cond;
 class CO2Gas: GasModel {
 public:
     this() {
+        type_str = "CO2Gas";
         // Default model is mostly initialized in the private data below.
         _n_species = 1;
         _n_modes = 0;

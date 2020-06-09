@@ -46,6 +46,7 @@ public:
 
     this()
     {
+        type_str = "VibSpecificNitrogen";
         // In this model the nitrogen molecules with differing vibrational levels
         // are considered pseudo-chemical-species.
         _n_species = numVibLevels;
