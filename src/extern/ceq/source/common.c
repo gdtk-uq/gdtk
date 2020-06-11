@@ -131,6 +131,7 @@ int all_but_one_species_are_trace(int nsp, double* ns){
     ntrace=0;
     for (s=0; s<nsp; s++) if (ns[s]==0.0) ntrace++;
 
+    i = -1;
     if (ntrace==nsp-1) { // Pseudo convergence criteria, all the species but one are trace
         for (s=0; s<nsp; s++) if (ns[s]!=0.0) i=s;
         return i;

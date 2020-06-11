@@ -218,44 +218,44 @@ static void update_unknowns(double* S,double* dlnns,int nsp,double* ns,double* T
     return;
 }
 
-static double temperature_guess(int nsp, double u, double* M, double* X0, double* lewis){
-    /*
-    Guess a first iteration temperature assuming constant Cv from 298 K
-    Inputs:
-        nsp   : Number of species
-        u     : Target mixture internal energy (J/kg)
-        M     : Species molecular weight (kg/mol) [nsp]
-        X0    : Intiial composition mole fractions [nsp]
-        lewis : Nasa Lewis Thermodynamic Database Data [nsp*3*9]
-
-    Output:
-        T : Temperature Guess (K)
-    */
-    int s;
-    double* lp;
-    double uf,cv,T,ufs,cvs,Cps298,Hfs298,ns0,M0;
-
-    M0 = 0.0;
-    for (s=0; s<nsp; s++) M0 += M[s]*X0[s];
-
-    uf = 0.0;
-    cv = 0.0;
-    for (s=0; s<nsp; s++){
-        lp = lewis + 9*3*s;
-        Cps298 = compute_Cp0_R(298.15, lp)*Ru;
-        Hfs298 = compute_H0_RT(298.15, lp)*Ru*298.15;
-
-        ns0 = X0[s]/M0;
-        ufs= ns0*(Cps298*298.15 - Hfs298);
-        cvs= ns0*(Cps298 - Ru);
-
-        uf += ufs;
-        cv += cvs;
-    }
-    T = (u + uf)/cv;
-    T = fmin(fmax(T, 200.0),20000.0); // Limit in case of bad initial state.
-    return T;
-}
+//static double temperature_guess(int nsp, double u, double* M, double* X0, double* lewis){
+//    /*
+//    Guess a first iteration temperature assuming constant Cv from 298 K
+//    Inputs:
+//        nsp   : Number of species
+//        u     : Target mixture internal energy (J/kg)
+//        M     : Species molecular weight (kg/mol) [nsp]
+//        X0    : Intiial composition mole fractions [nsp]
+//        lewis : Nasa Lewis Thermodynamic Database Data [nsp*3*9]
+//
+//    Output:
+//        T : Temperature Guess (K)
+//    */
+//    int s;
+//    double* lp;
+//    double uf,cv,T,ufs,cvs,Cps298,Hfs298,ns0,M0;
+//
+//    M0 = 0.0;
+//    for (s=0; s<nsp; s++) M0 += M[s]*X0[s];
+//
+//    uf = 0.0;
+//    cv = 0.0;
+//    for (s=0; s<nsp; s++){
+//        lp = lewis + 9*3*s;
+//        Cps298 = compute_Cp0_R(298.15, lp)*Ru;
+//        Hfs298 = compute_H0_RT(298.15, lp)*Ru*298.15;
+//
+//        ns0 = X0[s]/M0;
+//        ufs= ns0*(Cps298*298.15 - Hfs298);
+//        cvs= ns0*(Cps298 - Ru);
+//
+//        uf += ufs;
+//        cv += cvs;
+//    }
+//    T = (u + uf)/cv;
+//    T = fmin(fmax(T, 200.0),20000.0); // Limit in case of bad initial state.
+//    return T;
+//}
 
 int solve_rhou(double rho,double u,double* X0,int nsp,int nel,double* lewis,double* M,double* a,
                double* X1, double* Teq, int verbose){
