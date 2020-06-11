@@ -293,7 +293,8 @@ int solve_rhou(double rho,double u,double* X0,int nsp,int nel,double* lewis,doub
     dlnns = (double*) malloc(sizeof(double)*nsp);     // raw change in log(ns)
 
     composition_guess(a, M, X0, nsp, nel, ns, &n, bi0);
-    T = temperature_guess(nsp, u, M, X0, lewis);
+    //T = temperature_guess(nsp, u, M, X0, lewis);
+    T = *Teq; // For eilmer, just assume that the old value is pretty good
     if (verbose>0) printf("Guess T: %f\n", T);
 
     // Begin Iterations

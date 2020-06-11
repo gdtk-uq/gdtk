@@ -13,6 +13,7 @@ import nm.number;
 
 import gas;
 import kinetics.thermochemical_reactor;
+import std.stdio;
 
 // We need to know about the schemes that are available.
 import gas.therm_perf_gas;
@@ -52,11 +53,33 @@ import kinetics.two_temperature_gasgiant_kinetics;
 
 ThermochemicalReactor init_thermochemical_reactor(GasModel gmodel, string fileName1="", string fileName2="")
 {
+    /*
+    Construct a new ThermochemicalReactor object that is appropriate for use with GasModel gmodel.
+    Since thermochemical reactors are tied to specific gas models, this routine needs to test
+    the actual type of gasmodel that we have, even though OOP normally avoids this.
+    
+    In d, this can be done in one of two ways:
+
+    (cast(ObjectType) object) !is null
+
+    or 
+
+    typeid(object) is typeid(ObjectType)
+
+    The first is useful for testing for a family of objects, it returns true if object is an ObjectType
+    or anything that inherits from ObjectType. The second is useful for testing whether something is
+    an actual specific type, excluding parent objects it might be related to. In this routine,
+    ThermallyPerfectGas and ThermallyPerfectGasEquilibrium both have different reactor types,
+    in spite of being related by inheritance, so the typeid method is used. The other ones
+    all use the cast method, since it allows new gas models to be created by inheritance without
+    changes being made to this routine.
+    */
     ThermochemicalReactor reactor; // start with a null reference
-    if ((cast(ThermallyPerfectGas) gmodel) !is null) {
+
+    if (typeid(gmodel) is typeid(ThermallyPerfectGas)) {
         reactor = new ChemistryUpdate(fileName1, gmodel);
     }
-    if ((cast(ThermallyPerfectGasEquilibrium) gmodel) !is null) {
+    if (typeid(gmodel) is typeid(ThermallyPerfectGasEquilibrium)) {
         reactor = new EquilibriumUpdate(fileName1, gmodel);
     }
     if ((cast(IdealGasAB) gmodel) !is null) {
