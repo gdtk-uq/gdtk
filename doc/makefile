@@ -25,7 +25,8 @@ all: eilmer-reference-manual.html \
 	eilmer-catalog-of-examples.html \
 	l1d-reference-manual.html \
 	library-reference-manual.html \
-	geometry-reference-manual.html
+	geometry-reference-manual.html \
+	estcn-manual.html
 	@echo "Done."
 
 eilmer-reference-manual.html: eilmer-reference-manual.adoc $(EILMER_DOC_FILES)
@@ -36,6 +37,9 @@ eilmer-catalog-of-examples.html: eilmer-catalog-of-examples.adoc
 
 l1d-reference-manual.html: l1d-reference-manual.adoc
 	asciidoctor l1d-reference-manual.adoc
+
+estcn-manual.html: estcn-manual.adoc
+	asciidoctor estcn-manual.adoc
 
 library-reference-manual.html: library-reference-manual.adoc $(LIBRARY_DOC_FILES)
 	asciidoctor library-reference-manual.adoc
@@ -48,4 +52,5 @@ clean:
 		eilmer-catalog-of-examples.html \
 		l1d-reference-manual.html \
 		library-reference-manual.html \
-		geometry-reference-manual.html
+		geometry-reference-manual.html \
+		estcn-manual.html
