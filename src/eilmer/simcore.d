@@ -582,7 +582,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
         initPropertiesAtSolidInterfaces(localSolidBlocks);
     }
     if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.loose) {
-        initSolidLooseCouplingUpdate();
+        //initSolidLooseCouplingUpdate();
     }
     //
     // All cells are in place, so now we can initialise any history cell files.
@@ -1240,7 +1240,65 @@ int integrate_in_time(double target_time_as_requested)
             // in the gasdynamic_explicit_increment().
             if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.loose) {
                 // Call Nigel's update function here.
-                solid_domains_backward_euler_update(SimState.time, SimState.dt_global);
+                //solid_domains_backward_euler_update(SimState.time, SimState.dt_global);
+                int ftl = 0;
+                // Next do solid domain update IMMEDIATELY after at same flow update
+                exchange_ghost_cell_gas_solid_boundary_data();
+                if (GlobalConfig.apply_bcs_in_parallel) {
+                    foreach (sblk; parallel(localSolidBlocks, 1)) {
+                        if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, ftl); }
+                    }
+                    foreach (sblk; parallel(localSolidBlocks, 1)) {
+                        if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryCells(SimState.time, ftl); }
+                    }
+                } else {
+                    foreach (sblk; localSolidBlocks) {
+                        if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, ftl); }
+                    }
+                    foreach (sblk; localSolidBlocks) {
+                        if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryCells(SimState.time, ftl); }
+                    }
+                }
+                
+                foreach (sblk; parallel(localSolidBlocks, 1)) {
+                    if (!sblk.active) continue;
+                    sblk.averageTemperatures();
+                    sblk.clearSources();
+                    sblk.computeSpatialDerivatives(ftl);
+                }
+                exchange_ghost_cell_solid_boundary_data();
+                foreach (sblk; parallel(localSolidBlocks, 1)) {
+                    if (!sblk.active) continue;
+                    sblk.computeFluxes();
+                }
+                if (GlobalConfig.apply_bcs_in_parallel) {
+                    foreach (sblk; parallel(localSolidBlocks, 1)) {
+                        if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl); }
+                    }
+                } else {
+                    foreach (sblk; localSolidBlocks) {
+                        if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl); }
+                    }
+                }
+                // We need to synchronise before updating
+                foreach (sblk; parallel(localSolidBlocks, 1)) {
+                    foreach (scell; sblk.activeCells) {
+                        if (GlobalConfig.udfSolidSourceTerms) {
+                            addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time);
+                        }
+                        scell.timeDerivatives(ftl, GlobalConfig.dimensions);
+                        scell.eulerUpdate(SimState.dt_global);
+                        scell.T = updateTemperature(scell.sp, scell.e[ftl+1]);
+                    } // end foreach scell
+                } // end foreach sblk
+                foreach (sblk; localSolidBlocks) {
+                    if (sblk.active) {
+                        //size_t end_indx = final_index_for_update_scheme(GlobalConfig.gasdynamic_update_scheme);
+                        size_t end_indx = 1;
+                        foreach (scell; sblk.activeCells) { scell.e[0] = scell.e[end_indx]; }
+                    }
+                } // end foreach sblk
+                
             }
             // 2.4 Chemistry step or 1/2 step (if appropriate). 
             if ( GlobalConfig.reacting && (SimState.time > GlobalConfig.reaction_time_delay)) {
@@ -2709,14 +2767,16 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
                 }
 	    }
 	} // end foreach blk
-       	foreach (sblk; parallel(localSolidBlocks,1)) {
-	    if (sblk.active) {
-                foreach (scell; sblk.activeCells) { 
-                    scell.e[0] = scell.e[1];
-                    scell.e[1] = scell.e[2];
+        if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.tight) {
+            foreach (sblk; parallel(localSolidBlocks,1)) {
+                if (sblk.active) {
+                    foreach (scell; sblk.activeCells) { 
+                        scell.e[0] = scell.e[1];
+                        scell.e[1] = scell.e[2];
+                    }
                 }
-            }
-	} // end foreach blk	
+            } // end foreach blk
+        }
         if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1) {
             SimState.time = t0 + ((j*j+j)/(S*S+S))*dt_global; // RKL1
         } else {
@@ -2735,13 +2795,14 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
         }
     } // end foreach blk
     //
-    foreach (sblk; localSolidBlocks) {
-        if (sblk.active) {
-            //size_t end_indx = 1; // time-level holds current solution
-            foreach (scell; sblk.activeCells) { scell.e[0] = scell.e[idx]; }
-        }
-    } // end foreach sblk
-    
+    if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.tight) {
+        foreach (sblk; localSolidBlocks) {
+            if (sblk.active) {
+                //size_t end_indx = 1; // time-level holds current solution
+                foreach (scell; sblk.activeCells) { scell.e[0] = scell.e[idx]; }
+            }
+        } // end foreach sblk
+    }
     // Finally, update the globally known simulation time for the whole step.
     SimState.time = t0 + dt_global;
 } // end gasdynamic_explicit_increment_with_fixed_grid()
@@ -3410,12 +3471,14 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         }
     } // end foreach blk
     //
-    foreach (sblk; localSolidBlocks) {
-        if (sblk.active) {
-            size_t end_indx = final_index_for_update_scheme(GlobalConfig.gasdynamic_update_scheme);
-            foreach (scell; sblk.activeCells) { scell.e[0] = scell.e[end_indx]; }
-        }
-    } // end foreach sblk
+    if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.tight) {
+        foreach (sblk; localSolidBlocks) {
+            if (sblk.active) {
+                size_t end_indx = final_index_for_update_scheme(GlobalConfig.gasdynamic_update_scheme);
+                foreach (scell; sblk.activeCells) { scell.e[0] = scell.e[end_indx]; }
+            }
+        } // end foreach sblk
+    }
     //
     // Finally, update the globally know simulation time for the whole step.
     SimState.time = t0 + SimState.dt_global;

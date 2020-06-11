@@ -263,6 +263,11 @@ public:
 	return;
     } // end rkl2_stage_update_for_flow_on_fixed_grid2()
 
+    void eulerUpdate(double dt)
+    {
+        double gamma1 = 1.0; // Assume Euler
+        e[1] = e[0] + dt*gamma1*dedt[0];
+   }
     
     void stage1Update(double dt)
     {
