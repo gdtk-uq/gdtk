@@ -626,7 +626,10 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
 	if (!limiterFreezingCondition && (normNew/normRef <= limiterFreezingResidReduction)) {
 	    countsBeforeFreezing++;
 	    if (countsBeforeFreezing >= limiterFreezingCount) {
-	        GlobalConfig.frozen_limiter = true;
+                if (GlobalConfig.frozen_limiter == false) {
+                    evalRHS(pseudoSimTime, 0);
+                    GlobalConfig.frozen_limiter = true;
+                }
                 limiterFreezingCondition = true;
                 writefln("=== limiter freezing condition met at step: %d ===", step);
             }
