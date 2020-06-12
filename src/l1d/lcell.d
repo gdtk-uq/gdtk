@@ -83,6 +83,7 @@ public:
     double L_bar;        // distance travelled by cell, m
     GasState gas;
     GasState gas_ref;
+    debug { GasState gas_save; } // for reporting, if there is a failure in thermochem update.
     double D;            // local diameter of tube, m
     double L;            // local cell length, m
     double Twall;        // interpolates wall temperature, K
@@ -119,6 +120,7 @@ public:
     {
         gas = new GasState(gm);
         gas_ref = new GasState(gm);
+        debug { gas_save = new GasState(gm); }
     }
 
     @nogc
@@ -195,7 +197,11 @@ public:
     {
         if (gas.T <= L1dConfig.T_frozen) return;
         double[maxParams] params; // Not using these, but some gas models need them.
-        double dt_chem_save = dt_chem; // Keep a copy for reporting, if there is a failure.
+        debug {
+            // Keep a copy for reporting, if there is a failure.
+            double dt_chem_save = dt_chem;
+            gas_save.copy_values_from(gas);
+        }
         try {
             reactor(gas, dt, dt_chem, dt_therm, params);
         } catch(ThermochemicalReactorUpdateException err) {
@@ -211,7 +217,8 @@ public:
                     msg ~= format("This cell is located at: %s\n", xmid);
                     msg ~= format("The flow timestep is: %12.6e\n", dt);
                     msg ~= format("The initial attempted dt_chem is: %12.6e\n", dt_chem_save);
-                    msg ~= format("The gas state AFTER the failed update is:\n   gas %s", gas);
+                    msg ~= format("BEFORE the failed update gas state is:\n  %s", gas_save);
+                    msg ~= format("AFTER the failed update gas state is:\n  %s", gas);
                 }
                 throw new ThermochemicalReactorUpdateException(msg);
             }
