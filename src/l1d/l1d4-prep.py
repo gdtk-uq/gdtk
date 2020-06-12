@@ -497,6 +497,8 @@ class GasSlug():
         self.gas.p = p
         self.gas.massf = massf
         self.gas.T = T
+        if len(T_modes) != nmodes:
+            raise Exception("T_modes is inconsistent. gmodel.n_modes=%d T_modes=%s" % (nmodes, T_modes));
         self.gas.T_modes = T_modes
         self.gas.update_thermo_from_pT()
         self.gas.update_sound_speed()
