@@ -213,12 +213,12 @@ public:
             } catch(ThermochemicalReactorUpdateException err) {
                 string msg = "chemical_increment() failed.";
                 debug {
-                    msg ~= format("Caught: %s\n", err.msg);
-                    msg ~= format("This cell is located at: %s\n", xmid);
-                    msg ~= format("The flow timestep is: %12.6e\n", dt);
-                    msg ~= format("The initial attempted dt_chem is: %12.6e\n", dt_chem_save);
-                    msg ~= format("BEFORE the failed update gas state is:\n  %s", gas_save);
-                    msg ~= format("AFTER the failed update gas state is:\n  %s", gas);
+                    msg ~= format("\n%s", err.msg);
+                    msg ~= format("\nThis cell is located at: %s", xmid);
+                    msg ~= format("\nThe flow timestep is: %12.6e", dt);
+                    msg ~= format("\nThe initial attempted dt_chem is: %12.6e", dt_chem_save);
+                    msg ~= format("\nBEFORE the failed update gas state is:\n  %s", gas_save);
+                    msg ~= format("\nAFTER the failed update gas state is:\n  %s", gas);
                 }
                 throw new ThermochemicalReactorUpdateException(msg);
             }
