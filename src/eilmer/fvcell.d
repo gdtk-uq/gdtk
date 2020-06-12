@@ -40,7 +40,7 @@ version(debug_chem) {
 
 
 // The following functions are used at compile time.
-// Look for mixin statements further down in the file. 
+// Look for mixin statements further down in the file.
 string avg_over_vtx_list(string quantity, string result)
 {
     string code = result ~ " = 0.0; ";
@@ -93,7 +93,7 @@ public:
     // Flow
     // Although most do, some boundary conditions will not fill in
     // valid flow state data for the ghost cell. The following flag
-    // is used for the unstructured-grid code to determine if we 
+    // is used for the unstructured-grid code to determine if we
     // should add the cell to the list of points in the cloud about
     // an interface location.
     // [TODO] PJ 2016-04-23, Consider if we should use this flag in
@@ -130,7 +130,7 @@ public:
     // Data for computing residuals.
     number rho_at_start_of_step, rE_at_start_of_step;
     // distance to nearest viscous wall (only computed if turb_model.needs_dwall)
-    number dwall; 
+    number dwall;
     // Shape sensitivity calculator workspace.
     version(shape_sensitivity) {
 	size_t[] pcell_global_coord_list;
@@ -144,7 +144,7 @@ public:
         FVCell[] jacobian_cell_stencil;
         FVInterface[] jacobian_face_stencil;
         // arrays used to temporarily store data intended for the neighbouring block
-        // during construction of the external portion of the flow Jacobian.  
+        // during construction of the external portion of the flow Jacobian.
         size_t[] idList;
         number[] aa;
         // block-diagonal contribution to Jacobian used in steady-state solver pre-conditioner
@@ -169,7 +169,7 @@ public:
 
         GasModel gmodel = cast(GasModel) myConfig.gmodel;
         if (gmodel is null) { gmodel = GlobalConfig.gmodel_master; }
-        
+
         int n_species = myConfig.n_species;
         int n_modes = myConfig.n_modes;
         double T = 300.0;
@@ -243,7 +243,7 @@ public:
             L_min = other.L_min;
             L_max = other.L_max;
             break;
-        case CopyDataOption.all: 
+        case CopyDataOption.all:
         default:
             // [TODO] really need to think about what needs to be copied...
             id = other.id;
@@ -319,7 +319,7 @@ public:
     {
         return myConfig.universe_blk_id;
     }
-    
+
     @nogc
     void update_2D_geometric_data(size_t gtl, bool axisymmetric)
     {
@@ -408,8 +408,8 @@ public:
         }
         L_max = fmax(fmax(iLength, jLength), kLength);
     } // end update_3D_geometric_data()
-    
-    void replace_flow_data_with_average(in FVCell[] others) 
+
+    void replace_flow_data_with_average(in FVCell[] others)
     {
         auto gmodel = myConfig.gmodel;
         size_t n = others.length;
@@ -579,7 +579,7 @@ public:
     } // end encode_conserved()
 
     @nogc
-    int decode_conserved(int gtl, int ftl, double omegaz) 
+    int decode_conserved(int gtl, int ftl, double omegaz)
     {
         auto gmodel = myConfig.gmodel;
         ConservedQuantities myU = U[ftl];
@@ -658,7 +658,7 @@ public:
         // Other energies, if any.
         version(multi_T_gas) {
             number u_other = 0.0;
-            foreach(imode; 0 .. gmodel.n_modes) { fs.gas.u_modes[imode] = myU.energies[imode] * dinv; } 
+            foreach(imode; 0 .. gmodel.n_modes) { fs.gas.u_modes[imode] = myU.energies[imode] * dinv; }
             foreach(ei; fs.gas.u_modes) { u_other += ei; }
             fs.gas.u = u - u_other;
         } else {
@@ -747,7 +747,7 @@ public:
     } // end decode_conserved()
 
     @nogc
-    void time_derivatives(int gtl, int ftl) 
+    void time_derivatives(int gtl, int ftl)
     // These are the spatial (RHS) terms in the semi-discrete governing equations.
     // gtl : (grid-time-level) flow derivatives are evaluated at this grid level
     // ftl : (flow-time-level) specifies where computed derivatives are to be stored.
@@ -755,7 +755,7 @@ public:
     //       1: End of stage-1.
     //       2: End of stage-2.
     {
-        auto my_dUdt = dUdt[ftl]; 
+        auto my_dUdt = dUdt[ftl];
         //
         // Mass.
         number integral_mass = 0.0;
@@ -768,7 +768,7 @@ public:
             number integral_Bx = 0.0;
             number integral_By = 0.0;
             number integral_Bz = 0.0;
-            // Divergence of the magnetic field; it is not actually a time-derivative 
+            // Divergence of the magnetic field; it is not actually a time-derivative
             // but seems to be the best way to calculate it. (Lachlan W.)
             my_dUdt.divB = 0.0;
             number integral_psi = 0.0;
@@ -847,7 +847,7 @@ public:
                              vol_inv*integral_momz + Q.momentum.z);
         version(MHD) {
             if (myConfig.MHD) {
-                if (myConfig.MHD_static_field) { 
+                if (myConfig.MHD_static_field) {
                     // then the magnetic field won't change...
                     my_dUdt.B.set(Q.B.x, Q.B.y, Q.B.z);
                 } else {
@@ -892,13 +892,13 @@ public:
         U0 = U[0];
         U1 = U[1];
         dUdt0 = dUdt[0];
-        
+
         // coefficients
         double muj; double vuj; double muj_tilde;
         muj_tilde = (2.0*j-1)/j * 2.0/(s*s+s);
         muj = 1.0;
         vuj = 0.0;
-        
+
         U1.mass = U0.mass + muj_tilde*dt*dUdt0.mass;
         U1.momentum.set(U0.momentum.x + muj_tilde*dt*dUdt0.momentum.x,
                         U0.momentum.y + muj_tilde*dt*dUdt0.momentum.y,
@@ -918,7 +918,7 @@ public:
                 U1.psi = 0.0;
             }
         }
-        U1.total_energy = U0.total_energy + muj_tilde*dt*dUdt0.total_energy; 
+        U1.total_energy = U0.total_energy + muj_tilde*dt*dUdt0.total_energy;
         version(turbulence) {
         foreach(i; 0 .. myConfig.turb_model.nturb){
                 U1.rhoturb[i] = U0.rhoturb[i] + muj_tilde*dt*dUdt0.rhoturb[i];
@@ -940,7 +940,7 @@ public:
         U[1] = U1;
         return;
     } // end rkl1_stage_update_for_flow_on_fixed_grid1()
-    
+
     void rkl1_stage_update_for_flow_on_fixed_grid2(double dt, int j, int s, bool with_local_time_stepping) 
     {
         ConservedQuantities dUdt0;
@@ -951,13 +951,13 @@ public:
         U1 = U[1];
         U2 = U[2];
         dUdt0 = dUdt[1];
-        
+
         // coefficients
         double muj; double vuj; double muj_tilde;
         muj_tilde = (2.0*j-1)/j * 2.0/(s*s+s);
         muj = (2.0*j-1)/j;
         vuj = (1.0-j)/j;
-        
+
         U2.mass = muj*U1.mass + vuj*U0.mass + muj_tilde*dt*dUdt0.mass;
         U2.momentum.set(muj*U1.momentum.x + vuj*U0.momentum.x + muj_tilde*dt*dUdt0.momentum.x,
                         muj*U1.momentum.y + vuj*U0.momentum.y + muj_tilde*dt*dUdt0.momentum.y,
@@ -977,7 +977,7 @@ public:
                 U2.psi = 0.0;
             }
         }
-        U2.total_energy = muj*U1.total_energy + vuj*U0.total_energy + muj_tilde*dt*dUdt0.total_energy; 
+        U2.total_energy = muj*U1.total_energy + vuj*U0.total_energy + muj_tilde*dt*dUdt0.total_energy;
         version(turbulence) {
         foreach(i; 0 .. myConfig.turb_model.nturb){
                 U2.rhoturb[i] = muj*U1.rhoturb[i] + vuj*U0.rhoturb[i] + muj_tilde*dt*dUdt0.rhoturb[i];
@@ -1000,8 +1000,8 @@ public:
         U[2] = U2;
         return;
     } // end rkl1_stage_update_for_flow_on_fixed_grid2()
-    
-    void rkl2_stage_update_for_flow_on_fixed_grid1(double dt, int j, int s, bool with_local_time_stepping) 
+
+    void rkl2_stage_update_for_flow_on_fixed_grid1(double dt, int j, int s, bool with_local_time_stepping)
     {
         ConservedQuantities dUdt0;
         ConservedQuantities U0;
@@ -1010,11 +1010,11 @@ public:
         U0 = U[0];
         U1 = U[1];
         dUdt0 = dUdt[0];
-        
+
         // coefficients
         double muj; double vuj; double muj_tilde;
-        muj_tilde = 4.0/(3.0*(s*s+s-2.0));	
-        
+        muj_tilde = 4.0/(3.0*(s*s+s-2.0));
+
         U1.mass = U0.mass + muj_tilde*dt*dUdt0.mass;
         U1.momentum.set(U0.momentum.x + muj_tilde*dt*dUdt0.momentum.x,
                         U0.momentum.y + muj_tilde*dt*dUdt0.momentum.y,
@@ -1034,7 +1034,7 @@ public:
                 U1.psi = 0.0;
             }
         }
-        U1.total_energy = U0.total_energy + muj_tilde*dt*dUdt0.total_energy; 
+        U1.total_energy = U0.total_energy + muj_tilde*dt*dUdt0.total_energy;
         version(turbulence) {
             foreach(i; 0 .. myConfig.turb_model.nturb){
                 U1.rhoturb[i] = U0.rhoturb[i] + muj_tilde*dt*dUdt0.rhoturb[i];
@@ -1056,8 +1056,8 @@ public:
         U[3].copy_values_from(U[0]);
         return;
     } // end rkl2_stage_update_for_flow_on_fixed_grid1()
-    
-    void rkl2_stage_update_for_flow_on_fixed_grid2(double dt, int j, int s, bool with_local_time_stepping) 
+
+    void rkl2_stage_update_for_flow_on_fixed_grid2(double dt, int j, int s, bool with_local_time_stepping)
     {
         ConservedQuantities dUdt0;
         ConservedQuantities U0;
@@ -1071,7 +1071,7 @@ public:
         U3 = U[3];
         dUdt0 = dUdt[1];
         dUdtO = dUdt[0];
-        
+
         // coefficients
         double ajm1; double bj; double bjm1, bjm2; double muj; double vuj; double muj_tilde; double gam_tilde;
 
@@ -1117,7 +1117,7 @@ public:
                 U2.psi = 0.0;
             }
         }
-        U2.total_energy = muj*U1.total_energy + vuj*U0.total_energy + (1.0-muj-vuj)*U3.total_energy + muj_tilde*dt*dUdt0.total_energy + gam_tilde*dt*dUdtO.total_energy; 
+        U2.total_energy = muj*U1.total_energy + vuj*U0.total_energy + (1.0-muj-vuj)*U3.total_energy + muj_tilde*dt*dUdt0.total_energy + gam_tilde*dt*dUdtO.total_energy;
         version(turbulence) {
             foreach(i; 0 .. myConfig.turb_model.nturb){
                 U2.rhoturb[i] = muj*U1.rhoturb[i] + vuj*U0.rhoturb[i] + (1.0-muj-vuj)*U3.rhoturb[i] + muj_tilde*dt*dUdt0.rhoturb[i] + gam_tilde*dt*dUdtO.rhoturb[i];
@@ -1136,13 +1136,13 @@ public:
         }
 	return;
     } // end rkl2_stage_update_for_flow_on_fixed_grid2()
-    
+
     @nogc
     void stage_1_update_for_flow_on_fixed_grid(double dt, bool force_euler, bool with_local_time_stepping) 
     {
         // use the local-time step
         if (with_local_time_stepping) dt = this.dt_local;
-        
+
         ConservedQuantities dUdt0 = dUdt[0];
         ConservedQuantities U0 = U[0];
         ConservedQuantities U1 = U[1];
@@ -1166,7 +1166,7 @@ public:
             }
         }
         U1.mass = U0.mass + dt*gamma_1*dUdt0.mass;
-        // Side note: 
+        // Side note:
         // It would be convenient (codewise) for the updates of these Vector3 quantities to
         // be done with the Vector3 arithmetic operators but I suspect that the implementation
         // of those oerators is such that a whole lot of Vector3 temporaries would be created.
@@ -1221,11 +1221,11 @@ public:
     } // end stage_1_update_for_flow_on_fixed_grid()
 
     @nogc
-    void stage_2_update_for_flow_on_fixed_grid(double dt, bool with_local_time_stepping) 
+    void stage_2_update_for_flow_on_fixed_grid(double dt, bool with_local_time_stepping)
     {
         // use the local-time step
         if (with_local_time_stepping) dt = this.dt_local;
-        
+
         ConservedQuantities dUdt0 = dUdt[0];
         ConservedQuantities dUdt1 = dUdt[1];
         ConservedQuantities U_old = U[0];
@@ -1289,11 +1289,11 @@ public:
     } // end stage_2_update_for_flow_on_fixed_grid()
 
     @nogc
-    void stage_3_update_for_flow_on_fixed_grid(double dt, bool with_local_time_stepping) 
+    void stage_3_update_for_flow_on_fixed_grid(double dt, bool with_local_time_stepping)
     {
         // use the local-time step
         if (with_local_time_stepping) dt = this.dt_local;
-        
+
         ConservedQuantities dUdt0 = dUdt[0];
         ConservedQuantities dUdt1 = dUdt[1];
         ConservedQuantities dUdt2 = dUdt[2];
@@ -1306,7 +1306,7 @@ public:
         final switch (myConfig.gasdynamic_update_scheme) {
         case GasdynamicUpdate.euler:
         case GasdynamicUpdate.moving_grid_1_stage:
-        case GasdynamicUpdate.moving_grid_2_stage:    
+        case GasdynamicUpdate.moving_grid_2_stage:
         case GasdynamicUpdate.pc:
         case GasdynamicUpdate.midpoint:
             assert(false, "invalid for 2-stage update.");
@@ -1339,7 +1339,7 @@ public:
                 U3.psi = 0.0;
             }
         }
-        U3.total_energy = U_old.total_energy + 
+        U3.total_energy = U_old.total_energy +
             dt*(gamma_1*dUdt0.total_energy + gamma_2*dUdt1.total_energy + gamma_3*dUdt2.total_energy);
         version(turbulence) {
             foreach(i; 0 .. myConfig.turb_model.nturb){
@@ -1365,11 +1365,11 @@ public:
     } // end stage_3_update_for_flow_on_fixed_grid()
 
     @nogc
-    void stage_1_update_for_flow_on_moving_grid(double dt, bool with_local_time_stepping) 
+    void stage_1_update_for_flow_on_moving_grid(double dt, bool with_local_time_stepping)
     {
         // use the local-time step
         if (with_local_time_stepping) dt = this.dt_local;
-        
+
         ConservedQuantities dUdt0 = dUdt[0];
         ConservedQuantities U0 = U[0];
         ConservedQuantities U1 = U[1];
@@ -1411,11 +1411,11 @@ public:
     } // end stage_1_update_for_flow_on_moving_grid()
 
     @nogc
-    void stage_2_update_for_flow_on_moving_grid(double dt, bool with_local_time_stepping) 
+    void stage_2_update_for_flow_on_moving_grid(double dt, bool with_local_time_stepping)
     {
         // use the local-time step
         if (with_local_time_stepping) dt = this.dt_local;
-        
+
         ConservedQuantities dUdt0 = dUdt[0];
         ConservedQuantities dUdt1 = dUdt[1];
         ConservedQuantities U0 = U[0];
@@ -1424,7 +1424,7 @@ public:
         number gamma_1 = 0.5;
         number v_old = volume[0];
         number vol_inv = 1.0 / volume[2];
-        gamma_1 *= volume[0]; gamma_2 *= volume[1]; // Roll-in the volumes for convenience below. 
+        gamma_1 *= volume[0]; gamma_2 *= volume[1]; // Roll-in the volumes for convenience below.
         //
         U2.mass = vol_inv * (v_old * U0.mass + dt * (gamma_1 * dUdt0.mass + gamma_2 * dUdt1.mass));
         U2.momentum.set(vol_inv*(v_old*U0.momentum.x + dt*(gamma_1*dUdt0.momentum.x +
@@ -1469,7 +1469,7 @@ public:
     } // end stage_2_update_for_flow_on_moving_grid()
 
     @nogc
-    void thermochemical_increment(double dt) 
+    void thermochemical_increment(double dt)
     // Use the finite-rate chemistry module to update the species fractions
     // and the other thermochemical properties.
     {
@@ -1499,7 +1499,7 @@ public:
         double dt_chem_save = dt_chem;
 
         if (myConfig.sticky_electrons) { myConfig.gmodel.balance_charge(fs.gas); }
-        
+
         version(debug_chem) {
             savedGasState.copy_values_from(fs.gas);
         }
@@ -1642,7 +1642,7 @@ public:
         version(turbulence) {
             number turbulent_signal = myConfig.turb_model.turbulent_signal_frequency(fs);
             turbulent_signal *= myConfig.turbulent_signal_factor;
-            signal = fmax(signal, turbulent_signal); 
+            signal = fmax(signal, turbulent_signal);
             this.signal_parab = fmax(signal_parab, turbulent_signal);
         }
         version(MHD) {
@@ -1664,7 +1664,7 @@ public:
     } // end signal_frequency()
 
     @nogc
-    void turbulence_viscosity_zero() 
+    void turbulence_viscosity_zero()
     {
         fs.mu_t = 0.0;
         fs.k_t = 0.0;
@@ -1680,7 +1680,7 @@ public:
     }
 
     @nogc
-    void turbulence_viscosity_zero_if_not_in_zone() 
+    void turbulence_viscosity_zero_if_not_in_zone()
     {
         if ( in_turbulent_zone ) {
             /* Do nothing, leaving the turbulence quantities as set. */
@@ -1692,7 +1692,7 @@ public:
     }
 
     @nogc
-    void turbulence_viscosity_limit(double factor) 
+    void turbulence_viscosity_limit(double factor)
     // Limit the turbulent viscosity to reasonable values relative to
     // the local molecular viscosity.
     // In shock started flows, we seem to get crazy values on the
@@ -1703,7 +1703,7 @@ public:
     }
 
     @nogc
-    void turbulence_viscosity_factor(double factor) 
+    void turbulence_viscosity_factor(double factor)
     // Scale the turbulent viscosity to model effects
     // such as not-fully-developed turbulence that might be expected
     // in short-duration transient flows.
@@ -1713,21 +1713,21 @@ public:
     }
 
     @nogc
-    void turbulence_viscosity() 
+    void turbulence_viscosity()
     {
         auto gmodel = myConfig.gmodel;
         fs.mu_t = myConfig.turb_model.turbulent_viscosity(fs, grad, pos[0].y, dwall);
         fs.k_t = myConfig.turb_model.turbulent_conductivity(fs, gmodel);
-    } 
+    }
 
     /*
     Old k-omega stuff moved (see NNG 11/02/20)
     */
 
     @nogc
-    void clear_source_vector() 
+    void clear_source_vector()
     // When doing the gasdynamic update stages, the source vector values
-    // are accumulated for the inviscid and then viscous terms, so we 
+    // are accumulated for the inviscid and then viscous terms, so we
     // have to start with a clean slate, so to speak.
     {
         Q.mass = 0.0;
@@ -1749,7 +1749,7 @@ public:
     } // end clear_source_vector()
 
     @nogc
-    void add_inviscid_source_vector(int gtl, double omegaz=0.0) 
+    void add_inviscid_source_vector(int gtl, double omegaz=0.0)
     // Add the components of the source vector, Q, for inviscid flow.
     //
     // Currently, the axisymmetric equations include the
@@ -1795,13 +1795,13 @@ public:
     } // end add_inviscid_source_vector()
 
     @nogc
-    void add_viscous_source_vector() 
+    void add_viscous_source_vector()
     {
         if (myConfig.axisymmetric) {
             // For viscous, axisymmetric flow:
             number v_over_y = fs.vel.y / pos[0].y;
-            number dudx=grad.vel[0][0]; 
-            number dvdy=grad.vel[1][1]; 
+            number dudx=grad.vel[0][0];
+            number dvdy=grad.vel[1][1];
 
             number mu  = fs.gas.mu + fs.mu_t;
             mu *= myConfig.viscous_factor;
@@ -1865,7 +1865,7 @@ public:
     } // end calculate_wall_Reynolds_number()
 
     @nogc
-    void store_rad_scaling_params() 
+    void store_rad_scaling_params()
     // Store parameters for (re-)scaling of radiative source term.
     // Simple rho x T**4 scaling seems to be adequate.
     {
@@ -1884,7 +1884,7 @@ public:
     } // end store_rad_scaling_params()
 
     @nogc
-    void rescale_Q_rE_rad() 
+    void rescale_Q_rE_rad()
     {
         // 1. Compute the current scaling factor based on local gas properties
         number T = fs.gas.T;
@@ -1902,13 +1902,13 @@ public:
     } // end rescale_Q_rE_rad()
 
     @nogc
-    void reset_Q_rad_to_zero() 
+    void reset_Q_rad_to_zero()
     {
         Q_rE_rad = 0.0;
     } // end reset_Q_rad_to_zero()
 
     @nogc
-    number rad_scaling_ratio() 
+    number rad_scaling_ratio()
     {
         // 1. Compute the current scaling factor based on local gas properties
         number T = fs.gas.T;
@@ -2021,7 +2021,7 @@ string cell_data_as_string(ref const(Vector3) pos, number volume, ref const(Flow
             }
         }
         version(multi_species_gas) {
-            foreach (massfvalue; fs.gas.massf) { formattedWrite(writer, " %.18e", massfvalue); } 
+            foreach (massfvalue; fs.gas.massf) { formattedWrite(writer, " %.18e", massfvalue); }
             if (fs.gas.massf.length > 1) { formattedWrite(writer, " %.18e", dt_chem); }
         } else {
             formattedWrite(writer, " %.18e", 1.0); // single-species mass fraction
@@ -2073,7 +2073,7 @@ void cell_data_to_raw_binary(ref File fout,
         if (include_quality) { dbl1[0] = fs.gas.quality.re; fout.rawWrite(dbl1); }
         dbl4[0] = fs.gas.p.re; dbl4[1] = fs.gas.a.re; dbl4[2] = fs.gas.mu.re; dbl4[3] = fs.gas.k.re;
         fout.rawWrite(dbl4);
-        foreach (kvalue; fs.gas.k_modes) { dbl1[0] = kvalue.re; fout.rawWrite(dbl1); } 
+        foreach (kvalue; fs.gas.k_modes) { dbl1[0] = kvalue.re; fout.rawWrite(dbl1); }
         dbl2[0] = fs.mu_t.re; dbl2[1] = fs.k_t.re; fout.rawWrite(dbl2);
         dbl1[0] = to!double(fs.S); fout.rawWrite(dbl1);
         if (radiation) {
@@ -2086,7 +2086,7 @@ void cell_data_to_raw_binary(ref File fout,
             }
         }
         version(multi_species_gas) {
-            foreach (mf; fs.gas.massf) { dbl1[0] = mf.re; fout.rawWrite(dbl1); } 
+            foreach (mf; fs.gas.massf) { dbl1[0] = mf.re; fout.rawWrite(dbl1); }
             if (fs.gas.massf.length > 1) { dbl1[0] = dt_chem; fout.rawWrite(dbl1); }
         } else {
             dbl1[0] = 1.0; fout.rawWrite(dbl1); // single-species mass fraction
@@ -2136,7 +2136,7 @@ void cell_data_to_raw_binary(ref File fout,
             }
         }
         version(multi_species_gas) {
-            fout.rawWrite(fs.gas.massf); 
+            fout.rawWrite(fs.gas.massf);
             if (fs.gas.massf.length > 1) { dbl1[0] = dt_chem; fout.rawWrite(dbl1); }
         } else {
             dbl1[0] = 1.0; fout.rawWrite(dbl1); // single-species mass fraction
@@ -2247,7 +2247,7 @@ void scan_cell_data_from_fixed_order_string
                 fs.gas.T_modes[i] = Complex!double(items.front); items.popFront();
             }
             if (fs.gas.u_modes.length > 0) {
-                dt_therm = to!double(items.front); items.popFront(); 
+                dt_therm = to!double(items.front); items.popFront();
             }
         }
         if (with_local_time_stepping) { dt_local = to!double(items.front); items.popFront(); }
@@ -2334,7 +2334,7 @@ void scan_cell_data_from_fixed_order_string
                 fs.gas.T_modes[i] = to!double(items.front); items.popFront();
             }
             if (fs.gas.u_modes.length > 0) {
-                dt_therm = to!double(items.front); items.popFront(); 
+                dt_therm = to!double(items.front); items.popFront();
             }
         }
         if (with_local_time_stepping) { dt_local = to!double(items.front); items.popFront(); }
@@ -2428,7 +2428,7 @@ void scan_cell_data_from_variable_order_string
             fs.gas.T_modes[i] = values[countUntil(varNameList, T_modesName(to!int(i)))];
         }
         if (fs.gas.u_modes.length > 0) {
-            dt_therm = values[countUntil(varNameList, flowVarName(FlowVar.dt_therm))].re; 
+            dt_therm = values[countUntil(varNameList, flowVarName(FlowVar.dt_therm))].re;
         }
     }
     if (with_local_time_stepping) { dt_local = values[countUntil(varNameList, flowVarName(FlowVar.dt_local))].re; }
