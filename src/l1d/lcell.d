@@ -231,11 +231,11 @@ public:
         catch (Exception err) {
             string msg = "chemical_increment() failed update_thermo_from_rhou";
             debug {
-                msg ~= format("Caught %s", err.msg);
-                msg ~= format("This cell is located at: %s\n", xmid);
-                msg ~= "This failure occurred when trying to update the thermo state after\n";
-                msg ~= "computing the species change due to chemical reactions.\n";
-                msg ~= format("The present gas state is:\n   gas %s", gas);
+                msg ~= format("\n%s", err.msg);
+                msg ~= format("\nThis cell is located at: %g", xmid);
+                msg ~= "\nThis failure occurred when trying to update the thermo state after";
+                msg ~= "\ncomputing the species change due to chemical reactions.";
+                msg ~= format("\nGas state:\n  %s", gas);
             }
             throw new GasModelException(msg);
         }
