@@ -21,7 +21,7 @@ EOF
 gnuplot<<EOF
 set term postscript eps 20
 set output "shock_tube_rho.eps"
-set title "One-D Shock Tube, He driving air, at t = 80us"
+set title "One-D Shock Tube, He driving N2, at t = 80us"
 set xlabel "x, m"
 set ylabel "Density, kg/m**3"
 set xrange [0.0:1.0]
@@ -34,7 +34,7 @@ EOF
 gnuplot<<EOF
 set term postscript eps 20
 set output "shock_tube_vel.eps"
-set title "One-D Shock Tube, He driving air, at t = 80us"
+set title "One-D Shock Tube, He driving N2, at t = 80us"
 set xlabel "x, m"
 set ylabel "Velocity, km/s"
 set key top left
@@ -48,7 +48,7 @@ EOF
 gnuplot<<EOF
 set term postscript eps 20
 set output "shock_tube_T.eps"
-set title "One-D Shock Tube, He driving air, at t = 80us"
+set title "One-D Shock Tube, He driving N2, at t = 80us"
 set xlabel "x, m"
 set ylabel "Temperature, K"
 set key top left
