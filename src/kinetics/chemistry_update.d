@@ -51,6 +51,27 @@ final class ChemistryUpdate : ThermochemicalReactor {
         auto L = init_lua_State();
         doLuaFile(L, fname);
 
+        // Check on species order before proceeding.
+        lua_getglobal(L, "species");
+        if (lua_isnil(L, -1)) {
+            string errMsg = format("There is no species listing in your chemistry input file: '%s'\n", fname);
+            errMsg ~= "Please be sure to use an up-to-date version of prep-chem to generate your chemistry file.\n";
+            throw new Error(errMsg);
+        }
+        foreach (isp; 0 .. gmodel.n_species) {
+            lua_rawgeti(L, -1, isp);
+            auto sp = to!string(luaL_checkstring(L, -1));
+            if (sp != gmodel.species_name(isp)) {
+                string errMsg = "Species order is incompatible between gas model and chemistry input.\n";
+                errMsg ~= format("Chemistry input file is: '%s'.\n", fname);
+                errMsg ~= format("In gas model: index %d ==> species '%s'\n", isp, gmodel.species_name(isp));
+                errMsg ~= format("In chemistry: index %d ==> species '%s'\n", isp, sp);
+                throw new Error(errMsg);
+            }
+            lua_pop(L, 1);
+        }
+        lua_pop(L, 1);
+
         lua_getglobal(L, "config");
         lua_getfield(L, -1, "tempLimits");
         lua_getfield(L, -1, "lower");

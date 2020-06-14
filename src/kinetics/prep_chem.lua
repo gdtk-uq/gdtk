@@ -229,6 +229,12 @@ end
 
 function buildVerboseLuaFile(fName)
    f = assert(io.open(fName, 'w'))
+   -- Write out species in order so that we may later check for consistency with gas model
+   f:write("species = {")
+   for i, sp in ipairs(species) do
+      f:write(string.format("[%d]='%s', ", i-1, sp))
+   end
+   f:write("}\n")
    -- Write out configuration settings
    f:write(string.format("config = {\n"))
    f:write(string.format("  tempLimits = {lower=%f, upper=%f},\n",
