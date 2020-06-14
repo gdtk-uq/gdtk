@@ -131,7 +131,7 @@ default: $(PROGRAMS)
 	@echo "Source code revision string $(REVISION_STRING)"
 	@echo "L1d4 simulation code built."
 
-install: $(PROGRAMS) $(LUA_MODULES)
+install: $(PROGRAMS) $(LUA_MODULES) prep-gas prep-chem chemkin2eilmer
 	- mkdir -p $(INSTALL_DIR)
 	- mkdir -p $(BUILD_DIR)/bin
 	- mkdir -p $(BUILD_DIR)/lib
@@ -183,6 +183,15 @@ l1d4: main.d $(L1D_FILES) \
 l1d4-prep: l1d4-prep.py
 	cp l1d4-prep.py l1d4-prep
 	chmod +x l1d4-prep
+
+prep-gas:
+	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) build-prep-gas
+
+prep-chem:
+	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) build-prep-chem
+
+chemkin2eilmer:
+	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) build-chemkin2eilmer
 
 #--------------------------------------------------------------------------
 # Fortran bits -- we need a bit of a hack
