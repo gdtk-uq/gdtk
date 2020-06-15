@@ -8,6 +8,7 @@
 module ssolidblock;
 
 import std.stdio;
+import std.algorithm;
 import std.conv;
 import std.format;
 import std.array;
@@ -1067,6 +1068,28 @@ public:
     {
         foreach ( cell; activeCells ) cell.Q = 0.0;
     }
+    
+    @nogc
+    override double determine_time_step_size()
+    {
+        double signal, L_min, dt_local, dt_allow;
+        double cfl_value = GlobalConfig.solid_domain_cfl;
+        bool first = true;
+        foreach(cell; activeCells) {
+            L_min = double.max;
+            foreach (iface; cell.iface) { L_min = fmin(L_min, iface.length.re); }
+            signal = cell.sp.k / (cell.sp.rho*cell.sp.Cp*(L_min^^2));
+            dt_local = cfl_value / signal; // Recommend a time step size.
+            if (first) {
+                dt_allow = dt_local;
+                first = false;
+            } else {
+                dt_allow = fmin(dt_allow, dt_local);
+            }
+        }
+        return dt_allow;
+    } // end determine_time_step_size()
+    
 }
 
 @nogc
@@ -1198,4 +1221,3 @@ void gradients_T_lsq(SolidFVCell c, int dimensions)
     if (dimensions == 3) c.dTdz = gradT[2];
     else { c.dTdz = 0.0; }
 }
-

@@ -582,6 +582,8 @@ void init_simulation(int tindx, int nextLoadsIndx,
         initPropertiesAtSolidInterfaces(localSolidBlocks);
     }
     if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.loose) {
+        // currently we use an explicit-explicit loose coupling approach
+        // so there is no need to initialise anything at this stage.
         //initSolidLooseCouplingUpdate();
     }
     //
@@ -1196,6 +1198,7 @@ int integrate_in_time(double target_time_as_requested)
     //----------------------------------------------------------------
     //                 Top of main time-stepping loop
     //----------------------------------------------------------------
+    int update_solid_domain_on_step = 0;
     while ( !finished_time_stepping ) {
         try {
             // 0.0 Run-time configuration may change, a halt may be called, etc.
@@ -1238,9 +1241,24 @@ int integrate_in_time(double target_time_as_requested)
             // 2.3 Solid domain update (if loosely coupled)
             // If tight coupling, then this has already been performed
             // in the gasdynamic_explicit_increment().
-            if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.loose) {
+            if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.loose && SimState.step == update_solid_domain_on_step) { 
+
+                // determine stable time step in solid domain
+                double dt_solid_stable = determine_solid_time_step_size();
+                int n_solid_coupling = to!int(floor(dt_solid_stable/SimState.dt_global));
+                if (SimState.step == 0) n_solid_coupling = 1000; // we will wait for the fluid dt_global to settle
+                double dt_solid = n_solid_coupling*SimState.dt_global;
+                update_solid_domain_on_step = SimState.step + n_solid_coupling;
+                
+                if (GlobalConfig.is_master_task) {
+                    writeln("-- SOLID DOMAIN UPDATE: cfl = ", GlobalConfig.solid_domain_cfl, ",  dt_solid = ", dt_solid, ", next update on step = ", update_solid_domain_on_step);
+                }
+                
+                // we have currently removed the implicit solid update.
                 // Call Nigel's update function here.
-                //solid_domains_backward_euler_update(SimState.time, SimState.dt_global);
+                // solid_domains_backward_euler_update(SimState.time, SimState.dt_global);
+
+                // perform an Euler update for the solid domain
                 int ftl = 0;
                 // Next do solid domain update IMMEDIATELY after at same flow update
                 exchange_ghost_cell_gas_solid_boundary_data();
@@ -1287,7 +1305,7 @@ int integrate_in_time(double target_time_as_requested)
                             addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time);
                         }
                         scell.timeDerivatives(ftl, GlobalConfig.dimensions);
-                        scell.eulerUpdate(SimState.dt_global);
+                        scell.eulerUpdate(dt_solid);
                         scell.T = updateTemperature(scell.sp, scell.e[ftl+1]);
                     } // end foreach scell
                 } // end foreach sblk
@@ -1299,7 +1317,8 @@ int integrate_in_time(double target_time_as_requested)
                     }
                 } // end foreach sblk
                 
-            }
+            } // solid update finished
+            
             // 2.4 Chemistry step or 1/2 step (if appropriate). 
             if ( GlobalConfig.reacting && (SimState.time > GlobalConfig.reaction_time_delay)) {
                 double mydt = (GlobalConfig.strangSplitting == StrangSplittingMode.full_T_full_R) ?
@@ -1761,6 +1780,28 @@ void call_UDF_at_write_to_file()
         copy_userPad_into_block_interpreters();
     }
 } // end call_UDF_at_write_to_file()
+
+double determine_solid_time_step_size()
+{
+    // Set the size of the time step to be the minimum allowed for any active block.
+    double solid_dt_allow;
+    double local_solid_dt_allow;
+    // First, check what each block thinks should be the allowable step size.
+    foreach (mysblk; parallel(localSolidBlocks,1)) {
+        if (mysblk.active) { local_solid_dt_allow = mysblk.determine_time_step_size(); }
+    }
+    // Second, reduce this estimate across all local blocks.
+    solid_dt_allow = double.max; // to be sure it is replaced.
+    foreach (i, myblk; localFluidBlocks) { // serial loop
+        if (myblk.active) { solid_dt_allow = min(solid_dt_allow, local_solid_dt_allow); } 
+    }
+    version(mpi_parallel) {
+        double my_solid_dt_allow = solid_dt_allow;
+        MPI_Allreduce(MPI_IN_PLACE, &my_solid_dt_allow, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+        solid_dt_allow = my_solid_dt_allow;
+    }
+    return solid_dt_allow;
+} // end determine_solid_time_step_size()
 
 void determine_time_step_size()
 {

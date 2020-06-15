@@ -439,7 +439,8 @@ final class GlobalConfig {
     shared static SolidDomainLooseUpdateOptions sdluOptions;
     shared static bool solid_has_isotropic_properties = true;
     shared static bool solid_has_homogeneous_properties = true;
-
+    shared static double solid_domain_cfl = 0.85;
+    
     // Parameters related to possible motion of the grid.
     shared static grid_motion = GridMotion.none;
     shared static bool write_vertex_velocities = false;
@@ -1288,6 +1289,7 @@ JSONValue read_config_file()
     mixin(update_int("shock_fitting_interpolation_order", "shock_fitting_interpolation_order"));
     mixin(update_double("shock_fitting_scale_factor", "shock_fitting_scale_factor"));
 
+    mixin(update_double("solid_domain_cfl", "solid_domain_cfl"));
     mixin(update_enum("coupling_with_solid_domains", "coupling_with_solid_domains", "solidDomainCouplingFromName"));
     mixin(update_bool("solid_has_isotropic_properties", "solid_has_isotropic_properties"));
     mixin(update_bool("solid_has_homogeneous_properties", "solid_has_homogeneous_properties"));
@@ -1362,6 +1364,7 @@ JSONValue read_config_file()
         writeln("  shock_fitting_delay: ", GlobalConfig.shock_fitting_delay);
         writeln("  shock_fitting_interpolation_order: ", GlobalConfig.shock_fitting_interpolation_order);
         writeln("  shock_fitting_scale_factor: ", GlobalConfig.shock_fitting_scale_factor);
+        writeln("  solid_domain_cfl: ", GlobalConfig.solid_domain_cfl);
         writeln("  coupling_with_solid_domains: ", GlobalConfig.coupling_with_solid_domains);
         writeln("  solid_has_isotropic_properties: ", GlobalConfig.solid_has_isotropic_properties);
         writeln("  solid_has_homogeneous_properties: ", GlobalConfig.solid_has_homogeneous_properties);

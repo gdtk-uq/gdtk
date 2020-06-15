@@ -53,7 +53,8 @@ public:
     abstract void readSolution(string filename);
     abstract void writeSolution(string fileName, double simTime);
     abstract void computePrimaryCellGeometricData();
-
+    abstract double determine_time_step_size();
+    
     abstract void applyPreSpatialDerivActionAtBndryFaces(double t, int tLevel);
     abstract void applyPreSpatialDerivActionAtBndryCells(double t, int tLevel);
     abstract void applyPostFluxAction(double t, int tLevel);
