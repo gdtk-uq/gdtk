@@ -184,6 +184,8 @@ def add_gas_model(fileName, reaction_file_1="", reaction_file_2=""):
     :param FileName: (string) Name of the detailed-gas-model file.
     """
     global config
+    if not os.path.exists(fileName):
+        raise Exception("Gas model file not found: " + fileName)
     gmodel = GasModel(fileName)
     gmodel_id = len(config.gmodels)
     config.gmodels.append(gmodel)
@@ -197,6 +199,10 @@ def add_gas_model(fileName, reaction_file_1="", reaction_file_2=""):
     #
     # ThermochemicalReactor is always associated with a particular GasModel.
     if reaction_file_1:
+        if not os.path.exists(reaction_file_1):
+            raise Exception("Reaction file 1 not found: " + reaction_file_1)
+        if reaction_file_2 and (not os.path.exists(reaction_file_2)):
+            raise Exception("Reaction file 2 not found: " + reaction_file_2)
         reactor = ThermochemicalReactor(gmodel, reaction_file_1, reaction_file_2)
     else:
         reactor = None
