@@ -3,7 +3,7 @@
 build-uniform-lut.py
 
 Build look-up-table for the behaviour of a single-temperature gas.
-We just collate the results in a look-up-table. 
+We just collate the results in a look-up-table.
 
 Authors: PJ and RJG
 Versions:
@@ -19,17 +19,17 @@ from eilmer.gas import GasModel, GasState
 def get_u_offset(gs, T):
     """
     At a suitably-low value of temperature, compute the energy offset for the gas.
-    
+
     mygas: a GasState object
     T: temperature at which to evaluate the offset
     Returns: offset value to be added to gas internal energy.
-    
+
     It is convenient to have the reference temperature of 0 degrees K
     for internal energy and enthalpy, so that u = C_v * T, approximately.
     This is quite different to the reference temperature of 298 degrees K
-    used by CEA, for example, so we'll compute an offset value and 
+    used by CEA, for example, so we'll compute an offset value and
     shift the original value of internal energy by this offset in future.
-    """ 
+    """
     gs.p = 100.0e3
     gs.T = T
     gs.update_thermo_from_pT()
@@ -37,8 +37,8 @@ def get_u_offset(gs, T):
 
 def get_u_range(gs, T_min, T_max, log_rho_values):
     """
-    Scan the boundary of the temperature and density to determine 
-    the range of internal that can be comfortably computed 
+    Scan the boundary of the temperature and density to determine
+    the range of internal that can be comfortably computed
     by the original gas model.
     """
     u_values = []
@@ -93,10 +93,10 @@ def build_table(gs, tableName, T_min=200.0, T_max=20000.0,
     # when encoding entropy as Cp_hat later on.
     rho = math.pow(10.0, log_rho_max)
     gs.rho = rho; gs.u = u_min+0.5*du
-    gs.update_thermo_from_rhou() 
+    gs.update_thermo_from_rhou()
     gs.update_trans_coeffs()
     T1 = gs.T; p1 = gs.p; s1 = gs.entropy
-    
+
     fname = 'lut-' + tableName + '.lua'
     print("Writing out look-up table: %s" % fname)
     fp = open(fname, 'w')
@@ -144,9 +144,9 @@ if __name__ == '__main__':
     usage = "Usage: %prog [options]"
     parser = OptionParser(usage=usage)
     parser.add_option("-g", "--gas-model", action="store", type="string", dest="gasModelFile",
-                      help="name of built-in gas mixture")
+                      help="file name of the input gas-model")
     parser.add_option("-n", "--table-name", action="store", type="string", dest="tableName",
-                      help="name of built-in gas mixture")
+                      help="file name for the generated look-up table")
     parser.add_option("-b", "--bounds", action="store", type="string", dest="bounds",
                       default="200.0,20000.0,-6.0,2.0",
                       help="bounds of the table in form \"T_min,T_max,log_rho_min,log_rho_max\"")
@@ -160,7 +160,7 @@ if __name__ == '__main__':
         print("Example 1: build-uniform-lut --gas-model=cea-air5species-gas-model.lua"+
               " --table-name=air5species")
         print("Example 2: build-uniform-lut --gas-model=cea-air13species-gas-model.lua"+
-              " --table-name=air13species --bounds=\"500,20000,-6.0,2.0\"")
+              " --table-name=air13species --T-for-offset=600.0 --bounds=\"600,20000,-6.0,2.0\"")
         print("Example 3: build-uniform-lut --gas-model=cea-co2-gas-model.lua"+
               " --table-name=co2 --T-for-offset=650.0 --bounds=\"1000.0,20000,-6.0,2.0\"")
         print("Example 4: build-uniform-lut --gas-model=cea-co2-ions-gas-model.lua"+
@@ -168,7 +168,8 @@ if __name__ == '__main__':
         print("")
         print("Sometimes CEA2 has problems and the table will fail to build.")
         print("The best approach to fixing the problem seems to be to raise")
-        print("the lower temperatures, as shown in examples 2, 3 and 4 (above).")
+        print("the lower temperature boundary if the table,")
+        print("as shown in examples 2, 3 and 4 (above).")
         sys.exit()
     T_min, T_max, log_rho_min, log_rho_max = [float(item) for item in options.bounds.split(',')]
     T_for_offset = float(options.T_for_offset)

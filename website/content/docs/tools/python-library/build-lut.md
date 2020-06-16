@@ -9,3 +9,8 @@ draft: false
 `build-uniform-lut` assembles a table of gas-model data
 computed by the CEA2 program.
 
+
+## Documentation
+- [build-uniform-lut Manual (HTML)](/html/build-lut-manual.html)
+
+

@@ -26,7 +26,8 @@ all: eilmer-reference-manual.html \
 	l1d-reference-manual.html \
 	library-reference-manual.html \
 	geometry-reference-manual.html \
-	estcn-manual.html
+	estcn-manual.html \
+	build-lut-manual.html
 	@echo "Done."
 
 eilmer-reference-manual.html: eilmer-reference-manual.adoc $(EILMER_DOC_FILES)
@@ -41,6 +42,9 @@ l1d-reference-manual.html: l1d-reference-manual.adoc
 estcn-manual.html: estcn-manual.adoc
 	asciidoctor estcn-manual.adoc
 
+build-lut-manual.html: build-lut-manual.adoc
+	asciidoctor build-lut-manual.adoc
+
 library-reference-manual.html: library-reference-manual.adoc $(LIBRARY_DOC_FILES)
 	asciidoctor library-reference-manual.adoc
 
@@ -53,4 +57,5 @@ clean:
 		l1d-reference-manual.html \
 		library-reference-manual.html \
 		geometry-reference-manual.html \
-		estcn-manual.html
+		estcn-manual.html \
+		build-lut-manual.html

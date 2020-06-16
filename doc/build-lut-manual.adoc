@@ -1,0 +1,210 @@
+= build-uniform-lut Manual for Users
+Peter A. Jacobs; Rowan J. Gollan
+2020-06-16
+:toc: right
+:stylesheet: readthedocs.css
+:sectnums:
+:imagesdir: estcn
+
+:leveloffset: +1
+
+The properties of a gas mixture in thermochemical equilibrium can be computed using
+the CEA program (https://www.grc.nasa.gov/WWW/CEAWeb/).
+By pre-computing the properties for a range of densities and
+internal energies, a look-up table can be created.
+The use of a look-up table is much more efficient to use than
+calling out to the CEA program during simulation execution.
+
+This manual describes the use of the `build-uniform-lut` program for
+constructing your own look-up-table gas model.
+
+
+= Getting started
+
+The `build-unform-lut` program is built upon the core gas models and the Python library
+that is wrapped around that gas-model library.
+This is part of a larger gas-dynamics toolkit and
+general getting started notes can be found at
+http://cfcfd.mechmining.uq.edu.au/docs/getting-started
+There, you will see how to get a copy of the source code,
+and a list of what other software you will need to build and install the tool kit,
+and a collection of environment variables that need to be set.
+
+To install the `build-uniform-lut` program, move to the gas source directory
+and use the `make` utility.
+
+    cd dgd/src/gas
+    make install
+
+This will also install files associated with the gas models.
+
+We also expect that you have arranged to get a copy of the CEA2 program.
+It is not our's to give away, so don't ask.
+Once you have a copy of the CEA2 program executable,
+place it in the directory `${DGD}/bin/` as `cea2`.
+Also, place the database input files `thermo.inp` and `trans.inp` into
+the directory `${DGD}/share/cea-cases/`.
+Our `CEAGas` model code expects to find those files in place.
+
+----
+# makefile for cea2, in the context of the Eilmer4 project.
+#
+# Author: PJ
+# Version: 15-May-2013
+#          14-Jan-2020 Revise install commands for Eilmer4
+
+INSTALL_DIR ?= $(HOME)/dgdinst
+
+build_new: cea2
+	@echo "cea2 program should be up to date."
+
+install: cea2
+	- mkdir -p $(INSTALL_DIR)
+	- cp cea2 $(INSTALL_DIR)/bin/
+	- mkdir -p $(INSTALL_DIR)/share/cea-cases
+	- cp thermo.inp trans.inp $(INSTALL_DIR)/share/cea-cases/
+
+clean:
+	- rm cea2
+
+# The -m32 option sometimes gives grief
+# (on 64-bit linux systems with dodgy compatability libraries)
+# but it seems to be needed to make a well behaved executable.
+# If the -m32 gives grief, try removing it and building again.
+cea2 : cea2.f cea.inc
+	gfortran -m32 -std=legacy -o cea2 cea2.f
+----
+
+= Defining a CEAGas model
+
+To build a look-up table model, you are going to need a `CEAGas` model file
+in your working directory.
+Let's just copy one from the samples in the source code repository.
+
+----
+cp ${DGD_REPO}/src/gas/sample-data/cea-air13species-gas-model.lua .
+----
+
+The contents of this file are:
+----
+model = "CEAGas"
+
+CEAGas = {
+  mixtureName = 'air13species',
+  speciesList = {"N2","O2","Ar","N","O","NO","Ar+","NO+","N+","O+","N2+","O2+","e-"},
+  reactants = {N2=0.7811, O2=0.2095, Ar=0.0093},
+  inputUnits = "moles",
+  withIons = true,
+  trace = 1.0e-6
+}
+----
+
+Note that the file contains valid Lua code.
+The assignment to the variable called `model` is used to identify, to our gas package,
+the flavour of the gas model that this file defines.
+The `CEAGas` variable is then assigned a table of key=value entries
+that specify the parameters to be passed through to the CEA2 program
+in order to get it to compute our gas properties.
+The items are:
+
+`mixtureName`::
+  a string name to assign as the pseudo-species name.
+  Out gas model code does not know about the internal species
+  of the the equilibrium mixture.
+
+`speciesList`::
+  an array of strings specifying the internal mixture species,
+  as known by the CEA2 program.
+
+`reactants`::
+  an initial mixture, specified by fractions in a table where the keys are
+  the names of the species.
+  Lua has a nice feature that simple names may appear without quote characters,
+  however, names with special characters such as the plus sign will need to
+  specified in quotes.
+  In the table above, `N2=0.7811` is equivalent to `["N2"]=0.7811` and a
+  nonzero fraction for `N2+` would need to have its key specified as `["N2+"]`.
+
+`inputUnits`::
+  for the reactant fractions. Options are `"moles"` or `"massf"`.
+
+`withIons`::
+  a boolean indicating to CEA2 if ionization is permitted.
+
+`trace`::
+  the fraction value below which CEA2 is permitted to ignore a chemical species.
+
+
+= Building a look-up table model
+
+To see what specific inputs are required, start the program as:
+
+----
+build-uniform-lut --help
+----
+
+With the output:
+----
+Begin build-uniform-lut.py...
+Usage: build-uniform-lut [options]
+
+Options:
+  -h, --help            show this help message and exit
+  -g GASMODELFILE, --gas-model=GASMODELFILE
+                        file name of the input gas-model
+  -n TABLENAME, --table-name=TABLENAME
+                        file name for the generated look-up table
+  -b BOUNDS, --bounds=BOUNDS
+                        bounds of the table in form
+                        "T_min,T_max,log_rho_min,log_rho_max"
+  -T T_FOR_OFFSET, --T-for-offset=T_FOR_OFFSET
+                        Temperature (degree K) at which to evaluate the
+                        internal energy offset.
+----
+
+`GASMODELFILE`::
+  The input gas model is usually a `CEAGas` model file, as described above,
+  however, any gas model for our gas package may be used.
+
+`TABLENAME`::
+  The tabluated data is written to a file, as a valid Lua script.
+  It can then be used as a gas-model file in out gas package.
+
+`BOUNDS`::
+  Sometimes CEA2 has problems and the table will fail to build.
+  The best approach to fixing the problem seems to be to raise
+  the lower temperatures, as shown in examples 2, 3 and 4 (below).
+
+`T_FOR_OFFSET`::
+  The program does its best to make the tabulated model appear as an ideal gas
+  at low temperatures.
+  The internal energy offset is evaluated to try to make the internal energy zero at T=0 K.
+  It is sometimes convenient to have the reference temperature of 0 degrees K
+  for internal energy and enthalpy, so that u = C_v * T, approximately.
+  This is quite different to the reference temperature of 298 degrees K used by CEA.
+  Mostly, any low temperature will suffice, however, some gas mixtures need moderately
+  high values.
+  For example, CO2 needs T=600.
+
+== Examples
+
+----
+build-uniform-lut --gas-model=cea-air5species-gas-model.lua --table-name=air5species
+----
+
+----
+build-uniform-lut --gas-model=cea-air13species-gas-model.lua --table-name=air13species \
+                  --T-for-offset=600.0 --bounds="600,20000,-6.0,2.0"
+----
+
+----
+build-uniform-lut --gas-model=cea-co2-gas-model.lua --table-name=co2 \
+                  --T-for-offset=650.0 --bounds="1000.0,20000,-6.0,2.0"
+----
+
+----
+build-uniform-lut --gas-model=cea-co2-ions-gas-model.lua --table-name=co2-ions \
+                  --T-for-offset=1000.0 --bounds="1000.0,20000,-6.0,2.0"
+----
+
+
