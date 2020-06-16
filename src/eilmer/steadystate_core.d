@@ -123,11 +123,11 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     int maxNumberAttempts = GlobalConfig.sssOptions.maxNumberAttempts;
     double relGlobalResidReduction = GlobalConfig.sssOptions.stopOnRelGlobalResid;
     double absGlobalResidReduction = GlobalConfig.sssOptions.stopOnAbsGlobalResid;
-
     double cfl_max = GlobalConfig.sssOptions.cfl_max;
-    double cfl_growth_rate = GlobalConfig.sssOptions.cfl_growth_rate;
+    int cfl_schedule_current_index = 0;
+    auto cfl_schedule_value_list = GlobalConfig.sssOptions.cfl_schedule_value_list;
+    auto cfl_schedule_iter_list = GlobalConfig.sssOptions.cfl_schedule_iter_list;
     bool residual_based_cfl_scheduling = GlobalConfig.sssOptions.residual_based_cfl_scheduling;
-    
     // Settings for start-up phase
     double cfl0 = GlobalConfig.sssOptions.cfl0;
     double tau0 = GlobalConfig.sssOptions.tau0;
@@ -815,11 +815,13 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 cflTrial = fmin(cflTrial, 2.0*cfl);
                 cflTrial = fmax(cflTrial, 0.1*cfl);
                 cfl = cflTrial;
+                cfl = fmin(cflTrial, cfl_max);
             }
-        } else { // linear CFL growth
-            if (step <= nStartUpSteps) { cflTrial = cfl_growth_rate * step + cfl0; }
-            else { cflTrial = cfl_growth_rate * (step - nStartUpSteps) + cfl1; }
-            cfl = fmin(cflTrial, cfl_max);
+        } else { // user defined CFL growth
+            if (cfl_schedule_iter_list.canFind(step)) {
+                cfl = cfl_schedule_value_list[cfl_schedule_current_index];
+                cfl_schedule_current_index += 1;
+            }
         }
         
         if (step == nStartUpSteps) {

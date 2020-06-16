@@ -74,8 +74,10 @@ sssOptionsHidden = { -- hidden from user
    number_inner_iterations = 5,
    -- Options for start-up phase
    number_start_up_steps = 5,
-   cfl_growth_rate = 2.0,
-   cfl_max = 1.0,
+   cfl_schedule_length = 0,
+   cfl_schedule_value_list = {},
+   cfl_schedule_iter_list = {},
+   cfl_max = 1.0e8,
    residual_based_cfl_scheduling = true,
    cfl0 = 1.0,
    eta0 = 0.5,
@@ -1824,7 +1826,30 @@ function write_control_file(fileName)
    f:write(string.format('   "number_inner_iterations": %d,\n', SteadyStateSolver.number_inner_iterations))
    f:write(string.format('   "number_start_up_steps": %d,\n', SteadyStateSolver.number_start_up_steps))
    f:write(string.format('   "residual_based_cfl_scheduling": %s,\n', tostring(SteadyStateSolver.residual_based_cfl_scheduling)))
-   f:write(string.format('   "cfl_growth_rate": %.18e,\n', SteadyStateSolver.cfl_growth_rate))
+
+   if type(SteadyStateSolver.cfl_schedule_value_list) == 'table' then
+      if SteadyStateSolver.cfl_schedule_length < #SteadyStateSolver.cfl_schedule_value_list then
+         SteadyStateSolver.cfl_schedule_length = #SteadyStateSolver.cfl_schedule_value_list
+      end
+   end
+   f:write(string.format('   "cfl_schedule_length": %d,\n',  SteadyStateSolver.cfl_schedule_length))
+   f:write('   "cfl_schedule_value_list": [')
+   if type(SteadyStateSolver.cfl_schedule_value_list) == 'table' then
+      for i,e in ipairs(SteadyStateSolver.cfl_schedule_value_list) do
+         f:write(string.format('%.18e', e))
+         if i < #SteadyStateSolver.cfl_schedule_value_list then f:write(', ') end
+      end
+   end
+   f:write('],\n')
+   f:write('   "cfl_schedule_iter_list": [')
+   if type(SteadyStateSolver.cfl_schedule_iter_list) == 'table' then
+      for i,e in ipairs(SteadyStateSolver.cfl_schedule_iter_list) do
+         f:write(string.format('%d', e))
+         if i < #SteadyStateSolver.cfl_schedule_iter_list then f:write(', ') end
+      end
+   end
+   f:write('],\n')
+
    f:write(string.format('   "cfl_max": %.18e,\n', SteadyStateSolver.cfl_max))
    f:write(string.format('   "cfl0": %.18e,\n', SteadyStateSolver.cfl0))
    f:write(string.format('   "eta0": %.18e,\n', SteadyStateSolver.eta0))

@@ -338,9 +338,11 @@ struct SteadyStateSolverOptions {
     int maxOuterIterations = 10;
     int maxRestarts = 10;
     int nInnerIterations = 5;
-    double cfl_max = 1.0;
-    double cfl_growth_rate = 2.5;
+    double cfl_max = 1e8;
     bool residual_based_cfl_scheduling = true;
+    int cfl_schedule_length = 0;
+    double[] cfl_schedule_value_list; 
+    int[] cfl_schedule_iter_list;
     // Options for start-up phase
     int nStartUpSteps = 5;
     double p0 = 0.75;
@@ -1811,9 +1813,27 @@ void read_control_file()
     // Settings for start-up phase
     GlobalConfig.sssOptions.nStartUpSteps =
         getJSONint(sssOptions, "number_start_up_steps", GlobalConfig.sssOptions.nStartUpSteps);
+    
+    GlobalConfig.sssOptions.cfl_schedule_length =
+        getJSONint(sssOptions, "cfl_schedule_length", GlobalConfig.sssOptions.cfl_schedule_length);
+
+    double[] default_cfl_schedule_value_data;
+    foreach (i; 0 .. GlobalConfig.sssOptions.cfl_schedule_length) { default_cfl_schedule_value_data ~= 0.0; }
+    auto cfl_schedule_value_data = getJSONdoublearray(sssOptions, "cfl_schedule_value_list", default_cfl_schedule_value_data);
+    GlobalConfig.sssOptions.cfl_schedule_value_list.length = GlobalConfig.sssOptions.cfl_schedule_length;
+    foreach (i; 0 .. GlobalConfig.sssOptions.cfl_schedule_length) {
+        GlobalConfig.sssOptions.cfl_schedule_value_list[i] = (i < cfl_schedule_value_data.length) ? cfl_schedule_value_data[i] : default_cfl_schedule_value_data[i];
+    }
+
+    int[] default_cfl_schedule_iter_data;
+    foreach (i; 0 .. GlobalConfig.sssOptions.cfl_schedule_length) { default_cfl_schedule_iter_data ~= 0; }
+    auto cfl_schedule_iter_data = getJSONintarray(sssOptions, "cfl_schedule_iter_list", default_cfl_schedule_iter_data);
+    GlobalConfig.sssOptions.cfl_schedule_iter_list.length = GlobalConfig.sssOptions.cfl_schedule_length;
+    foreach (i; 0 .. GlobalConfig.sssOptions.cfl_schedule_length) {
+        GlobalConfig.sssOptions.cfl_schedule_iter_list[i] = (i < cfl_schedule_iter_data.length) ? cfl_schedule_iter_data[i] : default_cfl_schedule_iter_data[i];
+    }
+    
     GlobalConfig.sssOptions.residual_based_cfl_scheduling = getJSONbool(sssOptions, "residual_based_cfl_scheduling", GlobalConfig.sssOptions.residual_based_cfl_scheduling);
-    GlobalConfig.sssOptions.cfl_growth_rate =
-        getJSONdouble(sssOptions, "cfl_growth_rate", GlobalConfig.sssOptions.cfl_growth_rate);
     GlobalConfig.sssOptions.cfl_max =
         getJSONdouble(sssOptions, "cfl_max", GlobalConfig.sssOptions.cfl_max);
     GlobalConfig.sssOptions.cfl0 =
