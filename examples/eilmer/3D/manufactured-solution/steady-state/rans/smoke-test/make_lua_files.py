@@ -136,6 +136,10 @@ def generateSource(varList):
     f_code = f_code.replace('Max', 'max')
     f_code = f_code.replace('Min(0.0', 'Min1(0.0')
     f_code = f_code.replace('Min(25.0', 'Min2(25.0')
+    # Alternatively, some versions of sympy use "min"
+    f_code = f_code.replace('min(0.0', 'Min1(0.0')
+    f_code = f_code.replace('min(25.0', 'Min2(25.0')
+
     # Now we'll break into lines so that we can completely remove
     # some lines and tidy others
     lines = f_code.split('\n')
