@@ -105,14 +105,13 @@ void init_simulation(int tindx_start)
     L1dConfig.print_count = getJSONint(configData, "print_count", 50);
     L1dConfig.x_order = getJSONint(configData, "x_order", 0);
     L1dConfig.t_order = getJSONint(configData, "t_order", 0);
-    L1dConfig.n_dt_plot = getJSONint(configData, "n_dt_plot", 0);
-    L1dConfig.t_change.length = L1dConfig.n_dt_plot;
-    L1dConfig.dt_plot.length = L1dConfig.n_dt_plot;
-    L1dConfig.dt_hist.length = L1dConfig.n_dt_plot;
-    double[] dummy; foreach (i; 0 .. L1dConfig.n_dt_plot) { dummy ~= 0.0; }
-    L1dConfig.t_change[] = getJSONdoublearray(configData, "t_change", dummy);
-    L1dConfig.dt_plot[] = getJSONdoublearray(configData, "dt_plot", dummy);
-    L1dConfig.dt_hist[] = getJSONdoublearray(configData, "dt_hist", dummy);
+    int n_dt_plot = getJSONint(configData, "n_dt_plot", 0);
+    double[] dummy; foreach (i; 0 .. n_dt_plot) { dummy ~= 0.0; }
+    double[] t_changes = getJSONdoublearray(configData, "t_change", dummy);
+    double[] values = getJSONdoublearray(configData, "dt_plot", dummy);
+    L1dConfig.dt_plot = new Schedule(t_changes, values);
+    values[] = getJSONdoublearray(configData, "dt_hist", dummy);
+    L1dConfig.dt_hist = new Schedule(t_changes, values);
     L1dConfig.hloc_n = getJSONint(configData, "hloc_n", 0);
     L1dConfig.hloc_x.length = L1dConfig.hloc_n;
     dummy.length = L1dConfig.hloc_n; foreach (ref v; dummy) { v = 0.0; }
@@ -130,8 +129,6 @@ void init_simulation(int tindx_start)
         writeln("  print_count= ", L1dConfig.print_count);
         writeln("  x_order= ", L1dConfig.x_order);
         writeln("  t_order= ", L1dConfig.t_order);
-        writeln("  n_dt_plot= ", L1dConfig.n_dt_plot);
-        writeln("  t_change= ", L1dConfig.t_change);
         writeln("  dt_plot= ", L1dConfig.dt_plot);
         writeln("  dt_hist= ", L1dConfig.dt_hist);
         writeln("  hloc_x= ", L1dConfig.hloc_x);
@@ -262,8 +259,8 @@ void init_simulation(int tindx_start)
     }
     sim_data.dt_global = L1dConfig.dt_init;
     sim_data.sim_time = get_time_from_times_file(tindx_start);
-    sim_data.t_plot = get_dt_xxxx(L1dConfig.dt_plot, sim_data.sim_time);
-    sim_data.t_hist = get_dt_xxxx(L1dConfig.dt_hist, sim_data.sim_time);
+    sim_data.t_plot = L1dConfig.dt_plot.get_value(sim_data.sim_time);
+    sim_data.t_hist = L1dConfig.dt_hist.get_value(sim_data.sim_time);
     sim_data.steps_since_last_plot_write = 0;
     sim_data.steps_since_last_hist_write = 0;
     if (L1dConfig.verbosity_level >= 1) {
@@ -402,7 +399,7 @@ void integrate_in_time()
         sim_data.sim_time += sim_data.dt_global;
         if (sim_data.sim_time >= sim_data.t_plot) {
             write_state_gasslugs_pistons_diaphragms();
-            sim_data.t_plot += get_dt_xxxx(L1dConfig.dt_plot, sim_data.sim_time);
+            sim_data.t_plot += L1dConfig.dt_plot.get_value(sim_data.sim_time);
             sim_data.steps_since_last_plot_write = 0;
         } else {
             sim_data.steps_since_last_plot_write++;
@@ -410,7 +407,7 @@ void integrate_in_time()
         if (sim_data.sim_time >= sim_data.t_hist) {
             write_data_at_history_locations(sim_data.sim_time);
             write_energies(sim_data.sim_time);
-            sim_data.t_hist += get_dt_xxxx(L1dConfig.dt_hist, sim_data.sim_time);
+            sim_data.t_hist += L1dConfig.dt_hist.get_value(sim_data.sim_time);
             sim_data.steps_since_last_hist_write = 0;
         } else {
             sim_data.steps_since_last_hist_write++;

@@ -4,6 +4,7 @@
 module config;
 
 import std.conv;
+import std.format;
 
 
 final class L1dConfig {
@@ -30,10 +31,8 @@ public:
     shared static int print_count;
     shared static int x_order;
     shared static int t_order;
-    shared static int n_dt_plot;
-    shared static double[] t_change;
-    shared static double[] dt_plot;
-    shared static double[] dt_hist;
+    static Schedule dt_plot;
+    static Schedule dt_hist;
     shared static int hloc_n;
     shared static double[] hloc_x;
     shared static int nslugs;
@@ -42,11 +41,30 @@ public:
     shared static int necs;
 }
 
-double get_dt_xxxx(shared double[] dt_array, double t)
-{
-    assert(L1dConfig.t_change.length == dt_array.length, "Inconsistent array lengths.");
-    assert(L1dConfig.t_change.length > 0, "Need at least one dt value in the array.");
-    int i = to!int(L1dConfig.t_change.length) - 1;
-    while ((i > 0) && (t < L1dConfig.t_change[i])) { i--; }
-    return dt_array[i];
-}
+class Schedule {
+public:
+    this(double[] t_change, double[] values)
+    {
+        auto n = t_change.length;
+        assert(n > 0, "Need at least one value in the array.");
+        assert(n == values.length, "Inconsistent array lengths.");
+        this.t_change.length = n; this.t_change[] = t_change[];
+        this.values.length = n; this.values[] = values[];
+    }
+
+    override string toString()
+    {
+        return format("Schedule(t_change=%s, values=%s)", t_change, values);
+    }
+
+    double get_value(double t)
+    {
+        int i = to!int(t_change.length) - 1;
+        while ((i > 0) && (t < t_change[i])) { i--; }
+        return values[i];
+    }
+
+private:
+    shared double[] t_change;
+    shared double[] values;
+} // end class Schedule
