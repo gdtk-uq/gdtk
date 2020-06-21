@@ -501,7 +501,7 @@ public:
     }
 
     @nogc
-    double suggested_time_step()
+    double suggested_time_step(double cfl_value)
     {
         LCell c = cells[0];
         double signal_time = c.L / c.gas.a;
@@ -511,7 +511,7 @@ public:
             signal_time = c.L / c.gas.a;
             smallest_transit_time = min(smallest_transit_time, signal_time);
         }
-        return smallest_transit_time * L1dConfig.cfl_value;
+        return smallest_transit_time * cfl_value;
     }
 
     // Quadratic reconstruction functions adapted from Eilmer, 2020-05-22.

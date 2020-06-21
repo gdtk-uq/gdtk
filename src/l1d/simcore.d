@@ -43,6 +43,7 @@ struct SimulationData {
     int halt_now = 0;
     double sim_time = 0.0;
     double dt_global;
+    double cfl;
     double t_plot;
     double t_hist;
     int tindx;
@@ -100,13 +101,17 @@ void init_simulation(int tindx_start)
     L1dConfig.max_time = getJSONdouble(configData, "max_time", 0.0);
     L1dConfig.max_step = getJSONint(configData, "max_step", 0);
     L1dConfig.dt_init = getJSONdouble(configData, "dt_init", 0.0);
-    L1dConfig.cfl_value = getJSONdouble(configData, "cfl_value", 0.5);
+    int n_cfl = getJSONint(configData, "n_cfl", 0);
+    double[] dummy; foreach (i; 0 .. n_cfl) { dummy ~= 0.0; }
+    double[] cfl_times = getJSONdoublearray(configData, "cfl_times", dummy);
+    double[] cfl_values = getJSONdoublearray(configData, "cfl_values", dummy);
+    L1dConfig.cfl_schedule = new Schedule(cfl_times, cfl_values);
     L1dConfig.cfl_count = getJSONint(configData, "cfl_count", 10);
     L1dConfig.print_count = getJSONint(configData, "print_count", 50);
     L1dConfig.x_order = getJSONint(configData, "x_order", 0);
     L1dConfig.t_order = getJSONint(configData, "t_order", 0);
     int n_dt_plot = getJSONint(configData, "n_dt_plot", 0);
-    double[] dummy; foreach (i; 0 .. n_dt_plot) { dummy ~= 0.0; }
+    dummy.length = n_dt_plot; foreach (ref v; dummy) { v = 0.0; }
     double[] t_changes = getJSONdoublearray(configData, "t_change", dummy);
     double[] values = getJSONdoublearray(configData, "dt_plot", dummy);
     L1dConfig.dt_plot = new Schedule(t_changes, values);
@@ -124,7 +129,7 @@ void init_simulation(int tindx_start)
         writeln("  max_time= ", L1dConfig.max_time);
         writeln("  max_step= ", L1dConfig.max_step);
         writeln("  dt_init= ", L1dConfig.dt_init);
-        writeln("  cfl_value= ", L1dConfig.cfl_value);
+        writeln("  cfl_schedule= ", L1dConfig.cfl_schedule);
         writeln("  cfl_count= ", L1dConfig.cfl_count);
         writeln("  print_count= ", L1dConfig.print_count);
         writeln("  x_order= ", L1dConfig.x_order);
@@ -259,6 +264,7 @@ void init_simulation(int tindx_start)
     }
     sim_data.dt_global = L1dConfig.dt_init;
     sim_data.sim_time = get_time_from_times_file(tindx_start);
+    sim_data.cfl = L1dConfig.cfl_schedule.get_value(sim_data.sim_time);
     sim_data.t_plot = L1dConfig.dt_plot.get_value(sim_data.sim_time);
     sim_data.t_hist = L1dConfig.dt_hist.get_value(sim_data.sim_time);
     sim_data.steps_since_last_plot_write = 0;
@@ -289,9 +295,10 @@ void integrate_in_time()
         }
         // 1. Set the size of the time step.
         if ((sim_data.step % L1dConfig.cfl_count) == 0) {
-            double dt_allowed = gasslugs[0].suggested_time_step();
+            sim_data.cfl = L1dConfig.cfl_schedule.get_value(sim_data.sim_time);
+            double dt_allowed = gasslugs[0].suggested_time_step(sim_data.cfl);
             foreach (i; 1 .. gasslugs.length) {
-                dt_allowed = min(dt_allowed, gasslugs[i].suggested_time_step());
+                dt_allowed = min(dt_allowed, gasslugs[i].suggested_time_step(sim_data.cfl));
             }
             if (dt_allowed < sim_data.dt_global) {
                 // Reduce immediately.
@@ -392,7 +399,7 @@ void integrate_in_time()
                 (elapsed_s*(L1dConfig.max_step-sim_data.step))/sim_data.step : 0.0;
             writefln("Step=%d t=%.3e dt=%.3e cfl=%.3f WC=%.1f WCtFT=%.1f WCtMS=%.1f",
                      sim_data.step, sim_data.sim_time, sim_data.dt_global,
-                     L1dConfig.cfl_value, elapsed_s, WCtFT, WCtMS);
+                     sim_data.cfl, elapsed_s, WCtFT, WCtMS);
         }
         // 7. Update time and (maybe) write solution.
         sim_data.step += 1;

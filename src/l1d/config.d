@@ -26,7 +26,7 @@ public:
     shared static double max_time;
     shared static int max_step;
     shared static double dt_init;
-    shared static double cfl_value;
+    static Schedule cfl_schedule;
     shared static int cfl_count;
     shared static int print_count;
     shared static int x_order;

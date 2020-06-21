@@ -57,7 +57,7 @@ assemble_gas_path(left_wall, reservoir_gas, piston, driver_one_gas,
 config.max_time = 0.600    # long enough to get two bounces of the piston
 config.max_step = 2500000  # the simulation will stop here, dt becomes too small to make progress
 config.dt_init = 0.5e-7    # a small enough time step to be stable at the beginning
-config.cfl = 0.25          # should be small enough to cope with diaphragm rupture, etc
+add_cfl_value(0.0, 0.25)   # should be small enough to cope with diaphragm rupture, etc
 # We want a uniform record of the compression process,
 # since we are not letting the diaphragm rupture.
 add_dt_plot(0.0, 1.0e-3, 0.1e-3) # The compression process is slow.

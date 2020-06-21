@@ -71,7 +71,7 @@ assemble_gas_path(left_wall, compressed_air, piston, driver_gas, diaph1,
 config.max_time = 268.0e-3 # the simulation will stop at this time
 config.max_step = 250000   # large enough to allow max_time to be reached
 config.dt_init = 0.5e-6    # a small enough time step to be stable at the beginning
-config.cfl = 0.4           # should be small enough to cope with diaphragm rupture, etc
+add_cfl_value(0.0, 0.4)    # should be small enough to cope with diaphragm rupture, etc
 add_dt_plot(0.0, 2.0e-3, 1.0e-3)    # Most of the compression process is slow.
 add_dt_plot(0.251, 0.05e-3, 1.0e-6) # Record more frequently for the shock waves.
 #

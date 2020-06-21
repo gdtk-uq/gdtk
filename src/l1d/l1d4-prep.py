@@ -79,7 +79,7 @@ class GlobalConfig(object):
                 'overall_modes_count', 'overall_modes_index', \
                 'reaction_files_1', 'reaction_files_2', \
                 'reactors', 'reacting', 'T_frozen', \
-                'dt_init', 'cfl', 'cfl_count', 'print_count', 'dt_plot_list', \
+                'dt_init', 'cfl_list', 'cfl_count', 'print_count', 'dt_plot_list', \
                 'max_time', 'max_step', 'x_order', 't_order', \
                 'hloc_list'
 
@@ -103,7 +103,7 @@ class GlobalConfig(object):
         self.reacting = False
         self.T_frozen = 300.0
         self.dt_init = 1.0e-6
-        self.cfl = 0.5
+        self.cfl_list = []
         self.cfl_count = 10;
         self.print_count = 50;
         # If dt_plot_list is still an empty list when we write
@@ -136,13 +136,21 @@ class GlobalConfig(object):
         fp.write('  "max_time": %e,\n' % self.max_time)
         fp.write('  "max_step": %d,\n' % self.max_step)
         fp.write('  "dt_init": %e,\n' % self.dt_init)
-        fp.write('  "cfl_value": %e,\n' % self.cfl)
+        if len(self.cfl_list) == 0: add_cfl_value(0.0, 0.5) # Add a default value.
+        n_cfl = len(self.cfl_list)
+        assert n_cfl > 0, "Require at least one cfl_value to be specified."
+        fp.write('  "n_cfl": %d,\n' % n_cfl)
+        tlist = [self.cfl_list[i][0] for i in range(n_cfl)]
+        fp.write('  "cfl_times": %s,\n' % json.dumps(tlist))
+        tlist = [self.cfl_list[i][1] for i in range(n_cfl)]
+        assert min(tlist) > 0.0, "Require positive nonzero cfl values."
+        fp.write('  "cfl_values": %s,\n' % json.dumps(tlist))
         fp.write('  "cfl_count": %d,\n' % self.cfl_count)
         fp.write('  "print_count": %d,\n' % self.print_count)
         fp.write('  "x_order": %d,\n' % self.x_order)
         fp.write('  "t_order": %d,\n' % self.t_order)
         #
-        if len(config.dt_plot_list) == 0:
+        if len(self.dt_plot_list) == 0:
             # Since the user did not specify any, default to the end.
             add_dt_plot(0.0, config.max_time, config.max_time)
         n_dt_plot = len(self.dt_plot_list)
@@ -151,10 +159,10 @@ class GlobalConfig(object):
         tlist = [self.dt_plot_list[i][0] for i in range(n_dt_plot)]
         fp.write('  "t_change": %s,\n' % json.dumps(tlist))
         tlist = [self.dt_plot_list[i][1] for i in range(n_dt_plot)]
-        assert min(tlist) > 0.0, "Require nonzero dt_plot values."
+        assert min(tlist) > 0.0, "Require positive nonzero dt_plot values."
         fp.write('  "dt_plot": %s,\n' % json.dumps(tlist))
         tlist = [self.dt_plot_list[i][2] for i in range(n_dt_plot)]
-        assert min(tlist) > 0.0, "Require nonzero dt_hist values."
+        assert min(tlist) > 0.0, "Require positive nonzero dt_hist values."
         fp.write('  "dt_hist": %s,\n' % json.dumps(tlist))
         #
         n_hloc = len(config.hloc_list)
@@ -181,7 +189,10 @@ def add_gas_model(fileName, reaction_file_1="", reaction_file_2=""):
     """
     Initialize and add a GasModel in the GlobalConfig list of gas models.
 
-    :param FileName: (string) Name of the detailed-gas-model file.
+    fileName: (string) Name of the detailed-gas-model file.
+    reaction_file_1: (string) Name of the detailed chemistry file for reacting gas.
+    reaction_file_2: (string) Name of the second thermochemistry file.
+    This second thermochemistry file is needed for only a few of the multi-T models.
     """
     global config
     if not os.path.exists(fileName):
@@ -213,16 +224,36 @@ def add_gas_model(fileName, reaction_file_1="", reaction_file_2=""):
     return gmodel_id
 
 
+def add_cfl_value(t_change, cfl_value):
+    """
+    Add a (t,cfl) tuple to the cfl tuple list in GlobalConfig.
+
+    t_change: (float) The time, in seconds, at which this cfl should take effect.
+    cfl_value: (float) Ratio of actual time step divided by allowable time step.
+    Returns: the new length of the list
+    """
+    global config
+    if len(config.cfl_list) > 0:
+        # Check that we are adding points monotonically in x.
+        if t_change > config.cfl_list[-1][0]:
+            config.cfl_list.append((t_change, cfl_value))
+        else:
+            print("Warning: did not add t_change,cfl_value tuple (", t_change, cfl_value, ").")
+    else:
+        config.cfl_list.append((t_change, cfl_value))
+    return len(config.cfl_list)
+
+
 def add_dt_plot(t_change, dt_plot, dt_his):
     """
     Add a dt tuple to the dt_plot tuple list in GlobalConfig.
 
-    :param t_change: (float) The time, in seconds,
+    t_change: (float) The time, in seconds,
         at which this dt_plot and dt_his should take effect.
-    :param dt_plot: (float) Time interval between writing whole solutions
+    dt_plot: (float) Time interval between writing whole solutions
         for later plotting.
-    :param dt_his: (float) Time interval between writing data to history file.
-    :returns: the new length of the list
+    dt_his: (float) Time interval between writing data to history file.
+    Returns: the new length of the list
     """
     global config
     if len(config.dt_plot_list) > 0:

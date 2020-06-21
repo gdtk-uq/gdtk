@@ -1,6 +1,6 @@
 = L1d Reference Manual for Users, v4.0
 Peter A. Jacobs; Rowan J. Gollan
-2020-05-08
+2020-06-22
 :toc: right
 :stylesheet: readthedocs.css
 :sectnums:
@@ -99,6 +99,12 @@ Note you do not have to set all of these values in the input script.
   _string_, default: `""` +
   Short title string for embedding in the parameter and solution files.
 
+`gmodels` ::
+  _list_ of GasModel objects. +
+  You should add GasModels via the `add_gas_model` function described below but
+  this list will be accessible in case you wish to do some gas state calculations
+  in your input script.
+
 `reacting` ::
   _bool_, default: `False` +
   If set to `True`, the finite-rate chemistry will be active.
@@ -126,14 +132,19 @@ Note you do not have to set all of these values in the input script.
   a very long time (measured by one's patience), possibly because
   the time-step size has decreased to an extremely small value.
 
-`cfl` ::
-  _float_, default: `0.5` +
-  The ratio of the selected time-step size divided by the allowed time-step size.
-  The time-step size is adjusted to ensure that this value is not exceeded
+`cfl_list` ::
+  _list of tuples_, default: `[(0.0, 0.5),]` +
+  The cfl_value is the ratio of the selected time-step size divided by the allowed time-step size.
+  The time-step size is adjusted to ensure that this cfl_value is not exceeded
   in any particular cell.
   A typical value of 0.25 seems to work well for simulations with
   sudden events such as diaphragm bursting, while a value as high as
-  0.5 should be considered only for well-behaved flows.
+  0.5 may be considered for well-behaved flows.
+  For challenging flows, with very stiff thermochemistry,
+  you might require quite low cfl values (say 0.1).
+  Because the simulation may have times when there is not much happening and other times
+  when the dynamics are _interesting_, you can schedule different values of cfl.
+  Add entries to this list with the `add_cfl_value` function.
 
 `t_order` ::
   _int_, default: `2` +
@@ -148,7 +159,7 @@ Note you do not have to set all of these values in the input script.
   2=use limited reconstruction (nominally second order).
 
 `dt_plot_list` ::
-  _list of tuples_, default: `[]` +
+  _list of tuples_, default: `[(0.0, max_time, max_time),]` +
   Specifies the frequency of writing complete solutions
   (for later plotting, maybe) and also for the writing of data at history locations.
   It may be convenient to have different frequencies of writing such
@@ -160,12 +171,47 @@ Note you do not have to set all of these values in the input script.
   It is good to have low-frequency output during most of the compression
   process and higher-frequency output starting just before diaphragm rupture.
   Arranging good values may require some trial and error.
-  Add entries to this list via the add_dt_plot function.
+  Add entries to this list via the `add_dt_plot` function.
 
 `hloc_list` ::
   _list of floats_, default `[]` +
   List of x-coordinates for the history locations.
-  Add entries via the function add_history_loc.
+  Add entries via the function `add_history_loc`.
+
+== Configuration helper functions
+
+   add_cfl_value(t, cfl)
+
+`t` ::
+  _float_, no default. +
+  Time at which cfl value takes effect.
+
+`cfl` ::
+  _float_, no default. +
+  New cfl value.  See the discussion above for selecting a suitable value.
+
+
+   add_dt_plot(t, dt_plot, dt_hist)
+
+`t` ::
+  _float_, no default. +
+  Time at which new increments take effect.
+
+`dt_plot` ::
+  _float_, no default. +
+  Time interval to subsequent solution write.
+
+`dt_hist` ::
+  _float_, no default. +
+  Time interval to next write of history data.
+
+
+   add_history_loc(x)
+
+`x` ::
+  _float_, no default. +
+  Location, in metres, along the tube at which the flow data will be samples
+  a history written.
 
 
 = Gas Models
@@ -173,10 +219,27 @@ There may be one or more gas models involved in a simulation.
 You have to specify one when you make each GasSlug.
 To initialize a gas model, call the `add_gas_model` function.
 
-  my_gm = add_gas_model(fileName)
+  my_gm = add_gas_model(fileName, reaction_file_1="", reaction_file_2="")
 
-It accepts the name of the detailed gas model file and returns
-a reference to the initialized gas model object.
+Input:
+
+`fileName` ::
+  _string_, no default. +
+  Name of the detailed-gas-model file.
+
+`reaction_file_1` ::
+  _string_, default "". +
+  Name of the detailed chemistry file for reacting gas.
+
+`reaction_file_2` ::
+  _string_, default "". +
+  Name of the second thermochemistry file.
+  This second thermochemistry file is needed for only a few of the multi-T models.
+
+Returns:
+
+the index of the initialized gas model object.
+You will need this index to specify which gas model each gas slug is to use.
 
 
 = Tube
