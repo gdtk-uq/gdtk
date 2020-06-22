@@ -246,7 +246,7 @@ To compile Eilmer4 with MPI enabled on tinaroo, do:
     module purge
     module load gnu
     module load openmpi2_ib/2.0.2
-    cd dgd/src/install-scripts
+    cd dgd/install-scripts
     ./install-transient-solvers.sh
 
 ### Running
@@ -313,7 +313,7 @@ I have had success with the 4.0.2 version.
 As described for other systems, use the `install-transient-solvers.sh` script to
 get an optimised build of the distributed-memory (MPI) transient solver.
 
-    cd dgd/src/install-scripts
+    cd dgd/install-scripts
     ./install-transient-solvers.sh
 
 ### Running
