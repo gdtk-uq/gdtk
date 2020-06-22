@@ -104,21 +104,35 @@ def minimize(f, x, dx=None, tol=1.0e-6,
         for i in range(n_check):
             smplx.take_a_step(Kreflect, Kextend, Kcontract)
         # Pick out the current best vertex.
-        i_best = smplx.lowest()
-        x_best = smplx.get_vertex(i_best).copy()
-        f_best = smplx.f_list[i_best]
+        smplx.vertices.sort(key=lambda v: v.f)
+        x_best = smplx.vertices[0].x.copy()
+        f_best = smplx.vertices[0].f
         # Check the scatter of vertex values to see if we are
         # close enough to call it quits.
         mean, stddev = smplx.f_statistics()
         if stddev < tol:
             # All of the points are close together but we need to test more carefully.
-            converged = smplx.test_for_minimum(i_best, delta)
+            converged = smplx.test_for_minimum(0, delta)
             if not converged: smplx.rescale(delta)
     return x_best, f_best, converged, smplx.nfe, smplx.nrestarts
 
 
 #-----------------------------------------------------------------------
-# Use a class to keep the data tidy and conveniently accessible...
+# Use classes to keep the data tidy and conveniently accessible...
+
+class Vertex:
+    """
+    Stores the coordinates as and array and the associated function value.
+    """
+    __slots__ = 'x', 'f'
+
+    def __init__(self, x, f):
+        self.x = x.copy()
+        self.f = f
+
+    def __str__(self):
+        return "Vertex(x=%s, f=%s)" % (self.x, self.f)
+
 
 class NMSimplex:
     """
@@ -136,8 +150,7 @@ class NMSimplex:
         f is a user-specified objective function f(x).
         """
         self.N = len(x)
-        self.vertex_list = []
-        self.f_list = []
+        self.vertices = []
         self.dx = dx.copy()
         self.f = f
         self.nfe = 0
@@ -145,82 +158,35 @@ class NMSimplex:
         for i in range(self.N + 1):
             p = x.copy()
             if i >= 1: p[i-1] += dx[i-1]
-            self.vertex_list.append(p)
-            self.f_list.append(f(p))
+            self.vertices.append(Vertex(p, self.f(p)))
             self.nfe += 1
+        self.vertices.sort(key=lambda v: v.f)
 
     def rescale(self, ratio):
         """
-        Pick out the current minimum and rebuild the simplex about that point.
+        Rebuild the simplex about the lowest point.
         """
-        i_min = self.lowest()
+        self.vertices.sort(key=lambda v: v.f)
         self.dx *= ratio
-        x = self.get_vertex(i_min)
-        f_min = self.f_list[i_min]
-        self.vertex_list = []
-        self.f_list = []
-        for i in range(self.N + 1):
-            p = x.copy()
-            if i == 0:
-                self.f_list.append(f_min)
-            else:
-                p[i-1] += self.dx[i-1]
-                self.f_list.append(self.f(p))
-                self.nfe += 1
-            self.vertex_list.append(p)
+        vtx = self.vertices[0]
+        self.vertices = [vtx,]
+        for i in range(self.N):
+            p = vtx.x.copy()
+            p[i] += self.dx[i]
+            self.vertices.append(Vertex(p, self.f(p)))
+            self.nfe += 1
         self.nrestarts += 1
+        self.vertices.sort(key=lambda v: v.f)
         return
-
-    def get_vertex(self, i):
-        return self.vertex_list[i].copy()
-
-    def replace_vertex(self, i, x, fvalue):
-        self.vertex_list[i] = x.copy()
-        self.f_list[i] = fvalue
-        return
-
-    def lowest(self, exclude=-1):
-        """
-        Returns the index of the lowest vertex, excluding the one specified.
-        """
-        if exclude == 0:
-            indx = 1
-        else:
-            indx = 0
-        lowest_f_value = self.f_list[indx]
-        for i in range(self.N + 1):
-            if i == exclude: continue
-            if self.f_list[i] < lowest_f_value:
-                lowest_f_value = self.f_list[i]
-                indx = i
-        return indx
-
-    def highest(self, exclude=-1):
-        """
-        Returns the index of the highest vertex, excluding the one specified.
-        """
-        if exclude == 0:
-            indx = 1
-        else:
-            indx = 0
-        highest_f_value = self.f_list[indx]
-        for i in range(self.N + 1):
-            if i == exclude: continue
-            if self.f_list[i] > highest_f_value:
-                highest_f_value = self.f_list[i]
-                indx = i
-        return indx
 
     def f_statistics(self):
         """
         Returns mean and standard deviation of the vertex fn values.
         """
-        mean = sum(self.f_list)/(self.N + 1)
-        s = 0.0
-        for i in range(self.N + 1):
-            diff = self.f_list[i] - mean
-            s += diff * diff
-        std_dev = math.sqrt(s/self.N)
+        f_list = [v.f for v in self.vertices]
+        mean = sum(f_list)/(len(f_list))
+        ss = sum([(v-mean)**2 for v in f_list])
+        std_dev = math.sqrt(ss/(len(f_list)-1))
         return mean, std_dev
 
     def centroid(self, exclude=-1):
@@ -228,35 +194,39 @@ class NMSimplex:
         Returns the centroid of all vertices excluding the one specified.
         """
         xmid = numpy.array([0.0]*self.N)
+        count = 0
         for i in range(self.N + 1):
             if i == exclude: continue
-            xmid += self.vertex_list[i]
-        xmid /= self.N
+            xmid += self.vertices[i].x
+            count += 1
+        xmid /= count
         return xmid
 
     def contract_about_one_point(self, i_con):
         """
         Contract the simplex about the vertex i_con.
         """
-        p_con = self.vertex_list[i_con]
+        p_con = self.vertices[i_con].x
         for i in range(self.N + 1):
             if i == i_con: continue
-            p = 0.5*self.vertex_list[i] + 0.5*p_con
-            self.f_list[i] = self.f(p)
+            p = 0.5*self.vertices[i].x + 0.5*p_con
+            self.vertces[i] = Vertex(p, self.f(p))
             self.nfe += 1
-            self.vertex_list[i] = p
+        self.vertices.sort(key=lambda v: v.f)
         return
 
     def test_for_minimum(self, i_min, delta):
         """
         Perturb the minimum vertex and check that it is a local minimum.
+
+        This is expensive, so we don't want to do it often.
         """
         is_minimum = True  # Assume it is true and test for failure.
-        f_min = self.f_list[i_min]
+        f_min = self.vertices[i_min].f
         for j in range(self.N):
-            # Check either side of the minimum, perturbing one
-            # coordinate at a time.
-            p = self.get_vertex(i_min)
+            # Check either side of the candidate minimum,
+            # perturbing one coordinate at a time.
+            p = self.vertices[i_min].x.copy()
             p[j] += self.dx[j] * delta
             f_p = self.f(p)
             self.nfe += 1
@@ -273,20 +243,19 @@ class NMSimplex:
 
     def take_a_step(self, Kreflect, Kextend, Kcontract):
         """
-        Try to move away from the worst point in the simplex.
+        Try to replace the worst point in the simplex.
 
-        The new point will be inserted into the simplex (in place).
         This is the core of the minimizer...
         """
-        i_low = self.lowest()
-        i_high = self.highest()
-        x_high = self.vertex_list[i_high]
-        f_high = self.f_list[i_high]
+        self.vertices.sort(key=lambda v: v.f)
+        i_high = len(self.vertices)-1
+        x_high = self.vertices[i_high].x.copy()
+        f_high = self.vertices[i_high].f
         # Centroid of simplex excluding worst point.
         x_mid = self.centroid(i_high)
         f_mid = self.f(x_mid)
         self.nfe += 1
-
+        #
         # First, try moving away from worst point by
         # reflection through centroid
         x_refl = (1.0+Kreflect)*x_mid - Kreflect*x_high
@@ -300,16 +269,16 @@ class NMSimplex:
             self.nfe += 1
             if f_ext < f_refl:
                 # Keep the extension because it's best.
-                self.replace_vertex(i_high, x_ext, f_ext)
+                self.vertices[i_high] = Vertex(x_ext, f_ext)
             else:
                 # Settle for the original reflection.
-                self.replace_vertex(i_high, x_refl, f_refl)
+                self.vertices[i_high] = Vertex(x_refl, f_refl)
         else:
             # The reflection is not going in the right direction, it seems.
             # See how many vertices are better than the reflected point.
             count = 0
             for i in range(self.N+1):
-                if self.f_list[i] > f_refl: count += 1
+                if self.vertices[i].f > f_refl: count += 1
             if count <= 1:
                 # Not too many points are higher than the original reflection.
                 # Try a contraction on the reflection-side of the centroid.
@@ -318,15 +287,16 @@ class NMSimplex:
                 self.nfe += 1
                 if f_con < f_high:
                     # At least we haven't gone uphill; accept.
-                    self.replace_vertex(i_high, x_con, f_con)
+                    self.vertices[i_high] = Vertex(x_con, f_con)
                 else:
                     # We have not been successful in taking a single step.
                     # Contract the simplex about the current lowest point.
-                    self.contract_about_one_point(i_low)
+                    self.contract_about_one_point(0)
             else:
                 # Retain the original reflection because there are many
                 # vertices with higher values of the objective function.
-                self.replace_vertex(i_high, x_refl, f_refl)
+                self.vertices[i_high] = Vertex(x_refl, f_refl)
+        #
         return
 
 #--------------------------------------------------------------------
