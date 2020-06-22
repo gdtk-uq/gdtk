@@ -34,6 +34,139 @@ Install notes for the LLVM D compiler (LDC) are
 available [here]({{< relref installing-ldc >}}).
 {{< /hint >}}
 
+## A 3-minute introduction to queue sytems
+HPC systems are shared access systems for multiple users.
+The compute jobs are controlled by a queueing system.
+Different queueing systems are installed on various clusters,
+but they tend to have some commonalities.
+Those commonalities are: a way to submit your jobs to the queue;
+a way to check on your jobs' status; and a way to remove
+a job from the queue or terminate it while it's running.
+
+In the clusters we use regularly, there are two queueing
+systems: PBS(/Pro) and SLURM.
+Here is a brief summary on how to interact with those systems.
+
+### Preparing a submission script
+Your compute job will run in batch mode on the cluster.
+What this means is that you prepare the instructions (ie. the list of commands you would type)
+ahead of time and place these in a text file.
+This is what we call the submission script.
+We also include some directions to the queue system itself in the submission script.
+So, there are two parts in a submission script:
+
+  1. Directives for the queue system. Each of these lines start with `#` symbol
+     and a phrase associated with the particular system. On PBS, use `#PBS`.
+     On SLURM, use `#SBATCH`.
+  2. Commands to launch your compute job. These are the commands as you would
+     actually type them if running your job interactively at a terminal.
+
+{{< hint info >}}
+We need to add a caveat on that last statement.
+You do type commands as you would at the terminal to start your job,
+but remember your job is running in batch mode and you won't see its
+output or error messages.
+For this reason, it's common to redirect that output with the stdout redirect `>`
+and stderr redirect `2>`.
+You will find this in the examples below.
+{{< /hint >}}
+
+Here is an example script to give those points above some concreteness.
+
+
+    #!/bin/bash
+    #SBATCH --job-name=my-MPI-job
+    #SBATCH --nodes=1
+    #SBATCH --ntasks=24
+
+    e4shared --job=myJob --run  > LOGFILE 2> ERRFILE
+
+The first line sets our shell.
+The next three lines are directives for the SLURM queue manager.
+We won't explain them here because they are specific to each HPC cluster.
+Here, we are just emphasising the general layout of a submission script.
+There is one command in this script: a command to launch Eilmer.
+Note the stdout is directed to a file called `LOGFILE` and
+stderr to `ERRFILE`.
+
+Save your text file submission script.
+The extension on the script doesn't matter.
+I usually save PBS scripts with a `.qsub` extension
+and SLURM scripts with a `.sbatch` extension.
+The reason is related to submission: those extensions remind we
+which queue system I prepared my job for.
+
+### Submitting a job
+
+After saving your submission script into a file,
+you are ready to submit this to the queue system.
+The submission command in PBS is `qsub`.
+In SLURM, use `sbatch` to submit a job.
+This typed at the command prompt on the login node of a cluster.
+For example, assuming a PBS system and submission script
+called `run-my-job.qsub`, type:
+
+    qsub run-my-job.qsub
+
+The system will return to you a job number.
+
+### Checking job status
+Your job may not launch instantly.
+In fact, it might be several hours before your job starts.
+To check the job's status (or multiple jobs, if you have launched multiples),
+use the queue status command.
+On PBS, use `qstat`.
+On SLURM, use `squeue`.
+
+### Removing a job
+If your job runs successfully to completion, you don't need to do anything.
+The job simply terminates and leaves output in your working directory.
+
+Occasionally, you might detect an error in your script or 
+you might have changed your mind about parameters in your job.
+You will need a way to remove your job from either the queue,
+or running on the cluster.
+Here is where your job number comes in handy.
+You can remove a job using the appropriate command followed
+by your job number.
+On PBS, delete a job using `qdel`.
+On SLURM, cancel a job using `scancel`.
+
+This example shows what to type to remove a job with a
+job id `3465` on a SLURM system:
+
+    scancel 3465
+   
+{{< hint warning >}}
+As tempting as it might be to remove others' jobs so your
+job gets on faster, these commands won't let you do that.
+You can only remove your jobs from the queue.
+{{< /hint >}}
+
+### Summary of commands and where to find more information
+
+There are several more commands available to interact
+with a queue system.
+However, the main three you will need are: a command to submit a job;
+a command to check status; and a command to remove a job if you need.
+These are summarised here.
+
+ | Action           | `PBS`              | `SLURM`                |
+ |------------------|--------------------|------------------------|
+ | submit a job     | `qsub my-job.qsub` | `sbatch my-job.sbatch` |
+ | check job status | `qstat`            | `squeue`               |
+ | remove a job     | `qdel 3654.pbs`    | `scancel 3654`         |
+
+There is more information that is specific to each of the clusters
+in the sections below.
+You should consult the user guides for specific clusters for hints
+on the queue submission.
+You can also use `man` to find out the full list of options
+available on these queue commands.
+What I've introduced here is just their very basic usage.
+
+
+
 ## Goliath: EAIT Faculty Cluster
 
 *Hardware:* Dell servers, Intel CPUs, 24-cores per node
