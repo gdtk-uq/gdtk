@@ -392,9 +392,8 @@ void integrate_in_time()
             // For reporting wall-clock time, convert with precision of milliseconds.
             auto elapsed_ms = (Clock.currTime() - sim_data.wall_clock_start).total!"msecs"();
             double elapsed_s = to!double(elapsed_ms)/1000;
-            // [TODO] make a better estimate for non-zero starting sim times.
-            double WCtFT = (sim_data.sim_time > 0.0) ?
-                elapsed_s*(L1dConfig.max_time-sim_data.sim_time)/sim_data.sim_time : 0.0;
+            double WCtFT = ((sim_data.sim_time > 0.0) && (sim_data.step > 0)) ?
+                elapsed_s*(L1dConfig.max_time-sim_data.sim_time)/sim_data.dt_global/sim_data.step : 0.0;
             double WCtMS = (sim_data.step > 0) ?
                 (elapsed_s*(L1dConfig.max_step-sim_data.step))/sim_data.step : 0.0;
             writefln("Step=%d t=%.3e dt=%.3e cfl=%.3f WC=%.1f WCtFT=%.1f WCtMS=%.1f",
