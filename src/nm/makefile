@@ -201,4 +201,4 @@ gaussquad_demo: gaussquad_demo.d gaussquad.d complex.d
 	$(DMD) -g gaussquad_demo.d gaussquad.d complex.d
 
 bbla_demo: bbla_demo.d bbla.d complex.d
-	$(DMD) -g bbla_demo.d bbla.d complex.d
+	$(DMD) -g -dip1008 bbla_demo.d bbla.d complex.d

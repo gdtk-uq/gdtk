@@ -1,7 +1,7 @@
 /** nelmin_demo.d
  *
  * Try out the Nelder-Mead Simplex optimizer.
- * 
+ *
  * Author: Peter J
  * Version: 2014-06-14, Adapted from nelmin_test.cxx
  */
@@ -14,13 +14,13 @@ import nm.number;
 import nm.nelmin;
 
 /** Test objective function 1.
- *  x is expected to be a list of ccordinates.
+ *  x is expected to be a list of coordinates.
  *  Returns a single float value.
  */
 number testFunction1(number[] x)
 {
     number sum = 0.0;
-    foreach (elem; x) sum += (elem - 1.0) * (elem - 1.0); 
+    foreach (elem; x) sum += (elem - 1.0) * (elem - 1.0);
     return sum;
 }
 
@@ -32,21 +32,21 @@ number testFunction2(number[] x)
     if ( (x1 * x1 + x2 * x2) > 1.0 ) {
         return to!number(1.0e38);
     } else {
-        number yp = 53.69 + 7.26 * x1 - 10.33 * x2 + 7.22 * x1 * x1 
+        number yp = 53.69 + 7.26 * x1 - 10.33 * x2 + 7.22 * x1 * x1
             + 6.43 * x2 * x2 + 11.36 * x1 * x2;
-        number ys = 82.17 - 1.01 * x1 - 8.61 * x2 + 1.40 * x1 * x1 
+        number ys = 82.17 - 1.01 * x1 - 8.61 * x2 + 1.40 * x1 * x1
             - 8.76 * x2 * x2 - 7.20 * x1 * x2;
         return -yp + fabs(ys - 87.8);
     }
 }
- 
+
 // Test objective function 3.
 // Example 3.5 from Olsson and Nelson; least-squares.
 number testFunction3(number[] z)
 {
     double[] x = [0.25, 0.50, 1.00, 1.70, 2.00, 4.00];
     double[] y = [0.25, 0.40, 0.60, 0.58, 0.54, 0.27];
-    number a1 = z[0]; number a2 = z[1]; 
+    number a1 = z[0]; number a2 = z[1];
     number alpha1 = z[2]; number alpha2 = z[3];
     number sum_residuals = 0.0;
     foreach (i; 0 .. 6) {
@@ -57,7 +57,7 @@ number testFunction3(number[] z)
     }
     return sum_residuals;
 }
-   
+
 // -------------------------------------------------------------------
 
 void main() {

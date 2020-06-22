@@ -1,9 +1,9 @@
 /** nelmin.d
  *
  * Nelder-Mead simplex minimization of a nonlinear (multivariate) function.
- * 
+ *
  * Author: Peter J.
- * Version: 2014-06-14 adapted from the C++ version 
+ * Version: 2014-06-14 adapted from the C++ version
  *
  * The C++ version had been adpated from the Python version in Jan 2006.
  * The Python code had been adapted from the C-coded nelmin.c which was
@@ -23,7 +23,7 @@
  *    D.M. Olsson and L.S. Nelson (1975)
  *    The Nelder-Mead Simplex procedure for function minimization.
  *    Technometrics, Volume 17 No. 1, pp 45-51.
- *   
+ *
  * For a fairly recent and popular incarnation of this minimizer,
  * see the amoeba function in the famous "Numerical Recipes" text.
  * The programming interface is via the minimize() function; see below.
@@ -63,13 +63,13 @@ import nm.complex;
  *     n_fe      : the number of function evaluations and
  *     n_restart : the number of restarts (with scale reduction).
  */
-bool minimize(alias f, T)(ref T[] x, 
-                          out T f_min, 
-                          out int n_fe, 
+bool minimize(alias f, T)(ref T[] x,
+                          out T f_min,
+                          out int n_fe,
                           out int n_restart,
-                          T[] dx, 
-                          in double tol=1.0e-6, 
-                          in int max_fe=300, 
+                          T[] dx,
+                          in double tol=1.0e-6,
+                          in int max_fe=300,
                           in int n_check=20,
                           in double delta=0.001,
                           in double Kreflect=1.0,
@@ -105,7 +105,7 @@ bool minimize(alias f, T)(ref T[] x,
     // Utility functions for dealing with the simplex.
 
     // Returns the index of the lowest vertex, excluding the one specified.
-    int lowest(int exclude=-1) 
+    int lowest(int exclude=-1)
     {
         int indx;
         T lowest_f_value;
@@ -122,7 +122,7 @@ bool minimize(alias f, T)(ref T[] x,
     }
 
     // Returns the index of the highest vertex, excluding the one specified.
-    int highest(int exclude=-1) 
+    int highest(int exclude=-1)
     {
         int indx;
         T highest_f_value;
@@ -139,7 +139,7 @@ bool minimize(alias f, T)(ref T[] x,
     }
 
     // Returns the standard deviation of the vertex fn values.
-    T std_dev() 
+    T std_dev()
     {
         int i;
         T sum = 0.0;
@@ -182,7 +182,7 @@ bool minimize(alias f, T)(ref T[] x,
         return xmid;
     }
 
-    // Contract the simplex about the vertex i_con.    
+    // Contract the simplex about the vertex i_con.
     void contract_about_one_point(int i_con)
     {
         T[] p_con = vertex_list[i_con].dup;
