@@ -57,12 +57,20 @@ convergence-flag= True
 number-of-fn-evaluations= 86
 number-of-restarts= 0
 ---------------------------------------------------
-test 3: Example 3.5 in Olsson and Nelson, nonlinear least-squares
+test 3: Example 3.5 in Olsson and Nelson, nonlinear least-squares, P=1
 f(1.801, -1.842, -0.463, -1.205)=0.0009
 x= [ 1.80077733 -1.84149763 -0.46335921 -1.20518406]
 fx= 0.000908952987659
 convergence-flag= True
 number-of-fn-evaluations= 547
+number-of-restarts= 0
+---------------------------------------------------
+test 4: Example 3.5 in Olsson and Nelson, nonlinear least-squares, P=2
+f(1.801, -1.842, -0.463, -1.205)=0.0009
+x= [ 1.80105393 -1.84177191 -0.46338763 -1.20507747]
+fx= 0.000908952822531
+convergence-flag= True
+number-of-fn-evaluations= 503
 number-of-restarts= 0
 ---------------------------------------------------
 Done.
@@ -104,17 +112,18 @@ def minimize(f, x, dx=None, tol=1.0e-6, P=1,
         [4] the number of restarts (with scale reduction)
     """
     assert callable(f), "A function was expected for f."
-    assert P==1, "[TODO] Not yet parallel."
     converged = False
     if dx is None: dx = numpy.array([0.1]*len(x))
     smplx = NMSimplex(x, dx, f, P)
     while (not converged) and (smplx.nfe < maxfe):
         # Take some steps and then check for convergence.
-        for i in range(n_check):
+        for istep in range(n_check):
             smplx.vertices.sort(key=lambda v: v.f)
-            i_high = smplx.N
-            success = smplx.replace_vertex(i_high, Kreflect, Kextend, Kcontract)
-            if not success:
+            success = []
+            for i in range(smplx.P):
+                i_high = smplx.N - i
+                success.append(smplx.replace_vertex(i_high, Kreflect, Kextend, Kcontract))
+            if not any(success):
                 # Contract the simplex about the current lowest point.
                 smplx.contract_about_zero_point()
         # Pick out the current best vertex.
@@ -374,7 +383,7 @@ if __name__ == '__main__':
     x, fx, conv_flag, nfe, nres = minimize(test_fun_2,
                                            [0.0, 0.0],
                                            [0.5, 0.5],
-                                           1.0e-4)
+                                           tol=1.0e-4)
     print("x=", x)
     print("fx=", fx)
     print("convergence-flag=", conv_flag)
@@ -382,12 +391,25 @@ if __name__ == '__main__':
     print("number-of-restarts=", nres)
 
     print("---------------------------------------------------")
-    print("test 3: Example 3.5 in Olsson and Nelson, nonlinear least-squares")
+    print("test 3: Example 3.5 in Olsson and Nelson, nonlinear least-squares, P=1")
     print("f(1.801, -1.842, -0.463, -1.205)=0.0009")
     x, fx, conv_flag, nfe, nres = minimize(test_fun_3,
                                            [1.0, 1.0, -0.5, -2.5],
                                            [0.1, 0.1, 0.1, 0.1],
-                                           1.0e-9, maxfe=800)
+                                           tol=1.0e-9, maxfe=800)
+    print("x=", x)
+    print("fx=", fx)
+    print("convergence-flag=", conv_flag)
+    print("number-of-fn-evaluations=", nfe)
+    print("number-of-restarts=", nres)
+
+    print("---------------------------------------------------")
+    print("test 4: Example 3.5 in Olsson and Nelson, nonlinear least-squares, P=2")
+    print("f(1.801, -1.842, -0.463, -1.205)=0.0009")
+    x, fx, conv_flag, nfe, nres = minimize(test_fun_3,
+                                           [1.0, 1.0, -0.5, -2.5],
+                                           [0.1, 0.1, 0.1, 0.1],
+                                           tol=1.0e-9, P=2, maxfe=800)
     print("x=", x)
     print("fx=", fx)
     print("convergence-flag=", conv_flag)
