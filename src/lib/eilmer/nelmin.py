@@ -14,7 +14,14 @@ from the papers:
     Algorithm AS47. Function minimization using a simplex algorithm.
     Applied Statistics, Volume 20, pp 338-345.
 
-and some examples are in:
+For the 2020 update, we make some of the stepping closer to
+the description given in the paper:
+
+    Donghoon Lee and Matthew Wiswall (2007)
+    A parallel implementation of the simplec function minimization routine.
+    Computational Economics 30:171-187
+
+Some examples are in:
 
    D.M. Olsson and L.S. Nelson (1975)
    The Nelder-Mead Simplex procedure for function minimization.
@@ -30,34 +37,35 @@ The programming interface is via the minimize() function; see below.
    07-Jan-04 Python2 flavour for the cfcfd project.
    2020-06-22 Port to Python3 for the DGD project.
 
+
 Example transcript::
 
-    $ python ~/e3bin/cfpylib/nm/nelmin.py
-    Begin nelmin self-test...
-    ---------------------------------------------------
-    test 1: simple quadratic with zero at (1,1,...)
-    x= [1.0000000651818255, 1.000000021516589, 0.9999999925111813]
-    fx= 4.76771637998e-15
-    convergence-flag= 0
-    number-of-fn-evaluations= 300
-    number-of-restarts= 3
-    ---------------------------------------------------
-    test 2: Example 3.3 in Olsson and Nelson f(0.811,-0.585)=-67.1
-    x= [0.8112948625421268, -0.5846355980866065]
-    fx= -67.1077410608
-    convergence-flag= 1
-    number-of-fn-evaluations= 127
-    number-of-restarts= 0
-    ---------------------------------------------------
-    test 3: Example 3.5 in Olsson and Nelson, nonlinear least-squares
-    f(1.801, -1.842, -0.463, -1.205)=0.0009
-    x= [1.8010249070374442, -1.8417283432511073, -0.46337704853342615, -1.205053720578973]
-    fx= 0.000908952916125
-    convergence-flag= 1
-    number-of-fn-evaluations= 618
-    number-of-restarts= 0
-    ---------------------------------------------------
-    Done.
+$ python3 nelmin.py
+Begin nelmin self-test...
+---------------------------------------------------
+test 1: simple quadratic with zero at (1,1,...)
+x= [ 0.99999785  0.99999637  0.99999891]
+fx= 1.89813169642e-11
+convergence-flag= True
+number-of-fn-evaluations= 385
+number-of-restarts= 5
+---------------------------------------------------
+test 2: Example 3.3 in Olsson and Nelson f(0.811,-0.585)=-67.1
+x= [ 0.81129486 -0.5846356 ]
+fx= -67.1077410608
+convergence-flag= True
+number-of-fn-evaluations= 86
+number-of-restarts= 0
+---------------------------------------------------
+test 3: Example 3.5 in Olsson and Nelson, nonlinear least-squares
+f(1.801, -1.842, -0.463, -1.205)=0.0009
+x= [ 1.80077733 -1.84149763 -0.46335921 -1.20518406]
+fx= 0.000908952987659
+convergence-flag= True
+number-of-fn-evaluations= 547
+number-of-restarts= 0
+---------------------------------------------------
+Done.
 """
 
 import math
@@ -66,7 +74,7 @@ import numpy
 #-----------------------------------------------------------------------
 # The public face of the minimizer...
 
-def minimize(f, x, dx=None, tol=1.0e-6,
+def minimize(f, x, dx=None, tol=1.0e-6, P=1,
              maxfe=300, n_check=20, delta=0.001,
              Kreflect=1.0, Kextend=2.0, Kcontract=0.5):
     """
@@ -79,6 +87,7 @@ def minimize(f, x, dx=None, tol=1.0e-6,
         and shape of the initial simplex.
     tol: the terminating limit for the standard-deviation
         of the simplex function values.
+    P: number of points to replace in parallel, each step.
     maxfe: maximum number of function evaluations that we will allow
     n_check: number of steps between convergence checks
     delta: magnitude of the perturbations for checking a local minimum
@@ -95,14 +104,19 @@ def minimize(f, x, dx=None, tol=1.0e-6,
         [4] the number of restarts (with scale reduction)
     """
     assert callable(f), "A function was expected for f."
+    assert P==1, "[TODO] Not yet parallel."
     converged = False
-    N = len(x)
-    if dx is None: dx = numpy.array([0.1]*N)
-    smplx = NMSimplex(x, dx, f)
+    if dx is None: dx = numpy.array([0.1]*len(x))
+    smplx = NMSimplex(x, dx, f, P)
     while (not converged) and (smplx.nfe < maxfe):
         # Take some steps and then check for convergence.
         for i in range(n_check):
-            smplx.take_a_step(Kreflect, Kextend, Kcontract)
+            smplx.vertices.sort(key=lambda v: v.f)
+            i_high = smplx.N
+            success = smplx.replace_vertex(i_high, Kreflect, Kextend, Kcontract)
+            if not success:
+                # Contract the simplex about the current lowest point.
+                smplx.contract_about_zero_point()
         # Pick out the current best vertex.
         smplx.vertices.sort(key=lambda v: v.f)
         x_best = smplx.vertices[0].x.copy()
@@ -141,40 +155,41 @@ class NMSimplex:
     In an N-dimensional problem, each vertex is a list of N coordinates
     and the simplex consists of N+1 vertices.
     """
-    def __init__(self, x, dx, f):
+    def __init__(self, x, dx, f, P):
         """
         Initialize the simplex.
 
         Set up the vertices about the user-specified vertex, x,
         and the set of step-sizes dx.
         f is a user-specified objective function f(x).
+        P is the number of points to be replaced in parallel, each step.
         """
         self.N = len(x)
+        self.P = P
         self.vertices = []
-        self.dx = dx.copy()
+        x = numpy.array(x) # since it may be a list or array
+        self.dx = numpy.array(dx)
         self.f = f
         self.nfe = 0
         self.nrestarts = 0
         for i in range(self.N + 1):
-            p = x.copy()
-            if i >= 1: p[i-1] += dx[i-1]
-            self.vertices.append(Vertex(p, self.f(p)))
-            self.nfe += 1
+            x_new = x.copy()
+            if i >= 1: x_new[i-1] += dx[i-1]
+            self.vertices.append(Vertex(x_new, self.f(x_new))); self.nfe += 1
         self.vertices.sort(key=lambda v: v.f)
 
     def rescale(self, ratio):
         """
-        Rebuild the simplex about the lowest point.
+        Rebuild the simplex about the lowest point for a restart.
         """
         self.vertices.sort(key=lambda v: v.f)
         self.dx *= ratio
         vtx = self.vertices[0]
         self.vertices = [vtx,]
         for i in range(self.N):
-            p = vtx.x.copy()
-            p[i] += self.dx[i]
-            self.vertices.append(Vertex(p, self.f(p)))
-            self.nfe += 1
+            x_new = vtx.x.copy()
+            x_new[i] += self.dx[i]
+            self.vertices.append(Vertex(x_new, self.f(x_new))); self.nfe += 1
         self.nrestarts += 1
         self.vertices.sort(key=lambda v: v.f)
         return
@@ -189,29 +204,25 @@ class NMSimplex:
         std_dev = math.sqrt(ss/(len(f_list)-1))
         return mean, std_dev
 
-    def centroid(self, exclude=-1):
+    def centroid(self, imax):
         """
-        Returns the centroid of all vertices excluding the one specified.
+        Returns the centroid of all vertices up to and including imax.
         """
         xmid = numpy.array([0.0]*self.N)
-        count = 0
-        for i in range(self.N + 1):
-            if i == exclude: continue
+        imax = min(imax, self.N)
+        for i in range(imax+1):
             xmid += self.vertices[i].x
-            count += 1
-        xmid /= count
+        xmid /= (imax+1)
         return xmid
 
-    def contract_about_one_point(self, i_con):
+    def contract_about_zero_point(self):
         """
         Contract the simplex about the vertex i_con.
         """
-        p_con = self.vertices[i_con].x
-        for i in range(self.N + 1):
-            if i == i_con: continue
-            p = 0.5*self.vertices[i].x + 0.5*p_con
-            self.vertces[i] = Vertex(p, self.f(p))
-            self.nfe += 1
+        x_con = self.vertices[0].x
+        for i in range(1, self.N + 1):
+            x_new = 0.5*self.vertices[i].x + 0.5*x_con
+            self.vertices[i] = Vertex(x_new, self.f(x_new)); self.nfe += 1
         self.vertices.sort(key=lambda v: v.f)
         return
 
@@ -223,81 +234,76 @@ class NMSimplex:
         """
         is_minimum = True  # Assume it is true and test for failure.
         f_min = self.vertices[i_min].f
+        # [TODO] We can do all of these samples in parallel.
         for j in range(self.N):
             # Check either side of the candidate minimum,
             # perturbing one coordinate at a time.
-            p = self.vertices[i_min].x.copy()
-            p[j] += self.dx[j] * delta
-            f_p = self.f(p)
-            self.nfe += 1
-            if f_p < f_min:
+            x_new = self.vertices[i_min].x.copy()
+            x_new[j] += self.dx[j] * delta
+            f_new = self.f(x_new); self.nfe += 1
+            if f_new < f_min:
                 is_minimum = False
                 break
-            p[j] -= self.dx[j] * delta * 2
-            f_p = self.f(p)
-            self.nfe += 1
-            if f_p < f_min:
+            x_new[j] -= self.dx[j] * delta * 2
+            f_new = self.f(x_new); self.nfe += 1
+            if f_new < f_min:
                 is_minimum = False
                 break
         return is_minimum
 
-    def take_a_step(self, Kreflect, Kextend, Kcontract):
+    def replace_vertex(self, i, Kreflect, Kextend, Kcontract):
         """
-        Try to replace the worst point in the simplex.
+        Try to replace the worst point, i, in the simplex.
 
-        This is the core of the minimizer...
+        Returns True is there was a successful replacement.
         """
-        self.vertices.sort(key=lambda v: v.f)
-        i_high = len(self.vertices)-1
-        x_high = self.vertices[i_high].x.copy()
-        f_high = self.vertices[i_high].f
-        # Centroid of simplex excluding worst point.
-        x_mid = self.centroid(i_high)
-        f_mid = self.f(x_mid)
-        self.nfe += 1
+        f_min = self.vertices[0].f
+        assert i > (self.N-self.P), ("i=%d, seems not to be in the high points" % i)
+        x_high = self.vertices[i].x.copy()
+        f_high = self.vertices[i].f
+        # Centroid of simplex excluding point(s) that we are placing.
+        x_mid = self.centroid(self.N-self.P)
         #
         # First, try moving away from worst point by
         # reflection through centroid
-        x_refl = (1.0+Kreflect)*x_mid - Kreflect*x_high
-        f_refl = self.f(x_refl)
-        self.nfe += 1
-        if f_refl < f_mid:
+        x_refl = x_mid + Kreflect*(x_mid - x_high)
+        f_refl = self.f(x_refl); self.nfe += 1
+        if f_refl < f_min:
             # The reflection through the centroid is good,
             # try to extend in the same direction.
-            x_ext = Kextend*x_refl + (1.0-Kextend)*x_mid
-            f_ext = self.f(x_ext)
-            self.nfe += 1
+            x_ext = x_mid + Kextend*(x_refl - x_mid)
+            f_ext = self.f(x_ext); self.nfe += 1
             if f_ext < f_refl:
                 # Keep the extension because it's best.
-                self.vertices[i_high] = Vertex(x_ext, f_ext)
+                self.vertices[i] = Vertex(x_ext, f_ext)
+                return True
             else:
                 # Settle for the original reflection.
-                self.vertices[i_high] = Vertex(x_refl, f_refl)
+                self.vertices[i] = Vertex(x_refl, f_refl)
+                return True
         else:
             # The reflection is not going in the right direction, it seems.
-            # See how many vertices are better than the reflected point.
+            # See how many vertices are worse than the reflected point.
             count = 0
-            for i in range(self.N+1):
-                if self.vertices[i].f > f_refl: count += 1
+            for j in range(self.N+1):
+                if self.vertices[j].f > f_refl: count += 1
             if count <= 1:
                 # Not too many points are higher than the original reflection.
                 # Try a contraction on the reflection-side of the centroid.
                 x_con = (1.0-Kcontract)*x_mid + Kcontract*x_high
-                f_con = self.f(x_con)
-                self.nfe += 1
+                f_con = self.f(x_con); self.nfe += 1
                 if f_con < f_high:
                     # At least we haven't gone uphill; accept.
-                    self.vertices[i_high] = Vertex(x_con, f_con)
-                else:
-                    # We have not been successful in taking a single step.
-                    # Contract the simplex about the current lowest point.
-                    self.contract_about_one_point(0)
+                    self.vertices[i] = Vertex(x_con, f_con)
+                    return True
             else:
                 # Retain the original reflection because there are many
-                # vertices with higher values of the objective function.
-                self.vertices[i_high] = Vertex(x_refl, f_refl)
+                # original vertices with higher values of the objective function.
+                self.vertices[i] = Vertex(x_refl, f_refl)
+                return True
         #
-        return
+        # If we arrive here, we have not replaced the highest point.
+        return False
 
 #--------------------------------------------------------------------
 
@@ -356,7 +362,7 @@ if __name__ == '__main__':
 
     print("---------------------------------------------------")
     print("test 1: simple quadratic with zero at (1,1,...)")
-    x, fx, conv_flag, nfe, nres = minimize(test_fun_1, numpy.array([0.0, 0.0, 0.0]))
+    x, fx, conv_flag, nfe, nres = minimize(test_fun_1, [0.0, 0.0, 0.0])
     print("x=", x)
     print("fx=", fx)
     print("convergence-flag=", conv_flag)
@@ -366,8 +372,8 @@ if __name__ == '__main__':
     print("---------------------------------------------------")
     print("test 2: Example 3.3 in Olsson and Nelson f(0.811,-0.585)=-67.1")
     x, fx, conv_flag, nfe, nres = minimize(test_fun_2,
-                                           numpy.array([0.0, 0.0]),
-                                           numpy.array([0.5, 0.5]),
+                                           [0.0, 0.0],
+                                           [0.5, 0.5],
                                            1.0e-4)
     print("x=", x)
     print("fx=", fx)
@@ -379,9 +385,9 @@ if __name__ == '__main__':
     print("test 3: Example 3.5 in Olsson and Nelson, nonlinear least-squares")
     print("f(1.801, -1.842, -0.463, -1.205)=0.0009")
     x, fx, conv_flag, nfe, nres = minimize(test_fun_3,
-                                           numpy.array([1.0, 1.0, -0.5, -2.5]),
-                                           numpy.array([0.1, 0.1, 0.1, 0.1]),
-                                           1.0e-9, 800)
+                                           [1.0, 1.0, -0.5, -2.5],
+                                           [0.1, 0.1, 0.1, 0.1],
+                                           1.0e-9, maxfe=800)
     print("x=", x)
     print("fx=", fx)
     print("convergence-flag=", conv_flag)
