@@ -60,6 +60,7 @@ Matrix!number Q1;
 struct RestartInfo {
     double pseudoSimTime;
     double dt;
+    double cfl;
     int step;
     double globalResidual;
     ConservedQuantities residuals;
@@ -93,16 +94,17 @@ void extractRestartInfoFromTimesFile(string jobName, ref RestartInfo[] times)
             auto idx = to!int(tokens[0]);
             restartInfo.pseudoSimTime = to!double(tokens[1]);
             restartInfo.dt = to!double(tokens[2]);
-            restartInfo.step = to!int(tokens[3]);
-            restartInfo.globalResidual = to!double(tokens[4]);
-            restartInfo.residuals.mass = to!double(tokens[5+MASS]);
-            restartInfo.residuals.momentum.refx = to!double(tokens[5+X_MOM]);
-            restartInfo.residuals.momentum.refy = to!double(tokens[5+Y_MOM]);
+            restartInfo.cfl = to!double(tokens[3]);
+            restartInfo.step = to!int(tokens[4]);
+            restartInfo.globalResidual = to!double(tokens[5]);
+            restartInfo.residuals.mass = to!double(tokens[6+MASS]);
+            restartInfo.residuals.momentum.refx = to!double(tokens[6+X_MOM]);
+            restartInfo.residuals.momentum.refy = to!double(tokens[6+Y_MOM]);
             if ( GlobalConfig.dimensions == 3 ) 
-                restartInfo.residuals.momentum.refz = to!double(tokens[5+Z_MOM]);
-            restartInfo.residuals.total_energy = to!double(tokens[5+TOT_ENERGY]);
+                restartInfo.residuals.momentum.refz = to!double(tokens[6+Z_MOM]);
+            restartInfo.residuals.total_energy = to!double(tokens[6+TOT_ENERGY]);
             foreach(it; 0 .. GlobalConfig.turb_model.nturb) {
-                restartInfo.residuals.rhoturb[it] = to!double(tokens[5+TKE+it]);
+                restartInfo.residuals.rhoturb[it] = to!double(tokens[6+TKE+it]);
             }
             times ~= restartInfo;
         }
@@ -242,7 +244,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         foreach ( preStep; -nPreSteps .. 0 ) {
             foreach (attempt; 0 .. maxNumberAttempts) {
                 try {
-                    rpcGMRES_solve(preStep, pseudoSimTime, dt, eta0, sigma0, usePreconditioner, normOld, nRestarts);
+                    rpcGMRES_solve(preStep, pseudoSimTime, dt, eta0, sigma0, usePreconditioner, normOld, nRestarts, startStep);
                 }
                 catch (FlowSolverException e) {
                     version(mpi_parallel) {
@@ -452,14 +454,16 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         startStep = 1;
         restartInfo.pseudoSimTime = 0.0;
         restartInfo.dt = dt;
+        restartInfo.cfl = cfl;
         restartInfo.step = 0;
         restartInfo.globalResidual = normRef;
         restartInfo.residuals = maxResiduals;
         times ~= restartInfo;
     }
-    else {
+    if ( snapshotStart > 0 && GlobalConfig.is_master_task ) {
         restartInfo = times[snapshotStart];
         dt = restartInfo.dt;
+        cfl = restartInfo.cfl;
         startStep = restartInfo.step + 1;
         pseudoSimTime = restartInfo.pseudoSimTime;
         writefln("Restarting steps from step= %d", startStep);
@@ -538,7 +542,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         foreach (attempt; 0 .. maxNumberAttempts) {
             failedAttempt = 0;
             try {
-                rpcGMRES_solve(step, pseudoSimTime, dt, eta, sigma, usePreconditioner, normNew, nRestarts);
+                rpcGMRES_solve(step, pseudoSimTime, dt, eta, sigma, usePreconditioner, normNew, nRestarts, startStep);
             }
             catch (FlowSolverException e) {
                 writefln("Failed when attempting GMRES solve in main steps.");
@@ -682,7 +686,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                               normNew, normNew/normRef,
                               currResiduals.mass.re, currResiduals.mass.re/maxResiduals.mass.re,
                               currResiduals.momentum.x.re, currResiduals.momentum.x.re/maxResiduals.momentum.x.re,
-                              currResiduals.momentum.y.re, currResiduals.momentum.y/maxResiduals.momentum.y.re);
+                              currResiduals.momentum.y.re, currResiduals.momentum.y.re/maxResiduals.momentum.y.re);
                 if ( GlobalConfig.dimensions == 3 )
                     fResid.writef("%20.16e  %20.16e  ", currResiduals.momentum.z.re, currResiduals.momentum.z.re/maxResiduals.momentum.z.re);
                 fResid.writef("%20.16e  %20.16e  ",
@@ -758,6 +762,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 }
                 restartInfo.pseudoSimTime = pseudoSimTime;
                 restartInfo.dt = dt;
+                restartInfo.cfl = cfl;
                 restartInfo.step = step;
                 restartInfo.globalResidual = normNew;
                 restartInfo.residuals = currResiduals;
@@ -781,6 +786,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 remove(times, 1);
                 restartInfo.pseudoSimTime = pseudoSimTime;
                 restartInfo.dt = dt;
+                restartInfo.cfl = cfl;                
                 restartInfo.step = step;
                 restartInfo.globalResidual = normNew;
                 restartInfo.residuals = currResiduals;
@@ -1207,7 +1213,7 @@ foreach (blk; localFluidBlocks) `~norm2~` += blk.normAcc;
 }
 
 void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, double sigma, bool usePreconditioner,
-                    ref double residual, ref int nRestarts)
+                    ref double residual, ref int nRestarts, int startStep)
 {
     // Make a stack-local copy of conserved quantities info
     size_t nConserved = nConservedQuantities;
@@ -1477,7 +1483,10 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                     int n = blk.myConfig.sssOptions.frozenPreconditionerCount; //GlobalConfig.sssOptions.frozenPreconditionerCount;
                     // We compute the precondition matrix on the very first step after the start up steps
                     // We then only update the precondition matrix once per GMRES call on every nth flow solver step. 
-                    if (r == 0 && j == 0 && (step == blk.myConfig.sssOptions.startPreconditioning || step%n == 0 || step == blk.myConfig.sssOptions.nStartUpSteps+1))
+                    if (r == 0 && j == 0 && (step == blk.myConfig.sssOptions.startPreconditioning ||
+                                             step%n == 0 ||
+                                             step == startStep ||
+                                             step == blk.myConfig.sssOptions.nStartUpSteps+1))
                         sss_preconditioner(blk, nConserved, dt);
                     final switch (blk.myConfig.sssOptions.preconditionMatrixType) {
                         case PreconditionMatrixType.block_diagonal:
@@ -1841,21 +1850,21 @@ void rewrite_times_file(RestartInfo[] times)
     f.writeln("# tindx sim_time dt_global");
     foreach (i, rInfo; times) {
         if ( GlobalConfig.dimensions == 2 ) {
-            f.writef("%04d %.18e %.18e %d %.18e %.18e %.18e %.18e %.18e",
-                     i, rInfo.pseudoSimTime, rInfo.dt, rInfo.step,
-                     rInfo.globalResidual, rInfo.residuals.mass,
-                     rInfo.residuals.momentum.x, rInfo.residuals.momentum.y,
-                     rInfo.residuals.total_energy);
+            f.writef("%04d %.18e %.18e %.18e %d %.18e %.18e %.18e %.18e %.18e",
+                     i, rInfo.pseudoSimTime.re, rInfo.dt.re, rInfo.cfl.re, rInfo.step,
+                     rInfo.globalResidual.re, rInfo.residuals.mass.re,
+                     rInfo.residuals.momentum.x.re, rInfo.residuals.momentum.y.re,
+                     rInfo.residuals.total_energy.re);
         }
         else {
-            f.writef("%04d %.18e %.18e %d %.18e %.18e %.18e %.18e %.18e %.18e",
-                     i, rInfo.pseudoSimTime, rInfo.dt, rInfo.step,
-                     rInfo.globalResidual, rInfo.residuals.mass,
-                     rInfo.residuals.momentum.x, rInfo.residuals.momentum.y, rInfo.residuals.momentum.z,
-                     rInfo.residuals.total_energy);
+            f.writef("%04d %.18e %.18e %.18e %d %.18e %.18e %.18e %.18e %.18e %.18e",
+                     i, rInfo.pseudoSimTime.re, rInfo.dt.re, rInfo.cfl.re, rInfo.step,
+                     rInfo.globalResidual.re, rInfo.residuals.mass.re,
+                     rInfo.residuals.momentum.x.re, rInfo.residuals.momentum.y.re, rInfo.residuals.momentum.z.re,
+                     rInfo.residuals.total_energy.re);
         }
         foreach(it; 0 .. GlobalConfig.turb_model.nturb){
-            f.writef(" %.18e", rInfo.residuals.rhoturb[it]);
+            f.writef(" %.18e", rInfo.residuals.rhoturb[it].re);
         }
         f.write("\n");
     }
