@@ -10,6 +10,8 @@ simulation reaches either the final simulation time (`WCtFT`) or the maximum all
 number of steps (`WCtMS`).
 For a simple simulation of a transient flow, this is often sufficent.
 
+=== Viewing residuals
+
 For a simulation that is intended to progress toward a steady solution,
 you can monitor the residuals in the flow-field by specifying the `--report-residuals`
 command-line option when starting the simulation.
@@ -40,6 +42,8 @@ The essential lines from that script are shown here.
     plot residuals_file using "step":"L2" with lines
     pause period_seconds
   }
+
+=== (Lack of) Simulation progress
 
 For large MPI jobs, there is a risk that the part of the calculation will fail
 and leave other MPI tasks consuming compute resources while waiting for communication
