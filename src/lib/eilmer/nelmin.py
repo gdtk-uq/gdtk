@@ -31,113 +31,122 @@ For a fairly recent and popular incarnation of this minimizer,
 see the amoeba function in the famous "Numerical Recipes" text.
 The programming interface is via the minimize() function; see below.
 
-.. Author: PA Jacobs, School of Engineering, The University of Queensland
+Author:
+   PA Jacobs, School of Engineering, The University of Queensland
 
-.. Version:
-   07-Jan-04 Python2 flavour for the cfcfd project.
+Version:
+   2004-01-07 Python2 flavour for the cfcfd project.
    2020-06-22 Port to Python3 for the DGD project.
-
 
 Example transcript::
 
 $ python3 nelmin.py
 Begin nelmin self-test...
----------------------------------------------------
 test 1: simple quadratic with zero at (1,1,...)
-x= [ 0.99999785  0.99999637  0.99999891]
-fx= 1.89813169642e-11
-convergence-flag= True
-number-of-fn-evaluations= 385
-number-of-restarts= 5
----------------------------------------------------
+  x= [0.9999978545117707, 0.99999636750948351, 0.99999891224549198]
+  fx= 1.89813169642e-11
+  convergence-flag= True
+  number-of-fn-evaluations= 385
+  number-of-restarts= 5
+------------------------------------------------------------
 test 2: Example 3.3 in Olsson and Nelson f(0.811,-0.585)=-67.1
-x= [ 0.81129486 -0.5846356 ]
-fx= -67.1077410608
-convergence-flag= True
-number-of-fn-evaluations= 86
-number-of-restarts= 0
----------------------------------------------------
+  x= [0.81129486254212679, -0.58463559808660648]
+  fx= -67.1077410608
+  convergence-flag= True
+  number-of-fn-evaluations= 86
+  number-of-restarts= 0
+------------------------------------------------------------
 test 3: Example 3.5 in Olsson and Nelson, nonlinear least-squares, P=1
-f(1.801, -1.842, -0.463, -1.205)=0.0009
-x= [ 1.80077733 -1.84149763 -0.46335921 -1.20518406]
-fx= 0.000908952987659
-convergence-flag= True
-number-of-fn-evaluations= 547
-number-of-restarts= 0
----------------------------------------------------
+  f(1.801, -1.842, -0.463, -1.205)=0.0009
+  x= [1.8007773284762463, -1.8414976281967217, -0.46335920559222765, -1.2051840585794604]
+  fx= 0.000908952987659
+  convergence-flag= True
+  number-of-fn-evaluations= 547
+  number-of-restarts= 0
+------------------------------------------------------------
 test 4: Example 3.5 in Olsson and Nelson, nonlinear least-squares, P=2
-f(1.801, -1.842, -0.463, -1.205)=0.0009
-x= [ 1.80105393 -1.84177191 -0.46338763 -1.20507747]
-fx= 0.000908952822531
-convergence-flag= True
-number-of-fn-evaluations= 503
-number-of-restarts= 0
----------------------------------------------------
+  f(1.801, -1.842, -0.463, -1.205)=0.0009
+  x= [1.8010539316340544, -1.8417719106648769, -0.46338762974692316, -1.2050774716664778]
+  fx= 0.000908952822531
+  convergence-flag= True
+  number-of-fn-evaluations= 503
+  number-of-restarts= 0
+------------------------------------------------------------
 Done.
 """
 
 import math
 import numpy
+from collections import namedtuple
 
 #-----------------------------------------------------------------------
 # The public face of the minimizer...
 
-def minimize(f, x, dx=None, tol=1.0e-6, P=1,
-             maxfe=300, n_check=20, delta=0.001,
-             Kreflect=1.0, Kextend=2.0, Kcontract=0.5):
+def minimize(f, x, dx=None, options={}):
     """
     Locate a minimum of the objective function, f.
 
     f: user-specified function f(x)
     x: list of N coordinates
-    dx: list of N increments to apply to x when forming
-        the initial simplex.  Their magnitudes determine the size
-        and shape of the initial simplex.
-    tol: the terminating limit for the standard-deviation
-        of the simplex function values.
-    P: number of points to replace in parallel, each step.
-    maxfe: maximum number of function evaluations that we will allow
-    n_check: number of steps between convergence checks
-    delta: magnitude of the perturbations for checking a local minimum
-        and for the scale reduction when restarting
-    Kreflect:
-    Kextend:
-    Kcontract: coefficients for locating the new vertex
+    dx: optional list of N increments to apply to x when forming the initial simplex.
+        These increments determine the size and shape of the initial simplex.
+    options: a dictionary with entries
+        tol: (default 1.0e-6) the terminating limit for the standard-deviation
+            of the simplex function values.
+        P: (default 1) number of points to replace in parallel, each step.
+        maxfe: (default 300) maximum number of function evaluations that we will allow
+        n_check: (default 20) number of steps between convergence checks
+        delta: (default 0.001) magnitude of the perturbations for checking a local minimum
+            and for the scale reduction when restarting
+        Kreflect: (default 1.0)
+        Kextend: (default 2.0)
+        Kcontract: (default 0.5) coefficients for locating the new vertex
 
-    Returns a tuple consisting of::
-        [0] a list of coordinates for the best x location, corresponding to min(f(x)),
-        [1] the function value at that point,
-        [2] a flag to indicate if convergence was achieved
-        [3] the number of function evaluations and
-        [4] the number of restarts (with scale reduction)
+    Returns a namedtuple consisting of:
+        x, a list of coordinates for the best x location, corresponding to min(f(x)),
+        fun, the function value at that point,
+        success, a flag to indicate if convergence was achieved
+        nfe, the number of function evaluations and
+        nrestarts, the number of restarts (with scale reduction)
     """
+    # Check input parameters.
     assert callable(f), "A function was expected for f."
-    converged = False
     if dx is None: dx = numpy.array([0.1]*len(x))
-    smplx = NMSimplex(x, dx, f, P)
-    while (not converged) and (smplx.nfe < maxfe):
+    opts = {'tol':1.0e-6, 'P':1, 'maxfe':300, 'n_check':20, 'delta':0.001,
+            'Kreflect':1.0, 'Kextend':2.0, 'Kcontract':0.5}
+    for k in options.keys():
+        if k in opts.keys():
+            opts[k] = options[k]
+        else:
+            raise RuntimeError(f'option {k} is not available')
+    # Get to work.
+    converged = False
+    smplx = NMSimplex(x, dx, f, opts['P'])
+    while (not converged) and (smplx.nfe < opts['maxfe']):
         # Take some steps and then check for convergence.
-        for istep in range(n_check):
+        for istep in range(opts['n_check']):
             smplx.vertices.sort(key=lambda v: v.f)
             success = []
             for i in range(smplx.P):
                 i_high = smplx.N - i
-                success.append(smplx.replace_vertex(i_high, Kreflect, Kextend, Kcontract))
+                success.append(smplx.replace_vertex(i_high, opts['Kreflect'],
+                                                    opts['Kextend'], opts['Kcontract']))
             if not any(success):
                 # Contract the simplex about the current lowest point.
                 smplx.contract_about_zero_point()
         # Pick out the current best vertex.
         smplx.vertices.sort(key=lambda v: v.f)
-        x_best = smplx.vertices[0].x.copy()
+        x_best = list(smplx.vertices[0].x.copy())
         f_best = smplx.vertices[0].f
         # Check the scatter of vertex values to see if we are
         # close enough to call it quits.
         mean, stddev = smplx.f_statistics()
-        if stddev < tol:
+        if stddev < opts['tol']:
             # All of the points are close together but we need to test more carefully.
-            converged = smplx.test_for_minimum(0, delta)
-            if not converged: smplx.rescale(delta)
-    return x_best, f_best, converged, smplx.nfe, smplx.nrestarts
+            converged = smplx.test_for_minimum(0, opts['delta'])
+            if not converged: smplx.rescale(opts['delta'])
+    Result = namedtuple('Result', ['x', 'fun', 'success', 'nfe', 'nrestarts'])
+    return Result(x_best, f_best, converged, smplx.nfe, smplx.nrestarts)
 
 
 #-----------------------------------------------------------------------
@@ -368,53 +377,33 @@ def test_fun_3(z):
 
 if __name__ == '__main__':
     print("Begin nelmin self-test...")
-
-    print("---------------------------------------------------")
+    def pretty_print(r):
+        print("  x=", r.x)
+        print("  fx=", r.fun)
+        print("  convergence-flag=", r.success)
+        print("  number-of-fn-evaluations=", r.nfe)
+        print("  number-of-restarts=", r.nrestarts)
+        print(60*"-")
+        return
+    #
     print("test 1: simple quadratic with zero at (1,1,...)")
-    x, fx, conv_flag, nfe, nres = minimize(test_fun_1, [0.0, 0.0, 0.0])
-    print("x=", x)
-    print("fx=", fx)
-    print("convergence-flag=", conv_flag)
-    print("number-of-fn-evaluations=", nfe)
-    print("number-of-restarts=", nres)
-
-    print("---------------------------------------------------")
+    result = minimize(test_fun_1, [0.0, 0.0, 0.0])
+    pretty_print(result)
+    #
     print("test 2: Example 3.3 in Olsson and Nelson f(0.811,-0.585)=-67.1")
-    x, fx, conv_flag, nfe, nres = minimize(test_fun_2,
-                                           [0.0, 0.0],
-                                           [0.5, 0.5],
-                                           tol=1.0e-4)
-    print("x=", x)
-    print("fx=", fx)
-    print("convergence-flag=", conv_flag)
-    print("number-of-fn-evaluations=", nfe)
-    print("number-of-restarts=", nres)
-
-    print("---------------------------------------------------")
+    result = minimize(test_fun_2, [0.0, 0.0], [0.5, 0.5], options={'tol':1.0e-4})
+    pretty_print(result)
+    #
     print("test 3: Example 3.5 in Olsson and Nelson, nonlinear least-squares, P=1")
-    print("f(1.801, -1.842, -0.463, -1.205)=0.0009")
-    x, fx, conv_flag, nfe, nres = minimize(test_fun_3,
-                                           [1.0, 1.0, -0.5, -2.5],
-                                           [0.1, 0.1, 0.1, 0.1],
-                                           tol=1.0e-9, maxfe=800)
-    print("x=", x)
-    print("fx=", fx)
-    print("convergence-flag=", conv_flag)
-    print("number-of-fn-evaluations=", nfe)
-    print("number-of-restarts=", nres)
-
-    print("---------------------------------------------------")
+    print("  f(1.801, -1.842, -0.463, -1.205)=0.0009")
+    result = minimize(test_fun_3, [1.0, 1.0, -0.5, -2.5], [0.1, 0.1, 0.1, 0.1],
+                      options={'tol':1.0e-9, 'maxfe':800})
+    pretty_print(result)
+    #
     print("test 4: Example 3.5 in Olsson and Nelson, nonlinear least-squares, P=2")
-    print("f(1.801, -1.842, -0.463, -1.205)=0.0009")
-    x, fx, conv_flag, nfe, nres = minimize(test_fun_3,
-                                           [1.0, 1.0, -0.5, -2.5],
-                                           [0.1, 0.1, 0.1, 0.1],
-                                           tol=1.0e-9, P=2, maxfe=800)
-    print("x=", x)
-    print("fx=", fx)
-    print("convergence-flag=", conv_flag)
-    print("number-of-fn-evaluations=", nfe)
-    print("number-of-restarts=", nres)
-
-    print("---------------------------------------------------")
+    print("  f(1.801, -1.842, -0.463, -1.205)=0.0009")
+    result = minimize(test_fun_3, [1.0, 1.0, -0.5, -2.5], [0.1, 0.1, 0.1, 0.1],
+                      options={'tol':1.0e-9, 'P':2, 'maxfe':800})
+    pretty_print(result)
+    #
     print("Done.")
