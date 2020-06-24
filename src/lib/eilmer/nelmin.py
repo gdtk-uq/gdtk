@@ -37,17 +37,18 @@ Author:
 Version:
    2004-01-07 Python2 flavour for the cfcfd project.
    2020-06-22 Port to Python3 for the DGD project.
+   2020-06-25 Concurrent evaluation of the candidate points.
 
 Example transcript::
 
 $ python3 nelmin.py
 Begin nelmin self-test...
 test 1: simple quadratic with zero at (1,1,...)
-  x= [0.9999978545117707, 0.99999636750948351, 0.99999891224549198]
-  fx= 1.89813169642e-11
+  x= [0.99999759305115321, 0.99999586570882093, 0.99999901474880748]
+  fx= 2.38564862168e-11
   convergence-flag= True
-  number-of-fn-evaluations= 385
-  number-of-restarts= 5
+  number-of-fn-evaluations= 202
+  number-of-restarts= 2
 ------------------------------------------------------------
 test 2: Example 3.3 in Olsson and Nelson f(0.811,-0.585)=-67.1
   x= [0.81129486254212679, -0.58463559808660648]
@@ -56,20 +57,22 @@ test 2: Example 3.3 in Olsson and Nelson f(0.811,-0.585)=-67.1
   number-of-fn-evaluations= 86
   number-of-restarts= 0
 ------------------------------------------------------------
-test 3: Example 3.5 in Olsson and Nelson, nonlinear least-squares, P=1
+test 3: Example 3.5 in Olsson and Nelson, nonlinear least-squares, P=1, n_workers=1
   f(1.801, -1.842, -0.463, -1.205)=0.0009
+  calculation time (with 0.1 sec sleeps)= 54.83996343612671
   x= [1.8007773284762463, -1.8414976281967217, -0.46335920559222765, -1.2051840585794604]
   fx= 0.000908952987659
   convergence-flag= True
   number-of-fn-evaluations= 547
   number-of-restarts= 0
 ------------------------------------------------------------
-test 4: Example 3.5 in Olsson and Nelson, nonlinear least-squares, P=2
+test 4: Example 3.5 in Olsson and Nelson, nonlinear least-squares, P=2, n_workers=2
   f(1.801, -1.842, -0.463, -1.205)=0.0009
-  x= [1.8010539316340544, -1.8417719106648769, -0.46338762974692316, -1.2050774716664778]
-  fx= 0.000908952822531
+  calculation time (with 0.1 sec sleeps)= 26.823304653167725
+  x= [1.8011390988049902, -1.841849174052093, -0.46339847883903756, -1.205042800777345]
+  fx= 0.000908952812173
   convergence-flag= True
-  number-of-fn-evaluations= 503
+  number-of-fn-evaluations= 490
   number-of-restarts= 0
 ------------------------------------------------------------
 Done.
@@ -78,6 +81,7 @@ Done.
 import math
 import numpy
 from collections import namedtuple
+import concurrent.futures
 
 #-----------------------------------------------------------------------
 # The public face of the minimizer...
@@ -94,6 +98,7 @@ def minimize(f, x, dx=None, options={}):
         tol: (default 1.0e-6) the terminating limit for the standard-deviation
             of the simplex function values.
         P: (default 1) number of points to replace in parallel, each step.
+        n_workers: (default 1) number of concurrent threads or processes in pool
         maxfe: (default 300) maximum number of function evaluations that we will allow
         n_check: (default 20) number of steps between convergence checks
         delta: (default 0.001) magnitude of the perturbations for checking a local minimum
@@ -112,25 +117,40 @@ def minimize(f, x, dx=None, options={}):
     # Check input parameters.
     assert callable(f), "A function was expected for f."
     if dx is None: dx = numpy.array([0.1]*len(x))
-    opts = {'tol':1.0e-6, 'P':1, 'maxfe':300, 'n_check':20, 'delta':0.001,
-            'Kreflect':1.0, 'Kextend':2.0, 'Kcontract':0.5}
+    opts = {'tol':1.0e-6, 'maxfe':300, 'n_check':20, 'delta':0.001,
+            'Kreflect':1.0, 'Kextend':2.0, 'Kcontract':0.5,
+            'P':1, 'n_workers': 1}
     for k in options.keys():
         if k in opts.keys():
             opts[k] = options[k]
         else:
             raise RuntimeError(f'option {k} is not available')
+    global workers
+    if opts['n_workers'] > 1:
+        workers = concurrent.futures.ThreadPoolExecutor(max_workers=opts['n_workers'])
+    else:
+        workers = None
     # Get to work.
     converged = False
-    smplx = NMSimplex(x, dx, f, opts['P'])
+    smplx = NMSimplex(x, dx, f, opts['P'], opts['Kreflect'], opts['Kextend'], opts['Kcontract'])
     while (not converged) and (smplx.nfe < opts['maxfe']):
         # Take some steps and then check for convergence.
         for istep in range(opts['n_check']):
             smplx.vertices.sort(key=lambda v: v.f)
             success = []
-            for i in range(smplx.P):
-                i_high = smplx.N - i
-                success.append(smplx.replace_vertex(i_high, opts['Kreflect'],
-                                                    opts['Kextend'], opts['Kcontract']))
+            if workers:
+                # Concurrent replacements
+                my_futures = []
+                for i in range(smplx.P):
+                    i_high = smplx.N - i
+                    my_futures.append(workers.submit(smplx.replace_vertex, i_high))
+                for fut in my_futures:
+                    success.append(fut.result())
+            else:
+                # Serial replacements
+                for i in range(smplx.P):
+                    i_high = smplx.N - i
+                    success.append(smplx.replace_vertex(i_high))
             if not any(success):
                 # Contract the simplex about the current lowest point.
                 smplx.contract_about_zero_point()
@@ -145,6 +165,8 @@ def minimize(f, x, dx=None, options={}):
             # All of the points are close together but we need to test more carefully.
             converged = smplx.test_for_minimum(0, opts['delta'])
             if not converged: smplx.rescale(opts['delta'])
+    #
+    if workers: workers.shutdown()
     Result = namedtuple('Result', ['x', 'fun', 'success', 'nfe', 'nrestarts'])
     return Result(x_best, f_best, converged, smplx.nfe, smplx.nrestarts)
 
@@ -173,7 +195,10 @@ class NMSimplex:
     In an N-dimensional problem, each vertex is a list of N coordinates
     and the simplex consists of N+1 vertices.
     """
-    def __init__(self, x, dx, f, P):
+    __slots__ = 'dx', 'f', 'N', 'P', 'vertices', 'nfe', 'nrestarts', \
+                'Kreflect', 'Kextend', 'Kcontract'
+
+    def __init__(self, x, dx, f, P, Kreflect, Kextend, Kcontract):
         """
         Initialize the simplex.
 
@@ -184,17 +209,41 @@ class NMSimplex:
         """
         self.N = len(x)
         self.P = P
+        self.Kreflect = Kreflect
+        self.Kextend = Kextend
+        self.Kcontract = Kcontract
         self.vertices = []
         x = numpy.array(x) # since it may be a list or array
         self.dx = numpy.array(dx)
         self.f = f
         self.nfe = 0
         self.nrestarts = 0
+        xs = []
         for i in range(self.N + 1):
             x_new = x.copy()
             if i >= 1: x_new[i-1] += dx[i-1]
-            self.vertices.append(Vertex(x_new, self.f(x_new))); self.nfe += 1
+            xs.append(x_new)
+        fs = self.evaluate_candidate_points(xs)
+        for item in zip(xs, fs):
+            self.vertices.append(Vertex(item[0], item[1]))
         self.vertices.sort(key=lambda v: v.f)
+
+    def evaluate_candidate_points(self, xs):
+        """
+        Evaluate the objective function for a list of candidate points.
+        """
+        global workers
+        fs = []
+        if workers:
+            my_futures = []
+            for x in xs:
+                my_futures.append(workers.submit(self.f, x)); self.nfe += 1
+            for fut in my_futures:
+                fs.append(fut.result())
+        else:
+            for x in xs:
+                fs.append(self.f(x)); self.nfe += 1
+        return fs
 
     def rescale(self, ratio):
         """
@@ -204,10 +253,14 @@ class NMSimplex:
         self.dx *= ratio
         vtx = self.vertices[0]
         self.vertices = [vtx,]
+        xs = []
         for i in range(self.N):
             x_new = vtx.x.copy()
             x_new[i] += self.dx[i]
-            self.vertices.append(Vertex(x_new, self.f(x_new))); self.nfe += 1
+            xs.append(x_new)
+        fs = self.evaluate_candidate_points(xs)
+        for item in zip(xs, fs):
+            self.vertices.append(Vertex(item[0], item[1]))
         self.nrestarts += 1
         self.vertices.sort(key=lambda v: v.f)
         return
@@ -238,38 +291,37 @@ class NMSimplex:
         Contract the simplex about the vertex i_con.
         """
         x_con = self.vertices[0].x
+        xs = []
         for i in range(1, self.N + 1):
             x_new = 0.5*self.vertices[i].x + 0.5*x_con
-            self.vertices[i] = Vertex(x_new, self.f(x_new)); self.nfe += 1
+            xs.append(x_new)
+        fs = self.evaluate_candidate_points(xs)
+        for item in zip(xs, fs):
+            self.vertices.append(Vertex(item[0], item[1]))
         self.vertices.sort(key=lambda v: v.f)
         return
 
-    def test_for_minimum(self, i_min, delta):
+    def test_for_minimum(self, i, delta):
         """
-        Perturb the minimum vertex and check that it is a local minimum.
+        Look around vertex i to see if it is a local minimum.
 
         This is expensive, so we don't want to do it often.
         """
-        is_minimum = True  # Assume it is true and test for failure.
-        f_min = self.vertices[i_min].f
-        # [TODO] We can do all of these samples in parallel.
+        f_min = self.vertices[i].f
+        xs = []
         for j in range(self.N):
             # Check either side of the candidate minimum,
             # perturbing one coordinate at a time.
-            x_new = self.vertices[i_min].x.copy()
+            x_new = self.vertices[i].x.copy()
             x_new[j] += self.dx[j] * delta
-            f_new = self.f(x_new); self.nfe += 1
-            if f_new < f_min:
-                is_minimum = False
-                break
+            xs.append(x_new)
             x_new[j] -= self.dx[j] * delta * 2
-            f_new = self.f(x_new); self.nfe += 1
-            if f_new < f_min:
-                is_minimum = False
-                break
+            xs.append(x_new)
+        fs = self.evaluate_candidate_points(xs)
+        is_minimum = all([f >= f_min for f in fs])
         return is_minimum
 
-    def replace_vertex(self, i, Kreflect, Kextend, Kcontract):
+    def replace_vertex(self, i):
         """
         Try to replace the worst point, i, in the simplex.
 
@@ -284,12 +336,12 @@ class NMSimplex:
         #
         # First, try moving away from worst point by
         # reflection through centroid
-        x_refl = x_mid + Kreflect*(x_mid - x_high)
+        x_refl = x_mid + self.Kreflect*(x_mid - x_high)
         f_refl = self.f(x_refl); self.nfe += 1
         if f_refl < f_min:
             # The reflection through the centroid is good,
             # try to extend in the same direction.
-            x_ext = x_mid + Kextend*(x_refl - x_mid)
+            x_ext = x_mid + self.Kextend*(x_refl - x_mid)
             f_ext = self.f(x_ext); self.nfe += 1
             if f_ext < f_refl:
                 # Keep the extension because it's best.
@@ -308,7 +360,7 @@ class NMSimplex:
             if count <= 1:
                 # Not too many points are higher than the original reflection.
                 # Try a contraction on the reflection-side of the centroid.
-                x_con = (1.0-Kcontract)*x_mid + Kcontract*x_high
+                x_con = (1.0-self.Kcontract)*x_mid + self.Kcontract*x_high
                 f_con = self.f(x_con); self.nfe += 1
                 if f_con < f_high:
                     # At least we haven't gone uphill; accept.
@@ -324,6 +376,8 @@ class NMSimplex:
         return False
 
 #--------------------------------------------------------------------
+
+import time
 
 def test_fun_1(x):
     """
@@ -371,6 +425,7 @@ def test_fun_3(z):
         eta = a1 * exp(alpha1 * t) + a2 * exp(alpha2 * t)
         r = y[i] - eta
         sum_residuals += r * r
+    time.sleep(0.1)
     return sum_residuals
 
 #--------------------------------------------------------------------
@@ -394,16 +449,20 @@ if __name__ == '__main__':
     result = minimize(test_fun_2, [0.0, 0.0], [0.5, 0.5], options={'tol':1.0e-4})
     pretty_print(result)
     #
-    print("test 3: Example 3.5 in Olsson and Nelson, nonlinear least-squares, P=1")
+    print("test 3: Example 3.5 in Olsson and Nelson, nonlinear least-squares, P=1, n_workers=1")
     print("  f(1.801, -1.842, -0.463, -1.205)=0.0009")
+    start_time = time.time()
     result = minimize(test_fun_3, [1.0, 1.0, -0.5, -2.5], [0.1, 0.1, 0.1, 0.1],
                       options={'tol':1.0e-9, 'maxfe':800})
+    print("  calculation time (with 0.1 sec sleeps)=", time.time()-start_time)
     pretty_print(result)
     #
-    print("test 4: Example 3.5 in Olsson and Nelson, nonlinear least-squares, P=2")
+    print("test 4: Example 3.5 in Olsson and Nelson, nonlinear least-squares, P=2, n_workers=2")
     print("  f(1.801, -1.842, -0.463, -1.205)=0.0009")
+    start_time = time.time()
     result = minimize(test_fun_3, [1.0, 1.0, -0.5, -2.5], [0.1, 0.1, 0.1, 0.1],
-                      options={'tol':1.0e-9, 'P':2, 'maxfe':800})
+                      options={'tol':1.0e-9, 'P':2, 'maxfe':800, 'n_workers':2})
+    print("  calculation time (with 0.1 sec sleeps)=", time.time()-start_time)
     pretty_print(result)
     #
     print("Done.")
