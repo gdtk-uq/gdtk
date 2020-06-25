@@ -37,6 +37,7 @@ import gas.diffusion.sutherland_viscosity;
 import gas.diffusion.sutherland_therm_cond;
 import gas.diffusion.wilke_mixing_viscosity;
 import gas.diffusion.wilke_mixing_therm_cond;
+import gas.diffusion.gasgiant_transport_properties;
 
 class ThermallyPerfectGas: GasModel {
 public:
@@ -411,6 +412,11 @@ public:
         return _curves[isp].eval_s(Q.T);
     }
 
+    override number Cp(in GasState Q, int isp)
+    {
+        return _curves[isp].eval_Cp(Q.T);
+    }
+    
     override void balance_charge(GasState Q)
     {
         if (_is_plasma) {

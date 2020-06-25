@@ -159,6 +159,12 @@ public:
 
     @nogc final number Cv(in GasState Q) { return dudT_const_v(Q); }
     @nogc final number Cp(in GasState Q) { return dhdT_const_p(Q); }
+    @nogc number Cp(in GasState Q, int isp)
+    {
+        // For the single-species gases, provide a default implementation
+        // but we need to be careful to override this for multi-component gases.
+        return Cp(Q);
+    }
     @nogc final number R(in GasState Q)  { return gas_constant(Q); }
     @nogc final number gamma(in GasState Q) { return Cp(Q)/Cv(Q); }
     @nogc final number Prandtl(in GasState Q) { return Cp(Q)*Q.mu/Q.k; }
