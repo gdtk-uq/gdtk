@@ -137,20 +137,13 @@ def minimize(f, x, dx=None, options={}):
         # Take some steps and then check for convergence.
         for istep in range(opts['n_check']):
             smplx.vertices.sort(key=lambda v: v.f)
-            success = []
             if workers:
                 # Concurrent replacements
-                my_futures = []
-                for i in range(smplx.P):
-                    i_high = smplx.N - i
-                    my_futures.append(workers.submit(smplx.replace_vertex, i_high))
-                for fut in my_futures:
-                    success.append(fut.result())
+                my_futures = [workers.submit(smplx.replace_vertex, smplx.N-i) for i in range(smplx.P)]
+                success = [fut.result() for fut in my_futures]
             else:
                 # Serial replacements
-                for i in range(smplx.P):
-                    i_high = smplx.N - i
-                    success.append(smplx.replace_vertex(i_high))
+                success = [smplx.replace_vertex(smplx.N-i) for i in range(smplx.P)]
             if not any(success):
                 # Contract the simplex about the current lowest point.
                 smplx.contract_about_zero_point()
@@ -163,7 +156,7 @@ def minimize(f, x, dx=None, options={}):
         mean, stddev = smplx.f_statistics()
         if stddev < opts['tol']:
             # All of the points are close together but we need to test more carefully.
-            converged = smplx.test_for_minimum(0, opts['delta'])
+            converged = smplx.test_for_minimum(opts['delta'])
             if not converged: smplx.rescale(opts['delta'])
     #
     if workers: workers.shutdown()
@@ -212,7 +205,6 @@ class NMSimplex:
         self.Kreflect = Kreflect
         self.Kextend = Kextend
         self.Kcontract = Kcontract
-        self.vertices = []
         x = numpy.array(x) # since it may be a list or array
         self.dx = numpy.array(dx)
         self.f = f
@@ -224,25 +216,21 @@ class NMSimplex:
             if i >= 1: x_new[i-1] += dx[i-1]
             xs.append(x_new)
         fs = self.evaluate_candidate_points(xs)
-        for item in zip(xs, fs):
-            self.vertices.append(Vertex(item[0], item[1]))
+        self.vertices = [Vertex(item[0], item[1]) for item in zip(xs, fs)]
         self.vertices.sort(key=lambda v: v.f)
+        return
 
     def evaluate_candidate_points(self, xs):
         """
         Evaluate the objective function for a list of candidate points.
         """
         global workers
-        fs = []
         if workers:
-            my_futures = []
-            for x in xs:
-                my_futures.append(workers.submit(self.f, x)); self.nfe += 1
-            for fut in my_futures:
-                fs.append(fut.result())
+            my_futures = [workers.submit(self.f, x) for x in xs]
+            fs = [fut.result() for fut in my_futures]
         else:
-            for x in xs:
-                fs.append(self.f(x)); self.nfe += 1
+            fs = [self.f(x) for x in xs]
+        self.nfe += len(fs)
         return fs
 
     def rescale(self, ratio):
@@ -252,15 +240,13 @@ class NMSimplex:
         self.vertices.sort(key=lambda v: v.f)
         self.dx *= ratio
         vtx = self.vertices[0]
-        self.vertices = [vtx,]
         xs = []
         for i in range(self.N):
             x_new = vtx.x.copy()
             x_new[i] += self.dx[i]
             xs.append(x_new)
         fs = self.evaluate_candidate_points(xs)
-        for item in zip(xs, fs):
-            self.vertices.append(Vertex(item[0], item[1]))
+        self.vertices = [vtx,] + [Vertex(item[0], item[1]) for item in zip(xs, fs)]
         self.nrestarts += 1
         self.vertices.sort(key=lambda v: v.f)
         return
@@ -277,12 +263,11 @@ class NMSimplex:
 
     def centroid(self, imax):
         """
-        Returns the centroid of all vertices up to and including imax.
+        Returns the centroid of the subset of vertices up to and including imax.
         """
         xmid = numpy.array([0.0]*self.N)
         imax = min(imax, self.N)
-        for i in range(imax+1):
-            xmid += self.vertices[i].x
+        for i in range(imax+1): xmid += self.vertices[i].x
         xmid /= (imax+1)
         return xmid
 
@@ -291,28 +276,24 @@ class NMSimplex:
         Contract the simplex about the vertex i_con.
         """
         x_con = self.vertices[0].x
-        xs = []
-        for i in range(1, self.N + 1):
-            x_new = 0.5*self.vertices[i].x + 0.5*x_con
-            xs.append(x_new)
+        xs = [0.5*self.vertices[i].x + 0.5*x_con for i in range(1, self.N+1)]
         fs = self.evaluate_candidate_points(xs)
-        for item in zip(xs, fs):
-            self.vertices.append(Vertex(item[0], item[1]))
+        self.vertices = [self.vertices[0],] + [Vertex(item[0], item[1]) for item in zip(xs, fs)]
         self.vertices.sort(key=lambda v: v.f)
         return
 
-    def test_for_minimum(self, i, delta):
+    def test_for_minimum(self, delta):
         """
-        Look around vertex i to see if it is a local minimum.
+        Look around vertex 0 to see if it is a local minimum.
 
         This is expensive, so we don't want to do it often.
         """
-        f_min = self.vertices[i].f
+        f_min = self.vertices[0].f
         xs = []
         for j in range(self.N):
             # Check either side of the candidate minimum,
             # perturbing one coordinate at a time.
-            x_new = self.vertices[i].x.copy()
+            x_new = self.vertices[0].x.copy()
             x_new[j] += self.dx[j] * delta
             xs.append(x_new)
             x_new[j] -= self.dx[j] * delta * 2
@@ -376,6 +357,7 @@ class NMSimplex:
         return False
 
 #--------------------------------------------------------------------
+# Self test follows.
 
 import time
 
@@ -425,10 +407,9 @@ def test_fun_3(z):
         eta = a1 * exp(alpha1 * t) + a2 * exp(alpha2 * t)
         r = y[i] - eta
         sum_residuals += r * r
-    time.sleep(0.1)
+    time.sleep(0.1) # To make this calculation seem expensive.
     return sum_residuals
 
-#--------------------------------------------------------------------
 
 if __name__ == '__main__':
     print("Begin nelmin self-test...")
