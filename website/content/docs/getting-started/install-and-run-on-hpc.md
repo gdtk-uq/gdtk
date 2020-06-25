@@ -240,12 +240,12 @@ compilers and MPI libraries.
 These have been compiled specifically on tinaroo to take
 advantage of its InfiniBand interconnect.
 Select an openmpi environment for compiling.
-The `openmpi2_ib/2.0.2` has been tested and works nicely with the code.
+The `openmpi2_ib/2.1.6` has been tested and works nicely with the code.
 To compile Eilmer4 with MPI enabled on tinaroo, do:
 
     module purge
     module load gnu
-    module load openmpi2_ib/2.0.2
+    module load openmpi2_ib/2.1.6
     cd dgd/install-scripts
     ./install-transient-solvers.sh
 
@@ -264,7 +264,7 @@ across 24 MPI tasks.
 
     module purge
     module load gnu
-    module load openmpi2_ib/2.0.2
+    module load openmpi2_ib/2.1.6
 
     cd $PBS_O_WORKDIR
     mpirun e4mpi --job=dbl-cone --run > LOGFILE
