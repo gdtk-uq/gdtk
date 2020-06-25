@@ -24,12 +24,12 @@ interface ThermalConductivity {
     ThermalConductivity dup() const;
     @nogc final void update_thermal_conductivity(GasState Q)
     {
-        Q.k = eval(Q, Q.T);
+        Q.k = eval(Q, -1);
         for ( auto imode = 0; imode < Q.T_modes.length; ++imode) {
-            Q.k_modes[imode] = eval(Q, Q.T_modes[imode]);
+            Q.k_modes[imode] = eval(Q, imode);
         }
     }
-    @nogc number eval(ref const(GasState) Q, number T);
+    @nogc number eval(ref const(GasState) Q, int imode);
 }
 
 /**

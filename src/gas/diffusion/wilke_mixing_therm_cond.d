@@ -64,12 +64,12 @@ public:
         return new WilkeMixingThermCond(this);
     }
 
-    override number eval(ref const(GasState) Q, number T) {
+    override number eval(ref const(GasState) Q, int imode) {
         // 1. Evaluate the mole fractions
         massf2molef(Q.massf, _mol_masses, _x);
-        // 2. Calculate the component viscosities
+        // 2. Calculate the component thermoconductivities
         for ( auto isp = 0; isp < Q.massf.length; ++isp ) {
-            _k[isp] = _tcms[isp].eval(Q, T);
+            _k[isp] = _tcms[isp].eval(Q, -1);
         }
         // 3. Calculate interaction potentials
         for ( auto i = 0; i < Q.massf.length; ++i ) {

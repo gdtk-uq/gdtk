@@ -66,8 +66,8 @@ public:
     override SutherlandThermCond dup() const {
         return new SutherlandThermCond(this);
     }
-    @nogc override number eval(ref const(GasState) Q, number T) const {
-        return sutherland_thermal_conductivity(T, _T_ref, _k_ref, _S);
+    @nogc override number eval(ref const(GasState) Q, int imode) const {
+        return sutherland_thermal_conductivity(Q.T, _T_ref, _k_ref, _S);
     }
 
 private:

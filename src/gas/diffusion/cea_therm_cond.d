@@ -87,8 +87,9 @@ public:
     {
         return new CEAThermalConductivity(this);
     }
-    override number eval(ref const(GasState) Q, number T) const
+    override number eval(ref const(GasState) Q, int imode) const
     {
+        number T = Q.T;
         // At the limits of the curve, extrapolate value as a constant.
         if ( T < _T_lowest ) {
             return _curves[0].eval(to!number(_T_lowest));
