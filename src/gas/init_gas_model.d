@@ -91,6 +91,13 @@ GasModel init_gas_model(string file_name="gas-model.lua")
         break;
     case "ThermallyPerfectGas":
         gm = new ThermallyPerfectGas(L);
+        // There is a special step if we're using the Gas Giant transport properties model.
+        lua_getglobal(L, "use_gas_giant_transport_properties");
+        if (!lua_isnil(L, -1)) {
+            ThermallyPerfectGas tpg = cast(ThermallyPerfectGas) gm;
+            tpg.attachGasModelToGasGiantModel();
+        }
+        lua_pop(L, 1);
         break;
     case "ThermallyPerfectGasEquilibrium":
         gm = new ThermallyPerfectGasEquilibrium(L);

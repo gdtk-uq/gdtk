@@ -54,6 +54,20 @@ public:
             }
             _is_plasma = true;
         }
+        bool useGasGiantTransProps = false;
+        lua_getglobal(L, "use_gas_giant_transport_properties");
+        if (!lua_isnil(L, -1)) useGasGiantTransProps = true;
+        lua_pop(L, 1);
+
+        if (useGasGiantTransProps) {
+            // Check early we have correct number of species for using gas giant model
+            if (_n_species != 6) {
+                string errMsg = "Incorrect number of species to use the gas giant transport properties model.\n";
+                errMsg ~= format("6 species are expected, but %d species have been given.\n", _n_species);
+                throw new Error(errMsg);
+            }
+        }
+        
         // 0. Initialise private work arrays
         _Cp.length = _n_species;
         _Cv.length = _n_species;
@@ -74,6 +88,7 @@ public:
             lua_pop(L, 1);
             lua_pop(L, 1);
         }
+        create_species_reverse_lookup();
         // 1b. Gather L-J parameters
         _LJ_sigmas.length = _n_species;
         _LJ_epsilons.length = _n_species;
@@ -101,73 +116,106 @@ public:
         }
         _tpgMixEOS = new ThermallyPerfectGasMixEOS(_R, _curves);
         // 4. Set the viscosity model
-        Viscosity[] vms;
-        foreach ( isp; 0.._n_species ) {
-            lua_getglobal(L, "db");
-            lua_getfield(L, -1, _species_names[isp].toStringz);
-            lua_getfield(L, -1, "viscosity");
-            lua_getfield(L, -1, "model");
-            string model = to!string(luaL_checkstring(L, -1));
-            lua_pop(L, 1);
-            switch (model) {
-            case "CEA":
-                vms ~= createCEAViscosity(L);
-                break;
-            case "Sutherland":
-                vms ~= createSutherlandViscosity(L);
-                break;
-            case "Chemkin":
-                vms ~= createChemkinViscosity(L);
-                break;
-            default:
-                string errMsg = format("The viscosity model '%s' is not available.\n", model);
-                errMsg ~= format("This error occurred for species %d when constructing "
-                                 ~"the thermally perfect gas mix.\n", isp);
+        if (useGasGiantTransProps) {
+            // Before we go on, we need to check the species are in correct order.
+            bool speciesOrderCorrect = true;
+            if (species_index("H2") != gas.diffusion.gasgiant_transport_properties.Sp.H2) speciesOrderCorrect = false;
+            if (species_index("H") != gas.diffusion.gasgiant_transport_properties.Sp.H) speciesOrderCorrect = false;
+            if (species_index("H+") != gas.diffusion.gasgiant_transport_properties.Sp.Hp) speciesOrderCorrect = false;
+            if (species_index("He") != gas.diffusion.gasgiant_transport_properties.Sp.He) speciesOrderCorrect = false;
+            if (species_index("He+") != gas.diffusion.gasgiant_transport_properties.Sp.Hep) speciesOrderCorrect = false;
+            if ((species_index("e-") != gas.diffusion.gasgiant_transport_properties.Sp.e) &&
+                (species_index("eminus") != gas.diffusion.gasgiant_transport_properties.Sp.e))
+                speciesOrderCorrect = false;
+            if (!speciesOrderCorrect) {
+                string errMsg = "The species have been declared in the wrong order if using the gas giant transport properties model.";
+                errMsg ~= "The correct order is: H2, H, H+, He, He+, e-\n";
                 throw new Error(errMsg);
             }
-            lua_pop(L, 1);
-            lua_pop(L, 1);
-            lua_pop(L, 1);
+            _viscModel = new GasGiantViscosity();
         }
-        _viscModel = new WilkeMixingViscosity(vms, _mol_masses);
+        else {
+        
+            Viscosity[] vms;
+            foreach ( isp; 0.._n_species ) {
+                lua_getglobal(L, "db");
+                lua_getfield(L, -1, _species_names[isp].toStringz);
+                lua_getfield(L, -1, "viscosity");
+                lua_getfield(L, -1, "model");
+                string model = to!string(luaL_checkstring(L, -1));
+                lua_pop(L, 1);
+                switch (model) {
+                case "CEA":
+                    vms ~= createCEAViscosity(L);
+                    break;
+                case "Sutherland":
+                    vms ~= createSutherlandViscosity(L);
+                    break;
+                case "Chemkin":
+                    vms ~= createChemkinViscosity(L);
+                    break;
+                default:
+                    string errMsg = format("The viscosity model '%s' is not available.\n", model);
+                    errMsg ~= format("This error occurred for species %d when constructing "
+                                     ~"the thermally perfect gas mix.\n", isp);
+                    throw new Error(errMsg);
+                }
+                lua_pop(L, 1);
+                lua_pop(L, 1);
+                lua_pop(L, 1);
+            }
+            _viscModel = new WilkeMixingViscosity(vms, _mol_masses);
+        }
         // 5. Set the thermal conductivity model
-        ThermalConductivity[] tcms;
-        foreach (isp; 0.._n_species ) {
-            lua_getglobal(L, "db");
-            lua_getfield(L, -1, _species_names[isp].toStringz);
-            lua_getfield(L, -1, "thermal_conductivity");
-            lua_getfield(L, -1, "model");
-            string model = to!string(luaL_checkstring(L, -1));
-            lua_pop(L, 1);
-            switch (model) {
-            case "CEA":
-                tcms ~= createCEAThermalConductivity(L);
-                break;
-            case "Sutherland":
-                tcms ~=  createSutherlandThermalConductivity(L);
-                break;
-            case "Chemkin":
-                tcms ~=  createChemkinThermalConductivity(L);
-                break;
-            default:
-                string errMsg = format("The thermal conductivity model '%s' "
-                                       ~"is not available.\n", model);
-                errMsg ~= format("This error occurred for species %d when constructing "
-                                 ~"the thermally perfect gas mix.\n", isp);
-                throw new Error(errMsg);
-            }
-            lua_pop(L, 1);
-            lua_pop(L, 1);
-            lua_pop(L, 1);
+        if (useGasGiantTransProps) {
+            _thermCondModel = new  GasGiantThermalConductivity();
         }
-        _thermCondModel = new WilkeMixingThermCond(tcms, _mol_masses);
-        create_species_reverse_lookup();
+        else {
+            ThermalConductivity[] tcms;
+            foreach (isp; 0.._n_species ) {
+                lua_getglobal(L, "db");
+                lua_getfield(L, -1, _species_names[isp].toStringz);
+                lua_getfield(L, -1, "thermal_conductivity");
+                lua_getfield(L, -1, "model");
+                string model = to!string(luaL_checkstring(L, -1));
+                lua_pop(L, 1);
+                switch (model) {
+                case "CEA":
+                    tcms ~= createCEAThermalConductivity(L);
+                    break;
+                case "Sutherland":
+                    tcms ~=  createSutherlandThermalConductivity(L);
+                    break;
+                case "Chemkin":
+                    tcms ~=  createChemkinThermalConductivity(L);
+                    break;
+                default:
+                    string errMsg = format("The thermal conductivity model '%s' "
+                                           ~"is not available.\n", model);
+                    errMsg ~= format("This error occurred for species %d when constructing "
+                                     ~"the thermally perfect gas mix.\n", isp);
+                    throw new Error(errMsg);
+                }
+                lua_pop(L, 1);
+                lua_pop(L, 1);
+                lua_pop(L, 1);
+            }
+            _thermCondModel = new WilkeMixingThermCond(tcms, _mol_masses);
+        }
         //
         version(complex_numbers) {
             throw new Error("Do not use with complex numbers.");
         }
     } // end constructor using Lua interpreter
 
+    void attachGasModelToGasGiantModel()
+    {
+        GasGiantViscosity ggv = cast(GasGiantViscosity) _viscModel;
+        ggv.attachGasModel(this);
+        GasGiantThermalConductivity ggtc = cast(GasGiantThermalConductivity) _thermCondModel;
+        ggtc.attachGasModel(this);
+    }
+    
     this(in string fname)
     {
         auto L = init_lua_State();
@@ -439,8 +487,8 @@ protected:
     PerfectGasMixEOS _pgMixEOS;
     ThermallyPerfectGasMixEOS _tpgMixEOS;
     CEAThermoCurve[] _curves;
-    WilkeMixingViscosity _viscModel;
-    WilkeMixingThermCond _thermCondModel;
+    Viscosity _viscModel;
+    ThermalConductivity _thermCondModel;
     // Working array space
     number[] _Cp, _Cv, _h, _s, _molef;
 } // end class ThermallyPerfectGas

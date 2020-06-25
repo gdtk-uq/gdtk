@@ -234,6 +234,9 @@ function writeThermPerfGas(f, species, db, optsTable)
    end
    f:write("}\n\n")
    f:write("energyModes = {'equilibrium'}\n")
+   if (optsTable and optsTable.gas_giant_trans_props) then
+      f:write("use_gas_giants_transport_properties = true\n")
+   end
    f:write("db = {}\n")
    for _,sp in ipairs(species) do
       f:write(string.format("db['%s'] = {}\n", sp))
@@ -271,6 +274,8 @@ function writeThermPerfGas(f, species, db, optsTable)
 	 f:write(string.format("   T_ref = %.8f,\n", db['air'].sutherlandVisc.T_ref))
 	 f:write(string.format("   S = %.8f,\n", db['air'].sutherlandVisc.S))
 	 f:write("}\n")
+      elseif (optsTable and optsTable.gas_giant_trans_props) then
+         -- do nothing
       else
 	   if optsTable and optsTable.transport_database == "prefer-chemkin" then
 	      if ( not db[sp].chemkinViscosity ) then
@@ -293,6 +298,8 @@ function writeThermPerfGas(f, species, db, optsTable)
 	 f:write(string.format("   T_ref = %.8f,\n", db['air'].sutherlandThermCond.T_ref))
 	 f:write(string.format("   S = %.8f,\n", db['air'].sutherlandThermCond.S))
 	 f:write("}\n")
+      elseif (optsTable and optsTable.gas_giant_trans_props) then
+         -- do nothing
       else
 	   if optsTable and optsTable.transport_database == "prefer-chemkin" then
 	      if ( not db[sp].chemkinThermCond ) then
