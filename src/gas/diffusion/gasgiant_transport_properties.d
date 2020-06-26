@@ -120,7 +120,7 @@ private:
     }
     
     @nogc
-    number gupta(number T, double[] g)
+    number gupta(number T, number[] g)
     {
         auto x = log(T);
         auto A = g[0];
@@ -425,7 +425,7 @@ private:
     }
     
     @nogc
-    number gupta(number T, double[] g)
+    number gupta(number T, number[] g)
     {
         auto x = log(T);
         auto A = g[0];
