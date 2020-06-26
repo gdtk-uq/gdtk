@@ -19,6 +19,7 @@ cd ${DGD_REPO}/src/eilmer
 # We want the debug build to be able to operate with the CEA-gas model
 # for the T4 shock tunnel example.
 # This build should be relatively quick.
+make clean
 if make DMD=ldc2 FLAVOUR=debug INSTALL_DIR=${INSTALL_DIR} install
 then
     echo "Debug build successful"
