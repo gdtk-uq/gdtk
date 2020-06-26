@@ -413,7 +413,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
 
     RestartInfo[] times;
 
-    if (snapshotStart > 0 && GlobalConfig.is_master_task) {
+    if (snapshotStart > 0) { // && GlobalConfig.is_master_task) {
         extractRestartInfoFromTimesFile(jobName, times);
         normOld = times[snapshotStart].globalResidual;
         // We need to read in the reference residual values from a file.
@@ -459,17 +459,19 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         restartInfo.globalResidual = normRef;
         restartInfo.residuals = maxResiduals;
         times ~= restartInfo;
-    }
-    if ( snapshotStart > 0 && GlobalConfig.is_master_task ) {
+    } else {
         restartInfo = times[snapshotStart];
         dt = restartInfo.dt;
         cfl = restartInfo.cfl;
         startStep = restartInfo.step + 1;
         pseudoSimTime = restartInfo.pseudoSimTime;
-        writefln("Restarting steps from step= %d", startStep);
-        writefln("   pseudo-sim-time= %.6e dt= %.6e", pseudoSimTime, dt);  
+        if ( GlobalConfig.is_master_task ) {
+            writefln("Restarting steps from step= %d", startStep);
+            writefln("   pseudo-sim-time= %.6e dt= %.6e", pseudoSimTime, dt);  
+        }
     }
 
+    
     auto residFname = "e4-nk.diagnostics.dat";
     File fResid;
     if (GlobalConfig.is_master_task) {
