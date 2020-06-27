@@ -2364,25 +2364,26 @@ function warn_if_blocks_not_connected()
    end
 end
 
-function build_job_files(job)
+function build_config_files(job)
+   perform_spatial_gradient_consistency_check()
+   warn_if_blocks_not_connected()
+   print("Build config files for job:", job)
+   os.execute("mkdir -p config")
+   write_config_file("config/" .. job .. ".config")
+   write_control_file("config/" .. job .. ".control")
+   write_times_file("config/" .. job .. ".times")
+   write_block_list_file("config/" .. job .. ".list")
+   write_mpimap_file("config/" .. job .. ".mpimap")
+   write_fluidBlockArrays_file("config/" .. job .. ".fluidBlockArrays")
+   print("Done building config files.")
+end
+
+function build_block_files(job)
    if #fluidBlocksForPrep == 0 then
       -- We'll set *all* blocks for processing.
       for i=1,#fluidBlocks do
          fluidBlocksForPrep[i] = fluidBlocks[i].id
       end
-   end
-   perform_spatial_gradient_consistency_check()
-   warn_if_blocks_not_connected()
-   if buildMasterFiles then
-      print("Build files for job:", job)
-      os.execute("mkdir -p config")
-      -- sleep(2) -- agni0 seems to be slow to make the directory
-      write_config_file("config/" .. job .. ".config")
-      write_control_file("config/" .. job .. ".control")
-      write_times_file("config/" .. job .. ".times")
-      write_block_list_file("config/" .. job .. ".list")
-      write_mpimap_file("config/" .. job .. ".mpimap")
-      write_fluidBlockArrays_file("config/" .. job .. ".fluidBlockArrays")
    end
    os.execute("mkdir -p grid/t0000")
    os.execute("mkdir -p flow/t0000")
@@ -2390,7 +2391,6 @@ function build_job_files(job)
       os.execute("mkdir -p solid-grid/t0000")
       os.execute("mkdir -p solid/t0000")
    end
-   -- sleep(2) -- agni0 seems to be slow to make the directories
    for i, id in ipairs(fluidBlocksForPrep) do
       if false then
          -- May activate print statement for debug.
@@ -2463,7 +2463,7 @@ function build_job_files(job)
    end
    --
    if #fluidBlocks == 0 then print("Warning: number of FluidBlocks is zero.") end
-   print("Done building files.")
+   print("Done building block files.")
 end
 
 print("Done loading prep.lua")

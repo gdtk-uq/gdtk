@@ -98,6 +98,8 @@ Argument:                            Comment:
   --verbosity=<int>                  defaults to 0
 
   --prep                             prepare config, grid and flow files
+  --no-config-files                  do not prepare files in config directory
+  --no-block-files                   do not prepare flow and grid files for blocks
   --only-blocks=\"blk-list\"           only prepare blocks in given list
 
   --run                              run the simulation over time
@@ -162,6 +164,8 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
     string jobName = "";
     int verbosityLevel = 1; // default to having a little information
     bool prepFlag = false;
+    bool noConfigFilesFlag = false;
+    bool noBlockFilesFlag = false;
     string blocksForPrep = "";
     bool runFlag = false;
     string tindxStartStr = "0";
@@ -202,6 +206,8 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
                "job", &jobName,
                "verbosity", &verbosityLevel,
                "prep", &prepFlag,
+               "no-config-files", &noConfigFilesFlag,
+               "no-block-files", &noBlockFilesFlag,
                "only-blocks", &blocksForPrep,
                "run", &runFlag,
                "tindx-start", &tindxStartStr,
@@ -417,24 +423,18 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
                 lua_rawseti(L, -2, to!int(i));
             }
             lua_pop(L, 1);
-            // Set buildMasterFiles as appropriate
-            if (blockList.length == 0 || blockList[0] == 0) {
-                lua_pushboolean(L, true);
-                // Before processing the Lua input files, move old .config and .control files.
-                // This should prevent a subsequent run of the simulation on old config files
+            if (!noConfigFilesFlag) {
+                // We do want to prepare the config files but,
+                // before processing the Lua input files,
+                // move old .config and .control files.
+                // This should prevent the confusing situation of
+                // a subsequent run of the simulation on old config files,
                 // in the case that the processing of the input script fails.
-                //
-                // RJG, 2019-04-07
-                // We only do this if we are processing master files.
-                // We'll assume that things proceed ok if we are working on other block ranges.
                 moveFileToBackup("config/"~jobName~".config");
                 moveFileToBackup("config/"~jobName~".control");
             }
-            else {
-                lua_pushboolean(L, false);
-            }
-            lua_setglobal(L, "buildMasterFiles");
-            
+            // Now that we have set the Lua interpreter context,
+            // process the Lua scripts.
             if ( luaL_dofile(L, toStringz(dirName(thisExePath())~"/prep.lua")) != 0 ) {
                 writeln("There was a problem in the Eilmer Lua code: prep.lua");
                 string errMsg = to!string(lua_tostring(L, -1));
@@ -445,11 +445,21 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
                 string errMsg = to!string(lua_tostring(L, -1));
                 throw new FlowSolverException(errMsg);
             }
-            checkGlobalConfig(); // We may not proceed if the config parameters are incompatible.
-            if ( luaL_dostring(L, toStringz("build_job_files(\""~jobName~"\")")) != 0 ) {
-                writeln("There was a problem in the Eilmer build function build_job_files() in prep.lua");
-                string errMsg = to!string(lua_tostring(L, -1));
-                throw new FlowSolverException(errMsg);
+            // We may not proceed to building of files if the config parameters are incompatible.
+            checkGlobalConfig();
+            if (!noConfigFilesFlag) {
+                if ( luaL_dostring(L, toStringz("build_config_files(\""~jobName~"\")")) != 0 ) {
+                    writeln("There was a problem in the Eilmer build function build_config_files() in prep.lua");
+                    string errMsg = to!string(lua_tostring(L, -1));
+                    throw new FlowSolverException(errMsg);
+                }
+            }
+            if (!noBlockFilesFlag) {
+                if ( luaL_dostring(L, toStringz("build_block_files(\""~jobName~"\")")) != 0 ) {
+                    writeln("There was a problem in the Eilmer build function build_block_files() in prep.lua");
+                    string errMsg = to!string(lua_tostring(L, -1));
+                    throw new FlowSolverException(errMsg);
+                }
             }
             if (verbosityLevel > 0) { writeln("Done preparation."); }
         } // end NOT mpi_parallel
@@ -496,7 +506,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
             stdout.flush();
             Thread.sleep(dur!("msecs")(100));
             MPI_Barrier(MPI_COMM_WORLD);
-        }        
+        }
         init_simulation(tindxStart, nextLoadsIndx, maxCPUs, threadsPerMPITask, maxWallClock);
         if (verbosityLevel > 0 && GlobalConfig.is_master_task) {
             writeln("starting simulation time= ", simcore.SimState.time);
@@ -505,7 +515,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
             stdout.flush();
             Thread.sleep(dur!("msecs")(100));
             MPI_Barrier(MPI_COMM_WORLD);
-        }        
+        }
         if (GlobalConfig.block_marching) {
             march_over_blocks();
         } else {
@@ -585,7 +595,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
             exitFlag = 1;
             return exitFlag;
         } else { // NOT mpi_parallel
-            if (verbosityLevel > 0) { 
+            if (verbosityLevel > 0) {
                 writeln("Begin custom script processing using user-supplied script.");
             }
             // For this case, there is very little job context loaded and
@@ -626,5 +636,3 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
     //
     return exitFlag;
 } // end main()
-
-
