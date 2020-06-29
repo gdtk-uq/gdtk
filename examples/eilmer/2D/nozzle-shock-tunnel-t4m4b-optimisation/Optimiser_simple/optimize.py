@@ -20,6 +20,7 @@ import numpy
 import math
 from scipy.optimize import minimize
 import string, shlex, subprocess
+import time
 
 # Global parameters for the design.
 jobname = "t4m4b"
@@ -118,13 +119,12 @@ def objective(params):
     """
     pdict = {"dy1":params[0], "dy2":params[1], "dy3":params[2], "dy4":params[3],
              "dy5":params[4], "dy6":params[5], "dy7":params[6]}
-    print(40*"-")
-    print("Commencing simulation for x = ", params)
+    print("Commencing simulation.\n  x= ", params)
     run_simulation(pdict)
-    print("Simulation complete.")
+    print("  Simulation complete.")
     f_theta, f_M = flow_uniformity()
     obj_funct = (f_theta + f_M)**2
-    print("Objective function evaluated to ", obj_funct)
+    print("  Objective function evaluated to ", obj_funct)
     return obj_funct
 
 
@@ -141,15 +141,18 @@ def main():
     if 0:
         print("Compute the flow uniformity from previously run simulation.")
         f_theta, f_M = flow_uniformity()
-        print("Mach uniformity = ", f_M)
-        print("angular uniformity = ", f_theta)
+        print("Mach uniformity= ", f_M)
+        print("angular uniformity= ", f_theta)
     if 0:
         print("Evaluate objective function.")
+        start_time = time.time()
         params = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         objv = objective(params)
         print("objective value=", objv)
+        print("calculation time=", time.time()-start_time)
     if 1:
         print("Let the optimizer take control and run the numerical experiment.")
+        start_time = time.time()
         x0 = numpy.array([[-1.01359136e-03, 1.40857503e-05, -9.27802658e-04, 3.82603999e-04,
                            2.39843018e-03, -2.91766389e-04, -3.60642387e-04]])
         result = minimize(objective, x0, method='Nelder-Mead',
@@ -159,13 +162,13 @@ def main():
         print('  fun=', result.fun)
         print('  success=', result.success)
         print('  message=', result.message)
-
+        print("calculation time=", time.time()-start_time)
         # Save the new set of bezier points for later.
         bezCtrlPts_orig = numpy.loadtxt(f"Bezier-control-pts-{jobname}-initial.data", skiprows=1)
         bezCtrlPts_opt = bezCtrlPts_orig
         for i in range(len(result.x)):
             bezCtrlPts_opt[i+2,1] = bezCtrlPts_opt[i+2,1] + result.x[i]
-        numpy.savetxt("Bezier-control-pts-{jobname}.opt.data", bezCtrlPts_opt,
+        numpy.savetxt(f"Bezier-control-pts-{jobname}.opt.data", bezCtrlPts_opt,
                       header='#     x, m       y, m')
     return
 
