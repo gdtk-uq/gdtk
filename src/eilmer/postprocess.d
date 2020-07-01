@@ -59,6 +59,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
     auto tindx_list = times_dict.keys;
     sort(tindx_list);
     int[] tindx_list_to_plot;
+    tindxPlot = tindxPlot.replaceAll(regex("\""), "");
     switch (tindxPlot) {
     case "all":
         tindx_list_to_plot = tindx_list.dup;
@@ -68,8 +69,17 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
         tindx_list_to_plot ~= tindx_list[$-1];
         break;
     default:
-        // We assume that the command-line argument was an integer.
-        tindx_list_to_plot ~= to!int(tindxPlot);
+        // We assume that the command-line argument was an integer
+        // or a comma-separated list of integers.
+        auto items = tindxPlot.split(",");
+        foreach (item; items) {
+            if (item.length > 0) {
+                int i = to!int(item);
+                if ((i >= tindx_list[0]) && (i <= tindx_list[$-1])) {
+                    tindx_list_to_plot ~= i;
+                }
+            }
+        }
     } // end switch
     //
     if (listInfoFlag) {

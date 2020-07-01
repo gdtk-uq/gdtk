@@ -114,7 +114,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
 
   --post                             post-process simulation data
   --list-info                        report some details of this simulation
-  --tindx-plot=<int>|all|last|9999   defaults to last
+  --tindx-plot=<int>|all|last|9999|\"1,5,13,25\"   defaults to last
   --add-vars=\"mach,pitot\"            add variables to the flow solution data
                                      (just for postprocessing)
                                      Other variables include:
