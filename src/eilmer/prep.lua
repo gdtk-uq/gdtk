@@ -397,7 +397,7 @@ function initTurbulence(fs, turbulence_model_name)
     elseif turbulence_model_name == "k_omega" then
         if fs.nuhat~=0.0 then error(string.format("Turbulence model is k_omega but nuhat set: %.18e", fs.nuhat)) end
         turb = {fs.tke, fs.omega}
-    elseif turbulence_model_name == "spalart_allmaras" then
+    elseif string.find(turbulence_model_name , "spalart_allmaras") then
         if fs.tke~=0.0 then error(string.format("Turbulence model is spalart_allmaras but tke set: %.18e", fs.tke)) end
         if fs.omega~=1.0 then error(string.format("Turbulence model is spalart_allmaras but omega set: %.18e", fs.omega)) end
         turb = {fs.nuhat, 0.0}

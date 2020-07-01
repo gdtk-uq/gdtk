@@ -572,40 +572,14 @@ class saTurbulenceModel : TurbulenceModel {
         number chi_cubed = chi*chi*chi;
         number fv1 = chi_cubed/(chi_cubed + cv1_cubed);
         number fv2 = 1.0 - chi/(1.0 + chi*fv1);
-        number ft2 = ct3*exp(-ct4*chi*chi);
+        number ft2 = compute_ft2(chi);
         number nut = nuhat*fv1;
 
         number d = compute_d(nut,nu,grad.vel,dwall,L_min,L_max,fv1,fv2,ft2);
+        number Shat_by_nuhat = compute_Shat_mulitplied_by_nuhat(grad, nuhat, nu, d, fv1, fv2);
+        number production = rho*cb1*(1.0 - ft2)*Shat_by_nuhat;
 
-        // No axisymmetric corrections since W is antisymmetric
-        number Omega = 0.0;
-        number Wij;
-        foreach(i; 0 .. 3) {
-            foreach(j; 0 .. 3) {
-                 Wij = 0.5*(grad.vel[i][j] - grad.vel[j][i]);
-                 Omega += Wij*Wij;
-            }
-        }
-        Omega = sqrt(2.0*Omega);
-
-        // Clipping Equation: NNG 2.37, Allmaras (11/12)
-        number Sbar = nuhat/kappa/kappa/d/d*fv2;
-        number Shat;
-        number Sthing;
-        if (Sbar >= -cv2*Omega) {
-            Shat = Omega + Sbar;
-        } else {
-            Sthing = Omega*(cv2*cv2*Omega + cv3*Sbar)/((cv3-2.0*cv2)*Omega - Sbar);
-            Shat = Omega + Sthing;
-        }
-        number production = rho*cb1*(1.0 - ft2)*Shat*nuhat;
-
-        number r;
-        if (Shat==0.0) {
-            r = 10.0;
-        } else {
-            r = fmin(nuhat/Shat/kappa/kappa/d/d, 10.0);
-        }
+        number r = compute_r(Shat_by_nuhat, nuhat, d);
         number g = r + cw2*(pow(r,6.0) - r);
         number fw = (1.0 + cw3_to_the_sixth)/(pow(g,6.0) +  cw3_to_the_sixth);
         fw = g*pow(fw, 1.0/6.0);
@@ -747,6 +721,49 @@ protected:
         return dwall;
     }
 
+    @nogc number
+    compute_ft2(const number chi) const pure {
+        return ct3*exp(-ct4*chi*chi);
+    }
+
+    @nogc number
+    compute_Shat_mulitplied_by_nuhat(const FlowGradients grad, const number nuhat, const number nu,
+                 const number d, const number fv1, const number fv2) const pure {
+        // No axisymmetric corrections since W is antisymmetric
+        number Omega = 0.0;
+        number Wij;
+        foreach(i; 0 .. 3) {
+            foreach(j; 0 .. 3) {
+                 Wij = 0.5*(grad.vel[i][j] - grad.vel[j][i]);
+                 Omega += Wij*Wij;
+            }
+        }
+        Omega = sqrt(2.0*Omega);
+
+        // Clipping Equation: NNG 2.37, Allmaras (11/12)
+        number Sbar = nuhat/kappa/kappa/d/d*fv2;
+        number Shat;
+        number Sthing;
+        if (Sbar >= -cv2*Omega) {
+            Shat = Omega + Sbar;
+        } else {
+            Sthing = Omega*(cv2*cv2*Omega + cv3*Sbar)/((cv3-2.0*cv2)*Omega - Sbar);
+            Shat = Omega + Sthing;
+        }
+        return Shat*nuhat;
+    }
+
+    @nogc number
+    compute_r(const number Shat_by_nuhat, const number nuhat, const number d) const pure {
+        number r;
+        if (Shat_by_nuhat==0.0) {
+            r = 10.0;
+        } else {
+            r =  fmin(nuhat*nuhat/Shat_by_nuhat/kappa/kappa/d/d, 10.0);
+        }
+        return r;
+    }
+
     @nogc final bool is_nuhat_valid(const number nuhat) const {
         if (!isFinite(nuhat.re)) {
             debug { writeln("Turbulence nuhat invalid number ", nuhat); }
@@ -759,6 +776,83 @@ protected:
         return true;
     }
 }
+
+/*
+Object representing the Modified Edwards version of the Spalart Allmaras model
+ Notes:
+ - The model here is taken from "Comparison of Eddy Viscosity-Transport Turbulence
+   Models for Three-Dimensional, Shock-Separated Flowfields", Edwards and Chandra (1997)
+ - This version is intended by a more stable in compressible flow, particularly for 
+   implicit solvers with large timesteps.
+ - It also removes the ft2 sink term, which is designed to gently pull the nuhat
+   values down in regions of no strain, to allow for tripping. The paper does not
+   explain the reasoning for this, but I found leaving it in caused numerical problems.
+
+ @author: Nick Gibbons (n.gibbons@uq.edu.au)
+*/
+class saeTurbulenceModel : saTurbulenceModel {
+    this (){
+        number Pr_t = GlobalConfig.turbulence_prandtl_number;
+        this(Pr_t);
+    }
+
+    this (const JSONValue config){
+        number Pr_t = getJSONdouble(config, "turbulence_prandtl_number", 0.89);
+        this(Pr_t);
+    }
+
+    this (saeTurbulenceModel other){
+        this(other.Pr_t);
+    }
+
+    this (number Pr_t) {
+        super(Pr_t);
+    }
+
+    @nogc final override string modelName() const {return "spalart_allmaras_edwards";}
+
+    final override saeTurbulenceModel dup() {
+        return new saeTurbulenceModel(this);
+    }
+
+protected:
+    @nogc override number
+    compute_ft2(const number chi) const pure {
+        number ft2 = 0.0;
+        return ft2;
+    }
+
+    @nogc override number
+    compute_Shat_mulitplied_by_nuhat(const FlowGradients grad, const number nuhat, const number nu,
+                 const number d, const number fv1, const number fv2) const pure {
+        /*
+        The Edwards variant of Spalart-Allmaras contains a definition of Shat
+        that is singular when nuhat is equal to zero, such as during the Newton Krylov
+        startup phase where the boundary conditions are diffused into the flow.
+
+        Since Shat*nuhat is always non-singular and both the Edwards and normal models
+        need it, we compute that instead.
+        */
+        number S = 0.0;
+        foreach(i; 0 .. 3) {
+            foreach(j; 0 .. 3) {
+                 S += (grad.vel[i][j] + grad.vel[j][i])*grad.vel[i][j];
+            }
+        }
+        number div = grad.vel[0][0] + grad.vel[1][1] + grad.vel[2][2];
+        S -= 2.0/3.0*div*div;
+        number Shat_by_nuhat = sqrt(S)*(nu + fv1*nuhat);
+        return Shat_by_nuhat;
+    }
+
+    @nogc override number
+    compute_r(const number Shat_by_nuhat, const number nuhat, const number d) const pure {
+        number normal_r = super.compute_r(Shat_by_nuhat, nuhat, d);
+        number r = tanh(normal_r)/tanh(1.0);
+        return r;
+    }
+}
+
 
 /*
 Object representing the IDDES high fidelity turbulence model
@@ -869,6 +963,9 @@ version(turbulence){
     case "spalart_allmaras":
         turbulence_model = new saTurbulenceModel(config);
         break;
+    case "spalart_allmaras_edwards":
+        turbulence_model = new saeTurbulenceModel(config);
+        break;
 }
     default:
         string errMsg = format("The turbulence model '%s' is not available.", turbulence_model_name);
@@ -897,6 +994,9 @@ version(turbulence){
         break;
     case "spalart_allmaras":
         turbulence_model = new saTurbulenceModel();
+        break;
+    case "spalart_allmaras_edwards":
+        turbulence_model = new saeTurbulenceModel();
         break;
 }
     default:
