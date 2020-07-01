@@ -17,7 +17,7 @@ class TestCyl_SF < Test::Unit::TestCase
   end
 
   def test_1_run
-    cmd = "mpirun -np 8 e4mpi --run --job=cyl-sf-mpi --verbosity=1"
+    cmd = "mpirun -np 8 --oversubscribe e4mpi --run --job=cyl-sf-mpi --verbosity=1"
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
     steps = 0

@@ -8,13 +8,13 @@ require 'open3'
 
 class TestConnection < Test::Unit::TestCase
   def test_0_generate_ref_result
-    cmd = 'python generate-ref-result.py'
+    cmd = 'python3 generate-ref-result.py'
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
   end
 
   def test_1_run_connection_tests
-    cmd = 'python run-cases.py'
+    cmd = 'python3 run-cases.py'
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
     assert(!o.match("FAILED"), "Failed connection test")

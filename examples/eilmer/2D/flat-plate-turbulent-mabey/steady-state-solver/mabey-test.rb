@@ -38,7 +38,7 @@ class TestMabey < Test::Unit::TestCase
   end
 
   def test_2_drag_force
-    cmd = 'python compute_drag.py'
+    cmd = 'python3 compute_drag.py'
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
     lines = o.split("\n")
