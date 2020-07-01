@@ -80,6 +80,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
                 }
             }
         }
+        sort(tindx_list_to_plot);
     } // end switch
     //
     if (listInfoFlag) {
