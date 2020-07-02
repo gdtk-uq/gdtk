@@ -26,13 +26,13 @@ class Line(Path):
 
     def __repr__(self):
         return "Line(p0={}, p1={})".format(self.p0, self.p1)
-    
+
     def __call__(self, t):
         return self.p0*(1-t) + self.p1*t
 
     def length(self):
         return abs(self.p1 - self.p0)
-    
+
     # end class Line
 
 
@@ -63,7 +63,7 @@ class Arc(Path):
         if abs(ca_mag - cb_mag) > 1.0e-5:
             raise Exception("Arc: radii do not match ca=%s cb=%s" % (ca, cb))
         # First vector in plane.
-        tangent1 = Vector3(ca); tangent1.normalize() 
+        tangent1 = Vector3(ca); tangent1.normalize()
         # Compute unit normal to plane of all three points.
         n = cross(ca, cb)
         if abs(n) > 0.0:
@@ -71,9 +71,9 @@ class Arc(Path):
         else:
             raise Exception("Arc: cannot find plane of three points.")
         # Third (orthogonal) vector is in the original plane.
-        tangent2 = cross(n, tangent1) 
-        # Now transform to local coordinates so that we can do 
-        # the calculation of the point along the arc in 
+        tangent2 = cross(n, tangent1)
+        # Now transform to local coordinates so that we can do
+        # the calculation of the point along the arc in
         # the local xy-plane, with ca along the x-axis.
         cb_local = Vector3(cb)
         cb_local.transform_to_local_frame(tangent1, tangent2, n)
@@ -90,7 +90,7 @@ class Arc(Path):
         # and remember to add the centre coordinates.
         loc.transform_to_global_frame(tangent1, tangent2, n, self.c);
         return loc, L
-    
+
     # end class Arc
 
 
@@ -120,7 +120,7 @@ class Polyline(Path):
             self.t_values.append(t_total)
         for i in range(len(self.t_values)): self.t_values[i] /= t_total
         return
-    
+
     def __repr__(self):
         text = "Polyline(segments=["
         n = len(self.segments)
@@ -128,7 +128,7 @@ class Polyline(Path):
             text += '{}'.format(self.segments[i])
             text += ', ' if i < n-1 else ']'
         return text
-    
+
     def __call__(self, t):
         n = len(self.segments)
         if n == 1: return self.segments[0](t)
@@ -145,7 +145,7 @@ class Polyline(Path):
         L = 0.0
         for seg in self.segments: L += seg.length()
         return L
-    
+
     # end class Polyline
 
 
@@ -203,16 +203,16 @@ class ArcLengthParameterizedPath(Path):
         frac = (L_target - self.arc_lengths[i]) / \
                (self.arc_lengths[i+1]-self.arc_lengths[i])
         return (1.0-frac)*self.t_values[i] + frac*self.t_values[i+1]
-    
+
     def __repr__(self):
         return "ArcLengthParameterizedPath(underlying_path={}, n={})".format(
             self.underlying_path, self._n)
-    
+
     def __call__(self, t):
         return self.underlying_path(self.underlying_t(t))
 
     def length(self):
         return self.underlying_path.length()
-    
+
     # end class ArcLengthParameterizedPath
 
