@@ -10,7 +10,20 @@ import math
 from eilmer.geom.vector3 import Vector3, cross
 
 class Path(object):
-    pass
+    """
+    Base class for the family of paths.
+    """
+    
+    def length(self):
+        L = 0.0
+        p0 = self.__call__(0.0)
+        n = 20
+        dt = 1.0/n
+        for i in range(n):
+            p1 = self.__call__((i+1)*dt)
+            L += abs(p1-p0)
+            p0 = p1
+        return L
 
 
 class Line(Path):
@@ -94,6 +107,35 @@ class Arc(Path):
     # end class Arc
 
 
+class Bezier(Path):
+    """
+    Bezier curve defined on a list of points.
+    """
+    __slots__ = ['B']
+
+    def __init__(self, B):
+        try:
+            self.B = [Vector3(p) for p in B]
+        except Exception as err:
+            raise ValueError(f"Was expecting to get a list of points for B, but got {B}")
+        return
+
+    def __repr__(self):
+        return f"Bezier(B={self.B})"
+
+    def __call__(self, t):
+        if len(self.B) == 1: return self.B[0]
+        n_order = len(self.B) - 1
+        # Apply de Casteljau's algorithm.
+        Q = self.B.copy() # work array will be overwritten
+        for k in range(n_order):
+            for i in range(n_order-k):
+                Q[i] = (1.0-t)*Q[i] + t*Q[i+1]
+        return Q[0]
+
+    # end class Bezier
+
+
 class Polyline(Path):
     """
     Collection of Path segments.
@@ -151,7 +193,7 @@ class Polyline(Path):
 
 class ArcLengthParameterizedPath(Path):
     """
-    A Path reparameterized such that equal increments in t correspond 
+    A Path reparameterized such that equal increments in t correspond
     to approximately equal increments in arc length.
     """
     __slots__ = ['underlying_path', 'arc_lengths', 't_values', '_n']

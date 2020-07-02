@@ -35,7 +35,7 @@ public:
     {
         return new Bezier(B);
     }
-    override Vector3 opCall(double t) const 
+    override Vector3 opCall(double t) const
     {
         // Evaluate B(t)
         return deCasteljau(B, t);
@@ -68,7 +68,7 @@ public:
          * Comp. J. 15:pp.71--79
          */
         auto currentDegree = B.length - 1;
-        
+
         if (newDegree < currentDegree) {
             throw new GeometryException("Desired Bezier degree elevation is less than current degree.");
         }
@@ -124,7 +124,7 @@ protected:
     {
         if ( B.length == 1 ) return B[0];
         size_t n_order = B.length - 1;
-        // Apply de Casteljau's algorithm. 
+        // Apply de Casteljau's algorithm.
         Vector3[] Q = B.dup(); // work array will be overwritten
         foreach (k; 0 .. n_order) {
             foreach (i; 0 .. n_order-k) {
@@ -182,7 +182,7 @@ version(bezier_test) {
             Bezier myNewBez; double dPt_dP_analytic;
             double dPt_dP_complex_x;
             double dPt_dP_complex_y;
-            double dPt_dP_complex_z; 
+            double dPt_dP_complex_z;
             double h = 1.0e-20;
             number ih = complex(0, h); // complex step-size
             double t = 0.5;

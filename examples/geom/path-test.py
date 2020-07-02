@@ -43,6 +43,14 @@ assert approxEqual(d.z, 0.0), "Arc evaluation z-component"
 print("arc_abc.length()=", arc_abc.length())
 assert approxEqual(arc_abc.length(), math.pi), "Arc length()"
 
+adb = Bezier([a, d, b])
+adb5 = adb(0.5)
+assert approxEqual(adb5.x, 1.2071), "Bezier evaluation x-component"
+assert approxEqual(adb5.y, 1.2071), "Bezier evaluation y-component"
+assert approxEqual(adb5.z, 0.0), "Bezier evaluation z-component"
+print("Bezier adb(0.5)=", adb5)
+print("Length of adb=", adb.length())
+
 e = Polyline([Line(p0=[-math.pi,2.0],p1=[0.0,2.0]), arc_abc])
 print("e=", e)
 f = e(0.0)
