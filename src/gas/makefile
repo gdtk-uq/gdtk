@@ -186,6 +186,7 @@ clean:
 	- rm thermo.inp thermo.lib thermo.out
 	- rm trans.inp trans.lib trans.out
 	- rm tmp.inp tmp.out tmp.plt
+	- rm -f air-eq-1.lua air-eq.inp air-eq.lua
 	- rm ./ideal-air-gas-model.lua ./cea-lut-air-version-test.lua
 	- rm ./uniform-lut-plus-ideal-air-gas-model.lua
 	- rm ./two-temperature-reacting-argon-model.lua

@@ -33,27 +33,7 @@ final class EquilibriumUpdate : ThermochemicalReactor {
     {
         super(gmodel); // hang on to a reference to the gas model
         // We may need to pick a number of pieces out of the file.
-        auto L = init_lua_State();
-        doLuaFile(L, fname);
-
-        // Copy some things we need from the gasmodel
-        nsp = to!int(_gmodel.n_species);
-        foreach(Mi; _gmodel.mol_masses) M ~= Mi;
-        foreach(i; 0 .. nsp) species_names ~= _gmodel.species_name(i);
-
-        // Build arrays to mimic pyeq memory management
-        compile_lewis_array(L, lewis);
-        compile_element_map(L, element_map);
-        compile_element_set(element_map, element_set);
-        compile_element_matrix(species_names, element_map, element_set, a);
-        nel = to!int(element_set.length);
-        X0.length = nsp; X1.length = nsp;
-
-        aptr = a.ptr;
-        X0ptr = X0.ptr;
-        X1ptr = X1.ptr;
-        lewisptr = lewis.ptr;
-        Mptr = M.ptr;
+        eqcalc = new EquilibriumCalculator(fname);
     }
     
     override void opCall(GasState Q, double tInterval,
@@ -64,20 +44,98 @@ final class EquilibriumUpdate : ThermochemicalReactor {
         // we need to evaluate the new temperature, pressure, etc.
         int error;
 
-        version(complex_numbers){
-            throw new Error("Do not use equilibrium_update with complex numbers.");
-        } else {
-            _gmodel.massf2molef(Q, X0); 
-            error = ceq.rhou(Q.rho,Q.u,X0ptr,nsp,nel,lewisptr,Mptr,aptr,X1ptr,&Q.T,0);
-            if (error!=0) throw new GasModelException("ceq.rhou convergence failure");
-            _gmodel.molef2massf(X1, Q);
-
-            // Note that T is already set from ceq.rhou
-            // This slightly messes with the u, but it isn't by much
-            _gmodel.update_thermo_from_rhoT(Q);
-            _gmodel.update_sound_speed(Q);
-        }
+        eqcalc.set_massf_and_T_from_rhou(Q);
+        // Note that T is already set from ceq.rhou
+        // This slightly messes with the u, but it isn't by much
+        _gmodel.update_thermo_from_rhoT(Q);
+        _gmodel.update_sound_speed(Q);
     }
+
+private:
+    EquilibriumCalculator eqcalc;
+
+} // end class EquilibriumUpdate
+
+class EquilibriumCalculator {
+    /*
+       D version of pyeq's equilibrium calculator.
+       Rather than have the code here duplicated in separate reactor and gas model
+       classes, all of the ceq machinery is encapulated in this class which can be
+       instantiated whereever it is needed. 
+
+       @author: Nick Gibbons
+    */
+    this(string fname)
+    {
+        /*
+           Constructor requires a thermally_perfect_gas or a thermally_perfect_gas_equilibrium file
+           @author: Nick Gibbons
+        */
+        auto L = init_lua_State();
+        doLuaFile(L, fname);
+
+        getArrayOfStrings(L, LUA_GLOBALSINDEX, "species", species_names);
+        nsp = to!int(species_names.length);
+
+        // Build arrays to mimic pyeq memory management
+        compile_molar_masses(L, species_names, M);
+        compile_lewis_array(L, lewis);
+        compile_element_map(L, element_map);
+        compile_element_set(element_map, element_set);
+        compile_element_matrix(species_names, element_map, element_set, a);
+        nel = to!int(element_set.length);
+        X0.length = nsp; X1.length = nsp;
+
+        // c routines interact with the arrays through these pointers
+        aptr = a.ptr;
+        X0ptr = X0.ptr;
+        X1ptr = X1.ptr;
+        lewisptr = lewis.ptr;
+        Mptr = M.ptr;
+    }
+
+version(complex_numbers){
+    
+    @nogc void set_massf_from_pT(GasState Q) 
+    {
+        throw new Error("Do not use with complex numbers.");
+    }
+    
+    @nogc void set_massf_and_T_from_rhou(GasState Q)
+    {
+        throw new Error("Do not use with complex numbers.");
+    }
+
+    @nogc void set_massf_and_T_from_ps(GasState Q, number s)
+    {
+        throw new Error("Do not use with complex numbers.");
+    }
+
+} else {
+    @nogc void set_massf_from_pT(GasState Q) 
+    {
+        massf2molef(Q.massf, M, X0);
+        int error = ceq.pt(Q.p,Q.T,X0ptr,nsp,nel,lewisptr,Mptr,aptr,X1ptr,0);
+        if (error!=0) throw new GasModelException("ceq.pt convergence failure");
+        molef2massf(X1, M, Q.massf);
+    }
+    
+    @nogc void set_massf_and_T_from_rhou(GasState Q)
+    {
+        massf2molef(Q.massf, M, X0);
+        int error = ceq.rhou(Q.rho,Q.u,X0ptr,nsp,nel,lewisptr,Mptr,aptr,X1ptr,&Q.T,0);
+        if (error!=0) throw new GasModelException("ceq.rhou convergence failure");
+        molef2massf(X1, M, Q.massf);
+    }
+
+    @nogc void set_massf_and_T_from_ps(GasState Q, number s)
+    {
+        massf2molef(Q.massf, M, X0);
+        int error = ceq.ps(Q.p,s,X0ptr,nsp,nel,lewisptr,Mptr,aptr,X1ptr,&Q.T,0);
+        if (error!=0) throw new GasModelException("ceq.ps convergence failure");
+        molef2massf(X1, M, Q.massf);
+    }
+}
 
 private:
     int nel,nsp;
@@ -85,6 +143,19 @@ private:
     string[] element_set,species_names;
     double[] a,X0,X1,lewis,M;
     double* aptr, X0ptr, X1ptr, lewisptr, Mptr, Tptr;
+
+    void compile_molar_masses(lua_State* L, string[] _species_names, ref double[] _M){
+        /*
+        Extra an array of molar masses from a gas file
+        */
+        lua_getglobal(L, "db");
+        foreach (species; _species_names) {
+            lua_getfield(L, -1, species.toStringz);
+            _M ~= getDouble(L, -1, "M");
+            lua_pop(L, 1);
+        }
+        lua_pop(L, 1);
+    }
 
     void compile_lewis_array(lua_State* L, ref double[] _lewis){
         /*
@@ -198,7 +269,35 @@ private:
         return;
     }
 
-} // end class EquilibriumUpdate
+} // end class EquilibriumCalculator
+
+//version(equilibrium_calculator_test) {
+//    import std.stdio;
+//    import util.msg_service;
+//    import gas.therm_perf_gas;
+//
+//    int main() {
+//        auto gm = new ThermallyPerfectGasEquilibrium("../gas/sample-data/therm-perf-equil-5-species-air.lua");
+//        auto eq = new EquilibriumCalculator ("../gas/sample-data/therm-perf-equil-5-species-air.lua");
+//
+//        auto gs1 = new GasState(5, 0);
+//        gs1.p = 101.35e2;
+//        gs1.T = 2500.0;
+//        double[] molef = [0.79, 0.21, 0.0, 0.0, 0.0]; 
+//        molef2massf(molef, gm.mol_masses, gs1.massf);
+//
+//        assert(approxEqual(0.7321963 , gs2.massf[0], 1.0e-6)); 
+//        assert(approxEqual(0.23281198, gs2.massf[1], 1.0e-6));
+//        assert(approxEqual(0.0, gs2.massf[2], 1.0e-6));
+//        assert(approxEqual(0.01160037, gs2.massf[3], 1.0e-6));
+//        assert(approxEqual(0.02339135, gs2.massf[4], 1.0e-6));
+//        assert(approxEqual(T_target, gs2.T, 1.0e-6));
+//        assert(approxEqual(rho_target, gs2.rho, 1.0e-6));
+//        assert(approxEqual(u_target, gs2.u, 1.0e-1));
+//        return 0;
+//    }
+//}
+
 
 version(equilibrium_update_test) {
     import std.stdio;
@@ -216,12 +315,14 @@ version(equilibrium_update_test) {
         gs2.rho = rho_target;
         gs2.u = u_target;
         gs2.massf = [0.74311527, 0.25688473, 0.0, 0.0, 0.0];
+        gs2.T = 2000.0; // ceq doesn't guess temperature anymore
         double tInterval = 0.0;
         double dtChemSuggest = 0.0;
         double dtThermSuggest = 0.0;
         double[maxParams] params;
 
         reactor(gs2, tInterval, dtChemSuggest, dtThermSuggest, params);
+        writeln("T: ", gs2.T);
         assert(approxEqual(0.7321963 , gs2.massf[0], 1.0e-6)); 
         assert(approxEqual(0.23281198, gs2.massf[1], 1.0e-6));
         assert(approxEqual(0.0, gs2.massf[2], 1.0e-6));
