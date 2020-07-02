@@ -1,5 +1,13 @@
 // therm_perf_gas_equil.d
-// Thermally-perfect gas with equilibrium chemistry.
+
+/*
+    This is a totally identical subclass of ThermallyPerfectGas designed to invoke 
+    the EquilibriumUpdate reactor class present in the kinetics folder. Since reactors 
+    in eilmer 4 are tied to different gas models, we need a different gas model even
+    though ThermallyPerfectGas would work just fine with EquilibriumUpdate.
+
+    @author: Nick Gibbons/PJ
+*/
 
 module gas.therm_perf_gas_equil;
 
@@ -15,6 +23,7 @@ import nm.number;
 import gas.gas_model;
 import gas.gas_state;
 import gas.therm_perf_gas;
+
 
 class ThermallyPerfectGasEquilibrium: ThermallyPerfectGas {
 public:
