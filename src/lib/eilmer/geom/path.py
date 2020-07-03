@@ -7,13 +7,21 @@ These are made to work like the Dlang equivalent classes.
 PJ, 2020-02-05
 """
 import math
+from abc import ABC, abstractmethod
 from eilmer.geom.vector3 import Vector3, cross
 
-class Path(object):
+class Path(ABC):
     """
     Base class for the family of paths.
     """
-    
+    @abstractmethod
+    def __repr__(self):
+        pass
+
+    @abstractmethod
+    def __call__(self, t):
+        pass
+
     def length(self):
         L = 0.0
         p0 = self.__call__(0.0)

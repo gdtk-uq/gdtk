@@ -64,7 +64,7 @@ class Vector3(object):
     def __neg__(self):
         self.x = -self.x; self.y = -self.y; self.z = -self.z
         return self
-        
+
     def __add__(self, other):
         return Vector3(self.x+other.x, self.y+other.y, self.z+other.z)
 
@@ -107,7 +107,7 @@ class Vector3(object):
             return self
         else:
             return NotImplemented
-    
+
     def normalize(self):
         mag = abs(self)
         self /= mag
@@ -118,7 +118,7 @@ class Vector3(object):
             return self.x*other.x + self.y*other.y + self.z*other.z
         else:
             raise Exception("dot() not implemented for {}".format(type(other)))
-        
+
     def transform_to_local_frame(self, n, t1, t2, c=None):
         """
         Change coodinates into the local right-handed (RH) system at point c.
@@ -143,9 +143,9 @@ class Vector3(object):
             newX += c.x; newY += c.y; newZ += c.z
         self.x = newX; self.y = newY; self.z = newZ
         return self
-    
+
     # ------- end class Vector3 ---------
-    
+
 
 def cross(a, b):
     """
