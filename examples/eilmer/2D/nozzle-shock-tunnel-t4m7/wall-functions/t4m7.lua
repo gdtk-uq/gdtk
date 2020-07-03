@@ -127,13 +127,12 @@ throat_region = CoonsPatch:new{
    p11=Vector3:new{x=x_start, y=y_throat},
    p01=Vector3:new{x=-L_thr, y=y_throat}}
 -- Supersonic expansion is fully defined by its north edge
-exp_region = NozzleExpansionPatch:new{north=Bezier:new{points=bez_points}}
+nozzle_profile = ArcLengthParameterizedPath:new{underlying_path=Bezier:new{points=bez_points}}
+exp_region = NozzleExpansionPatch:new{north=nozzle_profile}
 -- Define structured grids for both regions.
 print "Building grid."
-x_cf_throat = RobertsFunction:new{end0=true, end1=true, beta=1.52768963946}
--- Note that the Bezier wall has a natural clustering of points toward the throat.
--- The following weak cluster function x_cf mitigates that clustering.
-x_cf = RobertsFunction:new{end0=false, end1=true, beta=1.5}
+x_cf_throat = RobertsFunction:new{end0=true, end1=true, beta=1.53}
+x_cf = RobertsFunction:new{end0=true, end1=false, beta=1.1}
 y_cf = RobertsFunction:new{end0=false, end1=true, beta=1.01}
 throat_grid = StructuredGrid:new{psurface=throat_region, niv=30, njv=81,
 				 cfList={west=y_cf, east=y_cf,
