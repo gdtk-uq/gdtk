@@ -156,3 +156,10 @@ def cross(a, b):
     ab_z = a.x*b.y - b.x*a.y
     return Vector3(ab_x, ab_y, ab_z)
 
+def approxEqualVectors(a, b, rel_tol=1.0e-2, abs_tol=1.0e-5):
+    """
+    Test that all components are close.
+    """
+    return all([math.isclose(a.x, b.x, rel_tol=rel_tol, abs_tol=abs_tol),
+                math.isclose(a.y, b.y, rel_tol=rel_tol, abs_tol=abs_tol),
+                math.isclose(a.z, b.z, rel_tol=rel_tol, abs_tol=abs_tol)])
