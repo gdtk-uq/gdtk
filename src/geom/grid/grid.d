@@ -58,7 +58,7 @@ class Grid {
     size_t nbx, nby, nbz; // number of bins in each coordinate direction
     double deltax, deltay, deltaz; // size of bin in each coordinate direction
     bool cells_are_sorted_into_bins = false;
-    
+
     this(Grid_t grid_type, int dimensions, string label="")
     {
         this.grid_type = grid_type;
@@ -89,7 +89,7 @@ class Grid {
         indx -= j * niv;
         return [indx, j, k];
     }
-            
+
     @nogc abstract Vector3* opIndex(size_t i, size_t j, size_t k=0);
     @nogc abstract Vector3* opIndex(size_t indx);
     abstract size_t[] get_vtx_id_list_for_cell(size_t i, size_t j, size_t k=0) const;
@@ -98,7 +98,7 @@ class Grid {
     abstract size_t[] get_vtx_id_list_for_cell(size_t indx) const;
     @nogc abstract void copy_vtx_id_list_for_cell(ref size_t[8] vtx_list_copy, ref size_t nvtx,
                                                   size_t indx) const;
-    
+
     abstract void read_from_gzip_file(string fileName, double scale=1.0);
     abstract void read_from_raw_binary_file(string fileName, double scale=1.0);
     void write(string fileName, string fmt)
@@ -114,7 +114,7 @@ class Grid {
     abstract void write_to_vtk_file(string fileName);
     abstract void write_to_su2_file(string fileName, double scale=1.0,
                                     bool use_gmsh_order_for_wedges=true);
-    
+
     abstract size_t number_of_vertices_for_cell(size_t i);
     abstract int vtk_element_type_for_cell(size_t i);
     abstract int get_cell_type(size_t i);
@@ -147,21 +147,21 @@ class Grid {
         // else, 3D
         switch (nvtx) {
         case 4:
-            tetrahedron_properties(vertices[vtx_ids[0]], vertices[vtx_ids[1]], 
+            tetrahedron_properties(vertices[vtx_ids[0]], vertices[vtx_ids[1]],
                                    vertices[vtx_ids[2]], vertices[vtx_ids[3]],
                                    centroid, volume);
             return;
         case 8:
-            hex_cell_properties(vertices[vtx_ids[0]], vertices[vtx_ids[1]], 
+            hex_cell_properties(vertices[vtx_ids[0]], vertices[vtx_ids[1]],
                                 vertices[vtx_ids[2]], vertices[vtx_ids[3]],
                                 vertices[vtx_ids[4]], vertices[vtx_ids[5]],
                                 vertices[vtx_ids[6]], vertices[vtx_ids[7]],
                                 centroid, volume, iLen, jLen, kLen);
             return;
         case 5:
-            pyramid_properties(vertices[vtx_ids[0]], vertices[vtx_ids[1]], 
+            pyramid_properties(vertices[vtx_ids[0]], vertices[vtx_ids[1]],
                                vertices[vtx_ids[2]], vertices[vtx_ids[3]],
-                               vertices[vtx_ids[4]], 
+                               vertices[vtx_ids[4]],
                                centroid, volume);
             return;
         case 6:
@@ -207,17 +207,17 @@ class Grid {
                 inside_cell = inside_hexahedron(vertices[vtx_id[0]], vertices[vtx_id[1]],
                                                 vertices[vtx_id[2]], vertices[vtx_id[3]],
                                                 vertices[vtx_id[4]], vertices[vtx_id[5]],
-                                                vertices[vtx_id[6]], vertices[vtx_id[7]], p); 
+                                                vertices[vtx_id[6]], vertices[vtx_id[7]], p);
                 break;
             case 5:
                 inside_cell = inside_pyramid(vertices[vtx_id[0]], vertices[vtx_id[1]],
                                              vertices[vtx_id[2]], vertices[vtx_id[3]],
-                                             vertices[vtx_id[4]], p); 
+                                             vertices[vtx_id[4]], p);
                 break;
             case 6:
                 inside_cell = inside_wedge(vertices[vtx_id[0]], vertices[vtx_id[1]],
                                            vertices[vtx_id[2]], vertices[vtx_id[3]],
-                                           vertices[vtx_id[4]], vertices[vtx_id[5]], p); 
+                                           vertices[vtx_id[4]], vertices[vtx_id[5]], p);
                 break;
             default:
                 throw new GeometryException("invalid cell type in 3D");
@@ -241,7 +241,7 @@ class Grid {
     } // end cell_barycentre()
 
     // Bin-sorting methods to speed up the search for the enclosing cell.
-    
+
     // Since we are cannot control what position we are given,
     // determine the bin index cautiously.
     @nogc
@@ -384,5 +384,5 @@ class Grid {
             if (d < minDist) { minDist = d; nearestCell = i; }
         }
     } // end find_nearest_cell_centre
-    
+
 } // end class grid

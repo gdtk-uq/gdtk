@@ -27,10 +27,10 @@ import paver2d;
 // For the USGCell types, we will have only the linear elements,
 // with straight-line edges joining the vertices.
 // We will use VTK names and vertex ordering to align with su2 file format,
-// but we will have different integer tags and thus need a translation array 
+// but we will have different integer tags and thus need a translation array
 // between the tag values.  This is vtk_element_types below.
 // 2016-dec-01: Kyle has found that Pointwise writes the su2 file with GMSH
-// vertex ordering for the wedge elements.  We retain the VTK ordering. 
+// vertex ordering for the wedge elements.  We retain the VTK ordering.
 
 enum USGCell_type {
     none = 0,
@@ -159,7 +159,7 @@ public:
     USGCell right_cell;
     bool is_on_boundary = false; // presume not on boundary until marked as such
 
-    this(const size_t[] vtx_id_list) 
+    this(const size_t[] vtx_id_list)
     {
         this.vtx_id_list = vtx_id_list.dup();
     }
@@ -315,8 +315,8 @@ public:
         this.face_id_list = face_id_list.dup();
         this.outsign_list = outsign_list.dup();
     } // end constructor
-    
-    this(string str) 
+
+    this(string str)
     // Defines the format for input from a text stream.
     {
         auto tokens = str.strip().split();
@@ -356,7 +356,7 @@ public:
         fin.rawRead(buf1); outsign_list.length = buf1[0];
         foreach(i; 0 .. outsign_list.length) { fin.rawRead(buf1);  outsign_list[i] = buf1[0]; }
     } // end constructor from raw file content
-    
+
     this(const BoundaryFaceSet other)
     {
         tag = other.tag;
@@ -477,7 +477,7 @@ public:
         ncells = cells.length;
         nboundaries = boundaries.length;
     } // end construction via paving in 2D
-    
+
     this(const Vector3[] boundary, BoundaryFaceSet[] in_boundaries, const string new_label="")
     // Paved Grid Constructor by Heather Muir, 2016.
     // Deprecated in 2018. We will use the constructor above.
@@ -790,7 +790,7 @@ public:
         return new UnstructuredGrid(this);
     }
 
-    
+
     // -----------------------------
     // Indexing and location methods.
     // -----------------------------
@@ -868,9 +868,9 @@ public:
     {
         bool[size_t] connectedCells;
         foreach (iFace; cells[i].face_id_list) {
-            if (faces[iFace].left_cell) 
+            if (faces[iFace].left_cell)
                 connectedCells[faces[iFace].left_cell.id] = true;
-            if (faces[iFace].right_cell) 
+            if (faces[iFace].right_cell)
                 connectedCells[faces[iFace].right_cell.id] = true;
         }
         return connectedCells.keys.dup;
@@ -880,7 +880,7 @@ public:
     // Returns the grid defining a particular boundary of the original grid.
     // For an 3D block, a 2D surface grid will be returned, with index directions
     // as defined on the debugging cube.
-    // This new grid is intended for use just in the output of a subset 
+    // This new grid is intended for use just in the output of a subset
     // of the simulation data and not for actual simulation.
     // It does not carry all of the information required for flow simulation.
     {
@@ -938,7 +938,7 @@ public:
         // as being the one we want to associate with the boundary face.
         BoundaryFaceSet bfs = boundaries[boundary_indx];
         foreach (i, fid; bfs.face_id_list) {
-            USGCell insideCell = (bfs.outsign_list[i] == 1) ? 
+            USGCell insideCell = (bfs.outsign_list[i] == 1) ?
                 faces[fid].left_cell : faces[fid].right_cell;
             cellList ~= cell_indx[insideCell];
         }
@@ -1005,7 +1005,7 @@ public:
             excMsg ~= "This method can only be used on TRIANGLE cells.\n";
             throw new GeometryException(excMsg);
         }
-        
+
         auto vtxList = get_vtx_id_list_for_cell(id, 0, 0);
         auto p0 = vertices[vtxList[0]];
         auto p1 = vertices[vtxList[1]];
@@ -1064,13 +1064,13 @@ public:
         faces[if2_id].left_cell = cells[id];
         faces[if2_id].right_cell = cells[nc1_id];
     }
-    
 
-    
+
+
     // ------------------------
     // Import-from-file methods.
     // ------------------------
-    
+
     override void read_from_gzip_file(string fileName, double scale=1.0)
     // This function, together with the constructors (from strings) for
     // the classes USGFace, USGCell and BoundaryFaceSet (above),
@@ -1084,7 +1084,7 @@ public:
         formattedRead(line, "unstructured_grid %s", &format_version);
         if (format_version != "1.0") {
             throw new Error("UnstructuredGrid.read_from_gzip_file(): " ~
-                            "format version found: " ~ format_version); 
+                            "format version found: " ~ format_version);
         }
         line = byLine.front; byLine.popFront();
         formattedRead(line, "label: %s", &label);
@@ -1124,7 +1124,7 @@ public:
             boundaries ~= new BoundaryFaceSet(line);
         }
     } // end read_from_gzip_file()
-    
+
     override void read_from_raw_binary_file(string fileName, double scale=1.0)
     // This function, together with the constructors (from a binary file) for
     // the classes USGFace, USGCell and BoundaryFaceSet (above),
@@ -1138,7 +1138,7 @@ public:
         fin.rawRead(found_header);
         if (found_header != expected_header) {
             throw new Error("UnstructuredGrid.read_from_raw_binary_file(): " ~
-                            "unexpected header: " ~ to!string(found_header)); 
+                            "unexpected header: " ~ to!string(found_header));
         }
         int[1] buf1; fin.rawRead(buf1);
         int label_length = buf1[0];
@@ -1576,7 +1576,7 @@ public:
             foreach (j, fid; b.face_id_list) {
                 varea += b.outsign_list[j] * vectorAreaOfFacet(faces[fid].vtx_id_list);
             }
-        }  
+        }
         double relTol=1.0e-9; double absTol=1.0e-9;
         if (!approxEqualVectors(varea, Vector3(0,0,0), relTol, absTol)) {
             string errMsg = format("SU2 grid has non-zero bounding vector area=", varea);
@@ -1599,7 +1599,7 @@ public:
         read_VTK_header_line("USTRUCTURED_GRID", f);
         tokens = f.readln().strip().split();
         throw new Error("read_from_vtk_text_file() is not finished, yet.");
-        // For VTK files, we need to work out how to extract 
+        // For VTK files, we need to work out how to extract
         // the topological details for the incoming grid.
     } // end read_from_vtk_text_file()
 
@@ -1757,7 +1757,7 @@ public:
         //
         int[USGCell] cellId; foreach (i, c; cells) { cellId[c] = to!int(i); }
         //
-        // Set up the list of internal-to-block face ids and 
+        // Set up the list of internal-to-block face ids and
         // lists of owner and neighbour cells.
         //
         size_t[] internal_face_id_list; // limited to internal faces only
@@ -1927,7 +1927,7 @@ public:
         f.writefln("%d\n(", bndry_count);
         size_t startFace = internal_face_id_list.length;
         foreach (i, b; boundaries) {
-            if (b.face_id_list.length == 0) continue; // skip past empty sets 
+            if (b.face_id_list.length == 0) continue; // skip past empty sets
             string label = b.tag; // Nominally, we would like to use the assigned tag
             // but, if it is not useful, make up something that is.
             if (label.length == 0) { label = format("boundary%04d", i); }
@@ -1948,7 +1948,7 @@ public:
         startFace = internal_face_id_list.length;
         foreach (i, b; boundaries) {
             size_t nf = b.face_id_list.length;
-            if (nf == 0) continue; // skip past empty sets 
+            if (nf == 0) continue; // skip past empty sets
             string objName = b.tag; // Nominally, we would like to use the assigned tag
             // but, if it is not useful, make up something that is.
             if (objName.length == 0) { label = format("boundary%04d", i); }
@@ -1966,7 +1966,7 @@ public:
             startFace += nf; // for the next boundary
         } // end foreach boundary
     } // end write_openFoam_polyMesh()
-    
+
     UnstructuredGrid joinGrid(const UnstructuredGrid other,
                               double relTol=1.0e-6, double absTol=1.0e-9, int openFoamDimensions=3)
     {
@@ -1987,7 +1987,7 @@ public:
         // switch between searching entire grid and only vtx located on grid boundaries
         if (false) {
             // Search all vtx in grid
-            new_vtx_ids.length = other.vertices.length;  
+            new_vtx_ids.length = other.vertices.length;
             foreach (i, vtx; other.vertices) {
                 bool found = false;
                 size_t jsave;
@@ -2013,8 +2013,8 @@ public:
             // Collect vertices on boundaries that need to be compared.
             size_t[] vtx_ids_boundary;
             foreach (i,b; boundaries) {
-                // for OpenFOAM 2-D meshes the top and bottom boundaries (index 4 and 5 and mutiples) can be skipped 
-                if (openFoamDimensions == 2  && ( (i%6)==4  || (i%6)==5) ) { continue; }  
+                // for OpenFOAM 2-D meshes the top and bottom boundaries (index 4 and 5 and mutiples) can be skipped
+                if (openFoamDimensions == 2  && ( (i%6)==4  || (i%6)==5) ) { continue; }
                 foreach (j,f; b.face_id_list) {
                     vtx_ids_boundary ~= faces[f].vtx_id_list;
                 }
@@ -2023,8 +2023,8 @@ public:
             vtx_ids_boundary.length -= vtx_ids_boundary.sort().uniq().copy(vtx_ids_boundary).length;
             size_t[] vtx_ids_other_boundary;
             foreach (i,b; other.boundaries) {
-                // for OpenFOAM 2-D meshes the top and bottom boundaries (index 4 and 5) can be skipped 
-                if (openFoamDimensions == 2 && (i == 4 || i == 5)) { continue; } 
+                // for OpenFOAM 2-D meshes the top and bottom boundaries (index 4 and 5) can be skipped
+                if (openFoamDimensions == 2 && (i == 4 || i == 5)) { continue; }
                 foreach (f; b.face_id_list) {
                     vtx_ids_other_boundary ~= other.faces[f].vtx_id_list;
                 }
@@ -2032,7 +2032,7 @@ public:
             // Sort resulting array and remove duplicates
             vtx_ids_other_boundary.length -= vtx_ids_other_boundary.sort().uniq().copy(vtx_ids_other_boundary).length;
             //
-            // Compare vertics on boundaries and add them to master grid if new. 
+            // Compare vertics on boundaries and add them to master grid if new.
             new_vtx_ids.length = other.vertices.length;
             foreach (i; vtx_ids_other_boundary) {
                 bool found = false;
@@ -2060,7 +2060,7 @@ public:
             //
             // Add internal vertices from other to master grid
             foreach (i, vtx; other.vertices) {
-                if ( !canFind(vtx_ids_other_boundary, i)) { 
+                if ( !canFind(vtx_ids_other_boundary, i)) {
                     // We have a new vertex for the master grid.
                     vertices ~= vtx;
                     new_vtx_ids[i]= vertices.length - 1;
@@ -2087,7 +2087,7 @@ public:
             size_t[] new_vtx_id_list;
             foreach (vid; f.vtx_id_list) { new_vtx_id_list ~= new_vtx_ids[vid]; }
             string faceTag = makeFaceTag(new_vtx_id_list);
-            if (faceTag !in faceIndices) { 
+            if (faceTag !in faceIndices) {
                 faces ~= new USGFace(new_vtx_id_list);
                 auto j = faces.length - 1;
                 faceIndices[faceTag] = j;
@@ -2221,7 +2221,7 @@ public:
             foreach (j, fid; b.face_id_list) {
                 varea += b.outsign_list[j] * vectorAreaOfFacet(faces[fid].vtx_id_list);
             }
-        }  
+        }
         if (!approxEqualVectors(varea, Vector3(0,0,0), relTol, absTol)) {
             writeln("  Region non-zero bounding vector area=", varea);
         } else {
@@ -2230,7 +2230,7 @@ public:
         //
         return;
     } // end writeStats()
-                
+
 } // end class UnstructuredGrid
 
 
@@ -2244,7 +2244,7 @@ version(usgrid_test) {
         auto p11 = Vector3(1.0, 1.1);
         auto p01 = Vector3(0.0, 1.1);
         auto my_patch = new CoonsPatch(p00, p10, p11, p01);
-        auto cf = [new LinearFunction(), new LinearFunction(), 
+        auto cf = [new LinearFunction(), new LinearFunction(),
                    new LinearFunction(), new LinearFunction()];
         auto my_grid = new StructuredGrid(my_patch, 11, 21, cf);
         assert(approxEqualVectors(*my_grid[5,5], Vector3(0.5, 0.35)),
@@ -2269,4 +2269,3 @@ version(usgrid_test) {
         return 0;
     }
 } // end sgrid_test
-
