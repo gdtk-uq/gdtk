@@ -120,7 +120,7 @@ while t+dt <= tFinal do
   t = t + dt
   print("t = ",t)
   dtSuggest = chemUpdate:updateState(Q, dt)
-  gm:updateThermoFromRHOE(Q)
+  gm:updateThermoFromRHOU(Q)
   conc = gm:massf2conc(Q)
   char = string.format("%10.3e, %10.3f, %10.3e", t, Q.T, Q.p)
   for i=0,gm:nSpecies()-1 do

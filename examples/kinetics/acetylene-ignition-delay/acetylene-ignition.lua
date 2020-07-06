@@ -46,7 +46,7 @@ function ignition_delay(T, gm, chemUpdate)
       dtSuggest = chemUpdate:updateState(Q, dt, dtSuggest, gm)
       t = t + dt
       dt = dtSuggest
-      gm:updateThermoFromRHOE(Q)
+      gm:updateThermoFromRHOU(Q)
       ts[#ts+1] = t
       ps[#ps+1] = Q.p
    end

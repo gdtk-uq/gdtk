@@ -2,14 +2,14 @@
 -- Date: 2017-03-23
 --
 -- A simple fixed-volume reactor.
--- 
+--
 -- This script is designed to run with the gas-calc program
 -- that comes as part of the dgd collection. To run this and
 -- capture the output in a data file, do:
 --
 -- > gas-calc fixed-volume-reactor.lua > output.data
 --
--- This script is a conversion of Peter Jacobs' 
+-- This script is a conversion of Peter Jacobs'
 -- fixed_volume_reactor.py that is part of the cfcfd3
 -- code collection. That script is, in turn, a cut-down
 -- version of Brendan O'Flaherty's master program for
@@ -23,7 +23,7 @@ molef = {CH4=1/total, O2=2/total, N2=7.52/total}
 Q.T = 2000.0 -- K
 Q.p = 101.325e3 -- Pa
 Q.massf = gmodel:molef2massf(molef)
-gmodel:updateThermoFromPT(Q) 
+gmodel:updateThermoFromPT(Q)
 nsp = gmodel:nSpecies()
 
 function writeHeader()
@@ -58,13 +58,9 @@ writeData(t)
 
 while t < tEnd do
    dtChem = chem:updateState(Q, dt, dtChem, gmodel)
-   gmodel:updateThermoFromRHOE(Q)
+   gmodel:updateThermoFromRHOU(Q)
    t = t + dt
    writeData(t)
 end
 
 print("# Done.")
-
-
-   
-   

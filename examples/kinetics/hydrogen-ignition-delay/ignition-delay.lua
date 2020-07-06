@@ -26,7 +26,7 @@ function ignition_delay(T, gm, chemUpdate)
       dtSuggest = chemUpdate:updateState(Q, dt, dtSuggest, gm)
       t = t + dt
       dt = dtSuggest
-      gm:updateThermoFromRHOE(Q)
+      gm:updateThermoFromRHOU(Q)
       local conc = gm:massf2conc(Q)
       if conc.OH > igCriteria then
 	 return t

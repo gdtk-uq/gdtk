@@ -25,7 +25,7 @@ while t <= tFinal do
    dtSuggest = chemUpdate:updateState(Q, dt, dtSuggest, gm)
    t = t + dt
    -- dt = dtSuggest -- uncomment this to get quicker stepping
-   gm:updateThermoFromRHOE(Q)
+   gm:updateThermoFromRHOU(Q)
    conc = gm:massf2conc(Q)
    f:write(string.format("%10.3e %10.3f %10.3e %20.12e %20.12e %20.12e %20.12e\n",
                          t, Q.T, Q.p, Q.massf.N2, Q.massf.N, conc.N2, conc.N))
