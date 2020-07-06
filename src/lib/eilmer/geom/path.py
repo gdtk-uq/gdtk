@@ -22,10 +22,14 @@ class Path(ABC):
     def __call__(self, t):
         pass
 
-    def length(self):
+    def length(self, n=20):
+        """
+        Crude evaluation of path length by sampling and summing.
+
+        Subclasses may fall back to using this method.
+        """
         L = 0.0
         p0 = self.__call__(0.0)
-        n = 20
         dt = 1.0/n
         for i in range(n):
             p1 = self.__call__((i+1)*dt)

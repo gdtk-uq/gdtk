@@ -12,7 +12,7 @@ from copy import copy
 from eilmer.geom.vector3 import Vector3
 from eilmer.geom.path import Path
 from eilmer.geom.surface import ParametricSurface
-
+from eilmer.geom.cluster import *
 
 class StructuredGrid():
     """
@@ -29,7 +29,9 @@ class StructuredGrid():
             psurf = kwargs['psurf']
             niv = kwargs.get('niv', 1)
             njv = kwargs.get('njv', 1)
-            cf_list = kwargs.get('cf_list', [])
+            cf_list = kwargs.get('cf_list', [None, None, None, None])
+            cf_list = [cf if isinstance(cf, ClusterFunction) else LinearFunction()
+                       for cf in cf_list]
             self.make_from_psurface(psurf, niv, njv, cf_list)
         elif "gzfile" in kwargs.keys():
             print("Read grid from gzip file")
@@ -53,6 +55,10 @@ class StructuredGrid():
             raise Exception(f"niv is too small: {niv}")
         if njv < 2:
             raise Exception(f"njv is too small: {njv}")
+        rNorth = cf_list[0].distribute_parameter_values(niv)
+        sEast = cf_list[1].distribute_parameter_values(njv)
+        rSouth = cf_list[2].distribute_parameter_values(niv)
+        sWest = cf_list[3].distribute_parameter_values(njv)
         self.niv = niv
         self.njv = njv
         self.nkv = 1
@@ -64,7 +70,9 @@ class StructuredGrid():
             self.vertices.append([])
             for j in range(0,njv):
                 s = ds*j
-                self.vertices[i].append(psurf(r,s))
+                sdash = (1.0-r) * sWest[j] + r * sEast[j];
+                rdash = (1.0-s) * rSouth[i] + s * rNorth[i];
+                self.vertices[i].append(psurf(rdash, sdash))
         return
 
     def read_from_gzip_file(self, file_name):
