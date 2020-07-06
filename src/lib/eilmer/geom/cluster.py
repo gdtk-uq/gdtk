@@ -27,7 +27,7 @@ class LinearFunction(ClusterFunction):
     def __init__(self):
         return
 
-    def __repr__():
+    def __repr__(self):
         return "LinearFunction()"
 
     def distribute_parameter_values(self, nv):
@@ -50,12 +50,12 @@ class RobertsFunction(ClusterFunction):
         """
         Store the cluster parameters for later use.
         """
-        this.end0 = end0
-        this.end1 = end1
-        this.beta = beta
+        self.end0 = end0
+        self.end1 = end1
+        self.beta = beta
         return
 
-    def __repr__():
+    def __repr__(self):
         return f"RobertsFunction(end0={self.end0}, end1={self.end1}, beta={self.beta})"
 
     def distribute_parameter_values(self, nv):
