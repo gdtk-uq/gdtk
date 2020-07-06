@@ -45,27 +45,27 @@ public:
         t_values.length = this.segments.length;
         reset_breakpoints();
     }
-    
+
     // Construct as a spline through specified points.
     this(const Vector3[] p_orig, bool isClosed=false, double tolerance=1.0e-10)
     {
-        Vector3[] p; foreach(pnt; p_orig) { p ~= pnt; } 
+        Vector3[] p; foreach(pnt; p_orig) { p ~= pnt; }
         if (isClosed && distance_between(p[0], p[$-1]) > tolerance) {
             // Add one more point to close the path.
             p ~= p[0];
         }
         auto m = p.length - 1;
         // Given m+1 interpolation points p, determine the m-segment
-        // Bezier polyline that interpolates these points as a spline. 
+        // Bezier polyline that interpolates these points as a spline.
         // This is done by first determining the array of weight points
-        // which define the spline and then evaluating the cubic 
+        // which define the spline and then evaluating the cubic
         // Bezier segments.
         // Reference:
         //     G. Engelin & F. Uhlig (1996)
         //     Numerical Algorithms with C
         //     Springer, Berlin
         //     Section 12.3.1
- 
+
         Vector3[] d; d.length = m+1;  // weight points
         // For a natural spline, the first and last weight points
         // are also the first and last interpolation points.
@@ -125,18 +125,18 @@ public:
         }
         this(points, isClosed);
     } // end spline constructor
-    
+
     this(ref const(Polyline) other, bool isClosed=false)
     {
         this(other.segments, isClosed);
     }
-    
+
     override Polyline dup() const
     {
         return new Polyline(segments, closed);
     }
-    
-    override Vector3 opCall(double t) const 
+
+    override Vector3 opCall(double t) const
     {
         // Evaluate B(t) without considering arc_length parameterization flag
         // or subrange.
@@ -158,7 +158,7 @@ public:
         }
         return segments[i](t_local);
     } // end opCall()
-    
+
     override string toString() const
     {
         return "Polyline(segments=" ~ to!string(segments) ~
@@ -185,7 +185,7 @@ public:
                       startPoint.x, startPoint.y, startPoint.z);
         int startPointTag = pointTag;
         double tol = 1.0e-6;
-        
+
         foreach (i, seg; segments) {
             switch (seg.classString()) {
             case "Line":
@@ -273,7 +273,7 @@ public:
         }
         return str;
     }
-    
+
 private:
     void reset_breakpoints()
     {
@@ -311,7 +311,7 @@ version(polyline_test) {
             double alpha = 1.0;
             auto pa_dash = Vector3(alpha+ih, alpha+ih);
             auto pb = Vector3(one, zero);
-            auto pc = Vector3(zero, one); 
+            auto pc = Vector3(zero, one);
             auto line0 = new Line(pc, pa_dash);
             auto line1 = new Line(pa_dash, pb);
             auto polyline3 = new Polyline([line0, line1]);
