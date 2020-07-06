@@ -203,6 +203,56 @@ class Polyline(Path):
     # end class Polyline
 
 
+class Spline(Polyline):
+    """
+    Construct a spline of Bezier segments from a sequence of points.
+    """
+    def __init__(self, points, closed=False, tolerance=1.0e-10):
+        self.points = [Vector3(p) for p in points]
+        if closed and (abs(self.points[0]-self.points[-1]) > tolerance):
+            self.points.append(Vectot3(points[0]))
+        self.closed = closed
+        # Given m+1 interpolation points p, determine the m-segment
+        # Bezier polyline that interpolates these points as a spline.
+        # This is done by first determining the array of weight points
+        # which define the spline and then evaluating the cubic
+        # Bezier segments.
+        # Reference:
+        #   G. Engelin & F. Uhlig (1996)
+        #   Numerical Algorithms with C
+        #   Springer, Berlin
+        #   Section 12.3.1
+        #
+        # For a natural spline, the first and last weight points
+        # are also the first and last interpolation points.
+        # And, for the initial guess at the remaining weight points,
+        # just use the supplied data points.
+        # This amounts to copying the whole p collection.
+        m = len(self.points)-1
+        d = [Vector3(p) for p in self.points]
+        # Apply Gauss-Seidel iteration until
+        # the internal weight points converge.
+        for j in range(50):
+            max_diff = 0.0
+            for i in range(1, m):
+                old_p = Vector3(d[i])
+                d[i] = 0.25*(6.0*self.points[i] - d[i-1] - d[i+1])
+                max_diff = max(max_diff, abs(d[i]-old_p))
+            if max_diff < tolerance: break
+        #
+        # Final stage; calculate the cubic Bezier segments.
+        segments = [Bezier([self.points[i],
+                            (2.0*d[i]+d[i+1])/3.0,
+                            (d[i]+2.0*d[i+1])/3.0,
+                            self.points[i+1]])
+                    for i in range(m)]
+        super().__init__(segments, closed, tolerance)
+        return
+
+    def __repr__(self):
+        return f"Spline(points={self.points}, closed={self.closed})"
+
+
 class ArcLengthParameterizedPath(Path):
     """
     A Path reparameterized such that equal increments in t correspond

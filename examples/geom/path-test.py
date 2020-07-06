@@ -5,6 +5,7 @@
 import math
 from eilmer.geom.vector3 import Vector3
 from eilmer.geom.path import *
+import numpy
 
 def approxEqual(a, b):
     result = math.isclose(a, b, rel_tol=1.0e-2, abs_tol=1.0e-5)
@@ -69,7 +70,6 @@ assert approxEqual(f.y, 0.0), "Polyline evaluation y-component"
 assert approxEqual(f.z, 0.0), "Polyline evaluation z-component"
 print("f=e(1.0)=", f)
 
-
 g = ArcLengthParameterizedPath(e)
 print("g=", g)
 h = g(0.5)
@@ -77,5 +77,20 @@ print("h=g(0.5)=", h)
 assert approxEqual(h.x, 0.0), "Polyline evaluation x-component"
 assert approxEqual(h.y, 2.0), "Polyline evaluation y-component"
 assert approxEqual(h.z, 0.0), "Polyline evaluation z-component"
+
+pnts = [Vector3(x, math.sin(x))
+        for x in numpy.linspace(0.0, 2*math.pi, 10)]
+s = Spline(points=pnts)
+print("s=", s)
+z = s(0.5)
+print("s(0.5)=", z)
+assert approxEqual(z.x, math.pi), "Spline zero-crossing x-component"
+assert approxEqual(z.y, 0.0), "Spline zero-crossing y-component"
+assert approxEqual(z.z, 0.0), "Spline zero-crossing z-component"
+p = s(0.25)
+print("s(0.25)=", p)
+assert approxEqual(p.x, math.pi/2), "Spline peak x-component"
+assert approxEqual(p.y, 1.0), "Spline peak y-component"
+assert approxEqual(p.z, 0.0), "Spline peak z-component"
 
 print("Done.")
