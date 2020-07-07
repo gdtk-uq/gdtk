@@ -40,7 +40,7 @@ There are two modes for the `e4-prep-restart` program:
 The first mode is more common and so is the default action.
 Let's look at an example of appending one of our snapshots to the time series.
 
-  > e4-prep-restart --jobName=my_job --snapshot=1
+  > e4-prep-restart --job=my_job --snapshot=1
 
 This will take the snapshot at index 1 and append it to the time series.
 You will get a message to the screen informing you of the new time index in the series.
@@ -54,13 +54,13 @@ The other mode of operation for `e4-prep-restart` is to replace a solution in th
 series with a snapshot.
 In this example, we replace the solution at index 5 with the snapshot 0:
 
- > e4-prep-restart --jobName=my_job --snapshot=0 --replace=5
+ > e4-prep-restart --job=my_job --snapshot=0 --replace=5
 
 Since we've replaced index 5 in the time series, it's likely we'd want to
 restart Eilmer from that point.
 Here is an example with MPI (on a cluster where number of processes is taken care of):
 
- > mpirun e4mpi --jobName=my_job --run --tindx-start=5
+ > mpirun e4mpi --job=my_job --run --tindx-start=5
 
 The `e4-prep-restart` program accepts a `--verbose` flag that will show you
 the house-keeping steps being performed.
