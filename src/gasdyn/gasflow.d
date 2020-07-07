@@ -84,6 +84,7 @@ number[] normal_shock(const(GasState) state1, number Vs, GasState state2,
                       GasModel gm, double rho_tol=1.0e-6, double T_tol = 0.1)
 /**
  * Computes post-shock conditions in a shock-stationary frame.
+ * (This version iterates on rho2, T2.)
  *
  * Input:
  *   state1: reference to pre-shock Gas state (given)
@@ -176,6 +177,105 @@ number[] normal_shock(const(GasState) state1, number Vs, GasState state2,
     gm.update_sound_speed(state2); // be sure that state2 is complete
     return [V2, Vg];
 } // end normal_shock()
+
+
+number[] normal_shock_1(const(GasState) state1, number Vs, GasState state2,
+                        GasModel gm, double p_tol=0.5, double T_tol = 0.1)
+/**
+ * Computes post-shock conditions in a shock-stationary frame.
+ * (This version iterates on p2, T2.)
+ *
+ * Input:
+ *   state1: reference to pre-shock Gas state (given)
+ *   Vs: speed of gas coming into shock (given)
+ *   state2: reference to post-shock Gas state (to be estimated)
+ *   gm: the gas model in use
+ *   p_tol: tolerance in Pa
+ *   T_tol: temperature tolerance in degrees K
+ *
+ * Returns: the dynamic array [V2, Vg], containing the post-shock gas speeds,
+ *   V2 in the shock-reference frame,
+ *   Vg in the lab frame.
+ *
+ */
+{
+    // Assume a chemically-frozen gas, so copy mass-fractions and the like from state1.
+    state2.copy_values_from(state1);
+    gm.update_thermo_from_pT(state2);
+    // Initial guess via ideal gas relations.
+    number[] velocities = shock_ideal(state1, Vs, state2, gm);
+    number V2 = velocities[0]; number Vg = velocities[1];
+    if (cast(CEAGas) gm !is null) {
+        // The ideal gas estimate may have an unreasonably high value for temperature.
+        // I vaguely recall Malcolm McIntosh had a correlation with shock velocity or
+        // Mach number for his adjustments to the ideal-gas initial guess, however,
+        // this is Chris James' simple adjustment that seems to allow the calculation
+        // to proceed.
+        state2.T = fmin(state2.T, 20000.0);
+        gm.update_thermo_from_pT(state2);
+    }
+    // We assume that state2 now contains a fair initial guess
+    // and set up the target values for the Rankine-Hugoniot relations.
+    number V1 = Vs;
+    number momentum = state1.p + state1.rho * V1 * V1;
+    number total_enthalpy = gm.enthalpy(state1) + 0.5 * V1 * V1;
+    //
+    auto Fvector = delegate(number p2, number T2)
+    {
+        // Constraint equations for state2 from the normal shock relations.
+        // The correct post-shock values allow this vector to evaluate to zeros.
+        state2.p = p2; state2.T = T2;
+        gm.update_thermo_from_pT(state2);
+        V2 = V1 * state1.rho / state2.rho; // mass conservation
+        number f1 = momentum - state2.p - state2.rho*V2*V2;
+        number f2 = total_enthalpy - gm.enthalpy(state2) - 0.5*V2*V2;
+        return [f1, f2];
+    };
+    // Augmented matrix for the linear equation coefficients.
+    Matrix!number Ab = new Matrix!number(2, 3);
+    number p_delta = 1.0; number T_delta = 1.0;
+    //
+    // Update the estimates for rho,T using the Newton-Raphson method.
+    //
+    // We put an upper limit on the number of iterations that should be plenty
+    // for well behaved gas models.  The CEA2 code, however, can have inconsistent
+    // thermo data at the joins of the polynomial pieces and the Newton iterations
+    // may go into a limit cycle that is close to the solution but never within
+    // the requested tolerances.  If this happens, we just accept whatever final
+    // iteration is computed.
+    foreach (count; 0 .. 20) {
+        number p_save = state2.p;
+        number T_save = state2.T;
+        number[] f_save = Fvector(p_save, T_save);
+        // Use finite differences to compute the Jacobian.
+        number d_p = p_save * 0.01;
+        number d_T = T_save * 0.01;
+        number[] f_values = Fvector(p_save + d_p, T_save);
+        number df0dp = (f_values[0] - f_save[0]) / d_p;
+        number df1dp = (f_values[1] - f_save[1]) / d_p;
+        f_values = Fvector(p_save, T_save + d_T);
+        number df0dT = (f_values[0] - f_save[0]) / d_T;
+        number df1dT = (f_values[1] - f_save[1]) / d_T;
+        Ab[0,0] = df0dp; Ab[0,1] = df0dT; Ab[0,2] = -f_save[0];
+        Ab[1,0] = df1dp; Ab[1,1] = df1dT; Ab[1,2] = -f_save[1];
+        gaussJordanElimination(Ab);
+        // These are the full increments according to the Newton method.
+        p_delta = Ab[0,2]; T_delta = Ab[1,2];
+        // Limit the increments so that the iteration is more stable for the difficult cases.
+        p_delta = copysign(fmin(abs(p_delta),0.2*abs(p_save)), p_delta);
+        T_delta = copysign(fmin(abs(T_delta),0.2*abs(T_save)), T_delta);
+        state2.p = p_save + p_delta;
+        state2.T = T_save + T_delta;
+        gm.update_thermo_from_pT(state2);
+        // Check convergence.
+        if (abs(p_delta) < p_tol && abs(T_delta) < T_tol) { break; }
+    } // end foreach count
+    // Back-out velocities via continuity.
+    V2 = V1 * state1.rho / state2.rho;
+    Vg = V1 - V2;
+    gm.update_sound_speed(state2); // be sure that state2 is complete
+    return [V2, Vg];
+} // end normal_shock_1()
 
 
 number[] normal_shock_p2p1(const(GasState) state1, number p2p1,
@@ -1175,8 +1275,8 @@ number[2] EOS_derivatives(const(GasState) state_0, GasModel gm)
 {
     number rho_0 = state_0.rho;
     // Choose relatively-small increments in energy (J/kg) and pressure (Pa).
-    number du = abs(state_0.u) * 0.01 + 1000.0;
-    number dp = state_0.p * 0.01 + 1000.0;
+    number du = abs(state_0.u) * 0.001 + 100.0;
+    number dp = state_0.p * 0.001 + 10.0;
     // We're actually going to work in changes of p and T.
     // The function name for Cv evaluation does look a bit odd,
     // in that the increment in internal energy with p constant
@@ -1280,6 +1380,7 @@ number[2] theta_cone(const(GasState) state1, number V1, number beta,
         gas_state.rho = rho; gas_state.u = u;
         gm.update_thermo_from_rhou(gas_state);
         assert(abs(gas_state.p - p)/p < 0.001, "pressure diverging");
+        z[4] = gas_state.p; // make consistent, so that we don't accumulate drift
     }
     // At this point, V_theta should have crossed zero so
     // we can linearly-interpolate the cone-surface conditions.

@@ -47,9 +47,19 @@ function approxEqual(a, b, relTol, absTol)
    return result
 end
 
-print("normal shock, given shock speed")
+print("normal shock, given shock speed (rho, T iterations)")
 Vs = 2414.0
 state2, V2, Vg = gasflow.normal_shock(state1, Vs)
+print("    V2=", V2, "Vg=", Vg)
+print("    state2:"); printValues(state2)
+assert(approxEqual(V2, 361.9), "V2 number after shock fail")
+assert(approxEqual(Vg, 2052.1), "Vg number after shock fail")
+assert(approxEqual(state2.p, 7.314e6), "p2 number after shock fail")
+assert(approxEqual(state2.T, 2630.0), "T2 number after shock fail")
+
+print("normal shock, given shock speed (p, T iterations)")
+Vs = 2414.0
+state2, V2, Vg = gasflow.normal_shock_1(state1, Vs)
 print("    V2=", V2, "Vg=", Vg)
 print("    state2:"); printValues(state2)
 assert(approxEqual(V2, 361.9), "V2 number after shock fail")
@@ -76,7 +86,7 @@ print("Expand from stagnation (with ratio of pressure to match observation)")
 state5s, V5s = gasflow.expand_from_stagnation(state5, 34.37/59.47)
 print("    V5s=", V5s, " Mach=", V5s/state5s.a)
 print("    state5s:"); printValues(state5s)
-print("    (h5s-h1)=", gm:enthalpy(state5s) - gm:enthalpy(state1)) 
+print("    (h5s-h1)=", gm:enthalpy(state5s) - gm:enthalpy(state1))
 assert(approxEqual(V5s, 1184.7), "V5s number after expand_from_stagnation fail")
 assert(approxEqual(state5s.p, 34.37e6), "p5s number after expand_from_stagnation fail")
 assert(approxEqual(state5s.T, 4161.8), "T5s number after expand_from_stagnation fail")
@@ -137,7 +147,7 @@ assert(approxEqual(state2.T, 276.9), "temperature after finite_wave_dv fail")
 M1 = 1.5
 print("\nOblique-shock demo for M1=", M1)
 state1.p = 1.0e5; state1.T = 300.0 -- ideal air, not high T
-gm:updateThermoFromPT(state1) 
+gm:updateThermoFromPT(state1)
 gm:updateSoundSpeed(state1)
 beta = 45.0 * math.pi/180.0
 print("    given beta(degrees)=", beta*180/math.pi)
@@ -155,7 +165,7 @@ print("    beta2(degrees)=", beta2*180/math.pi)
 assert(approxEqual(beta, beta2), "shock wave angle fail")
 
 print("\nCatch an error")
--- Note that we must wrap the code (that might throw errors 
+-- Note that we must wrap the code (that might throw errors
 -- that we want to catch and handle in Lua)
 -- in a function before calling it with pcall.
 -- bad_fun = function() error("deliberate oops") end

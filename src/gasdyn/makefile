@@ -25,21 +25,22 @@ LUA_DIR := ../../extern/lua-5.1.4
 LIBLUA := $(LUA_DIR)/lib/liblua.a
 LIBLUAPATH := $(LUA_DIR)/lib
 
+CEQ_DIR := ../extern/ceq/source
+LIBCEQ := $(CEQ_DIR)/libceq.a
+include $(CEQ_DIR)/ceq_files.mk
+
 GAS_DIR := ../gas
 include $(GAS_DIR)/gas_files.mk
 
 KINETICS_DIR := ../kinetics
 include $(KINETICS_DIR)/kinetics_files.mk
 
-CEQ_DIR := ../extern/ceq/source
-include $(CEQ_DIR)/ceq_files.mk
-
-# For development work, we have put on -debug and -unittest.
-DFLAGS := -w -debug -unittest -g -dip1008 -I..
+# For development work, we have put on -debug.
+DFLAGS := -w -debug -g -dip1008 -I..
 OF := -of
 DLINKFLAGS := -L-ldl -L-lgfortran
 
-DFLAGS_LUA := -w -debug -unittest -g -dip1008 -I.. -I$(LUAD_DIR)
+DFLAGS_LUA := -w -debug -g -dip1008 -I.. -I$(LUAD_DIR)
 DLINKFLAGS_LUA := -L-L$(LIBLUAPATH) -L-llua $(DLINKFLAGS)
 
 demo: $(DEMO_PROGRAMS)
@@ -60,7 +61,7 @@ clean:
 $(LIBLUA):
 	cd $(LUA_DIR); make linux local
 
-$(CEQ_FILES):
+$(LIBCEQ):
 	cd $(CEQ_DIR); make
 
 idealgasflow_demo: idealgasflow_demo.d idealgasflow.d $(NM_FILES) $(LIBLUA) \
@@ -76,23 +77,23 @@ luaidealgasflow_demo: luaidealgasflow_demo.d $(NM_FILES) $(LIBLUA) \
 		gasflowexception.d \
 		$(NM_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA)
 
-gasflow_demo: gasflow_demo.d gasflow.d idealgasflow.d $(NM_FILES) $(LIBLUA) \
-	$(UTIL_FILES) $(GASDYN_FILES) $(GAS_FILES) $(CEQ_FILES) $(KINETICS_FILES)
+gasflow_demo: gasflow_demo.d gasflow.d idealgasflow.d $(NM_FILES) $(LIBCEQ) $(LIBLUA) \
+	$(UTIL_FILES) $(GASDYN_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES)
 	dmd $(DFLAGS) $(OF)gasflow_demo \
 		gasflow_demo.d gasflow.d idealgasflow.d gasflowexception.d \
 		$(NM_FILES) $(UTIL_FILES) \
-		$(GAS_FILES) $(CEQ_FILES) $(KINETICS_FILES) $(DLINKFLAGS_LUA)
+		$(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(LIBCEQ) $(DLINKFLAGS_LUA)
 
 luagasflow_demo: luagasflow_demo.d luagasflow.d luaidealgasflow.d \
 	gasflow.d idealgasflow.d \
-	$(NM_FILES) $(LIBLUA) \
-	$(UTIL_FILES) $(GASDYN_FILES) $(GAS_FILES) $(CEQ_FILES) $(GAS_LUA_FILES) \
+	$(NM_FILES) $(LIBLUA) $(LIBCEQ) \
+	$(UTIL_FILES) $(GASDYN_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(GAS_LUA_FILES) \
 	$(KINETICS_FILES) $(KINETICS_LUA_FILES)
 	dmd $(DFLAGS) $(OF)luagasflow_demo \
 		luagasflow_demo.d luagasflow.d luaidealgasflow.d \
 		gasflow.d idealgasflow.d gasflowexception.d \$(NM_FILES) $(UTIL_FILES) \
-		$(GAS_FILES) $(CEQ_FILES) $(GAS_LUA_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES) \
-		$(DLINKFLAGS_LUA)
+		$(GAS_FILES) $(CEQ_SRC_FILES) $(GAS_LUA_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES) \
+		 $(LIBCEQ) $(DLINKFLAGS_LUA)
 
 #--------------------------------------------------------------------------
 # Fortran bits -- we need a bit of a hack

@@ -11,7 +11,8 @@ import idealgasflow; // for the oblique shock relations
 
 void main(){
     writeln("Begin gasflow demo (reflected-shock tunnel calculation)");
-    GasModel gm = init_gas_model("../gas/sample-data/cea-air13species-gas-model.lua");
+    GasModel gm = init_gas_model("../gas/sample-data/cea-lut-air-version-test.lua");
+    // GasModel gm = init_gas_model("../gas/sample-data/cea-air5species-gas-model.lua");
     GasState s1 = new GasState(gm, 125.0e3, 300.0);
     writeln("    s1: ", s1);
     //
@@ -22,8 +23,14 @@ void main(){
     writeln("    V2=", V2, " Vg=", Vg);
     writeln("    s2: ", s2);
     //
-    writeln("Incident shock (full gas model)");
+    writeln("Incident shock (full gas model) with rho,T iteration");
     velocities = normal_shock(s1, 2414.0, s2, gm);
+    V2 = velocities[0]; Vg = velocities[1];
+    writeln("    V2=", V2, " Vg=", Vg);
+    writeln("    s2: ", s2);
+    //
+    writeln("Incident shock (full gas model) with p,T iteration");
+    velocities = normal_shock_1(s1, 2414.0, s2, gm);
     V2 = velocities[0]; Vg = velocities[1];
     writeln("    V2=", V2, " Vg=", Vg);
     writeln("    s2: ", s2);
@@ -46,7 +53,7 @@ void main(){
     double V5s = expand_from_stagnation(s5, 34.37/59.47, s5s, gm);
     writeln("    V5s=", V5s, " Mach=", V5s/s5s.a);
     writeln("    s5s:", s5s);
-    writeln("    (h5s-h1)=", gm.enthalpy(s5s) - gm.enthalpy(s1)); 
+    writeln("    (h5s-h1)=", gm.enthalpy(s5s) - gm.enthalpy(s1));
     //
     writeln("Expand to throat conditions (Mach 1.0001)");
     GasState s6 = new GasState(s5s);
@@ -82,7 +89,7 @@ void main(){
     writeln("    p2/p1=", s10b.p/s10a.p, " expected ", 0.006586/0.5283);
     //
     writeln("slightly supersonic start");
-    V10b = steady_flow_with_area_change(s10a, V10a, 1.030, s10b, gm); 
+    V10b = steady_flow_with_area_change(s10a, V10a, 1.030, s10b, gm);
     writeln("    M=", V10b/s10b.a, " expected 1.2");
     writeln("    p2/p1=", s10b.p/s10a.p, " expected ", 0.4124/0.5283);
     //
@@ -119,7 +126,7 @@ void main(){
     double M1 = 1.5;
     writefln("\nOblique-shock demo for M1=%g.", M1);
     s1.p = 1.0e5; s1.T = 300.0; // ideal air, not high T
-    gm.update_thermo_from_pT(s1); 
+    gm.update_thermo_from_pT(s1);
     gm.update_sound_speed(s1);
     double beta = 45.0 * PI/180.0;
     writeln("    given beta(degrees)=", beta*180/PI);
@@ -138,7 +145,7 @@ void main(){
     //
     M1 = 1.5;
     s1.p = 1.0e5; s1.T = 300.0; // ideal air, not high T
-    gm.update_thermo_from_pT(s1); 
+    gm.update_thermo_from_pT(s1);
     gm.update_sound_speed(s1);
     writefln("\nTaylor-Maccoll cone flow demo with M1=%g", M1);
     writeln("for M1=1.5, beta=49deg, expect theta=20deg from NACA1135.");
@@ -155,7 +162,7 @@ void main(){
     //
     M1 = 1.5;
     s1.p = 1.0e5; s1.T = 300.0; // ideal air, not high T
-    gm.update_thermo_from_pT(s1); 
+    gm.update_thermo_from_pT(s1);
     gm.update_sound_speed(s1);
     writefln("\nTaylor-Maccoll cone flow demo with M1=%g", M1);
     writeln("for M1=1.5, beta=49.0404423512deg, expect theta=20deg from NACA1135.");
@@ -171,7 +178,7 @@ void main(){
     //
     M1 = 1.8;
     s1.p = 1.0e5; s1.T = 300.0; // ideal air, not high T
-    gm.update_thermo_from_pT(s1); 
+    gm.update_thermo_from_pT(s1);
     gm.update_sound_speed(s1);
     writefln("\nTaylor-Maccoll cone flow demo with M1=%g", M1);
     writeln("for M1=1.8, beta=45deg, expect theta=24deg from NACA1135.");
