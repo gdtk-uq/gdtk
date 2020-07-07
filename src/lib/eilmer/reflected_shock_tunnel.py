@@ -69,7 +69,7 @@ def calculate_states(gasModel, flow, p1, T1, massf, Vs, pe, pp_on_pe, area_ratio
     #
     if print_status: print('Start incident-shock calculation.')
     state2 = GasState(gasModel)
-    (V2,Vg) = flow.normal_shock(state1, Vs, state2)
+    (V2,Vg) = flow.normal_shock_1(state1, Vs, state2)
     result['state2'] = state2
     result['V2'] = V2
     result['Vg'] = Vg

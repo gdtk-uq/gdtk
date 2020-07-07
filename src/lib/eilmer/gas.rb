@@ -67,6 +67,8 @@ module Gas
                                   double* results)'
   extern 'int gasflow_normal_shock(int state1_id, double Vs, int state2_id, int gm_id,
                                    double* results, double rho_tol, double T_tol)'
+  extern 'int gasflow_normal_shock_1(int state1_id, double Vs, int state2_id, int gm_id,
+                                     double* results, double p_tol, double T_tol)'
   extern 'int gasflow_normal_shock_p2p1(int state1_id, double p2p1, int state2_id, int gm_id,
                                         double* results)'
   extern 'int gasflow_reflected_shock(int state2_id, double vg, int state5_id, int gm_id,
@@ -324,7 +326,7 @@ class GasState
   include Gas
   attr_reader :id
   attr_reader :gmodel
-  
+
   def initialize(gmodel)
     @gmodel = gmodel
     @id = Gas.gas_state_new(gmodel.id)
@@ -659,6 +661,14 @@ class GasFlow
     my_results = [0.0, 0.0].pack("d*")
     flag = Gas.gasflow_normal_shock(state1.id, vs, state2.id, @gmodel.id, my_results,
                                     rho_tol, t_tol)
+    if flag < 0 then raise "failed to compute normal shock jump from shock speed." end
+    return my_results[0, my_results.size].unpack("dd") # [v2, vg]
+  end
+
+  def normal_shock_1(state1, vs, state2, p_tol=0.5, t_tol=0.1)
+    my_results = [0.0, 0.0].pack("d*")
+    flag = Gas.gasflow_normal_shock_1(state1.id, vs, state2.id, @gmodel.id, my_results,
+                                      p_tol, t_tol)
     if flag < 0 then raise "failed to compute normal shock jump from shock speed." end
     return my_results[0, my_results.size].unpack("dd") # [v2, vg]
   end

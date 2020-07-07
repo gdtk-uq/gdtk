@@ -341,7 +341,8 @@ number reflected_shock(const(GasState) state2, number Vg,
     number gam = gm.gamma(state2);
     number density_ratio = (gam+1.0)/(gam-1.0);
     number Vr_a = Vg / density_ratio;
-    number[] velocities = normal_shock(state2, Vr_a+Vg, state5, gm);
+    debug { writeln("Vr_a=", Vr_a); }
+    number[] velocities = normal_shock_1(state2, Vr_a+Vg, state5, gm);
     number V5 = velocities[0];
     // The objective function is the difference in speeds,
     // units are m/s.  A value of zero for this function means
@@ -349,13 +350,16 @@ number reflected_shock(const(GasState) state2, number Vg,
     // the processed test gas is left in the end of the tube
     // with a velocity of zero in the laboratory frame.
     number f_a = V5 - Vr_a;
+    debug { writeln("f_a=", f_a); }
     //
     // Now, update this guess using the secant method.
     //
     number Vr_b = 1.1 * Vr_a;
-    velocities = normal_shock(state2, Vr_b+Vg, state5, gm);
+    debug { writeln("Vr_b=", Vr_b); }
+    velocities = normal_shock_1(state2, Vr_b+Vg, state5, gm);
     V5 = velocities[0];
     number f_b = V5 - Vr_b;
+    debug { writeln("f_b=", f_b); }
     if (abs(f_a) < abs(f_b)) {
         swap(f_a, f_b);
         swap(Vr_a, Vr_b);
@@ -364,9 +368,11 @@ number reflected_shock(const(GasState) state2, number Vg,
     while (abs(f_b) > 0.5 && count < 20) {
         number slope = (f_b - f_a) / (Vr_b - Vr_a);
         number Vr_c = Vr_b - f_b / slope;
-        velocities = normal_shock(state2, Vr_c+Vg, state5, gm);
+        debug { writeln("Vr_c=", Vr_c); }
+        velocities = normal_shock_1(state2, Vr_c+Vg, state5, gm);
         V5 = velocities[0];
         number f_c = V5 - Vr_c;
+        debug { writeln("f_c=", f_c); }
         if (abs(f_c) < abs(f_b)) {
             Vr_b = Vr_c; f_b = f_c;
         } else {
@@ -379,7 +385,7 @@ number reflected_shock(const(GasState) state2, number Vg,
     }
     // At this point, Vr_b should be our best guess.
     // Update the gas state data and return the best-guess value.
-    velocities = normal_shock(state2, Vr_b+Vg, state5, gm);
+    velocities = normal_shock_1(state2, Vr_b+Vg, state5, gm);
     return Vr_b;
 } // end reflected_shock()
 

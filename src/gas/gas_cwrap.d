@@ -839,6 +839,23 @@ int gasflow_normal_shock(int state1_id, double vs, int state2_id, int gm_id,
 }
 
 extern(C)
+int gasflow_normal_shock_1(int state1_id, double vs, int state2_id, int gm_id,
+                           double* results, double p_tol, double T_tol)
+{
+    try {
+        double[] my_results = normal_shock_1(gas_states[state1_id], vs,
+                                             gas_states[state2_id], gas_models[gm_id],
+                                             p_tol, T_tol);
+        results[0] = my_results[0]; // v2
+        results[1] = my_results[1]; // vg
+        return 0;
+    } catch (Exception e) {
+        stderr.writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern(C)
 int gasflow_normal_shock_p2p1(int state1_id, double p2p1, int state2_id, int gm_id,
                               double* results)
 {

@@ -65,6 +65,8 @@ ffi.cdef("""
                             double* results);
     int gasflow_normal_shock(int state1_id, double vs, int state2_id, int gm_id,
                              double* results, double rho_tol, double T_tol);
+    int gasflow_normal_shock_1(int state1_id, double vs, int state2_id, int gm_id,
+                               double* results, double p_tol, double T_tol);
     int gasflow_normal_shock_p2p1(int state1_id, double p2p1, int state2_id, int gm_id,
                                   double* results);
     int gasflow_reflected_shock(int state2_id, double vg, int state5_id, int gm_id,
@@ -636,6 +638,15 @@ class GasFlow(object):
         my_results = ffi.new("double[]", [0.0]*2)
         flag = so.gasflow_normal_shock(state1.id, vs, state2.id, self.gmodel.id, my_results,
                                        rho_tol, T_tol)
+        if flag < 0: raise Exception("failed to compute normal shock jump.")
+        v2 = my_results[0]
+        vg = my_results[1]
+        return [v2, vg]
+
+    def normal_shock_1(self, state1, vs, state2, p_tol=0.5, T_tol=0.1):
+        my_results = ffi.new("double[]", [0.0]*2)
+        flag = so.gasflow_normal_shock_1(state1.id, vs, state2.id, self.gmodel.id, my_results,
+                                         p_tol, T_tol)
         if flag < 0: raise Exception("failed to compute normal shock jump.")
         v2 = my_results[0]
         vg = my_results[1]
