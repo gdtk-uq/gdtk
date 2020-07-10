@@ -12,12 +12,10 @@ Running this module as a Python script gives me the following transcript::
 
 Start sample integrations...
 (1) Constant derivatives:
-len(ts)= 9
 t1= 10.0
 y1= [ 10. -20.  30.]
 err1= [5.55111512e-17 1.11022302e-16 0.00000000e+00]
 (2) Second-order linear ODE:
-len(ts)= 601
 t1= 6.283185307179586
 y1= [-5.64489861e-15  1.00000000e+00]
 err1= [6.16715441e-11 6.16715459e-11]
@@ -51,15 +49,13 @@ def ode_integrate(t0, tlast, nstep, f, n, y0):
     y0: an array of starting values for the dependent variables
       It is assumed that the y-elements are indexed 0..n-1
 
-    Returns final values of t, y, and error estimates for y values
-    are returned as a tuple.
+    Lists of t, y, and error estimates for y values are returned in a tuple.
     """
     assert callable(f)
     assert n <= len(y0)
     assert t0 <= tlast
     assert nstep >= 1
     ts = np.linspace(t0, tlast, nstep+1)
-    print("len(ts)=", len(ts))
     ys = []
     ys.append(y0.copy())  # Set up a new list so we don't mangle y0 itself.
     err_sums = []
@@ -74,7 +70,7 @@ def ode_integrate(t0, tlast, nstep, f, n, y0):
 
 def rkf45_step(t0, h, f, n, y0):
     """
-    Steps the set of ODEs by the Runge-Kutta-Fehlberg method.
+    Single-step the set of ODEs by the Runge-Kutta-Fehlberg method.
 
     t0: is the starting value of the independent variable
     h: the requested step size
@@ -86,8 +82,7 @@ def rkf45_step(t0, h, f, n, y0):
     y0: an array of starting values for the dependent variables
       It is assumed that the y-elements are indexed 0..n-1
 
-    Returns final values of t, y, and error estimates for y values
-    are returned as a tuple.
+    Final values of t, y, and error estimates for y values are returned in a tuple.
     """
     # Build up the sample point information.
     k1 = f(t0, y0.copy(), n)
