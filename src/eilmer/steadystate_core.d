@@ -224,6 +224,9 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     if ( snapshotStart == 0 ) {
         cfl = cfl0;
         dt = determine_dt(cfl);
+        version(mpi_parallel) {
+            MPI_Allreduce(MPI_IN_PLACE, &dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+        }
         // The initial residual is usually a poor choice for basing decisions about how the
         // residual is dropping, particularly when a constant initial condition is given.
         // A constant initial condition gives a zero residual everywhere in the interior
@@ -295,8 +298,6 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                             }
                             writefln("attempt %d: dt= %e", attempt, dt);
                             failedAttempt = 1;
-                            cfl = 0.1*cfl;
-                            dt = determine_dt(cfl);
                         }
                         cellCount += nConserved;
                     }
@@ -304,10 +305,16 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 // Coordinate MPI tasks if one of them had a failed attempt.
                 version(mpi_parallel) {
                     MPI_Allreduce(MPI_IN_PLACE, &failedAttempt, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-                    MPI_Allreduce(MPI_IN_PLACE, &dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
                 }
 
                 if (failedAttempt > 0) {
+                    // reduce CFL
+                    cfl = 0.1*cfl;
+                    dt = determine_dt(cfl);
+                    version(mpi_parallel) {
+                        MPI_Allreduce(MPI_IN_PLACE, &dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+                    }
+
                     // return cell flow-states to their original state
                     foreach (blk; parallel(localFluidBlocks,1)) {
                         int cellCount = 0;
@@ -584,8 +591,6 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                     catch (FlowSolverException e) {
                         writefln("Failed attempt %d: dt= %e", attempt, dt);
                         failedAttempt = 1;
-                        cfl = 0.1*cfl;
-                        dt = determine_dt(cfl);
                     }
                     cellCount += nConserved;
                 }
@@ -594,11 +599,17 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             // Coordinate MPI tasks after try-catch statement in case one or more of the tasks encountered an exception.
             version(mpi_parallel) {
                 MPI_Allreduce(MPI_IN_PLACE, &failedAttempt, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-                MPI_Allreduce(MPI_IN_PLACE, &dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
             }
             // end: coordination of MPI tasks
             if (failedAttempt > 0) {
-		// return cell flow-states to their original state
+                // Reduce CFL
+                cfl = 0.1*cfl;
+                dt = determine_dt(cfl);
+                version(mpi_parallel) {
+                    MPI_Allreduce(MPI_IN_PLACE, &dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+                }
+
+                // return cell flow-states to their original state
 		foreach (blk; parallel(localFluidBlocks,1)) {
 		    int cellCount = 0;
 		    foreach (cell; blk.cells) {
@@ -675,7 +686,6 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             version(mpi_parallel) {
                 MPI_Allreduce(MPI_IN_PLACE, &(mass_balance.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
             }
-            dt = determine_dt(cfl);
             // Write out residuals
             if ( !residualsUpToDate ) {
                 max_residuals(currResiduals);
@@ -717,7 +727,6 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         }
         
         if ( (step % GlobalConfig.print_count) == 0 || finalStep ) {
-            dt = determine_dt(cfl);
             if ( !residualsUpToDate ) {
                 max_residuals(currResiduals);
                 residualsUpToDate = true;
@@ -831,7 +840,13 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 cfl_schedule_current_index += 1;
             }
         }
-        
+
+        // Update dt based on new CFL
+        dt = determine_dt(cfl);
+        version(mpi_parallel) {
+            MPI_Allreduce(MPI_IN_PLACE, &dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+        }
+                
         if (step == nStartUpSteps) {
             // At the swap-over point from start-up phase to main phase
             // we need to do a few special things.
@@ -839,6 +854,9 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             if (GlobalConfig.is_master_task) { writefln("step= %d dt= %e  cfl1= %f", step, dt, cfl1); }
             cfl = cfl1;
             dt = determine_dt(cfl);
+            version(mpi_parallel) {
+                MPI_Allreduce(MPI_IN_PLACE, &dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+            }
             if (GlobalConfig.is_master_task) { writefln("after choosing new timestep: %e", dt); }
             // 2. Reset the inexact Newton phase.
             //    We'll take some constant timesteps at the new dt
