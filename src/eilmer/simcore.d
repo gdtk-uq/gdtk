@@ -1198,9 +1198,22 @@ int integrate_in_time(double target_time_as_requested)
     //----------------------------------------------------------------
     //                 Top of main time-stepping loop
     //----------------------------------------------------------------
-    int update_solid_domain_on_step = 0;
+
+    // we let the fluid time step settle before loosely coupling the solid domain;
+    // during this period the fluid and solid are tightly coupled.
+    // 1000 iterations appears to be sufficient.
+    int solid_domain_loose_coupling_delay = 1000;
+    int update_solid_domain_on_step = solid_domain_loose_coupling_delay;
+    auto coupling_with_solid_domains_save = GlobalConfig.coupling_with_solid_domains;
+    GlobalConfig.coupling_with_solid_domains = SolidDomainCoupling.tight;
+    
     while ( !finished_time_stepping ) {
         try {
+            if (SimState.step == solid_domain_loose_coupling_delay && coupling_with_solid_domains_save == SolidDomainCoupling.loose) {
+                // switch to loose coupling
+                GlobalConfig.coupling_with_solid_domains = SolidDomainCoupling.loose;
+            }
+            
             // 0.0 Run-time configuration may change, a halt may be called, etc.
             check_run_time_configuration(target_time_as_requested);
             if (GlobalConfig.grid_motion != GridMotion.none) { synchronize_corner_coords_for_all_blocks(); }
@@ -1242,11 +1255,10 @@ int integrate_in_time(double target_time_as_requested)
             // If tight coupling, then this has already been performed
             // in the gasdynamic_explicit_increment().
             if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.loose && SimState.step == update_solid_domain_on_step) { 
-
+    
                 // determine stable time step in solid domain
                 double dt_solid_stable = determine_solid_time_step_size();
-                int n_solid_coupling = to!int(floor(dt_solid_stable/SimState.dt_global));
-                if (SimState.step == 0) n_solid_coupling = 1000; // we will wait for the fluid dt_global to settle
+                int n_solid_coupling = to!int(min((floor(dt_solid_stable/SimState.dt_global)), int.max));
                 double dt_solid = n_solid_coupling*SimState.dt_global;
                 update_solid_domain_on_step = SimState.step + n_solid_coupling;
                 
