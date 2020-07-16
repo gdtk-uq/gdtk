@@ -77,7 +77,7 @@ add_dt_plot(0.251, 0.05e-3, 1.0e-6) # Record more frequently for the shock waves
 #
 # Sensor locations...
 # Remember that these history locations will be numbered from 0 in the set
-# of history data files.  Thus, the nozzle-supply sensor with be numbered 4.
+# of history data files.  Thus, the nozzle-supply sensor will be numbered 4.
 add_history_loc(25.8)   # downstream-end of the compression tube
 add_history_loc(30.0)   # shock-tube station 1
 add_history_loc(32.0)   # shock-tube station 2

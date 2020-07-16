@@ -85,7 +85,7 @@ add_dt_plot(0.154, 0.03e-3, 1.000e-6) # Record more frequently for the shock wav
 #
 # Sensor locations...
 # Remember that these history locations will be numbered from 0 in the set
-# of history data files.  Thus, the nozzle-supply sensor with be numbered 7.
+# of history data files.  Thus, the nozzle-supply sensor will be numbered 7.
 add_history_loc(33.900)   # downstream-end of the compression tube
 add_history_loc(34.300)   # SS1, just downstream of ST throat
 add_history_loc(34.683)   # SS2
