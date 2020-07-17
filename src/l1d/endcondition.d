@@ -134,16 +134,54 @@ public:
     {
         final switch (state) {
         case DiaphragmState.closed:
+            // When sampling the pressure either side of the diaphragm,
+            // we average the cell pressures over distances dxL, dxR.
             double pL = 0.0;
+            int ncellL = 0;
             if (slugL) {
-                LCell cL = (slugL_end == End.L) ? slugL.cells[0] : slugL.cells[$-1];
-                pL = cL.gas.p;
+                if (slugL_end == End.L) {
+                    double x0 = slugL.faces[0].x;
+                    foreach (i; 0 .. slugL.ncells) {
+                        LCell cL = slugL.cells[i];
+                        pL += cL.gas.p;
+                        ncellL++;
+                        // Doing the test after guarantees at least one cell is sampled,
+                        // even for dxL zero.
+                        if (fabs(cL.xmid - x0) > dxL) { break; }
+                    }
+                } else {
+                    double x0 = slugL.faces[$-1].x;
+                    foreach (i; 0 .. slugL.ncells) {
+                        LCell cL = slugL.cells[$-i];
+                        pL += cL.gas.p;
+                        ncellL++;
+                        if (fabs(cL.xmid - x0) > dxL) { break; }
+                    }
+                }
             }
+            pL /= ncellL;
             double pR = 0.0;
+            int ncellR = 0;
             if (slugR) {
-                LCell cR = (slugR_end == End.L) ? slugR.cells[0] : slugR.cells[$-1];
-                pR = cR.gas.p;
+                if (slugR_end == End.L) {
+                    double x0 = slugR.faces[0].x;
+                    foreach (i; 0 .. slugR.ncells) {
+                        LCell cR = slugR.cells[0];
+                        pR += cR.gas.p;
+                        ncellR++;
+                        if (fabs(cR.xmid - x0) > dxR) { break; }
+                    }
+                } else {
+                    double x0 = slugR.faces[$-1].x;
+                    foreach (i; 0 .. slugR.ncells) {
+                        LCell cR = slugR.cells[$-i];
+                        pR += cR.gas.p;
+                        ncellR++;
+                        if (fabs(cR.xmid - x0) > dxR) { break; }
+                    }
+                }
             }
+            pR /= ncellR;
             if (fabs(pL-pR) > p_burst) {
                 t_open = t + dt_hold;
                 state = DiaphragmState.triggered;
