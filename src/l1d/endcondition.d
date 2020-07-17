@@ -152,7 +152,7 @@ public:
                 } else {
                     double x0 = slugL.faces[$-1].x;
                     foreach (i; 0 .. slugL.ncells) {
-                        LCell cL = slugL.cells[$-i];
+                        LCell cL = slugL.cells[$-1-i];
                         pL += cL.gas.p;
                         ncellL++;
                         if (fabs(cL.xmid - x0) > dxL) { break; }
@@ -174,7 +174,7 @@ public:
                 } else {
                     double x0 = slugR.faces[$-1].x;
                     foreach (i; 0 .. slugR.ncells) {
-                        LCell cR = slugR.cells[$-i];
+                        LCell cR = slugR.cells[$-1-i];
                         pR += cR.gas.p;
                         ncellR++;
                         if (fabs(cR.xmid - x0) > dxR) { break; }
