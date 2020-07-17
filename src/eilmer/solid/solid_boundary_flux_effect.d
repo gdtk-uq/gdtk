@@ -253,7 +253,7 @@ public:
             for (k = blk.kmin; k <= blk.kmax; ++k) {
                 for (i = blk.imin; i <= blk.imax; ++i) {
                     IFace = blk.getIfj(i, j, k);
-                    callSolidFluxUDF(t, tLevel, i, j, k, IFace, "north");
+                    callSolidFluxUDF(t, tLevel, i, j-1, k, IFace, "north");
                 }
             }
             break;
@@ -262,7 +262,7 @@ public:
             for (k = blk.kmin; k <= blk.kmax; ++k) {
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     IFace = blk.getIfi(i, j, k);
-                    callSolidFluxUDF(t, tLevel, i, j, k, IFace, "east");
+                    callSolidFluxUDF(t, tLevel, i-1, j, k, IFace, "east");
                 }
             }
             break;
@@ -289,7 +289,7 @@ public:
             for (i = blk.imin; i <= blk.imax; ++i) {
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     IFace = blk.getIfk(i, j, k);
-                    callSolidFluxUDF(t, tLevel, i, j, k, IFace, "top");
+                    callSolidFluxUDF(t, tLevel, i, j, k-1, IFace, "top");
                 } // end j loop
             } // end for i
             break;

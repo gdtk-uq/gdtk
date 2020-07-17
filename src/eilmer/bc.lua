@@ -1638,6 +1638,7 @@ function SolidUserDefinedBC:new(o)
    o = SolidBoundaryCondition.new(self, o)
    if (o.specifyFlux) then
       o.postFluxAction = { SolidBFE_UserDefined:new{fileName=o.fileName} }
+      o.preSpatialDerivActionAtBndryFaces = { SolidBIE_CopyAdjacentCellT:new{} }
       o.setsFluxDirectly = true
    else
       o.preSpatialDerivActionAtBndryFaces = { SolidBIE_UserDefined:new{fileName=o.fileName} }
