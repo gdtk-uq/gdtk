@@ -249,11 +249,11 @@ public:
     @nogc
     void source_terms(int viscous_effects, bool adiabatic, GasModel gmodel)
     {
-        // Compute the components of the source vector, q_*.
+        // Compute the components of the source vector, Q_*.
         // These quantities are used to include generic flow losses
         // and wall heat-transfer.
-        // The influence of these processes will be applied directly
-        // to the bulk-flow conserved quantities.
+        // The influence of these processes will be added directly to
+        // the time-derivatives of the bulk-flow conserved quantities.
         //
         // Start with a clean slate.
         Q_mass = 0.0;
@@ -269,22 +269,23 @@ public:
         double M = abs_vel/gas.a; // Local Mach number.
         double lambda = 1.0 + (gmodel.gamma(gas)-1.0)*0.5*omega*M*M;
         double T_aw = lambda * gas.T; // Adiabatic wall temperature.
-        double T_wall_seen;
+        double T_wall_seen = Twall;
 	if (adiabatic) {
 	    T_wall_seen = T_aw;
 	} else {
-	    // John Hunter's suggestion from 1991/2.
+	    // John Hunter's suggestion for heat transfer, from 1991/2.
             // Heat transfer will tend to increase the wall temperature
 	    // to something close to the core temperature of the gas.
-	    T_wall_seen = gas.T - 400.0;
-            T_wall_seen = max(T_wall_seen, Twall);
+            // This was activated with adiabatic==2 in the old code.
+            // T_wall_seen = max(gas.T-400.0, Twall);
 	}
 	// Transport properties based on Eckert reference conditions.
-	double T_ref = gas.T + 0.5*(T_wall_seen - gas.T) + 0.22*(T_aw - gas.T);
+	double T_ref = gas.T + 0.5*(T_wall_seen-gas.T) + 0.22*(T_aw-gas.T);
         gas_ref.copy_values_from(gas);
         gas_ref.T = T_ref;
         gas_ref.rho = gas.rho * gas.T/T_ref;
-        gmodel.update_thermo_from_rhoT(gas_ref);
+        gas_ref.p = gas_ref.rho * gmodel.R(gas_ref) * gas_ref.T;
+        gmodel.update_thermo_from_pT(gas_ref);
         gmodel.update_trans_coeffs(gas_ref);
         double f = 0.0;
         if (viscous_effects == 2 && L_bar > 0.0) {
@@ -296,11 +297,12 @@ public:
             double Re_L = gas_ref.rho*L_bar*abs_vel/gas_ref.mu;
 	    f = f_flat_plate(Re_L);
 	} else {
+            // Presumably, viscous_effects == 1 at this point.
 	    // Default: friction factor determined from
 	    // fully-developed pipe flow correlation.
             // Local Reynolds number based on diameter and reference conditions.
             double Re_D = gas_ref.rho*D*abs_vel/gas_ref.mu;
-	    f = f_darcy_weisbach(Re_D, D)/lambda;
+	    f = f_darcy_weisbach(Re_D)/lambda;
 	}
 	// Local shear stress, in Pa, computed from the friction factor.
         // This is the stress that the wall applies to the gas and it is signed.
@@ -315,7 +317,7 @@ public:
 	if (adiabatic) {
 	    heat_flux = 0.0;
 	} else {
-	    heat_flux = h * (T_wall_seen - T_aw); // * math.pi*D*length
+	    heat_flux = h * (T_wall_seen - T_aw); // units W/m^^2
 	}
         // Shear stress and heat transfer act over the wall-constact surface.
         Q_moment += shear_stress * PI*D*L;
@@ -326,7 +328,7 @@ public:
 	double F_loss = K_over_L * 0.5*gas.rho*vel*abs_vel;
 	Q_moment -= volume * F_loss;
         return;
-    }
+    } // end source_terms()
 } // end class LCell
 
 //----------------------------------------------------------------------
@@ -334,9 +336,9 @@ public:
 // Friction factors for a couple of different models.
 
 @nogc
-double f_darcy_weisbach(double Re, double D)
+double f_darcy_weisbach(double Re)
 {
-    // Darcy-Weisbach friction factor for fully-developed pipe flow.
+    // Darcy-Weisbach friction factor for fully-developed flow in a smooth pipe.
     // Re is based on pipe diameter, D.
     double f;
     if (Re < 10.0) {

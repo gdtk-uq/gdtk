@@ -595,8 +595,8 @@ public:
     {
         interpR_prepare(cL0.L, cR0.L, cR1.L);
         gasR.copy_values_from(cR0.gas);
-        gasR.rho = interpL_scalar(cL0.gas.rho, cR0.gas.rho, cR1.gas.rho);
-        gasR.T = interpL_scalar(cL0.gas.T, cR0.gas.T, cR1.gas.T);
+        gasR.rho = interpR_scalar(cL0.gas.rho, cR0.gas.rho, cR1.gas.rho);
+        gasR.T = interpR_scalar(cL0.gas.T, cR0.gas.T, cR1.gas.T);
         velR = interpR_scalar(cL0.vel, cR0.vel, cR1.vel);
         gmodel.update_thermo_from_rhoT(gasR);
     }
