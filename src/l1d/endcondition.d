@@ -7,6 +7,7 @@ module endcondition;
 
 import std.conv;
 import std.stdio;
+import std.file;
 import std.string;
 import std.json;
 import std.format;
@@ -185,13 +186,17 @@ public:
             if (fabs(pL-pR) > p_burst) {
                 t_open = t + dt_hold;
                 state = DiaphragmState.triggered;
-                writefln("Diaphragm at ec_indx=%d triggered at t=%g.", indx, t);
+                string msg = format("t=%e Diaphragm at ec_indx=%d triggered\n", t, indx);
+                write(msg);
+                append(L1dConfig.job_name~"/events.txt", msg);
             }
             break;
         case DiaphragmState.triggered:
             if (t > t_open) {
                 state = DiaphragmState.open;
-                writefln("Diaphragm at ec_indx=%d open at t=%g.", indx, t);
+                string msg = format("t=%e Diaphragm at ec_indx=%d opened\n", t, indx);
+                write(msg);
+                append(L1dConfig.job_name~"/events.txt", msg);
             }
             break;
         case DiaphragmState.open:

@@ -285,6 +285,7 @@ void integrate_in_time()
         writeln("Begin time integration to max_time=", L1dConfig.max_time);
     }
     sim_data.step = 0;
+    append(L1dConfig.job_name~"/events.txt", format("t=%e Begin stepping\n", sim_data.sim_time));
     //
     // Main time loop.
     while (sim_data.sim_time <= L1dConfig.max_time &&
@@ -420,6 +421,7 @@ void integrate_in_time()
         }
     } // End main time loop.
     //
+    append(L1dConfig.job_name~"/events.txt", format("t=%e Finished stepping\n", sim_data.sim_time));
     // Write a final time solution.
     if (sim_data.steps_since_last_plot_write > 0) {
         write_state_gasslugs_pistons_diaphragms();

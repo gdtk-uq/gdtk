@@ -6,6 +6,7 @@ module piston;
 
 import std.conv;
 import std.stdio;
+import std.file;
 import std.string;
 import std.json;
 import std.format;
@@ -156,9 +157,10 @@ public:
     {
         if ((x > x_buffer) && (vel > 0.0)) {
             vel = 0.0;
-            writefln("Buffer strike by Piston[%d] at time %e with speed %e",
-                     indx, t, vel);
             hit_buffer = true;
+            string msg = format("t=%e Piston[%d] buffer strike with vel=%e\n", t, indx, vel);
+            write(msg);
+            append(L1dConfig.job_name~"/events.txt", msg);
         }
         return;
     }

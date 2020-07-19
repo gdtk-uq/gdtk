@@ -1286,6 +1286,11 @@ def write_initial_files():
     fp.write(' %e\n' % e_total)
     fp.close()
     #
+    fileName = config.job_name + '/events.txt'
+    fp = open(fileName, 'w')
+    fp.write('# time-stamped event descriptions\n')
+    fp.close()
+    #
     print("End write initial files.")
     return
 
