@@ -9,6 +9,7 @@ module geom.misc.univariatefunctions;
 
 import std.conv;
 import std.math;
+import std.stdio;
 
 // Base class for functions of one variable.
 class UnivariateFunction {
@@ -136,6 +137,104 @@ double roberts_original(double eta, double alpha, double beta)
     return etabar;
 } // end roberts_original()
 
+class GeometricFunction : UnivariateFunction {
+/*
+   A cluster function based on geometric progression, starting with a fixed
+   size and growing by a constant multiple until a threshold is reached.
+   After this the cells are equally sized
+
+   Notes: This function mimics how clustering is done in GridPro's "clu" utility
+   @author: Nick Gibbons
+*/
+public:
+    this(double a, double r, int N, bool reverse)
+    {
+        this.a = a;
+        this.r = r;
+        this.N = N;
+        this.reverse = reverse;
+        if (a<=0.0) throw new Error("Problematic parameters in GeometricFunction a= "~to!string(a));
+        if (r<=1.0) throw new Error("Problematic parameters in GeometricFunction r= "~to!string(r));
+        double ns = solve_for_nswitch(a, r, N);
+        if ((ns<1.0) || (ns>N)) throw new Error("Problematic parameters in GeometricFunction ns= "~to!string(ns));
+        this.ts = ns/(N-1);
+        this.ns = ns;
+    }
+
+    this(const GeometricFunction other)
+    {
+        a = other.a;
+        r = other.r;
+        N = other.N;
+        reverse = other.reverse;
+        ts = other.ts;
+        ns = other.ns;
+    }
+
+    GeometricFunction dup() const
+    {
+        return new GeometricFunction(this);
+    }
+
+    override double opCall(double t) const
+    {
+        if (reverse) t = 1.0 - t;
+        double n = t*(N-1);
+        double t1;
+        if (t<ts){
+            t1 = a*(1-pow(r,n))/(1-r);
+        } else {
+            t1 = a*(1-pow(r,ns))/(1-r) + (n-ns)*a*pow(r,(ns-1));
+        }
+        if (reverse) t1 = 1.0 - t1;
+        return t1;
+    }
+
+private:
+    double a,r,ts,ns;
+    int N;
+    bool reverse;
+
+    double lambertW(double z, double wguess=1.0, double tol=1e-12){
+        /*
+            Lamberts W function: solve for w given z=w*exp(w)
+            See: en.wikipedia.org/wiki/Lambert_W_function#Numerical_evaluation
+        */
+        double w, expw, zt, wexpw;
+        w = wguess;
+        foreach(n; 0 .. 100){
+            if (n>=99) throw new Error("lambertW function eval timed out");
+            expw = exp(w);
+            zt = w*expw;
+            if (fabs(zt-z)<tol) break;
+            wexpw = w*expw;
+            w -= (wexpw - z)/(expw + wexpw);
+        }
+        return w;
+    }
+
+    double solve_for_nswitch(double a, double r, double N){
+        /*
+           Solve for the switching point where the geometric progression
+           switches over to a linear function. (See derivation 20/07/2020)
+
+           Effectively we're solving for ns given:
+           1.0 = a*(1-r**ns)/(1-r) + (N-1-ns)*a*r**(ns-1)
+
+        */
+        double A = 1/a - 1/(1-r);
+        double B = -1.0/(1-r);
+        double M = N-1;
+
+        double powarg = -M-B*r+1;
+        double arg = -A*pow(r,powarg)*log(r);
+        double wguess = (N/4 - M - B*r)*log(r);
+        double w = lambertW(arg, wguess=wguess);
+        double ns = w/log(r) + B*r + M;
+        return ns;
+    }
+
+}
 
 version(univariatefunctions_test) {
     import util.msg_service;
@@ -146,6 +245,9 @@ version(univariatefunctions_test) {
         auto cf2 = new LinearFunction(1.0, 0.0);
         assert(approxEqual(cf2(0.1), 0.9), failedUnitTest());
         assert(approxEqual(cf2(0.9), 0.1), failedUnitTest());
+        auto cf3 = new GeometricFunction(0.005, 1.1, 40, false);
+        assert(approxEqual(cf3(0.1), 0.0225106), failedUnitTest());
+        assert(approxEqual(cf3(0.9), 0.85256413), failedUnitTest());
         return 0;
     }
 } // end univariatefunctions_test

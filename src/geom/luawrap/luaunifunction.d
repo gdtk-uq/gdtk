@@ -18,6 +18,7 @@ import geom.misc.univariatefunctions;
 immutable string LinearFunctionMT = "LinearFunction";
 immutable string RobertsFunctionMT = "RobertsFunction";
 immutable string LuaFnClusteringMT = "LuaFnClustering";
+immutable string GeometricFunctionMT = "GeometricFunction";
 
 static const(UnivariateFunction)[] functionStore;
 
@@ -30,6 +31,9 @@ UnivariateFunction checkUnivariateFunction(lua_State* L, int index) {
     }
     if ( isObjType(L, index, LuaFnClusteringMT) ) {
         return checkObj!(LuaFnUnivariateFunction, LuaFnClusteringMT)(L, index);
+    }
+    if ( isObjType(L, index, GeometricFunctionMT) ) {
+        return checkObj!(GeometricFunction, GeometricFunctionMT)(L, index);
     }
     // if all else fails
     return null;
@@ -222,6 +226,52 @@ extern(C) int newLuaFnUnivariateFunction(lua_State *L)
     return 1;
 }
 
+/**
+ * The Lua constructor for a GeometricFunction.
+ *
+ * Example construction in Lua:
+ * --------------------------------------------------------------
+ * f = GeometricFunction:new{a=0.005, r=1.1, N=40, reverse=false}
+ * --------------------------------------------------------------
+ */
+extern(C) int newGeometricFunction(lua_State* L)
+{
+    int narg = lua_gettop(L);
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected GeometricFunction:new{}; ";
+        errMsg ~= "maybe you tried GeometricFunction.new{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if ( !lua_istable(L, 1) ) {
+        string errMsg = "Error in call to GeometricFunction:new{}. ";
+        errMsg ~= "A table containing arguments is expected, but no table was found.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    if (!checkAllowedNames(L, 1, ["a", "r", "N", "reverse"])) {
+        string errMsg = "Error in call to GeometricFunction:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
+    }
+     //
+    string errMsgTmpltNumber = "Error in call to GeometricFunction:new{}. ";
+    errMsgTmpltNumber ~= "A valid value for '%s' was not found in list of arguments. ";
+    errMsgTmpltNumber ~= "The value, if present, should be a number.";
+    string errMsgTmpltBool = "Error in call to RobertsFunction:new{}. ";
+    errMsgTmpltBool ~= "A valid value for '%s' was not found in list of arguments. ";
+    errMsgTmpltBool ~= "The value, if present, should be boolean (true or false).";
+    string errMsgTmpltInt = "Error in call to GeometricFunction:new{}. ";
+    errMsgTmpltInt ~= "A valid value for '%s' was not found in list of arguments. ";
+    errMsgTmpltInt ~= "The value, if present, should be an integer.";
+    double a = getNumberFromTable(L, 1, "a", true, 1.0, true, format(errMsgTmpltNumber, "a"));
+    double r = getNumberFromTable(L, 1, "r", true, 1.0, true, format(errMsgTmpltNumber, "r"));
+    int N = getIntegerFromTable(L, 1, "N", true, 1, true, format(errMsgTmpltInt, "N"));
+    bool reverse = getBooleanFromTable(L, 1, "reverse", false, false, true, format(errMsgTmpltBool, "reverse"));
+    auto f = new GeometricFunction(a, r, N, reverse);
+    functionStore ~= pushObj!(GeometricFunction, GeometricFunctionMT)(L, f);
+    return 1;
+}
+
 void registerUnivariateFunctions(lua_State* L)
 {
     // Register the LinearFunction object
@@ -286,6 +336,27 @@ void registerUnivariateFunctions(lua_State* L)
     lua_setfield(L, -2, "copy");
 
     lua_setglobal(L, LuaFnClusteringMT.toStringz);
+
+    // Register the GeometricFunction object
+    luaL_newmetatable(L, GeometricFunctionMT.toStringz);
+    
+    /* metatable.__index = metatable */
+    lua_pushvalue(L, -1); // duplicates the current metatable
+    lua_setfield(L, -2, "__index");
+
+    /* Register methods for use. */
+    lua_pushcfunction(L, &newGeometricFunction);
+    lua_setfield(L, -2, "new");
+    lua_pushcfunction(L, &opCallUnivariateFunction!(GeometricFunction, GeometricFunctionMT));
+    lua_setfield(L, -2, "__call");
+    lua_pushcfunction(L, &opCallUnivariateFunction!(GeometricFunction, GeometricFunctionMT));
+    lua_setfield(L, -2, "eval");
+    lua_pushcfunction(L, &toStringObj!(GeometricFunction, GeometricFunctionMT));
+    lua_setfield(L, -2, "__tostring");
+    lua_pushcfunction(L, &copyUnivariateFunction!(GeometricFunction, GeometricFunctionMT));
+    lua_setfield(L, -2, "copy");
+
+    lua_setglobal(L, GeometricFunctionMT.toStringz);
 
 }
     
