@@ -22,9 +22,11 @@ config.dimensions = 2
 config.axisymmetric = true
 config.flux_calculator = "ausmdv"
 config.interpolation_order = 2
---config.grid_motion = "shock_fitting"
---config.gasdynamic_update_scheme = "moving_grid_2_stage"
+config.grid_motion = "shock_fitting"
+config.gasdynamic_update_scheme = "moving_grid_2_stage"
 config.shock_fitting_delay = body_flow_time
+config.max_invalid_cells = 20
+config.adjust_invalid_cell_data = true
 config.max_time = no_flow_times*body_flow_time
 config.max_step = 80000
 config.dt_init = 1.0e-10
@@ -36,7 +38,7 @@ initial = inflow
 grids = importGridproGrid(gproGrid, 1.0)
 
 blk = FluidBlockArray{grid=grids[1], initialState=initial, label='blk',
-		      bcList={west=InFlowBC_Supersonic:new{flowState=inflow},
+		      bcList={west=InFlowBC_ShockFitting:new{flowState=inflow},
 			      north=OutFlowBC_Simple:new{}},
 		      nib=1, njb=njb}
 
