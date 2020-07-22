@@ -35,6 +35,8 @@ include::../examples/eilmer/2D/forward-facing-step/readme.adoc[]
 
 = High-temperature gas flows
 
+include::../examples/eilmer/2D/sphere-nonaka/readme.adoc[]bg
+
 :leveloffset: -1
 
 

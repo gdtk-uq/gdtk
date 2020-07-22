@@ -1,6 +1,7 @@
 # makefile for building the HTML Reference Manuals
 
 LMR_DIR := eilmer
+EXAMPLES_DIR := ../examples/eilmer
 EILMER_DOC_FILES := $(LMR_DIR)/config-options-user.adoc \
 	$(LMR_DIR)/flowsolution_user.adoc \
 	$(LMR_DIR)/flow-state-user.adoc \
@@ -21,6 +22,9 @@ LIBRARY_DOC_FILES := flow/gas-flow.adoc \
 	gas/kinetics.adoc \
 	geom/elements.adoc
 
+EILMER_CATALOG_ENTRIES := $(EXAMPLES_DIR)/2D/forward-facing-step/readme.adoc \
+	$(EXAMPLES_DIR)/2D/sphere-nonaka/readme.adoc
+
 all: eilmer-reference-manual.html \
 	eilmer-catalog-of-examples.html \
 	l1d-reference-manual.html \
@@ -33,7 +37,7 @@ all: eilmer-reference-manual.html \
 eilmer-reference-manual.html: eilmer-reference-manual.adoc $(EILMER_DOC_FILES)
 	asciidoctor eilmer-reference-manual.adoc
 
-eilmer-catalog-of-examples.html: eilmer-catalog-of-examples.adoc
+eilmer-catalog-of-examples.html: eilmer-catalog-of-examples.adoc $(EILMER_CATALOG_ENTRIES)
 	asciidoctor eilmer-catalog-of-examples.adoc
 
 l1d-reference-manual.html: l1d-reference-manual.adoc
