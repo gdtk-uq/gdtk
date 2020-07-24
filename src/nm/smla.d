@@ -96,7 +96,7 @@ public:
             }
             // Add the collected values as a new row in the sparse matrix.
             // We need to sort the entries in column-ascending order.
-            
+
             ji = vi.keys;
             sort(ji);
             foreach (j; ji) ai ~= vi[j];
@@ -113,8 +113,8 @@ public:
             vi.clear;
         }
     }
-    
-    void addRow(T[] ai, size_t[] ji) 
+
+    void addRow(T[] ai, size_t[] ji)
     {
         if ( ia.length == 0 )
             ia ~= 0;
@@ -148,7 +148,7 @@ public:
         // else search failed, so we have a 0.0 entry
         return to!T(0.0);
     }
-    
+
     // We now allow assingment to zero entries.
     ref T opIndexAssign(T c, size_t row, size_t col) {
         foreach ( j; ia[row] .. ia[row+1] ) {
@@ -163,7 +163,7 @@ public:
         // WARNING: this code will happily add a zero to the sparse matrix;
         //          onus is on any user using this object to prevent
         //          unnecessary assingment of 0 values.
-        
+
         // shuffle aa, ja, ia entries
         if ( col > ja[ia[row+1]-1] ) { // if the new entry occurs after all currently stored columns in the row
             aa.insertInPlace(ia[row+1], c);
@@ -245,7 +245,7 @@ body {
  *   array  Bp[n_col+1] - column pointer
  *   array  Bj[nnz(A)]  - row indices
  *   array  Bx[nnz(A)]  - nonzeros
- * 
+ *
  */
 void transpose(T)(const size_t[] Aia, const size_t[] Aja, const T[] Aaa,
                   size_t[] Bia, size_t[] Bja, T[] Baa)
@@ -254,20 +254,20 @@ void transpose(T)(const size_t[] Aia, const size_t[] Aja, const T[] Aaa,
     size_t n_col = Aia.length-1;
     const size_t nnz = Aia[n_row];
 
-    // compute number of non-zero entries per column of A 
+    // compute number of non-zero entries per column of A
     Bia[0..$-1] = 0;
 
-    for (size_t n = 0; n < nnz; n++){            
+    for (size_t n = 0; n < nnz; n++){
         Bia[Aja[n]]++;
     }
 
     //cumsum the nnz per column to get Bia[]
-    for(size_t col = 0, cumsum = 0; col < n_col; col++){     
+    for(size_t col = 0, cumsum = 0; col < n_col; col++){
         size_t temp  = Bia[col];
         Bia[col] = cumsum;
         cumsum += temp;
     }
-    Bia[n_col] = nnz; 
+    Bia[n_col] = nnz;
 
     for(size_t row = 0; row < n_row; row++){
         for(size_t jj = Aia[row]; jj < Aia[row+1]; jj++){
@@ -279,7 +279,7 @@ void transpose(T)(const size_t[] Aia, const size_t[] Aja, const T[] Aaa,
 
             Bia[col]++;
         }
-    }  
+    }
 
     for(size_t col = 0, last = 0; col <= n_col; col++){
         size_t temp  = Bia[col];
@@ -332,15 +332,15 @@ void decompILUp(T)(SMatrix!T a, int k)
     // NB. This pre-conditioner uses a sparse matrix, however some stored entries will be zero,
     // this is a result of entries starting as non-zero in the original matrix, and then becoming
     // zero during the factorisation.
-    
+
     int n = to!int(a.ia.length)-1;
     int[][] lev; // fill levels
     lev.length = n;
     foreach ( i; 0..n) lev[i].length = n;
 
     // assign initial fill levels
-    foreach ( i; 0 .. n ) { 
-	foreach ( j; 0 .. n ) { 
+    foreach ( i; 0 .. n ) {
+	foreach ( j; 0 .. n ) {
             if (abs(a[i,j]) <= ESSENTIALLY_ZERO) lev[i][j] = n-1;
 	    else lev[i][j] = 0;
 	}
@@ -358,18 +358,18 @@ void decompILUp(T)(SMatrix!T a, int k)
             } // end if
         } // end foreach
     } // end foreach
-    
+
     // modify a matrix nonzero pattern
     foreach ( i; 0..n) {
         foreach ( j; 0..n) {
-            if (lev[i][j] <= k && abs(a[i,j]) < ESSENTIALLY_ZERO) { a[i,j] = to!T(0.0); } 
+            if (lev[i][j] <= k && abs(a[i,j]) < ESSENTIALLY_ZERO) { a[i,j] = to!T(0.0); }
         }
     }
-    
+
     // clear the fill level matrix from memory
     destroy(lev);
     GC.minimize();
-    
+
     // factorise phase (using ILU0 algorithm on new sparsity pattern)
     decompILU0!T(a);
 }
@@ -406,7 +406,7 @@ void solve(T)(SMatrix!T LU, T[] b)
  * This algorithm solves a transposed system without requiring
  * the explicit transposition of the system matrix.
  *
- * The algorithm is taken (with modifications) from pg.65 of, 
+ * The algorithm is taken (with modifications) from pg.65 of,
  *     Templates for the Solution of Linear Systems:
  *          Building Block for Iterative Methods, Barret et al.
  *
@@ -420,7 +420,7 @@ void transpose_solve(T)(SMatrix!T LU, T[] b)
     assert(b.length == n);
 
     T[] z; z.length = n;
-    
+
     foreach ( i; 0 .. n ) {
 	z[i] = b[i];
         foreach ( j; LU.ja[LU.ia[i] .. LU.ia[i+1]] ) {
@@ -430,10 +430,10 @@ void transpose_solve(T)(SMatrix!T LU, T[] b)
 	    b[j] -= val*z[i];
 	}
     }
-    
+
     for ( int i = to!int(n-1); i >= 0; --i ) {
 	b[i] = (1.0/LU[i,i])*z[i];
-     	foreach ( j; LU.ja[LU.ia[i] .. LU.ia[i+1]] ) {	  
+     	foreach ( j; LU.ja[LU.ia[i] .. LU.ia[i+1]] ) {
 	    // only work on entries where j < i
 	    if ( j >= i ) break;
 	    T val = LU[i,j];
@@ -453,7 +453,7 @@ void scaleLU(T)(SMatrix!T LU)
 	    LU[j,i] = LU[j,i] * LU[i,i];
 	}
     }
-    
+
     foreach(i; 0 .. n) {
 	foreach(j; LU.ja[LU.ia[i] .. LU.ia[i+1]]) {
 	    // only work on entries where j > i
@@ -507,7 +507,7 @@ body {
             v = V.getColumn(i);
             H[i,j] = dot(w, v);
             foreach (k; 0 .. n) {
-                w[k] -= H[i,j]*v[k]; 
+                w[k] -= H[i,j]*v[k];
             }
         }
         H[j+1,j] = norm2(w);
@@ -529,7 +529,7 @@ body {
     foreach (i; 0 .. m) {
         T c_i, s_i, denom;
         denom = sqrt(H[i,i]*H[i,i] + H[i+1,i]*H[i+1,i]);
-        s_i = H[i+1,i]/denom; 
+        s_i = H[i+1,i]/denom;
         c_i = H[i,i]/denom;
         Gamma.eye();
         Gamma[i,i] = c_i; Gamma[i,i+1] = s_i;
@@ -610,11 +610,11 @@ body {
             v = V.getColumn(i);
             H0[i,j] = dot!T(w, v);
             foreach (k; 0 .. n) {
-                w[k] -= H0[i,j]*v[k]; 
+                w[k] -= H0[i,j]*v[k];
             }
         }
         H0[j+1,j] = norm2(w);
-        
+
         foreach (i; 0 .. n) {
             v[i] = w[i]/H0[j+1,j];
             V[i,j+1] = v[i];
@@ -633,7 +633,7 @@ body {
         Gamma.eye();
         T c_j, s_j, denom;
         denom = sqrt(H0[j,j]*H0[j,j] + H0[j+1,j]*H0[j+1,j]);
-        s_j = H0[j+1,j]/denom; 
+        s_j = H0[j+1,j]/denom;
         c_j = H0[j,j]/denom;
         Gamma[j,j] = c_j; Gamma[j,j+1] = s_j;
         Gamma[j+1,j] = -s_j; Gamma[j+1,j+1] = c_j;
@@ -692,15 +692,15 @@ struct GMRESWorkSpace(T) {
         this.v.length = n;
         this.w.length = n;
         this.Pv.length = n;
-        this.g0.length = m+1; 
-        this.g1.length = m+1; 
+        this.g0.length = m+1;
+        this.g1.length = m+1;
         this.h.length = m+1;
         this.hR.length = m+1;
         // Allocate matrices
         this.V = new Matrix!T(n, m+1);
-        this.H0 = new Matrix!T(m+1, m); 
-        this.H1 = new Matrix!T(m+1, m); 
-        this.Gamma = new Matrix!T(m+1, m+1); 
+        this.H0 = new Matrix!T(m+1, m);
+        this.H1 = new Matrix!T(m+1, m);
+        this.Gamma = new Matrix!T(m+1, m+1);
         this.Q0 = new Matrix!T(m+1, m+1);
         this.Q1 = new Matrix!T(m+1, m+1);
     }
@@ -708,8 +708,8 @@ struct GMRESWorkSpace(T) {
 
 /**
  * A GMRES iterative solver with right preconditioning.
- * 
- * Params: 
+ *
+ * Params:
  *    A =         coefficient matrix
  *    P =         pre-conditioning matrix in LU form
  *    b =         RHS vector
@@ -759,10 +759,10 @@ body {
         foreach (i; 0 .. j+1) {
             foreach (k; 0 .. n ) gws.v[k] = gws.V[k,i]; // Extract column 'i'
             gws.H0[i,j] = dot(gws.w, gws.v);
-            foreach (k; 0 .. n) gws.w[k] -= gws.H0[i,j]*gws.v[k]; 
+            foreach (k; 0 .. n) gws.w[k] -= gws.H0[i,j]*gws.v[k];
         }
         gws.H0[j+1,j] = norm2(gws.w);
-        
+
         foreach (k; 0 .. n) {
             gws.v[k] = gws.w[k]/gws.H0[j+1,j];
             gws.V[k,j+1] = gws.v[k];
@@ -780,7 +780,7 @@ body {
         // Now form new Gamma
         gws.Gamma.eye();
         auto denom = sqrt(gws.H0[j,j]*gws.H0[j,j] + gws.H0[j+1,j]*gws.H0[j+1,j]);
-        auto s_j = gws.H0[j+1,j]/denom; 
+        auto s_j = gws.H0[j+1,j]/denom;
         auto c_j = gws.H0[j,j]/denom;
         gws.Gamma[j,j] = c_j; gws.Gamma[j,j+1] = s_j;
         gws.Gamma[j+1,j] = -s_j; gws.Gamma[j+1,j+1] = c_j;
@@ -866,7 +866,7 @@ body {
             v = V.getColumn(i);
             H[i,j] = dot(w, v);
             foreach (k; 0 .. n) {
-                w[k] -= H[i,j]*v[k]; 
+                w[k] -= H[i,j]*v[k];
             }
         }
         H[j+1,j] = norm2(w);
@@ -888,7 +888,7 @@ body {
     foreach (i; 0 .. mOuter) {
         T c_i, s_i, denom;
         denom = sqrt(H[i,i]*H[i,i] + H[i+1,i]*H[i+1,i]);
-        s_i = H[i+1,i]/denom; 
+        s_i = H[i+1,i]/denom;
         c_i = H[i,i]/denom;
         Gamma.eye();
         Gamma[i,i] = c_i; Gamma[i,i+1] = s_i;
@@ -988,7 +988,7 @@ version(smla_test) {
 	foreach ( i; 0 .. B.length ) {
             assert(approxEqualNumbers(B[i], B_exp[i]), failedUnitTest());
         }
-	
+
         // Now let's see how we go at an approximate solve by using a non-triangular matrix.
         // This is example 2.2 from Gerard and Wheatley, 6th edition
         auto f = new SMatrix!number();
@@ -1009,7 +1009,7 @@ version(smla_test) {
         t.addRow([to!number(2.), to!number(4.), to!number(1.), to!number(1.)], [0, 1, 2, 3]);
         t.addRow([to!number(-1.), to!number(2.), to!number(-1.)], [0, 2, 3]);
         t.addRow([to!number(2.), to!number(2.), to!number(-1.), to!number(3.)], [0, 1, 2, 3]);
-	decompILU0(t);	
+	decompILU0(t);
 	C = [to!number(2.), to!number(2.), to!number(0.), to!number(0.)];
 	scaleLU(t);
 	transpose_solve(t, C);
@@ -1019,7 +1019,7 @@ version(smla_test) {
 	// Finally, exercise transpose solve on a larger system
 	// original matrix
 	auto l = new SMatrix!number([to!number(1.), to!number(2.), to!number(-1.), to!number(3.), to!number(2.), to!number(-1.), to!number(-2.),
-				     to!number(2.), to!number(3.), to!number(-2.), to!number(-1.), to!number(2.), to!number(4.), to!number(2.), 
+				     to!number(2.), to!number(3.), to!number(-2.), to!number(-1.), to!number(2.), to!number(4.), to!number(2.),
 				     to!number(-2.), to!number(1.), to!number(5.), to!number(-1.), to!number(-1.), to!number(6.), to!number(-2.),
 				     to!number(-2.), to!number(3.), to!number(-1.), to!number(-1.), to!number(-5.), to!number(4.), to!number(3.),
 				     to!number(-2.), to!number(1.), to!number(2.), to!number(1.), to!number(-1.), to!number(3.), to!number(4.)],
@@ -1031,9 +1031,9 @@ version(smla_test) {
 	lt.ja.length = l.ja.length;
 	lt.ia.length = l.ia.length;
 	transpose(l.ia, l.ja, l.aa, lt.ia, lt.ja, lt.aa);
-	number[] q = [to!number(1.), to!number(2.), to!number(3.), to!number(4.), to!number(5.), 
+	number[] q = [to!number(1.), to!number(2.), to!number(3.), to!number(4.), to!number(5.),
 		      to!number(6.), to!number(7.), to!number(8.), to!number(9.), to!number(10.)];
-	number[] Q_exp = [to!number(1.), to!number(2.), to!number(3.), to!number(4.), to!number(5.), 
+	number[] Q_exp = [to!number(1.), to!number(2.), to!number(3.), to!number(4.), to!number(5.),
 		      to!number(6.), to!number(7.), to!number(8.), to!number(9.), to!number(10.)];
 	// solution
 	decompILU0(l);
@@ -1045,7 +1045,7 @@ version(smla_test) {
 	foreach (i; 0 .. q.length) {
             assert(approxEqualNumbers(q[i], Q_exp[i]), failedUnitTest());
         }
-	
+
         // Let's test the ILU(p) method
         auto s = new SMatrix!number([to!number(1.), to!number(1.), to!number(4.), to!number(2.),
                                      to!number(4.), to!number(1.), to!number(2.), to!number(1.),
@@ -1054,7 +1054,7 @@ version(smla_test) {
                                     [0, 1, 4, 1, 2, 4, 0, 1, 2, 3, 2, 3, 0, 1, 2, 4],
                                     [0, 3, 6, 10, 12, 16]);
         int p;
-	
+
         // test for ILU(p=2)
         s = new SMatrix!number([to!number(1.), to!number(1.), to!number(4.), to!number(2.),
                                 to!number(4.), to!number(1.), to!number(2.), to!number(1.),
@@ -1072,7 +1072,7 @@ version(smla_test) {
                                        [0, 1, 4, 1, 2, 4, 0, 1, 2, 3, 4, 2, 3, 4, 0, 1, 2, 3, 4],
                                        [0, 3, 6, 11, 14, 19]);
 	assert(approxEqualMatrix!number(s, sol1), failedUnitTest());
-        
+
         // Test GMRES on Faires and Burden problem.
 
         auto g = new SMatrix!number();
@@ -1083,12 +1083,12 @@ version(smla_test) {
         number[] B1 = [to!number(1.), to!number(0.), to!number(0.), to!number(1.)];
         number[] x0 = [to!number(1.2), to!number(0.8), to!number(0.9), to!number(1.1)];
 
-        
+
         auto x = gmres!number(g, B1, x0, 4);
         foreach (i; 0 .. x.length) {
             assert(approxEqualNumbers(x[i], B_exp[i]), failedUnitTest());
         }
-        
+
         x = gmres2!number(g, B1, x0, 5, 1.0e-10);
         foreach (i; 0 .. x.length) {
             assert(approxEqualNumbers(x[i], B_exp[i]), failedUnitTest());
@@ -1151,7 +1151,7 @@ version(smla_test) {
         auto testMat = new SMatrix!double(matrix);
         assert(approxEqualNumbers(testMat[4,0], -0.03599942, 1.0e-7), failedUnitTest());
         assert(approxEqualNumbers(testMat[6,6], 1.0, 1.0e-7), failedUnitTest());
-        
+
         return 0;
     }
 }
