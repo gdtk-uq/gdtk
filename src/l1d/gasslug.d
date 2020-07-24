@@ -209,7 +209,7 @@ public:
     @nogc
     void compute_areas_and_volumes()
     {
-        double[4] daKT;
+        double[5] daKT;
         foreach (f; faces) {
             daKT = tube1.eval(f.x);
             f.area = daKT[1];
@@ -230,6 +230,7 @@ public:
             c.D = daKT[0];
             c.K_over_L = daKT[2];
             c.Twall = daKT[3];
+            c.vf = daKT[4];
         }
         return;
     } // end compute_areas_and_volumes()

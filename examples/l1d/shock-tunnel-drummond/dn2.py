@@ -7,6 +7,7 @@ exec(open('./drummond-tube.py').read())
 add_loss_region(-3.050, -3.000, 0.5) # at steel-diaphragm station
 add_loss_region( 0.050,  0.120, 0.5) # at nozzle throat
 tube.T_nominal = 296.0
+add_vf_patch(0.1, 0.35, 0.0) # no viscous effects in nozzle expansion
 
 # Create the gas-path.
 left_end = VelocityEnd(x0=-3.785, vel=0.0)

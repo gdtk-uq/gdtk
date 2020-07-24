@@ -87,6 +87,9 @@ public:
     double D;            // local diameter of tube, m
     double L;            // local cell length, m
     double Twall;        // interpolates wall temperature, K
+    double vf;           // Viscous factor, nominally 1.0 for full viscous effects
+                         // but may be reduced to 0.0 for some sections of tube
+                         // in order to get ideal flow behaviour.
     double K_over_L;     // head-loss loss coefficient per unit length, 1/m
     double shear_stress; // for reporting via solution file
     double heat_flux;    // for reporting via solution file
@@ -304,9 +307,10 @@ public:
             double Re_D = gas_ref.rho*D*abs_vel/gas_ref.mu;
 	    f = f_darcy_weisbach(Re_D)/lambda;
 	}
-	// Local shear stress, in Pa, computed from the friction factor.
+	// Local shear stress, in Pa, computed from the friction factor and
+        // modulated by the viscous factor at this location.
         // This is the stress that the wall applies to the gas and it is signed.
-	shear_stress = -(0.125*f) * gas.rho * vel*abs_vel;
+	shear_stress = -(0.125*f) * gas.rho * vel*abs_vel * vf;
 	// Rate of energy transfer into the cell.
         // Shear stress does no work on the cell because the wall velocity is zero.
         double w_dot = 0.0;
@@ -314,10 +318,11 @@ public:
 	double St = (f*0.125) * pow(Prandtl, -0.667);
 	double h = gas_ref.rho * gmodel.Cp(gas) * abs_vel * St;
 	// Convective heat transfer from the wall into the gas.
+        // Note the modulation by the viscous factor.
 	if (adiabatic) {
 	    heat_flux = 0.0;
 	} else {
-	    heat_flux = h * (T_wall_seen - T_aw); // units W/m^^2
+	    heat_flux = h * (T_wall_seen - T_aw) * vf; // units W/m^^2
 	}
         // Shear stress and heat transfer act over the wall-constact surface.
         Q_moment += shear_stress * PI*D*L;

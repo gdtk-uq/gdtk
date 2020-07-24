@@ -272,8 +272,8 @@ def add_history_loc(x):
     """
     Add a location to the history-location list in L{GlobalConfig}.
 
-    :param x: (float) x-coordinate, in metres, of the sample point.
-    :returns: Number of sample points defined so far.
+    x: (float) x-coordinate, in metres, of the sample point.
+    Returns: Number of sample points defined so far.
     """
     global config
     if isinstance(x, list):
@@ -294,7 +294,7 @@ class Tube(object):
     count = 0
 
     __slots__ = 'n', 'x_list', 'd_list', 'T_nominal', 'T_patch_list', 'loss_region_list', \
-                'xs', 'ds', 'K_over_Ls', 'Ts'
+                'viscous_factor_patch_list', 'xs', 'ds', 'K_over_Ls', 'Ts', 'vfs'
 
     def __init__(self):
         """Accepts user-specified data and sets defaults. Make one only."""
@@ -314,6 +314,8 @@ class Tube(object):
         self.T_patch_list = []
         # Head-losses are also spread over finite-length patches.
         self.loss_region_list = []
+        # Sections of tube may have reduced viscous effects.
+        self.viscous_factor_patch_list = []
         #
         Tube.count += 1
         return
@@ -355,6 +357,14 @@ class Tube(object):
                 if x >= xL and x <= xR: value = region['T']
             self.Ts.append(value)
         #
+        self.vfs = []
+        for x in self.xs:
+            value = 1.0
+            for region in self.viscous_factor_patch_list:
+                xL = region['xL']; xR = region['xR']
+                if x >= xL and x <= xR: value = region['vf']
+            self.vfs.append(value)
+        #
         return
 
     def eval(self, x):
@@ -365,10 +375,12 @@ class Tube(object):
             d = self.ds[0]
             K_over_L = self.K_over_Ls[0]
             Twall = self.Ts[0]
+            vf = self.vfs[0]
         elif x >= self.xs[-1]:
             d = self.ds[-1]
             K_over_L = self.K_over_Ls[-1]
             Twall = self.Ts[-1]
+            vf = self.vfs[-1]
         else:
             dx = self.xs[1] - self.xs[0]
             i = int((x - self.xs[0])/dx)
@@ -376,19 +388,20 @@ class Tube(object):
             d = (1.0-frac)*self.ds[i] + frac*self.ds[i+1]
             K_over_L = (1.0-frac)*self.K_over_Ls[i] + frac*self.K_over_Ls[i+1]
             Twall = (1.0-frac)*self.Ts[i] + frac*self.Ts[i+1]
+            vf = (1.0-frac)*self.vfs[i] + frac*self.vfs[i+1]
         area = math.pi*(d**2)/4
-        return (d, area, K_over_L, Twall)
+        return (d, area, K_over_L, Twall, vf)
 
     def write(self, fp):
         """
         Writes the tube specification to the specified file, in small steps.
         """
         fp.write('# n= %d\n' % self.n) # n+1 points along tube to follow
-        fp.write('# 1:x,m  2:d,m  3:area,m^2  4:K_over_L,1/m  5:Twall,K\n')
+        fp.write('# 1:x,m  2:d,m  3:area,m^2  4:K_over_L,1/m  5:Twall,K  6:viscous-factor\n')
         for i in range(len(self.xs)):
-            fp.write('%e %e %e %e %e\n' %
+            fp.write('%e %e %e %e %e %e\n' %
                      (self.xs[i], self.ds[i], math.pi*(self.ds[i]**2)/4,
-                      self.K_over_Ls[i], self.Ts[i]))
+                      self.K_over_Ls[i], self.Ts[i], self.vfs[i]))
         return
 
 # We will create just one Tube object that the user can alter.
@@ -407,9 +420,9 @@ def add_break_point(x, d):
     You need at least 2 break points to define the tube.
     Linear variation of diameter between the break points is assumed.
 
-    :param x: (float) x-coordinate, in metres, of the break point
-    :param d: (float) diameter, in metres, of the tube wall at the break-point.
-    :returns: Number of break points defined so far.
+    x: (float) x-coordinate, in metres, of the break point
+    d: (float) diameter, in metres, of the tube wall at the break-point.
+    Returns: Number of break points defined so far.
     """
     global tube
     if len(tube.x_list) > 0:
@@ -432,11 +445,11 @@ def add_loss_region(xL, xR, K):
     The effect of the loss is spread over a finite region so that the cells
     are gradually affected as they pass through the region
 
-    :param xL: (float) Left-end location, in metres, of the loss region.
-    :param xR: (float) Right-end location, in metres, of the loss region.
-    :param K: (float) Head-loss coefficient.  A value of 0.25 seems to be good for a
+    xL: (float) Left-end location, in metres, of the loss region.
+    xR: (float) Right-end location, in metres, of the loss region.
+    K: (float) Head-loss coefficient.  A value of 0.25 seems to be good for a
         reasonably smooth contraction such as the T4 main diaphragm station.
-    :returns: Number of loss regions defined so far.
+    Returns: Number of loss regions defined so far.
     """
     global tube
     if xR < xL:
@@ -453,10 +466,10 @@ def add_T_patch(xL, xR, T):
     Add a temperature patch for a region where the wall temperature
     is different from the nominal value.
 
-    :param xL: (float) Left-end location, in metres, of the loss region.
-    :param xR: (float) Right-end location, in metres, of the loss region.
-    :param T: (float) Wall temperature in degrees K.
-    :returns: Number of temperature patches defined so far.
+    xL: (float) Left-end location, in metres, of the loss region.
+    xR: (float) Right-end location, in metres, of the loss region.
+    T: (float) Wall temperature in degrees K.
+    Returns: Number of temperature patches defined so far.
     """
     if xR < xL:
         # Keep x-values in increasing order
@@ -465,6 +478,24 @@ def add_T_patch(xL, xR, T):
         print("Warning: temperature patch is very short: (", xL, xR, ")")
     tube.T_patch_list.append({'xL':xL, 'xR':xR, 'T':T})
     return len(tube.T_patch_list)
+
+
+def add_vf_patch(xL, xR, vf):
+    """
+    Add a temperature patch for a region where the wall temperature
+    is different from the nominal value.
+
+    xL: (float) Left-end location, in metres, of the loss region.
+    xR: (float) Right-end location, in metres, of the loss region.
+    vf: (float) Viscous factor for limiting viscous effects at wall.
+        Nominal value is 1.0.  A completely inviscid wall has a value of 0.0.
+    Returns: Number of temperature patches defined so far.
+    """
+    if xR < xL:
+        # Keep x-values in increasing order
+        xL, xR = xR, xL
+    tube.viscous_factor_patch_list.append({'xL':xL, 'xR':xR, 'vf':vf})
+    return len(tube.viscous_factor_patch_list)
 
 
 #----------------------------------------------------------------------
@@ -607,7 +638,7 @@ class GasSlug():
             fp.write("#   x   area\n")
         fp.write("# tindx %d\n" % tindx)
         for x in self.ifxs:
-            d, area, K_over_L, Twall = tube.eval(x)
+            d, area, K_over_L, Twall, vf = tube.eval(x)
             fp.write("%e %e\n" % (x, area))
         fp.write("# end\n")
         return
@@ -631,7 +662,7 @@ class GasSlug():
         shear_stress=0.0; heat_flux = 0.0
         for j in range(self.ncells):
             xmid = 0.5*(self.ifxs[j+1] + self.ifxs[j])
-            d, area, K_over_L, Twall = tube.eval(xmid)
+            d, area, K_over_L, Twall, vf = tube.eval(xmid)
             volume = area * (self.ifxs[j+1] - self.ifxs[j])
             fp.write('%e %e %e %e' % (xmid, volume, self.vel, L_bar))
             fp.write(' %e %e %e %e' % (self.gas.rho, self.gas.p, self.gas.T, self.gas.u))
@@ -680,7 +711,7 @@ class GasSlug():
         e = 0.0
         for j in range(self.ncells):
             xmid = 0.5*(self.ifxs[j+1] + self.ifxs[j])
-            d, area, K_over_L, Twall = tube.eval(xmid)
+            d, area, K_over_L, Twall, vf = tube.eval(xmid)
             volume = area * (self.ifxs[j+1] - self.ifxs[j])
             e += volume*self.gas.rho*(self.gas.internal_energy + 0.5*self.vel*self.vel)
         return e

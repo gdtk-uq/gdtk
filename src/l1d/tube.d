@@ -27,6 +27,7 @@ public:
     double[] areas;
     double[] K_over_Ls;
     double[] Ts;
+    double[] vfs;
 
     this(string fileName)
     {
@@ -42,9 +43,11 @@ public:
         areas.length = n+1;
         K_over_Ls.length = n+1;
         Ts.length = n+1;
+        vfs.length = n+1;
         foreach (i; 0 .. n+1) {
             text = fp.readln().chomp();
-            text.formattedRead!"%e %e %e %e %e"(xs[i], ds[i], areas[i], K_over_Ls[i], Ts[i]);
+            text.formattedRead!("%e %e %e %e %e %e")
+                (xs[i], ds[i], areas[i], K_over_Ls[i], Ts[i], vfs[i]);
         }
         if (L1dConfig.verbosity_level >= 1) {
             int i = 0; writefln("  xs[%d]= %e ds[%d]= %e", i, xs[i], i, ds[i]);
@@ -53,17 +56,19 @@ public:
     } // end constructor
 
     @nogc
-    double[4] eval(double x)
+    double[5] eval(double x)
     {
-        double d, K_over_L, Twall;
+        double d, K_over_L, Twall, vf;
         if (x <= xs[0]) {
             d = ds[0];
             K_over_L = K_over_Ls[0];
             Twall = Ts[0];
+            vf = vfs[0];
         } else if (x >= xs[$-1]) {
             d = ds[$-1];
             K_over_L = K_over_Ls[$-1];
             Twall = Ts[$-1];
+            vf = vfs[$-1];
         } else {
             double dx = xs[1] - xs[0];
             int i = cast(int)floor((x - xs[0])/dx);
@@ -72,9 +77,11 @@ public:
             d = (1.0-frac)*ds[i] + frac*ds[i+1];
             K_over_L = (1.0-frac)*K_over_Ls[i] + frac*K_over_Ls[i+1];
             Twall = (1.0-frac)*Ts[i] + frac*Ts[i+1];
+            vf = (1.0-frac)*vfs[i] + frac*vfs[i+1];
         }
         double area = std.math.PI*(d^^2)/4;
-        double[4] daKT; daKT[0] = d; daKT[1] = area; daKT[2] = K_over_L; daKT[3] = Twall;
+        double[5] daKT;
+        daKT[0]=d; daKT[1]=area; daKT[2]=K_over_L; daKT[3]=Twall; daKT[4]=vf;
         return daKT;
     } // end eval()
 

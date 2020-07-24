@@ -17,4 +17,4 @@ add_history_loc(-0.295) # 0, heat flux gauge
 add_history_loc(-0.078) # 1, pressure transducer
 add_history_loc( 0.000) # 2, joint at nozzle block
 add_history_loc( 0.090) # 3, mid-point of nozzle throat
-add_history_loc( 0.265) # 4, nozzle exit plane
+add_history_loc( 0.280) # 4, nozzle exit plane (constant area section after nozzle)
