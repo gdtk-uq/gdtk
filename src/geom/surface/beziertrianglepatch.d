@@ -180,7 +180,7 @@ public:
         double tol = 1.0e-8;
         int max_steps = 10000;
 
-        bool success = nm.nelmin.minimize!(fMin, number)(x, f_min, n_fe, n_restart, dx, tol, max_steps);
+        bool success = nm.nelmin.minimize!(fMin, number)(x, f_min, n_fe, n_restart, dx, tol, 1, max_steps);
 
         if (success || returnOnFailure) {
             uFound = x[0].re;
@@ -456,7 +456,7 @@ BezierTrianglePatch bezierTriangleFromPointCloud(Vector3[] points, Vector3 p0, V
     // Make the initial perturbations of control points 1/100th of the longest side length
     number dp = 0.01*max(distance_between(p0, p1), distance_between(p0, p2), distance_between(p1, p2));
     dx[] = dp;
-    bool success = nm.nelmin.minimize!(fMin, number)(d, f_min, n_fe, n_restart, dx, tol, maxSteps);
+    bool success = nm.nelmin.minimize!(fMin, number)(d, f_min, n_fe, n_restart, dx, tol, 1, maxSteps);
     if (success) {
         size_t pos = 0;
         foreach (i; iota(n, -1, -1)) {
@@ -642,7 +642,7 @@ BezierTrianglePatch bezierTriangleFromPointCloud(Vector3[] points, Bezier b0, Be
                          distance_between(b1.B[0], b1.B[$-1]),
                          distance_between(b2.B[0], b2.B[$-1]));
     dx[] = dp;
-    success = nm.nelmin.minimize!(fMin, number)(d, f_min, n_fe, n_restart, dx, tol, maxSteps);
+    success = nm.nelmin.minimize!(fMin, number)(d, f_min, n_fe, n_restart, dx, tol, 1, maxSteps);
 
     size_t pos = 0;
     foreach (i; iota(n, -1, -1)) {

@@ -150,7 +150,7 @@ Bezier optimiseBezierPoints(Vector3[] points, int nCtrlPts, Bezier initGuess, re
     // Make the initial perturbations 1/100th of the arc length.
     number dp = myBez.length()/100.0;
     dx[] = dp;
-    success = nm.nelmin.minimize!(funMin,number)(d, f_min, n_fe, n_restart, dx, tol, max_steps);
+    success = nm.nelmin.minimize!(funMin,number)(d, f_min, n_fe, n_restart, dx, tol, 1, max_steps);
     foreach (i; 1 .. nCtrlPts-1) {
         if (dim == 2) {
             myBez.B[i].refx = d[2*i - 2];
@@ -285,7 +285,7 @@ Bezier optimiseBezierPoints2(Vector3[] points, int nCtrlPts, Bezier initGuess, V
     // Make the initial perturbations 1/100th of the arc length.
     number dp = myBez.length()/100.0;
     dx[] = dp;
-    success = nm.nelmin.minimize!(funMin,number)(d, f_min, n_fe, n_restart, dx, tol, max_steps);
+    success = nm.nelmin.minimize!(funMin,number)(d, f_min, n_fe, n_restart, dx, tol, 1, max_steps);
     foreach (i; 2 .. nCtrlPts-2) {
         if (dim == 2) {
             myBez.B[i].refx = d[2*i - 2];

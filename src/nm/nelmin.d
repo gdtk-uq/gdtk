@@ -3,8 +3,9 @@
  * Nelder-Mead simplex minimization of a nonlinear (multivariate) function.
  *
  * Author: Peter J.
- * Version: 2014-06-14 adapted from the C++ version
+ * Version: 2020-07-25 made more like the Python 2020 version.
  *
+ * This D version has been adapted from the C++ version 2014-06-14.
  * The C++ version had been adpated from the Python version in Jan 2006.
  * The Python code had been adapted from the C-coded nelmin.c which was
  * adapted from the Fortran-coded nelmin.f which was, in turn, adapted
@@ -17,6 +18,13 @@
  *     R. O'Neill (1971)
  *     Algorithm AS47. Function minimization using a simplex algorithm.
  *     Applied Statistics, Volume 20, pp 338-345.
+ *
+ * For the 2020 update, we make some of the stepping closer to
+ * the description given in the paper:
+ *
+ *    Donghoon Lee and Matthew Wiswall (2007)
+ *    A parallel implementation of the simplec function minimization routine.
+ *    Computational Economics 30:171-187
  *
  * and some examples are in
  *
@@ -49,6 +57,7 @@ import nm.complex;
  *               and shape of the initial simplex.
  *     tol     : the terminating limit for the standard-deviation
  *               of the simplex function values.
+ *     P       : number of points to replace in parallel, each step.
  *     maxfe   : maximum number of function evaluations that we will allow
  *     n_check : number of steps between convergence checks
  *     delta   : magnitude of the perturbations for checking a local minimum
@@ -69,6 +78,7 @@ bool minimize(alias f, T)(ref T[] x,
                           out int n_restart,
                           T[] dx,
                           in double tol=1.0e-6,
+                          in int P=1,
                           in int max_fe=300,
                           in int n_check=20,
                           in double delta=0.001,

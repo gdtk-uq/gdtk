@@ -90,7 +90,7 @@ void main() {
     writeln("f(1.801, -1.842, -0.463, -1.205)=0.0009");
     number[] x3 = [to!number(1.0), to!number(1.0), to!number(-0.5), to!number(-2.5)];
     number[] dx3 = [to!number(0.1), to!number(0.1), to!number(0.1), to!number(0.1)];
-    conv_flag = minimize!(testFunction3,number)(x3, fx, nfe, nres, dx3, 1.0e-9, 800);
+    conv_flag = minimize!(testFunction3,number)(x3, fx, nfe, nres, dx3, 1.0e-9, 1, 800);
     writeln("x = ", x3, " fx = ", fx);
     writeln("convergence-flag = ", conv_flag);
     writeln("number-of-fn-evaluations = ", nfe);
