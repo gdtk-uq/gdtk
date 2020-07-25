@@ -12,11 +12,23 @@ void main()
     auto p11 = Vector3(1.0, 1.1);
     auto p01 = Vector3(0.0, 1.1);
     auto my_patch = new AOPatch(p00, p10, p11, p01);
-    auto cf = [new LinearFunction(), new LinearFunction(), 
+    auto cf = [new LinearFunction(), new LinearFunction(),
                new LinearFunction(), new LinearFunction()];
     auto my_grid = new StructuredGrid(my_patch, 11, 21, cf);
     writeln("grid point 5 5 at x=", my_grid[5,5].x, " y=", my_grid[5,5].y);
     my_grid.write_to_vtk_file("test_grid-2D.vtk");
+
+    double[4][4] r_grid = [[0.0, 1.0/3, 2.0/3, 1.0],
+                           [0.0, 1.0/3-0.1, 2.0/3+0.1, 1.0],
+                           [0.0, 1.0/3-0.1, 2.0/3+0.1, 1.0],
+                           [0.0, 1.0/3, 2.0/3, 1.0]];
+    double[4][4] s_grid = [[0.0, 0.0, 0.0, 0.0],
+                           [1.0/3, 1.0/3-0.1, 1.0/3-0.1, 1.0/3],
+                           [2.0/3, 2.0/3+0.1, 2.0/3+0.1, 2.0/3],
+                           [1.0, 1.0, 1.0, 1.0]];
+    auto my_grid_b = new StructuredGrid(my_patch, 11, 21, cf, r_grid, s_grid);
+    writeln("grid point 5 5 at x=", my_grid_b[5,5].x, " y=", my_grid_b[5,5].y);
+    my_grid_b.write_to_vtk_file("test_grid_b-2D.vtk");
 
     // write then read standard gzip format
     my_grid.write_to_gzip_file("test_grid-2D.gz");
@@ -34,7 +46,7 @@ void main()
     writeln("WedgeGrid");
     auto my_grid4 = my_grid.makeWedgeGrid(0.2);
     my_grid4.write_to_vtk_file("test_grid4-wedge.vtk");
-    
+
     writeln("3D grid from the start");
     Vector3[8] p;
     p[0] = Vector3(0.0, 0.1, 0.0);
@@ -66,7 +78,7 @@ void main()
     writeln("2D surface from the 3D grid");
     auto north_grid = my_3Dgrid.get_boundary_grid(Face.north);
     writeln("grid point 5 5 at p=", *north_grid[5,5]);
-    
+
     writeln("Import GridPro grid...");
     auto gpgrid = import_gridpro_grid("../../examples/eilmer/3D/gridpro-import/blk.tmp");
     foreach (i; 0 .. gpgrid.length) {

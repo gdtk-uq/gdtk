@@ -63,7 +63,7 @@ LUAD_FILES := $(wildcard $(LUAD_DIR)/luad/*.d) \
 	$(wildcard $(LUAD_DIR)/luad/c/*.d) \
 	$(wildcard $(LUAD_DIR)/luad/conversions/*.d)
 
-DFLAGS := -w -debug -dip1008 -unittest -g -I..
+DFLAGS := -w -debug -dip1008 -g -I..
 OF := -of
 DLINKFLAGS :=
 ifeq ($(findstring libplot,$(LIBPLOT_VERSION_STR)), libplot)

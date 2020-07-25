@@ -81,6 +81,18 @@ public:
         make_grid_from_surface(surf, clusterf);
     }
 
+    // 2D grid, with redistribution of parameters, built on Parametric surface.
+    this(const ParametricSurface surf, size_t niv, size_t njv,
+         const(UnivariateFunction)[] clusterf,
+         const(double[4][4]) r_grid, const(double[4][4]) s_grid,
+         string label="")
+    {
+        this(niv, njv, 1, label);
+        // Any unspecified clustering functions default to the linear identity.
+        while (clusterf.length < 4) clusterf ~= new LinearFunction(0.0, 1.0);
+        make_grid_from_surface(surf, clusterf, r_grid, s_grid);
+    }
+
     // 3D grid, built on ParametricVolume.
     this(const ParametricVolume pvolume, size_t niv, size_t njv, size_t nkv,
          const(UnivariateFunction)[] clusterf, string label="")
@@ -481,6 +493,7 @@ public:
         }
     } // end make_grid_from_path()
 
+    // Simple grid generation with no redistribution of r,s parameters.
     void make_grid_from_surface(const ParametricSurface surf,
                                 const(UnivariateFunction)[] clusterf)
     {
@@ -500,6 +513,49 @@ public:
                 double sdash = (1.0-r) * sWest[j] + r * sEast[j];
                 double rdash = (1.0-s) * rSouth[i] + s * rNorth[i];
                 Vector3 p = surf(rdash, sdash);
+                this[i,j,k].set(p);
+            }
+        }
+    } // end make_grid_from_surface()
+
+    // This flavour of the function has internal redistribution of the r,s parameters.
+    void make_grid_from_surface(const ParametricSurface surf,
+                                const(UnivariateFunction)[] clusterf,
+                                const(double[4][4]) r_grid,
+                                const(double[4][4]) s_grid)
+    {
+        // First, set up clustered parameter values along each edge.
+        double[] rNorth = clusterf[0].distribute_parameter_values(niv);
+        double[] sEast = clusterf[1].distribute_parameter_values(njv);
+        double[] rSouth = clusterf[2].distribute_parameter_values(niv);
+        double[] sWest = clusterf[3].distribute_parameter_values(njv);
+        // Second, set up redistribution function to r,s.
+        void remap(double r, double s, out double r_star, out double s_star)
+        {
+            // Select quadrilateral.
+            int i = max(0, min(2, to!int(r*3.0)));
+            int j = max(0, min(2, to!int(s*3.0)));
+            // Compute local parametric coordinates.
+            double r_local = (r - i/3.0) * 3.0;
+            double s_local = (s - j/3.0) * 3.0;
+            r_star = (1.0-r_local)*(1.0-s_local)*r_grid[i][j] + r_local*(1.0-s_local)*r_grid[i+1][j] +
+                (1.0-r_local)*s_local*r_grid[i][j+1] + r_local*s_local*r_grid[i+1][j+1];
+            s_star = (1.0-r_local)*(1.0-s_local)*s_grid[i][j] + r_local*(1.0-s_local)*s_grid[i+1][j] +
+                (1.0-r_local)*s_local*s_grid[i][j+1] + r_local*s_local*s_grid[i+1][j+1];
+        }
+        // Now, work through the mesh, one point at a time,
+        // blending the stretched parameter values then remapping to rstar,sstar
+        // and creating the actual vertex coordinates in Cartesian space.
+        size_t k = 0;
+        foreach (j; 0 .. njv) {
+            double s = to!double(j) / (njv - 1);
+            foreach (i; 0 .. niv) {
+                double r = to!double(i) / (niv - 1);
+                double sdash = (1.0-r)*sWest[j] + r*sEast[j];
+                double rdash = (1.0-s)*rSouth[i] + s*rNorth[i];
+                double rstar; double sstar;
+                remap(rdash, sdash, rstar, sstar);
+                Vector3 p = surf(rstar, sstar);
                 this[i,j,k].set(p);
             }
         }
