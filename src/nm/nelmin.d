@@ -41,6 +41,8 @@ module nm.nelmin;
 import std.conv;
 import std.math;
 import std.stdio;
+import std.format;
+import std.algorithm;
 import nm.complex;
 
 //-----------------------------------------------------------------------
@@ -72,277 +74,249 @@ import nm.complex;
  *     n_fe      : the number of function evaluations and
  *     n_restart : the number of restarts (with scale reduction).
  */
-bool minimize(alias f, T)(ref T[] x,
-                          out T f_min,
-                          out int n_fe,
-                          out int n_restart,
-                          T[] dx,
-                          in double tol=1.0e-6,
-                          in int P=1,
-                          in int max_fe=300,
-                          in int n_check=20,
-                          in double delta=0.001,
-                          in double Kreflect=1.0,
-                          in double Kextend=2.0,
-                          in double Kcontract=0.5)
+bool minimize(alias f, T)
+    (ref T[] x, out T f_min, out int n_fe, out int n_restart, T[] dx,
+     in double tol=1.0e-6, in int P=1, in int max_fe=400,
+     in int n_check=20, in double delta=0.001,
+     in double Kreflect=1.0, in double Kextend=2.0, in double Kcontract=0.5)
     if (is(typeof(f([0.0,0.0])) == double) ||
         is(typeof(f([Complex!double(0.0),Complex!double(0.0)])) == Complex!double))
 {
     bool converged = false;
-    n_fe = 0;
-    n_restart = 0;
     size_t N = x.length;
     // Might have to check for NaNs as well.
-    if ( dx.length != x.length ) {
+    if (dx.length != x.length) {
         dx = x.dup;
         foreach (ref elem; dx) elem = 0.1;
     }
-    // In an N-dimensional problem, each vertex is an array of N coordinates
+    auto smplx = new NMSimplex!(f,T)(x, dx, P, Kreflect, Kextend, Kcontract);
+    while (!converged && (smplx.nfe < max_fe)) {
+        // Take some steps and then check for convergence.
+        foreach (istep; 0 .. n_check) {
+            smplx.vertices.sort!(less);
+            bool any_success = false;
+            foreach (i; 0 .. P) {
+                bool success = smplx.replace_vertex(N-i);
+                if (success) any_success = true;
+            }
+            if (!any_success) smplx.contract_about_zero_point();
+        }
+        // Pick out the current best vertex.
+        smplx.vertices.sort!(less);
+        x[] = smplx.vertices[0].x[];
+        f_min = smplx.vertices[0].fx;
+        // Check the scatter of vertex values to see if we are
+        // close enough to call it quits.
+        auto mean_std_dev = smplx.f_statistics();
+        if (mean_std_dev[1] < tol) {
+            // All of the points are close together but we need to test more carefully.
+            converged = smplx.test_for_minimum(delta);
+            if (!converged) smplx.rescale(delta);
+        }
+    } // end while !converged
+    n_fe = smplx.nfe;
+    n_restart = smplx.nrestarts;
+    return converged;
+} // end minimize()
+
+//-----------------------------------------------------------------------
+// Keep the data tidy and conveniently accessible...
+
+struct Vertex(T) {
+    // Stores the coordinates as and array and the associated function value.
+    T[] x;
+    T fx;
+}
+
+// Following function used when sorting vertices into ascending order.
+bool less(T)(Vertex!T a, Vertex!T b) { return a.fx < b.fx; }
+
+
+class NMSimplex(alias f, T)
+    if (is(typeof(f([0.0,0.0])) == double) ||
+        is(typeof(f([Complex!double(0.0),Complex!double(0.0)])) == Complex!double))
+{
+    //  Stores the (nonlinear) simplex and some stepping parameters.
+
+    this(T[] x, T[] dx, int P, double Kreflect, double Kextend, double Kcontract)
+    // In an N-dimensional problem, each vertex has an array of N coordinates
     // and the simplex consists of N+1 vertices.
     // Set up the vertices about the user-specified vertex, x,
     // and the set of step-sizes dx.
     // f is a user-specified objective function f(x).
-    T[][] vertex_list = new T[][N+1];
-    T[] f_list = new T[N+1];
-    foreach (i; 0 .. N+1) {
-        auto p = x.dup;
-        if ( i > 0 ) p[i-1] += dx[i-1];
-        vertex_list[i] = p;
-        f_list[i] = f(p);
-        n_fe += 1;
-    }
-
-    // Utility functions for dealing with the simplex.
-
-    // Returns the index of the lowest vertex, excluding the one specified.
-    int lowest(int exclude=-1)
     {
-        int indx;
-        T lowest_f_value;
-        if ( exclude == 0 ) indx = 1; else indx = 0;
-        lowest_f_value = f_list[indx];
-        for ( int i = 0; i <= N;  ++i ) {
-            if ( i == exclude ) continue;
-            if ( f_list[i] < lowest_f_value ) {
-                lowest_f_value = f_list[i];
-                indx = i;
-            }
-        }
-        return indx;
-    }
-
-    // Returns the index of the highest vertex, excluding the one specified.
-    int highest(int exclude=-1)
-    {
-        int indx;
-        T highest_f_value;
-        if ( exclude == 0 ) indx = 1; else indx = 0;
-        highest_f_value = f_list[indx];
-        for ( int i = 0; i <= N;  ++i ) {
-            if ( i == exclude ) continue;
-            if ( f_list[i] > highest_f_value ) {
-                highest_f_value = f_list[i];
-                indx = i;
-            }
-        }
-        return indx;
-    }
-
-    // Returns the standard deviation of the vertex fn values.
-    T std_dev()
-    {
-        int i;
-        T sum = 0.0;
-        for ( i = 0; i <= N; ++i ) {
-            sum += f_list[i];
-        }
-        T mean = sum / (N + 1);
-        sum = 0.0;
-        for ( i = 0; i <= N; ++i ) {
-            T diff = f_list[i] - mean;
-            sum += diff * diff;
-        }
-        return sqrt(sum / N);
-    }
-
-    // Pick out the current minimum and rebuild the simplex about that point.
-    void rescale(double ratio)
-    {
-        foreach ( idx; 0..dx.length) dx[idx] *= ratio;
-        T[] p = vertex_list[lowest()].dup; // save to use below
+        size_t N = x.length;
+        assert(dx.length == N, "Non-matching lengths for x and dx.");
+        this.dx = dx.dup;
+        this.N = N;
+        this.P = P;
+        this.Kreflect = Kreflect;
+        this.Kextend = Kextend;
+        this.Kcontract = Kcontract;
         foreach (i; 0 .. N+1) {
-            vertex_list[i][] = p.dup;
-            if ( i >= 1 ) vertex_list[i][i-1] += dx[i-1];
-            f_list[i] = f(vertex_list[i]);
-            n_fe += 1;
+            auto x_new = x.dup;
+            if (i >= 1) x_new[i-1] += dx[i-1];
+            auto f_new = f(x_new);
+            vertices ~= Vertex!T(x_new, f_new);
         }
+        vertices.sort!(less);
+        this.nfe = to!int(N+1);
+        this.nrestarts = 0;
+    }
+
+    void rescale(double ratio)
+    // Rebuild the simplex about the lowest point for a restart.
+    {
+        vertices.sort!(less);
+        foreach (ref elem; dx) { elem *= ratio; }
+        auto vtx = vertices[0];
+        foreach (i; 0 .. N) {
+            auto x_new = vtx.x.dup;
+            x_new[i] += dx[i];
+            vertices[i+1].x[] = x_new[];
+            vertices[i+1].fx = f(x_new); nfe += 1;
+        }
+        vertices.sort!(less);
+        nrestarts += 1;
         return;
     }
 
-    // Returns the centroid of all vertices excluding the one specified.
-    T[] centroid(int exclude=-1)
+    T[2] f_statistics()
+    // Returns mean and standard deviation of the vertex fn values.
     {
-        T[] xmid = new T[N];
-        foreach(ref elem; xmid) elem = 0.0;
-        foreach (i; 0 .. N+1) {
-            if (i == exclude ) continue;
-            xmid[] += vertex_list[i][];
-        }
-        foreach( idx; 0..xmid.length) xmid[idx] /= N;
+        T mean = 0.0;
+        foreach (vtx; vertices) { mean += vtx.fx; }
+        mean /= vertices.length;
+        T ss = 0.0;
+        foreach (vtx; vertices) { ss += (vtx.fx - mean)^^2; }
+        T std_dev = sqrt(ss/(vertices.length-1));
+        return [mean, std_dev];
+    }
+
+    T[] centroid(size_t imax)
+    // Returns the centroid of the subset of vertices up to and including imax.
+    {
+        T[] xmid = vertices[0].x.dup;
+        imax = min(imax, N);
+        foreach (i; 1 .. imax+1) { xmid[] += vertices[i].x[]; }
+        foreach (ref elem; xmid) { elem /= (imax+1); }
         return xmid;
     }
 
-    // Contract the simplex about the vertex i_con.
-    void contract_about_one_point(int i_con)
+    void contract_about_zero_point()
+    // Contract the simplex about the vertex[0].
     {
-        T[] p_con = vertex_list[i_con].dup;
-        foreach (i; 0 .. N+1) {
-            if ( i == i_con ) continue;
-            T[] p = vertex_list[i].dup;
-            foreach( idx; 0..p.length) p[idx] = 0.5 * (p[idx] + p_con[idx]);
-            f_list[i] = f(p);
-            n_fe += 1;
+        T[] x_con = vertices[0].x.dup;
+        foreach (i; 1 .. N+1) {
+            foreach (j, ref elem; vertices[i].x) { elem = 0.5*elem + 0.5*x_con[j]; }
+            vertices[i].fx = f(vertices[i].x); nfe += 1;
         }
+        vertices.sort!(less);
         return;
     }
 
-    // Perturb the minimum vertex and check that it is a local minimum.
-    bool test_for_minimum(int i_min, double delta)
+    bool test_for_minimum(double delta)
+    // Look around vertex 0 to see if it is a local minimum.
+    // This is expensive, so we don't want to do it often.
     {
-        bool is_minimum = true;  // Assume it is true and test for failure.
-        T f_min = f_list[i_min];
-        T f_p;
-        for ( int j = 0; j < N; ++j ) {
-            // Check either side of the minimum, perturbing one coordinate at a time.
-            T[] p = vertex_list[i_min].dup;
-            p[j] += dx[j] * delta;
-            f_p = f(p);
-            n_fe += 1;
-            if ( f_p < f_min ) { is_minimum = false; break; }
-            p[j] -= dx[j] * delta * 2;
-            f_p = f(p);
-            n_fe += 1;
-            if ( f_p < f_min ) { is_minimum = false; break; }
+        bool is_minimum = true;
+        auto f_min = vertices[0].fx;
+        foreach (j; 0 .. N) {
+            auto x_new = vertices[j].x.dup;
+            x_new[j] += dx[j] * delta;
+            auto f_new = f(x_new); nfe += 1;
+            if (f_new < f_min) { is_minimum = false; break; }
+            x_new[j] -= dx[j] * delta * 2.0;
+            f_new = f(x_new); nfe += 1;
+            if (f_new < f_min) { is_minimum = false; break; }
         }
         return is_minimum;
     }
 
-    void replace_vertex(int i, T[] p, T fp)
+    bool replace_vertex(size_t i)
+    // Try to replace the worst point, i, in the simplex.
+    // Returns true is there was a successful replacement.
     {
-        vertex_list[i] = p.dup;
-        f_list[i] = fp;
-    }
-
-    // The core of the minimizer...
-    // The following (nested) functions require access to the simplex.
-    void take_a_step()
-    {
-        // Try to move away from the worst point in the simplex.
-        // The new point will be inserted into the simplex (in place).
-        int i_low = lowest();
-        int i_high = highest();
-        T[] x_high = vertex_list[i_high].dup;
-        T f_high = f_list[i_high];
-        // Centroid of simplex excluding worst point.
-        T[] x_mid = centroid(i_high);
-        T f_mid = f(x_mid);
-        n_fe += 1;
-
+        auto f_min = vertices[0].fx;
+        if (i <= (N-P)) {
+            throw new Exception(format("i=%d seems not to be in the high points", i));
+        }
+        auto x_high = vertices[i].x.dup;
+        auto f_high = vertices[i].fx;
+        // Centroid of simplex excluding point(s) that we are replacing.
+        auto x_mid = centroid(N-P);
+        //
         // First, try moving away from worst point by
-        // reflection through centroid
-        T[] x_refl = x_mid.dup;
-        foreach( idx; 0..x_refl.length) x_refl[idx] = (1.0+Kreflect) * x_mid[idx] - Kreflect * x_high[idx];
-        T f_refl = f(x_refl);
-        n_fe += 1;
-
-        if ( f_refl < f_mid ) {
+        // reflection through centroid.
+        auto x_refl = x_mid.dup;
+        foreach (j, ref e; x_refl) { e += Kreflect*(e - x_high[j]); }
+        auto f_refl = f(x_refl); nfe += 1;
+        if (f_refl < f_min) {
             // The reflection through the centroid is good,
             // try to extend in the same direction.
-            T[] x_ext = x_mid.dup;
-            foreach( idx; 0..x_ext.length) x_ext[idx] = Kextend * x_refl[idx] + (1.0-Kextend) * x_mid[idx];
-            T f_ext = f(x_ext);
-            n_fe += 1;
-            if ( f_ext < f_refl ) {
+            auto x_ext = x_mid.dup;
+            foreach (j, ref e; x_ext) { e += Kextend*(x_refl[j] - x_mid[j]); }
+            auto f_ext = f(x_ext); nfe += 1;
+            if (f_ext < f_refl) {
                 // Keep the extension because it's best.
-                replace_vertex(i_high, x_ext, f_ext);
-                return;
+                vertices[i].x = x_ext[]; vertices[i].fx = f_ext;
+                return true;
             } else {
                 // Settle for the original reflection.
-                replace_vertex(i_high, x_refl, f_refl);
-                return;
+                vertices[i].x = x_refl[]; vertices[i].fx = f_refl;
+                return true;
             }
         } else {
             // The reflection is not going in the right direction, it seems.
-            // See how many vertices are better than the reflected point.
-            int count = 0;
-            for ( int i = 0; i <= N; ++i ) {
-                if ( f_list[i] > f_refl )  count += 1;
-            }
-            if ( count <= 1 ) {
+            // See how many vertices are worse than the reflected point.
+            size_t count = 0;
+            foreach (j; 0 .. N+1) { if (vertices[j].fx > f_refl) count += 1; }
+            if (count <= 1) {
                 // Not too many points are higher than the original reflection.
                 // Try a contraction on the reflection-side of the centroid.
-                T[] x_con = x_mid.dup;
-                foreach( idx; 0..x_con.length) x_con[idx] = (1.0-Kcontract) * x_mid[idx] + Kcontract * x_high[idx];
-                T f_con = f(x_con);
-                n_fe += 1;
-                if ( f_con < f_high ) {
+                auto x_con = x_mid.dup;
+                foreach (j, ref e; x_con) { e = (1.0-Kcontract)*e + Kcontract*x_high[j]; }
+                auto f_con = f(x_con); nfe += 1;
+                if (f_con < f_high) {
                     // At least we haven't gone uphill; accept.
-                    replace_vertex(i_high, x_con, f_con);
-                } else {
-                    // We have not been successful in taking a single step.
-                    // Contract the simplex about the current lowest point.
-                    contract_about_one_point(i_low);
+                    vertices[i].x = x_con[]; vertices[i].fx = f_con;
+                    return true;
                 }
-                return;
             } else {
                 // Retain the original reflection because there are many
-                // vertices with higher values of the objective function.
-                replace_vertex(i_high, x_refl, f_refl);
-                return;
+                // original vertices with higher values of the objective function.
+                vertices[i].x = x_refl[]; vertices[i].fx = f_refl;
+                return true;
             }
         }
-    } // end take_a_step()
+        // If we arrive here, we have not replaced the highest point.
+        return false;
+    } // end replace_vertex()
 
-    // Now, do some real work with all of these tools...
+public:
+    // In Python style, we have the following attributes of the simplex public
+    // because we want to be able to access them from the minimize function.
+    T[] dx;
+    size_t N;
+    size_t P;
+    double Kreflect;
+    double Kextend;
+    double Kcontract;
+    int nfe;
+    int nrestarts;
+    Vertex!T[] vertices;
+} // end class NMSimplex
 
-    // TODO make a better loop termination condition.
-    while ( !converged && n_fe < (max_fe+N+2) ) {
-        // Take some steps and then check for convergence.
-        for ( int i = 0; i < n_check; ++i ) {
-            take_a_step();
-            // Pick out the current best vertex.
-            int i_best = lowest();
-            x[] = vertex_list[i_best][];
-            f_min = f_list[i_best];
-            // Check the scatter of vertex values to see if we are
-            // close enough to call it quits.
-            if ( std_dev() < tol ) {
-                // All of the points are close together but we need to
-                // test more carefully to see if we are at a true minimum.
-                converged = test_for_minimum(i_best, delta);
-                if ( !converged ) {
-                    // The function evaluations are all very close together
-                    // but we are not at a true minimum; rescale the simplex.
-                    rescale(delta);
-                    n_restart += 1;
-                }
-            }
-        } // end for i
-    } // end while !converged
-
-    return converged;
-} // end minimize()
-
+//-----------------------------------------------------------------------
 
 version(nelmin_test) {
     import std.math;
     import util.msg_service;
     import nm.number;
     int main() {
-        /** Test objective function 1.
-         *  x is expected to be a list of coordinates.
-         *  Returns a single float value.
-         */
+        // Test objective function 1.
+        //   x is expected to be a list of coordinates.
+        //   Returns a single float value.
         number testFunction1(number[] x)
         {
             number sum = 0.0;
@@ -354,15 +328,17 @@ version(nelmin_test) {
         number fx;
         int nfe, nres;
         bool conv_flag = minimize!(testFunction1,number)(x, fx, nfe, nres, dx);
-        assert(conv_flag, failedUnitTest());
-        assert(approxEqualNumbers(x, [to!number(1.0), to!number(1.0), to!number(1.0), to!number(1.0)]), failedUnitTest());
-        assert(approxEqualNumbers(fx, to!number(0.0)), failedUnitTest());
-        assert((nfe > 355) && (nfe < 365), failedUnitTest()); // 361
-        assert(nres < 6, failedUnitTest()); // 5
         // writeln("x = ", x, " fx = ", fx);
         // writeln("convergence-flag = ", conv_flag);
         // writeln("number-of-fn-evaluations = ", nfe);
         // writeln("number-of-restarts = ", nres);
+        assert(conv_flag, failedUnitTest());
+        assert(approxEqualNumbers(x, [to!number(1.0), to!number(1.0),
+                                      to!number(1.0), to!number(1.0)]),
+               failedUnitTest());
+        assert(approxEqualNumbers(fx, to!number(0.0)), failedUnitTest());
+        assert((nfe > 425) && (nfe < 435), failedUnitTest()); // 428
+        assert(nres < 6, failedUnitTest()); // 5
 
         // Test objective function 2.
         // Example 3.3 from Olsson and Nelson.
@@ -382,15 +358,16 @@ version(nelmin_test) {
         number[] x2 = [to!number(0.0), to!number(0.0)];
         number[] dx2 = [to!number(0.5), to!number(0.5)];
         conv_flag = minimize!(testFunction2,number)(x2, fx, nfe, nres, dx2, 1.0e-4);
-        assert(conv_flag, failedUnitTest());
-        assert(approxEqualNumbers(x2, [to!number(0.811295), to!number(-0.584636)]), failedUnitTest());
-        assert(approxEqualNumbers(fx, to!number(-67.1077)), failedUnitTest());
-        assert((nfe > 125) && (nfe < 135), failedUnitTest()); // 131
-        assert(nres == 0, failedUnitTest());
         // writeln("x = ", x2, " fx = ", fx);
         // writeln("convergence-flag = ", conv_flag);
         // writeln("number-of-fn-evaluations = ", nfe);
         // writeln("number-of-restarts =", nres);
+        assert(conv_flag, failedUnitTest());
+        assert(approxEqualNumbers(x2, [to!number(0.811295), to!number(-0.584636)]),
+               failedUnitTest());
+        assert(approxEqualNumbers(fx, to!number(-67.1077)), failedUnitTest());
+        assert((nfe > 80) && (nfe < 90), failedUnitTest()); // 86
+        assert(nres == 0, failedUnitTest());
 
         // Test objective function 3.
         // Example 3.5 from Olsson and Nelson; least-squares.
@@ -412,16 +389,16 @@ version(nelmin_test) {
         double[] x3 = [1.0, 1.0, -0.5, -2.5];
         double[] dx3 = [0.1, 0.1, 0.1, 0.1];
         double fx3;
-        conv_flag = minimize!(testFunction3,double)(x3, fx3, nfe, nres, dx3, 1.0e-9, 1, 800);
-        assert(conv_flag, failedUnitTest());
-        assert(approxEqualNumbers(x3, [1.80102, -1.84173, -0.463377, -1.20505]), failedUnitTest());
-        assert(approxEqualNumbers(fx3, 0.000908953), failedUnitTest());
-        assert((nfe > 715) && (nfe < 725), failedUnitTest()); // 722
-        assert(nres == 0, failedUnitTest());
+        conv_flag = minimize!(testFunction3,double)(x3, fx3, nfe, nres, dx3, 1.0e-9, 2, 800);
         // writeln("x = ", x3, " fx = ", fx3);
         // writeln("convergence-flag = ", conv_flag);
         // writeln("number-of-fn-evaluations = ", nfe);
         // writeln("number-of-restarts = ", nres);
+        assert(conv_flag, failedUnitTest());
+        assert(approxEqualNumbers(x3, [1.80105, -1.84177, -0.463388, -1.20508]), failedUnitTest());
+        assert(approxEqualNumbers(fx3, 0.000908953), failedUnitTest());
+        assert((nfe > 500) && (nfe < 505), failedUnitTest()); // 503
+        assert(nres == 0, failedUnitTest());
 
         return 0;
     }

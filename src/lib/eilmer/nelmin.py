@@ -273,7 +273,7 @@ class NMSimplex:
 
     def contract_about_zero_point(self):
         """
-        Contract the simplex about the vertex i_con.
+        Contract the simplex about the vertex[0].
         """
         x_con = self.vertices[0].x
         xs = [0.5*self.vertices[i].x + 0.5*x_con for i in range(1, self.N+1)]
@@ -312,11 +312,11 @@ class NMSimplex:
         assert i > (self.N-self.P), ("i=%d, seems not to be in the high points" % i)
         x_high = self.vertices[i].x.copy()
         f_high = self.vertices[i].f
-        # Centroid of simplex excluding point(s) that we are placing.
+        # Centroid of simplex excluding point(s) that we are replacing.
         x_mid = self.centroid(self.N-self.P)
         #
         # First, try moving away from worst point by
-        # reflection through centroid
+        # reflection through centroid.
         x_refl = x_mid + self.Kreflect*(x_mid - x_high)
         f_refl = self.f(x_refl); self.nfe += 1
         if f_refl < f_min:
