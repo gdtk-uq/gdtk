@@ -532,16 +532,16 @@ public:
         // Second, set up redistribution function to r,s.
         void remap(double r, double s, out double r_star, out double s_star)
         {
-            // Select quadrilateral.
-            int i = max(0, min(2, to!int(r*3.0)));
-            int j = max(0, min(2, to!int(s*3.0)));
-            // Compute local parametric coordinates.
-            double r_local = (r - i/3.0) * 3.0;
-            double s_local = (s - j/3.0) * 3.0;
-            r_star = (1.0-r_local)*(1.0-s_local)*r_grid[i][j] + r_local*(1.0-s_local)*r_grid[i+1][j] +
-                (1.0-r_local)*s_local*r_grid[i][j+1] + r_local*s_local*r_grid[i+1][j+1];
-            s_star = (1.0-r_local)*(1.0-s_local)*s_grid[i][j] + r_local*(1.0-s_local)*s_grid[i+1][j] +
-                (1.0-r_local)*s_local*s_grid[i][j+1] + r_local*s_local*s_grid[i+1][j+1];
+            // Tensor-product, cubic-Bezier interpolation of the gridded parameter values.
+            double[4] rr; double[4] sr;
+            foreach (j; 0 .. 4) {
+                rr[j] = (1.0-r)^^3 * r_grid[0][j] + 3.0*r*(1.0-r)^^2 * r_grid[1][j] +
+                    3.0*(1.0-r)*r*r * r_grid[2][j] + r^^3 * r_grid[3][j];
+                sr[j] = (1.0-r)^^3 * s_grid[0][j] + 3.0*r*(1.0-r)^^2 * s_grid[1][j] +
+                    3.0*(1.0-r)*r*r * s_grid[2][j] + r^^3 * s_grid[3][j];
+            }
+            r_star = (1.0-s)^^3 * rr[0] + 3.0*s*(1.0-s)^^2 * rr[1] + 3.0*(1.0-s)*s*s * rr[2] + s^^3 * rr[3];
+            s_star = (1.0-s)^^3 * sr[0] + 3.0*s*(1.0-s)^^2 * sr[1] + 3.0*(1.0-s)*s*s * sr[2] + s^^3 * sr[3];
         }
         // Now, work through the mesh, one point at a time,
         // blending the stretched parameter values then remapping to rstar,sstar
