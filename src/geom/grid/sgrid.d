@@ -1060,25 +1060,55 @@ public:
     // just because it is ceas to compute and shold indicate skewed cells.
     // A grid that has a value of 1.0 is (likely) an ideal, orthogonal mesh.
     {
-        double badness = 0.0;
+        double ratio_of_diagonals_avg = 0.0; double ratio_of_diagonals_max = 0.0;
+        double slenderness_avg = 0.0; double slenderness_max = 0.0;
+        double area_min = double.max; double area_max = 0.0;
+        double negative_area_penalty = 0.0;
         if (nkv == 1 && njv > 1) {
             // 2D surface mesh.
             size_t k = 0;
             foreach (j; 0 .. njv-1) {
                 foreach (i; 0 .. niv-1) {
-                    Vector3 d0 = *this[i,j,k]; d0 -= *this[i+1,j+1,k];
-                    Vector3 d1 = *this[i+1,j,k]; d1 -= *this[i,j+1,k];
-                    double L20 = d0.x*d0.x + d0.y*d0.y + d0.x*d0.z + 1.0e-16;
-                    double L21 = d1.x*d1.x + d1.y*d1.y + d1.z*d1.z + 1.0e-16;
-                    badness += (L20 > L21) ? L20/L21 : L21/L20;
+                    // Corners of the cell[i,j]
+                    Vector3 p00 = *this[i,j,k]; Vector3 p10 = *this[i+1,j,k];
+                    Vector3 p01 = *this[i,j+1,k]; Vector3 p11 = *this[i+1,j+1,k];
+                    // Diagonals
+                    Vector3 d0 = p00; d0 -= p11;
+                    Vector3 d1 = p10; d1 -= p01;
+                    number L20 = d0.x*d0.x + d0.y*d0.y + d0.x*d0.z + 1.0e-16;
+                    number L21 = d1.x*d1.x + d1.y*d1.y + d1.z*d1.z + 1.0e-16;
+                    double ratio_of_diagonals = (L20 > L21) ? L20/L21 : L21/L20;
+                    ratio_of_diagonals_max = max(ratio_of_diagonals_max, ratio_of_diagonals);
+                    ratio_of_diagonals_avg += ratio_of_diagonals;
+                    // Slenderness
+                    Vector3 centroid;
+                    number xyplane_area, iLen, jLen, minLen;
+                    xyplane_quad_cell_properties(p00, p10, p11, p01, centroid,
+                                                 xyplane_area, iLen, jLen, minLen);
+                    number perimeter = distance_between(p00, p10) + distance_between(p10, p11) +
+                        distance_between(p11, p01) + distance_between(p01, p00);
+                    double slenderness = (perimeter^^2)/(16*xyplane_area);
+                    slenderness_max = max(slenderness_max, slenderness);
+                    slenderness_avg += slenderness;
+                    area_min = min(area_min, xyplane_area);
+                    area_max = max(area_max, xyplane_area);
+                    // Negative areas are a bad thing.
+                    negative_area_penalty += (xyplane_area < 0.0) ? 10000.0 : 0.0;
                 }
             }
-            badness /= (njv-1)*(niv-1);
+            size_t ncells = (njv-1)*(niv-1);
+            ratio_of_diagonals_avg /= ncells; // want average value per cell
+            slenderness_avg /= ncells;
         } else {
             // 3D volume mesh.
             throw new Error("Not implemented.");
         }
-        return badness;
+        writefln("diagonals max=%e avg=%e slenderness max=%e avg=%e area_max/min=%e negative=%e",
+                 ratio_of_diagonals_max, ratio_of_diagonals_avg, slenderness_max, slenderness_avg,
+                 (area_max/area_min), negative_area_penalty);
+        return 10.0*ratio_of_diagonals_max + slenderness_max +
+            10.0*ratio_of_diagonals_avg + slenderness_avg +
+            (area_max/area_min) + negative_area_penalty;
     }
 
     bool determine_rs_grids(const ParametricSurface surf, const(UnivariateFunction)[] clusterf,
@@ -1089,7 +1119,6 @@ public:
             list_to_rs_grids(data, r_grid, s_grid);
             make_grid_from_surface(surf, clusterf, r_grid, s_grid);
             double obj = measure_of_badness();
-            writeln("obj=", obj);
             return obj;
         }
         double[] data; data.length = 16;
@@ -1097,7 +1126,8 @@ public:
         double[] ddata; foreach (i; 0 .. data.length) { ddata ~= 0.1; }
         double fdata;
         int nfe, nres;
-        bool conv_flag = nm.nelmin.minimize!(objective,double)(data, fdata, nfe, nres, ddata);
+        bool conv_flag = nm.nelmin.minimize!(objective,double)(data, fdata, nfe, nres, ddata,
+                                                               1.0e-6, 3, 800);
         writeln("data = ", data, " fdata = ", fdata);
         writeln("convergence-flag = ", conv_flag);
         writeln("number-of-fn-evaluations = ", nfe);
