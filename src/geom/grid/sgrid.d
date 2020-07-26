@@ -18,6 +18,7 @@ import std.range : iota;
 import gzip;
 import nm.complex;
 import nm.number;
+import nm.nelmin;
 
 import geom;
 
@@ -1053,10 +1054,111 @@ public:
         usg.write_to_su2_file(fileName, scale, use_gmsh_order_for_wedges);
     }
 
+    double measure_of_badness()
+    // Compute the average of the cell badness measures.
+    // For each cell, this is the ratio of the squared-lengths of the diagonals,
+    // just because it is ceas to compute and shold indicate skewed cells.
+    // A grid that has a value of 1.0 is (likely) an ideal, orthogonal mesh.
+    {
+        double badness = 0.0;
+        if (nkv == 1 && njv > 1) {
+            // 2D surface mesh.
+            size_t k = 0;
+            foreach (j; 0 .. njv-1) {
+                foreach (i; 0 .. niv-1) {
+                    Vector3 d0 = *this[i,j,k]; d0 -= *this[i+1,j+1,k];
+                    Vector3 d1 = *this[i+1,j,k]; d1 -= *this[i,j+1,k];
+                    double L20 = d0.x*d0.x + d0.y*d0.y + d0.x*d0.z + 1.0e-16;
+                    double L21 = d1.x*d1.x + d1.y*d1.y + d1.z*d1.z + 1.0e-16;
+                    badness += (L20 > L21) ? L20/L21 : L21/L20;
+                }
+            }
+            badness /= (njv-1)*(niv-1);
+        } else {
+            // 3D volume mesh.
+            throw new Error("Not implemented.");
+        }
+        return badness;
+    }
+
+    bool determine_rs_grids(const ParametricSurface surf, const(UnivariateFunction)[] clusterf,
+                            ref double[4][4] r_grid, ref double[4][4] s_grid)
+    {
+        double objective(double[] data)
+        {
+            list_to_rs_grids(data, r_grid, s_grid);
+            make_grid_from_surface(surf, clusterf, r_grid, s_grid);
+            return measure_of_badness();
+        }
+        double[] data; data.length = 16;
+        rs_grids_to_list(r_grid, s_grid, data);
+        double[] ddata; foreach (i; 0 .. data.length) { ddata ~= 0.1; }
+        double fdata;
+        int nfe, nres;
+        bool conv_flag = nm.nelmin.minimize!(objective,double)(data, fdata, nfe, nres, ddata);
+        writeln("data = ", data, " fdata = ", fdata);
+        writeln("convergence-flag = ", conv_flag);
+        writeln("number-of-fn-evaluations = ", nfe);
+        writeln("number-of-restarts = ", nres);
+        list_to_rs_grids(data, r_grid, s_grid);
+        return conv_flag;
+    }
 } // end class StructuredGrid
 
 //-----------------------------------------------------------------
 // Helper functions
+
+void rs_grids_to_list(ref const(double[4][4]) r_grid, ref const(double[4][4]) s_grid,
+                      ref double[] data)
+// Mapping of redistribution r,s values from individual grids to parameter list.
+// See PJ workbook page 63 2020-07-25.
+// Should match function below.
+{
+    assert(data.length >= 16, "data array too short");
+    data[0] = s_grid[0][1];
+    data[1] = s_grid[0][2];
+    data[2] = r_grid[1][0];
+    data[3] = r_grid[1][1];
+    data[4] = s_grid[1][1];
+    data[5] = r_grid[1][2];
+    data[6] = s_grid[1][2];
+    data[7] = r_grid[1][3];
+    data[8] = r_grid[2][0];
+    data[9] = r_grid[2][1];
+    data[10] = s_grid[2][1];
+    data[11] = r_grid[2][2];
+    data[12] = s_grid[2][2];
+    data[13] = r_grid[2][3];
+    data[14] = s_grid[3][1];
+    data[15] = s_grid[3][2];
+    return;
+}
+
+void list_to_rs_grids(ref const(double[]) data,
+                      ref double[4][4] r_grid, ref double[4][4] s_grid)
+// Mapping of redistribution r,s values from parameter list to individual grids.
+// See PJ workbook page 63 2020-07-25.
+// Should match function above.
+{
+    assert(data.length >= 16, "data array too short");
+    r_grid[0][0] = 0.0;      s_grid[0][0] = 0.0;
+    r_grid[0][1] = 0.0;      s_grid[0][1] = data[0];
+    r_grid[0][2] = 0.0;      s_grid[0][2] = data[1];
+    r_grid[0][3] = 0.0;      s_grid[0][3] = 1.0;
+    r_grid[1][0] = data[2];  s_grid[1][0] = 0.0;
+    r_grid[1][1] = data[3];  s_grid[1][1] = data[4];
+    r_grid[1][2] = data[5];  s_grid[1][2] = data[6];
+    r_grid[1][3] = data[7];  s_grid[1][3] = 1.0;
+    r_grid[2][0] = data[8];  s_grid[2][0] = 0.0;
+    r_grid[2][1] = data[9];  s_grid[2][1] = data[10];
+    r_grid[2][2] = data[11]; s_grid[2][2] = data[12];
+    r_grid[2][3] = data[13]; s_grid[2][3] = 1.0;
+    r_grid[3][0] = 1.0;      s_grid[3][0] = 0.0;
+    r_grid[3][1] = 1.0;      s_grid[3][1] = data[14];
+    r_grid[3][2] = 1.0;      s_grid[3][2] = data[15];
+    r_grid[3][3] = 1.0;      s_grid[3][3] = 1.0;
+    return;
+}
 
 // Set very small quantities to zero, exactly.
 //

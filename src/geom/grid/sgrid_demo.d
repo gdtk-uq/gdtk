@@ -17,6 +17,7 @@ void main()
     auto my_grid = new StructuredGrid(my_patch, 11, 21, cf);
     writeln("grid point 5 5 at x=", my_grid[5,5].x, " y=", my_grid[5,5].y);
     my_grid.write_to_vtk_file("test_grid-2D.vtk");
+    writeln("badness=", my_grid.measure_of_badness());
 
     double[4][4] r_grid = [[0.0, 1.0/3, 2.0/3, 1.0],
                            [0.0, 1.0/3-0.3, 2.0/3+0.3, 1.0],
@@ -29,6 +30,7 @@ void main()
     auto my_grid_b = new StructuredGrid(my_patch, 11, 21, cf, r_grid, s_grid);
     writeln("grid point 5 5 at x=", my_grid_b[5,5].x, " y=", my_grid_b[5,5].y);
     my_grid_b.write_to_vtk_file("test_grid_b-2D.vtk");
+    writeln("badness=", my_grid_b.measure_of_badness());
 
     // write then read standard gzip format
     my_grid.write_to_gzip_file("test_grid-2D.gz");
