@@ -1088,7 +1088,9 @@ public:
         {
             list_to_rs_grids(data, r_grid, s_grid);
             make_grid_from_surface(surf, clusterf, r_grid, s_grid);
-            return measure_of_badness();
+            double obj = measure_of_badness();
+            writeln("obj=", obj);
+            return obj;
         }
         double[] data; data.length = 16;
         rs_grids_to_list(r_grid, s_grid, data);
