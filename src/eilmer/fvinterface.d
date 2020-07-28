@@ -365,6 +365,16 @@ public:
             grad.T[0] = c.grad.T[0];
             grad.T[1] = c.grad.T[1];
             grad.T[2] = c.grad.T[2];
+
+            // thermal modes
+            version(multi_T_gas) {
+                uint n_modes = myConfig.n_modes;
+                foreach (imode; 0 .. n_modes) {
+                    grad.T_modes[imode][0] = c.grad.T_modes[imode][0];
+                    grad.T_modes[imode][1] = c.grad.T_modes[imode][1];
+                    grad.T_modes[imode][2] = c.grad.T_modes[imode][2];
+                }
+            }
             
             version(turbulence) {
                 foreach(i; 0 .. myConfig.turb_model.nturb) {
@@ -451,6 +461,18 @@ public:
             grad.T[0] = 0.5*(cL0.grad.T[0]+cR0.grad.T[0]) - jump*(nx/ndotehat);
             grad.T[1] = 0.5*(cL0.grad.T[1]+cR0.grad.T[1]) - jump*(ny/ndotehat);
             grad.T[2] = 0.5*(cL0.grad.T[2]+cR0.grad.T[2]) - jump*(nz/ndotehat);
+            version(multi_T_gas) {
+                uint n_modes = myConfig.n_modes;
+                foreach (imode; 0 .. n_modes) {
+                    avgdotehat = 0.5*(cL0.grad.T_modes[imode][0]+cR0.grad.T_modes[imode][0])*ehatx +
+                        0.5*(cL0.grad.T_modes[imode][1]+cR0.grad.T_modes[imode][1])*ehaty +
+                        0.5*(cL0.grad.T_modes[imode][2]+cR0.grad.T_modes[imode][2])*ehatz;
+                    jump = avgdotehat - (cR0.fs.gas.T_modes[imode] - cL0.fs.gas.T_modes[imode])/emag;
+                    grad.T_modes[imode][0] = 0.5*(cL0.grad.T_modes[imode][0]+cR0.grad.T_modes[imode][0]) - jump*(nx/ndotehat);
+                    grad.T_modes[imode][1] = 0.5*(cL0.grad.T_modes[imode][1]+cR0.grad.T_modes[imode][1]) - jump*(ny/ndotehat);
+                    grad.T_modes[imode][2] = 0.5*(cL0.grad.T_modes[imode][2]+cR0.grad.T_modes[imode][2]) - jump*(nz/ndotehat);
+                }
+            }
             
             version(turbulence) {
                 foreach(i; 0 .. myConfig.turb_model.nturb) {

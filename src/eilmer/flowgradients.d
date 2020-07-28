@@ -456,7 +456,7 @@ public:
             vel[2][0] = 0.0; vel[2][1] = 0.0; vel[2][2] = 0.0;
         }
         mixin(codeForGradients("gas.T", "T"));
-        version(mulit_T_gas) {
+        version(multi_T_gas) {
             // T_modes
             size_t nmodes = cloud_fs[0].gas.T_modes.length;
             foreach (imode; 0 .. nmodes) {
