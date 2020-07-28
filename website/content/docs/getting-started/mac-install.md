@@ -35,7 +35,7 @@ the codes in the DGD collection.
 
     $ brew install dmd
 
-7. Create `dgd` directory and clone repository.  See [Download](/download).
+7. Create `dgd` directory and clone repository.  See [Getting the source code](/docs/getting-started/#getting-the-source-code).
 
 8. Install a copy of gfortran (included as part of gcc)
 
