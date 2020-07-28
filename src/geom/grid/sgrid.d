@@ -1054,6 +1054,8 @@ public:
         usg.write_to_su2_file(fileName, scale, use_gmsh_order_for_wedges);
     }
 
+version(complex_numbers){
+} else {
     double measure_of_badness()
     // Compute the average of the cell badness measures.
     // For each cell, this is the ratio of the squared-lengths of the diagonals,
@@ -1075,17 +1077,17 @@ public:
                     // Diagonals
                     Vector3 d0 = p00; d0 -= p11;
                     Vector3 d1 = p10; d1 -= p01;
-                    number L20 = d0.x*d0.x + d0.y*d0.y + d0.x*d0.z + 1.0e-16;
-                    number L21 = d1.x*d1.x + d1.y*d1.y + d1.z*d1.z + 1.0e-16;
+                    double L20 = d0.x*d0.x.re + d0.y*d0.y.re + d0.x*d0.z.re + 1.0e-16;
+                    double L21 = d1.x*d1.x.re + d1.y*d1.y.re + d1.z*d1.z.re + 1.0e-16;
                     double ratio_of_diagonals = (L20 > L21) ? L20/L21 : L21/L20;
                     ratio_of_diagonals_max = max(ratio_of_diagonals_max, ratio_of_diagonals);
                     ratio_of_diagonals_avg += ratio_of_diagonals;
                     // Slenderness
                     Vector3 centroid;
-                    number xyplane_area, iLen, jLen, minLen;
+                    double xyplane_area, iLen, jLen, minLen;
                     xyplane_quad_cell_properties(p00, p10, p11, p01, centroid,
                                                  xyplane_area, iLen, jLen, minLen);
-                    number perimeter = distance_between(p00, p10) + distance_between(p10, p11) +
+                    double perimeter = distance_between(p00, p10) + distance_between(p10, p11) +
                         distance_between(p11, p01) + distance_between(p01, p00);
                     double slenderness = (perimeter^^2)/(16*xyplane_area);
                     slenderness_max = max(slenderness_max, slenderness);
@@ -1135,6 +1137,7 @@ public:
         list_to_rs_grids(data, r_grid, s_grid);
         return conv_flag;
     }
+} // end not version(complex_numbers)
 } // end class StructuredGrid
 
 //-----------------------------------------------------------------
