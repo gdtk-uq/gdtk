@@ -1,0 +1,16 @@
+========================================================
+ One-dimensionalised properties at the exit of an inlet
+========================================================
+
+.. Author: Rowan J. Gollan <r.gollan@uq.edu.au>
+.. Date: 13-Feb-2013
+
+Files:
+------
+exit-slice.dat
+  A Tecplot file. This data is an extracted slice written out
+  in ASCII block format.
+
+exit.config
+  The config file to control what calculations onedval does.
+

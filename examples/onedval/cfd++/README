@@ -1,0 +1,18 @@
+========================================================
+One-dimensionalised properties in a scramjet combustor
+========================================================
+
+.. Author: Rowan J. Gollan <r.gollan@uq.edu.au>
+.. Date: 14-Feb-2013
+
+Files:
+------
+test.dat
+  A Tecplot slice file provided by Bianca Capra.
+  This data has air (N2-O2) and hydrogen combustion species
+  and is a slice across a scramjet combustor.
+
+test.config
+  The config file to control what calculations onedval does.
+  The variable_map works for typical cfd++ output.
+

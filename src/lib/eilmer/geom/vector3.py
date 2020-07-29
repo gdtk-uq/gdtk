@@ -2,7 +2,11 @@
 """
 A vector class for working in 2 or 3 dimensions.
 
-PJ, 2020-02-05
+Peter Jacobs and Rowan Gollan.
+
+Versions:
+  2020-02-05 Build enough to make Points and Paths
+  2020-07-30 Integrate minimal_geometry from cfcfd3 project.
 """
 
 import math
@@ -30,9 +34,9 @@ class Vector3(object):
             else:
                 raise Exception("Need to supply at least 2 coordinates.")
         elif isinstance(x, dict):
-            self.x = x["x"] if 'x' in x.keys() else 0.0
-            self.y = x["y"] if 'y' in x.keys() else 0.0
-            self.z = x["z"] if 'z' in x.keys() else 0.0
+            self.x = x["x"] if 'x' in list(x.keys()) else 0.0
+            self.y = x["y"] if 'y' in list(x.keys()) else 0.0
+            self.z = x["z"] if 'z' in list(x.keys()) else 0.0
         elif isinstance(x, Vector3):
             self.x = x.x
             self.y = x.y
@@ -108,6 +112,13 @@ class Vector3(object):
         else:
             return NotImplemented
 
+    def unit(self):
+        "Unit vector"
+        mag = abs(self)
+        if mag == 0.0:
+            raise ValueError("Zero magnitude vector has no defined direction.")
+        return Vector3(self.x/mag, self.y/mag, self.z/mag)
+
     def normalize(self):
         mag = abs(self)
         self /= mag
@@ -146,6 +157,15 @@ class Vector3(object):
 
     # ------- end class Vector3 ---------
 
+VERY_SMALL_MAGNITUDE = 1.0e-200
+
+def approxEqualVectors(a, b, rel_tol=1.0e-2, abs_tol=1.0e-5):
+    """
+    Test that all components are close.
+    """
+    return all([math.isclose(a.x, b.x, rel_tol=rel_tol, abs_tol=abs_tol),
+                math.isclose(a.y, b.y, rel_tol=rel_tol, abs_tol=abs_tol),
+                math.isclose(a.z, b.z, rel_tol=rel_tol, abs_tol=abs_tol)])
 
 def cross(a, b):
     """
@@ -156,10 +176,78 @@ def cross(a, b):
     ab_z = a.x*b.y - b.x*a.y
     return Vector3(ab_x, ab_y, ab_z)
 
-def approxEqualVectors(a, b, rel_tol=1.0e-2, abs_tol=1.0e-5):
-    """
-    Test that all components are close.
-    """
-    return all([math.isclose(a.x, b.x, rel_tol=rel_tol, abs_tol=abs_tol),
-                math.isclose(a.y, b.y, rel_tol=rel_tol, abs_tol=abs_tol),
-                math.isclose(a.z, b.z, rel_tol=rel_tol, abs_tol=abs_tol)])
+def dot(a, b):
+    "Dot product"
+    return a.dot(b)
+
+def unit(a):
+    return a.unit()
+
+def quad_properties(p0, p1, p2, p3):
+    "Quadrilateral defining unit vectors, area and centroid."
+    vector_area = 0.25 * cross(p1-p0+p2-p3, p3-p0+p2-p1)
+    n = vector_area.unit()
+    area = abs(vector_area)
+    t1 = ((p1-p0)+(p2-p3)).unit() # Works even if one edge has zero length.
+    t2 = cross(n, t1).unit() # Using unit() to tighten up on magnitude.
+    centroid = 0.25 * (p0 + p1 + p2 + p3)
+    return centroid, n, t1, t2, area
+
+def quad_centroid(p0, p1, p2, p3):
+    "Quadrilateral centroid"
+    centroid, n, t1, t2, area = quad_properties(p0, p1, p2, p3)
+    return centroid
+
+def quad_area(p0, p1, p2, p3):
+    "Quadrilateral area"
+    centroid, n, t1, t2, area = quad_properties(p0, p1, p2, p3)
+    return area
+
+def quad_normal(p0, p1, p2, p3):
+    "Quadrilateral area"
+    centroid, n, t1, t2, area = quad_properties(p0, p1, p2, p3)
+    return n
+
+def tetrahedron_properties(p0, p1, p2, p3):
+    "Tetrahedron centroid and volume"
+    volume = dot(p3-p0, cross(p1-p0, p2-p0))/6.0
+    centroid = 0.25 * (p0 + p1 + p2 + p3)
+    return centroid, volume
+
+def wedge_properties(p0, p1, p2, p3, p4, p5):
+    "Wedge centroid and volume"
+    c1, v1 = tetrahedron_properties(p0, p4, p5, p3)
+    c2, v2 = tetrahedron_properties(p0, p5, p4, p1)
+    c3, v3 = tetrahedron_properties(p0, p1, p2, p5)
+    volume = v1 + v2 + v3
+    if volume < VERY_SMALL_MAGNITUDE:
+        #print "Warning wedge_properties():"
+        #print "Very small or negative volume: ", volume
+        #print "Setting volume to zero."
+        volume = 0.0
+        centroid = (c1 + c2 + c3)/3.0
+        return centroid, volume
+
+    centroid = (c1*v1 + c2*v2 + c3*v3)/volume
+    return centroid, volume
+
+def hexahedron_properties(p0, p1, p2, p3, p4, p5, p6, p7):
+    "Hexahedron centroid and volume"
+    c1, v1 = wedge_properties(p0, p1, p2, p4, p5, p6)
+    c2, v2 = wedge_properties(p0, p2, p3, p4, p6, p7)
+    volume = v1 + v2
+    if volume < VERY_SMALL_MAGNITUDE:
+        #print "Warning hexahedron_properties():"
+        #print "Very small or negative volume: ", volume
+        #print "Setting volume to zero."
+        volume = 0.0
+        centroid = 0.5*(c1 + c2)
+        return centroid, volume
+
+    centroid = (c1*v1 + c2*v2)/volume
+    return centroid, volume
+
+def hexahedron_volume(p0, p1, p2, p3, p4, p5, p6, p7):
+    "Hexahedron volume"
+    c, v = hexahedron_properties(p0, p1, p2, p3, p4, p5, p6, p7)
+    return v
