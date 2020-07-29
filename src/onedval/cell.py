@@ -2,12 +2,12 @@
 # Place: UQ, Brisbane, Queensland, Australia
 # Date: 25-Jun-2012
 
-from cfpylib.geom.minimal_geometry import *
+from eilmer.geom.vector3 import *
 
 def tri_centroid(p0, p1, p2):
     """
     Compute centroid of triangle given 3 points
-    
+
            p1
            +
           / \
@@ -42,7 +42,7 @@ class Cell(object):
         return
 
     def variables(self):
-        return self._data.keys()
+        return list(self._data.keys())
 
     def get(self, k, default='no value'):
         return self._data.get(k, default)
@@ -90,7 +90,7 @@ class AxiCell(Cell):
     def __init__(self, data, pts):
         Cell.__init__(self, data)
         self._centroid = 0.5*(pts[0] + pts[1])
-        self._normal = Vector(1.0, 0.0, 0.0)
+        self._normal = Vector3(1.0, 0.0, 0.0)
         self._area = self._centroid.y*(pts[1].y - pts[0].y)
         AxiCell.count = AxiCell.count + 1
         return
@@ -112,7 +112,7 @@ def create_cell(idx, data, cell_cnrs, var_map, scale):
     zlabel = var_map['z']
     for cnr in c_list:
         i = cnr-1
-        pts.append(scale*Vector(data[xlabel][i], data[ylabel][i], data[zlabel][i]))
+        pts.append(scale*Vector3(data[xlabel][i], data[ylabel][i], data[zlabel][i]))
 
     if len(pts) == 3:
         pC = tri_centroid(pts[0], pts[1], pts[2])
@@ -121,7 +121,7 @@ def create_cell(idx, data, cell_cnrs, var_map, scale):
         a1 = tri_area(pts[0], pts[2], pC)
         a2 = tri_area(pts[0], pts[1], pC)
         d = {}
-        for v in data.keys():
+        for v in list(data.keys()):
             d0 = data[v][c_list[0]-1]
             d1 = data[v][c_list[1]-1]
             d2 = data[v][c_list[2]-1]
@@ -139,7 +139,7 @@ def create_cell(idx, data, cell_cnrs, var_map, scale):
         a2 = quad_area(pC, p30, pts[0], p01)
         a3 = quad_area(pC, p01, pts[1], p12)
         d = {}
-        for v in data.keys():
+        for v in list(data.keys()):
             d0 = data[v][c_list[0]-1]
             d1 = data[v][c_list[1]-1]
             d2 = data[v][c_list[2]-1]
@@ -147,8 +147,8 @@ def create_cell(idx, data, cell_cnrs, var_map, scale):
             d[v] = (a0*d0 + a1*d1 + a2*d2 + a3*d3)/area
         return QuadCell(d, pts)
     else:
-        print "Unknown cell type with num points= ", len(pts)
-        print "Bailing out!"
+        print("Unknown cell type with num points= ", len(pts))
+        print("Bailing out!")
         import sys
         sys.exit(1)
     return
@@ -197,14 +197,14 @@ def create_cells_from_slice(fname, var_map, scale):
     for i in range(nelems):
         cell_cnrs.append([int(tks[pos]), int(tks[pos+1]), int(tks[pos+2]), int(tks[pos+3])])
         pos = pos + 4
-    
+    #
     cells = []
     for i in range(nelems):
         try:
             cells.append(create_cell(i, data, cell_cnrs, var_map, scale))
         except ZeroDivisionError:
-            print "An attempt to create a cell with essentially zero area was made."
-            
+            print("An attempt to create a cell with essentially zero area was made.")
+    #
     return cells
 
 def create_cells_from_line(fname, var_map, scale):
@@ -250,31 +250,31 @@ def create_cells_from_line(fname, var_map, scale):
     zlabel = var_map['z']
     cells = []
     # First cell:
-    pt0 = Vector(data[xlabel][0], data[ylabel][0], data[zlabel][0])
-    pt1 = Vector(data[xlabel][1], data[ylabel][1], data[zlabel][1])
+    pt0 = Vector3(data[xlabel][0], data[ylabel][0], data[zlabel][0])
+    pt1 = Vector3(data[xlabel][1], data[ylabel][1], data[zlabel][1])
     pts = [ pt0, 0.5*(pt0+pt1) ]
     d = {}
-    for v in data.keys():
+    for v in list(data.keys()):
         d[v] = data[v][0]
     cells.append(AxiCell(d, pts))
     # Interior cells:
     for i in range(1,npoints-1):
-        ptA = Vector(data[xlabel][i-1], data[ylabel][i-1], data[zlabel][i-1])
-        ptB = Vector(data[xlabel][i], data[ylabel][i], data[zlabel][i])
-        ptC = Vector(data[xlabel][i+1], data[ylabel][i+1], data[zlabel][i+1])
+        ptA = Vector3(data[xlabel][i-1], data[ylabel][i-1], data[zlabel][i-1])
+        ptB = Vector3(data[xlabel][i], data[ylabel][i], data[zlabel][i])
+        ptC = Vector3(data[xlabel][i+1], data[ylabel][i+1], data[zlabel][i+1])
         pts = [ 0.5*(ptA+ptB), 0.5*(ptB+ptC) ]
         d = {}
-        for v in data.keys():
+        for v in list(data.keys()):
             d[v] = data[v][i]
         cells.append(AxiCell(d, pts))
     # Last cell
-    ptB = Vector(data[xlabel][npoints-2], data[ylabel][npoints-2], data[zlabel][npoints-2])
-    ptC = Vector(data[xlabel][npoints-1], data[ylabel][npoints-1], data[zlabel][npoints-1])
+    ptB = Vector3(data[xlabel][npoints-2], data[ylabel][npoints-2], data[zlabel][npoints-2])
+    ptC = Vector3(data[xlabel][npoints-1], data[ylabel][npoints-1], data[zlabel][npoints-1])
     pts = [ 0.5*(ptB+ptC), ptC ]
-    for v in data.keys():
+    for v in list(data.keys()):
         d[v] = data[v][npoints-1]
     cells.append(AxiCell(d, pts))
-    
+    #
     return cells
 
 def area(cells):
@@ -282,12 +282,3 @@ def area(cells):
     for c in cells:
         A = A + c.area()
     return A
-
-
-    
-
-
-
-
-    
-    

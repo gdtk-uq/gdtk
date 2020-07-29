@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 Python program to compute one-dimensionalized quantities from 2D data.
 
@@ -16,7 +16,7 @@ the 2D surface based on the methods selected by the user.
 
 import sys
 from math import *
-from gaspy import *
+from eilmer.gas import GasModel, GasState
 from cell import create_cells_from_slice, create_cells_from_line, area
 from prop_avg import *
 from copy import copy
@@ -27,13 +27,13 @@ default_var_map = {'x':'x', 'y':'y', 'z':'z', 'u':'u', 'v':'v', 'w':'w',
                    'rho':'rho', 'p':'p', 'T':'T', 'M':'M', 'h0':'h0'}
 
 def print_usage():
-    print ""
-    print "Usage: onedval CONFIG INPUT_FILE(S)"
-    print ""
-    print "where:"
-    print "CONFIG -- name of config file to control calculation"
-    print "INPUT_FILE(S)  -- a list of one or more Tecplot files with slice data"
-    print ""
+    print("")
+    print("Usage: onedval CONFIG INPUT_FILE(S)")
+    print("")
+    print("where:")
+    print("CONFIG -- name of config file to control calculation")
+    print("INPUT_FILE(S)  -- a list of one or more Tecplot files with slice data")
+    print("")
 
 # Global variable to hold gas model pointer
 gmodel = None
@@ -134,11 +134,11 @@ def main():
     """
     Top-level function for the onedval program.
     """
-    print "onedval: A program to compute integrated and one-dimensionalised quantities."
-    print "onedval: Beginning."
+    print("onedval: A program to compute integrated and one-dimensionalised quantities.")
+    print("onedval: Beginning.")
     # 0. Gather command-line info
     if len(sys.argv) < 3:
-        print "At least two arguments are required."
+        print("At least two arguments are required.")
         print_usage()
         sys.exit(1)
 
@@ -149,20 +149,20 @@ def main():
     # If set to 'None', we expect to find something from the user.
     cfg = {}
     try:
-        execfile(config_file, globals(), cfg)
+        exec(compile(open(config_file, "rb").read(), config_file, 'exec'), globals(), cfg)
     except IOError:
-        print "There was a problem reading the config file: ", config_file
-        print "Check that is conforms to Python syntax."
-        print "Bailing out!"
+        print("There was a problem reading the config file: ", config_file)
+        print("Check that is conforms to Python syntax.")
+        print("Bailing out!")
         sys.exit(1)
     
-    print "onedval: Setting up gas model"
+    print("onedval: Setting up gas model")
     # 1a. Setup gas model
     if 'species' in cfg and 'gmodel_file' in cfg:
-        print "There is a problem in the config file: ", config_file
-        print "Both 'species' and 'gmodel_file' have been specified."
-        print "You can only specify one of these keywords."
-        print "Bailing out!"
+        print("There is a problem in the config file: ", config_file)
+        print("Both 'species' and 'gmodel_file' have been specified.")
+        print("You can only specify one of these keywords.")
+        print("Bailing out!")
         sys.exit(1)
     # Look for species.
     gmodel = None
@@ -179,29 +179,29 @@ def main():
             cfg['species'].append(gmodel.species_name(isp))
 
     if gmodel is None:
-        print "There is a problem in the config file: ", config_file
-        print "It appears that neither the 'species' nor the 'gmodel_file' have been specified."
-        print "You must specify one of these keywords."
-        print "Bailing out!"
+        print("There is a problem in the config file: ", config_file)
+        print("It appears that neither the 'species' nor the 'gmodel_file' have been specified.")
+        print("You must specify one of these keywords.")
+        print("Bailing out!")
         sys.exit(1)
 
-    print "onedval: Checking over user inputs"
+    print("onedval: Checking over user inputs")
     # 1b. Check for variable map
     if not 'variable_map' in cfg:
-        print "No 'variable_map' was set so the following default is used:"
-        print default_var_map
+        print("No 'variable_map' was set so the following default is used:")
+        print(default_var_map)
         cfg['variable_map'] = default_var_map
     
     # 1c. Look for one_d_averages methods
     if not 'one_d_averages' in cfg:
-        print "No list of 'one_d_averages' was set."
-        print "The default method of 'flux-conserved' will be used."
+        print("No list of 'one_d_averages' was set.")
+        print("The default method of 'flux-conserved' will be used.")
         cfg['one_d_averages'] = ['flux-conserved']
 
     # 1d. Look for grid_scale
     if not 'grid_scale' in cfg:
-        print "No 'grid_scale' was set."
-        print "The default value of 1.0 will be used."
+        print("No 'grid_scale' was set.")
+        print("The default value of 1.0 will be used.")
         cfg['grid_scale'] = 1.0
 
     # 1e. Look for one_d_outpus
@@ -214,42 +214,42 @@ def main():
 
     # 1g. Looking for output options
     if not 'output_file' in cfg:
-        print "No 'output_file' was set."
-        print "An output file name must be set by the user."
-        print "Bailing out!"
+        print("No 'output_file' was set.")
+        print("An output file name must be set by the user.")
+        print("Bailing out!")
         sys.exit(1)
     
     if not 'output_format' in cfg:
-        print "No 'output_format' was set."
-        print "An output format must be set by the user."
-        print "Bailing out!"
+        print("No 'output_format' was set.")
+        print("An output format must be set by the user.")
+        print("Bailing out!")
         sys.exit(1)
 
     if not cfg['output_format'] in output_formats:
-        print "The selected output format: ", cfg['output_format']
-        print "is not one of the available options. The available options are:"
+        print("The selected output format: ", cfg['output_format'])
+        print("is not one of the available options. The available options are:")
         for o in output_formats:
-            print "'%s'" % o
-        print "Bailing out!"
+            print("'%s'" % o)
+        print("Bailing out!")
         sys.exit(1)
         
     # 1h. Look for what to do with "bad" slices
     if not 'skip_bad_slices' in cfg:
-        print "No 'skip_bad_slices' was set."
-        print "The default value of True will be used."
-        print "If bad data slices are encountered, the user"
-        print "will be warned but the program will continue"
-        print "on to the next slice and ignore the 'bad' slice."
+        print("No 'skip_bad_slices' was set.")
+        print("The default value of True will be used.")
+        print("If bad data slices are encountered, the user")
+        print("will be warned but the program will continue")
+        print("on to the next slice and ignore the 'bad' slice.")
         cfg['skip_bad_slices'] = True
 
     # 1i. Look for what kind of geometry
     if not 'geometry_type' in cfg:
-        print "No 'geometry_type' was set."
-        print "The default type of 3D will be used."
+        print("No 'geometry_type' was set.")
+        print("The default type of 3D will be used.")
         cfg['geometry_type'] = '3D'
 
     # 2. Read data from slices and process
-    print "onedval: Reading in data from slice(s)"
+    print("onedval: Reading in data from slice(s)")
     f = open(cfg['output_file'], 'w')
     phis = {}
     int_quants = {}
@@ -259,23 +259,23 @@ def main():
     
     for slice_file in sys.argv[2:]:
         result = 'success'
-        print "onedval: Creating cells from slice: ", slice_file
+        print("onedval: Creating cells from slice: ", slice_file)
         if cfg['geometry_type'] == 'axi':
             cells = create_cells_from_line(slice_file, cfg['variable_map'], cfg['grid_scale'])
         else:
             cells = create_cells_from_slice(slice_file, cfg['variable_map'], cfg['grid_scale'])
-        print "Total number of cells created from slice: ", len(cells)
-        print "Make all cell normals consistent with very first cell."
+        print("Total number of cells created from slice: ", len(cells))
+        print("Make all cell normals consistent with very first cell.")
         for c in cells[1:]:
              c._normal = cells[0]._normal
         # 2a. apply filtering if required
         if 'filter_function' in cfg:
-            print "Using filter function to remove unwanted or unimportant cells."
-            cells = filter(cfg['filter_function'], cells)
-            print "Number of cells after filtering: ", len(cells)
+            print("Using filter function to remove unwanted or unimportant cells.")
+            cells = list(filter(cfg['filter_function'], cells))
+            print("Number of cells after filtering: ", len(cells))
 
         # 3. Do some work.
-        print "onedval: Doing the requested calculations"
+        print("onedval: Doing the requested calculations")
         if cfg['output_format'] == 'verbose':
             f.write("------------------- onedval output ---------------------\n\n")
             f.write("number of cells in averaging:\n")
@@ -293,7 +293,7 @@ def main():
             
         if cfg['output_format'] == 'verbose':
             if len(cfg['integrated_outputs']) > 0:
-                print "onedval: Writing out integrated quantities"
+                print("onedval: Writing out integrated quantities")
                 f.write("\n---------------------\n")
                 f.write("Integrated quantities\n")
                 f.write("---------------------\n")
@@ -316,9 +316,9 @@ def main():
                                 f.write("mass flux of %s (kg/s)\n" % sp)
                                 f.write("m%s_dot = %.6e\n\n" % (sp, fluxes['species'][isp]))
                         else:
-                            print "Requested integrated quantity: ", flux
-                            print "is not part of the list of available integrated quantities."
-                            print "Bailing out!"
+                            print("Requested integrated quantity: ", flux)
+                            print("is not part of the list of available integrated quantities.")
+                            print("Bailing out!")
                             sys.exit(1)
                     else:
                         f.write("flux of %s\n")
@@ -339,9 +339,9 @@ def main():
                             isp = gmodel.get_isp_from_species_name(sp)
                             int_quants['species mass flux'][sp] = fluxes['species'][isp]
                     else:
-                        print "Requested integrated quantity: ", flux
-                        print "is not part of the list of available integrated quantities."
-                        print "Bailing out!"
+                        print("Requested integrated quantity: ", flux)
+                        print("is not part of the list of available integrated quantities.")
+                        print("Bailing out!")
                         sys.exit(1)
                 else:
                     int_quants[flux[0]] = fluxes[flux[0]]
@@ -349,7 +349,7 @@ def main():
         # 3b. Compute requested one_d_properties
         if cfg['output_format'] == 'verbose':
             if len(cfg['one_d_averages']) > 0:
-                print "onedval: Writing out one-dimensionalised quantities"
+                print("onedval: Writing out one-dimensionalised quantities")
                 f.write("\n------------------------------\n")
                 f.write("One-dimensionalised quantities\n")
                 f.write("------------------------------\n")
@@ -373,11 +373,11 @@ def main():
             elif avg == 'flux-conserved':
                 phis, result = stream_thrust_avg(cells, cfg['one_d_outputs'], cfg['variable_map'], cfg['species'], gmodel)
                 if result != 'success':
-                    print "WARNING: Something went wrong trying to compute flux-conserved averages for slice: ", slice_file
+                    print("WARNING: Something went wrong trying to compute flux-conserved averages for slice: ", slice_file)
                     if cfg['skip_bad_slices']:
-                        print "Skipping this slice and continuing."
+                        print("Skipping this slice and continuing.")
                     else:
-                        print "Bailing out at this point because 'skip_bad_cells' is set to false."
+                        print("Bailing out at this point because 'skip_bad_cells' is set to false.")
                         sys.exit(1)
 
                 phis_all[avg] = copy(phis)
@@ -386,9 +386,9 @@ def main():
                     pretty_print_props(f, phis, cfg['species'], cfg['one_d_outputs'])
                     f.write("\n")
             else:
-                print "Requested one-D averaging method: ", avg
-                print "is not known or not implemented."
-                print "Bailing out!"
+                print("Requested one-D averaging method: ", avg)
+                print("is not known or not implemented.")
+                print("Bailing out!")
                 sys.exit(1)
 
         if cfg['output_format'] == 'as_data_file' and result == 'success':
@@ -398,7 +398,7 @@ def main():
                               cfg['integrated_outputs'], cfg['species'])
 
     f.close()
-    print "onedval: Done."
+    print("onedval: Done.")
 
 if __name__ == '__main__':
     main()

@@ -10,9 +10,10 @@
 import sys
 
 from math import sqrt, pow
-from cfpylib.geom.minimal_geometry import Vector, dot
-from gaspy import Gas_data, set_massf, PC_P_atm
-from cfpylib.nm.zero_solvers import secant
+from eilmer.geom.vector3 import Vector3, dot
+from eilmer.gas import GasModel, GasState
+# 2020-07-30 PJ also need set_massf, PC_P_atm
+from eilmer.zero_solvers import secant
 from scipy.optimize import minimize, brute
 from numpy import median
 from copy import copy
@@ -40,15 +41,15 @@ def avg_pos(cells, var_map):
     x /= A
     y /= A
     z /= A
-    return Vector(x, y, z)
+    return Vector3(x, y, z)
 
 def compute_fluxes(cells, var_map, species, gmodel, special_fns):
     f_mass = 0.0
-    f_mom = Vector(0.0, 0.0, 0.0)
+    f_mom = Vector3(0.0, 0.0, 0.0)
     f_energy = 0.0
     f_sp = [0.0,]*len(species)
     nsp = gmodel.get_number_of_species()
-    N = Vector(0.0, 0.0, 0.0)
+    N = Vector3(0.0, 0.0, 0.0)
     A = 0.0
     rholabel = var_map['rho']
     plabel = var_map['p']
@@ -66,9 +67,7 @@ def compute_fluxes(cells, var_map, species, gmodel, special_fns):
         n = c.normal()
         rho = c.get(rholabel)
         p = c.get(plabel)
-        vel = Vector(c.get(ulabel),
-                      c.get(vlabel),
-                      c.get(wlabel))
+        vel = Vector3(c.get(ulabel), c.get(vlabel), c.get(wlabel))
         T = c.get(Tlabel)
         # Add increments
         u_n = dot(vel, n)
@@ -91,23 +90,21 @@ def compute_fluxes(cells, var_map, species, gmodel, special_fns):
         h = gmodel.mixture_enthalpy(Q)
         h0 = h + 0.5*abs(vel)*abs(vel)
         f_energy = f_energy + rho*u_n*h0*dA
-    
+    #
     # Process any special fns.
     # Special fns may like to know total flux and area
-    fluxes = {'mass':abs(f_mass), 'mom':f_mom, 'energy':abs(f_energy), 'species':map(abs, f_sp)}
-    
+    fluxes = {'mass':abs(f_mass), 'mom':f_mom, 'energy':abs(f_energy), 'species':list(map(abs, f_sp))}
+    #
     for c in cells:
-	dA = c.area()
+        dA = c.area()
         rho = c.get(rholabel)
-        vel = Vector(c.get(ulabel),
-                      c.get(vlabel),
-                      c.get(wlabel))
+        vel = Vector3(c.get(ulabel), c.get(vlabel), c.get(wlabel))
         n = c.normal()
         u_n = dot(vel, n)
-        for l,f in special_fns.iteritems():
+        for l,f in special_fns.items():
             special_fluxes[l] += f(c, rho, u_n, dA, A, fluxes)
     output = {'mass': f_mass, 'mom': f_mom, 'energy': f_energy, 'species':f_sp}
-    for l,f in special_fluxes.iteritems():
+    for l,f in special_fluxes.items():
         output[l] = special_fluxes[l]
     return output
 
@@ -122,10 +119,10 @@ def area_weighted_avg(cells, props, var_map):
             if p in var_map:
                 label = var_map[p]
             phis[p] = phis[p] + c.get(label)*dA
-    
+    #
     for p in props:
         phis[p] = phis[p]/area
-    
+    #
     return phis
 
 def mass_flux_weighted_avg(cells, props, var_map):
@@ -139,9 +136,7 @@ def mass_flux_weighted_avg(cells, props, var_map):
     for c in cells:
         dA = c.area()
         rho = c.get(rholabel)
-        vel = Vector(c.get(ulabel),
-                      c.get(vlabel),
-                      c.get(wlabel))
+        vel = Vector3(c.get(ulabel), c.get(vlabel), c.get(wlabel))
         n = c.normal()
         w = rho*dot(vel, n)
         f_mass = f_mass + w*dA
@@ -150,21 +145,21 @@ def mass_flux_weighted_avg(cells, props, var_map):
             if p in var_map:
                 label = var_map[p]
             phis[p] = phis[p] + c.get(label)*w*dA
-    
+    #
     for p in props:
         phis[p] = phis[p]/f_mass
-
+    #
     return phis
 
 
 def stream_thrust_avg(cells, props, var_map, species, gmodel):
     flag = 'success'
     f_mass = 0.0
-    f_mom = Vector(0.0, 0.0, 0.0)
+    f_mom = Vector3(0.0, 0.0, 0.0)
     f_energy = 0.0
     f_sp = [0.0,]*len(species)
     nsp = gmodel.get_number_of_species()
-    N = Vector(0.0, 0.0, 0.0)
+    N = Vector3(0.0, 0.0, 0.0)
     A = 0.0
     rholabel = var_map['rho']
     plabel = var_map['p']
@@ -174,13 +169,11 @@ def stream_thrust_avg(cells, props, var_map, species, gmodel):
     Tlabel = var_map['T']
     Q = Gas_data(gmodel)
     for c in cells:
-        dA = c.area() 
+        dA = c.area()
         n = c.normal()
         rho = c.get(rholabel)
         p = c.get(plabel)
-        vel = Vector(c.get(ulabel),
-                      c.get(vlabel),
-                      c.get(wlabel))
+        vel = Vector3(c.get(ulabel), c.get(vlabel), c.get(wlabel))
         T = c.get(Tlabel)
         # Add increments
         u_n = dot(vel, n)
@@ -214,7 +207,7 @@ def stream_thrust_avg(cells, props, var_map, species, gmodel):
         set_massf(Q, gmodel, massf)
     else:
         Q.massf[0] = 1.0
-    
+    #
     LARGE_PENALTY = 1.0e6
 
     def f_to_minimize(x):
@@ -238,12 +231,12 @@ def stream_thrust_avg(cells, props, var_map, species, gmodel):
         fe_err = abs(f_energy - (rho*u*A*(h + 0.5*u*u)))/(abs(f_energy))
         # Total error is the sum
         if DEBUG:
-            print "DEBUG: fmass_err= ", fmass_err
-            print "DEBUG: fmom_err= ", fmom_err
-            print "DEBUG: fe_err= ", fe_err
-            print "DEBUG: total error= ", fmass_err + fmom_err + fe_err
+            print("DEBUG: fmass_err= ", fmass_err)
+            print("DEBUG: fmom_err= ", fmom_err)
+            print("DEBUG: fe_err= ", fe_err)
+            print("DEBUG: total error= ", fmass_err + fmom_err + fe_err)
         return fmass_err + fmom_err + fe_err
-
+    #
     # Find bounds for answer.
     rhos = [c.get(rholabel) for c in cells]
     rho_min = min(rhos)
@@ -276,19 +269,19 @@ def stream_thrust_avg(cells, props, var_map, species, gmodel):
     result = minimize(f_to_minimize, guess, method='Nelder-Mead', options={'ftol':1.0e-6})
     rho, T, u = result.x
     if DEBUG:
-        print "DEBUG: First pass of optimiser... result= ", result.success
-        print "DEBUG: rho= ", rho, " T= ", T, " u= ", u
-        print "DEBUG: f_mass= ", f_mass
-        print "DEBUG: computed from props= ", rho*u*A
-        print "DEBUG: f_mom_s= ", f_mom_s
-        print "DEBUG: computed from props= ", A*(rho*u*u + p)
-        
+        print("DEBUG: First pass of optimiser... result= ", result.success)
+        print("DEBUG: rho= ", rho, " T= ", T, " u= ", u)
+        print("DEBUG: f_mass= ", f_mass)
+        print("DEBUG: computed from props= ", rho*u*A)
+        print("DEBUG: f_mom_s= ", f_mom_s)
+        print("DEBUG: computed from props= ", A*(rho*u*u + p))
+    #
     if rho < rho_min or rho > rho_max or T < T_min or T > T_max or u < u_min or u > u_max:
-        print "Something went seriously wrong with the optimiser because at least one"
-        print "of the returned values is outside the range of data."
-        print "rho_min= ", rho_min, " rho_max= ", rho_max, " computed rho= ", rho
-        print "T_min= ", T_min, " T_max= ", T_max, " computed T= ", T
-        print "u_min= ", u_min, " u_max= ", u_max, " computed u= ", u
+        print("Something went seriously wrong with the optimiser because at least one")
+        print("of the returned values is outside the range of data.")
+        print("rho_min= ", rho_min, " rho_max= ", rho_max, " computed rho= ", rho)
+        print("T_min= ", T_min, " T_max= ", T_max, " computed T= ", T)
+        print("u_min= ", u_min, " u_max= ", u_max, " computed u= ", u)
         result.success = False
         # We need a new initial guess
         aw_props = area_weighted_avg(cells, ['rho', 'p', 'T', 'u', 'v', 'w', 'M'], var_map)
@@ -298,34 +291,34 @@ def stream_thrust_avg(cells, props, var_map, species, gmodel):
         Q.p = p
         gmodel.eval_thermo_state_rhop(Q)
         T = Q.T[0]
-
+    #
     if not result.success:
         for i in range(N_RETRIES):
-            print "The optimiser did not converge. Attempting another go."
-            print "Retry attempt: %d/%d" % (i+1, N_RETRIES)
-            print "Retrying with the last (unconverged) values as the initial guess."
+            print("The optimiser did not converge. Attempting another go.")
+            print("Retry attempt: %d/%d" % (i+1, N_RETRIES))
+            print("Retrying with the last (unconverged) values as the initial guess.")
             guess = [rho, T, u]
-            print "rho= ", rho, " T= ", T, " u= ", u
+            print("rho= ", rho, " T= ", T, " u= ", u)
             result = minimize(f_to_minimize, guess, method='Nelder-Mead', options={'ftol':1.0e-6})
             rho, T, u = result.x
             if rho < rho_min or rho > rho_max or T < T_min or T > T_max or u < u_min or u > u_max:
-                print "Something went seriously wrong with the optimiser because at least one"
-                print "of the returned values is outside the range of data."
-                print "rho_min= ", rho_min, " rho_max= ", rho_max, " computed rho= ", rho
-                print "T_min= ", T_min, " T_max= ", T_max, " computed T= ", T
+                print("Something went seriously wrong with the optimiser because at least one")
+                print("of the returned values is outside the range of data.")
+                print("rho_min= ", rho_min, " rho_max= ", rho_max, " computed rho= ", rho)
+                print("T_min= ", T_min, " T_max= ", T_max, " computed T= ", T)
                 flag = 'failed'
                 result.success = False
             if result.success:
                 break
-    
+    #
     if not result.success:
         # We'll set this as a failed state and the user can decide whether
         # to keep it or not by using the 'skip_bad_slices' option.
         flag = 'failed'
         # Now use the brute force search
-        print "The Nelder-Mead optimiser has run into troubles."
-        print "Now we'll use a brute force approach in the region of the"
-        print "median values."
+        print("The Nelder-Mead optimiser has run into troubles.")
+        print("Now we'll use a brute force approach in the region of the")
+        print("median values.")
         delta = 0.15
         rho_l = (1.0 - delta)*rho_mid; rho_h = (1.0+delta)*rho_mid
         T_l = (1.0 - delta)*T_mid; T_h = (1.0+delta)*T_mid
@@ -333,7 +326,7 @@ def stream_thrust_avg(cells, props, var_map, species, gmodel):
         x0 = brute(f_to_minimize, ((rho_l, rho_h), (T_l, T_h), (u_l, u_h)))
         flag = 'success'
         rho, T, u = x0
-       
+    #
     Q.rho = rho; Q.T[0] = T
     gmodel.eval_thermo_state_rhoT(Q)
     h = gmodel.mixture_enthalpy(Q)
@@ -351,7 +344,7 @@ def stream_thrust_avg(cells, props, var_map, species, gmodel):
                      # such that h(298.15) == h_f
     for isp, f in enumerate(f_sp):
         hr += f*gmodel.enthalpy(Qd, isp) # <-- is h_f because evaluated at T=298.15 K
-    
+    #
     # Create a dictionary of all possible requests
     vals = {'rho':rho,
             'p': p,
@@ -371,20 +364,13 @@ def stream_thrust_avg(cells, props, var_map, species, gmodel):
             'hr': hr}
 
     phis = dict.fromkeys(props, 0.0)
-    
+    #
     for k in phis:
         if not k in vals:
-            print "Do not know what to do for flux-conserved average of:", k
-            print "Skipping this request."
+            print("Do not know what to do for flux-conserved average of:", k)
+            print("Skipping this request.")
             continue
         phis[k] = vals[k]
-    
+    #
     return phis, flag
-    
-    
-    
-
-    
-    
-        
 
