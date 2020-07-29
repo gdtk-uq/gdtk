@@ -11,8 +11,7 @@ import sys
 
 from math import sqrt, pow
 from eilmer.geom.vector3 import Vector3, dot
-from eilmer.gas import GasModel, GasState
-# 2020-07-30 PJ also need set_massf, PC_P_atm
+from eilmer.gas import GasModel, GasState, PC_P_atm
 from eilmer.zero_solvers import secant
 from scipy.optimize import minimize, brute
 from numpy import median
@@ -48,7 +47,7 @@ def compute_fluxes(cells, var_map, species, gmodel, special_fns):
     f_mom = Vector3(0.0, 0.0, 0.0)
     f_energy = 0.0
     f_sp = [0.0,]*len(species)
-    nsp = gmodel.get_number_of_species()
+    nsp = gmodel.n_species
     N = Vector3(0.0, 0.0, 0.0)
     A = 0.0
     rholabel = var_map['rho']
@@ -73,21 +72,21 @@ def compute_fluxes(cells, var_map, species, gmodel, special_fns):
         u_n = dot(vel, n)
         f_mass = f_mass + rho*u_n*dA
         f_mom = f_mom + (rho*u_n*vel + p*n)*dA
-        if gmodel.get_number_of_species() > 1:
+        if gmodel.n_species > 1:
             massfs = {}
             for isp, sp in enumerate(species):
                 splabel = var_map.get(sp, sp)
                 massf = c.get(splabel)
                 f_sp[isp] = f_sp[isp] + rho*massf*u_n*dA
                 massfs[sp] = massf
-            set_massf(Q, gmodel, massfs)
+            Q.massf = massfs
         else:
-            Q.massf[0] = 1.0
+            Q.massf = [1.0,]
             f_sp[0] = f_sp[0] + rho*u_n*dA
         Q.rho = c.get(rholabel)
-        Q.T[0] = c.get(Tlabel)
-        gmodel.eval_thermo_state_rhoT(Q)
-        h = gmodel.mixture_enthalpy(Q)
+        Q.T = c.get(Tlabel)
+        Q.update_thermo_from_rhoT()
+        h = Q.enthalpy
         h0 = h + 0.5*abs(vel)*abs(vel)
         f_energy = f_energy + rho*u_n*h0*dA
     #
@@ -158,7 +157,7 @@ def stream_thrust_avg(cells, props, var_map, species, gmodel):
     f_mom = Vector3(0.0, 0.0, 0.0)
     f_energy = 0.0
     f_sp = [0.0,]*len(species)
-    nsp = gmodel.get_number_of_species()
+    nsp = gmodel.n_species
     N = Vector3(0.0, 0.0, 0.0)
     A = 0.0
     rholabel = var_map['rho']
@@ -167,7 +166,7 @@ def stream_thrust_avg(cells, props, var_map, species, gmodel):
     vlabel = var_map['v']
     wlabel = var_map['w']
     Tlabel = var_map['T']
-    Q = Gas_data(gmodel)
+    Q = GasState(gmodel)
     for c in cells:
         dA = c.area()
         n = c.normal()
@@ -179,21 +178,21 @@ def stream_thrust_avg(cells, props, var_map, species, gmodel):
         u_n = dot(vel, n)
         f_mass = f_mass + rho*u_n*dA
         f_mom = f_mom + (rho*u_n*vel + p*n)*dA
-        if gmodel.get_number_of_species() > 1:
+        if gmodel.n_species > 1:
             massfs = {}
             for isp, sp in enumerate(species):
                 splabel = var_map.get(sp, sp)
                 massf = c.get(splabel)
                 f_sp[isp] = f_sp[isp] + rho*massf*u_n*dA
                 massfs[sp] = massf
-            set_massf(Q, gmodel, massfs)
+            Q.massf = massfs
         else:
-            Q.massf[0] = 1.0
+            Q.massf = [1.0,]
             f_sp[0] = f_sp[0] + rho*u_n*dA
         Q.rho = c.get(rholabel)
-        Q.T[0] = c.get(Tlabel)
-        gmodel.eval_thermo_state_rhoT(Q)
-        h = gmodel.mixture_enthalpy(Q)
+        Q.T = c.get(Tlabel)
+        Q.update_thermo_from_rhoT()
+        h = Q.enthalpy
         h0 = h + 0.5*abs(vel)*abs(vel)
         f_energy = f_energy + rho*u_n*h0*dA
         A = A + dA
@@ -201,12 +200,11 @@ def stream_thrust_avg(cells, props, var_map, species, gmodel):
 
     N = N / A
     f_mom_s = dot(f_mom, N)
-    Q = Gas_data(gmodel)
+    Q = GasState(gmodel)
     if nsp > 1:
-        massf = [ f_isp/f_mass for f_isp in f_sp ]
-        set_massf(Q, gmodel, massf)
+        Q.massf = [ f_isp/f_mass for f_isp in f_sp ]
     else:
-        Q.massf[0] = 1.0
+        Q.massf = [1.0,]
     #
     LARGE_PENALTY = 1.0e6
 
@@ -217,13 +215,13 @@ def stream_thrust_avg(cells, props, var_map, species, gmodel):
             return LARGE_PENALTY
         # Use equation of state to compute other thermo quantities
         Q.rho = rho
-        Q.T[0] = T
-        flag = gmodel.eval_thermo_state_rhoT(Q)
-        if flag != 0:
-            # If there are problems, then these are NOT good values
-            # so return a large error
+        Q.T = T
+        try:
+            Q.update_thermo_from_rhoT()
+        except:
+            # If there are problems, then these are NOT good values so return a large error
             return LARGE_PENALTY
-        h = gmodel.mixture_enthalpy(Q)
+        h = Q.enthalpy
         p = Q.p
         # Compute errors
         fmass_err = abs(f_mass - rho*u*A)/(abs(f_mass))
@@ -262,8 +260,8 @@ def stream_thrust_avg(cells, props, var_map, species, gmodel):
 #    p = f_mom_s/A - rho*u*u
 #    Q.rho = rho
 #    Q.p = p
-#    gmodel.eval_thermo_state_rhop(Q)
-#    T = Q.T[0]
+#    Q.update_thermo_from_rhop()
+#    T = Q.T
     # ------------- Just use median values for initial guess -------------- #
     guess = [rho_mid, T_mid, u_mid]
     result = minimize(f_to_minimize, guess, method='Nelder-Mead', options={'ftol':1.0e-6})
@@ -327,23 +325,23 @@ def stream_thrust_avg(cells, props, var_map, species, gmodel):
         flag = 'success'
         rho, T, u = x0
     #
-    Q.rho = rho; Q.T[0] = T
-    gmodel.eval_thermo_state_rhoT(Q)
-    h = gmodel.mixture_enthalpy(Q)
+    Q.rho = rho; Q.T = T
+    Q.update_thermo_from_rhoT()
+    h = Q.enthalpy
     M = u/Q.a
     p = Q.p
-    gamma = gmodel.gamma(Q)
+    gamma = Q.gamma
     T0 = T*(1.0 + (gamma - 1.0) * 0.5 * M**2)
     p0 = p * pow(T0/T, gamma/(gamma - 1.0))
     hr = 0.0
     # temporary dummy gas object
-    Qd = Gas_data(gmodel)
+    Qd = GasState(gmodel)
     Qd.p = PC_P_atm
-    Qd.T[0] = 298.15 # K <-- DO NOT ADJUST THIS VALUE
-                     # CEA curve fits are constructed
-                     # such that h(298.15) == h_f
+    Qd.T = 298.15 # K <-- DO NOT ADJUST THIS VALUE
+                  # CEA curve fits are constructed
+                  # such that h(298.15) == h_f
     for isp, f in enumerate(f_sp):
-        hr += f*gmodel.enthalpy(Qd, isp) # <-- is h_f because evaluated at T=298.15 K
+        hr += f*Qf.enthalpy_isp(isp) # <-- is h_f because evaluated at T=298.15 K
     #
     # Create a dictionary of all possible requests
     vals = {'rho':rho,
@@ -354,10 +352,10 @@ def stream_thrust_avg(cells, props, var_map, species, gmodel):
             'a': Q.a,
             'h': h,
             'h0': h + 0.5*u*u,
-            's': gmodel.mixture_entropy(Q),
-            'R': gmodel.R(Q),
-            'Cp': gmodel.Cp(Q),
-            'Cv': gmodel.Cv(Q),
+            's': Q.entropy,
+            'R': Q.R,
+            'Cp': Q.Cp,
+            'Cv': Q.Cv,
             'gamma': gamma,
             'u': u,
             'M': M,

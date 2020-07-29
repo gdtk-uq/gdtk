@@ -108,6 +108,7 @@ module Gas
                                  int state_c_id, int gm_id, double* results)'
   extern 'int gasflow_beta_cone(int state1_id, double v1, double theta,
                                 int gm_id, double* results)'
+  PC_P_atm = 101.325e3
 end
 
 Gas.cwrap_gas_init()

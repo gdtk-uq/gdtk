@@ -5,6 +5,8 @@
 # PJ 2019-07-24: start of experiment with FFI.
 #    2019-07-25: added Python wrapper
 #
+PC_P_atm = 101.325e3
+
 from cffi import FFI
 
 ffi = FFI()

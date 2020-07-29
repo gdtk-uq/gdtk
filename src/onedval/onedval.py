@@ -97,11 +97,11 @@ column_names = {'mass flux' : 'mass-flux',
 
 def data_file_header(f, one_d_av, one_d_out, int_out, species):
     f.write("# x[m]     y[m]     z[m]    area[m^2]     ")
-    
+    #
     for av in one_d_av:
         for o in one_d_out:
             f.write("%s[%s]:%s    " % (o, units[o], short_one_d_av_names[av]))
-    
+    #
     for i_out in int_out:
         if isinstance(i_out, tuple):
             f.write("%s    " % i_out[0])
@@ -118,7 +118,7 @@ def data_file_row(f, pos, area, phis, int_quants, one_d_av, one_d_out, int_out, 
     for av in one_d_av:
         for o in one_d_out:
             f.write("%20.12e " % (phis[av][o]))
-    
+    #
     for i_out in int_out:
         if isinstance(i_out, tuple):
             f.write("%20.12e " % int_quants[i_out[0]])
@@ -141,9 +141,9 @@ def main():
         print("At least two arguments are required.")
         print_usage()
         sys.exit(1)
-
+    #
     config_file = sys.argv[1]
-    
+    #
     # 1. Gather info from config file
     # Set some defaults.
     # If set to 'None', we expect to find something from the user.
@@ -155,7 +155,7 @@ def main():
         print("Check that is conforms to Python syntax.")
         print("Bailing out!")
         sys.exit(1)
-    
+    #
     print("onedval: Setting up gas model")
     # 1a. Setup gas model
     if 'species' in cfg and 'gmodel_file' in cfg:
@@ -191,7 +191,7 @@ def main():
         print("No 'variable_map' was set so the following default is used:")
         print(default_var_map)
         cfg['variable_map'] = default_var_map
-    
+    #
     # 1c. Look for one_d_averages methods
     if not 'one_d_averages' in cfg:
         print("No list of 'one_d_averages' was set.")
@@ -218,13 +218,13 @@ def main():
         print("An output file name must be set by the user.")
         print("Bailing out!")
         sys.exit(1)
-    
+    #
     if not 'output_format' in cfg:
         print("No 'output_format' was set.")
         print("An output format must be set by the user.")
         print("Bailing out!")
         sys.exit(1)
-
+    #
     if not cfg['output_format'] in output_formats:
         print("The selected output format: ", cfg['output_format'])
         print("is not one of the available options. The available options are:")
@@ -232,7 +232,7 @@ def main():
             print("'%s'" % o)
         print("Bailing out!")
         sys.exit(1)
-        
+    #
     # 1h. Look for what to do with "bad" slices
     if not 'skip_bad_slices' in cfg:
         print("No 'skip_bad_slices' was set.")
@@ -241,13 +241,13 @@ def main():
         print("will be warned but the program will continue")
         print("on to the next slice and ignore the 'bad' slice.")
         cfg['skip_bad_slices'] = True
-
+    #
     # 1i. Look for what kind of geometry
     if not 'geometry_type' in cfg:
         print("No 'geometry_type' was set.")
         print("The default type of 3D will be used.")
         cfg['geometry_type'] = '3D'
-
+    #
     # 2. Read data from slices and process
     print("onedval: Reading in data from slice(s)")
     f = open(cfg['output_file'], 'w')
@@ -255,8 +255,7 @@ def main():
     int_quants = {}
     if cfg['output_format'] == 'as_data_file':
         data_file_header(f, cfg['one_d_averages'], cfg['one_d_outputs'], cfg['integrated_outputs'], cfg['species'])
-
-    
+    #
     for slice_file in sys.argv[2:]:
         result = 'success'
         print("onedval: Creating cells from slice: ", slice_file)
@@ -273,7 +272,7 @@ def main():
             print("Using filter function to remove unwanted or unimportant cells.")
             cells = list(filter(cfg['filter_function'], cells))
             print("Number of cells after filtering: ", len(cells))
-
+        #
         # 3. Do some work.
         print("onedval: Doing the requested calculations")
         if cfg['output_format'] == 'verbose':
@@ -282,7 +281,7 @@ def main():
             f.write("ncells = %d\n" % len(cells))
             f.write("cumulative area of cells (m^2):\n")
             f.write("area = %.6e\n" % area(cells))
-
+        #
         # 3a. Compute requested integrated quantities (if required)
         # Grab any special fluxes.
         special_fns = {}
@@ -290,7 +289,7 @@ def main():
             if isinstance(i, tuple):
                 special_fns[i[0]] = i[1]
         fluxes = compute_fluxes(cells, cfg['variable_map'], cfg['species'], gmodel, special_fns)
-            
+        #
         if cfg['output_format'] == 'verbose':
             if len(cfg['integrated_outputs']) > 0:
                 print("onedval: Writing out integrated quantities")
@@ -298,7 +297,7 @@ def main():
                 f.write("Integrated quantities\n")
                 f.write("---------------------\n")
                 f.write("\n")
-
+                #
                 for flux in cfg['integrated_outputs']:
                     if isinstance(flux, str):
                         if flux == 'mass flux':
@@ -323,7 +322,7 @@ def main():
                     else:
                         f.write("flux of %s\n")
                         f.write("flux = %.6e\n\n" % fluxes[flux[0]])
-
+        #
         if cfg['output_format'] == 'as_data_file':
             for flux in cfg['integrated_outputs']:
                 if isinstance(flux, str):
@@ -345,7 +344,7 @@ def main():
                         sys.exit(1)
                 else:
                     int_quants[flux[0]] = fluxes[flux[0]]
-        
+        #
         # 3b. Compute requested one_d_properties
         if cfg['output_format'] == 'verbose':
             if len(cfg['one_d_averages']) > 0:
@@ -353,7 +352,7 @@ def main():
                 f.write("\n------------------------------\n")
                 f.write("One-dimensionalised quantities\n")
                 f.write("------------------------------\n")
-
+        #
         phis_all = {}
         for avg in cfg['one_d_averages']:
             if avg == 'area-weighted':
@@ -379,7 +378,7 @@ def main():
                     else:
                         print("Bailing out at this point because 'skip_bad_cells' is set to false.")
                         sys.exit(1)
-
+                #
                 phis_all[avg] = copy(phis)
                 if cfg['output_format'] == 'verbose' and result == 'success':
                     f.write("-- flux-conserved average --\n\n")
@@ -390,18 +389,15 @@ def main():
                 print("is not known or not implemented.")
                 print("Bailing out!")
                 sys.exit(1)
-
+        #
         if cfg['output_format'] == 'as_data_file' and result == 'success':
             A = area(cells)
             pos = avg_pos(cells, cfg['variable_map'])
             data_file_row(f, pos, A, phis_all, int_quants, cfg['one_d_averages'], cfg['one_d_outputs'],
                               cfg['integrated_outputs'], cfg['species'])
-
+    #
     f.close()
     print("onedval: Done.")
 
 if __name__ == '__main__':
     main()
-    
-
-    
