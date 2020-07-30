@@ -56,7 +56,7 @@ def compute_fluxes(cells, var_map, species, gmodel, special_fns):
     vlabel = var_map['v']
     wlabel = var_map['w']
     Tlabel = var_map['T']
-    Q = Gas_data(gmodel)
+    Q = GasState(gmodel)
     special_fluxes = copy(special_fns)
     for k in special_fluxes:
         special_fluxes[k] = 0.0
@@ -341,7 +341,7 @@ def stream_thrust_avg(cells, props, var_map, species, gmodel):
                   # CEA curve fits are constructed
                   # such that h(298.15) == h_f
     for isp, f in enumerate(f_sp):
-        hr += f*Qf.enthalpy_isp(isp) # <-- is h_f because evaluated at T=298.15 K
+        hr += f*Q.enthalpy_isp(isp) # <-- is h_f because evaluated at T=298.15 K
     #
     # Create a dictionary of all possible requests
     vals = {'rho':rho,

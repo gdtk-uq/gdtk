@@ -172,11 +172,9 @@ def main():
         nsp = gmodel.get_number_of_species()
     # Else, test for gmodel_file
     if 'gmodel_file' in cfg:
-        gmodel = create_gas_model(cfg['gmodel_file'])
-        nsp = gmodel.get_number_of_species()
-        cfg['species'] = []
-        for isp in range(nsp):
-            cfg['species'].append(gmodel.species_name(isp))
+        gmodel = GasModel(cfg['gmodel_file'])
+        nsp = gmodel.n_species
+        cfg['species'] = gmodel.species_names.copy()
 
     if gmodel is None:
         print("There is a problem in the config file: ", config_file)
@@ -310,8 +308,8 @@ def main():
                             f.write("energy flux (W)\n")
                             f.write("e_dot = %.6e\n\n" % fluxes['energy'])
                         elif flux == 'species mass flux':
-                            for sp in cfg['species']:
-                                isp = gmodel.get_isp_from_species_name(sp)
+                            for isp in range(len(cfg['species'])):
+                                sp = cfg['species'][isp]
                                 f.write("mass flux of %s (kg/s)\n" % sp)
                                 f.write("m%s_dot = %.6e\n\n" % (sp, fluxes['species'][isp]))
                         else:
@@ -334,8 +332,8 @@ def main():
                         int_quants['energy flux'] = fluxes['energy']
                     elif flux == 'species mass flux':
                         int_quants['species mass flux'] = {}
-                        for sp in cfg['species']:
-                            isp = gmodel.get_isp_from_species_name(sp)
+                        for isp in range(len(cfg['species'])):
+                            sp = cfg['species'][isp]
                             int_quants['species mass flux'][sp] = fluxes['species'][isp]
                     else:
                         print("Requested integrated quantity: ", flux)
