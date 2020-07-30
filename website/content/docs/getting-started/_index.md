@@ -144,7 +144,10 @@ move to the gas source directory and use `make` again.
     cd dgd/src/gas
     make install
 
-Note that the loadable library needs to be built with the DMD64 compiler.
+Note that the loadable library needs to be built with the DMD64 compiler
+and that you need the Foreign-Function-Interface extensions for your
+Python and Ruby interpreters.
+On a LinuxMint system these packages are `python-cffi` and `ruby-ffi`.
 
 
 ## Setting up for a first-time run of Eilmer
