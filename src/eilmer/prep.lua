@@ -2011,8 +2011,6 @@ function write_config_file(fileName)
 
    f:write(string.format('"separate_update_for_viscous_terms": %s,\n',
 			 tostring(config.separate_update_for_viscous_terms)))
-   f:write(string.format('"separate_update_for_k_omega_source": %s,\n',
-			 tostring(config.separate_update_for_k_omega_source)))
 
    f:write(string.format('"turbulence_model": "%s",\n',
 			 string.lower(config.turbulence_model)))
@@ -2022,8 +2020,6 @@ function write_config_file(fileName)
 			 config.turbulence_schmidt_number))
    f:write(string.format('"max_mu_t_factor": %.18e,\n', config.max_mu_t_factor))
    f:write(string.format('"transient_mu_t_factor": %.18e,\n', config.transient_mu_t_factor))
-   f:write(string.format('"limit_tke_production": %s,\n', tostring(config.limit_tke_production)))
-   f:write(string.format('"tke_production_limit_in_kelvins": %.18e,\n', config.tke_production_limit_in_kelvins))
 
    f:write(string.format('"udf_source_terms_file": "%s",\n', config.udf_source_terms_file))
    f:write(string.format('"udf_source_terms": %s,\n', tostring(config.udf_source_terms)))
