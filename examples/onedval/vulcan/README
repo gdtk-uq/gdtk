@@ -3,7 +3,7 @@
 ========================================================
 
 .. Author: Rowan J. Gollan <r.gollan@uq.edu.au>
-.. Date: 13-Feb-2013
+.. Date: 13-Feb-2013, 2020-07-30 PJ
 
 Files:
 ------
@@ -14,3 +14,5 @@ exit-slice.dat
 exit.config
   The config file to control what calculations onedval does.
 
+ideal-air.inp
+  Input file for the prep-gas program, to build a detailed gas-model file.

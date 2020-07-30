@@ -12,6 +12,7 @@ the 2D surface based on the methods selected by the user.
 
 .. Versions:
    12-Feb-2013  Initial coding.
+   2020-07-30, port, by PJ, to the DGD project.
 """
 
 import sys
@@ -158,28 +159,13 @@ def main():
     #
     print("onedval: Setting up gas model")
     # 1a. Setup gas model
-    if 'species' in cfg and 'gmodel_file' in cfg:
-        print("There is a problem in the config file: ", config_file)
-        print("Both 'species' and 'gmodel_file' have been specified.")
-        print("You can only specify one of these keywords.")
-        print("Bailing out!")
-        sys.exit(1)
-    # Look for species.
-    gmodel = None
-    if 'species' in cfg:
-        create_gas_file("thermally perfect gas", cfg['species'], "gas-model.lua")
-        gmodel = create_gas_model("gas-model.lua")
-        nsp = gmodel.get_number_of_species()
-    # Else, test for gmodel_file
     if 'gmodel_file' in cfg:
         gmodel = GasModel(cfg['gmodel_file'])
         nsp = gmodel.n_species
         cfg['species'] = gmodel.species_names.copy()
-
-    if gmodel is None:
+    else:
         print("There is a problem in the config file: ", config_file)
-        print("It appears that neither the 'species' nor the 'gmodel_file' have been specified.")
-        print("You must specify one of these keywords.")
+        print("It appears that the 'gmodel_file' has not been specified.")
         print("Bailing out!")
         sys.exit(1)
 
@@ -308,8 +294,7 @@ def main():
                             f.write("energy flux (W)\n")
                             f.write("e_dot = %.6e\n\n" % fluxes['energy'])
                         elif flux == 'species mass flux':
-                            for isp in range(len(cfg['species'])):
-                                sp = cfg['species'][isp]
+                            for isp, sp in enumerate(cfg['species']):
                                 f.write("mass flux of %s (kg/s)\n" % sp)
                                 f.write("m%s_dot = %.6e\n\n" % (sp, fluxes['species'][isp]))
                         else:
@@ -332,8 +317,7 @@ def main():
                         int_quants['energy flux'] = fluxes['energy']
                     elif flux == 'species mass flux':
                         int_quants['species mass flux'] = {}
-                        for isp in range(len(cfg['species'])):
-                            sp = cfg['species'][isp]
+                        for isp, sp in enumerate(cfg['species']):
                             int_quants['species mass flux'][sp] = fluxes['species'][isp]
                     else:
                         print("Requested integrated quantity: ", flux)
