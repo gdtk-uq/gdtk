@@ -1,18 +1,23 @@
-== 2D/forward-facing-step
+== 2D/sphere-nonaka
 
-This example shows the flow of gas at Mach 3 over a forward-facing step in a duct.
-The test case was first proposed by Emery (1968) and is described as a two-dimensional step.
-However, in the literature, this test case is often cited for its use
-in the paper by Woodward and Colella (1984) which tested the capabilities of
-various difference schemes for treating strong shocks.
-They describe this case as a Mach 3 Wind Tunnel with a Step.
+This example simulates the flow of air over a sphere.
+It is an example of using the two-temperature air model for high-speed flow.
+The particular conditions are chosen to replicate the physical experiments performed by Nonaka et al. (2000).
+Those conditions are Case 18 in Table 1.
+These conditions were chosen because they align with Figure 10 in their article.
+Figure 10 is one of the only cases where the full shock shape was reported.
+Having access to the full shock shape is very useful for validation.
+The conditions of this case are:
 
-References:
+*sphere radius : 7mm
+*free stream velocity : 3490 m/s
+*free stream pressure : 4850 Pa
+*free stream temperature : 293.0 K (assumed, not stated)
+*free stream composition : f_N2 = 0.767, f_O2 = 0.233
 
-1. *Emery* (1968), +
-   _An Evaluation of Several Differencing Methods for Inviscid Fluid Flow Problems_, +
-    Journal of Computational Physics, *2*: pp.306--331.
-2. *Woodward and Colella* (1984), +
-   _The Numerical Simulation of Two-Dimensional Fluid Flow with Strong Shocks_, +
-    Journal of Computational Physics, *54*: pp.115--173.
+Reference:
+
+1.  *Nonaka, S., Mizuno, H., Takayama, K. and Park, C.* (2000), +
+    _Measurement of Shock Standoff Distance for Sphere in Ballistic Range_, +
+    Journal of Thermophysics & Heat Transfer, *14*(2).
 
