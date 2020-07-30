@@ -466,8 +466,8 @@ def add_T_patch(xL, xR, T):
     Add a temperature patch for a region where the wall temperature
     is different from the nominal value.
 
-    xL: (float) Left-end location, in metres, of the loss region.
-    xR: (float) Right-end location, in metres, of the loss region.
+    xL: (float) Left-end location, in metres, of the temperature patch.
+    xR: (float) Right-end location, in metres, of the temperature patch.
     T: (float) Wall temperature in degrees K.
     Returns: Number of temperature patches defined so far.
     """
@@ -482,14 +482,14 @@ def add_T_patch(xL, xR, T):
 
 def add_vf_patch(xL, xR, vf):
     """
-    Add a temperature patch for a region where the wall temperature
-    is different from the nominal value.
+    Add a viscous-factor patch for a region where the viscous effects
+    are scaled from the nominal value.
 
     xL: (float) Left-end location, in metres, of the loss region.
     xR: (float) Right-end location, in metres, of the loss region.
     vf: (float) Viscous factor for limiting viscous effects at wall.
         Nominal value is 1.0.  A completely inviscid wall has a value of 0.0.
-    Returns: Number of temperature patches defined so far.
+    Returns: Number of viscous-factor patches defined so far.
     """
     if xR < xL:
         # Keep x-values in increasing order

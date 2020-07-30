@@ -264,6 +264,12 @@ The following attributes are stored in the Tube object:
   List of break-point tuples defining the tube wall.
   Add elements to the list via the function `add_break_point`.
 
+`loss_region_list` ::
+  _list of tuples_ +
+  List of head-loss regions, usually associated
+  with sudden changes in tube cross-section and diaphragm stations.
+  Add regions via the function `add_loss_region`.
+
 `T_nominal` ::
   _float_, default `300.0` +
   The nominal wall temperature (in degrees K)
@@ -274,11 +280,11 @@ The following attributes are stored in the Tube object:
   Regions of the tube wall that have temperature different to the
   nominal value can be specified via the function `add_T_patch`.
 
-`loss_region_list` ::
+`viscous_factor_patch_list` ::
   _list of tuples_ +
-  List of head-loss regions, usually associated
-  with sudden changes in tube cross-section and diaphragm stations.
-  Add regions via the function `add_loss_region`.
+  List of regions where we wish to modulate/scale the viscous wall effects.
+  Add regions via the function `add_vf_patch`.
+
 
 == Diameter description
 The tube is described as a set of (x,d)-coordinate pairs that
@@ -326,15 +332,35 @@ is different from the nominal value.
   add_T_patch(xL, xR, T)
 
 `xL` ::
-  _float_ Left-end location, in metres, of the loss region.
+  _float_ Left-end location, in metres, of the temperature patch.
 
 `xR` ::
-  _float_ Right-end location, in metres, of the loss region.
+  _float_ Right-end location, in metres, of the temperature patch.
 
 `T` ::
   _float_ Wall temperature in degrees K.
 
 Returns the number of temperature patches defined so far.
+
+
+== Viscous-factor patches
+These define sections of the tube where the viscous effects are scaled
+from the nominal value.
+
+  add_vf_patch(xL, xR, vf)
+
+`xL` ::
+  _float_ Left-end location, in metres, of the viscous-factor patch.
+
+`xR` ::
+  _float_ Right-end location, in metres, of the viscous-factor patch.
+
+`vf` ::
+  _float_ Viscous-factor for limiting viscous effects at the wall.
+  The nominal value is 1.0, for full viscous effects.
+  A completely inviscid wall has a value of 0.0.
+
+Returns the number of viscous-factor patches defined so far.
 
 
 = Dynamic components
