@@ -56,35 +56,49 @@ applyGridproBoundaryConditions = gridpro.applyGridproBoundaryConditions
 -- Storage for steady-state solver settings
 sssOptionsHidden = { -- hidden from user
    -- set defaults here
+
+   -- preconditioner settings
    use_preconditioner = true,
-   frozen_preconditioner_count = 1,
-   start_preconditioning = 1,
-   ilu_fill = 0,
-   precondition_matrix_type = "block_diagonal",
-   use_scaling = true,
-   use_complex_matvec_eval = false,
+   precondition_matrix_type = "ilu",
+   -- some parameters to help reduce the cost of forming precondition matrix
+   frozen_preconditioner_count = 1, -- how often the precondition matrix is updated
+   start_preconditioning = 1, -- what iteration to start preconditioning on
+   ilu_fill = 0, -- level of fill-in for ILU decomposition (use 0 for practical simulations)
+
+   use_scaling = true, -- always good to scale the linear system
+   use_complex_matvec_eval = false,-- use complex variable Frechet derivative
+
+   -- general simulation settings
    number_pre_steps = 10,
    number_total_steps = 100,
    max_number_attempts = 3,
    stop_on_relative_global_residual = 1.0e-99,
    stop_on_absolute_global_residual = 1.0e-99,
+
    -- Restarted preconditioned FGMRES settings
-   max_outer_iterations = 10,
-   max_restarts = 10,
+   max_outer_iterations = 10, -- higher settings typically mean fast convergence of
+                              -- an iteration BUT extra cost
+   max_restarts = 10, -- same as above, but not as effective, keep between 5-10
    number_inner_iterations = 5,
-   -- Options for start-up phase
-   number_start_up_steps = 5,
+
+   -- CFL ramp settings
+   residual_based_cfl_scheduling = true,
+   cfl_max = 1.0e8,
    cfl_schedule_length = 0,
    cfl_schedule_value_list = {},
    cfl_schedule_iter_list = {},
-   cfl_max = 1.0e8,
-   residual_based_cfl_scheduling = true,
+   
+   -- Options for start-up phase (first order interpolation applied during this phase)
+   number_start_up_steps = 5,
    cfl0 = 1.0,
-   eta0 = 0.5,
-   tau0 = 0.1,
-   sigma0 = 1.0e-8,
-   p0 = 0.75,
+   eta0 = 0.5, -- to what level of relative residual drop will we converge an iteration
+   tau0 = 0.1, -- relative residual at which the CFL will be ramped
+   sigma0 = 1.0e-8, -- perturbation (for complex-step choose a VERY small number)
+   p0 = 0.75, -- parameter used in the routine to increase the CFL
+
    -- Options for inexact Newton phase
+   -- this phase will use second order interpolation, if selected
+   -- settings are same as above
    cfl1 = 10.0,
    tau1 = 0.1,
    sigma1 = 1.0e-8,
