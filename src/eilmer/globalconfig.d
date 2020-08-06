@@ -2003,6 +2003,14 @@ void configCheckPoint3()
         throw new FlowSolverException(msg);
     }
 
+    // Check for compatbility between viscous flag and turbulence model
+    if (GlobalConfig.turb_model.isTurbulent && (GlobalConfig.viscous==false)) {
+        string msg = format("The selected turbulence model '%s'",
+                            GlobalConfig.turbulence_model_name);
+        msg ~= " is incompatible with an inviscid simulation.";
+        throw new FlowSolverException(msg);
+    }
+
     if (GlobalConfig.turb_model is null) {
         throw new FlowSolverException("Flowsolver started without a turbulence model");
     }

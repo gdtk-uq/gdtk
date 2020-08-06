@@ -321,7 +321,7 @@ string pushFSVarArray(string var)
 {
     return `lua_newtable(L);
 foreach (i, val; fs.` ~ var ~ `) {
-    lua_pushnumber(L, val); lua_rawseti(L, -2,to!int(i+1));
+    lua_pushnumber(L, val); lua_rawseti(L, -2,to!int(i));
 }
 lua_setfield(L, tblIdx, "` ~ var ~`");`;
 }
