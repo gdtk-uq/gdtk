@@ -233,7 +233,6 @@ function convectiveFlux(args)
    Tot_area = 0
    rho = 0.; T = 0.; p = 0.
    u_temp = 0.; v_temp = 0.; w = 0.
-   tke = 0.; omega =0.
    --print("Number of faces being sample in Z direction:",Z_Nfaces," in T direction:", T_count)
    for i=1,Z_Nfaces do
       for j=1,T_count do
@@ -274,8 +273,6 @@ function convectiveFlux(args)
          u_temp =  u_temp + flow.velx * weight * area 
          v_temp =  v_temp + flow.vely * weight * area 
          w      =  w      + flow.velz * weight * area 
-         tke    =  tke    + flow.tke  * weight * area 
-         omega  =  omega  + flow.omega* weight * area 
       end 
    end
 
@@ -380,7 +377,6 @@ function convectiveFlux(args)
       Tot_area2 = 0
       rho2 = 0.; T2 = 0.; p2 = 0.
       u_temp2 = 0.; v_temp2 = 0.; w2 = 0.
-      tke2 = 0.; omega2 =0.
       --print("Number of faces being sample in Z direction:",Z_Nfaces," in T direction:", T_count)
       for i=1,Z_Nfaces do
          for j=1,T_count do
@@ -419,8 +415,6 @@ function convectiveFlux(args)
             u_temp2 =  u_temp2 + flow.velx * weight * area 
             v_temp2 =  v_temp2 + flow.vely * weight * area 
             w2      =  w2      + flow.velz * weight * area 
-            tke2    =  tke2    + flow.tke  * weight * area 
-            omega2  =  omega2  + flow.omega* weight * area 
          end 
       end
       -- normalise properties
@@ -438,8 +432,6 @@ function convectiveFlux(args)
       u = (u*Tot_area + u2) / (Tot_area+Tot_area2)
       v = (v*Tot_area + v2) / (Tot_area+Tot_area2)
       w = (w*Tot_area + w2) / (Tot_area+Tot_area2)
-      tke = (tke*Tot_area + tke2) / (Tot_area+Tot_area2)
-      omega = (omega*Tot_area + omega2) / (Tot_area+Tot_area2)
    end
 
 
@@ -486,12 +478,6 @@ function convectiveFlux(args)
    T_old = FLOW.T
    T_new = T
    T = T_new * relax + (1-relax) * T_old 
-   tke_old = FLOW.tke
-   tke_new = tke
-   tke = tke_new * relax + (1-relax) * tke_old 
-   omega_old = FLOW.omega
-   omega_new = omega
-   omega = omega_new * relax + (1-relax) * omega_old 
 
     -- get gas model information
     Q = GasState:new{gmodel}
@@ -509,8 +495,6 @@ function convectiveFlux(args)
    flux.momentum_y = p * args.csY + v * flux.mass
    flux.momentum_z = p * CSZ + w * flux.mass
    flux.total_energy = flux.mass * (Q.u + 0.5*(u*u+v*v+w*w) + p/rho)
-   flux.tke = tke * flux.mass
-   flux.omega = omega * flux.mass
    --flux.species = {}
    --flux.species[0] = flux.mass * massf[0]
    --flux.renergies = {}
