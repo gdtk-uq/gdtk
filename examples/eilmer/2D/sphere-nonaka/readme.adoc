@@ -9,11 +9,11 @@ Figure 10 is one of the only cases where the full shock shape was reported.
 Having access to the full shock shape is very useful for validation.
 The conditions of this case are:
 
-*sphere radius : 7mm
-*free stream velocity : 3490 m/s
-*free stream pressure : 4850 Pa
-*free stream temperature : 293.0 K (assumed, not stated)
-*free stream composition : f_N2 = 0.767, f_O2 = 0.233
+* sphere radius : 7mm
+* free stream velocity : 3490 m/s
+* free stream pressure : 4850 Pa
+* free stream temperature : 293.0 K (assumed, not stated)
+* free stream composition : f_N2 = 0.767, f_O2 = 0.233
 
 Reference:
 
