@@ -17,7 +17,7 @@ import geom;
 import geom.luawrap.luagrid;
 import geom.luawrap.luasgrid;
 import geom.luawrap.luageom;
-// Might put the following back later when we generate our own 
+// Might put the following back later when we generate our own
 // UnstructuredGrid objects from parametric surfaces and volumes.
 // import luasurface;
 // import luavolume;
@@ -303,7 +303,7 @@ extern(C) int usg_joinGrid(lua_State* L)
         luaL_error(L, errMsg.toStringz);
     }
     int openFoamDimensions = 3;
-    if (narg == 3) { 
+    if (narg == 3) {
         openFoamDimensions = luaL_checkint(L, 3);
     }
     master.joinGrid(other, 1.0e-6, 1.0e-9, openFoamDimensions);
@@ -344,7 +344,7 @@ void registerUnstructuredGrid(lua_State* L)
 {
     // Register the UnstructuredGrid object
     luaL_newmetatable(L, UnstructuredGridMT.toStringz);
-    
+
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1); // duplicates the current metatable
     lua_setfield(L, -2, "__index");
@@ -408,10 +408,4 @@ void registerUnstructuredGrid(lua_State* L)
     lua_setglobal(L, UnstructuredGridMT.toStringz);
 
 } // end registerUnstructuredGrid()
-    
-
-
-
-
-
 

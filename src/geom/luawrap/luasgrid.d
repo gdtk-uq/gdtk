@@ -223,7 +223,7 @@ extern(C) int newStructuredGrid(lua_State* L)
     lua_pop(L, 1);
     //
     // If we haven't already obtained a grid from a file,
-    // it's time to try to construct one on top of 
+    // it's time to try to construct one on top of
     // a geometric description of the region.
     Path mypath;
     ParametricSurface psurface;
@@ -270,7 +270,7 @@ extern(C) int newStructuredGrid(lua_State* L)
         string errMsg = "Error in StructuredGrid:new{}. no path, psurface or pvolume found.";
         luaL_error(L, errMsg.toStringz);
     }
- 
+
     // Get clustering functions, filling in nil or invalid entries with LinearFunction.
     UnivariateFunction cf;
     UnivariateFunction[] cfList;
@@ -487,7 +487,7 @@ extern(C) int importPlot3DGrid(lua_State *L)
         luaL_error(L, errMsg.toStringz);
     }
     auto fname = to!string(luaL_checkstring(L, 1));
-    
+
     int dim = luaL_checkint(L, 2);
 
     double scale = 1.0;
@@ -566,7 +566,7 @@ void registerStructuredGrid(lua_State* L)
 {
     // Register the StructuredGrid object
     luaL_newmetatable(L, StructuredGridMT.toStringz);
-    
+
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1); // duplicates the current metatable
     lua_setfield(L, -2, "__index");
@@ -592,7 +592,7 @@ void registerStructuredGrid(lua_State* L)
     lua_setfield(L, -2, "get_nkv");
     lua_pushcfunction(L, &get_vtx!(StructuredGrid, StructuredGridMT));
     lua_setfield(L, -2, "get_vtx");
-        lua_pushcfunction(L, &set_vtx);
+    lua_pushcfunction(L, &set_vtx);
     lua_setfield(L, -2, "set_vtx");
     lua_pushcfunction(L, &subgrid);
     lua_setfield(L, -2, "subgrid");
@@ -632,10 +632,3 @@ void registerStructuredGrid(lua_State* L)
     lua_setglobal(L, "gridFaceSwap");
 
 } // end registerStructuredGrid()
-    
-
-
-
-
-
-

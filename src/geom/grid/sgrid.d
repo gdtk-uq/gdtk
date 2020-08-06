@@ -1289,24 +1289,24 @@ StructuredGrid[] importPlot3DGrid(string fileName, int dim, double scale=1.0)
     // Determine if we have multiblock file, or not. A multiblock file
     // will have a single integer on line.
     auto line = f.readln().strip();
-    auto tks = line.split();
-    int nBlocks = (tks.length == 1) ? to!int(tks[0]) : 1;
+    auto tokens = line.split();
+    int nBlocks = (tokens.length == 1) ? to!int(tokens[0]) : 1;
     // Next gather up the ni, nj and (possibly) nk dimensions.
     StructuredGrid[] grids;
     if (nBlocks == 1) {
         // We already have the line gather up with indices.
-        auto niv = to!int(tks[0]);
-        auto njv = to!int(tks[1]);
-        auto nkv = (dim == 3) ? to!int(tks[2]) : 1;
+        auto niv = to!int(tokens[0]);
+        auto njv = to!int(tokens[1]);
+        auto nkv = (dim == 3) ? to!int(tokens[2]) : 1;
         grids ~= new StructuredGrid(niv, njv, nkv);
     }
     else {
         foreach (iBlk; 0 .. nBlocks) {
             line = f.readln().strip();
-            tks = line.split();
-            auto niv = to!int(tks[0]);
-            auto njv = to!int(tks[1]);
-            auto nkv = (dim == 3) ? to!int(tks[2]) : 1;
+            tokens = line.split();
+            auto niv = to!int(tokens[0]);
+            auto njv = to!int(tokens[1]);
+            auto nkv = (dim == 3) ? to!int(tokens[2]) : 1;
             grids ~= new StructuredGrid(niv, njv, nkv);
         }
     }
@@ -1314,22 +1314,31 @@ StructuredGrid[] importPlot3DGrid(string fileName, int dim, double scale=1.0)
     // We only gather z for dim = 3. Plot3D considers a 2D grid as
     // one in the x-y plane. It is physically 2D. Not "logically" 2D
     // as a surface in 3D might be.
+    //
+    // Different programs seem to write the coordinate values with variable layout,
+    // sometimes one per line, sometimes several per line.
+    // Let's gather them all into one big list and then
+    // assign them to the individual blocks.
+    number[] coords;
+    line = f.readln().strip();
+    while (line.length > 0) {
+        tokens = line.split();
+        foreach (item; tokens) { coords ~= to!number(item); }
+        line = f.readln().strip();
+    }
+    size_t ic =0;
     foreach (g; grids) {
         foreach (k; 0 .. g.nkv) {
             foreach (j; 0 .. g.njv) {
                 foreach (i; 0 .. g.niv) {
-                    line = f.readln().strip();
-                    tks = line.split();
-                    g[i,j,k].refx = to!number(tks[0]);
+                    g[i,j,k].refx = coords[ic]; ic++;
                 }
             }
         }
         foreach (k; 0 .. g.nkv) {
             foreach (j; 0 .. g.njv) {
                 foreach (i; 0 .. g.niv) {
-                    line = f.readln().strip();
-                    tks = line.split();
-                    g[i,j,k].refy = to!number(tks[0]);
+                    g[i,j,k].refy = coords[ic]; ic++;
                 }
             }
         }
@@ -1337,17 +1346,15 @@ StructuredGrid[] importPlot3DGrid(string fileName, int dim, double scale=1.0)
             foreach (k; 0 .. g.nkv) {
                 foreach (j; 0 .. g.njv) {
                     foreach (i; 0 .. g.niv) {
-                        line = f.readln().strip();
-                        tks = line.split();
-                        g[i,j,k].refz = to!number(tks[0]);
+                        g[i,j,k].refz = coords[ic]; ic++;
                     }
                 }
             }
-        }
-    }
+        } // end if dim == 3
+    } // end foreach g
     f.close();
     return grids;
-}
+} // end importPlot3DGrid()
 
 void writeGridsAsPlot3D(string fname, StructuredGrid[] grids, int dim)
 {
@@ -1392,9 +1399,11 @@ void writeGridsAsPlot3D(string fname, StructuredGrid[] grids, int dim)
         }
     }
     f.close();
-}
+} // end writeGridsAsPlot3D()
 
-StructuredGrid rotate_gridpro_blocks(StructuredGrid grid, string rotateSouthToThis="South", string rotateWestToThis="West")
+StructuredGrid rotate_gridpro_blocks(StructuredGrid grid,
+                                     string rotateSouthToThis="South",
+                                     string rotateWestToThis="West")
 {
     StructuredGrid new_grid;
 
@@ -1402,7 +1411,9 @@ StructuredGrid rotate_gridpro_blocks(StructuredGrid grid, string rotateSouthToTh
     new_grid = new StructuredGrid(grid.njv, grid.niv);
         foreach (j; 0 .. grid.niv) {
             foreach (i; 0 .. grid.njv) {
-                new_grid[i,j,0].set(grid[(grid.niv-1)-j,i].x, grid[(grid.niv-1)-j,i].y, grid[(grid.niv-1)-j,i].z);
+                new_grid[i,j,0].set(grid[(grid.niv-1)-j,i].x,
+                                    grid[(grid.niv-1)-j,i].y,
+                                    grid[(grid.niv-1)-j,i].z);
             }
         }
     return new_grid;
@@ -1412,7 +1423,9 @@ StructuredGrid rotate_gridpro_blocks(StructuredGrid grid, string rotateSouthToTh
     new_grid = new StructuredGrid(grid.niv, grid.njv);
         foreach (j; 0 .. grid.njv) {
             foreach (i; 0 .. grid.niv) {
-                new_grid[i,j,0].set(grid[(grid.niv-1)-i,(grid.njv-1)-j].x, grid[(grid.niv-1)-i,(grid.njv-1)-j].y, grid[(grid.niv-1)-i,(grid.njv-1)-j].z);
+                new_grid[i,j,0].set(grid[(grid.niv-1)-i,(grid.njv-1)-j].x,
+                                    grid[(grid.niv-1)-i,(grid.njv-1)-j].y,
+                                    grid[(grid.niv-1)-i,(grid.njv-1)-j].z);
             }
         }
     return new_grid;
@@ -1422,15 +1435,19 @@ StructuredGrid rotate_gridpro_blocks(StructuredGrid grid, string rotateSouthToTh
     new_grid = new StructuredGrid(grid.njv, grid.niv);
         foreach (j; 0 .. grid.niv) {
             foreach (i; 0 .. grid.njv) {
-                new_grid[i,j,0].set(grid[j,(grid.njv-1)-i].x, grid[j,(grid.njv-1)-i].y, grid[j,(grid.njv-1)-i].z);
+                new_grid[i,j,0].set(grid[j,(grid.njv-1)-i].x,
+                                    grid[j,(grid.njv-1)-i].y,
+                                    grid[j,(grid.njv-1)-i].z);
             }
         }
     return new_grid;
     }
     return grid;
-}
+} // end rotate_gridpro_blocks()
 
-StructuredGrid grid_faceswap(StructuredGrid grid,  bool swapNorthToSouth=false, bool swapEastToWest=false)
+StructuredGrid grid_faceswap(StructuredGrid grid,
+                             bool swapNorthToSouth=false,
+                             bool swapEastToWest=false)
 {
     StructuredGrid new_grid;
 
@@ -1438,7 +1455,9 @@ StructuredGrid grid_faceswap(StructuredGrid grid,  bool swapNorthToSouth=false, 
     new_grid = new StructuredGrid(grid.niv, grid.njv);
         foreach (j; 0 .. grid.njv) {
             foreach (i; 0 .. grid.niv) {
-                new_grid[i,j,0].set(grid[i,(grid.njv-1)-j].x, grid[i,(grid.njv-1)-j].y, grid[i,(grid.njv-1)-j].z);
+                new_grid[i,j,0].set(grid[i,(grid.njv-1)-j].x,
+                                    grid[i,(grid.njv-1)-j].y,
+                                    grid[i,(grid.njv-1)-j].z);
             }
         }
     }
@@ -1447,12 +1466,14 @@ StructuredGrid grid_faceswap(StructuredGrid grid,  bool swapNorthToSouth=false, 
     new_grid = new StructuredGrid(grid.niv, grid.njv);
         foreach (j; 0 .. grid.njv) {
             foreach (i; 0 .. grid.niv) {
-                new_grid[i,j,0].set(grid[(grid.niv-1)-i,j].x, grid[(grid.niv-1)-i,j].y, grid[(grid.niv-1)-i,j].z);
+                new_grid[i,j,0].set(grid[(grid.niv-1)-i,j].x,
+                                    grid[(grid.niv-1)-i,j].y,
+                                    grid[(grid.niv-1)-i,j].z);
             }
         }
     }
     return new_grid;
-}
+} // end grid_faceswap()
 
 
 //-----------------------------------------------------------------
