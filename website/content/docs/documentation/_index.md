@@ -13,8 +13,9 @@ The GTDK documentation comes in a variety of styles, each for different purposes
     (but eventually comprehensive) documentation of all of the input parameters and functions
     available to the users.
     These are for reference as you build your input scripts.
-  + [Presentation and seminars]({{< relref "presentations" >}}) hosts a
+  + [Presentations and seminars]({{< relref "presentations" >}}) hosts a
     collection of presentations that the developers have made over the years
     about the development and use of the toolkit.
+  + [Examples]({{< relref "examples" >}}) provides a catalog of the examples.
 
 

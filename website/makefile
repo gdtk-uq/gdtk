@@ -14,7 +14,8 @@ HTML := eilmer-reference-manual.html \
 	library-reference-manual.html \
 	geometry-reference-manual.html \
 	estcn-manual.html \
-	build-lut-manual.html
+	build-lut-manual.html \
+	eilmer-catalog-of-examples.html
 
 build: $(PDFS) $(HTML) images
 	hugo
@@ -37,6 +38,13 @@ eilmer-reference-manual.html:
 	cd ../doc; make $@
 	cp ../doc/$@ static/html/
 
+eilmer-catalog-of-examples.html:
+	- mkdir -p static/html
+	- mkdir -p static/html/gallery
+	cd ../doc; make $@
+	cp ../doc/$@ static/html/
+	cp ../doc/gallery/*.png static/html/gallery/
+
 l1d-reference-manual.html:
 	- mkdir -p static/html
 	cd ../doc; make $@
@@ -44,8 +52,10 @@ l1d-reference-manual.html:
 
 estcn-manual.html:
 	- mkdir -p static/html
+	- mkdir -p static/html/estcn
 	cd ../doc; make $@
 	cp ../doc/$@ static/html/
+	cp ../doc/estcn/*.png static/html/estcn/
 
 build-lut-manual.html:
 	- mkdir -p static/html
