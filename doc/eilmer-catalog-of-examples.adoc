@@ -3,6 +3,7 @@ The Eilmer code gardeners
 2020-05-30
 :toc: right
 :stylesheet: readthedocs.css
+:imagesdir: gallery
 :sectnums:
 
 :leveloffset: +1
