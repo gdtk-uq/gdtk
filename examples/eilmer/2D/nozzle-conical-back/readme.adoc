@@ -1,0 +1,17 @@
+== 2D/nozzle-conical-back
+
+image::nozzle-conical-back-mach-field-at-4ms.png[caption="Mach number field a few milliseconds after simulation start."]
+
+This example shows the acceleration of gas through a converving-diverging nozzle.
+The left boundary is subsonic and driven by the stagnation condition of a hypothetical reservoir.
+The case is interesting because there are experimentally-measured wall pressures
+for the supersonic part of the nozzle.
+
+Reference:
+
+1. *LH Back, PF Massier and HL Gier* (1965), +
+   _Comparison of measured and predicted flows through conical
+   supersonic nozzles, with emphasis on the transonic region._ +
+   A.I.A.A. Journal *3*(9): pp.1606-1614.
+
+

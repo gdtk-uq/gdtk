@@ -1,0 +1,12 @@
+== 2D/foil-circular-arc-transonic
+
+image::foil-zoom-flow-domain-mach.png[caption="Mach number field near a circular-arc airfoil."]
+
+This example shows the transonic flow around an airfoil with a circular-arc profile.
+It appears to be a standard example in the textbooks on Computational Fluid Dynamics,
+where the solution for the full potential equations are discussed.
+Note that, effectively, the Euler equations solved here.
+Also, the image does not show the complete flow domain used for the simulation.
+The upper boundary is 6 chord lengths above the lower boundary and the inlet and outlet
+boundaries are each 5 chord lengths from the airfoil.
+

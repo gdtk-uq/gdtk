@@ -13,8 +13,8 @@ References:
 
 1. *Emery* (1968), +
    _An Evaluation of Several Differencing Methods for Inviscid Fluid Flow Problems_, +
-    Journal of Computational Physics, *2*: pp.306--331.
+    Journal of Computational Physics, *2*: pp.306-331.
 2. *Woodward and Colella* (1984), +
    _The Numerical Simulation of Two-Dimensional Fluid Flow with Strong Shocks_, +
-    Journal of Computational Physics, *54*: pp.115--173.
+    Journal of Computational Physics, *54*: pp.115-173.
 

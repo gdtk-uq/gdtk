@@ -1,0 +1,9 @@
+== 2D/flat-plate-hakkinen-swbli
+
+image::swbli-temperature-field-tindx-4.png[caption="Temperature field for a shock wave striking a laminar boundary layer."]
+
+An oblique shock wave interacts with a laminar boundary layer on a flat flate.
+The boundary layer can be seen as the warmer temperture gas close to the lower boundary.
+The oblique shock generated at the leading edge of the upper boundary can be seen to arrive at
+the plate a little after half-way along the flow domain.
+

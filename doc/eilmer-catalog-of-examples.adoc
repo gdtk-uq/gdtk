@@ -1,6 +1,6 @@
 = Catalogue of Eilmer examples
 The Eilmer code gardeners
-2020-08-07
+2020-08-10
 :toc: right
 :stylesheet: readthedocs.css
 :imagesdir: gallery
@@ -26,11 +26,17 @@ flow test cases is not always so easy to categorise.
 
 = External, inviscid flows of perfect gases
 
+include::../examples/eilmer/2D/foil-circular-arc-transonic/readme.adoc[]
+
 = Internal, inviscid flows of perfect gases
+
+include::../examples/eilmer/2D/nozzle-conical-back/readme.adoc[]
 
 include::../examples/eilmer/2D/forward-facing-step/readme.adoc[]
 
 = Laminar flows of perfect gases
+
+include::../examples/eilmer/2D/flat-plate-hakkinen-swbli/readme.adoc[]
 
 = Turbulent flows of perfect gases
 
