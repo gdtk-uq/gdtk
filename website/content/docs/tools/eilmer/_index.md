@@ -45,10 +45,11 @@ hypersonic inlets, turbomachinery and microcombustors.
 
 ## Documentation
 
-- [Eilmer4 Flow Solver User Guide (PDF)](/pdfs/eilmer-user-guide.pdf)
+- [Flow-Solver User Guide (PDF)](/pdfs/eilmer-user-guide.pdf)
 - [Geometry Package User Guide (PDF)](/pdfs/geometry-user-guide.pdf)
 - [Gas Package User Guide (PDF)](/pdfs/gas-user-guide.pdf)
 - [Reacting Gas Thermochemistry with the thermally-perfect-gas model (PDF)](/pdfs/reacting-gas-guide.pdf)
-- [Eilmer4 Reference Manual (HTML)](/html/eilmer-reference-manual.html)
+- [Reference Manual (HTML)](/html/eilmer-reference-manual.html)
+- [Catalog of examples](/html/eilmer-catalog-of-examples.html)
 
 
