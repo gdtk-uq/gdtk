@@ -262,11 +262,12 @@ void init_simulation(int tindx_start)
             writeln(format("  state=%s", dia.state));
         }
     }
+    // Note that, for a restart, sim_time will generally be nonzero
     sim_data.dt_global = L1dConfig.dt_init;
     sim_data.sim_time = get_time_from_times_file(tindx_start);
     sim_data.cfl = L1dConfig.cfl_schedule.get_value(sim_data.sim_time);
-    sim_data.t_plot = L1dConfig.dt_plot.get_value(sim_data.sim_time);
-    sim_data.t_hist = L1dConfig.dt_hist.get_value(sim_data.sim_time);
+    sim_data.t_plot = sim_data.sim_time + L1dConfig.dt_plot.get_value(sim_data.sim_time);
+    sim_data.t_hist = sim_data.sim_time + L1dConfig.dt_hist.get_value(sim_data.sim_time);
     sim_data.steps_since_last_plot_write = 0;
     sim_data.steps_since_last_hist_write = 0;
     if (L1dConfig.verbosity_level >= 1) {
