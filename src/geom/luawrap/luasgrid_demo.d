@@ -57,7 +57,26 @@ print("MeshPatch surface")
 surf2 = MeshPatch:new{sgrid=grid}
 print("mid-point on MeshPatch surface p= ", surf2(0.5, 0.5))
 --
+
+print("StructuredGrid with internal control.")
+p00 = Vector3:new{x=0.0, y=0.1}
+p10 = Vector3:new{x=1.0, y=0.4}
+p11 = Vector3:new{x=1.0, y=1.1}
+p01 = Vector3:new{x=0.0, y=1.1}
+myPatch = AOPatch:new{p00=p00, p10=p10, p11=p11, p01=p01}
+r_grid = {{0.0, 1/3, 2/3, 1.0},
+          {0.0, 1/3-0.3, 2/3+0.3, 1.0},
+          {0.0, 1/3-0.3, 2/3+0.3, 1.0},
+          {0.0, 1/3, 2/3, 1.0}}
+s_grid = {{0.0, 0.0, 0.0, 0.0},
+          {1.0/3, 1.0/3-0.3, 1.0/3-0.3, 1.0/3},
+          {2.0/3, 2.0/3+0.3, 2.0/3+0.3, 2.0/3},
+          {1.0, 1.0, 1.0, 1.0}}
+gridB = StructuredGrid:new{psurface=myPatch, niv=11, njv=21, r_grid=r_grid, s_grid=s_grid}
+gridB:write_to_vtk_file("test_grid_b-2D-lua.vtk")
+--
 print("3D grid")
+
 pArray = {Vector3:new{x=0.0, y=0.1, z=0.0}, Vector3:new{x=1.0, y=0.1, z=0.0},
           Vector3:new{x=1.0, y=1.1, z=0.0}, Vector3:new{x=0.0, y=1.1, z=0.0},
           Vector3:new{x=0.0, y=0.1, z=3.0}, Vector3:new{x=1.0, y=0.1, z=3.0},

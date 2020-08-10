@@ -199,7 +199,8 @@ extern(C) int newStructuredGrid(lua_State* L)
         luaL_error(L, errMsg.toStringz);
     }
     if (!checkAllowedNames(L, 1, ["path","psurface","pvolume","niv","njv","nkv",
-                                  "cf","cfList","label","filename","fileName","fmt"])) {
+                                  "cf","cfList","label","filename","fileName","fmt",
+				  "r_grid","s_grid"])) {
         string errMsg = "Error in call to StructuredGrid:new{}. Invalid name in table.";
         luaL_error(L, errMsg.toStringz);
     }
@@ -338,10 +339,47 @@ extern(C) int newStructuredGrid(lua_State* L)
         nkv = getIntegerFromTable(L, 1, "nkv", true, 0, true, format(errMsgTmplt, "nkv"));
     }
 
+    // Look for an r_grid and s_grid. If present, call special construction.
+    bool useSpecial2DConstructor = false;
+    double[4][4] r_grid, s_grid;
+    lua_getfield(L, 1, "r_grid");
+    if (!lua_isnil(L, -1)) {
+	useSpecial2DConstructor = false;
+	// Assume we have a valid table of r_grid points
+	foreach (i; 0 .. 4) {
+	    lua_rawgeti(L, -1, i+1);
+	    foreach (j; 0 .. 4) {
+		lua_rawgeti(L, -1, j+1);
+		r_grid[i][j] = luaL_checknumber(L, -1);
+		lua_pop(L, 1);
+	    }
+	    lua_pop(L, 1);
+	}
+    }
+    lua_pop(L, 1);
+
+    lua_getfield(L, 1, "s_grid");
+    if (!lua_isnil(L, -1)) {
+	// Assume we have a valid table of s_grid points
+	foreach (i; 0 .. 4) {
+	    lua_rawgeti(L, -1, i+1);
+	    foreach (j; 0 .. 4) {
+		lua_rawgeti(L, -1, j+1);
+		s_grid[i][j] = luaL_checknumber(L, -1);
+		lua_pop(L, 1);
+	    }
+	    lua_pop(L, 1);
+	}
+    }
+    lua_pop(L, 1);
+    
     StructuredGrid grid;
     switch (dimensions) {
     case 1: grid = new StructuredGrid(mypath, niv, cf); break;
-    case 2: grid = new StructuredGrid(psurface, niv, njv, cfList); break;
+    case 2:
+	grid = useSpecial2DConstructor ?
+	    new StructuredGrid(psurface, niv, njv, cfList, r_grid, s_grid) : new StructuredGrid(psurface, niv, njv, cfList);
+	break;
     case 3: grid = new StructuredGrid(pvolume, niv, njv, nkv, cfList); break;
     default: throw new GeometryException("invalid number of dimensions");
     }
