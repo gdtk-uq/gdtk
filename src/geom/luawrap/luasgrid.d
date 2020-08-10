@@ -344,7 +344,7 @@ extern(C) int newStructuredGrid(lua_State* L)
     double[4][4] r_grid, s_grid;
     lua_getfield(L, 1, "r_grid");
     if (!lua_isnil(L, -1)) {
-	useSpecial2DConstructor = false;
+	useSpecial2DConstructor = true;
 	// Assume we have a valid table of r_grid points
 	foreach (i; 0 .. 4) {
 	    lua_rawgeti(L, -1, i+1);
