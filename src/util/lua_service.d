@@ -49,6 +49,10 @@ bool tableEmpty(lua_State* L, int tblIdx)
 
 string getString(lua_State* L, int tblIdx, string key)
 {
+    if (!lua_istable(L, tblIdx)) {
+        string errMsg = format("getString was expecting a table at stack index: %d", tblIdx);
+        throw new Error(errMsg);
+    }
     lua_getfield(L, tblIdx, key.toStringz);
     if ( !lua_isstring(L, -1) ) {
         string errMsg = format("A string was expected in field: %s", key);
@@ -63,6 +67,10 @@ string getString(lua_State* L, int tblIdx, string key)
 string getStringWithDefault(lua_State* L, int tblIdx, string key, string defaultValue)
 {
     string val = defaultValue;
+    if (!lua_istable(L, tblIdx)) {
+        string errMsg = format("getStringWithDefault was expecting a table at stack index: %d", tblIdx);
+        throw new Error(errMsg);
+    }
     lua_getfield(L, tblIdx, key.toStringz);
     if (lua_isstring(L, -1)) {
         val = to!string(lua_tostring(L, -1));
@@ -73,6 +81,10 @@ string getStringWithDefault(lua_State* L, int tblIdx, string key, string default
 
 double getDouble(lua_State* L, int tblIdx, string key)
 {
+    if (!lua_istable(L, tblIdx)) {
+        string errMsg = format("getDouble was expecting a table at stack index: %d", tblIdx);
+        throw new Error(errMsg);
+    }
     lua_getfield(L, tblIdx, key.toStringz);
     if ( !lua_isnumber(L, -1) ) {
         string errMsg = format("A double was expected in field: %s", key);
@@ -86,6 +98,10 @@ double getDouble(lua_State* L, int tblIdx, string key)
 
 double getDoubleWithDefault(lua_State* L, int tblIdx, string key, double defaultValue)
 {
+    if (!lua_istable(L, tblIdx)) {
+        string errMsg = format("getDoubleWithDefault was expecting a table at stack index: %d", tblIdx);
+        throw new Error(errMsg);
+    }
     double val = defaultValue;
     lua_getfield(L, tblIdx, key.toStringz);
     if (lua_isnumber(L, -1)) {
@@ -97,6 +113,10 @@ double getDoubleWithDefault(lua_State* L, int tblIdx, string key, double default
 
 int getInt(lua_State* L, int tblIdx, string key)
 {
+    if (!lua_istable(L, tblIdx)) {
+        string errMsg = format("getInt was expecting a table at stack index: %d", tblIdx);
+        throw new Error(errMsg);
+    }
     lua_getfield(L, tblIdx, key.toStringz);
     if ( !lua_isnumber(L, -1) ) {
         string errMsg = format("An integer was expected in field: %s", key);
@@ -110,6 +130,10 @@ int getInt(lua_State* L, int tblIdx, string key)
 
 int getIntWithDefault(lua_State* L, int tblIdx, string key, int defaultValue)
 {
+    if (!lua_istable(L, tblIdx)) {
+        string errMsg = format("getIntWithDefault was expecting a table at stack index: %d", tblIdx);
+        throw new Error(errMsg);
+    }
     int val = defaultValue;
     lua_getfield(L, tblIdx, key.toStringz);
     if (lua_isnumber(L, -1)) {
@@ -121,6 +145,10 @@ int getIntWithDefault(lua_State* L, int tblIdx, string key, int defaultValue)
 
 bool getBool(lua_State* L, int tblIdx, string key)
 {
+    if (!lua_istable(L, tblIdx)) {
+        string errMsg = format("getBool was expecting a table at stack index: %d", tblIdx);
+        throw new Error(errMsg);
+    }
     lua_getfield(L, tblIdx, key.toStringz);
     if ( !lua_isboolean(L, -1) ) {
         string errMsg = format("A boolean value was expected in field: %s", key);
@@ -134,6 +162,10 @@ bool getBool(lua_State* L, int tblIdx, string key)
 
 bool getBoolWithDefault(lua_State* L, int tblIdx, string key, bool defaultValue)
 {
+    if (!lua_istable(L, tblIdx)) {
+        string errMsg = format("getBoolWithDefault was expecting a table at stack index: %d", tblIdx);
+        throw new Error(errMsg);
+    }
     bool val = defaultValue;
     lua_getfield(L, tblIdx, key.toStringz);
     if (lua_isboolean(L, -1)) {
@@ -145,6 +177,10 @@ bool getBoolWithDefault(lua_State* L, int tblIdx, string key, bool defaultValue)
 
 void getArrayOfStrings(lua_State* L, int tblIdx, string key, out string[] values)
 {
+    if (!lua_istable(L, tblIdx)) {
+        string errMsg = format("getArrayOfStrings was expecting a table at stack index: %d", tblIdx);
+        throw new Error(errMsg);
+    }
     values.length = 0;
     lua_getfield(L, tblIdx, key.toStringz);
     if ( !lua_istable(L, -1) ) {
@@ -168,6 +204,10 @@ void getArrayOfStrings(lua_State* L, int tblIdx, string key, out string[] values
 
 void getArrayOfDoubles(lua_State* L, int tblIdx, string key, out double[] values)
 {
+    if (!lua_istable(L, tblIdx)) {
+        string errMsg = format("getArrayOfDoubles was expecting a table at stack index: %d", tblIdx);
+        throw new Error(errMsg);
+    }
     values.length = 0;
     lua_getfield(L, tblIdx, key.toStringz);
     if ( !lua_istable(L, -1) ) {
@@ -187,6 +227,10 @@ void getArrayOfDoubles(lua_State* L, int tblIdx, string key, out double[] values
 
 void getArrayOfDoubles(lua_State* L, int tblIdx, string key, out Complex!double[] values)
 {
+    if (!lua_istable(L, tblIdx)) {
+        string errMsg = format("getArrayOfDoubles was expecting a table at stack index: %d", tblIdx);
+        throw new Error(errMsg);
+    }
     values.length = 0;
     lua_getfield(L, tblIdx, key.toStringz);
     if ( !lua_istable(L, -1) ) {
@@ -210,6 +254,10 @@ void getArrayOfDoubles(lua_State* L, int tblIdx, string key, out Complex!double[
 
 void getArrayOfInts(lua_State* L, int tblIdx, string key, out int[] values)
 {
+    if (!lua_istable(L, tblIdx)) {
+        string errMsg = format("getArrayOfInts was expecting a table at stack index: %d", tblIdx);
+        throw new Error(errMsg);
+    }
     values.length = 0;
     lua_getfield(L, tblIdx, key.toStringz);
     if ( !lua_istable(L, -1) ) {
@@ -229,6 +277,10 @@ void getArrayOfInts(lua_State* L, int tblIdx, string key, out int[] values)
 
 void getAssocArrayOfDoubles(lua_State* L, string key, string[] pList, out double[string] params)
 {
+    if (!lua_istable(L, -1)) {
+        string errMsg = format("getAssocArrayOfDoubles was expecting a table at stack index: %d", -1);
+        throw new Error(errMsg);
+    }
     lua_getfield(L, -1, key.toStringz);
     if ( !lua_istable(L, -1) ) {
         string errMsg = format("A table with key and values (doubles) was expected in field: %s", key);
@@ -239,10 +291,14 @@ void getAssocArrayOfDoubles(lua_State* L, string key, string[] pList, out double
         params[p] = getDouble(L, -1, p);
     }
     lua_pop(L, 1);
-} 
+}
 
 void getAssocArrayOfDoubles(lua_State* L, string key, string[] pList, out Complex!double[string] params)
 {
+    if (!lua_istable(L, -1)) {
+        string errMsg = format("getAssocArrayOfDoubles was expecting a table at stack index: %d", -1);
+        throw new Error(errMsg);
+    }
     lua_getfield(L, -1, key.toStringz);
     if ( !lua_istable(L, -1) ) {
         string errMsg = format("A table with key and values (doubles) was expected in field: %s", key);
@@ -253,13 +309,13 @@ void getAssocArrayOfDoubles(lua_State* L, string key, string[] pList, out Comple
         params[p] = Complex!double(getDouble(L, -1, p), 0.0);
     }
     lua_pop(L, 1);
-} 
+}
 
 /**
  * This creates a new userdata spot on the Lua stack and
  * populates it with an object of type T.
  *
- * Notes: 
+ * Notes:
  * (1) We explicitly set the metatable name as
  * a string and do NOT try to get the type name
  * using T.stringof (or a more elaborate __traits function).
@@ -267,10 +323,10 @@ void getAssocArrayOfDoubles(lua_State* L, string key, string[] pList, out Comple
  * appears in the Lua script, no matter what name the various D
  * compilers decide to give your class type.
  * (2) We also want to keep a reference to the object in the D domain
- * so that the D garbage collector will not try to remove it and 
+ * so that the D garbage collector will not try to remove it and
  * any of its internally-referenced objects from that domain.
- * We cannot tell how long the Lua interpreter will want 
- * to have access to the object. 
+ * We cannot tell how long the Lua interpreter will want
+ * to have access to the object.
  */
 
 const(T) pushObj(T, string metatableName)(lua_State* L, T obj)
