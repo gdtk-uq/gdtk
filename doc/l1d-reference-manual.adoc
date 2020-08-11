@@ -755,6 +755,18 @@ The state data for the gas slugs, pistons and diaphragms is appended periodicall
 to the files in the `<myjob>` directory.
 In that directory, there is a `times.data` file that lists the time instants
 for each time index.
+Beside the state data files, there are the history files, one for eash location
+that was specified in the input script.
+The format of these files is compatible with GNUPlot and has a comment as the
+first line, to indicate the recorded properties.
+
+
+== Stopping a simulation
+Because the solution files are opened and appended to periodically, 
+you can usually just kill the `l1d4` process 
+(possibly with the keyboard interrupt signal, Control-C) and all will be fine.
+You might be unlucky and interrupt the program while it is writing some 
+solution data but you can then trim the solution files to tidy up.
 
 
 == Postprocessing
@@ -785,5 +797,35 @@ with one GNUplot-compatible file for each gas slug.
   $ l1d4 --xt-data --job=<myjob> --var-name=p --log10
 
 
+== Restarting a simulation
+Because the time step adapts to the solution, it is a bit difficult to 
+predict how many steps a simulation will require.
+You may have a simulation that has stopped at the maximum number of steps
+but you would like to restart it and proceed a bit further.
+
+To prepare for a restart, first decide the final value of `tindx` that you
+wish to retain from the initial run and observe the size of the time step
+at that point in the simulation.
+You may wish to scan the `<myjob>/times.data` file to determine a suitable
+value for `tindx` and the console output from the previous run will 
+indicate suitable a time-step size.
+
+Edit the `<myjob>/config.json` file and manually change the values for 
+`max_time`, `max_step` and `dt_init`, so that you are reasonably sure
+that the simulation will step stably on restart. 
+
+Trim the solution files to the value of `tindx`, 
+from which you want to restart the simulation.
+
+  $ l1d4 --trim-solution-files --job=<myjob> --tindx-end=<int>
+
+If you make a mistake, all is not lost at this point because the original
+solution files have been retained with a `.backup` extension to their names.
+
+You should now be ready to restart the simulation, specifying which 
+value of `tindx' to use when reading the initial state.
+
+  $ l1d4 --run-simulation --job=<myjob> --tindx=<int>
+     
 :leveloffset: -1
 
