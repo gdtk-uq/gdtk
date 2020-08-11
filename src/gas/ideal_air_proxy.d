@@ -17,7 +17,6 @@ import std.string;
 import std.file;
 import std.json;
 import std.conv;
-import core.stdc.stdlib : exit;
 import nm.complex;
 import nm.number;
 

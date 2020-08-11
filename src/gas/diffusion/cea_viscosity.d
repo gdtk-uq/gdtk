@@ -12,7 +12,6 @@ import std.math;
 import std.stdio;
 import std.string;
 import std.conv;
-import core.stdc.stdlib : exit;
 import nm.complex;
 import nm.number;
 import util.lua;
@@ -133,7 +132,7 @@ CEAViscosity createCEAViscosity(lua_State* L)
             writeln("ERROR: in function 'createCEAViscosity'.");
             writeln("ERROR: Exception message is:\n");
             writeln(e.msg);
-            exit(1);
+            throw new Exception(e.msg);
         }
         curves ~= CEAViscCurve(params);
     }

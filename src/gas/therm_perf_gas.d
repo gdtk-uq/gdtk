@@ -19,7 +19,6 @@ import nm.complex;
 import nm.number;
 import nm.brent;
 import nm.bracketing;
-import core.stdc.stdlib : exit;
 
 import gas.gas_model;
 import gas.gas_state;

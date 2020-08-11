@@ -28,7 +28,6 @@ import std.array;
 import std.format;
 import util.lua;
 import util.lua_service;
-import core.stdc.stdlib : exit;
 import nm.complex;
 import nm.number;
 

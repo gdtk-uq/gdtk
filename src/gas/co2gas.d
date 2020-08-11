@@ -23,7 +23,6 @@ import nm.number;
 import util.lua;
 import util.lua_service;
 import util.msg_service;
-import core.stdc.stdlib : exit;
 
 import gas.gas_model;
 import gas.gas_state;

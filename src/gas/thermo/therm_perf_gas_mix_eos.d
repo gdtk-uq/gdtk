@@ -22,7 +22,6 @@ import std.math;
 import std.stdio;
 import std.string;
 import std.conv;
-import core.stdc.stdlib : exit;
 import nm.nm_exception : NumericalMethodException;
 import nm.complex;
 import nm.number;

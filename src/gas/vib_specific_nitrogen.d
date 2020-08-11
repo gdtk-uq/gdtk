@@ -22,7 +22,6 @@ import std.json;
 import std.conv;
 import util.lua;
 import util.lua_service;
-import core.stdc.stdlib : exit;
 
 import nm.complex;
 import nm.number;

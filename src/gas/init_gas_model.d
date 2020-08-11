@@ -41,8 +41,6 @@ import gas.steam : Steam;
 import gas.electronically_specific_gas: ElectronicallySpecificGas;
 import gas.two_temperature_gasgiant: TwoTemperatureGasGiant;
 
-import core.stdc.stdlib : exit;
-
 
 GasModel init_gas_model(string file_name="gas-model.lua")
 /**
@@ -76,101 +74,107 @@ GasModel init_gas_model(string file_name="gas-model.lua")
         throw new GasModelException(msg);
     }
     GasModel gm;
-    switch (gas_model_name) {
-    case "IdealGas":
-        gm = new IdealGas(L);
-        break;
-    case "IdealHelium":
-        gm = new IdealHelium();
-        break;
-    case "CubicGas":
-        gm = new CubicGas(L);
-        break;
-    case "CEAGas":
-        gm = new CEAGas(L);
-        break;
-    case "ThermallyPerfectGas":
-        gm = new ThermallyPerfectGas(L);
-        // There is a special step if we're using the Gas Giant transport properties model.
-        lua_getglobal(L, "use_gas_giant_transport_properties");
-        if (!lua_isnil(L, -1)) {
-            ThermallyPerfectGas tpg = cast(ThermallyPerfectGas) gm;
-            tpg.attachGasModelToGasGiantModel();
+    try {
+        switch (gas_model_name) {
+        case "IdealGas":
+            gm = new IdealGas(L);
+            break;
+        case "IdealHelium":
+            gm = new IdealHelium();
+            break;
+        case "CubicGas":
+            gm = new CubicGas(L);
+            break;
+        case "CEAGas":
+            gm = new CEAGas(L);
+            break;
+        case "ThermallyPerfectGas":
+            gm = new ThermallyPerfectGas(L);
+            // There is a special step if we're using the Gas Giant transport properties model.
+            lua_getglobal(L, "use_gas_giant_transport_properties");
+            if (!lua_isnil(L, -1)) {
+                ThermallyPerfectGas tpg = cast(ThermallyPerfectGas) gm;
+                tpg.attachGasModelToGasGiantModel();
+            }
+            lua_pop(L, 1);
+            break;
+        case "ThermallyPerfectGasEquilibrium":
+            gm = new ThermallyPerfectGasEquilibrium(L);
+            break;
+        case "VeryViscousAir":
+            gm = new VeryViscousAir(L);
+            break;
+        case "CO2Gas":
+            gm = new CO2Gas(L);
+            break;
+        case "CO2GasSW":
+            gm = new CO2GasSW(L);
+            break;
+        case "SF6Virial":
+            gm = new SF6Virial(L);
+            break;
+        case "look-up table":
+            gm = new UniformLUT(L);
+            break;
+        case "UniformLUTPlusIdealGas":
+            gm = new UniformLUTPlusIdealGas(L);
+            break;
+        case "CEA adaptive look-up table":
+            gm = new AdaptiveLUT(L);
+            break;
+        case "IdealAirProxy":
+            gm = new IdealAirProxy(); // no further config in the Lua file
+            break;
+        case "IdealGasAB":
+            gm = new IdealGasAB(L);
+            break;
+        case "PseudoSpeciesGas":
+            gm = new PseudoSpeciesGas(L);
+            break;
+        case "TwoTemperatureReactingArgon":
+            gm = new TwoTemperatureReactingArgon(L);
+            break;
+        case "TwoTemperatureArgonPlusIdealGas":
+            gm = new TwoTemperatureArgonPlusIdealGas(L);
+            break;
+        case "IdealDissociatingGas":
+            gm = new IdealDissociatingGas(L);
+            break;
+        case "TwoTemperatureAir":
+            gm = new TwoTemperatureAir(L);
+            break;
+        case "TwoTemperatureNitrogen":
+            gm = new TwoTemperatureNitrogen();
+            break;
+        case "TwoTemperatureDissociatingNitrogen":
+            gm = new TwoTemperatureDissociatingNitrogen();
+            break;
+        case "VibSpecificNitrogen":
+            gm = new VibSpecificNitrogen();
+            break;
+        case "FuelAirMix":
+            gm = new FuelAirMix(L);
+            break;
+        case "EquilibriumGas":
+            gm = new EquilibriumGas(L);
+            break;
+        case "Steam":
+            gm = new Steam();
+            break;
+        case "ElectronicallySpecificGas":
+            gm = new ElectronicallySpecificGas(L);
+            break;
+        case "TwoTemperatureGasGiant":
+            gm = new TwoTemperatureGasGiant();
+            break;
+        default:
+            string errMsg = format("The gas model '%s' is not available.", gas_model_name);
+            throw new Error(errMsg);
         }
-        lua_pop(L, 1);
-        break;
-    case "ThermallyPerfectGasEquilibrium":
-        gm = new ThermallyPerfectGasEquilibrium(L);
-        break;
-    case "VeryViscousAir":
-        gm = new VeryViscousAir(L);
-        break;
-    case "CO2Gas":
-        gm = new CO2Gas(L);
-        break;
-    case "CO2GasSW":
-        gm = new CO2GasSW(L);
-        break;
-    case "SF6Virial":
-        gm = new SF6Virial(L);
-        break;
-    case "look-up table":
-        gm = new UniformLUT(L);
-        break;
-    case "UniformLUTPlusIdealGas":
-        gm = new UniformLUTPlusIdealGas(L);
-        break;
-    case "CEA adaptive look-up table":
-        gm = new AdaptiveLUT(L);
-        break;
-    case "IdealAirProxy":
-        gm = new IdealAirProxy(); // no further config in the Lua file
-        break;
-    case "IdealGasAB":
-        gm = new IdealGasAB(L);
-        break;
-    case "PseudoSpeciesGas":
-        gm = new PseudoSpeciesGas(L);
-        break;
-    case "TwoTemperatureReactingArgon":
-        gm = new TwoTemperatureReactingArgon(L);
-        break;
-    case "TwoTemperatureArgonPlusIdealGas":
-        gm = new TwoTemperatureArgonPlusIdealGas(L);
-        break;
-    case "IdealDissociatingGas":
-        gm = new IdealDissociatingGas(L);
-        break;
-    case "TwoTemperatureAir":
-        gm = new TwoTemperatureAir(L);
-        break;
-    case "TwoTemperatureNitrogen":
-        gm = new TwoTemperatureNitrogen();
-        break;
-    case "TwoTemperatureDissociatingNitrogen":
-        gm = new TwoTemperatureDissociatingNitrogen();
-        break;
-    case "VibSpecificNitrogen":
-        gm = new VibSpecificNitrogen();
-        break;
-    case "FuelAirMix":
-        gm = new FuelAirMix(L);
-        break;
-    case "EquilibriumGas":
-        gm = new EquilibriumGas(L);
-        break;
-    case "Steam":
-        gm = new Steam();
-        break;
-    case "ElectronicallySpecificGas":
-        gm = new ElectronicallySpecificGas(L);
-        break;
-    case "TwoTemperatureGasGiant":
-        gm = new TwoTemperatureGasGiant();
-        break;
-    default:
-        string errMsg = format("The gas model '%s' is not available.", gas_model_name);
-        throw new Error(errMsg);
+    } catch (Error e) {
+        string msg = "Error while trying to initialize gas model " ~ gas_model_name ~ "\n";
+        msg ~= e.msg;
+        throw new Error(msg);
     }
     lua_close(L);
     return gm;

@@ -10,7 +10,6 @@ module gas.thermo.cea_thermo_curves;
 
 import std.math;
 import std.stdio;
-import core.stdc.stdlib : exit;
 import std.string;
 import std.conv;
 import nm.complex;
@@ -42,7 +41,7 @@ public:
             writeln("ERROR: while trying to construct a CEAThermo object.\n");
             writeln("ERROR: Exception message is:\n");
             writeln(e.msg);
-            exit(1);
+            throw new Exception(e.msg);
         }
     }
     @nogc
