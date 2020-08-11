@@ -29,13 +29,16 @@ int main(string[] args)
 Top-level arguments include the following.
 Argument:                            Comment:
 --------------------------------------------------------------------------------
-  --job=<string>                     file names built from this string
+Actions:
   --run-simulation                   run the simulation
-
   --time-slice                       extract a single-time slice for gas slugs
   --piston-history                   assemble the history dataset for a piston
   --xt-data                          generate an xt-dataset for a flow variable
+  --trim-solution-files              remove solution file content after tindx-end
+  --help                             writes this help message
 
+Parameters:
+  --job=<string>                     file names built from this string
   --tindx=<int>                      time index of the starting data (default 0)
   --tindx-end=<int>                  time index of the final data for xt-dataset
                                        (default 9999)
@@ -48,7 +51,6 @@ Argument:                            Comment:
                                        0=very little written to console
                                        1=major steps commentary (default)
                                        2=minor steps commentary
-  --help                             writes this help message
 --------------------------------------------------------------------------------
 ";
     //
@@ -65,6 +67,7 @@ Argument:                            Comment:
     bool timeSlice = false;
     bool pistonHistory = false;
     bool xtData = false;
+    bool trimSolutionFiles = false;
     int tindx = 0;
     int tindxEnd = 9999;
     int pistonIndx = 0;
@@ -79,6 +82,7 @@ Argument:                            Comment:
                "time-slice", &timeSlice,
                "piston-history", &pistonHistory,
                "xt-data", &xtData,
+               "trim-solution-files", &trimSolutionFiles,
                "tindx", &tindx,
                "tindx-end", &tindxEnd,
                "pindx", &pistonIndx,
@@ -155,6 +159,8 @@ Argument:                            Comment:
         assemble_piston_history(pistonIndx);
     } else if (xtData) {
         generate_xt_dataset(varName, tindx, tindxEnd, takeLog);
+    } else if (trimSolutionFiles) {
+        trim_solution_files(tindxEnd);
     } else {
         writeln("You did not ask for anything to be done.");
     }

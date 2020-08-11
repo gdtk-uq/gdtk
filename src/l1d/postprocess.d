@@ -155,3 +155,177 @@ void assemble_piston_history(int pindx)
     fph.close();
     return;
 } // end assemble_piston_history()
+
+void trim_solution_files(int tindxEnd)
+{
+    writeln("Postprocessing to remove solution data after tindx= ", tindxEnd);
+    double[int] times = readTimesFile();
+    int[] tindices = times.keys();
+    tindices.sort();
+    if (tindxEnd >= tindices[$-1]) {
+        writeln("Nothing to do since final tindx= ", tindices[$-1]);
+        return;
+    }
+    double timeEnd = times[tindxEnd];
+    writeln("Corresponding end time= ", timeEnd);
+    //
+    // We use just enough of the configuration to know which slug,
+    // diaphragm, piston and history files to work on.
+    string dirName = L1dConfig.job_name;
+    JSONValue jsonData = readJSONfile(dirName~"/config.json");
+    auto configData = jsonData["config"];
+    //
+    string fileName;
+    string backupFileName;
+    File fp_dest;
+    File fp_src;
+    string txt;
+    fileName = L1dConfig.job_name ~ "/times.data.backup";
+    if (std.file.exists(fileName)) {
+        writeln("Can see a times.data.backup file already.");
+        writeln("  Quitting without trimming files.");
+        return;
+    }
+    //
+    int nslugs = getJSONint(configData, "nslugs", 0);
+    foreach (i; 0 .. nslugs) {
+        writeln("  Trim faces file for slug ", i);
+        fileName = L1dConfig.job_name ~ format("/slug-%04d-faces.data", i);
+        backupFileName = fileName ~ ".backup";
+        std.file.rename(fileName, backupFileName);
+        fp_src = File(backupFileName, "r");
+        fp_dest = File(fileName, "w");
+        txt = fp_src.readln().chomp(); // header line
+        fp_dest.writeln(txt);
+        while (!fp_src.eof()) {
+            txt = fp_src.readln().chomp();
+            if (txt.length > 0 && txt.canFind("tindx")) {
+                int tindx = to!int(txt.split()[2]);
+                if (tindx > tindxEnd) { break; }
+            }
+            fp_dest.writeln(txt);
+        }
+        fp_src.close();
+        fp_dest.close();
+        //
+        writeln("  Trim cells file for slug ", i);
+        fileName = L1dConfig.job_name ~ format("/slug-%04d-cells.data", i);
+        backupFileName = fileName ~ ".backup";
+        std.file.rename(fileName, backupFileName);
+        fp_src = File(backupFileName, "r");
+        fp_dest = File(fileName, "w");
+        txt = fp_src.readln().chomp(); // header line
+        fp_dest.writeln(txt);
+        while (!fp_src.eof()) {
+            txt = fp_src.readln().chomp();
+            if (txt.length > 0 && txt.canFind("tindx")) {
+                int tindx = to!int(txt.split()[2]);
+                if (tindx > tindxEnd) { break; }
+            }
+            fp_dest.writeln(txt);
+        }
+        fp_src.close();
+        fp_dest.close();
+    }
+    int npistons = getJSONint(configData, "npistons", 0);
+    foreach (i; 0 .. npistons) {
+        writeln("  Trim file for piston ", i);
+        fileName = L1dConfig.job_name ~ format("/piston-%04d.data", i);
+        backupFileName = fileName ~ ".backup";
+        std.file.rename(fileName, backupFileName);
+        fp_src = File(backupFileName, "r");
+        fp_dest = File(fileName, "w");
+        txt = fp_src.readln().chomp(); // header line
+        fp_dest.writeln(txt);
+        while (!fp_src.eof()) {
+            txt = fp_src.readln().chomp();
+            if (txt.length > 0) {
+                int tindx = to!int(txt.split()[0]);
+                if (tindx > tindxEnd) { break; }
+            }
+            fp_dest.writeln(txt);
+        }
+        fp_src.close();
+        fp_dest.close();
+    }
+    int ndiaphragms = getJSONint(configData, "ndiaphragms", 0);
+    foreach (i; 0 .. ndiaphragms) {
+        writeln("  Trim file for diaphragm ", i);
+        fileName = L1dConfig.job_name ~ format("/diaphragm-%04d.data", i);
+        backupFileName = fileName ~ ".backup";
+        std.file.rename(fileName, backupFileName);
+        fp_src = File(backupFileName, "r");
+        fp_dest = File(fileName, "w");
+        txt = fp_src.readln().chomp(); // header line
+        fp_dest.writeln(txt);
+        while (!fp_src.eof()) {
+            txt = fp_src.readln().chomp();
+            if (txt.length > 0) {
+                int tindx = to!int(txt.split()[0]);
+                if (tindx > tindxEnd) { break; }
+            }
+            fp_dest.writeln(txt);
+        }
+        fp_src.close();
+        fp_dest.close();
+    }
+    int hloc_n = getJSONint(configData, "hloc_n", 0);
+    foreach (i; 0 .. hloc_n) {
+        writeln("  Trim history file for location ", i);
+        fileName = L1dConfig.job_name ~ format("/history-loc-%04d.data", i);
+        backupFileName = fileName ~ ".backup";
+        std.file.rename(fileName, backupFileName);
+        fp_src = File(backupFileName, "r");
+        fp_dest = File(fileName, "w");
+        txt = fp_src.readln().chomp(); // header line
+        fp_dest.writeln(txt);
+        while (!fp_src.eof()) {
+            txt = fp_src.readln().chomp();
+            if (txt.length > 0) {
+                double tme = to!double(txt.split()[0]);
+                if (tme > timeEnd) { break; }
+            }
+            fp_dest.writeln(txt);
+        }
+        fp_src.close();
+        fp_dest.close();
+    }
+    writeln("  Trim times file.");
+    fileName = L1dConfig.job_name ~ "/times.data";
+    backupFileName = fileName ~ ".backup";
+    std.file.rename(fileName, backupFileName);
+    fp_src = File(backupFileName, "r");
+    fp_dest = File(fileName, "w");
+    txt = fp_src.readln().chomp(); // header line
+    fp_dest.writeln(txt);
+    while (!fp_src.eof()) {
+        txt = fp_src.readln().chomp();
+        if (txt.length > 0) {
+            int tindx = to!int(txt.split()[0]);
+            if (tindx > tindxEnd) { break; }
+        }
+        fp_dest.writeln(txt);
+    }
+    fp_src.close();
+    fp_dest.close();
+    //
+    writeln("  Trim energies file.");
+    fileName = L1dConfig.job_name ~ "/energies.data";
+    backupFileName = fileName ~ ".backup";
+    std.file.rename(fileName, backupFileName);
+    fp_src = File(backupFileName, "r");
+    fp_dest = File(fileName, "w");
+    txt = fp_src.readln().chomp(); // header line
+    fp_dest.writeln(txt);
+    while (!fp_src.eof()) {
+        txt = fp_src.readln().chomp();
+        if (txt.length > 0) {
+            double tme = to!double(txt.split()[0]);
+            if (tme > timeEnd) { break; }
+        }
+        fp_dest.writeln(txt);
+    }
+    fp_src.close();
+    fp_dest.close();
+    return;
+} // end trim_solution_files()
