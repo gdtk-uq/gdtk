@@ -27,7 +27,8 @@ public:
 
     double x0;       // initial position for time step
     double[2] dxdt;  // time derivatives, predictor-corrector levels
-    double p;        // current pressure
+    double pLstar, pRstar;  // current pressure
+    // If there is a valve at the interface, it may maintain different pressures.
 
     this()
     {

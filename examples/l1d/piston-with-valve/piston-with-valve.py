@@ -2,6 +2,8 @@
 # Dimensions match verification case 2 in the 16th AFMC paper (2007)
 # "Development of Casbar: a Two-phase Flow Code for the Interior Ballistics
 # Problem", R.J Gollan, I.A. Johnston, B.T. O'Flaherty and P.A. Jacobs
+# Note that the valve and its opening time is arbitrary and is just to
+# demonstrate a change in behaviour from the ideal case. PJ 2020-08-15
 
 config.title = "Ideal piston and gas slug plus valve, 2020-08-14"
 my_gm = add_gas_model('ideal-air-gas-model.lua')
@@ -22,7 +24,7 @@ driver_gas = GasSlug(p=100.0e3, vel=0.0, T=348.43, gmodel_id=my_gm,
 piston = Piston(mass=1.0, diam=0.4, xL0=-0.005, xR0=0.005, vel0=0.0)
 assemble_gas_path(left_end, driver_gas, piston)
 
-v = Valve(x=-1.0, times=[0.020, 0.030], fopen=[0.0, 0.0])
+v = Valve(x=-1.0, times=[0.020, 0.030], fopen=[0.0, 1.0])
 
 # Set some time-stepping parameters
 config.dt_init = 1.0e-6
