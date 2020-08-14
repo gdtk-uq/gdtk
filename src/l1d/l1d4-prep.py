@@ -172,6 +172,7 @@ class GlobalConfig(object):
         #
         fp.write('  "nslugs": %d,\n' % len(slugList))
         fp.write('  "npistons": %d,\n' % len(pistonList))
+        fp.write('  "nvalves": %d,\n' % len(valveList))
         fp.write('  "ndiaphragms": %d,\n' % len(diaphragmList))
         fp.write('  "necs": %d\n' % len(ecList))
         # Note, no comma after last item inside JSON dict
@@ -506,6 +507,7 @@ def add_vf_patch(xL, xR, vf):
 # We will accumulate references to defined objects.
 slugList = []
 pistonList = []
+valveList = []
 ecList = []
 diaphragmList = []
 interfaceList = []
@@ -826,6 +828,60 @@ class Piston():
         Returns kinetic energy.
         """
         return 0.5*self.mass*self.vel0*self.vel0
+
+#----------------------------------------------------------------------------
+
+class Valve():
+    """
+    A valve may be used to retard the motion of the nearest interface
+    that lies between gas cells in a slug.
+
+    Note that we do not include valves into the gas-flow path.
+    They are a bit like the tube object in that they influence or interfere
+    with the gas flow from the edges.
+
+    We may construct several of these objects somewhere in the input script
+    and the information will be stored for later writing into the config file.
+    """
+    __slots__ = 'indx', 'label', 'x', 'times', 'fopen'
+
+    def __init__(self, x, times=[0.0,], fopen=[1.0,], label=""):
+        """
+        x: location of the valve
+        times: list of time values (in seconds)
+        fopen: list of fraction-open values (in range 0.0 to 1.0)
+
+        It may be convenient to generate these lists with a function
+        inside your Python input script.
+        """
+        self.indx = len(valveList)
+        self.x = x
+        self.times = list(times)
+        self.fopen = list(fopen)
+        self.label = label
+        valveList.append(self)
+        return
+
+    def write_config(self, fp):
+        """
+        Writes the configuration data in JSON format.
+        """
+        fp.write('"valve_%d": {\n' % self.indx)
+        fp.write('  "label": %s,\n' % json.dumps(self.label))
+        fp.write('  "x": %e,\n' % self.x)
+        fp.write('  "times": %s,\n' % json.dumps(self.times))
+        fp.write('  "fopen": %s\n' % json.dumps(self.fopen))
+        # Note no comma after last item in JSON dict.
+        fp.write('},\n') # presume that this dict not the last
+        return
+
+def add_valve(x, times=[0.0,], fopen=[1.0,], label=""):
+    """
+    Construct and store a Valve object.
+    This function is provided just for neatness in the input script.
+    """
+    _ = Valve(x, times, fopen, label)
+    return len(valveList)
 
 #----------------------------------------------------------------------------
 
@@ -1240,6 +1296,7 @@ def write_initial_files():
     config.write(fp)
     for slug in slugList: slug.write_config(fp)
     for piston in pistonList: piston.write_config(fp)
+    for valve in valveList: valve.write_config(fp)
     for ec in ecList: ec.write_config(fp)
     # Previous entries all presume that they are not the last.
     fp.write('"dummy_item": 0\n')
@@ -1354,6 +1411,7 @@ if __name__ == '__main__':
         print("Summary of components:")
         print("  gas slugs         :", len(slugList))
         print("  pistons           :", len(pistonList))
+        print("  valves            :", len(valveList))
         print("  diaphragms        :", len(diaphragmList))
         print("  free-ends         :", len(freeEndList))
         print("  velocity-ends     :", len(velocityEndList))

@@ -23,6 +23,7 @@ import tube;
 import gasslug;
 import lcell;
 import piston;
+import valve;
 import endcondition;
 import misc;
 
@@ -34,6 +35,7 @@ __gshared static uint[][] overall_modes_index;
 __gshared static ThermochemicalReactor[] reactors;
 __gshared static Tube tube1;
 __gshared static Piston[] pistons;
+__gshared static Valve[] valves;
 __gshared static GasSlug[] gasslugs;
 __gshared static EndCondition[] ecs;
 __gshared static Diaphragm[] diaphragms;
@@ -123,6 +125,7 @@ void init_simulation(int tindx_start)
     L1dConfig.hloc_x[] = getJSONdoublearray(configData, "hloc_x", dummy);
     L1dConfig.nslugs = getJSONint(configData, "nslugs", 0);
     L1dConfig.npistons = getJSONint(configData, "npistons", 0);
+    L1dConfig.nvalves = getJSONint(configData, "nvalves", 0);
     L1dConfig.ndiaphragms = getJSONint(configData, "ndiaphragms", 0);
     L1dConfig.necs = getJSONint(configData, "necs", 0);
     if (L1dConfig.verbosity_level >= 1) {
@@ -139,6 +142,7 @@ void init_simulation(int tindx_start)
         writeln("  hloc_x= ", L1dConfig.hloc_x);
         writeln("  nslugs= ", L1dConfig.nslugs);
         writeln("  npistons= ", L1dConfig.npistons);
+        writeln("  nvalves= ", L1dConfig.nvalves);
         writeln("  ndiaphragms= ", L1dConfig.ndiaphragms);
         writeln("  necs= ", L1dConfig.necs);
     }
@@ -155,6 +159,12 @@ void init_simulation(int tindx_start)
         auto myData = jsonData[format("piston_%d", i)];
         size_t indx = pistons.length;
         pistons ~= new Piston(indx, myData);
+    }
+    //
+    foreach (i; 0 .. L1dConfig.nvalves) {
+        auto myData = jsonData[format("valve_%d", i)];
+        size_t indx = valves.length;
+        valves ~= new Valve(indx, myData);
     }
     //
     foreach (i; 0 .. L1dConfig.necs) {
@@ -340,7 +350,7 @@ void integrate_in_time()
                 }
                 // 4.2 Update dynamic elements.
                 foreach (s; gasslugs) {
-                    s.time_derivatives(0);
+                    s.time_derivatives(0, sim_data.sim_time);
                     s.predictor_step(sim_data.dt_global);
                     if (s.bad_cells() > 0) { throw new Exception("Bad cells"); }
                 }
@@ -364,7 +374,7 @@ void integrate_in_time()
                     }
                     // 5.2 Update dynamic elements.
                     foreach (s; gasslugs) {
-                        s.time_derivatives(1);
+                        s.time_derivatives(1, sim_data.sim_time+sim_data.dt_global);
                         s.corrector_step(sim_data.dt_global);
                         if (s.bad_cells() > 0) { throw new Exception("Bad cells"); }
                     }

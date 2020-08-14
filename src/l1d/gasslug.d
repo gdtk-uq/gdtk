@@ -24,6 +24,7 @@ import gasflow;
 import config;
 import lcell;
 import piston;
+import valve;
 import endcondition;
 import simcore; // has the core data arrays
 import misc;
@@ -268,7 +269,7 @@ public:
     }
 
     @nogc
-    void time_derivatives(int level)
+    void time_derivatives(int level, double t)
     {
         // Compute face motion as Riemann subproblems.
         // For the moment, use cell-centre values as the left and right states.
@@ -424,6 +425,53 @@ public:
                 throw new Exception(msg);
             }
         } // end foreach f
+        //
+        // After we compute the normal Riemann solutions,
+        // we apply the closing-off effect of any valves.
+        //
+        // Presently, this is limited to internal faces within the gas slug,
+        // so we should be careful to set up simulations that do not have multiple
+        // gas slugs running through a partially-closed valve.
+        // Once a valve is fully open, this restriction no longer matters.
+        //
+        foreach (valve; simcore.valves) {
+            // Note that we need the current value of time
+            // in order to evaluate fopen for the valve.
+            double fopen = valve.fopen(t);
+            if (fopen > 0.999) { continue; } // Fully open so no need to do more.
+            if ((faces[0].x < valve.x) && (faces[$-1].x > valve.x)) {
+                // Do something to the internal face that is nearest to the valve.
+                // We limit the interaction to internal faces because we do not
+                // wish to have to deal with all of the special cases of an end face.
+                size_t closest_f = 1;
+                double closest_distance = fabs(faces[1].x - valve.x);
+                foreach (i; 2 .. faces.length-1) {
+                    double distance = fabs(faces[i].x - valve.x);
+                    if (distance < closest_distance) {
+                        closest_f = i;
+                        closest_distance = distance;
+                    }
+                }
+                // Do the two one-sided calculations as if the valve is closed.
+                double pLstar; double pRstar;
+                LCell cL = cells[closest_f-1];
+                LCell cR = cells[closest_f];
+                piston_at_right(cL.gas, cL.vel, gmodel, 0.0, pLstar);
+                piston_at_left(cR.gas, cR.vel, gmodel, 0.0, pRstar);
+                // The final face velocity and pressure are weighted sums
+                // the of the open and closed results.
+                LFace f = faces[closest_f];
+                // [FIX-ME] Once we introduce the valve, we really have different
+                // pressures on either-side of the face, else our model is not consistent.
+                // Applying (later) a very wrong pressure at the cell face is just
+                // asking for trouble.
+                f.p = (1.0-fopen)*(pLstar+pRstar)*0.5 + fopen*f.p;
+                f.dxdt[level] = fopen*f.dxdt[level];
+            }
+        }
+        //
+        // Now that we have the face velocities and pressures,
+        // we are ready to focus on the cell properties.
         foreach (c; cells) {
             c.source_terms(viscous_effects, adiabatic, gmodel);
         }

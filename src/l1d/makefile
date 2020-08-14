@@ -11,7 +11,7 @@ PLATFORM ?= linux
 PROGRAMS := l1d4 l1d4-prep
 
 L1D_FILES := config.d simcore.d tube.d gasslug.d lcell.d \
-	piston.d endcondition.d misc.d postprocess.d
+	piston.d valve.d endcondition.d misc.d postprocess.d
 
 LUA_MODULES :=
 
