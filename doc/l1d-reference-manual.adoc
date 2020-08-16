@@ -1,6 +1,6 @@
 = L1d Reference Manual for Users, v4.0
 Peter A. Jacobs; Rowan J. Gollan
-2020-06-22
+2020-08-16
 :toc: right
 :stylesheet: readthedocs.css
 :sectnums:
@@ -653,12 +653,39 @@ the `assemble_gas_path` function will create and connect them implicitly.
   PistonFace()
 
 
+== Valves
+Valve objects may be constructed to restrict the motion of gas slugs
+at some internal point.
+A valve is located at a particular x-location and has a history
+of open-area-fraction specified by a table of times with particular
+`fopen` values.
+At any time, the fraction of open area is interpolated linearly from this table.
+For example:
+
+  v = Valve(x=-1.0, times=[0.020, 0.030], fopen=[0.0, 1.0])
+
+This defines a valve that remains closed up until `t=0.020` and is fully open
+by `t=0.030`.
+For this simple example, it is easy to write the sequences for `times` and
+`fopen` explicitly, however, more sophisticated openings may be conveniently
+generated via a Python function in your input script.
+The details are up to you but the use of `numpy` arrays and their associated
+array functions will probably be handy.
+
+The effect of the valve is applied to the nearest internal face of a gas slug
+that covers the valve location.
+For this closest interface, the normal (fully-open) Riemann solver result
+of intermediate pressures and and velocity is blended with the fully-closed
+Riemann-solver result (of differing stagnation pressures and zero velocity)
+according to the fraction of open area.
+
+
 = Assembling a gas path
 Assemble a gas path by making the logical connections between adjacent components.
 The components are assembled left-to-right, as they are supplied
 to the following function.
 
-  assemble_gas_path(*components):
+  assemble_gas_path(*components)
 
 `components` ::
   An arbitrary number of arguments representing
@@ -669,6 +696,7 @@ to the following function.
   For example, connecting a GasSlug to a Piston is reasonable
   but connecting a Piston to a Diaphragm without an intervening
   GasSlug does not make sense in the context of this simulation program.
+  Also, valves are not part of the gas path.
 
 If you really want to make a connection manually, there is a function available
 to make the logical connection between a pair of components.
