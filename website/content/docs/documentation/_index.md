@@ -16,6 +16,7 @@ The GTDK documentation comes in a variety of styles, each for different purposes
   + [Presentations and seminars]({{< relref "presentations" >}}) hosts a
     collection of presentations that the developers have made over the years
     about the development and use of the toolkit.
-  + [Examples]({{< relref "examples" >}}) provides a catalog of the examples.
+  + [Examples and FAQ]({{< relref "examples" >}}) provides a catalog
+    of the examples and a list of frequently-asked questions.
 
 

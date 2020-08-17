@@ -23,10 +23,15 @@ LIBRARY_DOC_FILES := flow/gas-flow.adoc \
 	geom/elements.adoc
 
 EILMER_CATALOG_ENTRIES := $(EXAMPLES_DIR)/2D/forward-facing-step/readme.adoc \
-	$(EXAMPLES_DIR)/2D/sphere-nonaka/readme.adoc
+	$(EXAMPLES_DIR)/2D/sphere-nonaka/readme.adoc \
+	$(EXAMPLES_DIR)/2D/foil-circular-arc-transonic/readme.adoc \
+	$(EXAMPLES_DIR)/2D/flat-plate-hakkinen-swbli/readme.adoc \
+	$(EXAMPLES_DIR)/2D/nozzle-conical-back/readme.adoc
+
 
 all: eilmer-reference-manual.html \
 	eilmer-catalog-of-examples.html \
+	eilmer-faq.html \
 	l1d-reference-manual.html \
 	library-reference-manual.html \
 	geometry-reference-manual.html \
@@ -39,6 +44,9 @@ eilmer-reference-manual.html: eilmer-reference-manual.adoc $(EILMER_DOC_FILES)
 
 eilmer-catalog-of-examples.html: eilmer-catalog-of-examples.adoc $(EILMER_CATALOG_ENTRIES)
 	asciidoctor eilmer-catalog-of-examples.adoc
+
+eilmer-faq.html: eilmer-faq.adoc
+	asciidoctor eilmer-faq.adoc
 
 l1d-reference-manual.html: l1d-reference-manual.adoc
 	asciidoctor l1d-reference-manual.adoc
@@ -58,6 +66,7 @@ geometry-reference-manual.html: geometry-reference-manual.adoc $(GEOM_DOC_FILES)
 clean:
 	- rm eilmer-reference-manual.html \
 		eilmer-catalog-of-examples.html \
+		eilmer-faq.html \
 		l1d-reference-manual.html \
 		library-reference-manual.html \
 		geometry-reference-manual.html \

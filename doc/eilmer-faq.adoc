@@ -1,0 +1,25 @@
+= Frequently-asked questions
+The Eilmer code gardeners
+2020-08-17
+:toc: right
+:stylesheet: readthedocs.css
+:imagesdir: gallery
+:sectnums:
+
+:leveloffset: +1
+
+= Problems on cluster computers
+
+= Generic WTF?
+
+What are time stamps? ::
+as asked by Katrina (2017-04-26) and the Singapore group.
+
+
+What is `WC`, `WCtFT` and `WCtMS`? ::
+_Wall Clock_, _Wall Clock till Final Time_ and
+_Wall Clock till Maximum allowed Steps_ estimated in seconds.
+
+:leveloffset: -1
+
+
