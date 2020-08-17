@@ -1201,9 +1201,16 @@ void list_to_rs_grids(ref const(double[]) data,
 // when it is reading Float32 values that are *too* small.
 // We have also come across unreasonably-small float values
 // in the context of reading GridPro files.
-@nogc double uflowz(double q, double tiny=1.0e-30)
+// Edit: (NNG 2020), additionally we now cap values that are too
+// large as well. This is avoids a problem with paraviews ascii
+// grid reader that causes memory errors when given values that
+// invalid float32 values 
+@nogc double uflowz(double q, double tiny=1.0e-30, double huge=1.0e30)
 {
-    return (fabs(q) > tiny) ? q: 0.0;
+    double qsafe = q;
+    if (fabs(q) < tiny) qsafe = 0.0;
+    if (fabs(q) > huge) qsafe = copysign(huge, q);
+    return qsafe;
 }
 
 // Locate the line containing target and return the tokens on that line.
@@ -1494,6 +1501,18 @@ version(sgrid_test) {
         auto my_subgrid = my_grid.subgrid(4, 3, 4, 5);
         assert(approxEqualVectors(*my_subgrid[1,1], Vector3(0.5, 0.35, 0.0)),
                failedUnitTest());
+
+        assert(uflowz(1.0)==1.0, failedUnitTest());
+        assert(uflowz(1.0e-32)==0.0, failedUnitTest());
+        assert(uflowz(1.0e-29)==1.0e-29, failedUnitTest());
+        assert(uflowz(1.0e+29)==1.0e+29, failedUnitTest());
+        assert(uflowz(1.0e+32)==1.0e+30, failedUnitTest());
+
+        assert(uflowz(-1.0)==-1.0, failedUnitTest());
+        assert(uflowz(-1.0e-32)==0.0, failedUnitTest());
+        assert(uflowz(-1.0e-29)==-1.0e-29, failedUnitTest());
+        assert(uflowz(-1.0e+29)==-1.0e+29, failedUnitTest());
+        assert(uflowz(-1.0e+32)==-1.0e+30, failedUnitTest());
         return 0;
     }
 } // end sgrid_test
