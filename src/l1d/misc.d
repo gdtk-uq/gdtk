@@ -69,8 +69,9 @@ double[int] readTimesFile()
             int tindx; double tme;
             txt.formattedRead!"%d %e"(tindx, tme);
             if (tme < previous_time) {
-                writeln("Warning: at tindx=%d, time=%e but previous=%e",
+                writefln("Warning: at tindx=%d, time=%e but time-at-previous-indx=%e",
                         tindx, tme, previous_time);
+                writeln("Maybe you have run a new simulation over the top of an old one.");
             }
             times[tindx] = tme;
             previous_time = tme;

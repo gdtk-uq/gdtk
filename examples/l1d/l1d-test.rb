@@ -17,6 +17,7 @@ test_scripts = []
 test_scripts << "sod/sod-test.rb"
 test_scripts << "sod-he-air/sod-he-air-test.rb"
 test_scripts << "piston/piston-test.rb"
+test_scripts << "piston-with-valve/piston-with-valve--test.rb"
 
 time_start = DateTime.now
 original_dir = Dir.getwd
