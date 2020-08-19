@@ -1293,15 +1293,18 @@ StructuredGrid[] importPlot3DGrid(string fileName, int dim, double scale=1.0)
     }
 
     auto f = File(fileName, "r");
-    // Determine if we have multiblock file, or not. A multiblock file
-    // will have a single integer on line.
+    // Determine if we have multiblock file, or not.
+    // A multiblock file will have a single integer on line
+    // to give the number of blocks.
+    // A single-block file will start immediately with numbers
+    // that specify size of the grid in each dimension.
     auto line = f.readln().strip();
     auto tokens = line.split();
     int nBlocks = (tokens.length == 1) ? to!int(tokens[0]) : 1;
     // Next gather up the ni, nj and (possibly) nk dimensions.
     StructuredGrid[] grids;
-    if (nBlocks == 1) {
-        // We already have the line gather up with indices.
+    if ((nBlocks == 1) && (tokens.length > 1)) {
+        // Already have read the line with grid size in each dimesion.
         auto niv = to!int(tokens[0]);
         auto njv = to!int(tokens[1]);
         auto nkv = (dim == 3) ? to!int(tokens[2]) : 1;
