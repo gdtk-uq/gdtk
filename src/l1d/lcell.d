@@ -27,8 +27,9 @@ public:
 
     double x0;       // initial position for time step
     double[2] dxdt;  // time derivatives, predictor-corrector levels
-    double pLstar, pRstar;  // current pressure
-    // If there is a valve at the interface, it may maintain different pressures.
+    double p;        // current pressure from the Riemann problem solution.
+    double pLstar, pRstar;  // pressures either side of a closed (hypothetical) valve
+    double fopen;    // fraction open for a valve 0.0 <= fopen <= 1.0
 
     this()
     {

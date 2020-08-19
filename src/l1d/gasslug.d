@@ -271,8 +271,10 @@ public:
     @nogc
     void time_derivatives(int level, double t)
     {
-        // Compute face motion as Riemann subproblems.
-        // For the moment, use cell-centre values as the left and right states.
+        // For the interface between each of the control-mass cells,
+        // compute face motion as Riemann subproblems.
+        // There will be a single pressure and a single velocity
+        // as a result of solving the Riemann problem.
         foreach (i, f; faces) {
             // Need to consider the end conditions.
             if (i == 0) {
@@ -286,15 +288,12 @@ public:
                             auto slugL =  dia.slugL;
                             LCell cL = (dia.slugL_end == End.L) ?
                                 slugL.cells[0] : slugL.cells[$-1];
-                            lrivp(cL.gas, cR.gas, cL.vel, cR.vel, slugL.gmodel, gmodel,
-                                  f.dxdt[level], f.pLstar);
-                            f.pRstar = f.pLstar;
+                            lrivp(cL.gas, cR.gas, cL.vel, cR.vel, slugL.gmodel, gmodel, f.dxdt[level], f.p);
                         } else {
                             // Diaphragm acts as a fixed wall.
                             LCell cR = cells[0];
-                            piston_at_left(cR.gas, cR.vel, gmodel, 0.0, f.pRstar);
+                            piston_at_left(cR.gas, cR.vel, gmodel, 0.0, f.p);
                             f.dxdt[level] = 0.0;
-                            f.pLstar = f.pRstar;
                         }
                     }
                     if (cast(GasInterface) ecL) {
@@ -303,30 +302,25 @@ public:
                         auto slugL =  my_ecL.slugL;
                         LCell cL = (my_ecL.slugL_end == End.L) ?
                             slugL.cells[0] : slugL.cells[$-1];
-                        lrivp(cL.gas, cR.gas, cL.vel, cR.vel, slugL.gmodel, gmodel,
-                              f.dxdt[level], f.pLstar);
-                        f.pRstar = f.pLstar;
+                        lrivp(cL.gas, cR.gas, cL.vel, cR.vel, slugL.gmodel, gmodel, f.dxdt[level], f.p);
                     }
                     if (cast(FreeEnd) ecL) {
                         LCell cR = cells[0];
-                        f.pRstar = cR.gas.p;
+                        f.p = cR.gas.p;
                         f.dxdt[level] = cR.vel;
-                        f.pLstar = f.pRstar;
                     }
                     if (cast(VelocityEnd) ecL) {
                         auto my_ecL = cast(VelocityEnd) ecL;
                         LCell cR = cells[0];
-                        piston_at_left(cR.gas, cR.vel, gmodel, my_ecL.vel, f.pRstar);
+                        piston_at_left(cR.gas, cR.vel, gmodel, my_ecL.vel, f.p);
                         f.dxdt[level] = my_ecL.vel;
-                        f.pLstar = f.pRstar;
                     }
                     if (cast(PistonFace) ecL) {
                         auto my_ecL = cast(PistonFace) ecL;
                         Piston piston = my_ecL.pistonL;
                         LCell cR = cells[0];
-                        piston_at_left(cR.gas, cR.vel, gmodel, piston.vel, f.pRstar);
+                        piston_at_left(cR.gas, cR.vel, gmodel, piston.vel, f.p);
                         f.dxdt[level] = piston.vel;
-                        f.pLstar = f.pRstar;
                     }
                 } else {
                     throw new Error("Left end of gas slug does not have an end condition.");
@@ -342,15 +336,12 @@ public:
                             auto slugR =  dia.slugR;
                             LCell cR = (dia.slugR_end == End.L) ?
                                 slugR.cells[0] : slugR.cells[$-1];
-                            lrivp(cL.gas, cR.gas, cL.vel, cR.vel, gmodel, slugR.gmodel,
-                                  f.dxdt[level], f.pLstar);
-                            f.pRstar = f.pLstar;
+                            lrivp(cL.gas, cR.gas, cL.vel, cR.vel, gmodel, slugR.gmodel, f.dxdt[level], f.p);
                         } else {
                             // Diaphragm acts as a fixed wall.
                             LCell cL = cells[$-1];
-                            piston_at_right(cL.gas, cL.vel, gmodel, 0.0, f.pLstar);
+                            piston_at_right(cL.gas, cL.vel, gmodel, 0.0, f.p);
                             f.dxdt[level] = 0.0;
-                            f.pRstar = f.pLstar;
                         }
                     }
                     if (cast(GasInterface) ecR) {
@@ -359,30 +350,25 @@ public:
                         auto slugR =  my_ecR.slugR;
                         LCell cR = (my_ecR.slugR_end == End.L) ?
                             slugR.cells[0] : slugR.cells[$-1];
-                        lrivp(cL.gas, cR.gas, cL.vel, cR.vel, gmodel, slugR.gmodel,
-                              f.dxdt[level], f.pLstar);
-                        f.pRstar = f.pLstar;
+                        lrivp(cL.gas, cR.gas, cL.vel, cR.vel, gmodel, slugR.gmodel, f.dxdt[level], f.p);
                     }
                     if (cast(FreeEnd) ecR) {
                         LCell cL = cells[$-1];
-                        f.pLstar = cL.gas.p;
-                        f.pRstar = f.pLstar;
+                        f.p = cL.gas.p;
                         f.dxdt[level] = cL.vel;
                     }
                     if (cast(VelocityEnd) ecR) {
                         auto my_ecR = cast(VelocityEnd) ecR;
                         LCell cL = cells[$-1];
-                        piston_at_right(cL.gas, cL.vel, gmodel, my_ecR.vel, f.pLstar);
+                        piston_at_right(cL.gas, cL.vel, gmodel, my_ecR.vel, f.p);
                         f.dxdt[level] = my_ecR.vel;
-                        f.pRstar = f.pLstar;
                     }
                     if (cast(PistonFace) ecR) {
                         auto my_ecR = cast(PistonFace) ecR;
                         Piston piston = my_ecR.pistonR;
                         LCell cL = cells[$-1];
-                        piston_at_right(cL.gas, cL.vel, gmodel, piston.vel, f.pLstar);
+                        piston_at_right(cL.gas, cL.vel, gmodel, piston.vel, f.p);
                         f.dxdt[level] = piston.vel;
-                        f.pRstar = f.pLstar;
                     }
                 } else {
                     throw new Error("Right end of gas slug does not have an end condition.");
@@ -420,22 +406,20 @@ public:
                         interpR_prepare(cL0.L, cR0.L, cR1.L);
                         interpR(cL0, cR0, cR1, gsR, velR);
                     }
-                    lrivp(gsL, gsR, velL, velR, gmodel, gmodel, f.dxdt[level], f.pLstar);
-                    f.pRstar = f.pLstar;
+                    lrivp(gsL, gsR, velL, velR, gmodel, gmodel, f.dxdt[level], f.p);
                 } else {
                     // Just use cell-centre values directly.
                     LCell cL0 = cells[i-1];
                     LCell cR0 = cells[i];
-                    lrivp(cL0.gas, cR0.gas, cL0.vel, cR0.vel, gmodel, gmodel, f.dxdt[level], f.pLstar);
-                    f.pRstar = f.pLstar;
+                    lrivp(cL0.gas, cR0.gas, cL0.vel, cR0.vel, gmodel, gmodel, f.dxdt[level], f.p);
                 } // end if(x_order
             }
             // At this point pLstar and pRstar should be the same value.
-            if (isNaN(f.dxdt[level]) || isNaN(f.pLstar) || f.pLstar < 0.0) {
+            if (isNaN(f.dxdt[level]) || isNaN(f.p) || f.p < 0.0) {
                 string msg = "Bad Riemann solve.";
                 debug {
                     msg ~= text(" i=", i, " f.x=", f.x, " level=", level);
-                    msg ~= text(" f.dxdt=", f.dxdt[level], " f.pLstar=", f.pLstar);
+                    msg ~= text(" f.dxdt=", f.dxdt[level], " f.p=", f.p);
                 }
                 throw new Exception(msg);
             }
@@ -443,6 +427,11 @@ public:
         //
         // After we compute the normal Riemann solutions,
         // we apply the closing-off effect of any valves.
+        foreach (f; faces) {
+            // Start by assuming that the tube is completely open and
+            // that there are zero pressures associated with any valve effect.
+            f.fopen = 1.0; f.pLstar = 0.0; f.pRstar = 0.0;
+        }
         //
         // Presently, this is limited to internal faces within the gas slug,
         // so we should be careful to set up simulations that do not have multiple
@@ -468,21 +457,18 @@ public:
                     }
                 }
                 // Do the two one-sided calculations as if the valve is closed.
-                double pLstar; double pRstar;
+                LFace f = faces[closest_f];
+                f.fopen = fopen;
                 LCell cL = cells[closest_f-1];
                 LCell cR = cells[closest_f];
-                piston_at_right(cL.gas, cL.vel, gmodel, 0.0, pLstar);
-                piston_at_left(cR.gas, cR.vel, gmodel, 0.0, pRstar);
-                // The final face velocity and pressure are weighted sums
-                // the of the open and closed results.
-                LFace f = faces[closest_f];
-                // Once we introduce the valve, we really may have different pressures
-                // on either-side of the face.
-                f.pLstar = (1.0-fopen)*pLstar + fopen*f.pLstar;
-                f.pRstar = (1.0-fopen)*pRstar + fopen*f.pRstar;
-                f.dxdt[level] = fopen*f.dxdt[level];
+                piston_at_right(cL.gas, cL.vel, gmodel, 0.0, f.pLstar);
+                piston_at_left(cR.gas, cR.vel, gmodel, 0.0, f.pRstar);
+                // Apply the effect of the valve to the velocity.
+                f.dxdt[level] *= fopen;
+                // Below, the other effects of the valve will be fed
+                // into the conservation equations for the gas cells.
             }
-        }
+        } // end foreach valve
         //
         // Now that we have the face velocities and pressures,
         // we are ready to focus on the cell properties.
@@ -502,11 +488,14 @@ public:
             // Mass.
             c.dmassdt[level] = c.Q_mass;
             // Momentum -- force on cell
-            c.dmomdt[level] = fL.pRstar*fL.area - fR.pLstar*fR.area +
+            // Note that the valve faces have a contribution to momentum.
+            c.dmomdt[level] = fL.pRstar*fL.area*(1.0-fL.fopen) - fR.pLstar*fR.area*(1.0-fR.fopen) +
+                fL.p*fL.area*fL.fopen - fR.p*fR.area*fR.fopen +
                 c.gas.p*(fR.area - fL.area) + c.Q_moment;
-            // Energy -- work done on cell
-            c.dEdt[level] = fL.pRstar*fL.area*fL.dxdt[level] -
-                fR.pLstar*fR.area*fR.dxdt[level] + c.Q_energy;
+            // Energy -- work done on cell.
+            // Only the fraction-open will contribute to energy transfer across faces.
+            c.dEdt[level] = fL.p*fL.area*fL.fopen*fL.dxdt[level] -
+                fR.p*fR.area*fR.fopen*fR.dxdt[level] + c.Q_energy;
             // Particle distance travelled.
             c.dL_bardt[level] = fabs(c.vel);
         }

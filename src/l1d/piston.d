@@ -172,12 +172,12 @@ public:
         double pL = 0.0;
         if (ecL && ecL.slugL) {
             pL = (ecL.slugL_end == End.L) ?
-                ecL.slugL.faces[0].pLstar : ecL.slugL.faces[$-1].pRstar;
+                ecL.slugL.faces[0].p : ecL.slugL.faces[$-1].p;
         }
         double pR = 0.0;
         if (ecR && ecR.slugR) {
             pR = (ecR.slugR_end == End.L) ?
-                ecR.slugR.faces[0].pLstar : ecR.slugR.faces[$-1].pRstar;
+                ecR.slugR.faces[0].p : ecR.slugR.faces[$-1].p;
         }
         // Pressures drive the piston dynamics.
         if (is_restrain) {

@@ -26,13 +26,13 @@ class TestPiston < Test::Unit::TestCase
     sim_time = 0.0
     lines = o.split("\n")
     lines.each do |txt|
-      if txt.match('Step=2850') then
+      if txt.match('Step=2900') then
         items = txt.split(' ')
         sim_time_items = items[1].split('=')
         sim_time = sim_time_items[1].to_f
       end
     end
-    assert((sim_time - 0.03949).abs < 0.001, "Incorrect sim_time at step 2850.")
+    assert((sim_time - 0.0396).abs < 0.001, "Incorrect sim_time at step 2900.")
   end
 
   def test_2_post
@@ -47,8 +47,8 @@ class TestPiston < Test::Unit::TestCase
     x = items[2].to_f
     v = items[3].to_f
     assert((t - 0.040).abs < 0.0001, "Failed to reach correct final time.")
-    assert((x - 5.056).abs < 0.1, "Failed to reach correct position.")
-    assert((v - 197.3).abs < 1.0, "Failed to reach correct velocity.")
+    assert((x - 5.062).abs < 0.1, "Failed to reach correct position.")
+    assert((v - 199.6).abs < 1.0, "Failed to reach correct velocity.")
   end
 
   def test_3_energies
@@ -59,9 +59,7 @@ class TestPiston < Test::Unit::TestCase
     e0 = items[-1].to_f
     items = txt[-1].split(' ')
     e1 = items[-1].to_f
-    # Early simulations of this case show an energy loss of less than 1%
-    # Need to fix.
-    assert((e1 - e0).abs/e0 < 0.01, "Lost too much energy through valve opening.")
+    assert((e1 - e0).abs/e0 < 0.0001, "Lost too much energy.")
   end
 
 end
