@@ -1,6 +1,6 @@
 // sfluidblock.d
 // Class for structured blocks of cells, for use within Eilmer4.
-// This is the "classic" block within the mbcns/Eilmer series 
+// This is the "classic" block within the mbcns/Eilmer series
 // of flow simulation codes.
 
 // Peter J. 2014-07-20 first cut.
@@ -53,10 +53,10 @@ public:
     size_t nicell;
     size_t njcell;
     size_t nkcell;
-    size_t imin, imax; 
+    size_t imin, imax;
     size_t jmin, jmax;
     size_t kmin, kmax;
-    
+
     // A place to store coordinates of the corner vertices.
     // For a moving-grid simulation these will be kept up to date
     // and communicated to user-defined Lua functions via infoFluidBlock.
@@ -65,7 +65,7 @@ public:
     // Work-space that gets reused.
     // The following objects are used in the convective_flux method.
     OneDInterpolator one_d;
-    
+
 private:
     StructuredGrid grid; // for reading and writing
     // Total number of cells in each direction for this block.
@@ -77,7 +77,7 @@ private:
     // ctr = cell center values
     // ifi = east-facing face properties and fluxes (unit normal in the i-index direction)
     // ifj = north-facing face properties and fluxes (normal in the j-index direction)
-    // ifk = top-facing 
+    // ifk = top-facing
     // vtx = cell vertex values (used for the viscous terms, mostly)
     // sifi, sifj and sifk are secondary-cell faces (whose corner nodes are the
     //                     the primary-cell centres.
@@ -122,7 +122,7 @@ public:
             kmin = GlobalConfig.n_ghost_cell_layers; kmax = kmin + nkcell - 1;
         }
     } // end constructor
-    
+
     this(int blk_id, JSONValue json_data)
     {
         nicell = getJSONint(json_data, "nic", 0);
@@ -210,7 +210,7 @@ public:
     @nogc size_t to_single_index(size_t i, size_t j, size_t k) const
     {
         assert(i < _nidim && j < _njdim && k < _nkdim, "Index out of bounds.");
-        return (k*_njdim + j)*_nidim + i; 
+        return (k*_njdim + j)*_nidim + i;
     }
 
     pragma(inline, true)
@@ -247,7 +247,7 @@ public:
         k = (myConfig.dimensions == 2) ? 0 : k - n_ghost_cell_layers;
         return (k*njcell + j)*nicell + i;
     }
-    
+
     pragma(inline, true)
     @nogc size_t[3] cell_id_to_ijk_indices(size_t id) const
     {
@@ -264,12 +264,12 @@ public:
     } // end cell_id_to_ijk_indices()
 
     pragma(inline, true)
-    @nogc ref FVCell get_cell(size_t i, size_t j, size_t k=0) 
+    @nogc ref FVCell get_cell(size_t i, size_t j, size_t k=0)
     {
         return _ctr[to_single_index(i,j,k)];
     }
     pragma(inline, true)
-    @nogc ref FVInterface get_ifi(size_t i, size_t j, size_t k=0) 
+    @nogc ref FVInterface get_ifi(size_t i, size_t j, size_t k=0)
     {
         return _ifi[to_single_index(i,j,k)];
     }
@@ -530,13 +530,13 @@ public:
             } // for j
         } // for k
         //
-        // Sometimes it is convenient for an interface to come complete 
+        // Sometimes it is convenient for an interface to come complete
         // with information about the vertices that define it and also
         // the cells that adjoin it.
         //
         // ifi interfaces are west interfaces, with their unit normal pointing east.
         // In 2D, vtx0==p00, vtx1==p01.
-        // In 3D, the cycle [vtx0,vtx1,vtx2,vtx3] progresses counter-clockwise around 
+        // In 3D, the cycle [vtx0,vtx1,vtx2,vtx3] progresses counter-clockwise around
         // the periphery of the face when the normal unit vector is pointing toward you.
         // t1 vector aligned with j-index direction
         // t2 vector aligned with k-index direction
@@ -672,7 +672,7 @@ public:
         // 25-Feb-2014
         // Jason Qin and Paul Petrie-Repar have identified the lack of exact symmetry in
         // the reconstruction process at the wall as being a cause of the leaky wall
-        // boundary conditions.  Note that the symmetry is not consistent with the 
+        // boundary conditions.  Note that the symmetry is not consistent with the
         // linear extrapolation used for the positions and volumes in the next section.
         // [TODO] -- think about this carefully.
         auto option = CopyDataOption.cell_lengths_only;
@@ -856,7 +856,7 @@ public:
             if (myConfig.spatial_deriv_locn == SpatialDerivLocn.faces) {
                 foreach(iface; faces) {
                     iface.grad.set_up_workspace_leastsq(iface.cloud_pos, iface.pos, false, iface.ws_grad);
-                }       
+                }
             } else if (myConfig.spatial_deriv_locn == SpatialDerivLocn.vertices){
                 foreach(vtx; vertices) {
                     vtx.grad.set_up_workspace_leastsq(vtx.cloud_pos, vtx.pos[gtl], true, vtx.ws_grad);
@@ -884,7 +884,7 @@ public:
             break;
         }
     } // end store_references_for_derivative_calc()
-    
+
     void store_references_for_derivative_calc_at_cells(size_t gtl)
     {
         // This locations is only valid for the weighted least squares calculation.
@@ -957,11 +957,11 @@ public:
                         FVInterface F = get_ifj(i,j+1);
                         // Retain locations and references to flow states for later.
                         if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
-                            face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos[gtl]), &(C.pos), 
+                            face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos[gtl]), &(C.pos),
                                               &(D.pos), &(E.pos[gtl]), &(F.pos)];
                             face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs, F.fs];
                         } else {
-                            face.cloud_pos = [&(A.pos), &(B.pos[gtl]), &(C.pos), 
+                            face.cloud_pos = [&(A.pos), &(B.pos[gtl]), &(C.pos),
                                               &(D.pos), &(E.pos[gtl]), &(F.pos)];
                             face.cloud_fs = [A.fs, B.fs, C.fs, D.fs, E.fs, F.fs];
                         }
@@ -1003,15 +1003,15 @@ public:
                         FVCell E = get_cell(i,j);
                         FVInterface F = get_ifi(i,j);
                         // Retain locations and references to flow states for later.
-                        face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos[gtl]), &(C.pos), 
+                        face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos[gtl]), &(C.pos),
                                           &(D.pos), &(E.pos[gtl]), &(F.pos)];
                         face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs, F.fs];
                         if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
-                            face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos[gtl]), &(C.pos), 
+                            face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos[gtl]), &(C.pos),
                                               &(D.pos), &(E.pos[gtl]), &(F.pos)];
                             face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs, F.fs];
                         } else {
-                            face.cloud_pos = [&(A.pos), &(B.pos[gtl]), &(C.pos), 
+                            face.cloud_pos = [&(A.pos), &(B.pos[gtl]), &(C.pos),
                                               &(D.pos), &(E.pos[gtl]), &(F.pos)];
                             face.cloud_fs = [A.fs, B.fs, C.fs, D.fs, E.fs, F.fs];
                         }
@@ -1067,12 +1067,12 @@ public:
                             FVCell J = get_cell(i,j,k);
                             // Retain locations and references to flow states for later.
                             if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
-                                face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]), 
+                                face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]),
                                                   &(F.pos), &(G.pos), &(H.pos), &(I.pos), &(J.pos[gtl])];
                                 face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs,
                                                  F.fs, G.fs, H.fs, I.fs, J.fs];
                             } else {
-                                face.cloud_pos = [&(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]), 
+                                face.cloud_pos = [&(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]),
                                                   &(F.pos), &(G.pos), &(H.pos), &(I.pos), &(J.pos[gtl])];
                                 face.cloud_fs = [A.fs, B.fs, C.fs, D.fs, E.fs,
                                                  F.fs, G.fs, H.fs, I.fs, J.fs];
@@ -1129,12 +1129,12 @@ public:
                             FVCell J = get_cell(i,j,k);
                             // Retain locations and references to flow states for later.
                             if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
-                                face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]), 
+                                face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]),
                                                   &(F.pos), &(G.pos), &(H.pos), &(I.pos), &(J.pos[gtl])];
                                 face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs,
                                                  F.fs, G.fs, H.fs, I.fs, J.fs];
                             } else {
-                                face.cloud_pos = [&(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]), 
+                                face.cloud_pos = [&(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]),
                                                   &(F.pos), &(G.pos), &(H.pos), &(I.pos), &(J.pos[gtl])];
                                 face.cloud_fs = [A.fs, B.fs, C.fs, D.fs, E.fs,
                                                  F.fs, G.fs, H.fs, I.fs, J.fs];
@@ -1191,12 +1191,12 @@ public:
                             FVCell J = get_cell(i,j,k);
                             // Retain locations and references to flow states for later.
                             if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
-                                face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]), 
+                                face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]),
                                                   &(F.pos), &(G.pos), &(H.pos), &(I.pos), &(J.pos[gtl])];
                                 face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs,
                                              F.fs, G.fs, H.fs, I.fs, J.fs];
                             } else {
-                                face.cloud_pos = [&(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]), 
+                                face.cloud_pos = [&(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]),
                                                   &(F.pos), &(G.pos), &(H.pos), &(I.pos), &(J.pos[gtl])];
                                 face.cloud_fs = [A.fs, B.fs, C.fs, D.fs, E.fs,
                                                  F.fs, G.fs, H.fs, I.fs, J.fs];
@@ -1276,7 +1276,7 @@ public:
             } // i loop
             // For the corners, we are going to use the same divergence-theorem-based
             // gradient calculator and let one edge collapse to a point, thus giving
-            // it a triangle to compute over.  This should be fine. 
+            // it a triangle to compute over.  This should be fine.
             // North-east corner
             {
                 i = imax+1; j = jmax+1;
@@ -1447,7 +1447,7 @@ public:
             }
             // Now, do the 4 edges around the bottom face.
             // Bottom-South edge [0]-->[1]
-            j = jmin; k = kmin;         
+            j = jmin; k = kmin;
             for ( i = imin+1; i <= imax; ++i ) {
                 FVVertex vtx = get_vtx(i,j,k);
                 FVCell c0 = get_cell(i-1,j,k);
@@ -1779,10 +1779,10 @@ public:
         if (myConfig.verbosity_level > 1) { writeln("write_underlying_grid() for block ", id); }
         grid.write(fileName, myConfig.grid_format);
     }
-    
+
     override double read_solution(string filename, bool overwrite_geometry_data)
     // Note that the position data is read into grid-time-level 0
-    // by scan_values_from_string(). 
+    // by scan_values_from_string().
     // Returns sim_time from file.
     // Keep in sync with write_initial_flow_file() in flowstate.d
     // and write_solution below.
@@ -1801,7 +1801,7 @@ public:
             fin.rawRead(found_header);
             if (found_header != expected_header) {
                 throw new FlowSolverException("SFluidBlock.read_solution from raw_binary_file: " ~
-                                              "unexpected header: " ~ to!string(found_header)); 
+                                              "unexpected header: " ~ to!string(found_header));
             }
             int[1] int1; fin.rawRead(int1);
             int label_length = int1[0];
@@ -1813,7 +1813,7 @@ public:
             double[1] dbl1; fin.rawRead(dbl1); sim_time = dbl1[0];
             fin.rawRead(int1); nvariables = int1[0];
             foreach(i; 0 .. nvariables) {
-                char[] varname; fin.rawRead(int1); varname.length = int1[0]; 
+                char[] varname; fin.rawRead(int1); varname.length = int1[0];
                 fin.rawRead(varname);
             }
             int[4] int4; fin.rawRead(int4);
@@ -1823,12 +1823,12 @@ public:
                 string msg = text("dimensions found: " ~ to!string(my_dimensions));
                 throw new FlowSolverException(msg);
             }
-            if (nic != nicell || njc != njcell || 
+            if (nic != nicell || njc != njcell ||
                 nkc != ((myConfig.dimensions == 3) ? nkcell : 1)) {
                 string msg = text("For block[", id, "] we have a mismatch in solution size.",
                                   " Have read nic=", nic, " njc=", njc, " nkc=", nkc);
                 throw new FlowSolverException(msg);
-            }   
+            }
             for ( size_t k = kmin; k <= kmax; ++k ) {
                 for ( size_t j = jmin; j <= jmax; ++j ) {
                     for ( size_t i = imin; i <= imax; ++i ) {
@@ -1844,7 +1844,7 @@ public:
             formattedRead(line, "structured_grid_flow %s", &format_version);
             if (format_version != "1.0") {
                 string msg = text("File format version found: " ~ format_version);
-                throw new FlowSolverException(msg); 
+                throw new FlowSolverException(msg);
             }
             line = byLine.front; byLine.popFront();
             formattedRead(line, "label: %s", &myLabel);
@@ -1879,12 +1879,12 @@ public:
             formattedRead(line, "njcell: %d", &njc);
             line = byLine.front; byLine.popFront();
             formattedRead(line, "nkcell: %d", &nkc);
-            if (nic != nicell || njc != njcell || 
+            if (nic != nicell || njc != njcell ||
                 nkc != ((myConfig.dimensions == 3) ? nkcell : 1)) {
                 string msg = text("For block[", id, "] we have a mismatch in solution size.",
                                   " Have read nic=", nic, " njc=", njc, " nkc=", nkc);
                 throw new FlowSolverException(msg);
-            }   
+            }
             for ( size_t k = kmin; k <= kmax; ++k ) {
                 for ( size_t j = jmin; j <= jmax; ++j ) {
                     for ( size_t i = imin; i <= imax; ++i ) {
@@ -2036,13 +2036,10 @@ public:
                         auto IFace = get_ifi(i,j,k);
                         FlowState[4] stencil;
                         int location = 0;
-                        
                         if ((i == imin) && bc[Face.west].convective_flux_computed_in_bc) continue;
                         if ((i == imax+1) && bc[Face.east].convective_flux_computed_in_bc) continue;
-
                         stencil = [get_cell(i-2, j, k).fs, get_cell(i-1, j, k).fs, get_cell(i, j, k).fs, get_cell(i+1, j, k).fs];
                         ASF_242(stencil, IFace, myConfig);
-
                     }
                 }
             }
@@ -2051,38 +2048,30 @@ public:
                 for (size_t i = imin; i <= imax; ++i) {
                     for (size_t j = jmin; j <= jmax+1; ++j) {
                         auto IFace = get_ifj(i,j,k);
-                        
                         FlowState[4] stencil;
                         int location = 0;
-                        
                         if ((j == jmin) && bc[Face.south].convective_flux_computed_in_bc) continue;
                         if ((j == jmax+1) && bc[Face.north].convective_flux_computed_in_bc) continue;
-
                         stencil = [get_cell(i, j-2, k).fs, get_cell(i, j-1, k).fs, get_cell(i, j, k).fs, get_cell(i, j+1, k).fs];
                         ASF_242(stencil, IFace, myConfig);
                     }
                 }
             }
-    
             if (myConfig.dimensions == 2) return;
-
             // ifj interfaces are top-facing interfaces.
             for (size_t i = imin; i <= imax; ++i) {
                 for (size_t j = jmin; i <= jmax; ++j) {
                     for (size_t k = kmin; k <= kmax+1; ++k) {
                         auto IFace = get_ifk(i,j,k);
-                        
                         FlowState[4] stencil;
-                        
                         if ((k == kmin) && bc[Face.bottom].convective_flux_computed_in_bc) continue;
                         if ((k == kmax+1) && bc[Face.top].convective_flux_computed_in_bc) continue;
-
                         stencil = [get_cell(i, j, k-2).fs, get_cell(i, j, k-1).fs, get_cell(i, j, k).fs, get_cell(i, j, k+1).fs];
                         ASF_242(stencil, IFace, myConfig);
                     }
                 }
             }
-            return; 
+            return;
         } // end if (high_order_flux_calculator)
         //
         if (myConfig.interpolation_order == 3) {
@@ -2151,9 +2140,9 @@ public:
                     } // j loop
                 } // i loop
             } // for k
-    
+
             if (myConfig.dimensions == 2) return; // Our work is done.
-    
+
             // ifk interfaces are Top-facing interfaces.
             if (!bc[Face.top].ghost_cell_data_available) { throw new Error("top ghost cell data missing"); }
             if (!bc[Face.bottom].ghost_cell_data_available) { throw new Error("bottom ghost cell data missing"); }
@@ -2181,7 +2170,7 @@ public:
                         if ((k == kmin) && bc[Face.bottom].convective_flux_computed_in_bc) continue;
                         if ((k == kmax+1) && bc[Face.top].convective_flux_computed_in_bc) continue;
                         compute_interface_flux(Lft, Rght, IFace, myConfig, omegaz);
-                    } // for k 
+                    } // for k
                 } // j loop
             } // i loop
             return; // Our work is done.
@@ -2293,9 +2282,9 @@ public:
                 } // j loop
             } // i loop
         } // for k
-    
+
         if (myConfig.dimensions == 2) return; // Our work is done.
-    
+
         // ifk interfaces are Top-facing interfaces.
         for (size_t k = kmin; k <= kmax+1; ++k) {
             for (size_t j = jmin; j <= jmax; ++j) {
@@ -2344,7 +2333,7 @@ public:
                     } else {
                         compute_interface_flux(Lft, Rght, IFace, myConfig, omegaz);
                     }
-                } // for k 
+                } // for k
             } // j loop
         } // i loop
         return;
@@ -2429,10 +2418,10 @@ public:
             corner_coords[23] = vtx011.pos[0].z.re;
         }
     } // end copy_current_corner_coords()
-    
+
     @nogc void set_current_corner_coords_to_infinity()
     {
-        foreach(ref double cc; corner_coords) { cc = double.infinity; } 
+        foreach(ref double cc; corner_coords) { cc = double.infinity; }
     }
 } // end class SFluidBlock
 
@@ -2441,12 +2430,12 @@ public:
  *
  * \verbatim
  * The following figure shows cell [i,j] and its associated
- * vertices and faces. 
+ * vertices and faces.
  * (New arrangement, planned August 2006, implemented Nov 2006)
  *
  *
  *
- *     Vertex 3         North face           Vertex 2 
+ *     Vertex 3         North face           Vertex 2
  *   vtx[i,j+1]         ifj[i,j+1]           vtx[i+1,j+1]
  *             +--------------x--------------+
  *             |                             |
@@ -2454,7 +2443,7 @@ public:
  *             |                             |
  *             |                             |
  *             |                             |
- *   West      |         cell center         |  East 
+ *   West      |         cell center         |  East
  *   face      |          ctr[i,j]           |  face
  *   ifi[i,j]  x              o              x  ifi[i+1,j]
  *             |                             |
@@ -2488,4 +2477,3 @@ public:
  * Indexing for the 3D data -- see page 8 in 3D CFD workbook
  * \endverbatim
  */
-

@@ -1138,7 +1138,7 @@ public:
     } // end rkl2_stage_update_for_flow_on_fixed_grid2()
 
     @nogc
-    void stage_1_update_for_flow_on_fixed_grid(double dt, bool force_euler, bool with_local_time_stepping) 
+    void stage_1_update_for_flow_on_fixed_grid(double dt, bool force_euler, bool with_local_time_stepping)
     {
         // use the local-time step
         if (with_local_time_stepping) dt = this.dt_local;

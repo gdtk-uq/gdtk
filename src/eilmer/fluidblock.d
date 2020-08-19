@@ -102,10 +102,10 @@ public:
 	size_t[] local_pcell_global_coord_list;
 	size_t[][] local_ecell_global_coord_list;
 	number[][] local_entry_list;
-    
+
         // local objective function evaluation
         number locObjFcn;
-        // arrays used to temporarily store data during construction of the flow Jacobian transpose 
+        // arrays used to temporarily store data during construction of the flow Jacobian transpose
         number[][] aa;
         size_t[][] ja;
         // local effects matrix for flow Jacobian transpose.
@@ -125,7 +125,7 @@ public:
         number[] psi;
         number[] delpsi;
         // residual sensitivity w.r.t. design variables (transposed)
-        Matrix!number rT;           
+        Matrix!number rT;
         // local dot product of the residual sensitivity w.r.t. design variables (transposed) with the adjoint variables
         number[] rTdotPsi;
         // These arrays and matrices are directly tied to using the
@@ -141,7 +141,7 @@ public:
         size_t TOT_ENERGY;
         size_t TKE;
     }
-    
+
     version(nk_accelerator)
     {
     // Work-space for Newton-Krylov accelerator
@@ -175,7 +175,7 @@ public:
         // Workspace for flux_calc method.
         Lft = new FlowState(dedicatedConfig[id].gmodel);
         Rght = new FlowState(dedicatedConfig[id].gmodel);
-        // Lua interpreter for the block. 
+        // Lua interpreter for the block.
         // It will be available for computing user-defined source terms.
         registerGasModel(myL, LUA_GLOBALSINDEX);
         pushObj!(GasModel, GasModelMT)(myL, dedicatedConfig[id].gmodel);
@@ -184,8 +184,8 @@ public:
         lua_setglobal(myL, "n_species");
         lua_pushinteger(myL, dedicatedConfig[id].n_modes);
         lua_setglobal(myL, "n_modes");
-        // Although we make the helper functions available within 
-        // the block-specific Lua interpreter, we should use 
+        // Although we make the helper functions available within
+        // the block-specific Lua interpreter, we should use
         // those functions only in the context of the master thread.
         setSampleHelperFunctions(myL);
         setGridMotionHelperFunctions(myL);
@@ -220,7 +220,7 @@ public:
     @nogc abstract void propagate_inflow_data_west_to_east();
     @nogc abstract void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0);
     @nogc abstract void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0);
-    
+
     @nogc
     void identify_reaction_zones(int gtl)
     // Adjust the reactions-allowed flag for cells in this block.
@@ -244,7 +244,7 @@ public:
         debug {
             if (myConfig.reacting && myConfig.verbosity_level >= 2) {
                 writeln("identify_reaction_zones(): block ", id,
-                        " cells inside zones = ", total_cells_in_reaction_zones, 
+                        " cells inside zones = ", total_cells_in_reaction_zones,
                         " out of ", total_cells);
                 if (myConfig.reaction_zones.length == 0) {
                     writeln("Note that for no user-specified zones,",
@@ -324,7 +324,7 @@ public:
             } // foreach face
             if (myConfig.verbosity_level >= 2) {
                 writeln("identify_suppress_reconstruction_zones(): block ", id,
-                        " faces inside zones = ", total_faces_in_suppress_reconstruction_zones, 
+                        " faces inside zones = ", total_faces_in_suppress_reconstruction_zones,
                         " out of ", total_faces);
                 if (myConfig.suppress_reconstruction_zones.length == 0) {
                     writeln("Note that for no user-specified zones,",
@@ -360,10 +360,10 @@ public:
             total_cells += 1;
         } // foreach cell
         debug {
-            if (myConfig.turb_model.isTurbulent && 
+            if (myConfig.turb_model.isTurbulent &&
                 myConfig.verbosity_level >= 2) {
                 writeln("identify_turbulent_zones(): block ", id,
-                        " cells inside zones = ", total_cells_in_turbulent_zones, 
+                        " cells inside zones = ", total_cells_in_turbulent_zones,
                         " out of ", total_cells);
                 if (myConfig.turbulent_zones.length == 0) {
                     writeln("Note that for no user-specified zones,",
@@ -376,7 +376,7 @@ public:
     @nogc
     void estimate_turbulence_viscosity()
     {
-        version(turbulence) { // Exit instantly if turbulence capability disabled 
+        version(turbulence) { // Exit instantly if turbulence capability disabled
         foreach (cell; cells) {
             cell.turbulence_viscosity();
             cell.turbulence_viscosity_factor(myConfig.transient_mu_t_factor);
@@ -419,7 +419,7 @@ public:
     // we must patch the conserved quantities at the appropriate flow-level, as well as
     // patching the flow data.
     //
-    // Bad flow data can be identified by the density of internal energy 
+    // Bad flow data can be identified by the density of internal energy
     // being on the minimum limit or the velocity being very large.
     // There is also a flag to indicate that the thermo data is dodgy from an earlier
     // call to one of the thermochemical update functions.
@@ -473,7 +473,7 @@ public:
                                  id, cell.pos[gtl].x, cell.pos[gtl].y, cell.pos[gtl].z);
                         writeln(cell);
                     }
-                } // end adjust_invalid_cell_data 
+                } // end adjust_invalid_cell_data
             } // end of if invalid data...
         } // foreach cell
         return number_of_invalid_cells;
@@ -490,7 +490,7 @@ public:
             if (myConfig.dimensions == 2) {
                 final switch (myConfig.spatial_deriv_calc) {
                 case SpatialDerivCalc.least_squares:
-                    foreach(vtx; vertices) { 
+                    foreach(vtx; vertices) {
                         vtx.grad.gradients_leastsq(vtx.cloud_fs, vtx.cloud_pos, vtx.ws_grad);
                     }
                     break;
@@ -523,7 +523,7 @@ public:
             if (myConfig.dimensions == 2) {
                 final switch (myConfig.spatial_deriv_calc) {
                 case SpatialDerivCalc.least_squares:
-                    foreach(iface; faces) { 
+                    foreach(iface; faces) {
                         iface.grad.gradients_leastsq(iface.cloud_fs, iface.cloud_pos, iface.ws_grad);
                     }
                     break;
@@ -573,7 +573,7 @@ public:
     @nogc
     void viscous_flux()
     {
-        foreach (iface; faces) { iface.viscous_flux_calc(); } 
+        foreach (iface; faces) { iface.viscous_flux_calc(); }
     }
 
     @nogc
@@ -599,9 +599,9 @@ public:
     // However, with the splitting up of the increments for different physical
     // processes, this residual calculation code needed a bit of an update.
     // Noting that the viscous-stress, chemical and radiation increments
-    // do not affect the mass within a cell, we now compute the residuals 
+    // do not affect the mass within a cell, we now compute the residuals
     // for both mass and (total) energy for all cells, the record the largest
-    // with their location. 
+    // with their location.
     {
         mass_residual = 0.0;
         mass_residual_loc.clear();
@@ -679,7 +679,7 @@ public:
             }
         }
     } // end compute_Linf_residuals()
-    
+
     @nogc
     void residual_smoothing_dUdt(size_t ftl)
     {
@@ -689,7 +689,7 @@ public:
             c.dUdt_copy[1].copy_values_from(c.dUdt[ftl]);
         }
         double eps = GlobalConfig.residual_smoothing_weight;
-        if (GlobalConfig.residual_smoothing_type == ResidualSmoothingType.explicit) { 
+        if (GlobalConfig.residual_smoothing_type == ResidualSmoothingType.explicit) {
             foreach (c; cells) {
                 double total = 1.0;
                 foreach (i, f; c.iface) {
@@ -728,7 +728,7 @@ public:
             }
         }
     } // end residual_smoothing_dUdt()
-    
+
     @nogc
     double update_c_h(double dt_current)
     // Update the c_h value for the divergence cleaning mechanism.
@@ -786,7 +786,7 @@ public:
             myConfig.with_local_time_stepping &&
             GlobalConfig.residual_smoothing_type == ResidualSmoothingType.implicit) cfl_allow *= 10.0;
         // for local time-stepping we limit the larger time-steps by a factor of the smallest timestep
-        int local_time_stepping_limit_factor = myConfig.local_time_stepping_limit_factor; 
+        int local_time_stepping_limit_factor = myConfig.local_time_stepping_limit_factor;
         bool first = true;
         foreach(FVCell cell; cells) {
             signal = cell.signal_frequency();
@@ -798,7 +798,7 @@ public:
 		    dt_allow_parab = cfl_value / signal_parab;
 		    first = false;
 		} else {
-                    dt_allow_hyp = fmin(dt_allow_hyp, cfl_value / signal_hyp);		    
+                    dt_allow_hyp = fmin(dt_allow_hyp, cfl_value / signal_hyp);
 		    dt_allow_parab = fmin(dt_allow_parab, cfl_value / signal_parab);
 		}
 		dt_allow = fmin(dt_allow_hyp, GlobalConfig.dt_max); // set the allowable time-step based on hyperbolic time-step
@@ -828,8 +828,8 @@ public:
             debug { msg ~= text(" cfl_max=", cfl_max, " for FluidBlock ", id); }
             debug { writeln(msg); } // Write out warning message when running in debug mode
             cfl_max = cfl_adjust*cfl_allow;// If cfl_max exceeds cfl_allow, simply reduce the
-                                    // cfl_max to cfl_adjust*cfl_allow. A value of 0.5 seems 
-                                    // to work robustly. Values to 0.7 also work, beyond this 
+                                    // cfl_max to cfl_adjust*cfl_allow. A value of 0.5 seems
+                                    // to work robustly. Values to 0.7 also work, beyond this
                                     // and code begins to crash due to numerical instability.
                                     // Results in auto-limitation of the time step/cfl
             dt_allow = cfl_max/signal; // Reduce dt_allow according to new rescaled cfl_max

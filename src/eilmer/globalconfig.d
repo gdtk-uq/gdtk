@@ -341,7 +341,7 @@ struct SteadyStateSolverOptions {
     double cfl_max = 1e8;
     bool residual_based_cfl_scheduling = true;
     int cfl_schedule_length = 0;
-    double[] cfl_schedule_value_list; 
+    double[] cfl_schedule_value_list;
     int[] cfl_schedule_iter_list;
     // Options for start-up phase
     int nStartUpSteps = 5;
@@ -442,7 +442,7 @@ final class GlobalConfig {
     shared static bool solid_has_isotropic_properties = true;
     shared static bool solid_has_homogeneous_properties = true;
     shared static double solid_domain_cfl = 0.85;
-    
+
     // Parameters related to possible motion of the grid.
     shared static grid_motion = GridMotion.none;
     shared static bool write_vertex_velocities = false;
@@ -1798,7 +1798,7 @@ void read_control_file()
     // Settings for start-up phase
     GlobalConfig.sssOptions.nStartUpSteps =
         getJSONint(sssOptions, "number_start_up_steps", GlobalConfig.sssOptions.nStartUpSteps);
-    
+
     GlobalConfig.sssOptions.cfl_schedule_length =
         getJSONint(sssOptions, "cfl_schedule_length", GlobalConfig.sssOptions.cfl_schedule_length);
 
@@ -1817,7 +1817,7 @@ void read_control_file()
     foreach (i; 0 .. GlobalConfig.sssOptions.cfl_schedule_length) {
         GlobalConfig.sssOptions.cfl_schedule_iter_list[i] = (i < cfl_schedule_iter_data.length) ? cfl_schedule_iter_data[i] : default_cfl_schedule_iter_data[i];
     }
-    
+
     GlobalConfig.sssOptions.residual_based_cfl_scheduling = getJSONbool(sssOptions, "residual_based_cfl_scheduling", GlobalConfig.sssOptions.residual_based_cfl_scheduling);
     GlobalConfig.sssOptions.cfl_max =
         getJSONdouble(sssOptions, "cfl_max", GlobalConfig.sssOptions.cfl_max);
