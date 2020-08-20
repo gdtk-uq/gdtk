@@ -75,6 +75,9 @@ sssOptionsHidden = { -- hidden from user
    stop_on_relative_global_residual = 1.0e-99,
    stop_on_absolute_global_residual = 1.0e-99,
 
+   -- DPLU-SGS max number of subiterations (e.g. kmax)
+   max_sub_iterations = 1,
+   
    -- Restarted preconditioned FGMRES settings
    max_outer_iterations = 10, -- higher settings typically mean fast convergence of
                               -- an iteration BUT extra cost
@@ -1835,6 +1838,7 @@ function write_control_file(fileName)
    f:write(string.format('   "max_number_attempts": %d,\n', SteadyStateSolver.max_number_attempts))
    f:write(string.format('   "stop_on_relative_global_residual": %.18e,\n', SteadyStateSolver.stop_on_relative_global_residual))
    f:write(string.format('   "stop_on_absolute_global_residual": %.18e,\n', SteadyStateSolver.stop_on_absolute_global_residual))
+   f:write(string.format('   "max_sub_iterations": %d,\n', SteadyStateSolver.max_sub_iterations))
    f:write(string.format('   "max_outer_iterations": %d,\n', SteadyStateSolver.max_outer_iterations))
    f:write(string.format('   "max_restarts": %d,\n', SteadyStateSolver.max_restarts))
    f:write(string.format('   "number_inner_iterations": %d,\n', SteadyStateSolver.number_inner_iterations))

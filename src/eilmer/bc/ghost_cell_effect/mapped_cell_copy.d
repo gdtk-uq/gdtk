@@ -647,6 +647,7 @@ public:
         size_t nmodes = myConfig.n_modes;
 
         size_t nitems = 16;
+        nitems += 5; // for each conserved quantity in dU
         nitems += nmodes*3; // for each of T, e and k_t
         nitems += nspecies;
         version(MHD) { nitems += 5; }
@@ -749,6 +750,11 @@ public:
                     buf[ii++] = fs.mu_t.re; version(complex_numbers) { buf[ii++] = fs.mu_t.im; }
                     buf[ii++] = fs.k_t.re; version(complex_numbers) { buf[ii++] = fs.k_t.im; }
                     buf[ii++] = to!double(fs.S);
+                    buf[ii++] = c.dU[0].mass.re; version(complex_numbers) { buf[ii++] = c.dU[0].mass.im; }
+                    buf[ii++] = c.dU[0].momentum.x.re; version(complex_numbers) { buf[ii++] = c.dU[0].momentum.x.im; }
+                    buf[ii++] = c.dU[0].momentum.y.re; version(complex_numbers) { buf[ii++] = c.dU[0].momentum.y.im; }
+                    buf[ii++] = c.dU[0].momentum.z.re; version(complex_numbers) { buf[ii++] = c.dU[0].momentum.z.im; }
+                    buf[ii++] = c.dU[0].total_energy.re; version(complex_numbers) { buf[ii++] = c.dU[0].total_energy.im; }
                 }
                 version(mpi_timeouts) {
                     MPI_Request send_request;
@@ -826,6 +832,11 @@ public:
                     fs.mu_t.re = buf[ii++]; version(complex_numbers) { fs.mu_t.im = buf[ii++]; }
                     fs.k_t.re = buf[ii++]; version(complex_numbers) { fs.k_t.im = buf[ii++]; }
                     fs.S = to!int(buf[ii++]);
+                    c.dU[0].mass.re = buf[ii++]; version(complex_numbers) { c.dU[0].mass.im = buf[ii++]; }
+                    c.dU[0].momentum.refx.re = buf[ii++]; version(complex_numbers) { c.dU[0].momentum.refx.im = buf[ii++]; }
+                    c.dU[0].momentum.refy.re = buf[ii++]; version(complex_numbers) { c.dU[0].momentum.refy.im = buf[ii++]; }
+                    c.dU[0].momentum.refz.re = buf[ii++]; version(complex_numbers) { c.dU[0].momentum.refz.im = buf[ii++]; }
+                    c.dU[0].total_energy.re = buf[ii++]; version(complex_numbers) { c.dU[0].total_energy.im = buf[ii++]; }
                 }
             }
         } else { // not mpi_parallel

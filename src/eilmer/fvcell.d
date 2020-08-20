@@ -109,6 +109,9 @@ public:
     FlowState fs; // Flow properties
     ConservedQuantities[] U;  // Conserved flow quantities for the update stages.
     ConservedQuantities[] dUdt; // Time derivatives for the update stages.
+    ConservedQuantities[] dU; // For use with LU-SGS
+    ConservedQuantities dF; // For use with LU-SGS
+    number D; // scalar diagonal term for use with LU-SGS
     ConservedQuantities Q; // source (or production) terms
     ConservedQuantities[2] dUdt_copy; // for residual smoothing
     // for unstructured grids, we may be doing high-order reconstruction
@@ -177,8 +180,15 @@ public:
         fs = new FlowState(gmodel, 100.0e3, T, T_modes, Vector3(0.0,0.0,0.0));
         foreach(i; 0 .. myConfig.n_flow_time_levels) {
             U ~= new ConservedQuantities(n_species, n_modes);
+            U[i].clear();
             dUdt ~= new ConservedQuantities(n_species, n_modes);
         }
+        foreach(i; 0 .. myConfig.n_flow_time_levels) {
+            dU ~= new ConservedQuantities(n_species, n_modes);
+            dU[i].clear();
+        }
+        dF = new ConservedQuantities(n_species, n_modes);
+        dF.clear();
         Q = new ConservedQuantities(n_species, n_modes);
         Q.clear();
         if (myConfig.residual_smoothing) {

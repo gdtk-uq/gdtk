@@ -335,6 +335,7 @@ struct SteadyStateSolverOptions {
     double stopOnRelGlobalResid = 1.0e-99;
     double stopOnAbsGlobalResid = 1.0e-99;
     // Restarted preconditioned FGMRES settings
+    int maxSubIterations = 1;
     int maxOuterIterations = 10;
     int maxRestarts = 10;
     int nInnerIterations = 5;
@@ -1789,6 +1790,8 @@ void read_control_file()
         getJSONdouble(sssOptions, "stop_on_relative_global_residual", GlobalConfig.sssOptions.stopOnRelGlobalResid);
     GlobalConfig.sssOptions.stopOnAbsGlobalResid =
         getJSONdouble(sssOptions, "stop_on_absolute_global_residual", GlobalConfig.sssOptions.stopOnAbsGlobalResid);
+    GlobalConfig.sssOptions.maxSubIterations =
+        getJSONint(sssOptions, "max_sub_iterations", GlobalConfig.sssOptions.maxSubIterations);
     GlobalConfig.sssOptions.maxOuterIterations =
         getJSONint(sssOptions, "max_outer_iterations", GlobalConfig.sssOptions.maxOuterIterations);
     GlobalConfig.sssOptions.maxRestarts =
