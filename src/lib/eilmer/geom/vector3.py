@@ -22,6 +22,14 @@ class Vector3(object):
         """
         Accept the coordinates as a list of numbers,
         a dictionary of named numbers, or as individual numbers.
+
+        For example:
+        >>> from eilmer.geom.vector3 import Vector3
+        >>> p0 = Vector3(x=1.0, y=2.0, z=3.0)
+        >>> p1 = Vector3(1.0, 2.0, 3.0)
+        >>> p2 = Vector3([1.0, 2.0, 3.0])
+        >>> p3 = Vector3({'x':1.0, 'y':2.0, 'z':3.0})
+        >>> p4 = Vector3(p3)
         """
         if isinstance(x, list) or isinstance(x, tuple):
             self.x = x[0]
@@ -57,42 +65,53 @@ class Vector3(object):
         return
 
     def __repr__(self):
-        return "Vector3(x={}, y={}, z={})".format(self.x, self.y, self.z)
+        "Returns string representation."
+        return f"Vector3(x={self.x}, y={self.y}, z={self.z})"
 
     def __abs__(self):
+        "Returns magnitude."
         return math.sqrt(self.x**2 + self.y**2 + self.z**2)
 
     def __pos__(self):
+        "Returns self."
         return self
 
     def __neg__(self):
+        "Returns negative self."
         self.x = -self.x; self.y = -self.y; self.z = -self.z
         return self
 
     def __add__(self, other):
+        "Returns new Vector3 for self+other"
         return Vector3(self.x+other.x, self.y+other.y, self.z+other.z)
 
     def __iadd__(self, other):
+        "Returns self += other Vector3."
         self.x += other.x; self.y += other.y; self.z += other.z
         return self
 
     def __sub__(self, other):
+        "Returns new Vector3 self-other."
         return Vector3(self.x-other.x, self.y-other.y, self.z-other.z)
 
     def __isub__(self, other):
+        "self -= other Vector3"
         self.x -= other.x; self.y -= other.y; self.z -= other.z
         return self
 
     def __mul__(self, other):
+        "Returns new Vector3 self*number"
         if isinstance(other, numbers.Real):
             return Vector3(self.x*other, self.y*other, self.z*other)
         else:
             return NotImplemented
 
     def __rmul__(self, other):
+        "Returns new Vector3 number*self."
         return self * other
 
     def __imul__(self, other):
+        "Returns self *= other number."
         if isinstance(other, numbers.Real):
             self.x *= other; self.y *= other; self.z *= other
             return self
@@ -100,12 +119,14 @@ class Vector3(object):
             return NotImplemented
 
     def __truediv__(self, other):
+        "Returns new Vector3 self/number"
         if isinstance(other, numbers.Real):
             return Vector3(self.x/other, self.y/other, self.z/other)
         else:
             return NotImplemented
 
     def __itruediv__(self, other):
+        "Returns self /= other number."
         if isinstance(other, numbers.Real):
             self.x /= other; self.y /= other; self.z /= other
             return self
@@ -113,18 +134,20 @@ class Vector3(object):
             return NotImplemented
 
     def unit(self):
-        "Unit vector"
+        "Returns new unit vector."
         mag = abs(self)
         if mag == 0.0:
             raise ValueError("Zero magnitude vector has no defined direction.")
         return Vector3(self.x/mag, self.y/mag, self.z/mag)
 
     def normalize(self):
+        "Scales self to unit magnitude."
         mag = abs(self)
         self /= mag
         return
 
     def dot(self, other):
+        "Returns dot product of self with other Vector3."
         if isinstance(other, Vector3):
             return self.x*other.x + self.y*other.y + self.z*other.z
         else:
@@ -132,7 +155,7 @@ class Vector3(object):
 
     def transform_to_local_frame(self, n, t1, t2, c=None):
         """
-        Change coodinates into the local right-handed (RH) system at point c.
+        Change coordinates into the local right-handed (RH) system at point c.
 
         We trust that n, t1 and t2 are normalized and for a correct RH system.
         """
@@ -143,7 +166,7 @@ class Vector3(object):
 
     def transform_to_global_frame(self, n, t1, t2, c=None):
         """
-        Change coodinates out of the local right-handed (RH) system at point c.
+        Change coordinates out of the local right-handed (RH) system at point c.
 
         We trust that n, t1 and t2 are normalized and for a correct RH system.
         """
@@ -169,7 +192,7 @@ def approxEqualVectors(a, b, rel_tol=1.0e-2, abs_tol=1.0e-5):
 
 def cross(a, b):
     """
-    Vector3 cross product.
+    Returns Vector3 cross product.
     """
     ab_x = a.y*b.z - b.y*a.z
     ab_y = b.x*a.z - a.x*b.z
@@ -177,14 +200,15 @@ def cross(a, b):
     return Vector3(ab_x, ab_y, ab_z)
 
 def dot(a, b):
-    "Dot product"
+    "Returns dot product."
     return a.dot(b)
 
 def unit(a):
+    "Returns a new unit vector."
     return a.unit()
 
 def quad_properties(p0, p1, p2, p3):
-    "Quadrilateral defining unit vectors, area and centroid."
+    "Returns centroid, quadrilateral-defining unit vectors, and area."
     vector_area = 0.25 * cross(p1-p0+p2-p3, p3-p0+p2-p1)
     n = vector_area.unit()
     area = abs(vector_area)
@@ -194,28 +218,28 @@ def quad_properties(p0, p1, p2, p3):
     return centroid, n, t1, t2, area
 
 def quad_centroid(p0, p1, p2, p3):
-    "Quadrilateral centroid"
+    "Returns centroid of quadrilateral."
     centroid, n, t1, t2, area = quad_properties(p0, p1, p2, p3)
     return centroid
 
 def quad_area(p0, p1, p2, p3):
-    "Quadrilateral area"
+    "Returns area for quadrilateral."
     centroid, n, t1, t2, area = quad_properties(p0, p1, p2, p3)
     return area
 
 def quad_normal(p0, p1, p2, p3):
-    "Quadrilateral area"
+    "Returns unit normal for quadrilateral."
     centroid, n, t1, t2, area = quad_properties(p0, p1, p2, p3)
     return n
 
 def tetrahedron_properties(p0, p1, p2, p3):
-    "Tetrahedron centroid and volume"
+    "Returns centroid and volume of tetrahedron."
     volume = dot(p3-p0, cross(p1-p0, p2-p0))/6.0
     centroid = 0.25 * (p0 + p1 + p2 + p3)
     return centroid, volume
 
 def wedge_properties(p0, p1, p2, p3, p4, p5):
-    "Wedge centroid and volume"
+    "Returns centroid and volume for wedge."
     c1, v1 = tetrahedron_properties(p0, p4, p5, p3)
     c2, v2 = tetrahedron_properties(p0, p5, p4, p1)
     c3, v3 = tetrahedron_properties(p0, p1, p2, p5)
@@ -227,12 +251,12 @@ def wedge_properties(p0, p1, p2, p3, p4, p5):
         volume = 0.0
         centroid = (c1 + c2 + c3)/3.0
         return centroid, volume
-
+    #
     centroid = (c1*v1 + c2*v2 + c3*v3)/volume
     return centroid, volume
 
 def hexahedron_properties(p0, p1, p2, p3, p4, p5, p6, p7):
-    "Hexahedron centroid and volume"
+    "Returns centroid and volume for hexahedron."
     c1, v1 = wedge_properties(p0, p1, p2, p4, p5, p6)
     c2, v2 = wedge_properties(p0, p2, p3, p4, p6, p7)
     volume = v1 + v2
@@ -243,11 +267,11 @@ def hexahedron_properties(p0, p1, p2, p3, p4, p5, p6, p7):
         volume = 0.0
         centroid = 0.5*(c1 + c2)
         return centroid, volume
-
+    #
     centroid = (c1*v1 + c2*v2)/volume
     return centroid, volume
 
 def hexahedron_volume(p0, p1, p2, p3, p4, p5, p6, p7):
-    "Hexahedron volume"
+    "Returns volume for hexahedron."
     c, v = hexahedron_properties(p0, p1, p2, p3, p4, p5, p6, p7)
     return v
