@@ -31,12 +31,10 @@ def ode_integrate(t0, tlast, nstep, f, n, y0):
 
     This function coordinates the work of integrating a system
     of first-order differential equations of the form:
-
-        y' = f(t, y)
-        y(t=t0) = y0
-
-    The actual work is done by one of a set of more specialised
-    stepping functions that appear below.
+      y' = f(t, y)
+      y(t=t0) = y0
+    The actual work is done by rkf45_step, a more specialised
+    stepping function, that appears below.
 
     t0: is the starting value of the independent variable
     tlast: the desired finishing value for x
