@@ -4,9 +4,161 @@ These functions are the Python equivalent of the Lua functions found in the
 http://cfcfd.mechmining.uq.edu.au/pdfs/geometry-user-guide.pdf[Geometry User Guide].
 
 == Vector3
+This class defines geometric vector objects with three Cartesian components:
+`x`, `y` and `z`.
+The constructor accepts values for these components in a number of ways.
+----
+from eilmer.geom.vector3 import Vector3
+p0 = Vector3(x=1.0, y=2.0, z=3.0)          # named arguments
+p1 = Vector3(1.0, 2.0, 3.0)                # positional arguments x, y, z
+p2 = Vector3([1.0, 2.0, 3.0])              # list of numbers
+p3 = Vector3({'x':1.0, 'y':2.0, 'z':3.0})  # dictionary
+p4 = Vector3(p3)                           # another Vector3 object
+----
+You need to specify at least the `x` component.
+The `y` and `z` components will default to values of `0.0`.
+
+=== Vector3 expressions
+A number of methods have been defined so that you can write arithmetic expressions
+that involve Vector3 objects.
+To see the embedded doc strings, you can use the Python help function.
+----
+from eilmer.geom.vector3 import Vector3
+help(Vector3)
+----
+
+Sample expressions include:
+----
+from eilmer.geom.vector3 import Vector3
+p0 = Vector3(x=1.0, y=2.0, z=3.0)
+p1 = Vector3(1.0, 2.0, 3.0)
+p2 = +p0       # positive copy --> Vector3(x=1.0, y=2.0, z=3.0)
+p2 = -p0       # negative copy --> Vector3(x=-1.0, y=-2.0, z=-3.0)
+p2 = p0 + p1   # addition --> Vector3(x=2.0, y=4.0, z=6.0)
+p2 = p0 - p1   # subtraction --> Vector3(x=0.0, y=0.0, z=0.0)
+p2 += p1       # augmented addition --> Vector3(x=1.0, y=2.0, z=3.0)
+p2 -= p1       # augmented subtraction --> Vector3(x=0.0, y=0.0, z=0.0)
+p2 = Vector3(p0)
+p2 = p0 * 3.0  # scaling --> Vector3(x=3.0, y=6.0, z=9.0)
+p2 = 3.0 * p0  # scaling --> Vector3(x=3.0, y=6.0, z=9.0)
+p2 = p0 / 3.0  # scaling --> Vector3(x=0.333333, y=0.666666, z=1.0)
+p2 *= 3.0      # scaling --> Vector3(x=1.0, y=2.0, z=3.0)
+p2 /= 3.0      # scaling --> Vector3(x=0.333333, y=0.666666, z=1.0)
+p2.normalize() # scales to unit magnitude --> Vector3(x=0.267261, y=0.534522, z=0.801783)
+a = abs(p2)    # magnitude --> 1.0
+b = p1.dot(p0) # dot product --> 14.0
+p2 = p0.unit() # new unit vector --> Vector3(x=0.267261, y=0.534522, z=0.801783)
+----
+
+There are also a pair of transformations, so that you change
+change into and out of a local coordinate system.
+----
+from eilmer.geom.vector3 import Vector3
+p0 = Vector3(x=1.0, y=2.0, z=3.0)
+c = Vector3(0.0, 1.0, 2.0)
+n = Vector3(-1.0, 0.0, 0.0)
+t1 = Vector3(0.0, -1.0, 0.0)
+t2 = Vector3(0.0, 0.0, -1.0)
+p1 = p0.transform_to_local_frame(n, t1, t2, c)  # --> Vector3(x=-1.0, y=-1.0, z=-1.0)
+p2 = p1.transform_to_global_frame(n, t1, t2, c) # --> Vector3(x=1.0, y=2.0, z=3.0)
+----
+
+Remember that the Python assignment operator binds names to objects.
+----
+from eilmer.geom.vector3 import Vector3
+p0 = Vector3(x=1.0, y=2.0, z=3.0)
+p1 = Vector3(1.0, 2.0, 3.0)
+p2 = p1        # assignment binds new name p2 to same object as p1
+p2             # --> Vector3(x=1.0, y=2.0, z=3.0)
+p1.normalize() # change object details
+p2             # --> Vector3(x=0.267261, y=0.534522, z=0.801783)
+p1 = p0        # change binding for name p1
+p1             # --> Vector3(x=1.0, y=2.0, z=3.0)
+p2             # --> Vector3(x=0.267261, y=0.534522, z=0.801783)
+----
+
+=== Other functions
+The other functions in module `eilmer.geom.vector3` include:
+
+`approxEqualVectors(a, b, rel_tol=0.01, abs_tol=1e-05)`::
+  Returns `True` if all components if vectors `a` and `b` are close.
+
+`cross(a, b)`::
+  Returns the Vector3 cross product of vector `a` with vector `b`.
+
+`dot(a, b)`::
+  Returns dot product of vector `a` with vector `b`.
+
+`hexahedron_properties(p0, p1, p2, p3, p4, p5, p6, p7)`::
+  Returns centroid and volume for the hexahedron defined by the 8 vertices.
+
+`hexahedron_volume(p0, p1, p2, p3, p4, p5, p6, p7)`::
+  Returns volume for the hexahedron defined by the 8 vertices.
+
+`quad_area(p0, p1, p2, p3)`::
+  Returns area for quadrilateral defined by the 4 corner points.
+
+`quad_centroid(p0, p1, p2, p3)`::
+  Returns centroid of quadrilateral.
+
+`quad_normal(p0, p1, p2, p3)`::
+  Returns unit normal for quadrilateral.
+
+`quad_properties(p0, p1, p2, p3)`::
+  Returns centroid, quadrilateral-defining unit vectors, and area.
+
+`tetrahedron_properties(p0, p1, p2, p3)`::
+  Returns centroid and volume of tetrahedron defined by 4 points.
+
+`unit(a)`::
+  Returns a new unit vector.
+
+`wedge_properties(p0, p1, p2, p3, p4, p5)`::
+  Returns centroid and volume for wedge defined by 6 points.
 
 == Path
+The module `eilmer.geom.path` includes classes for making `Path` objects.
+A Path object may be called to evaluate a point on the path at parameter `t`,
+where the parametric range is `0.0` to `1.0`.
+
+The constructors for Path objects include:
+
+`Line(p0, p1)`::
+  Defines a straight line from point `p0` (`t=0`) to point `p1` (`t=1`).
+
+`Bezier(B)`::
+  Defines a Bezier curve from the sequence of points `B`.
+
+`Arc(a, b, c)`::
+  Defines a circular arc from point `a` to point `b` about centre `c`.
+
+`ArcLengthParameterizedPath(underlying_path, n=1000)`::
+  Derives path from `underlying_path` that has a uniformly-distributed set of points
+  with parameter `t`.
+
+`Polyline(segments, closed=False, tolerance=1e-10)`::
+  Builds a single path from a sequence of `Path` objects.
+  Setting `closed=True` will connect the ends with a straight-line segment
+  if the original end points are further apart than `tolerance`.
+
+`Spline(points, closed=False, tolerance=1e-10)`::
+  Builds a spline of Bezier segments through the sequence of points.
+  Setting `closed=True` will connect the ends with an extra segment
+  if the original end points are further apart than `tolerance`.
+
 
 == Surface
+The module `eilmer.geom.surface` includes classes for making `ParametricSurface` objects.
+These objects may be called two parameters `r`, and `s` to evaluate a point on the surface.
+Presently, only one class of `ParametricSurface` is implemented in the Python module.
+
+`CoonsPatch(north=None, east=None, south=None, west=None, p00=None, p10=None, p11=None, p01=None)`::
+  Define a surface using the method of interpolation described in
+  S.A. Coons "Surfaces for Computer Aided Design of Space Forms" MAC TR-41
+  Contract No. AF-33 (6000-42859) MIT June 1967.
+  The surface may be defined either by 4 `Path` objects as edges
+  (named `north`, `east`, `south`, `west`)
+  or by 4 corner points (named `p00`, `p10`, `p11`, `p01`).
+  If defined by corner points, straight-line paths will be used for the 4 edges.
 
 

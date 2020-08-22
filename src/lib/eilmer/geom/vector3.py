@@ -73,13 +73,12 @@ class Vector3(object):
         return math.sqrt(self.x**2 + self.y**2 + self.z**2)
 
     def __pos__(self):
-        "Returns self."
-        return self
+        "Returns copy of self."
+        return Vector3(self)
 
     def __neg__(self):
-        "Returns negative self."
-        self.x = -self.x; self.y = -self.y; self.z = -self.z
-        return self
+        "Returns negative copy of self."
+        return Vector3(-self.x, -self.y, -self.z)
 
     def __add__(self, other):
         "Returns new Vector3 for self+other"

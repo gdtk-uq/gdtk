@@ -1,6 +1,6 @@
 = Geometry library for Python
 Peter A. Jacobs; Ingo Jahn; Rowan J. Gollan
-2020-05-18
+2020-08-22
 :toc: right
 :stylesheet: readthedocs.css
 :sectnums:
