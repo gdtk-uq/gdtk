@@ -13,6 +13,7 @@ HTML := eilmer-reference-manual.html \
 	l1d-reference-manual.html \
 	library-reference-manual.html \
 	geometry-reference-manual.html \
+	nm-reference-manual.html \
 	estcn-manual.html \
 	build-lut-manual.html \
 	eilmer-catalog-of-examples.html \
@@ -74,6 +75,13 @@ library-reference-manual.html:
 	cp ../doc/$@ static/html/
 
 geometry-reference-manual.html:
+	- mkdir -p static/html
+	- mkdir -p static/html/geom
+	cd ../doc; make $@
+	cp ../doc/$@ static/html/
+	cp ../doc/geom/*.png static/html/geom/
+
+nm-reference-manual.html:
 	- mkdir -p static/html
 	cd ../doc; make $@
 	cp ../doc/$@ static/html/

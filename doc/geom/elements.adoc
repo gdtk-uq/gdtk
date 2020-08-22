@@ -116,7 +116,8 @@ The other functions in module `eilmer.geom.vector3` include:
 `wedge_properties(p0, p1, p2, p3, p4, p5)`::
   Returns centroid and volume for wedge defined by 6 points.
 
-== Path
+
+== Path elements
 The module `eilmer.geom.path` includes classes for making `Path` objects.
 A Path object may be called to evaluate a point on the path at parameter `t`,
 where the parametric range is `0.0` to `1.0`.
@@ -147,7 +148,7 @@ The constructors for Path objects include:
   if the original end points are further apart than `tolerance`.
 
 
-== Surface
+== ParametricSurface elements
 The module `eilmer.geom.surface` includes classes for making `ParametricSurface` objects.
 These objects may be called two parameters `r`, and `s` to evaluate a point on the surface.
 Presently, only one class of `ParametricSurface` is implemented in the Python module.
@@ -160,5 +161,36 @@ Presently, only one class of `ParametricSurface` is implemented in the Python mo
   (named `north`, `east`, `south`, `west`)
   or by 4 corner points (named `p00`, `p10`, `p11`, `p01`).
   If defined by corner points, straight-line paths will be used for the 4 edges.
+
+
+== Cluster functions
+The module `eilmer.geom.cluster` includes classes for constructing various
+`ClusterFunction` objects.
+These objects have a `distribute_parameter_values(nv)` method that returns
+a sequence of `nv` values spread over the parameter range `0.0` to `1.0`, inclusive.
+
+
+=== Linear
+----
+from eilmer.geom.cluster import *
+cf = LinearFunction()
+values = cf.distribute_parameter_values(11)
+----
+will result in `values` being `array([0. , 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1. ])`.
+
+
+=== Roberts
+If you want to cluster values toward either (or both) ends of the range,
+there is `RobertsFunction(end0, end1, beta)` where:
+
+`end0`::
+  Set `True` to cluster values toward `t=0`.
+
+`end1`::
+  Set `True` to cluster values toward `t=1`.
+
+`beta`::
+  The clustering parameter is larger than 1.0, and clustering increases in strength as
+  `beta` approaches `1.0`.
 
 

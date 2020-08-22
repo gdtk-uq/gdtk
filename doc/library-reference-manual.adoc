@@ -43,6 +43,32 @@ If you have not yet read the
 http://cfcfd.mechmining.uq.edu.au/pdfs/gas-user-guide.pdf[Gas Models User Guide],
 this is a good time to do so.
 
+= Installing the library
+
+The gas models library for Python3 is part of a larger gas-dynamics toolkit and
+general getting started notes can be found at
+http://cfcfd.mechmining.uq.edu.au/docs/getting-started
+There, you will see how to get a copy of the source code,
+and a list of what other software you will need to build and install the tool kit,
+and a collection of environment variables that need to be set.
+
+To install the library, move to the gas source directory and use the `make` utility.
+----
+cd dgd/src/gas
+make install
+----
+Note that the loadable library needs to be built with the DMD64 compiler and that
+you need the Foreign-Function-Interface extensions for your Python and Ruby interpreters.
+On a LinuxMint system this package is `python-cffi`.
+
+So that the Python interpreter can find the installed library,
+set your environment variables with something like:
+
+    export DGD=$HOME/dgdinst
+    export PYTHONPATH=${PYTHONPATH}:${DGD}/lib
+    export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${DGD}/lib
+
+
 include::gas/gas-model.adoc[]
 include::gas/kinetics.adoc[]
 include::flow/gas-flow.adoc[]

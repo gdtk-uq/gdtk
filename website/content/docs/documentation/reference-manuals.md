@@ -11,4 +11,5 @@ These are online documents for reference as you build the scripts for your simul
 - [Geometry library for Python](/html/geometry-reference-manual.html)
 - [ESTCN, Equilibrium Shock Tunnel Condition, with Nozzle](/html/estcn-manual.html)
 - [build-uniform-lut, for building look-up-table gas models](/html/build-lut-manual.html)
+- [Python numerical-methods package](/html/nm-reference-manual.html)
 

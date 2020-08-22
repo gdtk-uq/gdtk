@@ -61,5 +61,7 @@ that your newly configured environment is available.
 
 - [Gas-dynamic Package Reference Manual (HTML)](/html/library-reference-manual.html)
 - [Geometry Package Reference Manual (HTML)](/html/geometry-reference-manual.html)
-
+- [ESTCN, Equilibrium Shock Tunnel Condition, with Nozzle](/html/estcn-manual.html)
+- [build-uniform-lut, for building look-up-table gas models](/html/build-lut-manual.html)
+- [Numerical-methods package](/html/nm-reference-manual.html)
 

@@ -24,7 +24,7 @@ class StructuredGrid():
         """
         Initialize by either reading a file or by discretizing a ParametricSurface.
         """
-        print("kwargs=", kwargs)
+        # print("kwargs=", kwargs)
         if "psurf" in kwargs.keys():
             psurf = kwargs['psurf']
             niv = kwargs.get('niv', 1)
@@ -35,6 +35,7 @@ class StructuredGrid():
             self.make_from_psurface(psurf, niv, njv, cf_list)
         elif "gzfile" in kwargs.keys():
             print("Read grid from gzip file")
+            raise Exception("Oops, not yet implemented.")
         else:
             raise Exception("Do not know how to make grid.")
         self.label = "unknown"
