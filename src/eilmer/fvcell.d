@@ -112,6 +112,8 @@ public:
     ConservedQuantities[] dU; // For use with LU-SGS
     ConservedQuantities dF; // For use with LU-SGS
     number D; // scalar diagonal term for use with LU-SGS
+    Matrix!number dFdU; // For use with LU-SGS
+    Matrix!number dFdU_tmp; // For use with LU-SGS
     ConservedQuantities Q; // source (or production) terms
     ConservedQuantities[2] dUdt_copy; // for residual smoothing
     // for unstructured grids, we may be doing high-order reconstruction

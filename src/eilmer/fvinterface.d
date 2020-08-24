@@ -19,6 +19,7 @@ import std.math;
 import nm.complex;
 import nm.number;
 
+import nm.bbla;
 import geom;
 import gas;
 import fvcore;
@@ -41,6 +42,8 @@ public:
     bool in_suppress_reconstruction_zone; // if true, we no do reconstruction at this face
     //
     // Geometry
+    Matrix!number T;       // For use with LU-SGS
+    Matrix!number Tinv;    // For use with LU-SGS
     Vector3 pos;           // position of the (approx) midpoint
     Vector3 gvel;          // grid velocity at interface, m/s
     number Ybar;           // Y-coordinate of the mid-point

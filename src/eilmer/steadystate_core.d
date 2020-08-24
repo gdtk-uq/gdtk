@@ -25,6 +25,7 @@ import nm.bbla;
 import nm.complex;
 import nm.number;
 
+import nm.bbla;
 import fvcell;
 import fvinterface;
 import geom;
@@ -223,6 +224,26 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     // Set usePreconditioner to false for pre-steps AND first-order steps.
     usePreconditioner = false;
 
+    // some data structures for use with LU-SGS
+    foreach (blk; parallel(localFluidBlocks,1)) {
+        foreach(c; blk.cells) {
+            c.dFdU = new Matrix!number(5,5); // number of conserved variables
+            c.dFdU_tmp = new Matrix!number(5,5);
+        }
+        foreach(f; blk.faces) {
+            f.T = new Matrix!number(5,5); // number of conserved variables
+            f.Tinv = new Matrix!number(5,5);
+
+            f.T[0,0] = to!number(1.0); f.T[0,1] = to!number(0.0); f.T[0,2] = to!number(0.0); f.T[0,3] = to!number(0.0); f.T[0,4] = to!number(0.0);
+            f.T[1,0] = to!number(0.0); f.T[1,1] = f.n.x; f.T[1,2] = f.n.y; f.T[1,3] = f.n.z; f.T[1,4] = to!number(0.0);
+            f.T[2,0] = to!number(0.0); f.T[2,1] = f.t1.x; f.T[2,2] = f.t1.y; f.T[2,3] = f.t1.z; f.T[2,4] = to!number(0.0);
+            f.T[3,0] = to!number(0.0); f.T[3,1] = f.t2.x; f.T[3,2] = f.t2.y; f.T[3,3] = f.t2.z; f.T[3,4] = to!number(0.0);
+            f.T[4,0] = to!number(0.0); f.T[4,1] = to!number(0.0); f.T[4,2] = to!number(0.0); f.T[4,3] = to!number(0.0); f.T[4,4] = to!number(1.0);
+            
+            f.Tinv = inverse(f.T);
+        }
+    }
+    
     // We only do a pre-step phase if we are starting from scratch.
     if ( snapshotStart == 0 ) {
         cfl = cfl0;
@@ -1238,9 +1259,10 @@ foreach (blk; localFluidBlocks) `~norm2~` += blk.normAcc;
 
 }
 
-void evalFluxIncrement(FVCell cell, FVInterface face)
+
+void evalMatrixFreeFluxIncrement(FVCell cell, FVInterface face)
 {
-    // Flux vector increment
+    // Matrix-Free Flux vector increment
     //
     // As defined on right column, pg 4 of
     // Rieger and Jameson (1988),
@@ -1301,6 +1323,101 @@ void evalFluxIncrement(FVCell cell, FVInterface face)
     cell.dF.momentum.refz -= rho*velx*velz;
     cell.dF.momentum.transform_to_global_frame(face.n, face.t1, face.t2);
     cell.dF.total_energy -= (rho*e + rho*(velx^^2 + vely^^2 + velz^^2)/2.0 + p)*velx;
+}
+
+
+void evalMatrixBasedFluxIncrement(FVCell cell, FVInterface face)
+{
+    // Matrix-Based Flux vector increment
+    //
+    // Hand differentiation of Roe's split flux scheme for LHS Jacobian as per
+    // Luo, Baum, and Lohner (1998)
+    // A Fast, Matrix-free Implicit Method for Compressible Flows on Unstructured Grids,
+    // Journal of computational physics
+    // 
+
+    // primitive variables
+    auto gmodel = GlobalConfig.gmodel_master;
+    number gam = gmodel.gamma(cell.fs.gas);
+    number rho = cell.fs.gas.rho;
+    number u = cell.fs.vel.dot(face.n);
+    number v = cell.fs.vel.dot(face.t1);
+    number w = cell.fs.vel.dot(face.t2);
+    number p = cell.fs.gas.p;
+    number e = gmodel.internal_energy(cell.fs.gas);
+
+    // conserved variables
+    number U1 = rho; 
+    number U2 = rho*u;
+    number U3 = rho*v;
+    number U4 = rho*w;
+    number U5 = rho*e + rho*(u^^2 + v^^2 + w^^2)/2.0;
+
+    // Roe's split flux Jacobian
+    cell.dFdU[0,0] = to!number(0.0);
+    cell.dFdU[0,1] = to!number(1.0);
+    cell.dFdU[0,2] = to!number(0.0);
+    cell.dFdU[0,3] = to!number(0.0);
+    cell.dFdU[0,4] = to!number(0.0); 
+
+    cell.dFdU[1,0] = -(U2*U2)/(U1*U1) + (gam-1.0)*(U2*U2+U3*U3+U4*U4)/(2.0*U1*U1);
+    cell.dFdU[1,1] = (2.0*U2)/U1 + (1.0-gam)*(U2/U1);
+    cell.dFdU[1,2] = (1.0-gam)*(U3/U1);
+    cell.dFdU[1,3] = (1.0-gam)*(U4/U1);
+    cell.dFdU[1,4] = (gam-1.0);
+    
+    cell.dFdU[2,0] = to!number(0.0);
+    cell.dFdU[2,1] = U3/U1;
+    cell.dFdU[2,2] = U2/U1;
+    cell.dFdU[2,3] = to!number(0.0);
+    cell.dFdU[2,4] = to!number(0.0); 
+
+    cell.dFdU[3,0] = to!number(0.0);
+    cell.dFdU[3,1] = U4/U1;
+    cell.dFdU[3,2] = to!number(0.0);
+    cell.dFdU[3,3] = U2/U1;
+    cell.dFdU[3,4] = to!number(0.0);
+    
+    cell.dFdU[4,0] = -gam*(U5*U2)/(U1*U1) + (gam-1.0)*(U2*U2*U2+U2*U3*U3+U2*U4*U4)/(U1*U1);
+    cell.dFdU[4,1] = gam*(U5/U1) + (1.0-gam)*(3*U2*U2+U3*U3+U4*U4)/(2*U1*U1);
+    cell.dFdU[4,2] = (1.0-gam)*(U3*U2)/(U1*U1);
+    cell.dFdU[4,3] = (1.0-gam)*(U4*U2)/(U1*U1);
+    cell.dFdU[4,4] = gam*(U2/U1); 
+
+    // rotate matrix back to global frame
+    dot(face.Tinv, cell.dFdU, cell.dFdU_tmp);
+    dot(cell.dFdU_tmp, face.T, cell.dFdU);
+
+    // flux vector increment (i.e. dFdU * dU)
+    cell.dF.mass = cell.dFdU[0,0]*cell.dU[0].mass
+        + cell.dFdU[0,1]*cell.dU[0].momentum.x
+        + cell.dFdU[0,2]*cell.dU[0].momentum.y
+        + cell.dFdU[0,3]*cell.dU[0].momentum.z
+        + cell.dFdU[0,4]*cell.dU[0].total_energy;
+    
+    cell.dF.momentum.refx = cell.dFdU[1,0]*cell.dU[0].mass
+        + cell.dFdU[1,1]*cell.dU[0].momentum.x
+        + cell.dFdU[1,2]*cell.dU[0].momentum.y
+        + cell.dFdU[1,3]*cell.dU[0].momentum.z
+        + cell.dFdU[1,4]*cell.dU[0].total_energy;
+    
+    cell.dF.momentum.refy = cell.dFdU[2,0]*cell.dU[0].mass
+        + cell.dFdU[2,1]*cell.dU[0].momentum.x
+        + cell.dFdU[2,2]*cell.dU[0].momentum.y
+        + cell.dFdU[2,3]*cell.dU[0].momentum.z
+        + cell.dFdU[2,4]*cell.dU[0].total_energy;
+
+    cell.dF.momentum.refz = cell.dFdU[3,0]*cell.dU[0].mass
+        + cell.dFdU[3,1]*cell.dU[0].momentum.x
+        + cell.dFdU[3,2]*cell.dU[0].momentum.y
+        + cell.dFdU[3,3]*cell.dU[0].momentum.z
+        + cell.dFdU[3,4]*cell.dU[0].total_energy;
+    
+    cell.dF.total_energy = cell.dFdU[4,0]*cell.dU[0].mass
+        + cell.dFdU[4,1]*cell.dU[0].momentum.x
+        + cell.dFdU[4,2]*cell.dU[0].momentum.y
+        + cell.dFdU[4,3]*cell.dU[0].momentum.z
+        + cell.dFdU[4,4]*cell.dU[0].total_energy;
 }
 
 number spectral_radius(FVInterface face, bool viscous, double omega) {
@@ -1370,7 +1487,7 @@ void lusgs_solve(int step, double pseudoSimTime, double dt, double omega, ref do
                     FVInterface f = cell.iface[i-1];
                     number lij = spectral_radius(f, GlobalConfig.viscous, omega);
                     
-                    evalFluxIncrement(ncell, f);
+                    evalMatrixFreeFluxIncrement(ncell, f);
                     
                     LU_mass += (ncell.dF.mass*cell.outsign[i-1] - lij*ncell.dU[0].mass)*f.area[0];
                     LU_momentumx += (ncell.dF.momentum.x*cell.outsign[i-1] - lij*ncell.dU[0].momentum.x)*f.area[0];
