@@ -339,7 +339,14 @@ WallFunctionInterfaceEffect = BoundaryInterfaceEffect:new()
 WallFunctionInterfaceEffect.type = "wall_function_interface_effect"
 function WallFunctionInterfaceEffect:tojson()
    local str = string.format('          {"type" : "%s",', self.type)
-   str = str .. string.format(' "thermal_condition" : "%s"', self.thermal_condition)
+   str = str .. '}'
+   return str
+end
+
+AdiabaticWallFunctionInterfaceEffect = BoundaryInterfaceEffect:new()
+AdiabaticWallFunctionInterfaceEffect.type = "adiabatic_wall_function_interface_effect"
+function AdiabaticWallFunctionInterfaceEffect:tojson()
+   local str = string.format('          {"type" : "%s",', self.type)
    str = str .. '}'
    return str
 end
@@ -652,7 +659,7 @@ function WallBC_NoSlip_FixedT0:new(o)
       if o.wall_function and config.turbulence_model == "k_omega" then
          -- Only makes sense to add a wall function if the k-omega model is active.
          o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
-            WallFunctionInterfaceEffect:new{thermal_condition='FIXED_T'}
+            WallFunctionInterfaceEffect:new{}
          o.preSpatialDerivActionAtBndryCells = { WallFunctionCellEffect:new() }
       end
    end
@@ -689,10 +696,10 @@ function WallBC_NoSlip_FixedT1:new(o)
 					   UpdateThermoTransCoeffs:new() }
    if config.turbulence_model ~= "none" then
       o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallTurbulent:new()
-      if o.wall_function and o.turbulence_model == "k_omega" then
+      if o.wall_function and config.turbulence_model == "k_omega" then
 	 -- Only makes sense to add a wall function if the k-omega model is active.
 	 o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
-	    WallFunctionInterfaceEffect:new{thermal_condition='FIXED_T'}
+	    WallFunctionInterfaceEffect:new{}
 	 o.preSpatialDerivActionAtBndryCells = { WallFunctionCellEffect:new() }
       end
    end
@@ -772,10 +779,10 @@ function WallBC_NoSlip_Adiabatic0:new(o)
    o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new() }
    if config.turbulence_model ~= "none" then
       o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallTurbulent:new()
-      if o.wall_function and o.turbulence_model == "k_omega" then
+      if o.wall_function and config.turbulence_model == "k_omega" then
 	 -- Only makes sense to add a wall function if the k-omega model is active.
 	 o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
-	    WallFunctionInterfaceEffect:new{thermal_condition='ADIABATIC'}
+	    AdiabaticWallFunctionInterfaceEffect:new{}
 	 o.preSpatialDerivActionAtBndryCells = { WallFunctionCellEffect:new() }
       end
    end
@@ -810,10 +817,10 @@ function WallBC_NoSlip_Adiabatic1:new(o)
    o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new() }
    if config.turbulence_model ~= "none" then
       o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallTurbulent:new()
-      if o.wall_function and o.turbulence_model == "k_omega" then
+      if o.wall_function and config.turbulence_model == "k_omega" then
 	 -- Only makes sense to add a wall function if the k-omega model is active.
 	 o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
-	    WallFunctionInterfaceEffect:new{thermal_condition='ADIABATIC'}
+	    AdiabaticWallFunctionInterfaceEffect:new{}
 	 o.preSpatialDerivActionAtBndryCells = { WallFunctionCellEffect:new() }
       end
    end

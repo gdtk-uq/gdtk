@@ -86,9 +86,10 @@ BoundaryInterfaceEffect make_BIE_from_json(JSONValue jsonData, int blk_id, int b
         newBIE = new BIE_WallTurbulent(blk_id, boundary);
         break;
     case "wall_function_interface_effect":
-        string thermalCond = getJSONstring(jsonData, "thermal_condition", "FIXED_T");
-        thermalCond = toUpper(thermalCond);
-        newBIE = new BIE_WallFunction(blk_id, boundary, thermalCond);
+        newBIE = new BIE_WallFunction(blk_id, boundary);
+        break;
+    case "adiabatic_wall_function_interface_effect":
+        newBIE = new BIE_AdiabaticWallFunction(blk_id, boundary);
         break;
     case "temperature_from_gas_solid_interface":
         int otherBlock = getJSONint(jsonData, "other_block", -1);
@@ -1474,10 +1475,9 @@ class BIE_WallTurbulent : BoundaryInterfaceEffect {
 } // end class BIE_Turbulent
 
 class BIE_WallFunction : BoundaryInterfaceEffect {
-    this(int id, int boundary, string thermalCond)
+    this(int id, int boundary)
     {
         super(id, boundary, "WallFunction_InterfaceEffect");
-        _isFixedTWall = (thermalCond == "FIXED_T") ? true : false;
         _faces_need_to_be_flagged = true;
     }
 
@@ -1633,15 +1633,11 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
     //  Wall Function Boundary Conditions Inclding Heat Transfer
     //  and Compressibility.
     //  AIAA Journal, 42:6, pp. 1107--1114
+    // Authors N. Gibbons and W. Chan
     // NOTE: IFace.fs will receive updated values of tke and omega for later
     //       copying to boundary cells.
     {
         auto gmodel = blk.myConfig.gmodel;
-        // Compute recovery factor
-        number cp = gmodel.Cp(cell.fs.gas);
-        number Pr = cell.fs.gas.mu * cp / cell.fs.gas.k;
-        number gas_constant = gmodel.R(cell.fs.gas);
-        number recovery = pow(Pr, (1.0/3.0));
         // Compute tangent velocity at nearest interior point and wall interface
         number du, vt1_2_angle;
         number cell_tangent0, cell_tangent1, face_tangent0, face_tangent1;
@@ -1661,112 +1657,10 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
             vt1_2_angle = atan2(fabs(cellVel.z - faceVel.z), fabs(cellVel.y - faceVel.y));
             du = sqrt( pow((cell_tangent0-face_tangent0),2.0) + pow((cell_tangent1-face_tangent1),2.0) );
         }
-        // Compute wall gas properties from either ...
-        number T_wall, rho_wall;
-        if ( _isFixedTWall ) {
-            // ... user-specified wall temperature, or ...
-            T_wall = IFace.fs.gas.T;
-            rho_wall = IFace.fs.gas.rho;
-        } else {
-            // ... using Crocco-Busemann relation (Eq 11)
-            T_wall = cell.fs.gas.T + recovery * du * du / (2.0 * cp);
-            // Update gas properties at the wall, assuming static pressure
-            // at the wall is the same as that in the first wall cell
-            IFace.fs.gas.T = T_wall;
-            IFace.fs.gas.p = cell.fs.gas.p;
-            gmodel.update_thermo_from_pT(IFace.fs.gas);
-            gmodel.update_trans_coeffs(IFace.fs.gas);
-            rho_wall = IFace.fs.gas.rho;
-        }
-        // Compute wall shear stess (and heat flux for fixed temperature wall)
-        // using the surface stress tensor. This provides initial values to
-        // solve for tau_wall and q_wall iteratively
-        number wall_dist = distance_between(cell.pos[0], IFace.pos);
-        number dudy = du / wall_dist;
-        number mu_lam_wall = IFace.fs.gas.mu;
-        number mu_lam = cell.fs.gas.mu;
-        number tau_wall_old = mu_lam_wall * dudy;
-        number dT, dTdy, k_lam_wall, q_wall_old;
-        if ( _isFixedTWall ) {
-            dT = fabs( cell.fs.gas.T - IFace.fs.gas.T );
-            dTdy = dT / wall_dist;
-            k_lam_wall = IFace.fs.gas.k;
-            q_wall_old = k_lam_wall * dTdy;
-        }
-        // Constants from Spalding's Law of the Wall theory and
-        // Nichols' wall function implementation
-        double kappa = 0.4;
-        double B = 5.5;
-        double C_mu = 0.09;
-        size_t counter_tau = 0; size_t counter_q = 0;
-        double tolerance = 1.0e-10;
-        number diff_tau = 100.0; number diff_q = 100.0;
-        number tau_wall = 0.0; number q_wall = 0.0;
-        number u_tau = 0.0; number u_plus = 0.0; number Gam = 0.0;
-        number Beta = 0.0; number Q = 0.0; number Phi = 0.0;
-        number y_plus_white = 0.0; number y_plus = 0.0; number alpha = 0.0;
-        // Iteratively solve for the wall-function corrected shear stress
-        // (and heat flux for fixed temperature walls)
-        while ( diff_q > tolerance ) {
-            counter_tau = 0; // Resets counter for tau_wall to zero
-            while ( diff_tau > tolerance ) {
-                // Friction velocity and u+ (Eq 2)
-                u_tau = sqrt( tau_wall_old / rho_wall );
-                u_plus = du / u_tau;
-                // Gamma, Beta, Qm and Phi (Eq 7)
-                Gam = recovery * u_tau * u_tau / (2.0 * cp * T_wall);
-                if ( _isFixedTWall ) {
-                    Beta = q_wall_old * mu_lam_wall / (rho_wall*T_wall*k_lam_wall*u_tau);
-                } else {
-                    Beta = 0.0;
-                }
-                Q = sqrt(Beta*Beta + 4.0*Gam);
-                Phi = asin(-1.0 * Beta / Q);
-                // In the calculation of y+ defined by White and Christoph
-                // (Eq 9), the equation breaks down when the value of
-                // asin((2.0*Gam*u_plus - Beta)/Q) goes larger than 1.0 or
-                // smaller than -1.0. For cases where we initialise the flow
-                // solution with high flow velocity, du (and hence u_plus)
-                // becomes large enough to exceed this limit. A limiter is
-                // therefore implemented here to help get past this initially
-                // large velocity gradient at the wall. Note that this limiter
-                // is not in Nichols and Nelson's paper. We set the limit to
-                // either a value just below 1.0, or just above -1.0, to avoid
-                // the calculation of y_white_y_plus (Eq. 15) from blowing up.
-                alpha = (2.0*Gam*u_plus - Beta)/Q;
-                if (alpha > 0.0) alpha = fmin(alpha, 1-1e-12);
-                else alpha = fmax(alpha, -1+1e-12);
-                // y+ defined by White and Christoph (Eq 9)
-                y_plus_white = exp((kappa/sqrt(Gam))*(asin(alpha) - Phi))*exp(-1.0*kappa*B);
-                // Spalding's unified form for defining y+ (Eq 8)
-                y_plus = u_plus + y_plus_white - exp(-1.0*kappa*B) * ( 1.0 + kappa*u_plus
-                                                                           + pow((kappa*u_plus), 2.0) / 2.0
-                                                                           + pow((kappa*u_plus), 3.0) / 6.0 );
-                // Calculate an updated value for the wall shear stress and heat flux
-                tau_wall = 1.0/rho_wall * pow(y_plus*mu_lam_wall/wall_dist, 2.0);
-                // Difference between old and new tau_wall and q_wall. Update old value
-                diff_tau = fabs(tau_wall - tau_wall_old);
-                tau_wall_old += 0.25 * (tau_wall - tau_wall_old);
-                // Limit number of iteration loops to 1000.
-                counter_tau++;
-                if (counter_tau > 1000) break;
-            } // End of "while ( diff_tau > tolerance )" loop
-            //
-            if ( _isFixedTWall ) {
-                // Compute Beta and q_wall values
-                Beta = (cell.fs.gas.T/T_wall - 1.0 + Gam*u_plus*u_plus) / u_plus;
-                q_wall = Beta * (rho_wall*T_wall*k_lam_wall*u_tau) / mu_lam_wall;
-                diff_q = fabs( q_wall - q_wall_old );
-                q_wall_old += 0.25 * (q_wall - q_wall_old);
-            } else {
-                // For adiabatic wall cases, we just break out of the q_wall loop.
-                break;
-            }
-            // Limit number of iteration loops to 1000.
-            counter_q++;
-            if (counter_q > 1000) break;
-        } // End of "while ( diff_q > tolerance )" loop
-        //
+
+        number tau_wall, q_wall;
+        SolveShearStressAndHeatTransfer(cell, IFace, gmodel, du, tau_wall, q_wall);
+
         // Store wall shear stress and heat flux to be used later to replace viscous
         // stress in flux calculations. Also, for wall shear stress, transform value
         // back to the global frame of reference.
@@ -1788,11 +1682,7 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
                                          -1.0 * reverse_flag0 * tau_wall * cos(vt1_2_angle),
                                          -1.0 * reverse_flag1 * tau_wall * sin(vt1_2_angle));
             }
-            if (_isFixedTWall) {
-                IFace.q = -1.0 * q_wall;
-            } else {
-                IFace.q = 0.0;
-            }
+            IFace.q = -1.0 * q_wall;
         } else { // South, West and Bottom
             if ( blk.myConfig.dimensions == 2 ) {
                 IFace.tau_wall_x = reverse_flag0 * tau_wall * IFace.n.y;
@@ -1803,11 +1693,7 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
                                          reverse_flag0 * tau_wall * cos(vt1_2_angle),
                                          reverse_flag1 * tau_wall * sin(vt1_2_angle));
             }
-            if ( _isFixedTWall ) {
-                IFace.q = q_wall;
-            } else {
-                IFace.q = 0.0;
-            }
+            IFace.q = q_wall;
         }
         if ( blk.myConfig.dimensions == 3 ) {
             local_tau_wall.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
@@ -1815,30 +1701,10 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
             IFace.tau_wall_y = local_tau_wall.y;
             IFace.tau_wall_z = local_tau_wall.z;
         }
-        // Turbulence model boundary conditions (Eq 15 & 14)
-        // Note that the formulation of y_white_y_plus (Eq 15) is now directly
-        // affected by the limiter which was set earlier to help get past large
-        // velocity gradients at the wall for cases with initialised with high
-        // velocity in flow domain.
-        number y_white_y_plus = 2.0 * y_plus_white * kappa*sqrt(Gam)/Q
-                * pow((1.0 - pow(alpha,2.0)), 0.5);
-        number mu_coeff = 1.0 + y_white_y_plus
-                - kappa*exp(-1.0*kappa*B) * (1.0 + kappa*u_plus + kappa*u_plus*kappa*u_plus/2.0)
-                - mu_lam/mu_lam_wall;
-        // Limit turbulent-to-laminar viscosity ratio between zero and the global limit.
-        if ( mu_coeff < 0.0 ) mu_coeff = 0.0;
-        mu_coeff = fmin(mu_coeff, blk.myConfig.max_mu_t_factor);
-        // Compute turbulent viscosity; forcing mu_t to zero, if result is negative.
-        number mu_t = mu_lam_wall * mu_coeff;
-        // Compute omega (Eq 19 - 21)
-        number omega_i = 6.0*mu_lam_wall / (0.075*rho_wall*wall_dist*wall_dist);
-        number omega_o = u_tau / (sqrt(C_mu)*kappa*wall_dist);
-        number omega = sqrt(omega_i*omega_i + omega_o*omega_o);
-        // Compute tke (Eq 22)
-        assert(cell.fs.gas.rho > 0.0, "density not positive");
-        assert(mu_t >= 0.0, "mu_t lesser than zero");
-        assert(omega > 0.0, "omega not greater than zero");
-        number tke = omega * mu_t / cell.fs.gas.rho;
+        number tke, omega, mu_t;
+        mu_t = TurbulentViscosity(cell, IFace, gmodel, du, tau_wall, q_wall);
+        komegaVariables(cell, IFace, du, tau_wall, mu_t, tke, omega); // TODO: Generalise
+
         version(turbulence) {
             // Assign updated values of tke and omega to IFace.fs for
             // later copying to boundary cells.
@@ -1848,11 +1714,285 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
         return;
     } // end wall_function()
 
+protected:
+    void SolveShearStressAndHeatTransfer(const FVCell cell, FVInterface IFace, GasModel gmodel, const number du, ref number tau_wall, ref number q_wall){
+        // Compute wall gas properties from either ...
+        number cp = gmodel.Cp(cell.fs.gas);
+        number Pr = cell.fs.gas.mu * cp / cell.fs.gas.k;
+        number recovery = pow(Pr, (1.0/3.0));
+
+        number T = cell.fs.gas.T;
+        number T_wall = IFace.fs.gas.T;
+        IFace.fs.gas.p = cell.fs.gas.p;
+        gmodel.update_thermo_from_pT(IFace.fs.gas);
+        gmodel.update_trans_coeffs(IFace.fs.gas);
+        number rho_wall = IFace.fs.gas.rho; 
+        number k_lam_wall = IFace.fs.gas.k;
+        number mu_lam_wall = IFace.fs.gas.mu;
+
+        number wall_dist = distance_between(cell.pos[0], IFace.pos);
+        number dudy = du / wall_dist;
+        tau_wall = mu_lam_wall * dudy;
+
+        number dTdy = fabs(T - T_wall)/wall_dist;
+        q_wall = k_lam_wall * dTdy;
+
+        // Two variable Newton's method to solve equations (8) and (10) simulteneously 
+        const number tolerance = 1.0e-10;
+        number error = 1e32;
+        ulong iterations = 0;
+        number f1, f2, df1_dtau, df1_dq, df2_dtau, df2_dq;
+        number diff_tau; number diff_q;
+        while (error>tolerance) {
+            f1 = WhiteChristophError(tau_wall, q_wall, rho_wall, T_wall, mu_lam_wall, k_lam_wall, recovery, du, wall_dist, cp);
+            f2 = CroccoBusemanError(tau_wall, q_wall, T_wall, rho_wall, mu_lam_wall, k_lam_wall, du, T, recovery, cp);
+            error = sqrt(f1*f1 + f2*f2);
+
+            WhiteChristophJacobian(tau_wall, q_wall, rho_wall, T_wall, mu_lam_wall, k_lam_wall, recovery, du, wall_dist, cp, df1_dtau, df1_dq);
+            CroccoBusemanJacobian(tau_wall, q_wall, mu_lam_wall, k_lam_wall, du, df2_dtau, df2_dq);
+
+            diff_tau = (f1*df2_dq/df1_dq - f2)/(df2_dtau - df2_dq*df1_dtau/df1_dq);
+            diff_q = (f1*df2_dtau/df1_dtau - f2)/(df2_dq - df2_dtau*df1_dq/df1_dtau);
+
+            tau_wall += diff_tau;
+            q_wall += diff_q;
+            iterations += 1;
+            if (iterations>1000) throw new Exception("Convergence failure in turbulent wall function");
+        }
+        return;
+    }
+
+    void komegaVariables(const FVCell cell, const FVInterface IFace, const number du, const number tau_wall, const number mu_t, ref number tke, ref number omega){
+        // Compute omega (Eq 19 - 21)
+        const number C_mu = 0.09;
+        const number kappa = 0.4;
+
+        number wall_dist = distance_between(cell.pos[0], IFace.pos);
+        number rho_wall = IFace.fs.gas.rho;
+        number mu_lam_wall = IFace.fs.gas.mu;
+        number rho = cell.fs.gas.rho;
+
+        number u_tau = sqrt( tau_wall / rho_wall );
+        number omega_i = 6.0*mu_lam_wall / (0.075*rho_wall*wall_dist*wall_dist);
+        number omega_o = u_tau / (sqrt(C_mu)*kappa*wall_dist);
+
+        omega = sqrt(omega_i*omega_i + omega_o*omega_o);  // Compute omega (Eq 21)
+        tke = omega * mu_t / rho;                         // Compute tke (Eq 22)
+    }
+
+    number TurbulentViscosity(const FVCell cell, const FVInterface IFace, GasModel gmodel, const number u, const number tau_wall, const number q_wall){
+        // Turbulence model boundary conditions (Eq 15 & 14)
+        // Note that the formulation of y_white_y_plus (Eq 15) is now directly
+        // affected by the limiter which was set earlier to help get past large
+        // velocity gradients at the wall for cases with initialised with high
+        // velocity in flow domain.
+        number cp = gmodel.Cp(cell.fs.gas);
+        number Pr = cell.fs.gas.mu * cp / cell.fs.gas.k;
+        number recovery = pow(Pr, (1.0/3.0));
+        number T_wall = IFace.fs.gas.T;
+        number rho_wall = IFace.fs.gas.rho;
+        number k_lam_wall = IFace.fs.gas.k;
+        number mu_lam_wall = IFace.fs.gas.mu;
+        number mu_lam = cell.fs.gas.mu;
+        number y = distance_between(cell.pos[0], IFace.pos);
+
+        const number kappa = 0.4;
+        const number B = 5.5;
+
+        number u_tau = sqrt( tau_wall / rho_wall );
+        number u_plus = u / u_tau;
+        number y_plus = rho_wall*u_tau*y/mu_lam_wall;
+        number Gam = recovery * u_tau * u_tau / (2.0 * cp * T_wall);
+        number Beta = q_wall * mu_lam_wall / (rho_wall*T_wall*k_lam_wall*u_tau);
+        number Q = sqrt(Beta*Beta + 4.0*Gam);
+        number Phi = asin(-1.0 * Beta / Q);
+        number alpha = (2.0*Gam*u_plus - Beta)/Q;
+        if (alpha > 0.0) alpha = fmin(alpha, 1-1e-12);
+        else alpha = fmax(alpha, -1+1e-12);
+
+        number y_plus_white = exp((kappa/sqrt(Gam))*(asin(alpha) - Phi))*exp(-1.0*kappa*B);
+
+        number y_white_y_plus = 2.0 * y_plus_white * kappa*sqrt(Gam)/Q
+                * pow((1.0 - pow(alpha,2.0)), 0.5);
+        number mu_coeff = 1.0 + y_white_y_plus
+                - kappa*exp(-1.0*kappa*B) * (1.0 + kappa*u_plus + kappa*u_plus*kappa*u_plus/2.0)
+                - mu_lam/mu_lam_wall;
+        // Limit turbulent-to-laminar viscosity ratio between zero and the global limit.
+        if ( mu_coeff < 0.0 ) mu_coeff = 0.0;
+        mu_coeff = fmin(mu_coeff, blk.myConfig.max_mu_t_factor);
+        // Compute turbulent viscosity; forcing mu_t to zero, if result is negative.
+        return mu_lam_wall * mu_coeff;
+    }
+
+    number WhiteChristophError(number tau_wall, number q_wall, number rho_wall, number T_wall, number mu_lam_wall, number k_lam_wall, number recovery, number u, number y, number cp){
+        /*
+           Equation (8) + (9) from Nichols paper
+
+           Note:
+               In the calculation of y+ defined by White and Christoph
+               (Eq 9), the equation breaks down when the value of
+               asin((2.0*Gam*u_plus - Beta)/Q) goes larger than 1.0 or
+               smaller than -1.0. For cases where we initialise the flow
+               solution with high flow velocity, du (and hence u_plus)
+               becomes large enough to exceed this limit. A limiter is
+               therefore implemented here to help get past this initially
+               large velocity gradient at the wall. Note that this limiter
+               is not in Nichols and Nelson's paper. We set the limit to
+               either a value just below 1.0, or just above -1.0, to avoid
+               the calculation of y_white_y_plus (Eq. 15) from blowing up.
+        */ 
+        const number kappa = 0.4;
+        const number B = 5.5;
+
+        number u_tau = sqrt( tau_wall / rho_wall );
+        number u_plus = u / u_tau;
+        number y_plus = rho_wall*u_tau*y/mu_lam_wall;
+        number Gam = recovery * u_tau * u_tau / (2.0 * cp * T_wall);
+        number Beta = q_wall * mu_lam_wall / (rho_wall*T_wall*k_lam_wall*u_tau);
+        number Q = sqrt(Beta*Beta + 4.0*Gam);
+        number Phi = asin(-1.0 * Beta / Q);
+        number alpha = (2.0*Gam*u_plus - Beta)/Q;
+        if (alpha > 0.0) alpha = fmin(alpha, 1-1e-12);
+        else alpha = fmax(alpha, -1+1e-12);
+
+        number y_plus_white = exp((kappa/sqrt(Gam))*(asin(alpha) - Phi))*exp(-1.0*kappa*B);
+        number thing = exp(-1.0*kappa*B) * ( 1.0 + kappa*u_plus + pow((kappa*u_plus), 2.0) / 2.0
+                                                                + pow((kappa*u_plus), 3.0) / 6.0 );
+        number error = u_plus + y_plus_white - thing - y_plus;
+        return error; 
+    }
+
+    void WhiteChristophJacobian(number tau_wall, number q_wall, number rho_wall, number T_wall, number mu_lam_wall, number k_lam_wall, number recovery, number u, number y, number cp, ref number dWC_dtauw, ref number dWC_dqw){
+
+        const number kappa = 0.4;
+        const number B = 5.5;
+        number u_tau = sqrt( tau_wall / rho_wall );
+        number u_plus = u / u_tau;
+        number y_plus = rho_wall*u_tau*y/mu_lam_wall;
+        number Gam = recovery * u_tau * u_tau / (2.0 * cp * T_wall);
+        number Beta = q_wall * mu_lam_wall / (rho_wall*T_wall*k_lam_wall*u_tau);
+        number Q = sqrt(Beta*Beta + 4.0*Gam);
+        number Phi = asin(-1.0 * Beta / Q);
+        number alpha = (2.0*Gam*u_plus - Beta)/Q;
+        if (alpha > 0.0) alpha = fmin(alpha, 1-1e-12);
+        else alpha = fmax(alpha, -1+1e-12);
+        number P = asin(alpha);
+
+        number y_plus_white = exp((kappa/sqrt(Gam))*(P - Phi))*exp(-1.0*kappa*B);
+
+        number duplus_dtauw = -u/2.0*sqrt(rho_wall/tau_wall/tau_wall/tau_wall);
+        number dyplus_dtauw = y/2.0/mu_lam_wall*sqrt(rho_wall/tau_wall);
+        number dthing_duplus= exp(-1.0*kappa*B)*(kappa + kappa*kappa*u_plus + 0.5*kappa*kappa*kappa*u_plus*u_plus);
+        number dthing_dtauw = dthing_duplus*duplus_dtauw;
+
+        number dBeta_dtauw  = -q_wall*mu_lam_wall/2.0/T_wall/k_lam_wall/sqrt(rho_wall*tau_wall*tau_wall*tau_wall);
+        number dGam_dtauw   = recovery/2.0/cp/T_wall/rho_wall;
+        number dQ_dtauw     = 0.5/Q*(2.0*Beta*dBeta_dtauw + 4.0*dGam_dtauw);
+        number dalpha_dtauw = (2*Gam*duplus_dtauw + 2*u_plus*dGam_dtauw - dBeta_dtauw)/Q - alpha/Q*dQ_dtauw;
+        number dP_dtauw     = dalpha_dtauw/sqrt(1-alpha*alpha);
+        number dPhi_dtauw   = (Beta*dQ_dtauw - Q*dBeta_dtauw)/Q/Q/sqrt(1.0 - Beta*Beta/Q/Q);
+
+        number dyplusWhite_dtauw = y_plus_white*kappa/Gam*(dP_dtauw*sqrt(Gam) - dPhi_dtauw*sqrt(Gam) - (P-Phi)*dGam_dtauw/2.0/sqrt(Gam));
+
+        dWC_dtauw = duplus_dtauw + dyplusWhite_dtauw - dthing_dtauw - dyplus_dtauw;
+
+        number duplus_dqw = 0.0;
+        number dyplus_dqw = 0.0;
+        number dthing_dqw = 0.0;
+
+        number dBeta_dqw = mu_lam_wall/T_wall/k_lam_wall/sqrt(rho_wall*tau_wall);
+        number dGam_dqw = 0.0;
+        number dQ_dqw     = 0.5/Q*(2.0*Beta*dBeta_dqw + 4.0*dGam_dqw);
+        number dalpha_dqw = (2*Gam*duplus_dqw + 2*u_plus*dGam_dqw - dBeta_dqw)/Q - alpha/Q*dQ_dqw;
+        number dP_dqw     = dalpha_dqw/sqrt(1-alpha*alpha);
+        number dPhi_dqw   = (Beta*dQ_dqw - Q*dBeta_dqw)/Q/Q/sqrt(1.0 - Beta*Beta/Q/Q);
+
+        number dyplusWhite_dqw = y_plus_white*kappa/Gam*(dP_dqw*sqrt(Gam) - dPhi_dqw*sqrt(Gam) - (P-Phi)*dGam_dqw/2.0/sqrt(Gam));
+
+        dWC_dqw = dyplusWhite_dqw;
+    }
+
+    number CroccoBusemanError(number tau_wall, number q_wall, number T_wall, number rho_wall, number mu_lam_wall, number k_lam_wall, number u, number T, number recovery, number cp){
+        /*
+           Equation (10) from Nichols Paper
+
+       */
+        number u_tau = sqrt( tau_wall / rho_wall );
+        number u_plus = u / u_tau;
+        number Gam = recovery * u_tau * u_tau / (2.0 * cp * T_wall);
+        number Beta = q_wall * mu_lam_wall / (rho_wall*T_wall*k_lam_wall*u_tau);
+        number thing = 1.0 + Beta*u_plus - Gam*u_plus*u_plus;
+        number error = T_wall*thing - T;
+        return error;
+    }
+
+    void CroccoBusemanJacobian(number tau_wall, number q_wall, number mu_lam_wall, number k_lam_wall, number u, ref number dCB_dtauw, ref number dCB_dqw){
+
+        dCB_dtauw = -q_wall*mu_lam_wall*u/(k_lam_wall*tau_wall*tau_wall);
+        dCB_dqw = mu_lam_wall*u/k_lam_wall/tau_wall;
+        return;
+    }
 private:
-    bool _isFixedTWall;
     bool _faces_need_to_be_flagged = true;
+
 } // end class BIE_WallFunction
 
+class BIE_AdiabaticWallFunction : BIE_WallFunction {
+    this(int id, int boundary)
+    {
+        super(id, boundary);
+        desc = "AdiabaticWallFunction_InterfaceEffect";
+    }
+
+    override string toString() const
+    {
+        return "AdiabaticWallFunction_InterfaceEffect()";
+    }
+
+protected:
+    override void SolveShearStressAndHeatTransfer(const FVCell cell, FVInterface IFace, GasModel gmodel, const number du, ref number tau_wall, ref number q_wall){
+        number cp = gmodel.Cp(cell.fs.gas);
+        number Pr = cell.fs.gas.mu * cp / cell.fs.gas.k;
+        number recovery = pow(Pr, (1.0/3.0));
+
+        // set wall properties using the Crocco-Busemann relation (Eq 11)
+        number T = cell.fs.gas.T;
+        number T_wall = T + recovery * du * du / (2.0 * cp);
+        IFace.fs.gas.p = cell.fs.gas.p;
+        IFace.fs.gas.T = T_wall;
+        gmodel.update_thermo_from_pT(IFace.fs.gas);
+        gmodel.update_trans_coeffs(IFace.fs.gas);
+        number rho_wall = IFace.fs.gas.rho; 
+        number k_lam_wall = IFace.fs.gas.k;
+        number mu_lam_wall = IFace.fs.gas.mu;
+
+        number wall_dist = distance_between(cell.pos[0], IFace.pos);
+        number dudy = du / wall_dist;
+        tau_wall = mu_lam_wall * dudy;
+
+        q_wall = 0.0;
+
+        // One variable Newton's method to solve equation (8) with q_wall = 0.0
+        const number tolerance = 1.0e-10;
+        number error = 1e32;
+        ulong iterations = 0;
+        number f1, df1_dtau, df1_dq;
+        number diff_tau;
+        while (error>tolerance) {
+            f1 = WhiteChristophError(tau_wall, q_wall, rho_wall, T_wall, mu_lam_wall, k_lam_wall, recovery, du, wall_dist, cp);
+            error = sqrt(f1*f1);
+
+            WhiteChristophJacobian(tau_wall, q_wall, rho_wall, T_wall, mu_lam_wall, k_lam_wall, recovery, du, wall_dist, cp, df1_dtau, df1_dq);
+
+            diff_tau = -f1/df1_dtau;
+            tau_wall += diff_tau;
+            iterations += 1;
+            if (iterations>1000) throw new Exception("Convergence failure in turbulent wall function");
+        }
+        return;
+    }
+
+}
 
 // NOTE: This GAS DOMAIN boundary effect has a large
 //       and important side-effect:
