@@ -226,6 +226,12 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
 
     // some data structures for use with LU-SGS
     foreach (blk; parallel(localFluidBlocks,1)) {
+        foreach (bc; blk.bc) {
+            foreach(c; bc.ghostcells) {
+                c.dFdU = new Matrix!number(5,5); // number of conserved variables
+                c.dFdU_tmp = new Matrix!number(5,5);
+            }
+        }
         foreach(c; blk.cells) {
             c.dFdU = new Matrix!number(5,5); // number of conserved variables
             c.dFdU_tmp = new Matrix!number(5,5);
