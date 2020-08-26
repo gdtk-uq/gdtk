@@ -6,6 +6,8 @@ draft: false
 ## Graduate Theses
 The following documents are available in PDF.
 
+1. [Kyle Damm PhD Thesis, 2020](/pdfs/kyle-damm-phd-thesis-feb-2020.pdf) *Adjoint-based aerodynamic design optimisation in hypersonic flow*
+
 1. [Elise Fahy PhD Thesis, 2016](/pdfs/elise-fahy-phd-thesis-dec-2016.pdf) *Superorbital Re-entry Shock Layers: Flight and Laboratory Comparisons*
 
 1. [David Gildfind PhD Thesis, 2012](/pdfs/david-gildfind-phd-thesis-oct-2012.pdf) *Development of High Total Pressure Scramjet Flow Conditions using the X2 Expansion Tube*

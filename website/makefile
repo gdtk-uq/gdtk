@@ -149,6 +149,7 @@ theses:
 	rsync -av $(DGD_DOC)/theses/james-faddy-masters-thesis-aug-2000.pdf static/pdfs/
 	rsync -av $(DGD_DOC)/theses/joseph-tang-PhD-thesis-jun-2008.pdf static/pdfs/
 	rsync -av $(DGD_DOC)/theses/kevin-austin-phd-thesis-june-2002.pdf static/pdfs/
+	rsync -av $(DGD_DOC)/theses/kyle-damm-phd-thesis-feb-2020.pdf static/pdfs/
 	rsync -av $(DGD_DOC)/theses/matt-mcgilvray-PhD-thesis-sep-2008.pdf static/pdfs/
 	rsync -av $(DGD_DOC)/theses/matthew-smith-PhD-thesis-june-2008.pdf static/pdfs/
 	rsync -av $(DGD_DOC)/theses/michael-elford-masters-thesis-sep-2005.pdf static/pdfs/
