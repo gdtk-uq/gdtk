@@ -54,12 +54,17 @@ Instead, check the User Guide for the definitive user input.
   Presentation to the Franco-Australian Symposium in Paris.
   Example of stagnation-point heating of a sphere, with the shock-fitting procedure in action.
 
-- [Implementation of a compressible-flow simulation code in the D programming language](/pdfs/eilmer4-talk-pj-may-2016.pdf), May 2016.
+- [Implementation of a compressible-flow simulation code in the D programming language](/pdfs/eilmer4-talk-pj-may-2016.pdf), May 2016.  
   PAJ seminar on the development of the Eilmer4 code over the past year.
   Some history (for motivation), formulation and code structure to take advantage of easy shared-memory parallelism in D.
   Example of sharp-nosed body to show input script format.
   Parallel performance of the forward-facing step revisited.
   Blunt-nosed cone for a real hypersonics application.
+
+- [The Case for Open Source in Research _and what we're doing in Eilmer_](/html/case-for-open-source.html), 10 March 2016.  
+  RJG seminar in the Centre for Hypersonics seminar series.
+  This talk makes a case for the use of open source codes in research and then links that to the efforts
+  to support reproducible research when using Eilmer.
 
 - [Implementation of a compressible-flow simulation code in the D programming language](/pdfs/eilmer4-talk-nov-2015.pdf), November 2015.  
   The 2nd Australasian Conference on Computational Mechanics, held at QUT,
