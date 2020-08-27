@@ -222,6 +222,24 @@ public:
     @nogc abstract void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0);
 
     @nogc
+    void into_rotating_frame(ref Vector3 v, ref const(Vector3) pos)
+    // Velocity vector becomes relative to the rotating frame of the block
+    // by subtracting the entrainment velocity (-y*omegaz i + x*omegaz j).
+    {
+        v.refx += pos.y * omegaz;
+        v.refy -= pos.x * omegaz;
+    }
+
+    @nogc
+    void into_nonrotating_frame(ref Vector3 v, ref const(Vector3) pos)
+    // Velocity vector becomes relative to a nonrotating frame
+    // by adding the entrainment velocity (-y*omegaz i + x*omegaz j).
+    {
+        v.refx -= pos.y * omegaz;
+        v.refy += pos.x * omegaz;
+    }
+
+    @nogc
     void identify_reaction_zones(int gtl)
     // Adjust the reactions-allowed flag for cells in this block.
     {

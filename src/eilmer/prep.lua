@@ -77,7 +77,7 @@ sssOptionsHidden = { -- hidden from user
 
    -- DPLU-SGS max number of subiterations (e.g. kmax)
    max_sub_iterations = 1,
-   
+
    -- Restarted preconditioned FGMRES settings
    max_outer_iterations = 10, -- higher settings typically mean fast convergence of
                               -- an iteration BUT extra cost
@@ -90,7 +90,7 @@ sssOptionsHidden = { -- hidden from user
    cfl_schedule_length = 0,
    cfl_schedule_value_list = {},
    cfl_schedule_iter_list = {},
-   
+
    -- Options for start-up phase (first order interpolation applied during this phase)
    number_start_up_steps = 5,
    cfl0 = 1.0,
@@ -2458,10 +2458,11 @@ function build_block_files(job)
       end
       if type(ifs) ~= "string" then
          local grid = fluidBlocks[idx].grid
+         local omegaz = fluidBlocks[idx].omegaz
          if grid:get_type() == "structured_grid" then
-            write_initial_sg_flow_file(fileName, grid, ifs, config.start_time)
+            write_initial_sg_flow_file(fileName, grid, ifs, config.start_time, omegaz)
          else
-            write_initial_usg_flow_file(fileName, grid, ifs, config.start_time)
+            write_initial_usg_flow_file(fileName, grid, ifs, config.start_time, omegaz)
          end
       end
    end

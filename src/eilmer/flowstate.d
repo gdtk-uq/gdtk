@@ -375,14 +375,17 @@ public:
 } // end class FlowState
 
 void write_initial_flow_file(string fileName, ref StructuredGrid grid,
-                             in FlowState fs, double t0, GasModel gmodel)
+                             in FlowState fs, double t0, double omegaz, GasModel gmodel)
 // Keep in sync with SFluidBlock.write_solution.
+// Note that we assume the FlowState fs to be in a nonrotating frame.
 {
     // Numbers of cells derived from numbers of vertices in grid.
     auto nicell = grid.niv - 1;
     auto njcell = grid.njv - 1;
     auto nkcell = grid.nkv - 1;
     if (GlobalConfig.dimensions == 2) nkcell = 1;
+    //
+    auto myfs = new FlowState(fs);
     //
     // Write the data for the whole structured block.
     switch (GlobalConfig.flow_format) {
@@ -410,20 +413,30 @@ void write_initial_flow_file(string fileName, ref StructuredGrid grid,
                     Vector3 p100 = *grid[i+1,j,k];
                     Vector3 p110 = *grid[i+1,j+1,k];
                     Vector3 p010 = *grid[i,j+1,k];
-                    // [TODO] provide better calculation using geom module.
-                    // For the moment, it doesn't matter greatly because the solver
-                    // will compute it's own approximations
-                    auto pos = to!number(0.25)*(p000 + p100 + p110 + p010);
-                    number volume = 0.0;
-                    if (GlobalConfig.dimensions == 3) {
+                    Vector3 pos;
+                    number volume, iLen, jLen, kLen;
+                    if (GlobalConfig.dimensions == 2) {
+                        number xyplane_area;
+                        xyplane_quad_cell_properties(p000, p100, p110, p010, pos, xyplane_area, iLen, jLen, kLen);
+                        volume = xyplane_area * ((GlobalConfig.axisymmetric) ? pos.y : to!number(1.0) );
+                    } else if (GlobalConfig.dimensions == 3) {
                         Vector3 p001 = *grid[i,j,k+1];
                         Vector3 p101 = *grid[i+1,j,k+1];
                         Vector3 p111 = *grid[i+1,j+1,k+1];
                         Vector3 p011 = *grid[i,j+1,k+1];
-                        pos = to!number(0.5)*pos + to!number(0.125)*(p001 + p101 + p111 + p011);
+                        hex_cell_properties(p000, p100, p110, p010, p001, p101, p111, p011, pos, volume, iLen, jLen, kLen);
+                        if (omegaz != 0.0) {
+                            // Make velocities relative to rotating frame.
+                            myfs.vel.refx = fs.vel.x + pos.y * omegaz;
+                            myfs.vel.refy = fs.vel.y - pos.x * omegaz;
+                        }
+                    } else {
+                        throw new Exception("GlobalConfig.dimensions not 2 or 3.");
                     }
-                    cell_data_to_raw_binary(outfile, pos, volume, fs,
-                                            to!number(0.0), to!number(0.0), to!number(0.0), GlobalConfig.with_local_time_stepping, -1.0, -1.0, -1.0,
+                    cell_data_to_raw_binary(outfile, pos, volume, myfs,
+                                            to!number(0.0), to!number(0.0), to!number(0.0),
+                                            GlobalConfig.with_local_time_stepping,
+                                            -1.0, -1.0, -1.0,
                                             GlobalConfig.include_quality,
                                             GlobalConfig.MHD,
                                             GlobalConfig.divergence_cleaning,
@@ -460,19 +473,27 @@ void write_initial_flow_file(string fileName, ref StructuredGrid grid,
                     Vector3 p100 = *grid[i+1,j,k];
                     Vector3 p110 = *grid[i+1,j+1,k];
                     Vector3 p010 = *grid[i,j+1,k];
-                    // [TODO] provide better calculation using geom module.
-                    // For the moment, it doesn't matter greatly because the solver
-                    // will compute it's own approximations
-                    auto pos = to!number(0.25)*(p000 + p100 + p110 + p010);
-                    number volume = 0.0;
-                    if (GlobalConfig.dimensions == 3) {
+                    Vector3 pos;
+                    number volume, iLen, jLen, kLen;
+                    if (GlobalConfig.dimensions == 2) {
+                        number xyplane_area;
+                        xyplane_quad_cell_properties(p000, p100, p110, p010, pos, xyplane_area, iLen, jLen, kLen);
+                        volume = xyplane_area * ((GlobalConfig.axisymmetric) ? pos.y : to!number(1.0) );
+                    } else if (GlobalConfig.dimensions == 3) {
                         Vector3 p001 = *grid[i,j,k+1];
                         Vector3 p101 = *grid[i+1,j,k+1];
                         Vector3 p111 = *grid[i+1,j+1,k+1];
                         Vector3 p011 = *grid[i,j+1,k+1];
-                        pos = to!number(0.5)*pos + to!number(0.125)*(p001 + p101 + p111 + p011);
+                        hex_cell_properties(p000, p100, p110, p010, p001, p101, p111, p011, pos, volume, iLen, jLen, kLen);
+                        if (omegaz != 0.0) {
+                            // Make velocities relative to rotating frame.
+                            myfs.vel.refx = fs.vel.x + pos.y * omegaz;
+                            myfs.vel.refy = fs.vel.y - pos.x * omegaz;
+                        }
+                    } else {
+                        throw new Exception("GlobalConfig.dimensions not 2 or 3.");
                     }
-                    outfile.compress(" " ~ cell_data_as_string(pos, volume, fs,
+                    outfile.compress(" " ~ cell_data_as_string(pos, volume, myfs,
                                                                to!number(0.0), to!number(0.0), to!number(0.0),
                                                                GlobalConfig.with_local_time_stepping, -1.0, -1.0, -1.0,
                                                                GlobalConfig.include_quality,
@@ -489,8 +510,9 @@ void write_initial_flow_file(string fileName, ref StructuredGrid grid,
 } // end write_initial_flow_file() StructuredGrid version
 
 void write_initial_flow_file(string fileName, ref UnstructuredGrid grid,
-                             in FlowState fs, double t0, GasModel gmodel)
+                             in FlowState fs, double t0, double omegaz, GasModel gmodel)
 // Keep in sync with UFluidBlock.write_solution.
+// Note that we assume the FlowState fs to be in a nonrotating frame.
 {
     // Numbers of cells derived from numbers of vertices in grid.
     auto ncells = grid.ncells;
@@ -519,6 +541,9 @@ void write_initial_flow_file(string fileName, ref UnstructuredGrid grid,
             foreach (id; grid.cells[i].vtx_id_list) { pos += grid.vertices[id]; }
             pos /= to!number(grid.cells[i].vtx_id_list.length);
             number volume = 0.0;
+            if (omegaz != 0.0) {
+                throw new Error("Oops, we have not yet implemented rotating-frame code here.");
+            }
             cell_data_to_raw_binary(outfile, pos, volume, fs,
                                     to!number(0.0), to!number(0.0), to!number(0.0),
                                     GlobalConfig.with_local_time_stepping, -1.0, -1.0, -1.0,
@@ -552,6 +577,9 @@ void write_initial_flow_file(string fileName, ref UnstructuredGrid grid,
             foreach (id; grid.cells[i].vtx_id_list) { pos += grid.vertices[id]; }
             pos /= to!number(grid.cells[i].vtx_id_list.length);
             number volume = 0.0;
+            if (omegaz != 0.0) {
+                throw new Error("Oops, we have not yet implemented rotating-frame code here.");
+            }
             outfile.compress(" " ~ cell_data_as_string(pos, volume, fs,
                                                        to!number(0.0), to!number(0.0), to!number(0.0),
                                                        GlobalConfig.with_local_time_stepping, -1.0, -1.0, -1.0,

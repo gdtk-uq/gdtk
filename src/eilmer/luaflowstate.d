@@ -1,5 +1,5 @@
 /**
- * luaflowstate.d 
+ * luaflowstate.d
  * Lua interface to the FlowState class for users of the prep program.
  *
  * Authors: Rowan G. and Peter J.
@@ -39,7 +39,7 @@ immutable string FlowStateMT = "_FlowState";
 
 immutable string[] validFlowStateFields = ["p", "T", "T_modes", "p_e",
                                            "quality", "massf",
-                                           "mu", "k", 
+                                           "mu", "k",
                                            "velx", "vely", "velz",
                                            "Bx", "By", "Bz", "psi", "divB",
                                            "turb", "mu_t", "k_t", "S"];
@@ -52,7 +52,7 @@ FlowState checkFlowState(lua_State* L, int index)
     return checkObj!(FlowState, FlowStateMT)(L, index);
 }
 
-/** 
+/**
  * This function implements our constructor for the Lua interface.
  *
  * Construction of a _FlowState object from in Lua will accept:
@@ -72,7 +72,7 @@ FlowState checkFlowState(lua_State* L, int index)
  * The empty constructors forward through to PJ's
  * constructor that accepts a GasModel argument only.
  *
- * 2017-12-08 
+ * 2017-12-08
  * Note that the user is not expected to use this constructor
  * directly in their input script, however, we want it available
  * so that we can call the toJSONString function when writing
@@ -185,7 +185,7 @@ The value should be a number.`;
         lua_pop(L, 1);
     }
 
-    // Now everything else is optional. If it has been set, then we will 
+    // Now everything else is optional. If it has been set, then we will
     // ensure that it can be retrieved correctly, or signal the user.
 
     // Values related to velocity.
@@ -227,7 +227,7 @@ The value should be a number.`;
 
     // Value for quality
     double quality = getNumberFromTable(L, tblindx, "quality", false, 1.0, true, format(errMsgTmplt, "quality"));
-    
+
     // Values for B (magnetic field)
     double Bx = 0.0;
     double By = 0.0;
@@ -236,12 +236,12 @@ The value should be a number.`;
     By = getNumberFromTable(L, tblindx, "By", false, 0.0, true, format(errMsgTmplt, "By"));
     Bz = getNumberFromTable(L, tblindx, "Bz", false, 0.0, true, format(errMsgTmplt, "Bz"));
     auto B = Vector3(Bx, By, Bz);
-    
+
     //Divergence of the magnetic field
     double divB = getNumberFromTable(L, tblindx, "divB", false, 0.0, true, format(errMsgTmplt, "divB"));
     //Divergence cleaning parameter psi for MHD
     double psi = getNumberFromTable(L, tblindx, "psi", false, 0.0, true, format(errMsgTmplt, "psi"));
-    
+
     // Values related to turbulence modelling.
     double[] turb_init;
     lua_getfield(L, tblindx, "turb");
@@ -277,7 +277,7 @@ The value should be a number.`;
                             psi, divB, turb, mu_t, k_t, S);
     return fs;
 } // end makeFlowStateFromTable()
-    
+
 /**
  * Provide a peek into the FlowState data as a Lua table.
  *
@@ -544,8 +544,9 @@ extern(C) int toJSONString(lua_State* L)
 extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
 {
     auto fname = to!string(luaL_checkstring(L, 1));
-    auto grid = checkStructuredGrid(L, 2); 
+    auto grid = checkStructuredGrid(L, 2);
     double t0 = luaL_checknumber(L, 4);
+    double omegaz = luaL_checknumber(L, 5);
     if (GlobalConfig.flow_variable_list.length == 0) {
         foreach(varname; GlobalConfig.build_flow_variable_list()) {
             GlobalConfig.flow_variable_list ~= varname;
@@ -555,13 +556,16 @@ extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
     // Test if we have a simple flow state or something more exotic
     if ( isObjType(L, 3, "_FlowState") ) {
         fs = checkFlowState(L, 3);
-        write_initial_flow_file(fname, grid, fs, t0, GlobalConfig.gmodel_master);
+        write_initial_flow_file(fname, grid, fs, t0, omegaz, GlobalConfig.gmodel_master);
         lua_settop(L, 0); // clear stack
         return 0;
     }
     // Else, we might have a callable lua function
     if (lua_isfunction(L, 3)) {
-        // Assume we can use the function then.
+        // Assume we can use the function and also assume that it provides the
+        // flowstate with the velocity already in the rotating frame, if omegaz
+        // for the block is nonzero.
+        //
         // A lot of code borrowed from flowstate.d
         // Keep in sync with write_initial_flow_file() function in that file.
         //
@@ -570,7 +574,7 @@ extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
         auto njcell = grid.njv - 1;
         auto nkcell = grid.nkv - 1;
         if (GlobalConfig.dimensions == 2) nkcell = 1;
-        //      
+        //
         // Write the data for the whole structured block.
         auto gmodel = GlobalConfig.gmodel_master;
         switch (GlobalConfig.flow_format) {
@@ -598,19 +602,25 @@ extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
                         Vector3 p100 = *grid[i+1,j,k];
                         Vector3 p110 = *grid[i+1,j+1,k];
                         Vector3 p010 = *grid[i,j+1,k];
-                        // [TODO] provide better calculation using geom module.
-                        // For the moment, it doesn't matter greatly because the solver 
-                        // will compute it's own approximations
-                        auto pos = 0.25*(p000 + p100 + p110 + p010);
-                        number volume = 0.0; 
-                        if (GlobalConfig.dimensions == 3) {
+                        Vector3 pos;
+                        number volume, iLen, jLen, kLen;
+                        if (GlobalConfig.dimensions == 2) {
+                            number xyplane_area;
+                            xyplane_quad_cell_properties(p000, p100, p110, p010, pos, xyplane_area, iLen, jLen, kLen);
+                            volume = xyplane_area * ((GlobalConfig.axisymmetric) ? pos.y : to!number(1.0) );
+                        } else if (GlobalConfig.dimensions == 3) {
                             Vector3 p001 = *grid[i,j,k+1];
                             Vector3 p101 = *grid[i+1,j,k+1];
                             Vector3 p111 = *grid[i+1,j+1,k+1];
                             Vector3 p011 = *grid[i,j+1,k+1];
-                            pos = 0.5*pos + 0.125*(p001 + p101 + p111 + p011);
+                            hex_cell_properties(p000, p100, p110, p010, p001, p101, p111, p011, pos, volume, iLen, jLen, kLen);
+                        } else {
+                            throw new Exception("GlobalConfig.dimensions not 2 or 3.");
                         }
-                        // Now grab flow state via Lua function call
+                        // Now grab flow state via Lua function call.
+                        // If the block is in a rotating frame with omegaz != 0.0,
+                        // we presume that the Lua function will provide the velocity
+                        // components relative to the rotating frame.
                         lua_pushvalue(L, 3);
                         lua_pushnumber(L, pos.x);
                         lua_pushnumber(L, pos.y);
@@ -670,19 +680,25 @@ extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
                         Vector3 p100 = *grid[i+1,j,k];
                         Vector3 p110 = *grid[i+1,j+1,k];
                         Vector3 p010 = *grid[i,j+1,k];
-                        // [TODO] provide better calculation using geom module.
-                        // For the moment, it doesn't matter greatly because the solver 
-                        // will compute it's own approximations
-                        auto pos = 0.25*(p000 + p100 + p110 + p010);
-                        number volume = 0.0;
-                        if (GlobalConfig.dimensions == 3) {
+                        Vector3 pos;
+                        number volume, iLen, jLen, kLen;
+                        if (GlobalConfig.dimensions == 2) {
+                            number xyplane_area;
+                            xyplane_quad_cell_properties(p000, p100, p110, p010, pos, xyplane_area, iLen, jLen, kLen);
+                            volume = xyplane_area * ((GlobalConfig.axisymmetric) ? pos.y : to!number(1.0) );
+                        } else if (GlobalConfig.dimensions == 3) {
                             Vector3 p001 = *grid[i,j,k+1];
                             Vector3 p101 = *grid[i+1,j,k+1];
                             Vector3 p111 = *grid[i+1,j+1,k+1];
                             Vector3 p011 = *grid[i,j+1,k+1];
-                            pos = 0.5*pos + 0.125*(p001 + p101 + p111 + p011);
+                            hex_cell_properties(p000, p100, p110, p010, p001, p101, p111, p011, pos, volume, iLen, jLen, kLen);
+                        } else {
+                            throw new Exception("GlobalConfig.dimensions not 2 or 3.");
                         }
-                        // Now grab flow state via Lua function call
+                        // Now grab flow state via Lua function call.
+                        // If the block is in a rotating frame with omegaz != 0.0,
+                        // we presume that the Lua function will provide the velocity
+                        // components relative to the rotating frame.
                         lua_pushvalue(L, 3);
                         lua_pushnumber(L, pos.x);
                         lua_pushnumber(L, pos.y);
@@ -726,8 +742,9 @@ extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
 extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
 {
     auto fname = to!string(luaL_checkstring(L, 1));
-    auto grid = checkUnstructuredGrid(L, 2); 
+    auto grid = checkUnstructuredGrid(L, 2);
     double t0 = luaL_checknumber(L, 4);
+    double omegaz = luaL_checknumber(L, 5);
     if (GlobalConfig.flow_variable_list.length == 0) {
         foreach(varname; GlobalConfig.build_flow_variable_list()) {
             GlobalConfig.flow_variable_list ~= varname;
@@ -737,7 +754,7 @@ extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
     // Test if we have a simple flow state or something more exotic
     if ( isObjType(L, 3, "_FlowState") ) {
         fs = checkFlowState(L, 3);
-        write_initial_flow_file(fname, grid, fs, t0, GlobalConfig.gmodel_master);
+        write_initial_flow_file(fname, grid, fs, t0, omegaz, GlobalConfig.gmodel_master);
         lua_settop(L, 0); // clear stack
         return 0;
     }
@@ -749,7 +766,7 @@ extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
         //
         // Numbers of cells derived from numbers of vertices in grid.
         auto ncells = grid.ncells;
-        //      
+        //
         // Write the data for the whole unstructured block.
         auto gmodel = GlobalConfig.gmodel_master;
         switch (GlobalConfig.flow_format) {
@@ -774,7 +791,7 @@ extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
                 Vector3 pos = Vector3(0.0, 0.0, 0.0);
                 foreach (id; grid.cells[i].vtx_id_list) { pos += grid.vertices[id]; }
                 pos /= grid.cells[i].vtx_id_list.length;
-                number volume = 0.0; 
+                number volume = 0.0;
                 // Now grab flow state via Lua function call
                 lua_pushvalue(L, 3);
                 lua_pushnumber(L, pos.x);
@@ -829,7 +846,7 @@ extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
                 Vector3 pos = Vector3(0.0, 0.0, 0.0);
                 foreach (id; grid.cells[i].vtx_id_list) { pos += grid.vertices[id]; }
                 pos /= grid.cells[i].vtx_id_list.length;
-                number volume = 0.0; 
+                number volume = 0.0;
                 // Now grab flow state via Lua function call
                 lua_pushvalue(L, 3);
                 lua_pushnumber(L, pos.x);
@@ -873,7 +890,7 @@ extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
 void registerFlowState(lua_State* L)
 {
     luaL_newmetatable(L, FlowStateMT.toStringz);
-    
+
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1); // duplicates the current metatable
     lua_setfield(L, -2, "__index");
@@ -896,4 +913,3 @@ void registerFlowState(lua_State* L)
     lua_pushcfunction(L, &write_initial_usg_flow_file_from_lua);
     lua_setglobal(L, "write_initial_usg_flow_file");
 }
-
