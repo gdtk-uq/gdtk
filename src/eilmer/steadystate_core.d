@@ -25,7 +25,7 @@ import nm.bbla;
 import nm.complex;
 import nm.number;
 
-import nm.bbla;
+import gas;
 import fvcell;
 import fvinterface;
 import geom;
@@ -277,8 +277,8 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         foreach ( preStep; -nPreSteps .. 0 ) {
             foreach (attempt; 0 .. maxNumberAttempts) {
                 try {
-                    rpcGMRES_solve(preStep, pseudoSimTime, dt, eta0, sigma0, usePreconditioner, normOld, nRestarts, startStep);
-                    //lusgs_solve(preStep, pseudoSimTime, dt, 2.0, normOld, kmax, startStep);
+                    //rpcGMRES_solve(preStep, pseudoSimTime, dt, eta0, sigma0, usePreconditioner, normOld, nRestarts, startStep);
+                    lusgs_solve(preStep, pseudoSimTime, dt, 2.0, normOld, kmax, startStep);
                 }
                 catch (FlowSolverException e) {
                     version(mpi_parallel) {
@@ -582,8 +582,8 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         foreach (attempt; 0 .. maxNumberAttempts) {
             failedAttempt = 0;
             try {
-                rpcGMRES_solve(step, pseudoSimTime, dt, eta, sigma, usePreconditioner, normNew, nRestarts, startStep);
-                //lusgs_solve(step, pseudoSimTime, dt, 2.0, normNew, kmax, startStep);
+                //rpcGMRES_solve(step, pseudoSimTime, dt, eta, sigma, usePreconditioner, normNew, nRestarts, startStep);
+                lusgs_solve(step, pseudoSimTime, dt, 2.0, normNew, kmax, startStep);
             }
             catch (FlowSolverException e) {
                 writefln("Failed when attempting GMRES solve in main steps.");
@@ -1266,7 +1266,7 @@ foreach (blk; localFluidBlocks) `~norm2~` += blk.normAcc;
 }
 
 
-void evalMatrixFreeFluxIncrement(FVCell cell, FVInterface face)
+void evalMatrixFreeFluxIncrement(FVCell cell, FVInterface face, GasModel gmodel)
 {
     // Matrix-Free Flux vector increment
     //
@@ -1297,7 +1297,6 @@ void evalMatrixFreeFluxIncrement(FVCell cell, FVInterface face)
     cell.decode_conserved(0, 1, 0.0);          
 
     // Peturbed state flux
-    auto gmodel = GlobalConfig.gmodel_master;
     number rho = cell.fs.gas.rho;
     number velx = cell.fs.vel.dot(face.n);
     number vely = cell.fs.vel.dot(face.t1);
@@ -1332,7 +1331,7 @@ void evalMatrixFreeFluxIncrement(FVCell cell, FVInterface face)
 }
 
 
-void evalMatrixBasedFluxIncrement(FVCell cell, FVInterface face)
+void evalMatrixBasedFluxIncrement(FVCell cell, FVInterface face, GasModel gmodel)
 {
     // Matrix-Based Flux vector increment
     //
@@ -1343,7 +1342,6 @@ void evalMatrixBasedFluxIncrement(FVCell cell, FVInterface face)
     // 
 
     // primitive variables
-    auto gmodel = GlobalConfig.gmodel_master;
     number gam = gmodel.gamma(cell.fs.gas);
     number rho = cell.fs.gas.rho;
     number u = cell.fs.vel.dot(face.n);
@@ -1426,8 +1424,7 @@ void evalMatrixBasedFluxIncrement(FVCell cell, FVInterface face)
         + cell.dFdU[4,4]*cell.dU[0].total_energy;
 }
 
-number spectral_radius(FVInterface face, bool viscous, double omega) {
-    auto gmodel = GlobalConfig.gmodel_master;
+number spectral_radius(FVInterface face, bool viscous, double omega, GasModel gmodel) {
     number lam = 0.0;
     auto fvel = fabs(face.fs.vel.dot(face.n));
     lam += omega*(fvel + face.fs.gas.a);
@@ -1458,13 +1455,15 @@ void lusgs_solve(int step, double pseudoSimTime, double dt, double omega, ref do
     
     // 2. Compute scalar diagonal (D) and dQ^0 = D**(-1)*R
     foreach (blk; parallel(localFluidBlocks,1)) {
+        auto gmodel = blk.myConfig.gmodel;
         foreach (cell; blk.cells) {
             number dtInv;
-            if (GlobalConfig.with_local_time_stepping) { dtInv = 1.0/cell.dt_local; }
+            if (blk.myConfig.with_local_time_stepping) { dtInv = 1.0/cell.dt_local; }
             else { dtInv = 1.0/dt; }
             number tmp = 0.0;
+            
             foreach (f; cell.iface) {
-                tmp += f.area[0]*spectral_radius(f, GlobalConfig.viscous, omega);
+                tmp += f.area[0]*spectral_radius(f, blk.myConfig.viscous, omega, gmodel);
             }
             // diagonal scalar
             cell.D = dtInv + 0.5*tmp/cell.volume[0];
@@ -1483,6 +1482,7 @@ void lusgs_solve(int step, double pseudoSimTime, double dt, double omega, ref do
         // exchange dU values
         exchange_ghost_cell_boundary_data(pseudoSimTime, 0, 0);
         foreach (blk; parallel(localFluidBlocks,1)) {
+            auto gmodel = blk.myConfig.gmodel;
             foreach (cell; blk.cells) {
                 number LU_mass = 0.0;
                 number LU_momentumx = 0.0; number LU_momentumy = 0.0; number LU_momentumz = 0.0;
@@ -1491,9 +1491,9 @@ void lusgs_solve(int step, double pseudoSimTime, double dt, double omega, ref do
                 foreach (i; 1..cell.cell_cloud.length) {
                     FVCell ncell = cell.cell_cloud[i]; 
                     FVInterface f = cell.iface[i-1];
-                    number lij = spectral_radius(f, GlobalConfig.viscous, omega);
+                    number lij = spectral_radius(f, blk.myConfig.viscous, omega, gmodel);
                     
-                    evalMatrixFreeFluxIncrement(ncell, f);
+                    evalMatrixFreeFluxIncrement(ncell, f, gmodel);
                     
                     LU_mass += (ncell.dF.mass*cell.outsign[i-1] - lij*ncell.dU[0].mass)*f.area[0];
                     LU_momentumx += (ncell.dF.momentum.x*cell.outsign[i-1] - lij*ncell.dU[0].momentum.x)*f.area[0];
