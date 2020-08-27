@@ -277,8 +277,8 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         foreach ( preStep; -nPreSteps .. 0 ) {
             foreach (attempt; 0 .. maxNumberAttempts) {
                 try {
-                    //rpcGMRES_solve(preStep, pseudoSimTime, dt, eta0, sigma0, usePreconditioner, normOld, nRestarts, startStep);
-                    lusgs_solve(preStep, pseudoSimTime, dt, 2.0, normOld, kmax, startStep);
+                    rpcGMRES_solve(preStep, pseudoSimTime, dt, eta0, sigma0, usePreconditioner, normOld, nRestarts, startStep);
+                    //lusgs_solve(preStep, pseudoSimTime, dt, 2.0, normOld, kmax, startStep);
                 }
                 catch (FlowSolverException e) {
                     version(mpi_parallel) {
@@ -582,8 +582,8 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         foreach (attempt; 0 .. maxNumberAttempts) {
             failedAttempt = 0;
             try {
-                //rpcGMRES_solve(step, pseudoSimTime, dt, eta, sigma, usePreconditioner, normNew, nRestarts, startStep);
-                lusgs_solve(step, pseudoSimTime, dt, 2.0, normNew, kmax, startStep);
+                rpcGMRES_solve(step, pseudoSimTime, dt, eta, sigma, usePreconditioner, normNew, nRestarts, startStep);
+                //lusgs_solve(step, pseudoSimTime, dt, 2.0, normNew, kmax, startStep);
             }
             catch (FlowSolverException e) {
                 writefln("Failed when attempting GMRES solve in main steps.");
