@@ -1467,14 +1467,14 @@ void lusgs_solve(int step, double pseudoSimTime, double dt, double omega, ref do
                 tmp += f.area[0]*spectral_radius(f, GlobalConfig.viscous, omega);
             }
             // diagonal scalar
-            cell.D = cell.volume[0]*dtInv + 0.5*tmp;
+            cell.D = dtInv + 0.5*tmp/cell.volume[0];
 
-            cell.dU[0].mass = (1.0/cell.D)*cell.dUdt[0].mass*cell.volume[0];
-            cell.dU[0].momentum.refx = (1.0/cell.D)*cell.dUdt[0].momentum.x*cell.volume[0];
-            cell.dU[0].momentum.refy = (1.0/cell.D)*cell.dUdt[0].momentum.y*cell.volume[0];
+            cell.dU[0].mass = (1.0/cell.D)*cell.dUdt[0].mass;
+            cell.dU[0].momentum.refx = (1.0/cell.D)*cell.dUdt[0].momentum.x;
+            cell.dU[0].momentum.refy = (1.0/cell.D)*cell.dUdt[0].momentum.y;
             if ( blk.myConfig.dimensions == 3 )
-                cell.dU[0].momentum.refz = (1.0/cell.D)*cell.dUdt[0].momentum.z*cell.volume[0];
-            cell.dU[0].total_energy = (1.0/cell.D)*cell.dUdt[0].total_energy*cell.volume[0];
+                cell.dU[0].momentum.refz = (1.0/cell.D)*cell.dUdt[0].momentum.z;
+            cell.dU[0].total_energy = (1.0/cell.D)*cell.dUdt[0].total_energy;
         }
     }
     
@@ -1503,12 +1503,12 @@ void lusgs_solve(int step, double pseudoSimTime, double dt, double omega, ref do
                     LU_totalenergy += (ncell.dF.total_energy*cell.outsign[i-1] - lij*ncell.dU[0].total_energy)*f.area[0];
                 }
                 // update dU
-                cell.dU[1].mass = (1.0/cell.D) * (cell.dUdt[0].mass*cell.volume[0] - 0.5*LU_mass);
-                cell.dU[1].momentum.refx = (1.0/cell.D) * (cell.dUdt[0].momentum.x*cell.volume[0] - 0.5*LU_momentumx);
-                cell.dU[1].momentum.refy = (1.0/cell.D) * (cell.dUdt[0].momentum.y*cell.volume[0] - 0.5*LU_momentumy);
+                cell.dU[1].mass = (1.0/cell.D) * (cell.dUdt[0].mass - 0.5*LU_mass/cell.volume[0]);
+                cell.dU[1].momentum.refx = (1.0/cell.D) * (cell.dUdt[0].momentum.x - 0.5*LU_momentumx/cell.volume[0]);
+                cell.dU[1].momentum.refy = (1.0/cell.D) * (cell.dUdt[0].momentum.y - 0.5*LU_momentumy/cell.volume[0]);
                 if ( blk.myConfig.dimensions == 3 )
-                    cell.dU[1].momentum.refz = (1.0/cell.D) * (cell.dUdt[0].momentum.z*cell.volume[0] - 0.5*LU_momentumz);
-                cell.dU[1].total_energy = (1.0/cell.D) * (cell.dUdt[0].total_energy*cell.volume[0] - 0.5*LU_totalenergy);                
+                    cell.dU[1].momentum.refz = (1.0/cell.D) * (cell.dUdt[0].momentum.z - 0.5*LU_momentumz/cell.volume[0]);
+                cell.dU[1].total_energy = (1.0/cell.D) * (cell.dUdt[0].total_energy - 0.5*LU_totalenergy/cell.volume[0]);                
             }
         }
         // update most recent values of dU
