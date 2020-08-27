@@ -17,7 +17,7 @@ import std.math;
 import nm.complex;
 import nm.number;
 import nm.bbla;
-import nm.brent; 
+import nm.brent;
 import nm.bracketing;
 
 import geom;
@@ -46,7 +46,7 @@ BoundaryFluxEffect make_BFE_from_json(JSONValue jsonData, int blk_id, int bounda
     string bfeType = jsonData["type"].str;
     BoundaryFluxEffect newBFE;
     auto gmodel = GlobalConfig.gmodel_master;
-    
+
     switch ( bfeType ) {
     case "const_flux":
         auto flowstate = new FlowState(jsonData["flowstate"], gmodel);
@@ -85,7 +85,7 @@ BoundaryFluxEffect make_BFE_from_json(JSONValue jsonData, int blk_id, int bounda
         string errMsg = format("ERROR: The BoundaryFluxEffect type: '%s' is unknown.", bfeType);
         throw new Error(errMsg);
     }
-    
+
     return newBFE;
 }
 
@@ -94,7 +94,7 @@ public:
     FluidBlock blk;
     int which_boundary;
     string desc;
-    
+
     this(int id, int boundary, string description)
     {
         blk = cast(FluidBlock) globalBlocks[id];
@@ -110,7 +110,7 @@ public:
     void apply(double t, int gtl, int ftl)
     {
         final switch (blk.grid_type) {
-        case Grid_t.unstructured_grid: 
+        case Grid_t.unstructured_grid:
             apply_unstructured_grid(t, gtl, ftl);
             break;
         case Grid_t.structured_grid:
@@ -120,7 +120,7 @@ public:
     void apply_for_interface(double t, int gtl, int ftl, FVInterface f)
     {
         final switch (blk.grid_type) {
-        case Grid_t.unstructured_grid: 
+        case Grid_t.unstructured_grid:
             apply_for_interface_unstructured_grid(t, gtl, ftl, f);
             break;
         case Grid_t.structured_grid:
@@ -147,7 +147,7 @@ public:
         neighbourOrientation = orient;
     }
 
-    override string toString() const 
+    override string toString() const
     {
         return "BFE_EnergyFluxFromAdjacentSolid()";
     }
@@ -200,20 +200,20 @@ public:
             cosA = myBC.ifaces[i].n.x;
             cosB = myBC.ifaces[i].n.y;
             cosC = myBC.ifaces[i].n.z;
-            
+
             dxG = myBC.ifaces[i].pos.x - myBC.gasCells[i].pos[0].x;
             dyG = myBC.ifaces[i].pos.y - myBC.gasCells[i].pos[0].y;
             dzG = myBC.ifaces[i].pos.z - myBC.gasCells[i].pos[0].z;
             dnG = fabs(cosA*dxG + cosB*dyG + cosC*dzG);
-            
+
             dxS = myBC.ifaces[i].pos.x - myBC.solidCells[i].pos.x;
             dyS = myBC.ifaces[i].pos.y - myBC.solidCells[i].pos.y;
             dzS = myBC.ifaces[i].pos.z - myBC.solidCells[i].pos.z;
             dnS = fabs(cosA*dxS + cosB*dyS + cosC*dzS);
-            
+
             kG_dnG = myBC.gasCells[i].fs.gas.k / dnG;
             kS_dnS = myBC.solidCells[i].sp.k / dnS;
-            
+
             T = (myBC.gasCells[i].fs.gas.T*kG_dnG + myBC.solidCells[i].T*kS_dnS) / (kG_dnG + kS_dnS);
             q = -kG_dnG * (T - myBC.gasCells[i].fs.gas.T);
 
@@ -221,7 +221,7 @@ public:
             myBC.ifaces[i].fs.gas.T = T;
             myBC.ifaces[i].F.total_energy = outsign*q;
         }
-        
+
         //auto myBC = blk.bc[which_boundary];
         // computeFluxesAndTemperatures(ftl, myBC.gasCells, myBC.faces, myBC.solidCells, myBC.solidIFaces);
         // RJG 2019-09-10:
@@ -236,7 +236,7 @@ public:
           }
         */
     }
-    
+
 private:
 
     // RJG 2019-09-10:
@@ -319,8 +319,8 @@ private:
     number _e, _rho, _p, _u, _v;
     FlowState _fstate;
     int _nsp;
-   
-public:  
+
+public:
     this(int id, int boundary, in FlowState fstate)
     {
         /+ We only need to gather the freestream values once at
@@ -346,7 +346,7 @@ public:
         this.fstate = fstate.dup();
     }
 
-    override string toString() const 
+    override string toString() const
     {
         return "BFE_ConstFlux";
     }
@@ -385,12 +385,12 @@ public:
                     IFace.F.mass = _rho * ( _u_rel*IFace.n.x + _v_rel*IFace.n.y );
                     /++ when the boundary is moving we use the relative velocity
                       + between the fluid and the boundary interface to determine
-                      + the amount of mass flux across the cell face (above). 
-                      + Alternatively momentum is a fluid property hence we use the 
-                      + fluid velocity in determining the momentum flux -- this is 
-                      + akin to saying we know how much mass flux is crossing 
-                      + the cell face of which this mass has a momentum dependant 
-                      + on its velocity. Since we we want this momentum flux in global 
+                      + the amount of mass flux across the cell face (above).
+                      + Alternatively momentum is a fluid property hence we use the
+                      + fluid velocity in determining the momentum flux -- this is
+                      + akin to saying we know how much mass flux is crossing
+                      + the cell face of which this mass has a momentum dependant
+                      + on its velocity. Since we we want this momentum flux in global
                       + coordinates there is no need to rotate the velocity.
                       ++/
                     IFace.F.momentum.refx = _p * IFace.n.x + _u*IFace.F.mass;
@@ -416,13 +416,13 @@ public:
 }
 
 class BFE_SimpleOutflowFlux : BoundaryFluxEffect {
-public:  
+public:
     this(int id, int boundary)
     {
         super(id, boundary, "Simple_Outflow_Flux");
     }
 
-    override string toString() const 
+    override string toString() const
     {
         return "BFE_SimpleOutflowFlux";
     }
@@ -600,7 +600,7 @@ public:
     // Function inputs from Eilmer4 .lua simulation input
     double emissivity;  // Input emissivity, 0<e<=1.0. Assumed black body radiation out from wall
     double Ar;          // Richardson constant, material-dependent
-    double phi;         // Work function, material dependent. Input units in eV, 
+    double phi;         // Work function, material dependent. Input units in eV,
                         // this gets converted to Joules by multiplying by Elementary charge, Qe
     int ThermionicEmissionActive;  // Whether or not Thermionic Emission is active. Default is 'on'
 
@@ -612,7 +612,7 @@ public:
     double SB_sigma = 5.670373e-8;  // Stefan-Boltzmann constant.   Units: W/(m^2 K^4)
     double kb = 1.38064852e-23;     // Boltzmann constant.          Units: (m^2 kg)/(s^2 K^1)
     double Qe = 1.60217662e-19;     // Elementary charge.           Units: C
- 
+
     this(int id, int boundary, double emissivity, double Ar, double phi, int ThermionicEmissionActive,
         int Twall_iterations, int Twall_subiterations)
     {
@@ -625,12 +625,12 @@ public:
         this.Twall_subiterations = Twall_subiterations;
     }
 
-    override string toString() const 
+    override string toString() const
     {
         return "BFE_EnergyBalanceThermionic(ThermionicEmissionActive=" ~
-            to!string(ThermionicEmissionActive) ~ 
+            to!string(ThermionicEmissionActive) ~
             ", Work Function =" ~ to!string(phi/Qe) ~
-            "eV , emissivity=" ~ to!string(emissivity) ~ 
+            "eV , emissivity=" ~ to!string(emissivity) ~
             ", Richardson Constant=" ~ to!string(Ar) ~
             ")";
     }
@@ -659,7 +659,7 @@ public:
             // Check if emissivity value is valid
             throw new Error("emissivity should be 0.0<e<=1.0\n");
         } else if ( Ar == 0.0){
-            throw new Error("Ar should be set!\n");                 
+            throw new Error("Ar should be set!\n");
         } else if ( phi == 0.0){
             throw new Error("phi should be set!\n");
         } else if (blk.myConfig.turb_model.isTurbulent) {
@@ -764,7 +764,7 @@ public:
         number Tlow = 300.0;
         number Thigh = 5000.0;
 
-        auto gmodel = blk.myConfig.gmodel; 
+        auto gmodel = blk.myConfig.gmodel;
 
         // IFace orientation
         number nx = IFace.n.x; number ny = IFace.n.y; number nz = IFace.n.z;
@@ -780,7 +780,7 @@ public:
             gmodel.update_thermo_from_pT(IFace.fs.gas);
             gmodel.update_trans_coeffs(IFace.fs.gas);
 
-            number dT = (cell.fs.gas.T - IFace.fs.gas.T); 
+            number dT = (cell.fs.gas.T - IFace.fs.gas.T);
             number k_eff = viscous_factor * (IFace.fs.gas.k + IFace.fs.k_t);
             number dTdn = dT / dn;
             number q_total = k_eff * dTdn;
@@ -817,7 +817,7 @@ public:
         IFace.fs.gas.p = cell.fs.gas.p;
         gmodel.update_thermo_from_pT(IFace.fs.gas);
         gmodel.update_trans_coeffs(IFace.fs.gas);
-        number dT = (cell.fs.gas.T - IFace.fs.gas.T); 
+        number dT = (cell.fs.gas.T - IFace.fs.gas.T);
         number k_eff = viscous_factor * (IFace.fs.gas.k + IFace.fs.k_t);
         number dTdn = dT / dn;
         number q_total = k_eff * dTdn;
@@ -837,10 +837,10 @@ public:
 
 
 /**
- * BFE_UpdateEnergyWallNormalVelocity is a boundary Flux Effect 
- * that can be called for moving walls that have a wall normal 
+ * BFE_UpdateEnergyWallNormalVelocity is a boundary Flux Effect
+ * that can be called for moving walls that have a wall normal
  * velocity component.
- * It operates by incrementing total_energy to correct for work 
+ * It operates by incrementing total_energy to correct for work
  * done on fluid by moving wall:
  * total_energy += pressure * Wall_normal_velocity
  *
@@ -853,7 +853,7 @@ public:
         super(id, boundary, "UpdateEnergyWallNormalVelocity");
     }
 
-    override string toString() const 
+    override string toString() const
     {
         return "BFE_UpdateEnergyWallNormalVelocity";
     }
@@ -888,7 +888,6 @@ public:
                     // get interface
                     IFace = blk.get_cell(i,j,k).iface[Face.west];
                     //writeln("Before: Total energy:",IFace.F.total_energy, "X_mom", IFace.F.momentum.refx, "mass", IFace.F.mass);
-                    
                     // set correct energy and momentum flux
                     IFace.F.total_energy = IFace.fs.gas.p * dot(IFace.n, IFace.gvel);
                     IFace.F.momentum.refx = IFace.fs.gas.p * dot(IFace.n, nx);
@@ -908,7 +907,6 @@ public:
                     // get interface
                     IFace = blk.get_cell(i,j,k).iface[Face.east];
                     //writeln("Before: Total energy:",IFace.F.total_energy, "X_mom", IFace.F.momentum.refx, "mass", IFace.F.mass);
-
                     // set correct energy and momentum flux
                     IFace.F.total_energy =  IFace.fs.gas.p * dot(IFace.n, IFace.gvel);
                     IFace.F.momentum.refx = IFace.fs.gas.p * dot(IFace.n, nx);
