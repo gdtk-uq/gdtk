@@ -433,12 +433,11 @@ public:
         auto blk = cast(UFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be a UFluidBlock object.");
         assert(!(blk.myConfig.MHD), "Oops, not implemented for MHD.");
-        assert(blk.omegaz == 0.0, "Oops, not implemented for rotating frame.");
 
         BoundaryCondition bc = blk.bc[which_boundary];
 	int outsign = bc.outsigns[f.i_bndry];
 	FVCell interior_cell = (outsign == 1) ? f.left_cell : f.right_cell;
-	compute_outflow_flux(interior_cell.fs, outsign, f);
+	compute_outflow_flux(interior_cell.fs, outsign, blk.omegaz, f);
     }
 
     @nogc
@@ -447,13 +446,12 @@ public:
         auto blk = cast(UFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be a UFluidBlock object.");
         assert(!(blk.myConfig.MHD), "Oops, not implemented for MHD.");
-        assert(blk.omegaz == 0.0, "Oops, not implemented for rotating frame.");
 
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, face; bc.faces) {
             int outsign = bc.outsigns[i];
             FVCell interior_cell = (outsign == 1) ? face.left_cell : face.right_cell;
-            compute_outflow_flux(interior_cell.fs, outsign, face);
+            compute_outflow_flux(interior_cell.fs, outsign, blk.omegaz, face);
         }
     }
 
@@ -463,7 +461,6 @@ public:
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         assert(!(blk.myConfig.MHD), "Oops, not implemented for MHD.");
-        assert(blk.omegaz == 0.0, "Oops, not implemented for rotating frame.");
 
         switch(which_boundary){
         case Face.north:
@@ -472,7 +469,7 @@ public:
                 for (size_t i = blk.imin; i <= blk.imax; ++i) {
                     int outsign = 1;
                     FVCell interior_cell = blk.get_cell(i,j,k);
-                    compute_outflow_flux(interior_cell.fs, outsign, interior_cell.iface[Face.north]);
+                    compute_outflow_flux(interior_cell.fs, outsign, blk.omegaz, interior_cell.iface[Face.north]);
                 }
             }
             break;
@@ -482,7 +479,7 @@ public:
                 for (size_t j = blk.jmin; j <= blk.jmax; ++j) {
                     int outsign = 1;
                     FVCell interior_cell = blk.get_cell(i,j,k);
-                    compute_outflow_flux(interior_cell.fs, outsign, interior_cell.iface[Face.east]);
+                    compute_outflow_flux(interior_cell.fs, outsign, blk.omegaz, interior_cell.iface[Face.east]);
                 }
             }
             break;
@@ -492,7 +489,7 @@ public:
                 for (size_t i = blk.imin; i <= blk.imax; ++i) {
                     int outsign = -1;
                     FVCell interior_cell = blk.get_cell(i,j,k);
-                    compute_outflow_flux(interior_cell.fs, outsign, interior_cell.iface[Face.south]);
+                    compute_outflow_flux(interior_cell.fs, outsign, blk.omegaz, interior_cell.iface[Face.south]);
                 }
             }
             break;
@@ -502,7 +499,7 @@ public:
                 for (size_t j = blk.jmin; j <= blk.jmax; ++j) {
                     int outsign = -1;
                     FVCell interior_cell = blk.get_cell(i,j,k);
-                    compute_outflow_flux(interior_cell.fs, outsign, interior_cell.iface[Face.west]);
+                    compute_outflow_flux(interior_cell.fs, outsign, blk.omegaz, interior_cell.iface[Face.west]);
                 }
             }
             break;
@@ -512,7 +509,7 @@ public:
                 for (size_t j = blk.jmin; j <= blk.jmax; ++j) {
                     int outsign = 1;
                     FVCell interior_cell = blk.get_cell(i,j,k);
-                    compute_outflow_flux(interior_cell.fs, outsign, interior_cell.iface[Face.top]);
+                    compute_outflow_flux(interior_cell.fs, outsign, blk.omegaz, interior_cell.iface[Face.top]);
                 }
             }
             break;
@@ -522,7 +519,7 @@ public:
                 for (size_t j = blk.jmin; j <= blk.jmax; ++j) {
                     int outsign = -1;
                     FVCell interior_cell = blk.get_cell(i,j,k);
-                    compute_outflow_flux(interior_cell.fs, outsign, interior_cell.iface[Face.bottom]);
+                    compute_outflow_flux(interior_cell.fs, outsign, blk.omegaz, interior_cell.iface[Face.bottom]);
                 }
             }
             break;
@@ -533,7 +530,7 @@ public:
 
 private:
     @nogc
-    void compute_outflow_flux(ref const(FlowState) fs, int outsign, ref FVInterface face)
+    void compute_outflow_flux(ref const(FlowState) fs, int outsign, double omegaz, ref FVInterface face)
     {
         // Flux equations use the local flow state information.
         // For a moving grid we need vel relative to the interface.
@@ -553,9 +550,16 @@ private:
                 utot += blk.myConfig.turb_model.turbulent_kinetic_energy(fs);
             }
             face.F.total_energy = mass_flux*utot + fs.gas.p*dot(fs.vel,face.n);
-            // [TODO] PJ 2018-10-24 check that fs.vel is the correct velocity
-            // to use for pressure-work flowing across the face.
-            // [TODO] PJ 2018-10-25 consider rothalpy flavour for rotating frame
+            if (omegaz != 0.0) {
+                // Rotating frame.
+                number x = face.pos.x;
+                number y = face.pos.y;
+                number rsq = x*x + y*y;
+                // The conserved quantity is rotating-frame total energy,
+                // so we need to take -(u**2)/2 off the total energy.
+                // Note that rotating frame velocity u = omegaz * r.
+                face.F.total_energy -= mass_flux * 0.5*omegaz*omegaz*rsq;
+            }
             version(turbulence) {
                 foreach (i; 0 .. blk.myConfig.turb_model.nturb) { face.F.rhoturb[i] = mass_flux * fs.turb[i]; }
             }
@@ -576,7 +580,6 @@ private:
             face.F.mass = 0.0;
             face.F.momentum.set(face.n); face.F.momentum *= fs.gas.p;
             face.F.total_energy = fs.gas.p*dot(face.gvel,face.n);
-            // [TODO] PJ 2018-10-25 consider rothalpy flavour for rotating frame
             version(turbulence) {
                 foreach (i; 0 .. blk.myConfig.turb_model.nturb) { face.F.rhoturb[i] = 0.0; }
             }

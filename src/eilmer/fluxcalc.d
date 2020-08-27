@@ -105,7 +105,7 @@ void compute_interface_flux(ref FlowState Lft, ref FlowState Rght, ref FVInterfa
         number y = IFace.pos.y;
         number rsq = x*x + y*y;
         // The conserved quantity is rotating-frame total energy,
-        // so we need to take -(u**2)/2 off the total energy flux.
+        // so we need to take -(u**2)/2 off the total energy.
         // Note that rotating frame velocity u = omegaz * r.
         F.total_energy -= F.mass * 0.5*omegaz*omegaz*rsq;
     }
