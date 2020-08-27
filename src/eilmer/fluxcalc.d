@@ -46,7 +46,7 @@ void compute_interface_flux(ref FlowState Lft, ref FlowState Rght, ref FVInterfa
     // we want the velocity of the flow relative to the interface.
     Lft.vel.refx -= IFace.gvel.x; Lft.vel.refy -= IFace.gvel.y; Lft.vel.refz -= IFace.gvel.z;
     Rght.vel.refx -= IFace.gvel.x; Rght.vel.refy -= IFace.gvel.y; Rght.vel.refz -= IFace.gvel.z;
-   
+
     IFace.gvel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
     Lft.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
     Rght.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
@@ -104,14 +104,14 @@ void compute_interface_flux(ref FlowState Lft, ref FlowState Rght, ref FVInterfa
         number x = IFace.pos.x;
         number y = IFace.pos.y;
         number rsq = x*x + y*y;
-        // The conserved quantity is rothalpy,
+        // The conserved quantity is rotating-frame total energy,
         // so we need to take -(u**2)/2 off the total energy flux.
         // Note that rotating frame velocity u = omegaz * r.
         F.total_energy -= F.mass * 0.5*omegaz*omegaz*rsq;
     }
     // Transform fluxes back from interface frame of reference to local frame of reference.
     // Flux of Total Energy
-    number v_sqr = IFace.gvel.x*IFace.gvel.x + IFace.gvel.y*IFace.gvel.y + IFace.gvel.z*IFace.gvel.z; 
+    number v_sqr = IFace.gvel.x*IFace.gvel.x + IFace.gvel.y*IFace.gvel.y + IFace.gvel.z*IFace.gvel.z;
     F.total_energy += 0.5 * F.mass * v_sqr + F.momentum.dot(IFace.gvel);
     // Flux of momentum: Add component for interface velocity then
     // rotate back to the global frame of reference.
@@ -298,7 +298,7 @@ void compute_flux_at_right_wall(ref FlowState Lft, ref FVInterface IFace,
 } // end  compute_flux_at_right_wall()
 
 @nogc
-void set_flux_vector_in_local_frame(ref ConservedQuantities F, ref FlowState fs, 
+void set_flux_vector_in_local_frame(ref ConservedQuantities F, ref FlowState fs,
                                     ref LocalConfig myConfig)
 {
     number rho = fs.gas.rho;
@@ -327,15 +327,15 @@ void set_flux_vector_in_local_frame(ref ConservedQuantities F, ref FlowState fs,
 } // end set_flux_vector_in_local_frame()
 
 @nogc
-void set_flux_vector_in_global_frame(ref FVInterface IFace, ref FlowState fs, 
+void set_flux_vector_in_global_frame(ref FVInterface IFace, ref FlowState fs,
                                      ref LocalConfig myConfig, double omegaz=0.0)
 {
     ConservedQuantities F = IFace.F;
     // Record velocity to restore fs at end.
-    number vx = fs.vel.x; number vy = fs.vel.y; number vz = fs.vel.z; 
+    number vx = fs.vel.x; number vy = fs.vel.y; number vz = fs.vel.z;
     // Transform to interface frame of reference.
     // Beware: fs.vel is changed here and restored below.
-    fs.vel.refx -= IFace.gvel.x; fs.vel.refy -= IFace.gvel.y; fs.vel.refz -= IFace.gvel.z; 
+    fs.vel.refx -= IFace.gvel.x; fs.vel.refy -= IFace.gvel.y; fs.vel.refz -= IFace.gvel.z;
     IFace.gvel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
     fs.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
     version(MHD) {
@@ -358,7 +358,7 @@ void set_flux_vector_in_global_frame(ref FVInterface IFace, ref FlowState fs,
     number v_sqr = IFace.gvel.x*IFace.gvel.x + IFace.gvel.y*IFace.gvel.y + IFace.gvel.z*IFace.gvel.z;
     F.total_energy += 0.5 * F.mass * v_sqr + F.momentum.dot(IFace.gvel);
     Vector3 momentum_increment;
-    momentum_increment.set(IFace.gvel); momentum_increment *= F.mass; 
+    momentum_increment.set(IFace.gvel); momentum_increment *= F.mass;
     F.momentum += momentum_increment;
     //
     // Rotate momentum fluxes back to the global frame of reference.
@@ -375,8 +375,8 @@ void set_flux_vector_in_global_frame(ref FVInterface IFace, ref FlowState fs,
 @nogc
 void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
 // Wada and Liou's flux calculator.
-// 
-// Implemented from details in their AIAA paper 
+//
+// Implemented from details in their AIAA paper
 // with hints from Ian Johnston.
 // Y. Wada and M. -S. Liou (1994)
 // A flux splitting scheme with high-resolution and robustness for discontinuities.
@@ -417,8 +417,8 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
     number am = fmax(aL, aR);
     number ML = uL / am;
     number MR = uR / am;
-    // Left state: 
-    // pressure splitting (eqn 34) 
+    // Left state:
+    // pressure splitting (eqn 34)
     // and velocity splitting (eqn 30)
     number pLplus, uLplus;
     number duL = 0.5 * (uL + fabs(uL));
@@ -429,8 +429,8 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
         pLplus = pL * duL / uL;
         uLplus = duL;
     }
-    // Right state: 
-    // pressure splitting (eqn 34) 
+    // Right state:
+    // pressure splitting (eqn 34)
     // and velocity splitting (eqn 31)
     number pRminus, uRminus;
     number duR = 0.5 * (uR - fabs(uR));
@@ -531,8 +531,8 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
 @nogc
 void hanel(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
 // Hanel's flux calculator.
-// 
-// Implemented from Y. Wada and M. S. Liou details in their AIAA paper 
+//
+// Implemented from Y. Wada and M. S. Liou details in their AIAA paper
 // Y. Wada and M. -S. Liou (1997)
 // An accurate and robust flux splitting scheme for shock and contact discontinuities.
 // with reference to....
@@ -570,8 +570,8 @@ void hanel(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
     number am = fmax(aL, aR);
     number ML = uL / am;
     number MR = uR / am;
-    // Left state: 
-    // pressure splitting (eqn 7) 
+    // Left state:
+    // pressure splitting (eqn 7)
     // and velocity splitting (eqn 9)
     number pLplus, uLplus;
     if (fabs(uL) <= aL) {
@@ -581,15 +581,15 @@ void hanel(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
         uLplus = 0.5*(uL+fabs(uL));
         pLplus = pL*uLplus * (1.0/uL);
     }
-    // Right state: 
-    // pressure splitting (eqn 7) 
+    // Right state:
+    // pressure splitting (eqn 7)
     // and velocity splitting (eqn 9)
     number pRminus, uRminus;
     if (fabs(uR) <= aR) {
-        uRminus = -1.0/(4.0*aR) * (uR-aR)*(uR-aR);  
+        uRminus = -1.0/(4.0*aR) * (uR-aR)*(uR-aR);
         pRminus = pR*uRminus * (1.0/aR * (-2.0-uR/aR));
     } else {
-        uRminus = 0.5*(uR-fabs(uR)); 
+        uRminus = 0.5*(uR-fabs(uR));
         pRminus = pR*uRminus * (1.0/uR);
     }
     // The mass flux is relative to the moving interface.
@@ -638,10 +638,10 @@ void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
  *     flux of normal momentum
  *     flux of tangential momentum
  *     flux of energy
- *     array of species fluxes 
+ *     array of species fluxes
  *     vibrational energies
  *     free-electron energy
- * \endverbatim 
+ * \endverbatim
  */
 {
     auto gmodel = myConfig.gmodel;
@@ -861,14 +861,14 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
                   double M_inf, ref LocalConfig myConfig)
 // Liou's 2006 AUSM+up flux calculator
 //
-// A new version of the AUSM-family schemes, based 
+// A new version of the AUSM-family schemes, based
 // on the low Mach number asymptotic analysis.
 // Ironically, this flux calculator causes simulations
 // initialised with 0.0 m/s velocities to crash.
 //
 // RJG -- 26-Apr-2013
 // Added a (+ EPSILON) to help with any divide by zero problems.
-// That being said, I'm not sure this helps with the 
+// That being said, I'm not sure this helps with the
 // crashes at zero velocity because it would seem that the flow
 // of control would pass through a different branch for these cases.
 //
@@ -883,7 +883,7 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
     @nogc number M1plus(number M) { return 0.5*(M + fabs(M)); }
     @nogc number M1minus(number M) { return 0.5*(M - fabs(M)); }
     @nogc number M2plus(number M) { return 0.25*(M + 1.0)*(M + 1.0); }
-    @nogc number M2minus(number M) { return -0.25*(M - 1.0)*(M - 1.0); } 
+    @nogc number M2minus(number M) { return -0.25*(M - 1.0)*(M - 1.0); }
     @nogc number M4plus(number M, number beta) {
         if ( fabs(M) >= 1.0 ) {
             return M1plus(M);
@@ -946,7 +946,7 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
     //
     // This is the main part of the flux calculator.
     //
-    // Interface sound speed (eqns 28 & 30). 
+    // Interface sound speed (eqns 28 & 30).
     // An approximation is used instead of these equations as
     // suggested by Liou in his paper (see line below eqn 69).
     number a_half = 0.5 * (aR + aL);
@@ -961,17 +961,17 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
     number fa = sqrt(M0Sq) * (2.0 - sqrt(M0Sq));   // eqn 72
     number alpha = 0.1875 * (-4.0 + 5 * fa * fa);  // eqn 76
     number beta = 0.125;                           // eqn 76
-    // Left state: 
+    // Left state:
     // M4plus(ML)
     // P5plus(ML)
     number M4plus_ML = M4plus(ML, beta);
     number P5plus_ML = P5plus(ML, alpha);
-    // Right state: 
+    // Right state:
     // M4minus(MR)
     // P5minus(MR)
     number M4minus_MR = M4minus(MR, beta);
     number P5minus_MR = P5minus(MR, alpha);
-    // Pressure diffusion modification for 
+    // Pressure diffusion modification for
     // mass flux (eqn 73) and pressure flux (eqn 75).
     const double KP = 0.25;
     const double KU = 0.75;
@@ -1201,7 +1201,7 @@ void hlle(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalC
 @nogc
 void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
 // Philip Roe's flux calculator with entropy fix.
-// 
+//
 // Particular implementation is the Roe-Pike Method from
 // E. F. Toro (2009)
 // Riemann Solvers and Numerical Methods for Fluid Dynamics, pg. 366.
@@ -1240,7 +1240,7 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalCo
     number gL = gmodel.gamma(Lft.gas);
     number gR = gmodel.gamma(Rght.gas);
     number ghat = (gR+gL)/2.0;
-    
+
     // intermediate state (eq. 11.118)
     number rhat = sqrt(rL*rR);
     number uhat = (sqrt(rL)*uL+sqrt(rR)*uR) / (sqrt(rL) + sqrt(rR));
@@ -1249,7 +1249,7 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalCo
     number Hhat = (sqrt(rL)*HL+sqrt(rR)*HR) / (sqrt(rL) + sqrt(rR));
     number ahat2 = (ghat-1.0)*(Hhat-0.5*(uhat*uhat+vhat*vhat+what*what));
     number ahat = sqrt(ahat2);
-    
+
     // eigenvalues at intermediate state (eq. 11.107)
     number[5] lambda;
     lambda[0] = uhat - ahat;
@@ -1265,8 +1265,8 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalCo
     number EPS = 4.0*fmax(0.0, (lambdaR - lambdaL));
     // only change lambda[0] & lambda[4] (as per bottom of pg. 367)
     if (fabs(lambda[0]) < EPS) lambda[0] = (lambda[0]*lambda[0]+EPS*EPS)/(2.0*EPS + eps);
-    if (fabs(lambda[4]) < EPS) lambda[4] = (lambda[4]*lambda[4]+EPS*EPS)/(2.0*EPS + eps); 
-      
+    if (fabs(lambda[4]) < EPS) lambda[4] = (lambda[4]*lambda[4]+EPS*EPS)/(2.0*EPS + eps);
+
     // eigenvectors at intermediate state (eq. 11.108)
     number[5][5] K;
     K[0][0] = 1.0;
@@ -1286,7 +1286,7 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalCo
     K[2][2] = 1.0;
     K[2][3] = 0.0;
     K[2][4] = vhat;
-    
+
     K[3][0] = 0.0;
     K[3][1] = 0.0;
     K[3][2] = 0.0;
@@ -1306,7 +1306,7 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalCo
     alpha[2] = rhat*(vR-vL);
     alpha[3] = rhat*(wR-wL);
     alpha[4] = 1.0/(2.0 * ahat2) * ( (pR-pL) + rhat*ahat*(uR-uL) );
-    
+
     // compute fluxes (eq. 11.29)
     ConservedQuantities F = IFace.F;
 
@@ -1387,7 +1387,7 @@ void ASF_242(FlowState[] stencil, ref FVInterface IFace, ref LocalConfig myConfi
 
     // Define the v,w functions as prescribed by White et al. 2012 for the simple convective fluxes
 
-    number[4][10] v, w; 
+    number[4][10] v, w;
 
     foreach (i, cell; stencil) {
         v[0][i] = cell.gas.rho;
@@ -1440,7 +1440,7 @@ void ASF_242(FlowState[] stencil, ref FVInterface IFace, ref LocalConfig myConfi
 
     // Account for interface movement- probably shouldn't happen in this but check it anyway
     // Total energy flux due to interface movement
-    number v_sqr = IFace.gvel.x*IFace.gvel.x + IFace.gvel.y*IFace.gvel.y + IFace.gvel.z*IFace.gvel.z; 
+    number v_sqr = IFace.gvel.x*IFace.gvel.x + IFace.gvel.y*IFace.gvel.y + IFace.gvel.z*IFace.gvel.z;
     F.total_energy += 0.5 * F.mass * v_sqr + F.momentum.dot(IFace.gvel);
     // Flux of momentum: Add component for interface velocity then
     // rotate back to the global frame of reference.
