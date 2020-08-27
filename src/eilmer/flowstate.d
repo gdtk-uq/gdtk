@@ -27,6 +27,25 @@ import fvcore;
 import fvcell;
 import globalconfig;
 
+@nogc
+void into_rotating_frame(ref Vector3 v, ref const(Vector3) pos, double omegaz)
+// Velocity vector becomes relative to the rotating frame of the block
+// by subtracting the entrainment velocity (-y*omegaz i + x*omegaz j).
+{
+    v.refx += pos.y * omegaz;
+    v.refy -= pos.x * omegaz;
+}
+
+@nogc
+void into_nonrotating_frame(ref Vector3 v, ref const(Vector3) pos, double omegaz)
+// Velocity vector becomes relative to a nonrotating frame
+// by adding the entrainment velocity (-y*omegaz i + x*omegaz j).
+{
+    v.refx -= pos.y * omegaz;
+    v.refy += pos.x * omegaz;
+}
+
+
 class FlowState {
 public:
     GasState gas;  // gas state
@@ -425,11 +444,7 @@ void write_initial_flow_file(string fileName, ref StructuredGrid grid,
                         Vector3 p111 = *grid[i+1,j+1,k+1];
                         Vector3 p011 = *grid[i,j+1,k+1];
                         hex_cell_properties(p000, p100, p110, p010, p001, p101, p111, p011, pos, volume, iLen, jLen, kLen);
-                        if (omegaz != 0.0) {
-                            // Make velocities relative to rotating frame.
-                            myfs.vel.refx = fs.vel.x + pos.y * omegaz;
-                            myfs.vel.refy = fs.vel.y - pos.x * omegaz;
-                        }
+                        if (omegaz != 0.0) { myfs.vel.set(fs.vel); into_rotating_frame(myfs.vel, pos, omegaz); }
                     } else {
                         throw new Exception("GlobalConfig.dimensions not 2 or 3.");
                     }
@@ -485,11 +500,7 @@ void write_initial_flow_file(string fileName, ref StructuredGrid grid,
                         Vector3 p111 = *grid[i+1,j+1,k+1];
                         Vector3 p011 = *grid[i,j+1,k+1];
                         hex_cell_properties(p000, p100, p110, p010, p001, p101, p111, p011, pos, volume, iLen, jLen, kLen);
-                        if (omegaz != 0.0) {
-                            // Make velocities relative to rotating frame.
-                            myfs.vel.refx = fs.vel.x + pos.y * omegaz;
-                            myfs.vel.refy = fs.vel.y - pos.x * omegaz;
-                        }
+                        if (omegaz != 0.0) { myfs.vel.set(fs.vel); into_rotating_frame(myfs.vel, pos, omegaz); }
                     } else {
                         throw new Exception("GlobalConfig.dimensions not 2 or 3.");
                     }

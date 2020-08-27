@@ -45,7 +45,7 @@ public:
 	    ghost0 = f.left_cell;
 	}
 	ghost0.fs.copy_values_from(fstate);
-        if (blk.omegaz != 0.0) { blk.into_rotating_frame(ghost0.fs.vel, ghost0.pos[gtl]); }
+        if (blk.omegaz != 0.0) { into_rotating_frame(ghost0.fs.vel, ghost0.pos[gtl], blk.omegaz); }
     } // end apply_unstructured_grid()
 
     @nogc
@@ -60,7 +60,7 @@ public:
                 ghost0 = f.left_cell;
             }
             ghost0.fs.copy_values_from(fstate);
-            if (blk.omegaz != 0.0) { blk.into_rotating_frame(ghost0.fs.vel, ghost0.pos[gtl]); }
+            if (blk.omegaz != 0.0) { into_rotating_frame(ghost0.fs.vel, ghost0.pos[gtl], blk.omegaz); }
         } // end foreach face
     } // end apply_unstructured_grid()
 
@@ -83,14 +83,14 @@ public:
                 for (i = blk.imin; i <= blk.imax; ++i) {
                     dest_cell = blk.get_cell(i,j+1,k);
                     dest_cell.fs.copy_values_from(fstate);
-                    if (blk.omegaz != 0.0) { blk.into_rotating_frame(dest_cell.fs.vel, dest_cell.pos[gtl]); }
+                    if (blk.omegaz != 0.0) { into_rotating_frame(dest_cell.fs.vel, dest_cell.pos[gtl], blk.omegaz); }
                     dest_cell = blk.get_cell(i,j+2,k);
                     dest_cell.fs.copy_values_from(fstate);
-                    if (blk.omegaz != 0.0) { blk.into_rotating_frame(dest_cell.fs.vel, dest_cell.pos[gtl]); }
+                    if (blk.omegaz != 0.0) { into_rotating_frame(dest_cell.fs.vel, dest_cell.pos[gtl], blk.omegaz); }
                     if (nghost3) {
                         dest_cell = blk.get_cell(i,j+3,k);
                         dest_cell.fs.copy_values_from(fstate);
-                        if (blk.omegaz != 0.0) { blk.into_rotating_frame(dest_cell.fs.vel, dest_cell.pos[gtl]); }
+                        if (blk.omegaz != 0.0) { into_rotating_frame(dest_cell.fs.vel, dest_cell.pos[gtl], blk.omegaz); }
                     }
                 } // end i loop
             } // for k
@@ -101,14 +101,14 @@ public:
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     dest_cell = blk.get_cell(i+1,j,k);
                     dest_cell.fs.copy_values_from(fstate);
-                    if (blk.omegaz != 0.0) { blk.into_rotating_frame(dest_cell.fs.vel, dest_cell.pos[gtl]); }
+                    if (blk.omegaz != 0.0) { into_rotating_frame(dest_cell.fs.vel, dest_cell.pos[gtl], blk.omegaz); }
                     dest_cell = blk.get_cell(i+2,j,k);
                     dest_cell.fs.copy_values_from(fstate);
-                    if (blk.omegaz != 0.0) { blk.into_rotating_frame(dest_cell.fs.vel, dest_cell.pos[gtl]); }
+                    if (blk.omegaz != 0.0) { into_rotating_frame(dest_cell.fs.vel, dest_cell.pos[gtl], blk.omegaz); }
                     if (nghost3) {
                         dest_cell = blk.get_cell(i+3,j,k);
                         dest_cell.fs.copy_values_from(fstate);
-                        if (blk.omegaz != 0.0) { blk.into_rotating_frame(dest_cell.fs.vel, dest_cell.pos[gtl]); }
+                        if (blk.omegaz != 0.0) { into_rotating_frame(dest_cell.fs.vel, dest_cell.pos[gtl], blk.omegaz); }
                     }
                 } // end j loop
             } // for k
@@ -119,14 +119,14 @@ public:
                 for (i = blk.imin; i <= blk.imax; ++i) {
                     dest_cell = blk.get_cell(i,j-1,k);
                     dest_cell.fs.copy_values_from(fstate);
-                    if (blk.omegaz != 0.0) { blk.into_rotating_frame(dest_cell.fs.vel, dest_cell.pos[gtl]); }
+                    if (blk.omegaz != 0.0) { into_rotating_frame(dest_cell.fs.vel, dest_cell.pos[gtl], blk.omegaz); }
                     dest_cell = blk.get_cell(i,j-2,k);
                     dest_cell.fs.copy_values_from(fstate);
-                    if (blk.omegaz != 0.0) { blk.into_rotating_frame(dest_cell.fs.vel, dest_cell.pos[gtl]); }
+                    if (blk.omegaz != 0.0) { into_rotating_frame(dest_cell.fs.vel, dest_cell.pos[gtl], blk.omegaz); }
                     if (nghost3) {
                         dest_cell = blk.get_cell(i,j-3,k);
                         dest_cell.fs.copy_values_from(fstate);
-                        if (blk.omegaz != 0.0) { blk.into_rotating_frame(dest_cell.fs.vel, dest_cell.pos[gtl]); }
+                        if (blk.omegaz != 0.0) { into_rotating_frame(dest_cell.fs.vel, dest_cell.pos[gtl], blk.omegaz); }
                     }
                 } // end i loop
             } // for k
@@ -137,14 +137,14 @@ public:
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     dest_cell = blk.get_cell(i-1,j,k);
                     dest_cell.fs.copy_values_from(fstate);
-                    if (blk.omegaz != 0.0) { blk.into_rotating_frame(dest_cell.fs.vel, dest_cell.pos[gtl]); }
+                    if (blk.omegaz != 0.0) { into_rotating_frame(dest_cell.fs.vel, dest_cell.pos[gtl], blk.omegaz); }
                     dest_cell = blk.get_cell(i-2,j,k);
                     dest_cell.fs.copy_values_from(fstate);
-                    if (blk.omegaz != 0.0) { blk.into_rotating_frame(dest_cell.fs.vel, dest_cell.pos[gtl]); }
+                    if (blk.omegaz != 0.0) { into_rotating_frame(dest_cell.fs.vel, dest_cell.pos[gtl], blk.omegaz); }
                     if (nghost3) {
                         dest_cell = blk.get_cell(i-3,j,k);
                         dest_cell.fs.copy_values_from(fstate);
-                        if (blk.omegaz != 0.0) { blk.into_rotating_frame(dest_cell.fs.vel, dest_cell.pos[gtl]); }
+                        if (blk.omegaz != 0.0) { into_rotating_frame(dest_cell.fs.vel, dest_cell.pos[gtl], blk.omegaz); }
                     }
                 } // end j loop
             } // for k
@@ -155,14 +155,14 @@ public:
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     dest_cell = blk.get_cell(i,j,k+1);
                     dest_cell.fs.copy_values_from(fstate);
-                    if (blk.omegaz != 0.0) { blk.into_rotating_frame(dest_cell.fs.vel, dest_cell.pos[gtl]); }
+                    if (blk.omegaz != 0.0) { into_rotating_frame(dest_cell.fs.vel, dest_cell.pos[gtl], blk.omegaz); }
                     dest_cell = blk.get_cell(i,j,k+2);
                     dest_cell.fs.copy_values_from(fstate);
-                    if (blk.omegaz != 0.0) { blk.into_rotating_frame(dest_cell.fs.vel, dest_cell.pos[gtl]); }
+                    if (blk.omegaz != 0.0) { into_rotating_frame(dest_cell.fs.vel, dest_cell.pos[gtl], blk.omegaz); }
                     if (nghost3) {
                         dest_cell = blk.get_cell(i,j,k+3);
                         dest_cell.fs.copy_values_from(fstate);
-                        if (blk.omegaz != 0.0) { blk.into_rotating_frame(dest_cell.fs.vel, dest_cell.pos[gtl]); }
+                        if (blk.omegaz != 0.0) { into_rotating_frame(dest_cell.fs.vel, dest_cell.pos[gtl], blk.omegaz); }
                     }
                 } // end j loop
             } // for i
@@ -173,14 +173,14 @@ public:
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     dest_cell = blk.get_cell(i,j,k-1);
                     dest_cell.fs.copy_values_from(fstate);
-                    if (blk.omegaz != 0.0) { blk.into_rotating_frame(dest_cell.fs.vel, dest_cell.pos[gtl]); }
+                    if (blk.omegaz != 0.0) { into_rotating_frame(dest_cell.fs.vel, dest_cell.pos[gtl], blk.omegaz); }
                     dest_cell = blk.get_cell(i,j,k-2);
                     dest_cell.fs.copy_values_from(fstate);
-                    if (blk.omegaz != 0.0) { blk.into_rotating_frame(dest_cell.fs.vel, dest_cell.pos[gtl]); }
+                    if (blk.omegaz != 0.0) { into_rotating_frame(dest_cell.fs.vel, dest_cell.pos[gtl], blk.omegaz); }
                     if (nghost3) {
                         dest_cell = blk.get_cell(i,j,k-3);
                         dest_cell.fs.copy_values_from(fstate);
-                        if (blk.omegaz != 0.0) { blk.into_rotating_frame(dest_cell.fs.vel, dest_cell.pos[gtl]); }
+                        if (blk.omegaz != 0.0) { into_rotating_frame(dest_cell.fs.vel, dest_cell.pos[gtl], blk.omegaz); }
                     }
                 } // end j loop
             } // for i
