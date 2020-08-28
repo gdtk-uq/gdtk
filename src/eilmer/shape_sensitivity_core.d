@@ -104,14 +104,14 @@ void evalPrimitiveJacobianVecProd(FluidBlock blk, size_t nPrimitive, number[] v,
     steadystate_core.evalRHS(0.0, 0);
     cellCount = 0;
     foreach (cell; blk.cells) {
-        p[cellCount+blk.MASS] = -cell.dUdt[0].mass.im/EPS.im; 
-        p[cellCount+blk.X_MOM] = -cell.dUdt[0].momentum.x.im/EPS.im;
-        p[cellCount+blk.Y_MOM] = -cell.dUdt[0].momentum.y.im/EPS.im;
+        p[cellCount+blk.MASS] = cell.dUdt[0].mass.im/EPS.im; 
+        p[cellCount+blk.X_MOM] = cell.dUdt[0].momentum.x.im/EPS.im;
+        p[cellCount+blk.Y_MOM] = cell.dUdt[0].momentum.y.im/EPS.im;
         if ( blk.myConfig.dimensions == 3 )
-            p[cellCount+blk.Z_MOM] = -cell.dUdt[0].momentum.z.im/EPS.im;
-        p[cellCount+blk.TOT_ENERGY] = -cell.dUdt[0].total_energy.im/EPS.im;
+            p[cellCount+blk.Z_MOM] = cell.dUdt[0].momentum.z.im/EPS.im;
+        p[cellCount+blk.TOT_ENERGY] = cell.dUdt[0].total_energy.im/EPS.im;
         foreach(it; 0 .. nturb){
-            p[cellCount+blk.TKE+it] = -cell.dUdt[0].rhoturb[it].im/EPS.im;
+            p[cellCount+blk.TKE+it] = cell.dUdt[0].rhoturb[it].im/EPS.im;
         }
         cellCount += nPrimitive;
     }
@@ -151,14 +151,14 @@ void evalConservativeJacobianVecProd(FluidBlock blk, size_t nConserved, number[]
     steadystate_core.evalRHS(0.0, 1);
     cellCount = 0;
     foreach (cell; blk.cells) {
-        p[cellCount+blk.MASS] = -cell.dUdt[1].mass.im/EPS.im;
-        p[cellCount+blk.X_MOM] = -cell.dUdt[1].momentum.x.im/EPS.im;
-        p[cellCount+blk.Y_MOM] = -cell.dUdt[1].momentum.y.im/EPS.im;
+        p[cellCount+blk.MASS] = cell.dUdt[1].mass.im/EPS.im;
+        p[cellCount+blk.X_MOM] = cell.dUdt[1].momentum.x.im/EPS.im;
+        p[cellCount+blk.Y_MOM] = cell.dUdt[1].momentum.y.im/EPS.im;
         if ( blk.myConfig.dimensions == 3 )
-            p[cellCount+blk.Z_MOM] = -cell.dUdt[1].momentum.z.im/EPS.im;
-        p[cellCount+blk.TOT_ENERGY] = -cell.dUdt[1].total_energy.im/EPS.im;
+            p[cellCount+blk.Z_MOM] = cell.dUdt[1].momentum.z.im/EPS.im;
+        p[cellCount+blk.TOT_ENERGY] = cell.dUdt[1].total_energy.im/EPS.im;
         foreach(it; 0 .. nturb){
-            p[cellCount+blk.TKE+it] = -cell.dUdt[1].rhoturb[it].im/EPS.im;
+            p[cellCount+blk.TKE+it] = cell.dUdt[1].rhoturb[it].im/EPS.im;
         }
         cellCount += nConserved;
     }
@@ -833,7 +833,7 @@ void apply_boundary_conditions(ref SMatrix!number A, FluidBlock blk, size_t np, 
 				    integral -= bcell.outsign[fi] * iface.dFdU[ip][jp] * iface.area[0]; // gtl=0
 				}
 				number entry = volInv * integral + bcell.dQdU[ip][jp];                    
-				dRdq[ip][jp] = -entry;
+				dRdq[ip][jp] = entry;
 			    }
 			}
 
@@ -1344,7 +1344,7 @@ void form_external_flow_jacobian_block_phase3(ref SMatrix!number A, FluidBlock b
                                         integral -= cell.outsign[fi] * iface.dFdU[ip][jp] * iface.area[0]; // gtl=0
                                     }
                                     number entry = volInv * integral + cell.dQdU[ip][jp];                    
-                                    dRdq[ip][jp] = -entry*-1; // multiply by negative one due to outsign difference
+                                    dRdq[ip][jp] = entry*-1; // multiply by negative one due to outsign difference
                                 }
                             }
                             
@@ -1433,7 +1433,7 @@ void construct_flow_jacobian_for_boundary_cells(FVCell pcell, FVCell icell, Flui
 		    }
 		    number JacEntry = volInv * integral + cell.dQdU[ip][jp]; // add source term contribution
 		    //if(pcell.global_id == 325 && cell.global_id == 408) writeln(JacEntry, ", ", cell.dQdU[ip][jp]);
-		    ecell_entry_list ~= -JacEntry;
+		    ecell_entry_list ~= JacEntry;
 		}
                 }
 	}
@@ -1931,7 +1931,7 @@ void compute_flow_jacobian_rows_for_cell(ref SMatrix!number A, ref size_t aa_idx
 			integral -= cell.outsign[fi] * iface.dFdU[jp][ip] * iface.area[0]; // gtl=0
 		    }
 		    number JacEntry = volInv * integral + cell.dQdU[jp][ip];
-		    A.aa[aa_idx] = -JacEntry;
+		    A.aa[aa_idx] = JacEntry;
 		    aa_idx += 1;
 		    A.ja[ja_idx] = J;
 		    ja_idx += 1;
@@ -4292,6 +4292,8 @@ void ilu_preconditioner(ref FluidBlock blk, size_t np, double dt, size_t orderOf
     //foreach (i; 0 .. np*blk.cells.length) {
     //    blk.P[i,i] = blk.P[i,i] + dtInv;
     //}
+
+    blk.P.aa[] = [to!number(-1.0)]*blk.P.aa[];
     
     foreach (i, cell; blk.cells) {
         number dtInv;

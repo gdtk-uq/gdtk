@@ -591,7 +591,7 @@ void main(string[] args) {
         adjointGradients.length = designVars.length;
         adjointGradients[] = to!number(0.0);
         foreach (myblk; localFluidBlocks) adjointGradients[] += myblk.rTdotPsi[];
-        adjointGradients[] = g[] - adjointGradients[];
+        adjointGradients[] = g[] + adjointGradients[];
 
         foreach ( i; 0..adjointGradients.length) writef("gradient for variable %d: %.16e \n", i+1, adjointGradients[i]);
 
