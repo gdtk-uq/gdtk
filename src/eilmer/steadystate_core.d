@@ -1161,14 +1161,14 @@ void evalRealMatVecProd(double pseudoSimTime, double sigma)
         size_t nturb = blk.myConfig.turb_model.nturb;
         int cellCount = 0;
         foreach (cell; blk.cells) {
-            blk.zed[cellCount+MASS] = (-cell.dUdt[1].mass - blk.FU[cellCount+MASS])/(sigma);
-            blk.zed[cellCount+X_MOM] = (-cell.dUdt[1].momentum.x - blk.FU[cellCount+X_MOM])/(sigma);
-            blk.zed[cellCount+Y_MOM] = (-cell.dUdt[1].momentum.y - blk.FU[cellCount+Y_MOM])/(sigma);
+            blk.zed[cellCount+MASS] = (cell.dUdt[1].mass - blk.FU[cellCount+MASS])/(sigma);
+            blk.zed[cellCount+X_MOM] = (cell.dUdt[1].momentum.x - blk.FU[cellCount+X_MOM])/(sigma);
+            blk.zed[cellCount+Y_MOM] = (cell.dUdt[1].momentum.y - blk.FU[cellCount+Y_MOM])/(sigma);
             if ( blk.myConfig.dimensions == 3 )
-                blk.zed[cellCount+Z_MOM] = (-cell.dUdt[1].momentum.z - blk.FU[cellCount+Z_MOM])/(sigma);
-            blk.zed[cellCount+TOT_ENERGY] = (-cell.dUdt[1].total_energy - blk.FU[cellCount+TOT_ENERGY])/(sigma);
+                blk.zed[cellCount+Z_MOM] = (cell.dUdt[1].momentum.z - blk.FU[cellCount+Z_MOM])/(sigma);
+            blk.zed[cellCount+TOT_ENERGY] = (cell.dUdt[1].total_energy - blk.FU[cellCount+TOT_ENERGY])/(sigma);
             foreach(it; 0 .. nturb){
-                blk.zed[cellCount+TKE+it] = (-cell.dUdt[1].rhoturb[it] - blk.FU[cellCount+TKE+it])/(sigma);
+                blk.zed[cellCount+TKE+it] = (cell.dUdt[1].rhoturb[it] - blk.FU[cellCount+TKE+it])/(sigma);
             }
             cellCount += nConserved;
         }
@@ -1214,14 +1214,14 @@ void evalComplexMatVecProd(double pseudoSimTime, double sigma)
             size_t nturb = blk.myConfig.turb_model.nturb;
             int cellCount = 0;
             foreach (cell; blk.cells) {
-                blk.zed[cellCount+MASS] = -cell.dUdt[1].mass.im/(sigma);
-                blk.zed[cellCount+X_MOM] = -cell.dUdt[1].momentum.x.im/(sigma);
-                blk.zed[cellCount+Y_MOM] = -cell.dUdt[1].momentum.y.im/(sigma);
+                blk.zed[cellCount+MASS] = cell.dUdt[1].mass.im/(sigma);
+                blk.zed[cellCount+X_MOM] = cell.dUdt[1].momentum.x.im/(sigma);
+                blk.zed[cellCount+Y_MOM] = cell.dUdt[1].momentum.y.im/(sigma);
                 if ( blk.myConfig.dimensions == 3 )
-                    blk.zed[cellCount+Z_MOM] = -cell.dUdt[1].momentum.z.im/(sigma);
-                blk.zed[cellCount+TOT_ENERGY] = -cell.dUdt[1].total_energy.im/(sigma);
+                    blk.zed[cellCount+Z_MOM] = cell.dUdt[1].momentum.z.im/(sigma);
+                blk.zed[cellCount+TOT_ENERGY] = cell.dUdt[1].total_energy.im/(sigma);
                 foreach(it; 0 .. nturb){
-                    blk.zed[cellCount+TKE+it] = -cell.dUdt[1].rhoturb[it].im/(sigma);
+                    blk.zed[cellCount+TKE+it] = cell.dUdt[1].rhoturb[it].im/(sigma);
                 }
                 // we must explicitly remove the complex-perturbation for the turbulent properties - failing to do so
                 // will cause imaginary values to leak into the flowstate variables (outside of the Frechet derivative).
@@ -1610,14 +1610,14 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             blk.maxRate.rhoturb[it] = 0.0;
         }
         foreach (i, cell; blk.cells) {
-            blk.FU[cellCount+MASS] = -cell.dUdt[0].mass;
-            blk.FU[cellCount+X_MOM] = -cell.dUdt[0].momentum.x;
-            blk.FU[cellCount+Y_MOM] = -cell.dUdt[0].momentum.y;
+            blk.FU[cellCount+MASS] = cell.dUdt[0].mass;
+            blk.FU[cellCount+X_MOM] = cell.dUdt[0].momentum.x;
+            blk.FU[cellCount+Y_MOM] = cell.dUdt[0].momentum.y;
             if ( blk.myConfig.dimensions == 3 )
-                blk.FU[cellCount+Z_MOM] = -cell.dUdt[0].momentum.z;
-            blk.FU[cellCount+TOT_ENERGY] = -cell.dUdt[0].total_energy;
+                blk.FU[cellCount+Z_MOM] = cell.dUdt[0].momentum.z;
+            blk.FU[cellCount+TOT_ENERGY] = cell.dUdt[0].total_energy;
             foreach(it; 0 .. nturb){
-                blk.FU[cellCount+TKE+it] = -cell.dUdt[0].rhoturb[it];
+                blk.FU[cellCount+TKE+it] = cell.dUdt[0].rhoturb[it];
             }
             cellCount += nConserved;
             /*
@@ -1708,20 +1708,15 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         }
     }
 
+    // scale turbulence variables before calculating norm
     foreach (blk; parallel(localFluidBlocks,1)) {
         size_t nturb = blk.myConfig.turb_model.nturb;
         blk.x0[] = to!number(0.0);
         int cellCount = 0;
         foreach (cell; blk.cells) {
-            blk.FU[cellCount+MASS] = -blk.FU[cellCount+MASS];
-            blk.FU[cellCount+X_MOM] = -blk.FU[cellCount+X_MOM];
-            blk.FU[cellCount+Y_MOM] = -blk.FU[cellCount+Y_MOM];
-            if ( blk.myConfig.dimensions == 3 )
-                blk.FU[cellCount+Z_MOM] = -blk.FU[cellCount+Z_MOM];
-            blk.FU[cellCount+TOT_ENERGY] = -blk.FU[cellCount+TOT_ENERGY];
             foreach(it; 0 .. nturb){
                 number fac = blk.myConfig.turb_model.gmres_scaling_factor(it);
-                blk.FU[cellCount+TKE+it] = -1.0/fac*blk.FU[cellCount+TKE+it];
+                blk.FU[cellCount+TKE+it] = 1.0/fac*blk.FU[cellCount+TKE+it];
             }
             cellCount += nConserved;
         }
@@ -1734,20 +1729,15 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     }
     unscaledNorm2 = sqrt(unscaledNorm2);
 
+    // unscale turbulence variables after calculating norm
     foreach (blk; parallel(localFluidBlocks,1)) {
         size_t nturb = blk.myConfig.turb_model.nturb;
         blk.x0[] = to!number(0.0);
         int cellCount = 0;
         foreach (cell; blk.cells) {
-            blk.FU[cellCount+MASS] = -blk.FU[cellCount+MASS];
-            blk.FU[cellCount+X_MOM] = -blk.FU[cellCount+X_MOM];
-            blk.FU[cellCount+Y_MOM] = -blk.FU[cellCount+Y_MOM];
-            if ( blk.myConfig.dimensions == 3 )
-                blk.FU[cellCount+Z_MOM] = -blk.FU[cellCount+Z_MOM];
-            blk.FU[cellCount+TOT_ENERGY] = -blk.FU[cellCount+TOT_ENERGY];
             foreach(it; 0 .. nturb){
                 number fac = blk.myConfig.turb_model.gmres_scaling_factor(it);
-                blk.FU[cellCount+TKE+it] = -fac*blk.FU[cellCount+TKE+it];
+                blk.FU[cellCount+TKE+it] = fac*blk.FU[cellCount+TKE+it];
             }
             cellCount += nConserved;
         }
@@ -1759,8 +1749,6 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     H0.zeros();
     H1.zeros();
 
-    //double dtInv = 1.0/dt;
-
     // We'll scale r0 against these max rates of change.
     // r0 = b - A*x0
     // Taking x0 = [0] (as is common) gives r0 = b = FU
@@ -1770,14 +1758,14 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         blk.x0[] = to!number(0.0);
         int cellCount = 0;
         foreach (cell; blk.cells) {
-            blk.r0[cellCount+MASS] = -(1./blk.maxRate.mass)*blk.FU[cellCount+MASS];
-            blk.r0[cellCount+X_MOM] = -(1./blk.maxRate.momentum.x)*blk.FU[cellCount+X_MOM];
-            blk.r0[cellCount+Y_MOM] = -(1./blk.maxRate.momentum.y)*blk.FU[cellCount+Y_MOM];
+            blk.r0[cellCount+MASS] = (1./blk.maxRate.mass)*blk.FU[cellCount+MASS];
+            blk.r0[cellCount+X_MOM] = (1./blk.maxRate.momentum.x)*blk.FU[cellCount+X_MOM];
+            blk.r0[cellCount+Y_MOM] = (1./blk.maxRate.momentum.y)*blk.FU[cellCount+Y_MOM];
             if ( blk.myConfig.dimensions == 3 )
-                blk.r0[cellCount+Z_MOM] = -(1./blk.maxRate.momentum.z)*blk.FU[cellCount+Z_MOM];
-            blk.r0[cellCount+TOT_ENERGY] = -(1./blk.maxRate.total_energy)*blk.FU[cellCount+TOT_ENERGY];
+                blk.r0[cellCount+Z_MOM] = (1./blk.maxRate.momentum.z)*blk.FU[cellCount+Z_MOM];
+            blk.r0[cellCount+TOT_ENERGY] = (1./blk.maxRate.total_energy)*blk.FU[cellCount+TOT_ENERGY];
             foreach(it; 0 .. nturb){
-                blk.r0[cellCount+TKE+it] = -(1./blk.maxRate.rhoturb[it])*blk.FU[cellCount+TKE+it];
+                blk.r0[cellCount+TKE+it] = (1./blk.maxRate.rhoturb[it])*blk.FU[cellCount+TKE+it];
             }
             cellCount += nConserved;
         }
@@ -1862,12 +1850,6 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             }
             
             // Prepare 'w' with (I/dt)(P^-1)v term;
-            //foreach (blk; parallel(localFluidBlocks,1)) {
-                //double dtInv = 1.0/dt;
-                //foreach (idx; 0..blk.w.length) blk.w[idx] = dtInv*blk.zed[idx];
-            //}
-
-            // Prepare 'w' with (I/dt)(P^-1)v term;
             foreach (blk; parallel(localFluidBlocks,1)) {
                 foreach (i, cell; blk.cells) {
                     foreach (k; 0..nConserved) {
@@ -1886,7 +1868,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
 
             // Now we can complete calculation of w
             foreach (blk; parallel(localFluidBlocks,1)) {
-                foreach (k; 0 .. blk.nvars)  blk.w[k] += blk.zed[k];
+                foreach (k; 0 .. blk.nvars)  blk.w[k] = blk.w[k] - blk.zed[k];
             }
             
             // apply scaling
