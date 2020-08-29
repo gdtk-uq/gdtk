@@ -31,15 +31,9 @@ public:
 
     // Blank grid, ready for import of data.
     this(size_t niv, size_t njv, size_t nkv=1, string label="")
-    in {
-        assert(niv > 0 && njv > 0 && nkv > 0);
-    }
-    body {
-        // infer dimensions from numbers of vertices in each direction
-        int dim = 3;
-        if (nkv == 1) {
-            if (njv == 1) { dim = 1; } else { dim = 2; }
-        }
+    {
+        // Infer dimensions from numbers of vertices in each direction.
+        int dim = 3; if (nkv == 1) { dim = (njv == 1) ? 1 : 2; }
         super(Grid_t.structured_grid, dim, label);
         this.niv = niv; this.njv = njv; this.nkv = nkv;
         switch (dim) {
@@ -1054,8 +1048,6 @@ public:
         usg.write_to_su2_file(fileName, scale, use_gmsh_order_for_wedges);
     }
 
-version(complex_numbers){
-} else {
     double measure_of_badness()
     // Compute the average of the cell badness measures.
     // For each cell, this is the ratio of the squared-lengths of the diagonals,
@@ -1063,12 +1055,28 @@ version(complex_numbers){
     // A grid that has a value of 1.0 is (likely) an ideal, orthogonal mesh.
     {
         double ratio_of_diagonals_avg = 0.0; double ratio_of_diagonals_max = 0.0;
+        double nonorthogonality_avg = 0.0; double nonorthogonality_max = 0.0;
         double slenderness_avg = 0.0; double slenderness_max = 0.0;
         double area_min = double.max; double area_max = 0.0;
         double negative_area_penalty = 0.0;
         if (nkv == 1 && njv > 1) {
             // 2D surface mesh.
+            // Compute measure on nonorthogonality at every vertex.
             size_t k = 0;
+            foreach (j; 0 .. njv) {
+                foreach (i; 0 .. niv) {
+                    Vector3 a = *this[i,j,k];
+                    Vector3 b; if (i < niv-1) { b.set(*this[i+1,j,k]); } else { b.set(*this[i-1,j,k]); }
+                    Vector3 c; if (j < njv-1) { c.set(*this[i,j+1,k]); } else { b.set(*this[i,j-1,k]); }
+                    Vector3 ab = b; ab -= a; ab.normalize();
+                    Vector3 ac = c; ac -= a; ac.normalize();
+                    double dotprod = fabs(ab.dot(ac).re);
+                    nonorthogonality_avg += dotprod;
+                    nonorthogonality_max = max(nonorthogonality_max, dotprod);
+                }
+            }
+            size_t nvtx = njv*niv;
+            nonorthogonality_avg /= nvtx; // average value per vertex
             foreach (j; 0 .. njv-1) {
                 foreach (i; 0 .. niv-1) {
                     // Corners of the cell[i,j]
@@ -1077,23 +1085,23 @@ version(complex_numbers){
                     // Diagonals
                     Vector3 d0 = p00; d0 -= p11;
                     Vector3 d1 = p10; d1 -= p01;
-                    double L20 = d0.x*d0.x.re + d0.y*d0.y.re + d0.x*d0.z.re + 1.0e-16;
-                    double L21 = d1.x*d1.x.re + d1.y*d1.y.re + d1.z*d1.z.re + 1.0e-16;
+                    double L20 = d0.dot(d0).re + 1.0e-16;
+                    double L21 = d1.dot(d1).re + 1.0e-16;
                     double ratio_of_diagonals = (L20 > L21) ? L20/L21 : L21/L20;
                     ratio_of_diagonals_max = max(ratio_of_diagonals_max, ratio_of_diagonals);
                     ratio_of_diagonals_avg += ratio_of_diagonals;
                     // Slenderness
                     Vector3 centroid;
-                    double xyplane_area, iLen, jLen, minLen;
+                    number xyplane_area, iLen, jLen, minLen;
                     xyplane_quad_cell_properties(p00, p10, p11, p01, centroid,
                                                  xyplane_area, iLen, jLen, minLen);
-                    double perimeter = distance_between(p00, p10) + distance_between(p10, p11) +
+                    number perimeter = distance_between(p00, p10) + distance_between(p10, p11) +
                         distance_between(p11, p01) + distance_between(p01, p00);
-                    double slenderness = (perimeter^^2)/(16*xyplane_area);
-                    slenderness_max = max(slenderness_max, slenderness);
-                    slenderness_avg += slenderness;
-                    area_min = min(area_min, xyplane_area);
-                    area_max = max(area_max, xyplane_area);
+                    number slenderness = (perimeter^^2)/(16*xyplane_area);
+                    slenderness_max = max(slenderness_max, slenderness.re);
+                    slenderness_avg += slenderness.re;
+                    area_min = min(area_min, xyplane_area.re);
+                    area_max = max(area_max, xyplane_area.re);
                     // Negative areas are a bad thing.
                     negative_area_penalty += (xyplane_area < 0.0) ? 10000.0 : 0.0;
                 }
@@ -1105,13 +1113,18 @@ version(complex_numbers){
             // 3D volume mesh.
             throw new Error("Not implemented.");
         }
-        writefln("diagonals max=%e avg=%e slenderness max=%e avg=%e area_max/min=%e negative=%e",
-                 ratio_of_diagonals_max, ratio_of_diagonals_avg, slenderness_max, slenderness_avg,
+        /+
+        writefln("nonorthogonality max=%e avg=%g diagonals max=%e avg=%e"~
+                 " slenderness max=%e avg=%e area_max/min=%e negative=%e",
+                 nonorthogonality_max, nonorthogonality_avg,
+                 ratio_of_diagonals_max, ratio_of_diagonals_avg,
+                 slenderness_max, slenderness_avg,
                  (area_max/area_min), negative_area_penalty);
-        return 10.0*ratio_of_diagonals_max + slenderness_max +
-            10.0*ratio_of_diagonals_avg + slenderness_avg +
+        +/
+        return 7.0*nonorthogonality_max + 3.0*ratio_of_diagonals_max + slenderness_max +
+            7.0*nonorthogonality_avg + 3.0*ratio_of_diagonals_avg + slenderness_avg +
             (area_max/area_min) + negative_area_penalty;
-    }
+    } // end measure_of_badness()
 
     bool determine_rs_grids(const ParametricSurface surf, const(UnivariateFunction)[] clusterf,
                             ref double[4][4] r_grid, ref double[4][4] s_grid)
@@ -1129,15 +1142,15 @@ version(complex_numbers){
         double fdata;
         int nfe, nres;
         bool conv_flag = nm.nelmin.minimize!(objective,double)(data, fdata, nfe, nres, ddata,
-                                                               1.0e-6, 3, 800);
+                                                               1.0e-3, 3, 800);
         writeln("data = ", data, " fdata = ", fdata);
         writeln("convergence-flag = ", conv_flag);
         writeln("number-of-fn-evaluations = ", nfe);
         writeln("number-of-restarts = ", nres);
         list_to_rs_grids(data, r_grid, s_grid);
         return conv_flag;
-    }
-} // end not version(complex_numbers)
+    } // end determine_rs_grids()
+
 } // end class StructuredGrid
 
 //-----------------------------------------------------------------
@@ -1204,7 +1217,7 @@ void list_to_rs_grids(ref const(double[]) data,
 // Edit: (NNG 2020), additionally we now cap values that are too
 // large as well. This is avoids a problem with paraviews ascii
 // grid reader that causes memory errors when given values that
-// invalid float32 values 
+// invalid float32 values.
 @nogc double uflowz(double q, double tiny=1.0e-30, double huge=1.0e30)
 {
     double qsafe = q;
