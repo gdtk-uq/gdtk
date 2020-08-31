@@ -338,7 +338,7 @@ end
 WallFunctionInterfaceEffect = BoundaryInterfaceEffect:new()
 WallFunctionInterfaceEffect.type = "wall_function_interface_effect"
 function WallFunctionInterfaceEffect:tojson()
-   local str = string.format('          {"type" : "%s",', self.type)
+   local str = string.format('          {"type" : "%s"', self.type)
    str = str .. '}'
    return str
 end
@@ -346,7 +346,7 @@ end
 AdiabaticWallFunctionInterfaceEffect = BoundaryInterfaceEffect:new()
 AdiabaticWallFunctionInterfaceEffect.type = "adiabatic_wall_function_interface_effect"
 function AdiabaticWallFunctionInterfaceEffect:tojson()
-   local str = string.format('          {"type" : "%s",', self.type)
+   local str = string.format('          {"type" : "%s"', self.type)
    str = str .. '}'
    return str
 end
