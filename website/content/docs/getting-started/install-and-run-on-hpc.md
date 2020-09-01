@@ -185,6 +185,10 @@ To compile:
     cd dgd/src/eilmer
     make FLAVOUR=fast WITH_MPI=1 install
 
+To complete the install, remember to set your environment variables
+as described on the [getting started page]({{< relref "docs/getting-started/_index.md#setting-up-for-a-first-time-run-of-eilmer" >}}).
+
+
 ### Running
 
 Where possible, try to use a full node at a time on Goliath.
@@ -248,6 +252,9 @@ To compile Eilmer4 with MPI enabled on tinaroo, do:
     module load openmpi2_ib/2.1.6
     cd dgd/install-scripts
     ./install-transient-solvers.sh
+
+To complete the install, remember to set your environment variables
+as described on the [getting started page]({{< relref "docs/getting-started/_index.md#setting-up-for-a-first-time-run-of-eilmer" >}}).
 
 ### Running
 Where possible, try to use a full node at once on tinaroo.
@@ -316,6 +323,9 @@ get an optimised build of the distributed-memory (MPI) transient solver.
     cd dgd/install-scripts
     ./install-transient-solvers.sh
 
+To complete the install, remember to set your environment variables
+as described on the [getting started page]({{< relref "docs/getting-started/_index.md#setting-up-for-a-first-time-run-of-eilmer" >}}).
+
 ### Running
 
 As is common on large cluster computers, you will need to request the entire node CPU resources if your job spans multiple nodes. On gadi, that means CPU request numbers are in multiples of 48.
@@ -356,7 +366,6 @@ Here I have 80 MPI tasks but I'd like to use only 48 CPUs.
     mpirun --oversubscribe -n 80 e4mpi --job=myJob --run > LOGFILE-oversubscribed
 
 
-
 ## NSCC Cluster in Singapore
 
 *Hardware:* Fujitsu servers, Intel E5-2690v3 CPUs, 24 cores and 128 GB memory per node
@@ -395,6 +404,9 @@ To install the MPI version:
 
     cd dgd/src/eilmer
     make FLAVOUR=fast WITH_MPI=1 install
+
+To complete the install, remember to set your environment variables
+as described on the [getting started page]({{< relref "docs/getting-started/_index.md#setting-up-for-a-first-time-run-of-eilmer" >}}).
 
 ### Running
 
