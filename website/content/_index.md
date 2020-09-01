@@ -2,7 +2,7 @@
 title: "GDTk: The Gas Dynamic Toolkit"
 ---
 
-# GDTk: The Gas Dymamics Toolkit
+# GDTk: The Gas Dynamics Toolkit
 
 The Gas Dynamics Toolkit is a collection of programs and functions for
 computing the properties of high-speed gas flows.
