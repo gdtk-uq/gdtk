@@ -4272,7 +4272,6 @@ void sss_preconditioner_initialisation(ref FluidBlock blk, size_t nConservative)
 void sss_preconditioner(ref FluidBlock blk, size_t np, double dt, size_t orderOfJacobian=1) {
     final switch (blk.myConfig.sssOptions.preconditionMatrixType) {
     case PreconditionMatrixType.block_diagonal:
-        assert(blk.myConfig.sssOptions.preconditionMatrixType != PreconditionMatrixType.block_diagonal, "Error: Block Diagonal precondition matrix currently not available");
         block_diagonal_preconditioner(blk, np, dt, orderOfJacobian);
         break;
     case PreconditionMatrixType.ilu:
@@ -4316,7 +4315,7 @@ void ilu_preconditioner(ref FluidBlock blk, size_t np, double dt, size_t orderOf
 }
 
 void block_diagonal_preconditioner(FluidBlock blk, size_t np, double dt, size_t orderOfJacobian=1) {
-    /*
+    
     // Make a stack-local copy of conserved quantities info
     size_t nConserved = nConservedQuantities;
     size_t MASS = massIdx;
@@ -4325,7 +4324,6 @@ void block_diagonal_preconditioner(FluidBlock blk, size_t np, double dt, size_t 
     size_t Z_MOM = zMomIdx;
     size_t TOT_ENERGY = totEnergyIdx;
     size_t TKE = tkeIdx;
-    size_t OMEGA = omegaIdx;
     
     // temporarily switch the interpolation order of the config object to that of the Jacobian 
     bool transformToConserved = true;
@@ -4400,7 +4398,7 @@ void block_diagonal_preconditioner(FluidBlock blk, size_t np, double dt, size_t 
                     integral -= pcell.outsign[fi] * iface.dFdU[ip][jp] * iface.area[0]; // gtl=0
                 }
                 number entry = volInv * integral;                    
-                pcell.dConservative[ip,jp] = -entry;
+                pcell.dConservative[ip,jp] = entry;
             }
         }
         // clear the interface flux Jacobian entries
@@ -4417,23 +4415,24 @@ void block_diagonal_preconditioner(FluidBlock blk, size_t np, double dt, size_t 
     apply_boundary_conditions_for_sss_preconditioner(blk, np, orderOfJacobian, EPS, true);
 
     foreach (cell; blk.cells) {
-        number dtInv = 1.0/dt;
-        foreach (i; 0 .. np) {
-            cell.dConservative[i,i] += dtInv;
-        }
-
         foreach ( i; 0..np) {
             foreach ( j; 0..np) {
-                cell.dPrimitive[i,j] = cell.dConservative[i,j];
+                cell.dPrimitive[i,j] = -cell.dConservative[i,j];
             }
         }
+
+        number dtInv = 1.0/dt;
+        foreach (i; 0 .. np) {
+            cell.dPrimitive[i,i] += dtInv;
+        }
+
         // Get an inverse ready for repeated solves.
-        Matrix!number tmp = nm.bbla.inverse(cell.dConservative);
+        Matrix!number tmp = nm.bbla.inverse(cell.dPrimitive);
         cell.dConservative = tmp;
     }
     // reset interpolation order to the global setting
     blk.myConfig.interpolation_order = GlobalConfig.interpolation_order;
-    */
+    
 }
 
 void apply_boundary_conditions_for_sss_preconditioner(FluidBlock blk, size_t np, size_t orderOfJacobian, number EPS, bool transformToConserved) {
