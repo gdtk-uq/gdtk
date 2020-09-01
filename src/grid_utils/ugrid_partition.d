@@ -209,16 +209,25 @@ string SU2_to_metis_format(string fileName) {
             return ""; // didn't find the target
         }
     writeln("-- Converting SU2 mesh to Metis input format");
-    string outputFileName = "metisFormat_"~fileName;
-    File outFile;
-    outFile = File(outputFileName, "w");
     auto ncells = to!size_t(getHeaderContent("NELEM"));
-    outFile.writeln(ncells);
+
+    string[] cells;
+    cells.length = ncells;
     foreach(i; 0 .. ncells) {
         auto lineContent = f.readln().strip();
         auto tokens = lineContent.split();
-        foreach(j; 1 .. tokens.length-1) { outFile.writef("%d \t", to!int(tokens[j])+1); }
-        outFile.writef("\n");
+        size_t idx = to!size_t(tokens[tokens.length-1]);
+        string[] vtxids;
+        foreach(j; 1 .. tokens.length-1) { vtxids ~= format("%d \t", to!int(tokens[j])+1); }
+        cells[idx] = vtxids.join();
+    }
+
+    string outputFileName = "metisFormat_"~fileName;
+    File outFile;
+    outFile = File(outputFileName, "w");
+    outFile.writeln(ncells);
+    foreach(cell; cells){
+        outFile.writeln(cell);
     }
     return outputFileName;
 }
@@ -250,6 +259,7 @@ void construct_blocks(string meshFile, string mappedCellsFilename, string partit
     // Proceed through su2 file and collect cells
     auto dimensions = to!int(getHeaderContent("NDIME"));
     auto ncells = to!size_t(getHeaderContent("NELEM"));
+    global_cells.length = ncells;
     foreach(i; 0 .. ncells) {
         auto lineContent = f.readln().strip();
         auto tokens = lineContent.split();
@@ -258,10 +268,11 @@ void construct_blocks(string meshFile, string mappedCellsFilename, string partit
         size_t[] node_id_list;
         foreach(j; 1 .. tokens.length-1) { node_id_list ~= to!size_t(tokens[j]); }
         size_t[] face_id_list; // empty, so far
-        global_cells ~= new Cell(cell_id, cell_type, node_id_list, face_id_list);
+        global_cells[cell_id] = new Cell(cell_id, cell_type, node_id_list, face_id_list);
     }
     // Proceed through su2 file and collect nodes
     auto nnodes = to!size_t(getHeaderContent("NPOIN"));
+    global_nodes.length = nnodes;
     foreach(i; 0 .. nnodes) {
         auto tokens = f.readln().strip().split();
         double x=0.0; double y=0.0; double z = 0.0; size_t indx = 0;
@@ -277,7 +288,7 @@ void construct_blocks(string meshFile, string mappedCellsFilename, string partit
             indx = to!size_t(tokens[3]);
         }
         double[3] pos = [x, y, z];
-        global_nodes ~= new Node(indx, pos);
+        global_nodes[indx] = new Node(indx, pos);
     } // end foreach i .. nnodes
     // Collect what partition each cell belongs to
     writeln("-- -- Reading metis output file");
