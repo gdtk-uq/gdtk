@@ -55,7 +55,7 @@ the codes in the DGD collection.
 
     https://www.open-mpi.org/faq/?category=osx#osx-bundled-ompi
 
-10. Build Eilmer by following instructions [here](/getting-started). NOTE: PLATFORM=osx 
+10. Build Eilmer by following instructions [here](/docs/getting-started). NOTE: PLATFORM=osx 
 
 11. Install Paraview
    
