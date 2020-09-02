@@ -39,7 +39,7 @@ import gas.vib_specific_nitrogen;
 import fvcore;
 import globalconfig;
 import json_helper;
-import core.stdc.stdlib : exit;
+import flowstate;
 
 import util.lua;
 import geom.luawrap;
@@ -74,17 +74,15 @@ public:
         try {
             content = readText(configFileName);
         } catch (Exception e) {
-            writeln("Failed to read config file: ", configFileName);
             writeln("Message is: ", e.msg);
-            exit(1);
+            throw new Error(text("Failed to read config file: ", configFileName));
         }
         JSONValue jsonData;
         try {
             jsonData = parseJSON!string(content);
         } catch (Exception e) {
-            writeln("Failed to parse JSON from config file: ", configFileName);
             writeln("Message is: ", e.msg);
-            exit(1);
+            throw new Error(text("Failed to parse JSON from config file: ", configFileName));
         }
         GlobalConfig.grid_format = jsonData["grid_format"].str;
         GlobalConfig.flow_format = jsonData["flow_format"].str;
@@ -355,6 +353,8 @@ public:
     string[] variableNames;
     size_t[string] variableIndex;
     double sim_time;
+    double omegaz; // Angular velocity (in rad/s) of the rotating frame.
+                   // There is only one component, about the z-axis.
 
     size_t single_index(size_t i, size_t j, size_t k=0) const
     in {
@@ -487,11 +487,14 @@ public:
         } // end switch flow_format
         foreach (i; 0 .. variableNames.length) { variableIndex[variableNames[i]] = i; }
         // Fill boundary group list
-        size_t nboundaries = getJSONint(jsonData["block_" ~ to!string(blkID)], "nboundaries", 0);
+        JSONValue jsonDataForBlk = jsonData["block_" ~ to!string(blkID)];
+        size_t nboundaries = getJSONint(jsonDataForBlk, "nboundaries", 0);
         for (size_t i=0; i < nboundaries; i++) {
-            auto myGroup = getJSONstring(jsonData["block_" ~ to!string(blkID)]["boundary_" ~ to!string(i)], "group", "");
+            auto myGroup = getJSONstring(jsonDataForBlk["boundary_" ~ to!string(i)], "group", "");
             bcGroups ~= myGroup;
         }
+        // rotating-frame angular velocity
+        omegaz = getJSONdouble(jsonDataForBlk, "omegaz", 0.0);
     } // end constructor from file
 
     this(ref const(BlockFlow) other, size_t[] cellList, size_t new_dimensions,
@@ -503,6 +506,7 @@ public:
     {
         gridType = other.gridType;
         dimensions = new_dimensions;
+        omegaz = other.omegaz;
         ncells = cellList.length;
         nic = new_nic; njc = new_njc; nkc = new_nkc;
         sim_time = other.sim_time;
@@ -578,13 +582,14 @@ public:
         // We assume a lot about the data that has been read in so,
         // we need to skip this function if all is not in place
         bool ok_to_proceed = true;
-        foreach (name; ["a", "rho", "p", "vel.x", "vel.y", "vel.z", "u"]) {
+        foreach (name; ["pos.x", "pos.y", "a", "rho", "p", "vel.x", "vel.y", "vel.z", "u"]) {
             if (!canFind(variableNames, name)) { ok_to_proceed = false; }
         }
         if (!ok_to_proceed) {
             writeln("BlockFlow.add_aux_variables(): Some essential variables not found.");
             return;
         }
+        bool add_nrf_velocities = canFind(addVarsList, "nrf"); // nonrotating-frame velocities
         bool add_mach = canFind(addVarsList, "mach");
         bool add_pitot_p = canFind(addVarsList, "pitot");
         bool add_total_p = canFind(addVarsList, "total-p");
@@ -597,6 +602,13 @@ public:
         VibSpecificNitrogen gmodel2 = cast(VibSpecificNitrogen) gmodel;
         bool add_Tvib = gmodel2 && canFind(addVarsList, "Tvib");
         //
+        if (add_nrf_velocities) {
+            variableNames ~= "nrfv.x";
+            variableIndex["nrfv.x"] = variableNames.length - 1;
+            variableNames ~= "nrfv.y";
+            variableIndex["nrfv.y"] = variableNames.length - 1;
+            // Note that the z-component is the same for both frames.
+        }
         if (add_mach) {
             variableNames ~= "M_local";
             variableIndex["M_local"] = variableNames.length - 1;
@@ -662,6 +674,18 @@ public:
             double wz = _data[i][variableIndex["vel.z"]];
             double w = sqrt(wx*wx + wy*wy + wz*wz);
             double M = w/a;
+            if (add_nrf_velocities) {
+                // Nonrotating-frame velocities.
+                double x = _data[i][variableIndex["pos.x"]];
+                double y = _data[i][variableIndex["pos.y"]];
+                double z = _data[i][variableIndex["pos.z"]];
+                Vector3 pos = Vector3(x, y, z);
+                Vector3 vel = Vector3(wx, wy, wz);
+                into_nonrotating_frame(vel, pos, omegaz);
+                _data[i] ~= vel.x;
+                _data[i] ~= vel.y;
+                // Note that z-component is same for both frames.
+            }
             if (add_mach) { _data[i] ~= M; }
             if (add_pitot_p) {
                 // Rayleigh Pitot formula
