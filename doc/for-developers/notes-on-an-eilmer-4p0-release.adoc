@@ -13,7 +13,8 @@ In general, we'd like complete documentation for all features that are included 
 
 . Theory book
 . Catalogue of examples
-. Detailed notes on examples (LaTeX doc 'in' examples directories) 
+. Detailed notes on examples (LaTeX doc 'in' examples directories)
+. FAQ
 
 == Core simulation loop (time-stepping)
 
