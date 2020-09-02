@@ -1,0 +1,79 @@
+= Working notes on an Eilmer 4.0 release
+Rowan J. Gollan; Peter A. Jacobs; Kyle A. Damm; Nick N. Gibbons
+2020-09-02
+
+This document is to record and refine our thoughts on what aspects of the Eilmer simulation program would make it into an
+"official" Eilmer 4.0 release.
+I have tried to categorise the features, but unavoidably some
+features leak across category boundaries.
+
+== Documentation
+
+In general, we'd like complete documentation for all features that are included in the release. At a minimum, no aspects of the documentation should look "obviously incomplete".
+
+. Theory book
+. Catalogue of examples
+. Detailed notes on examples (LaTeX doc 'in' examples directories) 
+
+== Core simulation loop (time-stepping)
+
+. explicit timestepping with
+.. euler
+.. predictor-corrector
+.. RK3 schemes
+.. local timestepping (LTS)
+
+== Dimensionality, reference frames and grid types
+. 2D and 3D
+. fixed and rotatin frames
+. structured and unstrutured grids
+
+== Parallelism
+. shared-memory
+. MPI (should work with all features in release)
+
+== Gas modelling and kinetic effects
+. ideal gas
+. thermally perfect gas
+  .. with finite-rate chemistry
+. equilibrium gas (connected to Nick's eq calculator)
+. two-temperature air
+. vibrationally-specific N2 gas
+
+== Moving grid
+. general user-defined motions
+. shock-fitting
+
+== Turbulence models
+. k-omega
+.. with wall functions
+
+== Conjugate coupling
+. fluid solid domains in 2D/3D supported
+
+== Boundary conditions
+. all should work in context of supported gas models (where that is sensible in a physical modelling sense)
+. catalytic BC (simplified) included so that mass diffusion has relevance
+
+== User-defined functions for customisation
+. included in features, need work on conveying Lua error messages out to caller in meaningful way
+
+== Block-marching
+. included as feature, needs documentation on its application
+
+== Features NOT included
+
+This might not be an exhaustive list, but really everything not listed above should be considered experimental.
+This includes:
+. accelerators to steady-state
+.. Newton-Krylov
+.. LU-SGS
+.. STS
+. features using hardware accelerators
+. adjoint solver
+. Spalart-Allmaras turbulence model
+
+
+
+
+
