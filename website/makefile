@@ -116,6 +116,7 @@ presentations:
 	rsync -av $(DGD_DOC)/presentations/2014-06-eilmer3-talk-pj/eilmer3-talk-june-2014.pdf static/pdfs/
 	rsync -av $(DGD_DOC)/presentations/2015-05-cfh-seminar-pj/eilmer4-talk-may-2015.pdf static/pdfs/
 	rsync -av $(DGD_DOC)/presentations/2015-11-accm-conference/eilmer4-talk-nov-2015.pdf static/pdfs/
+	rsync -av $(DGD_DOC)/presentations/2016-03-cfh-seminar-rjg/ static/html/
 	rsync -av $(DGD_DOC)/presentations/2016-05-cfh-seminar-pj/eilmer4-talk-pj-may-2016.pdf static/pdfs/
 	rsync -av $(DGD_DOC)/presentations/2016-09-paris-talk-pj/eilmer4-talk-pj-sep-2016.pdf static/pdfs/
 	rsync -av $(DGD_DOC)/presentations/2016-12-oxford-talk-pj/eilmer4-talk-pj-dec-2016.pdf static/pdfs/
