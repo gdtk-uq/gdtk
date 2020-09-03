@@ -17,7 +17,7 @@ bottom = "bottom"; BOTTOM = "bottom"
 
 function faceList(dimensions)
    local myList = {north, east, south, west}
-   if dimensions == 3 then 
+   if dimensions == 3 then
       table.insert(myList, top)
       table.insert(myList, bottom)
    end
@@ -101,7 +101,7 @@ end
 -- The orientation is used in the C-code to decide where to transfer data
 -- at the block boundaries and the axis-map is used to interpret GridPro
 -- connectivity data.  The i,j,k axes of *this* block are aligned with the
--- specified axes of the *other* block. 
+-- specified axes of the *other* block.
 local tabulatedData = {
    {{{3,2},{7,6},{6,7},{2,3}}, {north, north, 0, '-i-j+k'}},
    {{{3,3},{7,2},{6,6},{2,7}}, {north, north, 1, '+k-j+i'}},
@@ -286,7 +286,7 @@ local tabulatedData = {
 
 connections3D = {}
 vtxPairs3D = {}
--- When reading GridPro block connectivity file, 
+-- When reading GridPro block connectivity file,
 -- we need to look up Eilmer notation for connection orientations.
 eilmer_orientation = {}
 for _,v in ipairs(tabulatedData) do

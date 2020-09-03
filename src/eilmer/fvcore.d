@@ -28,9 +28,9 @@ struct FlowStateLimits {
 
 // Symbolic names for the time-stepping schemes used to update the gasdynamic eqn.
 enum GasdynamicUpdate {
-    euler, 
+    euler,
     pc,
-    midpoint, 
+    midpoint,
     classic_rk3,
     tvd_rk3,
     denman_rk3,
@@ -340,10 +340,10 @@ ResidualSmoothingType residual_smoothing_type_from_name(string name)
     }
 }
 
-// Symbolic names for the shock detectors 
+// Symbolic names for the shock detectors
 enum ShockDetector {
     PJ,
-    Ducros 
+    Ducros
 }
 
 @nogc
