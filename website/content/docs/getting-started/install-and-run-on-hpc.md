@@ -34,7 +34,7 @@ Install notes for the LLVM D compiler (LDC) are
 available [here]({{< relref installing-ldc >}}).
 {{< /hint >}}
 
-## A 3-minute introduction to queue sytems
+## A 3-minute introduction to queue systems
 HPC systems are shared access systems for multiple users.
 The compute jobs are controlled by a queueing system.
 Different queueing systems are installed on various clusters,
@@ -294,24 +294,43 @@ We use `qsub` to submit our job script:
 
 *Queue system:* PBSPro
 
-### An example setup in `.bash_profile`
-Here, I include what I have added to the end of my `.bash_profile` file on gadi.
-It sets my environment up to compile and run Eilmer.
-Note also that I configure access to a locally installed version of the ldc2 compiler.
+### Alternative to Compiling: Using the pre-built module
 
-    export DGD=${HOME}/dgdinst
-    append_path PATH ${DGD}/bin
-    append_path PATH ${HOME}/opt/ldc2/bin
-    append_path PYTHONPATH ${DGD}/lib
-     
-    export DGD_LUA_PATH=$DGD/lib/?.lua
-    export DGD_LUA_CPATH=$DGD/lib/?.so
-    
-    module load openmpi/4.0.2
+Gadi has a number of helpful modules already present in the /scratch/dc7/common directory, including a copy of Eilmer 4.
+To avoid having to compile the code yourself, it is possible to simply load this module and allow it to configure your environment variables.
+First set up  privatemodules directory in your home directory. 
+
+    $ cd
+    $ mkdir privatemodules
+    $ cd privatemodules
+    $ mkdir dgd
+    $ ln -s /scratch/dc7/common/dgd/ldc2/dgd-module dgd/ldc
+
+Then add the following lines to the .bash\_profile file in your home directory.
+Note that this file is preferred over modifying .bashrc on Gadi, since it is always loaded when you start a new shell.
+
+    module load gcc
+    module load openmpi/2.1.6
+    module load dgd/ldc
+
+Finally, log out of Gadi and back in again to load the new modules. You can check the paths have been set properly by typing:
+
+    $ which e4shared 
+    /scratch/dc7/common/dgd/ldc2/bin/e4shared
+
+    $ e4shared version
+    Eilmer 4.0 compressible-flow simulation code.
+    Revision: 250f175e
+    Compiler-name: ldc2
+    Build-flavour: fast
+    Capabilities: multi-species-gas multi-temperature-gas MHD turbulence.
+    Parallelism: Shared-memory
 
 ### Compiling
 
-On gadi, you will need the ldc2 compiler installed locally.
+If you require your own copy of the source code, you will need to compile Eilmer yourself.
+Since Gadi does not have a module for the ldc2 compiler, you will need to install it too: See the instructions in "Guide to installing LDC".
+(There is also a pre-built ldc compiler in /scratch/dc7/common.)
 In terms of modules, you only need to load the openmpi module.
 I have had success with the 4.0.2 version.
 
@@ -326,9 +345,24 @@ get an optimised build of the distributed-memory (MPI) transient solver.
 To complete the install, remember to set your environment variables
 as described on the [getting started page]({{< relref "docs/getting-started/_index.md#setting-up-for-a-first-time-run-of-eilmer" >}}).
 
+### An example setup in `.bash_profile`
+Here, I include what I have added to the end of my `.bash_profile` file on Gadi.
+It sets my environment up to compile and run Eilmer.
+Note also that I configure access to a locally installed version of the ldc2 compiler.
+
+    export DGD=${HOME}/dgdinst
+    append_path PATH ${DGD}/bin
+    append_path PATH ${HOME}/opt/ldc2/bin
+    append_path PYTHONPATH ${DGD}/lib
+     
+    export DGD_LUA_PATH=$DGD/lib/?.lua
+    export DGD_LUA_CPATH=$DGD/lib/?.so
+    
+    module load openmpi/4.0.2
+
 ### Running
 
-As is common on large cluster computers, you will need to request the entire node CPU resources if your job spans multiple nodes. On gadi, that means CPU request numbers are in multiples of 48.
+As is common on large cluster computers, you will need to request the entire node CPU resources if your job spans multiple nodes. On Gadi, that means CPU request numbers are in multiples of 48.
 Here is a submit script where I've set up 192 MPI tasks for my job.
 
     #!/bin/bash
@@ -342,12 +376,12 @@ Here is a submit script where I've set up 192 MPI tasks for my job.
 
     mpirun e4mpi --job=myJob --run > LOGFILE
 
-Jobs on gadi are submitted using `qsub`.
+Jobs on Gadi are submitted using `qsub`.
 
 Take note about the `storage` directive that appears in the submission script.
-It is strongly encouraged on gadi to set up your jobs in the `scratch` area associated with your
+It is strongly encouraged on Gadi to set up your jobs in the `scratch` area associated with your
 project.
-On gadi, you need to request explicit access to the `scratch` area in your submission
+On Gadi, you need to request explicit access to the `scratch` area in your submission
 script so that filesystem is available to your job.
 The `storage` directive used to request that access.
 
