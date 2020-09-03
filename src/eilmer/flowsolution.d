@@ -4,7 +4,7 @@
  * The role of the post-processing functions is just to pick up data
  * from a previously-run simulation and either write plotting files
  * or extract interesting pieces of data.  To do this, we really don't
- * need or want all of the code machinery in the classes built for the 
+ * need or want all of the code machinery in the classes built for the
  * simulation code so we rebuild a bit of the core data handling here.
  * This allows us to be a bit flexible in what variables are held.
  * We might want to add flow variables, such as Mach number or Pitot
@@ -12,7 +12,7 @@
  * structures.  It also frees us of the internal numbering of cells in
  * the simulation code that must allow for ghost-cells.
  *
- * Author: Peter J. and Rowan G. 
+ * Author: Peter J. and Rowan G.
  * First code: 2015-06-09
  */
 
@@ -60,7 +60,7 @@ public:
     size_t nBlocks;
     BlockFlow[] flowBlocks;
     Grid[] gridBlocks;
-    
+
     this(string jobName, string dir, int tindx, size_t nBlocks, int gindx=-1)
     {
         // Default action is to set gindx to tindx. The default action
@@ -205,7 +205,7 @@ public:
         } // end foreach ip
         return count;
     } // end find_enclosing_cells_along_line()
-    
+
     size_t[] find_nearest_cell_centre(double x, double y, double z=0.0)
     {
         // [TODO] Think about delegating this work to the underlying grid objects.
@@ -286,7 +286,7 @@ public:
                 double x = flowBlocks[ib]["pos.x", i];
                 double y = flowBlocks[ib]["pos.y", i];
                 double z = flowBlocks[ib]["pos.z", i];
-                if (limitRegion && 
+                if (limitRegion &&
                     (x < x0 || y < y0 || z < z0 ||
                      x > x1 || y > y1 || z > z1)) continue;
                 double volume = flowBlocks[ib]["volume", i];
@@ -337,7 +337,7 @@ class BlockFlow {
     // we are going to handle the data as a big chunk of numbers,
     // with the label for each variable coming the top of the file.
     //
-    // Note that this class is like the SFluidBlock class but does not 
+    // Note that this class is like the SFluidBlock class but does not
     // have all of the data space needed for a simulation.
     // The intention is that it is "lighter weight" and so allow
     // postprocessing of workstations that may be considerably smaller
@@ -374,7 +374,7 @@ public:
         size_t nvariables;
         // Read in the flow data for a single block.
         //
-        // Keep in sync with: 
+        // Keep in sync with:
         // 1. SFluidBlock.write_solution(),
         // 2. UFluidBlock.write_solution()
         // 3. write_initial_sg_flow_file_from_lua() in luaflowstate.d
@@ -393,7 +393,7 @@ public:
             fin.rawRead(found_header);
             if (found_header != expected_header) {
                 throw new FlowSolverException("BlockFlow constructor, read_solution from raw_binary_file: "
-                                              ~ "unexpected header: " ~ to!string(found_header)); 
+                                              ~ "unexpected header: " ~ to!string(found_header));
             }
             int[1] int1; fin.rawRead(int1);
             int label_length = int1[0];
@@ -405,7 +405,7 @@ public:
             double[1] dbl1; fin.rawRead(dbl1); sim_time = dbl1[0];
             fin.rawRead(int1); nvariables = int1[0];
             foreach(i; 0 .. nvariables) {
-                char[] varname; fin.rawRead(int1); varname.length = int1[0]; 
+                char[] varname; fin.rawRead(int1); varname.length = int1[0];
                 fin.rawRead(varname); variableNames ~= to!string(varname);
             }
             fin.rawRead(int1); int my_dimensions = int1[0];
@@ -442,7 +442,7 @@ public:
             if (format_version != "1.0") {
                 string msg = text("BlockFlow.read_solution(): " ~
                                   "format version found: " ~ format_version);
-                throw new FlowSolverException(msg); 
+                throw new FlowSolverException(msg);
             }
             line = byLine.front; byLine.popFront();
             formattedRead(line, "label: %s", &myLabel);
@@ -521,7 +521,7 @@ public:
         } // foreach i
         return;
     } // end constructor of subset
-    
+
     ref double opIndex(string varName, size_t i)
     {
         return _data[i][variableIndex[varName]];
@@ -658,7 +658,7 @@ public:
             variableIndex["Tvib"] = variableNames.length - 1;
         }
         //
-        // Be careful to add auxiliary variable values in the code below 
+        // Be careful to add auxiliary variable values in the code below
         // in the same order as the list of variable names in the code above.
         //
         foreach (i; 0 .. ncells) {
@@ -682,8 +682,8 @@ public:
                 Vector3 pos = Vector3(x, y, z);
                 Vector3 vel = Vector3(wx, wy, wz);
                 into_nonrotating_frame(vel, pos, omegaz);
-                _data[i] ~= vel.x;
-                _data[i] ~= vel.y;
+                _data[i] ~= vel.x.re;
+                _data[i] ~= vel.y.re;
                 // Note that z-component is same for both frames.
             }
             if (add_mach) { _data[i] ~= M; }
@@ -791,8 +791,8 @@ public:
             lua_pushnumber(L, _data[i][variableIndex["pos.y"]]);
             lua_pushnumber(L, _data[i][variableIndex["pos.z"]]);
             if ( lua_pcall(L, 4, 1, 0) != 0 ) {
-                string errMsg = "Error in call to " ~ luaFnName ~ 
-                    " from FlowSolution.subtract_ref_soln(): " ~ 
+                string errMsg = "Error in call to " ~ luaFnName ~
+                    " from FlowSolution.subtract_ref_soln(): " ~
                     to!string(lua_tostring(L, -1));
                 luaL_error(L, errMsg.toStringz);
             }
@@ -832,7 +832,7 @@ public:
         if (format_version != "1.0") {
             string msg = text("BlockFlow.read_extra_vars_from_file(): " ~
                               "format version found: " ~ format_version);
-            throw new FlowSolverException(msg); 
+            throw new FlowSolverException(msg);
         }
         // Throw away label line.
         byLine.popFront();
@@ -844,7 +844,7 @@ public:
         if (varNames.length != extraVars.length) {
             string msg = text("BlockFlow.read_extra_vars_from_file(): " ~
                               "number of variables in file does not match user-supplied variables list.");
-            throw new FlowSolverException(msg); 
+            throw new FlowSolverException(msg);
         }
         foreach (var; extraVars) {
             variableIndex[var] = variableNames.length;
@@ -870,7 +870,7 @@ public:
         if (_data.length != ncells) {
             string msg = text("BlockFlow.read_extra_vars_from_file(): " ~
                               "number of cells in file does not match number of existing cells in block.");
-            throw new FlowSolverException(msg); 
+            throw new FlowSolverException(msg);
         }
         // Scan the remainder of the file, extracting our data.
         // Assume it is in standard cell order.
