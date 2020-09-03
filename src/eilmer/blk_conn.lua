@@ -7,6 +7,15 @@
 
 module(..., package.seeall)
 
+-- Symbolic names for identifying boundaries.
+-- Although we no longer use these names in our Lua code,
+-- there may be user-written scripts that do use these definitions.
+north = "north"; NORTH = "north"
+east = "east"; EAST = "east"
+south = "south"; SOUTH = "south"
+west = "west"; WEST = "west"
+top = "top"; TOP = "top"
+bottom = "bottom"; BOTTOM = "bottom"
 
 function faceList(dimensions)
    local myList = {'north', 'east', 'south', 'west'}
