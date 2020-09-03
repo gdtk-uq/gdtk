@@ -40,22 +40,22 @@ nicell = ncells; njcell = ncells; nkcell = ncells
 grid = StructuredGrid:new{pvolume=TFIVolume:new{vertices={p000, p100, p110, p010, p001, p101, p111, p011}}, niv=nicell+1, njv=njcell+1, nkv = nkcell+1}
 
 bcList = {}
-bcList[north] = UserDefinedBC:new{fileName='udf-bc.lua'}
-bcList[east] = UserDefinedBC:new{fileName='udf-bc.lua'}
-bcList[south] = UserDefinedBC:new{fileName='udf-bc.lua'}
-bcList[west] = UserDefinedBC:new{fileName='udf-bc.lua'}
-bcList[top] = UserDefinedBC:new{fileName='udf-bc.lua'}
-bcList[bottom] = UserDefinedBC:new{fileName='udf-bc.lua'}
+bcList['north'] = UserDefinedBC:new{fileName='udf-bc.lua'}
+bcList['east'] = UserDefinedBC:new{fileName='udf-bc.lua'}
+bcList['south'] = UserDefinedBC:new{fileName='udf-bc.lua'}
+bcList['west'] = UserDefinedBC:new{fileName='udf-bc.lua'}
+bcList['top'] = UserDefinedBC:new{fileName='udf-bc.lua'}
+bcList['bottom'] = UserDefinedBC:new{fileName='udf-bc.lua'}
 config.apply_bcs_in_parallel = false
 if blocking == 'single' then
    blk = FluidBlock:new{grid=grid, fillCondition=initial, bcList=bcList, label="blk"}
    SBlock2UBlock(blocks[1])
-else 
-   blks = FluidBlockArray{grid=grid, fillCondition=initial, bcList=bcList, 
+else
+   blks = FluidBlockArray{grid=grid, fillCondition=initial, bcList=bcList,
 		      nib=3, njb=3, nkb=3, label="blk"}
    for i=1,27 do
       SBlock2UBlock(fluidBlocks[i])
-   end 
+   end
 end
 
 config.include_ghost_cells_in_spatial_deriv_clouds = true
@@ -64,7 +64,7 @@ config.flux_calculator = fluxCalc
 config.spatial_deriv_calc = derivCalc
 config.udf_source_terms = true
 config.udf_source_terms_file = 'udf-source-terms.lua'
-config.viscous = false    
+config.viscous = false
 -- Do NOT use the limiters for the verification tests
 config.apply_limiter = false
 config.extrema_clipping = false
@@ -77,18 +77,18 @@ SteadyStateSolver{
    precondition_matrix_type = "ilu",
    frozen_preconditioner_count = 100;
    start_preconditioning = 1,
-   
+
    use_scaling = true,
    use_complex_matvec_eval = true,
-   
+
    number_pre_steps = 1,
    number_total_steps = 100000,
    stop_on_relative_global_residual = 1.0e-08,
-   
+
    -- Settings for FGMRES iterative solver
    max_outer_iterations = 10,
    max_restarts = 10,
-   
+
    -- Settings for start-up phase
    number_start_up_steps = 0,
    cfl0 = 100.0,
@@ -105,7 +105,7 @@ SteadyStateSolver{
    eta1 = 0.1,
    eta1_min = 0.1,
    eta_strategy = "geometric",
-   
+
    -- Settings control write-out
    snapshots_count = 50,
    number_total_snapshots = 5,

@@ -10,7 +10,7 @@
 --   SOUTH boundary. There is no connection to the gas domain.
 --
 -- + Speaking of the gas domain, note that it is only a dummy
---   flow domain. This is because the eilmer4 implementation 
+--   flow domain. This is because the eilmer4 implementation
 --   requires at least one flow block to be present. The grid
 --   is only 2x2 cells and the flow solution in that block is
 --   not meaningful.
@@ -31,7 +31,7 @@ R = 287.0
 k_g = 10000.0
 k_s = 10*k_g
 
--- Note the analytical solution is only here if one desires 
+-- Note the analytical solution is only here if one desires
 -- an initial condition based on using the analytical solution.
 -- It is commented out since we use an initial fill temperature
 -- of 350.0 K everywhere.
@@ -43,7 +43,7 @@ local pi = math.pi
 
 rho0=1.0; rhox=0.1; rhoy=0.15; rhoxy=0.08; arhox=0.75; arhoy=1.0; arhoxy=1.25;
 u0 = 1.0; ux = 0.1; uy = u0; uxy = -ux; aux = 5.0/3; auy = -1.0; auxy = aux;
-v0 = 0.9; vx = -0.02; vy = -v0; vxy = -vx; avx = 1.5; avy = 0.5; avxy = avx;	
+v0 = 0.9; vx = -0.02; vy = -v0; vxy = -vx; avx = 1.5; avy = 0.5; avxy = avx;
 T0 = 350; Tx = -10.0; Ty = 25.0; aTx = 1.5; aTy = 1.0; Ti = 350.0; aTx2 = 0.75;
 
 function rho(x, y)
@@ -73,7 +73,7 @@ initT = 350.0
 initial = FlowState:new{p=1.0e5, T=initT, velx=0.0, vely=0.0}
 
 --[==[
--- Analytical fill functions, if required 
+-- Analytical fill functions, if required
 function gasFillFn(x, y, z)
    T_g = T(x, y)
    rho_g = rho(x, y)
@@ -111,25 +111,25 @@ grid1 = StructuredGrid:new{psurface=patch1, niv=nx+1, njv=ny+1}
 
 blk0 = FluidBlock:new{grid=grid0, initialState=initial, label="blk0"}
 
-blk0.bcList[north] = BoundaryCondition:new{
+blk0.bcList['north'] = BoundaryCondition:new{
    preReconAction = { UserDefinedGhostCell:new{fileName='udf-bc.lua'} },
    preSpatialDerivAction = { UserDefinedInterface:new{fileName='udf-bc.lua'},
 			     UpdateThermoTransCoeffs:new()
    }
 }
-blk0.bcList[east] = BoundaryCondition:new{
+blk0.bcList['east'] = BoundaryCondition:new{
    preReconAction = { UserDefinedGhostCell:new{fileName='udf-bc.lua'} },
    preSpatialDerivAction = { UserDefinedInterface:new{fileName='udf-bc.lua'},
 			     UpdateThermoTransCoeffs:new()
    }
 }
-blk0.bcList[south] = BoundaryCondition:new{
+blk0.bcList['south'] = BoundaryCondition:new{
    preReconAction = { UserDefinedGhostCell:new{fileName='udf-bc.lua'} },
    preSpatialDerivAction = { UserDefinedInterface:new{fileName='udf-bc.lua'},
 			     UpdateThermoTransCoeffs:new()
    }
 }
-blk0.bcList[west] = BoundaryCondition:new{
+blk0.bcList['west'] = BoundaryCondition:new{
    preReconAction = { UserDefinedGhostCell:new{fileName='udf-bc.lua'} },
    preSpatialDerivAction = { UserDefinedInterface:new{fileName='udf-bc.lua'},
 			     UpdateThermoTransCoeffs:new()
@@ -140,10 +140,10 @@ blk1 = SolidBlock:new{grid=grid1, initTemperature=initT,
 		      properties={rho=10000, k=100000, Cp=100}}
 
 -- Set boundary conditions
-blk1.bcList[north] = SolidUserDefinedBC:new{fileName='udf-bc.lua'}
-blk1.bcList[east] = SolidUserDefinedBC:new{fileName='udf-bc.lua'}
-blk1.bcList[south] = SolidUserDefinedBC:new{fileName='udf-bc.lua'}
-blk1.bcList[west] = SolidUserDefinedBC:new{fileName='udf-bc.lua'}
+blk1.bcList['north'] = SolidUserDefinedBC:new{fileName='udf-bc.lua'}
+blk1.bcList['east'] = SolidUserDefinedBC:new{fileName='udf-bc.lua'}
+blk1.bcList['south'] = SolidUserDefinedBC:new{fileName='udf-bc.lua'}
+blk1.bcList['west'] = SolidUserDefinedBC:new{fileName='udf-bc.lua'}
 
 config.interpolation_order = 2
 config.gasdynamic_update_scheme = "euler"

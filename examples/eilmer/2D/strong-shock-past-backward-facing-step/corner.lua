@@ -16,7 +16,7 @@ nsp, nmodes = setGasModel('ideal-air-gas-model.lua')
 print("GasModel set to ideal air. nsp= ", nsp, " nmodes= ", nmodes)
 initial = FlowState:new{p=1000.0, T=298.0, velx=0.0, vely=0.0}
 -- the shock wave, not the flow, is at Mach 5.09
-inflow = FlowState:new{p=30059.45, T=1781.08, velx=1411.09, vely=0.0} 
+inflow = FlowState:new{p=30059.45, T=1781.08, velx=1411.09, vely=0.0}
 
 -- points
 ii = 1.0e-1; jj = 1.0e-1
@@ -60,11 +60,11 @@ blk2 = FluidBlock:new{grid=grid2, initialState=initial}
 
 -- Set boundary conditions.
 identifyBlockConnections()
-blk0.bcList[west] = InFlowBC_Supersonic:new{flowState=inflow}
-blk1.bcList[east] = OutFlowBC_Simple:new{}
-blk1.bcList[north] = OutFlowBC_Simple:new{}
-blk2.bcList[east] = OutFlowBC_Simple:new{}
-blk2.bcList[south] = OutFlowBC_Simple:new{}
+blk0.bcList['west'] = InFlowBC_Supersonic:new{flowState=inflow}
+blk1.bcList['east'] = OutFlowBC_Simple:new{}
+blk1.bcList['north'] = OutFlowBC_Simple:new{}
+blk2.bcList['east'] = OutFlowBC_Simple:new{}
+blk2.bcList['south'] = OutFlowBC_Simple:new{}
 
 config.max_time = 10.0e-3  -- seconds
 config.max_step = 1000

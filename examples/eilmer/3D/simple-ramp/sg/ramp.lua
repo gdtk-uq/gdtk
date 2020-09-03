@@ -1,7 +1,7 @@
 -- ramp.lua
 -- A simple 3D simulation of flow over a ramp with 10-degree deflection.
 -- PJ & RG
--- 2015-02-24 -- adapted from the Lua version of cone20 and 
+-- 2015-02-24 -- adapted from the Lua version of cone20 and
 --               the Python version simple_ramp
 config.title = "Mach 1.5 flow over a 10-degree ramp."
 print(config.title)
@@ -52,13 +52,13 @@ blk1Corners = simpleBoxCorners{xPos=0.2,xSize=0.8,ySize=0.1}
 -- Remember that Lua indexing starts at 1.
 blk1Corners[2].z = 0.8 * math.tan(math.pi * 10.0/180.0)
 blk1Corners[3].z = blk1Corners[2].z
-grid1 = StructuredGrid:new{pvolume=TFIVolume:new{vertices=blk1Corners}, 
+grid1 = StructuredGrid:new{pvolume=TFIVolume:new{vertices=blk1Corners},
 			   niv=31, njv=5, nkv=41, cfList=cflist}
 
 blk0 = FluidBlock:new{label="first-block", grid=grid0, initialState=initial}
-blk0.bcList[west] = InFlowBC_Supersonic:new{flowState=inflow}
+blk0.bcList['west'] = InFlowBC_Supersonic:new{flowState=inflow}
 blk1 = FluidBlock:new{label="second-block", grid=grid1, initialState=initial}
-blk1.bcList[east] = OutFlowBC_Simple:new{}
+blk1.bcList['east'] = OutFlowBC_Simple:new{}
 identifyBlockConnections()
 setHistoryPoint{ib=1, i=1, j=1, k=2}
 setHistoryPoint{ib=1, i=20, j=1, k=2}

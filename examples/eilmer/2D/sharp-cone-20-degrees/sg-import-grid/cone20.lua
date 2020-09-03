@@ -27,8 +27,8 @@ blk0 = FluidBlock:new{grid=grids[0], initialState=inflow}
 blk1 = FluidBlock:new{grid=grids[1], initialState=initial}
 -- Set boundary conditions.
 identifyBlockConnections()
-blk0.bcList[west] = InFlowBC_Supersonic:new{flowState=inflow}
-blk1.bcList[east] = OutFlowBC_Simple:new{}
+blk0.bcList['west'] = InFlowBC_Supersonic:new{flowState=inflow}
+blk1.bcList['east'] = OutFlowBC_Simple:new{}
 
 -- add history point 2/3 along length of cone surface
 nx1 = grids[1]:get_niv()

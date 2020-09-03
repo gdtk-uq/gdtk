@@ -52,48 +52,48 @@ grid = StructuredGrid:new{psurface=CoonsPatch:new{p00=p00, p10=p10, p11=p11, p01
 bcList = {}
 if case == 1 or case == 3 then
    -- Supersonic Euler, flow from south-west to north-east.
-   bcList[north] = OutFlowBC_SimpleExtrapolate:new{xOrder=1}
-   bcList[east] = OutFlowBC_SimpleExtrapolate:new{xOrder=1}
-   bcList[south] = UserDefinedBC:new{fileName='udf-bc.lua'}
-   bcList[west] = UserDefinedBC:new{fileName='udf-bc.lua'}
+   bcList['north'] = OutFlowBC_SimpleExtrapolate:new{xOrder=1}
+   bcList['east'] = OutFlowBC_SimpleExtrapolate:new{xOrder=1}
+   bcList['south'] = UserDefinedBC:new{fileName='udf-bc.lua'}
+   bcList['west'] = UserDefinedBC:new{fileName='udf-bc.lua'}
 elseif case == 5 then
    -- Supersonic duct, flow from west to east,
    -- to exercise slip-wall BCs without ghost cells
-   bcList[north] = WallBC_WithSlip1:new{}
-   bcList[east] = OutFlowBC_SimpleExtrapolate:new{xOrder=1}
-   bcList[south] = WallBC_WithSlip1:new{}
-   bcList[west] = UserDefinedBC:new{fileName='udf-bc.lua'}
+   bcList['north'] = WallBC_WithSlip1:new{}
+   bcList['east'] = OutFlowBC_SimpleExtrapolate:new{xOrder=1}
+   bcList['south'] = WallBC_WithSlip1:new{}
+   bcList['west'] = UserDefinedBC:new{fileName='udf-bc.lua'}
 elseif case == 6 then
    -- Supersonic 1D, flow from west to east,
    -- to try out high-order reconstruction
-   bcList[north] = UserDefinedBC:new{fileName='udf-bc.lua'}
-   bcList[east] = UserDefinedBC:new{fileName='udf-bc.lua'}
-   bcList[south] = UserDefinedBC:new{fileName='udf-bc.lua'}
-   bcList[west] = UserDefinedBC:new{fileName='udf-bc.lua'}
+   bcList['north'] = UserDefinedBC:new{fileName='udf-bc.lua'}
+   bcList['east'] = UserDefinedBC:new{fileName='udf-bc.lua'}
+   bcList['south'] = UserDefinedBC:new{fileName='udf-bc.lua'}
+   bcList['west'] = UserDefinedBC:new{fileName='udf-bc.lua'}
 elseif case == 2 or case == 4 then
    -- Subsonic Navier-Stokes, all boundaries as user-defined.
-   bcList[north] = BoundaryCondition:new{
+   bcList['north'] = BoundaryCondition:new{
       preReconAction = { UserDefinedGhostCell:new{fileName='udf-bc.lua'} },
       preSpatialDerivActionAtBndryFaces = {
          UserDefinedInterface:new{fileName='udf-bc.lua'},
          UpdateThermoTransCoeffs:new()
       }
    }
-   bcList[east] = BoundaryCondition:new{
+   bcList['east'] = BoundaryCondition:new{
       preReconAction = { UserDefinedGhostCell:new{fileName='udf-bc.lua'} },
       preSpatialDerivActionAtBndryFaces = {
          UserDefinedInterface:new{fileName='udf-bc.lua'},
          UpdateThermoTransCoeffs:new()
       }
    }
-   bcList[south] = BoundaryCondition:new{
+   bcList['south'] = BoundaryCondition:new{
       preReconAction = { UserDefinedGhostCell:new{fileName='udf-bc.lua'} },
       preSpatialDerivActionAtBndryFaces = {
          UserDefinedInterface:new{fileName='udf-bc.lua'},
          UpdateThermoTransCoeffs:new()
       }
    }
-   bcList[west] = BoundaryCondition:new{
+   bcList['west'] = BoundaryCondition:new{
       preReconAction = { UserDefinedGhostCell:new{fileName='udf-bc.lua'} },
       preSpatialDerivActionAtBndryFaces = {
          UserDefinedInterface:new{fileName='udf-bc.lua'},
@@ -107,8 +107,8 @@ config.apply_bcs_in_parallel = false
 if blocking == 'single' then
     blk = FluidBlock:new{grid=grid, initialState=initial, bcList=bcList,
 			 label='blk'}
-else 
-   blks = FluidBlockArray{grid=grid, initialState=initial, bcList=bcList, 
+else
+   blks = FluidBlockArray{grid=grid, initialState=initial, bcList=bcList,
 			  nib=2, njb=2, label="blk"}
 end
 

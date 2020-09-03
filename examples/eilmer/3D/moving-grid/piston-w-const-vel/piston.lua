@@ -80,26 +80,24 @@ blk = FluidBlock:new{grid=grid, initialState=initial}
 -- Since this is a somewhat customised boundary condition, we use the generic boundary
 -- condition object and explicitly control its behaviour with the available settings.
 if (Direction == 'X') then
-   blk.bcList[west] = BoundaryCondition:new{type="user_defined",
-                            ghost_cell_data_available=false,
-                            convective_flux_computed_in_bc=true,
-                            postConvFluxAction = {UserDefinedFlux:new{fileName='piston-bc.lua', funcName='convective_flux'}}
-                            }
+   blk.bcList['west'] = BoundaryCondition:new{
+      type="user_defined",
+      ghost_cell_data_available=false,
+      convective_flux_computed_in_bc=true,
+      postConvFluxAction = {UserDefinedFlux:new{fileName='piston-bc.lua', funcName='convective_flux'}}
+   }
 elseif (Direction == 'Y') then
-   blk.bcList[south] = BoundaryCondition:new{type="user_defined",
-                            ghost_cell_data_available=false,
-                            convective_flux_computed_in_bc=true,
-                            postConvFluxAction = {UserDefinedFlux:new{fileName='piston-bc.lua', funcName='convective_flux'}}
-                            }
+   blk.bcList['south'] = BoundaryCondition:new{
+      type="user_defined",
+      ghost_cell_data_available=false,
+      convective_flux_computed_in_bc=true,
+      postConvFluxAction = {UserDefinedFlux:new{fileName='piston-bc.lua', funcName='convective_flux'}}
+   }
 elseif (Direction == 'Z') then
-   blk.bcList[bottom] = BoundaryCondition:new{type="user_defined",
-                            ghost_cell_data_available=false,
-                            convective_flux_computed_in_bc=true,
-                            postConvFluxAction = {UserDefinedFlux:new{fileName='piston-bc.lua', funcName='convective_flux'}}
-                            }
+   blk.bcList['bottom'] = BoundaryCondition:new{
+      type="user_defined",
+      ghost_cell_data_available=false,
+      convective_flux_computed_in_bc=true,
+      postConvFluxAction = {UserDefinedFlux:new{fileName='piston-bc.lua', funcName='convective_flux'}}
+   }
 end
-
-
-
-
-

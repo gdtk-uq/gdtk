@@ -44,15 +44,15 @@ grid0 = StructuredGrid:new{psurface=patch0, niv=nx0+1, njv=ny0+1}
 grid1 = StructuredGrid:new{psurface=patch1, niv=nx0+1, njv=ny1+1}
 
 blk0 = FluidBlock:new{grid=grid0, initialState=gasFillFn, label="blk0"}
-blk0.bcList[east] = UserDefinedBC:new{fileName='udf-bc.lua'}
-blk0.bcList[south] = UserDefinedBC:new{fileName='udf-bc.lua'}
-blk0.bcList[west] = UserDefinedBC:new{fileName='udf-bc.lua'}
+blk0.bcList['east'] = UserDefinedBC:new{fileName='udf-bc.lua'}
+blk0.bcList['south'] = UserDefinedBC:new{fileName='udf-bc.lua'}
+blk0.bcList['west'] = UserDefinedBC:new{fileName='udf-bc.lua'}
 
 blk1 = SolidBlock:new{grid=grid1, initTemperature=solidFillFn,
 		      properties={rho=rho_s, k=k_s, Cp=Cp_s}}
-blk1.bcList[north] = SolidUserDefinedBC:new{fileName='udf-solid-bc.lua'}
-blk1.bcList[east] = SolidUserDefinedBC:new{fileName='udf-solid-bc.lua'}
-blk1.bcList[west] = SolidUserDefinedBC:new{fileName='udf-solid-bc.lua'}
+blk1.bcList['north'] = SolidUserDefinedBC:new{fileName='udf-solid-bc.lua'}
+blk1.bcList['east'] = SolidUserDefinedBC:new{fileName='udf-solid-bc.lua'}
+blk1.bcList['west'] = SolidUserDefinedBC:new{fileName='udf-solid-bc.lua'}
 
 identifyBlockConnections()
 
@@ -61,7 +61,7 @@ config.gasdynamic_update_scheme = 'euler'
 config.flux_calculator = 'ausm_plus_up'
 config.viscous = true
 config.spatial_deriv_calc = 'divergence'
-config.max_time = 1.0 
+config.max_time = 1.0
 config.max_step = 10000000
 config.dt_init = 2.5e-6
 config.fixed_time_step = true

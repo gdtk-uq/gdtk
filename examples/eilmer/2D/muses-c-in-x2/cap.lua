@@ -30,8 +30,8 @@ s = Vector3:new{x=145.0*mm, y=60.0*mm}; t = Vector3:new{x=150.0*mm, y=6.0*mm}
 -- Lines and arcs that run around the probe.
 ab = Line:new{p0=a, p1=b}; ac = Line:new{p0=a, p1=c}
 bf = Line:new{p0=b, p1=f}; cf = Bezier:new{points={c, d, e, f}};
-cg = Line:new{p0=c, p1=g} 
-gj = Polyline:new{segments={Arc:new{p0=g, p1=h, centre=i}, Line:new{p0=h, p1=j}}} 
+cg = Line:new{p0=c, p1=g}
+gj = Polyline:new{segments={Arc:new{p0=g, p1=h, centre=i}, Line:new{p0=h, p1=j}}}
 fj = Line:new{p0=f, p1=j}
 fp = Line:new{p0=f, p1=p}; po = Line:new{p0=p, p1=o}
 jo = Bezier:new{points={j, m, n, o}}
@@ -75,10 +75,10 @@ blk3 = FluidBlock:new{grid=grid3, initialState=initial, label="BLK3"}
 blk4 = FluidBlock:new{grid=grid4, initialState=initial, label="BLK4"}
 -- Set boundary conditions.
 identifyBlockConnections()
-blk0.bcList[west] = InFlowBC_Supersonic:new{flowState=inflow, label="inflow-boundary"}
-blk2.bcList[north] = OutFlowBC_Simple:new{label="outflow-boundary"}
-blk3.bcList[north] = OutFlowBC_Simple:new{label="outflow-boundary"}
-blk4.bcList[north] = OutFlowBC_Simple:new{label="outflow-boundary"}
+blk0.bcList['west'] = InFlowBC_Supersonic:new{flowState=inflow, label="inflow-boundary"}
+blk2.bcList['north'] = OutFlowBC_Simple:new{label="outflow-boundary"}
+blk3.bcList['north'] = OutFlowBC_Simple:new{label="outflow-boundary"}
+blk4.bcList['north'] = OutFlowBC_Simple:new{label="outflow-boundary"}
 
 -- We have a couple of sharp corners with strong expansions.
 srz0 = SuppressReconstructionZone:new{p0={x=-0.005,y=0.040}, p1={x=0.005,y=0.045}}
@@ -91,4 +91,3 @@ config.max_step = 50000
 config.dt_init = 0.5e-8
 config.cfl_value = 0.5
 config.dt_plot = 5.0e-6
-

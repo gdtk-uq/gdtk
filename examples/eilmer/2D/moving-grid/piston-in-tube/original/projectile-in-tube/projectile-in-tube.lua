@@ -2,10 +2,10 @@
 -- Date: 2018-06-07
 --
 -- This Lua script is used to prepare an Eilmer4
--- simulation with two-way coupling between the 
+-- simulation with two-way coupling between the
 -- the fluid and the projectile that is accelerated
--- by the fluid pressure. This simulation makes use 
--- of the user defined supervisory file and user 
+-- by the fluid pressure. This simulation makes use
+-- of the user defined supervisory file and user
 -- moving grid capabilities.
 --
 
@@ -67,12 +67,12 @@ bd = Line:new{p0=b, p1=d}
 cd = Line:new{p0=c, p1=d}
 
 grid = StructuredGrid:new{psurface=makePatch{north=cd, east=bd, south=ab, west=ac},
-			  niv=nxcells+1, njv=nycells+1} 
+			  niv=nxcells+1, njv=nycells+1}
 
 blk = FluidBlock:new{grid=grid, initialState=initial}
 
 -- Boundary condition uses development version of WallBC to correctly include
 -- work done by fluid as projectile is pushed.
-blk.bcList[east] = WallBC_WithSlip2:new{}
+blk.bcList['east'] = WallBC_WithSlip2:new{}
 
 

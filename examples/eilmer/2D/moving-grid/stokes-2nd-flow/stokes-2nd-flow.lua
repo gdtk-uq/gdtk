@@ -3,8 +3,8 @@
 --
 -- This Lua script is used to prepare an Eilmer4
 -- simulation to simulate Stokes Second Flow
--- See: 
---  Schlichting, H (1979), Boudary-Layer Theory, McGraw-Hill, New York 
+-- See:
+--  Schlichting, H (1979), Boudary-Layer Theory, McGraw-Hill, New York
 --
 
 
@@ -16,7 +16,7 @@ dofile('sim-config.lua')
 
 maxTime = 50e-3
 
---config.udf_supervisor_file='udf-process.lua'   -- manages calculation of force acting on projectile and acceleration 
+--config.udf_supervisor_file='udf-process.lua'   -- manages calculation of force acting on projectile and acceleration
 config.interpolation_order = 2
 config.dt_init = 1.0e-8
 config.fixed_time_step = false
@@ -52,7 +52,7 @@ initial = FlowState:new{p=startP, T=startT}
 
 -- Geometry, grid and block setup.
 
---    d----N----c 
+--    d----N----c
 --    |         |
 --    |         |
 --    W         E
@@ -61,7 +61,7 @@ initial = FlowState:new{p=startP, T=startT}
 --    a----S----b
 
 
-nxcells = 1*N_refine 
+nxcells = 1*N_refine
 nycells = 5*N_refine
 
 
@@ -74,22 +74,18 @@ cf = RobertsFunction:new{end0=true,end1=false,beta=1.05}
 
 grid = StructuredGrid:new{psurface=CoonsPatch:new{p00=a, p10=b, p01=d, p11=c},
 			  niv=nxcells+1, njv=nycells+1,
-              cfList={east=cf, west=cf} } 
+              cfList={east=cf, west=cf} }
 
 blk = FluidBlock:new{grid=grid, initialState=initial}
 
 -- Boundary conditions:
---blk.bcList[south] = WallBC_NoSlip_FixedT:new{Twall=startT}
--- blk.bcList[south] = WallBC_NoSlip_Adiabatic:new{}
-blk.bcList[south] = UserDefinedBC:new{fileName='southwall-bc.lua'}
+--blk.bcList['south'] = WallBC_NoSlip_FixedT:new{Twall=startT}
+-- blk.bcList['south'] = WallBC_NoSlip_Adiabatic:new{}
+blk.bcList['south'] = UserDefinedBC:new{fileName='southwall-bc.lua'}
 
---blk.bcList[south] = WallBC_TranslatingSurface_FixedT:new{Twall=startT, v_trans={x=0,y=0,z=0}}
---blk.bcList[south] = WallBC_TranslatingSurface_Adiabatic:new{v_trans={x=0,y=0,z=0}}
-
-
+--blk.bcList['south'] = WallBC_TranslatingSurface_FixedT:new{Twall=startT, v_trans={x=0,y=0,z=0}}
+--blk.bcList['south'] = WallBC_TranslatingSurface_Adiabatic:new{v_trans={x=0,y=0,z=0}}
 
 -- east and west are set as extraploation as the flow is invariant in the x-direction
-blk.bcList[east] = OutFlowBC_SimpleExtrapolate:new{xOrder=0}
-blk.bcList[west] = OutFlowBC_SimpleExtrapolate:new{xOrder=0}
-
-
+blk.bcList['east'] = OutFlowBC_SimpleExtrapolate:new{xOrder=0}
+blk.bcList['west'] = OutFlowBC_SimpleExtrapolate:new{xOrder=0}

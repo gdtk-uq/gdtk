@@ -8,14 +8,14 @@ config.dimensions = 2
 config.axisymmetric = true
 --
 nsp, nmodes, gm = setGasModel('ideal-air-gas-model.lua')
--- We will set up three FluidBlocks to represent 
+-- We will set up three FluidBlocks to represent
 -- [0] the driver tube
 -- [1] shock tube
 -- [2] acceleration tube
 fill_gases = {[0]=FlowState:new{p=1.0e6, T=3000.0},
 	      FlowState:new{p=5.0e3, T=300.0},
 	      FlowState:new{p=100.0, T=300.0}}
-Ls = {[0]=0.0, 0.5, 1.0, 2.5} -- break-points for tubes 
+Ls = {[0]=0.0, 0.5, 1.0, 2.5} -- break-points for tubes
 R = 0.010
 --
 -- Set up three quads in the (x,y)-plane by first defining
@@ -38,11 +38,11 @@ for i = 0, 2 do
 end
 identifyBlockConnections()
 -- The diaphragm boundary condition is between FluidBlocks [1] and [2]
-blks[1].bcList[east] = UserDefinedGhostCellBC:new{fileName="udf-diaphragm.lua"}
-blks[2].bcList[west] = UserDefinedGhostCellBC:new{fileName="udf-diaphragm.lua"}
+blks[1].bcList['east'] = UserDefinedGhostCellBC:new{fileName="udf-diaphragm.lua"}
+blks[2].bcList['west'] = UserDefinedGhostCellBC:new{fileName="udf-diaphragm.lua"}
 -- The following setting is important for UDF BCs that sample cell data
 -- from other blocks.
-config.apply_bcs_in_parallel = false 
+config.apply_bcs_in_parallel = false
 --
 -- Do a little more setting of global data.
 config.max_time = 1.0e-3  -- seconds

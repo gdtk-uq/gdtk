@@ -127,12 +127,12 @@ end
 -- Set boundary conditions.
 identifyBlockConnections()
 -- then, directly specify the stagnation conditions for the subsonic inflow.
-blks[0].bcList[west] = InFlowBC_FromStagnation:new{stagCondition=stagnation_gas}
+blks[0].bcList['west'] = InFlowBC_FromStagnation:new{stagCondition=stagnation_gas}
 -- to get loads on thrust surface, add that boundary condition to the group
-blks[1].bcList[south] = WallBC_WithSlip:new{group="loads"}
-blks[2].bcList[east] = OutFlowBC_Simple:new{}
-blks[5].bcList[east] = OutFlowBC_Simple:new{}
-blks[3].bcList[west] = InFlowBC_Supersonic:new{flowCondition=external_stream}
+blks[1].bcList['south'] = WallBC_WithSlip:new{group="loads"}
+blks[2].bcList['east'] = OutFlowBC_Simple:new{}
+blks[5].bcList['east'] = OutFlowBC_Simple:new{}
+blks[3].bcList['west'] = InFlowBC_Supersonic:new{flowCondition=external_stream}
 
 -- Some more simulation configuration.
 config.max_time = 1.0e-3  -- seconds

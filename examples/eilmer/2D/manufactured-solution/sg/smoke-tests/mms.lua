@@ -41,30 +41,30 @@ grid = StructuredGrid:new{psurface=CoonsPatch:new{p00=p00, p10=p10, p11=p11, p01
 
 bcList = {}
 if case == 1 or case == 3 then
-   bcList[north] = OutFlowBC_SimpleExtrapolate:new{xOrder=1}
-   bcList[east] = OutFlowBC_SimpleExtrapolate:new{xOrder=1}
-   bcList[south] = UserDefinedBC:new{fileName='udf-bc.lua'}
-   bcList[west] = UserDefinedBC:new{fileName='udf-bc.lua'}
+   bcList['north'] = OutFlowBC_SimpleExtrapolate:new{xOrder=1}
+   bcList['east'] = OutFlowBC_SimpleExtrapolate:new{xOrder=1}
+   bcList['south'] = UserDefinedBC:new{fileName='udf-bc.lua'}
+   bcList['west'] = UserDefinedBC:new{fileName='udf-bc.lua'}
 else
-   bcList[north] = BoundaryCondition:new{
+   bcList['north'] = BoundaryCondition:new{
       preReconAction = { UserDefinedGhostCell:new{fileName='udf-bc.lua'} },
       preSpatialDerivActionAtBndryFaces = { UserDefinedInterface:new{fileName='udf-bc.lua'},
 					    UpdateThermoTransCoeffs:new()
       }
    }
-   bcList[east] = BoundaryCondition:new{
+   bcList['east'] = BoundaryCondition:new{
       preReconAction = { UserDefinedGhostCell:new{fileName='udf-bc.lua'} },
       preSpatialDerivActionAtBndryFaces = { UserDefinedInterface:new{fileName='udf-bc.lua'},
 					    UpdateThermoTransCoeffs:new()
       }
    }
-   bcList[south] = BoundaryCondition:new{
+   bcList['south'] = BoundaryCondition:new{
       preReconAction = { UserDefinedGhostCell:new{fileName='udf-bc.lua'} },
       preSpatialDerivActionAtBndryFaces = { UserDefinedInterface:new{fileName='udf-bc.lua'},
 					    UpdateThermoTransCoeffs:new()
       }
    }
-   bcList[west] = BoundaryCondition:new{
+   bcList['west'] = BoundaryCondition:new{
       preReconAction = { UserDefinedGhostCell:new{fileName='udf-bc.lua'} },
       preSpatialDerivActionAtBndryFaces = { UserDefinedInterface:new{fileName='udf-bc.lua'},
 					    UpdateThermoTransCoeffs:new()
@@ -75,8 +75,8 @@ config.apply_bcs_in_parallel = false
 if blocking == 'single' then
     blk = FluidBlock:new{grid=grid, initialState=initial, bcList=bcList,
 			 label='blk'}
-else 
-   blks = FluidBlockArray{grid=grid, initialState=initial, bcList=bcList, 
+else
+   blks = FluidBlockArray{grid=grid, initialState=initial, bcList=bcList,
 			  nib=2, njb=2, label="blk"}
 end
 
@@ -104,6 +104,3 @@ config.stringent_cfl = true
 -- Do NOT use the limiters for the verification tests
 config.apply_limiter = false
 config.extrema_clipping = false
-
-				 
-		

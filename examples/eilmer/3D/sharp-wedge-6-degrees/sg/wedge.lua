@@ -57,11 +57,11 @@ inflow = FlowState:new{p=p_inf, T=T_inf, velx=u_inf}
 -- Inflow BC  |                              | OutFlow BC
 --            |                              |
 --            |                              + C
---            |                             / 
---            |                          /  
+--            |                             /
+--            |                          /
 --            |                       /   Impermeable Wall BC
---            |                    /  
---            |                 /   
+--            |                    /
+--            |                 / 
 --            +--------------+
 --            A    ^^^       B
 --                  |
@@ -95,12 +95,12 @@ grid = StructuredGrid:new{pvolume=vol, niv=nx+1, njv=ny+1, nkv=nz+1}
 
 -- Set up block
 blk = FluidBlock:new{grid=grid, initialState=inflow, label="block-0"}
-blk.bcList[north] = OutFlowBC_Simple:new{}
-blk.bcList[east] = OutFlowBC_Simple:new{}
-blk.bcList[south] = WallBC_WithSlip:new{}
-blk.bcList[west] = InFlowBC_Supersonic:new{flowState=inflow}
-blk.bcList[top] = WallBC_WithSlip:new{}
-blk.bcList[bottom] = WallBC_WithSlip:new{}
+blk.bcList['north'] = OutFlowBC_Simple:new{}
+blk.bcList['east'] = OutFlowBC_Simple:new{}
+blk.bcList['south'] = WallBC_WithSlip:new{}
+blk.bcList['west'] = InFlowBC_Supersonic:new{flowState=inflow}
+blk.bcList['top'] = WallBC_WithSlip:new{}
+blk.bcList['bottom'] = WallBC_WithSlip:new{}
 
 -- Set simulation parameters
 config.interpolation_order = 2
@@ -132,10 +132,3 @@ SteadyStateSolver{
    number_total_snapshots = 30,
    write_diagnostics_count = 1
 }
-   
-
-
-
-
-
-

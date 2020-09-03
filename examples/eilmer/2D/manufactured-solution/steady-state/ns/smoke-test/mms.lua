@@ -36,25 +36,25 @@ grid = StructuredGrid:new{psurface=CoonsPatch:new{p00=p00, p10=p10, p11=p11, p01
 			  niv=nicell+1, njv=njcell+1}
 
 bcList = {}
-bcList[north] = BoundaryCondition:new{
+bcList['north'] = BoundaryCondition:new{
    preReconAction = { UserDefinedGhostCell:new{fileName='udf-bc.lua'} },
    preSpatialDerivActionAtBndryFaces = { UserDefinedInterface:new{fileName='udf-bc.lua'},
                                          UpdateThermoTransCoeffs:new()
    }
 }
-bcList[east] = BoundaryCondition:new{
+bcList['east'] = BoundaryCondition:new{
    preReconAction = { UserDefinedGhostCell:new{fileName='udf-bc.lua'} },
    preSpatialDerivActionAtBndryFaces = { UserDefinedInterface:new{fileName='udf-bc.lua'},
                                          UpdateThermoTransCoeffs:new()
    }
 }
-bcList[south] = BoundaryCondition:new{
+bcList['south'] = BoundaryCondition:new{
    preReconAction = { UserDefinedGhostCell:new{fileName='udf-bc.lua'} },
    preSpatialDerivActionAtBndryFaces = { UserDefinedInterface:new{fileName='udf-bc.lua'},
                                          UpdateThermoTransCoeffs:new()
    }
 }
-bcList[west] = BoundaryCondition:new{
+bcList['west'] = BoundaryCondition:new{
    preReconAction = { UserDefinedGhostCell:new{fileName='udf-bc.lua'} },
    preSpatialDerivActionAtBndryFaces = { UserDefinedInterface:new{fileName='udf-bc.lua'},
                                          UpdateThermoTransCoeffs:new()
@@ -64,12 +64,12 @@ config.apply_bcs_in_parallel = false
 if blocking == 'single' then
    blks = FluidBlock:new{grid=grid, fillCondition=initial, bcList=bcList, label="blk"}
    SBlock2UBlock(fluidBlocks[1])
-else 
-   blks = FluidBlockArray{grid=grid, fillCondition=initial, bcList=bcList, 
+else
+   blks = FluidBlockArray{grid=grid, fillCondition=initial, bcList=bcList,
 		      nib=4, njb=4, label="blk"}
    for i=1,16 do
       SBlock2UBlock(fluidBlocks[i])
-   end 
+   end
 end
 
 config.include_ghost_cells_in_spatial_deriv_clouds = true
@@ -91,18 +91,18 @@ SteadyStateSolver{
    precondition_matrix_type = "ilu",
    frozen_preconditioner_count = 100;
    start_preconditioning = 1,
-   
+
    use_scaling = true,
    use_complex_matvec_eval = true,
-   
+
    number_pre_steps = 10,
    number_total_steps = 100000,
    stop_on_relative_global_residual = 1.0e-12,
-   
+
    -- Settings for FGMRES iterative solver
    max_outer_iterations = 10,
    max_restarts = 10,
-   
+
    -- Settings for start-up phase
    number_start_up_steps = 100,
    cfl0 = 1.0,
@@ -119,7 +119,7 @@ SteadyStateSolver{
    eta1 = 0.1,
    eta1_min = 0.1,
    eta_strategy = "geometric",
-   
+
    -- Settings control write-out
    snapshots_count = 50,
    number_total_snapshots = 5,

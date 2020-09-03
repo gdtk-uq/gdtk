@@ -42,10 +42,10 @@ nnx = 100; nny = 10
 grid = StructuredGrid:new{psurface=quad, niv=nnx+1, njv=nny+1}
 blk = FluidBlock:new{grid=grid,
 		     initialState=initialFill}
-blk.bcList[north] = WallBC_NoSlip_Adiabatic:new{}
-blk.bcList[east] = WallBC_NoSlip_Adiabatic:new{}
-blk.bcList[south] = WallBC_NoSlip_Adiabatic:new{}
-blk.bcList[west] = WallBC_NoSlip_Adiabatic:new{}
+blk.bcList['north'] = WallBC_NoSlip_Adiabatic:new{}
+blk.bcList['east'] = WallBC_NoSlip_Adiabatic:new{}
+blk.bcList['south'] = WallBC_NoSlip_Adiabatic:new{}
+blk.bcList['west'] = WallBC_NoSlip_Adiabatic:new{}
 
 config.viscous = true
 config.flux_calculator = "ausmdv"

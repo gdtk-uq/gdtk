@@ -37,10 +37,10 @@ blk0 = SolidBlock:new{grid=grid0, initTemperature=300.0,
 		      properties={rho=8960, k=401, Cp=386}}
 
 -- Set boundary conditions
-blk0.bcList[north] = SolidUserDefinedBC:new{fileName='fixed-T-bc.lua'}
-blk0.bcList[east] = SolidUserDefinedBC:new{fileName='fixed-T-bc.lua'}
-blk0.bcList[south] = SolidUserDefinedBC:new{fileName='fixed-T-bc.lua'}
-blk0.bcList[west] = SolidUserDefinedBC:new{fileName='fixed-T-bc.lua'}
+blk0.bcList['north'] = SolidUserDefinedBC:new{fileName='fixed-T-bc.lua'}
+blk0.bcList['east'] = SolidUserDefinedBC:new{fileName='fixed-T-bc.lua'}
+blk0.bcList['south'] = SolidUserDefinedBC:new{fileName='fixed-T-bc.lua'}
+blk0.bcList['west'] = SolidUserDefinedBC:new{fileName='fixed-T-bc.lua'}
 
 -- Set some simulation parameters
 config.solid_domain_update_scheme = "pc"

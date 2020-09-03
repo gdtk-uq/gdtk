@@ -43,8 +43,8 @@ blk1 = FluidBlock:new{grid=grid1, initialState=initial, label="BLOCK-1",
 setHistoryPoint{ib=1, i=9, j=0}
 -- Set boundary conditions.
 identifyBlockConnections()
-blk0.bcList[west] = UserDefinedBC:new{fileName="udf-bc.lua"}
-blk1.bcList[east] = UserDefinedBC:new{fileName="udf-bc.lua"}
+blk0.bcList['west'] = UserDefinedBC:new{fileName="udf-bc.lua"}
+blk1.bcList['east'] = UserDefinedBC:new{fileName="udf-bc.lua"}
 config.apply_bcs_in_parallel = false
 
 -- Do a little more setting of global data.

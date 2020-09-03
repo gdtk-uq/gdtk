@@ -101,7 +101,7 @@ cflist = {east=RobertsFunction:new{end0=true, end1=false,beta=clust_surf},
           west=RobertsFunction:new{end0=true,end1=false, beta=clust_surf}}
 suct_front1_grid = StructuredGrid:new{psurface=patch, cfList=cflist, niv=8*mrf, njv=2*mrf}
 suct_front1_block = FluidBlock:new{grid=suct_front1_grid, label="suct_front1", initialState=initialCond}
-suct_front1_block.bcList[south] = WallBC_NoSlip_Adiabatic:new{}
+suct_front1_block.bcList['south'] = WallBC_NoSlip_Adiabatic:new{}
 ---------------------------------------------------
 -- Block[1]: Front 2 block on suction surface
 ----------------------------------------------------
@@ -114,7 +114,7 @@ cflist = {east=RobertsFunction:new{end0=true, end1=false,beta=clust_surf},
           west=RobertsFunction:new{end0=true,end1=false, beta=clust_surf}}
 suct_front2_grid = StructuredGrid:new{psurface=patch, cfList=cflist, niv=mrf, njv=2*mrf}
 suct_front2_block = FluidBlock:new{grid=suct_front2_grid, label="suct_front2", initialState=initialCond}
-suct_front2_block.bcList[south] = WallBC_NoSlip_Adiabatic:new{}
+suct_front2_block.bcList['south'] = WallBC_NoSlip_Adiabatic:new{}
 ---------------------------------------------------
 -- Block[2]: Middle block on suction surface
 ---------------------------------------------------
@@ -130,7 +130,7 @@ cflist = {east=RobertsFunction:new{end0=true, end1=false, beta=clust_surf},
           west=RobertsFunction:new{end0=true, end1=false, beta=clust_surf}}
 suct_mid_grid = StructuredGrid:new{psurface=patch, cfList=cflist, niv=3*mrf, njv=2*mrf}--suct_front_grid.njv}
 suct_mid_block = FluidBlock:new{grid=suct_mid_grid,label="suct_mid", initialState=initialCond}
-suct_mid_block.bcList[south] = WallBC_NoSlip_Adiabatic:new{}
+suct_mid_block.bcList['south'] = WallBC_NoSlip_Adiabatic:new{}
 ---------------------------------------------------
 -- Block[3]: Rear block on suction surface
 ---------------------------------------------------
@@ -148,7 +148,7 @@ cflist = {east=RobertsFunction:new{end0=true, end1=false, beta=clust_surf},
           west=RobertsFunction:new{end0=true, end1=false, beta=clust_surf}}
 suct_rear_grid = StructuredGrid:new{psurface=patch, cfList=cflist, niv=mrf, njv=2*mrf}--suct_front_grid.njv}
 suct_rear_block = FluidBlock:new{grid=suct_rear_grid,label="suct_rear", initialState=initialCond}
-suct_rear_block.bcList[south] = WallBC_NoSlip_Adiabatic:new{}
+suct_rear_block.bcList['south'] = WallBC_NoSlip_Adiabatic:new{}
 ---------------------------------------------------
 -- Block[4]: Front block on pressure surface
 ---------------------------------------------------
@@ -167,7 +167,7 @@ cflist = {north=RobertsFunction:new{end0=false, end1=true, beta=clust_surf},
           south=RobertsFunction:new{end0=false, end1=true, beta=clust_surf}}
 pres_front_grid = StructuredGrid:new{psurface=patch, cfList=cflist, niv=2*mrf, njv=2*mrf} --changed niv from referention front block
 pres_front_block = FluidBlock:new{grid=pres_front_grid, label="pres_front", initialState=initialCond}
-pres_front_block.bcList[east] = WallBC_NoSlip_Adiabatic:new{}
+pres_front_block.bcList['east'] = WallBC_NoSlip_Adiabatic:new{}
 ---------------------------------------------------
 -- Block[5]: Middle block on pressure surface
 ---------------------------------------------------
@@ -184,7 +184,7 @@ cflist = {east=RobertsFunction:new{end0=false, end1=true,beta=clust_surf},
           west=RobertsFunction:new{end0=false,end1=true, beta=clust_surf}}
 pres_mid_grid = StructuredGrid:new{psurface=patch, cfList=cflist, niv=8*mrf, njv=2*mrf} --njv previously linked to pres_frontg
 pres_mid_block = FluidBlock:new{grid=pres_mid_grid, label="pres_mid", initialState=initialCond}
-pres_mid_block.bcList[north] = WallBC_NoSlip_Adiabatic:new{}
+pres_mid_block.bcList['north'] = WallBC_NoSlip_Adiabatic:new{}
 ---------------------------------------------------
 -- Block[6]: Rear block on pressure surface
 ---------------------------------------------------
@@ -201,7 +201,7 @@ cflist = {east=RobertsFunction:new{end0=false, end1=true,beta=clust_surf},
           west=RobertsFunction:new{end0=false,end1=true, beta=clust_surf}}
 pres_rear_grid = StructuredGrid:new{psurface=patch, cfList=cflist, niv=mrf, njv=2*mrf} --njv=pres_mid_block.njv
 pres_rear_block = FluidBlock:new{grid=pres_rear_grid, label="pres_rear", initialState=initialCond}
-pres_rear_block.bcList[north] = WallBC_NoSlip_Adiabatic:new{}
+pres_rear_block.bcList['north'] = WallBC_NoSlip_Adiabatic:new{}
 ---------------------------------------------------
 -- Inflow 1 block
 ---------------------------------------------------
@@ -215,11 +215,11 @@ in1_west = Line:new{p0=in1_bottom_left, p1=in1_top_left}
 patch = AOPatch:new{north=in1_north, east=in1_east, south=in1_south, west=in1_west}
 in1_grid = StructuredGrid:new{psurface=patch, niv=5*mrf, njv=2*mrf}
 in1_block = FluidBlock:new{grid=in1_grid, label="in1", initialState=initialCond}
-in1_block.bcList[west] = InFlowBC_FromStagnation:new{stagnationState=stagCond,
-						     direction_type = "uniform",
-						     direction_x=math.sqrt(3)/2,
-						     direction_y = 0.5,
-						     label="inflow-boundary"}
+in1_block.bcList['west'] = InFlowBC_FromStagnation:new{stagnationState=stagCond,
+                                                       direction_type = "uniform",
+                                                       direction_x=math.sqrt(3)/2,
+                                                       direction_y = 0.5,
+                                                       label="inflow-boundary"}
 ---------------------------------------------------
 --Inflow 2 block
 ---------------------------------------------------
@@ -229,11 +229,11 @@ in2_west = Line:new{p0=in2_bottom_left, p1=in1_bottom_left}
 patch = AOPatch:new{north=in1_south, east=pres_front_west, south=in2_south, west=in2_west}
 in2_grid = StructuredGrid:new{psurface=patch, niv=5*mrf, njv=2*mrf} --niv = 5*mrf; njv=pres_front_block.njb
 in2_block = FluidBlock:new{grid=in2_grid, label="in2", initialState=initialCond}
-in2_block.bcList[west] = InFlowBC_FromStagnation:new{stagnationState=stagCond,
-						     direction_type = "uniform",
-						     direction_x=math.sqrt(3)/2,
-						     direction_y = 0.5,
-						     label="inflow-boundary"}
+in2_block.bcList['west'] = InFlowBC_FromStagnation:new{stagnationState=stagCond,
+                                                       direction_type = "uniform",
+                                                       direction_x=math.sqrt(3)/2,
+                                                       direction_y = 0.5,
+                                                       label="inflow-boundary"}
 ---------------------------------------------------
 --Inflow 3 block
 ---------------------------------------------------
@@ -245,11 +245,11 @@ in3_west = Line:new{p0=in3_bottom_left, p1=in2_bottom_left}
 patch = AOPatch:new{north=in2_south, east=in3_east, south=in3_south, west=in3_west}
 in3_grid = StructuredGrid:new{psurface=patch, niv=5*mrf, njv=2*mrf} --niv=in2_grid.niv,njv=in1_grid.njv
 in3_block = FluidBlock:new{grid=in3_grid, label="in3", initialState=initialCond}
-in3_block.bcList[west] = InFlowBC_FromStagnation:new{stagnationState=stagCond,
-						     direction_type = "uniform",
-						     direction_x=math.sqrt(3)/2,
-						     direction_y = 0.5,
-						     label="inflow-boundary"}
+in3_block.bcList['west'] = InFlowBC_FromStagnation:new{stagnationState=stagCond,
+                                                       direction_type = "uniform",
+                                                       direction_x=math.sqrt(3)/2,
+                                                       direction_y = 0.5,
+                                                       label="inflow-boundary"}
 ---------------------------------------------------
 --Outflow 1 block
 ---------------------------------------------------
@@ -263,7 +263,7 @@ out1_west = Line:new{p0=TE_up, p1=out1_top_left}
 patch = AOPatch:new{north=out1_north, east=out1_east, south=out1_south, west=out1_west}
 out1_grid = StructuredGrid:new{psurface=patch, niv=5*mrf, njv=2*mrf} --njv=in1_grid.njv
 out1_block = FluidBlock:new{grid=out1_grid, label="out1", initialState=initialCond}
-out1_block.bcList[east] = OutFlowBC_FixedP:new{p_outside=p_exit, label="OUTLET"}
+out1_block.bcList['east'] = OutFlowBC_FixedP:new{p_outside=p_exit, label="OUTLET"}
 ---------------------------------------------------
 --Outflow 2 block
 ---------------------------------------------------
@@ -274,7 +274,7 @@ out2_west = ReversedPath:new{underlying_path=suct_mid_north}
 patch = AOPatch:new{north=out1_south, east=out2_east, south=out2_south, west=out2_west}
 out2_grid = StructuredGrid:new{psurface=patch, niv=5*mrf, njv=3*mrf} --,niv=out1_grid.niv,njv=suct_mid_grid.niv}
 out2_block = FluidBlock:new{grid=out2_grid, label="out2", initialState=initialCond}
-out2_block.bcList[east] = OutFlowBC_FixedP:new{p_outside=p_exit, label="OUTLET"}
+out2_block.bcList['east'] = OutFlowBC_FixedP:new{p_outside=p_exit, label="OUTLET"}
 ---------------------------------------------------
 --Outflow 2low block
 ---------------------------------------------------
@@ -285,7 +285,7 @@ out2low_west = ReversedPath:new{underlying_path=suct_rear_north}
 patch = AOPatch:new{north=out2_south, east=out2low_east, south=out2low_south, west=out2low_west}
 out2low_grid = StructuredGrid:new{psurface=patch, niv=5*mrf, njv =mrf} --njv=suct_rear_grid.niv}
 out2low_block = FluidBlock:new{grid=out2low_grid, label="out2low", initialState=initialCond}
-out2low_block.bcList[east] = OutFlowBC_FixedP:new{p_outside=p_exit, label="OUTLET"}
+out2low_block.bcList['east'] = OutFlowBC_FixedP:new{p_outside=p_exit, label="OUTLET"}
 
 ---------------------------------------------------
 --Outflow 3 block
@@ -298,7 +298,7 @@ out3_west = Line:new{p0=out3_bottom_left, p1=TE_out}
 patch = AOPatch:new{north=out2low_south, east=out3_east, south=out3_south, west=out3_west}
 out3_grid = StructuredGrid:new{psurface=patch, niv=5*mrf, njv=2*mrf} --out2_grid.niv,njv=in3_grid.njv}
 out3_block = FluidBlock:new{grid=out3_grid, label="out3", initialState=initialCond}
-out3_block.bcList[east] = OutFlowBC_FixedP:new{p_outside=p_exit, label="OUTLET"}
+out3_block.bcList['east'] = OutFlowBC_FixedP:new{p_outside=p_exit, label="OUTLET"}
 -----------------------------------------------------
 -- Top 1 block
 -----------------------------------------------------
@@ -338,9 +338,9 @@ low2_block = FluidBlock:new{grid=low2_grid, label="low2", initialState=initialCo
 identifyBlockConnections()
 -- This flow domain holds one blade that is part of a larger cascade.
 -- Apply periodic conditions, north and south.
-connectBlocks(in1_block,north, in3_block,south, 0)
-connectBlocks(out1_block,north, out3_block,south, 0)
-connectBlocks(top1_block,north, low1_block,south, 0)
-connectBlocks(top2_block,north, low2_block,south, 0)
+connectBlocks(in1_block, 'north', in3_block, 'south', 0)
+connectBlocks(out1_block, 'north', out3_block, 'south', 0)
+connectBlocks(top1_block, 'north', low1_block, 'south', 0)
+connectBlocks(top2_block, 'north', low2_block, 'south', 0)
 --
 mpiDistributeBlocks{ntasks=3, dist="load-balance"}

@@ -37,10 +37,10 @@ blk0 = SolidBlock:new{grid=grid0, initTemperature=300.0,
 		      properties={rho=8960, k=401, Cp=386}}
 
 -- Set boundary conditions
-blk0.bcList[north] = SolidFixedTBC:new{Twall=1000.0}
-blk0.bcList[east] = SolidFixedTBC:new{Twall=800.0}
-blk0.bcList[south] = SolidFixedTBC:new{Twall=300.0}
-blk0.bcList[west] = SolidFixedTBC:new{Twall=300.0}
+blk0.bcList['north'] = SolidFixedTBC:new{Twall=1000.0}
+blk0.bcList['east'] = SolidFixedTBC:new{Twall=800.0}
+blk0.bcList['south'] = SolidFixedTBC:new{Twall=300.0}
+blk0.bcList['west'] = SolidFixedTBC:new{Twall=300.0}
 
 -- Set some simulation parameters
 config.solid_domain_update_scheme = "pc"
@@ -52,5 +52,3 @@ config.dt_plot = 0.1
 
 -- Set a dummy flow block
 dummy = FluidBlock:new{grid=grid0, initialState=initial, label="dummy", active=false}
-
-

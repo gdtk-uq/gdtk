@@ -54,11 +54,11 @@ inflow = FlowState:new{p=p_inf, T=T_inf, velx=u_inf}
 -- Inflow BC  |                              | OutFlow BC
 --            |                              |
 --            |                              + C
---            |                             / 
---            |                          /  
+--            |                             /
+--            |                          /
 --            |                       /   Impermeable Wall BC
---            |                    /  
---            |                 /   
+--            |                    /
+--            |                 /
 --            +--------------+
 --            A    ^^^       B
 --                  |
@@ -86,10 +86,10 @@ grid = StructuredGrid:new{psurface=makePatch{north=de, east=ce, south=abc, west=
 
 -- Set up block
 blk = FluidBlock:new{grid=grid, initialState=inflow, label="block-0"}
-blk.bcList[north] = OutFlowBC_Simple:new{}
-blk.bcList[east] = OutFlowBC_Simple:new{}
-blk.bcList[south] = WallBC_WithSlip:new{}
-blk.bcList[west] = InFlowBC_Supersonic:new{flowState=inflow}
+blk.bcList['north'] = OutFlowBC_Simple:new{}
+blk.bcList['east'] = OutFlowBC_Simple:new{}
+blk.bcList['south'] = WallBC_WithSlip:new{}
+blk.bcList['west'] = InFlowBC_Supersonic:new{flowState=inflow}
 
 SBlock2UBlock(blk)
 

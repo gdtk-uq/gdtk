@@ -73,10 +73,4 @@ grid = StructuredGrid:new{psurface=makePatch{north=cd, east=bd, south=ab, west=a
 			  niv=nxcells+1, njv=nycells+1}
 blk = FluidBlock:new{grid=grid, initialState=initial}
 -- We now set a special boundary condition for the boundary that acts as the piston face (WEST face).
-blk.bcList[west] = UserDefinedFluxBC:new{fileName='piston-bc.lua', funcName='convective_flux'}
-
-
-
-
-
-
+blk.bcList['west'] = UserDefinedFluxBC:new{fileName='piston-bc.lua', funcName='convective_flux'}

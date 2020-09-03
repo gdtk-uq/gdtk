@@ -1,7 +1,7 @@
 -- back.lua
 -- Conical nozzle from Back, Massier and Gier (1965)
 -- Peter J. 2015-10-21 adpated from the Python version.
---          
+--
 config.title = "Flow through a conical nozzle."
 print(config.title)
 
@@ -74,23 +74,23 @@ grid1 = StructuredGrid:new{psurface=patch1, niv=nx1+1, njv=ny+1}
 subsonic_region = FluidBlock:new{grid=grid0, initialState=stagnation_gas,
 				 label="subsonic-region"}
 supersonic_region = FluidBlock:new{grid=grid1, initialState=low_pressure_gas,
-				   label="supersonic-region"} 
+				   label="supersonic-region"}
 -- History locations near throat and exit
 setHistoryPoint{ib=1, i=1, j=1}
 setHistoryPoint{ib=1, i=nx1-1, j=1}
 identifyBlockConnections()
 if fixed_pressure then
    -- Directly specify the stagnation conditions for the subsonic inflow.
-   subsonic_region.bcList[west] = InFlowBC_FromStagnation:new{stagnationState=stagnation_gas,
-							      label="inflow-boundary"}
+   subsonic_region.bcList['west'] = InFlowBC_FromStagnation:new{stagnationState=stagnation_gas,
+                                                                label="inflow-boundary"}
 else
    -- Specify the inflow mass_flux (kg/s/m^^2) across inlet and guess the stagnation condition.
-   subsonic_region.bcList[west] = InFlowBC_FromStagnation:new{stagnationState=stagnation_gas,
-							      mass_flux=275.16,
-							      relax_factor=0.2,
-							      label="inflow-boundary"}
+   subsonic_region.bcList['west'] = InFlowBC_FromStagnation:new{stagnationState=stagnation_gas,
+                                                                mass_flux=275.16,
+                                                                relax_factor=0.2,
+                                                                label="inflow-boundary"}
 end
-supersonic_region.bcList[east] = OutFlowBC_Simple:new{label="outflow-boundary"}
+supersonic_region.bcList['east'] = OutFlowBC_Simple:new{label="outflow-boundary"}
 
 -- Do a little more setting of global data.
 config.axisymmetric = 1

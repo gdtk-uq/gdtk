@@ -2,7 +2,7 @@
 -- Script to simulate and test sliding meshes
 
 -- Author: Ingo Jahn
--- Last modified: 25/04/2017 
+-- Last modified: 25/04/2017
 
 
 
@@ -80,12 +80,12 @@ if true then
 end
 
 
--- Create Stator and Rotor Mesh 
+-- Create Stator and Rotor Mesh
 R1 = 0.05
-R2 = 0.045 
+R2 = 0.045
 R3 = 0.04
 theta = 2.* math.pi / 16  -- 16 blades
-theta_a = -0.5*theta 
+theta_a = -0.5*theta
 theta_b = 0.0*theta
 theta_c = 0.5*theta
 
@@ -144,55 +144,55 @@ blk3 = FluidBlock:new{grid=StructuredGrid:new{pvolume=vol3, niv=n1, njv=n1, nkv=
 
 -- Looking radially outwards at downstream patch faces
 --    +-------------+
---    |    blk3     |  
---    |             |  
---    +-------------+     
+--    |    blk3     |
+--    |             |
+--    +-------------+
 --    |    blk2     |  ^
 --    |             |  | Z,k
---    +-------------+  |   
---               <-----+ 
+--    +-------------+  |
+--               <-----+
 --                  T,i
 identifyBlockConnections()
 
 if true then
 
     print("Periodic connection to blocks , blk0 and blk1")
-    blk0.bcList[south] = ExchangeBC_FullFace:new{otherBlock=1, otherFace=north,
+    blk0.bcList['south'] = ExchangeBC_FullFace:new{otherBlock=1, otherFace='north',
     orientation=0, reorient_vector_quantities=true,
-    Rmatrix={math.cos(-theta), -math.sin(-theta), 0.0, 
-             math.sin(-theta),  math.cos(-theta), 0.0, 
+    Rmatrix={math.cos(-theta), -math.sin(-theta), 0.0,
+             math.sin(-theta),  math.cos(-theta), 0.0,
              0.0,              0.0,             1.0}}
-    
-    blk1.bcList[north] = ExchangeBC_FullFace:new{otherBlock=0, otherFace=south,
+
+    blk1.bcList['north'] = ExchangeBC_FullFace:new{otherBlock=0, otherFace='south',
     orientation=0, reorient_vector_quantities=true,
-    Rmatrix={math.cos(theta), -math.sin(theta), 0.0, 
-             math.sin(theta),  math.cos(theta), 0.0, 
+    Rmatrix={math.cos(theta), -math.sin(theta), 0.0,
+             math.sin(theta),  math.cos(theta), 0.0,
              0.0,              0.0,             1.0}}
 
     print("Periodic connection to blocks , blk2 and blk2")
-    blk2.bcList[east] = ExchangeBC_FullFace:new{otherBlock=2, otherFace=west,
+    blk2.bcList['east'] = ExchangeBC_FullFace:new{otherBlock=2, otherFace='west',
     orientation=0, reorient_vector_quantities=true,
-    Rmatrix={math.cos(theta), -math.sin(theta), 0.0, 
-             math.sin(theta),  math.cos(theta), 0.0, 
+    Rmatrix={math.cos(theta), -math.sin(theta), 0.0,
+             math.sin(theta),  math.cos(theta), 0.0,
              0.0,              0.0,             1.0}}
 
-    blk2.bcList[west] = ExchangeBC_FullFace:new{otherBlock=2, otherFace=east,
+    blk2.bcList['west'] = ExchangeBC_FullFace:new{otherBlock=2, otherFace='east',
     orientation=0, reorient_vector_quantities=true,
-    Rmatrix={math.cos(-theta), -math.sin(-theta), 0.0, 
-             math.sin(-theta),  math.cos(-theta), 0.0, 
+    Rmatrix={math.cos(-theta), -math.sin(-theta), 0.0,
+             math.sin(-theta),  math.cos(-theta), 0.0,
              0.0,              0.0,             1.0}}
 
     print("Periodic connection to blocks , blk3 and blk3")
-    blk3.bcList[east] = ExchangeBC_FullFace:new{otherBlock=3, otherFace=west,
+    blk3.bcList['east'] = ExchangeBC_FullFace:new{otherBlock=3, otherFace='west',
     orientation=0, reorient_vector_quantities=true,
-    Rmatrix={math.cos(theta), -math.sin(theta), 0.0, 
-             math.sin(theta),  math.cos(theta), 0.0, 
+    Rmatrix={math.cos(theta), -math.sin(theta), 0.0,
+             math.sin(theta),  math.cos(theta), 0.0,
              0.0,              0.0,               1.0}}
 
-    blk3.bcList[west] = ExchangeBC_FullFace:new{otherBlock=3, otherFace=east,
+    blk3.bcList['west'] = ExchangeBC_FullFace:new{otherBlock=3, otherFace='east',
     orientation=0, reorient_vector_quantities=true,
-    Rmatrix={math.cos(-theta), -math.sin(-theta), 0.0, 
-             math.sin(-theta),  math.cos(-theta), 0.0, 
+    Rmatrix={math.cos(-theta), -math.sin(-theta), 0.0,
+             math.sin(-theta),  math.cos(-theta), 0.0,
              0.0,              0.0,               1.0}}
 end
 
@@ -202,39 +202,39 @@ end
 
 if true then
     -- supersonic flow in the radial inwards direction
-    blk0.bcList[east] = InFlowBC_Supersonic:new{flowState=stagnation1}
-    blk1.bcList[east] = InFlowBC_Supersonic:new{flowState=stagnation2}
+    blk0.bcList['east'] = InFlowBC_Supersonic:new{flowState=stagnation1}
+    blk1.bcList['east'] = InFlowBC_Supersonic:new{flowState=stagnation2}
 
-    blk2.bcList[north] = OutFlowBC_Simple:new{}
-    blk3.bcList[north] = OutFlowBC_Simple:new{}
+    blk2.bcList['north'] = OutFlowBC_Simple:new{}
+    blk3.bcList['north'] = OutFlowBC_Simple:new{}
 end
 
 if false then
     -- supersonic flow in the radial outwards direction
-    blk0.bcList[east] = OutFlowBC_Simple:new{}
-    blk1.bcList[east] = OutFlowBC_Simple:new{}
+    blk0.bcList['east'] = OutFlowBC_Simple:new{}
+    blk1.bcList['east'] = OutFlowBC_Simple:new{}
 
-    blk2.bcList[north] = InFlowBC_Supersonic:new{flowState=stagnation1}
-    blk3.bcList[north] = InFlowBC_Supersonic:new{flowState=stagnation2}
+    blk2.bcList['north'] = InFlowBC_Supersonic:new{flowState=stagnation1}
+    blk3.bcList['north'] = InFlowBC_Supersonic:new{flowState=stagnation2}
 end
 
 if false then
     -- subsonic flow in the radial inwards direction
-    blk0.bcList[east] = InFlowBC_FromStagnation:new{stagnationState=stagnation1} 
-    blk1.bcList[east] = InFlowBC_FromStagnation:new{stagnationState=stagnation2} 
+    blk0.bcList['east'] = InFlowBC_FromStagnation:new{stagnationState=stagnation1}
+    blk1.bcList['east'] = InFlowBC_FromStagnation:new{stagnationState=stagnation2}
 
-    blk2.bcList[north] = OutFlowBC_FixedP:new{p_outside=Pout}
-    blk3.bcList[north] = OutFlowBC_FixedP:new{p_outside=Pout}
+    blk2.bcList['north'] = OutFlowBC_FixedP:new{p_outside=Pout}
+    blk3.bcList['north'] = OutFlowBC_FixedP:new{p_outside=Pout}
 end
 
 
 if false then
     -- subsonic flow in the radial outwards direction
-    blk0.bcList[east] = OutFlowBC_FixedP:new{p_outside=Pout}
-    blk1.bcList[east] = OutFlowBC_FixedP:new{p_outside=Pout}
+    blk0.bcList['east'] = OutFlowBC_FixedP:new{p_outside=Pout}
+    blk1.bcList['east'] = OutFlowBC_FixedP:new{p_outside=Pout}
 
-    blk2.bcList[north] = InFlowBC_FromStagnation:new{stagnationState=stagnation1} 
-    blk3.bcList[north] = InFlowBC_FromStagnation:new{stagnationState=stagnation2} 
+    blk2.bcList['north'] = InFlowBC_FromStagnation:new{stagnationState=stagnation1}
+    blk3.bcList['north'] = InFlowBC_FromStagnation:new{stagnationState=stagnation2}
 end
 
 
@@ -242,15 +242,15 @@ end
 -- #######################################
 -- ### Couple Meshes and Overwrite BCs ###
 -- #######################################
-if false then -- MappedCell_BC 
+if false then -- MappedCell_BC
     -- Stator Outlet faces: E0.bc_list[WEST]; E1.bc_list[WEST]; E2.bc_list[WEST]; E3.bc_list[WEST]; E4.bc_list[WEST]
-    blk0.bcList[west] = ExchangeBC_MappedCell:new{}  -- MappedCellBC(ghost_cell_trans_fn=lambda x, y, z: (x, y, z))
-    blk1.bcList[west] = ExchangeBC_MappedCell:new{}  -- MappedCellBC(ghost_cell_trans_fn=lambda x, y, z: (x, y, z))
+    blk0.bcList['west'] = ExchangeBC_MappedCell:new{}  -- MappedCellBC(ghost_cell_trans_fn=lambda x, y, z: (x, y, z))
+    blk1.bcList['west'] = ExchangeBC_MappedCell:new{}  -- MappedCellBC(ghost_cell_trans_fn=lambda x, y, z: (x, y, z))
 
-   
-    -- Rotor Inlet faces: BLI_IT0.bc_list[SOUTH]; BLI_IT1.bc_list[SOUTH]; BLI_IB0.bc_list[SOUTH]; BLI_IB1.bc_list[SOUTH]; BLI_IC0.bc_list[SOUTH]; BLI_IC1.bc_list[SOUTH]; 
-    blk2.bcList[south] = ExchangeBC_MappedCell:new{}  -- MappedCellBC(ghost_cell_trans_fn=lambda x, y, z: (x, y, z))
-    blk3.bcList[south] = ExchangeBC_MappedCell:new{}  -- MappedCellBC(ghost_cell_trans_fn=lambda x, y, z: (x, y, z))
+
+    -- Rotor Inlet faces: BLI_IT0.bc_list[SOUTH]; BLI_IT1.bc_list[SOUTH]; BLI_IB0.bc_list[SOUTH]; BLI_IB1.bc_list[SOUTH]; BLI_IC0.bc_list[SOUTH]; BLI_IC1.bc_list[SOUTH];
+    blk2.bcList['south'] = ExchangeBC_MappedCell:new{}  -- MappedCellBC(ghost_cell_trans_fn=lambda x, y, z: (x, y, z))
+    blk3.bcList['south'] = ExchangeBC_MappedCell:new{}  -- MappedCellBC(ghost_cell_trans_fn=lambda x, y, z: (x, y, z))
 end
 
 
@@ -265,13 +265,9 @@ if true then  -- attempts at sliding interface
     -- Do preprocessing of B/C data
     dofile('udf-process_e4.lua')
 
-    blk0.bcList[west] = UserDefinedFluxBC:new{fileName='udf-stator_out_e4.lua'}
-    blk1.bcList[west] = UserDefinedFluxBC:new{fileName='udf-stator_out_e4.lua'}
+    blk0.bcList['west'] = UserDefinedFluxBC:new{fileName='udf-stator_out_e4.lua'}
+    blk1.bcList['west'] = UserDefinedFluxBC:new{fileName='udf-stator_out_e4.lua'}
 
-    blk2.bcList[south] = UserDefinedFluxBC:new{fileName='udf-rotor_in_e4.lua'}
-    blk3.bcList[south] = UserDefinedFluxBC:new{fileName='udf-rotor_in_e4.lua'}
+    blk2.bcList['south'] = UserDefinedFluxBC:new{fileName='udf-rotor_in_e4.lua'}
+    blk3.bcList['south'] = UserDefinedFluxBC:new{fileName='udf-rotor_in_e4.lua'}
 end
-
-
-
-

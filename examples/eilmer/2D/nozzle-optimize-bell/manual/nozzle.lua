@@ -2,7 +2,7 @@
 -- Optimize an axisymmetric bell nozzle for ENGG7601 assignment.
 -- Peter J. 2017-09-06 adpated from the Back nozzle simulation,
 -- hence the dimensions in inches.
---          
+--
 config.title = "Flow through a rocket nozzle."
 print(config.title)
 nsp, nmodes = setGasModel('ideal-air-gas-model.lua')
@@ -118,12 +118,12 @@ setHistoryPoint{ib=1, i=nx1-1, j=1}
 -- First stitch together adjoining blocks,
 identifyBlockConnections()
 -- then, directly specify the stagnation conditions for the subsonic inflow.
-subsonic_region.bcList[west] = InFlowBC_FromStagnation:new{stagnationState=stagnation_gas}
+subsonic_region.bcList['west'] = InFlowBC_FromStagnation:new{stagnationState=stagnation_gas}
 -- to get loads on thrust surface, add that boundary condition to the group
-supersonic_region.bcList[north] = WallBC_WithSlip:new{group="loads"}
-downstream_region.bcList[east] = OutFlowBC_Simple:new{}
-external_region.bcList[east] = OutFlowBC_Simple:new{}
-external_region.bcList[west] = InFlowBC_Supersonic:new{flowState=external_stream}
+supersonic_region.bcList['north'] = WallBC_WithSlip:new{group="loads"}
+downstream_region.bcList['east'] = OutFlowBC_Simple:new{}
+external_region.bcList['east'] = OutFlowBC_Simple:new{}
+external_region.bcList['west'] = InFlowBC_Supersonic:new{flowState=external_stream}
 
 -- Do a little more setting of global data.
 config.axisymmetric = 1

@@ -17,14 +17,14 @@ config.dt_plot = 10.0e-6
 config.dt_history = 1.0e-6
 --
 nsp, nmodes, gm = setGasModel('ideal-air-gas-model.lua')
--- We will set up three FluidBlocks to represent 
+-- We will set up three FluidBlocks to represent
 -- [0] the driver tube
 -- [1] shock tube
 -- [2] acceleration tube
 fill_gases = {[0]=FlowState:new{p=1.0e6, T=3000.0},
 	      FlowState:new{p=5.0e3, T=300.0},
 	      FlowState:new{p=100.0, T=300.0}}
-Ls = {[0]=0.0, 0.5, 1.0, 2.5} -- break-points for tubes 
+Ls = {[0]=0.0, 0.5, 1.0, 2.5} -- break-points for tubes
 R = 0.010
 --
 -- Set up three quads in the (x,y)-plane by first defining
@@ -58,14 +58,14 @@ downstream_blk = fba[2].blockArray[1][1]
 print("For diaphragm, block ids are:")
 print("   upstream:", upstream_blk.id)
 print("   downstream:", downstream_blk.id)
-upstream_blk.bcList[east] = ExchangeBC_FullFacePlusUDF:new{
-   otherBlock=downstream_blk.id, otherFace=west, fileName="diaphragm.lua"
+upstream_blk.bcList['east'] = ExchangeBC_FullFacePlusUDF:new{
+   otherBlock=downstream_blk.id, otherFace='west', fileName="diaphragm.lua"
 }
-downstream_blk.bcList[west] = ExchangeBC_FullFacePlusUDF:new{
-   otherBlock=upstream_blk.id, otherFace=east, fileName="diaphragm.lua"
+downstream_blk.bcList['west'] = ExchangeBC_FullFacePlusUDF:new{
+   otherBlock=upstream_blk.id, otherFace='east', fileName="diaphragm.lua"
 }
 -- Final block in the acceleration tube is open at the downstream end.
-fba[2].blockArray[3][1].bcList[east] = OutFlowBC_SimpleExtrapolate:new{}
+fba[2].blockArray[3][1].bcList['east'] = OutFlowBC_SimpleExtrapolate:new{}
 --
 -- A place to record the state of the diaphragm.
 -- 0 == diaphragm closed

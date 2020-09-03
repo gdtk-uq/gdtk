@@ -184,10 +184,10 @@ end
 -- Boundary conditions
 identifyBlockConnections()
 for ib = 0, 2 do
-   blk[ib].bcList[west] = InFlowBC_Supersonic:new{flowState=inflow}
+   blk[ib].bcList['west'] = InFlowBC_Supersonic:new{flowState=inflow}
 end
-blk[14].bcList[east] = OutFlowBC_Simple:new{}
-blk[15].bcList[east] = OutFlowBC_Simple:new{}
+blk[14].bcList['east'] = OutFlowBC_Simple:new{}
+blk[15].bcList['east'] = OutFlowBC_Simple:new{}
 
 -- Do a little more setting of global data.
 config.axisymmetric = true

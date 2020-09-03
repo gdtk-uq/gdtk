@@ -44,45 +44,45 @@ grid = StructuredGrid:new{pvolume=TFIVolume:new{vertices={p000, p100, p110, p010
 
 bcList = {}
 if case == 1 or case == 3 then
-   bcList[north] = UserDefinedBC:new{fileName='udf-bc.lua'} --OutFlowBC_Simple:new{}
-   bcList[east] = UserDefinedBC:new{fileName='udf-bc.lua'} --OutFlowBC_Simple:new{}
-   bcList[south] = UserDefinedBC:new{fileName='udf-bc.lua'}
-   bcList[west] = UserDefinedBC:new{fileName='udf-bc.lua'}
-   bcList[top] = UserDefinedBC:new{fileName='udf-bc.lua'} --OutFlowBC_Simple:new{}
-   bcList[bottom] = UserDefinedBC:new{fileName='udf-bc.lua'}
+   bcList['north'] = UserDefinedBC:new{fileName='udf-bc.lua'} --OutFlowBC_Simple:new{}
+   bcList['east'] = UserDefinedBC:new{fileName='udf-bc.lua'} --OutFlowBC_Simple:new{}
+   bcList['south'] = UserDefinedBC:new{fileName='udf-bc.lua'}
+   bcList['west'] = UserDefinedBC:new{fileName='udf-bc.lua'}
+   bcList['top'] = UserDefinedBC:new{fileName='udf-bc.lua'} --OutFlowBC_Simple:new{}
+   bcList['bottom'] = UserDefinedBC:new{fileName='udf-bc.lua'}
 
 else
-   bcList[north] = BoundaryCondition:new{
+   bcList['north'] = BoundaryCondition:new{
       preReconAction = { UserDefinedGhostCell:new{fileName='udf-bc.lua'} },
       preSpatialDerivAction = { UserDefinedInterface:new{fileName='udf-bc.lua'},
 				UpdateThermoTransCoeffs:new()
       }
    }
-   bcList[east] = BoundaryCondition:new{
+   bcList['east'] = BoundaryCondition:new{
       preReconAction = { UserDefinedGhostCell:new{fileName='udf-bc.lua'} },
       preSpatialDerivAction = { UserDefinedInterface:new{fileName='udf-bc.lua'},
 				UpdateThermoTransCoeffs:new()
       }
    }
-   bcList[south] = BoundaryCondition:new{
+   bcList['south'] = BoundaryCondition:new{
       preReconAction = { UserDefinedGhostCell:new{fileName='udf-bc.lua'} },
       preSpatialDerivAction = { UserDefinedInterface:new{fileName='udf-bc.lua'},
 				UpdateThermoTransCoeffs:new()
       }
    }
-   bcList[west] = BoundaryCondition:new{
+   bcList['west'] = BoundaryCondition:new{
       preReconAction = { UserDefinedGhostCell:new{fileName='udf-bc.lua'} },
       preSpatialDerivAction = { UserDefinedInterface:new{fileName='udf-bc.lua'},
 				UpdateThermoTransCoeffs:new()
       }
    }
-   bcList[top] = BoundaryCondition:new{
+   bcList['top'] = BoundaryCondition:new{
       preReconAction = { UserDefinedGhostCell:new{fileName='udf-bc.lua'} },
       preSpatialDerivAction = { UserDefinedInterface:new{fileName='udf-bc.lua'},
 				UpdateThermoTransCoeffs:new()
       }
    }
-   bcList[bottom] = BoundaryCondition:new{
+   bcList['bottom'] = BoundaryCondition:new{
       preReconAction = { UserDefinedGhostCell:new{fileName='udf-bc.lua'} },
       preSpatialDerivAction = { UserDefinedInterface:new{fileName='udf-bc.lua'},
 				UpdateThermoTransCoeffs:new()
@@ -93,12 +93,12 @@ config.apply_bcs_in_parallel = false
 if blocking == 'single' then
    blk = FluidBlock:new{grid=grid, initialState=gasFillFn, bcList=bcList, label="blk"}
    SBlock2UBlock(blocks[1])
-else 
-   blks = FluidBlockArray{grid=grid, initialState=gasFillFn, bcList=bcList, 
+else
+   blks = FluidBlockArray{grid=grid, initialState=gasFillFn, bcList=bcList,
 			  nib=2, njb=2, nkb=2, label="blk"}
    for i=1,8 do
       SBlock2UBlock(blocks[i])
-   end 
+   end
 end
 
 --config.adjust_invalid_cell_data = true

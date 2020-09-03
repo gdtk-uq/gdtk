@@ -49,18 +49,18 @@ SteadyStateSolver{
 -- Flow conditions, free stream
 p_inf   = 100.0
 r_omega = 2.0*math.pi*27600.0/60.0
-T_1     = 348.0 
+T_1     = 348.0
 T_2     = 350.0
 theta_A = 0.0*math.pi/180
-theta_B = 5.0*math.pi/180 
+theta_B = 5.0*math.pi/180
 theta   = theta_B - theta_A
 
 -- Geometry
-r_1     = 0.2125 
-g_width = 0.0031 
-r_2     = r_1 + g_width 
-h_1     = 0.0 
-h_2     = 10.0*g_width 
+r_1     = 0.2125
+g_width = 0.0031
+r_2     = r_1 + g_width
+h_1     = 0.0
+h_2     = 10.0*g_width
 
 -- Grid dimensions
 nx = 30
@@ -115,13 +115,19 @@ vol = TFIVolume:new{north=surf_n, east=surf_e, south=surf_s, west=surf_w, top=su
   -- Set up grid
 grid = StructuredGrid:new{pvolume=vol, cfList=cflist, niv=nx+1, njv=ny+1, nkv=nz+1}
   -- Set up block
-bsouth = ExchangeBC_FullFace:new{otherBlock=3, otherFace=north,
-                                     orientation=0, reorient_vector_quantities=true,
-                                     Rmatrix={9.96194698091745545199e-01, 8.71557427476581658699e-02, 0.00000000000000000000e+00, -8.71557427476581658699e-02, 9.96194698091745545199e-01, 0.00000000000000000000e+00, 0.00000000000000000000e+00, 0.00000000000000000000e+00, 1.00000000000000000000e+00}}
+bsouth = ExchangeBC_FullFace:new{
+   otherBlock=3, otherFace='north', orientation=0, reorient_vector_quantities=true,
+   Rmatrix={9.96194698091745545199e-01, 8.71557427476581658699e-02, 0.00000000000000000000e+00,
+               -8.71557427476581658699e-02, 9.96194698091745545199e-01, 0.00000000000000000000e+00,
+            0.00000000000000000000e+00, 0.00000000000000000000e+00, 1.00000000000000000000e+00}
+}
 
-bnorth = ExchangeBC_FullFace:new{otherBlock=0, otherFace=south,
-                                     orientation=0, reorient_vector_quantities=true,
-                                     Rmatrix={9.96194698091745545199e-01, -8.71557427476581658699e-02, 0.00000000000000000000e+00, 8.71557427476581658699e-02, 9.96194698091745545199e-01, 0.00000000000000000000e+00, 0.00000000000000000000e+00, 0.00000000000000000000e+00, 1.00000000000000000000e+00}}
+bnorth = ExchangeBC_FullFace:new{
+   otherBlock=0, otherFace='south', orientation=0, reorient_vector_quantities=true,
+   Rmatrix={9.96194698091745545199e-01, -8.71557427476581658699e-02, 0.00000000000000000000e+00,
+            8.71557427476581658699e-02, 9.96194698091745545199e-01, 0.00000000000000000000e+00,
+            0.00000000000000000000e+00, 0.00000000000000000000e+00, 1.00000000000000000000e+00}
+}
 beast   = WallBC_NoSlip_FixedT:new{Twall=T_2}
 bwest   = WallBC_RotatingSurface_FixedT:new{Twall=T_1, r_omega={x=0.0, y=0.0, z=r_omega}, centre={x=0.0, y=0.0, z=0.0}}
 btop    = WallBC_WithSlip:new{}

@@ -61,9 +61,9 @@ blk1 = FluidBlock:new{grid=grid1, initialState=initial}
 
 identifyBlockConnections()
 
-blk0.bcList[west] = InFlowBC_Supersonic:new{flowState=inflow}
-blk1.bcList[west] = InFlowBC_Supersonic:new{flowState=inflow}
-blk1.bcList[north] = OutFlowBC_Simple:new{}
+blk0.bcList['west'] = InFlowBC_Supersonic:new{flowState=inflow}
+blk1.bcList['west'] = InFlowBC_Supersonic:new{flowState=inflow}
+blk1.bcList['north'] = OutFlowBC_Simple:new{}
 
 --Config options
 config.sticky_electrons = true -- just wanted to try it

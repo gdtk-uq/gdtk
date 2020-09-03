@@ -96,10 +96,10 @@ blk_2 = FluidBlock:new{grid = grid2, initialState = Static}
 
 --Set boundary conditions
 identifyBlockConnections()
-blk_1.bcList[east] = WallBC_WithSlip:new{}
-blk_1.bcList[west] = InFlowBC_Supersonic:new{flowState = Inflow}
-blk_2.bcList[west] = WallBC_WithSlip:new{}
-blk_2.bcList[east] = OutFlowBC_Simple:new{}
+blk_1.bcList['east'] = WallBC_WithSlip:new{}
+blk_1.bcList['west'] = InFlowBC_Supersonic:new{flowState = Inflow}
+blk_2.bcList['west'] = WallBC_WithSlip:new{}
+blk_2.bcList['east'] = OutFlowBC_Simple:new{}
 
 
 --set global time-stepping data

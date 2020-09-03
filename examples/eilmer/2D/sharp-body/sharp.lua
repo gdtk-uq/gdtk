@@ -31,12 +31,12 @@ a = Vector3:new{x=-1.0, y=0.0}; b = Vector3:new{ x=0.0, y=0.0}
 c = Vector3:new{x=10.0, y=1.0}; d = Vector3:new{x=10.0, y=7.0}
 e = Vector3:new{ x=0.0, y=7.0}; f = Vector3:new{x=-1.0, y=7.0}
 -- lower boundary including body surface
-ab = Line:new{p0=a, p1=b}; bc = LuaFnPath:new{luaFnName="xypath"} 
+ab = Line:new{p0=a, p1=b}; bc = LuaFnPath:new{luaFnName="xypath"}
 -- upper boundary
 fe = Line:new{p0=f, p1=e}; ed = Line:new{p0=e, p1=d}
 -- vertical lines
 af = Line:new{p0=a, p1=f}; be = Line:new{p0=b, p1=e}
-cd = Line:new{p0=c, p1=d} 
+cd = Line:new{p0=c, p1=d}
 -- Mesh the patches, with particular discretisation.
 ny = 60
 clustery = RobertsFunction:new{end0=true, end1=false, beta=1.3}
@@ -52,8 +52,8 @@ blk0 = FluidBlock:new{grid=grid0, initialState=inflow}
 blk1 = FluidBlock:new{grid=grid1, initialState=initial}
 -- Set boundary conditions.
 identifyBlockConnections()
-blk0.bcList[west] = InFlowBC_Supersonic:new{flowState=inflow}
-blk1.bcList[east] = OutFlowBC_Simple:new{}
+blk0.bcList['west'] = InFlowBC_Supersonic:new{flowState=inflow}
+blk1.bcList['east'] = OutFlowBC_Simple:new{}
 
 config.max_time = 15.0e-3  -- seconds
 config.max_step = 2500

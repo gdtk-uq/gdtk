@@ -59,7 +59,7 @@ patches = {}
 patches[0] = CoonsPatch:new{p00=pnts.a, p10=pnts.b0, p11=pnts.e, p01=pnts.d}
 patches[2] = CoonsPatch:new{p00=pnts.b4, p10=pnts.c, p11=pnts.h, p01=pnts.g}
 -- lower boundary of middle block is body surface
-lines.body = Bezier:new{points={pnts.b0, pnts.b1, pnts.b2, pnts.b3, pnts.b4}} 
+lines.body = Bezier:new{points={pnts.b0, pnts.b1, pnts.b2, pnts.b3, pnts.b4}}
 -- upper boundary of middle block is a low-order Bezier
 lines.upper = Bezier:new{points={pnts.e, pnts.f, pnts.g}}
 -- vertical lines to provide west and east edges
@@ -91,11 +91,11 @@ blks[2] = FluidBlock:new{grid=grids[2], initialState=initial}
 -- Set boundary conditions.
 identifyBlockConnections()
 inBC = InFlowBC_Supersonic:new{flowState=inflow}
-blks[0].bcList[west] = inBC
-blks[0].bcList[north] = inBC
-blks[1].bcList[north] = inBC
-blks[1].bcList[south] = WallBC_WithSlip:new{group="loads"}
-blks[2].bcList[east] = OutFlowBC_Simple:new{}
+blks[0].bcList['west'] = inBC
+blks[0].bcList['north'] = inBC
+blks[1].bcList['north'] = inBC
+blks[1].bcList['south'] = WallBC_WithSlip:new{group="loads"}
+blks[2].bcList['east'] = OutFlowBC_Simple:new{}
 
 -- Some more configuration.
 config.max_time = 30.0e-3  -- seconds
