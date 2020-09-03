@@ -936,16 +936,16 @@ function FBArray:new(o)
 	    local bcList = {north=WallBC_WithSlip:new(), east=WallBC_WithSlip:new(),
 			    south=WallBC_WithSlip:new(), west=WallBC_WithSlip:new()}
 	    if ib == 1 then
-	       bcList[west] = o.bcList[west]
+	       bcList['west'] = o.bcList['west']
 	    end
 	    if ib == o.nib then
-	       bcList[east] = o.bcList[east]
+	       bcList['east'] = o.bcList['east']
 	    end
 	    if jb == 1 then
-	       bcList[south] = o.bcList[south]
+	       bcList['south'] = o.bcList['south']
 	    end
 	    if jb == o.njb then
-	       bcList[north] = o.bcList[north]
+	       bcList['north'] = o.bcList['north']
 	    end
 	    local new_block = FluidBlock:new{grid=subgrid, omegaz=o.omegaz,
                                              initialState=o.initialState,
@@ -979,22 +979,22 @@ function FBArray:new(o)
 			       south=WallBC_WithSlip:new(), west=WallBC_WithSlip:new(),
 			       top=WallBC_WithSlip:new(), bottom=WallBC_WithSlip:new()}
 	       if ib == 1 then
-		  bcList[west] = o.bcList[west]
+		  bcList['west'] = o.bcList['west']
 	       end
 	       if ib == o.nib then
-		  bcList[east] = o.bcList[east]
+		  bcList['east'] = o.bcList['east']
 	       end
 	       if jb == 1 then
-		  bcList[south] = o.bcList[south]
+		  bcList['south'] = o.bcList['south']
 	       end
 	       if jb == o.njb then
-		  bcList[north] = o.bcList[north]
+		  bcList['north'] = o.bcList['north']
 	       end
 	       if kb == 1 then
-		  bcList[bottom] = o.bcList[bottom]
+		  bcList['bottom'] = o.bcList['bottom']
 	       end
 	       if kb == o.nkb then
-		  bcList[top] = o.bcList[top]
+		  bcList['top'] = o.bcList['top']
 	       end
 	       local new_block = FluidBlock:new{grid=subgrid, omegaz=o.omegaz,
                                                 initialState=o.initialState,
@@ -1233,16 +1233,16 @@ function SolidBlockArray(t)
 	    local bcList = {north=SolidAdiabaticBC:new{}, east=SolidAdiabaticBC:new{},
 			    south=SolidAdiabaticBC:new{}, west=SolidAdiabaticBC:new{}}
 	    if ib == 1 then
-	       bcList[west] = t.bcList[west]
+	       bcList['west'] = t.bcList['west']
 	    end
 	    if ib == t.nib then
-	       bcList[east] = t.bcList[east]
+	       bcList['east'] = t.bcList['east']
 	    end
 	    if jb == 1 then
-	       bcList[south] = t.bcList[south]
+	       bcList['south'] = t.bcList['south']
 	    end
 	    if jb == t.njb then
-	       bcList[north] = t.bcList[north]
+	       bcList['north'] = t.bcList['north']
 	    end
 	    local new_block = SolidBlock:new{grid=subgrid, properties=t.properties,
                                              initTemperature=t.initTemperature,
@@ -1266,26 +1266,26 @@ function SolidBlockArray(t)
 			       south=SolidAdiabaticBC:new{}, west=SolidAdiabaticBC:new{},
 			       top=SolidAdiabaticBC:new{}, bottom=SolidAdiabaticBC:new{}}
 	       if ib == 1 then
-		  bcList[west] = t.bcList[west]
+		  bcList['west'] = t.bcList['west']
 	       end
 	       if ib == t.nib then
-		  bcList[east] = t.bcList[east]
+		  bcList['east'] = t.bcList['east']
 	       end
 	       if jb == 1 then
-		  bcList[south] = t.bcList[south]
+		  bcList['south'] = t.bcList['south']
 	       end
 	       if jb == t.njb then
-		  bcList[north] = t.bcList[north]
+		  bcList['north'] = t.bcList['north']
 	       end
 	       if kb == 1 then
-		  bcList[bottom] = t.bcList[bottom]
+		  bcList['bottom'] = t.bcList['bottom']
 	       end
 	       if kb == t.nkb then
-		  bcList[top] = t.bcList[top]
+		  bcList['top'] = t.bcList['top']
 	       end
 	       local new_block = SolidBlock:new{grid=subgrid, properties=t.properties,
-                                             initTemperature=t.initTemperature,
-                                             bcList=bcList}
+                                                initTemperature=t.initTemperature,
+                                                bcList=bcList}
 	       blockArray[ib][jb][kb] = new_block
 	       blockCollection[#blockCollection+1] = new_block
                -- Prepare k0 at end of loop, ready for next iteration

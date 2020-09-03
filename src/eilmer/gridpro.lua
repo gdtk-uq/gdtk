@@ -12,7 +12,7 @@ module(..., package.seeall)
 gproBCMap = {
   [4] = "WALL_SLIP",
   [5] = "WALL_ADIABATIC",
-  [6] = "WALL_FIXED_T", 
+  [6] = "WALL_FIXED_T",
   [7] = "INFLOW_SUPERSONIC",
   [8] = "INFLOW_SUBSONIC",
   [9] = "INFLOW_SHOCKFITTING",
@@ -82,7 +82,7 @@ function applyGridproConnectivity(fname, blks)
       end
       -- Gridpro imax ==> Eilmer EAST face
       otherBlk = tonumber(tks[9])
-      if otherBlk > 0 then 
+      if otherBlk > 0 then
 	 conns[ib]["east"] = {otherBlk, tks[10]}
       end
       -- Gridpro jmin ==> Eilmer SOUTH face
