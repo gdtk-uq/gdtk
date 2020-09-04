@@ -5,7 +5,7 @@
  * from a previously-run simulation and either write plotting files
  * or extract interesting pieces of data.
  *
- * Author: Peter J. and Rowan G. 
+ * Author: Peter J. and Rowan G.
  * First code: 2015-06-09
  */
 
@@ -202,7 +202,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
                     string errMsg = format("Tecplot binary output failed for block: %d", jb);
                     throw new FlowSolverException(errMsg);
                 }
-                writeTecplotBinaryZoneData(soln.flowBlocks[jb], soln.gridBlocks[jb], 
+                writeTecplotBinaryZoneData(soln.flowBlocks[jb], soln.gridBlocks[jb],
                                            soln.flowBlocks[jb].variableNames, connList);
             }
             if ( closeTecplotBinaryFile() != 0 ) {
@@ -216,8 +216,8 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
     if (tecplotBinaryFlag) {
         string errMsg = "This version of e4shared was NOT compiled with support for Tecplot binary files.";
         throw new FlowSolverException(errMsg);
-    }   
-    } 
+    }
+    }
     if (tecplotAsciiFlag) {
         // Use Pierpaolo's tecplot-writer module.
         ensure_directory_is_present(plotDir);
@@ -240,7 +240,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
             }
             fp.close();
         }
-    } // end 
+    } // end
     if (tecplotAsciiLegacyFlag) {
         // For structured-grid blocks, we had an old Tecplot writer from long ago.
         ensure_directory_is_present(plotDir);
@@ -630,18 +630,18 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
                                 P2 = P1-(SliceNormal[ip]*coneSliceDist);
                             }
 
-                            // calculate angle in between the slice and the velocity vector 
+                            // calculate angle in between the slice and the velocity vector
                             Vector3 SliceVec = P2-P0;
                             number beta = acos(dot(SliceVec,dStream)/(geom.abs(SliceVec)*geom.abs(dStream)));
 
                             // Check if the slice intersects the Mach cone
                             if (beta > MachAngle) {
-                                writeln("Specified slice doesn't intersect the Mach cone"); 
+                                writeln("Specified slice doesn't intersect the Mach cone");
                                 writeln("Locus Point: ", xp[ip], ", ", yp[ip], ", ", zp[ip]);
                                 writeln("Slice Normal: ", SliceNormal[ip].x, ", ",
                                         SliceNormal[ip].y, ", ", SliceNormal[ip].z);
                                 writeln("Direction: ", direct);
-                                break; 
+                                break;
                             }
 
                             // P2 is closer to P0 than P1, need to calculate the Mach cone
@@ -813,7 +813,6 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
                     auto surf_flow = new BlockFlow(soln.flowBlocks[blk_indx], surf_cells,
                                                    new_dimensions, new_nic, new_njc, new_nkc);
                     // At this stage we should have a surface flow structure, and a sufrace grid.
-                    
                 }
             }
         }
@@ -889,7 +888,7 @@ size_t[] decode_range_indices(string rangeStr, size_t first, size_t endplus1)
         if (items.length > 1 && items[1] != "$") {
             // Presume that we have a second integer.
             size_t new_endplus1 = to!size_t(items[1]);
-            if (new_endplus1 < endplus1) endplus1 = new_endplus1; 
+            if (new_endplus1 < endplus1) endplus1 = new_endplus1;
         }
     } else if (rangeStr == "$") {
         // Wit just a single "$" specified, we want only the last index.

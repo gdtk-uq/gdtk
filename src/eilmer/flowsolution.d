@@ -590,6 +590,7 @@ public:
             return;
         }
         bool add_nrf_velocities = canFind(addVarsList, "nrf"); // nonrotating-frame velocities
+        bool add_cyl_coords = canFind(addVarsList, "cyl"); // cylindrical coordinates, r and theta
         bool add_mach = canFind(addVarsList, "mach");
         bool add_pitot_p = canFind(addVarsList, "pitot");
         bool add_total_p = canFind(addVarsList, "total-p");
@@ -602,6 +603,16 @@ public:
         VibSpecificNitrogen gmodel2 = cast(VibSpecificNitrogen) gmodel;
         bool add_Tvib = gmodel2 && canFind(addVarsList, "Tvib");
         //
+        if (add_cyl_coords) {
+            variableNames ~= "r";
+            variableIndex["r"] = variableNames.length - 1;
+            variableNames ~= "theta";
+            variableIndex["theta"] = variableNames.length - 1;
+            variableNames ~= "vel.r";
+            variableIndex["vel.r"] = variableNames.length - 1;
+            variableNames ~= "vel.theta";
+            variableIndex["vel.theta"] = variableNames.length - 1;
+        }
         if (add_nrf_velocities) {
             variableNames ~= "nrfv.x";
             variableIndex["nrfv.x"] = variableNames.length - 1;
@@ -662,6 +673,9 @@ public:
         // in the same order as the list of variable names in the code above.
         //
         foreach (i; 0 .. ncells) {
+            double x = _data[i][variableIndex["pos.x"]];
+            double y = _data[i][variableIndex["pos.y"]];
+            double z = _data[i][variableIndex["pos.z"]];
             double a = _data[i][variableIndex["a"]];
             double p = _data[i][variableIndex["p"]];
             double rho = _data[i][variableIndex["rho"]];
@@ -674,11 +688,21 @@ public:
             double wz = _data[i][variableIndex["vel.z"]];
             double w = sqrt(wx*wx + wy*wy + wz*wz);
             double M = w/a;
+            if (add_cyl_coords) {
+                // Position and velocity components in cylindrical coordinates.
+                double r = hypot(x, y);
+                double theta = atan2(y, x);
+                double sn = y/r; // sin(theta)
+                double cs = x/r; // cos(theta)
+                double vel_r = cs*wx + sn*wy;
+                double vel_theta = -sn*wx + cs*wy;
+                _data[i] ~= r;
+                _data[i] ~= theta;
+                _data[i] ~= vel_r;
+                _data[i] ~= vel_theta;
+            }
             if (add_nrf_velocities) {
                 // Nonrotating-frame velocities.
-                double x = _data[i][variableIndex["pos.x"]];
-                double y = _data[i][variableIndex["pos.y"]];
-                double z = _data[i][variableIndex["pos.z"]];
                 Vector3 pos = Vector3(x, y, z);
                 Vector3 vel = Vector3(wx, wy, wz);
                 into_nonrotating_frame(vel, pos, omegaz);
