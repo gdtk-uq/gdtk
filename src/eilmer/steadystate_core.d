@@ -1365,24 +1365,24 @@ void evalMatrixBasedFluxIncrement(FVCell cell, FVInterface face, GasModel gmodel
     cell.dFdU[0,4] = to!number(0.0); 
 
     cell.dFdU[1,0] = -(U2*U2)/(U1*U1) + (gam-1.0)*(U2*U2+U3*U3+U4*U4)/(2.0*U1*U1);
-    cell.dFdU[1,1] = (2.0*U2)/U1 + (1.0-gam)*(U2/U1);
+    cell.dFdU[1,1] = (3.0-gam)*(U2/U1);
     cell.dFdU[1,2] = (1.0-gam)*(U3/U1);
     cell.dFdU[1,3] = (1.0-gam)*(U4/U1);
     cell.dFdU[1,4] = (gam-1.0);
     
-    cell.dFdU[2,0] = to!number(0.0);
+    cell.dFdU[2,0] = -(U2*U3)/(U1*U1);
     cell.dFdU[2,1] = U3/U1;
     cell.dFdU[2,2] = U2/U1;
     cell.dFdU[2,3] = to!number(0.0);
     cell.dFdU[2,4] = to!number(0.0); 
 
-    cell.dFdU[3,0] = to!number(0.0);
+    cell.dFdU[3,0] = -(U2*U4)/(U1*U1);
     cell.dFdU[3,1] = U4/U1;
     cell.dFdU[3,2] = to!number(0.0);
     cell.dFdU[3,3] = U2/U1;
     cell.dFdU[3,4] = to!number(0.0);
     
-    cell.dFdU[4,0] = -gam*(U5*U2)/(U1*U1) + (gam-1.0)*(U2*U2*U2+U2*U3*U3+U2*U4*U4)/(U1*U1);
+    cell.dFdU[4,0] = -gam*(U5*U2)/(U1*U1) + (gam-1.0)*(U2*U2*U2+U2*U3*U3+U2*U4*U4)/(U1*U1*U1);
     cell.dFdU[4,1] = gam*(U5/U1) + (1.0-gam)*(3*U2*U2+U3*U3+U4*U4)/(2*U1*U1);
     cell.dFdU[4,2] = (1.0-gam)*(U3*U2)/(U1*U1);
     cell.dFdU[4,3] = (1.0-gam)*(U4*U2)/(U1*U1);
@@ -1494,6 +1494,7 @@ void lusgs_solve(int step, double pseudoSimTime, double dt, double omega, ref do
                     number lij = spectral_radius(f, blk.myConfig.viscous, omega, gmodel);
                     
                     evalMatrixFreeFluxIncrement(ncell, f, gmodel);
+                    //evalMatrixBasedFluxIncrement(ncell, f, gmodel);
                     
                     LU_mass += (ncell.dF.mass*cell.outsign[i-1] - lij*ncell.dU[0].mass)*f.area[0];
                     LU_momentumx += (ncell.dF.momentum.x*cell.outsign[i-1] - lij*ncell.dU[0].momentum.x)*f.area[0];
