@@ -647,7 +647,8 @@ public:
         size_t nmodes = myConfig.n_modes;
 
         size_t nitems = 16;
-        nitems += 5; // for each conserved quantity in dU
+        if (myConfig.dimensions == 3) { nitems += 5; }  // for each conserved quantity in dUk (3D)
+        else { nitems += 4; }  // for each conserved quantity in dUk (2D)
         nitems += nmodes*3; // for each of T, e and k_t
         nitems += nspecies;
         version(MHD) { nitems += 5; }
@@ -750,11 +751,9 @@ public:
                     buf[ii++] = fs.mu_t.re; version(complex_numbers) { buf[ii++] = fs.mu_t.im; }
                     buf[ii++] = fs.k_t.re; version(complex_numbers) { buf[ii++] = fs.k_t.im; }
                     buf[ii++] = to!double(fs.S);
-                    buf[ii++] = c.dU[0].mass.re; version(complex_numbers) { buf[ii++] = c.dU[0].mass.im; }
-                    buf[ii++] = c.dU[0].momentum.x.re; version(complex_numbers) { buf[ii++] = c.dU[0].momentum.x.im; }
-                    buf[ii++] = c.dU[0].momentum.y.re; version(complex_numbers) { buf[ii++] = c.dU[0].momentum.y.im; }
-                    buf[ii++] = c.dU[0].momentum.z.re; version(complex_numbers) { buf[ii++] = c.dU[0].momentum.z.im; }
-                    buf[ii++] = c.dU[0].total_energy.re; version(complex_numbers) { buf[ii++] = c.dU[0].total_energy.im; }
+                    foreach(j; 0..c.dUk.length) {
+                        buf[ii++] = c.dUk[j].re; version(complex_numbers) { buf[ii++] = c.dUk[j].im; }
+                    }
                 }
                 version(mpi_timeouts) {
                     MPI_Request send_request;
@@ -832,11 +831,9 @@ public:
                     fs.mu_t.re = buf[ii++]; version(complex_numbers) { fs.mu_t.im = buf[ii++]; }
                     fs.k_t.re = buf[ii++]; version(complex_numbers) { fs.k_t.im = buf[ii++]; }
                     fs.S = to!int(buf[ii++]);
-                    c.dU[0].mass.re = buf[ii++]; version(complex_numbers) { c.dU[0].mass.im = buf[ii++]; }
-                    c.dU[0].momentum.refx.re = buf[ii++]; version(complex_numbers) { c.dU[0].momentum.refx.im = buf[ii++]; }
-                    c.dU[0].momentum.refy.re = buf[ii++]; version(complex_numbers) { c.dU[0].momentum.refy.im = buf[ii++]; }
-                    c.dU[0].momentum.refz.re = buf[ii++]; version(complex_numbers) { c.dU[0].momentum.refz.im = buf[ii++]; }
-                    c.dU[0].total_energy.re = buf[ii++]; version(complex_numbers) { c.dU[0].total_energy.im = buf[ii++]; }
+                    foreach(j; 0..c.dUk.length) {
+                        c.dUk[j].re = buf[ii++]; version(complex_numbers) { c.dUk[j].im = buf[ii++]; }
+                    }
                 }
             }
         } else { // not mpi_parallel
@@ -844,6 +841,8 @@ public:
             foreach (i, mygc; ghost_cells) {
                 mygc.fs.copy_values_from(mapped_cells[i].fs);
                 mygc.is_interior_to_domain = mapped_cells[i].is_interior_to_domain;
+                // this array is used for the LU-SGS implementation ... TODO: maybe this should be it's own routine
+                mygc.dUk = mapped_cells[i].dUk;
             }
         }
     } // end exchange_flowstate_phase2()

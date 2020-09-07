@@ -224,31 +224,52 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     // Set usePreconditioner to false for pre-steps AND first-order steps.
     usePreconditioner = false;
 
-    // some data structures for use with LU-SGS
+    // initiliase some data structures for use with LU-SGS ... TODO: here for now but should put this in a more appropriate spot
+    /*
     foreach (blk; parallel(localFluidBlocks,1)) {
         foreach (bc; blk.bc) {
             foreach(c; bc.ghostcells) {
-                c.dFdU = new Matrix!number(5,5); // number of conserved variables
-                c.dFdU_tmp = new Matrix!number(5,5);
+                c.dFdU = new Matrix!number(nConserved,nConserved); // number of conserved variables
+                c.mat_tmp = new Matrix!number(nConserved,nConserved);
+                c.dF.length = nConserved;
+                c.dUk.length = nConserved;
+                c.dUk[] = to!number(0.0);
+                c.LU.length = nConserved;
             }
         }
         foreach(c; blk.cells) {
-            c.dFdU = new Matrix!number(5,5); // number of conserved variables
-            c.dFdU_tmp = new Matrix!number(5,5);
+            c.dFdU = new Matrix!number(nConserved,nConserved); // number of conserved variables
+            c.scalar_diag_inv.length = nConserved;
+            c.dFvec.length = nConserved;
+            c.block_diag = new Matrix!number(nConserved,nConserved); // number of conserved variables
+            c.block_diag_inv = new Matrix!number(nConserved,nConserved); // number of conserved variables
+            c.mat_tmp = new Matrix!number(nConserved,nConserved);
+            c.dF.length = nConserved;
+            c.dUk.length = nConserved;
+            c.dUk[] = to!number(0.0);
+            c.LU.length = nConserved;
         }
         foreach(f; blk.faces) {
-            f.T = new Matrix!number(5,5); // number of conserved variables
-            f.Tinv = new Matrix!number(5,5);
+            f.T = new Matrix!number(nConserved,nConserved); // number of conserved variables
+            f.Tinv = new Matrix!number(nConserved,nConserved);
 
-            f.T[0,0] = to!number(1.0); f.T[0,1] = to!number(0.0); f.T[0,2] = to!number(0.0); f.T[0,3] = to!number(0.0); f.T[0,4] = to!number(0.0);
-            f.T[1,0] = to!number(0.0); f.T[1,1] = f.n.x; f.T[1,2] = f.n.y; f.T[1,3] = f.n.z; f.T[1,4] = to!number(0.0);
-            f.T[2,0] = to!number(0.0); f.T[2,1] = f.t1.x; f.T[2,2] = f.t1.y; f.T[2,3] = f.t1.z; f.T[2,4] = to!number(0.0);
-            f.T[3,0] = to!number(0.0); f.T[3,1] = f.t2.x; f.T[3,2] = f.t2.y; f.T[3,3] = f.t2.z; f.T[3,4] = to!number(0.0);
-            f.T[4,0] = to!number(0.0); f.T[4,1] = to!number(0.0); f.T[4,2] = to!number(0.0); f.T[4,3] = to!number(0.0); f.T[4,4] = to!number(1.0);
-            
+            f.T.zeros;
+            if (blk.myConfig.dimensions == 3) {
+                f.T[0,0] = to!number(1.0);
+                f.T[1,1] = f.n.x; f.T[1,2] = f.n.y; f.T[1,3] = f.n.z;
+                f.T[2,1] = f.t1.x; f.T[2,2] = f.t1.y; f.T[2,3] = f.t1.z;
+                f.T[3,1] = f.t2.x; f.T[3,2] = f.t2.y; f.T[3,3] = f.t2.z;
+                f.T[4,4] = to!number(1.0);
+            } else {
+                f.T[0,0] = to!number(1.0);
+                f.T[1,1] = f.n.x; f.T[1,2] = f.n.y;
+                f.T[2,1] = f.t1.x; f.T[2,2] = f.t1.y;
+                f.T[3,3] = to!number(1.0);
+            }
             f.Tinv = inverse(f.T);
         }
     }
+    */
     
     // We only do a pre-step phase if we are starting from scratch.
     if ( snapshotStart == 0 ) {
@@ -1265,8 +1286,7 @@ foreach (blk; localFluidBlocks) `~norm2~` += blk.normAcc;
 
 }
 
-
-void evalMatrixFreeFluxIncrement(FVCell cell, FVInterface face, GasModel gmodel)
+void evalMatrixFreeFluxIncrement(FVCell cell, FVInterface face, GasModel gmodel, int dimensions)
 {
     // Matrix-Free Flux vector increment
     //
@@ -1281,17 +1301,26 @@ void evalMatrixFreeFluxIncrement(FVCell cell, FVInterface face, GasModel gmodel)
     // Journal of computational physics
     // 
 
+    // Make a stack-local copy of conserved quantities info
+    size_t nConserved = nConservedQuantities;
+    size_t MASS = massIdx;
+    size_t X_MOM = xMomIdx;
+    size_t Y_MOM = yMomIdx;
+    size_t Z_MOM = zMomIdx;
+    size_t TOT_ENERGY = totEnergyIdx;
+    size_t TKE = tkeIdx;
+
     // make sure cells (particularly ghost cells) have conserved quantities filled
     cell.encode_conserved(0, 0, 0.0);
 
     // peturb conserved quantities by current approximation of dU
     cell.U[1].copy_values_from(cell.U[0]);
-    cell.U[1].mass += cell.dU[0].mass;
-    cell.U[1].momentum.refx += cell.dU[0].momentum.x;
-    cell.U[1].momentum.refy += cell.dU[0].momentum.y;
+    cell.U[1].mass += cell.dUk[MASS];
+    cell.U[1].momentum.refx += cell.dUk[X_MOM];
+    cell.U[1].momentum.refy += cell.dUk[Y_MOM];
     if (GlobalConfig.dimensions == 3 )
-        cell.U[1].momentum.refz += cell.dU[0].momentum.z;
-    cell.U[1].total_energy += cell.dU[0].total_energy;
+        cell.U[1].momentum.refz += cell.dUk[Z_MOM];
+    cell.U[1].total_energy += cell.dUk[TOT_ENERGY];
 
     // update primitive variables
     cell.decode_conserved(0, 1, 0.0);          
@@ -1304,11 +1333,12 @@ void evalMatrixFreeFluxIncrement(FVCell cell, FVInterface face, GasModel gmodel)
     number p = cell.fs.gas.p;
     number e = gmodel.internal_energy(cell.fs.gas);
 
-    cell.dF.mass = rho*velx;
-    cell.dF.momentum.refx = p + rho*velx*velx;
-    cell.dF.momentum.refy = rho*velx*vely;
-    cell.dF.momentum.refz = rho*velx*velz;
-    cell.dF.total_energy = (rho*e + rho*(velx^^2 + vely^^2 + velz^^2)/2.0 + p)*velx;
+    cell.dF[MASS]= rho*velx;
+    cell.dF[X_MOM] = p + rho*velx*velx;
+    cell.dF[Y_MOM] = rho*velx*vely;
+    if (dimensions == 3)
+        cell.dF[Z_MOM] = rho*velx*velz;
+    cell.dF[TOT_ENERGY] = (rho*e + rho*(velx^^2 + vely^^2 + velz^^2)/2.0 + p)*velx;
 
     // reset primitive variables to unperturbed state
     cell.decode_conserved(0, 0, 0.0);          
@@ -1322,24 +1352,47 @@ void evalMatrixFreeFluxIncrement(FVCell cell, FVInterface face, GasModel gmodel)
     e = gmodel.internal_energy(cell.fs.gas);
 
     // flux vector increment
-    cell.dF.mass -= rho*velx;
-    cell.dF.momentum.refx -= p + rho*velx*velx;
-    cell.dF.momentum.refy -= rho*velx*vely;
-    cell.dF.momentum.refz -= rho*velx*velz;
-    cell.dF.momentum.transform_to_global_frame(face.n, face.t1, face.t2);
-    cell.dF.total_energy -= (rho*e + rho*(velx^^2 + vely^^2 + velz^^2)/2.0 + p)*velx;
+    cell.dF[MASS] -= rho*velx;
+    cell.dF[X_MOM] -= p + rho*velx*velx;
+    cell.dF[Y_MOM] -= rho*velx*vely;
+    if (dimensions == 3)
+        cell.dF[Z_MOM] -= rho*velx*velz;
+
+    //cell.dF.momentum.transform_to_global_frame(face.n, face.t1, face.t2);
+
+    number global_mom_x = cell.dF[X_MOM]*face.n.x + cell.dF[Y_MOM]*face.t1.x; // global-x
+    number global_mom_y = cell.dF[X_MOM]*face.n.y + cell.dF[Y_MOM]*face.t1.y; // global-y
+    number global_mom_z;
+    if (dimensions == 3) {
+        global_mom_x += cell.dF[Z_MOM]*face.t2.x; // global-x
+        global_mom_y += cell.dF[Z_MOM]*face.t2.y; // global-y
+        global_mom_z = cell.dF[X_MOM]*face.n.z + cell.dF[Y_MOM]*face.t1.z + cell.dF[Z_MOM]*face.t2.z; // global-z
+    }
+    cell.dF[X_MOM] = global_mom_x;
+    cell.dF[Y_MOM] = global_mom_y;
+    if (dimensions == 3)
+        cell.dF[Z_MOM] = global_mom_z;
+
+    
+    cell.dF[TOT_ENERGY] -= (rho*e + rho*(velx^^2 + vely^^2 + velz^^2)/2.0 + p)*velx;
 }
 
-
-void evalMatrixBasedFluxIncrement(FVCell cell, FVInterface face, GasModel gmodel)
+void roeFluxJacobian(FVCell cell, FVInterface face, GasModel gmodel, int dimensions)
 {
-    // Matrix-Based Flux vector increment
-    //
     // Hand differentiation of Roe's split flux scheme for LHS Jacobian as per
     // Luo, Baum, and Lohner (1998)
     // A Fast, Matrix-free Implicit Method for Compressible Flows on Unstructured Grids,
     // Journal of computational physics
     // 
+
+    // Make a stack-local copy of conserved quantities info
+    size_t nConserved = nConservedQuantities;
+    size_t MASS = massIdx;
+    size_t X_MOM = xMomIdx;
+    size_t Y_MOM = yMomIdx;
+    size_t Z_MOM = zMomIdx;
+    size_t TOT_ENERGY = totEnergyIdx;
+    size_t TKE = tkeIdx;
 
     // primitive variables
     number gam = gmodel.gamma(cell.fs.gas);
@@ -1358,70 +1411,37 @@ void evalMatrixBasedFluxIncrement(FVCell cell, FVInterface face, GasModel gmodel
     number U5 = rho*e + rho*(u^^2 + v^^2 + w^^2)/2.0;
 
     // Roe's split flux Jacobian
-    cell.dFdU[0,0] = to!number(0.0);
-    cell.dFdU[0,1] = to!number(1.0);
-    cell.dFdU[0,2] = to!number(0.0);
-    cell.dFdU[0,3] = to!number(0.0);
-    cell.dFdU[0,4] = to!number(0.0); 
-
-    cell.dFdU[1,0] = -(U2*U2)/(U1*U1) + (gam-1.0)*(U2*U2+U3*U3+U4*U4)/(2.0*U1*U1);
-    cell.dFdU[1,1] = (3.0-gam)*(U2/U1);
-    cell.dFdU[1,2] = (1.0-gam)*(U3/U1);
-    cell.dFdU[1,3] = (1.0-gam)*(U4/U1);
-    cell.dFdU[1,4] = (gam-1.0);
+    cell.dFdU.zeros;
+    cell.dFdU[MASS,X_MOM] = to!number(1.0);
     
-    cell.dFdU[2,0] = -(U2*U3)/(U1*U1);
-    cell.dFdU[2,1] = U3/U1;
-    cell.dFdU[2,2] = U2/U1;
-    cell.dFdU[2,3] = to!number(0.0);
-    cell.dFdU[2,4] = to!number(0.0); 
-
-    cell.dFdU[3,0] = -(U2*U4)/(U1*U1);
-    cell.dFdU[3,1] = U4/U1;
-    cell.dFdU[3,2] = to!number(0.0);
-    cell.dFdU[3,3] = U2/U1;
-    cell.dFdU[3,4] = to!number(0.0);
+    cell.dFdU[X_MOM,MASS] = -(U2*U2)/(U1*U1) + (gam-1.0)*(U2*U2+U3*U3+U4*U4)/(2.0*U1*U1);
+    cell.dFdU[X_MOM,X_MOM] = (3.0-gam)*(U2/U1);
+    cell.dFdU[X_MOM,Y_MOM] = (1.0-gam)*(U3/U1);
+    if (dimensions == 3) { cell.dFdU[X_MOM,Z_MOM] = (1.0-gam)*(U4/U1); }
+    cell.dFdU[X_MOM,TOT_ENERGY] = (gam-1.0);
     
-    cell.dFdU[4,0] = -gam*(U5*U2)/(U1*U1) + (gam-1.0)*(U2*U2*U2+U2*U3*U3+U2*U4*U4)/(U1*U1*U1);
-    cell.dFdU[4,1] = gam*(U5/U1) + (1.0-gam)*(3*U2*U2+U3*U3+U4*U4)/(2*U1*U1);
-    cell.dFdU[4,2] = (1.0-gam)*(U3*U2)/(U1*U1);
-    cell.dFdU[4,3] = (1.0-gam)*(U4*U2)/(U1*U1);
-    cell.dFdU[4,4] = gam*(U2/U1); 
+    cell.dFdU[Y_MOM,MASS] = -(U2*U3)/(U1*U1);
+    cell.dFdU[Y_MOM,X_MOM] = U3/U1;
+    cell.dFdU[Y_MOM,Y_MOM] = U2/U1;
 
+    if (dimensions == 3) {
+        cell.dFdU[Z_MOM,MASS] = -(U2*U4)/(U1*U1);
+        cell.dFdU[Z_MOM,X_MOM] = U4/U1;
+        cell.dFdU[Z_MOM,Y_MOM] = to!number(0.0);
+        cell.dFdU[Z_MOM,Z_MOM] = U2/U1;
+        cell.dFdU[Z_MOM,TOT_ENERGY] = to!number(0.0);
+    }
+    
+    cell.dFdU[TOT_ENERGY,MASS] = -gam*(U5*U2)/(U1*U1) + (gam-1.0)*(U2*U2*U2+U2*U3*U3+U2*U4*U4)/(U1*U1*U1);
+    cell.dFdU[TOT_ENERGY,X_MOM] = gam*(U5/U1) + (1.0-gam)*(3*U2*U2+U3*U3+U4*U4)/(2*U1*U1);
+    cell.dFdU[TOT_ENERGY,Y_MOM] = (1.0-gam)*(U3*U2)/(U1*U1);
+    if (dimensions == 3) { cell.dFdU[TOT_ENERGY,Z_MOM] = (1.0-gam)*(U4*U2)/(U1*U1); }
+    cell.dFdU[TOT_ENERGY,TOT_ENERGY] = gam*(U2/U1); 
+    
     // rotate matrix back to global frame
-    dot(face.Tinv, cell.dFdU, cell.dFdU_tmp);
-    dot(cell.dFdU_tmp, face.T, cell.dFdU);
+    dot(face.Tinv, cell.dFdU, cell.mat_tmp);
+    dot(cell.mat_tmp, face.T, cell.dFdU);
 
-    // flux vector increment (i.e. dFdU * dU)
-    cell.dF.mass = cell.dFdU[0,0]*cell.dU[0].mass
-        + cell.dFdU[0,1]*cell.dU[0].momentum.x
-        + cell.dFdU[0,2]*cell.dU[0].momentum.y
-        + cell.dFdU[0,3]*cell.dU[0].momentum.z
-        + cell.dFdU[0,4]*cell.dU[0].total_energy;
-    
-    cell.dF.momentum.refx = cell.dFdU[1,0]*cell.dU[0].mass
-        + cell.dFdU[1,1]*cell.dU[0].momentum.x
-        + cell.dFdU[1,2]*cell.dU[0].momentum.y
-        + cell.dFdU[1,3]*cell.dU[0].momentum.z
-        + cell.dFdU[1,4]*cell.dU[0].total_energy;
-    
-    cell.dF.momentum.refy = cell.dFdU[2,0]*cell.dU[0].mass
-        + cell.dFdU[2,1]*cell.dU[0].momentum.x
-        + cell.dFdU[2,2]*cell.dU[0].momentum.y
-        + cell.dFdU[2,3]*cell.dU[0].momentum.z
-        + cell.dFdU[2,4]*cell.dU[0].total_energy;
-
-    cell.dF.momentum.refz = cell.dFdU[3,0]*cell.dU[0].mass
-        + cell.dFdU[3,1]*cell.dU[0].momentum.x
-        + cell.dFdU[3,2]*cell.dU[0].momentum.y
-        + cell.dFdU[3,3]*cell.dU[0].momentum.z
-        + cell.dFdU[3,4]*cell.dU[0].total_energy;
-    
-    cell.dF.total_energy = cell.dFdU[4,0]*cell.dU[0].mass
-        + cell.dFdU[4,1]*cell.dU[0].momentum.x
-        + cell.dFdU[4,2]*cell.dU[0].momentum.y
-        + cell.dFdU[4,3]*cell.dU[0].momentum.z
-        + cell.dFdU[4,4]*cell.dU[0].total_energy;
 }
 
 number spectral_radius(FVInterface face, bool viscous, double omega, GasModel gmodel) {
@@ -1449,78 +1469,7 @@ void lusgs_solve(int step, double pseudoSimTime, double dt, double omega, ref do
     // Implementation of Unstructured Grid GMRES + LU-SGS Method on Shared-Memory, Cache-Based Parallel Computer,
     // AIAA conference paper
     //
-    
-    // 1. Evaluate RHS residual (R)
-    evalRHS(pseudoSimTime, 0);
-    
-    // 2. Compute scalar diagonal (D) and dQ^0 = D**(-1)*R
-    foreach (blk; parallel(localFluidBlocks,1)) {
-        auto gmodel = blk.myConfig.gmodel;
-        foreach (cell; blk.cells) {
-            number dtInv;
-            if (blk.myConfig.with_local_time_stepping) { dtInv = 1.0/cell.dt_local; }
-            else { dtInv = 1.0/dt; }
-            number tmp = 0.0;
-            
-            foreach (f; cell.iface) {
-                tmp += f.area[0]*spectral_radius(f, blk.myConfig.viscous, omega, gmodel);
-            }
-            // diagonal scalar
-            cell.D = dtInv + 0.5*tmp/cell.volume[0];
 
-            cell.dU[0].mass = (1.0/cell.D)*cell.dUdt[0].mass;
-            cell.dU[0].momentum.refx = (1.0/cell.D)*cell.dUdt[0].momentum.x;
-            cell.dU[0].momentum.refy = (1.0/cell.D)*cell.dUdt[0].momentum.y;
-            if ( blk.myConfig.dimensions == 3 )
-                cell.dU[0].momentum.refz = (1.0/cell.D)*cell.dUdt[0].momentum.z;
-            cell.dU[0].total_energy = (1.0/cell.D)*cell.dUdt[0].total_energy;
-        }
-    }
-    
-    // 3. perform kmax subiterations    
-    foreach (k; 0 .. kmax) {
-        // exchange dU values
-        exchange_ghost_cell_boundary_data(pseudoSimTime, 0, 0);
-        foreach (blk; parallel(localFluidBlocks,1)) {
-            auto gmodel = blk.myConfig.gmodel;
-            foreach (cell; blk.cells) {
-                number LU_mass = 0.0;
-                number LU_momentumx = 0.0; number LU_momentumy = 0.0; number LU_momentumz = 0.0;
-                number LU_totalenergy = 0.0;
-                // approximate off-diagonal terms (L+U)
-                foreach (i; 1..cell.cell_cloud.length) {
-                    FVCell ncell = cell.cell_cloud[i]; 
-                    FVInterface f = cell.iface[i-1];
-                    number lij = spectral_radius(f, blk.myConfig.viscous, omega, gmodel);
-                    
-                    evalMatrixFreeFluxIncrement(ncell, f, gmodel);
-                    //evalMatrixBasedFluxIncrement(ncell, f, gmodel);
-                    
-                    LU_mass += (ncell.dF.mass*cell.outsign[i-1] - lij*ncell.dU[0].mass)*f.area[0];
-                    LU_momentumx += (ncell.dF.momentum.x*cell.outsign[i-1] - lij*ncell.dU[0].momentum.x)*f.area[0];
-                    LU_momentumy += (ncell.dF.momentum.y*cell.outsign[i-1] - lij*ncell.dU[0].momentum.y)*f.area[0];
-                    if ( blk.myConfig.dimensions == 3 )
-                        LU_momentumz += (ncell.dF.momentum.z*cell.outsign[i-1] - lij*ncell.dU[0].momentum.z)*f.area[0];
-                    LU_totalenergy += (ncell.dF.total_energy*cell.outsign[i-1] - lij*ncell.dU[0].total_energy)*f.area[0];
-                }
-                // update dU
-                cell.dU[1].mass = (1.0/cell.D) * (cell.dUdt[0].mass - 0.5*LU_mass/cell.volume[0]);
-                cell.dU[1].momentum.refx = (1.0/cell.D) * (cell.dUdt[0].momentum.x - 0.5*LU_momentumx/cell.volume[0]);
-                cell.dU[1].momentum.refy = (1.0/cell.D) * (cell.dUdt[0].momentum.y - 0.5*LU_momentumy/cell.volume[0]);
-                if ( blk.myConfig.dimensions == 3 )
-                    cell.dU[1].momentum.refz = (1.0/cell.D) * (cell.dUdt[0].momentum.z - 0.5*LU_momentumz/cell.volume[0]);
-                cell.dU[1].total_energy = (1.0/cell.D) * (cell.dUdt[0].total_energy - 0.5*LU_totalenergy/cell.volume[0]);                
-            }
-        }
-        // update most recent values of dU
-        foreach (blk; parallel(localFluidBlocks,1)) {
-            foreach (cell; blk.cells) {
-                cell.dU[0].copy_values_from(cell.dU[1]);
-            }
-        }
-    }
-
-    // pack up dU vector
     // Make a stack-local copy of conserved quantities info
     size_t nConserved = nConservedQuantities;
     size_t MASS = massIdx;
@@ -1530,36 +1479,131 @@ void lusgs_solve(int step, double pseudoSimTime, double dt, double omega, ref do
     size_t TOT_ENERGY = totEnergyIdx;
     size_t TKE = tkeIdx;
 
+    // temporary switches ... TODO: make these input parameters
+    bool block_diagonal = false; 
+    bool matrix_based_flux_increment = false;
+   
+    // 1. Evaluate RHS residual (R)
+    evalRHS(pseudoSimTime, 0);
+
+    // calculate global residual
     foreach (blk; parallel(localFluidBlocks,1)) {
         int cellCount = 0;
         foreach (i, cell; blk.cells) {
-            // used later to update conserved quantities
-            blk.dU[cellCount+MASS] = cell.dU[0].mass;
-            blk.dU[cellCount+X_MOM] = cell.dU[0].momentum.x;
-            blk.dU[cellCount+Y_MOM] = cell.dU[0].momentum.y;
-            if ( blk.myConfig.dimensions == 3 )
-                blk.dU[cellCount+Z_MOM] = cell.dU[0].momentum.z;
-            blk.dU[cellCount+TOT_ENERGY] = cell.dU[0].total_energy;
-
-            // used later to compute residual
-            blk.FU[cellCount+MASS] = -cell.dUdt[0].mass;
-            blk.FU[cellCount+X_MOM] = -cell.dUdt[0].momentum.x;
-            blk.FU[cellCount+Y_MOM] = -cell.dUdt[0].momentum.y;
+            blk.FU[cellCount+MASS] = cell.dUdt[0].mass;
+            blk.FU[cellCount+X_MOM] = cell.dUdt[0].momentum.x;
+            blk.FU[cellCount+Y_MOM] = cell.dUdt[0].momentum.y;
             if ( GlobalConfig.dimensions == 3 )
-                blk.FU[cellCount+Z_MOM] = -cell.dUdt[0].momentum.z;
-            blk.FU[cellCount+TOT_ENERGY] = -cell.dUdt[0].total_energy;
-
+                blk.FU[cellCount+Z_MOM] = cell.dUdt[0].momentum.z;
+            blk.FU[cellCount+TOT_ENERGY] = cell.dUdt[0].total_energy;
             cellCount += nConserved;
         }
     }
-
-    // calculate residual
     mixin(dot_over_blocks("residual", "FU", "FU"));
     version(mpi_parallel) {
         MPI_Allreduce(MPI_IN_PLACE, &(residual), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     }
     residual = sqrt(residual);
-    
+
+    // 2. Compute LHS Jacobian diagonal (D) and evaluate dU0 = D^{-1} * R
+    foreach (blk; parallel(localFluidBlocks,1)) {
+        int cellCount = 0;
+        auto gmodel = blk.myConfig.gmodel;
+        foreach (cell; blk.cells) {
+            number dtInv;
+            if (blk.myConfig.with_local_time_stepping) { dtInv = 1.0/cell.dt_local; }
+            else { dtInv = 1.0/dt; }
+            if (block_diagonal) {
+                cell.block_diag.zeros;
+                foreach (fi, f; cell.iface) {
+                    number spectral_radius = spectral_radius(f, blk.myConfig.viscous, omega, gmodel);
+                    roeFluxJacobian(cell, f, gmodel, blk.myConfig.dimensions);
+                    foreach(i; 0..nConserved) {
+                        foreach(j; 0..nConserved) {
+                            if (i==j) cell.block_diag[i,j] += 0.5*(1.0/cell.volume[0])*(-cell.dFdU[i,j]*cell.outsign[fi] + spectral_radius)*f.area[0];
+                            else cell.block_diag[i,j] += 0.5*(1.0/cell.volume[0])*-cell.dFdU[i,j]*cell.outsign[fi]*f.area[0];
+                        }
+                    }
+                }
+                foreach(i; 0..nConserved) { cell.block_diag[i,i] += dtInv; }
+                cell.block_diag_inv = inverse(cell.block_diag);
+                // currently the imaginary part is becoming non-zero when it should be zero ... TODO: find a better fix
+                //foreach(i; 0..nConserved) {
+                //    foreach(j; 0..nConserved) {
+                //        cell.block_diag_inv[i,j] = to!number(cell.block_diag_inv[i,j].re);
+                //    }
+                //}
+                dot(cell.block_diag_inv, blk.FU[cellCount..cellCount+nConserved], blk.dU[cellCount..cellCount+nConserved]);
+            } else { // scalar diagonal
+                number spectral_radius_sum = 0.0;
+                foreach (f; cell.iface) {
+                    spectral_radius_sum += f.area[0]*spectral_radius(f, blk.myConfig.viscous, omega, gmodel);
+                }
+                cell.scalar_diag_inv[] = 1.0/(dtInv + 0.5*spectral_radius_sum/cell.volume[0]);   
+                blk.dU[cellCount..cellCount+nConserved] = cell.scalar_diag_inv[]*blk.FU[cellCount..cellCount+nConserved];
+            }
+            cellCount += nConserved;
+        }
+    }
+
+    // 3. perform kmax subiterations    
+    foreach (k; 0 .. kmax) {
+        // update most recent values of dU
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            int cellCount = 0;
+            foreach (cell; blk.cells) {
+                cell.dUk[MASS] = blk.dU[cellCount+MASS];
+                cell.dUk[X_MOM] = blk.dU[cellCount+X_MOM];
+                cell.dUk[Y_MOM] = blk.dU[cellCount+Y_MOM];
+                if ( blk.myConfig.dimensions == 3 )
+                    cell.dUk[Z_MOM] = blk.dU[cellCount+Z_MOM];
+                cell.dUk[TOT_ENERGY] = blk.dU[cellCount+TOT_ENERGY];
+                cellCount += nConserved;
+            }
+        }
+        // exchange dU values
+        exchange_ghost_cell_boundary_data(pseudoSimTime, 0, 0);
+        // perform subiteraion
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            int cellCount = 0;
+            auto gmodel = blk.myConfig.gmodel;
+
+            foreach (cell; blk.cells) {
+                cell.LU[] = to!number(0.0);
+                // approximate off-diagonal terms (L+U)
+                foreach (i; 1..cell.cell_cloud.length) {
+                    FVCell ncell = cell.cell_cloud[i]; 
+                    FVInterface f = cell.iface[i-1];
+                    number lij = spectral_radius(f, blk.myConfig.viscous, omega, gmodel);
+                    if (matrix_based_flux_increment) {
+                        roeFluxJacobian(ncell, f, gmodel, blk.myConfig.dimensions);
+                        dot(ncell.dFdU, ncell.dUk[0..nConserved], ncell.dF[0..nConserved]);
+                    } else { // matrix free flux increment
+                        evalMatrixFreeFluxIncrement(ncell, f, gmodel, blk.myConfig.dimensions);
+                    }
+                    cell.LU[MASS] += (ncell.dF[MASS]*cell.outsign[i-1] - lij*ncell.dUk[MASS])*f.area[0];
+                    cell.LU[X_MOM] += (ncell.dF[X_MOM]*cell.outsign[i-1] - lij*ncell.dUk[X_MOM])*f.area[0];
+                    cell.LU[Y_MOM] += (ncell.dF[Y_MOM]*cell.outsign[i-1] - lij*ncell.dUk[Y_MOM])*f.area[0];
+                    if ( blk.myConfig.dimensions == 3 )
+                        cell.LU[Z_MOM] += (ncell.dF[Z_MOM]*cell.outsign[i-1] - lij*ncell.dF[Z_MOM])*f.area[0];
+                    cell.LU[TOT_ENERGY] += (ncell.dF[TOT_ENERGY]*cell.outsign[i-1] - lij*ncell.dUk[TOT_ENERGY])*f.area[0];
+                }
+                // update dU^{k+1} = D^{-1} * (R - 0.5*LU)
+                cell.LU[] *= 0.5/cell.volume[0];
+                if (block_diagonal) {
+                    number[] vec_tmp;
+                    vec_tmp.length = nConserved;
+                    blk.dU[cellCount..cellCount+nConserved] = blk.FU[cellCount..cellCount+nConserved] - cell.LU[0..nConserved];
+                    dot(cell.block_diag_inv, blk.dU[cellCount..cellCount+nConserved], vec_tmp);
+                    blk.dU[cellCount..cellCount+nConserved] = vec_tmp[];
+                } else { // scalar diagonal
+                    blk.dU[cellCount..cellCount+nConserved] = blk.FU[cellCount..cellCount+nConserved] - cell.LU[0..nConserved];
+                    blk.dU[cellCount..cellCount+nConserved] *= cell.scalar_diag_inv[];
+                }
+                cellCount += nConserved;
+            }
+        }
+    }
 } // end lusgs_solve()
 
 void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, double sigma, bool usePreconditioner,
