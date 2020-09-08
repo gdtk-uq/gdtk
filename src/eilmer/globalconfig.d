@@ -108,15 +108,62 @@ string u_modesName(int i) { return "u_modes[" ~ to!string(i) ~ "]"; }
 string T_modesName(int i) { return "T_modes[" ~ to!string(i) ~ "]"; }
 
 //--------------------------------------------------------------------------------
-// Indices into arrays for conserved quantities
-static size_t nConservedQuantities;
-static size_t massIdx;
-static size_t xMomIdx;
-static size_t yMomIdx;
-static size_t zMomIdx;
-static size_t totEnergyIdx;
-static size_t tkeIdx;
 
+class ConservedQuantitiesIndices {
+
+static bool isInitialised = false; 
+    
+public:
+    @nogc @property size_t nConservedQuantities() const { return _nConservedQuantities; }
+    @nogc @property size_t massIdx() const { return _massIdx; }
+    @nogc @property size_t xMomIdx() const { return _xMomIdx; }
+    @nogc @property size_t yMomIdx() const { return _yMomIdx; }
+    @nogc @property size_t zMomIdx() const { return _zMomIdx; }
+    @nogc @property size_t totEnergyIdx() const { return _totEnergyIdx; }
+    @nogc @property size_t tkeIdx() const { return _tkeIdx; }
+
+    this(int dimensions, ulong nturb, uint nmodes, uint nspecies) {
+
+        if (isInitialised) {
+            string errMsg = "Only one instance of class ConservedQuantitiesIndices is allowed.\n";
+            throw new Error(errMsg);
+        }
+        
+        _massIdx = 0;
+        _xMomIdx = 1;
+        _yMomIdx = 2;
+        if ( dimensions == 2 ) {
+            _totEnergyIdx = 3;
+            _nConservedQuantities = 4;
+        }
+        else { // 3D simulations
+            _zMomIdx = 3;
+            _totEnergyIdx = 4;
+            _nConservedQuantities = 5;
+        }
+        if ( nturb>0) {
+            _tkeIdx = nConservedQuantities;
+            _nConservedQuantities += nturb;
+        }
+        // TODO: Add this line when multi-species are handled correctly
+        //       by steady-state solver.
+        //nConservedQuantities += GlobalConfig.gmodel_master.n_species;
+
+        isInitialised = true;
+    }
+
+private:
+    size_t _nConservedQuantities;
+    size_t _massIdx;
+    size_t _xMomIdx;
+    size_t _yMomIdx;
+    size_t _zMomIdx;
+    size_t _totEnergyIdx;
+    size_t _tkeIdx;
+    
+} // end ConvservedQuantitiesIndices
+
+static ConservedQuantitiesIndices cqi;
 
 enum StrangSplittingMode { full_T_full_R, half_R_full_T_half_R }
 @nogc
@@ -1885,32 +1932,6 @@ void read_control_file()
     }
 
 } // end read_control_file()
-
-// The setting up of indices should only be called after the GlobalConfig
-// object has been configured. We will use information about the simulation
-// parameters to set the appropriate indices.
-void setupIndicesForConservedQuantities()
-{
-    massIdx = 0;
-    xMomIdx = 1;
-    yMomIdx = 2;
-    if ( GlobalConfig.dimensions == 2 ) {
-        totEnergyIdx = 3;
-        nConservedQuantities = 4;
-    }
-    else { // 3D simulations
-        zMomIdx = 3;
-        totEnergyIdx = 4;
-        nConservedQuantities = 5;
-    }
-    if ( GlobalConfig.turb_model.nturb>0) {
-        tkeIdx = nConservedQuantities;
-        nConservedQuantities += GlobalConfig.turb_model.nturb;
-    }
-    // TODO: Add this line when multi-species are handled correctly
-    //       by steady-state solver.
-    //nConservedQuantities += GlobalConfig.gmodel_master.n_species;
-}
 
 //
 // Functions to check the compatibility of the GlobalConfig parameters.

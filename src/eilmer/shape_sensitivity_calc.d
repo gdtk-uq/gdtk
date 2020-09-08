@@ -269,18 +269,18 @@ void main(string[] args) {
             
 
             // Make a stack-local copy of conserved quantities info
-            myblk.nConserved = nConservedQuantities;
-            myblk.MASS = massIdx;
-            myblk.X_MOM = xMomIdx;
-            myblk.Y_MOM = yMomIdx;
-            myblk.Z_MOM = zMomIdx;
-            myblk.TOT_ENERGY = totEnergyIdx;
-            myblk.TKE = tkeIdx;
+            myblk.nConserved = cqi.nConservedQuantities;
+            myblk.MASS = cqi.massIdx;
+            myblk.X_MOM = cqi.xMomIdx;
+            myblk.Y_MOM = cqi.yMomIdx;
+            myblk.Z_MOM = cqi.zMomIdx;
+            myblk.TOT_ENERGY = cqi.totEnergyIdx;
+            myblk.TKE = cqi.tkeIdx;
         }
         
         size_t nPrimitive; 
 
-        nPrimitive = nConservedQuantities;  // density, velocity(x,y), pressure
+        nPrimitive = cqi.nConservedQuantities;  // density, velocity(x,y), pressure
         //if (GlobalConfig.dimensions == 3) nPrimitive += 1; // velocity(z)
         //if (with_k_omega) nPrimitive += 2; // tke, omega
 
@@ -674,18 +674,18 @@ void main(string[] args) {
 
         foreach (myblk; localFluidBlocks) {
             // Make a stack-local copy of conserved quantities info
-            myblk.nConserved = nConservedQuantities;
-            myblk.MASS = massIdx;
-            myblk.X_MOM = xMomIdx;
-            myblk.Y_MOM = yMomIdx;
-            myblk.Z_MOM = zMomIdx;
-            myblk.TOT_ENERGY = totEnergyIdx;
-            myblk.TKE = tkeIdx;
+            myblk.nConserved = cqi.nConservedQuantities;
+            myblk.MASS = cqi.massIdx;
+            myblk.X_MOM = cqi.xMomIdx;
+            myblk.Y_MOM = cqi.yMomIdx;
+            myblk.Z_MOM = cqi.zMomIdx;
+            myblk.TOT_ENERGY = cqi.totEnergyIdx;
+            myblk.TKE = cqi.tkeIdx;
         }
 
         // set number of primitive variables
         size_t nPrimitive; 
-        nPrimitive = nConservedQuantities; //4;  // density, velocity(x,y), pressure
+        nPrimitive = cqi.nConservedQuantities; //4;  // density, velocity(x,y), pressure
         //if (GlobalConfig.dimensions == 3) nPrimitive += 1; // velocity(z)
         //if (with_k_omega) nPrimitive += 2; // tke, omega
         
@@ -779,17 +779,17 @@ void main(string[] args) {
     if (verifyConservativeJacobianFlag) {
         foreach (myblk; localFluidBlocks) {
             // Make a stack-local copy of conserved quantities info
-            myblk.nConserved = nConservedQuantities;
-            myblk.MASS = massIdx;
-            myblk.X_MOM = xMomIdx;
-            myblk.Y_MOM = yMomIdx;
-            myblk.Z_MOM = zMomIdx;
-            myblk.TOT_ENERGY = totEnergyIdx;
-            myblk.TKE = tkeIdx;
+            myblk.nConserved = cqi.nConservedQuantities;
+            myblk.MASS = cqi.massIdx;
+            myblk.X_MOM = cqi.xMomIdx;
+            myblk.Y_MOM = cqi.yMomIdx;
+            myblk.Z_MOM = cqi.zMomIdx;
+            myblk.TOT_ENERGY = cqi.totEnergyIdx;
+            myblk.TKE = cqi.tkeIdx;
         }
         
         size_t nPrimitive; 
-        nPrimitive = nConservedQuantities; //4;  // density, velocity(x,y), pressure
+        nPrimitive = cqi.nConservedQuantities; //4;  // density, velocity(x,y), pressure
         //if (GlobalConfig.dimensions == 3) nPrimitive += 1; // velocity(z)
         //if (with_k_omega) nPrimitive += 2; // tke, omega
         
@@ -982,17 +982,17 @@ void main(string[] args) {
     if (verifySSSPreconditionerFlag) {
         foreach (myblk; localFluidBlocks) {
             // Make a stack-local copy of conserved quantities info
-            myblk.nConserved = nConservedQuantities;
-            myblk.MASS = massIdx;
-            myblk.X_MOM = xMomIdx;
-            myblk.Y_MOM = yMomIdx;
-            myblk.Z_MOM = zMomIdx;
-            myblk.TOT_ENERGY = totEnergyIdx;
-            myblk.TKE = tkeIdx;
+            myblk.nConserved = cqi.nConservedQuantities;
+            myblk.MASS = cqi.massIdx;
+            myblk.X_MOM = cqi.xMomIdx;
+            myblk.Y_MOM = cqi.yMomIdx;
+            myblk.Z_MOM = cqi.zMomIdx;
+            myblk.TOT_ENERGY = cqi.totEnergyIdx;
+            myblk.TKE = cqi.tkeIdx;
         }
         
         size_t nPrimitive; 
-        nPrimitive = nConservedQuantities; //4;  // density, velocity(x,y), pressure
+        nPrimitive = cqi.nConservedQuantities; //4;  // density, velocity(x,y), pressure
         //if (GlobalConfig.dimensions == 3) nPrimitive += 1; // velocity(z)
         //if (with_k_omega) nPrimitive += 2; // tke, omega
 

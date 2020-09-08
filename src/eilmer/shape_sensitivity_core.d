@@ -71,14 +71,14 @@ private lua_State* L; // module-local Lua interpreter
 void evalPrimitiveJacobianVecProd(FluidBlock blk, size_t nPrimitive, number[] v, ref number[] p, number EPS) {
 
     // Make a stack-local copy of conserved quantities info
-    //size_t nConserved = nConservedQuantities;
-    //size_t MASS = massIdx;
-    //size_t X_MOM = xMomIdx;
-    //size_t Y_MOM = yMomIdx;
-    //size_t Z_MOM = zMomIdx;
-    //size_t TOT_ENERGY = totEnergyIdx;
-    //size_t TKE = tkeIdx;
-    //size_t OMEGA = omegaIdx;
+    //size_t nConserved = cqi.nConservedQuantities;
+    //size_t MASS = cqi.massIdx;
+    //size_t X_MOM = cqi.xMomIdx;
+    //size_t Y_MOM = cqi.yMomIdx;
+    //size_t Z_MOM = cqi.zMomIdx;
+    //size_t TOT_ENERGY = cqi.totEnergyIdx;
+    //size_t TKE = cqi.tkeIdx;
+    //size_t OMEGA = cqi.omegaIdx;
     
     size_t nturb = blk.myConfig.turb_model.nturb;
     blk.clear_fluxes_of_conserved_quantities();
@@ -120,14 +120,14 @@ void evalPrimitiveJacobianVecProd(FluidBlock blk, size_t nPrimitive, number[] v,
 void evalConservativeJacobianVecProd(FluidBlock blk, size_t nConserved, number[] v, ref number[] p, number EPS) {
 
     // Make a stack-local copy of conserved quantities info
-    //size_t nConserved = nConservedQuantities;
-    //size_t MASS = massIdx;
-    //size_t X_MOM = xMomIdx;
-    //size_t Y_MOM = yMomIdx;
-    //size_t Z_MOM = zMomIdx;
-    //size_t TOT_ENERGY = totEnergyIdx;
-    //size_t TKE = tkeIdx;
-    //size_t OMEGA = omegaIdx;
+    //size_t nConserved = cqi.nConservedQuantities;
+    //size_t MASS = cqi.massIdx;
+    //size_t X_MOM = cqi.xMomIdx;
+    //size_t Y_MOM = cqi.yMomIdx;
+    //size_t Z_MOM = cqi.zMomIdx;
+    //size_t TOT_ENERGY = cqi.totEnergyIdx;
+    //size_t TKE = cqi.tkeIdx;
+    //size_t OMEGA = cqi.omegaIdx;
 
     // We perform a Frechet derivative to evaluate J*D^(-1)v
     size_t nturb = blk.myConfig.turb_model.nturb;
@@ -175,11 +175,11 @@ void initialisation(ref FluidBlock blk, size_t nPrimitive, size_t orderOfJacobia
     foreach( cell; blk.cells) {
 	size += cell.jacobian_cell_stencil.length;
     }
-    size *= (nConservedQuantities*nConservedQuantities);
+    size *= (cqi.nConservedQuantities*cqi.nConservedQuantities);
     blk.JlocT = new SMatrix!number();
     blk.JlocT.aa.length = size;
     blk.JlocT.ja.length = size;
-    blk.JlocT.ia.length = blk.cells.length*nConservedQuantities + 1;
+    blk.JlocT.ia.length = blk.cells.length*cqi.nConservedQuantities + 1;
     foreach (cell; blk.cells) {
         cell.jacobian_face_stencil = [];
         cell.jacobian_cell_stencil = [];
@@ -200,11 +200,11 @@ void initialisation(ref FluidBlock blk, size_t nPrimitive, size_t orderOfJacobia
     foreach( cell; blk.cells) {
         size += cell.jacobian_cell_stencil.length;
     }
-    size *= (nConservedQuantities*nConservedQuantities);
+    size *= (cqi.nConservedQuantities*cqi.nConservedQuantities);
     blk.P = new SMatrix!number();
     blk.P.aa.length = size;
     blk.P.ja.length = size;
-    blk.P.ia.length = blk.cells.length*nConservedQuantities + 1;
+    blk.P.ia.length = blk.cells.length*cqi.nConservedQuantities + 1;
     foreach (cell; blk.cells) {
         cell.jacobian_face_stencil = [];
         cell.jacobian_cell_stencil = [];
@@ -223,11 +223,11 @@ void initialisation(ref FluidBlock blk, size_t nPrimitive, size_t orderOfJacobia
         foreach( cell; blk.cells) {
             size += cell.jacobian_cell_stencil.length;
         }
-        size *= (nConservedQuantities*nConservedQuantities);
+        size *= (cqi.nConservedQuantities*cqi.nConservedQuantities);
         blk.A = new SMatrix!number();
         blk.A.aa.length = size;
         blk.A.ja.length = size;
-        blk.A.ia.length = blk.cells.length*nConservedQuantities + 1;
+        blk.A.ia.length = blk.cells.length*cqi.nConservedQuantities + 1;
         foreach (cell; blk.cells) {
             cell.jacobian_face_stencil = [];
             cell.jacobian_cell_stencil = [];
@@ -619,14 +619,14 @@ string computeGhostCellDerivatives(string varName, string posInArray, bool inclu
 
 void fill_boundary_conditions(FluidBlock blk, size_t np, size_t orderOfJacobian, number EPS, bool transformToConserved, bool preconditionMatrix) {
     // Make a stack-local copy of conserved quantities info
-    //size_t nConserved = nConservedQuantities;
-    //size_t MASS = massIdx;
-    //size_t X_MOM = xMomIdx;
-    //size_t Y_MOM = yMomIdx;
-    //size_t Z_MOM = zMomIdx;
-    //size_t TOT_ENERGY = totEnergyIdx;
-    //size_t TKE = tkeIdx;
-    //size_t OMEGA = omegaIdx;
+    //size_t nConserved = cqi.nConservedQuantities;
+    //size_t MASS = cqi.massIdx;
+    //size_t X_MOM = cqi.xMomIdx;
+    //size_t Y_MOM = cqi.yMomIdx;
+    //size_t Z_MOM = cqi.zMomIdx;
+    //size_t TOT_ENERGY = cqi.totEnergyIdx;
+    //size_t TKE = cqi.tkeIdx;
+    //size_t OMEGA = cqi.omegaIdx;
 
     // initialise some re-used data objects here
     //number[][] dRdq; number[][] dqdQ; number[][] Aext; number[] qP;
@@ -681,14 +681,14 @@ void fill_boundary_conditions(FluidBlock blk, size_t np, size_t orderOfJacobian,
 void apply_boundary_conditions(ref SMatrix!number A, FluidBlock blk, size_t np, size_t orderOfJacobian, number EPS, bool transformToConserved, bool preconditionMatrix) {
 
     // Make a stack-local copy of conserved quantities info
-    //size_t nConserved = nConservedQuantities;
-    //size_t MASS = massIdx;
-    //size_t X_MOM = xMomIdx;
-    //size_t Y_MOM = yMomIdx;
-    //size_t Z_MOM = zMomIdx;
-    //size_t TOT_ENERGY = totEnergyIdx;
-    //size_t TKE = tkeIdx;
-    //size_t OMEGA = omegaIdx;
+    //size_t nConserved = cqi.nConservedQuantities;
+    //size_t MASS = cqi.massIdx;
+    //size_t X_MOM = cqi.xMomIdx;
+    //size_t Y_MOM = cqi.yMomIdx;
+    //size_t Z_MOM = cqi.zMomIdx;
+    //size_t TOT_ENERGY = cqi.totEnergyIdx;
+    //size_t TKE = cqi.tkeIdx;
+    //size_t OMEGA = cqi.omegaIdx;
     
     // initialise some re-used data objects here
     number[][] dRdq; number[][] dqdQ; number[][] Aext; number[] qP;
@@ -2290,14 +2290,14 @@ void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref
     int gtl; int ftl; number objFcnEvalP; number objFcnEvalM; string varID; number dP; number P0;
 
     // Make a stack-local copy of conserved quantities info
-    //size_t nConserved = nConservedQuantities;
-    //size_t MASS = massIdx;
-    //size_t X_MOM = xMomIdx;
-    //size_t Y_MOM = yMomIdx;
-    //size_t Z_MOM = zMomIdx;
-    //size_t TOT_ENERGY = totEnergyIdx;
-    //size_t TKE = tkeIdx;
-    //size_t OMEGA = omegaIdx;
+    //size_t nConserved = cqi.nConservedQuantities;
+    //size_t MASS = cqi.massIdx;
+    //size_t X_MOM = cqi.xMomIdx;
+    //size_t Y_MOM = cqi.yMomIdx;
+    //size_t Z_MOM = cqi.zMomIdx;
+    //size_t TOT_ENERGY = cqi.totEnergyIdx;
+    //size_t TKE = cqi.tkeIdx;
+    //size_t OMEGA = cqi.omegaIdx;
 
     foreach (i; 0..nDesignVars) {
         foreach (myblk; localFluidBlocks) {
@@ -3808,14 +3808,14 @@ void readDesignVarsFromDakotaFile(ref Vector3[] design_variables)
 
 void write_adjoint_variables_to_file(FluidBlock blk, size_t np, string jobName) {
     // Make a stack-local copy of conserved quantities info
-    //size_t nConserved = nConservedQuantities;
-    //size_t MASS = massIdx;
-    //size_t X_MOM = xMomIdx;
-    //size_t Y_MOM = yMomIdx;
-    //size_t Z_MOM = zMomIdx;
-    //size_t TOT_ENERGY = totEnergyIdx;
-    //size_t TKE = tkeIdx;
-    //size_t OMEGA = omegaIdx;
+    //size_t nConserved = cqi.nConservedQuantities;
+    //size_t MASS = cqi.massIdx;
+    //size_t X_MOM = cqi.xMomIdx;
+    //size_t Y_MOM = cqi.yMomIdx;
+    //size_t Z_MOM = cqi.zMomIdx;
+    //size_t TOT_ENERGY = cqi.totEnergyIdx;
+    //size_t TKE = cqi.tkeIdx;
+    //size_t OMEGA = cqi.omegaIdx;
 
     size_t ncells = blk.cells.length;
     size_t nvertices = blk.vertices.length;
@@ -4257,12 +4257,12 @@ void sss_preconditioner_initialisation(ref FluidBlock blk, size_t nConservative)
 	foreach( cell; blk.cells) {
 	    size += cell.jacobian_cell_stencil.length;
 	}
-	size *= (nConservedQuantities*nConservedQuantities);
+	size *= (cqi.nConservedQuantities*cqi.nConservedQuantities);
         blk.Minv = new Matrix!number(nConservative, nConservative);
 	blk.P = new SMatrix!number();
 	blk.P.aa.length = size;
 	blk.P.ja.length = size;
-	blk.P.ia.length = blk.cells.length*nConservedQuantities + 1;
+	blk.P.ia.length = blk.cells.length*cqi.nConservedQuantities + 1;
 	blk.cellSave = new FVCell(blk.myConfig);
         foreach(i; 0..blk.MAX_PERTURBED_INTERFACES) blk.ifaceP[i] = new FVInterface(blk.myConfig, false);
         break;
@@ -4317,13 +4317,13 @@ void ilu_preconditioner(ref FluidBlock blk, size_t np, double dt, size_t orderOf
 void block_diagonal_preconditioner(FluidBlock blk, size_t np, double dt, size_t orderOfJacobian=1) {
     
     // Make a stack-local copy of conserved quantities info
-    size_t nConserved = nConservedQuantities;
-    size_t MASS = massIdx;
-    size_t X_MOM = xMomIdx;
-    size_t Y_MOM = yMomIdx;
-    size_t Z_MOM = zMomIdx;
-    size_t TOT_ENERGY = totEnergyIdx;
-    size_t TKE = tkeIdx;
+    size_t nConserved = cqi.nConservedQuantities;
+    size_t MASS = cqi.massIdx;
+    size_t X_MOM = cqi.xMomIdx;
+    size_t Y_MOM = cqi.yMomIdx;
+    size_t Z_MOM = cqi.zMomIdx;
+    size_t TOT_ENERGY = cqi.totEnergyIdx;
+    size_t TKE = cqi.tkeIdx;
     
     // temporarily switch the interpolation order of the config object to that of the Jacobian 
     bool transformToConserved = true;
