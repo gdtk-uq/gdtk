@@ -148,7 +148,9 @@ theses:
 	rsync -av $(DGD_DOC)/theses/ian-johnston-honours-thesis-1994.pdf static/pdfs/
 	rsync -av $(DGD_DOC)/theses/ian-johnston-phd-thesis-jan-1999-export.pdf static/pdfs/
 	rsync -av $(DGD_DOC)/theses/james-faddy-masters-thesis-aug-2000.pdf static/pdfs/
+	rsync -av $(DGD_DOC)/theses/jens-kunze-phd-thesis-feb-2020.pdf static/pdfs/
 	rsync -av $(DGD_DOC)/theses/joseph-tang-PhD-thesis-jun-2008.pdf static/pdfs/
+	rsync -av $(DGD_DOC)/theses/kan-qin-phd-thesis-oct-2017.pdf static/pdfs/
 	rsync -av $(DGD_DOC)/theses/kevin-austin-phd-thesis-june-2002.pdf static/pdfs/
 	rsync -av $(DGD_DOC)/theses/kyle-damm-phd-thesis-feb-2020.pdf static/pdfs/
 	rsync -av $(DGD_DOC)/theses/matt-mcgilvray-PhD-thesis-sep-2008.pdf static/pdfs/
@@ -159,6 +161,7 @@ theses:
 	rsync -av $(DGD_DOC)/theses/neil-mudford-phd-thesis-production-of-pulsed-nozzle-flows.pdf static/pdfs/
 	rsync -av $(DGD_DOC)/theses/paul-petrie-repar-phd-thesis-dec-1997.pdf static/pdfs/
 	rsync -av $(DGD_DOC)/theses/peter-jacobs-phd-thesis-may-1987.pdf static/pdfs/
+	rsync -av $(DGD_DOC)/theses/pierpaolo-toniato-phd-thesis-2019.pdf static/pdfs/
 	rsync -av $(DGD_DOC)/theses/richard-goozee-phd-thesis-apr-2003.pdf static/pdfs/
 	rsync -av $(DGD_DOC)/theses/rowan-gollan-PhD-thesis-feb-2009.pdf static/pdfs/
 	rsync -av $(DGD_DOC)/theses/vince-wheatley-masters-thesis-aug-2001.pdf static/pdfs/
