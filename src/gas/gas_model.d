@@ -168,7 +168,6 @@ public:
     @nogc final number R(in GasState Q)  { return gas_constant(Q); }
     @nogc final number gamma(in GasState Q) { return Cp(Q)/Cv(Q); }
     @nogc final number Prandtl(in GasState Q) { return Cp(Q)*Q.mu/Q.k; }
-
     @nogc
     final number molecular_mass(const(GasState) Q) const
     in {
@@ -274,6 +273,18 @@ public:
             throw new Error("Gas model does not set the electron mass-fraction.");
         }
     }
+    @nogc
+    void binary_diffusion_coefficients(const(GasState) Q, ref number[][] D) const
+    {
+        // Calling this (optional) method without overriding it should be an error
+        // But the report to the user should depend on what they are trying to do
+        if (_n_species<=1) {
+            throw new Error("Species diffusion invalid for single species gas.");
+        } else { 
+            throw new Error("Gas model has no binary diffusion implementation.");
+        }
+    }
+
     
 protected:
     // Default to non-plasma gas model, where all species are treated alike.
