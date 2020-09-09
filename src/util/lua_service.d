@@ -199,7 +199,7 @@ void getArrayOfStrings(lua_State* L, int tblIdx, string key, out string[] values
 }
 
 /**
- * Get array of numbers from index in Lua stack.
+ * Get named array of numbers from index in Lua stack.
  */
 
 void getArrayOfDoubles(lua_State* L, int tblIdx, string key, out double[] values)
@@ -249,7 +249,7 @@ void getArrayOfDoubles(lua_State* L, int tblIdx, string key, out Complex!double[
 }
 
 /**
- * Get array of numbers from index in Lua stack.
+ * Get named array of numbers from index in Lua stack.
  */
 
 void getArrayOfInts(lua_State* L, int tblIdx, string key, out int[] values)
@@ -311,6 +311,45 @@ void getAssocArrayOfDoubles(lua_State* L, string key, string[] pList, out Comple
     lua_pop(L, 1);
 }
 
+// Get matrix of numbers from table at a particular stack index.
+
+void getMatrixOfDoubles(size_t N)(lua_State* L, int tblIdx, out double[N][N] values)
+{
+    if (!lua_istable(L, tblIdx)) {
+        string errMsg = format("getArrayOfDoubles was expecting a table at stack index: %d", tblIdx);
+        throw new Error(errMsg);
+    }
+    foreach (i; 0 .. N) {
+        lua_rawgeti(L, -1, to!int(i+1));
+        foreach (j; 0 .. N) {
+            lua_rawgeti(L, -1, to!int(j+1));
+            values[i][j] = (lua_isnumber(L, -1)) ? luaL_checknumber(L, -1) : 0.0;
+            lua_pop(L, 1);
+        }
+        lua_pop(L, 1);
+    }
+    // Table is left on stack.
+}
+
+// Push a matrix of numbers onto the stack as a table of tables.
+
+void pushMatrixOfDoubles(size_t N)(lua_State* L, double[N][N] values)
+{
+    lua_newtable(L); // for whole matrix
+    foreach (i; 0 .. N) {
+        // Build a new row.
+        lua_newtable(L);
+        foreach (j; 0 .. N) {
+            lua_pushnumber(L, values[i][j]);
+            lua_rawseti(L, -2, to!int(j+1));
+        }
+        // Completed row sitting at top of stack.
+        lua_rawseti(L, -2, to!int(i+1));
+    }
+    // Table is left on stack.
+}
+
+
 /**
  * This creates a new userdata spot on the Lua stack and
  * populates it with an object of type T.
@@ -360,7 +399,7 @@ T checkObj(T, string metatableName)(lua_State* L, int index)
  * the metatable name, which is essentially the object's type.
  * If there is no valid object, the string "nil" is returned.
  *
- * This code basically duplicates the function luaL_testudata 
+ * This code basically duplicates the function luaL_testudata
  * in the Lua source file: lauxlib.c. IN LUA VERSION 5.2
  * (You won't find it in our code collection.)
  * The difference is that it only looks to see if the
@@ -371,14 +410,14 @@ bool isObjType(lua_State* L, int index, string tname)
 {
     bool result;
     void *p = lua_touserdata(L, index);
-    if ( p ) {  // value is a userdata? 
-        if (lua_getmetatable(L, index)) {  // does it have a metatable? 
-            luaL_getmetatable(L, tname.toStringz);  // get correct metatable 
-            if ( lua_rawequal(L, -1, -2) )  // the same? 
+    if ( p ) {  // value is a userdata?
+        if (lua_getmetatable(L, index)) {  // does it have a metatable?
+            luaL_getmetatable(L, tname.toStringz);  // get correct metatable
+            if ( lua_rawequal(L, -1, -2) )  // the same?
                 result = true;
             else
                 result = false;
-            lua_pop(L, 2);  // remove both metatables 
+            lua_pop(L, 2);  // remove both metatables
             return result;
         }
     }
@@ -513,7 +552,7 @@ bool checkAllowedNames(lua_State* L, int tblIndx, string[] allowedNames)
             namesOk = false;
             // We stop on the first invalid key because continuing on may lead
             // to a failure message for next, and loss of the location information.
-            // The resulting error message is really confusing to the user. 
+            // The resulting error message is really confusing to the user.
             break;
         }
         lua_pop(L, 1); // discard value but keep key for next
@@ -569,7 +608,7 @@ unittest
     getValues(t, keys3[0..2], vals, "test3");
     assert(vals["A"] == 9.0);
     assert(vals["B"] == -15.8);
-    
+
     /// Test 4. Grab all values as doubles
     getValues(t, keys3, vals, "test4");
     assert(vals["A"] == 9.0);

@@ -74,6 +74,18 @@ s_grid = {{0.0, 0.0, 0.0, 0.0},
           {1.0, 1.0, 1.0, 1.0}}
 gridB = StructuredGrid:new{psurface=myPatch, niv=11, njv=21, r_grid=r_grid, s_grid=s_grid}
 gridB:write_to_vtk_file("test_grid_b-2D-lua.vtk")
+print("initial badness=", gridB:measure_of_badness())
+r_grid, s_grid = gridB:determine_rs_grids(myPatch)
+print("final badness=", gridB:measure_of_badness())
+print("r_grid=[[", r_grid[1][1], r_grid[1][2], r_grid[1][3], r_grid[1][4], "]")
+print("        [", r_grid[2][1], r_grid[2][2], r_grid[2][3], r_grid[2][4], "]")
+print("        [", r_grid[3][1], r_grid[3][2], r_grid[3][3], r_grid[3][4], "]")
+print("        [", r_grid[4][1], r_grid[4][2], r_grid[4][3], r_grid[4][4], "]]")
+print("s_grid=[[", s_grid[1][1], s_grid[1][2], s_grid[1][3], s_grid[1][4], "]")
+print("        [", s_grid[2][1], s_grid[2][2], s_grid[2][3], s_grid[2][4], "]")
+print("        [", s_grid[3][1], s_grid[3][2], s_grid[3][3], s_grid[3][4], "]")
+print("        [", s_grid[4][1], s_grid[4][2], s_grid[4][3], s_grid[4][4], "]]")
+gridB:write_to_vtk_file("test_grid_b_better-2D.vtk");
 --
 print("3D grid")
 
@@ -107,5 +119,3 @@ print("size of grid 1= ", grids[1]:get_niv(), grids[1]:get_njv())
     }
     writeln("Done with luasgrid_demo.");
 }
-
-    

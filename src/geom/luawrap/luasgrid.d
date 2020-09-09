@@ -345,40 +345,21 @@ extern(C) int newStructuredGrid(lua_State* L)
     lua_getfield(L, 1, "r_grid");
     if (!lua_isnil(L, -1)) {
 	useSpecial2DConstructor = true;
-	// Assume we have a valid table of r_grid points
-	foreach (i; 0 .. 4) {
-	    lua_rawgeti(L, -1, i+1);
-	    foreach (j; 0 .. 4) {
-		lua_rawgeti(L, -1, j+1);
-		r_grid[i][j] = luaL_checknumber(L, -1);
-		lua_pop(L, 1);
-	    }
-	    lua_pop(L, 1);
-	}
+        getMatrixOfDoubles!(4)(L, -1, r_grid);
     }
     lua_pop(L, 1);
 
     lua_getfield(L, 1, "s_grid");
-    if (!lua_isnil(L, -1)) {
-	// Assume we have a valid table of s_grid points
-	foreach (i; 0 .. 4) {
-	    lua_rawgeti(L, -1, i+1);
-	    foreach (j; 0 .. 4) {
-		lua_rawgeti(L, -1, j+1);
-		s_grid[i][j] = luaL_checknumber(L, -1);
-		lua_pop(L, 1);
-	    }
-	    lua_pop(L, 1);
-	}
-    }
+    if (!lua_isnil(L, -1)) { getMatrixOfDoubles!(4)(L, -1, s_grid); }
     lua_pop(L, 1);
-    
+
     StructuredGrid grid;
     switch (dimensions) {
     case 1: grid = new StructuredGrid(mypath, niv, cf); break;
     case 2:
 	grid = useSpecial2DConstructor ?
-	    new StructuredGrid(psurface, niv, njv, cfList, r_grid, s_grid) : new StructuredGrid(psurface, niv, njv, cfList);
+	    new StructuredGrid(psurface, niv, njv, cfList, r_grid, s_grid)
+            : new StructuredGrid(psurface, niv, njv, cfList);
 	break;
     case 3: grid = new StructuredGrid(pvolume, niv, njv, nkv, cfList); break;
     default: throw new GeometryException("invalid number of dimensions");
@@ -386,6 +367,51 @@ extern(C) int newStructuredGrid(lua_State* L)
     structuredGridStore ~= pushObj!(StructuredGrid, StructuredGridMT)(L, grid);
     return 1;
 } // end newStructuredGrid()
+
+
+extern(C) int get_measure_of_badness(lua_State* L)
+{
+    int narg = lua_gettop(L); // assume narg == 1; This is a getter
+    auto grid = checkObj!(StructuredGrid, StructuredGridMT)(L, 1);
+    lua_pushnumber(L, grid.measure_of_badness());
+    return 1;
+}
+
+extern(C) int determine_rs_grids(lua_State* L)
+{
+    int narg = lua_gettop(L); // assume narg == 2
+    if (narg != 2) {
+        string errMsg = "Error in StructuredGrid:determine_rs_grids(). " ~
+            "Expected call of form grid:determine_rs_grids(psurface).";
+        luaL_error(L, errMsg.toStringz);
+    }
+    auto grid = checkObj!(StructuredGrid, StructuredGridMT)(L, 1);
+    if (!grid) {
+        string errMsg = "Error in StructuredGrid:determine_rs_grids(). " ~
+            "Argument 1 should be a 2D grid.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    auto psurface = checkSurface(L, 2);
+    if (!psurface) {
+        string errMsg = "Error in StructuredGrid:determine_rs_grids(). " ~
+            "Argument 2 should be a ParametricSurface.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    auto cf = [new LinearFunction(), new LinearFunction(),
+               new LinearFunction(), new LinearFunction()];
+    double[4][4] r_grid = [[0.0, 1.0/3, 2.0/3, 1.0],
+                           [0.0, 1.0/3, 2.0/3, 1.0],
+                           [0.0, 1.0/3, 2.0/3, 1.0],
+                           [0.0, 1.0/3, 2.0/3, 1.0]];
+    double[4][4] s_grid = [[0.0, 0.0, 0.0, 0.0],
+                           [1.0/3, 1.0/3, 1.0/3, 1.0/3],
+                           [2.0/3, 2.0/3, 2.0/3, 2.0/3],
+                           [1.0, 1.0, 1.0, 1.0]];
+    grid.determine_rs_grids(psurface, cf, r_grid, s_grid);
+    pushMatrixOfDoubles!4(L, r_grid);
+    pushMatrixOfDoubles!4(L, s_grid);
+    return 2;
+}
 
 
 extern(C) int makeSlabGrid(lua_State* L)
@@ -612,6 +638,10 @@ void registerStructuredGrid(lua_State* L)
     /* Register methods for use. */
     lua_pushcfunction(L, &newStructuredGrid);
     lua_setfield(L, -2, "new");
+    lua_pushcfunction(L, &get_measure_of_badness);
+    lua_setfield(L, -2, "measure_of_badness");
+    lua_pushcfunction(L, &determine_rs_grids);
+    lua_setfield(L, -2, "determine_rs_grids");
     lua_pushcfunction(L, &toStringObj!(StructuredGrid, StructuredGridMT));
     lua_setfield(L, -2, "__tostring");
     lua_pushcfunction(L, &copyStructuredGrid!(StructuredGrid, StructuredGridMT));
