@@ -1953,6 +1953,221 @@ public:
         grad.scale_values_by(to!number(1.0/iface.length));
     } // end average_interface_deriv_values()
 
+    @nogc
+    void lusgs_startup_iteration(number dtInv, double omega, ref number[] dU, number[] R)
+    {
+        // Compute LHS Jacobian diagonal (D) and evaluate dU0 = D^{-1} * R
+        number lambda = 0.0;
+        foreach (f; iface) {
+            lambda += f.area[0]*f.spectral_radius(omega);
+        }
+        
+        scalar_diag_inv[] = (dtInv + 0.5*lambda/volume[0])^^(-1.0);   
+        dU[] = scalar_diag_inv[]*R[];
+    } // end lusgs_startup_iteration()
+
+    //@nogc
+    void lusgs_relaxation_iteration(double omega, bool matrix_based, ref number[] dU, number[] R)
+    {
+        // Compute a relaxation subiteration dU^{k+1} = D^{-1} * (R - 0.5*LU)
+
+        // Make a stack-local copy of conserved quantities info
+        size_t nConserved = cqi.nConservedQuantities;
+        size_t MASS = cqi.massIdx;
+        size_t X_MOM = cqi.xMomIdx;
+        size_t Y_MOM = cqi.yMomIdx;
+        size_t Z_MOM = cqi.zMomIdx;
+        size_t TOT_ENERGY = cqi.totEnergyIdx;
+        size_t TKE = cqi.tkeIdx;
+
+        LU[] = to!number(0.0);
+        // loop through neighbouring cells and approximate off-diagonal terms (L+U)
+        foreach (i; 1..cell_cloud.length) {
+            FVCell nc = cell_cloud[i]; FVInterface f = iface[i-1];
+            number lambda = f.spectral_radius(omega);
+            if (matrix_based) {
+                nc.roeFluxJacobian(f.n, f.t1, f.t2, f.Tinv, f.T);
+                dot(nc.dFdU, nc.dUk[0..nConserved], nc.dF[0..nConserved]);
+            } else { // matrix free flux increment
+                nc.evalMatrixFreeFluxIncrement(f.n, f.t1, f.t2);
+            }
+            LU[MASS] += (nc.dF[MASS]*outsign[i-1] - lambda*nc.dUk[MASS])*f.area[0];
+            LU[X_MOM] += (nc.dF[X_MOM]*outsign[i-1] - lambda*nc.dUk[X_MOM])*f.area[0];
+            LU[Y_MOM] += (nc.dF[Y_MOM]*outsign[i-1] - lambda*nc.dUk[Y_MOM])*f.area[0];
+            if (myConfig.dimensions == 3)
+                LU[Z_MOM] += (nc.dF[Z_MOM]*outsign[i-1] - lambda*nc.dUk[Z_MOM])*f.area[0];
+            LU[TOT_ENERGY] += (nc.dF[TOT_ENERGY]*outsign[i-1] - lambda*nc.dUk[TOT_ENERGY])*f.area[0];
+        }
+        LU[] *= 0.5/volume[0];
+
+        dU[] = R[] - LU[];
+        dU[] *= scalar_diag_inv[];
+    }
+
+    @nogc
+    void evalMatrixFreeFluxIncrement(Vector3 n, Vector3 t1, Vector3 t2)
+    {
+        // Matrix-Free Flux vector increment
+        //
+        // As defined on right column, pg 4 of
+        // Rieger and Jameson (1988),
+        // Solution of Steady Three-Dimensional Compressible Euler and Navier-Stokes Equations by an Implicit LU Scheme
+        // AIAA conference paper
+        //
+        // Uses Roe's split flux scheme for LHS Jacobian as per
+        // Luo, Baum, and Lohner (1998)
+        // A Fast, Matrix-free Implicit Method for Compressible Flows on Unstructured Grids,
+        // Journal of computational physics
+        // 
+        
+        // Make a stack-local copy of conserved quantities info
+        size_t nConserved = cqi.nConservedQuantities;
+        size_t MASS = cqi.massIdx;
+        size_t X_MOM = cqi.xMomIdx;
+        size_t Y_MOM = cqi.yMomIdx;
+        size_t Z_MOM = cqi.zMomIdx;
+        size_t TOT_ENERGY = cqi.totEnergyIdx;
+        size_t TKE = cqi.tkeIdx;
+        
+        // make sure cells have conserved quantities filled
+        encode_conserved(0, 0, 0.0);
+        
+        // peturb conserved quantities by approximation of dU
+        U[1].copy_values_from(U[0]);
+        U[1].mass += dUk[MASS];
+        U[1].momentum.refx += dUk[X_MOM];
+        U[1].momentum.refy += dUk[Y_MOM];
+        if (GlobalConfig.dimensions == 3 )
+            U[1].momentum.refz += dUk[Z_MOM];
+        U[1].total_energy += dUk[TOT_ENERGY];
+        
+        // update primitive variables
+        decode_conserved(0, 1, 0.0);          
+        
+        // Peturbed state flux
+        number rho = fs.gas.rho;
+        number velx = fs.vel.dot(n);
+        number vely = fs.vel.dot(t1);
+        number velz = fs.vel.dot(t2);
+        number p = fs.gas.p;
+        auto gmodel = myConfig.gmodel;
+        number e = gmodel.internal_energy(fs.gas);
+        
+        dF[MASS]= rho*velx;
+        dF[X_MOM] = p + rho*velx*velx;
+        dF[Y_MOM] = rho*velx*vely;
+        if (myConfig.dimensions == 3)
+            dF[Z_MOM] = rho*velx*velz;
+        dF[TOT_ENERGY] = (rho*e + rho*(velx^^2 + vely^^2 + velz^^2)/2.0 + p)*velx;
+        
+        // reset primitive variables to unperturbed state
+        decode_conserved(0, 0, 0.0);          
+        
+        // original state flux
+        rho = fs.gas.rho;
+        velx = fs.vel.dot(n);
+        vely = fs.vel.dot(t1);
+        velz = fs.vel.dot(t2);
+        p = fs.gas.p;
+        e = gmodel.internal_energy(fs.gas);
+        
+        // flux vector increment
+        dF[MASS] -= rho*velx;
+        dF[X_MOM] -= p + rho*velx*velx;
+        dF[Y_MOM] -= rho*velx*vely;
+        if (myConfig.dimensions == 3)
+            dF[Z_MOM] -= rho*velx*velz;
+
+        number global_mom_x = dF[X_MOM]*n.x + dF[Y_MOM]*t1.x; // global-x
+        number global_mom_y = dF[X_MOM]*n.y + dF[Y_MOM]*t1.y; // global-y
+        number global_mom_z;
+        if (myConfig.dimensions == 3) {
+            global_mom_x += dF[Z_MOM]*t2.x;
+            global_mom_y += dF[Z_MOM]*t2.y;
+            global_mom_z = dF[X_MOM]*n.z + dF[Y_MOM]*t1.z + dF[Z_MOM]*t2.z; // global-z
+        }
+        dF[X_MOM] = global_mom_x;
+        dF[Y_MOM] = global_mom_y;
+        if (myConfig.dimensions == 3)
+            dF[Z_MOM] = global_mom_z;
+        
+        dF[TOT_ENERGY] -= (rho*e + rho*(velx^^2 + vely^^2 + velz^^2)/2.0 + p)*velx;
+    } // end evalMatrixFreeFluxIncrement()
+
+    @nogc
+    void roeFluxJacobian(Vector3 n, Vector3 t1, Vector3 t2, Matrix!number Tinv, Matrix!number T)
+    {
+        // Hand differentiation of Roe's split flux scheme for LHS Jacobian as per
+        // Luo, Baum, and Lohner (1998)
+        // A Fast, Matrix-free Implicit Method for Compressible Flows on Unstructured Grids,
+        // Journal of computational physics
+        // 
+        
+        // Make a stack-local copy of conserved quantities info
+        size_t nConserved = cqi.nConservedQuantities;
+        size_t MASS = cqi.massIdx;
+        size_t X_MOM = cqi.xMomIdx;
+        size_t Y_MOM = cqi.yMomIdx;
+        size_t Z_MOM = cqi.zMomIdx;
+        size_t TOT_ENERGY = cqi.totEnergyIdx;
+        size_t TKE = cqi.tkeIdx;
+
+        // primitive variables
+        auto gmodel = myConfig.gmodel;
+        number gam = gmodel.gamma(fs.gas);
+        number rho = fs.gas.rho;
+        // rotate velocity into interface reference frame
+        number u = fs.vel.dot(n);
+        number v = fs.vel.dot(t1);
+        number w = fs.vel.dot(t2);
+        number p = fs.gas.p;
+        number e = gmodel.internal_energy(fs.gas);
+        
+        // conserved variables
+        number U1 = rho; 
+        number U2 = rho*u;
+        number U3 = rho*v;
+        number U4 = rho*w;
+        number U5 = rho*e + rho*(u^^2 + v^^2 + w^^2)/2.0;
+        
+        // approximate flux Jacobian based on Roe's approximate split flux scheme
+        dFdU[MASS,MASS] = to!number(0.0);
+        dFdU[MASS,X_MOM] = to!number(1.0);
+        dFdU[MASS,Y_MOM] = to!number(0.0);
+        if (myConfig.dimensions == 3) { dFdU[X_MOM,Z_MOM] = to!number(1.0); }
+        dFdU[MASS,TOT_ENERGY] = to!number(0.0);
+        
+        dFdU[X_MOM,MASS] = -(U2*U2)/(U1*U1) + (gam-1.0)*(U2*U2+U3*U3+U4*U4)/(2.0*U1*U1);
+        dFdU[X_MOM,X_MOM] = (3.0-gam)*(U2/U1);
+        dFdU[X_MOM,Y_MOM] = (1.0-gam)*(U3/U1);
+        if (myConfig.dimensions == 3) { dFdU[X_MOM,Z_MOM] = (1.0-gam)*(U4/U1); }
+        dFdU[X_MOM,TOT_ENERGY] = (gam-1.0);
+        
+        dFdU[Y_MOM,MASS] = -(U2*U3)/(U1*U1);
+        dFdU[Y_MOM,X_MOM] = U3/U1;
+        dFdU[Y_MOM,Y_MOM] = U2/U1;
+        if (myConfig.dimensions == 3) { dFdU[Y_MOM,Z_MOM] = to!number(0.0); }
+        dFdU[Y_MOM,TOT_ENERGY] = to!number(0.0);
+        
+        if (myConfig.dimensions == 3) {
+            dFdU[Z_MOM,MASS] = -(U2*U4)/(U1*U1);
+            dFdU[Z_MOM,X_MOM] = U4/U1;
+            dFdU[Z_MOM,Y_MOM] = to!number(0.0);
+            dFdU[Z_MOM,Z_MOM] = U2/U1;
+            dFdU[Z_MOM,TOT_ENERGY] = to!number(0.0);
+        }
+        
+        dFdU[TOT_ENERGY,MASS] = -gam*(U5*U2)/(U1*U1) + (gam-1.0)*(U2*U2*U2+U2*U3*U3+U2*U4*U4)/(U1*U1*U1);
+        dFdU[TOT_ENERGY,X_MOM] = gam*(U5/U1) + (1.0-gam)*(3*U2*U2+U3*U3+U4*U4)/(2*U1*U1);
+        dFdU[TOT_ENERGY,Y_MOM] = (1.0-gam)*(U3*U2)/(U1*U1);
+        if (myConfig.dimensions == 3) { dFdU[TOT_ENERGY,Z_MOM] = (1.0-gam)*(U4*U2)/(U1*U1); }
+        dFdU[TOT_ENERGY,TOT_ENERGY] = gam*(U2/U1); 
+        
+        // rotate matrix back into the global reference frame
+        dot(Tinv, dFdU, mat_tmp);
+        dot(mat_tmp, T, dFdU);
+
+    } // end roeFluxJacobian()
 
 } // end class FVCell
 

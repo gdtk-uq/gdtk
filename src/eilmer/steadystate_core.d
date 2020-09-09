@@ -1288,177 +1288,6 @@ foreach (blk; localFluidBlocks) `~norm2~` += blk.normAcc;
 
 }
 
-void evalMatrixFreeFluxIncrement(FVCell cell, FVInterface face, GasModel gmodel, int dimensions)
-{
-    // Matrix-Free Flux vector increment
-    //
-    // As defined on right column, pg 4 of
-    // Rieger and Jameson (1988),
-    // Solution of Steady Three-Dimensional Compressible Euler and Navier-Stokes Equations by an Implicit LU Scheme
-    // AIAA conference paper
-    //
-    // Uses Roe's split flux scheme for LHS Jacobian as per
-    // Luo, Baum, and Lohner (1998)
-    // A Fast, Matrix-free Implicit Method for Compressible Flows on Unstructured Grids,
-    // Journal of computational physics
-    // 
-
-    // Make a stack-local copy of conserved quantities info
-    size_t nConserved = cqi.nConservedQuantities;
-    size_t MASS = cqi.massIdx;
-    size_t X_MOM = cqi.xMomIdx;
-    size_t Y_MOM = cqi.yMomIdx;
-    size_t Z_MOM = cqi.zMomIdx;
-    size_t TOT_ENERGY = cqi.totEnergyIdx;
-    size_t TKE = cqi.tkeIdx;
-
-    // make sure cells (particularly ghost cells) have conserved quantities filled
-    cell.encode_conserved(0, 0, 0.0);
-
-    // peturb conserved quantities by current approximation of dU
-    cell.U[1].copy_values_from(cell.U[0]);
-    cell.U[1].mass += cell.dUk[MASS];
-    cell.U[1].momentum.refx += cell.dUk[X_MOM];
-    cell.U[1].momentum.refy += cell.dUk[Y_MOM];
-    if (GlobalConfig.dimensions == 3 )
-        cell.U[1].momentum.refz += cell.dUk[Z_MOM];
-    cell.U[1].total_energy += cell.dUk[TOT_ENERGY];
-
-    // update primitive variables
-    cell.decode_conserved(0, 1, 0.0);          
-
-    // Peturbed state flux
-    number rho = cell.fs.gas.rho;
-    number velx = cell.fs.vel.dot(face.n);
-    number vely = cell.fs.vel.dot(face.t1);
-    number velz = cell.fs.vel.dot(face.t2);
-    number p = cell.fs.gas.p;
-    number e = gmodel.internal_energy(cell.fs.gas);
-
-    cell.dF[MASS]= rho*velx;
-    cell.dF[X_MOM] = p + rho*velx*velx;
-    cell.dF[Y_MOM] = rho*velx*vely;
-    if (dimensions == 3)
-        cell.dF[Z_MOM] = rho*velx*velz;
-    cell.dF[TOT_ENERGY] = (rho*e + rho*(velx^^2 + vely^^2 + velz^^2)/2.0 + p)*velx;
-
-    // reset primitive variables to unperturbed state
-    cell.decode_conserved(0, 0, 0.0);          
-
-    // original state flux
-    rho = cell.fs.gas.rho;
-    velx = cell.fs.vel.dot(face.n);
-    vely = cell.fs.vel.dot(face.t1);
-    velz = cell.fs.vel.dot(face.t2);
-    p = cell.fs.gas.p;
-    e = gmodel.internal_energy(cell.fs.gas);
-
-    // flux vector increment
-    cell.dF[MASS] -= rho*velx;
-    cell.dF[X_MOM] -= p + rho*velx*velx;
-    cell.dF[Y_MOM] -= rho*velx*vely;
-    if (dimensions == 3)
-        cell.dF[Z_MOM] -= rho*velx*velz;
-
-    //cell.dF.momentum.transform_to_global_frame(face.n, face.t1, face.t2);
-
-    number global_mom_x = cell.dF[X_MOM]*face.n.x + cell.dF[Y_MOM]*face.t1.x; // global-x
-    number global_mom_y = cell.dF[X_MOM]*face.n.y + cell.dF[Y_MOM]*face.t1.y; // global-y
-    number global_mom_z;
-    if (dimensions == 3) {
-        global_mom_x += cell.dF[Z_MOM]*face.t2.x; // global-x
-        global_mom_y += cell.dF[Z_MOM]*face.t2.y; // global-y
-        global_mom_z = cell.dF[X_MOM]*face.n.z + cell.dF[Y_MOM]*face.t1.z + cell.dF[Z_MOM]*face.t2.z; // global-z
-    }
-    cell.dF[X_MOM] = global_mom_x;
-    cell.dF[Y_MOM] = global_mom_y;
-    if (dimensions == 3)
-        cell.dF[Z_MOM] = global_mom_z;
-
-    
-    cell.dF[TOT_ENERGY] -= (rho*e + rho*(velx^^2 + vely^^2 + velz^^2)/2.0 + p)*velx;
-}
-
-void roeFluxJacobian(FVCell cell, FVInterface face, GasModel gmodel, int dimensions)
-{
-    // Hand differentiation of Roe's split flux scheme for LHS Jacobian as per
-    // Luo, Baum, and Lohner (1998)
-    // A Fast, Matrix-free Implicit Method for Compressible Flows on Unstructured Grids,
-    // Journal of computational physics
-    // 
-
-    // Make a stack-local copy of conserved quantities info
-    size_t nConserved = cqi.nConservedQuantities;
-    size_t MASS = cqi.massIdx;
-    size_t X_MOM = cqi.xMomIdx;
-    size_t Y_MOM = cqi.yMomIdx;
-    size_t Z_MOM = cqi.zMomIdx;
-    size_t TOT_ENERGY = cqi.totEnergyIdx;
-    size_t TKE = cqi.tkeIdx;
-
-    // primitive variables
-    number gam = gmodel.gamma(cell.fs.gas);
-    number rho = cell.fs.gas.rho;
-    number u = cell.fs.vel.dot(face.n);
-    number v = cell.fs.vel.dot(face.t1);
-    number w = cell.fs.vel.dot(face.t2);
-    number p = cell.fs.gas.p;
-    number e = gmodel.internal_energy(cell.fs.gas);
-
-    // conserved variables
-    number U1 = rho; 
-    number U2 = rho*u;
-    number U3 = rho*v;
-    number U4 = rho*w;
-    number U5 = rho*e + rho*(u^^2 + v^^2 + w^^2)/2.0;
-
-    // Roe's split flux Jacobian
-    cell.dFdU.zeros;
-    cell.dFdU[MASS,X_MOM] = to!number(1.0);
-    
-    cell.dFdU[X_MOM,MASS] = -(U2*U2)/(U1*U1) + (gam-1.0)*(U2*U2+U3*U3+U4*U4)/(2.0*U1*U1);
-    cell.dFdU[X_MOM,X_MOM] = (3.0-gam)*(U2/U1);
-    cell.dFdU[X_MOM,Y_MOM] = (1.0-gam)*(U3/U1);
-    if (dimensions == 3) { cell.dFdU[X_MOM,Z_MOM] = (1.0-gam)*(U4/U1); }
-    cell.dFdU[X_MOM,TOT_ENERGY] = (gam-1.0);
-    
-    cell.dFdU[Y_MOM,MASS] = -(U2*U3)/(U1*U1);
-    cell.dFdU[Y_MOM,X_MOM] = U3/U1;
-    cell.dFdU[Y_MOM,Y_MOM] = U2/U1;
-
-    if (dimensions == 3) {
-        cell.dFdU[Z_MOM,MASS] = -(U2*U4)/(U1*U1);
-        cell.dFdU[Z_MOM,X_MOM] = U4/U1;
-        cell.dFdU[Z_MOM,Y_MOM] = to!number(0.0);
-        cell.dFdU[Z_MOM,Z_MOM] = U2/U1;
-        cell.dFdU[Z_MOM,TOT_ENERGY] = to!number(0.0);
-    }
-    
-    cell.dFdU[TOT_ENERGY,MASS] = -gam*(U5*U2)/(U1*U1) + (gam-1.0)*(U2*U2*U2+U2*U3*U3+U2*U4*U4)/(U1*U1*U1);
-    cell.dFdU[TOT_ENERGY,X_MOM] = gam*(U5/U1) + (1.0-gam)*(3*U2*U2+U3*U3+U4*U4)/(2*U1*U1);
-    cell.dFdU[TOT_ENERGY,Y_MOM] = (1.0-gam)*(U3*U2)/(U1*U1);
-    if (dimensions == 3) { cell.dFdU[TOT_ENERGY,Z_MOM] = (1.0-gam)*(U4*U2)/(U1*U1); }
-    cell.dFdU[TOT_ENERGY,TOT_ENERGY] = gam*(U2/U1); 
-    
-    // rotate matrix back to global frame
-    dot(face.Tinv, cell.dFdU, cell.mat_tmp);
-    dot(cell.mat_tmp, face.T, cell.dFdU);
-
-}
-
-number spectral_radius(FVInterface face, bool viscous, double omega, GasModel gmodel) {
-    number lam = 0.0;
-    auto fvel = fabs(face.fs.vel.dot(face.n));
-    lam += omega*(fvel + face.fs.gas.a);
-    if (viscous) {
-        auto dpos = face.left_cell.pos[0] - face.right_cell.pos[0];
-        number dr = sqrt(dpos.dot(dpos));
-        number Prandtl = face.fs.gas.mu * gmodel.Cp(face.fs.gas) / face.fs.gas.k;
-        lam += (1.0/dr)*fmax(4.0/(3.0*face.fs.gas.rho), gmodel.gamma(face.fs.gas)/face.fs.gas.rho) * (face.fs.gas.mu/Prandtl);
-    }
-    return lam;
-}
-
 void lusgs_solve(int step, double pseudoSimTime, double dt, double omega, ref double residual, int kmax, int startStep)
 {
     // Data-parallel implementation of a matrix-free LU-SGS method
@@ -1481,9 +1310,8 @@ void lusgs_solve(int step, double pseudoSimTime, double dt, double omega, ref do
     size_t TOT_ENERGY = cqi.totEnergyIdx;
     size_t TKE = cqi.tkeIdx;
 
-    // temporary switches ... TODO: make these input parameters
-    bool block_diagonal = false; 
-    bool matrix_based_flux_increment = false;
+    // temporary switch ... TODO: make this an input parameters
+    bool matrix_based = false;
    
     // 1. Evaluate RHS residual (R)
     evalRHS(pseudoSimTime, 0);
@@ -1507,101 +1335,39 @@ void lusgs_solve(int step, double pseudoSimTime, double dt, double omega, ref do
     }
     residual = sqrt(residual);
 
-    // 2. Compute LHS Jacobian diagonal (D) and evaluate dU0 = D^{-1} * R
+    // 2. initial subiteration
     foreach (blk; parallel(localFluidBlocks,1)) {
         int cellCount = 0;
-        auto gmodel = blk.myConfig.gmodel;
         foreach (cell; blk.cells) {
             number dtInv;
             if (blk.myConfig.with_local_time_stepping) { dtInv = 1.0/cell.dt_local; }
             else { dtInv = 1.0/dt; }
-            if (block_diagonal) {
-                cell.block_diag.zeros;
-                foreach (fi, f; cell.iface) {
-                    number spectral_radius = spectral_radius(f, blk.myConfig.viscous, omega, gmodel);
-                    roeFluxJacobian(cell, f, gmodel, blk.myConfig.dimensions);
-                    foreach(i; 0..nConserved) {
-                        foreach(j; 0..nConserved) {
-                            if (i==j) cell.block_diag[i,j] += 0.5*(1.0/cell.volume[0])*(-cell.dFdU[i,j]*cell.outsign[fi] + spectral_radius)*f.area[0];
-                            else cell.block_diag[i,j] += 0.5*(1.0/cell.volume[0])*-cell.dFdU[i,j]*cell.outsign[fi]*f.area[0];
-                        }
-                    }
-                }
-                foreach(i; 0..nConserved) { cell.block_diag[i,i] += dtInv; }
-                cell.block_diag_inv = inverse(cell.block_diag);
-                // currently the imaginary part is becoming non-zero when it should be zero ... TODO: find a better fix
-                //foreach(i; 0..nConserved) {
-                //    foreach(j; 0..nConserved) {
-                //        cell.block_diag_inv[i,j] = to!number(cell.block_diag_inv[i,j].re);
-                //    }
-                //}
-                dot(cell.block_diag_inv, blk.FU[cellCount..cellCount+nConserved], blk.dU[cellCount..cellCount+nConserved]);
-            } else { // scalar diagonal
-                number spectral_radius_sum = 0.0;
-                foreach (f; cell.iface) {
-                    spectral_radius_sum += f.area[0]*spectral_radius(f, blk.myConfig.viscous, omega, gmodel);
-                }
-                cell.scalar_diag_inv[] = 1.0/(dtInv + 0.5*spectral_radius_sum/cell.volume[0]);   
-                blk.dU[cellCount..cellCount+nConserved] = cell.scalar_diag_inv[]*blk.FU[cellCount..cellCount+nConserved];
-            }
+            auto dU_local = blk.dU[cellCount..cellCount+nConserved]; // this is actually a reference not a copy
+            cell.lusgs_startup_iteration(dtInv, omega, dU_local, blk.FU[cellCount..cellCount+nConserved]);
             cellCount += nConserved;
         }
     }
-
-    // 3. perform kmax subiterations    
+    
+    // 3. kmax subiterations    
     foreach (k; 0 .. kmax) {
-        // update most recent values of dU
+        // shuffle dU values
         foreach (blk; parallel(localFluidBlocks,1)) {
             int cellCount = 0;
             foreach (cell; blk.cells) {
-                cell.dUk[MASS] = blk.dU[cellCount+MASS];
-                cell.dUk[X_MOM] = blk.dU[cellCount+X_MOM];
-                cell.dUk[Y_MOM] = blk.dU[cellCount+Y_MOM];
-                if ( blk.myConfig.dimensions == 3 )
-                    cell.dUk[Z_MOM] = blk.dU[cellCount+Z_MOM];
-                cell.dUk[TOT_ENERGY] = blk.dU[cellCount+TOT_ENERGY];
+                cell.dUk[0..nConserved] = blk.dU[cellCount..cellCount+nConserved];
                 cellCount += nConserved;
             }
         }
-        // exchange dU values
+        
+        // exchange boundary dU values
         exchange_ghost_cell_boundary_data(pseudoSimTime, 0, 0);
+
         // perform subiteraion
         foreach (blk; parallel(localFluidBlocks,1)) {
             int cellCount = 0;
-            auto gmodel = blk.myConfig.gmodel;
-
             foreach (cell; blk.cells) {
-                cell.LU[] = to!number(0.0);
-                // approximate off-diagonal terms (L+U)
-                foreach (i; 1..cell.cell_cloud.length) {
-                    FVCell ncell = cell.cell_cloud[i]; 
-                    FVInterface f = cell.iface[i-1];
-                    number lij = spectral_radius(f, blk.myConfig.viscous, omega, gmodel);
-                    if (matrix_based_flux_increment) {
-                        roeFluxJacobian(ncell, f, gmodel, blk.myConfig.dimensions);
-                        dot(ncell.dFdU, ncell.dUk[0..nConserved], ncell.dF[0..nConserved]);
-                    } else { // matrix free flux increment
-                        evalMatrixFreeFluxIncrement(ncell, f, gmodel, blk.myConfig.dimensions);
-                    }
-                    cell.LU[MASS] += (ncell.dF[MASS]*cell.outsign[i-1] - lij*ncell.dUk[MASS])*f.area[0];
-                    cell.LU[X_MOM] += (ncell.dF[X_MOM]*cell.outsign[i-1] - lij*ncell.dUk[X_MOM])*f.area[0];
-                    cell.LU[Y_MOM] += (ncell.dF[Y_MOM]*cell.outsign[i-1] - lij*ncell.dUk[Y_MOM])*f.area[0];
-                    if ( blk.myConfig.dimensions == 3 )
-                        cell.LU[Z_MOM] += (ncell.dF[Z_MOM]*cell.outsign[i-1] - lij*ncell.dF[Z_MOM])*f.area[0];
-                    cell.LU[TOT_ENERGY] += (ncell.dF[TOT_ENERGY]*cell.outsign[i-1] - lij*ncell.dUk[TOT_ENERGY])*f.area[0];
-                }
-                // update dU^{k+1} = D^{-1} * (R - 0.5*LU)
-                cell.LU[] *= 0.5/cell.volume[0];
-                if (block_diagonal) {
-                    number[] vec_tmp;
-                    vec_tmp.length = nConserved;
-                    blk.dU[cellCount..cellCount+nConserved] = blk.FU[cellCount..cellCount+nConserved] - cell.LU[0..nConserved];
-                    dot(cell.block_diag_inv, blk.dU[cellCount..cellCount+nConserved], vec_tmp);
-                    blk.dU[cellCount..cellCount+nConserved] = vec_tmp[];
-                } else { // scalar diagonal
-                    blk.dU[cellCount..cellCount+nConserved] = blk.FU[cellCount..cellCount+nConserved] - cell.LU[0..nConserved];
-                    blk.dU[cellCount..cellCount+nConserved] *= cell.scalar_diag_inv[];
-                }
+                auto dU_local = blk.dU[cellCount..cellCount+nConserved]; // this is actually a reference not a copy
+                cell.lusgs_relaxation_iteration(omega, matrix_based, dU_local, blk.FU[cellCount..cellCount+nConserved]);
                 cellCount += nConserved;
             }
         }

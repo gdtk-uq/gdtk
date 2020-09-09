@@ -870,4 +870,28 @@ public:
         } // end of viscous-flux calculation with gradients from two points
     } // end viscous_flux_calc()
 
+    @nogc
+    number spectral_radius(double omega) {
+        // Spectral radii (lambda) of Jacobians of convective and approximate viscous terms at the interface between two cells
+        // as per the equation on pg. 2 of:
+        // Development of a Coupled Matrix-Free LU-SGS solver for Turbulent Compressible Flows,
+        // Furst, Computers and Fluids, 2018.
+        //
+        // omega is a tunable parameter for use in the LU-SGS implementation as described on
+        // pg. 193 of Computational Fluid Dynamics, Blazek, 2005
+        
+        number lambda = 0.0;
+        auto fvel = fabs(fs.vel.dot(n));
+        lambda += omega*(fvel + fs.gas.a);
+        if (myConfig.viscous) {
+            number dr = sqrt( (left_cell.pos[0].x-right_cell.pos[0].x)^^2 +
+                              (left_cell.pos[0].y-right_cell.pos[0].y)^^2 +
+                              (left_cell.pos[0].z-right_cell.pos[0].z)^^2 );
+            auto gmodel = myConfig.gmodel;
+            number Prandtl = fs.gas.mu * gmodel.Cp(fs.gas) / fs.gas.k;
+            lambda += (1.0/dr)*fmax(4.0/(3.0*fs.gas.rho), gmodel.gamma(fs.gas)/fs.gas.rho) * (fs.gas.mu/Prandtl);
+        }
+        return lambda;
+    }
+    
 } // end of class FV_Interface
