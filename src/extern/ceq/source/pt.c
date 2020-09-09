@@ -223,6 +223,7 @@ int solve_pt(double p,double T,double* X0,int nsp,int nel,double* lewis,double* 
 
     errorcode=0;
     neq= nel+1;
+    errorrms = 1e99;
     A     = (double*) malloc(sizeof(double)*neq*neq); // Iteration Jacobian
     B     = (double*) malloc(sizeof(double)*neq);     // Iteration RHS
     S     = (double*) malloc(sizeof(double)*neq);     // Iteration unknown vector

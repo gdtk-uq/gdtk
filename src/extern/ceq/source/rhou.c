@@ -282,6 +282,7 @@ int solve_rhou(double rho,double u,double* X0,int nsp,int nel,double* lewis,doub
 
     errorcode=0;
     neq= nel+1;
+    errorrms = 1e99;
     A     = (double*) malloc(sizeof(double)*neq*neq); // Iteration Jacobian
     B     = (double*) malloc(sizeof(double)*neq);     // Iteration RHS
     S     = (double*) malloc(sizeof(double)*neq);     // Iteration unknown vector
