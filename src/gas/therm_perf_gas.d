@@ -487,7 +487,8 @@ public:
         // The Properties of Gases and Liquids
         
         // Loop through only the upper elements.
-        // Moved and optimised here by NNG 09/09/2020
+        // Moved here by NNG 09/09/2020
+        debug{ assert(D.length==_n_species); }
         number T = Q.T;
         number p = Q.p;
         foreach (isp; 0 .. _n_species) {
