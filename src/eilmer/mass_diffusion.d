@@ -55,16 +55,15 @@ interface MassDiffusion {
 }
 
 MassDiffusion initMassDiffusion(GasModel gmodel,
+                                string diffusion_coefficient_type,
                                 bool sticky_electrons,
                                 MassDiffusionModel mass_diffusion_model,
-                                bool withConstantLewisNumber,
-                                double Lewis,
-                                bool withSpeciesSpecificLewisNumbers)
+                                double Lewis)
 {
     switch (mass_diffusion_model) {
     case MassDiffusionModel.ficks_first_law:
-        return new FicksFirstLaw(gmodel, sticky_electrons, true, withConstantLewisNumber,
-                                 Lewis, withSpeciesSpecificLewisNumbers);
+        return new FicksFirstLaw(gmodel, diffusion_coefficient_type, sticky_electrons, true,
+                                 Lewis);
     default:
         throw new FlowSolverException("Selected mass diffusion model is not available.");
     }
@@ -72,22 +71,14 @@ MassDiffusion initMassDiffusion(GasModel gmodel,
 
 class FicksFirstLaw : MassDiffusion {
     this(GasModel gmodel,
+         string diffusion_coefficient_type,
          bool sticky_electrons,
          bool withMassFluxCorrection=true,
-         bool withConstantLewisNumber=false,
          double Lewis=1.0,
          bool withSpeciesSpecificLewisNumbers=false)
     {
         _withMassFluxCorrection = withMassFluxCorrection;
-
-        // TODO, put the diff_coeff_name string into config isntead of this thing
-        if (withConstantLewisNumber) {
-            diffusion_coefficient = initDiffusionCoefficient(gmodel, "constant_lewis_number", Lewis);
-        } else if (withSpeciesSpecificLewisNumbers) {
-            diffusion_coefficient = initDiffusionCoefficient(gmodel, "species_specific_lewis_numbers", Lewis);
-        } else {
-            diffusion_coefficient = initDiffusionCoefficient(gmodel, "binary_diffusion", Lewis);
-        }
+        diffusion_coefficient = initDiffusionCoefficient(gmodel, diffusion_coefficient_type, Lewis);
         
         // Note that responsibility for sticky_electrons is confined to this
         // family of classes. The DiffusionCoefficient family knows nothing about
@@ -217,17 +208,20 @@ private:
     number[][] D;
 }
 
-DiffusionCoefficient initDiffusionCoefficient(GasModel gmodel, string diffusionCoefficientName, number Lewis)
+DiffusionCoefficient initDiffusionCoefficient(GasModel gmodel, string diffusion_coefficient_type, number Lewis)
 {
-    switch (diffusionCoefficientName) {
+    switch (diffusion_coefficient_type) {
     case "constant_lewis_number":
         return new ConstantLewisNumber(gmodel.n_species, Lewis);
     case "species_specific_lewis_numbers":
         return new SpeciesSpecificLewisNumbers(gmodel.n_species, gmodel.Le);
     case "binary_diffusion":
         return new BinaryDiffusion(gmodel.n_species);
+    case "none":
+        throw new FlowSolverException("Diffusion model requires a valid diffusion_coefficient_type.");
     default:
-        throw new FlowSolverException("Selected diffusion coefficient model is not available.");
+        string errMsg=format("The diffusion_coefficient_type '%s' is not available.",diffusion_coefficient_type);
+        throw new FlowSolverException(errMsg);
     }
 }
 

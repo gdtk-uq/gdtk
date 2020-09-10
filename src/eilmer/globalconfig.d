@@ -647,6 +647,7 @@ final class GlobalConfig {
     //
     shared static MassDiffusionModel mass_diffusion_model = MassDiffusionModel.none;
     static MassDiffusion massDiffusion;
+    shared static string diffusion_coefficient_type = "none";
     shared static bool constant_lewis_number = false;
     shared static bool species_specific_lewis_numbers = false;
     shared static double lewis_number = 1.0;
@@ -906,6 +907,7 @@ public:
     bool apply_shear_stress_relative_limit;
     MassDiffusionModel mass_diffusion_model;
     MassDiffusion massDiffusion;
+    string diffusion_coefficient_type;
     bool constant_lewis_number;
     bool species_specific_lewis_numbers;
     double lewis_number;
@@ -1041,6 +1043,7 @@ public:
         apply_shear_stress_relative_limit = GlobalConfig.apply_shear_stress_relative_limit;
         viscous_factor = GlobalConfig.viscous_factor;
         mass_diffusion_model = GlobalConfig.mass_diffusion_model;
+        diffusion_coefficient_type = GlobalConfig.diffusion_coefficient_type;
         constant_lewis_number = GlobalConfig.constant_lewis_number;
         species_specific_lewis_numbers = GlobalConfig.species_specific_lewis_numbers;
         lewis_number = GlobalConfig.lewis_number;
@@ -1099,9 +1102,11 @@ public:
         n_modes = gmodel.n_modes;
         sticky_electrons = GlobalConfig.sticky_electrons;
         if (mass_diffusion_model != MassDiffusionModel.none) {
-            massDiffusion = initMassDiffusion(gmodel, sticky_electrons, mass_diffusion_model,
-                                              GlobalConfig.constant_lewis_number, GlobalConfig.lewis_number,
-                                              GlobalConfig.species_specific_lewis_numbers);
+            massDiffusion = initMassDiffusion(gmodel,
+                                              GlobalConfig.diffusion_coefficient_type,
+                                              sticky_electrons,
+                                              mass_diffusion_model,
+                                              GlobalConfig.lewis_number);
         }
         include_quality = GlobalConfig.include_quality;
         if (GlobalConfig.reacting) {
@@ -1419,6 +1424,7 @@ JSONValue read_config_file()
     mixin(update_double("shear_stress_relative_limit", "shear_stress_relative_limit"));
     mixin(update_bool("apply_shear_stress_relative_limit", "apply_shear_stress_relative_limit"));
     mixin(update_enum("mass_diffusion_model", "mass_diffusion_model", "massDiffusionModelFromName"));
+    mixin(update_string("diffusion_coefficient_type", "diffusion_coefficient_type"));
     mixin(update_bool("constant_lewis_number", "constant_lewis_number"));
     mixin(update_bool("species_specific_lewis_numbers", "species_specific_lewis_numbers"));
     mixin(update_double("lewis_number", "lewis_number"));
@@ -1441,6 +1447,7 @@ JSONValue read_config_file()
         writeln("  shear_stress_relative_limit: ", GlobalConfig.shear_stress_relative_limit);
         writeln("  apply_shear_stress_relative_limit: ", GlobalConfig.apply_shear_stress_relative_limit);
         writeln("  mass_diffusion_model: ", massDiffusionModelName(GlobalConfig.mass_diffusion_model));
+        writeln("  diffusion_coefficient_type: ", GlobalConfig.diffusion_coefficient_type);
         writeln("  constant_lewis_number: ", GlobalConfig.constant_lewis_number);
         writeln("  species_specific_lewis_numbers: ", GlobalConfig.species_specific_lewis_numbers);
         writeln("  lewis_number: ", GlobalConfig.lewis_number);
@@ -1456,10 +1463,11 @@ JSONValue read_config_file()
     configCheckPoint3();
 
     if (GlobalConfig.mass_diffusion_model != MassDiffusionModel.none) {
-        GlobalConfig.massDiffusion = initMassDiffusion(GlobalConfig.gmodel_master, GlobalConfig.sticky_electrons,
+        GlobalConfig.massDiffusion = initMassDiffusion(GlobalConfig.gmodel_master,
+                                                       GlobalConfig.diffusion_coefficient_type,
+                                                       GlobalConfig.sticky_electrons,
                                                        GlobalConfig.mass_diffusion_model,
-                                                       GlobalConfig.constant_lewis_number, GlobalConfig.lewis_number,
-                                                       GlobalConfig.species_specific_lewis_numbers);
+                                                       GlobalConfig.lewis_number);
     }
     // User-defined source terms
     mixin(update_bool("udf_source_terms", "udf_source_terms"));
