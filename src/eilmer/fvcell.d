@@ -1966,7 +1966,7 @@ public:
         dU[] = scalar_diag_inv[]*R[];
     } // end lusgs_startup_iteration()
 
-    //@nogc
+    @nogc
     void lusgs_relaxation_iteration(double omega, bool matrix_based, ref number[] dU, number[] R)
     {
         // Compute a relaxation subiteration dU^{k+1} = D^{-1} * (R - 0.5*LU)
@@ -1986,10 +1986,10 @@ public:
             FVCell nc = cell_cloud[i]; FVInterface f = iface[i-1];
             number lambda = f.spectral_radius(omega);
             if (matrix_based) {
-                nc.roeFluxJacobian(f.n, f.t1, f.t2, f.Tinv, f.T);
+                nc.roeFluxJacobian(f);
                 dot(nc.dFdU, nc.dUk[0..nConserved], nc.dF[0..nConserved]);
             } else { // matrix free flux increment
-                nc.evalMatrixFreeFluxIncrement(f.n, f.t1, f.t2);
+                nc.evalMatrixFreeFluxIncrement(f);
             }
             LU[MASS] += (nc.dF[MASS]*outsign[i-1] - lambda*nc.dUk[MASS])*f.area[0];
             LU[X_MOM] += (nc.dF[X_MOM]*outsign[i-1] - lambda*nc.dUk[X_MOM])*f.area[0];
@@ -2005,7 +2005,7 @@ public:
     }
 
     @nogc
-    void evalMatrixFreeFluxIncrement(Vector3 n, Vector3 t1, Vector3 t2)
+    void evalMatrixFreeFluxIncrement(FVInterface f)
     {
         // Matrix-Free Flux vector increment
         //
@@ -2046,9 +2046,9 @@ public:
         
         // Peturbed state flux
         number rho = fs.gas.rho;
-        number velx = fs.vel.dot(n);
-        number vely = fs.vel.dot(t1);
-        number velz = fs.vel.dot(t2);
+        number velx = fs.vel.dot(f.n);
+        number vely = fs.vel.dot(f.t1);
+        number velz = fs.vel.dot(f.t2);
         number p = fs.gas.p;
         auto gmodel = myConfig.gmodel;
         number e = gmodel.internal_energy(fs.gas);
@@ -2065,9 +2065,9 @@ public:
         
         // original state flux
         rho = fs.gas.rho;
-        velx = fs.vel.dot(n);
-        vely = fs.vel.dot(t1);
-        velz = fs.vel.dot(t2);
+        velx = fs.vel.dot(f.n);
+        vely = fs.vel.dot(f.t1);
+        velz = fs.vel.dot(f.t2);
         p = fs.gas.p;
         e = gmodel.internal_energy(fs.gas);
         
@@ -2078,13 +2078,13 @@ public:
         if (myConfig.dimensions == 3)
             dF[Z_MOM] -= rho*velx*velz;
 
-        number global_mom_x = dF[X_MOM]*n.x + dF[Y_MOM]*t1.x; // global-x
-        number global_mom_y = dF[X_MOM]*n.y + dF[Y_MOM]*t1.y; // global-y
+        number global_mom_x = dF[X_MOM]*f.n.x + dF[Y_MOM]*f.t1.x; // global-x
+        number global_mom_y = dF[X_MOM]*f.n.y + dF[Y_MOM]*f.t1.y; // global-y
         number global_mom_z;
         if (myConfig.dimensions == 3) {
-            global_mom_x += dF[Z_MOM]*t2.x;
-            global_mom_y += dF[Z_MOM]*t2.y;
-            global_mom_z = dF[X_MOM]*n.z + dF[Y_MOM]*t1.z + dF[Z_MOM]*t2.z; // global-z
+            global_mom_x += dF[Z_MOM]*f.t2.x;
+            global_mom_y += dF[Z_MOM]*f.t2.y;
+            global_mom_z = dF[X_MOM]*f.n.z + dF[Y_MOM]*f.t1.z + dF[Z_MOM]*f.t2.z; // global-z
         }
         dF[X_MOM] = global_mom_x;
         dF[Y_MOM] = global_mom_y;
@@ -2095,7 +2095,7 @@ public:
     } // end evalMatrixFreeFluxIncrement()
 
     @nogc
-    void roeFluxJacobian(Vector3 n, Vector3 t1, Vector3 t2, Matrix!number Tinv, Matrix!number T)
+    void roeFluxJacobian(FVInterface f)
     {
         // Hand differentiation of Roe's split flux scheme for LHS Jacobian as per
         // Luo, Baum, and Lohner (1998)
@@ -2117,9 +2117,9 @@ public:
         number gam = gmodel.gamma(fs.gas);
         number rho = fs.gas.rho;
         // rotate velocity into interface reference frame
-        number u = fs.vel.dot(n);
-        number v = fs.vel.dot(t1);
-        number w = fs.vel.dot(t2);
+        number u = fs.vel.dot(f.n);
+        number v = fs.vel.dot(f.t1);
+        number w = fs.vel.dot(f.t2);
         number p = fs.gas.p;
         number e = gmodel.internal_energy(fs.gas);
         
@@ -2164,8 +2164,8 @@ public:
         dFdU[TOT_ENERGY,TOT_ENERGY] = gam*(U2/U1); 
         
         // rotate matrix back into the global reference frame
-        dot(Tinv, dFdU, mat_tmp);
-        dot(mat_tmp, T, dFdU);
+        dot(f.Tinv, dFdU, mat_tmp);
+        dot(mat_tmp, f.T, dFdU);
 
     } // end roeFluxJacobian()
 
