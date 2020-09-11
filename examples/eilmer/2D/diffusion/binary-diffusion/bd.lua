@@ -11,6 +11,7 @@ config.title = "Binary diffusion of N2 into O2 (and vice versa)"
 
 setGasModel("thermally-perfect-N2-O2-mix.lua")
 config.mass_diffusion_model = "ficks_first_law"
+config.diffusion_coefficient_type = "binary_diffusion"
 
 -- initial conditions
 -- nitrogen at left end
