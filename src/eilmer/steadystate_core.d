@@ -1245,13 +1245,14 @@ void evalComplexMatVecProd(double pseudoSimTime, double sigma)
                 foreach(it; 0 .. nturb){
                     blk.zed[cellCount+TKE+it] = cell.dUdt[1].rhoturb[it].im/(sigma);
                 }
-                // we must explicitly remove the complex-perturbation for the turbulent properties - failing to do so
-                // will cause imaginary values to leak into the flowstate variables (outside of the Frechet derivative).
-                cell.fs.mu_t = cell.fs.mu_t.re;
-                cell.fs.k_t = cell.fs.k_t.re;
-                cell.decode_conserved(0, 0, 0.0);
                 cellCount += nConserved;
             }
+            // we must explicitly remove the imaginary components from the cell and interface flowstates
+            foreach(cell; blk.cells) { cell.fs.clear_imaginary_components(); }
+            foreach(bc; blk.bc) {
+                foreach(ghostcell; bc.ghostcells) { ghostcell.fs.clear_imaginary_components(); }
+            }
+            foreach(face; blk.faces) { face.fs.clear_imaginary_components(); }
         }
     } else {
         throw new Error("Oops. Steady-State Solver setting: useComplexMatVecEval is not compatible with real-number version of the code.");

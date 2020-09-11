@@ -261,4 +261,28 @@ public:
         repr ~= ")";
         return to!string(repr);
     }
+
+version(complex_numbers) {
+    @nogc
+    void clear_imaginary_components()
+    // When performing the complex-step Frechet derivative in the Newton-Krylov accelerator,
+    // the flowstate values accumulate imaginary components, so we have to start with a clean slate, so to speak.
+    {
+        rho.im = 0.0;
+        p.im = 0.0;
+        p_e.im = 0.0;
+        a.im = 0.0;
+        T.im = 0.0;
+        u.im = 0.0;
+        foreach( i; 0..u_modes.length) u_modes[i].im = 0.0;
+        foreach( i; 0..T_modes.length) T_modes[i].im = 0.0;
+        mu.im = 0.0;
+        k.im = 0.0;
+        foreach( i; 0..k_modes.length) k_modes[i].im = 0.0;
+        sigma.im = 0.0;
+        foreach( i; 0..massf.length) massf[i].im = 0.0;
+        quality.im = 0.0;
+    } // end clear_imaginary_components()
+} // end version(complex)
+    
 } // end class GasState
