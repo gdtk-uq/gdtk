@@ -479,6 +479,43 @@ public:
             molef2massf(_molef, Q);
         }
     }
+    @nogc
+    override void binary_diffusion_coefficients(const(GasState) Q, ref number[][] D) const
+    {
+        // Expression from:
+        // Reid et al.
+        // The Properties of Gases and Liquids
+        
+        // Loop through only the upper elements.
+        // Moved here by NNG 09/09/2020
+        debug{ assert(D.length==_n_species); }
+        number T = Q.T;
+        number p = Q.p;
+        foreach (isp; 0 .. _n_species) {
+            foreach (jsp; isp+1 .. _n_species) {
+                // These three lines can be precomputed to save some time.
+                number _eps = sqrt(_LJ_epsilons[isp] * _LJ_epsilons[jsp]);
+                number _M = 2.0/(1.0/_mol_masses[isp] + 1.0/_mol_masses[jsp])*1.0e3;
+                number _sigma = 0.5*(_LJ_sigmas[isp] + _LJ_sigmas[jsp]);
+
+                number T_star = T/_eps;
+                number omega = _A/(pow(T_star, _B));
+                omega += _C/(exp(_D*T_star));
+                omega += _E/(exp(_F*T_star));
+                omega += _G/(exp(_H*T_star));
+
+                number denom = p/P_atm;
+                denom *= sqrt(_M);
+                denom *= _sigma*_sigma;
+                denom *= omega;
+                number numer = 0.00266*sqrt(T*T*T);
+                numer *= 1.0e-4; // cm^2/s --> m^2/s
+                D[isp][jsp] = numer/denom;
+                D[jsp][isp] = D[isp][jsp];
+            }
+        }
+    }
+
 
 protected:
     double[] _R;
@@ -490,6 +527,15 @@ protected:
     ThermalConductivity _thermCondModel;
     // Working array space
     number[] _Cp, _Cv, _h, _s, _molef;
+    // Data for binary diffusion calculations 
+    immutable double _A = 1.06036;
+    immutable double _B = 0.15610;
+    immutable double _C = 0.19300;
+    immutable double _D = 0.47635;
+    immutable double _E = 1.03587;
+    immutable double _F = 1.52996;
+    immutable double _G = 1.76474;
+    immutable double _H = 3.89411;
 } // end class ThermallyPerfectGas
 
 
