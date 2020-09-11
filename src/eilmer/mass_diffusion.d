@@ -74,8 +74,7 @@ class FicksFirstLaw : MassDiffusion {
          string diffusion_coefficient_type,
          bool sticky_electrons,
          bool withMassFluxCorrection=true,
-         double Lewis=1.0,
-         bool withSpeciesSpecificLewisNumbers=false)
+         double Lewis=1.0)
     {
         _withMassFluxCorrection = withMassFluxCorrection;
         diffusion_coefficient = initDiffusionCoefficient(gmodel, diffusion_coefficient_type, Lewis);
@@ -133,7 +132,7 @@ interface DiffusionCoefficient {
 }
 
 class ConstantLewisNumber : DiffusionCoefficient {
-    this(size_t nsp, number Le) {
+    this(size_t nsp, double Le) {
         this.Le = Le;
         this.nsp = nsp;
     }
@@ -145,11 +144,11 @@ class ConstantLewisNumber : DiffusionCoefficient {
     }
 private:
     size_t nsp;
-    number Le;
+    double Le;
 }
 
 class SpeciesSpecificLewisNumbers : DiffusionCoefficient {
-    this(size_t nsp, number[] Le) {
+    this(size_t nsp, double[] Le) {
         if (Le.length==0) throw new Error("No Lewis numbers present in gas model");
         foreach(Le_isp; Le) this.LeS ~= Le_isp;
         this.nsp = nsp;
@@ -164,7 +163,7 @@ class SpeciesSpecificLewisNumbers : DiffusionCoefficient {
     }
 private:
     size_t nsp;
-    number[] LeS;
+    double[] LeS;
 }
 
 class BinaryDiffusion : DiffusionCoefficient {
@@ -208,7 +207,7 @@ private:
     number[][] D;
 }
 
-DiffusionCoefficient initDiffusionCoefficient(GasModel gmodel, string diffusion_coefficient_type, number Lewis)
+DiffusionCoefficient initDiffusionCoefficient(GasModel gmodel, string diffusion_coefficient_type, double Lewis)
 {
     switch (diffusion_coefficient_type) {
     case "constant_lewis_number":
