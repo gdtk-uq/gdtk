@@ -579,6 +579,50 @@ public:
         }
         return e_ve;
     }
+    @nogc
+    override void binary_diffusion_coefficients(const(GasState) Q, ref number[][] D) const
+    {
+        debug{ assert(D.length==_n_species); }
+
+        number T = Q.T;
+        number mylogT = log(Q.T);
+        number Te = Q.T_modes[0];
+        number mylogTe = log(Te);
+        double kB_erg = 1.38066e-16; // erg/K
+        number p_erg = Q.p*10; // kg/m/s2 -> g/cm/s2;
+        number Dij;
+
+        // Weighted collision cross section Delta(1) from Gupta et al. (1990) eqn. 34
+        size_t ilim = (_n_species==5) ? _n_species : _n_species-1;
+        foreach (isp; 0 .. ilim) {
+            foreach (jsp; 0 .. isp+1) {
+                number expnt = _A_11[isp][jsp]*(mylogT)^^2 + _B_11[isp][jsp]*mylogT + _C_11[isp][jsp];
+                number pi_Omega_11 = exp(_D_11[isp][jsp])*pow(T, expnt); 
+                number Delta_11ij = (8.0/3)*1.546e-20*sqrt(2.0*_mu[isp][jsp]/(to!double(PI)*_R_U_cal*T))*pi_Omega_11;
+
+                // Binary Diffusion coefficient from eqn. 42a
+                Dij = kB_erg*T/p_erg/Delta_11ij; // bin
+                Dij *= 1e-4; // cm^2/sec -> m^2/sec
+                D[isp][jsp] = Dij;
+                D[jsp][isp] = Dij;
+            }
+        }
+        // If electrons present:
+        if (_n_species!=5) {
+            auto isp = _n_species - 1;
+            foreach (jsp; 0 .. _n_species) {
+                number expnt = _A_11[isp][jsp]*(mylogTe)^^2 + _B_11[isp][jsp]*mylogTe + _C_11[isp][jsp];
+                number pi_Omega_11 = exp(_D_11[isp][jsp])*pow(Te, expnt); 
+                number Delta_11ij = (8.0/3)*1.546e-20*sqrt(2.0*_mu[isp][jsp]/(to!double(PI)*_R_U_cal*Te))*pi_Omega_11;
+
+                // Binary Diffusion coefficient from eqn. 42a
+                Dij = kB_erg*Te/p_erg/Delta_11ij;
+                Dij *= 1e-4; // cm^2/sec -> m^2/sec
+                D[isp][jsp] = Dij;
+                D[jsp][isp] = Dij;
+            }
+        }
+    }
     
 private:
     PerfectGasMixEOS _pgMixEOS;
