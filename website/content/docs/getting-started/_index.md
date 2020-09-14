@@ -85,11 +85,6 @@ For viewing and plotting results, we recommend:
   + Paraview
   + Gnuplot
 
-### Installing on Mac OSX
-
-A guide to getting your development environment set up on
-Mac OSX is available [here]({{< relref mac-install >}}).
-
 
 ## Getting the source code
 

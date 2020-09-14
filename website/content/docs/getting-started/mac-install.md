@@ -1,7 +1,7 @@
 ---
 title: "Install on a Mac"
 date: 2018-08-06T08:05:42+10:00
-draft: false
+draft: true
 ---
 
 These notes were prepared by Ingo Jahn.
