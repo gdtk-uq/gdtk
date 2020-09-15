@@ -175,11 +175,11 @@ void initialisation(ref FluidBlock blk, size_t nPrimitive, size_t orderOfJacobia
     foreach( cell; blk.cells) {
 	size += cell.jacobian_cell_stencil.length;
     }
-    size *= (cqi.nConservedQuantities*cqi.nConservedQuantities);
+    size *= (blk.myConfig.cqi.nConservedQuantities*blk.myConfig.cqi.nConservedQuantities);
     blk.JlocT = new SMatrix!number();
     blk.JlocT.aa.length = size;
     blk.JlocT.ja.length = size;
-    blk.JlocT.ia.length = blk.cells.length*cqi.nConservedQuantities + 1;
+    blk.JlocT.ia.length = blk.cells.length*blk.myConfig.cqi.nConservedQuantities + 1;
     foreach (cell; blk.cells) {
         cell.jacobian_face_stencil = [];
         cell.jacobian_cell_stencil = [];
@@ -200,11 +200,11 @@ void initialisation(ref FluidBlock blk, size_t nPrimitive, size_t orderOfJacobia
     foreach( cell; blk.cells) {
         size += cell.jacobian_cell_stencil.length;
     }
-    size *= (cqi.nConservedQuantities*cqi.nConservedQuantities);
+    size *= (blk.myConfig.cqi.nConservedQuantities*blk.myConfig.cqi.nConservedQuantities);
     blk.P = new SMatrix!number();
     blk.P.aa.length = size;
     blk.P.ja.length = size;
-    blk.P.ia.length = blk.cells.length*cqi.nConservedQuantities + 1;
+    blk.P.ia.length = blk.cells.length*blk.myConfig.cqi.nConservedQuantities + 1;
     foreach (cell; blk.cells) {
         cell.jacobian_face_stencil = [];
         cell.jacobian_cell_stencil = [];
@@ -223,11 +223,11 @@ void initialisation(ref FluidBlock blk, size_t nPrimitive, size_t orderOfJacobia
         foreach( cell; blk.cells) {
             size += cell.jacobian_cell_stencil.length;
         }
-        size *= (cqi.nConservedQuantities*cqi.nConservedQuantities);
+        size *= (blk.myConfig.cqi.nConservedQuantities*blk.myConfig.cqi.nConservedQuantities);
         blk.A = new SMatrix!number();
         blk.A.aa.length = size;
         blk.A.ja.length = size;
-        blk.A.ia.length = blk.cells.length*cqi.nConservedQuantities + 1;
+        blk.A.ia.length = blk.cells.length*blk.myConfig.cqi.nConservedQuantities + 1;
         foreach (cell; blk.cells) {
             cell.jacobian_face_stencil = [];
             cell.jacobian_cell_stencil = [];
@@ -4257,12 +4257,12 @@ void sss_preconditioner_initialisation(ref FluidBlock blk, size_t nConservative)
 	foreach( cell; blk.cells) {
 	    size += cell.jacobian_cell_stencil.length;
 	}
-	size *= (cqi.nConservedQuantities*cqi.nConservedQuantities);
+	size *= (blk.myConfig.cqi.nConservedQuantities*blk.myConfig.cqi.nConservedQuantities);
         blk.Minv = new Matrix!number(nConservative, nConservative);
 	blk.P = new SMatrix!number();
 	blk.P.aa.length = size;
 	blk.P.ja.length = size;
-	blk.P.ia.length = blk.cells.length*cqi.nConservedQuantities + 1;
+	blk.P.ia.length = blk.cells.length*blk.myConfig.cqi.nConservedQuantities + 1;
 	blk.cellSave = new FVCell(blk.myConfig);
         foreach(i; 0..blk.MAX_PERTURBED_INTERFACES) blk.ifaceP[i] = new FVInterface(blk.myConfig, false);
         break;
@@ -4317,13 +4317,13 @@ void ilu_preconditioner(ref FluidBlock blk, size_t np, double dt, size_t orderOf
 void block_diagonal_preconditioner(FluidBlock blk, size_t np, double dt, size_t orderOfJacobian=1) {
     
     // Make a stack-local copy of conserved quantities info
-    size_t nConserved = cqi.nConservedQuantities;
-    size_t MASS = cqi.massIdx;
-    size_t X_MOM = cqi.xMomIdx;
-    size_t Y_MOM = cqi.yMomIdx;
-    size_t Z_MOM = cqi.zMomIdx;
-    size_t TOT_ENERGY = cqi.totEnergyIdx;
-    size_t TKE = cqi.tkeIdx;
+    size_t nConserved = blk.myConfig.cqi.nConservedQuantities;
+    size_t MASS = blk.myConfig.cqi.mass;
+    size_t X_MOM = blk.myConfig.cqi.xMom;
+    size_t Y_MOM = blk.myConfig.cqi.yMom;
+    size_t Z_MOM = blk.myConfig.cqi.zMom;
+    size_t TOT_ENERGY = blk.myConfig.cqi.totEnergy;
+    size_t TKE = blk.myConfig.cqi.tke;
     
     // temporarily switch the interpolation order of the config object to that of the Jacobian 
     bool transformToConserved = true;

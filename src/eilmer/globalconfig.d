@@ -109,61 +109,38 @@ string T_modesName(int i) { return "T_modes[" ~ to!string(i) ~ "]"; }
 
 //--------------------------------------------------------------------------------
 
-class ConservedQuantitiesIndices {
-
-static bool isInitialised = false; 
-    
-public:
-    @nogc @property size_t nConservedQuantities() const { return _nConservedQuantities; }
-    @nogc @property size_t massIdx() const { return _massIdx; }
-    @nogc @property size_t xMomIdx() const { return _xMomIdx; }
-    @nogc @property size_t yMomIdx() const { return _yMomIdx; }
-    @nogc @property size_t zMomIdx() const { return _zMomIdx; }
-    @nogc @property size_t totEnergyIdx() const { return _totEnergyIdx; }
-    @nogc @property size_t tkeIdx() const { return _tkeIdx; }
+struct ConservedQuantitiesIndices {
+    size_t nConservedQuantities;
+    size_t mass;
+    size_t xMom;
+    size_t yMom;
+    size_t zMom;
+    size_t totEnergy;
+    size_t tke;
 
     this(int dimensions, ulong nturb, uint nmodes, uint nspecies) {
-
-        if (isInitialised) {
-            string errMsg = "Only one instance of class ConservedQuantitiesIndices is allowed.\n";
-            throw new Error(errMsg);
-        }
-        
-        _massIdx = 0;
-        _xMomIdx = 1;
-        _yMomIdx = 2;
+        mass = 0;
+        xMom = 1;
+        yMom = 2;
         if ( dimensions == 2 ) {
-            _totEnergyIdx = 3;
-            _nConservedQuantities = 4;
+            totEnergy = 3;
+            nConservedQuantities = 4;
         }
         else { // 3D simulations
-            _zMomIdx = 3;
-            _totEnergyIdx = 4;
-            _nConservedQuantities = 5;
+            zMom = 3;
+            totEnergy = 4;
+            nConservedQuantities = 5;
         }
         if ( nturb>0) {
-            _tkeIdx = nConservedQuantities;
-            _nConservedQuantities += nturb;
+            tke = nConservedQuantities;
+            nConservedQuantities += nturb;
         }
         // TODO: Add this line when multi-species are handled correctly
         //       by steady-state solver.
         //nConservedQuantities += GlobalConfig.gmodel_master.n_species;
 
-        isInitialised = true;
     }
-
-private:
-    size_t _nConservedQuantities;
-    size_t _massIdx;
-    size_t _xMomIdx;
-    size_t _yMomIdx;
-    size_t _zMomIdx;
-    size_t _totEnergyIdx;
-    size_t _tkeIdx;
-    
 } // end ConvservedQuantitiesIndices
-
-static ConservedQuantitiesIndices cqi;
 
 enum StrangSplittingMode { full_T_full_R, half_R_full_T_half_R }
 @nogc
@@ -804,6 +781,8 @@ final class GlobalConfig {
     // Delay activation of Thermionic Emission BC
     shared static double thermionic_emission_bc_time_delay = 0.0;
 
+    shared static ConservedQuantitiesIndices cqi;
+    
     // Parameters related to the gpu chemistry mode
     version (gpu_chem) {
         static GPUChem gpuChem;
@@ -997,6 +976,8 @@ public:
 
     int verbosity_level;
 
+    ConservedQuantitiesIndices cqi;
+    
     version (nk_accelerator) {
         SteadyStateSolverOptions sssOptions;
     }
@@ -1123,6 +1104,8 @@ public:
         //
         verbosity_level = GlobalConfig.verbosity_level;
         //
+        cqi = GlobalConfig.cqi;
+        // 
         version (nk_accelerator) {
             sssOptions = GlobalConfig.sssOptions;
         }
@@ -1682,6 +1665,10 @@ JSONValue read_config_file()
     // and the boundary conditions need valid references to Sblock objects.
     mixin(update_int("nfluidblock", "nFluidBlocks"));
     if (GlobalConfig.verbosity_level > 1) { writeln("  nFluidBlocks: ", GlobalConfig.nFluidBlocks); }
+
+    // we have enough information here to create the ConservedQuantitiesIndices struct
+    GlobalConfig.cqi = ConservedQuantitiesIndices(GlobalConfig.dimensions, GlobalConfig.turb_model.nturb, GlobalConfig.n_modes, GlobalConfig.n_species);
+    
     // Set up dedicated copies of the configuration parameters for the threads.
     foreach (i; 0 .. GlobalConfig.nFluidBlocks) {
         dedicatedConfig ~= new LocalConfig(i);

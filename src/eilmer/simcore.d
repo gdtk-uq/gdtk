@@ -223,8 +223,6 @@ void init_simulation(int tindx, int nextLoadsIndx,
     //
     if (GlobalConfig.grid_format == "rawbinary") { GlobalConfig.gridFileExt = "bin"; }
     if (GlobalConfig.flow_format == "rawbinary") { GlobalConfig.flowFileExt = "bin"; }
-    // cqi is a global object declared in globalconfig.d
-    cqi = new ConservedQuantitiesIndices(GlobalConfig.dimensions, GlobalConfig.turb_model.nturb, GlobalConfig.gmodel_master.n_modes, GlobalConfig.gmodel_master.n_species);
     SimState.current_tindx = tindx;
     SimState.current_loads_tindx = nextLoadsIndx;
     if (SimState.current_loads_tindx == -1) {

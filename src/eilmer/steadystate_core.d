@@ -77,13 +77,13 @@ struct RestartInfo {
 void extractRestartInfoFromTimesFile(string jobName, ref RestartInfo[] times)
 {
     // Make a stack-local copy of conserved quantities info
-    size_t nConserved = cqi.nConservedQuantities;
-    size_t MASS = cqi.massIdx;
-    size_t X_MOM = cqi.xMomIdx;
-    size_t Y_MOM = cqi.yMomIdx;
-    size_t Z_MOM = cqi.zMomIdx;
-    size_t TOT_ENERGY = cqi.totEnergyIdx;
-    size_t TKE = cqi.tkeIdx;
+    size_t nConserved = GlobalConfig.cqi.nConservedQuantities;
+    size_t MASS = GlobalConfig.cqi.mass;
+    size_t X_MOM = GlobalConfig.cqi.xMom;
+    size_t Y_MOM = GlobalConfig.cqi.yMom;
+    size_t Z_MOM = GlobalConfig.cqi.zMom;
+    size_t TOT_ENERGY = GlobalConfig.cqi.totEnergy;
+    size_t TKE = GlobalConfig.cqi.tke;
 
     auto gmodel = GlobalConfig.gmodel_master;
     RestartInfo restartInfo = RestartInfo(gmodel.n_species, gmodel.n_modes);
@@ -164,13 +164,13 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     number mass_balance = 0.0;
     
     // Make a stack-local copy of conserved quantities info
-    size_t nConserved = cqi.nConservedQuantities;
-    size_t MASS = cqi.massIdx;
-    size_t X_MOM = cqi.xMomIdx;
-    size_t Y_MOM = cqi.yMomIdx;
-    size_t Z_MOM = cqi.zMomIdx;
-    size_t TOT_ENERGY = cqi.totEnergyIdx;
-    size_t TKE = cqi.tkeIdx;
+    size_t nConserved = GlobalConfig.cqi.nConservedQuantities;
+    size_t MASS = GlobalConfig.cqi.mass;
+    size_t X_MOM = GlobalConfig.cqi.xMom;
+    size_t Y_MOM = GlobalConfig.cqi.yMom;
+    size_t Z_MOM = GlobalConfig.cqi.zMom;
+    size_t TOT_ENERGY = GlobalConfig.cqi.totEnergy;
+    size_t TKE = GlobalConfig.cqi.tke;
 
     double cfl, cflTrial;
     double dt;
@@ -211,13 +211,13 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     if (usePreconditioner) {
         foreach (blk; localFluidBlocks) {
             // Make a block-local copy of conserved quantities info
-            blk.nConserved = cqi.nConservedQuantities;
-            blk.MASS = cqi.massIdx;
-            blk.X_MOM = cqi.xMomIdx;
-            blk.Y_MOM = cqi.yMomIdx;
-            blk.Z_MOM = cqi.zMomIdx;
-            blk.TOT_ENERGY = cqi.totEnergyIdx;
-            blk.TKE = cqi.tkeIdx;
+            blk.nConserved = GlobalConfig.cqi.nConservedQuantities;
+            blk.MASS = GlobalConfig.cqi.mass;
+            blk.X_MOM = GlobalConfig.cqi.xMom;
+            blk.Y_MOM = GlobalConfig.cqi.yMom;
+            blk.Z_MOM = GlobalConfig.cqi.zMom;
+            blk.TOT_ENERGY = GlobalConfig.cqi.totEnergy;
+            blk.TKE = GlobalConfig.cqi.tke;
             sss_preconditioner_initialisation(blk, nConserved); 
         }
     }
@@ -1148,13 +1148,13 @@ void evalJacobianVecProd(double pseudoSimTime, double sigma)
 void evalRealMatVecProd(double pseudoSimTime, double sigma)
 {
     // Make a stack-local copy of conserved quantities info
-    size_t nConserved = cqi.nConservedQuantities;
-    size_t MASS = cqi.massIdx;
-    size_t X_MOM = cqi.xMomIdx;
-    size_t Y_MOM = cqi.yMomIdx;
-    size_t Z_MOM = cqi.zMomIdx;
-    size_t TOT_ENERGY = cqi.totEnergyIdx;
-    size_t TKE = cqi.tkeIdx;
+    size_t nConserved = GlobalConfig.cqi.nConservedQuantities;
+    size_t MASS = GlobalConfig.cqi.mass;
+    size_t X_MOM = GlobalConfig.cqi.xMom;
+    size_t Y_MOM = GlobalConfig.cqi.yMom;
+    size_t Z_MOM = GlobalConfig.cqi.zMom;
+    size_t TOT_ENERGY = GlobalConfig.cqi.totEnergy;
+    size_t TKE = GlobalConfig.cqi.tke;
 
     // We perform a Frechet derivative to evaluate J*D^(-1)v
     foreach (blk; parallel(localFluidBlocks,1)) {
@@ -1201,13 +1201,13 @@ void evalComplexMatVecProd(double pseudoSimTime, double sigma)
 {
     version(complex_numbers) {
         // Make a stack-local copy of conserved quantities info
-        size_t nConserved = cqi.nConservedQuantities;
-        size_t MASS = cqi.massIdx;
-        size_t X_MOM = cqi.xMomIdx;
-        size_t Y_MOM = cqi.yMomIdx;
-        size_t Z_MOM = cqi.zMomIdx;
-        size_t TOT_ENERGY = cqi.totEnergyIdx;
-        size_t TKE = cqi.tkeIdx;
+        size_t nConserved = GlobalConfig.cqi.nConservedQuantities;
+        size_t MASS = GlobalConfig.cqi.mass;
+        size_t X_MOM = GlobalConfig.cqi.xMom;
+        size_t Y_MOM = GlobalConfig.cqi.yMom;
+        size_t Z_MOM = GlobalConfig.cqi.zMom;
+        size_t TOT_ENERGY = GlobalConfig.cqi.totEnergy;
+        size_t TKE = GlobalConfig.cqi.tke;
         
         // We perform a Frechet derivative to evaluate J*D^(-1)v
         foreach (blk; parallel(localFluidBlocks,1)) {
@@ -1303,13 +1303,13 @@ void lusgs_solve(int step, double pseudoSimTime, double dt, double omega, ref do
     //
 
     // Make a stack-local copy of conserved quantities info
-    size_t nConserved = cqi.nConservedQuantities;
-    size_t MASS = cqi.massIdx;
-    size_t X_MOM = cqi.xMomIdx;
-    size_t Y_MOM = cqi.yMomIdx;
-    size_t Z_MOM = cqi.zMomIdx;
-    size_t TOT_ENERGY = cqi.totEnergyIdx;
-    size_t TKE = cqi.tkeIdx;
+    size_t nConserved = GlobalConfig.cqi.nConservedQuantities;
+    size_t MASS = GlobalConfig.cqi.mass;
+    size_t X_MOM = GlobalConfig.cqi.xMom;
+    size_t Y_MOM = GlobalConfig.cqi.yMom;
+    size_t Z_MOM = GlobalConfig.cqi.zMom;
+    size_t TOT_ENERGY = GlobalConfig.cqi.totEnergy;
+    size_t TKE = GlobalConfig.cqi.tke;
 
     // temporary switch ... TODO: make this an input parameters
     bool matrix_based = false;
@@ -1379,13 +1379,13 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                     ref double residual, ref int nRestarts, int startStep)
 {
     // Make a stack-local copy of conserved quantities info
-    size_t nConserved = cqi.nConservedQuantities;
-    size_t MASS = cqi.massIdx;
-    size_t X_MOM = cqi.xMomIdx;
-    size_t Y_MOM = cqi.yMomIdx;
-    size_t Z_MOM = cqi.zMomIdx;
-    size_t TOT_ENERGY = cqi.totEnergyIdx;
-    size_t TKE = cqi.tkeIdx;
+    size_t nConserved = GlobalConfig.cqi.nConservedQuantities;
+    size_t MASS = GlobalConfig.cqi.mass;
+    size_t X_MOM = GlobalConfig.cqi.xMom;
+    size_t Y_MOM = GlobalConfig.cqi.yMom;
+    size_t Z_MOM = GlobalConfig.cqi.zMom;
+    size_t TOT_ENERGY = GlobalConfig.cqi.totEnergy;
+    size_t TKE = GlobalConfig.cqi.tke;
 
     number resid;
     
@@ -1918,7 +1918,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
 void max_residuals(ConservedQuantities residuals)
 {
     // Make a stack-local copy of conserved quantities info
-    size_t nConserved = cqi.nConservedQuantities;
+    size_t nConserved = GlobalConfig.cqi.nConservedQuantities;
 
     foreach (blk; parallel(localFluidBlocks,1)) {
         size_t nturb = blk.myConfig.turb_model.nturb;

@@ -1972,13 +1972,13 @@ public:
         // Compute a relaxation subiteration dU^{k+1} = D^{-1} * (R - 0.5*LU)
 
         // Make a stack-local copy of conserved quantities info
-        size_t nConserved = cqi.nConservedQuantities;
-        size_t MASS = cqi.massIdx;
-        size_t X_MOM = cqi.xMomIdx;
-        size_t Y_MOM = cqi.yMomIdx;
-        size_t Z_MOM = cqi.zMomIdx;
-        size_t TOT_ENERGY = cqi.totEnergyIdx;
-        size_t TKE = cqi.tkeIdx;
+        size_t nConserved = myConfig.cqi.nConservedQuantities;
+        size_t MASS = myConfig.cqi.mass;
+        size_t X_MOM = myConfig.cqi.xMom;
+        size_t Y_MOM = myConfig.cqi.yMom;
+        size_t Z_MOM = myConfig.cqi.zMom;
+        size_t TOT_ENERGY = myConfig.cqi.totEnergy;
+        size_t TKE = myConfig.cqi.tke;
 
         LU[] = to!number(0.0);
         // loop through neighbouring cells and approximate off-diagonal terms (L+U)
@@ -2021,13 +2021,13 @@ public:
         // 
         
         // Make a stack-local copy of conserved quantities info
-        size_t nConserved = cqi.nConservedQuantities;
-        size_t MASS = cqi.massIdx;
-        size_t X_MOM = cqi.xMomIdx;
-        size_t Y_MOM = cqi.yMomIdx;
-        size_t Z_MOM = cqi.zMomIdx;
-        size_t TOT_ENERGY = cqi.totEnergyIdx;
-        size_t TKE = cqi.tkeIdx;
+        size_t nConserved = myConfig.cqi.nConservedQuantities;
+        size_t MASS = myConfig.cqi.mass;
+        size_t X_MOM = myConfig.cqi.xMom;
+        size_t Y_MOM = myConfig.cqi.yMom;
+        size_t Z_MOM = myConfig.cqi.zMom;
+        size_t TOT_ENERGY = myConfig.cqi.totEnergy;
+        size_t TKE = myConfig.cqi.tke;
         
         // make sure cells have conserved quantities filled
         encode_conserved(0, 0, 0.0);
@@ -2104,13 +2104,13 @@ public:
         // 
         
         // Make a stack-local copy of conserved quantities info
-        size_t nConserved = cqi.nConservedQuantities;
-        size_t MASS = cqi.massIdx;
-        size_t X_MOM = cqi.xMomIdx;
-        size_t Y_MOM = cqi.yMomIdx;
-        size_t Z_MOM = cqi.zMomIdx;
-        size_t TOT_ENERGY = cqi.totEnergyIdx;
-        size_t TKE = cqi.tkeIdx;
+        size_t nConserved = myConfig.cqi.nConservedQuantities;
+        size_t MASS = myConfig.cqi.mass;
+        size_t X_MOM = myConfig.cqi.xMom;
+        size_t Y_MOM = myConfig.cqi.yMom;
+        size_t Z_MOM = myConfig.cqi.zMom;
+        size_t TOT_ENERGY = myConfig.cqi.totEnergy;
+        size_t TKE = myConfig.cqi.tke;
 
         // primitive variables
         auto gmodel = myConfig.gmodel;

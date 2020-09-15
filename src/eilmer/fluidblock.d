@@ -866,7 +866,7 @@ public:
     version(nk_accelerator) {
     void allocate_GMRES_workspace()
     {
-        size_t nConserved = cqi.nConservedQuantities;
+        size_t nConserved = GlobalConfig.cqi.nConservedQuantities;
         int n_species = GlobalConfig.gmodel_master.n_species();
         int n_modes = GlobalConfig.gmodel_master.n_modes();
         maxRate = new ConservedQuantities(n_species, n_modes);
