@@ -4292,8 +4292,8 @@ void ilu_preconditioner(ref FluidBlock blk, size_t np, double dt, size_t orderOf
     //    blk.P[i,i] = blk.P[i,i] + dtInv;
     //}
 
-    blk.P.aa[] = [to!number(-1.0)]*blk.P.aa[];
-    
+    foreach(i; 0..blk.P.aa.length) { blk.P.aa[i] = -1.0*blk.P.aa[i]; }
+
     foreach (i, cell; blk.cells) {
         number dtInv;
         if (GlobalConfig.with_local_time_stepping) { dtInv = 1.0/cell.dt_local; }
