@@ -299,14 +299,10 @@ shocks and Hanel-Schwane-Seider flux calculator near shocks.
   The per-time-step increment of the viscous effects, once simulation time exceeds
   `config.viscous_delay`.
 
-`config.diffusion` ::
-  _boolean_, default `false` +
-  Set to `true` to compute multicomponent diffusion of species.
-
 `config.turbulence_model` ::
   _string_, default: `'none'` +
   String specifying which model to use.
-  Options are: `'none'` `'k_omega'`
+  Options are: `'none'` `'k_omega'` `'spalart_allmaras'`
 
 `config.turbulence_prandtl_number` ::
   _float_, default: `0.89`
@@ -342,6 +338,31 @@ shocks and Hanel-Schwane-Seider flux calculator near shocks.
   The default value is `300.0` since most reaction schemes seem to be valid for temperatures
   above this, however, you may have good reasons to set it higher or lower.
 
+
+== Species Diffusion
+
+`config.mass_diffusion_model` ::
+  _string_, default: `'none'` +
+  Set the expression for laminar diffusion flux of species along concentration gradients. 
+  Valid options are: `'none'` (no diffusion) and `'ficks_first_law'` (self explanatory).
+  Note that this option is ignored in turbulent flow, where the turbulent diffusivity is
+  used instead.
+
+`config.diffusion_coefficient_type` ::
+  _string_, default: `'none'` +
+  Set the type of formula used to compute the species diffusion coefficients in a 
+  diffusion enabled simulation.
+  Valid options are: `'constant_lewis_number'` (works with any multi-species model),
+  `'species_specific_lewis_numbers'` (requires specific gas models), and
+  `'binary_diffusion'` (requires specific gas models).
+  Note that leaving this parameter as `'none'` in a simulation where 
+  `config.mass_diffusion_model='ficks_first_law'` will cause a run-time error.
+
+`config.lewis_number` ::
+  _float_, default: `1.0` +
+  Set the value for the Lewis number, which computes the species diffusion coefficients
+  based on the thermal conductivity, in a diffusion enabled simulation with    
+  `config.diffusion_coefficient_type=constant_lewis_number`.
 
 == Special initialisation
 
