@@ -362,6 +362,21 @@ function TemperatureFromGasSolidInterface:tojson()
    return str
 end
 
+ThermionicRadiativeEquilibrium = BoundaryInterfaceEffect:new{emissivity=nil, Ar=nil, phi=nil,
+                          ThermionicEmissionActive=1, Twall_iterations=200, Twall_subiterations=50}
+ThermionicRadiativeEquilibrium.type = "thermionic_radiative_equilibrium"
+function ThermionicRadiativeEquilibrium:tojson()
+   local str = string.format('          {"type": "%s",', self.type)
+   str = str .. string.format(' "emissivity": %.18e,', self.emissivity)
+   str = str .. string.format(' "Ar": %.18e,', self.Ar)
+   str = str .. string.format(' "phi": %.18e,', self.phi)
+   str = str .. string.format(' "ThermionicEmissionActive": %d,', self.ThermionicEmissionActive)
+   str = str .. string.format(' "Twall_iterations": %d,', self.Twall_iterations)
+   str = str .. string.format(' "Twall_subiterations": %d', self.Twall_subiterations)
+   str = str .. '}'
+   return str
+end
+
 UserDefinedInterface = BoundaryInterfaceEffect:new{fileName='user-defined-bc.lua'}
 UserDefinedInterface.type = "user_defined"
 function UserDefinedInterface:tojson()
@@ -733,8 +748,15 @@ function WallBC_ThermionicEmission:new(o)
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
 
-   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new(),
-                  UpdateThermoTransCoeffs:new() }
+   o.preSpatialDerivActionAtBndryFaces = {
+      CopyCellData:new(),
+      ZeroVelocity:new(),
+      ThermionicRadiativeEquilibrium:new{emissivity=o.emissivity, Ar=o.Ar, phi=o.phi,
+                                  ThermionicEmissionActive=o.ThermionicEmissionActive,
+                                  Twall_iterations=o.Twall_iterations,
+                                  Twall_subiterations=o.Twall_subiterations},
+      UpdateThermoTransCoeffs:new()
+   }
    if o.catalytic_type and o.catalytic_type ~= "none" then
       o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
          FixedComposition:new{wall_massf_composition=
@@ -746,13 +768,6 @@ function WallBC_ThermionicEmission:new(o)
       print("Thermionic Emission activated");
    end
    -- Added update for wall temperature following the computation of spatial derivaitives
-   o.postDiffFluxAction = {
-      EnergyBalanceThermionic:new{emissivity=o.emissivity, Ar=o.Ar, phi=o.phi,
-                                  ThermionicEmissionActive=o.ThermionicEmissionActive,
-                                  Twall_iterations=o.Twall_iterations,
-                                  Twall_subiterations=o.Twall_subiterations}
-   }
-
    o.is_configured = true
    return o
 end

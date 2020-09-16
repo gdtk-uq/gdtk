@@ -684,7 +684,7 @@ public:
                         double dn = distance_between(cell.pos[0], IFace.pos);
                         // Flux equations
                         // Energy balance by solving for the wall surface temperature
-                        IFace.F.total_energy = solve_for_wall_temperature_and_energy_flux(cell, IFace, dn);
+                        solve_for_wall_temperature_and_energy_flux(cell, IFace, dn, 1);
                     } // end i loop
                 } // end for k
                 break;
@@ -698,7 +698,7 @@ public:
                         double dn = distance_between(cell.pos[0], IFace.pos);
                         // Flux equations
                         // Energy balance by solving for the wall surface temperature
-                        IFace.F.total_energy = solve_for_wall_temperature_and_energy_flux(cell, IFace, dn);
+                        solve_for_wall_temperature_and_energy_flux(cell, IFace, dn, 1);
                     } // end j loop
                 } // end for k
                 break;
@@ -711,7 +711,7 @@ public:
                         IFace = cell.iface[Face.south];
                         double dn = distance_between(cell.pos[0], IFace.pos);
                         // Negative for SOUTH face
-                        IFace.F.total_energy = -1*solve_for_wall_temperature_and_energy_flux(cell, IFace, dn);
+                        solve_for_wall_temperature_and_energy_flux(cell, IFace, dn, -1);
                     } // end i loop
                 } // end for k
                 break;
@@ -724,7 +724,7 @@ public:
                         IFace = cell.iface[Face.south];
                         double dn = distance_between(cell.pos[0], IFace.pos);
                         // Negative for WEST face
-                        IFace.F.total_energy = -1*solve_for_wall_temperature_and_energy_flux(cell, IFace, dn);
+                        solve_for_wall_temperature_and_energy_flux(cell, IFace, dn, -1);
                     } // end j loop
                 } // end for k
                 break;
@@ -738,7 +738,7 @@ public:
                         double dn = distance_between(cell.pos[0], IFace.pos);
                         // Flux equations
                         // Energy balance by solving for the wall surface temperature
-                        IFace.F.total_energy = solve_for_wall_temperature_and_energy_flux(cell, IFace, dn);
+                        solve_for_wall_temperature_and_energy_flux(cell, IFace, dn, 1);
                     } // end j loop
                 } // end for i
                 break;
@@ -751,7 +751,7 @@ public:
                         IFace = cell.iface[Face.south];
                         double dn = distance_between(cell.pos[0], IFace.pos);
                         // Negative for BOTTOM face
-                        IFace.F.total_energy = -1*solve_for_wall_temperature_and_energy_flux(cell, IFace, dn);
+                        solve_for_wall_temperature_and_energy_flux(cell, IFace, dn, -1);
                     } // end j loop
                 } // end for i
                 break;
@@ -760,7 +760,7 @@ public:
     }
 
     @nogc
-    double solve_for_wall_temperature_and_energy_flux(const FVCell cell, FVInterface IFace, double dn)
+    void solve_for_wall_temperature_and_energy_flux(FVCell cell, FVInterface IFace, double dn, int sign)
     // Iteratively converge on wall temp
     {
         double TOL = 1.0e-3;
@@ -768,6 +768,7 @@ public:
         number Thigh = 5000.0;
 
         auto gmodel = blk.myConfig.gmodel;
+        uint n_modes = blk.myConfig.n_modes;
 
         // IFace orientation
         number nx = IFace.n.x; number ny = IFace.n.y; number nz = IFace.n.z;
@@ -775,14 +776,13 @@ public:
         FlowGradients grad = IFace.grad;
         double viscous_factor = blk.myConfig.viscous_factor;
 
-
         number zeroFun(number T)
         {
             IFace.fs.gas.T = T;
             IFace.fs.gas.p = cell.fs.gas.p;
+            version(multi_T_gas) { foreach (imode; 0 .. n_modes) IFace.fs.gas.T_modes[imode] = T; }
             gmodel.update_thermo_from_pT(IFace.fs.gas);
             gmodel.update_trans_coeffs(IFace.fs.gas);
-
             number dT = (cell.fs.gas.T - IFace.fs.gas.T);
             number k_eff = viscous_factor * (IFace.fs.gas.k + IFace.fs.k_t);
             number dTdn = dT / dn;
@@ -790,6 +790,13 @@ public:
             if (blk.myConfig.turb_model.isTurbulent ||
                 blk.myConfig.mass_diffusion_model != MassDiffusionModel.none) {
                 q_total -= IFace.q_diffusion;
+            }
+            version(multi_T_gas) {
+                foreach (imode; 0 .. n_modes) {
+                    number dTvdn = (cell.fs.gas.T_modes[imode] - T)/dn;
+                    number k_mode = IFace.fs.gas.k_modes[imode];
+                    q_total += k_mode*dTvdn;
+                }
             }
 
             number f_rad = emissivity*SB_sigma*T*T*T*T;
@@ -818,6 +825,7 @@ public:
         // If successful, set temperature, flux and gradients
         IFace.fs.gas.T = Twall;
         IFace.fs.gas.p = cell.fs.gas.p;
+        version(multi_T_gas) { foreach (imode; 0 .. n_modes) IFace.fs.gas.T_modes[imode] = Twall; }
         gmodel.update_thermo_from_pT(IFace.fs.gas);
         gmodel.update_trans_coeffs(IFace.fs.gas);
         number dT = (cell.fs.gas.T - IFace.fs.gas.T);
@@ -831,8 +839,19 @@ public:
         grad.T[0] = dTdn * nx;
         grad.T[1] = dTdn * ny;
         grad.T[2] = dTdn * nz;
-
-        return q_total.re;
+        version(multi_T_gas) {
+            foreach (imode; 0 .. n_modes) {
+                number dTvdn = (cell.fs.gas.T_modes[imode] - Twall)/dn;
+                grad.T_modes[imode][0] = dTvdn*nx;
+                grad.T_modes[imode][1] = dTvdn*ny;
+                grad.T_modes[imode][2] = dTvdn*nz;
+                number q_ve = IFace.fs.gas.k_modes[imode]*dTvdn;
+                IFace.F.energies[imode] = sign*q_ve.re;
+                q_total += q_ve;
+            }
+        }
+        IFace.F.total_energy = sign*q_total.re;
+        return;
 
     } // end solve_for_wall_temperature_and_energy_flux()
 

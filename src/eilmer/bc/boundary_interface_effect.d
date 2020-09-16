@@ -15,6 +15,8 @@ import std.stdio;
 import std.math;
 import nm.complex;
 import nm.number;
+import nm.brent;
+import nm.bracketing;
 
 import geom;
 import json_helper;
@@ -98,6 +100,16 @@ BoundaryInterfaceEffect make_BIE_from_json(JSONValue jsonData, int blk_id, int b
         newBIE = new BIE_TemperatureFromGasSolidInterface(blk_id, boundary,
                                                           otherBlock, face_index(otherFaceName),
                                                           neighbourOrientation);
+        break;
+    case "thermionic_radiative_equilibrium":
+        double emissivity = getJSONdouble(jsonData, "emissivity", 0.0);
+        double Ar = getJSONdouble(jsonData, "Ar", 0.0);
+        double phi = getJSONdouble(jsonData, "phi", 0.0);
+        int ThermionicEmissionActive = getJSONint(jsonData, "ThermionicEmissionActive", 1);
+        int Twall_iterations = getJSONint(jsonData, "Twall_iterations", 200);
+        int Twall_subiterations = getJSONint(jsonData, "Twall_subiterations", 20);
+        newBIE = new BIE_ThermionicRadiativeEquilibrium(blk_id, boundary, emissivity, Ar, phi,
+                                 ThermionicEmissionActive, Twall_iterations, Twall_subiterations);
         break;
     case "user_defined":
         string fname = getJSONstring(jsonData, "filename", "none");
@@ -1726,7 +1738,7 @@ protected:
         IFace.fs.gas.p = cell.fs.gas.p;
         gmodel.update_thermo_from_pT(IFace.fs.gas);
         gmodel.update_trans_coeffs(IFace.fs.gas);
-        number rho_wall = IFace.fs.gas.rho; 
+        number rho_wall = IFace.fs.gas.rho;
         number k_lam_wall = IFace.fs.gas.k;
         number mu_lam_wall = IFace.fs.gas.mu;
 
@@ -1737,7 +1749,7 @@ protected:
         number dTdy = fabs(T - T_wall)/wall_dist;
         q_wall = k_lam_wall * dTdy;
 
-        // Two variable Newton's method to solve equations (8) and (10) simulteneously 
+        // Two variable Newton's method to solve equations (8) and (10) simulteneously
         const number tolerance = 1.0e-10;
         number error = 1e32;
         ulong iterations = 0;
@@ -1840,7 +1852,7 @@ protected:
                is not in Nichols and Nelson's paper. We set the limit to
                either a value just below 1.0, or just above -1.0, to avoid
                the calculation of y_white_y_plus (Eq. 15) from blowing up.
-        */ 
+        */
         const number kappa = 0.4;
         const number B = 5.5;
 
@@ -1859,7 +1871,7 @@ protected:
         number thing = exp(-1.0*kappa*B) * ( 1.0 + kappa*u_plus + pow((kappa*u_plus), 2.0) / 2.0
                                                                 + pow((kappa*u_plus), 3.0) / 6.0 );
         number error = u_plus + y_plus_white - thing - y_plus;
-        return error; 
+        return error;
     }
 
     void WhiteChristophJacobian(number tau_wall, number q_wall, number rho_wall, number T_wall, number mu_lam_wall, number k_lam_wall, number recovery, number u, number y, number cp, ref number dWC_dtauw, ref number dWC_dqw){
@@ -1962,7 +1974,7 @@ protected:
         IFace.fs.gas.T = T_wall;
         gmodel.update_thermo_from_pT(IFace.fs.gas);
         gmodel.update_trans_coeffs(IFace.fs.gas);
-        number rho_wall = IFace.fs.gas.rho; 
+        number rho_wall = IFace.fs.gas.rho;
         number k_lam_wall = IFace.fs.gas.k;
         number mu_lam_wall = IFace.fs.gas.mu;
 
@@ -2076,3 +2088,233 @@ public:
     }
 
 } // end class BIE_TemperatureFromGasSolidInterface
+
+class BIE_ThermionicRadiativeEquilibrium : BoundaryInterfaceEffect {
+public:
+    // Function inputs from Eilmer4 .lua simulation input
+    double emissivity;  // Input emissivity, 0<e<=1.0. Assumed black body radiation out from wall
+    double Ar;          // Richardson constant, material-dependent
+    double phi;         // Work function, material dependent. Input units in eV,
+                        // this gets converted to Joules by multiplying by Elementary charge, Qe
+    int ThermionicEmissionActive;  // Whether or not Thermionic Emission is active. Default is 'on'
+
+    // Solver iteration counts
+    int Twall_iterations;  // Iterations for primary Twall calculations. Default = 200
+    int Twall_subiterations;  // Iterations for newton method when ThermionicEmissionActive==1. Default = 20
+
+    // Constants used in analysis
+    double SB_sigma = 5.670373e-8;  // Stefan-Boltzmann constant.   Units: W/(m^2 K^4)
+    double kb = 1.38064852e-23;     // Boltzmann constant.          Units: (m^2 kg)/(s^2 K^1)
+    double Qe = 1.60217662e-19;     // Elementary charge.           Units: C
+
+    this(int id, int boundary, double emissivity, double Ar, double phi, int ThermionicEmissionActive,
+        int Twall_iterations, int Twall_subiterations)
+    {
+        super(id, boundary, "ThermionicRadiativeEquilibrium");
+        this.emissivity = emissivity;
+        this.Ar = Ar;
+        this.phi = phi*Qe;  // Convert phi from input 'eV' to 'J'
+        this.ThermionicEmissionActive = ThermionicEmissionActive;
+        this.Twall_iterations = Twall_iterations;
+        this.Twall_subiterations = Twall_subiterations;
+    }
+
+    override string toString() const
+    {
+        return "BIE_ThermionicRadiativeEquilibrium(ThermionicEmissionActive=" ~
+            to!string(ThermionicEmissionActive) ~
+            ", Work Function =" ~ to!string(phi/Qe) ~
+            "eV , emissivity=" ~ to!string(emissivity) ~
+            ", Richardson Constant=" ~ to!string(Ar) ~
+            ")";
+    }
+
+    @nogc
+    override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        throw new Error("BIE_ThermionicRadiativeEquilibrium.apply_for_interface_unstructured_grid() not yet implemented");
+    }
+
+    @nogc
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
+    {
+        throw new Error("BIE_ThermionicRadiativeEquilibrium.apply_unstructured_grid() not yet implemented");
+    }
+
+    @nogc
+    override void apply_structured_grid(double t, int gtl, int ftl)
+    {
+        auto blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
+        if (t < blk.myConfig.thermionic_emission_bc_time_delay){
+            return;
+        }
+        if ( emissivity <= 0.0 || emissivity > 1.0 ) {
+            // Check if emissivity value is valid
+            throw new Error("emissivity should be 0.0<e<=1.0\n");
+        } else if ( Ar == 0.0){
+            throw new Error("Ar should be set!\n");
+        } else if ( phi == 0.0){
+            throw new Error("phi should be set!\n");
+        } else if (blk.myConfig.turb_model.isTurbulent) {
+            throw new Error("WallBC_ThermionicEmission only implemented for laminar flow\n");
+        } else {
+
+            FVInterface IFace;
+            size_t i, j, k;
+            FVCell cell;
+
+            final switch (which_boundary) {
+            case Face.north:
+                j = blk.jmax;
+                for (k = blk.kmin; k <= blk.kmax; ++k) {
+                    for (i = blk.imin; i <= blk.imax; ++i) {
+                        // Set cell/face properties
+                        cell = blk.get_cell(i,j,k);
+                        IFace = cell.iface[Face.east];
+                        double dn = distance_between(cell.pos[0], IFace.pos);
+                        // Flux equations
+                        // Energy balance by solving for the wall surface temperature
+                        solve_for_wall_temperature_and_energy_flux(cell, IFace, dn, 1);
+                    } // end i loop
+                } // end for k
+                break;
+            case Face.east:
+                i = blk.imax;
+                for (k = blk.kmin; k <= blk.kmax; ++k) {
+                    for (j = blk.jmin; j <= blk.jmax; ++j) {
+                        // Set cell/face properties
+                        cell = blk.get_cell(i,j,k);
+                        IFace = cell.iface[Face.east];
+                        double dn = distance_between(cell.pos[0], IFace.pos);
+                        // Flux equations
+                        // Energy balance by solving for the wall surface temperature
+                        solve_for_wall_temperature_and_energy_flux(cell, IFace, dn, 1);
+                    } // end j loop
+                } // end for k
+                break;
+            case Face.south:
+                j = blk.jmin;
+                for (k = blk.kmin; k <= blk.kmax; ++k) {
+                    for (i = blk.imin; i <= blk.imax; ++i) {
+                        // Set cell/face properties
+                        cell = blk.get_cell(i,j,k);
+                        IFace = cell.iface[Face.south];
+                        double dn = distance_between(cell.pos[0], IFace.pos);
+                        // Negative for SOUTH face
+                        solve_for_wall_temperature_and_energy_flux(cell, IFace, dn, -1);
+                    } // end i loop
+                } // end for k
+                break;
+            case Face.west:
+                i = blk.imin;
+                for (k = blk.kmin; k <= blk.kmax; ++k) {
+                    for (j = blk.jmin; j <= blk.jmax; ++j) {
+                        // Set cell/face properties
+                        cell = blk.get_cell(i,j,k);
+                        IFace = cell.iface[Face.south];
+                        double dn = distance_between(cell.pos[0], IFace.pos);
+                        // Negative for WEST face
+                        solve_for_wall_temperature_and_energy_flux(cell, IFace, dn, -1);
+                    } // end j loop
+                } // end for k
+                break;
+            case Face.top:
+                k = blk.kmax;
+                for (i = blk.imin; i <= blk.imax; ++i) {
+                    for (j = blk.jmin; j <= blk.jmax; ++j) {
+                        // Set cell/face properties
+                        cell = blk.get_cell(i,j,k);
+                        IFace = cell.iface[Face.east];
+                        double dn = distance_between(cell.pos[0], IFace.pos);
+                        // Flux equations
+                        // Energy balance by solving for the wall surface temperature
+                        solve_for_wall_temperature_and_energy_flux(cell, IFace, dn, 1);
+                    } // end j loop
+                } // end for i
+                break;
+            case Face.bottom:
+                k = blk.kmin;
+                for (i = blk.imin; i <= blk.imax; ++i) {
+                    for (j = blk.jmin; j <= blk.jmax; ++j) {
+                        // Set cell/face properties
+                        cell = blk.get_cell(i,j,k);
+                        IFace = cell.iface[Face.south];
+                        double dn = distance_between(cell.pos[0], IFace.pos);
+                        // Negative for BOTTOM face
+                        solve_for_wall_temperature_and_energy_flux(cell, IFace, dn, -1);
+                    } // end j loop
+                } // end for i
+                break;
+            } // end switch which_boundary
+        } // end apply_structured_grid()
+    }
+
+    @nogc
+    void solve_for_wall_temperature_and_energy_flux(FVCell cell, FVInterface IFace, double dn, int sign)
+    // Iteratively converge on wall temp
+    {
+        double TOL = 1.0e-3;
+        number Tlow = 300.0;
+        number Thigh = 5000.0;
+
+        auto gmodel = blk.myConfig.gmodel;
+        uint n_modes = blk.myConfig.n_modes;
+
+        number nx = IFace.n.x; number ny = IFace.n.y; number nz = IFace.n.z;
+        double viscous_factor = blk.myConfig.viscous_factor;
+
+        number zeroFun(number T)
+        {
+            IFace.fs.gas.T = T;
+            IFace.fs.gas.p = cell.fs.gas.p;
+            version(multi_T_gas) { foreach (imode; 0 .. n_modes) IFace.fs.gas.T_modes[imode] = T; }
+            gmodel.update_thermo_from_pT(IFace.fs.gas);
+            gmodel.update_trans_coeffs(IFace.fs.gas);
+
+            number k_eff = viscous_factor * (IFace.fs.gas.k + IFace.fs.k_t);
+            number dTdn = (cell.fs.gas.T - IFace.fs.gas.T)/dn;
+            number q_total = k_eff * dTdn;
+            version(multi_T_gas) {
+                foreach (imode; 0 .. n_modes) {
+                    number k_mode = viscous_factor*IFace.fs.gas.k_modes[imode];
+                    number dTvdn = (cell.fs.gas.T_modes[imode] - IFace.fs.gas.T_modes[imode])/dn;
+                    q_total += k_mode * dTvdn;
+                }
+            }
+
+            number f_rad = emissivity*SB_sigma*T*T*T*T;
+            number f_thermionic = to!number(0.0);
+            if (ThermionicEmissionActive == 1) {
+                f_thermionic = Ar*T*T*exp(-phi/(kb*T))/Qe*(phi + 2*kb*T);
+            }
+
+            return f_rad + f_thermionic - q_total;
+        }
+
+        if (bracket!(zeroFun,number)(Tlow, Thigh) == -1) {
+            string msg = "The 'bracket' function failed to find bracketing temperature values in thermionic emission boundary condition.\n";
+            throw new Exception(msg);
+        }
+
+        number Twall = -1.0;
+        try {
+            Twall = solve!(zeroFun,number)(Tlow, Thigh, TOL);
+        }
+        catch (Exception e) {
+            string msg = "There was a problem iterating to find temperature in ETC boundary condition.\n";
+            throw new Exception(msg);
+        }
+
+        // If successful, set temperatures and update
+        // Is this going to work in a situation where you aren't using cell
+        // centered least squares???
+        IFace.fs.gas.T = Twall;
+        IFace.fs.gas.p = cell.fs.gas.p; // possibly unneeded
+        version(multi_T_gas) { foreach (imode; 0 .. n_modes) IFace.fs.gas.T_modes[imode] = Twall; }
+        gmodel.update_thermo_from_pT(IFace.fs.gas);
+        return;
+
+    } // end solve_for_wall_temperature_and_energy_flux()
+
+} // end class BIE_EnergyBalanceThermionic
