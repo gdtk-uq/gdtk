@@ -27,6 +27,7 @@ PLATFORM ?= linux
 WITH_MPI ?= 0
 WITH_MPI_TIMEOUTS ?= 0
 WITH_NK ?= 0
+WITH_LUSGS ?= 0
 WITH_SSC ?= 0
 WITH_OPENCL_GPU_CHEM ?= 0
 WITH_CUDA_GPU_CHEM ?= 0
@@ -58,6 +59,10 @@ ifeq ($(WITH_NK),1)
     PROGRAMS += e4-nk-shared
 endif
 
+ifeq ($(WITH_LUSGS),1)
+    PROGRAMS += e4-lusgs-shared
+endif
+
 ifeq ($(WITH_SSC),1)
     PROGRAMS += e4ssc
     PROGRAMS += e4opt
@@ -67,6 +72,9 @@ ifeq ($(WITH_MPI),1)
     PROGRAMS += e4mpi e4loadbalance
     ifeq ($(WITH_NK),1)
         PROGRAMS += e4-nk-dist
+    endif
+    ifeq ($(WITH_LUSGS),1)
+        PROGRAMS += e4-lusgs-dist
     endif
     MPI_LIBRARY_DIRS = $(shell mpicc --showme:libdirs)
     MPI_LIB_DIRS_SEARCH = $(foreach d, $(MPI_LIBRARY_DIRS), -L-L$d)
@@ -413,7 +421,7 @@ clean:
 	- rm e4opt optdriver_with_rev_string.d
 	- rm mpi_main_with_rev_string.d
 	- rm loadbalance_with_rev_string.d
-	- rm e4mpi e4loadbalance e4ssc e4zshared e4-nk-shared e4-nk-dist
+	- rm e4mpi e4loadbalance e4ssc e4zshared e4-nk-shared e4-nk-dist e4-lusgs-shared e4-lusgs-dist
 	- rm dgd-for-mech4480.tgz
 	- cd $(OPENMPI_DIR); make clean
 	- cd $(LUA_DIR); make clean
@@ -549,6 +557,56 @@ e4-nk-dist: nk_accelerator.d steadystate_core.d shape_sensitivity_core.d $(EILME
 	$(DMD) $(DFLAGS) $(OF)$@ \
 		$(DVERSION)mpi_parallel -I$(OPENMPI_DIR) $(MPI_LIB_DIRS_SEARCH) \
 		$(DVERSION)complex_numbers \
+		$(DVERSION)nk_accelerator \
+		$(DVERSION)steady_state \
+		$(DVERSION)shape_sensitivity \
+		mpi_nk_accelerator_with_string_subst.d steadystate_core.d shape_sensitivity_core.d \
+		$(EILMER_FILES) \
+		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
+		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
+		$(UTIL_FILES) $(NM_FILES) \
+		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) $(OPENMPI_FILES) \
+		$(LIBCEQ) $(LIBLUA) \
+		$(DLINKFLAGS) -L-lmpi
+
+e4-lusgs-shared: nk_accelerator.d steadystate_core.d shape_sensitivity_core.d $(EILMER_FILES) \
+	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
+	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBLUA) $(GZIP_FILES) \
+	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+	$(NM_FILES) $(UTIL_FILES) \
+	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
+		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
+		nk_accelerator.d > nk_accelerator_with_string_subst.d
+	$(DMD) $(DFLAGS) $(OF)$@ \
+		$(DVERSION)lu_sgs \
+		$(DVERSION)nk_accelerator \
+		$(DVERSION)steady_state \
+		$(DVERSION)shape_sensitivity \
+		nk_accelerator_with_string_subst.d steadystate_core.d shape_sensitivity_core.d \
+		$(EILMER_FILES) \
+		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
+		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
+		$(UTIL_FILES) $(NM_FILES) \
+		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) $(TECPLOT_FILES) \
+		$(LIBCEQ) $(LIBLUA) \
+		$(DLINKFLAGS)
+
+e4-lusgs-dist: nk_accelerator.d steadystate_core.d shape_sensitivity_core.d $(EILMER_FILES) \
+	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
+	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBLUA) $(GZIP_FILES) \
+	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+	$(NM_FILES) $(UTIL_FILES) \
+	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
+	cd $(OPENMPI_DIR); gen/setup.sh
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
+		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
+		nk_accelerator.d > mpi_nk_accelerator_with_string_subst.d
+	$(DMD) $(DFLAGS) $(OF)$@ \
+		$(DVERSION)mpi_parallel -I$(OPENMPI_DIR) $(MPI_LIB_DIRS_SEARCH) \
+		$(DVERSION)lu_sgs \
 		$(DVERSION)nk_accelerator \
 		$(DVERSION)steady_state \
 		$(DVERSION)shape_sensitivity \

@@ -258,8 +258,9 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         foreach ( preStep; -nPreSteps .. 0 ) {
             foreach (attempt; 0 .. maxNumberAttempts) {
                 try {
-                    rpcGMRES_solve(preStep, pseudoSimTime, dt, eta0, sigma0, usePreconditioner, normOld, nRestarts, startStep);
-                    //lusgs_solve(preStep, pseudoSimTime, dt, 2.0, normOld, kmax, startStep);
+                    version(lu_sgs) { lusgs_solve(preStep, pseudoSimTime, dt, normOld, startStep); }
+                    else { rpcGMRES_solve(preStep, pseudoSimTime, dt, eta0, sigma0, usePreconditioner, normOld, nRestarts, startStep); }
+                    
                 }
                 catch (FlowSolverException e) {
                     version(mpi_parallel) {
@@ -563,8 +564,8 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         foreach (attempt; 0 .. maxNumberAttempts) {
             failedAttempt = 0;
             try {
-                rpcGMRES_solve(step, pseudoSimTime, dt, eta, sigma, usePreconditioner, normNew, nRestarts, startStep);
-                //lusgs_solve(step, pseudoSimTime, dt, 2.0, normNew, kmax, startStep);
+                version(lu_sgs) { lusgs_solve(step, pseudoSimTime, dt, normNew, startStep); }
+                else { rpcGMRES_solve(step, pseudoSimTime, dt, eta, sigma, usePreconditioner, normNew, nRestarts, startStep); }
             }
             catch (FlowSolverException e) {
                 writefln("Failed when attempting GMRES solve in main steps.");
@@ -1561,7 +1562,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     mixin(dot_over_blocks("beta", "r0", "r0"));
     version(mpi_parallel) {
         MPI_Allreduce(MPI_IN_PLACE, &(beta.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        MPI_Allreduce(MPI_IN_PLACE, &(beta.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        version(complex_numbers) { MPI_Allreduce(MPI_IN_PLACE, &(beta.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); }
     }
     beta = sqrt(beta);
     g0[0] = beta;
@@ -1700,7 +1701,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 mixin(dot_over_blocks("H0_ij", "w", "v"));
                 version(mpi_parallel) {
                     MPI_Allreduce(MPI_IN_PLACE, &(H0_ij.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-                    MPI_Allreduce(MPI_IN_PLACE, &(H0_ij.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                    version(complex_numbers) { MPI_Allreduce(MPI_IN_PLACE, &(H0_ij.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); }
                 }
                 H0[i,j] = H0_ij;
                 foreach (blk; parallel(localFluidBlocks,1)) {
@@ -1711,7 +1712,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             mixin(dot_over_blocks("H0_jp1j", "w", "w"));
             version(mpi_parallel) {
                 MPI_Allreduce(MPI_IN_PLACE, &(H0_jp1j.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-                MPI_Allreduce(MPI_IN_PLACE, &(H0_jp1j.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                version(complex_numbers) { MPI_Allreduce(MPI_IN_PLACE, &(H0_jp1j.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); }
             }
             H0_jp1j = sqrt(H0_jp1j);
             H0[j+1,j] = H0_jp1j;
@@ -1881,7 +1882,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         mixin(dot_over_blocks("beta", "r0", "r0"));
         version(mpi_parallel) {
             MPI_Allreduce(MPI_IN_PLACE, &(beta.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-            MPI_Allreduce(MPI_IN_PLACE, &(beta.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+            version(complex_numbers) { MPI_Allreduce(MPI_IN_PLACE, &(beta.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); }
         }
         beta = sqrt(beta);
 
@@ -1962,12 +1963,12 @@ void max_residuals(ConservedQuantities residuals)
         double maxResid;
         MPI_Reduce(&(residuals.mass.re), &maxResid, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
         if (GlobalConfig.is_master_task) { residuals.mass.re = maxResid; }
-        MPI_Reduce(&(residuals.momentum.x.re), &maxResid, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&(residuals.momentum.refx.re), &maxResid, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
         if (GlobalConfig.is_master_task) { residuals.momentum.refx = to!number(maxResid); }
-        MPI_Reduce(&(residuals.momentum.y.re), &maxResid, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&(residuals.momentum.refy.re), &maxResid, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
         if (GlobalConfig.is_master_task) { residuals.momentum.refy = to!number(maxResid); }
         if (GlobalConfig.dimensions == 3) {
-            MPI_Reduce(&(residuals.momentum.z.re), &maxResid, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+            MPI_Reduce(&(residuals.momentum.refz.re), &maxResid, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
             if (GlobalConfig.is_master_task) { residuals.momentum.refz = to!number(maxResid); }
         }
         MPI_Reduce(&(residuals.total_energy.re), &maxResid, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
