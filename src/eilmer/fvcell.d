@@ -109,18 +109,6 @@ public:
     FlowState fs; // Flow properties
     ConservedQuantities[] U;  // Conserved flow quantities for the update stages.
     ConservedQuantities[] dUdt; // Time derivatives for the update stages.
-
-    // For use with LU-SGS solver/preconditioner (note: we don't need complex numbers here)
-    number[] LU;
-    number[] dUk;
-    number[] dF;
-    number[] dFvec;
-    number[] scalar_diag_inv;
-    Matrix!number block_diag;
-    Matrix!number block_diag_inv;
-    Matrix!number dFdU;
-    Matrix!number mat_tmp;
-
     ConservedQuantities Q; // source (or production) terms
     ConservedQuantities[2] dUdt_copy; // for residual smoothing
     // for unstructured grids, we may be doing high-order reconstruction
@@ -143,6 +131,15 @@ public:
     number rho_at_start_of_step, rE_at_start_of_step;
     // distance to nearest viscous wall (only computed if turb_model.needs_dwall)
     number dwall;
+
+    // For use with LU-SGS solver/preconditioner (note: we don't need complex numbers here)
+    number[] LU;
+    number[] dUk;
+    number[] dF;
+    number[] scalar_diag_inv;
+    Matrix!number dFdU;
+    Matrix!number dFdU_rotated;
+
     // Shape sensitivity calculator workspace.
     version(shape_sensitivity) {
 	size_t[] pcell_global_coord_list;
@@ -220,6 +217,19 @@ public:
             // is on AND it only required initialisation once.
             savedGasState = new GasState(gmodel);
         }
+
+        // some data structures used in the LU-SGS solver
+        version(steady_state) {
+            size_t nConserved = myConfig.cqi.nConservedQuantities;
+            scalar_diag_inv.length = nConserved;
+            dFdU = new Matrix!number(nConserved,nConserved);
+            dFdU_rotated = new Matrix!number(nConserved,nConserved);
+            dF.length = nConserved;
+            dUk.length = nConserved;
+            dUk[] = to!number(0.0);
+            LU.length = nConserved;
+        }
+
     }
 
     @nogc
@@ -1961,8 +1971,8 @@ public:
         foreach (f; iface) {
             lambda += f.area[0]*f.spectral_radius(omega);
         }
-        
-        scalar_diag_inv[] = (dtInv + 0.5*lambda/volume[0])^^(-1.0);   
+
+        scalar_diag_inv[] = (dtInv + 0.5*lambda/volume[0])^^(-1.0);
         dU[] = scalar_diag_inv[]*R[];
     } // end lusgs_startup_iteration()
 
@@ -2134,7 +2144,7 @@ public:
         dFdU[MASS,MASS] = to!number(0.0);
         dFdU[MASS,X_MOM] = to!number(1.0);
         dFdU[MASS,Y_MOM] = to!number(0.0);
-        if (myConfig.dimensions == 3) { dFdU[X_MOM,Z_MOM] = to!number(1.0); }
+        if (myConfig.dimensions == 3) { dFdU[X_MOM,Z_MOM] = to!number(0.0); }
         dFdU[MASS,TOT_ENERGY] = to!number(0.0);
         
         dFdU[X_MOM,MASS] = -(U2*U2)/(U1*U1) + (gam-1.0)*(U2*U2+U3*U3+U4*U4)/(2.0*U1*U1);
@@ -2164,8 +2174,8 @@ public:
         dFdU[TOT_ENERGY,TOT_ENERGY] = gam*(U2/U1); 
         
         // rotate matrix back into the global reference frame
-        dot(f.Tinv, dFdU, mat_tmp);
-        dot(mat_tmp, f.T, dFdU);
+        dot(f.Tinv, dFdU, dFdU_rotated);
+        dot(dFdU_rotated, f.T, dFdU);
 
     } // end roeFluxJacobian()
 

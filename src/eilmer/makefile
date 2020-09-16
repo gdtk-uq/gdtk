@@ -524,6 +524,7 @@ e4-nk-shared: nk_accelerator.d steadystate_core.d shape_sensitivity_core.d $(EIL
 	$(DMD) $(DFLAGS) $(OF)$@ \
 		$(DVERSION)complex_numbers \
 		$(DVERSION)nk_accelerator \
+		$(DVERSION)steady_state \
 		$(DVERSION)shape_sensitivity \
 		nk_accelerator_with_string_subst.d steadystate_core.d shape_sensitivity_core.d \
 		$(EILMER_FILES) \
@@ -549,6 +550,7 @@ e4-nk-dist: nk_accelerator.d steadystate_core.d shape_sensitivity_core.d $(EILME
 		$(DVERSION)mpi_parallel -I$(OPENMPI_DIR) $(MPI_LIB_DIRS_SEARCH) \
 		$(DVERSION)complex_numbers \
 		$(DVERSION)nk_accelerator \
+		$(DVERSION)steady_state \
 		$(DVERSION)shape_sensitivity \
 		mpi_nk_accelerator_with_string_subst.d steadystate_core.d shape_sensitivity_core.d \
 		$(EILMER_FILES) \

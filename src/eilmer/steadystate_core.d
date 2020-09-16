@@ -208,6 +208,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     bool residualsUpToDate = false;
     bool finalStep = false;
     bool usePreconditioner = GlobalConfig.sssOptions.usePreconditioner;
+    writeln("BEFORE");
     if (usePreconditioner) {
         foreach (blk; localFluidBlocks) {
             // Make a block-local copy of conserved quantities info
@@ -224,52 +225,11 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     // Set usePreconditioner to false for pre-steps AND first-order steps.
     usePreconditioner = false;
 
-    // initiliase some data structures for use with LU-SGS ... TODO: here for now but should put this in a more appropriate spot
-    /*
-    foreach (blk; parallel(localFluidBlocks,1)) {
-        foreach (bc; blk.bc) {
-            foreach(c; bc.ghostcells) {
-                c.dFdU = new Matrix!number(nConserved,nConserved); // number of conserved variables
-                c.mat_tmp = new Matrix!number(nConserved,nConserved);
-                c.dF.length = nConserved;
-                c.dUk.length = nConserved;
-                c.dUk[] = to!number(0.0);
-                c.LU.length = nConserved;
-            }
-        }
-        foreach(c; blk.cells) {
-            c.dFdU = new Matrix!number(nConserved,nConserved); // number of conserved variables
-            c.scalar_diag_inv.length = nConserved;
-            c.dFvec.length = nConserved;
-            c.block_diag = new Matrix!number(nConserved,nConserved); // number of conserved variables
-            c.block_diag_inv = new Matrix!number(nConserved,nConserved); // number of conserved variables
-            c.mat_tmp = new Matrix!number(nConserved,nConserved);
-            c.dF.length = nConserved;
-            c.dUk.length = nConserved;
-            c.dUk[] = to!number(0.0);
-            c.LU.length = nConserved;
-        }
-        foreach(f; blk.faces) {
-            f.T = new Matrix!number(nConserved,nConserved); // number of conserved variables
-            f.Tinv = new Matrix!number(nConserved,nConserved);
-
-            f.T.zeros;
-            if (blk.myConfig.dimensions == 3) {
-                f.T[0,0] = to!number(1.0);
-                f.T[1,1] = f.n.x; f.T[1,2] = f.n.y; f.T[1,3] = f.n.z;
-                f.T[2,1] = f.t1.x; f.T[2,2] = f.t1.y; f.T[2,3] = f.t1.z;
-                f.T[3,1] = f.t2.x; f.T[3,2] = f.t2.y; f.T[3,3] = f.t2.z;
-                f.T[4,4] = to!number(1.0);
-            } else {
-                f.T[0,0] = to!number(1.0);
-                f.T[1,1] = f.n.x; f.T[1,2] = f.n.y;
-                f.T[2,1] = f.t1.x; f.T[2,2] = f.t1.y;
-                f.T[3,3] = to!number(1.0);
-            }
-            f.Tinv = inverse(f.T);
-        }
+    // the LU-SGS solver/preconditioner needs a rotation matrix
+    // we construct these here to escape the @nogc constraints of the update_2D/3D_geometric_data() routines
+    foreach (blk; localFluidBlocks) {
+        foreach (f; blk.faces) { f.construct_rotation_matrix(); }
     }
-    */
     
     // We only do a pre-step phase if we are starting from scratch.
     if ( snapshotStart == 0 ) {
@@ -1289,7 +1249,7 @@ foreach (blk; localFluidBlocks) `~norm2~` += blk.normAcc;
 
 }
 
-void lusgs_solve(int step, double pseudoSimTime, double dt, double omega, ref double residual, int kmax, int startStep)
+void lusgs_solve(int step, double pseudoSimTime, double dt, ref double residual, int startStep)
 {
     // Data-parallel implementation of a matrix-free LU-SGS method
     //
@@ -1311,10 +1271,7 @@ void lusgs_solve(int step, double pseudoSimTime, double dt, double omega, ref do
     size_t TOT_ENERGY = GlobalConfig.cqi.totEnergy;
     size_t TKE = GlobalConfig.cqi.tke;
 
-    // temporary switch ... TODO: make this an input parameters
-    bool matrix_based = false;
-   
-    // 1. Evaluate RHS residual (R)
+    // Evaluate RHS residual (R)
     evalRHS(pseudoSimTime, 0);
 
     // calculate global residual
@@ -1335,6 +1292,17 @@ void lusgs_solve(int step, double pseudoSimTime, double dt, double omega, ref do
         MPI_Allreduce(MPI_IN_PLACE, &(residual), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     }
     residual = sqrt(residual);
+    
+    mixin(lusgs_solve("dU", "FU"));
+} // end lusgs_solve()
+
+string lusgs_solve(string lhs_vec, string rhs_vec)
+{
+    string code = "{
+
+    int kmax = GlobalConfig.sssOptions.maxSubIterations;
+    bool matrix_based = false;
+    double omega = 2.0;
 
     // 2. initial subiteration
     foreach (blk; parallel(localFluidBlocks,1)) {
@@ -1343,37 +1311,40 @@ void lusgs_solve(int step, double pseudoSimTime, double dt, double omega, ref do
             number dtInv;
             if (blk.myConfig.with_local_time_stepping) { dtInv = 1.0/cell.dt_local; }
             else { dtInv = 1.0/dt; }
-            auto dU_local = blk.dU[cellCount..cellCount+nConserved]; // this is actually a reference not a copy
-            cell.lusgs_startup_iteration(dtInv, omega, dU_local, blk.FU[cellCount..cellCount+nConserved]);
+            auto z_local = blk."~lhs_vec~"[cellCount..cellCount+nConserved]; // this is actually a reference not a copy
+            cell.lusgs_startup_iteration(dtInv, omega, z_local, blk."~rhs_vec~"[cellCount..cellCount+nConserved]);
             cellCount += nConserved;
         }
     }
-    
-    // 3. kmax subiterations    
-    foreach (k; 0 .. kmax) {
-        // shuffle dU values
-        foreach (blk; parallel(localFluidBlocks,1)) {
-            int cellCount = 0;
-            foreach (cell; blk.cells) {
-                cell.dUk[0..nConserved] = blk.dU[cellCount..cellCount+nConserved];
-                cellCount += nConserved;
-            }
-        }
-        
-        // exchange boundary dU values
-        exchange_ghost_cell_boundary_data(pseudoSimTime, 0, 0);
 
-        // perform subiteraion
-        foreach (blk; parallel(localFluidBlocks,1)) {
-            int cellCount = 0;
-            foreach (cell; blk.cells) {
-                auto dU_local = blk.dU[cellCount..cellCount+nConserved]; // this is actually a reference not a copy
-                cell.lusgs_relaxation_iteration(omega, matrix_based, dU_local, blk.FU[cellCount..cellCount+nConserved]);
-                cellCount += nConserved;
-            }
-        }
+    // 3. kmax subiterations
+    foreach (k; 0 .. kmax) {  
+         // shuffle dU values
+         foreach (blk; parallel(localFluidBlocks,1)) {
+             int cellCount = 0;
+             foreach (cell; blk.cells) {
+                 cell.dUk[0..nConserved] = blk."~lhs_vec~"[cellCount..cellCount+nConserved];
+                 cellCount += nConserved;
+             }
+         }
+
+         // exchange boundary dU values
+         exchange_ghost_cell_boundary_data(pseudoSimTime, 0, 0);
+            
+         // perform subiteraion
+         foreach (blk; parallel(localFluidBlocks,1)) {
+             int cellCount = 0;
+             foreach (cell; blk.cells) {
+                  auto z_local = blk."~lhs_vec~"[cellCount..cellCount+nConserved]; // this is actually a reference not a copy
+                  cell.lusgs_relaxation_iteration(omega, matrix_based, z_local, blk."~rhs_vec~"[cellCount..cellCount+nConserved]);
+                  cellCount += nConserved;
+             }
+         }
     }
-} // end lusgs_solve()
+
+    }";
+    return code;
+}
 
 void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, double sigma, bool usePreconditioner,
                     ref double residual, ref int nRestarts, int startStep)
@@ -1630,17 +1601,17 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             
             // apply preconditioning
             if (usePreconditioner && step >= GlobalConfig.sssOptions.startPreconditioning) {
-                foreach (blk; parallel(localFluidBlocks,1)) {
-                    int n = blk.myConfig.sssOptions.frozenPreconditionerCount; //GlobalConfig.sssOptions.frozenPreconditionerCount;
-                    // We compute the precondition matrix on the very first step after the start up steps
-                    // We then only update the precondition matrix once per GMRES call on every nth flow solver step. 
-                    if (r == 0 && j == 0 && (step == blk.myConfig.sssOptions.startPreconditioning ||
-                                             step%n == 0 ||
-                                             step == startStep ||
-                                             step == blk.myConfig.sssOptions.nStartUpSteps+1))
-                        sss_preconditioner(blk, nConserved, dt);
-                    final switch (blk.myConfig.sssOptions.preconditionMatrixType) {
-                        case PreconditionMatrixType.block_diagonal:
+                final switch (GlobalConfig.sssOptions.preconditionMatrixType) {
+                    case PreconditionMatrixType.block_diagonal:
+                        foreach (blk; parallel(localFluidBlocks,1)) {
+                            int n = blk.myConfig.sssOptions.frozenPreconditionerCount; //GlobalConfig.sssOptions.frozenPreconditionerCount;
+                            // We compute the precondition matrix on the very first step after the start up steps
+                            // We then only update the precondition matrix once per GMRES call on every nth flow solver step. 
+                            if (r == 0 && j == 0 && (step == blk.myConfig.sssOptions.startPreconditioning ||
+                                                     step%n == 0 ||
+                                                     step == startStep ||
+                                                     step == blk.myConfig.sssOptions.nStartUpSteps+1))
+                                sss_preconditioner(blk, nConserved, dt);
                             int cellCount = 0;
                             number[] tmp;
                             tmp.length = nConserved;
@@ -1649,14 +1620,28 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                                 blk.zed[cellCount..cellCount+nConserved] = tmp[];
                                 cellCount += nConserved;
                             }
-                            break;
+                        }
+                        break;
                         case PreconditionMatrixType.ilu:
-                            blk.zed[] = blk.v[];
-			    nm.smla.transpose_solve(blk.P, blk.zed);
-			    break;
-                    } // end switch
-                }
+                            foreach (blk; parallel(localFluidBlocks,1)) {
+                                int n = blk.myConfig.sssOptions.frozenPreconditionerCount; //GlobalConfig.sssOptions.frozenPreconditionerCount;
+                                // We compute the precondition matrix on the very first step after the start up steps
+                                // We then only update the precondition matrix once per GMRES call on every nth flow solver step. 
+                                if (r == 0 && j == 0 && (step == blk.myConfig.sssOptions.startPreconditioning ||
+                                                         step%n == 0 ||
+                                                         step == startStep ||
+                                                         step == blk.myConfig.sssOptions.nStartUpSteps+1))
+                                    sss_preconditioner(blk, nConserved, dt);
+                                blk.zed[] = blk.v[];
+                                nm.smla.transpose_solve(blk.P, blk.zed);
+                            }
+                            break;
+                        case PreconditionMatrixType.lu_sgs:
+                            mixin(lusgs_solve("zed", "v"));
+                            break;
+                } // end switch
             }
+       
             else {
                 foreach (blk; parallel(localFluidBlocks,1)) {
                     blk.zed[] = blk.v[];
@@ -1815,25 +1800,31 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
 
         // apply preconditioning
         if (usePreconditioner && step >= GlobalConfig.sssOptions.startPreconditioning) {
-            foreach(blk; parallel(localFluidBlocks,1)) {
-                final switch (blk.myConfig.sssOptions.preconditionMatrixType) {
+            final switch (GlobalConfig.sssOptions.preconditionMatrixType) {
                 case PreconditionMatrixType.block_diagonal:
-                    int cellCount = 0;
-                    number[] tmp;
-                    tmp.length = nConserved;
-                    foreach (cell; blk.cells) {
-                        nm.bbla.dot(cell.dConservative, blk.zed[cellCount..cellCount+nConserved], tmp);
-                        blk.dU[cellCount..cellCount+nConserved] = tmp[];
-                        cellCount += nConserved;
+                    foreach(blk; parallel(localFluidBlocks,1)) {
+                        int cellCount = 0;
+                        number[] tmp;
+                        tmp.length = nConserved;
+                        foreach (cell; blk.cells) {
+                            nm.bbla.dot(cell.dConservative, blk.zed[cellCount..cellCount+nConserved], tmp);
+                            blk.dU[cellCount..cellCount+nConserved] = tmp[];
+                            cellCount += nConserved;
+                        }
                     }
                     break;
                 case PreconditionMatrixType.ilu:
-                    blk.dU[] = blk.zed[];
-		    nm.smla.transpose_solve(blk.P, blk.dU);
+                    foreach(blk; parallel(localFluidBlocks,1)) {
+                        blk.dU[] = blk.zed[];
+                        nm.smla.transpose_solve(blk.P, blk.dU);
+                    }
                     break;
-                } // end switch
-            }
+                case PreconditionMatrixType.lu_sgs:
+                    mixin(lusgs_solve("dU", "zed"));
+                    break;
+            } // end switch
         }
+    
         else {
             foreach(blk; parallel(localFluidBlocks,1)) {
                 blk.dU[] = blk.zed[];

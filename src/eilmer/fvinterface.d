@@ -103,9 +103,8 @@ public:
         auto gmodel = myConfig.gmodel;
         uint n_species = myConfig.n_species;
         uint n_modes = myConfig.n_modes;
-        double T = 300.0;
         double[] T_modes; foreach(i; 0 .. n_modes) { T_modes ~= 300.0; }
-        fs = new FlowState(gmodel, 100.0e3, T, T_modes, Vector3(0.0,0.0,0.0));
+        fs = new FlowState(gmodel, 100.0e3, 300, T_modes, Vector3(0.0,0.0,0.0));
         F = new ConservedQuantities(n_species, n_modes);
         F.clear();
         grad = new FlowGradients(myConfig);
@@ -127,6 +126,13 @@ public:
             }
         }
         q_diffusion = to!number(0.0);
+
+        // rotation matrices used in the LU-SGS solver
+        version(steady_state) {
+            const size_t nConserved = myConfig.cqi.nConservedQuantities;
+            T = new Matrix!number(nConserved,nConserved);
+            Tinv = new Matrix!number(nConserved,nConserved);
+        }
     }
 
     this(FVInterface other, GasModel gm)
@@ -320,6 +326,45 @@ public:
         } // end switch     
     } // end update_3D_geometric_data()
 
+    void construct_rotation_matrix() {
+        // rotation matrices used in the LU-SGS solver
+
+        // Make a stack-local copy of conserved quantities info
+        size_t nConserved = myConfig.cqi.nConservedQuantities;
+        size_t MASS = myConfig.cqi.mass;
+        size_t X_MOM = myConfig.cqi.xMom;
+        size_t Y_MOM = myConfig.cqi.yMom;
+        size_t Z_MOM = myConfig.cqi.zMom;
+        size_t TOT_ENERGY = myConfig.cqi.totEnergy;
+        size_t TKE = myConfig.cqi.tke;
+        
+        T.zeros;
+        T[MASS,MASS] = to!number(1.0);
+        
+        T[X_MOM,X_MOM] = n.x;
+        T[X_MOM,Y_MOM] = n.y;
+        if (myConfig.dimensions == 3) { T[X_MOM,Z_MOM] = n.z; }
+        
+        T[Y_MOM,X_MOM] = t1.x;
+        T[Y_MOM,Y_MOM] = t1.y;
+        if (myConfig.dimensions == 3) { T[Y_MOM,Z_MOM] = t1.z; }
+        
+        if (myConfig.dimensions == 3) {
+            T[Z_MOM,X_MOM] = t2.x;
+            T[Z_MOM,Y_MOM] = t2.y;
+            T[Z_MOM,Z_MOM] = t2.z;
+        }
+        
+        T[TOT_ENERGY,TOT_ENERGY] = to!number(1.0);
+
+        auto tm = myConfig.turb_model;
+        if(tm.nturb > 0) { 
+            foreach(it; 0 .. tm.nturb){ T[TKE+it,TKE+it] = to!number(1.0); }
+        }
+
+        Tinv = inverse(T);
+    }
+    
     @nogc
     void average_vertex_deriv_values()
     {

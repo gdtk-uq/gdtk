@@ -4266,6 +4266,8 @@ void sss_preconditioner_initialisation(ref FluidBlock blk, size_t nConservative)
 	blk.cellSave = new FVCell(blk.myConfig);
         foreach(i; 0..blk.MAX_PERTURBED_INTERFACES) blk.ifaceP[i] = new FVInterface(blk.myConfig, false);
         break;
+    case PreconditionMatrixType.lu_sgs:
+        break;
     } // end switch
 }
 
@@ -4276,6 +4278,8 @@ void sss_preconditioner(ref FluidBlock blk, size_t np, double dt, size_t orderOf
         break;
     case PreconditionMatrixType.ilu:
         ilu_preconditioner(blk, np, dt, orderOfJacobian);
+        break;
+    case PreconditionMatrixType.lu_sgs:
         break;
     } // end switch
 }
