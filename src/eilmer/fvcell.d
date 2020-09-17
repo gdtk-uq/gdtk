@@ -223,7 +223,9 @@ public:
             size_t nConserved = myConfig.cqi.nConservedQuantities;
             scalar_diag_inv.length = nConserved;
             dFdU = new Matrix!number(nConserved,nConserved);
+            dFdU.zeros;
             dFdU_rotated = new Matrix!number(nConserved,nConserved);
+            dFdU_rotated.zeros;
             dF.length = nConserved;
             dUk.length = nConserved;
             dUk[] = to!number(0.0);
@@ -1989,6 +1991,7 @@ public:
         size_t Z_MOM = myConfig.cqi.zMom;
         size_t TOT_ENERGY = myConfig.cqi.totEnergy;
         size_t TKE = myConfig.cqi.tke;
+        size_t nturb = myConfig.turb_model.nturb;
 
         LU[] = to!number(0.0);
         // loop through neighbouring cells and approximate off-diagonal terms (L+U)
@@ -2007,6 +2010,9 @@ public:
             if (myConfig.dimensions == 3)
                 LU[Z_MOM] += (nc.dF[Z_MOM]*outsign[i-1] - lambda*nc.dUk[Z_MOM])*f.area[0];
             LU[TOT_ENERGY] += (nc.dF[TOT_ENERGY]*outsign[i-1] - lambda*nc.dUk[TOT_ENERGY])*f.area[0];
+            foreach(it; 0 .. nturb) {
+                LU[TKE+it] += (nc.dF[TKE+it]*outsign[i-1] - lambda*nc.dUk[TKE+it])*f.area[0];
+            }
         }
         LU[] *= 0.5/volume[0];
 
@@ -2039,6 +2045,8 @@ public:
         size_t TOT_ENERGY = myConfig.cqi.totEnergy;
         size_t TKE = myConfig.cqi.tke;
         
+        size_t nturb = myConfig.turb_model.nturb;
+
         // make sure cells have conserved quantities filled
         encode_conserved(0, 0, 0.0);
         
@@ -2050,6 +2058,9 @@ public:
         if (GlobalConfig.dimensions == 3 )
             U[1].momentum.refz += dUk[Z_MOM];
         U[1].total_energy += dUk[TOT_ENERGY];
+        foreach(it; 0 .. nturb) {
+            U[1].rhoturb[it] += dUk[TKE+it];
+        }
         
         // update primitive variables
         decode_conserved(0, 1, 0.0);          
@@ -2069,6 +2080,9 @@ public:
         if (myConfig.dimensions == 3)
             dF[Z_MOM] = rho*velx*velz;
         dF[TOT_ENERGY] = (rho*e + rho*(velx^^2 + vely^^2 + velz^^2)/2.0 + p)*velx;
+        foreach(it; 0 .. nturb) {
+            dF[TKE+it] = rho*velx*fs.turb[it];
+        }
         
         // reset primitive variables to unperturbed state
         decode_conserved(0, 0, 0.0);          
@@ -2102,6 +2116,9 @@ public:
             dF[Z_MOM] = global_mom_z;
         
         dF[TOT_ENERGY] -= (rho*e + rho*(velx^^2 + vely^^2 + velz^^2)/2.0 + p)*velx;
+        foreach(it; 0 .. nturb) {
+            dF[TKE+it] -= rho*velx*fs.turb[it];
+        }
     } // end evalMatrixFreeFluxIncrement()
 
     @nogc
@@ -2172,6 +2189,13 @@ public:
         dFdU[TOT_ENERGY,Y_MOM] = (1.0-gam)*(U3*U2)/(U1*U1);
         if (myConfig.dimensions == 3) { dFdU[TOT_ENERGY,Z_MOM] = (1.0-gam)*(U4*U2)/(U1*U1); }
         dFdU[TOT_ENERGY,TOT_ENERGY] = gam*(U2/U1); 
+
+        size_t nturb = myConfig.turb_model.nturb;
+        foreach(it; 0 .. nturb) {
+            dFdU[TKE+it, MASS] = -rho*fs.turb[it]*U2/(U1*U1);
+            dFdU[TKE+it, X_MOM] = rho*fs.turb[it]/U1;
+            dFdU[TKE+it, TKE+it] = U2/U1;
+        }
         
         // rotate matrix back into the global reference frame
         dot(f.Tinv, dFdU, dFdU_rotated);

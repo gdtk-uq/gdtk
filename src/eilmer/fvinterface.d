@@ -934,7 +934,7 @@ public:
                               (left_cell.pos[0].z-right_cell.pos[0].z)^^2 );
             auto gmodel = myConfig.gmodel;
             number Prandtl = fs.gas.mu * gmodel.Cp(fs.gas) / fs.gas.k;
-            lambda += (1.0/dr)*fmax(4.0/(3.0*fs.gas.rho), gmodel.gamma(fs.gas)/fs.gas.rho) * (fs.gas.mu/Prandtl);
+            lambda += (1.0/dr)*fmax(4.0/(3.0*fs.gas.rho), gmodel.gamma(fs.gas)/fs.gas.rho) * ( (fs.gas.mu/Prandtl) + (fs.mu_t/myConfig.turbulence_prandtl_number) );
         }
         return lambda;
     }

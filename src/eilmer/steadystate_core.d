@@ -1277,6 +1277,7 @@ void lusgs_solve(int step, double pseudoSimTime, double dt, ref double residual,
 
     // calculate global residual
     foreach (blk; parallel(localFluidBlocks,1)) {
+        size_t nturb = blk.myConfig.turb_model.nturb;
         int cellCount = 0;
         foreach (i, cell; blk.cells) {
             blk.FU[cellCount+MASS] = cell.dUdt[0].mass;
@@ -1285,6 +1286,9 @@ void lusgs_solve(int step, double pseudoSimTime, double dt, ref double residual,
             if ( GlobalConfig.dimensions == 3 )
                 blk.FU[cellCount+Z_MOM] = cell.dUdt[0].momentum.z;
             blk.FU[cellCount+TOT_ENERGY] = cell.dUdt[0].total_energy;
+            foreach(it; 0 .. nturb) {
+                blk.FU[cellCount+TKE+it] = cell.dUdt[0].rhoturb[it];
+            }
             cellCount += nConserved;
         }
     }
