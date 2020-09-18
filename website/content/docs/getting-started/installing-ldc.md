@@ -1,6 +1,7 @@
 ---
 title: "Guide to Installing LDC"
 date: 2020-04-01T08:22:59+10:00
+weight: 20
 draft: false
 ---
 

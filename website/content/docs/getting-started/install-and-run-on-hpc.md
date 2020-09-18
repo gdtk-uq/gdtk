@@ -1,6 +1,7 @@
 ---
 title: "Install & Run On HPC"
 date: 2018-02-26T13:33:39+10:00
+weight: 30
 draft: false
 ---
 
@@ -122,7 +123,7 @@ On SLURM, use `squeue`.
 If your job runs successfully to completion, you don't need to do anything.
 The job simply terminates and leaves output in your working directory.
 
-Occasionally, you might detect an error in your script or 
+Occasionally, you might detect an error in your script or
 you might have changed your mind about parameters in your job.
 You will need a way to remove your job from either the queue,
 or running on the cluster.
@@ -136,7 +137,7 @@ This example shows what to type to remove a job with a
 job id `3465` on a SLURM system:
 
     scancel 3465
-   
+
 {{< hint warning >}}
 As tempting as it might be to remove others' jobs so your
 job gets on faster, these commands won't let you do that.
@@ -186,7 +187,7 @@ To compile:
     make FLAVOUR=fast WITH_MPI=1 install
 
 To complete the install, remember to set your environment variables
-as described on the [getting started page]({{< relref "docs/getting-started/_index.md#setting-up-for-a-first-time-run-of-eilmer" >}}).
+as described on the [quick start page]({{< relref "docs/getting-started/quick-start.md#setting-up-for-a-first-time-run-of-eilmer" >}}).
 
 
 ### Running
@@ -254,7 +255,7 @@ To compile Eilmer4 with MPI enabled on tinaroo, do:
     ./install-transient-solvers.sh
 
 To complete the install, remember to set your environment variables
-as described on the [getting started page]({{< relref "docs/getting-started/_index.md#setting-up-for-a-first-time-run-of-eilmer" >}}).
+as described on the [quick start page]({{< relref "docs/getting-started/quick-start.md#setting-up-for-a-first-time-run-of-eilmer" >}}).
 
 ### Running
 Where possible, try to use a full node at once on tinaroo.
@@ -298,7 +299,7 @@ We use `qsub` to submit our job script:
 
 Gadi has a number of helpful modules already present in the /scratch/dc7/common directory, including a copy of Eilmer 4.
 To avoid having to compile the code yourself, it is possible to simply load this module and allow it to configure your environment variables.
-First set up  privatemodules directory in your home directory. 
+First set up  privatemodules directory in your home directory.
 
     $ cd
     $ mkdir privatemodules
@@ -315,7 +316,7 @@ Note that this file is preferred over modifying .bashrc on Gadi, since it is alw
 
 Finally, log out of Gadi and back in again to load the new modules. You can check the paths have been set properly by typing:
 
-    $ which e4shared 
+    $ which e4shared
     /scratch/dc7/common/dgd/ldc2/bin/e4shared
 
     $ e4shared version
@@ -335,7 +336,7 @@ In terms of modules, you only need to load the openmpi module.
 I have had success with the 4.0.2 version.
 
     module load openmpi/4.0.2
-    
+
 As described for other systems, use the `install-transient-solvers.sh` script to
 get an optimised build of the distributed-memory (MPI) transient solver.
 
@@ -343,7 +344,7 @@ get an optimised build of the distributed-memory (MPI) transient solver.
     ./install-transient-solvers.sh
 
 To complete the install, remember to set your environment variables
-as described on the [getting started page]({{< relref "docs/getting-started/_index.md#setting-up-for-a-first-time-run-of-eilmer" >}}).
+as described on the [quick start page]({{< relref "docs/getting-started/quick-start.md#setting-up-for-a-first-time-run-of-eilmer" >}}).
 
 ### An example setup in `.bash_profile`
 Here, I include what I have added to the end of my `.bash_profile` file on Gadi.
@@ -354,10 +355,10 @@ Note also that I configure access to a locally installed version of the ldc2 com
     append_path PATH ${DGD}/bin
     append_path PATH ${HOME}/opt/ldc2/bin
     append_path PYTHONPATH ${DGD}/lib
-     
+
     export DGD_LUA_PATH=$DGD/lib/?.lua
     export DGD_LUA_CPATH=$DGD/lib/?.so
-    
+
     module load openmpi/4.0.2
 
 ### Running
@@ -440,7 +441,7 @@ To install the MPI version:
     make FLAVOUR=fast WITH_MPI=1 install
 
 To complete the install, remember to set your environment variables
-as described on the [getting started page]({{< relref "docs/getting-started/_index.md#setting-up-for-a-first-time-run-of-eilmer" >}}).
+as described on the [quick start page]({{< relref "docs/getting-started/quick-start.md#setting-up-for-a-first-time-run-of-eilmer" >}}).
 
 ### Running
 
