@@ -208,7 +208,6 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     bool residualsUpToDate = false;
     bool finalStep = false;
     bool usePreconditioner = GlobalConfig.sssOptions.usePreconditioner;
-    writeln("BEFORE");
     if (usePreconditioner) {
         foreach (blk; localFluidBlocks) {
             // Make a block-local copy of conserved quantities info
