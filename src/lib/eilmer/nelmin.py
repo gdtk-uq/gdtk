@@ -82,9 +82,10 @@ import math
 import numpy
 from collections import namedtuple
 import concurrent.futures
+import json
 
 #-----------------------------------------------------------------------
-# The public face of the minimizer...
+# The public face of the simple minimizer...
 
 def minimize(f, x, dx=None, options={}):
     """
@@ -113,10 +114,12 @@ def minimize(f, x, dx=None, options={}):
         success, a flag to indicate if convergence was achieved
         nfe, the number of function evaluations and
         nrestarts, the number of restarts (with scale reduction)
+        vertices, the full simplex of points and function values, useful for a restart
     """
     # Check input parameters.
     assert callable(f), "A function was expected for f."
-    if dx is None: dx = numpy.array([0.1]*len(x))
+    N = len(x)
+    if dx is None: dx = numpy.array([0.1]*N)
     opts = {'tol':1.0e-6, 'maxfe':300, 'n_check':20, 'delta':0.001,
             'Kreflect':1.0, 'Kextend':2.0, 'Kcontract':0.5,
             'P':1, 'n_workers': 1}
@@ -132,23 +135,10 @@ def minimize(f, x, dx=None, options={}):
         workers = None
     # Get to work.
     converged = False
-    smplx = NMSimplex(x, dx, f, opts['P'], opts['Kreflect'], opts['Kextend'], opts['Kcontract'])
+    smplx = NelderMeadMinimizer(f, N, dx, opts['P'], opts['Kreflect'], opts['Kextend'], opts['Kcontract'])
+    smplx.build_initial_simplex(x)
     while (not converged) and (smplx.nfe < opts['maxfe']):
-        # Take some steps and then check for convergence.
-        for istep in range(opts['n_check']):
-            smplx.vertices.sort(key=lambda v: v.f)
-            if workers:
-                # Concurrent replacements
-                my_futures = [workers.submit(smplx.replace_vertex, smplx.N-i) for i in range(smplx.P)]
-                success = [fut.result() for fut in my_futures]
-            else:
-                # Serial replacements
-                success = [smplx.replace_vertex(smplx.N-i) for i in range(smplx.P)]
-            if not any(success):
-                # Contract the simplex about the current lowest point.
-                smplx.contract_about_zero_point()
-        # Pick out the current best vertex.
-        smplx.vertices.sort(key=lambda v: v.f)
+        smplx.take_steps(opts['n_check'])
         x_best = list(smplx.vertices[0].x.copy())
         f_best = smplx.vertices[0].f
         # Check the scatter of vertex values to see if we are
@@ -159,9 +149,11 @@ def minimize(f, x, dx=None, options={}):
             converged = smplx.test_for_minimum(opts['delta'])
             if not converged: smplx.rescale(opts['delta'])
     #
-    if workers: workers.shutdown()
-    Result = namedtuple('Result', ['x', 'fun', 'success', 'nfe', 'nrestarts'])
-    return Result(x_best, f_best, converged, smplx.nfe, smplx.nrestarts)
+    if workers:
+        workers.shutdown()
+        workers = None
+    Result = namedtuple('Result', ['x', 'fun', 'success', 'nfe', 'nrestarts', 'vertices'])
+    return Result(x_best, f_best, converged, smplx.nfe, smplx.nrestarts, smplx.vertices)
 
 
 #-----------------------------------------------------------------------
@@ -169,7 +161,7 @@ def minimize(f, x, dx=None, options={}):
 
 class Vertex:
     """
-    Stores the coordinates as and array and the associated function value.
+    Stores the coordinates as an array together with the associated function value.
     """
     __slots__ = 'x', 'f'
 
@@ -181,7 +173,7 @@ class Vertex:
         return "Vertex(x=%s, f=%s)" % (self.x, self.f)
 
 
-class NMSimplex:
+class NelderMeadMinimizer:
     """
     Stores the (nonlinear) simplex as a list of lists.
 
@@ -191,32 +183,85 @@ class NMSimplex:
     __slots__ = 'dx', 'f', 'N', 'P', 'vertices', 'nfe', 'nrestarts', \
                 'Kreflect', 'Kextend', 'Kcontract'
 
-    def __init__(self, x, dx, f, P, Kreflect, Kextend, Kcontract):
+    def __init__(self, f, N, dx=None, P=1, Kreflect=1.0, Kextend=2.0, Kcontract=0.5):
         """
-        Initialize the simplex.
+        Initialize the minimizer.
 
-        Set up the vertices about the user-specified vertex, x,
-        and the set of step-sizes dx.
         f is a user-specified objective function f(x).
         P is the number of points to be replaced in parallel, each step.
         """
-        self.N = len(x)
+        self.N = N
         self.P = P
         self.Kreflect = Kreflect
         self.Kextend = Kextend
         self.Kcontract = Kcontract
-        x = numpy.array(x) # since it may be a list or array
-        self.dx = numpy.array(dx)
+        self.dx = numpy.array(dx) if dx is not None else numpy.array([0.1]*N)
+        assert callable(f), "A function was expected for f."
         self.f = f
         self.nfe = 0
         self.nrestarts = 0
+        return
+
+    def build_initial_simplex(self, x):
+        """
+        Set up the vertices about the user-specified vertex, x, using step-sizes dx.
+        """
+        if self.N != len(x):
+            raise RuntimeError(f'N={self.N} does not match length of data {len(x)}')
+        x = numpy.array(x) # since it may be a list or array
         xs = []
         for i in range(self.N + 1):
             x_new = x.copy()
-            if i >= 1: x_new[i-1] += dx[i-1]
+            if i >= 1: x_new[i-1] += self.dx[i-1]
             xs.append(x_new)
         fs = self.evaluate_candidate_points(xs)
         self.vertices = [Vertex(item[0], item[1]) for item in zip(xs, fs)]
+        self.vertices.sort(key=lambda v: v.f)
+        return
+
+    def set_simplex(self, vertex_list):
+        """
+        Sets the full simplex from the supplied list of Vertex objects.
+        """
+        self.vertices = [Vertex(v.x, v.f) for v in vertex_list]
+        return
+
+    def load_simplex(self, filename):
+        """
+        Load full simplex from a JSON file.
+        """
+        lines = open(filename,'r').readlines()
+        dicts = [json.loads(line.strip()) for line in lines]
+        self.vertices = [Vertex(d['x'], d['f']) for d in dicts]
+        return
+
+    def dump_simplex(self, filename):
+        """
+        Dump full simplex to a JSON file.
+        """
+        with open(filename,'w') as fp:
+            for v in self.vertices:
+                fp.write(json.dumps({'x':list(v.x), 'f':v.f})+'\n')
+        return
+
+    def take_steps(self, nsteps):
+        """
+        Take some steps, updating the simplex.
+        On return, the best point is vertex[0].
+        """
+        global workers
+        for istep in range(nsteps):
+            self.vertices.sort(key=lambda v: v.f)
+            if workers:
+                # Concurrent replacements
+                my_futures = [workers.submit(self.replace_vertex, self.N-i) for i in range(self.P)]
+                success = [fut.result() for fut in my_futures]
+            else:
+                # Serial replacements
+                success = [self.replace_vertex(self.N-i) for i in range(self.P)]
+            if not any(success):
+                # Contract the simplex about the current lowest point.
+                self.contract_about_zero_point()
         self.vertices.sort(key=lambda v: v.f)
         return
 
