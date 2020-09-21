@@ -52,6 +52,10 @@ test therm-perf-gas-test {Testing therm_perf_gas.d} -body {
     exec ./therm_perf_gas_test
 } -result {} -returnCodes {0}
 
+test therm-perf-gas-complex-test {Testing therm_perf_gas.d complex flavour} -body {
+    exec ./therm_perf_gas_complex_test
+} -result {} -returnCodes {0}
+
 test therm-perf-gas-equil-test {Testing therm_perf_gas_equil.d} -body {
     exec ./therm_perf_gas_equil_test > LOGFILE_THERM_PERF_EQUIL_TEST
 } -result {} -returnCodes {0}
