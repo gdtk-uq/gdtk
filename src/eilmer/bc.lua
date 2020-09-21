@@ -363,16 +363,14 @@ function TemperatureFromGasSolidInterface:tojson()
 end
 
 ThermionicRadiativeEquilibrium = BoundaryInterfaceEffect:new{emissivity=nil, Ar=nil, phi=nil,
-                          ThermionicEmissionActive=1, Twall_iterations=200, Twall_subiterations=50}
+                          ThermionicEmissionActive=1}
 ThermionicRadiativeEquilibrium.type = "thermionic_radiative_equilibrium"
 function ThermionicRadiativeEquilibrium:tojson()
    local str = string.format('          {"type": "%s",', self.type)
    str = str .. string.format(' "emissivity": %.18e,', self.emissivity)
    str = str .. string.format(' "Ar": %.18e,', self.Ar)
    str = str .. string.format(' "phi": %.18e,', self.phi)
-   str = str .. string.format(' "ThermionicEmissionActive": %d,', self.ThermionicEmissionActive)
-   str = str .. string.format(' "Twall_iterations": %d,', self.Twall_iterations)
-   str = str .. string.format(' "Twall_subiterations": %d', self.Twall_subiterations)
+   str = str .. string.format(' "ThermionicEmissionActive": %d', self.ThermionicEmissionActive)
    str = str .. '}'
    return str
 end
@@ -739,7 +737,6 @@ function WallBC_ThermionicEmission:new(o)
    end
    o = o or {}
    flag = checkAllowedNames(o, {"emissivity", "Ar", "phi", "ThermionicEmissionActive",
-                                "Twall_iterations", "Twall_subiterations",
                                 "catalytic_type", "wall_massf_composition",
                                 "label", "group", "is_design_surface", "num_cntrl_pts"})
    if not flag then
@@ -752,9 +749,7 @@ function WallBC_ThermionicEmission:new(o)
       CopyCellData:new(),
       ZeroVelocity:new(),
       ThermionicRadiativeEquilibrium:new{emissivity=o.emissivity, Ar=o.Ar, phi=o.phi,
-                                  ThermionicEmissionActive=o.ThermionicEmissionActive,
-                                  Twall_iterations=o.Twall_iterations,
-                                  Twall_subiterations=o.Twall_subiterations},
+                                  ThermionicEmissionActive=o.ThermionicEmissionActive},
       UpdateThermoTransCoeffs:new()
    }
    if o.catalytic_type and o.catalytic_type ~= "none" then
