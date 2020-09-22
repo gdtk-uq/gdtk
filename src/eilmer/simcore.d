@@ -340,10 +340,10 @@ void init_simulation(int tindx, int nextLoadsIndx,
     foreach (myblk; parallel(localFluidBlocks,1)) {
         if (GlobalConfig.grid_motion != GridMotion.none) {
             myblk.init_grid_and_flow_arrays(make_file_name!"grid"(job_name, myblk.id, SimState.current_tindx,
-                                                                  GlobalConfig.gridFileExt)); 
+                                                                  GlobalConfig.gridFileExt));
         } else {
             // Assume there is only a single, static grid stored at tindx=0
-            myblk.init_grid_and_flow_arrays(make_file_name!"grid"(job_name, myblk.id, 0, GlobalConfig.gridFileExt)); 
+            myblk.init_grid_and_flow_arrays(make_file_name!"grid"(job_name, myblk.id, 0, GlobalConfig.gridFileExt));
         }
         myblk.compute_primary_cell_geometric_data(0);
     }
