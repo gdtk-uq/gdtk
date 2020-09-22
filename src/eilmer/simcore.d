@@ -394,7 +394,39 @@ void init_simulation(int tindx, int nextLoadsIndx,
     // we can sift through the boundary condition effects and
     // set up the ghost-cell mapping for the appropriate boundaries.
     if (GlobalConfig.verbosity_level >= 2) { writeln("Prepare exchange of boundary information."); }
-    // Serial loops because the cell-mapping function searches across
+    //
+    // First, check that full-face exchange boundaries are paired correctly.
+    foreach (my_blk; localFluidBlocks) {
+        foreach (j, bc; my_blk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto my_gce = cast(GhostCellFullFaceCopy)gce;
+                if (my_gce) {
+                    // The local block thinks that it has an exchange boundary with another block,
+                    // so we need to check the ghost-cell effects of the other block's face to see
+                    // that it points back to the local block face.
+                    auto other_blk = my_gce.neighbourBlock;
+                    bool ok = false;
+                    auto other_blk_bc = other_blk.bc[my_gce.neighbourFace];
+                    foreach (gce2; other_blk_bc.preReconAction) {
+                        auto other_gce = cast(GhostCellFullFaceCopy)gce2;
+                        if (other_gce &&
+                            (other_gce.neighbourBlock.id == my_blk.id) &&
+                            (other_gce.neighbourFace == j)) {
+                            ok = true;
+                        }
+                    }
+                    if (!ok) {
+                        string msg = format("FullFaceCopy for local blk_id=%d face=%d", my_blk.id, j);
+                        msg ~= format(" is not correctly paired with other block id=%d face=%d.",
+                                      other_blk.id, my_gce.neighbourFace);
+                        throw new FlowSolverException(msg);
+                    }
+                } // end if (my_copy_gce)
+            } // end foreach (gce;
+        } // end foreach (j, bc;
+    } // end foreach (my_blk;
+    //
+    // Serial loops follow because the cell-mapping function searches across
     // all blocks local to the process.
     // Also, there are several loops because the MPI communication,
     // if there is any, needs to be done in phases of posting of non-blocking reads,
