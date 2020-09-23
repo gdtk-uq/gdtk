@@ -1692,12 +1692,6 @@ JSONValue read_config_file()
                                    i, gridType));
         } // end switch gridType
     }
-    foreach (blk; globalBlocks) {
-        auto myblk = cast(FluidBlock) blk;
-        if (myblk) {
-            myblk.init_boundary_conditions(jsonData["block_" ~ to!string(myblk.id)]);
-        }
-    }
     // Defer the remaining configuration of the FluidBlocks until they have
     // been assigned to their MPI tasks out in the main part of init_simulation()
     // in simcore.d
@@ -1731,6 +1725,12 @@ JSONValue read_config_file()
         sblk.initBoundaryConditions(jsonData["solid_block_" ~ to!string(sblk.id)]);
         if ( GlobalConfig.udfSolidSourceTerms ) {
             initUDFSolidSourceTerms(sblk.myL, GlobalConfig.udfSolidSourceTermsFile);
+        }
+    }
+    foreach (blk; globalBlocks) {
+        auto myblk = cast(FluidBlock) blk;
+        if (myblk) {
+            myblk.init_boundary_conditions(jsonData["block_" ~ to!string(myblk.id)]);
         }
     }
     // Now that the blocks are partly configured, we can initialize
