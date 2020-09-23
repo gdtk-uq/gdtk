@@ -42,7 +42,7 @@ private:
     number p0_min;
     number p0_max;
 
-public:    
+public:
     this(int id, int boundary,
          in FlowState stagnation_condition, in string fileName,
          string direction_type, in Vector3 vec, double alpha, double beta,
@@ -58,7 +58,7 @@ public:
         this.beta = beta;
         this.mass_flux = mass_flux;
         this.relax_factor = relax_factor;
-        auto gmodel = blk.myConfig.gmodel;
+        auto gmodel = GlobalConfig.gmodel_master;
         stagnation_enthalpy = gmodel.enthalpy(stagnation_condition.gas);
         stagnation_entropy = gmodel.entropy(stagnation_condition.gas);
         inflow_condition = new FlowState(stagnation_condition);
@@ -77,13 +77,13 @@ public:
         }
     }
 
-    override string toString() const 
+    override string toString() const
     {
         return "FromStagnation(stagnation_condition=" ~ to!string(stagnation_condition) ~
             ", luaFileName=\"" ~ luaFileName ~ "\"" ~
-            ", direction_type=" ~ direction_type ~ 
+            ", direction_type=" ~ direction_type ~
             ", direction_vector=" ~ to!string(direction_vector) ~
-            ", alpha=" ~ to!string(alpha) ~ ", beta=" ~ to!string(beta) ~ 
+            ", alpha=" ~ to!string(alpha) ~ ", beta=" ~ to!string(beta) ~
             ", mass_flux=" ~ to!string(mass_flux) ~
             ", relax_factor=" ~ to!string(relax_factor) ~ ")";
     }
@@ -216,7 +216,7 @@ public:
                 // Note that we only do this adjustment once, at the start of a
                 // multi-level gas-dynamic update.
                 number p = pA / area;
-                number dp_over_p = relax_factor * 0.5 / (rhoA/area) * 
+                number dp_over_p = relax_factor * 0.5 / (rhoA/area) *
                     (mass_flux*mass_flux - rhoUA*fabs(rhoUA)/(area*area)) / p;
                 number new_p0 = (1.0 + dp_over_p) * stagnation_condition.gas.p;
                 new_p0 = fmin(fmax(new_p0, p0_min), p0_max);
@@ -288,7 +288,7 @@ public:
                 // Note that we only do this adjustment once, at the start of a
                 // multi-level gas-dynamic update.
                 number p = pA / area;
-                number dp_over_p = relax_factor * 0.5 / (rhoA/area) * 
+                number dp_over_p = relax_factor * 0.5 / (rhoA/area) *
                     (mass_flux*mass_flux - rhoUA*fabs(rhoUA)/(area*area)) / p;
                 number new_p0 = (1.0 + dp_over_p) * stagnation_condition.gas.p;
                 new_p0 = fmin(fmax(new_p0, p0_min), p0_max);
@@ -359,7 +359,7 @@ public:
                 // Note that we only do this adjustment once, at the start of a
                 // multi-level gas-dynamic update.
                 number p = pA / area;
-                number dp_over_p = relax_factor * 0.5 / (rhoA/area) * 
+                number dp_over_p = relax_factor * 0.5 / (rhoA/area) *
                     (mass_flux*mass_flux - rhoUA*fabs(rhoUA)/(area*area)) / p;
                 number new_p0 = (1.0 + dp_over_p) * stagnation_condition.gas.p;
                 new_p0 = fmin(fmax(new_p0, p0_min), p0_max);
@@ -431,7 +431,7 @@ public:
                 // Note that we only do this adjustment once, at the start of a
                 // multi-level gas-dynamic update.
                 number p = pA / area;
-                number dp_over_p = relax_factor * 0.5 / (rhoA/area) * 
+                number dp_over_p = relax_factor * 0.5 / (rhoA/area) *
                     (mass_flux*mass_flux - rhoUA*fabs(rhoUA)/(area*area)) / p;
                 number new_p0 = (1.0 + dp_over_p) * stagnation_condition.gas.p;
                 new_p0 = fmin(fmax(new_p0, p0_min), p0_max);
@@ -503,7 +503,7 @@ public:
                 // Note that we only do this adjustment once, at the start of a
                 // multi-level gas-dynamic update.
                 number p = pA / area;
-                number dp_over_p = relax_factor * 0.5 / (rhoA/area) * 
+                number dp_over_p = relax_factor * 0.5 / (rhoA/area) *
                     (mass_flux*mass_flux - rhoUA*fabs(rhoUA)/(area*area)) / p;
                 number new_p0 = (1.0 + dp_over_p) * stagnation_condition.gas.p;
                 new_p0 = fmin(fmax(new_p0, p0_min), p0_max);
@@ -574,7 +574,7 @@ public:
                 // Note that we only do this adjustment once, at the start of a
                 // multi-level gas-dynamic update.
                 number p = pA / area;
-                number dp_over_p = relax_factor * 0.5 / (rhoA/area) * 
+                number dp_over_p = relax_factor * 0.5 / (rhoA/area) *
                     (mass_flux*mass_flux - rhoUA*fabs(rhoUA)/(area*area)) / p;
                 number new_p0 = (1.0 + dp_over_p) * stagnation_condition.gas.p;
                 new_p0 = fmin(fmax(new_p0, p0_min), p0_max);
