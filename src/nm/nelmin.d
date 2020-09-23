@@ -89,20 +89,12 @@ bool minimize(alias f, T)
         dx = x.dup;
         foreach (ref elem; dx) elem = 0.1;
     }
-    auto smplx = new NMSimplex!(f,T)(x, dx, P, Kreflect, Kextend, Kcontract);
+    auto smplx = new NMMinimizer!(f,T)(N, dx, P, Kreflect, Kextend, Kcontract);
+    smplx.build_initial_simplex(x);
     while (!converged && (smplx.nfe < max_fe)) {
-        // Take some steps and then check for convergence.
-        foreach (istep; 0 .. n_check) {
-            smplx.vertices.sort!(less);
-            bool any_success = false;
-            foreach (i; 0 .. P) {
-                bool success = smplx.replace_vertex(N-i);
-                if (success) any_success = true;
-            }
-            if (!any_success) smplx.contract_about_zero_point();
-        }
-        // Pick out the current best vertex.
+        smplx.take_steps(n_check);
         smplx.vertices.sort!(less);
+        // Pick out the current best vertex.
         x[] = smplx.vertices[0].x[];
         f_min = smplx.vertices[0].fx;
         // Check the scatter of vertex values to see if we are
@@ -132,27 +124,33 @@ struct Vertex(T) {
 bool less(T)(Vertex!T a, Vertex!T b) { return a.fx < b.fx; }
 
 
-class NMSimplex(alias f, T)
+class NMMinimizer(alias f, T)
     if (is(typeof(f([0.0,0.0])) == double) ||
         is(typeof(f([Complex!double(0.0),Complex!double(0.0)])) == Complex!double))
 {
     //  Stores the (nonlinear) simplex and some stepping parameters.
 
-    this(T[] x, T[] dx, int P, double Kreflect, double Kextend, double Kcontract)
+    this(size_t N, T[] dx, int P, double Kreflect, double Kextend, double Kcontract)
     // In an N-dimensional problem, each vertex has an array of N coordinates
     // and the simplex consists of N+1 vertices.
-    // Set up the vertices about the user-specified vertex, x,
     // and the set of step-sizes dx.
     // f is a user-specified objective function f(x).
     {
-        size_t N = x.length;
-        assert(dx.length == N, "Non-matching lengths for x and dx.");
+        assert(dx.length == N, "Incorrect length for dx.");
         this.dx = dx.dup;
         this.N = N;
         this.P = P;
         this.Kreflect = Kreflect;
         this.Kextend = Kextend;
         this.Kcontract = Kcontract;
+        this.nrestarts = 0;
+        this.nfe = 0;
+    }
+
+    void build_initial_simplex(T[] x)
+    // Set up the vertices about the user-specified point, x,
+    {
+        assert(x.length == N, "Incorrect length for x.");
         foreach (i; 0 .. N+1) {
             auto x_new = x.dup;
             if (i >= 1) x_new[i-1] += dx[i-1];
@@ -161,7 +159,25 @@ class NMSimplex(alias f, T)
         }
         vertices.sort!(less);
         this.nfe = to!int(N+1);
-        this.nrestarts = 0;
+        return;
+    }
+
+    void take_steps(int nsteps)
+    // Take a few steps, updating the simplex.
+    // Returns a sorted simplex, with the best point at index 0.
+    {
+        foreach (istep; 0 .. nsteps) {
+            vertices.sort!(less);
+            bool any_success = false;
+            foreach (i; 0 .. P) {
+                bool success = replace_vertex(N-i);
+                if (success) any_success = true;
+            }
+            if (!any_success) {
+                contract_about_zero_point();
+            }
+        }
+        return;
     }
 
     void rescale(double ratio)
@@ -305,7 +321,7 @@ public:
     int nfe;
     int nrestarts;
     Vertex!T[] vertices;
-} // end class NMSimplex
+} // end class NMMinimizer
 
 //-----------------------------------------------------------------------
 
