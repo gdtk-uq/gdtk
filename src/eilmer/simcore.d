@@ -328,7 +328,6 @@ void init_simulation(int tindx, int nextLoadsIndx,
         if (GlobalConfig.user_pad_length > 0) {
             push_array_to_Lua(myblk.myL, GlobalConfig.userPad, "userPad");
         }
-        myblk.init_boundary_conditions(config_jsonData["block_" ~ to!string(myblk.id)]);
         if (GlobalConfig.udf_source_terms) {
             luaL_dofile(myblk.myL, GlobalConfig.udf_source_terms_file.toStringz);
         }

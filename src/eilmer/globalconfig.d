@@ -1671,7 +1671,7 @@ JSONValue read_config_file()
 
     // we have enough information here to create the ConservedQuantitiesIndices struct
     GlobalConfig.cqi = ConservedQuantitiesIndices(GlobalConfig.dimensions, GlobalConfig.turb_model.nturb, GlobalConfig.n_modes, GlobalConfig.n_species);
-    
+
     // Set up dedicated copies of the configuration parameters for the threads.
     foreach (i; 0 .. GlobalConfig.nFluidBlocks) {
         dedicatedConfig ~= new LocalConfig(i);
@@ -1692,6 +1692,12 @@ JSONValue read_config_file()
                                    i, gridType));
         } // end switch gridType
     }
+    foreach (blk; globalBlocks) {
+        auto myblk = cast(FluidBlock) blk;
+        if (myblk) {
+            myblk.init_boundary_conditions(jsonData["block_" ~ to!string(myblk.id)]);
+        }
+    }
     // Defer the remaining configuration of the FluidBlocks until they have
     // been assigned to their MPI tasks out in the main part of init_simulation()
     // in simcore.d
@@ -1706,7 +1712,7 @@ JSONValue read_config_file()
         writeln("  udf_solid_source_terms: ", GlobalConfig.udfSolidSourceTerms);
         writeln("  udf_solid_source_terms_file: ", to!string(GlobalConfig.udfSolidSourceTermsFile));
     }
-    // Set up dedicated copies of the configuration parameters for the threads.
+    // Set up dedicated copies of the configuration parameters for SolidBlocks, for the threads.
     foreach (int i; GlobalConfig.nFluidBlocks .. GlobalConfig.nBlocks) {
         dedicatedConfig ~= new LocalConfig(i);
     }
