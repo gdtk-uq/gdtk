@@ -247,7 +247,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
         throw new FlowSolverException("No FluidBlocks; no point in continuing to initialize simulation.");
     }
     version(mpi_parallel) {
-        // Assign particular fluid blocks to this MPI task and keep a record
+        // Assign particular fluid (& solid) blocks to this MPI task and keep a record
         // of the MPI rank for all blocks.
         int my_rank = GlobalConfig.mpi_rank_for_local_task;
         GlobalConfig.mpi_rank_for_block.length = GlobalConfig.nFluidBlocks + GlobalConfig.nSolidBlocks ;
@@ -503,48 +503,6 @@ void init_simulation(int tindx, int nextLoadsIndx,
         initGPUChem();
     }
     //
-    /*
-    version(mpi_parallel) {
-        // Assign particular solid blocks to this MPI task and keep a record
-        // of the MPI rank for all blocks.
-        int my_rank = GlobalConfig.mpi_rank_for_local_task;
-        GlobalConfig.mpi_rank_for_block.length = GlobalConfig.nSolidBlocks;
-        auto lines = readText("config/" ~ job_name ~ ".mpimap").splitLines();
-        foreach (line; lines) {
-            auto content = line.strip();
-            if (content.startsWith("#")) continue; // Skip comment
-            auto tokens = content.split();
-            int blkid = to!int(tokens[0]);
-            int taskid = to!int(tokens[1]);
-            if (taskid >= GlobalConfig.mpi_size && GlobalConfig.is_master_task) {
-                writefln("Number of MPI tasks (%d) is insufficient for "~
-                         "taskid=%d that is associated with blockid=%d. Quitting.",
-                         GlobalConfig.mpi_size, taskid, blkid);
-                MPI_Abort(MPI_COMM_WORLD, 2);
-            }
-            GlobalConfig.mpi_rank_for_block[blkid] = taskid;
-            if (taskid == my_rank) {
-                auto blk = cast(SSolidBlock) globalBlocks[blkid];
-                if (blk) { localSolidBlocks ~= blk; }
-            }
-        }
-        version(mpi_timeouts) {
-            MPI_Sync_tasks();
-        } else {
-            MPI_Barrier(MPI_COMM_WORLD);
-        }
-        if (localSolidBlocks.length == 0) {
-            writefln("MPI-task with rank %d has no FluidBlocks. Quitting.", my_rank);
-            MPI_Abort(MPI_COMM_WORLD, 2);
-        }
-    } else {
-        // There is only one process and it deals with all blocks.
-        foreach (blk; globalBlocks) {
-            auto sblk = cast(SSolidBlock) blk;
-            if (sblk) { localSolidBlocks ~= sblk; }
-        }
-    }
-    */
     // solid blocks assigned prior to this
     foreach (ref mySolidBlk; localSolidBlocks) {
         mySolidBlk.assembleArrays();
