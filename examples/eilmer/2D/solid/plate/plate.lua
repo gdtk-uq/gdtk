@@ -31,6 +31,9 @@ patch0 = makePatch{north=cd, east=bd, south=ab, west=ac}
 nx = 100; ny = 20
 grid0 = StructuredGrid:new{psurface=patch0, niv=nx+1, njv=ny+1}
 
+-- Set a dummy flow block (note that fluid blocks need to be defined BEFORE solid blocks).
+dummy = FluidBlock:new{grid=grid0, initialState=initial, label="dummy", active=false}
+
 -- Define the solution block
 -- Physical properties are those of copper
 blk0 = SolidBlock:new{grid=grid0, initTemperature=300.0,
@@ -49,6 +52,3 @@ config.max_step = 1000
 config.dt_init = 1.0e-3
 config.fixed_time_step = true
 config.dt_plot = 0.1
-
--- Set a dummy flow block
-dummy = FluidBlock:new{grid=grid0, initialState=initial, label="dummy", active=false}

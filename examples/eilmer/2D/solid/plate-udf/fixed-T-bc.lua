@@ -5,5 +5,5 @@ T['west'] = 300.0
 T['south'] = 300.0
 
 function solidInterface(args)
-   return T[whichBoundary]
+   return T[args.boundaryName]
 end
