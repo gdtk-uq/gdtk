@@ -1,0 +1,5 @@
+model = "IdealGas"
+species = {'air'}
+options = {
+	Prandtl = 0.71
+}
