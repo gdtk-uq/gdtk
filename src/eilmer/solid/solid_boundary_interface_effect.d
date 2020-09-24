@@ -325,6 +325,8 @@ public:
         lua_pushnumber(L, SimState.dt_global); lua_setfield(L, -2, "dt");
         lua_pushinteger(L, SimState.step); lua_setfield(L, -2, "timeStep");
         lua_pushinteger(L, tLevel); lua_setfield(L, -2, "timeLevel");
+        lua_pushinteger(L, whichBoundary); lua_setfield(L, -2, "boundaryId");
+        lua_pushstring(L, boundaryName.toStringz); lua_setfield(L, -2, "boundaryName");
         lua_pushnumber(L, IFace.pos.x); lua_setfield(L, -2, "x");
         lua_pushnumber(L, IFace.pos.y); lua_setfield(L, -2, "y");
         lua_pushnumber(L, IFace.pos.z); lua_setfield(L, -2, "z");
