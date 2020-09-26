@@ -1,0 +1,11 @@
+title: "Some T4 shot..."
+species: ['N2', 'O2', 'N', 'O', 'NO']
+gas-model-1: cea-air5species-gas-model.lua
+gas-model-2: air-5sp-1T.lua
+reactions: air-5sp-1T-reactions.lua
+T1: 300         # K
+p1: 125.0e3     # Pa
+Vs: 2414.0      # m/s
+pe: 34.37e6     # Pa
+ar: 27.0
+
