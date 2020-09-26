@@ -1,0 +1,5 @@
+[wrap-git]
+directory = tinyendian
+
+url = https://github.com/dlang-community/tinyendian.git
+revision = head
