@@ -3,7 +3,7 @@
  *
  * Solve a nonlinear equation f(x)=0 using the method of Ridder.
  *
- * Peter J. 
+ * Peter J.
  * mech3750 demo code 12-Mar-2014
  * added bracketing 19-Mar-2014
  * D version 13-Jun-2014
@@ -26,7 +26,7 @@ import nm.complex;
  * Returns:
  *    x, a point near the root.
  */
-T solve(alias f, T)(T x1, T x2, double tol=1.0e-9) 
+T solve(alias f, T)(T x1, T x2, double tol=1.0e-9)
     if ( is(typeof(f(0.0)) == double) ||
          is(typeof(f(0.0)) == float)  ||
          is(typeof(f(Complex!double(0.0))) == Complex!double))
@@ -35,7 +35,7 @@ T solve(alias f, T)(T x1, T x2, double tol=1.0e-9)
     T x4 = x1; // So that g++ doesn't warn on maybe unitialized.
     T f4, eps;
 
-    T f1 = f(x1); 
+    T f1 = f(x1);
     T f2 = f(x2);
     if ( abs(f1) == 0.0 ) return x1;
     if ( abs(f2) == 0.0 ) return x2;

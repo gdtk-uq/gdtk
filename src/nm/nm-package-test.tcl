@@ -14,6 +14,7 @@ set module_names [list bbla bbla_complex luabbla \
                       linesearch linesearch_complex \
                       newtoncotes newtoncotes_complex \
 		      ridder ridder_complex \
+                      secant secant_complex \
                       brent brent_complex \
                       rungekutta rungekutta_complex \
                       rsla rsla_complex \

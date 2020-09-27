@@ -7,6 +7,7 @@ NM_FILES := $(NM_DIR)/package.d \
 	$(NM_DIR)/bdfLU.d \
 	$(NM_DIR)/bracketing.d \
 	$(NM_DIR)/brent.d \
+	$(NM_DIR)/secant.d \
 	$(NM_DIR)/gaussquad.d \
 	$(NM_DIR)/linesearch.d \
 	$(NM_DIR)/nelmin.d \

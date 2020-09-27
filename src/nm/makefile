@@ -25,6 +25,7 @@ TEST_PROGRAMS := bbla_test bbla_complex_test \
 	newtoncotes_test newtoncotes_complex_test \
 	ridder_test ridder_complex_test \
 	brent_test brent_complex_test \
+	secant_test secant_complex_test \
 	rungekutta_test rungekutta_complex_test \
 	smla_test smla_complex_test \
 	rsla_test rsla_complex_test \
@@ -122,6 +123,14 @@ ridder_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 ridder_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
+	$(DMD) -of$@ -debug -g -w -dip1008 -version=ridder_test -version=complex_number \
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+
+secant_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
+	$(DMD) -of$@ -debug -g -w -dip1008 -version=$@ \
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+
+secant_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=ridder_test -version=complex_number \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 

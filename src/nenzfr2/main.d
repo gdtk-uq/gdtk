@@ -6,7 +6,7 @@ import std.array;
 import std.string;
 import std.conv;
 import dyaml;
-
+import nm.secant;
 import gas;
 import kinetics;
 import gasflow;
@@ -64,8 +64,18 @@ int main()
     double T1 = to!double(config["T1"].as!string);
     double p1 = to!double(config["p1"].as!string);
     double Vs = to!double(config["Vs"].as!string);
-    double pe = to!double(config["pe"].as!string);
-    double ar = to!double(config["ar"].as!string);
+    double pe = 0.0;
+    try {
+        pe = to!double(config["pe"].as!string);
+    } catch (YAMLException e) {
+        // Assume 0.0.
+    }
+    double ar = 1.0;
+    try {
+        ar = to!double(config["ar"].as!string);
+    } catch (YAMLException e) {
+        // Assume 1.0.
+    }
     writeln("  T1= ", T1);
     writeln("  p1= ", p1);
     writeln("  Vs= ", Vs);
@@ -90,6 +100,75 @@ int main()
     double Vg = velocities[1];
     writeln("  V2= ", V2, " Vg= ", Vg);
     writeln("  state2: ", state2);
+    //
+    writeln("Start reflected-shock calculation.");
+    GasState state5 = new GasState(gm1);
+    double Vr = reflected_shock(state2, Vg, state5, gm1);
+    //
+    writeln("Start calculation of isentropic relaxation.");
+    GasState state5s = new GasState(gm1);
+    state5s.copy_values_from(state5);
+    // Entropy is set, then pressure is relaxed via an isentropic process.
+    state5s.p = (pe > 0.0) ? pe : state5.p;
+    double entropy5 = gm1.entropy(state5);
+    writeln("  state5.entropy= ", entropy5);
+    gm1.update_thermo_from_ps(state5s, entropy5);
+    writeln("  state5s: ", state5s);
+    double H5s = gm1.internal_energy(state5s) + state5s.p/state5s.rho; // stagnation enthalpy
+    writeln("  H5s= ", H5s);
+    //
+    writeln("Start isentropic relaxation to throat (Mach 1)");
+    double error_at_throat(double x)
+    {
+        // Returns Mach number error as pressure is changed.
+        GasState state = new GasState(gm1);
+        double V = expand_from_stagnation(state5s, x, state, gm1);
+        gm1.update_sound_speed(state);
+        return (V/state.a) - 1.0;
+    }
+    double x6 = 1.0;
+    try {
+        x6 = nm.secant.solve!(error_at_throat, double)(0.95, 0.90, 1.0e-4);
+    } catch (Exception e) {
+        writeln("Failed to find throat conditions iteratively.");
+    }
+    GasState state6 = new GasState(gm1);
+    double V6 = expand_from_stagnation(state5s, x6, state6, gm1);
+    double mflux6 = state6.rho * V6;  // mass flux per unit area, at throat
+    writeln("  state6= ", state6);
+    writeln("  V6= ", V6);
+    writeln("  mflux6= ", mflux6);
+    //
+    writeln("Start isentropic relaxation to nozzle exit of given area.");
+    // The mass flux going through the nozzle exit has to be the same
+    // as that going through the nozzle throat.
+    double error_at_exit(double x)
+    {
+        // Returns mass_flux error as for a given exit pressure."
+        GasState state = new GasState(gm1);
+        double V = expand_from_stagnation(state5s, x, state, gm1);
+        double mflux = state.rho * V * ar;
+        return (mflux-mflux6)/mflux6;
+    }
+    // It appears that we need a pretty good starting guess for the pressure ratio.
+    // Maybe a low value is OK.
+    double x7 = x6;
+    try {
+        x7 = nm.secant.solve!(error_at_exit, double)(0.001*x6, 0.00005*x6, 1.0e-4, 1.0/state5s.p, 1.0);
+    } catch (Exception e) {
+        writeln("Failed to find exit conditions iteratively.");
+        x7 = x6;
+    }
+    GasState state7 = new GasState(gm1);
+    double V7 = expand_from_stagnation(state5s, x7, state7, gm1);
+    double mflux7 = state7.rho * V7 * ar;
+    writeln("  area_ratio= ", ar);
+    GasState state7_pitot = new GasState(gm1);
+    pitot_condition(state7, V7, state7_pitot, gm1);
+    writeln("  state7= ", state7);
+    writeln("  V7= ", V7);
+    writeln("  mflux7= ", mflux7);
+    writeln("  pitot7= ", state7_pitot.p);
     //
     return 0;
 } // end main
