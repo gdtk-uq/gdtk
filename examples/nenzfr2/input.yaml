@@ -1,5 +1,10 @@
-title: "Some T4 shot..."
-species: ['N2', 'O2', 'N', 'O', 'NO']
+# Sample input file for nenzfr2 is a YAML 1.1 file.
+title: "Some T4 shot..."                      # Any string will do.
+species: ['N2', 'O2', 'N', 'O', 'NO']         # List
+molef: {'N2': 0.79, 'O2': 0.21}               # Map of nonzero values will suffice.
+# Gas model and reactions files need to be consistent with the species above.
+# Gas model 1 is usually a CEAGas model file.
+# Gas model 2 is a thermally-perfect gas model for teh finite-rate chemistry.
 gas-model-1: cea-air5species-gas-model.lua
 gas-model-2: air-5sp-1T.lua
 reactions: air-5sp-1T-reactions.lua
