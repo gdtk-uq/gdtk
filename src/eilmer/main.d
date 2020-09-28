@@ -507,25 +507,28 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
             Thread.sleep(dur!("msecs")(100));
             MPI_Barrier(MPI_COMM_WORLD);
         }
-        init_simulation(tindxStart, nextLoadsIndx, maxCPUs, threadsPerMPITask, maxWallClock);
-        if (verbosityLevel > 0 && GlobalConfig.is_master_task) {
-            writeln("starting simulation time= ", simcore.SimState.time);
-        }
-        version(mpi_parallel) {
-            stdout.flush();
-            Thread.sleep(dur!("msecs")(100));
-            MPI_Barrier(MPI_COMM_WORLD);
-        }
-        if (GlobalConfig.block_marching) {
-            march_over_blocks();
-        } else {
-            if (integrate_in_time(GlobalConfig.max_time) != 0 && GlobalConfig.is_master_task) {
-                writeln("Note that integrate_in_time failed.");
+        int fail_init = 0;
+        fail_init = init_simulation(tindxStart, nextLoadsIndx, maxCPUs, threadsPerMPITask, maxWallClock);
+        if (!fail_init) {
+            if (verbosityLevel > 0 && GlobalConfig.is_master_task) {
+                writeln("starting simulation time= ", simcore.SimState.time);
             }
+            version(mpi_parallel) {
+                stdout.flush();
+                Thread.sleep(dur!("msecs")(100));
+                MPI_Barrier(MPI_COMM_WORLD);
+            }
+            if (GlobalConfig.block_marching) {
+                march_over_blocks();
+            } else {
+                if (integrate_in_time(GlobalConfig.max_time) != 0 && GlobalConfig.is_master_task) {
+                    writeln("Note that integrate_in_time failed.");
+                }
+            }
+            finalize_simulation();
         }
-        finalize_simulation();
         if (verbosityLevel > 0 && GlobalConfig.is_master_task) {
-            writeln("Done simulation.");
+            writeln("Done --run.");
         }
     } // end if runFlag
 

@@ -188,8 +188,9 @@ version(mpi_parallel) {
 
 //----------------------------------------------------------------------------
 
-void init_simulation(int tindx, int nextLoadsIndx,
-                     int maxCPUs, int threadsPerMPITask, int maxWallClock)
+int init_simulation(int tindx, int nextLoadsIndx,
+                    int maxCPUs, int threadsPerMPITask, int maxWallClock)
+// Returns with fail_flag == 0 for a successful initialization.
 {
     if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) {
         writeln("Begin init_simulation()...");
@@ -334,18 +335,35 @@ void init_simulation(int tindx, int nextLoadsIndx,
         // After fully constructing the blocks and its boundary conditions,
         // we can optionally print their representation for checking.
         if (GlobalConfig.verbosity_level > 1) {
-        writeln("  Block[", myblk.id, "]: ", myblk); }
-    }
-    foreach (myblk; parallel(localFluidBlocks,1)) {
-        if (GlobalConfig.grid_motion != GridMotion.none) {
-            myblk.init_grid_and_flow_arrays(make_file_name!"grid"(job_name, myblk.id, SimState.current_tindx,
-                                                                  GlobalConfig.gridFileExt));
-        } else {
-            // Assume there is only a single, static grid stored at tindx=0
-            myblk.init_grid_and_flow_arrays(make_file_name!"grid"(job_name, myblk.id, 0, GlobalConfig.gridFileExt));
+            writeln("  Block[", myblk.id, "]: ", myblk);
         }
-        myblk.compute_primary_cell_geometric_data(0);
     }
+    // When initializing the grid for each block, there is a possibility that
+    // an exception will be thrown if there are negative or zero cell volumes.
+    // Having messed up grids is a fairly common occurrence, so we should be ready.
+    bool any_block_fail = 0;
+    foreach (myblk; parallel(localFluidBlocks,1)) {
+        try {
+            if (GlobalConfig.grid_motion != GridMotion.none) {
+                myblk.init_grid_and_flow_arrays(make_file_name!"grid"(job_name, myblk.id, SimState.current_tindx,
+                                                                      GlobalConfig.gridFileExt));
+            } else {
+                // Assume there is only a single, static grid stored at tindx=0
+                myblk.init_grid_and_flow_arrays(make_file_name!"grid"(job_name, myblk.id, 0, GlobalConfig.gridFileExt));
+            }
+            myblk.compute_primary_cell_geometric_data(0);
+        } catch (Exception e) {
+            writefln("Block[%d] failed to initialize geometry, msg=%s", myblk.id, e.msg);
+            any_block_fail = true;
+        }
+    }
+    version(mpi_parallel) {
+        int myFlag = to!int(any_block_fail);
+        MPI_Allreduce(MPI_IN_PLACE, &myFlag, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+        any_block_fail = to!bool(myFlag);
+    }
+    if (any_block_fail) { return -1; }
+    //
     // Note that the global id is across all processes, not just the local collection of blocks.
     foreach (i, blk; globalBlocks) {
         auto fluidblk = cast(FluidBlock) blk;
@@ -374,11 +392,19 @@ void init_simulation(int tindx, int nextLoadsIndx,
             // fills in some gas properties such as Prandtl number that is
             // needed for both the cfl_check and the BaldwinLomax turbulence model.
             if (0 != cell.decode_conserved(0, 0, myblk.omegaz)) {
-                throw new FlowSolverException("Bad cell decode_conserved while initializing.");
+                writefln("Block[%d] Bad cell decode_conserved while initializing flow.", myblk.id);
+                any_block_fail = true;
             }
         }
         myblk.set_cell_dt_chem(-1.0);
     }
+    version(mpi_parallel) {
+        myFlag = to!int(any_block_fail);
+        MPI_Allreduce(MPI_IN_PLACE, &myFlag, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+        any_block_fail = to!bool(myFlag);
+    }
+    if (any_block_fail) { return -1; }
+    //
     SimState.time = time_array[0]; // Pick one; they should all be the same.
     //
     version(mpi_parallel) {
@@ -418,12 +444,19 @@ void init_simulation(int tindx, int nextLoadsIndx,
                         string msg = format("FullFaceCopy for local blk_id=%d face=%d", my_blk.id, j);
                         msg ~= format(" is not correctly paired with other block id=%d face=%d.",
                                       other_blk.id, my_gce.neighbourFace);
-                        throw new FlowSolverException(msg);
+                        writeln(msg);
+                        any_block_fail = true;
                     }
                 } // end if (my_copy_gce)
             } // end foreach (gce;
         } // end foreach (j, bc;
     } // end foreach (my_blk;
+    version(mpi_parallel) {
+        myFlag = to!int(any_block_fail);
+        MPI_Allreduce(MPI_IN_PLACE, &myFlag, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+        any_block_fail = to!bool(myFlag);
+    }
+    if (any_block_fail) { return -1; }
     //
     // Serial loops follow because the cell-mapping function searches across
     // all blocks local to the process.
@@ -858,7 +891,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
         stdout.flush();
     }
 
-    return;
+    return 0; // Successfully initialized simulation.
 } // end init_simulation()
 
 void write_solution_files()
@@ -1252,7 +1285,8 @@ int integrate_in_time(double target_time_as_requested)
                 update_solid_domain_on_step = SimState.step + n_solid_coupling;
 
                 if (GlobalConfig.is_master_task) {
-                    writeln("-- SOLID DOMAIN UPDATE: cfl = ", GlobalConfig.solid_domain_cfl, ",  dt_solid = ", dt_solid, ", next update on step = ", update_solid_domain_on_step);
+                    writeln("-- SOLID DOMAIN UPDATE: cfl = ", GlobalConfig.solid_domain_cfl, ",  dt_solid = ", dt_solid,
+                            ", next update on step = ", update_solid_domain_on_step);
                 }
 
                 // we have currently removed the implicit solid update.
