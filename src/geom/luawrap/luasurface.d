@@ -77,6 +77,17 @@ extern(C) int opCallSurface(T, string MTname)(lua_State* L)
     return pushVector3(L, pt);
 }
 
+extern(C) int areaOfSurface(T, string MTname)(lua_State* L)
+{
+    int nargs = lua_gettop(L);
+    auto surface = checkObj!(T, MTname)(L, 1);
+    int nr = 10;
+    if (nargs > 1) { nr = luaL_checkint(L, 2); }
+    int ns = 10;
+    if (nargs > 2) { ns = luaL_checkint(L, 3); }
+    return pushVector3(L, surface.area(nr, ns));
+} // end areaOfSurface
+
 extern(C) int luaWriteSurfaceAsVtkXml(lua_State *L)
 {
     int narg = lua_gettop(L);
@@ -1060,6 +1071,8 @@ void registerSurfaces(lua_State* L)
     lua_setfield(L, -2, "eval");
     lua_pushcfunction(L, &toStringObj!(CoonsPatch, CoonsPatchMT));
     lua_setfield(L, -2, "__tostring");
+    lua_pushcfunction(L, &areaOfSurface!(CoonsPatch, CoonsPatchMT));
+    lua_setfield(L, -2, "area");
 
     lua_setglobal(L, CoonsPatchMT.toStringz);
     lua_getglobal(L, CoonsPatchMT.toStringz); lua_setglobal(L, "CoonsSurface"); // alias
@@ -1080,6 +1093,8 @@ void registerSurfaces(lua_State* L)
     lua_setfield(L, -2, "eval");
     lua_pushcfunction(L, &toStringObj!(AOPatch, AOPatchMT));
     lua_setfield(L, -2, "__tostring");
+    lua_pushcfunction(L, &areaOfSurface!(AOPatch, AOPatchMT));
+    lua_setfield(L, -2, "area");
 
     lua_setglobal(L, AOPatchMT.toStringz);
     lua_getglobal(L, AOPatchMT.toStringz); lua_setglobal(L, "AOSurface"); // alias
@@ -1100,6 +1115,8 @@ void registerSurfaces(lua_State* L)
     lua_setfield(L, -2, "eval");
     lua_pushcfunction(L, &toStringObj!(ChannelPatch, ChannelPatchMT));
     lua_setfield(L, -2, "__tostring");
+    lua_pushcfunction(L, &areaOfSurface!(ChannelPatch, ChannelPatchMT));
+    lua_setfield(L, -2, "area");
     lua_pushcfunction(L, &make_bridging_path_ChannelPatch);
     lua_setfield(L, -2, "make_bridging_path");
 
@@ -1168,7 +1185,7 @@ void registerSurfaces(lua_State* L)
 
     // Register the LuaFnSurface object
     luaL_newmetatable(L, LuaFnSurfaceMT.toStringz);
-    
+
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1); // duplicates the current metatable
     lua_setfield(L, -2, "__index");
@@ -1182,6 +1199,8 @@ void registerSurfaces(lua_State* L)
     lua_setfield(L, -2, "eval");
     lua_pushcfunction(L, &toStringObj!(LuaFnSurface, LuaFnSurfaceMT));
     lua_setfield(L, -2, "__tostring");
+    lua_pushcfunction(L, &areaOfSurface!(LuaFnSurface, LuaFnSurfaceMT));
+    lua_setfield(L, -2, "area");
 
     lua_setglobal(L, LuaFnSurfaceMT.toStringz);
 
@@ -1201,6 +1220,8 @@ void registerSurfaces(lua_State* L)
     lua_setfield(L, -2, "eval");
     lua_pushcfunction(L, &toStringObj!(SubRangedSurface, SubRangedSurfaceMT));
     lua_setfield(L, -2, "__tostring");
+    lua_pushcfunction(L, &areaOfSurface!(SubRangedSurface, SubRangedSurfaceMT));
+    lua_setfield(L, -2, "area");
 
     lua_setglobal(L, SubRangedSurfaceMT.toStringz);
 
@@ -1220,6 +1241,8 @@ void registerSurfaces(lua_State* L)
     lua_setfield(L, -2, "eval");
     lua_pushcfunction(L, &toStringObj!(BezierPatch, BezierPatchMT));
     lua_setfield(L, -2, "__tostring");
+    lua_pushcfunction(L, &areaOfSurface!(BezierPatch, BezierPatchMT));
+    lua_setfield(L, -2, "area");
 
     lua_setglobal(L, BezierPatchMT.toStringz);
     lua_getglobal(L, BezierPatchMT.toStringz); lua_setglobal(L, "BezierSurface"); // alias

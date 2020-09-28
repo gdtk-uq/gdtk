@@ -30,6 +30,7 @@ surf = CoonsPatch:new{north=Line:new{p0=b, p1=d}, east=Line:new{p0=c, p1=d},
                       south=Line:new{p0=a, p1=c}, west=Line:new{p0=a, p1=b}}
 print("CoonsPatch representation: ", surf)
 print("surf(0.5,0.5)= ", surf(0.5, 0.5))
+print("vector area= ", surf:area())
 --
 print("Try construction using corners")
 surf2 = CoonsPatch:new{p00=a, p01=b, p11=c, p10=d}

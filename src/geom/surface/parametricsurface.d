@@ -12,7 +12,11 @@ import std.math;
 import std.stdio;
 import std.conv;
 import std.algorithm;
+
+import nm.complex;
+import nm.number;
 import geom;
+
 
 // Nomenclature for the parametric distances, bounding paths and corners.
 //
@@ -32,6 +36,35 @@ public:
     abstract Vector3 opCall(double r, double s) const;
     abstract ParametricSurface dup() const;
     abstract override string toString() const;
+
+    Vector3 area(int nr=10, int ns=10)
+    {
+        Vector3 vector_area; vector_area.set(0.0, 0.0, 0.0);
+        double dr = 1.0/nr;
+        double ds = 1.0/ns;
+        Vector3[][] p;
+        p.length = nr+1;
+        foreach (i; 0 .. nr+1) {
+            double r = dr * i;
+            foreach (j; 0 .. ns+1) {
+                double s = ds * j;
+                p[i] ~= opCall(r, s);
+            }
+        }
+        number dA;
+        Vector3 centroid;
+        Vector3 n, t1, t2;
+        foreach (i; 0 .. nr) {
+            foreach (j; 0 .. ns) {
+                quad_properties(p[i][j], p[i+1][j], p[i+1][j+1], p[i][j+1],
+                                centroid, n, t1, t2, dA);
+                n *= dA;
+                vector_area += n;
+            }
+        }
+        return vector_area;
+    } // end area()
+
 } // end class ParametricSurface
 
 void writeSurfaceAsVtkXml(ParametricSurface surf, string fileName, int nrPts, int nsPts)
