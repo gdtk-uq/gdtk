@@ -13,7 +13,7 @@ It should take less than half an hour to do the full set up and run.
 
 ## Prerequisites: background
 
-This first section is about you, the user of the Gas Dynamics Toolkit.
+This section is about you, the user of the Gas Dynamics Toolkit.
 We assume that your mathematics, science or engineering background
 adequately prepares you for computational fluid dynamics (CFD) analysis.
 In particular, we assume that you have a working knowledge of geometry, calculus, mechanics,
@@ -30,20 +30,25 @@ The pre- and post-processing modes make use of the Lua scripting language
 so that we get flexibility and convenient customization.
 There is also some Ruby a little Tcl/Tk used in the automated testing scripts.
 
+Our main development environment is Linux but the programs can be deployed on
+Linux, flavours of Unix such as MacOS-X, and MS-Windows using WSL2.
+
 To run simulations, you need an executable versions of the Eilmer and/or L1d programs.
 You may build these executable programs from the source code, as described below.
 
 
 ## Prerequisites: building from source
 
-Our main development environment is Linux but the programs can be deployed on
-Linux, flavours of Unix such as MacOS-X, and MS-Windows.
-The main requirement is a D language compiler.
-Our recommendation for building the main simulation programs is the the LLVM D compiler.
-The build of the loadable library, however, needs to be done with the DMD64 compiler.
-Note that you do not need to build the loadable library to use the Eilmer and L1d simulation codes,
-and, vice versa, you do not need to build Eilmer and L1d, if you just want the loadable library.
-The source code of the Lua interpreter is included in the source code repository.
+The main requirement is a D language compiler but the story with this is a little complicated.
+The reference D-language compiler is DMD64 and this good for getting started, however,
+our recommendation for building optimised versions of the main simulation programs is the the LLVM D compiler.
+In constrast, the build of the loadable library needs to be done with the DMD64 compiler.
+Note that you do not need to build the loadable library to use the Eilmer simulation code,
+and, vice versa, you do not need to build Eilmer if you just want the loadable library.
+
+If you are just starting out, choose the DMD64 compiler.
+If you are preparing to do large simulations on a cluster computer,
+you should add the LLVM D compiler to you set up.
 
 To build Eilmer, you will require:
 
@@ -85,6 +90,7 @@ For viewing and plotting results, we recommend:
   + Paraview
   + Gnuplot
 
+The source code of the Lua interpreter is included in the source code repository.
 
 ## Getting the source code
 
@@ -106,23 +112,12 @@ To compile and install Eilmer, move into the eilmer source
 area and use `make` to coordinate the compiling and installing:
 
     cd dgd/src/eilmer
-    make DMD=ldc2 install
+    make install
 
 If you are on a Mac, you'll need to give the `make` command an
 extra hint:
 
-    make DMD=ldc2 PLATFORM=macosx install
-
-
-## Installing L1d (optional)
-
-L1d installs into the same location as Eilmer but, its source code
-is in a different location.
-To compile and install L1d, move into its source area and, again,
-use `make` to coordinate the compiling and installing:
-
-    cd dgd/src/l1d
-    make install
+    make PLATFORM=macosx install
 
 
 ## Installing the loadable library (optional)
@@ -143,6 +138,17 @@ Note that the loadable library needs to be built with the DMD64 compiler
 and that you need the Foreign-Function-Interface extensions for your
 Python and Ruby interpreters.
 On a LinuxMint system these packages are `python-cffi` and `ruby-ffi`.
+
+
+## Installing L1d (optional)
+
+L1d installs into the same location as Eilmer but, its source code
+is in a different location.
+To compile and install L1d, move into its source area and, again,
+use `make` to coordinate the compiling and installing:
+
+    cd dgd/src/l1d
+    make install
 
 
 ## Setting up for a first-time run of Eilmer

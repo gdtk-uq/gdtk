@@ -180,6 +180,17 @@ Note you do not have to set all of these values in the input script.
 
 == Configuration helper functions
 
+The configuration options that are lists of values can be managed with
+the following functions.
+The lists start empty and these functions may be called several times
+to build up the list entries.
+If you do not explicitly add any entries,
+the lists will take the default entries specified above.
+
+=== cfl_list
+
+CFL values for the time-stepping can be scheduled with
+
    add_cfl_value(t, cfl)
 
 `t` ::
@@ -190,6 +201,10 @@ Note you do not have to set all of these values in the input script.
   _float_, no default. +
   New cfl value.  See the discussion above for selecting a suitable value.
 
+=== dt_plot_list
+
+To set the frequency for writing whole solution data and
+(separately) history data, shedule the periods between writes with
 
    add_dt_plot(t, dt_plot, dt_hist)
 
@@ -205,6 +220,9 @@ Note you do not have to set all of these values in the input script.
   _float_, no default. +
   Time interval to next write of history data.
 
+=== hloc_list
+
+To specify a location at which you want the history data recorded, use
 
    add_history_loc(x)
 
