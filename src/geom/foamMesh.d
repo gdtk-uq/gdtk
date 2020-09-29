@@ -81,8 +81,7 @@ int main(string[] args)
         exitFlag = 1;
         return exitFlag;
     }
-        
-    
+
     auto L = luaL_newstate();
     luaL_openlibs(L);
     registerVector3(L);

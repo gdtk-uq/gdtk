@@ -117,7 +117,7 @@ function checkBndryLabels(bndryList)
       end
    end
 end
-	      
+
 -- Storage for global collection of boundary labels
 globalBndryLabels = {}
 
@@ -143,14 +143,19 @@ function FoamBlock:new(o)
    --   error(errMsg)
    --end
    if (o.bndry_labels == nil) then
-      o.bndry_labels = {}  -- create empty list for cases where block doesn't have outwards facing faces. 
+      o.bndry_labels = {}  -- create empty list for cases where block doesn't have outwards facing faces.
    end
    if (o.grid:get_type() ~= "structured_grid") then
-      errMsg = "The 'grid' object supplied to FoamBlock:new() must be a structured grid.\n"
-      error(errMsg)
+      error("The 'grid' object supplied to FoamBlock:new() must be a structured grid.\n")
    end
    if (o.grid:get_dimensions() == 2) then
-      -- Construct a slab or wedge, as appropriate
+      -- Construct a slab or wedge, as appropriate.
+      -- First, test that the 2D grid is "face-up" in the z-direction.
+      local cell_0_properties = quadProperties{p0=o.grid:get_vtx(0, 0), p1=o.grid:get_vtx(1, 0),
+                                               p2=o.grid:get_vtx(1, 1), p3=o.grid:get_vtx(0, 1)}
+      if cell_0_properties.n.z < 0.0 then
+         error("The 'grid' object supplied to FoamBlock:new() is facing in the negative z-direction.\n")
+      end
       if (axisymmetric) then
          newGrid = o.grid:makeWedgeGrid{dtheta=dtheta, symmetric=true}
       else
@@ -160,8 +165,7 @@ function FoamBlock:new(o)
          newGrid = o.grid
          openFoamDimensions = 3
    else
-      errMsg = "The 'grid' object supplied to FoamBlock:new() must be a 2D or 3D grid.\n"
-      error(errMsg)
+      error("The 'grid' object supplied to FoamBlock:new() must be a 2D or 3D grid.\n")
    end
    -- and then convert to unstructured
    o.ugrid = UnstructuredGrid:new{sgrid=newGrid}
@@ -177,7 +181,7 @@ function FoamBlock:new(o)
          o.bndry_labels.top = "FrontAndBack"
          o.bndry_labels.bottom = "FrontAndBack"
       end
-   end 
+   end
    -- Populate the unset bndry_labels with the defaults
    for _,face in ipairs({"north", "east", "south", "west","top","bottom"}) do
       o.bndry_labels[face] = o.bndry_labels[face] or "unassigned"
@@ -230,7 +234,7 @@ function runCollapseEdges()
    end
    cmd = string.format("cp %s system/", collapseDictFile)
    os.execute(cmd)
-   -- 2. Run the collapeEdges command   
+   -- 2. Run the collapeEdges command
    cmd = "collapseEdges -overwrite -noZero"
    os.execute(cmd)
    if (vrbLvl >= 1) then
@@ -892,7 +896,7 @@ function runRenumberMesh()
    if retVal == 0 then
       -- 0/ already exists. We don't want renumberMesh
       if (vrbLvl >= 1) then
-         print("   SKIPPED: Running OpenFOAM command: renumberMesh.") 
+         print("   SKIPPED: Running OpenFOAM command: renumberMesh.")
          print("   Run manually once /0 is set-up.")
       end
    else
@@ -900,7 +904,7 @@ function runRenumberMesh()
       assert((flag == 0),"Cannot find command renumberMesh, check that OpenFOAM environment has been loaded.")
       if (vrbLvl >= 1) then
          print("   DONE: Running OpenFOAM command: renumberMesh.")
-      end      
+      end
    end
 end
 
@@ -922,7 +926,7 @@ function clearPolyMesh()
    -- Check if constant/polyMesh exists.
    retVal = os.execute("test -d constant/polyMesh")
    if retVal == 0 then
-       os.execute("rm -r constant/polyMesh")  
+       os.execute("rm -r constant/polyMesh")
    end
    if (vrbLvl >= 1) then
       print("   DONE: existing polyMesh folder deleted.")
@@ -942,7 +946,7 @@ function main(verbosityLevel)
    -- Check that global settings are correct
    checkTurbulenceModel(turbulenceModel)
    checkCompressible(compressible,compressibleList)
-   
+
    -- Join all grids together.
    if (vrbLvl >= 1) then
       print("Joining all grids together.")
@@ -952,8 +956,8 @@ function main(verbosityLevel)
       if (vrbLvl >= 2) then
 	 print("Joining blk ", ib, " to master mesh.")
       end
-      -- joinGrid and pass openFoamDimensions. For 2-D this excludes top and 
-      -- bottom boundaries when searching for ways to join grids. 
+      -- joinGrid and pass openFoamDimensions. For 2-D this excludes top and
+      -- bottom boundaries when searching for ways to join grids.
       myMesh:joinGrid(blks[ib].ugrid,openFoamDimensions)
    end
    if (vrbLvl >= 1) then
@@ -987,7 +991,9 @@ function main(verbosityLevel)
       if unassigned == true then break end
    end
    if unassigned == true then
-      print("WARNING: Not all boundary faces defined. Undefined boundaries have been grouped in the boundary patch 'unassigned'. (Note: Counter starts from 1)")
+      print("WARNING: Not all boundary faces defined."..
+               " Undefined boundaries have been grouped in the boundary patch 'unassigned'."..
+               " (Note: Counter starts from 1)")
       print("The following boundaries are unassigned.")
       for ib, blk in ipairs(blks) do
 	     for bndry, bndryLabel in pairs(blk.bndry_labels) do
@@ -997,5 +1003,4 @@ function main(verbosityLevel)
 	     end
       end
    end
-end   
-
+end

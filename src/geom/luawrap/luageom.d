@@ -133,8 +133,8 @@ extern(C) int newVector3(lua_State *L)
         string errMsg = "Expected Vector3:new{x=number, y=number}; ";
         errMsg ~= "maybe you tried Vector3.new{x=number, y=number}.";
         luaL_error(L, errMsg.toStringz);
-    } 
-    // Regardless of how we filled in vec, we are now ready 
+    }
+    // Regardless of how we filled in vec, we are now ready
     // to place our new Vector3 on the stack as userdata.
     return pushVector3(L, vec);
 } // end newVector3()
@@ -242,7 +242,7 @@ extern(C) int mulVector3(lua_State *L)
         if ( !lua_isnumber(L, 1) ) {
             string errMsg = "can't multiply Vector3 by non-number";
             luaL_error(L, errMsg.toStringz);
-        }   
+        }
         a = checkVector3(L, 2);
         b = luaL_checknumber(L, 1);
     }
@@ -290,7 +290,7 @@ extern(C) int normalizeVector3(lua_State* L)
 }
 
 /**
- * Moves a Vector3 object about the z-axis. 
+ * Moves a Vector3 object about the z-axis.
  * Exposes geom.Vector3.rotate_about_z_axis(angle)
  */
 extern(C) int rotateAboutZAxisVector3(lua_State* L)
@@ -303,7 +303,7 @@ extern(C) int rotateAboutZAxisVector3(lua_State* L)
 
 /**
  * Mirror-image a Vector3 object through a given plane that is
- * defined by a point and a normal. 
+ * defined by a point and a normal.
  * Exposes geom.Vector3.mirror_image(point, normal)
  */
 extern(C) int mirrorImageVector3(lua_State* L)
@@ -350,7 +350,7 @@ extern(C) int unitVector3(lua_State *L)
     // we don't change 'a'.
     auto b = *a;
     b.normalize();
-    return pushVector3(L, b); 
+    return pushVector3(L, b);
 }
 
 /**
@@ -455,7 +455,7 @@ extern(C) int hexCellProperties(lua_State* L)
         Vector3 centroid;
         number volume;
         number iLen, jLen, kLen;
-        hex_cell_properties(p0, p1, p2, p3, p4, p5, p6, p7, 
+        hex_cell_properties(p0, p1, p2, p3, p4, p5, p6, p7,
                             centroid, volume, iLen, jLen, kLen);
 
         lua_newtable(L); // anonymous table { }
@@ -488,7 +488,7 @@ extern(C) int toStringVector3(lua_State* L)
 void registerVector3(lua_State* L)
 {
     luaL_newmetatable(L, Vector3MT.toStringz);
-    
+
     /* metatable.__index = metatable */
     //    lua_pushvalue(L, -1); // duplicates the current metatable
     //    lua_setfield(L, -2, "__index");
@@ -527,7 +527,7 @@ void registerVector3(lua_State* L)
 
     lua_setglobal(L, Vector3MT.toStringz);
 
-    /* Also attempt to put "add" in the global namespace. */
+    /* Also attempt to put "add" and friends in the global namespace. */
     lua_pushcfunction(L, &addVector3);
     lua_setglobal(L, "add");
     lua_pushcfunction(L, &dotVector3);
