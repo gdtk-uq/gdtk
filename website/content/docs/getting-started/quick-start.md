@@ -24,14 +24,14 @@ and reliable; we cannot make it trivial.
 
 ## Prerequisites: software
 
+Our main development environment is Linux but the programs can be deployed on
+Linux, flavours of Unix such as MacOS-X, and MS-Windows using WSL2.
+
 The core Eilmer, and L1d solvers and their modules are mainly written in the
 D programming language for speed and the benefits of compile-time checking.
 The pre- and post-processing modes make use of the Lua scripting language
 so that we get flexibility and convenient customization.
 There is also some Ruby a little Tcl/Tk used in the automated testing scripts.
-
-Our main development environment is Linux but the programs can be deployed on
-Linux, flavours of Unix such as MacOS-X, and MS-Windows using WSL2.
 
 To run simulations, you need an executable versions of the Eilmer and/or L1d programs.
 You may build these executable programs from the source code, as described below.

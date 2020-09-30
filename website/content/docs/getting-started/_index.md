@@ -20,5 +20,7 @@ before they can be used.
     that we use.
     This is a level up on using the programs on your personal workstation.
     Typically, you will have to submit your jobs to a batch queue.
+  + [WSL2 Notes]({{< relref "wsl2-notes" >}}) gives a few pointers to getting
+    Windows Subsystem for Linux set up on your Windows-10 workstation.
 
 
