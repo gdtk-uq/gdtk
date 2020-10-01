@@ -18,9 +18,9 @@ The following documents are available in PDF.
 
 1. [David Gildfind PhD Thesis, 2012](/pdfs/david-gildfind-phd-thesis-oct-2012.pdf) *Development of High Total Pressure Scramjet Flow Conditions using the X2 Expansion Tube*
 
-1. [Wilson Chan PhD Thesis, 2012](/pdfs/theses/wilson-chan-phd-thesis-aug-2012.pdf) *Effects of flow non-uniformities on the drag reduction by boundary layer combustion*
+1. [Wilson Chan PhD Thesis, 2012](/pdfs/wilson-chan-phd-thesis-aug-2012.pdf) *Effects of flow non-uniformities on the drag reduction by boundary layer combustion*
 
-1. [Brendan O'Flaherty PhD Thesis, 2012](/pdfs/theses/brendan-oflaherty-phd-thesis-june-2012.pdf) *Reducing the Global Warming Potential of Coal Mine Ventilation Air by Combustion in a Free-Piston Engine*
+1. [Brendan O'Flaherty PhD Thesis, 2012](/pdfs/brendan-oflaherty-phd-thesis-june-2012.pdf) *Reducing the Global Warming Potential of Coal Mine Ventilation Air by Combustion in a Free-Piston Engine*
 
 1. [Carolyn Jacobs PhD Thesis, 2011](/pdfs/carolyn-jacobs-phd-finalthesis-UQversion-aug-2011.pdf) *Radiation in low density hypervelocity flows*
 

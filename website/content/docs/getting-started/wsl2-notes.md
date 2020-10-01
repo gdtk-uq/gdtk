@@ -12,8 +12,13 @@ how to get a Linux environment set up on your Windows 10 computer.
 
 ### Linux installation
 
-Follow these instructions to install a Linux distribution:
+If you have a sufficiently recent version of Windows 10,
+follow these instructions to install a Linux distribution:
 [Windows Subsystem for Linux Installation Guide for Windows 10](https://docs.microsoft.com/en-us/windows/wsl/install-win10)
+This approach uses the Microsoft Store to get the Linux distribution.
+
+Instead of going through the Microsoft Store, you may want to down a WSL Linux distribution manually.
+[These notes](https://docs.microsoft.com/en-us/windows/wsl/install-manual) will explain how to do so.
 
 If you are new to Linux, you could follow [WSL](https://wiki.ubuntu.com/WSL) notes
 from the Ubuntu world to get a bit of an introduction to running Linux.
