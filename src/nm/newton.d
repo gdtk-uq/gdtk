@@ -36,75 +36,107 @@ import std.format;
 
 import nm.nm_exception : NumericalMethodException;
 
+
+version(complex_numbers) {
+// For the complex numbers version of the code we need
+// a Newton's method with a fixed number of iterations.
+// An explanation can be found in:
+//     Efficient Construction of Discrete Adjoint Operators on Unstructured Grids
+//     by Using Complex Variables, pg. 10, Nielsen et al., AIAA Journal, 2006.
+// TODO: add in safeguards from the real number version.
 @nogc
 T solve(alias f, alias dfdx, T)(T x0, T xMin, T xMax, double tol=1.0e-9)
-    if ( (is(typeof(f(0.0)) == double) && is(typeof(dfdx(0.0)) == double)) ||
-         (is(typeof(f(0.0)) == float) && is(typeof(dfdx(0.0)) == float)) ||
-         (is(typeof(f(Complex!double(0.0))) == Complex!double) &&
-          is(typeof(dfdx(Complex!double(0.0))) == Complex!double)) )
-{
-    const int MAXIT = 30; // maximum number of iterations
-    T xL = xMin;
-    T xH = xMax;
-    T fL = f(xL);
-    T fH = f(xH);
-    if ( (fL > 0.0 && fH > 0.0) || (fL < 0.0 && fH < 0.0) ) {
-        string msg = "Root must be bracketed in call to nm.newton.solve";
-        throw new NumericalMethodException(msg);
-    }
-    
-    if (fL == 0.0) return xMin;
-    if (fH == 0.0) return xMax;
-
-    // Orient the search so that that f(xL) < 0.0
-    if (fL < 0.0) {
-        xL = xMin;
-        xH = xMax;
-    }
-    else {
-        xH = xMin;
-        xL = xMax;
-    }
-
-    T rts = x0;
-    T dxold = (xMax - xMin);
-    T dx = dxold;
-    T f0 = f(rts);
-    T df0 = dfdx(rts);
-    foreach (j; 0 .. MAXIT) {
-        // Bisect if Newton prediction is out of range.
-        if ( (((rts-xH)*df0 - f0)*((rts-xL)*df0 - f0) > 0.0) ||
-             (fabs(2.0*f0) > fabs(dxold*df0)) ) {
-            dxold = dx;
-            dx = 0.5*(xH - xL);
-            rts = xL + dx;
-            // Check if change in root is negligible.
-            // Accept it, if it is.
-            if (xL == rts) return rts; 
-        }
-        else { // A Newton step is acceptable
-            dxold = dx;
+if ( (is(typeof(f(0.0)) == double) && is(typeof(dfdx(0.0)) == double)) ||
+     (is(typeof(f(0.0)) == float) && is(typeof(dfdx(0.0)) == float)) ||
+     (is(typeof(f(Complex!double(0.0))) == Complex!double) &&
+      is(typeof(dfdx(Complex!double(0.0))) == Complex!double)) )
+    {
+        const int MAXIT = 10; // maximum number of iterations                
+        T rts = x0;
+        T dx = 0.0;
+        T f0 = f(rts);
+        T df0 = dfdx(rts);
+        
+        foreach (j; 0 .. MAXIT) {
             dx = f0/df0;
-            T tmp = rts;
             rts -= dx;
-            if (tmp == rts) return rts;
+            f0 = f(rts);
+            df0 = dfdx(rts);
         }
-        if (fabs(dx) < tol) return rts;
-        // Otherwise, re-evaluate for next iteration
-        f0 = f(rts);
-        df0 = dfdx(rts);
-        if (f0 < 0.0) {
-            xL = rts;
+        
+        return rts;
+    }
+} else {
+@nogc
+T solve(alias f, alias dfdx, T)(T x0, T xMin, T xMax, double tol=1.0e-9)
+if ( (is(typeof(f(0.0)) == double) && is(typeof(dfdx(0.0)) == double)) ||
+     (is(typeof(f(0.0)) == float) && is(typeof(dfdx(0.0)) == float)) ||
+     (is(typeof(f(Complex!double(0.0))) == Complex!double) &&
+      is(typeof(dfdx(Complex!double(0.0))) == Complex!double)) )
+    {
+        const int MAXIT = 30; // maximum number of iterations
+        T xL = xMin;
+        T xH = xMax;
+        T fL = f(xL);
+        T fH = f(xH);
+        if ( (fL > 0.0 && fH > 0.0) || (fL < 0.0 && fH < 0.0) ) {
+            string msg = "Root must be bracketed in call to nm.newton.solve";
+            throw new NumericalMethodException(msg);
+        }
+        
+        if (fL == 0.0) return xMin;
+        if (fH == 0.0) return xMax;
+        
+        // Orient the search so that that f(xL) < 0.0
+        if (fL < 0.0) {
+            xL = xMin;
+            xH = xMax;
         }
         else {
-            xH = rts;
+            xH = xMin;
+            xL = xMax;
         }
+        
+        T rts = x0;
+        T dxold = (xMax - xMin);
+        T dx = dxold;
+        T f0 = f(rts);
+        T df0 = dfdx(rts);
+        foreach (j; 0 .. MAXIT) {
+            // Bisect if Newton prediction is out of range.
+            if ( (((rts-xH)*df0 - f0)*((rts-xL)*df0 - f0) > 0.0) ||
+                 (fabs(2.0*f0) > fabs(dxold*df0)) ) {
+                dxold = dx;
+                dx = 0.5*(xH - xL);
+                rts = xL + dx;
+                // Check if change in root is negligible.
+                // Accept it, if it is.
+                if (xL == rts) return rts; 
+            }
+            else { // A Newton step is acceptable
+                dxold = dx;
+                dx = f0/df0;
+                T tmp = rts;
+                rts -= dx;
+                if (tmp == rts) return rts;
+            }
+            if (fabs(dx) < tol) return rts;
+            // Otherwise, re-evaluate for next iteration
+            f0 = f(rts);
+            df0 = dfdx(rts);
+            if (f0 < 0.0) {
+                xL = rts;
+            }
+            else {
+                xH = rts;
+            }
+        }
+        // When successful, we should never reach here.
+        string msg = "Newton method failed to converge";
+        debug { msg ~= format(" in %d iterations.", MAXIT); }
+        throw new NumericalMethodException(msg);
     }
-    // When successful, we should never reach here.
-    string msg = "Newton method failed to converge";
-    debug { msg ~= format(" in %d iterations.", MAXIT); }
-    throw new NumericalMethodException(msg);
-}
+ }
 
 version(newton_test) {
     import std.conv;
