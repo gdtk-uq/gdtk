@@ -53,8 +53,8 @@ class TestCompCorner < Test::Unit::TestCase
         grad2 = items[1].to_f
       end
     end
-    assert((grad1 - -1.8644685491709595e+02).abs < 1.0e-6, "Failed to compute correct gradient for variable 1.")
-    assert((grad2 - -3.6804864018006072e+00).abs < 1.0e-6, "Failed to compute correct gradient for variable 2.")
+    assert((grad1 - -1.8661396212174540e+02).abs < 1.0e-6, "Failed to compute correct gradient for variable 1.")
+    assert((grad2 - -4.1220436569012122e+00).abs < 1.0e-6, "Failed to compute correct gradient for variable 2.")
   end
 
 end
