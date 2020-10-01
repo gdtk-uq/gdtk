@@ -117,6 +117,7 @@ struct ConservedQuantitiesIndices {
     size_t zMom;
     size_t totEnergy;
     size_t tke;
+    size_t species;
 
     this(int dimensions, ulong nturb, uint nmodes, uint nspecies) {
         mass = 0;
@@ -131,14 +132,14 @@ struct ConservedQuantitiesIndices {
             totEnergy = 4;
             nConservedQuantities = 5;
         }
-        if ( nturb>0) {
+        if ( nturb > 0) {
             tke = nConservedQuantities;
             nConservedQuantities += nturb;
         }
-        // TODO: Add this line when multi-species are handled correctly
-        //       by steady-state solver.
-        //nConservedQuantities += GlobalConfig.gmodel_master.n_species;
-
+        if ( nspecies > 1) {
+            species = nConservedQuantities;
+            nConservedQuantities += nspecies;
+        }
     }
 } // end ConvservedQuantitiesIndices
 

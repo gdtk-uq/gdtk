@@ -230,6 +230,7 @@ int main(string[] args)
 
     /* Check that items are implemented. */
     bool goodToProceed = true;
+    /*
     if (GlobalConfig.gmodel_master.n_species > 1) {
         if (GlobalConfig.is_master_task) {
             writeln("Newton-Krylov accelerator not implemented for multiple-species calculations.");
@@ -237,6 +238,7 @@ int main(string[] args)
         }
         goodToProceed = false;
     }
+    */
     if (!goodToProceed) {
         if (GlobalConfig.is_master_task) {
             writeln("One or more options are not yet available for the Newton-Krylov accelerator.");
