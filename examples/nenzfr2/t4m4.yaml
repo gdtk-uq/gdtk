@@ -1,5 +1,5 @@
 # Sample input file for nenzfr2 is a YAML 1.1 file.
-title: "Some T4 shot..."                      # Any string will do.
+title: "Some T4 shot provided by Wilson, long ago."  # Any string will do.
 species: ['N2', 'O2', 'N', 'O', 'NO']         # List
 molef: {'N2': 0.79, 'O2': 0.21}               # Map of nonzero values will suffice.
 # Gas model and reactions files need to be consistent with the species above.
@@ -12,5 +12,5 @@ T1: 300         # K
 p1: 125.0e3     # Pa
 Vs: 2414.0      # m/s
 pe: 34.37e6     # Pa
-ar: 27.0
+ar: 27.0        # original Mach 4 nozzle
 
