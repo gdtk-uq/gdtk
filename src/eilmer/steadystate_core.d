@@ -1133,6 +1133,10 @@ void evalRealMatVecProd(double pseudoSimTime, double sigma)
             foreach(it; 0 .. nturb){
                 cell.U[1].rhoturb[it] += sigma*blk.zed[cellCount+TKE+it];
             }
+            // enforce mass fraction of 1 for single species gas
+            if (blk.myConfig.n_species == 1) {
+                cell.U[1].massf[0] = cell.U[1].mass;
+            }
             cell.decode_conserved(0, 1, 0.0);
             cellCount += nConserved;
         }
@@ -1187,6 +1191,10 @@ void evalComplexMatVecProd(double pseudoSimTime, double sigma)
                 foreach(it; 0 .. nturb){
                     cell.U[1].rhoturb[it] += complex(0.0, sigma*blk.zed[cellCount+TKE+it].re);
                 }
+                // enforce mass fraction of 1 for single species gas
+                if (blk.myConfig.n_species == 1) {
+                    cell.U[1].massf[0] = cell.U[1].mass;
+                } 
                 cell.decode_conserved(0, 1, 0.0);
                 cellCount += nConserved;
             }
