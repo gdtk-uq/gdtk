@@ -165,6 +165,119 @@ public:
         //
         if (blk.myConfig.dimensions == 2) {
             // Handle the 2D case separately.
+            // First, check consistency of numbers of cells along the exchange boundaries.
+            string fstr = "Block[%d] %s exchange with Block[%d] %s, inconsistent number of cells.";
+            switch (which_boundary) {
+            case Face.north:
+                switch (other_face) {
+                case Face.north:
+                    if (this_blk.nicell != other_blk.nicell) {
+                        throw new FlowSolverException(format(fstr, this_blk.id, "north", other_blk.id, "north"));
+                    }
+                    break;
+                case Face.east:
+                    if (this_blk.nicell != other_blk.njcell) {
+                        throw new FlowSolverException(format(fstr, this_blk.id, "north", other_blk.id, "east"));
+                    }
+                    break;
+                case Face.south:
+                    if (this_blk.nicell != other_blk.nicell) {
+                        throw new FlowSolverException(format(fstr, this_blk.id, "north", other_blk.id, "south"));
+                    }
+                    break;
+                case Face.west:
+                    if (this_blk.nicell != other_blk.njcell) {
+                        throw new FlowSolverException(format(fstr, this_blk.id, "north", other_blk.id, "west"));
+                    }
+                    break;
+                default:
+                    throw new FlowSolverException("Incorrect boundary connection, invalid source face id.");
+                } // end switch other_face
+                break;
+            case Face.east:
+                switch (other_face) {
+                case Face.north:
+                    if (this_blk.njcell != other_blk.nicell) {
+                        throw new FlowSolverException(format(fstr, this_blk.id, "east", other_blk.id, "north"));
+                    }
+                    break;
+                case Face.east:
+                    if (this_blk.njcell != other_blk.njcell) {
+                        throw new FlowSolverException(format(fstr, this_blk.id, "east", other_blk.id, "east"));
+                    }
+                    break;
+                case Face.south:
+                    if (this_blk.njcell != other_blk.nicell) {
+                        throw new FlowSolverException(format(fstr, this_blk.id, "east", other_blk.id, "south"));
+                    }
+                    break;
+                case Face.west:
+                    if (this_blk.njcell != other_blk.njcell) {
+                        throw new FlowSolverException(format(fstr, this_blk.id, "east", other_blk.id, "west"));
+                    }
+                    break;
+                default:
+                    throw new FlowSolverException("Incorrect boundary connection, invalid source face id.");
+                } // end switch other_face
+                break;
+            case Face.south:
+                switch (other_face) {
+                case Face.north:
+                    if (this_blk.nicell != other_blk.nicell) {
+                        throw new FlowSolverException(format(fstr, this_blk.id, "south", other_blk.id, "north"));
+                    }
+                    break;
+                case Face.east:
+                    if (this_blk.nicell != other_blk.njcell) {
+                        throw new FlowSolverException(format(fstr, this_blk.id, "south", other_blk.id, "east"));
+                    }
+                    break;
+                case Face.south:
+                    if (this_blk.nicell != other_blk.nicell) {
+                        throw new FlowSolverException(format(fstr, this_blk.id, "south", other_blk.id, "south"));
+                    }
+                    break;
+                case Face.west:
+                    if (this_blk.nicell != other_blk.njcell) {
+                        throw new FlowSolverException(format(fstr, this_blk.id, "south", other_blk.id, "west"));
+                    }
+                    break;
+                default:
+                    throw new FlowSolverException("Incorrect boundary connection, invalid source face id.");
+                } // end switch other_face
+                break;
+            case Face.west:
+                switch (other_face) {
+                case Face.north:
+                    if (this_blk.njcell != other_blk.nicell) {
+                        throw new FlowSolverException(format(fstr, this_blk.id, "west", other_blk.id, "north"));
+                    }
+                    break;
+                case Face.east:
+                    if (this_blk.njcell != other_blk.njcell) {
+                        throw new FlowSolverException(format(fstr, this_blk.id, "west", other_blk.id, "east"));
+                    }
+                    break;
+                case Face.south:
+                    if (this_blk.njcell != other_blk.nicell) {
+                        throw new FlowSolverException(format(fstr, this_blk.id, "west", other_blk.id, "south"));
+                    }
+                    break;
+                case Face.west:
+                    if (this_blk.njcell != other_blk.njcell) {
+                        throw new FlowSolverException(format(fstr, this_blk.id, "west", other_blk.id, "west"));
+                    }
+                    break;
+                default:
+                    throw new FlowSolverException("Incorrect boundary connection, invalid source face id.");
+                } // end switch other_face
+                break;
+            default:
+                throw new FlowSolverException("Incorrect boundary connection, invalid which_boundary id.");
+            } // end switch which_boundary
+            //
+            // If we get to this point, the numbers of cells along the exchange boundaries is consistent.
+            //
             switch (which_boundary) {
             case Face.north:
                 j_dest = this_blk.jmax;  // index of the north-most plane of active cells
@@ -203,7 +316,7 @@ public:
                         if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+2,j_src,k_src); }
                         break;
                     default:
-                        assert(false, "Incorrect boundary connection, source face.");
+                        throw new FlowSolverException("Incorrect boundary connection, source face.");
                     } // end switch other_face
                 } // i loop
                 break;
@@ -244,7 +357,7 @@ public:
                         if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+2,j_src); }
                         break;
                     default:
-                        assert(false, "Incorrect boundary connection, source face.");
+                        throw new FlowSolverException("Incorrect boundary connection, source face.");
                     } // end switch other_face
                 } // j loop
                 break;
@@ -285,7 +398,7 @@ public:
                         if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+2,j_src); }
                         break;
                     default:
-                        assert(false, "Incorrect boundary connection, source face.");
+                        throw new FlowSolverException("Incorrect boundary connection, source face.");
                     } // end switch other_face
                 } // i loop
                 break;
@@ -326,12 +439,12 @@ public:
                         if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+2,j_src); }
                         break;
                     default:
-                        assert(false, "Incorrect boundary connection, source face.");
+                        throw new FlowSolverException("Incorrect boundary connection, source face.");
                     } // end switch other_face
                 } // j loop
                 break;
             default:
-                assert(false, "Incorrect boundary connection, which_boundary.");
+                throw new FlowSolverException("Incorrect boundary connection, which_boundary.");
             } // end switch which_boundary
         } else {
             // presume dimensions == 3
