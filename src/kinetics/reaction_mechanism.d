@@ -79,6 +79,16 @@ public:
             }
         }
     }
+
+    @nogc
+    final void eval_source_terms(GasModel gmodel, GasState Q, ref number[] conc, ref number[] rates, ref number[] source)
+    {
+        gmodel.massf2conc(Q, conc);
+        eval_rate_constants(Q);
+        eval_rates(conc, rates);
+        gmodel.rates2source(rates, source);
+    }
+    
     @nogc
     final number k_f(int ir)
     {

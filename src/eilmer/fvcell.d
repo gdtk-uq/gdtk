@@ -33,6 +33,8 @@ import gas.fuel_air_mix;
 import simcore : SimState;
 import turbulence;
 
+import kinetics.chemistry_update;
+import kinetics.reaction_mechanism;
 
 version(debug_chem) {
     GasState savedGasState;
@@ -132,6 +134,12 @@ public:
     // distance to nearest viscous wall (only computed if turb_model.needs_dwall)
     number dwall;
 
+    // source terms for finite-rate chemistr
+    number[] chem_conc;
+    number[] chem_rates;
+    number[] chem_source;
+    ReactionMechanism rmech;
+    
     // For use with LU-SGS solver/preconditioner (note: we don't need complex numbers here)
     number[] LU;
     number[] dUk;
@@ -220,6 +228,20 @@ public:
 
         // some data structures used in the LU-SGS solver
         version(steady_state) {
+
+            if (myConfig.reacting) {
+                chem_source.length = n_species;
+                chem_conc.length = n_species;
+                chem_rates.length = n_species;
+                
+                auto myChemUpdate = cast(ChemistryUpdate) myConfig.thermochemUpdate;
+                if (myChemUpdate !is null) { 
+                    rmech = myChemUpdate.rmech.dup();
+                } else {
+                    throw new Exception("Opps, incorrect ThermochemicalReactor.");
+                }
+            }
+            
             size_t nConserved = myConfig.cqi.nConservedQuantities;
             scalar_diag_inv.length = nConserved;
             dFdU = new Matrix!number(nConserved,nConserved);
@@ -1869,6 +1891,13 @@ public:
         return;
     } // end add_viscous_source_vector()
 
+    @nogc
+    void add_chemistry_source_vector()
+    {
+        rmech.eval_source_terms(myConfig.gmodel, fs.gas, chem_conc, chem_rates, chem_source);
+        foreach(sp, ref elem; Q.massf) { elem += chem_source[sp]; }
+    }
+    
     @nogc
     number calculate_wall_Reynolds_number(int which_boundary, GasModel gmodel)
     // [TODO] unstructured-grid adaption to be done, however,

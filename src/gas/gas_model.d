@@ -235,6 +235,14 @@ public:
     }
 
     @nogc
+    final void rates2source(number[] rates, number[] source) const
+    body {
+        foreach ( i; 0.._n_species ) {
+            source[i] = rates[i]*_mol_masses[i];
+        }
+    }
+
+    @nogc
     final void massf2numden(const(GasState) Q, number[] numden) const
     in {
         debug { assert(Q.massf.length == numden.length,

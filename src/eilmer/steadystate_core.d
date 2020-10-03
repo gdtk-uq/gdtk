@@ -1133,6 +1133,9 @@ void evalRHS(double pseudoSimTime, int ftl)
             if (blk.myConfig.viscous) {
                 cell.add_viscous_source_vector();
             }
+            if (blk.myConfig.reacting) {
+                cell.add_chemistry_source_vector();
+            }
             if (blk.myConfig.udf_source_terms) {
                 size_t i_cell = cell.id;
                 size_t j_cell = 0;
