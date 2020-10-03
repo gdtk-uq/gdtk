@@ -243,7 +243,7 @@ protected:
         number val = _k_f;
         foreach ( ref r; _reactants ) {
             int isp = r[0];
-            number coeff = r[1];
+            double coeff = r[1].re;
             val *= pow(conc[isp], coeff);
         }
         return val;
@@ -255,7 +255,7 @@ protected:
         number val = _k_b;
         foreach ( ref p; _products ) {
             int isp = p[0];
-            number coeff = p[1];
+            double coeff = p[1].re;
             val *= pow(conc[isp], coeff);
         }
         return val;
@@ -366,7 +366,7 @@ protected:
         number val = _k_f*_anonymousColliderTerm;
         foreach ( ref r; _reactants ) {
             int isp = r[0];
-            number coeff = r[1];
+            double coeff = r[1];
             val *= pow(conc[isp], coeff);
         }
         return val;
@@ -378,7 +378,7 @@ protected:
         number val = _k_b*_anonymousColliderTerm;
         foreach ( ref p; _products ) {
             int isp = p[0];
-            number coeff = p[1];
+            double coeff = p[1];
             val *= pow(conc[isp], coeff);
         }
         return val;
