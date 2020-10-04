@@ -140,6 +140,545 @@ public:
         return str;
     }
 
+    int check_cell_mapping()
+    {
+        // Returns 0 if the numbers of cells along exchange block boundaries are consistent, -1 otherwise.
+        // The checking process stops at the first mismatch.
+        //
+        // We call this function only after all blocks have been constructed.
+        //
+        this_blk = cast(SFluidBlock) blk;
+        if (!this_blk) { writeln("Destination FlowBlock must be a structured-grid block."); return -4; }
+        bool nghost3 = (this_blk.n_ghost_cell_layers == 3);
+        other_blk = cast(SFluidBlock) neighbourBlock;
+        if (!other_blk) { writeln("Source FlowBlock must be a structured-grid block.");  return -4; }
+        other_face = neighbourFace;
+        other_orientation = neighbourOrientation;
+        version(mpi_parallel) {
+            other_blk_rank = GlobalConfig.mpi_rank_for_block[other_blk.id];
+        }
+        //
+        // For the source cells, we use indices into the hypothetical block of active cells.
+        size_t i_src, j_src, k_src;
+        // For ghost-cell indices into the destination block, we use the raw indices into the
+        // larger underlying block array that includes the surrounding layers of ghost cells.
+        size_t i_dest, j_dest, k_dest;
+        //
+        if (blk.myConfig.dimensions == 2) {
+            // Handle the 2D case separately.
+            // First, check consistency of numbers of cells along the exchange boundaries.
+            string fstr = "Block[%d] %s exchange with Block[%d] %s, inconsistent number of cells.";
+            switch (which_boundary) {
+            case Face.north:
+                switch (other_face) {
+                case Face.north:
+                    if (this_blk.nicell != other_blk.nicell) {
+                        writefln(fstr, this_blk.id, "north", other_blk.id, "north");
+                        return -1;
+                    }
+                    break;
+                case Face.east:
+                    if (this_blk.nicell != other_blk.njcell) {
+                        writefln(fstr, this_blk.id, "north", other_blk.id, "east");
+                        return -1;
+                    }
+                    break;
+                case Face.south:
+                    if (this_blk.nicell != other_blk.nicell) {
+                        writefln(fstr, this_blk.id, "north", other_blk.id, "south");
+                        return -1;
+                    }
+                    break;
+                case Face.west:
+                    if (this_blk.nicell != other_blk.njcell) {
+                        writefln(fstr, this_blk.id, "north", other_blk.id, "west");
+                        return -1;
+                    }
+                    break;
+                default:
+                    writeln("Incorrect boundary connection, invalid source face id.");
+                    return -2;
+                } // end switch other_face
+                break;
+            case Face.east:
+                switch (other_face) {
+                case Face.north:
+                    if (this_blk.njcell != other_blk.nicell) {
+                        writefln(fstr, this_blk.id, "east", other_blk.id, "north");
+                        return -1;
+                    }
+                    break;
+                case Face.east:
+                    if (this_blk.njcell != other_blk.njcell) {
+                        writefln(fstr, this_blk.id, "east", other_blk.id, "east");
+                        return -1;
+                    }
+                    break;
+                case Face.south:
+                    if (this_blk.njcell != other_blk.nicell) {
+                        writefln(fstr, this_blk.id, "east", other_blk.id, "south");
+                        return -1;
+                    }
+                    break;
+                case Face.west:
+                    if (this_blk.njcell != other_blk.njcell) {
+                        writefln(fstr, this_blk.id, "east", other_blk.id, "west");
+                        return -1;
+                    }
+                    break;
+                default:
+                    writeln("Incorrect boundary connection, invalid source face id.");
+                    return -2;
+                } // end switch other_face
+                break;
+            case Face.south:
+                switch (other_face) {
+                case Face.north:
+                    if (this_blk.nicell != other_blk.nicell) {
+                        writefln(fstr, this_blk.id, "south", other_blk.id, "north");
+                        return -1;
+                    }
+                    break;
+                case Face.east:
+                    if (this_blk.nicell != other_blk.njcell) {
+                        writefln(fstr, this_blk.id, "south", other_blk.id, "east");
+                        return -1;
+                    }
+                    break;
+                case Face.south:
+                    if (this_blk.nicell != other_blk.nicell) {
+                        writefln(fstr, this_blk.id, "south", other_blk.id, "south");
+                        return -1;
+                    }
+                    break;
+                case Face.west:
+                    if (this_blk.nicell != other_blk.njcell) {
+                        writefln(fstr, this_blk.id, "south", other_blk.id, "west");
+                        return -1;
+                    }
+                    break;
+                default:
+                    writeln("Incorrect boundary connection, invalid source face id.");
+                    return -2;
+                } // end switch other_face
+                break;
+            case Face.west:
+                switch (other_face) {
+                case Face.north:
+                    if (this_blk.njcell != other_blk.nicell) {
+                        writefln(fstr, this_blk.id, "west", other_blk.id, "north");
+                        return -1;
+                    }
+                    break;
+                case Face.east:
+                    if (this_blk.njcell != other_blk.njcell) {
+                        writefln(fstr, this_blk.id, "west", other_blk.id, "east");
+                        return -1;
+                    }
+                    break;
+                case Face.south:
+                    if (this_blk.njcell != other_blk.nicell) {
+                        writefln(fstr, this_blk.id, "west", other_blk.id, "south");
+                        return -1;
+                    }
+                    break;
+                case Face.west:
+                    if (this_blk.njcell != other_blk.njcell) {
+                        writefln(fstr, this_blk.id, "west", other_blk.id, "west");
+                        return -1;
+                    }
+                    break;
+                default:
+                    writefln("Incorrect boundary connection, invalid source face id.");
+                    return -2;
+                } // end switch other_face
+                break;
+            default:
+                writeln("Incorrect boundary connection, invalid which_boundary id.");
+                return -3;
+            } // end switch which_boundary
+        } else {
+            // presume dimensions == 3
+            // Continue on with 3D work...
+            // For checking orientations, see the code in bc_conn.lua.
+            string fstr = "Block[%d] %s exchange with Block[%d] %s, orientation=%d, inconsistent number of cells.";
+            bool ok = false;
+            switch (which_boundary) {
+            case Face.north:
+                switch (other_face) {
+                case Face.north:
+                    final switch (other_orientation) {
+                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
+                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell); break;
+                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
+                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell);
+                    }
+                    if (!ok) { writefln(fstr, this_blk.id, "north", other_blk.id, "north", other_orientation);  return -1; }
+                    break;
+                case Face.east:
+                    final switch (other_orientation) {
+                    case 0: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
+                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell); break;
+                    case 2: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
+                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell);
+                    }
+                    if (!ok) { writefln(fstr, this_blk.id, "north", other_blk.id, "east", other_orientation); return -1; }
+                    break;
+                case Face.south:
+                    final switch (other_orientation) {
+                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
+                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell); break;
+                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
+                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell);
+                    }
+                    if (!ok) { writefln(fstr, this_blk.id, "north", other_blk.id, "south", other_orientation); return -1;  }
+                    break;
+                case Face.west:
+                    final switch (other_orientation) {
+                    case 0: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
+                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell); break;
+                    case 2: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
+                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell);
+                    }
+                    if (!ok) { writefln(fstr, this_blk.id, "north", other_blk.id, "west", other_orientation); return -1; }
+                    break;
+                case Face.top:
+                    final switch (other_orientation) {
+                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
+                    case 1: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell); break;
+                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
+                    case 3: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell);
+                    }
+                    if (!ok) { writefln(fstr, this_blk.id, "north", other_blk.id, "top", other_orientation); return -1; }
+                    break;
+                case Face.bottom:
+                    final switch (other_orientation) {
+                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
+                    case 1: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell); break;
+                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
+                    case 3: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell);
+                    }
+                    if (!ok) { writefln(fstr, this_blk.id, "north", other_blk.id, "bottom", other_orientation); return -1; }
+                    break;
+                default:
+                    writeln("Incorrect boundary connection, invalid source face id.");
+                    return -2;
+                } // end switch other_face
+                break;
+            case Face.east:
+                switch (other_face) {
+                case Face.north:
+                    final switch (other_orientation) {
+                    case 0: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
+                    case 1: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell); break;
+                    case 2: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
+                    case 3: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell);
+                    }
+                    if (!ok) { writefln(fstr, this_blk.id, "east", other_blk.id, "north", other_orientation); return -1; }
+                    break;
+                case Face.east:
+                    final switch (other_orientation) {
+                    case 0: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
+                    case 1: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell); break;
+                    case 2: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
+                    case 3: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell);
+                    }
+                    if (!ok) { writefln(fstr, this_blk.id, "east", other_blk.id, "east", other_orientation); return -1; }
+                    break;
+                case Face.south:
+                    final switch (other_orientation) {
+                    case 0: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
+                    case 1: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell); break;
+                    case 2: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
+                    case 3: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell);
+                    }
+                    if (!ok) { writefln(fstr, this_blk.id, "east", other_blk.id, "south", other_orientation); return -1; }
+                    break;
+                case Face.west:
+                    final switch (other_orientation) {
+                    case 0: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
+                    case 1: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell); break;
+                    case 2: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
+                    case 3: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell);
+                    }
+                    if (!ok) { writefln(fstr, this_blk.id, "east", other_blk.id, "west", other_orientation); return -1; }
+                    break;
+                case Face.top:
+                    final switch (other_orientation) {
+                    case 0: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
+                    case 1: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell); break;
+                    case 2: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
+                    case 3: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell);
+                    }
+                    if (!ok) { writefln(fstr, this_blk.id, "east", other_blk.id, "top", other_orientation); return -1; }
+                    break;
+                case Face.bottom:
+                    final switch (other_orientation) {
+                    case 0: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
+                    case 1: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell); break;
+                    case 2: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
+                    case 3: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell);
+                    }
+                    if (!ok) { writefln(fstr, this_blk.id, "east", other_blk.id, "bottom", other_orientation); return -1; }
+                    break;
+                default:
+                    writeln("Incorrect boundary connection, invalid source face id.");
+                    return -2;
+                } // end switch other_face
+                break;
+            case Face.south:
+                switch (other_face) {
+                case Face.north:
+                    final switch (other_orientation) {
+                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
+                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell); break;
+                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
+                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell);
+                    }
+                    if (!ok) { writefln(fstr, this_blk.id, "south", other_blk.id, "north", other_orientation); return -1; }
+                    break;
+                case Face.east:
+                    final switch (other_orientation) {
+                    case 0: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
+                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell); break;
+                    case 2: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
+                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell);
+                    }
+                    if (!ok) { writefln(fstr, this_blk.id, "south", other_blk.id, "east", other_orientation); return -1; }
+                    break;
+                case Face.south:
+                    final switch (other_orientation) {
+                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
+                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell); break;
+                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
+                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell);
+                    }
+                    if (!ok) { writefln(fstr, this_blk.id, "south", other_blk.id, "south", other_orientation); return -1; }
+                    break;
+                case Face.west:
+                    final switch (other_orientation) {
+                    case 0: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
+                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell); break;
+                    case 2: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
+                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell);
+                    }
+                    if (!ok) { writefln(fstr, this_blk.id, "south", other_blk.id, "west", other_orientation); return -1; }
+                    break;
+                case Face.top:
+                    final switch (other_orientation) {
+                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
+                    case 1: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell); break;
+                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
+                    case 3: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell);
+                    }
+                    if (!ok) { writefln(fstr, this_blk.id, "south", other_blk.id, "top", other_orientation); return -1; }
+                    break;
+                case Face.bottom:
+                    final switch (other_orientation) {
+                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
+                    case 1: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell); break;
+                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
+                    case 3: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell);
+                    }
+                    if (!ok) { writefln(fstr, this_blk.id, "south", other_blk.id, "bottom", other_orientation); return -1; }
+                    break;
+                default:
+                    writeln("Incorrect boundary connection, invalid source face id.");
+                    return -2;
+                } // end switch other_face
+                break;
+            case Face.west:
+                switch (other_face) {
+                case Face.north:
+                    final switch (other_orientation) {
+                    case 0: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
+                    case 1: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell); break;
+                    case 2: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
+                    case 3: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell);
+                    }
+                    if (!ok) { writefln(fstr, this_blk.id, "west", other_blk.id, "north", other_orientation); return -1; }
+                    break;
+                case Face.east:
+                    final switch (other_orientation) {
+                    case 0: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
+                    case 1: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell); break;
+                    case 2: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
+                    case 3: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell);
+                    }
+                    if (!ok) { writefln(fstr, this_blk.id, "west", other_blk.id, "east", other_orientation); return -1; }
+                    break;
+                case Face.south:
+                    final switch (other_orientation) {
+                    case 0: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
+                    case 1: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell); break;
+                    case 2: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
+                    case 3: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell);
+                    }
+                    if (!ok) { writefln(fstr, this_blk.id, "west", other_blk.id, "south", other_orientation); return -1; }
+                    break;
+                case Face.west:
+                    final switch (other_orientation) {
+                    case 0: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
+                    case 1: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell); break;
+                    case 2: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
+                    case 3: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell);
+                    }
+                    if (!ok) { writefln(fstr, this_blk.id, "west", other_blk.id, "west", other_orientation); return -1; }
+                    break;
+                case Face.top:
+                    final switch (other_orientation) {
+                    case 0: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
+                    case 1: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell); break;
+                    case 2: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
+                    case 3: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell);
+                    }
+                    if (!ok) { writefln(fstr, this_blk.id, "west", other_blk.id, "top", other_orientation); return -1; }
+                    break;
+                case Face.bottom:
+                    final switch (other_orientation) {
+                    case 0: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
+                    case 1: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell); break;
+                    case 2: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
+                    case 3: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell);
+                    }
+                    if (!ok) { writefln(fstr, this_blk.id, "west", other_blk.id, "bottom", other_orientation); return -1; }
+                    break;
+                default:
+                    writeln("Incorrect boundary connection, invalid source face id.");
+                    return -1;
+                } // end switch other_face
+                break;
+            case Face.top:
+                switch (other_face) {
+                case Face.north:
+                    final switch (other_orientation) {
+                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.nkcell); break;
+                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.nicell); break;
+                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.nkcell); break;
+                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.nicell);
+                    }
+                    if (!ok) { writefln(fstr, this_blk.id, "top", other_blk.id, "north", other_orientation); return -1; }
+                    break;
+                case Face.east:
+                    final switch (other_orientation) {
+                    case 0: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nkcell); break;
+                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.njcell); break;
+                    case 2: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nkcell); break;
+                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.njcell);
+                    }
+                    if (!ok) { writefln(fstr, this_blk.id, "top", other_blk.id, "east", other_orientation); return -1; }
+                    break;
+                case Face.south:
+                    final switch (other_orientation) {
+                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.nkcell); break;
+                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.nicell); break;
+                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.nkcell); break;
+                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.nicell);
+                    }
+                    if (!ok) { writefln(fstr, this_blk.id, "top", other_blk.id, "south", other_orientation); return -1; }
+                    break;
+                case Face.west:
+                    final switch (other_orientation) {
+                    case 0: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nkcell); break;
+                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.njcell); break;
+                    case 2: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nkcell); break;
+                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.njcell);
+                    }
+                    if (!ok) { writefln(fstr, this_blk.id, "top", other_blk.id, "west", other_orientation); return -1; }
+                    break;
+                case Face.top:
+                    final switch (other_orientation) {
+                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.njcell); break;
+                    case 1: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nicell); break;
+                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.njcell); break;
+                    case 3: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nicell);
+                    }
+                    if (!ok) { writefln(fstr, this_blk.id, "top", other_blk.id, "top", other_orientation); return -1; }
+                    break;
+                case Face.bottom:
+                    final switch (other_orientation) {
+                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.njcell); break;
+                    case 1: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nicell); break;
+                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.njcell); break;
+                    case 3: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nicell);
+                    }
+                    if (!ok) { writefln(fstr, this_blk.id, "top", other_blk.id, "bottom", other_orientation); return -1; }
+                    break;
+                default:
+                    writeln("Incorrect boundary connection, invalid source face id.");
+                    return -1;
+                } // end switch other_face
+                break;
+            case Face.bottom:
+                switch (other_face) {
+                case Face.north:
+                    final switch (other_orientation) {
+                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.nkcell); break;
+                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.nicell); break;
+                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.nkcell); break;
+                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.nicell);
+                    }
+                    if (!ok) { writefln(fstr, this_blk.id, "bottom", other_blk.id, "north", other_orientation); return -1; }
+                    break;
+                case Face.east:
+                    final switch (other_orientation) {
+                    case 0: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nkcell); break;
+                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.njcell); break;
+                    case 2: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nkcell); break;
+                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.njcell);
+                    }
+                    if (!ok) { writefln(fstr, this_blk.id, "bottom", other_blk.id, "east", other_orientation); return -1; }
+                    break;
+                case Face.south:
+                    final switch (other_orientation) {
+                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.nkcell); break;
+                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.nicell); break;
+                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.nkcell); break;
+                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.nicell);
+                    }
+                    if (!ok) { writefln(fstr, this_blk.id, "bottom", other_blk.id, "south", other_orientation); return -1; }
+                    break;
+                case Face.west:
+                    final switch (other_orientation) {
+                    case 0: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nkcell); break;
+                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.njcell); break;
+                    case 2: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nkcell); break;
+                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.njcell);
+                    }
+                    if (!ok) { writefln(fstr, this_blk.id, "bottom", other_blk.id, "west", other_orientation); return -1; }
+                    break;
+                case Face.top:
+                    final switch (other_orientation) {
+                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.njcell); break;
+                    case 1: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nicell); break;
+                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.njcell); break;
+                    case 3: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nicell);
+                    }
+                    if (!ok) { writefln(fstr, this_blk.id, "bottom", other_blk.id, "top", other_orientation); return -1; }
+                    break;
+                case Face.bottom:
+                    final switch (other_orientation) {
+                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.njcell); break;
+                    case 1: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nicell); break;
+                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.njcell); break;
+                    case 3: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nicell);
+                    }
+                    if (!ok) { writefln(fstr, this_blk.id, "bottom", other_blk.id, "bottom", other_orientation); return -1; }
+                    break;
+                default:
+                    writeln("Incorrect boundary connection, invalid source face id.");
+                    return -2;
+                } // end switch other_face
+                break;
+            default:
+                writeln("Incorrect boundary connection, invalid which_boundary id.");
+                return -3;
+            } // end switch which_boundary
+        } // end if dimensions == ...
+        //
+        return 0; // to arrive here, the numbers of cells along the exchange boundaries are consistent.
+    } // end check_cell_mapping()
+
     void set_up_cell_mapping_phase0()
     {
         // We call this function only after all blocks have been constructed.
@@ -165,119 +704,6 @@ public:
         //
         if (blk.myConfig.dimensions == 2) {
             // Handle the 2D case separately.
-            // First, check consistency of numbers of cells along the exchange boundaries.
-            string fstr = "Block[%d] %s exchange with Block[%d] %s, inconsistent number of cells.";
-            switch (which_boundary) {
-            case Face.north:
-                switch (other_face) {
-                case Face.north:
-                    if (this_blk.nicell != other_blk.nicell) {
-                        throw new FlowSolverException(format(fstr, this_blk.id, "north", other_blk.id, "north"));
-                    }
-                    break;
-                case Face.east:
-                    if (this_blk.nicell != other_blk.njcell) {
-                        throw new FlowSolverException(format(fstr, this_blk.id, "north", other_blk.id, "east"));
-                    }
-                    break;
-                case Face.south:
-                    if (this_blk.nicell != other_blk.nicell) {
-                        throw new FlowSolverException(format(fstr, this_blk.id, "north", other_blk.id, "south"));
-                    }
-                    break;
-                case Face.west:
-                    if (this_blk.nicell != other_blk.njcell) {
-                        throw new FlowSolverException(format(fstr, this_blk.id, "north", other_blk.id, "west"));
-                    }
-                    break;
-                default:
-                    throw new FlowSolverException("Incorrect boundary connection, invalid source face id.");
-                } // end switch other_face
-                break;
-            case Face.east:
-                switch (other_face) {
-                case Face.north:
-                    if (this_blk.njcell != other_blk.nicell) {
-                        throw new FlowSolverException(format(fstr, this_blk.id, "east", other_blk.id, "north"));
-                    }
-                    break;
-                case Face.east:
-                    if (this_blk.njcell != other_blk.njcell) {
-                        throw new FlowSolverException(format(fstr, this_blk.id, "east", other_blk.id, "east"));
-                    }
-                    break;
-                case Face.south:
-                    if (this_blk.njcell != other_blk.nicell) {
-                        throw new FlowSolverException(format(fstr, this_blk.id, "east", other_blk.id, "south"));
-                    }
-                    break;
-                case Face.west:
-                    if (this_blk.njcell != other_blk.njcell) {
-                        throw new FlowSolverException(format(fstr, this_blk.id, "east", other_blk.id, "west"));
-                    }
-                    break;
-                default:
-                    throw new FlowSolverException("Incorrect boundary connection, invalid source face id.");
-                } // end switch other_face
-                break;
-            case Face.south:
-                switch (other_face) {
-                case Face.north:
-                    if (this_blk.nicell != other_blk.nicell) {
-                        throw new FlowSolverException(format(fstr, this_blk.id, "south", other_blk.id, "north"));
-                    }
-                    break;
-                case Face.east:
-                    if (this_blk.nicell != other_blk.njcell) {
-                        throw new FlowSolverException(format(fstr, this_blk.id, "south", other_blk.id, "east"));
-                    }
-                    break;
-                case Face.south:
-                    if (this_blk.nicell != other_blk.nicell) {
-                        throw new FlowSolverException(format(fstr, this_blk.id, "south", other_blk.id, "south"));
-                    }
-                    break;
-                case Face.west:
-                    if (this_blk.nicell != other_blk.njcell) {
-                        throw new FlowSolverException(format(fstr, this_blk.id, "south", other_blk.id, "west"));
-                    }
-                    break;
-                default:
-                    throw new FlowSolverException("Incorrect boundary connection, invalid source face id.");
-                } // end switch other_face
-                break;
-            case Face.west:
-                switch (other_face) {
-                case Face.north:
-                    if (this_blk.njcell != other_blk.nicell) {
-                        throw new FlowSolverException(format(fstr, this_blk.id, "west", other_blk.id, "north"));
-                    }
-                    break;
-                case Face.east:
-                    if (this_blk.njcell != other_blk.njcell) {
-                        throw new FlowSolverException(format(fstr, this_blk.id, "west", other_blk.id, "east"));
-                    }
-                    break;
-                case Face.south:
-                    if (this_blk.njcell != other_blk.nicell) {
-                        throw new FlowSolverException(format(fstr, this_blk.id, "west", other_blk.id, "south"));
-                    }
-                    break;
-                case Face.west:
-                    if (this_blk.njcell != other_blk.njcell) {
-                        throw new FlowSolverException(format(fstr, this_blk.id, "west", other_blk.id, "west"));
-                    }
-                    break;
-                default:
-                    throw new FlowSolverException("Incorrect boundary connection, invalid source face id.");
-                } // end switch other_face
-                break;
-            default:
-                throw new FlowSolverException("Incorrect boundary connection, invalid which_boundary id.");
-            } // end switch which_boundary
-            //
-            // If we get to this point, the numbers of cells along the exchange boundaries is consistent.
-            //
             switch (which_boundary) {
             case Face.north:
                 j_dest = this_blk.jmax;  // index of the north-most plane of active cells
@@ -449,376 +875,6 @@ public:
         } else {
             // presume dimensions == 3
             // Continue on with 3D work...
-            // For checking orientations, see the code in bc_conn.lua.
-            string fstr = "Block[%d] %s exchange with Block[%d] %s, orientation=%d, inconsistent number of cells.";
-            bool ok = false;
-            switch (which_boundary) {
-            case Face.north:
-                switch (other_face) {
-                case Face.north:
-                    final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell);
-                    }
-                    if (!ok) { throw new FlowSolverException(format(fstr, this_blk.id, "north", other_blk.id, "north", other_orientation)); }
-                    break;
-                case Face.east:
-                    final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell);
-                    }
-                    if (!ok) { throw new FlowSolverException(format(fstr, this_blk.id, "north", other_blk.id, "east", other_orientation)); }
-                    break;
-                case Face.south:
-                    final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell);
-                    }
-                    if (!ok) { throw new FlowSolverException(format(fstr, this_blk.id, "north", other_blk.id, "south", other_orientation)); }
-                    break;
-                case Face.west:
-                    final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell);
-                    }
-                    if (!ok) { throw new FlowSolverException(format(fstr, this_blk.id, "north", other_blk.id, "west", other_orientation)); }
-                    break;
-                case Face.top:
-                    final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell);
-                    }
-                    if (!ok) { throw new FlowSolverException(format(fstr, this_blk.id, "north", other_blk.id, "top", other_orientation)); }
-                    break;
-                case Face.bottom:
-                    final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell);
-                    }
-                    if (!ok) { throw new FlowSolverException(format(fstr, this_blk.id, "north", other_blk.id, "bottom", other_orientation)); }
-                    break;
-                default:
-                    throw new FlowSolverException("Incorrect boundary connection, invalid source face id.");
-                } // end switch other_face
-                break;
-            case Face.east:
-                switch (other_face) {
-                case Face.north:
-                    final switch (other_orientation) {
-                    case 0: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell);
-                    }
-                    if (!ok) { throw new FlowSolverException(format(fstr, this_blk.id, "east", other_blk.id, "north", other_orientation)); }
-                    break;
-                case Face.east:
-                    final switch (other_orientation) {
-                    case 0: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 2: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell);
-                    }
-                    if (!ok) { throw new FlowSolverException(format(fstr, this_blk.id, "east", other_blk.id, "east", other_orientation)); }
-                    break;
-                case Face.south:
-                    final switch (other_orientation) {
-                    case 0: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell);
-                    }
-                    if (!ok) { throw new FlowSolverException(format(fstr, this_blk.id, "east", other_blk.id, "south", other_orientation)); }
-                    break;
-                case Face.west:
-                    final switch (other_orientation) {
-                    case 0: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 2: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell);
-                    }
-                    if (!ok) { throw new FlowSolverException(format(fstr, this_blk.id, "east", other_blk.id, "west", other_orientation)); }
-                    break;
-                case Face.top:
-                    final switch (other_orientation) {
-                    case 0: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 1: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 3: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell);
-                    }
-                    if (!ok) { throw new FlowSolverException(format(fstr, this_blk.id, "east", other_blk.id, "top", other_orientation)); }
-                    break;
-                case Face.bottom:
-                    final switch (other_orientation) {
-                    case 0: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 1: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 3: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell);
-                    }
-                    if (!ok) { throw new FlowSolverException(format(fstr, this_blk.id, "east", other_blk.id, "bottom", other_orientation)); }
-                    break;
-                default:
-                    throw new FlowSolverException("Incorrect boundary connection, invalid source face id.");
-                } // end switch other_face
-                break;
-            case Face.south:
-                switch (other_face) {
-                case Face.north:
-                    final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell);
-                    }
-                    if (!ok) { throw new FlowSolverException(format(fstr, this_blk.id, "south", other_blk.id, "north", other_orientation)); }
-                    break;
-                case Face.east:
-                    final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell);
-                    }
-                    if (!ok) { throw new FlowSolverException(format(fstr, this_blk.id, "south", other_blk.id, "east", other_orientation)); }
-                    break;
-                case Face.south:
-                    final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell);
-                    }
-                    if (!ok) { throw new FlowSolverException(format(fstr, this_blk.id, "south", other_blk.id, "south", other_orientation)); }
-                    break;
-                case Face.west:
-                    final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell);
-                    }
-                    if (!ok) { throw new FlowSolverException(format(fstr, this_blk.id, "south", other_blk.id, "west", other_orientation)); }
-                    break;
-                case Face.top:
-                    final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell);
-                    }
-                    if (!ok) { throw new FlowSolverException(format(fstr, this_blk.id, "south", other_blk.id, "top", other_orientation)); }
-                    break;
-                case Face.bottom:
-                    final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell);
-                    }
-                    if (!ok) { throw new FlowSolverException(format(fstr, this_blk.id, "south", other_blk.id, "bottom", other_orientation)); }
-                    break;
-                default:
-                    throw new FlowSolverException("Incorrect boundary connection, invalid source face id.");
-                } // end switch other_face
-                break;
-            case Face.west:
-                switch (other_face) {
-                case Face.north:
-                    final switch (other_orientation) {
-                    case 0: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell);
-                    }
-                    if (!ok) { throw new FlowSolverException(format(fstr, this_blk.id, "west", other_blk.id, "north", other_orientation)); }
-                    break;
-                case Face.east:
-                    final switch (other_orientation) {
-                    case 0: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 2: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell);
-                    }
-                    if (!ok) { throw new FlowSolverException(format(fstr, this_blk.id, "west", other_blk.id, "east", other_orientation)); }
-                    break;
-                case Face.south:
-                    final switch (other_orientation) {
-                    case 0: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell);
-                    }
-                    if (!ok) { throw new FlowSolverException(format(fstr, this_blk.id, "west", other_blk.id, "south", other_orientation)); }
-                    break;
-                case Face.west:
-                    final switch (other_orientation) {
-                    case 0: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 2: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell);
-                    }
-                    if (!ok) { throw new FlowSolverException(format(fstr, this_blk.id, "west", other_blk.id, "west", other_orientation)); }
-                    break;
-                case Face.top:
-                    final switch (other_orientation) {
-                    case 0: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 1: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 3: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell);
-                    }
-                    if (!ok) { throw new FlowSolverException(format(fstr, this_blk.id, "west", other_blk.id, "top", other_orientation)); }
-                    break;
-                case Face.bottom:
-                    final switch (other_orientation) {
-                    case 0: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 1: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 3: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell);
-                    }
-                    if (!ok) { throw new FlowSolverException(format(fstr, this_blk.id, "west", other_blk.id, "bottom", other_orientation)); }
-                    break;
-                default:
-                    throw new FlowSolverException("Incorrect boundary connection, invalid source face id.");
-                } // end switch other_face
-                break;
-            case Face.top:
-                switch (other_face) {
-                case Face.north:
-                    final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.nicell);
-                    }
-                    if (!ok) { throw new FlowSolverException(format(fstr, this_blk.id, "top", other_blk.id, "north", other_orientation)); }
-                    break;
-                case Face.east:
-                    final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.njcell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.njcell);
-                    }
-                    if (!ok) { throw new FlowSolverException(format(fstr, this_blk.id, "top", other_blk.id, "east", other_orientation)); }
-                    break;
-                case Face.south:
-                    final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.nicell);
-                    }
-                    if (!ok) { throw new FlowSolverException(format(fstr, this_blk.id, "top", other_blk.id, "south", other_orientation)); }
-                    break;
-                case Face.west:
-                    final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.njcell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.njcell);
-                    }
-                    if (!ok) { throw new FlowSolverException(format(fstr, this_blk.id, "top", other_blk.id, "west", other_orientation)); }
-                    break;
-                case Face.top:
-                    final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.njcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.njcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nicell);
-                    }
-                    if (!ok) { throw new FlowSolverException(format(fstr, this_blk.id, "top", other_blk.id, "top", other_orientation)); }
-                    break;
-                case Face.bottom:
-                    final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.njcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.njcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nicell);
-                    }
-                    if (!ok) { throw new FlowSolverException(format(fstr, this_blk.id, "top", other_blk.id, "bottom", other_orientation)); }
-                    break;
-                default:
-                    throw new FlowSolverException("Incorrect boundary connection, invalid source face id.");
-                } // end switch other_face
-                break;
-            case Face.bottom:
-                switch (other_face) {
-                case Face.north:
-                    final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.nicell);
-                    }
-                    if (!ok) { throw new FlowSolverException(format(fstr, this_blk.id, "bottom", other_blk.id, "north", other_orientation)); }
-                    break;
-                case Face.east:
-                    final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.njcell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.njcell);
-                    }
-                    if (!ok) { throw new FlowSolverException(format(fstr, this_blk.id, "bottom", other_blk.id, "east", other_orientation)); }
-                    break;
-                case Face.south:
-                    final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.nicell);
-                    }
-                    if (!ok) { throw new FlowSolverException(format(fstr, this_blk.id, "bottom", other_blk.id, "south", other_orientation)); }
-                    break;
-                case Face.west:
-                    final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.njcell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.njcell);
-                    }
-                    if (!ok) { throw new FlowSolverException(format(fstr, this_blk.id, "bottom", other_blk.id, "west", other_orientation)); }
-                    break;
-                case Face.top:
-                    final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.njcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.njcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nicell);
-                    }
-                    if (!ok) { throw new FlowSolverException(format(fstr, this_blk.id, "bottom", other_blk.id, "top", other_orientation)); }
-                    break;
-                case Face.bottom:
-                    final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.njcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.njcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nicell);
-                    }
-                    if (!ok) { throw new FlowSolverException(format(fstr, this_blk.id, "bottom", other_blk.id, "bottom", other_orientation)); }
-                    break;
-                default:
-                    throw new FlowSolverException("Incorrect boundary connection, invalid source face id.");
-                } // end switch other_face
-                break;
-            default:
-                throw new FlowSolverException("Incorrect boundary connection, invalid which_boundary id.");
-            } // end switch which_boundary
-            //
-            // If we get to this point, the numbers of cells along the exchange boundaries is consistent.
-            //
             final switch (which_boundary) {
             case Face.north:
                 j_dest = this_blk.jmax;  // index of the north-most plane of active cells
@@ -1394,7 +1450,7 @@ public:
             // we know that we can just access the data directly
             // in the final phase.
         }
-    } // end set_up_cell_mapping_send()
+    } // end set_up_cell_mapping_phase1()
 
     // not @nogc
     void set_up_cell_mapping_phase2()

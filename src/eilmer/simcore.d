@@ -476,6 +476,20 @@ int init_simulation(int tindx, int nextLoadsIndx,
         foreach (bc; myblk.bc) {
             foreach (gce; bc.preReconAction) {
                 auto mygce = cast(GhostCellFullFaceCopy)gce;
+                if (mygce && (mygce.check_cell_mapping() != 0)) { any_block_fail = true; }
+            }
+        }
+    }
+    version(mpi_parallel) {
+        myFlag = to!int(any_block_fail);
+        MPI_Allreduce(MPI_IN_PLACE, &myFlag, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+        any_block_fail = to!bool(myFlag);
+    }
+    if (any_block_fail) { return -1; }
+    foreach (myblk; localFluidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce = cast(GhostCellFullFaceCopy)gce;
                 if (mygce) { mygce.set_up_cell_mapping_phase0(); }
             }
         }
