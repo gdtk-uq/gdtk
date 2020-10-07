@@ -305,13 +305,15 @@ int init_simulation(int tindx, int nextLoadsIndx,
         extraThreadsInPool = min(maxCPUs-1, nBlocksInThreadParallel-1);
     }
     defaultPoolThreads(extraThreadsInPool); // total = main thread + extra-threads-in-Pool
-    if (GlobalConfig.verbosity_level > 0) {
-        version(mpi_parallel) {
-            writeln("MPI-task with rank ", my_rank, " running with ", extraThreadsInPool+1, " threads.");
+    version(mpi_parallel) {
+        if (GlobalConfig.verbosity_level > 0) {
             debug {
-                foreach (blk; localFluidBlocks) { writeln("rank=", my_rank, " blk.id=", blk.id); }
+            writeln("MPI-task with rank ", my_rank, " running with ", extraThreadsInPool+1, " threads.");
+            //foreach (blk; localFluidBlocks) { writeln("rank=", my_rank, " blk.id=", blk.id); } 
             }
-        } else {
+        }
+    } else {
+        if (GlobalConfig.verbosity_level > 0) {
             writeln("Single process running with ", extraThreadsInPool+1, " threads.");
             // Remember the +1 for the main thread.
         }
@@ -881,6 +883,7 @@ int init_simulation(int tindx, int nextLoadsIndx,
     }
 
 
+    debug{
     if (GlobalConfig.verbosity_level > 0) {
         auto myStats = GC.stats();
         auto heapUsed = to!double(myStats.usedSize)/(2^^20);
@@ -888,6 +891,7 @@ int init_simulation(int tindx, int nextLoadsIndx,
         writefln("Heap memory used for task %d: %.2f  free: %.2f  total: %.1f MB",
                  GlobalConfig.mpi_rank_for_local_task, heapUsed, heapFree, heapUsed+heapFree);
         stdout.flush();
+    }
     }
 
     version(mpi_parallel) {
