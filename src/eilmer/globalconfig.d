@@ -311,7 +311,7 @@ PreconditionMatrixType preconditionMatrixTypeFromName(string name)
         errMsg ~= "The available strategies are: \n";
         errMsg ~= "   'block_diagonal'\n";
         errMsg ~= "   'ilu'\n";
-        errMsg ~= "   'lu_sgs'\n";        
+        errMsg ~= "   'lu_sgs'\n";
         errMsg ~= "Check your selection or its spelling in the input file.\n";
         throw new Error(errMsg);
     }
@@ -786,7 +786,7 @@ final class GlobalConfig {
     shared static double thermionic_emission_bc_time_delay = 0.0;
 
     shared static ConservedQuantitiesIndices cqi;
-    
+
     // Parameters related to the gpu chemistry mode
     version (gpu_chem) {
         static GPUChem gpuChem;
@@ -981,7 +981,7 @@ public:
     int verbosity_level;
 
     ConservedQuantitiesIndices cqi;
-    
+
     version (nk_accelerator) {
         SteadyStateSolverOptions sssOptions;
     }
@@ -2004,7 +2004,7 @@ void configCheckPoint3()
         }
     }
     // Check the compatibility of turbulence model selection and flux calculator.
-    if (GlobalConfig.turb_model.isTurbulent) {
+    if (GlobalConfig.turb_model && GlobalConfig.turb_model.isTurbulent) {
         if (GlobalConfig.flux_calculator == FluxCalculator.hlle) {
             string msg = format("The selected flux calculator '%s'",
                                 flux_calculator_name(GlobalConfig.flux_calculator));
@@ -2015,7 +2015,8 @@ void configCheckPoint3()
 
     // Check the compatibility of update scheme and viscous flag.
     if (GlobalConfig.viscous == false &&
-        (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1 || GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl2)) {
+        (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1 ||
+         GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl2)) {
         string msg = format("The selected gas dynamic update scheme '%s'",
                             gasdynamic_update_scheme_name(GlobalConfig.gasdynamic_update_scheme));
         msg ~= " is incompatible with an inviscid simulation.";
@@ -2023,7 +2024,8 @@ void configCheckPoint3()
     }
 
     // Check for compatbility between viscous flag and turbulence model
-    if (GlobalConfig.turb_model.isTurbulent && (GlobalConfig.viscous==false)) {
+    if (GlobalConfig.turb_model && GlobalConfig.turb_model.isTurbulent &&
+        (GlobalConfig.viscous==false)) {
         string msg = format("The selected turbulence model '%s'",
                             GlobalConfig.turbulence_model_name);
         msg ~= " is incompatible with an inviscid simulation.";
@@ -2031,7 +2033,9 @@ void configCheckPoint3()
     }
 
     if (GlobalConfig.turb_model is null) {
-        throw new FlowSolverException("Flowsolver started without a turbulence model");
+        // PJ 2020-10-08 Have relaxed the Exception that was thrown here to just a warning.
+        // This allows an essentially empty input script to be processed by e4shared --prep.
+        writeln("Warning: GlobalConfig does not have a turbulence model.");
     }
     // The super_time_stepping is associated with two particular update schemes:
     // rkl1, rkl2.
@@ -2040,7 +2044,7 @@ void configCheckPoint3()
         GlobalConfig.with_super_time_stepping = true;
     }
     return;
-}
+} // end configCheckPoint3()
 
 void configCheckPoint4()
 {

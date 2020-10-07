@@ -26,7 +26,7 @@ Abstract base class defines functions all turbulence models must have:
 
 */
 class TurbulenceModel{
-    this() {} // For some reason having this(); instead of this() {} didn't work??? 
+    this() {}
     this (const JSONValue config){}
     this (TurbulenceModel other){}
 
