@@ -561,7 +561,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                     fResid.writefln("# %02d: %s-rel", 11+2*(SPECIES+sp)+1, spname);
                 }
             }
-            fResid.writeln("# %02d: mass-balance", 11+2*(TKE+nt)+2);
+            fResid.writefln("# %02d: mass-balance", 11+2*(TKE+nt + SPECIES+nsp));
             fResid.close();
         }
     }
