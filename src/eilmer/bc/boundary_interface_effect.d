@@ -2134,7 +2134,7 @@ class BIE_ThermionicRadiativeEquilibrium : BoundaryInterfaceEffect {
             for (k = blk.kmin; k <= blk.kmax; ++k) {
                 for (i = blk.imin; i <= blk.imax; ++i) {
                     cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.east];
+                    IFace = cell.iface[Face.north];
                     solve_for_wall_temperature_and_energy_flux(cell, IFace, -1.0);
                 } // end i loop
             } // end for k
@@ -2164,7 +2164,7 @@ class BIE_ThermionicRadiativeEquilibrium : BoundaryInterfaceEffect {
             for (k = blk.kmin; k <= blk.kmax; ++k) {
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.south];
+                    IFace = cell.iface[Face.west];
                     solve_for_wall_temperature_and_energy_flux(cell, IFace, 1.0);
                 } // end j loop
             } // end for k
@@ -2174,7 +2174,7 @@ class BIE_ThermionicRadiativeEquilibrium : BoundaryInterfaceEffect {
             for (i = blk.imin; i <= blk.imax; ++i) {
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.east];
+                    IFace = cell.iface[Face.top];
                     solve_for_wall_temperature_and_energy_flux(cell, IFace, -1.0);
                 } // end j loop
             } // end for i
@@ -2184,7 +2184,7 @@ class BIE_ThermionicRadiativeEquilibrium : BoundaryInterfaceEffect {
             for (i = blk.imin; i <= blk.imax; ++i) {
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.south];
+                    IFace = cell.iface[Face.bottom];
                     solve_for_wall_temperature_and_energy_flux(cell, IFace, 1.0);
                 } // end j loop
             } // end for i
