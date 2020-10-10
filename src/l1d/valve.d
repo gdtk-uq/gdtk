@@ -12,6 +12,7 @@ import std.string;
 import std.json;
 import std.format;
 
+import nm.schedule;
 import json_helper;
 import config;
 

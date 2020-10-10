@@ -32,7 +32,8 @@ TEST_PROGRAMS := bbla_test bbla_complex_test \
 	luabbla_test complex_number_test \
 	newton_test newton_complex_test \
 	stmatrix_test \
-	nelmin_test nelmin_complex_test
+	nelmin_test nelmin_complex_test \
+	schedule_test
 
 LUA := ../../extern/lua-5.1.4
 LIBLUA := $(LUA)/lib/liblua.a
@@ -148,6 +149,10 @@ brent_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 brent_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=brent_test -version=complex_numbers \
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+
+schedule_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
+	$(DMD) -of$@ -debug -g -w -dip1008 -version=$@ \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 smla_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
