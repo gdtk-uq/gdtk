@@ -9,6 +9,7 @@ import std.getopt;
 import std.file;
 import dyaml;
 import nm.secant;
+import nm.schedule;
 import gas;
 import gas.cea_gas;
 import gas.therm_perf_gas;
@@ -19,7 +20,13 @@ import gasflow;
 int main(string[] args)
 {
     int exitFlag = 0; // Presume OK in the beginning.
-    string usageMsg = "Usage: nenzfr2 <input-file>";
+    // Be careful with the usageMsg string; it has embedded newline characters.
+    string usageMsg = "Usage: nenzfr2 <input-file>
+Options:
+   --verbosity=<int>   0 == very terse output
+                       1 == key results printed
+                       2 == echo input as well as printing more detailed results
+   --help              Print this help message.";
     if (args.length < 2) {
         writeln("Too few arguments. You need to specify the input file.");
         writeln(usageMsg);
@@ -107,12 +114,16 @@ int main(string[] args)
     } catch (YAMLException e) {
         // Assume 0.0.
     }
+    // Nozzle-exit area ratio for terminating expansion.
     double ar = 1.0;
     try {
         ar = to!double(config["ar"].as!string);
     } catch (YAMLException e) {
         // Assume 1.0.
     }
+    // Nozzle area-ratio schedule.
+    double[] xi; foreach(string val; config["xi"]) { xi ~= to!double(val); }
+    double[] ai; foreach(string val; config["ai"]) { ai ~= to!double(val); }
     if (verbosityLevel >= 2) {
         writeln("Input data.");
         writeln("  "~config["title"].as!string);
@@ -127,6 +138,8 @@ int main(string[] args)
         writeln("  Vs= ", Vs);
         writeln("  pe= ", pe);
         writeln("  ar= ", ar);
+        writeln("  xi= ", xi);
+        writeln("  ai= ", ai);
     }
     // Set up equilibrium-gas flow analysis of shock tube.
     // Let's assume a cea2 gas model.
@@ -255,6 +268,16 @@ int main(string[] args)
     if (verbosityLevel >= 2) {
         writeln("Throat state mass fractions from CEA.");
         writeln("massf=", state6.ceaSavedData.massf);
+    }
+    //
+    // Supersonic expansion.
+    auto ar_schedule = new Schedule(xi, ai);
+    int n = 20;
+    double dx = (xi[$-1] - xi[0])/n;
+    foreach (i; 0..n+1) {
+        double x = xi[0] + i*dx;
+        double a = ar_schedule.interpolate_value(x);
+        writeln("x= ", x, " a= ", a);
     }
     return exitFlag;
 } // end main
