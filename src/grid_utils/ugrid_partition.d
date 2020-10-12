@@ -136,10 +136,12 @@ class Node {
 public:
     size_t id;       // node id number
     double[3] pos;  // node position, (x,y,z-Coordinates)
-
-    this(size_t id, double[3] pos) {
+    bool[] node_added_to_partion;
+    this(size_t id, double[3] pos, size_t nparts) {
         this.id = id;
         this.pos = pos.dup();
+        this.node_added_to_partion.length = nparts;
+        foreach (ref entry; this.node_added_to_partion) { entry = false; }
     }
 }
 // -------------------------------------------------------------------------------------
@@ -288,7 +290,7 @@ void construct_blocks(string meshFile, string mappedCellsFilename, string partit
             indx = to!size_t(tokens[3]);
         }
         double[3] pos = [x, y, z];
-        global_nodes[indx] = new Node(indx, pos);
+        global_nodes[indx] = new Node(indx, pos, nparts);
     } // end foreach i .. nnodes
     // Collect what partition each cell belongs to
     writeln("-- -- Reading metis output file");
@@ -460,7 +462,8 @@ void construct_blocks(string meshFile, string mappedCellsFilename, string partit
         blocks[partition_id].cells ~= global_cells[cell_id];
         blocks[partition_id].transform_cell_list[cell_id] = blocks[partition_id].cells.length - 1;
         foreach(node_id;global_cells[cell_id].node_id_list) {
-            if (!blocks[partition_id].node_id_list.canFind(node_id)) {
+            if (!global_nodes[node_id].node_added_to_partion[partition_id]) {
+                global_nodes[node_id].node_added_to_partion[partition_id] = true;
                 blocks[partition_id].nodes ~= global_nodes[node_id];
                 blocks[partition_id].node_id_list ~= node_id;
                 blocks[partition_id].transform_list[node_id] = blocks[partition_id].nodes.length - 1;
@@ -483,8 +486,8 @@ void construct_blocks(string meshFile, string mappedCellsFilename, string partit
                     }
                 }
             }
-         }
-    }
+        }
+}
     // finally assign domain boundary faces to correct blocks
     foreach(face_id;0 .. global_faces.length) {
         if (global_faces[face_id].partition_id_list.length ==  1) {
