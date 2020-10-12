@@ -89,7 +89,7 @@ public:
     }
 
     @nogc
-    void set_velocity_components(ref Vector3 vel, number speed, ref FVInterface face)
+    void set_velocity_components(ref Vector3 vel, number speed, ref FVInterface face, double outsign)
     {
         switch (direction_type) {
         case "uniform":
@@ -114,19 +114,7 @@ public:
         case "normal":
         default:
             // The flow direction is into the block along the local face normal.
-            final switch (which_boundary) {
-            case Face.north:
-            case Face.east:
-            case Face.top:
-                // Outward-facing normal.
-                vel.set(-speed*face.n.x, -speed*face.n.y, -speed*face.n.z);
-                break;
-            case Face.west:
-            case Face.south:
-            case Face.bottom:
-                // Inward-facing normal.
-                vel.set(speed*face.n.x, speed*face.n.y, speed*face.n.z);
-            }
+            vel.set(-outsign*speed*face.n.x, -outsign*speed*face.n.y, -outsign*speed*face.n.z);
         }
     } // end set_velocity_components()
 
@@ -168,7 +156,77 @@ public:
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-        throw new Error("GhostCellFromStagnation.apply_unstructured_grid() not yet implemented");
+        BoundaryCondition bc = blk.bc[which_boundary];
+        FVCell ghost0; FVCell cell;
+        auto gmodel = blk.myConfig.gmodel;
+
+        // First, estimate the current bulk inflow condition.
+        number area = 0.0;
+        number rhoUA = 0.0; // current mass_flux through boundary
+        number rhovxA = 0.0; // mass-weighted x-velocity
+        number rhovyA = 0.0;
+        number rhovzA = 0.0;
+        number rhoA = 0.0;
+        number pA = 0.0;
+
+        foreach (i, f; bc.faces) {
+            if (bc.outsigns[i] == 1) {
+                cell = f.left_cell;
+            } else {
+                cell = f.right_cell;
+            }
+            area += f.area[0];
+            number local_rhoA = cell.fs.gas.rho * f.area[0];
+            rhoA += local_rhoA;
+            double outsign = bc.outsigns[i];
+            rhoUA -= outsign*(local_rhoA * dot(cell.fs.vel, f.n)); // mass flux
+            rhovxA += local_rhoA * cell.fs.vel.x;
+            rhovyA += local_rhoA * cell.fs.vel.y;
+            rhovzA += local_rhoA * cell.fs.vel.z;
+            pA += cell.fs.gas.p * f.area[0];
+        }
+
+        if (mass_flux > 0.0 && ftl == 0) {
+            // Adjust the stagnation pressure to better achieve the specified mass flux.
+            // Note that we only do this adjustment once, at the start of a
+            // multi-level gas-dynamic update.
+            number p = pA / area;
+            number dp_over_p = relax_factor * 0.5 / (rhoA/area) *
+                (mass_flux*mass_flux - rhoUA*fabs(rhoUA)/(area*area)) / p;
+            number new_p0 = (1.0 + dp_over_p) * stagnation_condition.gas.p;
+            new_p0 = fmin(fmax(new_p0, p0_min), p0_max);
+            stagnation_condition.gas.p = new_p0;
+            gmodel.update_thermo_from_pT(stagnation_condition.gas);
+            stagnation_enthalpy = gmodel.enthalpy(stagnation_condition.gas);
+            stagnation_entropy = gmodel.entropy(stagnation_condition.gas);
+        } else if (luaFileName.length > 0) {
+            number new_p0 = stagnation_condition.gas.p;
+            number new_T0 = stagnation_condition.gas.T;
+            // [FIXME] dt_global=0.0 step=0
+            callUDFstagnationPT(t, 0.0, 0, gtl, ftl, new_p0, new_T0);
+            stagnation_condition.gas.p = new_p0;
+            stagnation_condition.gas.T = new_T0;
+            gmodel.update_thermo_from_pT(stagnation_condition.gas);
+            stagnation_enthalpy = gmodel.enthalpy(stagnation_condition.gas);
+            stagnation_entropy = gmodel.entropy(stagnation_condition.gas);
+        }
+        number bulk_speed = sqrt((rhovxA/rhoA)^^2 + (rhovyA/rhoA)^^2 + (rhovzA/rhoA)^^2);
+        if (rhoUA < 0.0) { bulk_speed = 0.0; } // Block any outflow with stagnation condition.
+        // Assume an isentropic process from a known total enthalpy.
+        number enthalpy = stagnation_enthalpy - 0.5 * bulk_speed^^2;
+        gmodel.update_thermo_from_hs(inflow_condition.gas, enthalpy, stagnation_entropy);
+        // Now, apply the ghost-cell conditions
+        foreach (i, f; bc.faces) {
+            if (bc.outsigns[i] == 1) {
+                ghost0 = f.right_cell;
+            } else {
+                ghost0 = f.left_cell;
+            }
+            // Velocity components may vary with position on the block face.
+            double outsign = bc.outsigns[i];
+            set_velocity_components(inflow_condition.vel, bulk_speed, f, outsign);
+            ghost0.fs.copy_values_from(inflow_condition);
+        }
     }
 
     // not @nogc
@@ -246,7 +304,8 @@ public:
                     src_cell = blk.get_cell(i,j,k);
                     face = src_cell.iface[Face.north];
                     // Velocity components may vary with position on the block face.
-                    set_velocity_components(inflow_condition.vel, bulk_speed, face);
+                    double outsign = 1;
+                    set_velocity_components(inflow_condition.vel, bulk_speed, face, outsign);
                     dest_cell = blk.get_cell(i,j+1,k);
                     dest_cell.fs.copy_values_from(inflow_condition);
                     dest_cell = blk.get_cell(i,j+2,k);
@@ -318,7 +377,8 @@ public:
                     src_cell = blk.get_cell(i,j,k);
                     face = src_cell.iface[Face.east];
                     // Velocity components may vary with position on the block face.
-                    set_velocity_components(inflow_condition.vel, bulk_speed, face);
+                    double outsign = 1;
+                    set_velocity_components(inflow_condition.vel, bulk_speed, face, outsign);
                     dest_cell = blk.get_cell(i+1,j,k);
                     dest_cell.fs.copy_values_from(inflow_condition);
                     dest_cell = blk.get_cell(i+2,j,k);
@@ -389,7 +449,8 @@ public:
                     src_cell = blk.get_cell(i,j,k);
                     face = src_cell.iface[Face.south];
                     // Velocity components may vary with position on the block face.
-                    set_velocity_components(inflow_condition.vel, bulk_speed, face);
+                    double outsign = -1;
+                    set_velocity_components(inflow_condition.vel, bulk_speed, face, outsign);
                     dest_cell = blk.get_cell(i,j-1,k);
                     dest_cell.fs.copy_values_from(inflow_condition);
                     dest_cell = blk.get_cell(i,j-2,k);
@@ -461,7 +522,8 @@ public:
                     src_cell = blk.get_cell(i,j,k);
                     face = src_cell.iface[Face.west];
                     // Velocity components may vary with position on the block face.
-                    set_velocity_components(inflow_condition.vel, bulk_speed, face);
+                    double outsign = -1;
+                    set_velocity_components(inflow_condition.vel, bulk_speed, face, outsign);
                     dest_cell = blk.get_cell(i-1,j,k);
                     dest_cell.fs.copy_values_from(inflow_condition);
                     dest_cell = blk.get_cell(i-2,j,k);
@@ -533,7 +595,8 @@ public:
                     src_cell = blk.get_cell(i,j,k);
                     face = src_cell.iface[Face.top];
                     // Velocity components may vary with position on the block face.
-                    set_velocity_components(inflow_condition.vel, bulk_speed, face);
+                    double outsign = 1;
+                    set_velocity_components(inflow_condition.vel, bulk_speed, face, outsign);
                     dest_cell = blk.get_cell(i,j,k+1);
                     dest_cell.fs.copy_values_from(inflow_condition);
                     dest_cell = blk.get_cell(i,j,k+2);
@@ -604,7 +667,8 @@ public:
                     src_cell = blk.get_cell(i,j,k);
                     face = src_cell.iface[Face.bottom];
                     // Velocity components may vary with position on the block face.
-                    set_velocity_components(inflow_condition.vel, bulk_speed, face);
+                    double outsign = -1;
+                    set_velocity_components(inflow_condition.vel, bulk_speed, face, outsign);
                     dest_cell = blk.get_cell(i,j,k-1);
                     dest_cell.fs.copy_values_from(inflow_condition);
                     dest_cell = blk.get_cell(i,j,k-2);
