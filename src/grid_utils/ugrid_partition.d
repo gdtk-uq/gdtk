@@ -49,7 +49,6 @@ import std.math;
 import std.process;
 import std.getopt;
 
-
 void printHelp()
 {
     writeln("Usage: ugrid_partition");
@@ -194,24 +193,17 @@ string partitionDual(string fileName, int nparts) {
 }
 
 string SU2_to_metis_format(string fileName) {
-    auto f = File(fileName, "r");
-    string getHeaderContent(string target)
-        // Helper function to proceed through file, line-by-line,
-        // looking for a particular header line.
-        // Returns the content from the header line and leaves the file
-        // at the next line to be read, presumably with expected data.
-        {
-            while (!f.eof) {
-                auto line = f.readln().strip();
-                if (canFind(line, target)) {
-                    auto tokens = line.split("=");
-                    return tokens[1].strip();
-                }
-            } // end while
-            return ""; // didn't find the target
-        }
     writeln("-- Converting SU2 mesh to Metis input format");
-    auto ncells = to!size_t(getHeaderContent("NELEM"));
+    auto f = File(fileName, "r");
+    size_t ncells;
+    while (!f.eof) {
+        auto line = f.readln().strip();
+        if (canFind(line, "NELEM")) {
+            auto tokens = line.split("=");
+            ncells = to!size_t(tokens[1].strip());
+            break;
+        }
+    }
 
     string[] cells;
     cells.length = ncells;
