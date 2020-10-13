@@ -33,7 +33,7 @@ import bc;
 import solidfvcell;
 import solidfvinterface;
 import gas_solid_interface;
-
+import kinetics.equilibrium_update;
 
 BoundaryInterfaceEffect make_BIE_from_json(JSONValue jsonData, int blk_id, int boundary)
 {
@@ -108,6 +108,9 @@ BoundaryInterfaceEffect make_BIE_from_json(JSONValue jsonData, int blk_id, int b
         int ThermionicEmissionActive = getJSONint(jsonData, "ThermionicEmissionActive", 1);
         newBIE = new BIE_ThermionicRadiativeEquilibrium(blk_id, boundary, emissivity, Ar, phi,
                                  ThermionicEmissionActive);
+        break;
+    case "equilibrium_composition":
+        newBIE = new BIE_EquilibriumComposition(blk_id, boundary, GlobalConfig.gas_model_file);
         break;
     case "user_defined":
         string fname = getJSONstring(jsonData, "filename", "none");
@@ -2254,12 +2257,12 @@ protected:
         Imagine you have an array of references to various objects. You want
         to know which index in the array a specific instance is. That's
         what this function does. The reason it exists is because you can't
-        use object1==object2 inside a nogc function without overriding 
-        the flowstate opEquals operation, and I can't be bothered to 
+        use object1==object2 inside a nogc function without overriding
+        the flowstate opEquals operation, and I can't be bothered to
         do this properly.
     */
         size_t p=-1;
-    
+
         void* target_address = cast(void*) target;
         foreach(i, s; search) {
             void* address = cast(void*) s;
@@ -2274,7 +2277,6 @@ protected:
     /*
         Wall heat transfer due to conduction, assuming the cell centered least-squares method
         is in use. 
-        
     */
         auto ws = cell.ws_grad;
         size_t loop_init = ws.loop_init;
@@ -2421,3 +2423,128 @@ protected:
     }
 
 } // end class BIE_ThermionicRadiativeEquilibrium
+
+class BIE_EquilibriumComposition : BoundaryInterfaceEffect {
+/*
+    Equilibrium Boundary Interface effect for use in catalytic
+    wall studies. Note that this effect assumes that the pressure
+    and temperature at the interface face been set correctly,
+    and that the transprops will be recomputed after it is called.
+
+    @author: Nick Gibbons
+*/
+    this(int id, int boundary, string gas_file_name)
+    {
+        super(id, boundary, "EquilibriumComposition");
+        eqcalc = new EquilibriumCalculator(gas_file_name);
+    }
+
+    override string toString() const
+    {
+        return "BIE_EquilibriumComposition()";
+    }
+
+    @nogc
+    override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        set_equilibrium_composition(f);
+    }
+
+    @nogc
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
+    {
+        BoundaryCondition bc = blk.bc[which_boundary];
+        foreach (f; bc.faces) {
+            set_equilibrium_composition(f);
+        }
+    }
+
+    @nogc
+    override void apply_structured_grid(double t, int gtl, int ftl)
+    {
+        auto blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
+        FVInterface IFace;
+        size_t i, j, k;
+        FVCell cell;
+
+        final switch (which_boundary) {
+        case Face.north:
+            j = blk.jmax;
+            for (k = blk.kmin; k <= blk.kmax; ++k) {
+                for (i = blk.imin; i <= blk.imax; ++i) {
+                    cell = blk.get_cell(i,j,k);
+                    IFace = cell.iface[Face.north];
+                    set_equilibrium_composition(IFace);
+                } // end i loop
+            } // end for k
+            break;
+        case Face.east:
+            i = blk.imax;
+            for (k = blk.kmin; k <= blk.kmax; ++k) {
+                for (j = blk.jmin; j <= blk.jmax; ++j) {
+                    cell = blk.get_cell(i,j,k);
+                    IFace = cell.iface[Face.east];
+                    set_equilibrium_composition(IFace);
+                } // end j loop
+            } // end for k
+            break;
+        case Face.south:
+            j = blk.jmin;
+            for (k = blk.kmin; k <= blk.kmax; ++k) {
+                for (i = blk.imin; i <= blk.imax; ++i) {
+                    cell = blk.get_cell(i,j,k);
+                    IFace = cell.iface[Face.south];
+                    set_equilibrium_composition(IFace);
+                } // end i loop
+            } // end for k
+            break;
+        case Face.west:
+            i = blk.imin;
+            for (k = blk.kmin; k <= blk.kmax; ++k) {
+                for (j = blk.jmin; j <= blk.jmax; ++j) {
+                    cell = blk.get_cell(i,j,k);
+                    IFace = cell.iface[Face.west];
+                    set_equilibrium_composition(IFace);
+                } // end j loop
+            } // end for k
+            break;
+        case Face.top:
+            k = blk.kmax;
+            for (i = blk.imin; i <= blk.imax; ++i) {
+                for (j = blk.jmin; j <= blk.jmax; ++j) {
+                    cell = blk.get_cell(i,j,k);
+                    IFace = cell.iface[Face.top];
+                    set_equilibrium_composition(IFace);
+                } // end j loop
+            } // end for i
+            break;
+        case Face.bottom:
+            k = blk.kmin;
+            for (i = blk.imin; i <= blk.imax; ++i) {
+                for (j = blk.jmin; j <= blk.jmax; ++j) {
+                    cell = blk.get_cell(i,j,k);
+                    IFace = cell.iface[Face.bottom];
+                    set_equilibrium_composition(IFace);
+                } // end j loop
+            } // end for i
+            break;
+        } // end switch which_boundary
+    }
+protected:
+    EquilibriumCalculator eqcalc;
+
+    @nogc
+    void set_equilibrium_composition(FVInterface IFace) {
+    /*
+        Set IFace.gs.gas.massf to the equilibrium results, assuming a later interface effect
+        is going to tidy up the thermodynamic state and transport coefficients.
+
+        See file src/kinetics/equilibrium_update for the
+        EquilibriumCalculator source code.
+    */
+        eqcalc.set_massf_from_pT(IFace.fs.gas);
+    }
+
+
+} // end class BIE_EquilibriumComposition

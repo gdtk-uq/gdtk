@@ -375,6 +375,13 @@ function ThermionicRadiativeEquilibrium:tojson()
    return str
 end
 
+EquilibriumComposition = BoundaryInterfaceEffect:new{}
+EquilibriumComposition.type = "equilibrium_composition"
+function EquilibriumComposition:tojson()
+   local str = string.format('          {"type": "%s"}', self.type)
+   return str
+end
+
 UserDefinedInterface = BoundaryInterfaceEffect:new{fileName='user-defined-bc.lua'}
 UserDefinedInterface.type = "user_defined"
 function UserDefinedInterface:tojson()
@@ -665,8 +672,18 @@ function WallBC_NoSlip_FixedT0:new(o)
    o.is_wall_with_viscous_effects = true
    o.preReconAction = { InternalCopyThenReflect:new() }
    o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new(),
-					   FixedT:new{Twall=o.Twall},
-					   UpdateThermoTransCoeffs:new() }
+					   FixedT:new{Twall=o.Twall}}
+
+   if o.catalytic_type == "fixed_composition" then
+      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
+         FixedComposition:new{wall_massf_composition=convertSpeciesTableToArray(o.wall_massf_composition)}
+   elseif o.catalytic_type == "equilibrium" then
+      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
+         EquilibriumComposition:new{}
+   end
+   o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
+      UpdateThermoTransCoeffs:new()
+
    if config.turbulence_model ~= "none" then
       o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallTurbulent:new()
       if o.wall_function and config.turbulence_model == "k_omega" then
@@ -675,11 +692,6 @@ function WallBC_NoSlip_FixedT0:new(o)
             WallFunctionInterfaceEffect:new{}
          o.preSpatialDerivActionAtBndryCells = { WallFunctionCellEffect:new() }
       end
-   end
-   if o.catalytic_type and o.catalytic_type ~= "none" then
-      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
-	 FixedComposition:new{wall_massf_composition=
-                                 convertSpeciesTableToArray(o.wall_massf_composition)}
    end
    o.is_configured = true
    return o
@@ -705,8 +717,18 @@ function WallBC_NoSlip_FixedT1:new(o)
    o.is_wall_with_viscous_effects = true
    o.preReconAction = {}
    o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new(),
-					   FixedT:new{Twall=o.Twall},
-					   UpdateThermoTransCoeffs:new() }
+					   FixedT:new{Twall=o.Twall}}
+
+   if o.catalytic_type == "fixed_composition" then
+      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
+         FixedComposition:new{wall_massf_composition=convertSpeciesTableToArray(o.wall_massf_composition)}
+   elseif o.catalytic_type == "equilibrium" then
+      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
+         EquilibriumComposition:new{}
+   end
+   o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
+      UpdateThermoTransCoeffs:new()
+
    if config.turbulence_model ~= "none" then
       o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallTurbulent:new()
       if o.wall_function and config.turbulence_model == "k_omega" then
@@ -715,11 +737,6 @@ function WallBC_NoSlip_FixedT1:new(o)
 	    WallFunctionInterfaceEffect:new{}
 	 o.preSpatialDerivActionAtBndryCells = { WallFunctionCellEffect:new() }
       end
-   end
-   if o.catalytic_type and o.catalytic_type ~= "none" then
-      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
-	 FixedComposition:new{wall_massf_composition=
-                                 convertSpeciesTableToArray(o.wall_massf_composition)}
    end
    o.is_configured = true
    return o
@@ -787,6 +804,20 @@ function WallBC_NoSlip_Adiabatic0:new(o)
    o.is_wall_with_viscous_effects = true
    o.preReconAction = { InternalCopyThenReflect:new() }
    o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new() }
+
+   -- For the adiabatic wall we only need an UpdateThermoTransCoeffs if catalytic effects are present
+   if o.catalytic_type == "fixed_composition" then
+      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
+         FixedComposition:new{wall_massf_composition=convertSpeciesTableToArray(o.wall_massf_composition)}
+      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
+         UpdateThermoTransCoeffs:new()
+   elseif o.catalytic_type == "equilibrium" then
+      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
+         EquilibriumComposition:new{}
+      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
+         UpdateThermoTransCoeffs:new()
+   end
+
    if config.turbulence_model ~= "none" then
       o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallTurbulent:new()
       if o.wall_function and config.turbulence_model == "k_omega" then
@@ -795,11 +826,6 @@ function WallBC_NoSlip_Adiabatic0:new(o)
 	    AdiabaticWallFunctionInterfaceEffect:new{}
 	 o.preSpatialDerivActionAtBndryCells = { WallFunctionCellEffect:new() }
       end
-   end
-   if o.catalytic_type and o.catalytic_type ~= "none" then
-      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
-	 FixedComposition:new{wall_massf_composition=
-                                 convertSpeciesTableToArray(o.wall_massf_composition)}
    end
    o.is_configured = true
    return o
@@ -825,6 +851,20 @@ function WallBC_NoSlip_Adiabatic1:new(o)
    o.is_wall_with_viscous_effects = true
    o.preReconAction = {}
    o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new() }
+
+   -- For the adiabatic wall we only need an UpdateThermoTransCoeffs if catalytic effects are present
+   if o.catalytic_type == "fixed_composition" then
+      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
+         FixedComposition:new{wall_massf_composition=convertSpeciesTableToArray(o.wall_massf_composition)}
+      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
+         UpdateThermoTransCoeffs:new()
+   elseif o.catalytic_type == "equilibrium" then
+      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
+         EquilibriumComposition:new{}
+      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
+         UpdateThermoTransCoeffs:new()
+   end
+
    if config.turbulence_model ~= "none" then
       o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallTurbulent:new()
       if o.wall_function and config.turbulence_model == "k_omega" then
@@ -833,11 +873,6 @@ function WallBC_NoSlip_Adiabatic1:new(o)
 	    AdiabaticWallFunctionInterfaceEffect:new{}
 	 o.preSpatialDerivActionAtBndryCells = { WallFunctionCellEffect:new() }
       end
-   end
-   if o.catalytic_type and o.catalytic_type ~= "none" then
-      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
-	 FixedComposition:new{wall_massf_composition=
-                                 convertSpeciesTableToArray(o.wall_massf_composition)}
    end
    o.is_configured = true
    return o
