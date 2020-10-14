@@ -231,7 +231,7 @@ void compute_and_store_loads(FVInterface iface, int outsign, number cellWidthNor
         // compute heat load
         number dTdn = dTdx*nx + dTdy*ny + dTdz*nz; // dot product
         q_cond = k_wall * dTdn; // heat load (positive sign means heat flows to the wall)
-        q_diff = -iface.q_diffusion;
+        q_diff = iface.q_diffusion;
         q_total = q_cond + q_diff;
         // compute stress tensor at interface in global reference frame
         number lmbda = -2.0/3.0 * mu_wall;
