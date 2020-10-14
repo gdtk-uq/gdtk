@@ -921,6 +921,7 @@ public:
             new_grid.cells ~= new USGCell(new_cell_type, id, faces[fid].vtx_id_list,
                                           newCell_face_id_list, newCell_outsign_list);
         }
+        new_grid.ncells = new_grid.cells.length;
         return new_grid;
     } // end get_boundary_grid()
 
@@ -942,7 +943,9 @@ public:
             if (insideCell) {
                 cellList ~= cell_indx[insideCell.id];
             } else {
-                // writefln("Oops, while processing boundary faces, i=%d, insideCell is null for face.id=%d", i, fid);
+                string msg = format("Oops, while processing boundary faces, " ~
+                                    "i=%d, insideCell is null for face.id=%d", i, fid);
+                throw new Exception(msg);
             }
         }
         return cellList;
@@ -1074,6 +1077,23 @@ public:
     // Import-from-file methods.
     // ------------------------
 
+    void link_faces_back_to_cells()
+    {
+        // Make links from faces back to cells.
+        foreach (c; cells) {
+            size_t nf = c.face_id_list.length;
+            assert (nf == c.outsign_list.length, "Mismatch in number of faces and number of outsigns");
+            foreach (j; 0 .. nf) {
+                auto f = faces[c.face_id_list[j]];
+                if (c.outsign_list[j] == 1) {
+                    f.left_cell = c;
+                } else {
+                    f.right_cell = c;
+                }
+            }
+        }
+    } // end link_faces_back_to_cells()
+
     override void read_from_gzip_file(string fileName, double scale=1.0)
     // This function, together with the constructors (from strings) for
     // the classes USGFace, USGCell and BoundaryFaceSet (above),
@@ -1126,6 +1146,7 @@ public:
             line = byLine.front; byLine.popFront();
             boundaries ~= new BoundaryFaceSet(line);
         }
+        link_faces_back_to_cells();
     } // end read_from_gzip_file()
 
     override void read_from_raw_binary_file(string fileName, double scale=1.0)
@@ -1170,9 +1191,14 @@ public:
             faces ~= myFace;
         }
         cells.length = 0;
-        foreach (i; 0 .. ncells) { cells ~= new USGCell(fin, i); }
+        foreach (i; 0 .. ncells) {
+            cells ~= new USGCell(fin, i);
+        }
         boundaries.length = 0;
-        foreach (i; 0 .. nboundaries) { boundaries ~= new BoundaryFaceSet(fin); }
+        foreach (i; 0 .. nboundaries) {
+            boundaries ~= new BoundaryFaceSet(fin);
+        }
+        link_faces_back_to_cells();
     } // end read_from_raw_binary_file()
 
     void read_from_su2_file(string fileName, double scale=1.0,

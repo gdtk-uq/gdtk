@@ -438,12 +438,23 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
                 size_t[] surf_cells = soln.gridBlocks[blk_indx].get_list_of_boundary_cells(boundary_indx);
                 if (surf_cells.length > 0) {
                     size_t new_dimensions = surf_grid.dimensions;
-                    // The following should work for both structured and unstructured grids.
-                    size_t new_nic = max(surf_grid.niv-1, 1);
-                    size_t new_njc = max(surf_grid.njv-1, 1);
-                    size_t new_nkc = max(surf_grid.nkv-1, 1);
-                    if (new_nic*new_njc*new_nkc != surf_cells.length) {
-                        throw new Exception("Mismatch in number of cells for new surface grid.");
+                    size_t new_nic;
+                    size_t new_njc;
+                    size_t new_nkc;
+                    final switch (surf_grid.grid_type) {
+                    case Grid_t.structured_grid:
+                        new_nic = max(surf_grid.niv-1, 1);
+                        new_njc = max(surf_grid.njv-1, 1);
+                        new_nkc = max(surf_grid.nkv-1, 1);
+                        if (new_nic*new_njc*new_nkc != surf_cells.length) {
+                            throw new Exception("Mismatch in number of cells for new surface grid.");
+                        }
+                        break;
+                    case Grid_t.unstructured_grid:
+                        new_nic = surf_cells.length;
+                        new_njc = 1;
+                        new_nkc = 1;
+                        break;
                     }
                     auto surf_flow = new BlockFlow(soln.flowBlocks[blk_indx], surf_cells,
                                                    new_dimensions, new_nic, new_njc, new_nkc);
