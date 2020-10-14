@@ -2,6 +2,7 @@
 The Eilmer code gardeners
 2020-08-17
 :toc: right
+:toclevels: 1
 :stylesheet: readthedocs.css
 :imagesdir: gallery
 :sectnums:
@@ -10,13 +11,62 @@ The Eilmer code gardeners
 
 = Problems on cluster computers
 
+= Thermochemistry questions
+
+== When preparing a thermally perfect gas model for use, I get a warning about missing CEA coefficients for viscosity and thermal conductivity for some species. Should I be worried? Why does this happen?
+
+When preparing a thermally perfect gas model, Eilmer defaults to attempting to use the CEA coefficients for thermodynamics
+_and_ transport properties.
+The thermodynamic coefficients have been taken from the CEA file `thermo.inp`, and
+the transport property coefficients are from `trans.inp`.
+If you look in `trans.inp`, you'll notice that is has data for far fewer species than those listed in `thermo.inp`.
+In other words, the transport property data was not available or not important for the builders of CEA.
+So this answers the question why does this happen.
+It happens because the data is simply not available from CEA.
+What the `prep-gas` program will do is supply default values from the `defaults.lua` file.
+You can inspect that to see what the defaults are.
+They are most likely the properties for air.
+
+The other question, "should I be worried?", has a more complex answer.
+It depends.
+If you are doing an inviscid simulation, then there's nothing to be concerned about.
+This warning is related to transport properties.
+These only come into play for viscous simulations.
+If you are doing a viscous simulation, then you need to apply some judgement.
+Are these species with missing transport data minor species in the mixture?
+If so, their contribution to the bulk viscosity and thermal conductivity is probably minor.
+If this is the case, it would probably be quite acceptable to use the substituted
+air properties for these minor species.
+
+*But no, these missing species are really important to me?*
+
+Sounds like you're doing a combustion problem.
+Usually these missing species properties arise for intermediate species
+in combustion processes.
+In that case, you'll probably want to dip into the Grimech database instead.
+It is often more complete for these species.
+That is also available in Eilmer for many (but not all) species.
+You can configure this option in your input file for `prep-gas`.
+Add the following line to your input file::
+
+   options = {database='prefer-grimech'}
+
+*My species are still missing when I use the Grimech database!!!*
+
+Well, now it sounds like you'll need to hunt down the data for the transport properties yourself.
+You can add them to your prepared gas model input file, or better yet, add them to the
+source code and send us your contribution.
+There is information on adding complete species and species data in:
+`dgd/src/gas/species-database/README.rst`.
+
+
 = Generic WTF?
 
-What are time stamps? ::
+== What are time stamps?
 as asked by Katrina (2017-04-26) and the Singapore group.
 
 
-What is `WC`, `WCtFT` and `WCtMS`? ::
+== What is `WC`, `WCtFT` and `WCtMS`? 
 _Wall Clock_, _Wall Clock till Final Time_ and
 _Wall Clock till Maximum allowed Steps_ estimated in seconds.
 
