@@ -1,4 +1,5 @@
 // gmopatch.d
+// A surface patch that internally redistributes the interpolation parameters.
 // PJ 2020-10-15
 
 module geom.surface.gmopatch;
@@ -12,12 +13,23 @@ import geom.gpath;
 import geom.surface.parametricsurface;
 import geom.surface.coonspatch;
 import geom.grid.sgrid;
+import geom.misc.univariatefunctions;
 
 
 class GMOPatch : ParametricSurface {
 public:
     Path north, east, south, west; // bounding paths
     Vector3 p00, p10, p11, p01;    // corners
+    // The following initial values for the interior parameters
+    // will be adjusted during construction of a new patch.
+    double[4][4] r_grid = [[0.0, 1.0/3, 2.0/3, 1.0],
+                           [0.0, 1.0/3, 2.0/3, 1.0],
+                           [0.0, 1.0/3, 2.0/3, 1.0],
+                           [0.0, 1.0/3, 2.0/3, 1.0]];
+    double[4][4] s_grid = [[0.0, 0.0, 0.0, 0.0],
+                           [1.0/3, 1.0/3, 1.0/3, 1.0/3],
+                           [2.0/3, 2.0/3, 2.0/3, 2.0/3],
+                           [1.0, 1.0, 1.0, 1.0]];
 
     this(in Vector3 p00, in Vector3 p10, in Vector3 p11, in Vector3 p01)
     {
@@ -62,6 +74,14 @@ public:
             throw new Error(text("GMOPatch open corner p01= ", p01,
                                  " p01_alt= ", p01_alt));
         }
+        // Now we need to set up a temporary grid and adjust the internal
+        // distribution of the interpolation parameters to get a nice grid.
+        // We hang onto the redistributed parameters.
+        auto my_patch = new CoonsPatch(south, north, west, east);
+        auto cf = [new LinearFunction(), new LinearFunction(),
+                   new LinearFunction(), new LinearFunction()];
+        auto my_grid = new StructuredGrid(my_patch, 11, 11, cf, r_grid, s_grid);
+        my_grid.determine_rs_grids(my_patch, cf, r_grid, s_grid);
     }
 
     this(ref const(GMOPatch) other)
@@ -74,6 +94,8 @@ public:
         p10 = other.p10;
         p01 = other.p01;
         p11 = other.p11;
+        r_grid[][] = other.r_grid[][];
+        s_grid[][] = other.s_grid[][];
     }
 
     override GMOPatch dup() const
@@ -83,12 +105,28 @@ public:
 
     override Vector3 opCall(double r, double s) const
     {
-        Vector3 south_r = south(r);
-        Vector3 north_r = north(r);
-        Vector3 west_s = west(s);
-        Vector3 east_s = east(s);
-        Vector3 p = (1.0-s)*south_r + s*north_r + (1.0-r)*west_s + r*east_s -
-            ((1.0-r)*(1.0-s)*p00 + (1.0-r)*s*p01 + r*(1.0-s)*p10 + r*s*p11);
+        // Set up redistribution function to r,s.
+        void remap(double r, double s, out double r_star, out double s_star)
+        {
+            // Tensor-product, cubic-Bezier interpolation of the gridded parameter values.
+            double[4] rr; double[4] sr;
+            foreach (j; 0 .. 4) {
+                rr[j] = (1.0-r)^^3 * r_grid[0][j] + 3.0*r*(1.0-r)^^2 * r_grid[1][j] +
+                    3.0*(1.0-r)*r*r * r_grid[2][j] + r^^3 * r_grid[3][j];
+                sr[j] = (1.0-r)^^3 * s_grid[0][j] + 3.0*r*(1.0-r)^^2 * s_grid[1][j] +
+                    3.0*(1.0-r)*r*r * s_grid[2][j] + r^^3 * s_grid[3][j];
+            }
+            r_star = (1.0-s)^^3 * rr[0] + 3.0*s*(1.0-s)^^2 * rr[1] + 3.0*(1.0-s)*s*s * rr[2] + s^^3 * rr[3];
+            s_star = (1.0-s)^^3 * sr[0] + 3.0*s*(1.0-s)^^2 * sr[1] + 3.0*(1.0-s)*s*s * sr[2] + s^^3 * sr[3];
+        }
+        double rstar; double sstar;
+        remap(r, s, rstar, sstar);
+        Vector3 south_r = south(rstar);
+        Vector3 north_r = north(rstar);
+        Vector3 west_s = west(sstar);
+        Vector3 east_s = east(sstar);
+        Vector3 p = (1.0-sstar)*south_r + sstar*north_r + (1.0-rstar)*west_s + rstar*east_s -
+            ((1.0-rstar)*(1.0-sstar)*p00 + (1.0-rstar)*sstar*p01 + rstar*(1.0-sstar)*p10 + rstar*sstar*p11);
         return p;
     }
 
@@ -98,9 +136,11 @@ public:
             ", north=" ~ to!string(north) ~
             ", west=" ~ to!string(west) ~
             ", east=" ~ to!string(east) ~
+            ", r_grid=" ~ to!string(r_grid) ~
+            ", s_grid=" ~ to!string(s_grid) ~
             ")";
     }
-} // end class CoonsPatch
+} // end class GMOPatch
 
 
 version(gmopatch_test) {
