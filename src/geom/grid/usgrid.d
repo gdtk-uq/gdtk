@@ -932,15 +932,18 @@ public:
         size_t[] cellList;
         // Make a dictionary of cell indices, so that we may look them up
         // when building the list of indices.
-        size_t[USGCell] cell_indx;
-        foreach (i, c; cells) { cell_indx[c] = i; }
+        size_t[size_t] cell_indx;
+        foreach (i, c; cells) { cell_indx[c.id] = i; }
         // Work through the set of boundary faces and identify the inside cell
         // as being the one we want to associate with the boundary face.
         BoundaryFaceSet bfs = boundaries[boundary_indx];
         foreach (i, fid; bfs.face_id_list) {
-            USGCell insideCell = (bfs.outsign_list[i] == 1) ?
-                faces[fid].left_cell : faces[fid].right_cell;
-            cellList ~= cell_indx[insideCell];
+            USGCell insideCell = (bfs.outsign_list[i] == 1) ? faces[fid].left_cell : faces[fid].right_cell;
+            if (insideCell) {
+                cellList ~= cell_indx[insideCell.id];
+            } else {
+                // writefln("Oops, while processing boundary faces, i=%d, insideCell is null for face.id=%d", i, fid);
+            }
         }
         return cellList;
     } // end get_list_of_boundary_cells()

@@ -431,20 +431,27 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
                 } else {
                     boundary_indx = to!size_t(boundary_id);
                 }
+                writefln("Assemble boundary surface %d for block %d", boundary_indx, blk_indx);
                 string vtuFileName = format("%s-t%04d-blk-%04d-surface-%s.vtu",
-                                         surfaceCollectionName, tindx, blk_indx, boundary_id);
+                                            surfaceCollectionName, tindx, blk_indx, boundary_id);
                 auto surf_grid = soln.gridBlocks[blk_indx].get_boundary_grid(boundary_indx);
                 size_t[] surf_cells = soln.gridBlocks[blk_indx].get_list_of_boundary_cells(boundary_indx);
-                size_t new_dimensions = surf_grid.dimensions;
-                // The following should work for both structured and unstructured grids.
-                size_t new_nic = max(surf_grid.niv-1, 1);
-                size_t new_njc = max(surf_grid.njv-1, 1);
-                size_t new_nkc = max(surf_grid.nkv-1, 1);
-                assert(new_nic*new_njc*new_nkc == surf_cells.length, "mismatch is number of cells");
-                auto surf_flow = new BlockFlow(soln.flowBlocks[blk_indx], surf_cells,
-                                               new_dimensions, new_nic, new_njc, new_nkc);
-                add_piece_to_PVTU_file(pvtuFile, vtuFileName);
-                write_VTU_file(surf_flow, surf_grid, plotDir~"/"~vtuFileName, binary_format);
+                if (surf_cells.length > 0) {
+                    size_t new_dimensions = surf_grid.dimensions;
+                    // The following should work for both structured and unstructured grids.
+                    size_t new_nic = max(surf_grid.niv-1, 1);
+                    size_t new_njc = max(surf_grid.njv-1, 1);
+                    size_t new_nkc = max(surf_grid.nkv-1, 1);
+                    if (new_nic*new_njc*new_nkc != surf_cells.length) {
+                        throw new Exception("Mismatch in number of cells for new surface grid.");
+                    }
+                    auto surf_flow = new BlockFlow(soln.flowBlocks[blk_indx], surf_cells,
+                                                   new_dimensions, new_nic, new_njc, new_nkc);
+                    add_piece_to_PVTU_file(pvtuFile, vtuFileName);
+                    write_VTU_file(surf_flow, surf_grid, plotDir~"/"~vtuFileName, binary_format);
+                } else {
+                    writeln("Warning: no flow cells associated with the new surface grid.");
+                }
             } // end foreach surfaceStr
             finish_PVTU_file(pvtuFile);
         } // end foreach tindx
