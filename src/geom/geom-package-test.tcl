@@ -21,6 +21,7 @@ set module_names [list vector3 vector3_complex \
                       svgpath \
 		      coonspatch coonspatch_complex \
                       aopatch aopatch_complex \
+                      gmopatch gmopatch_complex \
                       bezierpatch bezierpatch_complex \
                       beziertrianglepatch \
 		      tfivolume tfivolume_complex \
