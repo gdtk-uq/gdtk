@@ -13,6 +13,7 @@ import std.datetime;
 import std.algorithm;
 import std.range;
 
+import nm.schedule;
 import json_helper;
 import geom;
 import gas;

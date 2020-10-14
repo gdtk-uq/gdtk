@@ -1,4 +1,4 @@
-/** 
+/**
  * The GasState class defines the data storage for a blob of gas.
  *
  * Authors: Rowan G. and Peter J.
@@ -87,7 +87,7 @@ public:
         gm.update_trans_coeffs(this);
     }
 
-    this(GasModel gm, in double p_init, in double T_init, 
+    this(GasModel gm, in double p_init, in double T_init,
          in double[] massf_init=[1.0,], in double quality_init=1.0,
          in double sigma_init=0.0)
     {
@@ -97,7 +97,7 @@ public:
         this(gm, p_init, T_init, T_modes, massf_init, quality_init, sigma_init);
     }
 
-    this(in GasState other) 
+    this(in GasState other)
     {
         rho = other.rho;
         p = other.p;
@@ -118,7 +118,7 @@ public:
         }
     }
 
-    @nogc void copy_values_from(ref const(GasState) other) 
+    @nogc void copy_values_from(ref const(GasState) other)
     {
         rho = other.rho;
         p = other.p;
@@ -136,7 +136,7 @@ public:
         quality = other.quality;
     }
 
-    @nogc void copy_average_values_from(ref const(GasState) gs0, ref const(GasState) gs1) 
+    @nogc void copy_average_values_from(ref const(GasState) gs0, ref const(GasState) gs1)
     // Avoids memory allocation, it's all in place.
     {
         rho = 0.5 * (gs0.rho + gs1.rho);
@@ -155,7 +155,7 @@ public:
         quality = 0.5 * (gs0.quality + gs1.quality);
     }
 
-    void copy_average_values_from(in GasState[] others, GasModel gm) 
+    void copy_average_values_from(in GasState[] others, GasModel gm)
     // Note that we must not send the current object in the others list as well.
     {
         size_t n = others.length;
@@ -284,5 +284,5 @@ version(complex_numbers) {
         quality.im = 0.0;
     } // end clear_imaginary_components()
 } // end version(complex)
-    
+
 } // end class GasState

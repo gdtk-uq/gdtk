@@ -10,7 +10,7 @@ Simulation set up by Peter Blyton for Eilmer3 in 2011.
 This calculation with Eilmer4 in 2020.
 Visualization with Paraview.
 
-## What does Eilmer do
+## What does Eilmer do?
 
 The Eilmer code is a program for the numerical simulation of transient,
 compressible gas flows in two and three dimensions.

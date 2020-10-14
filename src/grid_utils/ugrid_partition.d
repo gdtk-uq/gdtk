@@ -2,13 +2,13 @@
        ------------------Unstructured Mesh Partitioner------------------------
        -----------------------------------------------------------------------
 ++/
-/++ 
+/++
  + filename: ugrid_partitioner.d
  + Unstructured mesh partioner -- for use with Metis
  + author: KD
  + version date: 07/11/2016
- + 
- + This is a stand alone executable that partitions a global mesh (su2 format) 
+ +
+ + This is a stand alone executable that partitions a global mesh (su2 format)
  + into a number of blocks, and writes them to different
  + su2 formatted files, for use with the Eilmer4 flow solver.
  +
@@ -17,7 +17,7 @@
  + To use this program, first download and install Metis 5.1.0:
  + http://glaros.dtc.umn.edu/gkhome/metis/metis/download
  +
- + To compile the partitioner: 
+ + To compile the partitioner:
  + $ dmd partition_core.d
  +
  + To partition a mesh:
@@ -26,7 +26,7 @@
  + where,
  + mesh_fileName is the mesh file name, i.e. mesh.su2
  + mappedCells_fileName is the user defined name given to the file used to store
- +                      the ghost cell connectivity along METIS_INTERIOR boundaries 
+ +                      the ghost cell connectivity along METIS_INTERIOR boundaries
  + nPartitions is the number of partitions
  + nDim is the minimum number of nodes that constitutes a face,
  +      i.e. 2 for a line (2D), 3 for a triangle (3D)
@@ -48,7 +48,6 @@ import std.format;
 import std.math;
 import std.process;
 import std.getopt;
-
 
 void printHelp()
 {
@@ -113,7 +112,7 @@ public:
     size_t[] node_id_list;  // list of ids for of the nodes attached to a cell
     size_t[] cell_neighbour_id_list; // list of cell ids of neighbouring cells
     size_t partition;
-    
+
     this(size_t id, size_t type, size_t[] node_id_list, size_t[] face_id_list) {
         this.id = id;
         this.type = type;
@@ -136,10 +135,12 @@ class Node {
 public:
     size_t id;       // node id number
     double[3] pos;  // node position, (x,y,z-Coordinates)
-
-    this(size_t id, double[3] pos) {
+    bool[] node_added_to_partion;
+    this(size_t id, double[3] pos, size_t nparts) {
         this.id = id;
         this.pos = pos.dup();
+        this.node_added_to_partion.length = nparts;
+        foreach (ref entry; this.node_added_to_partion) { entry = false; }
     }
 }
 // -------------------------------------------------------------------------------------
@@ -147,7 +148,7 @@ class Boundary {
 public:
     string tag;     // Boundary condition type name
     size_t[] face_id_list;  // list of ids for the faces that make up a domain boundary
-    
+
     this(string tag, size_t[] face_id_list)
     {
         this.tag = tag;
@@ -192,24 +193,17 @@ string partitionDual(string fileName, int nparts) {
 }
 
 string SU2_to_metis_format(string fileName) {
-    auto f = File(fileName, "r");
-    string getHeaderContent(string target)
-        // Helper function to proceed through file, line-by-line,
-        // looking for a particular header line.
-        // Returns the content from the header line and leaves the file
-        // at the next line to be read, presumably with expected data.
-        {
-            while (!f.eof) {
-                auto line = f.readln().strip();
-                if (canFind(line, target)) {
-                    auto tokens = line.split("=");
-                    return tokens[1].strip();
-                }
-            } // end while
-            return ""; // didn't find the target
-        }
     writeln("-- Converting SU2 mesh to Metis input format");
-    auto ncells = to!size_t(getHeaderContent("NELEM"));
+    auto f = File(fileName, "r");
+    size_t ncells;
+    while (!f.eof) {
+        auto line = f.readln().strip();
+        if (canFind(line, "NELEM")) {
+            auto tokens = line.split("=");
+            ncells = to!size_t(tokens[1].strip());
+            break;
+        }
+    }
 
     string[] cells;
     cells.length = ncells;
@@ -288,7 +282,7 @@ void construct_blocks(string meshFile, string mappedCellsFilename, string partit
             indx = to!size_t(tokens[3]);
         }
         double[3] pos = [x, y, z];
-        global_nodes[indx] = new Node(indx, pos);
+        global_nodes[indx] = new Node(indx, pos, nparts);
     } // end foreach i .. nnodes
     // Collect what partition each cell belongs to
     writeln("-- -- Reading metis output file");
@@ -297,7 +291,7 @@ void construct_blocks(string meshFile, string mappedCellsFilename, string partit
         auto tokens = f.readln().strip().split();
         size_t partition_id = to!int(tokens[0]);
         global_cells[cell_id].partition = partition_id;
-    }    
+    }
     // construct faces
     writeln("-- -- Construct mesh faces");
     //
@@ -413,7 +407,7 @@ void construct_blocks(string meshFile, string mappedCellsFilename, string partit
     // make lists of the boundary faces.
     //
     writeln("-- -- Fill boundary face arrays");
-    f = File(meshFile, "r"); 
+    f = File(meshFile, "r");
     auto nboundaries = to!size_t(getHeaderContent("NMARK"));
     foreach(i; 0 .. nboundaries) {
         string tag = getHeaderContent("MARKER_TAG");
@@ -443,7 +437,7 @@ void construct_blocks(string meshFile, string mappedCellsFilename, string partit
     foreach(cell_id;0 .. ncells) {
          auto lineContent = f.readln().strip();
          auto tokens = lineContent.split();
-         foreach(j; 0 .. tokens.length) { global_cells[cell_id].cell_neighbour_id_list ~= to!size_t(tokens[j]) - 1 ; }   
+         foreach(j; 0 .. tokens.length) { global_cells[cell_id].cell_neighbour_id_list ~= to!size_t(tokens[j]) - 1 ; }
     }
     // At this point we have all the data we need. Now construct the new blocks.
     // construct blocks
@@ -460,10 +454,11 @@ void construct_blocks(string meshFile, string mappedCellsFilename, string partit
         blocks[partition_id].cells ~= global_cells[cell_id];
         blocks[partition_id].transform_cell_list[cell_id] = blocks[partition_id].cells.length - 1;
         foreach(node_id;global_cells[cell_id].node_id_list) {
-            if (!blocks[partition_id].node_id_list.canFind(node_id)) {
+            if (!global_nodes[node_id].node_added_to_partion[partition_id]) {
+                global_nodes[node_id].node_added_to_partion[partition_id] = true;
                 blocks[partition_id].nodes ~= global_nodes[node_id];
                 blocks[partition_id].node_id_list ~= node_id;
-                blocks[partition_id].transform_list[node_id] = blocks[partition_id].nodes.length - 1; 
+                blocks[partition_id].transform_list[node_id] = blocks[partition_id].nodes.length - 1;
             }
         }
         // assign interior boundaries
@@ -483,10 +478,10 @@ void construct_blocks(string meshFile, string mappedCellsFilename, string partit
                     }
                 }
             }
-         }
-    } 
+        }
+}
     // finally assign domain boundary faces to correct blocks
-    foreach(face_id;0 .. global_faces.length) {  
+    foreach(face_id;0 .. global_faces.length) {
         if (global_faces[face_id].partition_id_list.length ==  1) {
             foreach(i;0 .. nboundaries) {
                 if (global_boundaries[i].face_id_list.canFind(face_id)) {
@@ -498,7 +493,7 @@ void construct_blocks(string meshFile, string mappedCellsFilename, string partit
                         blocks[partition_id].bc_names ~= tag;
                     }
                     blocks[partition_id].boundary[tag].face_id_list ~= face_id;
-                }                                                                 
+                }
             }
         }
     }
@@ -506,13 +501,6 @@ void construct_blocks(string meshFile, string mappedCellsFilename, string partit
     // NB. cells and nodes use their local ids.
     File outFile_mappedcells;
     outFile_mappedcells = File(mappedCellsFilename, "w");
-
-    // Let's check the user doesn't have any previous partitioned su2 files in the directory -- if there are, this will upset the code
-    // if the user intends on partitioning more than one su2 file.
-    int nSimilarBlocks;    
-    string commandCheck = "if [ -f block_0_"~meshFile~" ] ; then echo 'yes' ; else echo 'no' ; fi";
-    auto fileCheck = executeShell(commandCheck);
-    if (fileCheck[1] != "no\n")  throw new Error("It appears the partitioned su2 files already exist. Please remove these files before running the partitioner again.");
 
     // If the user is partitioning more than one su2 file, then we need to count the current number of partitions (su2 files) to
     // know where to start the block counting for the new partitions.
@@ -529,12 +517,12 @@ void construct_blocks(string meshFile, string mappedCellsFilename, string partit
     foreach(i;0..nparts) {
         writeln("-- Writing out block: #", i+nCurrentBlocks);
         // let's begin by writing out the mapped cells for the block
-        
-        string mapped_cells_tag = "NMappedCells in BLOCK[" ~ to!string(i+nCurrentBlocks) ~ "]= "; 
+
+        string mapped_cells_tag = "NMappedCells in BLOCK[" ~ to!string(i+nCurrentBlocks) ~ "]= ";
         outFile_mappedcells.writef("%s", mapped_cells_tag);
         auto ninterior = blocks[i].boundary["METIS_INTERIOR"].face_id_list.length;
         outFile_mappedcells.writef("%d \n", ninterior);
-        
+
         foreach(mapped_cell; blocks[i].mapped_cells){
             auto primary_cell_local_id = blocks[i].transform_cell_list[mapped_cell.global_cell_id];
             auto secondary_cell_local_id = blocks[mapped_cell.neighbour_block_id].transform_cell_list[mapped_cell.global_neighbour_cell_id];
@@ -603,25 +591,36 @@ void construct_blocks(string meshFile, string mappedCellsFilename, string partit
 }
 
 int main(string[] args){
+
     if (args.length != 5) {
         writeln("Wrong number of command line arguments.");
         printHelp();
         return 1;
     }
+
     // assign command line arguments to variable names
     string inputMeshFile; string mappedCellsFilename; int nparts; int ncommon;
     inputMeshFile = args[1];
     mappedCellsFilename = args[2];
     nparts = to!int(args[3]);
     ncommon = to!int(args[4]);
-    writeln("Begin partitioner................");
-    // check if Metis is installed correctly. 
+
+    writeln("Begin partitioning................");
+
+    // Let's check the user doesn't have any previous partitioned su2 files in the directory -- if there are, this will upset the code
+    // if the user intends on partitioning more than one su2 file.
+    string commandCheck = "if [ -f block_0_"~inputMeshFile~" ] ; then echo 'yes' ; else echo 'no' ; fi";
+    auto fileCheck = executeShell(commandCheck);
+    if (fileCheck[1] != "no\n")  throw new Error("It appears the partitioned su2 files already exist. Please remove these files before running the partitioner again.");
+
+    // check if Metis is installed correctly
     if (metisCheck() != 0)  throw new Error("Metis partition software cannot be found.");
-    string metisFormatFile = SU2_to_metis_format(inputMeshFile);//("square_mesh.su2");
+    string metisFormatFile = SU2_to_metis_format(inputMeshFile);
     string dualFormatFile = mesh2dual(metisFormatFile, ncommon);
     string partitionFile = partitionDual(dualFormatFile, nparts);
     construct_blocks(inputMeshFile, mappedCellsFilename, partitionFile, dualFormatFile, nparts);
     clean_dir(dualFormatFile, partitionFile, metisFormatFile);
+
     writeln("Finished partitioning................");
     return 0;
 }

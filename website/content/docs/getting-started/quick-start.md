@@ -50,7 +50,7 @@ If you are just starting out, choose the DMD64 compiler.
 If you are preparing to do large simulations on a cluster computer,
 you should add the LLVM D compiler to you set up.
 
-To build Eilmer, you will require:
+To build Eilmer and other programs in the toolkit, you will require:
 
   + D compilers
       + The reference DMD64 compiler (`dmd`) is available from https://dlang.org.
@@ -78,6 +78,9 @@ To build Eilmer, you will require:
   + plotutils development package:
       + libplot-dev on Debian/Ubuntu/Mint
       + plotutils-devel on RedHat/CentOS/Fedora (for CentOS 8.x, enable PowerTools repo)
+  + foreign-function interface packages for Python and Ruby:
+      + python3-cffi on Debian/Ubuntu/Mint and RedHat/CentOS/Fedora
+      + ruby-ffi on Debian/Ubuntu/Mint
 
 Additionally, if you want to run the test suite, you will require:
 
@@ -151,7 +154,7 @@ use `make` to coordinate the compiling and installing:
     make install
 
 
-## Setting up for a first-time run of Eilmer
+## Environment variables
 
 We'll assume you are happy using the default install area `$HOME/dgdinst`.
 The next step is to configure your environment to use Eilmer.

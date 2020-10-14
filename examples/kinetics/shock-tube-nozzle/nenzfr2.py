@@ -20,7 +20,7 @@
 # Versions:
 # 2019-11-30, state-to-state calculation of shock tube conditions
 # 2019-12-27, nozzle flow calculation adapted from supersonic-diffuser example
-# 
+#
 
 #------------------------------------------------------------------
 
@@ -184,7 +184,7 @@ dt_suggest = 1.0e-12  # suggested starting time-step for chemistry
 print(sample_data(x, area, v, gas0, dt_suggest))
 
 print("# Start reactions...")
-reactor = ThermochemicalReactor(gmodel2, "air-5sp-1T-reactions.lua") 
+reactor = ThermochemicalReactor(gmodel2, "air-5sp-1T-reactions.lua")
 t = 0 # time is in seconds
 t_final = 0.8e-3 # long enough to convect past exit
 t_inc = 1.0e-9 # start small
@@ -248,7 +248,7 @@ while x < x_end:
     gas1.update_sound_speed()
     if debug:
         print("# At new point x1=", x1, "v1=", v1,
-              ": gas1.p=", gas1.p, "p1_check=", p1_check, 
+              ": gas1.p=", gas1.p, "p1_check=", p1_check,
               "rel_error=", abs(gas1.p-p1_check)/p1_check)
     # Have now finished the chemical and gas-dynamic update.
     print(sample_data(x1, area1, v1, gas1, dt_suggest))
