@@ -121,9 +121,9 @@ Options:
     } catch (YAMLException e) {
         // Assume 1.0.
     }
-    // Nozzle area-ratio schedule.
+    // Nozzle x,diameter schedule.
     double[] xi; foreach(string val; config["xi"]) { xi ~= to!double(val); }
-    double[] ai; foreach(string val; config["ai"]) { ai ~= to!double(val); }
+    double[] di; foreach(string val; config["di"]) { di ~= to!double(val); }
     if (verbosityLevel >= 2) {
         writeln("Input data.");
         writeln("  "~config["title"].as!string);
@@ -139,12 +139,12 @@ Options:
         writeln("  pe= ", pe);
         writeln("  ar= ", ar);
         writeln("  xi= ", xi);
-        writeln("  ai= ", ai);
+        writeln("  di= ", di);
     }
     //
-    // ---------------
-    // ANALYSIS PART A
-    // ---------------
+    // ---------------------------
+    // ANALYSIS PART A, SHOCK TUBE
+    // ---------------------------
     //
     // Set up equilibrium-gas flow analysis of shock tube.
     // Let's assume a cea2 gas model.
@@ -250,9 +250,9 @@ Options:
         writeln("End of stage 1: shock-tube and frozen/eq nozzle analysis.");
     }
     //
-    // ---------------
-    // ANALYSIS PART B
-    // ---------------
+    // -------------------------------------
+    // ANALYSIS PART B, SUPERSONIC EXPANSION
+    // -------------------------------------
     //
     // We will continue with a non-equilibrium chemistry expansion
     // only if we have the correct gas models in play.
@@ -338,9 +338,11 @@ Options:
     }
     //
     // Supersonic expansion.
-    auto ar_schedule = new Schedule(xi, ai);
+    auto diameter_schedule = new Schedule(xi, di);
     double x = xi[0];
-    double area = ar_schedule.interpolate_value(x);
+    double d = diameter_schedule.interpolate_value(x);
+    double area = 0.25*d*d*std.math.PI;
+    double throat_area = area; // for later normalizing the exit area
     double dt_suggest = 1.0e-12;  // suggested starting time-step for chemistry
     double dt_therm = dt_suggest;
     if (verbosityLevel >= 2) {
@@ -373,7 +375,8 @@ Options:
         // Simple, Euler update for the spatial stepper.
         double t1 = t + t_inc;
         double x1 = x + v*t_inc;
-        double area1 = ar_schedule.interpolate_value(x1);
+        double d1 = diameter_schedule.interpolate_value(x1);
+        double area1 = 0.25*d1*d1*std.math.PI;
         //
         // Do the gas-dynamic accommodation after the chemical change.
         double darea = area1 - area;
@@ -383,7 +386,7 @@ Options:
         double A = area+0.5*darea;
         if (verbosityLevel >= 3) {
             writeln("# dfdr=", dfdr, " dfdu=", dfdu);
-            writeln("# x=", x, " v=", v, " A=", A, " dA=", darea);
+            writeln("# x=", x, " v=", v, " diam=", d, " A=", A, " dA=", darea);
         }
         // Linear solve to get the accommodation increments.
         //   [v*A,      rho*A,          0.0, 0.0    ]   [drho  ]   [-rho*v*dA       ]
@@ -425,19 +428,19 @@ Options:
             writeln(sample_data(x1, area1, v1, gas1, dt_suggest));
         }
         // House-keeping for the next step.
-        v = v1; t = t1; x = x1; area = area1;
+        v = v1; t = t1; x = x1; d =  d1; area = area1;
         gas0.copy_values_from(gas1); // gas0 will be used in the next iteration
         t_inc = fmin(t_inc*1.001, t_inc_max);
     } // end while
 
     writeln("# Exit condition:");
-    writefln("#   temperature %g (K) ", gas0.T);
-    writefln("#   pressure %g (kPa) ", gas0.p/1000);
-    writefln("#   density %g (kg/m^3) ", gas0.rho);
-    writefln("#   velocity %g (m/s) ", v);
+    writefln("#   x %g (m), area-ratio %g", x, area/throat_area);
+    writefln("#   temperature %g (K)", gas0.T);
+    writefln("#   pressure %g (kPa)", gas0.p/1000);
+    writefln("#   density %g (kg/m^3)", gas0.rho);
+    writefln("#   velocity %g (m/s)", v);
     writefln("#   Mach %g", v/gas0.a);
-    writefln("#   rho*v^2 %g (kPa) ", gas0.rho*v*v/1000);
-    writefln("#   area-ratio %g", area);
+    writefln("#   rho*v^2 %g (kPa)", gas0.rho*v*v/1000);
     foreach (name; species) {
         writefln("#   massf[%s] %g", name, gas0.massf[gm_tp.species_index(name)]);
     }
