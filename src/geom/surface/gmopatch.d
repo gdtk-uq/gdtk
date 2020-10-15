@@ -1,5 +1,6 @@
 // gmopatch.d
-// A surface patch that internally redistributes the interpolation parameters.
+// A grid-metric-optimized surface patch that internally redistributes
+// the r,s-interpolation parameters to get the "best" test grid.
 // PJ 2020-10-15
 
 module geom.surface.gmopatch;
@@ -31,19 +32,22 @@ public:
                            [2.0/3, 2.0/3, 2.0/3, 2.0/3],
                            [1.0, 1.0, 1.0, 1.0]];
 
-    this(in Vector3 p00, in Vector3 p10, in Vector3 p11, in Vector3 p01)
+    this(in Vector3 p00, in Vector3 p10, in Vector3 p11, in Vector3 p01,
+         int niv=11, int njv=11)
     {
         north = new Line(p01, p11);
         east = new Line(p10, p11);
         south = new Line(p00, p10);
         west = new Line(p00, p01);
-        this(south, north, west, east);
+        this(south, north, west, east, niv, njv);
     }
 
-    this(in Path south, in Path north, in Path west, in Path east)
+    this(in Path south, in Path north, in Path west, in Path east,
+         int niv=11, int njv=11)
     // The particular order for the boundary surfaces goes way back
     // to the original grid generation paper, so it doesn't match the
     // default order of NESW in the rest of the flow code.
+    // niv and njv are the number of vertices for the test grid.
     {
         this.north = north.dup();
         this.east = east.dup();
@@ -80,7 +84,7 @@ public:
         auto my_patch = new CoonsPatch(south, north, west, east);
         auto cf = [new LinearFunction(), new LinearFunction(),
                    new LinearFunction(), new LinearFunction()];
-        auto my_grid = new StructuredGrid(my_patch, 11, 11, cf, r_grid, s_grid);
+        auto my_grid = new StructuredGrid(my_patch, niv, njv, cf, r_grid, s_grid);
         my_grid.determine_rs_grids(my_patch, cf, r_grid, s_grid);
     }
 
@@ -150,7 +154,7 @@ version(gmopatch_test) {
         auto p10 = Vector3(1.0, 0.1, 3.0);
         auto p11 = Vector3(1.0, 1.1, 3.0);
         auto p01 = Vector3(0.0, 1.1, 3.0);
-        auto my_patch = new GMOPatch(p00, p10, p11, p01);
+        auto my_patch = new GMOPatch(p00, p10, p11, p01, 11, 11);
         auto c = my_patch(0.5, 0.5);
         assert(approxEqualVectors(c, Vector3(0.5, 0.6, 3.0)), failedUnitTest());
         c = my_patch(0.1, 0.1);

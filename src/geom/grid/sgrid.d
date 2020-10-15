@@ -1049,9 +1049,7 @@ public:
     }
 
     double measure_of_badness()
-    // Compute the average of the cell badness measures.
-    // For each cell, this is the ratio of the squared-lengths of the diagonals,
-    // just because it is ceas to compute and shold indicate skewed cells.
+    // Compute the cell badness measures for a given grid.
     // A grid that has a value of 1.0 is (likely) an ideal, orthogonal mesh.
     {
         double ratio_of_diagonals_avg = 0.0; double ratio_of_diagonals_max = 0.0;
@@ -1138,7 +1136,7 @@ public:
         }
         double[] data; data.length = 16;
         rs_grids_to_list(r_grid, s_grid, data);
-        double[] ddata; foreach (i; 0 .. data.length) { ddata ~= 0.1; }
+        double[] ddata; foreach (i; 0 .. data.length) { ddata ~= 0.05; }
         double fdata;
         int nfe, nres;
         bool conv_flag = nm.nelmin.minimize!(objective,double)(data, fdata, nfe, nres, ddata,

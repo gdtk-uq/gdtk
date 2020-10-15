@@ -19,6 +19,7 @@ void main()
     my_grid.write_to_vtk_file("test_grid-2D.vtk");
     writeln("badness=", my_grid.measure_of_badness());
 
+    writeln("Start playing with internal redistribution of r,s parameters.");
     double[4][4] r_grid = [[0.0, 1.0/3, 2.0/3, 1.0],
                            [0.0, 1.0/3-0.3, 2.0/3+0.3, 1.0],
                            [0.0, 1.0/3-0.3, 2.0/3+0.3, 1.0],
@@ -36,6 +37,11 @@ void main()
     writeln("r_grid=", r_grid);
     writeln("s_grid=", s_grid);
     my_grid_b.write_to_vtk_file("test_grid_better-2D.vtk");
+
+    writeln("GMOPatch is simpler to use.");
+    auto gmo_patch = new GMOPatch(p00, p10, p11, p01, 11, 21);
+    auto gmo_grid = new StructuredGrid(gmo_patch, 11, 21, cf);
+    gmo_grid.write_to_vtk_file("test_gmo_grid-2D.vtk");
 
     // write then read standard gzip format
     my_grid.write_to_gzip_file("test_grid-2D.gz");
