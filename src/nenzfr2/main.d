@@ -95,7 +95,7 @@ Options:
     try {
         reactions_filename2 = config["reactions-file2"].as!string;
     } catch (YAMLException e) {
-        // Do nothing, but assume 1T chemistry,  if we cannot set the second reactions file.
+        // We cannot set the second reactions file so assume 1T chemistry.
     }
     //
     string[] species;
@@ -103,11 +103,7 @@ Options:
     double[] molef;
     foreach(name; species) {
         double mf = 0.0;
-        try {
-            mf = to!double(config["molef"][name].as!string);
-        } catch (YAMLException e) {
-            // Assume 0.0.
-        }
+        try { mf = to!double(config["molef"][name].as!string); } catch (YAMLException e) {}
         molef ~= mf;
     }
     //
@@ -115,19 +111,13 @@ Options:
     double T1 = to!double(config["T1"].as!string);
     double p1 = to!double(config["p1"].as!string);
     double Vs = to!double(config["Vs"].as!string);
+    // Observed relaxation pressure for reflected-shock, nozzle-supply region.
+    // A value of 0.0 indicates that we should use the ideal shock-reflection pressure.
     double pe = 0.0;
-    try {
-        pe = to!double(config["pe"].as!string);
-    } catch (YAMLException e) {
-        // Assume 0.0.
-    }
+    try { pe = to!double(config["pe"].as!string); } catch (YAMLException e) {}
     // Nozzle-exit area ratio for terminating expansion.
     double ar = 1.0;
-    try {
-        ar = to!double(config["ar"].as!string);
-    } catch (YAMLException e) {
-        // Assume 1.0.
-    }
+    try { ar = to!double(config["ar"].as!string); } catch (YAMLException e) {}
     // Nozzle x,diameter schedule.
     double[] xi; foreach(string val; config["xi"]) { xi ~= to!double(val); }
     double[] di; foreach(string val; config["di"]) { di ~= to!double(val); }
@@ -228,7 +218,7 @@ Options:
     double mflux6 = state6.rho * V6;  // mass flux per unit area, at throat
     if (verbosityLevel >= 1) {
         writefln("  V6          %g km/s", V6);
-        writefln("  mflux6      %g ", mflux6);
+        writefln("  mflux6      %g", mflux6);
         write_cea_state(state6);
         if (verbosityLevel >= 3) { writeln("  state6= ", state6); }
     }
@@ -382,7 +372,10 @@ Options:
     double x = xi[0];
     double d = diameter_schedule.interpolate_value(x);
     double area = 0.25*d*d*std.math.PI;
-    double throat_area = area; // for later normalizing the exit area
+    double area_at_throat = area; // for later normalizing the exit area
+    double massflux_at_throat = area*gas0.rho*v;
+    double H_at_throat = gm_tp.enthalpy(gas0) + 0.5*v*v;
+    //
     double dt_suggest = 1.0e-12;  // suggested starting time-step for chemistry
     double dt_therm = dt_suggest;
     if (verbosityLevel >= 2) {
@@ -391,11 +384,26 @@ Options:
         writeln("Start reactions...");
     }
     double t = 0;  // time is in seconds
-    double x_end = xi[$-1];
+    double x_end = xi[$-1];  // Nozzle-exit position for terminating expansion.
+    try { x_end = to!double(config["x_end"].as!string); } catch (YAMLException e) {}
     double t_final = 2.0 * x_end / v;  // long enough to convect past exit
+    try { t_final = to!double(config["t_final"].as!string); } catch (YAMLException e) {}
     double t_inc = 1.0e-10; // start small
+    try { t_inc = to!double(config["t_inc"].as!string); } catch (YAMLException e) {}
+    double t_inc_factor = 1.0001;
+    try { t_inc_factor = to!double(config["t_inc_factor"].as!string); } catch (YAMLException e) {}
     double t_inc_max = 1.0e-7;
-    while ((x < x_end) && (area < ar)) {
+    try { t_inc_max = to!double(config["t_inc_max"].as!string); } catch (YAMLException e) {}
+    if (verbosityLevel >= 2) {
+        writeln("Stepping parameters:");
+        writefln("  x_end= %g", x_end);
+        writefln("  t_final= %g", t_final);
+        writefln("  t_inc= %g", t_inc);
+        writefln("  t_inc_factor= %g", t_inc_factor);
+        writefln("  t_inc_max= %g", t_inc_max);
+    }
+    //
+    while ((x < x_end) && (area < ar) && (t < t_final)) {
         // At the start of the step...
         double rho = gas0.rho; double T = gas0.T; double p = gas0.p; double u = gas0.u;
         //
@@ -469,17 +477,21 @@ Options:
         }
         // House-keeping for the next step.
         v = v1; t = t1; x = x1; d =  d1; area = area1;
-        gas0.copy_values_from(gas1); // gas0 will be used in the next iteration
-        t_inc = fmin(t_inc*1.001, t_inc_max);
+        gas0.copy_values_from(gas1);
+        t_inc = fmin(t_inc*t_inc_factor, t_inc_max);
     } // end while
-
+    //
     writeln("Exit condition:");
     writefln("  x           %g m", x);
-    writefln("  area-ratio  %g", area/throat_area);
+    writefln("  area-ratio  %g", area/area_at_throat);
     writefln("  velocity    %g km/s", v/1000.0);
     writefln("  Mach        %g", v/gas0.a);
     writefln("  rho*v^2     %g kPa", gas0.rho*v*v/1000);
     write_tp_state(gas0);
-    if (verbosityLevel >= 1) { writeln("End part B."); }
+    double massflux = area * gas0.rho * v;
+    writefln("  relerr-mass %g", fabs(massflux - massflux_at_throat)/massflux_at_throat);
+    double H = gm_tp.enthalpy(gas0) + 0.5*v*v;
+    writefln("  relerr-H    %g", fabs(H - H_at_throat)/H_at_throat);
+    if (verbosityLevel >= 1) { writeln("End."); }
     return exitFlag;
 } // end main
