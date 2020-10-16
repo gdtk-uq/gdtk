@@ -151,7 +151,93 @@ public:
 
     override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
     {
-	throw new Error("GhostCellFromStagnation.apply_for_interface_unstructured_grid() not yet implemented");
+        //throw new Error("GhostCellFromStagnation.apply_for_interface_unstructured_grid() not yet implemented");
+
+        // TODO: debug below code. KD 13-10-2020
+        // Below is the first hack at extending this boundary condition to be applied on a per interface basis.
+        // Currently there is something not quite right in this implementation, it fails to work with the numerical
+        // Jacobian code to form an ILU preconditioner.
+        BoundaryCondition bc = blk.bc[which_boundary];
+        FVCell ghost0; FVCell cell;
+        auto gmodel = blk.myConfig.gmodel;
+
+        // First, estimate the current bulk inflow condition.
+        number area = 0.0;
+        number rhoUA = 0.0; // current mass_flux through boundary
+        number rhovxA = 0.0; // mass-weighted x-velocity
+        number rhovyA = 0.0;
+        number rhovzA = 0.0;
+        number rhoA = 0.0;
+        number pA = 0.0;
+
+        foreach (i, face; bc.faces) {
+            if (bc.outsigns[i] == 1) {
+                cell = face.left_cell;
+            } else {
+                cell = face.right_cell;
+            }
+            area += face.area[0];
+            number local_rhoA = cell.fs.gas.rho * face.area[0];
+            rhoA += local_rhoA;
+            double outsign = bc.outsigns[i];
+            rhoUA -= outsign*(local_rhoA * dot(cell.fs.vel, face.n)); // mass flux
+            rhovxA += local_rhoA * cell.fs.vel.x;
+            rhovyA += local_rhoA * cell.fs.vel.y;
+            rhovzA += local_rhoA * cell.fs.vel.z;
+            pA += cell.fs.gas.p * face.area[0];
+        }
+
+        if (mass_flux > 0.0 && ftl == 0) {
+
+            throw new Error("GhostCellFromStagnation.apply_for_interface_unstructured_grid() with fixed mass_flux not yet implemented");
+            /*
+            // Adjust the stagnation pressure to better achieve the specified mass flux.
+            // Note that we only do this adjustment once, at the start of a
+            // multi-level gas-dynamic update.
+            number p = pA / area;
+            number dp_over_p = relax_factor * 0.5 / (rhoA/area) *
+                (mass_flux*mass_flux - rhoUA*fabs(rhoUA)/(area*area)) / p;
+            number new_p0 = (1.0 + dp_over_p) * stagnation_condition.gas.p;
+            new_p0 = fmin(fmax(new_p0, p0_min), p0_max);
+            stagnation_condition.gas.p = new_p0;
+            gmodel.update_thermo_from_pT(stagnation_condition.gas);
+            stagnation_enthalpy = gmodel.enthalpy(stagnation_condition.gas);
+            stagnation_entropy = gmodel.entropy(stagnation_condition.gas);
+            */
+        } else if (luaFileName.length > 0) {
+            throw new Error("GhostCellFromStagnation.apply_for_interface_unstructured_grid() with lua UDF not yet implemented");
+            /*
+            number new_p0 = stagnation_condition.gas.p;
+            number new_T0 = stagnation_condition.gas.T;
+            // [FIXME] dt_global=0.0 step=0
+            callUDFstagnationPT(t, 0.0, 0, gtl, ftl, new_p0, new_T0);
+            stagnation_condition.gas.p = new_p0;
+            stagnation_condition.gas.T = new_T0;
+            gmodel.update_thermo_from_pT(stagnation_condition.gas);
+            stagnation_enthalpy = gmodel.enthalpy(stagnation_condition.gas);
+            stagnation_entropy = gmodel.entropy(stagnation_condition.gas);
+            */
+        }
+        number bulk_speed = sqrt((rhovxA/rhoA)^^2 + (rhovyA/rhoA)^^2 + (rhovzA/rhoA)^^2);
+        if (rhoUA < 0.0) { bulk_speed = 0.0; } // Block any outflow with stagnation condition.
+        // Assume an isentropic process from a known total enthalpy.
+        number enthalpy = stagnation_enthalpy - 0.5 * bulk_speed^^2;
+        gmodel.update_thermo_from_hs(inflow_condition.gas, enthalpy, stagnation_entropy);
+        // Now, apply the ghost-cell conditions to the particular interface
+        if (bc.outsigns[f.i_bndry] == 1) {
+	    ghost0 = f.right_cell;
+	} else {
+	    ghost0 = f.left_cell;
+	}
+        // Velocity components may vary with position on the block face.
+        double outsign = bc.outsigns[f.i_bndry];
+        set_velocity_components(inflow_condition.vel, bulk_speed, f, outsign);
+        ghost0.fs.copy_values_from(inflow_condition);
+
+        version(complex_numbers) {
+            stagnation_condition.clear_imaginary_components();
+            inflow_condition.clear_imaginary_components();
+        }
     }
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
@@ -169,21 +255,21 @@ public:
         number rhoA = 0.0;
         number pA = 0.0;
 
-        foreach (i, f; bc.faces) {
+        foreach (i, face; bc.faces) {
             if (bc.outsigns[i] == 1) {
-                cell = f.left_cell;
+                cell = face.left_cell;
             } else {
-                cell = f.right_cell;
+                cell = face.right_cell;
             }
-            area += f.area[0];
-            number local_rhoA = cell.fs.gas.rho * f.area[0];
+            area += face.area[0];
+            number local_rhoA = cell.fs.gas.rho * face.area[0];
             rhoA += local_rhoA;
             double outsign = bc.outsigns[i];
-            rhoUA -= outsign*(local_rhoA * dot(cell.fs.vel, f.n)); // mass flux
+            rhoUA -= outsign*(local_rhoA * dot(cell.fs.vel, face.n)); // mass flux
             rhovxA += local_rhoA * cell.fs.vel.x;
             rhovyA += local_rhoA * cell.fs.vel.y;
             rhovzA += local_rhoA * cell.fs.vel.z;
-            pA += cell.fs.gas.p * f.area[0];
+            pA += cell.fs.gas.p * face.area[0];
         }
 
         if (mass_flux > 0.0 && ftl == 0) {
@@ -216,16 +302,21 @@ public:
         number enthalpy = stagnation_enthalpy - 0.5 * bulk_speed^^2;
         gmodel.update_thermo_from_hs(inflow_condition.gas, enthalpy, stagnation_entropy);
         // Now, apply the ghost-cell conditions
-        foreach (i, f; bc.faces) {
+        foreach (i, face; bc.faces) {
             if (bc.outsigns[i] == 1) {
-                ghost0 = f.right_cell;
+                ghost0 = face.right_cell;
             } else {
-                ghost0 = f.left_cell;
+                ghost0 = face.left_cell;
             }
             // Velocity components may vary with position on the block face.
             double outsign = bc.outsigns[i];
-            set_velocity_components(inflow_condition.vel, bulk_speed, f, outsign);
+            set_velocity_components(inflow_condition.vel, bulk_speed, face, outsign);
             ghost0.fs.copy_values_from(inflow_condition);
+        }
+        
+        version(complex_numbers) {
+            stagnation_condition.clear_imaginary_components();
+            inflow_condition.clear_imaginary_components();
         }
     }
 
