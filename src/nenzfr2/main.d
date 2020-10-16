@@ -1,5 +1,12 @@
 // main.d for nenzfr2
-// PJ 2020-09-26 Initial code built from Python prototype.
+// Reflected shock tube analysis followed by supersonic nozzle expansion.
+//
+// Peter J.
+// School of Mechanical and Mining Engineering
+// The University of Queensland
+//
+// 2020-09-26 Initial code built from Python prototype.
+// 2020-10-16 Ready for use, I believe.
 
 import std.stdio;
 import std.array;
@@ -146,34 +153,43 @@ Options:
     // ANALYSIS PART A, SHOCK TUBE
     // ---------------------------
     //
+    void write_cea_state(GasState gs, string fill="  ")
+    {
+        writefln("%spressure    %g kPa", fill, gs.p/1000.0);
+        writefln("%sdensity     %g kg/m^3", fill, gs.rho);
+        writefln("%stemperature %g K", fill, gs.T);
+    }
     // Set up equilibrium-gas flow analysis of shock tube.
     // Let's assume a cea2 gas model.
-    if (verbosityLevel >= 1) { writeln("Initial gas state."); }
+    if (verbosityLevel >= 1) { writeln("Initial gas in shock tube (state 1)."); }
     auto state1 = new GasState(gm1);
     state1.p = p1; state1.T = T1; state1.massf = [1.0,];
     gm1.update_thermo_from_pT(state1);
     gm1.update_sound_speed(state1);
     double H1 = gm1.internal_energy(state1) + state1.p/state1.rho;
     if (verbosityLevel >= 1) {
-        writeln("  state1: ", state1);
-        writeln("  H1= ", H1);
+        write_cea_state(state1);
+        writefln("  H1          %g MJ/kg", H1/1.0e6);
+        if (verbosityLevel >= 3) { writeln("  state1: ", state1); }
     }
     //
-    if (verbosityLevel >= 1) { writeln("Start incident-shock calculation."); }
+    if (verbosityLevel >= 1) { writeln("Incident-shock process to state 2."); }
     auto state2 = new GasState(gm1);
     double[2] velocities = normal_shock(state1, Vs, state2, gm1);
     double V2 = velocities[0];
     double Vg = velocities[1];
     if (verbosityLevel >= 1) {
-        writeln("  V2= ", V2, " Vg= ", Vg);
-        writeln("  state2: ", state2);
+        writefln("  V2          %g km/s", V2/1000.0);
+        writefln("  Vg          %g km/s", Vg/1000.0);
+        write_cea_state(state2);
+        if (verbosityLevel >= 3) { writeln("  state2: ", state2); }
     }
     //
-    if (verbosityLevel >= 1) { writeln("Start reflected-shock calculation."); }
+    if (verbosityLevel >= 1) { writeln("Reflected-shock process to state 5."); }
     GasState state5 = new GasState(gm1);
     double Vr = reflected_shock(state2, Vg, state5, gm1);
     //
-    if (verbosityLevel >= 1) { writeln("Start calculation of isentropic relaxation."); }
+    if (verbosityLevel >= 1) { writeln("Isentropic relaxation to state 5s."); }
     auto state5s = new GasState(gm1);
     state5s.copy_values_from(state5);
     // Entropy is set, then pressure is relaxed via an isentropic process.
@@ -182,12 +198,14 @@ Options:
     gm1.update_thermo_from_ps(state5s, entropy5);
     double H5s = gm1.internal_energy(state5s) + state5s.p/state5s.rho; // stagnation enthalpy
     if (verbosityLevel >= 1) {
-        writeln("  state5.entropy= ", entropy5);
-        writeln("  state5s= ", state5s);
-        writeln("  H5s= ", H5s, " H5s-H1=", H5s-H1);
+        writefln("  entropy     %g J/kg/K", entropy5);
+        writefln("  H5s         %g MJ/kg", H5s/1.0e6);
+        writefln("  H5s-H1      %g MJ/kg", (H5s-H1)/1.0e6);
+        write_cea_state(state5s);
+        if (verbosityLevel >= 3) { writeln("  state5s= ", state5s); }
     }
     //
-    if (verbosityLevel >= 1) { writeln("Start isentropic relaxation to throat (Mach 1)"); }
+    if (verbosityLevel >= 1) { writeln("Isentropic flow to throat to state 6 (Mach 1)."); }
     double error_at_throat(double x)
     {
         // Returns Mach number error as pressure is changed.
@@ -209,12 +227,13 @@ Options:
     double V6 = expand_from_stagnation(state5s, x6, state6, gm1);
     double mflux6 = state6.rho * V6;  // mass flux per unit area, at throat
     if (verbosityLevel >= 1) {
-        writeln("  state6= ", state6);
-        writeln("  V6= ", V6);
-        writeln("  mflux6= ", mflux6);
+        writefln("  V6          %g km/s", V6);
+        writefln("  mflux6      %g ", mflux6);
+        write_cea_state(state6);
+        if (verbosityLevel >= 3) { writeln("  state6= ", state6); }
     }
     //
-    if (verbosityLevel >= 1) { writeln("Start isentropic relaxation to nozzle exit of given area."); }
+    if (verbosityLevel >= 1) { writeln("Isentropic expansion to nozzle exit of given area (state 7)."); }
     // The mass flux going through the nozzle exit has to be the same
     // as that going through the nozzle throat.
     double error_at_exit(double x)
@@ -242,12 +261,13 @@ Options:
     auto state7_pitot = new GasState(gm1);
     pitot_condition(state7, V7, state7_pitot, gm1);
     if (verbosityLevel >= 1) {
-        writeln("  area_ratio= ", ar);
-        writeln("  state7= ", state7);
-        writeln("  V7= ", V7);
-        writeln("  mflux7= ", mflux7);
-        writeln("  pitot7= ", state7_pitot.p);
-        writeln("End of stage 1: shock-tube and frozen/eq nozzle analysis.");
+        writefln("  area_ratio  %g", ar);
+        writefln("  V7          %g km/s", V7/1000.0);
+        write_cea_state(state7);
+        writefln("  mflux7      %g", mflux7);
+        writefln("  pitot7      %g kPa", state7_pitot.p/1000.0);
+        if (verbosityLevel >= 3) { writeln("  state7= ", state7); }
+        writeln("End of part A: shock-tube and frozen/eq nozzle analysis.");
     }
     //
     // -------------------------------------
@@ -274,6 +294,17 @@ Options:
     auto reactor = init_thermochemical_reactor(gm2, reactions_filename, reactions_filename2);
     double[10] reactor_params; // An array that passes extra parameters to the reactor.
     //
+    void write_tp_state(GasState gs, string fill="  ")
+    {
+        writefln("%spressure    %g kPa", fill, gs.p/1000.0);
+        writefln("%sdensity     %g kg/m^3", fill, gs.rho);
+        writefln("%stemperature %g K", fill, gs.T);
+        foreach (name; species) {
+            string label = format("massf[%s]", name);
+            writefln("%s%-12s%g", fill, label, gs.massf[gm_tp.species_index(name)]);
+        }
+    }
+    //
     if (state6.ceaSavedData is null) {
         exitFlag = 3;
         return exitFlag;
@@ -299,15 +330,24 @@ Options:
     }
     gm_tp.update_thermo_from_pT(gas0);
     gm_tp.update_sound_speed(gas0);
-    writeln("gas0=", gas0);
+    if (verbosityLevel >= 1) {
+        writeln("Begin part B: supersonic expansion with finite-rate chemistry.");
+    }
     //
     // Make sure that we start the supersonic expansion with a velocity
     // that is slightly higher than the speed of sound for the thermally-perfect gas.
     // This speed seems slightly higher than for the equilibrium gas.
     double v = 1.001 * gas0.a;
-    writeln("# v=", v, " a=", gas0.a, " (v-V6)/V6=", (v-V6)/V6);
+    if (verbosityLevel >= 1) {
+        writeln("Throat condition:");
+        writefln("  velocity    %g km/s", v/1000.0);
+        writefln("  sound-speed %g km/s", gas0.a/1000.0);
+        writefln("  (v-V6)/V6   %g", (v-V6)/V6);
+        write_tp_state(gas0);
+        if (verbosityLevel >= 3) { writeln("gas0=", gas0); }
+    }
     //
-    string sample_header = "# x(m) A(m**2) rho(kg/m**3) p(Pa) T(degK) e(J/kg) v(m/s)";
+    string sample_header = "x(m) A(m**2) rho(kg/m**3) p(Pa) T(degK) e(J/kg) v(m/s)";
     foreach (name; species) { sample_header ~= format(" massf_%s", name); }
     sample_header ~= " dt_suggest(s) mdot(kg/s)";
     //
@@ -348,7 +388,7 @@ Options:
     if (verbosityLevel >= 2) {
         writeln(sample_header);
         writeln(sample_data(xi[0], area, v, gas0, dt_suggest));
-        writeln("# Start reactions...");
+        writeln("Start reactions...");
     }
     double t = 0;  // time is in seconds
     double x_end = xi[$-1];
@@ -368,7 +408,7 @@ Options:
         double du_chem = gas1.u - u;
         double dp_chem = gas1.p - p;
         if (verbosityLevel >= 3) {
-            writeln("# du_chem=", du_chem, " dp_chem=", dp_chem);
+            writeln("du_chem=", du_chem, " dp_chem=", dp_chem);
         }
         //
         // Update the independent variables for the end point of this step.
@@ -385,8 +425,8 @@ Options:
         double dfdr = df[0]; double dfdu = df[1];
         double A = area+0.5*darea;
         if (verbosityLevel >= 3) {
-            writeln("# dfdr=", dfdr, " dfdu=", dfdu);
-            writeln("# x=", x, " v=", v, " diam=", d, " A=", A, " dA=", darea);
+            writeln("dfdr=", dfdr, " dfdu=", dfdu);
+            writeln("x=", x, " v=", v, " diam=", d, " A=", A, " dA=", darea);
         }
         // Linear solve to get the accommodation increments.
         //   [v*A,      rho*A,          0.0, 0.0    ]   [drho  ]   [-rho*v*dA       ]
@@ -404,8 +444,8 @@ Options:
         double du_gda = -(A*(du_chem*rho*rho*v*v - du_chem*dfdr*rho*rho - dp_chem*p)
                           + darea*p*rho*v*v) / denom;
         if (verbosityLevel >= 3) {
-            writeln("# drho=", drho, " dv=", dv, " dp_gda=", dp_gda, " du_gda=", du_gda);
-            writefln("# residuals= %g %g %g",
+            writeln("drho=", drho, " dv=", dv, " dp_gda=", dp_gda, " du_gda=", du_gda);
+            writefln("residuals= %g %g %g",
                      v*area*drho + rho*area*dv + rho*v*darea,
                      rho*v*dv + (dp_gda + dp_chem),
                      v*etot*drho*area + (rho*etot+p)*area*dv + rho*v*area*(du_gda + du_chem) + v*(rho*etot+p)*darea,
@@ -419,7 +459,7 @@ Options:
         gm_tp.update_thermo_from_rhou(gas1);
         gm_tp.update_sound_speed(gas1);
         if (verbosityLevel >= 3) {
-            writeln("# At new point x1=", x1, " v1=", v1,
+            writeln("At new point x1=", x1, " v1=", v1,
                     ": gas1.p=", gas1.p, " p1_check=", p1_check,
                     " rel_error=", fabs(gas1.p-p1_check)/p1_check);
         }
@@ -433,16 +473,13 @@ Options:
         t_inc = fmin(t_inc*1.001, t_inc_max);
     } // end while
 
-    writeln("# Exit condition:");
-    writefln("#   x %g (m), area-ratio %g", x, area/throat_area);
-    writefln("#   temperature %g (K)", gas0.T);
-    writefln("#   pressure %g (kPa)", gas0.p/1000);
-    writefln("#   density %g (kg/m^3)", gas0.rho);
-    writefln("#   velocity %g (m/s)", v);
-    writefln("#   Mach %g", v/gas0.a);
-    writefln("#   rho*v^2 %g (kPa)", gas0.rho*v*v/1000);
-    foreach (name; species) {
-        writefln("#   massf[%s] %g", name, gas0.massf[gm_tp.species_index(name)]);
-    }
+    writeln("Exit condition:");
+    writefln("  x           %g m", x);
+    writefln("  area-ratio  %g", area/throat_area);
+    writefln("  velocity    %g km/s", v/1000.0);
+    writefln("  Mach        %g", v/gas0.a);
+    writefln("  rho*v^2     %g kPa", gas0.rho*v*v/1000);
+    write_tp_state(gas0);
+    if (verbosityLevel >= 1) { writeln("End part B."); }
     return exitFlag;
 } // end main
