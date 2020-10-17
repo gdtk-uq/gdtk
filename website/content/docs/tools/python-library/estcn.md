@@ -28,7 +28,7 @@ move to the `gas` source directory and use the make utility.
     make install
 
 This will also install files associated with the gas models.
-Note that you should have your Linux envoronment set up as described on the
+Note that you should have your Linux environment set up as described on the
 [Quick Start Guide]({{< relref "quick-start" >}}).
 
 

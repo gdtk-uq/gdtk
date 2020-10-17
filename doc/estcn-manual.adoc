@@ -22,7 +22,7 @@ This is part of a larger gas-dynamics toolkit and
 general getting started notes can be found at
 http://cfcfd.mechmining.uq.edu.au/docs/getting-started
 There, you will see how to get a copy of the source code,
-and a list of what other software you will need to build and install the tool kit,
+a list of what other software you will need to build and install the tool kit,
 and a collection of environment variables that need to be set.
 
 To install the `estcn` program, move to the gas source directory
