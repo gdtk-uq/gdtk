@@ -80,4 +80,5 @@ clean:
 		geometry-reference-manual.html \
 		nm-reference-manual.html \
 		estcn-manual.html \
+		nenzfr2-manual.html \
 		build-lut-manual.html
