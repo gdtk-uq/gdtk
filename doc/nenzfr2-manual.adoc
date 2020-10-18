@@ -1,6 +1,6 @@
 = NENZFR2 Manual for Users
 Peter A. Jacobs; Rowan J. Gollan
-2020-10-17
+2020-10-19
 :toc: right
 :stylesheet: readthedocs.css
 :sectnums:
@@ -36,11 +36,7 @@ and use the `make` utility.
     cd dgd/src/nenzfr2
     make install
 
-You will also need to install files associated with the gas models.
-
-    cd dgd/src/gas
-    make install
-
+This will also install files associated with the gas models.
 Note that you will need a compiled version of the NASA Lewis `cea2` program
 installed in a location that the gas models module can find it.
 
