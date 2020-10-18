@@ -82,6 +82,9 @@ Options:
     }
     // Extract our job parameters from the YAML input file.
     auto config = dyaml.Loader.fromFile(inputFile).load();
+    if (verbosityLevel >= 1) {
+        writeln("  "~config["title"].as!string);
+    }
     //
     // The first gas model is for the shock-tube analysis,
     // assuming frozen reactions or full equilibrium.
@@ -123,7 +126,6 @@ Options:
     double[] di; foreach(string val; config["di"]) { di ~= to!double(val); }
     if (verbosityLevel >= 2) {
         writeln("Input data.");
-        writeln("  "~config["title"].as!string);
         writeln("  gas-model-1= ", gm1_filename);
         writeln("  gas-model-2= ", gm2_filename);
         writeln("  reactions-file= ", reactions_filename);

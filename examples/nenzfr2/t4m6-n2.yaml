@@ -3,7 +3,7 @@
 # Data for T4 shot 10565 obtained from Wilson Chan's PhD thesis, Table D.1, page 158.
 # PJ 2020-10-19
 #
-title: "T4 shot 10559 with Mach 6 nozzle."    # Any string will do.
+title: "T4 shot 10565 with Mach 6 nozzle."    # Any string will do.
 
 species: ['N2', 'N']         # List
 molef: {'N2': 1.0}           # Map of nonzero values will suffice.
