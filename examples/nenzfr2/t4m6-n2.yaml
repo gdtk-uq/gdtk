@@ -1,0 +1,34 @@
+# Sample input file for nenzfr2 is a YAML 1.1 file.
+# t4m6-n2.yaml
+# Data for T4 shot 10565 obtained from Wilson Chan's PhD thesis, Table D.1, page 158.
+# PJ 2020-10-19
+#
+title: "T4 shot 10559 with Mach 6 nozzle."    # Any string will do.
+
+species: ['N2', 'N']         # List
+molef: {'N2': 1.0}           # Map of nonzero values will suffice.
+# Gas model and reactions files need to be consistent with the species above.
+# Gas model 1 is usually a CEAGas model file.
+# Gas model 2 is a thermally-perfect gas model for the finite-rate chemistry.
+gas-model-1: cea-n2-gas-model.lua
+gas-model-2: nitrogen-2sp-1T.lua
+reactions: nitrogen-2sp-1T-reactions.lua
+
+# Observed parameter values for shock-tube operation.
+T1: 300         # K
+p1: 150.0e3     # Pa
+Vs: 2253.0      # m/s
+pe: 35.11e6     # Pa
+ar: 127.0       # Mach 6 nozzle
+
+# Define the expanding part of the nozzle as a schedule of area ratios with position.
+xi: [0.0, 0.150, 0.280, 0.468, 0.671,  0.984]  # axial-distance metres
+di: [1.0,   4.0, 6.232,  8.44,  9.92, 11.268]  # diameter (may be normalized)
+
+# Optionally, we can adjust the stepping parameters for the supersonic expansion.
+# x_end: 1.0
+# t_final: 1.0e-3
+# t_inc: 1.0e-10
+# t_inc_factor: 1.0001
+# t_inc_max: 1.0e-7
+

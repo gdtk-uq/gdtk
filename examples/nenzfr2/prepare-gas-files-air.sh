@@ -1,5 +1,5 @@
 #! /bin/bash
-# prepare-gas-files.sh
+# prepare-gas-files-air.sh
 cp ${DGD_REPO}/src/gas/sample-data/cea-air5species-gas-model.lua .
 cp ${DGD_REPO}/examples/kinetics/air-chemistry-1T/air-5sp-1T.inp .
 cp ${DGD_REPO}/examples/kinetics/air-chemistry-1T/GuptaEtAl-air-reactions.lua .
