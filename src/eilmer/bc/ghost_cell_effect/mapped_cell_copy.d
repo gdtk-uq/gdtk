@@ -647,12 +647,13 @@ public:
         size_t nmodes = myConfig.n_modes;
 
         size_t nitems = 16;
-        if (myConfig.dimensions == 3) { nitems += 5 + nspecies; }  // for each conserved quantity in dUk (3D)
-        else { nitems += 4 + nspecies; }  // for each conserved quantity in dUk (2D)
+        // TODO: create a separate exchange routine for dUk values used in the LU-SGS solver [KD 19-10-2020]
+        if (myConfig.dimensions == 3) { nitems += 5 + nspecies; }  // for each conserved quantity in dUk array (3D) 
+        else { nitems += 4 + nspecies; }  // for each conserved quantity in dUk array (2D)
         nitems += nmodes*3; // for each of T, e and k_t
         nitems += nspecies;
         version(MHD) { nitems += 5; }
-        version(turbulence) { nitems += myConfig.turb_model.nturb; }
+        version(turbulence) { nitems += myConfig.turb_model.nturb*2; } // *2 to account for the dUk array entries
 
         version(complex_numbers) {
             nitems *= 2;
