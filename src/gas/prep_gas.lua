@@ -235,7 +235,7 @@ function writeThermPerfGas(f, species, db, optsTable)
    f:write("}\n\n")
    f:write("energyModes = {'equilibrium'}\n")
    if (optsTable and optsTable.gas_giant_trans_props) then
-      f:write("use_gas_giants_transport_properties = true\n")
+      f:write("use_gas_giant_transport_properties = true\n")
    end
    f:write("db = {}\n")
    for _,sp in ipairs(species) do
