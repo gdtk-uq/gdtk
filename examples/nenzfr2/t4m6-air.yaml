@@ -21,7 +21,7 @@ Vs: 2434.0      # m/s
 pe: 34.07e6     # Pa
 ar: 127.0       # Mach 6 nozzle
 
-# Define the expanding part of the nozzle as a schedule of area ratios with position.
+# Define the expanding part of the nozzle as a schedule of diameters with position.
 xi: [0.0, 0.150, 0.280, 0.468, 0.671,  0.984]  # axial-distance metres
 di: [1.0,   4.0, 6.232,  8.44,  9.92, 11.268]  # diameter (may be normalized)
 

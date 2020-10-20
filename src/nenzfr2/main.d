@@ -121,6 +121,12 @@ Options:
     // Nozzle-exit area ratio for terminating expansion.
     double ar = 1.0;
     try { ar = to!double(config["ar"].as!string); } catch (YAMLException e) {}
+    // Alternatively, we might stop on pPitot/pSupply becoming less than pp_ps.
+    double pp_ps = 0.0;
+    try { pp_ps = to!double(config["pp_ps"].as!string); } catch (YAMLException e) {}
+    // pPitot = C * rho*V^2
+    double C = 0.92;
+    try { C = to!double(config["C"].as!string); } catch (YAMLException e) {}
     // Nozzle x,diameter schedule.
     double[] xi; foreach(string val; config["xi"]) { xi ~= to!double(val); }
     double[] di; foreach(string val; config["di"]) { di ~= to!double(val); }
@@ -137,6 +143,8 @@ Options:
         writeln("  Vs= ", Vs);
         writeln("  pe= ", pe);
         writeln("  ar= ", ar);
+        writeln("  pp_ps= ", pp_ps);
+        writeln("  C= ", C);
         writeln("  xi= ", xi);
         writeln("  di= ", di);
     }
@@ -377,6 +385,8 @@ Options:
     double area_at_throat = area; // for later normalizing the exit area
     double massflux_at_throat = area*gas0.rho*v;
     double H_at_throat = gm_tp.enthalpy(gas0) + 0.5*v*v;
+    // We may use the Pitot pressure as a stopping criteria.
+    double p_pitot = C * gas0.rho*v*v;
     //
     double dt_suggest = 1.0e-12;  // suggested starting time-step for chemistry
     double dt_therm = dt_suggest;
@@ -405,7 +415,10 @@ Options:
         writefln("  t_inc_max= %g", t_inc_max);
     }
     //
-    while ((x < x_end) && (area < ar) && (t < t_final)) {
+    while ((x < x_end) &&
+           (area < ar) &&
+           (t < t_final) &&
+           (p_pitot > pp_ps*state5s.p)) {
         // At the start of the step...
         double rho = gas0.rho; double T = gas0.T; double p = gas0.p; double u = gas0.u;
         //
@@ -480,6 +493,7 @@ Options:
         // House-keeping for the next step.
         v = v1; t = t1; x = x1; d =  d1; area = area1;
         gas0.copy_values_from(gas1);
+        p_pitot = C * gas0.rho*v*v;
         t_inc = fmin(t_inc*t_inc_factor, t_inc_max);
     } // end while
     //
@@ -488,12 +502,15 @@ Options:
     writefln("  area-ratio  %g", area/area_at_throat);
     writefln("  velocity    %g km/s", v/1000.0);
     writefln("  Mach        %g", v/gas0.a);
-    writefln("  rho*v^2     %g kPa", gas0.rho*v*v/1000);
+    writefln("  p_pitot     %g kPa", p_pitot/1000);
     write_tp_state(gas0);
     double massflux = area * gas0.rho * v;
+    //
+    writeln("Expansion error-indicators:");
     writefln("  relerr-mass %g", fabs(massflux - massflux_at_throat)/massflux_at_throat);
     double H = gm_tp.enthalpy(gas0) + 0.5*v*v;
     writefln("  relerr-H    %g", fabs(H - H_at_throat)/H_at_throat);
+    //
     if (verbosityLevel >= 1) { writeln("End."); }
     return exitFlag;
 } // end main
