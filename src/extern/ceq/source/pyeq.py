@@ -17,10 +17,12 @@ References:
 from string import ascii_letters
 from numpy import array, zeros, log
 from ctypes import cdll,c_double,POINTER,c_int,byref
+from clib import *
 
 letters = set(ascii_letters)
 DBPATH='../thermo.inp'
 LIBPATH='./libceq.so'
+HEADERFILE='./ceq.h'
 
 class EqCalculator(object):
     """ Python interface to low level ceq routines """
@@ -132,13 +134,9 @@ class EqCalculator(object):
         M = array([Mi])
         Td = c_double(T)
 
-        c_double_p = POINTER(c_double)
-        Xp    = X.ctypes.data_as(c_double_p)
-        Mp    = M.ctypes.data_as(c_double_p)
-        lewisp= lspa.ctypes.data_as(c_double_p)
-        cp = self.lib.get_cp(Td, Xp, 1, lewisp, Mp)
-        h  = self.lib.get_h(Td, Xp, 1, lewisp, Mp)
-        s0 = self.lib.get_s0(Td, Xp, 1, lewisp, Mp)
+        cp = self.lib.get_cp(T, X, 1, lspa, M)
+        h  = self.lib.get_h(T, X, 1, lspa, M)
+        s0 = self.lib.get_s0(T, X, 1, lspa, M)
 
         a2 = cp*Mi/Ru
         b1 = h*Mi/Ru - a2*T
@@ -150,35 +148,15 @@ class EqCalculator(object):
     @staticmethod
     def load_ceq_library(LIBPATH=LIBPATH):
         """ Load the c library and set return types """
-        lib = cdll.LoadLibrary(LIBPATH)
-        lib.compute_Cp0_R.restype = c_double
-        lib.pt.restype = c_int
-        lib.rhou.restype = c_int
-        lib.get_u.restype = c_double
-        lib.get_h.restype = c_double
-        lib.get_cp.restype = c_double
-        lib.get_s0.restype = c_double
-        lib.get_s.restype = c_double
-        lib.batch_pt.restype = c_int
-        lib.batch_rhou.restype = c_int
-        lib.batch_u.restype = c_int
+        lib = CLib(LIBPATH,[HEADERFILE])
         return lib
 
     def pt(self, p, T, Xs0, verbose=0):
         """ Call c library to compute equilibrium concentrations at fixed p, T """
         if Xs0.size!=self.nsp: raise Exception('Mismatched array size {}!={}'.format(Xs0.size, self.nsp))
         Xs1 = zeros(Xs0.shape)
-        pp = c_double(p)
-        Tp = c_double(T)
 
-        c_double_p = POINTER(c_double)
-        Xs0p  = Xs0.ctypes.data_as(c_double_p)
-        Mp    = self.M.ctypes.data_as(c_double_p)
-        lewisp= self.lewis.ctypes.data_as(c_double_p)
-        ap    = self.a.ctypes.data_as(c_double_p)
-        Xs1p  = Xs1.ctypes.data_as(c_double_p)
-
-        recode = self.lib.pt(pp, Tp, Xs0p, self.nsp, self.nel, lewisp, Mp, ap, Xs1p, verbose)
+        recode = self.lib.pt(p, T, Xs0, self.nsp, self.nel, self.lewis, self.M, self.a, Xs1, verbose)
         if recode!=0: raise Exception("Equilibrium Calc Failed.")
         return Xs1
 
@@ -186,105 +164,48 @@ class EqCalculator(object):
         """ Call c library to compute equilibrium concentrations at fixed rho, u """
         if Xs0.size!=self.nsp: raise Exception('Mismatched array size {}!={}'.format(Xs0.size, self.nsp))
         Xs1 = zeros(Xs0.shape)
-        rhop = c_double(rho)
-        up = c_double(u)
-        Tp = c_double()
-        Tref = byref(Tp)
+        Tref = zeros(1)
 
-        c_double_p = POINTER(c_double)
-        Xs0p  = Xs0.ctypes.data_as(c_double_p)
-        Mp    = self.M.ctypes.data_as(c_double_p)
-        lewisp= self.lewis.ctypes.data_as(c_double_p)
-        ap    = self.a.ctypes.data_as(c_double_p)
-        Xs1p  = Xs1.ctypes.data_as(c_double_p)
-
-        recode = self.lib.rhou(rhop, up, Xs0p, self.nsp, self.nel, lewisp, Mp, ap, Xs1p, Tref, verbose)
+        recode = self.lib.rhou(rho, u, Xs0, self.nsp, self.nel, self.lewis, self.M, self.a, Xs1, Tref, verbose)
         if recode!=0: raise Exception("Equilibrium Calc Failed.")
-        T = Tp.value
+        T = Tref[0]
         return Xs1, T
 
     def ps(self, pt, st, Xs0, verbose=0):
         """ Call c library to compute equilibrium concentrations at fixed p, s """
         if Xs0.size!=self.nsp: raise Exception('Mismatched array size {}!={}'.format(Xs0.size, self.nsp))
         Xs1 = zeros(Xs0.shape)
-        pp = c_double(pt)
-        sp = c_double(st)
-        Tp = c_double()
-        Tref = byref(Tp)
+        Tref = zeros(1)
 
-        c_double_p = POINTER(c_double)
-        Xs0p  = Xs0.ctypes.data_as(c_double_p)
-        Mp    = self.M.ctypes.data_as(c_double_p)
-        lewisp= self.lewis.ctypes.data_as(c_double_p)
-        ap    = self.a.ctypes.data_as(c_double_p)
-        Xs1p  = Xs1.ctypes.data_as(c_double_p)
-
-        recode = self.lib.ps(pp, sp, Xs0p, self.nsp, self.nel, lewisp, Mp, ap, Xs1p, Tref, verbose)
+        recode = self.lib.ps(pt, st, Xs0, self.nsp, self.nel, self.lewis, self.M, self.a, Xs1, Tref, verbose)
         if recode!=0: raise Exception("Equilibrium Calc Failed.")
-        T = Tp.value
+        T = Tref[0]
         return Xs1, T
 
     def get_u(self, X, T):
         """ Call c library to compute internal energy at fixed composition and temperature """
-        Td = c_double(T)
-
-        c_double_p = POINTER(c_double)
-        Xp    = X.ctypes.data_as(c_double_p)
-        Mp    = self.M.ctypes.data_as(c_double_p)
-        lewisp= self.lewis.ctypes.data_as(c_double_p)
-
-        u = self.lib.get_u(Td, Xp, self.nsp, lewisp, Mp)
+        u = self.lib.get_u(T, X, self.nsp, self.lewis, self.M)
         return u
 
     def get_h(self, X, T):
         """ Call c library to compute internal energy at fixed composition and temperature """
-        Td = c_double(T)
-
-        c_double_p = POINTER(c_double)
-        Xp    = X.ctypes.data_as(c_double_p)
-        Mp    = self.M.ctypes.data_as(c_double_p)
-        lewisp= self.lewis.ctypes.data_as(c_double_p)
-
-        h = self.lib.get_h(Td, Xp, self.nsp, lewisp, Mp)
+        h = self.lib.get_h(T, X, self.nsp, self.lewis, self.M)
         return h
 
     def get_cp(self, X, T):
         """ Call c library to compute internal energy at fixed composition and temperature """
-        Td = c_double(T)
-
-        c_double_p = POINTER(c_double)
-        Xp    = X.ctypes.data_as(c_double_p)
-        Mp    = self.M.ctypes.data_as(c_double_p)
-        lewisp= self.lewis.ctypes.data_as(c_double_p)
-
-        cp = self.lib.get_cp(Td, Xp, self.nsp, lewisp, Mp)
+        cp = self.lib.get_cp(T, X, self.nsp, self.lewis, self.M)
         return cp
 
     def get_s0(self, X, T):
         """ Call c library to compute specific entropy at standard state and arbitrary temperature """
-        Td = c_double(T)
-
-        c_double_p = POINTER(c_double)
-        Xp    = X.ctypes.data_as(c_double_p)
-        Mp    = self.M.ctypes.data_as(c_double_p)
-        lewisp= self.lewis.ctypes.data_as(c_double_p)
-
-        s0 = self.lib.get_s0(Td, Xp, self.nsp, lewisp, Mp)
+        s0 = self.lib.get_s0(T, X, self.nsp, self.lewis, self.M)
         return s0
 
     def get_s(self, X, T, p):
         """ Call c library to compute internal entropy at an arbitrary pressure and temperature """
-        Td = c_double(T)
-        pd = c_double(p)
-
-        c_double_p = POINTER(c_double)
-        Xp    = X.ctypes.data_as(c_double_p)
-        Mp    = self.M.ctypes.data_as(c_double_p)
-        lewisp= self.lewis.ctypes.data_as(c_double_p)
-
-        s = self.lib.get_s(Td, pd, Xp, self.nsp, lewisp, Mp)
+        s = self.lib.get_s(T, p, X, self.nsp, self.lewis, self.M)
         return s
-
 
     def batch_pt(self, p, T, Xs0, verbose=0):
         """ Call c library to compute equilibrium concentrations at fixed p, T """
@@ -296,16 +217,7 @@ class EqCalculator(object):
 
         Xs1 = zeros(Xs0.shape)
 
-        c_double_p = POINTER(c_double)
-        pp    = p.ctypes.data_as(c_double_p)
-        Tp    = T.ctypes.data_as(c_double_p)
-        Xs0p  = Xs0.ctypes.data_as(c_double_p)
-        Mp    = self.M.ctypes.data_as(c_double_p)
-        lewisp= self.lewis.ctypes.data_as(c_double_p)
-        ap    = self.a.ctypes.data_as(c_double_p)
-        Xs1p  = Xs1.ctypes.data_as(c_double_p)
-
-        recode = self.lib.batch_pt(N, pp, Tp, Xs0p, self.nsp, self.nel, lewisp, Mp, ap, Xs1p, verbose)
+        recode = self.lib.batch_pt(N, p, T, Xs0, self.nsp, self.nel, self.lewis, self.M, self.a, Xs1, verbose)
         if recode!=0: raise Exception("Equilibrium Calc Failed.")
         return Xs1
 
@@ -320,17 +232,7 @@ class EqCalculator(object):
         Xs1 = zeros(Xs0.shape)
         T = zeros(rho.shape)
 
-        c_double_p = POINTER(c_double)
-        rhop  = rho.ctypes.data_as(c_double_p)
-        up    = u.ctypes.data_as(c_double_p)
-        Tp    = T.ctypes.data_as(c_double_p)
-        Xs0p  = Xs0.ctypes.data_as(c_double_p)
-        Mp    = self.M.ctypes.data_as(c_double_p)
-        lewisp= self.lewis.ctypes.data_as(c_double_p)
-        ap    = self.a.ctypes.data_as(c_double_p)
-        Xs1p  = Xs1.ctypes.data_as(c_double_p)
-
-        recode = self.lib.batch_rhou(N,rhop,up,Xs0p,self.nsp,self.nel,lewisp,Mp,ap,Xs1p,Tp,verbose)
+        recode = self.lib.batch_rhou(N,rho,u,Xs0,self.nsp,self.nel,self.lewis,self.M,self.a,Xs1,T,verbose)
         if recode!=0: raise Exception("Equilibrium Calc Failed.")
         return Xs1, T
 
@@ -343,14 +245,7 @@ class EqCalculator(object):
 
         u = zeros(T.shape)
 
-        c_double_p = POINTER(c_double)
-        Xp    = X.ctypes.data_as(c_double_p)
-        Tp    = T.ctypes.data_as(c_double_p)
-        up    = u.ctypes.data_as(c_double_p)
-        Mp    = self.M.ctypes.data_as(c_double_p)
-        lewisp= self.lewis.ctypes.data_as(c_double_p)
-
-        recode = self.lib.batch_u(N, Tp, Xp, self.nsp, lewisp, Mp, up)
+        recode = self.lib.batch_u(N, T, X, self.nsp, self.lewis, self.M, u)
         if recode!=0: raise Exception("u calc failed.")
         return u
 

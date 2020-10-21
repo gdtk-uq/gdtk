@@ -35,14 +35,6 @@ static void Assemble_Matrices(double* a,double* bi0,double* G0_RTs,double p,doub
 
     // Equation 2.24: k-> equation index, i-> variable index
     for (k=0; k<nel; k++){
-
-        if (bi0[k]<1e-16) { // Check for missing missing element equations and Lock
-            for (i=0; i<neq; i++) A[k*neq+i] = 0.0;
-            A[k*neq + k+1] = 1.0;   
-            B[k] = 0.0;
-            continue;
-        }
-
         bk = 0.0; for (s=0; s<nsp; s++) bk += a[k*nsp + s]*ns[s];
         A[k*neq + 0] = bk;
 
@@ -53,6 +45,7 @@ static void Assemble_Matrices(double* a,double* bi0,double* G0_RTs,double p,doub
             }
             A[k*neq + i+1] = akjaijnj;
         }
+
         akjnjmuj = 0.0;
         for (j=0; j<nsp; j++){
             if (ns[j]==0.0) continue;
@@ -61,6 +54,7 @@ static void Assemble_Matrices(double* a,double* bi0,double* G0_RTs,double p,doub
 
         }
         B[k] = bi0[k] - bk + akjnjmuj;
+        check_ill_posed_matrix_row(A, B, neq, k, 1);
     }
 
     // Equation 2.26 - > (only the pii entries, we're highjacking k here to go across the last row)
@@ -223,7 +217,7 @@ int solve_pt(double p,double T,double* X0,int nsp,int nel,double* lewis,double* 
 
     errorcode=0;
     neq= nel+1;
-    errorrms = 1e99;
+    errorrms=1e99;
     A     = (double*) malloc(sizeof(double)*neq*neq); // Iteration Jacobian
     B     = (double*) malloc(sizeof(double)*neq);     // Iteration RHS
     S     = (double*) malloc(sizeof(double)*neq);     // Iteration unknown vector

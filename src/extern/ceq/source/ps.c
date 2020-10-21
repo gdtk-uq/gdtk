@@ -85,14 +85,6 @@ static void Assemble_Matrices(double* a,double* bi0, double pt,double st,double 
     // FIXME: Consider having one function for each of these rather than a single huge one
     // Equation 2.24: k-> equation index, i-> variable index
     for (k=0; k<nel; k++){
-
-        if (bi0[k]<1e-16) { // Check for missing missing element equations and Lock
-            for (i=0; i<neq; i++) A[k*neq+i] = 0.0;
-            A[k*neq + k+2] = 1.0;  
-            B[k] = 0.0;
-            continue;
-        }
-
         bk = 0.0; for (s=0; s<nsp; s++) bk += a[k*nsp + s]*ns[s];
         A[k*neq + 0] = bk;       // dlnn entry
 
@@ -113,6 +105,7 @@ static void Assemble_Matrices(double* a,double* bi0, double pt,double st,double 
             akjnjmuj += a[k*nsp+j]*ns[j]*mu_RTs[j];
         }
         B[k] = bi0[k] - bk + akjnjmuj; // rhs
+        check_ill_posed_matrix_row(A, B, neq, k, 2);
     }
 
     // Equation 2.26 - > (only the pii entries)
@@ -348,7 +341,7 @@ int solve_ps(double pt,double st,double* X0,int nsp,int nel,double* lewis,double
 
     errorcode=0;
     neq= nel+2;
-    errorrms = 1e99;
+    errorrms=1e99;
     A     = (double*) malloc(sizeof(double)*neq*neq); // Iteration Jacobian
     B     = (double*) malloc(sizeof(double)*neq);     // Iteration RHS
     S     = (double*) malloc(sizeof(double)*neq);     // Iteration unknown vector

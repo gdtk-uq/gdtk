@@ -33,10 +33,12 @@ install:
 	cp libceq.so $(INSTALL_DIR)
 	sed -e "s+DBPATH='../thermo.inp'+DBPATH='$(INSTALL_DIR)/thermo.inp'+" \
         -e "s+LIBPATH='./libceq.so'+LIBPATH='$(INSTALL_DIR)/libceq.so'+" \
+	    -e "s+HEADERFILE='./ceq.h'+HEADERFILE='$(INSTALL_DIR)/ceq.h'+" \
         pyeq.py > $(INSTALL_DIR)/pyeq.py
+	cp 'clib.py' $(INSTALL_DIR)
 	cp '../thermo.inp' $(INSTALL_DIR)
-	rm -rf $(INSTALL_DIR)/tests
-	cp -r ../tests $(INSTALL_DIR)
+	cp 'ceq.h' $(INSTALL_DIR)
+	cp -r ../tests $(INSTALL_DIR)/
 
 moduletests: thermo.c thermo.h thermo.o linalg.c linalg.h linalg.o
 	$(CC) thermo.c -D TEST -lm -o ../tests/testthermo
