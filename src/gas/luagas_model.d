@@ -621,6 +621,32 @@ extern(C) int conc2massf(lua_State* L)
     return 1;
 }
 
+extern(C) int binary_diffusion_coefficients(lua_State* L)
+{
+    auto gm = checkGasModel(L, 1);
+    size_t nsp = gm.n_species;
+    number[][] D;
+    D.length = nsp;
+    foreach(ref Di; D) Di.length=nsp;
+
+    auto Q = new GasState(gm);
+    getGasStateFromTable(L, gm, 2, Q);
+    gm.binary_diffusion_coefficients(Q, D);
+
+    // Return the Diffusion_coefficients to the caller
+    size_t idx = 1;
+    lua_newtable(L);
+    foreach (i, Di; D) {
+        lua_newtable(L);
+        foreach (j, Dij; Di){
+            lua_pushnumber(L, Dij);
+            lua_rawseti(L, -2, to!int(j+1));
+        }
+        lua_rawseti(L, -2, to!int(i+1));
+    }
+    return 1;
+}
+
 void getSpeciesValsFromTable(lua_State* L, GasModel gm, int idx,
                              ref double[] vals, string tabName)
 {
@@ -1227,6 +1253,8 @@ void registerGasModel(lua_State* L, int tblIdx)
     lua_setfield(L, -2, "massf2conc");
     lua_pushcfunction(L, &conc2massf);
     lua_setfield(L, -2, "conc2massf");
+    lua_pushcfunction(L, &binary_diffusion_coefficients);
+    lua_setfield(L, -2, "binary_diffusion_coefficients");
 
     // Make class visible
     lua_setfield(L, tblIdx, GasModelMT.toStringz);
