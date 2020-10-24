@@ -230,7 +230,7 @@ public:
             Q.u = Q_ideal.u;
         }
     }
-    
+
     override void update_thermo_from_ps(GasState Q, number s)
     {
         bool with_lut = Q.massf[0] > massf_tiny;
@@ -284,7 +284,7 @@ public:
     override void update_sound_speed(GasState Q)
     {
         if (Q.T <= 0.0) {
-            string msg = "Temperature was negative for update_sound_speed."; 
+            string msg = "Temperature was negative for update_sound_speed.";
             throw new GasModelException(msg);
         }
         bool with_lut = Q.massf[0] > massf_tiny;
@@ -497,6 +497,8 @@ version(uniform_lut_plus_ideal_test) {
         gd.T = 300.0;
         gd.massf[0] = 0.5;
         gd.massf[1] = 0.5;
+        gm.update_thermo_from_pT(gd);
+        gm.update_sound_speed(gd);
         assert(approxEqualNumbers(gm.R(gd), to!number(287.086), 1.0e-4), failedUnitTest());
         assert(gm.n_modes == 0, failedUnitTest());
         assert(gm.n_species == 2, failedUnitTest());
@@ -504,9 +506,6 @@ version(uniform_lut_plus_ideal_test) {
         assert(approxEqualNumbers(gd.T, to!number(300.0), 1.0e-6), failedUnitTest());
         assert(approxEqualNumbers(gd.massf[0], to!number(0.5), 1.0e-6), failedUnitTest());
         assert(approxEqualNumbers(gd.massf[1], to!number(0.5), 1.0e-6), failedUnitTest());
-
-        gm.update_thermo_from_pT(gd);
-        gm.update_sound_speed(gd);
         writeln("rho=", gd.rho);
         assert(approxEqualNumbers(gd.rho, to!number(1.16113), 1.0e-4), failedUnitTest());
         writeln("u=", gd.u);
@@ -515,9 +514,9 @@ version(uniform_lut_plus_ideal_test) {
         assert(approxEqualNumbers(gd.a, to!number(346.625), 1.0e-4), failedUnitTest());
         gm.update_trans_coeffs(gd);
         writeln("mu=", gd.mu);
-        assert(approxEqualNumbers(gd.mu, to!number(2.22104e-05), 1.0e-6), failedUnitTest());
+        assert(approxEqualNumbers(gd.mu, to!number(1.97489e-05), 1.0e-6), failedUnitTest());
         writeln("k=", gd.k);
-        assert(approxEqualNumbers(gd.k, to!number(0.0316054), 1.0e-6), failedUnitTest());
+        assert(approxEqualNumbers(gd.k, to!number(0.028169), 1.0e-6), failedUnitTest());
 
         gm.update_thermo_from_rhou(gd);
         writeln("same condition: p=", gd.p);

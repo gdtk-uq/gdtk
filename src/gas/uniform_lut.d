@@ -293,15 +293,28 @@ public:
             }
             throw new Exception(msg);
         }
-        mu_eff = (1.0 - efrac) * (1.0 - lrfrac) * _mu_hat[ie][ir] +
-            efrac         * (1.0 - lrfrac) * _mu_hat[ie+1][ir] +
-            efrac         * lrfrac         * _mu_hat[ie+1][ir+1] +
-            (1.0 - efrac) * lrfrac         * _mu_hat[ie][ir+1];
-
-        k_eff = (1.0 - efrac) * (1.0 - lrfrac) * _k_hat[ie][ir] +
-            efrac         * (1.0 - lrfrac) * _k_hat[ie+1][ir] +
-            efrac         * lrfrac         * _k_hat[ie+1][ir+1] +
-            (1.0 - efrac) * lrfrac         * _k_hat[ie][ir+1];
+        if (efrac >= 0.0 && efrac <= 1.0) {
+            // Use area-weighted interpolation.
+            mu_eff = (1.0 - efrac) * (1.0 - lrfrac) * _mu_hat[ie][ir] +
+                efrac         * (1.0 - lrfrac) * _mu_hat[ie+1][ir] +
+                efrac         * lrfrac         * _mu_hat[ie+1][ir+1] +
+                (1.0 - efrac) * lrfrac         * _mu_hat[ie][ir+1];
+            k_eff = (1.0 - efrac) * (1.0 - lrfrac) * _k_hat[ie][ir] +
+                efrac         * (1.0 - lrfrac) * _k_hat[ie+1][ir] +
+                efrac         * lrfrac         * _k_hat[ie+1][ir+1] +
+                (1.0 - efrac) * lrfrac         * _k_hat[ie][ir+1];
+        } else {
+            // Extrapolate using a square-root variation with T.
+            number e_dash = (efrac < 0.0) ? _emin : _emin+_iesteps*_de;
+            number T_dash = _emin/((1.0-lrfrac)*_Cv_hat[ie][ir] + lrfrac*_Cv_hat[ie][ir+1]);
+            number mu_dash = (1.0-lrfrac)*_mu_hat[ie][ir] + lrfrac*_mu_hat[ie][ir+1];
+            number k_dash = (1.0-lrfrac)*_k_hat[ie][ir] + lrfrac*_k_hat[ie][ir+1];
+            // Note that we are assuming that an update_thermo_from_xx function
+            // has been recently called and that the temperature is correct.
+            number factor = sqrt(Q.T/T_dash);
+            mu_eff = factor*mu_dash;
+            k_eff = factor*k_dash;
+        }
         Q.mu = mu_eff;
         Q.k = k_eff;
     }
