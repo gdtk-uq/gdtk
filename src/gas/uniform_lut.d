@@ -1,11 +1,11 @@
 /**
  * uniform_lut.d
- * Gas model for a uniformly spaced look-up-table 
+ * Gas model for a uniformly spaced look-up-table
  *
- * Based on look-up-table.cxx and look-up-table.hh 
- * for Eilmer3, 
+ * Based on look-up-table.cxx and look-up-table.hh
+ * for Eilmer3,
  * Author: Rowan J. Gollan, 07-Nov-2008
- * 
+ *
  * Converted to D for use in Eilmer4,
  * Author: James M. Burgess, 11-Jan-2016
  */
@@ -25,7 +25,7 @@ import gas.gas_model;
 import gas.gas_state;
 import gas.physical_constants;
 
-/* Output from the CEA lookuptable is : 
+/* Output from the CEA lookuptable is :
    {cv_hat, cv, R_hat, cp_hat, gamma_hat, mu, k }  */
 
 class UniformLUT: GasModel{
@@ -35,35 +35,35 @@ public:
     {
         type_str = "look-up table";
         _n_species = 1;
-        _n_modes = 0; 
+        _n_modes = 0;
         _species_names ~= "LUT";
         assert(_species_names.length == 1);
         create_species_reverse_lookup();
-        // _mol_masses is defined at the end of the constructor  
+        // _mol_masses is defined at the end of the constructor
     }
 
     this(lua_State *L) {
         this();    // Call the default constructor
         try {
             with_entropy = getInt(L, LUA_GLOBALSINDEX, "with_entropy");
-            assert(with_entropy == 1);   
+            assert(with_entropy == 1);
             _p1 = getDouble(L, LUA_GLOBALSINDEX, "p1");
             _T1 = getDouble(L, LUA_GLOBALSINDEX, "T1");
             _s1 = getDouble(L, LUA_GLOBALSINDEX, "s1");
         }
-        catch (Exception e) {       
+        catch (Exception e) {
             writeln(e.msg);
             with_entropy = 0;
             writeln("Look_up_table(): No entropy data available");
         }
-        
+
         _iesteps = getInt(L, LUA_GLOBALSINDEX, "iesteps");
         _irsteps = getInt(L, LUA_GLOBALSINDEX, "irsteps");
         _emin = getDouble(L, LUA_GLOBALSINDEX, "emin");
         _de = getDouble(L, LUA_GLOBALSINDEX, "de");
         _lrmin = getDouble(L, LUA_GLOBALSINDEX, "lrmin");
         _dlr = getDouble(L, LUA_GLOBALSINDEX, "dlr");
-  
+
         _emax = _emin + _de * _iesteps;
         _lrmax = _lrmin + _dlr * _irsteps;
 
@@ -71,12 +71,12 @@ public:
         if ( !lua_istable(L, -1) ) {
             string msg;
             msg ~= format("Look_up_table():\n");
-            msg ~= format("   Error in look-up table input file: %s\n", __FILE__); 
+            msg ~= format("   Error in look-up table input file: %s\n", __FILE__);
             msg ~= format("   A table of 'data' is expected, but not found.\n");
             throw new Exception(msg);
         }
 
-        size_t ne = lua_objlen(L, -1); 
+        size_t ne = lua_objlen(L, -1);
         if ( ne != _iesteps + 1) {
             string msg;
             msg ~= format("Look_up_table():\n");
@@ -94,21 +94,21 @@ public:
         _mu_hat.length = ne;
         _k_hat.length = ne;
         _Cp_hat.length = ne;
-    
+
         // Determine the required j-length of data
         lua_rawgeti(L, -1, 1);
         size_t nr = lua_objlen(L, -1);
         lua_pop(L, 1);
-    
+
         if ( nr != _irsteps +1) {
             string msg;
             msg ~= "Look_up_table():\n";
-            msg ~= format("   Error in look-up table input file: %s\n", __FILE__); 
+            msg ~= format("   Error in look-up table input file: %s\n", __FILE__);
             msg ~= "   Inconsistent numbers for density steps:.\n";
             msg ~= format("   points = %s, steps = %s ", nr, _irsteps);
             throw new Exception(msg);
         }
-        
+
         for ( _ie= 0;_ie< ne; ++_ie ) {
             // Set j-lengths of data matrices 2D arrays
             _Cv_hat[_ie].length = nr;
@@ -116,9 +116,9 @@ public:
             _R_hat[_ie].length = nr;
             _g_hat[_ie].length = nr;
             _mu_hat[_ie].length = nr;
-            _k_hat[_ie].length = nr;  
+            _k_hat[_ie].length = nr;
             if ( with_entropy == 1) { _Cp_hat[_ie].length = nr; }
-  
+
             lua_rawgeti(L, -1, _ie+1);
             for (_ir = 0;_ir< nr; ++_ir ) {
                 lua_rawgeti(L, -1, _ir+1);
@@ -161,14 +161,14 @@ public:
             lua_pop(L, 1); // pop data[_ie] off.
         }
         lua_pop(L, 1); // pop data table off.
-        
-        _mol_masses ~= s_molecular_weight(0).re; 
+
+        _mol_masses ~= s_molecular_weight(0).re;
 
         Q_temp = new GasState(this); // For use in dpdrho_const_T()
-    } // End constructor  
+    } // End constructor
 
-  
-    override string toString() const 
+
+    override string toString() const
     {
         char[] repr;
         repr ~= "UniformLUT =(";
@@ -188,8 +188,8 @@ public:
         repr ~= ", dlr = " ~ to!string(_dlr);
         repr ~= ")";
         return to!string(repr);
-    } 
-    
+    }
+
     @nogc
     void determine_interpolants(const GasState Q, ref int ir, ref int ie,
                                 ref number lrfrac, ref number efrac) const
@@ -221,7 +221,7 @@ public:
         // Calculate bilinear interpolation(/extrapolation) fractions.
         lrfrac = (logrho - (_lrmin +ir* _dlr)) / _dlr;
         efrac  = (Q.u - (_emin +ie* _de)) / _de;
-    
+
         // Limit the extrapolation to small distances.
         const number EXTRAP_MARGIN = 0.2;
         lrfrac = max(lrfrac, -EXTRAP_MARGIN);
@@ -234,7 +234,7 @@ public:
     {
         number efrac, lrfrac, Cv_eff, R_eff, g_eff;
         int    ir, ie;
-   
+
         try { determine_interpolants(Q, ir, ie, lrfrac, efrac); }
         catch (Exception caughtException) {
             string msg = "Oops, ";
@@ -249,12 +249,12 @@ public:
             efrac         * (1.0 - lrfrac) * _Cv_hat[ie+1][ir] +
             efrac         * lrfrac         * _Cv_hat[ie+1][ir+1] +
             (1.0 - efrac) * lrfrac         * _Cv_hat[ie][ir+1];
-   
+
         R_eff  = (1.0 - efrac) * (1.0 - lrfrac) * _R_hat[ie][ir] +
             efrac         * (1.0 - lrfrac) * _R_hat[ie+1][ir] +
             efrac         * lrfrac         * _R_hat[ie+1][ir+1] +
             (1.0 - efrac) * lrfrac         * _R_hat[ie][ir+1];
-           
+
         g_eff  = (1.0 - efrac) * (1.0 - lrfrac) * _g_hat[ie][ir] +
             efrac         * (1.0 - lrfrac) * _g_hat[ie+1][ir] +
             efrac         * lrfrac         * _g_hat[ie+1][ir+1] +
@@ -276,7 +276,7 @@ public:
         if ( Q.p < 0.0 ) Q.p = 0.0;
         if ( Q.T < 0.0 ) Q.T = 0.0;
         if ( Q.a < 0.0 ) Q.a = 0.0;
-    }  
+    }
 
     override void update_trans_coeffs(GasState Q) const
     {
@@ -306,7 +306,7 @@ public:
         Q.k = k_eff;
     }
 
-    /* 
+    /*
        override void eval_diffusion_coefficients(ref GasState Q)
        {   // These have no meaning for an equilibrium gas.
        Q.D_AB[0][0] = 0.0;
@@ -314,7 +314,7 @@ public:
     */
 
     override number dudT_const_v(in GasState Q) const
-    { 
+    {
         number efrac, lrfrac;
         int    ir, ie;
         number Cv_actual;
@@ -378,7 +378,7 @@ public:
             efrac         * (1.0 - lrfrac) * _R_hat[ie+1][ir] +
             efrac         * lrfrac         * _R_hat[ie+1][ir+1] +
             (1.0 - efrac) * lrfrac         * _R_hat[ie][ir+1];
-   
+
         return R_eff;
     }
 
@@ -438,7 +438,7 @@ public:
                 (1.0 - efrac) * lrfrac         * _Cp_hat[ie][ir+1];
             number T = Q.u / Cv_eff;
             number p = Q.rho*R_eff*T;
-            s = _s1 + Cp_eff*log(T/_T1) - R_eff*log(p/_p1); 
+            s = _s1 + Cp_eff*log(T/_T1) - R_eff*log(p/_p1);
         } else {
             // Without having the entropy recorded as part of the original table,
             // the next best is to use a model of an ideal gas.
@@ -447,18 +447,18 @@ public:
                 writeln( "Using an ideal gas model" );
             }
             int ie = 0; // coldest
-            int ir = _irsteps - 1; // quite dense 
+            int ir = _irsteps - 1; // quite dense
             number R = _R_hat[ie][ir]; // J/kg/deg-K
             number Cp = R + _Cv_hat[ie][ir];
             const number T1 = 300.0; // degrees K: This value and the next was type constexpr
             const number p1 = 100.0e3; // Pa
             s = Cp * log(Q.T/T1) - R * log(Q.p/p1);
-        } 
+        }
         return s;
     }
 
     number s_molecular_weight(int isp) const
-    { 
+    {
         // This method is not very meaningful for an equilibrium
         // gas.  The molecular weight is best obtained from
         // the mixture molecular weight methods which IS a function
@@ -470,12 +470,12 @@ public:
             throw new Exception("LUT gas: should not be looking up isp != 0");
         }
         int ie = 0; // coldest
-        int ir = _irsteps -1; // quite dense    
+        int ir = _irsteps -1; // quite dense
         number Rgas = _R_hat[ie][ir]; // J/kg/deg-K
         /* Eilmer3 converts these values to kg/kmol - I am keeping in SI units
          * immutable R_universal_kmol = R_universal * 1000;
          * number M = R_universal_kmol / Rgas; */
-        number M = R_universal / Rgas;    
+        number M = R_universal / Rgas;
         return M;
     }
 
@@ -511,25 +511,25 @@ public:
         // Reconstruct the thermodynamic properties.
         Q.a = sqrt(g_eff*R_eff*Q.T);
     }
- 
+
     // Remaining functions must call numerical method solution defined in gas_model.d
-    override void update_thermo_from_pT(GasState Q) 
+    override void update_thermo_from_pT(GasState Q)
     {
         update_thermo_state_pT(this, Q);
     }
-    override void update_thermo_from_rhoT(GasState Q)  
+    override void update_thermo_from_rhoT(GasState Q)
     {
         update_thermo_state_rhoT(this, Q);
     }
-    override void update_thermo_from_rhop(GasState Q) 
+    override void update_thermo_from_rhop(GasState Q)
     {
         update_thermo_state_rhop(this, Q);
-    } 
-    override void update_thermo_from_ps(GasState Q, number s) 
+    }
+    override void update_thermo_from_ps(GasState Q, number s)
     {
         update_thermo_state_ps(this, Q, s);
     }
-    override void update_thermo_from_hs(GasState Q, number h, number s) 
+    override void update_thermo_from_hs(GasState Q, number h, number s)
     {
         update_thermo_state_hs(this, Q, h, s);
     }
@@ -559,7 +559,7 @@ public:
         return ( (p_step - p) / h);
      }
 
- 
+
 private:
     int with_entropy;
     double _s1, _p1, _T1;
@@ -567,7 +567,7 @@ private:
     double _emin, _emax, _de;
     double _lrmin, _lrmax, _dlr;
     int _ie, _ir; // used in the constructor, but not in interpolation
-    
+
     // Data for interpolation
     double[][]  _Cv_hat;
     double[][] _Cv;
@@ -580,7 +580,7 @@ private:
     GasState Q_temp;
 } // End of uniformLUT class
 
-version(uniform_lut_test) 
+version(uniform_lut_test)
 {
     import util.msg_service;
     int main() {
@@ -605,12 +605,12 @@ version(uniform_lut_test)
         number T_given = 1.0e3; // K
         number rho_given = 3.4837; // kg/m^^3
         // CEA uses a reference temperature of 298K (Eilmer uses 0K) so the
-        // temperature was offset by amount e_offset 
+        // temperature was offset by amount e_offset
         number e_CEA =  456600; // J/kg
         number e_offset = 303949.904; // J/kg
         number e_given = e_CEA + e_offset; // J/kg
         number h_CEA = 743650; // J/kg
-        number h_given = h_CEA + e_offset; // J/kg 
+        number h_given = h_CEA + e_offset; // J/kg
         number a_given = 619.2; // m/s
         number s_given = 7475.7; // J(kg.K)
         number R_given = 287.036; // J/(kg.K)
@@ -619,7 +619,7 @@ version(uniform_lut_test)
         number mu_given = 4.3688e-05; // Pa.s
         number k_given = 0.0662; // W/(m.K)
         number Cv_given = e_given / T_given; // J/(kg.K)
-                
+
         auto Q = new GasState(gm, p_given, T_given);
         // Return values not stored in the GasState
         number Cv = gm.dudT_const_v(Q);
@@ -639,7 +639,7 @@ version(uniform_lut_test)
         assert(approxEqual(k_given, Q.k, 1.0e-3), failedUnitTest());
         assert(approxEqual(s_given, s, 1.0e-4), failedUnitTest());
         assert(approxEqual(R_given, R, 1.0e-4), failedUnitTest());
-        
+
         return 0;
     }
 }
