@@ -268,7 +268,7 @@ ifeq ($(DMD), ldmd2)
 endif
 ifeq ($(DMD), ldc2)
     ifeq ($(FLAVOUR), debug)
-        DFLAGS := -w -g -d-debug -d-version=flavour_debug
+        DFLAGS := -w -g -d-debug -d-version=flavour_debug -fsanitize=thread
     endif
     ifeq ($(FLAVOUR), profile)
         # -fprofile-generate will result in profraw files being written
