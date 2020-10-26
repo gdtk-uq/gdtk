@@ -296,15 +296,6 @@ function FixedT:tojson()
    return str
 end
 
-EnergyBalance = BoundaryInterfaceEffect:new{emissivity=nil}
-EnergyBalance.type = "energy_balance"
-function EnergyBalance:tojson()
-   local str = string.format('          {"type": "%s",', self.type)
-   str = str .. string.format(' "emissivity": %.18e', self.emissivity)
-   str = str .. '}'
-   return str
-end
-
 FixedComposition = BoundaryInterfaceEffect:new{wall_massf_composition={}}
 FixedComposition.type = "fixed_composition"
 function FixedComposition:tojson()
@@ -454,21 +445,6 @@ function EnergyFluxFromAdjacentSolid:tojson()
    str = str .. string.format('"other_block": %d, ', self.otherBlock)
    str = str .. string.format('"other_face": "%s", ', self.otherFace)
    str = str .. string.format('"orientation": %d', self.orientation)
-   str = str .. '}'
-   return str
-end
-
-EnergyBalanceThermionic = BoundaryFluxEffect:new{emissivity=nil, Ar=nil, phi=nil,
-                          ThermionicEmissionActive=1, Twall_iterations=200, Twall_subiterations=50}
-EnergyBalanceThermionic.type = "energy_balance_thermionic"
-function EnergyBalanceThermionic:tojson()
-   local str = string.format('          {"type": "%s",', self.type)
-   str = str .. string.format(' "emissivity": %.18e,', self.emissivity)
-   str = str .. string.format(' "Ar": %.18e,', self.Ar)
-   str = str .. string.format(' "phi": %.18e,', self.phi)
-   str = str .. string.format(' "ThermionicEmissionActive": %d,', self.ThermionicEmissionActive)
-   str = str .. string.format(' "Twall_iterations": %d,', self.Twall_iterations)
-   str = str .. string.format(' "Twall_subiterations": %d', self.Twall_subiterations)
    str = str .. '}'
    return str
 end
@@ -760,26 +736,23 @@ function WallBC_ThermionicEmission:new(o)
       error("Invalid name for item supplied to WallBC_ThermionicEmission constructor.", 2)
    end
    o = BoundaryCondition.new(self, o)
+   o.ghost_cell_data_available = true
+   o.is_wall_with_viscous_effects = true
    o.preReconAction = { InternalCopyThenReflect:new() }
-
-   o.preSpatialDerivActionAtBndryFaces = {
-      CopyCellData:new(),
-      ZeroVelocity:new(),
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new(),
       ThermionicRadiativeEquilibrium:new{emissivity=o.emissivity, Ar=o.Ar, phi=o.phi,
-                                  ThermionicEmissionActive=o.ThermionicEmissionActive},
-      UpdateThermoTransCoeffs:new()
-   }
-   if o.catalytic_type and o.catalytic_type ~= "none" then
+                                  ThermionicEmissionActive=o.ThermionicEmissionActive}}
+
+   if o.catalytic_type == "fixed_composition" then
       o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
-         FixedComposition:new{wall_massf_composition=
-                                 convertSpeciesTableToArray(o.wall_massf_composition)}
+         FixedComposition:new{wall_massf_composition=convertSpeciesTableToArray(o.wall_massf_composition)}
+   elseif o.catalytic_type == "equilibrium" then
+      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
+         EquilibriumComposition:new{}
    end
-   if o.ThermionicEmissionActive == 0 then
-      print("Thermionic Emission not activated. Running radiation equilibrium only");
-   else
-      print("Thermionic Emission activated");
-   end
-   -- Added update for wall temperature following the computation of spatial derivaitives
+   o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
+      UpdateThermoTransCoeffs:new()
+
    o.is_configured = true
    return o
 end
