@@ -1,4 +1,4 @@
-# makefile for nenzfr2 (mostly copied from the l1d makefile).
+# makefile for nenzf1d (mostly copied from the l1d makefile).
 # PJ 2020-09-26
 
 DMD ?= dmd
@@ -8,9 +8,9 @@ DMD ?= dmd
 FLAVOUR ?= debug
 PLATFORM ?= linux
 
-PROGRAMS := nenzfr2
+PROGRAMS := nenzf1d
 
-NENZFR2_FILES :=
+NENZF1D_FILES :=
 
 LUA_MODULES :=
 
@@ -134,7 +134,7 @@ endif
 
 default: $(PROGRAMS)
 	@echo "Source code revision string $(REVISION_STRING)"
-	@echo "nenzfr2 code built."
+	@echo "nenzf1d code built."
 
 install: $(PROGRAMS) $(LUA_MODULES) prep-gas prep-chem chemkin2eilmer
 	- mkdir -p $(INSTALL_DIR)
@@ -165,7 +165,7 @@ $(LIBLUA):
 $(LIBCEQ):
 	cd $(CEQ_DIR); make
 
-nenzfr2: main.d $(NENZFR2_FILES) \
+nenzf1d: main.d $(NENZF1D_FILES) \
 	$(GEOM_FILES) $(DYAML_FILES) $(TINYENDIAN_FILES) \
 	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
@@ -174,9 +174,9 @@ nenzfr2: main.d $(NENZFR2_FILES) \
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		main.d > main_with_rev_string.d
-	$(DMD) $(DFLAGS) $(OF)nenzfr2 \
+	$(DMD) $(DFLAGS) $(OF)nenzf1d \
 		main_with_rev_string.d \
-		$(NENZFR2_FILES) $(DYAML_FILES) $(TINYENDIAN_FILES) \
+		$(NENZF1D_FILES) $(DYAML_FILES) $(TINYENDIAN_FILES) \
 		$(GEOM_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) \

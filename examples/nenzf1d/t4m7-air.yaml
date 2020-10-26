@@ -1,4 +1,4 @@
-# Sample input file for nenzfr2 is a YAML 1.1 file.
+# Sample input file for nenzf1d is a YAML 1.1 file.
 # t4m7-air.yaml
 # Data for T4 shot 11311 obtained from Wilson Chan's Mach 7 nozzle design report.
 # PJ 2020-10-20
@@ -22,7 +22,7 @@ pe: 19.33e6     # Pa
 ar: 169.2       # Mach 6 nozzle
 pp_ps: 0.0105   # From Figure 8.
 
-C: 0.92         # pPitot/(rho*v^2), a value handed down for generations.
+C: 0.96         # pPitot/(rho*v^2), a value obtained from sphere simulations.
 
 # Define the expanding part of the nozzle as a schedule of diameters with position.
 xi: [0.0000, 5.126e-3, 1.021e-2, 2.008e-2, 5.023e-2, 0.1003, 0.2004, 0.4006, 0.6000, 0.8012, 1.0000]

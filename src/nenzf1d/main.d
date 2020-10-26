@@ -1,4 +1,4 @@
-// main.d for nenzfr2
+// main.d for nenzf1d
 // Reflected shock tube analysis followed by supersonic nozzle expansion.
 //
 // Peter J.
@@ -29,7 +29,7 @@ int main(string[] args)
 {
     int exitFlag = 0; // Presume OK in the beginning.
     // Be careful with the usageMsg string; it has embedded newline characters.
-    string usageMsg = "Usage: nenzfr2 <input-file>
+    string usageMsg = "Usage: nenzf1d <input-file>
 Options:
    --verbosity=<int>   0 == very terse output
                        1 == key results printed
@@ -61,7 +61,7 @@ Options:
         return exitFlag;
     }
     if (verbosityLevel >= 1) {
-        writeln("NENZFR2: shock-tunnel with nonequilibrium nozzle flow.");
+        writeln("NENZF1D: shock-tunnel with nonequilibrium nozzle flow.");
     }
     if (verbosityLevel >= 2) {
         writeln("Revision: PUT_REVISION_STRING_HERE");

@@ -29,7 +29,7 @@ Programs built upon the loadable library:
 + [build-uniform-lut]({{< relref "build-lut.md" >}}),
   Assemble a look-up-table gas model, based on CEA2 calculations
   for a gas mixture in thermochemical equilibrium.
-+ [NENZF2]({{< relref "nenzf2.md" >}}),
++ [NENZF1D]({{< relref "nenzf1d.md" >}}),
   Calculation of Nonequilibrium Nozzle Flow with finite-rate chemistry.
 + [Poshax]({{< relref "poshax.md" >}}),
   Calculation of Post-Shock Relaxing flow.
@@ -62,6 +62,7 @@ that your newly configured environment is available.
 - [Gas-dynamic Package Reference Manual (HTML)](/html/library-reference-manual.html)
 - [Geometry Package Reference Manual (HTML)](/html/geometry-reference-manual.html)
 - [ESTCN, Equilibrium Shock Tunnel Condition, with Nozzle](/html/estcn-manual.html)
+- [NENZF1D, Shock Tunnel Condition, with Nonequilibrium Nozzle](/html/nenzf1d-manual.html)
 - [build-uniform-lut, for building look-up-table gas models](/html/build-lut-manual.html)
 - [Numerical-methods package](/html/nm-reference-manual.html)
 

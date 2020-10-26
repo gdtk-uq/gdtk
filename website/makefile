@@ -15,7 +15,7 @@ HTML := eilmer-reference-manual.html \
 	geometry-reference-manual.html \
 	nm-reference-manual.html \
 	estcn-manual.html \
-	nenzfr2-manual.html \
+	nenzf1d-manual.html \
 	build-lut-manual.html \
 	eilmer-catalog-of-examples.html \
 	eilmer-faq.html
@@ -65,9 +65,9 @@ estcn-manual.html:
 	cp ../doc/$@ static/html/
 	cp ../doc/estcn/*.png static/html/estcn/
 
-nenzfr2-manual.html:
+nenzf1d-manual.html:
 	- mkdir -p static/html
-	- mkdir -p static/html/nenzfr2
+	- mkdir -p static/html/nenzf1d
 	cd ../doc; make $@
 	cp ../doc/$@ static/html/
 

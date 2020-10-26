@@ -1,24 +1,24 @@
-# Sample input file for nenzfr2 is a YAML 1.1 file.
-# t4m6-air.yaml
-# Data for T4 shot 10559 obtained from Wilson Chan's PhD thesis, Table D.1, page 158.
-# PJ 2020-10-17
+# Sample input file for nenzf1d is a YAML 1.1 file.
+# t4m6-n2.yaml
+# Data for T4 shot 10565 obtained from Wilson Chan's PhD thesis, Table D.1, page 158.
+# PJ 2020-10-19
 #
-title: "T4 shot 10559 with Mach 6 nozzle."    # Any string will do.
+title: "T4 shot 10565 with Mach 6 nozzle."    # Any string will do.
 
-species: ['N2', 'O2', 'N', 'O', 'NO']         # List
-molef: {'N2': 0.79, 'O2': 0.21}               # Map of nonzero values will suffice.
+species: ['N2', 'N']         # List
+molef: {'N2': 1.0}           # Map of nonzero values will suffice.
 # Gas model and reactions files need to be consistent with the species above.
 # Gas model 1 is usually a CEAGas model file.
 # Gas model 2 is a thermally-perfect gas model for the finite-rate chemistry.
-gas-model-1: cea-air5species-gas-model.lua
-gas-model-2: air-5sp-1T.lua
-reactions: air-5sp-1T-reactions.lua
+gas-model-1: cea-n2-gas-model.lua
+gas-model-2: nitrogen-2sp-1T.lua
+reactions: nitrogen-2sp-1T-reactions.lua
 
 # Observed parameter values for shock-tube operation.
 T1: 300         # K
-p1: 130.0e3     # Pa
-Vs: 2434.0      # m/s
-pe: 34.07e6     # Pa
+p1: 150.0e3     # Pa
+Vs: 2253.0      # m/s
+pe: 35.11e6     # Pa
 ar: 127.0       # Mach 6 nozzle
 
 # Define the expanding part of the nozzle as a schedule of diameters with position.

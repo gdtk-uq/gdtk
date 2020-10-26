@@ -1,5 +1,5 @@
 ---
-title: NENZFR2
+title: NENZF1D
 weight: 40
 draft: false
 ---
@@ -13,12 +13,12 @@ in the nozzle expansion are expected to be important.
 
 ## Getting started
 
-`nenzfr2` is a D-language program built upon the core gas-model and flow modules
+`nenzf1d` is a D-language program built upon the core gas-model and flow modules
 of our gas-dynamics tool kit.
-To install the `nenzfr2` program, move to its source directory
+To install the `nenzf1d` program, move to its source directory
 and use the `make` utility.
 
-    cd dgd/src/nenzfr2
+    cd dgd/src/nenzf1d
     make install
 
 You will also need to install files associated with the gas models.
@@ -32,6 +32,6 @@ program compiled and installed where the gas-model module can find it.
 
 
 ## Documentation
-- [NENZFR2 Manual (HTML)](/html/nenzfr2-manual.html)
+- [NENZF1D Manual (HTML)](/html/nenzf1d-manual.html)
 
 

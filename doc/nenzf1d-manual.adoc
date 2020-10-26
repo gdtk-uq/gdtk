@@ -1,6 +1,6 @@
-= NENZFR2 Manual for Users
+= NENZF1D Manual for Users
 Peter A. Jacobs; Rowan J. Gollan
-2020-10-19
+2020-10-26
 :toc: right
 :stylesheet: readthedocs.css
 :sectnums:
@@ -8,7 +8,7 @@ Peter A. Jacobs; Rowan J. Gollan
 
 :leveloffset: +1
 
-NENZF2 is a program for estimating flow conditions in reflected-shock tunnels,
+NENZF1D is a program for estimating flow conditions in reflected-shock tunnels,
 when the test gas reaches temperatures high enough for chemical reactions
 to occur and
 when nonequilibrium chemistry effects are expected to be important.
@@ -22,7 +22,7 @@ of the supersonic flow of the gas through the nozzle expansion.
 
 = Getting started
 
-The `nenzfr2` program is built upon the core gas model and flow modules
+The `nenzf1d` program is built upon the core gas model and flow modules
 of our gas-dynamics tool kit.
 General getting started notes can be found at
 http://cfcfd.mechmining.uq.edu.au/docs/getting-started
@@ -30,10 +30,10 @@ There, you will see how to get a copy of the source code,
 a list of what other software you will need to build and install the tool kit,
 and a collection of environment variables that need to be set.
 
-To install the `nenzfr2` program, move to its source directory
+To install the `nenzf1d` program, move to its source directory
 and use the `make` utility.
 
-    cd dgd/src/nenzfr2
+    cd dgd/src/nenzf1d
     make install
 
 This will also install files associated with the gas models.
@@ -50,7 +50,7 @@ with the detailed calculation parameters.
 To see what other command-line options are available,
 start the program as:
 
-    nenzfr2 --help
+    nenzf1d --help
 
 
 = Example shock-tunnel calculation
@@ -78,7 +78,7 @@ prep-chem air-5sp-1T.lua GuptaEtAl-air-reactions.lua air-5sp-1T-reactions.lua
 == Input file
 
 ----
-# Sample input file for nenzfr2 is a YAML 1.1 file.
+# Sample input file for nenzf1d is a YAML 1.1 file.
 # t4m6.yaml
 # Data for T4 shot 10559 obtained from Wilson Chan's PhD thesis, Table D.1, page 158.
 # PJ 2020-10-17
@@ -115,16 +115,16 @@ di: [1.0,   4.0, 6.232,  8.44,  9.92, 11.268]  # diameter (may be normalized)
 
 ## Results
 
-Run `nenzfr2` with the command:
+Run `nenzf1d` with the command:
 
 ----
-nenzfr2 t4m6.yaml
+nenzf1d t4m6.yaml
 ----
 
 to get the result
 
 ----
-NENZFR2: shock-tunnel with nonequilibrium nozzle flow.
+NENZF1D: shock-tunnel with nonequilibrium nozzle flow.
   T4 shot 10559 with Mach 6 nozzle.
 Initial gas in shock tube (state 1).
   pressure    130 kPa

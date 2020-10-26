@@ -37,7 +37,7 @@ all: eilmer-reference-manual.html \
 	geometry-reference-manual.html \
 	nm-reference-manual.html \
 	estcn-manual.html \
-	nenzfr2-manual.html \
+	nenzf1d-manual.html \
 	build-lut-manual.html
 	@echo "Done."
 
@@ -56,8 +56,8 @@ l1d-reference-manual.html: l1d-reference-manual.adoc
 estcn-manual.html: estcn-manual.adoc
 	asciidoctor estcn-manual.adoc
 
-nenzfr2-manual.html: nenzfr2-manual.adoc
-	asciidoctor nenzfr2-manual.adoc
+nenzf1d-manual.html: nenzf1d-manual.adoc
+	asciidoctor nenzf1d-manual.adoc
 
 build-lut-manual.html: build-lut-manual.adoc
 	asciidoctor build-lut-manual.adoc
@@ -80,5 +80,5 @@ clean:
 		geometry-reference-manual.html \
 		nm-reference-manual.html \
 		estcn-manual.html \
-		nenzfr2-manual.html \
+		nenzf1d-manual.html \
 		build-lut-manual.html
