@@ -511,7 +511,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
                     xInit = soln.flowBlocks[ib]["pos.x", idx];
                     yInit = soln.flowBlocks[ib]["pos.y", idx];
                     zInit = soln.flowBlocks[ib]["pos.z", idx];
-                    outFile.writeln(xInit, " ", yInit, " ", zInit, " ",
+                    outFile.writeln(xInit, " ", yInit, " ", zInit, " 0 ",
                                     soln.flowBlocks[ib].values_as_string(idx));
                 }
                 // we need to travel both forward (direction = 1) and backward (direction = -1)
