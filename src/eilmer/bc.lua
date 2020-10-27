@@ -456,6 +456,17 @@ function UpdateEnergyWallNormalVelocity:tojson()
    return str
 end
 
+ThermionicElectronFlux = BoundaryFluxEffect:new{emissivity=nil, Ar=nil, phi=nil}
+ThermionicElectronFlux.type = "thermionic_electron_flux"
+function ThermionicElectronFlux:tojson()
+   local str = string.format('          {"type": "%s",', self.type)
+   str = str .. string.format(' "emissivity": %.18e,', self.emissivity)
+   str = str .. string.format(' "Ar": %.18e,', self.Ar)
+   str = str .. string.format(' "phi": %.18e', self.phi)
+   str = str .. '}'
+   return str
+end
+
 -- Class for (complete) BoundaryCondition
 --
 -- BoundaryConditions consist of lists of actions to be done

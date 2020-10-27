@@ -71,6 +71,12 @@ BoundaryFluxEffect make_BFE_from_json(JSONValue jsonData, int blk_id, int bounda
     case "update_energy_wall_normal_velocity":
         newBFE = new BFE_UpdateEnergyWallNormalVelocity(blk_id, boundary);
         break;
+    case "thermionic_electron_flux":
+        double emissivity = getJSONdouble(jsonData, "emissivity", 0.0);
+        double Ar = getJSONdouble(jsonData, "Ar", 0.0);
+        double phi = getJSONdouble(jsonData, "phi", 0.0);
+        newBFE = new BFE_ThermionicElectronFlux(blk_id, boundary, emissivity, Ar, phi);
+        break;
     default:
         string errMsg = format("ERROR: The BoundaryFluxEffect type: '%s' is unknown.", bfeType);
         throw new Error(errMsg);
@@ -736,3 +742,134 @@ public:
     }
 } // end BFE_UpdateEnergyWallNormalVelocity
 
+class BFE_ThermionicElectronFlux : BoundaryFluxEffect {
+    this(int id, int boundary, double emissivity, double Ar, double phi)
+    {
+        super(id, boundary, "ThermionicElectronFlux");
+        this.emissivity = emissivity;
+        this.Ar = Ar;
+        this.phi = phi*Qe;  // Convert phi from input 'eV' to 'J'
+        if (!blk.myConfig.gmodel.is_plasma)
+            throw new Error("ThermionicElectronFlux Flux Effect requires a gas model with electrons");
+        electron_index = blk.myConfig.gmodel.species_index("e-");
+        Me = blk.myConfig.gmodel.mol_masses[electron_index];
+    }
+
+    override string toString() const
+    {
+        return "BFE_ThermionicElectronEmission(" ~
+            "Work Function =" ~ to!string(phi/Qe) ~
+            "eV , emissivity=" ~ to!string(emissivity) ~
+            ", Richardson Constant=" ~ to!string(Ar) ~
+            ")";
+    }
+
+    @nogc
+    override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        throw new Error("BIE_ThermionicElectronEmission.apply_for_interface_unstructured_grid() not yet implemented");
+    }
+
+    @nogc
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
+    {
+        throw new Error("BIE_ThermionicElectronEmission.apply_unstructured_grid() not yet implemented");
+    }
+
+    @nogc
+    override void apply_structured_grid(double t, int gtl, int ftl)
+    {
+        auto blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
+        FVInterface IFace;
+        size_t i, j, k;
+        FVCell cell;
+
+        final switch (which_boundary) {
+        case Face.north:
+            j = blk.jmax;
+            for (k = blk.kmin; k <= blk.kmax; ++k) {
+                for (i = blk.imin; i <= blk.imax; ++i) {
+                    cell = blk.get_cell(i,j,k);
+                    IFace = cell.iface[Face.north];
+                    IFace.F.massf[electron_index] = -1.0*electron_flux(IFace);
+                } // end i loop
+            } // end for k
+            break;
+        case Face.east:
+            i = blk.imax;
+            for (k = blk.kmin; k <= blk.kmax; ++k) {
+                for (j = blk.jmin; j <= blk.jmax; ++j) {
+                    cell = blk.get_cell(i,j,k);
+                    IFace = cell.iface[Face.east];
+                    IFace.F.massf[electron_index] = -1.0*electron_flux(IFace);
+                } // end j loop
+            } // end for k
+            break;
+        case Face.south:
+            j = blk.jmin;
+            for (k = blk.kmin; k <= blk.kmax; ++k) {
+                for (i = blk.imin; i <= blk.imax; ++i) {
+                    cell = blk.get_cell(i,j,k);
+                    IFace = cell.iface[Face.south];
+                    IFace.F.massf[electron_index] = 1.0*electron_flux(IFace);
+                } // end i loop
+            } // end for k
+            break;
+        case Face.west:
+            i = blk.imin;
+            for (k = blk.kmin; k <= blk.kmax; ++k) {
+                for (j = blk.jmin; j <= blk.jmax; ++j) {
+                    cell = blk.get_cell(i,j,k);
+                    IFace = cell.iface[Face.west];
+                    IFace.F.massf[electron_index] = 1.0*electron_flux(IFace);
+                } // end j loop
+            } // end for k
+            break;
+        case Face.top:
+            k = blk.kmax;
+            for (i = blk.imin; i <= blk.imax; ++i) {
+                for (j = blk.jmin; j <= blk.jmax; ++j) {
+                    cell = blk.get_cell(i,j,k);
+                    IFace = cell.iface[Face.top];
+                    IFace.F.massf[electron_index] = -1.0*electron_flux(IFace);
+                } // end j loop
+            } // end for i
+            break;
+        case Face.bottom:
+            k = blk.kmin;
+            for (i = blk.imin; i <= blk.imax; ++i) {
+                for (j = blk.jmin; j <= blk.jmax; ++j) {
+                    cell = blk.get_cell(i,j,k);
+                    IFace = cell.iface[Face.bottom];
+                    IFace.F.massf[electron_index] = 1.0*electron_flux(IFace);
+                } // end j loop
+            } // end for i
+            break;
+        } // end switch which_boundary
+    }
+protected:
+    // Function inputs from Eilmer4 .lua simulation input
+    double emissivity;  // Input emissivity, 0<e<=1.0. Assumed black body radiation out from wall
+    double Ar;          // Richardson constant, material-dependent
+    double phi;         // Work function, material dependent. Input units in eV,
+                        // this gets converted to Joules by multiplying by Elementary charge, Qe
+    size_t electron_index;
+    number Me;
+    // Constants used in analysis
+    immutable double kb = 1.38064852e-23;     // Boltzmann constant.          Units: (m^2 kg)/(s^2 K^1)
+    immutable double Qe = 1.60217662e-19;     // Elementary charge.           Units: C
+    // Faraday's constant Qe*Na, but exact as of the 2019 redefinition of base SI units
+    immutable double F  = 96485.3321233100184;
+
+    @nogc
+    number electron_flux(const FVInterface IFace)
+    {
+    /*
+        Compute the electron flux per unit area due to thermionic emission
+    */
+        number Tw = IFace.fs.gas.T; // Maybe this should be the electron temperature?
+        return Ar*Tw*Tw*exp(-phi/kb/Tw)/F*Me;
+    }
+
+} // end class BFE_ThermionicElectronFlux
