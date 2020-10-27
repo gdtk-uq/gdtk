@@ -289,7 +289,7 @@ void compute_and_store_loads(FVInterface iface, int outsign, number cellWidthNor
                          iface.pos.x.re, iface.pos.y.re, iface.pos.z.re, iface.area[0].re,
                          q_total.re, q_cond.re, q_diff.re, tau_wall.re, l_tau.re, m_tau.re, n_tau.re, sigma_wall.re,
                          nx.re, ny.re, nz.re, T_wall.re, Re_wall.re, y_plus.re, 
-                         cellWidthNormalToSurface.re, outsign, rho_wall, mu_wall, a_wall, u_wall, v_wall);
+                         cellWidthNormalToSurface.re, outsign, rho_wall.re, mu_wall.re, a_wall.re, u_wall.re, v_wall.re);
     std.file.append(fname, writer);    
 } // end compute_and_store_loads()
 
