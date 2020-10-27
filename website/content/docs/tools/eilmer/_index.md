@@ -4,11 +4,11 @@ weight: 10
 
 # Eilmer: compressible flow simulation program
 
-![](/images/kiock-mach-field.png)
-Transonic flow through a plane turbine cascade (Kiock et al., 1986).
-Simulation set up by Peter Blyton for Eilmer3 in 2011.
-This calculation with Eilmer4 in 2020.
-Visualization with Paraview.
+![](/images/ramp-in-3D-by-kad.png)
+Simulation of flow over a 24&deg; compression corner as
+in the experiments performed by Holden (1970).
+The simulation is performed in 3D as this captures the spillage of gas over side of the ramp and results in a better comparison
+to experimental results for heat transfer.
 
 ## What does Eilmer do?
 
