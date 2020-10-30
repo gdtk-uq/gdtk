@@ -2018,7 +2018,7 @@ public:
     } // end propagate_inflow_data_west_to_east()
 
     @nogc
-    override void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0)
+    override void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0, FVCell[] cell_list = [], FVVertex[] vertex_list = [])
     // Compute the flux from flow-field data on either-side of the interface.
     {
         // Barring exceptions at the block boundaries, the general process is:
@@ -2340,7 +2340,7 @@ public:
     } // end convective_flux_phase0()
 
     @nogc
-    override void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0)
+    override void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0, FVCell[] cell_list = [], FVInterface[] iface_list = [])
     // Compute the flux from data on either-side of the interface.
     // For the structured-grid block, there is nothing to do.
     // The unstructured-grid block needs to work in two phases.

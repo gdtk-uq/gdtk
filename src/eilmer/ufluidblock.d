@@ -779,23 +779,27 @@ public:
     {
         throw new FlowSolverException("function not implemented for unstructured grid.");
     }
-    
+
     @nogc
-    override void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0)
+    override void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0, FVCell[] cell_list = [], FVVertex[] vertex_list = [])
     // Compute gradients of flow quantities for higher-order reconstruction, if required.
     // To be used, later, in the convective flux calculation.
     {
+
+        if (cell_list.length == 0) { cell_list = cells; }
+        if (vertex_list.length == 0) { vertex_list = vertices; }
+
         if (allow_high_order_interpolation && (myConfig.interpolation_order > 1)) {
             if (myConfig.unstructured_limiter == UnstructuredLimiter.mlp) {
-                foreach (vtx; vertices) {
+                foreach (vtx; vertex_list) {
                     vtx.gradients.store_max_min_values_for_mlp_limiter(vtx.cell_cloud, myConfig);
                 }
             }
-            foreach (c; cells) {
+            foreach (c; cell_list) {
                 c.gradients.compute_lsq_values(c.cell_cloud, c.ws, myConfig);
             }
             if (GlobalConfig.frozen_limiter == false) {
-                foreach (c; cells) {
+                foreach (c; cell_list) {
                     // It is more efficient to determine limiting factor here for some usg limiters.
                     final switch (myConfig.unstructured_limiter) {
                         case UnstructuredLimiter.van_albada:
@@ -823,11 +827,13 @@ public:
     } // end convective_flux-phase0()
 
     @nogc
-    override void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0)
+    override void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0, FVCell[] cell_list = [], FVInterface[] iface_list = [])
     // Make use of the flow gradients to actually do the high-order reconstruction
     // and then compute fluxes of conserved quantities at all faces.
     {
-        //
+        if (cell_list.length == 0) { cell_list = cells; }
+        if (iface_list.length == 0) { iface_list = faces; }
+
         if (allow_high_order_interpolation && (myConfig.interpolation_order > 1)) {
             // Fill in gradients for ghost cells so that left- and right- cells at all faces,
             // including those along block boundaries, have the latest gradient values.
@@ -858,7 +864,7 @@ public:
         //
         // At this point, we should have all gradient values up to date and we are now ready
         // to reconstruct field values and compute the convective fluxes.
-        foreach (f; faces) {
+        foreach (f; iface_list) {
             bool do_reconstruction = allow_high_order_interpolation && !f.in_suppress_reconstruction_zone;
             if (f.left_cell && f.right_cell) {
 		lsq.interp_both(f, gtl, Lft, Rght, do_reconstruction);

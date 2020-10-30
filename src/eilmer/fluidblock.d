@@ -219,8 +219,8 @@ public:
         abstract void write_adjoint_variables(string filename);
     }
     @nogc abstract void propagate_inflow_data_west_to_east();
-    @nogc abstract void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0);
-    @nogc abstract void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0);
+    @nogc abstract void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0, FVCell[] cell_list = [], FVVertex[] vertex_list = []);
+    @nogc abstract void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0, FVCell[] cell_list = [], FVInterface[] iface_list = []);
 
     @nogc
     void identify_reaction_zones(int gtl)
@@ -375,10 +375,11 @@ public:
     } // end identify_turbulent_zones()
 
     @nogc
-    void estimate_turbulence_viscosity()
+    void estimate_turbulence_viscosity(FVCell[] cell_list = [])
     {
         version(turbulence) { // Exit instantly if turbulence capability disabled
-        foreach (cell; cells) {
+        if (cell_list.length == 0) { cell_list = cells; }
+        foreach (cell; cell_list) {
             cell.turbulence_viscosity();
             cell.turbulence_viscosity_factor(myConfig.transient_mu_t_factor);
             cell.turbulence_viscosity_limit(myConfig.max_mu_t_factor);
@@ -572,9 +573,10 @@ public:
     }
 
     @nogc
-    void viscous_flux()
+    void viscous_flux(FVInterface[] face_list = [])
     {
-        foreach (iface; faces) { iface.viscous_flux_calc(); }
+        if (face_list.length == 0) { face_list = faces; }
+        foreach (iface; face_list) { iface.viscous_flux_calc(); }
     }
 
     @nogc
@@ -844,14 +846,35 @@ public:
         foreach(boundary; bc) { boundary.applyPreReconAction(t, gtl, ftl); }
     }
 
+    void applyPreReconAction(double t, int gtl, int ftl, FVInterface f)
+    {
+        foreach(boundary; bc) {
+            if (boundary.which_boundary == f.bc_id) { boundary.applyPreReconAction(t, gtl, ftl, f); }
+        }
+    }
+
     void applyPostConvFluxAction(double t, int gtl, int ftl)
     {
         foreach(boundary; bc) { boundary.applyPostConvFluxAction(t, gtl, ftl); }
     }
 
+    void applyPostConvFluxAction(double t, int gtl, int ftl, FVInterface f)
+    {
+        foreach(boundary; bc) {
+            if (boundary.which_boundary == f.bc_id) { boundary.applyPostConvFluxAction(t, gtl, ftl, f); }
+        }
+    }
+
     void applyPreSpatialDerivActionAtBndryFaces(double t, int gtl, int ftl)
     {
         foreach(boundary; bc) { boundary.applyPreSpatialDerivActionAtBndryFaces(t, gtl, ftl); }
+    }
+
+    void applyPreSpatialDerivActionAtBndryFaces(double t, int gtl, int ftl, FVInterface f)
+    {
+        foreach(boundary; bc) {
+            if (boundary.which_boundary == f.bc_id) { boundary.applyPreSpatialDerivActionAtBndryFaces(t, gtl, ftl, f); }
+        }
     }
 
     void applyPreSpatialDerivActionAtBndryCells(double t, int gtl, int ftl)
@@ -862,6 +885,13 @@ public:
     void applyPostDiffFluxAction(double t, int gtl, int ftl)
     {
         foreach(boundary; bc) { boundary.applyPostDiffFluxAction(t, gtl, ftl); }
+    }
+
+    void applyPostDiffFluxAction(double t, int gtl, int ftl, FVInterface f)
+    {
+        foreach(boundary; bc) {
+            if (boundary.which_boundary == f.bc_id) { boundary.applyPostDiffFluxAction(t, gtl, ftl, f); }
+        }
     }
 
     version(nk_accelerator) {

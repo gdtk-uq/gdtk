@@ -2022,233 +2022,48 @@ string computeFluxDerivativesAroundCell(string varName, string posInArray, bool 
     return codeStr;
 }
 
-void compute_flux(FVCell pcell, FluidBlock blk, size_t orderOfJacobian, ref FVCell[] cell_list, FVInterface[] iface_list, FVInterface[] ifaceP_list) {
+void compute_flux(FVCell pcell, FluidBlock blk, size_t orderOfJacobian, ref FVCell[] cell_list, FVInterface[] iface_list, FVInterface[] ifaceP_list)
+{
 
-    bool apply_bcs = false;
-    foreach(cell; cell_list) {
-	foreach(f; cell.iface) {
-	    if(f.is_on_boundary) apply_bcs = true;
-	}
-    }
-    //writeln("COMPUTE FLUX");
     foreach(iface; iface_list) iface.F.clear();
     foreach(iface; ifaceP_list) iface.F.clear();
     foreach(cell; cell_list) cell.clear_source_vector();
-    if (orderOfJacobian > 1) {
-        // TODO: add in missing MLP code. 
-        // compute gradients for reconstruction
-        foreach(c; cell_list) {
-	    //writeln(pcell.global_id, ", ", c.global_id, ", ", c.cell_cloud.length, ", ", blk.id);
-            c.gradients.compute_lsq_values(c.cell_cloud, c.ws, blk.myConfig);
-        }
 
-	if (GlobalConfig.frozen_limiter == false) {
-	    foreach(c; cell_list) {
-		// It is more efficient to determine limiting factor here for some usg limiters.
-		final switch (blk.myConfig.unstructured_limiter) {
-		case UnstructuredLimiter.van_albada:
-		    // do nothing now
-		    break;
-		case UnstructuredLimiter.min_mod:
-		    // do nothing now
-		    break;
-		case UnstructuredLimiter.mlp:
-		    c.gradients.mlp_limit(c.cell_cloud, c.ws, blk.myConfig);
-		    break;
-		case UnstructuredLimiter.barth:
-		    c.gradients.barth_limit(c.cell_cloud, c.ws, blk.myConfig);
-		    break;
-		case UnstructuredLimiter.heuristic_van_albada:
-		    c.gradients.heuristic_van_albada_limit(c.cell_cloud, c.ws, blk.myConfig, 0);
-		    break;
-		case UnstructuredLimiter.venkat:
-		    c.gradients.venkat_limit(c.cell_cloud, c.ws, blk.myConfig, 0);
-		    break;
-		} // end switch
-	    } // end foreach c
-	}
+    bool do_reconstruction = ( orderOfJacobian > 1 );
 
-        // Fill in gradients for ghost cells so that left- and right- cells at all faces,
-        // including those along block boundaries, have the latest gradient values.
-        // Note that we DO NOT copy gradients from neighbour blocks even if the boundary
-        // has a mapped cell, this is due to efficiency, and block-parallel formation reasons.
-        // So we just use the fall back for all boundary conditions.
-        foreach (bcond; blk.bc) {
-	if (bcond.type != "exchange_using_mapped_cells") {
-	    // There are no other cells backing the ghost cells on this boundary.
-		// Fill in ghost-cell gradients from the other side of the face.
-		foreach (i, f; bcond.faces) {
-		    if (bcond.outsigns[i] == 1) {
-			f.right_cell.gradients.copy_values_from(f.left_cell.gradients);
-		    } else {
-			f.left_cell.gradients.copy_values_from(f.right_cell.gradients);
-		    }
-		} // end foreach f
-	    } // end foreach bcond
-	}
+    blk.convective_flux_phase0(do_reconstruction, 0, cell_list, []);
+    blk.convective_flux_phase1(do_reconstruction, 0, cell_list, iface_list);
 
-	foreach(c; cell_list) {
-            c.gradients.compute_lsq_values(c.cell_cloud, c.ws, blk.myConfig);
-	}
+    foreach(f; iface_list) {
+        if (f.is_on_boundary) { blk.applyPostConvFluxAction(0.0, 0, 0, f); }
+    }
 
-    } // end if interpolation_order > 1
-    // Convective flux update
-    //writeln("BEGIN INVISCID");
-    foreach(iface; iface_list) {
-        auto ublk = cast(UFluidBlock) blk;
-        size_t gtl = 0;
-        bool allow_high_order_interpolation = true;
-        if (iface.left_cell && iface.right_cell) {
-            ublk.lsq.interp_both(iface, gtl, ublk.Lft, ublk.Rght, allow_high_order_interpolation);
-	    compute_interface_flux(ublk.Lft, ublk.Rght, iface, ublk.myConfig, ublk.omegaz);
-        } else if (iface.right_cell) {
-            ublk.lsq.interp_right(iface, gtl, ublk.Rght, allow_high_order_interpolation);
-	    compute_flux_at_left_wall(ublk.Rght, iface, ublk.myConfig, ublk.omegaz);
-        } else if (iface.left_cell) {
-            ublk.lsq.interp_left(iface, gtl, ublk.Lft, allow_high_order_interpolation);
-	    compute_flux_at_right_wall(ublk.Lft, iface, ublk.myConfig, ublk.omegaz);
-        } else {
-                assert(0, "oops, a face without attached cells");
-        }
-        
-    }
-    //writeln("INVISCID CHECKS OUT");
-    /*
-    foreach (f; iface_list) {
-	if(pcell.global_id == 4 || pcell.global_id == 12) writeln("---- face check: ", pcell.global_id, ", ", f.global_id, ", ", f.pos.x.re, ", ", f.pos.y.re, ", ", blk.id, ", ", f.fs.vel.x, ", ", f.fs.vel.y, ", ", f.fs.gas.rho, ", ", f.fs.gas.p);
-	//f.average_cell_deriv_values(0);
-    }
-    foreach(c; cell_list) {
-        c.grad.gradients_leastsq(c.cloud_fs, c.cloud_pos, c.ws_grad); // blk.flow_property_spatial_derivatives(0); 
-        if(pcell.global_id == 4 || pcell.global_id == 12) {
-            writeln("fs check 0 : ", blk.id);
-            foreach(i; 0..c.cloud_fs.length) {
-                writeln(pcell.global_id, ", ", c.global_id, ", ", c.cloud_pos[i].x.re, ", ", c.cloud_pos[i].y.re, ", ", c.cloud_fs[i].vel.x, ", ", c.cloud_fs[i].vel.y, ", ", c.cloud_fs[i].gas.rho, ", ", c.cloud_fs[i].gas.p, ", ", c.cloud_fs[i].gas.T);
-            }
-            writef("grad check:  %d    %d    %.12e   %.12e   %.12e   %.12e   %.12e   %.12e\n", pcell.global_id, c.global_id, c.grad.vel[0][0], c.grad.vel[0][1], c.grad.vel[1][0], c.grad.vel[1][1], c.grad.T[0], c.grad.T[1]);
-	    writeln(c.ws_grad.wx);
-	    writeln(c.ws_grad.wy);
-	}
-    }
-    */
-    
-    //writeln("END INVISCID");
-    if (apply_bcs) {
-	foreach(cell; cell_list) {
-	    foreach(f; cell.iface) {
-		if (f.is_on_boundary) {
-		    if (blk.bc[f.bc_id].postConvFluxAction.length > 0) blk.bc[f.bc_id].applyPostConvFluxAction(0.0, 0, 0, f);
-		}
-	    }
-	}
-    }
     // Viscous flux update
-    //writeln("BEGIN VISCOUS");
     if (blk.myConfig.viscous) {
+
+        foreach(f; iface_list) {
+            if (f.is_on_boundary) { blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0, f); }
+        }
+
         // currently only for least-squares at faces
-        if (apply_bcs)  {
-	    foreach(cell; cell_list) {
-		foreach(f; cell.iface) {
-		    if (f.is_on_boundary) {
-			if (blk.bc[f.bc_id].preSpatialDerivActionAtBndryFaces.length > 0) blk.bc[f.bc_id].applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0, f);
-		    }
-		}
-	    }
-	}
-	//writeln("STAGE 1");
-        foreach(c; cell_list) {
-	    //writeln(c.global_id, " in");
-	    //writeln("fs: ", c.cloud_fs);
-	    //writeln("pos: ", c.cloud_pos);
-	    //writeln("ws_grad: ", c.ws_grad);
-	    c.grad.gradients_leastsq(c.cloud_fs, c.cloud_pos, c.ws_grad); // blk.flow_property_spatial_derivatives(0); 
-	    //writeln(c.global_id, " out");
-	}
-	//writeln("SPATIAL GRAD CHECKS OUT");
-	//writeln("STAGE 2");
-        foreach (bcond; blk.bc) {
-	    if (bcond.type != "exchange_using_mapped_cells") {
-		// There are no other cells backing the ghost cells on this boundary.
-		// Fill in ghost-cell gradients from the other side of the face.
-		foreach (i, f; bcond.faces) {
-		    if (bcond.outsigns[i] == 1) {
-			f.right_cell.grad.copy_values_from(f.left_cell.grad);
-		    } else {
-			f.left_cell.grad.copy_values_from(f.right_cell.grad);
-		    }
-		} // end foreach f
-	    }
-	}
-
-	//writeln("SPATIAL GRAD COPY CHECKS OUT");
-        if(pcell.global_id == 17) //writef("pcell info: %d   %d    %d \n", blk.id, pcell.jacobian_cell_stencil.length, pcell.jacobian_face_stencil.length);
 	foreach(c; cell_list) {
-            c.grad.gradients_leastsq(c.cloud_fs, c.cloud_pos, c.ws_grad); // blk.flow_property_spatial_derivatives(0); 
-	    if(pcell.global_id == 17) //writef("%d   %.12e   %.12e   %.12e   %.12e   %.12e   %.12e\n", c.global_id, c.grad.vel[0][0], c.grad.vel[0][1], c.grad.vel[1][0], c.grad.vel[1][1], c.grad.T[0], c.grad.T[1]);
-            if(pcell.global_id == 17 && c.global_id == 17) {
-                foreach(i; 0..c.cloud_fs.length) {
-                    //writeln("c_cloud: ", c.cloud_pos[i].x.re, ", ", c.cloud_pos[i].y.re, ", ", c.cloud_fs[i].gas.rho, ", ", c.cloud_fs[i].vel.x, ", ", c.cloud_fs[i].vel.y, ", ", c.cloud_fs[i].gas.p);
-                }
-	    }
+            c.grad.gradients_leastsq(c.cloud_fs, c.cloud_pos, c.ws_grad); // blk.flow_property_spatial_derivatives(0);
 	}
 
-	if(pcell.global_id == 17) {
-            foreach(face; pcell.iface) {
-                //writeln("face check 0: ", face.left_cell.global_id, ", ", face.left_cell.fs.gas.rho, ", ", face.right_cell.global_id, ", ", face.right_cell.fs.gas.rho);
-            }
-	}
-
-	//writeln("SPATIAL GRAD 2 CHECKS OUT");
-	//writeln("STAGE 3");
-        foreach (f; iface_list) {
-	    //writeln("in......blk: ", blk.id, ", f.id: ", f.global_id, ", ", f.left_cell, ", ", f.right_cell);
-	    //if(pcell.global_id == 14) writeln("check: ", f.id, ", ", blk.id, ", ", f.F.mass);
-            f.average_cell_deriv_values(0);
-	    //writeln("out......blk: ", blk.id, ", f.id: ", f.global_id, ", ", f.left_cell, ", ", f.right_cell);
-        }
-
-        if(pcell.global_id == 17) {
-            foreach(f; pcell.jacobian_face_stencil) {
-                //writeln("face check 1: ", f.global_id, ", ", f.grad.vel[0][0], " ,", f.grad.vel[0][1], ", ", f.grad.vel[1][0], ", ", f.grad.vel[1][1], ", ", f.grad.T[0], ", ", f.grad.T[1]);
+        // we need to average cell-centered spatial (/viscous) gradients to get approximations of the gradients
+        // at the cell interfaces before the viscous flux calculation.
+        if (blk.myConfig.spatial_deriv_locn == SpatialDerivLocn.cells) {
+            foreach(f; iface_list) {
+                f.average_cell_deriv_values(0);
             }
         }
+        blk.estimate_turbulence_viscosity(cell_list);
+        blk.viscous_flux(iface_list);
 
-	//writeln("SPATIAL GRAD AVG CHECKS OUT");
-	//writeln("STAGE 4");
-        foreach (cell; cell_list) {
-            cell.turbulence_viscosity();
-            cell.turbulence_viscosity_factor(blk.myConfig.transient_mu_t_factor);
-            cell.turbulence_viscosity_limit(blk.myConfig.max_mu_t_factor);
-            cell.turbulence_viscosity_zero_if_not_in_zone();
+        foreach(f; iface_list) {
+            if (f.is_on_boundary) { blk.applyPostDiffFluxAction(0.0, 0, 0, f); }
         }
 
-        if(pcell.global_id == 17) {
-            foreach(face; pcell.jacobian_face_stencil) {
-		//writeln("face check 2: ", face.global_id, ", ", face.fs.gas.rho, ", ", face.fs.vel.x, ", ", face.fs.vel.y, ", ", face.fs.gas.p, ", ", face.fs.gas.T);
-
-            }
-        }
-
-        foreach(iface; iface_list) {
-            iface.viscous_flux_calc();
-        }
-
-        if(pcell.global_id == 17) {
-            foreach(face; pcell.jacobian_face_stencil) {
-                //writeln("face check 3: ", face.global_id, ", ", face.F.mass, ", ", face.F.momentum.x, ", ", face.F.momentum.y, ", ", face.F.total_energy);
-            }
-        }
-        
-	//writeln("VISCOUS CALC CHECKS OUT");
-	if (apply_bcs)  {
-	    foreach(cell; cell_list) {
-		foreach(f; cell.iface) {
-		    if (f.is_on_boundary) {
-			if (blk.bc[f.bc_id].postDiffFluxAction.length > 0) blk.bc[f.bc_id].applyPostDiffFluxAction(0.0, 0, 0, f);
-		    }
-		}
-	    }
-	}
     }
     foreach (i, cell; cell_list) {
         cell.add_inviscid_source_vector(0, 0.0);
@@ -2267,17 +2082,11 @@ void compute_flux(FVCell pcell, FluidBlock blk, size_t orderOfJacobian, ref FVCe
                 j_cell = ijk_indices[1];
                 k_cell = ijk_indices[2];
             }
-            addUDFSourceTermsToCell(blk.myL, cell, 0, 
+            addUDFSourceTermsToCell(blk.myL, cell, 0,
                                     0.0, blk.myConfig,
                                     blk.id, i_cell, j_cell, k_cell);
         }
     }
-
-    foreach (f; iface_list) {
-	//if(pcell.global_id == 14 && f.id == 9) writeln("check 1: ", f.id, ", ", f.global_id, ", ", f.pos.x.re, ", ", f.pos.y.re, ", ", blk.id, ", ", f.F.mass);
-	//f.average_cell_deriv_values(0);
-    }
-
     // copy perturbed flux
     foreach(i, iface; iface_list) {
         ifaceP_list[i].copy_values_from(iface, CopyDataOption.all);
