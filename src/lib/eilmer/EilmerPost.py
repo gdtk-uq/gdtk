@@ -45,7 +45,7 @@ def get_block_size(jobName, tstep, block_id):
     elif 0 <= block_id < 10:
         block_str = "000" + str(block_id)
     else:
-        print("Block ID out of range")
+        raise ValueError ("Block ID out of range")
 
     if 100 <= tstep < 1000:
         time_str = "0" + str(tstep)
@@ -54,7 +54,7 @@ def get_block_size(jobName, tstep, block_id):
     elif 0 <= tstep < 10:
         time_str = "000" + str(tstep)
     else:
-        print("Time ID out of range")
+        raise ValueError ("Time ID out of range")
     
     filename = "flow/t" + time_str + "/" + jobName + ".flow.b" + block_str + ".t" + time_str + ".gz"
     f = gz.open(filename, "rt")
@@ -141,8 +141,16 @@ def get_cell_data(jobName, tstep, block_id, i, j = 0, k = 0, directory = "."):
             nk = int(line.split()[1])
             break
 
+    # Check the inputs
+    if i >= (ni * nj * nk):
+        raise ValueError ("i index out of range")
+    if j >= nj:
+        raise ValueError ("j index out of range")
+    if k >= nk:
+        raise ValueError ("k index out of range")
+
     # Now we know the line number we're looking for
-    line_number = 10 + nk * k + nj * j + i
+    line_number = 10 + (ni + nj) * k + ni * j + i
 
     #Return the pointer to the start of the file
     f.seek(0)
@@ -163,63 +171,9 @@ def get_cell_data(jobName, tstep, block_id, i, j = 0, k = 0, directory = "."):
         
     return flowState(cell_data), simTime
 
-def get_block_as_array(jobName, tstep, block_id):
+if __name__ == "__main__":
 
-    # Build the file name
-    if 100 <= block_id < 1000:
-        block_str = "0" + str(block_id)
-    elif 10 <= block_id < 100:
-        block_str = "00" + str(block_id)
-    elif 0 <= block_id < 10:
-        block_str = "000" + str(block_id)
-    else:
-        print("Block ID out of range")
+    jobname = "IVA"; tstep = 2; block_id = 2;
+    i = 5; j = 2;
 
-    if 100 <= tstep < 1000:
-        time_str = "0" + str(tstep)
-    elif 10 <= tstep < 100:
-        time_str = "00" + str(tstep)
-    elif 0 <= tstep < 10:
-        time_str = "000" + str(tstep)
-    else:
-        print("Time ID out of range")
-    
-    filename = "flow/t" + time_str + "/" + jobName + ".flow.b" + block_str + ".t" + time_str + ".gz"
-    f = gz.open(filename, "rt")
-
-    # Check that the desired file exists
-    if not os.path.isfile(filename):
-        raise IOError ("File does not exist- check job name, time step and block_id")
-
-    # Pull out information about the data block
-    inc = 0
-    for line in f:
-        
-        inc += 1
-    
-        if inc == 3:
-            simTime = float(line.split()[1])
-        if inc == 7:
-            ni = int(line.split()[1])
-        if inc == 8:
-            nj = int(line.split()[1])
-        if inc == 9:
-            nk = int(line.split()[1])
-            break
-
-    data_array = np.empty((ni * nj * nk, 18), dtype = np.double)
-
-    f.seek(0)
-
-    inc = 0
-    for line in f:
-
-        inc += 1
-
-        if inc >= 10:
-            for indx, element in enumerate(line.split()):
-                data_array[inc - 10, indx] = np.double(element)
-
-    f.close()
-
-    return data_array
+    print(get_cell(jobname, tstep, block_id, i, j))
