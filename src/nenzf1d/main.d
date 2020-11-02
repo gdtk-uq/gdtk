@@ -124,8 +124,11 @@ Options:
     // Alternatively, we might stop on pPitot/pSupply becoming less than pp_ps.
     double pp_ps = 0.0;
     try { pp_ps = to!double(config["pp_ps"].as!string); } catch (YAMLException e) {}
-    // pPitot = C * rho*V^2
-    double C = 0.92;
+    // pPitot = C * rho*V^^2
+    // A value of C=1.0 is a good default.
+    // In a number of sphere simulations, for flows representative of T4 flow conditions,
+    // values of pPitot/(rho*v^^2) appeared to be in the range 0.96 to 1.0.
+    double C = 1.0;
     try { C = to!double(config["C"].as!string); } catch (YAMLException e) {}
     // Nozzle x,diameter schedule.
     double[] xi; foreach(string val; config["xi"]) { xi ~= to!double(val); }
