@@ -354,14 +354,15 @@ function TemperatureFromGasSolidInterface:tojson()
 end
 
 ThermionicRadiativeEquilibrium = BoundaryInterfaceEffect:new{emissivity=nil, Ar=nil, phi=nil,
-                          ThermionicEmissionActive=1}
+                          ThermionicEmissionActive=1,catalytic_type="none"}
 ThermionicRadiativeEquilibrium.type = "thermionic_radiative_equilibrium"
 function ThermionicRadiativeEquilibrium:tojson()
    local str = string.format('          {"type": "%s",', self.type)
    str = str .. string.format(' "emissivity": %.18e,', self.emissivity)
    str = str .. string.format(' "Ar": %.18e,', self.Ar)
    str = str .. string.format(' "phi": %.18e,', self.phi)
-   str = str .. string.format(' "ThermionicEmissionActive": %d', self.ThermionicEmissionActive)
+   str = str .. string.format(' "ThermionicEmissionActive": %d,', self.ThermionicEmissionActive)
+   str = str .. string.format(' "catalytic_type": "%s"', self.catalytic_type)
    str = str .. '}'
    return str
 end
@@ -752,18 +753,11 @@ function WallBC_ThermionicEmission:new(o)
    o.preReconAction = { InternalCopyThenReflect:new() }
    o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new(),
       ThermionicRadiativeEquilibrium:new{emissivity=o.emissivity, Ar=o.Ar, phi=o.phi,
-                                  ThermionicEmissionActive=o.ThermionicEmissionActive}}
+                                  ThermionicEmissionActive=o.ThermionicEmissionActive,
+                                  catalytic_type=o.catalytic_type}}
 
-   if o.catalytic_type == "fixed_composition" then
-      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
-         FixedComposition:new{wall_massf_composition=convertSpeciesTableToArray(o.wall_massf_composition)}
-   elseif o.catalytic_type == "equilibrium" then
-      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
-         EquilibriumComposition:new{}
-   end
-   o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
-      UpdateThermoTransCoeffs:new()
-
+   -- ThermionicRadiativeEquilibrium handles setting the thermostate and transprops
+   -- at the boundaries. It needs access to these routines anyway, so it might as well.
    o.is_configured = true
    return o
 end

@@ -106,8 +106,9 @@ BoundaryInterfaceEffect make_BIE_from_json(JSONValue jsonData, int blk_id, int b
         double Ar = getJSONdouble(jsonData, "Ar", 0.0);
         double phi = getJSONdouble(jsonData, "phi", 0.0);
         int ThermionicEmissionActive = getJSONint(jsonData, "ThermionicEmissionActive", 1);
+        string catalytic_type = getJSONstring(jsonData, "catalytic_type", "none");
         newBIE = new BIE_ThermionicRadiativeEquilibrium(blk_id, boundary, emissivity, Ar, phi,
-                                 ThermionicEmissionActive);
+                                 ThermionicEmissionActive, GlobalConfig.gas_model_file, catalytic_type);
         break;
     case "equilibrium_composition":
         newBIE = new BIE_EquilibriumComposition(blk_id, boundary, GlobalConfig.gas_model_file);
@@ -2091,13 +2092,22 @@ public:
 } // end class BIE_TemperatureFromGasSolidInterface
 
 class BIE_ThermionicRadiativeEquilibrium : BoundaryInterfaceEffect {
-    this(int id, int boundary, double emissivity, double Ar, double phi, int ThermionicEmissionActive)
+    this(int id, int boundary, double emissivity, double Ar, double phi, int ThermionicEmissionActive, const string gas_file_name, const string catalytic_type)
     {
         super(id, boundary, "ThermionicRadiativeEquilibrium");
         this.emissivity = emissivity;
         this.Ar = Ar;
         this.phi = phi*Qe;  // Convert phi from input 'eV' to 'J'
         this.ThermionicEmissionActive = ThermionicEmissionActive;
+        switch(catalytic_type){
+            case "none":
+                break;
+            case "equilibrium":
+                eqcalc = new EquilibriumCalculator(gas_file_name);
+                break;
+            default:
+                throw new Error("TRE Boundary Condition does not support catalytic type: " ~ catalytic_type);
+        }
     }
 
     override string toString() const
@@ -2201,6 +2211,7 @@ protected:
     double phi;         // Work function, material dependent. Input units in eV,
                         // this gets converted to Joules by multiplying by Elementary charge, Qe
     int ThermionicEmissionActive;  // Whether or not Thermionic Emission is active. Default is 'on'
+    EquilibriumCalculator eqcalc;
 
     // Constants used in analysis
     immutable double SB_sigma = 5.670373e-8;  // Stefan-Boltzmann constant.   Units: W/(m^2 K^4)
@@ -2219,23 +2230,22 @@ protected:
         uint n_modes = blk.myConfig.n_modes;
         double viscous_factor = blk.myConfig.viscous_factor;
 
-        //double dn = distance_between(cell.pos[0], IFace.pos);
         IFace.fs.gas.p = cell.fs.gas.p;
-        number Tf = IFace.fs.gas.T;
-        number T0;
         number Twall;
-        T0 = IFace.fs.gas.T;
+        number T0 = IFace.fs.gas.T;
 
         Twall = T0;
         // One variable Newton's method to solve heat balance equations
+        immutable number eta = 1e-9;
         immutable number tolerance = 1.0e-10;
         number error = 1e32;
         ulong iterations = 0;
-        number f, dfdT;
+        number f, dfdT,df;
         number diff_T;
         while (error>tolerance) {
-            f   = ThermionicRadiativeEnergyBalanceLSQ(gmodel, cell, IFace, sign, viscous_factor, n_modes, Twall);
-            dfdT= ThermionicRadiativeDerivativeLSQ(gmodel, cell, IFace, sign, viscous_factor, n_modes, Twall);
+            f = ThermionicRadiativeEnergyBalance(gmodel, cell, IFace, n_modes, Twall);
+            df= ThermionicRadiativeEnergyBalance(gmodel, cell, IFace, n_modes, Twall+eta);
+            dfdT = (df-f)/eta;
 
             error = sqrt(f*f);
             diff_T = -f/dfdT;
@@ -2246,83 +2256,33 @@ protected:
 
         IFace.fs.gas.T = Twall;
         version(multi_T_gas) { foreach (imode; 0 .. n_modes) IFace.fs.gas.T_modes[imode] = Twall; }
+        if (eqcalc) eqcalc.set_massf_from_pT(IFace.fs.gas);
         gmodel.update_thermo_from_pT(IFace.fs.gas);
+        gmodel.update_trans_coeffs(IFace.fs.gas);
+
         return;
 
     } // end solve_for_wall_temperature_and_energy_flux()
 
     @nogc
-    size_t IndexOfInstance(T)(T target, T[] search){
-    /*
-        Imagine you have an array of references to various objects. You want
-        to know which index in the array a specific instance is. That's
-        what this function does. The reason it exists is because you can't
-        use object1==object2 inside a nogc function without overriding
-        the flowstate opEquals operation, and I can't be bothered to
-        do this properly.
-    */
-        size_t p=-1;
-
-        void* target_address = cast(void*) target;
-        foreach(i, s; search) {
-            void* address = cast(void*) s;
-            if (address==target_address) p = i;
-        }
-        assert(p!=-1);
-        return p;
-    }
-
-    @nogc
-    number ConductionHeatTransferLSQ(FVCell cell, FVInterface IFace, double sign, double viscous_factor, uint n_modes){
-    /*
-        Wall heat transfer due to conduction, assuming the cell centered least-squares method
-        is in use. 
-    */
-        auto ws = cell.ws_grad;
-        size_t loop_init = ws.loop_init;
-        size_t n = ws.n;
-        number dTdn = 0.0;
-        foreach(i; loop_init .. n) {
-            number dT = (cell.cloud_fs[i].gas.T - cell.fs.gas.T);
-            dTdn += IFace.n.x*ws.wx[i]*dT;
-            dTdn += IFace.n.y*ws.wy[i]*dT;
-            dTdn += IFace.n.z*ws.wz[i]*dT;
-        }
-        number q_conduction = IFace.fs.gas.k*dTdn;
-
-        version(multi_T_gas) {
-            foreach (imode; 0 .. n_modes) {
-                number dTvdn = 0.0;
-                foreach(i; loop_init .. n) {
-                    number dTv = (cell.cloud_fs[i].gas.T_modes[imode] - cell.fs.gas.T_modes[imode]);
-                    dTvdn += IFace.n.x*ws.wx[i]*dTv;
-                    dTvdn += IFace.n.y*ws.wy[i]*dTv;
-                    dTvdn += IFace.n.z*ws.wz[i]*dTv;
-                }
-                q_conduction += IFace.fs.gas.k_modes[imode]*dTvdn;
-            }
-        }
-        q_conduction *= sign*viscous_factor;
-        return q_conduction;
-    }
-
-    @nogc
-    number ThermionicRadiativeEnergyBalanceLSQ(GasModel gmodel, FVCell cell, FVInterface IFace, double sign, double viscous_factor, uint n_modes, number Twall){
+    number ThermionicRadiativeEnergyBalance(GasModel gmodel, FVCell cell, FVInterface IFace, uint n_modes, number Twall){
     /*
         Energy flux balance at the wall, from Alkandry, 2014 equations 6 and 10.
-        Note that the equations are divided by Twall squared to reduce their magnitude,
-        which fixes some numerical issues I was having with the numbers being large. This
-        is allowed because we are solving f(Twall) = 0, and f(Twall)/Twall/Twall is also = 0
-
-        Notes:
-           This form uses the weighted least squares formulation to compute the T gradient
+        This version uses the viscous_flux_calc routines directly, avoiding code duplication
     */
         IFace.fs.gas.T = Twall;
         version(multi_T_gas) { foreach (imode; 0 .. n_modes) IFace.fs.gas.T_modes[imode] = Twall; }
+        if (eqcalc) eqcalc.set_massf_from_pT(IFace.fs.gas);
         gmodel.update_thermo_from_pT(IFace.fs.gas);
-        gmodel.update_trans_coeffs(IFace.fs.gas); 
+        gmodel.update_trans_coeffs(IFace.fs.gas);
 
-        number q_conduction = ConductionHeatTransferLSQ(cell, IFace, sign, viscous_factor, n_modes);
+        cell.grad.gradients_leastsq(cell.cloud_fs, cell.cloud_pos, cell.ws_grad);
+        IFace.grad.copy_values_from(cell.grad);
+
+        IFace.F.clear();
+        IFace.viscous_flux_calc();
+        number q_conduction = IFace.F.total_energy;
+        IFace.F.clear();
 
         number q_rad = emissivity*SB_sigma*Twall*Twall;
         number q_thermionic = to!number(0.0);
@@ -2331,97 +2291,6 @@ protected:
         }
         return q_rad + q_thermionic - q_conduction/Twall/Twall;
     }
-
-    @nogc
-    number ThermionicRadiativeDerivativeLSQ(GasModel gmodel, FVCell cell, FVInterface IFace, double sign, double viscous_factor, uint n_modes, number Twall){
-    /*
-        Derivative of energy flux balance equations with respect to wall temperature,
-        ignoring variation of thermal conductivty with respect to temperature.
-        Notes:
-         - Assumes that the gas.k and gas.k_modes have already been set at Twall
-         - This least squares version is a bit more complex than the other one.
-         - We also assume that the derivative of thermal conductivity w.r.t 
-         temperature is small. This is true within ~3% for the temps I tested.
-    */
-        number dradiationdT = 2.0*emissivity*SB_sigma*Twall;
-
-        number q_conduction = ConductionHeatTransferLSQ(cell, IFace, sign, viscous_factor, n_modes);
-
-        number knwp = IFace.fs.gas.k;
-        version(multi_T_gas) { foreach (imode; 0 .. n_modes) knwp += IFace.fs.gas.k_modes[imode]; }
-
-        auto ws = cell.ws_grad;
-        size_t p = IndexOfInstance!FlowState(IFace.fs, cell.cloud_fs);
-        knwp *= (IFace.n.x*ws.wx[p] + IFace.n.y*ws.wy[p] + IFace.n.z*ws.wz[p]);
-        knwp *= sign*viscous_factor;
-
-        // Put the two parts together with the quotient rule
-        number dconductiondT = (knwp - 2*q_conduction/Twall)/Twall/Twall;
-
-        number delectrondT = to!number(0.0);
-        if (ThermionicEmissionActive == 1) {
-            delectrondT += Ar/Qe*exp(-phi/kb/Twall)*(phi*phi/kb/Twall/Twall + 2.0*kb + 2.0*phi/Twall);
-        }
-        return dradiationdT + delectrondT - dconductiondT;
-    }
-
-    @nogc
-    number ThermionicRadiativeEnergyBalance(GasModel gmodel, FVCell cell, FVInterface IFace, double dn, double viscous_factor, uint n_modes, number Twall){
-    /*
-        Energy flux balance at the wall, from Alkandry, 2014 equations 6 and 10.
-        Note that the equations are divided by Twall squared to reduce their magnitude,
-        which fixes some numerical issues I was having with the numbers being large. This
-        is allowed because we are solving f(Twall) = 0, and f(Twall)/Twall/Twall is also = 0
-    */
-        IFace.fs.gas.T = Twall;
-        version(multi_T_gas) { foreach (imode; 0 .. n_modes) IFace.fs.gas.T_modes[imode] = Twall; }
-        gmodel.update_thermo_from_pT(IFace.fs.gas);
-        gmodel.update_trans_coeffs(IFace.fs.gas);
-
-        number q_conduction = IFace.fs.gas.k*(cell.fs.gas.T/Twall - 1.0);
-
-        version(multi_T_gas) {
-            foreach (imode; 0 .. n_modes) {
-                q_conduction += IFace.fs.gas.k_modes[imode]*(cell.fs.gas.T_modes[imode]/Twall - 1.0);
-            }
-        }
-        q_conduction *= viscous_factor/Twall/dn;
-
-        number q_rad = emissivity*SB_sigma*Twall*Twall;
-        number q_thermionic = to!number(0.0);
-        if (ThermionicEmissionActive == 1) {
-            q_thermionic = Ar/Qe*exp(-phi/kb/Twall)*(phi + 2*kb*Twall);
-        }
-
-        return q_rad + q_thermionic - q_conduction;
-
-    }
-
-    @nogc
-    number ThermionicRadiativeDerivative(const FlowState cellfs, const FlowState wallfs, double dn, double viscous_factor, uint n_modes, number Twall){
-    /*
-        Derivative of energy flux balance equations with respect to wall temperature,
-        ignoring variation of thermal conductivty with respect to temperature.
-        Notes:
-         - Assumes that the gas.k and gas.k_modes have already been set at Twall
-    */
-        number dradiationdT = 2.0*emissivity*SB_sigma*Twall;
-
-        number dconductiondT = wallfs.gas.k*(1.0 - 2.0*cellfs.gas.T/Twall);
-        version(multi_T_gas) {
-            foreach (imode; 0 .. n_modes) {
-                dconductiondT += wallfs.gas.k_modes[imode]*(1.0 - 2.0*cellfs.gas.T_modes[imode]/Twall);
-            }
-        }
-        dconductiondT *= viscous_factor/dn/Twall/Twall;
-
-        number delectrondT = to!number(0.0);
-        if (ThermionicEmissionActive == 1) {
-            delectrondT += Ar/Qe*exp(-phi/kb/Twall)*(phi*phi/kb/Twall/Twall + 2.0*kb + 2.0*phi/Twall);
-        }
-        return dradiationdT + delectrondT - dconductiondT;
-    }
-
 } // end class BIE_ThermionicRadiativeEquilibrium
 
 class BIE_EquilibriumComposition : BoundaryInterfaceEffect {

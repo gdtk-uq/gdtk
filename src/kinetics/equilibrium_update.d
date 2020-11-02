@@ -216,6 +216,11 @@ private:
                 lua_pop(L, 1); // discard value but keep key so that lua_next can remove it (?!)
             }
             lua_pop(L, 1); // remove atomicConstituents (lua_next removed the key when it broke loop)
+
+            // ceq deals with ionised species with a pretend Electron element named E
+            int charge = getInt(L, -1, "charge");
+            if (charge!=0) species_elements["E"] = -1*charge;
+
             lua_pop(L, 1); // remove species table
             lua_pop(L, 1); // remove db table
             _element_map ~= species_elements.dup();
