@@ -23,13 +23,13 @@ class TestSod < Test::Unit::TestCase
     sim_time = 0.0
     lines = o.split("\n")
     lines.each do |txt|
-      if txt.match('Step=200') then
+      if txt.match('Step=350') then
         items = txt.split(' ')
         sim_time_items = items[1].split('=')
         sim_time = sim_time_items[1].to_f
       end
     end
-    assert((sim_time - 5.421e-4).abs < 1.0e-5, "Incorrect sim_time at step 200.")
+    assert((sim_time - 5.798e-4).abs < 1.0e-5, "Incorrect sim_time at step 350.")
   end
 
   def test_2_post
