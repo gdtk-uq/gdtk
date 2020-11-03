@@ -562,11 +562,11 @@ public:
     double suggested_time_step(double cfl_value)
     {
         LCell c = cells[0];
-        double signal_time = c.L / c.gas.a;
+        double signal_time = c.L / (c.gas.a + fabs(c.vel));
         double smallest_transit_time = signal_time;
         foreach (i; 1 .. cells.length) {
             c = cells[i];
-            signal_time = c.L / c.gas.a;
+            signal_time = c.L / (c.gas.a + fabs(c.vel));
             smallest_transit_time = min(smallest_transit_time, signal_time);
         }
         return smallest_transit_time * cfl_value;
