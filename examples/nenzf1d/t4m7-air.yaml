@@ -1,6 +1,8 @@
 # Sample input file for nenzf1d is a YAML 1.1 file.
 # t4m7-air.yaml
-# Data for T4 shot 11311 obtained from Wilson Chan's Mach 7 nozzle design report.
+# Data for T4 shot 11311 obtained from
+# Wilson Chan's Mach 7 nozzle validation report 2014/14
+# later published in AIAA Journal of Propulsion and Power, 2018.
 # PJ 2020-10-20
 #
 title: "T4 shot 11311 with Mach 7 nozzle."    # Any string will do.
@@ -25,8 +27,10 @@ pp_ps: 0.0105   # From Figure 8.
 C: 0.96         # pPitot/(rho*v^2), a value obtained from sphere simulations.
 
 # Define the expanding part of the nozzle as a schedule of diameters with position.
-xi: [0.0000, 5.126e-3, 1.021e-2, 2.008e-2, 5.023e-2, 0.1003, 0.2004, 0.4006, 0.6000, 0.8012, 1.0000]
-di: [0.0210, 0.0220,   0.0243,   0.0303,   0.0518,   0.0855, 0.1359, 0.2005, 0.2389, 0.2626, 0.2732]
+xi: [0.0000, 5.126e-3, 1.021e-2, 2.008e-2, 5.023e-2, 0.1003, 0.2004, 0.4006,
+     0.6000, 0.8012, 1.0000]
+di: [0.0210, 0.0220,   0.0243,   0.0303,   0.0518,   0.0855, 0.1359, 0.2005,
+     0.2389, 0.2626, 0.2732]
 # Values are sampled from Wilson's contour-t4-m7.data file.
 #    x, m         y, m
 # 0.000000e+00 1.050000e-02
