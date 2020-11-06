@@ -422,6 +422,7 @@ def find_nearest_cell_centre(jobName, nBlocks, x, y, z = 0.0, tstep = 0, directo
                 # Return the local block and tell the function we're done
                 local_block = block_id
                 finished = True
+                f.close()
 
         else:
 
@@ -471,6 +472,8 @@ def find_nearest_cell_centre(jobName, nBlocks, x, y, z = 0.0, tstep = 0, directo
                         dist = local_dist
                         cell_id = line_number - 10
                         local_block = block_id
+
+            f.close()
 
         block_id += 1
 
