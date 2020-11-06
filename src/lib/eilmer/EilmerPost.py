@@ -3,18 +3,20 @@ import gzip as gz
 import re
 import os
 
+class Vector3:
+
+    def __init__(self, x, y, z):
+
+        self.x = x; self.y = y; self.z = z
+
 class flowState:
 
     def __init__(self, data_list):
 
-        self.posx = data_list[0]
-        self.posy = data_list[1]
-        self.posz = data_list[2]
+        self.pos = Vector3(data_list[0], data_list[1], data_list[2])
         self.vol = data_list[3]
         self.rho = data_list[4]
-        self.velx = data_list[5]
-        self.vely = data_list[6]
-        self.velz = data_list[7]
+        self.vel = Vector3(data_list[5], data_list[6], data_list[7])
         self.p = data_list[8]
         self.a = data_list[9]
         self.mu = data_list[10]
@@ -232,12 +234,12 @@ def get_vertex(jobName, block_id, i, j = 0, k = 0, tstep = 0, directory = "."):
         raise ValueError ("k index out of range")
 
     # What line number are we looking for?
-    line_number = 7 + (ni * nj) * nk + ni * j + i
+    line_number = 7 + (ni * nj) * k + ni * j + i
 
     # Pull out the information about the vertex
     f.seek(0)
     inc = 0
-    vector = np.empty(3, dtype = float)
+    vertex_vector = np.empty(3, dtype = float)
 
     for line in f:
 
@@ -245,15 +247,11 @@ def get_vertex(jobName, block_id, i, j = 0, k = 0, tstep = 0, directory = "."):
 
         if line_number == inc:
             for indx, element in enumerate(line.split()):
-                vector[indx] = float(element)
+                vertex_vector[indx] = float(element)
 
     f.close()
 
-    return vector
-
-
-
-
+    return Vector3(vertex_vector[0], vertex_vector[1], vertex_vector[2])
 
 if __name__ == "__main__":
 
