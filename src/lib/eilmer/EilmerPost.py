@@ -355,8 +355,6 @@ def find_nearest_cell_centre(jobName, nBlocks, x, y, z = 0.0, tstep = 0, directo
     lines. The slow version simply checks every cell in the domain.
     """
 
-    # Build the file name
-
     # Start from block_id of 0 and run until the file no longer exists
     block_id = 0
     finished = False
@@ -453,6 +451,8 @@ def find_nearest_cell_centre(jobName, nBlocks, x, y, z = 0.0, tstep = 0, directo
             if not os.path.isfile(filename):
                 raise IOError ("File does not exist- check job name, time step")
 
+    # Build the file name
+
             f = gz.open(filename, 'rt')
 
             # Run through the file and check distances at each point
@@ -486,6 +486,75 @@ def find_nearest_cell_centre(jobName, nBlocks, x, y, z = 0.0, tstep = 0, directo
 
 ###------------------------------------------------------------------------------------------------###
 
+# Begin find_enclosing_cell
+
+def find_enclosing_cell(jobName, nBlocks, x, y, z = 0, tstep = 0, directory = ".", quick = False):
+    
+    """
+    find_enclosing_cell(jobName, nBlocks, x, y, z = 0, tstep = 0, directory = ".". quick = False)
+    jobName: your jobName as string
+    nBlocks: number of blocks in the simulation
+    x, y, z: co-ordinate of interest
+    tstep: time index of desired solution; relevant for moving grids
+    directory: string location of the directory containing the files, relative to current location
+    quick: boolean check whether to run fast version or not
+
+    Returns the block_id, cell_id of the cell which contains the specified (x, y, z) coordinate.
+
+    Quick version uses the winding method to check whether the specified coordinate is within the
+    current block before running through every cell in the block. May lead to bad results for
+    blocks with longer curved edges.
+    """
+
+    # Run through blocks until we either reach the last block or we find the enclosing cell
+    block_id = 0
+    finished = False
+    
+    while not finished:
+
+        if quick:
+
+            # The quick version- first perform a bounding box check to see if the point is in the current block
+
+            ni, nj, nk = get_block_size(jobName, block_id)
+
+            block_corners = [get_vertex(jobName, block_id, 0, 0), get_vertex(jobName, block_id, 0, nj), get_vertex(jobName, block_id, ni, nj), get_vertex(jobName, block_id, ni, 0)]
+
+            if is_in_bounding_box(Vector3(x, y), block_corners):
+
+                for j in range(nj):
+                    for i in range(ni):
+
+                        cell_corners = [get_vertex(jobName, block_id, i, j), get_vertex(jobName, block_id, i, j+1), get_vertex(jobName, block_id, i+1, j+1), get_vertex(jobName, block_id, i+1, j)]
+
+                        if is_in_bounding_box(Vector3(x, y, z), cell_corners):
+
+                            finished = True
+                            return block_id, j * ni + i
+
+        else:
+
+            ni, nj, nk = get_block_size(jobName, block_id)
+
+            for j in range(nj):
+                for i in range(ni):
+
+                    cell_corners = [get_vertex(jobName, block_id, i, j), get_vertex(jobName, block_id, i, j+1), get_vertex(jobName, block_id, i+1, j+1), get_vertex(jobName, block_id, i+1, j)]
+
+                    if is_in_bounding_box(Vector3(x, y, z), cell_corners):
+
+                        finished = True
+                        return block_id, j * ni + i
+
+        block_id += 1
+
+        if block_id == nBlocks:
+            raise ValueError ("The point does not be contained within any of the cells")
+
+# end find_enclosing_cell
+
+###------------------------------------------------------------------------------------------------###
+
 # Begin is_in_bounding_box_function
 def is_in_bounding_box(pos, corners):
     
@@ -498,8 +567,17 @@ def is_in_bounding_box(pos, corners):
 
     Order of the corners should be either clockwise or counter-clockwise, precise order does not matter.
     """
+    
+    """
+    // Copyright 2000 softSurfer, 2012 Dan Sunday
+    // This code may be freely used and modified for any purpose
+    // providing that this copyright notice is included with it.
+    // SoftSurfer makes no warranty for this code, and cannot be held
+    // liable for any real or imagined damage resulting from its use.
+    // Users of this code must verify correctness for their application.
 
-    # See c++ code code by Dan Sunday for this winding number implementation
+    Adapted from the c++ code by Lachlan Whyborn 2020
+    """
 
     # Define the isLeft lambda function
     isLeft = lambda P, V0, V1 : ((V1.x - V0.x) * (P.y - V0.y) - (P.x - V0.x) * (V1.y - V0.y))
