@@ -1,6 +1,6 @@
 = NENZF1D Manual for Users
 Peter A. Jacobs; Rowan J. Gollan
-2020-10-26
+2020-11-09
 :toc: right
 :stylesheet: readthedocs.css
 :sectnums:
@@ -79,7 +79,7 @@ prep-chem air-5sp-1T.lua GuptaEtAl-air-reactions.lua air-5sp-1T-reactions.lua
 
 ----
 # Sample input file for nenzf1d is a YAML 1.1 file.
-# t4m6.yaml
+# t4m6-air.yaml
 # Data for T4 shot 10559 obtained from Wilson Chan's PhD thesis, Table D.1, page 158.
 # PJ 2020-10-17
 #
@@ -118,7 +118,7 @@ di: [1.0,   4.0, 6.232,  8.44,  9.92, 11.268]  # diameter (may be normalized)
 Run `nenzf1d` with the command:
 
 ----
-nenzf1d t4m6.yaml
+nenzf1d t4m6-air.yaml
 ----
 
 to get the result
@@ -178,7 +178,7 @@ Exit condition:
   area-ratio  126.968
   velocity    3.10966 km/s
   Mach        6.04831
-  p_pitot     465.988 kPa
+  p_pitot     506.509 kPa
   pressure    10.1286 kPa
   density     0.0523794 kg/m^3
   temperature 669.499 K

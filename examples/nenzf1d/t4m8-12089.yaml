@@ -1,0 +1,29 @@
+# t4m8-12089.yaml
+# Data for Augusto's Mach 10 experiments obtained from
+# his nenzfr result, most similar to shot 12089
+# Ryan Whitside 2020-11-06
+#
+title: "Augusto Mach 10 enthalpy with Mach 8 nozzle."
+
+species: ['N2', 'O2', 'N', 'O', 'NO']
+molef: {'N2': 0.79, 'O2': 0.21}
+gas-model-1: cea-air5species-gas-model.lua
+gas-model-2: air-5sp-1T.lua
+reactions: air-5sp-1T-reactions.lua
+
+T1: 300         # K
+p1: 129.0e3     # Pa
+Vs: 2190.8      # m/s
+pe: 30.182e6    # Pa
+ar: 271.16      # Mach 8 nozzle
+pp_ps: 0.006964 # From Augusto nenzfr pp / input pe
+
+C: 0.96         # pPitot/(rho*v^2)
+
+# Define the expanding part of the nozzle as a schedule of diameters with position.
+# Values are sampled from M8_COORDS.txt file.
+xi: [0.0000, 5.007e-3, 1.038e-2, 1.998e-2, 5.084e-2, 0.10097, 0.20272, 0.40123,
+     0.60631, 0.80419, 1.110]
+di: [0.0164, 0.01676, 0.01840, 0.02330, 0.04332, 0.07457, 0.12397, 0.18691,
+     0.22705, 0.25263, 0.27006]
+
