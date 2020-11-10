@@ -1,6 +1,6 @@
 = L1d Reference Manual for Users, v4.0
 Peter A. Jacobs; Rowan J. Gollan
-2020-08-16
+2020-11-10
 :toc: right
 :stylesheet: readthedocs.css
 :sectnums:
@@ -602,16 +602,27 @@ A diaphragm conditionally connects the adjacent ends of two gas slugs.
   _float_, default: `0.0` +
   Pressure, in Pa, at which rupture is triggered.
 
-`is_burst` ::
+`dxL` ::
+  _float_, default: `0.0` +
+  Distance to the left of the diaphragm over which to average the pressure.
+
+`dxR` ::
+  _float_, default: `0.0` +
+  Distance to the right of the diaphragm over which to average the pressure.
+
+`state` ::
   _int_: default `0` +
-  Flag to indicate the state of diaphragm.
-  A value of 0 indicates that the diaphragm is intact (with zero-velocity end condition
-  being effectively applied to both gas slugs) while a value of 1 indicates that
-  the diaphragm is ruptured and the gas slugs are interacting.
+  Indicates the state of diaphragm: +
+  `0` indicates that the diaphragm is intact/closed
+  (with zero-velocity end condition being effectively applied
+  to both gas slugs). +
+  `1` indicates that the diaphragm has been triggered by over pressure. +
+  `2` indicates that the diaphragm is ruptured/open and
+  the gas slugs are interacting.
 
 `dt_hold` ::
   _float_, default: `0.0` +
-  Time delay, in seconds, from rupture-trigger to actual rupture with the
+  Time delay, in seconds, from overpressure-trigger to actual rupture with the
   gas slugs being allowed to interact.
 
 ////
