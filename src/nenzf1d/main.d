@@ -507,9 +507,11 @@ Options:
     writefln("  Mach        %g", v/gas0.a);
     writefln("  p_pitot     %g kPa", p_pitot/1000);
     write_tp_state(gas0);
-    double massflux = area * gas0.rho * v;
+    gm_tp.update_trans_coeffs(gas0);
+    writefln("  viscosity   %g Pa.s", gas0.mu);
     //
     writeln("Expansion error-indicators:");
+    double massflux = area * gas0.rho * v;
     writefln("  relerr-mass %g", fabs(massflux - massflux_at_throat)/massflux_at_throat);
     double H = gm_tp.enthalpy(gas0) + 0.5*v*v;
     writefln("  relerr-H    %g", fabs(H - H_at_throat)/H_at_throat);
