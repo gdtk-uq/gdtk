@@ -5,7 +5,7 @@ dummy:
 	echo "do nothing"
 
 clean:
-	- mv dub.json.back dub.json
+	- rm -f dub.json
 	- rm -rf .dub/
 	- rm -f mpi_configure mpi_splice
 	- rm -f source/mpi/package.d

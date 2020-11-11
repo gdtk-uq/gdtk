@@ -19,11 +19,6 @@ configStr="\
 
 echo $configStr
 
-if [ ! -f dub.json.back ]
-then
-    cp dub.json dub.json.back
-fi
-
 FLAG=0
 while read line; do
     if [ $FLAG == 1 ]
@@ -43,7 +38,7 @@ while read line; do
         continue
     fi
     echo $line >> dub.json.part
-done < dub.json.back
+done < dub.json.template
 
 mv dub.json.part dub.json
 
