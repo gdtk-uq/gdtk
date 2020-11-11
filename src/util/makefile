@@ -13,5 +13,5 @@ lua_service : lua_service.d $(LIBLUA)
 	dmd -main -unittest -g lua_service.d ${LUAD_FILES} -L-L$(LIBLUAPATH) -L-llua -L-ldl
 
 clean:
-	- rm *.o lua_service
+	- rm -f *.o lua_service
 	- cd $(LUA); make clean

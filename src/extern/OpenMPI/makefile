@@ -6,7 +6,7 @@ dummy:
 
 clean:
 	- mv dub.json.back dub.json
-	- rm -r .dub/
-	- rm mpi_configure mpi_splice
-	- rm source/mpi/package.d
+	- rm -rf .dub/
+	- rm -f mpi_configure mpi_splice
+	- rm -f source/mpi/package.d
 

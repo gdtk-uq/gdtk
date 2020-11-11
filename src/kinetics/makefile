@@ -58,13 +58,13 @@ test: $(TEST_PROGRAMS)
 	tclsh kinetics-package-test.tcl
 
 clean:
-	- rm *.o *.mod
-	- rm $(TEST_PROGRAMS)
-	- rm two_temperature_argon_kinetics_test_results.data
-	- rm -r $(BUILD_DIR)/*
+	- rm -f *.o *.mod
+	- rm -f $(TEST_PROGRAMS)
+	- rm -f two_temperature_argon_kinetics_test_results.data
+	- rm -rf $(BUILD_DIR)/*
 	- cd $(LUA_DIR); make clean
 	- cd $(CEQ_DIR); make clean
-	- rm $(GAS_DIR)/ideal_air_fortran.mod $(GAS_DIR)/ideal_air_fortran.o
+	- rm -f $(GAS_DIR)/ideal_air_fortran.mod $(GAS_DIR)/ideal_air_fortran.o
 
 ${LIBLUA}:
 	cd ${LUA_DIR}; make $(PLATFORM) local

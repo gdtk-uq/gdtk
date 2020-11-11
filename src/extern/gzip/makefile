@@ -5,6 +5,6 @@ gzip_demo: gzip_demo.d gzip.d
 	dmd gzip_demo.d gzip.d
 
 clean:
-	- rm testout.gz
-	- rm *.o
-	- rm gzip_demo
+	- rm -f testout.gz
+	- rm -f *.o
+	- rm -f gzip_demo

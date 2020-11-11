@@ -19,9 +19,9 @@ endif
 PROGRAMS := ugrid_partition
 
 clean:
-	- rm *.o
-	- rm $(PROGRAMS)
-	- rm $(BUILD_DIR)/bin/$(PROGRAMS)
+	- rm -f *.o
+	- rm -f $(PROGRAMS)
+	- rm -f $(BUILD_DIR)/bin/$(PROGRAMS)
 
 install: $(PROGRAMS)
 	cp -r $(BUILD_DIR)/bin/$(PROGRAMS) $(INSTALL_DIR)/bin

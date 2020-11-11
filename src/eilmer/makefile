@@ -410,28 +410,28 @@ sync-tarball: tarball
 	rsync -av dgd-for-mech4480.tgz mango:dropbox/
 
 clean:
-	- rm *.o
-	- rm $(DEMO_PROGRAMS) $(PROGRAMS)
-	- rm -r $(BUILD_DIR)/*
-	- rm test-grid.txt.gz test-flow.txt.gz trace.log trace.def
-	- rm -r plot/ flow/ grid/
-	- rm main_with_rev_string.d
-	- rm main_complex_with_rev_string.d
-	- rm nk_accelerator_with_string_subst.d
-	- rm mpi_nk_accelerator_with_string_subst.d
-	- rm steadystate_solver_with_rev_string.d
-	- rm steadystate_solver_complex_with_rev_string.d
-	- rm shape_sensitivity_calc_with_rev_string.d
-	- rm e4opt optdriver_with_rev_string.d
-	- rm mpi_main_with_rev_string.d
-	- rm loadbalance_with_rev_string.d
-	- rm e4mpi e4loadbalance e4ssc e4zshared e4-nk-shared e4-nk-dist e4-lusgs-shared e4-lusgs-dist
-	- rm dgd-for-mech4480.tgz
+	- rm -f *.o
+	- rm -f $(DEMO_PROGRAMS) $(PROGRAMS)
+	- rm -rf $(BUILD_DIR)/*
+	- rm -f test-grid.txt.gz test-flow.txt.gz trace.log trace.def
+	- rm -rf plot/ flow/ grid/
+	- rm -f main_with_rev_string.d
+	- rm -f main_complex_with_rev_string.d
+	- rm -f nk_accelerator_with_string_subst.d
+	- rm -f mpi_nk_accelerator_with_string_subst.d
+	- rm -f steadystate_solver_with_rev_string.d
+	- rm -f steadystate_solver_complex_with_rev_string.d
+	- rm -f shape_sensitivity_calc_with_rev_string.d
+	- rm -f e4opt optdriver_with_rev_string.d
+	- rm -f mpi_main_with_rev_string.d
+	- rm -f loadbalance_with_rev_string.d
+	- rm -f e4mpi e4loadbalance e4ssc e4zshared e4-nk-shared e4-nk-dist e4-lusgs-shared e4-lusgs-dist
+	- rm -f dgd-for-mech4480.tgz
 	- cd $(OPENMPI_DIR); make clean
 	- cd $(LUA_DIR); make clean
 	- cd $(GEOM_DIR); make clean
 	- cd $(GZIP_DIR); make clean
-	- cd $(GAS_DIR); make clean; rm libgas.a
+	- cd $(GAS_DIR); make clean; rm -f libgas.a
 	- cd $(KINETICS_DIR); make clean
 	- cd $(GRID_DIR); make clean
 	- cd $(CEQ_DIR); make clean

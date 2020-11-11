@@ -173,27 +173,27 @@ demo: ${DEMO_PROGRAMS}
 	echo "Demo programs built."
 
 clean:
-	- rm *.o *.so
-	- rm *.mod
-	- rm -r $(BUILD_DIR)/*
-	- rm -r __pycache__
-	- rm ${DEMO_PROGRAMS}
-	- rm ${TEST_PROGRAMS}
-	- rm gas.so
-	- rm gas-calc
-	- rm species-database/species-database.lua
-	- rm LOGFILE*TEST
-	- rm thermo.inp thermo.lib thermo.out
-	- rm trans.inp trans.lib trans.out
-	- rm tmp.inp tmp.out tmp.plt
+	- rm -f *.o *.so
+	- rm -f *.mod
+	- rm -rf $(BUILD_DIR)/*
+	- rm -rf __pycache__
+	- rm -f ${DEMO_PROGRAMS}
+	- rm -f ${TEST_PROGRAMS}
+	- rm -f gas.so
+	- rm -f gas-calc
+	- rm -f species-database/species-database.lua
+	- rm -f LOGFILE*TEST
+	- rm -f thermo.inp thermo.lib thermo.out
+	- rm -f trans.inp trans.lib trans.out
+	- rm -f tmp.inp tmp.out tmp.plt
 	- rm -f air-eq-1.lua air-eq.inp air-eq.lua
-	- rm ./ideal-air-gas-model.lua ./cea-lut-air-version-test.lua
-	- rm ./uniform-lut-plus-ideal-air-gas-model.lua
-	- rm ./two-temperature-reacting-argon-model.lua
-	- rm ./two-temperature-argon-plus-ideal-air-gas-model.lua
-	- rm ./diffusion/*.o
-	- rm ./thermo/*.o
-	- rm $(GASDYN_DIR)/*.o
+	- rm -f ./ideal-air-gas-model.lua ./cea-lut-air-version-test.lua
+	- rm -f ./uniform-lut-plus-ideal-air-gas-model.lua
+	- rm -f ./two-temperature-reacting-argon-model.lua
+	- rm -f ./two-temperature-argon-plus-ideal-air-gas-model.lua
+	- rm -f ./diffusion/*.o
+	- rm -f ./thermo/*.o
+	- rm -f $(GASDYN_DIR)/*.o
 	- cd $(LUA); make clean
 	- cd $(CEQ_DIR); make clean
 	- cd $(UTIL_DIR); make clean

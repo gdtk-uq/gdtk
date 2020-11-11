@@ -69,9 +69,9 @@ demo: ${DEMO_PROGRAMS}
 	echo "Demo codes built."
 
 clean:
-	- rm *.o
-	- rm ${DEMO_PROGRAMS}
-	- rm ${TEST_PROGRAMS}
+	- rm -f *.o
+	- rm -f ${DEMO_PROGRAMS}
+	- rm -f ${TEST_PROGRAMS}
 	- cd $(LUA); make clean
 
 # Specific targets, for individual artefacts.

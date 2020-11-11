@@ -107,17 +107,17 @@ install: foamMesh foam-mesh.lua
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
 
 clean:
-	- rm *.o elements/*.o gpath/*.o grid/*.o luawrap/*.o misc/*.o surface/*.o volume/*.o
-	- rm $(DEMO_PROGRAMS)
-	- rm $(TEST_PROGRAMS)
-	- rm gpgrid*.vtk test*.vtk test*.gz test*.svg test*.su2 test*.bin
-	- rm -r test_openFoam
+	- rm -f *.o elements/*.o gpath/*.o grid/*.o luawrap/*.o misc/*.o surface/*.o volume/*.o
+	- rm -f $(DEMO_PROGRAMS)
+	- rm -f $(TEST_PROGRAMS)
+	- rm -f gpgrid*.vtk test*.vtk test*.gz test*.svg test*.su2 test*.bin
+	- rm -rf test_openFoam
 	- cd $(LUA_DIR); make clean
 
 all-clean:
 	- make clean
-	- rm -r foamMesh foamMesh_with_rev_string.d
-	- rm -r $(BUILD_DIR)
+	- rm -rf foamMesh foamMesh_with_rev_string.d
+	- rm -rf $(BUILD_DIR)
 
 # Specific targets, for individual artefacts.
 
