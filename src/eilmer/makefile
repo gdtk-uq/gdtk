@@ -39,6 +39,7 @@ MULTI_SPECIES_GAS ?= 1
 MULTI_T_GAS ?= 1
 MHD ?= 1
 TURBULENCE ?= 1
+WITH_THREAD_SANITIZER ?= 0
 
 TECPLOT_BIN_DIR ?= unavailable
 TECPLOT_BIN_VERSION_STR = tecplot_unavailable
@@ -268,7 +269,7 @@ ifeq ($(DMD), ldmd2)
 endif
 ifeq ($(DMD), ldc2)
     ifeq ($(FLAVOUR), debug)
-        DFLAGS := -w -g -d-debug -d-version=flavour_debug -fsanitize=thread
+        DFLAGS := -w -g -d-debug -d-version=flavour_debug
     endif
     ifeq ($(FLAVOUR), profile)
         # -fprofile-generate will result in profraw files being written
@@ -278,6 +279,9 @@ ifeq ($(DMD), ldc2)
     endif
     ifeq ($(FLAVOUR), fast)
         DFLAGS := -w -g -O -release -enable-inlining -boundscheck=off -d-version=flavour_fast -ffast-math -flto=full
+    endif
+    ifeq ($(WITH_THREAD_SANITIZER), 1)
+        DFLAGS := $(DFLAGS) -fsanitize=thread
     endif
     OF := -of=
     DVERSION := -d-version=
