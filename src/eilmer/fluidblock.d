@@ -6,6 +6,7 @@
 
 module fluidblock;
 
+import std.algorithm;
 import std.conv;
 import std.stdio;
 import std.math;
@@ -37,6 +38,7 @@ import grid_deform;
 import sfluidblock; // needed for some special-case processing, below
 import shockdetectors;
 import block;
+import jacobian;
 
 // To distinguish ghost cells from active cells, we start their id values at
 // an arbitrarily high value.  It seem high to me (PJ) but feel free to adjust it
@@ -95,6 +97,7 @@ public:
 
     // Shape sensitivity calculator workspace.
     version(shape_sensitivity) {
+        FlowJacobianT flowJacobianT;
         immutable size_t MAX_PERTURBED_INTERFACES = 800;
         FVCell cellSave;
         FVInterface[MAX_PERTURBED_INTERFACES] ifaceP;
@@ -893,6 +896,497 @@ public:
             if (boundary.which_boundary == f.bc_id) { boundary.applyPostDiffFluxAction(t, gtl, ftl, f); }
         }
     }
+
+    version(shape_sensitivity) {
+
+    void initialize_transpose_jacobian(size_t spatial_order_of_jacobian)
+    {
+        /*
+          This method initializes the transpose flow Jacobian matrix attached the FluidBlock object.
+          We gather the cell/interface residual stencils for the interior and ghost cells at this point,
+          since we need to know the number of expected entries in the Jacobian matrix to pre-size the
+          sparse matrix arrays.
+         */
+
+        size_t nentry = 0;
+        // gather the expected number of non-zero entries in the flow Jacobian
+        foreach (cell; cells) {
+            cell.gather_residual_stencil_lists(spatial_order_of_jacobian);
+            nentry += cell.cell_list.length;
+        }
+        shared size_t my_nConserved = GlobalConfig.cqi.nConservedQuantities;
+        size_t ncells = cells.length;
+        flowJacobianT = new FlowJacobianT(myConfig.dimensions, my_nConserved, spatial_order_of_jacobian, nentry, ncells);
+
+        // we will gather the ghost cell residual stencil lists
+        // at this point as well for convenience, we need them
+        // when we apply the boundary condition corrections later
+        foreach ( bndary; bc ) {
+            if ( bndary.type == "exchange_using_mapped_cells") { continue; }
+            foreach ( iface, face; bndary.faces) {
+                FVCell ghost_cell; FVCell cell;
+                if (bndary.outsigns[iface] == 1) {
+                    cell = face.left_cell;
+                    ghost_cell = face.right_cell;
+                } else {
+                    cell = face.right_cell;
+                    ghost_cell = face.left_cell;
+                }
+                ghost_cell.gather_residual_stencil_lists_for_ghost_cells(spatial_order_of_jacobian, cell.cell_cloud);
+            }
+        }
+    } // end initialize_transpose_jacobian()
+
+    void evaluate_transpose_jacobian()
+    {
+        /*
+          Higher level method used to evaluate the transpose flow Jacobian attached to the FluidBlock object.
+         */
+
+        // temporarily change interpolation order
+        shared int interpolation_order_save = GlobalConfig.interpolation_order;
+        myConfig.interpolation_order = to!int(flowJacobianT.spatial_order);
+
+        // fill out the rows of the Jacobian for a cell
+        flowJacobianT.prepare_crs_indexes();
+        foreach(cell; cells) { evaluate_block_row_of_jacobian(cell); }
+
+        // add boundary condition corrections to boundary cells
+        apply_transpose_jacobian_bcs();
+
+        // return the interpolation order to its original state
+        myConfig.interpolation_order = interpolation_order_save;
+
+    } // end evaluate_transpose_jacobian()
+
+    void evaluate_block_row_of_jacobian(FVCell pcell)
+    {
+        // Make a stack-local copy of conserved quantities info
+        size_t nConserved = GlobalConfig.cqi.nConservedQuantities;
+        size_t MASS = GlobalConfig.cqi.mass;
+        size_t X_MOM = GlobalConfig.cqi.xMom;
+        size_t Y_MOM = GlobalConfig.cqi.yMom;
+        size_t Z_MOM = GlobalConfig.cqi.zMom;
+        size_t TOT_ENERGY = GlobalConfig.cqi.totEnergy;
+        size_t TKE = GlobalConfig.cqi.tke;
+        //size_t SPECIES = GlobalConfig.cqi.species;
+        number EPS = flowJacobianT.eps;
+        int gtl = 0; int ftl = 1;
+        pcell.U[ftl].copy_values_from(pcell.U[0]);
+
+        // perturb either the cell flow state or conserved quantities and
+        // evaluate the perturbed residuals for the cells in the residual stencil
+        if ( flowJacobianT.wrtConserved ) {
+            mixin(computeResidualSensitivity("pcell", "mass", "MASS", true, true));
+            mixin(computeResidualSensitivity("pcell", "momentum.refx", "X_MOM", false, true));
+            mixin(computeResidualSensitivity("pcell", "momentum.refy", "Y_MOM", false, true));
+            if ( myConfig.dimensions == 3 ) { mixin(computeResidualSensitivity("pcell", "momentum.refz", "Z_MOM", false, true)); }
+            mixin(computeResidualSensitivity("pcell", "total_energy", "TOT_ENERGY", true, true));
+            foreach(ii; 0 .. myConfig.turb_model.nturb) { mixin(computeResidualSensitivity("pcell", "rhoturb[ii]", "TKE+ii", false, true)); }
+            //foreach(ii; 0 .. myConfig.gmodel.n_species) { mixin(computeResidualSensitivity("pcell", "massf[ii]", "SPECIES+ii", true, true)); }
+        } else { // wrtPrimitive
+            mixin(computeResidualSensitivity("pcell", "gas.rho", "MASS", true, false));
+            mixin(computeResidualSensitivity("pcell", "vel.refx", "X_MOM", false, false));
+            mixin(computeResidualSensitivity("pcell", "vel.refy", "Y_MOM", false, false));
+            if ( myConfig.dimensions == 3 ) { mixin(computeResidualSensitivity("pcell", "vel.refz", "Z_MOM", false, false)); }
+            mixin(computeResidualSensitivity("pcell", "gas.p", "TOT_ENERGY", true, false));
+            foreach(ii; 0 .. myConfig.turb_model.nturb) { mixin(computeResidualSensitivity("pcell", "turb[ii]", "TKE+ii", false, false)); }
+            //foreach(ii; 0 .. myConfig.gmodel.n_species) { mixin(computeResidualSensitivity("pcell", "gas.massf[ii]", "SPECIES+ii", true, false)); }
+        }
+
+        // we now populate the pre-sized sparse matrix representation of the flow Jacobian
+        // note that nConserved and nPrimitive are interchangeable
+        size_t jidx; // column index into the matrix
+        // loop through nConserved rows
+        for (size_t ip = 0; ip < nConserved; ++ip) {
+            // loop through cells that will have non-zero entries
+            foreach(cell; pcell.cell_list) {
+                // loop through nConserved columns for each effected cell
+                for ( size_t jp = 0; jp < nConserved; ++jp ) {
+                    assert(cell.id < ghost_cell_start_id, "Oops, we expect to not find a ghost cell at this point.");
+                    jidx = cell.id*nConserved + jp; // column index
+                    // note we are inherently performing a transpose operation on the next line,
+                    // we do this since it appeared more natural to build up the
+                    // global transpose flow Jacobian in compressed row storage format
+                    flowJacobianT.local.aa[flowJacobianT.aa_idx] = cell.dQdU[jp][ip];
+                    // fill out the sparse matrix idexes ready for the next entry in the row
+                    flowJacobianT.aa_idx += 1;
+                    flowJacobianT.local.ja[flowJacobianT.ja_idx] = jidx;
+                    flowJacobianT.ja_idx += 1;
+                }
+            }
+            // prepare the sparse matrix for a new row
+            flowJacobianT.local.ia[flowJacobianT.ia_idx] = flowJacobianT.aa_idx;
+            flowJacobianT.ia_idx += 1;
+        }
+    } // end evaluate_block_row_of_jacobian()
+
+    static string computeResidualSensitivity(string cellName, string varName, string posInArray, bool includeThermoUpdate, bool wrtConserved)
+    {
+        string codeStr ="{";
+
+        if ( wrtConserved ) {
+            codeStr ~= ""~cellName~".U[ftl]."~varName~" += EPS;
+                        "~cellName~".decode_conserved(gtl, ftl, 0.0); ";
+        } else {
+            codeStr ~= " "~cellName~".fs."~varName~" += EPS; ";
+        }
+
+        if ( includeThermoUpdate ) {
+            codeStr ~="
+            myConfig.gmodel.update_thermo_from_rhop("~cellName~".fs.gas);
+            myConfig.gmodel.update_trans_coeffs("~cellName~".fs.gas);
+            myConfig.gmodel.update_sound_speed("~cellName~".fs.gas);
+            ";
+        }
+
+        codeStr ~="
+        evalRHS(gtl, ftl, "~cellName~".cell_list, "~cellName~".face_list);
+
+        foreach (i, cell; "~cellName~".cell_list) {
+            cell.dQdU[MASS][" ~ posInArray ~ "] = cell.dUdt[ftl].mass.im/EPS.im;
+            cell.dQdU[X_MOM][" ~ posInArray ~ "] = cell.dUdt[ftl].momentum.x.im/EPS.im;
+            cell.dQdU[Y_MOM][" ~ posInArray ~ "] = cell.dUdt[ftl].momentum.y.im/EPS.im;
+            if (myConfig.dimensions == 3) { cell.dQdU[Z_MOM][" ~ posInArray ~ "] = cell.dUdt[ftl].momentum.z.im/EPS.im; }
+            cell.dQdU[TOT_ENERGY][" ~ posInArray ~ "] = cell.dUdt[ftl].total_energy.im/EPS.im;
+            foreach(it; 0 .. myConfig.turb_model.nturb) { cell.dQdU[TKE+it][" ~ posInArray ~ "] = cell.dUdt[ftl].rhoturb[it].im/EPS.im; }
+            //foreach(sp; 0 .. myConfig.gmodel.n_species) { cell.dQdU[SPECIES+sp][" ~ posInArray ~ "] = cell.dUdt[ftl].massf[sp].im/EPS.im; }
+         }
+
+         foreach(cell; "~cellName~".cell_list) {
+             cell.fs.clear_imaginary_components();
+             cell.U[ftl].clear_imaginary_components();
+             cell.dUdt[ftl].clear_imaginary_components();
+         }
+         "~cellName~".fs.clear_imaginary_components();
+         "~cellName~".U[ftl].clear_imaginary_components();
+         "~cellName~".dUdt[ftl].clear_imaginary_components();
+         foreach(face; "~cellName~".face_list) { face.fs.clear_imaginary_components(); } ";
+         if ( wrtConserved ) {
+             codeStr ~= ""~cellName~".decode_conserved(gtl, ftl, 0.0); ";
+         }
+         codeStr ~= "evalRHS(gtl, ftl, "~cellName~".cell_list, "~cellName~".face_list);
+         }";
+         return codeStr;
+    } // end computeResidualSensitivity()
+
+    void evalRHS(int gtl, int ftl, ref FVCell[] cell_list, FVInterface[] iface_list)
+    /*
+     *  This method evaluates the RHS residual on a subset of cells for a given FluidBlock.
+     *  It is used when constructing the numerical Jacobian.
+     *  Its effect should replicate evalRHS() in steadystatecore.d for a subset of cells.
+     */
+    {
+
+        foreach(iface; iface_list) iface.F.clear();
+        foreach(cell; cell_list) cell.clear_source_vector();
+
+        bool do_reconstruction = ( flowJacobianT.spatial_order > 1 );
+
+        convective_flux_phase0(do_reconstruction, gtl, cell_list, []);
+        convective_flux_phase1(do_reconstruction, gtl, cell_list, iface_list);
+
+        foreach(f; iface_list) {
+            if (f.is_on_boundary) { applyPostConvFluxAction(0.0, gtl, ftl, f); }
+        }
+
+        // Viscous flux update
+        if (myConfig.viscous) {
+
+            foreach(f; iface_list) {
+                if (f.is_on_boundary) { applyPreSpatialDerivActionAtBndryFaces(0.0, gtl, ftl, f); }
+            }
+
+            // currently only for least-squares at faces
+            // TODO: generalise for all spatial gradient methods
+            foreach(c; cell_list) {
+                c.grad.gradients_leastsq(c.cloud_fs, c.cloud_pos, c.ws_grad); // flow_property_spatial_derivatives(0);
+            }
+
+            // we need to average cell-centered spatial (/viscous) gradients to get approximations of the gradients
+            // at the cell interfaces before the viscous flux calculation.
+            if (myConfig.spatial_deriv_locn == SpatialDerivLocn.cells) {
+                foreach(f; iface_list) {
+                    f.average_cell_deriv_values(gtl);
+                }
+            }
+            estimate_turbulence_viscosity(cell_list);
+            viscous_flux(iface_list);
+            foreach(f; iface_list) {
+                if (f.is_on_boundary) { applyPostDiffFluxAction(0.0, gtl, ftl, f); }
+            }
+        }
+
+        foreach (i, cell; cell_list) {
+            cell.add_inviscid_source_vector(gtl, 0.0);
+            if (myConfig.viscous) {
+                cell.add_viscous_source_vector();
+            }
+            if (myConfig.reacting) {
+                cell.add_chemistry_source_vector();
+            }
+            if (myConfig.udf_source_terms) {
+                size_t i_cell = cell.id;
+                size_t j_cell = 0;
+                size_t k_cell = 0;
+                // can't call a blk/this inside the FluidBlock class
+                /*
+                if (grid_type == Grid_t.structured_g31rid) {
+                    auto sblk = cast(SFluidBlock) blk;
+                    assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
+                    auto ijk_indices = sblk.cell_id_to_ijk_indices(cell.id);
+                    i_cell = ijk_indices[0];
+                    j_cell = ijk_indices[1];
+                    k_cell = ijk_indices[2];
+                }
+                */
+                addUDFSourceTermsToCell(myL, cell, 0,
+                                        0.0, myConfig,
+                                        id, i_cell, j_cell, k_cell);
+            }
+            cell.time_derivatives(gtl, ftl);
+        }
+
+    } // end evalRHS()
+
+    void apply_transpose_jacobian_bcs() {
+        /*
+          This method accounts for the boundary conditions for the boundary cell entries in the transpose flow Jacobian.
+
+          To calculate a boundary correction dRdU (or dRdQ), we calculate the sensitivity of a
+          ghost cell flow state (q) with respect to a perturbation of the interior cells
+          conserved quantity (U) or flow state (Q) depending on whether the Jacobian is
+          calculated with respect to conserved or primitive flow variables. This sensitivity
+          is denoted as dQdq or dUdQ. We also calculate the residual sensitivity of interior
+          cells with respect to perturbing the ghost cell flow state, dRdq. Then we multiply
+          these results to obtain the local sensitivity matrix to be added onto the current entries
+          in the Jacobian, e.g. dRdU = dRdq * dqdU or dRdQ = dRdq * dqdQ.
+          Refer to Kyle's thesis for more details.
+
+          TODO: this function is a bit busy, think about breaking it up into smaller pieces.
+         */
+
+        // Make a stack-local copy of conserved quantities info
+        size_t nConserved = GlobalConfig.cqi.nConservedQuantities;
+        size_t MASS = GlobalConfig.cqi.mass;
+        size_t X_MOM = GlobalConfig.cqi.xMom;
+        size_t Y_MOM = GlobalConfig.cqi.yMom;
+        size_t Z_MOM = GlobalConfig.cqi.zMom;
+        size_t TOT_ENERGY = GlobalConfig.cqi.totEnergy;
+        size_t TKE = GlobalConfig.cqi.tke;
+        //size_t SPECIES = GlobalConfig.cqi.species;
+        number EPS = flowJacobianT.eps;
+        int gtl = 0; int ftl = 1;
+
+        foreach ( bndary; bc ) {
+            if ( bndary.type == "exchange_using_mapped_cells") { continue; }
+            foreach ( bi, bface; bndary.faces) {
+                FVCell ghost_cell; FVCell pcell;
+                if (bndary.outsigns[bi] == 1) {
+                    pcell = bface.left_cell;
+                    ghost_cell = bface.right_cell;
+                } else {
+                    pcell = bface.right_cell;
+                    ghost_cell = bface.left_cell;
+                }
+                pcell.U[ftl].copy_values_from(pcell.U[0]);
+
+                // calculate the sensitivity of the ghost cell with respect to
+                // a perturbation of the interior cell it shares an interface with
+                if ( flowJacobianT.wrtConserved ) {
+                    mixin(computeGhostCellSensitivity("mass", "MASS", true, true));
+                    mixin(computeGhostCellSensitivity("momentum.refx", "X_MOM", false, true));
+                    mixin(computeGhostCellSensitivity("momentum.refy", "Y_MOM", false, true));
+                    if ( myConfig.dimensions == 3 ) { mixin(computeGhostCellSensitivity("momentum.refz", "Z_MOM", false, true)); }
+                    mixin(computeGhostCellSensitivity("total_energy", "TOT_ENERGY", true, true));
+                    foreach(ii; 0 .. myConfig.turb_model.nturb) { mixin(computeGhostCellSensitivity("rhoturb[ii]", "TKE+ii", false, true)); }
+                    //foreach(ii; 0 .. myConfig.gmodel.n_species) { mixin(computeGhostCellSensitivity("massf[ii]", "SPECIES+ii", false, true)); }
+                } else {
+                    mixin(computeGhostCellSensitivity("gas.rho", "MASS", true, false));
+                    mixin(computeGhostCellSensitivity("vel.refx", "X_MOM", false, false));
+                    mixin(computeGhostCellSensitivity("vel.refy", "Y_MOM", false, false));
+                    if ( myConfig.dimensions == 3 ) { mixin(computeGhostCellSensitivity("vel.refz", "Z_MOM", false, false)); }
+                    mixin(computeGhostCellSensitivity("gas.p", "TOT_ENERGY", true, false));
+                    foreach(ii; 0 .. myConfig.turb_model.nturb) { mixin(computeGhostCellSensitivity("turb[ii]", "TKE+ii", false, false)); }
+                    //foreach(ii; 0 .. myConfig.gmodel.n_species) { mixin(computeGhostCellSensitivity("gas.massf[ii]", "SPECIES+ii", true, false)); }
+                }
+
+                // calculate the sensivitiy of the interior cells residuals with respect to
+                // a perturbation of the ghost cell flow state
+                mixin(computeResidualSensitivity("ghost_cell", "gas.rho", "MASS", true, false));
+                mixin(computeResidualSensitivity("ghost_cell", "vel.refx", "X_MOM", false, false));
+                mixin(computeResidualSensitivity("ghost_cell", "vel.refy", "Y_MOM", false, false));
+                if ( myConfig.dimensions == 3 ) { mixin(computeResidualSensitivity("ghost_cell", "vel.refz", "Z_MOM", false, false)); }
+                mixin(computeResidualSensitivity("ghost_cell", "gas.p", "TOT_ENERGY", true, false));
+                foreach(ii; 0 .. myConfig.turb_model.nturb) { mixin(computeResidualSensitivity("ghost_cell", "turb[ii]", "TKE+ii", false, false)); }
+                //foreach(ii; 0 .. myConfig.gmodel.n_species) { mixin(computeResidualSensitivity("ghost_cell", "gas.massf[ii]", "SPECIES+ii", true, false)); }
+
+                // multiply the sensitivity matrices and add the corrections to the relevant flow Jacobian entries
+                foreach(bcell; ghost_cell.cell_list) { //
+                    assert(bcell.id < ghost_cell_start_id, "Oops, we expect to not find a ghost cell at this point.");
+                    for ( size_t ip = 0; ip < nConserved; ++ip ) {
+                        for ( size_t jp = 0; jp < nConserved; ++jp ) {
+                            number entry = bcell.dQdU[ip][jp];
+                            flowJacobianT.dRdq[ip][jp] = entry;
+                        }
+                    }
+                    // perform matrix-matrix multiplication
+                    for (size_t i = 0; i < nConserved; i++) {
+                        for (size_t j = 0; j < nConserved; j++) {
+                            flowJacobianT.dRdQ[i][j] = 0;
+                            for (size_t k = 0; k < nConserved; k++) {
+                                flowJacobianT.dRdQ[i][j] += flowJacobianT.dRdq[i][k]*flowJacobianT.dqdQ[k][j];
+                            }
+                        }
+                    }
+
+                    // add correction to boundary entry in Jacobian
+                    size_t I, J;
+                    for ( size_t ip = 0; ip < nConserved; ++ip ) {
+                        I = bcell.id*nConserved + ip; // column index
+                        for ( size_t jp = 0; jp < nConserved; ++jp ) {
+                            J = pcell.id*nConserved + jp; // row index
+                            //writeln(I, ", ", J, ", ", flowJacobianT.local[J,I], ", ", flowJacobianT.dRdQ[ip][jp]);
+                            flowJacobianT.local[J,I] = flowJacobianT.local[J,I] + flowJacobianT.dRdQ[ip][jp];
+                        }
+                    }
+                }
+            } // foreach ( bi, bface; bndary.faces)
+        } // foreach ( bndary; bc )
+    } // end apply_transpose_jacobian_bcs()
+
+    static string computeGhostCellSensitivity(string varName, string posInArray, bool includeThermoUpdate, bool wrtConserved)
+    {
+        string codeStr = "{ ";
+        if ( wrtConserved ) {
+            codeStr ~= "pcell.U[ftl]."~varName~" += EPS;
+                        pcell.decode_conserved(gtl, ftl, 0.0); ";
+        } else {
+            codeStr ~= "pcell.fs."~varName~" += EPS; ";
+        }
+        if ( includeThermoUpdate ) {
+            codeStr ~= "myConfig.gmodel.update_thermo_from_rhop(pcell.fs.gas);";
+        }
+
+        codeStr ~= "
+        if (bc[bface.bc_id].preReconAction.length > 0) { bc[bface.bc_id].applyPreReconAction(0.0, 0, 0, bface); }
+
+        flowJacobianT.dqdQ[MASS][" ~ posInArray ~ "] = ghost_cell.fs.gas.rho.im/(EPS.im);
+        flowJacobianT.dqdQ[X_MOM][" ~ posInArray ~ "] = ghost_cell.fs.vel.x.im/(EPS.im);
+        flowJacobianT.dqdQ[Y_MOM][" ~ posInArray ~ "] = ghost_cell.fs.vel.y.im/(EPS.im);
+        if (myConfig.dimensions == 3) { flowJacobianT.dqdQ[Z_MOM][" ~ posInArray ~ "] = ghost_cell.fs.vel.z.im/(EPS.im); }
+        flowJacobianT.dqdQ[TOT_ENERGY][" ~ posInArray ~ "] = ghost_cell.fs.gas.p.im/(EPS.im);
+        foreach(it; 0 .. myConfig.turb_model.nturb){ flowJacobianT.dqdQ[TKE+it][" ~ posInArray ~ "] = ghost_cell.fs.turb[it].im/(EPS.im); }
+        //foreach(sp; 0 .. myConfig.gmodel.n_species){ flowJacobianT.dqdQ[SPECIES+sp][" ~ posInArray ~ "] = ghost_cell.fs.gas.massf[sp].im/(EPS.im); }
+
+        foreach ( ref c; [pcell, ghost_cell] ) {
+            c.fs.clear_imaginary_components();
+            c.U[ftl].clear_imaginary_components();
+            c.dUdt[ftl].clear_imaginary_components();
+        }
+        }";
+        return codeStr;
+    }
+
+    // The following two methods are used to verify the numerical Jacobian implementation.
+    /*
+    void verify_transpose_jacobian()
+    {
+        assert(flowJacobianT !is null, "Oops, we expect a flowJacobianT object to be attached to the fluidblock.");
+        size_t nConserved = GlobalConfig.cqi.nConservedQuantities;
+
+        // temporarily change interpolation order
+        shared int interpolation_order_save = GlobalConfig.interpolation_order;
+        myConfig.interpolation_order = to!int(flowJacobianT.spatial_order);
+
+        // create an arbitrary unit vector
+        number[] vec;
+        vec.length = cells.length*nConserved;
+        foreach ( i, ref val; vec) { val = i+1; }
+
+        // normalise the vector
+        number norm = 0.0;
+        foreach( i; 0..vec.length) { norm += vec[i]*vec[i]; }
+        norm = sqrt(norm);
+        foreach( ref val; vec) { val = val/norm; }
+
+        // result vectors
+        number[] sol1;
+        sol1.length = vec.length;
+        number[] sol2;
+        sol2.length = vec.length;
+
+        // explicit multiplication of J*vec
+        foreach ( i; 0..vec.length) {
+            sol1[i] = 0.0;
+            foreach ( j; 0..vec.length) {
+                sol1[i] += flowJacobianT.local[j,i]*vec[j];
+            }
+        }
+
+        // Frechet derivative of J*vec
+        evalConservativeJacobianVecProd(vec, sol2);
+
+        // write out results
+        string fileName = "jacobian_test.output";
+        auto outFile = File(fileName, "w");
+        foreach( i; 0..v.length ) {
+            size_t id = i/nConserved;
+            outFile.writef("%d    %d    %.16e    %.16e    %.16f    %.16f \n", i, id, fabs((sol1[i]-sol2[i])/sol1[i]).re, fabs(sol1[i]-sol2[i]).re, sol1[i].re, sol2[i].re);
+        }
+
+        // return the interpolation order to its original state
+        myConfig.interpolation_order = interpolation_order_save;
+
+    } // end verify_transpose_jacobian
+
+    void evalConservativeJacobianVecProd(number[] vec, ref number[] sol) {
+        import steadystate_core;
+        steadystate_core.evalRHS(0.0, 0);
+
+        size_t nConserved = GlobalConfig.cqi.nConservedQuantities;
+        size_t MASS = GlobalConfig.cqi.mass;
+        size_t X_MOM = GlobalConfig.cqi.xMom;
+        size_t Y_MOM = GlobalConfig.cqi.yMom;
+        size_t Z_MOM = GlobalConfig.cqi.zMom;
+        size_t TOT_ENERGY = GlobalConfig.cqi.totEnergy;
+        size_t TKE = GlobalConfig.cqi.tke;
+        //size_t SPECIES = GlobalConfig.cqi.species;
+        double EPS = flowJacobianT.eps.im;
+
+        // We perform a Frechet derivative to evaluate J*D^(-1)v
+        size_t nturb = myConfig.turb_model.nturb;
+        clear_fluxes_of_conserved_quantities();
+        foreach (cell; cells) cell.clear_source_vector();
+        int cellCount = 0;
+        foreach (cell; cells) {
+            cell.U[1].copy_values_from(cell.U[0]);
+            cell.U[1].mass += complex(0.0, EPS*vec[cellCount+MASS].re);
+            cell.U[1].momentum.refx += complex(0.0, EPS*vec[cellCount+X_MOM].re);
+            cell.U[1].momentum.refy += complex(0.0, EPS*vec[cellCount+Y_MOM].re);
+            if ( myConfig.dimensions == 3 ) { cell.U[1].momentum.refz += complex(0.0, EPS*vec[cellCount+Z_MOM].re); }
+            cell.U[1].total_energy += complex(0.0, EPS*vec[cellCount+TOT_ENERGY].re);
+            foreach(it; 0 .. nturb) { cell.U[1].rhoturb[it] += complex(0.0, EPS*vec[cellCount+TKE+it].re); }
+            cell.decode_conserved(0, 1, 0.0);
+            cellCount += nConserved;
+        }
+
+        steadystate_core.evalRHS(0.0, 1);
+        //evalRHS(cells, ifaces);
+        cellCount = 0;
+        foreach (cell; cells) {
+            sol[cellCount+MASS] = cell.dUdt[1].mass.im/EPS;
+            sol[cellCount+X_MOM] = cell.dUdt[1].momentum.x.im/EPS;
+            sol[cellCount+Y_MOM] = cell.dUdt[1].momentum.y.im/EPS;
+            if ( myConfig.dimensions == 3 ) { sol[cellCount+Z_MOM] = cell.dUdt[1].momentum.z.im/EPS; }
+            sol[cellCount+TOT_ENERGY] = cell.dUdt[1].total_energy.im/EPS;
+            foreach(it; 0 .. nturb) { sol[cellCount+TKE+it] = cell.dUdt[1].rhoturb[it].im/EPS; }
+            cellCount += nConserved;
+        }
+        steadystate_core.evalRHS(0.0, 0);
+    }
+    */
+    } // end version(shape_sensitivity)
 
     version(nk_accelerator) {
     void allocate_GMRES_workspace()

@@ -182,4 +182,35 @@ public:
         repr ~= ")";
         return to!string(repr);
     }
+
+version(complex_numbers) {
+    @nogc
+    void clear_imaginary_components()
+    // When performing the complex-step Frechet derivative in the Newton-Krylov accelerator,
+    // the conserved quantities accumulate imaginary components, so we have to start with a clean slate, so to speak.
+    {
+        mass.im = 0.0;
+        momentum.refx.im = 0.0;
+        momentum.refy.im = 0.0;
+        momentum.refz.im = 0.0;
+        total_energy.im = 0.0;
+        version(multi_species_gas) {
+            foreach(ref mf; massf) { mf.im = 0.0; }
+        }
+        version(multi_T_gas) {
+            foreach(ref e; energies) { e.im = 0.0; }
+        }
+        version(MHD) {
+            B.refx.im = 0.0;
+            B.refy.im = 0.0;
+            B.refz.im = 0.0;
+            psi.im = 0.0;
+            divB.im = 0.0;
+        }
+        version(turbulence) {
+            foreach(ref rt; rhoturb) { rt.im = 0.0; }
+        }
+    } // end clear_imaginary_components()
+} // end version(complex)
+
 } // end class ConservedQuantities

@@ -148,9 +148,11 @@ public:
     Matrix!number dFdU;
     Matrix!number dFdU_rotated;
 
-    // Shape sensitivity calculator workspace.
+    // Shape sensitivity calculator workspace
+    FVCell[] cell_list;            // list of cells in the residual stencil
+    FVInterface[] face_list;       // list of faces in the residual stencil
     version(shape_sensitivity) {
-	size_t[] pcell_global_coord_list;
+       	size_t[] pcell_global_coord_list;
 	size_t[][] ecell_global_coord_list;
 	number[][] entry_list;
 
@@ -208,10 +210,10 @@ public:
             ws_grad = new WLSQGradWorkspace();
         }
         version(shape_sensitivity) {
-            dQdU.length = 7; // number of conserved variables
-            dqdQ.length = 7;
-	    foreach (ref a; dQdU) a.length = 7;
-	    foreach (ref a; dqdQ) a.length = 7;
+            dQdU.length = GlobalConfig.cqi.nConservedQuantities; // number of conserved variables
+            dqdQ.length = GlobalConfig.cqi.nConservedQuantities;
+	    foreach (ref a; dQdU) a.length = GlobalConfig.cqi.nConservedQuantities;
+	    foreach (ref a; dqdQ) a.length = GlobalConfig.cqi.nConservedQuantities;
             foreach (i; 0..dQdU.length) {
                 foreach (j; 0..dQdU[i].length) {
                     dQdU[i][j] = 0.0;
@@ -2231,6 +2233,168 @@ public:
         dot(dFdU_rotated, f.T, dFdU);
 
     } // end roeFluxJacobian()
+
+    void gather_residual_stencil_lists(size_t spatial_order_of_jacobian)
+    {
+        /*
+          This function gathers references to the interfaces and cells
+          that make up the residual stencil for a cell needed for the
+          flow Jacobian construction. These stencils can be thought of
+          in terms of what neighbouring cells will have perturbed residuals
+          in the event this cells flow state or conserved quantities are
+          perturbed.
+
+          Note that we need the cells to be in numerical order
+          according to their local id for entry into the flow
+          Jacobian later
+
+          TODO: extend to handle structured grid solver
+         */
+
+        FVCell[] unordered_cell_list;  // TODO: think about possibly pre-sizing this array
+        size_t[size_t] cell_pos_array; // this is used to retrieve a cell from the unordered list
+
+        bool include_viscous_effects = myConfig.viscous;
+        // when using the flow Jacobian as a precondition matrix for methods such as GMRES it has
+        // been observed that only filling entries of the nearest-neighbours provides more
+        // robust preconditioning even if viscous effects would suggest a larger stencil is
+        // required. Note that we will still apply the viscous effects later when forming
+        // the flow Jacobian, we are in effect just dropping some of the Jacobian entries
+        // by reducing the stencil footprint.
+        bool nearest_neighbours_only = false;
+        if ( (spatial_order_of_jacobian == 1 && include_viscous_effects == false) ||
+             spatial_order_of_jacobian == 0) { nearest_neighbours_only = true; }
+
+        if (nearest_neighbours_only) {
+            // this first order stencil includes the cell and its nearest neighbours
+
+            // gather cells
+            size_t[] cell_ids;
+            unordered_cell_list ~= cell_cloud[0];
+            cell_pos_array[cell_cloud[0].id] = unordered_cell_list.length-1;
+            cell_ids ~= cell_cloud[0].id;
+            foreach (cell; cell_cloud) {
+                bool cell_exists = cell_ids.canFind(cell.id);
+                if (!cell_exists && cell.id < 1_000_000_000) {
+                    unordered_cell_list ~= cell;
+                    cell_pos_array[cell.id] = unordered_cell_list.length-1;
+                    cell_ids ~= cell.id;
+                }
+            } // finished gathering cells
+
+            // now sort the cells
+            cell_ids.sort();
+            foreach (id; cell_ids) { cell_list ~= unordered_cell_list[cell_pos_array[id]]; }
+
+            // gather the interfaces of those cells
+            size_t[] face_ids;
+            foreach (cell; cell_list) {
+                foreach (face; cell.iface) {
+                    bool face_exists = face_ids.canFind(face.id);
+                    if (!face_exists) {
+                        face_list ~= face;
+                        face_ids ~= face.id;
+                    }
+                }
+            } // finished gathering faces
+        } else {
+            // second order (&/or viscous, or first order with viscous effects) stencil includes the cell
+            // and its nearest neighbours as well as the nearest neighbours of the nearest neighbours
+
+            // gather cells
+            size_t[] cell_ids;
+            unordered_cell_list ~= cell_cloud[0];
+            cell_pos_array[cell_cloud[0].id] = unordered_cell_list.length-1;
+            cell_ids ~= cell_cloud[0].id;
+            foreach (icell; 1 .. cell_cloud.length) {
+                foreach (cell; cell_cloud[icell].cell_cloud) {
+                    bool cell_exists = cell_ids.canFind(cell.id);
+                    if (!cell_exists && cell.id < 1_000_000_000) {
+                        unordered_cell_list ~= cell;
+                        cell_pos_array[cell.id] = unordered_cell_list.length-1;
+                        cell_ids ~= cell.id;
+                    }
+                }
+            } // finished gathering cells
+
+            // now sort the cells
+            cell_ids.sort();
+            foreach (id; cell_ids) { cell_list ~= unordered_cell_list[cell_pos_array[id]]; }
+
+            // gather the interfaces of those cells
+            size_t[] face_ids;
+            foreach (cell; cell_list) {
+                foreach (face; cell.iface) {
+                    bool face_exists = face_ids.canFind(face.id);
+                    if (!face_exists) {
+                        face_list ~= face;
+                        face_ids ~= face.id;
+                    }
+                }
+            } // finished gathering faces
+        }
+    } // end gather_residual_stencil_lists()
+
+    void gather_residual_stencil_lists_for_ghost_cells(size_t spatial_order_of_jacobian, FVCell[] neighbour_cell_cloud)
+    {
+        /*
+          This function gathers references to the interfaces and cells
+          that make up the residual stencil for a ghost cell along domain
+          boundaries (e.g. all boundary conditions except FullFaceCopy and
+          MappedCellCopy BCs). These stencils can be thought of
+          in terms of what interior neighbouring cells will have perturbed residuals
+          in the event this ghost cells flow state or conserved quantities are
+          perturbed.
+
+          Note that we DO NOT need the cells to be in numerical order
+          for this stencil
+
+          TODO: extend to handle structured grid solver
+         */
+
+        bool include_viscous_effects = myConfig.viscous;
+        bool nearest_neighbours_only = false;
+        if ( (spatial_order_of_jacobian == 1 && include_viscous_effects == false) ||
+             spatial_order_of_jacobian == 0) { nearest_neighbours_only = true; }
+
+        if (nearest_neighbours_only) {
+            // this first order stencil includes the ghost cells nearest neighbours
+            cell_list ~= neighbour_cell_cloud[0]; // this is the interior cell that shares an interface
+            // gather faces
+            size_t[] face_ids;
+            foreach (c; cell_list) {
+                foreach (face; c.iface) {
+                    bool face_exists = face_ids.canFind(face.id);
+                    if (!face_exists) {
+                        face_list ~= face;
+                        face_ids ~= face.id;
+                    }
+                }
+            } // finished gathering faces
+        } else {
+            // second order (&/or viscous, or first order with viscous effects) stencil includes the cell
+            // and its nearest neighbours as well as the nearest neighbours of the nearest neighbours
+
+            // gather cells
+            foreach (c; neighbour_cell_cloud) {
+                if ( c.id != id && c.is_interior_to_domain) {
+                    cell_list ~= c;
+                }
+            } // finished gathering cells
+
+            // gather faces
+            size_t[] face_ids;
+            foreach (c; cell_list) {
+                foreach (face; c.iface) {
+                    bool face_exists = face_ids.canFind(face.id);
+                    if (!face_exists) {
+                        face_list ~= face;
+                        face_ids ~= face.id;
+                    }
+                }
+            } // finished gathering faces
+        }
+    } // end gather_residual_stencil_lists_for_ghost_cells()
 
 } // end class FVCell
 
