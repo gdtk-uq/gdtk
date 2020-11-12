@@ -61,7 +61,7 @@ Options:
         return exitFlag;
     }
     if (verbosityLevel >= 1) {
-        writeln("NENZF1D: shock-tunnel with nonequilibrium nozzle flow.");
+        writeln("NENZF1D 2020-11-13: shock-tunnel with nonequilibrium nozzle flow.");
     }
     if (verbosityLevel >= 2) {
         writeln("Revision: PUT_REVISION_STRING_HERE");
@@ -118,6 +118,13 @@ Options:
     // A value of 0.0 indicates that we should use the ideal shock-reflection pressure.
     double pe = 0.0;
     try { pe = to!double(config["pe"].as!string); } catch (YAMLException e) {}
+    // Mach number (in equilibrium gas) at nozzle throat.
+    double meq_throat = 1.0;
+    // Nominally, it would be 1.0 for sonic flow.
+    // It may be good to expand a little more so that,
+    // on changing to the frozen-gas sound speed in the nonequilibrium gas model,
+    // the flow remains slightly supersonic.
+    try { meq_throat = to!double(config["meq_throat"].as!string); } catch (YAMLException e) {}
     // Nozzle-exit area ratio for terminating expansion.
     double ar = 1.0;
     try { ar = to!double(config["ar"].as!string); } catch (YAMLException e) {}
@@ -145,6 +152,7 @@ Options:
         writeln("  p1= ", p1);
         writeln("  Vs= ", Vs);
         writeln("  pe= ", pe);
+        writeln("  meq_throat= ", meq_throat);
         writeln("  ar= ", ar);
         writeln("  pp_ps= ", pp_ps);
         writeln("  C= ", C);
@@ -208,14 +216,16 @@ Options:
         if (verbosityLevel >= 3) { writeln("  state5s= ", state5s); }
     }
     //
-    if (verbosityLevel >= 1) { writeln("Isentropic flow to throat to state 6 (Mach 1)."); }
+    if (verbosityLevel >= 1) {
+        writefln("Isentropic flow to throat to state 6 (Mach %g).", meq_throat);
+    }
     double error_at_throat(double x)
     {
         // Returns Mach number error as pressure is changed.
         GasState state = new GasState(gm1);
         double V = expand_from_stagnation(state5s, x, state, gm1);
         gm1.update_sound_speed(state);
-        return (V/state.a) - 1.0;
+        return (V/state.a) - meq_throat;
     }
     double x6 = 1.0;
     try {

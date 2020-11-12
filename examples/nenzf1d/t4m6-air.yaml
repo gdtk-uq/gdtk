@@ -15,11 +15,13 @@ gas-model-2: air-5sp-1T.lua
 reactions: air-5sp-1T-reactions.lua
 
 # Observed parameter values for shock-tube operation.
-T1: 300         # K
-p1: 130.0e3     # Pa
-Vs: 2434.0      # m/s
-pe: 34.07e6     # Pa
-ar: 127.0       # Mach 6 nozzle
+T1: 300           # K
+p1: 130.0e3       # Pa
+Vs: 2434.0        # m/s
+pe: 34.07e6       # Pa
+
+meq_throat: 1.03  # To get sonic condition with frozen-gas sound speed
+ar: 127.0         # Mach 6 nozzle
 
 # Define the expanding part of the nozzle as a schedule of diameters with position.
 xi: [0.0, 0.150, 0.280, 0.468, 0.671,  0.984]  # axial-distance metres
