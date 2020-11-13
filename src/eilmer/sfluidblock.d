@@ -2025,6 +2025,7 @@ public:
         bool do_reconstruction = allow_high_order_interpolation && (myConfig.interpolation_order > 1);
         //
         if (myConfig.high_order_flux_calculator) {
+            // ifi interfaces are East-facing interfaces.
             for (size_t k = kmin; k <= kmax; ++k) {
                 for (size_t j = jmin; j <= jmax; ++j) {
                     for (size_t i = imin; i <= imax+1; ++i) {
@@ -2053,7 +2054,7 @@ public:
                 }
             }
             if (myConfig.dimensions == 2) return;
-            // ifj interfaces are top-facing interfaces.
+            // ifk interfaces are Top-facing interfaces.
             for (size_t i = imin; i <= imax; ++i) {
                 for (size_t j = jmin; i <= jmax; ++j) {
                     for (size_t k = kmin; k <= kmax+1; ++k) {
