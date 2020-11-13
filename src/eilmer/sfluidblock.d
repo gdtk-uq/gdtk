@@ -79,16 +79,11 @@ private:
     // ifj = north-facing face properties and fluxes (normal in the j-index direction)
     // ifk = top-facing
     // vtx = cell vertex values (used for the viscous terms, mostly)
-    // sifi, sifj and sifk are secondary-cell faces (whose corner nodes are the
-    //                     the primary-cell centres.
     FVCell[] _ctr;
     FVInterface[] _ifi;
     FVInterface[] _ifj;
     FVInterface[] _ifk;
     FVVertex[] _vtx;
-    FVInterface[] _sifi;
-    FVInterface[] _sifj;
-    FVInterface[] _sifk;
 
 public:
     this(int blk_id, size_t nicell, size_t njcell, size_t nkcell, string label)
