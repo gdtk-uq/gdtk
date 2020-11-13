@@ -1188,7 +1188,7 @@ function OutFlowBC_SimpleExtrapolate:new(o)
    o = BoundaryCondition.new(self, o)
    o.is_wall_with_viscous_effects = false
    o.preReconAction = { ExtrapolateCopy:new{xOrder = o.xOrder} }
-   o.preSpatialDerivAction = { CopyCellData:new() }
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new() }
    o.is_configured = true
    return o
 end
@@ -1209,7 +1209,7 @@ function OutFlowBC_SimpleFlux:new(o)
    o = BoundaryCondition.new(self, o)
    o.is_wall_with_viscous_effects = false
    o.preReconAction = { ExtrapolateCopy:new{xOrder = o.xOrder} }
-   o.preSpatialDerivAction = { CopyCellData:new() }
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new() }
    o.postConvFluxAction = { SimpleOutflowFlux:new() }
    o.ghost_cell_data_available = true
    o.convective_flux_computed_in_bc = true
