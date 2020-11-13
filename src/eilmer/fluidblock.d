@@ -1289,9 +1289,16 @@ public:
     }
 
     // The following two methods are used to verify the numerical Jacobian implementation.
-    /*
     void verify_transpose_jacobian()
     {
+
+        // we perform a residual evaluation to ensure the ghost cells are filled with good data
+        import steadystate_core;
+        steadystate_core.evalRHS(0.0, 0);
+
+        // calculate the numerical Jaacobian
+        initialize_transpose_jacobian(1);
+        evaluate_transpose_jacobian();
         assert(flowJacobianT !is null, "Oops, we expect a flowJacobianT object to be attached to the fluidblock.");
         size_t nConserved = GlobalConfig.cqi.nConservedQuantities;
 
@@ -1325,6 +1332,7 @@ public:
         }
 
         // Frechet derivative of J*vec
+        steadystate_core.evalRHS(0.0, 0);
         evalConservativeJacobianVecProd(vec, sol2);
 
         // write out results
@@ -1338,12 +1346,12 @@ public:
         // return the interpolation order to its original state
         myConfig.interpolation_order = interpolation_order_save;
 
+        // stop the program at this point
+        import core.runtime;
+        Runtime.terminate();
     } // end verify_transpose_jacobian
 
     void evalConservativeJacobianVecProd(number[] vec, ref number[] sol) {
-        import steadystate_core;
-        steadystate_core.evalRHS(0.0, 0);
-
         size_t nConserved = GlobalConfig.cqi.nConservedQuantities;
         size_t MASS = GlobalConfig.cqi.mass;
         size_t X_MOM = GlobalConfig.cqi.xMom;
@@ -1370,7 +1378,7 @@ public:
             cell.decode_conserved(0, 1, 0.0);
             cellCount += nConserved;
         }
-
+        import steadystate_core;
         steadystate_core.evalRHS(0.0, 1);
         //evalRHS(cells, ifaces);
         cellCount = 0;
@@ -1383,9 +1391,7 @@ public:
             foreach(it; 0 .. nturb) { sol[cellCount+TKE+it] = cell.dUdt[1].rhoturb[it].im/EPS; }
             cellCount += nConserved;
         }
-        steadystate_core.evalRHS(0.0, 0);
     }
-    */
     } // end version(shape_sensitivity)
 
     version(nk_accelerator) {
