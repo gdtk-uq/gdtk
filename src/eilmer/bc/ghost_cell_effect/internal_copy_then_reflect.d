@@ -23,13 +23,13 @@ import bc;
 
 class GhostCellInternalCopyThenReflect : GhostCellEffect {
 public:
-    
+
     this(int id, int boundary)
     {
         super(id, boundary, "InternalCopyThenReflect");
     }
 
-    override string toString() const 
+    override string toString() const
     {
         return "InternalCopyThenReflect()";
     }
@@ -55,11 +55,11 @@ public:
 	}
 	ghost0.fs.copy_values_from(src_cell.fs);
 	reflect_normal_velocity(ghost0.fs, f);
-        
+
 	if (blk.myConfig.MHD) {
 	    reflect_normal_magnetic_field(ghost0.fs, f);
 	}
-    } // end apply_unstructured_grid()
+    } // end apply_for_interface_unstructured_grid()
 
     @nogc
     override void apply_unstructured_grid(double t, int gtl, int ftl)
@@ -83,7 +83,7 @@ public:
             }
             ghost0.fs.copy_values_from(src_cell.fs);
             reflect_normal_velocity(ghost0.fs, f);
-            
+
             if (blk.myConfig.MHD) {
                 reflect_normal_magnetic_field(ghost0.fs, f);
             }
