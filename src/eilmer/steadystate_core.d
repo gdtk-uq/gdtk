@@ -217,6 +217,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     if (usePreconditioner) {
         // initialize the flow Jacobians used as local precondition matrices for GMRES
         foreach (blk; localFluidBlocks) { blk.initialize_transpose_jacobian(0); }
+        //foreach (blk; localFluidBlocks) { blk.verify_transpose_jacobian(); }
     }
 
     // Set usePreconditioner to false for pre-steps AND first-order steps.
