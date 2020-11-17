@@ -61,6 +61,10 @@ public:
     // maybe for a boundary without ghost cells.
     FVCell left_cell;      // interface normal points out of this adjoining cell
     FVCell right_cell;     // interface normal points into this adjoining cell
+    // For structured grids, the structure of the grid allows us to carry
+    // references for several left- and right- cells.
+    FVCell[] left_cells;
+    FVCell[] right_cells;
     //
     // Flow
     FlowState fs;          // Flow properties
@@ -76,7 +80,7 @@ public:
     number[] jx; // diffusive mass flux in x
     number[] jy; // diffusive mass flux in y
     number[] jz; // diffusive mass flux in z
-    number q_diffusion; 
+    number q_diffusion;
     //
     // Shape sensitivity calculator workspace.
     string global_id;
@@ -84,7 +88,7 @@ public:
         //string global_id;
 	number[][] dFdU;
         // arrays used to temporarily store data intended for the neighbouring block
-        // during construction of the external portion of the flow Jacobian.  
+        // during construction of the external portion of the flow Jacobian.
         size_t[] idList;
         number[] aa;
     }
@@ -201,7 +205,7 @@ public:
             area[] = other.area[];
             n.set(other.n); t1.set(other.t1); t2.set(other.t2);
             break;
-        case CopyDataOption.all: 
+        case CopyDataOption.all:
         default:
             id = other.id;
             // We are sort-of promising not to alter the myConfig object,

@@ -49,41 +49,20 @@ class SFluidBlock: FluidBlock {
 public:
     size_t[] hicell, hjcell, hkcell; // locations of sample cells for history record
     size_t[] micell, mjcell, mkcell; // locations of monitor cells
-
-    size_t nicell;
-    size_t njcell;
-    size_t nkcell;
-    size_t imin, imax;
-    size_t jmin, jmax;
-    size_t kmin, kmax;
-
+    //
+    size_t nic, njc, nkc;
+    size_t niv, njv, nkv;
+    StructuredGrid grid; // for reading and writing
+    //
     // A place to store coordinates of the corner vertices.
     // For a moving-grid simulation these will be kept up to date
     // and communicated to user-defined Lua functions via infoFluidBlock.
     double[24] corner_coords;
     int[] inflow_partners;
+    //
     // Work-space that gets reused.
     // The following objects are used in the convective_flux method.
     OneDInterpolator one_d;
-
-private:
-    StructuredGrid grid; // for reading and writing
-    // Total number of cells in each direction for this block.
-    // these will be used in the array allocation routines.
-    size_t _nidim;
-    size_t _njdim;
-    size_t _nkdim;
-    // Most of the data is stored in the following arrays.
-    // ctr = cell center values
-    // ifi = east-facing face properties and fluxes (unit normal in the i-index direction)
-    // ifj = north-facing face properties and fluxes (normal in the j-index direction)
-    // ifk = top-facing
-    // vtx = cell vertex values (used for the viscous terms, mostly)
-    FVCell[] _ctr;
-    FVInterface[] _ifi;
-    FVInterface[] _ifj;
-    FVInterface[] _ifk;
-    FVVertex[] _vtx;
 
 public:
     this(int blk_id, size_t nicell, size_t njcell, size_t nkcell, string label)
@@ -91,38 +70,28 @@ public:
         super(blk_id, Grid_t.structured_grid, nicell*njcell*nkcell,
               GlobalConfig.n_ghost_cell_layers, label);
         this.n_ghost_cell_layers = GlobalConfig.n_ghost_cell_layers;
-        this.nicell = nicell;
-        this.njcell = njcell;
-        this.nkcell = nkcell;
+        nic = nicell;
+        njc = njcell;
+        nkc = nkcell;
         // Fill in other data sizes.
-        _nidim = nicell + 2 * GlobalConfig.n_ghost_cell_layers;
-        _njdim = njcell + 2 * GlobalConfig.n_ghost_cell_layers;
-        // Indices, in each grid direction for the active cells.
-        // These limits are inclusive. The mincell and max cell
-        // are both within the active set of cells.
-        imin = GlobalConfig.n_ghost_cell_layers; imax = imin + nicell - 1;
-        jmin = GlobalConfig.n_ghost_cell_layers; jmax = jmin + njcell - 1;
-        if ( GlobalConfig.dimensions == 2 ) {
+        niv = nic + 1;
+        njv = njc + 1;
+        if (GlobalConfig.dimensions == 2) {
             // In 2D simulations, the k range is from 0 to 0 for the
-            // storage arrays of cells and relevant faces.
-            if ( nkcell != 1 ) {
-                writeln("Warning: inconsistent dimensions nkcell set to 1 for 2D");
-                nkcell = 1;
-            }
-            _nkdim = 1;
-            kmin = 0; kmax = 0;
+            // storage of cells, vertices and relevant faces.
+            if (nkc != 1) { throw new Error("Inconsistent dimensions and value for nkc."); }
+            nkv = 1;
         } else {
             // In 3D simulations the k index is just like the i and j indices.
-            _nkdim = nkcell + 2 * n_ghost_cell_layers;
-            kmin = GlobalConfig.n_ghost_cell_layers; kmax = kmin + nkcell - 1;
+            nkv = nkc + 1;
         }
     } // end constructor
 
     this(int blk_id, JSONValue json_data)
     {
-        nicell = getJSONint(json_data, "nic", 0);
-        njcell = getJSONint(json_data, "njc", 0);
-        nkcell = getJSONint(json_data, "nkc", 0);
+        size_t nicell = getJSONint(json_data, "nic", 0);
+        size_t njcell = getJSONint(json_data, "njc", 0);
+        size_t nkcell = getJSONint(json_data, "nkc", 0);
         label = getJSONstring(json_data, "label", "");
         this(blk_id, nicell, njcell, nkcell, label);
         active = getJSONbool(json_data, "active", true);
@@ -149,9 +118,9 @@ public:
 
     override void init_lua_globals()
     {
-        lua_pushinteger(myL, nicell); lua_setglobal(myL, "nicell");
-        lua_pushinteger(myL, njcell); lua_setglobal(myL, "njcell");
-        lua_pushinteger(myL, nkcell); lua_setglobal(myL, "nkcell");
+        lua_pushinteger(myL, nic); lua_setglobal(myL, "nicell");
+        lua_pushinteger(myL, njc); lua_setglobal(myL, "njcell");
+        lua_pushinteger(myL, nkc); lua_setglobal(myL, "nkcell");
         lua_pushinteger(myL, Face.north); lua_setglobal(myL, "north");
         lua_pushinteger(myL, Face.east); lua_setglobal(myL, "east");
         lua_pushinteger(myL, Face.south); lua_setglobal(myL, "south");
@@ -188,9 +157,9 @@ public:
         repr ~= ", grid_type=\"" ~ gridTypeName(grid_type) ~ "\"";
         repr ~= ", omegaz=" ~ to!string(omegaz);
         repr ~= ", may_be_turbulent=" ~ to!string(may_be_turbulent);
-        repr ~= ", nicell=" ~ to!string(nicell);
-        repr ~= ", njcell=" ~ to!string(njcell);
-        repr ~= ", nkcell=" ~ to!string(nkcell);
+        repr ~= ", nic=" ~ to!string(nic);
+        repr ~= ", njc=" ~ to!string(njc);
+        repr ~= ", nkc=" ~ to!string(nkc);
         repr ~= ", n_ghost_cell_layers=" ~ to!string(n_ghost_cell_layers);
         repr ~= ", \n    bc=["~ face_name[0] ~ "=" ~ to!string(bc[0]);
         foreach (i; 1 .. (myConfig.dimensions == 3 ? 6 : 4)) {
@@ -202,86 +171,99 @@ public:
     } // end toString()
 
     pragma(inline, true)
-    @nogc size_t to_single_index(size_t i, size_t j, size_t k) const
-    {
-        assert(i < _nidim && j < _njdim && k < _nkdim, "Index out of bounds.");
-        return (k*_njdim + j)*_nidim + i;
-    }
-
-    pragma(inline, true)
-    @nogc size_t[3] to_ijk_indices(size_t gid) const
-    {
-        size_t[3] ijk;
-        size_t slabDim = _njdim * _nidim;
-        size_t k = gid / slabDim;
-        size_t j = (gid - k*slabDim) / _nidim;
-        size_t i = gid - k*slabDim - j*_nidim;
-        ijk[0] = i; ijk[1] = j; ijk[2] = k;
-        return ijk;
-    }
-
-    pragma(inline, true)
-    @nogc size_t ijk_0n_indices_to_cell_id(size_t i, size_t j, size_t k=0) const
-    // ijk indices into the hypothetical block of active cells.
-    // where 0<k<nkcell, 0<j<njcell, 0<i<nicell are the indices
-    // into the hypothetical block of active cells.
-    // This cell_id also the index into the single-dimensional cells array,
+    @nogc
+    size_t cell_index(size_t i, size_t j, size_t k=0) const
+    // The i,j,k indices into the hypothetical block of active cells
+    // map to the index into the single-dimensional cells array
     // that is held in the FluidBlock base class.
-    // Note that the hypothetical block of active cells is embedded in
-    // a larger array that includes surrounding layers of ghost cells.
     {
-        return (k*njcell + j)*nicell + i;
+        assert(i < nic && j < njc && k < nkc, "Index out of bounds.");
+        return (k*njc + j)*nic + i;
     }
 
     pragma(inline, true)
-    @nogc size_t ijk_indices_to_cell_id(size_t i, size_t j, size_t k=0) const
-    // ijk indices into the underlying block array.
-    {
-        i -= n_ghost_cell_layers;
-        j -= n_ghost_cell_layers;
-        k = (myConfig.dimensions == 2) ? 0 : k - n_ghost_cell_layers;
-        return (k*njcell + j)*nicell + i;
-    }
-
-    pragma(inline, true)
-    @nogc size_t[3] cell_id_to_ijk_indices(size_t id) const
+    @nogc
+    size_t[3] to_ijk_indices_for_cell(size_t gid) const
     {
         size_t[3] ijk;
-        // Invert the cell_id calculation given above.
-        size_t k = (myConfig.dimensions == 2) ? 0 : id/(njcell*nicell);
-        size_t j = (id - k*(njcell*nicell))/nicell;
-        size_t i = id - k*(njcell*nicell) - j*nicell;
-        // Add on the ghost-cell offset.
-        ijk[0] = i + n_ghost_cell_layers;
-        ijk[1] = j + n_ghost_cell_layers;
-        ijk[2] = (myConfig.dimensions == 2) ? 0 : k + n_ghost_cell_layers;
-        return ijk;
-    } // end cell_id_to_ijk_indices()
+        size_t slabDim = njc * nic;
+        size_t k = gid / slabDim;
+        size_t j = (gid - k*slabDim) / nic;
+        size_t i = gid - k*slabDim - j*nic;
+        return [i, j, k];
+    }
+
+    pragma(inline, true)
+    @nogc
+    size_t vertex_index(size_t i, size_t j, size_t k=0) const
+    // The i,j,k indices into the hypothetical block of vertices
+    // map to the index into the single-dimensional vertices array
+    // that is held in the FluidBlock base class.
+    {
+        assert(i < niv && j < njv && k < nkv, "Index out of bounds.");
+        return (k*njv + j)*niv + i;
+    }
+
+    pragma(inline, true)
+    @nogc
+    size_t ifi_index(size_t i, size_t j, size_t k=0) const
+    // The i,j,k indices into the hypothetical block of i-faces
+    // map to the index into the single-dimensional vertices array
+    // that is held in the FluidBlock base class.
+    {
+        assert(i < niv && j < njc && k < nkc, "Index out of bounds.");
+        return (k*njc + j)*niv + i;
+    }
+
+    pragma(inline, true)
+    @nogc
+    size_t ifj_index(size_t i, size_t j, size_t k=0) const
+    // The i,j,k indices into the hypothetical block of j-faces
+    // map to the index into the single-dimensional vertices array
+    // that is held in the FluidBlock base class.
+    {
+        assert(i < nic && j < njv && k < nkc, "Index out of bounds.");
+        size_t nifaces = niv*njc*nkc;
+        return (k*njv + j)*nic + i + nifaces;
+    }
+
+    pragma(inline, true)
+    @nogc
+    size_t ifk_index(size_t i, size_t j, size_t k=0) const
+    // The i,j,k indices into the hypothetical block of k-faces
+    // map to the index into the single-dimensional vertices array
+    // that is held in the FluidBlock base class.
+    {
+        assert(i < nic && j < njc && k < nkv, "Index out of bounds.");
+        size_t nifaces = niv*njc*nkc;
+        size_t njfaces = nic*njv*nkc;
+        return (k*njc + j)*nic + i + nifaces + njfaces;
+    }
 
     pragma(inline, true)
     @nogc ref FVCell get_cell(size_t i, size_t j, size_t k=0)
     {
-        return _ctr[to_single_index(i,j,k)];
-    }
-    pragma(inline, true)
-    @nogc ref FVInterface get_ifi(size_t i, size_t j, size_t k=0)
-    {
-        return _ifi[to_single_index(i,j,k)];
-    }
-    pragma(inline, true)
-    @nogc ref FVInterface get_ifj(size_t i, size_t j, size_t k=0)
-    {
-        return _ifj[to_single_index(i,j,k)];
-    }
-    pragma(inline, true)
-    @nogc ref FVInterface get_ifk(size_t i, size_t j, size_t k=0)
-    {
-        return _ifk[to_single_index(i,j,k)];
+        return cells[cell_index(i,j,k)];
     }
     pragma(inline, true)
     @nogc ref FVVertex get_vtx(size_t i, size_t j, size_t k=0)
     {
-        return _vtx[to_single_index(i,j,k)];
+        return vertices[vertex_index(i,j,k)];
+    }
+    pragma(inline, true)
+    @nogc ref FVInterface get_ifi(size_t i, size_t j, size_t k=0)
+    {
+        return faces[ifi_index(i,j,k)];
+    }
+    pragma(inline, true)
+    @nogc ref FVInterface get_ifj(size_t i, size_t j, size_t k=0)
+    {
+        return faces[ifj_index(i,j,k)];
+    }
+    pragma(inline, true)
+    @nogc ref FVInterface get_ifk(size_t i, size_t j, size_t k=0)
+    {
+        return faces[ifk_index(i,j,k)];
     }
 
     @nogc
@@ -292,53 +274,352 @@ public:
 
     override void init_grid_and_flow_arrays(string gridFileName)
     {
-        assemble_arrays();
-        bind_interfaces_vertices_and_cells();
-        store_references_for_derivative_calc(0);
         if (myConfig.verbosity_level > 1) { writeln("init_grid_and_flow_arrays(): Start block ", id); }
-        grid = new StructuredGrid(gridFileName, myConfig.grid_format);
-        grid.sort_cells_into_bins();
-        sync_vertices_from_underlying_grid(0);
+        //
+        bool lsq_workspace_at_faces = (myConfig.viscous)
+            && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
+            && (myConfig.spatial_deriv_locn == SpatialDerivLocn.faces);
+        bool lsq_workspace_at_vertices = (myConfig.viscous)
+            && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
+            && (myConfig.spatial_deriv_locn == SpatialDerivLocn.vertices);
+        bool lsq_workspace_at_cells = (myConfig.viscous)
+            && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
+            && (myConfig.spatial_deriv_locn == SpatialDerivLocn.cells);
+        try {
+            // Create the cell and interface objects for the structured block
+            // in the order expected by the index functions defined above.
+            // Do not include the surrounding ghost cells, yet.
+            // These will be attached to boundary faces later.
+            foreach (k; 0 .. nkc) {
+                foreach (j; 0 .. njc) {
+                    foreach (i; 0 .. nic) {
+                        cells ~= new FVCell(myConfig,  lsq_workspace_at_cells);
+                    }
+                }
+            }
+            foreach (k; 0 .. nkv) {
+                foreach (j; 0 .. njv) {
+                    foreach (i; 0 .. niv) {
+                        vertices ~= new FVVertex(myConfig, lsq_workspace_at_vertices);
+                    }
+                }
+            }
+            // First ifi faces.
+            foreach (k; 0 .. nkc) {
+                foreach (j; 0 .. njc) {
+                    foreach (i; 0 .. niv) {
+                        faces ~= new FVInterface(myConfig, lsq_workspace_at_faces);
+                    }
+                }
+            }
+            // Second ifj faces.
+            foreach (k; 0 .. nkc) {
+                foreach (j; 0 .. njv) {
+                    foreach (i; 0 .. nic) {
+                        faces ~= new FVInterface(myConfig, lsq_workspace_at_faces);
+                    }
+                }
+            }
+            if (myConfig.dimensions == 3) {
+                // Third, maybe, ifk faces.
+                foreach (k; 0 .. nkv) {
+                    foreach (j; 0 .. njc) {
+                        foreach (i; 0 .. nic) {
+                            faces ~= new FVInterface(myConfig, lsq_workspace_at_faces);
+                        }
+                    }
+                }
+            }
+            //
+            // Now, construct the ghost cells, attaching them to the boundary faces.
+            int cell_id = ghost_cell_start_id;
+            // North and South boundaries.
+            if (bc[Face.north].ghost_cell_data_available) {
+                foreach (k; 0 .. nkc) {
+                    foreach (i; 0 .. nic) {
+                        auto f = get_ifj(i, njc, k);
+                        foreach (n; 0 .. n_ghost_cell_layers) {
+                            auto c = new FVCell(myConfig,  lsq_workspace_at_cells);
+                            c.id = cell_id; ++cell_id;
+                            f.right_cells ~= c;
+                        }
+                    }
+                }
+            }
+            if (bc[Face.south].ghost_cell_data_available) {
+                foreach (k; 0 .. nkc) {
+                    foreach (i; 0 .. nic) {
+                        auto f = get_ifj(i, 0, k);
+                        foreach (n; 0 .. n_ghost_cell_layers) {
+                            auto c = new FVCell(myConfig,  lsq_workspace_at_cells);
+                            c.id = cell_id; ++cell_id;
+                            f.left_cells ~= c;
+                        }
+                    }
+                }
+            }
+            if (bc[Face.east].ghost_cell_data_available) {
+                foreach (k; 0 .. nkc) {
+                    foreach (j; 0 .. njc) {
+                        auto f = get_ifi(nic, j, k);
+                        foreach (n; 0 .. n_ghost_cell_layers) {
+                            auto c = new FVCell(myConfig,  lsq_workspace_at_cells);
+                            c.id = cell_id; ++cell_id;
+                            f.right_cells ~= c;
+                        }
+                    }
+                }
+            }
+            if (bc[Face.west].ghost_cell_data_available) {
+                foreach (k; 0 .. nkc) {
+                    foreach (j; 0 .. njc) {
+                        auto f = get_ifi(0, j, k);
+                        foreach (n; 0 .. n_ghost_cell_layers) {
+                            auto c = new FVCell(myConfig,  lsq_workspace_at_cells);
+                            c.id = cell_id; ++cell_id;
+                            f.left_cells ~= c;
+                        }
+                    }
+                }
+            }
+            if (myConfig.dimensions == 3) {
+                if (bc[Face.top].ghost_cell_data_available) {
+                    foreach (j; 0 .. njc) {
+                        foreach (i; 0 .. nic) {
+                            auto f = get_ifk(i, j, nkc);
+                            foreach (n; 0 .. n_ghost_cell_layers) {
+                                auto c = new FVCell(myConfig,  lsq_workspace_at_cells);
+                                c.id = cell_id; ++cell_id;
+                                f.right_cells ~= c;
+                            }
+                        }
+                    }
+                }
+                if (bc[Face.bottom].ghost_cell_data_available) {
+                    foreach (j; 0 .. njc) {
+                        foreach (i; 0 .. nic) {
+                            auto f = get_ifi(i, j, 0);
+                            foreach (n; 0 .. n_ghost_cell_layers) {
+                                auto c = new FVCell(myConfig,  lsq_workspace_at_cells);
+                                c.id = cell_id; ++cell_id;
+                                f.left_cells ~= c;
+                            }
+                        }
+                    }
+                }
+            } // end if (myConfig.dimensions == 3)
+        } catch (Exception e) {
+            writeln("Failed while assembling block arrays.");
+            writefln("nic=%d njc=%d nkc=%d", nic, njc, nkc);
+            writeln("Probably ran out of memory.");
+            writeln("Be a little less ambitious and try a smaller grid next time.");
+            writefln("System message: %s", e.msg);
+            throw new FlowSolverException("SFluidBlock.init_grid_and_flow_arrays() failed.");
+        }
+        // Make the cell, vertex, and face id value consistent with the index in the array.
+        // We will depend on this equality in other parts of the flow solver.
+        // We also note that these cells are interior to the block (i.e. not ghost cells)
+        foreach (i, c; cells) {
+            c.id = to!int(i);
+            c.contains_flow_data = true;
+            c.is_interior_to_domain = true;
+        }
+        foreach (i, v; vertices) { v.id = to!int(i); }
+        foreach (i, f; faces) { f.id = to!int(i); }
+        //
         // Set references to boundary faces in bc objects.
-        // north boundary
-        foreach (k; kmin .. kmax+1) {
-            foreach (i; imin .. imax+1) {
-                bc[Face.north].faces ~= get_ifj(i, jmax+1, k);
+        foreach (k; 0 .. nkc) {
+            foreach (i; 0 .. nic) {
+                bc[Face.north].faces ~= get_ifj(i, njc, k);
                 bc[Face.north].outsigns ~= 1;
             }
         }
-        foreach (k; kmin .. kmax+1) {
-            foreach (j; jmin .. jmax+1) {
-                bc[Face.east].faces ~= get_ifi(imax+1, j, k);
+        foreach (k; 0 .. nkc) {
+            foreach (j; 0 .. njc) {
+                bc[Face.east].faces ~= get_ifi(nic, j, k);
                 bc[Face.east].outsigns ~= 1;
             }
         }
-        foreach (k; kmin .. kmax+1) {
-            foreach (i; imin .. imax+1) {
-                bc[Face.south].faces ~= get_ifj(i, jmin, k);
+        foreach (k; 0 .. nkc) {
+            foreach (i; 0 .. nic) {
+                bc[Face.south].faces ~= get_ifj(i, 0, k);
                 bc[Face.south].outsigns ~= -1;
             }
         }
-        foreach (k; kmin .. kmax+1) {
-            foreach (j; jmin .. jmax+1) {
-                bc[Face.west].faces ~= get_ifi(imin, j, k);
+        foreach (k; 0 .. nkc) {
+            foreach (j; 0 .. njc) {
+                bc[Face.west].faces ~= get_ifi(0, j, k);
                 bc[Face.west].outsigns ~= -1;
             }
         }
         if (myConfig.dimensions == 3) {
-            foreach (j; jmin .. jmax+1) {
-                foreach (i; imin .. imax+1) {
-                    bc[Face.top].faces ~= get_ifk(i, j, kmax+1);
+            foreach (j; 0 .. njc) {
+                foreach (i; 0 .. nic) {
+                    bc[Face.top].faces ~= get_ifk(i, j, nkc);
                     bc[Face.top].outsigns ~= 1;
                 }
             }
-            foreach (j; jmin .. jmax+1) {
-                foreach (i; imin .. imax+1) {
-                    bc[Face.bottom].faces ~= get_ifk(i, j, kmin);
+            foreach (j; 0 .. njc) {
+                foreach (i; 0 .. nic) {
+                    bc[Face.bottom].faces ~= get_ifk(i, j, 0);
                     bc[Face.bottom].outsigns ~= -1;
                 }
             }
         } // end if dimensions == 3
+        //
+        // Bind interfaces vertices to cells.
+        // There is a fixed order of faces and vertices for each cell.
+        // Refer to fvcore.d
+        foreach (k; 0 .. nkc) {
+            foreach (j; 0 .. njc) {
+                foreach (i; 0 .. nic) {
+                    auto c = get_cell(i,j,k);
+                    c.iface.length = 0; c.outsign.length = 0;
+                    c.iface ~= get_ifj(i,j+1,k); c.outsign ~= 1.0; // north
+                    c.iface ~= get_ifi(i+1,j,k); c.outsign ~= 1.0; // east
+                    c.iface ~= get_ifj(i,j,k); c.outsign ~= -1.0; // south
+                    c.iface ~= get_ifi(i,j,k); c.outsign ~= -1.0; // west
+                    c.vtx.length = 0;
+                    c.vtx ~= get_vtx(i,j,k);
+                    c.vtx ~= get_vtx(i+1,j,k);
+                    c.vtx ~= get_vtx(i+1,j+1,k);
+                    c.vtx ~= get_vtx(i,j+1,k);
+                    if (myConfig.dimensions == 3) {
+                        c.iface ~= get_ifk(i,j,k+1); c.outsign ~= 1.0; // top
+                        c.iface ~= get_ifk(i,j,k); c.outsign ~= -1.0; // bottom
+                        c.vtx ~= get_vtx(i,j,k+1);
+                        c.vtx ~= get_vtx(i+1,j,k+1);
+                        c.vtx ~= get_vtx(i+1,j+1,k+1);
+                        c.vtx ~= get_vtx(i,j+1,k+1);
+                    }
+                }
+            }
+        }
+        //
+        // Sometimes it is convenient for an interface to come complete
+        // with information about the vertices that define it and also
+        // the cells that adjoin it, as for the unstructured grid.
+        //
+        // ifi interfaces are west interfaces, with their unit normal pointing east.
+        // In 2D, vtx0==p00, vtx1==p01.
+        // In 3D, the cycle [vtx0,vtx1,vtx2,vtx3] progresses counter-clockwise around
+        // the periphery of the face when the normal unit vector is pointing toward you.
+        // t1 vector aligned with j-index direction
+        // t2 vector aligned with k-index direction
+        foreach (k; 0 .. nkc) {
+            foreach (j; 0 .. njc) {
+                foreach (i; 0 .. niv) {
+                    auto f = get_ifi(i,j,k);
+                    f.vtx.length = 0;
+                    if (myConfig.dimensions == 3) {
+                        f.vtx ~= get_vtx(i,j,k);
+                        f.vtx ~= get_vtx(i,j+1,k);
+                        f.vtx ~= get_vtx(i,j+1,k+1);
+                        f.vtx ~= get_vtx(i,j,k+1);
+                    } else {
+                        f.vtx ~= get_vtx(i,j);
+                        f.vtx ~= get_vtx(i,j+1);
+                    }
+                    if (i == 0) {
+                        f.is_on_boundary = true;
+                        f.bc_id = Face.west;
+                        if (bc[Face.west].ghost_cell_data_available) {
+                            f.left_cell = f.left_cells[0];
+                        }
+                        f.right_cell = get_cell(i,j,k);
+                    } else if (i == nic) {
+                        f.is_on_boundary = true;
+                        f.bc_id = Face.east;
+                        f.left_cell = get_cell(i-1,j,k);
+                        if (bc[Face.east].ghost_cell_data_available) {
+                            f.right_cell = f.right_cells[0];
+                        }
+                    } else {
+                        f.left_cell = get_cell(i-1,j,k);
+                        f.right_cell = get_cell(i,j,k);
+                    }
+                } // i loop
+            } // j loop
+        } // for k
+        // ifj interfaces are south interfaces, with their unit normal pointing north.
+        // In 2D, vtx0==p10, vtx1==p00.
+        // t1 vector aligned with k-index direction
+        // t2 vector aligned with i-index direction
+        foreach (k; 0 .. nkc) {
+            foreach (i; 0 .. nic) {
+                foreach (j; 0 .. njv) {
+                    auto f = get_ifj(i,j,k);
+                    f.vtx.length = 0;
+                    if (myConfig.dimensions == 3) {
+                        f.vtx ~= get_vtx(i,j,k);
+                        f.vtx ~= get_vtx(i,j,k+1);
+                        f.vtx ~= get_vtx(i+1,j,k+1);
+                        f.vtx ~= get_vtx(i+1,j,k);
+                    } else {
+                        f.vtx ~= get_vtx(i+1,j);
+                        f.vtx ~= get_vtx(i,j);
+                    }
+                    if (j == 0) {
+                        f.is_on_boundary = true;
+                        f.bc_id = Face.south;
+                        if (bc[Face.south].ghost_cell_data_available) {
+                            f.left_cell = f.left_cells[0];
+                        }
+                        f.right_cell = get_cell(i,j,k);
+                    } else if (j == njc) {
+                        f.is_on_boundary = true;
+                        f.bc_id = Face.north;
+                        f.left_cell = get_cell(i,j-1,k);
+                        if (bc[Face.north].ghost_cell_data_available) {
+                            f.right_cell = f.right_cells[0];
+                        }
+                    } else {
+                        f.left_cell = get_cell(i,j-1,k);
+                        f.right_cell = get_cell(i,j,k);
+                    }
+                } // j loop
+            } // i loop
+        } // for k
+        if (myConfig.dimensions == 3) {
+            // ifk interfaces are bottom interfaces, with unit normal pointing to top.
+            // t1 vector aligned with i-index direction
+            // t2 vector aligned with j-index direction
+            foreach (i; 0 .. nic) {
+                foreach (j; 0 .. njc) {
+                    foreach (k; 0 .. nkv) {
+                        auto f = get_ifk(i,j,k);
+                        f.vtx.length = 0;
+                        f.vtx ~= get_vtx(i,j,k);
+                        f.vtx ~= get_vtx(i+1,j,k);
+                        f.vtx ~= get_vtx(i+1,j+1,k);
+                        f.vtx ~= get_vtx(i,j+1,k);
+                        if (k == 0) {
+                            f.is_on_boundary = true;
+                            f.bc_id = Face.bottom;
+                            if (bc[Face.bottom].ghost_cell_data_available) {
+                                f.left_cell = f.left_cells[0];
+                            }
+                            f.right_cell = get_cell(i,j,k);
+                        } else if (k == nkc) {
+                            f.is_on_boundary = true;
+                            f.bc_id = Face.top;
+                            f.left_cell = get_cell(i,j,k-1);
+                            if (bc[Face.top].ghost_cell_data_available) {
+                                f.right_cell = f.right_cells[0];
+                            }
+                        } else {
+                            f.left_cell = get_cell(i,j,k-1);
+                            f.right_cell = get_cell(i,j,k);
+                        }
+                    } // for k
+                } // j loop
+            } // i loop
+        }
+        //
+        store_references_for_derivative_calc(0);
+        grid = new StructuredGrid(gridFileName, myConfig.grid_format);
+        grid.sort_cells_into_bins();
+        sync_vertices_from_underlying_grid(0);
         //
         // Set up the lists of indices for look-up of cells and faces
         // from a given vertex.
@@ -352,305 +633,10 @@ public:
         }
     } // end init_grid_and_flow_arrays()
 
-    void assemble_arrays()
-    // We shouldn't be calling this until the essential bits of the GlobalConfig
-    // and the local myConfig instances have been set up.
-    {
-        if (myConfig.verbosity_level >= 2) {
-            writefln("assemble_arrays(): Begin for block %d", id);
-        }
-        // Check for obvious errors.
-        if ( _nidim <= 0 || _njdim <= 0 || _nkdim <= 0 ) {
-            string msg = text("resize_arrays(): invalid dimensions nidim=",
-                              _nidim, " njdim=", _njdim, " nkdim=", _nkdim);
-            throw new FlowSolverException(msg);
-        }
-        size_t ntot = _nidim * _njdim * _nkdim;
-        bool lsq_workspace_at_faces = (myConfig.viscous) && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
-            && (myConfig.spatial_deriv_locn == SpatialDerivLocn.faces);
-        bool lsq_workspace_at_vertices = (myConfig.viscous) && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
-            && (myConfig.spatial_deriv_locn == SpatialDerivLocn.vertices);
-        bool lsq_workspace_at_cells = (myConfig.viscous) && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
-            && (myConfig.spatial_deriv_locn == SpatialDerivLocn.cells);
-        try {
-            // Create the cell and interface objects for the entire structured block.
-            // This includes the layer of surrounding ghost cells.
-            // The for each cell, face and vertex, the global index (gid)
-            // will be the index into the array held privately by this class.
-            //
-            // In the FluidBlock base class, we will keep an array of "active" cells
-            // that may be accessed directly by other parts of the code.
-            // Providing such access brings the structured-grid code a little closer
-            // to the flavour of the unstructured-grid code.
-            foreach (gid; 0 .. ntot) {
-                _ctr ~= new FVCell(myConfig,  lsq_workspace_at_cells);
-                _ifi ~= new FVInterface(myConfig, lsq_workspace_at_faces);
-                _ifj ~= new FVInterface(myConfig, lsq_workspace_at_faces);
-                if ( myConfig.dimensions == 3 ) {
-                    _ifk ~= new FVInterface(myConfig, lsq_workspace_at_faces);
-                }
-                _vtx ~= new FVVertex(myConfig, lsq_workspace_at_vertices);
-            }
-            // Now, assemble the lists of references to the cells, vertices and faces
-            // in standard order for a structured grid.
-            // These arrays are held by the FluidBlock base class and allow us to handle
-            // a structured-grid block much as we would an unstructured-grid block.
-            if (myConfig.dimensions == 2) {
-                foreach (j; jmin .. jmax+1) {
-                    foreach (i; imin .. imax+1) { cells ~= get_cell(i, j); }
-                }
-                foreach (j; jmin .. jmax+2) {
-                    foreach (i; imin .. imax+2) { vertices ~= get_vtx(i, j); }
-                }
-                foreach (j; jmin .. jmax+1) {
-                    foreach (i; imin .. imax+2) { faces ~= get_ifi(i, j); }
-                }
-                foreach (j; jmin .. jmax+2) {
-                    foreach (i; imin .. imax+1) { faces ~= get_ifj(i, j); }
-                }
-            } else { // assume 3D
-                foreach (k; kmin .. kmax+1) {
-                    foreach (j; jmin .. jmax+1) {
-                        foreach (i; imin .. imax+1) { cells ~= get_cell(i, j, k); }
-                    }
-                }
-                foreach (k; kmin .. kmax+2) {
-                    foreach (j; jmin .. jmax+2) {
-                        foreach (i; imin .. imax+2) { vertices ~= get_vtx(i, j, k); }
-                    }
-                }
-                foreach (k; kmin .. kmax+1) {
-                    foreach (j; jmin .. jmax+1) {
-                        foreach (i; imin .. imax+2) { faces ~= get_ifi(i, j, k); }
-                    }
-                }
-                foreach (k; kmin .. kmax+1) {
-                    foreach (j; jmin .. jmax+2) {
-                        foreach (i; imin .. imax+1) { faces ~= get_ifj(i, j, k); }
-                    }
-                }
-                foreach (k; kmin .. kmax+2) {
-                    foreach (j; jmin .. jmax+1) {
-                        foreach (i; imin .. imax+1) { faces ~= get_ifk(i, j, k); }
-                    }
-                }
-            } // end if dimensions
-        } catch (Exception e) {
-            writeln("Failed while assembling block arrays.");
-            writefln("nicell=%d njcell=%d nkcell=%d", nicell, njcell, nkcell);
-            writefln("nidim=%d njdim=%d nkdim=%d", _nidim, _njdim, _nkdim);
-            writeln("Probably ran out of memory.");
-            writeln("Be a little less ambitious and try a smaller grid next time.");
-            writefln("System message: %s", e.msg);
-            throw new FlowSolverException("Block.assemble_arrays() failed.");
-        }
-        //
-        // Make the cell. vertex. and face.id consistent with the index in the array.
-        // We will depend on this equality in other parts of the flow solver.
-        // We also note that these cells are interior to the block (i.e. not ghost cells)
-        foreach (i, c; cells) { c.id = to!int(i); c.contains_flow_data = true; c.is_interior_to_domain = true; }
-        foreach (i, v; vertices) { v.id = to!int(i); }
-        foreach (i, f; faces) { f.id = to!int(i); }
-        // Alter the id values of the ghost cells to be a bit like those in the
-        // unstructured-grid block.
-        int cell_id = ghost_cell_start_id;
-        int face_id = ghost_cell_start_id;
-        int vtx_id = ghost_cell_start_id;
-        if (myConfig.dimensions == 2) {
-            foreach (j; 0 .. _njdim) {
-                foreach (i; 0 .. _nidim) {
-                    auto c = get_cell(i, j); if (c.id == -1) { c.id = cell_id; ++cell_id; }
-                    auto f = get_ifi(i,j); if (f.id == -1) { f.id = face_id; ++face_id; }
-                    f = get_ifj(i,j); if (f.id == -1) { f.id = face_id; ++face_id; }
-                    auto v = get_vtx(i,j); if (v.id == -1) { v.id = vtx_id; ++vtx_id; }
-                }
-            }
-        } else { // assume 3D
-            foreach (k; 0 .. _nkdim) {
-                foreach (j; 0 .. _njdim) {
-                    foreach (i; 0 .. _nidim) {
-                        auto c = get_cell(i, j, k); if (c.id == -1) { c.id = cell_id; ++cell_id; }
-                        auto f = get_ifi(i,j,k); if (f.id == -1) { f.id = face_id; ++face_id; }
-                        f = get_ifj(i,j,k); if (f.id == -1) { f.id = face_id; ++face_id; }
-                        f = get_ifk(i,j,k); if (f.id == -1) { f.id = face_id; ++face_id; }
-                        auto v = get_vtx(i,j,k); if (v.id == -1) { v.id = vtx_id; ++vtx_id; }
-                    }
-                }
-            }
-        } // end if dimensions
-        if (myConfig.verbosity_level >= 2) {
-            writefln("Done assembling arrays for %d cells in block %d.", ntot, id);
-        }
-    } // end of assemble_arrays()
-
-    void bind_interfaces_vertices_and_cells()
-    {
-        // There is a fixed order of faces and vertices for each cell.
-        // Refer to fvcore.d
-        size_t kstart, kend;
-        if (myConfig.dimensions == 3) {
-            kstart = kmin - 1;
-            kend = kmax + 1;
-        } else {
-            kstart = 0;
-            kend = 0;
-        }
-        // With the ranges above and in the following nested loops,
-        // we make connections for the first layer of ghost cells, also.
-        // These connections of faces to the first layer of ghost cells
-        // are used in the user-defined_effects.d, to pick up boundary faces.
-        for ( size_t k = kstart; k <= kend; ++k ) {
-            for ( size_t j = jmin-1; j <= jmax+1; ++j ) {
-                for ( size_t i = imin-1; i <= imax+1; ++i ) {
-                    FVCell cell = get_cell(i,j,k);
-                    cell.iface.length = 0; cell.outsign.length = 0;
-                    cell.iface ~= get_ifj(i,j+1,k); cell.outsign ~= 1.0; // north
-                    cell.iface ~= get_ifi(i+1,j,k); cell.outsign ~= 1.0; // east
-                    cell.iface ~= get_ifj(i,j,k); cell.outsign ~= -1.0; // south
-                    cell.iface ~= get_ifi(i,j,k); cell.outsign ~= -1.0; // west
-                    cell.vtx.length = 0;
-                    cell.vtx ~= get_vtx(i,j,k);
-                    cell.vtx ~= get_vtx(i+1,j,k);
-                    cell.vtx ~= get_vtx(i+1,j+1,k);
-                    cell.vtx ~= get_vtx(i,j+1,k);
-                    if (myConfig.dimensions == 3) {
-                        cell.iface ~= get_ifk(i,j,k+1); cell.outsign ~= 1.0; // top
-                        cell.iface ~= get_ifk(i,j,k); cell.outsign ~= -1.0; // bottom
-                        cell.vtx ~= get_vtx(i,j,k+1);
-                        cell.vtx ~= get_vtx(i+1,j,k+1);
-                        cell.vtx ~= get_vtx(i+1,j+1,k+1);
-                        cell.vtx ~= get_vtx(i,j+1,k+1);
-                    } // end if
-                } // for i
-            } // for j
-        } // for k
-        //
-        // Sometimes it is convenient for an interface to come complete
-        // with information about the vertices that define it and also
-        // the cells that adjoin it.
-        //
-        // ifi interfaces are west interfaces, with their unit normal pointing east.
-        // In 2D, vtx0==p00, vtx1==p01.
-        // In 3D, the cycle [vtx0,vtx1,vtx2,vtx3] progresses counter-clockwise around
-        // the periphery of the face when the normal unit vector is pointing toward you.
-        // t1 vector aligned with j-index direction
-        // t2 vector aligned with k-index direction
-        for (size_t k = kmin; k <= kmax; ++k) {
-            for (size_t j = jmin; j <= jmax; ++j) {
-                for (size_t i = imin; i <= imax+1; ++i) {
-                    auto IFace = get_ifi(i,j,k);
-                    IFace.vtx.length = 0;
-                    if (myConfig.dimensions == 3) {
-                        IFace.vtx ~= get_vtx(i,j,k);
-                        IFace.vtx ~= get_vtx(i,j+1,k);
-                        IFace.vtx ~= get_vtx(i,j+1,k+1);
-                        IFace.vtx ~= get_vtx(i,j,k+1);
-                    } else {
-                        IFace.vtx ~= get_vtx(i,j);
-                        IFace.vtx ~= get_vtx(i,j+1);
-                    }
-                    if (i == imin) {
-                        IFace.is_on_boundary = true;
-                        IFace.bc_id = Face.west;
-                        if (bc[Face.west].ghost_cell_data_available) {
-                            IFace.left_cell = (myConfig.dimensions == 3) ? get_cell(i-1,j,k) : get_cell(i-1,j);
-                        }
-                        IFace.right_cell = (myConfig.dimensions == 3) ? get_cell(i,j,k) : get_cell(i,j);
-                    } else if (i == imax+1) {
-                        IFace.is_on_boundary = true;
-                        IFace.bc_id = Face.east;
-                        IFace.left_cell = (myConfig.dimensions == 3) ? get_cell(i-1,j,k) : get_cell(i-1,j);
-                        if (bc[Face.east].ghost_cell_data_available) {
-                            IFace.right_cell = (myConfig.dimensions == 3) ? get_cell(i,j,k) : get_cell(i,j);
-                        }
-                    } else {
-                        IFace.left_cell = (myConfig.dimensions == 3) ? get_cell(i-1,j,k) : get_cell(i-1,j);
-                        IFace.right_cell = (myConfig.dimensions == 3) ? get_cell(i,j,k) : get_cell(i,j);
-                    }
-                } // i loop
-            } // j loop
-        } // for k
-        // ifj interfaces are south interfaces, with their unit normal pointing north.
-        // In 2D, vtx0==p10, vtx1==p00.
-        // t1 vector aligned with k-index direction
-        // t2 vector aligned with i-index direction
-        for (size_t k = kmin; k <= kmax; ++k) {
-            for (size_t i = imin; i <= imax; ++i) {
-                for (size_t j = jmin; j <= jmax+1; ++j) {
-                    auto IFace = get_ifj(i,j,k);
-                    IFace.vtx.length = 0;
-                    if (myConfig.dimensions == 3) {
-                        IFace.vtx ~= get_vtx(i,j,k);
-                        IFace.vtx ~= get_vtx(i,j,k+1);
-                        IFace.vtx ~= get_vtx(i+1,j,k+1);
-                        IFace.vtx ~= get_vtx(i+1,j,k);
-                    } else {
-                        IFace.vtx ~= get_vtx(i+1,j);
-                        IFace.vtx ~= get_vtx(i,j);
-                    }
-                    if (j == jmin) {
-                        IFace.is_on_boundary = true;
-                        IFace.bc_id = Face.south;
-                        if (bc[Face.south].ghost_cell_data_available) {
-                            IFace.left_cell = (myConfig.dimensions == 3) ? get_cell(i,j-1,k) : get_cell(i,j-1);
-                        }
-                        IFace.right_cell = (myConfig.dimensions == 3) ? get_cell(i,j,k) : get_cell(i,j);
-                    } else if (j == jmax+1) {
-                        IFace.is_on_boundary = true;
-                        IFace.bc_id = Face.north;
-                        IFace.left_cell = (myConfig.dimensions == 3) ? get_cell(i,j-1,k) : get_cell(i,j-1);
-                        if (bc[Face.north].ghost_cell_data_available) {
-                            IFace.right_cell = (myConfig.dimensions == 3) ? get_cell(i,j,k) : get_cell(i,j);
-                        }
-                    } else {
-                        IFace.left_cell = (myConfig.dimensions == 3) ? get_cell(i,j-1,k) : get_cell(i,j-1);
-                        IFace.right_cell = (myConfig.dimensions == 3) ? get_cell(i,j,k) : get_cell(i,j);
-                    }
-                } // j loop
-            } // i loop
-        } // for k
-        if (myConfig.dimensions == 2) return;
-        // ifk interfaces are bottom interfaces, with unit normal pointing to top.
-        // t1 vector aligned with i-index direction
-        // t2 vector aligned with j-index direction
-        for (size_t i = imin; i <= imax; ++i) {
-            for (size_t j = jmin; j <= jmax; ++j) {
-                for (size_t k = kmin; k <= kmax+1; ++k) {
-                    auto IFace = get_ifk(i,j,k);
-                    IFace.vtx.length = 0;
-                    IFace.vtx ~= get_vtx(i,j,k);
-                    IFace.vtx ~= get_vtx(i+1,j,k);
-                    IFace.vtx ~= get_vtx(i+1,j+1,k);
-                    IFace.vtx ~= get_vtx(i,j+1,k);
-                    if (k == kmin) {
-                        IFace.is_on_boundary = true;
-                        IFace.bc_id = Face.bottom;
-                        if (bc[Face.bottom].ghost_cell_data_available) {
-                            IFace.left_cell = get_cell(i,j,k-1);
-                        }
-                        IFace.right_cell = get_cell(i,j,k);
-                    } else if (k == kmax+1) {
-                        IFace.is_on_boundary = true;
-                        IFace.bc_id = Face.top;
-                        IFace.left_cell = get_cell(i,j,k-1);
-                        if (bc[Face.top].ghost_cell_data_available) {
-                            IFace.right_cell = get_cell(i,j,k);
-                        }
-                    } else {
-                        IFace.left_cell = get_cell(i,j,k-1);
-                        IFace.right_cell = get_cell(i,j,k);
-                    }
-                } // for k
-            } // j loop
-        } // i loop
-        return;
-    } // end bind_interfaces_vertices_and_cells()
-
     @nogc
     override void compute_primary_cell_geometric_data(size_t gtl)
     // Compute cell and interface geometric properties.
     {
-        size_t i, j, k;
         Vector3 dummy;
         Vector3 ds;
         if (myConfig.dimensions == 2) {
@@ -670,46 +656,7 @@ public:
         // boundary conditions.  Note that the symmetry is not consistent with the
         // linear extrapolation used for the positions and volumes in the next section.
         // [TODO] -- think about this carefully.
-        auto option = CopyDataOption.cell_lengths_only;
-        bool nghost3 = (n_ghost_cell_layers == 3);
-        for (j = jmin; j <= jmax; ++j) {
-            for (k = kmin; k <= kmax; ++k) {
-                i = imin;
-                get_cell(i-1,j,k).copy_values_from(get_cell(i,j,k), option);
-                get_cell(i-2,j,k).copy_values_from(get_cell(i+1,j,k), option);
-                if (nghost3) { get_cell(i-3,j,k).copy_values_from(get_cell(i+2,j,k), option); }
-                i = imax;
-                get_cell(i+1,j,k).copy_values_from(get_cell(i,j,k), option);
-                get_cell(i+2,j,k).copy_values_from(get_cell(i-1,j,k), option);
-                if (nghost3) { get_cell(i+3,j,k).copy_values_from(get_cell(i-2,j,k), option); }
-            }
-        }
-        for (i = imin; i <= imax; ++i) {
-            for (k = kmin; k <= kmax; ++k) {
-                j = jmin;
-                get_cell(i,j-1,k).copy_values_from(get_cell(i,j,k), option);
-                get_cell(i,j-2,k).copy_values_from(get_cell(i,j+1,k), option);
-                if (nghost3) { get_cell(i,j-3,k).copy_values_from(get_cell(i,j+2,k), option); }
-                j = jmax;
-                get_cell(i,j+1,k).copy_values_from(get_cell(i,j,k), option);
-                get_cell(i,j+2,k).copy_values_from(get_cell(i,j-1,k), option);
-                if (nghost3) { get_cell(i,j+3,k).copy_values_from(get_cell(i,j-2,k), option); }
-            }
-        }
-        if (myConfig.dimensions == 3) {
-            for (i = imin; i <= imax; ++i) {
-                for (j = jmin; j <= jmax; ++j) {
-                    k = kmin;
-                    get_cell(i,j,k-1).copy_values_from(get_cell(i,j,k), option);
-                    get_cell(i,j,k-2).copy_values_from(get_cell(i,j,k+1), option);
-                    if (nghost3) { get_cell(i,j,k-3).copy_values_from(get_cell(i,j,k+2), option); }
-                    k = kmax;
-                    get_cell(i,j,k+1).copy_values_from(get_cell(i,j,k), option);
-                    get_cell(i,j,k+2).copy_values_from(get_cell(i,j,k-1), option);
-                    if (nghost3) { get_cell(i,j,k+3).copy_values_from(get_cell(i,j,k-2), option); }
-                }
-            }
-        } // end if dimensions == 3
+        //
         /* Extrapolate (with first-order) cell positions and volumes to ghost cells. */
         // TODO -- think about how to make these things consistent.
         @nogc
@@ -717,128 +664,175 @@ public:
         {
             pos.set(p1); pos *= 2.0; pos -= p2;
         }
-        for (j = jmin; j <= jmax; ++j) {
-            for (k = kmin; k <= kmax; ++k) {
-                i = imin;
-                auto cell_1 = get_cell(i,j,k);
-                auto cell_2 = get_cell(i+1,j,k);
-                auto ghost_cell = get_cell(i-1,j,k);
-                extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
-                ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
-                cell_2 = cell_1;
-                cell_1 = ghost_cell;
-                ghost_cell = get_cell(i-2,j,k);
-                extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
-                ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
-                if (nghost3) {
-                    cell_2 = cell_1;
-                    cell_1 = ghost_cell;
-                    ghost_cell = get_cell(i-3,j,k);
+        //
+        auto option = CopyDataOption.cell_lengths_only;
+        bool nghost3 = n_ghost_cell_layers == 3;
+        //
+        if (bc[Face.east].ghost_cell_data_available) {
+            foreach (j; 0 .. njc) {
+                foreach (k; 0 .. nkc) {
+                    auto f = get_ifi(nic, j, k);
+                    foreach (n; 0 .. n_ghost_cell_layers) {
+                        f.right_cells[n].copy_values_from(get_cell(nic-1-n,j,k), option);
+                    }
+                    auto cell_1 = get_cell(nic-1,j,k);
+                    auto cell_2 = get_cell(nic-2,j,k);
+                    auto ghost_cell = f.right_cells[0];
                     extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                     ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
-                }
-                i = imax;
-                cell_1 = get_cell(i,j,k);
-                cell_2 = get_cell(i-1,j,k);
-                ghost_cell = get_cell(i+1,j,k);
-                extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
-                ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
-                cell_2 = cell_1;
-                cell_1 = ghost_cell;
-                ghost_cell = get_cell(i+2,j,k);
-                extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
-                ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
-                if (nghost3) {
                     cell_2 = cell_1;
                     cell_1 = ghost_cell;
-                    ghost_cell = get_cell(i+3,j,k);
+                    ghost_cell = f.right_cells[1];
                     extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                     ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
+                    if (nghost3) {
+                        cell_2 = cell_1;
+                        cell_1 = ghost_cell;
+                        ghost_cell = f.right_cells[2];
+                        extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
+                        ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
+                    }
                 }
             }
         }
-        for (i = imin; i <= imax; ++i) {
-            for (k = kmin; k <= kmax; ++k) {
-                j = jmin;
-                auto cell_1 = get_cell(i,j,k);
-                auto cell_2 = get_cell(i,j+1,k);
-                auto ghost_cell = get_cell(i,j-1,k);
-                extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
-                ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
-                cell_2 = cell_1;
-                cell_1 = ghost_cell;
-                ghost_cell = get_cell(i,j-2,k);
-                extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
-                ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
-                if (nghost3) {
-                    cell_2 = cell_1;
-                    cell_1 = ghost_cell;
-                    ghost_cell = get_cell(i,j-3,k);
+        if (bc[Face.west].ghost_cell_data_available) {
+            foreach (j; 0 .. njc) {
+                foreach (k; 0 .. nkc) {
+                    auto f = get_ifi(0, j, k);
+                    foreach (n; 0 .. n_ghost_cell_layers) {
+                        f.left_cells[n].copy_values_from(get_cell(n,j,k), option);
+                    }
+                    auto cell_1 = get_cell(0,j,k);
+                    auto cell_2 = get_cell(1,j,k);
+                    auto ghost_cell = f.left_cells[0];
                     extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                     ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
+                    cell_2 = cell_1;
+                    cell_1 = ghost_cell;
+                    ghost_cell = f.left_cells[1];
+                    extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
+                    ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
+                    if (nghost3) {
+                        cell_2 = cell_1;
+                        cell_1 = ghost_cell;
+                        ghost_cell = f.left_cells[2];
+                        extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
+                        ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
+                    }
                 }
-                j = jmax;
-                cell_1 = get_cell(i,j,k);
-                cell_2 = get_cell(i,j-1,k);
-                ghost_cell = get_cell(i,j+1,k);
-                extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
-                ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
-                cell_2 = cell_1;
-                cell_1 = ghost_cell;
-                ghost_cell = get_cell(i,j+2,k);
-                extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
-                ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
-                if (nghost3) {
-                    cell_2 = cell_1;
-                    cell_1 = ghost_cell;
-                    ghost_cell = get_cell(i,j+3,k);
+            }
+        }
+        if (bc[Face.north].ghost_cell_data_available) {
+            foreach (i; 0 .. nic) {
+                foreach (k; 0 .. nkc) {
+                    auto f = get_ifj(i, njc, k);
+                    foreach (n; 0 .. n_ghost_cell_layers) {
+                        f.right_cells[n].copy_values_from(get_cell(i,njc-1-n,k), option);
+                    }
+                    auto cell_1 = get_cell(i,njc-1,k);
+                    auto cell_2 = get_cell(i,njc-2,k);
+                    auto ghost_cell = f.right_cells[0];
                     extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                     ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
+                    cell_2 = cell_1;
+                    cell_1 = ghost_cell;
+                    ghost_cell = f.right_cells[1];
+                    extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
+                    ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
+                    if (nghost3) {
+                        cell_2 = cell_1;
+                        cell_1 = ghost_cell;
+                        ghost_cell = f.right_cells[2];
+                        extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
+                        ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
+                    }
+                }
+            }
+        }
+        if (bc[Face.south].ghost_cell_data_available) {
+            foreach (i; 0 .. nic) {
+                foreach (k; 0 .. nkc) {
+                    auto f = get_ifj(i, 0, k);
+                    foreach (n; 0 .. n_ghost_cell_layers) {
+                        f.left_cells[n].copy_values_from(get_cell(i,n,k), option);
+                    }
+                    auto cell_1 = get_cell(i,0,k);
+                    auto cell_2 = get_cell(i,1,k);
+                    auto ghost_cell = f.left_cells[0];
+                    extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
+                    ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
+                    cell_2 = cell_1;
+                    cell_1 = ghost_cell;
+                    ghost_cell = f.left_cells[1];
+                    extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
+                    ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
+                    if (nghost3) {
+                        cell_2 = cell_1;
+                        cell_1 = ghost_cell;
+                        ghost_cell = f.left_cells[2];
+                        extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
+                        ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
+                    }
                 }
             }
         }
         if (myConfig.dimensions == 3) {
-            for (i = imin; i <= imax; ++i) {
-                for (j = jmin; j <= jmax; ++j) {
-                    k = kmin;
-                    auto cell_1 = get_cell(i,j,k);
-                    auto cell_2 = get_cell(i,j,k+1);
-                    auto ghost_cell = get_cell(i,j,k-1);
-                    extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
-                    ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
-                    cell_2 = cell_1;
-                    cell_1 = ghost_cell;
-                    ghost_cell = get_cell(i,j,k-2);
-                    extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
-                    ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
-                    if (nghost3) {
-                        cell_2 = cell_1;
-                        cell_1 = ghost_cell;
-                        ghost_cell = get_cell(i,j,k-3);
+            if (bc[Face.top].ghost_cell_data_available) {
+                foreach (i; 0 .. nic) {
+                    foreach (j; 0 .. njc) {
+                        auto f = get_ifk(i, j, nkc);
+                        foreach (n; 0 .. n_ghost_cell_layers) {
+                            f.right_cells[n].copy_values_from(get_cell(i,j,nkc-1-n), option);
+                        }
+                        auto cell_1 = get_cell(i,j,nkc-1);
+                        auto cell_2 = get_cell(i,j,nkc-2);
+                        auto ghost_cell = f.right_cells[0];
                         extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                         ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
+                        cell_2 = cell_1;
+                        cell_1 = ghost_cell;
+                        ghost_cell = f.right_cells[1];
+                        extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
+                        ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
+                        if (nghost3) {
+                            cell_2 = cell_1;
+                            cell_1 = ghost_cell;
+                            ghost_cell = f.right_cells[2];
+                            extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
+                            ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
+                        }
                     }
-                    k = kmax;
-                    cell_1 = get_cell(i,j,k);
-                    cell_2 = get_cell(i,j,k-1);
-                    ghost_cell = get_cell(i,j,k+1);
-                    extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
-                    ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
-                    cell_2 = cell_1;
-                    cell_1 = ghost_cell;
-                    ghost_cell = get_cell(i,j,k+2);
-                    extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
-                    ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
-                    if (nghost3) {
-                        cell_2 = cell_1;
-                        cell_1 = ghost_cell;
-                        ghost_cell = get_cell(i,j,k+3);
+                }
+            }
+            if (bc[Face.bottom].ghost_cell_data_available) {
+                foreach (i; 0 .. nic) {
+                    foreach (j; 0 .. njc) {
+                        auto f = get_ifk(i, j, 0);
+                        foreach (n; 0 .. n_ghost_cell_layers) {
+                            f.left_cells[n].copy_values_from(get_cell(i,j,n), option);
+                        }
+                        auto cell_1 = get_cell(i,j,0);
+                        auto cell_2 = get_cell(i,j,1);
+                        auto ghost_cell = f.left_cells[0];
                         extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                         ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
+                        cell_2 = cell_1;
+                        cell_1 = ghost_cell;
+                        ghost_cell = f.left_cells[1];
+                        extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
+                        ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
+                        if (nghost3) {
+                            cell_2 = cell_1;
+                            cell_1 = ghost_cell;
+                            ghost_cell = f.left_cells[2];
+                            extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
+                            ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
+                        }
                     }
                 }
             }
         } // end if dimensions == 3
+
     } // end compute_primary_cell_geometric_data()
 
     @nogc
@@ -909,19 +903,18 @@ public:
 
     void store_references_for_derivative_calc_at_faces(size_t gtl)
     {
-    // The weighted least squares calculation is expecting the interface
-    // at which the gradient is being calculated to be stored in position [0].
-    // However the divergence calculation is expecting a specific ordering of
-    // the cloud points, as such we must look up the spatial_deriv_calc type
-    // to decide which cloud to use.
-        size_t i, j, k;
+        // The weighted least squares calculation is expecting the interface
+        // at which the gradient is being calculated to be stored in position [0].
+        // However the divergence calculation is expecting a specific ordering of
+        // the cloud points, as such we must look up the spatial_deriv_calc type
+        // to decide which cloud to use.
         if (myConfig.dimensions == 2) {
             // First, i-faces
-            for (i = imin; i <= imax+1; ++i) {
-                for (j = jmin; j <= jmax; ++j) {
+            foreach (i; 0 .. niv) {
+                foreach (j; 0 .. njc) {
                     FVInterface face = get_ifi(i,j);
                     // Points nearby.
-                    if (i == imin) {
+                    if (i == 0) {
                         // west boundary
                         FVInterface D = get_ifj(i,j);
                         FVCell E = get_cell(i,j);
@@ -929,7 +922,7 @@ public:
                         // Retain locations and references to flow states for later.
                         face.cloud_pos = [&(face.pos), &(D.pos), &(E.pos[gtl]), &(F.pos)];
                         face.cloud_fs = [face.fs, D.fs, E.fs, F.fs];
-                    } else if (i == imax+1) {
+                    } else if (i == nic) {
                         // east boundary
                         FVInterface A = get_ifj(i-1,j+1);
                         FVCell B = get_cell(i-1,j);
@@ -964,11 +957,11 @@ public:
                 } // j loop
             } // i loop
             // Now, j-faces
-            for (i = imin; i <= imax; ++i) {
-                for (j = jmin; j <= jmax+1; ++j) {
+            foreach (i; 0 .. nic) {
+                foreach (j; 0 .. njv) {
                     FVInterface face = get_ifj(i,j);
                     // Points nearby.
-                    if (j == jmin) {
+                    if (j == 0) {
                         // south boundary
                         FVInterface D = get_ifi(i+1,j);
                         FVCell E = get_cell(i,j);
@@ -976,7 +969,7 @@ public:
                         // Retain locations and references to flow states for later.
                         face.cloud_pos = [&(face.pos), &(D.pos), &(E.pos[gtl]), &(F.pos)];
                         face.cloud_fs = [face.fs, D.fs, E.fs, F.fs];
-                    } else if (j == jmax+1) {
+                    } else if (j == njc) {
                         // north boundary
                         FVInterface A = get_ifi(i,j-1);
                         FVCell B = get_cell(i,j-1);
@@ -1015,12 +1008,12 @@ public:
             } // i loop
         } else { // for 3D.
             // First, i-faces
-            for (i = imin; i <= imax+1; ++i) {
-                for (j = jmin; j <= jmax; ++j) {
-                    for (k = kmin; k <= kmax; ++k) {
+            foreach (i; 0 .. niv) {
+                foreach (j; 0 .. njc) {
+                    foreach (k; 0 .. nkc) {
                         FVInterface face = get_ifi(i,j,k);
                         // Points nearby.
-                        if (i == imin) {
+                        if (i == 0) {
                             // west boundary
                             FVInterface F = get_ifj(i,j+1,k);
                             FVInterface G = get_ifj(i,j,k);
@@ -1031,7 +1024,7 @@ public:
                             face.cloud_pos = [&(face.pos), &(F.pos), &(G.pos), &(H.pos),
                                               &(I.pos), &(J.pos[gtl])];
                             face.cloud_fs = [face.fs, F.fs, G.fs, H.fs, I.fs, J.fs];
-                        } else if (i == imax+1) {
+                        } else if (i == nic) {
                             // east boundary
                             FVInterface A = get_ifj(i-1,j+1,k);
                             FVInterface B = get_ifj(i-1,j,k);
@@ -1077,12 +1070,12 @@ public:
                 } // j loop
             } // i loop
             // Next, j-faces
-            for (i = imin; i <= imax; ++i) {
-                for (j = jmin; j <= jmax+1; ++j) {
-                    for (k = kmin; k <= kmax; ++k) {
+            foreach (i; 0 .. nic) {
+                foreach (j; 0 .. njv) {
+                    foreach (k; 0 .. nkc) {
                         FVInterface face = get_ifj(i,j,k);
                         // Points nearby.
-                        if (j == jmin) {
+                        if (j == 0) {
                             // south boundary
                             FVInterface F = get_ifi(i+1,j,k);
                             FVInterface G = get_ifi(i,j,k);
@@ -1093,7 +1086,7 @@ public:
                             face.cloud_pos = [&(face.pos), &(F.pos), &(G.pos), &(H.pos),
                                               &(I.pos), &(J.pos[gtl])];
                             face.cloud_fs = [face.fs, F.fs, G.fs, H.fs, I.fs, J.fs];
-                        } else if (j == jmax+1) {
+                        } else if (j == njc) {
                             // north boundary
                             FVInterface A = get_ifi(i+1,j-1,k);
                             FVInterface B = get_ifi(i,j-1,k);
@@ -1139,12 +1132,12 @@ public:
                 } // j loop
             } // i loop
             // Finally, k-faces
-            for (i = imin; i <= imax; ++i) {
-                for (j = jmin; j <= jmax; ++j) {
-                    for (k = kmin; k <= kmax+1; ++k) {
+            foreach (i; 0 .. nic) {
+                foreach (j; 0 .. njc) {
+                    foreach (k; 0 .. nkv) {
                         FVInterface face = get_ifk(i,j,k);
                         // Points nearby.
-                        if (k == kmin) {
+                        if (k == 0) {
                             // bottom boundary
                             FVInterface F = get_ifj(i,j+1,k);
                             FVInterface G = get_ifj(i,j,k);
@@ -1155,7 +1148,7 @@ public:
                             face.cloud_pos = [&(face.pos), &(F.pos), &(G.pos), &(H.pos),
                                               &(I.pos), &(J.pos[gtl])];
                             face.cloud_fs = [face.fs, F.fs, G.fs, H.fs, I.fs, J.fs];
-                        } else if (k == kmax+1) {
+                        } else if (k == nkc) {
                             // top boundary
                             FVInterface A = get_ifj(i,j+1,k-1);
                             FVInterface B = get_ifj(i,j,k-1);
@@ -1205,12 +1198,11 @@ public:
 
     void store_references_for_derivative_calc_at_vertices(size_t gtl)
     {
-        size_t i, j, k;
         if (myConfig.dimensions == 2) {
             // First, do all of the internal secondary cells.
             // i.e. Those not on a boundary.
-            for ( i = imin+1; i <= imax; ++i ) {
-                for ( j = jmin+1; j <= jmax; ++j ) {
+            foreach (i; 1 .. nic) {
+                foreach (j; 1 .. njc) {
                     // Secondary-cell centre is a primary-cell vertex.
                     FVVertex vtx = get_vtx(i,j);
                     // These are the corners of the secondary cell.
@@ -1225,8 +1217,8 @@ public:
             } // i loop
             // Half-cells along the edges of the block.
             // East boundary
-            i = imax+1;
-            for (j = jmin+1; j <= jmax; ++j) {
+            foreach (j; 1 .. njc) {
+                size_t i = nic;
                 FVVertex vtx = get_vtx(i,j);
                 FVInterface A = get_ifi(i,j-1);
                 FVInterface B = get_ifi(i,j);
@@ -1236,8 +1228,8 @@ public:
                 vtx.cloud_fs = [A.fs, B.fs, C.fs, D.fs];
             } // j loop
             // West boundary
-            i = imin;
-            for (j = jmin+1; j <= jmax; ++j) {
+            foreach (j; 1 .. nic) {
+                size_t i = 0;
                 FVVertex vtx = get_vtx(i,j);
                 // These are the corners of the secondary cell.
                 FVCell A = get_cell(i,j-1);
@@ -1248,8 +1240,8 @@ public:
                 vtx.cloud_fs = [A.fs, B.fs, C.fs, D.fs];
             } // j loop
             // North boundary
-            j = jmax+1;
-            for (i = imin+1; i <= imax; ++i) {
+            foreach (i; 1 .. nic) {
+                size_t j = nic;
                 FVVertex vtx = get_vtx(i,j);
                 FVCell A = get_cell(i,j-1);
                 FVInterface B = get_ifj(i,j);
@@ -1259,8 +1251,8 @@ public:
                 vtx.cloud_fs = [A.fs, B.fs, C.fs, D.fs];
             } // i loop
             // South boundary
-            j = jmin;
-            for (i = imin+1; i <= imax; ++i) {
+            foreach (i; 1 .. nic) {
+                size_t j = 0;
                 FVVertex vtx = get_vtx(i,j);
                 FVInterface A = get_ifj(i,j);
                 FVCell B = get_cell(i,j);
@@ -1274,7 +1266,7 @@ public:
             // it a triangle to compute over.  This should be fine.
             // North-east corner
             {
-                i = imax+1; j = jmax+1;
+                size_t i = nic; size_t j = njc;
                 FVVertex vtx = get_vtx(i,j);
                 FVInterface A = get_ifi(i,j-1);
                 FVInterface B = get_ifj(i-1,j);
@@ -1284,7 +1276,7 @@ public:
             }
             // South-east corner
             {
-                i = imax+1; j = jmin;
+                size_t i = nic; size_t j = 0;
                 FVVertex vtx = get_vtx(i,j);
                 FVInterface A = get_ifi(i,j);
                 FVCell B = get_cell(i-1,j);
@@ -1294,7 +1286,7 @@ public:
             }
             // South-west corner
             {
-                i = imin; j = jmin;
+                size_t i = 0; size_t j = 0;
                 FVVertex vtx = get_vtx(i,j);
                 FVInterface A = get_ifj(i,j);
                 FVCell B = get_cell(i,j);
@@ -1304,7 +1296,7 @@ public:
             }
             // North-west corner
             {
-                i = imin; j = jmax+1;
+                size_t i = 0; size_t j = njc;
                 FVVertex vtx = get_vtx(i,j);
                 FVCell A = get_cell(i,j-1);
                 FVInterface B = get_ifj(i,j);
@@ -1313,6 +1305,7 @@ public:
                 vtx.cloud_fs = [A.fs, B.fs, C.fs];
             }
         } else { // Flow quantity derivatives for 3D.
+/+ TODO PJ 2020-11-17
             // Internal secondary cell geometry information
             for ( i = imin; i <= imax-1; ++i ) {
                 for ( j = jmin; j <= jmax-1; ++j ) {
@@ -1700,49 +1693,49 @@ public:
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos), &(c2.pos), &(c3.pos)];
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs];
             }
++/
         } // end if (myConfig.dimensions
     } // end store_references_for_derivative_calc_at_vertices()
 
     @nogc
     override void sync_vertices_from_underlying_grid(size_t gtl=0)
     {
-        size_t nivtx, njvtx, nkvtx;
-        nivtx = grid.niv; njvtx = grid.njv; nkvtx = grid.nkv;
         if (myConfig.dimensions == 3) {
-            if ( nivtx-1 != nicell || njvtx-1 != njcell || nkvtx-1 != nkcell ) {
+            if (grid.niv != niv || grid.njv != njv || grid.nkv != nkv ) {
                 string msg = "Mismatch in 3D grid size";
                 debug {
-                    msg ~= text("\nFor block[", id, "] we have read nivtx=", nivtx,
-                                " njvtx=", njvtx, " nkvtx=", nkvtx);
+                    msg ~= text("\nFor block[", id, "] we have read grid.niv=", grid.niv,
+                                " njv=", grid.njv, " nkv=", grid.nkv);
                 }
                 throw new FlowSolverException(msg);
             }
-            for (size_t k = kmin; k <= kmax+1; ++k) {
-                for (size_t j = jmin; j <= jmax+1; ++j) {
-                    for (size_t i = imin; i <= imax+1; ++i) {
+            foreach (k; 0 .. nkv) {
+                foreach (j; 0 .. njv) {
+                    foreach (i; 0 .. niv) {
                         auto vtx = get_vtx(i,j,k);
-                        auto src_vtx = grid[i-imin,j-jmin,k-kmin];
+                        auto src_vtx = grid[i,j,k];
                         vtx.pos[gtl].set(src_vtx);
-                    } // for i
-                } // for j
-            } // for k
+                    }
+                }
+            }
         } else { // 2D case
-            if (nivtx-1 != nicell || njvtx-1 != njcell || nkvtx != 1) {
+            if (grid.niv != niv || grid.njv != njv || grid.nkv != 1) {
                 string msg = "Mismatch in 2D grid size";
                 debug {
-                    msg ~= text("\nFor block[", id, "] we have read nivtx=", nivtx,
-                                " njvtx=", njvtx, " nkvtx=", nkvtx);
+                    msg ~= text("\nFor block[", id, "] we have read grid.niv=", grid.niv,
+                                " njv=", grid.njv, " nkv=", grid.nkv);
                 }
                 throw new FlowSolverException(msg);
             }
-            for (size_t j = jmin; j <= jmax+1; ++j) {
-                for (size_t i = imin; i <= imax+1; ++i) {
+            foreach (j; 0 .. njv) {
+                foreach (i; 0 .. njv) {
                     auto vtx = get_vtx(i,j);
-                    auto src_vtx = grid[i-imin,j-jmin];
+                    auto src_vtx = grid[i,j];
                     vtx.pos[gtl].set(src_vtx.x, src_vtx.y, to!number(0.0));
-                } // for i
-            } // for j
+                }
+            }
         }
+        return;
     } // end sync_vertices_from_underlying_grid()
 
     @nogc
@@ -1750,16 +1743,16 @@ public:
     // Note that we reuse the StructuredGrid object that was created on the
     // use of init_grid_and_flow_arrays().
     {
-        size_t kmaxrange = (myConfig.dimensions == 3) ? kmax+1 : kmax;
-        for (size_t k = kmin; k <= kmaxrange; ++k) {
-            for (size_t j = jmin; j <= jmax+1; ++j) {
-                for (size_t i = imin; i <= imax+1; ++i) {
+        foreach (k; 0 .. nkv) {
+            foreach (j; 0 .. njv) {
+                foreach (i; 0 .. niv) {
                     auto vtx = get_vtx(i,j,k);
-                    auto dest_vtx = grid[i-imin,j-jmin,k-kmin];
+                    auto dest_vtx = grid[i,j,k];
                     dest_vtx.set(vtx.pos[gtl]);
-                } // for i
-            } // for j
-        } // for k
+                }
+            }
+        }
+        return;
     } // end sync_vertices_to_underlying_grid()
 
     override void read_new_underlying_grid(string fileName)
@@ -1812,21 +1805,21 @@ public:
                 fin.rawRead(varname);
             }
             int[4] int4; fin.rawRead(int4);
-            int my_dimensions = int4[0];
-            size_t nic = int4[1]; size_t njc = int4[2]; size_t nkc = int4[3];
-            if (my_dimensions != myConfig.dimensions) {
-                string msg = text("dimensions found: " ~ to!string(my_dimensions));
+            int dimensions_read = int4[0];
+            size_t nic_read = int4[1]; size_t njc_read = int4[2]; size_t nkc_read = int4[3];
+            if (dimensions_read != myConfig.dimensions) {
+                string msg = text("dimensions found: " ~ to!string(dimensions_read));
                 throw new FlowSolverException(msg);
             }
-            if (nic != nicell || njc != njcell ||
-                nkc != ((myConfig.dimensions == 3) ? nkcell : 1)) {
+            if (nic != nic_read || njc != njc_read ||
+                nkc_read != ((myConfig.dimensions == 3) ? nkc : 1)) {
                 string msg = text("For block[", id, "] we have a mismatch in solution size.",
-                                  " Have read nic=", nic, " njc=", njc, " nkc=", nkc);
+                                  " Have read nic=", nic_read, " njc=", njc_read, " nkc=", nkc_read);
                 throw new FlowSolverException(msg);
             }
-            for ( size_t k = kmin; k <= kmax; ++k ) {
-                for ( size_t j = jmin; j <= jmax; ++j ) {
-                    for ( size_t i = imin; i <= imax; ++i ) {
+            foreach (k; 0 .. nkc) {
+                foreach (j; 0 .. njc) {
+                    foreach (i; 0 .. nic) {
                         get_cell(i,j,k).read_values_from_raw_binary(fin, overwrite_geometry_data);
                     }
                 }
@@ -1862,33 +1855,33 @@ public:
                 }
             }
             line = byLine.front; byLine.popFront();
-            size_t my_dimensions, nic, njc, nkc;
-            formattedRead(line, "dimensions: %d", &my_dimensions);
-            if (my_dimensions != myConfig.dimensions) {
-                string msg = text("dimensions found: " ~ to!string(my_dimensions));
+            size_t dimensions_read, nic_read, njc_read, nkc_read;
+            formattedRead(line, "dimensions: %d", &dimensions_read);
+            if (dimensions_read != myConfig.dimensions) {
+                string msg = text("dimensions found: " ~ to!string(dimensions_read));
                 throw new FlowSolverException(msg);
             }
             line = byLine.front; byLine.popFront();
-            formattedRead(line, "nicell: %d", &nic);
+            formattedRead(line, "nicell: %d", &nic_read);
             line = byLine.front; byLine.popFront();
-            formattedRead(line, "njcell: %d", &njc);
+            formattedRead(line, "njcell: %d", &njc_read);
             line = byLine.front; byLine.popFront();
-            formattedRead(line, "nkcell: %d", &nkc);
-            if (nic != nicell || njc != njcell ||
-                nkc != ((myConfig.dimensions == 3) ? nkcell : 1)) {
+            formattedRead(line, "nkcell: %d", &nkc_read);
+            if (nic_read != nic || njc_read != njc ||
+                nkc_read != ((myConfig.dimensions == 3) ? nkc : 1)) {
                 string msg = text("For block[", id, "] we have a mismatch in solution size.",
-                                  " Have read nic=", nic, " njc=", njc, " nkc=", nkc);
+                                  " Have read nic=", nic_read, " njc=", njc_read, " nkc=", nkc_read);
                 throw new FlowSolverException(msg);
             }
-            for ( size_t k = kmin; k <= kmax; ++k ) {
-                for ( size_t j = jmin; j <= jmax; ++j ) {
-                    for ( size_t i = imin; i <= imax; ++i ) {
+            foreach (k; 0 .. nkc) {
+                foreach (j; 0 .. njc) {
+                    foreach (i; 0 .. nic) {
                         line = byLine.front; byLine.popFront();
                         get_cell(i,j,k).scan_values_from_string(line, variableNames, useFixedOrder,
                                                                 myConfig.gmodel, overwrite_geometry_data);
-                    } // for i
-                } // for j
-            } // for k
+                    }
+                }
+            }
         } // end switch flow_format
         if (myConfig.verbosity_level > 1) { writeln("read_solution(): Done block ", id); }
         return sim_time;
@@ -1917,11 +1910,11 @@ public:
                 outfile.rawWrite(to!(char[])(varname));
             }
             int4[0] = myConfig.dimensions;
-            int4[1] = to!int(nicell); int4[2] = to!int(njcell); int4[3] = to!int(nkcell);
+            int4[1] = to!int(nic); int4[2] = to!int(njc); int4[3] = to!int(nkc);
             outfile.rawWrite(int4);
-            for ( size_t k = kmin; k <= kmax; ++k ) {
-                for ( size_t j = jmin; j <= jmax; ++j ) {
-                    for ( size_t i = imin; i <= imax; ++i ) {
+            foreach (k; 0 .. nkc) {
+                foreach (j; 0 .. njc) {
+                    foreach (i; 0 .. nic) {
                         get_cell(i,j,k).write_values_to_raw_binary(outfile);
                     }
                 }
@@ -1938,13 +1931,13 @@ public:
             foreach(varname; myConfig.flow_variable_list) { formattedWrite(writer, " \"%s\"", varname); }
             formattedWrite(writer, "\n");
             formattedWrite(writer, "dimensions: %d\n", myConfig.dimensions);
-            formattedWrite(writer, "nicell: %d\n", nicell);
-            formattedWrite(writer, "njcell: %d\n", njcell);
-            formattedWrite(writer, "nkcell: %d\n", nkcell);
+            formattedWrite(writer, "nicell: %d\n", nic);
+            formattedWrite(writer, "njcell: %d\n", njc);
+            formattedWrite(writer, "nkcell: %d\n", nkc);
             outfile.compress(writer.data);
-            for ( size_t k = kmin; k <= kmax; ++k ) {
-                for ( size_t j = jmin; j <= jmax; ++j ) {
-                    for ( size_t i = imin; i <= imax; ++i ) {
+            foreach (k; 0 .. nkc) {
+                foreach (j; 0 .. njc) {
+                    foreach (i; 0 .. nic) {
                         outfile.compress(" " ~ get_cell(i,j,k).write_values_to_string() ~ "\n");
                     }
                 }
@@ -1970,9 +1963,9 @@ public:
         }
         formattedWrite(writer, "\n");
         formattedWrite(writer, "dimensions: %d\n", myConfig.dimensions);
-        formattedWrite(writer, "nicell: %d\n", nicell);
-        formattedWrite(writer, "njcell: %d\n", njcell);
-        formattedWrite(writer, "nkcell: %d\n", nkcell);
+        formattedWrite(writer, "nicell: %d\n", nic);
+        formattedWrite(writer, "njcell: %d\n", njc);
+        formattedWrite(writer, "nkcell: %d\n", nkc);
         outfile.compress(writer.data);
         foreach (cell; cells) {
             outfile.compress(" " ~ cell.write_residuals_to_string() ~ "\n");
@@ -1991,10 +1984,10 @@ public:
     override void propagate_inflow_data_west_to_east()
     {
         // Assume that the west-face ghost cells have appropriate data.
-        for ( size_t k = kmin; k <= kmax; ++k ) {
-            for ( size_t j = jmin; j <= jmax; ++j ) {
-                auto src_cell = get_cell(imin-1,j,k);
-                for ( size_t i = imin; i <= imax; ++i ) {
+        foreach (k; 0 .. nkc) {
+            foreach (j; 0 .. njc) {
+                auto src_cell = get_ifi(0,j,k).left_cells[0];
+                foreach (i; 0 .. nic) {
                     auto dest_cell = get_cell(i,j,k);
                     dest_cell.copy_values_from(src_cell, CopyDataOption.all_flow);
                 }
@@ -2013,7 +2006,8 @@ public:
     } // end propagate_inflow_data_west_to_east()
 
     @nogc
-    override void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0, FVCell[] cell_list = [], FVVertex[] vertex_list = [])
+    override void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0,
+                                         FVCell[] cell_list = [], FVVertex[] vertex_list = [])
     // Compute the flux from flow-field data on either-side of the interface.
     {
         // Barring exceptions at the block boundaries, the general process is:
@@ -2024,6 +2018,7 @@ public:
         //
         bool do_reconstruction = allow_high_order_interpolation && (myConfig.interpolation_order > 1);
         //
+/+ TODO PJ 2020-11-17
         if (myConfig.high_order_flux_calculator) {
             // ifi interfaces are East-facing interfaces.
             for (size_t k = kmin; k <= kmax; ++k) {
@@ -2069,7 +2064,9 @@ public:
             }
             return;
         } // end if (high_order_flux_calculator)
++/
         //
+/+ TODO PJ 2020-11-17
         if (myConfig.interpolation_order == 3) {
             //
             // A form of high-order flux calculation built on
@@ -2171,11 +2168,13 @@ public:
             } // i loop
             return; // Our work is done.
         } // end if (interpolation_order == 3)
++/
         //
         // If we have not left already, continue with the flux calculation
         // being done in the classic (piecewise-parabolic) reconstruction,
         // followed by flux calculation from Left,Right conditions.
         //
+/+ TODO PJ 2020-11-17
         // ifi interfaces are East-facing interfaces.
         for (size_t k = kmin; k <= kmax; ++k) {
             for (size_t j = jmin; j <= jmax; ++j) {
@@ -2332,11 +2331,13 @@ public:
                 } // for k
             } // j loop
         } // i loop
++/
         return;
     } // end convective_flux_phase0()
 
     @nogc
-    override void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0, FVCell[] cell_list = [], FVInterface[] iface_list = [])
+    override void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0,
+                                         FVCell[] cell_list = [], FVInterface[] iface_list = [])
     // Compute the flux from data on either-side of the interface.
     // For the structured-grid block, there is nothing to do.
     // The unstructured-grid block needs to work in two phases.
@@ -2347,19 +2348,19 @@ public:
     @nogc void copy_current_corner_coords()
     {
         if (myConfig.dimensions == 2) {
-            FVVertex vtx00 = get_vtx(imin,jmin);
+            FVVertex vtx00 = get_vtx(0,0);
             corner_coords[0] = vtx00.pos[0].x.re;
             corner_coords[1] = vtx00.pos[0].y.re;
             corner_coords[2] = vtx00.pos[0].z.re;
-            FVVertex vtx10 = get_vtx(imax+1,jmin);
+            FVVertex vtx10 = get_vtx(nic,0);
             corner_coords[3] = vtx10.pos[0].x.re;
             corner_coords[4] = vtx10.pos[0].y.re;
             corner_coords[5] = vtx10.pos[0].z.re;
-            FVVertex vtx11 = get_vtx(imax+1,jmax+1);
+            FVVertex vtx11 = get_vtx(nic,njc);
             corner_coords[6] = vtx11.pos[0].x.re;
             corner_coords[7] = vtx11.pos[0].y.re;
             corner_coords[8] = vtx11.pos[0].z.re;
-            FVVertex vtx01 = get_vtx(imin,jmax+1);
+            FVVertex vtx01 = get_vtx(0,njc);
             corner_coords[9] = vtx01.pos[0].x.re;
             corner_coords[10] = vtx01.pos[0].y.re;
             corner_coords[11] = vtx01.pos[0].z.re;
@@ -2380,35 +2381,35 @@ public:
             corner_coords[22] = vtx01.pos[0].y.re;
             corner_coords[23] = vtx01.pos[0].z.re;
         } else {
-            FVVertex vtx000 = get_vtx(imin,jmin,kmin);
+            FVVertex vtx000 = get_vtx(0,0,0);
             corner_coords[0] = vtx000.pos[0].x.re;
             corner_coords[1] = vtx000.pos[0].y.re;
             corner_coords[2] = vtx000.pos[0].z.re;
-            FVVertex vtx100 = get_vtx(imax+1,jmin,kmin);
+            FVVertex vtx100 = get_vtx(nic,0,0);
             corner_coords[3] = vtx100.pos[0].x.re;
             corner_coords[4] = vtx100.pos[0].y.re;
             corner_coords[5] = vtx100.pos[0].z.re;
-            FVVertex vtx110 = get_vtx(imax+1,jmax+1,kmin);
+            FVVertex vtx110 = get_vtx(nic,njc,0);
             corner_coords[6] = vtx110.pos[0].x.re;
             corner_coords[7] = vtx110.pos[0].y.re;
             corner_coords[8] = vtx110.pos[0].z.re;
-            FVVertex vtx010 = get_vtx(imin,jmax+1,kmin);
+            FVVertex vtx010 = get_vtx(0,njc,0);
             corner_coords[9] = vtx010.pos[0].x.re;
             corner_coords[10] = vtx010.pos[0].y.re;
             corner_coords[11] = vtx010.pos[0].z.re;
-            FVVertex vtx001 = get_vtx(imin,jmin,kmax+1);
+            FVVertex vtx001 = get_vtx(0,0,nkc);
             corner_coords[12] = vtx001.pos[0].x.re;
             corner_coords[13] = vtx001.pos[0].y.re;
             corner_coords[14] = vtx001.pos[0].z.re;
-            FVVertex vtx101 = get_vtx(imax+1,jmin,kmax+1);
+            FVVertex vtx101 = get_vtx(nic,0,nkc);
             corner_coords[15] = vtx101.pos[0].x.re;
             corner_coords[16] = vtx101.pos[0].y.re;
             corner_coords[17] = vtx101.pos[0].z.re;
-            FVVertex vtx111 = get_vtx(imax+1,jmax+1,kmax+1);
+            FVVertex vtx111 = get_vtx(nic,njc,nkc);
             corner_coords[18] = vtx111.pos[0].x.re;
             corner_coords[19] = vtx111.pos[0].y.re;
             corner_coords[20] = vtx111.pos[0].z.re;
-            FVVertex vtx011 = get_vtx(imin,jmax+1,kmax+1);
+            FVVertex vtx011 = get_vtx(0,njc,nkc);
             corner_coords[21] = vtx011.pos[0].x.re;
             corner_coords[22] = vtx011.pos[0].y.re;
             corner_coords[23] = vtx011.pos[0].z.re;

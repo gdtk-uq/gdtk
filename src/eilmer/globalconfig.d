@@ -2100,23 +2100,23 @@ void init_master_lua_State()
         if ( fluidblk.grid_type == Grid_t.structured_grid ) {
             auto sblk = cast(SFluidBlock) fluidblk;
             assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
-            lua_pushnumber(L, sblk.nicell);
+            lua_pushnumber(L, sblk.nic);
             lua_setfield(L, -2, "niCells");
-            lua_pushnumber(L, sblk.njcell);
+            lua_pushnumber(L, sblk.njc);
             lua_setfield(L, -2, "njCells");
-            lua_pushnumber(L, sblk.nkcell);
+            lua_pushnumber(L, sblk.nkc);
             lua_setfield(L, -2, "nkCells");
-            lua_pushnumber(L, sblk.imin);
+            lua_pushnumber(L, 0);
             lua_setfield(L, -2, "vtxImin");
-            lua_pushnumber(L, sblk.imax+1);
+            lua_pushnumber(L, sblk.nic);
             lua_setfield(L, -2, "vtxImax");
-            lua_pushnumber(L, sblk.jmin);
+            lua_pushnumber(L, 0);
             lua_setfield(L, -2, "vtxJmin");
-            lua_pushnumber(L, sblk.jmax+1);
+            lua_pushnumber(L, sblk.njc);
             lua_setfield(L, -2, "vtxJmax");
-            lua_pushnumber(L, sblk.kmin);
+            lua_pushnumber(L, 0);
             lua_setfield(L, -2, "vtxKmin");
-            lua_pushnumber(L, sblk.kmax+1);
+            lua_pushnumber(L, sblk.nkc);
             lua_setfield(L, -2, "vtxKmax");
         }
         lua_rawseti(L, -2, to!int(i));
