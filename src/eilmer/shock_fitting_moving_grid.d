@@ -423,8 +423,8 @@ Vector3[] shock_fitting_vertex_velocities(SFluidBlock blk) {
                     M = dot(u_east, t_unit)/cell[i].fs.gas.a;
                     // Weighting functions defined on page 78 of Ian's thesis.
                     if (M <= 1.0) {
-                        //w[i] = ((M + 1) * (M + 1) + (M + 1) * abs(M + 1)) / 8.0;
-                        w[i] = exp(0.01 * (M - 1));
+                        w[i] = ((M + 1) * (M + 1) + (M + 1) * abs(M + 1)) / 8.0;
+                        //w[i] = exp(0.01 * (M - 1));
                     } else {
                         w[i] = M;
                     }
