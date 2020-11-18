@@ -4,7 +4,7 @@
  * Author: Kyle Damm
  * First code: 2017-03-17
  * Edits by Will Landsberg and Tim Cullen
- * 
+ *
  * 2018-01-20 Some code clean up by PJ;
  * [TODO] more is needed for MPI context.
  */
@@ -78,7 +78,7 @@ void write_boundary_loads_to_file(double sim_time, int current_loads_tindx) {
     foreach (blk; localFluidBlocks) {
         if (blk.active) {
             final switch (blk.grid_type) {
-            case Grid_t.unstructured_grid: 
+            case Grid_t.unstructured_grid:
                 auto ublk = cast(UFluidBlock) blk;
                 assert(ublk !is null, "Oops, this should be a UFluidBlock object.");
                 apply_unstructured_grid(ublk, sim_time, current_loads_tindx);
@@ -125,85 +125,76 @@ void apply_structured_grid(SFluidBlock blk, double sim_time, int current_loads_t
     foreach (bndary; blk.bc) {
         if (canFind(GlobalConfig.group_names_for_loads, bndary.group)) {
             string fname = generate_boundary_load_file(blk.id, current_loads_tindx, sim_time, bndary.group);
-            size_t i, j, k;
-            FVCell cell;
-            FVInterface IFace;
-            number cellWidthNormalToSurface;
             // For structured blocks, all cell faces along a boundary point out or
             // all faces point in, so just use a constant for the outsign value.
             final switch (bndary.which_boundary) {
             case Face.north:
-                j = blk.jmax;
-                for (k = blk.kmin; k <= blk.kmax; ++k) {
-                    for (i = blk.imin; i <= blk.imax; ++i) {
-                        cell = blk.get_cell(i,j,k);
-                        IFace = cell.iface[Face.north];
-                        cellWidthNormalToSurface = cell.jLength;
-                        compute_and_store_loads(IFace, 1, cellWidthNormalToSurface, sim_time, fname);
-                    } // end i loop
-                } // end for k
+                foreach (k; 0 .. blk.nkc) {
+                    foreach (i; 0 .. blk.nic) {
+                        auto cell = blk.get_cell(i,blk.njc-1,k);
+                        auto f = cell.iface[Face.north];
+                        number cellWidthNormalToSurface = cell.jLength;
+                        compute_and_store_loads(f, 1, cellWidthNormalToSurface, sim_time, fname);
+                    }
+                }
                 break;
             case Face.east:
-                i = blk.imax;
-                for (k = blk.kmin; k <= blk.kmax; ++k) {
-                    for (j = blk.jmin; j <= blk.jmax; ++j) {
-                        cell = blk.get_cell(i,j,k);
-                        IFace = cell.iface[Face.east];
-                        cellWidthNormalToSurface = cell.iLength;
-                        compute_and_store_loads(IFace, 1, cellWidthNormalToSurface, sim_time, fname);
-                    } // end j loop
-                } // end for k
+                foreach (k; 0 .. blk.nkc) {
+                    foreach (j; 0 .. blk.njc) {
+                        auto cell = blk.get_cell(blk.nic-1,j,k);
+                        auto f = cell.iface[Face.east];
+                        number cellWidthNormalToSurface = cell.iLength;
+                        compute_and_store_loads(f, 1, cellWidthNormalToSurface, sim_time, fname);
+                    }
+                }
                 break;
             case Face.south:
-                j = blk.jmin;
-                for (k = blk.kmin; k <= blk.kmax; ++k) {
-                    for (i = blk.imin; i <= blk.imax; ++i) {
-                        cell = blk.get_cell(i,j,k);
-                        IFace = cell.iface[Face.south];
-                        cellWidthNormalToSurface = cell.jLength;
-                        compute_and_store_loads(IFace, -1, cellWidthNormalToSurface, sim_time, fname);
-                    } // end i loop
-                } // end for k
+                foreach (k; 0 .. blk.nkc) {
+                    foreach (i; 0 .. blk.nic) {
+                        auto cell = blk.get_cell(i,0,k);
+                        auto f = cell.iface[Face.south];
+                        number cellWidthNormalToSurface = cell.jLength;
+                        compute_and_store_loads(f, -1, cellWidthNormalToSurface, sim_time, fname);
+                    }
+                }
                 break;
             case Face.west:
-                i = blk.imin;
-                for (k = blk.kmin; k <= blk.kmax; ++k) {
-                    for (j = blk.jmin; j <= blk.jmax; ++j) {
-                        cell = blk.get_cell(i,j,k);
-                        IFace = cell.iface[Face.west];
-                        cellWidthNormalToSurface = cell.iLength;
-                        compute_and_store_loads(IFace, -1, cellWidthNormalToSurface, sim_time, fname);
-                    } // end j loop
-                } // end for k
+                foreach (k; 0 .. blk.nkc) {
+                    foreach (j; 0 .. blk.njc) {
+                        auto cell = blk.get_cell(0,j,k);
+                        auto f = cell.iface[Face.west];
+                        number cellWidthNormalToSurface = cell.iLength;
+                        compute_and_store_loads(f, -1, cellWidthNormalToSurface, sim_time, fname);
+                    }
+                }
                 break;
             case Face.top:
-                k = blk.kmax;
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    for (j = blk.jmin; j <= blk.jmax; ++j) {
-                        cell = blk.get_cell(i,j,k);
-                        IFace = cell.iface[Face.top];
-                        cellWidthNormalToSurface = cell.kLength;
-                        compute_and_store_loads(IFace, 1, cellWidthNormalToSurface, sim_time, fname);
-                    } // end j loop
-                } // end for i
+                foreach (i; 0 .. blk.nic) {
+                    foreach (j; 0 .. blk.njc) {
+                        auto cell = blk.get_cell(i,j,blk.nkc-1);
+                        auto f = cell.iface[Face.top];
+                        number cellWidthNormalToSurface = cell.kLength;
+                        compute_and_store_loads(f, 1, cellWidthNormalToSurface, sim_time, fname);
+                    }
+                }
                 break;
             case Face.bottom:
-                k = blk.kmin;
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    for (j = blk.jmin; j <= blk.jmax; ++j) {
-                        cell = blk.get_cell(i,j,k);
-                        IFace = cell.iface[Face.bottom];
-                        cellWidthNormalToSurface = cell.kLength;
-                        compute_and_store_loads(IFace, -1, cellWidthNormalToSurface, sim_time, fname);
-                    } // end j loop
-                } // end for i
+                foreach (i; 0 .. blk.nic) {
+                    foreach (j; 0 .. blk.njc) {
+                        auto cell = blk.get_cell(i,j,0);
+                        auto f = cell.iface[Face.bottom];
+                        number cellWidthNormalToSurface = cell.kLength;
+                        compute_and_store_loads(f, -1, cellWidthNormalToSurface, sim_time, fname);
+                    }
+                }
                 break;
             } // end switch which_boundary
         } // end if
-    } // end foreach
+    } // end foreach bndary
 } // end apply_structured_grid()
 
-void compute_and_store_loads(FVInterface iface, int outsign, number cellWidthNormalToSurface, double sim_time, string fname)
+void compute_and_store_loads(FVInterface iface, int outsign, number cellWidthNormalToSurface,
+                             double sim_time, string fname)
 {
     auto gmodel = GlobalConfig.gmodel_master;
     FlowState fs = iface.fs;
@@ -224,7 +215,7 @@ void compute_and_store_loads(FVInterface iface, int outsign, number cellWidthNor
     number sigma_wall, tau_wall, l_tau, m_tau, n_tau, Re_wall, nu_wall, u_star, y_plus;
     number q_total, q_cond, q_diff;
     if (GlobalConfig.viscous) {
-        number dTdx = grad.T[0]; number dTdy = grad.T[1]; number dTdz = grad.T[2]; 
+        number dTdx = grad.T[0]; number dTdy = grad.T[1]; number dTdz = grad.T[2];
         number dudx = grad.vel[0][0]; number dudy = grad.vel[0][1]; number dudz = grad.vel[0][2];
         number dvdx = grad.vel[1][0]; number dvdy = grad.vel[1][1]; number dvdz = grad.vel[1][2];
         number dwdx = grad.vel[2][0]; number dwdy = grad.vel[2][1]; number dwdz = grad.vel[2][2];
@@ -285,12 +276,14 @@ void compute_and_store_loads(FVInterface iface, int outsign, number cellWidthNor
         y_plus = 0.0;
     }
     // store in file
-    auto writer = format("%20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %d %20.16e %20.16e %20.16e %20.16e %20.16e\n",
+    auto writer = format("%20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e"~
+                         " %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e"~
+                         " %20.16e %d %20.16e %20.16e %20.16e %20.16e %20.16e\n",
                          iface.pos.x.re, iface.pos.y.re, iface.pos.z.re, iface.area[0].re,
                          q_total.re, q_cond.re, q_diff.re, tau_wall.re, l_tau.re, m_tau.re, n_tau.re, sigma_wall.re,
-                         nx.re, ny.re, nz.re, T_wall.re, Re_wall.re, y_plus.re, 
+                         nx.re, ny.re, nz.re, T_wall.re, Re_wall.re, y_plus.re,
                          cellWidthNormalToSurface.re, outsign, rho_wall.re, mu_wall.re, a_wall.re, u_wall.re, v_wall.re);
-    std.file.append(fname, writer);    
+    std.file.append(fname, writer);
 } // end compute_and_store_loads()
 
 
@@ -362,7 +355,7 @@ void computeRunTimeLoads()
             }
         }
     }
-    
+
     // The remainder is only required for parallel work.
     // We do the following:
     // 1. update the groupedLoads array locally on each process
@@ -383,13 +376,10 @@ void computeRunTimeLoads()
                 groupedLoads[grpIdx*6+4] = group.resultantMoment.y;
                 groupedLoads[grpIdx*6+5] = group.resultantMoment.z;
             }
-            
             // Make sure each process has updated its loads calculation complete
             // before going on.
             MPI_Barrier(MPI_COMM_WORLD);
-
             MPI_Allreduce(MPI_IN_PLACE, groupedLoads.ptr, to!int(groupedLoads.length), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-
             foreach (grpIdx, ref group; runTimeLoads) {
                 group.resultantForce.refx = groupedLoads[grpIdx*6+0];
                 group.resultantForce.refy = groupedLoads[grpIdx*6+1];
@@ -401,17 +391,3 @@ void computeRunTimeLoads()
         } // END version(!nk_accelerator)
     } // end version(mpi_parallel)
 }
-            
-
-
-    
-
-
-                
-
-                
-
-                
-
-                
-

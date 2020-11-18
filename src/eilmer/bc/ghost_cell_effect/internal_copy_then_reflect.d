@@ -55,10 +55,7 @@ public:
 	}
 	ghost0.fs.copy_values_from(src_cell.fs);
 	reflect_normal_velocity(ghost0.fs, f);
-
-	if (blk.myConfig.MHD) {
-	    reflect_normal_magnetic_field(ghost0.fs, f);
-	}
+	if (blk.myConfig.MHD) { reflect_normal_magnetic_field(ghost0.fs, f); }
     } // end apply_for_interface_unstructured_grid()
 
     @nogc
@@ -83,229 +80,33 @@ public:
             }
             ghost0.fs.copy_values_from(src_cell.fs);
             reflect_normal_velocity(ghost0.fs, f);
-
-            if (blk.myConfig.MHD) {
-                reflect_normal_magnetic_field(ghost0.fs, f);
-            }
+            if (blk.myConfig.MHD) { reflect_normal_magnetic_field(ghost0.fs, f); }
         } // end foreach face
     } // end apply_unstructured_grid()
 
     @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        size_t i, j, k;
         FVCell src_cell, dest_cell;
-        FVInterface IFace;
         auto copy_opt = CopyDataOption.minimal_flow;
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
-        bool nghost3 = (blk.n_ghost_cell_layers == 3);
-
-        final switch (which_boundary) {
-        case Face.north:
-            j = blk.jmax;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    // ghost cell 1.
-                    src_cell = blk.get_cell(i,j,k);
-                    IFace = src_cell.iface[Face.north];
-                    dest_cell = blk.get_cell(i,j+1,k);
-                    dest_cell.copy_values_from(src_cell, copy_opt);
-                    reflect_normal_velocity(dest_cell.fs, IFace);
-                    if (blk.myConfig.MHD) {
-                        reflect_normal_magnetic_field(dest_cell.fs, IFace);
-                    }
-                    // ghost cell 2.
-                    src_cell = blk.get_cell(i,j-1,k);
-                    dest_cell = blk.get_cell(i,j+2,k);
-                    dest_cell.copy_values_from(src_cell, copy_opt);
-                    reflect_normal_velocity(dest_cell.fs, IFace);
-                    if (blk.myConfig.MHD) {
-                        reflect_normal_magnetic_field(dest_cell.fs, IFace);
-                    }
-                    if (nghost3) {
-                        // ghost cell 3.
-                        src_cell = blk.get_cell(i,j-2,k);
-                        dest_cell = blk.get_cell(i,j+3,k);
-                        dest_cell.copy_values_from(src_cell, copy_opt);
-                        reflect_normal_velocity(dest_cell.fs, IFace);
-                        if (blk.myConfig.MHD) {
-                            reflect_normal_magnetic_field(dest_cell.fs, IFace);
-                        }
-                    }
-                } // end i loop
-            } // for k
-            break;
-        case Face.east:
-            i = blk.imax;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    // ghost cell 1.
-                    src_cell = blk.get_cell(i,j,k);
-                    IFace = src_cell.iface[Face.east];
-                    dest_cell = blk.get_cell(i+1,j,k);
-                    dest_cell.copy_values_from(src_cell, copy_opt);
-                    reflect_normal_velocity(dest_cell.fs, IFace);
-                    if (blk.myConfig.MHD) {
-                        reflect_normal_magnetic_field(dest_cell.fs, IFace);
-                    }
-                    // ghost cell 2.
-                    src_cell = blk.get_cell(i-1,j,k);
-                    dest_cell = blk.get_cell(i+2,j,k);
-                    dest_cell.copy_values_from(src_cell, copy_opt);
-                    reflect_normal_velocity(dest_cell.fs, IFace);
-                    if (blk.myConfig.MHD) {
-                        reflect_normal_magnetic_field(dest_cell.fs, IFace);
-                    }
-                    if (nghost3) {
-                        // ghost cell 3.
-                        src_cell = blk.get_cell(i-2,j,k);
-                        dest_cell = blk.get_cell(i+3,j,k);
-                        dest_cell.copy_values_from(src_cell, copy_opt);
-                        reflect_normal_velocity(dest_cell.fs, IFace);
-                        if (blk.myConfig.MHD) {
-                            reflect_normal_magnetic_field(dest_cell.fs, IFace);
-                        }
-                    }
-                } // end j loop
-            } // for k
-            break;
-        case Face.south:
-            j = blk.jmin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    // ghost cell 1.
-                    src_cell = blk.get_cell(i,j,k);
-                    IFace = src_cell.iface[Face.south];
-                    dest_cell = blk.get_cell(i,j-1,k);
-                    dest_cell.copy_values_from(src_cell, copy_opt);
-                    reflect_normal_velocity(dest_cell.fs, IFace);
-                    if (blk.myConfig.MHD) {
-                        reflect_normal_magnetic_field(dest_cell.fs, IFace);
-                    }
-                    // ghost cell 2.
-                    src_cell = blk.get_cell(i,j+1,k);
-                    dest_cell = blk.get_cell(i,j-2,k);
-                    dest_cell.copy_values_from(src_cell, copy_opt);
-                    reflect_normal_velocity(dest_cell.fs, IFace);
-                    if (blk.myConfig.MHD) {
-                        reflect_normal_magnetic_field(dest_cell.fs, IFace);
-                    }
-                    if (nghost3) {
-                        // ghost cell 3.
-                        src_cell = blk.get_cell(i,j+2,k);
-                        dest_cell = blk.get_cell(i,j-3,k);
-                        dest_cell.copy_values_from(src_cell, copy_opt);
-                        reflect_normal_velocity(dest_cell.fs, IFace);
-                        if (blk.myConfig.MHD) {
-                            reflect_normal_magnetic_field(dest_cell.fs, IFace);
-                        }
-                    }
-                } // end i loop
-            } // for k
-            break;
-        case Face.west:
-            i = blk.imin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    // ghost cell 1.
-                    src_cell = blk.get_cell(i,j,k);
-                    IFace = src_cell.iface[Face.west];
-                    dest_cell = blk.get_cell(i-1,j,k);
-                    dest_cell.copy_values_from(src_cell, copy_opt);
-                    reflect_normal_velocity(dest_cell.fs, IFace);
-                    if (blk.myConfig.MHD) {
-                        reflect_normal_magnetic_field(dest_cell.fs, IFace);
-                    }
-                    // ghost cell 2.
-                    src_cell = blk.get_cell(i+1,j,k);
-                    dest_cell = blk.get_cell(i-2,j,k);
-                    dest_cell.copy_values_from(src_cell, copy_opt);
-                    reflect_normal_velocity(dest_cell.fs, IFace);
-                    if (blk.myConfig.MHD) {
-                        reflect_normal_magnetic_field(dest_cell.fs, IFace);
-                    }
-                    if (nghost3) {
-                        // ghost cell 3.
-                        src_cell = blk.get_cell(i+2,j,k);
-                        dest_cell = blk.get_cell(i-3,j,k);
-                        dest_cell.copy_values_from(src_cell, copy_opt);
-                        reflect_normal_velocity(dest_cell.fs, IFace);
-                        if (blk.myConfig.MHD) {
-                            reflect_normal_magnetic_field(dest_cell.fs, IFace);
-                        }
-                    }
-                } // end j loop
-            } // for k
-            break;
-        case Face.top:
-            k = blk.kmax;
-            for (i = blk.imin; i <= blk.imax; ++i) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    // ghost cell 1.
-                    src_cell = blk.get_cell(i,j,k);
-                    IFace = src_cell.iface[Face.top];
-                    dest_cell = blk.get_cell(i,j,k+1);
-                    dest_cell.copy_values_from(src_cell, copy_opt);
-                    reflect_normal_velocity(dest_cell.fs, IFace);
-                    if (blk.myConfig.MHD) {
-                        reflect_normal_magnetic_field(dest_cell.fs, IFace);
-                    }
-                    // ghost cell 2.
-                    src_cell = blk.get_cell(i,j,k-1);
-                    dest_cell = blk.get_cell(i,j,k+2);
-                    dest_cell.copy_values_from(src_cell, copy_opt);
-                    reflect_normal_velocity(dest_cell.fs, IFace);
-                    if (blk.myConfig.MHD) {
-                        reflect_normal_magnetic_field(dest_cell.fs, IFace);
-                    }
-                    if (nghost3) {
-                        // ghost cell 3.
-                        src_cell = blk.get_cell(i,j,k-2);
-                        dest_cell = blk.get_cell(i,j,k+3);
-                        dest_cell.copy_values_from(src_cell, copy_opt);
-                        reflect_normal_velocity(dest_cell.fs, IFace);
-                        if (blk.myConfig.MHD) {
-                            reflect_normal_magnetic_field(dest_cell.fs, IFace);
-                        }
-                    }
-                } // end j loop
-            } // for i
-            break;
-        case Face.bottom:
-            k = blk.kmin;
-            for (i = blk.imin; i <= blk.imax; ++i) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    // ghost cell 1.
-                    src_cell = blk.get_cell(i,j,k);
-                    IFace = src_cell.iface[Face.bottom];
-                    dest_cell = blk.get_cell(i,j,k-1);
-                    dest_cell.copy_values_from(src_cell, copy_opt);
-                    reflect_normal_velocity(dest_cell.fs, IFace);
-                    if (blk.myConfig.MHD) {
-                        reflect_normal_magnetic_field(dest_cell.fs, IFace);
-                    }
-                    // ghost cell 2.
-                    src_cell = blk.get_cell(i,j,k+1);
-                    dest_cell = blk.get_cell(i,j,k-2);
-                    dest_cell.copy_values_from(src_cell, copy_opt);
-                    reflect_normal_velocity(dest_cell.fs, IFace);
-                    if (blk.myConfig.MHD) {
-                        reflect_normal_magnetic_field(dest_cell.fs, IFace);
-                    }
-                    if (nghost3) {
-                        // ghost cell 3.
-                        src_cell = blk.get_cell(i,j,k+2);
-                        dest_cell = blk.get_cell(i,j,k-3);
-                        dest_cell.copy_values_from(src_cell, copy_opt);
-                        reflect_normal_velocity(dest_cell.fs, IFace);
-                        if (blk.myConfig.MHD) {
-                            reflect_normal_magnetic_field(dest_cell.fs, IFace);
-                        }
-                    }
-                } // end j loop
-            } // for i
-            break;
-        } // end switch which_boundary
+        BoundaryCondition bc = blk.bc[which_boundary];
+        foreach (i, f; bc.faces) {
+            foreach (n; 0 .. blk.n_ghost_cell_layers) {
+                if (bc.outsigns[i] == 1) {
+                    src_cell = f.left_cells[n];
+                    dest_cell = f.right_cells[n];
+                } else {
+                    src_cell = f.right_cells[n];
+                    dest_cell = f.left_cells[n];
+                }
+                dest_cell.copy_values_from(src_cell, copy_opt);
+                reflect_normal_velocity(dest_cell.fs, f);
+                if (blk.myConfig.MHD) {
+                    reflect_normal_magnetic_field(dest_cell.fs, f);
+                }
+            }
+        }
     } // end apply_structured_grid()
 } // end class GhostCellInternalCopyThenReflect

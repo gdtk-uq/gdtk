@@ -99,15 +99,15 @@ extern(C) int luafn_infoFluidBlock(lua_State *L)
         auto sblk = cast(SFluidBlock) blk;
         assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
         // For a structured_grid
-        lua_pushinteger(L, sblk.nicell); lua_setfield(L, tblIdx, "nicell");
-        lua_pushinteger(L, sblk.njcell); lua_setfield(L, tblIdx, "njcell");
-        lua_pushinteger(L, sblk.nkcell); lua_setfield(L, tblIdx, "nkcell");
-        lua_pushinteger(L, sblk.imin); lua_setfield(L, tblIdx, "imin");
-        lua_pushinteger(L, sblk.jmin); lua_setfield(L, tblIdx, "jmin");
-        lua_pushinteger(L, sblk.kmin); lua_setfield(L, tblIdx, "kmin");
-        lua_pushinteger(L, sblk.imax); lua_setfield(L, tblIdx, "imax");
-        lua_pushinteger(L, sblk.jmax); lua_setfield(L, tblIdx, "jmax");
-        lua_pushinteger(L, sblk.kmax); lua_setfield(L, tblIdx, "kmax");
+        lua_pushinteger(L, sblk.nic); lua_setfield(L, tblIdx, "nicell");
+        lua_pushinteger(L, sblk.njc); lua_setfield(L, tblIdx, "njcell");
+        lua_pushinteger(L, sblk.nkc); lua_setfield(L, tblIdx, "nkcell");
+        lua_pushinteger(L, 0); lua_setfield(L, tblIdx, "imin");
+        lua_pushinteger(L, 0); lua_setfield(L, tblIdx, "jmin");
+        lua_pushinteger(L, 0); lua_setfield(L, tblIdx, "kmin");
+        lua_pushinteger(L, sblk.nic-1); lua_setfield(L, tblIdx, "imax");
+        lua_pushinteger(L, sblk.njc-1); lua_setfield(L, tblIdx, "jmax");
+        lua_pushinteger(L, sblk.nkc-1); lua_setfield(L, tblIdx, "kmax");
         string[] corner_names;
         if (GlobalConfig.dimensions == 3) {
             corner_names = ["p000","p100","p110","p010","p001","p101","p111","p011"];

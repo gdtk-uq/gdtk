@@ -3,7 +3,7 @@
 //
 // Peter J. 2014-07-20 : first cut.
 // RG & PJ  2015-12-03 : Decompose boundary conditions into lists of actions
-//    
+//
 
 module bc.boundary_condition;
 
@@ -94,7 +94,7 @@ public:
     // Sometimes it is convenient to think of individual boundaries
     // grouped together.
     string group;
-    // Nature of the boundary condition that may be checked 
+    // Nature of the boundary condition that may be checked
     // by other parts of the CFD code.
     bool is_design_surface = false;
     int num_cntrl_pts = 0;
@@ -291,7 +291,7 @@ public:
     {
         foreach ( bfe; postConvFluxAction ) bfe.apply_for_interface(t, gtl, ftl, f);
     }
-    
+
     final void applyPreSpatialDerivActionAtBndryFaces(double t, int gtl, int ftl)
     {
         foreach ( bie; preSpatialDerivActionAtBndryFaces ) bie.apply(t, gtl, ftl);
@@ -306,7 +306,7 @@ public:
     {
         foreach ( bce; preSpatialDerivActionAtBndryCells ) bce.apply(t, gtl, ftl);
     }
-    
+
     final void applyPostDiffFluxAction(double t, int gtl, int ftl)
     {
         foreach ( bfe; postDiffFluxAction ) bfe.apply(t, gtl, ftl);
@@ -318,8 +318,8 @@ public:
     }
 
     // The Lua interpreter for the user-defined boundary condition belongs to
-    // the boundary condition.  User-defined GhostCellEffect or 
-    // BoundaryInterfaceEffect objects may need to initialize it. 
+    // the boundary condition.  User-defined GhostCellEffect or
+    // BoundaryInterfaceEffect objects may need to initialize it.
     void init_lua_State(string luafname)
     {
         myL = luaL_newstate();
@@ -342,9 +342,9 @@ public:
             // Structured-block-specific data
             auto sblk = cast(SFluidBlock) blk;
             assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
-            lua_pushinteger(myL, sblk.nicell); lua_setglobal(myL, "nicell");
-            lua_pushinteger(myL, sblk.njcell); lua_setglobal(myL, "njcell");
-            lua_pushinteger(myL, sblk.nkcell); lua_setglobal(myL, "nkcell");
+            lua_pushinteger(myL, sblk.nic); lua_setglobal(myL, "nicell");
+            lua_pushinteger(myL, sblk.njc); lua_setglobal(myL, "njcell");
+            lua_pushinteger(myL, sblk.nkc); lua_setglobal(myL, "nkcell");
             lua_pushinteger(myL, Face.north); lua_setglobal(myL, "north");
             lua_pushinteger(myL, Face.east); lua_setglobal(myL, "east");
             lua_pushinteger(myL, Face.south); lua_setglobal(myL, "south");
@@ -357,8 +357,8 @@ public:
         lua_pushstring(myL, label.toStringz); lua_setglobal(myL, "boundaryLabel");
         lua_pushstring(myL, type.toStringz); lua_setglobal(myL, "boundaryType");
         lua_pushstring(myL, group.toStringz); lua_setglobal(myL, "boundaryGroup");
-        // Although we make the helper functions available within 
-        // the boundary-condition-specific Lua interpreter, we should use 
+        // Although we make the helper functions available within
+        // the boundary-condition-specific Lua interpreter, we should use
         // those functions only in the context of the master thread.
         setSampleHelperFunctions(myL);
         setGridMotionHelperFunctions(myL);
