@@ -89,7 +89,7 @@ public:
     int other_face;
     int other_orientation;
     BoundaryCondition myBC;
-    
+
     version(mpi_parallel) {
         // This GhostCellEffect is somewhat symmetric in that for each ghost-cell
         // source-cell mapping, there should be a corresponding mapping over in
@@ -116,20 +116,20 @@ public:
         assert(neighbourBlock !is null, "Oops, this should be a SolidBlock object.");
         neighbourFace = otherFace;
         neighbourOrientation = orient;
-        
     }
 
     override string toString() const
-    { 
-        string str = "GasSolidFullFaceCopy(otherBlock=" ~ to!string(neighbourBlock.id) ~ 
-            ", otherFace=" ~ to!string(neighbourFace) ~ 
+    {
+        string str = "GasSolidFullFaceCopy(otherBlock=" ~ to!string(neighbourBlock.id) ~
+            ", otherFace=" ~ to!string(neighbourFace) ~
             ", orient=" ~ to!string(neighbourOrientation);
         str ~= ")";
         return str;
     }
-    
+
     void set_up_cell_mapping_phase0()
     {
+/+ FIX-ME PJ 2020-11-18 Cutting this code out as a short cut.
         // We call this function only after all blocks have been constructed.
         //
         // The following references and names will be handy for the data exchange
@@ -145,7 +145,7 @@ public:
             other_blk_rank = GlobalConfig.mpi_rank_for_block[other_blk.id];
         }
         //
-        // For the source cells, we use indices into the hypothetical block of active cells. 
+        // For the source cells, we use indices into the hypothetical block of active cells.
         size_t i_src, j_src, k_src;
         // For ghost-cell indices into the destination block, we use the raw indices into the
         // larger underlying block array that includes the surrounding layers of ghost cells.
@@ -163,22 +163,22 @@ public:
                     myBC.gasCells ~= this_blk.get_cell(i_dest, j_dest);
                     switch (other_face) {
                     case Face.north:
-                        j_src = other_blk.njcell - 1; 
+                        j_src = other_blk.njcell - 1;
                         i_src = other_blk.nicell - i - 1;
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
                         break;
                     case Face.east:
-                        i_src = other_blk.nicell - 1; 
+                        i_src = other_blk.nicell - 1;
                         j_src = i;
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
                         break;
                     case Face.south:
-                        j_src = 0; 
+                        j_src = 0;
                         i_src = i;
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
                         break;
                     case Face.west:
-                        i_src = 0; 
+                        i_src = 0;
                         j_src = other_blk.njcell - i - 1;
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                         break;
@@ -196,22 +196,22 @@ public:
                     myBC.gasCells ~= this_blk.get_cell(i_dest,j_dest);
                     switch (other_face) {
                     case Face.north:
-                        j_src = other_blk.njcell - 1; 
+                        j_src = other_blk.njcell - 1;
                         i_src = j;
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
                         break;
                     case Face.east:
-                        i_src = other_blk.nicell - 1; 
+                        i_src = other_blk.nicell - 1;
                         j_src = other_blk.njcell - j - 1;
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
                         break;
                     case Face.south:
-                        j_src = 0; 
+                        j_src = 0;
                         i_src = other_blk.nicell - j - 1;
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
                         break;
                     case Face.west:
-                        i_src = 0; 
+                        i_src = 0;
                         j_src = j;
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
                         break;
@@ -229,22 +229,22 @@ public:
                     myBC.gasCells ~= this_blk.get_cell(i_dest,j_dest);
                     switch (other_face) {
                     case Face.north:
-                        j_src = other_blk.njcell - 1; 
+                        j_src = other_blk.njcell - 1;
                         i_src = i;
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
                         break;
                     case Face.east:
-                        i_src = other_blk.nicell - 1; 
+                        i_src = other_blk.nicell - 1;
                         j_src = other_blk.njcell - i - 1;
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
                         break;
                     case Face.south:
-                        j_src = 0; 
+                        j_src = 0;
                         i_src = other_blk.nicell - i - 1;
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
                         break;
                     case Face.west:
-                        i_src = 0; 
+                        i_src = 0;
                         j_src = i;
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
                         break;
@@ -262,22 +262,22 @@ public:
                     myBC.gasCells ~= this_blk.get_cell(i_dest,j_dest);
                     switch (other_face) {
                     case Face.north:
-                        j_src = other_blk.njcell - 1; 
+                        j_src = other_blk.njcell - 1;
                         i_src = other_blk.nicell - j - 1;
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
                         break;
                     case Face.east:
-                        i_src = other_blk.nicell - 1; 
+                        i_src = other_blk.nicell - 1;
                         j_src = j;
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
                         break;
                     case Face.south:
-                        j_src = 0; 
+                        j_src = 0;
                         i_src = j;
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
                         break;
                     case Face.west:
-                        i_src = 0; 
+                        i_src = 0;
                         j_src = other_blk.njcell - j - 1;
                         mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
                         break;
@@ -304,7 +304,7 @@ public:
                         myBC.gasCells ~= this_blk.get_cell(i_dest,j_dest,k_dest);
                         final switch (other_face) {
                         case Face.north:
-                            j_src = other_blk.njcell - 1; 
+                            j_src = other_blk.njcell - 1;
                             final switch (other_orientation) {
                             case 0: i_src = other_blk.nicell - i - 1; k_src = k; break;
                             case 1: i_src = k; k_src = i; break;
@@ -314,7 +314,7 @@ public:
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             break;
                         case Face.east:
-                            i_src = other_blk.nicell - 1; 
+                            i_src = other_blk.nicell - 1;
                             final switch (other_orientation) {
                             case 0: j_src = i; k_src = k; break;
                             case 1: j_src = other_blk.njcell - k - 1; k_src = i; break;
@@ -324,7 +324,7 @@ public:
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             break;
                         case Face.south:
-                            j_src = 0; 
+                            j_src = 0;
                             final switch (other_orientation) {
                             case 0: i_src = i; k_src = k; break;
                             case 1: i_src = other_blk.nicell - k - 1; k_src = i; break;
@@ -334,7 +334,7 @@ public:
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             break;
                         case Face.west:
-                            i_src = 0; 
+                            i_src = 0;
                             final switch (other_orientation) {
                             case 0: j_src = other_blk.njcell - i - 1; k_src = k; break;
                             case 1: j_src = k; k_src = i; break;
@@ -344,7 +344,7 @@ public:
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             break;
                         case Face.top:
-                            k_src = other_blk.nkcell - 1; 
+                            k_src = other_blk.nkcell - 1;
                             final switch (other_orientation) {
                             case 0: i_src = i; j_src = k; break;
                             case 1: i_src = other_blk.nicell - k - 1; j_src = i; break;
@@ -354,7 +354,7 @@ public:
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             break;
                         case Face.bottom:
-                            k_src = 0; 
+                            k_src = 0;
                             final switch (other_orientation) {
                             case 0: i_src = other_blk.nicell - i - 1; j_src = k; break;
                             case 1: i_src = k; j_src = i; break;
@@ -377,7 +377,7 @@ public:
                         myBC.gasCells ~= this_blk.get_cell(i_dest,j_dest,k_dest);
                         final switch (other_face) {
                         case Face.north:
-                            j_src = other_blk.njcell - 1; 
+                            j_src = other_blk.njcell - 1;
                             final switch (other_orientation) {
                             case 0: i_src = j; k_src = k; break;
                             case 1: i_src = k; k_src = other_blk.nkcell - j - 1; break;
@@ -387,7 +387,7 @@ public:
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             break;
                         case Face.east:
-                            i_src = other_blk.nicell - 1; 
+                            i_src = other_blk.nicell - 1;
                             final switch (other_orientation) {
                             case 0: j_src = other_blk.njcell - j - 1; k_src = k; break;
                             case 1: j_src = other_blk.njcell - k - 1; k_src = other_blk.nkcell - j - 1; break;
@@ -397,7 +397,7 @@ public:
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             break;
                         case Face.south:
-                            j_src = 0; 
+                            j_src = 0;
                             final switch (other_orientation) {
                             case 0: i_src = other_blk.nicell - j - 1; k_src = k; break;
                             case 1: i_src = other_blk.nicell - k - 1; k_src = other_blk.nkcell - j - 1; break;
@@ -407,7 +407,7 @@ public:
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             break;
                         case Face.west:
-                            i_src = 0; 
+                            i_src = 0;
                             final switch (other_orientation) {
                             case 0: j_src = j; k_src = k; break;
                             case 1: j_src = k; k_src = other_blk.nkcell - j - 1; break;
@@ -417,7 +417,7 @@ public:
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             break;
                         case Face.top:
-                            k_src = other_blk.nkcell - 1; 
+                            k_src = other_blk.nkcell - 1;
                             final switch (other_orientation) {
                             case 0: i_src = other_blk.nicell - j - 1; j_src = k; break;
                             case 1: i_src = other_blk.nicell - k - 1; j_src = other_blk.njcell - j - 1; break;
@@ -427,7 +427,7 @@ public:
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             break;
                         case Face.bottom:
-                            k_src = 0; 
+                            k_src = 0;
                             final switch (other_orientation) {
                             case 0: i_src = j; j_src = k; break;
                             case 1: i_src = k; j_src = other_blk.njcell - j - 1; break;
@@ -450,7 +450,7 @@ public:
                         myBC.gasCells ~= this_blk.get_cell(i_dest,j_dest,k_dest);
                         final switch (other_face) {
                         case Face.north:
-                            j_src = other_blk.njcell - 1; 
+                            j_src = other_blk.njcell - 1;
                             final switch (other_orientation) {
                             case 0: i_src = i; k_src = k; break;
                             case 1: i_src = k; k_src = other_blk.nkcell - i - 1; break;
@@ -460,7 +460,7 @@ public:
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             break;
                         case Face.east:
-                            i_src = other_blk.nicell - 1; 
+                            i_src = other_blk.nicell - 1;
                             final switch (other_orientation) {
                             case 0: j_src = other_blk.njcell - i - 1; k_src = k; break;
                             case 1: j_src = other_blk.njcell - k - 1; k_src = other_blk.nkcell - i - 1; break;
@@ -470,7 +470,7 @@ public:
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             break;
                         case Face.south:
-                            j_src = 0; 
+                            j_src = 0;
                             final switch (other_orientation) {
                             case 0: i_src = other_blk.nicell - i - 1; k_src = k; break;
                             case 1: i_src = other_blk.nicell - k - 1; k_src = other_blk.nkcell - i - 1; break;
@@ -480,7 +480,7 @@ public:
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             break;
                         case Face.west:
-                            i_src = 0; 
+                            i_src = 0;
                             final switch (other_orientation) {
                             case 0: j_src = i; k_src = k; break;
                             case 1: j_src = k; k_src = other_blk.nkcell - i - 1; break;
@@ -490,7 +490,7 @@ public:
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             break;
                         case Face.top:
-                            k_src = other_blk.nkcell - 1; 
+                            k_src = other_blk.nkcell - 1;
                             final switch (other_orientation) {
                             case 0: i_src = other_blk.nicell - i - 1; j_src = k; break;
                             case 1: i_src = other_blk.nicell - k - 1; j_src = other_blk.njcell - i - 1; break;
@@ -500,7 +500,7 @@ public:
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             break;
                         case Face.bottom:
-                            k_src = 0; 
+                            k_src = 0;
                             final switch (other_orientation) {
                             case 0: i_src = i; j_src = k; break;
                             case 1: i_src = k; j_src = other_blk.njcell - i - 1; break;
@@ -523,7 +523,7 @@ public:
                         myBC.gasCells ~= this_blk.get_cell(i_dest,j_dest,k_dest);
                         final switch (other_face) {
                         case Face.north:
-                            j_src = other_blk.njcell - 1; 
+                            j_src = other_blk.njcell - 1;
                             final switch (other_orientation) {
                             case 0: i_src = other_blk.nicell - j - 1; k_src = k; break;
                             case 1: i_src = k; k_src = j; break;
@@ -533,7 +533,7 @@ public:
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             break;
                         case Face.east:
-                            i_src = other_blk.nicell - 1; 
+                            i_src = other_blk.nicell - 1;
                             final switch (other_orientation) {
                             case 0: j_src = j; k_src = k; break;
                             case 1: j_src = other_blk.njcell - k - 1; k_src = j; break;
@@ -543,7 +543,7 @@ public:
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             break;
                         case Face.south:
-                            j_src = 0; 
+                            j_src = 0;
                             final switch (other_orientation) {
                             case 0: i_src = j; k_src = k; break;
                             case 1: i_src = other_blk.nicell - k - 1; k_src = j; break;
@@ -553,7 +553,7 @@ public:
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             break;
                         case Face.west:
-                            i_src = 0; 
+                            i_src = 0;
                             final switch (other_orientation) {
                             case 0: j_src = other_blk.njcell - j - 1; k_src = k; break;
                             case 1: j_src = k; k_src = j; break;
@@ -563,7 +563,7 @@ public:
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             break;
                         case Face.top:
-                            k_src = other_blk.nkcell - 1; 
+                            k_src = other_blk.nkcell - 1;
                             final switch (other_orientation) {
                             case 0: i_src = j; j_src = k; break;
                             case 1: i_src = other_blk.nicell - k - 1; j_src = j; break;
@@ -573,7 +573,7 @@ public:
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             break;
                         case Face.bottom:
-                            k_src = 0; 
+                            k_src = 0;
                             final switch (other_orientation) {
                             case 0: i_src = other_blk.nicell - j - 1; j_src = k; break;
                             case 1: i_src = k; j_src = j; break;
@@ -596,7 +596,7 @@ public:
                         myBC.gasCells ~= this_blk.get_cell(i_dest,j_dest,k_dest);
                         final switch (other_face) {
                         case Face.north:
-                            j_src = other_blk.njcell - 1; 
+                            j_src = other_blk.njcell - 1;
                             final switch (other_orientation) {
                             case 0: i_src = i; k_src = j; break;
                             case 1: i_src = j; k_src = other_blk.nkcell - i - 1; break;
@@ -606,7 +606,7 @@ public:
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             break;
                         case Face.east:
-                            i_src = other_blk.nicell - 1; 
+                            i_src = other_blk.nicell - 1;
                             final switch (other_orientation) {
                             case 0: j_src = other_blk.njcell - i - 1; k_src = j; break;
                             case 1: j_src = other_blk.njcell - j - 1; k_src = other_blk.nkcell - i - 1; break;
@@ -616,7 +616,7 @@ public:
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             break;
                         case Face.south:
-                            j_src = 0; 
+                            j_src = 0;
                             final switch (other_orientation) {
                             case 0: i_src = other_blk.nicell - i - 1; k_src = j; break;
                             case 1: i_src = other_blk.nicell - j - 1; k_src = other_blk.nkcell - i - 1; break;
@@ -626,7 +626,7 @@ public:
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             break;
                         case Face.west:
-                            i_src = 0; 
+                            i_src = 0;
                             final switch (other_orientation) {
                             case 0: j_src = i; k_src = j; break;
                             case 1: j_src = j; k_src = other_blk.nkcell - i - 1; break;
@@ -636,7 +636,7 @@ public:
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             break;
                         case Face.top:
-                            k_src = other_blk.nkcell - 1; 
+                            k_src = other_blk.nkcell - 1;
                             final switch (other_orientation) {
                             case 0: i_src = other_blk.nicell - i - 1; j_src = j; break;
                             case 1: i_src = other_blk.nicell - j - 1; j_src = other_blk.njcell - i - 1; break;
@@ -646,7 +646,7 @@ public:
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             break;
                         case Face.bottom:
-                            k_src = 0; 
+                            k_src = 0;
                             final switch (other_orientation) {
                             case 0: i_src = i; j_src = j; break;
                             case 1: i_src = j; j_src = other_blk.njcell - i - 1; break;
@@ -669,7 +669,7 @@ public:
                         myBC.gasCells ~= this_blk.get_cell(i_dest,j_dest,k_dest);
                         final switch (other_face) {
                         case Face.north:
-                            j_src = other_blk.njcell - 1; 
+                            j_src = other_blk.njcell - 1;
                             final switch (other_orientation) {
                             case 0: i_src = other_blk.nicell - i - 1; k_src = j; break;
                             case 1: i_src = j; k_src = i; break;
@@ -679,7 +679,7 @@ public:
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             break;
                         case Face.east:
-                            i_src = other_blk.nicell - 1; 
+                            i_src = other_blk.nicell - 1;
                             final switch (other_orientation) {
                             case 0: j_src = i; k_src = j; break;
                             case 1: j_src = other_blk.njcell - j - 1; k_src = i; break;
@@ -689,7 +689,7 @@ public:
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             break;
                         case Face.south:
-                            j_src = 0; 
+                            j_src = 0;
                             final switch (other_orientation) {
                             case 0: i_src = i; k_src = j; break;
                             case 1: i_src = other_blk.nicell - j - 1; k_src = i; break;
@@ -699,7 +699,7 @@ public:
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             break;
                         case Face.west:
-                            i_src = 0; 
+                            i_src = 0;
                             final switch (other_orientation) {
                             case 0: j_src = other_blk.njcell - i - 1; k_src = j; break;
                             case 1: j_src = j; k_src = i; break;
@@ -709,7 +709,7 @@ public:
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             break;
                         case Face.top:
-                            k_src = other_blk.nkcell - 1; 
+                            k_src = other_blk.nkcell - 1;
                             final switch (other_orientation) {
                             case 0: i_src = i; j_src = j; break;
                             case 1: i_src = other_blk.nicell - j - 1; j_src = i; break;
@@ -719,7 +719,7 @@ public:
                             mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
                             break;
                         case Face.bottom:
-                            k_src = 0; 
+                            k_src = 0;
                             final switch (other_orientation) {
                             case 0: i_src = other_blk.nicell - i - 1; j_src = j; break;
                             case 1: i_src = j; j_src = i; break;
@@ -760,6 +760,7 @@ public:
             // we know that we can just access the data directly,
             // in the final phase.
         }
++/
     } // end set_up_cell_mapping_phase0()
 
     // not @nogc because we set array length
@@ -831,7 +832,7 @@ public:
             }
         }
     } // end set_up_cell_mapping_phase2()
-    
+
     @nogc
     ref SolidFVCell get_mapped_cell(size_t i)
     {
@@ -980,15 +981,15 @@ public:
             // we know that we can just access the data directly.
             foreach (i; 0 .. myBC.solidCells.length) {
                 myBC.solidCells[i].copy_values_from(mapped_cells[i]);
-            } 
+            }
         }
     } // end exchange_solidstate_phase2()
-    
+
     override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
     {
 	throw new Error("GhostCellFullFaceCopy.apply_for_interface_unstructured_grid() not implemented");
     }
-    
+
     @nogc
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
@@ -1001,5 +1002,5 @@ public:
         // We presume that all of the exchange of data happened earlier,
         // and that the ghost cells have been filled with flow state data
         // from their respective source cells.
-    }        
+    }
 } // end class GhostCellFullFaceCopy
