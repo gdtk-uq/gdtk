@@ -131,6 +131,7 @@ public:
     
     void set_up_cell_mapping_phase0()
     {
+/+ FIX-ME PJ 2020-11-19 Short-cut work by commenting out...
         // We call this function only after all blocks have been constructed.
         //
         // The following references and names will be handy for the data exchange
@@ -761,6 +762,7 @@ public:
             // we know that we can just access the data directly,
             // in the final phase.
         }
++/
     } // end set_up_cell_mapping_phase0()
 
     // not @nogc because we set array length
