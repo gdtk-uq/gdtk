@@ -376,77 +376,70 @@ public:
         // for the nearest cell.
         //
         final switch (blk.grid_type) {
-        case Grid_t.unstructured_grid: 
+        case Grid_t.unstructured_grid:
             BoundaryCondition bc = blk.bc[which_boundary];
             foreach (i, face; bc.faces) {
                 ghost_cells ~= (bc.outsigns[i] == 1) ? face.right_cell : face.left_cell;
             }
             break;
         case Grid_t.structured_grid:
-            size_t i, j, k;
             auto blk = cast(SFluidBlock) this.blk;
             assert(blk !is null, "Oops, this should be an SFluidBlock object.");
             bool nghost3 = (blk.n_ghost_cell_layers == 3);
             final switch (which_boundary) {
             case Face.north:
-                j = blk.jmax;
-                for (k = blk.kmin; k <= blk.kmax; ++k) {
-                    for (i = blk.imin; i <= blk.imax; ++i) {
-                        ghost_cells ~= blk.get_cell(i,j+1,k);
-                        ghost_cells ~= blk.get_cell(i,j+2,k);
-                        if (nghost3) { ghost_cells ~= blk.get_cell(i,j+3,k); }
-                    } // end i loop
-                } // for k
+                size_t j = blk.njc;
+                foreach (k; 0 .. blk.nkc) {
+                    foreach (i; 0 .. blk.nic) {
+                        auto f = blk.get_ifj(i,j,k);
+                        foreach (n; 0 .. blk.n_ghost_cell_layers) { ghost_cells ~= f.right_cells[n]; }
+                    }
+                }
                 break;
             case Face.east:
-                i = blk.imax;
-                for (k = blk.kmin; k <= blk.kmax; ++k) {
-                    for (j = blk.jmin; j <= blk.jmax; ++j) {
-                        ghost_cells ~= blk.get_cell(i+1,j,k);
-                        ghost_cells ~= blk.get_cell(i+2,j,k);
-                        if (nghost3) { ghost_cells ~= blk.get_cell(i+3,j,k); }
-                    } // end j loop
-                } // for k
+                size_t i = blk.nic;
+                foreach (k; 0 .. blk.nkc) {
+                    foreach (j; 0 .. blk.njc) {
+                        auto f = blk.get_ifi(i,j,k);
+                        foreach (n; 0 .. blk.n_ghost_cell_layers) { ghost_cells ~= f.right_cells[n]; }
+                    }
+                }
                 break;
             case Face.south:
-                j = blk.jmin;
-                for (k = blk.kmin; k <= blk.kmax; ++k) {
-                    for (i = blk.imin; i <= blk.imax; ++i) {
-                        ghost_cells ~= blk.get_cell(i,j-1,k);
-                        ghost_cells ~= blk.get_cell(i,j-2,k);
-                        if (nghost3) { ghost_cells ~= blk.get_cell(i,j-3,k); }
-                    } // end i loop
-                } // for k
+                size_t j = 0;
+                foreach (k; 0 .. blk.nkc) {
+                    foreach (i; 0 .. blk.nic) {
+                        auto f = blk.get_ifj(i,j,k);
+                        foreach (n; 0 .. blk.n_ghost_cell_layers) { ghost_cells ~= f.left_cells[n]; }
+                    }
+                }
                 break;
             case Face.west:
-                i = blk.imin;
-                for (k = blk.kmin; k <= blk.kmax; ++k) {
-                    for (j = blk.jmin; j <= blk.jmax; ++j) {
-                        ghost_cells ~= blk.get_cell(i-1,j,k);
-                        ghost_cells ~= blk.get_cell(i-2,j,k);
-                        if (nghost3) { ghost_cells ~= blk.get_cell(i-3,j,k); }
-                    } // end j loop
-                } // for k
+                size_t i = 0;
+                foreach (k; 0 .. blk.nkc) {
+                    foreach (j; 0 .. blk.njc) {
+                        auto f = blk.get_ifi(i,j,k);
+                        foreach (n; 0 .. blk.n_ghost_cell_layers) { ghost_cells ~= f.left_cells[n]; }
+                    }
+                }
                 break;
             case Face.top:
-                k = blk.kmax;
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    for (j = blk.jmin; j <= blk.jmax; ++j) {
-                        ghost_cells ~= blk.get_cell(i,j,k+1);
-                        ghost_cells ~= blk.get_cell(i,j,k+2);
-                        if (nghost3) { ghost_cells ~= blk.get_cell(i,j,k+3); }
-                    } // end j loop
-                } // for i
+                size_t k = blk.nkc;
+                foreach (i; 0 .. blk.nic) {
+                    foreach (j; 0 .. blk.njc) {
+                        auto f = blk.get_ifk(i,j,k);
+                        foreach (n; 0 .. blk.n_ghost_cell_layers) { ghost_cells ~= f.right_cells[n]; }
+                    }
+                }
                 break;
             case Face.bottom:
-                k = blk.kmin;
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    for (j = blk.jmin; j <= blk.jmax; ++j) {
-                        ghost_cells ~= blk.get_cell(i,j,k-1);
-                        ghost_cells ~= blk.get_cell(i,j,k-2);
-                        if (nghost3) { ghost_cells ~= blk.get_cell(i,j,k-3); }
-                    } // end j loop
-                } // for i
+                size_t k = 0;
+                foreach (i; 0 .. blk.nic) {
+                    foreach (j; 0 .. blk.njc) {
+                        auto f = blk.get_ifk(i,j,k);
+                        foreach (n; 0 .. blk.n_ghost_cell_layers) { ghost_cells ~= f.left_cells[n]; }
+                    }
+                }
                 break;
             } // end switch
         } // end switch blk.grid_type
