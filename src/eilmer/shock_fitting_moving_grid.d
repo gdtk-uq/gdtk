@@ -57,7 +57,7 @@ version(mpi_parallel) {
 
         // Populate the list with zeros as we will be incrementing the elements- can't leave as nans
         for (size_t i = 0; i < local_dist.length; i++) { local_dist[i] = 0.0; }
-        
+
         bool requested_data = false, sent_data = false;
         int no_partners, east_neighbour_rank, west_neighbour_rank, east_neighbour, west_neighbour;
 
@@ -93,7 +93,7 @@ version(mpi_parallel) {
                           MPI_COMM_WORLD, &MPI_incoming_partner_request);
             }
         } else {
-            // Block is local in the mpi context 
+            // Block is local in the mpi context
             for (size_t i = 0; i < local_dist.length; i++) {
                 total_dist[i] = 0.0;
             }
@@ -107,7 +107,7 @@ version(mpi_parallel) {
             }
         }
         // This is where we get the proper radial position of all the vertices
-        // by adding the radial distance of the previous blocks to the local vertices 
+        // by adding the radial distance of the previous blocks to the local vertices
         for (size_t k = blk.kmin; k <= krange; k++) {
             for (size_t j = blk.jmin; j <= blk.jmax+1; j++) {
                 for (size_t i = blk.imin; i <= blk.imax+1; i++) {
@@ -158,13 +158,13 @@ version(mpi_parallel) {
                 int mpi_chained_send_tag = make_mpi_tag(blk.id, 4, 2);
                 west_neighbour_rank = GlobalConfig.mpi_rank_for_block[west_neighbour];
                 // Send away all the data; the total distance to the edge of this block,
-                // the number of blocks partnered to this one, 
+                // the number of blocks partnered to this one,
                 MPI_Send(total_dist_send.ptr, ne, MPI_DOUBLE, west_neighbour_rank, mpi_dist_send_tag, MPI_COMM_WORLD);
                 MPI_Send(&no_partners, 1, MPI_INT, west_neighbour_rank, mpi_partner_send_tag, MPI_COMM_WORLD);
                 MPI_Send(chained_to.ptr, no_partners, MPI_INT, west_neighbour_rank, mpi_chained_send_tag, MPI_COMM_WORLD);
             }
         }
-        /++ 
+        /++
         At this point, every vertex in the simulation should have a non-normalised value for their radial position,
         and the outer-most block should have the total radial distance along each line and the list of all its slaves.
         Now, lets transfer that information back along the radial direction to assign a normalised radial position
@@ -212,36 +212,35 @@ version(mpi_parallel) {
         }
         blk.inflow_partners = chained_to;
     }
-} // end assign_radial_dist_mpi 
+} // end assign_radial_dist_mpi
 
 //-------------------------------------------------------------------------------------------------------------------------------
 
 // Assigning radial distances in the shared memory version.
 void assign_radial_dist(SFluidBlock blk) {
-    /++ 
+    /++
     This will assign all the vertices a normalised radial distance for use
     with the shock fitting internal velocities.
     ++/
     //Write the radial distance data for the current block
-    size_t krange = ( blk.myConfig.dimensions == 3 ) ? blk.kmax+1 : blk.kmax;
     FVVertex vtx, vtx_next;
     Vector3 delta;
     SFluidBlock master_block = blk;
     number radial_dist, block_crossover_value;
     bool last_block;
-    for ( size_t k = blk.kmin; k <= krange; ++k ) {
-        for ( size_t j = blk.jmin; j <= blk.jmax+1; ++j ) {
+    foreach (k; 0 .. blk.nkv) {
+        foreach (j; 0 .. blk.njv) {
             radial_dist = 0;
             last_block = false;
             while (last_block == false) {
-                for ( size_t i = blk.imin; i <= blk.imax; ++i ) {
+                foreach (i; 0 .. blk.niv-1) {
                     vtx = blk.get_vtx(i, j, k);
                     vtx_next = blk.get_vtx(i+1, j, k);
                     delta = vtx_next.pos[0] - vtx.pos[0];
                     radial_dist += geom.abs(delta);
                 }
                 // We want to know which blocks are slaved to the inflow shock fitted block later
-                if (k == blk.kmin && j == blk.jmin) {   //Make sure this only happens once per block
+                if (k == 0 && j == 0) {   //Make sure this only happens once per block
                     master_block.inflow_partners.length += 1;
                     master_block.inflow_partners[$-1] = blk.id;
                 }
@@ -264,14 +263,14 @@ void assign_radial_dist(SFluidBlock blk) {
             block_crossover_value = 0; //It is important we initialise this to 0 for the very first vertex
             last_block = false;
             while (last_block == false) {
-                for ( size_t i = blk.imax+1; i >= blk.imin; --i ) {
+                for (int i = to!int(blk.niv-1); i >= 0; i--) {
                     /++ Some special consideration needs to happen at the boundaries here, for both
                       + concerns of information transfer between blocks and consistency between block
                       + boundaries. By setting the east-most vertex of the current block to the same
                       + value as the west-most boundary of the last block, we ensure the boundaries
                       + should never move apart due to having different velocities.
                     ++/
-                    if (i == blk.imax+1) {
+                    if (i == blk.niv-1) {
                         blk.get_vtx(i, j, k).radial_pos_norm = block_crossover_value;
                     } else {
                         vtx = blk.get_vtx(i, j, k);
@@ -279,7 +278,7 @@ void assign_radial_dist(SFluidBlock blk) {
                         delta = vtx.pos[0] - vtx_next.pos[0];
                         vtx.radial_pos_norm = geom.abs(delta) / radial_dist + vtx_next.radial_pos_norm;
                     }
-                    if (i == blk.imin) block_crossover_value = blk.get_vtx(i, j, k).radial_pos_norm;
+                    if (i == 0) { block_crossover_value = blk.get_vtx(i, j, k).radial_pos_norm; }
                 }
                 if (blk.bc[Face.west].type == "exchange_over_full_face") {
                     auto ffeBC = cast(GhostCellFullFaceCopy) blk.bc[Face.west].preReconAction[0];
@@ -306,28 +305,19 @@ Vector3[] shock_fitting_vertex_velocities(SFluidBlock blk) {
     NB: Implementation is hard coded for a moving WEST boundary
     ++/
     // Lets be verbose about where each of these are used
-    FVVertex vtx;        // The vertex we are calculating velocity at
     Vector3[] vertex_master_velocities;
     int interpolation_order = blk.myConfig.shock_fitting_interpolation_order;
     immutable number SHOCK_DETECT_THRESHOLD =  0.2;
     immutable number vtx_vel_stability_factor = blk.myConfig.shock_fitting_scale_factor;
-    size_t krangemax = ( blk.myConfig.dimensions == 3 ) ? blk.kmax+1 : blk.kmax;
     // Clear the velocities of all the vertices within the block-
     // this shouldn't be necessary.
     // Take this out once its working and check still works.
-    for ( size_t k = blk.kmin; k <= krangemax; ++k ) {
-        for ( size_t j = blk.jmin; j <= blk.jmax+1; ++j ) {    
-            for ( size_t i = blk.imin; i <= blk.imax+1; ++i ) {
-                vtx = blk.get_vtx(i,j,k);
-                vtx.vel[0].clear();
-            }
-        }
-    }
+    foreach (vtx; blk.vertices) { vtx.vel[0].clear(); }
     // Define the size of the array required- the number of vertices on the western face.
     // The extra +1 is due to indexing starting at 0 but length starting at 1
-    vertex_master_velocities.length = ( blk.myConfig.dimensions == 3) ?
-        ((blk.jmax - blk.jmin + 1) * (blk.kmax - blk.kmin + 1) + 1) : (blk.jmax - blk.jmin + 2);
-    /++ 
+    // FIX-ME PJ 2020-11-18 Kyle, what size should this be?
+    vertex_master_velocities.length = (blk.myConfig.dimensions == 3) ? ((blk.njv+1)*blk.nkv) : (blk.njv+1);
+    /++
      Layout the naming configuration for the cells and vertices used
            +-------------------------------------------------------------------------------+
            |                  |                  |                     |                   |
@@ -338,9 +328,9 @@ Vector3[] shock_fitting_vertex_velocities(SFluidBlock blk) {
            |      inflow      |        cell      |       cell_R1       |      cell_R2      |
            |      (ghost)     |                  |                     |                   |
            +-------------------------------------------------------------------------------+
-     This shows the reconstruction process in relation to the vertex being shock fitted vtx(i, j, k). 					
+     This shows the reconstruction process in relation to the vertex being shock fitted vtx(i, j, k).
      ++/
-    
+
     // Let's give the shock some time to form before searching for it.
     // Move this to simcore- the function shouldn't be called if we aren't shock fitting.
     populate_ghost_cell_interface_geometry(blk);
@@ -349,13 +339,12 @@ Vector3[] shock_fitting_vertex_velocities(SFluidBlock blk) {
     auto constFluxEffect = cast(BFE_ConstFlux) blk.bc[Face.west].postConvFluxAction[0];
     auto inflow = constFluxEffect.fstate;
     // #####-------------------------- SHOCK SEARCH --------------------------##### //
-    for ( size_t k = blk.kmin; k <= krangemax; ++k ) {
-        for ( size_t j = blk.jmin; j <= blk.jmax+1; ++j ) {
-            size_t i = blk.imin;
-            vtx = blk.get_vtx(i,j,k);
+    foreach (k; 0 .. blk.nkv) {
+        foreach (j; 0 .. blk.njv) {
+            auto vtx = blk.get_vtx(0,j,k);
             number rho_east = 0.0;
-            number p_east;   
-            Vector3 u_east, numerator;    
+            number p_east;
+            Vector3 u_east, numerator;
             // Create the arrays used to store the cell data around the vertex.
             FVCell[4] cell, cell_R1, cell_R2;
             Vector3[4] interface_ws;
@@ -366,24 +355,26 @@ Vector3[] shock_fitting_vertex_velocities(SFluidBlock blk) {
             // loop over neighbouring interfaces (above vtx first, then below vtx)
             foreach (int jOffSet; [0, 1]) {
                 foreach (kOffSet; (blk.myConfig.dimensions == 3) ? [0, 1] : [0]) {
-                    if ((j-jOffSet) < blk.jmin && blk.bc[Face.south].type != "exchange_over_full_face") {} // Do nothing
-                    else if ((j-jOffSet) > blk.jmax && blk.bc[Face.north].type != "exchange_over_full_face") {} // Do nothing
+                    if ((j-jOffSet) < 0 && blk.bc[Face.south].type != "exchange_over_full_face") {} // Do nothing
+                    else if ((j-jOffSet) > blk.njc && blk.bc[Face.north].type != "exchange_over_full_face") {} // Do nothing
                     else {
-                        // Normal cell  
+                        // Normal cell
+                        size_t i = 0;
                         cell[numcells] = blk.get_cell(i, j-jOffSet, k-kOffSet);
                         cell_R1[numcells] = blk.get_cell(i+1, j-jOffSet, k-kOffSet);
                         cell_R2[numcells++] = blk.get_cell(i+2, j-jOffSet, k-kOffSet);
                     }
                 }
             }
-            for(i = 0; i < numcells; ++i) {
+            foreach (i; 0 .. numcells) {
                 rho_east += scalar_reconstruction(cell[i].fs.gas.rho,  cell_R1[i].fs.gas.rho,
                                                   cell_R2[i].fs.gas.rho, cell[i].iLength,
                                                   cell_R1[i].iLength,  cell_R2[i].iLength, inflow.gas.rho);
             }
             number shock_detect = abs(inflow.gas.rho - (rho_east/numcells))/fmax(inflow.gas.rho, (rho_east/numcells));
-            if (shock_detect < SHOCK_DETECT_THRESHOLD) { 
-                // We don't think there's a shock here, so set vertex velocity to the maximum, U+a. Be careful with choice of direction, particularly in the y direction.
+            if (shock_detect < SHOCK_DETECT_THRESHOLD) {
+                // We don't think there's a shock here, so set vertex velocity to the maximum, U+a.
+                // Be careful with choice of direction, particularly in the y direction.
                 // If we apply a blanket +a or -a, either the top or bottom boundary will drift away
                 number y_factor = (vtx.pos[0].y >= 0) ? -1.0 : 1.0;
                 exact_vel.set(inflow.vel.x + inflow.gas.a,
@@ -391,7 +382,7 @@ Vector3[] shock_fitting_vertex_velocities(SFluidBlock blk) {
                               (blk.myConfig.dimensions == 3) ? inflow.vel.z+inflow.gas.a: to!number(0.0));
             } else {
                 // We do have a shock here
-                for (i = 0; i < numcells; ++i) {
+                foreach (i; 0 .. numcells) {
                     // Reconstruct the density and pressure values at the interface
                     rho_east = scalar_reconstruction(cell[i].fs.gas.rho,  cell_R1[i].fs.gas.rho, cell_R2[i].fs.gas.rho,
                                                      cell[i].iLength, cell_R1[i].iLength,  cell_R2[i].iLength, inflow.gas.rho);
@@ -432,15 +423,15 @@ Vector3[] shock_fitting_vertex_velocities(SFluidBlock blk) {
                 // All interface velocities and weightings are now found-
                 // we will do a quick check of the weights to prevent divide by 0
                 number wsum = 0.0;
-                for (i = 0; i < numcells; ++i) { wsum += w[i]; }
-                if (wsum < 1.0e-7) { for (i = 0; i < numcells; ++i) { w[i] = 1.0; } }
+                foreach (i; 0 .. numcells) { wsum += w[i]; }
+                if (wsum < 1.0e-7) { foreach (i; 0 .. numcells) { w[i] = 1.0; } }
                 numerator.clear();
                 denom = 0.0;
-                for (i = 0; i < numcells; ++i) {
+                foreach (i; 0 .. numcells) {
                     numerator += w[i] * interface_ws[i];
                     denom += w[i];
                 }
-                // The theoretically correct vertex velocity- we still need to do a bit more for numerical stability               
+                // The theoretically correct vertex velocity- we still need to do a bit more for numerical stability
                 exact_vel = numerator / denom;
                 // Catch if the velocity is too large- set to unshocked velocity
                 if (geom.abs(exact_vel) > (geom.abs(inflow.vel) + inflow.gas.a)) {
@@ -454,8 +445,7 @@ Vector3[] shock_fitting_vertex_velocities(SFluidBlock blk) {
              (+1 as we want vertices instead of cells) for the number of cells in each row,
              then add the current j-jmin for the cell in the current row.
              ++/
-            vertex_master_velocities[(blk.jmax - blk.jmin + 1) * (k - blk.kmin) + (j - blk.jmin)] =
-                vtx_vel_stability_factor * exact_vel;
+            vertex_master_velocities[blk.njv * k + j] = vtx_vel_stability_factor * exact_vel;
         }
     }
     return vertex_master_velocities;
@@ -467,23 +457,17 @@ Vector3[] shock_fitting_vertex_velocities(SFluidBlock blk) {
 
 void assign_slave_velocities(SFluidBlock blk, Vector3[] velocity_array) {
     // Assigns velocities to all the inner vertices from the master array of velocities
-    size_t krangemax = ( blk.myConfig.dimensions == 3 ) ? blk.kmax+1 : blk.kmax;
-    FVVertex vtx, vtx_left, vtx_right;
-    Vector3 unit_d;
     get_ghost_vertex_positions(blk);
-    for (size_t k = blk.kmin; k <= krangemax; ++k) {
-        for (size_t j = blk.jmin; j <= blk.jmax+1; ++j) {
-            for (size_t i = blk.imin; i <= blk.imax+1; ++i) {
-                           
-                vtx = blk.get_vtx(i, j, k);
-                vtx_left = blk.get_vtx(i-1, j, k);
-                vtx_right = blk.get_vtx(i+1, j, k);
-                
+    foreach (k; 0 .. blk.nkv) {
+        foreach (j; 0 .. blk.njv) {
+            foreach (i; 0 .. blk.niv) {
+                auto vtx = blk.get_vtx(i, j, k);
+                auto vtx_left = blk.get_vtx(i-1, j, k);
+                auto vtx_right = blk.get_vtx(i+1, j, k);
                 // Scale it by its normalised radial position
-                vtx.vel[0] = vtx.radial_pos_norm * velocity_array[(blk.jmax - blk.jmin + 1) * (k - blk.kmin) + (j - blk.jmin)];
-
+                vtx.vel[0] = vtx.radial_pos_norm * velocity_array[blk.njv * k + j];
                 // Find its radial direction and point it in that direction
-                unit_d = correct_direction([vtx_left.pos[0], vtx.pos[0], vtx_right.pos[0]]);
+                auto unit_d = correct_direction([vtx_left.pos[0], vtx.pos[0], vtx_right.pos[0]]);
                 vtx.vel[0] = unit_d * dot(unit_d, vtx.vel[0]);
             }
         }
@@ -503,7 +487,10 @@ Vector3 correct_direction(Vector3[] pos) {
 
 // Begin populate_ghost_cell_interface_geometry- used to get some extra ghost cell information required
 void populate_ghost_cell_interface_geometry(SFluidBlock blk) {
-    size_t krangemax = ( blk.myConfig.dimensions == 3 ) ? blk.kmax+1 : blk.kmax;
+    // FIX-ME PJ 2018-11-18
+    // FIX-ME PJ 2018-11-18 BUGGER, we no longer have faces on all sides of a ghost cell.
+    // FIX-ME PJ 2018-11-18
+    /+
     if (blk.bc[Face.south].type == "exchange_over_full_face") {
         GhostCellFullFaceCopy ffeBC = cast(GhostCellFullFaceCopy) blk.bc[Face.south].preReconAction[0];
         int neighbour = ffeBC.neighbourBlock.id;
@@ -524,20 +511,20 @@ void populate_ghost_cell_interface_geometry(SFluidBlock blk) {
                           MPI_COMM_WORLD, &MPI_incoming_request);
                 // Construct the outgoing array
                 size_t i = 0;
-                for (size_t k = blk.kmin; k <= krangemax; k++) {
-                    outgoing_cells[i++] = blk.get_cell(blk.imin, blk.jmin, k).iface[Face.west].n.x;
-                    outgoing_cells[i++] = blk.get_cell(blk.imin, blk.jmin, k).iface[Face.west].n.y;
-                    outgoing_cells[i++] = blk.get_cell(blk.imin, blk.jmin, k).iface[Face.west].n.z;
-                    outgoing_cells[i++] = blk.get_cell(blk.imin, blk.jmin, k).iface[Face.west].pos.x;
-                    outgoing_cells[i++] = blk.get_cell(blk.imin, blk.jmin, k).iface[Face.west].pos.y;
-                    outgoing_cells[i++] = blk.get_cell(blk.imin, blk.jmin, k).iface[Face.west].pos.z;
+                foreach (k; 0 .. blk.nkv) {
+                    outgoing_cells[i++] = blk.get_cell(0, 0, k).iface[Face.west].n.x;
+                    outgoing_cells[i++] = blk.get_cell(0, 0, k).iface[Face.west].n.y;
+                    outgoing_cells[i++] = blk.get_cell(0, 0, k).iface[Face.west].n.z;
+                    outgoing_cells[i++] = blk.get_cell(0, 0, k).iface[Face.west].pos.x;
+                    outgoing_cells[i++] = blk.get_cell(0, 0, k).iface[Face.west].pos.y;
+                    outgoing_cells[i++] = blk.get_cell(0, 0, k).iface[Face.west].pos.z;
                 }
                 mpi_send_tag = make_mpi_tag(neighbour, 2, 0);
                 MPI_Send(outgoing_cells.ptr, ne, MPI_DOUBLE, neighbour_rank, mpi_send_tag, MPI_COMM_WORLD);
                 MPI_Wait(&MPI_incoming_request, &MPI_incoming_status);
                 i = 0;
-                for (size_t k = blk.kmin; k <= krangemax; k++) {
-                    blk.get_cell(blk.imin, blk.jmin-1, k).iface[Face.west].n.set(incoming_cells[i],
+                foreach (k; 0 .. blk.nkv) {
+                    blk.get_cell(0, blk.jmin-1, k).iface[Face.west].n.set(incoming_cells[i],
                                                                                  incoming_cells[i+1],
                                                                                  incoming_cells[i+2]);
                     blk.get_cell(blk.imin, blk.jmin-1, k).iface[Face.west].pos.set(incoming_cells[i+3],
@@ -614,6 +601,7 @@ void populate_ghost_cell_interface_geometry(SFluidBlock blk) {
             }
         }
     }
+    +/
 } // end populate_ghost_cell_geometry
 
 //----------------------------------------------------------------------------------------------------------
@@ -621,6 +609,10 @@ void populate_ghost_cell_interface_geometry(SFluidBlock blk) {
 void get_ghost_vertex_positions(SFluidBlock blk) {
     // used to get the ghost vertex locations for determining vertex direction
     //
+    // FIX-ME PJ 2018-11-18
+    // FIX-ME PJ 2018-11-18 BUGGER, we no longer have faces on all sides of a ghost cell.
+    // FIX-ME PJ 2018-11-18
+    /+
     size_t krange = (GlobalConfig.dimensions == 3) ? blk.kmax+1 : blk.kmax;
     // For each boundary in the inflow direction that is an exchange_over_full_face,
     // we need to do an exchange of information.
@@ -763,6 +755,7 @@ void get_ghost_vertex_positions(SFluidBlock blk) {
             }
         }
     }
+    +/
 } // end get_ghost_vertex_positions
 
 
@@ -822,7 +815,7 @@ number scalar_reconstruction(number x1, number x2, number x3, number h1, number 
         reconstructed_value = x1 - h1 * (sgn(abs(delta_1.re) - abs(delta_2.re)) *
                                          (delta_2 - delta_1) + delta_1 + delta_2);
     } else {
-        // linear one-sided reconstruction function 
+        // linear one-sided reconstruction function
         number delta = 2.0*(x2-x1)/(h1+h2);
         number r = (x1-g1+eps)/(x2-x1+eps);
         //number phi = (r*r + r)/(r*r+1); // van albada 1
