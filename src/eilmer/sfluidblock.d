@@ -433,7 +433,7 @@ public:
                         foreach (n; 0 .. n_ghost_cell_layers) {
                             if (i > n) {
                                 // Selected cell is in the block.
-                                f.left_cells ~= get_cell(i-n,j,k);
+                                f.left_cells ~= get_cell(i-n-1,j,k);
                             } else {
                                 // Selected cell in in the ghost-cell halo, if it exists.
                                 if (bc[Face.west].ghost_cell_data_available) {
@@ -469,7 +469,7 @@ public:
                         foreach (n; 0 .. n_ghost_cell_layers) {
                             if (j > n) {
                                 // Selected cell is in the block.
-                                f.left_cells ~= get_cell(i,j-n,k);
+                                f.left_cells ~= get_cell(i,j-n-1,k);
                             } else {
                                 // Selected cell in in the ghost-cell halo, if it exists.
                                 if (bc[Face.south].ghost_cell_data_available) {
@@ -506,7 +506,7 @@ public:
                             foreach (n; 0 .. n_ghost_cell_layers) {
                                 if (k > n) {
                                     // Selected cell is in the block.
-                                    f.left_cells ~= get_cell(i,j,k-n);
+                                    f.left_cells ~= get_cell(i,j,k-n-1);
                                 } else {
                                     // Selected cell in in the ghost-cell halo, if it exists.
                                     if (bc[Face.bottom].ghost_cell_data_available) {
