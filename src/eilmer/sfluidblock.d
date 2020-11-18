@@ -416,6 +416,124 @@ public:
             writefln("System message: %s", e.msg);
             throw new FlowSolverException("SFluidBlock.init_grid_and_flow_arrays() failed.");
         }
+        //
+        // Now that all of the cells and faces are constructed,
+        // We want to store the local structure of the grid
+        // in the array of references stored in the faces.
+        //   cL[2] cL[1] cL[0] f cR[0] cR[1] cR[2]
+        //     o     o     o   |   o     o     o
+        // Note that the boundary faces already have ghost-cells attached
+        // if the boundary-condition accommodates them.
+        foreach (k; 0 .. nkc) {
+            foreach (j; 0 .. njc) {
+                foreach (i; 0 .. niv) {
+                    auto f = get_ifi(i,j,k);
+                    if (i > 0) {
+                        // Attach cells to left of this face.
+                        foreach (n; 0 .. n_ghost_cell_layers) {
+                            if (i > n) {
+                                // Selected cell is in the block.
+                                f.left_cells ~= get_cell(i-n,j,k);
+                            } else {
+                                // Selected cell in in the ghost-cell halo, if it exists.
+                                if (bc[Face.west].ghost_cell_data_available) {
+                                    f.left_cells ~= get_ifi(0,j,k).left_cells[n-i];
+                                }
+                            }
+                        } // end foreach n
+                    }
+                    if (i < niv-1) {
+                        // Attach cells to right of this face.
+                        size_t dif = niv-1-i; // count of face in from right boundary: 1, 2, ...
+                        foreach (n; 0 .. n_ghost_cell_layers) {
+                            if (dif > n) {
+                                // Selected cell is in the block.
+                                f.right_cells ~= get_cell(nic-dif,j,k);
+                            } else {
+                                // Selected cell in in the ghost-cell halo, if it exists.
+                                if (bc[Face.east].ghost_cell_data_available) {
+                                    f.right_cells ~= get_ifi(niv-1,j,k).right_cells[n+1-dif];
+                                }
+                            }
+                        } // end foreach n
+                    }
+                } // i loop
+            } // j loop
+        } // k loop
+        foreach (k; 0 .. nkc) {
+            foreach (i; 0 .. nic) {
+                foreach (j; 0 .. njv) {
+                    auto f = get_ifj(i,j,k);
+                    if (j > 0) {
+                        // Attach cells to left of this face.
+                        foreach (n; 0 .. n_ghost_cell_layers) {
+                            if (j > n) {
+                                // Selected cell is in the block.
+                                f.left_cells ~= get_cell(i,j-n,k);
+                            } else {
+                                // Selected cell in in the ghost-cell halo, if it exists.
+                                if (bc[Face.south].ghost_cell_data_available) {
+                                    f.left_cells ~= get_ifj(i,0,k).left_cells[n-j];
+                                }
+                            }
+                        } // end foreach n
+                    }
+                    if (j < njv-1) {
+                        // Attach cells to right of this face.
+                        size_t djf = njv-1-j; // count of face in from right boundary: 1, 2, ...
+                        foreach (n; 0 .. n_ghost_cell_layers) {
+                            if (djf > n) {
+                                // Selected cell is in the block.
+                                f.right_cells ~= get_cell(i,njc-djf,k);
+                            } else {
+                                // Selected cell in in the ghost-cell halo, if it exists.
+                                if (bc[Face.north].ghost_cell_data_available) {
+                                    f.right_cells ~= get_ifj(i,njv-1,k).right_cells[n+1-djf];
+                                }
+                            }
+                        } // end foreach n
+                    }
+                } // j loop
+            } // i loop
+        } // k loop
+        if (myConfig.dimensions == 3) {
+            foreach (j; 0 .. njc) {
+                foreach (i; 0 .. nic) {
+                    foreach (k; 0 .. nkv) {
+                        auto f = get_ifk(i,j,k);
+                        if (k > 0) {
+                            // Attach cells to left of this face.
+                            foreach (n; 0 .. n_ghost_cell_layers) {
+                                if (k > n) {
+                                    // Selected cell is in the block.
+                                    f.left_cells ~= get_cell(i,j,k-n);
+                                } else {
+                                    // Selected cell in in the ghost-cell halo, if it exists.
+                                    if (bc[Face.bottom].ghost_cell_data_available) {
+                                        f.left_cells ~= get_ifk(i,j,0).left_cells[n-k];
+                                    }
+                                }
+                            } // end foreach n
+                        }
+                        if (k < nkv-1) {
+                            // Attach cells to right of this face.
+                            size_t dkf = nkv-1-k; // count of face in from right boundary: 1, 2, ...
+                            foreach (n; 0 .. n_ghost_cell_layers) {
+                                if (dkf > n) {
+                                    // Selected cell is in the block.
+                                    f.right_cells ~= get_cell(i,j,nkc-dkf);
+                                } else {
+                                    // Selected cell in in the ghost-cell halo, if it exists.
+                                    if (bc[Face.top].ghost_cell_data_available) {
+                                        f.right_cells ~= get_ifk(i,j,nkv-1).right_cells[n+1-dkf];
+                                    }
+                                }
+                            } // end foreach n
+                        }
+                    } //k loop
+                } // i loop
+            } // j loop
+        } // end if (myConfig.dimensions == 3)
         // Make the cell, vertex, and face id value consistent with the index in the array.
         // We will depend on this equality in other parts of the flow solver.
         // We also note that these cells are interior to the block (i.e. not ghost cells)
@@ -1201,8 +1319,8 @@ public:
         if (myConfig.dimensions == 2) {
             // First, do all of the internal secondary cells.
             // i.e. Those not on a boundary.
-            foreach (i; 1 .. nic) {
-                foreach (j; 1 .. njc) {
+            foreach (i; 1 .. niv-1) {
+                foreach (j; 1 .. njv-1) {
                     // Secondary-cell centre is a primary-cell vertex.
                     FVVertex vtx = get_vtx(i,j);
                     // These are the corners of the secondary cell.
@@ -1217,8 +1335,8 @@ public:
             } // i loop
             // Half-cells along the edges of the block.
             // East boundary
-            foreach (j; 1 .. njc) {
-                size_t i = nic;
+            foreach (j; 1 .. njv-1) {
+                size_t i = niv;
                 FVVertex vtx = get_vtx(i,j);
                 FVInterface A = get_ifi(i,j-1);
                 FVInterface B = get_ifi(i,j);
@@ -1228,7 +1346,7 @@ public:
                 vtx.cloud_fs = [A.fs, B.fs, C.fs, D.fs];
             } // j loop
             // West boundary
-            foreach (j; 1 .. nic) {
+            foreach (j; 1 .. njv-1) {
                 size_t i = 0;
                 FVVertex vtx = get_vtx(i,j);
                 // These are the corners of the secondary cell.
@@ -1240,8 +1358,8 @@ public:
                 vtx.cloud_fs = [A.fs, B.fs, C.fs, D.fs];
             } // j loop
             // North boundary
-            foreach (i; 1 .. nic) {
-                size_t j = nic;
+            foreach (i; 1 .. niv-1) {
+                size_t j = niv-1;
                 FVVertex vtx = get_vtx(i,j);
                 FVCell A = get_cell(i,j-1);
                 FVInterface B = get_ifj(i,j);
@@ -1251,7 +1369,7 @@ public:
                 vtx.cloud_fs = [A.fs, B.fs, C.fs, D.fs];
             } // i loop
             // South boundary
-            foreach (i; 1 .. nic) {
+            foreach (i; 1 .. niv-1) {
                 size_t j = 0;
                 FVVertex vtx = get_vtx(i,j);
                 FVInterface A = get_ifj(i,j);
@@ -1266,7 +1384,7 @@ public:
             // it a triangle to compute over.  This should be fine.
             // North-east corner
             {
-                size_t i = nic; size_t j = njc;
+                size_t i = niv-1; size_t j = njv-1;
                 FVVertex vtx = get_vtx(i,j);
                 FVInterface A = get_ifi(i,j-1);
                 FVInterface B = get_ifj(i-1,j);
@@ -1276,7 +1394,7 @@ public:
             }
             // South-east corner
             {
-                size_t i = nic; size_t j = 0;
+                size_t i = niv-1; size_t j = 0;
                 FVVertex vtx = get_vtx(i,j);
                 FVInterface A = get_ifi(i,j);
                 FVCell B = get_cell(i-1,j);
@@ -1296,7 +1414,7 @@ public:
             }
             // North-west corner
             {
-                size_t i = 0; size_t j = njc;
+                size_t i = 0; size_t j = njv-1;
                 FVVertex vtx = get_vtx(i,j);
                 FVCell A = get_cell(i,j-1);
                 FVInterface B = get_ifj(i,j);
@@ -1305,11 +1423,10 @@ public:
                 vtx.cloud_fs = [A.fs, B.fs, C.fs];
             }
         } else { // Flow quantity derivatives for 3D.
-/+ TODO PJ 2020-11-17
             // Internal secondary cell geometry information
-            for ( i = imin; i <= imax-1; ++i ) {
-                for ( j = jmin; j <= jmax-1; ++j ) {
-                    for ( k = kmin; k <= kmax-1; ++k ) {
+            foreach (i; 0 .. niv-1) {
+                foreach (j; 0 .. njv-1) {
+                    foreach (k; 0 .. nkv-1) {
                         FVVertex vtx = get_vtx(i+1,j+1,k+1);
                         FVCell c0 = get_cell(i,j,k);
                         FVCell c1 = get_cell(i+1,j,k);
@@ -1326,9 +1443,9 @@ public:
                 }
             }
             // East boundary secondary cell geometry information
-            i = imax;
-            for ( j = jmin; j <= jmax-1; ++j ) {
-                for ( k = kmin; k <= kmax-1; ++k ) {
+            foreach (j; 0 .. njv-1) {
+                foreach (k; 0 .. njv-1) {
+                    size_t i = niv-2;
                     FVVertex vtx = get_vtx(i+1,j+1,k+1);
                     FVCell c0 = get_cell(i,j,k);
                     FVInterface c1 = get_ifi(i+1,j,k);
@@ -1344,9 +1461,9 @@ public:
                 }
             }
             // West boundary secondary cell geometry information
-            i = imin - 1;
-            for ( j = jmin; j <= jmax-1; ++j ) {
-                for ( k = kmin; k <= kmax-1; ++k ) {
+            foreach (j; 0 .. njv-1) {
+                foreach (k; 0 .. nkv-1) {
+                    int i = -1; // note negative value
                     FVVertex vtx = get_vtx(i+1,j+1,k+1);
                     FVInterface c0 = get_ifi(i+1,j,k);
                     FVCell c1 = get_cell(i+1,j,k);
@@ -1362,9 +1479,9 @@ public:
                 }
             }
             // North boundary secondary cell geometry information
-            j = jmax;
-            for ( i = imin; i <= imax-1; ++i ) {
-                for ( k = kmin; k <= kmax-1; ++k ) {
+            foreach (i; 0 .. niv-1) {
+                foreach (k; 0 .. nkv-1) {
+                    size_t j = njv-2;
                     FVVertex vtx = get_vtx(i+1,j+1,k+1);
                     FVCell c0 = get_cell(i,j,k);
                     FVCell c1 = get_cell(i+1,j,k);
@@ -1380,9 +1497,9 @@ public:
                 }
             }
             // South boundary secondary cell geometry information
-            j = jmin - 1;
-            for ( i = imin; i <= imax-1; ++i ) {
-                for ( k = kmin; k <= kmax-1; ++k ) {
+            foreach (i; 0 .. niv-1) {
+                foreach (k; 0 .. nkv-1) {
+                    int j = -1; // note negative
                     FVVertex vtx = get_vtx(i+1,j+1,k+1);
                     FVInterface c0 = get_ifj(i,j+1,k);
                     FVInterface c1 = get_ifj(i+1,j+1,k);
@@ -1398,9 +1515,9 @@ public:
                 }
             }
             // Top boundary secondary cell geometry information
-            k = kmax;
-            for ( i = imin; i <= imax-1; ++i ) {
-                for ( j = jmin; j <= jmax-1; ++j ) {
+            foreach (i; 0 .. niv-1) {
+                foreach (j; 0 .. njv-1) {
+                    size_t k = nkv-1;
                     FVVertex vtx = get_vtx(i+1,j+1,k+1);
                     FVCell c0 = get_cell(i,j,k);
                     FVCell c1 = get_cell(i+1,j,k);
@@ -1416,9 +1533,9 @@ public:
                 }
             }
             // Bottom boundary secondary cell geometry information
-            k = kmin - 1;
-            for ( i = imin; i <= imax-1; ++i ) {
-                for ( j = jmin; j <= jmax-1; ++j ) {
+            foreach (i; 0 .. niv-1) {
+                foreach (j; 0 .. njv-1) {
+                    int k = -1; // note negative
                     FVVertex vtx = get_vtx(i+1,j+1,k+1);
                     FVInterface c0 = get_ifk(i,j,k+1);
                     FVInterface c1 = get_ifk(i+1,j,k+1);
@@ -1435,8 +1552,8 @@ public:
             }
             // Now, do the 4 edges around the bottom face.
             // Bottom-South edge [0]-->[1]
-            j = jmin; k = kmin;
-            for ( i = imin+1; i <= imax; ++i ) {
+            foreach (i; 1 .. niv-1) {
+                size_t j = 0; size_t k = 0;
                 FVVertex vtx = get_vtx(i,j,k);
                 FVCell c0 = get_cell(i-1,j,k);
                 FVCell c1 = get_cell(i,j,k);
@@ -1449,8 +1566,8 @@ public:
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // Bottom-North edge [3]-->[2]
-            j = jmax; k = kmin;
-            for ( i = imin+1; i <= imax; ++i ) {
+            foreach (i; 1 .. niv-1) {
+                size_t j = njv-2; size_t k = 0;
                 FVVertex vtx = get_vtx(i,j+1,k);
                 FVCell c0 = get_cell(i-1,j,k);
                 FVCell c1 = get_cell(i,j,k);
@@ -1463,8 +1580,8 @@ public:
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // Bottom-West edge [0]-->[3]
-            i = imin; k = kmin;
-            for ( j = jmin+1; j <= jmax; ++j ) {
+            foreach (j; 1 .. njv-1) {
+                size_t i = 0; size_t k = 0;
                 FVVertex vtx = get_vtx(i,j,k);
                 FVCell c0 = get_cell(i,j-1,k);
                 FVCell c1 = get_cell(i,j,k);
@@ -1477,8 +1594,8 @@ public:
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // Bottom-East edge [1]-->[2]
-            i = imax; k = kmin;
-            for ( j = jmin+1; j <= jmax; ++j ) {
+            foreach (j; 1 ..njv-1) {
+                size_t i = niv-2; size_t k = 0;
                 FVVertex vtx = get_vtx(i+1,j,k);
                 FVCell c0 = get_cell(i,j-1,k);
                 FVCell c1 = get_cell(i,j,k);
@@ -1492,8 +1609,8 @@ public:
             }
             // 4 edges around the top face.
             // Top-South edge [4]-->[5]
-            j = jmin; k = kmax;
-            for ( i = imin+1; i <= imax; ++i ) {
+            foreach (i; 1 .. niv-1) {
+                size_t j = 0; size_t k = nkv-2;
                 FVVertex vtx = get_vtx(i,j,k+1);
                 FVCell c0 = get_cell(i-1,j,k);
                 FVCell c1 = get_cell(i,j,k);
@@ -1506,8 +1623,8 @@ public:
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // Top-North edge [7]-->[6]
-            j = jmax; k = kmax;
-            for ( i = imin+1; i <= imax; ++i ) {
+            foreach (i; 1 .. niv-1) {
+                size_t j = njv-2; size_t k = nkv-2;
                 FVVertex vtx = get_vtx(i,j+1,k+1);
                 FVCell c0 = get_cell(i-1,j,k);
                 FVCell c1 = get_cell(i,j,k);
@@ -1520,8 +1637,8 @@ public:
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // Top-West edge [4]-->[7]
-            i = imin; k = kmax;
-            for ( j = jmin+1; j <= jmax; ++j ) {
+            foreach (j; 1 .. niv-1) {
+                size_t i = 0; size_t k = nkv-2;
                 FVVertex vtx = get_vtx(i,j,k+1);
                 FVCell c0 = get_cell(i,j-1,k);
                 FVCell c1 = get_cell(i,j,k);
@@ -1534,8 +1651,8 @@ public:
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // Top-East edge [5]-->[6]
-            i = imax; k = kmax;
-            for ( j = jmin+1; j <= jmax; ++j ) {
+            foreach (j; 1 .. njv-1) {
+                size_t i = niv-2; size_t k = nkv-2;
                 FVVertex vtx = get_vtx(i+1,j,k+1);
                 FVCell c0 = get_cell(i,j-1,k);
                 FVCell c1 = get_cell(i,j,k);
@@ -1549,8 +1666,8 @@ public:
             }
             // 4 edges running from bottom to top.
             // South-West edge [0]-->[4]
-            i = imin; j = jmin;
-            for ( k = kmin+1; k <= kmax; ++k ) {
+            foreach (k; 1 .. nkv-1) {
+                size_t i = 0; size_t j = 0;
                 FVVertex vtx = get_vtx(i,j,k);
                 FVCell c0 = get_cell(i,j,k-1);
                 FVCell c1 = get_cell(i,j,k);
@@ -1563,8 +1680,8 @@ public:
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // South-East edge [1]-->[5]
-            i = imax; j = jmin;
-            for ( k = kmin+1; k <= kmax; ++k ) {
+            foreach (k; 1 .. nkv-1) {
+                size_t i = niv-2; size_t j = 0;
                 FVVertex vtx = get_vtx(i+1,j,k);
                 FVCell c0 = get_cell(i,j,k-1);
                 FVCell c1 = get_cell(i,j,k);
@@ -1577,8 +1694,8 @@ public:
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // North-East edge [2]-->[6]
-            i = imax; j = jmax;
-            for ( k = kmin+1; k <= kmax; ++k ) {
+            foreach (k; 1 .. nkv-1) {
+                size_t i = niv-2; size_t j = njv-2;
                 FVVertex vtx = get_vtx(i+1,j+1,k);
                 FVCell c0 = get_cell(i,j,k-1);
                 FVCell c1 = get_cell(i,j,k);
@@ -1591,8 +1708,8 @@ public:
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // North-West edge [3]-->[7]
-            i = imin; j = jmax;
-            for ( k = kmin+1; k <= kmax; ++k ) {
+            foreach (k; 1 .. nkv-1) {
+                size_t i = 0; size_t j = njv-2;
                 FVVertex vtx = get_vtx(i,j+1,k);
                 FVCell c0 = get_cell(i,j,k-1);
                 FVCell c1 = get_cell(i,j,k);
@@ -1606,8 +1723,8 @@ public:
             }
             // Finally, the 8 corners.
             // South-West-Bottom corner [0]
-            i = imin; j = jmin; k = kmin;
             {
+                size_t i = 0; size_t j = 0; size_t k = 0;
                 FVVertex vtx = get_vtx(i,j,k);
                 FVCell c0 = get_cell(i,j,k);
                 FVInterface c1 = get_ifi(i,j,k);
@@ -1617,8 +1734,8 @@ public:
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs];
             }
             // South-East-Bottom corner [1]
-            i = imax; j = jmin; k = kmin;
             {
+                size_t i = niv-2; size_t j = 0; size_t k = 0;
                 FVVertex vtx = get_vtx(i+1,j,k);
                 FVCell c0 = get_cell(i,j,k);
                 FVInterface c1 = get_ifi(i+1,j,k);
@@ -1628,8 +1745,8 @@ public:
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs];
             }
             // North-East-Bottom corner [2]
-            i = imax; j = jmax; k = kmin;
             {
+                size_t i = niv-2; size_t j = njv-2; size_t k = 0;
                 FVVertex vtx = get_vtx(i+1,j+1,k);
                 FVCell c0 = get_cell(i,j,k);
                 FVInterface c1 = get_ifi(i+1,j,k);
@@ -1639,8 +1756,8 @@ public:
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs];
             }
             // North-West-Bottom corner [3]
-            i = imin; j = jmax; k = kmin;
             {
+                size_t i = 0; size_t j = njv-2; size_t k = 0;
                 FVVertex vtx = get_vtx(i,j+1,k);
                 FVCell c0 = get_cell(i,j,k);
                 FVInterface c1 = get_ifi(i,j,k);
@@ -1650,8 +1767,8 @@ public:
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs];
             }
             // South-West-Top corner [4]
-            i = imin; j = jmin; k = kmax;
             {
+                size_t i = 0; size_t j = 0; size_t k = nkv-2;
                 FVVertex vtx = get_vtx(i,j,k+1);
                 FVCell c0 = get_cell(i,j,k);
                 FVInterface c1 = get_ifi(i,j,k);
@@ -1661,8 +1778,8 @@ public:
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs];
             }
             // South-East-Top corner [5]
-            i = imax; j = jmin; k = kmax;
             {
+                size_t i = niv-2; size_t j = 0; size_t k = nkv-2;
                 FVVertex vtx = get_vtx(i+1,j,k+1);
                 FVCell c0 = get_cell(i,j,k);
                 FVInterface c1 = get_ifi(i+1,j,k);
@@ -1672,8 +1789,8 @@ public:
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs];
             }
             // North-East-Top corner [6]
-            i = imax; j = jmax; k = kmax;
             {
+                size_t i = niv-2; size_t j = njv-2; size_t k = nkv-2;
                 FVVertex vtx = get_vtx(i+1,j+1,k+1);
                 FVCell c0 = get_cell(i,j,k);
                 FVInterface c1 = get_ifi(i+1,j,k);
@@ -1683,8 +1800,8 @@ public:
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs];
             }
             // North-West-Top corner [7]
-            i = imin; j = jmax; k = kmax;
             {
+                size_t i = 0; size_t j = njv-2; size_t k = nkv-2;
                 FVVertex vtx = get_vtx(i,j+1,k+1);
                 FVCell c0 = get_cell(i,j,k);
                 FVInterface c1 = get_ifi(i,j,k);
@@ -1693,7 +1810,6 @@ public:
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos), &(c2.pos), &(c3.pos)];
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs];
             }
-+/
         } // end if (myConfig.dimensions
     } // end store_references_for_derivative_calc_at_vertices()
 
@@ -2018,59 +2134,64 @@ public:
         //
         bool do_reconstruction = allow_high_order_interpolation && (myConfig.interpolation_order > 1);
         //
-/+ TODO PJ 2020-11-17
         if (myConfig.high_order_flux_calculator) {
+            // Lachlan's high-order flux calculator assumes that ghost cells are available.
+            if (!bc[Face.north].ghost_cell_data_available) { throw new Error("north ghost cell data missing"); }
+            if (!bc[Face.south].ghost_cell_data_available) { throw new Error("south ghost cell data missing"); }
+            if (!bc[Face.west].ghost_cell_data_available) { throw new Error("west ghost cell data missing"); }
+            if (!bc[Face.east].ghost_cell_data_available) { throw new Error("east ghost cell data missing"); }
+            //
             // ifi interfaces are East-facing interfaces.
-            for (size_t k = kmin; k <= kmax; ++k) {
-                for (size_t j = jmin; j <= jmax; ++j) {
-                    for (size_t i = imin; i <= imax+1; ++i) {
-                        auto IFace = get_ifi(i,j,k);
-                        FlowState[4] stencil;
-                        int location = 0;
-                        if ((i == imin) && bc[Face.west].convective_flux_computed_in_bc) continue;
-                        if ((i == imax+1) && bc[Face.east].convective_flux_computed_in_bc) continue;
-                        stencil = [get_cell(i-2, j, k).fs, get_cell(i-1, j, k).fs, get_cell(i, j, k).fs, get_cell(i+1, j, k).fs];
-                        ASF_242(stencil, IFace, myConfig);
+            foreach (k; 0 .. nkc) {
+                foreach (j; 0 .. njc) {
+                    foreach (i; 0 .. niv) {
+                        auto f = get_ifi(i,j,k);
+                        if ((i == 0) && bc[Face.west].convective_flux_computed_in_bc) continue;
+                        if ((i == niv-1) && bc[Face.east].convective_flux_computed_in_bc) continue;
+                        FlowState[4] stencil = [f.left_cells[1].fs, f.left_cells[0].fs,
+                                                f.right_cells[0].fs, f.right_cells[1].fs];
+                        ASF_242(stencil, f, myConfig);
                     }
                 }
             }
             // ifj interfaces are North-facing interfaces.
-            for (size_t k = kmin; k <= kmax; ++k) {
-                for (size_t i = imin; i <= imax; ++i) {
-                    for (size_t j = jmin; j <= jmax+1; ++j) {
-                        auto IFace = get_ifj(i,j,k);
-                        FlowState[4] stencil;
-                        int location = 0;
-                        if ((j == jmin) && bc[Face.south].convective_flux_computed_in_bc) continue;
-                        if ((j == jmax+1) && bc[Face.north].convective_flux_computed_in_bc) continue;
-                        stencil = [get_cell(i, j-2, k).fs, get_cell(i, j-1, k).fs, get_cell(i, j, k).fs, get_cell(i, j+1, k).fs];
-                        ASF_242(stencil, IFace, myConfig);
+            foreach (k; 0 .. nkc) {
+                foreach (i; 0 .. nic) {
+                    foreach (j; 0 .. njv) {
+                        auto f = get_ifj(i,j,k);
+                        if ((j == 0) && bc[Face.south].convective_flux_computed_in_bc) continue;
+                        if ((j == njv-1) && bc[Face.north].convective_flux_computed_in_bc) continue;
+                        FlowState[4] stencil = [f.left_cells[1].fs, f.left_cells[0].fs,
+                                                f.right_cells[0].fs, f.right_cells[1].fs];
+                        ASF_242(stencil, f, myConfig);
                     }
                 }
             }
-            if (myConfig.dimensions == 2) return;
-            // ifk interfaces are Top-facing interfaces.
-            for (size_t i = imin; i <= imax; ++i) {
-                for (size_t j = jmin; i <= jmax; ++j) {
-                    for (size_t k = kmin; k <= kmax+1; ++k) {
-                        auto IFace = get_ifk(i,j,k);
-                        FlowState[4] stencil;
-                        if ((k == kmin) && bc[Face.bottom].convective_flux_computed_in_bc) continue;
-                        if ((k == kmax+1) && bc[Face.top].convective_flux_computed_in_bc) continue;
-                        stencil = [get_cell(i, j, k-2).fs, get_cell(i, j, k-1).fs, get_cell(i, j, k).fs, get_cell(i, j, k+1).fs];
-                        ASF_242(stencil, IFace, myConfig);
+            if (myConfig.dimensions == 3) {
+                // ifk interfaces are Top-facing interfaces.
+                if (!bc[Face.top].ghost_cell_data_available) { throw new Error("top ghost cell data missing"); }
+                if (!bc[Face.bottom].ghost_cell_data_available) { throw new Error("bottom ghost cell data missing"); }
+                foreach (i; 0 .. nic) {
+                    foreach (j; 0 .. njc) {
+                        foreach (k; 0 .. nkv) {
+                            auto f = get_ifk(i,j,k);
+                            if ((k == 0) && bc[Face.bottom].convective_flux_computed_in_bc) continue;
+                            if ((k == nkv-1) && bc[Face.top].convective_flux_computed_in_bc) continue;
+                            FlowState[4] stencil = [f.left_cells[1].fs, f.left_cells[0].fs,
+                                                    f.right_cells[0].fs, f.right_cells[1].fs];
+                            ASF_242(stencil, f, myConfig);
+                        }
                     }
                 }
-            }
+            } // end if (myConfig.dimensions == 3)
             return;
         } // end if (high_order_flux_calculator)
-+/
         //
-/+ TODO PJ 2020-11-17
         if (myConfig.interpolation_order == 3) {
             //
             // A form of high-order flux calculation built on
             // reconstruction via Lagrangian interpolation across a 6-cell stencil.
+            // This convective flux calculation assumes that ghost cells are available.
             //
             if (!bc[Face.north].ghost_cell_data_available) { throw new Error("north ghost cell data missing"); }
             if (!bc[Face.south].ghost_cell_data_available) { throw new Error("south ghost cell data missing"); }
@@ -2078,260 +2199,258 @@ public:
             if (!bc[Face.east].ghost_cell_data_available) { throw new Error("east ghost cell data missing"); }
             FVCell cL0, cL1, cL2, cR0, cR1, cR2;
             // ifi interfaces are East-facing interfaces.
-            for (size_t k = kmin; k <= kmax; ++k) {
-                for (size_t j = jmin; j <= jmax; ++j) {
-                    for (size_t i = imin; i <= imax+1; ++i) {
-                        auto IFace = get_ifi(i,j,k);
-                        cL0 = get_cell(i-1,j,k); cL1 = get_cell(i-2,j,k); cL2 = get_cell(i-3,j,k);
-                        cR0 = get_cell(i,j,k); cR1 = get_cell(i+1,j,k); cR2 = get_cell(i+2,j,k);
+            foreach (k; 0 .. nkc) {
+                foreach (j; 0 .. njc) {
+                    foreach (i; 0 .. niv) {
+                        auto f = get_ifi(i,j,k);
+                        cL0 = f.left_cells[0]; cL1 = f.left_cells[1]; cL2 = f.left_cells[2];
+                        cR0 = f.right_cells[0]; cR1 = f.right_cells[1]; cR2 = f.right_cells[2];
                         // Low-order reconstruction just copies data from adjacent FV_Cell.
                         // Even for high-order reconstruction, we depend upon this copy for
                         // the viscous-transport and diffusion coefficients.
                         Lft.copy_values_from(cL0.fs);
                         Rght.copy_values_from(cR0.fs);
-                        if (do_reconstruction && !IFace.in_suppress_reconstruction_zone &&
-                            !(myConfig.suppress_reconstruction_at_shocks && IFace.fs.S)) {
-                            one_d.interp_l3r3(IFace,
-                                              cL2, cL1, cL0, cR0, cR1, cR2,
+                        if (do_reconstruction && !f.in_suppress_reconstruction_zone &&
+                            !(myConfig.suppress_reconstruction_at_shocks && f.fs.S)) {
+                            one_d.interp_l3r3(f, cL2, cL1, cL0, cR0, cR1, cR2,
                                               cL2.iLength, cL1.iLength, cL0.iLength,
                                               cR0.iLength, cR1.iLength, cR2.iLength,
                                               Lft, Rght);
                         }
-                        IFace.fs.copy_average_values_from(Lft, Rght);
+                        f.fs.copy_average_values_from(Lft, Rght);
                         //
-                        if ((i == imin) && bc[Face.west].convective_flux_computed_in_bc) continue;
-                        if ((i == imax+1) && bc[Face.east].convective_flux_computed_in_bc) continue;
-                        compute_interface_flux(Lft, Rght, IFace, myConfig, omegaz);
+                        if ((i == 0) && bc[Face.west].convective_flux_computed_in_bc) continue;
+                        if ((i == niv-1) && bc[Face.east].convective_flux_computed_in_bc) continue;
+                        compute_interface_flux(Lft, Rght, f, myConfig, omegaz);
                     } // i loop
                 } // j loop
             } // for k
             // ifj interfaces are North-facing interfaces.
-            for (size_t k = kmin; k <= kmax; ++k) {
-                for (size_t j = jmin; j <= jmax+1; ++j) {
-                    for (size_t i = imin; i <= imax; ++i) {
-                        auto IFace = get_ifj(i,j,k);
-                        cL0 = get_cell(i,j-1,k); cL1 = get_cell(i,j-2,k); cL2 = get_cell(i,j-3,k);
-                        cR0 = get_cell(i,j,k); cR1 = get_cell(i,j+1,k); cR2 = get_cell(i,j+2,k);
+            foreach (k; 0 .. nkc) {
+                foreach (j; 0 .. njv) {
+                    foreach (i; 0 .. nic) {
+                        auto f = get_ifj(i,j,k);
+                        cL0 = f.left_cells[0]; cL1 = f.left_cells[1]; cL2 = f.left_cells[2];
+                        cR0 = f.right_cells[0]; cR1 = f.right_cells[1]; cR2 = f.right_cells[2];
                         // Low-order reconstruction just copies data from adjacent FV_Cell.
                         // Even for high-order reconstruction, we depend upon this copy for
                         // the viscous-transport and diffusion coefficients.
                         Lft.copy_values_from(cL0.fs);
                         Rght.copy_values_from(cR0.fs);
-                        if (do_reconstruction && !IFace.in_suppress_reconstruction_zone &&
-                            !(myConfig.suppress_reconstruction_at_shocks && IFace.fs.S)) {
-                            one_d.interp_l3r3(IFace,
-                                              cL2, cL1, cL0, cR0, cR1, cR2,
+                        if (do_reconstruction && !f.in_suppress_reconstruction_zone &&
+                            !(myConfig.suppress_reconstruction_at_shocks && f.fs.S)) {
+                            one_d.interp_l3r3(f, cL2, cL1, cL0, cR0, cR1, cR2,
                                               cL2.jLength, cL1.jLength, cL0.jLength,
                                               cR0.jLength, cR1.jLength, cR2.jLength,
                                               Lft, Rght);
                         }
-                        IFace.fs.copy_average_values_from(Lft, Rght);
+                        f.fs.copy_average_values_from(Lft, Rght);
                         //
-                        if ((j == jmin) && bc[Face.south].convective_flux_computed_in_bc) continue;
-                        if ((j == jmax+1) && bc[Face.north].convective_flux_computed_in_bc) continue;
-                        compute_interface_flux(Lft, Rght, IFace, myConfig, omegaz);
-                    } // j loop
-                } // i loop
-            } // for k
-
-            if (myConfig.dimensions == 2) return; // Our work is done.
-
-            // ifk interfaces are Top-facing interfaces.
-            if (!bc[Face.top].ghost_cell_data_available) { throw new Error("top ghost cell data missing"); }
-            if (!bc[Face.bottom].ghost_cell_data_available) { throw new Error("bottom ghost cell data missing"); }
-            for (size_t k = kmin; k <= kmax+1; ++k) {
-                for (size_t j = jmin; j <= jmax; ++j) {
-                    for (size_t i = imin; i <= imax; ++i) {
-                        auto IFace = get_ifk(i,j,k);
-                        cL0 = get_cell(i,j,k-1); cL1 = get_cell(i,j,k-2); cL2 = get_cell(i,j,k-3);
-                        cR0 = get_cell(i,j,k); cR1 = get_cell(i,j,k+1); cR2 = get_cell(i,j,k+2);
-                        // Low-order reconstruction just copies data from adjacent FV_Cell.
-                        // Even for high-order reconstruction, we depend upon this copy for
-                        // the viscous-transport and diffusion coefficients.
-                        Lft.copy_values_from(cL0.fs);
-                        Rght.copy_values_from(cR0.fs);
-                        if (do_reconstruction && !IFace.in_suppress_reconstruction_zone &&
-                            !(myConfig.suppress_reconstruction_at_shocks && IFace.fs.S)) {
-                            one_d.interp_l3r3(IFace,
-                                              cL2, cL1, cL0, cR0, cR1, cR2,
-                                              cL2.kLength, cL1.kLength, cL0.kLength,
-                                              cR0.kLength, cR1.kLength, cR2.kLength,
-                                              Lft, Rght);
-                        }
-                        IFace.fs.copy_average_values_from(Lft, Rght);
-                        //
-                        if ((k == kmin) && bc[Face.bottom].convective_flux_computed_in_bc) continue;
-                        if ((k == kmax+1) && bc[Face.top].convective_flux_computed_in_bc) continue;
-                        compute_interface_flux(Lft, Rght, IFace, myConfig, omegaz);
-                    } // for k
+                        if ((j == 0) && bc[Face.south].convective_flux_computed_in_bc) continue;
+                        if ((j == njv-1) && bc[Face.north].convective_flux_computed_in_bc) continue;
+                        compute_interface_flux(Lft, Rght, f, myConfig, omegaz);
+                    } // i loop
                 } // j loop
-            } // i loop
-            return; // Our work is done.
+            } // k loop
+            //
+            if (myConfig.dimensions == 3) {
+                // ifk interfaces are Top-facing interfaces.
+                if (!bc[Face.top].ghost_cell_data_available) { throw new Error("top ghost cell data missing"); }
+                if (!bc[Face.bottom].ghost_cell_data_available) { throw new Error("bottom ghost cell data missing"); }
+                foreach (k; 0 .. nkv) {
+                    foreach (j; 0 .. njc) {
+                        foreach (i; 0 .. nic) {
+                            auto f = get_ifk(i,j,k);
+                            cL0 = f.left_cells[0]; cL1 = f.left_cells[1]; cL2 = f.left_cells[2];
+                            cR0 = f.right_cells[0]; cR1 = f.right_cells[1]; cR2 = f.right_cells[2];
+                            // Low-order reconstruction just copies data from adjacent FV_Cell.
+                            // Even for high-order reconstruction, we depend upon this copy for
+                            // the viscous-transport and diffusion coefficients.
+                            Lft.copy_values_from(cL0.fs);
+                            Rght.copy_values_from(cR0.fs);
+                            if (do_reconstruction && !f.in_suppress_reconstruction_zone &&
+                                !(myConfig.suppress_reconstruction_at_shocks && f.fs.S)) {
+                                one_d.interp_l3r3(f, cL2, cL1, cL0, cR0, cR1, cR2,
+                                                  cL2.kLength, cL1.kLength, cL0.kLength,
+                                                  cR0.kLength, cR1.kLength, cR2.kLength,
+                                                  Lft, Rght);
+                            }
+                            f.fs.copy_average_values_from(Lft, Rght);
+                            //
+                            if ((k == 0) && bc[Face.bottom].convective_flux_computed_in_bc) continue;
+                            if ((k == nkv-1) && bc[Face.top].convective_flux_computed_in_bc) continue;
+                            compute_interface_flux(Lft, Rght, f, myConfig, omegaz);
+                        } // i loop
+                    } // j loop
+                } // k loop
+            } // end if (myConfig.dimensions == 3)
+            return;
         } // end if (interpolation_order == 3)
-+/
         //
         // If we have not left already, continue with the flux calculation
         // being done in the classic (piecewise-parabolic) reconstruction,
         // followed by flux calculation from Left,Right conditions.
         //
-/+ TODO PJ 2020-11-17
         // ifi interfaces are East-facing interfaces.
-        for (size_t k = kmin; k <= kmax; ++k) {
-            for (size_t j = jmin; j <= jmax; ++j) {
-                for (size_t i = imin; i <= imax+1; ++i) {
-                    auto IFace = get_ifi(i,j,k);
-                    auto cL0 = get_cell(i-1,j,k); auto cL1 = get_cell(i-2,j,k);
-                    auto cR0 = get_cell(i,j,k); auto cR1 = get_cell(i+1,j,k);
+        foreach (k; 0 .. nkc) {
+            foreach (j; 0 .. njc) {
+                foreach (i; 0 .. niv) {
+                    auto f = get_ifi(i,j,k);
+                    auto cL0 = f.left_cells[0]; auto cL1 = f.left_cells[1];
+                    auto cR0 = f.right_cells[0]; auto cR1 = f.right_cells[1];
                     // Low-order reconstruction just copies data from adjacent FV_Cell.
                     // Even for high-order reconstruction, we depend upon this copy for
                     // the viscous-transport and diffusion coefficients.
-                    if ((i == imin) && !(bc[Face.west].ghost_cell_data_available)) {
+                    if ((i == 0) && !(bc[Face.west].ghost_cell_data_available)) {
                         Lft.copy_values_from(cR0.fs);
                     } else {
                         Lft.copy_values_from(cL0.fs);
                     }
-                    if ((i == imax+1) && !(bc[Face.east].ghost_cell_data_available)) {
+                    if ((i == niv-1) && !(bc[Face.east].ghost_cell_data_available)) {
                         Rght.copy_values_from(cL0.fs);
                     } else {
                         Rght.copy_values_from(cR0.fs);
                     }
-                    if (do_reconstruction && !IFace.in_suppress_reconstruction_zone &&
-                        !(myConfig.suppress_reconstruction_at_shocks && IFace.fs.S)) {
-                        if ((i == imin) && !(bc[Face.west].ghost_cell_data_available)) {
-                            one_d.interp_l0r2(IFace, cR0, cR1, cR0.iLength, cR1.iLength, Lft, Rght);
-                        } else if ((i == imin+1) && !(bc[Face.west].ghost_cell_data_available)) {
-                            one_d.interp_l1r2(IFace, cL0, cR0, cR1, cL0.iLength, cR0.iLength, cR1.iLength, Lft, Rght);
-                        } else if ((i == imax) && !(bc[Face.east].ghost_cell_data_available)) {
-                            one_d.interp_l2r1(IFace, cL1, cL0, cR0, cL1.iLength, cL0.iLength, cR0.iLength, Lft, Rght);
-                        } else if ((i == imax+1) && !(bc[Face.east].ghost_cell_data_available)) {
-                            one_d.interp_l2r0(IFace, cL1, cL0, cL1.iLength, cL0.iLength, Lft, Rght);
+                    if (do_reconstruction && !f.in_suppress_reconstruction_zone &&
+                        !(myConfig.suppress_reconstruction_at_shocks && f.fs.S)) {
+                        /// FIX-ME PJ 2020-11-18
+                        /// Now that we have the stencils set up as variable-lengh arrays of references,
+                        /// we can move the selection of interpolation scheme below into a
+                        /// more general function with signature  one_d.interp(f, Lft, Rght).
+                        /// Also, we should be able to subsume the interpolation_order==3 code from above.
+                        if ((i == 0) && !(bc[Face.west].ghost_cell_data_available)) {
+                            one_d.interp_l0r2(f, cR0, cR1, cR0.iLength, cR1.iLength, Lft, Rght);
+                        } else if ((i == 1) && !(bc[Face.west].ghost_cell_data_available)) {
+                            one_d.interp_l1r2(f, cL0, cR0, cR1, cL0.iLength, cR0.iLength, cR1.iLength, Lft, Rght);
+                        } else if ((i == niv-2) && !(bc[Face.east].ghost_cell_data_available)) {
+                            one_d.interp_l2r1(f, cL1, cL0, cR0, cL1.iLength, cL0.iLength, cR0.iLength, Lft, Rght);
+                        } else if ((i == niv-1) && !(bc[Face.east].ghost_cell_data_available)) {
+                            one_d.interp_l2r0(f, cL1, cL0, cL1.iLength, cL0.iLength, Lft, Rght);
                         } else { // General symmetric reconstruction.
-                            one_d.interp_l2r2(IFace, cL1, cL0, cR0, cR1,
+                            one_d.interp_l2r2(f, cL1, cL0, cR0, cR1,
                                               cL1.iLength, cL0.iLength, cR0.iLength, cR1.iLength,
                                               Lft, Rght);
                         }
                     }
-                    IFace.fs.copy_average_values_from(Lft, Rght);
+                    f.fs.copy_average_values_from(Lft, Rght);
                     //
-                    if ((i == imin) && bc[Face.west].convective_flux_computed_in_bc) continue;
-                    if ((i == imax+1) && bc[Face.east].convective_flux_computed_in_bc) continue;
+                    if ((i == 0) && bc[Face.west].convective_flux_computed_in_bc) continue;
+                    if ((i == niv-1) && bc[Face.east].convective_flux_computed_in_bc) continue;
                     //
-                    if ((i == imin) && !(bc[Face.west].ghost_cell_data_available)) {
-                        compute_flux_at_left_wall(Rght, IFace, myConfig, omegaz);
-                    } else if ((i == imax+1) && !(bc[Face.east].ghost_cell_data_available)) {
-                        compute_flux_at_right_wall(Lft, IFace, myConfig, omegaz);
+                    if ((i == 0) && !(bc[Face.west].ghost_cell_data_available)) {
+                        compute_flux_at_left_wall(Rght, f, myConfig, omegaz);
+                    } else if ((i == niv-1) && !(bc[Face.east].ghost_cell_data_available)) {
+                        compute_flux_at_right_wall(Lft, f, myConfig, omegaz);
                     } else {
-                        compute_interface_flux(Lft, Rght, IFace, myConfig, omegaz);
+                        compute_interface_flux(Lft, Rght, f, myConfig, omegaz);
                     }
                 } // i loop
             } // j loop
         } // for k
         // ifj interfaces are North-facing interfaces.
-        for (size_t k = kmin; k <= kmax; ++k) {
-            for (size_t j = jmin; j <= jmax+1; ++j) {
-                for (size_t i = imin; i <= imax; ++i) {
-                    auto IFace = get_ifj(i,j,k);
-                    auto cL0 = get_cell(i,j-1,k); auto cL1 = get_cell(i,j-2,k);
-                    auto cR0 = get_cell(i,j,k); auto cR1 = get_cell(i,j+1,k);
+        foreach (k; 0 .. nkc) {
+            foreach (j; 0 .. njv) {
+                foreach (i; 0 .. nic) {
+                    auto f = get_ifj(i,j,k);
+                    auto cL0 = f.left_cells[0]; auto cL1 = f.left_cells[1];
+                    auto cR0 = f.right_cells[0]; auto cR1 = f.right_cells[1];
                     // Low-order reconstruction just copies data from adjacent FV_Cell.
                     // Even for high-order reconstruction, we depend upon this copy for
                     // the viscous-transport and diffusion coefficients.
-                    if ((j == jmin) && !(bc[Face.south].ghost_cell_data_available)) {
+                    if ((j == 0) && !(bc[Face.south].ghost_cell_data_available)) {
                         Lft.copy_values_from(cR0.fs);
                     } else {
                         Lft.copy_values_from(cL0.fs);
                     }
-                    if ((j == jmax+1) && !(bc[Face.north].ghost_cell_data_available)) {
+                    if ((j == njv-1) && !(bc[Face.north].ghost_cell_data_available)) {
                         Rght.copy_values_from(cL0.fs);
                     } else {
                         Rght.copy_values_from(cR0.fs);
                     }
-                    if (do_reconstruction && !IFace.in_suppress_reconstruction_zone &&
-                        !(myConfig.suppress_reconstruction_at_shocks && IFace.fs.S)) {
-                        if ((j == jmin) && !(bc[Face.south].ghost_cell_data_available)) {
-                            one_d.interp_l0r2(IFace, cR0, cR1, cR0.jLength, cR1.jLength, Lft, Rght);
-                        } else if ((j == jmin+1) && !(bc[Face.south].ghost_cell_data_available)) {
-                            one_d.interp_l1r2(IFace, cL0, cR0, cR1, cL0.jLength, cR0.jLength, cR1.jLength, Lft, Rght);
-                        } else if ((j == jmax) && !(bc[Face.north].ghost_cell_data_available)) {
-                            one_d.interp_l2r1(IFace, cL1, cL0, cR0, cL1.jLength, cL0.jLength, cR0.jLength, Lft, Rght);
-                        } else if ((j == jmax+1) && !(bc[Face.north].ghost_cell_data_available)) {
-                            one_d.interp_l2r0(IFace, cL1, cL0, cL1.jLength, cL0.jLength, Lft, Rght);
+                    if (do_reconstruction && !f.in_suppress_reconstruction_zone &&
+                        !(myConfig.suppress_reconstruction_at_shocks && f.fs.S)) {
+                        if ((j == 0) && !(bc[Face.south].ghost_cell_data_available)) {
+                            one_d.interp_l0r2(f, cR0, cR1, cR0.jLength, cR1.jLength, Lft, Rght);
+                        } else if ((j == 1) && !(bc[Face.south].ghost_cell_data_available)) {
+                            one_d.interp_l1r2(f, cL0, cR0, cR1, cL0.jLength, cR0.jLength, cR1.jLength, Lft, Rght);
+                        } else if ((j == njv-2) && !(bc[Face.north].ghost_cell_data_available)) {
+                            one_d.interp_l2r1(f, cL1, cL0, cR0, cL1.jLength, cL0.jLength, cR0.jLength, Lft, Rght);
+                        } else if ((j == njv-1) && !(bc[Face.north].ghost_cell_data_available)) {
+                            one_d.interp_l2r0(f, cL1, cL0, cL1.jLength, cL0.jLength, Lft, Rght);
                         } else { // General symmetric reconstruction.
-                            one_d.interp_l2r2(IFace, cL1, cL0, cR0, cR1,
+                            one_d.interp_l2r2(f, cL1, cL0, cR0, cR1,
                                               cL1.jLength, cL0.jLength, cR0.jLength, cR1.jLength,
                                               Lft, Rght);
                         }
                     }
-                    IFace.fs.copy_average_values_from(Lft, Rght);
+                    f.fs.copy_average_values_from(Lft, Rght);
                     //
-                    if ((j == jmin) && bc[Face.south].convective_flux_computed_in_bc) continue;
-                    if ((j == jmax+1) && bc[Face.north].convective_flux_computed_in_bc) continue;
+                    if ((j == 0) && bc[Face.south].convective_flux_computed_in_bc) continue;
+                    if ((j == njv-1) && bc[Face.north].convective_flux_computed_in_bc) continue;
                     //
-                    if ((j == jmin) && !(bc[Face.south].ghost_cell_data_available)) {
-                        compute_flux_at_left_wall(Rght, IFace, myConfig, omegaz);
-                    } else if ((j == jmax+1) && !(bc[Face.north].ghost_cell_data_available)) {
-                        compute_flux_at_right_wall(Lft, IFace, myConfig, omegaz);
+                    if ((j == 0) && !(bc[Face.south].ghost_cell_data_available)) {
+                        compute_flux_at_left_wall(Rght, f, myConfig, omegaz);
+                    } else if ((j == njv-1) && !(bc[Face.north].ghost_cell_data_available)) {
+                        compute_flux_at_right_wall(Lft, f, myConfig, omegaz);
                     } else {
-                        compute_interface_flux(Lft, Rght, IFace, myConfig, omegaz);
+                        compute_interface_flux(Lft, Rght, f, myConfig, omegaz);
                     }
-                } // j loop
-            } // i loop
-        } // for k
-
-        if (myConfig.dimensions == 2) return; // Our work is done.
-
-        // ifk interfaces are Top-facing interfaces.
-        for (size_t k = kmin; k <= kmax+1; ++k) {
-            for (size_t j = jmin; j <= jmax; ++j) {
-                for (size_t i = imin; i <= imax; ++i) {
-                    auto IFace = get_ifk(i,j,k);
-                    auto cL0 = get_cell(i,j,k-1); auto cL1 = get_cell(i,j,k-2);
-                    auto cR0 = get_cell(i,j,k); auto cR1 = get_cell(i,j,k+1);
-                    // Low-order reconstruction just copies data from adjacent FV_Cell.
-                    // Even for high-order reconstruction, we depend upon this copy for
-                    // the viscous-transport and diffusion coefficients.
-                    if ((k == kmin) && !(bc[Face.bottom].ghost_cell_data_available)) {
-                        Lft.copy_values_from(cR0.fs);
-                    } else {
-                        Lft.copy_values_from(cL0.fs);
-                    }
-                    if ((k == kmax+1) && !(bc[Face.top].ghost_cell_data_available)) {
-                        Rght.copy_values_from(cL0.fs);
-                    } else {
-                        Rght.copy_values_from(cR0.fs);
-                    }
-                    if (do_reconstruction && !IFace.in_suppress_reconstruction_zone &&
-                        !(myConfig.suppress_reconstruction_at_shocks && IFace.fs.S)) {
-                        if ((k == kmin) && !(bc[Face.bottom].ghost_cell_data_available)) {
-                            one_d.interp_l0r2(IFace, cR0, cR1, cR0.kLength, cR1.kLength, Lft, Rght);
-                        } else if ((k == kmin+1) && !(bc[Face.bottom].ghost_cell_data_available)) {
-                            one_d.interp_l1r2(IFace, cL0, cR0, cR1, cL0.kLength, cR0.kLength, cR1.kLength, Lft, Rght);
-                        } else if ((k == kmax) && !(bc[Face.top].ghost_cell_data_available)) {
-                            one_d.interp_l2r1(IFace, cL1, cL0, cR0, cL1.kLength, cL0.kLength, cR0.kLength, Lft, Rght);
-                        } else if ((k == kmax+1) && !(bc[Face.top].ghost_cell_data_available)) {
-                            one_d.interp_l2r0(IFace, cL1, cL0, cL1.kLength, cL0.kLength, Lft, Rght);
-                        } else { // General symmetric reconstruction.
-                            one_d.interp_l2r2(IFace, cL1, cL0, cR0, cR1,
-                                              cL1.kLength, cL0.kLength, cR0.kLength, cR1.kLength,
-                                              Lft, Rght);
-                        }
-                    }
-                    IFace.fs.copy_average_values_from(Lft, Rght);
-                    //
-                    if ((k == kmin) && bc[Face.bottom].convective_flux_computed_in_bc) continue;
-                    if ((k == kmax+1) && bc[Face.top].convective_flux_computed_in_bc) continue;
-                    //
-                    if ((k == kmin) && !(bc[Face.bottom].ghost_cell_data_available)) {
-                        compute_flux_at_left_wall(Rght, IFace, myConfig, omegaz);
-                    } else if ((k == kmax+1) && !(bc[Face.top].ghost_cell_data_available)) {
-                        compute_flux_at_right_wall(Lft, IFace, myConfig, omegaz);
-                    } else {
-                        compute_interface_flux(Lft, Rght, IFace, myConfig, omegaz);
-                    }
-                } // for k
+                } // i loop
             } // j loop
-        } // i loop
-+/
+        } // k loop
+        if (myConfig.dimensions == 3) {
+            // ifk interfaces are Top-facing interfaces.
+            foreach (k; 0 .. nkv) {
+                foreach (j; 0 .. njc) {
+                    foreach (i; 0 .. nic) {
+                        auto f = get_ifk(i,j,k);
+                        auto cL0 = f.left_cells[0]; auto cL1 = f.left_cells[1];
+                        auto cR0 = f.right_cells[0]; auto cR1 = f.right_cells[1];
+                        // Low-order reconstruction just copies data from adjacent FV_Cell.
+                        // Even for high-order reconstruction, we depend upon this copy for
+                        // the viscous-transport and diffusion coefficients.
+                        if ((k == 0) && !(bc[Face.bottom].ghost_cell_data_available)) {
+                            Lft.copy_values_from(cR0.fs);
+                        } else {
+                            Lft.copy_values_from(cL0.fs);
+                        }
+                        if ((k == niv-1) && !(bc[Face.top].ghost_cell_data_available)) {
+                            Rght.copy_values_from(cL0.fs);
+                        } else {
+                            Rght.copy_values_from(cR0.fs);
+                        }
+                        if (do_reconstruction && !f.in_suppress_reconstruction_zone &&
+                            !(myConfig.suppress_reconstruction_at_shocks && f.fs.S)) {
+                            if ((k == 0) && !(bc[Face.bottom].ghost_cell_data_available)) {
+                                one_d.interp_l0r2(f, cR0, cR1, cR0.kLength, cR1.kLength, Lft, Rght);
+                            } else if ((k == 1) && !(bc[Face.bottom].ghost_cell_data_available)) {
+                                one_d.interp_l1r2(f, cL0, cR0, cR1, cL0.kLength, cR0.kLength, cR1.kLength, Lft, Rght);
+                            } else if ((k == nkv-2) && !(bc[Face.top].ghost_cell_data_available)) {
+                                one_d.interp_l2r1(f, cL1, cL0, cR0, cL1.kLength, cL0.kLength, cR0.kLength, Lft, Rght);
+                            } else if ((k == nkv-2) && !(bc[Face.top].ghost_cell_data_available)) {
+                                one_d.interp_l2r0(f, cL1, cL0, cL1.kLength, cL0.kLength, Lft, Rght);
+                            } else { // General symmetric reconstruction.
+                                one_d.interp_l2r2(f, cL1, cL0, cR0, cR1,
+                                                  cL1.kLength, cL0.kLength, cR0.kLength, cR1.kLength,
+                                                  Lft, Rght);
+                            }
+                        }
+                        f.fs.copy_average_values_from(Lft, Rght);
+                        //
+                        if ((k == 0) && bc[Face.bottom].convective_flux_computed_in_bc) continue;
+                        if ((k == nkv-1) && bc[Face.top].convective_flux_computed_in_bc) continue;
+                        //
+                        if ((k == 0) && !(bc[Face.bottom].ghost_cell_data_available)) {
+                            compute_flux_at_left_wall(Rght, f, myConfig, omegaz);
+                        } else if ((k == nkv-1) && !(bc[Face.top].ghost_cell_data_available)) {
+                            compute_flux_at_right_wall(Lft, f, myConfig, omegaz);
+                        } else {
+                            compute_interface_flux(Lft, Rght, f, myConfig, omegaz);
+                        }
+                    } // i loop
+                } // j loop
+            } // k loop
+        } // end if (dimensions == 3)
         return;
     } // end convective_flux_phase0()
 
