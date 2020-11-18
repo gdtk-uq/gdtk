@@ -172,25 +172,25 @@ public:
             case Face.north:
                 switch (other_face) {
                 case Face.north:
-                    if (this_blk.nicell != other_blk.nicell) {
+                    if (this_blk.nic != other_blk.nic) {
                         writefln(fstr, this_blk.id, "north", other_blk.id, "north");
                         return -1;
                     }
                     break;
                 case Face.east:
-                    if (this_blk.nicell != other_blk.njcell) {
+                    if (this_blk.nic != other_blk.njc) {
                         writefln(fstr, this_blk.id, "north", other_blk.id, "east");
                         return -1;
                     }
                     break;
                 case Face.south:
-                    if (this_blk.nicell != other_blk.nicell) {
+                    if (this_blk.nic != other_blk.nic) {
                         writefln(fstr, this_blk.id, "north", other_blk.id, "south");
                         return -1;
                     }
                     break;
                 case Face.west:
-                    if (this_blk.nicell != other_blk.njcell) {
+                    if (this_blk.nic != other_blk.njc) {
                         writefln(fstr, this_blk.id, "north", other_blk.id, "west");
                         return -1;
                     }
@@ -203,25 +203,25 @@ public:
             case Face.east:
                 switch (other_face) {
                 case Face.north:
-                    if (this_blk.njcell != other_blk.nicell) {
+                    if (this_blk.njc != other_blk.nic) {
                         writefln(fstr, this_blk.id, "east", other_blk.id, "north");
                         return -1;
                     }
                     break;
                 case Face.east:
-                    if (this_blk.njcell != other_blk.njcell) {
+                    if (this_blk.njc != other_blk.njc) {
                         writefln(fstr, this_blk.id, "east", other_blk.id, "east");
                         return -1;
                     }
                     break;
                 case Face.south:
-                    if (this_blk.njcell != other_blk.nicell) {
+                    if (this_blk.njc != other_blk.nic) {
                         writefln(fstr, this_blk.id, "east", other_blk.id, "south");
                         return -1;
                     }
                     break;
                 case Face.west:
-                    if (this_blk.njcell != other_blk.njcell) {
+                    if (this_blk.njc != other_blk.njc) {
                         writefln(fstr, this_blk.id, "east", other_blk.id, "west");
                         return -1;
                     }
@@ -234,25 +234,25 @@ public:
             case Face.south:
                 switch (other_face) {
                 case Face.north:
-                    if (this_blk.nicell != other_blk.nicell) {
+                    if (this_blk.nic != other_blk.nic) {
                         writefln(fstr, this_blk.id, "south", other_blk.id, "north");
                         return -1;
                     }
                     break;
                 case Face.east:
-                    if (this_blk.nicell != other_blk.njcell) {
+                    if (this_blk.nic != other_blk.njc) {
                         writefln(fstr, this_blk.id, "south", other_blk.id, "east");
                         return -1;
                     }
                     break;
                 case Face.south:
-                    if (this_blk.nicell != other_blk.nicell) {
+                    if (this_blk.nic != other_blk.nic) {
                         writefln(fstr, this_blk.id, "south", other_blk.id, "south");
                         return -1;
                     }
                     break;
                 case Face.west:
-                    if (this_blk.nicell != other_blk.njcell) {
+                    if (this_blk.nic != other_blk.njc) {
                         writefln(fstr, this_blk.id, "south", other_blk.id, "west");
                         return -1;
                     }
@@ -265,25 +265,25 @@ public:
             case Face.west:
                 switch (other_face) {
                 case Face.north:
-                    if (this_blk.njcell != other_blk.nicell) {
+                    if (this_blk.njc != other_blk.nic) {
                         writefln(fstr, this_blk.id, "west", other_blk.id, "north");
                         return -1;
                     }
                     break;
                 case Face.east:
-                    if (this_blk.njcell != other_blk.njcell) {
+                    if (this_blk.njc != other_blk.njc) {
                         writefln(fstr, this_blk.id, "west", other_blk.id, "east");
                         return -1;
                     }
                     break;
                 case Face.south:
-                    if (this_blk.njcell != other_blk.nicell) {
+                    if (this_blk.njc != other_blk.nic) {
                         writefln(fstr, this_blk.id, "west", other_blk.id, "south");
                         return -1;
                     }
                     break;
                 case Face.west:
-                    if (this_blk.njcell != other_blk.njcell) {
+                    if (this_blk.njc != other_blk.njc) {
                         writefln(fstr, this_blk.id, "west", other_blk.id, "west");
                         return -1;
                     }
@@ -308,55 +308,55 @@ public:
                 switch (other_face) {
                 case Face.north:
                     final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell);
+                    case 0: ok = (this_blk.nic == other_blk.nic) && (this_blk.nkc == other_blk.nkc); break;
+                    case 1: ok = (this_blk.nic == other_blk.nkc) && (this_blk.nkc == other_blk.nic); break;
+                    case 2: ok = (this_blk.nic == other_blk.nic) && (this_blk.nkc == other_blk.nkc); break;
+                    case 3: ok = (this_blk.nic == other_blk.nkc) && (this_blk.nkc == other_blk.nic);
                     }
                     if (!ok) { writefln(fstr, this_blk.id, "north", other_blk.id, "north", other_orientation);  return -1; }
                     break;
                 case Face.east:
                     final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell);
+                    case 0: ok = (this_blk.nic == other_blk.njc) && (this_blk.nkc == other_blk.nkc); break;
+                    case 1: ok = (this_blk.nic == other_blk.nkc) && (this_blk.nkc == other_blk.njc); break;
+                    case 2: ok = (this_blk.nic == other_blk.njc) && (this_blk.nkc == other_blk.nkc); break;
+                    case 3: ok = (this_blk.nic == other_blk.nkc) && (this_blk.nkc == other_blk.njc);
                     }
                     if (!ok) { writefln(fstr, this_blk.id, "north", other_blk.id, "east", other_orientation); return -1; }
                     break;
                 case Face.south:
                     final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell);
+                    case 0: ok = (this_blk.nic == other_blk.nic) && (this_blk.nkc == other_blk.nkc); break;
+                    case 1: ok = (this_blk.nic == other_blk.nkc) && (this_blk.nkc == other_blk.nic); break;
+                    case 2: ok = (this_blk.nic == other_blk.nic) && (this_blk.nkc == other_blk.nkc); break;
+                    case 3: ok = (this_blk.nic == other_blk.nkc) && (this_blk.nkc == other_blk.nic);
                     }
                     if (!ok) { writefln(fstr, this_blk.id, "north", other_blk.id, "south", other_orientation); return -1;  }
                     break;
                 case Face.west:
                     final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell);
+                    case 0: ok = (this_blk.nic == other_blk.njc) && (this_blk.nkc == other_blk.nkc); break;
+                    case 1: ok = (this_blk.nic == other_blk.nkc) && (this_blk.nkc == other_blk.njc); break;
+                    case 2: ok = (this_blk.nic == other_blk.njc) && (this_blk.nkc == other_blk.nkc); break;
+                    case 3: ok = (this_blk.nic == other_blk.nkc) && (this_blk.nkc == other_blk.njc);
                     }
                     if (!ok) { writefln(fstr, this_blk.id, "north", other_blk.id, "west", other_orientation); return -1; }
                     break;
                 case Face.top:
                     final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell);
+                    case 0: ok = (this_blk.nic == other_blk.nic) && (this_blk.nkc == other_blk.njc); break;
+                    case 1: ok = (this_blk.nic == other_blk.njc) && (this_blk.nkc == other_blk.nic); break;
+                    case 2: ok = (this_blk.nic == other_blk.nic) && (this_blk.nkc == other_blk.njc); break;
+                    case 3: ok = (this_blk.nic == other_blk.njc) && (this_blk.nkc == other_blk.nic);
                     }
                     if (!ok) { writefln(fstr, this_blk.id, "north", other_blk.id, "top", other_orientation); return -1; }
                     break;
                 case Face.bottom:
                     final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell);
+                    case 0: ok = (this_blk.nic == other_blk.nic) && (this_blk.nkc == other_blk.njc); break;
+                    case 1: ok = (this_blk.nic == other_blk.njc) && (this_blk.nkc == other_blk.nic); break;
+                    case 2: ok = (this_blk.nic == other_blk.nic) && (this_blk.nkc == other_blk.njc); break;
+                    case 3: ok = (this_blk.nic == other_blk.njc) && (this_blk.nkc == other_blk.nic);
                     }
                     if (!ok) { writefln(fstr, this_blk.id, "north", other_blk.id, "bottom", other_orientation); return -1; }
                     break;
@@ -369,55 +369,55 @@ public:
                 switch (other_face) {
                 case Face.north:
                     final switch (other_orientation) {
-                    case 0: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell);
+                    case 0: ok = (this_blk.njc == other_blk.nic) && (this_blk.nkc == other_blk.nkc); break;
+                    case 1: ok = (this_blk.njc == other_blk.nkc) && (this_blk.nkc == other_blk.nic); break;
+                    case 2: ok = (this_blk.njc == other_blk.nic) && (this_blk.nkc == other_blk.nkc); break;
+                    case 3: ok = (this_blk.njc == other_blk.nkc) && (this_blk.nkc == other_blk.nic);
                     }
                     if (!ok) { writefln(fstr, this_blk.id, "east", other_blk.id, "north", other_orientation); return -1; }
                     break;
                 case Face.east:
                     final switch (other_orientation) {
-                    case 0: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 2: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell);
+                    case 0: ok = (this_blk.njc == other_blk.njc) && (this_blk.nkc == other_blk.nkc); break;
+                    case 1: ok = (this_blk.njc == other_blk.nkc) && (this_blk.nkc == other_blk.njc); break;
+                    case 2: ok = (this_blk.njc == other_blk.njc) && (this_blk.nkc == other_blk.nkc); break;
+                    case 3: ok = (this_blk.njc == other_blk.nkc) && (this_blk.nkc == other_blk.njc);
                     }
                     if (!ok) { writefln(fstr, this_blk.id, "east", other_blk.id, "east", other_orientation); return -1; }
                     break;
                 case Face.south:
                     final switch (other_orientation) {
-                    case 0: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell);
+                    case 0: ok = (this_blk.njc == other_blk.nic) && (this_blk.nkc == other_blk.nkc); break;
+                    case 1: ok = (this_blk.njc == other_blk.nkc) && (this_blk.nkc == other_blk.nic); break;
+                    case 2: ok = (this_blk.njc == other_blk.nic) && (this_blk.nkc == other_blk.nkc); break;
+                    case 3: ok = (this_blk.njc == other_blk.nkc) && (this_blk.nkc == other_blk.nic);
                     }
                     if (!ok) { writefln(fstr, this_blk.id, "east", other_blk.id, "south", other_orientation); return -1; }
                     break;
                 case Face.west:
                     final switch (other_orientation) {
-                    case 0: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 2: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell);
+                    case 0: ok = (this_blk.njc == other_blk.njc) && (this_blk.nkc == other_blk.nkc); break;
+                    case 1: ok = (this_blk.njc == other_blk.nkc) && (this_blk.nkc == other_blk.njc); break;
+                    case 2: ok = (this_blk.njc == other_blk.njc) && (this_blk.nkc == other_blk.nkc); break;
+                    case 3: ok = (this_blk.njc == other_blk.nkc) && (this_blk.nkc == other_blk.njc);
                     }
                     if (!ok) { writefln(fstr, this_blk.id, "east", other_blk.id, "west", other_orientation); return -1; }
                     break;
                 case Face.top:
                     final switch (other_orientation) {
-                    case 0: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 1: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 3: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell);
+                    case 0: ok = (this_blk.njc == other_blk.nic) && (this_blk.nkc == other_blk.njc); break;
+                    case 1: ok = (this_blk.njc == other_blk.njc) && (this_blk.nkc == other_blk.nic); break;
+                    case 2: ok = (this_blk.njc == other_blk.nic) && (this_blk.nkc == other_blk.njc); break;
+                    case 3: ok = (this_blk.njc == other_blk.njc) && (this_blk.nkc == other_blk.nic);
                     }
                     if (!ok) { writefln(fstr, this_blk.id, "east", other_blk.id, "top", other_orientation); return -1; }
                     break;
                 case Face.bottom:
                     final switch (other_orientation) {
-                    case 0: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 1: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 3: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell);
+                    case 0: ok = (this_blk.njc == other_blk.nic) && (this_blk.nkc == other_blk.njc); break;
+                    case 1: ok = (this_blk.njc == other_blk.njc) && (this_blk.nkc == other_blk.nic); break;
+                    case 2: ok = (this_blk.njc == other_blk.nic) && (this_blk.nkc == other_blk.njc); break;
+                    case 3: ok = (this_blk.njc == other_blk.njc) && (this_blk.nkc == other_blk.nic);
                     }
                     if (!ok) { writefln(fstr, this_blk.id, "east", other_blk.id, "bottom", other_orientation); return -1; }
                     break;
@@ -430,55 +430,55 @@ public:
                 switch (other_face) {
                 case Face.north:
                     final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell);
+                    case 0: ok = (this_blk.nic == other_blk.nic) && (this_blk.nkc == other_blk.nkc); break;
+                    case 1: ok = (this_blk.nic == other_blk.nkc) && (this_blk.nkc == other_blk.nic); break;
+                    case 2: ok = (this_blk.nic == other_blk.nic) && (this_blk.nkc == other_blk.nkc); break;
+                    case 3: ok = (this_blk.nic == other_blk.nkc) && (this_blk.nkc == other_blk.nic);
                     }
                     if (!ok) { writefln(fstr, this_blk.id, "south", other_blk.id, "north", other_orientation); return -1; }
                     break;
                 case Face.east:
                     final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell);
+                    case 0: ok = (this_blk.nic == other_blk.njc) && (this_blk.nkc == other_blk.nkc); break;
+                    case 1: ok = (this_blk.nic == other_blk.nkc) && (this_blk.nkc == other_blk.njc); break;
+                    case 2: ok = (this_blk.nic == other_blk.njc) && (this_blk.nkc == other_blk.nkc); break;
+                    case 3: ok = (this_blk.nic == other_blk.nkc) && (this_blk.nkc == other_blk.njc);
                     }
                     if (!ok) { writefln(fstr, this_blk.id, "south", other_blk.id, "east", other_orientation); return -1; }
                     break;
                 case Face.south:
                     final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell);
+                    case 0: ok = (this_blk.nic == other_blk.nic) && (this_blk.nkc == other_blk.nkc); break;
+                    case 1: ok = (this_blk.nic == other_blk.nkc) && (this_blk.nkc == other_blk.nic); break;
+                    case 2: ok = (this_blk.nic == other_blk.nic) && (this_blk.nkc == other_blk.nkc); break;
+                    case 3: ok = (this_blk.nic == other_blk.nkc) && (this_blk.nkc == other_blk.nic);
                     }
                     if (!ok) { writefln(fstr, this_blk.id, "south", other_blk.id, "south", other_orientation); return -1; }
                     break;
                 case Face.west:
                     final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell);
+                    case 0: ok = (this_blk.nic == other_blk.njc) && (this_blk.nkc == other_blk.nkc); break;
+                    case 1: ok = (this_blk.nic == other_blk.nkc) && (this_blk.nkc == other_blk.njc); break;
+                    case 2: ok = (this_blk.nic == other_blk.njc) && (this_blk.nkc == other_blk.nkc); break;
+                    case 3: ok = (this_blk.nic == other_blk.nkc) && (this_blk.nkc == other_blk.njc);
                     }
                     if (!ok) { writefln(fstr, this_blk.id, "south", other_blk.id, "west", other_orientation); return -1; }
                     break;
                 case Face.top:
                     final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell);
+                    case 0: ok = (this_blk.nic == other_blk.nic) && (this_blk.nkc == other_blk.njc); break;
+                    case 1: ok = (this_blk.nic == other_blk.njc) && (this_blk.nkc == other_blk.nic); break;
+                    case 2: ok = (this_blk.nic == other_blk.nic) && (this_blk.nkc == other_blk.njc); break;
+                    case 3: ok = (this_blk.nic == other_blk.njc) && (this_blk.nkc == other_blk.nic);
                     }
                     if (!ok) { writefln(fstr, this_blk.id, "south", other_blk.id, "top", other_orientation); return -1; }
                     break;
                 case Face.bottom:
                     final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell);
+                    case 0: ok = (this_blk.nic == other_blk.nic) && (this_blk.nkc == other_blk.njc); break;
+                    case 1: ok = (this_blk.nic == other_blk.njc) && (this_blk.nkc == other_blk.nic); break;
+                    case 2: ok = (this_blk.nic == other_blk.nic) && (this_blk.nkc == other_blk.njc); break;
+                    case 3: ok = (this_blk.nic == other_blk.njc) && (this_blk.nkc == other_blk.nic);
                     }
                     if (!ok) { writefln(fstr, this_blk.id, "south", other_blk.id, "bottom", other_orientation); return -1; }
                     break;
@@ -491,55 +491,55 @@ public:
                 switch (other_face) {
                 case Face.north:
                     final switch (other_orientation) {
-                    case 0: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell);
+                    case 0: ok = (this_blk.njc == other_blk.nic) && (this_blk.nkc == other_blk.nkc); break;
+                    case 1: ok = (this_blk.njc == other_blk.nkc) && (this_blk.nkc == other_blk.nic); break;
+                    case 2: ok = (this_blk.njc == other_blk.nic) && (this_blk.nkc == other_blk.nkc); break;
+                    case 3: ok = (this_blk.njc == other_blk.nkc) && (this_blk.nkc == other_blk.nic);
                     }
                     if (!ok) { writefln(fstr, this_blk.id, "west", other_blk.id, "north", other_orientation); return -1; }
                     break;
                 case Face.east:
                     final switch (other_orientation) {
-                    case 0: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 2: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell);
+                    case 0: ok = (this_blk.njc == other_blk.njc) && (this_blk.nkc == other_blk.nkc); break;
+                    case 1: ok = (this_blk.njc == other_blk.nkc) && (this_blk.nkc == other_blk.njc); break;
+                    case 2: ok = (this_blk.njc == other_blk.njc) && (this_blk.nkc == other_blk.nkc); break;
+                    case 3: ok = (this_blk.njc == other_blk.nkc) && (this_blk.nkc == other_blk.njc);
                     }
                     if (!ok) { writefln(fstr, this_blk.id, "west", other_blk.id, "east", other_orientation); return -1; }
                     break;
                 case Face.south:
                     final switch (other_orientation) {
-                    case 0: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.nicell);
+                    case 0: ok = (this_blk.njc == other_blk.nic) && (this_blk.nkc == other_blk.nkc); break;
+                    case 1: ok = (this_blk.njc == other_blk.nkc) && (this_blk.nkc == other_blk.nic); break;
+                    case 2: ok = (this_blk.njc == other_blk.nic) && (this_blk.nkc == other_blk.nkc); break;
+                    case 3: ok = (this_blk.njc == other_blk.nkc) && (this_blk.nkc == other_blk.nic);
                     }
                     if (!ok) { writefln(fstr, this_blk.id, "west", other_blk.id, "south", other_orientation); return -1; }
                     break;
                 case Face.west:
                     final switch (other_orientation) {
-                    case 0: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 2: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.njcell == other_blk.nkcell) && (this_blk.nkcell == other_blk.njcell);
+                    case 0: ok = (this_blk.njc == other_blk.njc) && (this_blk.nkc == other_blk.nkc); break;
+                    case 1: ok = (this_blk.njc == other_blk.nkc) && (this_blk.nkc == other_blk.njc); break;
+                    case 2: ok = (this_blk.njc == other_blk.njc) && (this_blk.nkc == other_blk.nkc); break;
+                    case 3: ok = (this_blk.njc == other_blk.nkc) && (this_blk.nkc == other_blk.njc);
                     }
                     if (!ok) { writefln(fstr, this_blk.id, "west", other_blk.id, "west", other_orientation); return -1; }
                     break;
                 case Face.top:
                     final switch (other_orientation) {
-                    case 0: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 1: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 3: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell);
+                    case 0: ok = (this_blk.njc == other_blk.nic) && (this_blk.nkc == other_blk.njc); break;
+                    case 1: ok = (this_blk.njc == other_blk.njc) && (this_blk.nkc == other_blk.nic); break;
+                    case 2: ok = (this_blk.njc == other_blk.nic) && (this_blk.nkc == other_blk.njc); break;
+                    case 3: ok = (this_blk.njc == other_blk.njc) && (this_blk.nkc == other_blk.nic);
                     }
                     if (!ok) { writefln(fstr, this_blk.id, "west", other_blk.id, "top", other_orientation); return -1; }
                     break;
                 case Face.bottom:
                     final switch (other_orientation) {
-                    case 0: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 1: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.njcell == other_blk.nicell) && (this_blk.nkcell == other_blk.njcell); break;
-                    case 3: ok = (this_blk.njcell == other_blk.njcell) && (this_blk.nkcell == other_blk.nicell);
+                    case 0: ok = (this_blk.njc == other_blk.nic) && (this_blk.nkc == other_blk.njc); break;
+                    case 1: ok = (this_blk.njc == other_blk.njc) && (this_blk.nkc == other_blk.nic); break;
+                    case 2: ok = (this_blk.njc == other_blk.nic) && (this_blk.nkc == other_blk.njc); break;
+                    case 3: ok = (this_blk.njc == other_blk.njc) && (this_blk.nkc == other_blk.nic);
                     }
                     if (!ok) { writefln(fstr, this_blk.id, "west", other_blk.id, "bottom", other_orientation); return -1; }
                     break;
@@ -552,55 +552,55 @@ public:
                 switch (other_face) {
                 case Face.north:
                     final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.nicell);
+                    case 0: ok = (this_blk.nic == other_blk.nic) && (this_blk.njc == other_blk.nkc); break;
+                    case 1: ok = (this_blk.nic == other_blk.nkc) && (this_blk.njc == other_blk.nic); break;
+                    case 2: ok = (this_blk.nic == other_blk.nic) && (this_blk.njc == other_blk.nkc); break;
+                    case 3: ok = (this_blk.nic == other_blk.nkc) && (this_blk.njc == other_blk.nic);
                     }
                     if (!ok) { writefln(fstr, this_blk.id, "top", other_blk.id, "north", other_orientation); return -1; }
                     break;
                 case Face.east:
                     final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.njcell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.njcell);
+                    case 0: ok = (this_blk.nic == other_blk.njc) && (this_blk.njc == other_blk.nkc); break;
+                    case 1: ok = (this_blk.nic == other_blk.nkc) && (this_blk.njc == other_blk.njc); break;
+                    case 2: ok = (this_blk.nic == other_blk.njc) && (this_blk.njc == other_blk.nkc); break;
+                    case 3: ok = (this_blk.nic == other_blk.nkc) && (this_blk.njc == other_blk.njc);
                     }
                     if (!ok) { writefln(fstr, this_blk.id, "top", other_blk.id, "east", other_orientation); return -1; }
                     break;
                 case Face.south:
                     final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.nicell);
+                    case 0: ok = (this_blk.nic == other_blk.nic) && (this_blk.njc == other_blk.nkc); break;
+                    case 1: ok = (this_blk.nic == other_blk.nkc) && (this_blk.njc == other_blk.nic); break;
+                    case 2: ok = (this_blk.nic == other_blk.nic) && (this_blk.njc == other_blk.nkc); break;
+                    case 3: ok = (this_blk.nic == other_blk.nkc) && (this_blk.njc == other_blk.nic);
                     }
                     if (!ok) { writefln(fstr, this_blk.id, "top", other_blk.id, "south", other_orientation); return -1; }
                     break;
                 case Face.west:
                     final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.njcell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.njcell);
+                    case 0: ok = (this_blk.nic == other_blk.njc) && (this_blk.njc == other_blk.nkc); break;
+                    case 1: ok = (this_blk.nic == other_blk.nkc) && (this_blk.njc == other_blk.njc); break;
+                    case 2: ok = (this_blk.nic == other_blk.njc) && (this_blk.njc == other_blk.nkc); break;
+                    case 3: ok = (this_blk.nic == other_blk.nkc) && (this_blk.njc == other_blk.njc);
                     }
                     if (!ok) { writefln(fstr, this_blk.id, "top", other_blk.id, "west", other_orientation); return -1; }
                     break;
                 case Face.top:
                     final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.njcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.njcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nicell);
+                    case 0: ok = (this_blk.nic == other_blk.nic) && (this_blk.njc == other_blk.njc); break;
+                    case 1: ok = (this_blk.nic == other_blk.njc) && (this_blk.njc == other_blk.nic); break;
+                    case 2: ok = (this_blk.nic == other_blk.nic) && (this_blk.njc == other_blk.njc); break;
+                    case 3: ok = (this_blk.nic == other_blk.njc) && (this_blk.njc == other_blk.nic);
                     }
                     if (!ok) { writefln(fstr, this_blk.id, "top", other_blk.id, "top", other_orientation); return -1; }
                     break;
                 case Face.bottom:
                     final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.njcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.njcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nicell);
+                    case 0: ok = (this_blk.nic == other_blk.nic) && (this_blk.njc == other_blk.njc); break;
+                    case 1: ok = (this_blk.nic == other_blk.njc) && (this_blk.njc == other_blk.nic); break;
+                    case 2: ok = (this_blk.nic == other_blk.nic) && (this_blk.njc == other_blk.njc); break;
+                    case 3: ok = (this_blk.nic == other_blk.njc) && (this_blk.njc == other_blk.nic);
                     }
                     if (!ok) { writefln(fstr, this_blk.id, "top", other_blk.id, "bottom", other_orientation); return -1; }
                     break;
@@ -613,55 +613,55 @@ public:
                 switch (other_face) {
                 case Face.north:
                     final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.nicell);
+                    case 0: ok = (this_blk.nic == other_blk.nic) && (this_blk.njc == other_blk.nkc); break;
+                    case 1: ok = (this_blk.nic == other_blk.nkc) && (this_blk.njc == other_blk.nic); break;
+                    case 2: ok = (this_blk.nic == other_blk.nic) && (this_blk.njc == other_blk.nkc); break;
+                    case 3: ok = (this_blk.nic == other_blk.nkc) && (this_blk.njc == other_blk.nic);
                     }
                     if (!ok) { writefln(fstr, this_blk.id, "bottom", other_blk.id, "north", other_orientation); return -1; }
                     break;
                 case Face.east:
                     final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.njcell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.njcell);
+                    case 0: ok = (this_blk.nic == other_blk.njc) && (this_blk.njc == other_blk.nkc); break;
+                    case 1: ok = (this_blk.nic == other_blk.nkc) && (this_blk.njc == other_blk.njc); break;
+                    case 2: ok = (this_blk.nic == other_blk.njc) && (this_blk.njc == other_blk.nkc); break;
+                    case 3: ok = (this_blk.nic == other_blk.nkc) && (this_blk.njc == other_blk.njc);
                     }
                     if (!ok) { writefln(fstr, this_blk.id, "bottom", other_blk.id, "east", other_orientation); return -1; }
                     break;
                 case Face.south:
                     final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.nicell);
+                    case 0: ok = (this_blk.nic == other_blk.nic) && (this_blk.njc == other_blk.nkc); break;
+                    case 1: ok = (this_blk.nic == other_blk.nkc) && (this_blk.njc == other_blk.nic); break;
+                    case 2: ok = (this_blk.nic == other_blk.nic) && (this_blk.njc == other_blk.nkc); break;
+                    case 3: ok = (this_blk.nic == other_blk.nkc) && (this_blk.njc == other_blk.nic);
                     }
                     if (!ok) { writefln(fstr, this_blk.id, "bottom", other_blk.id, "south", other_orientation); return -1; }
                     break;
                 case Face.west:
                     final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nkcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.njcell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nkcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.nkcell) && (this_blk.njcell == other_blk.njcell);
+                    case 0: ok = (this_blk.nic == other_blk.njc) && (this_blk.njc == other_blk.nkc); break;
+                    case 1: ok = (this_blk.nic == other_blk.nkc) && (this_blk.njc == other_blk.njc); break;
+                    case 2: ok = (this_blk.nic == other_blk.njc) && (this_blk.njc == other_blk.nkc); break;
+                    case 3: ok = (this_blk.nic == other_blk.nkc) && (this_blk.njc == other_blk.njc);
                     }
                     if (!ok) { writefln(fstr, this_blk.id, "bottom", other_blk.id, "west", other_orientation); return -1; }
                     break;
                 case Face.top:
                     final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.njcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.njcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nicell);
+                    case 0: ok = (this_blk.nic == other_blk.nic) && (this_blk.njc == other_blk.njc); break;
+                    case 1: ok = (this_blk.nic == other_blk.njc) && (this_blk.njc == other_blk.nic); break;
+                    case 2: ok = (this_blk.nic == other_blk.nic) && (this_blk.njc == other_blk.njc); break;
+                    case 3: ok = (this_blk.nic == other_blk.njc) && (this_blk.njc == other_blk.nic);
                     }
                     if (!ok) { writefln(fstr, this_blk.id, "bottom", other_blk.id, "top", other_orientation); return -1; }
                     break;
                 case Face.bottom:
                     final switch (other_orientation) {
-                    case 0: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.njcell); break;
-                    case 1: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nicell); break;
-                    case 2: ok = (this_blk.nicell == other_blk.nicell) && (this_blk.njcell == other_blk.njcell); break;
-                    case 3: ok = (this_blk.nicell == other_blk.njcell) && (this_blk.njcell == other_blk.nicell);
+                    case 0: ok = (this_blk.nic == other_blk.nic) && (this_blk.njc == other_blk.njc); break;
+                    case 1: ok = (this_blk.nic == other_blk.njc) && (this_blk.njc == other_blk.nic); break;
+                    case 2: ok = (this_blk.nic == other_blk.nic) && (this_blk.njc == other_blk.njc); break;
+                    case 3: ok = (this_blk.nic == other_blk.njc) && (this_blk.njc == other_blk.nic);
                     }
                     if (!ok) { writefln(fstr, this_blk.id, "bottom", other_blk.id, "bottom", other_orientation); return -1; }
                     break;
@@ -696,50 +696,50 @@ public:
             other_blk_rank = GlobalConfig.mpi_rank_for_block[other_blk.id];
         }
         //
-        // For the source cells, we use indices into the hypothetical block of active cells.
+        // Flow data is copied from the other (source) block into this (destination) block.
+        // For the source cells, we use indices into the other block of active cells.
         size_t i_src, j_src, k_src;
-        // For ghost-cell indices into the destination block, we use the raw indices into the
-        // larger underlying block array that includes the surrounding layers of ghost cells.
+        // To find ghost-cells in this destination block, we use the boundary face that holds
+        // arrays of references that include the attached ghost cells.
         size_t i_dest, j_dest, k_dest;
         //
         if (blk.myConfig.dimensions == 2) {
             // Handle the 2D case separately.
             switch (which_boundary) {
             case Face.north:
-                j_dest = this_blk.jmax;  // index of the north-most plane of active cells
-                foreach (i; 0 .. this_blk.nicell) {
-                    i_dest = i + this_blk.imin;
-                    ghost_cells ~= this_blk.get_cell(i_dest,j_dest+1);
-                    ghost_cells ~= this_blk.get_cell(i_dest,j_dest+2);
-                    if (nghost3) { ghost_cells ~= this_blk.get_cell(i_dest,j_dest+3); }
+                j_dest = this_blk.njc;  // index of the north-most plane of faces
+                foreach (i; 0 .. this_blk.nic) {
+                    i_dest = i;
+                    auto f = this_blk.get_ifj(i_dest,j_dest);
+                    foreach (n; 0 .. this_blk.n_ghost_cell_layers) { ghost_cells ~= f.right_cells[n]; }
                     switch (other_face) {
                     case Face.north:
-                        j_src = other_blk.njcell - 1;
-                        i_src = other_blk.nicell - i - 1;
-                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
-                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1);
-                        if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-2); }
+                        j_src = other_blk.njc - 1;
+                        i_src = other_blk.nic - i - 1;
+                        foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                            mapped_cell_ids ~= other_blk.cell_index(i_src,j_src-n);
+                        }
                         break;
                     case Face.east:
-                        i_src = other_blk.nicell - 1;
+                        i_src = other_blk.nic - 1;
                         j_src = i;
-                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
-                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src);
-                        if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-2,j_src); }
+                        foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                            mapped_cell_ids ~= other_blk.cell_index(i_src-n,j_src);
+                        }
                         break;
                     case Face.south:
                         j_src = 0;
                         i_src = i;
-                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
-                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1);
-                        if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+2); }
+                        foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                            mapped_cell_ids ~= other_blk.cell_index(i_src,j_src+n);
+                        }
                         break;
                     case Face.west:
                         i_src = 0;
-                        j_src = other_blk.njcell - i - 1;
-                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src,k_src);
-                        if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+2,j_src,k_src); }
+                        j_src = other_blk.njc - i - 1;
+                        foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                            mapped_cell_ids ~= other_blk.cell_index(i_src+n,j_src);
+                        }
                         break;
                     default:
                         throw new FlowSolverException("Incorrect boundary connection, source face.");
@@ -747,40 +747,39 @@ public:
                 } // i loop
                 break;
             case Face.east:
-                i_dest = this_blk.imax;  // index of the east-most plane of active cells
-                foreach (j; 0 .. this_blk.njcell) {
-                    j_dest = j + this_blk.jmin;
-                    ghost_cells ~= this_blk.get_cell(i_dest+1,j_dest);
-                    ghost_cells ~= this_blk.get_cell(i_dest+2,j_dest);
-                    if (nghost3) { ghost_cells ~= this_blk.get_cell(i_dest+3,j_dest); }
+                i_dest = this_blk.nic;  // index of the east-most plane of faces
+                foreach (j; 0 .. this_blk.njc) {
+                    j_dest = j;
+                    auto f = this_blk.get_ifi(i_dest,j_dest);
+                    foreach (n; 0 .. this_blk.n_ghost_cell_layers) { ghost_cells ~= f.right_cells[n]; }
                     switch (other_face) {
                     case Face.north:
-                        j_src = other_blk.njcell - 1;
+                        j_src = other_blk.njc - 1;
                         i_src = j;
-                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
-                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1);
-                        if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-2); }
+                        foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                            mapped_cell_ids ~= other_blk.cell_index(i_src,j_src-n);
+                        }
                         break;
                     case Face.east:
-                        i_src = other_blk.nicell - 1;
-                        j_src = other_blk.njcell - j - 1;
-                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
-                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src);
-                        if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-2,j_src); }
+                        i_src = other_blk.nic - 1;
+                        j_src = other_blk.njc - j - 1;
+                        foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                            mapped_cell_ids ~= other_blk.cell_index(i_src-n,j_src);
+                        }
                         break;
                     case Face.south:
                         j_src = 0;
-                        i_src = other_blk.nicell - j - 1;
-                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
-                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1);
-                        if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+2); }
+                        i_src = other_blk.nic - j - 1;
+                        foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                            mapped_cell_ids ~= other_blk.cell_index(i_src,j_src+n);
+                        }
                         break;
                     case Face.west:
                         i_src = 0;
                         j_src = j;
-                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
-                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src);
-                        if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+2,j_src); }
+                        foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                            mapped_cell_ids ~= other_blk.cell_index(i_src+n,j_src);
+                        }
                         break;
                     default:
                         throw new FlowSolverException("Incorrect boundary connection, source face.");
@@ -788,40 +787,39 @@ public:
                 } // j loop
                 break;
             case Face.south:
-                j_dest = this_blk.jmin;  // index of the south-most plane of active cells
-                foreach (i; 0 .. this_blk.nicell) {
-                    i_dest = i + this_blk.imin;
-                    ghost_cells ~= this_blk.get_cell(i_dest,j_dest-1);
-                    ghost_cells ~= this_blk.get_cell(i_dest,j_dest-2);
-                    if (nghost3) { ghost_cells ~= this_blk.get_cell(i_dest,j_dest-3); }
+                j_dest = 0;  // index of the south-most plane of faces
+                foreach (i; 0 .. this_blk.nic) {
+                    i_dest = i;
+                    auto f = this_blk.get_ifj(i_dest,j_dest);
+                    foreach (n; 0 .. this_blk.n_ghost_cell_layers) { ghost_cells ~= f.left_cells[n]; }
                     switch (other_face) {
                     case Face.north:
-                        j_src = other_blk.njcell - 1;
+                        j_src = other_blk.njc - 1;
                         i_src = i;
-                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
-                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1);
-                        if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-2); }
+                        foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                            mapped_cell_ids ~= other_blk.cell_index(i_src,j_src-n);
+                        }
                         break;
                     case Face.east:
-                        i_src = other_blk.nicell - 1;
-                        j_src = other_blk.njcell - i - 1;
-                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
-                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src);
-                        if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-2,j_src); }
+                        i_src = other_blk.nic - 1;
+                        j_src = other_blk.njc - i - 1;
+                        foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                            mapped_cell_ids ~= other_blk.cell_index(i_src-n,j_src);
+                        }
                         break;
                     case Face.south:
                         j_src = 0;
-                        i_src = other_blk.nicell - i - 1;
-                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
-                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1);
-                        if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+2); }
+                        i_src = other_blk.nic - i - 1;
+                        foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                            mapped_cell_ids ~= other_blk.cell_index(i_src,j_src+n);
+                        }
                         break;
                     case Face.west:
                         i_src = 0;
                         j_src = i;
-                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
-                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src);
-                        if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+2,j_src); }
+                        foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                            mapped_cell_ids ~= other_blk.cell_index(i_src+n,j_src);
+                        }
                         break;
                     default:
                         throw new FlowSolverException("Incorrect boundary connection, source face.");
@@ -829,40 +827,39 @@ public:
                 } // i loop
                 break;
             case Face.west:
-                i_dest = this_blk.imin;  // index of the west-most plane of active cells
-                foreach (j; 0 .. this_blk.njcell) {
-                    j_dest = j + this_blk.jmin;
-                    ghost_cells ~= this_blk.get_cell(i_dest-1,j_dest);
-                    ghost_cells ~= this_blk.get_cell(i_dest-2,j_dest);
-                    if (nghost3) { ghost_cells ~= this_blk.get_cell(i_dest-3,j_dest); }
+                i_dest = 0;  // index of the west-most plane of faces
+                foreach (j; 0 .. this_blk.njc) {
+                    j_dest = j;
+                    auto f = this_blk.get_ifi(i_dest,j_dest);
+                    foreach (n; 0 .. this_blk.n_ghost_cell_layers) { ghost_cells ~= f.left_cells[n]; }
                     switch (other_face) {
                     case Face.north:
-                        j_src = other_blk.njcell - 1;
-                        i_src = other_blk.nicell - j - 1;
-                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
-                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1);
-                        if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-2); }
+                        j_src = other_blk.njc - 1;
+                        i_src = other_blk.nic - j - 1;
+                        foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                            mapped_cell_ids ~= other_blk.cell_index(i_src,j_src-n);
+                        }
                         break;
                     case Face.east:
-                        i_src = other_blk.nicell - 1;
+                        i_src = other_blk.nic - 1;
                         j_src = j;
-                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
-                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src);
-                        if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-2,j_src); }
+                        foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                            mapped_cell_ids ~= other_blk.cell_index(i_src-n,j_src);
+                        }
                         break;
                     case Face.south:
                         j_src = 0;
                         i_src = j;
-                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
-                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1);
-                        if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+2); }
+                        foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                            mapped_cell_ids ~= other_blk.cell_index(i_src,j_src+n);
+                        }
                         break;
                     case Face.west:
                         i_src = 0;
-                        j_src = other_blk.njcell - j - 1;
-                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
-                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src);
-                        if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+2,j_src); }
+                        j_src = other_blk.njc - j - 1;
+                        foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                            mapped_cell_ids ~= other_blk.cell_index(i_src+n,j_src);
+                        }
                         break;
                     default:
                         throw new FlowSolverException("Incorrect boundary connection, source face.");
@@ -877,511 +874,508 @@ public:
             // Continue on with 3D work...
             final switch (which_boundary) {
             case Face.north:
-                j_dest = this_blk.jmax;  // index of the north-most plane of active cells
-                foreach (i; 0 .. this_blk.nicell) {
-                    i_dest = i + this_blk.imin;
-                    foreach (k; 0 .. this_blk.nkcell) {
-                        k_dest = k + this_blk.kmin;
-                        ghost_cells ~= this_blk.get_cell(i_dest,j_dest+1,k_dest);
-                        ghost_cells ~= this_blk.get_cell(i_dest,j_dest+2,k_dest);
-                        if (nghost3) { ghost_cells ~= this_blk.get_cell(i_dest,j_dest+3,k_dest); }
+                j_dest = this_blk.njc;  // index of the north-most plane of faces
+                foreach (i; 0 .. this_blk.nic) {
+                    i_dest = i;
+                    foreach (k; 0 .. this_blk.nkc) {
+                        k_dest = k;
+                        auto f = this_blk.get_ifj(i_dest,j_dest,k_dest);
+                        foreach (n; 0 .. this_blk.n_ghost_cell_layers) { ghost_cells ~= f.right_cells[n]; }
                         final switch (other_face) {
                         case Face.north:
-                            j_src = other_blk.njcell - 1;
+                            j_src = other_blk.njc - 1;
                             final switch (other_orientation) {
-                            case 0: i_src = other_blk.nicell - i - 1; k_src = k; break;
+                            case 0: i_src = other_blk.nic - i - 1; k_src = k; break;
                             case 1: i_src = k; k_src = i; break;
-                            case 2: i_src = i; k_src = other_blk.nkcell - k - 1; break;
-                            case 3: i_src = other_blk.nicell - k - 1; k_src = other_blk.nkcell - i - 1;
+                            case 2: i_src = i; k_src = other_blk.nkc - k - 1; break;
+                            case 3: i_src = other_blk.nic - k - 1; k_src = other_blk.nkc - i - 1;
                             }
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1,k_src);
-                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-2,k_src); }
+                            foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                                mapped_cell_ids ~= other_blk.cell_index(i_src,j_src-n,k_src);
+                            }
                             break;
                         case Face.east:
-                            i_src = other_blk.nicell - 1;
+                            i_src = other_blk.nic - 1;
                             final switch (other_orientation) {
                             case 0: j_src = i; k_src = k; break;
-                            case 1: j_src = other_blk.njcell - k - 1; k_src = i; break;
-                            case 2: j_src = other_blk.njcell - i - 1; k_src = other_blk.nkcell - k - 1; break;
-                            case 3: j_src = k; k_src = other_blk.nkcell - i - 1;
+                            case 1: j_src = other_blk.njc - k - 1; k_src = i; break;
+                            case 2: j_src = other_blk.njc - i - 1; k_src = other_blk.nkc - k - 1; break;
+                            case 3: j_src = k; k_src = other_blk.nkc - i - 1;
                             }
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src,k_src);
-                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-2,j_src,k_src); }
+                            foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                                mapped_cell_ids ~= other_blk.cell_index(i_src-n,j_src,k_src);
+                            }
                             break;
                         case Face.south:
                             j_src = 0;
                             final switch (other_orientation) {
                             case 0: i_src = i; k_src = k; break;
-                            case 1: i_src = other_blk.nicell - k - 1; k_src = i; break;
-                            case 2: i_src = other_blk.nicell - i - 1; k_src = other_blk.nkcell - k - 1; break;
-                            case 3: i_src = k; k_src = other_blk.nkcell - i - 1;
+                            case 1: i_src = other_blk.nic - k - 1; k_src = i; break;
+                            case 2: i_src = other_blk.nic - i - 1; k_src = other_blk.nkc - k - 1; break;
+                            case 3: i_src = k; k_src = other_blk.nkc - i - 1;
                             }
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1,k_src);
-                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+2,k_src); }
+                            foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                                mapped_cell_ids ~= other_blk.cell_index(i_src,j_src+n,k_src);
+                            }
                             break;
                         case Face.west:
                             i_src = 0;
                             final switch (other_orientation) {
-                            case 0: j_src = other_blk.njcell - i - 1; k_src = k; break;
+                            case 0: j_src = other_blk.njc - i - 1; k_src = k; break;
                             case 1: j_src = k; k_src = i; break;
-                            case 2: j_src = i; k_src = other_blk.nkcell - k - 1; break;
-                            case 3: j_src = other_blk.njcell - k - 1; k_src = other_blk.nkcell - i - 1;
+                            case 2: j_src = i; k_src = other_blk.nkc - k - 1; break;
+                            case 3: j_src = other_blk.njc - k - 1; k_src = other_blk.nkc - i - 1;
                             }
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src,k_src);
-                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+2,j_src,k_src); }
+                            foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                                mapped_cell_ids ~= other_blk.cell_index(i_src+n,j_src,k_src);
+                            }
                             break;
                         case Face.top:
-                            k_src = other_blk.nkcell - 1;
+                            k_src = other_blk.nkc - 1;
                             final switch (other_orientation) {
                             case 0: i_src = i; j_src = k; break;
-                            case 1: i_src = other_blk.nicell - k - 1; j_src = i; break;
-                            case 2: i_src = other_blk.nicell - i - 1; j_src = other_blk.njcell - k - 1; break;
-                            case 3: i_src = k; j_src = other_blk.njcell - i - 1;
+                            case 1: i_src = other_blk.nic - k - 1; j_src = i; break;
+                            case 2: i_src = other_blk.nic - i - 1; j_src = other_blk.njc - k - 1; break;
+                            case 3: i_src = k; j_src = other_blk.njc - i - 1;
                             }
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-1);
-                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-2); }
+                            foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                                mapped_cell_ids ~= other_blk.cell_index(i_src,j_src,k_src-n);
+                            }
                             break;
                         case Face.bottom:
                             k_src = 0;
                             final switch (other_orientation) {
-                            case 0: i_src = other_blk.nicell - i - 1; j_src = k; break;
+                            case 0: i_src = other_blk.nic - i - 1; j_src = k; break;
                             case 1: i_src = k; j_src = i; break;
-                            case 2: i_src = i; j_src = other_blk.njcell - k - 1; break;
-                            case 3: i_src = other_blk.nicell - k - 1; j_src = other_blk.njcell - i - 1;
+                            case 2: i_src = i; j_src = other_blk.njc - k - 1; break;
+                            case 3: i_src = other_blk.nic - k - 1; j_src = other_blk.njc - i - 1;
                             }
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+1);
-                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+2); }
+                            foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                                mapped_cell_ids ~= other_blk.cell_index(i_src,j_src,k_src+n);
+                            }
                         } // end switch (other_face)
                     } // k loop
                 } // i loop
                 break;
             case Face.east:
-                i_dest = this_blk.imax;  // index of the east-most plane of active cells
-                foreach (j; 0 .. this_blk.njcell) {
-                    j_dest = j + this_blk.jmin;
-                    foreach (k; 0 .. this_blk.nkcell) {
-                        k_dest = k + this_blk.kmin;
+                i_dest = this_blk.nic;  // index of the east-most plane of faces
+                foreach (j; 0 .. this_blk.njc) {
+                    j_dest = j;
+                    foreach (k; 0 .. this_blk.nkc) {
+                        k_dest = k;
+                        auto f = this_blk.get_ifi(i_dest,j_dest,k_dest);
+                        foreach (n; 0 .. this_blk.n_ghost_cell_layers) { ghost_cells ~= f.right_cells[n]; }
                         ghost_cells ~= this_blk.get_cell(i_dest+1,j_dest,k_dest);
                         ghost_cells ~= this_blk.get_cell(i_dest+2,j_dest,k_dest);
                         if (nghost3) { ghost_cells ~= this_blk.get_cell(i_dest+3,j_dest,k_dest); }
                         final switch (other_face) {
                         case Face.north:
-                            j_src = other_blk.njcell - 1;
+                            j_src = other_blk.njc - 1;
                             final switch (other_orientation) {
                             case 0: i_src = j; k_src = k; break;
-                            case 1: i_src = k; k_src = other_blk.nkcell - j - 1; break;
-                            case 2: i_src = other_blk.nicell - j - 1; k_src = other_blk.nkcell - k - 1; break;
-                            case 3: i_src = other_blk.nicell - k - 1; k_src = j;
+                            case 1: i_src = k; k_src = other_blk.nkc - j - 1; break;
+                            case 2: i_src = other_blk.nic - j - 1; k_src = other_blk.nkc - k - 1; break;
+                            case 3: i_src = other_blk.nic - k - 1; k_src = j;
                             }
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1,k_src);
-                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-2,k_src); }
+                            foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                                mapped_cell_ids ~= other_blk.cell_index(i_src,j_src-n,k_src);
+                            }
                             break;
                         case Face.east:
-                            i_src = other_blk.nicell - 1;
+                            i_src = other_blk.nic - 1;
                             final switch (other_orientation) {
-                            case 0: j_src = other_blk.njcell - j - 1; k_src = k; break;
-                            case 1: j_src = other_blk.njcell - k - 1; k_src = other_blk.nkcell - j - 1; break;
-                            case 2: j_src = j; k_src = other_blk.nkcell - k - 1; break;
+                            case 0: j_src = other_blk.njc - j - 1; k_src = k; break;
+                            case 1: j_src = other_blk.njc - k - 1; k_src = other_blk.nkc - j - 1; break;
+                            case 2: j_src = j; k_src = other_blk.nkc - k - 1; break;
                             case 3: j_src = k; k_src = j;
                             }
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src,k_src);
-                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-2,j_src,k_src); }
+                            foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                                mapped_cell_ids ~= other_blk.cell_index(i_src-n,j_src,k_src);
+                            }
                             break;
                         case Face.south:
                             j_src = 0;
                             final switch (other_orientation) {
-                            case 0: i_src = other_blk.nicell - j - 1; k_src = k; break;
-                            case 1: i_src = other_blk.nicell - k - 1; k_src = other_blk.nkcell - j - 1; break;
-                            case 2: i_src = j; k_src = other_blk.nkcell - k - 1; break;
+                            case 0: i_src = other_blk.nic - j - 1; k_src = k; break;
+                            case 1: i_src = other_blk.nic - k - 1; k_src = other_blk.nkc - j - 1; break;
+                            case 2: i_src = j; k_src = other_blk.nkc - k - 1; break;
                             case 3: i_src = k; k_src = j;
                             }
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1,k_src);
-                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+2,k_src); }
+                            foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                                mapped_cell_ids ~= other_blk.cell_index(i_src,j_src+n,k_src);
+                            }
                             break;
                         case Face.west:
                             i_src = 0;
                             final switch (other_orientation) {
                             case 0: j_src = j; k_src = k; break;
-                            case 1: j_src = k; k_src = other_blk.nkcell - j - 1; break;
-                            case 2: j_src = other_blk.njcell - j - 1; k_src = other_blk.nkcell - k - 1; break;
-                            case 3: j_src = other_blk.njcell - k - 1; k_src = j;
+                            case 1: j_src = k; k_src = other_blk.nkc - j - 1; break;
+                            case 2: j_src = other_blk.njc - j - 1; k_src = other_blk.nkc - k - 1; break;
+                            case 3: j_src = other_blk.njc - k - 1; k_src = j;
                             }
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src,k_src);
-                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+2,j_src,k_src); }
+                            foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                                mapped_cell_ids ~= other_blk.cell_index(i_src+n,j_src,k_src);
+                            }
                             break;
                         case Face.top:
-                            k_src = other_blk.nkcell - 1;
+                            k_src = other_blk.nkc - 1;
                             final switch (other_orientation) {
-                            case 0: i_src = other_blk.nicell - j - 1; j_src = k; break;
-                            case 1: i_src = other_blk.nicell - k - 1; j_src = other_blk.njcell - j - 1; break;
-                            case 2: i_src = j; j_src = other_blk.njcell - k - 1; break;
+                            case 0: i_src = other_blk.nic - j - 1; j_src = k; break;
+                            case 1: i_src = other_blk.nic - k - 1; j_src = other_blk.njc - j - 1; break;
+                            case 2: i_src = j; j_src = other_blk.njc - k - 1; break;
                             case 3: i_src = k; j_src = j;
                             }
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-1);
-                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-2); }
+                            foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                                mapped_cell_ids ~= other_blk.cell_index(i_src,j_src,k_src-n);
+                            }
                             break;
                         case Face.bottom:
                             k_src = 0;
                             final switch (other_orientation) {
                             case 0: i_src = j; j_src = k; break;
-                            case 1: i_src = k; j_src = other_blk.njcell - j - 1; break;
-                            case 2: i_src = other_blk.nicell - j - 1; j_src = other_blk.njcell - k - 1; break;
-                            case 3: i_src = other_blk.nicell - k - 1; j_src = j;
+                            case 1: i_src = k; j_src = other_blk.njc - j - 1; break;
+                            case 2: i_src = other_blk.nic - j - 1; j_src = other_blk.njc - k - 1; break;
+                            case 3: i_src = other_blk.nic - k - 1; j_src = j;
                             }
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+1);
-                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+2); }
+                            foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                                mapped_cell_ids ~= other_blk.cell_index(i_src,j_src,k_src+n);
+                            }
                         } // end switch (other_face)
                     } // k loop
                 } // j loop
                 break;
             case Face.south:
-                j_dest = this_blk.jmin;  // index of the south-most plane of active cells
-                foreach (i; 0 .. this_blk.nicell) {
-                    i_dest = i + this_blk.imin;
-                    foreach (k; 0 .. this_blk.nkcell) {
-                        k_dest = k + this_blk.kmin;
-                        ghost_cells ~= this_blk.get_cell(i_dest,j_dest-1,k_dest);
-                        ghost_cells ~= this_blk.get_cell(i_dest,j_dest-2,k_dest);
-                        if (nghost3) { ghost_cells ~= this_blk.get_cell(i_dest,j_dest-3,k_dest); }
+                j_dest = 0;  // index of the south-most plane of faces
+                foreach (i; 0 .. this_blk.nic) {
+                    i_dest = i;
+                    foreach (k; 0 .. this_blk.nkc) {
+                        k_dest = k;
+                        auto f = this_blk.get_ifj(i_dest,j_dest,k_dest);
+                        foreach (n; 0 .. this_blk.n_ghost_cell_layers) { ghost_cells ~= f.left_cells[n]; }
                         final switch (other_face) {
                         case Face.north:
-                            j_src = other_blk.njcell - 1;
+                            j_src = other_blk.njc - 1;
                             final switch (other_orientation) {
                             case 0: i_src = i; k_src = k; break;
-                            case 1: i_src = k; k_src = other_blk.nkcell - i - 1; break;
-                            case 2: i_src = other_blk.nicell - i - 1; k_src = other_blk.nkcell - k - 1; break;
-                            case 3: i_src = other_blk.nicell - k - 1; k_src = i;
+                            case 1: i_src = k; k_src = other_blk.nkc - i - 1; break;
+                            case 2: i_src = other_blk.nic - i - 1; k_src = other_blk.nkc - k - 1; break;
+                            case 3: i_src = other_blk.nic - k - 1; k_src = i;
                             }
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1,k_src);
-                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-2,k_src); }
+                            foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                                mapped_cell_ids ~= other_blk.cell_index(i_src,j_src-n,k_src);
+                            }
                             break;
                         case Face.east:
-                            i_src = other_blk.nicell - 1;
+                            i_src = other_blk.nic - 1;
                             final switch (other_orientation) {
-                            case 0: j_src = other_blk.njcell - i - 1; k_src = k; break;
-                            case 1: j_src = other_blk.njcell - k - 1; k_src = other_blk.nkcell - i - 1; break;
-                            case 2: j_src = i; k_src = other_blk.nkcell - k - 1; break;
+                            case 0: j_src = other_blk.njc - i - 1; k_src = k; break;
+                            case 1: j_src = other_blk.njc - k - 1; k_src = other_blk.nkc - i - 1; break;
+                            case 2: j_src = i; k_src = other_blk.nkc - k - 1; break;
                             case 3: j_src = k; k_src = i;
                             }
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src,k_src);
-                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-2,j_src,k_src); }
+                            foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                                mapped_cell_ids ~= other_blk.cell_index(i_src-n,j_src,k_src);
+                            }
                             break;
                         case Face.south:
                             j_src = 0;
                             final switch (other_orientation) {
-                            case 0: i_src = other_blk.nicell - i - 1; k_src = k; break;
-                            case 1: i_src = other_blk.nicell - k - 1; k_src = other_blk.nkcell - i - 1; break;
-                            case 2: i_src = i; k_src = other_blk.nkcell - k - 1; break;
+                            case 0: i_src = other_blk.nic - i - 1; k_src = k; break;
+                            case 1: i_src = other_blk.nic - k - 1; k_src = other_blk.nkc - i - 1; break;
+                            case 2: i_src = i; k_src = other_blk.nkc - k - 1; break;
                             case 3: i_src = k; k_src = i;
                             }
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1,k_src);
-                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+2,k_src); }
+                            foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                                mapped_cell_ids ~= other_blk.cell_index(i_src,j_src+n,k_src);
+                            }
                             break;
                         case Face.west:
                             i_src = 0;
                             final switch (other_orientation) {
                             case 0: j_src = i; k_src = k; break;
-                            case 1: j_src = k; k_src = other_blk.nkcell - i - 1; break;
-                            case 2: j_src = other_blk.njcell - i - 1; k_src = other_blk.nkcell - k - 1; break;
-                            case 3: j_src = other_blk.njcell - k - 1; k_src = i;
+                            case 1: j_src = k; k_src = other_blk.nkc - i - 1; break;
+                            case 2: j_src = other_blk.njc - i - 1; k_src = other_blk.nkc - k - 1; break;
+                            case 3: j_src = other_blk.njc - k - 1; k_src = i;
                             }
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src,k_src);
-                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+2,j_src,k_src); }
+                            foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                                mapped_cell_ids ~= other_blk.cell_index(i_src+n,j_src,k_src);
+                            }
                             break;
                         case Face.top:
-                            k_src = other_blk.nkcell - 1;
+                            k_src = other_blk.nkc - 1;
                             final switch (other_orientation) {
-                            case 0: i_src = other_blk.nicell - i - 1; j_src = k; break;
-                            case 1: i_src = other_blk.nicell - k - 1; j_src = other_blk.njcell - i - 1; break;
-                            case 2: i_src = i; j_src = other_blk.njcell - k - 1; break;
+                            case 0: i_src = other_blk.nic - i - 1; j_src = k; break;
+                            case 1: i_src = other_blk.nic - k - 1; j_src = other_blk.njc - i - 1; break;
+                            case 2: i_src = i; j_src = other_blk.njc - k - 1; break;
                             case 3: i_src = k; j_src = i;
                             }
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-1);
-                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-2); }
+                            foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                                mapped_cell_ids ~= other_blk.cell_index(i_src,j_src,k_src-n);
+                            }
                             break;
                         case Face.bottom:
                             k_src = 0;
                             final switch (other_orientation) {
                             case 0: i_src = i; j_src = k; break;
-                            case 1: i_src = k; j_src = other_blk.njcell - i - 1; break;
-                            case 2: i_src = other_blk.nicell - i - 1; j_src = other_blk.njcell - k - 1; break;
-                            case 3: i_src = other_blk.nicell - k - 1; j_src = i;
+                            case 1: i_src = k; j_src = other_blk.njc - i - 1; break;
+                            case 2: i_src = other_blk.nic - i - 1; j_src = other_blk.njc - k - 1; break;
+                            case 3: i_src = other_blk.nic - k - 1; j_src = i;
                             }
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+1);
-                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+2); }
+                            foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                                mapped_cell_ids ~= other_blk.cell_index(i_src,j_src,k_src+n);
+                            }
                         } // end switch (other_face)
                     } // k loop
                 } // i loop
                 break;
             case Face.west:
-                i_dest = this_blk.imin;  // index of the west-most plane of active cells
-                foreach (j; 0 .. this_blk.njcell) {
-                    j_dest = j + this_blk.jmin;
-                    foreach (k; 0 .. this_blk.nkcell) {
-                        k_dest = k + this_blk.kmin;
-                        ghost_cells ~= this_blk.get_cell(i_dest-1,j_dest,k_dest);
-                        ghost_cells ~= this_blk.get_cell(i_dest-2,j_dest,k_dest);
-                        if (nghost3) { ghost_cells ~= this_blk.get_cell(i_dest-3,j_dest,k_dest); }
+                i_dest = 0;  // index of the west-most plane of faces
+                foreach (j; 0 .. this_blk.njc) {
+                    j_dest = j;
+                    foreach (k; 0 .. this_blk.nkc) {
+                        k_dest = k;
+                        auto f = this_blk.get_ifi(i_dest,j_dest,k_dest);
+                        foreach (n; 0 .. this_blk.n_ghost_cell_layers) { ghost_cells ~= f.left_cells[n]; }
                         final switch (other_face) {
                         case Face.north:
-                            j_src = other_blk.njcell - 1;
+                            j_src = other_blk.njc - 1;
                             final switch (other_orientation) {
-                            case 0: i_src = other_blk.nicell - j - 1; k_src = k; break;
+                            case 0: i_src = other_blk.nic - j - 1; k_src = k; break;
                             case 1: i_src = k; k_src = j; break;
-                            case 2: i_src = j; k_src = other_blk.nkcell - k - 1; break;
-                            case 3: i_src = other_blk.nicell - k - 1; k_src = other_blk.nkcell - j - 1;
+                            case 2: i_src = j; k_src = other_blk.nkc - k - 1; break;
+                            case 3: i_src = other_blk.nic - k - 1; k_src = other_blk.nkc - j - 1;
                             }
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1,k_src);
-                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-2,k_src); }
+                            foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                                mapped_cell_ids ~= other_blk.cell_index(i_src,j_src-n,k_src);
+                            }
                             break;
                         case Face.east:
-                            i_src = other_blk.nicell - 1;
+                            i_src = other_blk.nic - 1;
                             final switch (other_orientation) {
                             case 0: j_src = j; k_src = k; break;
-                            case 1: j_src = other_blk.njcell - k - 1; k_src = j; break;
-                            case 2: j_src = other_blk.njcell - j - 1; k_src = other_blk.nkcell - k - 1; break;
-                            case 3: j_src = k; k_src = other_blk.nkcell - j - 1;
+                            case 1: j_src = other_blk.njc - k - 1; k_src = j; break;
+                            case 2: j_src = other_blk.njc - j - 1; k_src = other_blk.nkc - k - 1; break;
+                            case 3: j_src = k; k_src = other_blk.nkc - j - 1;
                             }
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src,k_src);
-                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-2,j_src,k_src); }
+                            foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                                mapped_cell_ids ~= other_blk.cell_index(i_src-n,j_src,k_src);
+                            }
                             break;
                         case Face.south:
                             j_src = 0;
                             final switch (other_orientation) {
                             case 0: i_src = j; k_src = k; break;
-                            case 1: i_src = other_blk.nicell - k - 1; k_src = j; break;
-                            case 2: i_src = other_blk.nicell - j - 1; k_src = other_blk.nkcell - k - 1; break;
-                            case 3: i_src = k; k_src = other_blk.nkcell - j - 1;
+                            case 1: i_src = other_blk.nic - k - 1; k_src = j; break;
+                            case 2: i_src = other_blk.nic - j - 1; k_src = other_blk.nkc - k - 1; break;
+                            case 3: i_src = k; k_src = other_blk.nkc - j - 1;
                             }
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1,k_src);
-                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+2,k_src); }
+                            foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                                mapped_cell_ids ~= other_blk.cell_index(i_src,j_src+n,k_src);
+                            }
                             break;
                         case Face.west:
                             i_src = 0;
                             final switch (other_orientation) {
-                            case 0: j_src = other_blk.njcell - j - 1; k_src = k; break;
+                            case 0: j_src = other_blk.njc - j - 1; k_src = k; break;
                             case 1: j_src = k; k_src = j; break;
-                            case 2: j_src = j; k_src = other_blk.nkcell - k - 1; break;
-                            case 3: j_src = other_blk.njcell - k - 1; k_src = other_blk.nkcell - j - 1;
+                            case 2: j_src = j; k_src = other_blk.nkc - k - 1; break;
+                            case 3: j_src = other_blk.njc - k - 1; k_src = other_blk.nkc - j - 1;
                             }
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src,k_src);
-                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+2,j_src,k_src); }
+                            foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                                mapped_cell_ids ~= other_blk.cell_index(i_src+n,j_src,k_src);
+                            }
                             break;
                         case Face.top:
-                            k_src = other_blk.nkcell - 1;
+                            k_src = other_blk.nkc - 1;
                             final switch (other_orientation) {
                             case 0: i_src = j; j_src = k; break;
-                            case 1: i_src = other_blk.nicell - k - 1; j_src = j; break;
-                            case 2: i_src = other_blk.nicell - j - 1; j_src = other_blk.njcell - k - 1; break;
-                            case 3: i_src = k; j_src = other_blk.njcell - j - 1;
+                            case 1: i_src = other_blk.nic - k - 1; j_src = j; break;
+                            case 2: i_src = other_blk.nic - j - 1; j_src = other_blk.njc - k - 1; break;
+                            case 3: i_src = k; j_src = other_blk.njc - j - 1;
                             }
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-1);
-                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-2); }
+                            foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                                mapped_cell_ids ~= other_blk.cell_index(i_src,j_src,k_src-n);
+                            }
                             break;
                         case Face.bottom:
                             k_src = 0;
                             final switch (other_orientation) {
-                            case 0: i_src = other_blk.nicell - j - 1; j_src = k; break;
+                            case 0: i_src = other_blk.nic - j - 1; j_src = k; break;
                             case 1: i_src = k; j_src = j; break;
-                            case 2: i_src = j; j_src = other_blk.njcell - k - 1; break;
-                            case 3: i_src = other_blk.nicell - k - 1; j_src = other_blk.njcell - j - 1;
+                            case 2: i_src = j; j_src = other_blk.njc - k - 1; break;
+                            case 3: i_src = other_blk.nic - k - 1; j_src = other_blk.njc - j - 1;
                             }
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+1);
-                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+2); }
+                            foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                                mapped_cell_ids ~= other_blk.cell_index(i_src,j_src,k_src+n);
+                            }
                         } // end switch (other_face)
                     } // k loop
                 } // j loop
                 break;
             case Face.top:
-                k_dest = this_blk.kmax;  // index of the top-most plane of active cells
-                foreach (j; 0 .. this_blk.njcell) {
-                    j_dest = j + this_blk.jmin;
-                    foreach (i; 0 .. this_blk.nicell) {
-                        i_dest = i + this_blk.imin;
-                        ghost_cells ~= this_blk.get_cell(i_dest,j_dest,k_dest+1);
-                        ghost_cells ~= this_blk.get_cell(i_dest,j_dest,k_dest+2);
-                        if (nghost3) { ghost_cells ~= this_blk.get_cell(i_dest,j_dest,k_dest+3); }
+                k_dest = this_blk.nkc;  // index of the top-most plane of faces
+                foreach (j; 0 .. this_blk.njc) {
+                    j_dest = j;
+                    foreach (i; 0 .. this_blk.nic) {
+                        i_dest = i;
+                        auto f = this_blk.get_ifk(i_dest,j_dest,k_dest);
+                        foreach (n; 0 .. this_blk.n_ghost_cell_layers) { ghost_cells ~= f.right_cells[n]; }
                         final switch (other_face) {
                         case Face.north:
-                            j_src = other_blk.njcell - 1;
+                            j_src = other_blk.njc - 1;
                             final switch (other_orientation) {
                             case 0: i_src = i; k_src = j; break;
-                            case 1: i_src = j; k_src = other_blk.nkcell - i - 1; break;
-                            case 2: i_src = other_blk.nicell - i - 1; k_src = other_blk.nkcell - j - 1; break;
-                            case 3: i_src = other_blk.nicell - j - 1; k_src = i;
+                            case 1: i_src = j; k_src = other_blk.nkc - i - 1; break;
+                            case 2: i_src = other_blk.nic - i - 1; k_src = other_blk.nkc - j - 1; break;
+                            case 3: i_src = other_blk.nic - j - 1; k_src = i;
                             }
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1,k_src);
-                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-2,k_src); }
+                            foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                                mapped_cell_ids ~= other_blk.cell_index(i_src,j_src-n,k_src);
+                            }
                             break;
                         case Face.east:
-                            i_src = other_blk.nicell - 1;
+                            i_src = other_blk.nic - 1;
                             final switch (other_orientation) {
-                            case 0: j_src = other_blk.njcell - i - 1; k_src = j; break;
-                            case 1: j_src = other_blk.njcell - j - 1; k_src = other_blk.nkcell - i - 1; break;
-                            case 2: j_src = i; k_src = other_blk.nkcell - j - 1; break;
+                            case 0: j_src = other_blk.njc - i - 1; k_src = j; break;
+                            case 1: j_src = other_blk.njc - j - 1; k_src = other_blk.nkc - i - 1; break;
+                            case 2: j_src = i; k_src = other_blk.nkc - j - 1; break;
                             case 3: j_src = j; k_src = i;
                             }
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src,k_src);
-                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-2,j_src,k_src); }
+                            foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                                mapped_cell_ids ~= other_blk.cell_index(i_src-n,j_src,k_src);
+                            }
                             break;
                         case Face.south:
                             j_src = 0;
                             final switch (other_orientation) {
-                            case 0: i_src = other_blk.nicell - i - 1; k_src = j; break;
-                            case 1: i_src = other_blk.nicell - j - 1; k_src = other_blk.nkcell - i - 1; break;
-                            case 2: i_src = i; k_src = other_blk.nkcell - j - 1; break;
+                            case 0: i_src = other_blk.nic - i - 1; k_src = j; break;
+                            case 1: i_src = other_blk.nic - j - 1; k_src = other_blk.nkc - i - 1; break;
+                            case 2: i_src = i; k_src = other_blk.nkc - j - 1; break;
                             case 3: i_src = j; k_src = i;
                             }
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1,k_src);
-                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+2,k_src); }
+                            foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                                mapped_cell_ids ~= other_blk.cell_index(i_src,j_src+n,k_src);
+                            }
                             break;
                         case Face.west:
                             i_src = 0;
                             final switch (other_orientation) {
                             case 0: j_src = i; k_src = j; break;
-                            case 1: j_src = j; k_src = other_blk.nkcell - i - 1; break;
-                            case 2: j_src = other_blk.njcell - i - 1; k_src = other_blk.nkcell - j - 1; break;
-                            case 3: j_src = other_blk.njcell - j - 1; k_src = i;
+                            case 1: j_src = j; k_src = other_blk.nkc - i - 1; break;
+                            case 2: j_src = other_blk.njc - i - 1; k_src = other_blk.nkc - j - 1; break;
+                            case 3: j_src = other_blk.njc - j - 1; k_src = i;
                             }
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src,k_src);
-                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+2,j_src,k_src); }
+                            foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                                mapped_cell_ids ~= other_blk.cell_index(i_src+n,j_src,k_src);
+                            }
                             break;
                         case Face.top:
-                            k_src = other_blk.nkcell - 1;
+                            k_src = other_blk.nkc - 1;
                             final switch (other_orientation) {
-                            case 0: i_src = other_blk.nicell - i - 1; j_src = j; break;
-                            case 1: i_src = other_blk.nicell - j - 1; j_src = other_blk.njcell - i - 1; break;
-                            case 2: i_src = i; j_src = other_blk.njcell - j - 1; break;
+                            case 0: i_src = other_blk.nic - i - 1; j_src = j; break;
+                            case 1: i_src = other_blk.nic - j - 1; j_src = other_blk.njc - i - 1; break;
+                            case 2: i_src = i; j_src = other_blk.njc - j - 1; break;
                             case 3: i_src = j; j_src = i;
                             }
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-1);
-                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-2); }
+                            foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                                mapped_cell_ids ~= other_blk.cell_index(i_src,j_src,k_src-n);
+                            }
                             break;
                         case Face.bottom:
                             k_src = 0;
                             final switch (other_orientation) {
                             case 0: i_src = i; j_src = j; break;
-                            case 1: i_src = j; j_src = other_blk.njcell - i - 1; break;
-                            case 2: i_src = other_blk.nicell - i - 1; j_src = other_blk.njcell - j - 1; break;
-                            case 3: i_src = other_blk.nicell - j - 1; j_src = i;
+                            case 1: i_src = j; j_src = other_blk.njc - i - 1; break;
+                            case 2: i_src = other_blk.nic - i - 1; j_src = other_blk.njc - j - 1; break;
+                            case 3: i_src = other_blk.nic - j - 1; j_src = i;
                             }
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+1);
-                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+2); }
+                            foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                                mapped_cell_ids ~= other_blk.cell_index(i_src,j_src,k_src+n);
+                            }
                         } // end switch (other_face)
                     } // i loop
                 } // j loop
                 break;
             case Face.bottom:
-                k_dest = this_blk.kmin;  // index of the bottom-most plane of active cells
-                foreach (j; 0 .. this_blk.njcell) {
-                    j_dest = j + this_blk.jmin;
-                    foreach (i; 0 .. this_blk.nicell) {
-                        i_dest = i + this_blk.imin;
-                        ghost_cells ~= this_blk.get_cell(i_dest,j_dest,k_dest-1);
-                        ghost_cells ~= this_blk.get_cell(i_dest,j_dest,k_dest-2);
-                        if (nghost3) { ghost_cells ~= this_blk.get_cell(i_dest,j_dest,k_dest-3); }
+                k_dest = 0;  // index of the bottom-most plane of faces
+                foreach (j; 0 .. this_blk.njc) {
+                    j_dest = j;
+                    foreach (i; 0 .. this_blk.nic) {
+                        i_dest = i;
+                        auto f = this_blk.get_ifk(i_dest,j_dest,k_dest);
+                        foreach (n; 0 .. this_blk.n_ghost_cell_layers) { ghost_cells ~= f.left_cells[n]; }
                         final switch (other_face) {
                         case Face.north:
-                            j_src = other_blk.njcell - 1;
+                            j_src = other_blk.njc - 1;
                             final switch (other_orientation) {
-                            case 0: i_src = other_blk.nicell - i - 1; k_src = j; break;
+                            case 0: i_src = other_blk.nic - i - 1; k_src = j; break;
                             case 1: i_src = j; k_src = i; break;
-                            case 2: i_src = i; k_src = other_blk.nkcell - j - 1; break;
-                            case 3: i_src = other_blk.nicell - j - 1; k_src = other_blk.nkcell - i - 1;
+                            case 2: i_src = i; k_src = other_blk.nkc - j - 1; break;
+                            case 3: i_src = other_blk.nic - j - 1; k_src = other_blk.nkc - i - 1;
                             }
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1,k_src);
-                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-2,k_src); }
+                            foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                                mapped_cell_ids ~= other_blk.cell_index(i_src,j_src-n,k_src);
+                            }
                             break;
                         case Face.east:
-                            i_src = other_blk.nicell - 1;
+                            i_src = other_blk.nic - 1;
                             final switch (other_orientation) {
                             case 0: j_src = i; k_src = j; break;
-                            case 1: j_src = other_blk.njcell - j - 1; k_src = i; break;
-                            case 2: j_src = other_blk.njcell - i - 1; k_src = other_blk.nkcell - j - 1; break;
-                            case 3: j_src = j; k_src = other_blk.nkcell - i - 1;
+                            case 1: j_src = other_blk.njc - j - 1; k_src = i; break;
+                            case 2: j_src = other_blk.njc - i - 1; k_src = other_blk.nkc - j - 1; break;
+                            case 3: j_src = j; k_src = other_blk.nkc - i - 1;
                             }
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src,k_src);
-                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-2,j_src,k_src); }
+                            foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                                mapped_cell_ids ~= other_blk.cell_index(i_src-n,j_src,k_src);
+                            }
                             break;
                         case Face.south:
                             j_src = 0;
                             final switch (other_orientation) {
                             case 0: i_src = i; k_src = j; break;
-                            case 1: i_src = other_blk.nicell - j - 1; k_src = i; break;
-                            case 2: i_src = other_blk.nicell - i - 1; k_src = other_blk.nkcell - j - 1; break;
-                            case 3: i_src = j; k_src = other_blk.nkcell - i - 1;
+                            case 1: i_src = other_blk.nic - j - 1; k_src = i; break;
+                            case 2: i_src = other_blk.nic - i - 1; k_src = other_blk.nkc - j - 1; break;
+                            case 3: i_src = j; k_src = other_blk.nkc - i - 1;
                             }
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1,k_src);
-                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+2,k_src); }
+                            foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                                mapped_cell_ids ~= other_blk.cell_index(i_src,j_src+n,k_src);
+                            }
                             break;
                         case Face.west:
                             i_src = 0;
                             final switch (other_orientation) {
-                            case 0: j_src = other_blk.njcell - i - 1; k_src = j; break;
+                            case 0: j_src = other_blk.njc - i - 1; k_src = j; break;
                             case 1: j_src = j; k_src = i; break;
-                            case 2: j_src = i; k_src = other_blk.nkcell - j - 1; break;
-                            case 3: j_src = other_blk.njcell - j - 1; k_src = other_blk.nkcell - i - 1;
+                            case 2: j_src = i; k_src = other_blk.nkc - j - 1; break;
+                            case 3: j_src = other_blk.njc - j - 1; k_src = other_blk.nkc - i - 1;
                             }
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src,k_src);
-                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+2,j_src,k_src); }
+                            foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                                mapped_cell_ids ~= other_blk.cell_index(i_src+n,j_src,k_src);
+                            }
                             break;
                         case Face.top:
-                            k_src = other_blk.nkcell - 1;
+                            k_src = other_blk.nkc - 1;
                             final switch (other_orientation) {
                             case 0: i_src = i; j_src = j; break;
-                            case 1: i_src = other_blk.nicell - j - 1; j_src = i; break;
-                            case 2: i_src = other_blk.nicell - i - 1; j_src = other_blk.njcell - j - 1; break;
-                            case 3: i_src = j; j_src = other_blk.njcell - i - 1;
+                            case 1: i_src = other_blk.nic - j - 1; j_src = i; break;
+                            case 2: i_src = other_blk.nic - i - 1; j_src = other_blk.njc - j - 1; break;
+                            case 3: i_src = j; j_src = other_blk.njc - i - 1;
                             }
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-1);
-                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-2); }
+                            foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                                mapped_cell_ids ~= other_blk.cell_index(i_src,j_src,k_src-n);
+                            }
                             break;
                         case Face.bottom:
                             k_src = 0;
                             final switch (other_orientation) {
-                            case 0: i_src = other_blk.nicell - i - 1; j_src = j; break;
+                            case 0: i_src = other_blk.nic - i - 1; j_src = j; break;
                             case 1: i_src = j; j_src = i; break;
-                            case 2: i_src = i; j_src = other_blk.njcell - j - 1; break;
-                            case 3: i_src = other_blk.nicell - j - 1; j_src = other_blk.njcell - i - 1;
+                            case 2: i_src = i; j_src = other_blk.njc - j - 1; break;
+                            case 3: i_src = other_blk.nic - j - 1; j_src = other_blk.njc - i - 1;
                             }
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+1);
-                            if (nghost3) { mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+2); }
+                            foreach (n; 0 .. this_blk.n_ghost_cell_layers) {
+                                mapped_cell_ids ~= other_blk.cell_index(i_src,j_src,k_src+n);
+                            }
                         } // end switch other_face
                     } // i loop
                 } // j loop
@@ -1918,7 +1912,7 @@ public:
     @nogc
     size_t viscous_gradient_buffer_entry_size(const LocalConfig myConfig){
         /*
-        Compute the amount of space needed for one gradient in the SEND/RECV buffer 
+        Compute the amount of space needed for one gradient in the SEND/RECV buffer
 
         Note: This routine must be kept consistent with the buffer packing in exchange_viscous_gradient
         phases 1 and 2
