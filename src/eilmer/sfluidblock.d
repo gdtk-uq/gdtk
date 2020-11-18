@@ -2187,120 +2187,19 @@ public:
             return;
         } // end if (high_order_flux_calculator)
         //
-        if (myConfig.interpolation_order == 3) {
-            //
-            // A form of high-order flux calculation built on
-            // reconstruction via Lagrangian interpolation across a 6-cell stencil.
-            // This convective flux calculation assumes that ghost cells are available.
-            //
-            if (!bc[Face.north].ghost_cell_data_available) { throw new Error("north ghost cell data missing"); }
-            if (!bc[Face.south].ghost_cell_data_available) { throw new Error("south ghost cell data missing"); }
-            if (!bc[Face.west].ghost_cell_data_available) { throw new Error("west ghost cell data missing"); }
-            if (!bc[Face.east].ghost_cell_data_available) { throw new Error("east ghost cell data missing"); }
-            FVCell cL0, cL1, cL2, cR0, cR1, cR2;
-            // ifi interfaces are East-facing interfaces.
-            foreach (k; 0 .. nkc) {
-                foreach (j; 0 .. njc) {
-                    foreach (i; 0 .. niv) {
-                        auto f = get_ifi(i,j,k);
-                        cL0 = f.left_cells[0]; cL1 = f.left_cells[1]; cL2 = f.left_cells[2];
-                        cR0 = f.right_cells[0]; cR1 = f.right_cells[1]; cR2 = f.right_cells[2];
-                        // Low-order reconstruction just copies data from adjacent FV_Cell.
-                        // Even for high-order reconstruction, we depend upon this copy for
-                        // the viscous-transport and diffusion coefficients.
-                        Lft.copy_values_from(cL0.fs);
-                        Rght.copy_values_from(cR0.fs);
-                        if (do_reconstruction && !f.in_suppress_reconstruction_zone &&
-                            !(myConfig.suppress_reconstruction_at_shocks && f.fs.S)) {
-                            one_d.interp_l3r3(f, cL2, cL1, cL0, cR0, cR1, cR2,
-                                              cL2.iLength, cL1.iLength, cL0.iLength,
-                                              cR0.iLength, cR1.iLength, cR2.iLength,
-                                              Lft, Rght);
-                        }
-                        f.fs.copy_average_values_from(Lft, Rght);
-                        //
-                        if ((i == 0) && bc[Face.west].convective_flux_computed_in_bc) continue;
-                        if ((i == niv-1) && bc[Face.east].convective_flux_computed_in_bc) continue;
-                        compute_interface_flux(Lft, Rght, f, myConfig, omegaz);
-                    } // i loop
-                } // j loop
-            } // for k
-            // ifj interfaces are North-facing interfaces.
-            foreach (k; 0 .. nkc) {
-                foreach (j; 0 .. njv) {
-                    foreach (i; 0 .. nic) {
-                        auto f = get_ifj(i,j,k);
-                        cL0 = f.left_cells[0]; cL1 = f.left_cells[1]; cL2 = f.left_cells[2];
-                        cR0 = f.right_cells[0]; cR1 = f.right_cells[1]; cR2 = f.right_cells[2];
-                        // Low-order reconstruction just copies data from adjacent FV_Cell.
-                        // Even for high-order reconstruction, we depend upon this copy for
-                        // the viscous-transport and diffusion coefficients.
-                        Lft.copy_values_from(cL0.fs);
-                        Rght.copy_values_from(cR0.fs);
-                        if (do_reconstruction && !f.in_suppress_reconstruction_zone &&
-                            !(myConfig.suppress_reconstruction_at_shocks && f.fs.S)) {
-                            one_d.interp_l3r3(f, cL2, cL1, cL0, cR0, cR1, cR2,
-                                              cL2.jLength, cL1.jLength, cL0.jLength,
-                                              cR0.jLength, cR1.jLength, cR2.jLength,
-                                              Lft, Rght);
-                        }
-                        f.fs.copy_average_values_from(Lft, Rght);
-                        //
-                        if ((j == 0) && bc[Face.south].convective_flux_computed_in_bc) continue;
-                        if ((j == njv-1) && bc[Face.north].convective_flux_computed_in_bc) continue;
-                        compute_interface_flux(Lft, Rght, f, myConfig, omegaz);
-                    } // i loop
-                } // j loop
-            } // k loop
-            //
-            if (myConfig.dimensions == 3) {
-                // ifk interfaces are Top-facing interfaces.
-                if (!bc[Face.top].ghost_cell_data_available) { throw new Error("top ghost cell data missing"); }
-                if (!bc[Face.bottom].ghost_cell_data_available) { throw new Error("bottom ghost cell data missing"); }
-                foreach (k; 0 .. nkv) {
-                    foreach (j; 0 .. njc) {
-                        foreach (i; 0 .. nic) {
-                            auto f = get_ifk(i,j,k);
-                            cL0 = f.left_cells[0]; cL1 = f.left_cells[1]; cL2 = f.left_cells[2];
-                            cR0 = f.right_cells[0]; cR1 = f.right_cells[1]; cR2 = f.right_cells[2];
-                            // Low-order reconstruction just copies data from adjacent FV_Cell.
-                            // Even for high-order reconstruction, we depend upon this copy for
-                            // the viscous-transport and diffusion coefficients.
-                            Lft.copy_values_from(cL0.fs);
-                            Rght.copy_values_from(cR0.fs);
-                            if (do_reconstruction && !f.in_suppress_reconstruction_zone &&
-                                !(myConfig.suppress_reconstruction_at_shocks && f.fs.S)) {
-                                one_d.interp_l3r3(f, cL2, cL1, cL0, cR0, cR1, cR2,
-                                                  cL2.kLength, cL1.kLength, cL0.kLength,
-                                                  cR0.kLength, cR1.kLength, cR2.kLength,
-                                                  Lft, Rght);
-                            }
-                            f.fs.copy_average_values_from(Lft, Rght);
-                            //
-                            if ((k == 0) && bc[Face.bottom].convective_flux_computed_in_bc) continue;
-                            if ((k == nkv-1) && bc[Face.top].convective_flux_computed_in_bc) continue;
-                            compute_interface_flux(Lft, Rght, f, myConfig, omegaz);
-                        } // i loop
-                    } // j loop
-                } // k loop
-            } // end if (myConfig.dimensions == 3)
-            return;
-        } // end if (interpolation_order == 3)
-        //
         // If we have not left already, continue with the flux calculation
-        // being done in the classic (piecewise-parabolic) reconstruction,
-        // followed by flux calculation from Left,Right conditions.
+        // being done following the classic reconstruction.
+        // Low-order reconstruction just copies data from adjacent FV_Cell.
+        // Note that ,even for high-order reconstruction, we depend upon this copy for
+        // the viscous-transport and diffusion coefficients.
         //
         // ifi interfaces are East-facing interfaces.
         foreach (k; 0 .. nkc) {
             foreach (j; 0 .. njc) {
                 foreach (i; 0 .. niv) {
                     auto f = get_ifi(i,j,k);
-                    auto cL0 = f.left_cells[0]; auto cL1 = f.left_cells[1];
-                    auto cR0 = f.right_cells[0]; auto cR1 = f.right_cells[1];
-                    // Low-order reconstruction just copies data from adjacent FV_Cell.
-                    // Even for high-order reconstruction, we depend upon this copy for
-                    // the viscous-transport and diffusion coefficients.
+                    auto cL0 = f.left_cells[0];
+                    auto cR0 = f.right_cells[0];
                     if ((i == 0) && !(bc[Face.west].ghost_cell_data_available)) {
                         Lft.copy_values_from(cR0.fs);
                     } else {
@@ -2313,24 +2212,7 @@ public:
                     }
                     if (do_reconstruction && !f.in_suppress_reconstruction_zone &&
                         !(myConfig.suppress_reconstruction_at_shocks && f.fs.S)) {
-                        /// FIX-ME PJ 2020-11-18
-                        /// Now that we have the stencils set up as variable-lengh arrays of references,
-                        /// we can move the selection of interpolation scheme below into a
-                        /// more general function with signature  one_d.interp(f, Lft, Rght).
-                        /// Also, we should be able to subsume the interpolation_order==3 code from above.
-                        if ((i == 0) && !(bc[Face.west].ghost_cell_data_available)) {
-                            one_d.interp_l0r2(f, cR0, cR1, cR0.iLength, cR1.iLength, Lft, Rght);
-                        } else if ((i == 1) && !(bc[Face.west].ghost_cell_data_available)) {
-                            one_d.interp_l1r2(f, cL0, cR0, cR1, cL0.iLength, cR0.iLength, cR1.iLength, Lft, Rght);
-                        } else if ((i == niv-2) && !(bc[Face.east].ghost_cell_data_available)) {
-                            one_d.interp_l2r1(f, cL1, cL0, cR0, cL1.iLength, cL0.iLength, cR0.iLength, Lft, Rght);
-                        } else if ((i == niv-1) && !(bc[Face.east].ghost_cell_data_available)) {
-                            one_d.interp_l2r0(f, cL1, cL0, cL1.iLength, cL0.iLength, Lft, Rght);
-                        } else { // General symmetric reconstruction.
-                            one_d.interp_l2r2(f, cL1, cL0, cR0, cR1,
-                                              cL1.iLength, cL0.iLength, cR0.iLength, cR1.iLength,
-                                              Lft, Rght);
-                        }
+                        one_d.interp(f, Lft, Rght, 'i');
                     }
                     f.fs.copy_average_values_from(Lft, Rght);
                     //
@@ -2352,11 +2234,8 @@ public:
             foreach (j; 0 .. njv) {
                 foreach (i; 0 .. nic) {
                     auto f = get_ifj(i,j,k);
-                    auto cL0 = f.left_cells[0]; auto cL1 = f.left_cells[1];
-                    auto cR0 = f.right_cells[0]; auto cR1 = f.right_cells[1];
-                    // Low-order reconstruction just copies data from adjacent FV_Cell.
-                    // Even for high-order reconstruction, we depend upon this copy for
-                    // the viscous-transport and diffusion coefficients.
+                    auto cL0 = f.left_cells[0];
+                    auto cR0 = f.right_cells[0];
                     if ((j == 0) && !(bc[Face.south].ghost_cell_data_available)) {
                         Lft.copy_values_from(cR0.fs);
                     } else {
@@ -2369,19 +2248,7 @@ public:
                     }
                     if (do_reconstruction && !f.in_suppress_reconstruction_zone &&
                         !(myConfig.suppress_reconstruction_at_shocks && f.fs.S)) {
-                        if ((j == 0) && !(bc[Face.south].ghost_cell_data_available)) {
-                            one_d.interp_l0r2(f, cR0, cR1, cR0.jLength, cR1.jLength, Lft, Rght);
-                        } else if ((j == 1) && !(bc[Face.south].ghost_cell_data_available)) {
-                            one_d.interp_l1r2(f, cL0, cR0, cR1, cL0.jLength, cR0.jLength, cR1.jLength, Lft, Rght);
-                        } else if ((j == njv-2) && !(bc[Face.north].ghost_cell_data_available)) {
-                            one_d.interp_l2r1(f, cL1, cL0, cR0, cL1.jLength, cL0.jLength, cR0.jLength, Lft, Rght);
-                        } else if ((j == njv-1) && !(bc[Face.north].ghost_cell_data_available)) {
-                            one_d.interp_l2r0(f, cL1, cL0, cL1.jLength, cL0.jLength, Lft, Rght);
-                        } else { // General symmetric reconstruction.
-                            one_d.interp_l2r2(f, cL1, cL0, cR0, cR1,
-                                              cL1.jLength, cL0.jLength, cR0.jLength, cR1.jLength,
-                                              Lft, Rght);
-                        }
+                        one_d.interp(f, Lft, Rght, 'j');
                     }
                     f.fs.copy_average_values_from(Lft, Rght);
                     //
@@ -2406,9 +2273,6 @@ public:
                         auto f = get_ifk(i,j,k);
                         auto cL0 = f.left_cells[0]; auto cL1 = f.left_cells[1];
                         auto cR0 = f.right_cells[0]; auto cR1 = f.right_cells[1];
-                        // Low-order reconstruction just copies data from adjacent FV_Cell.
-                        // Even for high-order reconstruction, we depend upon this copy for
-                        // the viscous-transport and diffusion coefficients.
                         if ((k == 0) && !(bc[Face.bottom].ghost_cell_data_available)) {
                             Lft.copy_values_from(cR0.fs);
                         } else {
@@ -2421,19 +2285,7 @@ public:
                         }
                         if (do_reconstruction && !f.in_suppress_reconstruction_zone &&
                             !(myConfig.suppress_reconstruction_at_shocks && f.fs.S)) {
-                            if ((k == 0) && !(bc[Face.bottom].ghost_cell_data_available)) {
-                                one_d.interp_l0r2(f, cR0, cR1, cR0.kLength, cR1.kLength, Lft, Rght);
-                            } else if ((k == 1) && !(bc[Face.bottom].ghost_cell_data_available)) {
-                                one_d.interp_l1r2(f, cL0, cR0, cR1, cL0.kLength, cR0.kLength, cR1.kLength, Lft, Rght);
-                            } else if ((k == nkv-2) && !(bc[Face.top].ghost_cell_data_available)) {
-                                one_d.interp_l2r1(f, cL1, cL0, cR0, cL1.kLength, cL0.kLength, cR0.kLength, Lft, Rght);
-                            } else if ((k == nkv-2) && !(bc[Face.top].ghost_cell_data_available)) {
-                                one_d.interp_l2r0(f, cL1, cL0, cL1.kLength, cL0.kLength, Lft, Rght);
-                            } else { // General symmetric reconstruction.
-                                one_d.interp_l2r2(f, cL1, cL0, cR0, cR1,
-                                                  cL1.kLength, cL0.kLength, cR0.kLength, cR1.kLength,
-                                                  Lft, Rght);
-                            }
+                            one_d.interp(f, Lft, Rght, 'k');
                         }
                         f.fs.copy_average_values_from(Lft, Rght);
                         //
