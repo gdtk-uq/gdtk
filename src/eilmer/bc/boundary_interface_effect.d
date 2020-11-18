@@ -194,92 +194,22 @@ class BIE_CopyCellData : BoundaryInterfaceEffect {
     {
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
-            if (bc.outsigns[i] == 1) {
-                f.fs.copy_values_from(f.left_cell.fs);
-            } else {
-                f.fs.copy_values_from(f.right_cell.fs);
-            }
-        } // end foreach face
+            auto c = (bc.outsigns[i] == 1) ? f.left_cell : f.right_cell;
+            f.fs.copy_values_from(c.fs);
+        }
     }
 
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        size_t i, j, k;
-        FVCell cell;
-        FVInterface IFace;
         auto gmodel = blk.myConfig.gmodel;
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
-
-        final switch (which_boundary) {
-        case Face.north:
-            j = blk.jmax;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.north];
-                    FlowState fs = IFace.fs;
-                    fs.copy_values_from(cell.fs);
-                } // end i loop
-            } // end for k
-            break;
-        case Face.east:
-            i = blk.imax;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.east];
-                    FlowState fs = IFace.fs;
-                    fs.copy_values_from(cell.fs);
-                } // end j loop
-            } // end for k
-            break;
-        case Face.south:
-            j = blk.jmin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.south];
-                    FlowState fs = IFace.fs;
-                    fs.copy_values_from(cell.fs);
-                } // end i loop
-            } // end for k
-            break;
-        case Face.west:
-            i = blk.imin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.west];
-                    FlowState fs = IFace.fs;
-                    fs.copy_values_from(cell.fs);
-                } // end j loop
-            } // end for k
-            break;
-        case Face.top:
-            k = blk.kmax;
-            for (i = blk.imin; i <= blk.imax; ++i) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.top];
-                    FlowState fs = IFace.fs;
-                    fs.copy_values_from(cell.fs);
-                } // end j loop
-            } // end for i
-            break;
-        case Face.bottom:
-            k = blk.kmin;
-            for (i = blk.imin; i <= blk.imax; ++i) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.bottom];
-                    FlowState fs = IFace.fs;
-                    fs.copy_values_from(cell.fs);
-                } // end j loop
-            } // end for i
-            break;
-        } // end switch which_boundary
-    } // end apply()
+        BoundaryCondition bc = blk.bc[which_boundary];
+        foreach (i, f; bc.faces) {
+            auto c = (bc.outsigns[i] == 1) ? f.left_cells[0] : f.right_cells[0];
+            f.fs.copy_values_from(c.fs);
+        }
+    } // end apply_structured_grid()
 } // end class BIE_CopyCellData
 
 class BIE_FlowStateCopy : BoundaryInterfaceEffect {
@@ -306,87 +236,19 @@ class BIE_FlowStateCopy : BoundaryInterfaceEffect {
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
             f.fs.copy_values_from(fstate);
-        } // end foreach face
+        }
     }
 
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        size_t i, j, k;
-        FVCell cell;
-        FVInterface IFace;
         auto gmodel = blk.myConfig.gmodel;
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
-
-        final switch (which_boundary) {
-        case Face.north:
-            j = blk.jmax;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.north];
-                    FlowState fs = IFace.fs;
-                    fs.copy_values_from(fstate);
-                } // end i loop
-            } // end for k
-            break;
-        case Face.east:
-            i = blk.imax;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.east];
-                    FlowState fs = IFace.fs;
-                    fs.copy_values_from(fstate);
-                } // end j loop
-            } // end for k
-            break;
-        case Face.south:
-            j = blk.jmin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.south];
-                    FlowState fs = IFace.fs;
-                    fs.copy_values_from(fstate);
-                } // end i loop
-            } // end for k
-            break;
-        case Face.west:
-            i = blk.imin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.west];
-                    FlowState fs = IFace.fs;
-                    fs.copy_values_from(fstate);
-                } // end j loop
-            } // end for k
-            break;
-        case Face.top:
-            k = blk.kmax;
-            for (i = blk.imin; i <= blk.imax; ++i) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.top];
-                    FlowState fs = IFace.fs;
-                    fs.copy_values_from(fstate);
-                } // end j loop
-            } // end for i
-            break;
-        case Face.bottom:
-            k = blk.kmin;
-            for (i = blk.imin; i <= blk.imax; ++i) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.bottom];
-                    FlowState fs = IFace.fs;
-                    fs.copy_values_from(fstate);
-                } // end j loop
-            } // end for i
-            break;
-        } // end switch which_boundary
-    } // end apply()
+        BoundaryCondition bc = blk.bc[which_boundary];
+        foreach (i, f; bc.faces) {
+            f.fs.copy_values_from(fstate);
+        }
+    } // end apply_structured_grid()
 
 private:
     FlowState fstate;
@@ -427,82 +289,15 @@ public:
 
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        size_t i, j, k;
-        FVCell cell;
-        FVInterface f;
         auto gmodel = blk.myConfig.gmodel;
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
-
-        final switch (which_boundary) {
-        case Face.north:
-            j = blk.jmax;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    cell = blk.get_cell(i,j,k);
-                    f = cell.iface[Face.north];
-                    f.fs.copy_values_from(fprofile.get_flowstate(f.id, f.pos));
-                    fprofile.adjust_velocity(f.fs, f.pos);
-                } // end i loop
-            } // end for k
-            break;
-        case Face.east:
-            i = blk.imax;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    f = cell.iface[Face.east];
-                    f.fs.copy_values_from(fprofile.get_flowstate(f.id, f.pos));
-                    fprofile.adjust_velocity(f.fs, f.pos);
-                } // end j loop
-            } // end for k
-            break;
-        case Face.south:
-            j = blk.jmin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    cell = blk.get_cell(i,j,k);
-                    f = cell.iface[Face.south];
-                    f.fs.copy_values_from(fprofile.get_flowstate(f.id, f.pos));
-                    fprofile.adjust_velocity(f.fs, f.pos);
-                } // end i loop
-            } // end for k
-            break;
-        case Face.west:
-            i = blk.imin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    f = cell.iface[Face.west];
-                    f.fs.copy_values_from(fprofile.get_flowstate(f.id, f.pos));
-                    fprofile.adjust_velocity(f.fs, f.pos);
-                } // end j loop
-            } // end for k
-            break;
-        case Face.top:
-            k = blk.kmax;
-            for (i = blk.imin; i <= blk.imax; ++i) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    f = cell.iface[Face.top];
-                    f.fs.copy_values_from(fprofile.get_flowstate(f.id, f.pos));
-                    fprofile.adjust_velocity(f.fs, f.pos);
-                } // end j loop
-            } // end for i
-            break;
-        case Face.bottom:
-            k = blk.kmin;
-            for (i = blk.imin; i <= blk.imax; ++i) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    f = cell.iface[Face.bottom];
-                    f.fs.copy_values_from(fprofile.get_flowstate(f.id, f.pos));
-                    fprofile.adjust_velocity(f.fs, f.pos);
-                } // end j loop
-            } // end for i
-            break;
-        } // end switch which_boundary
-    } // end apply()
+        BoundaryCondition bc = blk.bc[which_boundary];
+        foreach (i, f; bc.faces) {
+            f.fs.copy_values_from(fprofile.get_flowstate(f.id, f.pos));
+            fprofile.adjust_velocity(f.fs, f.pos);
+        }
+    } // end apply_structured_grid()
 
 private:
     FlowProfile fprofile;
@@ -516,7 +311,7 @@ public:
     {
         super(id, boundary, "flowStateCopyFromHistory");
         fhistory = new FlowHistory(fileName);
-        my_fs = new FlowState(GlobalConfig.gmodel_master);
+        fstate = new FlowState(GlobalConfig.gmodel_master);
     }
 
     override string toString() const
@@ -534,87 +329,25 @@ public:
     {
         BoundaryCondition bc = blk.bc[which_boundary];
         auto gmodel = blk.myConfig.gmodel;
-        fhistory.set_flowstate(my_fs, t, gmodel);
-        foreach (i, f; bc.faces) { f.fs.copy_values_from(my_fs); }
+        fhistory.set_flowstate(fstate, t, gmodel);
+        foreach (i, f; bc.faces) { f.fs.copy_values_from(fstate); }
     }
 
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        size_t i, j, k;
-        FVCell cell;
-        FVInterface f;
-        auto gmodel = blk.myConfig.gmodel;
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
-        fhistory.set_flowstate(my_fs, t, gmodel);
-
-        final switch (which_boundary) {
-        case Face.north:
-            j = blk.jmax;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    cell = blk.get_cell(i,j,k);
-                    f = cell.iface[Face.north];
-                    f.fs.copy_values_from(my_fs);
-                } // end i loop
-            } // end for k
-            break;
-        case Face.east:
-            i = blk.imax;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    f = cell.iface[Face.east];
-                    f.fs.copy_values_from(my_fs);
-                } // end j loop
-            } // end for k
-            break;
-        case Face.south:
-            j = blk.jmin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    cell = blk.get_cell(i,j,k);
-                    f = cell.iface[Face.south];
-                    f.fs.copy_values_from(my_fs);
-                } // end i loop
-            } // end for k
-            break;
-        case Face.west:
-            i = blk.imin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    f = cell.iface[Face.west];
-                    f.fs.copy_values_from(my_fs);
-                } // end j loop
-            } // end for k
-            break;
-        case Face.top:
-            k = blk.kmax;
-            for (i = blk.imin; i <= blk.imax; ++i) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    f = cell.iface[Face.top];
-                    f.fs.copy_values_from(my_fs);
-                } // end j loop
-            } // end for i
-            break;
-        case Face.bottom:
-            k = blk.kmin;
-            for (i = blk.imin; i <= blk.imax; ++i) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    f = cell.iface[Face.bottom];
-                    f.fs.copy_values_from(my_fs);
-                } // end j loop
-            } // end for i
-            break;
-        } // end switch which_boundary
-    } // end apply()
+        auto gmodel = blk.myConfig.gmodel;
+        fhistory.set_flowstate(fstate, t, gmodel);
+        BoundaryCondition bc = blk.bc[which_boundary];
+        foreach (i, f; bc.faces) {
+            f.fs.copy_values_from(fstate);
+        }
+    } // end apply_structured_grid()
 
 private:
     FlowHistory fhistory;
-    FlowState my_fs;
+    FlowState fstate;
 } // end class BIE_FlowStateCopyFromHistory
 
 
@@ -649,82 +382,13 @@ class BIE_ZeroVelocity : BoundaryInterfaceEffect {
 
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        size_t i, j, k;
-        FVCell cell;
-        FVInterface IFace;
-        auto gmodel = blk.myConfig.gmodel;
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
-
-        final switch (which_boundary) {
-        case Face.north:
-            j = blk.jmax;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.north];
-                    FlowState fs = IFace.fs;
-                    fs.vel.refx = 0.0; fs.vel.refy = 0.0; fs.vel.refz = 0.0;
-                } // end i loop
-            } // end for k
-            break;
-        case Face.east:
-            i = blk.imax;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.east];
-                    FlowState fs = IFace.fs;
-                    fs.vel.refx = 0.0; fs.vel.refy = 0.0; fs.vel.refz = 0.0;
-                } // end j loop
-            } // end for k
-            break;
-        case Face.south:
-            j = blk.jmin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.south];
-                    FlowState fs = IFace.fs;
-                    fs.vel.refx = 0.0; fs.vel.refy = 0.0; fs.vel.refz = 0.0;
-                } // end i loop
-            } // end for k
-            break;
-        case Face.west:
-            i = blk.imin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.west];
-                    FlowState fs = IFace.fs;
-                    fs.vel.refx = 0.0; fs.vel.refy = 0.0; fs.vel.refz = 0.0;
-                } // end j loop
-            } // end for k
-            break;
-        case Face.top:
-            k = blk.kmax;
-            for (i = blk.imin; i <= blk.imax; ++i) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.top];
-                    FlowState fs = IFace.fs;
-                    fs.vel.refx = 0.0; fs.vel.refy = 0.0; fs.vel.refz = 0.0;
-                } // end j loop
-            } // end for i
-            break;
-        case Face.bottom:
-            k = blk.kmin;
-            for (i = blk.imin; i <= blk.imax; ++i) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.bottom];
-                    FlowState fs = IFace.fs;
-                    fs.vel.refx = 0.0; fs.vel.refy = 0.0; fs.vel.refz = 0.0;
-                } // end j loop
-            } // end for i
-            break;
-        } // end switch which_boundary
-    } // end apply()
+        BoundaryCondition bc = blk.bc[which_boundary];
+        foreach (i, f; bc.faces) {
+            f.fs.vel.set(0.0, 0.0, 0.0);
+        }
+    } // end apply_structured_grid()
 } // end class BIE_ZeroVelocity
 
 
@@ -745,100 +409,26 @@ class BIE_TranslatingSurface : BoundaryInterfaceEffect {
 
     override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
     {
-        auto gmodel = blk.myConfig.gmodel;
-        BoundaryCondition bc = blk.bc[which_boundary];
-	FlowState fs = f.fs;
-        fs.vel.refx = v_trans.x; fs.vel.refy = v_trans.y; fs.vel.refz = v_trans.z;
+        f.fs.vel.set(v_trans);
     }
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-        auto gmodel = blk.myConfig.gmodel;
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
-            FlowState fs = f.fs;
-            fs.vel.refx = v_trans.x; fs.vel.refy = v_trans.y; fs.vel.refz = v_trans.z;
-        } // end foreach face
+            f.fs.vel.set(v_trans);
+        }
     }
 
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        size_t i, j, k;
-        FVCell cell;
-        FVInterface IFace;
-        auto gmodel = blk.myConfig.gmodel;
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
-
-        final switch (which_boundary) {
-        case Face.north:
-            j = blk.jmax;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.north];
-                    FlowState fs = IFace.fs;
-                    fs.vel.refx = v_trans.x; fs.vel.refy = v_trans.y; fs.vel.refz = v_trans.z;
-                } // end i loop
-            } // end for k
-            break;
-        case Face.east:
-            i = blk.imax;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.east];
-                    FlowState fs = IFace.fs;
-                    fs.vel.refx = v_trans.x; fs.vel.refy = v_trans.y; fs.vel.refz = v_trans.z;
-                } // end j loop
-            } // end for k
-            break;
-        case Face.south:
-            j = blk.jmin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.south];
-                    FlowState fs = IFace.fs;
-                    fs.vel.refx = v_trans.x; fs.vel.refy = v_trans.y; fs.vel.refz = v_trans.z;
-                } // end i loop
-            } // end for k
-            break;
-        case Face.west:
-            i = blk.imin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.west];
-                    FlowState fs = IFace.fs;
-                    fs.vel.refx = v_trans.x; fs.vel.refy = v_trans.y; fs.vel.refz = v_trans.z;
-                } // end j loop
-            } // end for k
-            break;
-        case Face.top:
-            k = blk.kmax;
-            for (i = blk.imin; i <= blk.imax; ++i) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.top];
-                    FlowState fs = IFace.fs;
-                    fs.vel.refx = v_trans.x; fs.vel.refy = v_trans.y; fs.vel.refz = v_trans.z;
-                } // end j loop
-            } // end for i
-            break;
-        case Face.bottom:
-            k = blk.kmin;
-            for (i = blk.imin; i <= blk.imax; ++i) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.bottom];
-                    FlowState fs = IFace.fs;
-                    fs.vel.refx = v_trans.x; fs.vel.refy = v_trans.y; fs.vel.refz = v_trans.z;
-                } // end j loop
-            } // end for i
-            break;
-        } // end switch which_boundary
-    } // end apply()
+        BoundaryCondition bc = blk.bc[which_boundary];
+        foreach (i, f; bc.faces) {
+            f.fs.vel.set(v_trans);
+        }
+    } // end apply_structured_grid()
 } // end class BIE_TranslatingSurface
 
 
@@ -868,87 +458,21 @@ class BIE_RotatingSurface : BoundaryInterfaceEffect {
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-        throw new Error("BIE_RotatingSurface.apply_unstructured_grid() not implemented yet");
-    }
+        BoundaryCondition bc = blk.bc[which_boundary];
+        foreach (i, f; bc.faces) {
+            f.fs.vel = cross(r_omega, f.pos-centre);
+        }
+    } // end apply_unstructured_grid()
 
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        size_t i, j, k;
-        FVCell cell;
-        FVInterface IFace;
-        auto gmodel = blk.myConfig.gmodel;
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
-
-        final switch (which_boundary) {
-        case Face.north:
-            j = blk.jmax;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.north];
-                    FlowState fs = IFace.fs;
-                    fs.vel = cross(r_omega, IFace.pos-centre);
-                } // end i loop
-            } // end for k
-            break;
-        case Face.east:
-            i = blk.imax;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.east];
-                    FlowState fs = IFace.fs;
-                    fs.vel = cross(r_omega, IFace.pos-centre);
-                } // end j loop
-            } // end for k
-            break;
-        case Face.south:
-            j = blk.jmin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.south];
-                    FlowState fs = IFace.fs;
-                    fs.vel = cross(r_omega, IFace.pos-centre);
-                } // end i loop
-            } // end for k
-            break;
-        case Face.west:
-            i = blk.imin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.west];
-                    FlowState fs = IFace.fs;
-                    fs.vel = cross(r_omega, IFace.pos-centre);
-                } // end j loop
-            } // end for k
-            break;
-        case Face.top:
-            k = blk.kmax;
-            for (i = blk.imin; i <= blk.imax; ++i) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.top];
-                    FlowState fs = IFace.fs;
-                    fs.vel = cross(r_omega, IFace.pos-centre);
-                } // end j loop
-            } // end for i
-            break;
-        case Face.bottom:
-            k = blk.kmin;
-            for (i = blk.imin; i <= blk.imax; ++i) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.bottom];
-                    FlowState fs = IFace.fs;
-                    fs.vel = cross(r_omega, IFace.pos-centre);
-                } // end j loop
-            } // end for i
-            break;
-        } // end switch which_boundary
-    } // end apply()
+        BoundaryCondition bc = blk.bc[which_boundary];
+        foreach (i, f; bc.faces) {
+            f.fs.vel = cross(r_omega, f.pos-centre);
+        }
+    } // end apply_structured_grid()
 } // end class BIE_RotatingSurface
 
 
@@ -980,7 +504,6 @@ public:
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-        auto gmodel = blk.myConfig.gmodel;
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
             FlowState fs = f.fs;
@@ -988,105 +511,23 @@ public:
             version(multi_T_gas) {
                 foreach(ref elem; fs.gas.T_modes) { elem = Twall; }
             }
-        } // end foreach face
-    }
+        }
+    } // end apply_unstructured_grid()
 
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        size_t i, j, k;
-        FVCell cell;
-        FVInterface IFace;
         auto gmodel = blk.myConfig.gmodel;
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
-
-        final switch (which_boundary) {
-        case Face.north:
-            j = blk.jmax;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.north];
-                    FlowState fs = IFace.fs;
-                    fs.gas.T = Twall;
-                    version(multi_T_gas) {
-                        foreach(ref elem; fs.gas.T_modes) { elem = Twall; }
-                    }
-                } // end i loop
-            } // end for k
-            break;
-        case Face.east:
-            i = blk.imax;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.east];
-                    FlowState fs = IFace.fs;
-                    fs.gas.T = Twall;
-                    version(multi_T_gas) {
-                        foreach(ref elem; fs.gas.T_modes) { elem = Twall; }
-                    }
-                } // end j loop
-            } // end for k
-            break;
-        case Face.south:
-            j = blk.jmin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.south];
-                    FlowState fs = IFace.fs;
-                    fs.gas.T = Twall;
-                    version(multi_T_gas) {
-                        foreach(ref elem; fs.gas.T_modes) { elem = Twall; }
-                    }
-                } // end i loop
-            } // end for k
-            break;
-        case Face.west:
-            i = blk.imin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.west];
-                    FlowState fs = IFace.fs;
-                    fs.gas.T = Twall;
-                    version(multi_T_gas) {
-                        foreach(ref elem; fs.gas.T_modes) { elem = Twall; }
-                    }
-                } // end j loop
-            } // end for k
-            break;
-        case Face.top:
-            k = blk.kmax;
-            for (i = blk.imin; i <= blk.imax; ++i) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.top];
-                    FlowState fs = IFace.fs;
-                    fs.gas.T = Twall;
-                    version(multi_T_gas) {
-                        foreach(ref elem; fs.gas.T_modes) { elem = Twall; }
-                    }
-                } // end j loop
-            } // end for i
-            break;
-        case Face.bottom:
-            k = blk.kmin;
-            for (i = blk.imin; i <= blk.imax; ++i) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.bottom];
-                    FlowState fs = IFace.fs;
-                    fs.gas.T = Twall;
-                    version(multi_T_gas) {
-                        foreach(ref elem; fs.gas.T_modes) { elem = Twall; }
-                    }
-                } // end j loop
-            } // end for i
-            break;
-        } // end switch which_boundary
-    } // end apply()
+        BoundaryCondition bc = blk.bc[which_boundary];
+        foreach (i, f; bc.faces) {
+            FlowState fs = f.fs;
+            fs.gas.T = Twall;
+            version(multi_T_gas) {
+                foreach(ref elem; fs.gas.T_modes) { elem = Twall; }
+            }
+        }
+    } // end apply_structured_grid()
 } // end class BIE_FixedT
 
 class BIE_FixedComposition : BoundaryInterfaceEffect {
@@ -1117,113 +558,24 @@ public:
         foreach (i, f; bc.faces) {
             FlowState fs = f.fs;
             version(multi_species_gas) {
-                for(uint isp=0; isp<nsp; isp++) {
-                    fs.gas.massf[isp] = massfAtWall[isp];
-                }
+                foreach (isp; 0 .. nsp) { fs.gas.massf[isp] = massfAtWall[isp]; }
             }
-        } // end foreach face
-    }
+        }
+    } // end apply_unstructured_grid()
 
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        size_t i, j, k;
-        FVCell cell;
-        FVInterface IFace;
         uint nsp = blk.myConfig.n_species;
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
-
-        final switch (which_boundary) {
-        case Face.north:
-            j = blk.jmax;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.north];
-                    FlowState fs = IFace.fs;
-                    version(multi_species_gas) {
-                        for(uint isp=0; isp<nsp; isp++) {
-                            fs.gas.massf[isp] = massfAtWall[isp];
-                        }
-                    }
-                } // end i loop
-            } // end for k
-            break;
-        case Face.east:
-            i = blk.imax;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.east];
-                    FlowState fs = IFace.fs;
-                    version(multi_species_gas) {
-                        for(uint isp=0; isp<nsp; isp++) {
-                            fs.gas.massf[isp] = massfAtWall[isp];
-                        }
-                    }
-                } // en for j loop
-            } // end for k
-            break;
-        case Face.south:
-            j = blk.jmin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.south];
-                    FlowState fs = IFace.fs;
-                    for(uint isp=0; isp<nsp; isp++) {
-                        fs.gas.massf[isp] = massfAtWall[isp];
-                    }
-                } // end i loop
-            } // end for k
-            break;
-        case Face.west:
-            i = blk.imin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.west];
-                    FlowState fs = IFace.fs;
-                    version(multi_species_gas) {
-                        for(uint isp=0; isp<nsp; isp++) {
-                            fs.gas.massf[isp] = massfAtWall[isp];
-                        }
-                    }
-                } // end j loop
-            } // end for k
-            break;
-        case Face.top:
-            k = blk.kmax;
-            for (i = blk.imin; i <= blk.imax; ++i) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.top];
-                    FlowState fs = IFace.fs;
-                    version(multi_species_gas) {
-                        for(uint isp=0; isp<nsp; isp++) {
-                            fs.gas.massf[isp] = massfAtWall[isp];
-                        }
-                    }
-                } // end j loop
-            } // end for i
-            break;
-        case Face.bottom:
-            k = blk.kmin;
-            for (i = blk.imin; i <= blk.imax; ++i) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.bottom];
-                    FlowState fs = IFace.fs;
-                    version(multi_species_gas) {
-                        for(uint isp=0; isp<nsp; isp++) {
-                            fs.gas.massf[isp] = massfAtWall[isp];
-                        }
-                    }
-                } // end j loop
-            } // end for i
-            break;
-        } // end switch which_boundary
-    } // end apply()
+        BoundaryCondition bc = blk.bc[which_boundary];
+        foreach (i, f; bc.faces) {
+            FlowState fs = f.fs;
+            version(multi_species_gas) {
+                foreach (isp; 0 .. nsp) { fs.gas.massf[isp] = massfAtWall[isp]; }
+            }
+        }
+    } // end apply_structured_grid()
 } // end class BIE_FixedComposition
 
 
@@ -1252,102 +604,24 @@ class BIE_UpdateThermoTransCoeffs : BoundaryInterfaceEffect {
         BoundaryCondition bc = blk.bc[which_boundary];
         auto gmodel = blk.myConfig.gmodel;
         foreach (i, f; bc.faces) {
-            if (bc.outsigns[i] == 1) {
-                FlowState fs = f.fs;
-                gmodel.update_thermo_from_pT(fs.gas);
-                gmodel.update_trans_coeffs(fs.gas);
-            } else {
-                FlowState fs = f.fs;
-                gmodel.update_thermo_from_pT(fs.gas);
-                gmodel.update_trans_coeffs(fs.gas);
-            }
-        } // end foreach face
-    }
+            FlowState fs = f.fs;
+            gmodel.update_thermo_from_pT(fs.gas);
+            gmodel.update_trans_coeffs(fs.gas);
+        }
+    } // end apply_unstructured_grid()
 
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        size_t i, j, k;
-        FVCell cell;
-        FVInterface IFace;
-        auto gmodel = blk.myConfig.gmodel;
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
-
-        final switch (which_boundary) {
-        case Face.north:
-            j = blk.jmax;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.north];
-                    FlowState fs = IFace.fs;
-                    gmodel.update_thermo_from_pT(fs.gas);
-                    gmodel.update_trans_coeffs(fs.gas);
-                } // end i loop
-            } // end for k
-            break;
-        case Face.east:
-            i = blk.imax;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.east];
-                    FlowState fs = IFace.fs;
-                    gmodel.update_thermo_from_pT(fs.gas);
-                    gmodel.update_trans_coeffs(fs.gas);
-                } // end j loop
-            } // end for k
-            break;
-        case Face.south:
-            j = blk.jmin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.south];
-                    FlowState fs = IFace.fs;
-                    gmodel.update_thermo_from_pT(fs.gas);
-                    gmodel.update_trans_coeffs(fs.gas);
-                } // end i loop
-            } // end for k
-            break;
-        case Face.west:
-            i = blk.imin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.west];
-                    FlowState fs = IFace.fs;
-                    gmodel.update_thermo_from_pT(fs.gas);
-                    gmodel.update_trans_coeffs(fs.gas);
-                } // end j loop
-            } // end for k
-            break;
-        case Face.top:
-            k = blk.kmax;
-            for (i = blk.imin; i <= blk.imax; ++i) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.top];
-                    FlowState fs = IFace.fs;
-                    gmodel.update_thermo_from_pT(fs.gas);
-                    gmodel.update_trans_coeffs(fs.gas);
-                } // end j loop
-            } // end for i
-            break;
-        case Face.bottom:
-            k = blk.kmin;
-            for (i = blk.imin; i <= blk.imax; ++i) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.bottom];
-                    FlowState fs = IFace.fs;
-                    gmodel.update_thermo_from_pT(fs.gas);
-                    gmodel.update_trans_coeffs(fs.gas);
-                } // end j loop
-            } // end for i
-            break;
-        } // end switch which_boundary
-    } // end apply()
+        BoundaryCondition bc = blk.bc[which_boundary];
+        auto gmodel = blk.myConfig.gmodel;
+        foreach (i, f; bc.faces) {
+            FlowState fs = f.fs;
+            gmodel.update_thermo_from_pT(fs.gas);
+            gmodel.update_trans_coeffs(fs.gas);
+        }
+    } // end apply_structured_grid()
 } // end class BIE_UpdateThermoTransCoeffs
 
 class BIE_WallTurbulent : BoundaryInterfaceEffect {
@@ -1366,11 +640,11 @@ class BIE_WallTurbulent : BoundaryInterfaceEffect {
         BoundaryCondition bc = blk.bc[which_boundary];
         version(turbulence) {
 	    if (bc.outsigns[f.i_bndry] == 1) {
-            blk.myConfig.turb_model.set_flowstate_at_wall(gtl, f, f.left_cell, f.fs);
+                blk.myConfig.turb_model.set_flowstate_at_wall(gtl, f, f.left_cell, f.fs);
 	    } else {
-            blk.myConfig.turb_model.set_flowstate_at_wall(gtl, f, f.right_cell, f.fs);
-		}
-	    }
+                blk.myConfig.turb_model.set_flowstate_at_wall(gtl, f, f.right_cell, f.fs);
+            }
+        }
     } // end apply_unstructured_grid()
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
@@ -1383,90 +657,25 @@ class BIE_WallTurbulent : BoundaryInterfaceEffect {
                 } else {
                     blk.myConfig.turb_model.set_flowstate_at_wall(gtl, f, f.right_cell, f.fs);
                 }
-            } // end foreach face
+            }
         }
     } // end apply_unstructured_grid()
 
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        size_t i, j, k;
-        FVCell cell;
-        FVInterface IFace;
-        auto gmodel = blk.myConfig.gmodel;
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
-
+        BoundaryCondition bc = blk.bc[which_boundary];
         version(turbulence) {
-            final switch (which_boundary) {
-            case Face.north:
-                j = blk.jmax;
-                for (k = blk.kmin; k <= blk.kmax; ++k) {
-                    for (i = blk.imin; i <= blk.imax; ++i) {
-                        cell = blk.get_cell(i,j,k);
-                        IFace = cell.iface[Face.north];
-                        FlowState fs = IFace.fs;
-                        blk.myConfig.turb_model.set_flowstate_at_wall(gtl, IFace, cell, fs);
-                    } // end i loop
-                } // end for k
-                break;
-            case Face.east:
-                i = blk.imax;
-                for (k = blk.kmin; k <= blk.kmax; ++k) {
-                    for (j = blk.jmin; j <= blk.jmax; ++j) {
-                        cell = blk.get_cell(i,j,k);
-                        IFace = cell.iface[Face.east];
-                        FlowState fs = IFace.fs;
-                        blk.myConfig.turb_model.set_flowstate_at_wall(gtl, IFace, cell, fs);
-                    } // end j loop
-                } // end for k
-                break;
-            case Face.south:
-                j = blk.jmin;
-                for (k = blk.kmin; k <= blk.kmax; ++k) {
-                    for (i = blk.imin; i <= blk.imax; ++i) {
-                        cell = blk.get_cell(i,j,k);
-                        IFace = cell.iface[Face.south];
-                        FlowState fs = IFace.fs;
-                        blk.myConfig.turb_model.set_flowstate_at_wall(gtl, IFace, cell, fs);
-                    } // end i loop
-                } // end for k
-                break;
-            case Face.west:
-                i = blk.imin;
-                for (k = blk.kmin; k <= blk.kmax; ++k) {
-                    for (j = blk.jmin; j <= blk.jmax; ++j) {
-                        cell = blk.get_cell(i,j,k);
-                        IFace = cell.iface[Face.west];
-                        FlowState fs = IFace.fs;
-                        blk.myConfig.turb_model.set_flowstate_at_wall(gtl, IFace, cell, fs);
-                    } // end j loop
-                } // end for k
-                break;
-            case Face.top:
-                k = blk.kmax;
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    for (j = blk.jmin; j <= blk.jmax; ++j) {
-                        cell = blk.get_cell(i,j,k);
-                        IFace = cell.iface[Face.top];
-                        FlowState fs = IFace.fs;
-                        blk.myConfig.turb_model.set_flowstate_at_wall(gtl, IFace, cell, fs);
-                    } // end j loop
-                } // end for i
-                break;
-            case Face.bottom:
-                k = blk.kmin;
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    for (j = blk.jmin; j <= blk.jmax; ++j) {
-                        cell = blk.get_cell(i,j,k);
-                        IFace = cell.iface[Face.bottom];
-                        FlowState fs = IFace.fs;
-                        blk.myConfig.turb_model.set_flowstate_at_wall(gtl, IFace, cell, fs);
-                    } // end j loop
-                } // end for i
-                break;
-            } // end switch which_boundary
+            foreach (i, f; bc.faces) {
+                if (bc.outsigns[i] == 1) {
+                    blk.myConfig.turb_model.set_flowstate_at_wall(gtl, f, f.left_cell, f.fs);
+                } else {
+                    blk.myConfig.turb_model.set_flowstate_at_wall(gtl, f, f.right_cell, f.fs);
+                }
+            }
         }
-    } // end apply()
+    } // end apply_structured_grid()
 
 
     //@nogc
@@ -1514,131 +723,20 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
     {
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
-        size_t i, j, k;
+        BoundaryCondition bc = blk.bc[which_boundary];
         if (_faces_need_to_be_flagged) {
             // Flag faces, just once.
-            final switch (which_boundary) {
-            case Face.north:
-                j = blk.jmax;
-                for (k = blk.kmin; k <= blk.kmax; ++k) {
-                    for (i = blk.imin; i <= blk.imax; ++i) {
-                        blk.get_cell(i,j,k).iface[Face.north].use_wall_function_shear_and_heat_flux = true;
-                    }
-                }
-                break;
-            case Face.east:
-                i = blk.imax;
-                for (k = blk.kmin; k <= blk.kmax; ++k) {
-                    for (j = blk.jmin; j <= blk.jmax; ++j) {
-                        blk.get_cell(i,j,k).iface[Face.east].use_wall_function_shear_and_heat_flux = true;
-                    }
-                }
-                break;
-            case Face.south:
-                j = blk.jmin;
-                for (k = blk.kmin; k <= blk.kmax; ++k) {
-                    for (i = blk.imin; i <= blk.imax; ++i) {
-                        blk.get_cell(i,j,k).iface[Face.south].use_wall_function_shear_and_heat_flux = true;
-                    }
-                }
-                break;
-            case Face.west:
-                i = blk.imin;
-                for (k = blk.kmin; k <= blk.kmax; ++k) {
-                    for (j = blk.jmin; j <= blk.jmax; ++j) {
-                        blk.get_cell(i,j,k).iface[Face.west].use_wall_function_shear_and_heat_flux = true;
-                    }
-                }
-                break;
-            case Face.top:
-                k = blk.kmax;
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    for (j = blk.jmin; j <= blk.jmax; ++j) {
-                        blk.get_cell(i,j,k).iface[Face.top].use_wall_function_shear_and_heat_flux = true;
-                    }
-                }
-                break;
-            case Face.bottom:
-                k = blk.kmin;
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    for (j = blk.jmin; j <= blk.jmax; ++j) {
-                        blk.get_cell(i,j,k).iface[Face.bottom].use_wall_function_shear_and_heat_flux = true;
-                    }
-                }
-                break;
-            } // end switch which_boundary
+            foreach (i, f; bc.faces) {
+                f.use_wall_function_shear_and_heat_flux = true;
+            }
             _faces_need_to_be_flagged = false;
-        } // end if _faces_need_to_be_flagged
-        //
+        }
         // Do some real work.
-        //
-        FVCell cell;
-        FVInterface IFace;
-        auto gmodel = blk.myConfig.gmodel;
-
-        final switch (which_boundary) {
-        case Face.north:
-            j = blk.jmax;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.north];
-                    wall_function(cell, IFace);
-                } // end i loop
-            } // end for k
-            break;
-        case Face.east:
-            i = blk.imax;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.east];
-                    wall_function(cell, IFace);
-                } // end j loop
-            } // end for k
-            break;
-        case Face.south:
-            j = blk.jmin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.south];
-                    wall_function(cell, IFace);
-                } // end i loop
-            } // end for k
-            break;
-        case Face.west:
-            i = blk.imin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.west];
-                    wall_function(cell, IFace);
-                } // end j loop
-            } // end for k
-            break;
-        case Face.top:
-            k = blk.kmax;
-            for (i = blk.imin; i <= blk.imax; ++i) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.top];
-                    wall_function(cell, IFace);
-                } // end j loop
-            } // end for i
-            break;
-        case Face.bottom:
-            k = blk.kmin;
-            for (i = blk.imin; i <= blk.imax; ++i) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.bottom];
-                    wall_function(cell, IFace);
-                } // end j loop
-            } // end for i
-            break;
-        } // end switch which_boundary
-    } // end apply()
+        foreach (i, f; bc.faces) {
+            auto c = (bc.outsigns[i] == 1) ? f.left_cells[0] : f.right_cells[0];
+            wall_function(c, f);
+        }
+    } // end apply_structured_grid()
 
     void wall_function(const FVCell cell, FVInterface IFace)
     // Implement Nichols' and Nelson's wall function boundary condition
@@ -1729,7 +827,9 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
     } // end wall_function()
 
 protected:
-    void SolveShearStressAndHeatTransfer(const FVCell cell, FVInterface IFace, GasModel gmodel, const number du, ref number tau_wall, ref number q_wall){
+    void SolveShearStressAndHeatTransfer(const FVCell cell, FVInterface IFace,
+                                         GasModel gmodel, const number du,
+                                         ref number tau_wall, ref number q_wall){
         // Compute wall gas properties from either ...
         number cp = gmodel.Cp(cell.fs.gas);
         number Pr = cell.fs.gas.mu * cp / cell.fs.gas.k;
@@ -1758,11 +858,14 @@ protected:
         number f1, f2, df1_dtau, df1_dq, df2_dtau, df2_dq;
         number diff_tau; number diff_q;
         while (error>tolerance) {
-            f1 = WhiteChristophError(tau_wall, q_wall, rho_wall, T_wall, mu_lam_wall, k_lam_wall, recovery, du, wall_dist, cp);
-            f2 = CroccoBusemanError(tau_wall, q_wall, T_wall, rho_wall, mu_lam_wall, k_lam_wall, du, T, recovery, cp);
+            f1 = WhiteChristophError(tau_wall, q_wall, rho_wall, T_wall, mu_lam_wall,
+                                     k_lam_wall, recovery, du, wall_dist, cp);
+            f2 = CroccoBusemanError(tau_wall, q_wall, T_wall, rho_wall, mu_lam_wall,
+                                    k_lam_wall, du, T, recovery, cp);
             error = sqrt(f1*f1 + f2*f2);
 
-            WhiteChristophJacobian(tau_wall, q_wall, rho_wall, T_wall, mu_lam_wall, k_lam_wall, recovery, du, wall_dist, cp, df1_dtau, df1_dq);
+            WhiteChristophJacobian(tau_wall, q_wall, rho_wall, T_wall, mu_lam_wall,
+                                   k_lam_wall, recovery, du, wall_dist, cp, df1_dtau, df1_dq);
             CroccoBusemanJacobian(tau_wall, q_wall, mu_lam_wall, k_lam_wall, du, df2_dtau, df2_dq);
 
             diff_tau = (f1*df2_dq/df1_dq - f2)/(df2_dtau - df2_dq*df1_dtau/df1_dq);
@@ -1776,7 +879,8 @@ protected:
         return;
     }
 
-    void komegaVariables(const FVCell cell, const FVInterface IFace, const number du, const number tau_wall, const number mu_t, ref number tke, ref number omega){
+    void komegaVariables(const FVCell cell, const FVInterface IFace, const number du,
+                         const number tau_wall, const number mu_t, ref number tke, ref number omega){
         // Compute omega (Eq 19 - 21)
         const number C_mu = 0.09;
         const number kappa = 0.4;
@@ -1794,7 +898,8 @@ protected:
         tke = omega * mu_t / rho;                         // Compute tke (Eq 22)
     }
 
-    number TurbulentViscosity(const FVCell cell, const FVInterface IFace, GasModel gmodel, const number u, const number tau_wall, const number q_wall){
+    number TurbulentViscosity(const FVCell cell, const FVInterface IFace, GasModel gmodel,
+                              const number u, const number tau_wall, const number q_wall){
         // Turbulence model boundary conditions (Eq 15 & 14)
         // Note that the formulation of y_white_y_plus (Eq 15) is now directly
         // affected by the limiter which was set earlier to help get past large
@@ -1838,7 +943,9 @@ protected:
         return mu_lam_wall * mu_coeff;
     }
 
-    number WhiteChristophError(number tau_wall, number q_wall, number rho_wall, number T_wall, number mu_lam_wall, number k_lam_wall, number recovery, number u, number y, number cp){
+    number WhiteChristophError(number tau_wall, number q_wall, number rho_wall, number T_wall,
+                               number mu_lam_wall, number k_lam_wall, number recovery, number u,
+                               number y, number cp){
         /*
            Equation (8) + (9) from Nichols paper
 
@@ -1876,7 +983,9 @@ protected:
         return error;
     }
 
-    void WhiteChristophJacobian(number tau_wall, number q_wall, number rho_wall, number T_wall, number mu_lam_wall, number k_lam_wall, number recovery, number u, number y, number cp, ref number dWC_dtauw, ref number dWC_dqw){
+    void WhiteChristophJacobian(number tau_wall, number q_wall, number rho_wall, number T_wall,
+                                number mu_lam_wall, number k_lam_wall, number recovery, number u,
+                                number y, number cp, ref number dWC_dtauw, ref number dWC_dqw){
 
         const number kappa = 0.4;
         const number B = 5.5;
@@ -1896,7 +1005,8 @@ protected:
 
         number duplus_dtauw = -u/2.0*sqrt(rho_wall/tau_wall/tau_wall/tau_wall);
         number dyplus_dtauw = y/2.0/mu_lam_wall*sqrt(rho_wall/tau_wall);
-        number dthing_duplus= exp(-1.0*kappa*B)*(kappa + kappa*kappa*u_plus + 0.5*kappa*kappa*kappa*u_plus*u_plus);
+        number dthing_duplus= exp(-1.0*kappa*B)*(kappa + kappa*kappa*u_plus +
+                                                 0.5*kappa*kappa*kappa*u_plus*u_plus);
         number dthing_dtauw = dthing_duplus*duplus_dtauw;
 
         number dBeta_dtauw  = -q_wall*mu_lam_wall/2.0/T_wall/k_lam_wall/sqrt(rho_wall*tau_wall*tau_wall*tau_wall);
@@ -1906,7 +1016,8 @@ protected:
         number dP_dtauw     = dalpha_dtauw/sqrt(1-alpha*alpha);
         number dPhi_dtauw   = (Beta*dQ_dtauw - Q*dBeta_dtauw)/Q/Q/sqrt(1.0 - Beta*Beta/Q/Q);
 
-        number dyplusWhite_dtauw = y_plus_white*kappa/Gam*(dP_dtauw*sqrt(Gam) - dPhi_dtauw*sqrt(Gam) - (P-Phi)*dGam_dtauw/2.0/sqrt(Gam));
+        number dyplusWhite_dtauw = y_plus_white*kappa/Gam*(dP_dtauw*sqrt(Gam) - dPhi_dtauw*sqrt(Gam) -
+                                                           (P-Phi)*dGam_dtauw/2.0/sqrt(Gam));
 
         dWC_dtauw = duplus_dtauw + dyplusWhite_dtauw - dthing_dtauw - dyplus_dtauw;
 
@@ -1921,12 +1032,15 @@ protected:
         number dP_dqw     = dalpha_dqw/sqrt(1-alpha*alpha);
         number dPhi_dqw   = (Beta*dQ_dqw - Q*dBeta_dqw)/Q/Q/sqrt(1.0 - Beta*Beta/Q/Q);
 
-        number dyplusWhite_dqw = y_plus_white*kappa/Gam*(dP_dqw*sqrt(Gam) - dPhi_dqw*sqrt(Gam) - (P-Phi)*dGam_dqw/2.0/sqrt(Gam));
+        number dyplusWhite_dqw = y_plus_white*kappa/Gam*(dP_dqw*sqrt(Gam) - dPhi_dqw*sqrt(Gam) -
+                                                         (P-Phi)*dGam_dqw/2.0/sqrt(Gam));
 
         dWC_dqw = dyplusWhite_dqw;
     }
 
-    number CroccoBusemanError(number tau_wall, number q_wall, number T_wall, number rho_wall, number mu_lam_wall, number k_lam_wall, number u, number T, number recovery, number cp){
+    number CroccoBusemanError(number tau_wall, number q_wall, number T_wall, number rho_wall,
+                              number mu_lam_wall, number k_lam_wall, number u, number T,
+                              number recovery, number cp){
         /*
            Equation (10) from Nichols Paper
 
@@ -1940,7 +1054,8 @@ protected:
         return error;
     }
 
-    void CroccoBusemanJacobian(number tau_wall, number q_wall, number mu_lam_wall, number k_lam_wall, number u, ref number dCB_dtauw, ref number dCB_dqw){
+    void CroccoBusemanJacobian(number tau_wall, number q_wall, number mu_lam_wall, number k_lam_wall,
+                               number u, ref number dCB_dtauw, ref number dCB_dqw){
 
         dCB_dtauw = -q_wall*mu_lam_wall*u/(k_lam_wall*tau_wall*tau_wall);
         dCB_dqw = mu_lam_wall*u/k_lam_wall/tau_wall;
@@ -1964,7 +1079,8 @@ class BIE_AdiabaticWallFunction : BIE_WallFunction {
     }
 
 protected:
-    override void SolveShearStressAndHeatTransfer(const FVCell cell, FVInterface IFace, GasModel gmodel, const number du, ref number tau_wall, ref number q_wall){
+    override void SolveShearStressAndHeatTransfer(const FVCell cell, FVInterface IFace, GasModel gmodel,
+                                                  const number du, ref number tau_wall, ref number q_wall){
         number cp = gmodel.Cp(cell.fs.gas);
         number Pr = cell.fs.gas.mu * cp / cell.fs.gas.k;
         number recovery = pow(Pr, (1.0/3.0));
@@ -1993,10 +1109,12 @@ protected:
         number f1, df1_dtau, df1_dq;
         number diff_tau;
         while (error>tolerance) {
-            f1 = WhiteChristophError(tau_wall, q_wall, rho_wall, T_wall, mu_lam_wall, k_lam_wall, recovery, du, wall_dist, cp);
+            f1 = WhiteChristophError(tau_wall, q_wall, rho_wall, T_wall, mu_lam_wall, k_lam_wall,
+                                     recovery, du, wall_dist, cp);
             error = sqrt(f1*f1);
 
-            WhiteChristophJacobian(tau_wall, q_wall, rho_wall, T_wall, mu_lam_wall, k_lam_wall, recovery, du, wall_dist, cp, df1_dtau, df1_dq);
+            WhiteChristophJacobian(tau_wall, q_wall, rho_wall, T_wall, mu_lam_wall, k_lam_wall,
+                                   recovery, du, wall_dist, cp, df1_dtau, df1_dq);
 
             diff_tau = -f1/df1_dtau;
             tau_wall += diff_tau;
@@ -2092,7 +1210,8 @@ public:
 } // end class BIE_TemperatureFromGasSolidInterface
 
 class BIE_ThermionicRadiativeEquilibrium : BoundaryInterfaceEffect {
-    this(int id, int boundary, double emissivity, double Ar, double phi, int ThermionicEmissionActive, const string gas_file_name, const string catalytic_type)
+    this(int id, int boundary, double emissivity, double Ar, double phi, int ThermionicEmissionActive,
+         const string gas_file_name, const string catalytic_type)
     {
         super(id, boundary, "ThermionicRadiativeEquilibrium");
         this.emissivity = emissivity;
@@ -2129,81 +1248,27 @@ class BIE_ThermionicRadiativeEquilibrium : BoundaryInterfaceEffect {
     @nogc
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-        throw new Error("BIE_ThermionicRadiativeEquilibrium.apply_unstructured_grid() not yet implemented");
-    }
+        BoundaryCondition bc = blk.bc[which_boundary];
+        foreach (i, f; bc.faces) {
+            auto c = (bc.outsigns[i] == 1) ? f.left_cell : f.right_cell;
+            double outsign = bc.outsigns[i];
+            solve_for_wall_temperature_and_energy_flux(c, f, -outsign);
+        }
+    } // end apply_unstructured_grid()
 
     @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
-        FVInterface IFace;
-        size_t i, j, k;
-        FVCell cell;
+        BoundaryCondition bc = blk.bc[which_boundary];
+        foreach (i, f; bc.faces) {
+            auto c = (bc.outsigns[i] == 1) ? f.left_cells[0] : f.right_cells[0];
+            double outsign = bc.outsigns[i];
+            solve_for_wall_temperature_and_energy_flux(c, f, -outsign);
+        }
+    } // end apply_structured_grid()
 
-        final switch (which_boundary) {
-        case Face.north:
-            j = blk.jmax;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.north];
-                    solve_for_wall_temperature_and_energy_flux(cell, IFace, -1.0);
-                } // end i loop
-            } // end for k
-            break;
-        case Face.east:
-            i = blk.imax;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.east];
-                    solve_for_wall_temperature_and_energy_flux(cell, IFace, -1.0);
-                } // end j loop
-            } // end for k
-            break;
-        case Face.south:
-            j = blk.jmin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.south];
-                    solve_for_wall_temperature_and_energy_flux(cell, IFace, 1.0);
-                } // end i loop
-            } // end for k
-            break;
-        case Face.west:
-            i = blk.imin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.west];
-                    solve_for_wall_temperature_and_energy_flux(cell, IFace, 1.0);
-                } // end j loop
-            } // end for k
-            break;
-        case Face.top:
-            k = blk.kmax;
-            for (i = blk.imin; i <= blk.imax; ++i) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.top];
-                    solve_for_wall_temperature_and_energy_flux(cell, IFace, -1.0);
-                } // end j loop
-            } // end for i
-            break;
-        case Face.bottom:
-            k = blk.kmin;
-            for (i = blk.imin; i <= blk.imax; ++i) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.bottom];
-                    solve_for_wall_temperature_and_energy_flux(cell, IFace, 1.0);
-                } // end j loop
-            } // end for i
-            break;
-        } // end switch which_boundary
-    }
 protected:
     // Function inputs from Eilmer4 .lua simulation input
     double emissivity;  // Input emissivity, 0<e<=1.0. Assumed black body radiation out from wall
@@ -2265,7 +1330,8 @@ protected:
     } // end solve_for_wall_temperature_and_energy_flux()
 
     @nogc
-    number ThermionicRadiativeEnergyBalance(GasModel gmodel, FVCell cell, FVInterface IFace, uint n_modes, number Twall){
+    number ThermionicRadiativeEnergyBalance(GasModel gmodel, FVCell cell, FVInterface IFace,
+                                            uint n_modes, number Twall){
     /*
         Energy flux balance at the wall, from Alkandry, 2014 equations 6 and 10.
         This version uses the viscous_flux_calc routines directly, avoiding code duplication
@@ -2333,73 +1399,12 @@ class BIE_EquilibriumComposition : BoundaryInterfaceEffect {
     {
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
-        FVInterface IFace;
-        size_t i, j, k;
-        FVCell cell;
-
-        final switch (which_boundary) {
-        case Face.north:
-            j = blk.jmax;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.north];
-                    set_equilibrium_composition(IFace);
-                } // end i loop
-            } // end for k
-            break;
-        case Face.east:
-            i = blk.imax;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.east];
-                    set_equilibrium_composition(IFace);
-                } // end j loop
-            } // end for k
-            break;
-        case Face.south:
-            j = blk.jmin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.south];
-                    set_equilibrium_composition(IFace);
-                } // end i loop
-            } // end for k
-            break;
-        case Face.west:
-            i = blk.imin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.west];
-                    set_equilibrium_composition(IFace);
-                } // end j loop
-            } // end for k
-            break;
-        case Face.top:
-            k = blk.kmax;
-            for (i = blk.imin; i <= blk.imax; ++i) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.top];
-                    set_equilibrium_composition(IFace);
-                } // end j loop
-            } // end for i
-            break;
-        case Face.bottom:
-            k = blk.kmin;
-            for (i = blk.imin; i <= blk.imax; ++i) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.bottom];
-                    set_equilibrium_composition(IFace);
-                } // end j loop
-            } // end for i
-            break;
-        } // end switch which_boundary
+        BoundaryCondition bc = blk.bc[which_boundary];
+        foreach (f; bc.faces) {
+            set_equilibrium_composition(f);
+        }
     }
+    
 protected:
     EquilibriumCalculator eqcalc;
 

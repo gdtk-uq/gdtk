@@ -19,6 +19,7 @@ import fluidblock;
 import sfluidblock: SFluidBlock;
 import globaldata;
 import json_helper;
+import bc;
 
 BoundaryCellEffect make_BCE_from_json(JSONValue jsonData, int blk_id, int boundary)
 {
@@ -61,7 +62,7 @@ public:
     void apply(double t, int gtl, int ftl)
     {
         final switch (blk.grid_type) {
-        case Grid_t.unstructured_grid: 
+        case Grid_t.unstructured_grid:
             apply_unstructured_grid(t, gtl, ftl);
             break;
         case Grid_t.structured_grid:
@@ -102,149 +103,25 @@ public:
     @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        size_t i, j, k;
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
-
+        BoundaryCondition bc = blk.bc[which_boundary];
+        // Apply the cell flags, just once.
         if (_cells_need_to_be_flagged) {
-            // Apply the cell flags, just once.
-            final switch (which_boundary) {
-            case Face.north:
-                j = blk.jmax;
-                for (k = blk.kmin; k <= blk.kmax; ++k) {
-                    for (i = blk.imin; i <= blk.imax; ++i) {
-                        blk.get_cell(i,j,k).allow_k_omega_update = false;
-                    }
-                }
-                break;
-            case Face.east:
-                i = blk.imax;
-                for (k = blk.kmin; k <= blk.kmax; ++k) {
-                    for (j = blk.jmin; j <= blk.jmax; ++j) {
-                        blk.get_cell(i,j,k).allow_k_omega_update = false;
-                    }
-                }
-                break;
-            case Face.south:
-                j = blk.jmin;
-                for (k = blk.kmin; k <= blk.kmax; ++k) {
-                    for (i = blk.imin; i <= blk.imax; ++i) {
-                        blk.get_cell(i,j,k).allow_k_omega_update = false;
-                    }
-                }
-                break;
-            case Face.west:
-                i = blk.imin;
-                for (k = blk.kmin; k <= blk.kmax; ++k) {
-                    for (j = blk.jmin; j <= blk.jmax; ++j) {
-                        blk.get_cell(i,j,k).allow_k_omega_update = false;
-                    }
-                }
-                break;
-            case Face.top:
-                k = blk.kmax;
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    for (j = blk.jmin; j <= blk.jmax; ++j) {
-                        blk.get_cell(i,j,k).allow_k_omega_update = false;
-                    }
-                }
-                break;
-            case Face.bottom:
-                k = blk.kmin;
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    for (j = blk.jmin; j <= blk.jmax; ++j) {
-                        blk.get_cell(i,j,k).allow_k_omega_update = false;
-                    }
-                }
-                break;
-            } // end switch
+            foreach (i, f; bc.faces) {
+                FVCell c = (bc.outsigns[i] == 1) ? f.left_cells[0] : f.right_cells[0];
+                c.allow_k_omega_update = false;
+            }
             _cells_need_to_be_flagged = false;
-        } // end if _cells_need_to_be_flagged
-        //
+        }
         // Do some real work.
-        FVCell cell;
-        FVInterface iface;
-
-        final switch (which_boundary) {
-        case Face.north:
-            j = blk.jmax;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    cell = blk.get_cell(i,j,k);
-                    iface = cell.iface[Face.north];
-                    version(turbulence) {
-                        cell.fs.turb[0] = iface.fs.turb[0];
-                        cell.fs.turb[1] = iface.fs.turb[1];
-                    }
-                } // end i loop
-            } // for k
-            break;
-        case Face.east:
-            i = blk.imax;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    iface = cell.iface[Face.east];
-                    version(turbulence) {
-                        cell.fs.turb[0] = iface.fs.turb[0];
-                        cell.fs.turb[1] = iface.fs.turb[1];
-                    }
-                } // end j loop
-            } // for k
-            break;
-        case Face.south:
-            j = blk.jmin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    cell = blk.get_cell(i,j,k);
-                    iface = cell.iface[Face.south];
-                    version(turbulence) {
-                        cell.fs.turb[0] = iface.fs.turb[0];
-                        cell.fs.turb[1] = iface.fs.turb[1];
-                    }
-                } // end i loop
-            } // for k
-            break;
-        case Face.west:
-            i = blk.imin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    iface = cell.iface[Face.west];
-                    version(turbulence) {
-                        cell.fs.turb[0] = iface.fs.turb[0];
-                        cell.fs.turb[1] = iface.fs.turb[1];
-                    }
-                } // end j loop
-            } // for k
-            break;
-        case Face.top:
-            k = blk.kmax;
-            for (i = blk.imin; i <= blk.imax; ++i) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    iface = cell.iface[Face.top];
-                    version(turbulence) {
-                        cell.fs.turb[0] = iface.fs.turb[0];
-                        cell.fs.turb[1] = iface.fs.turb[1];
-                    }
-                } // end j loop
-            } // for i
-            break;
-        case Face.bottom:
-            k = blk.kmin;
-            for (i = blk.imin; i <= blk.imax; ++i) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    iface = cell.iface[Face.bottom];
-                    version(turbulence) {
-                        cell.fs.turb[0] = iface.fs.turb[0];
-                        cell.fs.turb[1] = iface.fs.turb[1];
-                    }
-                } // end j loop
-            } // for i
-            break;
-        } // end switch
+        foreach (i, f; bc.faces) {
+            FVCell c = (bc.outsigns[i] == 1) ? f.left_cells[0] : f.right_cells[0];
+            version(turbulence) {
+                c.fs.turb[0] = f.fs.turb[0];
+                c.fs.turb[1] = f.fs.turb[1];
+            }
+        }
     } // end apply_structured_grid()
 
 private:

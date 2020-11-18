@@ -362,51 +362,38 @@ public:
     @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        FVInterface IFace;
-        size_t i, j, k;
-        number _u_rel, _v_rel;
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
-
-        switch(which_boundary){
-        case Face.west:
-            i = blk.imin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    // Flux equations
-                    IFace = blk.get_cell(i,j,k).iface[Face.west];
-                    // for a moving grid we need vel relative to the interface
-                    _u_rel = _u - IFace.gvel.x;
-                    _v_rel = _v - IFace.gvel.y;
-                    IFace.F.mass = _rho * ( _u_rel*IFace.n.x + _v_rel*IFace.n.y );
-                    /++ when the boundary is moving we use the relative velocity
-                      + between the fluid and the boundary interface to determine
-                      + the amount of mass flux across the cell face (above).
-                      + Alternatively momentum is a fluid property hence we use the
-                      + fluid velocity in determining the momentum flux -- this is
-                      + akin to saying we know how much mass flux is crossing
-                      + the cell face of which this mass has a momentum dependant
-                      + on its velocity. Since we we want this momentum flux in global
-                      + coordinates there is no need to rotate the velocity.
-                      ++/
-                    IFace.F.momentum.refx = _p * IFace.n.x + _u*IFace.F.mass;
-                    IFace.F.momentum.refy = _p * IFace.n.y + _v*IFace.F.mass;
-                    IFace.F.momentum.refz = 0.0;
-                    // [TODO]: Kyle, think about z component.
-                    IFace.F.total_energy = IFace.F.mass * (_e + 0.5*(_u*_u+_v*_v)) + _p*(_u*IFace.n.x+_v*IFace.n.y);
-                    version(multi_species_gas) {
-                        for ( int _isp = 0; _isp < _nsp; _isp++ ){
-                            IFace.F.massf[_isp] = IFace.F.mass * _massf[_isp];
-                        }
-                    }
-                    version(multi_T_gas) {
-                        // [TODO]: Kyle, separate energy modes for multi-species simulations.
-                    }
-                } // end j loop
-            } // end k loop
-            break;
-        default:
-            throw new Error("Const_Flux only implemented for WEST gas face.");
+        BoundaryCondition bc = blk.bc[which_boundary];
+        //
+        foreach (i, f; bc.faces) {
+            // for a moving grid we need vel relative to the interface
+            number _u_rel = _u - f.gvel.x;
+            number _v_rel = _v - f.gvel.y;
+            f.F.mass = _rho * ( _u_rel*f.n.x + _v_rel*f.n.y );
+            /++ when the boundary is moving we use the relative velocity
+             + between the fluid and the boundary interface to determine
+             + the amount of mass flux across the cell face (above).
+             + Alternatively momentum is a fluid property hence we use the
+             + fluid velocity in determining the momentum flux -- this is
+             + akin to saying we know how much mass flux is crossing
+             + the cell face of which this mass has a momentum dependant
+             + on its velocity. Since we we want this momentum flux in global
+             + coordinates there is no need to rotate the velocity.
+             ++/
+            f.F.momentum.refx = _p * f.n.x + _u*f.F.mass;
+            f.F.momentum.refy = _p * f.n.y + _v*f.F.mass;
+            f.F.momentum.refz = 0.0;
+            // [TODO]: Kyle, think about z component.
+            f.F.total_energy = f.F.mass * (_e + 0.5*(_u*_u+_v*_v)) + _p*(_u*f.n.x+_v*f.n.y);
+            version(multi_species_gas) {
+                for ( int _isp = 0; _isp < _nsp; _isp++ ){
+                    f.F.massf[_isp] = f.F.mass * _massf[_isp];
+                }
+            }
+            version(multi_T_gas) {
+                // [TODO]: Kyle, separate energy modes for multi-species simulations.
+            }
         }
     }
 }
@@ -457,71 +444,13 @@ public:
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         assert(!(blk.myConfig.MHD), "Oops, not implemented for MHD.");
-
-        switch(which_boundary){
-        case Face.north:
-            size_t j = blk.jmax;
-            for (size_t k = blk.kmin; k <= blk.kmax; ++k) {
-                for (size_t i = blk.imin; i <= blk.imax; ++i) {
-                    int outsign = 1;
-                    FVCell interior_cell = blk.get_cell(i,j,k);
-                    compute_outflow_flux(interior_cell.fs, outsign, blk.omegaz, interior_cell.iface[Face.north]);
-                }
-            }
-            break;
-        case Face.east:
-            size_t i = blk.imax;
-            for (size_t k = blk.kmin; k <= blk.kmax; ++k) {
-                for (size_t j = blk.jmin; j <= blk.jmax; ++j) {
-                    int outsign = 1;
-                    FVCell interior_cell = blk.get_cell(i,j,k);
-                    compute_outflow_flux(interior_cell.fs, outsign, blk.omegaz, interior_cell.iface[Face.east]);
-                }
-            }
-            break;
-        case Face.south:
-            size_t j = blk.jmin;
-            for (size_t k = blk.kmin; k <= blk.kmax; ++k) {
-                for (size_t i = blk.imin; i <= blk.imax; ++i) {
-                    int outsign = -1;
-                    FVCell interior_cell = blk.get_cell(i,j,k);
-                    compute_outflow_flux(interior_cell.fs, outsign, blk.omegaz, interior_cell.iface[Face.south]);
-                }
-            }
-            break;
-        case Face.west:
-            size_t i = blk.imin;
-            for (size_t k = blk.kmin; k <= blk.kmax; ++k) {
-                for (size_t j = blk.jmin; j <= blk.jmax; ++j) {
-                    int outsign = -1;
-                    FVCell interior_cell = blk.get_cell(i,j,k);
-                    compute_outflow_flux(interior_cell.fs, outsign, blk.omegaz, interior_cell.iface[Face.west]);
-                }
-            }
-            break;
-        case Face.top:
-            size_t k = blk.kmax;
-            for (size_t i = blk.imin; i <= blk.imax; ++i) {
-                for (size_t j = blk.jmin; j <= blk.jmax; ++j) {
-                    int outsign = 1;
-                    FVCell interior_cell = blk.get_cell(i,j,k);
-                    compute_outflow_flux(interior_cell.fs, outsign, blk.omegaz, interior_cell.iface[Face.top]);
-                }
-            }
-            break;
-        case Face.bottom:
-            size_t k = blk.kmin;
-            for (size_t i = blk.imin; i <= blk.imax; ++i) {
-                for (size_t j = blk.jmin; j <= blk.jmax; ++j) {
-                    int outsign = -1;
-                    FVCell interior_cell = blk.get_cell(i,j,k);
-                    compute_outflow_flux(interior_cell.fs, outsign, blk.omegaz, interior_cell.iface[Face.bottom]);
-                }
-            }
-            break;
-        default:
-            throw new Error("oops, wrong boundary id");
-        } // end switch
+        BoundaryCondition bc = blk.bc[which_boundary];
+        //
+        foreach (i, f; bc.faces) {
+            int outsign = bc.outsigns[i];
+            FVCell interior_cell = (outsign == 1) ? f.left_cells[0] : f.right_cells[0];
+            compute_outflow_flux(interior_cell.fs, outsign, blk.omegaz, f);
+        }
     } // end apply_structured_grid()
 
 private:
@@ -631,115 +560,20 @@ public:
     @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        FVInterface IFace;
-        size_t i, j, k;
         Vector3 nx,ny,nz;
         nx.set(1,0,0); ny.set(0,1,0); nz.set(0,0,1);
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
-
-        switch(which_boundary){
-        case Face.west:
-            i = blk.imin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    // get interface
-                    IFace = blk.get_cell(i,j,k).iface[Face.west];
-                    //writeln("Before: Total energy:",IFace.F.total_energy, "X_mom", IFace.F.momentum.refx, "mass", IFace.F.mass);
-                    // set correct energy and momentum flux
-                    IFace.F.total_energy = IFace.fs.gas.p * dot(IFace.n, IFace.gvel);
-                    IFace.F.momentum.refx = IFace.fs.gas.p * dot(IFace.n, nx);
-                    IFace.F.momentum.refy = IFace.fs.gas.p * dot(IFace.n, ny);
-                    IFace.F.momentum.refz = IFace.fs.gas.p * dot(IFace.n, nz);
-                    IFace.F.mass = 0.;
-                    //writeln("Pressure", IFace.fs.gas.p, "IFace.gvel",IFace.gvel);
-                    //writeln("After: Total energy:",IFace.F.total_energy, "X_mom", IFace.F.momentum.refx, "mass", IFace.F.mass);
-
-                } // end j loop
-            } // end k loop
-            break;
-        case Face.east:
-            i = blk.imax;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    // get interface
-                    IFace = blk.get_cell(i,j,k).iface[Face.east];
-                    //writeln("Before: Total energy:",IFace.F.total_energy, "X_mom", IFace.F.momentum.refx, "mass", IFace.F.mass);
-                    // set correct energy and momentum flux
-                    IFace.F.total_energy =  IFace.fs.gas.p * dot(IFace.n, IFace.gvel);
-                    IFace.F.momentum.refx = IFace.fs.gas.p * dot(IFace.n, nx);
-                    IFace.F.momentum.refy = IFace.fs.gas.p * dot(IFace.n, ny);
-                    IFace.F.momentum.refz = IFace.fs.gas.p * dot(IFace.n, nz);
-                    IFace.F.mass = 0.;
-                    //writeln("Pressure", IFace.fs.gas.p, "IFace.gvel",IFace.gvel);
-                    //writeln("After: Total energy:",IFace.F.total_energy, "X_mom", IFace.F.momentum.refx, "mass", IFace.F.mass);
-                } // end j loop
-            } // end k loop
-            break;
-        case Face.south:
-            j = blk.jmin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    // get interface
-                    IFace = blk.get_cell(i,j,k).iface[Face.south];
-                    // set correct energy and momentum flux
-                    IFace.F.total_energy =  IFace.fs.gas.p * dot(IFace.n, IFace.gvel);
-                    IFace.F.momentum.refx = IFace.fs.gas.p * dot(IFace.n, nx);
-                    IFace.F.momentum.refy = IFace.fs.gas.p * dot(IFace.n, ny);
-                    IFace.F.momentum.refz = IFace.fs.gas.p * dot(IFace.n, nz);
-                    IFace.F.mass = 0.;
-                } // end i loop
-            } // end k loop
-            break;
-        case Face.north:
-            j = blk.jmax;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    // get interface
-                    IFace = blk.get_cell(i,j,k).iface[Face.north];
-                    // set correct energy and momentum flux
-                    IFace.F.total_energy =  IFace.fs.gas.p * dot(IFace.n, IFace.gvel);
-                    IFace.F.momentum.refx = IFace.fs.gas.p * dot(IFace.n, nx);
-                    IFace.F.momentum.refy = IFace.fs.gas.p * dot(IFace.n, ny);
-                    IFace.F.momentum.refz = IFace.fs.gas.p * dot(IFace.n, nz);
-                    IFace.F.mass = 0.;
-                } // end i loop
-            } // end k loop
-            break;
-        case Face.bottom:
-            k = blk.kmin;
-            for (j = blk.jmin; j <= blk.jmax; ++j) {
-                for (i = blk.imin; i <= blk.imax; ++j) {
-                    // get interface
-                    IFace = blk.get_cell(i,j,k).iface[Face.bottom];
-                    // set correct energy and momentum flux
-                    IFace.F.total_energy =  IFace.fs.gas.p * dot(IFace.n, IFace.gvel);
-                    IFace.F.momentum.refx = IFace.fs.gas.p * dot(IFace.n, nx);
-                    IFace.F.momentum.refy = IFace.fs.gas.p * dot(IFace.n, ny);
-                    IFace.F.momentum.refz = IFace.fs.gas.p * dot(IFace.n, nz);
-                    IFace.F.mass = 0.;
-                } // end i loop
-            } // end j loop
-            break;
-        case Face.top:
-            k = blk.kmax;
-            for (j = blk.jmin; j <= blk.jmax; ++j) {
-                for (i = blk.imin; i <= blk.imax; ++j) {
-                    // get interface
-                    IFace = blk.get_cell(i,j,k).iface[Face.top];
-                    // set correct energy and momentum flux
-                    IFace.F.total_energy =  IFace.fs.gas.p * dot(IFace.n, IFace.gvel);
-                    IFace.F.momentum.refx = IFace.fs.gas.p * dot(IFace.n, nx);
-                    IFace.F.momentum.refy = IFace.fs.gas.p * dot(IFace.n, ny);
-                    IFace.F.momentum.refz = IFace.fs.gas.p * dot(IFace.n, nz);
-                    IFace.F.mass = 0.;
-                } // end i loop
-            } // end j loop
-            break;
-        default:
-            throw new Error("Const_Flux only implemented for EAST & WEST gas face.");
+        BoundaryCondition bc = blk.bc[which_boundary];
+        //
+        foreach (i, f; bc.faces) {
+            f.F.total_energy = f.fs.gas.p * dot(f.n, f.gvel);
+            f.F.momentum.refx = f.fs.gas.p * dot(f.n, nx);
+            f.F.momentum.refy = f.fs.gas.p * dot(f.n, ny);
+            f.F.momentum.refz = f.fs.gas.p * dot(f.n, nz);
+            f.F.mass = 0.;
         }
-    }
+    } // end apply_structured_grid()
 } // end BFE_UpdateEnergyWallNormalVelocity
 
 class BFE_ThermionicElectronFlux : BoundaryFluxEffect {
@@ -781,72 +615,11 @@ class BFE_ThermionicElectronFlux : BoundaryFluxEffect {
     {
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
-        FVInterface IFace;
-        size_t i, j, k;
-        FVCell cell;
-
-        final switch (which_boundary) {
-        case Face.north:
-            j = blk.jmax;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.north];
-                    IFace.F.massf[electron_index] = -1.0*electron_flux(IFace);
-                } // end i loop
-            } // end for k
-            break;
-        case Face.east:
-            i = blk.imax;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.east];
-                    IFace.F.massf[electron_index] = -1.0*electron_flux(IFace);
-                } // end j loop
-            } // end for k
-            break;
-        case Face.south:
-            j = blk.jmin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.south];
-                    IFace.F.massf[electron_index] = 1.0*electron_flux(IFace);
-                } // end i loop
-            } // end for k
-            break;
-        case Face.west:
-            i = blk.imin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.west];
-                    IFace.F.massf[electron_index] = 1.0*electron_flux(IFace);
-                } // end j loop
-            } // end for k
-            break;
-        case Face.top:
-            k = blk.kmax;
-            for (i = blk.imin; i <= blk.imax; ++i) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.top];
-                    IFace.F.massf[electron_index] = -1.0*electron_flux(IFace);
-                } // end j loop
-            } // end for i
-            break;
-        case Face.bottom:
-            k = blk.kmin;
-            for (i = blk.imin; i <= blk.imax; ++i) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.bottom];
-                    IFace.F.massf[electron_index] = 1.0*electron_flux(IFace);
-                } // end j loop
-            } // end for i
-            break;
-        } // end switch which_boundary
+        BoundaryCondition bc = blk.bc[which_boundary];
+        //
+        foreach (i, f; bc.faces) {
+            f.F.massf[electron_index] = -bc.outsigns[i]*electron_flux(f);
+        }
     }
 protected:
     // Function inputs from Eilmer4 .lua simulation input
@@ -860,16 +633,16 @@ protected:
     immutable double kb = 1.38064852e-23;     // Boltzmann constant.          Units: (m^2 kg)/(s^2 K^1)
     immutable double Qe = 1.60217662e-19;     // Elementary charge.           Units: C
     // Faraday's constant Qe*Na, but exact as of the 2019 redefinition of base SI units
-    immutable double F  = 96485.3321233100184;
+    immutable double Faraday  = 96485.3321233100184;
 
     @nogc
-    number electron_flux(const FVInterface IFace)
+    number electron_flux(const FVInterface f)
     {
     /*
         Compute the electron flux per unit area due to thermionic emission
     */
-        number Tw = IFace.fs.gas.T; // Maybe this should be the electron temperature?
-        return Ar*Tw*Tw*exp(-phi/kb/Tw)/F*Me;
+        number Tw = f.fs.gas.T; // Maybe this should be the electron temperature?
+        return Ar*Tw*Tw*exp(-phi/kb/Tw)/Faraday*Me;
     }
 
 } // end class BFE_ThermionicElectronFlux
