@@ -28,79 +28,78 @@ import std.stdio;
 
 @nogc
 int set_gcl_interface_properties(SFluidBlock blk, size_t gtl, double dt) {
-    size_t i, j, k;
     FVInterface IFace;
     Vector3 pos1, pos2, temp;
     Vector3 averaged_ivel, vol;
     if (blk.myConfig.dimensions == 2) {
-    FVVertex vtx1, vtx2;
-    k = blk.kmin;
-    // loop over i-interfaces and compute interface velocity wif'.
-    for (j = blk.jmin; j <= blk.jmax; ++j) {
-        for (i = blk.imin; i <= blk.imax+1; ++i) {//  i <= blk.imax+1
-            vtx1 = blk.get_vtx(i,j,k);
-            vtx2 = blk.get_vtx(i,j+1,k);
-            IFace = blk.get_ifi(i,j,k);         
-            pos1 = vtx1.pos[gtl];
-            pos1 -= vtx2.pos[0];
-            pos2 = vtx2.pos[gtl];
-            pos2 -= vtx1.pos[0];
-            averaged_ivel = vtx1.vel[0];
-            averaged_ivel += vtx2.vel[0];
-            averaged_ivel.scale(0.5);
-            // Use effective edge velocity
-            // Reference: D. Ambrosi, L. Gasparini and L. Vigenano
-            // Full Potential and Euler solutions for transonic unsteady flow
-            // Aeronautical Journal November 1994 Eqn 25
-            cross(vol, pos1, pos2);
-            if (blk.myConfig.axisymmetric == false) {
-                vol.scale(0.5);
-            } else {
-                vol.scale(0.125*(vtx1.pos[gtl].y+vtx1.pos[0].y+vtx2.pos[gtl].y+vtx2.pos[0].y));
-            }
-            temp = vol; temp /= dt*IFace.area[0];
-            // temp is the interface velocity (W_if) from the GCL
-            // interface area determined at gtl 0 since GCL formulation
-            // recommends using initial interfacial area in calculation.
-            IFace.gvel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
-            averaged_ivel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
-            IFace.gvel.set(temp.z, averaged_ivel.y, averaged_ivel.z);
-            averaged_ivel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);           
-            IFace.gvel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);                           
-        }
-    }
-    // loop over j-interfaces and compute interface velocity wif'.
-    for (j = blk.jmin; j <= blk.jmax+1; ++j) { //j <= blk.jmax+
-        for (i = blk.imin; i <= blk.imax; ++i) {
-            vtx1 = blk.get_vtx(i,j,k);
-            vtx2 = blk.get_vtx(i+1,j,k);
-            IFace = blk.get_ifj(i,j,k);
-            pos1 = vtx2.pos[gtl]; pos1 -= vtx1.pos[0];
-            pos2 = vtx1.pos[gtl]; pos2 -= vtx2.pos[0];
-            averaged_ivel = vtx1.vel[0]; averaged_ivel += vtx2.vel[0]; averaged_ivel.scale(0.5);
-            cross(vol, pos1, pos2);
-            if (blk.myConfig.axisymmetric == false) {
-                vol.scale(0.5);
-            } else {
-                vol.scale(0.125*(vtx1.pos[gtl].y+vtx1.pos[0].y+vtx2.pos[gtl].y+vtx2.pos[0].y));
-            }
-            IFace.gvel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
-            averaged_ivel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);  
-            if (blk.myConfig.axisymmetric && j == blk.jmin && IFace.area[0] == 0.0) {
-                // For axi-symmetric cases the cells along the axis of symmetry have 0 interface area,
-                // this is a problem for determining Wif, so we have to catch the NaN from dividing by 0.
-                // We choose to set the y and z directions to 0, but take an averaged value for the
-                // x-direction so as to not force the grid to be stationary, defeating the moving grid's purpose.
-                IFace.gvel.set(averaged_ivel.x, to!number(0.0), to!number(0.0));
-            } else {
+        FVVertex vtx1, vtx2;
+        size_t k = 0;
+        // loop over i-interfaces and compute interface velocity wif'.
+        foreach (j; 0 .. blk.njc) {
+            foreach (i; 0 .. blk.niv) {
+                vtx1 = blk.get_vtx(i,j,k);
+                vtx2 = blk.get_vtx(i,j+1,k);
+                IFace = blk.get_ifi(i,j,k);
+                pos1 = vtx1.pos[gtl];
+                pos1 -= vtx2.pos[0];
+                pos2 = vtx2.pos[gtl];
+                pos2 -= vtx1.pos[0];
+                averaged_ivel = vtx1.vel[0];
+                averaged_ivel += vtx2.vel[0];
+                averaged_ivel.scale(0.5);
+                // Use effective edge velocity
+                // Reference: D. Ambrosi, L. Gasparini and L. Vigenano
+                // Full Potential and Euler solutions for transonic unsteady flow
+                // Aeronautical Journal November 1994 Eqn 25
+                cross(vol, pos1, pos2);
+                if (blk.myConfig.axisymmetric == false) {
+                    vol.scale(0.5);
+                } else {
+                    vol.scale(0.125*(vtx1.pos[gtl].y+vtx1.pos[0].y+vtx2.pos[gtl].y+vtx2.pos[0].y));
+                }
                 temp = vol; temp /= dt*IFace.area[0];
+                // temp is the interface velocity (W_if) from the GCL
+                // interface area determined at gtl 0 since GCL formulation
+                // recommends using initial interfacial area in calculation.
+                IFace.gvel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
+                averaged_ivel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
                 IFace.gvel.set(temp.z, averaged_ivel.y, averaged_ivel.z);
+                averaged_ivel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
+                IFace.gvel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
             }
-            averaged_ivel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);           
-            IFace.gvel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
         }
-    } 
-    }
+        // loop over j-interfaces and compute interface velocity wif'.
+        foreach (j; 0 .. blk.njv) {
+            foreach (i; 0 .. blk.nic) {
+                vtx1 = blk.get_vtx(i,j,k);
+                vtx2 = blk.get_vtx(i+1,j,k);
+                IFace = blk.get_ifj(i,j,k);
+                pos1 = vtx2.pos[gtl]; pos1 -= vtx1.pos[0];
+                pos2 = vtx1.pos[gtl]; pos2 -= vtx2.pos[0];
+                averaged_ivel = vtx1.vel[0]; averaged_ivel += vtx2.vel[0]; averaged_ivel.scale(0.5);
+                cross(vol, pos1, pos2);
+                if (blk.myConfig.axisymmetric == false) {
+                    vol.scale(0.5);
+                } else {
+                    vol.scale(0.125*(vtx1.pos[gtl].y+vtx1.pos[0].y+vtx2.pos[gtl].y+vtx2.pos[0].y));
+                }
+                IFace.gvel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
+                averaged_ivel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
+                if (blk.myConfig.axisymmetric && j == 0 && IFace.area[0] == 0.0) {
+                    // For axi-symmetric cases the cells along the axis of symmetry have 0 interface area,
+                    // this is a problem for determining Wif, so we have to catch the NaN from dividing by 0.
+                    // We choose to set the y and z directions to 0, but take an averaged value for the
+                    // x-direction so as to not force the grid to be stationary, defeating the moving grid's purpose.
+                    IFace.gvel.set(averaged_ivel.x, to!number(0.0), to!number(0.0));
+                } else {
+                    temp = vol; temp /= dt*IFace.area[0];
+                    IFace.gvel.set(temp.z, averaged_ivel.y, averaged_ivel.z);
+                }
+                averaged_ivel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
+                IFace.gvel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
+            }
+        }
+    } // end if (blk.myConfig.dimensions == 2)
 
     // Do 3-D cases, where faces move and create a new hexahedron
     if (blk.myConfig.dimensions == 3) {
@@ -109,14 +108,14 @@ int set_gcl_interface_properties(SFluidBlock blk, size_t gtl, double dt) {
         Vector3 centroid_hex, sub_centroid;
         number volume, sub_volume, temp2;
         // loop over i-interfaces and compute interface velocity wif'.
-        for (k = blk.kmin; k <= blk.kmax; ++k) {
-            for (j = blk.jmin; j <= blk.jmax; ++j) {
-                for (i = blk.imin; i <= blk.imax+1; ++i) {//  i <= blk.imax+1
+        foreach (k; 0 .. blk.nkc) {
+            foreach (j; 0 .. blk.njc) {
+                foreach (i; 0 .. blk.niv) {
                     // Calculate volume generated by sweeping face 0123 from pos[0] to pos[gtl]
                     vtx0 = blk.get_vtx(i,j  ,k  );
                     vtx1 = blk.get_vtx(i,j+1,k  );
                     vtx2 = blk.get_vtx(i,j+1,k+1);
-                    vtx3 = blk.get_vtx(i,j  ,k+1  );
+                    vtx3 = blk.get_vtx(i,j  ,k+1);
                     p0 = vtx0.pos[0]; p1 = vtx1.pos[0];
                     p2 = vtx2.pos[0]; p3 = vtx3.pos[0];
                     p4 = vtx0.pos[gtl]; p5 = vtx1.pos[gtl];
@@ -125,21 +124,21 @@ int set_gcl_interface_properties(SFluidBlock blk, size_t gtl, double dt) {
                     centroid_hex.set(0.125*(p0.x+p1.x+p2.x+p3.x+p4.x+p5.x+p6.x+p7.x),
                                  0.125*(p0.y+p1.y+p2.y+p3.y+p4.y+p5.y+p6.y+p7.y),
                                  0.125*(p0.z+p1.z+p2.z+p3.z+p4.z+p5.z+p6.z+p7.z));
-                    volume = 0.0; 
+                    volume = 0.0;
                     pyramid_properties(p6, p7, p3, p2, centroid_hex, sub_centroid, sub_volume);
-                    volume += sub_volume; 
+                    volume += sub_volume;
                     pyramid_properties(p5, p6, p2, p1, centroid_hex, sub_centroid, sub_volume);
-                    volume += sub_volume; 
+                    volume += sub_volume;
                     pyramid_properties(p4, p5, p1, p0, centroid_hex, sub_centroid, sub_volume);
-                    volume += sub_volume; 
+                    volume += sub_volume;
                     pyramid_properties(p7, p4, p0, p3, centroid_hex, sub_centroid, sub_volume);
-                    volume += sub_volume; 
+                    volume += sub_volume;
                     pyramid_properties(p7, p6, p5, p4, centroid_hex, sub_centroid, sub_volume);
-                    volume += sub_volume; 
+                    volume += sub_volume;
                     pyramid_properties(p0, p1, p2, p3, centroid_hex, sub_centroid, sub_volume);
-                    volume += sub_volume; 
+                    volume += sub_volume;
                     //
-                    IFace = blk.get_ifi(i,j,k);         
+                    IFace = blk.get_ifi(i,j,k);
                     averaged_ivel = vtx0.vel[0];
                     averaged_ivel += vtx1.vel[0];
                     averaged_ivel += vtx2.vel[0];
@@ -156,15 +155,15 @@ int set_gcl_interface_properties(SFluidBlock blk, size_t gtl, double dt) {
                     IFace.gvel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
                     averaged_ivel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
                     IFace.gvel.set(temp2, averaged_ivel.y, averaged_ivel.z);
-                    averaged_ivel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);           
-                    IFace.gvel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);  
+                    averaged_ivel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
+                    IFace.gvel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
                 }
             }
         }
         // loop over j-interfaces and compute interface velocity wif'.
-        for (k = blk.kmin; k <= blk.kmax; ++k) {
-            for (j = blk.jmin; j <= blk.jmax+1; ++j) { //j <= blk.jmax+
-                for (i = blk.imin; i <= blk.imax; ++i) {
+        foreach (k; 0 .. blk.nkc) {
+            foreach (j; 0 .. blk.njv) {
+                foreach (i; 0 .. blk.nic) {
                     // Calculate volume generated by sweeping face 0123 from pos[0] to pos[gtl]
                     vtx0 = blk.get_vtx(i  ,j,k  );
                     vtx1 = blk.get_vtx(i  ,j,k+1);
@@ -178,21 +177,21 @@ int set_gcl_interface_properties(SFluidBlock blk, size_t gtl, double dt) {
                     centroid_hex.set(0.125*(p0.x+p1.x+p2.x+p3.x+p4.x+p5.x+p6.x+p7.x),
                                  0.125*(p0.y+p1.y+p2.y+p3.y+p4.y+p5.y+p6.y+p7.y),
                                  0.125*(p0.z+p1.z+p2.z+p3.z+p4.z+p5.z+p6.z+p7.z));
-                    volume = 0.0; 
+                    volume = 0.0;
                     pyramid_properties(p6, p7, p3, p2, centroid_hex, sub_centroid, sub_volume);
-                    volume += sub_volume; 
+                    volume += sub_volume;
                     pyramid_properties(p5, p6, p2, p1, centroid_hex, sub_centroid, sub_volume);
-                    volume += sub_volume; 
+                    volume += sub_volume;
                     pyramid_properties(p4, p5, p1, p0, centroid_hex, sub_centroid, sub_volume);
-                    volume += sub_volume; 
+                    volume += sub_volume;
                     pyramid_properties(p7, p4, p0, p3, centroid_hex, sub_centroid, sub_volume);
-                    volume += sub_volume; 
+                    volume += sub_volume;
                     pyramid_properties(p7, p6, p5, p4, centroid_hex, sub_centroid, sub_volume);
-                    volume += sub_volume; 
+                    volume += sub_volume;
                     pyramid_properties(p0, p1, p2, p3, centroid_hex, sub_centroid, sub_volume);
-                    volume += sub_volume; 
-                    // 
-                    IFace = blk.get_ifj(i,j,k);         
+                    volume += sub_volume;
+                    //
+                    IFace = blk.get_ifj(i,j,k);
                     averaged_ivel = vtx0.vel[0];
                     averaged_ivel += vtx1.vel[0];
                     averaged_ivel += vtx2.vel[0];
@@ -209,15 +208,15 @@ int set_gcl_interface_properties(SFluidBlock blk, size_t gtl, double dt) {
                     IFace.gvel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
                     averaged_ivel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
                     IFace.gvel.set(temp2, averaged_ivel.y, averaged_ivel.z);
-                    averaged_ivel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);           
-                    IFace.gvel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);  
+                    averaged_ivel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
+                    IFace.gvel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
                 }
-            } 
+            }
         }
         // loop over k-interfaces and compute interface velocity wif'.
-        for (k = blk.kmin; k <= blk.kmax+1; ++k) {
-            for (j = blk.jmin; j <= blk.jmax; ++j) { //j <= blk.jmax+
-                for (i = blk.imin; i <= blk.imax; ++i) {
+        foreach (k; 0 .. blk.nkv) {
+            foreach (j; 0 .. blk.njc) {
+                foreach (i; 0 .. blk.nic) {
                     // Calculate volume generated by sweeping face 0123 from pos[0] to pos[gtl]
                     vtx0 = blk.get_vtx(i  ,j  ,k);
                     vtx1 = blk.get_vtx(i+1,j  ,k);
@@ -231,21 +230,21 @@ int set_gcl_interface_properties(SFluidBlock blk, size_t gtl, double dt) {
                     centroid_hex.set(0.125*(p0.x+p1.x+p2.x+p3.x+p4.x+p5.x+p6.x+p7.x),
                                  0.125*(p0.y+p1.y+p2.y+p3.y+p4.y+p5.y+p6.y+p7.y),
                                  0.125*(p0.z+p1.z+p2.z+p3.z+p4.z+p5.z+p6.z+p7.z));
-                    volume = 0.0; 
+                    volume = 0.0;
                     pyramid_properties(p6, p7, p3, p2, centroid_hex, sub_centroid, sub_volume);
-                    volume += sub_volume; 
+                    volume += sub_volume;
                     pyramid_properties(p5, p6, p2, p1, centroid_hex, sub_centroid, sub_volume);
-                    volume += sub_volume; 
+                    volume += sub_volume;
                     pyramid_properties(p4, p5, p1, p0, centroid_hex, sub_centroid, sub_volume);
-                    volume += sub_volume; 
+                    volume += sub_volume;
                     pyramid_properties(p7, p4, p0, p3, centroid_hex, sub_centroid, sub_volume);
-                    volume += sub_volume; 
+                    volume += sub_volume;
                     pyramid_properties(p7, p6, p5, p4, centroid_hex, sub_centroid, sub_volume);
-                    volume += sub_volume; 
+                    volume += sub_volume;
                     pyramid_properties(p0, p1, p2, p3, centroid_hex, sub_centroid, sub_volume);
-                    volume += sub_volume; 
+                    volume += sub_volume;
                     //
-                    IFace = blk.get_ifk(i,j,k);         
+                    IFace = blk.get_ifk(i,j,k);
                     averaged_ivel = vtx0.vel[0];
                     averaged_ivel += vtx1.vel[0];
                     averaged_ivel += vtx2.vel[0];
@@ -262,32 +261,25 @@ int set_gcl_interface_properties(SFluidBlock blk, size_t gtl, double dt) {
                     IFace.gvel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
                     averaged_ivel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
                     IFace.gvel.set(temp2, averaged_ivel.y, averaged_ivel.z);
-                    averaged_ivel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);           
-                    IFace.gvel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);  
+                    averaged_ivel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
+                    IFace.gvel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
                 }
-            } 
+            }
         }
-    } 
+    }
     return 0;
 } // end set_gcl_interface_properties()
 
 @nogc
 void predict_vertex_positions(SFluidBlock blk, double dt, int gtl)
 {
-    // [TODO] PJ 2018-09-10: Could generalize by just looping over all vertices in FluidBlock list.
-    size_t krangemax = ( blk.myConfig.dimensions == 2 ) ? blk.kmax : blk.kmax+1;
-    for (size_t k = blk.kmin; k <= krangemax; ++k) {
-        for (size_t j = blk.jmin; j <= blk.jmax+1; ++j) {
-            for (size_t i = blk.imin; i <= blk.imax+1; ++i) {
-                FVVertex vtx = blk.get_vtx(i,j,k);
-                if (gtl == 0) {
-                    // predictor/sole step; update grid
-                    vtx.pos[1] = vtx.pos[0] + dt * vtx.vel[0];
-                } else {
-                    // corrector step; keep grid fixed
-                    vtx.pos[2] = vtx.pos[1];
-                }
-            }
+    foreach (vtx; blk.vertices) {
+        if (gtl == 0) {
+            // predictor/sole step; update grid
+            vtx.pos[1] = vtx.pos[0] + dt * vtx.vel[0];
+        } else {
+            // corrector step; keep grid fixed
+            vtx.pos[2] = vtx.pos[1];
         }
     }
     return;
@@ -536,22 +528,22 @@ extern(C) int luafn_setVtxVelocitiesForBlockXYZ(lua_State* L)
 
 /**
  * Sets the velocity of an entire block, for the case
- * that the block is rotating about an axis with direction 
+ * that the block is rotating about an axis with direction
  * (0 0 1) located at a point defined by vector (x y 0).
  *
  * setVtxVelocitiesRotatingBlock(blkId, omega, vector3)
- *      Sets rotational speed omega (rad/s) for rotation about 
+ *      Sets rotational speed omega (rad/s) for rotation about
  *      (0 0 1) axis defined by Vector3.
  *
  * setVtxVelocitiesRotatingBlock(blkId, omega)
- *      Sets rotational speed omega (rad/s) for rotation about 
+ *      Sets rotational speed omega (rad/s) for rotation about
  *      Z-axis.
  */
 extern(C) int luafn_setVtxVelocitiesForRotatingBlock(lua_State* L)
 {
     // Expect two/three arguments: 1. a block id
     //                             2. a float object
-    //                             3. a Vector3/table with x,y,z fields (optional) 
+    //                             3. a Vector3/table with x,y,z fields (optional)
     int narg = lua_gettop(L);
     auto blkId = lua_tointeger(L, 1);
     if (!canFind(GlobalConfig.localFluidBlockIds, blkId)) {
@@ -564,7 +556,7 @@ extern(C) int luafn_setVtxVelocitiesForRotatingBlock(lua_State* L)
     auto blk = cast(FluidBlock) globalBlocks[blkId];
     assert(blk !is null, "Oops, this should be a FluidBlock object.");
     if ( narg == 2 ) {
-        // assume rotation about Z-axis 
+        // assume rotation about Z-axis
         foreach ( vtx; blk.vertices ) {
             velx = - omega * vtx.pos[0].y.re;
             vely =   omega * vtx.pos[0].x.re;
@@ -604,16 +596,16 @@ extern(C) int luafn_setVtxVelocitiesForRotatingBlock(lua_State* L)
  * extruded 3-D grids only. The following calls are allowed:
  *
  * setVtxVelocitiesByCorners(blkId, p0vel, p1vel, p2vel, p3vel)
- *   Sets the velocity vectors for block with corner velocities 
- *   specified by four corner velocities. This works for both 
- *   2-D and 3- meshes. In 3-D a uniform velocity is applied 
+ *   Sets the velocity vectors for block with corner velocities
+ *   specified by four corner velocities. This works for both
+ *   2-D and 3- meshes. In 3-D a uniform velocity is applied
  *   in k direction.
  */
 extern(C) int luafn_setVtxVelocitiesByCorners(lua_State* L)
 {
     // Expect five/nine arguments: 1. a block id
     //                             2-5. corner velocities for 2-D motion
-    //                             6-9. corner velocities for full 3-D motion 
+    //                             6-9. corner velocities for full 3-D motion
     //                                  (optional)
     int narg = lua_gettop(L);
     auto blkId = lua_tointeger(L, 1);
@@ -626,13 +618,13 @@ extern(C) int luafn_setVtxVelocitiesByCorners(lua_State* L)
     Vector3 p00vel = toVector3(L, 2);
     Vector3 p10vel = toVector3(L, 3);
     Vector3 p11vel = toVector3(L, 4);
-    Vector3 p01vel = toVector3(L, 5);  
+    Vector3 p01vel = toVector3(L, 5);
     // get coordinates for corner points
-    size_t  k = blk.kmin;
-    Vector3 p00 = blk.get_vtx(blk.imin,blk.jmin,k).pos[0];
-    Vector3 p10 = blk.get_vtx(blk.imax+1,blk.jmin,k).pos[0];
-    Vector3 p11 = blk.get_vtx(blk.imax+1,blk.jmax+1,k).pos[0];
-    Vector3 p01 = blk.get_vtx(blk.imin,blk.jmax+1,k).pos[0];
+    size_t  k = 0;
+    Vector3 p00 = blk.get_vtx(0,0,k).pos[0];
+    Vector3 p10 = blk.get_vtx(blk.niv-1,0,k).pos[0];
+    Vector3 p11 = blk.get_vtx(blk.niv-1,blk.njv-1,k).pos[0];
+    Vector3 p01 = blk.get_vtx(0,blk.njv-1,k).pos[0];
 
     @nogc
     void setAsWeightedSum2(ref Vector3 result, double w0, Vector3 v0, double w1, Vector3 v1)
@@ -648,14 +640,12 @@ extern(C) int luafn_setVtxVelocitiesByCorners(lua_State* L)
         result.add(v1, w[1]);
         result.add(v2, w[2]);
     }
-    
-    size_t i, j;
-    if ( narg == 5 ) {
+
+    if (narg == 5) {
         if (blk.myConfig.dimensions == 2) {
-            k = blk.kmin;
-            for (j = blk.jmin; j <= blk.jmax+1; ++j) {
-                for (i = blk.imin; i <= blk.imax+1; ++i) {
-                    // get position of current point                    
+            foreach (j; 0 .. blk.njv) {
+                foreach (i; 0 .. blk.niv) {
+                    // get position of current point
                     auto pos = blk.get_vtx(i,j,k).pos[0];
                     // Assuming we have a roughly-quadrilateral block,
                     // transfinite interpolation with reconstructed parameters.
@@ -665,10 +655,10 @@ extern(C) int luafn_setVtxVelocitiesByCorners(lua_State* L)
                     //  |    |      |
                     //  |    |      |
                     // p00---pS----p10
-                    Vector3 pS = blk.get_vtx(i,blk.jmin,k).pos[0];
-                    Vector3 pE = blk.get_vtx(blk.imax+1,j,k).pos[0];
-                    Vector3 pN = blk.get_vtx(i,blk.jmax+1,k).pos[0];
-                    Vector3 pW = blk.get_vtx(blk.imin,j,k).pos[0];
+                    Vector3 pS = blk.get_vtx(i,0,k).pos[0];
+                    Vector3 pE = blk.get_vtx(blk.niv-1,j,k).pos[0];
+                    Vector3 pN = blk.get_vtx(i,blk.njv-1,k).pos[0];
+                    Vector3 pW = blk.get_vtx(0,j,k).pos[0];
                     double dW = distance_between(pW, pos);
                     double dE = distance_between(pos, pE);
                     double r = dW/(dW+dE); double omr = 1.0-r;
@@ -680,9 +670,9 @@ extern(C) int luafn_setVtxVelocitiesByCorners(lua_State* L)
                     setAsWeightedSum2(pNvel, omr, p01vel, r, p11vel);
                     setAsWeightedSum2(pWvel, oms, p00vel, s, p01vel);
                     setAsWeightedSum2(pEvel, oms, p10vel, s, p11vel);
-                    number velx = oms*pSvel.x + s*pNvel.x + omr*pWvel.x + r*pEvel.x - 
+                    number velx = oms*pSvel.x + s*pNvel.x + omr*pWvel.x + r*pEvel.x -
                         (omr*oms*p00vel.x + omr*s*p01vel.x + r*oms*p10vel.x + r*s*p11vel.x);
-                    number vely = oms*pSvel.y + s*pNvel.y + omr*pWvel.y + r*pEvel.y - 
+                    number vely = oms*pSvel.y + s*pNvel.y + omr*pWvel.y + r*pEvel.y -
                         (omr*oms*p00vel.y + omr*s*p01vel.y + r*oms*p10vel.y + r*s*p11vel.y);
                     number velz = 0.0;
                     blk.get_vtx(i,j,k).vel[0].set(velx, vely, velz);
@@ -724,7 +714,7 @@ extern(C) int luafn_setVtxVelocitiesByCorners(lua_State* L)
  *
  * setVtxVelocitiesByQuad{blkId=i,
  *                        p00=p0, p10=p1, p11=p2, p01=p3,
- *                        v00=v0, v10=v1, v11=v2, v01=v3}                        
+ *                        v00=v0, v10=v1, v11=v2, v01=v3}
  */
 extern(C) int luafn_setVtxVelocitiesByQuad(lua_State* L)
 {
@@ -807,7 +797,7 @@ extern(C) int luafn_setVtxVelocitiesByQuad(lua_State* L)
     //
     if (blk.myConfig.dimensions == 2) {
         foreach (vtx; blk.vertices) {
-            // get position of current point                    
+            // get position of current point
             auto pos = vtx.pos[0];
             // Find the normalized barycentric coordinates for position within the quad
             // and use those coordinates as weights to interpolate the corner velocity values.
@@ -837,8 +827,8 @@ extern(C) int luafn_setVtxVelocitiesByQuad(lua_State* L)
 
 /**
  * Sets the velocity of vertices in a block based on
- * specified corner velocities. The velocity of any cell 
- * is estimated using interpolation based on cell indices. 
+ * specified corner velocities. The velocity of any cell
+ * is estimated using interpolation based on cell indices.
  * This should only be used for blocks with regular spacing.
  * On clustered grids deformation of the mesh occurs.
  *
@@ -847,30 +837,29 @@ extern(C) int luafn_setVtxVelocitiesByQuad(lua_State* L)
  *   |      |
  *   p0-----p1
  *
- * This function can be called for structured 
+ * This function can be called for structured
  * grids only. The following calls are allowed:
  *
  * setVtxVelocitiesByCornersReg(blkId, p0vel, p1vel, p2vel, p3vel)
- *   Sets the velocity vectors for block with corner velocities 
- *   specified by four corner velocities. This works for both 
- *   2-D and 3- meshes. In 3-D a uniform velocity is applied 
+ *   Sets the velocity vectors for block with corner velocities
+ *   specified by four corner velocities. This works for both
+ *   2-D and 3- meshes. In 3-D a uniform velocity is applied
  *   in k direction.
- * 
- * setVtxVelocitiesByCornersReg(blkId, p0vel, p1vel, p2vel, p3vel, 
+ *
+ * setVtxVelocitiesByCornersReg(blkId, p0vel, p1vel, p2vel, p3vel,
  *                                     p4vel, p5vel, p6vel, p7vel)
- *   As above but suitable for 3-D meshes with eight specified 
+ *   As above but suitable for 3-D meshes with eight specified
  *   velocities.
  */
 extern(C) int luafn_setVtxVelocitiesByCornersReg(lua_State* L)
 {
     // Expect five/nine arguments: 1. a block id
     //                             2-5. corner velocities for 2-D motion
-    //                             6-9. corner velocities for full 3-D motion 
+    //                             6-9. corner velocities for full 3-D motion
     //                                  (optional)
     int narg = lua_gettop(L);
     double u, v;
     auto blkId = lua_tointeger(L, 1);
-    size_t i, j, k;
     Vector3 velw, vele, veln, vels, vel;
     auto blk = cast(SFluidBlock) globalBlocks[blkId];
     if (!canFind(GlobalConfig.localFluidBlockIds, blkId)) {
@@ -881,7 +870,7 @@ extern(C) int luafn_setVtxVelocitiesByCornersReg(lua_State* L)
     Vector3 p00vel = toVector3(L, 2);
     Vector3 p10vel = toVector3(L, 3);
     Vector3 p11vel = toVector3(L, 4);
-    Vector3 p01vel = toVector3(L, 5);  
+    Vector3 p01vel = toVector3(L, 5);
 
     @nogc
     void setAsWeightedSum(ref Vector3 result,
@@ -892,49 +881,41 @@ extern(C) int luafn_setVtxVelocitiesByCornersReg(lua_State* L)
         result.add(v1, w1);
     }
 
-    if ( narg == 5 ) {
+    if (narg == 5) {
         if (blk.myConfig.dimensions == 2) {
             // deal with 2-D meshes
-            k = blk.kmin;
-            for (j = blk.jmin; j <= blk.jmax+1; ++j) {
+            size_t k = 0;
+            foreach (j; 0 .. blk.njv) {
                 // find velocity along west and east edge
-                v = to!double(j-blk.jmin) / to!double(blk.jmax+1-blk.jmin); 
+                v = to!double(j) / to!double(blk.njv - 1);
                 setAsWeightedSum(velw, v, p01vel, 1-v, p00vel);
                 setAsWeightedSum(vele, v, p11vel, 1-v, p10vel);
-
-                for (i = blk.imin; i <= blk.imax+1; ++i) {
-                    //// interpolate in i direction
-                    u = to!double(i-blk.imin) / to!double(blk.imax+1-blk.imin); 
+                foreach (i; 0 .. blk.niv) {
+                    // interpolate in i direction
+                    u = to!double(i) / to!double(blk.niv - 1);
                     setAsWeightedSum(vel, u, vele, 1-u, velw);
-                    //// set velocity
                     blk.get_vtx(i,j,k).vel[0].set(vel);
                 }
             }
-        }
-        else { // deal with 3-D meshesv (assume constant properties wrt k index)
-            for (j = blk.jmin; j <= blk.jmax+1; ++j) {
+        } else { // deal with 3-D meshes (assume constant properties wrt k index)
+            foreach (j; 0 .. blk.njv) {
                 // find velocity along west and east edge
-                v = to!double(j-blk.jmin) / to!double(blk.jmax+1-blk.jmin); 
+                v = to!double(j) / to!double(blk.njv - 1);
                 setAsWeightedSum(velw, v, p01vel, 1-v, p00vel);
                 setAsWeightedSum(vele, v, p11vel, 1-v, p10vel);
-
-
-                for (i = blk.imin; i <= blk.imax+1; ++i) {
+                foreach (i; 0 .. blk.niv) {
                     // interpolate in i direction
-                    u = to!double(i-blk.imin) / to!double(blk.imax+1-blk.imin); 
+                    u = to!double(i) / to!double(blk.niv - 1);
                     setAsWeightedSum(vel, u, vele, 1-u, velw);
-
-                    // set velocity for all k
-                    for (k = blk.kmin; k <= blk.kmax+1; ++i) {
+                    foreach (k; 0 .. blk.nkv) {
                         blk.get_vtx(i,j,k).vel[0].set(vel);
                     }
                 }
             }
         }
-    }
-    else if ( narg == 9 ) {
+    } else if (narg == 9) {
         // assume all blocks are 3-D
-        writeln("setVtxVelocitiesByCorners not verified for 3-D. 
+        writeln("setVtxVelocitiesByCorners not verified for 3-D.
                 Proceed at own peril. See /src/eilmer/grid_motion.d");
         double w;
         Vector3 velwt, velet, velt;
@@ -942,30 +923,27 @@ extern(C) int luafn_setVtxVelocitiesByCornersReg(lua_State* L)
         Vector3 p001vel = toVector3(L, 6);
         Vector3 p101vel = toVector3(L, 7);
         Vector3 p111vel = toVector3(L, 8);
-        Vector3 p011vel = toVector3(L, 9);  
-        for (j = blk.jmin; j <= blk.jmax+1; ++j) {
+        Vector3 p011vel = toVector3(L, 9);
+        foreach (j; 0 .. blk.njv) {
             // find velocity along west and east edge (four times)
-            v = to!double(j-blk.jmin) / to!double(blk.jmax+1-blk.jmin); 
+            v = to!double(j) / to!double(blk.njv - 1);
             setAsWeightedSum(velw, v, p01vel, 1-v, p00vel);
             setAsWeightedSum(vele, v, p11vel, 1-v, p10vel);
             setAsWeightedSum(velwt, v, p011vel, 1-v, p001vel);
             setAsWeightedSum(velet, v, p111vel, 1-v, p101vel);
-
-            for (i = blk.imin; i <= blk.imax+1; ++i) {
+            foreach (i; 0 .. blk.niv) {
                 // interpolate in i direction (twice)
-                u = to!double(i-blk.imin) / to!double(blk.imax+1-blk.imin); 
+                u = to!double(i) / to!double(blk.niv - 1);
                 setAsWeightedSum(vel, u, vele, 1-u, velw);
                 setAsWeightedSum(velt, u, velet, 1-u, velwt);
-
                 // set velocity by interpolating in k.
-                for (k = blk.kmin; k <= blk.kmax+1; ++i) {
-                    w = to!double(k-blk.kmin) / to!double(blk.kmax+1-blk.kmin); 
+                foreach (k; 0 .. blk.nkv) {
+                    w = to!double(k) / to!double(blk.nkv - 1);
                     setAsWeightedSum(blk.get_vtx(i,j,k).vel[0], w, velt, 1-w, vel);
                 }
             }
         }
-    }
-    else {
+    } else {
         string errMsg = "ERROR: Wrong number of arguments passed to luafn: setVtxVelocitiesByCornersReg()\n";
         luaL_error(L, errMsg.toStringz);
     }
@@ -979,7 +957,7 @@ extern(C) int luafn_setVtxVelocitiesByCornersReg(lua_State* L)
 /**
  * Sets the velocity of an individual vertex.
  *
- * This function can be called for structured 
+ * This function can be called for structured
  * or unstructured grids. We'll determine what
  * type grid is meant by the number of arguments
  * supplied. The following calls are allowed:
@@ -1066,7 +1044,7 @@ extern(C) int luafn_setVtxVelocity(lua_State* L)
 /**
  * Sets the velocity components of an individual vertex.
  *
- * This function can be called for structured 
+ * This function can be called for structured
  * or unstructured grids. We'll determine what
  * type grid is meant by the number of arguments
  * supplied. The following calls are allowed:
