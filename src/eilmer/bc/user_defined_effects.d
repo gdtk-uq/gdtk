@@ -69,7 +69,7 @@ public:
 	callGhostCellUDF(t, gtl, ftl, f.i_bndry, j, k, f, ghostCells);
 	lua_gc(bc.myL, LUA_GCCOLLECT, 0);
     }  // end apply_for_interface_unstructured_grid()
-    
+
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         size_t j = 0, k = 0;
@@ -88,92 +88,68 @@ public:
 
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        size_t i, j, k;
-        FVCell[3] ghostCells;
-        FVInterface IFace;
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
-        bool nghost3 = (blk.n_ghost_cell_layers == 3);
-
+        //
         final switch (which_boundary) {
         case Face.north:
-            j = blk.jmax;
-            for (k = blk.kmin; k <= blk.kmax; ++k)  {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    // ghostCells[0] is closest to domain
-                    // ghostCells[1] is one layer out.
-                    ghostCells[0] = blk.get_cell(i,j+1,k);
-                    ghostCells[1] = blk.get_cell(i,j+2,k);
-                    if (nghost3) { ghostCells[2] = blk.get_cell(i,j+3,k); }
-                    IFace = ghostCells[0].iface[Face.south];
-                    callGhostCellUDF(t, gtl, ftl, i, j, k, IFace, ghostCells);
-                } // end i loop
-            } // end k loop
+            size_t j = blk.njc;
+            foreach (k; 0 .. blk.nkc)  {
+                foreach (i; 0 .. blk.nic) {
+                    auto f = blk.get_ifj(i,j,k);
+                    callGhostCellUDF(t, gtl, ftl, i, j, k, f, f.right_cells);
+                }
+            }
             break;
         case Face.east:
-            i = blk.imax;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    ghostCells[0] = blk.get_cell(i+1,j,k);
-                    ghostCells[1] = blk.get_cell(i+2,j,k);
-                    if (nghost3) { ghostCells[2] = blk.get_cell(i+3,j,k); }
-                    IFace = ghostCells[0].iface[Face.west];
-                    callGhostCellUDF(t, gtl, ftl, i, j, k, IFace, ghostCells);
-                } // end j loop
-            } // end k loop
+            size_t i = blk.nic;
+            foreach (k; 0 .. blk.nkc) {
+                foreach (j; 0 .. blk.njc) {
+                    auto f = blk.get_ifi(i,j,k);
+                    callGhostCellUDF(t, gtl, ftl, i, j, k, f, f.right_cells);
+                }
+            }
             break;
         case Face.south:
-            j = blk.jmin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i=blk.imin; i <= blk.imax; ++i) {
-                    ghostCells[0] = blk.get_cell(i,j-1,k);
-                    ghostCells[1] = blk.get_cell(i,j-2,k);
-                    if (nghost3) { ghostCells[2] = blk.get_cell(i,j-3,k); }
-                    IFace = ghostCells[0].iface[Face.north];
-                    callGhostCellUDF(t, gtl, ftl, i, j, k, IFace, ghostCells);
-                } // end i loop
-            } // end j loop
+            size_t j = 0;
+            foreach (k; 0 .. blk.nkc)  {
+                foreach (i; 0 .. blk.nic) {
+                    auto f = blk.get_ifj(i,j,k);
+                    callGhostCellUDF(t, gtl, ftl, i, j, k, f, f.left_cells);
+                }
+            }
             break;
         case Face.west:
-            i = blk.imin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j=blk.jmin; j <= blk.jmax; ++j) {
-                    ghostCells[0] = blk.get_cell(i-1,j,k);
-                    ghostCells[1] = blk.get_cell(i-2,j,k);
-                    if (nghost3) { ghostCells[2] = blk.get_cell(i-3,j,k); }
-                    IFace = ghostCells[0].iface[Face.east];
-                    callGhostCellUDF(t, gtl, ftl, i, j, k, IFace, ghostCells);
-                } // end j loop
-            } // end k loop
+            size_t i = 0;
+            foreach (k; 0 .. blk.nkc) {
+                foreach (j; 0 .. blk.njc) {
+                    auto f = blk.get_ifi(i,j,k);
+                    callGhostCellUDF(t, gtl, ftl, i, j, k, f, f.left_cells);
+                }
+            }
             break;
         case Face.top:
-            k = blk.kmax;
-            for (i= blk.imin; i <= blk.imax; ++i) {
-                for (j=blk.jmin; j <= blk.jmax; ++j) {
-                    ghostCells[0] = blk.get_cell(i,j,k+1);
-                    ghostCells[1] = blk.get_cell(i,j,k+2);
-                    if (nghost3) { ghostCells[2] = blk.get_cell(i,j,k+3); }
-                    IFace = ghostCells[0].iface[Face.bottom];
-                    callGhostCellUDF(t, gtl, ftl, i, j, k, IFace, ghostCells);
-                } // end j loop
-            } // end i loop
+            size_t k = blk.nkc;
+            foreach (i; 0 .. blk.nic) {
+                foreach (j; 0 .. blk.njc) {
+                    auto f = blk.get_ifk(i,j,k);
+                    callGhostCellUDF(t, gtl, ftl, i, j, k, f, f.right_cells);
+                }
+            }
             break;
         case Face.bottom:
-            k = blk.kmin;
-            for (i = blk.imin; i <= blk.imax; ++i) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    ghostCells[0] = blk.get_cell(i,j,k-1);
-                    ghostCells[1] = blk.get_cell(i,j,k-2);
-                    if (nghost3) { ghostCells[2] = blk.get_cell(i,j,k-3); }
-                    IFace = ghostCells[0].iface[Face.top];
-                    callGhostCellUDF(t, gtl, ftl, i, j, k, IFace, ghostCells);
-                } // end j loop
-            } // end i loop
+            size_t k = blk.nkc;
+            foreach (i; 0 .. blk.nic) {
+                foreach (j; 0 .. blk.njc) {
+                    auto f = blk.get_ifk(i,j,k);
+                    callGhostCellUDF(t, gtl, ftl, i, j, k, f, f.left_cells);
+                }
+            }
             break;
         } // end switch which boundary
         lua_gc(blk.bc[which_boundary].myL, LUA_GCCOLLECT, 0);
     }
-                        
+
 private:
     // not @nogc
     void putFlowStateIntoGhostCell(lua_State* L, int tblIdx, FVCell ghostCell)
@@ -197,7 +173,7 @@ private:
                         ghostCell.fs.gas.massf[0] = 1.0;
                     } else {
                         // There's no clear choice for multi-species.
-                        // Maybe best to set everything to zero to 
+                        // Maybe best to set everything to zero to
                         // trigger some bad behaviour rather than
                         // one value to 1.0 and have the calculation
                         // proceed but not follow the users' intent.
@@ -314,7 +290,7 @@ public:
     {
         return "UserDefined(fname=" ~ luafname ~ ")";
     }
-    
+
     // not @nogc
     override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
     {
@@ -323,7 +299,7 @@ public:
 	callInterfaceUDF(t, gtl, ftl, f.i_bndry, j, k, f);
 	lua_gc(bc.myL, LUA_GCCOLLECT, 0);
     }
-    
+
     // not @nogc
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
@@ -331,79 +307,70 @@ public:
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
             callInterfaceUDF(t, gtl, ftl, i, j, k, f);
-        } // end foreach face
+        }
         lua_gc(bc.myL, LUA_GCCOLLECT, 0);
     }
 
     // not @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        size_t i, j, k;
-        FVCell cell;
-        FVInterface IFace;
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
-
+        //
         final switch (which_boundary) {
         case Face.north:
-            j = blk.jmax;
-            for (k = blk.kmin; k <= blk.kmax; ++k)  {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.north];
-                    callInterfaceUDF(t, gtl, ftl, i, j, k, IFace);
-                } // end i loop
-            } // end k loop
+            size_t j = blk.njc;
+            foreach (k; 0 .. blk.nkc)  {
+                foreach (i; 0 .. blk.nic) {
+                    auto f = blk.get_ifj(i,j,k);
+                    callInterfaceUDF(t, gtl, ftl, i, j, k, f);
+                }
+            }
             break;
         case Face.east:
-            i = blk.imax;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.east];
-                    callInterfaceUDF(t, gtl, ftl, i, j, k, IFace);
-                } // end j loop
-            } // end k loop
+            size_t i = blk.nic;
+            foreach (k; 0 .. blk.nkc) {
+                foreach (j; 0 .. blk.njc) {
+                    auto f = blk.get_ifi(i,j,k);
+                    callInterfaceUDF(t, gtl, ftl, i, j, k, f);
+                }
+            }
             break;
         case Face.south:
-            j = blk.jmin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i=blk.imin; i <= blk.imax; ++i) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.south];
-                    callInterfaceUDF(t, gtl, ftl, i, j, k, IFace);
-                } // end i loop
-            } // end j loop
+            size_t j = 0;
+            foreach (k; 0 .. blk.nkc)  {
+                foreach (i; 0 .. blk.nic) {
+                    auto f = blk.get_ifj(i,j,k);
+                    callInterfaceUDF(t, gtl, ftl, i, j, k, f);
+                }
+            }
             break;
         case Face.west:
-            i = blk.imin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j=blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.west];
-                    callInterfaceUDF(t, gtl, ftl, i, j, k, IFace);
-                } // end j loop
-            } // end k loop
+            size_t i = 0;
+            foreach (k; 0 .. blk.nkc) {
+                foreach (j; 0 .. blk.njc) {
+                    auto f = blk.get_ifi(i,j,k);
+                    callInterfaceUDF(t, gtl, ftl, i, j, k, f);
+                }
+            }
             break;
         case Face.top:
-            k = blk.kmax;
-            for (i= blk.imin; i <= blk.imax; ++i) {
-                for (j=blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.top];
-                    callInterfaceUDF(t, gtl, ftl, i, j, k, IFace);
-                } // end j loop
-            } // end i loop
+            size_t k = blk.nkc;
+            foreach (i; 0 .. blk.nic) {
+                foreach (j; 0 .. blk.njc) {
+                    auto f = blk.get_ifk(i,j,k);
+                    callInterfaceUDF(t, gtl, ftl, i, j, k, f);
+                }
+            }
             break;
         case Face.bottom:
-            k = blk.kmin;
-            for (i = blk.imin; i <= blk.imax; ++i) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    cell = blk.get_cell(i,j,k);
-                    IFace = cell.iface[Face.bottom];
-                    callInterfaceUDF(t, gtl, ftl, i, j, k, IFace);
-                } // end j loop
-            } // end i loop
+            size_t k = blk.nkc;
+            foreach (i; 0 .. blk.nic) {
+                foreach (j; 0 .. blk.njc) {
+                    auto f = blk.get_ifk(i,j,k);
+                    callInterfaceUDF(t, gtl, ftl, i, j, k, f);
+                }
+            }
             break;
         } // end switch which boundary
         lua_gc(blk.bc[which_boundary].myL, LUA_GCCOLLECT, 0);
@@ -419,13 +386,13 @@ private:
         // the non-nil values.
         auto gmodel = blk.myConfig.gmodel;
         FlowState fs = iface.fs;
-        
+
         lua_getfield(L, tblIdx, "p");
         if ( !lua_isnil(L, -1) ) {
             fs.gas.p = getDouble(L, tblIdx, "p");
         }
         lua_pop(L, 1);
-        
+
         lua_getfield(L, tblIdx, "T");
         if ( !lua_isnil(L, -1) ) {
             fs.gas.T = getDouble(L, tblIdx, "T");
@@ -585,77 +552,75 @@ public:
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
             callFluxUDF(t, gtl, ftl, i, j, k, f);
-        } // end foreach face
+        }
         lua_gc(bc.myL, LUA_GCCOLLECT, 0);
     }  // end apply_unstructured_grid()
 
     // not @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        size_t i, j, k;
-        FVInterface IFace;
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
-
+        //
         final switch (which_boundary) {
         case Face.north:
-            j = blk.jmax + 1;
-            for (k = blk.kmin; k <= blk.kmax; ++k)  {
-                for (i = blk.imin; i <= blk.imax; ++i) {
-                    IFace = blk.get_ifj(i, j, k);
-                    callFluxUDF(t, gtl, ftl, i, j, k, IFace);
-                } // end i loop
-            } // end k loop
+            size_t j = blk.njc;
+            foreach (k; 0 .. blk.nkc)  {
+                foreach (i; 0 .. blk.nic) {
+                    auto f = blk.get_ifj(i,j,k);
+                    callFluxUDF(t, gtl, ftl, i, j, k, f);
+                }
+            }
             break;
         case Face.east:
-            i = blk.imax + 1;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    IFace = blk.get_ifi(i, j, k);
-                    callFluxUDF(t, gtl, ftl, i, j, k, IFace);
-                } // end j loop
-            } // end k loop
+            size_t i = blk.nic;
+            foreach (k; 0 .. blk.nkc) {
+                foreach (j; 0 .. blk.njc) {
+                    auto f = blk.get_ifi(i,j,k);
+                    callFluxUDF(t, gtl, ftl, i, j, k, f);
+                }
+            }
             break;
         case Face.south:
-            j = blk.jmin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (i=blk.imin; i <= blk.imax; ++i) {
-                    IFace = blk.get_ifj(i, j, k);
-                    callFluxUDF(t, gtl, ftl, i, j, k, IFace);
-                } // end i loop
-            } // end j loop
+            size_t j = 0;
+            foreach (k; 0 .. blk.nkc)  {
+                foreach (i; 0 .. blk.nic) {
+                    auto f = blk.get_ifj(i,j,k);
+                    callFluxUDF(t, gtl, ftl, i, j, k, f);
+                }
+            }
             break;
         case Face.west:
-            i = blk.imin;
-            for (k = blk.kmin; k <= blk.kmax; ++k) {
-                for (j=blk.jmin; j <= blk.jmax; ++j) {
-                    IFace = blk.get_ifi(i, j, k);
-                    callFluxUDF(t, gtl, ftl, i, j, k, IFace);
-                } // end j loop
-            } // end k loop
+            size_t i = 0;
+            foreach (k; 0 .. blk.nkc) {
+                foreach (j; 0 .. blk.njc) {
+                    auto f = blk.get_ifi(i,j,k);
+                    callFluxUDF(t, gtl, ftl, i, j, k, f);
+                }
+            }
             break;
         case Face.top:
-            k = blk.kmax + 1;
-            for (i= blk.imin; i <= blk.imax; ++i) {
-                for (j=blk.jmin; j <= blk.jmax; ++j) {
-                    IFace = blk.get_ifk(i, j, k);
-                    callFluxUDF(t, gtl, ftl, i, j, k, IFace);
-                } // end j loop
-            } // end i loop
+            size_t k = blk.nkc;
+            foreach (i; 0 .. blk.nic) {
+                foreach (j; 0 .. blk.njc) {
+                    auto f = blk.get_ifk(i,j,k);
+                    callFluxUDF(t, gtl, ftl, i, j, k, f);
+                }
+            }
             break;
         case Face.bottom:
-            k = blk.kmin;
-            for (i = blk.imin; i <= blk.imax; ++i) {
-                for (j = blk.jmin; j <= blk.jmax; ++j) {
-                    IFace = blk.get_ifk(i, j, k);
-                    callFluxUDF(t, gtl, ftl, i, j, k, IFace);
-                } // end j loop
-            } // end i loop
+            size_t k = blk.nkc;
+            foreach (i; 0 .. blk.nic) {
+                foreach (j; 0 .. blk.njc) {
+                    auto f = blk.get_ifk(i,j,k);
+                    callFluxUDF(t, gtl, ftl, i, j, k, f);
+                }
+            }
             break;
         } // end switch which boundary
         lua_gc(blk.bc[which_boundary].myL, LUA_GCCOLLECT, 0);
     } // end apply_structured_grid()
-                        
+
 private:
     // not @nogc
     void putFluxIntoInterface(lua_State* L, int tblIdx, FVInterface iface)
@@ -666,7 +631,7 @@ private:
         // So we need to test every possibility and only set
         // the non-nil values.
         auto gmodel = blk.myConfig.gmodel;
-        
+
         lua_getfield(L, tblIdx, "mass");
         if ( !lua_isnil(L, -1) ) {
             iface.F.mass += getDouble(L, tblIdx, "mass");
