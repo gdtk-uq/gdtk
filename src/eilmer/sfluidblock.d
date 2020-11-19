@@ -426,72 +426,42 @@ public:
         // if the boundary-condition accommodates them.
         foreach (k; 0 .. nkc) {
             foreach (j; 0 .. njc) {
-                foreach (i; 0 .. niv) {
-                    auto f = get_ifi(i,j,k);
-                    if (i > 0) {
-                        // Attach cells to left of this face.
-                        foreach (n; 0 .. n_ghost_cell_layers) {
-                            if (i > n) {
-                                // Selected cell is in the block.
-                                f.left_cells ~= get_cell(i-n-1,j,k);
-                            } else {
-                                // Selected cell in in the ghost-cell halo, if it exists.
-                                if (bc[Face.west].ghost_cell_data_available) {
-                                    f.left_cells ~= get_ifi(0,j,k).left_cells[n-i];
-                                }
-                            }
-                        } // end foreach n
+                foreach (i; 1 .. niv) {
+                    // Work from left to right, attaching cells to left of each face.
+                    auto fL = get_ifi(i,j,k);
+                    fL.left_cells ~= get_cell(i-1,j,k);
+                    auto fL1 = get_ifi(i-1,j,k);
+                    foreach (n; 0 .. n_ghost_cell_layers-1) {
+                        fL.left_cells ~= fL1.left_cells[n];
                     }
-                    if (i < niv-1) {
-                        // Attach cells to right of this face.
-                        size_t dif = niv-1-i; // count of face in from right boundary: 1, 2, ...
-                        foreach (n; 0 .. n_ghost_cell_layers) {
-                            if (dif > n) {
-                                // Selected cell is in the block.
-                                f.right_cells ~= get_cell(nic-dif,j,k);
-                            } else {
-                                // Selected cell in in the ghost-cell halo, if it exists.
-                                if (bc[Face.east].ghost_cell_data_available) {
-                                    f.right_cells ~= get_ifi(niv-1,j,k).right_cells[n+1-dif];
-                                }
-                            }
-                        } // end foreach n
+                    // Work from right to left, attaching cells to right of each face.
+                    size_t iR = niv-1-i;
+                    auto fR = get_ifi(iR,j,k);
+                    fR.right_cells ~= get_cell(iR,j,k);
+                    auto fR1 = get_ifi(iR+1,j,k);
+                    foreach (n; 0 .. n_ghost_cell_layers-1) {
+                        fR.right_cells ~= fR1.right_cells[n];
                     }
                 } // i loop
             } // j loop
         } // k loop
         foreach (k; 0 .. nkc) {
             foreach (i; 0 .. nic) {
-                foreach (j; 0 .. njv) {
-                    auto f = get_ifj(i,j,k);
-                    if (j > 0) {
-                        // Attach cells to left of this face.
-                        foreach (n; 0 .. n_ghost_cell_layers) {
-                            if (j > n) {
-                                // Selected cell is in the block.
-                                f.left_cells ~= get_cell(i,j-n-1,k);
-                            } else {
-                                // Selected cell in in the ghost-cell halo, if it exists.
-                                if (bc[Face.south].ghost_cell_data_available) {
-                                    f.left_cells ~= get_ifj(i,0,k).left_cells[n-j];
-                                }
-                            }
-                        } // end foreach n
+                foreach (j; 1 .. njv) {
+                    // Work from left to right, attaching cells to left of each face.
+                    auto fL = get_ifj(i,j,k);
+                    fL.left_cells ~= get_cell(i,j-1,k);
+                    auto fL1 = get_ifj(i,j-1,k);
+                    foreach (n; 0 .. n_ghost_cell_layers-1) {
+                        fL.left_cells ~= fL1.left_cells[n];
                     }
-                    if (j < njv-1) {
-                        // Attach cells to right of this face.
-                        size_t djf = njv-1-j; // count of face in from right boundary: 1, 2, ...
-                        foreach (n; 0 .. n_ghost_cell_layers) {
-                            if (djf > n) {
-                                // Selected cell is in the block.
-                                f.right_cells ~= get_cell(i,njc-djf,k);
-                            } else {
-                                // Selected cell in in the ghost-cell halo, if it exists.
-                                if (bc[Face.north].ghost_cell_data_available) {
-                                    f.right_cells ~= get_ifj(i,njv-1,k).right_cells[n+1-djf];
-                                }
-                            }
-                        } // end foreach n
+                    // Work from right to left, attaching cells to right of each face.
+                    size_t jR = njv-1-j;
+                    auto fR = get_ifj(i,jR,k);
+                    fR.right_cells ~= get_cell(i,jR,k);
+                    auto fR1 = get_ifj(i,jR+1,k);
+                    foreach (n; 0 .. n_ghost_cell_layers-1) {
+                        fR.right_cells ~= fR1.right_cells[n];
                     }
                 } // j loop
             } // i loop
@@ -499,36 +469,21 @@ public:
         if (myConfig.dimensions == 3) {
             foreach (j; 0 .. njc) {
                 foreach (i; 0 .. nic) {
-                    foreach (k; 0 .. nkv) {
-                        auto f = get_ifk(i,j,k);
-                        if (k > 0) {
-                            // Attach cells to left of this face.
-                            foreach (n; 0 .. n_ghost_cell_layers) {
-                                if (k > n) {
-                                    // Selected cell is in the block.
-                                    f.left_cells ~= get_cell(i,j,k-n-1);
-                                } else {
-                                    // Selected cell in in the ghost-cell halo, if it exists.
-                                    if (bc[Face.bottom].ghost_cell_data_available) {
-                                        f.left_cells ~= get_ifk(i,j,0).left_cells[n-k];
-                                    }
-                                }
-                            } // end foreach n
+                    foreach (k; 1 .. nkv) {
+                        // Work from left to right, attaching cells to left of each face.
+                        auto fL = get_ifk(i,j,k);
+                        fL.left_cells ~= get_cell(i,j,k-1);
+                        auto fL1 = get_ifk(i,j,k-1);
+                        foreach (n; 0 .. n_ghost_cell_layers-1) {
+                            fL.left_cells ~= fL1.left_cells[n];
                         }
-                        if (k < nkv-1) {
-                            // Attach cells to right of this face.
-                            size_t dkf = nkv-1-k; // count of face in from right boundary: 1, 2, ...
-                            foreach (n; 0 .. n_ghost_cell_layers) {
-                                if (dkf > n) {
-                                    // Selected cell is in the block.
-                                    f.right_cells ~= get_cell(i,j,nkc-dkf);
-                                } else {
-                                    // Selected cell in in the ghost-cell halo, if it exists.
-                                    if (bc[Face.top].ghost_cell_data_available) {
-                                        f.right_cells ~= get_ifk(i,j,nkv-1).right_cells[n+1-dkf];
-                                    }
-                                }
-                            } // end foreach n
+                        // Work from right to left, attaching cells to right of each face.
+                        size_t kR = nkv-1-k;
+                        auto fR = get_ifk(i,j,kR);
+                        fR.right_cells ~= get_cell(i,j,kR);
+                        auto fR1 = get_ifk(i,j,kR+1);
+                        foreach (n; 0 .. n_ghost_cell_layers-1) {
+                            fR.right_cells ~= fR1.right_cells[n];
                         }
                     } //k loop
                 } // i loop
