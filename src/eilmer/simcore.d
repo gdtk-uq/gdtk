@@ -2067,7 +2067,7 @@ void set_grid_velocities()
                             if (blk.active && blk.bc[Face.west].type == "inflow_shock_fitting") {
                                 is_master_block[0] = 1;     // Assign self as the master block
                                 inflow_vertex_velocities = shock_fitting_vertex_velocities(sblk);   // Do calculation
-                                assert(inflow_vertex_velocities.length == (sblk.jmax - sblk.jmin + 2), "the vertex velocity array is the wrong size");
+                                assert(inflow_vertex_velocities.length == (sblk.njv), "the vertex velocity array is the wrong size");
                                 unpacked_vertex_velocities = unpack_vertex_velocities(inflow_vertex_velocities); // Unpack the vertex velocities to a form that can be read by MPI
                             }
 

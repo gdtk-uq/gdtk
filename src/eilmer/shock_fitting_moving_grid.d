@@ -47,29 +47,28 @@ version(mpi_parallel) {
 // Start assign_radial_dist_mpi
 version(mpi_parallel) {
     void assign_radial_dist_mpi(SFluidBlock blk) {
-        size_t krange = (blk.myConfig.dimensions == 3) ? blk.kmax+1 : blk.kmax;
         MPI_Status MPI_incoming_dist_status, MPI_incoming_partner_status, MPI_incoming_chained_status;
         MPI_Request MPI_incoming_dist_request, MPI_incoming_partner_request, MPI_incoming_chained_request;
         FVVertex vtx, vtx_prev;
 
-        number[] local_dist = new number[(blk.jmax - blk.jmin + 2) * (krange - blk.kmin + 1)];
+        number[] local_dist = new number[blk.njv * blk.nkv];
         number[] total_dist = new number[local_dist.length];
 
         // Populate the list with zeros as we will be incrementing the elements- can't leave as nans
-        for (size_t i = 0; i < local_dist.length; i++) { local_dist[i] = 0.0; }
+        foreach (i; 0 .. local_dist.length) { local_dist[i] = 0.0; }
 
         bool requested_data = false, sent_data = false;
         int no_partners, east_neighbour_rank, west_neighbour_rank, east_neighbour, west_neighbour;
 
         // Assign absolute radial distance within the block
-        for (size_t k = blk.kmin; k <= krange; k++) {
-            for (size_t j = blk.jmin; j <= blk.jmax+1; j++) {
-                for (size_t i = blk.imax; i >= blk.imin; i--) {
+        foreach (k; 0 .. blk.nkv) {
+            foreach (j; 0 .. blk.njv) {
+                for (int i = to!int(blk.niv-2); i >= 0; i--) {
                     vtx = blk.get_vtx(i, j, k);
                     vtx_prev = blk.get_vtx(i+1, j, k);
                     Vector3 delta = vtx.pos[0] - vtx_prev.pos[0];
-                    local_dist[(blk.jmax - blk.jmin + 2) * (k - blk.kmin) + (j - blk.jmin)] += geom.abs(delta);
-                    vtx.radial_pos_norm = local_dist[(blk.jmax - blk.jmin + 2) * (k - blk.kmin) + (j - blk.jmin)];
+                    local_dist[(blk.njv)*k + j] += geom.abs(delta);
+                    vtx.radial_pos_norm = local_dist[(blk.njv) * k + j];
                 }
             }
         }
@@ -108,18 +107,18 @@ version(mpi_parallel) {
         }
         // This is where we get the proper radial position of all the vertices
         // by adding the radial distance of the previous blocks to the local vertices
-        for (size_t k = blk.kmin; k <= krange; k++) {
-            for (size_t j = blk.jmin; j <= blk.jmax+1; j++) {
-                for (size_t i = blk.imin; i <= blk.imax+1; i++) {
+        foreach (k; 0 .. blk.nkv) {
+            foreach (j; 0 .. blk.njv) {
+                foreach (i; 0 .. blk.niv) {
                     vtx = blk.get_vtx(i, j, k);
-                    vtx.radial_pos_norm += total_dist[(blk.jmax - blk.jmin + 2) * (k - blk.kmin) + (j - blk.jmin)];
+                    vtx.radial_pos_norm += total_dist[blk.njv * k + j];
                 }
             }
         }
         // Create a new array that will be sent away to the next block
         // which contains the radial distance up to the west edge of this block
-        number[] total_dist_send = new number[(blk.jmax - blk.jmin + 2) * (krange - blk.kmin + 1)];
-        for (size_t m = 0; m < total_dist_send.length; m++) {
+        number[] total_dist_send = new number[blk.njv * blk.nkv];
+        foreach (m; 0 .. total_dist_send.length) {
             total_dist_send[m] = total_dist[m] + local_dist[m];
         }
         // Wait for the receive request for the size of the chained_to array to be completed
@@ -183,13 +182,12 @@ version(mpi_parallel) {
         } else {
             total_dist = total_dist_send;
         }
-        for (size_t k = blk.kmin; k <= krange; k++) {
-            for (size_t j = blk.jmin; j <= blk.jmax+1; j++) {
-                for (size_t i = blk.imin; i <= blk.imax+1; i++) {
+        foreach (k; 0 .. blk.nkv) {
+            foreach (j; 0 .. blk.njv) {
+                foreach (i; 0 .. blk.niv) {
                     vtx = blk.get_vtx(i, j, k);
-                    vtx.radial_pos_norm /= total_dist[(blk.jmax - blk.jmin + 2) * (k - blk.kmin) + (j - blk.jmin)];
-                    if (j == blk.jmin) {
-                    }
+                    // FIX-ME 2020-11-21 Suspect that total_distance might get to zero at one end.
+                    vtx.radial_pos_norm /= total_dist[blk.njv * k + j];
                 }
             }
         }
