@@ -1497,7 +1497,7 @@ public:
             // Top boundary secondary cell geometry information
             foreach (i; 0 .. niv-1) {
                 foreach (j; 0 .. njv-1) {
-                    size_t k = nkv-1;
+                    size_t k = nkv-2;
                     FVVertex vtx = get_vtx(i+1,j+1,k+1);
                     FVCell c0 = get_cell(i,j,k);
                     FVCell c1 = get_cell(i+1,j,k);
@@ -1617,7 +1617,7 @@ public:
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // Top-West edge [4]-->[7]
-            foreach (j; 1 .. niv-1) {
+            foreach (j; 1 .. njv-1) {
                 size_t i = 0; size_t k = nkv-2;
                 FVVertex vtx = get_vtx(i,j,k+1);
                 FVCell c0 = get_cell(i,j-1,k);
