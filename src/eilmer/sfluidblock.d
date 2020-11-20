@@ -423,7 +423,7 @@ public:
                 if (bc[Face.bottom].ghost_cell_data_available) {
                     foreach (j; 0 .. njc) {
                         foreach (i; 0 .. nic) {
-                            auto f = get_ifi(i, j, 0);
+                            auto f = get_ifk(i, j, 0);
                             foreach (n; 0 .. n_ghost_cell_layers) {
                                 auto c = new FVCell(myConfig,  lsq_workspace_at_cells);
                                 c.id = cell_id; ++cell_id;
@@ -1404,9 +1404,9 @@ public:
             }
         } else { // Flow quantity derivatives for 3D.
             // Internal secondary cell geometry information
-            foreach (i; 0 .. niv-1) {
-                foreach (j; 0 .. njv-1) {
-                    foreach (k; 0 .. nkv-1) {
+            foreach (i; 0 .. niv-2) {
+                foreach (j; 0 .. njv-2) {
+                    foreach (k; 0 .. nkv-2) {
                         FVVertex vtx = get_vtx(i+1,j+1,k+1);
                         FVCell c0 = get_cell(i,j,k);
                         FVCell c1 = get_cell(i+1,j,k);
@@ -1423,8 +1423,8 @@ public:
                 }
             }
             // East boundary secondary cell geometry information
-            foreach (j; 0 .. njv-1) {
-                foreach (k; 0 .. njv-1) {
+            foreach (j; 0 .. njv-2) {
+                foreach (k; 0 .. njv-2) {
                     size_t i = niv-2;
                     FVVertex vtx = get_vtx(i+1,j+1,k+1);
                     FVCell c0 = get_cell(i,j,k);
@@ -1441,8 +1441,8 @@ public:
                 }
             }
             // West boundary secondary cell geometry information
-            foreach (j; 0 .. njv-1) {
-                foreach (k; 0 .. nkv-1) {
+            foreach (j; 0 .. njv-2) {
+                foreach (k; 0 .. nkv-2) {
                     int i = -1; // note negative value
                     FVVertex vtx = get_vtx(i+1,j+1,k+1);
                     FVInterface c0 = get_ifi(i+1,j,k);
@@ -1459,8 +1459,8 @@ public:
                 }
             }
             // North boundary secondary cell geometry information
-            foreach (i; 0 .. niv-1) {
-                foreach (k; 0 .. nkv-1) {
+            foreach (i; 0 .. niv-2) {
+                foreach (k; 0 .. nkv-2) {
                     size_t j = njv-2;
                     FVVertex vtx = get_vtx(i+1,j+1,k+1);
                     FVCell c0 = get_cell(i,j,k);
@@ -1477,8 +1477,8 @@ public:
                 }
             }
             // South boundary secondary cell geometry information
-            foreach (i; 0 .. niv-1) {
-                foreach (k; 0 .. nkv-1) {
+            foreach (i; 0 .. niv-2) {
+                foreach (k; 0 .. nkv-2) {
                     int j = -1; // note negative
                     FVVertex vtx = get_vtx(i+1,j+1,k+1);
                     FVInterface c0 = get_ifj(i,j+1,k);
@@ -1495,8 +1495,8 @@ public:
                 }
             }
             // Top boundary secondary cell geometry information
-            foreach (i; 0 .. niv-1) {
-                foreach (j; 0 .. njv-1) {
+            foreach (i; 0 .. niv-2) {
+                foreach (j; 0 .. njv-2) {
                     size_t k = nkv-2;
                     FVVertex vtx = get_vtx(i+1,j+1,k+1);
                     FVCell c0 = get_cell(i,j,k);
@@ -1513,8 +1513,8 @@ public:
                 }
             }
             // Bottom boundary secondary cell geometry information
-            foreach (i; 0 .. niv-1) {
-                foreach (j; 0 .. njv-1) {
+            foreach (i; 0 .. niv-2) {
+                foreach (j; 0 .. njv-2) {
                     int k = -1; // note negative
                     FVVertex vtx = get_vtx(i+1,j+1,k+1);
                     FVInterface c0 = get_ifk(i,j,k+1);
@@ -1532,7 +1532,7 @@ public:
             }
             // Now, do the 4 edges around the bottom face.
             // Bottom-South edge [0]-->[1]
-            foreach (i; 1 .. niv-1) {
+            foreach (i; 1 .. niv-2) {
                 size_t j = 0; size_t k = 0;
                 FVVertex vtx = get_vtx(i,j,k);
                 FVCell c0 = get_cell(i-1,j,k);
@@ -1546,7 +1546,7 @@ public:
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // Bottom-North edge [3]-->[2]
-            foreach (i; 1 .. niv-1) {
+            foreach (i; 1 .. niv-2) {
                 size_t j = njv-2; size_t k = 0;
                 FVVertex vtx = get_vtx(i,j+1,k);
                 FVCell c0 = get_cell(i-1,j,k);
@@ -1560,7 +1560,7 @@ public:
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // Bottom-West edge [0]-->[3]
-            foreach (j; 1 .. njv-1) {
+            foreach (j; 1 .. njv-2) {
                 size_t i = 0; size_t k = 0;
                 FVVertex vtx = get_vtx(i,j,k);
                 FVCell c0 = get_cell(i,j-1,k);
@@ -1574,7 +1574,7 @@ public:
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // Bottom-East edge [1]-->[2]
-            foreach (j; 1 ..njv-1) {
+            foreach (j; 1 ..njv-2) {
                 size_t i = niv-2; size_t k = 0;
                 FVVertex vtx = get_vtx(i+1,j,k);
                 FVCell c0 = get_cell(i,j-1,k);
@@ -1589,7 +1589,7 @@ public:
             }
             // 4 edges around the top face.
             // Top-South edge [4]-->[5]
-            foreach (i; 1 .. niv-1) {
+            foreach (i; 1 .. niv-2) {
                 size_t j = 0; size_t k = nkv-2;
                 FVVertex vtx = get_vtx(i,j,k+1);
                 FVCell c0 = get_cell(i-1,j,k);
@@ -1603,7 +1603,7 @@ public:
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // Top-North edge [7]-->[6]
-            foreach (i; 1 .. niv-1) {
+            foreach (i; 1 .. niv-2) {
                 size_t j = njv-2; size_t k = nkv-2;
                 FVVertex vtx = get_vtx(i,j+1,k+1);
                 FVCell c0 = get_cell(i-1,j,k);
@@ -1617,7 +1617,7 @@ public:
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // Top-West edge [4]-->[7]
-            foreach (j; 1 .. njv-1) {
+            foreach (j; 1 .. njv-2) {
                 size_t i = 0; size_t k = nkv-2;
                 FVVertex vtx = get_vtx(i,j,k+1);
                 FVCell c0 = get_cell(i,j-1,k);
@@ -1631,7 +1631,7 @@ public:
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // Top-East edge [5]-->[6]
-            foreach (j; 1 .. njv-1) {
+            foreach (j; 1 .. njv-2) {
                 size_t i = niv-2; size_t k = nkv-2;
                 FVVertex vtx = get_vtx(i+1,j,k+1);
                 FVCell c0 = get_cell(i,j-1,k);
@@ -1646,7 +1646,7 @@ public:
             }
             // 4 edges running from bottom to top.
             // South-West edge [0]-->[4]
-            foreach (k; 1 .. nkv-1) {
+            foreach (k; 1 .. nkv-2) {
                 size_t i = 0; size_t j = 0;
                 FVVertex vtx = get_vtx(i,j,k);
                 FVCell c0 = get_cell(i,j,k-1);
@@ -1660,7 +1660,7 @@ public:
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // South-East edge [1]-->[5]
-            foreach (k; 1 .. nkv-1) {
+            foreach (k; 1 .. nkv-2) {
                 size_t i = niv-2; size_t j = 0;
                 FVVertex vtx = get_vtx(i+1,j,k);
                 FVCell c0 = get_cell(i,j,k-1);
@@ -1674,7 +1674,7 @@ public:
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // North-East edge [2]-->[6]
-            foreach (k; 1 .. nkv-1) {
+            foreach (k; 1 .. nkv-2) {
                 size_t i = niv-2; size_t j = njv-2;
                 FVVertex vtx = get_vtx(i+1,j+1,k);
                 FVCell c0 = get_cell(i,j,k-1);
@@ -1688,7 +1688,7 @@ public:
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // North-West edge [3]-->[7]
-            foreach (k; 1 .. nkv-1) {
+            foreach (k; 1 .. nkv-2) {
                 size_t i = 0; size_t j = njv-2;
                 FVVertex vtx = get_vtx(i,j+1,k);
                 FVCell c0 = get_cell(i,j,k-1);

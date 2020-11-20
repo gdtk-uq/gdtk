@@ -965,9 +965,6 @@ public:
                         k_dest = k;
                         auto f = this_blk.get_ifi(i_dest,j_dest,k_dest);
                         foreach (n; 0 .. this_blk.n_ghost_cell_layers) { ghost_cells ~= f.right_cells[n]; }
-                        ghost_cells ~= this_blk.get_cell(i_dest+1,j_dest,k_dest);
-                        ghost_cells ~= this_blk.get_cell(i_dest+2,j_dest,k_dest);
-                        if (nghost3) { ghost_cells ~= this_blk.get_cell(i_dest+3,j_dest,k_dest); }
                         final switch (other_face) {
                         case Face.north:
                             j_src = other_blk.njc - 1;
