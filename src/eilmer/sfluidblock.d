@@ -177,6 +177,11 @@ public:
     // map to the index into the single-dimensional cells array
     // that is held in the FluidBlock base class.
     {
+        debug {
+            if (!(i < nic && j < njc && k < nkc)) {
+                writefln("cell_index[%d,%d,%d] from [%d,%d,%d]", i, j, k, nic, njc, nkc);
+            }
+        }
         assert(i < nic && j < njc && k < nkc, "Index out of bounds.");
         return (k*njc + j)*nic + i;
     }
@@ -200,6 +205,11 @@ public:
     // map to the index into the single-dimensional vertices array
     // that is held in the FluidBlock base class.
     {
+        debug {
+            if (!(i < niv && j < njv && k < nkv)) {
+                writefln("vertex_index[%d,%d,%d] from [%d,%d,%d]", i, j, k, niv, njv, nkv);
+            }
+        }
         assert(i < niv && j < njv && k < nkv, "Index out of bounds.");
         return (k*njv + j)*niv + i;
     }
@@ -211,6 +221,11 @@ public:
     // map to the index into the single-dimensional vertices array
     // that is held in the FluidBlock base class.
     {
+        debug {
+            if (!(i < niv && j < njc && k < nkc)) {
+                writefln("ifi_index[%d,%d,%d] from [%d,%d,%d]", i, j, k, niv, njc, nkc);
+            }
+        }
         assert(i < niv && j < njc && k < nkc, "Index out of bounds.");
         return (k*njc + j)*niv + i;
     }
@@ -222,6 +237,11 @@ public:
     // map to the index into the single-dimensional vertices array
     // that is held in the FluidBlock base class.
     {
+        debug {
+            if (!(i < nic && j < njv && k < nkc)) {
+                writefln("ifj_index[%d,%d,%d] from [%d,%d,%d]", i, j, k, nic, njv, nkc);
+            }
+        }
         assert(i < nic && j < njv && k < nkc, "Index out of bounds.");
         size_t nifaces = niv*njc*nkc;
         return (k*njv + j)*nic + i + nifaces;
@@ -234,6 +254,11 @@ public:
     // map to the index into the single-dimensional vertices array
     // that is held in the FluidBlock base class.
     {
+        debug {
+            if (!(i < nic && j < njc && k < nkv)) {
+                writefln("ifj_index[%d,%d,%d] from [%d,%d,%d]", i, j, k, nic, njc, nkv);
+            }
+        }
         assert(i < nic && j < njc && k < nkv, "Index out of bounds.");
         size_t nifaces = niv*njc*nkc;
         size_t njfaces = nic*njv*nkc;
@@ -1291,7 +1316,7 @@ public:
             // Half-cells along the edges of the block.
             // East boundary
             foreach (j; 1 .. njv-1) {
-                size_t i = niv;
+                size_t i = niv-1;
                 FVVertex vtx = get_vtx(i,j);
                 FVInterface A = get_ifi(i,j-1);
                 FVInterface B = get_ifi(i,j);
@@ -1314,7 +1339,7 @@ public:
             } // j loop
             // North boundary
             foreach (i; 1 .. niv-1) {
-                size_t j = niv-1;
+                size_t j = njv-1;
                 FVVertex vtx = get_vtx(i,j);
                 FVCell A = get_cell(i,j-1);
                 FVInterface B = get_ifj(i,j);
@@ -1799,7 +1824,7 @@ public:
                 throw new FlowSolverException(msg);
             }
             foreach (j; 0 .. njv) {
-                foreach (i; 0 .. njv) {
+                foreach (i; 0 .. niv) {
                     auto vtx = get_vtx(i,j);
                     auto src_vtx = grid[i,j];
                     vtx.pos[gtl].set(src_vtx.x, src_vtx.y, to!number(0.0));
