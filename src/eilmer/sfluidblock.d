@@ -457,7 +457,7 @@ public:
                     fL.left_cells ~= get_cell(i-1,j,k);
                     auto fL1 = get_ifi(i-1,j,k);
                     foreach (n; 0 .. n_ghost_cell_layers-1) {
-                        fL.left_cells ~= fL1.left_cells[n];
+                        if (fL1.left_cells.length > n) { fL.left_cells ~= fL1.left_cells[n]; }
                     }
                     // Work from right to left, attaching cells to right of each face.
                     size_t iR = niv-1-i;
@@ -465,7 +465,7 @@ public:
                     fR.right_cells ~= get_cell(iR,j,k);
                     auto fR1 = get_ifi(iR+1,j,k);
                     foreach (n; 0 .. n_ghost_cell_layers-1) {
-                        fR.right_cells ~= fR1.right_cells[n];
+                        if (fR1.right_cells.length > n) { fR.right_cells ~= fR1.right_cells[n]; }
                     }
                 } // i loop
             } // j loop
@@ -478,7 +478,7 @@ public:
                     fL.left_cells ~= get_cell(i,j-1,k);
                     auto fL1 = get_ifj(i,j-1,k);
                     foreach (n; 0 .. n_ghost_cell_layers-1) {
-                        fL.left_cells ~= fL1.left_cells[n];
+                        if (fL1.left_cells.length > n) { fL.left_cells ~= fL1.left_cells[n]; }
                     }
                     // Work from right to left, attaching cells to right of each face.
                     size_t jR = njv-1-j;
@@ -486,7 +486,7 @@ public:
                     fR.right_cells ~= get_cell(i,jR,k);
                     auto fR1 = get_ifj(i,jR+1,k);
                     foreach (n; 0 .. n_ghost_cell_layers-1) {
-                        fR.right_cells ~= fR1.right_cells[n];
+                        if (fR1.right_cells.length > n) { fR.right_cells ~= fR1.right_cells[n]; }
                     }
                 } // j loop
             } // i loop
@@ -500,7 +500,7 @@ public:
                         fL.left_cells ~= get_cell(i,j,k-1);
                         auto fL1 = get_ifk(i,j,k-1);
                         foreach (n; 0 .. n_ghost_cell_layers-1) {
-                            fL.left_cells ~= fL1.left_cells[n];
+                            if (fL1.left_cells.length > n) { fL.left_cells ~= fL1.left_cells[n]; }
                         }
                         // Work from right to left, attaching cells to right of each face.
                         size_t kR = nkv-1-k;
@@ -508,7 +508,7 @@ public:
                         fR.right_cells ~= get_cell(i,j,kR);
                         auto fR1 = get_ifk(i,j,kR+1);
                         foreach (n; 0 .. n_ghost_cell_layers-1) {
-                            fR.right_cells ~= fR1.right_cells[n];
+                            if (fR1.right_cells.length > n) { fR.right_cells ~= fR1.right_cells[n]; }
                         }
                     } //k loop
                 } // i loop
@@ -2178,8 +2178,8 @@ public:
             foreach (j; 0 .. njc) {
                 foreach (i; 0 .. niv) {
                     auto f = get_ifi(i,j,k);
-                    auto cL0 = f.left_cells[0];
-                    auto cR0 = f.right_cells[0];
+                    FVCell cL0; if (f.left_cells.length > 0) { cL0 = f.left_cells[0]; }
+                    FVCell cR0; if (f.right_cells.length > 0) { cR0 = f.right_cells[0]; }
                     if ((i == 0) && !(bc[Face.west].ghost_cell_data_available)) {
                         Lft.copy_values_from(cR0.fs);
                     } else {
@@ -2214,8 +2214,8 @@ public:
             foreach (j; 0 .. njv) {
                 foreach (i; 0 .. nic) {
                     auto f = get_ifj(i,j,k);
-                    auto cL0 = f.left_cells[0];
-                    auto cR0 = f.right_cells[0];
+                    FVCell cL0; if (f.left_cells.length > 0) { cL0 = f.left_cells[0]; }
+                    FVCell cR0; if (f.right_cells.length > 0) { cR0 = f.right_cells[0]; }
                     if ((j == 0) && !(bc[Face.south].ghost_cell_data_available)) {
                         Lft.copy_values_from(cR0.fs);
                     } else {
@@ -2251,8 +2251,8 @@ public:
                 foreach (j; 0 .. njc) {
                     foreach (i; 0 .. nic) {
                         auto f = get_ifk(i,j,k);
-                        auto cL0 = f.left_cells[0]; auto cL1 = f.left_cells[1];
-                        auto cR0 = f.right_cells[0]; auto cR1 = f.right_cells[1];
+                        FVCell cL0; if (f.left_cells.length > 0) { cL0 = f.left_cells[0]; }
+                        FVCell cR0; if (f.right_cells.length > 0) { cR0 = f.right_cells[0]; }
                         if ((k == 0) && !(bc[Face.bottom].ghost_cell_data_available)) {
                             Lft.copy_values_from(cR0.fs);
                         } else {
