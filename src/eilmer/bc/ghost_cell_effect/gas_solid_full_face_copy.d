@@ -129,7 +129,6 @@ public:
 
     void set_up_cell_mapping_phase0()
     {
-/+ FIX-ME PJ 2020-11-18 Cutting this code out as a short cut.
         // We call this function only after all blocks have been constructed.
         //
         // The following references and names will be handy for the data exchange
@@ -155,12 +154,12 @@ public:
             // Handle the 2D case separately.
             switch (which_boundary) {
             case Face.north:
-                j_dest = this_blk.jmax;  // index of the north-most plane of active cells
-                foreach (i; 0 .. this_blk.nicell) {
-                    i_dest = i + this_blk.imin;
-                    myBC.ifaces ~= this_blk.get_ifj(i_dest, j_dest+1);
+                j_dest = this_blk.njc;  // index of the north-most plane of faces in gas block
+                foreach (i; 0 .. this_blk.nic) {
+                    i_dest = i;
+                    myBC.ifaces ~= this_blk.get_ifj(i_dest, j_dest);
                     myBC.solidCells ~= new SolidFVCell(other_blk.myConfig);
-                    myBC.gasCells ~= this_blk.get_cell(i_dest, j_dest);
+                    myBC.gasCells ~= this_blk.get_cell(i_dest, j_dest-1);
                     switch (other_face) {
                     case Face.north:
                         j_src = other_blk.njcell - 1;
@@ -188,12 +187,12 @@ public:
                 } // i loop
                 break;
             case Face.east:
-                i_dest = this_blk.imax;  // index of the east-most plane of active cells
-                foreach (j; 0 .. this_blk.njcell) {
-                    j_dest = j + this_blk.jmin;
-                    myBC.ifaces ~= this_blk.get_ifi(i_dest+1, j_dest);
+                i_dest = this_blk.nic;  // index of the east-most plane of faces in gas block
+                foreach (j; 0 .. this_blk.njc) {
+                    j_dest = j;
+                    myBC.ifaces ~= this_blk.get_ifi(i_dest, j_dest);
                     myBC.solidCells ~= new SolidFVCell(other_blk.myConfig);
-                    myBC.gasCells ~= this_blk.get_cell(i_dest,j_dest);
+                    myBC.gasCells ~= this_blk.get_cell(i_dest-1,j_dest);
                     switch (other_face) {
                     case Face.north:
                         j_src = other_blk.njcell - 1;
@@ -221,9 +220,9 @@ public:
                 } // j loop
                 break;
             case Face.south:
-                j_dest = this_blk.jmin;  // index of the south-most plane of active cells
-                foreach (i; 0 .. this_blk.nicell) {
-                    i_dest = i + this_blk.imin;
+                j_dest = 0;  // index of the south-most plane of faces in gas block
+                foreach (i; 0 .. this_blk.nic) {
+                    i_dest = i;
                     myBC.ifaces ~= this_blk.get_ifj(i_dest, j_dest);
                     myBC.solidCells ~= new SolidFVCell(other_blk.myConfig);
                     myBC.gasCells ~= this_blk.get_cell(i_dest,j_dest);
@@ -254,9 +253,9 @@ public:
                 } // i loop
                 break;
             case Face.west:
-                i_dest = this_blk.imin;  // index of the west-most plane of active cells
-                foreach (j; 0 .. this_blk.njcell) {
-                    j_dest = j + this_blk.jmin;
+                i_dest = 0;  // index of the west-most plane of faces in gas block
+                foreach (j; 0 .. this_blk.njc) {
+                    j_dest = j;
                     myBC.ifaces ~= this_blk.get_ifi(i_dest, j_dest);
                     myBC.solidCells ~= new SolidFVCell(other_blk.myConfig);
                     myBC.gasCells ~= this_blk.get_cell(i_dest,j_dest);
@@ -294,11 +293,11 @@ public:
             // Continue on with 3D work...
             final switch (which_boundary) {
             case Face.north:
-                j_dest = this_blk.jmax;  // index of the north-most plane of active cells
-                foreach (i; 0 .. this_blk.nicell) {
-                    i_dest = i + this_blk.imin;
-                    foreach (k; 0 .. this_blk.nkcell) {
-                        k_dest = k + this_blk.kmin;
+                j_dest = this_blk.njc;  // index of the north-most plane of faces in gas block
+                foreach (i; 0 .. this_blk.nic) {
+                    i_dest = i;
+                    foreach (k; 0 .. this_blk.nkc) {
+                        k_dest = k;
                         myBC.ifaces ~= this_blk.get_ifj(i_dest, j_dest+1, k_dest);
                         myBC.solidCells ~= new SolidFVCell(other_blk.myConfig);
                         myBC.gasCells ~= this_blk.get_cell(i_dest,j_dest,k_dest);
@@ -367,14 +366,14 @@ public:
                 } // i loop
                 break;
             case Face.east:
-                i_dest = this_blk.imax;  // index of the east-most plane of active cells
-                foreach (j; 0 .. this_blk.njcell) {
-                    j_dest = j + this_blk.jmin;
-                    foreach (k; 0 .. this_blk.nkcell) {
-                        k_dest = k + this_blk.kmin;
-                        myBC.ifaces ~= this_blk.get_ifi(i_dest+1, j_dest, k_dest);
+                i_dest = this_blk.nic;  // index of the east-most plane of faces in gas block
+                foreach (j; 0 .. this_blk.njc) {
+                    j_dest = j;
+                    foreach (k; 0 .. this_blk.nkc) {
+                        k_dest = k;
+                        myBC.ifaces ~= this_blk.get_ifi(i_dest, j_dest, k_dest);
                         myBC.solidCells ~= new SolidFVCell(other_blk.myConfig);
-                        myBC.gasCells ~= this_blk.get_cell(i_dest,j_dest,k_dest);
+                        myBC.gasCells ~= this_blk.get_cell(i_dest-1,j_dest,k_dest);
                         final switch (other_face) {
                         case Face.north:
                             j_src = other_blk.njcell - 1;
@@ -440,11 +439,11 @@ public:
                 } // j loop
                 break;
             case Face.south:
-                j_dest = this_blk.jmin;  // index of the south-most plane of active cells
-                foreach (i; 0 .. this_blk.nicell) {
-                    i_dest = i + this_blk.imin;
-                    foreach (k; 0 .. this_blk.nkcell) {
-                        k_dest = k + this_blk.kmin;
+                j_dest = 0;  // index of the south-most plane of faces in gas block
+                foreach (i; 0 .. this_blk.nic) {
+                    i_dest = i;
+                    foreach (k; 0 .. this_blk.nkc) {
+                        k_dest = k;
                         myBC.ifaces ~= this_blk.get_ifj(i_dest, j_dest, k_dest);
                         myBC.solidCells ~= new SolidFVCell(other_blk.myConfig);
                         myBC.gasCells ~= this_blk.get_cell(i_dest,j_dest,k_dest);
@@ -513,11 +512,11 @@ public:
                 } // i loop
                 break;
             case Face.west:
-                i_dest = this_blk.imin;  // index of the west-most plane of active cells
-                foreach (j; 0 .. this_blk.njcell) {
-                    j_dest = j + this_blk.jmin;
-                    foreach (k; 0 .. this_blk.nkcell) {
-                        k_dest = k + this_blk.kmin;
+                i_dest = 0;  // index of the west-most plane of faces in gas block
+                foreach (j; 0 .. this_blk.njc) {
+                    j_dest = j;
+                    foreach (k; 0 .. this_blk.nkc) {
+                        k_dest = k;
                         myBC.ifaces ~= this_blk.get_ifi(i_dest, j_dest, k_dest);
                         myBC.solidCells ~= new SolidFVCell(other_blk.myConfig);
                         myBC.gasCells ~= this_blk.get_cell(i_dest,j_dest,k_dest);
@@ -586,14 +585,14 @@ public:
                 } // j loop
                 break;
             case Face.top:
-                k_dest = this_blk.kmax;  // index of the top-most plane of active cells
-                foreach (j; 0 .. this_blk.njcell) {
-                    j_dest = j + this_blk.jmin;
-                    foreach (i; 0 .. this_blk.nicell) {
-                        i_dest = i + this_blk.imin;
-                        myBC.ifaces ~= this_blk.get_ifk(i_dest, j_dest, k_dest+1);
+                k_dest = this_blk.nkc;  // index of the top-most plane of faces in gas block
+                foreach (j; 0 .. this_blk.njc) {
+                    j_dest = j;
+                    foreach (i; 0 .. this_blk.nic) {
+                        i_dest = i;
+                        myBC.ifaces ~= this_blk.get_ifk(i_dest, j_dest, k_dest);
                         myBC.solidCells ~= new SolidFVCell(other_blk.myConfig);
-                        myBC.gasCells ~= this_blk.get_cell(i_dest,j_dest,k_dest);
+                        myBC.gasCells ~= this_blk.get_cell(i_dest,j_dest,k_dest-1);
                         final switch (other_face) {
                         case Face.north:
                             j_src = other_blk.njcell - 1;
@@ -659,11 +658,11 @@ public:
                 } // j loop
                 break;
             case Face.bottom:
-                k_dest = this_blk.kmin;  // index of the bottom-most plane of active cells
-                foreach (j; 0 .. this_blk.njcell) {
-                    j_dest = j + this_blk.jmin;
-                    foreach (i; 0 .. this_blk.nicell) {
-                        i_dest = i + this_blk.imin;
+                k_dest = 0;  // index of the bottom-most plane of faces in gas block
+                foreach (j; 0 .. this_blk.njc) {
+                    j_dest = j;
+                    foreach (i; 0 .. this_blk.nic) {
+                        i_dest = i;
                         myBC.ifaces ~= this_blk.get_ifk(i_dest, j_dest, k_dest);
                         myBC.solidCells ~= new SolidFVCell(other_blk.myConfig);
                         myBC.gasCells ~= this_blk.get_cell(i_dest,j_dest,k_dest);
@@ -760,7 +759,6 @@ public:
             // we know that we can just access the data directly,
             // in the final phase.
         }
-+/
     } // end set_up_cell_mapping_phase0()
 
     // not @nogc because we set array length
