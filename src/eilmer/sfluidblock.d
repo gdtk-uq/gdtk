@@ -311,51 +311,27 @@ public:
             && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
             && (myConfig.spatial_deriv_locn == SpatialDerivLocn.cells);
         try {
-            // Create the cell and interface objects for the structured block
-            // in the order expected by the index functions defined above.
-            // Do not include the surrounding ghost cells, yet.
-            // These will be attached to boundary faces later.
-            foreach (k; 0 .. nkc) {
-                foreach (j; 0 .. njc) {
-                    foreach (i; 0 .. nic) {
-                        cells ~= new FVCell(myConfig,  lsq_workspace_at_cells);
-                    }
-                }
+            // Create the interior cell, vertex and interface objects for the block.
+            foreach (n; 0 .. nic*njc*nkc) {
+                cells ~= new FVCell(myConfig,  lsq_workspace_at_cells);
             }
-            foreach (k; 0 .. nkv) {
-                foreach (j; 0 .. njv) {
-                    foreach (i; 0 .. niv) {
-                        vertices ~= new FVVertex(myConfig, lsq_workspace_at_vertices);
-                    }
-                }
+            foreach (n; 0 .. niv*njv*nkv) {
+                vertices ~= new FVVertex(myConfig, lsq_workspace_at_vertices);
             }
-            // First ifi faces.
-            foreach (k; 0 .. nkc) {
-                foreach (j; 0 .. njc) {
-                    foreach (i; 0 .. niv) {
-                        faces ~= new FVInterface(myConfig, lsq_workspace_at_faces);
-                    }
-                }
+            // First, ifi faces.
+            foreach (n; 0 .. niv*njc*nkc) {
+                faces ~= new FVInterface(myConfig, lsq_workspace_at_faces);
             }
-            // Second ifj faces.
-            foreach (k; 0 .. nkc) {
-                foreach (j; 0 .. njv) {
-                    foreach (i; 0 .. nic) {
-                        faces ~= new FVInterface(myConfig, lsq_workspace_at_faces);
-                    }
-                }
+            // Second, ifj faces.
+            foreach (n; 0 .. nic*njv*nkc) {
+                faces ~= new FVInterface(myConfig, lsq_workspace_at_faces);
             }
+            // Third, maybe, ifk faces.
             if (myConfig.dimensions == 3) {
-                // Third, maybe, ifk faces.
-                foreach (k; 0 .. nkv) {
-                    foreach (j; 0 .. njc) {
-                        foreach (i; 0 .. nic) {
-                            faces ~= new FVInterface(myConfig, lsq_workspace_at_faces);
-                        }
-                    }
+                foreach (n; 0 .. nic*njc*nkv) {
+                    faces ~= new FVInterface(myConfig, lsq_workspace_at_faces);
                 }
             }
-            //
             // Now, construct the ghost cells, attaching them to the boundary faces.
             int cell_id = ghost_cell_start_id;
             // North and South boundaries.
