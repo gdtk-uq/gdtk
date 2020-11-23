@@ -1400,7 +1400,7 @@ public:
             }
             // East boundary secondary cell geometry information
             foreach (j; 0 .. njv-2) {
-                foreach (k; 0 .. njv-2) {
+                foreach (k; 0 .. nkv-2) {
                     size_t i = niv-2;
                     FVVertex vtx = get_vtx(i+1,j+1,k+1);
                     FVCell c0 = get_cell(i,j,k);
