@@ -387,7 +387,7 @@ void set_flux_vector_in_global_frame(ref FVInterface IFace, ref FlowState fs,
 } // end set_flux_vector_in_global_frame()
 
 @nogc
-void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
+void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
 // Wada and Liou's flux calculator.
 //
 // Implemented from details in their AIAA paper
@@ -474,20 +474,20 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
     //
     // Assemble components of the flux vector.
     ConservedQuantities F = IFace.F;
-    F.mass = ru_half;
+    F.mass += factor*ru_half;
     if (ru_half >= 0.0) {
         // Wind is blowing from the left.
-        F.momentum.set(ru2_half+p_half, ru_half*vL, ru_half*wL);
-        F.total_energy = ru_half*HL;
+        F.momentum.add(ru2_half+p_half, ru_half*vL, ru_half*wL, factor);
+        F.total_energy += factor*ru_half*HL;
         version(turbulence) {
-            foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] = ru_half*Lft.turb[i]; }
+            foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] += factor*ru_half*Lft.turb[i]; }
         }
         version(multi_species_gas) {
             uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
-            foreach (i; 0 .. nsp) { F.massf[i] = ru_half*Lft.gas.massf[i]; }
+            foreach (i; 0 .. nsp) { F.massf[i] += factor*ru_half*Lft.gas.massf[i]; }
         }
         version(multi_T_gas) {
-            foreach (i; 0 .. F.energies.length) { F.energies[i] = ru_half*Lft.gas.u_modes[i]; }
+            foreach (i; 0 .. F.energies.length) { F.energies[i] += factor*ru_half*Lft.gas.u_modes[i]; }
         }
         // NOTE: - the following relies on the free-electron mode being the last mode
         //       - for single temp models F_renergies isn't used
@@ -496,17 +496,17 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
         // FIX-ME F.energies[nmodes-1] += ru_half * Lft.gas.p_e / Lft.gas.rho;
     } else {
         // Wind is blowing from the right.
-        F.momentum.set(ru2_half+p_half, ru_half*vR, ru_half*wR);
-        F.total_energy = ru_half*HR;
+        F.momentum.add(ru2_half+p_half, ru_half*vR, ru_half*wR, factor);
+        F.total_energy += factor*ru_half*HR;
         version(turbulence) {
-            foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] = ru_half*Rght.turb[i]; }
+            foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] += factor*ru_half*Rght.turb[i]; }
         }
         version(multi_species_gas) {
             uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
-            foreach (i; 0 .. nsp) { F.massf[i] = ru_half*Rght.gas.massf[i]; }
+            foreach (i; 0 .. nsp) { F.massf[i] += factor*ru_half*Rght.gas.massf[i]; }
         }
         version(multi_T_gas) {
-            foreach (i; 0 .. F.energies.length) { F.energies[i] = ru_half*Rght.gas.u_modes[i]; }
+            foreach (i; 0 .. F.energies.length) { F.energies[i] += factor*ru_half*Rght.gas.u_modes[i]; }
         }
     }
     //
@@ -520,30 +520,30 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
     if (caseB && !caseA) { d_ua = C_EFIX * ((uR + aR) - (uL + aL)); }
     //
     if (d_ua != 0.0) {
-        F.mass -= d_ua*(rR - rL);
-        F.momentum.refx -= d_ua*(rR*uR - rL*uL);
-        F.momentum.refy -= d_ua*(rR*vR - rL*vL);
-        F.momentum.refz -= d_ua*(rR*wR - rL*wL);
-        F.total_energy -= d_ua*(rR*HR - rL*HL);
+        F.mass -= factor*d_ua*(rR - rL);
+        F.momentum.refx -= factor*d_ua*(rR*uR - rL*uL);
+        F.momentum.refy -= factor*d_ua*(rR*vR - rL*vL);
+        F.momentum.refz -= factor*d_ua*(rR*wR - rL*wL);
+        F.total_energy -= factor*d_ua*(rR*HR - rL*HL);
         version(turbulence) {
-            foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] -= d_ua*(rR*Rght.turb[i] - rL*Lft.turb[i]); }
+            foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] -= factor*d_ua*(rR*Rght.turb[i] - rL*Lft.turb[i]); }
         }
         version(multi_species_gas) {
             uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
             foreach (i; 0 .. nsp) {
-                F.massf[i] -= d_ua*(rR*Rght.gas.massf[i] - rL*Lft.gas.massf[i]);
+                F.massf[i] -= factor*d_ua*(rR*Rght.gas.massf[i] - rL*Lft.gas.massf[i]);
             }
         }
         version(multi_T_gas) {
             foreach (i; 0 .. F.energies.length) {
-                F.energies[i] -= d_ua*(rR*Rght.gas.u_modes[i] - rL*Lft.gas.u_modes[i]);
+                F.energies[i] -= factor*d_ua*(rR*Rght.gas.u_modes[i] - rL*Lft.gas.u_modes[i]);
             }
         }
     } // end of entropy fix (d_ua != 0)
 } // end ausmdv()
 
 @nogc
-void hanel(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
+void hanel(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
 // Hanel's flux calculator.
 //
 // Implemented from Y. Wada and M. S. Liou details in their AIAA paper
@@ -613,31 +613,32 @@ void hanel(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
     number p_half = pLplus + pRminus;
     // Assemble components of the flux vector (eqn 36).
     ConservedQuantities F = IFace.F;
-    F.mass = uLplus * rL + uRminus * rR;
-    F.momentum.set(uLplus * rL * uL + uRminus * rR * uR + p_half,
+    F.mass += factor*(uLplus * rL + uRminus * rR);
+    F.momentum.add(uLplus * rL * uL + uRminus * rR * uR + p_half,
                    uLplus * rL * vL + uRminus * rR * vR,
-                   uLplus * rL * wL + uRminus * rR * wR);
-    F.total_energy = uLplus * rL * HL + uRminus * rR * HR;
+                   uLplus * rL * wL + uRminus * rR * wR,
+                   factor);
+    F.total_energy += factor*(uLplus * rL * HL + uRminus * rR * HR);
     version(turbulence) {
         foreach(i; 0 .. myConfig.turb_model.nturb) {
-            F.rhoturb[i] = uLplus * rL * Lft.turb[i] + uRminus * rR * Rght.turb[i];
+            F.rhoturb[i] += factor*(uLplus * rL * Lft.turb[i] + uRminus * rR * Rght.turb[i]);
         }
     }
     version(multi_species_gas) {
         uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
         foreach (i; 0 .. nsp) {
-            F.massf[i] = uLplus*rL*Lft.gas.massf[i] + uRminus*rR*Rght.gas.massf[i];
+            F.massf[i] += factor*(uLplus*rL*Lft.gas.massf[i] + uRminus*rR*Rght.gas.massf[i]);
         }
     }
     version(multi_T_gas) {
         foreach (i; 0 .. F.energies.length) {
-            F.energies[i] = uLplus*rL*Lft.gas.u_modes[i] + uRminus*rR*Rght.gas.u_modes[i];
+            F.energies[i] += factor*(uLplus*rL*Lft.gas.u_modes[i] + uRminus*rR*Rght.gas.u_modes[i]);
         }
     }
 } // end hanel()
 
 @nogc
-void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
+void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
 /** \brief Compute the fluxes across an interface using
  * the Equilibrium Flux Method of Macrossan & Pullin
  *
@@ -672,6 +673,7 @@ void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
     number cv, cp, con, gam, Rgas;
     number cvL, cvR, RgasL, RgasR;
     number rLsqrt, rRsqrt, alpha;
+    number mass_flux;
     int statusf;
     //
     // Calculate Constants
@@ -733,46 +735,49 @@ void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
     fmsL = (wL * rhoL * vnL) + (dL * cmpL * rhoL);
     fmsR = (wR * rhoR * vnR) + (dR * cmpR * rhoR);
     ConservedQuantities F = IFace.F;
-    F.mass = fmsL + fmsR;
-    F.momentum.set(fmsL*vnL + fmsR*vnR + wL*presL + wR*presR,
+
+    mass_flux = factor*(fmsL + fmsR);
+    F.mass += mass_flux;
+    F.momentum.add(fmsL*vnL + fmsR*vnR + wL*presL + wR*presR,
                    fmsL*vpL + fmsR*vpR,
-                   fmsL*vqL + fmsR*vqR);
-    F.total_energy = (wL * rhoL * vnL) * (hvsqL + hL) +
-        (wR * rhoR * vnR) * (hvsqR + hR) +
-        (dL * cmpL * rhoL) * (hvsqL + con * rtL) +
-        (dR * cmpR * rhoR) * (hvsqR + con * rtR);
+                   fmsL*vqL + fmsR*vqR,
+                   factor);
+    F.total_energy += factor*((wL * rhoL * vnL) * (hvsqL + hL) +
+                              (wR * rhoR * vnR) * (hvsqR + hR) +
+                              (dL * cmpL * rhoL) * (hvsqL + con * rtL) +
+                              (dR * cmpR * rhoR) * (hvsqR + con * rtR));
     // Species mass flux and individual energies.
     // Presently, this is implemented by assuming that
     // the wind is blowing one way or the other and then
     // picking the appropriate side for the species fractions.
     // Such an approach may not be fully compatible with the
     // EFM approach where there can be fluxes from both sides.
-    if (F.mass > 0.0) {
+    if (mass_flux > 0.0) {
         version(turbulence) {
-            foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] = F.mass * Lft.turb[i]; }
+            foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] += mass_flux * Lft.turb[i]; }
         }
         version(multi_species_gas) {
             uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
-            foreach (i; 0 .. nsp) { F.massf[i] = F.mass * Lft.gas.massf[i]; }
+            foreach (i; 0 .. nsp) { F.massf[i] += mass_flux * Lft.gas.massf[i]; }
         }
         version(multi_T_gas) {
-            foreach (i; 0 .. F.energies.length) { F.energies[i] = F.mass * Lft.gas.u_modes[i]; }
+            foreach (i; 0 .. F.energies.length) { F.energies[i] += mass_flux * Lft.gas.u_modes[i]; }
         }
         // NOTE: - the following relies on the free-electron mode being the last mode
         //       - for single temp models F_renergies isn't used
         //       - for multitemp modes with no free-electrons p_e is zero
         // Add electron pressure work term onto final energy mode
-        // F.energies[$-1] += (F.mass) * Lft.gas.p_e / Lft.gas.rho; [TODO]
+        // F.energies[$-1] += mass_flux * Lft.gas.p_e / Lft.gas.rho; [TODO]
     } else {
         version(turbulence) {
-            foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] = F.mass * Rght.turb[i]; }
+            foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] +=  mass_flux * Rght.turb[i]; }
         }
         version(multi_species_gas) {
             uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
-            foreach (i; 0 .. nsp) { F.massf[i] = F.mass * Rght.gas.massf[i]; }
+            foreach (i; 0 .. nsp) { F.massf[i] += mass_flux * Rght.gas.massf[i]; }
         }
         version(multi_T_gas) {
-            foreach (i; 0 .. F.energies.length) { F.energies[i] = F.mass * Rght.gas.u_modes[i]; }
+            foreach (i; 0 .. F.energies.length) { F.energies[i] += mass_flux * Rght.gas.u_modes[i]; }
         }
     }
 } // end efmflx()
@@ -823,15 +828,17 @@ void adaptive_efm_ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IF
 //
 // The actual work is passed off to the original flux calculation functions.
 {
-    number sound_speed = 0.5 * (Lft.gas.a + Rght.gas.a);
-    number shear_y = fabs(Lft.vel.y - Rght.vel.y) / sound_speed;
-    number shear_z = fabs(Lft.vel.z - Rght.vel.z) / sound_speed;
-    bool shear_is_small = fmax(shear_y, shear_z) <= myConfig.shear_tolerance;
-    if ((Lft.S == 1 || Rght.S == 1) && shear_is_small) {
-        efmflx(Lft, Rght, IFace, myConfig);
-    } else {
-        ausmdv(Lft, Rght, IFace, myConfig);
-    }
+
+    number alpha = IFace.fs.S;
+
+    if (alpha > 0.0) {
+        efmflx(Lft, Rght, IFace, myConfig, alpha);
+    } 
+    
+    if (alpha < 1.0) {
+        ausmdv(Lft, Rght, IFace, myConfig, 1.0-alpha);
+    } 
+
 } // end adaptive_flux()
 
 @nogc
@@ -841,15 +848,16 @@ void adaptive_hanel_ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface 
 //
 // The actual work is passed off to the original flux calculation functions.
 {
-    number sound_speed = 0.5 * (Lft.gas.a + Rght.gas.a);
-    number shear_y = fabs(Lft.vel.y - Rght.vel.y) / sound_speed;
-    number shear_z = fabs(Lft.vel.z - Rght.vel.z) / sound_speed;
-    bool shear_is_small = fmax(shear_y, shear_z) <= myConfig.shear_tolerance;
-    if ((Lft.S == 1 || Rght.S == 1) && shear_is_small) {
-        hanel(Lft, Rght, IFace, myConfig);
-    } else {
-        ausmdv(Lft, Rght, IFace, myConfig);
-    }
+    number alpha = IFace.fs.S;
+
+    if (alpha > 0.0) {
+        hanel(Lft, Rght, IFace, myConfig, alpha);
+    } 
+    
+    if (alpha < 1.0) {
+        ausmdv(Lft, Rght, IFace, myConfig, 1.0-alpha);
+    } 
+
 } // end adaptive_flux()
 
 @nogc
@@ -859,20 +867,22 @@ void adaptive_hlle_roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFac
 //
 // The actual work is passed off to the original flux calculation functions.
 {
-    number sound_speed = 0.5 * (Lft.gas.a + Rght.gas.a);
-    number shear_y = fabs(Lft.vel.y - Rght.vel.y) / sound_speed;
-    number shear_z = fabs(Lft.vel.z - Rght.vel.z) / sound_speed;
-    bool shear_is_small = fmax(shear_y, shear_z) <= myConfig.shear_tolerance;
-    if ((Lft.S == 1 || Rght.S == 1) && shear_is_small) {
-        hlle(Lft, Rght, IFace, myConfig);
-    } else {
-        roe(Lft, Rght, IFace, myConfig);
-    }
+
+    number alpha = IFace.fs.S;
+
+    if (alpha > 0.0) {
+        hlle(Lft, Rght, IFace, myConfig, alpha);
+    } 
+    
+    if (alpha < 1.0) {
+        roe(Lft, Rght, IFace, myConfig, 1.0-alpha);
+    } 
+
 } // end adaptive_flux()
 
 @nogc
 void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
-                  double M_inf, ref LocalConfig myConfig)
+                  double M_inf, ref LocalConfig myConfig, number factor=1.0)
 // Liou's 2006 AUSM+up flux calculator
 //
 // A new version of the AUSM-family schemes, based
@@ -1010,22 +1020,24 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
     } else {
         ru2_half = ru_half * uR;
     }
+
+    number mass_flux = factor*ru_half;
     // Assemble components of the flux vector.
     ConservedQuantities F = IFace.F;
-    F.mass = ru_half;
+    F.mass += mass_flux;
     if (ru_half >= 0.0) {
         // Wind is blowing from the left.
-        F.momentum.set(ru2_half+p_half, ru_half*vL, ru_half*wL);
-        F.total_energy = ru_half * HL;
+        F.momentum.add(ru2_half+p_half, ru_half*vL, ru_half*wL, factor);
+        F.total_energy += mass_flux * HL;
         version(turbulence) {
-            foreach(i; 0 ..  myConfig.turb_model.nturb) { F.rhoturb[i] = ru_half * Lft.turb[i]; }
+            foreach(i; 0 ..  myConfig.turb_model.nturb) { F.rhoturb[i] += mass_flux * Lft.turb[i]; }
         }
         version(multi_species_gas) {
             uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
-            foreach (i; 0 .. nsp) { F.massf[i] = ru_half * Lft.gas.massf[i]; }
+            foreach (i; 0 .. nsp) { F.massf[i] += mass_flux * Lft.gas.massf[i]; }
         }
         version(multi_T_gas) {
-            foreach (i; 0 .. F.energies.length) { F.energies[i] = ru_half * Lft.gas.u_modes[i]; }
+            foreach (i; 0 .. F.energies.length) { F.energies[i] += mass_flux * Lft.gas.u_modes[i]; }
         }
         // NOTE: - the following relies on the free-electron mode being the last mode
         //       - for single temp models F_renergies isn't used
@@ -1034,23 +1046,23 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
         // F.energies[nmodes-1] += ru_half * Lft.gas.p_e / Lft.gas.rho;
     } else {
         // Wind is blowing from the right.
-        F.momentum.set(ru2_half+p_half, ru_half*vR, ru_half*wR);
-        F.total_energy = ru_half * HR;
+        F.momentum.add(ru2_half+p_half, ru_half*vR, ru_half*wR, factor);
+        F.total_energy += mass_flux * HR;
         version(turbulence) {
-            foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] = ru_half * Rght.turb[i]; }
+            foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] += mass_flux * Rght.turb[i]; }
         }
         version(multi_species_gas) {
             uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
-            foreach (i; 0 .. nsp) { F.massf[i] = ru_half * Rght.gas.massf[i]; }
+            foreach (i; 0 .. nsp) { F.massf[i] += mass_flux * Rght.gas.massf[i]; }
         }
         version(multi_T_gas) {
-            foreach (i; 0 .. F.energies.length) { F.energies[i] = ru_half * Rght.gas.u_modes[i]; }
+            foreach (i; 0 .. F.energies.length) { F.energies[i] += mass_flux * Rght.gas.u_modes[i]; }
         }
     }
 } // end ausm_plus_up()
 
 @nogc
-void hlle(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
+void hlle(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
 // HLLE fluxes for MHD.
 // From V. Wheatley Matlab implementation
 // Author D. M. Bond
@@ -1187,24 +1199,30 @@ void hlle(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalC
         number iden = 1.0/(brp - blm);
         number fac1 = brp*blm;
         //
+
+        
+
         ConservedQuantities F = IFace.F;
-        F.mass = (brp*fmassL - blm*fmassR + fac1*dU[0])*iden;
-        F.momentum.set((brp*fmomxL - blm*fmomxR + fac1*dU[1])*iden,
+        number mass_flux = factor*(brp*fmassL - blm*fmassR + fac1*dU[0])*iden;
+        F.mass = mass_flux;
+        F.momentum.add((brp*fmomxL - blm*fmomxR + fac1*dU[1])*iden,
                        (brp*fmomyL - blm*fmomyR + fac1*dU[2])*iden,
-                       (brp*fmomzL - blm*fmomzR + fac1*dU[3])*iden);
-        F.B.set((brp*fBxL - blm*fBxR + fac1*dU[4])*iden,
+                       (brp*fmomzL - blm*fmomzR + fac1*dU[3])*iden,
+                       factor);
+        F.B.add((brp*fBxL - blm*fBxR + fac1*dU[4])*iden,
                 (brp*fByL - blm*fByR + fac1*dU[5])*iden,
-                (brp*fBzL - blm*fBzR + fac1*dU[6])*iden);
-        F.total_energy = (brp*fenergyL - blm*fenergyR + fac1*dU[7])*iden;
+                (brp*fBzL - blm*fBzR + fac1*dU[6])*iden,
+                factor);
+        F.total_energy += factor*(brp*fenergyL - blm*fenergyR + fac1*dU[7])*iden;
         version(multi_species_gas) {
             uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
             foreach (i; 0 .. nsp) {
-                F.massf[i] = F.mass * ((F.mass >= 0.0) ? Lft.gas.massf[i]: Rght.gas.massf[i]);
+                F.massf[i] += mass_flux * ((mass_flux >= 0.0) ? Lft.gas.massf[i]: Rght.gas.massf[i]);
             }
         }
         version(multi_T_gas) {
             foreach (i; 0 .. F.energies.length) {
-                F.energies[i] = F.mass * ((F.mass >= 0.0) ? Lft.gas.u_modes[i]: Rght.gas.u_modes[i]);
+                F.energies[i] += mass_flux * ((mass_flux >= 0.0) ? Lft.gas.u_modes[i]: Rght.gas.u_modes[i]);
             }
         }
     } else {
@@ -1213,7 +1231,7 @@ void hlle(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalC
 } // end hlle()
 
 @nogc
-void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
+void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
 // Philip Roe's flux calculator with entropy fix.
 //
 // Particular implementation is the Roe-Pike Method from
@@ -1329,64 +1347,67 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalCo
     // mass flux
     FL = rL*uL;
     FR = rR*uR;
-    F.mass = 0.5*(FL+FR);
-    foreach ( i; 0..5 ) F.mass -= 0.5*alpha[i]*fabs(lambda[i])*K[i][0];
+    number mass_flux = factor*0.5*(FL+FR);
+    foreach ( i; 0..5 ) mass_flux -= factor*0.5*alpha[i]*fabs(lambda[i])*K[i][0];
+    F.mass += mass_flux;
+    
 
     // x-momentum flux;
     FL = pL+rL*uL*uL;
     FR = pR+rR*uR*uR;
-    F.momentum.refx = 0.5*(FL+FR);
-    foreach ( i; 0..5) F.momentum.refx -= 0.5*alpha[i]*fabs(lambda[i])*K[i][1];
+    F.momentum.refx += factor*0.5*(FL+FR);
+    foreach ( i; 0..5) F.momentum.refx -= factor*0.5*alpha[i]*fabs(lambda[i])*K[i][1];
 
     // y-momentum flux;
     FL = rL*uL*vL;
     FR = rR*uR*vR;
-    F.momentum.refy = 0.5*(FL+FR);
-    foreach ( i; 0..5) F.momentum.refy -= 0.5*alpha[i]*fabs(lambda[i])*K[i][2];
+    F.momentum.refy += factor*0.5*(FL+FR);
+    foreach ( i; 0..5) F.momentum.refy -= factor*0.5*alpha[i]*fabs(lambda[i])*K[i][2];
 
     // z-momentum flux;
     FL = rL*uL*wL;
     FR = rR*uR*wR;
-    F.momentum.refz = 0.5*(FL+FR);
-    foreach ( i; 0..5) F.momentum.refz -= 0.5*alpha[i]*fabs(lambda[i])*K[i][3];
+    F.momentum.refz += factor*0.5*(FL+FR);
+    foreach ( i; 0..5) F.momentum.refz -= factor*0.5*alpha[i]*fabs(lambda[i])*K[i][3];
 
     // total energy flux
     FL = (rL*eL + rL*(uL*uL+vL*vL+wL*wL)/2.0 + pL)*uL;
     FR = (rR*eR + rR*(uR*uR+vR*vR+wR*wR)/2.0 + pR)*uR;
-    F.total_energy = 0.5*(FL+FR);
-    foreach ( i; 0..5) F.total_energy -= 0.5*alpha[i]*fabs(lambda[i])*K[i][4];
+    F.total_energy += factor*0.5*(FL+FR);
+    foreach ( i; 0..5) F.total_energy -= factor*0.5*alpha[i]*fabs(lambda[i])*K[i][4];
 
     // remaining fluxes
-    if (F.mass >= 0.0) {
+    if (mass_flux >= 0.0) {
         /* Wind is blowing from the left */
         version(turbulence) {
-            foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] = F.mass*Lft.turb[i]; }
+            foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] += mass_flux*Lft.turb[i]; }
         }
         version(multi_species_gas) {
             uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
-            foreach (i; 0 .. nsp) { F.massf[i] = F.mass*Lft.gas.massf[i]; }
+            foreach (i; 0 .. nsp) { F.massf[i] += mass_flux*Lft.gas.massf[i]; }
         }
         version(multi_T_gas) {
-            foreach (i; 0 .. F.energies.length) { F.energies[i] = F.mass*Lft.gas.u_modes[i]; }
+            foreach (i; 0 .. F.energies.length) { F.energies[i] += mass_flux*Lft.gas.u_modes[i]; }
         }
     } else {
         /* Wind is blowing from the right */
         version(turbulence) {
-            foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] = F.mass*Rght.turb[i]; }
+            foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] += mass_flux*Rght.turb[i]; }
         }
         version(multi_species_gas) {
             uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
-            foreach (i; 0 .. nsp) { F.massf[i] = F.mass*Rght.gas.massf[i]; }
+            foreach (i; 0 .. nsp) { F.massf[i] += mass_flux*Rght.gas.massf[i]; }
         }
         version(multi_T_gas) {
-            foreach (i; 0 .. F.energies.length) { F.energies[i] = F.mass*Rght.gas.u_modes[i]; }
+            foreach (i; 0 .. F.energies.length) { F.energies[i] += mass_flux*Rght.gas.u_modes[i]; }
         }
     }
 } // end roe()
 
 @nogc
-void ASF_242(FlowState[] stencil, ref FVInterface IFace, ref LocalConfig myConfig) {
-    // Start by substracting interface velocities and transforming to local frame; it is unlikely we will be using moving grids with this solver, but harm in including this.
+void ASF_242(FlowState[] stencil, ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0) {
+    // Start by substracting interface velocities and transforming to local frame; 
+    // it is unlikely we will be using moving grids with this solver, but no harm in including this.
 
     auto gmodel = myConfig.gmodel;
     ConservedQuantities F = IFace.F;
@@ -1440,33 +1461,42 @@ void ASF_242(FlowState[] stencil, ref FVInterface IFace, ref LocalConfig myConfi
     number alpha_mass = 1.0, alpha_mom = 0.5, alpha_ie = 0.5, alpha_ke = 0.0, alpha_p = 0.0;
 
     // Calculate the final flux values of the simple quantities mass, momentum and energy
-    F.mass = (alpha_mass * f_c[0] + (1.0 - alpha_mass) * f_e[0]);
-    F.momentum.set((alpha_mom * f_c[1] + (1.0 - alpha_mom) * f_e[1]) + (alpha_p * f_c[9] + (1.0 - alpha_p) * f_e[9]),
-           (alpha_mom * f_c[2] + (1.0 - alpha_mom) * f_e[2]), (alpha_mom * f_c[3] + (1.0 - alpha_mom) * f_e[3]));
+    number mass_flux = factor*(alpha_mass * f_c[0] + (1.0 - alpha_mass) * f_e[0]);
+    F.mass += mass_flux;
+    F.momentum.add((alpha_mom * f_c[1] + (1.0 - alpha_mom) * f_e[1]) + (alpha_p * f_c[9] + (1.0 - alpha_p) * f_e[9]),
+           (alpha_mom * f_c[2] + (1.0 - alpha_mom) * f_e[2]), (alpha_mom * f_c[3] + (1.0 - alpha_mom) * f_e[3]), factor);
 
-    F.total_energy = (alpha_ie * f_c[4] + (1.0 - alpha_ie) * f_e[4] + (1.0 / 2.0) * (alpha_ke * f_c[5] + (1.0 - alpha_ke) * f_e[5] + alpha_ke * f_c[6] +
+    F.total_energy += factor*(alpha_ie * f_c[4] + (1.0 - alpha_ie) * f_e[4] + (1.0 / 2.0) * (alpha_ke * f_c[5] + (1.0 - alpha_ke) * f_e[5] + alpha_ke * f_c[6] +
            (1.0 - alpha_ke) * f_e[6] + alpha_ke * f_c[7] + (1.0 - alpha_ke) * f_e[7]) + alpha_p * f_c[8] + (1.0 - alpha_p) * f_e[8]);
 
-    // Bit of a placeholder for multi_species_gas
-    version(multi_species_gas) {
-    F.massf[0] = F.mass;
-    }
 
-    // Account for interface movement- probably shouldn't happen in this but check it anyway
-    // Total energy flux due to interface movement
-    number v_sqr = IFace.gvel.x*IFace.gvel.x + IFace.gvel.y*IFace.gvel.y + IFace.gvel.z*IFace.gvel.z;
-    F.total_energy += 0.5 * F.mass * v_sqr + F.momentum.dot(IFace.gvel);
-    // Flux of momentum: Add component for interface velocity then
-    // rotate back to the global frame of reference.
-    Vector3 momentum_increment;
-    momentum_increment.set(IFace.gvel); momentum_increment *= F.mass;
-    F.momentum += momentum_increment;
-    F.momentum.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
-    // Also, transform the interface (grid) velocity and magnetic field.
-    IFace.gvel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
+    // remaining fluxes (copied from Roe flux)
+    FlowState Lft = stencil[$/2-1];
+    FlowState Rght = stencil[$/2];
 
-    // Transform back to the global frame
-    foreach (cell; stencil) {
-        cell.vel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
+    if (mass_flux >= 0.0) {
+        /* Wind is blowing from the left */
+        version(turbulence) {
+            foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] += mass_flux*Lft.turb[i]; }
+        }
+        version(multi_species_gas) {
+            uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
+            foreach (i; 0 .. nsp) { F.massf[i] += mass_flux*Lft.gas.massf[i]; }
+        }
+        version(multi_T_gas) {
+            foreach (i; 0 .. F.energies.length) { F.energies[i] += mass_flux*Lft.gas.u_modes[i]; }
+        }
+    } else {
+        /* Wind is blowing from the right */
+        version(turbulence) {
+            foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] += mass_flux*Rght.turb[i]; }
+        }
+        version(multi_species_gas) {
+            uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
+            foreach (i; 0 .. nsp) { F.massf[i] += mass_flux*Rght.gas.massf[i]; }
+        }
+        version(multi_T_gas) {
+            foreach (i; 0 .. F.energies.length) { F.energies[i] += mass_flux*Rght.gas.u_modes[i]; }
+        }
     }
 }

@@ -2116,7 +2116,7 @@ public:
             Lft.copy_values_from(cL0.fs);
             Rght.copy_values_from(cR0.fs);
             if (do_reconstruction && !f.in_suppress_reconstruction_zone &&
-                !(myConfig.suppress_reconstruction_at_shocks && f.fs.S)) {
+                !(myConfig.suppress_reconstruction_at_shocks && (f.fs.S == 1.0))) {
                 one_d.interp(f, Lft, Rght);
             }
             f.fs.copy_average_values_from(Lft, Rght);

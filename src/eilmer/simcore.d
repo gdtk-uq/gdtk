@@ -2952,6 +2952,16 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         if (blk.active) { blk.convective_flux_phase0(allow_high_order_interpolation, gtl); }
     }
 
+    // interfaces may have had shock status updated in the flux routine so get 
+    // the cells shocked status here
+    if (GlobalConfig.do_shock_detect) {
+	foreach (blk; parallel(localFluidBlocksBySize,1)) {
+	    if (blk.active) { 
+            blk.mark_shock_cells();
+        }
+    }
+    }
+
     // for unstructured blocks we need to transfer the convective gradients before the flux calc
     if (allow_high_order_interpolation && (GlobalConfig.interpolation_order > 1)) {
         exchange_ghost_cell_boundary_convective_gradient_data(SimState.time, gtl, ftl);

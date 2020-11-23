@@ -402,17 +402,34 @@ public:
     // Detects shocks by looking for compression between adjacent cells.
     //
     {
-        double tol = myConfig.compression_tolerance;
-        // First, work across interfaces and locate shocks using the (local) normal velocity.
-        foreach (iface; faces) {
-            iface.fs.S = PJ_ShockDetector(iface, tol);
-        }
-        // Finally, mark cells as shock points if any of their interfaces are shock points.
-        foreach (cell; cells) {
-            cell.fs.S = false;
-            foreach (face; cell.iface) {
-                if (face.fs.S) cell.fs.S = true;
+        number comp_tol = myConfig.compression_tolerance;
+        number shear_tol = myConfig.shear_tolerance;
+
+        final switch (myConfig.shock_detector) {
+        case ShockDetector.PJ:
+            foreach (iface; faces) {
+                iface.fs.S = PJ_ShockDetector(iface, comp_tol, shear_tol);
             }
+            break;
+        }
+
+    } // end detect_shock_points()
+
+
+    @nogc
+    void mark_shock_cells()
+    // Mark cells as shock points if any of their interfaces are shock points.
+    //
+    {
+        size_t count;
+        foreach (cell; cells) {
+            cell.fs.S = 0.0;
+            count = 0;
+            foreach (face; cell.iface) {
+                cell.fs.S += face.fs.S;
+                count += 1;
+            }
+            cell.fs.S /= count;
         }
     } // end detect_shock_points()
 

@@ -912,6 +912,7 @@ public:
     double M_inf;
     double compression_tolerance;
     ShockDetector shock_detector;
+    bool do_shock_detect;
     bool artificial_compressibility;
     double ac_alpha;
 
@@ -1047,6 +1048,7 @@ public:
         M_inf = GlobalConfig.M_inf;
         compression_tolerance = GlobalConfig.compression_tolerance;
         shock_detector = GlobalConfig.shock_detector;
+        do_shock_detect = GlobalConfig.do_shock_detect;
         //
         artificial_compressibility = GlobalConfig.artificial_compressibility;
         ac_alpha = GlobalConfig.ac_alpha;
@@ -1359,6 +1361,7 @@ JSONValue read_config_file()
     mixin(update_double("M_inf", "M_inf"));
     mixin(update_double("compression_tolerance", "compression_tolerance"));
     mixin(update_enum("shock_detector", "shock_detector", "shock_detector_from_name"));
+    mixin(update_bool("do_shock_detect", "do_shock_detect"));
     mixin(update_enum("flux_calculator", "flux_calculator", "flux_calculator_from_name"));
     mixin(update_bool("artificial_compressibility", "artificial_compressibility"));
     mixin(update_double("ac_alpha", "ac_alpha"));

@@ -1797,7 +1797,7 @@ public:
                         }
                         outgoing_flowstate_buf[ii++] = fs.mu_t;
                         outgoing_flowstate_buf[ii++] = fs.k_t;
-                        outgoing_flowstate_buf[ii++] = to!double(fs.S);
+                        outgoing_flowstate_buf[ii++] = fs.S;
                     }
                     version(mpi_timeouts) {
                         MPI_Request send_request;
@@ -1885,7 +1885,7 @@ public:
                     }
                     fs.mu_t = incoming_flowstate_buf[ii++];
                     fs.k_t = incoming_flowstate_buf[ii++];
-                    fs.S = to!int(incoming_flowstate_buf[ii++]);
+                    fs.S = incoming_flowstate_buf[ii++];
                 }
             } else {
                 // The other block happens to be in this MPI process so

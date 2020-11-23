@@ -153,6 +153,7 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_double_field("M_inf", "M_inf"));
     mixin(get_double_field("compression_tolerance", "compression_tolerance"));
     mixin(get_enum_field("shock_detector", "shock_detector", "shock_detector_from_name"));
+mixin(get_bool_field("do_shock_detect", "do_shock_detect"));
     //
     mixin(get_bool_field("artificial_compressiblity", "artificial_compressibility"));
     mixin(get_double_field("ac_alpha", "ac_alpha"));
@@ -341,6 +342,7 @@ extern(C) int configGet(lua_State* L)
     case "M_inf": lua_pushnumber(L, GlobalConfig.M_inf); break;
     case "compression_tolerance": lua_pushnumber(L, GlobalConfig.compression_tolerance); break;
     case "shock_detector": lua_pushstring(L, shock_detector_name(GlobalConfig.shock_detector).toStringz); break;
+    case "do_shock_detect": lua_pushboolean(L, GlobalConfig.do_shock_detect); break;    
     case "artificial_compressibility": lua_pushboolean(L, GlobalConfig.artificial_compressibility); break;
     case "ac_alpha": lua_pushnumber(L, GlobalConfig.ac_alpha); break;
         //

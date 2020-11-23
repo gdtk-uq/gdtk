@@ -2430,7 +2430,7 @@ string cell_data_as_string(ref const(Vector3) pos, number volume, ref const(Flow
         version(multi_T_gas) {
             foreach (kvalue; fs.gas.k_modes) { formattedWrite(writer, " %.18e", kvalue.re); }
         }
-        formattedWrite(writer, " %.18e %.18e %d", fs.mu_t.re, fs.k_t.re, fs.S);
+        formattedWrite(writer, " %.18e %.18e %.18e", fs.mu_t.re, fs.k_t.re, fs.S.re);
         if (radiation) { formattedWrite(writer, " %.18e %.18e %.18e", Q_rad_org.re, f_rad_org.re, Q_rE_rad.re); }
         version(turbulence) {
             foreach(it; 0 .. nturb){
@@ -2468,7 +2468,7 @@ string cell_data_as_string(ref const(Vector3) pos, number volume, ref const(Flow
         version(multi_T_gas) {
             foreach (kvalue; fs.gas.k_modes) { formattedWrite(writer, " %.18e", kvalue); }
         }
-        formattedWrite(writer, " %.18e %.18e %d", fs.mu_t, fs.k_t, fs.S);
+        formattedWrite(writer, " %.18e %.18e %.18e", fs.mu_t, fs.k_t, fs.S);
         if (radiation) { formattedWrite(writer, " %.18e %.18e %.18e", Q_rad_org, f_rad_org, Q_rE_rad); }
         version(turbulence) {
             foreach(it; 0 .. nturb){
@@ -2530,7 +2530,7 @@ void cell_data_to_raw_binary(ref File fout,
         fout.rawWrite(dbl4);
         foreach (kvalue; fs.gas.k_modes) { dbl1[0] = kvalue.re; fout.rawWrite(dbl1); }
         dbl2[0] = fs.mu_t.re; dbl2[1] = fs.k_t.re; fout.rawWrite(dbl2);
-        dbl1[0] = to!double(fs.S); fout.rawWrite(dbl1);
+        dbl1[0] = fs.S.re; fout.rawWrite(dbl1);
         if (radiation) {
             dbl3[0] = Q_rad_org.re; dbl3[1] = f_rad_org.re; dbl3[2] = Q_rE_rad.re;
             fout.rawWrite(dbl3);
@@ -2580,7 +2580,7 @@ void cell_data_to_raw_binary(ref File fout,
             foreach (kvalue; fs.gas.k_modes) { dbl1[0] = kvalue; fout.rawWrite(dbl1); }
         }
         dbl2[0] = fs.mu_t; dbl2[1] = fs.k_t; fout.rawWrite(dbl2);
-        dbl1[0] = to!double(fs.S); fout.rawWrite(dbl1);
+        dbl1[0] = fs.S; fout.rawWrite(dbl1);
         if (radiation) {
             dbl3[0] = Q_rad_org; dbl3[1] = f_rad_org; dbl3[2] = Q_rE_rad;
             fout.rawWrite(dbl3);
@@ -2660,18 +2660,7 @@ void scan_cell_data_from_fixed_order_string
         }
         fs.mu_t = Complex!double(items.front); items.popFront();
         fs.k_t = Complex!double(items.front); items.popFront();
-        // In the usual format for the flow data, the shock detector appears as an int.
-        // In profile files, the same value may appear as a double.
-        try {
-            fs.S = to!int(items.front);
-        } catch(Exception e) {
-            try {
-                fs.S = to!int(to!double(items.front));
-            } catch(Exception e2) {
-                throw new FlowSolverException("Couldn't get a reasonable value for shock detector.");
-            }
-        }
-        items.popFront();
+        fs.S = Complex!double(items.front); items.popFront();
         if (radiation) {
             Q_rad_org = Complex!double(items.front); items.popFront();
             f_rad_org = Complex!double(items.front); items.popFront();
@@ -2747,18 +2736,7 @@ void scan_cell_data_from_fixed_order_string
         }
         fs.mu_t = to!double(items.front); items.popFront();
         fs.k_t = to!double(items.front); items.popFront();
-        // In the usual format for the flow data, the shock detector appears as an int.
-        // In profile files, the same value may appear as a double.
-        try {
-            fs.S = to!int(items.front);
-        } catch(Exception e) {
-            try {
-                fs.S = to!int(to!double(items.front));
-            } catch(Exception e2) {
-                throw new FlowSolverException("Couldn't get a reasonable value for shock detector.");
-            }
-        }
-        items.popFront();
+        fs.S = to!double(items.front); items.popFront();
         if (radiation) {
             Q_rad_org = to!double(items.front); items.popFront();
             f_rad_org = to!double(items.front); items.popFront();
@@ -2852,9 +2830,7 @@ void scan_cell_data_from_variable_order_string
     }
     fs.mu_t = values[countUntil(varNameList, flowVarName(FlowVar.mu_t))];
     fs.k_t = values[countUntil(varNameList, flowVarName(FlowVar.k_t))];
-    // In the usual format for the flow data, the shock detector appears as an int.
-    // In profile files, the same value may appear as a double.
-    fs.S = to!int(values[countUntil(varNameList, flowVarName(FlowVar.S))].re);
+    fs.S = values[countUntil(varNameList, flowVarName(FlowVar.S))];
     if (radiation) {
         Q_rad_org = values[countUntil(varNameList, flowVarName(FlowVar.Q_rad_org))];
         f_rad_org = values[countUntil(varNameList, flowVarName(FlowVar.f_rad_org))];
@@ -2936,7 +2912,7 @@ void raw_binary_to_cell_data(ref File fin,
             }
         }
         fin.rawRead(dbl2); fs.mu_t = dbl2[0]; fs.k_t = dbl2[1];
-        fin.rawRead(dbl1); fs.S = to!int(dbl1[0]);
+        fin.rawRead(dbl1); fs.S = dbl1[0];
         if (radiation) {
             fin.rawRead(dbl3);
             Q_rad_org = dbl3[0]; f_rad_org = dbl3[1]; Q_rE_rad = dbl3[2];
@@ -3003,7 +2979,7 @@ void raw_binary_to_cell_data(ref File fin,
             }
         }
         fin.rawRead(dbl2); fs.mu_t = dbl2[0]; fs.k_t = dbl2[1];
-        fin.rawRead(dbl1); fs.S = to!int(dbl1[0]);
+        fin.rawRead(dbl1); fs.S = dbl1[0];
         if (radiation) {
             fin.rawRead(dbl3);
             Q_rad_org = dbl3[0]; f_rad_org = dbl3[1]; Q_rE_rad = dbl3[2];

@@ -60,7 +60,7 @@ public:
     }
     number mu_t;   // turbulence viscosity
     number k_t;    // turbulence thermal-conductivity
-    int S;         // shock indicator, value 0 or 1
+    number S;         // shock indicator, [0,1]
 
     this(GasModel gm,
          in double p_init,
@@ -348,7 +348,7 @@ public:
         }
         formattedWrite(writer, ", \"mu_t\": %.18e", mu_t.re);
         formattedWrite(writer, ", \"k_t\": %.18e", k_t.re);
-        formattedWrite(writer, ", \"S\": %d", S);
+        formattedWrite(writer, ", \"S\": %.18e", S);
         formattedWrite(writer, "}");
         return writer.data;
     } // end toJSONString()

@@ -132,6 +132,14 @@ struct Vector3 {
         return this;
     }
 
+    @nogc ref Vector3 add(number x, number y, number z, number factor) return
+    // Convenience function for adding the components of an existing object.
+    // This avoids the temporary associated with += (below)
+    {
+        _p[0] += factor*x; _p[1] += factor*y; _p[2] += factor*z;
+        return this;
+    }
+
     @nogc ref Vector3 add(ref const(Vector3) other) return
     // Convenience function for adding the components of an existing object.
     // This avoids the temporary associated with += (below)
@@ -174,6 +182,14 @@ struct Vector3 {
 
     version(complex_numbers) {
         // We want to retain the flavour with double numbers.
+
+        @nogc ref Vector3 add(double x, double y, double z, double factor) return
+        // Convenience function for adding the components of an existing object, scaled.
+        // This avoids the temporary associated with += (below)
+        {
+            _p[0] += factor*x; _p[1] += factor*y; _p[2] += factor*z;
+            return this;
+        }
 
         @nogc ref Vector3 add(ref const(Vector3) other, double factor) return
         // Convenience function for adding the components of an existing object, scaled.

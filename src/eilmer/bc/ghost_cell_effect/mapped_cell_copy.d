@@ -744,7 +744,7 @@ public:
                     }
                     buf[ii++] = fs.mu_t.re; version(complex_numbers) { buf[ii++] = fs.mu_t.im; }
                     buf[ii++] = fs.k_t.re; version(complex_numbers) { buf[ii++] = fs.k_t.im; }
-                    buf[ii++] = to!double(fs.S);
+                    buf[ii++] = fs.S.re; version(complex_numbers) { buf[ii++] = fs.S.im; }
                     foreach(j; 0..c.dUk.length) {
                         buf[ii++] = c.dUk[j].re; version(complex_numbers) { buf[ii++] = c.dUk[j].im; }
                     }
@@ -824,7 +824,7 @@ public:
                     }
                     fs.mu_t.re = buf[ii++]; version(complex_numbers) { fs.mu_t.im = buf[ii++]; }
                     fs.k_t.re = buf[ii++]; version(complex_numbers) { fs.k_t.im = buf[ii++]; }
-                    fs.S = to!int(buf[ii++]);
+                    fs.S.re = buf[ii++]; version(complex_numbers) { fs.S.im = buf[ii++]; }
                     foreach(j; 0..c.dUk.length) {
                         c.dUk[j].re = buf[ii++]; version(complex_numbers) { c.dUk[j].im = buf[ii++]; }
                     }
