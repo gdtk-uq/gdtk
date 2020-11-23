@@ -25,7 +25,7 @@ initial = FlowState:new{p=p_inf/5, T=T_inf, velx=0, massf=massf_inf}
 
 -- Now set some configuration options
 body_flow_length = R/u_inf
-t_final = 10 * body_flow_length -- allow time to establish
+t_final = 20 * body_flow_length -- allow time to establish
 ni = 128; nj = 256
 config.axisymmetric = true
 config.reacting = true
@@ -34,7 +34,8 @@ config.reaction_time_delay = 0.0
 config.flux_calculator = "ausmdv"
 config.gasdynamic_update_scheme = "moving_grid_2_stage"
 config.grid_motion = "shock_fitting"
-config.shock_fitting_delay = 3 * body_flow_length  
+config.shock_fitting_delay = 3 * body_flow_length
+config.interpolation_delay = 10 * body_flow_length
 config.max_time = t_final
 config.max_step = 800000
 config.dt_init = 1.0e-10
