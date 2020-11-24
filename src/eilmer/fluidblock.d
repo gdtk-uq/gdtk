@@ -11,6 +11,7 @@ import std.conv;
 import std.stdio;
 import std.math;
 import std.json;
+import std.array;
 import util.lua;
 import nm.complex;
 import nm.number;
@@ -39,6 +40,13 @@ import sfluidblock; // needed for some special-case processing, below
 import shockdetectors;
 import block;
 import jacobian;
+
+// version(matplotlib) {
+// import plt = matplotlibd.pyplot;
+// import std.format;
+// }
+
+
 
 // To distinguish ghost cells from active cells, we start their id values at
 // an arbitrarily high value.  It seem high to me (PJ) but feel free to adjust it
@@ -421,17 +429,49 @@ public:
     // Mark cells as shock points if any of their interfaces are shock points.
     //
     {
-        size_t count;
         foreach (cell; cells) {
             cell.fs.S = 0.0;
+            foreach (face; cell.iface) {
+                if (face.fs.S == 1.0) {
+                    cell.fs.S = 1.0;
+                    break;
+                }
+            }
+        }
+    } // end mark_shock_cells()
+
+    @nogc
+    void diffuse_shock_marker()
+    // Spatially diffuse the shock marker
+    //
+    {
+        number sum;
+        int count;
+
+        foreach (cell; cells) {
+
+            if (cell.fs.S == 1.0) continue;
+
+            sum = 0.0;
             count = 0;
             foreach (face; cell.iface) {
-                cell.fs.S += face.fs.S;
-                count += 1;
+                sum += fmax(face.left_cell.fs.S, face.right_cell.fs.S);
+                count++;
             }
-            cell.fs.S /= count;
+
+            cell.fs.S = sum / count;
         }
-    } // end detect_shock_points()
+    } // end diffuse_shock_marker()
+
+    @nogc
+    void shock_cells_to_faces()
+    // Mark cells as shock points if any of their interfaces are shock points.
+    //
+    {
+        foreach(face; faces) {
+            face.fs.S = fmax(face.left_cell.fs.S, face.right_cell.fs.S);
+        }
+    } // end shock_cells_to_faces()
 
     int count_invalid_cells(int gtl, int ftl)
     // Returns the number of cells that contain invalid data,

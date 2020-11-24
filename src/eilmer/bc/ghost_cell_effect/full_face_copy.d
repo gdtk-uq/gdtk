@@ -1906,6 +1906,100 @@ public:
         // Done with copying from source cells.
     } // end exchange_flowstate_phase2()
 
+
+    // not @nogc
+    void exchange_shock_phase0(double t, int gtl, int ftl)
+    // look in exchange_flowstate_phase0 for description of activities
+    {
+        version(mpi_parallel) {
+            if (find(GlobalConfig.localFluidBlockIds, other_blk.id).empty) {
+                size_t fs_size = 1; // we only want to transfer a single value
+                size_t ne = ghost_cells.length * fs_size;
+                if (incoming_flowstate_buf.length < ne) { incoming_flowstate_buf.length = ne; }
+                incoming_flowstate_tag = make_mpi_tag(other_blk.id, other_face, 0);
+                MPI_Irecv(incoming_flowstate_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
+                          incoming_flowstate_tag, MPI_COMM_WORLD, &incoming_flowstate_request);
+            } else {
+            }
+        } else { 
+        }
+    } // end exchange_shock_phase0()
+
+    // not @nogc
+    void exchange_shock_phase1(double t, int gtl, int ftl)
+    // look in exchange_flowstate_phase1 for description of activities
+    {
+        version(mpi_parallel) {
+            version(nk_accelerator) {
+                throw new Error("exchange_shock_phase1: Full-face copy is not available for e4-nk-dist.");
+            }
+            else {
+                if (find(GlobalConfig.localFluidBlockIds, other_blk.id).empty) {
+                    
+                    assert(outgoing_mapped_cells.length == ghost_cells.length,
+                           "oops, mismatch in outgoing_mapped_cells and ghost_cells.");
+
+                    const size_t fs_size = 1;
+                    size_t ne = ghost_cells.length * fs_size;
+                    if (outgoing_flowstate_buf.length < ne) { outgoing_flowstate_buf.length = ne; }
+                    outgoing_flowstate_tag = make_mpi_tag(blk.id, which_boundary, 0);
+                    size_t ii = 0;
+                    foreach (c; outgoing_mapped_cells) {
+                        outgoing_flowstate_buf[ii++] = c.fs.S;
+                    }
+                    version(mpi_timeouts) {
+                        MPI_Request send_request;
+                        MPI_Isend(outgoing_flowstate_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
+                                  outgoing_flowstate_tag, MPI_COMM_WORLD, &send_request);
+                        MPI_Status send_status;
+                        MPI_Wait_a_while(&send_request, &send_status);
+                    } else {
+                        MPI_Send(outgoing_flowstate_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
+                                 outgoing_flowstate_tag, MPI_COMM_WORLD);
+                    }
+                } else {
+                }
+            } // END: version(!nk_accelerator)
+        } else {
+        }
+    } // end exchange_shock_phase1()
+
+    // not @nogc
+    void exchange_shock_phase2(double t, int gtl, int ftl)
+    // look in exchange_flowstate_phase2 for description of activities
+    {
+        version(mpi_parallel) {
+            if (find(GlobalConfig.localFluidBlockIds, other_blk.id).empty) {
+                assert(outgoing_mapped_cells.length == ghost_cells.length,
+                       "oops, mismatch in outgoing_mapped_cells and ghost_cells.");
+                version(mpi_timeouts) {
+                    MPI_Wait_a_while(&incoming_flowstate_request, &incoming_flowstate_status);
+                } else {
+                    MPI_Wait(&incoming_flowstate_request, &incoming_flowstate_status);
+                }
+                size_t ii = 0;
+                foreach (c; ghost_cells) {
+                    c.is_interior_to_domain = true;
+                    c.fs.S = incoming_flowstate_buf[ii++];
+                }
+            } else {
+                foreach (i; 0 .. ghost_cells.length) {
+                    ghost_cells[i].fs.S = mapped_cells[i].fs.S;
+                    ghost_cells[i].is_interior_to_domain = mapped_cells[i].is_interior_to_domain;
+                }
+            }
+        } else { // not mpi_parallel
+            // For a single process,
+            // we know that we can just access the data directly.
+            foreach (i; 0 .. ghost_cells.length) {
+                ghost_cells[i].fs.S = mapped_cells[i].fs.S;
+                ghost_cells[i].is_interior_to_domain = mapped_cells[i].is_interior_to_domain;
+            }
+        }
+        // Done with copying from source cells.
+    } // end exchange_flowstate_phase2()
+
+
     @nogc
     size_t viscous_gradient_buffer_entry_size(const LocalConfig myConfig){
         /*

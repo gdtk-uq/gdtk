@@ -75,6 +75,11 @@ public:
     number tau_wall_x, tau_wall_y, tau_wall_z; // shear at face (used by wall-function BCs)
     number q;              // heat-flux across face (used by wall-function BCs)
     //
+    // Shock-detector-related quantities.
+    int[] nbr_id; // list of neighbour ids
+    FlowState[] nbr_fs; // list of neighbouring flow states
+    number[] nbr_dist; // distance to neighbour
+    //
     // Viscous-flux-related quantities.
     FlowGradients grad;
     WLSQGradWorkspace ws_grad;

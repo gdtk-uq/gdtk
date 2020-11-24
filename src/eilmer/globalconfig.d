@@ -611,6 +611,9 @@ final class GlobalConfig {
     shared static double compression_tolerance = -0.30;
     shared static ShockDetector shock_detector = ShockDetector.PJ;
 
+    // How many iterations to perform shock detector averaging
+    shared static int shock_detector_smoothing = 0;
+
     // With this flag on, the energy equation is modified such that
     // an artificial compressibility form of equations is solved.
     shared static bool artificial_compressibility = false;
@@ -911,6 +914,7 @@ public:
     double shear_tolerance;
     double M_inf;
     double compression_tolerance;
+    int shock_detector_smoothing;
     ShockDetector shock_detector;
     bool do_shock_detect;
     bool artificial_compressibility;
@@ -1048,6 +1052,7 @@ public:
         M_inf = GlobalConfig.M_inf;
         compression_tolerance = GlobalConfig.compression_tolerance;
         shock_detector = GlobalConfig.shock_detector;
+        shock_detector_smoothing = GlobalConfig.shock_detector_smoothing;
         do_shock_detect = GlobalConfig.do_shock_detect;
         //
         artificial_compressibility = GlobalConfig.artificial_compressibility;
@@ -1358,6 +1363,7 @@ JSONValue read_config_file()
     mixin(update_bool("use_extended_stencil", "use_extended_stencil"));
     mixin(update_double("venkat_K_value", "venkat_K_value"));
     mixin(update_double("shear_tolerance", "shear_tolerance"));
+    mixin(update_int("shock_detector_smoothing", "shock_detector_smoothing"));
     mixin(update_double("M_inf", "M_inf"));
     mixin(update_double("compression_tolerance", "compression_tolerance"));
     mixin(update_enum("shock_detector", "shock_detector", "shock_detector_from_name"));
@@ -1433,6 +1439,7 @@ JSONValue read_config_file()
         writeln("  M_inf: ", GlobalConfig.M_inf);
         writeln("  compression_tolerance: ", GlobalConfig.compression_tolerance);
         writeln("  shock_detector: ", shock_detector_name(GlobalConfig.shock_detector));
+        writeln("  shock_detector_smoothing: ", GlobalConfig.shock_detector_smoothing);
         //
         writeln("  MHD: ", GlobalConfig.MHD);
         writeln("  MHD_static_field: ", GlobalConfig.MHD_static_field);
@@ -1954,13 +1961,21 @@ void configCheckPoint1()
         }
         if (GlobalConfig.flux_calculator == FluxCalculator.adaptive_hanel_ausmdv ||
             GlobalConfig.flux_calculator == FluxCalculator.adaptive_hlle_roe ||
-            GlobalConfig.flux_calculator == FluxCalculator.adaptive_efm_ausmdv) {
+            GlobalConfig.flux_calculator == FluxCalculator.adaptive_efm_ausmdv ||
+            GlobalConfig.flux_calculator == FluxCalculator.adaptive_ausmdv_asf) {
             GlobalConfig.do_shock_detect = true;
         }
         if (GlobalConfig.do_shock_detect && GlobalConfig.is_master_task) {
             writeln("NOTE: turning on shock detector.");
         }
     }
+
+    if (!GlobalConfig.high_order_flux_calculator) {
+        if (GlobalConfig.flux_calculator == FluxCalculator.adaptive_ausmdv_asf) {
+            GlobalConfig.high_order_flux_calculator = true;
+        }
+    }
+
     return;
 } // end configCheckPoint1()
 
