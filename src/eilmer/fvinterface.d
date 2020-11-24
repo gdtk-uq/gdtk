@@ -37,6 +37,7 @@ enum IndexDirection {none=0, i, j, k}; // Needed for StructuredGrid interpolatio
 class FVInterface {
 public:
     int id;
+    char logical_dir; // logical index direction
     bool is_on_boundary = false;  // by default, assume not on boundary
     size_t bc_id;  // if the face is on a block boundary, which one
     size_t i_bndry; // if the face is on a block boundary, store index into the array of faces attached to bc
@@ -108,11 +109,13 @@ public:
     this(LocalConfig myConfig,
          IndexDirection idir,
          bool allocate_spatial_deriv_lsq_workspace,
-         int id_init=-1)
+         int id_init=-1,
+         char dir=' ')
     {
         this.myConfig = myConfig;
         this.idir = idir;
         id = id_init;
+        logical_dir = dir;
         area.length = myConfig.n_grid_time_levels;
         gvel = Vector3(0.0,0.0,0.0); // default to fixed grid
         auto gmodel = myConfig.gmodel;

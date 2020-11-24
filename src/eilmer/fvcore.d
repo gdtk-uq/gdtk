@@ -184,7 +184,9 @@ enum FluxCalculator {
     adaptive_hanel_ausmdv, // Hanel near shocks, AUSMDV otherwise
     adaptive_hlle_roe, // HLLE near shocks, Roe otherwise
     hlle, // MHD HLLE approximate Riemann solver
-    roe // Roe approximate Riemann solver
+    roe, // Roe approximate Riemann solver
+    asf, // what does this stand for???
+    adaptive_ausmdv_asf // AUSMDV near shocks, asf otherwise
 }
 
 @nogc
@@ -200,6 +202,8 @@ string flux_calculator_name(FluxCalculator fcalc)
     case FluxCalculator.adaptive_hlle_roe: return "adaptive_hlle_roe";
     case FluxCalculator.hlle: return "hlle";
     case FluxCalculator.roe: return "roe";
+    case FluxCalculator.asf: return "asf";
+    case FluxCalculator.adaptive_ausmdv_asf: return "adaptive_ausmdv_asf";
     }
 }
 
@@ -217,6 +221,8 @@ FluxCalculator flux_calculator_from_name(string name)
     case "adaptive_hlle_roe": return FluxCalculator.adaptive_hlle_roe;
     case "hlle": return FluxCalculator.hlle;
     case "roe": return FluxCalculator.roe;
+    case "asf": return FluxCalculator.asf;
+    case "adaptive_ausmdv_asf" : return FluxCalculator.adaptive_ausmdv_asf;
     default:
         throw new FlowSolverException("Invalid flux calculator name");
     }

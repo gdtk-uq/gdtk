@@ -2090,27 +2090,17 @@ public:
         //
         bool do_reconstruction = allow_high_order_interpolation && (myConfig.interpolation_order > 1);
         //
-        if (myConfig.high_order_flux_calculator) {
-            // Lachlan's high-order flux calculator assumes that ghost cells are available.
-            foreach (f; faces) {
-                if (f.is_on_boundary && bc[f.bc_id].convective_flux_computed_in_bc) continue;
-                if (f.is_on_boundary && !bc[f.bc_id].ghost_cell_data_available) {
-                    throw new Error("ghost cell data missing");
-                }
-                FlowState[4] stencil = [f.left_cells[1].fs, f.left_cells[0].fs,
-                                        f.right_cells[0].fs, f.right_cells[1].fs];
-                ASF_242(stencil, f, myConfig);
-            }
-            return;
-        } // end if (high_order_flux_calculator)
-        //
-        // If we have not left already, continue with the flux calculation
-        // being done following the classic reconstruction.
+        
         // Low-order reconstruction just copies data from adjacent FV_Cell.
         // Note that ,even for high-order reconstruction, we depend upon this copy for
         // the viscous-transport and diffusion coefficients.
         //
         foreach (f; faces) {
+
+            if (myConfig.high_order_flux_calculator && f.is_on_boundary && !bc[f.bc_id].ghost_cell_data_available) {
+                throw new Error("ghost cell data missing");
+            }
+
             FVCell cL0 = (f.left_cells.length > 0) ? f.left_cells[0] : f.right_cells[0];
             FVCell cR0 = (f.right_cells.length > 0) ? f.right_cells[0]: f.left_cells[0];
             Lft.copy_values_from(cL0.fs);

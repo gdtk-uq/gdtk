@@ -100,6 +100,12 @@ void compute_interface_flux_interior(ref FlowState Lft, ref FlowState Rght,
     case FluxCalculator.roe:
         roe(Lft, Rght, IFace, myConfig);
         break;
+    case FluxCalculator.asf:
+        ASF_242(Lft, Rght, IFace, myConfig);
+        break;
+    case FluxCalculator.adaptive_ausmdv_asf:
+        adaptive_ausmdv_asf(Lft, Rght, IFace, myConfig);
+        break;
     } // end switch
     ConservedQuantities F = IFace.F;
     version(MHD) {
@@ -1405,12 +1411,19 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalCo
 } // end roe()
 
 @nogc
-void ASF_242(FlowState[] stencil, ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0) {
+void ASF_242(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0) {
     // Start by substracting interface velocities and transforming to local frame; 
     // it is unlikely we will be using moving grids with this solver, but no harm in including this.
 
     auto gmodel = myConfig.gmodel;
     ConservedQuantities F = IFace.F;
+
+    // this stencil is using references to comply with @nogc
+    // we need to convert back after we have finished with them
+    // (this is very inefficient)
+    FlowState[4] stencil = [IFace.left_cells[1].fs,  IFace.left_cells[0].fs,
+                            IFace.right_cells[0].fs, IFace.right_cells[1].fs];
+
     foreach (cell; stencil) {
 
         cell.vel.refx -= IFace.gvel.x;
@@ -1447,6 +1460,17 @@ void ASF_242(FlowState[] stencil, ref FVInterface IFace, ref LocalConfig myConfi
         w[9][i] = 1;
     }
 
+    // convert back
+    foreach (cell; stencil) {
+
+        cell.vel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
+
+        cell.vel.refx += IFace.gvel.x;
+        cell.vel.refy += IFace.gvel.y;
+        cell.vel.refz += IFace.gvel.z;
+
+    }
+
     // Prepare the conservative and product rule fluxes arrays
     number[10] f_c, f_e;
 
@@ -1471,8 +1495,6 @@ void ASF_242(FlowState[] stencil, ref FVInterface IFace, ref LocalConfig myConfi
 
 
     // remaining fluxes (copied from Roe flux)
-    FlowState Lft = stencil[$/2-1];
-    FlowState Rght = stencil[$/2];
 
     if (mass_flux >= 0.0) {
         /* Wind is blowing from the left */
@@ -1500,3 +1522,26 @@ void ASF_242(FlowState[] stencil, ref FVInterface IFace, ref LocalConfig myConfi
         }
     }
 }
+
+
+@nogc
+void adaptive_ausmdv_asf(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
+// This adaptive flux calculator uses the AUSMDV flux calculator
+// near shocks and ASF_242 away from shocks.
+//
+// The actual work is passed off to the original flux calculation functions.
+{
+
+    number alpha = IFace.fs.S;
+
+    if (alpha > 0.0) {
+        ausmdv(Lft, Rght, IFace, myConfig, alpha);
+    } 
+    
+    if (alpha < 1.0) {
+        ASF_242(Lft, Rght, IFace, myConfig, 1.0-alpha);
+    } 
+
+    return;
+
+} // end adaptive_flux()
