@@ -1,0 +1,6 @@
+{
+    "name": "examples",
+    "dependencies": {
+	"matplotlib-d": {"version": "~master", "path": "../"}
+    }
+}

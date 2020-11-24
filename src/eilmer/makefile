@@ -35,6 +35,7 @@ DEBUG_CHEM ?= 0
 WITH_COMPLEX_NUMBERS ?= 0
 WITH_FPE ?= 0
 WITH_DVODE ?= 0
+WITH_MATPLOTLIB ?= 0
 MULTI_SPECIES_GAS ?= 1
 MULTI_T_GAS ?= 1
 MHD ?= 1
@@ -93,6 +94,10 @@ endif
 
 ifeq ($(WITH_COMPLEX_NUMBERS),1)
     PROGRAMS += e4zshared
+endif
+
+ifeq ($(WITH_MATPLOTLIB), 1)
+	PROGRAMS += e4shared_mpl
 endif
 
 EILMER_CORE_FILES := simcore.d \
@@ -214,6 +219,11 @@ OPENMPI_FILES := $(OPENMPI_DIR)/source/mpi/package.d $(OPENMPI_DIR)/source/mpi/u
 LUA_DIR := ../../extern/lua-5.1.4
 LIBLUA := $(LUA_DIR)/lib/liblua.a
 LIBLUAPATH := $(LUA_DIR)/lib
+
+MPL_DIR := ../extern/matplotlib.d/source
+MPL_FILES := $(MPL_DIR)/matplotlibd/pyplot.d \
+	$(MPL_DIR)/matplotlibd/core/pycall.d \
+	$(MPL_DIR)/matplotlibd/core/translate.d \
 
 # The install destination.
 INSTALL_DIR ?= $(HOME)/dgdinst
@@ -478,6 +488,28 @@ e4shared: main.d $(EILMER_FILES) \
 		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) $(TECPLOT_FILES) \
 		$(LIBCEQ) $(LIBLUA) \
 		$(DLINKFLAGS)
+
+e4shared_mpl: main.d $(EILMER_FILES) \
+	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
+	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBLUA) $(GZIP_FILES) \
+	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+	$(NM_FILES) $(UTIL_FILES) $(MPL_FILES) \
+	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
+		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
+		main.d > main_with_rev_string.d
+	python3 $(MPL_DIR)/../python/prebuild.py $(MPL_DIR)/..
+	$(DMD) $(DFLAGS) -J$(MPL_DIR)/../views $(OF)e4shared_mpl \
+		$(DVERSION)matplotlib \
+		main_with_rev_string.d \
+		$(EILMER_FILES) \
+		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
+		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
+		$(UTIL_FILES) $(NM_FILES) $(MPL_FILES) \
+		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
+		$(LIBCEQ) $(LIBLUA) \
+		$(DLINKFLAGS) -I$(MPL_DIR)
 
 e4zshared: main.d $(EILMER_FILES) \
 	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
