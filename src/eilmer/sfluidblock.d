@@ -2154,34 +2154,18 @@ public:
             foreach (j; 0 .. njc) {
                 foreach (i; 0 .. niv) {
                     auto f = get_ifi(i,j,k);
-                    FVCell cL0; if (f.left_cells.length > 0) { cL0 = f.left_cells[0]; }
-                    FVCell cR0; if (f.right_cells.length > 0) { cR0 = f.right_cells[0]; }
-                    if ((i == 0) && !(bc[Face.west].ghost_cell_data_available)) {
-                        Lft.copy_values_from(cR0.fs);
-                    } else {
-                        Lft.copy_values_from(cL0.fs);
-                    }
-                    if ((i == niv-1) && !(bc[Face.east].ghost_cell_data_available)) {
-                        Rght.copy_values_from(cL0.fs);
-                    } else {
-                        Rght.copy_values_from(cR0.fs);
-                    }
+                    FVCell cL0 = (f.left_cells.length > 0) ? f.left_cells[0] : f.right_cells[0];
+                    FVCell cR0 = (f.right_cells.length > 0) ? f.right_cells[0]: f.left_cells[0];
+                    Lft.copy_values_from(cL0.fs);
+                    Rght.copy_values_from(cR0.fs);
                     if (do_reconstruction && !f.in_suppress_reconstruction_zone &&
                         !(myConfig.suppress_reconstruction_at_shocks && f.fs.S)) {
                         one_d.interp(f, Lft, Rght);
                     }
                     f.fs.copy_average_values_from(Lft, Rght);
-                    //
                     if ((i == 0) && bc[Face.west].convective_flux_computed_in_bc) continue;
                     if ((i == niv-1) && bc[Face.east].convective_flux_computed_in_bc) continue;
-                    //
-                    if ((i == 0) && !(bc[Face.west].ghost_cell_data_available)) {
-                        compute_flux_at_left_wall(Rght, f, myConfig, omegaz);
-                    } else if ((i == niv-1) && !(bc[Face.east].ghost_cell_data_available)) {
-                        compute_flux_at_right_wall(Lft, f, myConfig, omegaz);
-                    } else {
-                        compute_interface_flux(Lft, Rght, f, myConfig, omegaz);
-                    }
+                    compute_interface_flux(Lft, Rght, f, myConfig, omegaz);
                 } // i loop
             } // j loop
         } // for k
@@ -2190,34 +2174,18 @@ public:
             foreach (j; 0 .. njv) {
                 foreach (i; 0 .. nic) {
                     auto f = get_ifj(i,j,k);
-                    FVCell cL0; if (f.left_cells.length > 0) { cL0 = f.left_cells[0]; }
-                    FVCell cR0; if (f.right_cells.length > 0) { cR0 = f.right_cells[0]; }
-                    if ((j == 0) && !(bc[Face.south].ghost_cell_data_available)) {
-                        Lft.copy_values_from(cR0.fs);
-                    } else {
-                        Lft.copy_values_from(cL0.fs);
-                    }
-                    if ((j == njv-1) && !(bc[Face.north].ghost_cell_data_available)) {
-                        Rght.copy_values_from(cL0.fs);
-                    } else {
-                        Rght.copy_values_from(cR0.fs);
-                    }
+                    FVCell cL0 = (f.left_cells.length > 0) ? f.left_cells[0] : f.right_cells[0];
+                    FVCell cR0 = (f.right_cells.length > 0) ? f.right_cells[0]: f.left_cells[0];
+                    Lft.copy_values_from(cL0.fs);
+                    Rght.copy_values_from(cR0.fs);
                     if (do_reconstruction && !f.in_suppress_reconstruction_zone &&
                         !(myConfig.suppress_reconstruction_at_shocks && f.fs.S)) {
                         one_d.interp(f, Lft, Rght);
                     }
                     f.fs.copy_average_values_from(Lft, Rght);
-                    //
                     if ((j == 0) && bc[Face.south].convective_flux_computed_in_bc) continue;
                     if ((j == njv-1) && bc[Face.north].convective_flux_computed_in_bc) continue;
-                    //
-                    if ((j == 0) && !(bc[Face.south].ghost_cell_data_available)) {
-                        compute_flux_at_left_wall(Rght, f, myConfig, omegaz);
-                    } else if ((j == njv-1) && !(bc[Face.north].ghost_cell_data_available)) {
-                        compute_flux_at_right_wall(Lft, f, myConfig, omegaz);
-                    } else {
-                        compute_interface_flux(Lft, Rght, f, myConfig, omegaz);
-                    }
+                    compute_interface_flux(Lft, Rght, f, myConfig, omegaz);
                 } // i loop
             } // j loop
         } // k loop
@@ -2227,34 +2195,18 @@ public:
                 foreach (j; 0 .. njc) {
                     foreach (i; 0 .. nic) {
                         auto f = get_ifk(i,j,k);
-                        FVCell cL0; if (f.left_cells.length > 0) { cL0 = f.left_cells[0]; }
-                        FVCell cR0; if (f.right_cells.length > 0) { cR0 = f.right_cells[0]; }
-                        if ((k == 0) && !(bc[Face.bottom].ghost_cell_data_available)) {
-                            Lft.copy_values_from(cR0.fs);
-                        } else {
-                            Lft.copy_values_from(cL0.fs);
-                        }
-                        if ((k == niv-1) && !(bc[Face.top].ghost_cell_data_available)) {
-                            Rght.copy_values_from(cL0.fs);
-                        } else {
-                            Rght.copy_values_from(cR0.fs);
-                        }
+                        FVCell cL0 = (f.left_cells.length > 0) ? f.left_cells[0] : f.right_cells[0];
+                        FVCell cR0 = (f.right_cells.length > 0) ? f.right_cells[0]: f.left_cells[0];
+                        Lft.copy_values_from(cL0.fs);
+                        Rght.copy_values_from(cR0.fs);
                         if (do_reconstruction && !f.in_suppress_reconstruction_zone &&
                             !(myConfig.suppress_reconstruction_at_shocks && f.fs.S)) {
                             one_d.interp(f, Lft, Rght);
                         }
                         f.fs.copy_average_values_from(Lft, Rght);
-                        //
                         if ((k == 0) && bc[Face.bottom].convective_flux_computed_in_bc) continue;
                         if ((k == nkv-1) && bc[Face.top].convective_flux_computed_in_bc) continue;
-                        //
-                        if ((k == 0) && !(bc[Face.bottom].ghost_cell_data_available)) {
-                            compute_flux_at_left_wall(Rght, f, myConfig, omegaz);
-                        } else if ((k == nkv-1) && !(bc[Face.top].ghost_cell_data_available)) {
-                            compute_flux_at_right_wall(Lft, f, myConfig, omegaz);
-                        } else {
-                            compute_interface_flux(Lft, Rght, f, myConfig, omegaz);
-                        }
+                        compute_interface_flux(Lft, Rght, f, myConfig, omegaz);
                     } // i loop
                 } // j loop
             } // k loop

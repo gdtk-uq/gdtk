@@ -22,9 +22,6 @@ import fvcore;
 import fvinterface;
 import globalconfig;
 
-@nogc
-void compute_interface_flux(ref FlowState Lft, ref FlowState Rght, ref FVInterface IFace,
-                            ref LocalConfig myConfig, double omegaz=0.0)
 /** Compute the inviscid fluxes (in 1D) across the cell interfaces.
  *
  * This is the top-level function that calls the previously selected
@@ -33,13 +30,30 @@ void compute_interface_flux(ref FlowState Lft, ref FlowState Rght, ref FVInterfa
  *
  * Lft : reference to the LEFT FlowState
  * Rght : reference to the RIGHT FlowState
- * IFace : reference to the interface where the fluxes are to be stored
+ * f : reference to the interface where the fluxes are to be stored
  * myConfig : a block-local configuration object
  * omegaz : angular speed of the block
  *
  * Note that the FlowState objects, Lft and Rght, are tampered with.
  * Be sure that you use copies if you care about their content.
  */
+@nogc
+void compute_interface_flux(ref FlowState Lft, ref FlowState Rght, ref FVInterface f,
+                            ref LocalConfig myConfig, double omegaz=0.0)
+{
+    if (f.left_cells.length == 0) {
+        compute_flux_at_left_wall(Rght, f, myConfig, omegaz);
+    } else if (f.right_cells.length == 0) {
+        compute_flux_at_right_wall(Lft, f, myConfig, omegaz);
+    } else {
+        compute_interface_flux_interior(Lft, Rght, f, myConfig, omegaz);
+    }
+}
+
+@nogc
+void compute_interface_flux_interior(ref FlowState Lft, ref FlowState Rght,
+                                     ref FVInterface IFace,
+                                     ref LocalConfig myConfig, double omegaz=0.0)
 {
     // Transform to interface frame of reference.
     // Firstly, subtract interface velocity, in the case where the grid is moving
@@ -125,7 +139,7 @@ void compute_interface_flux(ref FlowState Lft, ref FlowState Rght, ref FVInterfa
         if (myConfig.MHD) { F.B.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2); }
     }
     return;
-} // end compute_interface_flux()
+} // end compute_interface_flux_interior()
 
 @nogc
 void compute_flux_at_left_wall(ref FlowState Rght, ref FVInterface IFace,

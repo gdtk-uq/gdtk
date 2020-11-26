@@ -258,7 +258,7 @@ public:
 		my_face.i_bndry = bc[i].outsigns.length - 1;
 		if (bc[i].ghost_cell_data_available) {
                     // Make ghost-cell id values distinct from FVCell ids so that
-                    // the warning/error messages are somewhat informative. 
+                    // the warning/error messages are somewhat informative.
                     FVCell ghost0 = new FVCell(myConfig, false, ghost_cell_start_id+ghost_cell_count);
                     ghost_cell_count++;
                     ghost0.contains_flow_data = bc[i].ghost_cell_data_available;
@@ -325,7 +325,7 @@ public:
             }
         } // end foreach f
         //
-        // Set up the cell clouds for least-squares derivative estimation for use in 
+        // Set up the cell clouds for least-squares derivative estimation for use in
         // interpolation/reconstruction of flow quantities at left- and right- sides
         // of cell faces.
         // (Will be used for the convective fluxes).
@@ -357,9 +357,9 @@ public:
                     foreach(vtx; c.vtx) {
                         foreach(cid; cellIndexListPerVertex[vtx.id])
                             if (cell_ids.canFind(cid) == false && cells[cid].contains_flow_data)
-                                { c.cell_cloud ~= cells[cid]; cell_ids ~= cid; } 
+                                { c.cell_cloud ~= cells[cid]; cell_ids ~= cid; }
                     }
-                } 
+                }
                 c.ws = new LSQInterpWorkspace();
                 c.gradients = new LSQInterpGradients(nsp, nmodes);
             } // end foreach cell
@@ -439,7 +439,7 @@ public:
             } // end switch (myConfig.spatial_deriv_locn)
         } // if myConfig.viscous
     } // end init_grid_and_flow_arrays()
-    
+
     void build_cloud_of_cell_references_at_each_vertex()
     {
         // For the MLP limiter, we need access to the gradients stored in the cells.
@@ -465,7 +465,7 @@ public:
         // 25-Feb-2014 Note copied from Eilmer3
         // Jason Qin and Paul Petrie-Repar have identified the lack of exact symmetry in
         // the reconstruction process at the wall as being a cause of the leaky wall
-        // boundary conditions.  Note that the symmetry is not consistent with the 
+        // boundary conditions.  Note that the symmetry is not consistent with the
         // linear extrapolation used for the positions and volumes in Eilmer3.
         // 2018-06-10: Maybe we can fix some of this by eliminating ghost-cells for
         // boundary conditions that do not really have gas regions backing the
@@ -516,7 +516,7 @@ public:
             } else if (myConfig.spatial_deriv_locn == SpatialDerivLocn.faces) {
                 foreach(iface; faces) {
                     iface.grad.set_up_workspace_leastsq(iface.cloud_pos, iface.pos, false, iface.ws_grad);
-                }       
+                }
             } else { // myConfig.spatial_deriv_locn == vertices
                 foreach(vtx; vertices) {
                     vtx.grad.set_up_workspace_leastsq(vtx.cloud_pos, vtx.pos[gtl], true, vtx.ws_grad);
@@ -560,7 +560,7 @@ public:
         grid = new UnstructuredGrid(fileName, myConfig.grid_format);
         grid.sort_cells_into_bins();
     }
-    
+
     override void write_underlying_grid(string fileName)
     {
         if (myConfig.verbosity_level > 1) { writeln("write_underlying_grid() for block ", id); }
@@ -570,7 +570,7 @@ public:
     override double read_solution(string filename, bool overwrite_geometry_data)
     // Note that this function needs to be kept in sync with the BlockFlow class
     // over in flowsolution.d and with write_solution() below and with
-    // write_initial_usg_flow_file_from_lua() in luaflowstate.d. 
+    // write_initial_usg_flow_file_from_lua() in luaflowstate.d.
     // Returns sim_time from file.
     {
         if (myConfig.verbosity_level > 1) { writeln("read_solution(): Start block ", id); }
@@ -589,7 +589,7 @@ public:
             fin.rawRead(found_header);
             if (found_header != expected_header) {
                 throw new FlowSolverException("UFluidBlock.read_solution from raw_binary_file: " ~
-                                              "unexpected header: " ~ to!string(found_header)); 
+                                              "unexpected header: " ~ to!string(found_header));
             }
             int[1] int1; fin.rawRead(int1);
             int label_length = int1[0];
@@ -601,7 +601,7 @@ public:
             double[1] dbl1; fin.rawRead(dbl1); sim_time = dbl1[0];
             fin.rawRead(int1); nvariables = int1[0];
             foreach(i; 0 .. nvariables) {
-                char[] varname; fin.rawRead(int1); varname.length = int1[0]; 
+                char[] varname; fin.rawRead(int1); varname.length = int1[0];
                 fin.rawRead(varname);
             }
             int[2] int2; fin.rawRead(int2); my_dimensions = int2[0]; nc = int2[1];
@@ -613,7 +613,7 @@ public:
                 string msg = text("For block[", id, "] we have a mismatch in solution size.",
                                   " Have read nc=", nc, " ncells=", ncells);
                 throw new FlowSolverException(msg);
-            }   
+            }
             foreach (i; 0 .. ncells) {
                 cells[i].read_values_from_raw_binary(fin, overwrite_geometry_data);
             }
@@ -626,7 +626,7 @@ public:
             if (format_version != "1.0") {
                 string msg = text("UFluidBlock.read_solution(): " ~ "format version found: "
                                   ~ format_version);
-                throw new FlowSolverException(msg); 
+                throw new FlowSolverException(msg);
             }
             line = byLine.front; byLine.popFront();
             formattedRead(line, "label: %s", &myLabel);
@@ -656,7 +656,7 @@ public:
                 string msg = text("For block[", id, "] we have a mismatch in solution size.",
                                   " Have read nc=", nc, " ncells=", ncells);
                 throw new FlowSolverException(msg);
-            }   
+            }
             foreach (i; 0 .. ncells) {
                 line = byLine.front; byLine.popFront();
                 cells[i].scan_values_from_string(line, variableNames, useFixedOrder,
@@ -781,7 +781,8 @@ public:
     }
 
     @nogc
-    override void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0, FVCell[] cell_list = [], FVVertex[] vertex_list = [])
+    override void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0,
+                                         FVCell[] cell_list = [], FVVertex[] vertex_list = [])
     // Compute gradients of flow quantities for higher-order reconstruction, if required.
     // To be used, later, in the convective flux calculation.
     {
@@ -827,7 +828,8 @@ public:
     } // end convective_flux-phase0()
 
     @nogc
-    override void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0, FVCell[] cell_list = [], FVInterface[] iface_list = [])
+    override void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0,
+                                         FVCell[] cell_list = [], FVInterface[] iface_list = [])
     // Make use of the flow gradients to actually do the high-order reconstruction
     // and then compute fluxes of conserved quantities at all faces.
     {
@@ -868,7 +870,7 @@ public:
             bool do_reconstruction = allow_high_order_interpolation && !f.in_suppress_reconstruction_zone;
             if (f.left_cell && f.right_cell) {
 		lsq.interp_both(f, gtl, Lft, Rght, do_reconstruction);
-                compute_interface_flux(Lft, Rght, f, myConfig, omegaz);
+                compute_interface_flux_interior(Lft, Rght, f, myConfig, omegaz);
             } else if (f.right_cell) {
                 lsq.interp_right(f, gtl, Rght, do_reconstruction);
                 compute_flux_at_left_wall(Rght, f, myConfig, omegaz);
