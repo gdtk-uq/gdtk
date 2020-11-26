@@ -167,20 +167,20 @@ public:
         bool lsq_workspace_at_faces = (myConfig.viscous) && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
             && (myConfig.spatial_deriv_locn == SpatialDerivLocn.faces);
         foreach (i, f; grid.faces) {
-            auto new_face = new FVInterface(myConfig, lsq_workspace_at_faces, to!int(i));
+            auto new_face = new FVInterface(myConfig, IndexDirection.none, lsq_workspace_at_faces, to!int(i));
             faces ~= new_face;
         }
         foreach (i, c; grid.cells) {
             // Note that the cell id and the index in the cells array are the same.
             // We will reply upon this connection in other parts of the flow code.
             bool lsq_workspace_at_cells = (myConfig.viscous) && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
-                && (myConfig.spatial_deriv_locn == SpatialDerivLocn.cells);            
+                && (myConfig.spatial_deriv_locn == SpatialDerivLocn.cells);
             auto new_cell = new FVCell(myConfig, lsq_workspace_at_cells, to!int(i));
             new_cell.contains_flow_data = true;
             new_cell.is_interior_to_domain = true;
             cells ~= new_cell;
         }
-        // Bind the interfaces, vertices and cells together, 
+        // Bind the interfaces, vertices and cells together,
         // using the indices stored in the unstructured grid.
         foreach (i, f; faces) {
             foreach (j; grid.faces[i].vtx_id_list) {

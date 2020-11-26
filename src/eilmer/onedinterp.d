@@ -58,7 +58,7 @@ public:
 
 
     @nogc
-    void interp(ref FVInterface f, ref FlowState Lft, ref FlowState Rght, char indexdir)
+    void interp(ref FVInterface f, ref FlowState Lft, ref FlowState Rght)
     // Top-level interpolation function delegates to the specific functions, below.
     {
         if (myConfig.interpolation_order == 3) {
@@ -71,20 +71,20 @@ public:
             auto cL0 = f.left_cells[0]; auto cL1 = f.left_cells[1]; auto cL2 = f.left_cells[2];
             auto cR0 = f.right_cells[0]; auto cR1 = f.right_cells[1]; auto cR2 = f.right_cells[2];
             number lL0, lL1, lL2, lR0, lR1, lR2;
-            switch (indexdir) {
-            case 'i':
+            final switch (f.idir) {
+            case IndexDirection.i:
                 lL0 = cL0.iLength; lL1 = cL1.iLength; lL2 = cL2.iLength;
                 lR0 = cR0.iLength; lR1 = cR1.iLength; lR2 = cR2.iLength;
                 break;
-            case 'j':
+            case IndexDirection.j:
                 lL0 = cL0.jLength; lL1 = cL1.jLength; lL2 = cL2.jLength;
                 lR0 = cR0.jLength; lR1 = cR1.jLength; lR2 = cR2.jLength;
                 break;
-            case 'k':
+            case IndexDirection.k:
                 lL0 = cL0.kLength; lL1 = cL1.kLength; lL2 = cL2.kLength;
                 lR0 = cR0.kLength; lR1 = cR1.kLength; lR2 = cR2.kLength;
                 break;
-            default:
+            case IndexDirection.none:
                 throw new Error("Invalid index direction.");
             }
             interp_l3r3(f, cL2, cL1, cL0, cR0, cR1, cR2, lL2, lL1, lL0, lR0, lR1, lR2, Lft, Rght);
@@ -95,17 +95,17 @@ public:
             if (f.left_cells.length == 0 && f.right_cells.length >= 2) {
                 auto cR0 = f.right_cells[0]; auto cR1 = f.right_cells[1];
                 number lR0, lR1;
-                switch (indexdir) {
-                case 'i':
+                final switch (f.idir) {
+                case IndexDirection.i:
                     lR0 = cR0.iLength; lR1 = cR1.iLength;
                     break;
-                case 'j':
+                case IndexDirection.j:
                     lR0 = cR0.jLength; lR1 = cR1.jLength;
                     break;
-                case 'k':
+                case IndexDirection.k:
                     lR0 = cR0.kLength; lR1 = cR1.kLength;
                     break;
-                default:
+                case IndexDirection.none:
                     throw new Error("Invalid index direction.");
                 }
                 interp_l0r2(f, cR0, cR1, lR0, lR1, Lft, Rght);
@@ -113,17 +113,17 @@ public:
                 auto cL0 = f.left_cells[0];
                 auto cR0 = f.right_cells[0]; auto cR1 = f.right_cells[1];
                 number lL0, lR0, lR1;
-                switch (indexdir) {
-                case 'i':
+                final switch (f.idir) {
+                case IndexDirection.i:
                     lL0 = cL0.iLength; lR0 = cR0.iLength; lR1 = cR1.iLength;
                     break;
-                case 'j':
+                case IndexDirection.j:
                     lL0 = cL0.jLength; lR0 = cR0.jLength; lR1 = cR1.jLength;
                     break;
-                case 'k':
+                case IndexDirection.k:
                     lL0 = cL0.kLength; lR0 = cR0.kLength; lR1 = cR1.kLength;
                     break;
-                default:
+                case IndexDirection.none:
                     throw new Error("Invalid index direction.");
                 }
                 interp_l1r2(f, cL0, cR0, cR1, lL0, lR0, lR1, Lft, Rght);
@@ -131,34 +131,34 @@ public:
                 auto cL0 = f.left_cells[0]; auto cL1 = f.left_cells[1];
                 auto cR0 = f.right_cells[0];
                 number lL0, lL1, lR0;
-                switch (indexdir) {
-                case 'i':
+                final switch (f.idir) {
+                case IndexDirection.i:
                     lL0 = cL0.iLength; lL1 = cL1.iLength; lR0 = cR0.iLength;
                     break;
-                case 'j':
+                case IndexDirection.j:
                     lL0 = cL0.jLength; lL1 = cL1.jLength; lR0 = cR0.jLength;
                     break;
-                case 'k':
+                case IndexDirection.k:
                     lL0 = cL0.kLength; lL1 = cL1.kLength; lR0 = cR0.kLength;
                     break;
-                default:
+                case IndexDirection.none:
                     throw new Error("Invalid index direction.");
                 }
                 interp_l2r1(f, cL1, cL0, cR0, lL1, lL0, lR0, Lft, Rght);
             } else if (f.left_cells.length >= 2 && f.right_cells.length == 0) {
                 auto cL0 = f.left_cells[0]; auto cL1 = f.left_cells[1];
                 number lL0, lL1;
-                switch (indexdir) {
-                case 'i':
+                final switch (f.idir) {
+                case IndexDirection.i:
                     lL0 = cL0.iLength; lL1 = cL1.iLength;
                     break;
-                case 'j':
+                case IndexDirection.j:
                     lL0 = cL0.jLength; lL1 = cL1.jLength;
                     break;
-                case 'k':
+                case IndexDirection.k:
                     lL0 = cL0.kLength; lL1 = cL1.kLength;
                     break;
-                default:
+                case IndexDirection.none:
                     throw new Error("Invalid index direction.");
                 }
                 interp_l2r0(f, cL1, cL0, cL1.iLength, cL0.iLength, Lft, Rght);
@@ -167,20 +167,20 @@ public:
                 auto cL0 = f.left_cells[0]; auto cL1 = f.left_cells[1];
                 auto cR0 = f.right_cells[0]; auto cR1 = f.right_cells[1];
                 number lL0, lL1, lR0, lR1;
-                switch (indexdir) {
-                case 'i':
+                final switch (f.idir) {
+                case IndexDirection.i:
                     lL0 = cL0.iLength; lL1 = cL1.iLength;
                     lR0 = cR0.iLength; lR1 = cR1.iLength;
                     break;
-                case 'j':
+                case IndexDirection.j:
                     lL0 = cL0.jLength; lL1 = cL1.jLength;
                     lR0 = cR0.jLength; lR1 = cR1.jLength;
                     break;
-                case 'k':
+                case IndexDirection.k:
                     lL0 = cL0.kLength; lL1 = cL1.kLength;
                     lR0 = cR0.kLength; lR1 = cR1.kLength;
                     break;
-                default:
+                case IndexDirection.none:
                     throw new Error("Invalid index direction.");
                 }
                 interp_l2r2(f, cL1, cL0, cR0, cR1, lL1, lL0, lR0, lR1, Lft, Rght);

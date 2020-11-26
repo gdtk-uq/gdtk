@@ -32,6 +32,8 @@ import globalconfig;
 import lsqinterp;
 import mass_diffusion;
 
+enum IndexDirection {none=0, i, j, k}; // Needed for StructuredGrid interpolation.
+
 class FVInterface {
 public:
     int id;
@@ -44,6 +46,7 @@ public:
     // Geometry
     Matrix!number T;       // For use with LU-SGS
     Matrix!number Tinv;    // For use with LU-SGS
+    IndexDirection idir;   // For StructuredGrid: in which index-direction is face pointing?
     Vector3 pos;           // position of the (approx) midpoint
     Vector3 gvel;          // grid velocity at interface, m/s
     number Ybar;           // Y-coordinate of the mid-point
@@ -97,10 +100,12 @@ private:
 
 public:
     this(LocalConfig myConfig,
+         IndexDirection idir,
          bool allocate_spatial_deriv_lsq_workspace,
          int id_init=-1)
     {
         this.myConfig = myConfig;
+        this.idir = idir;
         id = id_init;
         area.length = myConfig.n_grid_time_levels;
         gvel = Vector3(0.0,0.0,0.0); // default to fixed grid
@@ -142,6 +147,7 @@ public:
     this(FVInterface other, GasModel gm)
     {
         id = other.id;
+        idir = other.idir;
         // We are sort-of promising not to alter the myConfig object,
         // so the rest of the code had better honour that deal...
         myConfig = cast(LocalConfig)other.myConfig;
@@ -208,6 +214,7 @@ public:
         case CopyDataOption.all:
         default:
             id = other.id;
+            idir = other.idir;
             // We are sort-of promising not to alter the myConfig object,
             // so the rest of the code had better honour that deal...
             myConfig = cast(LocalConfig)other.myConfig;
@@ -240,6 +247,7 @@ public:
         char[] repr;
         repr ~= "FVInterface(";
         repr ~= "id=" ~ to!string(id);
+        repr ~= "idir=" ~ to!string(idir);
         repr ~= ", universe_blk_id=" ~ to!string(myConfig.universe_blk_id);
         repr ~= ", pos=" ~ to!string(pos);
         repr ~= ", vtx_ids=[";
@@ -286,7 +294,7 @@ public:
         // Direction cosines for the unit normal and two tangential directions.
         if (LAB > 1.0e-12) {
             // Normal is purely in the xy-plane, pointing to the "right"
-            // as we sit at A, looking toward B. 
+            // as we sit at A, looking toward B.
             n.set((yB-yA)/LAB, -(xB-xA)/LAB, to!number(0.0));
             t2 = Vector3(0.0, 0.0, 1.0);
             cross(t1, n, t2);
@@ -327,7 +335,7 @@ public:
             string msg = "FVInterface.update_3D_geometric_data(): Unhandled number of vertices: ";
             debug { msg ~= format("%d", vtx.length); }
             throw new FlowSolverException(msg);
-        } // end switch     
+        } // end switch
     } // end update_3D_geometric_data()
 
     void construct_rotation_matrix() {
@@ -341,34 +349,34 @@ public:
         size_t Z_MOM = myConfig.cqi.zMom;
         size_t TOT_ENERGY = myConfig.cqi.totEnergy;
         size_t TKE = myConfig.cqi.tke;
-        
+
         T.zeros;
         T[MASS,MASS] = to!number(1.0);
-        
+
         T[X_MOM,X_MOM] = n.x;
         T[X_MOM,Y_MOM] = n.y;
         if (myConfig.dimensions == 3) { T[X_MOM,Z_MOM] = n.z; }
-        
+
         T[Y_MOM,X_MOM] = t1.x;
         T[Y_MOM,Y_MOM] = t1.y;
         if (myConfig.dimensions == 3) { T[Y_MOM,Z_MOM] = t1.z; }
-        
+
         if (myConfig.dimensions == 3) {
             T[Z_MOM,X_MOM] = t2.x;
             T[Z_MOM,Y_MOM] = t2.y;
             T[Z_MOM,Z_MOM] = t2.z;
         }
-        
+
         T[TOT_ENERGY,TOT_ENERGY] = to!number(1.0);
 
         auto tm = myConfig.turb_model;
-        if(tm.nturb > 0) { 
+        if(tm.nturb > 0) {
             foreach(it; 0 .. tm.nturb){ T[TKE+it,TKE+it] = to!number(1.0); }
         }
 
         Tinv = inverse(T);
     }
-    
+
     @nogc
     void average_vertex_deriv_values()
     {
@@ -392,17 +400,17 @@ public:
             grad.vel[0][0] = c.grad.vel[0][0];
             grad.vel[0][1] = c.grad.vel[0][1];
             grad.vel[0][2] = c.grad.vel[0][2];
-            
+
             // vel-y
             grad.vel[1][0] = c.grad.vel[1][0];
             grad.vel[1][1] = c.grad.vel[1][1];
             grad.vel[1][2] = c.grad.vel[1][2];
-            
+
             // vel-z
             grad.vel[2][0] = c.grad.vel[2][0];
             grad.vel[2][1] = c.grad.vel[2][1];
             grad.vel[2][2] = c.grad.vel[2][2];
-            
+
             // massf
             version(multi_species_gas) {
                 uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
@@ -412,7 +420,7 @@ public:
                     grad.massf[isp][2] = c.grad.massf[isp][2];
                 }
             }
-            
+
             // T
             grad.T[0] = c.grad.T[0];
             grad.T[1] = c.grad.T[1];
@@ -427,7 +435,7 @@ public:
                     grad.T_modes[imode][2] = c.grad.T_modes[imode][2];
                 }
             }
-            
+
             version(turbulence) {
                 foreach(i; 0 .. myConfig.turb_model.nturb) {
                     grad.turb[i][0] = c.grad.turb[i][0];
@@ -453,17 +461,17 @@ public:
             // vector from left-cell-centre to right-cell-centre
             number ex = cR0.pos[gtl].x - cL0.pos[gtl].x;
             number ey = cR0.pos[gtl].y - cL0.pos[gtl].y;
-            number ez = cR0.pos[gtl].z - cL0.pos[gtl].z;                
+            number ez = cR0.pos[gtl].z - cL0.pos[gtl].z;
             // ehat
             number emag = sqrt(ex*ex + ey*ey + ez*ez);
             number ehatx = ex/emag;
             number ehaty = ey/emag;
-            number ehatz = ez/emag;                
+            number ehatz = ez/emag;
             // ndotehat
             number ndotehat = nx*ehatx + ny*ehaty + nz*ehatz;
             number avgdotehat;
             number jump;
-            
+
             // vel-x
             avgdotehat = 0.5*(cL0.grad.vel[0][0]+cR0.grad.vel[0][0])*ehatx +
                 0.5*(cL0.grad.vel[0][1]+cR0.grad.vel[0][1])*ehaty +
@@ -472,7 +480,7 @@ public:
             grad.vel[0][0] = 0.5*(cL0.grad.vel[0][0]+cR0.grad.vel[0][0]) - jump*(nx/ndotehat);
             grad.vel[0][1] = 0.5*(cL0.grad.vel[0][1]+cR0.grad.vel[0][1]) - jump*(ny/ndotehat);
             grad.vel[0][2] = 0.5*(cL0.grad.vel[0][2]+cR0.grad.vel[0][2]) - jump*(nz/ndotehat);
-            
+
             // vel-y
             avgdotehat = 0.5*(cL0.grad.vel[1][0]+cR0.grad.vel[1][0])*ehatx +
                 0.5*(cL0.grad.vel[1][1]+cR0.grad.vel[1][1])*ehaty +
@@ -481,7 +489,7 @@ public:
             grad.vel[1][0] = 0.5*(cL0.grad.vel[1][0]+cR0.grad.vel[1][0]) - jump*(nx/ndotehat);
             grad.vel[1][1] = 0.5*(cL0.grad.vel[1][1]+cR0.grad.vel[1][1]) - jump*(ny/ndotehat);
             grad.vel[1][2] = 0.5*(cL0.grad.vel[1][2]+cR0.grad.vel[1][2]) - jump*(nz/ndotehat);
-            
+
             // vel-z
             avgdotehat = 0.5*(cL0.grad.vel[2][0]+cR0.grad.vel[2][0])*ehatx +
                 0.5*(cL0.grad.vel[2][1]+cR0.grad.vel[2][1])*ehaty +
@@ -490,7 +498,7 @@ public:
             grad.vel[2][0] = 0.5*(cL0.grad.vel[2][0]+cR0.grad.vel[2][0]) - jump*(nx/ndotehat);
             grad.vel[2][1] = 0.5*(cL0.grad.vel[2][1]+cR0.grad.vel[2][1]) - jump*(ny/ndotehat);
             grad.vel[2][2] = 0.5*(cL0.grad.vel[2][2]+cR0.grad.vel[2][2]) - jump*(nz/ndotehat);
-            
+
             // massf
             version(multi_species_gas) {
                 uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
@@ -504,7 +512,7 @@ public:
                     grad.massf[isp][2] = 0.5*(cL0.grad.massf[isp][2]+cR0.grad.massf[isp][2]) - jump*(nz/ndotehat);
                 }
             }
-            
+
             // T
             avgdotehat = 0.5*(cL0.grad.T[0]+cR0.grad.T[0])*ehatx +
                 0.5*(cL0.grad.T[1]+cR0.grad.T[1])*ehaty +
@@ -525,7 +533,7 @@ public:
                     grad.T_modes[imode][2] = 0.5*(cL0.grad.T_modes[imode][2]+cR0.grad.T_modes[imode][2]) - jump*(nz/ndotehat);
                 }
             }
-            
+
             version(turbulence) {
                 foreach(i; 0 .. myConfig.turb_model.nturb) {
                     avgdotehat = 0.5*(cL0.grad.turb[i][0]+cR0.grad.turb[i][0])*ehatx +
@@ -539,7 +547,7 @@ public:
             }
         }
     } // end average_cell_spatial_derivs()
-            
+
     @nogc
     void viscous_flux_calc()
     // Unified 2D and 3D viscous-flux calculation.
@@ -726,7 +734,7 @@ public:
                     tau_yy -= 2.0/3.0 * fs.gas.rho * tke;
                     if (myConfig.dimensions == 3) { tau_zz -= 2.0/3.0 * fs.gas.rho * tke; }
 
-                    // Turbulent transport of turbulent kinetic energy 
+                    // Turbulent transport of turbulent kinetic energy
                     number[3] qtke = myConfig.turb_model.turbulent_kinetic_energy_transport(fs, grad);
                     qx += qtke[0];
                     qy += qtke[1];
@@ -759,8 +767,8 @@ public:
             // computed by the wall functions in the boundary condition call.
             if (use_wall_function_shear_and_heat_flux) {
                 // Mass flux -- NO CONTRIBUTION, unless there's diffusion (below)
-                // [TODO] As per Jason's recommendation, we need to do something 
-                // to correct for corner cells. 
+                // [TODO] As per Jason's recommendation, we need to do something
+                // to correct for corner cells.
                 // [TODO] Currently implemented for 2D; need to extend to 3D.
                 F.momentum.refx -= tau_xx*nx + tau_wall_x;
                 F.momentum.refy -= tau_yy*ny + tau_wall_y;
@@ -799,7 +807,7 @@ public:
                         number mu_effective = myConfig.turb_model.viscous_transport_coeff(fs, i);
                         // Apply a limit on mu_effective in the same manner as that applied to mu_t.
                         mu_effective = fmin(mu_effective, myConfig.max_mu_t_factor * fs.gas.mu);
-                        tau_tx = mu_effective * grad.turb[i][0]; 
+                        tau_tx = mu_effective * grad.turb[i][0];
                         tau_ty = mu_effective * grad.turb[i][1];
                         if (myConfig.dimensions == 3) { tau_tz = mu_effective * grad.turb[i][2]; }
 
@@ -864,7 +872,7 @@ public:
                 deln += (z1-z0)*nz;
                 veln0 += velz0*nz;
                 veln1 += velz1*nz;
-            } 
+            }
             number veln_face;
             if (left_cell && right_cell && left_cell.is_interior_to_domain && right_cell.is_interior_to_domain) {
                 veln_face = 0.5*(veln0+veln1);
@@ -928,7 +936,7 @@ public:
         //
         // omega is a tunable parameter for use in the LU-SGS implementation as described on
         // pg. 193 of Computational Fluid Dynamics, Blazek, 2005
-        
+
         number lambda = 0.0;
         auto fvel = fabs(fs.vel.dot(n));
         lambda += omega*(fvel + fs.gas.a);
@@ -942,5 +950,5 @@ public:
         }
         return lambda;
     }
-    
+
 } // end of class FV_Interface

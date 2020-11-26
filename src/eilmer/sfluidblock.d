@@ -320,16 +320,16 @@ public:
             }
             // First, ifi faces.
             foreach (n; 0 .. niv*njc*nkc) {
-                faces ~= new FVInterface(myConfig, lsq_workspace_at_faces);
+                faces ~= new FVInterface(myConfig, IndexDirection.i, lsq_workspace_at_faces);
             }
             // Second, ifj faces.
             foreach (n; 0 .. nic*njv*nkc) {
-                faces ~= new FVInterface(myConfig, lsq_workspace_at_faces);
+                faces ~= new FVInterface(myConfig, IndexDirection.j, lsq_workspace_at_faces);
             }
             // Third, maybe, ifk faces.
             if (myConfig.dimensions == 3) {
                 foreach (n; 0 .. nic*njc*nkv) {
-                    faces ~= new FVInterface(myConfig, lsq_workspace_at_faces);
+                    faces ~= new FVInterface(myConfig, IndexDirection.k, lsq_workspace_at_faces);
                 }
             }
             // Now, construct the ghost cells, attaching them to the boundary faces.
@@ -2168,7 +2168,7 @@ public:
                     }
                     if (do_reconstruction && !f.in_suppress_reconstruction_zone &&
                         !(myConfig.suppress_reconstruction_at_shocks && f.fs.S)) {
-                        one_d.interp(f, Lft, Rght, 'i');
+                        one_d.interp(f, Lft, Rght);
                     }
                     f.fs.copy_average_values_from(Lft, Rght);
                     //
@@ -2204,7 +2204,7 @@ public:
                     }
                     if (do_reconstruction && !f.in_suppress_reconstruction_zone &&
                         !(myConfig.suppress_reconstruction_at_shocks && f.fs.S)) {
-                        one_d.interp(f, Lft, Rght, 'j');
+                        one_d.interp(f, Lft, Rght);
                     }
                     f.fs.copy_average_values_from(Lft, Rght);
                     //
@@ -2241,7 +2241,7 @@ public:
                         }
                         if (do_reconstruction && !f.in_suppress_reconstruction_zone &&
                             !(myConfig.suppress_reconstruction_at_shocks && f.fs.S)) {
-                            one_d.interp(f, Lft, Rght, 'k');
+                            one_d.interp(f, Lft, Rght);
                         }
                         f.fs.copy_average_values_from(Lft, Rght);
                         //
