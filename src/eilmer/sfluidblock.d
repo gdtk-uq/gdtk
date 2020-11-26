@@ -2092,54 +2092,15 @@ public:
         //
         if (myConfig.high_order_flux_calculator) {
             // Lachlan's high-order flux calculator assumes that ghost cells are available.
-            if (!bc[Face.north].ghost_cell_data_available) { throw new Error("north ghost cell data missing"); }
-            if (!bc[Face.south].ghost_cell_data_available) { throw new Error("south ghost cell data missing"); }
-            if (!bc[Face.west].ghost_cell_data_available) { throw new Error("west ghost cell data missing"); }
-            if (!bc[Face.east].ghost_cell_data_available) { throw new Error("east ghost cell data missing"); }
-            //
-            // ifi interfaces are East-facing interfaces.
-            foreach (k; 0 .. nkc) {
-                foreach (j; 0 .. njc) {
-                    foreach (i; 0 .. niv) {
-                        auto f = get_ifi(i,j,k);
-                        if ((i == 0) && bc[Face.west].convective_flux_computed_in_bc) continue;
-                        if ((i == niv-1) && bc[Face.east].convective_flux_computed_in_bc) continue;
-                        FlowState[4] stencil = [f.left_cells[1].fs, f.left_cells[0].fs,
-                                                f.right_cells[0].fs, f.right_cells[1].fs];
-                        ASF_242(stencil, f, myConfig);
-                    }
+            foreach (f; faces) {
+                if (f.is_on_boundary && bc[f.bc_id].convective_flux_computed_in_bc) continue;
+                if (f.is_on_boundary && !bc[f.bc_id].ghost_cell_data_available) {
+                    throw new Error("ghost cell data missing");
                 }
+                FlowState[4] stencil = [f.left_cells[1].fs, f.left_cells[0].fs,
+                                        f.right_cells[0].fs, f.right_cells[1].fs];
+                ASF_242(stencil, f, myConfig);
             }
-            // ifj interfaces are North-facing interfaces.
-            foreach (k; 0 .. nkc) {
-                foreach (i; 0 .. nic) {
-                    foreach (j; 0 .. njv) {
-                        auto f = get_ifj(i,j,k);
-                        if ((j == 0) && bc[Face.south].convective_flux_computed_in_bc) continue;
-                        if ((j == njv-1) && bc[Face.north].convective_flux_computed_in_bc) continue;
-                        FlowState[4] stencil = [f.left_cells[1].fs, f.left_cells[0].fs,
-                                                f.right_cells[0].fs, f.right_cells[1].fs];
-                        ASF_242(stencil, f, myConfig);
-                    }
-                }
-            }
-            if (myConfig.dimensions == 3) {
-                // ifk interfaces are Top-facing interfaces.
-                if (!bc[Face.top].ghost_cell_data_available) { throw new Error("top ghost cell data missing"); }
-                if (!bc[Face.bottom].ghost_cell_data_available) { throw new Error("bottom ghost cell data missing"); }
-                foreach (i; 0 .. nic) {
-                    foreach (j; 0 .. njc) {
-                        foreach (k; 0 .. nkv) {
-                            auto f = get_ifk(i,j,k);
-                            if ((k == 0) && bc[Face.bottom].convective_flux_computed_in_bc) continue;
-                            if ((k == nkv-1) && bc[Face.top].convective_flux_computed_in_bc) continue;
-                            FlowState[4] stencil = [f.left_cells[1].fs, f.left_cells[0].fs,
-                                                    f.right_cells[0].fs, f.right_cells[1].fs];
-                            ASF_242(stencil, f, myConfig);
-                        }
-                    }
-                }
-            } // end if (myConfig.dimensions == 3)
             return;
         } // end if (high_order_flux_calculator)
         //
@@ -2149,68 +2110,19 @@ public:
         // Note that ,even for high-order reconstruction, we depend upon this copy for
         // the viscous-transport and diffusion coefficients.
         //
-        // ifi interfaces are East-facing interfaces.
-        foreach (k; 0 .. nkc) {
-            foreach (j; 0 .. njc) {
-                foreach (i; 0 .. niv) {
-                    auto f = get_ifi(i,j,k);
-                    FVCell cL0 = (f.left_cells.length > 0) ? f.left_cells[0] : f.right_cells[0];
-                    FVCell cR0 = (f.right_cells.length > 0) ? f.right_cells[0]: f.left_cells[0];
-                    Lft.copy_values_from(cL0.fs);
-                    Rght.copy_values_from(cR0.fs);
-                    if (do_reconstruction && !f.in_suppress_reconstruction_zone &&
-                        !(myConfig.suppress_reconstruction_at_shocks && f.fs.S)) {
-                        one_d.interp(f, Lft, Rght);
-                    }
-                    f.fs.copy_average_values_from(Lft, Rght);
-                    if ((i == 0) && bc[Face.west].convective_flux_computed_in_bc) continue;
-                    if ((i == niv-1) && bc[Face.east].convective_flux_computed_in_bc) continue;
-                    compute_interface_flux(Lft, Rght, f, myConfig, omegaz);
-                } // i loop
-            } // j loop
-        } // for k
-        // ifj interfaces are North-facing interfaces.
-        foreach (k; 0 .. nkc) {
-            foreach (j; 0 .. njv) {
-                foreach (i; 0 .. nic) {
-                    auto f = get_ifj(i,j,k);
-                    FVCell cL0 = (f.left_cells.length > 0) ? f.left_cells[0] : f.right_cells[0];
-                    FVCell cR0 = (f.right_cells.length > 0) ? f.right_cells[0]: f.left_cells[0];
-                    Lft.copy_values_from(cL0.fs);
-                    Rght.copy_values_from(cR0.fs);
-                    if (do_reconstruction && !f.in_suppress_reconstruction_zone &&
-                        !(myConfig.suppress_reconstruction_at_shocks && f.fs.S)) {
-                        one_d.interp(f, Lft, Rght);
-                    }
-                    f.fs.copy_average_values_from(Lft, Rght);
-                    if ((j == 0) && bc[Face.south].convective_flux_computed_in_bc) continue;
-                    if ((j == njv-1) && bc[Face.north].convective_flux_computed_in_bc) continue;
-                    compute_interface_flux(Lft, Rght, f, myConfig, omegaz);
-                } // i loop
-            } // j loop
-        } // k loop
-        if (myConfig.dimensions == 3) {
-            // ifk interfaces are Top-facing interfaces.
-            foreach (k; 0 .. nkv) {
-                foreach (j; 0 .. njc) {
-                    foreach (i; 0 .. nic) {
-                        auto f = get_ifk(i,j,k);
-                        FVCell cL0 = (f.left_cells.length > 0) ? f.left_cells[0] : f.right_cells[0];
-                        FVCell cR0 = (f.right_cells.length > 0) ? f.right_cells[0]: f.left_cells[0];
-                        Lft.copy_values_from(cL0.fs);
-                        Rght.copy_values_from(cR0.fs);
-                        if (do_reconstruction && !f.in_suppress_reconstruction_zone &&
-                            !(myConfig.suppress_reconstruction_at_shocks && f.fs.S)) {
-                            one_d.interp(f, Lft, Rght);
-                        }
-                        f.fs.copy_average_values_from(Lft, Rght);
-                        if ((k == 0) && bc[Face.bottom].convective_flux_computed_in_bc) continue;
-                        if ((k == nkv-1) && bc[Face.top].convective_flux_computed_in_bc) continue;
-                        compute_interface_flux(Lft, Rght, f, myConfig, omegaz);
-                    } // i loop
-                } // j loop
-            } // k loop
-        } // end if (dimensions == 3)
+        foreach (f; faces) {
+            FVCell cL0 = (f.left_cells.length > 0) ? f.left_cells[0] : f.right_cells[0];
+            FVCell cR0 = (f.right_cells.length > 0) ? f.right_cells[0]: f.left_cells[0];
+            Lft.copy_values_from(cL0.fs);
+            Rght.copy_values_from(cR0.fs);
+            if (do_reconstruction && !f.in_suppress_reconstruction_zone &&
+                !(myConfig.suppress_reconstruction_at_shocks && f.fs.S)) {
+                one_d.interp(f, Lft, Rght);
+            }
+            f.fs.copy_average_values_from(Lft, Rght);
+            if (f.is_on_boundary && bc[f.bc_id].convective_flux_computed_in_bc) continue;
+            compute_interface_flux(Lft, Rght, f, myConfig, omegaz);
+        }
         return;
     } // end convective_flux_phase0()
 
