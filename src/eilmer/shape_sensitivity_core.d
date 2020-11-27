@@ -235,7 +235,7 @@ void initialisation(ref FluidBlock blk, size_t nPrimitive, size_t orderOfJacobia
     }
 
     blk.cellSave = new FVCell(blk.myConfig);
-    foreach(i; 0..blk.MAX_PERTURBED_INTERFACES) blk.ifaceP[i] = new FVInterface(blk.myConfig, false);
+    foreach(i; 0..blk.MAX_PERTURBED_INTERFACES) blk.ifaceP[i] = new FVInterface(blk.myConfig, IndexDirection.none, false);
 }
 
 void ghost_cell_connectivity_for_gradients(ref FluidBlock blk) {
@@ -368,7 +368,7 @@ void ghost_cell_connectivity_for_gradients(ref FluidBlock blk) {
                     }
                     foreach(iface; mapped_cell.iface) {
                         if(!ghost_interface_global_id_list.canFind(iface.global_id)) {
-			    FVInterface new_face = new FVInterface(blk.myConfig, false);
+			    FVInterface new_face = new FVInterface(blk.myConfig, IndexDirection.none, false);
                             new_face.copy_values_from(iface, CopyDataOption.all);
                             new_face.global_id = iface.global_id;
                             bcond.neighbour_block_faces ~= new_face;
@@ -4056,7 +4056,7 @@ void sss_preconditioner_initialisation(ref FluidBlock blk, size_t nConservative)
         }
         blk.cellSave = new FVCell(blk.myConfig);
         foreach (i; 0..blk.MAX_PERTURBED_INTERFACES) {
-            blk.ifaceP[i] = new FVInterface(blk.myConfig, false);
+            blk.ifaceP[i] = new FVInterface(blk.myConfig, IndexDirection.none, false);
         }
         break;
     case PreconditionMatrixType.ilu:
@@ -4073,7 +4073,7 @@ void sss_preconditioner_initialisation(ref FluidBlock blk, size_t nConservative)
 	blk.P.ja.length = size;
 	blk.P.ia.length = blk.cells.length*blk.myConfig.cqi.nConservedQuantities + 1;
 	blk.cellSave = new FVCell(blk.myConfig);
-        foreach(i; 0..blk.MAX_PERTURBED_INTERFACES) blk.ifaceP[i] = new FVInterface(blk.myConfig, false);
+        foreach(i; 0..blk.MAX_PERTURBED_INTERFACES) blk.ifaceP[i] = new FVInterface(blk.myConfig, IndexDirection.none, false);
         break;
     case PreconditionMatrixType.lu_sgs:
         break;
