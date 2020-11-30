@@ -298,9 +298,9 @@ public:
                     i_dest = i;
                     foreach (k; 0 .. this_blk.nkc) {
                         k_dest = k;
-                        myBC.ifaces ~= this_blk.get_ifj(i_dest, j_dest+1, k_dest);
+                        myBC.ifaces ~= this_blk.get_ifj(i_dest, j_dest, k_dest);
                         myBC.solidCells ~= new SolidFVCell(other_blk.myConfig);
-                        myBC.gasCells ~= this_blk.get_cell(i_dest,j_dest,k_dest);
+                        myBC.gasCells ~= this_blk.get_cell(i_dest,j_dest-1,k_dest);
                         final switch (other_face) {
                         case Face.north:
                             j_src = other_blk.njcell - 1;
