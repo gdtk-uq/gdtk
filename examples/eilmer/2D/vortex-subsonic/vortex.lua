@@ -41,6 +41,6 @@ if false then
 end
 if true then
    -- Lachlan's alpha-split scheme
-   config.high_order_flux_calculator = true
+   config.flux_calculator = 'asf'
    config.cfl_value = 0.10
 end
