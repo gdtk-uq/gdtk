@@ -49,6 +49,6 @@ class TestMabey < Test::Unit::TestCase
         force = items[1].to_f
       end
     end
-    assert((force - 25.0356587647).abs < 1.0e-02, "Failed to compute correct drag force.")
+    assert((force - 108.095).abs < 1.0e-02, "Failed to compute correct drag force.")
   end
 end

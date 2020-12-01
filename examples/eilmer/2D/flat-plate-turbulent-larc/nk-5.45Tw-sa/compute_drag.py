@@ -4,7 +4,7 @@ Compute wall drag from a set of loads files
 @author: Nick Gibbons
 """
 
-from numpy import array, argsort, concatenate
+from numpy import array, argsort, concatenate, sqrt
 from sys import argv
 from glob import glob
 
@@ -64,8 +64,8 @@ def wall_data(jobname, groupname='wall', time=-1):
     return data
 
 def drag_forces(data):
-    data['inviscid_force'] = data['sigma']*data['area']*data['n.x']*data['outsign'] 
-    data['viscous_force']  = data['tau']*data['area']*data['l_tau']*data['outsign']
+    data['inviscid_force'] = data['p']*data['area']*data['n.x']*data['outsign'] 
+    data['viscous_force']  = sqrt(data['tau_wall_x']**2+data['tau_wall_y']**2)*data['area']*data['outsign']
 
 if __name__=='__main__':
     jobname = argv[1]
