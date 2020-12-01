@@ -6,6 +6,14 @@ config.title = "Forward-facing step with supersonic flow."
 print(config.title)
 config.dimensions = 2
 
+-- alternative flux routines including exercising the shock detector smoothing
+if (true) then
+  config.flux_calculator = 'adaptive_ausmdv_asf'
+  config.shear_tolerance = 1.0
+  config.compression_tolerance = -0.01
+  config.shock_detector_smoothing = 3
+end
+
 -- Gas model and flow conditions.
 nsp, nmodes = setGasModel('ideal-air-gas-model.lua')
 print("GasModel set to ideal air. nsp= ", nsp, " nmodes= ", nmodes)
