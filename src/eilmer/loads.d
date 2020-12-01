@@ -100,9 +100,11 @@ string generate_boundary_load_file(int blkid, int current_loads_tindx, double si
     // reate file
     auto f = File(fname, "w");
     f.writeln("# t = ", sim_time);
-    f.writeln("# 1:pos.x 2:pos.y 3:pos.z 4:area 5:q_total 6:q_cond 7:q_diff 8:tau 9:l_tau 10:m_tau 11:n_tau 12:sigma "~
-              "13:n.x 14:n.y 15:n.z 16:T 17:Re_wall 18:y+ 19:cellWidthNormalToSurface 20:outsign"~
-              " 21:rho 22:mu 23:a 24:vel.x 25:vel.y");
+    f.writeln("# 1:pos.x 2:pos.y 3:pos.z 4:n.x 5:n.y 6:n.z 7:area 8:cellWidthNormalToSurface 9:outsign "~
+              "10:p 11:rho 12:T 13:velx 14:vely 15:velz 16:mu 17:a "~
+              "18:Re 19:y+ "~
+              "20:tau_wall_x 21:tau_wall_y 22:tau_wall_z "~
+              "23:q_total 24:q_cond 25:q_diff");
     f.close();
     return fname;
 } // end generate_boundary_load_file()
@@ -201,8 +203,6 @@ void compute_and_store_loads(FVInterface iface, int outsign, number cellWidthNor
     FlowGradients grad = iface.grad;
     // iface orientation
     number nx = iface.n.x; number ny = iface.n.y; number nz = iface.n.z;
-    number t1x = iface.t1.x; number t1y = iface.t1.y; number t1z = iface.t1.z;
-    number t2x = iface.t2.x; number t2y = iface.t2.y; number t2z = iface.t2.z;
     // iface properties
     number mu_wall = fs.gas.mu;
     number k_wall = fs.gas.k;
@@ -212,52 +212,24 @@ void compute_and_store_loads(FVInterface iface, int outsign, number cellWidthNor
     number rho_wall = fs.gas.rho;
     number u_wall = fs.vel.x;
     number v_wall = fs.vel.y;
-    number sigma_wall, tau_wall, l_tau, m_tau, n_tau, Re_wall, nu_wall, u_star, y_plus;
+    number w_wall = fs.vel.z;
+    number Re_wall, nu_wall, u_star, y_plus;
     number q_total, q_cond, q_diff;
+    number tau_wall_x, tau_wall_y, tau_wall_z;
     if (GlobalConfig.viscous) {
-        number dTdx = grad.T[0]; number dTdy = grad.T[1]; number dTdz = grad.T[2];
-        number dudx = grad.vel[0][0]; number dudy = grad.vel[0][1]; number dudz = grad.vel[0][2];
-        number dvdx = grad.vel[1][0]; number dvdy = grad.vel[1][1]; number dvdz = grad.vel[1][2];
-        number dwdx = grad.vel[2][0]; number dwdy = grad.vel[2][1]; number dwdz = grad.vel[2][2];
         // compute heat load
+        number dTdx = grad.T[0]; number dTdy = grad.T[1]; number dTdz = grad.T[2];
         number dTdn = dTdx*nx + dTdy*ny + dTdz*nz; // dot product
         q_cond = k_wall * dTdn; // heat load (positive sign means heat flows to the wall)
         q_diff = iface.q_diffusion;
         q_total = q_cond + q_diff;
         // compute stress tensor at interface in global reference frame
-        number lmbda = -2.0/3.0 * mu_wall;
-        number tau_xx = 2.0*mu_wall*dudx + lmbda*(dudx + dvdy + dwdz);
-        number tau_yy = 2.0*mu_wall*dvdy + lmbda*(dudx + dvdy + dwdz);
-        number tau_zz = 2.0*mu_wall*dwdz + lmbda*(dudx + dvdy + dwdz);
-        number tau_xy = mu_wall * (dudy + dvdx);
-        number tau_xz = mu_wall * (dudz + dwdx);
-        number tau_yz = mu_wall * (dvdz + dwdy);
-        number sigma_x = P + tau_xx;
-        number sigma_y = P + tau_yy;
-        number sigma_z = P + tau_zz;
-        // compute direction cosines for interface normal
-        // [TODO] Kyle, shouldn't the nx, ny and nz values already be direction cosines? PJ 2017-09-09
-        number l = nx / sqrt(nx*nx + ny*ny + nz*nz);
-        number m = ny / sqrt(nx*nx + ny*ny + nz*nz);
-        number n = nz / sqrt(nx*nx + ny*ny + nz*nz);
-        // transform stress tensor -- we only need stress on a single surface
-        // we can avoid performing the entire transformation by following
-        // the procedure in Roark's Formulas for Stress and Strain (Young and Budynas) pg. 21.
-        sigma_wall = sigma_x*l*l+sigma_y*m*m+sigma_z*n*n+2.0*tau_xy*l*m+2.0*tau_yz*m*n+2.0*tau_xz*n*l;
-        tau_wall = sqrt((sigma_x*l+tau_xy*m+tau_xz*n)*(sigma_x*l+tau_xy*m+tau_xz*n)
-                        +(tau_xy*l+sigma_y*m+tau_yz*n)*(tau_xy*l+sigma_y*m+tau_yz*n)
-                        +(tau_xz*l+tau_yz*m+sigma_z*n)*(tau_xz*l+tau_yz*m+sigma_z*n)
-                        -sigma_wall*sigma_wall);
-        // tau_wall directional cosines
-        if (tau_wall == 0.0){
-            l_tau = l;
-            m_tau = m;
-            n_tau = n;
-        } else {
-            l_tau = 1.0/tau_wall * ((sigma_x - sigma_wall)*l+tau_xy*m+tau_xz*n);
-            m_tau = 1.0/tau_wall * (tau_xy*l+(sigma_y - sigma_wall)*m+tau_yz*n);
-            n_tau = 1.0/tau_wall * (tau_xz*l+tau_yz*m+(sigma_z-sigma_wall)*n);
-        }
+        iface.F.clear();
+        iface.viscous_flux_calc();
+        tau_wall_x = iface.F.momentum.x;
+        tau_wall_y = iface.F.momentum.y;
+        tau_wall_z = iface.F.momentum.z;
+        number tau_wall = sqrt(tau_wall_x^^2 + tau_wall_y^^2 + tau_wall_z^^2);
         // compute y+
         nu_wall = mu_wall / rho_wall;
         u_star = sqrt(tau_wall / rho_wall);
@@ -266,9 +238,9 @@ void compute_and_store_loads(FVInterface iface, int outsign, number cellWidthNor
         Re_wall = rho_wall * a_wall * cellWidthNormalToSurface / mu_wall;
     } else {
         // For an inviscid simulation, we have only pressure.
-        sigma_wall = P;
-        tau_wall = 0.0;
-        l_tau = 0.0; m_tau = 0.0; n_tau = 0.0;
+        tau_wall_x = 0.0;
+        tau_wall_y = 0.0;
+        tau_wall_z = 0.0;
         q_total = 0.0;
         q_cond = 0.0;
         q_diff = 0.0;
@@ -276,16 +248,14 @@ void compute_and_store_loads(FVInterface iface, int outsign, number cellWidthNor
         y_plus = 0.0;
     }
     // store in file
-    auto writer = format("%20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e"~
-                         " %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e"~
-                         " %20.16e %d %20.16e %20.16e %20.16e %20.16e %20.16e\n",
-                         iface.pos.x.re, iface.pos.y.re, iface.pos.z.re, iface.area[0].re,
-                         q_total.re, q_cond.re, q_diff.re, tau_wall.re, l_tau.re, m_tau.re, n_tau.re, sigma_wall.re,
-                         nx.re, ny.re, nz.re, T_wall.re, Re_wall.re, y_plus.re,
-                         cellWidthNormalToSurface.re, outsign, rho_wall.re, mu_wall.re, a_wall.re, u_wall.re, v_wall.re);
+    auto writer = format("%20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %d %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e\n",
+                         iface.pos.x.re, iface.pos.y.re, iface.pos.z.re, nx.re, ny.re, nz.re, iface.area[0].re, cellWidthNormalToSurface.re, outsign,
+                         P.re, rho_wall.re, T_wall.re, u_wall.re, v_wall.re, w_wall.re, mu_wall.re, a_wall.re,
+                         Re_wall.re, y_plus.re,
+                         tau_wall_x.re, tau_wall_y.re, tau_wall_z.re,
+                         q_total.re, q_cond.re, q_diff.re);
     std.file.append(fname, writer);
 } // end compute_and_store_loads()
-
 
 struct RunTimeLoads {
     Tuple!(size_t,size_t)[] surfaces;
