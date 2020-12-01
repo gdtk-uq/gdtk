@@ -84,6 +84,7 @@ public:
     number[] jy; // diffusive mass flux in y
     number[] jz; // diffusive mass flux in z
     number q_diffusion;
+    number q_conduction;
     //
     // Shape sensitivity calculator workspace.
     string global_id;
@@ -135,7 +136,7 @@ public:
             }
         }
         q_diffusion = to!number(0.0);
-
+        q_conduction = to!number(0.0);
         // rotation matrices used in the LU-SGS solver
         version(steady_state) {
             const size_t nConserved = myConfig.cqi.nConservedQuantities;
@@ -699,6 +700,7 @@ public:
             number qx = k_eff * grad.T[0];
             number qy = k_eff * grad.T[1];
             number qz = k_eff * grad.T[2];
+            q_conduction = (qx*n.x + qy*n.y + qz*n.z);
             version(multi_T_gas) {
                 foreach (imode; 0 .. n_modes) {
                     qx += viscous_factor * fs.gas.k_modes[imode] * grad.T_modes[imode][0];

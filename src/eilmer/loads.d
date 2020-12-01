@@ -204,8 +204,7 @@ void compute_and_store_loads(FVInterface iface, int outsign, number cellWidthNor
     // iface orientation
     number nx = iface.n.x; number ny = iface.n.y; number nz = iface.n.z;
     // iface properties
-    number mu_wall = fs.gas.mu;
-    number k_wall = fs.gas.k;
+    number mu_wall = fs.gas.mu; // laminar viscosity
     number P = fs.gas.p;
     number T_wall = fs.gas.T;
     number a_wall = fs.gas.a;
@@ -217,10 +216,10 @@ void compute_and_store_loads(FVInterface iface, int outsign, number cellWidthNor
     number q_total, q_cond, q_diff;
     number tau_wall_x, tau_wall_y, tau_wall_z;
     if (GlobalConfig.viscous) {
+        iface.F.clear();
+        iface.viscous_flux_calc();
         // compute heat load
-        number dTdx = grad.T[0]; number dTdy = grad.T[1]; number dTdz = grad.T[2];
-        number dTdn = dTdx*nx + dTdy*ny + dTdz*nz; // dot product
-        q_cond = k_wall * dTdn; // heat load (positive sign means heat flows to the wall)
+        q_cond = iface.q_conduction;
         q_diff = iface.q_diffusion;
         q_total = q_cond + q_diff;
         // compute stress tensor at interface in global reference frame
