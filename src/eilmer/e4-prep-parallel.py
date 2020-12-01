@@ -4,7 +4,7 @@
 Prepare a simulation, writing the block files in batches, concurrently.
 
 Usage:
-  $ e4-prep-parallel --job=<jobName> --n-workers=<int> --nb-per-task=<int>
+  $ e4-prep-parallel --job=<jobName> --n-workers=<int> --nb-per-task=<int> --complex
 
 Authors:
   PAJ and RJG
@@ -35,7 +35,7 @@ def run_command(cmd):
         completedCmd = subprocess.run(args, stdout=out, stderr=err)
     return completedCmd.returncode
 
-def main(jobName, nWorkers, nBlocksPerTask):
+def main(jobName, nWorkers, nBlocksPerTask, doComplexPrep=False):
     """
     Do the real work with the user-supplied parameters.
     """
@@ -46,7 +46,10 @@ def main(jobName, nWorkers, nBlocksPerTask):
     if not os.path.exists(inputScriptName):
         raise RuntimeError(f"Input script not found: {inputScriptName}")
     if not os.path.exists("logs"): os.mkdir("logs")
-    cmdTxt = f"e4shared --job={jobName} --prep --no-block-files"
+    prepProgName = "e4shared"
+    if doComplexPrep:
+        prepProgName = "e4zshared"
+    cmdTxt = f"{prepProgName} --job={jobName} --prep --no-block-files"
     tagTxt = f"{0}"
     print(f"cmd={cmdTxt}, tag={tagTxt}")
     returnCode = run_command((cmdTxt, tagTxt))
@@ -66,7 +69,7 @@ def main(jobName, nWorkers, nBlocksPerTask):
     for i in range(0, nBlocks, nBlocksPerTask):
         n1 = i
         n2 = min(i+nBlocksPerTask, nBlocks)
-        cmdTxt = f"e4shared --job={jobName} --prep --no-config-files --only-blocks=\"{n1}..<{n2}\""
+        cmdTxt = f"{prepProgName} --job={jobName} --prep --no-config-files --only-blocks=\"{n1}..<{n2}\""
         tagTxt = f"{n2}"
         print(f"cmdTxt={cmdTxt}, tagTxt={tagTxt}")
         cmds.append((cmdTxt, tagTxt))
@@ -84,13 +87,14 @@ def main(jobName, nWorkers, nBlocksPerTask):
 
 #--------------------------------------------------------------------
 
-shortOptions = "hf:w:b:"
-longOptions = ["help", "job=", "n-workers=", "nb-per-task="]
+shortOptions = "hf:w:b:c"
+longOptions = ["help", "job=", "n-workers=", "nb-per-task=", "complex"]
 
 def printUsage():
     print("Prepare a simulation, writing the block files in batches, concurrently.")
     print("Usage: e4-prep-parallel [--help | -h] [--job=<jobName> | -f <jobName>]\n" +
-          "                        [--n-workers=<int> | -w <int>] [--nb-per-task=<int> | -b <int>]")
+          "                        [--n-workers=<int> | -w <int>] [--nb-per-task=<int> | -b <int>]\n" +
+          "                        [--complex | -c]")
     print("")
     return
 
@@ -123,6 +127,12 @@ if __name__ == '__main__':
             nbpt = int(uoDict.get("-b", "1"))
         else:
             nbpt = 1
-        main(jobName, n_workers, nbpt)
+        if "--complex" in uoDict:
+            doComplexPrep = True
+        elif "-c" in uoDict:
+            doComplexPrep = True
+        else:
+            doComplexPrep = False
+        main(jobName, n_workers, nbpt, doComplexPrep)
     print("Done.")
     sys.exit(0)
