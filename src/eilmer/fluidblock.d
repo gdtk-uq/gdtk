@@ -448,6 +448,15 @@ public:
         number sum;
         int count;
 
+        // to avoid order of operation effects we load the cell based shock
+        // detector value into faces so we have static data to work from
+
+        foreach (face; faces) {
+            if (face.fs.S == 1.0) continue;
+            face.fs.S = fmax(face.left_cell.fs.S, face.right_cell.fs.S);
+        }
+
+        // now use the face shock detector value to update the cell values
         foreach (cell; cells) {
 
             if (cell.fs.S == 1.0) continue;
@@ -455,7 +464,7 @@ public:
             sum = 0.0;
             count = 0;
             foreach (face; cell.iface) {
-                sum += fmax(face.left_cell.fs.S, face.right_cell.fs.S);
+                sum += face.fs.S;
                 count++;
             }
 
