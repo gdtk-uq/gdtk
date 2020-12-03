@@ -11,6 +11,13 @@ that the finer details of user input may change over time.
 These slides are not updated, but rather serve as historical record of activities.
 Instead, check the User Guide for the definitive user input.
 
+- [Calculation of Test Flow Conditions for Reflected-Shock Tunnels](/pdfs/eilmer-talk-pj-2020-dec.pdf), 03 December 2020.
+  PAJ seminar to the Centre for Hypersonics research group on a couple of ways to estimate
+  test flow conditions in reflected shock tunnels.
+  The first uses Eilmer to do an axisymmetric simulation of the nozzle expansion and
+  the second is a simpler quasi-one-dimensional calculation.
+  Both make use of the finite-rate chemistry module.
+  
 - [Estimating parallel compute performance for Eilmer simulations](/pdfs/cfh-seminar-oct-2019.pdf), 03 October 2019.  
   RJG seminar to the Centre for Hypersonics research group on estimating
   parallel performance in the context of Eilmer simulations.
