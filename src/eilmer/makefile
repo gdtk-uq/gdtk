@@ -435,7 +435,7 @@ clean:
 	- rm -f e4opt optdriver_with_rev_string.d
 	- rm -f mpi_main_with_rev_string.d
 	- rm -f loadbalance_with_rev_string.d
-	- rm -f e4mpi e4loadbalance e4ssc e4zshared e4-nk-shared e4-nk-dist e4-lusgs-shared e4-lusgs-dist
+	- rm -f e4mpi e4loadbalance e4ssc e4zshared e4-nk-shared e4-nk-dist e4-lusgs-shared e4-lusgs-dist e4shared_mpl
 	- rm -f dgd-for-mech4480.tgz
 	- cd $(OPENMPI_DIR); make clean
 	- cd $(LUA_DIR); make clean
