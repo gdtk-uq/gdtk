@@ -12,6 +12,7 @@ if (true) then
   config.shear_tolerance = 1.0
   config.compression_tolerance = -0.01
   config.shock_detector_smoothing = 3
+  config.strict_shock_detector = false
 end
 
 -- Gas model and flow conditions.
