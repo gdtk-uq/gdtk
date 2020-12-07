@@ -564,6 +564,9 @@ final class GlobalConfig {
     shared static bool suppress_radial_reconstruction_at_xaxis = false;
     // We will activate the shock detector if selected features need it.
     shared static bool do_shock_detect = false;
+    // enforce strict usage of the shock detector, if either the interface or 
+    // a touching cell is marked assume need for only diffusive flux
+    shared static bool strict_shock_detector = true;
     // We might optionally want to suppress reconstruction at faces at
     // shocks and boundaries. Presently, we need to opt-in to these features.
     shared static bool suppress_reconstruction_at_shocks = false;
@@ -917,6 +920,7 @@ public:
     int shock_detector_smoothing;
     ShockDetector shock_detector;
     bool do_shock_detect;
+    bool strict_shock_detector;
     bool artificial_compressibility;
     double ac_alpha;
 
@@ -1054,6 +1058,7 @@ public:
         shock_detector = GlobalConfig.shock_detector;
         shock_detector_smoothing = GlobalConfig.shock_detector_smoothing;
         do_shock_detect = GlobalConfig.do_shock_detect;
+        strict_shock_detector = GlobalConfig.strict_shock_detector;
         //
         artificial_compressibility = GlobalConfig.artificial_compressibility;
         ac_alpha = GlobalConfig.ac_alpha;
@@ -1368,6 +1373,7 @@ JSONValue read_config_file()
     mixin(update_double("compression_tolerance", "compression_tolerance"));
     mixin(update_enum("shock_detector", "shock_detector", "shock_detector_from_name"));
     mixin(update_bool("do_shock_detect", "do_shock_detect"));
+    mixin(update_bool("strict_shock_detector", "strict_shock_detector"));
     mixin(update_enum("flux_calculator", "flux_calculator", "flux_calculator_from_name"));
     mixin(update_bool("artificial_compressibility", "artificial_compressibility"));
     mixin(update_double("ac_alpha", "ac_alpha"));
@@ -1423,6 +1429,7 @@ JSONValue read_config_file()
         writeln("  interpolation_delay: ", GlobalConfig.interpolation_delay);
         writeln("  suppress_radial_reconstruction_at_xaxis: ", GlobalConfig.suppress_radial_reconstruction_at_xaxis);
         writeln("  do_shock_detect: ", GlobalConfig.do_shock_detect);
+        writeln("  strict_shock_detector: ", GlobalConfig.strict_shock_detector);
         writeln("  suppress_reconstruction_at_shocks: ", GlobalConfig.suppress_reconstruction_at_shocks);
         writeln("  suppress_reconstruction_at_boundaries: ", GlobalConfig.suppress_reconstruction_at_boundaries);
         writeln("  thermo_interpolator: ", thermo_interpolator_name(GlobalConfig.thermo_interpolator));

@@ -837,6 +837,12 @@ void adaptive_efm_ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IF
 
     number alpha = IFace.fs.S;
 
+    if (myConfig.strict_shock_detector) {
+        if ((Lft.S > 0.0) || (Rght.S > 0.0) || (alpha > 0.0)) {
+            alpha = 1.0;
+        }
+    }
+
     if (alpha > 0.0) {
         efmflx(Lft, Rght, IFace, myConfig, alpha);
     } 
@@ -849,12 +855,18 @@ void adaptive_efm_ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IF
 
 @nogc
 void adaptive_hanel_ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
-// This adaptive flux calculator uses uses the Hanel flux calculator
+// This adaptive flux calculator uses the Hanel flux calculator
 // near shocks and AUSMDV away from shocks.
 //
 // The actual work is passed off to the original flux calculation functions.
 {
     number alpha = IFace.fs.S;
+
+    if (myConfig.strict_shock_detector) {
+        if ((Lft.S > 0.0) || (Rght.S > 0.0) || (alpha > 0.0)) {
+            alpha = 1.0;
+        }
+    }
 
     if (alpha > 0.0) {
         hanel(Lft, Rght, IFace, myConfig, alpha);
@@ -875,6 +887,12 @@ void adaptive_hlle_roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFac
 {
 
     number alpha = IFace.fs.S;
+
+    if (myConfig.strict_shock_detector) {
+        if ((Lft.S > 0.0) || (Rght.S > 0.0) || (alpha > 0.0)) {
+            alpha = 1.0;
+        }
+    }
 
     if (alpha > 0.0) {
         hlle(Lft, Rght, IFace, myConfig, alpha);
@@ -1533,6 +1551,12 @@ void adaptive_ausmdv_asf(in FlowState Lft, in FlowState Rght, ref FVInterface IF
 {
 
     number alpha = IFace.fs.S;
+
+    if (myConfig.strict_shock_detector) {
+        if ((Lft.S > 0.0) || (Rght.S > 0.0) || (alpha > 0.0)) {
+            alpha = 1.0;
+        }
+    }
 
     if (alpha > 0.0) {
         ausmdv(Lft, Rght, IFace, myConfig, alpha);

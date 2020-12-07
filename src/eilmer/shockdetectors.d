@@ -83,14 +83,11 @@ import std.algorithm;
             shear = fmax(shear_y, shear_z);
 
         } else {
-            comp = to!number(0.0);
-            shear = to!number(0.0);
+            return to!number(0.0);
         }
 
-        if (shear < shear_tol) {
-            if (comp < comp_tol) {
-                return to!number(1.0);
-            }
+        if ((shear < shear_tol) && (comp < comp_tol)) {
+            return to!number(1.0);
         }
 
         return to!number(0.0);
