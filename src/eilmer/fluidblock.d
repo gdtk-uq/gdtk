@@ -457,7 +457,7 @@ public:
 
     @nogc
     void shock_cells_to_faces()
-    // Mark cells as shock points if any of their interfaces are shock points.
+    // Mark faces as shocked if either attached cell is shocked
     //
     {
         foreach(face; faces) {
