@@ -2467,14 +2467,36 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
     }
     // We've put this detector step here because it needs the ghost-cell data
     // to be current, as it should be just after a call to apply_convective_bc().
-    if (GlobalConfig.flux_calculator == FluxCalculator.adaptive_hanel_ausmdv ||
-        GlobalConfig.flux_calculator == FluxCalculator.adaptive_hlle_roe ||
-	    GlobalConfig.flux_calculator == FluxCalculator.adaptive_efm_ausmdv ||
-        GlobalConfig.flux_calculator == FluxCalculator.adaptive_ausmdv_asf) {
-	foreach (blk; parallel(localFluidBlocksBySize,1)) {
-	    if (blk.active) { blk.detect_shock_points(); }
-	}
+    if (GlobalConfig.do_shock_detect) {
+        foreach (blk; parallel(localFluidBlocksBySize,1)) {
+            if (blk.active) { 
+                blk.detect_shock_points();
+                blk.shock_faces_to_cells();
+            }
+        }
+
+        // perform an iterative diffusion process to spread the influence of the shock detector
+        if (GlobalConfig.shock_detector_smoothing) {
+            foreach(i; 0 .. GlobalConfig.shock_detector_smoothing) {
+
+                exchange_ghost_cell_shock_data(SimState.time, gtl, ftl);
+
+                foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                    if (blk.active) { 
+                        blk.diffuse_shock_marker();
+                    }
+                }
+            }
+
+            // mark faces as shocked based on cell values
+            foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                if (blk.active) { 
+                    blk.shock_cells_to_faces();
+                }
+            }
+        }
     }
+
     foreach (blk; parallel(localFluidBlocksBySize,1)) {
 	if (blk.active) { blk.convective_flux_phase0(allow_high_order_interpolation, gtl); }
     }
@@ -2694,14 +2716,36 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 	}
 	// We've put this detector step here because it needs the ghost-cell data
 	// to be current, as it should be just after a call to apply_convective_bc().
-	if (GlobalConfig.flux_calculator == FluxCalculator.adaptive_hanel_ausmdv ||
-	    GlobalConfig.flux_calculator == FluxCalculator.adaptive_hlle_roe ||
-	    GlobalConfig.flux_calculator == FluxCalculator.adaptive_efm_ausmdv ||
-        GlobalConfig.flux_calculator == FluxCalculator.adaptive_ausmdv_asf) {
-	    foreach (blk; parallel(localFluidBlocksBySize,1)) {
-		if (blk.active) { blk.detect_shock_points(); }
-	    }
-	}
+    if (GlobalConfig.do_shock_detect) {
+        foreach (blk; parallel(localFluidBlocksBySize,1)) {
+            if (blk.active) { 
+                blk.detect_shock_points();
+                blk.shock_faces_to_cells();
+            }
+        }
+
+        // perform an iterative diffusion process to spread the influence of the shock detector
+        if (GlobalConfig.shock_detector_smoothing) {
+            foreach(i; 0 .. GlobalConfig.shock_detector_smoothing) {
+
+                exchange_ghost_cell_shock_data(SimState.time, gtl, ftl);
+
+                foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                    if (blk.active) { 
+                        blk.diffuse_shock_marker();
+                    }
+                }
+            }
+
+            // mark faces as shocked based on cell values
+            foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                if (blk.active) { 
+                    blk.shock_cells_to_faces();
+                }
+            }
+        }
+    }
+
 	foreach (blk; parallel(localFluidBlocksBySize,1)) {
 	    if (blk.active) { blk.convective_flux_phase0(allow_high_order_interpolation, gtl); }
 	}
@@ -2979,7 +3023,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
             if (blk.active) { 
                 blk.detect_shock_points();
-                blk.mark_shock_cells();
+                blk.shock_faces_to_cells();
             }
         }
 
@@ -3690,7 +3734,31 @@ void gasdynamic_explicit_increment_with_moving_grid()
     // to be current, as it should be just after a call to apply_convective_bc().
     if (GlobalConfig.do_shock_detect) {
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
-            if (blk.active) { blk.detect_shock_points(); }
+            if (blk.active) { 
+                blk.detect_shock_points();
+                blk.shock_faces_to_cells();
+            }
+        }
+
+        // perform an iterative diffusion process to spread the influence of the shock detector
+        if (GlobalConfig.shock_detector_smoothing) {
+            foreach(i; 0 .. GlobalConfig.shock_detector_smoothing) {
+
+                exchange_ghost_cell_shock_data(SimState.time, gtl, ftl);
+
+                foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                    if (blk.active) { 
+                        blk.diffuse_shock_marker();
+                    }
+                }
+            }
+
+            // mark faces as shocked based on cell values
+            foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                if (blk.active) { 
+                    blk.shock_cells_to_faces();
+                }
+            }
         }
     }
     foreach (blk; parallel(localFluidBlocksBySize,1)) {

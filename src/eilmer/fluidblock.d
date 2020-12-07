@@ -423,23 +423,6 @@ public:
 
     } // end detect_shock_points()
 
-
-    @nogc
-    void mark_shock_cells()
-    // Mark cells as shock points if any of their interfaces are shock points.
-    //
-    {
-        foreach (cell; cells) {
-            cell.fs.S = 0.0;
-            foreach (face; cell.iface) {
-                if (face.fs.S == 1.0) {
-                    cell.fs.S = 1.0;
-                    break;
-                }
-            }
-        }
-    } // end mark_shock_cells()
-
     @nogc
     void diffuse_shock_marker()
     // Spatially diffuse the shock marker
@@ -481,6 +464,19 @@ public:
             face.fs.S = fmax(face.left_cell.fs.S, face.right_cell.fs.S);
         }
     } // end shock_cells_to_faces()
+
+    @nogc
+    void shock_faces_to_cells()
+    // Mark cells as shocked if any of their interfaces are shocked
+    //
+    {
+        foreach (cell; cells) {
+            cell.fs.S = 0.0;
+            foreach (face; cell.iface) {
+                cell.fs.S = fmax(cell.fs.S, face.fs.S);
+            }
+        }
+    } // end shock_faces_to_cells()
 
     int count_invalid_cells(int gtl, int ftl)
     // Returns the number of cells that contain invalid data,
