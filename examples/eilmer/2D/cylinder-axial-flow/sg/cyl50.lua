@@ -36,7 +36,7 @@ blks = FluidBlockArray{grid=grd, nib=2, njb=2,
 
 -- Do a little more setting of the simulation configuration data.
 config.viscous = true
-config.flux_calculator = "adaptive"
+config.flux_calculator = "ausmdv"
 config.gasdynamic_update_scheme = "euler"
 config.max_time = 8.0e-3  -- seconds
 config.max_step = 230000

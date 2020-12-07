@@ -28,7 +28,7 @@ class TestCyl50_SG < Test::Unit::TestCase
         steps = items[1].to_i
       end
     end
-    assert((steps - 186645).abs < 300, "Failed to take correct number of steps.")
+    assert((steps - 190388).abs < 300, "Failed to take correct number of steps.")
   end
   
   def test_2_peak_T_in_boundary_layer

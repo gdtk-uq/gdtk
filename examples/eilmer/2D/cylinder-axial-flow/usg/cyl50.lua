@@ -43,7 +43,7 @@ end
 
 -- Do a little more setting of the simulation configuration data.
 config.viscous = true
-config.flux_calculator = "adaptive"
+config.flux_calculator = "ausmdv"
 config.include_ghost_cells_in_spatial_deriv_clouds = true
 config.spatial_deriv_calc = "least_squares"
 config.gasdynamic_update_scheme = "euler"
