@@ -478,6 +478,36 @@ public:
         }
     } // end shock_faces_to_cells()
 
+    @nogc
+    void enforce_strict_shock_detector()
+    // mark faces as shocked if either left or right cell is shocked
+    {
+        foreach(face; faces) {
+            if (face.fs.S > 0.0) {
+                face.fs.S = 1.0;
+                continue;
+            } 
+            
+            // need to check for existence of cell before checking its shock state
+
+            if (face.left_cell) {
+                if (face.left_cell.fs.S > 0.0) {
+                    face.fs.S = 1.0;
+                    continue;
+                }
+            }
+
+            if (face.right_cell) {
+                if (face.right_cell.fs.S > 0.0) {
+                    face.fs.S = 1.0;
+                    continue;
+                }
+            }
+
+            
+        }
+    } // end enforce_strict_shock_detector
+
     int count_invalid_cells(int gtl, int ftl)
     // Returns the number of cells that contain invalid data,
     // optionally patching bad cell data as it goes.
