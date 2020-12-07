@@ -1,0 +1,19 @@
+# Bezier-control-pts-t4-m7.data
+# Control points for a Bezier curve that defines the T4 Mach 7 nozzle contour.
+#
+# This file has been built from the control points in Table 5 in Wilson Chan's
+# UQ School of Mechanical & Mining Engineering Research Report Number 2013/02, 
+# "Flowpath design of an axisymmetric Mach 7.0 nozzle for T4".
+#
+# Wilson Chan, 8 Oct 2013
+#
+#     x, m       y, m 
+ 0.000000e+00 1.050000e-02
+ 3.000000e-02 1.050000e-02
+ 1.200000e-01 6.750100e-02
+ 1.600000e-01 5.080100e-02
+ 2.600000e-01 9.194200e-02
+ 4.000000e-01 1.103570e-01
+ 5.700000e-01 1.179570e-01
+ 7.700000e-01 1.355220e-01
+ 1.000000e+00 1.365830e-01
