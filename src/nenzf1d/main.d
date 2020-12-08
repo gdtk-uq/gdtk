@@ -6,7 +6,8 @@
 // The University of Queensland
 //
 // 2020-09-26 Initial code built from Python prototype.
-// 2020-10-16 Ready for use, I believe.
+// 2020-10-16 Ready for use with 1T thermally-perfect gas model, I believe.
+// 2020-12-09 Allow 2T gas models.
 
 import std.stdio;
 import std.array;
@@ -61,7 +62,7 @@ Options:
         return exitFlag;
     }
     if (verbosityLevel >= 1) {
-        writeln("NENZF1D 2020-11-13: shock-tunnel with nonequilibrium nozzle flow.");
+        writeln("NENZF1D 2020-12-09: shock-tunnel with nonequilibrium nozzle flow.");
     }
     if (verbosityLevel >= 2) {
         writeln("Revision: PUT_REVISION_STRING_HERE");
@@ -297,13 +298,6 @@ Options:
         return exitFlag;
     }
     auto gm2 = init_gas_model(gm2_filename);
-    auto gm_tp = cast(ThermallyPerfectGas) gm2;
-    if (gm_tp is null) {
-        writeln("Cannot continue with nonequilibrium expansion.");
-        writeln("  Gas model 2 is not of class ThermallyPerfectGas.");
-        exitFlag = 2;
-        return exitFlag;
-    }
     auto reactor = init_thermochemical_reactor(gm2, reactions_filename, reactions_filename2);
     double[10] reactor_params; // An array that passes extra parameters to the reactor.
     //
@@ -312,9 +306,13 @@ Options:
         writefln("%spressure    %g kPa", fill, gs.p/1000.0);
         writefln("%sdensity     %g kg/m^3", fill, gs.rho);
         writefln("%stemperature %g K", fill, gs.T);
+        foreach (i; 0 .. gs.T_modes.length) {
+            string label = format("T_modes[%d]", i);
+            writefln("%s%-12s%g K", fill, label, gs.T_modes[i]);
+        }
         foreach (name; species) {
             string label = format("massf[%s]", name);
-            writefln("%s%-12s%g", fill, label, gs.massf[gm_tp.species_index(name)]);
+            writefln("%s%-12s%g", fill, label, gs.massf[gm2.species_index(name)]);
         }
     }
     //
@@ -326,23 +324,24 @@ Options:
         writeln("Throat state mass fractions from CEA.");
         writeln("massf=", state6.ceaSavedData.massf);
     }
-    GasState gas0 = new GasState(gm_tp);
+    GasState gas0 = new GasState(gm2);
     gas0.p = state6.p; gas0.T = state6.T;
+    foreach (ref Tmode; gas0.T_modes) { Tmode = state6.T; }
     try {
         foreach (name; species) {
-            gas0.massf[gm_tp.species_index(name)] = state6.ceaSavedData.massf[name];
+            gas0.massf[gm2.species_index(name)] = state6.ceaSavedData.massf[name];
         }
         // CEA2 should be good to 0.01 percent.
         // If it is not, we probably have something significant wrong.
         scale_mass_fractions(gas0.massf, 0.0, 0.0001);
     } catch (Exception e) {
-        writeln("Failed to transfer mass fractions to thermally-perfect gas.");
+        writeln("Failed to transfer mass fractions to finite-rate-chemistry gas.");
         writeln(e.msg);
         exitFlag = 4;
         return exitFlag;
     }
-    gm_tp.update_thermo_from_pT(gas0);
-    gm_tp.update_sound_speed(gas0);
+    gm2.update_thermo_from_pT(gas0);
+    gm2.update_sound_speed(gas0);
     if (verbosityLevel >= 1) {
         writeln("Begin part B: supersonic expansion with finite-rate chemistry.");
     }
@@ -360,31 +359,37 @@ Options:
         if (verbosityLevel >= 3) { writeln("gas0=", gas0); }
     }
     //
-    string sample_header = "x(m) A(m**2) rho(kg/m**3) p(Pa) T(degK) e(J/kg) v(m/s)";
+    string sample_header = "x(m) A(m**2) rho(kg/m**3) p(Pa) T(degK)";
+    foreach (i; 0 .. gm2.n_modes) { sample_header ~= format(" T_modes[%d](degK)", i); }
+    sample_header ~= " u(J/kg)";
+    foreach (i; 0 .. gm2.n_modes) { sample_header ~= format(" u_modes[%d](J/kg)", i); }
     foreach (name; species) { sample_header ~= format(" massf_%s", name); }
-    sample_header ~= " dt_suggest(s) mdot(kg/s)";
+    sample_header ~= " v(m/s) dt_suggest(s) mdot(kg/s)";
     //
     string sample_data(double x, double area, double v, GasState gas, double dt_suggest)
     {
-        string txt = format("%g %g %g %g %g %g %g", x, area, gas.rho, gas.p, gas.T, gas.u, v);
-        foreach (name; species) { txt ~= format(" %g", gas.massf[gm_tp.species_index(name)]); }
-        txt ~= format(" %g %g", dt_suggest, gas.rho*v*area);
+        string txt = format("%g %g %g %g %g", x, area, gas.rho, gas.p, gas.T);
+        foreach (i; 0 .. gas.T_modes.length) { txt ~= format(" %g", gas.T_modes[i]); }
+        txt ~= format(" %g", gas.u);
+        foreach (i; 0 .. gas.u_modes.length) { txt ~= format(" %g", gas.u_modes[i]); }
+        foreach (name; species) { txt ~= format(" %g", gas.massf[gm2.species_index(name)]); }
+        txt ~= format(" %g %g %g", v, dt_suggest, gas.rho*v*area);
         return txt;
     }
     //
     double[2] eos_derivatives(ref GasState gas0, double tol=0.0001)
     {
         // Finite difference evaluation, assuming that gas0 is valid state already.
-        auto gas1 = new GasState(gm_tp);
+        auto gas1 = new GasState(gm2);
         gas1.copy_values_from(gas0);
         double p0 = gas0.p; double rho0 = gas0.rho; double u0 = gas0.u;
         //
         double drho = rho0 * tol; gas1.rho = rho0 + drho;
-        gm_tp.update_thermo_from_rhou(gas1);
+        gm2.update_thermo_from_rhou(gas1);
         double dpdrho = (gas1.p - p0)/drho;
         //
         gas1.rho = rho0; double du = u0 * tol; gas1.u = u0 + du;
-        gm_tp.update_thermo_from_rhou(gas1);
+        gm2.update_thermo_from_rhou(gas1);
         double dpdu = (gas1.p - p0)/du;
         //
         return [dpdrho, dpdu];
@@ -397,7 +402,7 @@ Options:
     double area = 0.25*d*d*std.math.PI;
     double area_at_throat = area; // for later normalizing the exit area
     double massflux_at_throat = area*gas0.rho*v;
-    double H_at_throat = gm_tp.enthalpy(gas0) + 0.5*v*v;
+    double H_at_throat = gm2.enthalpy(gas0) + 0.5*v*v;
     // We may use the Pitot pressure as a stopping criteria.
     double p_pitot = C * gas0.rho*v*v;
     //
@@ -436,10 +441,10 @@ Options:
         double rho = gas0.rho; double T = gas0.T; double p = gas0.p; double u = gas0.u;
         //
         // Do the chemical increment.
-        auto gas1 = new GasState(gm_tp); // we need an update state
+        auto gas1 = new GasState(gm2); // we need an update state
         gas1.copy_values_from(gas0);
         reactor(gas1, t_inc, dt_suggest, dt_therm, reactor_params);
-        gm_tp.update_thermo_from_rhou(gas1);
+        gm2.update_thermo_from_rhou(gas1);
         //
         double du_chem = gas1.u - u;
         double dp_chem = gas1.p - p;
@@ -492,8 +497,8 @@ Options:
         double v1 = v + dv;
         double p1_check = gas1.p + dp_gda;
         gas1.u = gas1.u + du_gda;
-        gm_tp.update_thermo_from_rhou(gas1);
-        gm_tp.update_sound_speed(gas1);
+        gm2.update_thermo_from_rhou(gas1);
+        gm2.update_sound_speed(gas1);
         if (verbosityLevel >= 3) {
             writeln("At new point x1=", x1, " v1=", v1,
                     ": gas1.p=", gas1.p, " p1_check=", p1_check,
@@ -515,16 +520,20 @@ Options:
     writefln("  area-ratio  %g", area/area_at_throat);
     writefln("  velocity    %g km/s", v/1000.0);
     writefln("  Mach        %g", v/gas0.a);
-    writefln("  p_pitot     %g kPa", p_pitot/1000);
+    GasState gs_pitot = new GasState(gas0);
+    pitot_condition(gas0, v, gs_pitot, gm2);
+    writefln("  p_pitot     %g kPa (C.rho.V^2)", p_pitot/1000);
+    writefln("  p_pitot     %g kPa (Rayleigh-Pitot, frozen)", gs_pitot.p/1000);
     write_tp_state(gas0);
-    gm_tp.update_trans_coeffs(gas0);
+    gm2.update_trans_coeffs(gas0);
     writefln("  viscosity   %g Pa.s", gas0.mu);
     //
     writeln("Expansion error-indicators:");
     double massflux = area * gas0.rho * v;
     writefln("  relerr-mass %g", fabs(massflux - massflux_at_throat)/massflux_at_throat);
-    double H = gm_tp.enthalpy(gas0) + 0.5*v*v;
+    double H = gm2.enthalpy(gas0) + 0.5*v*v;
     writefln("  relerr-H    %g", fabs(H - H_at_throat)/H_at_throat);
+    writefln("  relerr-pitot %g", fabs(p_pitot - gs_pitot.p)/p_pitot);
     //
     if (verbosityLevel >= 1) { writeln("End."); }
     return exitFlag;
