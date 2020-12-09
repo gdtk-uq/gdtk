@@ -548,7 +548,12 @@ public:
     @nogc
     override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
     {
-        throw new Error("BIE_FicedComposition.apply_for_interface_unstructured_grid() not yet implemented");
+        uint nsp = blk.myConfig.n_species;
+        BoundaryCondition bc = blk.bc[which_boundary];
+        FlowState fs = f.fs;
+        version(multi_species_gas) {
+            foreach (isp; 0 .. nsp) { fs.gas.massf[isp] = massfAtWall[isp]; }
+        }
     }
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
