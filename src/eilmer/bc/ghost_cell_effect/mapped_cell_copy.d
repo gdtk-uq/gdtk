@@ -650,7 +650,6 @@ public:
 
         version(complex_numbers) {
             nitems *= 2;
-            nitems -= 1; // subtract 1 because we send the integer "S" as a plain double
         }
         
         return nitems;
