@@ -1,0 +1,55 @@
+# Sample input file for nenzf1d is a YAML 1.1 file.
+# t4m7-air-C-92-2T.yaml
+# Data for T4 shot 11311 obtained from
+# Wilson Chan's Mach 7 nozzle validation report 2014/14
+# later published in AIAA Journal of Propulsion and Power, 2018.
+# PJ 2020-10-20
+#
+title: "T4 shot 11311 with Mach 7 nozzle."    # Any string will do.
+
+species: ['N2', 'O2', 'N', 'O', 'NO']         # List
+molef: {'N2': 0.79, 'O2': 0.21}               # Map of nonzero values will suffice.
+# Gas model and reactions files need to be consistent with the species above.
+# Gas model 1 is usually a CEAGas model file.
+# Gas model 2 is a thermally-perfect gas model for the finite-rate chemistry.
+gas-model-1: cea-air5species-gas-model.lua
+gas-model-2: air-5sp-2T.lua
+reactions: air-5sp-6r-2T.lua
+reactions-file2: air-energy-exchange.lua
+
+# Observed parameter values for shock-tube operation from Table 1 in Appendix A.
+T1: 300         # K
+p1: 200.0e3     # Pa
+Vs: 1679.0      # m/s
+pe: 19.33e6     # Pa
+ar: 169.2       # Mach 6 nozzle
+pp_ps: 0.0105   # From Figure 8.
+
+C: 0.92
+
+# Define the expanding part of the nozzle as a schedule of diameters with position.
+xi: [0.0000, 5.126e-3, 1.021e-2, 2.008e-2, 5.023e-2, 0.1003, 0.2004, 0.4006,
+     0.6000, 0.8012, 1.0000]
+di: [0.0210, 0.0220,   0.0243,   0.0303,   0.0518,   0.0855, 0.1359, 0.2005,
+     0.2389, 0.2626, 0.2732]
+# Values are sampled from Wilson's contour-t4-m7.data file.
+#    x, m         y, m
+# 0.000000e+00 1.050000e-02
+# 5.126188e-03 1.102829e-02
+# 1.021600e-02 1.216751e-02
+# 2.008018e-02 1.513886e-02
+# 5.026745e-02 2.592048e-02
+# 1.003539e-01 4.273343e-02
+# 2.004285e-01 6.793324e-02
+# 4.006492e-01 1.002281e-01
+# 6.000095e-01 1.194318e-01
+# 8.011666e-01 1.313086e-01
+# 1.000000e+00 1.365830e-01
+
+# Optionally, we can adjust the stepping parameters for the supersonic expansion.
+# x_end: 1.0
+# t_final: 1.0e-3
+# t_inc: 1.0e-10
+# t_inc_factor: 1.0001
+# t_inc_max: 1.0e-7
+
