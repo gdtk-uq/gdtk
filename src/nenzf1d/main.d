@@ -527,14 +527,14 @@ Options:
     writefln("  Mach        %g", v/gas0.a);
     writefln("  p_pitot     %g kPa (C.rho.V^2)", p_pitot/1000);
     double rayleigh_pitot = 0.0;
-    if (cast(ThermallyPerfectGas) gm2) {
+    try {
         // We need the gas model to be able to compute entropy in order
         // to apply the Rayleigh-Pitot formula.
         GasState gs_pitot = new GasState(gas0);
         pitot_condition(gas0, v, gs_pitot, gm2);
         rayleigh_pitot = gs_pitot.p;
         writefln("  p_pitot     %g kPa (Rayleigh-Pitot, frozen)", rayleigh_pitot/1000);
-    }
+    } catch (Exception e) { /* Do nothing. */ }
     write_tp_state(gas0);
     gm2.update_trans_coeffs(gas0);
     writefln("  viscosity   %g Pa.s", gas0.mu);
@@ -544,7 +544,7 @@ Options:
     writefln("  relerr-mass %g", fabs(massflux - massflux_at_throat)/massflux_at_throat);
     double H = gm2.enthalpy(gas0) + 0.5*v*v;
     writefln("  relerr-H    %g", fabs(H - H_at_throat)/H_at_throat);
-    if (cast(ThermallyPerfectGas) gm2) {
+    if (rayleigh_pitot > 0.0) {
         writefln("  relerr-pitot %g", fabs(p_pitot - rayleigh_pitot)/p_pitot);
     }
     //
