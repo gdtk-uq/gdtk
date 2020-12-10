@@ -497,11 +497,11 @@ Options:
                      v*etot*drho*area + (rho*etot+p)*area*dv + rho*v*area*(du_gda + du_chem) + v*(rho*etot+p)*darea,
                      dfdr*drho - dp_gda + dfdu*du_gda);
         }
-        // Add the accommodation increments.
-        gas1.rho = gas0.rho + drho;
+        // Add the gas-dynamic accommodation increments.
+        gas1.rho += drho;
         double v1 = v + dv;
         double p1_check = gas1.p + dp_gda;
-        gas1.u = gas1.u + du_gda;
+        gas1.u += du_gda;
         gm2.update_thermo_from_rhou(gas1);
         gm2.update_sound_speed(gas1);
         if (verbosityLevel >= 3) {
