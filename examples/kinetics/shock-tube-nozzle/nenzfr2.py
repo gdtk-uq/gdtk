@@ -218,10 +218,10 @@ while x < x_end:
         print("# dfdr=", dfdr, "dfdu=", dfdu)
         print("# x=", x, "v=", v, "A=", area, "dA=", darea)
     # Linear solve to get the accommodation increments.
-    #   [v*A,      rho*A,          0.0, 0.0    ]   [drho  ]   [-rho*v*dA       ]
-    #   [0.0,      rho*v,          1.0, 0.0    ] * [dv    ] = [-dp_chem        ]
-    #   [v*etot*A, (rho*etot+p)*A, 0.0, rho*v*A]   [dp_gda]   [-rho*v*A*du_chem]
-    #   [dfdr,     0.0,           -1.0, dfdu   ]   [du_gda]   [0.0             ]
+    #   [v*A,      rho*A,          0.0, 0.0    ]   [drho  ]   [-rho*v*dA                          ]
+    #   [0.0,      rho*v,          1.0, 0.0    ] * [dv    ] = [-dp_chem                           ]
+    #   [v*etot*A, (rho*etot+p)*A, 0.0, rho*v*A]   [dp_gda]   [-rho*v*A*du_chem -(rho*etot+p)*v*dA]
+    #   [dfdr,     0.0,           -1.0, dfdu   ]   [du_gda]   [0.0                                ]
     #
     # Compute the accommodation increments using expressions from Maxima.
     denom = area*(rho*rho*v*v - dfdr*rho*rho - dfdu*p)

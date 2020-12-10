@@ -62,7 +62,7 @@ Options:
         return exitFlag;
     }
     if (verbosityLevel >= 1) {
-        writeln("NENZF1D 2020-12-09: shock-tunnel with nonequilibrium nozzle flow.");
+        writeln("NENZF1D 2020-12-10: shock-tunnel with nonequilibrium nozzle flow.");
     }
     if (verbosityLevel >= 2) {
         writeln("Revision: PUT_REVISION_STRING_HERE");
@@ -380,15 +380,18 @@ Options:
     double[2] eos_derivatives(ref GasState gas0, double tol=0.0001)
     {
         // Finite difference evaluation, assuming that gas0 is valid state already.
-        auto gas1 = new GasState(gm2);
-        gas1.copy_values_from(gas0);
+        // Only the trans-rotational internal energy will be perturbed with any
+        // other internal energy modes being left unperturbed.
         double p0 = gas0.p; double rho0 = gas0.rho; double u0 = gas0.u;
         //
+        auto gas1 = new GasState(gm2);
+        gas1.copy_values_from(gas0);
         double drho = rho0 * tol; gas1.rho = rho0 + drho;
         gm2.update_thermo_from_rhou(gas1);
         double dpdrho = (gas1.p - p0)/drho;
         //
-        gas1.rho = rho0; double du = u0 * tol; gas1.u = u0 + du;
+        gas1.copy_values_from(gas0);
+        double du = u0 * tol; gas1.u = u0 + du;
         gm2.update_thermo_from_rhou(gas1);
         double dpdu = (gas1.p - p0)/du;
         //
@@ -438,7 +441,8 @@ Options:
            (t < t_final) &&
            (p_pitot > pp_ps*state5s.p)) {
         // At the start of the step...
-        double rho = gas0.rho; double T = gas0.T; double p = gas0.p; double u = gas0.u;
+        double rho = gas0.rho; double T = gas0.T; double p = gas0.p;
+        double u = gm2.internal_energy(gas0);
         //
         // Do the chemical increment.
         auto gas1 = new GasState(gm2); // we need an update state
@@ -446,7 +450,7 @@ Options:
         reactor(gas1, t_inc, dt_suggest, dt_therm, reactor_params);
         gm2.update_thermo_from_rhou(gas1);
         //
-        double du_chem = gas1.u - u;
+        double du_chem = gm2.internal_energy(gas1) - u;
         double dp_chem = gas1.p - p;
         if (verbosityLevel >= 3) {
             writeln("du_chem=", du_chem, " dp_chem=", dp_chem);
@@ -464,16 +468,17 @@ Options:
         double etot = u + 0.5*v*v;
         double[2] df = eos_derivatives(gas1);
         double dfdr = df[0]; double dfdu = df[1];
-        double A = area+0.5*darea;
+        // double A = area+0.5*darea; // Slight improvement of mass-flux error.
+        double A = area; // Original formulation of the linear constraint equations uses this.
         if (verbosityLevel >= 3) {
             writeln("dfdr=", dfdr, " dfdu=", dfdu);
             writeln("x=", x, " v=", v, " diam=", d, " A=", A, " dA=", darea);
         }
         // Linear solve to get the accommodation increments.
-        //   [v*A,      rho*A,          0.0, 0.0    ]   [drho  ]   [-rho*v*dA       ]
-        //   [0.0,      rho*v,          1.0, 0.0    ] * [dv    ] = [-dp_chem        ]
-        //   [v*etot*A, (rho*etot+p)*A, 0.0, rho*v*A]   [dp_gda]   [-rho*v*A*du_chem]
-        //   [dfdr,     0.0,           -1.0, dfdu   ]   [du_gda]   [0.0             ]
+        //   [v*A,      rho*A,          0.0, 0.0    ]   [drho  ]   [-rho*v*dA                          ]
+        //   [0.0,      rho*v,          1.0, 0.0    ] * [dv    ] = [-dp_chem                           ]
+        //   [v*etot*A, (rho*etot+p)*A, 0.0, rho*v*A]   [dp_gda]   [-rho*v*A*du_chem -(rho*etot+p)*v*dA]
+        //   [dfdr,     0.0,           -1.0, dfdu   ]   [du_gda]   [0.0                                ]
         //
         // Compute the accommodation increments using expressions from Maxima.
         double denom = A*(rho*rho*v*v - dfdr*rho*rho - dfdu*p);
@@ -486,7 +491,7 @@ Options:
                           + darea*p*rho*v*v) / denom;
         if (verbosityLevel >= 3) {
             writeln("drho=", drho, " dv=", dv, " dp_gda=", dp_gda, " du_gda=", du_gda);
-            writefln("residuals= %g %g %g",
+            writefln("residuals= %g %g %g %g",
                      v*area*drho + rho*area*dv + rho*v*darea,
                      rho*v*dv + (dp_gda + dp_chem),
                      v*etot*drho*area + (rho*etot+p)*area*dv + rho*v*area*(du_gda + du_chem) + v*(rho*etot+p)*darea,
@@ -520,10 +525,16 @@ Options:
     writefln("  area-ratio  %g", area/area_at_throat);
     writefln("  velocity    %g km/s", v/1000.0);
     writefln("  Mach        %g", v/gas0.a);
-    GasState gs_pitot = new GasState(gas0);
-    pitot_condition(gas0, v, gs_pitot, gm2);
     writefln("  p_pitot     %g kPa (C.rho.V^2)", p_pitot/1000);
-    writefln("  p_pitot     %g kPa (Rayleigh-Pitot, frozen)", gs_pitot.p/1000);
+    double rayleigh_pitot = 0.0;
+    if (cast(ThermallyPerfectGas) gm2) {
+        // We need the gas model to be able to compute entropy in order
+        // to apply the Rayleigh-Pitot formula.
+        GasState gs_pitot = new GasState(gas0);
+        pitot_condition(gas0, v, gs_pitot, gm2);
+        rayleigh_pitot = gs_pitot.p;
+        writefln("  p_pitot     %g kPa (Rayleigh-Pitot, frozen)", rayleigh_pitot/1000);
+    }
     write_tp_state(gas0);
     gm2.update_trans_coeffs(gas0);
     writefln("  viscosity   %g Pa.s", gas0.mu);
@@ -533,7 +544,9 @@ Options:
     writefln("  relerr-mass %g", fabs(massflux - massflux_at_throat)/massflux_at_throat);
     double H = gm2.enthalpy(gas0) + 0.5*v*v;
     writefln("  relerr-H    %g", fabs(H - H_at_throat)/H_at_throat);
-    writefln("  relerr-pitot %g", fabs(p_pitot - gs_pitot.p)/p_pitot);
+    if (cast(ThermallyPerfectGas) gm2) {
+        writefln("  relerr-pitot %g", fabs(p_pitot - rayleigh_pitot)/p_pitot);
+    }
     //
     if (verbosityLevel >= 1) { writeln("End."); }
     return exitFlag;

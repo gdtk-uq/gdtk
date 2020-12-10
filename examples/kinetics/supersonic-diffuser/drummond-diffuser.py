@@ -86,7 +86,7 @@ if debug:
     print("# massf=", gas0.massf)
 
 print("# Start reactions...")
-reactor = ThermochemicalReactor(gmodel, "h2-o2-n2-5sp-2r.lua") 
+reactor = ThermochemicalReactor(gmodel, "h2-o2-n2-5sp-2r.lua")
 t = 0 # time is in seconds
 t_final = 1.15e-3 # long enough to convect past exit
 t_inc = 0.005e-6 # start small
@@ -118,10 +118,10 @@ while x < x_end:
     dfdr, dfdu = eos_derivatives(gas1, gmodel)
     if debug: print("# dfdr=", dfdr, "dfdu=", dfdu)
     # Linear solve to get the accommodation increments.
-    #   [v*A,      rho*A,          0.0, 0.0    ]   [drho  ]   [-rho*v*dA       ]
-    #   [0.0,      rho*v,          1.0, 0.0    ] * [dv    ] = [-dp_chem        ]
-    #   [v*etot*A, (rho*etot+p)*A, 0.0, rho*v*A]   [dp_gda]   [-rho*v*A*du_chem]
-    #   [dfdr,     0.0,           -1.0, dfdu   ]   [du_gda]   [0.0             ]
+    #   [v*A,      rho*A,          0.0, 0.0    ]   [drho  ]   [-rho*v*dA                          ]
+    #   [0.0,      rho*v,          1.0, 0.0    ] * [dv    ] = [-dp_chem                           ]
+    #   [v*etot*A, (rho*etot+p)*A, 0.0, rho*v*A]   [dp_gda]   [-rho*v*A*du_chem -(rho*etot+p)*v*dA]
+    #   [dfdr,     0.0,           -1.0, dfdu   ]   [du_gda]   [0.0                                ]
     #
     # Compute the accommodation increments using expressions from Maxima.
     denom = area*(rho*rho*v*v - dfdr*rho*rho - dfdu*p)
@@ -132,7 +132,7 @@ while x < x_end:
                - area*dfdr*dp_chem*rho*rho - area*dfdu*dp_chem*p) / denom
     du_gda = -(area*(du_chem*rho*rho*v*v - du_chem*dfdr*rho*rho - dp_chem*p)
                + darea*p*rho*v*v) / denom
-    if debug: 
+    if debug:
         print("# drho=", drho, "dv=", dv, "dp_gda=", dp_gda, "du_gda=", du_gda)
         print("# residuals=", v*area*drho + rho*area*dv + rho*v*darea,
               rho*v*dv + (dp_gda + dp_chem),
@@ -147,7 +147,7 @@ while x < x_end:
     gas1.update_thermo_from_rhou()
     if debug:
         print("# At new point for x1=", x1, ": gas1.p=", gas1.p,
-              "p1_check=", p1_check, 
+              "p1_check=", p1_check,
               "rel_error=", abs(gas1.p-p1_check)/p1_check)
     # Have now finished the chemical and gas-dynamic update.
     print(sample_data(x1, area1, v1, gas1, dt_suggest))
