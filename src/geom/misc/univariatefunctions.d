@@ -236,6 +236,77 @@ private:
 
 }
 
+class GaussianFunction : UnivariateFunction {
+/*
+   A cluster function based on the Gaussian Normal Function. Designed for clustering
+   in the middle of a block somewhere:
+   https://en.wikipedia.org/wiki/Gaussian_function
+
+   Inputs:
+     m - The location of peak clustering, (0<m<1)
+     s - The width of the peak
+     ratio - smallest cell size/largest cell size
+
+   @author: Nick Gibbons
+*/
+public:
+    this(double m, double s, double ratio)
+    {
+        this.m = m;
+        this.s = s;
+        this.ratio = ratio;
+        if ((m<=0.0) || (m>=1.0)) throw new Error("Problematic parameters in GaussianFunction m= "~to!string(m));
+        if ((ratio<=0.0) || (ratio>=1.0)) throw new Error("Problematic parameters in GaussianFunction ratio= "~to!string(ratio));
+        // See derivation 20/12/11 (NNG)
+        this.a = 1.0/(1.0+sqrt(pi/2.0)*(1.0-ratio)*s*(erf((m-1.0)/sqrt(2.0)/s) - erf(m/sqrt(2.0)/s)));
+        this.c = -sqrt(pi/2.0)*a*(1-ratio)*s*erf(m/sqrt(2.0)/s);
+    }
+
+    this(const GaussianFunction other)
+    {
+        m = other.m;
+        s = other.s;
+        ratio = other.ratio;
+        a = other.a;
+        c = other.c;
+    }
+
+    GaussianFunction dup() const
+    {
+        return new GaussianFunction(this);
+    }
+
+    override double opCall(double x) const
+    {
+        return a*x + sqrt(pi/2.0)*a*(1.0-ratio)*s*erf((m-x)/sqrt(2.0)/s) + c;
+    }
+
+private:
+    double m,s,ratio,a,c;
+    immutable double pi = 3.1415926535;
+    immutable double p  = 0.3275911;
+    immutable double a1 = 0.254829592;
+    immutable double a2 =-0.284496736;
+    immutable double a3 = 1.421413741;
+    immutable double a4 =-1.453152027;
+    immutable double a5 = 1.061405429;
+
+    const double erf(double x){
+        /*
+            Approximate the gaussian error function using curve fitted polynomial 
+            "Handbook of Mathematical Functions with Formulas, Graphs, and Mathematical Tables", NIST
+            See: https://en.wikipedia.org/wiki/Error_function#Approximation_with_elementary_functions
+            Note: The approximation here is only valid for x>=0. For x less than zero we exploit the
+            fact that the error function is odd: f(x) = -f(-x)
+        */
+
+        double xabs = fabs(x);
+        double t = 1.0/(1.0+p*xabs);
+        double f = 1.0 - (a1*t + a2*t*t + a3*t*t*t + a4*t*t*t*t + a5*t*t*t*t*t)*exp(-(xabs*xabs));
+        f = copysign(f, x);
+        return f;
+    }
+}
 version(univariatefunctions_test) {
     import util.msg_service;
     int main() {
@@ -248,6 +319,9 @@ version(univariatefunctions_test) {
         auto cf3 = new GeometricFunction(0.005, 1.1, 40, false);
         assert(approxEqual(cf3(0.1), 0.0225106), failedUnitTest());
         assert(approxEqual(cf3(0.9), 0.85256413), failedUnitTest());
+        auto cf4 = new GaussianFunction(0.5, 0.1, 0.2);
+        assert(approxEqual(cf4(0.1), 0.1250750), failedUnitTest());
+        assert(approxEqual(cf4(0.9), 0.8749249), failedUnitTest());
         return 0;
     }
 } // end univariatefunctions_test

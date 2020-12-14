@@ -19,6 +19,7 @@ immutable string LinearFunctionMT = "LinearFunction";
 immutable string RobertsFunctionMT = "RobertsFunction";
 immutable string LuaFnClusteringMT = "LuaFnClustering";
 immutable string GeometricFunctionMT = "GeometricFunction";
+immutable string GaussianFunctionMT = "GaussianFunction";
 
 static const(UnivariateFunction)[] functionStore;
 
@@ -34,6 +35,9 @@ UnivariateFunction checkUnivariateFunction(lua_State* L, int index) {
     }
     if ( isObjType(L, index, GeometricFunctionMT) ) {
         return checkObj!(GeometricFunction, GeometricFunctionMT)(L, index);
+    }
+    if ( isObjType(L, index, GaussianFunctionMT) ) {
+        return checkObj!(GaussianFunction, GaussianFunctionMT)(L, index);
     }
     // if all else fails
     return null;
@@ -272,6 +276,45 @@ extern(C) int newGeometricFunction(lua_State* L)
     return 1;
 }
 
+/**
+ * The Lua constructor for a GaussianFunction.
+ *
+ * Example construction in Lua:
+ * --------------------------------------------------------------
+ * f = GeometricFunction:new{m=0.5, s=0.1, ratio=0.2}
+ * --------------------------------------------------------------
+ */
+extern(C) int newGaussianFunction(lua_State* L)
+{
+    int narg = lua_gettop(L);
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected GaussianFunction:new{}; ";
+        errMsg ~= "maybe you tried GaussianFunction.new{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if ( !lua_istable(L, 1) ) {
+        string errMsg = "Error in call to GaussianFunction:new{}. ";
+        errMsg ~= "A table containing arguments is expected, but no table was found.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    if (!checkAllowedNames(L, 1, ["m", "s", "ratio"])) {
+        string errMsg = "Error in call to GaussianFunction:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
+    }
+     //
+    string errMsgTmpltNumber = "Error in call to GaussianFunction:new{}. ";
+    errMsgTmpltNumber ~= "A valid value for '%s' was not found in list of arguments. ";
+    errMsgTmpltNumber ~= "The value, if present, should be a number.";
+    double m = getNumberFromTable(L, 1, "m", true, 0.5, true, format(errMsgTmpltNumber, "m"));
+    double s = getNumberFromTable(L, 1, "s", true, 0.1, true, format(errMsgTmpltNumber, "s"));
+    double ratio = getNumberFromTable(L, 1, "ratio", true, 0.2, true, format(errMsgTmpltNumber, "ratio"));
+    auto f = new GaussianFunction(m, s, ratio);
+    functionStore ~= pushObj!(GaussianFunction, GaussianFunctionMT)(L, f);
+    return 1;
+}
+
 void registerUnivariateFunctions(lua_State* L)
 {
     // Register the LinearFunction object
@@ -358,11 +401,25 @@ void registerUnivariateFunctions(lua_State* L)
 
     lua_setglobal(L, GeometricFunctionMT.toStringz);
 
-}
+    // Register the GaussianFunction object
+    luaL_newmetatable(L, GaussianFunctionMT.toStringz);
     
+    /* metatable.__index = metatable */
+    lua_pushvalue(L, -1); // duplicates the current metatable
+    lua_setfield(L, -2, "__index");
 
+    /* Register methods for use. */
+    lua_pushcfunction(L, &newGaussianFunction);
+    lua_setfield(L, -2, "new");
+    lua_pushcfunction(L, &opCallUnivariateFunction!(GaussianFunction, GaussianFunctionMT));
+    lua_setfield(L, -2, "__call");
+    lua_pushcfunction(L, &opCallUnivariateFunction!(GaussianFunction, GaussianFunctionMT));
+    lua_setfield(L, -2, "eval");
+    lua_pushcfunction(L, &toStringObj!(GaussianFunction, GaussianFunctionMT));
+    lua_setfield(L, -2, "__tostring");
+    lua_pushcfunction(L, &copyUnivariateFunction!(GaussianFunction, GaussianFunctionMT));
+    lua_setfield(L, -2, "copy");
 
+    lua_setglobal(L, GaussianFunctionMT.toStringz);
 
-
-
-
+}
