@@ -5,7 +5,7 @@
 DMD ?= dmd
 PLATFORM ?= linux
 INSTALL_DIR ?= $(HOME)/dgdinst
-BUILD_DIR := ../../build
+BUILD_DIR ?= ../../build
 
 ifeq ($(DMD), dmd)
     DFLAGS := -w -g -O -release -inline -boundscheck=off
@@ -18,14 +18,16 @@ ifeq ($(DMD), ldc2)
 endif
 PROGRAMS := ugrid_partition
 
+ugrid_partition: ugrid_partition.d
+	$(DMD) $(DFLAGS) ugrid_partition.d
+
 clean:
 	- rm -f *.o
 	- rm -f $(PROGRAMS)
 	- rm -f $(BUILD_DIR)/bin/$(PROGRAMS)
 
 install: $(PROGRAMS)
+	- mkdir -p $(BUILD_DIR)/bin
+	cp $(PROGRAMS) $(BUILD_DIR)/bin/
 	cp -r $(BUILD_DIR)/bin/$(PROGRAMS) $(INSTALL_DIR)/bin
 
-ugrid_partition: ugrid_partition.d
-	$(DMD) $(DFLAGS) ugrid_partition.d
-	cp $(PROGRAMS) $(BUILD_DIR)/bin/

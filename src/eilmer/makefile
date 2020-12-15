@@ -372,7 +372,7 @@ ifeq ($(TURBULENCE),1)
     DFLAGS += $(DVERSION)turbulence
 endif
 
-default: $(PROGRAMS)
+default: $(PROGRAMS) ugrid_partition
 	@echo "Source code revision string $(REVISION_STRING)"
 	@echo "Eilmer4 simulation code built."
 
@@ -401,6 +401,7 @@ install: $(PROGRAMS) $(LUA_MODULES) prep.lua prep-gas prep-chem chemkin2eilmer \
 	chmod +x $(BUILD_DIR)/bin/xtdata.rb
 	cp e4forces.py $(BUILD_DIR)/bin/e4forces
 	chmod +x $(BUILD_DIR)/bin/e4forces
+	cp ../grid_utils/ugrid_partition $(BUILD_DIR)/bin
 ifneq "$(SHARE_FILES)" ""
 	cp $(SHARE_FILES) $(BUILD_DIR)/share
 endif
