@@ -79,6 +79,9 @@ void compute_interface_flux_interior(ref FlowState Lft, ref FlowState Rght,
     case FluxCalculator.ausmdv:
         ausmdv(Lft, Rght, IFace, myConfig);
         break;
+    case FluxCalculator.ldfss:
+        ldfss(Lft, Rght, IFace, myConfig);
+        break;
     case FluxCalculator.hanel:
         hanel(Lft, Rght, IFace, myConfig);
         break;
@@ -547,6 +550,96 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
         }
     } // end of entropy fix (d_ua != 0)
 } // end ausmdv()
+
+@nogc
+void ldfss(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
+// Jack Edwards' LDFSS (variant 2) flux calculator.
+//
+// Implemented from details in
+// Jack R. Edwards (1997)
+// A low-diffusion flux-splitting scheme for Navier-Stokes calculations.
+// Computers & Fluids paper.
+{
+    auto gmodel = myConfig.gmodel;
+    // Unpack the flow-state vectors for either side of the interface.
+    // Store in work vectors, those quantities that will be neede later.
+    number rL = Lft.gas.rho;
+    number pL = Lft.gas.p;
+    number pLrL = pL / rL;
+    number uL = Lft.vel.x;
+    number vL = Lft.vel.y;
+    number wL = Lft.vel.z;
+    number eL = gmodel.internal_energy(Lft.gas);
+    number aL = Lft.gas.a;
+    number keL = 0.5*(uL*uL + vL*vL + wL*wL);
+    number HL = eL + pLrL + keL;
+    version(turbulence) { HL += myConfig.turb_model.turbulent_kinetic_energy(Lft); }
+    //
+    number rR = Rght.gas.rho;
+    number pR = Rght.gas.p;
+    number pRrR = pR / rR;
+    number uR = Rght.vel.x;
+    number vR = Rght.vel.y;
+    number wR = Rght.vel.z;
+    number eR = gmodel.internal_energy(Rght.gas);
+    number aR = Rght.gas.a;
+    number keR = 0.5*(uR*uR + vR*vR + wR*wR);
+    number HR = eR + pRrR + keR;
+    version(turbulence) { HR += myConfig.turb_model.turbulent_kinetic_energy(Rght); }
+    //
+    // Common sound speed (eqn 33) and Mach numbers (eqn 34) for LDFSS(2)
+    number am = 0.5*(aL+aR);
+    number ML = uL / am;
+    number MR = uR / am;
+    // Split Mach number (eqn 15)
+    number MpL = 0.25*(ML + 1.0)^^2;
+    number MmR = -0.25*(MR - 1.0)^^2;
+    // Parameters to provide correct sonic-point transition behaviour
+    // equation 16
+    number alphaL = 0.5*(1.0 + sgn(ML.re));
+    number alphaR = 0.5*(1.0 - sgn(MR.re));
+    // equation 17
+    number betaL = -fmax(0.0, 1.0-floor(fabs(ML.re)));
+    number betaR = -fmax(0.0, 1.0-floor(fabs(MR.re)));
+    // subsonic pressure splitting (eqn 12)
+    number PL = 0.25*(ML+1.0)^^2*(2.0-ML);
+    number PR = 0.25*(MR-1.0)^^2*(2.0+MR);
+    // D parameter (eqn 11)
+    number DL = alphaL*(1.0+betaL) - betaL*PL;
+    number DR = alphaR*(1.0+betaR) - betaR*PR;
+    // M_1/2 parameters for LDFSS (1,2) (eqn 20 & eqn 28 & eqn 29)
+    number delta = 4.0; // weighting parameter to suppress 'carbuncle' phenomena
+                        // while preserving the beneficial traits of the scheme
+                        // in the capturing of discontinuities. Choice of delta
+                        // is not obvious. Higher values are better at 'carbuncle'
+                        // supression (favourable for blunt-body flows), but can also
+                        // cause smearing of oblique shocks.
+    number Mhalf = 0.25*betaL*betaR*(sqrt(0.5*(ML^^2+MR^^2))-1.0)^^2;
+    number MhalfL = Mhalf * (2*pR/(pL+pR) - delta*(fabs(pL-pR)/pL));
+    number MhalfR = Mhalf * (2*pL/(pL+pR) - delta*(fabs(pL-pR)/pR));
+    // C parameter for LDFSS (2) (eqn 13 & eqn 14 & eqn 26 & eqn 27)
+    number CL = alphaL*(1.0+betaL)*ML - betaL*MpL - MhalfL;
+    number CR = alphaR*(1.0+betaR)*MR - betaR*MmR + MhalfR;
+    //
+    // Assemble components of the flux vector.
+    ConservedQuantities F = IFace.F;
+    number ru_half = am*rL*CL + am*rR*CR;
+    number ru2_half = am*rL*CL*uL + am*rR*CR*uR;
+    number p_half = DL*pL + DR*pR;
+    F.mass += factor*ru_half;
+    F.momentum.add(ru2_half+p_half, (am*rL*CL*vL + am*rR*CR*vR), (am*rL*CL*wL + am*rR*CR*wR), factor);
+    F.total_energy += factor*(am*rL*CL*HL + am*rR*CR*HR);
+    version(turbulence) {
+        foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] += factor*(am*rL*CL*Lft.turb[i] + am*rR*CR*Rght.turb[i]); }
+    }
+    version(multi_species_gas) {
+        uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
+        foreach (i; 0 .. nsp) { F.massf[i] += factor*(am*rL*CL*Lft.gas.massf[i] + am*rR*CR*Rght.gas.massf[i]); }
+    }
+    version(multi_T_gas) {
+        foreach (i; 0 .. F.energies.length) { F.energies[i] +=  factor*(am*rL*CL*Lft.gas.u_modes[i] + am*rR*CR*Rght.gas.u_modes[i]); }
+    }
+} // end ldfss()
 
 @nogc
 void hanel(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)

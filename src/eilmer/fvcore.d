@@ -177,6 +177,7 @@ InterpolateOption thermo_interpolator_from_name(string name)
 // Symbolic names for the flavours of our flux_calculators.
 enum FluxCalculator {
     ausmdv, // Wada and Liou's flux calculator AIAA Paper 94-0083
+    ldfss,  // A Low-diffusion flux-splitting scheme (Details in Edward's Computers & Fluids paper 1997)
     hanel, // Hanel's flux calculator (details in Wada & Lious's 1997 SIAM paper)
     efm, // Mike Macrossan's EFM flux calculation
     ausm_plus_up, // Liou's 2006 all-speed flux calculator
@@ -194,6 +195,7 @@ string flux_calculator_name(FluxCalculator fcalc)
 {
     final switch ( fcalc ) {
     case FluxCalculator.ausmdv: return "ausmdv";
+    case FluxCalculator.ldfss: return "ldfss";
     case FluxCalculator.hanel: return "hanel";
     case FluxCalculator.efm: return "efm";
     case FluxCalculator.ausm_plus_up: return "ausm_plus_up";
@@ -212,6 +214,7 @@ FluxCalculator flux_calculator_from_name(string name)
 {
     switch ( name ) {
     case "ausmdv": return FluxCalculator.ausmdv;
+    case "ldfss": return FluxCalculator.ldfss;
     case "hanel": return FluxCalculator.hanel;
     case "efm": return FluxCalculator.efm;
     case "ausm_plus_up": return FluxCalculator.ausm_plus_up;
