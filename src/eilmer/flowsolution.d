@@ -58,6 +58,9 @@ public:
     string jobName;
     double sim_time;
     size_t nBlocks;
+    string flow_format;
+    string grid_format;
+    GridMotion grid_motion;
     BlockFlow[] flowBlocks;
     Grid[] gridBlocks;
 
@@ -84,11 +87,11 @@ public:
             writeln("Message is: ", e.msg);
             throw new Error(text("Failed to parse JSON from config file: ", configFileName));
         }
-        GlobalConfig.grid_format = jsonData["grid_format"].str;
-        GlobalConfig.flow_format = jsonData["flow_format"].str;
-        string gridFileExt = "gz"; if (GlobalConfig.grid_format == "rawbinary") { gridFileExt = "bin"; }
-        string flowFileExt = "gz"; if (GlobalConfig.flow_format == "rawbinary") { flowFileExt = "bin"; }
-        GlobalConfig.grid_motion = grid_motion_from_name(jsonData["grid_motion"].str);
+        grid_format = jsonData["grid_format"].str;
+        flow_format = jsonData["flow_format"].str;
+        string gridFileExt = "gz"; if (grid_format == "rawbinary") { gridFileExt = "bin"; }
+        string flowFileExt = "gz"; if (flow_format == "rawbinary") { flowFileExt = "bin"; }
+        grid_motion = grid_motion_from_name(jsonData["grid_motion"].str);
         // -- end initialising JSONData
         //
         // Use job.list to get a hint of the type of each block.
@@ -107,7 +110,7 @@ public:
             }
             auto gridType = gridTypeFromName(gridTypeName);
             string fileName;
-            if (GlobalConfig.grid_motion != GridMotion.none) {
+            if (grid_motion != GridMotion.none) {
                 fileName = make_file_name!"grid"(jobName, to!int(ib), gindx, gridFileExt);
             } else {
                 fileName = make_file_name!"grid"(jobName, to!int(ib), 0, gridFileExt);
@@ -115,15 +118,15 @@ public:
             fileName = dir ~ "/" ~ fileName;
             final switch (gridType) {
             case Grid_t.structured_grid:
-                gridBlocks ~= new StructuredGrid(fileName, GlobalConfig.grid_format);
+                gridBlocks ~= new StructuredGrid(fileName, grid_format);
                 break;
             case Grid_t.unstructured_grid:
-                gridBlocks ~= new UnstructuredGrid(fileName, GlobalConfig.grid_format);
+                gridBlocks ~= new UnstructuredGrid(fileName, grid_format);
             }
             gridBlocks[$-1].sort_cells_into_bins();
             fileName = make_file_name!"flow"(jobName, to!int(ib), tindx, flowFileExt);
             fileName = dir ~ "/" ~ fileName;
-            flowBlocks ~= new BlockFlow(fileName, ib, jsonData, gridType);
+            flowBlocks ~= new BlockFlow(fileName, ib, jsonData, gridType, flow_format);
         } // end foreach ib
         this.jobName = jobName;
         this.nBlocks = nBlocks;
@@ -353,6 +356,7 @@ public:
     string[] variableNames;
     size_t[string] variableIndex;
     double sim_time;
+    string flow_format;
     double omegaz; // Angular velocity (in rad/s) of the rotating frame.
                    // There is only one component, about the z-axis.
 
@@ -367,9 +371,10 @@ public:
         return i + nic*(j + njc*k);
     }
 
-    this(string filename, size_t blkID, JSONValue jsonData, Grid_t gridType)
+    this(string filename, size_t blkID, JSONValue jsonData, Grid_t gridType, string flow_format)
     {
         this.gridType = gridType;
+        this.flow_format = flow_format;
         string myLabel;
         size_t nvariables;
         // Read in the flow data for a single block.
@@ -380,7 +385,7 @@ public:
         // 3. write_initial_sg_flow_file_from_lua() in luaflowstate.d
         // 4. write_initial_usg_flow_file_from_lua() in luaflowstate.d.
         //
-        switch (GlobalConfig.flow_format) {
+        switch (flow_format) {
         case "gziptext": goto default;
         case "rawbinary":
             File fin = File(filename, "rb");
@@ -504,6 +509,7 @@ public:
     // cellList.length == new_nic * new_njc * new_nkc
     // For an unstructured grid, new_njc=1 and new_nkc=1 should be provided.
     {
+        flow_format = other.flow_format;
         gridType = other.gridType;
         dimensions = new_dimensions;
         omegaz = other.omegaz;
