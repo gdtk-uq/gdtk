@@ -547,13 +547,13 @@ class saTurbulenceModel : TurbulenceModel {
     @nogc override string modelName() const {return "spalart_allmaras";}
     @nogc final override size_t nturb() const {return 1;}
     @nogc final override bool isTurbulent() const {return true;}
-    @nogc final override bool needs_dwall() const {return true;}
+    @nogc override bool needs_dwall() const {return true;}
 
     override saTurbulenceModel dup() {
         return new saTurbulenceModel(this);
     }
 
-    @nogc final override
+    @nogc override
     void source_terms(const FlowState fs,const FlowGradients grad, const number ybar,
                       const number dwall, const number L_min, const number L_max,
                       ref number[2] source) const {
@@ -596,7 +596,7 @@ class saTurbulenceModel : TurbulenceModel {
         return; 
     }
 
-    @nogc final override number turbulent_viscosity(const FlowState fs, const FlowGradients grad, const number ybar, const number dwall) const {
+    @nogc override number turbulent_viscosity(const FlowState fs, const FlowGradients grad, const number ybar, const number dwall) const {
         /*
         Compute the turbulent viscosity mu_t from the SA transport variable nuhat
         See equation (1) from Allmaras (2012)
@@ -610,7 +610,7 @@ class saTurbulenceModel : TurbulenceModel {
         number mu_t = rho*nuhat*fv1;
         return mu_t;
     }
-    @nogc final override number turbulent_conductivity(const FlowState fs, GasModel gm) const {
+    @nogc override number turbulent_conductivity(const FlowState fs, GasModel gm) const {
         // Warning: Make sure fs.mu_t is up to date before calling this method
         number k_t = gm.Cp(fs.gas) * fs.mu_t / Pr_t;
         return k_t;
@@ -653,7 +653,7 @@ class saTurbulenceModel : TurbulenceModel {
         return _varlimits[i];
     }
 
-    @nogc final override number viscous_transport_coeff(const FlowState fs, size_t i) const {
+    @nogc override number viscous_transport_coeff(const FlowState fs, size_t i) const {
         /*
         Viscous diffusion of nuhat, the green term in Gibbons (2019) equation 2.32
         */
@@ -776,6 +776,49 @@ protected:
         return true;
     }
 }
+
+/*
+Object representing the Spalart Allmaras turbulence model with constant wall distance
+
+ @author: Daryl Bond (d.bond1@uq.edu.au)
+*/
+
+class sadTurbulenceModel : saTurbulenceModel {
+    this (){
+        number Pr_t = GlobalConfig.turbulence_prandtl_number;
+        this(Pr_t);
+    }
+
+    this (const JSONValue config){
+        number Pr_t = getJSONdouble(config, "turbulence_prandtl_number", 0.89);
+        this(Pr_t);
+    }
+
+    this (sadTurbulenceModel other){
+        this(other.Pr_t);
+    }
+
+    this (number Pr_t) {
+        this.Pr_t = Pr_t;
+    }
+
+    @nogc override string modelName() const {return "spalart_allmaras_dwall_const";}
+
+    override sadTurbulenceModel dup() {
+        return new sadTurbulenceModel(this);
+    }
+
+protected:
+    immutable number Pr_t;
+
+    @nogc override number
+    compute_d(const number nut, const number nu, const number[3][3] velgrad,
+              const number dwall, const number L_min, const number L_max,
+              const number fv1,  const number fv2, const number ft2) const {
+        return to!number(1000);
+    }
+}
+
 
 /*
 Object representing the Modified Edwards version of the Spalart Allmaras model
@@ -963,8 +1006,14 @@ version(turbulence){
     case "spalart_allmaras":
         turbulence_model = new saTurbulenceModel(config);
         break;
+    case "spalart_allmaras_dwall_const":
+        turbulence_model = new sadTurbulenceModel(config);
+        break;
     case "spalart_allmaras_edwards":
         turbulence_model = new saeTurbulenceModel(config);
+        break;
+    case "spalart_allmaras_iddes":
+        turbulence_model = new iddesTurbulenceModel(config);
         break;
 }
     default:
@@ -995,8 +1044,14 @@ version(turbulence){
     case "spalart_allmaras":
         turbulence_model = new saTurbulenceModel();
         break;
+    case "spalart_allmaras_dwall_const":
+        turbulence_model = new sadTurbulenceModel();
+        break;
     case "spalart_allmaras_edwards":
         turbulence_model = new saeTurbulenceModel();
+        break;
+    case "spalart_allmaras_iddes":
+        turbulence_model = new iddesTurbulenceModel();
         break;
 }
     default:
