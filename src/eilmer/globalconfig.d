@@ -1967,6 +1967,7 @@ void configCheckPoint1()
             GlobalConfig.do_shock_detect = true;
         }
         if (GlobalConfig.flux_calculator == FluxCalculator.adaptive_hanel_ausmdv ||
+            GlobalConfig.flux_calculator == FluxCalculator.adaptive_hanel_hllc ||
             GlobalConfig.flux_calculator == FluxCalculator.adaptive_hlle_roe ||
             GlobalConfig.flux_calculator == FluxCalculator.adaptive_efm_ausmdv ||
             GlobalConfig.flux_calculator == FluxCalculator.adaptive_ausmdv_asf) {

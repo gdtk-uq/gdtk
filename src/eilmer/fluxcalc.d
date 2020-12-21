@@ -79,6 +79,9 @@ void compute_interface_flux_interior(ref FlowState Lft, ref FlowState Rght,
     case FluxCalculator.ausmdv:
         ausmdv(Lft, Rght, IFace, myConfig);
         break;
+    case FluxCalculator.hllc:
+        hllc(Lft, Rght, IFace, myConfig);
+        break;
     case FluxCalculator.ldfss:
         ldfss(Lft, Rght, IFace, myConfig);
         break;
@@ -90,6 +93,9 @@ void compute_interface_flux_interior(ref FlowState Lft, ref FlowState Rght,
         break;
     case FluxCalculator.adaptive_hanel_ausmdv:
         adaptive_hanel_ausmdv(Lft, Rght, IFace, myConfig);
+        break;
+    case FluxCalculator.adaptive_hanel_hllc:
+        adaptive_hanel_hllc(Lft, Rght, IFace, myConfig);
         break;
     case FluxCalculator.adaptive_hlle_roe:
         adaptive_hlle_roe(Lft, Rght, IFace, myConfig);
@@ -552,6 +558,156 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
 } // end ausmdv()
 
 @nogc
+void hllc(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
+// HLLC flux calculator (variant 1).
+//
+// Implemented from details in
+// Toro (2009)
+// Riemann solvers and numerical methods for fluid dynamics,
+// textbook on pg. 331-332.
+{
+    auto gmodel = myConfig.gmodel;
+    // Unpack the flow-state vectors for either side of the interface.
+    // Store in work vectors, those quantities that will be neede later.
+    number gL = gmodel.gamma(Lft.gas);
+    number rL = Lft.gas.rho;
+    number pL = Lft.gas.p;
+    number uL = Lft.vel.x;
+    number vL = Lft.vel.y;
+    number wL = Lft.vel.z;
+    number eL = gmodel.internal_energy(Lft.gas);
+    number aL = Lft.gas.a;
+    number keL = 0.5*(uL*uL + vL*vL + wL*wL);
+    number EL = rL*eL + rL*keL;
+    version(turbulence) { EL += rL*myConfig.turb_model.turbulent_kinetic_energy(Lft); }
+    //
+    number gR = gmodel.gamma(Rght.gas);
+    number rR = Rght.gas.rho;
+    number pR = Rght.gas.p;
+    number pRrR = pR / rR;
+    number uR = Rght.vel.x;
+    number vR = Rght.vel.y;
+    number wR = Rght.vel.z;
+    number eR = gmodel.internal_energy(Rght.gas);
+    number aR = Rght.gas.a;
+    number keR = 0.5*(uR*uR + vR*vR + wR*wR);
+    number ER = rR*eR + rR*keR;
+    version(turbulence) { ER += rR*myConfig.turb_model.turbulent_kinetic_energy(Rght); }
+    //
+
+    // Step I: pressure estimate (compute estimate for the pressure p_star in the Star Region)
+    number rbar = 0.5*(rL + rR);
+    number abar = 0.5*(aL + aR);
+    number p_pvrs = 0.5*(pL + pR) - 0.5*(uR - uL)*rbar*abar;
+    number p_star = fmax(0.0, p_pvrs);
+
+    // Step II: wave speed estimates (compute the wave speed estimates for SL, SR, and S_star)
+    number qL;
+    if (p_star <= pL) {
+        qL = 1.0;
+    } else {
+        qL = sqrt(1.0 + ((gL + 1.0)/(2.0*gL))*(p_star/pL - 1.0));
+    }
+    number SL = uL - aL*qL;
+
+    number qR;
+    if (p_star <= pR) {
+        qR = 1.0;
+    } else {
+        qR = sqrt(1.0 + ((gR + 1.0)/(2.0*gR))*(p_star/pR - 1.0));
+    }
+    number SR = uR + aR*qR;
+
+    number S_star = (pR - pL + rL*uL*(SL - uL) - rR*uR*(SR - uR))/(rL*(SL - uL) - rR*(SR - uR));
+
+    // Step III: HLLC flux (compute the HLLC flux)
+    ConservedQuantities F = IFace.F;
+
+    // a helper function that evaluates the HLLC fluxes used to reduce repeated code
+    void hllc_flux_function(bool star_region, number coeff, number r, number p, number u, number v, number w, number E, in FlowState state, number S) {
+        // mass
+        number F_mass = r*u;
+        number U_mass = r;
+        number U_star_mass = coeff;
+        if (star_region) { F.mass += factor*(F_mass + S*(U_star_mass - U_mass)); }
+        else { F.mass += factor*(F_mass); }
+        // momentum
+        // x
+        number F_momx = r*u*u + p;
+        number U_momx = r*u;
+        number U_star_momx = coeff*S_star;
+        // y
+        number F_momy = r*u*v;
+        number U_momy = r*v;
+        number U_star_momy = coeff*v;
+        // z
+        number F_momz = r*u*w;
+        number U_momz = r*w;
+        number U_star_momz = coeff*w;
+        if (star_region) {
+            F.momentum.add(F_momx + S*(U_star_momx - U_momx),
+                           F_momy + S*(U_star_momy - U_momy),
+                           F_momz + S*(U_star_momz - U_momz),
+                           factor);
+        } else {
+            F.momentum.add(F_momx, F_momy, F_momz, factor);
+        }
+        // total energy
+        number F_totenergy = u*(E + p);
+        number U_totenergy = E;
+        number U_star_totenergy = coeff*(E/r + (S_star - u)*(S_star + p/(r*(S - u))));
+        if (star_region) { F.total_energy += factor*(F_totenergy + S*(U_star_totenergy - U_totenergy)); }
+        else { F.total_energy += factor*(F_totenergy); }
+        // turbulence
+        version(turbulence) {
+            foreach(i; 0 .. myConfig.turb_model.nturb) {
+                number F_rhoturb = r*u*state.turb[i];
+                number U_rhoturb = r*state.turb[i];
+                number U_star_rhoturb = coeff*state.turb[i];
+                if (star_region) { F.rhoturb[i] += factor*(F_rhoturb + S*(U_star_rhoturb - U_rhoturb)); }
+                else { F.rhoturb[i] += factor*(F_rhoturb); }
+            }
+        }
+        // multi-species
+        version(multi_species_gas) {
+            uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
+            foreach (i; 0 .. nsp) {
+                number F_massf = r*u*state.gas.massf[i];
+                number U_massf = r*state.gas.massf[i];
+                number U_star_massf = coeff*state.gas.massf[i];
+                if (star_region) { F.massf[i] += factor*(F_massf + S*(U_star_massf - U_massf)); }
+                else { F.massf[i] += factor*(F_massf); }
+            }
+        }
+        // multi-T gas
+        version(multi_T_gas) {
+            foreach (i; 0 .. F.energies.length) {
+                number F_energies = r*u*state.gas.u_modes[i];
+                number U_energies = r*state.gas.u_modes[i];
+                number U_star_energies = coeff*state.gas.u_modes[i];
+                if (star_region) { F.energies[i] += factor*(F_energies + S*(U_star_energies - U_energies)); }
+                else { F.energies[i] += factor*(F_energies); }
+            }
+        }
+    }
+
+    // evaluate HLLC fluxes
+    if (0.0 <= SL) {
+        number coeffL = 0.0;
+        hllc_flux_function(false, coeffL, rL, pL, uL, vL, wL, EL, Lft, SL);
+    } else if (SL <= 0.0 && 0.0 <= S_star) {
+        number coeffL = rL*(SL-uL)/(SL-S_star);
+        hllc_flux_function(true, coeffL, rL, pL, uL, vL, wL, EL, Lft, SL);
+    } else if (S_star <= 0.0 && 0.0 <= SR) {
+        number coeffR = rR*(SR-uR)/(SR-S_star);
+        hllc_flux_function(true, coeffR, rR, pR, uR, vR, wR, ER, Rght, SR);
+    } else { //if (0.0 >= SR) {
+        number coeffR = 0.0;
+        hllc_flux_function(false, coeffR, rR, pR, uR, vR, wR, ER, Rght, SR);
+    }
+} // end hllc()
+
+@nogc
 void ldfss(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
 // Jack Edwards' LDFSS (variant 2) flux calculator.
 //
@@ -608,7 +764,7 @@ void ldfss(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
     number DL = alphaL*(1.0+betaL) - betaL*PL;
     number DR = alphaR*(1.0+betaR) - betaR*PR;
     // M_1/2 parameters for LDFSS (1,2) (eqn 20 & eqn 28 & eqn 29)
-    number delta = 4.0; // weighting parameter to suppress 'carbuncle' phenomena
+    number delta = 10.0; // weighting parameter to suppress 'carbuncle' phenomena
                         // while preserving the beneficial traits of the scheme
                         // in the capturing of discontinuities. Choice of delta
                         // is not obvious. Higher values are better at 'carbuncle'
@@ -955,6 +1111,25 @@ void adaptive_hanel_ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface 
     
     if (alpha < 1.0) {
         ausmdv(Lft, Rght, IFace, myConfig, 1.0-alpha);
+    } 
+
+} // end adaptive_flux()
+
+@nogc
+void adaptive_hanel_hllc(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
+// This adaptive flux calculator uses the Hanel flux calculator
+// near shocks and HLLC away from shocks.
+//
+// The actual work is passed off to the original flux calculation functions.
+{
+    number alpha = IFace.fs.S;
+
+    if (alpha > 0.0) {
+        hanel(Lft, Rght, IFace, myConfig, alpha);
+    } 
+    
+    if (alpha < 1.0) {
+        hllc(Lft, Rght, IFace, myConfig, 1.0-alpha);
     } 
 
 } // end adaptive_flux()
