@@ -810,6 +810,24 @@ extern(C) int read_extra_vars(lua_State* L)
     return 0;
 }
 
+extern(C) int write_vtk_files(lua_State* L)
+{
+    auto fsol = checkFlowSolution(L, 1);
+    string plotDir = to!string(luaL_checkstring(L, 2));
+    string plotName = to!string(luaL_checkstring(L, 3));
+    fsol.write_vtk_files(plotDir, plotName, false);
+    lua_settop(L, 0);
+    return 0;
+}
+
+extern(C) int subtract(lua_State* L)
+{
+    auto fsol1 = checkFlowSolution(L, 1);
+    auto fsol2 = checkFlowSolution(L, 2);
+    fsol1.subtract(fsol2);
+    return 0;
+}
+
 
 void registerFlowSolution(lua_State* L)
 {
@@ -870,6 +888,10 @@ void registerFlowSolution(lua_State* L)
     lua_setfield(L, -2, "sgrid");
     lua_pushcfunction(L, &read_extra_vars);
     lua_setfield(L, -2, "read_extra_vars");
+    lua_pushcfunction(L, &write_vtk_files);
+    lua_setfield(L, -2, "write_vtk_files");
+    lua_pushcfunction(L, &subtract);
+    lua_setfield(L, -2, "subtract");
     // Make class visible
     lua_setglobal(L, FlowSolutionMT.toStringz);
 } // end registerFlowSolution()

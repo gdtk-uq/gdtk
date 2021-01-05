@@ -40,6 +40,7 @@ import fvcore;
 import globalconfig;
 import json_helper;
 import flowstate;
+import vtk_writer;
 
 import util.lua;
 import geom.luawrap;
@@ -266,6 +267,14 @@ public:
         }
     } // end subtract_ref_soln()
 
+    void subtract(FlowSolution other)
+    {
+        // We assume that the flow solutions align geometrically.
+        foreach (ib; 0 .. nBlocks) {
+            flowBlocks[ib].subtract(other.flowBlocks[ib]);
+        }
+    }
+
     double[] compute_volume_weighted_norms(string varName, string regionStr)
     {
         double x0, y0, z0, x1, y1, z1;
@@ -333,6 +342,26 @@ public:
         }
         return txt;
     } // end get_massf_str()
+
+    void write_vtk_files(string plotDir, string plotName, bool binary_format=false)
+    {
+        ensure_directory_is_present(plotDir);
+        writefln("Writing VTK-XML files to directory \"%s\" with name \"%s\"", plotDir, plotName);
+        File visitFile = File(plotDir~"/"~plotName~".visit", "w");
+        // For each time index, the visit justs lists the names of the files for individual blocks.
+        visitFile.writef("!NBLOCKS %d\n", nBlocks);
+        string pvtuFileName = plotName~".pvtu";
+        File pvtuFile = begin_PVTU_file(plotDir~"/"~pvtuFileName, flowBlocks[0].variableNames);
+        foreach (jb; 0 .. nBlocks) {
+            string vtuFileName = plotName~format("-b%04d.vtu", jb);
+            add_piece_to_PVTU_file(pvtuFile, vtuFileName);
+            visitFile.writef("%s\n", vtuFileName);
+            write_VTU_file(flowBlocks[jb], gridBlocks[jb], plotDir~"/"~vtuFileName, binary_format);
+        }
+        finish_PVTU_file(pvtuFile);
+        visitFile.close();
+    } // end write_vtk_files()
+
 } // end class FlowSolution
 
 class BlockFlow {
@@ -844,6 +873,16 @@ public:
             lua_settop(L, 0); // clear the stack
         } // foreach i
     } // end subtract_ref_soln()
+
+    void subtract(BlockFlow other)
+    {
+        // We assume that the flow solutions align geometrically.
+        foreach (i; 0 .. ncells) {
+            foreach (ivar; 0 .. variableNames.length) {
+                _data[i][ivar] -= other._data[i][ivar];
+            }
+        }
+    } // end subtract()
 
     void read_extra_vars_from_file(string filename, string[] extraVars)
     {
