@@ -271,7 +271,7 @@ def add_dt_plot(t_change, dt_plot, dt_his):
 
 def add_history_loc(x):
     """
-    Add a location to the history-location list in L{GlobalConfig}.
+    Add a location to the history-location list in GlobalConfig.
 
     x: (float) x-coordinate, in metres, of the sample point.
     Returns: Number of sample points defined so far.
@@ -1337,8 +1337,8 @@ def write_initial_files():
     fp.write('%d %e\n' % (0, 0.0))
     fp.close()
     #
-    for i in range(len(config.hloc_list)):
-        fileName = config.job_name + ('/history-loc-%04d.data' % i)
+    for ih in range(len(config.hloc_list)):
+        fileName = config.job_name + ('/history-loc-%04d.data' % ih)
         fp = open(fileName, 'w')
         fp.write('# 1:t  2:vel  3:L_bar  4:rho  5:p  6:T  7:u  8:a  9:shear_stress  10:heat_flux')
         column_count = 11
@@ -1352,7 +1352,7 @@ def write_initial_files():
                 fp.write('  %d:gas-%d-Tmode[%d]' % (column_count, gi, i))
                 column_count += 1
         fp.write('\n')
-        for slug in slugList: slug.write_history_loc_data(fp, config.hloc_list[i], 0.0)
+        for slug in slugList: slug.write_history_loc_data(fp, config.hloc_list[ih], 0.0)
         fp.close()
     #
     fileName = config.job_name + '/energies.data'
