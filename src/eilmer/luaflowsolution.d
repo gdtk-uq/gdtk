@@ -25,7 +25,7 @@ import flowsolution;
 import postprocess;
 
 /// name for FlowSolution object in Lua scripts.
-immutable string FlowSolutionMT = "FlowSolution"; 
+immutable string FlowSolutionMT = "FlowSolution";
 
 static const(FlowSolution)[] flowSolutionStore;
 
@@ -34,7 +34,7 @@ FlowSolution checkFlowSolution(lua_State* L, int index)
     return checkObj!(FlowSolution, FlowSolutionMT)(L, index);
 }
 
-/** 
+/**
  * This function implements our constructor for the Lua interface.
  *
  * Construction of a FlowSolution object from in Lua will accept:
@@ -147,7 +147,7 @@ extern(C) int newFlowSolution(lua_State* L)
         throw new LuaInputException(errMsg);
     }
     lua_pop(L, 1);
-    
+
     auto fsol = new FlowSolution(jobName, dir, tindx, nBlocks, gindx);
     flowSolutionStore ~= pushObj!(FlowSolution, FlowSolutionMT)(L, fsol);
     return 1;
@@ -355,7 +355,7 @@ extern(C) int find_enclosing_cells_along_line_from_lua(lua_State* L)
         throw new LuaInputException(errMsg);
     }
     lua_pop(L, 1); // dispose of z item
-    
+
     size_t[2][] cells_found;
     auto count = fsol.find_enclosing_cells_along_line(p0, p1, n, cells_found);
 
@@ -565,12 +565,12 @@ void plottingTableToFlowStateTable(lua_State *L)
     auto managedGasModel = GlobalConfig.gmodel_master;
     auto n_species = managedGasModel.n_species;
     auto n_modes = managedGasModel.n_modes;
-    
+
     // 0. Set a type string so that we may later identify this table as
     // having all the relevant data for making a FlowState object.
     lua_pushstring(L, toStringz("CellData"));
     lua_setfield(L, tblIdx, toStringz("myType"));
-    
+
     // 1. Convert velocities
     lua_getfield(L, tblIdx, "vel.x");
     lua_setfield(L, tblIdx, "velx");
@@ -774,7 +774,7 @@ extern(C) int read_extra_vars(lua_State* L)
         errMsg ~= " A table is expected as first (and only) argument to the method.";
         luaL_error(L, errMsg.toStringz);
     }
-    
+
     string bfn;
     lua_getfield(L, 2, "basefilename");
     if (lua_isnil(L, -1)) {
@@ -814,7 +814,7 @@ extern(C) int read_extra_vars(lua_State* L)
 void registerFlowSolution(lua_State* L)
 {
     luaL_newmetatable(L, FlowSolutionMT.toStringz);
-    
+
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1); // duplicates the current metatable
     lua_setfield(L, -2, "__index");

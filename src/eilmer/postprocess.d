@@ -622,10 +622,10 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
                                                      soln.flowBlocks[ib]["vel.y", idx],
                                                      soln.flowBlocks[ib]["vel.z", idx]);
                             Vector3 dStream = vlocal*direct*stepSize;
-                            Vector3 P1 = P0 + dStream; 
+                            Vector3 P1 = P0 + dStream;
 
                             // define slice as n1*x+n2*y+n3*z+sliceConst = 0
-                            number sliceConst = -dot(SliceNormal[ip],P0); 
+                            number sliceConst = -dot(SliceNormal[ip],P0);
                             number coneSliceDist = abs(dot(SliceNormal[ip],P1)+sliceConst);
 
                             // calculate local Mach number and angle
@@ -1338,9 +1338,9 @@ void write_VTU_file(SBlockSolid solid, StructuredGrid grid, string fileName, boo
                         fp.writef(" %d %d %d %d\n", ids[0], ids[1], ids[2], ids[3]);
                     }
                 } else {
-                    auto ids = [vtx_id[i][j][k], vtx_id[i+1][j][k], 
+                    auto ids = [vtx_id[i][j][k], vtx_id[i+1][j][k],
                                 vtx_id[i+1][j+1][k], vtx_id[i][j+1][k],
-                                vtx_id[i][j][k+1], vtx_id[i+1][j][k+1], 
+                                vtx_id[i][j][k+1], vtx_id[i+1][j][k+1],
                                 vtx_id[i+1][j+1][k+1], vtx_id[i][j+1][k+1]];
                     if (binary_format) {
                         foreach (id; ids) { binary_data ~= nativeToBigEndian(to!int32_t(id)); }
