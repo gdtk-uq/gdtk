@@ -820,7 +820,7 @@ extern(C) int write_vtk_files(lua_State* L)
     return 0;
 }
 
-extern(C) int subtract(lua_State* L)
+extern(C) int subtract_flow_solution(lua_State* L)
 {
     auto fsol1 = checkFlowSolution(L, 1);
     auto fsol2 = checkFlowSolution(L, 2);
@@ -890,7 +890,7 @@ void registerFlowSolution(lua_State* L)
     lua_setfield(L, -2, "read_extra_vars");
     lua_pushcfunction(L, &write_vtk_files);
     lua_setfield(L, -2, "write_vtk_files");
-    lua_pushcfunction(L, &subtract);
+    lua_pushcfunction(L, &subtract_flow_solution);
     lua_setfield(L, -2, "subtract");
     // Make class visible
     lua_setglobal(L, FlowSolutionMT.toStringz);
