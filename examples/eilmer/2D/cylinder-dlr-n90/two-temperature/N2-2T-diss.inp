@@ -1,0 +1,3 @@
+model = "two temperature dissociating nitrogen"
+species = {'N2', 'N'}
+

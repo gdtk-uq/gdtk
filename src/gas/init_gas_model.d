@@ -147,7 +147,7 @@ GasModel init_gas_model(string file_name="gas-model.lua")
             gm = new TwoTemperatureNitrogen();
             break;
         case "TwoTemperatureDissociatingNitrogen":
-            gm = new TwoTemperatureDissociatingNitrogen();
+            gm = new TwoTemperatureDissociatingNitrogen(L);
             break;
         case "VibSpecificNitrogen":
             gm = new VibSpecificNitrogen();

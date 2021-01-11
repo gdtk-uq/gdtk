@@ -338,6 +338,29 @@ function write2TAir(f, species, db, optsTable)
    end
 end
 
+function write2TN2(f, species, db, optsTable)
+   -- species for this model are N2 and N in fixed order.
+   speciesList = {'N2', 'N'}
+   f:write("species = {")
+   for _,sp in ipairs(speciesList) do
+      f:write(string.format("'%s', ", sp))
+   end
+   f:write("}\n\n")
+   f:write("db = {}\n")
+   for _,sp in ipairs(speciesList) do
+      f:write(string.format("db['%s'] = {}\n", sp))
+      f:write(string.format("db['%s'].atomicConstituents = { ", sp))
+      for k,v in pairs(db[sp].atomicConstituents) do
+         f:write(string.format("%s=%d, ", k, v))
+      end
+      f:write("}\n")
+      f:write(string.format("db['%s'].charge = %d\n", sp, db[sp].charge))
+      f:write(string.format("db['%s'].M = %.8e\n", sp, db[sp].M.value))
+      writeCeaThermoCoeffs(f, sp, db, optsTable)
+   end
+end
+
+
 
 function writeCO2Gas(f, sp, db)
    -- This is the Bender Model, entropy Ref values, viscosity etc. are not needed
@@ -454,6 +477,10 @@ gasModels["THERMALLY PERFECT GAS EQUILIBRIUM"] = {writeFn=writeThermPerfGas, DNa
 gasModels["TWOTEMPERATUREAIR"] = {writeFn=write2TAir, DName="TwoTemperatureAir"}
 gasModels["TWO TEMPERATURE AIR"] = gasModels["TWOTEMPERATUREAIR"]
 gasModels["TWO-TEMPERATURE AIR"] = gasModels["TWOTEMPERATUREAIR"]
+-- Two-temperature nitogren (N2 and N)
+gasModels["TWOTEMPERATUREN2"] = {writeFn=write2TN2, DName="TwoTemperatureDissociatingNitrogen"}
+gasModels["TWO TEMPERATURE DISSOCIATING NITROGEN"] = gasModels["TWOTEMPERATUREN2"]
+gasModels["TWO-TEMPERATURE DISSOCIATING NITROGEN"] = gasModels["TWOTEMPERATUREN2"]
 -- CO2
 gasModels["CO2GAS"] = {writeFn=writeCO2Gas, DName = "CO2Gas"}
 gasModels["CO2GASSW"] = {writeFn = writeCO2GasSW, DName = "CO2GasSW"}
