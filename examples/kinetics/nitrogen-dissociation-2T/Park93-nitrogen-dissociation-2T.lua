@@ -1,7 +1,11 @@
--- nitrogen-2sp-2T-2r.lua
---
 -- Author: Rowan J. Gollan
 -- Date: 2019-09-22
+--
+-- Reference:
+-- Park (1993)
+-- Review of chemical-kinetic problems for future NASA missions, I: Earth entries
+-- Journal of Thermophysics and Heat Transfer, 7(3): 385--398
+--
 
 Reaction{
    'N2 + N2 <=> N + N + N2',
