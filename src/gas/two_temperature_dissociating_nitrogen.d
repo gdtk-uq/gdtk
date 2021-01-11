@@ -315,13 +315,30 @@ public:
         number h = e + Q.p/Q.rho;
         return h;
     }
+
+    override number enthalpy(in GasState Q, int isp)
+    {
+	number h_tr_rot = _Cp_tr_rot[isp]*(Q.T - T_REF) + _del_hf[isp];
+	number h_at_Tve = _curves[isp].eval_h(Q.T_modes[0]);
+        number h_ve = h_at_Tve - _Cp_tr_rot[isp]*(Q.T_modes[0] - T_REF) - _del_hf[isp];
+	return h_tr_rot + h_ve;
+    }
+    
     override number enthalpyPerSpeciesInMode(in GasState Q, int isp, int imode)
     {
         return vibEnergy(Q.T_modes[imode], isp);
     }
     override number entropy(in GasState Q)
     {
-        throw new GasModelException("entropy not implemented in TwoTemperatureNitrogen.");
+	number s = 0.0;
+        foreach ( isp; 0.._n_species ) {
+            s += Q.massf[isp]*(_curves[isp].eval_s(Q.T) - _R[isp]*log(Q.p/P_atm));
+        }
+        return s;
+    }
+    override number entropy(in GasState Q, int isp)
+    {
+        return _curves[isp].eval_s(Q.T) - _R[isp]*log(Q.p/P_atm);
     }
 
     override void balance_charge(GasState Q) const

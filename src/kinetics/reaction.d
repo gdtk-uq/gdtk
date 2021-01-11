@@ -75,7 +75,7 @@ public:
     abstract Reaction dup();
 
     @nogc abstract void eval_equilibrium_constant(in GasState Q);
-    
+        
     @nogc final void eval_rate_constants(in GasState Q)
     {
         immutable double EPS = 1.0e-16; // To prevent divide by zero
@@ -209,12 +209,15 @@ public:
         return new ElementaryReaction(_forward, _backward, _gmodel, _participants,
                                       _reactants, _products, _nu);
     }
+
     @nogc
     override void eval_equilibrium_constant(in GasState Q)
     {
         _Qw.T = Q.T;
+	if (_gmodel.n_modes >= 1) _Qw.T_modes[] = Q.T; // equilibrium constant evaluated at thermal equilibrium 
         _K_eq = compute_equilibrium_constant(_gmodel, _Qw, _participants, _nu);
     }
+    
     @nogc
     override number production(int isp) const
     {
@@ -329,12 +332,15 @@ public:
         return new AnonymousColliderReaction(_forward, _backward, _gmodel, _participants,
                                              _reactants, _products, _nu, _efficiencies);
     }
+
     @nogc
     override void eval_equilibrium_constant(in GasState Q)
     {
         _Qw.T = Q.T;
+	if (_gmodel.n_modes >= 1) _Qw.T_modes[] = Q.T; // equilibrium constant evaluated at thermal equilibrium 
         _K_eq = compute_equilibrium_constant(_gmodel, _Qw, _participants, _nu);
     }
+
     @nogc
     override number production(int isp) const
     {
