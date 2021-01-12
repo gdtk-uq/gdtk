@@ -33,7 +33,8 @@ Actions:
   --run-simulation                   run the simulation
   --time-slice                       extract a single-time slice for gas slugs
   --piston-history                   assemble the history dataset for a piston
-  --xt-data                          generate an xt-dataset for a flow variable
+  --xt-data                          generate an xt-dataset for a flow variable (GNUPlot)
+  --xt-data-vtk                      generate an xt-dataset for all flow variables (VTK)
   --trim-solution-files              remove solution file content after tindx-end
   --help                             writes this help message
 
@@ -46,6 +47,7 @@ Parameters:
   --var-name=<name>                  flow variable name
   --log10                            take logarithm of flow variable
                                        Useful to get a better range for pressure.
+  --millisec                         write time values in milliseconds
 
   --verbosity=<int>                  level of commentary as the work is done
                                        0=very little written to console
@@ -67,12 +69,14 @@ Parameters:
     bool timeSlice = false;
     bool pistonHistory = false;
     bool xtData = false;
+    bool xtDataVTK = false;
     bool trimSolutionFiles = false;
     int tindx = 0;
     int tindxEnd = 9999;
     int pistonIndx = 0;
     string varName = "";
     bool takeLog = false;
+    bool milliSec = false;
     int verbosityLevel = 1; // default to commenting on major steps
     bool helpWanted = false;
     try {
@@ -82,12 +86,14 @@ Parameters:
                "time-slice", &timeSlice,
                "piston-history", &pistonHistory,
                "xt-data", &xtData,
+               "xt-data-vtk", &xtDataVTK,
                "trim-solution-files", &trimSolutionFiles,
                "tindx", &tindx,
                "tindx-end", &tindxEnd,
                "pindx", &pistonIndx,
                "var-name", &varName,
                "log10", &takeLog,
+               "millisec", &milliSec,
                "verbosity", &verbosityLevel,
                "help", &helpWanted
                );
@@ -158,7 +164,9 @@ Parameters:
     } else if (pistonHistory) {
         assemble_piston_history(pistonIndx);
     } else if (xtData) {
-        generate_xt_dataset(varName, tindx, tindxEnd, takeLog);
+        generate_xt_dataset_gnuplot(varName, tindx, tindxEnd, takeLog);
+    } else if (xtDataVTK) {
+        generate_xt_dataset_vtk(tindx, tindxEnd, milliSec);
     } else if (trimSolutionFiles) {
         trim_solution_files(tindxEnd);
     } else {
