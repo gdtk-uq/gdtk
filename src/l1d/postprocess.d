@@ -41,21 +41,19 @@ void generate_xt_dataset_gnuplot(string varName, int tindxStart, int tindxEnd, b
     JSONValue jsonData = readJSONfile(dirName~"/config.json");
     auto configData = jsonData["config"];
     L1dConfig.gas_model_files = getJSONstringarray(configData, "gas_model_files", []);
-    foreach (i, fileName; L1dConfig.gas_model_files) {
-        auto gm = init_gas_model(fileName);
-        gmodels ~= gm;
-    }
+    assert(gmodels.length == 0, "Gas models array is not empty.");
+    foreach (fileName; L1dConfig.gas_model_files) { gmodels ~= init_gas_model(fileName); }
     L1dConfig.nslugs = getJSONint(configData, "nslugs", 0);
+    assert(gasslugs.length == 0, "Gas slugs array is not empty.");
     foreach (i; 0 .. L1dConfig.nslugs) {
         auto myData = jsonData[format("slug_%d", i)];
-        size_t indx = gasslugs.length;
-        gasslugs ~= new GasSlug(indx, myData);
+        gasslugs ~= new GasSlug(i, myData);
     }
     // Build a GNUPlot-compatible file for each gas slug.
-    foreach (i, s; gasslugs) {
-        writeln("  Read state data for slug ", i);
-        File fp = File(L1dConfig.job_name~format("/slug-%04d-cells.data", i), "r");
-        File fpv = File(format("slug-%04d-xtdata-%s.data", i, varName), "w");
+    foreach (islug, s; gasslugs) {
+        writeln("  Read state data for slug ", islug);
+        File fp = File(L1dConfig.job_name~format("/slug-%04d-cells.data", islug), "r");
+        File fpv = File(format("slug-%04d-xtdata-%s.data", islug, varName), "w");
         string header = format("# x  t  ");
         header ~= (takeLog) ? format("log10(%s)", varName) : varName;
         fpv.writeln(header);
@@ -90,9 +88,9 @@ void generate_xt_dataset_gnuplot(string varName, int tindxStart, int tindxEnd, b
 } // end generate_xt_dataset_gnuplot()
 
 
-void generate_xt_dataset_vtk(int tindxStart, int tindxEnd, bool milliSec)
+void generate_xt_dataset(int tindxStart, int tindxEnd, bool milliSec, string fmt)
 {
-    writeln("Produce an xt-dataset in legacy VTK format for all flow variables");
+    writefln("Produce an xt-dataset in %s format for all flow variables", fmt);
     double[int] times = readTimesFile();
     int[] tindices = times.keys();
     tindices.sort();
@@ -107,24 +105,24 @@ void generate_xt_dataset_vtk(int tindxStart, int tindxEnd, bool milliSec)
     JSONValue jsonData = readJSONfile(dirName~"/config.json");
     auto configData = jsonData["config"];
     L1dConfig.gas_model_files = getJSONstringarray(configData, "gas_model_files", []);
-    foreach (i, fileName; L1dConfig.gas_model_files) {
-        auto gm = init_gas_model(fileName);
-        gmodels ~= gm;
-    }
+    assert(gmodels.length == 0, "Gas models array is not empty.");
+    foreach (fileName; L1dConfig.gas_model_files) { gmodels ~= init_gas_model(fileName); }
     L1dConfig.nslugs = getJSONint(configData, "nslugs", 0);
+    assert(gasslugs.length == 0, "Gas slugs array is not empty.");
     foreach (i; 0 .. L1dConfig.nslugs) {
         auto myData = jsonData[format("slug_%d", i)];
-        size_t indx = gasslugs.length;
-        gasslugs ~= new GasSlug(indx, myData);
+        gasslugs ~= new GasSlug(i, myData);
     }
-    // Build a VTK legacy data file for each gas slug.
+    // Build an xt-data file for each gas slug.
     // We are going to assume that the data can be accumulated in a structured-grid format
     // such that there are constant number of cells in the slug at each time.
-    foreach (i, s; gasslugs) {
-        writeln("  Read state data for slug ", i);
+    foreach (islug, s; gasslugs) {
+        writeln("  Read state data for slug ", islug);
         size_t ncells = 0;
-        File fp = File(L1dConfig.job_name~format("/slug-%04d-cells.data", i), "r");
+        File fp = File(L1dConfig.job_name~format("/slug-%04d-cells.data", islug), "r");
         string[] varNames = ["x", "t", "p", "T", "rho", "vel"];
+        string[] varUnits = ["m", (milliSec)?"ms":"s", "Pa", "K", "kg/m^3", "m/s"];
+        assert(varNames.length == varUnits.length, "Mismatch in variable names and units.");
         double[][][string] data;
         foreach (v; varNames) { data[v].length = ntimes; }
         size_t jt = 0;
@@ -153,33 +151,72 @@ void generate_xt_dataset_vtk(int tindxStart, int tindxEnd, bool milliSec)
             }
         } // foreach tindx
         fp.close();
-        File fpv = File(format("slug-%04d-xtdata.vtk", i), "w");
-        fpv.writeln("# vtk DataFile Version 2.0");
-        fpv.writefln("# job: %s slug: %d time-units: %s",
-                     L1dConfig.job_name, i, (milliSec)?"ms":"s");
-        fpv.writefln("ASCII");
-        fpv.writefln("DATASET STRUCTURED_GRID");
-        fpv.writefln("DIMENSIONS %d %d 1", ncells, ntimes);
-        fpv.writefln("POINTS %d double", ncells*ntimes);
-        foreach (nt; 0 .. ntimes) {
-            foreach (ix; 0 .. ncells) {
-                fpv.writefln("%g %g 0.0", data["x"][nt][ix], data["t"][nt][ix]);
-            }
-        }
-        fpv.writefln("POINT_DATA %d", ncells*ntimes);
-        foreach (v; varNames) {
-            fpv.writefln("SCALARS %s double 1", v);
-            fpv.writeln("LOOKUP_TABLE default");
+        //
+        switch (fmt) {
+        case "VTK":
+            File fpv = File(format("slug-%04d-xtdata.vtk", islug), "w");
+            fpv.writeln("# vtk DataFile Version 2.0");
+            fpv.writefln("# job: %s slug: %d time-units: %s",
+                         L1dConfig.job_name, islug, (milliSec)?"ms":"s");
+            fpv.writefln("ASCII");
+            fpv.writefln("DATASET STRUCTURED_GRID");
+            fpv.writefln("DIMENSIONS %d %d 1", ncells, ntimes);
+            fpv.writefln("POINTS %d double", ncells*ntimes);
             foreach (nt; 0 .. ntimes) {
                 foreach (ix; 0 .. ncells) {
-                    fpv.writefln("%g", data[v][nt][ix]);
+                    fpv.writefln("%g %g 0.0", data["x"][nt][ix], data["t"][nt][ix]);
                 }
             }
-        } // end foreach v
-        fpv.close();
+            fpv.writefln("POINT_DATA %d", ncells*ntimes);
+            foreach (i, v; varNames) {
+                fpv.writefln("SCALARS %s-%s double 1", v, varUnits[i]);
+                fpv.writeln("LOOKUP_TABLE default");
+                foreach (nt; 0 .. ntimes) {
+                    foreach (ix; 0 .. ncells) {
+                        fpv.writefln("%g", data[v][nt][ix]);
+                    }
+                }
+            } // end foreach v
+            fpv.close();
+            break;
+        case "JSON":
+            File fpj = File(format("slug-%04d-xtdata.json", islug), "w");
+            fpj.writeln("{");
+            fpj.writefln("\"jobName\": \"%s\",", L1dConfig.job_name);
+            fpj.writefln("\"slug\": %d,", islug);
+            fpj.writefln("\"ntimes\": %d,", ntimes);
+            fpj.writefln("\"ncells\": %d,", ncells);
+            fpj.write("\"varNames\": [");
+            foreach (i, v; varNames) {
+                fpj.writef("\"%s\"%s", v, (i<(varNames.length-1))?", ":"");
+            }
+            fpj.writeln("],");
+            fpj.write("\"varUnits\": [");
+            foreach (i, v; varUnits) {
+                fpj.writef("\"%s\"%s", v, (i<(varUnits.length-1))?", ":"");
+            }
+            fpj.writeln("],");
+            foreach (i, v; varNames) {
+                fpj.writefln("\"%s\": [", v);
+                foreach (nt; 0 .. ntimes) {
+                    fpj.write("  [");
+                    foreach (ix; 0 .. ncells) {
+                        fpj.writef("%g%s", data[v][nt][ix], (ix<(ncells-1))?", ":"");
+                    }
+                    fpj.writefln("]%s", (nt<(ntimes-1))?", ":"");
+                }
+                fpj.writefln("],");
+            }
+            fpj.writeln("\"dummy\": 0");
+            fpj.writeln("}");
+            fpj.close();
+            break;
+        default:
+            throw new Error(format("Invalid format specified: %s", fmt));
+        }
     } // foreach gasslug
     return;
-} // end generate_xt_dataset_vtk()
+} // end generate_xt_dataset()
 
 
 void extract_time_slice(int tindx)

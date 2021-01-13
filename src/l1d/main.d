@@ -35,6 +35,7 @@ Actions:
   --piston-history                   assemble the history dataset for a piston
   --xt-data                          generate an xt-dataset for a flow variable (GNUPlot)
   --xt-data-vtk                      generate an xt-dataset for all flow variables (VTK)
+  --xt-data-json                     generate an xt-dataset for all flow variables (JSON)
   --trim-solution-files              remove solution file content after tindx-end
   --help                             writes this help message
 
@@ -70,6 +71,7 @@ Parameters:
     bool pistonHistory = false;
     bool xtData = false;
     bool xtDataVTK = false;
+    bool xtDataJSON = false;
     bool trimSolutionFiles = false;
     int tindx = 0;
     int tindxEnd = 9999;
@@ -87,6 +89,7 @@ Parameters:
                "piston-history", &pistonHistory,
                "xt-data", &xtData,
                "xt-data-vtk", &xtDataVTK,
+               "xt-data-json", &xtDataJSON,
                "trim-solution-files", &trimSolutionFiles,
                "tindx", &tindx,
                "tindx-end", &tindxEnd,
@@ -166,7 +169,9 @@ Parameters:
     } else if (xtData) {
         generate_xt_dataset_gnuplot(varName, tindx, tindxEnd, takeLog);
     } else if (xtDataVTK) {
-        generate_xt_dataset_vtk(tindx, tindxEnd, milliSec);
+        generate_xt_dataset(tindx, tindxEnd, milliSec, "VTK");
+    } else if (xtDataJSON) {
+        generate_xt_dataset(tindx, tindxEnd, milliSec, "JSON");
     } else if (trimSolutionFiles) {
         trim_solution_files(tindxEnd);
     } else {
