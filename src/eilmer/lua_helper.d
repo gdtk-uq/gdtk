@@ -156,7 +156,7 @@ extern(C) int luafn_sampleFluidCell(lua_State *L)
         msg ~= " You have asked for an ijk-index cell in an unstructured-grid block.";
         luaL_error(L, msg.toStringz);
     }
-    
+
     // Return the interesting bits as a table.
     lua_newtable(L);
     int tblIdx = lua_gettop(L);
@@ -196,7 +196,7 @@ extern(C) int luafn_sampleFluidFace(lua_State *L)
     } catch (Exception e) {
         string msg = format("Failed to locate face[%d,%d,%d] in block %d.", i, j, k, blkId);
         luaL_error(L, msg.toStringz);
-    }    
+    }
     // Return the interesting bits as a table.
     lua_newtable(L);
     int tblIdx = lua_gettop(L);
@@ -236,7 +236,7 @@ extern(C) int luafn_runTimeLoads(lua_State *L)
     lua_setfield(L, tblIdx, "y");
     lua_pushnumber(L, runTimeLoads[grpIdx].resultantMoment.z);
     lua_setfield(L, tblIdx, "z");
-        
+
     return 2;
 }
 
@@ -247,7 +247,7 @@ extern(C) int luafn_runTimeLoads(lua_State *L)
  * Push the interesting data from a FVCell and FVInterface to a Lua table
  *
  */
-void pushFluidCellToTable(lua_State* L, int tblIdx, ref const(FVCell) cell, 
+void pushFluidCellToTable(lua_State* L, int tblIdx, ref const(FVCell) cell,
                           size_t gtl, GasModel gmodel)
 {
     lua_pushnumber(L, cell.pos[gtl].x); lua_setfield(L, tblIdx, "x");
@@ -260,7 +260,7 @@ void pushFluidCellToTable(lua_State* L, int tblIdx, ref const(FVCell) cell,
     pushFlowStateToTable(L, tblIdx, cell.fs, gmodel);
 } // end pushFluidCellToTable()
 
-void pushFluidFaceToTable(lua_State* L, int tblIdx, ref const(FVInterface) face, 
+void pushFluidFaceToTable(lua_State* L, int tblIdx, ref const(FVInterface) face,
                           size_t gtl, GasModel gmodel)
 {
     lua_pushnumber(L, face.pos.x); lua_setfield(L, tblIdx, "x");
@@ -301,7 +301,7 @@ extern(C) int luafn_sampleSolidCell(lua_State *L)
     auto blk = cast(SSolidBlock) globalBlocks[blkId];
     assert(blk !is null, "Oops, this should be a SSolidBlock object.");
     auto cell = blk.getCell(i, j, k);
-    
+
     // Return the interesting bits as a table.
     lua_newtable(L);
     int tblIdx = lua_gettop(L);
@@ -331,6 +331,3 @@ void pushSolidCellToTable(lua_State* L, int tblIdx, ref const(SolidFVCell) cell)
     lua_pushnumber(L, cell.sp.k33); lua_setfield(L, tblIdx, "k33");
 
 } // end pushSolidCellToTable()
-
-
-
