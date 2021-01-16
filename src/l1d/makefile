@@ -8,7 +8,7 @@ DMD ?= dmd
 FLAVOUR ?= debug
 PLATFORM ?= linux
 
-PROGRAMS := l1d4 l1d4-prep
+PROGRAMS := l1d4 l1d4-prep l1d4-xt-viewer
 
 L1D_FILES := config.d simcore.d tube.d gasslug.d lcell.d \
 	piston.d valve.d endcondition.d misc.d postprocess.d
@@ -183,6 +183,10 @@ l1d4: main.d $(L1D_FILES) \
 l1d4-prep: l1d4-prep.py
 	cp l1d4-prep.py l1d4-prep
 	chmod +x l1d4-prep
+
+l1d4-xt-viewer: xt-viewer.py
+	cp xt-viewer.py l1d4-xt-viewer
+	chmod +x l1d4-xt-viewer
 
 prep-gas:
 	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) build-prep-gas

@@ -14,7 +14,7 @@ import json
 import numpy as np
 import matplotlib.pyplot as plt
 
-parser = argparse.ArgumentParser(description='Display xt-data for the l1d4.')
+parser = argparse.ArgumentParser(description='Display xt-data for the gas slugs from an l1d4 simulation.')
 parser.add_argument(dest='fileNames', metavar='filename', nargs='*')
 parser.add_argument('-v', '--variable', metavar='varName',
                     dest='varName', action='store',
@@ -51,7 +51,7 @@ for fname in args.fileNames:
 
 # Get a single Axes object so that we can put several contour patches onto it.
 # We need to explicitly set the levels so that they are the same in all patches.
-fig1, ax = plt.subplots()
+fig, ax = plt.subplots()
 if args.xRange:
     items = args.xRange.split(':')
     x0 = float(items[0])
@@ -81,11 +81,16 @@ else:
     vLevels = None
 
 plts = []
+cbar = None
 for s in slugs:
     x = np.array(s['x'])
     t = np.array(s['t'])
     v = np.array(s[varName])
-    plts.append(ax.contourf(x, t, v, levels=vLevels))
+    if args.takeLog: v = np.log10(v)
+    contourf_ = ax.contourf(x, t, v, levels=vLevels)
+    plts.append(contourf_)
+    # We want only one colour bar displayed for multiple slugs.
+    if not cbar : cbar = fig.colorbar(contourf_)
 
 # Assume that all slugs have the same list of variables and units and
 # just pick the names out of the first one.
@@ -94,5 +99,8 @@ unitNames = slugs[0]["varUnits"]
 ax.set_xlabel(f'x, {unitNames[0]}')
 ax.set_ylabel(f't, {unitNames[1]}')
 varUnits = unitNames[allVarNames.index(varName)]
-ax.set_title(f'xt-diagram of {varName} ({varUnits})')
+if args.takeLog:
+    ax.set_title(f'xt-diagram of log10({varName}) ({varUnits})')
+else:
+    ax.set_title(f'xt-diagram of {varName} ({varUnits})')
 plt.show()
