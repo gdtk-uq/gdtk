@@ -38,7 +38,7 @@ FlowSolution checkFlowSolution(lua_State* L, int index)
  * This function implements our constructor for the Lua interface.
  *
  * Construction of a FlowSolution object from in Lua will accept:
- * fs = FlowSolution:new{jobName=<string>, dir=<string>, tindx=<int>, nBlocks=<int>}
+ * fs = FlowSolution:new{jobName=<string>, dir=<string>, tindx=<int>, gindx=<int>, nBlocks=<int>}
  */
 extern(C) int newFlowSolution(lua_State* L)
 {
@@ -48,6 +48,13 @@ extern(C) int newFlowSolution(lua_State* L)
         errMsg ~= " A table is expected as first (and only) argument.";
         luaL_error(L, errMsg.toStringz);
     }
+    string[] allowedNames = ["jobName", "dir", "tindx", "gindx", "nBlocks"];
+    if ( !checkAllowedNames(L, 1, allowedNames) ) {
+        string errMsg = "Error in call to FlowSolution:new.";
+        errMsg ~= " The table contains unexpected names.";
+        errMsg ~= format(" Allowed names: %s ", allowedNames);
+        luaL_error(L, errMsg.toStringz);
+    }
 
     string jobName;
     lua_getfield(L, 1, "jobName");
@@ -55,14 +62,14 @@ extern(C) int newFlowSolution(lua_State* L)
         jobName = "";
         string errMsg = "Error in call to FlowSolution:new.";
         errMsg ~= " A field for jobName was not found.";
-        throw new LuaInputException(errMsg);
+        luaL_error(L, errMsg.toStringz);
     } else if ( lua_isstring(L, -1) ) {
         jobName = to!string(luaL_checkstring(L, -1));
     } else {
         string errMsg = "Error in call to FlowSolution:new.";
         errMsg ~= " A field for jobName was found, but the content was not valid.";
         errMsg ~= " The jobName should be given as a string.";
-        throw new LuaInputException(errMsg);
+        luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
 
@@ -76,7 +83,7 @@ extern(C) int newFlowSolution(lua_State* L)
         string errMsg = "Error in call to FlowSolution:new.";
         errMsg ~= " A field for dir was found, but the content was not valid.";
         errMsg ~= " The dir field, if given, should be a string.";
-        throw new LuaInputException(errMsg);
+        luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
 
@@ -100,27 +107,13 @@ extern(C) int newFlowSolution(lua_State* L)
             string errMsg = "Error in call to FlowSolution:new.\n";
             errMsg ~= " A string value was passed to the field 'tindx', but the content was not valid.\n";
             errMsg ~= " The only valid string field is 'last'.\n";
-            throw new LuaInputException(errMsg);
+            luaL_error(L, errMsg.toStringz);
         }
     } else {
         string errMsg = "Error in call to FlowSolution:new.";
         errMsg ~= " A field for tindx was found, but the content was not valid.";
         errMsg ~= " The tindx field, if given, should be an integer or the string 'last'.";
-        throw new LuaInputException(errMsg);
-    }
-    lua_pop(L, 1);
-
-    int nBlocks;
-    lua_getfield(L, 1, "nBlocks");
-    if ( lua_isnil(L, -1) ) {
-        nBlocks = 1;
-    } else if ( lua_isnumber(L, -1) ) {
-        nBlocks = to!int(luaL_checknumber(L, -1));
-    } else {
-        string errMsg = "Error in call to FlowSolution:new.";
-        errMsg ~= " A field for nBlocks was found, but the content was not valid.";
-        errMsg ~= " The nBlocks field, if given, should be an integer.";
-        throw new LuaInputException(errMsg);
+        luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
 
@@ -138,13 +131,29 @@ extern(C) int newFlowSolution(lua_State* L)
             string errMsg = "Error in call to FlowSolution:new.\n";
             errMsg ~= " A string value was passed to the field 'gindx', but the content was not valid.\n";
             errMsg ~= " The only valid string field is 'last'.\n";
-            throw new LuaInputException(errMsg);
+            luaL_error(L, errMsg.toStringz);
         }
     } else {
         string errMsg = "Error in call to FlowSolution:new.";
         errMsg ~= " A field for gindx was found, but the content was not valid.";
         errMsg ~= " The gindx field, if given, should be an integer or the string 'last'.";
-        throw new LuaInputException(errMsg);
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_pop(L, 1);
+
+    int nBlocks;
+    lua_getfield(L, 1, "nBlocks");
+    if ( lua_isnil(L, -1) ) {
+        string errMsg = "Error in call to FlowSolution:new.";
+        errMsg ~= " A field for nBlocks was not found.";
+        luaL_error(L, errMsg.toStringz);
+    } else if ( lua_isnumber(L, -1) ) {
+        nBlocks = to!int(luaL_checknumber(L, -1));
+    } else {
+        string errMsg = "Error in call to FlowSolution:new.";
+        errMsg ~= " A field for nBlocks was found, but the content was not valid.";
+        errMsg ~= " The nBlocks field, if given, should be an integer.";
+        luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
 
@@ -181,7 +190,7 @@ extern(C) int find_enclosing_cell_from_lua(lua_State* L)
         string errMsg = "Error in call to FlowSolution:find_enclosing_cell.";
         errMsg ~= " A field for x was found, but the content was not valid.";
         errMsg ~= " The x field, if given, should be a double.";
-        throw new LuaInputException(errMsg);
+        luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1); // dispose of x item
     //
@@ -195,7 +204,7 @@ extern(C) int find_enclosing_cell_from_lua(lua_State* L)
         string errMsg = "Error in call to FlowSolution:find_enclosing_cell.";
         errMsg ~= " A field for y was found, but the content was not valid.";
         errMsg ~= " The y field, if given, should be a double.";
-        throw new LuaInputException(errMsg);
+        luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1); // dispose of y item
     //
@@ -209,7 +218,7 @@ extern(C) int find_enclosing_cell_from_lua(lua_State* L)
         string errMsg = "Error in call to FlowSolution:find_enclosing_cell.";
         errMsg ~= " A field for z was found, but the content was not valid.";
         errMsg ~= " The z field, if given, should be a double.";
-        throw new LuaInputException(errMsg);
+        luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1); // dispose of z item
 
@@ -252,7 +261,7 @@ extern(C) int find_enclosing_cells_along_line_from_lua(lua_State* L)
             string errMsg = "Error in call to FlowSolution:find_enclosing_cells_along_line.";
             errMsg ~= " A field for p0.x was found, but the content was not valid.";
             errMsg ~= " The x field, if given, should be a double.";
-            throw new LuaInputException(errMsg);
+            luaL_error(L, errMsg.toStringz);
         }
         lua_pop(L, 1); // dispose of x item
         //
@@ -266,7 +275,7 @@ extern(C) int find_enclosing_cells_along_line_from_lua(lua_State* L)
             string errMsg = "Error in call to FlowSolution:find_enclosing_cells_along_line.";
             errMsg ~= " A field for p0.y was found, but the content was not valid.";
             errMsg ~= " The y field, if given, should be a double.";
-            throw new LuaInputException(errMsg);
+            luaL_error(L, errMsg.toStringz);
         }
         lua_pop(L, 1); // dispose of y item
         //
@@ -280,7 +289,7 @@ extern(C) int find_enclosing_cells_along_line_from_lua(lua_State* L)
             string errMsg = "Error in call to FlowSolution:find_enclosing_cells_along_line.";
             errMsg ~= " A field for p0.z was found, but the content was not valid.";
             errMsg ~= " The z field, if given, should be a double.";
-            throw new LuaInputException(errMsg);
+            luaL_error(L, errMsg.toStringz);
         }
         lua_pop(L, 1); // dispose of z item
         p0 = Vector3(x, y, z);
@@ -304,7 +313,7 @@ extern(C) int find_enclosing_cells_along_line_from_lua(lua_State* L)
             string errMsg = "Error in call to FlowSolution:find_enclosing_cells_along_line.";
             errMsg ~= " A field for p1.x was found, but the content was not valid.";
             errMsg ~= " The x field, if given, should be a double.";
-            throw new LuaInputException(errMsg);
+            luaL_error(L, errMsg.toStringz);
         }
         lua_pop(L, 1); // dispose of x item
         //
@@ -318,7 +327,7 @@ extern(C) int find_enclosing_cells_along_line_from_lua(lua_State* L)
             string errMsg = "Error in call to FlowSolution:find_enclosing_cells_along_line.";
             errMsg ~= " A field for p1.y was found, but the content was not valid.";
             errMsg ~= " The y field, if given, should be a double.";
-            throw new LuaInputException(errMsg);
+            luaL_error(L, errMsg.toStringz);
         }
         lua_pop(L, 1); // dispose of y item
         //
@@ -332,7 +341,7 @@ extern(C) int find_enclosing_cells_along_line_from_lua(lua_State* L)
             string errMsg = "Error in call to FlowSolution:find_enclosing_cells_along_line.";
             errMsg ~= " A field for p1.z was found, but the content was not valid.";
             errMsg ~= " The z field, if given, should be a double.";
-            throw new LuaInputException(errMsg);
+            luaL_error(L, errMsg.toStringz);
         }
         lua_pop(L, 1); // dispose of z item
         p1 = Vector3(x, y, z);
@@ -352,7 +361,7 @@ extern(C) int find_enclosing_cells_along_line_from_lua(lua_State* L)
         string errMsg = "Error in call to FlowSolution:find_enclosing_cells_along_line.";
         errMsg ~= " A field for n was found, but the content was not valid.";
         errMsg ~= " The n field, if given, should be a nonnegative integer.";
-        throw new LuaInputException(errMsg);
+        luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1); // dispose of z item
 
@@ -391,7 +400,7 @@ extern(C) int find_nearest_cell_centre_from_lua(lua_State* L)
         string errMsg = "Error in call to FlowSolution:find_nearest_cell_centre.";
         errMsg ~= " A field for x was found, but the content was not valid.";
         errMsg ~= " The x field, if given, should be a double.";
-        throw new LuaInputException(errMsg);
+        luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
 
@@ -405,7 +414,7 @@ extern(C) int find_nearest_cell_centre_from_lua(lua_State* L)
         string errMsg = "Error in call to FlowSolution:find_nearest_cell_centre.";
         errMsg ~= " A field for y was found, but the content was not valid.";
         errMsg ~= " The y field, if given, should be a double.";
-        throw new LuaInputException(errMsg);
+        luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
 
@@ -419,7 +428,7 @@ extern(C) int find_nearest_cell_centre_from_lua(lua_State* L)
         string errMsg = "Error in call to FlowSolution:find_nearest_cell_centre.";
         errMsg ~= " A field for z was found, but the content was not valid.";
         errMsg ~= " The z field, if given, should be a double.";
-        throw new LuaInputException(errMsg);
+        luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
 
@@ -490,7 +499,7 @@ extern(C) int get_vtx_pos(lua_State* L)
         string errMsg = "Error in call to FlowSolution:get_vtx_pos.";
         errMsg ~= " A field for ib was found, but the content was not valid.";
         errMsg ~= " The ib field, if given, should be an integer.";
-        throw new LuaInputException(errMsg);
+        luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
 
@@ -504,7 +513,7 @@ extern(C) int get_vtx_pos(lua_State* L)
         string errMsg = "Error in call to FlowSolution:get_vtx_pos.";
         errMsg ~= " A field for i was found, but the content was not valid.";
         errMsg ~= " The i field, if given, should be an integer.";
-        throw new LuaInputException(errMsg);
+        luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
 
@@ -518,7 +527,7 @@ extern(C) int get_vtx_pos(lua_State* L)
         string errMsg = "Error in call to FlowSolution:get_vtx_pos.";
         errMsg ~= " A field for j was found, but the content was not valid.";
         errMsg ~= " The j field, if given, should be an integer.";
-        throw new LuaInputException(errMsg);
+        luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
 
@@ -532,7 +541,7 @@ extern(C) int get_vtx_pos(lua_State* L)
         string errMsg = "Error in call to FlowSolution:get_vtx_pos.";
         errMsg ~= " A field for k was found, but the content was not valid.";
         errMsg ~= " The k field, if given, should be an integer.";
-        throw new LuaInputException(errMsg);
+        luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
     Vector3 vtx = *(fsol.gridBlocks[ib][i, j, k]);
@@ -629,14 +638,14 @@ extern(C) int get_cell_data(lua_State* L)
             string errMsg = "Error in call to FlowSolution:get_cell_data.";
             errMsg ~= " The fmt field should be one of 'Plotting' or 'FlowState'.";
             errMsg ~= " The fmt string received was: " ~ fmt;
-            throw new LuaInputException(errMsg);
+            luaL_error(L, errMsg.toStringz);
         }
     }
     else {
         string errMsg = "Error in call to FlowSolution:get_cell_data.";
         errMsg ~= " A field for fmt was found, but the content was not valid.";
         errMsg ~= " A string was expected. Either 'Plotting' or 'FlowState' are acceptable strings.";
-        throw new LuaInputException(errMsg);
+        luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
 
@@ -646,14 +655,14 @@ extern(C) int get_cell_data(lua_State* L)
         string errMsg = "Error in call to FlowSolution:get_cell_data.\n";
         errMsg ~= " No field for ib was found.\n";
         errMsg ~= " A block number in field ib should be provided.\n";
-        throw new LuaInputException(errMsg);
+        luaL_error(L, errMsg.toStringz);
     } else if ( lua_isnumber(L, -1) ) {
         ib = to!int(luaL_checknumber(L, -1));
     } else {
         string errMsg = "Error in call to FlowSolution:get_cell_data.";
         errMsg ~= " A field for ib was found, but the content was not valid.";
         errMsg ~= " The ib field, if given, should be an integer.";
-        throw new LuaInputException(errMsg);
+        luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
 
@@ -663,14 +672,14 @@ extern(C) int get_cell_data(lua_State* L)
         string errMsg = "Error in call to FlowSolution:get_cell_data.\n";
         errMsg ~= " No field for i was found.\n";
         errMsg ~= " A cell index number in field i should be provided.\n";
-        throw new LuaInputException(errMsg);
+        luaL_error(L, errMsg.toStringz);
     } else if ( lua_isnumber(L, -1) ) {
         i = to!int(luaL_checknumber(L, -1));
     } else {
         string errMsg = "Error in call to FlowSolution:get_cell_data.";
         errMsg ~= " A field for i was found, but the content was not valid.";
         errMsg ~= " The i field, if given, should be an integer.";
-        throw new LuaInputException(errMsg);
+        luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
 
@@ -705,7 +714,7 @@ extern(C) int get_cell_data(lua_State* L)
         string errMsg = "Error in call to FlowSolution:get_cell_data.";
         errMsg ~= " A field for j was found, but the content was not valid.";
         errMsg ~= " The j field, if given, should be an integer.";
-        throw new LuaInputException(errMsg);
+        luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
 
@@ -719,7 +728,7 @@ extern(C) int get_cell_data(lua_State* L)
         string errMsg = "Error in call to FlowSolution:get_cell_data.";
         errMsg ~= " A field for k was found, but the content was not valid.";
         errMsg ~= " The k field, if given, should be an integer.";
-        throw new LuaInputException(errMsg);
+        luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
 
@@ -757,7 +766,7 @@ extern(C) int get_sgrid(lua_State* L)
         string errMsg = "Error in call to FlowSolution:get_grid.";
         errMsg ~= " A field for ib was found, but the content was not valid.";
         errMsg ~= " The ib field, if given, should be an integer.";
-        throw new LuaInputException(errMsg);
+        luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
 
@@ -780,7 +789,7 @@ extern(C) int read_extra_vars(lua_State* L)
     if (lua_isnil(L, -1)) {
         string errMsg = "Error in call to FlowSolution:read_extra_vars.";
         errMsg ~= " A field for 'basefilename' should be supplied as a string.";
-        throw new LuaInputException(errMsg);
+        luaL_error(L, errMsg.toStringz);
     }
     else {
         bfn = to!string(luaL_checkstring(L, -1));
@@ -792,7 +801,7 @@ extern(C) int read_extra_vars(lua_State* L)
     if (!lua_istable(L, -1)) {
         string errMsg = "Error in call to FlowSolution:read_extra_vars.";
         errMsg ~= " A field for 'vars' should be supplied as a table.\n";
-        throw new LuaInputException(errMsg);
+        luaL_error(L, errMsg.toStringz);
     }
     int nEntries = to!int(lua_objlen(L, -1));
     foreach (i; 1 .. nEntries+1) {
