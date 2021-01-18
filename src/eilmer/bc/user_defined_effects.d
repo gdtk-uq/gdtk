@@ -197,9 +197,12 @@ private:
         ghostCell.fs.vel.refx = getNumberFromTable(L, tblIdx, "velx", false, 0.0);
         ghostCell.fs.vel.refy = getNumberFromTable(L, tblIdx, "vely", false, 0.0);
         ghostCell.fs.vel.refz = getNumberFromTable(L, tblIdx, "velz", false, 0.0);
+        
         version(turbulence) {
-            ghostCell.fs.turb[0] = getNumberFromTable(L, tblIdx, "tke", false, 0.0);
-            ghostCell.fs.turb[1] = getNumberFromTable(L, tblIdx, "omega", false, 1.0);
+            foreach(it; 0 .. blk.myConfig.turb_model.nturb){
+                string tname = blk.myConfig.turb_model.primitive_variable_name(it);
+                ghostCell.fs.turb[it] = getNumberFromTable(L, -1, tname, false, 0.0);
+            }
         }
     }
 
@@ -438,15 +441,9 @@ private:
         lua_pop(L, 1);
 
         version(turbulence) {
-            lua_getfield(L, tblIdx, "tke");
-            if ( !lua_isnil(L, -1) ) {
-                fs.turb[0] = getDouble(L, tblIdx, "tke");
-            }
-            lua_pop(L, 1);
-
-            lua_getfield(L, tblIdx, "omega");
-            if ( !lua_isnil(L, -1) ) {
-                fs.turb[1] = getDouble(L, tblIdx, "omega");
+            foreach(it; 0 .. blk.myConfig.turb_model.nturb){
+                string tname = blk.myConfig.turb_model.primitive_variable_name(it);
+                fs.turb[it] = getNumberFromTable(L, -1, tname, false, 0.0);
             }
         }
 
@@ -686,19 +683,10 @@ private:
 
         version(turbulence) {
             // TODO: Think on tke and omega fluxes.
-            /*
-              lua_getfield(L, tblIdx, "tke");
-              if ( !lua_isnil(L, -1) ) {
-              fs.turb[0] = getDouble(L, tblIdx, "tke");
-              }
-              lua_pop(L, 1);
-
-              lua_getfield(L, tblIdx, "omega");
-              if ( !lua_isnil(L, -1) ) {
-              fs.turb[1] = getDouble(L, tblIdx, "omega");
-              }
-              lua_pop(L, 1);
-            */
+            // foreach(it; 0 .. blk.myConfig.turb_model.nturb){
+            //     string tname = blk.myConfig.turb_model.primitive_variable_name(it);
+            //     fs.turb[it] = getNumberFromTable(L, -1, tname, false, 0.0);
+            // }
         }
     } // end putFluxIntoInterface()
 
