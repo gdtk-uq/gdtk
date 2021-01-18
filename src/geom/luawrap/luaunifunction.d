@@ -20,6 +20,7 @@ immutable string RobertsFunctionMT = "RobertsFunction";
 immutable string LuaFnClusteringMT = "LuaFnClustering";
 immutable string GeometricFunctionMT = "GeometricFunction";
 immutable string GaussianFunctionMT = "GaussianFunction";
+immutable string GaussGeomHybridFunctionMT = "GaussGeomHybridFunction";
 
 static const(UnivariateFunction)[] functionStore;
 
@@ -38,6 +39,9 @@ UnivariateFunction checkUnivariateFunction(lua_State* L, int index) {
     }
     if ( isObjType(L, index, GaussianFunctionMT) ) {
         return checkObj!(GaussianFunction, GaussianFunctionMT)(L, index);
+    }
+    if ( isObjType(L, index, GaussGeomHybridFunctionMT) ) {
+        return checkObj!(GaussGeomHybridFunction, GaussGeomHybridFunctionMT)(L, index);
     }
     // if all else fails
     return null;
@@ -315,6 +319,56 @@ extern(C) int newGaussianFunction(lua_State* L)
     return 1;
 }
 
+/**
+ * The Lua constructor for a GaussGeomHybridFunction.
+ *
+ * Example construction in Lua:
+ * --------------------------------------------------------------
+ * f = GaussGeomHybridFunction:new{A=0.01, R=1.2, N=40, m=0.8, s=0.1, ratio=0.2, reverse=false}
+ * --------------------------------------------------------------
+ */
+extern(C) int newGaussGeomHybridFunction(lua_State* L)
+{
+    int narg = lua_gettop(L);
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected GaussGeomHybridFunction:new{}; ";
+        errMsg ~= "maybe you tried GaussGeomHybridFunction.new{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if ( !lua_istable(L, 1) ) {
+        string errMsg = "Error in call to GaussGeomHybridFunction:new{}. ";
+        errMsg ~= "A table containing arguments is expected, but no table was found.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    if (!checkAllowedNames(L, 1, ["A","R","N","m", "s","ratio","reverse"])) {
+        string errMsg = "Error in call to GaussGeomHybridFunction:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
+    }
+     //
+    string errMsgTmpltNumber = "Error in call to GaussGeomHybridFunction:new{}. ";
+    errMsgTmpltNumber ~= "A valid value for '%s' was not found in list of arguments. ";
+    errMsgTmpltNumber ~= "The value, if present, should be a number.";
+    string errMsgTmpltBool = "Error in call to GaussGeomHybridFunction:new{}. ";
+    errMsgTmpltBool ~= "A valid value for '%s' was not found in list of arguments. ";
+    errMsgTmpltBool ~= "The value, if present, should be boolean (true or false).";
+    string errMsgTmpltInt = "Error in call to GaussGeomHybridFunction:new{}. ";
+    errMsgTmpltInt ~= "A valid value for '%s' was not found in list of arguments. ";
+    errMsgTmpltInt ~= "The value, if present, should be an integer.";
+
+    double A = getNumberFromTable(L, 1, "A", true, 1.0, true, format(errMsgTmpltNumber, "A"));
+    double R = getNumberFromTable(L, 1, "R", true, 1.0, true, format(errMsgTmpltNumber, "R"));
+    int N = getIntegerFromTable(L, 1, "N", true, 1, true, format(errMsgTmpltInt, "N"));
+    double m = getNumberFromTable(L, 1, "m", true, 0.5, true, format(errMsgTmpltNumber, "m"));
+    double s = getNumberFromTable(L, 1, "s", true, 0.1, true, format(errMsgTmpltNumber, "s"));
+    double ratio = getNumberFromTable(L, 1, "ratio", true, 0.2, true, format(errMsgTmpltNumber, "ratio"));
+    bool reverse = getBooleanFromTable(L, 1, "reverse", false, false, true, format(errMsgTmpltBool, "reverse"));
+    auto f = new GaussGeomHybridFunction(A, R, N, m, s, ratio, reverse);
+    functionStore ~= pushObj!(GaussGeomHybridFunction, GaussGeomHybridFunctionMT)(L, f);
+    return 1;
+}
+
 void registerUnivariateFunctions(lua_State* L)
 {
     // Register the LinearFunction object
@@ -422,4 +476,24 @@ void registerUnivariateFunctions(lua_State* L)
 
     lua_setglobal(L, GaussianFunctionMT.toStringz);
 
+    // Register the GaussGeomHybridFunction object
+    luaL_newmetatable(L, GaussGeomHybridFunctionMT.toStringz);
+    
+    /* metatable.__index = metatable */
+    lua_pushvalue(L, -1); // duplicates the current metatable
+    lua_setfield(L, -2, "__index");
+
+    /* Register methods for use. */
+    lua_pushcfunction(L, &newGaussGeomHybridFunction);
+    lua_setfield(L, -2, "new");
+    lua_pushcfunction(L, &opCallUnivariateFunction!(GaussGeomHybridFunction, GaussGeomHybridFunctionMT));
+    lua_setfield(L, -2, "__call");
+    lua_pushcfunction(L, &opCallUnivariateFunction!(GaussGeomHybridFunction, GaussGeomHybridFunctionMT));
+    lua_setfield(L, -2, "eval");
+    lua_pushcfunction(L, &toStringObj!(GaussGeomHybridFunction, GaussGeomHybridFunctionMT));
+    lua_setfield(L, -2, "__tostring");
+    lua_pushcfunction(L, &copyUnivariateFunction!(GaussGeomHybridFunction, GaussGeomHybridFunctionMT));
+    lua_setfield(L, -2, "copy");
+
+    lua_setglobal(L, GaussGeomHybridFunctionMT.toStringz);
 }

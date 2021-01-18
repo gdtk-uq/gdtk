@@ -307,6 +307,193 @@ private:
         return f;
     }
 }
+
+class GaussGeomHybridFunction : UnivariateFunction {
+/*
+   A hybrid function that includes both a geometric growth beginning
+   and a smooth gaussian cluster in the middle.
+
+   Inputs:
+      - A : nondimensional starting size for the geometric progression (1.0 is the full width)
+      - R : Geometric progression growth factor, should be larger than 1
+      - N : Number of node points along the boundary.
+      - m : location of Gaussian cluster minimum
+      - s : Gaussian cluster width, equivalent to a standard deviation
+      - ratio: cell size at the minimum divided by baseline largest cell size
+      - reverse : whether to put the Geometric progression at the beginning or end of the boundary
+
+   @author: Nick Gibbons
+*/
+public:
+    this(double A, double R, int N, double m, double s, double ratio, bool reverse)
+    {
+        this.A = A;
+        this.R = R;
+        this.N = N;
+        this.m = m;
+        this.s = s;
+        this.ratio = ratio;
+        this.reverse = reverse;
+        if (A<=0.0) throw new Error("Problematic parameters in GaussGeomHybridFunction A= "~to!string(A));
+        if (R<=1.0) throw new Error("Problematic parameters in GaussGeomHybridFunction R= "~to!string(R));
+        if ((m<=0.0) || (m>=1.0)) throw new Error("Problematic parameters in GaussGeomHybridFunction m= "~to!string(m));
+        if ((ratio<=0.0) || (ratio>=1.0)) throw new Error("Problematic parameters in GaussGeomHybridFunction ratio= "~to!string(ratio));
+
+        double xs = solve_for_xswitch();
+        if ((xs<0.0) || (xs>1.0)) throw new Error("Problematic parameters in GaussGeomHybridFunction xs= "~to!string(xs));
+        this.xs = xs;
+
+        this.a = dGeometricdx(xs)/dGaussiandx(1.0,xs);
+        this.c = 1.0 - Gaussian(this.a, 0.0, 1.0);
+    }
+
+    this(const GaussGeomHybridFunction other)
+    {
+        A = other.A;
+        R = other.R;
+        N = other.N;
+        m = other.m;
+        s = other.s;
+        ratio = other.ratio;
+        reverse = other.reverse;
+        xs = other.xs;
+    }
+
+    GaussGeomHybridFunction dup() const
+    {
+        return new GaussGeomHybridFunction(this);
+    }
+
+    override double opCall(double x) const
+    {
+        if (reverse) x = 1.0 - x;
+        double y;
+        if (x<xs){
+            y = Geometric(x);
+        } else {
+            y = Gaussian(a, c, x);
+        }
+        if (reverse) y = 1.0 - y;
+        return y;
+    }
+
+private:
+    double A,R,m,s,ratio,xs;
+    int N;
+    double a,c;
+    bool reverse;
+
+    immutable double pi = 3.1415926535;
+    immutable double p  = 0.3275911;
+    immutable double a1 = 0.254829592;
+    immutable double a2 =-0.284496736;
+    immutable double a3 = 1.421413741;
+    immutable double a4 =-1.453152027;
+    immutable double a5 = 1.061405429;
+
+    const double erf(double x){
+        /*
+            Approximate the gaussian error function using curve fitted polynomial
+            "Handbook of Mathematical Functions with Formulas, Graphs, and Mathematical Tables", NIST
+            See: https://en.wikipedia.org/wiki/Error_function#Approximation_with_elementary_functions
+            Note: The approximation here is only valid for x>=0. For x less than zero we exploit the
+            fact that the error function is odd: f(x) = -f(-x)
+        */
+
+        double xabs = fabs(x);
+        double t = 1.0/(1.0+p*xabs);
+        double f = 1.0 - (a1*t + a2*t*t + a3*t*t*t + a4*t*t*t*t + a5*t*t*t*t*t)*exp(-(xabs*xabs));
+        f = copysign(f, x);
+        return f;
+    }
+
+    const double Gaussian(double a_, double c_, double x){
+        /*
+           Note that during setup, we don't yet know what a and c are. During the process
+           of figuring them out we need to call this function with dummy values (like a=1)
+           so they are labelled a_ instead of a to avoid name clashes.
+
+        */
+        return a_*x + sqrt(pi/2.0)*a_*(1.0-ratio)*s*erf((m-x)/sqrt(2.0)/s) + c_;
+    }
+
+    const double dGaussiandx(double a_, double x){
+        return a_ - a_*(1.0-ratio)*exp(-(m-x)*(m-x)/2.0/s/s);
+    }
+
+    const double d2Gaussiandx2(double a_, double x){
+        return -a_*(1.0-ratio)*exp(-(m-x)*(m-x)/2.0/s/s)*(m-x)/s/s;
+    }
+
+    const double Geometric(double x){
+        double n = x*(N-1.0);
+        return A*(1.0-pow(R,n))/(1.0-R);
+    }
+
+    const double dGeometricdx(double x){
+        double n = x*(N-1.0);
+        return A*(N-1.0)*log(R)*pow(R,n)/(R-1.0);
+    }
+
+    const double d2Geometricdx2(double x){
+        double dEdx = dGeometricdx(x);
+        return (N-1.0)*log(R)*dEdx;
+    }
+
+    const double SwitchEquationError(double xs){
+        /*
+           This function returns zero when the following three constraints are met:
+            1.) 1.0 = Gaussian(1.0)
+            2.) Gaussian(xswitch) = Geometric(xswitch)
+            3.) dGaussiandx(xswitch) = dGeometricdx(xswitch)
+
+           It is solved numerically to get a smooth crossover point between the two functions.
+        */
+        double E = Geometric(xs);
+        double dEdx = dGeometricdx(xs);
+        double G = Gaussian(1.0, 0.0, xs);
+        double G1= Gaussian(1.0, 0.0, 1.0);
+        double dGdx = dGaussiandx(1.0, xs);
+
+        double error = dEdx*(G-G1)/dGdx + 1.0 - E;
+        return error;
+    }
+
+    const double SwitchEquationDerivative(double xs){
+        double E = Geometric(xs);
+        double dEdx = dGeometricdx(xs);
+        double d2Edx2 = d2Geometricdx2(xs);
+        double G = Gaussian(1.0, 0.0, xs);
+        double G1= Gaussian(1.0, 0.0, 1.0);
+        double dGdx = dGaussiandx(1.0, xs);
+        double d2Gdx2 = d2Gaussiandx2(1.0, xs);
+
+        double de = (G-G1)*(dGdx*d2Edx2 - d2Gdx2*dEdx)/dGdx/dGdx;
+        return de;
+    }
+
+    const double solve_for_xswitch(double guess=0.5, double tol=1e-8){
+        /*
+            One variable Newton's method to find the switching point between the two functions
+        */
+        double xs = guess;
+        double error = 1e32;
+        double f,dfdx,dxs;
+        int iterations=0;
+
+        while (error>tol){
+            f = SwitchEquationError(xs);
+            error = sqrt(f*f);
+            dfdx = SwitchEquationDerivative(xs);
+            dxs = -f/dfdx;
+            xs += dxs;
+            iterations += 1;
+            if (iterations>99) throw new Exception("Newton solver for xswitch timed out!");
+        }
+        return xs;
+    }
+}
+
 version(univariatefunctions_test) {
     import util.msg_service;
     int main() {
@@ -322,6 +509,9 @@ version(univariatefunctions_test) {
         auto cf4 = new GaussianFunction(0.5, 0.1, 0.2);
         assert(approxEqual(cf4(0.1), 0.1250750), failedUnitTest());
         assert(approxEqual(cf4(0.9), 0.8749249), failedUnitTest());
+        auto cf5 = new GaussGeomHybridFunction(0.01, 1.2, 40, 0.8, 0.1, 0.2, false);
+        assert(approxEqual(cf5(0.1), 0.0518068), failedUnitTest());
+        assert(approxEqual(cf5(0.9), 0.8984721), failedUnitTest());
         return 0;
     }
 } // end univariatefunctions_test
