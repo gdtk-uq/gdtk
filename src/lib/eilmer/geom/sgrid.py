@@ -4,11 +4,12 @@ StructuredGrid class for Eilmer calculations.
 
 Similar to the Dlang equivalent class.
 
-PJ, 2020-07-05
+PJ, 2020-07-05 Initial code
 """
 import math
 from abc import ABC, abstractmethod
 from copy import copy
+import gzip
 from eilmer.geom.vector3 import Vector3
 from eilmer.geom.path import Path
 from eilmer.geom.surface import ParametricSurface
@@ -18,7 +19,7 @@ class StructuredGrid():
     """
     Structured grid.
     """
-    _slots_ = ['niv', 'njv', 'nkv', 'vertices', 'label']
+    _slots_ = ['dimensions', 'niv', 'njv', 'nkv', 'vertices', 'label']
 
     def __init__(self, **kwargs):
         """
@@ -34,8 +35,7 @@ class StructuredGrid():
                        for cf in cf_list]
             self.make_from_psurface(psurf, niv, njv, cf_list)
         elif "gzfile" in kwargs.keys():
-            print("Read grid from gzip file")
-            raise Exception("Oops, not yet implemented.")
+            self.read_from_gzip_file(kwargs.get['gzfile'])
         else:
             raise Exception("Do not know how to make grid.")
         self.label = "unknown"
@@ -43,8 +43,8 @@ class StructuredGrid():
 
     def __repr__(self):
         str = "StructuredGrid("
-        str += f"niv={self.niv}, njv={self.njv}, nkv={self.nkv}"
-        # [FIX-ME] limit for large number of vertices.
+        str += f"dimensions={self.dimensions}, niv={self.niv}, njv={self.njv}, nkv={self.nkv}"
+        # [FIX-ME] limit how much is written for large number of vertices.
         str += f", vertices={self.vertices}"
         str += ")"
         return str
@@ -63,6 +63,7 @@ class StructuredGrid():
         self.niv = niv
         self.njv = njv
         self.nkv = 1
+        self.dimensions = 2
         dr = 1.0/(niv-1)
         ds = 1.0/(njv-1)
         self.vertices = []
@@ -78,28 +79,36 @@ class StructuredGrid():
 
     def read_from_gzip_file(self, file_name):
         # [FIX-ME]
+        raise Exception("Oops, not yet implemented.")
         return
 
     def write_to_gzip_file(self, file_name):
-        # [FIX-ME]
+        with gzip.open(file_name, "wt") as f:
+            f.write("structured_grid 1.0\n")
+            f.write(f"label: {self.label}\n")
+            f.write(f"dimensions: {self.dimensions}\n")
+            f.write(f"niv: {self.niv}\n")
+            f.write(f"njv: {self.njv}\n")
+            f.write(f"nkv: {self.nkv}\n")
+            for k in range(self.nkv):
+                for j in range(self.njv):
+                    for i in range(self.niv):
+                        vtx = self.vertices[i][j][k] if self.nkv > 1 else self.vertices[i][j]
+                        f.write("%.18e %.18e %.18e\n" % (vtx.x, vtx.y, vtx.z))
         return
 
     def write_to_vtk_file(self, file_name):
-        f = open(file_name, "w");
-        f.write("# vtk DataFile Version 2.0\n")
-        f.write(self.label+'\n')
-        f.write("ASCII\n")
-        f.write("\n")
-        f.write("DATASET STRUCTURED_GRID\n")
-        f.write("DIMENSIONS %d %d %d\n" % (self.niv, self.njv, self.nkv))
-        f.write("POINTS %d float\n" % (self.niv*self.njv*self.nkv))
-        for k in range(self.nkv):
-            for j in range(self.njv):
-                for i in range(self.niv):
-                    if self.nkv > 1:
-                        vtx = self.vertices[i][j][k]
-                    else:
-                        vtx = self.vertices[i][j]
-                    f.write("%.18e %.18e %.18e\n" % (vtx.x, vtx.y, vtx.z))
-        f.close()
+        with open(file_name, "wt") as f:
+            f.write("# vtk DataFile Version 2.0\n")
+            f.write(self.label+'\n')
+            f.write("ASCII\n")
+            f.write("\n")
+            f.write("DATASET STRUCTURED_GRID\n")
+            f.write("DIMENSIONS %d %d %d\n" % (self.niv, self.njv, self.nkv))
+            f.write("POINTS %d float\n" % (self.niv*self.njv*self.nkv))
+            for k in range(self.nkv):
+                for j in range(self.njv):
+                    for i in range(self.niv):
+                        vtx = self.vertices[i][j][k] if self.nkv > 1 else self.vertices[i][j]
+                        f.write("%.18e %.18e %.18e\n" % (vtx.x, vtx.y, vtx.z))
         return
