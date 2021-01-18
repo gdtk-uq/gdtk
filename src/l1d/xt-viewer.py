@@ -12,6 +12,7 @@
 import argparse
 import json
 import numpy as np
+import sys
 import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser(description='Display xt-data for the gas slugs from an l1d4 simulation.')
@@ -31,14 +32,17 @@ parser.add_argument('-t', '--t-range', metavar='t0:dt:t1',
 parser.add_argument('-r', '--v-range', metavar='v0:dv:v1',
                     dest='vRange', action='store',
                     help='min, delta and max for variable')
+parser.add_argument('-d', '--debug', dest='debugFlag', action='store_true',
+                    help='print intermediate values for debug purposes')
 args = parser.parse_args()
 
 print('fileNames=', args.fileNames)
-print('varName=', args.varName)
-print('takeLog=', args.takeLog)
-print('xRange=', args.xRange)
-print('tRange=', args.tRange)
-print('vRange=', args.vRange)
+if args.debugFlag:
+    print('varName=', args.varName)
+    print('takeLog=', args.takeLog)
+    print('xRange=', args.xRange)
+    print('tRange=', args.tRange)
+    print('vRange=', args.vRange)
 
 varName = args.varName if args.varName else 'p'
 
@@ -47,7 +51,7 @@ for fname in args.fileNames:
     with open(fname, 'r') as fp:
         content = fp.read()
     slugs.append(json.loads(content))
-    print(slugs[-1].keys())
+    if args.debugFlag: print(slugs[-1].keys())
 
 # Get a single Axes object so that we can put several contour patches onto it.
 # We need to explicitly set the levels so that they are the same in all patches.
@@ -57,7 +61,7 @@ if args.xRange:
     x0 = float(items[0])
     dx = float(items[1])
     x1 = float(items[2])
-    print('x0=', x0, 'dx=', dx, 'x1=', x1)
+    if args.debugFlag: print('x0=', x0, 'dx=', dx, 'x1=', x1)
     ticklocs = np.arange(x0, x1+dx/10, dx)
     plt.xticks(ticklocs)
     plt.xlim(x0, x1)
@@ -66,7 +70,7 @@ if args.tRange:
     t0 = float(items[0])
     dt = float(items[1])
     t1 = float(items[2])
-    print('t0=', x0, 'dt=', dt, 't1=', t1)
+    if args.debugFlag: print('t0=', x0, 'dt=', dt, 't1=', t1)
     ticklocs = np.arange(t0, t1+dt/10, dt)
     plt.yticks(ticklocs)
     plt.ylim(t0, t1)
@@ -75,18 +79,27 @@ if args.vRange:
     v0 = float(items[0])
     dv = float(items[1])
     v1 = float(items[2])
-    print('v0=', v0, 'dv=', dv, 'v1=', v1)
+    if args.debugFlag: print('v0=', v0, 'dv=', dv, 'v1=', v1)
     vLevels = np.arange(v0, v1+dv/10, dv)
 else:
     vLevels = None
 
-plts = []
-cbar = None
+xtData = [] # A place to accumulate the data for all slugs.
+vmin = sys.float_info.max # cannot be bigger then this
+vmax = -vmin
 for s in slugs:
     x = np.array(s['x'])
     t = np.array(s['t'])
     v = np.array(s[varName])
     if args.takeLog: v = np.log10(v)
+    xtData.append([x, t, v])
+    vmin = min(vmin, np.min(v))
+    vmax = max(vmax, np.max(v))
+
+if vLevels is None: vLevels = np.linspace(vmin, vmax, 10)
+plts = []
+cbar = None
+for x,t,v in xtData:
     contourf_ = ax.contourf(x, t, v, levels=vLevels)
     plts.append(contourf_)
     # We want only one colour bar displayed for multiple slugs.
