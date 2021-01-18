@@ -45,13 +45,12 @@ public:
         nvertices = niv*njv*nkv;
         vertices.length = nvertices;
         vtx_id.length = nvertices;
-        // Standard order of vertices.
-        size_t ivtx = 0;
+        // Standard order of vertices is defined in grid.d.
         foreach (k; 0 .. nkv) {
             foreach (j; 0 .. njv) {
                 foreach (i; 0 .. niv) {
-                    vtx_id[single_index(i,j,k)] = ivtx;
-                    ivtx++;
+                    size_t ivtx = single_index(i,j,k);
+                    vtx_id[ivtx] = ivtx;
                 }
             }
         }
