@@ -35,7 +35,7 @@ class StructuredGrid():
                        for cf in cf_list]
             self.make_from_psurface(psurf, niv, njv, cf_list)
         elif "gzfile" in kwargs.keys():
-            self.read_from_gzip_file(kwargs.get['gzfile'])
+            self.read_from_gzip_file(kwargs.get('gzfile'))
         else:
             raise Exception("Do not know how to make grid.")
         self.label = "unknown"
@@ -78,8 +78,52 @@ class StructuredGrid():
         return
 
     def read_from_gzip_file(self, file_name):
-        # [FIX-ME]
-        raise Exception("Oops, not yet implemented.")
+        with gzip.open(file_name, "rt") as f:
+            line = f.readline(); items = line.split()
+            assert items[1] == "1.0", "incorrect structured_grid version"
+            line = f.readline(); items = line.split()
+            self.label = items[1]
+            line = f.readline(); items = line.split()
+            self.dimensions = int(items[1])
+            line = f.readline(); items = line.split()
+            self.niv = int(items[1])
+            line = f.readline(); items = line.split()
+            self.njv = int(items[1])
+            line = f.readline(); items = line.split()
+            self.nkv = int(items[1])
+            self.vertices = []
+            if self.dimensions == 1:
+                # A single list.
+                for i in range(self.niv):
+                    line = f.readline(); items = line.split()
+                    x = float(items[0]); y = float(items[1])
+                    z = float(items[2]) if len(items) > 2 else 0.0
+                    self.vertices.append(Vector3(x, y, z))
+            elif self.dimensions == 2:
+                # A list of lists.
+                for i in range(self.niv): self.vertices.append([])
+                for j in range(self.njv):
+                    for i in range(self.niv):
+                        line = f.readline(); items = line.split()
+                        x = float(items[0]); y = float(items[1])
+                        z = float(items[2]) if len(items) > 2 else 0.0
+                        self.vertices[i].append(Vector3(x, y, z))
+            elif self.dimensions == 3:
+                # A list of lists of lists.
+                for i in range(self.niv):
+                    self.vertices.append([])
+                    for j in range(self.njv):
+                        self.vertices[i].append([])
+                # Get the actual data.
+                for k in range(self.nkv):
+                    for j in range(self.njv):
+                        for i in range(self.niv):
+                            line = f.readline(); items = line.split()
+                            x = float(items[0]); y = float(items[1])
+                            z = float(items[2]) if len(items) > 2 else 0.0
+                            self.vertices[i][j].append(Vector3(x, y, z))
+            else:
+                raise RuntimeError("Invalid dimensions.")
         return
 
     def write_to_gzip_file(self, file_name):
