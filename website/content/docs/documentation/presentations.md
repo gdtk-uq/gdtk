@@ -11,7 +11,13 @@ that the finer details of user input may change over time.
 These slides are not updated, but rather serve as historical record of activities.
 Instead, check the User Guide for the definitive user input.
 
-- [Calculation of Test Flow Conditions for Reflected-Shock Tunnels](/pdfs/eilmer-talk-pj-2020-dec.pdf), 03 December 2020.
+- [Towards an Eilmer Four Point Zero Release](/pdfs/cfh-seminar-jan-2021.pdf), 21 January 2021.  
+  RJG seminar to the Centre for Hypersonics research group about the plans for a fixed release
+  of Eilmer in early 2021.
+  The talk captures the motivation behind a fixed release model, what Eilmer 4.0 will include,
+  and discusses progress to date towards that release.
+
+- [Calculation of Test Flow Conditions for Reflected-Shock Tunnels](/pdfs/eilmer-talk-pj-2020-dec.pdf), 03 December 2020.  
   PAJ seminar to the Centre for Hypersonics research group on a couple of ways to estimate
   test flow conditions in reflected shock tunnels.
   The first uses Eilmer to do an axisymmetric simulation of the nozzle expansion and
