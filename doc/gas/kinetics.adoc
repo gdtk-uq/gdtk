@@ -1,7 +1,7 @@
 = Thermochemical kinetics
 
 If you have a gas model with several chemical species and/or with more than one temperature
-you may be interested in allowing the thermochamical processes to change the gas state in
+you may be interested in allowing the thermochemical processes to change the gas state in
 an otherwise isolated blob of gas.
 
 Before trying the following functions, you should read the
@@ -45,7 +45,7 @@ To update the gas state over a finite interval of time, call
 `dt_suggest`::
   _Float_, default -1.0 +
   The suggested time step size for the thermochemical update.
-  The default value of `-1.0` indicates to the reactor that we have no godd idea and
+  The default value of `-1.0` indicates to the reactor that we have no good idea and
   that it should select something suitable.
 
 Returns the last successful time-step size,
