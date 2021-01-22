@@ -44,6 +44,8 @@ include::../examples/eilmer/2D/flat-plate-hakkinen-swbli/readme.adoc[]
 
 include::../examples/eilmer/2D/sphere-nonaka/readme.adoc[]
 
+include::../examples/eilmer/2D/wall-catalysis/readme.adoc[]
+
 :leveloffset: -1
 
 

@@ -1,0 +1,14 @@
+== 2D/wall-catalysis
+
+image::catalytic-wall-N2-field.png[caption="Molecular Nitrogen Mass Fraction for catalytic wall vs. noncatalytic wall at 2200K."]
+
+This example exercises the mass fraction boundary conditions for a blunt wedge with an elevated temperature of 2200K, immersed in a hypersonic flow at 6 km/s.
+The left hand image shows the mass fraction of molecular nitrogen (N2), using a normal fixed temperature wall where the mass fraction gradients are set to zero.
+Note the drop in N2 as the gas passes through the shock layer and begins to dissociate.
+In contrast the right hand image uses a fully catalytic wall, where the mass fraction values are set to their equilibrium composition --- effectively assuming that the wall accelerates the reaction rates all the way to completion. 
+Note the layer of red against the wall of this image, demonstrating that the wall is forcing some of the nitrogen molecules to recombine, despite its elevated temperature. 
+
+This effect can significantly increase the heat transferred to the surface from the fluid, as shown in the figure below. 
+The "q_diff" term represents the additional heat transfer from chemical activity at the surface, which is only present in the catalytic wall case.
+
+image::catalytic-wall-heat-transfer.svg[caption="Comparison of heat transfer due to wall chemistry effects."]
