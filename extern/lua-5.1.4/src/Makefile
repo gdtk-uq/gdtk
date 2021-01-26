@@ -100,7 +100,8 @@ generic:
 	$(MAKE) all MYCFLAGS=
 
 linux:
-	$(MAKE) all MYCFLAGS="-DLUA_USE_LINUX -fPIC -fno-omit-frame-pointer" MYLIBS="-Wl,-E -ldl -lreadline -lhistory -lncurses"
+	$(MAKE) all MYCFLAGS="-DLUA_USE_LINUX -fPIC -fno-omit-frame-pointer" \
+		MYLIBS="-Wl,-E -ldl -lreadline -lhistory -lncurses"
 
 # On cygwin, like linux (PJ, 18-Oct-2009)
 cygwin:
@@ -111,15 +112,13 @@ macosx:
 # use this on Mac OS X 10.3-
 #	$(MAKE) all MYCFLAGS=-DLUA_USE_MACOSX
 
-# Make the Mingw32 setup similar to Rowan's Linux setup. (PJ 18-Oct-2009)
-# However, it's still broke...
+# Make the mingw-w64 setup similar to Linux setup. (PJ 2021-01-26)
 mingw:
-	$(MAKE) "LUA_A=lua51.dll" "LUA_T=lua.exe" \
-	"AR=$(CC) -shared -o" "RANLIB=strip --strip-unneeded" \
-	"MYCFLAGS=-DLUA_BUILD_AS_DLL" \
-	"MYLIBS=-Wl,-E -ldl -lreadline -lhistory -lcurses" \
-	"MYLDFLAGS=-s" lua.exe
-	$(MAKE) "LUAC_T=luac.exe" luac.exe
+	$(MAKE) all LUA_A="liblua.a" LUA_T="dgd-lua" LUAC_T="dgd-luac" \
+	CC=gcc AR="ar rcu" RANLIB="$(RANLIB)" \
+	MYCFLAGS="-fPIC -fno-omit-frame-pointer" \
+	MYLIBS="-lreadline -lhistory -lpdcurses" \
+	MYLDFLAGS=""
 
 posix:
 	$(MAKE) all MYCFLAGS=-DLUA_USE_POSIX
