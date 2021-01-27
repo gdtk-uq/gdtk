@@ -1,0 +1,55 @@
+In https://forum.dlang.org/post/qkmbtmbwexymejldzled@forum.dlang.org
+IGotD- wrote
+
+For mixed language project use Cmake only, you do not need to involve dub.
+
+You extend Cmake to compile D files. You add these files with the contents.
+
+CMakeDCompiler.cmake.in:
+set(CMAKE_D_COMPILER "@CMAKE_D_COMPILER@")
+set(CMAKE_D_COMPILER_LOADED 1)
+set(CMAKE_D_SOURCE_FILE_EXTENSIONS @CMAKE_D_SOURCE_FILE_EXTENSIONS@)
+set(CMAKE_D_OUTPUT_EXTENSION @CMAKE_D_OUTPUT_EXTENSION@)
+set(CMAKE_D_COMPILER_ENV_VAR "@CMAKE_D_COMPILER_ENV_VAR@")
+
+
+CMakeDetermineDCompiler.cmake:
+# Find the D compiler
+find_program(
+    CMAKE_D_COMPILER
+        NAMES "ldc2"
+        HINTS "${CMAKE_SOURCE_DIR}"
+        DOC "LDC compiler"
+)
+mark_as_advanced(CMAKE_D_COMPILER)
+
+set(CMAKE_D_SOURCE_FILE_EXTENSIONS d)
+set(CMAKE_D_OUTPUT_EXTENSION .obj)
+set(CMAKE_D_COMPILER_ENV_VAR "D")
+
+# Configure variables set in this file for fast reload later on
+configure_file(${CMAKE_CURRENT_LIST_DIR}/CMakeDCompiler.cmake.in
+               ${CMAKE_PLATFORM_INFO_DIR}/CMakeDCompiler.cmake)
+
+
+CMakeDInformation.cmake:
+if(NOT CMAKE_D_COMPILE_OBJECT)
+    set(CMAKE_D_COMPILE_OBJECT "<CMAKE_D_COMPILER> ${CMAKE_D_FLAGS} -c --of=<OBJECT> <SOURCE>")
+endif()
+set(CMAKE_D_INFORMATION_LOADED 1)
+
+
+CMakeTestDCompiler.cmake:
+# For now just do nothing in here
+set(CMAKE_D_COMPILER_WORKS 1 CACHE INTERNAL "")
+
+
+Put these files somewhere and tell Cmake were to find them.
+
+set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}" ${THE_PATH_TO_THE_FILES}" CACHE INTERNAL "")
+
+You need to enable D language to use it with.
+
+enable_language(D)
+
+
