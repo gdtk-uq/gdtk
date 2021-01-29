@@ -285,7 +285,7 @@ extern(C) int transCoeffs(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm);
-    getGasStateFromTable(L, gm, 2, Q); 
+    getGasStateFromTable(L, gm, 2, Q);
     if ( Q.T <= 0.0 || isNaN(Q.T) ) {
         string errMsg = "ERROR: when calling 'updateTransCoeffs'\n";
         errMsg ~= "        The supplied temperature value is negative, 0 or has not been set.\n";
@@ -730,7 +730,7 @@ GasState makeNewGasState(GasModel gm)
     // In which case, we'll just set that value to 1.0.
     // For all other cases, we take the default action of
     // setting all mass fractions to 0.0.
-    // For a multi-component gas, we expect the user to 
+    // For a multi-component gas, we expect the user to
     // take care with setting mass fraction values.
     if ( gm.n_species == 1 ) {
         Q.massf[0] = 1.0;
@@ -784,7 +784,7 @@ void getGasStateFromTable(lua_State* L, GasModel gm, int idx, GasState Q)
         throw new Error(errMsg);
     }
     lua_pop(L, 1);
-    
+
     lua_getfield(L, idx, "T");
     if ( lua_isnumber(L, -1) ) {
         Q.T = lua_tonumber(L, -1);
@@ -808,7 +808,7 @@ void getGasStateFromTable(lua_State* L, GasModel gm, int idx, GasState Q)
         throw new Error(errMsg);
     }
     lua_pop(L, 1);
-    
+
     lua_getfield(L, idx, "a");
     if ( lua_isnumber(L, -1) ) {
         Q.a = lua_tonumber(L, -1);
@@ -820,7 +820,7 @@ void getGasStateFromTable(lua_State* L, GasModel gm, int idx, GasState Q)
         throw new Error(errMsg);
     }
     lua_pop(L, 1);
-    
+
     lua_getfield(L, idx, "u");
     if ( lua_isnumber(L, -1) ) {
         Q.u = lua_tonumber(L, -1);
@@ -1063,10 +1063,10 @@ void setGasStateInTable(lua_State* L, GasModel gm, int idx, const(GasState) Q)
         lua_pushnumber(L, T); lua_rawseti(L, -2, to!int(i)+1);
     }
     lua_setfield(L, idx, "T_modes");
-    
+
     lua_pushnumber(L, Q.mu);
     lua_setfield(L, idx, "mu");
-    
+
     lua_pushnumber(L, Q.k);
     lua_setfield(L, idx, "k");
 
@@ -1104,16 +1104,16 @@ void setGasStateInTable(lua_State* L, GasModel gm, int idx, const(GasState) Q)
 
         lua_pushnumber(L, Q.ceaSavedData.rho);
         lua_setfield(L, -2, "rho");
-        
+
         lua_pushnumber(L, Q.ceaSavedData.u);
         lua_setfield(L, -2, "u");
-        
+
         lua_pushnumber(L, Q.ceaSavedData.h);
         lua_setfield(L, -2, "h");
 
         lua_pushnumber(L, Q.ceaSavedData.T);
         lua_setfield(L, -2, "T");
-        
+
         lua_pushnumber(L, Q.ceaSavedData.a);
         lua_setfield(L, -2, "a");
 
@@ -1122,7 +1122,7 @@ void setGasStateInTable(lua_State* L, GasModel gm, int idx, const(GasState) Q)
 
         lua_pushnumber(L, Q.ceaSavedData.Rgas);
         lua_setfield(L, -2, "Rgas");
-        
+
         lua_pushnumber(L, Q.ceaSavedData.gamma);
         lua_setfield(L, -2, "gamma");
 
@@ -1134,7 +1134,7 @@ void setGasStateInTable(lua_State* L, GasModel gm, int idx, const(GasState) Q)
 
         lua_pushnumber(L, Q.ceaSavedData.k);
         lua_setfield(L, -2, "k");
-        
+
         lua_pushnumber(L, Q.ceaSavedData.mu);
         lua_setfield(L, -2, "mu");
 
@@ -1271,7 +1271,7 @@ void registerGasModel(lua_State* L, int tblIdx)
 
     // Make GasState constructor visible
     lua_setfield(L, tblIdx, "GasState");
-    
+
     // Set a global function to print values in GasState
     lua_pushcfunction(L, &printValues);
     lua_setglobal(L, "printValues");
@@ -1284,51 +1284,4 @@ void registerGasModel(lua_State* L, int tblIdx)
     lua_setglobal(L, "P_atm");
     lua_pushnumber(L, R_universal);
     lua_setglobal(L, "R_universal");
-
 }
-
-version(gas_calc) {
-    import luaidealgasflow;
-    import luagasflow;
-    import nm.luabbla;
-
-    int main(string[] args) {
-        if ( args.length < 2 ) {
-            writeln("ERROR: Wrong number of arguments.");
-            writeln("");
-            writeln("Usage: ");
-            writeln("  gas-calc inputFile (+ script args)");
-            return 1;
-        }
-        auto L = luaL_newstate();
-        luaL_openlibs(L);
-        registerGasModel(L, LUA_GLOBALSINDEX);
-        registerThermochemicalReactor(L, LUA_GLOBALSINDEX);
-        registerReactionMechanism(L, LUA_GLOBALSINDEX);
-        registerChemistryUpdate(L, LUA_GLOBALSINDEX);
-        registerTwoTemperatureAirKinetics(L, LUA_GLOBALSINDEX);
-        registerVibSpecNitrogenKinetics(L, LUA_GLOBALSINDEX);
-        version(with_dvode) {
-            registerPseudoSpeciesKinetics(L, LUA_GLOBALSINDEX);
-        }
-        registeridealgasflowFunctions(L);
-        registergasflowFunctions(L);
-        registerBBLA(L);
-        // Pass on command line args to user's scripts.
-        lua_newtable(L);
-        int argIdx = 1;
-        foreach (i; 2 .. args.length) {
-            lua_pushstring(L, args[i].toStringz);
-            lua_rawseti(L, -2, argIdx);
-            argIdx++;
-        }
-        lua_setglobal(L, "arg");
-
-        if ( luaL_dofile(L, toStringz(args[1])) != 0 ) {
-            writeln(to!string(lua_tostring(L, -1)));
-            return 1;
-        }
-        return 0;
-    }
-}
-
