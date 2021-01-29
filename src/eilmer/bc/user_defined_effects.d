@@ -97,7 +97,8 @@ public:
             foreach (k; 0 .. blk.nkc)  {
                 foreach (i; 0 .. blk.nic) {
                     auto f = blk.get_ifj(i,j,k);
-                    callGhostCellUDF(t, gtl, ftl, i, j, k, f, f.right_cells);
+                    // Indices passed in are for the cell just inside the boundary.
+                    callGhostCellUDF(t, gtl, ftl, i, j-1, k, f, f.right_cells);
                 }
             }
             break;
@@ -106,7 +107,7 @@ public:
             foreach (k; 0 .. blk.nkc) {
                 foreach (j; 0 .. blk.njc) {
                     auto f = blk.get_ifi(i,j,k);
-                    callGhostCellUDF(t, gtl, ftl, i, j, k, f, f.right_cells);
+                    callGhostCellUDF(t, gtl, ftl, i-1, j, k, f, f.right_cells);
                 }
             }
             break;
@@ -133,7 +134,7 @@ public:
             foreach (i; 0 .. blk.nic) {
                 foreach (j; 0 .. blk.njc) {
                     auto f = blk.get_ifk(i,j,k);
-                    callGhostCellUDF(t, gtl, ftl, i, j, k, f, f.right_cells);
+                    callGhostCellUDF(t, gtl, ftl, i, j, k-1, f, f.right_cells);
                 }
             }
             break;
@@ -197,7 +198,7 @@ private:
         ghostCell.fs.vel.refx = getNumberFromTable(L, tblIdx, "velx", false, 0.0);
         ghostCell.fs.vel.refy = getNumberFromTable(L, tblIdx, "vely", false, 0.0);
         ghostCell.fs.vel.refz = getNumberFromTable(L, tblIdx, "velz", false, 0.0);
-        
+
         version(turbulence) {
             foreach(it; 0 .. blk.myConfig.turb_model.nturb){
                 string tname = blk.myConfig.turb_model.primitive_variable_name(it);

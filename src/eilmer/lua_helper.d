@@ -307,7 +307,7 @@ extern(C) int luafn_sampleSolidCell(lua_State *L)
     int tblIdx = lua_gettop(L);
     pushSolidCellToTable(L, tblIdx, cell);
     return 1;
-} // end luafn_sampleFluidCell()
+} // end luafn_sampleSolidCell()
 
 void pushSolidCellToTable(lua_State* L, int tblIdx, ref const(SolidFVCell) cell)
 {
