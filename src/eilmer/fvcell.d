@@ -1896,8 +1896,10 @@ public:
     @nogc
     void add_chemistry_source_vector()
     {
+        version(multi_species_gas){
         rmech.eval_source_terms(myConfig.gmodel, fs.gas, chem_conc, chem_rates, chem_source);
         foreach(sp, ref elem; Q.massf) { elem += chem_source[sp]; }
+        }
     }
     
     @nogc

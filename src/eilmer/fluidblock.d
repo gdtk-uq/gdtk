@@ -554,7 +554,9 @@ public:
                         throw new FlowSolverException(msg);
                     }
                     cell.fs.copy_average_values_from(neighbour_flows, myConfig.gmodel);
-                    scale_mass_fractions(cell.fs.gas.massf, 0.0, 0.9); // big assertion-error-tolerance
+                    version(multi_species_gas){
+                        scale_mass_fractions(cell.fs.gas.massf, 0.0, 0.9); // big assertion-error-tolerance
+                    }
                     cell.data_is_bad = false; // assume that we've fixed it at this point.
                     cell.encode_conserved(gtl, ftl, omegaz);
                     if (0 != cell.decode_conserved(gtl, ftl, omegaz)) {
@@ -1075,8 +1077,10 @@ public:
             if ( myConfig.dimensions == 3 ) { mixin(computeResidualSensitivity("pcell", "momentum.refz", "Z_MOM", false, true)); }
             mixin(computeResidualSensitivity("pcell", "total_energy", "TOT_ENERGY", true, true));
             foreach(ii; 0 .. myConfig.turb_model.nturb) { mixin(computeResidualSensitivity("pcell", "rhoturb[ii]", "TKE+ii", false, true)); }
+            version(multi_species_gas){
             if (myConfig.n_species > 1) {
                 foreach(ii; 0 .. myConfig.gmodel.n_species) { mixin(computeResidualSensitivity("pcell", "massf[ii]", "SPECIES+ii", false, true)); }
+            }
             }
         } else { // wrtPrimitive
             mixin(computeResidualSensitivity("pcell", "gas.rho", "MASS", true, false));
@@ -1085,8 +1089,10 @@ public:
             if ( myConfig.dimensions == 3 ) { mixin(computeResidualSensitivity("pcell", "vel.refz", "Z_MOM", false, false)); }
             mixin(computeResidualSensitivity("pcell", "gas.p", "TOT_ENERGY", true, false));
             foreach(ii; 0 .. myConfig.turb_model.nturb) { mixin(computeResidualSensitivity("pcell", "turb[ii]", "TKE+ii", false, false)); }
+            version(multi_species_gas){
             if (myConfig.n_species > 1) {
                 foreach(ii; 0 .. myConfig.gmodel.n_species) { mixin(computeResidualSensitivity("pcell", "gas.massf[ii]", "SPECIES+ii", false, false)); }
+            }
             }
         }
 
@@ -1146,8 +1152,10 @@ public:
             if (myConfig.dimensions == 3) { cell.dQdU[Z_MOM][" ~ posInArray ~ "] = cell.dUdt[ftl].momentum.z.im/EPS.im; }
             cell.dQdU[TOT_ENERGY][" ~ posInArray ~ "] = cell.dUdt[ftl].total_energy.im/EPS.im;
             foreach(it; 0 .. myConfig.turb_model.nturb) { cell.dQdU[TKE+it][" ~ posInArray ~ "] = cell.dUdt[ftl].rhoturb[it].im/EPS.im; }
+            version(multi_species_gas){
             if (myConfig.n_species > 1) {
                 foreach(sp; 0 .. myConfig.gmodel.n_species) { cell.dQdU[SPECIES+sp][" ~ posInArray ~ "] = cell.dUdt[ftl].massf[sp].im/EPS.im; }
+            }
             }
          }
 
@@ -1298,8 +1306,10 @@ public:
                     if ( myConfig.dimensions == 3 ) { mixin(computeGhostCellSensitivity("momentum.refz", "Z_MOM", false, true)); }
                     mixin(computeGhostCellSensitivity("total_energy", "TOT_ENERGY", true, true));
                     foreach(ii; 0 .. myConfig.turb_model.nturb) { mixin(computeGhostCellSensitivity("rhoturb[ii]", "TKE+ii", false, true)); }
+                    version(multi_species_gas){
                     if (myConfig.n_species > 1) {
                         foreach(ii; 0 .. myConfig.gmodel.n_species) { mixin(computeGhostCellSensitivity("massf[ii]", "SPECIES+ii", false, true)); }
+                    }
                     }
                 } else {
                     mixin(computeGhostCellSensitivity("gas.rho", "MASS", true, false));
@@ -1308,8 +1318,10 @@ public:
                     if ( myConfig.dimensions == 3 ) { mixin(computeGhostCellSensitivity("vel.refz", "Z_MOM", false, false)); }
                     mixin(computeGhostCellSensitivity("gas.p", "TOT_ENERGY", true, false));
                     foreach(ii; 0 .. myConfig.turb_model.nturb) { mixin(computeGhostCellSensitivity("turb[ii]", "TKE+ii", false, false)); }
+                    version(multi_species_gas){
                     if (myConfig.n_species > 1) {
                         foreach(ii; 0 .. myConfig.gmodel.n_species) { mixin(computeGhostCellSensitivity("gas.massf[ii]", "SPECIES+ii", false, false)); }
+                    }
                     }
                 }
 
@@ -1321,8 +1333,10 @@ public:
                 if ( myConfig.dimensions == 3 ) { mixin(computeResidualSensitivity("ghost_cell", "vel.refz", "Z_MOM", false, false)); }
                 mixin(computeResidualSensitivity("ghost_cell", "gas.p", "TOT_ENERGY", true, false));
                 foreach(ii; 0 .. myConfig.turb_model.nturb) { mixin(computeResidualSensitivity("ghost_cell", "turb[ii]", "TKE+ii", false, false)); }
+                version(multi_species_gas){
                 if (myConfig.n_species > 1) {
                     foreach(ii; 0 .. myConfig.gmodel.n_species) { mixin(computeResidualSensitivity("ghost_cell", "gas.massf[ii]", "SPECIES+ii", false, false)); }
+                }
                 }
                 // multiply the sensitivity matrices and add the corrections to the relevant flow Jacobian entries
                 foreach(bcell; ghost_cell.cell_list) { //
@@ -1380,8 +1394,10 @@ public:
         if (myConfig.dimensions == 3) { flowJacobianT.dqdQ[Z_MOM][" ~ posInArray ~ "] = ghost_cell.fs.vel.z.im/(EPS.im); }
         flowJacobianT.dqdQ[TOT_ENERGY][" ~ posInArray ~ "] = ghost_cell.fs.gas.p.im/(EPS.im);
         foreach(it; 0 .. myConfig.turb_model.nturb){ flowJacobianT.dqdQ[TKE+it][" ~ posInArray ~ "] = ghost_cell.fs.turb[it].im/(EPS.im); }
+        version(multi_species_gas){
         if (myConfig.n_species > 1) {
             foreach(sp; 0 .. myConfig.gmodel.n_species){ flowJacobianT.dqdQ[SPECIES+sp][" ~ posInArray ~ "] = ghost_cell.fs.gas.massf[sp].im/(EPS.im); }
+        }
         }
         foreach ( ref c; [pcell, ghost_cell] ) {
             c.fs.clear_imaginary_components();
@@ -1480,8 +1496,10 @@ public:
             if ( myConfig.dimensions == 3 ) { cell.U[1].momentum.refz += complex(0.0, EPS*vec[cellCount+Z_MOM].re); }
             cell.U[1].total_energy += complex(0.0, EPS*vec[cellCount+TOT_ENERGY].re);
             foreach(it; 0 .. nturb) { cell.U[1].rhoturb[it] += complex(0.0, EPS*vec[cellCount+TKE+it].re); }
+            version(multi_species_gas){
             if (myConfig.n_species > 1) {
                 foreach(sp; 0 .. nsp) { cell.U[1].massf[sp] += complex(0.0, EPS*vec[cellCount+SPECIES+sp].re); }
+            }
             }
             cell.decode_conserved(0, 1, 0.0);
             cellCount += nConserved;
@@ -1497,8 +1515,10 @@ public:
             if ( myConfig.dimensions == 3 ) { sol[cellCount+Z_MOM] = cell.dUdt[1].momentum.z.im/EPS; }
             sol[cellCount+TOT_ENERGY] = cell.dUdt[1].total_energy.im/EPS;
             foreach(it; 0 .. nturb) { sol[cellCount+TKE+it] = cell.dUdt[1].rhoturb[it].im/EPS; }
+            version(multi_species_gas){
             if (myConfig.n_species > 1) {
                 foreach(sp; 0 .. nsp) { sol[cellCount+SPECIES+sp] = cell.dUdt[1].massf[sp].im/EPS; }
+            }
             }
             cellCount += nConserved;
         }

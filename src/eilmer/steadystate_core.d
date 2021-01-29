@@ -111,8 +111,10 @@ void extractRestartInfoFromTimesFile(string jobName, ref RestartInfo[] times)
             foreach(it; 0 .. GlobalConfig.turb_model.nturb) {
                 restartInfo.residuals.rhoturb[it] = to!double(tokens[6+TKE+it]);
             }
+            version(multi_species_gas){
             foreach(sp; 0 .. GlobalConfig.gmodel_master.n_species) {
                 restartInfo.residuals.massf[sp] = to!double(tokens[6+SPECIES+sp]);
+            }
             }
             times ~= restartInfo;
         }
@@ -294,11 +296,13 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                         foreach(it; 0 .. nturb) {
                             cell.U[1].rhoturb[it] = cell.U[0].rhoturb[it] + blk.dU[cellCount+TKE+it];
                         }
+                        version(multi_species_gas){
                         if (blk.myConfig.n_species > 1) {
                             foreach(sp; 0 .. nsp) { cell.U[1].massf[sp] = cell.U[0].massf[sp] + blk.dU[cellCount+SPECIES+sp]; }
                         } else {
                             // enforce mass fraction of 1 for single species gas
                             cell.U[1].massf[0] = cell.U[1].mass;                            
+                        }
                         }
                         try {
                             cell.decode_conserved(0, 1, 0.0);
@@ -389,8 +393,10 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                     foreach(it; 0 .. nturb) {
                         blk.FU[cellCount+TKE+it] = -cell.dUdt[0].rhoturb[it];
                     }
+                    version(multi_species_gas){
                     if ( nsp > 1 ) {
                         foreach(sp; 0 .. nsp) { blk.FU[cellCount+SPECIES+sp] = -cell.dUdt[0].massf[sp]; }
+                    }
                     }
                     cellCount += nConserved;
                 }
@@ -414,11 +420,13 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 string tvname = capitalize(GlobalConfig.turb_model.primitive_variable_name(it));
                 writefln("%s:            %.12e",tvname, maxResiduals.rhoturb[it].re);
             }
+            version(multi_species_gas){
             if ( GlobalConfig.gmodel_master.n_species > 1 ) {
                 foreach(sp; 0 .. GlobalConfig.gmodel_master.n_species) {
                     string spname = capitalize(GlobalConfig.gmodel_master.species_name(sp));
                     writefln("%s:            %.12e",spname, maxResiduals.massf[sp].re);
                 }
+            }
             }
             string refResidFname = jobName ~ "-ref-residuals.saved";
             auto refResid = File(refResidFname, "w");
@@ -436,10 +444,12 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             foreach(it; 0 .. GlobalConfig.turb_model.nturb) {
                 refResid.writef(" %.18e", maxResiduals.rhoturb[it].re);
             }
+            version(multi_species_gas){
             if ( GlobalConfig.gmodel_master.n_species > 1 ) {
                 foreach(sp; 0 .. GlobalConfig.gmodel_master.n_species) {
                     refResid.writef(" %.18e", maxResiduals.massf[sp].re);
                 }
+            }
             }
             refResid.write("\n");
             refResid.close();
@@ -466,10 +476,12 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         foreach(it; 0 .. GlobalConfig.turb_model.nturb) {
             maxResiduals.rhoturb[it] = to!double(tokens[1+TKE+it]);
         }
+        version(multi_species_gas){
         if ( GlobalConfig.gmodel_master.n_species > 1 ) {
             foreach(sp; 0 .. GlobalConfig.gmodel_master.n_species) {
                 maxResiduals.massf[sp] = to!double(tokens[1+SPECIES+sp]);
             }   
+        }
         }
         
         // We also need to determine how many snapshots have already been written
@@ -624,11 +636,13 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                     foreach(it; 0 .. nturb){
                         cell.U[1].rhoturb[it] = cell.U[0].rhoturb[it] + blk.dU[cellCount+TKE+it];
                     }
+                    version(multi_species_gas){
                     if (blk.myConfig.n_species > 1) {
                         foreach(sp; 0 .. nsp) { cell.U[1].massf[sp] = cell.U[0].massf[sp] + blk.dU[cellCount+SPECIES+sp]; }
                     } else {
                         // enforce mass fraction of 1 for single species gas
                         cell.U[1].massf[0] = cell.U[1].mass;                        
+                    }
                     }
                     try {
                         cell.decode_conserved(0, 1, 0.0);
@@ -752,11 +766,13 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                     fResid.writef("%20.16e  %20.16e  ",
                                   currResiduals.rhoturb[it].re, currResiduals.rhoturb[it].re/maxResiduals.rhoturb[it].re);
                 }
+                version(multi_species_gas){
                 if ( GlobalConfig.gmodel_master.n_species > 1 ) {
                     foreach(sp; 0 .. GlobalConfig.gmodel_master.n_species){
                         fResid.writef("%20.16e  %20.16e  ",
                                       currResiduals.massf[sp].re, currResiduals.massf[sp].re/maxResiduals.massf[sp].re);
                     }
+                }
                 }
                 fResid.writef("%20.16e ", fabs(mass_balance.re));
                 fResid.write("\n");
@@ -797,11 +813,13 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                     auto tvname = GlobalConfig.turb_model.primitive_variable_name(it);
                     formattedWrite(writer, "  %s            %10.6e    %10.6e\n", tvname, currResiduals.rhoturb[it].re, currResiduals.rhoturb[it].re/maxResiduals.rhoturb[it].re);
                 }
+                version(multi_species_gas){
                 if ( GlobalConfig.gmodel_master.n_species > 1 ) {
                     foreach(sp; 0 .. GlobalConfig.gmodel_master.n_species){
                         auto spname = GlobalConfig.gmodel_master.species_name(sp);
                         formattedWrite(writer, "  %s            %10.6e    %10.6e\n", spname, currResiduals.massf[sp].re, currResiduals.massf[sp].re/maxResiduals.massf[sp].re);
                     }
+                }
                 }
                 writeln(writer.data);
             }
@@ -979,10 +997,12 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 foreach(it; 0 .. blk.myConfig.turb_model.nturb){
 		    outFile.writef("%.16e \n", cell.gradients.turbPhi[it].re);
 		}
+                version(multi_species_gas){
                 if ( blk.myConfig.gmodel.n_species > 1 ) {
                     foreach(sp; 0 .. blk.myConfig.gmodel.n_species) {
                         outFile.writef("%.16e \n", cell.gradients.massfPhi[sp].re);
                     }
+                }
                 }
                 
             }
@@ -1184,6 +1204,7 @@ void evalRealMatVecProd(double pseudoSimTime, double sigma)
             foreach(it; 0 .. nturb){
                 cell.U[1].rhoturb[it] += sigma*blk.zed[cellCount+TKE+it];
             }
+            version(multi_species_gas){
             if ( nsp > 1 ) { 
                 foreach(sp; 0 .. nsp) { cell.U[1].massf[sp] += sigma*blk.zed[cellCount+SPECIES+sp]; }
             } else {
@@ -1191,6 +1212,7 @@ void evalRealMatVecProd(double pseudoSimTime, double sigma)
                 if (blk.myConfig.n_species == 1) {
                     cell.U[1].massf[0] = cell.U[1].mass;
                 }
+            }
             }
             cell.decode_conserved(0, 1, 0.0);
             cellCount += nConserved;
@@ -1211,8 +1233,10 @@ void evalRealMatVecProd(double pseudoSimTime, double sigma)
             foreach(it; 0 .. nturb){
                 blk.zed[cellCount+TKE+it] = (cell.dUdt[1].rhoturb[it] - blk.FU[cellCount+TKE+it])/(sigma);
             }
+            version(multi_species_gas){
             if ( nsp > 1 ) {
                 foreach(sp; 0 .. nsp){ blk.zed[cellCount+SPECIES+sp] = (cell.dUdt[1].massf[sp] - blk.FU[cellCount+SPECIES+sp])/(sigma); }
+            }
             }
             cell.decode_conserved(0, 0, 0.0);
             cellCount += nConserved;
@@ -1252,11 +1276,13 @@ void evalComplexMatVecProd(double pseudoSimTime, double sigma)
                 foreach(it; 0 .. nturb){
                     cell.U[1].rhoturb[it] += complex(0.0, sigma*blk.zed[cellCount+TKE+it].re);
                 }
+                version(multi_species_gas){
                 if ( nsp > 1 ) {
                     foreach(sp; 0 .. nsp){ cell.U[1].massf[sp] += complex(0.0, sigma*blk.zed[cellCount+SPECIES+sp].re); }
                 } else {
                     // enforce mass fraction of 1 for single species gas
                     cell.U[1].massf[0] = cell.U[1].mass;
+                }
                 }
                 cell.decode_conserved(0, 1, 0.0);
                 cellCount += nConserved;
@@ -1277,8 +1303,10 @@ void evalComplexMatVecProd(double pseudoSimTime, double sigma)
                 foreach(it; 0 .. nturb){
                     blk.zed[cellCount+TKE+it] = cell.dUdt[1].rhoturb[it].im/(sigma);
                 }
+                version(multi_species_gas){
                 if ( nsp > 1 ) {
                     foreach(sp; 0 .. nsp){ blk.zed[cellCount+SPECIES+sp] = cell.dUdt[1].massf[sp].im/(sigma); }
+                }
                 }
                 cellCount += nConserved;
             }
@@ -1475,8 +1503,10 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         foreach(it; 0 .. nturb){
             blk.maxRate.rhoturb[it] = 0.0;
         }
+        version(multi_species_gas){
         if ( nsp > 1 ) {
             foreach(sp; 0 .. nsp){ blk.maxRate.massf[sp] = 0.0; }
+        }
         }
         foreach (i, cell; blk.cells) {
             blk.FU[cellCount+MASS] = cell.dUdt[0].mass;
@@ -1488,8 +1518,10 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             foreach(it; 0 .. nturb){
                 blk.FU[cellCount+TKE+it] = cell.dUdt[0].rhoturb[it];
             }
+            version(multi_species_gas){
             if ( nsp > 1 ) {
                 foreach(sp; 0 .. nsp){ blk.FU[cellCount+SPECIES+sp] = cell.dUdt[0].massf[sp]; }
+            }
             }
             cellCount += nConserved;
             /*
@@ -1511,8 +1543,10 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             foreach(it; 0 .. nturb){
                 blk.maxRate.rhoturb[it] = fmax(blk.maxRate.rhoturb[it], fabs(cell.dUdt[0].rhoturb[it]));
             }
+            version(multi_species_gas){
             if ( nsp > 1 ) {
                 foreach(sp; 0 .. nsp){ blk.maxRate.massf[sp] = fmax(blk.maxRate.massf[sp], fabs(cell.dUdt[0].massf[sp])); }
+            }
             }
         }
     }
@@ -1537,10 +1571,12 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         foreach(it; 0 .. blk.myConfig.turb_model.nturb){
             maxTurb[it] = fmax(maxTurb[it], blk.maxRate.rhoturb[it]);
         }
+        version(multi_species_gas){
         if ( blk.myConfig.gmodel.n_species > 1 ) {
             foreach(sp; 0 .. blk.myConfig.gmodel.n_species){
                 maxSpecies[sp] = fmax(maxSpecies[sp], blk.maxRate.massf[sp]);
             }
+        }
         }
     }
     // In distributed memory, reduce the max values and ensure everyone has a copy
@@ -1586,10 +1622,12 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             foreach(it; 0 .. blk.myConfig.turb_model.nturb){
                 blk.maxRate.rhoturb[it] = maxTurb[it];
             }
+            version(multi_species_gas){
             if ( blk.myConfig.gmodel.n_species > 1 ) {
                 foreach(sp; 0 .. blk.myConfig.gmodel.n_species){
                     blk.maxRate.massf[sp] = maxSpecies[sp];
                 }
+            }
             }
         }
         else { // just scale by 1
@@ -1602,10 +1640,12 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             foreach(it; 0 .. blk.myConfig.turb_model.nturb){
                 blk.maxRate.rhoturb[it] = 1.0; 
             }
+            version(multi_species_gas){
             if ( blk.myConfig.gmodel.n_species ) {
                 foreach(sp; 0 .. blk.myConfig.gmodel.n_species){
                     blk.maxRate.massf[sp] = 1.0; 
                 }
+            }
             }
         }
     }
@@ -1670,10 +1710,12 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             foreach(it; 0 .. nturb){
                 blk.r0[cellCount+TKE+it] = (1./blk.maxRate.rhoturb[it])*blk.FU[cellCount+TKE+it];
             }
+            version(multi_species_gas){
             if ( nsp > 1 ) {
                 foreach(sp; 0 .. nsp){
                     blk.r0[cellCount+SPECIES+sp] = (1./blk.maxRate.massf[sp])*blk.FU[cellCount+SPECIES+sp];
                 }
+            }
             }
             cellCount += nConserved;
         }
@@ -1719,8 +1761,10 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                     foreach(it; 0 .. nturb){
                         blk.v[cellCount+TKE+it] *= (blk.maxRate.rhoturb[it]);
                     }
+                    version(multi_species_gas){
                     if ( nsp > 1 ) {
                         foreach(sp; 0 .. nsp){ blk.v[cellCount+SPECIES+sp] *= (blk.maxRate.massf[sp]); }
+                    }
                     }
                     cellCount += nConserved;
                 }
@@ -1815,8 +1859,10 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                     foreach(it; 0 .. nturb){
                         blk.w[cellCount+TKE+it] *= (1./blk.maxRate.rhoturb[it]);
                     }
+                    version(multi_species_gas){
                     if ( nsp > 1 ) {
                         foreach(sp; 0 .. nsp){ blk.w[cellCount+SPECIES+sp] *= (1./blk.maxRate.massf[sp]); }
+                    }
                     }
                     cellCount += nConserved;
                 }
@@ -1929,8 +1975,10 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 foreach(it; 0 .. nturb){
                     blk.zed[cellCount+TKE+it] *= (blk.maxRate.rhoturb[it]);
                 }
+                version(multi_species_gas){
                 if ( nsp > 1 ) {
                     foreach(sp; 0 .. nsp){ blk.zed[cellCount+SPECIES+sp] *= (blk.maxRate.massf[sp]); }
+                }
                 }
                 cellCount += nConserved;
             }
@@ -2013,8 +2061,10 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 foreach(it; 0 .. nturb){
                     blk.r0[cellCount+TKE+it] *= (1.0/blk.maxRate.rhoturb[it]);
                 }
+                version(multi_species_gas){
                 if ( nsp > 1 ) {
                     foreach(sp; 0 .. nsp){ blk.r0[cellCount+SPECIES+sp] *= (1.0/blk.maxRate.massf[sp]); }
+                }
                 }
                 cellCount += nConserved;
             }
@@ -2066,8 +2116,10 @@ void max_residuals(ConservedQuantities residuals)
         foreach(it; 0 .. nturb){
             blk.residuals.rhoturb[it] = fabs(blk.residuals.rhoturb[it]);
         }
+        version(multi_species_gas){
         if ( nsp > 1 ) {
             foreach(sp; 0 .. nsp){ blk.residuals.massf[sp] = fabs(blk.residuals.massf[sp]); }
+        }
         }
         number massLocal, xMomLocal, yMomLocal, zMomLocal, energyLocal;
         number[2] turbLocal;
@@ -2083,7 +2135,9 @@ void max_residuals(ConservedQuantities residuals)
             foreach(it; 0 .. nturb){
                 turbLocal[it] = cell.dUdt[0].rhoturb[it];
             }
+            version(multi_species_gas){
             foreach(sp; 0 .. nsp){ speciesLocal[sp] = cell.dUdt[0].massf[sp]; }
+            }
             blk.residuals.mass = fmax(blk.residuals.mass, massLocal);
             blk.residuals.momentum.refx = fmax(blk.residuals.momentum.x, xMomLocal);
             blk.residuals.momentum.refy = fmax(blk.residuals.momentum.y, yMomLocal);
@@ -2093,8 +2147,10 @@ void max_residuals(ConservedQuantities residuals)
             foreach(it; 0 .. nturb){
                 blk.residuals.rhoturb[it] = fmax(blk.residuals.rhoturb[it], turbLocal[it]);
             }
+            version(multi_species_gas){
             if ( nsp > 1 ) {
                 foreach(sp; 0 .. nsp){ blk.residuals.massf[sp] = fmax(blk.residuals.massf[sp], speciesLocal[sp]); }
+            }
             }
         }
     }
@@ -2109,10 +2165,12 @@ void max_residuals(ConservedQuantities residuals)
         foreach(it; 0 .. blk.myConfig.turb_model.nturb){
             residuals.rhoturb[it] = fmax(residuals.rhoturb[it], blk.residuals.rhoturb[it]);
         }
+        version(multi_species_gas){
         if ( blk.myConfig.gmodel.n_species > 1 ) {
             foreach(sp; 0 .. blk.myConfig.gmodel.n_species ){
                 residuals.massf[sp] = fmax(residuals.massf[sp], blk.residuals.massf[sp]);
             }
+        }
         }
     }
     version(mpi_parallel) {
@@ -2134,11 +2192,13 @@ void max_residuals(ConservedQuantities residuals)
             MPI_Reduce(&(residuals.rhoturb[it].re), &maxResid, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
             if (GlobalConfig.is_master_task) { residuals.rhoturb[it].re = maxResid; }
         }
+        version(multi_species_gas){
         if ( GlobalConfig.gmodel_master.n_species > 1 ) {
             foreach (sp; 0 .. GlobalConfig.gmodel_master.n_species) {
                 MPI_Reduce(&(residuals.massf[sp].re), &maxResid, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
                 if (GlobalConfig.is_master_task) { residuals.massf[sp].re = maxResid; }
             }   
+        }
         }
     }
 }
@@ -2166,10 +2226,12 @@ void rewrite_times_file(RestartInfo[] times)
         foreach(it; 0 .. GlobalConfig.turb_model.nturb){
             f.writef(" %.18e", rInfo.residuals.rhoturb[it].re);
         }
+        version(multi_species_gas){
         if ( GlobalConfig.gmodel_master.n_species > 1 ) {
             foreach(sp; 0 .. GlobalConfig.gmodel_master.n_species){
                 f.writef(" %.18e", rInfo.residuals.massf[sp].re);
             }
+        }
         }
         f.write("\n");
     }

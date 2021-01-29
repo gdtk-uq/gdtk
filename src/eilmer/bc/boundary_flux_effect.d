@@ -617,8 +617,10 @@ class BFE_ThermionicElectronFlux : BoundaryFluxEffect {
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
         //
-        foreach (i, f; bc.faces) {
-            f.F.massf[electron_index] = -bc.outsigns[i]*electron_flux(f);
+        version(multi_species_gas){
+            foreach (i, f; bc.faces) {
+                f.F.massf[electron_index] = -bc.outsigns[i]*electron_flux(f);
+            }
         }
     }
 protected:
