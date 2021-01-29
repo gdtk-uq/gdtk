@@ -116,10 +116,13 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
   --list-info                        report some details of this simulation
   --tindx-plot=<int>|all|last|9999|\"1,5,13,25\"   defaults to last
   --add-vars=\"mach,pitot\"            add variables to the flow solution data
-                                     (just for postprocessing)
+                                     (just for postprocessing and plotting)
                                      Other variables include:
-                                     total-h, total-p, enthalpy, entropy, molef, conc,
-                                     Tvib (for some gas models)
+                                       total-h, total-p, total-T,
+                                       enthalpy, entropy, molef, conc,
+                                       Tvib (for some gas models)
+                                       nrf (non-rotating-frame velocities)
+                                       cyl (cylindrical coordinates: r, theta)
   --ref-soln=<filename>              Lua file for reference solution
   --vtk-xml                          produce XML VTK-format plot files
   --binary-format                    use binary within the VTK-XML
