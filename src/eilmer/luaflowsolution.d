@@ -816,6 +816,27 @@ extern(C) int read_extra_vars(lua_State* L)
         blk.read_extra_vars_from_file(fname, vars);
     }
 
+    lua_settop(L, 0);
+    return 0;
+}
+
+extern(C) int add_aux_variables(lua_State* L)
+{
+    auto fsol = checkFlowSolution(L, 1);
+    if (!lua_istable(L, 2)) {
+        string errMsg = "Error in call to FlowSolution:add_aux_variables.";
+        errMsg ~= " A table is expected as first (and only) argument to the method.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    string[] names;
+    int nEntries = to!int(lua_objlen(L, 2));
+    foreach (i; 0 .. nEntries) {
+        lua_rawgeti(L, 2, i+1);
+        names ~= to!string(luaL_checkstring(L, -1));
+        lua_pop(L, 1);
+    }
+    fsol.add_aux_variables(names);
+    lua_settop(L, 0);
     return 0;
 }
 
@@ -834,6 +855,7 @@ extern(C) int subtract_flow_solution(lua_State* L)
     auto fsol1 = checkFlowSolution(L, 1);
     auto fsol2 = checkFlowSolution(L, 2);
     fsol1.subtract(fsol2);
+    lua_settop(L, 0);
     return 0;
 }
 
@@ -897,6 +919,8 @@ void registerFlowSolution(lua_State* L)
     lua_setfield(L, -2, "sgrid");
     lua_pushcfunction(L, &read_extra_vars);
     lua_setfield(L, -2, "read_extra_vars");
+    lua_pushcfunction(L, &add_aux_variables);
+    lua_setfield(L, -2, "add_aux_variables");
     lua_pushcfunction(L, &write_vtk_files);
     lua_setfield(L, -2, "write_vtk_files");
     lua_pushcfunction(L, &subtract_flow_solution);

@@ -150,6 +150,7 @@ public:
         string str = "FlowSolution(";
         str ~= "jobName=" ~ jobName ~ ", sim_time=" ~ to!string(sim_time);
         str ~= ", nBlocks=" ~ to!string(nBlocks);
+        str ~= ", variables=" ~ to!string(flowBlocks[0].variableNames);
         str ~= ")";
         return str;
     }
@@ -876,10 +877,12 @@ public:
 
     void subtract(BlockFlow other)
     {
-        // We assume that the flow solutions align geometrically.
-        foreach (i; 0 .. ncells) {
-            foreach (ivar; 0 .. variableNames.length) {
-                _data[i][ivar] -= other._data[i][ivar];
+        foreach (ivar; 0 .. variableNames.length) {
+            if (other.variableNames.length > ivar && (other.variableNames[ivar] == variableNames[ivar])) {
+                // We assume that the flow solutions align geometrically.
+                foreach (i; 0 .. ncells) { _data[i][ivar] -= other._data[i][ivar]; }
+            } else {
+                writeln("Warning: variable-name mismatch at ivar=%d, name=%s", ivar, variableNames[ivar]);
             }
         }
     } // end subtract()
