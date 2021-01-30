@@ -108,6 +108,7 @@ install: foamMesh foam-mesh.lua
 
 clean:
 	- rm -f *.o elements/*.o gpath/*.o grid/*.o luawrap/*.o misc/*.o surface/*.o volume/*.o
+	- rm -f *.obj elements/*.obj gpath/*.obj grid/*.obj luawrap/*.obj misc/*.obj surface/*.obj volume/*.obj
 	- rm -f $(DEMO_PROGRAMS)
 	- rm -f $(TEST_PROGRAMS)
 	- rm -f gpgrid*.vtk test*.vtk test*.gz test*.svg test*.su2 test*.bin

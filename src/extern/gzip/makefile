@@ -6,5 +6,5 @@ gzip_demo: gzip_demo.d gzip.d
 
 clean:
 	- rm -f testout.gz
-	- rm -f *.o
+	- rm -f *.o *.obj
 	- rm -f gzip_demo

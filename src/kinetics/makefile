@@ -3,7 +3,7 @@
 # and build stand-alone programs.
 PLATFORM ?= linux
 WITH_DVODE ?= 0
-INSTALL_DIR ?= $(HOME)/e3bin
+INSTALL_DIR ?= $(HOME)/dgdinst
 BUILD_DIR ?= ../../build
 
 TEST_PROGRAMS := chemistry_update_test \
@@ -59,7 +59,7 @@ test: $(TEST_PROGRAMS)
 	tclsh kinetics-package-test.tcl
 
 clean:
-	- rm -f *.o *.mod
+	- rm -f *.o *.mod *.obj
 	- rm -f $(TEST_PROGRAMS)
 	- rm -f two_temperature_argon_kinetics_test_results.data
 	- rm -rf $(BUILD_DIR)/*

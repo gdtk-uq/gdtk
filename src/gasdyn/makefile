@@ -48,7 +48,7 @@ demo: $(DEMO_PROGRAMS)
 	@echo "Demo codes built."
 
 clean:
-	- rm *.o
+	- rm *.o *.obj
 	- rm $(DEMO_PROGRAMS)
 	- rm trace.log trace.def
 	- rm thermo.inp thermo.lib thermo.out
@@ -60,7 +60,7 @@ clean:
 	- cd $(CEQ_DIR); make clean
 
 $(LIBLUA):
-	cd $(LUA_DIR); make linux local
+	cd $(LUA_DIR); make $(PLATFORM) local
 
 $(LIBGASF):
 	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) libgasf.a

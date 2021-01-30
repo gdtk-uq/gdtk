@@ -45,5 +45,5 @@ moduletests: thermo.c thermo.h thermo.o linalg.c linalg.h linalg.o
 	$(CC) linalg.c -D TEST -lm -o ../tests/testlinalg
 
 clean: 
-	rm -rf *.o 
+	rm -rf *.o *.obj
 	rm -rf libceq.so libceq.a

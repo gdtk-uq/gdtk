@@ -69,7 +69,7 @@ demo: ${DEMO_PROGRAMS}
 	echo "Demo codes built."
 
 clean:
-	- rm -f *.o
+	- rm -f *.o *.obj
 	- rm -f ${DEMO_PROGRAMS}
 	- rm -f ${TEST_PROGRAMS}
 	- cd $(LUA); make clean
@@ -77,7 +77,7 @@ clean:
 # Specific targets, for individual artefacts.
 
 $(LIBLUA):
-	cd $(LUA); make linux local
+	cd $(LUA); make $(PLATFORM) local
 
 bbla_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=$@ \

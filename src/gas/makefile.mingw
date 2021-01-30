@@ -1,14 +1,26 @@
-# makefile for the gas module
+# makefile for the gas module in a Mingw-w64 environment
+#
+# Example use:
+# $ make -f makefile.mingw gas-calc
+#
+# 2021-01-30 This is a work in progress.
+# Have got to the point that the link stage fails with errors:
+# lld-link: error: undefined symbol: __imp___acrt_iob_func
+# lld-link: error: undefined symbol: __mingw_vfprintf
+# lld-link: error: undefined symbol: __mingw_vsprintf
+# lld-link: error: undefined symbol: __mingw_strtod
+# lld-link: error: undefined symbol: __mingw_vfscanf
+# lld-link: error: undefined symbol: ___chkstk_ms
+#
 
-# We can specify the LDC2 compiler as DMD=ldmd2 on the command-line
-# when invoking this makefile.  Can also ask for gdc.
+# Only the dmd compiler is usable, I believe.
 DMD ?= dmd
 
 # FLAVOUR options are debug, fast, profile
 # Flags for each compiler will be determined on this option.
 FLAVOUR ?= debug
 
-PLATFORM ?= linux
+PLATFORM ?= mingw
 WITH_DVODE ?= 0
 INSTALL_DIR ?= $(HOME)/dgdinst
 BUILD_DIR := ../../build
@@ -63,70 +75,22 @@ include gas_files.mk
 
 # The fortran functions are put in a dedicated library.
 # The build rules for this library are at the bottom of this makefile.
-LIBGASF := libgasf.a
+LIBGASF := libgasf.lib
 
 ifeq ($(DMD), dmd)
     ifeq ($(FLAVOUR), debug)
-        DFLAGS := -w -g -debug -version=flavour_debug
+        DFLAGS := -w -g -debug -version=flavour_debug -m64
     endif
     ifeq ($(FLAVOUR), profile)
-        DFLAGS := -profile -w -g -O -release -boundscheck=off -version=flavour_profile
+        DFLAGS := -profile -w -g -O -release -boundscheck=off -version=flavour_profile -m64
     endif
     ifeq ($(FLAVOUR), fast)
-        DFLAGS := -w -g -O -release -boundscheck=off -version=flavour_fast
+        DFLAGS := -w -g -O -release -boundscheck=off -version=flavour_fast -m64
     endif
-    PIC := -fPIC
+    PIC :=
     DVERSION := -version=
     OF := -of
-    DLINKFLAGS := -L-ldl
-endif
-ifeq ($(DMD), ldmd2)
-    ifeq ($(FLAVOUR), debug)
-        DFLAGS := -w -g -debug -version=flavour_debug
-    endif
-    ifeq ($(FLAVOUR), profile)
-        DFLAGS := -profile -w -g -O -release -inline -boundscheck=off -version=flavour_profile
-    endif
-    ifeq ($(FLAVOUR), fast)
-        DFLAGS := -w -g -O -release -inline -boundscheck=off -version=flavour_fast
-    endif
-    PIC := -fPIC
-    DVERSION := -version=
-    OF := -of
-    DLINKFLAGS := -L-ldl
-endif
-ifeq ($(DMD), ldc2)
-    ifeq ($(FLAVOUR), debug)
-        DFLAGS := -w -g -d-debug -d-version=flavour_debug
-    endif
-    ifeq ($(FLAVOUR), profile)
-        # -fprofile-generate will result in profraw files being written
-        # that may be viewed, showing the top 10 functions with internal block counts
-        # llvm-profdata show -text -topn=10 <profraw-file>
-        DFLAGS := -fprofile-generate -g -w -O -release -enable-inlining -boundscheck=off -d-version=flavour_profile
-    endif
-    ifeq ($(FLAVOUR), fast)
-        DFLAGS := -w -g -O -release -enable-inlining -boundscheck=off -d-version=flavour_fast -ffast-math -flto=full
-    endif
-    PIC := --relocation-model=pic
-    DVERSION := -d-version=
-    OF := -of=
-    DLINKFLAGS := -L-ldl
-endif
-ifeq ($(DMD), gdc-8)
-    ifeq ($(FLAVOUR), debug)
-        DFLAGS := -Wall -Og -g -fversion=flavour_debug
-    endif
-    ifeq ($(FLAVOUR), profile)
-        DFLAGS := -Wall -O2 -frelease -fno-debug -fversion=flavour_profile
-    endif
-    ifeq ($(FLAVOUR), fast)
-        DFLAGS := -Wall -O2 -frelease -fno-debug -fversion=flavour_fast
-    endif
-    PIC := -fPIC
-    DVERSION := -fversion=
-    OF := -o
-    DLINKFLAGS := -ldl
+    DLINKFLAGS :=
 endif
 
 ifeq ($(WITH_DVODE),1)
@@ -155,14 +119,14 @@ build-prep-gas: prep_gas.lua species-database/species-database.lua \
 
 # The following are not required by the Eilmer flow solver but
 # they are useful for building stand-alone flow-analysis programs.
-build-libgas: libgas.so gas-calc build-uniform-lut.py $(LIBCEQ)
+build-libgas: libgas.dll gas-calc build-uniform-lut.py $(LIBCEQ)
 	- mkdir -p $(BUILD_DIR)/bin
 	cp gas-calc $(BUILD_DIR)/bin/
 	cp build-uniform-lut.py $(BUILD_DIR)/bin/build-uniform-lut; chmod +x $(BUILD_DIR)/bin/build-uniform-lut
 	cp ../../examples/estcn/estcn.py $(BUILD_DIR)/bin/estcn; chmod +x $(BUILD_DIR)/bin/estcn
 	- mkdir -p $(BUILD_DIR)/lib
-	cp libgas.so $(BUILD_DIR)/lib/
-	cp $(CEQ_DIR)/libceq.so $(BUILD_DIR)/lib/
+	cp libgas.dll $(BUILD_DIR)/lib/
+	cp $(CEQ_DIR)/libceq.so $(BUILD_DIR)/lib/libceq.dll
 	cp -r ../lib/* $(BUILD_DIR)/lib/
 
 install: build-prep-gas build-libgas
@@ -177,7 +141,7 @@ demo: ${DEMO_PROGRAMS}
 	echo "Demo programs built."
 
 clean:
-	- rm -f *.o *.so *.a *.obj *.lib
+	- rm -f *.o *.so *.a *.obj *.lib *.dll
 	- rm -f *.mod
 	- rm -rf $(BUILD_DIR)/*
 	- rm -rf __pycache__
@@ -217,27 +181,29 @@ gas-calc: gas_calc.d $(LIBLUA) $(GAS_FILES) $(GAS_LUA_FILES) \
 		$(NM_FILES) $(NM_LUA_FILES) $(UTIL_FILES) \
 		$(KINETICS_FILES) $(KINETICS_LUA_FILES) \
 		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(CEQ_SRC_FILES) $(GEOM_FILES) $(GZIP_FILES) \
-		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
+		libceq.lib libgasf.lib liblua.lib \
 		$(DLINKFLAGS)
 
-libgas.so: gas_cwrap.d $(LIBLUA) $(GAS_FILES) $(KINETICS_FILES) \
+libgas.dll: gas_cwrap.d $(LIBLUA) $(GAS_FILES) $(KINETICS_FILES) \
 	$(NM_FILES) $(UTIL_FILES) $(GASDYN_FILES) \
 	$(CEQ_SRC_FILES) $(GEOM_FILES) $(GZIP_FILES) \
 	$(LIBCEQ) $(LIBGASF) $(LIBLUA)
 	$(DMD) -c gas_cwrap.d $(PIC) $(DFLAGS) -op \
 		$(GAS_FILES) $(KINETICS_FILES) $(GASDYN_FILES) $(NM_FILES) \
 		$(UTIL_FILES) $(CEQ_SRC_FILES) $(GEOM_FILES) $(GZIP_FILES)
-	$(DMD) $(OF)libgas.so gas_cwrap.o $(PIC) $(DFLAGS) -op -shared \
+	$(DMD) $(OF)libgas.dll gas_cwrap.obj $(PIC) $(DFLAGS) -op -shared \
 		$(GAS_FILES) $(KINETICS_FILES) $(GASDYN_FILES) $(NM_FILES) \
 		$(UTIL_FILES) $(CEQ_SRC_FILES) $(GEOM_FILES) $(GZIP_FILES) \
-		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
+		libceq.lib libgasf.lib liblua.lib \
 		-L-L=$(INSTALL_DIR)/lib $(DLINKFLAGS)
 
 $(LIBLUA):
 	cd $(LUA); make $(PLATFORM) local
+	cp $(LIBLUA) liblua.lib
 
 $(LIBCEQ):
 	cd $(CEQ_DIR); make
+	cp $(LIBCEQ) libceq.lib
 
 species-database/species-database.lua :
 	cd species-database; make species-database.lua
