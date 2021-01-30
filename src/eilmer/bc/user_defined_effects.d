@@ -327,7 +327,8 @@ public:
             foreach (k; 0 .. blk.nkc)  {
                 foreach (i; 0 .. blk.nic) {
                     auto f = blk.get_ifj(i,j,k);
-                    callInterfaceUDF(t, gtl, ftl, i, j, k, f);
+                    // Indices passed in are for the cell just inside the boundary.
+                    callInterfaceUDF(t, gtl, ftl, i, j-1, k, f);
                 }
             }
             break;
@@ -336,7 +337,7 @@ public:
             foreach (k; 0 .. blk.nkc) {
                 foreach (j; 0 .. blk.njc) {
                     auto f = blk.get_ifi(i,j,k);
-                    callInterfaceUDF(t, gtl, ftl, i, j, k, f);
+                    callInterfaceUDF(t, gtl, ftl, i-1, j, k, f);
                 }
             }
             break;
@@ -363,7 +364,7 @@ public:
             foreach (i; 0 .. blk.nic) {
                 foreach (j; 0 .. blk.njc) {
                     auto f = blk.get_ifk(i,j,k);
-                    callInterfaceUDF(t, gtl, ftl, i, j, k, f);
+                    callInterfaceUDF(t, gtl, ftl, i, j, k-1, f);
                 }
             }
             break;
@@ -490,6 +491,7 @@ private:
         lua_pushnumber(L, IFace.t2.x); lua_setfield(L, -2, "csX2");
         lua_pushnumber(L, IFace.t2.y); lua_setfield(L, -2, "csY2");
         lua_pushnumber(L, IFace.t2.z); lua_setfield(L, -2, "csZ2");
+        // Note that the following indices are for the cell just inside the boundary.
         lua_pushinteger(L, i); lua_setfield(L, -2, "i");
         lua_pushinteger(L, j); lua_setfield(L, -2, "j");
         lua_pushinteger(L, k); lua_setfield(L, -2, "k");
@@ -566,7 +568,8 @@ public:
             foreach (k; 0 .. blk.nkc)  {
                 foreach (i; 0 .. blk.nic) {
                     auto f = blk.get_ifj(i,j,k);
-                    callFluxUDF(t, gtl, ftl, i, j, k, f);
+                    // Indices passed in are for the cell just inside the boundary.
+                    callFluxUDF(t, gtl, ftl, i, j-1, k, f);
                 }
             }
             break;
@@ -575,7 +578,7 @@ public:
             foreach (k; 0 .. blk.nkc) {
                 foreach (j; 0 .. blk.njc) {
                     auto f = blk.get_ifi(i,j,k);
-                    callFluxUDF(t, gtl, ftl, i, j, k, f);
+                    callFluxUDF(t, gtl, ftl, i-1, j, k, f);
                 }
             }
             break;
@@ -602,7 +605,7 @@ public:
             foreach (i; 0 .. blk.nic) {
                 foreach (j; 0 .. blk.njc) {
                     auto f = blk.get_ifk(i,j,k);
-                    callFluxUDF(t, gtl, ftl, i, j, k, f);
+                    callFluxUDF(t, gtl, ftl, i, j, k-1, f);
                 }
             }
             break;
@@ -719,6 +722,7 @@ private:
         lua_pushnumber(L, IFace.t2.x); lua_setfield(L, -2, "csX2");
         lua_pushnumber(L, IFace.t2.y); lua_setfield(L, -2, "csY2");
         lua_pushnumber(L, IFace.t2.z); lua_setfield(L, -2, "csZ2");
+        // Note that the following indices are for the cell just inside the boundary.
         lua_pushinteger(L, i); lua_setfield(L, -2, "i");
         lua_pushinteger(L, j); lua_setfield(L, -2, "j");
         lua_pushinteger(L, k); lua_setfield(L, -2, "k");
