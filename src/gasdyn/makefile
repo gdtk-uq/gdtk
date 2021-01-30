@@ -31,6 +31,7 @@ include $(CEQ_DIR)/ceq_files.mk
 
 GAS_DIR := ../gas
 include $(GAS_DIR)/gas_files.mk
+LIBGASF := $(GAS_DIR)/libgasf.a
 
 KINETICS_DIR := ../kinetics
 include $(KINETICS_DIR)/kinetics_files.mk
@@ -61,6 +62,9 @@ clean:
 $(LIBLUA):
 	cd $(LUA_DIR); make linux local
 
+$(LIBGASF):
+	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) libgasf.a
+
 $(LIBCEQ):
 	cd $(CEQ_DIR); make
 
@@ -77,35 +81,20 @@ luaidealgasflow_demo: luaidealgasflow_demo.d $(NM_FILES) $(LIBLUA) \
 		gasflowexception.d \
 		$(NM_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA)
 
-gasflow_demo: gasflow_demo.d gasflow.d idealgasflow.d $(NM_FILES) $(LIBCEQ) $(LIBLUA) \
+gasflow_demo: gasflow_demo.d gasflow.d idealgasflow.d $(NM_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) \
 	$(UTIL_FILES) $(GASDYN_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES)
 	dmd $(DFLAGS) $(OF)gasflow_demo \
 		gasflow_demo.d gasflow.d idealgasflow.d gasflowexception.d \
 		$(NM_FILES) $(UTIL_FILES) \
-		$(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(LIBCEQ) $(DLINKFLAGS_LUA)
+		$(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(LIBCEQ) $(LIBGASF) $(DLINKFLAGS_LUA)
 
 luagasflow_demo: luagasflow_demo.d luagasflow.d luaidealgasflow.d \
 	gasflow.d idealgasflow.d \
-	$(NM_FILES) $(LIBLUA) $(LIBCEQ) \
+	$(NM_FILES) $(LIBLUA) $(LIBCEQ) $(LIBGASF) \
 	$(UTIL_FILES) $(GASDYN_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(GAS_LUA_FILES) \
 	$(KINETICS_FILES) $(KINETICS_LUA_FILES)
 	dmd $(DFLAGS) $(OF)luagasflow_demo \
 		luagasflow_demo.d luagasflow.d luaidealgasflow.d \
 		gasflow.d idealgasflow.d gasflowexception.d \$(NM_FILES) $(UTIL_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GAS_LUA_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES) \
-		 $(LIBCEQ) $(DLINKFLAGS_LUA)
-
-#--------------------------------------------------------------------------
-# Fortran bits -- we need a bit of a hack
-
-$(GAS_DIR)/ideal_air_fortran.o: $(GAS_DIR)/ideal_air_fortran.f
-	cd $(GAS_DIR); gfortran -c -ffree-form ideal_air_fortran.f
-
-$(KINETICS_DIR)/pseudosp_solve_ode.o: $(KINETICS_DIR)/pseudosp_solve_ode.f90
-	cd $(KINETICS_DIR); gfortran -c pseudosp_solve_ode.f90
-
-$(KINETICS_DIR)/pseudosp_rhs_ode.o: $(KINETICS_DIR)/pseudosp_rhs_ode.f90
-	cd $(KINETICS_DIR); gfortran -c pseudosp_rhs_ode.f90
-
-$(KINETICS_DIR)/dvode.o: $(KINETICS_DIR)/dvode.f
-	cd $(KINETICS_DIR); gfortran -c dvode.f
+		$(LIBCEQ) $(LIBGASF) $(DLINKFLAGS_LUA)

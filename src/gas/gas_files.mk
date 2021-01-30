@@ -32,7 +32,6 @@ GAS_MODEL_FILES := $(GAS_DIR)/package.d \
 	$(GAS_DIR)/vib_specific_nitrogen.d \
 	$(GAS_DIR)/fuel_air_mix.d \
 	$(GAS_DIR)/equilibrium_gas.d \
-	$(GAS_DIR)/ideal_air_fortran.o \
 	$(GAS_DIR)/steam.d \
 	$(GAS_DIR)/pseudo_species_gas.d \
 	$(GAS_DIR)/pseudo_species.d \

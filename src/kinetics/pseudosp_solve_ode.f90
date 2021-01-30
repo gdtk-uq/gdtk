@@ -30,7 +30,8 @@ subroutine solveODE(Y, neq, T_init, dt) bind(C, name='solveODE')
     real(c_double), intent(in) :: dt
 
     ! Parameters and variables for subroutine DVODE
-    integer(kind=4) :: i,itol,itask,istate,iopt,liw,lrw,mf
+    integer(kind=4) :: i,itol,itask,istate,iopt,mf
+    integer(kind=8) :: liw,lrw
     real(kind=8) :: t, t_out
     real(kind=8) :: rtol,atol
     real(kind=8), allocatable, dimension(:) :: rwork
@@ -43,7 +44,7 @@ subroutine solveODE(Y, neq, T_init, dt) bind(C, name='solveODE')
     real(kind=8), parameter :: Na=6.0221409e+23 ! Avogadro
 
     ! Local variables
-    integer(kind=4) :: j
+    integer(kind=8) :: j
 
     ! Convert vector Y from [mol/m^3] to [particules/m^3]
     do j=1,neq

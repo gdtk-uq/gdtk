@@ -28,6 +28,7 @@ include $(NML_DIR)/nml_files.mk
 
 GAS_DIR := ../gas
 include $(GAS_DIR)/gas_files.mk
+LIBGASF := $(GAS_DIR)/libgasf.a
 
 KINETICS_DIR := ../kinetics
 include $(KINETICS_DIR)/kinetics_files.mk
@@ -162,12 +163,15 @@ clean:
 $(LIBLUA):
 	cd $(LUA_DIR); make $(PLATFORM) local
 
+$(LIBGASF):
+	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) libgasf.a
+
 $(LIBCEQ):
 	cd $(CEQ_DIR); make
 
 nenzf1d: main.d $(NENZF1D_FILES) \
 	$(GEOM_FILES) $(DYAML_FILES) $(TINYENDIAN_FILES) \
-	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBLUA) $(GZIP_FILES) \
+	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 	$(NM_FILES) $(UTIL_FILES) \
 	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
@@ -182,7 +186,7 @@ nenzf1d: main.d $(NENZF1D_FILES) \
 		$(UTIL_FILES) $(NM_FILES) \
 		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
-		$(LIBCEQ) $(LIBLUA) \
+		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
 		$(DLINKFLAGS)
 
 prep-gas:
@@ -193,18 +197,3 @@ prep-chem:
 
 chemkin2eilmer:
 	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) build-chemkin2eilmer
-
-#--------------------------------------------------------------------------
-# Fortran bits -- we need a bit of a hack
-
-$(GAS_DIR)/ideal_air_fortran.o: $(GAS_DIR)/ideal_air_fortran.f
-	cd $(GAS_DIR); gfortran -c -ffree-form -fPIC ideal_air_fortran.f
-
-$(KINETICS_DIR)/pseudosp_solve_ode.o: $(KINETICS_DIR)/pseudosp_solve_ode.f90
-	cd $(KINETICS_DIR); gfortran -c pseudosp_solve_ode.f90
-
-$(KINETICS_DIR)/pseudosp_rhs_ode.o: $(KINETICS_DIR)/pseudosp_rhs_ode.f90
-	cd $(KINETICS_DIR); gfortran -c pseudosp_rhs_ode.f90
-
-$(KINETICS_DIR)/dvode.o: $(KINETICS_DIR)/dvode.f
-	cd $(KINETICS_DIR); gfortran -c dvode.f

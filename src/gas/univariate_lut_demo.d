@@ -3,10 +3,10 @@
 import std.stdio;
 import std.math;
 import std.mathspecial;
-import std.algorithm; 
+import std.algorithm;
 import std.string;
 import std.conv;
-import std.datetime;
+import std.datetime.stopwatch;
 
 import nm.univariate_lut;
 import gas.gas_model;
@@ -22,7 +22,7 @@ static double F(double rho){
 void main(){
         double rho_min = 0.001;
         double rho_max = 1500;
-        int n = 10000;  
+        int n = 10000;
         uni_lut e_rho_sat_lut = new uni_lut(&F, rho_min, rho_max, n);
         //----DEMO OF READ AND WRITE-------
         string filename = "e_rho_sat_table.dat";
@@ -53,7 +53,7 @@ void main(){
         writefln("Error for %s divisions for %s < rho < %s", n, rho_min, rho_max);
         writefln("MSE: %s, maxError: %s", meanError2, maxError);
 
-        
+
 
         //SOME TIMING TESTS
 
@@ -65,14 +65,14 @@ void main(){
                         F(rho);
         }
         sw.stop();
-        long t_eval = sw.peek().usecs;
+        long t_eval = sw.peek.total!"usecs";
         sw.start();
         for(int i = 0; i != ncycles; i++){
                 rho = i/ncycles*(rho_max - rho_min) + rho_min;
                 e_rho_sat_lut2.lookup(rho);
         }
         sw.stop();
-        long t_lut = sw.peek().usecs - t_eval;
+        long t_lut = sw.peek.total!"usecs" - t_eval;
         writeln("-------------------------------");
         writefln("Time taken for %s evaluations:", ncycles);
         writefln("Direct Eval: %s usecs; LUT: %s usecs;", t_eval, t_lut);
