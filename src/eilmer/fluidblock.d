@@ -187,20 +187,6 @@ public:
         // Workspace for flux_calc method.
         Lft = new FlowState(dedicatedConfig[id].gmodel);
         Rght = new FlowState(dedicatedConfig[id].gmodel);
-        // Lua interpreter for the block.
-        // It will be available for computing user-defined source terms.
-        registerGasModel(myL, LUA_GLOBALSINDEX);
-        pushObj!(GasModel, GasModelMT)(myL, dedicatedConfig[id].gmodel);
-        lua_setglobal(myL, "gmodel");
-        lua_pushinteger(myL, dedicatedConfig[id].n_species);
-        lua_setglobal(myL, "n_species");
-        lua_pushinteger(myL, dedicatedConfig[id].n_modes);
-        lua_setglobal(myL, "n_modes");
-        // Although we make the helper functions available within
-        // the block-specific Lua interpreter, we should use
-        // those functions only in the context of the master thread.
-        setSampleHelperFunctions(myL);
-        setGridMotionHelperFunctions(myL);
     }
 
     ~this()

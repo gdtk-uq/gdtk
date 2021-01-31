@@ -375,6 +375,7 @@ const(T) pushObj(T, string metatableName)(lua_State* L, T obj)
     luaL_getmetatable(L, metatableName.toStringz);
     lua_setmetatable(L, -2);
     return obj; // Back in the D domain, we should keep a reference.
+    // It is the responsibility of the calling code to do so.
 }
 
 /**
@@ -382,13 +383,15 @@ const(T) pushObj(T, string metatableName)(lua_State* L, T obj)
  *
  * This function looks for an object of type T
  * at the specified index in lua_State. A error is
- * raised by luaL_checkudata is the object is not of type
+ * raised by luaL_checkudata if the object is not of type
  * metaTableName.
  */
 
 T checkObj(T, string metatableName)(lua_State* L, int index)
 {
+    if (lua_isnil(L, index)) { luaL_error(L, "nil value as pointer to type %s", metatableName.toStringz); }
     auto ptr = cast(T*) luaL_checkudata(L, index, metatableName.toStringz);
+    if (ptr is null) { luaL_error(L, "null pointer to type %s", metatableName.toStringz); }
     return *ptr;
 }
 
@@ -430,7 +433,9 @@ bool isObjType(lua_State* L, int index, string tname)
 
 extern(C) int toStringObj(T, string metatableName)(lua_State* L)
 {
+    if (lua_isnil(L, 1)) { luaL_error(L, "nil value as pointer to type %s", metatableName.toStringz); }
     auto path = checkObj!(T, metatableName)(L, 1);
+    if (path is null) { luaL_error(L, "null pointer to type %s", metatableName.toStringz); }
     lua_pushstring(L, toStringz(path.toString));
     return 1;
 }

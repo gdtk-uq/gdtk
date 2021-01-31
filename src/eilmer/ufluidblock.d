@@ -15,6 +15,8 @@ import std.math;
 import std.algorithm;
 
 import util.lua;
+import util.lua_service;
+import gas.luagas_model;
 import json_helper;
 import lua_helper;
 import gzip;
@@ -33,6 +35,7 @@ import fvcell;
 import lsqinterp;
 import fluidblock;
 import bc;
+import grid_motion;
 
 
 class UFluidBlock: FluidBlock {
@@ -80,6 +83,20 @@ public:
 
     override void init_lua_globals()
     {
+        // Lua interpreter for the block.
+        // It will be available for computing user-defined source terms.
+        registerGasModel(myL, LUA_GLOBALSINDEX);
+        pushObj!(GasModel, GasModelMT)(myL, dedicatedConfig[id].gmodel);
+        lua_setglobal(myL, "gmodel");
+        lua_pushinteger(myL, dedicatedConfig[id].n_species);
+        lua_setglobal(myL, "n_species");
+        lua_pushinteger(myL, dedicatedConfig[id].n_modes);
+        lua_setglobal(myL, "n_modes");
+        // Although we make the helper functions available within
+        // the block-specific Lua interpreter, we should use
+        // those functions only in the context of the master thread.
+        setSampleHelperFunctions(myL);
+        setGridMotionHelperFunctions(myL);
         lua_pushinteger(myL, ncells); lua_setglobal(myL, "ncells");
         lua_pushinteger(myL, nvertices); lua_setglobal(myL, "nvertices");
         lua_pushinteger(myL, nfaces); lua_setglobal(myL, "nfaces");
@@ -94,7 +111,7 @@ public:
     } // end init_lua_globals()
 
     override void init_boundary_conditions(JSONValue json_data)
-    // Initialize boundary conditions after the blocks are fully constructed,
+    // Initialize boundary conditions after the blocks are constructed,
     // because we want access to the full collection of valid block references.
     {
         foreach (boundary; 0 .. nboundaries) {
@@ -102,7 +119,6 @@ public:
             auto bc_json_data = json_data[json_key];
             bc ~= make_BC_from_json(bc_json_data, id, to!int(boundary));
         }
-        foreach (bci; bc) bci.post_bc_construction();
     } // end init_boundary_conditions()
 
     override string toString() const

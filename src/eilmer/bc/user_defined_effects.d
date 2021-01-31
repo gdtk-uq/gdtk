@@ -39,21 +39,22 @@ import bc;
 
 class UserDefinedGhostCell : GhostCellEffect {
 public:
-    string luafname;
+    string luaFileName;
+
     this(int id, int boundary, string fname)
     {
         super(id, boundary, "UserDefined");
-        luafname = fname;
+        luaFileName = fname;
     }
     override void post_bc_construction()
     {
-        if (blk.bc[which_boundary].myL == null) {
-            blk.bc[which_boundary].init_lua_State(luafname);
+        if ((luaFileName.length > 0) && (blk.bc[which_boundary].myL == null)) {
+            blk.bc[which_boundary].init_lua_State(luaFileName);
         }
     }
     override string toString() const
     {
-        return "UserDefinedGhostCellEffect(fname=" ~ luafname ~ ")";
+        return "UserDefinedGhostCellEffect(luaFileName=" ~ luaFileName ~ ")";
     }
 
     override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
@@ -251,7 +252,7 @@ private:
         // 2. Call LuaFunction and expect two tables of ghost cell flow state
         int number_args = 1;
         int number_results = to!int(blk.n_ghost_cell_layers);
-        if ( lua_pcall(L, number_args, number_results, 0) != 0 ) {
+        if (lua_pcall(L, number_args, number_results, 0) != 0) {
             luaL_error(L, "error running user-defined b.c. ghostCell function on boundaryId %d: %s\n",
                        which_boundary, lua_tostring(L, -1));
         }

@@ -363,7 +363,7 @@ public:
         setSampleHelperFunctions(myL);
         setGridMotionHelperFunctions(myL);
         // FIXME: Is this capability depreciated?
-        // Give access to diffusion coefficients calculation 
+        // Give access to diffusion coefficients calculation
         //lua_pushcfunction(myL, &luafn_computeBinaryDiffCoeffs);
         //lua_setglobal(myL, "computeBinaryDiffCoeffs");
         // Finally, do the actual user-supplied file.

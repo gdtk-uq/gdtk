@@ -113,30 +113,34 @@ extern(C) int speciesName(lua_State* L)
 
 extern(C) int thermoPT(lua_State* L)
 {
-    auto gm = checkGasModel(L, 1);
-    auto Q = new GasState(gm);
-    getGasStateFromTable(L, gm, 2, Q);
-    if ( Q.p <= 0.0 || isNaN(Q.p) ) {
-        string errMsg = "ERROR: when calling 'updateThermoFromPT'\n";
-        errMsg ~= "        The supplied pressure value is negative, 0 or has not been set.\n";
-        errMsg ~= "        Check that the 'p' field is set with a valid value.\n";
-        errMsg ~= "        The complete gas state is:\n";
-        errMsg ~= Q.toString();
-        errMsg ~= "\nBailing out\n";
-        throw new Error(errMsg);
+    try {
+        auto gm = checkGasModel(L, 1);
+        auto Q = new GasState(gm);
+        getGasStateFromTable(L, gm, 2, Q);
+        if ( Q.p <= 0.0 || isNaN(Q.p) ) {
+            string errMsg = "ERROR: when calling 'updateThermoFromPT'\n";
+            errMsg ~= "        The supplied pressure value is negative, 0 or has not been set.\n";
+            errMsg ~= "        Check that the 'p' field is set with a valid value.\n";
+            errMsg ~= "        The complete gas state is:\n";
+            errMsg ~= Q.toString();
+            errMsg ~= "\nBailing out\n";
+            throw new Exception(errMsg);
+        }
+        if ( Q.T <= 0.0 || isNaN(Q.T) ) {
+            string errMsg = "ERROR: when calling 'updateThermoFromPT'\n";
+            errMsg ~= "        Supplied temperature value is negative,  0 or has not been set.\n";
+            errMsg ~= "        Check that the 'T' field is set with a valid value.\n";
+            errMsg ~= "        The complete gas state is:\n";
+            errMsg ~= Q.toString();
+            errMsg ~= "\nBailing out\n";
+            throw new Exception(errMsg);
+        }
+        gm.update_thermo_from_pT(Q);
+        gm.update_sound_speed(Q);
+        setGasStateInTable(L, gm, 2, Q);
+    } catch(Exception e) {
+        luaL_error(L, "%s", e.msg.toStringz);
     }
-    if ( Q.T <= 0.0 || isNaN(Q.T) ) {
-        string errMsg = "ERROR: when calling 'updateThermoFromPT'\n";
-        errMsg ~= "        Supplied temperature value is negative,  0 or has not been set.\n";
-        errMsg ~= "        Check that the 'T' field is set with a valid value.\n";
-        errMsg ~= "        The complete gas state is:\n";
-        errMsg ~= Q.toString();
-        errMsg ~= "\nBailing out\n";
-        throw new Error(errMsg);
-    }
-    gm.update_thermo_from_pT(Q);
-    gm.update_sound_speed(Q);
-    setGasStateInTable(L, gm, 2, Q);
     return 0;
 }
 

@@ -309,7 +309,7 @@ int init_simulation(int tindx, int nextLoadsIndx,
         if (GlobalConfig.verbosity_level > 0) {
             debug {
             writeln("MPI-task with rank ", my_rank, " running with ", extraThreadsInPool+1, " threads.");
-            //foreach (blk; localFluidBlocks) { writeln("rank=", my_rank, " blk.id=", blk.id); } 
+            //foreach (blk; localFluidBlocks) { writeln("rank=", my_rank, " blk.id=", blk.id); }
             }
         }
     } else {
@@ -328,6 +328,7 @@ int init_simulation(int tindx, int nextLoadsIndx,
         myblk.myConfig.init_gas_model_bits();
         myblk.init_workspace();
         myblk.init_lua_globals();
+        foreach (bci; myblk.bc) { bci.post_bc_construction(); }
         if (GlobalConfig.user_pad_length > 0) {
             push_array_to_Lua(myblk.myL, GlobalConfig.userPad, "userPad");
         }
