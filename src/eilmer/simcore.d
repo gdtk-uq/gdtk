@@ -331,6 +331,9 @@ int init_simulation(int tindx, int nextLoadsIndx,
         foreach (bci; myblk.bc) { bci.post_bc_construction(); }
         if (GlobalConfig.user_pad_length > 0) {
             push_array_to_Lua(myblk.myL, GlobalConfig.userPad, "userPad");
+            foreach (bci; myblk.bc) {
+                if (bci.myL) { push_array_to_Lua(bci.myL, GlobalConfig.userPad, "userPad"); }
+            }
         }
         if (GlobalConfig.udf_source_terms) {
             luaL_dofile(myblk.myL, GlobalConfig.udf_source_terms_file.toStringz);
