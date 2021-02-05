@@ -62,7 +62,7 @@ Options:
         return exitFlag;
     }
     if (verbosityLevel >= 1) {
-        writeln("NENZF1D 2020-12-10: shock-tunnel with nonequilibrium nozzle flow.");
+        writeln("NENZF1D 2021-02-05: shock-tunnel with nonequilibrium nozzle flow.");
     }
     if (verbosityLevel >= 2) {
         writeln("Revision: PUT_REVISION_STRING_HERE");
@@ -218,7 +218,7 @@ Options:
     }
     //
     if (verbosityLevel >= 1) {
-        writefln("Isentropic flow to throat to state 6 (Mach %g).", meq_throat);
+        writeln("Isentropic flow to throat to state 6 (Mach 1).");
     }
     double error_at_throat(double x)
     {
@@ -226,10 +226,13 @@ Options:
         GasState state = new GasState(gm1);
         double V = expand_from_stagnation(state5s, x, state, gm1);
         gm1.update_sound_speed(state);
-        return (V/state.a) - meq_throat;
+        double err = (V/state.a) - 1.0;
+        return err;
     }
     double x6 = 1.0;
     try {
+        // Note that with the CEA2 calculations, we rally cannot get the
+        // following iteration to converge better then 1.0e-4.
         x6 = nm.secant.solve!(error_at_throat, double)(0.95, 0.90, 1.0e-4);
     } catch (Exception e) {
         writeln("Failed to find throat conditions iteratively.");
@@ -247,7 +250,45 @@ Options:
         if (verbosityLevel >= 3) { writeln("  state6= ", state6); }
     }
     //
-    if (verbosityLevel >= 1) { writeln("Isentropic expansion to nozzle exit of given area (state 7)."); }
+    if (verbosityLevel >= 1) {
+        writefln("Isentropic flow to slightly-expanded state 6e (Mach %g).", meq_throat);
+    }
+    double error_at_small_expansion(double x)
+    {
+        // Returns Mach number error as pressure is changed.
+        GasState state = new GasState(gm1);
+        double V = expand_from_stagnation(state5s, x, state, gm1);
+        gm1.update_sound_speed(state);
+        double err = (V/state.a) - meq_throat;
+        return err;
+    }
+    double x6e = x6;
+    try {
+        // Note that with the CEA2 calculations, we rally cannot get the
+        // following iteration to converge better then 1.0e-4.
+        x6e = nm.secant.solve!(error_at_small_expansion, double)(0.95*x6, 0.90*x6, 1.0e-4);
+    } catch (Exception e) {
+        writeln("Failed to find slightly-expanded conditions iteratively.");
+        writeln("  Exception message: %s", e.msg);
+        exitFlag = 2;
+        return exitFlag;
+    }
+    auto state6e = new GasState(gm1);
+    double V6e = expand_from_stagnation(state5s, x6e, state6e, gm1);
+    double mflux6e = state6e.rho * V6e;  // mass flux per unit area, at slightly-expanded state
+    // Compute the area-ratio at this slightly-expanded state.
+    double ar6e = mflux6 / mflux6e;
+    if (verbosityLevel >= 1) {
+        writefln("  V6e         %g km/s", V6e);
+        writefln("  mflux6e     %g", mflux6e);
+        writefln("  ar6e        %g", ar6e);
+        write_cea_state(state6e);
+        if (verbosityLevel >= 3) { writeln("  state6e= ", state6e); }
+    }
+    //
+    if (verbosityLevel >= 1) {
+        writeln("Isentropic expansion to nozzle exit of given area (state 7).");
+    }
     // The mass flux going through the nozzle exit has to be the same
     // as that going through the nozzle throat.
     double error_at_exit(double x)
@@ -316,17 +357,53 @@ Options:
         }
     }
     //
-    if (state6.ceaSavedData is null) {
+    if (state6e.ceaSavedData is null) {
         exitFlag = 3;
         return exitFlag;
     }
+    if (verbosityLevel >= 1) {
+        writeln("Begin part B: continue supersonic expansion with finite-rate chemistry.");
+    }
+    //
+    // Geometry of nozzle expansion.
+    //
+    auto diameter_schedule = new Schedule(xi, di);
+    double x = xi[0];
+    double d = diameter_schedule.interpolate_value(x);
+    double area_at_throat = 0.25*d*d*std.math.PI; // for later normalizing the exit area
+    //
+    // Since we start slightly supersonic,
+    // we need to determin where we are along the nozzle profile.
+    double error_in_area_ratio(double x)
+    {
+        double d = diameter_schedule.interpolate_value(x);
+        double area = 0.25*d*d*std.math.PI;
+        return area/area_at_throat - ar6e;
+    }
+    // It appears that we need a pretty good starting guess for the pressure ratio.
+    // Maybe a low value is OK.
+    double xstart = xi[0];
+    try {
+        xstart = nm.secant.solve!(error_in_area_ratio, double)(xi[0], xi[1], 1.0e-9, xi[0], xi[$-1]);
+    } catch (Exception e) {
+        writeln("Failed to find starting position iteratively.");
+        xstart = xi[0];
+    }
+    d = diameter_schedule.interpolate_value(xstart);
+    double area_at_start = 0.25*d*d*std.math.PI;
+    if (verbosityLevel >= 1) {
+        writeln("Start position:");
+        writefln("  x           %g m", xstart);
+        writefln("  area-ratio  %g", area_at_start/area_at_throat);
+    }
+    //
     if (verbosityLevel >= 2) {
-        writeln("Throat state mass fractions from CEA.");
-        writeln("massf=", state6.ceaSavedData.massf);
+        writeln("Start part B state mass fractions from CEA.");
+        writeln("massf=", state6e.ceaSavedData.massf);
     }
     GasState gas0 = new GasState(gm2);
-    gas0.p = state6.p; gas0.T = state6.T;
-    foreach (ref Tmode; gas0.T_modes) { Tmode = state6.T; }
+    gas0.p = state6e.p; gas0.T = state6e.T;
+    foreach (ref Tmode; gas0.T_modes) { Tmode = state6e.T; }
     try {
         foreach (name; species) {
             gas0.massf[gm2.species_index(name)] = state6.ceaSavedData.massf[name];
@@ -342,19 +419,17 @@ Options:
     }
     gm2.update_thermo_from_pT(gas0);
     gm2.update_sound_speed(gas0);
-    if (verbosityLevel >= 1) {
-        writeln("Begin part B: supersonic expansion with finite-rate chemistry.");
-    }
     //
     // Make sure that we start the supersonic expansion with a velocity
     // that is slightly higher than the speed of sound for the thermally-perfect gas.
-    // This speed seems slightly higher than for the equilibrium gas.
-    double v = 1.001 * gas0.a;
+    // This sound speed for the finite-rate chemistry seems slightly higher than
+    // the sound speed for the equilibrium gas.
+    double v = fmax(V6e, 1.001*gas0.a);
     if (verbosityLevel >= 1) {
-        writeln("Throat condition:");
+        writeln("Start condition:");
         writefln("  velocity    %g km/s", v/1000.0);
         writefln("  sound-speed %g km/s", gas0.a/1000.0);
-        writefln("  (v-V6)/V6   %g", (v-V6)/V6);
+        writefln("  (v-V6e)/V6e %g", (v-V6e)/V6e);
         write_tp_state(gas0);
         if (verbosityLevel >= 3) { writeln("gas0=", gas0); }
     }
@@ -398,14 +473,12 @@ Options:
         return [dpdrho, dpdu];
     }
     //
-    // Supersonic expansion.
-    auto diameter_schedule = new Schedule(xi, di);
-    double x = xi[0];
-    double d = diameter_schedule.interpolate_value(x);
-    double area = 0.25*d*d*std.math.PI;
-    double area_at_throat = area; // for later normalizing the exit area
-    double massflux_at_throat = area*gas0.rho*v;
-    double H_at_throat = gm2.enthalpy(gas0) + 0.5*v*v;
+    // Supersonic expansion process for gas.
+    //
+    x = xstart;
+    double area = area_at_start;
+    double massflux_at_start = area*gas0.rho*v;
+    double H_at_start = gm2.enthalpy(gas0) + 0.5*v*v;
     // We may use the Pitot pressure as a stopping criteria.
     double p_pitot = C * gas0.rho*v*v;
     //
@@ -541,9 +614,9 @@ Options:
     //
     writeln("Expansion error-indicators:");
     double massflux = area * gas0.rho * v;
-    writefln("  relerr-mass %g", fabs(massflux - massflux_at_throat)/massflux_at_throat);
+    writefln("  relerr-mass %g", fabs(massflux - massflux_at_start)/massflux_at_start);
     double H = gm2.enthalpy(gas0) + 0.5*v*v;
-    writefln("  relerr-H    %g", fabs(H - H_at_throat)/H_at_throat);
+    writefln("  relerr-H    %g", fabs(H - H_at_start)/H_at_start);
     if (rayleigh_pitot > 0.0) {
         writefln("  relerr-pitot %g", fabs(p_pitot - rayleigh_pitot)/p_pitot);
     }

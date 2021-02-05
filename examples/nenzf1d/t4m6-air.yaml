@@ -1,7 +1,7 @@
 # Sample input file for nenzf1d is a YAML 1.1 file.
 # t4m6-air.yaml
 # Data for T4 shot 10559 obtained from Wilson Chan's PhD thesis, Table D.1, page 158.
-# PJ 2020-10-17
+# PJ 2020-10-17, 2021-02-05
 #
 title: "T4 shot 10559 with Mach 6 nozzle."    # Any string will do.
 
@@ -20,8 +20,9 @@ p1: 130.0e3       # Pa
 Vs: 2434.0        # m/s
 pe: 34.07e6       # Pa
 
-meq_throat: 1.03  # To get sonic condition with frozen-gas sound speed
+meq_throat: 1.05  # To get supersonic condition with frozen-gas sound speed
 ar: 127.0         # Mach 6 nozzle
+C: 0.945          # estimate of Rayleigh_Pitot/(rho*V^2) for frozen gas at exit
 
 # Define the expanding part of the nozzle as a schedule of diameters with position.
 xi: [0.0, 0.150, 0.280, 0.468, 0.671,  0.984]  # axial-distance metres
