@@ -3,7 +3,7 @@
 # Data for T4 shot 11311 obtained from
 # Wilson Chan's Mach 7 nozzle validation report 2014/14
 # later published in AIAA Journal of Propulsion and Power, 2018.
-# PJ 2020-10-20
+# PJ 2020-10-20, 2021-02-05
 #
 title: "T4 shot 11311 with Mach 7 nozzle."    # Any string will do.
 
@@ -24,7 +24,8 @@ pe: 19.33e6     # Pa
 ar: 169.2       # Mach 6 nozzle
 pp_ps: 0.0105   # From Figure 8.
 
-C: 0.96         # pPitot/(rho*v^2), a value obtained from sphere simulations.
+meq_throat: 1.01  # To get supersonic condition with frozen-gas sound speed
+C: 0.94           # estimate of Rayleigh_Pitot/(rho*V^2) for frozen gas at exit
 
 # Define the expanding part of the nozzle as a schedule of diameters with position.
 xi: [0.0000, 5.126e-3, 1.021e-2, 2.008e-2, 5.023e-2, 0.1003, 0.2004, 0.4006,
