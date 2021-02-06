@@ -138,7 +138,7 @@ The extra arguments are:
 
 `nkb` ::
   _int_, default 1 +
-  The number of blocks in the j-index direction.
+  The number of blocks in the k-index direction.
 
 The table that is returned contains an arrays of all of the FluidBlock objects defined
 over the partitioned grid:
@@ -150,7 +150,7 @@ over the partitioned grid:
 
 `blockCollection` ::
   will be a single-dimensional array, also starting at 1.
-  Note that the index of the blocks within thos array follow the Lua convention
+  Note that the index of the blocks within this array follow the Lua convention
   and will be different to the `id` assigned to the blocks, which will start at `0`,
   and thus align with the D-language indexing.
 
