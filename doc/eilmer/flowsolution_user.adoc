@@ -13,7 +13,7 @@ to initialise the domain with a flow field from another
 `dir` ::
     _string_, no default + 
     directory containing completed simulation +
-    It is often easy to use relative paths if the simulation is nearyby.
+    It is often easy to use relative paths if the simulation is nearby.
 
 `tindx` ::
     _int_ or _string_, no default +
