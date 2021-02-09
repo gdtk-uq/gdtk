@@ -878,6 +878,12 @@ function FBArray:new(o)
    for _,face in ipairs(faceList(config.dimensions)) do
       o.bcList[face] = o.bcList[face] or WallBC_WithSlip:new()
    end
+   for _,face in ipairs(faceList(config.dimensions)) do
+      if (face ~= "west") and (o.bcList[face].type == "inflow_shock_fitting") then
+         error("Shock fitting cannot be used on " .. face .. " face.", 2)
+      end
+   end
+   o.shock_fitting = (o.bcList["west"].type == "inflow_shock_fitting")
    o.xforceList = o.xforceList or {}
    -- Numbers of subblocks in each coordinate direction
    o.nib = o.nib or 1
@@ -1028,6 +1034,7 @@ end -- FBArray:new
 
 -- Retain the original behaviour.
 function FluidBlockArray(t)
+   print("NOTE: You have called FluidBlockArray{}; prefer FBArray:new{}.")
    o = FBArray:new(t)
    return o.blockArray
 end
@@ -1363,7 +1370,7 @@ function setHistoryPoint(args)
          errMsg = string.format("setHistoryPoint: k value invalid. valid k --> 0 <= k < nkc. \n k= %d, nkc= %d", k, nkc)
          error(errMsg, 2)
       end
-      -- Convert back to single_index      
+      -- Convert back to single_index
       local cellId = k * (njc * nic) + j * nic + i
       historyCells[#historyCells+1] = {ib=args.ib, i=cellId}
       found = true
@@ -2407,6 +2414,9 @@ function build_config_files(job)
    write_block_list_file("config/" .. job .. ".list")
    write_mpimap_file("config/" .. job .. ".mpimap")
    write_fluidBlockArrays_file("config/" .. job .. ".fluidBlockArrays")
+   if config.grid_motion == "shock_fitting" then
+      write_shock_fitting_helper_files(job)
+   end
    print("Done building config files.")
 end
 
@@ -2497,6 +2507,10 @@ function build_block_files(job)
    --
    if #fluidBlocks == 0 then print("Warning: number of FluidBlocks is zero.") end
    print("Done building block files.")
+end
+
+function write_shock_fitting_helper_files(job)
+   print("FIX-ME: need to write shock-fitting helper files.")
 end
 
 print("Done loading prep.lua")
