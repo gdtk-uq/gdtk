@@ -286,7 +286,59 @@ class IgnitionZone : BlockZone {
         return text("IgnitionZone(p0=", to!string(p0), ", p1=", to!string(p1),
                     ", Tig=", Tig, ")");
     }
-}
+} // end class IgnitionZone
+
+class FBArray {
+    size_t nib, njb, nkb;
+    int[] blockIds;
+    size_t[][][] blockArray; // indices i,j,k
+
+    this(size_t ni, size_t nj, size_t nk, const(int[]) ids)
+    {
+        assert(ni*nj*nk == ids.length, "Incorrect number of block Ids");
+        nib = ni; njb = nj; nkb = nk;
+        blockIds.length = ids.length;
+        foreach (i; 0 .. ids.length) { blockIds[i] = ids[i]; }
+        // There is a particular order of definition blocks
+        // in the FBArray:new() function over in prep.lua.
+        size_t list_index = 0;
+        blockArray.length = nib;
+        foreach (i; 0 .. nib) {
+            blockArray[i].length = njb;
+            foreach (j; 0 .. njb) {
+                blockArray[i][j].length = nkb;
+                foreach (k; 0 .. nkb) {
+                    blockArray[i][j][k] = blockIds[list_index];
+                    list_index++;
+                }
+            }
+        }
+    }
+    this(const(FBArray) other)
+    {
+        this(other.nib, other.njb, other.nkb, other.blockIds);
+    }
+    this(JSONValue json_data)
+    {
+        size_t ni = getJSONint(json_data, "nib", 0);
+        size_t nj = getJSONint(json_data, "njb", 0);
+        size_t nk = getJSONint(json_data, "nkb", 0);
+        int[] oops; oops.length = ni*nj*nk; foreach(ref item; oops) { item = -1; }
+        int[] ids = getJSONintarray(json_data, "blockIds", oops);
+        bool all_positive = true;
+        foreach (item; ids) { if (item < 0) { all_positive = false; } }
+        assert(all_positive, "One or more blocks ids are not as expected.");
+        this(ni, nj, nk, ids);
+    }
+
+    override string toString()
+    {
+        string result = format("FBArray(nib=%d, njb=%d, nkb=%d, blockIds=%s, blockArray=%s",
+                               nib, njb, nkb, blockIds, blockArray);
+        return result;
+    }
+} // end class FBArray
+
 
 version(nk_accelerator) {
     enum PreconditionMatrixType { block_diagonal, ilu, lu_sgs }
@@ -449,6 +501,8 @@ final class GlobalConfig {
     shared static int nSolidBlocks = 0; // Number of solid blocks in the overall simulation.
     shared static int dimensions = 2; // default is 2, other valid option is 3
     shared static bool axisymmetric = false;
+    shared static int nFluidBlockArrays = 0;
+    static FBArray[] fluidBlockArrays;
 
     // Parameters controlling update
     shared static GasdynamicUpdate gasdynamic_update_scheme = GasdynamicUpdate.pc;
@@ -564,7 +618,7 @@ final class GlobalConfig {
     shared static bool suppress_radial_reconstruction_at_xaxis = false;
     // We will activate the shock detector if selected features need it.
     shared static bool do_shock_detect = false;
-    // enforce strict usage of the shock detector, if either the interface or 
+    // enforce strict usage of the shock detector, if either the interface or
     // a touching cell is marked assume need for only diffusive flux
     shared static bool strict_shock_detector = true;
     // We might optionally want to suppress reconstruction at faces at
@@ -1121,7 +1175,7 @@ public:
         verbosity_level = GlobalConfig.verbosity_level;
         //
         cqi = GlobalConfig.cqi;
-        // 
+        //
         version (nk_accelerator) {
             sssOptions = GlobalConfig.sssOptions;
         }
@@ -1685,7 +1739,18 @@ JSONValue read_config_file()
     // This is done in phases.  The blocks need valid references to LocalConfig objects
     // and the boundary conditions need valid references to Sblock objects.
     mixin(update_int("nfluidblock", "nFluidBlocks"));
-    if (GlobalConfig.verbosity_level > 1) { writeln("  nFluidBlocks: ", GlobalConfig.nFluidBlocks); }
+    mixin(update_int("nfluidblockarrays", "nFluidBlockArrays"));
+    foreach (i; 0 .. GlobalConfig.nFluidBlockArrays) {
+        auto jsonDataForBlockArray = jsonData["fluid_block_array_" ~ to!string(i)];
+        GlobalConfig.fluidBlockArrays ~= new FBArray(jsonDataForBlockArray);
+    }
+    if (GlobalConfig.verbosity_level > 1) {
+        writeln("  nFluidBlocks: ", GlobalConfig.nFluidBlocks);
+        writeln("  nFluidBlockArrays: ", GlobalConfig.nFluidBlockArrays);
+        foreach (i; 0 .. GlobalConfig.nFluidBlockArrays) {
+            writefln("fluid_block_array_%d: %s", i, GlobalConfig.fluidBlockArrays[i]);
+        }
+    }
 
     // we have enough information here to create the ConservedQuantitiesIndices struct
     GlobalConfig.cqi = ConservedQuantitiesIndices(GlobalConfig.dimensions, GlobalConfig.turb_model.nturb, GlobalConfig.n_modes, GlobalConfig.n_species);
