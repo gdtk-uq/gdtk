@@ -1347,9 +1347,23 @@ function setHistoryPoint(args)
       local i = args.i
       local j = args.j
       local k = args.k or 0
-      -- Convert back to single_index
       local nic = fluidBlocks[ib+1].nic
       local njc = fluidBlocks[ib+1].njc
+      local nkc = fluidBlocks[ib+1].nkc
+      -- Check indices are valid.
+      if i >= nic then
+         errMsg = string.format("setHistoryPoint: i value invalid; valid i --> 0 <= i < nic.\n i= %d, nic= %d", i, nic)
+         error(errMsg, 2)
+      end
+      if j >= njc then
+         errMsg = string.format("setHistoryPoint: j value invalid. valid j --> 0 <= j < njc.\n j= %d, njc= %d", j, njc)
+         error(errMsg, 2)
+      end
+      if k >= nkc then
+         errMsg = string.format("setHistoryPoint: k value invalid. valid k --> 0 <= k < nkc. \n k= %d, nkc= %d", k, nkc)
+         error(errMsg, 2)
+      end
+      -- Convert back to single_index      
       local cellId = k * (njc * nic) + j * nic + i
       historyCells[#historyCells+1] = {ib=args.ib, i=cellId}
       found = true
@@ -1367,7 +1381,9 @@ function setHistoryPoint(args)
    local n = #historyCells
    local ib = historyCells[n].ib -- zero-based block index
    local i = historyCells[n].i
+   print("Call to cellCentroid the issue? ib,i= ", ib, i)
    local pos = fluidBlocks[ib+1].grid:cellCentroid(i) -- one-based block array
+   print("done.")
    print(string.format("Fluid History point [%d] ib=%d i=%d x=%g y=%g z=%g",
                        n, ib, i, pos.x, pos.y, pos.z))
    return
