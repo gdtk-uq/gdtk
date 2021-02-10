@@ -158,7 +158,15 @@ SOLID_FILES := solid/solidbc.d \
 
 LUA_MODULES := blk_conn.lua \
 	bc.lua \
-	gridpro.lua
+	gridpro.lua \
+	flowstate.lua \
+	fluidblock.lua \
+	solidblock.lua \
+	mpi.lua \
+	history.lua \
+	zones.lua \
+	output.lua \
+	sssoptions.lua
 
 
 UTIL_DIR := ../util
