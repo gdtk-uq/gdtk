@@ -72,10 +72,9 @@ BoundaryFluxEffect make_BFE_from_json(JSONValue jsonData, int blk_id, int bounda
         newBFE = new BFE_UpdateEnergyWallNormalVelocity(blk_id, boundary);
         break;
     case "thermionic_electron_flux":
-        double emissivity = getJSONdouble(jsonData, "emissivity", 0.0);
         double Ar = getJSONdouble(jsonData, "Ar", 0.0);
         double phi = getJSONdouble(jsonData, "phi", 0.0);
-        newBFE = new BFE_ThermionicElectronFlux(blk_id, boundary, emissivity, Ar, phi);
+        newBFE = new BFE_ThermionicElectronFlux(blk_id, boundary, Ar, phi, GlobalConfig.gmodel_master);
         break;
     default:
         string errMsg = format("ERROR: The BoundaryFluxEffect type: '%s' is unknown.", bfeType);
@@ -577,23 +576,22 @@ public:
 } // end BFE_UpdateEnergyWallNormalVelocity
 
 class BFE_ThermionicElectronFlux : BoundaryFluxEffect {
-    this(int id, int boundary, double emissivity, double Ar, double phi)
+    this(int id, int boundary, double Ar, double phi, GasModel gmodel)
     {
         super(id, boundary, "ThermionicElectronFlux");
-        this.emissivity = emissivity;
         this.Ar = Ar;
         this.phi = phi*Qe;  // Convert phi from input 'eV' to 'J'
-        if (!blk.myConfig.gmodel.is_plasma)
+        if (!gmodel.is_plasma)
             throw new Error("ThermionicElectronFlux Flux Effect requires a gas model with electrons");
-        electron_index = blk.myConfig.gmodel.species_index("e-");
-        Me = blk.myConfig.gmodel.mol_masses[electron_index];
+        is_one_temperature = gmodel.n_modes==0;
+        electron_index = gmodel.species_index("e-");
+        Me = gmodel.mol_masses[electron_index];
     }
 
     override string toString() const
     {
         return "BFE_ThermionicElectronEmission(" ~
             "Work Function =" ~ to!string(phi/Qe) ~
-            "eV , emissivity=" ~ to!string(emissivity) ~
             ", Richardson Constant=" ~ to!string(Ar) ~
             ")";
     }
@@ -616,21 +614,28 @@ class BFE_ThermionicElectronFlux : BoundaryFluxEffect {
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
-        //
-        version(multi_species_gas){
-            foreach (i, f; bc.faces) {
-                f.F.massf[electron_index] = -bc.outsigns[i]*electron_flux(f);
-            }
+
+        foreach (i, f; bc.faces) {
+            int sign = bc.outsigns[i];
+            //version(multi_species_gas){
+            //    number emf = electron_mass_flux(f);
+            //    f.F.massf[electron_index] -= sign*emf;
+            //}
+
+            number eef = electron_energy_flux(f);
+            f.F.total_energy -= sign*eef;
+            version(multi_T_gas) { f.F.energies[0] -= sign*eef; }
         }
     }
+
 protected:
     // Function inputs from Eilmer4 .lua simulation input
-    double emissivity;  // Input emissivity, 0<e<=1.0. Assumed black body radiation out from wall
     double Ar;          // Richardson constant, material-dependent
     double phi;         // Work function, material dependent. Input units in eV,
                         // this gets converted to Joules by multiplying by Elementary charge, Qe
     size_t electron_index;
     number Me;
+    bool is_one_temperature;
     // Constants used in analysis
     immutable double kb = 1.38064852e-23;     // Boltzmann constant.          Units: (m^2 kg)/(s^2 K^1)
     immutable double Qe = 1.60217662e-19;     // Elementary charge.           Units: C
@@ -638,13 +643,33 @@ protected:
     immutable double Faraday  = 96485.3321233100184;
 
     @nogc
-    number electron_flux(const FVInterface f)
+    number electron_mass_flux(const FVInterface f)
     {
     /*
         Compute the electron flux per unit area due to thermionic emission
     */
-        number Tw = f.fs.gas.T; // Maybe this should be the electron temperature?
+        number Tw;
+        version(multi_T_gas) {
+            Tw = is_one_temperature ? f.fs.gas.T : f.fs.gas.T_modes[0];
+        } else {
+            Tw = f.fs.gas.T;
+        }
         return Ar*Tw*Tw*exp(-phi/kb/Tw)/Faraday*Me;
+    }
+
+    @nogc
+    number electron_energy_flux(const FVInterface f)
+    {
+    /*
+        Compute the energy flux per unit area due to thermionic emission
+    */
+        number Tw;
+        version(multi_T_gas) {
+            Tw = is_one_temperature ? f.fs.gas.T : f.fs.gas.T_modes[0];
+        } else {
+            Tw = f.fs.gas.T;
+        }
+        return Ar*Tw*Tw/Qe*exp(-phi/kb/Tw)*(phi + 2*kb*Tw);
     }
 
 } // end class BFE_ThermionicElectronFlux

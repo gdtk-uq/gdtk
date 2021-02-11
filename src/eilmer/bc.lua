@@ -457,11 +457,10 @@ function UpdateEnergyWallNormalVelocity:tojson()
    return str
 end
 
-ThermionicElectronFlux = BoundaryFluxEffect:new{emissivity=nil, Ar=nil, phi=nil}
+ThermionicElectronFlux = BoundaryFluxEffect:new{Ar=nil, phi=nil}
 ThermionicElectronFlux.type = "thermionic_electron_flux"
 function ThermionicElectronFlux:tojson()
    local str = string.format('          {"type": "%s",', self.type)
-   str = str .. string.format(' "emissivity": %.18e,', self.emissivity)
    str = str .. string.format(' "Ar": %.18e,', self.Ar)
    str = str .. string.format(' "phi": %.18e', self.phi)
    str = str .. '}'
@@ -651,7 +650,8 @@ function WallBC_NoSlip_FixedT0:new(o)
    o = o or {}
    flag = checkAllowedNames(o, {"Twall", "wall_function",
                                 "catalytic_type", "wall_massf_composition",
-                                "label", "group", "is_design_surface", "num_cntrl_pts"})
+                                "label", "group", "is_design_surface", "num_cntrl_pts",
+                                "thermionic_emission"})
    if not flag then
       error("Invalid name for item supplied to WallBC_NoSlip_FixedT0 constructor.", 2)
    end
@@ -680,6 +680,10 @@ function WallBC_NoSlip_FixedT0:new(o)
             WallFunctionInterfaceEffect:new{}
          o.preSpatialDerivActionAtBndryCells = { WallFunctionCellEffect:new() }
       end
+   end
+
+   if o.thermionic_emission == "true" then
+      o.postDiffFluxAction = {ThermionicElectronFlux:new{Ar=1.20e6, phi=2.0}}
    end
    o.is_configured = true
    return o
