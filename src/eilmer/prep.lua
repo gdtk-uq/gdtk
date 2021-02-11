@@ -8,7 +8,7 @@
 print("Loading prep.lua...")
 
 require 'lua_helper'
-local deepclone = lua_helper.deepclone
+deepclone = lua_helper.deepclone
 
 -- sleep() function copied from http://lua-users.org/wiki/SleepFunction
 local clock = os.clock
@@ -63,6 +63,7 @@ SBlock2UBlock = fluidblock.SBlock2UBlock
 connectBlocks = fluidblock.connectBlocks
 identifyBlockConnections = fluidblock.identifyBlockConnections
 FBArray = fluidblock.FBArray
+FluidBlockArray = fluidblock.FluidBlockArray
 
 require 'solidblock'
 SolidBlock = solidblock.SolidBlock
