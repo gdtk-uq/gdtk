@@ -42,6 +42,10 @@ include::../examples/eilmer/2D/flat-plate-hakkinen-swbli/readme.adoc[]
 
 include::../examples/eilmer/2D/flat-plate-turbulent-larc/nk-5.45Tw-sa/readme.adoc[]
 
+= Reacting gas flows
+
+include::../examples/eilmer/2D/oblique-detonation-wave/readme.adoc[]
+
 = High-temperature gas flows
 
 include::../examples/eilmer/2D/sphere-nonaka/readme.adoc[]

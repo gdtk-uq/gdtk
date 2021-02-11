@@ -1,0 +1,15 @@
+== 2D/oblique-detonation-wave
+:stem:
+
+image::odw-colourmaps.png[caption="Left: Pressure colourmap of oblique detonation wave with shocked cells highlighted. Right: Product mass fraction colourmap showing linear fit to shocked cells."]
+
+The flow in this example corresponds to an exact solution published by Powers and Aslam in 2006, in a paper calling for more widespread and rigorous verification of numerical codes used in aerospace research. The flow is inviscid and reacting, using a two-species irreversible reaction with zero activation energy. The curved ramp is designed in concert with the reaction rates to generate a straight detonation wave at latexmath:[45^\circ], driven by an exothermic reaction that proceeds slowly as the flow travels further downstream.
+
+The left hand image shows the pressure field, with the cells identified by the shock detector highlighted in light blue. The pressure is highest directly behind the shock and then falls as the reaction proceeds and the temperature increases. The procedure of this reaction is shown on the right; a colourmap of the product species mass fraction, along with a linear fit through the shock detected cells where the detonation wave is present. Though the example grid is not highly resolved, the angle of the linear fit and its explained variance are used in the internal integration tests to verify the reaction machinery is interacting correctly with the rest of the code. 
+
+Reference:
+
+1.  *Powers, J., and Aslam, T.* (2006), +
+    _Exact Solution for Multidimensional Compressible Reactive Flow for Verifying Numerical Algorithms_, +
+    AIAA Journal, *44*(2).
+
