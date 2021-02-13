@@ -41,7 +41,6 @@ import gas.steam : Steam;
 import gas.electronically_specific_gas: ElectronicallySpecificGas;
 import gas.two_temperature_gasgiant: TwoTemperatureGasGiant;
 
-
 GasModel init_gas_model(string file_name="gas-model.lua")
 /**
  * Get the instructions for setting up the GasModel object from a Lua file.
@@ -58,10 +57,12 @@ GasModel init_gas_model(string file_name="gas-model.lua")
     try {
         L = init_lua_State();
         doLuaFile(L, file_name);
-    } catch (Exception e) {
+    } catch (LuaInputException e) {
         string msg = "In function init_gas_model() in gas_model.d";
-        msg ~= format("there was a problem parsing the input file: ", file_name);
-        msg ~= " There could be a Lua syntax error OR the file might not exist.";
+        msg ~= format("there was a problem parsing the input file: %s\n", file_name);
+        msg ~= "There could be a Lua syntax error OR the file might not exist.\n";
+        msg ~= "Lua error message follows:\n";
+        msg ~= e.msg;
         throw new GasModelException(msg);
     }
     string gas_model_name;

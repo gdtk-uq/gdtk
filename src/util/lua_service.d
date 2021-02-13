@@ -29,7 +29,7 @@ void doLuaFile(lua_State* L, string fname)
 {
     if ( luaL_dofile(L, fname.toStringz) != 0 ) {
         string errMsg = to!string(lua_tostring(L, -1));
-        throw new Error(errMsg);
+        throw new LuaInputException(errMsg);
     }
 }
 

@@ -6,6 +6,8 @@
 
 module luaglobalconfig;
 
+import core.stdc.stdlib : exit;
+
 import std.stdio;
 import std.string;
 import std.conv;
@@ -492,7 +494,16 @@ extern(C) int setGasModel(lua_State* L)
     if (lua_isstring(L, 1)) {
         string fname = to!string(luaL_checkstring(L, 1));
         GlobalConfig.gas_model_file = fname;
-        GlobalConfig.gmodel_master = init_gas_model(fname);
+        try {
+            GlobalConfig.gmodel_master = init_gas_model(fname);
+        } catch (GasModelException e) {
+            string msg = "\nThere is a problem in call to setGasModel. Reported errors are:\n";
+            msg ~= e.msg;
+            msg ~= "\n---------------------------\n";
+            msg ~= "The preparation stage cannot proceed. Exiting without completing.\n";
+            writeln(msg);
+            exit(1);
+        }
         lua_settop(L, 0); // clear the stack
         lua_pushinteger(L, GlobalConfig.gmodel_master.n_species);
         lua_pushinteger(L, GlobalConfig.gmodel_master.n_modes);
