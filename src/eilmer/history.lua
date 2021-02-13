@@ -80,9 +80,7 @@ function setHistoryPoint(args)
    local n = #historyCells
    local ib = historyCells[n].ib -- zero-based block index
    local i = historyCells[n].i
-   print("Call to cellCentroid the issue? ib,i= ", ib, i)
    local pos = fluidBlocks[ib+1].grid:cellCentroid(i) -- one-based block array
-   print("done.")
    print(string.format("Fluid History point [%d] ib=%d i=%d x=%g y=%g z=%g",
                        n, ib, i, pos.x, pos.y, pos.z))
    return
