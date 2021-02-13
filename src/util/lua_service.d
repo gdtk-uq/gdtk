@@ -57,7 +57,7 @@ string getString(lua_State* L, int tblIdx, string key)
     if ( !lua_isstring(L, -1) ) {
         string errMsg = format("A string was expected in field: %s", key);
         lua_pop(L, 1);
-        throw new Error(errMsg);
+        throw new LuaInputException(errMsg);
     }
     string val = to!string(lua_tostring(L, -1));
     lua_pop(L, 1);
