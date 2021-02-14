@@ -59,7 +59,7 @@ GasModel init_gas_model(string file_name="gas-model.lua")
         doLuaFile(L, file_name);
     } catch (LuaInputException e) {
         string msg = "In function init_gas_model() in gas_model.d";
-        msg ~= format("there was a problem parsing the input file: %s\n", file_name);
+        msg ~= format(" there was a problem parsing the input file: %s\n", file_name);
         msg ~= "There could be a Lua syntax error OR the file might not exist.\n";
         msg ~= "Lua error message follows:\n";
         msg ~= e.msg;
