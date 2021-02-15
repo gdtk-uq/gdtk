@@ -390,7 +390,7 @@ public:
     @nogc
     void set_cell_dt_chem(double dt_chem)
     {
-        foreach ( cell; cells ) cell.dt_chem = dt_chem;
+        foreach (cell; cells) { cell.dt_chem = dt_chem; }
     }
 
     @nogc
@@ -400,7 +400,6 @@ public:
     {
         number comp_tol = myConfig.compression_tolerance;
         number shear_tol = myConfig.shear_tolerance;
-
         final switch (myConfig.shock_detector) {
         case ShockDetector.PJ:
             foreach (iface; faces) {
@@ -408,37 +407,27 @@ public:
             }
             break;
         }
-
     } // end detect_shock_points()
 
     @nogc
     void diffuse_shock_marker()
-    // Spatially diffuse the shock marker
-    //
     {
-        number sum;
-        int count;
-
-        // to avoid order of operation effects we load the cell based shock
-        // detector value into faces so we have static data to work from
-
+        // Spatially diffuse the shock marker.
+        // To avoid order of operation effects, we load the cell based shock
+        // detector value into faces so we have static data to work from.
         foreach (face; faces) {
             if (face.fs.S == 1.0) continue;
             face.fs.S = fmax(face.left_cell.fs.S, face.right_cell.fs.S);
         }
-
         // now use the face shock detector value to update the cell values
         foreach (cell; cells) {
-
             if (cell.fs.S == 1.0) continue;
-
-            sum = 0.0;
-            count = 0;
+            number sum = 0.0;
+            int count = 0;
             foreach (face; cell.iface) {
                 sum += face.fs.S;
                 count++;
             }
-
             cell.fs.S = sum / count;
         }
     } // end diffuse_shock_marker()
@@ -474,25 +463,20 @@ public:
             if (face.fs.S > 0.0) {
                 face.fs.S = 1.0;
                 continue;
-            } 
-            
+            }
             // need to check for existence of cell before checking its shock state
-
             if (face.left_cell) {
                 if (face.left_cell.fs.S > 0.0) {
                     face.fs.S = 1.0;
                     continue;
                 }
             }
-
             if (face.right_cell) {
                 if (face.right_cell.fs.S > 0.0) {
                     face.fs.S = 1.0;
                     continue;
                 }
             }
-
-            
         }
     } // end enforce_strict_shock_detector
 
