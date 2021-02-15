@@ -637,6 +637,7 @@ function FBArray:tojson()
    str = str .. string.format('    "niv": %d,\n', self.niv)
    str = str .. string.format('    "njv": %d,\n', self.njv)
    str = str .. string.format('    "nkv": %d,\n', self.nkv)
+   str = str .. string.format('    "shock_fitting": %s,\n', tostring(self.shock_fitting))
    --
    str = str .. string.format('    "nics": [ ')
    for i=1,#(self.nics)-1 do

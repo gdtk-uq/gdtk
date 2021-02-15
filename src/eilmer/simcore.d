@@ -656,10 +656,12 @@ int init_simulation(int tindx, int nextLoadsIndx,
     }
     //
     if (GlobalConfig.grid_motion == GlobalConfig.grid_motion.shock_fitting) {
-        throw new Error("[TODO] PJ 2021-02-15 Need to read the velocity weights and rails files.");
-        // foreach (myblk; localFluidBlocks) {
-        //     auto sblk = cast(SFluidBlock) myblk;
-        // }
+        foreach (i, fba; fluidBlockArrays) {
+            if (fba.shock_fitting) {
+                fba.read_rails_file(format("config/fba-%04d.rails", i));
+                fba.read_velocity_weights(format("config/fba-%04d.weights", i));
+            }
+        }
     }
     // Finally when both gas AND solid domains are setup..
     // Look for a solid-adjacent bc, if there is one,
@@ -2044,17 +2046,19 @@ void set_grid_velocities()
                 // [TODO] PJ 2021-02-15 Shock-fitting in an MPI-parallel context.
                 throw new Error("Shock-fitting in an MPI context is not implemented yet.");
             } else {
-                // [TODO] PJ 2021-02-15 Shock-fitting in a shared-memory-parallel context.
+                throw new Error("[TODO] PJ 2021-02-15 Shock-fitting grid-motion code in a shared-memory-parallel context.");
+                /+
                 foreach (blk; localFluidBlocksBySize) {
                     SFluidBlock sblk = cast(SFluidBlock) blk;
                     if (sblk is null) { throw new Error("Oops, this should be an SFluidBlock object."); }
                     if (!blk.active) { throw new Error("Oops, expected active block for shock-fitting grid motion."); }
                     if (blk.bc[Face.west].type == "inflow_shock_fitting") {
-                        // Vector3[] inflow_vertex_velocities = shock_fitting_vertex_velocities(sblk);
-                        // foreach (indx; sblk.inflow_partners) {
-                        //     assign_slave_velocities(cast(SFluidBlock) globalBlocks[indx], inflow_vertex_velocities);
+                        Vector3[] inflow_vertex_velocities = shock_fitting_vertex_velocities(sblk);
+                        foreach (indx; sblk.inflow_partners) {
+                        assign_slave_velocities(cast(SFluidBlock) globalBlocks[indx], inflow_vertex_velocities);
                     }
                 }
+                +/
             }
         }
     } // end switch grid_motion

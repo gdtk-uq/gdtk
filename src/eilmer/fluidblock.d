@@ -9,6 +9,7 @@ module fluidblock;
 import std.algorithm;
 import std.conv;
 import std.stdio;
+import std.string;
 import std.math;
 import std.json;
 import std.format;
@@ -1542,11 +1543,19 @@ class FBArray {
     int[] nics, njcs, nkcs;
     int[] blockIds;
     int[][][] blockArray; // indices i,j,k
+    bool shock_fitting;
+    // Shock-fitting data storage follows.
+    double[][][] velocity_weights;
+    Vector3[][] p_east;
+    Vector3[][] p_west;
 
     this(int nib, int njb, int nkb, const(int[]) ids,
          int niv, int njv, int nkv,
-         const(int[]) nics, const(int[]) njcs, const(int[]) nkcs)
+         const(int[]) nics, const(int[]) njcs, const(int[]) nkcs,
+         bool sff)
     {
+        // Construt with just configuration data.
+        // The shock-fitting data will be picked up later, if relevant.
         assert(nib*njb*nkb == ids.length, "Incorrect number of block Ids");
         this.nib = nib; this.njb = njb; this.nkb = nkb;
         blockIds.length = ids.length;
@@ -1573,12 +1582,15 @@ class FBArray {
         foreach (i; 0 .. njcs.length) { this.njcs[i] = njcs[i]; }
         this.nkcs.length = nkcs.length;
         foreach (i; 0 .. nkcs.length) { this.nkcs[i] = nkcs[i]; }
+        // Other bits.
+        this.shock_fitting = sff;
     }
     this(const(FBArray) other)
     {
         this(other.nib, other.njb, other.nkb, other.blockIds,
              other.niv, other.njv, other.nkv,
-             other.nics, other.njcs, other.nkcs);
+             other.nics, other.njcs, other.nkcs,
+             other.shock_fitting);
     }
     this(JSONValue json_data)
     {
@@ -1599,7 +1611,8 @@ class FBArray {
         int[] njcs = getJSONintarray(json_data, "njcs", oops3);
         int[] oops4; oops4.length = nkb; foreach(ref item; oops4) { item = -1; }
         int[] nkcs = getJSONintarray(json_data, "nkcs", oops4);
-        this(nib, njb, nkb, ids, niv, njv, nkv, nics, njcs, nkcs);
+        bool sff = getJSONbool(json_data, "shock_fitting", false);
+        this(nib, njb, nkb, ids, niv, njv, nkv, nics, njcs, nkcs, sff);
     }
 
     override string toString()
@@ -1607,9 +1620,52 @@ class FBArray {
         string result = format("FBArray(nib=%d, njb=%d, nkb=%d, "~
                                "blockIds=%s, blockArray=%s, "~
                                "niv=%d, njv=%d, nkv=%d, "~
-                               "nics=%s, njcs=%s, nkcs=%s)",
+                               "nics=%s, njcs=%s, nkcs=%s, shock_fitting=%s)",
                                nib, njb, nkb, blockIds, blockArray,
-                               niv, njv, nkv, nics, njcs, nkcs);
+                               niv, njv, nkv, nics, njcs, nkcs, shock_fitting);
         return result;
     }
+
+    void read_velocity_weights(string filename)
+    {
+        velocity_weights.length = niv;
+        foreach (i; 0 .. niv) {
+            velocity_weights[i].length = njv;
+            foreach (j; 0 .. njv) {
+                velocity_weights[i][j].length = nkv;
+            }
+        }
+        auto f = File(filename, "r");
+        auto line = f.readln(); // Discard the comment line.
+        foreach (k; 0 .. nkv) {
+            foreach (j; 0 .. njv) {
+                foreach (i; 0 .. niv) {
+                    line = f.readln().strip();
+                    formattedRead(line, "%e", &(velocity_weights[i][j][k]));
+                }
+            }
+        }
+    } // end read_velocity_weights()
+
+    void read_rails_file(string filename)
+    {
+        p_west.length = njv;
+        p_east.length = njv;
+        foreach (j; 0 .. njv) {
+            p_west[j].length = nkv;
+            p_east[j].length = nkv;
+        }
+        auto f = File(filename, "r");
+        auto line = f.readln().strip(); // Discard the comment line.
+        double pwx, pwy, pwz, pex, pey, pez;
+        foreach (k; 0 .. nkv) {
+            foreach (j; 0 .. njv) {
+                foreach (i; 0 .. niv) {
+                    line = f.readln().strip();
+                    formattedRead(line, "%e %e %e %e %e %e",
+                                  &pwx, &pwy, &pwz, &pex, &pey, &pez);
+                }
+            }
+        }
+    } // end read_rails_file()
 } // end class FBArray

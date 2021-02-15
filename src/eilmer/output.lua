@@ -539,10 +539,10 @@ function write_shock_fitting_helper_files(job)
          f:write("# Rails are presently described by the initial west- and east-boundary coordinates.\n")
          for k = 0, fba.nkv-1 do
             for j = 0, fba.njv-1 do
-               local pwest = fba.grid:get_vtx(0,j,k)
-               local peast = fba.grid:get_vtx(fba.niv-1,j,k)
+               local pw = fba.grid:get_vtx(0,j,k)
+               local pe = fba.grid:get_vtx(fba.niv-1,j,k)
                f:write(string.format("%.18e %.18e %.18e %.18e %.18e %.18e\n",
-                                     pwest.x, pwest.y, pwest.z, peast.x, peast.y, peast.z))
+                                     pw.x, pw.y, pw.z, pe.x, pe.y, pe.z))
             end
          end
          f:close()
