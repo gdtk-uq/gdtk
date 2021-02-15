@@ -60,7 +60,6 @@ public:
     // For a moving-grid simulation these will be kept up to date
     // and communicated to user-defined Lua functions via infoFluidBlock.
     double[24] corner_coords;
-    int[] inflow_partners;
     //
     // Work-space that gets reused.
     // The following objects are used in the convective_flux method.

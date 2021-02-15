@@ -16,7 +16,7 @@ public:
                  // where we want to integrate a few blocks at a time.
     lua_State* myL;
     LocalConfig myConfig;
-    
+
     this(int id, string label)
     {
         this.id = id;

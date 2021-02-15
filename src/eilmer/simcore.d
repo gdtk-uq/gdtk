@@ -655,20 +655,11 @@ int init_simulation(int tindx, int nextLoadsIndx,
         }
     }
     //
-    // For the shock fitting grid motion, we need to assign radial positions for all vertices
     if (GlobalConfig.grid_motion == GlobalConfig.grid_motion.shock_fitting) {
-        foreach (myblk; localFluidBlocks) {
-            version(mpi_parallel) {
-                auto sblk = cast(SFluidBlock) myblk;
-                assign_radial_dist_mpi(sblk);
-            }
-            else {
-                if (myblk.bc[Face.west].type == "inflow_shock_fitting") {
-                    auto sblk = cast(SFluidBlock) myblk;
-                    assign_radial_dist(sblk);
-                }
-            }
-        }
+        throw new Error("[TODO] PJ 2021-02-15 Need to read the velocity weights and rails files.");
+        // foreach (myblk; localFluidBlocks) {
+        //     auto sblk = cast(SFluidBlock) myblk;
+        // }
     }
     // Finally when both gas AND solid domains are setup..
     // Look for a solid-adjacent bc, if there is one,
@@ -1277,8 +1268,10 @@ int integrate_in_time(double target_time_as_requested)
             //
             // 2.0 Attempt a time step.
             // 2.1 Chemistry 1/2 step (if appropriate).
-            if(GlobalConfig.strangSplitting == StrangSplittingMode.half_R_full_T_half_R && GlobalConfig.with_local_time_stepping)
-                assert(0, "Oops, strangSplitting.half_R_full_T_half_R and LTS aren't currently compatible");
+            if (GlobalConfig.strangSplitting == StrangSplittingMode.half_R_full_T_half_R &&
+                GlobalConfig.with_local_time_stepping) {
+                throw new Error("StrangSplitting.half_R_full_T_half_R and LTS aren't currently compatible");
+            }
             if (GlobalConfig.reacting &&
                 (GlobalConfig.strangSplitting == StrangSplittingMode.half_R_full_T_half_R) &&
                 (SimState.time > GlobalConfig.reaction_time_delay)) {
@@ -1289,19 +1282,23 @@ int integrate_in_time(double target_time_as_requested)
                 if(GlobalConfig.with_super_time_stepping) { sts_gasdynamic_explicit_increment_with_fixed_grid(); }
 		else { gasdynamic_explicit_increment_with_fixed_grid(); }
             } else {
-                // Moving Grid - perform gas update for moving grid
-                // [TODO] PJ 2018-01-20 Up to here with thinking about MPI parallel.
-                set_grid_velocities();
-                gasdynamic_explicit_increment_with_moving_grid();
-                // Recalculate all geometry at gtl 0
-                // because that is where the update function
-                // has put the most recent data values.
-                foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                    if (blk.active) {
-                        blk.compute_primary_cell_geometric_data(0);
-                        blk.compute_least_squares_setup(0);
+                version(nk_accelerator) {
+                    throw new Error("Grid motion is not compatible e4-nk-dist.");
+                } else {
+                    // Moving Grid - perform gas update for moving grid
+                    // [TODO] PJ 2018-01-20 Up to here with thinking about MPI parallel.
+                    set_grid_velocities();
+                    gasdynamic_explicit_increment_with_moving_grid();
+                    // Recalculate all geometry at gtl 0
+                    // because that is where the update function
+                    // has put the most recent data values.
+                    foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                        if (blk.active) {
+                            blk.compute_primary_cell_geometric_data(0);
+                            blk.compute_least_squares_setup(0);
+                        }
                     }
-                }
+                } // end version(!nk_accelerator)
             }
             // 2.3 Solid domain update (if loosely coupled)
             // If tight coupling, then this has already been performed
@@ -2033,80 +2030,34 @@ void chemistry_step(double dt)
 
 void set_grid_velocities()
 {
-    final switch(GlobalConfig.grid_motion){
-        case GridMotion.none:
-            throw new Error("Should not be setting grid velocities in with GridMotion.none");
-        case GridMotion.user_defined:
-            // Rely on user to set vertex velocities.
-            // Note that velocities remain unchanged if the user does nothing.
-            assign_vertex_velocities_via_udf(SimState.time, SimState.dt_global);
-            break;
-        case GridMotion.shock_fitting:
-            // apply boundary conditions here because ...
-            // shockfitting algorithm requires ghost cells to be up to date.
-            if (SimState.time > GlobalConfig.shock_fitting_delay) {
-                exchange_ghost_cell_boundary_data(SimState.time, 0, 0);
-                foreach (blk; localFluidBlocksBySize) {
-                    if (blk.active) { blk.applyPreReconAction(SimState.time, 0, 0); }
-                }
+    final switch(GlobalConfig.grid_motion) {
+    case GridMotion.none:
+        throw new Error("Should not be setting grid velocities in with GridMotion.none");
+    case GridMotion.user_defined:
+        // Rely on user to set vertex velocities.
+        // Note that velocities remain unchanged if the user does nothing.
+        assign_vertex_velocities_via_udf(SimState.time, SimState.dt_global);
+        break;
+    case GridMotion.shock_fitting:
+        if (SimState.time > GlobalConfig.shock_fitting_delay) {
+            version(mpi_parallel) {
+                // [TODO] PJ 2021-02-15 Shock-fitting in an MPI-parallel context.
+                throw new Error("Shock-fitting in an MPI context is not implemented yet.");
+            } else {
+                // [TODO] PJ 2021-02-15 Shock-fitting in a shared-memory-parallel context.
                 foreach (blk; localFluidBlocksBySize) {
                     SFluidBlock sblk = cast(SFluidBlock) blk;
-
-                    version(mpi_parallel) {
-                        version(nk_accelerator) {
-                            throw new Error("set_grid_velocities(): shock-fitting not available in e4-nk-dist.");
-                        }
-                        else {
-                            // Define a new communication group- need to be real explicit with MPI
-                            assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
-                            MPI_Comm shock_fitting_comm;
-                            int communicator_tag = 0, local_rank;
-                            MPI_Comm_rank(MPI_COMM_WORLD, &local_rank);
-                            foreach (indx; sblk.inflow_partners) {
-                                communicator_tag += indx;
-                            }
-                            MPI_Comm_split(MPI_COMM_WORLD, communicator_tag, local_rank, &shock_fitting_comm);
-                            // Define the variables that will be local to some processes
-                            int[2] is_master_block; // Bit passed around to determine master rank
-                            int[2] master_rank; // This contains the location of the shock fitted block
-                            int shock_fitting_rank; // Rank of local process
-                            double[] unpacked_vertex_velocities; // Array that will contain the vertex velocities broken into their spatial elements
-                            Vector3[] inflow_vertex_velocities, packed_vertex_velocities; // Array that will contain the vertex velocities in vector form
-                            MPI_Comm_rank(shock_fitting_comm, &shock_fitting_rank); // Assign the local rank
-                            is_master_block[1] = shock_fitting_rank;
-
-                            // Calculate the vertex velocities on the inflow boundary
-                            if (blk.active && blk.bc[Face.west].type == "inflow_shock_fitting") {
-                                is_master_block[0] = 1;     // Assign self as the master block
-                                inflow_vertex_velocities = shock_fitting_vertex_velocities(sblk);   // Do calculation
-                                assert(inflow_vertex_velocities.length == (sblk.njv), "the vertex velocity array is the wrong size");
-                                unpacked_vertex_velocities = unpack_vertex_velocities(inflow_vertex_velocities); // Unpack the vertex velocities to a form that can be read by MPI
-                            }
-
-                            MPI_Allreduce(is_master_block.ptr, master_rank.ptr, 2, MPI_2INT, MPI_MAXLOC, shock_fitting_comm);     // Tell everyone who their master is
-                            int ne = to!int(unpacked_vertex_velocities.length);     // Number of orders
-                            MPI_Bcast(&ne, 1, MPI_INT, master_rank[1], shock_fitting_comm);     // Let all the other blocks know how much space to set aside
-                            unpacked_vertex_velocities.length = ne;                             // Set aside that space
-                            MPI_Bcast(unpacked_vertex_velocities.ptr, ne, MPI_DOUBLE, master_rank[1], shock_fitting_comm);  // Master gives his orders
-                            packed_vertex_velocities = pack_vertex_velocities(unpacked_vertex_velocities);      // Put orders into usable format
-                            assign_slave_velocities(sblk, packed_vertex_velocities);    // Assign inner vertex velocities
-                            MPI_Comm_free(&shock_fitting_comm);
-                        } // End version(!nk_accelerator)
-                    }
-                    else {
-                        if (blk.active && blk.bc[Face.west].type == "inflow_shock_fitting" && SimState.time > GlobalConfig.shock_fitting_delay) {
-                            assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
-                            Vector3[] inflow_vertex_velocities = shock_fitting_vertex_velocities(sblk);
-                            assert(inflow_vertex_velocities.length == (sblk.njv), "the vertex velocity array is the wrong size");
-
-                            foreach (indx; sblk.inflow_partners) {
-                                assign_slave_velocities(cast(SFluidBlock) globalBlocks[indx], inflow_vertex_velocities);
-                            }
-                        }
+                    if (sblk is null) { throw new Error("Oops, this should be an SFluidBlock object."); }
+                    if (!blk.active) { throw new Error("Oops, expected active block for shock-fitting grid motion."); }
+                    if (blk.bc[Face.west].type == "inflow_shock_fitting") {
+                        // Vector3[] inflow_vertex_velocities = shock_fitting_vertex_velocities(sblk);
+                        // foreach (indx; sblk.inflow_partners) {
+                        //     assign_slave_velocities(cast(SFluidBlock) globalBlocks[indx], inflow_vertex_velocities);
                     }
                 }
             }
-    }
+        }
+    } // end switch grid_motion
 } // end set_grid_velocities()
 
 //---------------------------------------------------------------------------
