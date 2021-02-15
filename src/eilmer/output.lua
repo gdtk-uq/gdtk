@@ -530,5 +530,33 @@ end
 end -- function write_fluidBlockArrays_file
 
 function write_shock_fitting_helper_files(job)
-   print("FIX-ME: need to write shock-fitting helper files.")
-end
+   print("For shock-fitting, write rails and weights files.")
+   for i = 1, #(fluidBlockArrays) do
+      local fba = fluidBlockArrays[i]
+      if fba.shock_fitting then
+         local filename = string.format("config/fba-%04d.rails", fba.id)
+         local f = assert(io.open(filename, "w"))
+         f:write("# Rails are presently described by the initial west- and east-boundary coordinates.\n")
+         for k = 0, fba.nkv-1 do
+            for j = 0, fba.njv-1 do
+               local pwest = fba.grid:get_vtx(0,j,k)
+               local peast = fba.grid:get_vtx(fba.niv-1,j,k)
+               f:write(string.format("%.18e %.18e %.18e %.18e %.18e %.18e\n",
+                                     pwest.x, pwest.y, pwest.z, peast.x, peast.y, peast.z))
+            end
+         end
+         f:close()
+         local filename = string.format("config/fba-%04d.weights", fba.id)
+         local f = assert(io.open(filename, "w"))
+         f:write("# Weights represent the arc-length distance of each vertex from the east-boundary vertex.\n")
+         for k = 0, fba.nkv-1 do
+            for j = 0, fba.njv-1 do
+               for i = 0, fba.niv-1 do
+                  f:write(string.format("%.18e\n", fba.velocity_weights[i][j][k]))
+               end
+            end
+         end
+         f:close()
+      end
+   end
+end -- function write_shock_fitting_helper_files

@@ -289,14 +289,18 @@ class IgnitionZone : BlockZone {
 } // end class IgnitionZone
 
 class FBArray {
-    size_t nib, njb, nkb;
+    int nib, njb, nkb;
+    int niv, njv, nkv;
+    int[] nics, njcs, nkcs;
     int[] blockIds;
-    size_t[][][] blockArray; // indices i,j,k
+    int[][][] blockArray; // indices i,j,k
 
-    this(size_t ni, size_t nj, size_t nk, const(int[]) ids)
+    this(int nib, int njb, int nkb, const(int[]) ids,
+         int niv, int njv, int nkv,
+         const(int[]) nics, const(int[]) njcs, const(int[]) nkcs)
     {
-        assert(ni*nj*nk == ids.length, "Incorrect number of block Ids");
-        nib = ni; njb = nj; nkb = nk;
+        assert(nib*njb*nkb == ids.length, "Incorrect number of block Ids");
+        this.nib = nib; this.njb = njb; this.nkb = nkb;
         blockIds.length = ids.length;
         foreach (i; 0 .. ids.length) { blockIds[i] = ids[i]; }
         // There is a particular order of definition blocks
@@ -313,28 +317,51 @@ class FBArray {
                 }
             }
         }
+        // Information about the underlying grid and its subdivision.
+        this.niv = niv; this.njv = njv; this.nkv = nkv;
+        this.nics.length = nics.length;
+        foreach (i; 0 .. nics.length) { this.nics[i] = nics[i]; }
+        this.njcs.length = njcs.length;
+        foreach (i; 0 .. njcs.length) { this.njcs[i] = njcs[i]; }
+        this.nkcs.length = nkcs.length;
+        foreach (i; 0 .. nkcs.length) { this.nkcs[i] = nkcs[i]; }
     }
     this(const(FBArray) other)
     {
-        this(other.nib, other.njb, other.nkb, other.blockIds);
+        this(other.nib, other.njb, other.nkb, other.blockIds,
+             other.niv, other.njv, other.nkv,
+             other.nics, other.njcs, other.nkcs);
     }
     this(JSONValue json_data)
     {
-        size_t ni = getJSONint(json_data, "nib", 0);
-        size_t nj = getJSONint(json_data, "njb", 0);
-        size_t nk = getJSONint(json_data, "nkb", 0);
-        int[] oops; oops.length = ni*nj*nk; foreach(ref item; oops) { item = -1; }
+        int nib = getJSONint(json_data, "nib", 0);
+        int njb = getJSONint(json_data, "njb", 0);
+        int nkb = getJSONint(json_data, "nkb", 0);
+        int[] oops; oops.length = nib*njb*nkb; foreach(ref item; oops) { item = -1; }
         int[] ids = getJSONintarray(json_data, "blockIds", oops);
         bool all_positive = true;
         foreach (item; ids) { if (item < 0) { all_positive = false; } }
         assert(all_positive, "One or more blocks ids are not as expected.");
-        this(ni, nj, nk, ids);
+        int niv = getJSONint(json_data, "niv", 0);
+        int njv = getJSONint(json_data, "njv", 0);
+        int nkv = getJSONint(json_data, "nkv", 1);
+        int[] oops2; oops2.length = nib; foreach(ref item; oops2) { item = -1; }
+        int[] nics = getJSONintarray(json_data, "nics", oops2);
+        int[] oops3; oops3.length = njb; foreach(ref item; oops3) { item = -1; }
+        int[] njcs = getJSONintarray(json_data, "njcs", oops3);
+        int[] oops4; oops4.length = nkb; foreach(ref item; oops4) { item = -1; }
+        int[] nkcs = getJSONintarray(json_data, "nkcs", oops4);
+        this(nib, njb, nkb, ids, niv, njv, nkv, nics, njcs, nkcs);
     }
 
     override string toString()
     {
-        string result = format("FBArray(nib=%d, njb=%d, nkb=%d, blockIds=%s, blockArray=%s",
-                               nib, njb, nkb, blockIds, blockArray);
+        string result = format("FBArray(nib=%d, njb=%d, nkb=%d, "~
+                               "blockIds=%s, blockArray=%s, "~
+                               "niv=%d, njv=%d, nkv=%d, "~
+                               "nics=%s, njcs=%s, nkcs=%s)",
+                               nib, njb, nkb, blockIds, blockArray,
+                               niv, njv, nkv, nics, njcs, nkcs);
         return result;
     }
 } // end class FBArray
@@ -1748,7 +1775,7 @@ JSONValue read_config_file()
         writeln("  nFluidBlocks: ", GlobalConfig.nFluidBlocks);
         writeln("  nFluidBlockArrays: ", GlobalConfig.nFluidBlockArrays);
         foreach (i; 0 .. GlobalConfig.nFluidBlockArrays) {
-            writefln("fluid_block_array_%d: %s", i, GlobalConfig.fluidBlockArrays[i]);
+            writefln("  fluid_block_array_%d: %s", i, GlobalConfig.fluidBlockArrays[i]);
         }
     }
 

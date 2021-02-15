@@ -436,24 +436,50 @@ function FBArray:new(o)
    o.blockArray = {} -- will be a multi-dimensional array, indexed as [ib][jb][kb],
                      -- with 1<=ib<=nib, 1<=jb<=njb, 1<=kb<=nkb
    o.blockCollection = {} -- will be a single-dimensional array, also starting at 1
+   -- Work along each index direction and work out numbers of cells in sub-blocks.
+   o.nics = {} -- numbers of cells in each sub-block
    local nic_remaining = nic_total
-   local i0 = 0
    for ib = 1, o.nib do
-      o.blockArray[ib] = {}
       local nic = math.floor(nic_remaining/(o.nib-ib+1))
       if (ib == o.nib) then
          -- On last block, just use what's left
          nic = nic_remaining
       end
+      o.nics[#o.nics+1] = nic
       nic_remaining = nic_remaining - nic
-      local njc_remaining = njc_total
+   end
+   o.njcs = {}
+   local njc_remaining = njc_total
+   for jb = 1, o.njb do
+      local njc = math.floor(njc_remaining/(o.njb-jb+1))
+      if (jb == o.njb) then
+         njc = njc_remaining
+      end
+      o.njcs[#o.njcs+1] = njc
+      njc_remaining = njc_remaining - njc
+   end
+   o.nkcs = {}
+   if config.dimensions == 2 then
+      o.nkcs[1] = 1
+   else
+      local nkc_remaining = nkc_total
+      for kb = 1, o.nkb do
+         local nkc = math.floor(nkc_remaining/(o.nkb-kb+1))
+         if (kb == o.nkb) then
+            nkc = nkc_remaining
+         end
+         o.nkcs[#o.nkcs+1] = nkc
+         nkc_remaining = nkc_remaining - nkc
+      end
+   end
+   -- Now, generate the sub-blocks.
+   local i0 = 0
+   for ib = 1, o.nib do
+      o.blockArray[ib] = {}
+      local nic = o.nics[ib]
       local j0 = 0
       for jb = 1, o.njb do
-         local njc = math.floor(njc_remaining/(o.njb-jb+1))
-	 if (jb == o.njb) then
-	    njc = njc_remaining
-	 end
-         njc_remaining = njc_remaining - njc
+         local njc = o.njcs[jb]
 	 if config.dimensions == 2 then
 	    -- 2D flow
             if false then
@@ -492,14 +518,9 @@ function FBArray:new(o)
 	 else
 	    -- 3D flow, need one more level in the array
 	    o.blockArray[ib][jb] = {}
-            local nkc_remaining = nkc_total
             local k0 = 0
 	    for kb = 1, o.nkb do
-               local nkc = math.floor(nkc_remaining/(o.nkb-kb+1))
-               if (kb == o.nkb) then
-                  nkc = nkc_remaining
-               end
-               nkc_remaining = nkc_remaining - nkc
+               local nkc = o.nkcs[kb]
                if nic < 1 then
                   error(string.format("Invalid nic=%d while making subgrid ib=%d, jb=%d, kb=%d", nic, ib, jb, kb), 2)
                end
@@ -558,6 +579,42 @@ function FBArray:new(o)
    -- Note that the index of this array starts at 1 (in the Lua way).
    fluidBlockArrays[#fluidBlockArrays+1] = o
    --
+   if o.shock_fitting then
+      -- Prepare the velocity-weights for later writing to file.
+      -- Note that vertex indicies start at 0 in each direction.
+      o.niv = o.grid:get_niv()
+      o.njv = o.grid:get_njv()
+      o.nkv = o.grid:get_nkv()
+      o.velocity_weights = {}
+      for i = 0, o.niv-1 do
+         o.velocity_weights[i] = {}
+         for j = 0, o.njv-1 do
+            o.velocity_weights[i][j] = {}
+         end
+      end
+      for j = 0, o.njv-1 do
+         for k = 0, o.nkv-1 do
+            distances = {}
+            i = o.niv-1
+            p0 = o.grid:get_vtx(i,j,k)
+            distances[i] = 0.0
+            for irev = 1, o.niv-1 do
+               i = o.niv-1-irev
+               p1 = o.grid:get_vtx(i,j,k)
+               ds = vabs(p1-p0)
+               distances[i] = distances[i+1] + ds
+               p0 = p1 -- for next step
+            end
+            local arc_length = distances[0]
+            for i = 0, o.niv-1 do
+               o.velocity_weights[i][j][k] = distances[i] / arc_length
+            end
+         end
+      end
+   else
+      o.velocity_weights = nil
+   end
+   --
    return o
 end -- FBArray:new
 
@@ -573,6 +630,28 @@ function FBArray:tojson()
    str = str .. string.format('    "nib": %d,\n', self.nib)
    str = str .. string.format('    "njb": %d,\n', self.njb)
    str = str .. string.format('    "nkb": %d,\n', self.nkb)
+   str = str .. string.format('    "niv": %d,\n', self.niv)
+   str = str .. string.format('    "njv": %d,\n', self.njv)
+   str = str .. string.format('    "nkv": %d,\n', self.nkv)
+   --
+   str = str .. string.format('    "nics": [ ')
+   for i=1,#(self.nics)-1 do
+      str = str .. string.format('%d, ', self.nics[i])
+   end
+   str = str .. string.format('%d ],\n', self.nics[#self.nics])
+   --
+   str = str .. string.format('    "njcs": [ ')
+   for i=1,#(self.njcs)-1 do
+      str = str .. string.format('%d, ', self.njcs[i])
+   end
+   str = str .. string.format('%d ],\n', self.njcs[#self.njcs])
+   --
+   str = str .. string.format('    "nkcs": [ ')
+   for i=1,#(self.nkcs)-1 do
+      str = str .. string.format('%d, ', self.nkcs[i])
+   end
+   str = str .. string.format('%d ],\n', self.nkcs[#self.nkcs])
+   --
    str = str .. string.format('    "blockIds": [ ')
    for ib=1,#(self.blockCollection)-1 do
       str = str .. string.format('%d, ', self.blockCollection[ib].id)
