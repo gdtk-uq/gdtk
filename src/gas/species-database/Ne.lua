@@ -1,5 +1,6 @@
 -- Neon ported from Chris's Ne.lua file in the cfcfd3 collection
 -- Yu Liu, 2018-06-08
+-- LJ units fixed by NNG, 2021-02-15
 db.Ne = {}
 db.Ne.atomicConstituents = {Ne=1,}
 db.Ne.charge = 0
@@ -10,14 +11,14 @@ db.Ne.M = {
    reference = 'molecular weight from CEA2::thermo.inp'
 }
 db.Ne.sigma = {
-   value = 2.820e-10,
-   units = 'm',
+   value = 2.82,
+   units = 'Angstrom',
    description = 'Hard sphere collision diameter',
    reference = 'Svehla (1962) NASA Technical Report R-132'
 }
 db.Ne.epsilon = {
-   value = 4.52852544e-22,
-   units = 'J',
+   value = 32.7999876,
+   units = 'K',
    description = 'Depth of the intermolecular potential minimum',
    reference = 'Svehla (1962) NASA Technical Report R-132'
 }
