@@ -36,6 +36,7 @@ import lsqinterp;
 import fluidblock;
 import bc;
 import grid_motion;
+import grid_motion_udf;
 
 
 class UFluidBlock: FluidBlock {

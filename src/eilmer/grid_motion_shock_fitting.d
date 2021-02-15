@@ -1,10 +1,12 @@
-// shock_fitting_moving_grid.d
+// grid_motion_shock_fitting.d
 // Module for implementing shock-fitting with a moving grid in Eilmer4.
+//
 // 2015-Nov Kyle D. original implmentation (moving grid, shock fitting).
 // 2019 Lachlan Whyborn multiple blocks and MPI
 // 2019-Nov PJ tidy-up to make the code more readable (by PJ, at least).
+// 2021-02-15 PJ complete rework.
 
-module shock_fitting_moving_grid;
+module grid_motion_shock_fitting;
 
 import std.conv;
 import std.stdio;

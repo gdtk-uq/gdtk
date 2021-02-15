@@ -41,6 +41,7 @@ import onedinterp;
 import fluidblock;
 import bc;
 import grid_motion;
+import grid_motion_udf;
 
 // EPSILON parameter for numerical differentiation of flux jacobian
 // Value used based on Vanden and Orkwis (1996), AIAA J. 34:6 pp. 1125-1129

@@ -39,6 +39,7 @@ import bc.boundary_flux_effect;
 import bc.user_defined_effects;
 import lua_helper;
 import grid_motion;
+import grid_motion_udf;
 import mass_diffusion;
 
 BoundaryCondition make_BC_from_json(JSONValue jsonData, int blk_id, int boundary)

@@ -44,6 +44,7 @@ import bc;
 import user_defined_source_terms;
 import solid_udf_source_terms;
 import grid_motion;
+import grid_motion_udf;
 import mass_diffusion;
 import loads;
 import turbulence;

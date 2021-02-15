@@ -101,14 +101,14 @@ ifeq ($(WITH_MATPLOTLIB), 1)
 endif
 
 EILMER_CORE_FILES := simcore.d \
-	fileutil.d \
-	fvcore.d fvcell.d fvvertex.d fvinterface.d \
+	fileutil.d fvcore.d fvcell.d fvvertex.d fvinterface.d \
 	fluxcalc.d onedinterp.d flowgradients.d lsqinterp.d limiters.d \
 	conservedquantities.d flowstate.d \
 	globalconfig.d globaldata.d \
 	block.d fluidblock.d sfluidblock.d ufluidblock.d \
-	gas_solid_interface.d grid_motion.d \
-	shock_fitting_moving_grid.d history.d loads.d special_block_init.d \
+	gas_solid_interface.d \
+	grid_motion.d grid_motion_udf.d grid_motion_shock_fitting.d \
+	history.d loads.d special_block_init.d \
 	mass_diffusion.d shockdetectors.d turbulence.d jacobian.d
 
 EILMER_LUA_FILES := luaglobalconfig.d lua_helper.d \
