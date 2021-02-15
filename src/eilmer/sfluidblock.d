@@ -2103,7 +2103,6 @@ public:
         //
         bool do_reconstruction = allow_high_order_interpolation && (myConfig.interpolation_order > 1);
         //
-        
         // Low-order reconstruction just copies data from adjacent FV_Cell.
         // Note that ,even for high-order reconstruction, we depend upon this copy for
         // the viscous-transport and diffusion coefficients.

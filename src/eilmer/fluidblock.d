@@ -1552,10 +1552,10 @@ class FBArray {
     this(int nib, int njb, int nkb, const(int[]) ids,
          int niv, int njv, int nkv,
          const(int[]) nics, const(int[]) njcs, const(int[]) nkcs,
-         bool sff)
+         bool sf_flag)
     {
-        // Construt with just configuration data.
-        // The shock-fitting data will be picked up later, if relevant.
+        // Construct with just configuration data.
+        // The shock-fitting data will be added later, if relevant.
         assert(nib*njb*nkb == ids.length, "Incorrect number of block Ids");
         this.nib = nib; this.njb = njb; this.nkb = nkb;
         blockIds.length = ids.length;
@@ -1583,7 +1583,7 @@ class FBArray {
         this.nkcs.length = nkcs.length;
         foreach (i; 0 .. nkcs.length) { this.nkcs[i] = nkcs[i]; }
         // Other bits.
-        this.shock_fitting = sff;
+        this.shock_fitting = sf_flag;
     }
     this(const(FBArray) other)
     {
@@ -1611,8 +1611,8 @@ class FBArray {
         int[] njcs = getJSONintarray(json_data, "njcs", oops3);
         int[] oops4; oops4.length = nkb; foreach(ref item; oops4) { item = -1; }
         int[] nkcs = getJSONintarray(json_data, "nkcs", oops4);
-        bool sff = getJSONbool(json_data, "shock_fitting", false);
-        this(nib, njb, nkb, ids, niv, njv, nkv, nics, njcs, nkcs, sff);
+        bool sf_flag = getJSONbool(json_data, "shock_fitting", false);
+        this(nib, njb, nkb, ids, niv, njv, nkv, nics, njcs, nkcs, sf_flag);
     }
 
     override string toString()
@@ -1628,6 +1628,7 @@ class FBArray {
 
     void read_velocity_weights(string filename)
     {
+        // File written by function write_shock_fitting_helper_files() in output.lua.
         velocity_weights.length = niv;
         foreach (i; 0 .. niv) {
             velocity_weights[i].length = njv;
@@ -1649,6 +1650,7 @@ class FBArray {
 
     void read_rails_file(string filename)
     {
+        // File written by function write_shock_fitting_helper_files() in output.lua.
         p_west.length = njv;
         p_east.length = njv;
         foreach (j; 0 .. njv) {
@@ -1664,6 +1666,8 @@ class FBArray {
                     line = f.readln().strip();
                     formattedRead(line, "%e %e %e %e %e %e",
                                   &pwx, &pwy, &pwz, &pex, &pey, &pez);
+                    p_west[j][k].set(pwx, pwy, pwz);
+                    p_east[j][k].set(pex, pey, pez);
                 }
             }
         }

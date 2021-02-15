@@ -641,7 +641,7 @@ int init_simulation(int tindx, int nextLoadsIndx,
     }
     init_history_cell_files();
     //
-    // create the loads directory, maybe
+    // Create the loads directory, maybe.
     if (GlobalConfig.write_loads && (SimState.current_loads_tindx == 0)) {
         if (GlobalConfig.is_master_task) {
             ensure_directory_is_present("loads");
@@ -656,6 +656,9 @@ int init_simulation(int tindx, int nextLoadsIndx,
         }
     }
     //
+    // For a simulation with shock fitting, the files defining the rails for
+    // vertex motion and the scaling of vertex velocities throughout the blocks
+    // will have been written by prep.lua + output.lua.
     if (GlobalConfig.grid_motion == GlobalConfig.grid_motion.shock_fitting) {
         foreach (i, fba; fluidBlockArrays) {
             if (fba.shock_fitting) {
