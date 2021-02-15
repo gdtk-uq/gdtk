@@ -422,12 +422,16 @@ function FBArray:new(o)
       o.nkb = 1
    end
    -- Extract some information from the StructuredGrid
+   o.niv = o.grid:get_niv()
+   o.njv = o.grid:get_njv()
+   o.nkv = o.grid:get_nkv()
+   -- Subdivide the block based on numbers of cells.
    -- Note 0-based indexing for vertices and cells in the D-domain.
-   local nic_total = o.grid:get_niv() - 1
+   local nic_total = o.niv - 1
    local dnic = math.floor(nic_total/o.nib)
-   local njc_total = o.grid:get_njv() - 1
+   local njc_total = o.njv - 1
    local dnjc = math.floor(njc_total/o.njb)
-   local nkc_total = o.grid:get_nkv() - 1
+   local nkc_total = o.nkv - 1
    local dnkc = math.floor(nkc_total/o.nkb)
    if config.dimensions == 2 then
       nkc_total = 1
