@@ -32,9 +32,9 @@ __gshared static Block[] globalBlocks;
 // In this context, "local" is within the local MPI task (or Linux process),
 // which may have several threads running within it.
 __gshared static FluidBlock[] localFluidBlocks;
-__gshared static FluidBlock[] localFluidBlocksBySize; // sorted largest to smallest  
+__gshared static FluidBlock[] localFluidBlocksBySize; // sorted largest to smallest
 __gshared static SSolidBlock[] localSolidBlocks;
-__gshared static SSolidBlock[] localSolidBlocksBySize; // sorted largest to smallest  
+__gshared static SSolidBlock[] localSolidBlocksBySize; // sorted largest to smallest
 
 // We also need to have a dedicated set of configuration parameters for each thread
 // so that there is no need to have memory barriers guarding their access.
@@ -46,3 +46,8 @@ __gshared static LocalConfig[] dedicatedConfig;
 // Lua environments.
 __gshared static RunTimeLoads[] runTimeLoads;
 __gshared static size_t[string] runTimeLoadsByName;
+
+// Shock fitting is coordinated across arrays of FluidBlock objects.
+// Here is the storage for that coordination data.
+__gshared static FBArray[] fluidBlockArrays;
+

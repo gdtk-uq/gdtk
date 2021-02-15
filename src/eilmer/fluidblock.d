@@ -11,6 +11,7 @@ import std.conv;
 import std.stdio;
 import std.math;
 import std.json;
+import std.format;
 import std.array;
 import util.lua;
 import nm.complex;
@@ -34,6 +35,7 @@ import bc;
 import user_defined_source_terms;
 import conservedquantities;
 import lua_helper;
+import json_helper;
 import grid_motion;
 import grid_deform;
 import sfluidblock; // needed for some special-case processing, below
@@ -1546,3 +1548,84 @@ public:
     }
     }
 } // end class FluidBlock
+
+
+class FBArray {
+    // Shock fitting is coordinated across arrays of FluidBlock objects.
+    // Here is the storage for that coordination data.
+    int nib, njb, nkb;
+    int niv, njv, nkv;
+    int[] nics, njcs, nkcs;
+    int[] blockIds;
+    int[][][] blockArray; // indices i,j,k
+
+    this(int nib, int njb, int nkb, const(int[]) ids,
+         int niv, int njv, int nkv,
+         const(int[]) nics, const(int[]) njcs, const(int[]) nkcs)
+    {
+        assert(nib*njb*nkb == ids.length, "Incorrect number of block Ids");
+        this.nib = nib; this.njb = njb; this.nkb = nkb;
+        blockIds.length = ids.length;
+        foreach (i; 0 .. ids.length) { blockIds[i] = ids[i]; }
+        // There is a particular order of definition blocks
+        // in the FBArray:new() function over in prep.lua.
+        size_t list_index = 0;
+        blockArray.length = nib;
+        foreach (i; 0 .. nib) {
+            blockArray[i].length = njb;
+            foreach (j; 0 .. njb) {
+                blockArray[i][j].length = nkb;
+                foreach (k; 0 .. nkb) {
+                    blockArray[i][j][k] = blockIds[list_index];
+                    list_index++;
+                }
+            }
+        }
+        // Information about the underlying grid and its subdivision.
+        this.niv = niv; this.njv = njv; this.nkv = nkv;
+        this.nics.length = nics.length;
+        foreach (i; 0 .. nics.length) { this.nics[i] = nics[i]; }
+        this.njcs.length = njcs.length;
+        foreach (i; 0 .. njcs.length) { this.njcs[i] = njcs[i]; }
+        this.nkcs.length = nkcs.length;
+        foreach (i; 0 .. nkcs.length) { this.nkcs[i] = nkcs[i]; }
+    }
+    this(const(FBArray) other)
+    {
+        this(other.nib, other.njb, other.nkb, other.blockIds,
+             other.niv, other.njv, other.nkv,
+             other.nics, other.njcs, other.nkcs);
+    }
+    this(JSONValue json_data)
+    {
+        int nib = getJSONint(json_data, "nib", 0);
+        int njb = getJSONint(json_data, "njb", 0);
+        int nkb = getJSONint(json_data, "nkb", 0);
+        int[] oops; oops.length = nib*njb*nkb; foreach(ref item; oops) { item = -1; }
+        int[] ids = getJSONintarray(json_data, "blockIds", oops);
+        bool all_positive = true;
+        foreach (item; ids) { if (item < 0) { all_positive = false; } }
+        assert(all_positive, "One or more blocks ids are not as expected.");
+        int niv = getJSONint(json_data, "niv", 0);
+        int njv = getJSONint(json_data, "njv", 0);
+        int nkv = getJSONint(json_data, "nkv", 1);
+        int[] oops2; oops2.length = nib; foreach(ref item; oops2) { item = -1; }
+        int[] nics = getJSONintarray(json_data, "nics", oops2);
+        int[] oops3; oops3.length = njb; foreach(ref item; oops3) { item = -1; }
+        int[] njcs = getJSONintarray(json_data, "njcs", oops3);
+        int[] oops4; oops4.length = nkb; foreach(ref item; oops4) { item = -1; }
+        int[] nkcs = getJSONintarray(json_data, "nkcs", oops4);
+        this(nib, njb, nkb, ids, niv, njv, nkv, nics, njcs, nkcs);
+    }
+
+    override string toString()
+    {
+        string result = format("FBArray(nib=%d, njb=%d, nkb=%d, "~
+                               "blockIds=%s, blockArray=%s, "~
+                               "niv=%d, njv=%d, nkv=%d, "~
+                               "nics=%s, njcs=%s, nkcs=%s)",
+                               nib, njb, nkb, blockIds, blockArray,
+                               niv, njv, nkv, nics, njcs, nkcs);
+        return result;
+    }
+} // end class FBArray
