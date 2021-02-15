@@ -8,31 +8,20 @@
 
 module grid_motion_shock_fitting;
 
-import std.conv;
-import std.stdio;
 import std.math;
 import nm.complex;
 import nm.number;
-import std.json;
-import util.lua;
-import util.lua_service;
-import std.string;
-import std.algorithm;
-import std.datetime;
 version(mpi_parallel) {
     import mpi;
     import mpi.util;
 }
 
-import json_helper;
-import kinetics;
 import globalconfig;
 import globaldata;
 import fvcore;
 import fvvertex;
 import fvinterface;
 import fvcell;
-import flowgradients;
 import bc;
 import fluidblock;
 import sfluidblock;

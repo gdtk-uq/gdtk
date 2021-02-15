@@ -1,29 +1,21 @@
-// Authors: RG, PJ, KD & IJ
+// Authors: Rowan Gollan, Peter J., Kyle Damm & Ian Johnston
 // Date: 2015-11-20
 
 module grid_motion;
 
-import std.string;
 import std.conv;
-import std.algorithm;
-
 import util.lua;
 import util.lua_service;
 import nm.complex;
 import nm.number;
-import nm.luabbla;
-import lua_helper;
 import fvcore;
 import fvvertex;
 import fvinterface;
 import globalconfig;
 import globaldata;
 import geom;
-import geom.luawrap;
 import fluidblock;
 import sfluidblock;
-import ufluidblock;
-import std.stdio;
 
 
 @nogc
