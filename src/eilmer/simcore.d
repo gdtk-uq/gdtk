@@ -1293,7 +1293,15 @@ int integrate_in_time(double target_time_as_requested)
                 // [TODO] PJ 2018-01-20 Up to here with thinking about MPI parallel.
                 set_grid_velocities();
                 gasdynamic_explicit_increment_with_moving_grid();
-                recalculate_all_geometry();
+                // Recalculate all geometry at gtl 0
+                // because that is where the update function
+                // has put the most recent data values.
+                foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                    if (blk.active) {
+                        blk.compute_primary_cell_geometric_data(0);
+                        blk.compute_least_squares_setup(0);
+                    }
+                }
             }
             // 2.3 Solid domain update (if loosely coupled)
             // If tight coupling, then this has already been performed
@@ -2100,19 +2108,6 @@ void set_grid_velocities()
             }
     }
 } // end set_grid_velocities()
-
-void recalculate_all_geometry()
-{
-    // Moving Grid - Recalculate all geometry, note that in the gas dynamic
-    // update gtl level 2 is copied to gtl level 0 for the next step thus
-    // we actually do want to calculate geometry at gtl 0 here.
-    foreach (blk; localFluidBlocksBySize) {
-        if (blk.active) {
-            blk.compute_primary_cell_geometric_data(0);
-            blk.compute_least_squares_setup(0);
-        }
-    }
-} // end recalculate_all_geometry()
 
 //---------------------------------------------------------------------------
 
