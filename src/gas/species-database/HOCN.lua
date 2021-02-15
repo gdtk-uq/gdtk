@@ -13,6 +13,18 @@ db.HOCN.gamma = {
    description = 'ratio of specific heats at 300.0K',
    reference = 'evaluated using Cp/R from Chemkin-II coefficients'
 }
+db.HOCN.sigma = {
+   value = 3.828,
+   units = 'Angstrom',
+   description = 'Lennard-Jones potential distance.',
+   reference = 'GRI-Mech 3.0 transport file.'
+}
+db.HOCN.epsilon = {
+   value = 232.4,
+   units = 'K',
+   description = 'Lennard-Jones potential well depth.',
+   reference = 'GRI-Mech 3.0 transport file.'
+}
 db.HOCN.grimechThermoCoeffs = {
    notes = 'data from GRIMECH 3.0',
    nsegments = 2, 

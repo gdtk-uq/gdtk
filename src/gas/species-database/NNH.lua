@@ -13,6 +13,18 @@ db.NNH.gamma = {
    description = 'ratio of specific heats at 300.0K',
    reference = 'evaluated using Cp/R from Chemkin-II coefficients'
 }
+db.NNH.sigma = {
+   value = 3.798,
+   units = 'Angstrom',
+   description = 'Lennard-Jones potential distance.',
+   reference = 'GRI-Mech 3.0 transport file.'
+}
+db.NNH.epsilon = {
+   value = 71.4,
+   units = 'K',
+   description = 'Lennard-Jones potential well depth.',
+   reference = 'GRI-Mech 3.0 transport file.'
+}
 db.NNH.grimechThermoCoeffs = {
    notes = 'data from GRIMECH 3.0',
    nsegments = 2, 

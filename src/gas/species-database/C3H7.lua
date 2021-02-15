@@ -7,6 +7,18 @@ db.C3H7.M = {
    description = 'molecular mass',
    reference = 'Periodic table'
 }
+db.C3H7.sigma = {
+   value = 4.982,
+   units = 'Angstrom',
+   description = 'Lennard-Jones potential distance.',
+   reference = 'GRI-Mech 3.0 transport file.'
+}
+db.C3H7.epsilon = {
+   value = 266.8,
+   units = 'K',
+   description = 'Lennard-Jones potential well depth.',
+   reference = 'GRI-Mech 3.0 transport file.'
+}
 db.C3H7.gamma = {
    value = 1.1314e00,
    units = 'non-dimensional',

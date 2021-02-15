@@ -13,6 +13,18 @@ db.HNO.gamma = {
    description = 'ratio of specific heats at room temperature (= Cp/(Cp - R))',
    reference = 'using Cp evaluated from CEA2 coefficients at T=300.0 K'
 }
+db.HNO.sigma = {
+   value = 3.492,
+   units = 'Angstrom',
+   description = 'Lennard-Jones potential distance.',
+   reference = 'GRI-Mech 3.0 transport file.'
+}
+db.HNO.epsilon = {
+   value = 116.7,
+   units = 'K',
+   description = 'Lennard-Jones potential well depth.',
+   reference = 'GRI-Mech 3.0 transport file.'
+}
 db.HNO.ceaThermoCoeffs = {
    nsegments = 2,
    T_break_points = {200.0, 1000.0, 6000.0},

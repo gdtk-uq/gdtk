@@ -13,6 +13,18 @@ db.NO.gamma = {
    description = 'ratio of specific heats at room temperature (= Cp/(Cp - R))',
    reference = 'using Cp evaluated from CEA2 coefficients at T=300.0 K'
 }
+db.NO.sigma = {
+   value = 3.621,
+   units = 'Angstrom',
+   description = 'Lennard-Jones potential distance.',
+   reference = 'GRI-Mech 3.0 transport file.'
+}
+db.NO.epsilon = {
+   value = 97.53,
+   units = 'K',
+   description = 'Lennard-Jones potential well depth.',
+   reference = 'GRI-Mech 3.0 transport file.'
+}
 db.NO.ceaThermoCoeffs = {
    nsegments = 3,
    T_break_points = {200.0, 1000.0, 6000.0, 20000.0},

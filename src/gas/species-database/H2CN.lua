@@ -13,6 +13,18 @@ db.H2CN.gamma = {
    description = 'ratio of specific heats at 300.0K',
    reference = 'evaluated using Cp/R from Chemkin-II coefficients'
 }
+db.H2CN.sigma = {
+   value = 3.63,
+   units = 'Angstrom',
+   description = 'Lennard-Jones potential distance.',
+   reference = 'GRI-Mech 3.0 transport file.'
+}
+db.H2CN.epsilon = {
+   value = 569.0,
+   units = 'K',
+   description = 'Lennard-Jones potential well depth.',
+   reference = 'GRI-Mech 3.0 transport file.'
+}
 db.H2CN.grimechThermoCoeffs = {
    notes = 'data from GRIMECH 3.0',
    T_break_points = {300.0, 1000.0, 4000.0},

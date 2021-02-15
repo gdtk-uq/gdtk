@@ -15,6 +15,18 @@ db.He.gamma = {
    description = '(ideal) ratio of specific heats at room temperature',
    reference = 'monatomic gas'
 }
+db.He.sigma = {
+   value = 2.551,
+   units = 'Angstrom',
+   description = 'Lennard-Jones potential distance.',
+   reference = 'Svehla (1962) NASA Technical Report R-132'
+}
+db.He.epsilon = {
+   value = 10.22007017,
+   units = 'K',
+   description = 'Lennard-Jones potential well depth.',
+   reference = 'Svehla (1962) NASA Technical Report R-132'
+}
 db.He.ceaThermoCoeffs = {
    nsegments = 3,
    T_break_points = {200.0, 1000.0, 6000.0, 20000.0},

@@ -13,6 +13,18 @@ db.C2.gamma = {
    description = 'ratio of specific heats at room temperature (= Cp/(Cp - R))',
    reference = 'diatom -- assumed 1.4 at low temperatures'
 }
+db.C2.sigma = {
+   value = 3.913,
+   units = 'Angstrom',
+   description = 'Lennard-Jones potential distance.',
+   reference = 'Svehla (1962) NASA Technical Report R-132'
+}
+db.C2.epsilon = {
+   value = 195.1013396,
+   units = 'K',
+   description = 'Lennard-Jones potential well depth.',
+   reference = 'Svehla (1962) NASA Technical Report R-132'
+}
 db.C2.ceaThermoCoeffs = {
    nsegments = 3,
    T_break_points = {200.0, 1000.0, 6000.0,20000.0},
