@@ -233,11 +233,13 @@ function writeThermPerfGas(f, species, db, optsTable)
       f:write(string.format("'%s', ", sp))
    end
    f:write("}\n\n")
+
    f:write("energyModes = {'equilibrium'}\n")
    if (optsTable and optsTable.gas_giant_trans_props) then
       f:write("use_gas_giant_transport_properties = true\n")
    end
    f:write("db = {}\n")
+
    for _,sp in ipairs(species) do
       f:write(string.format("db['%s'] = {}\n", sp))
       f:write(string.format("db['%s'].atomicConstituents = { ", sp))
@@ -247,19 +249,34 @@ function writeThermPerfGas(f, species, db, optsTable)
       f:write("}\n")
       f:write(string.format("db['%s'].charge = %d\n", sp, db[sp].charge))
       f:write(string.format("db['%s'].M = %.8e\n", sp, db[sp].M.value))
-      sigma = db.default.sigma.value
+
+      diffusion_info_missing = false
       if db[sp].sigma then
-	 sigma = db[sp].sigma.value
+         sigma = db[sp].sigma.value
+      else
+         diffusion_info_missing = true
+         sigma = db.default.sigma.value
       end
       f:write(string.format("db['%s'].sigma = %.8f\n", sp, sigma))
-      epsilon = db.default.epsilon.value
       if db[sp].epsilon then
-	 epsilon = db[sp].epsilon.value
+         epsilon = db[sp].epsilon.value
+      else
+          diffusion_info_missing = true
+         epsilon = db.default.epsilon.value
       end
       f:write(string.format("db['%s'].epsilon = %.8f\n", sp, epsilon))
+      -- Ionised species have a different potentials to LJ, so we don't mind them being missing (NNG)
+      if ((db[sp].charge == 0) and diffusion_info_missing) then
+          print("------------------------------------------------------------------------------------------")
+          print("WARNING: Lennard-Jones potential data could not be found for species: ", sp)
+          print("WARNING: As a substitute the values from 'defaults.lua' will be used.")
+          print("WARNING: This may affect a multi-species calculation with mass diffusion.")
+          print("------------------------------------------------------------------------------------------")
+      end
+
       Lewis = db.default.Lewis.value
       if db[sp].Lewis then
-	 Lewis = db[sp].Lewis.value
+         Lewis = db[sp].Lewis.value
       end
       f:write(string.format("db['%s'].Lewis = %.8f\n", sp, Lewis))
       writeCeaThermoCoeffs(f, sp, db, optsTable)
