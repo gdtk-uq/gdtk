@@ -178,7 +178,7 @@ number wave_speed(const(FlowState) L0, const(FlowState) R0, const(Vector3) n)
         number ws1 = (L0.gas.rho*dot(L0.vel,n) - R0.gas.rho*dot(R0.vel,n)) / (L0.gas.rho - R0.gas.rho);
         // Conservation of momentum, equation 4.6 in Ian's thesis.
         number pRpL = R0.gas.p.re - L0.gas.p.re;
-        number ws2 = veln - sgn(pRpL)/L0.gas.rho * sqrt(abs(pRpL / (1.0/L0.gas.rho - 1.0/R0.gas.rho)));
+        number ws2 = veln - sgn(pRpL.re)/L0.gas.rho * sqrt(abs(pRpL / (1.0/L0.gas.rho - 1.0/R0.gas.rho)));
         immutable double alpha = 0.5;
         return alpha*ws1 + (1.0-alpha)*ws2;
     } else {
