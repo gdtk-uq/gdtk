@@ -1594,7 +1594,6 @@ class FBArray {
         if (sf_flag) {
             // Make space for the shock-fitting intermediate data.
             int njc = sum(njcs); int nkc = sum(nkcs);
-            writeln("njv=", njv, " nkv=", nkv, " njc=", njc, " nkc=", nkc);
             assert((njv==njc+1) &&
                    ((GlobalConfig.dimensions==2 && nkv==1 && nkc==1) ||
                     (GlobalConfig.dimensions==3 && nkv==nkc+1)),
