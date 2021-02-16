@@ -2026,9 +2026,11 @@ void chemistry_step(double dt)
         // without GPU accelerator
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
             if (blk.active) {
-                double local_dt = dt;
-                if (GlobalConfig.with_local_time_stepping) foreach (cell; blk.cells) { cell.thermochemical_increment(cell.dt_local); }
-                else foreach (cell; blk.cells) { cell.thermochemical_increment(local_dt); }
+                if (GlobalConfig.with_local_time_stepping) {
+                    foreach (cell; blk.cells) { cell.thermochemical_increment(cell.dt_local); }
+                } else {
+                    foreach (cell; blk.cells) { cell.thermochemical_increment(dt); }
+                }
             }
         }
     }
@@ -2046,23 +2048,8 @@ void set_grid_velocities()
         break;
     case GridMotion.shock_fitting:
         if (SimState.time > GlobalConfig.shock_fitting_delay) {
-            version(mpi_parallel) {
-                // [TODO] PJ 2021-02-15 Shock-fitting in an MPI-parallel context.
-                throw new Error("Shock-fitting in an MPI context is not implemented yet.");
-            } else {
-                throw new Error("[TODO] PJ 2021-02-15 Shock-fitting grid-motion code in a shared-memory-parallel context.");
-                /+
-                foreach (blk; localFluidBlocksBySize) {
-                    SFluidBlock sblk = cast(SFluidBlock) blk;
-                    if (sblk is null) { throw new Error("Oops, this should be an SFluidBlock object."); }
-                    if (!blk.active) { throw new Error("Oops, expected active block for shock-fitting grid motion."); }
-                    if (blk.bc[Face.west].type == "inflow_shock_fitting") {
-                        Vector3[] inflow_vertex_velocities = shock_fitting_vertex_velocities(sblk);
-                        foreach (indx; sblk.inflow_partners) {
-                        assign_slave_velocities(cast(SFluidBlock) globalBlocks[indx], inflow_vertex_velocities);
-                    }
-                }
-                +/
+            foreach (i, fba; fluidBlockArrays) {
+                if (fba.shock_fitting) { compute_vtx_velocities_for_sf(fba); }
             }
         }
     } // end switch grid_motion

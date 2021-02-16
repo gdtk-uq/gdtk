@@ -1537,17 +1537,24 @@ public:
 
 class FBArray {
     // Shock fitting is coordinated across arrays of FluidBlock objects.
+    //
     // Here is the storage for that coordination data.
-    int nib, njb, nkb;
-    int niv, njv, nkv;
-    int[] nics, njcs, nkcs;
-    int[] blockIds;
-    int[][][] blockArray; // indices i,j,k
-    bool shock_fitting;
+    int nib, njb, nkb; // Numbers of blocks in each index direction.
+    int niv, njv, nkv; // Numbers of vertices (overall) in each index direction.
+    int[] nics, njcs, nkcs; // Numbers of cells (per index direction) within each sub-block
+    int[] blockIds; // Block ids in a single list.
+    int[][][] blockArray; // Block ids arranged in an array with indices ib,jb,kb.
+    bool shock_fitting; // Flag to indicate that we want to do shock fitting and move the grid.
+    //
     // Shock-fitting data storage follows.
-    double[][][] velocity_weights;
-    Vector3[][] p_east;
-    Vector3[][] p_west;
+    double[][][] velocity_weights; // Fraction of shock-front velocity.
+    Vector3[][] p_east; // East-most point on rail.
+    Vector3[][] p_west; // West-most point on rail.
+    number[][] face_ws; // Wave speeds at face centres.
+    Vector3[][] face_pos; // Positions of face centres.
+    Vector3[][] vtx_vel; // Computed velocities for the vertices on the shock boundary.
+    Vector3[][] vtx_dir; // Rail directions for the vertices on the shock boundary.
+    Vector3[][] vtx_pos; // Positions of the vertices on the shock boundary.
 
     this(int nib, int njb, int nkb, const(int[]) ids,
          int niv, int njv, int nkv,
@@ -1584,6 +1591,20 @@ class FBArray {
         foreach (i; 0 .. nkcs.length) { this.nkcs[i] = nkcs[i]; }
         // Other bits.
         this.shock_fitting = sf_flag;
+        if (sf_flag) {
+            // Make space for the shock-fitting intermediate data.
+            int njc = sum(njcs); int nkc = sum(nkcs);
+            writeln("njv=", njv, " nkv=", nkv, " njc=", njc, " nkc=", nkc);
+            assert((njv==njc+1) &&
+                   ((GlobalConfig.dimensions==2 && nkv==1 && nkc==1) ||
+                    (GlobalConfig.dimensions==3 && nkv==nkc+1)),
+                   "Mismatch in cells and vertices at shock boundary.");
+            face_ws.length = njc; foreach (j; 0 .. njc) { face_ws[j].length = nkc; }
+            face_pos.length = njc; foreach (j; 0 .. njc) { face_pos[j].length = nkc; }
+            vtx_vel.length = njv; foreach (j; 0 .. njv) { vtx_vel[j].length = nkv; }
+            vtx_dir.length = njv; foreach (j; 0 .. njv) { vtx_dir[j].length = nkv; }
+            vtx_pos.length = njv; foreach (j; 0 .. njv) { vtx_pos[j].length = nkv; }
+        }
     }
     this(const(FBArray) other)
     {
@@ -1662,13 +1683,11 @@ class FBArray {
         double pwx, pwy, pwz, pex, pey, pez;
         foreach (k; 0 .. nkv) {
             foreach (j; 0 .. njv) {
-                foreach (i; 0 .. niv) {
-                    line = f.readln().strip();
-                    formattedRead(line, "%e %e %e %e %e %e",
-                                  &pwx, &pwy, &pwz, &pex, &pey, &pez);
-                    p_west[j][k].set(pwx, pwy, pwz);
-                    p_east[j][k].set(pex, pey, pez);
-                }
+                line = f.readln().strip();
+                formattedRead(line, "%e %e %e %e %e %e",
+                              &pwx, &pwy, &pwz, &pex, &pey, &pez);
+                p_west[j][k].set(pwx, pwy, pwz);
+                p_east[j][k].set(pex, pey, pez);
             }
         }
     } // end read_rails_file()

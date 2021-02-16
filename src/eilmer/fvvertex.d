@@ -36,7 +36,7 @@ public:
     FVCell[] cell_cloud; // for the MLP limiter we need access to the gradients within each cell
     WLSQGradWorkspace ws_grad;
     LSQInterpGradients gradients; // needed for the MLP limiter
-    
+
     this(LocalConfig myConfig,
          bool allocate_spatial_deriv_lsq_workspace,
          int id_init=-1)
@@ -66,7 +66,7 @@ public:
         cloud_fs = other.cloud_fs.dup();
     }
 
-    @nogc 
+    @nogc
     void copy_values_from(ref const(FVVertex) other)
     {
         if (!(this is other)) {
@@ -78,7 +78,7 @@ public:
         }
     } // end copy_values_from()
 
-    @nogc 
+    @nogc
     void copy_grid_level_to_level(uint from_level, uint to_level)
     {
         pos[to_level] = pos[from_level];

@@ -5,7 +5,7 @@
  * Versions: 2014-07-18 : first cut.
  *           2015-22-04 : added containers for solid blocks
  *           2017-01-17 : Added globalFluidBlocks for the MPI-parallel.
- *           2020-02-11 : Removed globalFluidBlocks & globalSolidBlocks; 
+ *           2020-02-11 : Removed globalFluidBlocks & globalSolidBlocks;
  *                        replaced with globalBlocks (Kyle A. Damm).
  */
 
