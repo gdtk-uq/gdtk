@@ -106,12 +106,17 @@ version(complex_numbers){
         throw new Error("Do not use with complex numbers.");
     }
 
-    @nogc void set_massf_and_T_from_ps(GasState Q, number s)
+    @nogc void set_massf_and_T_from_ps(GasState Q, double s)
     {
         throw new Error("Do not use with complex numbers.");
     }
 
     @nogc void set_massf_from_rhoT(GasState Q)
+    {
+        throw new Error("Do not use with complex numbers.");
+    }
+
+    @nogc double get_s(GasState Q)
     {
         throw new Error("Do not use with complex numbers.");
     }
