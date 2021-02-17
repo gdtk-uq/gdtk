@@ -28,12 +28,12 @@ class TestCyl_SF < Test::Unit::TestCase
         steps = items[1].to_i
       end
     end
-    print(steps)
+    # print(steps)
     assert((steps - 5269).abs < 100, "Failed to take correct number of steps.")
   end
 
   def test_2_post_shock_condition
-    # With this shock-fitting simulation, we take the first point 
+    # With this shock-fitting simulation, we take the first point
     # in the grid as (being close enough to) the position of the shock.
     # For a free stream Mach number of 7, Billig's correlation gives
     # delta/R = 0.4246.

@@ -9,6 +9,7 @@
 module grid_motion_shock_fitting;
 
 import std.stdio;
+import std.conv;
 import std.math;
 import std.algorithm;
 import nm.complex;
@@ -85,7 +86,6 @@ version(mpi_parallel) {
         } // end foreach jb
         //
         // MPI synchronization of fba.face_ws, fba.face_pos and fba.vtx_pos
-        // [TODO] PJ 2021-02-17
         foreach (jb; 0 .. fba.njb) {
             int j0 = 0; if (jb > 0) { foreach(j; 0 .. jb) { j0 += fba.njcs[j]; } }
             foreach (kb; 0 .. fba.nkb) {
@@ -94,7 +94,10 @@ version(mpi_parallel) {
                 blk = cast(SFluidBlock) globalBlocks[blkId];
                 int src_task = GlobalConfig.mpi_rank_for_block[blkId];
                 int items;
+                //
+                // Broadcast the face velocities.
                 if (canFind(GlobalConfig.localFluidBlockIds, blkId)) {
+                    // Local task owns the block so we pack its data into the buffer.
                     assert(src_task == GlobalConfig.mpi_rank_for_local_task,
                            "Oops, source task should be local MPI task.");
                     items = 0;
@@ -103,11 +106,12 @@ version(mpi_parallel) {
                             fba.buffer[items++] = fba.face_ws[j0+j][k0+k].re;
                         }
                     }
-                } // end if canFind
-                writeln("jb=", jb, " Before first Bcast, rank=", GlobalConfig.mpi_rank_for_local_task); stdout.flush();
+                } else {
+                    // Local task does not own this block,
+                    // but we need to know how many items are broadcast.
+                    items = to!int(blk.nkc * blk.njc);
+                }
                 MPI_Bcast(fba.buffer.ptr, items, MPI_DOUBLE, src_task, fba.mpicomm);
-                writeln("jb=", jb, " After first Bcast, rank=", GlobalConfig.mpi_rank_for_local_task); stdout.flush();
-                MPI_Barrier(MPI_COMM_WORLD);
                 if (!canFind(GlobalConfig.localFluidBlockIds, blkId)) {
                     assert(src_task != GlobalConfig.mpi_rank_for_local_task,
                            "Oops, source task should not be local task.");
@@ -117,7 +121,9 @@ version(mpi_parallel) {
                             fba.face_ws[j0+j][k0+k] = fba.buffer[items++];
                         }
                     }
-                } // end if !canFind
+                }
+                //
+                // Broadcast the face positions.
                 if (canFind(GlobalConfig.localFluidBlockIds, blkId)) {
                     assert(src_task == GlobalConfig.mpi_rank_for_local_task,
                            "Oops, source task should be local MPI task.");
@@ -129,11 +135,10 @@ version(mpi_parallel) {
                             fba.buffer[items++] = fba.face_pos[j0+j][k0+k].z.re;
                         }
                     }
-                } // end if canFind
-                writeln("jb=", jb, " Before second Bcast, rank=", GlobalConfig.mpi_rank_for_local_task); stdout.flush();
+                } else {
+                    items = to!int(blk.nkc * blk.njc * 3);
+                }
                 MPI_Bcast(fba.buffer.ptr, items, MPI_DOUBLE, src_task, fba.mpicomm);
-                writeln("jb=", jb, " After second Bcast, rank=", GlobalConfig.mpi_rank_for_local_task); stdout.flush();
-                MPI_Barrier(MPI_COMM_WORLD);
                 if (!canFind(GlobalConfig.localFluidBlockIds, blkId)) {
                     assert(src_task != GlobalConfig.mpi_rank_for_local_task,
                            "Oops, source task should not be local task.");
@@ -145,7 +150,9 @@ version(mpi_parallel) {
                                                          fba.buffer[items++]);
                         }
                     }
-                } // end if !canFind
+                }
+                //
+                // Broadcast the vertex positions.
                 if (canFind(GlobalConfig.localFluidBlockIds, blkId)) {
                     assert(src_task == GlobalConfig.mpi_rank_for_local_task,
                            "Oops, source task should be local MPI task.");
@@ -157,11 +164,10 @@ version(mpi_parallel) {
                             fba.buffer[items++] = fba.vtx_pos[j0+j][k0+k].z.re;
                         }
                     }
-                } // end if canFind
-                writeln("jb=", jb, " Before third Bcast, rank=", GlobalConfig.mpi_rank_for_local_task); stdout.flush();
+                } else {
+                    items = to!int(blk.nkv * blk.njv * 3);
+                }
                 MPI_Bcast(fba.buffer.ptr, items, MPI_DOUBLE, src_task, fba.mpicomm);
-                writeln("jb=", jb, " After third Bcast, rank=", GlobalConfig.mpi_rank_for_local_task); stdout.flush();
-                MPI_Barrier(MPI_COMM_WORLD);
                 if (!canFind(GlobalConfig.localFluidBlockIds, blkId)) {
                     assert(src_task != GlobalConfig.mpi_rank_for_local_task,
                            "Oops, source task should not be local task.");
