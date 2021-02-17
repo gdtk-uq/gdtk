@@ -1,0 +1,45 @@
+# Sample input file for nenzf1d is a YAML 1.1 file.
+# t4m4-air.yaml
+# Data for T4 shot 12033 setup obtained from G drive
+# NNG 2021-01-12,
+#
+title: "T4 shot 12033 with Mach 4 nozzle."    # Any string will do.
+
+species: ['N2', 'O2', 'N', 'O', 'NO']         # List
+molef: {'N2': 0.79, 'O2': 0.21}               # Map of nonzero values will suffice.
+# Gas model and reactions files need to be consistent with the species above.
+# Gas model 1 is a ceq gas model file.
+# Gas model 2 is a thermally-perfect gas model for the finite-rate chemistry.
+gas-model-1: air-5sp-eq.lua
+gas-model-2: air-5sp-1T.lua
+reactions: air-5sp-1T-reactions.lua
+
+# Observed parameter values for shock-tube operation.
+T1: 300           # K
+p1: 40.0e3        # Pa
+Vs: 1778.8        # m/s
+pe: 5168.7e3      # Pa
+
+meq_throat: 1.05  # To get supersonic condition with frozen-gas sound speed
+ar: 14.6156       # I assume this the area ratio???
+C: 0.945          # estimate of Rayleigh_Pitot/(rho*V^2) for frozen gas at exit
+
+# Define the expanding part of the nozzle as a schedule of diameters with position.
+xi:  [0.        ,0.00856873,0.02054367,0.03524418,0.05242816,0.07205407,
+ 0.09412567,0.11860176,0.14535521,0.17416729,0.20474516,0.23675217,
+ 0.26984255,0.30369374,0.33803165,0.37264569,0.40739262,0.44218958,
+ 0.47699908,0.51181   ]
+di:  [1.        ,1.06988344,1.24916061,1.49765046,1.78256962,2.07840033,
+ 2.36637792,2.63372008,2.87270348,3.0796769 ,3.2540837 ,3.39754956,
+ 3.5130754 ,3.60435844,3.6752483 ,3.72932817,3.76959472,3.7981941 ,
+ 3.81615457,3.82304   ]
+
+
+
+# Optionally, we can adjust the stepping parameters for the supersonic expansion.
+# x_end: 1.0
+# t_final: 1.0e-3
+# t_inc: 1.0e-10
+# t_inc_factor: 1.0001
+# t_inc_max: 1.0e-7
+

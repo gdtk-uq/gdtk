@@ -3,6 +3,7 @@
 #
 # For equilibrium thermo.
 cp ${DGD_REPO}/src/gas/sample-data/cea-air5species-gas-model.lua .
+cp ${DGD_REPO}/src/gas/sample-data/air-5sp-eq.lua .
 #
 # For 1-temperature thermo with finite-rate chemistry.
 cp ${DGD_REPO}/examples/kinetics/air-chemistry-1T/air-5sp-1T.inp .
