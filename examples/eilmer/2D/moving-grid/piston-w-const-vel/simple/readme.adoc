@@ -1,0 +1,29 @@
+== 2D/moving-grid/piston-w-const-vel/simple
+
+image::piston-w-const-vel-animation.gif[caption="Piston with constant velocity driving a shock in ideal air."]
+
+This example simulates the motion of a piston, at constant velocity, driving into ideal air.
+It is an example that shows the use of the moving grid capability in Eilmer.
+In the animation, you can see a fixed number of cells for the entire simulation.
+These cells move during the course of the simulation.
+In fact, it is is the user's job to supply the grid motion in these types of simulation.
+This is done by specifying the velocities at the vertices in the grid.
+
+The conditions for this simulation are:
+
+* piston speed: 293.5 m/s
+* initial pressure: 1.0e4 Pa
+* initial temperature: 278.8 K
+
+With these conditions, the resulting shock speed is 554.35 m/s.
+This can be computed using the ideal shock relations.
+If these flow conditions look familiar, it is because they have
+been chosen to match conditions used in the classic Sod shock tube problem.
+
+The conditions between the piston face and the shock have been computed
+analytically. They are:
+
+* pressure = 30.33 kPa
+* temperature = 397.9 K
+
+
