@@ -2,9 +2,9 @@ CC = gcc
 CFLAGS := -I. -fPIC -Wall -std=c99 -O3
 INSTALL_DIR ?= $(HOME)/ceq
 
-all: thermo.o linalg.o common.o pt.o rhou.o ps.o ceq.o
-	$(CC) $(CFLAGS) -shared thermo.o linalg.o common.o pt.o rhou.o ps.o ceq.o -lm -o libceq.so
-	ar r libceq.a thermo.o linalg.o common.o pt.o rhou.o ps.o ceq.o
+all: thermo.o linalg.o common.o pt.o rhou.o ps.o rhot.o ceq.o
+	$(CC) $(CFLAGS) -shared thermo.o linalg.o common.o pt.o rhou.o ps.o rhot.o ceq.o -lm -o libceq.so
+	ar r libceq.a thermo.o linalg.o common.o pt.o rhou.o ps.o rhot.o ceq.o
 	ranlib libceq.a
 
 thermo.o: thermo.c thermo.h
@@ -25,7 +25,10 @@ rhou.o: rhou.c thermo.h linalg.h common.h rhou.h
 ps.o: ps.c thermo.h linalg.h common.h ps.h
 	$(CC) $(CFLAGS) -c ps.c
 
-ceq.o: ceq.c thermo.h pt.h rhou.h ps.h ceq.h
+rhot.o: rhot.c thermo.h linalg.h common.h rhot.h
+	$(CC) $(CFLAGS) -c rhot.c
+
+ceq.o: ceq.c thermo.h pt.h rhou.h ps.h rhot.h ceq.h
 	$(CC) $(CFLAGS) -c ceq.c
 
 install: 

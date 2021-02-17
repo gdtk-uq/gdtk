@@ -21,6 +21,7 @@ References:
 #include "pt.h"
 #include "rhou.h"
 #include "ps.h"
+#include "rhot.h"
 #include "ceq.h"
 
 
@@ -86,6 +87,27 @@ int ps(double pt,double st,double* X0,int nsp,int nel,double* lewis,double* M,do
         T  : Equilibrium Temperature 
     */
     return solve_ps(pt, st, X0, nsp, nel, lewis, M, a, X1, T, verbose);
+}
+
+int rhot(double rho,double T,double* X0,int nsp,int nel,double* lewis,double* M,double* a,
+         double* X1, int verbose){
+    /*
+    Compute the equilibrium composition X1 at a fixed volume and internal energy 
+    Inputs:
+        rho   : target Density (kg/m3)
+        T     : target Temperature (K)
+        X0    : Intial Mole fractions [nsp]
+        nsp   : number of species 
+        nel   : number of elements 
+        lewis : Nasa Lewis Thermodynamic Database Data [nsp*3*9]
+        M     : Molar Mass of each species (kg/mol) [nsp]
+        a     : elemental composition array [nel,nsp]
+        verbose: print debugging information
+
+    Output:
+        X1 : Equilibrium Mole Fraction [nsp]  
+    */
+    return solve_rhot(rho, T, X0, nsp, nel, lewis, M, a, X1, verbose);
 }
 
 double get_u(double T, double* X, int nsp, double* lewis, double* M){

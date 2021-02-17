@@ -207,7 +207,7 @@ void check_ill_posed_matrix_row(double* A, double* B, int neq, int k, int offset
     // This equation is designed to force pi_k to be zero.
     if (row_is_bad<1e-16) {
         for (i=0; i<neq; i++) A[k*neq+i] = 0.0;
-        A[k*neq + k+offset] = 1.0;
+        if(offset!=0) A[k*neq + k+offset] = 1.0;
         B[k] = 0.0;
     }
 }

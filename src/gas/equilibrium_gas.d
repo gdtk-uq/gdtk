@@ -110,8 +110,6 @@ public:
 
         tpEqCalc.set_massf_from_pT(tpgs);
         tpGasEqModel.update_thermo_from_pT(tpgs);
-        tpGasEqModel.update_trans_coeffs(tpgs);
-        tpGasEqModel.update_sound_speed(tpgs);
 
         copy_gas_state_except_massf(tpgs, Q);
         number Mmix = gas.gas_model.mixture_molecular_mass(tpgs.massf, tpGasEqModel.mol_masses);
@@ -125,8 +123,6 @@ public:
 
         tpEqCalc.set_massf_and_T_from_rhou(tpgs);
         tpGasEqModel.update_thermo_from_rhoT(tpgs); // Faster than calling from_rhou, and ceq set T for us
-        tpGasEqModel.update_trans_coeffs(tpgs);
-        tpGasEqModel.update_sound_speed(tpgs);
 
         copy_gas_state_except_massf(tpgs, Q);
         number Mmix = gas.gas_model.mixture_molecular_mass(tpgs.massf, tpGasEqModel.mol_masses);
@@ -135,8 +131,16 @@ public:
     }
     override void update_thermo_from_rhoT(GasState Q)
     {
-        //tpGasEqModel.update_thermo_from_rhoT(tpgs); // [TODO] We Should probably not allow this?
-        throw new Error("Not Implemented Error (equilibrium_gas): update_thermo_from_rhoT");
+        copy_gas_state_except_massf(Q, tpgs);
+        tpgs.massf[] = reactants_massf[];
+
+        tpEqCalc.set_massf_from_rhoT(tpgs);
+        tpGasEqModel.update_thermo_from_rhoT(tpgs);
+
+        copy_gas_state_except_massf(tpgs, Q);
+        number Mmix = gas.gas_model.mixture_molecular_mass(tpgs.massf, tpGasEqModel.mol_masses);
+        version(complex_numbers) {_mol_masses[0] = Mmix.re;}
+        else {_mol_masses[0] = Mmix;}
     }
     override void update_thermo_from_rhop(GasState Q)
     {
@@ -148,7 +152,7 @@ public:
         copy_gas_state_except_massf(Q, tpgs);
         tpgs.massf[] = reactants_massf[];
 
-        tpEqCalc.set_massf_and_T_from_ps(tpgs, s);
+        tpEqCalc.set_massf_and_T_from_ps(tpgs, s.re);
         tpGasEqModel.update_thermo_from_pT(tpgs); // p and T are now set, so call the pT method
         tpGasEqModel.update_trans_coeffs(tpgs);
         tpGasEqModel.update_sound_speed(tpgs);
@@ -160,50 +164,61 @@ public:
     }
     override void update_thermo_from_hs(GasState Q, number h, number s)
     {
-        //tpGasEqModel.update_thermo_from_hs(tpgs, h, s);// [TODO]
+        //tpGasEqModel.update_thermo_from_hs(tpgs, h, s);
         throw new Error("Not Implemented Error (equilibrium_gas): update_thermo_from_hs");
     }
 
-    // All of these will just return the value based on the last time tpgs was used
-    // This COULD be okay... But the only alternative is recalculating the mass fractions.
     override void update_sound_speed(GasState Q)
     {
-        //Q.a = tpgs.a; // Bad?
-        //tpGasEqModel.update_sound_speed(tpgs); // [TODO] 
+        set_tpgs_from_external_gasstate(Q);
+        tpGasEqModel.update_sound_speed(tpgs);
+        Q.a = tpgs.a;
     }
     override void update_trans_coeffs(GasState Q)
     {
-        //Q.mu = tpgs.mu; // BAD?
-        //Q.k = tpgs.k;
-        //tpGasEqModel.update_trans_coeffs(tpgs);// [TODO]
+        set_tpgs_from_external_gasstate(Q);
+        tpGasEqModel.update_trans_coeffs(tpgs);
+        Q.mu = tpgs.mu;
+        Q.k = tpgs.k;
     }
     override number dudT_const_v(in GasState Q)
     {
-        return tpGasEqModel.dudT_const_v(tpgs);// [TODO]
+        set_tpgs_from_external_gasstate(Q);
+        return tpGasEqModel.dudT_const_v(tpgs);
     }
     override number dhdT_const_p(in GasState Q)
     {
-        return tpGasEqModel.dhdT_const_p(tpgs);// [TODO]
+        set_tpgs_from_external_gasstate(Q);
+        return tpGasEqModel.dhdT_const_p(tpgs);
     }
     override number dpdrho_const_T(in GasState Q)
     {
-        return tpGasEqModel.dpdrho_const_T(tpgs);// [TODO]
+        set_tpgs_from_external_gasstate(Q);
+        return tpGasEqModel.dpdrho_const_T(tpgs);
     }
     override number gas_constant(in GasState Q)
     {
-        return tpGasEqModel.gas_constant(tpgs);// [TODO]
+        set_tpgs_from_external_gasstate(Q);
+        return tpGasEqModel.gas_constant(tpgs);
     }
     override number internal_energy(in GasState Q)
     {
-        return tpGasEqModel.internal_energy(tpgs);// [TODO]
+        set_tpgs_from_external_gasstate(Q);
+        return tpGasEqModel.internal_energy(tpgs);
     }
     override number enthalpy(in GasState Q)
     {
-        return tpGasEqModel.enthalpy(tpgs);// [TODO]
+        set_tpgs_from_external_gasstate(Q);
+        return tpGasEqModel.enthalpy(tpgs);
     }
     override number entropy(in GasState Q)
     {
-        return tpGasEqModel.entropy(tpgs);// [TODO]
+        // It's important that this method return one consistent with ceq's internal thermo routines,
+        // so we use those here rather than tpGasEqModel. For some reason tpGasModel has a different
+        // zero point to thermo.c, with regard to entropy.
+        set_tpgs_from_external_gasstate(Q);
+        double s = tpEqCalc.get_s(tpgs);
+        return s.re;
     }
 
 private:
@@ -214,7 +229,7 @@ private:
     GasState tpgs;
 
     @nogc
-    void copy_gas_state_except_massf(GasState Q2, GasState Q1){
+    void copy_gas_state_except_massf(const GasState Q2, GasState Q1){
         Q1.rho = Q2.rho;
         Q1.p = Q2.p;
         Q1.p_e = Q2.p_e;
@@ -225,6 +240,20 @@ private:
         Q1.k = Q2.k;
         Q1.sigma = Q2.sigma;
         Q1.quality = Q2.quality;
+    }
+
+    @nogc void set_tpgs_from_external_gasstate(const GasState Q){
+        /*
+            This is a bandaid to deal with the fact that we have no storage for the 
+            mass fractions. Instead we use this routine to frantically recalculate them
+            whenever the outside world asks this gas model for something.
+
+            Because of this, you shouldn't use this model in performance critical
+            calculations (not yet at least...)
+        */
+        copy_gas_state_except_massf(Q, tpgs);
+        tpgs.massf[] = reactants_massf[];
+        tpEqCalc.set_massf_from_pT(tpgs);
     }
 } // end class EquilibriumGas
 

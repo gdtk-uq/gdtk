@@ -32,7 +32,7 @@ double compute_Cp0_R(double Tin, double* lewis){
     double Cp0_R,T;
     int iT;
 
-    T = fmax(fmin(Tin,20000.0),200.0);
+    T = fmax(fmin(Tin,20000.0),1.0);
     iT = T <= 1000.0 ? 0 : (T<=6000 ? 1 : 2);
     lp = lewis + iT*9;
 
@@ -56,7 +56,7 @@ double compute_H0_RT(double Tin, double* lewis){
     double H0_RT,T;
     int iT;
 
-    T = fmax(fmin(Tin,20000.0),200.0);
+    T = fmax(fmin(Tin,20000.0),1.0);
     iT = T <= 1000.0 ? 0 : (T<=6000 ? 1 : 2);
     lp = lewis + iT*9;
 
@@ -80,7 +80,7 @@ double compute_S0_R(double Tin, double* lewis){
     double S0_R,T;
     int iT;
 
-    T = fmax(fmin(Tin,20000.0),200.0);
+    T = fmax(fmin(Tin,20000.0),1.0);
     iT = T <= 1000.0 ? 0 : (T<=6000 ? 1 : 2);
     lp = lewis + iT*9;
 

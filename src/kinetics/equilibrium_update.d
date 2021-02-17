@@ -111,6 +111,11 @@ version(complex_numbers){
         throw new Error("Do not use with complex numbers.");
     }
 
+    @nogc void set_massf_from_rhoT(GasState Q)
+    {
+        throw new Error("Do not use with complex numbers.");
+    }
+
 } else {
     @nogc void set_massf_from_pT(GasState Q) 
     {
@@ -128,12 +133,26 @@ version(complex_numbers){
         molef2massf(X1, M, Q.massf);
     }
 
-    @nogc void set_massf_and_T_from_ps(GasState Q, number s)
+    @nogc void set_massf_and_T_from_ps(GasState Q, double s)
     {
         massf2molef(Q.massf, M, X0);
         int error = ceq.ps(Q.p,s,X0ptr,nsp,nel,lewisptr,Mptr,aptr,X1ptr,&Q.T,0);
         if (error!=0) throw new GasModelException("ceq.ps convergence failure");
         molef2massf(X1, M, Q.massf);
+    }
+
+    @nogc void set_massf_from_rhoT(GasState Q)
+    {
+        massf2molef(Q.massf, M, X0);
+        int error = ceq.rhot(Q.rho,Q.T,X0ptr,nsp,nel,lewisptr,Mptr,aptr,X1ptr,0);
+        if (error!=0) throw new GasModelException("ceq.rhot convergence failure");
+        molef2massf(X1, M, Q.massf);
+    }
+
+    @nogc double get_s(GasState Q)
+    {
+        massf2molef(Q.massf, M, X0);
+        return ceq.get_s(Q.T, Q.p, X0ptr, nsp, lewisptr, Mptr);
     }
 }
 

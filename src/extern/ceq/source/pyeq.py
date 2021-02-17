@@ -182,6 +182,15 @@ class EqCalculator(object):
         T = Tref[0]
         return Xs1, T
 
+    def rhot(self, rho, T, Xs0, verbose=0):
+        """ Call c library to compute equilibrium concentrations at fixed rho, T """
+        if Xs0.size!=self.nsp: raise Exception('Mismatched array size {}!={}'.format(Xs0.size, self.nsp))
+        Xs1 = zeros(Xs0.shape)
+
+        recode = self.lib.rhot(rho, T, Xs0, self.nsp, self.nel, self.lewis, self.M, self.a, Xs1, verbose)
+        if recode!=0: raise Exception("Equilibrium Calc Failed.")
+        return Xs1
+
     def get_u(self, X, T):
         """ Call c library to compute internal energy at fixed composition and temperature """
         u = self.lib.get_u(T, X, self.nsp, self.lewis, self.M)

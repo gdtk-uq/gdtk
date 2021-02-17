@@ -1,0 +1,5 @@
+
+These files were taken from ceq commit f3dd00b on 21-02-17. The rhou.c file has
+been modified to use the provided Teq pointer as a guess, rather than the
+temperature_guess routine. I have also commented this routine out to silence
+the warning about it being unused.

@@ -7,6 +7,9 @@
 @nogc extern (C) int ps(double pt,double st,double* X0,int nsp,int nel,double* lewis,double* M,double* a,
          double* X1, double* T, int verbose);
 
+@nogc extern (C) int rhot(double rho,double T,double* X0,int nsp,int nel,double* lewis,double* M,double* a,
+         double* X1, int verbose);
+
 @nogc extern (C) double get_u(double T, double* X, int nsp, double* lewis, double* M);
 
 @nogc extern (C) double get_h(double T, double* X, int nsp, double* lewis, double* M);
