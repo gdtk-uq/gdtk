@@ -43,6 +43,9 @@ import sfluidblock; // needed for some special-case processing, below
 import shockdetectors;
 import block;
 import jacobian;
+version(mpi_parallel) {
+    import mpi;
+}
 
 // version(matplotlib) {
 // import plt = matplotlibd.pyplot;
@@ -1555,6 +1558,12 @@ class FBArray {
     Vector3[][] vtx_vel; // Computed velocities for the vertices on the shock boundary.
     Vector3[][] vtx_dir; // Rail directions for the vertices on the shock boundary.
     Vector3[][] vtx_pos; // Positions of the vertices on the shock boundary.
+    version(mpi_parallel) {
+        // The tasks associated with this FBarray with have their own communicator
+        // so that the can synchronize the content of the data storage arrays above.
+        MPI_Comm mpicomm;
+        double[] buffer;
+    }
 
     this(int nib, int njb, int nkb, const(int[]) ids,
          int niv, int njv, int nkv,
@@ -1603,6 +1612,18 @@ class FBArray {
             vtx_vel.length = njv; foreach (j; 0 .. njv) { vtx_vel[j].length = nkv; }
             vtx_dir.length = njv; foreach (j; 0 .. njv) { vtx_dir[j].length = nkv; }
             vtx_pos.length = njv; foreach (j; 0 .. njv) { vtx_pos[j].length = nkv; }
+            //
+            version(mpi_parallel) {
+                // Size buffers for the MPI exchange of the largest sub-block surface.
+                // The largest array will be needed for the vertex positions or velocities.
+                int n = 0;
+                foreach (nk; nkcs) {
+                    foreach (nj; njcs) {
+                        n = max(n, (nj+1)*((GlobalConfig.dimensions == 2) ? 1 : nk+1));
+                    }
+                }
+                this.buffer.length = n * 3;
+            }
         }
     }
     this(const(FBArray) other)

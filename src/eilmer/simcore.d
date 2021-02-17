@@ -662,6 +662,14 @@ int init_simulation(int tindx, int nextLoadsIndx,
     if (GlobalConfig.grid_motion == GlobalConfig.grid_motion.shock_fitting) {
         foreach (i, fba; fluidBlockArrays) {
             if (fba.shock_fitting) {
+                version(mpi_parallel) {
+                    // The MPI tasks associated with this FBArray will have
+                    // their own communicator for synchronizing the content
+                    // of their shock-fitting arrays.
+                    // We don't care about the rank of each task within
+                    // that communicator.
+                    MPI_Comm_split(MPI_COMM_WORLD, to!int(i), 0, &(fba.mpicomm));
+                }
                 fba.read_rails_file(format("config/fba-%04d.rails", i));
                 fba.read_velocity_weights(format("config/fba-%04d.weights", i));
             }
