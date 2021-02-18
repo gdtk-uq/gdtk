@@ -13,8 +13,8 @@ WITH_DVODE ?= 0
 INSTALL_DIR ?= $(HOME)/dgdinst
 BUILD_DIR := ../../build
 
-DEMO_PROGRAMS := gas_model_demo ideal_gas_demo co2_model_demo co2_sw_model_demo \
-	sf6_model_demo luagas_model_demo univariate_lut_demo build_tree
+DEMO_PROGRAMS := gas_model_demo ideal_gas_demo luagas_model_demo
+
 TEST_PROGRAMS := chemkin_therm_cond_test chemkin_viscosity_test cea_therm_cond_test \
 	cea_thermo_curves_test cea_viscosity_test \
 	init_gas_model_test ideal_gas_test ideal_helium_test \
@@ -24,10 +24,9 @@ TEST_PROGRAMS := chemkin_therm_cond_test chemkin_viscosity_test cea_therm_cond_t
 	wilke_mixing_therm_cond_test wilke_mixing_viscosity_test \
 	therm_perf_gas_test therm_perf_gas_complex_test therm_perf_gas_equil_test \
 	therm_perf_gas_mix_eos_test very_viscous_air_test \
-	co2gas_sw_test uniform_lut_test uniform_lut_plus_ideal_test \
+	uniform_lut_test uniform_lut_plus_ideal_test \
 	adaptive_lut_CEA_test ideal_air_proxy_test \
         two_temperature_reacting_argon_test two_temperature_argon_plus_ideal_test \
-	steam_test \
 	init_gas_model_complex_test ideal_gas_complex_test cea_thermo_curves_complex_test \
 	pseudo_species_gas_test vib_specific_nitrogen_test \
 	electronically_specific_gas_test \
@@ -253,24 +252,6 @@ gas_model_demo: gas_model_demo.d $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(N
 ideal_gas_demo: ideal_gas_demo.d $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) \
 	$(LIBCEQ) $(LIBGASF) $(LIBLUA)
 	$(DMD) -g $(DFLAGS) ideal_gas_demo.d $(OF)ideal_gas_demo \
-		$(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
-		$(LIBCEQ) $(LIBGASF) $(LIBLUA) $(DLINKFLAGS)
-
-co2_model_demo: co2_model_demo.d $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) \
-	$(LIBCEQ) $(LIBGASF) $(LIBLUA)
-	$(DMD) -g $(DFLAGS) co2_model_demo.d $(OF)co2_model_demo \
-		$(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
-		$(LIBCEQ) $(LIBGASF) $(LIBLUA) $(DLINKFLAGS)
-
-co2_sw_model_demo: co2_sw_model_demo.d $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) \
-	$(LIBCEQ) $(LIBGASF) $(LIBLUA)
-	$(DMD) -g $(DFLAGS) co2_sw_model_demo.d $(OF)co2_sw_model_demo \
-		$(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
-		$(LIBCEQ) $(LIBGASF) $(LIBLUA) $(DLINKFLAGS)
-
-sf6_model_demo: sf6_model_demo.d $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) \
-	$(LIBCEQ) $(LIBGASF) $(LIBLUA)
-	$(DMD) -g $(DFLAGS) sf6_model_demo.d $(OF)sf6_model_demo \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA) $(DLINKFLAGS)
 

@@ -19,9 +19,6 @@ import gas.cea_gas;
 import gas.therm_perf_gas;
 import gas.therm_perf_gas_equil;
 import gas.very_viscous_air;
-import gas.co2gas;
-import gas.co2gas_sw;
-import gas.sf6virial;
 import gas.uniform_lut;
 import gas.uniform_lut_plus_ideal;
 import gas.adaptive_lut_CEA;
@@ -37,7 +34,6 @@ import gas.two_temperature_dissociating_nitrogen : TwoTemperatureDissociatingNit
 import gas.vib_specific_nitrogen;
 import gas.fuel_air_mix;
 import gas.equilibrium_gas;
-import gas.steam : Steam;
 import gas.electronically_specific_gas: ElectronicallySpecificGas;
 import gas.two_temperature_gasgiant: TwoTemperatureGasGiant;
 
@@ -105,15 +101,6 @@ GasModel init_gas_model(string file_name="gas-model.lua")
         case "VeryViscousAir":
             gm = new VeryViscousAir(L);
             break;
-        case "CO2Gas":
-            gm = new CO2Gas(L);
-            break;
-        case "CO2GasSW":
-            gm = new CO2GasSW(L);
-            break;
-        case "SF6Virial":
-            gm = new SF6Virial(L);
-            break;
         case "look-up table":
             gm = new UniformLUT(L);
             break;
@@ -158,9 +145,6 @@ GasModel init_gas_model(string file_name="gas-model.lua")
             break;
         case "EquilibriumGas":
             gm = new EquilibriumGas(L);
-            break;
-        case "Steam":
-            gm = new Steam();
             break;
         case "ElectronicallySpecificGas":
             gm = new ElectronicallySpecificGas(L);

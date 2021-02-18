@@ -1208,9 +1208,6 @@ import gas.ideal_gas;
 import gas.cea_gas;
 import gas.therm_perf_gas;
 import gas.very_viscous_air;
-import gas.co2gas;
-import gas.co2gas_sw;
-import gas.sf6virial;
 import gas.uniform_lut;
 import gas.adaptive_lut_CEA;
 import gas.ideal_air_proxy;
@@ -1223,7 +1220,6 @@ import gas.two_temperature_nitrogen;
 import gas.vib_specific_nitrogen;
 import gas.fuel_air_mix;
 import gas.equilibrium_gas;
-import gas.steam : Steam;
 import gas.electronically_specific_gas: ElectronicallySpecificGas;
 import gas.two_temperature_gasgiant: TwoTemperatureGasGiant;
 
@@ -1248,9 +1244,6 @@ JSONValue read_config_file()
     if (cast(IdealGas)gm) { multiSpecies = false; }
     if (cast(CEAGas)gm) { multiSpecies = false; }
     if (cast(VeryViscousAir)gm) { multiSpecies = false; }
-    if (cast(CO2Gas)gm) { multiSpecies = false; }
-    if (cast(CO2GasSW)gm) { multiSpecies = false; }
-    if (cast(SF6Virial)gm) { multiSpecies = false; }
     if (cast(UniformLUT)gm) { multiSpecies = false; }
     if (cast(AdaptiveLUT)gm) { multiSpecies = false; }
     if (cast(TwoTemperatureReactingArgon)gm) { multiT = true; }

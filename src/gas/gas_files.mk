@@ -4,8 +4,6 @@
 #
 GAS_DIR ?= .
 GAS_MODEL_FILES := $(GAS_DIR)/package.d \
-	$(GAS_DIR)/co2gas.d \
-	$(GAS_DIR)/co2gas_sw.d \
 	$(GAS_DIR)/gas_model.d \
 	$(GAS_DIR)/gas_state.d \
 	$(GAS_DIR)/init_gas_model.d \
@@ -14,7 +12,6 @@ GAS_MODEL_FILES := $(GAS_DIR)/package.d \
 	$(GAS_DIR)/cubic_gas.d \
 	$(GAS_DIR)/cea_gas.d \
 	$(GAS_DIR)/physical_constants.d \
-	$(GAS_DIR)/sf6virial.d \
 	$(GAS_DIR)/therm_perf_gas.d \
 	$(GAS_DIR)/therm_perf_gas_equil.d \
 	$(GAS_DIR)/very_viscous_air.d \
@@ -32,7 +29,6 @@ GAS_MODEL_FILES := $(GAS_DIR)/package.d \
 	$(GAS_DIR)/vib_specific_nitrogen.d \
 	$(GAS_DIR)/fuel_air_mix.d \
 	$(GAS_DIR)/equilibrium_gas.d \
-	$(GAS_DIR)/steam.d \
 	$(GAS_DIR)/pseudo_species_gas.d \
 	$(GAS_DIR)/pseudo_species.d \
 	$(GAS_DIR)/electronically_specific_gas.d \

@@ -6,7 +6,7 @@
 # RJG, 2015-10-23
 #
 # This script can be started by hand, but usually we will
-# get the makefile to execute this when issued with a 
+# get the makefile to execute this when issued with a
 # 'make test'. To execute by hand:
 #    1. ./gas-package-test.tcl
 #    2. tclsh gas-package-test.tcl
@@ -44,9 +44,9 @@ test cubic-gas-test {Testing cubic_gas.d} -body {
     exec ./cubic_gas_test
 } -result {} -returnCodes {0}
 
-#test cea-gas-test {Testing cea_gas.d} -body {
-#    exec ./cea_gas_test
-#} -result {} -returnCodes {0}
+test cea-gas-test {Testing cea_gas.d} -body {
+    exec ./cea_gas_test
+} -result {} -returnCodes {0}
 
 test therm-perf-gas-test {Testing therm_perf_gas.d} -body {
     exec ./therm_perf_gas_test
@@ -62,10 +62,6 @@ test therm-perf-gas-equil-test {Testing therm_perf_gas_equil.d} -body {
 
 test very-viscous-air-test {Testing very_viscous_air.d} -body {
     exec ./very_viscous_air_test
-} -result {} -returnCodes {0}
-
-test co2gas-sw-test {Testing co2gas_sw.d} -body {
-    exec ./co2gas_sw_test > LOGFILE_CO2GAS_SW_TEST
 } -result {} -returnCodes {0}
 
 test uniform-lut-test {Testing uniform_lut.d} -body {
@@ -108,10 +104,6 @@ test two-temperature-argon-plus-ideal-test {Testing two_temperature_argon_plus_i
     exec cp sample-data/two-temperature-reacting-argon-model.lua ./two-temperature-reacting-argon-model.lua
     exec cp sample-data/ideal-air-gas-model.lua ./ideal-air-gas-model.lua
     exec ./two_temperature_argon_plus_ideal_test > LOGFILE_TWO_TEMPERATURE_ARGON_PLUS_IDEAL_TEST
-} -result {} -returnCodes {0}
-
-test steam-test {Testing steam.d} -body {
-    exec ./steam_test
 } -result {} -returnCodes {0}
 
 #test fuel_air_mix-test {Testing fuel_air_mix.d} -body {
