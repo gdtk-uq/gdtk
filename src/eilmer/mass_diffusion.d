@@ -56,13 +56,12 @@ interface MassDiffusion {
 
 MassDiffusion initMassDiffusion(GasModel gmodel,
                                 string diffusion_coefficient_type,
-                                bool sticky_electrons,
                                 MassDiffusionModel mass_diffusion_model,
                                 double Lewis)
 {
     switch (mass_diffusion_model) {
     case MassDiffusionModel.ficks_first_law:
-        return new FicksFirstLaw(gmodel, diffusion_coefficient_type, sticky_electrons, true,
+        return new FicksFirstLaw(gmodel, diffusion_coefficient_type, true,
                                  Lewis);
     default:
         throw new FlowSolverException("Selected mass diffusion model is not available.");
@@ -72,19 +71,14 @@ MassDiffusion initMassDiffusion(GasModel gmodel,
 class FicksFirstLaw : MassDiffusion {
     this(GasModel gmodel,
          string diffusion_coefficient_type,
-         bool sticky_electrons,
          bool withMassFluxCorrection=true,
          double Lewis=1.0)
     {
         _withMassFluxCorrection = withMassFluxCorrection;
         diffusion_coefficient = initDiffusionCoefficient(gmodel, diffusion_coefficient_type, Lewis);
         
-        // Note that responsibility for sticky_electrons is confined to this
-        // family of classes. The DiffusionCoefficient family knows nothing about
-        // this, and always computes things as if the electrons were present.
-        // This is why _D_avg.length is set to n_species rather than _nsp
         _gmodel = gmodel;
-        _nsp = (sticky_electrons) ? gmodel.n_heavy : gmodel.n_species;
+        _nsp = gmodel.n_species;
         _D_avg.length = gmodel.n_species;
     }
 
@@ -233,7 +227,7 @@ DiffusionCoefficient initDiffusionCoefficient(GasModel gmodel, string diffusion_
 //extern(C) int luafn_computeBinaryDiffCoeffs(lua_State *L)
 //{
 //    auto gmodel = GlobalConfig.gmodel_master;
-//    auto n_species = (GlobalConfig.sticky_electrons) ? gmodel.n_heavy : gmodel.n_species;
+//    auto n_species = gmodel.n_species;
 //    // Expect temperature, pressure, and a table to push values into.
 //    auto T = to!number(luaL_checknumber(L, 1));
 //    auto p = to!number(luaL_checknumber(L, 2));

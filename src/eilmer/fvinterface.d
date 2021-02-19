@@ -422,8 +422,7 @@ public:
 
             // massf
             version(multi_species_gas) {
-                uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
-                foreach (isp; 0 .. nsp) {
+                foreach (isp; 0 .. myConfig.n_species) {
                     grad.massf[isp][0] = c.grad.massf[isp][0];
                     grad.massf[isp][1] = c.grad.massf[isp][1];
                     grad.massf[isp][2] = c.grad.massf[isp][2];
@@ -510,8 +509,7 @@ public:
 
             // massf
             version(multi_species_gas) {
-                uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
-                foreach (isp; 0 .. nsp) {
+                foreach (isp; 0 .. myConfig.n_species) {
                     avgdotehat = 0.5*(cL0.grad.massf[isp][0]+cR0.grad.massf[isp][0])*ehatx +
                         0.5*(cL0.grad.massf[isp][1]+cR0.grad.massf[isp][1])*ehaty +
                         0.5*(cL0.grad.massf[isp][2]+cR0.grad.massf[isp][2])*ehatz;
@@ -563,7 +561,7 @@ public:
     // Note that the gradient values need to be in place before calling this procedure.
     {
         auto gmodel = myConfig.gmodel;
-        uint n_species = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
+        uint n_species = myConfig.n_species;
         uint n_modes = myConfig.n_modes;
         double viscous_factor = myConfig.viscous_factor;
         number k_laminar = fs.gas.k;

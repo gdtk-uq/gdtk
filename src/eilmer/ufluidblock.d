@@ -172,7 +172,7 @@ public:
         // Assemble array storage for finite-volume cells, etc.
         bool lsq_workspace_at_vertices = (myConfig.viscous) && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
             && (myConfig.spatial_deriv_locn == SpatialDerivLocn.vertices);
-        uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
+        uint nsp = myConfig.n_species;
         foreach (i, v; grid.vertices) {
             auto new_vtx = new FVVertex(myConfig, lsq_workspace_at_vertices, to!int(i));
             if (myConfig.unstructured_limiter == UnstructuredLimiter.mlp)

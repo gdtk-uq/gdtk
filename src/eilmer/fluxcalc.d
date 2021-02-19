@@ -215,8 +215,7 @@ void compute_flux_at_left_wall(ref FlowState Rght, ref FVInterface IFace,
     F.momentum.set(pstar, to!number(0.0), to!number(0.0));
     F.total_energy = pstar * vstar;
     version(multi_species_gas) {
-        uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
-        foreach (i; 0 .. nsp) { F.massf[i] = 0.0; }
+        foreach (i; 0 .. myConfig.n_species) { F.massf[i] = 0.0; }
     }
     version(multi_T_gas) {
         foreach (i; 0 .. F.energies.length) { F.energies[i] = 0.0; }
@@ -300,8 +299,7 @@ void compute_flux_at_right_wall(ref FlowState Lft, ref FVInterface IFace,
     F.momentum.set(pstar, to!number(0.0), to!number(0.0));
     F.total_energy = pstar * vstar;
     version(multi_species_gas) {
-        uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
-        foreach (i; 0 .. nsp) { F.massf[i] = 0.0; }
+        foreach (i; 0 .. myConfig.n_species) { F.massf[i] = 0.0; }
     }
     version(multi_T_gas) {
         foreach (i; 0 .. F.energies.length) { F.energies[i] = 0.0; }
@@ -347,8 +345,7 @@ void set_flux_vector_in_local_frame(ref ConservedQuantities F, ref FlowState fs,
         foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] = F.mass * fs.turb[i]; }
     }
     version(multi_species_gas) {
-        uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
-        foreach (isp; 0 .. nsp) { F.massf[isp] = F.mass*fs.gas.massf[isp]; }
+        foreach (isp; 0 .. myConfig.n_species) { F.massf[isp] = F.mass*fs.gas.massf[isp]; }
     }
     version(multi_T_gas) {
         foreach (imode; 0 .. F.energies.length) { F.energies[imode] = F.mass*fs.gas.u_modes[imode]; }
@@ -498,8 +495,7 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
             foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] += factor*ru_half*Lft.turb[i]; }
         }
         version(multi_species_gas) {
-            uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
-            foreach (i; 0 .. nsp) { F.massf[i] += factor*ru_half*Lft.gas.massf[i]; }
+            foreach (i; 0 .. myConfig.n_species) { F.massf[i] += factor*ru_half*Lft.gas.massf[i]; }
         }
         version(multi_T_gas) {
             foreach (i; 0 .. F.energies.length) { F.energies[i] += factor*ru_half*Lft.gas.u_modes[i]; }
@@ -517,8 +513,7 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
             foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] += factor*ru_half*Rght.turb[i]; }
         }
         version(multi_species_gas) {
-            uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
-            foreach (i; 0 .. nsp) { F.massf[i] += factor*ru_half*Rght.gas.massf[i]; }
+            foreach (i; 0 .. myConfig.n_species) { F.massf[i] += factor*ru_half*Rght.gas.massf[i]; }
         }
         version(multi_T_gas) {
             foreach (i; 0 .. F.energies.length) { F.energies[i] += factor*ru_half*Rght.gas.u_modes[i]; }
@@ -544,8 +539,7 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
             foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] -= factor*d_ua*(rR*Rght.turb[i] - rL*Lft.turb[i]); }
         }
         version(multi_species_gas) {
-            uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
-            foreach (i; 0 .. nsp) {
+            foreach (i; 0 .. myConfig.n_species) {
                 F.massf[i] -= factor*d_ua*(rR*Rght.gas.massf[i] - rL*Lft.gas.massf[i]);
             }
         }
@@ -670,8 +664,7 @@ void hllc(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalC
         }
         // multi-species
         version(multi_species_gas) {
-            uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
-            foreach (i; 0 .. nsp) {
+            foreach (i; 0 .. myConfig.n_species) {
                 number F_massf = r*u*state.gas.massf[i];
                 number U_massf = r*state.gas.massf[i];
                 number U_star_massf = coeff*state.gas.massf[i];
@@ -789,8 +782,7 @@ void ldfss(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
         foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] += factor*(am*rL*CL*Lft.turb[i] + am*rR*CR*Rght.turb[i]); }
     }
     version(multi_species_gas) {
-        uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
-        foreach (i; 0 .. nsp) { F.massf[i] += factor*(am*rL*CL*Lft.gas.massf[i] + am*rR*CR*Rght.gas.massf[i]); }
+        foreach (i; 0 .. myConfig.n_species) { F.massf[i] += factor*(am*rL*CL*Lft.gas.massf[i] + am*rR*CR*Rght.gas.massf[i]); }
     }
     version(multi_T_gas) {
         foreach (i; 0 .. F.energies.length) { F.energies[i] +=  factor*(am*rL*CL*Lft.gas.u_modes[i] + am*rR*CR*Rght.gas.u_modes[i]); }
@@ -880,8 +872,7 @@ void hanel(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
         }
     }
     version(multi_species_gas) {
-        uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
-        foreach (i; 0 .. nsp) {
+        foreach (i; 0 .. myConfig.n_species) {
             F.massf[i] += factor*(uLplus*rL*Lft.gas.massf[i] + uRminus*rR*Rght.gas.massf[i]);
         }
     }
@@ -1012,8 +1003,7 @@ void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
             foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] += mass_flux * Lft.turb[i]; }
         }
         version(multi_species_gas) {
-            uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
-            foreach (i; 0 .. nsp) { F.massf[i] += mass_flux * Lft.gas.massf[i]; }
+            foreach (i; 0 .. myConfig.n_species) { F.massf[i] += mass_flux * Lft.gas.massf[i]; }
         }
         version(multi_T_gas) {
             foreach (i; 0 .. F.energies.length) { F.energies[i] += mass_flux * Lft.gas.u_modes[i]; }
@@ -1028,8 +1018,7 @@ void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
             foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] +=  mass_flux * Rght.turb[i]; }
         }
         version(multi_species_gas) {
-            uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
-            foreach (i; 0 .. nsp) { F.massf[i] += mass_flux * Rght.gas.massf[i]; }
+            foreach (i; 0 .. myConfig.n_species) { F.massf[i] += mass_flux * Rght.gas.massf[i]; }
         }
         version(multi_T_gas) {
             foreach (i; 0 .. F.energies.length) { F.energies[i] += mass_flux * Rght.gas.u_modes[i]; }
@@ -1307,8 +1296,7 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
             foreach(i; 0 ..  myConfig.turb_model.nturb) { F.rhoturb[i] += mass_flux * Lft.turb[i]; }
         }
         version(multi_species_gas) {
-            uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
-            foreach (i; 0 .. nsp) { F.massf[i] += mass_flux * Lft.gas.massf[i]; }
+            foreach (i; 0 .. myConfig.n_species) { F.massf[i] += mass_flux * Lft.gas.massf[i]; }
         }
         version(multi_T_gas) {
             foreach (i; 0 .. F.energies.length) { F.energies[i] += mass_flux * Lft.gas.u_modes[i]; }
@@ -1326,8 +1314,7 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
             foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] += mass_flux * Rght.turb[i]; }
         }
         version(multi_species_gas) {
-            uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
-            foreach (i; 0 .. nsp) { F.massf[i] += mass_flux * Rght.gas.massf[i]; }
+            foreach (i; 0 .. myConfig.n_species) { F.massf[i] += mass_flux * Rght.gas.massf[i]; }
         }
         version(multi_T_gas) {
             foreach (i; 0 .. F.energies.length) { F.energies[i] += mass_flux * Rght.gas.u_modes[i]; }
@@ -1489,8 +1476,7 @@ void hlle(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalC
                 factor);
         F.total_energy += factor*(brp*fenergyL - blm*fenergyR + fac1*dU[7])*iden;
         version(multi_species_gas) {
-            uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
-            foreach (i; 0 .. nsp) {
+            foreach (i; 0 .. myConfig.n_species) {
                 F.massf[i] += mass_flux * ((mass_flux >= 0.0) ? Lft.gas.massf[i]: Rght.gas.massf[i]);
             }
         }
@@ -1657,8 +1643,7 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalCo
             foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] += mass_flux*Lft.turb[i]; }
         }
         version(multi_species_gas) {
-            uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
-            foreach (i; 0 .. nsp) { F.massf[i] += mass_flux*Lft.gas.massf[i]; }
+            foreach (i; 0 .. myConfig.n_species) { F.massf[i] += mass_flux*Lft.gas.massf[i]; }
         }
         version(multi_T_gas) {
             foreach (i; 0 .. F.energies.length) { F.energies[i] += mass_flux*Lft.gas.u_modes[i]; }
@@ -1669,8 +1654,7 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalCo
             foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] += mass_flux*Rght.turb[i]; }
         }
         version(multi_species_gas) {
-            uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
-            foreach (i; 0 .. nsp) { F.massf[i] += mass_flux*Rght.gas.massf[i]; }
+            foreach (i; 0 .. myConfig.n_species) { F.massf[i] += mass_flux*Rght.gas.massf[i]; }
         }
         version(multi_T_gas) {
             foreach (i; 0 .. F.energies.length) { F.energies[i] += mass_flux*Rght.gas.u_modes[i]; }
@@ -1770,8 +1754,7 @@ void ASF_242(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loc
             foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] += mass_flux*Lft.turb[i]; }
         }
         version(multi_species_gas) {
-            uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
-            foreach (i; 0 .. nsp) { F.massf[i] += mass_flux*Lft.gas.massf[i]; }
+            foreach (i; 0 .. myConfig.n_species) { F.massf[i] += mass_flux*Lft.gas.massf[i]; }
         }
         version(multi_T_gas) {
             foreach (i; 0 .. F.energies.length) { F.energies[i] += mass_flux*Lft.gas.u_modes[i]; }
@@ -1782,8 +1765,7 @@ void ASF_242(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loc
             foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] += mass_flux*Rght.turb[i]; }
         }
         version(multi_species_gas) {
-            uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
-            foreach (i; 0 .. nsp) { F.massf[i] += mass_flux*Rght.gas.massf[i]; }
+            foreach (i; 0 .. myConfig.n_species) { F.massf[i] += mass_flux*Rght.gas.massf[i]; }
         }
         version(multi_T_gas) {
             foreach (i; 0 .. F.energies.length) { F.energies[i] += mass_flux*Rght.gas.u_modes[i]; }

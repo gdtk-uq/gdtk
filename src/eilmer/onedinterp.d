@@ -399,7 +399,7 @@ public:
                      ref FlowState Lft, ref FlowState Rght)
     {
         auto gmodel = myConfig.gmodel;
-        uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
+        uint nsp = myConfig.n_species;
         auto nmodes = myConfig.n_modes;
         // High-order reconstruction for some properties.
         if (myConfig.interpolate_in_local_frame) {
@@ -569,7 +569,7 @@ public:
                      ref FlowState Lft, ref FlowState Rght)
     {
         auto gmodel = myConfig.gmodel;
-        uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
+        uint nsp = myConfig.n_species;
         auto nmodes = myConfig.n_modes;
         // High-order reconstruction for some properties.
         if (myConfig.interpolate_in_local_frame) {
@@ -718,7 +718,7 @@ public:
                      ref FlowState Lft, ref FlowState Rght)
     {
         auto gmodel = myConfig.gmodel;
-        uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
+        uint nsp = myConfig.n_species;
         auto nmodes = myConfig.n_modes;
         // High-order reconstruction for some properties.
         if (myConfig.interpolate_in_local_frame) {
@@ -856,7 +856,7 @@ public:
     // the cell-average data and the lengths of the cells in the interpolation direction.
     {
         auto gmodel = myConfig.gmodel;
-        uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
+        uint nsp = myConfig.n_species;
         auto nmodes = myConfig.n_modes;
         // High-order reconstruction for some properties.
         if (myConfig.interpolate_in_local_frame) {
@@ -990,7 +990,7 @@ public:
                      ref FlowState Lft, ref FlowState Rght)
     {
         auto gmodel = myConfig.gmodel;
-        uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
+        uint nsp = myConfig.n_species;
         auto nmodes = myConfig.n_modes;
         if (myConfig.extrema_clipping) {
             // Not much that we can do with linear extrapolation
@@ -1111,7 +1111,7 @@ public:
                      ref FlowState Lft, ref FlowState Rght)
     {
         auto gmodel = myConfig.gmodel;
-        uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
+        uint nsp = myConfig.n_species;
         auto nmodes = myConfig.n_modes;
         //
         if (myConfig.extrema_clipping) {

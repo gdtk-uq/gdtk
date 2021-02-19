@@ -81,8 +81,7 @@ public:
     {
         this.myConfig = myConfig;
         version(multi_species_gas) {
-            uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
-            massf.length = nsp;
+            massf.length = myConfig.n_species;
         }
         version(multi_T_gas) {
             T_modes.length = myConfig.n_modes;

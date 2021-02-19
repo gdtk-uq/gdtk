@@ -431,8 +431,9 @@ final class GlobalConfig {
     static uint n_heavy;
     static uint n_modes;
     static bool sticky_electrons = false; // Default to electrons being a separate species.
-    // Setting sticky_electrons=true will signal to the flow solver that we carry electrons
-    // in the gas model but do not treat them as a separate species in the transport equations.
+    // Setting sticky_electrons=true will cause the electron mass fraction to be reset after every 
+    // timestep to preserve charge neutrality in each cell. Note that a transport equation for the
+    // electrons is still solved, even though its output is effectively discarded.
     //
     // Customization of the simulation is via user-defined actions.
     shared static string udf_supervisor_file; // empty to start
@@ -1142,11 +1143,9 @@ public:
         n_species = gmodel.n_species;
         n_heavy = gmodel.n_heavy;
         n_modes = gmodel.n_modes;
-        sticky_electrons = GlobalConfig.sticky_electrons;
         if (mass_diffusion_model != MassDiffusionModel.none) {
             massDiffusion = initMassDiffusion(gmodel,
                                               GlobalConfig.diffusion_coefficient_type,
-                                              sticky_electrons,
                                               mass_diffusion_model,
                                               GlobalConfig.lewis_number);
         }
@@ -1501,7 +1500,6 @@ JSONValue read_config_file()
     if (GlobalConfig.mass_diffusion_model != MassDiffusionModel.none) {
         GlobalConfig.massDiffusion = initMassDiffusion(GlobalConfig.gmodel_master,
                                                        GlobalConfig.diffusion_coefficient_type,
-                                                       GlobalConfig.sticky_electrons,
                                                        GlobalConfig.mass_diffusion_model,
                                                        GlobalConfig.lewis_number);
     }

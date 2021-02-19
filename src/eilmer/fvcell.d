@@ -617,8 +617,7 @@ public:
         }
         version(multi_species_gas) {
             // Species densities: mass of species is per unit volume.
-            uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
-            foreach(isp; 0 .. nsp) {
+            foreach(isp; 0 .. myConfig.n_species) {
                 myU.massf[isp] = fs.gas.rho*fs.gas.massf[isp];
             }
         }
@@ -716,8 +715,7 @@ public:
         // Thermochemical species, if appropriate.
         version(multi_species_gas) {
             try {
-		uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
-		foreach(isp; 0 .. nsp) { fs.gas.massf[isp] = myU.massf[isp] * dinv; }
+		foreach(isp; 0 .. myConfig.n_species) { fs.gas.massf[isp] = myU.massf[isp] * dinv; }
 		if (myConfig.sticky_electrons) { gmodel.balance_charge(fs.gas); }
 		if (myConfig.n_species > 1) { scale_mass_fractions(fs.gas.massf); }
 	    } catch (GasModelException err) {
@@ -837,9 +835,8 @@ public:
             // Units of DmassfDt are 1/sec.
             immutable uint max_species = 32;
             number[max_species] integral_species;
-            uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
-            if (nsp > max_species) { throw new Error("oops too many chemical species for work array"); }
-            foreach(j; 0 .. nsp) { integral_species[j] = 0.0; }
+            if (myConfig.n_species > max_species) { throw new Error("oops too many chemical species for work array"); }
+            foreach(j; 0 .. myConfig.n_species) { integral_species[j] = 0.0; }
         }
         version(multi_T_gas) {
             // Individual energies.
@@ -880,7 +877,7 @@ public:
                 }
             }
             version(multi_species_gas) {
-                foreach(j; 0 .. nsp) { integral_species[j] -= myF.massf[j]*area; }
+                foreach(j; 0 .. myConfig.n_species) { integral_species[j] -= myF.massf[j]*area; }
             }
             version(multi_T_gas) {
                 foreach(j; 0 .. nmodes) { integral_modes[j] -= myF.energies[j]*area; }
@@ -920,7 +917,7 @@ public:
             }
         }
         version(multi_species_gas) {
-            foreach(j; 0 .. nsp) {
+            foreach(j; 0 .. myConfig.n_species) {
                 my_dUdt.massf[j] = vol_inv*integral_species[j] + Q.massf[j];
             }
         }
@@ -1256,8 +1253,7 @@ public:
                 // there will be an unreasonably-large flux out of the cell.
         }
         version(multi_species_gas) {
-            uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
-            foreach(isp; 0 .. nsp) {
+            foreach(isp; 0 .. myConfig.n_species) {
                 U1.massf[isp] = U0.massf[isp] + dt*gamma_1*dUdt0.massf[isp];
             }
         }
@@ -1323,8 +1319,7 @@ public:
             }
         }
         version(multi_species_gas) {
-            uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
-            foreach(isp; 0 .. nsp) {
+            foreach(isp; 0 .. myConfig.n_species) {
                 U2.massf[isp] = U_old.massf[isp] + dt*(gamma_1*dUdt0.massf[isp] + gamma_2*dUdt1.massf[isp]);
             }
         }
@@ -1397,8 +1392,7 @@ public:
             }
         }
         version(multi_species_gas) {
-            uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
-            foreach(isp; 0 .. nsp) {
+            foreach(isp; 0 .. myConfig.n_species) {
                 U3.massf[isp] = U_old.massf[isp] +
                     dt*(gamma_1*dUdt0.massf[isp] + gamma_2*dUdt1.massf[isp] + gamma_3*dUdt2.massf[isp]);
             }
@@ -1446,8 +1440,7 @@ public:
             }
         }
         version(multi_species_gas) {
-            uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
-            foreach(isp; 0 .. nsp) {
+            foreach(isp; 0 .. myConfig.n_species) {
                 U1.massf[isp] = vr*(U0.massf[isp] + dt*gamma_1*dUdt0.massf[isp]);
             }
         }
@@ -1501,8 +1494,7 @@ public:
             }
         }
         version(multi_species_gas) {
-            uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
-            foreach(isp; 0 .. nsp) {
+            foreach(isp; 0 .. myConfig.n_species) {
                 U2.massf[isp] = vol_inv*(v_old*U0.massf[isp] +
                                          dt*(gamma_1*dUdt0.massf[isp] + gamma_2*dUdt1.massf[isp]));
             }
