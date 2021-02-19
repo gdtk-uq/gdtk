@@ -251,6 +251,10 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_bool_field("udf_solid_source_terms", "udfSolidSourceTerms"));
     //
     mixin(get_double_field("thermionic_emission_bc_time_delay", "thermionic_emission_bc_time_delay"));
+    //
+    mixin(get_bool_field("do_temporal_DFT", "do_temporal_DFT"));
+    mixin(get_int_field("DFT_n_modes", "DFT_n_modes"));
+    mixin(get_int_field("DFT_step_interval", "DFT_step_interval"));
 
     // Look for unused keys. These are unsupported keys that the user
     // has supplied. Give a warning.
@@ -439,6 +443,10 @@ extern(C) int configGet(lua_State* L)
     case "udf_solid_source_terms": lua_pushboolean(L, GlobalConfig.udfSolidSourceTerms); break;
         //
     case "thermionic_emission_bc_time_delay": lua_pushnumber(L, GlobalConfig.thermionic_emission_bc_time_delay); break;
+        //
+    case "do_temporal_DFT": lua_pushboolean(L, GlobalConfig.do_temporal_DFT); break;
+    case "DFT_n_modes": lua_pushnumber(L, GlobalConfig.DFT_n_modes); break;
+    case "DFT_step_interval": lua_pushnumber(L, GlobalConfig.DFT_step_interval); break;
         //
     default: lua_pushnil(L);
     }

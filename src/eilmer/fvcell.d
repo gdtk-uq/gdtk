@@ -148,6 +148,11 @@ public:
     Matrix!number dFdU;
     Matrix!number dFdU_rotated;
 
+    // Arrays to store the local DFT values
+    // Lengths are known at run time (globalconfig.n_DFT_modes) but not at compile time, handle lengths later
+    number[] DFT_local_real;
+    number[] DFT_local_imag;
+
     // Shape sensitivity calculator workspace
     FVCell[] cell_list;            // list of cells in the residual stencil
     FVInterface[] face_list;       // list of faces in the residual stencil
@@ -256,6 +261,8 @@ public:
             LU.length = nConserved;
         }
 
+        DFT_local_real.length = myConfig.DFT_n_modes;
+        DFT_local_imag.length = myConfig.DFT_n_modes;
     }
 
     @nogc
@@ -562,6 +569,16 @@ public:
         return writer.data;
     }
 
+    // begin write_DFT_to_string()
+    string write_DFT_to_string()
+    {
+        auto writer = appender!string();
+        foreach(i; 0..myConfig.DFT_n_modes) {
+            formattedWrite(writer, "%.18e %1.8e ", DFT_local_real[i], DFT_local_imag[i]);
+        }
+    return writer.data;
+    } // end write_DFT_to_string
+    
     @nogc
     void encode_conserved(int gtl, int ftl, double omegaz)
     // gtl = grid time level
@@ -1989,6 +2006,24 @@ public:
         foreach (i; 1 .. iface.length) grad.accumulate_values_from(iface[i].grad);
         grad.scale_values_by(to!number(1.0/iface.length));
     } // end average_interface_deriv_values()
+
+    // Think this should be fine as nogc? Taking transform of pressure in this example
+    @nogc
+    void increment_local_DFT(size_t DFT_step) {
+        double pi = 3.14159265359;
+        // If it's the first step, we should set the values rather than incrementing
+        if (DFT_step == 0) {
+            foreach (i; 0..myConfig.DFT_n_modes) {
+                DFT_local_real[i] = cos(2 * pi * i * DFT_step / myConfig.DFT_n_modes) * fs.gas.p;
+                DFT_local_imag[i] = sin(2 * pi * i * DFT_step / myConfig.DFT_n_modes) * fs.gas.p;
+            }
+        } else {
+            foreach (i; 0..myConfig.DFT_n_modes) {
+                DFT_local_real[i] += cos(2 * pi * i * DFT_step / myConfig.DFT_n_modes) * fs.gas.p;
+                DFT_local_imag[i] -= sin(2 * pi * i * DFT_step / myConfig.DFT_n_modes) * fs.gas.p;
+            }
+        }
+    }
 
     @nogc
     void lusgs_startup_iteration(number dtInv, double omega, ref number[] dU, number[] R)

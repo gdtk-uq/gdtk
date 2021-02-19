@@ -272,6 +272,10 @@ function write_config_file(fileName)
 
    f:write(string.format('"thermionic_emission_bc_time_delay": %.18e,\n', config.thermionic_emission_bc_time_delay))
 
+   f:write(string.format('"do_temporal_DFT": %s,\n', tostring(config.do_temporal_DFT)))
+   f:write(string.format('"DFT_n_modes": %d,\n', config.DFT_n_modes))
+   f:write(string.format('"DFT_step_interval": %d,\n', config.DFT_step_interval))
+
    f:write('"shape_sensitivity_calculator_options" : {\n')
    f:write(string.format('   "pseudotime": %s,\n', tostring(ShapeSensitivityCalculator.pseudotime)))
    f:write(string.format('   "pseudotime_lhs_jacobian_order": %d,\n', ShapeSensitivityCalculator.pseudotime_lhs_jacobian_order))

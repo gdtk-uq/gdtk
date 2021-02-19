@@ -1054,6 +1054,27 @@ void write_snapshot_files()
     SimState.nWrittenSnapshots = SimState.nWrittenSnapshots + 1;
 } // end write_snapshot_files()
 
+void write_DFT_files()
+{
+    if (GlobalConfig.is_master_task) {
+        ensure_directory_is_present("DFT");
+    }
+
+    version(mpi_parallel) {
+        version(mpi_timeouts) {
+            MPI_Sync_tasks();
+        } else {
+            MPI_Barrier(MPI_COMM_WORLD);
+        }
+    }
+
+    auto job_name = GlobalConfig.base_file_name;
+
+    foreach (myblk; parallel(localFluidBlocksBySize, 1)) {
+        auto file_name = make_DFT_file_name(job_name, myblk.id, GlobalConfig.flowFileExt);
+        myblk.write_DFT(file_name);
+    }
+}
 
 void march_over_blocks()
 {
@@ -1565,6 +1586,15 @@ int integrate_in_time(double target_time_as_requested)
                 GC.collect();
                 GC.minimize();
             }
+
+            // 4.3 Increment the DFT in each cell
+            if ((SimState.step % GlobalConfig.DFT_step_interval == 0) && 
+                    GlobalConfig.do_temporal_DFT) {
+                foreach (blk; localFluidBlocks) {
+                    blk.increment_DFT(SimState.step / GlobalConfig.DFT_step_interval - 1);
+                }
+            }
+
             //
             // 5.0 Update the run-time loads calculation, if required
             if (GlobalConfig.compute_run_time_loads) {
@@ -4043,6 +4073,11 @@ void finalize_simulation()
         wait_for_current_tindx_dir(SimState.current_loads_tindx);
         write_boundary_loads_to_file(SimState.time, SimState.current_loads_tindx);
     }
+
+    if (GlobalConfig.do_temporal_DFT) {
+        write_DFT_files();
+    }
+
     GC.collect();
     GC.minimize();
     if (GlobalConfig.verbosity_level > 0  && GlobalConfig.is_master_task) {

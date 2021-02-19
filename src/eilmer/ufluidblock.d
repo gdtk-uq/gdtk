@@ -758,6 +758,18 @@ public:
         outfile.finish();
     }
 
+    override void write_DFT(string filename)
+    {
+        auto outfile = new GzipOut(filename);
+        auto writer = appender!string();
+        formattedWrite(writer, "Discrete Fourier Transform, Cell-by-Cell\n");
+        outfile.compress(writer.data);
+        foreach (cell; cells) {
+            outfile.compress(" " ~ cell.write_DFT_to_string() ~ "\n");
+        }
+        outfile.finish();
+    }
+
     version(shape_sensitivity) {
         override void write_adjoint_variables(string filename)
         {

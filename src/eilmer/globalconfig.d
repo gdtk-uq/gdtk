@@ -796,6 +796,11 @@ final class GlobalConfig {
 
     shared static ConservedQuantitiesIndices cqi;
 
+    // Parameters for the on-the-go DFT
+    shared static bool do_temporal_DFT = false;
+    shared static int DFT_n_modes = 5;
+    shared static int DFT_step_interval = 10;
+
     // Parameters related to the gpu chemistry mode
     version (gpu_chem) {
         static GPUChem gpuChem;
@@ -994,6 +999,10 @@ public:
 
     ConservedQuantitiesIndices cqi;
 
+    bool do_temporal_DFT;
+    int DFT_n_modes;
+    int DFT_step_interval;
+
     version (nk_accelerator) {
         SteadyStateSolverOptions sssOptions;
     }
@@ -1124,6 +1133,10 @@ public:
         verbosity_level = GlobalConfig.verbosity_level;
         //
         cqi = GlobalConfig.cqi;
+        //
+        do_temporal_DFT = GlobalConfig.do_temporal_DFT;
+        DFT_n_modes = GlobalConfig.DFT_n_modes;
+        DFT_step_interval = GlobalConfig.DFT_step_interval;
         //
         version (nk_accelerator) {
             sssOptions = GlobalConfig.sssOptions;
@@ -1560,6 +1573,9 @@ JSONValue read_config_file()
     mixin(update_bool("compute_run_time_loads", "compute_run_time_loads"));
     mixin(update_int("run_time_loads_count", "run_time_loads_count"));
     mixin(update_double("thermionic_emission_bc_time_delay", "thermionic_emission_bc_time_delay"));
+    mixin(update_bool("do_temporal_DFT", "do_temporal_DFT"));
+    mixin(update_int("DFT_n_modes", "DFT_n_modes"));
+    mixin(update_int("DFT_step_interval", "DFT_step_interval"));
     if (GlobalConfig.verbosity_level > 1) {
         writeln("  diffuse_wall_bcs_on_init: ", GlobalConfig.diffuseWallBCsOnInit);
         writeln("  number_init_passes: ", GlobalConfig.nInitPasses);
@@ -1575,6 +1591,9 @@ JSONValue read_config_file()
         writeln("  group_names_for_loads: ", GlobalConfig.group_names_for_loads);
         writeln("  write_loads: ", GlobalConfig.write_loads);
         writeln("  thermionic_emission_bc_time_delay: ", GlobalConfig.thermionic_emission_bc_time_delay);
+        writeln("  do_temporal_DFT: ", GlobalConfig.do_temporal_DFT);
+        writeln("  DFT_n_modes: ", GlobalConfig.DFT_n_modes);
+        writeln("  DFT_step_interval: ", GlobalConfig.DFT_step_interval);
     }
 
     configCheckPoint4();

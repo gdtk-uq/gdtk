@@ -42,6 +42,15 @@ string make_snapshot_file_name(string type, string base_file_name, int blk_id, i
     return format!"%s/snapshot-%04d/%s.%s.b%04d.snapshot.%04d.%s"(type, idx, base_file_name, type, blk_id, idx, ext);
 }
 
+string make_DFT_file_name(string base_file_name, int blk_id, string myext) {
+// Based on make_file_name, but specifically for building the DFT file. This has no time indices, and no block subdirs.
+    
+    auto writer = appender!string();
+    formattedWrite(writer, "DFT/%s.DFT.b%04d.%s",
+                    base_file_name, blk_id, myext);
+    return writer.data;
+}
+
 void ensure_directory_is_present(string dir_name)
 {
     if (exists(dir_name) && isDir(dir_name)) return;

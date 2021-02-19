@@ -218,6 +218,7 @@ public:
     abstract double read_solution(string filename, bool overwrite_geometry_data);
     abstract void write_solution(string filename, double sim_time);
     abstract void write_residuals(string filename);
+    abstract void write_DFT(string filename);
     version(shape_sensitivity) {
         abstract void write_adjoint_variables(string filename);
     }
@@ -376,6 +377,15 @@ public:
             }
         }
     } // end identify_turbulent_zones()
+
+    // Increment the local DFT in each cell.
+    // Do we need garbage collection here? I don't think so?
+    @nogc
+    void increment_DFT(size_t DFT_step) {
+        foreach(cell; cells) {
+            cell.increment_local_DFT(DFT_step);
+        }
+    }
 
     @nogc
     void estimate_turbulence_viscosity(FVCell[] cell_list = [])
