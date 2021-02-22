@@ -48,6 +48,7 @@ public:
         _species_names[0] = mixtureName;
         _mol_masses.length = 1;
         _mol_masses[0] = 0.0; // dummy value; we shouldn't use it
+        create_species_reverse_lookup();
         //
         // Underlying thermally-perfect gas model and equilibrium reactor.
         string tpGasEqFile = getString(L, -1, "tpGasEqFile");
