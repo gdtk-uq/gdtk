@@ -108,7 +108,7 @@ public:
                 case IndexDirection.none:
                     throw new Error("Invalid index direction.");
                 }
-                interp_l0r2(f, cR0, cR1, lR0, lR1, Lft, Rght);
+                interp_l0r2(f, cR0, cR1, lR0, lR1, Rght);
             } else if (f.left_cells.length == 1 && f.right_cells.length >= 2) {
                 auto cL0 = f.left_cells[0];
                 auto cR0 = f.right_cells[0]; auto cR1 = f.right_cells[1];
@@ -161,7 +161,7 @@ public:
                 case IndexDirection.none:
                     throw new Error("Invalid index direction.");
                 }
-                interp_l2r0(f, cL1, cL0, cL1.iLength, cL0.iLength, Lft, Rght);
+                interp_l2r0(f, cL1, cL0, cL1.iLength, cL0.iLength, Lft);
             } else if (f.left_cells.length >= 2 && f.right_cells.length >= 2) {
                 // General symmetric reconstruction.
                 auto cL0 = f.left_cells[0]; auto cL1 = f.left_cells[1];
@@ -987,7 +987,7 @@ public:
     void interp_l2r0(ref FVInterface IFace,
                      ref FVCell cL1, ref FVCell cL0,
                      number cL1Length, number cL0Length,
-                     ref FlowState Lft, ref FlowState Rght)
+                     ref FlowState Lft)
     {
         auto gmodel = myConfig.gmodel;
         uint nsp = myConfig.n_species;
@@ -1108,7 +1108,7 @@ public:
     void interp_l0r2(ref FVInterface IFace,
                      ref FVCell cR0, ref FVCell cR1,
                      number cR0Length, number cR1Length,
-                     ref FlowState Lft, ref FlowState Rght)
+                     ref FlowState Rght)
     {
         auto gmodel = myConfig.gmodel;
         uint nsp = myConfig.n_species;
