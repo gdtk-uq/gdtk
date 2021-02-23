@@ -25,6 +25,7 @@ import fvcore;
 import fvvertex;
 import fvinterface;
 import fvcell;
+import onedinterp;
 import bc;
 import fluidblock;
 import sfluidblock;
@@ -74,6 +75,7 @@ void compute_vtx_velocities_for_sf(FBArray fba)
             blkId = fba.blockArray[0][jb][kb];
             if (canFind(GlobalConfig.localFluidBlockIds, blkId)) {
                 blk = cast(SFluidBlock) globalBlocks[blkId];
+                FlowState Rght = new FlowState(blk.myConfig.gmodel);
                 foreach (k; 0 .. blk.nkc) {
                     foreach (j; 0 .. blk.njc) {
                         auto f = blk.get_ifi(0,j,k);
@@ -81,7 +83,13 @@ void compute_vtx_velocities_for_sf(FBArray fba)
                             // Using the first cell-centre state for R0 is first-order.
                             fba.face_ws[j0+j][k0+k] = wave_speed(inflow, blk.get_cell(0,j,k).fs, f.n);
                         } else {
-                            throw new Error("Linear interpolation of R state not yet implemented.");
+                            // Reconstruct the flow state just behind the shock from
+                            // the flow states in the first two cells.
+                            FVCell cR0 = blk.get_cell(0,j,k);
+                            FVCell cR1 = blk.get_cell(1,j,k);
+                            Rght.copy_values_from(cR0.fs);
+                            blk.one_d.interp_l0r2(f, cR0, cR1, cR0.iLength, cR1.iLength, Rght);
+                            fba.face_ws[j0+j][k0+k] = wave_speed(inflow, Rght, f.n);
                         }
                         fba.face_pos[j0+j][k0+k] = f.pos;
                     }
