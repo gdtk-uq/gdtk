@@ -428,9 +428,19 @@ public:
     {
         return mass_average(Q, _R);
     }
+    override number gas_constant(in GasState Q, int isp)
+    {
+        return to!number(_R[isp]);
+    }
     override number internal_energy(in GasState Q)
     {
         return Q.u;
+    }
+    override number internal_energy(in GasState Q, int isp)
+    {
+        number h = _curves[isp].eval_h(Q.T);
+        number u = h - _R[isp]*Q.T;
+        return u;
     }
     override number enthalpy(in GasState Q)
     {

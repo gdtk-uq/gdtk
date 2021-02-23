@@ -1494,17 +1494,22 @@ void hlle(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalC
 void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
 // Philip Roe's flux calculator with entropy fix.
 //
-// Particular implementation is the Roe-Pike Method from
-// E. F. Toro (2009)
-// Riemann Solvers and Numerical Methods for Fluid Dynamics, pg. 366.
-// with entropy fix from
-// M. J. Kermani & E. G. Plett (2001)
-// Modified Entropy Correction Formula for the Roe Scheme
+// Particular implementation is based on the descriptions from
+// J. Morrison (1990)
+// Flux Difference Split Scheme for Turbulent Transport Equations, pg. 4.
+// and
+// Walters et al. (1992)
+// Characteristic-Based Algorithms for Flows in Thermochemical Nonequilibrium, pg. 1307.
+//
+// with the entropy fix from
+// Gnoffo et al. (2004)
+// Computational Aerothermodynamic Simulation Issues on Unstructured Grids
 {
     auto gmodel = myConfig.gmodel;
     // Unpack the flow-state vectors for either side of the interface.
     // Store in work vectors, those quantities that will be neede later.
     number rL = Lft.gas.rho;
+    number TL = Lft.gas.T;
     number pL = Lft.gas.p;
     number pLrL = pL / rL;
     number uL = Lft.vel.x;
@@ -1514,9 +1519,14 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalCo
     number aL = Lft.gas.a;
     number keL = 0.5*(uL*uL + vL*vL + wL*wL);
     number HL = eL + pLrL + keL;
-    version(turbulence) { HL += myConfig.turb_model.turbulent_kinetic_energy(Lft); }
+    number tkeL = 0.0;
+    version(turbulence) {
+        tkeL = myConfig.turb_model.turbulent_kinetic_energy(Lft);
+        HL += tkeL;
+    }
     //
     number rR = Rght.gas.rho;
+    number TR = Rght.gas.T;
     number pR = Rght.gas.p;
     number pRrR = pR / rR;
     number uR = Rght.vel.x;
@@ -1526,138 +1536,152 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalCo
     number aR = Rght.gas.a;
     number keR = 0.5*(uR*uR + vR*vR + wR*wR);
     number HR = eR + pRrR + keR;
-    version(turbulence) { HR += myConfig.turb_model.turbulent_kinetic_energy(Rght); }
+    number tkeR = 0.0;
+    version(turbulence) {
+        tkeR = myConfig.turb_model.turbulent_kinetic_energy(Rght);
+        HR += tkeR;
+    }
 
     // averaged gamma
     number gL = gmodel.gamma(Lft.gas);
     number gR = gmodel.gamma(Rght.gas);
-    number ghat = (gR+gL)/2.0;
+    number ghat = (sqrt(rL)*gL+sqrt(rR)*gR) / (sqrt(rL) + sqrt(rR));
 
-    // intermediate state (eq. 11.118)
+    // Roe averaged variables for the interface
     number rhat = sqrt(rL*rR);
+    number That = (sqrt(rL)*TL+sqrt(rR)*TR) / (sqrt(rL) + sqrt(rR));
     number uhat = (sqrt(rL)*uL+sqrt(rR)*uR) / (sqrt(rL) + sqrt(rR));
     number vhat = (sqrt(rL)*vL+sqrt(rR)*vR) / (sqrt(rL) + sqrt(rR));
     number what = (sqrt(rL)*wL+sqrt(rR)*wR) / (sqrt(rL) + sqrt(rR));
     number Hhat = (sqrt(rL)*HL+sqrt(rR)*HR) / (sqrt(rL) + sqrt(rR));
-    number ahat2 = (ghat-1.0)*(Hhat-0.5*(uhat*uhat+vhat*vhat+what*what));
+    number tkehat = (sqrt(rL)*tkeL+sqrt(rR)*tkeR) / (sqrt(rL) + sqrt(rR));
+    number kehat = 0.5*(uhat*uhat+vhat*vhat+what*what);
+    number ahat2 = (ghat-1.0)*(Hhat-kehat-tkehat);
     number ahat = sqrt(ahat2);
 
-    // eigenvalues at intermediate state (eq. 11.107)
-    number[5] lambda;
-    lambda[0] = uhat - ahat;
-    lambda[1] = uhat;
-    lambda[2] = uhat;
-    lambda[3] = uhat;
-    lambda[4] = uhat + ahat;
+    // Roe jump quantities for the interface
+    number dr = rR-rL;
+    number dp = pR-pL;
+    number du = uR-uL;
+    number dv = vR-vL;
+    number dw = wR-wL;
+    number dtke = 0.0;
+    version(turbulence) {
+        dtke = myConfig.turb_model.turbulent_kinetic_energy(Rght) - myConfig.turb_model.turbulent_kinetic_energy(Lft);
+    }
 
-    // Apply entropy fix to eigenvalues (eq. 11 with EPS2 from the Kermani & Plett paper)
-    number lambdaL = uL-aL;
-    number lambdaR = uR-aR;
-    double eps = 1.0e-12;
-    number EPS = 4.0*fmax(0.0, (lambdaR - lambdaL));
-    // only change lambda[0] & lambda[4] (as per bottom of pg. 367)
-    if (fabs(lambda[0]) < EPS) lambda[0] = (lambda[0]*lambda[0]+EPS*EPS)/(2.0*EPS + eps);
-    if (fabs(lambda[4]) < EPS) lambda[4] = (lambda[4]*lambda[4]+EPS*EPS)/(2.0*EPS + eps);
+    // the eigenvalues for the Jacobian
+    number[3] lambda;
+    lambda[0] = uhat; // this is the repeated eigenvalue
+    lambda[1] = uhat+ahat;
+    lambda[2] = uhat-ahat;
 
-    // eigenvectors at intermediate state (eq. 11.108)
-    number[5][5] K;
-    K[0][0] = 1.0;
-    K[0][1] = uhat-ahat;
-    K[0][2] = vhat;
-    K[0][3] = what;
-    K[0][4] = Hhat-uhat*ahat;
+    // Apply entropy fix to eigenvalues (i.e. eigenvalue limiter)
+    number phi = 0.5;
+    number V = sqrt(uhat^^2+vhat^^2+what^^2);
+    number lref = phi*(V+ahat);
+    foreach (ref l; lambda) {
+        if (fabs(l) >= 2*lref) { l = fabs(l); }
+        else { l = (l*l)/(4*lref) + lref; }
+    }
 
-    K[1][0] = 1.0;
-    K[1][1] = uhat;
-    K[1][2] = vhat;
-    K[1][3] = what;
-    K[1][4] = 0.5*(uhat*uhat+vhat*vhat+what*what);
-
-    K[2][0] = 0.0;
-    K[2][1] = 0.0;
-    K[2][2] = 1.0;
-    K[2][3] = 0.0;
-    K[2][4] = vhat;
-
-    K[3][0] = 0.0;
-    K[3][1] = 0.0;
-    K[3][2] = 0.0;
-    K[3][3] = 1.0;
-    K[3][4] = what;
-
-    K[4][0] = 1.0;
-    K[4][1] = uhat+ahat;
-    K[4][2] = vhat;
-    K[4][3] = what;
-    K[4][4] = Hhat+uhat*ahat;
-
-    // wave strengths at intermediate state (eq. 11.113)
-    number[5] alpha;
-    alpha[0] = 1.0/(2.0 * ahat2) * ( (pR-pL) - rhat*ahat*(uR-uL) );
-    alpha[1] = (rR-rL) - (pR-pL)/ahat2;
-    alpha[2] = rhat*(vR-vL);
-    alpha[3] = rhat*(wR-wL);
-    alpha[4] = 1.0/(2.0 * ahat2) * ( (pR-pL) + rhat*ahat*(uR-uL) );
-
-    // compute fluxes (eq. 11.29)
+    // compute fluxes
     ConservedQuantities F = IFace.F;
-
     number FL; number FR;
 
     // mass flux
     FL = rL*uL;
     FR = rR*uR;
-    number mass_flux = factor*0.5*(FL+FR);
-    foreach ( i; 0..5 ) mass_flux -= factor*0.5*alpha[i]*fabs(lambda[i])*K[i][0];
-    F.mass += mass_flux;
-    
-
+    F.mass += factor*0.5*( FL + FR
+                           -( fabs(lambda[0])*(dr - dp/ahat2) )
+                           -( fabs(lambda[1])*((dp + rhat*ahat*du)/(2.0*ahat2)) )
+                           -( fabs(lambda[2])*((dp - rhat*ahat*du)/(2.0*ahat2)) )
+                           );
     // x-momentum flux;
     FL = pL+rL*uL*uL;
     FR = pR+rR*uR*uR;
-    F.momentum.refx += factor*0.5*(FL+FR);
-    foreach ( i; 0..5) F.momentum.refx -= factor*0.5*alpha[i]*fabs(lambda[i])*K[i][1];
-
+    F.momentum.refx += factor*0.5*( FL + FR
+                                    -( fabs(lambda[0])*(dr - dp/ahat2)*uhat )
+                                    -( fabs(lambda[1])*((dp + rhat*ahat*du)/(2.0*ahat2))*(uhat+ahat) )
+                                    -( fabs(lambda[2])*((dp - rhat*ahat*du)/(2.0*ahat2))*(uhat-ahat) )
+                                    );
     // y-momentum flux;
     FL = rL*uL*vL;
     FR = rR*uR*vR;
-    F.momentum.refy += factor*0.5*(FL+FR);
-    foreach ( i; 0..5) F.momentum.refy -= factor*0.5*alpha[i]*fabs(lambda[i])*K[i][2];
-
+    F.momentum.refy += factor*0.5*( FL + FR
+                                    -( fabs(lambda[0])*((dr - dp/ahat2)*vhat + rhat*dv) )
+                                    -( fabs(lambda[1])*((dp + rhat*ahat*du)/(2.0*ahat2))*vhat )
+                                    -( fabs(lambda[2])*((dp - rhat*ahat*du)/(2.0*ahat2))*vhat )
+                                    );
     // z-momentum flux;
     FL = rL*uL*wL;
     FR = rR*uR*wR;
-    F.momentum.refz += factor*0.5*(FL+FR);
-    foreach ( i; 0..5) F.momentum.refz -= factor*0.5*alpha[i]*fabs(lambda[i])*K[i][3];
-
+    F.momentum.refz += factor*0.5*( FL + FR
+                                    -( fabs(lambda[0])*((dr - dp/ahat2)*what + rhat*dw) )
+                                    -( fabs(lambda[1])*((dp + rhat*ahat*du)/(2.0*ahat2))*what )
+                                    -( fabs(lambda[2])*((dp - rhat*ahat*du)/(2.0*ahat2))*what )
+                                    );
     // total energy flux
-    FL = (rL*eL + rL*(uL*uL+vL*vL+wL*wL)/2.0 + pL)*uL;
-    FR = (rR*eR + rR*(uR*uR+vR*vR+wR*wR)/2.0 + pR)*uR;
-    F.total_energy += factor*0.5*(FL+FR);
-    foreach ( i; 0..5) F.total_energy -= factor*0.5*alpha[i]*fabs(lambda[i])*K[i][4];
+    number theta = 0.0;
+    version(multi_species_gas) {
+        uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
+        foreach (i; 0 .. nsp) {
+            number dmassf = Rght.gas.massf[i] - Lft.gas.massf[i];
+            number eiL = gmodel.internal_energy(Lft.gas, i);
+            number eiR = gmodel.internal_energy(Rght.gas, i);
+            number eihat = (sqrt(rL)*eiL+sqrt(rR)*eiR) / (sqrt(rL) + sqrt(rR));
+            number Ri = gmodel.gas_constant(IFace.fs.gas, i);
+            // equation 33b from Walters et al. (1992)
+            number psihat = Ri*That/(ghat-1.0) - eihat + kehat;
+            theta += dmassf*psihat;
+        }
+    }
 
-    // remaining fluxes
-    if (mass_flux >= 0.0) {
-        /* Wind is blowing from the left */
-        version(turbulence) {
-            foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] += mass_flux*Lft.turb[i]; }
+    FL = rL*uL*HL;
+    FR = rR*uR*HR;
+    F.total_energy += factor*0.5*( FL + FR
+                                   -( fabs(lambda[0])*((dr - dp/ahat2)*(kehat + tkehat) + rhat*(vhat*dv+what*dw+dtke-theta)) )
+                                   -( fabs(lambda[1])*((dp + rhat*ahat*du)/(2.0*ahat2))*(Hhat+uhat*ahat) )
+                                   -( fabs(lambda[2])*((dp - rhat*ahat*du)/(2.0*ahat2))*(Hhat-uhat*ahat) )
+                                   );
+
+    version(turbulence) {
+        foreach(i; 0 .. myConfig.turb_model.nturb) {
+            number turbhat = (sqrt(rL)*Lft.turb[i]+sqrt(rR)*Rght.turb[i]) / (sqrt(rL) + sqrt(rR));
+            number dturb = Rght.turb[i]-Lft.turb[i];
+            FL = rL*uL*Lft.turb[i];
+            FR = rR*uR*Rght.turb[i];
+            F.rhoturb[i] += factor*0.5*( FL + FR
+                                         -( fabs(lambda[0])*((dr - dp/ahat2)*turbhat + rhat*dturb) )
+                                         -( fabs(lambda[1])*((dp + rhat*ahat*du)/(2.0*ahat2))*turbhat )
+                                         -( fabs(lambda[2])*((dp - rhat*ahat*du)/(2.0*ahat2))*turbhat )
+                                         );
         }
-        version(multi_species_gas) {
-            foreach (i; 0 .. myConfig.n_species) { F.massf[i] += mass_flux*Lft.gas.massf[i]; }
+    }
+    version(multi_species_gas) {
+        foreach (i; 0 .. nsp) {
+            number massfhat = (sqrt(rL)*Lft.gas.massf[i]+sqrt(rR)*Rght.gas.massf[i]) / (sqrt(rL) + sqrt(rR));
+            number dmassf = Rght.gas.massf[i] - Lft.gas.massf[i];
+            FL = rL*uL*Lft.gas.massf[i];
+            FR = rR*uR*Rght.gas.massf[i];
+            F.massf[i] += factor*0.5*( FL + FR
+                                       -( fabs(lambda[0])*((dr - dp/ahat2)*massfhat + rhat*dmassf) )
+                                       -( fabs(lambda[1])*((dp + rhat*ahat*du)/(2.0*ahat2))*massfhat )
+                                       -( fabs(lambda[2])*((dp - rhat*ahat*du)/(2.0*ahat2))*massfhat )
+                                       );
         }
-        version(multi_T_gas) {
-            foreach (i; 0 .. F.energies.length) { F.energies[i] += mass_flux*Lft.gas.u_modes[i]; }
-        }
-    } else {
-        /* Wind is blowing from the right */
-        version(turbulence) {
-            foreach(i; 0 .. myConfig.turb_model.nturb) { F.rhoturb[i] += mass_flux*Rght.turb[i]; }
-        }
-        version(multi_species_gas) {
-            foreach (i; 0 .. myConfig.n_species) { F.massf[i] += mass_flux*Rght.gas.massf[i]; }
-        }
-        version(multi_T_gas) {
-            foreach (i; 0 .. F.energies.length) { F.energies[i] += mass_flux*Rght.gas.u_modes[i]; }
+    }
+    version(multi_T_gas) {
+        foreach (i; 0 .. F.energies.length) {
+            number enrghat = (sqrt(rL)*Lft.gas.u_modes[i]+sqrt(rR)*Rght.gas.u_modes[i]) / (sqrt(rL) + sqrt(rR));
+            number denrg = Rght.gas.u_modes[i] - Lft.gas.u_modes[i];
+            FL = rL*uL*Lft.gas.u_modes[i];
+            FR = rR*uR*Rght.gas.u_modes[i];
+            F.energies[i] += factor*0.5*( FL + FR
+                                          -( fabs(lambda[0])*((dr - dp/ahat2)*enrghat + rhat*denrg) )
+                                          -( fabs(lambda[1])*((dp + rhat*ahat*du)/(2.0*ahat2))*enrghat )
+                                          -( fabs(lambda[2])*((dp - rhat*ahat*du)/(2.0*ahat2))*enrghat )
+                                       );
         }
     }
 } // end roe()

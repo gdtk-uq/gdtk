@@ -127,7 +127,19 @@ public:
     @nogc abstract number dhdT_const_p(in GasState Q);
     @nogc abstract number dpdrho_const_T(in GasState Q);
     @nogc abstract number gas_constant(in GasState Q);
+    @nogc number gas_constant(in GasState Q, int isp)
+    {
+        // For the single-species gases, provide a default implementation
+        // but we need to be careful to override this for multi-component gases.
+        return gas_constant(Q);
+    }
     @nogc abstract number internal_energy(in GasState Q); // u+sum(u_modes)
+    @nogc number internal_energy(in GasState Q, int isp)
+    {
+        // For the single-species gases, provide a default implementation
+        // but we need to be careful to override this for multi-component gases.
+        return internal_energy(Q);
+    }
     @nogc abstract number enthalpy(in GasState Q);
     @nogc number enthalpy(in GasState Q, int isp)
     {
