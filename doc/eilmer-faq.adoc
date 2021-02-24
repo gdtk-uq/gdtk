@@ -1,6 +1,6 @@
 = Frequently-asked questions
 The Eilmer code gardeners
-2020-08-17
+2021-02-25
 :toc: right
 :toclevels: 1
 :stylesheet: readthedocs.css
@@ -8,6 +8,127 @@ The Eilmer code gardeners
 :sectnums:
 
 :leveloffset: +1
+
+= Build and install process
+
+== What do these terms mean: update, clean, build, compile, install?
+As developers we take these terms for granted since we might rebuild the code multiple times a day.
+Here's what you need to know.
+
+update:: If we suggest you update the code, we are referring to grabbing the latest copy of the source code.
+If you're working in rolling release mode, you can get this update via a `git pull`.
+clean:: Cleaning refers to removing all of the build objects that accumulate in the source directory during a build. We use the name `clean` as a target in our makefiles. You can execute a clean step with the command `make clean`.
+
+compile:: This typically refers to using the compiler to build small pieces of machine-ready instructions.
+These pieces could be object files that do nothing on their own, or executables, which are individual working programs.
+
+build:: A "build" usually refers to compiling all of the necessary pieces to make up the toolkit of executables.
+
+install:: Installing is the process of taking the interesting build pieces (executables, libraries, auxiliary data files)
+and placing them in a common installation directory.
+
+== How is the build process managed?
+We use the Make build system (specifically, GNU Make).
+This is a system for automating software builds that has its origins in early Unix systems, dating back to 1976.
+The Make system takes its directions for building from `makefile` s.
+The default name is `makefile` and you will see these files in various source directories across the source tree.
+
+The roles of the makefiles are to make selections about the build process and provide a recipe for the build.
+In our builds, those selections include:
+
+* which D compiler to use;
+* which parts of the executable suite to build;
+* which "flavour" (debug or fast) to build (which affects optimisation of the executable)
+* which internal features to enable/disable such as multi-species options and complex numbers mode.
+
+== Why is there a choice between D compilers for the build? Which should I use?
+
+The D language community have a few compiler options available to them.
+These include the reference compiler `dmd` (by Digital Mars), and `ldc` built on top of the LLVM core libraries.
+
+For Eilmer builds, users can choose between `dmd` and `ldc`.
+The reason for choice is partly historical, partly for flexibility, partly
+for development concerns and partly for optimisation.
+
+When we first began development only `dmd` was available.
+Later, the `ldc` compiler became a reliable tool also.
+(There is a GNU D compiler, `gdc`, but I have had limited success with that compiler
+in recent years.)
+
+Since D is relatively new language, we occasionally bump up against edge cases for language features.
+Having access to multiple compilers is a good way of checking that we are sticking to mostly well-trodden language features.
+When we write code that fails to build, it is good to test on a different compiler to see if we're abusing a
+language feature or we've just run up against bugs in the compilers themselves.
+This is what I mean by development concerns.
+
+The `dmd` compiler is the reference compiler but doesn't give the fastest executing code.
+(It's very good, but `ldc` compiled code is faster.)
+This is a choice of the `dmd` team.
+Their focus is on providing a reference compiler implementation, and they choose not to emphasise internal code optimisations.
+That's not to say the `dmd` compiler can't do optimised builds, just that it's not an emphasis.
+On the other hand, the LLVM project does have a keen focus on the performance of the executable code.
+For this reason, `ldc` is recommended for the optimised executable builds.
+This is why it's our recommendation for use on HPC where performance matters on a shared resource.
+
+== Where's a list of the build options for the makefile?
+
+The best response is: "use the source". However, here is a list of build options with explanations as at 25 Feb 2021.
+This is not an exhaustive list because some options are related to very special
+cases.
+
+High-level options are:
+
+`DMD`:: selection of D compiler. Default is `dmd`, other option is `ldc2`.
+`FLAVOUR`:: Options are `debug` (default) for a debug build, or `fast` for an optimised build.
+`PLATFORM`:: Options are `linux` (default) or `macosx`.
+`INSTALL_DIR`:: Location for installation files (default: `$HOME/dgdinst`)
+
+Options related to feature enabling:
+
+`WITH_MPI`:: 0 (default) for no MPI version; 1 to include the MPI build.
+`WITH_MPI_TIMEOUTS`:: 0 (default) for no internal timeout checking (use e4monitor); 1 to turn on internal checking for timeouts
+`WITH_NK`:: 0 (default) for exclusion of Newton-Krylov accelerator; 1 to include it.
+`WITH_LUSGS`:: 0 (default) for exclusion of lower-upper symmetric-Gauss-Seidel update; 1 to include it
+`WITH_SSC`:: 0 (defualt) for exclusion of shape-sensitivity core functions for adjoint work; 1 to include them
+`WITH_OPENCL_GPU_CHEM`:: 0 (default) for exclusion of GPU chemistry module implemented in OpenCL; 1 to include it
+`WITH_CUDA_GPU_CHEM`:: 0 (default) for exclusion of GPU chemistry module implemented with CUDA; 1 to include it
+`WITH_COMPLEX_NUMBERS`:: 0 (default) for exclusion of complex number mode; 1 to turn it on
+`WITH_FPE`:: 0 (default) for no trapping of floating-point exceptions; 1 to turn it on and halt on floating-point exceptions
+`WITH_DVODE`:: 0 (default) for exclusion of DVODE Fortran ODE library; 1 to include it
+`WITH_MATPLOTLIB`:: 0 (default) for exclusion of Matplotlib library calls; 1 to include it
+`MULTI_SPECIES_GAS`:: 1 (default) to allow for multiple-species simulations; 0 to restrict to single species only
+`MULTI_T_GAS`:: 1 (default) to allow for multiple temperatures; 0 to restrict to single temperature only
+`MHD`:: 1 (default) to include modelling terms for magnetohydrodynamics; 0 to disable those modelling terms
+`TURBULENCE`:: 1 (default) to include RANS turbulence model terms; 0 to disable that modelling
+`WITH_THREAD_SANITIZER`:: 0 (default) -- CHECK WITH DEV TEAM.
+
+== This all seems a bit confusing. What are the recommendations?
+
+The recommendation depends on your how you want to use the code. Here are some scenarios.
+
+=== I'd like a simple build to try things out on my laptop or desktop.
+We recommend a default build and install. Try this:
+
+   $ cd dgd/src/eilmer
+   $ make install
+
+=== I'd like a (fairly) full-featured install of the transient solver
+    for use on a cluster computer (with MPI)
+
+Sounds like you want an optimised build and MPI. In the Eilmer source directory, do this:
+
+   $ make DMD=ldc2 FLAVOUR=fast WITH_MPI=1 install
+
+=== I'm an expert. I know exactly what modelling options I want, and I'd like to reduce the memory footprint.
+
+Say you had a laminar flow, a single species and single temperature, you could really optimise the selections
+by doing:
+
+    $ make DMD=ldc2 FLAVOUR=fast WITH_MPI=1 TURBULENCE=0 MULTI_SPECIES_GAS=0 MULTI_T_GAS=0 MHD=0 install 
+
+== This is overwhemling. Isn't there a script that would just take care of this build and install process for me?
+
+Yes, there are several scripts available to help you. Take a look in `dgd/install-scripts`. The script names are self-describing.
 
 = Problems on cluster computers
 
@@ -47,7 +168,7 @@ In that case, you'll probably want to dip into the Grimech database instead.
 It is often more complete for these species.
 That is also available in Eilmer for many (but not all) species.
 You can configure this option in your input file for `prep-gas`.
-Add the following line to your input file::
+Add the following line to your input file:
 
    options = {database='prefer-grimech'}
 
