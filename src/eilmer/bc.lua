@@ -736,6 +736,57 @@ end
 
 WallBC_NoSlip_FixedT = WallBC_NoSlip_FixedT0
 
+WallBC_NoSlip_UserDefinedT = BoundaryCondition:new()
+WallBC_NoSlip_UserDefinedT.type = "wall_no_slip_user_defined_t"
+function WallBC_NoSlip_UserDefinedT:new(o)
+   local flag = type(self)=='table' and self.type=='wall_no_slip_user_defined_t'
+   if not flag then
+      error("Make sure that you are using WallBC_NoSlip_UserDefinedT:new{}"..
+               " and not WallBC_NoSlip_UserDefinedT.new{}", 2)
+   end
+   o = o or {}
+   flag = checkAllowedNames(o, {"Twall", "wall_function",
+                                "catalytic_type", "wall_massf_composition",
+                                "label", "group", "is_design_surface", "num_cntrl_pts",
+                                "thermionic_emission"})
+   if not flag then
+      error("Invalid name for item supplied to WallBC_NoSlip_UserDefinedT constructor.", 2)
+   end
+   o = BoundaryCondition.new(self, o)
+   o.ghost_cell_data_available = true
+   o.is_wall_with_viscous_effects = true
+   o.preReconAction = { InternalCopyThenReflect:new() }
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new(),
+                                           UserDefinedInterface:new{fileName=o.Twall}}
+
+   if o.catalytic_type == "fixed_composition" then
+      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
+         FixedComposition:new{wall_massf_composition=convertSpeciesTableToArray(o.wall_massf_composition)}
+   elseif o.catalytic_type == "equilibrium" then
+      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
+         EquilibriumComposition:new{}
+   end
+   o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
+      UpdateThermoTransCoeffs:new()
+
+   if config.turbulence_model ~= "none" then
+      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallTurbulent:new()
+      if o.wall_function and config.turbulence_model == "k_omega" then
+         -- Only makes sense to add a wall function if the k-omega model is active.
+         o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
+            WallFunctionInterfaceEffect:new{}
+         o.preSpatialDerivActionAtBndryCells = { WallFunctionCellEffect:new() }
+      end
+   end
+
+   if o.thermionic_emission == "true" then
+      o.postDiffFluxAction = {ThermionicElectronFlux:new{Ar=1.20e6, phi=2.0}}
+   end
+   o.is_configured = true
+   return o
+end
+
+
 WallBC_ThermionicEmission = BoundaryCondition:new()
 WallBC_ThermionicEmission.type = "wall_thermionic_emission"
 function WallBC_ThermionicEmission:new(o)
