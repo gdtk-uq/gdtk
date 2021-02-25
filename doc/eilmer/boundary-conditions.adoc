@@ -74,6 +74,20 @@ of this boundary condition effective.
 is variant of the boundary condition that does not use ghost cells and
 is suitable for moving-grid simulations.
 
+=== No-slip, user-defined temperature
+
+  WallBC_NoSlip_UserDefinedT:new{Twall, label, group}
+
+is similar to the fixed-temperature wall but allows an arbitrary temperature
+function to be specified via a lua script. This may be useful for simulating a
+heated experimental model, where some specific part of the model is heated by
+electrical resistance heating to a known elevatated temperature.
+
+`Twall`::
+  The name of the lua file used to specify the wall temperature. Inside the code,
+  this file is passed to a UserDefinedInterface effect, which takes care of calling
+  it once per face in the boundary, for each timestep. For further information, see
+  the section regarding user defined interface effects in the PDF User Guide.
 
 === No-slip, adiabatic
 
