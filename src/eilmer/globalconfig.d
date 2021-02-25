@@ -493,16 +493,16 @@ final class GlobalConfig {
 
     // Shock-fitting
     //
-    // The amount of time by which to delay the shock fitting.
+    // The amount of time by which to delay any grid movement for shock fitting.
     // We'll often be doing shock-fitting of a strong bow shock over a blunt body.
-    // To get the simulation started, we'll operate with a fixed grid, with the
-    // flow solver in shock-capturing mode.  Once the bow shock has formed,
-    // we then allow the supersonic-inflow boundary to then be moved toward
-    // the captured shock.
-    shared static double shock_fitting_delay = 1.5e-3;
-    // order of the special interpolation applied at the shock fitting inflow boundary
-    shared static int shock_fitting_interpolation_order = 1;
-    // scaling factor applied to vertices in shock fitting simulations for stability
+    // To get the simulation started, we may operate with a fixed grid,
+    // with the flow solver in shock-capturing mode.
+    // Once the bow shock has formed, we then allow the inflow boundary
+    // to be moved toward the captured shock.
+    shared static double shock_fitting_delay = 0.0;
+    // We may want to override reconstruction at the shock fitting inflow boundary.
+    shared static bool shock_fitting_allow_flow_reconstruction = true;
+    // Scaling factor applied to vertices in shock fitting simulations for stability.
     shared static double shock_fitting_scale_factor = 0.5;
 
     // We might update some properties in with the main convective-terms
@@ -892,7 +892,7 @@ public:
     string udf_grid_motion_file;
     size_t n_grid_time_levels;
 
-    int shock_fitting_interpolation_order;
+    bool shock_fitting_allow_flow_reconstruction;
     double shock_fitting_scale_factor;
 
     bool solid_has_isotropic_properties;
@@ -1032,7 +1032,7 @@ public:
         udf_grid_motion_file = GlobalConfig.udf_grid_motion_file;
         n_grid_time_levels = GlobalConfig.n_grid_time_levels;
         //
-        shock_fitting_interpolation_order = GlobalConfig.shock_fitting_interpolation_order;
+        shock_fitting_allow_flow_reconstruction = GlobalConfig.shock_fitting_allow_flow_reconstruction;
         shock_fitting_scale_factor = GlobalConfig.shock_fitting_scale_factor;
         //
         solid_has_isotropic_properties = GlobalConfig.solid_has_isotropic_properties;
@@ -1332,7 +1332,7 @@ JSONValue read_config_file()
     //
     // Shock fitting involves grid motion.
     mixin(update_double("shock_fitting_delay", "shock_fitting_delay"));
-    mixin(update_int("shock_fitting_interpolation_order", "shock_fitting_interpolation_order"));
+    mixin(update_bool("shock_fitting_allow_flow_reconstruction", "shock_fitting_allow_flow_reconstruction"));
     mixin(update_double("shock_fitting_scale_factor", "shock_fitting_scale_factor"));
 
     mixin(update_double("solid_domain_cfl", "solid_domain_cfl"));
@@ -1411,7 +1411,7 @@ JSONValue read_config_file()
         writeln("  write_vertex_velocities: ", GlobalConfig.write_vertex_velocities);
         writeln("  udf_grid_motion_file: ", to!string(GlobalConfig.udf_grid_motion_file));
         writeln("  shock_fitting_delay: ", GlobalConfig.shock_fitting_delay);
-        writeln("  shock_fitting_interpolation_order: ", GlobalConfig.shock_fitting_interpolation_order);
+        writeln("  shock_fitting_allow_flow_reconstruction: ", GlobalConfig.shock_fitting_allow_flow_reconstruction);
         writeln("  shock_fitting_scale_factor: ", GlobalConfig.shock_fitting_scale_factor);
         writeln("  solid_domain_cfl: ", GlobalConfig.solid_domain_cfl);
         writeln("  coupling_with_solid_domains: ", GlobalConfig.coupling_with_solid_domains);
