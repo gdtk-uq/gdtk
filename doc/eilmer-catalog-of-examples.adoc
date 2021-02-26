@@ -46,6 +46,9 @@ include::../examples/eilmer/2D/flat-plate-turbulent-larc/nk-5.45Tw-sa/readme.ado
 
 include::../examples/eilmer/2D/oblique-detonation-wave/readme.adoc[]
 
+= Flows with moving boundaries
+include::../examples/eilmer/2D/moving-grid/piston-w-const-vel/simple/readme.adoc[]
+
 = High-temperature gas flows
 
 include::../examples/eilmer/2D/sphere-nonaka/readme.adoc[]
