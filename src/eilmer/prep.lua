@@ -262,7 +262,7 @@ end
 function check_DFT_settings()
     -- Check to see that the DFT has been correctly configured.
 
-    if (config.DFT_n_modes * config.DFT_step_interval != config.max_step) then
+    if not ((config.DFT_n_modes * config.DFT_step_interval) == config.max_step) then
         print("WARNING: config.DFT_n_modes * config.DFT_step_interval should equal config.max_step")
     end
     if not config.fixed_time_step then
