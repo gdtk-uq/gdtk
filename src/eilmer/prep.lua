@@ -259,9 +259,23 @@ function warn_if_blocks_not_connected()
    end
 end
 
+function check_DFT_settings()
+    -- Check to see that the DFT has been correctly configured.
+
+    if (config.DFT_n_modes * config.DFT_step_interval != config.max_step) then
+        print("WARNING: config.DFT_n_modes * config.DFT_step_interval should equal config.max_step")
+    end
+    if not config.fixed_time_step then
+        print("WARNING: should turn config.fixed_time_step on when computing the DFT")
+    end
+end
+
 function build_config_files(job)
    perform_spatial_gradient_consistency_check()
    warn_if_blocks_not_connected()
+   if config.do_temporal_DFT then
+       check_DFT_settings()
+   end
    print("Build config files for job:", job)
    os.execute("mkdir -p config")
    write_config_file("config/" .. job .. ".config")

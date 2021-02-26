@@ -2102,6 +2102,11 @@ void configCheckPoint4()
         GlobalConfig.n_grid_time_levels = 3;
     }
     return;
+
+    if (GlobalConfig.do_temporal_DFT &&
+            (GlobalConfig.DFT_n_modes * GlobalConfig.DFT_step_interval != GlobalConfig.max_step)) {
+        writeln("Warning: config.DFT_n_modes * config.DFT_step_interval should equal config.max_step");
+    }
 }
 
 void checkGlobalConfig()
