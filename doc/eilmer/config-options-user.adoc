@@ -459,3 +459,14 @@ of this initialisation option. See: `dgd/examples/eilmer/2D/flat-plate-turbulent
   _boolean_, default: `false` +
   Set to `true` to make MHD physics active.
 
+`config.do_temporal_DFT` ::
+  _boolean_, default: `false` +
+  Set to `true` to calculate the temporal Discrete Fourier Transform of the pressure on a cell-by-cell basis on-the-go. Useful for large jobs where storing the number of snapshots required for Fourier decomposition is prohibitive. Results written to file `DFT/jobName.DFT.bxxxx.tar.gz`, with a line containing the real and imaginary components of each Fourier mode i.e. Re(A0), Im(A0), Re(A1), Im(A1), ... Im(A_n). Requires setting of additional config options `config.DFT_n_modes` and `config.DFT_step_interval`. Use of `config.fixed_time_step` is also very strongly recommended, non-fixed time stepping will lead to erronous mode amplitudes and phases.
+
+`config.DFT_n_modes` ::
+  _int_, default: `5` +
+  The number of Fourier modes to be computed in the temporal Discrete Fourier Transform. Should be equal to `config.max_steps / config.DFT_step_interval` (see next entry).
+
+`config.DFT_step_interval` ::
+  _int_, default: `10` +
+  The number of steps between each increment of the temporal Discrete Fourier Transform modes. Should be equal to `config.max_steps / config.DFT_n_modes`.
