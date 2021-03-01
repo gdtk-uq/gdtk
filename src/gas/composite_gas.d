@@ -16,6 +16,36 @@ import gas.physical_constants;
 class CompositeGas : GasModel {
 public:
 
+    this(lua_State *L)
+    {
+        type_str = "CompositeGas";
+        /* There are some top-level GasModel services that require us to fill in data
+         * at this point.
+         */
+        getArrayOfStrings(L, LUA_GLOBALSINDEX, "species", _species_names);
+        _n_species = cast(uint) _species_names.length;
+        create_species_reverse_lookup();
+        _n_modes = 0; // Single temperature gas
+        if (canFind(_species_names, "e-") || canFind(_species_names, "eminus")) {
+            if (!(_species_names[$-1] == "e-" || _species_names[$-1] == "eminus")) {
+                throw new Error("Electrons should be last species.");
+            }
+            _is_plasma = true;
+        }
+
+        foreach (isp; 0 .. _n_species) {
+            lua_getglobal(L, "db");
+            lua_getfield(L, -1, _species_names[isp].toStringz);
+            _mol_masses[isp] = getDouble(L, -1, "M");
+            lua_pop(L, 1);
+            lua_pop(L, 1);
+        }
+
+        ThermodynamicModel mThermo = new ThermodynamicModel(L, _species_names, _mol_masses);
+        TransportPropertiesModel mTransProps = new TransportPropertiesModel(L, mThermo);
+        
+    }
+    
     // Service methods related to thermodynamics
     // Updates to GasState
     @nogc override void update_thermo_from_pT(GasState gs)
@@ -87,7 +117,11 @@ public:
     {
         return mThermo.gibbs_free_energy(gs, isp);
     }
-    
+
+    @nogc override void update_trans_coeffs(GasState gs)
+    {
+        mTransProps.updateTransCoeffs(gs);
+    }
 
 private:
     ThermodynamicModel mThermo;

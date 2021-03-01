@@ -8,7 +8,11 @@
 
 module gas.thermo.thermo_model;
 
-interface ThermoModel {
+import nm.number;
+import gas : GasState;
+
+
+interface ThermodynamicModel {
 public:
     // Methods related to computing thermo state.
     @nogc void update_thermo_from_pT(GasState gs);
@@ -30,5 +34,4 @@ public:
     @nogc number enthalpy(in GasState gs, int isp, int imode);
     @nogc number entropy(in GasState gs);
     @nogc number entropy(in GasState gs, int isp);
-    @nogc number gibbs_free_energy(GasState gs, int isp);
 }

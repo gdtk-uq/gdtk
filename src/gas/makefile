@@ -525,6 +525,12 @@ gasgiant_transport_properties_test: $(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FIL
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA) $(DLINKFLAGS)
 
+therm_perf_gas_mix_thermo_test: $(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
+	$(LIBCEQ) $(LIBGASF) $(LIBLUA)
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ thermo/thermo_model.d thermo/therm_perf_gas_mix_thermo.d \
+		$(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
+		$(LIBCEQ) $(LIBGASF) $(LIBLUA) $(DLINKFLAGS)
+
 # Fortran bits
 
 LIBGASF_OBJECT_FILES := ideal_air_fortran.o \
