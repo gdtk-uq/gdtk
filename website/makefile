@@ -48,6 +48,7 @@ eilmer-catalog-of-examples.html:
 	cp ../doc/$@ static/html/
 	cp ../doc/gallery/*.png static/html/gallery/
 	cp ../doc/gallery/*.gif static/html/gallery/
+	cp ../doc/gallery/*.svg static/html/gallery/
 
 eilmer-faq.html:
 	- mkdir -p static/html
