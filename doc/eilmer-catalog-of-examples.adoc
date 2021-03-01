@@ -57,6 +57,10 @@ include::../examples/eilmer/2D/sphere-nonaka/readme.adoc[]
 
 include::../examples/eilmer/2D/wall-catalysis/readme.adoc[]
 
+= Flows with Conjugate Heat Transfer (CHT)
+
+include::../examples/eilmer/2D/solid/hollow-cylinder/readme.adoc[]
+
 :leveloffset: -1
 
 
