@@ -1,56 +1,98 @@
 -- rmi.lua
+-- Redesign by NNG, February 2021
 config.title = "Richtmyer-Meshkov Instability"
 print(config.title)
 
 nsp, nmodes = setGasModel('ideal-air-gas-model.lua')
 print("GasModel set to ideal air. nsp= ", nsp, " nmodes= ", nmodes)
-state1 = FlowState:new{p=100.0e3, T=300.0, velx=0.0, vely=0.0} -- pre-shock
-state2 = FlowState:new{p=497.8e3, T=531.1, velx=469.9, vely=0.0} -- post-shock
-state3 = FlowState:new{p=100.0e3, T=75.0, velx=0.0, vely=0.0} -- dense gas
+
+-- The initial flow is travelling leftwards at some velocity, so that the instability 
+-- stays relatively still after the impact. This gives us more time to watch it evolve. 
+-- 300 m/s seemed to be about the right number, after some trial and error
+axes_velocity = 300
+state1 = FlowState:new{p=100.0e3, T=300.0, velx=0.0-axes_velocity, vely=0.0} -- pre-shock
+state2 = FlowState:new{p=497.8e3, T=531.1, velx=469.9-axes_velocity, vely=0.0} -- post-shock
+state3 = FlowState:new{p=100.0e3, T=75.0, velx=0.0-axes_velocity, vely=0.0} -- dense gas
+config.flux_calculator = 'ausmdv'
+config.flow_format='rawbinary'
 
 
 -- Geometry of flow domain.
-L = 15.0 -- length of downstream part of duct
-H = 1.0  -- half-height of duct
+L = 4.0  -- length of downstream part of duct
+H = 1.0  -- height of duct
+d = 1.5  -- interface location
 delta = 0.1 -- magnitude of interface perturbation
--- We're going to simulate both sides of the symmetry plane.
-a0 = Vector3:new{x=-L/5, y=-H}; a1 = Vector3:new{x=-L/5, y=H}
-b0 = Vector3:new{x=delta, y=-H}; b1 = Vector3:new{x=delta, y=H}
-c0 = Vector3:new{x=L, y=-H}; c1 = Vector3:new{x=L, y=H}
--- Shape of the disturbed interface.
-function xypath(t)
+E1= 15.0    -- Length of sponge block 1
+E2= 15.0    -- Length of sponge block 2
+
+-- Interface shape is controlled by a custom fill condition.
+function fillFunction(x,y,z)
    -- Parametric path with 0<=t<=1.
-   local y = -1.0 * (1.0-t) + 1.0*t
-   local x = delta*math.cos(2*math.pi*t)
-   return {x=x, y=y}
+   interfacex = delta*math.cos(2*math.pi*(y/H)) + d
+   if (x < interfacex) then
+       return state1
+   else
+       return state3
+   end
 end
 
--- On the left of the interface
-region1 = AOPatch:new{south=Line:new{p0=a0, p1=b0},
-		      north=Line:new{p0=a1, p1=b1},
-		      west=Line:new{p0=a0, p1=a1},
-		      east=LuaFnPath:new{luaFnName="xypath"}}
--- On the right of the interface
-region2 = AOPatch:new{south=Line:new{p0=b0, p1=c0},
-		      north=Line:new{p0=b1, p1=c1},
-		      west=LuaFnPath:new{luaFnName="xypath"},
-		      east=Line:new{p0=c0, p1=c1}}
-		      
-nx = 80
-grid1 = StructuredGrid:new{psurface=region1, niv=2*nx+1, njv=2*nx+1}
-grid2 = StructuredGrid:new{psurface=region2, niv=10*nx+1, njv=2*nx+1}
+spongepatch1= CoonsPatch:new{p00=Vector3:new{x=-E1,  y=0.0},
+                             p10=Vector3:new{x=0.0, y=0.0},
+                             p11=Vector3:new{x=0.0, y=H  },
+                             p01=Vector3:new{x=-E1,  y=H  }}
+
+mainpatch = CoonsPatch:new{p00=Vector3:new{x=0.0, y=0.0},
+                           p10=Vector3:new{x=L,   y=0.0},
+                           p11=Vector3:new{x=L,   y=H  },
+                           p01=Vector3:new{x=0.0, y=H  }}
+
+spongepatch2= CoonsPatch:new{p00=Vector3:new{x=L,   y=0.0},
+                             p10=Vector3:new{x=L+E2, y=0.0},
+                             p11=Vector3:new{x=L+E2, y=H  },
+                             p01=Vector3:new{x=L,   y=H  }}
+
+nx = 200
+nsponge = math.floor((nx+1)/4)
+ny = math.floor((nx+1)*(H/L))
+dx_main = L/nx
+a_sponge1 = dx_main/E1
+a_sponge2 = dx_main/E2
+
+cluster1 = GeometricFunction:new{a=a_sponge1, r=1.14, N=nsponge, reverse=true}
+cluster2 = GeometricFunction:new{a=a_sponge2, r=1.14, N=nsponge, reverse=false}
+cflist1 = {north=cluster1, east=none, south=cluster1, west=none}
+cflist2 = {north=cluster2, east=none, south=cluster2, west=none}
+sponge1grid = StructuredGrid:new{psurface=spongepatch1, niv=nsponge, njv=ny, cfList=cflist1}
+maingrid   = StructuredGrid:new{psurface=mainpatch, niv=nx+1, njv=ny}
+sponge2grid = StructuredGrid:new{psurface=spongepatch2, niv=nsponge, njv=ny, cfList=cflist2}
+
 -- Define the boundary conditions that we care about 
 -- and the flow-solution blocks.
-bcList1 = {north=nil, east=nil, south=nil,
-	   west=InFlowBC_Supersonic:new{flowState=state2, label="inflow-boundary"}}
-blk1 = FluidBlockArray{grid=grid1, nib=2, njb=2,
-		       initialState=state1, bcList=bcList1, label="BLOCK-1"}
-bcList2 = {north=nil, east=OutFlowBC_Simple:new{label="outflow-boundary"},
-	   south=nil, west=nil}
-blk2 = FluidBlockArray{grid=grid2, nib=10, njb=2,
-		       initialState=state3, bcList=bcList2, label="BLOCK-2"}
+sponge1bcs = {north=nil,
+             east=nil,
+             south=nil,
+             west=InFlowBC_Supersonic:new{flowState=state2}}
+
+sponge1blk = FBArray:new{grid=sponge1grid, nib=1, njb=1,
+		                initialState=state2, bcList=sponge1bcs}
+
+mainbcs = {north=nil,
+           east=nil,
+           south=nil,
+           west=nil}
+mainblk = FBArray:new{grid=maingrid, nib=4, njb=1,
+                      initialState=fillFunction, bcList=mainbcs}
+
+sponge2bcs = {north=nil,
+              east=OutFlowBC_SimpleExtrapolate:new{},
+              south=nil,
+              west=nil}
+spong2blk = FBArray:new{grid=sponge2grid, nib=1, njb=1,
+                      initialState=state3, bcList=sponge2bcs}
+
 identifyBlockConnections()
 
-config.max_time = 40.0e-3  -- seconds
-config.max_step = 10000
+config.max_time = 200.0e-3  -- seconds
+config.dt_plot = 5.0e-4
+config.max_step = 10000000
 config.dt_init = 5.0e-6
