@@ -1,0 +1,18 @@
+== 2D/richtmyer-meshkov
+:stem:
+
+image::rmi_T_vortz_plain.svg[caption="Timelapse of the Richtmyer-Meshkov instability. Temperature and Z-vorticity colourmap."]
+
+This example consists of a curved interface between two fluids of different density that is processed by a shock passing left to right through the domain. The misaligned density gradient at the interface and pressure gradient at the shock induce a symmetric swirling motion of the interface, which is driven by the baroclinic production of vorticity during the impact. This vorticity is visualised in the colourmaps as blue for clockwise (negative) swirling motion and red for anti-clockwise (positive) motion, overlayed on a greyscale map describing the temperature. As the simulation progresses, the interface grows unstably into a complex structure consisting of a "spike" of cold fluid piercing leftward, and a "bubble" of hot fluid on the right. In the simulation these structures convect out of the domain within 200 ms, but with more time a turbulent interface would form, with both spike and bubble decaying into a random chaotic mess.
+
+The first theoretical description of this kind of instability was given by the American physicist Robert D. Richtmyer in 1960, followed by experimental results published in 1969 by the Russian physicist Evgeny Meshkov. The phenomenon of unstable growth of a density interface due to shock compression is named the Richtmyer-Meshkov instability (RMI) in recognition of their efforts. 
+
+The Richtmyer-Meshkov instability plays a role in many flows of engineering and scientific interest. In inertial confinement fusion it is responsible for mixing the hot target material into the colder surroundings, reducing fusion yield and making positive net energy production more difficult. Conversely, in high speed aircraft engines shock induced mixing is employed deliberately to help mix fuel and air, accelerating combustion and leading to greater engine performance.
+
+1.  *Robert D. Richtmyer* (1960), +
+    _Taylor instability in shock acceleration of compressible fluids_, +
+    Communications on Pure and Applied Mathematics, *13*(2).
+
+2.  *E. E. Meshkov* (1969), +
+    _Instability of the interface of two gases accelerated by a shock wave_, +
+    Fluid Dynamics, *4*(101-104).
