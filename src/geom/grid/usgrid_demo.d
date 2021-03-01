@@ -12,7 +12,7 @@ void main()
     auto p11 = Vector3(1.0, 1.1);
     auto p01 = Vector3(0.0, 1.1);
     auto my_patch = new AOPatch(p00, p10, p11, p01);
-    auto cf = [new LinearFunction(), new LinearFunction(), 
+    auto cf = [new LinearFunction(), new LinearFunction(),
                new LinearFunction(), new LinearFunction()];
     auto my_grid = new StructuredGrid(my_patch, 11, 21, cf);
     writeln("grid point 5 5 at x=", my_grid[5,5].x, " y=", my_grid[5,5].y);
@@ -97,6 +97,6 @@ void main()
     usg3D_a.joinGrid(usg3D_b);
     usg3D_a.writeStats();
     usg3D_a.write_to_vtk_file("test-join-grid.vtk");
-    
+
     writeln("Done.");
 }

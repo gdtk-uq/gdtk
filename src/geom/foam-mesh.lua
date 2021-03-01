@@ -958,7 +958,7 @@ function main(verbosityLevel)
       end
       -- joinGrid and pass openFoamDimensions. For 2-D this excludes top and
       -- bottom boundaries when searching for ways to join grids.
-      myMesh:joinGrid(blks[ib].ugrid,openFoamDimensions)
+      myMesh:joinGrid(blks[ib].ugrid, 1.0e-6, 1.0e-9, true, true, openFoamDimensions)
    end
    if (vrbLvl >= 1) then
       print("   DONE: Joining all grids together.")

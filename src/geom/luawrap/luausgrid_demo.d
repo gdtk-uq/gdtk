@@ -34,7 +34,7 @@ surf = CoonsPatch:new{north=Line:new{p0=b, p1=d}, east=Line:new{p0=c, p1=d},
                       south=Line:new{p0=a, p1=c}, west=Line:new{p0=a, p1=b}}
 print("CoonsPatch representation: ", surf)
 my_grid = StructuredGrid:new{psurface=surf, niv=10, njv=20}
-my_usg = UnstructuredGrid:new{sgrid=my_grid} 
+my_usg = UnstructuredGrid:new{sgrid=my_grid}
 print("type=", my_usg:get_type(), "dimensions=", my_usg:get_dimensions())
 my_usg:write_to_vtk_file("test_grid.vtk")
 my_usg:write_to_gzip_file("test_grid.gz")
@@ -48,7 +48,7 @@ pArray = {Vector3:new{x=0.0, y=0.1, z=0.0}, Vector3:new{x=1.0, y=0.1, z=0.0},
           Vector3:new{x=1.0, y=1.1, z=3.0}, Vector3:new{x=0.0, y=1.1, z=3.0}}
 volume = TFIVolume:new{vertices=pArray}
 my_grid3D = StructuredGrid:new{pvolume=volume, niv=11, njv=21, nkv=11}
-my_usg3D = UnstructuredGrid:new{sgrid=my_grid3D} 
+my_usg3D = UnstructuredGrid:new{sgrid=my_grid3D}
 my_usg3D:write_to_vtk_file("test_grid3D.vtk")
 for i=0,my_usg3D:get_nboundaries()-1 do
    print(string.format("boundaryset_tag[%d]=%s", i, my_usg3D:get_boundaryset_tag(i)))
@@ -78,5 +78,3 @@ usg3D_a:writeOpenFoamPolyMesh("test_openFoam")
     }
     writeln("Done with luausgrid_demo.");
 }
-
-    

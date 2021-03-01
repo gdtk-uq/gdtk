@@ -13,6 +13,7 @@ import std.conv;
 import std.stdio;
 import std.file;
 import std.algorithm;
+import std.array;
 import std.format;
 import std.math;
 import gzip;
@@ -1997,7 +1998,9 @@ public:
     } // end write_openFoam_polyMesh()
 
     UnstructuredGrid joinGrid(const UnstructuredGrid other,
-                              double relTol=1.0e-6, double absTol=1.0e-9, int openFoamDimensions=3)
+                              double relTol=1.0e-6, double absTol=1.0e-9,
+                              bool checkBoundariesOnly=true,
+                              bool openFoam=false, int dimensions=3)
     {
         // We consider *this as the "master" grid and will join
         // a copy of the unique bits of the other grid to it.
@@ -2013,9 +2016,8 @@ public:
         //
         // Merge the unique points from the other grid and keep a record of where we put them.
         size_t[] new_vtx_ids;
-        // switch between searching entire grid and only vtx located on grid boundaries
-        if (false) {
-            // Search all vtx in grid
+        if (!checkBoundariesOnly) {
+            // Search all vertices in grid.
             new_vtx_ids.length = other.vertices.length;
             foreach (i, vtx; other.vertices) {
                 bool found = false;
@@ -2023,7 +2025,7 @@ public:
                 foreach (j, v; vertices) {
                     if (approxEqualVectors(v, vtx, relTol, absTol)) {
                         found = true;
-                        jsave = j; // remember where we found it
+                        jsave = j; // Remember where we found it.
                         break;
                     }
                 }
@@ -2038,28 +2040,31 @@ public:
             }
             nvertices = vertices.length;
         } else {
-            // Search only vertices on boundaries
-            // Collect vertices on boundaries that need to be compared.
+            // Search only vertices on boundaries of the grids.
+            //
+            // First, collect vertices on boundaries that need to be compared.
             size_t[] vtx_ids_boundary;
             foreach (i,b; boundaries) {
-                // for OpenFOAM 2-D meshes the top and bottom boundaries (index 4 and 5 and mutiples) can be skipped
-                if (openFoamDimensions == 2  && ( (i%6)==4  || (i%6)==5) ) { continue; }
+                // For OpenFOAM 2-D meshes the top and bottom boundaries
+                // (index 4 and 5 and mutiples) can be skipped because
+                // we will not be joining grids across those boundaries.
+                if (openFoam && dimensions == 2  && ( (i%6)==4  || (i%6)==5) ) { continue; }
                 foreach (j,f; b.face_id_list) {
                     vtx_ids_boundary ~= faces[f].vtx_id_list;
                 }
             }
-            // Sort resulting array and remove duplicates
-            vtx_ids_boundary.length -= vtx_ids_boundary.sort().uniq().copy(vtx_ids_boundary).length;
+            vtx_ids_boundary = array(vtx_ids_boundary.sort().uniq());
+            //
             size_t[] vtx_ids_other_boundary;
             foreach (i,b; other.boundaries) {
-                // for OpenFOAM 2-D meshes the top and bottom boundaries (index 4 and 5) can be skipped
-                if (openFoamDimensions == 2 && (i == 4 || i == 5)) { continue; }
+                // For OpenFOAM 2-D meshes the top and bottom boundaries
+                // (index 4 and 5) can be skipped.
+                if (openFoam && dimensions == 2 && (i == 4 || i == 5)) { continue; }
                 foreach (f; b.face_id_list) {
                     vtx_ids_other_boundary ~= other.faces[f].vtx_id_list;
                 }
             }
-            // Sort resulting array and remove duplicates
-            vtx_ids_other_boundary.length -= vtx_ids_other_boundary.sort().uniq().copy(vtx_ids_other_boundary).length;
+            vtx_ids_other_boundary = array(vtx_ids_other_boundary.sort().uniq());
             //
             // Compare vertics on boundaries and add them to master grid if new.
             new_vtx_ids.length = other.vertices.length;
@@ -2073,7 +2078,7 @@ public:
                     v = vertices[j];
                     if (approxEqualVectors(v, vtx, relTol, absTol)) {
                         found = true;
-                        jsave = j; // remember where we found it
+                        jsave = j; // Remember where we found it.
                         break;
                     }
                 }
