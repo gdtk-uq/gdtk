@@ -16,6 +16,7 @@ import kinetics.thermochemical_reactor;
 import std.stdio;
 
 // We need to know about the schemes that are available.
+import gas.composite_gas;
 import gas.therm_perf_gas;
 import gas.therm_perf_gas_equil;
 import gas.ideal_gas_ab;
@@ -76,7 +77,13 @@ ThermochemicalReactor init_thermochemical_reactor(GasModel gmodel, string fileNa
     */
     ThermochemicalReactor reactor; // start with a null reference
 
+    writeln(typeid(gmodel));
+    writeln(typeid(CompositeGas));
+    
     if (typeid(gmodel) is typeid(ThermallyPerfectGas)) {
+        reactor = new ChemistryUpdate(fileName1, gmodel);
+    }
+    if (typeid(gmodel) is typeid(CompositeGas)) {
         reactor = new ChemistryUpdate(fileName1, gmodel);
     }
     if (typeid(gmodel) is typeid(ThermallyPerfectGasEquilibrium)) {
