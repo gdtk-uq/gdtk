@@ -4,6 +4,7 @@
 #
 GAS_DIR ?= .
 GAS_MODEL_FILES := $(GAS_DIR)/package.d \
+	$(GAS_DIR)/composite_gas.d \
 	$(GAS_DIR)/gas_model.d \
 	$(GAS_DIR)/gas_state.d \
 	$(GAS_DIR)/init_gas_model.d \
@@ -40,16 +41,20 @@ THERMO_FILES := \
 	$(GAS_DIR)/thermo/evt_eos.d \
 	$(GAS_DIR)/thermo/perf_gas_mix_eos.d \
 	$(GAS_DIR)/thermo/pvt_eos.d \
-	$(GAS_DIR)/thermo/therm_perf_gas_mix_eos.d
+	$(GAS_DIR)/thermo/therm_perf_gas_mix_eos.d \
+	$(GAS_DIR)/thermo/thermo_model.d \
+	$(GAS_DIR)/thermo/therm_perf_gas_mix.d
 
 DIFFUSION_FILES := \
 	$(GAS_DIR)/diffusion/cea_therm_cond.d \
 	$(GAS_DIR)/diffusion/cea_viscosity.d \
 	$(GAS_DIR)/diffusion/chemkin_therm_cond.d \
 	$(GAS_DIR)/diffusion/chemkin_viscosity.d \
+	$(GAS_DIR)/diffusion/gas_mixtures.d \
 	$(GAS_DIR)/diffusion/sutherland_therm_cond.d \
 	$(GAS_DIR)/diffusion/sutherland_viscosity.d \
 	$(GAS_DIR)/diffusion/therm_cond.d \
+	$(GAS_DIR)/diffusion/transport_properties_model.d \
 	$(GAS_DIR)/diffusion/viscosity.d \
 	$(GAS_DIR)/diffusion/wilke_mixing_therm_cond.d \
 	$(GAS_DIR)/diffusion/wilke_mixing_viscosity.d \
