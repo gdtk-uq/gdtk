@@ -1978,13 +1978,6 @@ void read_control_file()
 //
 void configCheckPoint1()
 {
-    if (GlobalConfig.grid_motion == GridMotion.shock_fitting &&
-        GlobalConfig.apply_bcs_in_parallel) {
-        if (GlobalConfig.is_master_task) {
-            writeln("NOTE: apply_bcs_in_parallel is set to false when shock_fitting is used.");
-        }
-        GlobalConfig.apply_bcs_in_parallel = false;
-    }
     if (!GlobalConfig.do_shock_detect) {
         if (GlobalConfig.suppress_reconstruction_at_shocks) {
             GlobalConfig.do_shock_detect = true;
