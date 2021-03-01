@@ -16,7 +16,7 @@ BUILD_DIR := ../../build
 DEMO_PROGRAMS := gas_model_demo ideal_gas_demo luagas_model_demo
 
 TEST_PROGRAMS := chemkin_therm_cond_test chemkin_viscosity_test cea_therm_cond_test \
-	cea_thermo_curves_test cea_viscosity_test \
+	cea_thermo_curves_test cea_viscosity_test composite_gas_test \
 	init_gas_model_test ideal_gas_test ideal_helium_test \
 	cubic_gas_test cea_gas_test ideal_gas_ab_test \
 	ideal_dissociating_gas_test fuel_air_mix_test equilibrium_gas_test \
@@ -399,6 +399,13 @@ therm_perf_gas_mix_eos_test: $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FI
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA) $(DLINKFLAGS)
 
+composite_gas_test : $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) \
+	$(LIBCEQ) $(LIBGASF) $(LIBLUA)
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
+		$(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
+		$(LIBCEQ) $(LIBGASF) $(LIBLUA) $(DLINKFLAGS)
+
+
 very_viscous_air_test: $(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
 	$(LIBCEQ) $(LIBGASF) $(LIBLUA)
 	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
@@ -525,11 +532,18 @@ gasgiant_transport_properties_test: $(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FIL
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA) $(DLINKFLAGS)
 
-therm_perf_gas_mix_thermo_test: $(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
+therm_perf_gas_mix_test: $(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
 	$(LIBCEQ) $(LIBGASF) $(LIBLUA)
-	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ thermo/thermo_model.d thermo/therm_perf_gas_mix_thermo.d \
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA) $(DLINKFLAGS)
+
+gas_mixtures_test: $(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
+	$(LIBCEQ) $(LIBGASF) $(LIBLUA)
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ diffusion/transport_properties_model.d diffusion/gas_mixtures.d \
+		$(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
+		$(LIBCEQ) $(LIBGASF) $(LIBLUA) $(DLINKFLAGS)
+
 
 # Fortran bits
 

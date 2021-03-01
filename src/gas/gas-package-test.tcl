@@ -48,6 +48,10 @@ test cea-gas-test {Testing cea_gas.d} -body {
     exec ./cea_gas_test
 } -result {} -returnCodes {0}
 
+test composite-gas-test {Testing composite_gas.d} -body {
+    exec ./composite_gas_test
+} -result {} -returnCodes {0}
+
 test therm-perf-gas-test {Testing therm_perf_gas.d} -body {
     exec ./therm_perf_gas_test
 } -result {} -returnCodes {0}

@@ -15,20 +15,20 @@ import gas : GasState;
 interface ThermodynamicModel {
 public:
     // Methods related to computing thermo state.
-    @nogc void update_thermo_from_pT(GasState gs);
-    @nogc void update_thermo_from_rhou(GasState gs);
-    @nogc void update_thermo_from_rhoT(GasState gs);
-    @nogc void update_thermo_from_rhop(GasState gs);
-    @nogc void update_thermo_from_ps(GasState gs, number s);
-    @nogc void update_thermo_from_hs(GasState gs, number h, number s);
-    @nogc void update_sound_speed(GasState gs);
+    @nogc void updateFromPT(GasState gs);
+    @nogc void updateFromRhoU(GasState gs);
+    @nogc void updateFromRhoT(GasState gs);
+    @nogc void updateFromRhoP(GasState gs);
+    @nogc void updateFromPS(GasState gs, number s);
+    @nogc void updateFromHS(GasState gs, number h, number s);
+    @nogc void updateSoundSpeed(GasState gs);
     // Methods related to computing thermo derivatives.
-    @nogc number dudT_const_v(in GasState gs);
-    @nogc number dhdT_const_p(in GasState gs);
-    @nogc number dpdrho_const_T(in GasState gs);
+    @nogc number dudTConstV(in GasState gs);
+    @nogc number dhdTConstP(in GasState gs);
+    @nogc number dpdrhoConstT(in GasState gs);
     // Methods related to single properties of the mixture.
-    @nogc number gas_constant(in GasState gs);
-    @nogc number internal_energy(in GasState gs); 
+    @nogc number gasConstant(in GasState gs);
+    @nogc number internalEnergy(in GasState gs); 
     @nogc number enthalpy(in GasState gs);
     @nogc number enthalpy(in GasState gs, int isp);
     @nogc number enthalpy(in GasState gs, int isp, int imode);

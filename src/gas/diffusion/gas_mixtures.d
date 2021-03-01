@@ -5,6 +5,8 @@
  * Version: 2021-03-01
  */
 
+module gas.diffusion.gas_mixtures;
+
 import std.math;
 import std.string;
 import std.conv;
