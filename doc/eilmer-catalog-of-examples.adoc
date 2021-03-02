@@ -28,6 +28,8 @@ flow test cases is not always so easy to categorise.
 
 include::../examples/eilmer/2D/foil-circular-arc-transonic/readme.adoc[]
 
+include::../examples/eilmer/2D/sphere-lehr/m355/readme.adoc[]
+
 = Internal, inviscid flows of perfect gases
 
 include::../examples/eilmer/2D/nozzle-conical-back/readme.adoc[]

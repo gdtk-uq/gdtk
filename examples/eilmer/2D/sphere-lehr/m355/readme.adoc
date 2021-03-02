@@ -1,0 +1,17 @@
+== 2D/sphere-lehr/m355
+
+image::lehr-m355-mach-and-temp-animation.gif[caption="Shock-fitted flow domain developing over a sphere."]
+
+This shock-fitting example shows the transient flow of a hydrogen/oxygen gas mixture 
+over a spherical projectile.
+The test case is derived from the experiments by Lehr (1972) with conditions corresponding
+to Figure 5 of his original paper.  
+The glyphs overlaid on the animation are points manually digitized from the shock front in that figure.
+
+
+Reference:
+
+1. *Hartmuth F. Lehr.* (1972), +
+   _Experiments on Shock-Induced Combustion_, +
+   Acta Astronautica, *17*, pp.589--597
+
