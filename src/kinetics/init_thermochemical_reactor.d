@@ -77,9 +77,6 @@ ThermochemicalReactor init_thermochemical_reactor(GasModel gmodel, string fileNa
     */
     ThermochemicalReactor reactor; // start with a null reference
 
-    writeln(typeid(gmodel));
-    writeln(typeid(CompositeGas));
-    
     if (typeid(gmodel) is typeid(ThermallyPerfectGas)) {
         reactor = new ChemistryUpdate(fileName1, gmodel);
     }
