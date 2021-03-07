@@ -271,11 +271,11 @@ extern(C) int luafn_setVtxVelocitiesForBlockXYZ(lua_State* L)
  * that the block is rotating about an axis with direction
  * (0 0 1) located at a point defined by vector (x y 0).
  *
- * setVtxVelocitiesRotatingBlock(blkId, omega, vector3)
+ * setVtxVelocitiesForRotatingBlock(blkId, omega, vector3)
  *      Sets rotational speed omega (rad/s) for rotation about
  *      (0 0 1) axis defined by Vector3.
  *
- * setVtxVelocitiesRotatingBlock(blkId, omega)
+ * setVtxVelocitiesForRotatingBlock(blkId, omega)
  *      Sets rotational speed omega (rad/s) for rotation about
  *      Z-axis.
  */
@@ -312,7 +312,7 @@ extern(C) int luafn_setVtxVelocitiesForRotatingBlock(lua_State* L)
         }
     }
     else {
-        string errMsg = "ERROR: Too few arguments passed to luafn: setVtxVelocitiesRotatingBlock()\n";
+        string errMsg = "ERROR: Too few arguments passed to luafn: setVtxVelocitiesForRotatingBlock()\n";
         luaL_error(L, errMsg.toStringz);
     }
     // In case, the user gave use more return values than
