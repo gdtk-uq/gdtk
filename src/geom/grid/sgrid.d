@@ -1140,10 +1140,14 @@ public:
         int nfe, nres;
         bool conv_flag = nm.nelmin.minimize!(objective,double)(data, fdata, nfe, nres, ddata,
                                                                1.0e-3, 3, 800);
-        writeln("data = ", data, " fdata = ", fdata);
-        writeln("convergence-flag = ", conv_flag);
-        writeln("number-of-fn-evaluations = ", nfe);
-        writeln("number-of-restarts = ", nres);
+        /+
+        debug {
+            writeln("data = ", data, " fdata = ", fdata);
+            writeln("convergence-flag = ", conv_flag);
+            writeln("number-of-fn-evaluations = ", nfe);
+            writeln("number-of-restarts = ", nres);
+        }
+        +/
         list_to_rs_grids(data, r_grid, s_grid);
         return conv_flag;
     } // end determine_rs_grids()

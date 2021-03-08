@@ -686,8 +686,8 @@ version(beziertrianglepatch_test) {
         auto dist = btp.projectPoint(p, q, u, v);
         assert(dist < 1.0e-6, failedUnitTest());
         assert(approxEqualVectors(q, Vector3(2, 2, 7./3)), failedUnitTest());
-        assert(approxEqual(u, 1./3, 1.0e-6), failedUnitTest());
-        assert(approxEqual(v, 1./3, 1.0e-6), failedUnitTest());
+        assert(isClose(u, 1./3, 1.0e-6), failedUnitTest());
+        assert(isClose(v, 1./3, 1.0e-6), failedUnitTest());
 
         // Test optimizer with this surface.
         // 1. Generate a bunch of points

@@ -109,7 +109,7 @@ public:
         if (reverse) t = 1.0 - t;
         if (cluster) {
             tbar = roberts_original(t, alpha, beta);
-        } else { 
+        } else {
             tbar = t;
         }
         if (reverse) tbar = 1.0 - tbar;
@@ -117,7 +117,7 @@ public:
     }
     override string toString() const
     {
-        return "RobertsFunction(end0=" ~ to!string(end0) ~ 
+        return "RobertsFunction(end0=" ~ to!string(end0) ~
             ", end1=" ~ to!string(end1) ~ ", beta=" ~ to!string(beta) ~ ")";
     }
 } // end class RobertsFunction()
@@ -293,7 +293,7 @@ private:
 
     const double erf(double x){
         /*
-            Approximate the gaussian error function using curve fitted polynomial 
+            Approximate the gaussian error function using curve fitted polynomial
             "Handbook of Mathematical Functions with Formulas, Graphs, and Mathematical Tables", NIST
             See: https://en.wikipedia.org/wiki/Error_function#Approximation_with_elementary_functions
             Note: The approximation here is only valid for x>=0. For x less than zero we exploit the
@@ -498,20 +498,20 @@ version(univariatefunctions_test) {
     import util.msg_service;
     int main() {
         auto cf = new RobertsFunction(false, true, 1.1);
-        assert(approxEqual(cf(0.1), 0.166167), failedUnitTest());
-        assert(approxEqual(cf(0.9), 0.96657), failedUnitTest());
+        assert(isClose(cf(0.1), 0.166167, 1.0e-4), failedUnitTest());
+        assert(isClose(cf(0.9), 0.96657, 1.0e-4), failedUnitTest());
         auto cf2 = new LinearFunction(1.0, 0.0);
-        assert(approxEqual(cf2(0.1), 0.9), failedUnitTest());
-        assert(approxEqual(cf2(0.9), 0.1), failedUnitTest());
+        assert(isClose(cf2(0.1), 0.9, 1.0e-4), failedUnitTest());
+        assert(isClose(cf2(0.9), 0.1, 1.0e-4), failedUnitTest());
         auto cf3 = new GeometricFunction(0.005, 1.1, 40, false);
-        assert(approxEqual(cf3(0.1), 0.0225106), failedUnitTest());
-        assert(approxEqual(cf3(0.9), 0.85256413), failedUnitTest());
+        assert(isClose(cf3(0.1), 0.0225106, 1.0e-4), failedUnitTest());
+        assert(isClose(cf3(0.9), 0.85256413, 1.0e-4), failedUnitTest());
         auto cf4 = new GaussianFunction(0.5, 0.1, 0.2);
-        assert(approxEqual(cf4(0.1), 0.1250750), failedUnitTest());
-        assert(approxEqual(cf4(0.9), 0.8749249), failedUnitTest());
+        assert(isClose(cf4(0.1), 0.1250750, 1.0e-4), failedUnitTest());
+        assert(isClose(cf4(0.9), 0.8749249, 1.0e-4), failedUnitTest());
         auto cf5 = new GaussGeomHybridFunction(0.01, 1.2, 40, 0.8, 0.1, 0.2, false);
-        assert(approxEqual(cf5(0.1), 0.0518068), failedUnitTest());
-        assert(approxEqual(cf5(0.9), 0.8984721), failedUnitTest());
+        assert(isClose(cf5(0.1), 0.0518068, 1.0e-4), failedUnitTest());
+        assert(isClose(cf5(0.9), 0.8984721, 1.0e-4), failedUnitTest());
         return 0;
     }
 } // end univariatefunctions_test

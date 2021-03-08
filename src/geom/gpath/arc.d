@@ -31,7 +31,7 @@ public:
     {
         return new Arc(a, b, c);
     }
-    override Vector3 opCall(double t) const 
+    override Vector3 opCall(double t) const
     {
         number L;
         Vector3 p;
@@ -54,7 +54,7 @@ public:
         evaluate_position_and_length(1.0, p, L);
         return L;
     }
-    
+
     void evaluate_position_and_length(in double t, out Vector3 loc, out number L) const
     {
         // Both the position of the point and the length of the full arc are evaluated
@@ -69,7 +69,7 @@ public:
             throw new Error(text("Arc.evaluate(): radii do not match ca=",ca," cb=",cb));
         }
         // First vector in plane.
-        tangent1 = Vector3(ca); tangent1.normalize(); 
+        tangent1 = Vector3(ca); tangent1.normalize();
         // Compute unit normal to plane of all three points.
         n = cross(ca, cb);
         if (geom.abs(n) > 0.0) {
@@ -78,9 +78,9 @@ public:
             throw new Error(text("Arc.evaluate(): cannot find plane of three points."));
         }
         // Third (orthogonal) vector is in the original plane.
-        tangent2 = cross(n, tangent1); 
-        // Now transform to local coordinates so that we can do 
-        // the calculation of the point along the arc in 
+        tangent2 = cross(n, tangent1);
+        // Now transform to local coordinates so that we can do
+        // the calculation of the point along the arc in
         // the local xy-plane, with ca along the x-axis.
         cb_local = cb;
         Vector3 zerov = Vector3(0.0,0.0,0.0);
@@ -114,7 +114,7 @@ class Arc3 : Arc {
                                  " m=", to!string(m),
                                  " b=", to!string(b)));
         }
-        // The centre of the circle lies along the bisector of am and 
+        // The centre of the circle lies along the bisector of am and
         // the bisector of mb.
         number half = 0.5;
         Vector3 mid_am = half * (a + m);
@@ -181,7 +181,7 @@ version(arc_test) {
         auto found = pth.intersect2D(ps, dir, t, 10);
         assert(found, failedUnitTest());
         // intersect2D parametric location on Arc3
-        assert(approxEqual(t,0.5), failedUnitTest());
+        assert(isClose(t,0.5), failedUnitTest());
         //
         version(complex_numbers) {
             // Try out the complex derivative evaluation.
@@ -205,12 +205,11 @@ version(arc_test) {
             double dpmid_da_y = arc1(0.5).y.im / h;
             double dpmid_da_z = arc1(0.5).z.im / h;
             // writeln("dpmid_da x:", dpmid_da_x, " y:", dpmid_da_y, " z:", dpmid_da_z);
-            assert(approxEqual(dpmid_da_x,1.0/sqrt(2.0)), failedUnitTest());
-            assert(approxEqual(dpmid_da_y,1.0/sqrt(2.0)), failedUnitTest());
-            assert(approxEqual(dpmid_da_z,0.0), failedUnitTest());
+            assert(isClose(dpmid_da_x,1.0/sqrt(2.0)), failedUnitTest());
+            assert(isClose(dpmid_da_y,1.0/sqrt(2.0)), failedUnitTest());
+            assert(isClose(dpmid_da_z,0.0), failedUnitTest());
         }
         //
         return 0;
     }
 } // end arc_test
-

@@ -28,15 +28,15 @@ public:
     {
         return new Line(p0, p1);
     }
-    override Vector3 opCall(double t) const 
+    override Vector3 opCall(double t) const
     {
         return (1.0-t)*p0 + t*p1;
     }
-    override Vector3 dpdt(double t) const 
+    override Vector3 dpdt(double t) const
     {
         return p1 - p0;
     }
-    override Vector3 d2pdt2(double t) const 
+    override Vector3 d2pdt2(double t) const
     {
         return Vector3(0.0,0.0,0.0);
     }
@@ -83,7 +83,7 @@ version(line_test) {
         auto found = pth.intersect2D(ps, dir, t);
         assert(found, failedUnitTest());
         // intersect2D parametric location on Line
-        assert(approxEqual(t,0.5), failedUnitTest());
+        assert(isClose(t,0.5), failedUnitTest());
         //
         version(complex_numbers) {
             // Try out the complex derivative evaluation.
@@ -102,9 +102,9 @@ version(line_test) {
             double dpmid_da_z = line1(0.5).z.im / h;
             // import std.stdio;
             // writeln("dpmid_da x:", dpmid_da_x, " y:", dpmid_da_y, " z:", dpmid_da_z);
-            assert(approxEqual(dpmid_da_x,0.5), failedUnitTest());
-            assert(approxEqual(dpmid_da_y,0.5), failedUnitTest());
-            assert(approxEqual(dpmid_da_z,0.0), failedUnitTest());
+            assert(isClose(dpmid_da_x,0.5), failedUnitTest());
+            assert(isClose(dpmid_da_y,0.5), failedUnitTest());
+            assert(isClose(dpmid_da_z,0.0), failedUnitTest());
         }
         //
         return 0;

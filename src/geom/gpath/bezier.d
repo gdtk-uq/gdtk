@@ -198,9 +198,9 @@ version(bezier_test) {
                 dPt_dP_complex_y = myNewBez(t).y.im/ih.im;
                 dPt_dP_complex_z = myNewBez(t).z.im/ih.im;
                 // compare deriatives
-                assert(std.math.approxEqual(dPt_dP_analytic, dPt_dP_complex_x), failedUnitTest());
-                assert(std.math.approxEqual(0.0, dPt_dP_complex_y), failedUnitTest());
-                assert(std.math.approxEqual(0.0, dPt_dP_complex_z), failedUnitTest());
+                assert(std.math.isClose(dPt_dP_analytic, dPt_dP_complex_x), failedUnitTest());
+                assert(std.math.isClose(0.0, dPt_dP_complex_y), failedUnitTest());
+                assert(std.math.isClose(0.0, dPt_dP_complex_z), failedUnitTest());
                 // restore point to original position
                 P[idx].refx = Po[idx].x;
             }

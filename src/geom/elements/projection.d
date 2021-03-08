@@ -191,7 +191,7 @@ version(projection_test) {
                                              Vector3(0.5,0.5), Vector3(0.0,1.0),
                                              t_intersection);
         assert(foundIntersection, failedUnitTest());
-        assert(approxEqual(t_intersection, 0.5), failedUnitTest());
+        assert(isClose(t_intersection, 0.5), failedUnitTest());
 
         // Projection onto a plane.
         Vector3 a = Vector3(1.0, 0.0, 0.0); // plane through a,b,c
@@ -231,7 +231,10 @@ version(projection_test) {
             qDerivReal[1] = (q.y.re-q0.y.re)/hRe;
             qDerivReal[2] = (q.z.re-q0.z.re)/hRe;
 
-            foreach( idx; 0..3) assert(std.math.approxEqual(qDerivCmplx[idx], qDerivReal[idx]), failedUnitTest());
+            foreach( idx; 0..3) {
+                // debug { import std.stdio; writeln("cmplx=", qDerivCmplx[idx], " real=", qDerivReal[idx]); }
+                assert(std.math.isClose(qDerivCmplx[idx], qDerivReal[idx], 1.0e-5, 1.0e-9), failedUnitTest());
+            }
         }
 
         // projection onto a cylinder.
@@ -263,7 +266,7 @@ version(projection_test) {
             qDerivReal[0] = (myp.x.re-myp0.x.re)/hRe;
             qDerivReal[1] = (myp.y.re-myp0.y.re)/hRe;
             qDerivReal[2] = (myp.z.re-myp0.z.re)/hRe;
-            foreach( idx; 0..3) assert(std.math.approxEqual(qDerivCmplx[idx], qDerivReal[idx]), failedUnitTest());
+            foreach( idx; 0..3) assert(std.math.isClose(qDerivCmplx[idx], qDerivReal[idx]), failedUnitTest());
         }
         //
         // Barycentric coordinates for the midpoint of an equilateral triangle.
@@ -272,9 +275,9 @@ version(projection_test) {
         Vector3 p2 = Vector3(0.5, std.math.sin(60.0*std.math.PI/180.0));
         Vector3 p = (p0+p1+p2)/3.0;
         number[3] bcc = barycentricCoords(p, p0, p1, p2);
-        assert(approxEqual(bcc[0].re, 1.0/3.0), failedUnitTest());
-        assert(approxEqual(bcc[1].re, 1.0/3.0), failedUnitTest());
-        assert(approxEqual(bcc[2].re, 1.0/3.0), failedUnitTest());
+        assert(isClose(bcc[0].re, 1.0/3.0), failedUnitTest());
+        assert(isClose(bcc[1].re, 1.0/3.0), failedUnitTest());
+        assert(isClose(bcc[2].re, 1.0/3.0), failedUnitTest());
         assert(!is_outside_triangle(bcc), failedUnitTest());
         // Now move the point down to the bottom edge of the triangle.
         p = Vector3(0.5, 0.0);
@@ -292,10 +295,10 @@ version(projection_test) {
         Vector3 p3 = Vector3(0.0, 1.0);
         p = (p0+p1+p2+p3)/4.0;
         number[4] bcc4 = barycentricCoords(p, p0, p1, p2, p3);
-        assert(approxEqual(bcc4[0].re, 0.25), failedUnitTest());
-        assert(approxEqual(bcc4[1].re, 0.25), failedUnitTest());
-        assert(approxEqual(bcc4[2].re, 0.25), failedUnitTest());
-        assert(approxEqual(bcc4[3].re, 0.25), failedUnitTest());
+        assert(isClose(bcc4[0].re, 0.25), failedUnitTest());
+        assert(isClose(bcc4[1].re, 0.25), failedUnitTest());
+        assert(isClose(bcc4[2].re, 0.25), failedUnitTest());
+        assert(isClose(bcc4[3].re, 0.25), failedUnitTest());
         assert(!is_outside_quad(bcc4), failedUnitTest());
         // Now move the point down to the bottom edge of the square.
         p = Vector3(0.5, 0.0);

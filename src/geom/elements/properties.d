@@ -965,7 +965,7 @@ version(properties_test) {
             assert(approxEqualVectors(dt1_da, Vector3(0.0, 0.0, 0.0)), failedUnitTest());
             assert(approxEqualVectors(dt2_da, Vector3(0.0, 0.0, 0.0)), failedUnitTest());
             // Since, for this triangle, area = 0.5*alpha^^2, we expect darea/dalpha = alpha
-            assert(approxEqual(darea_da, alpha), failedUnitTest());
+            assert(isClose(darea_da, alpha), failedUnitTest());
         }
 
         // Set up a simple quadrilateral for which we can easily compute
@@ -1003,7 +1003,7 @@ version(properties_test) {
             assert(approxEqualVectors(dt1_da, Vector3(0.0, 0.0, 0.0)), failedUnitTest());
             assert(approxEqualVectors(dt2_da, Vector3(0.0, 0.0, 0.0)), failedUnitTest());
             // Since, for this triangle, area = 0.5*alpha^^2, we expect darea/dalpha = alpha
-            assert(approxEqual(darea_da, 2.0*alpha), failedUnitTest());
+            assert(isClose(darea_da, 2.0*alpha), failedUnitTest());
         }
 
         // Build tetrahedron with equilateral triangle (side 1.0) base on xy plane.
@@ -1030,7 +1030,7 @@ version(properties_test) {
             tetrahedron_properties(p0_dash, p1_dash, p2_dash, p3_dash, centroid_dash, volume_dash);
             double dvol_da = volume_dash.im/h;
             dcentroid_da = Vector3(centroid_dash.x.im/h, centroid_dash.y.im/h, centroid_dash.z.im/h);
-            assert(approxEqual(dvol_da, alpha^^2/(2.0*sqrt(2.0))), failedUnitTest());
+            assert(isClose(dvol_da, alpha^^2/(2.0*sqrt(2.0))), failedUnitTest());
             assert(approxEqualVectors(dcentroid_da, Vector3(3.0/8.0+0.25*cos(radians(60)),
                                                             1.0/4.0*sin(radians(60))+1.0/8.0*tan(radians(30)),
                                                             sqrt(6.0)/12.0)),
@@ -1061,7 +1061,7 @@ version(properties_test) {
             wedge_properties(p0_dash, p1_dash, p2_dash, p3_dash, p4_dash, p5_dash, centroid_dash, volume_dash);
             dvol_da = volume_dash.im/h;
             dcentroid_da = Vector3(centroid_dash.x.im/h, centroid_dash.y.im/h, centroid_dash.z.im/h);
-            assert(approxEqual(dvol_da, alpha*sin(radians(60))), failedUnitTest());
+            assert(isClose(dvol_da, alpha*sin(radians(60))), failedUnitTest());
             assert(approxEqualVectors(dcentroid_da, Vector3((1.0/3.0)*(1.0+cos(radians(60))), (1.0/3.0)*sin(radians(60)), 0.0)), failedUnitTest());
         }
 
@@ -1081,7 +1081,7 @@ version(properties_test) {
             pyramid_properties(p0_dash, p1_dash, p2_dash, p3_dash, p4_dash, centroid_dash, volume_dash);
             dvol_da = volume_dash.im/h;
             dcentroid_da = Vector3(centroid_dash.x.im/h, centroid_dash.y.im/h, centroid_dash.z.im/h);
-            assert(approxEqual(dvol_da, 2.0*alpha/3.0), failedUnitTest());
+            assert(isClose(dvol_da, 2.0*alpha/3.0), failedUnitTest());
             // [TODO] centroid sensitivity
         }
 
@@ -1106,7 +1106,7 @@ version(properties_test) {
                             iLen, jLen, kLen);
             dvol_da = volume_dash.im/h;
             dcentroid_da = Vector3(centroid_dash.x.im/h, centroid_dash.y.im/h, centroid_dash.z.im/h);
-            assert(approxEqual(dvol_da, 3.0*alpha^^2), failedUnitTest());
+            assert(isClose(dvol_da, 3.0*alpha^^2), failedUnitTest());
             assert(approxEqualVectors(dcentroid_da, Vector3(0.5, 0.5, 0.5)), failedUnitTest());
         }
 

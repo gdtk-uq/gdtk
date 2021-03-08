@@ -320,9 +320,9 @@ version(polyline_test) {
             double dpmid_da_x = polyline3(0.5).x.im / h;
             double dpmid_da_y = polyline3(0.5).y.im / h;
             double dpmid_da_z = polyline3(0.5).z.im / h;
-            assert(approxEqual(dpmid_da_x,1.0), failedUnitTest());
-            assert(approxEqual(dpmid_da_y,1.0), failedUnitTest());
-            assert(approxEqual(dpmid_da_z,0.0), failedUnitTest());
+            assert(isClose(dpmid_da_x,1.0), failedUnitTest());
+            assert(isClose(dpmid_da_y,1.0), failedUnitTest());
+            assert(isClose(dpmid_da_z,0.0), failedUnitTest());
         }
         return 0;
     }
