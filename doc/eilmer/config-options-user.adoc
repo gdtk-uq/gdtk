@@ -244,6 +244,9 @@ In a typical input script, one might set 10-15 input variables.
   - `'adaptive_hlle_roe'` A blend of Roe's low-dissipation scheme and
      the more dissipative HLLE flux calculator.
 
+  - `'adaptive_ausmdv_asf'` A blend of Summation-by-Parts method of Fisher (high order,
+    low-dissipation scheme) and the ausmdv method.
+
 The default adaptive scheme is a good all-round scheme that uses AUSMDV away from
 shocks and Hanel-Schwane-Seider flux calculator near shocks.
 
@@ -276,11 +279,26 @@ shocks and Hanel-Schwane-Seider flux calculator near shocks.
   representative Mach number for the free stream.
    Used by the `ausm_plus_up` flux calculator.
 
+`config.shock_detector_smoothing`
+ _int_, default = `0` +
+ How many iterations of shock detector averaging. Higher values spread the influence of the shock
+ detector further from the shock, increasing numerical dissipation but providing a smoother
+ transition between flux calculators in adaptive schemes.
+
+`config.frozen_shock_detector` ::
+ _boolean_, default: `false` +
+ If set to true, the shock detector field will be frozen after the number of time steps
+ prescribed by config.shock_detector_freeze_step. Used to prevent flickering of adaptive
+ flux methods between their constituent flux calculators.
+
+`config.shock_detector_freeze_step` ::
+ _int_, default: `1000` +
+ The time step at which the shock detector field will be frozen.
 
 == Viscous effects
 
 `config.viscous` ::
-  _boolean_, default: `false' +
+  _boolean_, default: `false` +
   If set `true`, viscous effects will be included in the simulation.
 
 `config.separate_update_for_viscous_terms` ::
