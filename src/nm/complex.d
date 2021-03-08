@@ -217,7 +217,7 @@ if (isFloatingPoint!T)
         re = r;
         im = 0;
     }
-    
+
     // ASSIGNMENT OPERATORS
 
     // this = complex
@@ -437,7 +437,7 @@ if (isFloatingPoint!T)
         double r = std.math.sqrt(a*a + b*b);
         double theta = arg(this); Complex!double i = complex(0.0, 1.0);
         double logr = std.math.log(to!double(r));
-        re = exp(logr*w+i*theta*w).re; 
+        re = exp(logr*w+i*theta*w).re;
         im = exp(logr*w+i*theta*w).im;
         return this;
     }
@@ -458,7 +458,7 @@ if (isFloatingPoint!T)
         return this;
     }
     */
-    
+
     // complex += numeric,  complex -= numeric
     ref Complex opOpAssign(string op, U : T)(U a)
         if (op == "+" || op == "-")
@@ -570,16 +570,16 @@ if (isFloatingPoint!T)
     assert(cmc.im == c1.im - c2.im);
 
     auto ctc = c1 * c2;
-    assert(approxEqual(abs(ctc), abs(c1)*abs(c2), EPS));
-    assert(approxEqual(arg(ctc), arg(c1)+arg(c2), EPS));
+    assert(isClose(abs(ctc), abs(c1)*abs(c2), EPS));
+    assert(isClose(arg(ctc), arg(c1)+arg(c2), EPS));
 
     auto cdc = c1 / c2;
-    assert(approxEqual(abs(cdc), abs(c1)/abs(c2), EPS));
-    assert(approxEqual(arg(cdc), arg(c1)-arg(c2), EPS));
+    assert(isClose(abs(cdc), abs(c1)/abs(c2), EPS));
+    assert(isClose(arg(cdc), arg(c1)-arg(c2), EPS));
 
     auto cec = c1^^c2;
-    assert(approxEqual(cec.re, 0.11524131979943839881, EPS));
-    assert(approxEqual(cec.im, 0.21870790452746026696, EPS));
+    assert(isClose(cec.re, 0.11524131979943839881, EPS));
+    assert(isClose(cec.im, 0.21870790452746026696, EPS));
 
     // Check complex-real operations.
     double a = 123.456;
@@ -597,12 +597,12 @@ if (isFloatingPoint!T)
     assert(ctr.im == c1.im*a);
 
     auto cdr = c1 / a;
-    assert(approxEqual(abs(cdr), abs(c1)/a, EPS));
-    assert(approxEqual(arg(cdr), arg(c1), EPS));
+    assert(isClose(abs(cdr), abs(c1)/a, EPS));
+    assert(isClose(arg(cdr), arg(c1), EPS));
 
     auto cer = c1^^3.0;
-    assert(approxEqual(abs(cer), abs(c1)^^3, EPS));
-    assert(approxEqual(arg(cer), arg(c1)*3, EPS));
+    assert(isClose(abs(cer), abs(c1)^^3, EPS));
+    assert(isClose(arg(cer), arg(c1)*3, EPS));
 
     auto rpc = a + c1;
     assert(rpc == cpr);
@@ -615,12 +615,12 @@ if (isFloatingPoint!T)
     assert(rtc == ctr);
 
     auto rdc = a / c1;
-    assert(approxEqual(abs(rdc), a/abs(c1), EPS));
-    assert(approxEqual(arg(rdc), -arg(c1), EPS));
+    assert(isClose(abs(rdc), a/abs(c1), EPS));
+    assert(isClose(arg(rdc), -arg(c1), EPS));
 
     rdc = a / c2;
-    assert(approxEqual(abs(rdc), a/abs(c2), EPS));
-    assert(approxEqual(arg(rdc), -arg(c2), EPS));
+    assert(isClose(abs(rdc), a/abs(c2), EPS));
+    assert(isClose(arg(rdc), -arg(c2), EPS));
 
     auto rec1a = 1.0 ^^ c1;
     assert(rec1a.re == 1.0);
@@ -631,26 +631,26 @@ if (isFloatingPoint!T)
     assert(rec2a.im == 0.0);
 
     auto rec1b = (-1.0) ^^ c1;
-    assert(approxEqual(abs(rec1b), std.math.exp(-PI * c1.im), EPS));
+    assert(isClose(abs(rec1b), std.math.exp(-PI * c1.im), EPS));
     auto arg1b = arg(rec1b);
     /* The argument _should_ be PI, but floating-point rounding error
      * means that in fact the imaginary part is very slightly negative.
      */
-    assert(approxEqual(arg1b, PI, EPS) || approxEqual(arg1b, -PI, EPS));
+    assert(isClose(arg1b, PI, EPS) || isClose(arg1b, -PI, EPS));
 
     auto rec2b = (-1.0) ^^ c2;
-    assert(approxEqual(abs(rec2b), std.math.exp(-2 * PI), EPS));
-    assert(approxEqual(arg(rec2b), PI_2, EPS));
+    assert(isClose(abs(rec2b), std.math.exp(-2 * PI), EPS));
+    assert(isClose(arg(rec2b), PI_2, EPS));
 
     auto rec3a = 0.79 ^^ complex(6.8, 5.7);
     auto rec3b = complex(0.79, 0.0) ^^ complex(6.8, 5.7);
-    assert(approxEqual(rec3a.re, rec3b.re, EPS));
-    assert(approxEqual(rec3a.im, rec3b.im, EPS));
+    assert(isClose(rec3a.re, rec3b.re, EPS));
+    assert(isClose(rec3a.im, rec3b.im, EPS));
 
     auto rec4a = (-0.79) ^^ complex(6.8, 5.7);
     auto rec4b = complex(-0.79, 0.0) ^^ complex(6.8, 5.7);
-    assert(approxEqual(rec4a.re, rec4b.re, EPS));
-    assert(approxEqual(rec4a.im, rec4b.im, EPS));
+    assert(isClose(rec4a.re, rec4b.re, EPS));
+    assert(isClose(rec4a.im, rec4b.im, EPS));
 
     auto rer = a ^^ complex(2.0, 0.0);
     auto rcheck = a ^^ 2.0;
@@ -663,13 +663,13 @@ if (isFloatingPoint!T)
     rcheck = (-a) ^^ 2.0;
     assert(feqrel(rer2.re, rcheck) == double.mant_dig);
     assert(isIdentical(rer2.re, rcheck));
-    assert(approxEqual(rer2.im, 0.0, EPS));
+    assert(isClose(rer2.im, 0.0, EPS));
 
     auto rer3 = (-a) ^^ complex(-2.0, 0.0);
     rcheck = (-a) ^^ (-2.0);
     assert(feqrel(rer3.re, rcheck) == double.mant_dig);
     assert(isIdentical(rer3.re, rcheck));
-    assert(approxEqual(rer3.im, 0.0, EPS));
+    assert(isClose(rer3.im, 0.0, EPS));
 
     auto rer4 = a ^^ complex(-2.0, 0.0);
     rcheck = a ^^ (-2.0);
@@ -681,10 +681,10 @@ if (isFloatingPoint!T)
     foreach (i; 0 .. 6)
     {
         auto cei = c1^^i;
-        assert(approxEqual(abs(cei), abs(c1)^^i, EPS));
+        assert(isClose(abs(cei), abs(c1)^^i, EPS));
         // Use cos() here to deal with arguments that go outside
         // the (-pi,pi] interval (only an issue for i>3).
-        assert(approxEqual(std.math.cos(arg(cei)), std.math.cos(arg(c1)*i), EPS));
+        assert(isClose(std.math.cos(arg(cei)), std.math.cos(arg(c1)*i), EPS));
     }
 
     // Check operations between different complex types.
@@ -701,22 +701,22 @@ if (isFloatingPoint!T)
     auto c2c = c2;
 
     c1c /= c1;
-    assert(approxEqual(c1c.re, 1.0, EPS));
-    assert(approxEqual(c1c.im, 0.0, EPS));
+    assert(isClose(c1c.re, 1.0, EPS));
+    assert(isClose(c1c.im, 0.0, EPS));
 
     c1c = c1;
     c1c /= c2;
-    assert(approxEqual(c1c.re, 0.588235, EPS));
-    assert(approxEqual(c1c.im, -0.352941, EPS));
+    assert(isClose(c1c.re, 0.588235, EPS));
+    assert(isClose(c1c.im, -0.352941, EPS));
 
     c2c /= c1;
-    assert(approxEqual(c2c.re, 1.25, EPS));
-    assert(approxEqual(c2c.im, 0.75, EPS));
+    assert(isClose(c2c.re, 1.25, EPS));
+    assert(isClose(c2c.im, 0.75, EPS));
 
     c2c = c2;
     c2c /= c2;
-    assert(approxEqual(c2c.re, 1.0, EPS));
-    assert(approxEqual(c2c.im, 0.0, EPS));
+    assert(isClose(c2c.re, 1.0, EPS));
+    assert(isClose(c2c.im, 0.0, EPS));
 }
 
 @safe pure nothrow unittest
@@ -805,16 +805,16 @@ bool isNaN(Complex!double z) @safe pure nothrow
     else
         return false;
 }
- 
+
 @nogc
 Complex!double pow(Complex!double z, int w) @safe pure nothrow
 {
     Complex!double p  = complex(z.re, z.im);
     foreach ( i; 0..w-1) z *= p;
-    
-    return z; 
+
+    return z;
 }
-        
+
 @nogc
 Complex!double pow(Complex!double z, Complex!double w) @safe pure nothrow
 {
@@ -823,7 +823,7 @@ Complex!double pow(Complex!double z, Complex!double w) @safe pure nothrow
     double r = std.math.sqrt(a*a + b*b);
     double theta = arg(z); Complex!double i = complex(0.0, 1.0);
     double logr = std.math.log(to!double(r));
-    return exp(logr*w+i*theta*w); 
+    return exp(logr*w+i*theta*w);
 }
 
 @nogc
@@ -838,7 +838,7 @@ Complex!double pow(Complex!double z, double w) @safe pure nothrow
 }
 
 @nogc
-Complex!double pow(double z, Complex!double w) @safe pure nothrow 
+Complex!double pow(double z, Complex!double w) @safe pure nothrow
 {
     double a = z; double b = 0.0;
     double c = w.re; double d = w.im;
@@ -849,23 +849,23 @@ Complex!double pow(double z, Complex!double w) @safe pure nothrow
 }
 
 @nogc
-Complex!double fabs(Complex!double z) @safe pure nothrow 
+Complex!double fabs(Complex!double z) @safe pure nothrow
 {
     // The standard library abs() function does not satisfy analyticity, hence will not yield correct sensitivity
     // information when used in the flow solver. Below is an implementation that imposes analyticity, referenced from
     // An Automated Method for Sensitivity Analysis using Complex Variables (Martins et al, 2000).
     // A thorough explanation of the reasoning behind this implementation is provided in Martins' thesis,
     // A Coupled-Adjoint Method For High-Fidelity Aero-Structural Optimization (pg. 42, 2003).
-    
+
     double x = z.re;
     if ( x < 0.0)
         return -z;
     else
-        return z; 
+        return z;
 }
 
 @nogc
-Complex!double exp(Complex!double z) @safe pure nothrow 
+Complex!double exp(Complex!double z) @safe pure nothrow
 {
     double x = z.re; double y = z.im;
     double e = std.math.exp(x);
@@ -873,7 +873,7 @@ Complex!double exp(Complex!double z) @safe pure nothrow
 }
 
 @nogc
-Complex!double sqrt(Complex!double z) @safe pure nothrow 
+Complex!double sqrt(Complex!double z) @safe pure nothrow
 {
     double x = z.re; double y = z.im;
     double zarg = arg(z);
@@ -882,7 +882,7 @@ Complex!double sqrt(Complex!double z) @safe pure nothrow
 }
 
 @nogc
-Complex!double sin(Complex!double z) @safe pure nothrow 
+Complex!double sin(Complex!double z) @safe pure nothrow
 {
     // The definition provided in ref.:
     // An Automated Method for Sensitivity Analysis using Complex Variables (Martins et al, 2000)
@@ -896,7 +896,7 @@ Complex!double sin(Complex!double z) @safe pure nothrow
 }
 
 @nogc
-Complex!double cos(Complex!double z) @safe pure nothrow 
+Complex!double cos(Complex!double z) @safe pure nothrow
 {
     // Use same ref. as sin() for consistency: https://proofwiki.org/wiki/Cosine_of_Complex_Number
     Complex!double i = complex(0, 1);
@@ -905,18 +905,18 @@ Complex!double cos(Complex!double z) @safe pure nothrow
  }
 
 @nogc
-Complex!double tan(Complex!double z) @safe pure nothrow 
+Complex!double tan(Complex!double z) @safe pure nothrow
 {
     double x = z.re; double y = z.im;
     Complex!double numer;
     numer = complex( std.math.sin(x)*std.math.cosh(y), std.math.cos(x)*std.math.sinh(y));
     Complex!double denom;
     denom = complex( std.math.cos(x)*std.math.cosh(y), -std.math.sin(x)*std.math.sinh(y));
-    return numer/denom; 
+    return numer/denom;
 }
 
 @nogc
-Complex!double log(Complex!double z) @safe pure nothrow 
+Complex!double log(Complex!double z) @safe pure nothrow
 {
     double x = z.re; double y = z.im;
     double zabs = std.math.sqrt(x*x + y*y);
@@ -924,7 +924,7 @@ Complex!double log(Complex!double z) @safe pure nothrow
 }
 
 @nogc
-Complex!double log10(Complex!double z) @safe pure nothrow 
+Complex!double log10(Complex!double z) @safe pure nothrow
 {
     double ln10 = std.math.log(10.0);
     return log(z)/ln10;
@@ -945,7 +945,7 @@ Complex!double cosh(Complex!double z) @safe pure nothrow
 }
 
 @nogc
-Complex!double tanh(Complex!double z) @safe pure nothrow 
+Complex!double tanh(Complex!double z) @safe pure nothrow
 {
     Complex!double zsinh = sinh(z);
     Complex!double zcosh = cosh(z);
@@ -973,7 +973,7 @@ Complex!double fmax(Complex!double z1, double z2) @safe pure nothrow
 }
 
 @nogc
-Complex!double fmax(double z1, Complex!double z2) @safe pure nothrow 
+Complex!double fmax(double z1, Complex!double z2) @safe pure nothrow
 {
     double x1 = z1; double x2 = z2.re;
     if (x1 >= x2)
@@ -984,7 +984,7 @@ Complex!double fmax(double z1, Complex!double z2) @safe pure nothrow
 
 
 @nogc
-Complex!double fmin(Complex!double z1, Complex!double z2) @safe pure nothrow 
+Complex!double fmin(Complex!double z1, Complex!double z2) @safe pure nothrow
 {
     double x1 = z1.re; double x2 = z2.re;
     if (x1 <= x2)
@@ -994,7 +994,7 @@ Complex!double fmin(Complex!double z1, Complex!double z2) @safe pure nothrow
 }
 
 @nogc
-Complex!double fmin(double z1, Complex!double z2) { @safe pure nothrow 
+Complex!double fmin(double z1, Complex!double z2) { @safe pure nothrow
     double x1 = z1; double x2 = z2.re;
     if (x1 <= x2)
         return complex(z1);
@@ -1003,7 +1003,7 @@ Complex!double fmin(double z1, Complex!double z2) { @safe pure nothrow
 }
 
 @nogc
-Complex!double fmin(Complex!double z1, double z2) @safe pure nothrow  
+Complex!double fmin(Complex!double z1, double z2) @safe pure nothrow
 {
     double x1 = z1.re; double x2 = z2;
     if (x1 <= x2)
@@ -1014,7 +1014,7 @@ Complex!double fmin(Complex!double z1, double z2) @safe pure nothrow
 
 /*
 @nogc
-Complex!double sgn(Complex!double z1, Complex!double z2) @safe pure nothrow 
+Complex!double sgn(Complex!double z1, Complex!double z2) @safe pure nothrow
 {
     double x1 = z1.re; double x2 = z2.re;
     if (x2 >= 0.0)
@@ -1025,7 +1025,7 @@ Complex!double sgn(Complex!double z1, Complex!double z2) @safe pure nothrow
 */
 
 @nogc
-Complex!double copysign(Complex!double z1, Complex!double z2) @safe pure nothrow 
+Complex!double copysign(Complex!double z1, Complex!double z2) @safe pure nothrow
 {
     double x1 = z1.re; double x2 = z2.re;
     if (x2 >= 0.0)
@@ -1035,7 +1035,7 @@ Complex!double copysign(Complex!double z1, Complex!double z2) @safe pure nothrow
 }
 
 @nogc
-Complex!double copysign(double z1, Complex!double z2) @safe pure nothrow 
+Complex!double copysign(double z1, Complex!double z2) @safe pure nothrow
 {
     double x1 = z1.re; double x2 = z2.re;
     if (x2 >= 0.0)
@@ -1045,14 +1045,14 @@ Complex!double copysign(double z1, Complex!double z2) @safe pure nothrow
 }
 
 @nogc
-Complex!double asin(Complex!double z) @safe pure nothrow 
+Complex!double asin(Complex!double z) @safe pure nothrow
 {
     Complex!double i = complex(0.0, 1.0);
     return -i * log( i*z + sqrt(1.0-z*z) );
 }
 
 @nogc
-Complex!double acos(Complex!double z) @safe pure nothrow 
+Complex!double acos(Complex!double z) @safe pure nothrow
 {
     // Corrected with +ve i
     // An Automated Method for Sensitivity Analysis using Complex Variables (Martins et al, 2000).
@@ -1061,14 +1061,14 @@ Complex!double acos(Complex!double z) @safe pure nothrow
 }
 
 @nogc
-Complex!double atan(Complex!double z) @safe pure nothrow 
+Complex!double atan(Complex!double z) @safe pure nothrow
 {
     Complex!double i = complex(0.0, 1.0);
     return 1.0/(2.0*i) * log( (i-z) / (i+z) );
 }
 
 @nogc
-Complex!double atan2(Complex!double z, Complex!double w) @safe pure nothrow 
+Complex!double atan2(Complex!double z, Complex!double w) @safe pure nothrow
 {
     // ref.: https://www.medcalc.org/manual/atan2_function.php - extension of this method to complex numbers proves problematic.
     // Below implementation provided from WolframAlpha
@@ -1119,9 +1119,9 @@ T sqAbs(T)(Complex!T z) @safe pure nothrow @nogc
     assert(sqAbs(complex(0.0)) == 0.0);
     assert(sqAbs(complex(1.0)) == 1.0);
     assert(sqAbs(complex(0.0, 1.0)) == 1.0);
-    assert(approxEqual(sqAbs(complex(1.0L, -2.0L)), 5.0L));
-    assert(approxEqual(sqAbs(complex(-3.0L, 1.0L)), 10.0L));
-    assert(approxEqual(sqAbs(complex(1.0f,-1.0f)), 2.0f));
+    assert(isClose(sqAbs(complex(1.0L, -2.0L)), 5.0L));
+    assert(isClose(sqAbs(complex(-3.0L, 1.0L)), 10.0L));
+    assert(isClose(sqAbs(complex(1.0f,-1.0f)), 2.0f));
 }
 
 /// ditto
@@ -1136,8 +1136,8 @@ if (isFloatingPoint!T)
     import std.math;
     assert(sqAbs(0.0) == 0.0);
     assert(sqAbs(-1.0) == 1.0);
-    assert(approxEqual(sqAbs(-3.0L), 9.0L));
-    assert(approxEqual(sqAbs(-5.0f), 25.0f));
+    assert(isClose(sqAbs(-3.0L), 9.0L));
+    assert(isClose(sqAbs(-5.0f), 25.0f));
 }
 
 
@@ -1198,8 +1198,8 @@ Complex!(CommonType!(T, U)) fromPolar(T, U)(T modulus, U argument)
 {
     import std.math;
     auto z = fromPolar(std.math.sqrt(2.0), PI_4);
-    assert(approxEqual(z.re, 1.0L, real.epsilon));
-    assert(approxEqual(z.im, 1.0L, real.epsilon));
+    assert(isClose(z.re, 1.0L, real.epsilon));
+    assert(isClose(z.im, 1.0L, real.epsilon));
 }
 
 // removed (KD, 2018)
@@ -1400,12 +1400,12 @@ Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
     auto c2 = Complex!double(0.5, 2.0);
 
     auto c1s = sqrt(c1);
-    assert(approxEqual(c1s.re, 1.09868411));
-    assert(approxEqual(c1s.im, 0.45508986));
+    assert(isClose(c1s.re, 1.09868411));
+    assert(isClose(c1s.im, 0.45508986));
 
     auto c2s = sqrt(c2);
-    assert(approxEqual(c2s.re, 1.1317134));
-    assert(approxEqual(c2s.im, 0.8836155));
+    assert(isClose(c2s.re, 1.1317134));
+    assert(isClose(c2s.im, 0.8836155));
 }
 */
 // Issue 10881: support %f formatting of complex numbers
@@ -1442,14 +1442,14 @@ Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
     assert(complex(1.2, 3.4).toString() == "1.2+3.4i");
 }
 
-// end of version(complex_numbers)  
+// end of version(complex_numbers)
 
 } else {
     // Presume that we are building for double_numbers
     // and we do not need all the complex numbers machinery,
     // just enough to define Complex!double
 
-import std.traits;    
+import std.traits;
 
 struct Complex(T)
 if (isFloatingPoint!T)
@@ -1482,14 +1482,14 @@ version(complex_number_test) {
         Complex!double ze = "5.0";
         assert(ze.re == 5.0, failedUnitTest());
         assert(ze.im == 0.0, failedUnitTest());
-        
+
         // complex number reference solutions from Python 2.7.12 cmath library.
         //
         // define some test values
         Complex!double  z = complex(1.2, -3.4);
-        Complex!double  w = complex(-5.3, 1.0); 
+        Complex!double  w = complex(-5.3, 1.0);
         double p = 5.1;
-              
+
         // opCmp tests
         // Complex Cmp Complex
         assert( (z > w), failedUnitTest());
@@ -1514,7 +1514,7 @@ version(complex_number_test) {
         cpow = z^^(w);
         assert(approxEqualNumbers(cpow, result), failedUnitTest());
 
-        // pow(Complex, Double)        
+        // pow(Complex, Double)
         result = complex(-10.12, -8.16);
         cpow = pow(z, 2.0);
         assert(approxEqualNumbers(cpow, result), failedUnitTest());
@@ -1556,7 +1556,7 @@ version(complex_number_test) {
         result = complex(-3.209883040054176, 0.8484263372940289);
         Complex!double cexp = exp(z);
         assert(approxEqualNumbers(cexp, result), failedUnitTest());
- 
+
         // Square root tests
         result = complex(1.5500889128472581, -1.096711282759503);
         Complex!double csqrt;
@@ -1567,7 +1567,7 @@ version(complex_number_test) {
         // z^^0.5
         csqrt = z^^0.5;
         assert(approxEqualNumbers(csqrt, result), failedUnitTest());
-        
+
         // Trigonometric tests
         // sin(Complex)
         result = complex(13.979408806017995, -5.422815472463402);
@@ -1593,7 +1593,7 @@ version(complex_number_test) {
         result = complex(-1.7505385298731442, 0.3857294182289409);
         Complex!double ccosh = cosh(z);
         assert(approxEqualNumbers(ccosh, result), failedUnitTest());
-        
+
         // tanh(Complex)
         result = complex(0.8505969575493737, -0.0768887100657046);
         Complex!double ctanh = tanh(z);
@@ -1608,7 +1608,7 @@ version(complex_number_test) {
         result = complex(1.2430532747803715, 1.990465064891069);
         Complex!double cacos = acos(z);
         assert(approxEqualNumbers(cacos, result), failedUnitTest());
-        
+
         // atan(Complex)
         result = complex(1.4720985468699563, -0.2652179901713157);
         Complex!double catan = atan(z);
@@ -1616,10 +1616,10 @@ version(complex_number_test) {
 
         // atan2(Complex, Complex)
         // cmath has no atan2 function, reference result taken from WolframAlpha
-        result = complex(2.70088, 0.548252); 
+        result = complex(2.70088, 0.548252);
         Complex!double catan2 = atan2(z, w);
         assert(approxEqualNumbers(catan2, result), failedUnitTest());
-        
+
         // Natural log test
         result = complex(1.2824746787307684, -1.2315037123408519);
         Complex!double clog = log(z);
@@ -1631,12 +1631,12 @@ version(complex_number_test) {
         assert(approxEqualNumbers(clog10, result), failedUnitTest());
 
         // Fmax test
-        result = complex(1.2, -3.4);     
+        result = complex(1.2, -3.4);
         Complex!double cmax = fmax(z, w);
         assert(approxEqualNumbers(cmax, result), failedUnitTest());
 
         // Fmin test
-        result = complex(-5.3, 1.0);     
+        result = complex(-5.3, 1.0);
         Complex!double cmin = fmin(z, w);
         assert(approxEqualNumbers(cmin, result), failedUnitTest());
 
@@ -1658,14 +1658,15 @@ version(complex_number_test) {
         double res1 = 18.600812734259759;
         Complex!double f1(Complex!double x) { return x^^(9.0/2.0); }
         double deriv1 = f1(xp).im/h.im;
-        assert( std.math.approxEqual(deriv1, res1), failedUnitTest());
+        assert( std.math.isClose(deriv1, res1), failedUnitTest());
 
         // Example 2: F(x) = e^^(x)/(sin(x)^^3+cos(x)^^3) at x0 = 1.5
-        double res2 = 3.62203;
+        double res2 = 3.6220337007163259;
         Complex!double f2(Complex!double x) { return exp(x) / ( sin(x)^^3 + cos(x)^^3 ); }
         double deriv2 = f2(xp).im/h.im;
-        assert( std.math.approxEqual(deriv2, res2), failedUnitTest());
-        
+        // debug { import std.stdio; writefln("deriv2=%.18f res2=%.18f", deriv2, res2); }
+        assert( std.math.isClose(deriv2, res2), failedUnitTest());
+
         return 0;
     }
 }

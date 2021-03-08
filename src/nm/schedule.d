@@ -60,12 +60,12 @@ version(schedule_test) {
     import std.conv;
     int main() {
         auto mysched = new Schedule([0.0, 1.0, 1.5, 2.0], [1.0, 1.0, 0.5, 0.0]);
-        assert(approxEqual(mysched.get_value(-1.0), 1.0), failedUnitTest());
-        assert(approxEqual(mysched.interpolate_value(-1.2), 1.0), failedUnitTest());
-        assert(approxEqual(mysched.get_value(1.2), 1.0), failedUnitTest());
-        assert(approxEqual(mysched.interpolate_value(1.2), 0.8), failedUnitTest());
-        assert(approxEqual(mysched.get_value(2.2), 0.0), failedUnitTest());
-        assert(approxEqual(mysched.interpolate_value(2.2), 0.0), failedUnitTest());
+        assert(isClose(mysched.get_value(-1.0), 1.0), failedUnitTest());
+        assert(isClose(mysched.interpolate_value(-1.2), 1.0), failedUnitTest());
+        assert(isClose(mysched.get_value(1.2), 1.0), failedUnitTest());
+        assert(isClose(mysched.interpolate_value(1.2), 0.8), failedUnitTest());
+        assert(isClose(mysched.get_value(2.2), 0.0), failedUnitTest());
+        assert(isClose(mysched.interpolate_value(2.2), 0.0), failedUnitTest());
         return 0;
     }
 }
