@@ -97,9 +97,9 @@ double r0_r(double M, double g=1.4)
 unittest {
     double M = 2.4;
     double g = 1.4;
-    assert(approxEqual(T0_T(M,g), 2.152), "Total temperature fail");
-    assert(approxEqual(p0_p(M,g), 14.620), "Total pressure fail");
-    assert(approxEqual(r0_r(M,g), 6.7937), "Total density fail");
+    assert(isClose(T0_T(M,g), 2.152), "Total temperature fail");
+    assert(isClose(p0_p(M,g), 14.620), "Total pressure fail");
+    assert(isClose(r0_r(M,g), 6.7937), "Total density fail");
 }
 
 //------------------------------------------------------------------
@@ -227,10 +227,10 @@ double pitot_p(double p1, double M1, double g=1.4)
 unittest {
     double M = 2.0;
     double g = 1.4;
-    assert(approxEqual(m2_shock(M,g), 0.5774), "Mach number after shock fail");
-    assert(approxEqual(p2_p1(M,g), 4.50), "Pressure ratio across shock fail");
-    assert(approxEqual(T2_T1(M,g), 1.687), "Temperature ratio across shock fail");
-    assert(approxEqual(r2_r1(M,g), 2.667), "Density ratio across shock fail");
+    assert(isClose(m2_shock(M,g), 0.5774), "Mach number after shock fail");
+    assert(isClose(p2_p1(M,g), 4.50), "Pressure ratio across shock fail");
+    assert(isClose(T2_T1(M,g), 1.687), "Temperature ratio across shock fail");
+    assert(isClose(r2_r1(M,g), 2.667), "Density ratio across shock fail");
 }
 
 //------------------------------------------------------------------
@@ -334,11 +334,11 @@ double p0_p0star(double M, double g=1.4)
 unittest {
     double M = 2.0;
     double g = 1.4;
-    assert(approxEqual(T0_T0star(M,g), 0.7934), "Rayleigh-line total T0_T0star fail");
-    assert(approxEqual(T_Tstar(M,g), 0.5289), "Rayleigh-line static T_Tstar fail");
-    assert(approxEqual(p_pstar(M,g), 0.3636), "Rayleigh-line static p_pstar fail");
-    assert(approxEqual(r_rstar(M,g), 0.6875), "Rayleigh-line static p_pstar fail");
-    assert(approxEqual(M_Rayleigh(T0_T0star(M,g),g), M), "Rayleigh-line inverse fail");
+    assert(isClose(T0_T0star(M,g), 0.7934), "Rayleigh-line total T0_T0star fail");
+    assert(isClose(T_Tstar(M,g), 0.5289), "Rayleigh-line static T_Tstar fail");
+    assert(isClose(p_pstar(M,g), 0.3636), "Rayleigh-line static p_pstar fail");
+    assert(isClose(r_rstar(M,g), 0.6875), "Rayleigh-line static p_pstar fail");
+    assert(isClose(M_Rayleigh(T0_T0star(M,g),g), M), "Rayleigh-line inverse fail");
 }
 
 //------------------------------------------------------------------
@@ -461,7 +461,7 @@ double MachAngle(double M)
 unittest {
     double M = 2.4;
     double g = 1.4;
-    assert(approxEqual(PM1(M,g), 0.6413), "Prandtl-Meyer fail");
+    assert(isClose(PM1(M,g), 0.6413), "Prandtl-Meyer fail");
     try {
         PM1(0.8,g);
     } catch (GasFlowException e) {
@@ -469,14 +469,14 @@ unittest {
         assert(found_subsonic, "Prandtl-Meyer failed to catch subsonic M");
     }
     double nu = 0.6413479572;
-    assert(approxEqual(PM2(nu,g), 2.4), "Inverse Prandtl-Meyer fail");
+    assert(isClose(PM2(nu,g), 2.4), "Inverse Prandtl-Meyer fail");
     try {
         PM2(-0.5,g);
     } catch (GasFlowException e) {
         auto found_negative = (indexOf(e.toString(), "negative") != -1);
         assert(found_negative, "Prandtl-Meyer failed to catch negative nu");
     }
-    assert(approxEqual(MachAngle(M), 0.430), "Mach angle fail");
+    assert(isClose(MachAngle(M), 0.430), "Mach angle fail");
     try {
         MachAngle(0.8);
     } catch (GasFlowException e) {
@@ -707,16 +707,16 @@ unittest {
     double g = 1.4;
     double beta = 44.0 * PI / 180.0;
     double theta = 14.0 * PI / 180.0;
-    assert(approxEqual(beta_obl(M, theta, g), beta), "Oblique shock, beta from theta fail");
-    assert(approxEqual(beta_obl2(M, 2.088, g), beta), "Oblique shock, beta from p2_p1 fail");
-    assert(approxEqual(theta_obl(M, beta, g), theta), "Oblique shock, theta from beta fail");
-    assert(approxEqual(M2_obl(M, beta, theta, g), 1.482), "Oblique shock, M2 after shock fail");
-    assert(approxEqual(T2_T1_obl(M, beta, g), 1.249), "Oblique shock, temperature ratio fail");
-    assert(approxEqual(p2_p1_obl(M, beta, g), 2.088), "Oblique shock, pressure ratio fail");
-    assert(approxEqual(r2_r1_obl(M, beta, g), 1.673), "Oblique shock, density ratio fail");
-    assert(approxEqual(p02_p01_obl(M, beta, g), 0.9608), "Oblique shock, total-pressure fail");
-    assert(approxEqual(Vn2_Vn1_obl(M, beta, g), 0.598), "Oblique shock, normal velocity ratio fail");
-    assert(approxEqual(V2_V1_obl(M, beta, g),0.828), "Oblique shock, absolute velocity ratio fail");
+    assert(isClose(beta_obl(M, theta, g), beta), "Oblique shock, beta from theta fail");
+    assert(isClose(beta_obl2(M, 2.088, g), beta), "Oblique shock, beta from p2_p1 fail");
+    assert(isClose(theta_obl(M, beta, g), theta), "Oblique shock, theta from beta fail");
+    assert(isClose(M2_obl(M, beta, theta, g), 1.482), "Oblique shock, M2 after shock fail");
+    assert(isClose(T2_T1_obl(M, beta, g), 1.249), "Oblique shock, temperature ratio fail");
+    assert(isClose(p2_p1_obl(M, beta, g), 2.088), "Oblique shock, pressure ratio fail");
+    assert(isClose(r2_r1_obl(M, beta, g), 1.673), "Oblique shock, density ratio fail");
+    assert(isClose(p02_p01_obl(M, beta, g), 0.9608), "Oblique shock, total-pressure fail");
+    assert(isClose(Vn2_Vn1_obl(M, beta, g), 0.598), "Oblique shock, normal velocity ratio fail");
+    assert(isClose(V2_V1_obl(M, beta, g),0.828), "Oblique shock, absolute velocity ratio fail");
     try {
         beta_obl(M,40.*PI/180.,g);
     } catch (Exception e) {
@@ -939,10 +939,10 @@ unittest {
     double[] results = theta_cone(V1, p1, T1, beta);
     double theta_c=results[0];  double V_c=results[1];
     double p_c=results[2]; double T_c=results[3];
-    assert(approxEqual(theta_c*180.0/PI, 19.96), "cone flow deflection angle fail");
-    assert(approxEqual((p_c - p1)/(0.5*rho1*V1*V1), 0.386), "cone pressure coefficient fail");
-    assert(approxEqual(beta_cone(V1, p1, T1, 20.0*PI/180)*180/PI, 49.0),
+    assert(isClose(theta_c*180.0/PI, 19.96), "cone flow deflection angle fail");
+    assert(isClose((p_c - p1)/(0.5*rho1*V1*V1), 0.386), "cone pressure coefficient fail");
+    assert(isClose(beta_cone(V1, p1, T1, 20.0*PI/180)*180/PI, 49.0),
            "cone shock angle from deflection, V, p and T fail");
-    assert(approxEqual(beta_cone2(M1, 20.0*PI/180)*180/PI, 49.0),
+    assert(isClose(beta_cone2(M1, 20.0*PI/180)*180/PI, 49.0),
            "cone shock angle from deflection and M fail");
 }
