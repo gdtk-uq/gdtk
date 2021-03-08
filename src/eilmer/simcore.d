@@ -2946,7 +2946,8 @@ void gasdynamic_explicit_increment_with_fixed_grid()
     }
     // We've put this detector step here because it needs the ghost-cell data
     // to be current, as it should be just after a call to apply_convective_bc().
-    if (GlobalConfig.do_shock_detect) detect_shocks(gtl, ftl);
+    if ((GlobalConfig.do_shock_detect) && ((!GlobalConfig.frozen_shock_detector) ||
+               (GlobalConfig.shock_detector_freeze_step > SimState.step))) detect_shocks(gtl, ftl);
 
     foreach (blk; parallel(localFluidBlocksBySize,1)) {
         if (blk.active) { blk.convective_flux_phase0(allow_high_order_interpolation, gtl); }

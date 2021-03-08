@@ -158,6 +158,8 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_bool_field("do_shock_detect", "do_shock_detect"));
     mixin(get_bool_field("strict_shock_detector", "strict_shock_detector"));
     mixin(get_int_field("shock_detector_smoothing", "shock_detector_smoothing"));
+    mixin(get_bool_field("frozen_shock_detector", "frozen_shock_detector"));
+    mixin(get_int_field("shock_detector_freeze_step", "shock_detector_freeze_step"));
     //
     mixin(get_bool_field("artificial_compressiblity", "artificial_compressibility"));
     mixin(get_double_field("ac_alpha", "ac_alpha"));
@@ -353,6 +355,8 @@ extern(C) int configGet(lua_State* L)
     case "do_shock_detect": lua_pushboolean(L, GlobalConfig.do_shock_detect); break;
     case "strict_shock_detector": lua_pushboolean(L, GlobalConfig.strict_shock_detector); break;
     case "shock_detector_smoothing": lua_pushnumber(L, GlobalConfig.shock_detector_smoothing); break;
+    case "frozen_shock_detector": lua_pushboolean(L, GlobalConfig.frozen_shock_detector); break;
+    case "shock_detector_freeze_step": lua_pushnumber(L, GlobalConfig.shock_detector_freeze_step); break;
     case "artificial_compressibility": lua_pushboolean(L, GlobalConfig.artificial_compressibility); break;
     case "ac_alpha": lua_pushnumber(L, GlobalConfig.ac_alpha); break;
         //
