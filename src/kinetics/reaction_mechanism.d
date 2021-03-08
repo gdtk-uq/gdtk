@@ -88,13 +88,13 @@ public:
         eval_rates(conc, rates);
         gmodel.rates2source(rates, source);
     }
-    
+
     @nogc
     final number k_f(int ir)
     {
         return _reactions[ir].k_f;
     }
-    @nogc 
+    @nogc
     final number k_b(int ir)
     {
         return _reactions[ir].k_b;
@@ -121,10 +121,10 @@ public:
      +
      + This selection algorithm first came to my attention in the paper by Young and Boris.
      + In this implementation, we use the modification suggested by Mott.
-     + 
+     +
      + References:
      + Young and Boris (1977)
-     + A Numerical Technique for Solving Stiff Ordinary Differential Equations 
+     + A Numerical Technique for Solving Stiff Ordinary Differential Equations
      + Associated with the Chemical Kinetics Reactive-Flow Problem
      + The Journal of Physical Chemistry, 81:25 pp. 2424--2427
      +
@@ -132,7 +132,7 @@ public:
      + New Quasi-Steady-State and Partial-Equilibrium Methods for
      + Integrating Chemically Reacting Systems.
      + PhD Thesis, The University of Michigan
-     +/ 
+     +/
     @nogc
     final double estimateStepSize(in number[] conc)
     {
@@ -142,7 +142,7 @@ public:
         immutable double EPS1 = 1.0e-3;
         immutable double CHEM_STEP_UPPER_INITIAL_LIMIT = 1.0e-10;
         immutable double CHEM_STEP_LOWER_INITIAL_LIMIT = 1.0e-15;
-        
+
         double min_dt = 1.0e6; // something massive to get us started
         double dt;
         eval_split_rates(conc, _q, _L);
@@ -196,7 +196,7 @@ private:
  +              .......................
  +         [n]={... reaction n info ...}
  +       }
- +/ 
+ +/
 ReactionMechanism createReactionMechanism(lua_State* L, GasModel gmodel, double T_lower_limit, double T_upper_limit)
 {
     auto n_species = gmodel.n_species;
@@ -237,7 +237,7 @@ version(reaction_mechanism_test) {
         rates.length = 3;
         reacMech.eval_rate_constants(gd);
         reacMech.eval_rates(conc, rates);
-        assert(approxEqual([-643.9303, -643.9303, 1287.8606], rates, 1.0e-6), failedUnitTest());
+        assert(isClose([-643.9303, -643.9303, 1287.8606], rates, 1.0e-6), failedUnitTest());
 
         return 0;
     }

@@ -3,7 +3,7 @@
  * Authors: Rowan G., Katrina Sklavos, Christopher Chang and Peter J.
  *
  * Edited by Christopher C. to include V-V transfer
- * 
+ *
  * This is a 10-level vibrationally-specific model for nitrogen
  * as descrbied in:
  *
@@ -31,7 +31,7 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
     // Keep a reference to the specific gas model
     // so that we can dip into it for specialized data.
     VibSpecificNitrogen gm;
-    
+
     this(string fname, GasModel gmodel)
     {
         super(gmodel); // hang on to a reference to the gas model
@@ -41,12 +41,12 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
 
     @nogc
     override void opCall(GasState Q, double tInterval,
-                         ref double dtChemSuggest, ref double dtThermSuggest, 
+                         ref double dtChemSuggest, ref double dtThermSuggest,
                          ref number[maxParams] params)
     {
         int nsteps = 10;
         double dt = tInterval/nsteps;
-        number vvRepRate;            // V-V Replenishing rate   
+        number vvRepRate;            // V-V Replenishing rate
 	number vvDepRate;            // V-V Depletion Rate
 	number vtRhoDot0, vvRhoDot0; // First level density time derivatives
 	number vtRhoDotL, vvRhoDotL; //Last level density time derivatives
@@ -55,14 +55,14 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
         //
         number rho2M = Q.rho*Q.rho/gm._M_N2;
         foreach(step; 0 .. nsteps) {
-            // Replenishing and depleting equations 
+            // Replenishing and depleting equations
             foreach(imode; 1 .. numVibLevels-1) {
                 vtRhoDot = rho2M *
                     (BCoeff(imode,Q.T)*Q.massf[imode-1] -
-                     (FCoeff(imode,Q.T) + BCoeff(imode+1,Q.T)) * Q.massf[imode] + 
+                     (FCoeff(imode,Q.T) + BCoeff(imode+1,Q.T)) * Q.massf[imode] +
                      FCoeff(imode+1,Q.T)*Q.massf[imode+1]);
-                //V-V Exchange Reaction velocities 
-                vvRepRate = 0.0; 
+                //V-V Exchange Reaction velocities
+                vvRepRate = 0.0;
                 vvDepRate = 0.0;
                 foreach (jmode; 2 .. numVibLevels) {
                     vvRepRate += rho2M *
@@ -79,8 +79,8 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
             }
             // Ground state and upper-most state treated specially.
             vtRhoDot0 = rho2M *
-                ((-BCoeff(1,Q.T)*Q.massf[0]) + (FCoeff(1,Q.T)*Q.massf[1])); 
-            vvRepRate = 0.0; 
+                ((-BCoeff(1,Q.T)*Q.massf[0]) + (FCoeff(1,Q.T)*Q.massf[1]));
+            vvRepRate = 0.0;
             foreach (jmode; 2 .. numVibLevels) {
                 vvRepRate += rho2M *
                     (vvFCoeff(1,jmode,Q.T)*Q.massf[1]*Q.massf[jmode-1] -
@@ -91,8 +91,8 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
             Q.massf[0] = rho_0 / Q.rho;
             vtRhoDotL = rho2M *
                 (BCoeff(numVibLevels-1,Q.T)*Q.massf[numVibLevels-2] +
-                 (-FCoeff(numVibLevels-1,Q.T))*Q.massf[numVibLevels-1]); 
-            vvDepRate = 0.0; 
+                 (-FCoeff(numVibLevels-1,Q.T))*Q.massf[numVibLevels-1]);
+            vvDepRate = 0.0;
             foreach (jmode; 2 .. numVibLevels) {
                 vvDepRate += rho2M *
                     (vvFCoeff(numVibLevels-1,jmode,Q.T)*Q.massf[numVibLevels-1]*Q.massf[jmode-1] -
@@ -109,7 +109,7 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
         _gmodel.update_sound_speed(Q);
     } // end opCall
 
-     
+
     // [TODO] Indices need checking
     @nogc
     number FCoeff(int i, number T) const
@@ -118,11 +118,11 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
         number ft = 1e-6 * Avogadro_number * exp(-3.24093 - (140.69597/T^^0.2));
         number delta_t = 0.26679 - (6.99237e-5 * T) + (4.70073e-9 * T^^2);
         number f = (I-1) * ft * exp((I-2)*delta_t);
-        return f;     
-    }   
+        return f;
+    }
 
     @nogc
-    number vvFCoeff(int i, int j, number T) const 
+    number vvFCoeff(int i, int j, number T) const
     {
         number vvdelta_t = exp((-6.8/sqrt(T))*abs(i-j));
 	number f = 2.5e-20*Avogadro_number*(i-1)*(j-1)*(T/300.0)^^(3.0/2.0)
@@ -139,10 +139,10 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
     }
 
     @nogc
-    number vvBCoeff(int i, int j, number T) const 
+    number vvBCoeff(int i, int j, number T) const
     {
         number B = vvFCoeff(i,j,T)*exp(-1.0*(gm._vib_energy[i] - gm._vib_energy[i-1] +
                                              gm._vib_energy[j-1] - gm._vib_energy[j])/(gm.kB*T));
 	return B;
     }
-} // end class 
+} // end class

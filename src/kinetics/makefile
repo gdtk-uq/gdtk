@@ -65,7 +65,9 @@ clean:
 	- rm -rf $(BUILD_DIR)/*
 	- cd $(LUA_DIR); make clean
 	- cd $(CEQ_DIR); make clean
-	- rm -f $(GAS_DIR)/ideal_air_fortran.mod $(GAS_DIR)/ideal_air_fortran.o
+	- rm -f $(GAS_DIR)/ideal_air_fortran.mod \
+		$(GAS_DIR)/ideal_air_fortran.o \
+		$(GAS_DIR)/libgasf.a
 
 $(LIBLUA):
 	cd $(LUA_DIR); make $(PLATFORM) local

@@ -712,7 +712,7 @@ version(chemistry_update_test) {
         conc0 = [c0, c0, 0.0];
         double numVal1 = numericalEstimate(dt, tInterval, conc0, rkfStep);
         double err1 = analyticalVal - numVal1;
-        assert(approxEqual(1.96809, err0/err1, 1.0e-4), failedUnitTest());
+        assert(isClose(1.96809, err0/err1, 1.0e-4), failedUnitTest());
 
         /* 2. Test alpha-QSS step
          * We'll check that the order of accuracy for the method
@@ -732,9 +732,9 @@ version(chemistry_update_test) {
         conc0 = [c0, c0, 0.0];
         numVal1 = numericalEstimate(dt, tInterval, conc0, alphaStep);
         err1 = analyticalVal - numVal1;
-        assert(approxEqual(7.1420197868416215, numVal1, 1.0e-4), failedUnitTest());
-        assert(approxEqual(4.001, err0/err1, 1.0e-4), failedUnitTest());
-        
+        assert(isClose(7.1420197868416215, numVal1, 1.0e-4), failedUnitTest());
+        assert(isClose(4.001, err0/err1, 1.0e-4), failedUnitTest());
+
         /* 3. Test the complete update algorithm as used
          *    by the flow solver. This might be stretching a
          *    bit what a *unit* is. In this test, we'll exercise
@@ -750,7 +750,7 @@ version(chemistry_update_test) {
         double[] conc;
         conc.length = 3;
         gmodel.massf2conc(gd, conc);
-        assert(approxEqual(7.14201983840, conc[2], 1.0e-9), failedUnitTest());
+        assert(isClose(7.14201983840, conc[2], 1.0e-9), failedUnitTest());
 
         return 0;
     }

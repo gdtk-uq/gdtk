@@ -139,7 +139,7 @@ public:
         lua_getfield(L, -1, "k0");
         _k0 = new ArrheniusRateConstant(L);
         lua_pop(L, 1);
-        
+
         _efficiencies = efficiencies.dup();
         _gmodel = gmodel;
     }
@@ -213,7 +213,7 @@ public:
             }
             lua_pop(L, 1);
         }
-        
+
         _efficiencies = efficiencies.dup();
         _gmodel = gmodel;
     }
@@ -232,7 +232,7 @@ public:
         number p_r = k0*M/kInf;
         number log_p_r = log10(fmax(p_r, essentially_zero));
         number T = Q.T;
-        
+
         if ( !_Fcent_supplied ) {
             _Fcent = (1.0 - _a)*exp(-T/_T3) + _a*exp(-T/_T1);
             if ( _T2_supplied ) {
@@ -245,7 +245,7 @@ public:
         number n = 0.75 - 1.27*log_F_cent;
         double d = 0.14;
 
-        number numer = log_p_r + c; 
+        number numer = log_p_r + c;
         number denom = n - d*numer;
         number frac = numer/denom;
         number log_F = log_F_cent / (1.0 + frac*frac);
@@ -263,7 +263,7 @@ private:
 
 /++
  + A pressure-dependent rate constant in the form given by
- + Yungster and Rabinowitz. 
+ + Yungster and Rabinowitz.
  +
  + Yungster and Rabinowitz cite Troe-Golden for this form
  + of rate constant, however, when I traced back to original
@@ -279,7 +279,7 @@ private:
 
 class YRRateConstant : RateConstant {
 public:
-    this(ArrheniusRateConstant kInf, ArrheniusRateConstant k0, double a, double b, double c, 
+    this(ArrheniusRateConstant kInf, ArrheniusRateConstant k0, double a, double b, double c,
          Tuple!(int, double)[] efficiencies, GasModel gmodel)
     {
         _kInf = kInf.dup();
@@ -410,7 +410,8 @@ version(rate_constant_test) {
         auto rc = new ArrheniusRateConstant(1.94e14*1e-6, 0.0, 20620.0);
         auto gd = new GasState(1, 1);
         gd.T = 700.0;
-        assert(approxEqual(3.10850956e-5, rc.eval(gd), 1.0e-6), failedUnitTest());
+        // debug { import std.stdio;  writeln("rc=", rc.eval(gd)); } // rc=3.12412e-05
+        assert(isClose(3.10850956e-5, rc.eval(gd), 1.0e-2), failedUnitTest());
         // Test 2. Read rate constant parameters for nitrogen dissociation
         // from Lua input and compute rate constant at 4000.0 K
         auto L = init_lua_State();
@@ -418,7 +419,8 @@ version(rate_constant_test) {
         lua_getglobal(L, "rate");
         auto rc2 = new ArrheniusRateConstant(L);
         gd.T = 4000.0;
-        assert(approxEqual(0.00159439, rc2.eval(gd), 1.0e-6), failedUnitTest());
+        // debug { import std.stdio;  writeln("rc2=", rc2.eval(gd)); } // rc2=0.00159439
+        assert(isClose(0.00159439, rc2.eval(gd), 1.0e-5), failedUnitTest());
 
         return 0;
     }

@@ -31,7 +31,7 @@ import kinetics.thermochemical_reactor;
 import kinetics.two_temperature_argon_kinetics;
 
 final class UpdateArgonFracWithIdeal : ThermochemicalReactor {
-    
+
     this(string fname, GasModel gmodel)
     {
         super(gmodel); // hang on to a reference to the gas model
@@ -47,10 +47,10 @@ final class UpdateArgonFracWithIdeal : ThermochemicalReactor {
             throw new ThermochemicalReactorUpdateException("Need a 2T argon gas but did not get one.");
         }
     }
-    
+
     @nogc
     override void opCall(GasState Q, double tInterval,
-                         ref double dtChemSuggest, ref double dtThermSuggest, 
+                         ref double dtChemSuggest, ref double dtThermSuggest,
                          ref number[maxParams] params)
     {
         bool with_ideal = Q.massf[0] > massf_tiny;
@@ -59,7 +59,7 @@ final class UpdateArgonFracWithIdeal : ThermochemicalReactor {
         number internal_energy = _gmodel.internal_energy(Q); // remains fixed
         if (with_argon) {
             // Abstract the reacting argon species and do the update on them in isolation.
-            // Fixed volume, density and energy process 
+            // Fixed volume, density and energy process
             Q_argon.rho = argon_massf*Q.rho;
             Q_argon.T = Q.T;
             Q_argon.T_modes[0] = Q.T_modes[0];
@@ -98,11 +98,11 @@ private:
 version(two_temperature_argon_with_ideal_gas_test) {
     import std.stdio;
     import util.msg_service;
-    import std.math : approxEqual;
+    import std.math : isClose;
     import gas.two_temperature_argon_plus_ideal;
     void main() {
         // [TODO] Put a meaningful test in this place.
-        assert(approxEqual(1.0, 1.0, 1.0e-3), failedUnitTest());
+        assert(isClose(1.0, 1.0, 1.0e-3), failedUnitTest());
     } // end main()
 } // end two_temperature_argon_with_ideal_gas_test
 

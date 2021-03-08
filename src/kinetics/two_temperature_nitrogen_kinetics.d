@@ -45,7 +45,7 @@ final class VibRelaxNitrogen : ThermochemicalReactor {
 
     @nogc
     override void opCall(GasState Q, double tInterval,
-                         ref double dtChemSuggest, ref double dtThermSuggest, 
+                         ref double dtChemSuggest, ref double dtThermSuggest,
                          ref number[maxParams] params)
     {
         number tau = _relaxTimeCalc(Q.T, Q.p);

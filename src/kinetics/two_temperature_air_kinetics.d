@@ -3,7 +3,7 @@
  *
  * This module implements the two-temperature version
  * of the high-temperature air model described in
- * the report by Gupta et al. 
+ * the report by Gupta et al.
  *
  * Author: Rowan G.
  */
@@ -64,7 +64,7 @@ final class TwoTemperatureAirKinetics : ThermochemicalReactor {
         number uTotal = Q.u + Q.u_modes[0];
         // 1. Perform chemistry update.
         _chemUpdate(Q, tInterval, dtChemSuggest, dummyDouble, params);
-        // Changing mass fractions does not change the temperature 
+        // Changing mass fractions does not change the temperature
         // of the temperatures associated with internal structure.
         // Now we can adjust the transrotational energy, given that
         // some of it was redistributed to other internal structure energy bins.
@@ -105,7 +105,7 @@ private:
     number _T_sh, _Tv_sh;
     double[] _A;
     number[] _molef;
-    number[] _numden; 
+    number[] _numden;
     double[] _particleMass;
     double[][] _mu;
     int[][] _reactionsByMolecule;
@@ -167,7 +167,7 @@ private:
         foreach (isp; _airModel.molecularSpecies) {
             _A[isp] = A_MW[_airModel.species_name(isp)];
         }
-        
+
         _mu.length = nSpecies;
         foreach (isp; 0 .. nSpecies) _mu[isp].length = nSpecies;
         foreach (isp; 0 .. nSpecies) {
@@ -212,7 +212,7 @@ private:
             h = 0.01*tInterval;
         else
             h = dtSuggest;
-        
+
         // 2. Now do the interesting stuff, increment energy change
         int cycle = 0;
         int attempt = 0;
@@ -238,7 +238,7 @@ private:
                      * We'll also balk if the ODE step wants to reduce
                      * the stepsize on a successful step. This is because
                      * if the step was successful there shouldn't be any
-                     * need (stability wise or accuracy related) to warrant 
+                     * need (stability wise or accuracy related) to warrant
                      * a reduction. Thus if the step is successful and
                      * the dtSuggest comes back lower, let's just set
                      * h as the original value for the successful step.
@@ -262,7 +262,7 @@ private:
                     break;
                 }
                 else { // in the case of failure...
-                    /* We now need to make some decision about 
+                    /* We now need to make some decision about
                      * what timestep to attempt next.
                      */
                     h /= DT_REDUCTION_FACTOR;
@@ -347,7 +347,7 @@ private:
         // 3. Combine M-W and Park values.
         number tauV = tauMW + tauP;
         return tauV;
-        
+
         /* RJG, 2018-12-22
            Remove this correction for present. It is causing issues.
            Need to do some deeper research on this correction.
@@ -358,7 +358,7 @@ private:
         return 1.0/tauInv;
            END: RJG, 2018-12-22
         */
-        
+
     }
 
     @nogc
@@ -483,4 +483,3 @@ static this()
     A_MW["O2+"] = 129.0;
     A_MW["NO+"] = 168.0;
 }
-

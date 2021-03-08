@@ -49,7 +49,7 @@ public:
     @property @nogc number k_b() const { return _k_b; }
     @property @nogc number K_eq() const { return _K_eq; }
     @property @nogc ref int[] participants() { return _participants; }
-    
+
     this(RateConstant forward, RateConstant backward, GasModel gmodel)
     {
         _gmodel = gmodel;
@@ -75,7 +75,7 @@ public:
     abstract Reaction dup();
 
     @nogc abstract void eval_equilibrium_constant(in GasState Q);
-        
+
     @nogc final void eval_rate_constants(in GasState Q)
     {
         immutable double EPS = 1.0e-16; // To prevent divide by zero
@@ -125,7 +125,7 @@ public:
 protected:
     @nogc abstract number eval_forward_rate(in number[] conc);
     @nogc abstract number eval_backward_rate(in number[] conc);
-            
+
 private:
     RateConstant _forward, _backward;
     number _k_f, _k_b; // Storage of computed rate constants
@@ -214,10 +214,10 @@ public:
     override void eval_equilibrium_constant(in GasState Q)
     {
         _Qw.T = Q.T;
-	if (_gmodel.n_modes >= 1) _Qw.T_modes[] = Q.T; // equilibrium constant evaluated at thermal equilibrium 
+	if (_gmodel.n_modes >= 1) _Qw.T_modes[] = Q.T; // equilibrium constant evaluated at thermal equilibrium
         _K_eq = compute_equilibrium_constant(_gmodel, _Qw, _participants, _nu);
     }
-    
+
     @nogc
     override number production(int isp) const
     {
@@ -232,11 +232,11 @@ public:
     @nogc
     override number loss(int isp) const
     {
-        if ( _nu[isp] > 0.0 ) 
+        if ( _nu[isp] > 0.0 )
             return _nu[isp]*_w_b;
         else if ( _nu[isp] < 0.0 )
             return -_nu[isp]*_w_f;
-        else 
+        else
             return to!number(0.0);
     }
 protected:
@@ -337,7 +337,7 @@ public:
     override void eval_equilibrium_constant(in GasState Q)
     {
         _Qw.T = Q.T;
-	if (_gmodel.n_modes >= 1) _Qw.T_modes[] = Q.T; // equilibrium constant evaluated at thermal equilibrium 
+	if (_gmodel.n_modes >= 1) _Qw.T_modes[] = Q.T; // equilibrium constant evaluated at thermal equilibrium
         _K_eq = compute_equilibrium_constant(_gmodel, _Qw, _participants, _nu);
     }
 
@@ -355,11 +355,11 @@ public:
     @nogc
     override number loss(int isp) const
     {
-        if ( _nu[isp] > 0.0 ) 
+        if ( _nu[isp] > 0.0 )
             return _nu[isp]*_w_b;
         else if ( _nu[isp] < 0.0 )
             return -_nu[isp]*_w_f;
-        else 
+        else
             return to!number(0.0);
     }
 protected:
@@ -467,7 +467,7 @@ Reaction createReaction(lua_State* L, GasModel gmodel)
                                       prodIdx, prodCoeffs, n_species);
     case "anonymous_collider":
         // We need to get table of efficiencies also
-        return new AnonymousColliderReaction(frc, brc, gmodel, 
+        return new AnonymousColliderReaction(frc, brc, gmodel,
                                              reacIdx, reacCoeffs,
                                              prodIdx, prodCoeffs,
                                              efficiencies, n_species);
@@ -490,18 +490,18 @@ version(reaction_test) {
                                                [2], [2.0], 3);
         reaction.eval_rate_constants(gd);
         reaction.eval_rates(conc);
-        assert(approxEqual(0.0, reaction.production(0)), failedUnitTest());
-        assert(approxEqual(0.0, reaction.production(1)), failedUnitTest());
-        assert(approxEqual(1287.8606, reaction.production(2), 1.0e-6), failedUnitTest());
-        assert(approxEqual(643.9303, reaction.loss(0), 1.0e-6), failedUnitTest());
-        assert(approxEqual(643.9303, reaction.loss(1), 1.0e-6), failedUnitTest());
-        assert(approxEqual(0.0, reaction.loss(2)), failedUnitTest());
+        assert(isClose(0.0, reaction.production(0)), failedUnitTest());
+        assert(isClose(0.0, reaction.production(1)), failedUnitTest());
+        assert(isClose(1287.8606, reaction.production(2), 1.0e-6), failedUnitTest());
+        assert(isClose(643.9303, reaction.loss(0), 1.0e-6), failedUnitTest());
+        assert(isClose(643.9303, reaction.loss(1), 1.0e-6), failedUnitTest());
+        assert(isClose(0.0, reaction.loss(2)), failedUnitTest());
 
         auto reaction2 = new AnonymousColliderReaction(rc, rc, gm, [0, 1], [1., 1.],
                                                        [2], [2.], [tuple(1, 1.0)], 3);
         reaction2.eval_rate_constants(gd);
         reaction2.eval_rates(conc);
-        
+
         // Try a reaction with backwards rate computed from equilibrium constant.
         auto reaction3 = new ElementaryReaction(rc, null, gm, [0, 1], [1., 1.],
                                                 [2], [2.], 3);

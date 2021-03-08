@@ -4,7 +4,7 @@
  *
  * This module provides an integrator for the master
  * equation for an electronic state-specific system
- * 
+ *
  */
 
 module kinetics.electronically_specific_kinetics;
@@ -45,7 +45,7 @@ enum ResultOfStep { success, failure };
 
 final class ElectronicallySpecificKinetics : ThermochemicalReactor {
     this(string listOfFiles, GasModel gmodel)
-    {   
+    {
 
         auto L_filenames = init_lua_State();
         doLuaFile(L_filenames,listOfFiles);
@@ -59,10 +59,10 @@ final class ElectronicallySpecificKinetics : ThermochemicalReactor {
         _n_N_species = getInt(L_filenames,LUA_GLOBALSINDEX,"number_N_species");
         _n_O_species = getInt(L_filenames,LUA_GLOBALSINDEX,"number_O_species");
         _n_elec_species = _n_N_species + _n_O_species;
-        
+
         auto L_TT = init_lua_State();
         doLuaFile(L_TT,twotemperaturegmodel);
-        
+
         // Initialise much of the macro species data
         auto macro_gmodel = new TwoTemperatureAir(L_TT);
         _macroAirModel = cast(TwoTemperatureAir) macro_gmodel;
@@ -101,7 +101,7 @@ final class ElectronicallySpecificKinetics : ThermochemicalReactor {
     override void opCall(GasState Q, double tInterval,
                          ref double dtChemSuggest, ref double dtThermSuggest,
                          ref number[maxParams] params)
-    {   
+    {
         // This section is the macro species updates
         //First, create test macro species gas state, _macro_Q from given state Q
         Update_Macro_State(_macro_Q, Q);
@@ -111,13 +111,13 @@ final class ElectronicallySpecificKinetics : ThermochemicalReactor {
         // 1. Perform chemistry update.
 
         _macro_chemUpdate(_macro_Q, tInterval, dtChemSuggest, dummyDouble, params);
-        
+
         debug {
             // writeln("--- 1 ---");
             // writefln("uTotal= %.12e u= %.12e uv= %.12e", uTotal, _macro_Q.u, _macro_Q.u_modes[0]);
             // writefln("T= %.12e  Tv= %.12e", _macro_Q.T, _macro_Q.T_modes[0]);
         }
-        // Changing mass fractions does not change the temperature 
+        // Changing mass fractions does not change the temperature
         // of the temperatures associated with internal structure.
         // Now we can adjust the transrotational energy, given that
         // some of it was redistributed to other internal structure energy bins.
@@ -142,7 +142,7 @@ final class ElectronicallySpecificKinetics : ThermochemicalReactor {
         // These values won't change during the energy update
         // since the composition does not change
         // during energy exhange.
-        
+
         _macroAirModel.massf2molef(_macro_Q, _macro_molef);
         _macroAirModel.massf2numden(_macro_Q, _macro_numden);
         try {
@@ -161,7 +161,7 @@ final class ElectronicallySpecificKinetics : ThermochemicalReactor {
         Update_Electronic_State(Q,_macro_Q);
         //update the electronic distribution
 
-        //Remember, gas model always initialised in this order: 
+        //Remember, gas model always initialised in this order:
         //N, O, N2, O2, NO, N+, O+, N2+, O2+, NO+, e-
         //input in electronic solver takes the form
         //[N1, N2, N3 .... Nn, N+, O1, O2, O3 ... On, O+, e-]
@@ -177,7 +177,7 @@ private:
     ElectronicUpdate ES_N, ES_O;
 
     //macro definitions
-    
+
     GasState _macro_Qinit, _macro_Q0, _macro_Q;
     ChemistryUpdate _macro_chemUpdate;
     number[] _macro_molef;
@@ -256,7 +256,7 @@ private:
         foreach (isp; _macroAirModel.molecularSpecies) {
             _A[isp] = A_MW[_macroAirModel.species_name(isp)];
         }
-        
+
         _mu.length = nSpecies;
         foreach (isp; 0 .. nSpecies) _mu[isp].length = nSpecies;
         foreach (isp; 0 .. nSpecies) {
@@ -300,7 +300,7 @@ private:
             h = 0.01*tInterval;
         else
             h = dtSuggest;
-        
+
         // 2. Now do the interesting stuff, increment energy change
         int cycle = 0;
         int attempt = 0;
@@ -326,7 +326,7 @@ private:
                      * We'll also balk if the ODE step wants to reduce
                      * the stepsize on a successful step. This is because
                      * if the step was successful there shouldn't be any
-                     * need (stability wise or accuracy related) to warrant 
+                     * need (stability wise or accuracy related) to warrant
                      * a reduction. Thus if the step is successful and
                      * the dtSuggest comes back lower, let's just set
                      * h as the original value for the successful step.
@@ -350,7 +350,7 @@ private:
                     break;
                 }
                 else { // in the case of failure...
-                    /* We now need to make some decision about 
+                    /* We now need to make some decision about
                      * what timestep to attempt next.
                      */
                     h /= DT_REDUCTION_FACTOR;
@@ -433,7 +433,7 @@ private:
         number tauP = 1.0/(sigma_s*cBar_s*nd);
         // 3. Combine M-W and Park values.
         number tauV = tauMW + tauP;
-        return tauV;      
+        return tauV;
         /* RJG, 2018-12-22
            Remove this correction for present. It is causing issues.
            Need to do some deeper research on this correction.
@@ -554,10 +554,10 @@ private:
     }
 
     //electronic functions
-    
+
     @nogc
     void update_input_from_numden(number[] elec_numden, number[] full_numden)
-    {   
+    {
         foreach(int i;0 .. _n_N_species) { //number density in state solver in #/cm^3
             elec_numden[i] = full_numden[i] / 1e6;
         }
@@ -585,7 +585,7 @@ private:
     }
 
 
-    @nogc 
+    @nogc
     number energyInNoneq(GasState Q)
     {
         return to!number(0);
@@ -713,7 +713,7 @@ version(electronically_specific_kinetics_test) {
         gd.massf[] = 0;
         gd.massf[16] = 0.78;
         gd.massf[16 + 1] = 0.22;
-        
+
         gd.p = 21478.7;
         gd.T = 25000.9;
         gd.T_modes[0] = 20000.0;
@@ -741,7 +741,7 @@ version(electronically_specific_kinetics_test) {
         foreach(number eachmassf;gd.massf) {
             massfsum += eachmassf;
         }
-        assert(approxEqual(massfsum, 1.0, 1e-2), failedUnitTest());
+        assert(isClose(massfsum, 1.0, 1e-2), failedUnitTest());
 
 
 
@@ -793,8 +793,8 @@ public:
     override void opCall(GasState Q, double tInterval,
                          ref double dtChemSuggest, ref double dtThermSuggest,
                          ref number[maxParams] params)
-    {   
-        
+    {
+
         //  Process for kinetics update is as follows
         //  1. Calculate initial energy in higher electronic states
         //  2. Pass mass fraction to number density vector and convert to #/cm^3 for the solver
@@ -803,11 +803,11 @@ public:
         //  5. Call molecule update with state Q --> updates numden vector
         //  6. Convert number density vector to #/m^3 and pass back to Q.massf
         //  8. Calculate final energy in higher electronic states --> update u_modes[0] --> update thermo
-        
-        // 1. 
+
+        // 1.
         initialEnergy = energyInNoneq(Q);
-        
-        // 2. 
+
+        // 2.
         foreach(int i; 0 .. _gmodel.n_species){ //give massf values for the required species
             _numden[i] = Q.massf[i];
         }
@@ -817,28 +817,28 @@ public:
             _numden_input[i] = _numden[i] / 1e6;
         }
 
-        // 3. 
+        // 3.
         Electronic_Solve(_numden_input, _numden_output, Q.T_modes[0], tInterval, dtChemSuggest);
-        // 4. 
+        // 4.
         foreach (int i; 0 .. _gmodel.n_species - 2) {//convert back to number density in #/m^3
             _numden[i] = _numden_output[i] * 1e6;
-        } 
+        }
 
         foreach(int i; 0 .. _gmodel.n_species){ //convert numden to mol/cm^3
             _numden[i] = _numden[i] / (Avogadro_number*1e6);
         }
 
-        // 5. 
+        // 5.
         Molecule_Update(Q, tInterval);
-        // 6. 
+        // 6.
         foreach(int i; 0 .. _gmodel.n_species){ //convert mol/cm^3 to numden
             _numden[i] = _numden[i] * Avogadro_number*1e6;
         }
         _gmodel.numden2massf(_numden,Q);
-        // 8. 
+        // 8.
         finalEnergy = energyInNoneq(Q);
         Q.u -= finalEnergy-initialEnergy;
-        _gmodel.update_thermo_from_rhou(Q);     
+        _gmodel.update_thermo_from_rhou(Q);
     }
 
 private:
@@ -877,7 +877,7 @@ private:
                             [1.0, 4.150e+22, -1.50, 113100.00],
                             [1.0, 1.920e+17, -0.50, 113100.00],
                             [1.0, 1.920e+17, -0.50, 113100.00]];
-    
+
     double[][] ArrN2_br = [[2.5, 1.090e+16, -0.50, 0.0],
                             [1.0, 2.320e+21, -1.50, 0.0],
                             [1.0, 1.090e+16, -0.50, 0.0],
@@ -899,7 +899,7 @@ private:
         number rate_coef(int i){
             return ArrN2_fr[i][0]*ArrN2_fr[i][1]*(Q.T^^ArrN2_fr[i][2])*exp(-ArrN2_fr[i][3]/Q.T);
         }
-        
+
         N_sum = 0.0;
         O_sum = 0.0;
         foreach(int i; 0 .. NInum) {
@@ -908,7 +908,7 @@ private:
         foreach(int i; NInum+1 .. NInum+1+OInum) {
             O_sum += _numden[i];
         }
-        
+
         return rate_coef(0)*_numden[N2ind]*_numden[N2ind] + rate_coef(1)*_numden[N2ind]*N_sum + 
                 rate_coef(2)*_numden[N2ind]*_numden[O2ind] + rate_coef(3)*_numden[N2ind]*O_sum;
     }
@@ -918,7 +918,7 @@ private:
         number rate_coef(int i){
             return ArrN2_br[i][0]*ArrN2_br[i][1]*(Q.T^^ArrN2_br[i][2])*exp(-ArrN2_br[i][3]/Q.T);
         }
-        
+
         N_sum = 0.0;
         O_sum = 0.0;
         foreach(int i; 0 .. NInum) {
@@ -937,7 +937,7 @@ private:
         number rate_coef(int i){
             return ArrO2_fr[i][0]*ArrO2_fr[i][1]*(Q.T^^ArrO2_fr[i][2])*exp(-ArrO2_fr[i][3]/Q.T);
         }
-        
+
         N_sum = 0.0;
         O_sum = 0.0;
         foreach(int i; 0 .. NInum) {
@@ -946,8 +946,8 @@ private:
         foreach(int i; NInum+1 .. NInum+1+OInum) {
             O_sum += _numden[i];
         }
-        
-        return rate_coef(0)*_numden[O2ind]*_numden[N2ind] + rate_coef(1)*_numden[O2ind]*N_sum + 
+
+        return rate_coef(0)*_numden[O2ind]*_numden[N2ind] + rate_coef(1)*_numden[O2ind]*N_sum +
                 rate_coef(2)*_numden[O2ind]*_numden[O2ind] + rate_coef(3)*_numden[O2ind]*O_sum;
     }
     @nogc
@@ -956,7 +956,7 @@ private:
         number rate_coef(int i){
             return ArrO2_br[i][0]*ArrO2_br[i][1]*(Q.T^^ArrO2_br[i][2])*exp(-ArrO2_br[i][3]/Q.T);
         }
-        
+
         N_sum = 0.0;
         O_sum = 0.0;
         foreach(int i; 0 .. NInum) {
@@ -965,13 +965,13 @@ private:
         foreach(int i; NInum+1 .. NInum+1+OInum) {
             O_sum += _numden[i];
         }
-        
-        return rate_coef(0)*O_sum*O_sum*_numden[N2ind] + rate_coef(1)*O_sum*O_sum*N_sum + 
+
+        return rate_coef(0)*O_sum*O_sum*_numden[N2ind] + rate_coef(1)*O_sum*O_sum*N_sum +
                 rate_coef(2)*O_sum*O_sum*_numden[O2ind] + rate_coef(3)*O_sum*O_sum*O_sum;
     }
     @nogc
-    number N2_rate(GasState Q) 
-    {   
+    number N2_rate(GasState Q)
+    {
         return N2_fr(Q) - N2_br(Q);
     }
     @nogc
@@ -993,7 +993,7 @@ private:
         }
     }
 
-    @nogc number energyInNoneq(const GasState Q)  
+    @nogc number energyInNoneq(const GasState Q)
     {
         number uNoneq = 0.0;
         foreach (int isp; 0 .. _gmodel.n_species) {
@@ -1025,7 +1025,7 @@ private:
 
     @nogc
     void PopulateRateFits(string Nfilename, string Ofilename)
-    {   
+    {
         debug{
             double[][] N_rate_fit = Import_2D(Nfilename);
             double[][] O_rate_fit = Import_2D(Ofilename);
@@ -1048,9 +1048,9 @@ version(electronically_specific_kinetics_test) {
 }
 */
 /*
-version(electronically_specific_kinetics_test) 
+version(electronically_specific_kinetics_test)
 {
-    int main() 
+    int main()
     {
         import util.msg_service;
 
@@ -1068,9 +1068,9 @@ version(electronically_specific_kinetics_test)
         // gd.massf[19] = 0.74082290750449; //N2
         // gd.massf[20] = 0.21155752733244; //O2
         // gd.massf[18] = 1.0 - (gd.massf[0] + gd.massf[9] + gd.massf[19] + gd.massf[20]); //tiny massf for free electron
-        // gd.massf = [0.0313603, 0.00492971, 0.000741705, 1.06916e-06, 4.90114e-07, 
-        //                 2.46998e-07, 9.58454e-08, 6.6456e-07, 6.41328e-06, 0.010005, 
-        //                 0.000565079, 8.59624e-06, 2.58411e-07, 9.00322e-08, 5.80925e-08, 
+        // gd.massf = [0.0313603, 0.00492971, 0.000741705, 1.06916e-06, 4.90114e-07,
+        //                 2.46998e-07, 9.58454e-08, 6.6456e-07, 6.41328e-06, 0.010005,
+        //                 0.000565079, 8.59624e-06, 2.58411e-07, 9.00322e-08, 5.80925e-08,
         //                 3.67871e-08, 9.06483e-08, 4.16313e-07, 1.4773e-08, 0.740823, 0.211558];
         gd.massf[] = 0;
         gd.massf[gm.n_species-3] = 1e-8;
@@ -1101,7 +1101,7 @@ version(electronically_specific_kinetics_test)
         foreach(number eachmassf;gd.massf) {
             massfsum += eachmassf;
         }
-        assert(approxEqual(massfsum, 1.0, 1e-2), failedUnitTest());
+        assert(isClose(massfsum, 1.0, 1e-2), failedUnitTest());
 
         return 0;
 

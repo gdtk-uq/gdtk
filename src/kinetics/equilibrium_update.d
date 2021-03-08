@@ -28,16 +28,16 @@ import kinetics.thermochemical_reactor;
 import ceq;
 
 final class EquilibriumUpdate : ThermochemicalReactor {
-    
+
     this(string fname, GasModel gmodel)
     {
         super(gmodel); // hang on to a reference to the gas model
         // We may need to pick a number of pieces out of the file.
         eqcalc = new EquilibriumCalculator(fname);
     }
-    
+
     override void opCall(GasState Q, double tInterval,
-                         ref double dtChemSuggest, ref double dtThermSuggest, 
+                         ref double dtChemSuggest, ref double dtThermSuggest,
                          ref number[maxParams] params)
     {
         // Since the internal energy and density in the (isolated) reactor is fixed,
@@ -61,7 +61,7 @@ class EquilibriumCalculator {
        D version of pyeq's equilibrium calculator.
        Rather than have the code here duplicated in separate reactor and gas model
        classes, all of the ceq machinery is encapulated in this class which can be
-       instantiated whereever it is needed. 
+       instantiated whereever it is needed.
 
        @author: Nick Gibbons
     */
@@ -95,12 +95,12 @@ class EquilibriumCalculator {
     }
 
 version(complex_numbers){
-    
-    @nogc void set_massf_from_pT(GasState Q) 
+
+    @nogc void set_massf_from_pT(GasState Q)
     {
         throw new Error("Do not use with complex numbers.");
     }
-    
+
     @nogc void set_massf_and_T_from_rhou(GasState Q)
     {
         throw new Error("Do not use with complex numbers.");
@@ -122,14 +122,14 @@ version(complex_numbers){
     }
 
 } else {
-    @nogc void set_massf_from_pT(GasState Q) 
+    @nogc void set_massf_from_pT(GasState Q)
     {
         massf2molef(Q.massf, M, X0);
         int error = ceq.pt(Q.p,Q.T,X0ptr,nsp,nel,lewisptr,Mptr,aptr,X1ptr,0);
         if (error!=0) throw new GasModelException("ceq.pt convergence failure");
         molef2massf(X1, M, Q.massf);
     }
-    
+
     @nogc void set_massf_and_T_from_rhou(GasState Q)
     {
         massf2molef(Q.massf, M, X0);
@@ -255,12 +255,12 @@ private:
     void compile_element_set(double[string][] element_map, ref string[] _element_set){
         /*
         Get an alphabetical list of all the elements in the complete set of species
-        Inputs: 
+        Inputs:
              element_map : array of associative arrays mapping species to elements
         Outputs:
             elements : list of elements in the entire system
         */
-    
+
         foreach(e; element_map){
             foreach(key; e.keys()){
                 if (!_element_set.canFind(key)) _element_set ~= key;
@@ -275,20 +275,20 @@ private:
                                 ref double[] a){
         /*
         Get the number of each element in a species from its lewis table data
-        Inputs: 
+        Inputs:
              species_names : array of strings of each species
              element_map   : array of associative arrays mapping species to elements
              element_set   : array of strings for each element (sorted alphabetically)
         Outputs:
-            a : element_matrix mapping species to elemental composition 
+            a : element_matrix mapping species to elemental composition
         */
         size_t _nsp,_nel,j;
-    
+
         _nsp = species_names.length;
-        _nel = element_set.length; 
+        _nel = element_set.length;
         a.length = _nel*_nsp;
         a[] = 0.0;
-    
+
         foreach(i, atoms; enumerate(element_map)){
             foreach (key, value; atoms){
                 j = countUntil(element_set, key);
@@ -299,33 +299,6 @@ private:
     }
 
 } // end class EquilibriumCalculator
-
-//version(equilibrium_calculator_test) {
-//    import std.stdio;
-//    import util.msg_service;
-//    import gas.therm_perf_gas;
-//
-//    int main() {
-//        auto gm = new ThermallyPerfectGasEquilibrium("../gas/sample-data/therm-perf-equil-5-species-air.lua");
-//        auto eq = new EquilibriumCalculator ("../gas/sample-data/therm-perf-equil-5-species-air.lua");
-//
-//        auto gs1 = new GasState(5, 0);
-//        gs1.p = 101.35e2;
-//        gs1.T = 2500.0;
-//        double[] molef = [0.79, 0.21, 0.0, 0.0, 0.0]; 
-//        molef2massf(molef, gm.mol_masses, gs1.massf);
-//
-//        assert(approxEqual(0.7321963 , gs2.massf[0], 1.0e-6)); 
-//        assert(approxEqual(0.23281198, gs2.massf[1], 1.0e-6));
-//        assert(approxEqual(0.0, gs2.massf[2], 1.0e-6));
-//        assert(approxEqual(0.01160037, gs2.massf[3], 1.0e-6));
-//        assert(approxEqual(0.02339135, gs2.massf[4], 1.0e-6));
-//        assert(approxEqual(T_target, gs2.T, 1.0e-6));
-//        assert(approxEqual(rho_target, gs2.rho, 1.0e-6));
-//        assert(approxEqual(u_target, gs2.u, 1.0e-1));
-//        return 0;
-//    }
-//}
 
 
 version(equilibrium_update_test) {
@@ -351,15 +324,15 @@ version(equilibrium_update_test) {
         double[maxParams] params;
 
         reactor(gs2, tInterval, dtChemSuggest, dtThermSuggest, params);
-        writeln("T: ", gs2.T);
-        assert(approxEqual(0.7321963 , gs2.massf[0], 1.0e-6)); 
-        assert(approxEqual(0.23281198, gs2.massf[1], 1.0e-6));
-        assert(approxEqual(0.0, gs2.massf[2], 1.0e-6));
-        assert(approxEqual(0.01160037, gs2.massf[3], 1.0e-6));
-        assert(approxEqual(0.02339135, gs2.massf[4], 1.0e-6));
-        assert(approxEqual(T_target, gs2.T, 1.0e-6));
-        assert(approxEqual(rho_target, gs2.rho, 1.0e-6));
-        assert(approxEqual(u_target, gs2.u, 1.0e-1));
+        // writeln("T: ", gs2.T);
+        assert(isClose(0.7321963 , gs2.massf[0], 1.0e-6));
+        assert(isClose(0.23281198, gs2.massf[1], 1.0e-6));
+        assert(isClose(0.0, gs2.massf[2], 1.0e-6));
+        assert(isClose(0.01160037, gs2.massf[3], 1.0e-6));
+        assert(isClose(0.02339135, gs2.massf[4], 1.0e-6));
+        assert(isClose(T_target, gs2.T, 1.0e-6));
+        assert(isClose(rho_target, gs2.rho, 1.0e-6));
+        assert(isClose(u_target, gs2.u, 1.0e-1));
         return 0;
     }
 }

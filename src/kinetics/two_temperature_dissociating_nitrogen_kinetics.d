@@ -61,7 +61,7 @@ final class TwoTemperatureDissociatingNitrogenKinetics : ThermochemicalReactor {
         number uTotal = Q.u + Q.u_modes[0];
         // 1. Perform chemistry update.
         _chemUpdate(Q, tInterval, dtChemSuggest, dummyDouble, params);
-        // Changing mass fractions does not change the temperature 
+        // Changing mass fractions does not change the temperature
         // of the temperatures associated with internal structure.
         // Now we can adjust the transrotational energy, given that
         // some of it was redistributed to other internal structure energy bins.
@@ -101,7 +101,7 @@ private:
     number _uTotal;
     double _A_MW_N2 = 220.0;
     number[] _molef;
-    number[] _numden; 
+    number[] _numden;
     double[] _particleMass;
     double[][] _mu;
     int[][] _reactionsByMolecule;
@@ -199,7 +199,7 @@ private:
             h = 0.01*tInterval;
         else
             h = dtSuggest;
-        
+
         // 2. Now do the interesting stuff, increment energy change
         int cycle = 0;
         int attempt = 0;
@@ -225,7 +225,7 @@ private:
                      * We'll also balk if the ODE step wants to reduce
                      * the stepsize on a successful step. This is because
                      * if the step was successful there shouldn't be any
-                     * need (stability wise or accuracy related) to warrant 
+                     * need (stability wise or accuracy related) to warrant
                      * a reduction. Thus if the step is successful and
                      * the dtSuggest comes back lower, let's just set
                      * h as the original value for the successful step.
@@ -249,7 +249,7 @@ private:
                     break;
                 }
                 else { // in the case of failure...
-                    /* We now need to make some decision about 
+                    /* We now need to make some decision about
                      * what timestep to attempt next.
                      */
                     h /= DT_REDUCTION_FACTOR;
@@ -434,5 +434,3 @@ private:
     }
 
 }
-
-

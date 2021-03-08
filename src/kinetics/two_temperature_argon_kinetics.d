@@ -28,7 +28,7 @@ import util.lua_service;
 import kinetics.thermochemical_reactor;
 
 final class UpdateArgonFrac : ThermochemicalReactor {
-    
+
     this(string fname, GasModel gmodel)
     {
         super(gmodel); // hang on to a reference to the gas model
@@ -47,10 +47,10 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         _argon_argon_rate_multiplier = getIntWithDefault(L, -1, "argon_argon_rate_multiplier", 1);
         lua_close(L);
     }
-    
+
     @nogc
     override void opCall(GasState Q, double tInterval,
-                         ref double dtChemSuggest, ref double dtThermSuggest, 
+                         ref double dtChemSuggest, ref double dtThermSuggest,
                          ref number[maxParams] params)
     {
         if (dtChemSuggest < 0.0) {
@@ -208,7 +208,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
                 Q.T = 2.0/3.0*Q.u/_Rgas;
                 Q.T_modes[0] = _Te_default;
             }
-            
+
             // Must update the mass fractions before updating the gas state from rho and u...
             // Number density of Argon+ is the same as electron number density.
             numden[0] = n_Ar; numden[1] = n_e; numden[2] = n_e;
@@ -220,7 +220,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
             dtChemSuggest = _chem_dt;
         } // end if Q.T > _T_min_for_reaction
     } // end opCall()
-    
+
     private:
     @nogc
     number[2] F(ref const(number[2]) y, GasState Q)
@@ -309,7 +309,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
             number u_dot = 3*n_e*_m_e/_m_Ar*(v_ea+v_ei)*_Kb*(T-Te)/Q.rho;
             y_dash[1] = -u_dot - u_dot_reac;
         } else {
-            y_dash[1] = 0.0 - u_dot_reac;            
+            y_dash[1] = 0.0 - u_dot_reac;
         }
         //
         return y_dash;
@@ -407,7 +407,7 @@ private:
 version(two_temperature_argon_kinetics_test) {
     import std.stdio;
     import util.msg_service;
-    import std.math : approxEqual;
+    import std.math : isClose;
     import gas.two_temperature_reacting_argon;
     void main() {
         string modelFileName = "sample-input/two-temperature-reacting-argon-model.lua";
@@ -428,11 +428,11 @@ version(two_temperature_argon_kinetics_test) {
         _mol_masses[1] = _mol_masses[0] - _mol_masses[2]; // Units are kg/mol
         double theta_ion = 183100.0;
         double alpha;
-        double new_vel; 
-        
+        double new_vel;
+
         double Ru = R_universal;
-        double m_Ar = 6.6335209e-26; //mass of argon (kg)        
-        double M_Ar = Avogadro_number*m_Ar;            
+        double m_Ar = 6.6335209e-26; //mass of argon (kg)
+        double M_Ar = Avogadro_number*m_Ar;
 
         // This is the benchmark case presented in the Hoffert & Lien paper,
         // Section IV. Normal-shock relaxation zone: the local steady-state approximation
@@ -486,7 +486,7 @@ version(two_temperature_argon_kinetics_test) {
         auto argonChemUpdate = new UpdateArgonFrac(modelFileName, gm);
         double[maxParams] params; // ignore
         double dtThermSuggest; // ignore
-        double dtChemSuggest = dt; // To give 100 steps per integration interval. 
+        double dtChemSuggest = dt; // To give 100 steps per integration interval.
         //
         foreach (i; 1 .. maxsteps) {
             // Perform the chemistry update
@@ -495,7 +495,7 @@ version(two_temperature_argon_kinetics_test) {
             alpha = (gs.massf[2]/_mol_masses[2]) /
                 ((gs.massf[2]/_mol_masses[2])+(gs.massf[0]/_mol_masses[0]));
             // Update x position
-            new_vel = u1/8.*(5 + 3.0/pow(M1,2) - sqrt(9*pow(1-1.0/pow(M1,2),2) + 
+            new_vel = u1/8.*(5 + 3.0/pow(M1,2) - sqrt(9*pow(1-1.0/pow(M1,2),2) +
                                                       96*alpha/5./pow(M1,2)*theta_ion/T1));
             x += (vel + new_vel)/2*dt;
             vel = new_vel;
@@ -507,7 +507,7 @@ version(two_temperature_argon_kinetics_test) {
             // Give all of the new energy to the heavy particles.
             gs.u = gs.u + (e_new - (gs.u + gs.u_modes[0]));
             // Update the temperature of the heavy paritcles based on this.
-            gm.update_thermo_from_rhou(gs); 
+            gm.update_thermo_from_rhou(gs);
             //
             if (writefreq == 0) { writefreq = 1; }
             if ((i % writefreq) == 0) { // only save 1000 points
@@ -531,9 +531,9 @@ version(two_temperature_argon_kinetics_test) {
                          collateddata[4][i], " ", collateddata[5][i], " ",
                          collateddata[6][i]);
         }
-    assert(approxEqual(gs.T, 14730, 1.0e2), failedUnitTest());
-    assert(approxEqual(gs.p, 705738, 1.0e2), failedUnitTest());
-    assert(approxEqual(vel, 700.095, 1.0e0), failedUnitTest());
+    assert(isClose(gs.T, 14730, 1.0e-3), failedUnitTest());
+    assert(isClose(gs.p, 705738, 1.0e-3), failedUnitTest());
+    assert(isClose(vel, 700.095, 1.0e-3), failedUnitTest());
     } // end main()
 } // end two_temperature_argon_kinetics_test
 
