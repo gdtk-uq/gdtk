@@ -24,6 +24,21 @@ If you are new to Linux, you could follow [WSL](https://wiki.ubuntu.com/WSL) not
 from the Ubuntu world to get a bit of an introduction to running Linux.
 The notes describe typical tasks such as installing packages in Ubuntu Linux.
 
+### Mounting Windows drives
+
+From [this blog entry](https://docs.microsoft.com/en-us/archive/blogs/wsl/file-system-improvements-to-the-windows-subsystem-for-linux) 
+we get the following example of mounting an external drive using DrvFs.
+
+To mount a removable drive D: as /mnt/d directory, run the following commands:
+
+    sudo mkdir /mnt/d
+    sudo mount -t drvfs D: /mnt/d
+
+Now, you will be able to access the files of your D: drive under /mnt/d. 
+When you wish to unmount the drive, for example so you can safely remove it, run the following command:
+
+    sudo umount /mnt/d
+
 
 ### Xserver (optional)
 
