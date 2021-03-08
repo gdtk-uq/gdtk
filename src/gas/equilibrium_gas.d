@@ -267,14 +267,14 @@ version(equilibrium_gas_test) {
 
     int main() {
         // Before running this test, we need the gas model files in place.
-        auto cmd = executeShell("cp sample-data/air-eq-1.lua .");
+        auto cmd = executeShell("cp sample-data/air-5sp-eq.lua .");
         assert(cmd.status == 0, failedUnitTest());
-        cmd = executeShell("cp sample-data/air-eq.inp .");
+        cmd = executeShell("cp ../../examples/kinetics/air-chemistry-1T/air-5sp-1T.inp .");
         assert(cmd.status == 0, failedUnitTest());
-        cmd = executeShell("prep-gas air-eq.inp air-eq.lua");
+        cmd = executeShell("prep-gas air-5sp-1T.inp air-5sp-1T.lua");
         assert(cmd.status == 0, failedUnitTest());
 
-        auto gm = new EquilibriumGas("air-eq-1.lua");
+        auto gm = new EquilibriumGas("air-5sp-eq.lua");
         // writeln("gm=", gm); // Can see that the reactants_massf and _molef set.
 
         auto gd = new GasState(1, 0);
