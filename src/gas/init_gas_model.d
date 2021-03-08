@@ -269,7 +269,7 @@ version(init_gas_model_test) {
             Q.T += complex(0.0,h);
             update_thermo_state_rhoT(gm, Q);
             double myCv = Q.u.im/h;
-            assert(approxEqual(myCv, gm.dudT_const_v(Q).re), failedUnitTest());
+            assert(isClose(myCv, gm.dudT_const_v(Q).re), failedUnitTest());
         }
         return 0;
     }

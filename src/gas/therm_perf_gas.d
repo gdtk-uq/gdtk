@@ -66,7 +66,7 @@ public:
                 throw new Error(errMsg);
             }
         }
-        
+
         // 0. Initialise private work arrays
         _Cp.length = _n_species;
         _Cv.length = _n_species;
@@ -134,7 +134,7 @@ public:
             _viscModel = new GasGiantViscosity();
         }
         else {
-        
+
             Viscosity[] vms;
             foreach ( isp; 0.._n_species ) {
                 lua_getglobal(L, "db");
@@ -210,7 +210,7 @@ public:
         GasGiantThermalConductivity ggtc = cast(GasGiantThermalConductivity) _thermCondModel;
         ggtc.attachGasModel(this);
     }
-    
+
     this(in string fname)
     {
         auto L = init_lua_State();
@@ -469,13 +469,13 @@ public:
     {
         return _curves[isp].eval_Cp(Q.T);
     }
-    
+
     override void balance_charge(GasState Q)
     {
         if (_is_plasma) {
             massf2molef(Q, _molef);
             number molefIons = 0.0;
-            // Loop to n_species - 1 so that we do NOT include electron 
+            // Loop to n_species - 1 so that we do NOT include electron
             // in counting up ionic contributions.
             foreach (isp; 0 .. _n_species-1) {
                 molefIons += _charge[isp] * _molef[isp];
@@ -491,7 +491,7 @@ public:
         // Expression from:
         // Reid et al.
         // The Properties of Gases and Liquids
-        
+
         // Loop through only the upper elements.
         // Moved here by NNG 09/09/2020
         debug{ assert(D.length==_n_species); }
@@ -533,7 +533,7 @@ protected:
     ThermalConductivity _thermCondModel;
     // Working array space
     number[] _Cp, _Cv, _h, _s, _molef;
-    // Data for binary diffusion calculations 
+    // Data for binary diffusion calculations
     immutable double _A = 1.06036;
     immutable double _B = 0.15610;
     immutable double _C = 0.19300;
@@ -557,8 +557,8 @@ version(therm_perf_gas_test) {
         //
         auto gm = new ThermallyPerfectGas("sample-data/therm-perf-5-species-air.lua");
         auto gd = new GasState(5, 0);
-        assert(approxEqual(3.621, gm.LJ_sigmas[0]), failedUnitTest());
-        assert(approxEqual(97.530, gm.LJ_epsilons[0]), failedUnitTest());
+        assert(isClose(3.621, gm.LJ_sigmas[0]), failedUnitTest());
+        assert(isClose(97.530, gm.LJ_epsilons[0]), failedUnitTest());
 
         gd.p = 1.0e6;
         gd.T = 2000.0;
@@ -612,7 +612,7 @@ version(therm_perf_gas_test) {
             gd.T += complex(0.0,ih);
             gm.update_thermo_from_rhoT(gd);
             double myCv = gd.u.im/ih;
-            assert(approxEqual(myCv, gm.dudT_const_v(gd).re), failedUnitTest());
+            assert(isClose(myCv, gm.dudT_const_v(gd).re), failedUnitTest());
         }
 
         // [TODO]

@@ -3,10 +3,10 @@
  * Ideal-air gas model, implemented in fortran, for use in the CFD codes.
  *
  * Author: Peter J. and Rowan G.
- * Version: 
+ * Version:
  * 2016-12-27: initial cut, to explore mixed-language binding.
  * 2018-06-03: Adapted to accept complex numbers but not pass them through.
- *             We assume that the Fortran side is only coded for double numbers. 
+ *             We assume that the Fortran side is only coded for double numbers.
  */
 
 module gas.ideal_air_proxy;
@@ -238,21 +238,21 @@ version(ideal_air_proxy_test) {
         gd.p = 1.0e5;
         gd.T = 300.0;
         gd.massf[0] = 1.0;
-        assert(approxEqual(gm.R(gd), 287.086, 1.0e-4), failedUnitTest());
+        assert(isClose(gm.R(gd), 287.086, 1.0e-4), failedUnitTest());
         assert(gm.n_modes == 0, failedUnitTest());
         assert(gm.n_species == 1, failedUnitTest());
-        assert(approxEqual(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
-        assert(approxEqual(gd.T, 300.0, 1.0e-6), failedUnitTest());
-        assert(approxEqual(gd.massf[0], 1.0, 1.0e-6), failedUnitTest());
+        assert(isClose(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
+        assert(isClose(gd.T, 300.0, 1.0e-6), failedUnitTest());
+        assert(isClose(gd.massf[0], 1.0, 1.0e-6), failedUnitTest());
 
         gm.update_thermo_from_pT(gd);
         gm.update_sound_speed(gd);
-        assert(approxEqual(gd.rho, 1.16109, 1.0e-4), failedUnitTest());
-        assert(approxEqual(gd.u, 215314.0, 1.0e-4), failedUnitTest());
-        assert(approxEqual(gd.a, 347.241, 1.0e-4), failedUnitTest());
+        assert(isClose(gd.rho, 1.16109, 1.0e-4), failedUnitTest());
+        assert(isClose(gd.u, 215314.0, 1.0e-4), failedUnitTest());
+        assert(isClose(gd.a, 347.241, 1.0e-4), failedUnitTest());
         gm.update_trans_coeffs(gd);
-        assert(approxEqual(gd.mu, 1.84691e-05, 1.0e-6), failedUnitTest());
-        assert(approxEqual(gd.k, 0.0262449, 1.0e-6), failedUnitTest());
+        assert(isClose(gd.mu, 1.84691e-05, 1.0e-3), failedUnitTest());
+        assert(isClose(gd.k, 0.0262449, 1.0e-6), failedUnitTest());
 
         return 0;
     }

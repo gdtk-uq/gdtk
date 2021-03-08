@@ -145,7 +145,7 @@ version(chemkin_therm_cond_test) {
                                  "A":-2.119099884033e+01, "B":5.186927559697e+00,
                                  "C":-4.741229077145e-01, "D":1.610702319175e-02];
         auto chemkinCurve = ChemkinThermCondCurve(params);
-        assert(approxEqual(0.124382229603, chemkinCurve.eval(2000.0), 1.0e-6), failedUnitTest());
+        assert(isClose(0.124382229603, chemkinCurve.eval(2000.0), 1.0e-6), failedUnitTest());
 
         /*
         /// Next, let's test the creation and functionality
@@ -157,7 +157,7 @@ version(chemkin_therm_cond_test) {
         lua_close(L);
         auto Q = new GasState(1, 1);
         // Q.T = 3500.0;
-        assert(approxEqual(0.185719655303, co2Chemkin.eval(Q, 3500.0), 1.0e-6), failedUnitTest());
+        assert(isClose(0.185719655303, co2Chemkin.eval(Q, 3500.0), 1.0e-6), failedUnitTest());
         */
 
         return 0;

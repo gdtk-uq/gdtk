@@ -245,7 +245,7 @@ private:
 
     @nogc void set_tpgs_from_external_gasstate(const GasState Q){
         /*
-            This is a bandaid to deal with the fact that we have no storage for the 
+            This is a bandaid to deal with the fact that we have no storage for the
             mass fractions. Instead we use this routine to frantically recalculate them
             whenever the outside world asks this gas model for something.
 
@@ -279,13 +279,13 @@ version(equilibrium_gas_test) {
 
         auto gd = new GasState(1, 0);
         gd.rho = 0.0139284858607; // Fixed example to use reactants = {N2=0.79, O2=0.21} in moles
-        gd.u = 2122510.049202302; // 
-  
+        gd.u = 2122510.049202302; //
+
         gd.T = 3352.068185; // Same guess as normal ceq
         gm.update_thermo_from_rhou(gd);
-        //writeln("gd.p=", gd.p, " gd.T=", gd.T);
-        assert(approxEqual(2500.0, gd.T, 1.0), failedUnitTest());
-        assert(approxEqual(10135.0, gd.p, 1.0), failedUnitTest());
+        // writeln("gd.p=", gd.p, " gd.T=", gd.T);
+        assert(isClose(2500.0, gd.T, 1.0), failedUnitTest());
+        assert(isClose(10135.0, gd.p, 1.0), failedUnitTest());
         return 0;
     }
 }

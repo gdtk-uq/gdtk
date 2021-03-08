@@ -298,7 +298,7 @@ public:
             Q.u_modes[0] = to!number(0.0);
         }
     }
-    
+
     override void update_thermo_from_ps(GasState Q, number s)
     {
         bool with_ideal = Q.massf[0] > massf_tiny;
@@ -336,7 +336,7 @@ public:
     override void update_sound_speed(GasState Q)
     {
         if (Q.T <= 0.0) {
-            string msg = "Temperature was negative for update_sound_speed."; 
+            string msg = "Temperature was negative for update_sound_speed.";
             throw new GasModelException(msg);
         }
         bool with_ideal = Q.massf[0] > massf_tiny;
@@ -645,7 +645,7 @@ version(two_temperature_argon_plus_ideal_test) {
             gd.T += complex(0.0,h);
             gm.update_thermo_from_rhoT(gd);
             double myCv = gd.u.im/h;
-            assert(approxEqual(myCv, gm.dudT_const_v(gd).re), failedUnitTest());
+            assert(isClose(myCv, gm.dudT_const_v(gd).re), failedUnitTest());
         }
 
         // (2) Try pure argon.
@@ -657,32 +657,32 @@ version(two_temperature_argon_plus_ideal_test) {
         gd.massf[Species.Ar_plus] = 0.0;
         gd.massf[Species.e_minus] = 0.0;
 
-        assert(approxEqual(gm.R(gd), 208.0, 1.0e-4), failedUnitTest());
-        assert(approxEqual(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
-        assert(approxEqual(gd.T, 300.0, 1.0e-6), failedUnitTest());
-        assert(approxEqual(gd.massf[Species.ideal], 0.0, 1.0e-6), failedUnitTest());
-        assert(approxEqual(gd.massf[Species.Ar], 1.0, 1.0e-6), failedUnitTest());
-        assert(approxEqual(gd.massf[Species.Ar_plus], 0.0, 1.0e-6), failedUnitTest());
-        assert(approxEqual(gd.massf[Species.e_minus], 0.0, 1.0e-6), failedUnitTest());
+        assert(isClose(gm.R(gd), 208.0, 1.0e-4), failedUnitTest());
+        assert(isClose(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
+        assert(isClose(gd.T, 300.0, 1.0e-6), failedUnitTest());
+        assert(isClose(gd.massf[Species.ideal], 0.0, 1.0e-6), failedUnitTest());
+        assert(isClose(gd.massf[Species.Ar], 1.0, 1.0e-6), failedUnitTest());
+        assert(isClose(gd.massf[Species.Ar_plus], 0.0, 1.0e-6), failedUnitTest());
+        assert(isClose(gd.massf[Species.e_minus], 0.0, 1.0e-6), failedUnitTest());
 
         gm.update_thermo_from_pT(gd);
         gm.update_sound_speed(gd);
         number my_rho = 1.0e5 / (208.0 * 300.0);
-        assert(approxEqual(gd.rho, my_rho, 1.0e-4), failedUnitTest());
+        assert(isClose(gd.rho, my_rho, 1.0e-4), failedUnitTest());
 
         number my_Cv = gm.dudT_const_v(gd);
-        number my_u = my_Cv*300.0; 
-        assert(approxEqual(gd.u, my_u, 1.0e-3), failedUnitTest());
+        number my_u = my_Cv*300.0;
+        assert(isClose(gd.u, my_u, 1.0e-3), failedUnitTest());
 
         number my_Cp = gm.dhdT_const_p(gd);
         number alpha = gm.ionisation_fraction_from_mass_fractions(gd);
         number my_a = sqrt(5.0/3.0*208.0*(gd.T + alpha*gd.T_modes[0]));
-        assert(approxEqual(gd.a, my_a, 1.0e-3), failedUnitTest());
+        assert(isClose(gd.a, my_a, 1.0e-3), failedUnitTest());
 
         gm.update_trans_coeffs(gd);
-        assert(approxEqual(gd.mu, 22.912e-6, 1.0e-6), failedUnitTest());
-        assert(approxEqual(gd.k, 0.0178625, 1.0e-6), failedUnitTest());
-        
+        assert(isClose(gd.mu, 22.912e-6, 1.0e-3), failedUnitTest());
+        assert(isClose(gd.k, 0.0178625, 1.0e-3), failedUnitTest());
+
         return 0;
     }
 }

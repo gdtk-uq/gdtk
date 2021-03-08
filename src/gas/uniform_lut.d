@@ -643,15 +643,15 @@ version(uniform_lut_test)
 
         assert(gm.n_modes == 0, failedUnitTest());
         assert(gm.n_species == 1, failedUnitTest());
-        assert(approxEqual(e_given, Q.u, 1.0e-4), failedUnitTest());
-        assert(approxEqual(rho_given, Q.rho, 1.0e-4), failedUnitTest());
-        assert(approxEqual(a_given, Q.a, 1.0e-4), failedUnitTest());
-        assert(approxEqual(Cp_given, Cp, 1.0e-3), failedUnitTest());
-        assert(approxEqual(h_given, h, 1.0e-4), failedUnitTest());
-        assert(approxEqual(mu_given, Q.mu, 1.0e-4), failedUnitTest());
-        assert(approxEqual(k_given, Q.k, 1.0e-3), failedUnitTest());
-        assert(approxEqual(s_given, s, 1.0e-4), failedUnitTest());
-        assert(approxEqual(R_given, R, 1.0e-4), failedUnitTest());
+        assert(isClose(e_given, Q.u, 1.0e-4), failedUnitTest());
+        assert(isClose(rho_given, Q.rho, 1.0e-4), failedUnitTest());
+        assert(isClose(a_given, Q.a, 1.0e-4), failedUnitTest());
+        assert(isClose(Cp_given, Cp, 1.0e-3), failedUnitTest());
+        assert(isClose(h_given, h, 1.0e-4), failedUnitTest());
+        assert(isClose(mu_given, Q.mu, 1.0e-3), failedUnitTest());
+        assert(isClose(k_given, Q.k, 1.0e-3), failedUnitTest());
+        assert(isClose(s_given, s, 1.0e-4), failedUnitTest());
+        assert(isClose(R_given, R, 1.0e-4), failedUnitTest());
 
         return 0;
     }

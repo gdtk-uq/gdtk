@@ -412,7 +412,7 @@ version(pseudo_species_gas_test) {
         assert(gm.n_species == 49, failedUnitTest());
         // writeln("gm._n_parents = ", gm._n_parents);
         assert(gm._n_parents == 2, failedUnitTest());
-        
+
         auto gd = new GasState(gm);
         // writeln("gd.massf.length = ", gd.massf.length);
         assert(gd.massf.length == 49, failedUnitTest());
@@ -424,16 +424,16 @@ version(pseudo_species_gas_test) {
         gd.T = 7000.0;
         // writeln(gd.massf);
         // writeln(gm.Cv(gd));
-        assert(approxEqual(gm.Cv(gd), 840.445, 1.0e-3), failedUnitTest());
+        assert(isClose(gm.Cv(gd), 840.445, 1.0e-3), failedUnitTest());
         gm.update_thermo_from_pT(gd);
         // writeln("gd.u = ", gd.u);
-        assert(approxEqual(gd.u, -5.36274e+06, 1.0e-3), failedUnitTest());
+        assert(isClose(gd.u, -5.36274e+06, 1.0e-3), failedUnitTest());
 
         gm.update_trans_coeffs(gd);
         // writeln("gd.mu = ", gd.mu);
         // writeln("gd.k = ", gd.k);
-        assert(approxEqual(gd.mu, 0.000187585, 1.0e-6), failedUnitTest());
-        assert(approxEqual(gd.k, 0.403616, 1.0e-6), failedUnitTest());
+        assert(isClose(gd.mu, 0.000187585, 1.0e-3), failedUnitTest());
+        assert(isClose(gd.k, 0.403616, 1.0e-3), failedUnitTest());
 
         return 0;
     } // end main()

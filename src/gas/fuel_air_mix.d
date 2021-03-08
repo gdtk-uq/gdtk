@@ -87,27 +87,27 @@ version(fuel_air_mix_test) {
         gd.massf[0] = 0.75; gd.massf[1] = 0.25;
         /+
          [FIX-ME]
-        assert(approxEqual(gm.R(gd), 287.0, 1.0e-4), failedUnitTest());
+        assert(isClose(gm.R(gd), 287.0, 1.0e-4), failedUnitTest());
         assert(gm.n_modes == 0, failedUnitTest());
         assert(gm.n_species == 2, failedUnitTest());
-        assert(approxEqual(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
-        assert(approxEqual(gd.T, 300.0, 1.0e-6), failedUnitTest());
-        assert(approxEqual(gd.massf[0], 0.75, 1.0e-6), failedUnitTest());
-        assert(approxEqual(gd.massf[1], 0.25, 1.0e-6), failedUnitTest());
+        assert(isClose(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
+        assert(isClose(gd.T, 300.0, 1.0e-6), failedUnitTest());
+        assert(isClose(gd.massf[0], 0.75, 1.0e-6), failedUnitTest());
+        assert(isClose(gd.massf[1], 0.25, 1.0e-6), failedUnitTest());
 
         gm.update_thermo_from_pT(gd);
         gm.update_sound_speed(gd);
         double my_rho = 1.0e5 / (287.0 * 300.0);
-        assert(approxEqual(gd.rho, my_rho, 1.0e-4), failedUnitTest());
+        assert(isClose(gd.rho, my_rho, 1.0e-4), failedUnitTest());
         double my_Cv = gm.dudT_const_v(gd);
         double my_u = my_Cv*300.0 - 0.25*300000.0;
-        assert(approxEqual(gd.u, my_u, 1.0e-3), failedUnitTest());
+        assert(isClose(gd.u, my_u, 1.0e-3), failedUnitTest());
         double my_Cp = gm.dhdT_const_p(gd);
         double my_a = sqrt(my_Cp/my_Cv*287.0*300.0);
-        assert(approxEqual(gd.a, my_a, 1.0e-3), failedUnitTest());
+        assert(isClose(gd.a, my_a, 1.0e-3), failedUnitTest());
         gm.update_trans_coeffs(gd);
-        assert(approxEqual(gd.mu, 0.0, 1.0e-6), failedUnitTest());
-        assert(approxEqual(gd.k, 0.0, 1.0e-6), failedUnitTest());
+        assert(isClose(gd.mu, 0.0, 1.0e-6), failedUnitTest());
+        assert(isClose(gd.k, 0.0, 1.0e-6), failedUnitTest());
         +/
         return 0;
     }

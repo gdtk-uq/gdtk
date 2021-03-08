@@ -1,6 +1,6 @@
 /*
- * therm_perg_gas_mix_thermo.d
- * 
+ * thermo/therm_perg_gas_mix.d
+ *
  * Author: Rowan G. and Peter J.
  * Version: 2021-02-09
  */
@@ -43,7 +43,7 @@ public:
             lua_pop(L, 1);
         }
     }
-    
+
     @nogc
     override void updateFromPT(GasState gs)
     {
@@ -503,9 +503,9 @@ version(therm_perf_gas_mix_test) {
             gs.T += complex(0.0,ih);
             tm.updateFromRhoT(gs);
             double myCv = gs.u.im/ih;
-            assert(approxEqual(myCv, tm.dudTConstV(gs).re), failedUnitTest());
+            assert(isClose(myCv, tm.dudTConstV(gs).re), failedUnitTest());
         }
-        
+
         return 0;
     }
 }

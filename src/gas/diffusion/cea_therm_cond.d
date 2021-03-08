@@ -145,7 +145,7 @@ version(cea_therm_cond_test) {
                                  "A":0.76269502, "B":0.62341752e3,
                                  "C":-0.71899552e6, "D":0.56927918];
         auto ceaCurve = CEAThermCondCurve(params);
-        assert(approxEqual(0.1662583, ceaCurve.eval(7200.0), 1.0e-6), failedUnitTest());
+        assert(isClose(0.1662583, ceaCurve.eval(7200.0), 1.0e-6), failedUnitTest());
 
         /// Next, let's test the creation and functionality
         /// of a CEAThermalConductivity object.
@@ -156,7 +156,7 @@ version(cea_therm_cond_test) {
         lua_close(L);
         auto Q = new GasState(1, 1);
         Q.T = 3500.0;
-        assert(approxEqual(1.859070e-01, co2CEA.eval(Q, -1), 1.0e-6), failedUnitTest());
+        assert(isClose(1.859070e-01, co2CEA.eval(Q, -1), 1.0e-6), failedUnitTest());
 
         return 0;
     }

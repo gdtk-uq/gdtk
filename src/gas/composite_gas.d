@@ -70,7 +70,7 @@ public:
             lua_pop(L, 1);
         }
     }
-    
+
     // Service methods related to thermodynamics
     // Updates to GasState
     @nogc override void update_thermo_from_pT(GasState gs)
@@ -158,7 +158,7 @@ version(composite_gas_test) {
     int main() {
         import util.msg_service;
         import std.math;
-        
+
         FloatingPointControl fpctrl;
         // Enable hardware exceptions for division by zero, overflow to infinity,
         // invalid operations, and uninitialized floating-point variables.
@@ -170,8 +170,8 @@ version(composite_gas_test) {
         auto gm = new CompositeGas(L);
         lua_close(L);
         auto gs = new GasState(5, 0);
-        assert(approxEqual(3.621, gm.LJ_sigmas[0]), failedUnitTest());
-        assert(approxEqual(97.530, gm.LJ_epsilons[0]), failedUnitTest());
+        assert(isClose(3.621, gm.LJ_sigmas[0]), failedUnitTest());
+        assert(isClose(97.530, gm.LJ_epsilons[0]), failedUnitTest());
 
         gs.p = 1.0e6;
         gs.T = 2000.0;
@@ -225,7 +225,7 @@ version(composite_gas_test) {
             gs.T += complex(0.0,ih);
             gm.update_thermo_from_rhoT(gs);
             double myCv = gs.u.im/ih;
-            assert(approxEqual(myCv, gm.dudT_const_v(gs).re), failedUnitTest());
+            assert(isClose(myCv, gm.dudT_const_v(gs).re), failedUnitTest());
         }
 
         return 0;

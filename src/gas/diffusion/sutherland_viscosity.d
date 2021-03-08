@@ -22,7 +22,7 @@ import util.msg_service;
 
 /++
   Compute the viscosity using Sutherland's expression.
-  
+
   Params:
      T = temperature of gas in K
      T_ref = reference temperature in K
@@ -94,10 +94,10 @@ version(sutherland_viscosity_test) {
     import std.conv;
     int main() {
         number T = 300.0;
-        double T_ref = 273.0; 
+        double T_ref = 273.0;
         double mu_ref = 1.716e-5;
         double S = 111.0;
-        assert(approxEqual(sutherland_viscosity(T, T_ref, mu_ref, S), 1.84691e-05, 1.0e-6), failedUnitTest());
+        assert(isClose(sutherland_viscosity(T, T_ref, mu_ref, S), 1.84691e-05, 1.0e-3), failedUnitTest());
 
         auto vm = new SutherlandViscosity(T_ref, mu_ref, S);
         auto gd = new GasState(1, 1);

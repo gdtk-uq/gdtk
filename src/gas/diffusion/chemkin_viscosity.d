@@ -146,7 +146,7 @@ version(chemkin_viscosity_test) {
                                  "A":-2.000056657134e+01, "B":2.898260367046e+00,
                                  "C":-3.018511062902e-01, "D":1.346540184145e-02];
         auto chemkinCurve = ChemkinViscCurve(params);
-        assert(approxEqual(4.47483851e-05, chemkinCurve.eval(900.0), 1.0e-6), failedUnitTest());
+        assert(isClose(4.47483851e-05, chemkinCurve.eval(900.0), 1.0e-6), failedUnitTest());
 
         /*
         /// Next, let's test the creation and functionality
@@ -158,7 +158,7 @@ version(chemkin_viscosity_test) {
         lua_close(L);
         auto Q = new GasState(1, 1);
         Q.T = 1500.0;
-        assert(approxEqual(6.238853e-05, o2chemkin.eval(Q), 1.0e-6), failedUnitTest());
+        assert(isClose(6.238853e-05, o2chemkin.eval(Q), 1.0e-6), failedUnitTest());
         */
 
         return 0;

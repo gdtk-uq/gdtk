@@ -118,7 +118,7 @@ version(wilke_mixing_viscosity_test) {
         gd.massf[0] = 0.8;
         gd.massf[1] = 0.2;
         vm.update_viscosity(gd);
-        assert(approxEqual(1.12102e-05, gd.mu), failedUnitTest());
+        assert(isClose(1.84005e-05, gd.mu, 1.0e-4, 0.0), failedUnitTest());
 
         return 0;
     }

@@ -70,7 +70,7 @@ public:
         return to!string(repr);
     }
 
-    override void update_thermo_from_pT(GasState Q) const 
+    override void update_thermo_from_pT(GasState Q) const
     {
         Q.rho = Q.p / (_R_N2*Q.T);
         // For full internal energy, start with trans-rotational mode
@@ -108,7 +108,7 @@ public:
     }
     override void update_sound_speed(GasState Q) const
     {
-        Q.a = sqrt(_gamma * _R_N2 * Q.T); 
+        Q.a = sqrt(_gamma * _R_N2 * Q.T);
     }
     override void update_trans_coeffs(GasState Q)
     {
@@ -155,7 +155,7 @@ public:
         number init_x1 = x1;
         number fx0 = boltzmann_eq(x0) - Q.massf[0];
         number fx1 = boltzmann_eq(x1) - Q.massf[0];
-        int max_it = 100; 
+        int max_it = 100;
         foreach(n; 0 .. max_it) {
             if (abs(fx1) < tol) {return x1;}
             number x2 = ((x0*fx1) - (x1*fx0)) / (fx1 - fx0);
@@ -166,8 +166,8 @@ public:
         } //end foreach
         return x1;
     } // end compute_Tvib()
-    
-    double vib_energy(int i) const 
+
+    double vib_energy(int i) const
     {
         int I = i+1;
         double w_e = 235857;
@@ -178,14 +178,14 @@ public:
         double e = h*c * (w_e*(I-0.5) - we_xe*(I-0.5)^^2 + we_ye*(I-0.5)^^3);
         return e;
     }
-     
+
     number boltzmann_eq(number Tf1) const
     {
         number summ = 0;
-        foreach(ej; 0 .. numVibLevels) { summ += exp(-_vib_energy[ej] / (kB*Tf1)); }        
+        foreach(ej; 0 .. numVibLevels) { summ += exp(-_vib_energy[ej] / (kB*Tf1)); }
         number ei = _vib_energy[0];
         number temp_func = (exp(-ei/(kB*Tf1)) / summ);
-        return temp_func;   
+        return temp_func;
     }
 } // end class VibSpecificNitrogen
 
@@ -206,22 +206,22 @@ version(vib_specific_nitrogen_test) {
 
         gm.update_thermo_from_pT(Q);
         double my_rho = 1.0e5 / (R_N2 * 300.0);
-        assert(approxEqual(Q.rho, my_rho, 1.0e-6), failedUnitTest());
-        
+        assert(isClose(Q.rho, my_rho, 1.0e-6), failedUnitTest());
+
         double my_u = 2.5 * R_N2 * 300.0;
         foreach (i; 0 .. numVibLevels) {
             my_u += (Avogadro_number/M_N2) * gm.vib_energy(i) * Q.massf[i];
         }
-        assert(approxEqual(Q.u, my_u, 1.0e-6), failedUnitTest());
-        
+        assert(isClose(Q.u, my_u, 1.0e-6), failedUnitTest());
+
         gm.update_trans_coeffs(Q);
-        assert(approxEqual(Q.mu, 0.0, 1.0e-6), failedUnitTest());
-        assert(approxEqual(Q.k, 0.0, 1.0e-6), failedUnitTest());
-        
+        assert(isClose(Q.mu, 0.0, 1.0e-6), failedUnitTest());
+        assert(isClose(Q.k, 0.0, 1.0e-6), failedUnitTest());
+
         gm.update_sound_speed(Q);
         double my_a = sqrt(gamma * R_N2 * 300.0);
-        assert(approxEqual(Q.a, my_a, 1.0e-6), failedUnitTest());
-        
+        assert(isClose(Q.a, my_a, 1.0e-6), failedUnitTest());
+
         return 0;
     }
 }

@@ -113,7 +113,7 @@ public:
     override void update_thermo_from_rhou(GasState Q)
     {
         if (Q.u <= 0.0 || Q.rho <= 0.0) {
-            string msg = "Internal energy and/or density was negative for update_thermo_from_rhou."; 
+            string msg = "Internal energy and/or density was negative for update_thermo_from_rhou.";
             throw new GasModelException(msg);
         }
         bool with_lut = Q.massf[0] > massf_tiny;
@@ -545,7 +545,7 @@ version(uniform_lut_plus_ideal_test) {
             gd.T += complex(0.0,h);
             gm.update_thermo_from_rhoT(gd);
             double myCv = gd.u.im/h;
-            assert(approxEqual(myCv, gm.dudT_const_v(gd).re), failedUnitTest());
+            assert(isClose(myCv, gm.dudT_const_v(gd).re), failedUnitTest());
         }
         return 0;
     }

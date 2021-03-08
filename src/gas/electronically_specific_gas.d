@@ -27,7 +27,7 @@ import gas.electronic_species;
 immutable double T_REF = 298.15; // K
 static string[] molecularSpeciesNames = ["N2", "O2", "NO", "N2+", "O2+", "NO+"];
 
-class ElectronicallySpecificGas : GasModel 
+class ElectronicallySpecificGas : GasModel
 {
 public:
     int[] molecularSpecies;
@@ -45,7 +45,7 @@ public:
         doLuaFile(L_macro, macroSpeciesFilename);
         getArrayOfStrings(L_macro, LUA_GLOBALSINDEX, "species", _macro_species_names);
 
-        
+
         _n_macro_species = to!int(_macro_species_names.length);
         _macro_molef.length = _n_macro_species;
         macro_Q = new GasState(_n_macro_species,1);
@@ -54,7 +54,7 @@ public:
             _macro_particleMass[isp] = _macro_mol_masses[isp]/Avogadro_number;
             _macro_particleMass[isp] *= 1000.0; // kg -> g
         }
-        
+
         _macro_R.length = _n_macro_species;
         foreach (isp; 0 .. _n_macro_species) {
             _macro_R[isp] = R_universal/_macro_mol_masses[isp];
@@ -103,7 +103,7 @@ public:
             // The following are NOT ragged arrays, unlike above.
             _Delta_11[isp].length = _n_macro_species;
             _Delta_22[isp].length = _n_macro_species;
-            _alpha[isp].length = _n_macro_species; 
+            _alpha[isp].length = _n_macro_species;
             foreach (jsp; 0 .. isp+1) {
                 string key = _macro_species_names[isp] ~ ":" ~ _macro_species_names[jsp];
                 if (!(key in A_11)) {
@@ -136,7 +136,7 @@ public:
         _n_N_species = getInt(L_elec, LUA_GLOBALSINDEX, "number_N_species");
         _n_O_species = getInt(L_elec, LUA_GLOBALSINDEX, "number_O_species");
         _n_elec_species = _n_N_species + _n_O_species;
-        
+
         lua_getfield(L_elec, LUA_GLOBALSINDEX, "electronic_species");
         foreach (isp; 0 .. _n_elec_species) {
             lua_rawgeti(L_elec, -1, isp);
@@ -144,16 +144,16 @@ public:
                 string msg = format("There was an error when attempting to information about electronic-species %d.\n", isp);
                 throw new Error(msg);
             }
-            
+
             _electronicSpecies ~= createElectronicSpecies(L_elec);
             lua_pop(L_elec, 1);
             _elec_species_names ~= _electronicSpecies[$-1].name;
             _elec_mol_masses ~= _electronicSpecies[$-1].mol_mass;
             _elec_R ~= R_universal/_electronicSpecies[$-1].mol_mass;
             _elec_electronic_energy ~= _electronicSpecies[$-1].electronic_energy;
-            
+
         }
-        
+
         //define global properties for the general gas model
         _n_species = _n_macro_species + _n_elec_species - 2;
         _n_modes = 1;
@@ -175,7 +175,7 @@ public:
     override void update_thermo_from_pT(GasState Q)
     {
         Update_Macro_State(macro_Q, Q);
-        
+
         _pgMixEOS.update_density(macro_Q);
         macro_Q.u = transRotEnergy(macro_Q);
         macro_Q.u_modes[0] = vibEnergy(macro_Q, macro_Q.T_modes[0]);
@@ -185,7 +185,7 @@ public:
     override void update_thermo_from_rhou(GasState Q)
     {
         Update_Macro_State(macro_Q, Q);
-        // We can compute T by direct inversion since the Cp in 
+        // We can compute T by direct inversion since the Cp in
         // in translation and rotation are fully excited,
         // and, as such, constant.
         number sumA = 0.0;
@@ -209,7 +209,7 @@ public:
     {
         Update_Macro_State(macro_Q, Q);
         _pgMixEOS.update_pressure(macro_Q);
-        macro_Q.u = transRotEnergy(macro_Q); 
+        macro_Q.u = transRotEnergy(macro_Q);
         macro_Q.u_modes[0] = vibEnergy(macro_Q, macro_Q.T_modes[0]);
         Update_Electronic_State(Q, macro_Q);
     }
@@ -256,7 +256,7 @@ public:
         foreach (isp; 0 .. _n_macro_species) {
             foreach (jsp; 0 .. isp+1) {
                 number expnt = _A_22[isp][jsp]*(mylogT)^^2 + _B_22[isp][jsp]*mylogT + _C_22[isp][jsp];
-                number pi_Omega_22 = exp(_D_22[isp][jsp])*pow(T, expnt); 
+                number pi_Omega_22 = exp(_D_22[isp][jsp])*pow(T, expnt);
                 _Delta_22[isp][jsp] = (16./5)*1.546e-20*sqrt(2.0*_mu[isp][jsp]/(to!double(PI)*_R_U_cal*T))*pi_Omega_22;
                 _Delta_22[jsp][isp] = _Delta_22[isp][jsp];
             }
@@ -271,7 +271,7 @@ public:
             sumA += _macro_particleMass[isp]*_macro_molef[isp]/sumB;
         }
         macro_Q.mu = sumA * (1.0e-3/1.0e-2); // convert g/(cm.s) -> kg/(m.s)
-        
+
         // k = k_tr + k_rot
         sumA = 0.0;
         foreach (isp; 0 .. _n_macro_species) {
@@ -288,7 +288,7 @@ public:
         foreach (isp; 0 .. _n_macro_species) {
             foreach (jsp; 0 .. isp+1) {
                 number expnt = _A_11[isp][jsp]*(mylogT)^^2 + _B_11[isp][jsp]*mylogT + _C_11[isp][jsp];
-                number pi_Omega_11 = exp(_D_11[isp][jsp])*pow(T, expnt); 
+                number pi_Omega_11 = exp(_D_11[isp][jsp])*pow(T, expnt);
                 _Delta_11[isp][jsp] = (8.0/3)*1.546e-20*sqrt(2.0*_mu[isp][jsp]/(to!double(PI)*_R_U_cal*T))*pi_Omega_11;
                 _Delta_11[jsp][isp] = _Delta_11[isp][jsp];
             }
@@ -323,7 +323,7 @@ public:
             Cv_tr_rot = transRotSpecHeatConstV(isp);
             Cv_vib = vibSpecHeatConstV(macro_Q.T_modes[0], isp);
             Cv += macro_Q.massf[isp] * (Cv_tr_rot + Cv_vib);
-        } 
+        }
         return Cv;
     }
     override number dhdT_const_p(in GasState Q)
@@ -400,7 +400,7 @@ private:
     double[] _elec_R;
     ElectronicSpecies[] _electronicSpecies;
     GasState macro_Q;
-    
+
     //storage for macro species
     int _n_macro_species;
     string[] _macro_species_names;
@@ -682,7 +682,7 @@ private:
             f_guess = vibEnergy(macro_Q, T_guess) - macro_Q.u_modes[0];
             count++;
         }
-        
+
         if (count == MAX_ITERATIONS) {
             string msg = "The 'vibTemperature' function failed to converge.\n";
             debug {
@@ -706,9 +706,9 @@ static double[string] A_22, B_22, C_22, D_22;
 
 version(electronically_specific_gas_test) {
     int main()
-    {   
+    {
         import util.msg_service;
-        
+
         auto L = init_lua_State();
         doLuaFile(L,"sample-data/electronic-and-macro-species.lua");
 
@@ -720,13 +720,13 @@ version(electronically_specific_gas_test) {
         gd.T_modes[0] = 293;
         gd.massf = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.78, 0.22, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
         gm.update_thermo_from_pT(gd);
-        
-        assert(approxEqual(-89784.2, gd.u, 1.0e-6), failedUnitTest());
-        assert(approxEqual(0.00787412, gd.rho, 1.0e-6), failedUnitTest());
+
+        assert(isClose(-89784.2, gd.u, 1.0e-6), failedUnitTest());
+        assert(isClose(0.00787412, gd.rho, 1.0e-6), failedUnitTest());
 
         gm.update_thermo_from_rhou(gd);
-        assert(approxEqual(666.0, gd.p, 1.0e-6), failedUnitTest());
-        assert(approxEqual(293, gd.T, 1.0e-6), failedUnitTest());
+        assert(isClose(666.0, gd.p, 1.0e-6), failedUnitTest());
+        assert(isClose(293, gd.T, 1.0e-6), failedUnitTest());
 
         return 0;
     }
@@ -734,7 +734,7 @@ version(electronically_specific_gas_test) {
 static this()
 {
     _macro_mol_masses[0] = 14.0067e-3;
-    _macro_mol_masses[1] = 0.01599940; 
+    _macro_mol_masses[1] = 0.01599940;
     _macro_mol_masses[2] = 28.0134e-3;
     _macro_mol_masses[3] = 0.03199880;
     _macro_mol_masses[4] = 0.03000610;
@@ -760,7 +760,7 @@ static this()
     del_hf[9] = 237.3239e3*4.184/_macro_mol_masses[9];
     del_hf[10]  =  0.0;
 
-    thermoCoeffs[2] = 
+    thermoCoeffs[2] =
         [
          [  0.3674826e+01, -0.1208150e-02,  0.2324010e-05, -0.6321755e-09, -0.2257725e-12, -0.1061160e+04,  0.23580e+01 ], // 300 -- 1000 K
          [  0.2896319e+01,  0.1515486e-02, -0.5723527e-06,  0.9980739e-10, -0.6522355e-14, -0.9058620e+03,  0.43661e+01 ], // 1000 -- 6000 K
@@ -769,7 +769,7 @@ static this()
          [ -0.5168080e+01,  0.2333690e-02, -0.1295340e-06,  0.2787210e-11, -0.2135960e-16, -0.1043000e+04,  0.66217e+02 ] // 25000 -- 30000 K
          ];
 
-    thermoCoeffs[3] = 
+    thermoCoeffs[3] =
         [
          [  0.3625598e+01, -0.1878218e-02,  0.7055454e-05, -0.6763513e-08,  0.2155599e-11, -0.1047520e+04,  0.43628e+01 ], // 300 -- 1000 K
          [  0.3621953e+01,  0.7361826e-03, -0.1965222e-06,  0.3620155e-10, -0.2894562e-14, -0.1201980e+04,  0.38353e+01 ], // 1000 -- 6000 K
@@ -778,7 +778,7 @@ static this()
          [  0.3961980e+01,  0.3944550e-03, -0.2950580e-07,  0.7397450e-12, -0.6420930e-17, -0.1044000e+04,  0.13985e+01 ]
          ];
 
-    thermoCoeffs[0] = 
+    thermoCoeffs[0] =
         [
          [  0.2503071e+01, -0.2180018e-04,  0.5420528e-07, -0.5647560e-10,  0.2099904e-13,  0.5609890e+05,  0.41676e+01 ], // 300 -- 1000 K
          [  0.2450268e+01,  0.1066145e-03, -0.7465337e-07,  0.1879652e-10, -0.1025983e-14,  0.5611600e+05,  0.42618e+01 ], // 1000 -- 6000 K
@@ -787,7 +787,7 @@ static this()
          [  0.1552020e+02, -0.3885790e-02,  0.3228840e-06, -0.9605270e-11,  0.9547220e-16,  0.5609000e+05, -0.88120e+02 ]  // 25000 -- 30000 K
          ];
 
-    thermoCoeffs[1] = 
+    thermoCoeffs[1] =
         [
          [  0.2946428e+01, -0.1638166e-02,  0.2421031e-05, -0.1602843e-08,  0.3890696e-12,  0.2914760e+05,  0.35027e+01 ], // 300 -- 1000 K
          [  0.2542059e+01, -0.2755061e-04, -0.3102803e-08,  0.4551067e-11, -0.4368051e-15,  0.2923080e+05,  0.49203e+01 ], // 1000 -- 6000 K
@@ -795,7 +795,7 @@ static this()
          [ -0.9787120e-02,  0.1244970e-02, -0.1615440e-06,  0.8037990e-11, -0.1262400e-15,  0.2915000e+05,  0.21711e+02 ], // 15000 -- 25000 K
          [  0.1642810e+02, -0.3931300e-02,  0.2983990e-06, -0.8161280e-11,  0.7500430e-16,  0.2915000e+05, -0.94358e+02 ] // 25000 -- 30000 K
          ];
-        
+
     thermoCoeffs[4] =
         [
          [  0.4045952e+01, -0.3418178e-02,  0.7981919e-05, -0.6113931e-08,  0.1591907e-11,  0.9745390e+04,  0.51497e+01 ], // 300 -- 1000 K
@@ -805,16 +805,16 @@ static this()
          [  0.2350750e+01,  0.5864300e-03, -0.3131650e-07,  0.6049510e-12, -0.4055670e-17,  0.9764000e+04,  0.14026e+02 ] // 25000 -- 30000 K
          ];
 
-    thermoCoeffs[5] = 
+    thermoCoeffs[5] =
         [
-         [     0.2727e+01,    -0.2820e-03,     0.1105e-06,    -0.1551e-10,     0.7847e-15,     0.2254e+06,  0.36450e+01 ], // 300 -- 1000 K 
+         [     0.2727e+01,    -0.2820e-03,     0.1105e-06,    -0.1551e-10,     0.7847e-15,     0.2254e+06,  0.36450e+01 ], // 300 -- 1000 K
          [     0.2727e+01,    -0.2820e-03,     0.1105e-06,    -0.1551e-10,     0.7847e-15,     0.2254e+06,  0.36450e+01 ], // 1000 -- 6000 K , yes same as previous entry
          [     0.2499e+01,    -0.3725e-05,     0.1147e-07,    -0.1102e-11,     0.3078e-16,     0.2254e+06,  0.49500e+01 ], // 6000 -- 15000 K
          [  0.2385610e+01,  0.8349470e-04, -0.5881510e-08,  0.1884970e-12, -0.1611950e-17,     0.2254e+06,  0.56462e+01 ], // 15000 -- 25000 K
          [  0.2228570e+01,  0.1245820e-03, -0.8763570e-08,  0.2620400e-12, -0.2167420e-17,     0.2554e+06,  0.67811e+01 ] // 25000 -- 30000 K
          ];
 
-    thermoCoeffs[6] = 
+    thermoCoeffs[6] =
         [
          [  0.2498479e+01,  0.1141097e-04, -0.2976139e-07,  0.3224653e-10, -0.1237551e-13,  0.1879490e+06,  0.43864e+01 ], // 300 -- 1000 K
          [  0.2506048e+01, -0.1446424e-04,  0.1244604e-07, -0.4685847e-11,  0.6554887e-15,  0.1879470e+06,  0.43480e+01 ], // 1000 -- 6000 K
@@ -823,7 +823,7 @@ static this()
          [  0.1288860e+01,  0.4334250e-03, -0.2675820e-07,  0.6215900e-12, -0.4513150e-17,  0.1879000e+06,  0.12604e+02 ] // 25000 -- 30000 K
          ];
 
-    thermoCoeffs[7] = 
+    thermoCoeffs[7] =
         [
          [  0.3397000e+01,  0.4525000e-03,  0.1272000e-06, -0.3879000e-10,  0.2459000e-14,  0.1826000e+06,  0.36535e+01 ], // 300 -- 1000 K
          [  0.3397390e+01,  0.4524870e-03,  0.1272300e-06, -0.3879340e-10,  0.2458950e-14,  0.1826000e+06,  0.42050e+01 ], // 1000 -- 6000 K
@@ -832,15 +832,15 @@ static this()
          [  0.3949290e+01,  0.3679480e-03, -0.2691020e-07,  0.6711050e-12, -0.5824370e-17,  0.1826000e+06,  0.65472e+00 ] // 25000 -- 30000 K
          ];
 
-    thermoCoeffs[8] = 
+    thermoCoeffs[8] =
         [
          [  0.3243000e+01,  0.1174000e-02, -0.3900000e-06,  0.5437000e-10, -0.2392000e-14,  0.1400000e+06,  0.59250e+01 ], // 300 -- 1000 K
          [  0.3242980e+01,  0.1173910e-02, -0.3900420e-06,  0.5437260e-10, -0.2392320e-14,  0.1400000e+06,  0.59250e+01 ], // 1000 -- 6000 K
          [  0.5168650e+01, -0.8619690e-03,  0.2041410e-06, -0.1300410e-10,  0.2494210e-15,  0.1400000e+06, -0.52960e+01 ], // 6000 -- 15000 K
          [ -0.2801710e+00,  0.1667410e-02, -0.1210740e-06,  0.3211290e-11, -0.2834890e-16,  0.1400000e+06,  0.31013e+02 ], // 15000 -- 25000 K
          [  0.2044550e+01,  0.1031320e-02, -0.7404630e-07,  0.1925750e-11, -0.1746100e-16,  0.1400000e+06,  0.14310e+02 ] // 25000 -- 30000 K
-         ]; 
-    thermoCoeffs[9] = 
+         ];
+    thermoCoeffs[9] =
         [
          [  0.3668506e+01, -0.1154458e-02,  0.2175561e-05, -0.4822747e-09, -0.2784791e-12,  0.1180340e+06,  0.37852e+01 ],
          [  0.2888549e+01,  0.1521712e-02, -0.5753124e-06,  0.1005108e-09, -0.6604429e-14,  0.1181920e+06,  0.51508e+01 ],
@@ -849,32 +849,32 @@ static this()
          [ -0.4348760e+01,  0.2401210e-02, -0.1445990e-06,  0.3381320e-11, -0.2825510e-16,  0.1181920e+06,  0.65896e+02 ]
          ];
 
-    thermoCoeffs[10] = 
+    thermoCoeffs[10] =
         [
          [  0.2500000e+01,            0.0,            0.0,            0.0,            0.0, -0.7453750e+03, -0.11734e+02],
          [  0.2500000e+01,            0.0,            0.0,            0.0,            0.0, -0.7453750e+03, -0.11734e+02],
          [  0.2508e+01   , -0.6332e-05   ,  0.1364e-08   , -0.1094e-12   ,  0.2934e-17   , -0.7450000e+03, -0.11734e+02],
          [  0.250010e+01 , -0.311281e-09 ,  0.357207e-13 , -0.1603670e-17,  0.250707e-22 , -0.7450000e+03, -0.11734e+02],
-         [  0.250010e+01 ,  0.301577e-09 , -0.226204e-13 ,  0.667344e-18 , -0.689169e-23 , -0.7450000e+03, -0.11734e+02] 
+         [  0.250010e+01 ,  0.301577e-09 , -0.226204e-13 ,  0.667344e-18 , -0.689169e-23 , -0.7450000e+03, -0.11734e+02]
          ];
-        
+
 
     // Parameters for collision integrals
     // Collision cross-section Omega_11
     A_11["N2:N2"]   =  0.0;    B_11["N2:N2"]   = -0.0112; C_11["N2:N2"]   =  -0.1182; D_11["N2:N2"]   =    4.8464;
-    A_11["O2:N2"]   =  0.0;    B_11["O2:N2"]   = -0.0465; C_11["O2:N2"]   =   0.5729; D_11["O2:N2"]   =    1.6185; 
+    A_11["O2:N2"]   =  0.0;    B_11["O2:N2"]   = -0.0465; C_11["O2:N2"]   =   0.5729; D_11["O2:N2"]   =    1.6185;
     A_11["O2:O2"]   =  0.0;    B_11["O2:O2"]   = -0.0410; C_11["O2:O2"]   =   0.4977; D_11["O2:O2"]   =    1.8302;
-    A_11["N:N2"]    =  0.0;    B_11["N:N2"]    = -0.0194; C_11["N:N2"]    =   0.0119; D_11["N:N2"]    =    4.1055; 
-    A_11["N:O2"]    =  0.0;    B_11["N:O2"]    = -0.0179; C_11["N:O2"]    =   0.0152; D_11["N:O2"]    =    3.9996; 
+    A_11["N:N2"]    =  0.0;    B_11["N:N2"]    = -0.0194; C_11["N:N2"]    =   0.0119; D_11["N:N2"]    =    4.1055;
+    A_11["N:O2"]    =  0.0;    B_11["N:O2"]    = -0.0179; C_11["N:O2"]    =   0.0152; D_11["N:O2"]    =    3.9996;
     A_11["N:N"]     =  0.0;    B_11["N:N"]     = -0.0033; C_11["N:N"]     =  -0.0572; D_11["N:N"]     =    5.0452;
     A_11["O:N2"]    =  0.0;    B_11["O:N2"]    = -0.0139; C_11["O:N2"]    =  -0.0825; D_11["O:N2"]    =    4.5785;
     A_11["O:O2"]    =  0.0;    B_11["O:O2"]    = -0.0226; C_11["O:O2"]    =   0.1300; D_11["O:O2"]    =    3.3363;
     A_11["O:N"]     =  0.0;    B_11["O:N"]     =  0.0048; C_11["O:N"]     =  -0.4195; D_11["O:N"]     =    5.7774;
     A_11["O:O"]     =  0.0;    B_11["O:O"]     = -0.0034; C_11["O:O"]     =  -0.0572; D_11["O:O"]     =    4.9901;
-    A_11["NO:N2"]   =  0.0;    B_11["NO:N2"]   = -0.0291; C_11["NO:N2"]   =   0.2324; D_11["NO:N2"]   =    3.2082; 
+    A_11["NO:N2"]   =  0.0;    B_11["NO:N2"]   = -0.0291; C_11["NO:N2"]   =   0.2324; D_11["NO:N2"]   =    3.2082;
     A_11["NO:O2"]   =  0.0;    B_11["NO:O2"]   = -0.0438; C_11["NO:O2"]   =   0.5352; D_11["NO:O2"]   =    1.7252;
     A_11["NO:N"]    =  0.0;    B_11["NO:N"]    = -0.0185; C_11["NO:N"]    =   0.0118; D_11["NO:N"]    =    4.0590;
-    A_11["NO:O"]    =  0.0;    B_11["NO:O"]    = -0.0179; C_11["NO:O"]    =   0.0152; D_11["NO:O"]    =    3.9996; 
+    A_11["NO:O"]    =  0.0;    B_11["NO:O"]    = -0.0179; C_11["NO:O"]    =   0.0152; D_11["NO:O"]    =    3.9996;
     A_11["NO:NO"]   =  0.0;    B_11["NO:NO"]   = -0.0364; C_11["NO:NO"]   =   0.3825; D_11["NO:NO"]   =    2.4718;
     A_11["NO+:N2"]  =  0.0;    B_11["NO+:N2"]  =     0.0; C_11["NO+:N2"]  =  -0.4000; D_11["NO+:N2"]  =    6.8543;
     A_11["NO+:O2"]  =  0.0;    B_11["NO+:O2"]  =     0.0; C_11["NO+:O2"]  =  -0.4000; D_11["NO+:O2"]  =    6.8543;
@@ -888,7 +888,7 @@ static this()
     A_11["e-:O"]    =  0.0164; B_11["e-:O"]    = -0.2431; C_11["e-:O"]    =   1.1231; D_11["e-:O"]    =   -1.5561;
     A_11["e-:NO"]   = -0.2202; B_11["e-:NO"]   =  5.2265; C_11["e-:NO"]   = -40.5659; D_11["e-:NO"]   =  104.7126;
     A_11["e-:NO+"]  =  0.0;    B_11["e-:NO+"]  =     0.0; C_11["e-:NO+"]  =  -2.0000; D_11["e-:NO+"]  =   23.8237;
-    A_11["e-:e-"]   =  0.0;    B_11["e-:e-"]   =     0.0; C_11["e-:e-"]   =  -2.0000; D_11["e-:e-"]   =   23.8237;    
+    A_11["e-:e-"]   =  0.0;    B_11["e-:e-"]   =     0.0; C_11["e-:e-"]   =  -2.0000; D_11["e-:e-"]   =   23.8237;
     A_11["N+:N2"]   =  0.0;    B_11["N+:N2"]   =     0.0; C_11["N+:N2"]   =  -0.4000; D_11["N+:N2"]   =    6.8543;
     A_11["N+:O2"]   =  0.0;    B_11["N+:O2"]   =     0.0; C_11["N+:O2"]   =  -0.4000; D_11["N+:O2"]   =    6.8543;
     A_11["N+:N"]    =  0.0;    B_11["N+:N"]    = -0.0033; C_11["N+:N"]    =  -0.0572; D_11["N+:N"]    =    5.0452;
@@ -913,9 +913,9 @@ static this()
     A_11["N2+:NO"]  =  0.0;    B_11["N2+:NO"]  =     0.0; C_11["N2+:NO"]  =  -0.4000; D_11["N2+:NO"]  =    6.8543;
     A_11["N2+:NO+"] =  0.0;    B_11["N2+:NO+"] =     0.0; C_11["N2+:NO+"] =  -2.0000; D_11["N2+:NO+"] =   23.8237;
     A_11["N2+:e-"]  =  0.0;    B_11["N2+:e-"]  =     0.0; C_11["N2+:e-"]  =  -2.0000; D_11["N2+:e-"]  =   23.8237;
-    A_11["N2+:N+"]  =  0.0;    B_11["N2+:N+"]  =     0.0; C_11["N2+:N+"]  =  -2.0000; D_11["N2+:N+"]  =   23.8237;    
+    A_11["N2+:N+"]  =  0.0;    B_11["N2+:N+"]  =     0.0; C_11["N2+:N+"]  =  -2.0000; D_11["N2+:N+"]  =   23.8237;
     A_11["N2+:O+"]  =  0.0;    B_11["N2+:O+"]  =     0.0; C_11["N2+:O+"]  =  -2.0000; D_11["N2+:O+"]  =   23.8237;
-    A_11["N2+:N2+"] =  0.0;    B_11["N2+:N2+"] =     0.0; C_11["N2+:N2+"] =  -2.0000; D_11["N2+:N2+"] =   23.8237;    
+    A_11["N2+:N2+"] =  0.0;    B_11["N2+:N2+"] =     0.0; C_11["N2+:N2+"] =  -2.0000; D_11["N2+:N2+"] =   23.8237;
     A_11["O2+:N2"]  =  0.0;    B_11["O2+:N2"]  =     0.0; C_11["O2+:N2"]  =  -0.4000; D_11["O2+:N2"]  =    6.8543;
     A_11["O2+:O2"]  =  0.0;    B_11["O2+:O2"]  =     0.0; C_11["O2+:O2"]  =  -0.4000; D_11["O2+:O2"]  =    6.8543;
     A_11["O2+:N"]   =  0.0;    B_11["O2+:N"]   =     0.0; C_11["O2+:N"]   =  -0.4000; D_11["O2+:N"]   =    6.8543;
@@ -923,16 +923,16 @@ static this()
     A_11["O2+:NO"]  =  0.0;    B_11["O2+:NO"]  =     0.0; C_11["O2+:NO"]  =  -0.4000; D_11["O2+:NO"]  =    6.8543;
     A_11["O2+:NO+"] =  0.0;    B_11["O2+:NO+"] =     0.0; C_11["O2+:NO+"] =  -2.0000; D_11["O2+:NO+"] =   23.8237;
     A_11["O2+:e-"]  =  0.0;    B_11["O2+:e-"]  =     0.0; C_11["O2+:e-"]  =  -2.0000; D_11["O2+:e-"]  =   23.8237;
-    A_11["O2+:N+"]  =  0.0;    B_11["O2+:N+"]  =     0.0; C_11["O2+:N+"]  =  -2.0000; D_11["O2+:N+"]  =   23.8237;    
+    A_11["O2+:N+"]  =  0.0;    B_11["O2+:N+"]  =     0.0; C_11["O2+:N+"]  =  -2.0000; D_11["O2+:N+"]  =   23.8237;
     A_11["O2+:O+"]  =  0.0;    B_11["O2+:O+"]  =     0.0; C_11["O2+:O+"]  =  -2.0000; D_11["O2+:O+"]  =   23.8237;
-    A_11["O2+:N2+"] =  0.0;    B_11["O2+:N2+"] =     0.0; C_11["O2+:N2+"] =  -2.0000; D_11["O2+:N2+"] =   23.8237;    
-    A_11["O2+:O2+"] =  0.0;    B_11["O2+:O2+"] =     0.0; C_11["O2+:O2+"] =  -2.0000; D_11["O2+:O2+"] =   23.8237;    
+    A_11["O2+:N2+"] =  0.0;    B_11["O2+:N2+"] =     0.0; C_11["O2+:N2+"] =  -2.0000; D_11["O2+:N2+"] =   23.8237;
+    A_11["O2+:O2+"] =  0.0;    B_11["O2+:O2+"] =     0.0; C_11["O2+:O2+"] =  -2.0000; D_11["O2+:O2+"] =   23.8237;
 
     // Collision cross-section Omega_22
     A_22["N2:N2"]   =  0.0;    B_22["N2:N2"]   = -0.0203; C_22["N2:N2"]   =   0.0683; D_22["N2:N2"]   =   4.0900;
     A_22["O2:N2"]   =  0.0;    B_22["O2:N2"]   = -0.0558; C_22["O2:N2"]   =   0.7590; D_22["O2:N2"]   =   0.8955;
     A_22["O2:O2"]   =  0.0;    B_22["O2:O2"]   = -0.0485; C_22["O2:O2"]   =   0.6475; D_22["O2:O2"]   =   1.2607;
-    A_22["N:N2"]    =  0.0;    B_22["N:N2"]    = -0.0190; C_22["N:N2"]    =   0.0239; D_22["N:N2"]    =   4.1782; 
+    A_22["N:N2"]    =  0.0;    B_22["N:N2"]    = -0.0190; C_22["N:N2"]    =   0.0239; D_22["N:N2"]    =   4.1782;
     A_22["N:O2"]    =  0.0;    B_22["N:O2"]    = -0.0203; C_22["N:O2"]    =   0.0703; D_22["N:O2"]    =   3.8818;
     A_22["N:N"]     =  0.0;    B_22["N:N"]     = -0.0118; C_22["N:N"]     =  -0.0960; D_22["N:N"]     =   4.3252;
     A_22["O:N2"]    =  0.0;    B_22["O:N2"]    = -0.0169; C_22["O:N2"]    =  -0.0143; D_22["O:N2"]    =   4.4195;
@@ -1002,13 +1002,13 @@ static this()
 /*
 class ElectronicallySpecificGas : GasModel {
 public:
-    this(lua_State *L) 
+    this(lua_State *L)
     {
         auto nElecSpecies = getInt(L, LUA_GLOBALSINDEX, "number_electronic_species");
         _n_species = cast(uint) nElecSpecies;
 
         _n_modes = 1;
-        _species_names.length = _n_species; 
+        _species_names.length = _n_species;
         _numden.length = _n_species;
 
         _s1 = getDouble(L, LUA_GLOBALSINDEX, "s1");
@@ -1057,7 +1057,7 @@ public:
     override void update_thermo_from_rhou(GasState Q)
     {
         auto Cv_heavy = heavy_Cv(Q);
-        Q.T = (Q.u)/Cv_heavy; 
+        Q.T = (Q.u)/Cv_heavy;
         auto Cv_electron = electron_Cv(Q);
         Q.T_modes[0] = Q.u_modes[0]/Cv_electron;
         auto R_mix = gas_constant(Q);
@@ -1191,7 +1191,7 @@ private:
     number _Osum;
     number _sumterm;
 
-    @nogc number energyInNoneq(const GasState Q) const 
+    @nogc number energyInNoneq(const GasState Q) const
     {
         number uNoneq = 0.0;
         foreach (isp; 0 .. _n_species) {
@@ -1213,9 +1213,9 @@ private:
     }
 
     @nogc number electron_Cv(GasState Q)
-    {   
+    {
         number elec_cv = Q.massf[_n_species-3]*(_dof[_n_species-3]/2.0) * _R[_n_species-3];
-        return elec_cv; 
+        return elec_cv;
     }
 
 
@@ -1248,9 +1248,9 @@ version(electronically_specific_gas_test) {
         // gd.massf[19] = 0.74082290750449; //N2
         // gd.massf[20] = 0.21155752733244; //O2
         // gd.massf[18] = 1.0 - (gd.massf[0] + gd.massf[9] + gd.massf[19] + gd.massf[20]); //tiny massf for free electron
-        // gd.massf = [0.0313603, 0.00492971, 0.000741705, 1.06916e-06, 4.90114e-07, 
-        //                 2.46998e-07, 9.58454e-08, 6.6456e-07, 6.41328e-06, 0.010005, 
-        //                 0.000565079, 8.59624e-06, 2.58411e-07, 9.00322e-08, 5.80925e-08, 
+        // gd.massf = [0.0313603, 0.00492971, 0.000741705, 1.06916e-06, 4.90114e-07,
+        //                 2.46998e-07, 9.58454e-08, 6.6456e-07, 6.41328e-06, 0.010005,
+        //                 0.000565079, 8.59624e-06, 2.58411e-07, 9.00322e-08, 5.80925e-08,
         //                 3.67871e-08, 9.06483e-08, 4.16313e-07, 1.4773e-08, 0.740823, 0.211558];
         gd.massf[] = 0;
         gd.massf[gm.n_species-3] = 1e-8;
@@ -1261,16 +1261,15 @@ version(electronically_specific_gas_test) {
         gd.T = 300.0;
         gd.T_modes[0]=4000.0;
         gm.update_thermo_from_pT(gd);
-        
 
         double massfsum=0.0;
         foreach(number eachmassf;gd.massf) {
             massfsum += eachmassf;
         }
-        assert(approxEqual(massfsum, 1.0, 1e-2), failedUnitTest());
+        assert(isClose(massfsum, 1.0, 1e-2), failedUnitTest());
 
         return 0;
     }
-    
+
 }
 */

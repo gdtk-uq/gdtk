@@ -31,7 +31,7 @@ static string[] molecularSpeciesNames = ["H2"];
 
 // The following symbols are for indexing into the thermo-coefficient database.
 // They also set the order for the list of species in this gas model.
-enum Species {H2=0, H, Hplus, eminus, He, Heplus} 
+enum Species {H2=0, H, Hplus, eminus, He, Heplus}
 
 // For table parameters see end of file.
 // They are declared in the static this() function.
@@ -39,14 +39,14 @@ enum Species {H2=0, H, Hplus, eminus, He, Heplus}
 class TwoTemperatureGasGiant : GasModel {
 public:
     int[] molecularSpecies;
-    
+
     this()
     {
         type_str = "TwoTemperatureGasGiant";
         _n_species = 6;
         _n_modes = 1;
         _species_names.length = _n_species;
-        // Species_names	
+        // Species_names
         _species_names[Species.H2] = "H2";
         _species_names[Species.H] = "H";
         _species_names[Species.Hplus] = "H+";
@@ -63,7 +63,7 @@ public:
         _mol_masses[Species.Heplus] = _mol_masses[Species.He] - _mol_masses[Species.eminus];
 
         _molef.length = _n_species;
-        
+
         // Particle mass in g
         _particleMass.length = _n_species;
         foreach (isp; 0 .. _n_species) {
@@ -122,7 +122,7 @@ public:
             // The following are NOT ragged arrays, unlike above.
             _Delta_11[isp].length = _n_species;
             _Delta_22[isp].length = _n_species;
-            _alpha[isp].length = _n_species; 
+            _alpha[isp].length = _n_species;
             foreach (jsp; 0 .. isp+1) {
                 string key = _species_names[isp] ~ ":" ~ _species_names[jsp];
                 if (!(key in A_11)) {
@@ -159,12 +159,12 @@ public:
     {
         _pgMixEOS.update_density(Q); // rho = P/Rg/T
         Q.u = transRotEnergy(Q);     // Cp(T-Tref)+h_ref-RT
-        Q.u_modes[0] = vibElecEnergy(Q, Q.T_modes[0]); 
+        Q.u_modes[0] = vibElecEnergy(Q, Q.T_modes[0]);
     }
 
     override void update_thermo_from_rhou(GasState Q)
     {
-        // We can compute T by direct inversion since the Cp in 
+        // We can compute T by direct inversion since the Cp in
         // in translation and rotation are fully excited,
         // and, as such, constant.
         number sumA = 0.0;
@@ -187,10 +187,10 @@ public:
     override void update_thermo_from_rhoT(GasState Q)
     {
         _pgMixEOS.update_pressure(Q);
-        Q.u = transRotEnergy(Q); 
+        Q.u = transRotEnergy(Q);
         Q.u_modes[0] = vibElecEnergy(Q, Q.T_modes[0]);
     }
-    
+
     override void update_thermo_from_rhop(GasState Q)
     {
         // In this function, we assume that T_modes is set correctly
@@ -214,7 +214,7 @@ public:
     {
         // We compute the frozen sound speed based on an effective gamma
         number R = gas_constant(Q);
-        Q.a = sqrt(gamma(Q)*R*Q.T); 
+        Q.a = sqrt(gamma(Q)*R*Q.T);
     }
 
     override void update_trans_coeffs(GasState Q)
@@ -242,7 +242,7 @@ public:
             sumA += _particleMass[isp]*_molef[isp]/sumB;//Gupta Page 24
         }
         Q.mu = sumA * (1.0e-3/1.0e-2); // convert g/(cm.s) -> kg/(m.s)
-        
+
         // k = k_tr + k_rot
         sumA = 0.0;
         foreach (isp; 0 .. _n_species) {
@@ -259,7 +259,7 @@ public:
         foreach (isp; 0 .. _n_species) {
             foreach (jsp; 0 .. isp+1) {
                 number expnt = _A_11[isp][jsp]*(log(T))^^2 + _B_11[isp][jsp]*log(T) + _C_11[isp][jsp];
-                number pi_Omega_11 = _D_11[isp][jsp]*pow(T, expnt); 
+                number pi_Omega_11 = _D_11[isp][jsp]*pow(T, expnt);
                 _Delta_11[isp][jsp] = (8.0/3)*1.546e-20*sqrt(2.0*_mu[isp][jsp]/(to!number(PI)*_R_U_cal*T))*pi_Omega_11;
                 _Delta_11[jsp][isp] = _Delta_11[isp][jsp];
             }
@@ -272,7 +272,7 @@ public:
                 sumB += _molef[jsp]*_Delta_11[isp][jsp];
             }
             k_rot += _molef[isp]/sumB;
-            number Cp_vib = vibElecSpecHeatConstV(Q.T_modes[0], isp);                    
+            number Cp_vib = vibElecSpecHeatConstV(Q.T_modes[0], isp);
             k_vib += (Cp_vib*_mol_masses[isp]/R_universal)*_molef[isp]/sumB;
         }
         k_rot *= 2.3901e-8*kB_erg;
@@ -340,7 +340,7 @@ public:
             // Below 500.0 K, the energy vibrational and electronic energy
             // is essentially 0.
             // We short-circuit the computation here because if we go too much
-            // lower in temperature, we run into a temperature region where the 
+            // lower in temperature, we run into a temperature region where the
             // rotational mode of hydrogen is not fully excited. So, our assumption
             // of a constant Cp_tr_rot no longer holds at low temperatures.
             h_ve = 0.0;
@@ -498,7 +498,7 @@ private:
     {
         number T_guess;
         // We have made the statement that we consider energy in vibElec
-        // mode to be 0.0 at 500.0 K or less. This means that when 
+        // mode to be 0.0 at 500.0 K or less. This means that when
         // u_modes is 0.0, we cannot distinguish any vibroelectronic
         // temperature below this.
         // So we'll just set the vibroelectronic temperature to 500.0 K.
@@ -507,13 +507,13 @@ private:
             return T_guess;
         }
 
-    	//Let us assume the density mass fractions and densities are known, 
+    	//Let us assume the density mass fractions and densities are known,
     	//now make the vibrational temperature consistent with this data.
         int MAX_ITERATIONS = 20;
         // We'll keep adjusting our temperature estimate
         // until it is less than TOL.
         double TOL = 1.0e-6;
-        
+
         // Take the supplied T_modes[0] as the initial guess.
         T_guess = Q.T_modes[0];
         number f_guess = vibElecEnergy(Q, T_guess) - Q.u_modes[0];
@@ -541,7 +541,7 @@ private:
             f_guess = vibElecEnergy(Q, T_guess) - Q.u_modes[0];
             count++;
         }
-        
+
         if (count == MAX_ITERATIONS) {
             string msg = "The 'vibElecTemperature' function failed to converge.\n";
             debug {
@@ -580,37 +580,37 @@ static this()
     T_low[Species.Heplus] = 298.15;
 
 
-    
+
 //Ref: NASA Glenn Coefficients for Calculating Thermodynamic Properties of Individual Species
 
-    thermoCoeffs[Species.H2] = 
+    thermoCoeffs[Species.H2] =
         [
          [  4.078323210e+04, -8.009186040e+02, 8.214702010e+00, -1.269714457e-02,  1.753605076e-05, -1.202860270e-08,  3.368093490e-12, 2.682484665e+03, -3.043788844e+01], // 200 -- 1000 K
          [  5.608128010e+05, -8.371504740e+02, 2.975364532e+00,  1.252249124e-03, -3.740716190e-07,  5.936625200e-11, -3.606994100e-15, 5.339824410e+03, -2.202774769e+00], // 1000 -- 6000 K
          [  4.966884120e+08, -3.147547149e+05, 7.984121880e+01, -8.414789210e-03,  4.753248350e-07, -1.371873492e-11,  1.605461756e-16, 2.488433516e+06, -6.695728110e+02], // 6000 -- 20000 K
          ];
 
-    thermoCoeffs[Species.H] = 
+    thermoCoeffs[Species.H] =
         [
          [  0.000000000e+00,  0.000000000e+00, 2.500000000e+00,  0.000000000e+00, 0.000000000e+00,  0.000000000e+00, 0.000000000e+00, 2.547370801e+04, -4.466828530e-01], // 200 -- 1000 K
          [  6.078774250e+01, -1.819354417e-01, 2.500211817e+00, -1.226512864e-07, 3.732876330e-11, -5.687744560e-15, 3.410210197e-19, 2.547486398e+04, -4.481917770e-01], // 1000 -- 6000 K
          [  2.173757694e+08, -1.312035403e+05, 3.399174200e+01, -3.813999680e-03, 2.432854837e-07, -7.694275540e-12, 9.644105630e-17, 1.067638086e+06, -2.742301051e+02], // 6000 -- 20000 K
          ];
 
-    thermoCoeffs[Species.Hplus] = 
+    thermoCoeffs[Species.Hplus] =
         [
          [  0.000000000e+00,  0.000000000e+00, 2.500000000e+00,  0.000000000e+00, 0.000000000e+00,  0.000000000e+00, 0.000000000e+00, 1.840214877e+05, -1.140646644e+00], // 298.15 -- 1000 K
          [  0.000000000e+00,  0.000000000e+00, 2.500000000e+00,  0.000000000e+00, 0.000000000e+00,  0.000000000e+00, 0.000000000e+00, 1.840214877e+05, -1.140646644e+00], // 1000 -- 6000 K
          [  0.000000000e+00,  0.000000000e+00, 2.500000000e+00,  0.000000000e+00, 0.000000000e+00,  0.000000000e+00, 0.000000000e+00, 1.840214877e+05, -1.140646644e+00], // 6000 -- 20000 K
          ];
 
-    thermoCoeffs[Species.eminus] = 
+    thermoCoeffs[Species.eminus] =
         [
          [  0.000000000e+00,  0.000000000e+00, 2.500000000e+00,  0.000000000e+00, 0.000000000e+00,  0.000000000e+00, 0.000000000e+00, -7.453750000e+02, -1.172081224e+01], // 298.15 -- 1000 K
          [  0.000000000e+00,  0.000000000e+00, 2.500000000e+00,  0.000000000e+00, 0.000000000e+00,  0.000000000e+00, 0.000000000e+00, -7.453750000e+02, -1.172081224e+01], // 1000 -- 6000 K
          [  0.000000000e+00,  0.000000000e+00, 2.500000000e+00,  0.000000000e+00, 0.000000000e+00,  0.000000000e+00, 0.000000000e+00, -7.453750000e+02, -1.172081224e+01], // 6000 -- 20000 K
          ];
-        
+
     thermoCoeffs[Species.He] =
         [
          [  0.000000000e+00,  0.000000000e+00, 2.500000000e+00,  0.000000000e+00, 0.000000000e+00,  0.000000000e+00, 0.000000000e+00, -7.453750000e+02,  9.287239740e-01], // 200 -- 1000 K
@@ -630,54 +630,54 @@ static this()
     A_11["H:H2"]    =  -1.47e-3;     B_11["H:H2"]    = -2.79e-2;   C_11["H:H2"]    =   2.27e-1;   D_11["H:H2"]    =    1.50e+1;
     A_11["H:H"]     =  -1.88e-2;     B_11["H:H"]     =  3.59e-1;   C_11["H:H"]     =  -2.51;      D_11["H:H"]     =    1.15e+4;
     A_11["H+:H2"]   =  -1.80e-2;     B_11["H+:H2"]   =  3.22e-1;   C_11["H+:H2"]   =  -2.17;      D_11["H+:H2"]   =    1.07e+4;
-    A_11["H+:H"]    =  -9.97e-4;     B_11["H+:H"]    =  2.26e-2;   C_11["H+:H"]    =  -3.19e-1;   D_11["H+:H"]    =    5.04e+2; 
+    A_11["H+:H"]    =  -9.97e-4;     B_11["H+:H"]    =  2.26e-2;   C_11["H+:H"]    =  -3.19e-1;   D_11["H+:H"]    =    5.04e+2;
     A_11["H+:H+"]   =   0.0;         B_11["H+:H+"]   = -0.0194;    C_11["H+:H+"]   =   0.0119;    D_11["H+:H+"]   =    4.1055;  // Unknown
     A_11["e-:H2"]   =  -2.27e-2;     B_11["e-:H2"]   =  4.64e-1;   C_11["e-:H2"]   =  -2.90;      D_11["e-:H2"]   =    2.71e+3;
     A_11["e-:H"]    =  -6.18e-3;     B_11["e-:H"]    =  6.82e-2;   C_11["e-:H"]    =  -2.01e-1;   D_11["e-:H"]    =    4.47e+1;
     A_11["e-:H+"]   =   0.0;         B_11["e-:H+"]   = -0.0226;    C_11["e-:H+"]   =   0.1300;    D_11["e-:H+"]   =    3.3363;  // Unknown
     A_11["e-:e-"]   =   0.0;         B_11["e-:e-"]   = -0.0139;    C_11["e-:e-"]   =  -0.0825;    D_11["e-:e-"]   =    4.5785;
     A_11["He:H2"]   =  -3.49e-3;     B_11["He:H2"]   =  5.10e-2;   C_11["He:H2"]   =  -4.60e-1;   D_11["He:H2"]   =    8.39e+1;
-    A_11["He:H"]    =  -6.82e-3;     B_11["He:H"]    =  1.06e-1;   C_11["He:H"]    =  -8.08e-1;   D_11["He:H"]    =    1.66e+2; 
+    A_11["He:H"]    =  -6.82e-3;     B_11["He:H"]    =  1.06e-1;   C_11["He:H"]    =  -8.08e-1;   D_11["He:H"]    =    1.66e+2;
     A_11["He:H+"]   =  -2.05e-2;     B_11["He:H+"]   =  3.91e-1;   C_11["He:H+"]   =  -2.91;      D_11["He:H+"]   =    7.60e+4;
     A_11["He:e-"]   =  -8.24e-3;     B_11["He:e-"]   =  1.68e-1;   C_11["He:e-"]   =  -1.06;      D_11["He:e-"]   =    4.65e+1;
-    A_11["He:He"]   =  -3.58e-3;     B_11["He:He"]   =  5.68e-2;   C_11["He:He"]   =  -5.14e-1;   D_11["He:He"]   =    7.29e+1; 
+    A_11["He:He"]   =  -3.58e-3;     B_11["He:He"]   =  5.68e-2;   C_11["He:He"]   =  -5.14e-1;   D_11["He:He"]   =    7.29e+1;
     A_11["He+:H2"]  =   2.91e-4;     B_11["He+:H2"]  =  1.54e-2;   C_11["He+:H2"]  =  -7.92e-1;   D_11["He+:H2"]  =    2.86e+3;
-    A_11["He+:H"]   =  -1.78e-2;     B_11["He+:H"]   =  2.82e-1;   C_11["He+:H"]   =  -1.64;      D_11["He+:H"]   =    9.30e+2; 
+    A_11["He+:H"]   =  -1.78e-2;     B_11["He+:H"]   =  2.82e-1;   C_11["He+:H"]   =  -1.64;      D_11["He+:H"]   =    9.30e+2;
     A_11["He+:H+"]  =  -2.05e-2;     B_11["He+:H+"]  =  3.91e-1;   C_11["He+:H+"]  =  -2.91;      D_11["He+:H+"]  =    7.60e+4; //Unknown
     A_11["He+:e-"]  =  -8.24e-3;     B_11["He+:e-"]  =  1.68e-1;   C_11["He+:e-"]  =  -1.06;      D_11["He+:e-"]  =    4.65e+1; //Unknown
-    A_11["He+:He"]  =   8.24e-4;     B_11["He+:He"]  = -2.19e-2;   C_11["He+:He"]  =   3.89e-2;   D_11["He+:He"]  =    1.15e+2; 
+    A_11["He+:He"]  =   8.24e-4;     B_11["He+:He"]  = -2.19e-2;   C_11["He+:He"]  =   3.89e-2;   D_11["He+:He"]  =    1.15e+2;
     A_11["He+:He+"] =  -3.58e-3;     B_11["He+:He+"] =  5.68e-2;   C_11["He+:He+"] =  -5.14e-1;   D_11["He+:He+"] =    7.29e+1;  //Unknown
-    
+
     // Collision cross-section Omega_22
     A_22["H2:H2"]   =  -5.46e-3;    B_22["H2:H2"]   =  9.60e-2; C_22["H2:H2"]   =  -7.67e-1; D_22["H2:H2"]   =    2.21e+2;
     A_22["H:H2"]    =  -3.31e-3;    B_22["H:H2"]    =  8.68e-3; C_22["H:H2"]    =   2.65e-2; D_22["H:H2"]    =    2.40E+1;
-    A_22["H:H"]     =  -1.99e-2;    B_22["H:H"]     =  4.13e-1; C_22["H:H"]     =  -3.10;    D_22["H:H"]     =    7.59e+4; 
+    A_22["H:H"]     =  -1.99e-2;    B_22["H:H"]     =  4.13e-1; C_22["H:H"]     =  -3.10;    D_22["H:H"]     =    7.59e+4;
     A_22["H+:H2"]   =  -8.37e-3;    B_22["H+:H2"]   =  1.49e-1; C_22["H+:H2"]   =  -1.17;    D_22["H+:H2"]   =    1.43e+3;
-    A_22["H+:H"]    =  -2.39e-2;    B_22["H+:H"]    =  4.70e-1; C_22["H+:H"]    =  -3.31;    D_22["H+:H"]    =    2.02e+5; 
+    A_22["H+:H"]    =  -2.39e-2;    B_22["H+:H"]    =  4.70e-1; C_22["H+:H"]    =  -3.31;    D_22["H+:H"]    =    2.02e+5;
     A_22["H+:H+"]   =   0.0;        B_22["H+:H+"]   = -0.0194;  C_22["H+:H+"]   =   0.0119;  D_22["H+:H+"]   =    2.40e+1; // Unknown
     A_22["e-:H2"]   =  -1.95e-2;    B_22["e-:H2"]   =  3.89e-1; C_22["e-:H2"]   =  -2.30;    D_22["e-:H2"]   =    3.72e+2;
     A_22["e-:H"]    =  -1.90e-3;    B_22["e-:H"]    = -3.28e-2; C_22["e-:H"]    =   5.05e-1; D_22["e-:H"]    =    9.10;
     A_22["e-:H+"]   =   0.0;        B_22["e-:H+"]   = -0.0226;  C_22["e-:H+"]   =   0.1300;  D_22["e-:H+"]   =    3.3363;  //Unknown
     A_22["e-:e-"]   =   0.0;        B_22["e-:e-"]   =  0.0;     C_22["e-:e-"]   =  -2.0000;  D_22["e-:e-"]   =    24.3061;
     A_22["He:H2"]   =  -3.46e-3;    B_22["He:H2"]   =  5.24e-2; C_22["He:H2"]   =  -4.62e-1; D_22["He:H2"]   =    9.41e+1;
-    A_22["He:H"]    =  -7.67e-3;    B_22["He:H"]    =  1.28e-1; C_22["He:H"]    =  -9.53e-1; D_22["He:H"]    =    2.66e+2; 
+    A_22["He:H"]    =  -7.67e-3;    B_22["He:H"]    =  1.28e-1; C_22["He:H"]    =  -9.53e-1; D_22["He:H"]    =    2.66e+2;
     A_22["He:H+"]   =  -2.73e-2;    B_22["He:H+"]   =  5.60e-1; C_22["He:H+"]   =  -4.18;    D_22["He:H+"]   =    1.26e+6;
     A_22["He:e-"]   =  -6.49e-3;    B_22["He:e-"]   =  1.20e-1; C_22["He:e-"]   =  -6.91e-1; D_22["He:e-"]   =    1.95e+1;
-    A_22["He:He"]   =  -5.25e-3;    B_22["He:He"]   =  9.66e-2; C_22["He:He"]   =  -8.03e-1; D_22["He:He"]   =    1.65e+2; 
+    A_22["He:He"]   =  -5.25e-3;    B_22["He:He"]   =  9.66e-2; C_22["He:He"]   =  -8.03e-1; D_22["He:He"]   =    1.65e+2;
     A_22["He+:H2"]  =  -1.15e-3;    B_22["He+:H2"]  =  3.91e-2; C_22["He+:H2"]  =  -8.74e-1; D_22["He+:H2"]  =    2.81e+3;
-    A_22["He+:H"]   =  -1.62e-2;    B_22["He+:H"]   =  2.83e-1; C_22["He+:H"]   =  -1.86;    D_22["He+:H"]   =    1.95e+3; 
+    A_22["He+:H"]   =  -1.62e-2;    B_22["He+:H"]   =  2.83e-1; C_22["He+:H"]   =  -1.86;    D_22["He+:H"]   =    1.95e+3;
     A_22["He+:H+"]  =  -2.05e-2;    B_22["He+:H+"]  =  3.91e-1; C_22["He+:H+"]  =  -2.91;    D_22["He+:H+"]  =    7.60e+4; //Unknown
     A_22["He+:e-"]  =  -8.24e-3;    B_22["He+:e-"]  =  1.68e-1; C_22["He+:e-"]  =  -1.06;    D_22["He+:e-"]  =    4.65e+1; //Unknown
-    A_22["He+:He"]  =  -8.77e-3;    B_22["He+:He"]  =  1.50e-1; C_22["He+:He"]  =  -1.09;    D_22["He+:He"]  =    7.53e+2; 
+    A_22["He+:He"]  =  -8.77e-3;    B_22["He+:He"]  =  1.50e-1; C_22["He+:He"]  =  -1.09;    D_22["He+:He"]  =    7.53e+2;
     A_22["He+:He+"] =  -3.58e-3;    B_22["He+:He+"] =  5.68e-2; C_22["He+:He+"] =  -5.14e-1; D_22["He+:He+"] =    7.29e+1;  //Unknown
-   
+
 }
 
 
 version(two_temperature_gasgiant_test) {
     import std.stdio;
     import util.msg_service;
-    import std.math : approxEqual;
+    import std.math : isClose;
     int main() {
         // Comment out lines that write to console
         // to avoid triggering a test failure.
@@ -689,16 +689,16 @@ version(two_temperature_gasgiant_test) {
         gd.T = 300.0;
         gd.T_modes[0] = 1000.0;
         gd.massf[0] = 1.0; gd.massf[1] = 0.0; gd.massf[2] = 0.0; gd.massf[3] = 0.0; gd.massf[4] = 0.0, gd.massf[5] = 0.0;
-        //assert(approxEqual(gm.R(gd), 4124.506, 1.0e-4), failedUnitTest());
+        //assert(isClose(gm.R(gd), 4124.506, 1.0e-4), failedUnitTest());
         //assert(gm.n_modes == 1, failedUnitTest());
         //assert(gm.n_species == 5, failedUnitTest());
-        //assert(approxEqual(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
-        //assert(approxEqual(gd.T, 310.0, 1.0e-6), failedUnitTest());
-        //assert(approxEqual(gd.massf[0], 1.0, 1.0e-6), failedUnitTest());
-        //assert(approxEqual(gd.massf[1], 0.0, 1.0e-6), failedUnitTest());
-        //assert(approxEqual(gd.massf[2], 0.0, 1.0e-6), failedUnitTest());
-        //assert(approxEqual(gd.massf[3], 0.0, 1.0e-6), failedUnitTest());
-        //assert(approxEqual(gd.massf[4], 0.0, 1.0e-6), failedUnitTest());
+        //assert(isClose(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
+        //assert(isClose(gd.T, 310.0, 1.0e-6), failedUnitTest());
+        //assert(isClose(gd.massf[0], 1.0, 1.0e-6), failedUnitTest());
+        //assert(isClose(gd.massf[1], 0.0, 1.0e-6), failedUnitTest());
+        //assert(isClose(gd.massf[2], 0.0, 1.0e-6), failedUnitTest());
+        //assert(isClose(gd.massf[3], 0.0, 1.0e-6), failedUnitTest());
+        //assert(isClose(gd.massf[4], 0.0, 1.0e-6), failedUnitTest());
         /*
         writeln("before update_thermo_from_pT");
         writeln(gd);
@@ -716,10 +716,10 @@ version(two_temperature_gasgiant_test) {
 		//writeln("Cv");
 		//writeln(gm. vibSpecHeatConstV(dg, 600);
 		//writeln("T_modes");
-		//writeln(gd);	
+		//writeln(gd);
         gm.update_trans_coeffs(gd);
         writeln("after update_trans_coeffs");
-		////assert(approxEqual(Cp, 169739.4, 1.0e-1), failedUnitTest());
+		////assert(isClose(Cp, 169739.4, 1.0e-1), failedUnitTest());
         writeln(gd);
 		//gm.update_thermo_from_rhoT(gd);
 		//writeln(gd);

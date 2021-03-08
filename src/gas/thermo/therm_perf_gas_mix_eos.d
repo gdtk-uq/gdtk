@@ -1,5 +1,5 @@
 /**
- * therm_perf_gas_mix_eos.d 
+ * therm_perf_gas_mix_eos.d
  * This implements a caloric equation of state
  * relating temperature and internal energy
  * for a mixture of thermally perfect gases.
@@ -57,7 +57,6 @@ public:
         _R = R.dup;
         _curves = curves.dup;
         _vals.length = R.length;
-        
     }
     override void update_energy(ref GasState Q)
     {
@@ -111,7 +110,7 @@ public:
             */
             return e_tgt - Q.u;
         }
-        
+
         number dzdT(number T)
         {
             // We evaluate Cv.
@@ -188,11 +187,11 @@ version(therm_perf_gas_mix_eos_test) {
         Q.massf[0] = 0.2; Q.massf[1] = 0.7; Q.massf[2] = 0.1;
         Q.T = 1000.0;
         tpgm.update_energy(Q);
-        assert(approxEqual(1031849.875, Q.u, 1.0e-6), failedUnitTest());
+        assert(isClose(1031849.875, Q.u, 1.0e-6), failedUnitTest());
         // Now set T a little off, say 1500.0.
         Q.T = 1500.0;
         tpgm.update_temperature(Q);
-        assert(approxEqual(1000.0, Q.T, 1.0e-6), failedUnitTest());
+        assert(isClose(1000.0, Q.T, 1.0e-6), failedUnitTest());
 
         return 0;
     }

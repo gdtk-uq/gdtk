@@ -3,7 +3,7 @@
  * Implements a mixture of perfect gases equation of state.
  * This module provides simple functions for the
  * the p-v-T behaviour of a mixture perfect gases.
- * 
+ *
  * Author: Rowan G. and Peter J.
  * Version: 2014-09-07 -- first cut
  */
@@ -19,7 +19,7 @@ import gas.thermo.pvt_eos;
 
 /++
  PerfectGasMixEOS is a thermal equation of state.
- 
+
  The perfect gas mixture model assumes point masses and
  perfectly elastic collisions.
 +/
@@ -92,7 +92,7 @@ private:
         }
         return Rmix;
     }
-}         
+}
 
 version(perf_gas_mix_eos_test) {
     import std.math;
@@ -107,22 +107,16 @@ version(perf_gas_mix_eos_test) {
         gd.massf[0] = 0.78;
         gd.massf[1] = 0.22;
         pg.update_pressure(gd);
-        assert(approxEqual(gd.p, 103989.6, 1.0e-6), failedUnitTest());
+        assert(isClose(gd.p, 103989.6, 1.0e-6), failedUnitTest());
         gd.p = 103989.6;
         gd.rho = 0.0;
         pg.update_density(gd);
-        assert(approxEqual(gd.rho, 1.2, 1.0e-6), failedUnitTest());
+        assert(isClose(gd.rho, 1.2, 1.0e-6), failedUnitTest());
         gd.rho = 1.2;
         gd.T = 0.0;
         pg.update_temperature(gd);
-        assert(approxEqual(gd.T, 300.0, 1.0e-6), failedUnitTest());
-        
+        assert(isClose(gd.T, 300.0, 1.0e-6), failedUnitTest());
+
         return 0;
     }
 }
-
-
-
-           
-
-

@@ -580,31 +580,31 @@ version(cea_gas_test) {
         gd.T = 300.0;
         gd.massf[0] = 1.0;
         gm.update_thermo_from_pT(gd);
-        assert(approxEqual(gm.R(gd), 288.198, 0.01), failedUnitTest());
+        assert(isClose(gm.R(gd), 288.198, 0.01), failedUnitTest());
         assert(gm.n_modes == 0, failedUnitTest());
         assert(gm.n_species == 1, failedUnitTest());
-        assert(approxEqual(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
-        assert(approxEqual(gd.T, 300.0, 1.0e-6), failedUnitTest());
-        assert(approxEqual(gd.massf[0], 1.0, 1.0e-6), failedUnitTest());
-        assert(approxEqual(gd.rho, 1.1566, 1.0e-4), failedUnitTest());
-        assert(approxEqual(gd.u, -84587.0, 0.1), failedUnitTest());
-        assert(approxEqual(gd.ceaSavedData.massf["N2"], 0.76708, 1.0e-5), failedUnitTest());
-        assert(approxEqual(gd.ceaSavedData.massf["O2"], 0.23292, 1.0e-5), failedUnitTest());
+        assert(isClose(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
+        assert(isClose(gd.T, 300.0, 1.0e-6), failedUnitTest());
+        assert(isClose(gd.massf[0], 1.0, 1.0e-6), failedUnitTest());
+        assert(isClose(gd.rho, 1.1566, 1.0e-4), failedUnitTest());
+        assert(isClose(gd.u, -84587.0, 0.1), failedUnitTest());
+        assert(isClose(gd.ceaSavedData.massf["N2"], 0.76708, 1.0e-5), failedUnitTest());
+        assert(isClose(gd.ceaSavedData.massf["O2"], 0.23292, 1.0e-5), failedUnitTest());
 
         gm.update_sound_speed(gd);
-        assert(approxEqual(gd.a, 347.7, 0.1), failedUnitTest());
+        assert(isClose(gd.a, 347.7, 0.1), failedUnitTest());
 
         gm.update_trans_coeffs(gd);
-        assert(approxEqual(gd.mu, 1.87e-05, 0.01), failedUnitTest());
-        assert(approxEqual(gd.k, 0.02647, 1.0e-5), failedUnitTest());
+        assert(isClose(gd.mu, 1.87e-05, 0.01), failedUnitTest());
+        assert(isClose(gd.k, 0.02647, 1.0e-5), failedUnitTest());
 
         gm.update_thermo_from_ps(gd, gd.ceaSavedData.s);
-        assert(approxEqual(gd.p, 1.0e5, 1.0), failedUnitTest());
-        assert(approxEqual(gd.T, 300.0, 0.1), failedUnitTest());
+        assert(isClose(gd.p, 1.0e5, 1.0), failedUnitTest());
+        assert(isClose(gd.T, 300.0, 0.1), failedUnitTest());
 
         gm.update_thermo_from_rhou(gd);
-        assert(approxEqual(gd.p, 1.0e5, 1.0), failedUnitTest());
-        assert(approxEqual(gd.T, 300.0, 0.1), failedUnitTest());
+        assert(isClose(gd.p, 1.0e5, 1.0), failedUnitTest());
+        assert(isClose(gd.T, 300.0, 0.1), failedUnitTest());
 
         return 0;
     }

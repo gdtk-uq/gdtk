@@ -148,7 +148,7 @@ version(cea_viscosity_test) {
                                  "A":0.62526577, "B":-0.31779652e2,
                                  "C":-0.1640798e4, "D":0.17454992e01];
         auto ceaCurve = CEAViscCurve(params);
-        assert(approxEqual(3.8818e-5, ceaCurve.eval(900.0), 1.0e-6), failedUnitTest());
+        assert(isClose(3.8818e-5, ceaCurve.eval(900.0), 1.0e-3), failedUnitTest());
 
         /// Next, let's test the creation and functionality
         /// of a CEAViscosity object.
@@ -159,7 +159,7 @@ version(cea_viscosity_test) {
         lua_close(L);
         auto Q = new GasState(1, 1);
         Q.T = 1500.0;
-        assert(approxEqual(6.407851e-05, o2CEA.eval(Q), 1.0e-6), failedUnitTest());
+        assert(isClose(6.407851e-05, o2CEA.eval(Q), 1.0e-3), failedUnitTest());
 
         return 0;
     }

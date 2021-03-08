@@ -94,7 +94,7 @@ public:
         return to!string(repr);
     }
 
-    override void update_thermo_from_pT(GasState Q) const 
+    override void update_thermo_from_pT(GasState Q) const
     {
         Q.rho = Q.p/(Q.T*_Rgas);
         Q.u = _Cv*Q.T - Q.massf[1]*_q;
@@ -114,7 +114,7 @@ public:
         Q.T = Q.p/(Q.rho*_Rgas);
         Q.u = _Cv*Q.T - Q.massf[1]*_q;
     }
-    
+
     override void update_thermo_from_ps(GasState Q, number s) const
     {
         Q.T = _T1 * exp((1.0/_Cp)*((s - _s1) + _Rgas * log(Q.p/_p1)));
@@ -196,27 +196,27 @@ version(ideal_gas_ab_test) {
         gd.p = 1.0e5;
         gd.T = 300.0;
         gd.massf[0] = 0.75; gd.massf[1] = 0.25;
-        assert(approxEqual(gm.R(gd), 287.0, 1.0e-4), failedUnitTest());
+        assert(isClose(gm.R(gd), 287.0, 1.0e-4), failedUnitTest());
         assert(gm.n_modes == 0, failedUnitTest());
         assert(gm.n_species == 2, failedUnitTest());
-        assert(approxEqual(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
-        assert(approxEqual(gd.T, 300.0, 1.0e-6), failedUnitTest());
-        assert(approxEqual(gd.massf[0], 0.75, 1.0e-6), failedUnitTest());
-        assert(approxEqual(gd.massf[1], 0.25, 1.0e-6), failedUnitTest());
+        assert(isClose(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
+        assert(isClose(gd.T, 300.0, 1.0e-6), failedUnitTest());
+        assert(isClose(gd.massf[0], 0.75, 1.0e-6), failedUnitTest());
+        assert(isClose(gd.massf[1], 0.25, 1.0e-6), failedUnitTest());
 
         gm.update_thermo_from_pT(gd);
         gm.update_sound_speed(gd);
         number my_rho = 1.0e5 / (287.0 * 300.0);
-        assert(approxEqual(gd.rho, my_rho, 1.0e-4), failedUnitTest());
+        assert(isClose(gd.rho, my_rho, 1.0e-4), failedUnitTest());
         number my_Cv = gm.dudT_const_v(gd);
-        number my_u = my_Cv*300.0 - 0.25*300000.0; 
-        assert(approxEqual(gd.u, my_u, 1.0e-3), failedUnitTest());
+        number my_u = my_Cv*300.0 - 0.25*300000.0;
+        assert(isClose(gd.u, my_u, 1.0e-3), failedUnitTest());
         number my_Cp = gm.dhdT_const_p(gd);
         number my_a = sqrt(my_Cp/my_Cv*287.0*300.0);
-        assert(approxEqual(gd.a, my_a, 1.0e-3), failedUnitTest());
+        assert(isClose(gd.a, my_a, 1.0e-3), failedUnitTest());
         gm.update_trans_coeffs(gd);
-        assert(approxEqual(gd.mu, 0.0, 1.0e-6), failedUnitTest());
-        assert(approxEqual(gd.k, 0.0, 1.0e-6), failedUnitTest());
+        assert(isClose(gd.mu, 0.0, 1.0e-6), failedUnitTest());
+        assert(isClose(gd.k, 0.0, 1.0e-6), failedUnitTest());
 
         return 0;
     }

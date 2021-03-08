@@ -246,7 +246,7 @@ version(ideal_gas_test) {
             gd.T += complex(0.0,h);
             gm.update_thermo_from_rhoT(gd);
             double myCv = gd.u.im/h;
-            assert(approxEqual(myCv, gm.dudT_const_v(gd).re), failedUnitTest());
+            assert(isClose(myCv, gm.dudT_const_v(gd).re), failedUnitTest());
         }
         return 0;
     }

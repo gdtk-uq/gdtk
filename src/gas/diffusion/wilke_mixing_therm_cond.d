@@ -114,14 +114,14 @@ version(wilke_mixing_therm_cond_test) {
         auto tcm_N2 = new SutherlandThermCond(273.0, 0.0242, 150.0);
         auto tcm_O2 = new SutherlandThermCond(273.0, 0.0244, 240.0);
         auto tcm = new WilkeMixingThermCond([tcm_N2, tcm_O2], [28.0e-3, 32.0e-3]);
-        
+
         auto gd = new GasState(2, 0);
         gd.T = T;
         gd.massf[0] = 0.8;
         gd.massf[1] = 0.2;
         tcm.update_thermal_conductivity(gd);
-        assert(approxEqual(0.0263063, gd.k), failedUnitTest());
-        
+        assert(isClose(0.0263063, gd.k, 1.0e-3), failedUnitTest());
+
         return 0;
     }
 }

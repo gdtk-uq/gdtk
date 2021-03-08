@@ -8,7 +8,7 @@
  *
  * Authors: Peter J. and Rowan G.
  * Version: 2017-04-22: initial shell copied from powers-aslam-gas module.
- *          2017-04-11: Filled in IDG thermo details as noted in 
+ *          2017-04-11: Filled in IDG thermo details as noted in
  *                      PJ's workbooks 2017-04-22 through 2017-05-11
  *          2017-07-27: Finished reactor function and eliminated bugs in workbook.
  */
@@ -205,27 +205,27 @@ version(ideal_dissociating_gas_test) {
         gd.T = 300.0;
         gd.massf[0] = 1.0; gd.massf[1] = 0.0;
         number Rgas = R_universal / 0.028;
-        assert(approxEqual(gm.R(gd), Rgas, 1.0e-4), failedUnitTest());
+        assert(isClose(gm.R(gd), Rgas, 1.0e-4), failedUnitTest());
         assert(gm.n_modes == 0, failedUnitTest());
         assert(gm.n_species == 2, failedUnitTest());
-        assert(approxEqual(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
-        assert(approxEqual(gd.T, 300.0, 1.0e-6), failedUnitTest());
-        assert(approxEqual(gd.massf[0], 1.0, 1.0e-6), failedUnitTest());
-        assert(approxEqual(gd.massf[1], 0.0, 1.0e-6), failedUnitTest());
+        assert(isClose(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
+        assert(isClose(gd.T, 300.0, 1.0e-6), failedUnitTest());
+        assert(isClose(gd.massf[0], 1.0, 1.0e-6), failedUnitTest());
+        assert(isClose(gd.massf[1], 0.0, 1.0e-6), failedUnitTest());
 
         gm.update_thermo_from_pT(gd);
         gm.update_sound_speed(gd);
         number my_rho = 1.0e5 / (Rgas * 300.0);
-        assert(approxEqual(gd.rho, my_rho, 1.0e-4), failedUnitTest());
+        assert(isClose(gd.rho, my_rho, 1.0e-4), failedUnitTest());
         number my_Cv = gm.dudT_const_v(gd);
         number my_u = my_Cv*300.0;
-        assert(approxEqual(gd.u, my_u, 1.0e-3), failedUnitTest());
+        assert(isClose(gd.u, my_u, 1.0e-3), failedUnitTest());
         number my_Cp = gm.dhdT_const_p(gd);
         number my_a = sqrt(my_Cp/my_Cv*Rgas*300.0);
-        assert(approxEqual(gd.a, my_a, 1.0e-3), failedUnitTest());
+        assert(isClose(gd.a, my_a, 1.0e-3), failedUnitTest());
         gm.update_trans_coeffs(gd);
-        assert(approxEqual(gd.mu, 0.0, 1.0e-6), failedUnitTest());
-        assert(approxEqual(gd.k, 0.0, 1.0e-6), failedUnitTest());
+        assert(isClose(gd.mu, 0.0, 1.0e-6), failedUnitTest());
+        assert(isClose(gd.k, 0.0, 1.0e-6), failedUnitTest());
 
         // Let's set a higher temperature condition so that we can see some reaction.
         // [TODO]: move this test to kinetics/ideal_dissociating_gas_kinetics.d

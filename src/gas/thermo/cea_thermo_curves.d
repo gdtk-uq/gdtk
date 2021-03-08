@@ -159,7 +159,7 @@ private:
             if (T > T_blend_high && T < (_T_breaks[i+1] - 0.5*_T_blends[i])) {
                 _a[] = _coeffs[i][];
                 return;
-            } 
+            }
         }
         // We should never reach this point of code.
         string msg = "Coefficients for CEA curve could not be determined.";
@@ -181,12 +181,12 @@ version(cea_thermo_curves_test) {
         auto oThermo = new CEAThermoCurve(L, R);
         lua_close(L);
         number T = 500.0;
-        assert(approxEqual(1328.627, oThermo.eval_Cp(T).re, 1.0e-6), failedUnitTest());
+        assert(isClose(1328.627, oThermo.eval_Cp(T).re, 1.0e-6), failedUnitTest());
         T = 3700.0;
-        assert(approxEqual(20030794.683, oThermo.eval_h(T).re, 1.0e-6), failedUnitTest());
+        assert(isClose(20030794.683, oThermo.eval_h(T).re, 1.0e-6), failedUnitTest());
         T = 10000.0;
-        assert(approxEqual(14772.717, oThermo.eval_s(T).re, 1.0e-3), failedUnitTest());
-        
+        assert(isClose(14772.717, oThermo.eval_s(T).re, 1.0e-3), failedUnitTest());
+
         version(complex_numbers) {
             // Try out the complex derivative evaluation
             double h = 1.0e-20;
@@ -194,7 +194,7 @@ version(cea_thermo_curves_test) {
             number enthalpy = oThermo.eval_h(T);
             double Cp_cd = enthalpy.im / h;
             number Cp_eval = oThermo.eval_Cp(T);
-            assert(approxEqual(Cp_cd, Cp_eval.re, 1.0e-6), failedUnitTest());
+            assert(isClose(Cp_cd, Cp_eval.re, 1.0e-6), failedUnitTest());
         }
         return 0;
     }
