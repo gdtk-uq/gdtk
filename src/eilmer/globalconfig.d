@@ -620,10 +620,6 @@ final class GlobalConfig {
     // How many iterations to perform shock detector averaging
     shared static int shock_detector_smoothing = 0;
 
-    // Do we want to freeze the shock detector at some point?
-    shared static bool frozen_shock_detector = false;
-    shared static int shock_detector_freeze_step = 100;
-
     // With this flag on, the energy equation is modified such that
     // an artificial compressibility form of equations is solved.
     shared static bool artificial_compressibility = false;
@@ -930,8 +926,6 @@ public:
     double M_inf;
     double compression_tolerance;
     int shock_detector_smoothing;
-    bool frozen_shock_detector;
-    int shock_detector_freeze_step;
     ShockDetector shock_detector;
     bool do_shock_detect;
     bool strict_shock_detector;
@@ -1075,8 +1069,6 @@ public:
         compression_tolerance = GlobalConfig.compression_tolerance;
         shock_detector = GlobalConfig.shock_detector;
         shock_detector_smoothing = GlobalConfig.shock_detector_smoothing;
-        frozen_shock_detector = GlobalConfig.frozen_shock_detector;
-        shock_detector_freeze_step = GlobalConfig.shock_detector_freeze_step;
         do_shock_detect = GlobalConfig.do_shock_detect;
         strict_shock_detector = GlobalConfig.strict_shock_detector;
         //
@@ -1384,8 +1376,6 @@ JSONValue read_config_file()
     mixin(update_double("venkat_K_value", "venkat_K_value"));
     mixin(update_double("shear_tolerance", "shear_tolerance"));
     mixin(update_int("shock_detector_smoothing", "shock_detector_smoothing"));
-    mixin(update_bool("frozen_shock_detector", "frozen_shock_detector"));
-    mixin(update_int("shock_detector_freeze_step", "shock_detector_freeze_step"));
     mixin(update_double("M_inf", "M_inf"));
     mixin(update_double("compression_tolerance", "compression_tolerance"));
     mixin(update_enum("shock_detector", "shock_detector", "shock_detector_from_name"));
@@ -1464,8 +1454,6 @@ JSONValue read_config_file()
         writeln("  compression_tolerance: ", GlobalConfig.compression_tolerance);
         writeln("  shock_detector: ", shock_detector_name(GlobalConfig.shock_detector));
         writeln("  shock_detector_smoothing: ", GlobalConfig.shock_detector_smoothing);
-        writeln("  frozen_shock_detector: ", GlobalConfig.frozen_shock_detector);
-        writeln("  shock_detector_freeze_step: ", GlobalConfig.shock_detector_freeze_step);
         //
         writeln("  MHD: ", GlobalConfig.MHD);
         writeln("  MHD_static_field: ", GlobalConfig.MHD_static_field);
@@ -2106,6 +2094,12 @@ void configCheckPoint4()
     version(shape_sensitivity) {
         GlobalConfig.n_grid_time_levels = 3;
     }
+
+    if (GlobalConfig.do_temporal_DFT &&
+            (GlobalConfig.DFT_n_modes * GlobalConfig.DFT_step_interval != GlobalConfig.max_step)) {
+        writeln("Warning: config.DFT_n_modes * config.DFT_step_interval should equal config.max_step");
+    }
+    return;
 }
 
 void checkGlobalConfig()
