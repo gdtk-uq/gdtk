@@ -547,7 +547,7 @@ extern(C) int importPlot3DGrid(lua_State *L)
     int narg = lua_gettop(L);
     if ( narg < 2 ) {
         string errMsg = "Error in call to importPlot3DGrid(). " ~
-            "At least two arguments are required: the name of the Gridpro file and the dimensionality (2 or 3).";
+            "At least two arguments are required: the name of the Plot3D file and the dimensionality (2 or 3).";
         luaL_error(L, errMsg.toStringz);
     }
     auto fname = to!string(luaL_checkstring(L, 1));

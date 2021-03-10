@@ -1375,6 +1375,15 @@ StructuredGrid[] importPlot3DGrid(string fileName, int dim, double scale=1.0)
                 }
             }
         } // end if dim == 3
+        else {
+            foreach (k; 0 .. g.nkv) {
+                foreach (j; 0 .. g.njv) {
+                    foreach (i; 0 .. g.niv) {
+                        g[i,j,k].refz = 0.0;
+                    }
+                }
+            }
+        }
     } // end foreach g
     f.close();
     return grids;
