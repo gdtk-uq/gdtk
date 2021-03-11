@@ -2010,17 +2010,16 @@ public:
     // Think this should be fine as nogc? Taking transform of pressure in this example
     @nogc
     void increment_local_DFT(size_t DFT_step) {
-        double pi = 3.14159265359;
         // If it's the first step, we should set the values rather than incrementing
         if (DFT_step == 0) {
             foreach (i; 0..myConfig.DFT_n_modes) {
-                DFT_local_real[i] = cos(2 * pi * i * DFT_step / myConfig.DFT_n_modes) * fs.gas.p;
-                DFT_local_imag[i] = sin(2 * pi * i * DFT_step / myConfig.DFT_n_modes) * fs.gas.p;
+                DFT_local_real[i] = cos(2 * std.math.PI * i * DFT_step / myConfig.DFT_n_modes) * fs.gas.p;
+                DFT_local_imag[i] = sin(2 * std.math.PI * i * DFT_step / myConfig.DFT_n_modes) * fs.gas.p;
             }
         } else {
             foreach (i; 0..myConfig.DFT_n_modes) {
-                DFT_local_real[i] += cos(2 * pi * i * DFT_step / myConfig.DFT_n_modes) * fs.gas.p;
-                DFT_local_imag[i] -= sin(2 * pi * i * DFT_step / myConfig.DFT_n_modes) * fs.gas.p;
+                DFT_local_real[i] += cos(2 * std.math.PI * i * DFT_step / myConfig.DFT_n_modes) * fs.gas.p;
+                DFT_local_imag[i] -= sin(2 * std.math.PI * i * DFT_step / myConfig.DFT_n_modes) * fs.gas.p;
             }
         }
     }
