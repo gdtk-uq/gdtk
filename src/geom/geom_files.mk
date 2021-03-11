@@ -14,6 +14,7 @@ GEOM_D_FILES := \
 	$(GEOM_DIR)/gpath/arc.d \
 	$(GEOM_DIR)/gpath/helix.d \
 	$(GEOM_DIR)/gpath/bezier.d \
+	$(GEOM_DIR)/gpath/nurbscurve.d \
 	$(GEOM_DIR)/gpath/polynomial.d \
 	$(GEOM_DIR)/gpath/polyline.d \
 	$(GEOM_DIR)/gpath/svgpath.d \
@@ -31,6 +32,7 @@ GEOM_D_FILES := \
 	$(GEOM_DIR)/surface/subrangedsurface.d \
 	$(GEOM_DIR)/surface/bezierpatch.d \
 	$(GEOM_DIR)/surface/beziertrianglepatch.d \
+	$(GEOM_DIR)/surface/nurbssurface.d \
 	$(GEOM_DIR)/volume/package.d \
 	$(GEOM_DIR)/volume/parametricvolume.d \
 	$(GEOM_DIR)/volume/tfivolume.d \
@@ -50,7 +52,8 @@ GEOM_D_FILES := \
 	$(GEOM_DIR)/misc/univariatefunctions.d \
 	$(GEOM_DIR)/misc/svg.d \
 	$(GEOM_DIR)/misc/kdtree.d \
-	$(GEOM_DIR)/misc/sketch.d
+	$(GEOM_DIR)/misc/sketch.d \
+	$(GEOM_DIR)/misc/nurbs_utils.d
 
 # Look for the static library libplot
 LIBPLOT := $(strip $(wildcard /usr/lib/libplot.a) \
