@@ -37,6 +37,7 @@ import json_helper;
 import globaldata;
 import flowstate;
 import fluidblock;
+import fluidblockarray;
 import sfluidblock: SFluidBlock;
 import ufluidblock: UFluidBlock;
 import ssolidblock;

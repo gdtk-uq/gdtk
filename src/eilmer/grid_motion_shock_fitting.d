@@ -28,6 +28,7 @@ import fvcell;
 import onedinterp;
 import bc;
 import fluidblock;
+import fluidblockarray;
 import sfluidblock;
 import geom;
 import grid_motion;

@@ -13,6 +13,7 @@ module globaldata;
 
 import globalconfig;
 import fluidblock;
+import fluidblockarray;
 import ssolidblock;
 import block;
 import loads;
