@@ -38,6 +38,7 @@ import globaldata;
 import flowstate;
 import fluidblock;
 import fluidblockarray;
+import fluidblockio_old;
 import sfluidblock: SFluidBlock;
 import ufluidblock: UFluidBlock;
 import ssolidblock;
@@ -49,65 +50,6 @@ import grid_motion_udf;
 import mass_diffusion;
 import loads;
 import turbulence;
-
-// ----------------------------------------------------------------------
-// Flow variables, as they might appear in the data files.
-// We define their names here with a single, definitive spelling.
-// Although having symbolic names for the variables might seem excessive,
-// we hope to gain some benefit from the compiler being able to check them.
-enum FlowVar {
-    pos_x, pos_y, pos_z, volume,
-    rho, vel_x, vel_y, vel_z,
-    B_x, B_y, B_z, divB,
-    psi, quality, p, a, mu, k,
-    mu_t, k_t, S,
-    Q_rad_org, f_rad_org, Q_rE_rad,
-    dt_local, dt_chem, u, T, dt_therm
-};
-
-@nogc
-string flowVarName(FlowVar var)
-{
-    final switch(var) {
-    case FlowVar.pos_x: return "pos.x";
-    case FlowVar.pos_y: return "pos.y";
-    case FlowVar.pos_z: return "pos.z";
-    case FlowVar.volume: return "volume";
-    case FlowVar.rho: return "rho";
-    case FlowVar.vel_x: return "vel.x";
-    case FlowVar.vel_y: return "vel.y";
-    case FlowVar.vel_z: return "vel.z";
-    case FlowVar.B_x: return "B.x";
-    case FlowVar.B_y: return "B.y";
-    case FlowVar.B_z: return "B.z";
-    case FlowVar.divB: return "divB";
-    case FlowVar.psi: return "psi";
-    case FlowVar.quality: return "quality";
-    case FlowVar.p: return "p";
-    case FlowVar.a: return "a";
-    case FlowVar.mu: return "mu";
-    case FlowVar.k: return "k";
-    case FlowVar.mu_t: return "mu_t";
-    case FlowVar.k_t: return "k_t";
-    case FlowVar.S: return "S";
-    case FlowVar.Q_rad_org: return "Q_rad_org";
-    case FlowVar.f_rad_org: return "f_rad_org";
-    case FlowVar.Q_rE_rad: return "Q_rE_rad";
-    case FlowVar.dt_local: return "dt_local";
-    case FlowVar.dt_chem: return "dt_chem";
-    case FlowVar.u: return "u";
-    case FlowVar.T: return "T";
-    case FlowVar.dt_therm: return "dt_therm";
-    } // end switch(var)
-} // end FlowVarName
-string massfName(GasModel gmodel, int i) {
-    auto name = cast(char[]) gmodel.species_name(i);
-    name = tr(name, " \t", "--", "s"); // Replace internal whitespace with dashes.
-    return "massf[" ~ to!string(i) ~ "]-" ~ to!string(name);
-}
-string k_modesName(int i) { return "k_modes[" ~ to!string(i) ~ "]"; }
-string u_modesName(int i) { return "u_modes[" ~ to!string(i) ~ "]"; }
-string T_modesName(int i) { return "T_modes[" ~ to!string(i) ~ "]"; }
 
 //--------------------------------------------------------------------------------
 
@@ -825,53 +767,6 @@ final class GlobalConfig {
     }
 
     shared static string[] flow_variable_list;
-
-    static string[] build_flow_variable_list()
-    {
-        // Returns a list of variable names in the order of the fixed-layout data files.
-        // This function needs to be consistent with the cell-data reading and writing
-        // functions toward the end of fvcell.d.
-        string[] list;
-        list ~= [flowVarName(FlowVar.pos_x),
-                 flowVarName(FlowVar.pos_y),
-                 flowVarName(FlowVar.pos_z),
-                 flowVarName(FlowVar.volume),
-                 flowVarName(FlowVar.rho),
-                 flowVarName(FlowVar.vel_x),
-                 flowVarName(FlowVar.vel_y),
-                 flowVarName(FlowVar.vel_z)];
-        if (MHD) {
-            list ~= [flowVarName(FlowVar.B_x),
-                     flowVarName(FlowVar.B_y),
-                     flowVarName(FlowVar.B_z),
-                     flowVarName(FlowVar.divB)];
-        }
-        if (MHD && divergence_cleaning) { list ~= flowVarName(FlowVar.psi); }
-        if (include_quality) { list ~= flowVarName(FlowVar.quality); }
-        list ~= [flowVarName(FlowVar.p),
-                 flowVarName(FlowVar.a),
-                 flowVarName(FlowVar.mu),
-                 flowVarName(FlowVar.k)];
-        foreach(i; 0 .. gmodel_master.n_modes) { list ~= k_modesName(i); }
-        list ~= [flowVarName(FlowVar.mu_t),
-                 flowVarName(FlowVar.k_t),
-                 flowVarName(FlowVar.S)];
-        if (radiation) {
-            list ~= [flowVarName(FlowVar.Q_rad_org),
-                     flowVarName(FlowVar.f_rad_org),
-                     flowVarName(FlowVar.Q_rE_rad)];
-        }
-        foreach(i; 0 .. turb_model.nturb) list ~= turb_model.primitive_variable_name(i);
-        foreach(i; 0 .. gmodel_master.n_species) { list ~= [massfName(gmodel_master, i)]; }
-        if (gmodel_master.n_species > 1) { list ~= flowVarName(FlowVar.dt_chem); }
-        list ~= [flowVarName(FlowVar.u), flowVarName(FlowVar.T)];
-        foreach(i; 0 .. gmodel_master.n_modes) {
-            list ~= [u_modesName(i), T_modesName(i)];
-        }
-        if (gmodel_master.n_modes > 0) { list ~= flowVarName(FlowVar.dt_therm); }
-        if (with_local_time_stepping) { list ~= flowVarName(FlowVar.dt_local); }
-        return list;
-    } // end variable_list_for_flow_data()
 
 } // end class GlobalConfig
 
@@ -1703,7 +1598,7 @@ JSONValue read_config_file()
     // Enough configuration should be known, such we can build a list of variable names
     // for which data will be written into the flow data files.
     // This list needs to be built before the block-local config is copied.
-    foreach (vname; GlobalConfig.build_flow_variable_list()) { GlobalConfig.flow_variable_list ~= vname; }
+    foreach (vname; build_flow_variable_list()) { GlobalConfig.flow_variable_list ~= vname; }
 
     // Now, configure blocks that make up the flow domain.
     //

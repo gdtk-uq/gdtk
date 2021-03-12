@@ -37,6 +37,7 @@ import flowstate;
 import fluidblock;
 import sfluidblock;
 import ufluidblock;
+import fluidblockio_old;
 import ssolidblock;
 import solidprops;
 import solidfvinterface;

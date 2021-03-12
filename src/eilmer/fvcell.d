@@ -139,7 +139,7 @@ public:
     number[] chem_rates;
     number[] chem_source;
     ReactionMechanism rmech;
-    
+
     // For use with LU-SGS solver/preconditioner (note: we don't need complex numbers here)
     number[] LU;
     number[] dUk;
@@ -177,7 +177,10 @@ public:
         int[] pivot;
     }
 
-private:
+    // 2021-03-12: Note that we have moved the IO functions for the cell into fluidblockio.d
+    // in preparation for the new block-level IO code.  We thus need to be able to access the
+    // cell's local reference to the config data from over there.
+public:
     LocalConfig myConfig;
 
 public:
@@ -240,15 +243,15 @@ public:
                 chem_source.length = n_species;
                 chem_conc.length = n_species;
                 chem_rates.length = n_species;
-                
+
                 auto myChemUpdate = cast(ChemistryUpdate) myConfig.thermochemUpdate;
-                if (myChemUpdate !is null) { 
+                if (myChemUpdate !is null) {
                     rmech = myChemUpdate.rmech.dup();
                 } else {
                     throw new Exception("Opps, incorrect ThermochemicalReactor.");
                 }
             }
-            
+
             size_t nConserved = myConfig.cqi.nConservedQuantities;
             scalar_diag_inv.length = nConserved;
             dFdU = new Matrix!number(nConserved,nConserved);
@@ -487,98 +490,6 @@ public:
         Q_rE_rad /= n;
     } // end replace_flow_data_with_average()
 
-    void scan_values_from_string(string buffer, ref string[] varNameList, bool fixedOrder,
-                                 GasModel gmodel, bool overwrite_geometry_data)
-    // Note that the position data is read into grid_time_level 0.
-    {
-        Vector3 new_pos;
-        number new_volume;
-        if (fixedOrder) {
-            scan_cell_data_from_fixed_order_string
-                (buffer,
-                 new_pos, new_volume, fs,
-                 Q_rad_org, f_rad_org, Q_rE_rad,
-                 myConfig.with_local_time_stepping, dt_local, dt_chem, dt_therm,
-                 myConfig.include_quality, myConfig.MHD,
-                 myConfig.divergence_cleaning, myConfig.radiation,
-                 myConfig.turb_model.nturb);
-        } else {
-            scan_cell_data_from_variable_order_string
-                (buffer, varNameList, gmodel, myConfig.turb_model,
-                 new_pos, new_volume, fs,
-                 Q_rad_org, f_rad_org, Q_rE_rad,
-                 myConfig.with_local_time_stepping, dt_local, dt_chem, dt_therm,
-                 myConfig.include_quality, myConfig.MHD,
-                 myConfig.divergence_cleaning, myConfig.radiation);
-        }
-        if (overwrite_geometry_data) {
-            pos[0].set(new_pos);
-            volume[0] = new_volume;
-        }
-    } // end scan_values_from_string()
-
-    void read_values_from_raw_binary(ref File fin, bool overwrite_geometry_data)
-    // Note that the position data is read into grid_time_level 0.
-    {
-        Vector3 new_pos;
-        number new_volume;
-        raw_binary_to_cell_data(fin, new_pos, new_volume, fs,
-                                Q_rad_org, f_rad_org, Q_rE_rad,
-                                myConfig.with_local_time_stepping, dt_local, dt_chem, dt_therm,
-                                myConfig.include_quality, myConfig.MHD,
-                                myConfig.divergence_cleaning, myConfig.radiation,
-                                myConfig.turb_model.nturb);
-        if (overwrite_geometry_data) {
-            pos[0].set(new_pos);
-            volume[0] = new_volume;
-        }
-    } // end read_values_from_raw_binary()
-
-    string write_values_to_string() const
-    {
-        return cell_data_as_string(pos[0], volume[0], fs,
-                                   Q_rad_org, f_rad_org, Q_rE_rad,
-                                   myConfig.with_local_time_stepping, dt_local, dt_chem, dt_therm,
-                                   myConfig.include_quality, myConfig.MHD,
-                                   myConfig.divergence_cleaning, myConfig.radiation,
-                                   myConfig.turb_model.nturb);
-    } // end write_values_to_string()
-
-    void write_values_to_raw_binary(ref File fout) const
-    {
-        cell_data_to_raw_binary(fout, pos[0], volume[0], fs,
-                                Q_rad_org, f_rad_org, Q_rE_rad,
-                                myConfig.with_local_time_stepping, dt_local, dt_chem, dt_therm,
-                                myConfig.include_quality, myConfig.MHD,
-                                myConfig.divergence_cleaning, myConfig.radiation,
-                                myConfig.turb_model.nturb);
-    } // end write_values_to_raw_binary()
-
-    string write_residuals_to_string() const
-    {
-        auto writer = appender!string();
-        version(complex_numbers) {
-            formattedWrite(writer, "%.18e %.18e %.18e %.18e",
-                           -dUdt[0].mass.re, -dUdt[0].momentum.x.re,
-                           -dUdt[0].momentum.y.re, -dUdt[0].total_energy.re);
-        } else {
-            formattedWrite(writer, "%.18e %.18e %.18e %.18e",
-                           -dUdt[0].mass, -dUdt[0].momentum.x,
-                           -dUdt[0].momentum.y, -dUdt[0].total_energy);
-        }
-        return writer.data;
-    }
-
-    // begin write_DFT_to_string()
-    string write_DFT_to_string()
-    {
-        auto writer = appender!string();
-        foreach(i; 0..myConfig.DFT_n_modes) {
-            formattedWrite(writer, "%.18e %1.8e ", DFT_local_real[i], DFT_local_imag[i]);
-        }
-    return writer.data;
-    } // end write_DFT_to_string
-    
     @nogc
     void encode_conserved(int gtl, int ftl, double omegaz)
     // gtl = grid time level
@@ -1910,7 +1821,7 @@ public:
         foreach(sp, ref elem; Q.massf) { elem += chem_source[sp]; }
         }
     }
-    
+
     @nogc
     number calculate_wall_Reynolds_number(int which_boundary, GasModel gmodel)
     // [TODO] unstructured-grid adaption to be done, however,
@@ -2093,8 +2004,8 @@ public:
         // Luo, Baum, and Lohner (1998)
         // A Fast, Matrix-free Implicit Method for Compressible Flows on Unstructured Grids,
         // Journal of computational physics
-        // 
-        
+        //
+
         // Make a stack-local copy of conserved quantities info
         size_t nConserved = myConfig.cqi.nConservedQuantities;
         size_t MASS = myConfig.cqi.mass;
@@ -2103,12 +2014,12 @@ public:
         size_t Z_MOM = myConfig.cqi.zMom;
         size_t TOT_ENERGY = myConfig.cqi.totEnergy;
         size_t TKE = myConfig.cqi.tke;
-        
+
         size_t nturb = myConfig.turb_model.nturb;
 
         // make sure cells have conserved quantities filled
         encode_conserved(0, 0, 0.0);
-        
+
         // peturb conserved quantities by approximation of dU
         U[1].copy_values_from(U[0]);
         U[1].mass += dUk[MASS];
@@ -2120,10 +2031,10 @@ public:
         foreach(it; 0 .. nturb) {
             U[1].rhoturb[it] += dUk[TKE+it];
         }
-        
+
         // update primitive variables
-        decode_conserved(0, 1, 0.0);          
-        
+        decode_conserved(0, 1, 0.0);
+
         // Peturbed state flux
         number rho = fs.gas.rho;
         number velx = fs.vel.dot(f.n);
@@ -2132,7 +2043,7 @@ public:
         number p = fs.gas.p;
         auto gmodel = myConfig.gmodel;
         number e = gmodel.internal_energy(fs.gas);
-        
+
         dF[MASS]= rho*velx;
         dF[X_MOM] = p + rho*velx*velx;
         dF[Y_MOM] = rho*velx*vely;
@@ -2142,10 +2053,10 @@ public:
         foreach(it; 0 .. nturb) {
             dF[TKE+it] = rho*velx*fs.turb[it];
         }
-        
+
         // reset primitive variables to unperturbed state
-        decode_conserved(0, 0, 0.0);          
-        
+        decode_conserved(0, 0, 0.0);
+
         // original state flux
         rho = fs.gas.rho;
         velx = fs.vel.dot(f.n);
@@ -2153,7 +2064,7 @@ public:
         velz = fs.vel.dot(f.t2);
         p = fs.gas.p;
         e = gmodel.internal_energy(fs.gas);
-        
+
         // flux vector increment
         dF[MASS] -= rho*velx;
         dF[X_MOM] -= p + rho*velx*velx;
@@ -2173,7 +2084,7 @@ public:
         dF[Y_MOM] = global_mom_y;
         if (myConfig.dimensions == 3)
             dF[Z_MOM] = global_mom_z;
-        
+
         dF[TOT_ENERGY] -= (rho*e + rho*(velx^^2 + vely^^2 + velz^^2)/2.0 + p)*velx;
         foreach(it; 0 .. nturb) {
             dF[TKE+it] -= rho*velx*fs.turb[it];
@@ -2187,8 +2098,8 @@ public:
         // Luo, Baum, and Lohner (1998)
         // A Fast, Matrix-free Implicit Method for Compressible Flows on Unstructured Grids,
         // Journal of computational physics
-        // 
-        
+        //
+
         // Make a stack-local copy of conserved quantities info
         size_t nConserved = myConfig.cqi.nConservedQuantities;
         size_t MASS = myConfig.cqi.mass;
@@ -2208,33 +2119,33 @@ public:
         number w = fs.vel.dot(f.t2);
         number p = fs.gas.p;
         number e = gmodel.internal_energy(fs.gas);
-        
+
         // conserved variables
-        number U1 = rho; 
+        number U1 = rho;
         number U2 = rho*u;
         number U3 = rho*v;
         number U4 = rho*w;
         number U5 = rho*e + rho*(u^^2 + v^^2 + w^^2)/2.0;
-        
+
         // approximate flux Jacobian based on Roe's approximate split flux scheme
         dFdU[MASS,MASS] = to!number(0.0);
         dFdU[MASS,X_MOM] = to!number(1.0);
         dFdU[MASS,Y_MOM] = to!number(0.0);
         if (myConfig.dimensions == 3) { dFdU[X_MOM,Z_MOM] = to!number(0.0); }
         dFdU[MASS,TOT_ENERGY] = to!number(0.0);
-        
+
         dFdU[X_MOM,MASS] = -(U2*U2)/(U1*U1) + (gam-1.0)*(U2*U2+U3*U3+U4*U4)/(2.0*U1*U1);
         dFdU[X_MOM,X_MOM] = (3.0-gam)*(U2/U1);
         dFdU[X_MOM,Y_MOM] = (1.0-gam)*(U3/U1);
         if (myConfig.dimensions == 3) { dFdU[X_MOM,Z_MOM] = (1.0-gam)*(U4/U1); }
         dFdU[X_MOM,TOT_ENERGY] = (gam-1.0);
-        
+
         dFdU[Y_MOM,MASS] = -(U2*U3)/(U1*U1);
         dFdU[Y_MOM,X_MOM] = U3/U1;
         dFdU[Y_MOM,Y_MOM] = U2/U1;
         if (myConfig.dimensions == 3) { dFdU[Y_MOM,Z_MOM] = to!number(0.0); }
         dFdU[Y_MOM,TOT_ENERGY] = to!number(0.0);
-        
+
         if (myConfig.dimensions == 3) {
             dFdU[Z_MOM,MASS] = -(U2*U4)/(U1*U1);
             dFdU[Z_MOM,X_MOM] = U4/U1;
@@ -2242,12 +2153,12 @@ public:
             dFdU[Z_MOM,Z_MOM] = U2/U1;
             dFdU[Z_MOM,TOT_ENERGY] = to!number(0.0);
         }
-        
+
         dFdU[TOT_ENERGY,MASS] = -gam*(U5*U2)/(U1*U1) + (gam-1.0)*(U2*U2*U2+U2*U3*U3+U2*U4*U4)/(U1*U1*U1);
         dFdU[TOT_ENERGY,X_MOM] = gam*(U5/U1) + (1.0-gam)*(3*U2*U2+U3*U3+U4*U4)/(2*U1*U1);
         dFdU[TOT_ENERGY,Y_MOM] = (1.0-gam)*(U3*U2)/(U1*U1);
         if (myConfig.dimensions == 3) { dFdU[TOT_ENERGY,Z_MOM] = (1.0-gam)*(U4*U2)/(U1*U1); }
-        dFdU[TOT_ENERGY,TOT_ENERGY] = gam*(U2/U1); 
+        dFdU[TOT_ENERGY,TOT_ENERGY] = gam*(U2/U1);
 
         size_t nturb = myConfig.turb_model.nturb;
         foreach(it; 0 .. nturb) {
@@ -2255,7 +2166,7 @@ public:
             dFdU[TKE+it, X_MOM] = rho*fs.turb[it]/U1;
             dFdU[TKE+it, TKE+it] = U2/U1;
         }
-        
+
         // rotate matrix back into the global reference frame
         dot(f.Tinv, dFdU, dFdU_rotated);
         dot(dFdU_rotated, f.T, dFdU);
@@ -2425,614 +2336,3 @@ public:
     } // end gather_residual_stencil_lists_for_ghost_cells()
 
 } // end class FVCell
-
-//--------------------------------------------------------------------------------
-// The following functions define the written fixed-formats for the cell data.
-// Other input and output functions should delegate their work to these functions.
-//--------------------------------------------------------------------------------
-
-string cell_data_as_string(ref const(Vector3) pos, number volume, ref const(FlowState) fs,
-                           number Q_rad_org, number f_rad_org, number Q_rE_rad,
-                           bool with_local_time_stepping, double dt_local, double dt_chem, double dt_therm,
-                           bool include_quality,
-                           bool MHDflag, bool divergence_cleaning,
-                           bool radiation, size_t nturb)
-{
-    // We'll treat this function as the master definition of the data format.
-    auto writer = appender!string();
-    version(complex_numbers) {
-        // For complex_numbers, we presently write out only the real parts.
-        // [TODO] Maybe we should write full complex numbers.
-        formattedWrite(writer, "%.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e",
-                       pos.x.re, pos.y.re, pos.z.re, volume.re, fs.gas.rho.re,
-                       fs.vel.x.re, fs.vel.y.re, fs.vel.z.re);
-        version(MHD) {
-            if (MHDflag) { formattedWrite(writer, " %.18e %.18e %.18e %.18e", fs.B.x.re, fs.B.y.re, fs.B.z.re, fs.divB.re); }
-            if (MHDflag && divergence_cleaning) { formattedWrite(writer, " %.18e", fs.psi.re); }
-        } else {
-            assert(!MHDflag, "inappropriate MHDflag");
-        }
-        if (include_quality) { formattedWrite(writer, " %.18e", fs.gas.quality.re); }
-        formattedWrite(writer, " %.18e %.18e %.18e", fs.gas.p.re, fs.gas.a.re, fs.gas.mu.re);
-        formattedWrite(writer, " %.18e", fs.gas.k.re);
-        version(multi_T_gas) {
-            foreach (kvalue; fs.gas.k_modes) { formattedWrite(writer, " %.18e", kvalue.re); }
-        }
-        formattedWrite(writer, " %.18e %.18e %.18e", fs.mu_t.re, fs.k_t.re, fs.S.re);
-        if (radiation) { formattedWrite(writer, " %.18e %.18e %.18e", Q_rad_org.re, f_rad_org.re, Q_rE_rad.re); }
-        version(turbulence) {
-            foreach(it; 0 .. nturb){
-                formattedWrite(writer, " %.18e", fs.turb[it].re);
-            }
-        }
-        version(multi_species_gas) {
-            foreach (massfvalue; fs.gas.massf) { formattedWrite(writer, " %.18e", massfvalue.re); } 
-            if (fs.gas.massf.length > 1) { formattedWrite(writer, " %.18e", dt_chem); }
-        } else {
-            formattedWrite(writer, " %.18e", 1.0); // single-species mass fraction
-        }
-        formattedWrite(writer, " %.18e %.18e", fs.gas.u.re, fs.gas.T.re);
-        version(multi_T_gas) {
-            foreach (imode; 0 .. fs.gas.u_modes.length) {
-                formattedWrite(writer, " %.18e %.18e", fs.gas.u_modes[imode].re, fs.gas.T_modes[imode].re);
-            }
-            if (fs.gas.u_modes.length > 0) { formattedWrite(writer, " %.18e", dt_therm); }
-        }
-        if (with_local_time_stepping) formattedWrite(writer, " %.18e", dt_local);
-    } else {
-        // version double_numbers
-        formattedWrite(writer, "%.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e",
-                       pos.x, pos.y, pos.z, volume, fs.gas.rho,
-                       fs.vel.x, fs.vel.y, fs.vel.z);
-        version(MHD) {
-            if (MHDflag) { formattedWrite(writer, " %.18e %.18e %.18e %.18e", fs.B.x, fs.B.y, fs.B.z, fs.divB); }
-            if (MHDflag && divergence_cleaning) { formattedWrite(writer, " %.18e", fs.psi); }
-        } else {
-            assert(!MHDflag, "inappropriate MHDflag");
-        }
-        if (include_quality) { formattedWrite(writer, " %.18e", fs.gas.quality); }
-        formattedWrite(writer, " %.18e %.18e %.18e", fs.gas.p, fs.gas.a, fs.gas.mu);
-        formattedWrite(writer, " %.18e", fs.gas.k);
-        version(multi_T_gas) {
-            foreach (kvalue; fs.gas.k_modes) { formattedWrite(writer, " %.18e", kvalue); }
-        }
-        formattedWrite(writer, " %.18e %.18e %.18e", fs.mu_t, fs.k_t, fs.S);
-        if (radiation) { formattedWrite(writer, " %.18e %.18e %.18e", Q_rad_org, f_rad_org, Q_rE_rad); }
-        version(turbulence) {
-            foreach(it; 0 .. nturb){
-                formattedWrite(writer, " %.18e", fs.turb[it]);
-            }
-        }
-        version(multi_species_gas) {
-            foreach (massfvalue; fs.gas.massf) { formattedWrite(writer, " %.18e", massfvalue); }
-            if (fs.gas.massf.length > 1) { formattedWrite(writer, " %.18e", dt_chem); }
-        } else {
-            formattedWrite(writer, " %.18e", 1.0); // single-species mass fraction
-        }
-        formattedWrite(writer, " %.18e %.18e", fs.gas.u, fs.gas.T);
-        version(multi_T_gas) {
-            foreach (imode; 0 .. fs.gas.u_modes.length) {
-                formattedWrite(writer, " %.18e %.18e", fs.gas.u_modes[imode], fs.gas.T_modes[imode]);
-            }
-            if (fs.gas.u_modes.length > 0) { formattedWrite(writer, " %.18e", dt_therm); }
-        }
-        if (with_local_time_stepping) { formattedWrite(writer, " %.18e", dt_local); }
-    } // end version double_numbers
-    return writer.data;
-} // end cell_data_as_string()
-
-void cell_data_to_raw_binary(ref File fout,
-                             ref const(Vector3) pos, number volume, ref const(FlowState) fs,
-                             number Q_rad_org, number f_rad_org, number Q_rE_rad,
-                             bool with_local_time_stepping, double dt_local, double dt_chem, double dt_therm,
-                             bool include_quality, bool MHDflag, bool divergence_cleaning,
-                             bool radiation, size_t nturb)
-{
-    // This function should match function cell_data_as_string()
-    // which is considered the master definition of the data format.
-    // We have tried to keep the same code layout.  There is some history.
-    // 2017-09-02:
-    // Change to using all double values so that the FlowSolution reader becomes simpler.
-    //
-    version(complex_numbers) {
-        // For complex_numbers, we presently write out only the real parts.
-        // [TODO] Maybe we should write full complex numbers.
-        // Fixed-length buffers to hold data for sending to binary file.
-        double[1] dbl1; double[2] dbl2; double[3] dbl3; double[4] dbl4;
-        //
-        dbl4[0] = pos.x.re; dbl4[1] = pos.y.re; dbl4[2] = pos.z.re; dbl4[3] = volume.re;
-        fout.rawWrite(dbl4);
-        dbl4[0] = fs.gas.rho.re; dbl4[1] = fs.vel.x.re; dbl4[2] = fs.vel.y.re; dbl4[3] = fs.vel.z.re;
-        fout.rawWrite(dbl4);
-        version(MHD) {
-            if (MHDflag) {
-                dbl4[0] = fs.B.x.re; dbl4[1] = fs.B.y.re; dbl4[2] = fs.B.z.re; dbl4[3] = fs.divB.re;
-                fout.rawWrite(dbl4);
-            }
-            if (MHDflag && divergence_cleaning) { dbl1[0] = fs.psi.re; fout.rawWrite(dbl1); }
-        } else {
-            assert(!MHDflag, "inappropriate MHDflag");
-        }
-        if (include_quality) { dbl1[0] = fs.gas.quality.re; fout.rawWrite(dbl1); }
-        dbl4[0] = fs.gas.p.re; dbl4[1] = fs.gas.a.re; dbl4[2] = fs.gas.mu.re; dbl4[3] = fs.gas.k.re;
-        fout.rawWrite(dbl4);
-        foreach (kvalue; fs.gas.k_modes) { dbl1[0] = kvalue.re; fout.rawWrite(dbl1); }
-        dbl2[0] = fs.mu_t.re; dbl2[1] = fs.k_t.re; fout.rawWrite(dbl2);
-        dbl1[0] = fs.S.re; fout.rawWrite(dbl1);
-        if (radiation) {
-            dbl3[0] = Q_rad_org.re; dbl3[1] = f_rad_org.re; dbl3[2] = Q_rE_rad.re;
-            fout.rawWrite(dbl3);
-        }
-        version(turbulence) {
-            foreach(it; 0 .. nturb){
-                dbl1[0] = fs.turb[it].re; fout.rawWrite(dbl1);
-            }
-        }
-        version(multi_species_gas) {
-            foreach (mf; fs.gas.massf) { dbl1[0] = mf.re; fout.rawWrite(dbl1); }
-            if (fs.gas.massf.length > 1) { dbl1[0] = dt_chem; fout.rawWrite(dbl1); }
-        } else {
-            dbl1[0] = 1.0; fout.rawWrite(dbl1); // single-species mass fraction
-        }
-        dbl2[0] = fs.gas.u.re; dbl2[1] = fs.gas.T.re; fout.rawWrite(dbl2);
-        version(multi_T_gas) {
-            foreach (imode; 0 .. fs.gas.u_modes.length) {
-                dbl2[0] = fs.gas.u_modes[imode].re; dbl2[1] = fs.gas.T_modes[imode].re;
-                fout.rawWrite(dbl2);
-            }
-            if (fs.gas.u_modes.length > 0) { dbl1[0] = dt_therm; fout.rawWrite(dbl1); }
-        }
-        if (with_local_time_stepping) { dbl1[0] = dt_local; fout.rawWrite(dbl1); }
-    } else {
-        // version double_numbers
-        // Fixed-length buffers to hold data for sending to binary file.
-        double[1] dbl1; double[2] dbl2; double[3] dbl3; double[4] dbl4;
-        //
-        dbl4[0] = pos.x; dbl4[1] = pos.y; dbl4[2] = pos.z; dbl4[3] = volume;
-        fout.rawWrite(dbl4);
-        dbl4[0] = fs.gas.rho; dbl4[1] = fs.vel.x; dbl4[2] = fs.vel.y; dbl4[3] = fs.vel.z;
-        fout.rawWrite(dbl4);
-        version(MHD) {
-            if (MHDflag) {
-                dbl4[0] = fs.B.x; dbl4[1] = fs.B.y; dbl4[2] = fs.B.z; dbl4[3] = fs.divB;
-                fout.rawWrite(dbl4);
-            }
-            if (MHDflag && divergence_cleaning) { dbl1[0] = fs.psi; fout.rawWrite(dbl1); }
-        } else {
-            assert(!MHDflag, "inappropriate MHDflag");
-        }
-        if (include_quality) { dbl1[0] = fs.gas.quality; fout.rawWrite(dbl1); }
-        dbl4[0] = fs.gas.p; dbl4[1] = fs.gas.a; dbl4[2] = fs.gas.mu; dbl4[3] = fs.gas.k;
-        fout.rawWrite(dbl4);
-        version(multi_species_gas) {
-            foreach (kvalue; fs.gas.k_modes) { dbl1[0] = kvalue; fout.rawWrite(dbl1); }
-        }
-        dbl2[0] = fs.mu_t; dbl2[1] = fs.k_t; fout.rawWrite(dbl2);
-        dbl1[0] = fs.S; fout.rawWrite(dbl1);
-        if (radiation) {
-            dbl3[0] = Q_rad_org; dbl3[1] = f_rad_org; dbl3[2] = Q_rE_rad;
-            fout.rawWrite(dbl3);
-        }
-        version(turbulence) {
-            foreach(it; 0 .. nturb){
-                dbl1[0] = fs.turb[it]; fout.rawWrite(dbl1);
-            }
-        }
-        version(multi_species_gas) {
-            fout.rawWrite(fs.gas.massf);
-            if (fs.gas.massf.length > 1) { dbl1[0] = dt_chem; fout.rawWrite(dbl1); }
-        } else {
-            dbl1[0] = 1.0; fout.rawWrite(dbl1); // single-species mass fraction
-        }
-        dbl2[0] = fs.gas.u; dbl2[1] = fs.gas.T; fout.rawWrite(dbl2);
-        version(multi_T_gas) {
-            foreach (imode; 0 .. fs.gas.u_modes.length) {
-                dbl2[0] = fs.gas.u_modes[imode]; dbl2[1] = fs.gas.T_modes[imode];
-                fout.rawWrite(dbl2);
-            }
-            if (fs.gas.u_modes.length > 0) { dbl1[0] = dt_therm; fout.rawWrite(dbl1); }
-        }
-        if (with_local_time_stepping) { dbl1[0] = dt_local; fout.rawWrite(dbl1); }
-    } // end version double_numbers
-    return;
-} // end cell_data_to_raw_binary()
-
-void scan_cell_data_from_fixed_order_string
-(string buffer,
- ref Vector3 pos, ref number volume, ref FlowState fs,
- ref number Q_rad_org, ref number f_rad_org, ref number Q_rE_rad,
- bool with_local_time_stepping, ref double dt_local, ref double dt_chem, ref double dt_therm,
- bool include_quality, bool MHDflag, bool divergence_cleaning, bool radiation, size_t nturb)
-{
-    // This function needs to be kept consistent with cell_data_as_string() above.
-    auto items = split(buffer);
-    version(complex_numbers) {
-        // For complex_numbers, we presently set only the real parts.
-        // [TODO] Maybe we should read full complex numbers.
-        pos.refx = Complex!double(items.front); items.popFront();
-        pos.refy = Complex!double(items.front); items.popFront();
-        pos.refz = Complex!double(items.front); items.popFront();
-        volume = Complex!double(items.front); items.popFront();
-        fs.gas.rho = Complex!double(items.front); items.popFront();
-        fs.vel.refx = Complex!double(items.front); items.popFront();
-        fs.vel.refy = Complex!double(items.front); items.popFront();
-        fs.vel.refz = Complex!double(items.front); items.popFront();
-        version(MHD) {
-            if (MHDflag) {
-                fs.B.refx = Complex!double(items.front); items.popFront();
-                fs.B.refy = Complex!double(items.front); items.popFront();
-                fs.B.refz = Complex!double(items.front); items.popFront();
-                fs.divB = Complex!double(items.front); items.popFront();
-                if (divergence_cleaning) {
-                    fs.psi = Complex!double(items.front); items.popFront();
-                } else {
-                    fs.psi = 0.0;
-                }
-            } else {
-                fs.B.clear(); fs.psi = 0.0; fs.divB = 0.0;
-            }
-        }
-        if (include_quality) {
-            fs.gas.quality = Complex!double(items.front); items.popFront();
-        } else {
-            fs.gas.quality = 1.0;
-        }
-        fs.gas.p = Complex!double(items.front); items.popFront();
-        fs.gas.a = Complex!double(items.front); items.popFront();
-        fs.gas.mu = Complex!double(items.front); items.popFront();
-        fs.gas.k = Complex!double(items.front); items.popFront();
-        version(multi_T_gas) {
-            foreach(i; 0 .. fs.gas.k_modes.length) {
-                fs.gas.k_modes[i] = Complex!double(items.front); items.popFront();
-            }
-        }
-        fs.mu_t = Complex!double(items.front); items.popFront();
-        fs.k_t = Complex!double(items.front); items.popFront();
-        fs.S = Complex!double(items.front); items.popFront();
-        if (radiation) {
-            Q_rad_org = Complex!double(items.front); items.popFront();
-            f_rad_org = Complex!double(items.front); items.popFront();
-            Q_rE_rad = Complex!double(items.front); items.popFront();
-        } else {
-            Q_rad_org = 0.0; f_rad_org = 0.0; Q_rE_rad = 0.0;
-        }
-        version(turbulence) {
-            foreach(it; 0 .. nturb) {
-                fs.turb[it] = Complex!double(items.front); items.popFront();
-            }
-        }
-        version(multi_species_gas) {
-            foreach(i; 0 .. fs.gas.massf.length) {
-                fs.gas.massf[i] = Complex!double(items.front); items.popFront();
-            }
-            if (fs.gas.massf.length > 1) {
-                dt_chem = to!double(items.front); items.popFront();
-            }
-        } else {
-            items.popFront(); // discard the single-species mass fraction, assumed 1.0
-        }
-        fs.gas.u = Complex!double(items.front); items.popFront();
-        fs.gas.T = Complex!double(items.front); items.popFront();
-        version(multi_T_gas) {
-            foreach(i; 0 .. fs.gas.u_modes.length) {
-                fs.gas.u_modes[i] = Complex!double(items.front); items.popFront();
-                fs.gas.T_modes[i] = Complex!double(items.front); items.popFront();
-            }
-            if (fs.gas.u_modes.length > 0) {
-                dt_therm = to!double(items.front); items.popFront();
-            }
-        }
-        if (with_local_time_stepping) { dt_local = to!double(items.front); items.popFront(); }
-    } else {
-        // version double_numbers
-        pos.refx = to!double(items.front); items.popFront();
-        pos.refy = to!double(items.front); items.popFront();
-        pos.refz = to!double(items.front); items.popFront();
-        volume = to!double(items.front); items.popFront();
-        fs.gas.rho = to!double(items.front); items.popFront();
-        fs.vel.refx = to!double(items.front); items.popFront();
-        fs.vel.refy = to!double(items.front); items.popFront();
-        fs.vel.refz = to!double(items.front); items.popFront();
-        version(MHD) {
-            if (MHDflag) {
-                fs.B.refx = to!double(items.front); items.popFront();
-                fs.B.refy = to!double(items.front); items.popFront();
-                fs.B.refz = to!double(items.front); items.popFront();
-                fs.divB = to!double(items.front); items.popFront();
-                if (divergence_cleaning) {
-                    fs.psi = to!double(items.front); items.popFront();
-                } else {
-                    fs.psi = 0.0;
-                }
-            } else {
-                fs.B.clear(); fs.psi = 0.0; fs.divB = 0.0;
-            }
-        }
-        if (include_quality) {
-            fs.gas.quality = to!double(items.front); items.popFront();
-        } else {
-            fs.gas.quality = 1.0;
-        }
-        fs.gas.p = to!double(items.front); items.popFront();
-        fs.gas.a = to!double(items.front); items.popFront();
-        fs.gas.mu = to!double(items.front); items.popFront();
-        fs.gas.k = to!double(items.front); items.popFront();
-        version(multi_T_gas) {
-            foreach(i; 0 .. fs.gas.k_modes.length) {
-                fs.gas.k_modes[i] = to!double(items.front); items.popFront();
-            }
-        }
-        fs.mu_t = to!double(items.front); items.popFront();
-        fs.k_t = to!double(items.front); items.popFront();
-        fs.S = to!double(items.front); items.popFront();
-        if (radiation) {
-            Q_rad_org = to!double(items.front); items.popFront();
-            f_rad_org = to!double(items.front); items.popFront();
-            Q_rE_rad = to!double(items.front); items.popFront();
-        } else {
-            Q_rad_org = 0.0; f_rad_org = 0.0; Q_rE_rad = 0.0;
-        }
-        version(turbulence) {
-            foreach(it; 0 .. nturb) {
-                fs.turb[it] = to!double(items.front); items.popFront();
-            }
-        }
-        version(multi_species_gas) {
-            foreach(i; 0 .. fs.gas.massf.length) {
-                fs.gas.massf[i] = to!double(items.front); items.popFront();
-            }
-            if (fs.gas.massf.length > 1) {
-                dt_chem = to!double(items.front); items.popFront();
-            }
-        } else {
-            items.popFront(); // discard single-species mass fraction
-        }
-        fs.gas.u = to!double(items.front); items.popFront();
-        fs.gas.T = to!double(items.front); items.popFront();
-        version(multi_T_gas) {
-            foreach(i; 0 .. fs.gas.u_modes.length) {
-                fs.gas.u_modes[i] = to!double(items.front); items.popFront();
-                fs.gas.T_modes[i] = to!double(items.front); items.popFront();
-            }
-            if (fs.gas.u_modes.length > 0) {
-                dt_therm = to!double(items.front); items.popFront();
-            }
-        }
-        if (with_local_time_stepping) { dt_local = to!double(items.front); items.popFront(); }
-    } // end version double_numbers
-} // end scan_values_from_fixed_order_string()
-
-void scan_cell_data_from_variable_order_string
-(string buffer, string[] varNameList, GasModel gmodel, const ref TurbulenceModel tm,
- ref Vector3 pos, ref number volume, ref FlowState fs,
- ref number Q_rad_org, ref number f_rad_org, ref number Q_rE_rad,
- bool with_local_time_stepping, ref double dt_local, ref double dt_chem, ref double dt_therm,
- bool include_quality, bool MHDflag, bool divergence_cleaning, bool radiation)
-{
-    // This function uses the list of variable names read from the file
-    // to work out which data item to assign to each variable.
-    version(complex_numbers) {
-        Complex!double[] values;
-        // Note that we expect only the real part of each item to be in the string.
-        foreach (item; buffer.strip().split()) { values ~= to!(Complex!double)(item); }
-    } else {
-        double[] values;
-        foreach (item; buffer.strip().split()) { values ~= to!double(item); }
-    }
-    pos.refx = values[countUntil(varNameList, flowVarName(FlowVar.pos_x))];
-    pos.refy = values[countUntil(varNameList, flowVarName(FlowVar.pos_y))];
-    pos.refz = values[countUntil(varNameList, flowVarName(FlowVar.pos_z))];
-    volume = values[countUntil(varNameList, flowVarName(FlowVar.volume))];
-    fs.gas.rho = values[countUntil(varNameList, flowVarName(FlowVar.rho))];
-    fs.vel.refx = values[countUntil(varNameList, flowVarName(FlowVar.vel_x))];
-    fs.vel.refy = values[countUntil(varNameList, flowVarName(FlowVar.vel_y))];
-    fs.vel.refz = values[countUntil(varNameList, flowVarName(FlowVar.vel_z))];
-    version(MHD) {
-        if (MHDflag) {
-            fs.B.refx = values[countUntil(varNameList, flowVarName(FlowVar.B_x))];
-            fs.B.refy = values[countUntil(varNameList, flowVarName(FlowVar.B_y))];
-            fs.B.refz = values[countUntil(varNameList, flowVarName(FlowVar.B_z))];
-            fs.divB = values[countUntil(varNameList, flowVarName(FlowVar.divB))];
-            if (divergence_cleaning) {
-                fs.psi = values[countUntil(varNameList, flowVarName(FlowVar.psi))];
-            } else {
-                fs.psi = 0.0;
-            }
-        } else {
-            fs.B.clear(); fs.psi = 0.0; fs.divB = 0.0;
-        }
-    }
-    if (include_quality) {
-        fs.gas.quality = values[countUntil(varNameList, flowVarName(FlowVar.quality))];
-    } else {
-        fs.gas.quality = 1.0;
-    }
-    fs.gas.p = values[countUntil(varNameList, flowVarName(FlowVar.p))];
-    fs.gas.a = values[countUntil(varNameList, flowVarName(FlowVar.a))];
-    fs.gas.mu = values[countUntil(varNameList, flowVarName(FlowVar.mu))];
-    fs.gas.k = values[countUntil(varNameList, flowVarName(FlowVar.k))];
-    version(multi_T_gas) {
-        foreach(i; 0 .. fs.gas.k_modes.length) {
-            fs.gas.k_modes[i] = values[countUntil(varNameList, k_modesName(to!int(i)))];
-        }
-    }
-    fs.mu_t = values[countUntil(varNameList, flowVarName(FlowVar.mu_t))];
-    fs.k_t = values[countUntil(varNameList, flowVarName(FlowVar.k_t))];
-    fs.S = values[countUntil(varNameList, flowVarName(FlowVar.S))];
-    if (radiation) {
-        Q_rad_org = values[countUntil(varNameList, flowVarName(FlowVar.Q_rad_org))];
-        f_rad_org = values[countUntil(varNameList, flowVarName(FlowVar.f_rad_org))];
-        Q_rE_rad = values[countUntil(varNameList, flowVarName(FlowVar.Q_rE_rad))];
-    } else {
-        Q_rad_org = 0.0; f_rad_org = 0.0; Q_rE_rad = 0.0;
-    }
-    version(turbulence) {
-        foreach(i; 0 .. tm.nturb) {
-            fs.turb[i] = values[countUntil(varNameList, tm.primitive_variable_name(i))];
-        }
-    }
-    version(multi_species_gas) {
-        foreach(i; 0 .. fs.gas.massf.length) {
-            fs.gas.massf[i] = values[countUntil(varNameList, massfName(gmodel, to!int(i)))];
-        }
-        if (fs.gas.massf.length > 1) {
-            dt_chem = values[countUntil(varNameList, flowVarName(FlowVar.dt_chem))].re;
-        }
-    }
-    fs.gas.u = values[countUntil(varNameList, flowVarName(FlowVar.u))];
-    fs.gas.T = values[countUntil(varNameList, flowVarName(FlowVar.T))];
-    version(multi_T_gas) {
-        foreach(i; 0 .. fs.gas.u_modes.length) {
-            fs.gas.u_modes[i] = values[countUntil(varNameList, u_modesName(to!int(i)))];
-            fs.gas.T_modes[i] = values[countUntil(varNameList, T_modesName(to!int(i)))];
-        }
-        if (fs.gas.u_modes.length > 0) {
-            dt_therm = values[countUntil(varNameList, flowVarName(FlowVar.dt_therm))].re;
-        }
-    }
-    if (with_local_time_stepping) { dt_local = values[countUntil(varNameList, flowVarName(FlowVar.dt_local))].re; }
-} // end scan_values_from_variable_order_string()
-
-void raw_binary_to_cell_data(ref File fin,
-                             ref Vector3 pos, ref number volume, ref FlowState fs,
-                             ref number Q_rad_org, ref number f_rad_org, ref number Q_rE_rad,
-                             bool with_local_time_stepping, ref double dt_local, ref double dt_chem, ref double dt_therm,
-                             bool include_quality, bool MHDflag, bool divergence_cleaning,
-                             bool radiation, size_t nturb)
-{
-    // This function needs to be kept consistent with cell_data_to_raw_binary() above.
-    //
-    version(complex_numbers) {
-        // For complex_numbers, we presently set only the real parts.
-        // [TODO] Maybe we should read full complex numbers.
-        // Fixed-length buffers to hold data while reading binary file.
-        double[1] dbl1; double[2] dbl2; double[3] dbl3; double[4] dbl4;
-        fin.rawRead(dbl4);
-        pos.set(dbl4[0], dbl4[1], dbl4[2]);
-        volume = dbl4[3];
-        fin.rawRead(dbl4);
-        fs.gas.rho = dbl4[0];
-        fs.vel.set(dbl4[1], dbl4[2], dbl4[3]);
-        version(MHD) {
-            if (MHDflag) {
-                fin.rawRead(dbl4);
-                fs.B.set(dbl4[0], dbl4[1], dbl4[2]);
-                fs.divB = dbl4[3];
-                if (divergence_cleaning) {
-                    fin.rawRead(dbl1); fs.psi = dbl1[0];
-                } else {
-                    fs.psi = 0.0;
-                }
-            } else {
-                fs.B.clear(); fs.psi = 0.0; fs.divB = 0.0;
-            }
-        }
-        if (include_quality) {
-            fin.rawRead(dbl1); fs.gas.quality = dbl1[0];
-        } else {
-            fs.gas.quality = 1.0;
-        }
-        fin.rawRead(dbl4);
-        fs.gas.p = dbl4[0]; fs.gas.a = dbl4[1]; fs.gas.mu = dbl4[2]; fs.gas.k = dbl4[3];
-        version(multi_T_gas) {
-            foreach(i; 0 .. fs.gas.k_modes.length) {
-                fin.rawRead(dbl1); fs.gas.k_modes[i] = dbl1[0];
-            }
-        }
-        fin.rawRead(dbl2); fs.mu_t = dbl2[0]; fs.k_t = dbl2[1];
-        fin.rawRead(dbl1); fs.S = dbl1[0];
-        if (radiation) {
-            fin.rawRead(dbl3);
-            Q_rad_org = dbl3[0]; f_rad_org = dbl3[1]; Q_rE_rad = dbl3[2];
-        } else {
-            Q_rad_org = 0.0; f_rad_org = 0.0; Q_rE_rad = 0.0;
-        }
-        fin.rawRead(dbl2); // tke, omega
-        version(turbulence) {
-            foreach(i; 0 .. nturb){
-                fin.rawRead(dbl1); fs.turb[i] = dbl1[0];
-            }
-        }
-        version(multi_species_gas) {
-            foreach (i; 0 .. fs.gas.massf.length) {
-                fin.rawRead(dbl1); fs.gas.massf[i] = dbl1[0];
-            }
-            if (fs.gas.massf.length > 1) { fin.rawRead(dbl1); dt_chem = dbl1[0]; }
-        } else {
-            fin.rawRead(dbl1); // single-species mass fraction discarded
-        }
-        fin.rawRead(dbl2);
-        fs.gas.u = dbl2[0]; fs.gas.T = dbl2[1];
-        version(multi_T_gas) {
-            foreach(i; 0 .. fs.gas.u_modes.length) {
-                fin.rawRead(dbl2); fs.gas.u_modes[i] = dbl2[0]; fs.gas.T_modes[i] = dbl2[1];
-            }
-            if (fs.gas.u_modes.length > 0) { fin.rawRead(dbl1); dt_therm = dbl1[0]; }
-        }
-        if (with_local_time_stepping) { fin.rawRead(dbl1); dt_local = dbl1[0]; }
-    } else {
-        // double_numbers
-        // Fixed-length buffers to hold data while reading binary file.
-        double[1] dbl1; double[2] dbl2; double[3] dbl3; double[4] dbl4;
-        fin.rawRead(dbl4);
-        pos.set(dbl4[0], dbl4[1], dbl4[2]);
-        volume = dbl4[3];
-        fin.rawRead(dbl4);
-        fs.gas.rho = dbl4[0];
-        fs.vel.set(dbl4[1], dbl4[2], dbl4[3]);
-        version(MHD) {
-            if (MHDflag) {
-                fin.rawRead(dbl4);
-                fs.B.set(dbl4[0], dbl4[1], dbl4[2]);
-                fs.divB = dbl4[3];
-                if (divergence_cleaning) {
-                    fin.rawRead(dbl1); fs.psi = dbl1[0];
-                } else {
-                    fs.psi = 0.0;
-                }
-            } else {
-                fs.B.clear(); fs.psi = 0.0; fs.divB = 0.0;
-            }
-        }
-        if (include_quality) {
-            fin.rawRead(dbl1); fs.gas.quality = dbl1[0];
-        } else {
-            fs.gas.quality = 1.0;
-        }
-        fin.rawRead(dbl4);
-        fs.gas.p = dbl4[0]; fs.gas.a = dbl4[1]; fs.gas.mu = dbl4[2]; fs.gas.k = dbl4[3];
-        version(multi_T_gas) {
-            foreach(i; 0 .. fs.gas.k_modes.length) {
-                fin.rawRead(dbl1); fs.gas.k_modes[i] = dbl1[0];
-            }
-        }
-        fin.rawRead(dbl2); fs.mu_t = dbl2[0]; fs.k_t = dbl2[1];
-        fin.rawRead(dbl1); fs.S = dbl1[0];
-        if (radiation) {
-            fin.rawRead(dbl3);
-            Q_rad_org = dbl3[0]; f_rad_org = dbl3[1]; Q_rE_rad = dbl3[2];
-        } else {
-            Q_rad_org = 0.0; f_rad_org = 0.0; Q_rE_rad = 0.0;
-        }
-        version(turbulence) {
-            foreach(i; 0 .. nturb){
-                fin.rawRead(dbl1); fs.turb[i] = dbl1[0];
-            }
-        }
-        version(multi_species_gas) {
-            fin.rawRead(fs.gas.massf);
-            if (fs.gas.massf.length > 1) { fin.rawRead(dbl1); dt_chem = dbl1[0]; }
-        } else {
-            fin.rawRead(dbl1); // single-species mass fraction discarded
-        }
-        fin.rawRead(dbl2);
-        fs.gas.u = dbl2[0]; fs.gas.T = dbl2[1];
-        version(multi_T_gas) {
-            foreach(i; 0 .. fs.gas.u_modes.length) {
-                fin.rawRead(dbl2); fs.gas.u_modes[i] = dbl2[0]; fs.gas.T_modes[i] = dbl2[1];
-            }
-            if (fs.gas.u_modes.length > 0) { fin.rawRead(dbl1); dt_therm = dbl1[0]; }
-        }
-        if (with_local_time_stepping) { fin.rawRead(dbl1); dt_local = dbl1[0]; }
-    } // end version double_numbers
-} // end raw_binary_to_cell_data()

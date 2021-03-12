@@ -106,7 +106,7 @@ EILMER_CORE_FILES := simcore.d \
 	conservedquantities.d flowstate.d \
 	globalconfig.d globaldata.d \
 	block.d fluidblock.d sfluidblock.d ufluidblock.d \
-	fluidblockarray.d \
+	fluidblockarray.d fluidblockio_old.d \
 	gas_solid_interface.d \
 	grid_motion.d grid_motion_udf.d grid_motion_shock_fitting.d \
 	history.d loads.d special_block_init.d \

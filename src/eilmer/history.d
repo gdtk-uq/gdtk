@@ -22,6 +22,7 @@ import fileutil;
 import solidfvcell;
 import solidblock;
 import fluidblock;
+import fluidblockio_old;
 
 string histDir = "hist";
 
