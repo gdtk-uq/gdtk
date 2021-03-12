@@ -594,7 +594,7 @@ version(shape_sensitivity) {
         auto outfile = new GzipOut(filename);
         auto writer = appender!string();
         formattedWrite(writer, "unstructured_grid_adjoint_variables 1.0\n");
-        formattedWrite(writer, "label: %s\n", label);
+        formattedWrite(writer, "label: %s\n", blk.label);
         // RJG: Fix me, we'll need to make this variable based on conservation
         //      equations being solved.
         //      For now, assume the simplest: single-species ideal gas in two dimensions
@@ -611,10 +611,10 @@ version(shape_sensitivity) {
         //      As per hard-coded assumption made above.
         int np = 4;
         foreach (i; 0 .. blk.ncells) {
-            auto s = format!"%.18e %.18e %.18e %.18e\n"(blk.psi[np*i+MASS].re,
-                                                        blk.psi[np*i+X_MOM].re,
-                                                        blk.psi[np*i+Y_MOM].re,
-                                                        blk.psi[np*i+TOT_ENERGY].re);
+            auto s = format!"%.18e %.18e %.18e %.18e\n"(blk.psi[np*i+blk.MASS].re,
+                                                        blk.psi[np*i+blk.X_MOM].re,
+                                                        blk.psi[np*i+blk.Y_MOM].re,
+                                                        blk.psi[np*i+blk.TOT_ENERGY].re);
             outfile.compress(s);
         }
         outfile.finish();

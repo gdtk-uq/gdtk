@@ -31,6 +31,7 @@ import fvinterface;
 import geom;
 import special_block_init;
 import fluidblock;
+import fluidblockio_old;
 import sfluidblock;
 import globaldata;
 import globalconfig;

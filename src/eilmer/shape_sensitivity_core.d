@@ -29,6 +29,7 @@ import nm.number;
 import special_block_init;
 import steadystate_core;
 import fluidblock;
+import fluidblockio_old;
 import sfluidblock;
 import ufluidblock;
 import fvcell;
