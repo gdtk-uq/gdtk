@@ -22,6 +22,7 @@ import globalconfig;
 import geom;
 import geom.luawrap;
 import flowsolution;
+import fluidblockio_old;
 import postprocess;
 
 /// name for FlowSolution object in Lua scripts.
