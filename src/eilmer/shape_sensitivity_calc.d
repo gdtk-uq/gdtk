@@ -34,6 +34,7 @@ import fvcell;
 import bc;
 import steadystate_core;
 import shape_sensitivity_core;
+import fluidblockio_old;
 import fileutil;
 import globalconfig;
 import postprocess;
