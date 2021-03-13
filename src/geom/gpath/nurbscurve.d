@@ -1,7 +1,7 @@
 /* nurbscurve.d
-Author: Reece O. 
-Date: 2021-02-24
-*/
+ * Author: Reece O. 
+ * Date: 2021-02-24
+ */
 
 module geom.gpath.nurbscurve;
 
@@ -13,12 +13,12 @@ import nurbs_utils;
 
 class NURBSCurve : Path {
 public:
-    const double[][] Pw; // collection of weighted control points
+    const double[4][] Pw; // collection of weighted control points
     const double[] U; // knot vector
     int p; // degree of curve
     int a; // a+1 = number of control points
     
-    this(in double[][] Pw, in double[] U, in int p) 
+    this(in double[4][] Pw, in double[] U, in int p) 
     {
         this.Pw = Pw; this.U = U; this.p = p; this.a = to!int(U.length-p-2);   
     }

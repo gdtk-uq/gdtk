@@ -21,6 +21,7 @@ immutable string ArcMT = "Arc";
 immutable string Arc3MT = "Arc3";
 immutable string HelixMT = "Helix";
 immutable string BezierMT = "Bezier";
+immutable string NURBSMT = "NURBS";
 immutable string PolylineMT = "Polyline";
 immutable string SplineMT = "Spline";
 immutable string Spline2MT = "Spline2";
@@ -52,6 +53,9 @@ Path checkPath(lua_State* L, int index) {
     }
     if ( isObjType(L, index, BezierMT) ) {
         return checkObj!(Bezier, BezierMT)(L, index);
+    }
+    if ( isObjType(L, index, NURBSMT) ) {
+        return checkObj!(NURBSCurve, NURBSMT)(L, index);
     }
     if ( isObjType(L, index, PolylineMT) ) {
         return checkObj!(Polyline, PolylineMT)(L, index);
@@ -551,6 +555,88 @@ extern(C) int elevateDegree(lua_State* L)
     bezier.elevateDegree(newDegree);
     return 0;
 }
+
+/**
+ * The Lua constructor for a NURBS.
+ *
+ * Example construction in Lua:
+ * ---------------------------------
+ * p0 = Vector3:new{x=0}
+ * p1 = Vector3:new{x=0.7071, y=0.7071}
+ * p2 = Vector3:new{y=1}
+ * w = {1.0, 1.0, 1.0}
+ * U = {0.0, 0.0, 0.5, 1.0, 1.0}
+ * p = 2
+ * nrb = NURBS:new{points={p0, p1, p2}, weights=w, knots=U, degree=p}
+ * ---------------------------------
+ */
+extern(C) int newNURBS(lua_State* L)
+{
+    int narg = lua_gettop(L);
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected NURBS:new{points=..., weights=..., knots=..., degree=...};\n ";
+        errMsg ~= "maybe you tried NURBS.new{}}.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if ( !lua_istable(L, 1) ) {
+        string errMsg = "Error in call to NURBS:new{}.; " ~
+            "A table containing arguments is expected, but no table was found.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    if (!checkAllowedNames(L, 1, ["points", "weights", "knots", "degree"])) {
+        string errMsg = "Error in call to NURBS:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    // Get "points"
+    lua_getfield(L, 1, "points".toStringz());
+    if ( lua_isnil(L, -1) ) {
+        string errMsg = "Error in call to NURBS:new{}. No points entry found.";
+        luaL_error(L, errMsg.toStringz());
+    }
+    if ( !lua_istable(L, -1) ) {
+        string errMsg = "Error in call to NURBS:new{}.; " ~
+            "A table containing Vector3 points is expected, but no table was found.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    // Expect Vector3 objects at array positions within that table.
+    Vector3[] P;
+    int position = 1;
+    while ( true ) {
+        lua_rawgeti(L, -1, position);
+        if ( lua_isnil(L, -1) ) { lua_pop(L, 1); break; }
+        auto a = toVector3(L, -1);
+        lua_pop(L, 1);
+        P ~= a;
+        ++position;
+    }
+    lua_pop(L, 1); // dispose of points table
+    if (P.length == 0) {
+        string errMsg = "Error in call to NURBS:new{}. No valid Vector3 objects found.";
+        luaL_error(L, errMsg.toStringz());
+    }
+    // Get "weights"
+    double[] w;
+    getArrayOfDoubles(L, 1, "weights", w);
+    // Get "knots"
+    double[] U;
+    getArrayOfDoubles(L, 1, "knots", U);
+    // Get "degree"
+    int p = getInt(L, 1, "degree");
+    // Prepare Pw array and build NURBS
+    if (P.length != w.length) {
+        string errMsg = "Error in call to NURBS:new{}. The length of the points table and knots table do not agree.\n";
+        errMsg ~= format("#points= %d, #weights= %d", P.length, w.length);
+    }
+    double[4][] Pw;
+    Pw.length = P.length;
+    foreach (i; 0 .. P.length) Pw[i] = [P[i].x*w[i], P[i].y*w[i], P[i].z*w[i], w[i]];
+    auto nrb = new NURBSCurve(Pw, U, p);
+    pathStore ~= pushObj!(NURBSCurve, NURBSMT)(L, nrb);
+    return 1;
+} // end newBezier()
+
 
 /**
  * The Lua constructor for a Polyline.
@@ -1457,6 +1543,28 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "elevateDegree");
 
     lua_setglobal(L, BezierMT.toStringz);
+
+    // Register the NURBS object
+    luaL_newmetatable(L, NURBSMT.toStringz);
+    
+    /* metatable.__index = metatable */
+    lua_pushvalue(L, -1); // duplicates the current metatable
+    lua_setfield(L, -2, "__index");
+
+    lua_pushcfunction(L, &newNURBS);
+    lua_setfield(L, -2, "new");
+    lua_pushcfunction(L, &opCallPath!(NURBSCurve, NURBSMT));
+    lua_setfield(L, -2, "__call");
+    lua_pushcfunction(L, &opCallPath!(NURBSCurve, NURBSMT));
+    lua_setfield(L, -2, "eval");
+    lua_pushcfunction(L, &toStringObj!(NURBSCurve, NURBSMT));
+    lua_setfield(L, -2, "__tostring");
+    lua_pushcfunction(L, &copyPath!(NURBSCurve, NURBSMT));
+    lua_setfield(L, -2, "copy");
+    lua_pushcfunction(L, &pathIntersect2D!(NURBSCurve, NURBSMT));
+    lua_setfield(L, -2, "intersect2D");
+
+    lua_setglobal(L, NURBSMT.toStringz);
 
     // Register the Polyline object
     luaL_newmetatable(L, PolylineMT.toStringz);

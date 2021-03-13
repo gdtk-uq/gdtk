@@ -74,6 +74,20 @@ mydir = Vector3:new{x=0.0,y=1.0}
 found, t = mypth:intersect2D{ps=myps, d=mydir, nseg=10}
 print("intersection on Arc3: found=", found, "t=", t)
 --
+print("NURBS")
+pts = {Vector3:new{x=-4, y=-4},
+       Vector3:new{x=-2, y=4},
+       Vector3:new{x=2, y=-4},
+       Vector3:new{x=4, y=4},
+       Vector3:new{x=3.778, y=1.836, z=2.933},
+       Vector3:new{x=2.772, y=-3.875, z=1.736}}
+w = {1.0, 1.0, 5.0, 1.0, 1.0, 4.0}
+U = {0.0, 0.0, 0.0, 0.375, 0.5, 0.625, 1.0, 1.0, 1.0}
+p = 2
+nrb = NURBS:new{points=pts, weights=w, knots=U, degree=p}
+np = nrb(0.6)
+print("np= ", np, "expected appoximately Vector3([3.782, 2.939, 0.435])")
+--
 print("Polyline")
 polyline = Polyline:new{segments={abc, Line:new{p0=b,p1=c}}}
 print("polyline= ", polyline)
