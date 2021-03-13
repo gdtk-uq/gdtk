@@ -89,6 +89,58 @@ extern(C) int set_vtx(lua_State* L)
     return 0;
 }
 
+/*
+ * Set one or more string tags for the boundaries.
+ * my_sgrid:set_tags{north="my-north-tag", south="special-axis"}
+ */
+extern(C) int set_boundary_tags(lua_State* L)
+{
+    int narg = lua_gettop(L);
+    auto grid = checkObj!(StructuredGrid, StructuredGridMT)(L, 1);
+    if (lua_istable(L, 2)) {
+        lua_getfield(L, 2, "north");
+        if (!lua_isnil(L, -1)) {
+            string tag = to!string(lua_tostring(L, -1));
+            grid.set_tag(Face.north, tag);
+        }
+        lua_pop(L, 1);
+        lua_getfield(L, 2, "east");
+        if (!lua_isnil(L, -1)) {
+            string tag = to!string(lua_tostring(L, -1));
+            grid.set_tag(Face.east, tag);
+        }
+        lua_pop(L, 1);
+        lua_getfield(L, 2, "south");
+        if (!lua_isnil(L, -1)) {
+            string tag = to!string(lua_tostring(L, -1));
+            grid.set_tag(Face.south, tag);
+        }
+        lua_pop(L, 1);
+        lua_getfield(L, 2, "west");
+        if (!lua_isnil(L, -1)) {
+            string tag = to!string(lua_tostring(L, -1));
+            grid.set_tag(Face.west, tag);
+        }
+        lua_pop(L, 1);
+        lua_getfield(L, 2, "top");
+        if (!lua_isnil(L, -1)) {
+            string tag = to!string(lua_tostring(L, -1));
+            grid.set_tag(Face.top, tag);
+        }
+        lua_pop(L, 1);
+        lua_getfield(L, 2, "bottom");
+        if (!lua_isnil(L, -1)) {
+            string tag = to!string(lua_tostring(L, -1));
+            grid.set_tag(Face.bottom, tag);
+        }
+        lua_pop(L, 1);
+    } else {
+        string errMsg = "myGrid:set_tags{} was expecting a table of named tag strings.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    return 0;
+}
+
 extern(C) int subgrid(lua_State* L)
 {
     int narg = lua_gettop(L);
@@ -662,6 +714,8 @@ void registerStructuredGrid(lua_State* L)
     lua_setfield(L, -2, "get_vtx");
     lua_pushcfunction(L, &set_vtx);
     lua_setfield(L, -2, "set_vtx");
+    lua_pushcfunction(L, &set_boundary_tags);
+    lua_setfield(L, -2, "set_tags");
     lua_pushcfunction(L, &subgrid);
     lua_setfield(L, -2, "subgrid");
     lua_pushcfunction(L, &get_boundary_grid);

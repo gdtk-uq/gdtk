@@ -34,10 +34,12 @@ surf = CoonsPatch:new{north=Line:new{p0=b, p1=d}, east=Line:new{p0=c, p1=d},
                       south=Line:new{p0=a, p1=c}, west=Line:new{p0=a, p1=b}}
 print("CoonsPatch representation: ", surf)
 my_grid = StructuredGrid:new{psurface=surf, niv=10, njv=20}
+my_grid:set_tags{north="my-special-tag"}
 my_usg = UnstructuredGrid:new{sgrid=my_grid}
 print("type=", my_usg:get_type(), "dimensions=", my_usg:get_dimensions())
 my_usg:write_to_vtk_file("test_grid.vtk")
 my_usg:write_to_gzip_file("test_grid.gz")
+my_usg:write_to_su2_file("test_grid.su2")
 my_usg_2 = UnstructuredGrid:new{filename="test_grid.gz"}
 my_usg_2:write_to_vtk_file("test_grid_2.vtk")
 

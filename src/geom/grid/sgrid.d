@@ -28,6 +28,7 @@ class StructuredGrid : Grid {
 public:
     size_t[] vtx_id; // used to hold the single-index id for each vertex.
     // So that the structured-grid can look like an unstructured grid.
+    string[] tags; // A user-specified name for each boundary.
 
     // Blank grid, ready for import of data.
     this(size_t niv, size_t njv, size_t nkv=1, string label="")
@@ -37,10 +38,20 @@ public:
         super(Grid_t.structured_grid, dim, label);
         this.niv = niv; this.njv = njv; this.nkv = nkv;
         switch (dim) {
-        case 1: ncells = niv-1; break;
-        case 2: ncells = (niv-1)*(njv-1); break;
-        case 3: ncells = (niv-1)*(njv-1)*(nkv-1); break;
-        default: throw new GeometryException("invalid number of dimensions");
+        case 1:
+            ncells = niv-1;
+            tags = ["", ""];
+            break;
+        case 2:
+            ncells = (niv-1)*(njv-1);
+            tags = ["", "", "", ""];
+            break;
+        case 3:
+            ncells = (niv-1)*(njv-1)*(nkv-1);
+            tags = ["", "", "", "", "", ""];
+            break;
+        default:
+            throw new GeometryException("invalid number of dimensions");
         }
         nvertices = niv*njv*nkv;
         vertices.length = nvertices;
@@ -132,6 +143,16 @@ public:
         return new StructuredGrid(this);
     }
 
+    string set_tag(size_t boundary_indx, string new_tag)
+    {
+        if (boundary_indx < tags.length) {
+            tags[boundary_indx] = new_tag;
+            return new_tag;
+        } else {
+            return "";
+        }
+    }
+
     override Vector3* opIndex(size_t i, size_t j, size_t k=0)
     in {
         assert (i < niv, text("index i=", i, " is invalid, niv=", niv));
@@ -147,6 +168,17 @@ public:
     in { assert (indx < niv*njv*nkv, "index indx is invalid"); }
     body {
         return &(vertices[indx]);
+    }
+
+    override string toString()
+    {
+        string repr = "StructuredGrid(";
+        repr ~= format("dimensions=%d, niv=%d, njv=%d, nkv=%d, ncells=%d",
+                       dimensions, niv, njv, nkv, ncells);
+        repr ~= format(", vertices=[%s ... %s]", vertices[0], vertices[$-1]);
+        repr ~= format(", tags=%s", tags);
+        repr ~= ")";
+        return repr;
     }
 
     @nogc
@@ -1522,6 +1554,10 @@ version(sgrid_test) {
         auto cf = [new LinearFunction(), new LinearFunction(),
                    new LinearFunction(), new LinearFunction()];
         auto my_grid = new StructuredGrid(my_patch, 11, 21, cf);
+        my_grid.set_tag(Face.north, "north-face");
+        string repr = to!string(my_grid);
+        // writeln("my_grid=", repr);
+        assert(repr.canFind("north-face"), failedUnitTest());
         assert(approxEqualVectors(*my_grid[5,5], Vector3(0.5, 0.35, 0.0)),
                failedUnitTest());
         auto my_subgrid = my_grid.subgrid(4, 3, 4, 5);

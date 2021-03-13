@@ -189,6 +189,11 @@ public:
         foreach(i; 0 .. vtx_id_list.length) { fin.rawRead(buf1); vtx_id_list[i] = buf1[0]; }
     }
 
+    override string toString()
+    {
+        return format("USGFace(vtx_id_list=%s)", vtx_id_list);
+    }
+
     string toIOString()
     // Defines the format for output to a text stream.
     {
@@ -277,6 +282,17 @@ public:
         foreach(i; 0 .. outsign_list.length) { fin.rawRead(buf1);  outsign_list[i] = buf1[0]; }
     } // end constructor from raw binary file content
 
+    override string toString()
+    {
+        string repr = "USGCell(";
+        repr ~= format("id=%d cell_type=%s", id, cell_type);
+        repr ~= format(", vtx_id_list=%s", vtx_id_list);
+        repr ~= format(", face_id_list=%s", face_id_list);
+        repr ~= format(", outsign_list=%s", outsign_list);
+        repr ~= ")";
+        return repr;
+    }
+
     string toIOString()
     // Defines the format for output to a text stream.
     {
@@ -364,6 +380,16 @@ public:
         face_id_list = other.face_id_list.dup();
         outsign_list = other.outsign_list.dup();
     } // end constructor from another
+
+    override string toString()
+    {
+        string repr = "BoundaryFaceSet(";
+        repr ~= format("tag=\"%s\"", tag);
+        repr ~= format(", face_id_list=[%d ... %d]", face_id_list[0], face_id_list[$-1]);
+        repr ~= format(", outsign_list=[%d ... %d]", outsign_list[0], outsign_list[$-1]);
+        repr ~= ")";
+        return repr;
+    }
 
     string toIOString()
     // Defines the format for output to a text stream.
@@ -454,7 +480,7 @@ public:
                 faceIndices[faceTag] = faces.length; // before new face
                 faces ~= new USGFace(vtx_id_list);
                 face_id_list ~= faces.length-1;
-                outsign_list ~= 1; // always pointing out for a counter-clockwise vertex order 
+                outsign_list ~= 1; // always pointing out for a counter-clockwise vertex order
             }
             boundaries ~= new BoundaryFaceSet("bndry-"~to!string(i), face_id_list, outsign_list);
             if (i > 0) {
@@ -531,10 +557,16 @@ public:
             ncells = (sg.niv-1)*(sg.njv-1);
             nboundaries = 4;
             foreach(ib; 0 .. nboundaries) {
-                string boundary_label;
-                if (my_block_label.length > 0) { boundary_label = my_block_label ~ "-"; }
-                boundary_label ~= face_name[ib]; // 0=north, 1=east, 2=south, 3=west
-                boundaries ~= new BoundaryFaceSet(boundary_label);
+                string boundary_tag;
+                if (sg.tags[ib].length > 0) {
+                    // Copy the original tag string.
+                    boundary_tag = sg.tags[ib];
+                } else {
+                    // Fabricate a tag string.
+                    if (my_block_label.length > 0) { boundary_tag = my_block_label ~ "-"; }
+                    boundary_tag ~= face_name[ib]; // 0=north, 1=east, 2=south, 3=west
+                }
+                boundaries ~= new BoundaryFaceSet(boundary_tag);
             }
             // vertex index array
             size_t[][] vtx_id;
@@ -624,10 +656,16 @@ public:
             ncells = (sg.niv-1)*(sg.njv-1)*(sg.nkv-1);
             nboundaries = 6;
             foreach(ib; 0 .. nboundaries) {
-                string boundary_label;
-                if (my_block_label.length > 0) { boundary_label = my_block_label ~ "-"; }
-                boundary_label ~= face_name[ib]; // 0=north, 1=east, 2=south, 3=west, 4=top, 5=bottom
-                boundaries ~= new BoundaryFaceSet(boundary_label);
+                string boundary_tag;
+                if (sg.tags[ib].length > 0) {
+                    // Copy the original tag string.
+                    boundary_tag = sg.tags[ib];
+                } else {
+                    // Fabricate a tag string.
+                    if (my_block_label.length > 0) { boundary_tag = my_block_label ~ "-"; }
+                    boundary_tag ~= face_name[ib]; // 0=north, 1=east, 2=south, 3=west, 4=top, 5=bottom
+                }
+                boundaries ~= new BoundaryFaceSet(boundary_tag);
             }
             // vertex index array
             size_t[][][] vtx_id;
@@ -811,6 +849,19 @@ public:
     in { assert (indx < nvertices, "index indx is invalid"); }
     body {
         return &(vertices[indx]);
+    }
+
+    override string toString()
+    {
+        string repr = "UnstructuredGrid(";
+        repr ~= format("dimensions=%d, nvertices=%d, nfaces=%d, ncells=%d",
+                       dimensions, nvertices, nfaces, ncells);
+        repr ~= format(", vertices=[%s ... %s]", vertices[0], vertices[$-1]);
+        repr ~= format(", faces=[%s ... %s]", faces[0], faces[$-1]);
+        repr ~= format(", cells=[%s ... %s]", cells[0], cells[$-1]);
+        repr ~= format(", boundaries=%s", boundaries);
+        repr ~= ")";
+        return repr;
     }
 
     @nogc
@@ -2281,10 +2332,17 @@ version(usgrid_test) {
         auto cf = [new LinearFunction(), new LinearFunction(),
                    new LinearFunction(), new LinearFunction()];
         auto my_grid = new StructuredGrid(my_patch, 11, 21, cf);
+        my_grid.set_tag(Face.north, "my-special-boundary");
+        string repr = to!string(my_grid);
+        // writeln("my_grid=", repr);
+        assert(repr.canFind("my-special-boundary"), failedUnitTest());
         assert(approxEqualVectors(*my_grid[5,5], Vector3(0.5, 0.35)),
                failedUnitTest());
         // writeln("grid point 5 5 at x=", my_grid[5,5].x, " y=", my_grid[5,5].y);
         auto usg = new UnstructuredGrid(my_grid);
+        string usg_repr = to!string(usg);
+        // writeln("usg=", usg_repr);
+        assert(usg_repr.canFind("my-special-boundary"), failedUnitTest());
         usg.sort_cells_into_bins(10, 10);
         Vector3 my_point = Vector3(0.55, 0.325);
         size_t cell_indx = 0; bool found = false;
