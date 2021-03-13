@@ -130,6 +130,9 @@ The constructors for Path objects include:
 `Bezier(B)`::
   Defines a Bezier curve from the sequence of points `B`.
 
+`NURBS(P, w, U, p)`::
+  Defines a NURBS from control points `P`, weights `w`, knot vector `U` and degree `p`.
+
 `Arc(a, b, c)`::
   Defines a circular arc from point `a` to point `b` about centre `c`.
 
