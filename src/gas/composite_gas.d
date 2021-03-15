@@ -128,11 +128,11 @@ public:
     }
     @nogc override number enthalpy(in GasState gs, int isp)
     {
-        return mThermo.enthalpy(gs, isp);
+        return mThermo.enthalpyPerSpecies(gs, isp);
     }
     @nogc override number enthalpyPerSpeciesInMode(in GasState gs, int isp, int imode)
     {
-        return mThermo.enthalpy(gs, isp, imode);
+        return mThermo.enthalpyPerSpeciesInMode(gs, isp, imode);
     }
     @nogc override number entropy(in GasState gs)
     {
@@ -140,7 +140,7 @@ public:
     }
     @nogc override number entropy(in GasState gs, int isp)
     {
-        return mThermo.entropy(gs, isp);
+        return mThermo.entropyPerSpecies(gs, isp);
     }
 
     @nogc override void update_trans_coeffs(GasState gs)

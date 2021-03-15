@@ -30,8 +30,8 @@ public:
     @nogc number gasConstant(in GasState gs);
     @nogc number internalEnergy(in GasState gs); 
     @nogc number enthalpy(in GasState gs);
-    @nogc number enthalpy(in GasState gs, int isp);
-    @nogc number enthalpy(in GasState gs, int isp, int imode);
+    @nogc number enthalpyPerSpecies(in GasState gs, int isp);
+    @nogc number enthalpyPerSpeciesInMode(in GasState gs, int isp, int imode);
     @nogc number entropy(in GasState gs);
-    @nogc number entropy(in GasState gs, int isp);
+    @nogc number entropyPerSpecies(in GasState gs, int isp);
 }

@@ -284,13 +284,13 @@ public:
     }
 
     @nogc
-    override number enthalpy(in GasState gs, int isp)
+    override number enthalpyPerSpecies(in GasState gs, int isp)
     {
         return mCurves[isp].eval_h(gs.T);
     }
 
     @nogc
-    override number enthalpy(in GasState gs, int isp, int imode)
+    override number enthalpyPerSpeciesInMode(in GasState gs, int isp, int imode)
     {
         /* This is a single-T gas. */
         return mCurves[isp].eval_h(gs.T);
@@ -307,7 +307,7 @@ public:
     }
 
     @nogc
-    override number entropy(in GasState gs, int isp)
+    override number entropyPerSpecies(in GasState gs, int isp)
     {
         return mCurves[isp].eval_s(gs.T) - mR[isp]*log(gs.p/P_atm);
     }
