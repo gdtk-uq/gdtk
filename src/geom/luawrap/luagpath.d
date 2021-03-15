@@ -631,7 +631,7 @@ extern(C) int newNURBS(lua_State* L)
     }
     double[4][] Pw;
     Pw.length = P.length;
-    foreach (i; 0 .. P.length) Pw[i] = [P[i].x*w[i], P[i].y*w[i], P[i].z*w[i], w[i]];
+    foreach (i; 0 .. P.length) Pw[i] = [P[i].x.re*w[i], P[i].y.re*w[i], P[i].z.re*w[i], w[i]];
     auto nrb = new NURBSCurve(Pw, U, p);
     pathStore ~= pushObj!(NURBSCurve, NURBSMT)(L, nrb);
     return 1;
