@@ -382,7 +382,8 @@ default: $(PROGRAMS) ugrid_partition
 	@echo "Source code revision string $(REVISION_STRING)"
 	@echo "Eilmer4 simulation code built."
 
-install: $(PROGRAMS) $(LUA_MODULES) prep.lua prep-gas prep-chem chemkin2eilmer \
+install: $(PROGRAMS) $(LUA_MODULES) prep.lua prep-grids.lua prep-flow.lua post.lua \
+		prep-gas prep-chem chemkin2eilmer \
 		$(SHARE_FILES) ugrid_partition
 	- mkdir -p $(INSTALL_DIR)
 	- mkdir -p $(BUILD_DIR)/bin
@@ -391,9 +392,11 @@ install: $(PROGRAMS) $(LUA_MODULES) prep.lua prep-gas prep-chem chemkin2eilmer \
 	cp $(PROGRAMS) $(BUILD_DIR)/bin
 	cp $(LUA_DIR)/bin/* $(BUILD_DIR)/bin
 	cp prep.lua $(BUILD_DIR)/bin
+	cp prep-grids.lua $(BUILD_DIR)/bin
+	cp prep-flow.lua $(BUILD_DIR)/bin
 	cp post.lua $(BUILD_DIR)/bin
-	cp -r ../lib/* $(BUILD_DIR)/lib
 	cp $(LUA_MODULES) $(BUILD_DIR)/lib
+	cp -r ../lib/* $(BUILD_DIR)/lib
 	cp $(NML_LUA_MODULES) $(BUILD_DIR)/lib
 	cp e4console.tcl $(BUILD_DIR)/bin
 	chmod +x $(BUILD_DIR)/bin/e4console.tcl

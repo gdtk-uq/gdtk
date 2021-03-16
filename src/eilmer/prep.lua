@@ -9,31 +9,7 @@ print("Loading prep.lua...")
 
 require 'lua_helper'
 deepclone = lua_helper.deepclone
-
--- sleep() function copied from http://lua-users.org/wiki/SleepFunction
-local clock = os.clock
-function sleep(n)  -- seconds
-   -- warning: clock can eventually wrap around for sufficiently large n
-   -- (whose value is platform dependent).  Even for n == 1, clock() - t0
-   -- might become negative on the second that clock wraps.
-   local t0 = clock()
-   while clock() - t0 <= n do end
-end
-
-function checkAllowedNames(myTable, allowedNames)
-   local setOfNames = {}
-   local namesOk = true
-   for i,name in ipairs(allowedNames) do
-      setOfNames[name] = true
-   end
-   for k,v in pairs(myTable) do
-      if not setOfNames[k] then
-	 print("Warning: Invalid name: ", k)
-	 namesOk = false
-      end
-   end
-   return namesOk
-end
+checkAllowedNames = lua_helper.checkAllowedNames
 
 require 'blk_conn'
 -- Let's pull the symbols out of the blk_conn module

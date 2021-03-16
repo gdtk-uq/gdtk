@@ -97,11 +97,18 @@ Argument:                            Comment:
   --job=<string>                     file names built from this string
   --verbosity=<int>                  defaults to 0
 
+  Classic (integrated) preparation of configuration, grid and flow blocks.
   --prep                             prepare config, grid and flow files
+                                     Expects <job>.lua input script.
   --no-config-files                  do not prepare files in config directory
   --no-block-files                   do not prepare flow and grid files for blocks
   --only-blocks=\"blk-list\"           only prepare blocks in given list
 
+  Staged preparation of grid, followed by flow, files.
+  --prep-grid                        uses <job>-grid.lua to prepare grid files only
+  --prep-flow                        uses <job>-flow.lua to prepare config & flow files
+
+  Running the main simulation.
   --run                              run the simulation over time
   --tindx-start=<int>|last|9999      defaults to 0
   --next-loads-indx=<int>            defaults to (final index + 1) of lines
@@ -112,6 +119,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
   --max-wall-clock=<int>             in seconds, default 5days*24h/day*3600s/h
   --report-residuals                 write residuals to file config/job-residuals.txt
 
+  Postprocessing of flow data from simulation.
   --post                             post-process simulation data
   --list-info                        report some details of this simulation
   --tindx-plot=<int>|all|last|9999|\"1,5,13,25\"   defaults to last
@@ -167,6 +175,8 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
     string jobName = "";
     int verbosityLevel = 1; // default to having a little information
     bool prepFlag = false;
+    bool prepGridFilesFlag = false;
+    bool prepFlowFilesFlag = false;
     bool noConfigFilesFlag = false;
     bool noBlockFilesFlag = false;
     string blocksForPrep = "";
@@ -209,6 +219,8 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
                "job", &jobName,
                "verbosity", &verbosityLevel,
                "prep", &prepFlag,
+               "prep-grid", &prepGridFilesFlag,
+               "prep-flow", &prepFlowFilesFlag,
                "no-config-files", &noConfigFilesFlag,
                "no-block-files", &noBlockFilesFlag,
                "only-blocks", &blocksForPrep,
@@ -353,6 +365,9 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
         }
     }
     //
+    // We will be doing the (classic) integrated preparation of grids and flow files
+    // only if we are not doing the staged preparation.
+    if (prepGridFilesFlag || prepFlowFilesFlag) { prepFlag = false; }
     if (prepFlag) {
         version(mpi_parallel) {
             if (GlobalConfig.is_master_task) {
@@ -360,7 +375,6 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
                 stdout.flush();
             }
             exitFlag = 1;
-            return exitFlag;
         } else { // NOT mpi_parallel
             if (verbosityLevel > 0) { writeln("Begin preparation stage for a simulation."); }
             if (jobName.length == 0) {
@@ -470,7 +484,113 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
             }
             if (verbosityLevel > 0) { writeln("Done preparation."); }
         } // end NOT mpi_parallel
+        return exitFlag;
     } // end if prepFlag
+
+    if (prepGridFilesFlag) {
+        version(mpi_parallel) {
+            if (GlobalConfig.is_master_task) {
+                writeln("Do not prepare grid files using MPI.");
+                stdout.flush();
+            }
+            exitFlag = 1;
+        } else { // NOT mpi_parallel
+            if (verbosityLevel > 0) { writeln("Begin preparation of grid files."); }
+            if (jobName.length == 0) {
+                writeln("Need to specify a job name.");
+                writeln(briefUsageMsg);
+                exitFlag = 1;
+                return exitFlag;
+            }
+            if (verbosityLevel > 1) { writeln("Start lua connection."); }
+            auto L = luaL_newstate();
+            luaL_openlibs(L);
+            registerVector3(L);
+            registerGlobalConfig(L);
+            registerFlowSolution(L);
+            registerFlowState(L);
+            registerPaths(L);
+            registerGpathUtils(L);
+            registerSurfaces(L);
+            registerVolumes(L);
+            registerUnivariateFunctions(L);
+            registerStructuredGrid(L);
+            registerUnstructuredGrid(L);
+            registerSketch(L);
+            // Now that we have set the Lua interpreter context,
+            // process the Lua scripts.
+            if ( luaL_dofile(L, toStringz(dirName(thisExePath())~"/prep-grids.lua")) != 0 ) {
+                writeln("There was a problem in the Eilmer Lua code: prep-grids.lua");
+                string errMsg = to!string(lua_tostring(L, -1));
+                throw new FlowSolverException(errMsg);
+            }
+            if ( luaL_dofile(L, toStringz(jobName~"-grid.lua")) != 0 ) {
+                writeln("There was a problem in the user-supplied input lua script: ", jobName~"-grid.lua");
+                string errMsg = to!string(lua_tostring(L, -1));
+                throw new FlowSolverException(errMsg);
+            }
+            //
+            writeln("[FIX-ME] write the grid files.");
+            //
+            if (verbosityLevel > 0) { writeln("Done preparation of grid files."); }
+        } // end NOT mpi_parallel
+        return exitFlag;
+    } // end if prepGridFilesFlag
+
+    if (prepFlowFilesFlag) {
+        version(mpi_parallel) {
+            if (GlobalConfig.is_master_task) {
+                writeln("Do not prepare config and flow files using MPI.");
+                stdout.flush();
+            }
+            exitFlag = 1;
+        } else { // NOT mpi_parallel
+            if (verbosityLevel > 0) { writeln("Begin preparation of flow and config files."); }
+            if (jobName.length == 0) {
+                writeln("Need to specify a job name.");
+                writeln(briefUsageMsg);
+                exitFlag = 1;
+                return exitFlag;
+            }
+            if (verbosityLevel > 1) { writeln("Start lua connection."); }
+            auto L = luaL_newstate();
+            luaL_openlibs(L);
+            registerVector3(L);
+            registerGlobalConfig(L);
+            registerFlowSolution(L);
+            registerFlowState(L);
+            registerPaths(L);
+            registerGpathUtils(L);
+            registerSurfaces(L);
+            registerVolumes(L);
+            registerUnivariateFunctions(L);
+            registerStructuredGrid(L);
+            registerUnstructuredGrid(L);
+            registerSketch(L);
+            registerSolidProps(L);
+            registerGasModel(L, LUA_GLOBALSINDEX);
+            registeridealgasflowFunctions(L);
+            registergasflowFunctions(L);
+            registerBBLA(L);
+            // Now that we have set the Lua interpreter context,
+            // process the Lua scripts.
+            if ( luaL_dofile(L, toStringz(dirName(thisExePath())~"/prep-flow.lua")) != 0 ) {
+                writeln("There was a problem in the Eilmer Lua code: prep-flow.lua");
+                string errMsg = to!string(lua_tostring(L, -1));
+                throw new FlowSolverException(errMsg);
+            }
+            if ( luaL_dofile(L, toStringz(jobName~"-flow.lua")) != 0 ) {
+                writeln("There was a problem in the user-supplied input lua script: ", jobName~"-flow.lua");
+                string errMsg = to!string(lua_tostring(L, -1));
+                throw new FlowSolverException(errMsg);
+            }
+            //
+            writeln("[FIX-ME] write the flow and config files.");
+            //
+            if (verbosityLevel > 0) { writeln("Done preparation of config and flow files."); }
+        } // end NOT mpi_parallel
+        return exitFlag;
+    } // end if prepFlowFilesFlag
 
     if (runFlag) {
         if (jobName.length == 0) {
@@ -537,6 +657,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
         if (verbosityLevel > 0 && GlobalConfig.is_master_task) {
             writeln("Done --run.");
         }
+        return exitFlag;
     } // end if runFlag
 
     if (postFlag) {
@@ -546,7 +667,6 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
                 stdout.flush();
             }
             exitFlag = 1;
-            return exitFlag;
         } else { // NOT mpi_parallel
             if (jobName.length == 0) {
                 writeln("Need to specify a job name.");
@@ -594,6 +714,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
                          probeStr, outputFormat, normsStr, regionStr, extractSolidLineStr);
             if (verbosityLevel > 0) { writeln("Done postprocessing."); }
         } // end NOT mpi_parallel
+        return exitFlag;
     } // end if postFlag
 
     if (customScriptFlag) {
@@ -603,7 +724,6 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
                 stdout.flush();
             }
             exitFlag = 1;
-            return exitFlag;
         } else { // NOT mpi_parallel
             if (verbosityLevel > 0) {
                 writeln("Begin custom script processing using user-supplied script.");
@@ -642,7 +762,8 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
             }
             if (verbosityLevel > 0) { writeln("Done custom script processing."); }
         } // end NOT mpi_parallel
-    } // end if customPostFlag
+        return exitFlag;
+    } // end if customScriptFlag
     //
     return exitFlag;
 } // end main()

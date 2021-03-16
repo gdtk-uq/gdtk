@@ -18,8 +18,8 @@ Following functions are inluded:
 Author: Ingo Jahn
 Last Modified: 17/05/2017
 
-Update:
-   2017-09-26 RJG added deepcopy
+2017-09-26: RJG added deepcopy
+2021-03-16: PAJ added sleep and checkAllowedNames
 --]]
 
 module(..., package.seeall)
@@ -170,4 +170,29 @@ function print_var (X )
             end
         end
     end
+end
+
+-- sleep() function copied from http://lua-users.org/wiki/SleepFunction
+local clock = os.clock
+function sleep(n)  -- seconds
+   -- warning: clock can eventually wrap around for sufficiently large n
+   -- (whose value is platform dependent).  Even for n == 1, clock() - t0
+   -- might become negative on the second that clock wraps.
+   local t0 = clock()
+   while clock() - t0 <= n do end
+end
+
+function checkAllowedNames(myTable, allowedNames)
+   local setOfNames = {}
+   local namesOk = true
+   for i,name in ipairs(allowedNames) do
+      setOfNames[name] = true
+   end
+   for k,v in pairs(myTable) do
+      if not setOfNames[k] then
+	 print("Warning: Invalid name: ", k)
+	 namesOk = false
+      end
+   end
+   return namesOk
 end
