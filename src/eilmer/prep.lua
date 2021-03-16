@@ -97,10 +97,6 @@ SteadyStateSolver = sssoptions.SteadyStateSolver
 ShapeSensitivityCalculator = sssoptions.ShapeSensitivityCalculator
 SolidDomainLooseUpdate = sssoptions.SolidDomainLooseUpdate
 
--- The following module is not required by prep itself, but we load it here
--- to make it available in the user's script.
-require 'billig'
-
 -- ---------------------------------------------------------------------------------------
 
 -- Storage for later definitions of FluidBlock objects.

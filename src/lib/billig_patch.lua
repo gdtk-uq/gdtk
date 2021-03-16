@@ -4,6 +4,8 @@
 
 module(..., package.seeall)
 
+require 'billig'
+
 function make_patch(t)
    -- Construct a surface patch for use in a bluff-body simulation
    -- using arguments found in the supplied table.
