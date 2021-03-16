@@ -13,13 +13,8 @@ PROGRAMS := l1d4 l1d4-prep l1d4-xt-viewer
 L1D_FILES := config.d simcore.d tube.d gasslug.d lcell.d \
 	piston.d valve.d endcondition.d misc.d postprocess.d
 
-LUA_MODULES :=
-
 UTIL_DIR := ../util
 include $(UTIL_DIR)/util_files.mk
-LUA_MODULES += $(UTIL_DIR)/lua_helper.lua \
-	$(UTIL_DIR)/simplecsv.lua \
-	$(UTIL_DIR)/tools.lua
 
 NM_DIR := ../nm
 include $(NM_DIR)/nm_files.mk
@@ -132,7 +127,7 @@ default: $(PROGRAMS)
 	@echo "Source code revision string $(REVISION_STRING)"
 	@echo "L1d4 simulation code built."
 
-install: $(PROGRAMS) $(LUA_MODULES) prep-gas prep-chem chemkin2eilmer
+install: $(PROGRAMS) prep-gas prep-chem chemkin2eilmer
 	- mkdir -p $(INSTALL_DIR)
 	- mkdir -p $(BUILD_DIR)/bin
 	- mkdir -p $(BUILD_DIR)/lib
@@ -140,7 +135,6 @@ install: $(PROGRAMS) $(LUA_MODULES) prep-gas prep-chem chemkin2eilmer
 	cp $(PROGRAMS) $(BUILD_DIR)/bin
 	cp $(LUA_DIR)/bin/* $(BUILD_DIR)/bin
 	cp -r ../lib/* $(BUILD_DIR)/lib
-	cp $(LUA_MODULES) $(BUILD_DIR)/lib
 	cp $(NML_LUA_MODULES) $(BUILD_DIR)/lib
 	@echo "Installing to $(INSTALL_DIR)"
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
