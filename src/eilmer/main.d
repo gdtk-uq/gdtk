@@ -529,9 +529,11 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
                 string errMsg = to!string(lua_tostring(L, -1));
                 throw new FlowSolverException(errMsg);
             }
-            //
-            writeln("[FIX-ME] write the grid files.");
-            //
+            if ( luaL_dostring(L, toStringz("writeGridFiles(\""~jobName~"\")")) != 0 ) {
+                writeln("There was a problem in the Lua function writeGridFiles() in prep-grids.lua");
+                string errMsg = to!string(lua_tostring(L, -1));
+                throw new FlowSolverException(errMsg);
+            }
             if (verbosityLevel > 0) { writeln("Done preparation of grid files."); }
         } // end NOT mpi_parallel
         return exitFlag;
