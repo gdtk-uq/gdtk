@@ -4,6 +4,7 @@
 l1d4-prep --job=shock_he_air
 l1d4 --run-simulation --job=shock_he_air
 l1d4 --time-slice --job=shock_he_air --tindx=40
+python3 analytic_he_air.py
 
 gnuplot<<EOF
 set term postscript eps 20

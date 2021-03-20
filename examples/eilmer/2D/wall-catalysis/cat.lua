@@ -38,10 +38,10 @@ config.write_loads = true
 config.dt_loads = config.max_time/N_solutions
 config.boundary_groups_for_loads = "wall"
 
-nsp, nmodes, gmodel = setGasModel('air-5sp-gas-model.lua')
+nsp, nmodes, gmodel = setGasModel('air-5sp-2T.lua')
 config.reacting = true
-config.reactions_file = 'air-5sp-reactions.lua'
-config.energy_exchange_file = 'air-5sp-energy-exchange.lua'
+config.reactions_file = 'air-5sp-2T-chem.lua'
+config.energy_exchange_file = 'air-energy-exchange.lua'
 
 T_inf = 238.0  -- K
 rho_inf = 2.3e-4  -- kg/m^3
