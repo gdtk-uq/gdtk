@@ -156,11 +156,13 @@ public:
         _R.length = _n_species;
         _molef.length = _n_species;
         _particleMass.length = _n_species;
+        _charge.length = n_species;
         foreach (isp; 0 .. _n_species) {
             lua_getglobal(L, "db");
             lua_getfield(L, -1, _species_names[isp].toStringz);
             _mol_masses[isp] = getDouble(L, -1, "M");
             _R[isp] = R_universal/_mol_masses[isp];
+            _charge[isp] = getInt(L, -1, "charge");
             _particleMass[isp] = _mol_masses[isp]/Avogadro_number;
             _particleMass[isp] *= 1000.0; // kg -> g
             lua_getfield(L, -1, "thermoCoeffs");

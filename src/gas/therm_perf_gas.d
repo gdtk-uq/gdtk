@@ -525,7 +525,6 @@ public:
 
 protected:
     double[] _R;
-    double[] _charge;
     PerfectGasMixEOS _pgMixEOS;
     ThermallyPerfectGasMixEOS _tpgMixEOS;
     CEAThermoCurve[] _curves;
