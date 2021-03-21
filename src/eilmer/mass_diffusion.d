@@ -161,11 +161,19 @@ private:
 }
 
 class BinaryDiffusion : DiffusionCoefficient {
-    this(size_t nsp) {
+    this(size_t nsp, bool is_plasma, double[] charge) {
         this.nsp = nsp;
         molef.length = nsp;
         D.length = nsp;
         foreach (isp; 0 .. nsp) D[isp].length = nsp;
+
+        if (is_plasma) {
+            with_ambipolar_diffusion = true;
+            foreach (isp, icharge; charge){
+                if (icharge>0.0) ion_idxs ~= isp;
+                if (icharge<0.0) electron_idx = isp;
+            }
+        }
     }
     @nogc
     void computeAvgDiffCoeffs(GasState Q, GasModel gmodel, ref number[] D_avg) {
@@ -194,11 +202,50 @@ class BinaryDiffusion : DiffusionCoefficient {
                 D_avg[isp] = (1.0 - molef[isp])/sum;
             }
         }
+        if (with_ambipolar_diffusion) computeAmbipolarDiffusion(Q, D_avg);
+        return;
     }
+
 private:
     size_t nsp;
     number[] molef;
     number[][] D;
+    size_t electron_idx;
+    size_t[] ion_idxs;
+    bool with_ambipolar_diffusion = false;
+
+    @nogc
+    void computeAmbipolarDiffusion(GasState Q, ref number[] D_avg) {
+        /*
+        Ambipolar diffusion is a correction to the diffusion process for charged particles that
+        contrains electrons and ions to diffuse at the same rate, thus preserving charge neutrality.
+
+        For details see chapter 5 of "Introduction to Plasma Physics and Controlled Fusion", Chen 2016.
+        The expression here is a generalisation of equation his 5.18, rederived for a multispecies plasma
+        by NNG. See notes from 21/03/11.
+        */
+
+        number DiZi = 0.0;
+        version(multi_species_gas){
+            number theta = Q.T_modes[0]/Q.T;
+        } else {
+            number theta = 1.0;
+        }
+
+        if (molef[electron_idx]<SMALL_MOLE_FRACTION) return;
+
+        foreach (isp; ion_idxs) {
+            number Zi = molef[isp]/molef[electron_idx];
+            DiZi += D_avg[isp]*Zi;
+        }
+        number Da = DiZi*(1.0+theta)/(DiZi*theta/D_avg[electron_idx] + 1.0);
+
+        foreach (isp; ion_idxs) {
+            D_avg[isp] = Da;
+        }
+        D_avg[electron_idx] = Da;
+        return;
+    }
 }
 
 DiffusionCoefficient initDiffusionCoefficient(GasModel gmodel, string diffusion_coefficient_type, double Lewis)
@@ -209,7 +256,7 @@ DiffusionCoefficient initDiffusionCoefficient(GasModel gmodel, string diffusion_
     case "species_specific_lewis_numbers":
         return new SpeciesSpecificLewisNumbers(gmodel.n_species, gmodel.Le);
     case "binary_diffusion":
-        return new BinaryDiffusion(gmodel.n_species);
+        return new BinaryDiffusion(gmodel.n_species, gmodel.is_plasma, gmodel.charge);
     case "none":
         throw new FlowSolverException("Diffusion model requires a valid diffusion_coefficient_type.");
     default:
