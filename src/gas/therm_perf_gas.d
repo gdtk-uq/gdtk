@@ -261,7 +261,7 @@ public:
             return s - s_guess;
         }
 
-        if ( bracket!(zeroFun,number)(T1, T2) == -1 ) {
+        if ( bracket!(zeroFun,number)(T1, T2, 10.0) == -1 ) {
             string msg = "The 'bracket' function failed to find temperature values\n";
             debug {
                 msg ~= "that bracketed the zero function in ThermallyPerfectGas.update_thermo_from_ps().\n";
