@@ -1,6 +1,6 @@
 /**
  * flowgradients.d
- * Flow-gradient calculation, for use in the viscous fluxes, 
+ * Flow-gradient calculation, for use in the viscous fluxes,
  * that are driven by molecular-transport effects.
  *
  * Author: Peter J. and Rowan G.
@@ -34,7 +34,7 @@ class WLSQGradWorkspace {
 public:
     // A place to hold the intermediate results for computing
     // the least-squares model as a weighted sum of the flow data.
-    number[cloud_nmax] wx, wy, wz; 
+    number[cloud_nmax] wx, wy, wz;
     bool compute_about_mid;
     size_t loop_init; // starting index for loops:
     // 0=compute_about_mid, 1=compute_about_[0]
@@ -58,7 +58,7 @@ public:
 class FlowGradients {
     // Spatial derivatives of the flow quantities
 public:
-    number[3][3] vel; 
+    number[3][3] vel;
     // velocity derivatives stored as a second-order tensor
     // [[du/dx du/dy du/dz]
     //  [dv/dx dv/dy dv/dz]
@@ -71,7 +71,7 @@ public:
         number[3][] T_modes;
     }
     version(turbulence) {
-        number[3][2] turb; // turbulence primitive variables 
+        number[3][2] turb; // turbulence primitive variables
     }
 private:
     LocalConfig myConfig;
@@ -117,7 +117,7 @@ public:
             foreach (imode; 0 .. other.T_modes.length) { T_modes[imode][] = other.T_modes[imode][]; }
         }
         version(turbulence) {
-            foreach(i; 0 .. turb.length) turb[i][] = other.turb[i][]; 
+            foreach(i; 0 .. turb.length) turb[i][] = other.turb[i][];
         }
     }
 
@@ -133,7 +133,7 @@ public:
             foreach (imode; 0 .. T_modes.length) { T_modes[imode][] += other.T_modes[imode][]; }
         }
         version(turbulence) {
-            foreach(i; 0 .. turb.length) turb[i][] += other.turb[i][]; 
+            foreach(i; 0 .. turb.length) turb[i][] += other.turb[i][];
         }
     }
 
@@ -160,7 +160,7 @@ public:
         repr ~= "vel=[";
         foreach (i; 0 .. vel.length) {
             repr ~= "[" ~ to!string(vel[i][0]);
-            foreach (j; 1 .. vel[i].length) repr ~= ", " ~ to!string(vel[i][j]); 
+            foreach (j; 1 .. vel[i].length) repr ~= ", " ~ to!string(vel[i][j]);
             repr ~= "],";
         }
         repr ~= "]";
@@ -310,6 +310,16 @@ public:
             loop_init = 1; // first point is reference for differences.
             weights2[0] = 0.0; // and doesn't enter into the sum itself.
         }
+        if (n < 2) {
+            string msg = "Not enough points in cloud.";
+            debug {
+                import std.format;
+                msg ~= format("\n  pos=%s", pos);
+                msg ~= format("\n  compute_about_mid=%s, loop_init=%d, n=%d", compute_about_mid, loop_init, n);
+                foreach (i; 0 .. n) { msg ~= format("\n  cloud_pos[%d]=%s", i, cloud_pos[i]); }
+            }
+            throw new FlowSolverException(msg);
+        }
         ws.n = n;
         ws.loop_init = loop_init;
         //
@@ -319,7 +329,7 @@ public:
         // as the reference point (pos).
         // For the "faces" spatial location we are expecting the primary point
         // (i.e. the face at which we are calculating the gradients) to be in
-        // the first cloud position. 
+        // the first cloud position.
         number x0 = pos.x; number y0 = pos.y; number z0 = pos.z;
         if (myConfig.dimensions == 2) {
             foreach (i; loop_init .. n) {
@@ -372,9 +382,14 @@ public:
             xTx[2][3] = 0.0; xTx[2][4] = 0.0; xTx[2][5] = 1.0;
             double very_small_value = 1.0e-16*(normInf!(3,3,6,number)(xTx).re)^^3;
             if (0 != computeInverse!(3,3,6,number)(xTx, very_small_value)) {
-                throw new FlowSolverException("Failed to invert LSQ normal matrix");
-                // Assume that the rows are linearly dependent 
-                // because the sample points are coplanar or colinear.
+                string msg = "Failed to invert LSQ normal matrix";
+                debug {
+                    import std.format;
+                    msg ~= format("\n  pos=%s", pos);
+                    msg ~= format("\n  compute_about_mid=%s, loop_init=%d, n=%d", compute_about_mid, loop_init, n);
+                    foreach (i; 0 .. n) { msg ~= format("\n  cloud_pos[%d]=%s", i, cloud_pos[i]); }
+                }
+                throw new FlowSolverException(msg);
             }
             // Prepare final weights for later use in the reconstruction phase.
             foreach (i; loop_init .. n) {
@@ -402,9 +417,14 @@ public:
             xTx[1][2] = 0.0; xTx[1][3] = 1.0;
             double very_small_value = 1.0e-16*(normInf!(2,2,4,number)(xTx).re)^^2;
             if (0 != computeInverse!(2,2,4,number)(xTx, very_small_value)) {
-                throw new FlowSolverException("Failed to invert LSQ normal matrix");
-                // Assume that the rows are linearly dependent 
-                // because the sample points are colinear.
+                string msg = "Failed to invert LSQ normal matrix";
+                debug {
+                    import std.format;
+                    msg ~= format("\n  pos=%s", pos);
+                    msg ~= format("\n  compute_about_mid=%s, loop_init=%d, n=%d", compute_about_mid, loop_init, n);
+                    foreach (i; 0 .. n) { msg ~= format("\n  cloud_pos[%d]=%s", i, cloud_pos[i]); }
+                }
+                throw new FlowSolverException(msg);
             }
             // Prepare final weights for later use in the reconstruction phase.
             foreach (i; loop_init .. n) {
@@ -434,7 +454,7 @@ public:
                 q0 = 0.0;
                 foreach (i; loop_init .. n) { q0 += cloud_fs[i]."~qname~"; }
                 q0 /= n;
-            } else { 
+            } else {
                 q0 = cloud_fs[0]."~qname~";
             }
             "~gname~"[0] = 0.0; "~gname~"[1] = 0.0; "~gname~"[2] = 0.0;
