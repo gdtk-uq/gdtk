@@ -930,20 +930,22 @@ public:
         // The weights should be calculated when the grid is initialised or moved.
         // They are needed for flow gradient calculations that feed into the viscous fluxes.
         if (myConfig.viscous && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)) {
-            if (myConfig.spatial_deriv_locn == SpatialDerivLocn.faces) {
-                foreach(iface; faces) {
-                    iface.grad.set_up_workspace_leastsq(iface.cloud_pos, iface.pos, false, iface.ws_grad);
-                }
-            } else if (myConfig.spatial_deriv_locn == SpatialDerivLocn.vertices){
+            final switch (myConfig.spatial_deriv_locn) {
+            case SpatialDerivLocn.vertices:
                 foreach(vtx; vertices) {
                     vtx.grad.set_up_workspace_leastsq(vtx.cloud_pos, vtx.pos[gtl], true, vtx.ws_grad);
                 }
-            } else { // myConfig.spatial_deriv_locn == cells
+                break;
+            case SpatialDerivLocn.faces:
+                foreach(iface; faces) {
+                    iface.grad.set_up_workspace_leastsq(iface.cloud_pos, iface.pos, false, iface.ws_grad);
+                }
+                break;
+            case SpatialDerivLocn.cells:
                 foreach(cell; cells) {
                     cell.grad.set_up_workspace_leastsq(cell.cloud_pos, cell.pos[gtl], false, cell.ws_grad);
                 }
-            }
-
+            } // end switch
         }
     } // end compute_least_squares_setup()
 
@@ -974,6 +976,21 @@ public:
                 c.cloud_pos ~= &(f.pos);
                 c.cloud_fs ~= f.fs;
             } // end foreach face
+        }
+        // Check that we have correctly assembled clouds.
+        foreach (i; 0 .. nic) {
+            foreach (j; 0 .. njc) {
+                foreach (k; 0 .. nkc) {
+                    auto c = get_cell(i,j,k);
+                    auto ncloud = c.cloud_pos.length;
+                    if (ncloud < 3) {
+                        string msg = format("Too few points in cloud around cell centre[%d,%d,%d] "~
+                                            "ncloud=%d nic=%d njc=%d nkc=%d",
+                                            i, j, k, ncloud, nic, njc, nkc);
+                        throw new FlowSolverException(msg);
+                    }
+                }
+            }
         }
         // We will also need derivative storage in ghostcells because the special
         // interface gradient averaging functions will expect to be able to access the gradients
@@ -1282,6 +1299,15 @@ public:
                 } // j loop
             } // i loop
         } // end if (myConfig.dimensions
+        //
+        // Check that we have some points in all clouds.
+        foreach (f; faces) {
+            auto ncloud = f.cloud_pos.length;
+            if (ncloud < 3) {
+                string msg = format("Too few points in cloud around midpoint of face id=%d ncloud=%d", f.id, ncloud);
+                throw new FlowSolverException(msg);
+            }
+        }
     } // end store_references_for_derivative_calc_at_faces()
 
     void store_references_for_derivative_calc_at_vertices(size_t gtl)
@@ -1522,7 +1548,7 @@ public:
             }
             // Now, do the 4 edges around the bottom face.
             // Bottom-South edge [0]-->[1]
-            foreach (i; 1 .. niv-2) {
+            foreach (i; 1 .. niv-1) {
                 size_t j = 0; size_t k = 0;
                 FVVertex vtx = get_vtx(i,j,k);
                 FVCell c0 = get_cell(i-1,j,k);
@@ -1536,7 +1562,7 @@ public:
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // Bottom-North edge [3]-->[2]
-            foreach (i; 1 .. niv-2) {
+            foreach (i; 1 .. niv-1) {
                 size_t j = njv-2; size_t k = 0;
                 FVVertex vtx = get_vtx(i,j+1,k);
                 FVCell c0 = get_cell(i-1,j,k);
@@ -1550,7 +1576,7 @@ public:
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // Bottom-West edge [0]-->[3]
-            foreach (j; 1 .. njv-2) {
+            foreach (j; 1 .. njv-1) {
                 size_t i = 0; size_t k = 0;
                 FVVertex vtx = get_vtx(i,j,k);
                 FVCell c0 = get_cell(i,j-1,k);
@@ -1564,7 +1590,7 @@ public:
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // Bottom-East edge [1]-->[2]
-            foreach (j; 1 ..njv-2) {
+            foreach (j; 1 .. njv-1) {
                 size_t i = niv-2; size_t k = 0;
                 FVVertex vtx = get_vtx(i+1,j,k);
                 FVCell c0 = get_cell(i,j-1,k);
@@ -1579,7 +1605,7 @@ public:
             }
             // 4 edges around the top face.
             // Top-South edge [4]-->[5]
-            foreach (i; 1 .. niv-2) {
+            foreach (i; 1 .. niv-1) {
                 size_t j = 0; size_t k = nkv-2;
                 FVVertex vtx = get_vtx(i,j,k+1);
                 FVCell c0 = get_cell(i-1,j,k);
@@ -1593,7 +1619,7 @@ public:
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // Top-North edge [7]-->[6]
-            foreach (i; 1 .. niv-2) {
+            foreach (i; 1 .. niv-1) {
                 size_t j = njv-2; size_t k = nkv-2;
                 FVVertex vtx = get_vtx(i,j+1,k+1);
                 FVCell c0 = get_cell(i-1,j,k);
@@ -1607,7 +1633,7 @@ public:
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // Top-West edge [4]-->[7]
-            foreach (j; 1 .. njv-2) {
+            foreach (j; 1 .. njv-1) {
                 size_t i = 0; size_t k = nkv-2;
                 FVVertex vtx = get_vtx(i,j,k+1);
                 FVCell c0 = get_cell(i,j-1,k);
@@ -1621,7 +1647,7 @@ public:
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // Top-East edge [5]-->[6]
-            foreach (j; 1 .. njv-2) {
+            foreach (j; 1 .. njv-1) {
                 size_t i = niv-2; size_t k = nkv-2;
                 FVVertex vtx = get_vtx(i+1,j,k+1);
                 FVCell c0 = get_cell(i,j-1,k);
@@ -1636,7 +1662,7 @@ public:
             }
             // 4 edges running from bottom to top.
             // South-West edge [0]-->[4]
-            foreach (k; 1 .. nkv-2) {
+            foreach (k; 1 .. nkv-1) {
                 size_t i = 0; size_t j = 0;
                 FVVertex vtx = get_vtx(i,j,k);
                 FVCell c0 = get_cell(i,j,k-1);
@@ -1650,7 +1676,7 @@ public:
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // South-East edge [1]-->[5]
-            foreach (k; 1 .. nkv-2) {
+            foreach (k; 1 .. nkv-1) {
                 size_t i = niv-2; size_t j = 0;
                 FVVertex vtx = get_vtx(i+1,j,k);
                 FVCell c0 = get_cell(i,j,k-1);
@@ -1664,7 +1690,7 @@ public:
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // North-East edge [2]-->[6]
-            foreach (k; 1 .. nkv-2) {
+            foreach (k; 1 .. nkv-1) {
                 size_t i = niv-2; size_t j = njv-2;
                 FVVertex vtx = get_vtx(i+1,j+1,k);
                 FVCell c0 = get_cell(i,j,k-1);
@@ -1678,7 +1704,7 @@ public:
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // North-West edge [3]-->[7]
-            foreach (k; 1 .. nkv-2) {
+            foreach (k; 1 .. nkv-1) {
                 size_t i = 0; size_t j = njv-2;
                 FVVertex vtx = get_vtx(i,j+1,k);
                 FVCell c0 = get_cell(i,j,k-1);
@@ -1781,6 +1807,22 @@ public:
                 vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs];
             }
         } // end if (myConfig.dimensions
+        //
+        // Check that we have correctly assembled clouds.
+        foreach (i; 0 .. niv) {
+            foreach (j; 0 .. njv) {
+                foreach (k; 0 .. nkv) {
+                    auto vtx = get_vtx(i,j,k);
+                    auto ncloud = vtx.cloud_pos.length;
+                    if (ncloud < 3) {
+                        string msg = format("Too few points in cloud around vertex[%d,%d,%d] "~
+                                            "ncloud=%d niv=%d njv=%d nkv=%d",
+                                            i, j, k, ncloud, niv, njv, nkv);
+                        throw new FlowSolverException(msg);
+                    }
+                }
+            }
+        }
     } // end store_references_for_derivative_calc_at_vertices()
 
     @nogc

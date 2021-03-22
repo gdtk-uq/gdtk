@@ -310,7 +310,7 @@ public:
             loop_init = 1; // first point is reference for differences.
             weights2[0] = 0.0; // and doesn't enter into the sum itself.
         }
-        if (n < 2) {
+        if (n < 3) {
             string msg = "Not enough points in cloud.";
             debug {
                 import std.format;
