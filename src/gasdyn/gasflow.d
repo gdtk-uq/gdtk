@@ -401,6 +401,7 @@ number expand_from_stagnation(const(GasState) state0, number p_over_p0,
     state1.p = state0.p * p_over_p0;
     number s0 = gm.entropy(state0);
     gm.update_thermo_from_ps(state1, s0);
+    gm.update_sound_speed(state1);
     // Matt McGilvray had a note about CEA giving bad entropy values
     // so we'll assert things are OK before proceeding.
     assert (abs(gm.entropy(state1) - s0)/abs(s0) < 0.001, "Bad entropy value.");
@@ -450,6 +451,7 @@ number expand_to_mach(const(GasState) state0, number mach,
     number p_over_p0 = solve!(error_in_mach, number)(p_over_p0_guess1, p_over_p0_guess2, 1.0e-6);
     state1.p = state0.p * p_over_p0;
     gm.update_thermo_from_ps(state1, s0);
+    gm.update_sound_speed(state1);
     number static_enthalpy = gm.enthalpy(state1);
     number V = 0.0;
     if (total_enthalpy > static_enthalpy) {
@@ -492,6 +494,7 @@ void total_condition(const(GasState) state1, number V1,
     number x_total = solve!error_in_total_enthalpy(x1, x2, 1.0e-4);
     state0.p = x_total * state1.p;
     gm.update_thermo_from_ps(state0, s1);
+    gm.update_sound_speed(state0);
 } // end total_condition()
 
 
@@ -596,6 +599,7 @@ number steady_flow_with_area_change(const(GasState)state1, number V1, number A2_
     state2.copy_values_from(state1);
     state2.p *= p2p1;
     gm.update_thermo_from_ps(state2, s1);
+    gm.update_sound_speed(state2);
     V2 = sqrt(2*(H1 - gm.enthalpy(state2)));
     return V2;
 } // end steady_flow_with_area_change()
