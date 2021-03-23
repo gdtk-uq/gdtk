@@ -6,6 +6,7 @@
  * the report by Gupta et al.
  *
  * Author: Rowan G.
+ * Major Edits by N. Gibbons (21/03/19)
  */
 
 module kinetics.two_temperature_air_kinetics;
@@ -24,6 +25,7 @@ import gas;
 import gas.two_temperature_air;
 import kinetics.thermochemical_reactor;
 import kinetics.chemistry_update;
+import kinetics.reaction_mechanism;
 
 
 immutable double DT_INCREASE_PERCENT = 10.0; // allowable percentage increase on succesful step
@@ -34,9 +36,14 @@ immutable double DT_DECREASE_PERCENT = 50.0; // allowable percentage decrease on
 immutable double DT_REDUCTION_FACTOR = 10.0; // factor by which to reduce timestep
                                              // after a failed attempt
 immutable double H_MIN = 1.0e-15; // Minimum allowable step size
-enum ResultOfStep { success, failure };
 
 final class TwoTemperatureAirKinetics : ThermochemicalReactor {
+    ReactionMechanism rmech;
+    ChemODEStep cstep;
+    bool tightTempCoupling;
+    int maxSubcycles;
+    int maxAttempts;
+
     this(string chemFile, string energyExchFile, GasModel gmodel)
     {
         super(gmodel);
@@ -48,10 +55,106 @@ final class TwoTemperatureAirKinetics : ThermochemicalReactor {
         }
         _Qinit = new GasState(gmodel);
         _Q0 = new GasState(gmodel);
-        _chemUpdate = new ChemistryUpdate(chemFile, gmodel);
+        chemupdate_constructor(chemFile, gmodel);
         _molef.length = _airModel.n_species;
         _numden.length = _airModel.n_species;
         initModel(energyExchFile);
+    }
+
+    void chemupdate_constructor(string fname, GasModel gmodel)
+    {
+        // Allocate memory
+        //_Qinit = new GasState(gmodel.n_species, gmodel.n_modes);
+        _conc0.length = gmodel.n_species;
+        _concOut.length = gmodel.n_species;
+
+        // Configure other parameters via Lua state.
+        auto L = init_lua_State();
+        doLuaFile(L, fname);
+
+        // Check on species order before proceeding.
+        lua_getglobal(L, "species");
+        if (lua_isnil(L, -1)) {
+            string errMsg = format("There is no species listing in your chemistry input file: '%s'\n", fname);
+            errMsg ~= "Please be sure to use an up-to-date version of prep-chem to generate your chemistry file.\n";
+            throw new Error(errMsg);
+        }
+        foreach (isp; 0 .. gmodel.n_species) {
+            lua_rawgeti(L, -1, isp);
+            auto sp = to!string(luaL_checkstring(L, -1));
+            if (sp != gmodel.species_name(isp)) {
+                string errMsg = "Species order is incompatible between gas model and chemistry input.\n";
+                errMsg ~= format("Chemistry input file is: '%s'.\n", fname);
+                errMsg ~= format("In gas model: index %d ==> species '%s'\n", isp, gmodel.species_name(isp));
+                errMsg ~= format("In chemistry: index %d ==> species '%s'\n", isp, sp);
+                throw new Error(errMsg);
+            }
+            lua_pop(L, 1);
+        }
+        lua_pop(L, 1);
+
+        lua_getglobal(L, "config");
+        lua_getfield(L, -1, "tempLimits");
+        lua_getfield(L, -1, "lower");
+        double T_lower_limit = lua_tonumber(L, -1);
+        lua_pop(L, 1);
+        lua_getfield(L, -1, "upper");
+        double T_upper_limit = lua_tonumber(L, -1);
+        lua_pop(L, 1);
+        lua_pop(L, 1);
+        lua_pop(L, 1);
+
+        lua_getglobal(L, "reaction");
+        rmech = createReactionMechanism(L, gmodel, T_lower_limit, T_upper_limit);
+        lua_pop(L, 1);
+
+        lua_getglobal(L, "config");
+        lua_getfield(L, -1, "odeStep");
+        lua_getfield(L, -1, "method");
+        string ode_method = to!string(lua_tostring(L, -1));
+        lua_pop(L, 1);
+        switch (ode_method) {
+        case "rkf":
+             lua_getfield(L, -1, "errTol");
+             double err_tol = lua_tonumber(L, -1);
+             lua_pop(L, 1);
+             cstep = new RKFStep(gmodel, rmech, err_tol);
+             break;
+        case "alpha-qss":
+             lua_getfield(L, -1, "eps1");
+             double eps1 = lua_tonumber(L, -1);
+             lua_pop(L, 1);
+             lua_getfield(L, -1, "eps2");
+             double eps2 = lua_tonumber(L, -1);
+             lua_pop(L, 1);
+             lua_getfield(L, -1, "delta");
+             double delta = lua_tonumber(L, -1);
+             lua_pop(L, 1);
+             lua_getfield(L, -1, "maxIters");
+             int max_iters = to!int(lua_tointeger(L, -1));
+             lua_pop(L, 1);
+             cstep = new AlphaQssStep(gmodel, rmech, eps1, eps2, delta, max_iters);
+             break;
+        default:
+             string errMsg = format("ERROR: The odeStep '%s' is unknown.\n", ode_method);
+             throw new Error(errMsg);
+        }
+        lua_pop(L, 1); // pops 'odeStep'
+
+        lua_getfield(L, -1, "tightTempCoupling");
+        tightTempCoupling = lua_toboolean(L, -1);
+        lua_pop(L, 1);
+
+        lua_getfield(L, -1, "maxSubcycles");
+        maxSubcycles = to!int(luaL_checkinteger(L, -1));
+        lua_pop(L, 1);
+
+        lua_getfield(L, -1, "maxAttempts");
+        maxAttempts = to!int(luaL_checkinteger(L, -1));
+        lua_pop(L, 1);
+
+        lua_pop(L, 1); // pops 'config'
+        lua_close(L);
     }
 
     @nogc
@@ -59,47 +162,211 @@ final class TwoTemperatureAirKinetics : ThermochemicalReactor {
                          ref double dtChemSuggest, ref double dtThermSuggest,
                          ref number[maxParams] params)
     {
+        _Qinit.copy_values_from(Q);
+        _gmodel.massf2conc(Q, _conc0);
+        number uTotal = _gmodel.internal_energy(Q);
+        _uTotal = Q.u + Q.u_modes[0];
 
-        double dummyDouble;
-        number uTotal = Q.u + Q.u_modes[0];
-        // 1. Perform chemistry update.
-        _chemUpdate(Q, tInterval, dtChemSuggest, dummyDouble, params);
-        // Changing mass fractions does not change the temperature
-        // of the temperatures associated with internal structure.
-        // Now we can adjust the transrotational energy, given that
-        // some of it was redistributed to other internal structure energy bins.
-        Q.u_modes[0] = _airModel.vibElecEnergy(Q, Q.T_modes[0]);
-        Q.u = uTotal - Q.u_modes[0];
-        try {
-            _airModel.update_thermo_from_rhou(Q);
-        }
-        catch (GasModelException err) {
-            string msg = "Call to update_thermo_from_rhou failed in two-temperature air kinetics.";
-            debug { msg ~= format("\ncaught %s", err.msg); }
-            throw new ThermochemicalReactorUpdateException(msg);
-        }
+        // 0. Evaluate the rate constants.
+        //    It helps to have these computed before doing other setup work.
+        rmech.eval_rate_constants(Q);
+        // 1. Sort out the time step for possible subcycling.
+        double t = 0.0;
+        double h;
+        double dtSave;
+        double dtSuggest = dtChemSuggest;
+        if ( dtChemSuggest > tInterval )
+            h = tInterval;
+        else if ( dtChemSuggest <= 0.0 )
+            h = rmech.estimateStepSize(_conc0);
+        else
+            h = dtChemSuggest;
 
-        // 2. Perform energy exchange update.
-        // As prep work, compute mole fractions.
-        // These values won't change during the energy update
-        // since the composition does not change
-        // during energy exhange.
-        _gmodel.massf2molef(Q, _molef);
-        _gmodel.massf2numden(Q, _numden);
-        try {
-            energyUpdate(Q, tInterval, dtThermSuggest);
+        // 2. Now do the interesting stuff, increment species change
+        int cycle = 0;
+        int attempt = 0;
+        for ( ; cycle < maxSubcycles; ++cycle ) {
+            /* Copy the last good timestep suggestion before moving on.
+             * If we're near the end of the interval, we want
+             * the penultimate step. In other words, we don't
+             * want to store the fractional step of (tInterval - t)
+             * that is taken as the last step.
+             */
+            dtSave = dtChemSuggest;
+            h = min(h, tInterval - t);
+            attempt= 0;
+            for ( ; attempt < maxAttempts; ++attempt ) {
+                ResultOfStep result1 = cstep(_conc0, h, _concOut, dtChemSuggest);
+                ResultOfStep result2 = EnergyStep(Q, h, dtSuggest);
+                ResultOfStep result = ResultOfStep.failure;
+                if (result1==ResultOfStep.success && result2==ResultOfStep.success){
+                    result = ResultOfStep.success;
+                }
+                dtChemSuggest = fmin(dtChemSuggest, dtSuggest);
+
+                bool passesMassFractionTest = true;
+                if ( result  == ResultOfStep.success ) {
+                    /* We succesfully took a step of size h according to the ODE method.
+                     * However, we need to test that that mass fractions have remained ok.
+                     */
+                    _gmodel.conc2massf(_concOut, Q);
+                    auto massfTotal = sum(Q.massf);
+                    if ( fabs(massfTotal - 1.0) > ALLOWABLE_MASSF_ERROR ) {
+                        passesMassFractionTest = false;
+                    }
+                }
+
+                if ( result == ResultOfStep.success && passesMassFractionTest ) {
+                    t += h;
+                    // Copy succesful values in concOut to conc0, ready for next step
+                    _conc0[] = _concOut[];
+                    /* We can now make some decision about how to
+                     * increase the timestep. We will take some
+                     * guidance from the ODE step, but also check
+                     * that it's sensible. For example, we won't
+                     * increase by more than 10% (or INCREASE_PERCENT).
+                     * We'll also balk if the ODE step wants to reduce
+                     * the stepsize on a successful step. This is because
+                     * if the step was successful there shouldn't be any
+                     * need (stability wise or accuracy related) to warrant
+                     * a reduction. Thus if the step is successful and
+                     * the dtChemSuggest comes back lower, let's just set
+                     * h as the original value for the successful step.
+                     */
+                    double hMax = h*(1.0 + DT_INCREASE_PERCENT/100.0);
+                    if (dtChemSuggest > h) {
+                        /* It's possible that dtChemSuggest is less than h.
+                         * When that occurs, we've made the decision to ignore
+                         * the new timestep suggestion supplied by the ODE step.
+                         * Our reasoning is that we'd like push for an aggressive
+                         * timestep size. If that fails, then a later part of
+                         * the timestepping algorithm will catch that and reduce
+                         * the timestep.
+                         *
+                         * It's also possible that the suggested timestep
+                         * is much larger than what we just used. For that
+                         * case, we cap it at hMax. That's the following line.
+                         */
+                        h = min(dtChemSuggest, hMax);
+                    }
+                    break;
+                }
+                else { // in the case of failure...
+                    /* We now need to make some decision about
+                     * what timestep to attempt next. We follow
+                     * David Mott's suggestion in his thesis (on p. 51)
+                     * and reduce the timestep by a factor of 2 or 3.
+                     * (The actual value is set as DT_REDUCTION_FACTOR).
+                     * In fact, for the types of problems we deal with
+                     * I have found that a reduction by a factor of 10
+                     * is more effective.
+                     */
+                    h /= DT_REDUCTION_FACTOR;
+                    if ( h < H_MIN ) {
+                        string errMsg = "Hit the minimum allowable timestep in chemistry update.";
+                        debug { errMsg ~= format("\ndt= %.4e", H_MIN); }
+                        Q.copy_values_from(_Qinit);
+                        throw new ThermochemicalReactorUpdateException(errMsg);
+                    }
+                }
+            } // end attempts at single subcycle.
+            if ( attempt == maxAttempts ) {
+                string errMsg = "Hit maximum number of step attempts within a subcycle for chemistry update.";
+                // We did poorly. Let's put the original GasState back in place,
+                // and let the outside world know via an Exception.
+                Q.copy_values_from(_Qinit);
+                throw new ThermochemicalReactorUpdateException(errMsg);
+            }
+            /* Otherwise, we've done well.
+             * If tight temperature coupling is requested, we can reevaluate
+             * the temperature at this point. With regards to tight coupling,
+             * we follow Oran and Boris's advice on pp. 140-141.
+             * To paraphrase: solving a separate differential equation for
+             * temperature is computationally expensive, however, it usually
+             * suffices to reevaluate the temperature assuming that total internal
+             * energy of the system has not changed but has been redistributed
+             * among chemical states. Since the chemistry has not altered much,
+             * the iteration for temperature should converge in one or two
+             * iterations.
+             *
+             * My own additional argument for avoiding a temperature differential
+             * equation is that it does not play nicely with the special
+             * ODE methods for chemistry that exploit structure in the species
+             * differential equations.
+             */
+            if ( tightTempCoupling ) {
+                _gmodel.conc2massf(_conc0, Q);
+                Q.u = _uTotal - Q.u_modes[0];
+                _gmodel.update_thermo_from_rhou(Q);
+                rmech.eval_rate_constants(Q);
+            }
+
+            if ( t >= tInterval ) { // We've done enough work.
+                // If we've only take one cycle, then we would like to use
+                // dtChemSuggest rather than using the dtChemSuggest from the
+                // penultimate step.
+                if (cycle == 0) {
+                    dtSave = dtChemSuggest;
+                }
+                break;
+            }
         }
-        catch (GasModelException err) {
-            string msg = "The energy update in the two temperature air kinetics module failed.\n";
-            debug { msg ~= format("\ncaught %s", err.msg); }
+        if ( cycle == maxSubcycles ) {
+            // If we make it out here, then we didn't complete within
+            // the maximum number of subscyles... we are taking too long.
+            // Let's return the gas state to how it was before we failed
+            // and throw an Exception.
+            string errMsg = "Hit maximum number of subcycles while attempting chemistry update.";
+            Q.copy_values_from(_Qinit);
+            throw new ThermochemicalReactorUpdateException(errMsg);
+        }
+        // At this point, it appears that everything has gone well.
+        // We'll tweak the mass fractions in case they are a little off.
+        _gmodel.conc2massf(_concOut, Q);
+        auto massfTotal = sum(Q.massf);
+        foreach (ref mf; Q.massf) mf /= massfTotal;
+        /*
+         * RJG 2018-11-16
+         * Let's remove this piece of complication.
+         * Let's have the chemistry module *only* update mass fractions.
+         * The caller can decide on the thermodynamic constraint.
+         * This allows re-use as a chemistry updater in multi-temperature models.
+         *
+        if (_gmodel.n_modes >= 1) {
+            // Changing mass fractions does not change internal energies
+            // but it might have been redistributed.
+            try {
+                _gmodel.update_thermo_from_rhoT(Q);
+            }
+            catch (GasModelException err) {
+                string msg = "The call to update_thermo_from_rhoT in the chemistry update failed.";
+                debug { msg ~= format("\ncaught %s", err.msg); }
             throw new ThermochemicalReactorUpdateException(msg);
+            }
+            auto uOther = sum(Q.u_modes);
+            Q.u = uTotal - uOther;
+            try {
+                _gmodel.update_thermo_from_rhou(Q);
+            }
+            catch (GasModelException err) {
+                string msg = "The call to update_thermo_from_rhou in the chemistry update failed.";
+                debug { msg ~= format("\ncaught %s", err.msg); }
+            throw new ThermochemicalReactorUpdateException(msg);
+            }
         }
+        */
+        dtChemSuggest = dtSave;
+        dtSuggest = dtSave;
     }
 
 private:
+    // Stuff from chemistry update
+    //GasState _Qinit;
+    number[] _conc0;
+    number[] _concOut;
+
     TwoTemperatureAir _airModel;
     GasState _Qinit, _Q0;
-    ChemistryUpdate _chemUpdate;
     double _c2 = 1.0;
     number _uTotal;
     number _T_sh, _Tv_sh;
@@ -186,134 +453,12 @@ private:
 
         _reactionsByMolecule.length = nSpecies;
         foreach (isp; _airModel.molecularSpecies) {
-            foreach (ir; 0 .. to!int(_chemUpdate.rmech.n_reactions)) {
-                if (_chemUpdate.rmech.reactionHasParticipant(ir, isp)) {
+            foreach (ir; 0 .. to!int(rmech.n_reactions)) {
+                if (rmech.reactionHasParticipant(ir, isp)) {
                     _reactionsByMolecule[isp] ~= ir;
                 }
             }
         }
-    }
-
-    @nogc
-    void energyUpdate(GasState Q, double tInterval, ref double dtSuggest)
-    {
-        _uTotal = Q.u + Q.u_modes[0];
-        // We borrow the algorithm from ChemistryUpdate.opCall()
-        // Take a copy of what's passed in, in case something goes wrong
-        _Qinit.copy_values_from(Q);
-
-        // 1. Sort out the time step for possible subcycling.
-        double t = 0.0;
-        double h;
-        double dtSave;
-        if ( dtSuggest > tInterval )
-            h = tInterval;
-        else if ( dtSuggest <= 0.0 )
-            h = 0.01*tInterval;
-        else
-            h = dtSuggest;
-
-        // 2. Now do the interesting stuff, increment energy change
-        int cycle = 0;
-        int attempt = 0;
-        for ( ; cycle < _maxSubcycles; ++cycle) {
-            /* Copy the last good timestep suggestion before moving on.
-             * If we're near the end of the interval, we want
-             * the penultimate step. In other words, we don't
-             * want to store the fractional step of (tInterval - t)
-             * that is taken as the last step.
-             */
-            dtSave = dtSuggest;
-            h = fmin(h, tInterval - t);
-            attempt= 0;
-            for ( ; attempt < _maxAttempts; ++attempt) {
-                ResultOfStep result = RKFStep(Q, h, dtSuggest);
-                if (result == ResultOfStep.success) {
-                    t += h;
-                    /* We can now make some decision about how to
-                     * increase the timestep. We will take some
-                     * guidance from the ODE step, but also check
-                     * that it's sensible. For example, we won't
-                     * increase by more than 10% (or INCREASE_PERCENT).
-                     * We'll also balk if the ODE step wants to reduce
-                     * the stepsize on a successful step. This is because
-                     * if the step was successful there shouldn't be any
-                     * need (stability wise or accuracy related) to warrant
-                     * a reduction. Thus if the step is successful and
-                     * the dtSuggest comes back lower, let's just set
-                     * h as the original value for the successful step.
-                     */
-                    double hMax = h*(1.0 + DT_INCREASE_PERCENT/100.0);
-                    if (dtSuggest > h) {
-                        /* It's possible that dtSuggest is less than h.
-                         * When that occurs, we've made the decision to ignore
-                         * the new timestep suggestion supplied by the ODE step.
-                         * Our reasoning is that we'd like push for an aggressive
-                         * timestep size. If that fails, then a later part of
-                         * the timestepping algorithm will catch that and reduce
-                         * the timestep.
-                         *
-                         * It's also possible that the suggested timestep
-                         * is much larger than what we just used. For that
-                         * case, we cap it at hMax. That's the following line.
-                         */
-                        h = fmin(dtSuggest, hMax);
-                    }
-                    break;
-                }
-                else { // in the case of failure...
-                    /* We now need to make some decision about
-                     * what timestep to attempt next.
-                     */
-                    h /= DT_REDUCTION_FACTOR;
-                    if (h < H_MIN) {
-                        string errMsg = "Hit the minimum allowable timestep in 2-T air energy exchange update.";
-                        debug { errMsg ~= format("\ndt= %.4e", H_MIN); }
-                        Q.copy_values_from(_Qinit);
-                        throw new ThermochemicalReactorUpdateException(errMsg);
-                    }
-                }
-            } // end attempts at single subcycle.
-            if (attempt == _maxAttempts) {
-                string errMsg = "Hit maximum number of step attempts within a subcycle for 2-T air energy exchange update.";
-                // We did poorly. Let's put the original GasState back in place,
-                // and let the outside world know via an Exception.
-                Q.copy_values_from(_Qinit);
-                throw new ThermochemicalReactorUpdateException(errMsg);
-            }
-            /* Otherwise, we've done well. */
-            if (t >= tInterval) {
-                // We've done enough work.
-                // If we've only take one cycle, then we would like to use
-                // dtSuggest rather than using the dtSuggest from the
-                // penultimate step.
-                if (cycle == 0) {
-                    dtSave = dtSuggest;
-                }
-                break;
-            }
-        }
-        if (cycle == _maxSubcycles) {
-            // If we make it out here, then we didn't complete within
-            // the maximum number of subscyles... we are taking too long.
-            // Let's return the gas state to how it was before we failed
-            // and throw an Exception.
-            string errMsg = "Hit maximum number of subcycles while attempting 2-T air energy exchange update.";
-            Q.copy_values_from(_Qinit);
-            throw new ThermochemicalReactorUpdateException(errMsg);
-        }
-        // At this point, it appears that everything has gone well.
-        // Update energies and leave.
-        try {
-            Q.u = _uTotal - Q.u_modes[0];
-            _airModel.update_thermo_from_rhou(Q);
-        }
-        catch (GasModelException err) {
-            string msg = "Call to update_thermo_from_rhou failed in two-temperature air kinetics.";
-            debug { msg ~= format("\ncaught %s", err.msg); }
-            throw new ThermochemicalReactorUpdateException(msg);
-        }
-        dtSuggest = dtSave;
     }
 
     @nogc
@@ -364,6 +509,8 @@ private:
     @nogc
     number evalRate(GasState Q)
     {
+        _gmodel.massf2molef(Q, _molef);
+        _gmodel.massf2numden(Q, _numden);
         number rate = 0.0;
         foreach (isp; _airModel.molecularSpecies) {
             // Vibrational energy exchange via collisions.
@@ -374,7 +521,7 @@ private:
             // Vibrational energy change due to chemical reactions.
             number chemRate = 0.0;
             foreach (ir; _reactionsByMolecule[isp]) {
-                chemRate += _chemUpdate.rmech.rate(ir, isp);
+                chemRate += rmech.rate(ir, isp);
             }
             chemRate *= _airModel.mol_masses[isp]; // convert mol/m^3/s --> kg/m^3/s
             number Ds = _c2*ev;
@@ -384,7 +531,7 @@ private:
     }
 
     @nogc
-    ResultOfStep RKFStep(GasState Q, double h, ref double hSuggest)
+    ResultOfStep EnergyStep(GasState Q, double h, ref double hSuggest)
     {
         _Q0.copy_values_from(Q);
         immutable double a21=1./5., a31=3./40., a32=9./40.,
