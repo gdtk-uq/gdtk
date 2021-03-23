@@ -1227,6 +1227,28 @@ function InFlowBC_FromStagnation:new(o)
    return o
 end
 
+InOutFlowBC_Ambient = BoundaryCondition:new()
+InOutFlowBC_Ambient.type = "inoutflow_ambient"
+function InOutFlowBC_Ambient:new(o)
+   local flag = type(self)=='table' and self.type=='inoutflow_ambient'
+   if not flag then
+      error("Make sure that you are using InOutFlowBC_Ambient:new{}"..
+               " and not InOutFlowBC_Ambient.new{}", 2)
+   end
+   o = o or {}
+   flag = checkAllowedNames(o, {"flowState", "flowCondition", "label", "group"})
+   if not flag then
+      error("Invalid name for item supplied to InOutFlowBC_Ambient constructor.", 2)
+   end
+   if o.flowState == nil then o.flowState = o.flowCondition end -- look for old name
+   o = BoundaryCondition.new(self, o)
+   o.is_wall_with_viscous_effects = false
+   o.preReconAction = { FlowStateCopy:new{flowState=o.flowState} }
+   o.preSpatialDerivActionAtBndryFaces = { FlowStateCopyToInterface:new{flowState=o.flowState} }
+   o.is_configured = true
+   return o
+end
+
 OutFlowBC_SimpleExtrapolate = BoundaryCondition:new()
 OutFlowBC_SimpleExtrapolate.type = "outflow_simple_extrapolate"
 function OutFlowBC_SimpleExtrapolate:new(o)
