@@ -3145,7 +3145,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                 } // end foreach sblk
             } // end if tight solid domain coupling.
         } catch (Exception e) {
-            debug { writeln("Caught exception at end of first-stage of explicit update: %s", e.msg); }
+            debug { writefln("Exception thrown in first-stage of explicit update: %s", e.msg); }
             step_failed = 1;
         }
         version(mpi_parallel) {

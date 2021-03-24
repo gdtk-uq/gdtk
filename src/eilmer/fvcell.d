@@ -653,11 +653,11 @@ public:
 		} else {
 		    string msg = "Bad cell with mass fractions that do not add correctly.";
 		    debug {
-			msg ~= format("scale_mass_fractions exception with message:\n  %s", err.msg);
+			msg ~= format(" scale_mass_fractions exception with message:\n  %s", err.msg);
 			msg ~= format("The decode_conserved() failed for cell: %d\n", id);
-			msg ~= format("This cell is located at: %s\n", pos[0]);
-			msg ~= format("This cell is located in block: %d\n", myConfig.universe_blk_id);
-			msg ~= format("The gas state before thermo update is:\n   fs.gas %s", fs.gas);
+			msg ~= format("  This cell is located at: %s\n", pos[0]);
+			msg ~= format("  This cell is located in block: %d\n", myConfig.universe_blk_id);
+			msg ~= format("  The gas state before thermo update is:\n   fs.gas %s", fs.gas);
 		    }
 		    throw new FlowSolverException(msg);
 		} // end if
@@ -699,11 +699,11 @@ public:
             } else {
                 string msg = "Bad cell with failed thermodynamic update.";
                 debug {
-                    msg ~= format("Thermodynamic update exception with message:\n  %s", err.msg);
+                    msg ~= format(" thermodynamic update exception with message:\n  %s", err.msg);
                     msg ~= format("The decode_conserved() failed for cell: %d\n", id);
-                    msg ~= format("This cell is located at: %s\n", pos[0]);
-                    msg ~= format("This cell is located in block: %d\n", myConfig.universe_blk_id);
-                    msg ~= format("The gas state after the failed update is:\n   fs.gas %s", fs.gas);
+                    msg ~= format("  This cell is located at: %s\n", pos[0]);
+                    msg ~= format("  This cell is located in block: %d\n", myConfig.universe_blk_id);
+                    msg ~= format("  The gas state after the failed update is:\n   fs.gas %s", fs.gas);
                 }
                 throw new FlowSolverException(msg);
             } // end if

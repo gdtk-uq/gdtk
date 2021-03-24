@@ -354,9 +354,9 @@ void scale_mass_fractions(ref number[] massf, double tolerance=0.0,
         if (fabs(massf_sum - 1.0) > assert_error_tolerance) {
             string msg = "Sum of species mass fractions far from 1.0";
             debug {
-                msg ~= format("fabs(massf_sum - 1.0) = %s \n", fabs(massf_sum - 1.0));
-                msg ~= format("assert_error_tolerance = %s \n", assert_error_tolerance);
-                msg ~= format("tolerance = %s \n", tolerance);
+                msg ~= format(": fabs(massf_sum - 1.0) = %s \n", fabs(massf_sum - 1.0));
+                msg ~= format("  assert_error_tolerance = %s \n", assert_error_tolerance);
+                msg ~= format("  tolerance = %s \n", tolerance);
             }
             throw new GasModelException(msg);
         }
