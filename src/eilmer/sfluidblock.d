@@ -757,6 +757,9 @@ public:
         bool nghost3 = n_ghost_cell_layers == 3;
         //
         if (bc[Face.east].ghost_cell_data_available) {
+            if (n_ghost_cell_layers > nic) {
+                throw new FlowSolverException("Too few cells in i-direction for ghost cell copies.");
+            }
             foreach (j; 0 .. njc) {
                 foreach (k; 0 .. nkc) {
                     auto f = get_ifi(nic, j, k);
@@ -784,6 +787,9 @@ public:
             }
         }
         if (bc[Face.west].ghost_cell_data_available) {
+            if (n_ghost_cell_layers > nic) {
+                throw new FlowSolverException("Too few cells in i-direction for ghost cell copies.");
+            }
             foreach (j; 0 .. njc) {
                 foreach (k; 0 .. nkc) {
                     auto f = get_ifi(0, j, k);
@@ -811,6 +817,9 @@ public:
             }
         }
         if (bc[Face.north].ghost_cell_data_available) {
+            if (n_ghost_cell_layers > njc) {
+                throw new FlowSolverException("Too few cells in j-direction for ghost cell copies.");
+            }
             foreach (i; 0 .. nic) {
                 foreach (k; 0 .. nkc) {
                     auto f = get_ifj(i, njc, k);
@@ -838,6 +847,9 @@ public:
             }
         }
         if (bc[Face.south].ghost_cell_data_available) {
+            if (n_ghost_cell_layers > njc) {
+                throw new FlowSolverException("Too few cells in j-direction for ghost cell copies.");
+            }
             foreach (i; 0 .. nic) {
                 foreach (k; 0 .. nkc) {
                     auto f = get_ifj(i, 0, k);
@@ -866,6 +878,9 @@ public:
         }
         if (myConfig.dimensions == 3) {
             if (bc[Face.top].ghost_cell_data_available) {
+                if (n_ghost_cell_layers > nkc) {
+                    throw new FlowSolverException("Too few cells in k-direction for ghost cell copies.");
+                }
                 foreach (i; 0 .. nic) {
                     foreach (j; 0 .. njc) {
                         auto f = get_ifk(i, j, nkc);
@@ -893,6 +908,9 @@ public:
                 }
             }
             if (bc[Face.bottom].ghost_cell_data_available) {
+                if (n_ghost_cell_layers > nkc) {
+                    throw new FlowSolverException("Too few cells in k-direction for ghost cell copies.");
+                }
                 foreach (i; 0 .. nic) {
                     foreach (j; 0 .. njc) {
                         auto f = get_ifk(i, j, 0);
