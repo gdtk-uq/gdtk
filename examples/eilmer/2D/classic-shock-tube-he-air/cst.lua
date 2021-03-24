@@ -1,5 +1,5 @@
 -- cst.lua
--- High-performance shock tube with helium driving air 
+-- High-performance shock tube with helium driving air
 -- in a constant-diameter tube.  The temperatures in the air
 -- are high enough to induce strong thermochemical effects.
 --

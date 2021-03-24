@@ -3,7 +3,7 @@
 #
 e4shared --prep --job=cst
 mpirun -np 2 e4mpi --run --job=cst --verbosity=1
-e4shared --post --job=cst --tindx-plot=last --vtk-xml 
+e4shared --post --job=cst --tindx-plot=last --vtk-xml
 e4shared --post --job=cst --tindx-plot=last \
          --output-file=profile.data --slice-list="0,:,0,0;1,:,0,0"
 
@@ -56,6 +56,6 @@ set key bottom right
 set xrange [0.0:1.0]
 set yrange [0.0:5000.0]
 set key left bottom
-plot "profile.data" using 1:22 title "Eilmer4" with points ps 1 pt 6, \
+plot "profile.data" using 1:20 title "Eilmer4" with points ps 1 pt 6, \
      "analytic.data" using 1:4 title "analytic" with lines lt 1 lw 3
 EOF
