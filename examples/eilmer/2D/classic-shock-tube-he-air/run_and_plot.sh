@@ -2,7 +2,8 @@
 # Classic 1-D shock tube exercise with a LUT+ideal gas mix.
 #
 e4shared --prep --job=cst
-mpirun -np 2 e4mpi --run --job=cst --verbosity=1
+# mpirun -np 2 e4mpi --run --job=cst --verbosity=1
+e4shared --run --job=cst --verbosity=1
 e4shared --post --job=cst --tindx-plot=last --vtk-xml
 e4shared --post --job=cst --tindx-plot=last \
          --output-file=profile.data --slice-list="0,:,0,0;1,:,0,0"

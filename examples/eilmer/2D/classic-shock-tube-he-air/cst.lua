@@ -21,8 +21,8 @@ c0 = {x=L, y=0.0}; c1 = {x=L, y=R}
 quad_driver = CoonsPatch:new{p00=a0, p10=b0, p11=b1, p01=a1}
 quad_driven = CoonsPatch:new{p00=b0, p10=c0, p11=c1, p01=b1}
 
-grid_driver = StructuredGrid:new{psurface=quad_driver, niv=401, njv=3}
-grid_driven = StructuredGrid:new{psurface=quad_driven, niv=401, njv=3}
+grid_driver = StructuredGrid:new{psurface=quad_driver, niv=401, njv=4}
+grid_driven = StructuredGrid:new{psurface=quad_driven, niv=401, njv=4}
 
 blk_driver = FluidBlock:new{grid=grid_driver, initialState=helium}
 blk_driven = FluidBlock:new{grid=grid_driven, initialState=air}
@@ -31,3 +31,6 @@ identifyBlockConnections()
 config.max_time = 100.0e-6  -- seconds
 config.max_step = 8000
 
+-- Daryl's experiment with Lachlan's low-dissipation flux calculator
+-- uses 3 ghost-cells and so requires njv=4 in the grids (above).
+-- config.flux_calculator = 'adaptive_ausmdv_asf'
