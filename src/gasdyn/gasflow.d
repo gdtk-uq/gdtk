@@ -439,7 +439,7 @@ number expand_to_mach(const(GasState) state0, number mach,
     gm.update_thermo_from_pT(state1);
     // Use an ideal-gas model to get an idea of the expected pressure.
     number g = gm.gamma(state1);
-    number p_over_p0_guess = 1.0 / p0_p(mach, g);
+    number p_over_p0_guess = 1.0 / p0_p(mach.re, g.re);
     number p_over_p0_guess1 = 1.1 * p_over_p0_guess;
     number p_over_p0_guess2 = 0.90 * p_over_p0_guess;
     auto error_in_mach = delegate(number p_over_p0) {
