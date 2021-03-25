@@ -1,4 +1,6 @@
 = State-to-state flow processes
+:source-highlighter: rouge
+
 
 For processes involving the general gas models,
 flow analysis functions are collected as methods of the GasFlow class.
@@ -156,9 +158,19 @@ The function returns `v`. the velocity (in m/s) of the expanded gas.
 Allow a gas to expand through a steady isentropic process,
 from stagnation to a particular Mach number.
 
-  v = flow.expand_to_mach(state0, mach, state1)
+[source,python]
+----
+# Python
+v = flow.expand_to_mach(state0, mach, state1)
+----
 
-Input:
+[source,lua]
+----
+-- Lua
+state1, v = gasflow.expand_to_mach(state0, mach)
+----
+
+Parameters:
 
 `state0`::
   _GasState_ object, no default. +
@@ -171,10 +183,12 @@ Input:
 `state1`::
   _GasState_ object, no default. +
   The state of the gas after expansion.
-  Although you might expect `state1` as output, you need to construct it first
+  Although you might expect `state1` as output, in Python,
+  you need to construct it first
   and pass it into the function to have its values mutated.
 
 The function returns `v`. the velocity (in m/s) of the expanded gas.
+The Lua flavour also returns `state1`.
 
 
 Given a free-stream, compute the corresponding stagnation condition.
