@@ -4137,6 +4137,9 @@ void finalize_simulation()
         }
         wait_for_current_tindx_dir(SimState.current_loads_tindx);
         write_boundary_loads_to_file(SimState.time, SimState.current_loads_tindx);
+        if (GlobalConfig.is_master_task) {
+            update_loads_times_file(SimState.time, SimState.current_loads_tindx);
+        }
     }
 
     if (GlobalConfig.do_temporal_DFT) {
