@@ -529,7 +529,7 @@ final class GlobalConfig {
     shared static bool interpolate_in_local_frame = true; // only for structured-grid
     // The unstructured solver has a selection of limiters available
     shared static UnstructuredLimiter unstructured_limiter = UnstructuredLimiter.venkat;
-    shared static int freeze_limiter_on_step = 2000;
+    shared static int freeze_limiter_on_step = 1_000_000_000;
     shared static bool frozen_limiter = false;
     // Allow the least-squares cloud of points (used to compute a cell-center gradient for
     // reconstruction in the unstructured solver) to grow.
