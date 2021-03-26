@@ -1314,6 +1314,12 @@ int integrate_in_time(double target_time_as_requested)
                 chemistry_step(0.5*SimState.dt_global);
             }
             // 2.2 Update the convective terms.
+            // for the unstructured code, at this point we can freeze the limiter
+            // to help alleviate any ringing of the residuals
+            if (SimState.step >= GlobalConfig.freeze_limiter_on_step &&
+                GlobalConfig.frozen_limiter == false) {
+                    GlobalConfig.frozen_limiter = true;
+            }
             if (GlobalConfig.grid_motion == GridMotion.none) {
                 if(GlobalConfig.with_super_time_stepping) { sts_gasdynamic_explicit_increment_with_fixed_grid(); }
 		else { gasdynamic_explicit_increment_with_fixed_grid(); }
