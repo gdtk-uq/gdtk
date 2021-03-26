@@ -55,7 +55,7 @@ Path checkPath(lua_State* L, int index) {
         return checkObj!(Bezier, BezierMT)(L, index);
     }
     if ( isObjType(L, index, NURBSMT) ) {
-        return checkObj!(NURBSCurve, NURBSMT)(L, index);
+        return checkObj!(NURBS, NURBSMT)(L, index);
     }
     if ( isObjType(L, index, PolylineMT) ) {
         return checkObj!(Polyline, PolylineMT)(L, index);
@@ -626,14 +626,14 @@ extern(C) int newNURBS(lua_State* L)
     int p = getInt(L, 1, "degree");
     // Prepare Pw array and build NURBS
     if (P.length != w.length) {
-        string errMsg = "Error in call to NURBS:new{}. The length of the points table and knots table do not agree.\n";
+        string errMsg = "Error in call to NURBS:new{}. The length of the points table and weights table do not agree.\n";
         errMsg ~= format("#points= %d, #weights= %d", P.length, w.length);
     }
     double[4][] Pw;
     Pw.length = P.length;
     foreach (i; 0 .. P.length) Pw[i] = [P[i].x.re*w[i], P[i].y.re*w[i], P[i].z.re*w[i], w[i]];
-    auto nrb = new NURBSCurve(Pw, U, p);
-    pathStore ~= pushObj!(NURBSCurve, NURBSMT)(L, nrb);
+    auto nrb = new NURBS(Pw, U, p);
+    pathStore ~= pushObj!(NURBS, NURBSMT)(L, nrb);
     return 1;
 } // end newBezier()
 
@@ -1553,15 +1553,15 @@ void registerPaths(lua_State* L)
 
     lua_pushcfunction(L, &newNURBS);
     lua_setfield(L, -2, "new");
-    lua_pushcfunction(L, &opCallPath!(NURBSCurve, NURBSMT));
+    lua_pushcfunction(L, &opCallPath!(NURBS, NURBSMT));
     lua_setfield(L, -2, "__call");
-    lua_pushcfunction(L, &opCallPath!(NURBSCurve, NURBSMT));
+    lua_pushcfunction(L, &opCallPath!(NURBS, NURBSMT));
     lua_setfield(L, -2, "eval");
-    lua_pushcfunction(L, &toStringObj!(NURBSCurve, NURBSMT));
+    lua_pushcfunction(L, &toStringObj!(NURBS, NURBSMT));
     lua_setfield(L, -2, "__tostring");
-    lua_pushcfunction(L, &copyPath!(NURBSCurve, NURBSMT));
+    lua_pushcfunction(L, &copyPath!(NURBS, NURBSMT));
     lua_setfield(L, -2, "copy");
-    lua_pushcfunction(L, &pathIntersect2D!(NURBSCurve, NURBSMT));
+    lua_pushcfunction(L, &pathIntersect2D!(NURBS, NURBSMT));
     lua_setfield(L, -2, "intersect2D");
 
     lua_setglobal(L, NURBSMT.toStringz);

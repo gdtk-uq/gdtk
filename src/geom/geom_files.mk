@@ -14,7 +14,7 @@ GEOM_D_FILES := \
 	$(GEOM_DIR)/gpath/arc.d \
 	$(GEOM_DIR)/gpath/helix.d \
 	$(GEOM_DIR)/gpath/bezier.d \
-	$(GEOM_DIR)/gpath/nurbscurve.d \
+	$(GEOM_DIR)/gpath/nurbs.d \
 	$(GEOM_DIR)/gpath/polynomial.d \
 	$(GEOM_DIR)/gpath/polyline.d \
 	$(GEOM_DIR)/gpath/svgpath.d \

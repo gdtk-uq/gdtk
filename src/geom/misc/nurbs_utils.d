@@ -1,11 +1,13 @@
-/*nurbs_utils.d
-Author: Reece O. 
-Date: 2021-03-09
-*/
+/** 
+ * nurbs_utils.d
+ * Author: Reece O. 
+ * Date: 2021-03-09
+ */
 
 module nurbs_utils;
 
 import std.format;
+import std.conv;
 
 int FindSpan(double u, int n, int p, const double[] U) {
     // Returns the index of the given knot vector whose value is less than the given parameter
@@ -32,24 +34,38 @@ int FindSpan(double u, int n, int p, const double[] U) {
     return mid;
     }
 
-double[] BasisFuns(int i, double u, int p, const double[] U) {    
-    // Returns an array with all nonvanishing basis function terms
-    // This is algorithm A2.2 from Piegl and Tiller (1997) - 'The NURBS Book'
+struct NURBSWorkspace {
+    double[] left;
+    double[] right;
+    this(int p) {
+        this.left.length = p+1;
+        this.right.length = p+1; 
+    }
+}
 
-    auto N = new double[p+1]; 
+void BasisFuns(int i, double u, int p, const double[] U, ref double[] N, ref NURBSWorkspace nws) {    
+    // Fills in N array with all nonvanishing basis function terms
+    // This is algorithm A2.2 from Piegl and Tiller (1997) - 'The NURBS Book'
     N[0] = 1.0;
-    auto left = new double[p+1]; 
-    auto right = new double[p+1]; 
     foreach (j; 1 .. p+1) {
-        left[j] = u-U[i+1-j];
-        right[j] = U[i+j]-u;
+        nws.left[j] = u-U[i+1-j];
+        nws.right[j] = U[i+j]-u;
         double saved = 0.0;
         foreach (r; 0 .. j) {
-            auto temp = N[r]/(right[r+1]+left[j-r]);
-            N[r] = saved+right[r+1]*temp;
-            saved = left[j-r]*temp;
+            auto temp = N[r]/(nws.right[r+1] + nws.left[j-r]);
+            N[r] = saved + nws.right[r+1]*temp;
+            saved = nws.left[j-r]*temp;
         }
         N[j] = saved;
     }
-    return N;
 }
+
+void PwTest(const double[4][] Pw) {
+    if (Pw.length < 2) {
+	        string errMsg = "NURBS() A NURBS path requires at least two control points.\n";
+	        errMsg ~= format("Supplied number of control points: %s", Pw.length);
+	        throw new Error(text(errMsg));
+    }
+}
+
+

@@ -19,7 +19,7 @@ import geom.elements;
 import geom.gpath.line;
 import geom.gpath.arc;
 import geom.gpath.bezier;
-import geom.gpath.nurbscurve;
+import geom.gpath.nurbs;
 import geom.gpath.polyline;
 import geom.surface;
 import nm.complex;
