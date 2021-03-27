@@ -226,13 +226,22 @@ public:
         gs.k_modes[0] = k_vib + k_E;
     }
 
-    /*
-    void binaryDiffusionCoefficients(in GasState gs, ref number[][] D)
+    void binaryDiffusionCoefficients(GasState gs, ref number[][] D)
     {
-        // TODO.
-        throw new Error("not implemented.");
+        // TODO: Think about "p" in this equation.
+        // Should it be total pressure, or bath pressure of binary interactors only?
+        massf2molef(gs.massf, mMolMasses, mMolef);
+        computeDelta11(gs);
+        double kB = Boltzmann_constant;
+        foreach (isp; 0 .. mNSpecies) {
+            foreach (jsp; 0 .. isp+1) {
+                number T = (isp == mElectronIdx || jsp == mElectronIdx) ? gs.T_modes[0] : gs.T;
+                D[isp][jsp] = (kB * T)/(gs.p * mDelta_11[isp][jsp]);
+                D[jsp][isp] = D[isp][jsp];
+            }
+        }
     }
-    */
+
 
 private:
     
