@@ -131,7 +131,8 @@ public:
                 errMsg ~= "The correct order is: H2, H, H+, He, He+, e-\n";
                 throw new Error(errMsg);
             }
-            _viscModel = new GasGiantViscosity();
+            string dbOption = getString(L, LUA_GLOBALSINDEX, "gas_giant_visc_db");
+            _viscModel = new GasGiantViscosity(dbOption);
         }
         else {
 
@@ -167,7 +168,9 @@ public:
         }
         // 5. Set the thermal conductivity model
         if (useGasGiantTransProps) {
-            _thermCondModel = new  GasGiantThermalConductivity();
+            string dbOption = getString(L, LUA_GLOBALSINDEX, "gas_giant_tc_db");
+            string modelOption = getString(L, LUA_GLOBALSINDEX, "gas_giant_tc_model");
+            _thermCondModel = new  GasGiantThermalConductivity(dbOption, modelOption);
         }
         else {
             ThermalConductivity[] tcms;
