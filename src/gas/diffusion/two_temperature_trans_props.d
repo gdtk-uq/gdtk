@@ -236,7 +236,6 @@ public:
 
 private:
     
-    double mR_U_cal = 1.987; // cal/(mole.K)
     int mNSpecies;
     int mElectronIdx = -1;
     int[] mMolecularSpecies;
@@ -250,7 +249,18 @@ private:
     @nogc
     void computeDelta11(GasState gs)
     {
-        // TODO: Correct collision cross-sections when p_e != 1 atm.
+        double crossSectionCorrection = 1.0;
+        if (mElectronIdx != -1) {
+            auto p_em = 0.0975*pow(gs.T/1000.0, 4.0);
+            auto p_e = gs.p_e/P_atm;
+            if (p_e > p_em) { // "unlikely for aerospace applications" p. 20 in Gupta)
+                crossSectionCorrection = 1.0;
+            }
+            else {
+                auto tempTerm = gs.T/(1000.0*pow(p_e, 0.25));
+                crossSectionCorrection = 0.5*log(2.09e-2*pow(tempTerm, 4.0) + 1.52*pow(tempTerm, 8./3.));
+            }
+        }
         double kB = Boltzmann_constant;
         number T_CI;
         number log_T_CI;
@@ -268,8 +278,8 @@ private:
                     log_T_CI = log(T_CI);
                 }
                 number expnt = mA_11[isp][jsp]*(log_T_CI)^^2 + mB_11[isp][jsp]*log_T_CI + mC_11[isp][jsp];
-                number pi_Omega_11 = exp(mD_11[isp][jsp])*pow(T_CI, expnt); 
-                mDelta_11[isp][jsp] = (8.0/3)*1.546e-20*sqrt(2.0*mMu[isp][jsp]/(to!double(PI)*mR_U_cal*T_CI))*pi_Omega_11;
+                number pi_Omega_11 = exp(mD_11[isp][jsp])*pow(T_CI, expnt) * crossSectionCorrection; 
+                mDelta_11[isp][jsp] = (8.0/3)*1.546e-20*sqrt(2.0*mMu[isp][jsp]/(to!double(PI)*R_universal_cal*T_CI))*pi_Omega_11;
                 mDelta_11[jsp][isp] = mDelta_11[isp][jsp];
             }
         }
@@ -278,7 +288,19 @@ private:
     @nogc
     void computeDelta22(GasState gs)
     {
-        // TODO: Correct collision cross-sections when p_e != 1 atm.
+        double crossSectionCorrection = 1.0;
+        if (mElectronIdx != -1) {
+            auto p_em = 0.0975*pow(gs.T/1000.0, 4.0);
+            auto p_e = gs.p_e/P_atm;
+            if (p_e > p_em) { // "unlikely for aerospace applications" p. 20 in Gupta)
+                crossSectionCorrection = 1.0;
+            }
+            else {
+                auto tempTerm = gs.T/(1000.0*pow(p_e, 0.25));
+                crossSectionCorrection = 0.5*log(2.09e-2*pow(tempTerm, 4.0) + 1.52*pow(tempTerm, 8./3.));
+            }
+        }
+        
         double kB = Boltzmann_constant;
         number T_CI;
         number log_T_CI;
@@ -296,8 +318,8 @@ private:
                     log_T_CI = log(T_CI);
                 }
                 number expnt = mA_22[isp][jsp]*(log_T_CI)^^2 + mB_22[isp][jsp]*log_T_CI + mC_22[isp][jsp];
-                number pi_Omega_22 = exp(mD_22[isp][jsp])*pow(T_CI, expnt); 
-                mDelta_22[isp][jsp] = (16./5)*1.546e-20*sqrt(2.0*mMu[isp][jsp]/(to!double(PI)*mR_U_cal*T_CI))*pi_Omega_22;
+                number pi_Omega_22 = exp(mD_22[isp][jsp])*pow(T_CI, expnt) * crossSectionCorrection; 
+                mDelta_22[isp][jsp] = (16./5)*1.546e-20*sqrt(2.0*mMu[isp][jsp]/(to!double(PI)*R_universal_cal*T_CI))*pi_Omega_22;
                 mDelta_22[jsp][isp] = mDelta_22[isp][jsp];
             }
         }
