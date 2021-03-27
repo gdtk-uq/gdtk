@@ -284,6 +284,10 @@ private:
             number T = (isp == mElectronIdx) ? gs.T_modes[0] : gs.T;
             gs.p += gs.rho * gs.massf[isp] * mR[isp] * T;
         }
+        // Also set electron pressure, while we're computing pressures.
+        if (mElectronIdx != -1) {
+            gs.p_e = gs.rho * gs.massf[mElectronIdx] * mR[mElectronIdx] * gs.T_modes[0];
+        }
     }
 
     @nogc
