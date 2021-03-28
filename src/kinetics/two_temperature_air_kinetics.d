@@ -371,11 +371,16 @@ private:
     number _uTotal;
     number _T_sh, _Tv_sh;
     double[] _A;
+    double[] _as, _bs, _cs;
     number[] _molef;
     number[] _numden;
     double[] _particleMass;
     double[][] _mu;
     int[][] _reactionsByMolecule;
+    int[] _neutralidxs;
+    int[] _ionidxs;
+    int _electronidx;
+    bool do_ET_exchange;
     // Numerics control
     int _maxSubcycles = 10000;
     int _maxAttempts = 3;
@@ -434,6 +439,17 @@ private:
         foreach (isp; _airModel.molecularSpecies) {
             _A[isp] = A_MW[_airModel.species_name(isp)];
         }
+        foreach(isp; 0 .. _airModel.n_species){
+            if (_airModel.charge[isp]>0.0) _ionidxs ~= isp;
+            if (_airModel.charge[isp]<0.0) _electronidx = isp;
+            if (_airModel.charge[isp]==0.0){
+                string name = _airModel.species_name(isp);
+                _as ~= as[name];
+                _bs ~= bs[name];
+                _cs ~= cs[name];
+                _neutralidxs ~= isp;
+            }
+        }
 
         _mu.length = nSpecies;
         foreach (isp; 0 .. nSpecies) _mu[isp].length = nSpecies;
@@ -445,6 +461,7 @@ private:
                 _mu[isp][jsp] *= 1000.0; // convert kg/mole to g/mole
             }
         }
+        if (_airModel.is_plasma) do_ET_exchange = true;
 
         _particleMass.length = nSpecies;
         foreach (isp; 0 .. nSpecies) {
@@ -527,7 +544,53 @@ private:
             number Ds = _c2*ev;
             rate += Q.massf[isp]*chemRate*Ds;
         }
+        if(do_ET_exchange)
+           rate += ElectronEnergyExchangeRate(Q);
         return rate;
+    }
+
+    @nogc
+    number ElectronEnergyExchangeRate(GasState Q)
+    {
+        /*
+        Appleton-Bray electron-translational energy exchange expression. Taken from Gnoffo, 1989
+        equation (16) term 7, and (64)/(65) for the collision cross section data.
+
+        The expression differs slightly from the paper, because we are using SI units. Their expression
+        uses "esu" for the electric charge, which is defined so that the factor 1/4/pi/epsilon_0 is equal
+        to one. See notes 21/03/24 for the derivation of the expression with this term inserted.
+
+        @author: Nick Gibbons
+        */
+        number Te = Q.T_modes[0];
+        number Tfit = fmin(30e3, Te);
+        number me = _particleMass[_electronidx];
+        number ne = _numden[_electronidx];
+        number nues_on_Ms = 0.0;
+        double pi = to!double(PI);
+
+        // Neutral energy exchange from tabulated collision cross sections eqn. (65)
+        foreach(isp; _neutralidxs){
+            number sigma = _as[isp] + _bs[isp]*Tfit + _cs[isp]*Tfit*Tfit;
+            number nues = _numden[isp]*sigma*sqrt(8*Boltzmann_constant*Te/pi/me);
+            nues_on_Ms += nues/_airModel.mol_masses[isp];
+        }
+
+        // Ion energy exchange from analytical Coulomb collision cross section eqn. (64)
+        // Note that Le is a weird inverse lengthscale related to the Debeye length.
+        number Le = 4.0*PI*vacuum_permittivity*Boltzmann_constant*Te/electron_volt_energy/electron_volt_energy;
+        number Lambda = log(Le*Le*Le/pi/fmax(ne,1.0));
+        number A = 8.0/3.0*sqrt(pi/me/8.0)*electron_volt_energy/sqrt(4.0*pi*vacuum_permittivity);
+        number B = sqrt(1.0/Le/Le/Le);
+
+        foreach(isp; _ionidxs){
+            number nues = A*_numden[isp]*B*Lambda;
+            nues_on_Ms += nues/_airModel.mol_masses[isp];
+        }
+
+        // Unlike Gnoffo's equation 16, we are working directly on u_ve in J/kg,
+        // rather than rho u_ve in J/m3. So we use massf[e-] instead of rho[e-]
+        return Q.massf[_electronidx]*3.0*R_universal*(Q.T-Te)*nues_on_Ms;
     }
 
     @nogc
@@ -619,6 +682,9 @@ private:
 }
 
 static double[string] A_MW; // A parameter in Millikan-White expression
+static double[string] as; // a parameter in Electron-Neutral Collision Cross Section Curve Fit
+static double[string] bs; // b parameter in Electron-Neutral Collision Cross Section Curve Fit
+static double[string] cs; // c parameter in Electron-Neutral Collision Cross Section Curve Fit
 
 static this()
 {
@@ -629,4 +695,11 @@ static this()
     A_MW["N2+"] = 220.0;
     A_MW["O2+"] = 129.0;
     A_MW["NO+"] = 168.0;
+
+    // Gnoffo et al. Table 5 (These appear to be in m2)
+    as["N"]  = 5.0e-20; bs["N"]  = 0.0e+00; cs["N"]  =  0.0e+00;
+    as["O"]  = 1.2e-20; bs["O"]  = 1.7e-24; cs["O"]  = -2.0e-29;
+    as["N2"] = 7.5e-20; bs["N2"] = 5.5e-24; cs["N2"] = -1.0e-28;
+    as["O2"] = 2.0e-20; bs["O2"] = 6.0e-24; cs["O2"] =  0.0e-00;
+    as["NO"] = 1.0e-19; bs["NO"] = 0.0e+00; cs["NO"] =  0.0e+00;
 }
