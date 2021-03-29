@@ -1,0 +1,20 @@
+== 2D/underexpanded-jet
+
+image::underexpanded-jet-density-field-at-0p2ms.png[caption="Density field 0.2 milliseconds after simulation start."]
+
+This example shows the transient exhaust of gas from a finite reservoir.
+The original experiment explored the jet as an analog of a volcanic eruption
+and provided images of the jet at various times.
+
+Reference:
+
+1. *MM Orescanin, JM Austin and SW Kieffer* (2010), +
+   _Unsteady high-pressure flow experiments with applications to
+   explosive volcanic eruptions._ +
+   Journal of Geophysical Research *115* B06206.
+
+2. *MM Orescanin and JM Austin* (2010), +
+   _Exhaust of underexpanded jets from finite reservoirs._ +
+   Journal of Propulsion and Power *26*(4): 744-753.
+
+

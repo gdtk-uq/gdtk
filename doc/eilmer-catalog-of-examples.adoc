@@ -38,6 +38,10 @@ include::../examples/eilmer/2D/forward-facing-step/readme.adoc[]
 
 include::../examples/eilmer/2D/richtmyer-meshkov/readme.adoc[]
 
+= Jets
+
+include::../examples/eilmer/2D/underexpanded-jet/readme.adoc[]
+
 = Laminar flows of perfect gases
 
 include::../examples/eilmer/2D/flat-plate-hakkinen-swbli/readme.adoc[]
