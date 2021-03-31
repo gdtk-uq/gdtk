@@ -274,6 +274,13 @@ public:
     }
 
     @nogc
+    override number energyPerSpeciesInMode(in GasState gs, int isp, int imode)
+    {
+        /* This is a single-T gas. */
+        return mCurves[isp].eval_h(gs.T) - mR[isp]*gs.T;
+    }
+
+    @nogc
     override number enthalpy(in GasState gs)
     {
         foreach (isp, ref h; mVals) {

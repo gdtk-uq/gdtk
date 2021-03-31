@@ -21,12 +21,17 @@ import gas.gas_model;
 import gas.gas_state;
 import gas.physical_constants;
 
+import gas.thermo.thermo_model;
 import gas.thermo.therm_perf_gas_mix;
+import gas.thermo.two_temperature_gas;
+import gas.diffusion.transport_properties_model;
 import gas.diffusion.gas_mixtures;
+import gas.diffusion.two_temperature_trans_props;
+
 
 class CompositeGas : GasModel {
 public:
-
+    @property string physicalModel() { return mPhysicalModel; }
     this(lua_State *L)
     {
         type_str = "CompositeGas";
@@ -36,7 +41,6 @@ public:
         getArrayOfStrings(L, LUA_GLOBALSINDEX, "species", _species_names);
         _n_species = cast(uint) _species_names.length;
         create_species_reverse_lookup();
-        _n_modes = 0; // Single temperature gas
         if (canFind(_species_names, "e-") || canFind(_species_names, "eminus")) {
             if (!(_species_names[$-1] == "e-" || _species_names[$-1] == "eminus")) {
                 throw new Error("Electrons should be last species.");
@@ -53,8 +57,23 @@ public:
             lua_pop(L, 1);
         }
 
-        mThermo = new ThermPerfGasMixture(L, _species_names);
-        mTransProps = new GasMixtureTransProps(L, _species_names);
+        mPhysicalModel = getString(L, LUA_GLOBALSINDEX, "physical_model");
+
+        switch (mPhysicalModel) {
+        case "thermally-perfect-gas":
+            _n_modes = 0;
+            mThermo = new ThermPerfGasMixture(L, _species_names);
+            mTransProps = new GasMixtureTransProps(L, _species_names);
+            break;
+        case "two-temperature-gas":
+            _n_modes = 1;
+            mThermo = new TwoTemperatureGasMixture(L, _species_names);
+            mTransProps = new TwoTemperatureTransProps(L, _species_names);
+            break;
+        default:
+            string errMsg = format("Problem trying to construct gas model. The physical model variant '%s' is not known.\n", mPhysicalModel);
+            throw new Error(errMsg);
+        }
 
         // Fill in some parameters needed in GasModel protected data.
         _LJ_sigmas.length = _n_species;
@@ -122,6 +141,10 @@ public:
     {
         return mThermo.internalEnergy(gs);
     }
+    @nogc override number energyPerSpeciesInMode(in GasState gs, int isp, int imode)
+    {
+        return mThermo.energyPerSpeciesInMode(gs, isp, imode);
+    }
     @nogc override number enthalpy(in GasState gs)
     {
         return mThermo.enthalpy(gs);
@@ -149,8 +172,9 @@ public:
     }
 
 private:
-    ThermPerfGasMixture mThermo;
-    GasMixtureTransProps mTransProps;
+    string mPhysicalModel;
+    ThermodynamicModel mThermo;
+    TransportPropertiesModel mTransProps;
 }
 
 

@@ -141,6 +141,12 @@ public:
         // but we need to be careful to override this for multi-component gases.
         return internal_energy(Q);
     }
+    @nogc number energyPerSpeciesInMode(in GasState Q, int isp, int imode)
+    {
+        // For single-species, single temperature gas a default implementation is:
+        return internal_energy(Q);
+    }
+        
     @nogc abstract number enthalpy(in GasState Q);
     @nogc number enthalpy(in GasState Q, int isp)
     {

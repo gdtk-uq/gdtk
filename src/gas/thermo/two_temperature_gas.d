@@ -7,6 +7,7 @@
 
 module gas.thermo.two_temperature_gas;
 
+import std.stdio;
 import std.math;
 import std.string;
 import std.conv;
@@ -200,6 +201,16 @@ public:
     }
 
     @nogc
+    override number energyPerSpeciesInMode(in GasState gs, int isp, int imode)
+    {
+        if (imode == 0) {
+            return vibElecEnergyPerSpecies(gs.T_modes[0], isp);
+        }
+        return transRotEnergyPerSpecies(gs.T, isp);
+    }
+
+    
+    @nogc
     override number enthalpy(in GasState gs)
     {
         number u = transRotEnergyMixture(gs) + vibElecEnergyMixture(gs, gs.T_modes[0]);
@@ -217,7 +228,10 @@ public:
     @nogc
     override number enthalpyPerSpeciesInMode(in GasState gs, int isp, int imode)
     {
-        return vibElecEnergyPerSpecies(gs.T_modes[0], isp);
+        if (imode == 0) {
+            return vibElecEnergyPerSpecies(gs.T_modes[0], isp);
+        }
+        return mCpTR[isp]*(gs.T - T_REF) + mDel_hf[isp];
     }
 
     @nogc
@@ -305,13 +319,21 @@ private:
     }
 
     @nogc
+    number transRotEnergyPerSpecies(number T, int isp)
+    {
+        if (isp == mElectronIdx) return to!number(0.0);
+        number h = mCpTR[isp] * (T - T_REF) + mDel_hf[isp];
+        number e = h - mR[isp]*T;
+        return e;
+    }
+    
+    @nogc
     number transRotEnergyMixture(in GasState gs)
     {
         number e = 0.0;
         foreach (isp; 0 .. mNSpecies) {
             if (isp == mElectronIdx) continue;
-            number h = mCpTR[isp] * (gs.T - T_REF) + mDel_hf[isp];
-            e += gs.massf[isp] * (h - mR[isp]*gs.T);
+            e += gs.massf[isp] * transRotEnergyPerSpecies(gs.T, isp);
         }
         return e;
     }

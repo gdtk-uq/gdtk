@@ -23,7 +23,7 @@ TEST_PROGRAMS := chemkin_therm_cond_test chemkin_viscosity_test cea_therm_cond_t
 	perf_gas_mix_eos_test sutherland_therm_cond_test sutherland_viscosity_test \
 	wilke_mixing_therm_cond_test wilke_mixing_viscosity_test \
 	therm_perf_gas_test therm_perf_gas_complex_test therm_perf_gas_equil_test \
-	two_temperature_gas_test \
+	two_temperature_gas_test two_temperature_trans_props_test \
 	therm_perf_gas_mix_eos_test very_viscous_air_test \
 	uniform_lut_test uniform_lut_plus_ideal_test \
 	adaptive_lut_CEA_test ideal_air_proxy_test \
@@ -401,6 +401,12 @@ therm_perf_gas_mix_eos_test: $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FI
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA) $(DLINKFLAGS)
 
 two_temperature_gas_test: $(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
+	$(LIBCEQ) $(LIBGASF) $(LIBLUA)
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
+		$(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
+		$(LIBCEQ) $(LIBGASF) $(LIBLUA) $(DLINKFLAGS)
+
+two_temperature_trans_props_test: $(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
 	$(LIBCEQ) $(LIBGASF) $(LIBLUA)
 	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \

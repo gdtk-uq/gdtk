@@ -56,6 +56,7 @@ DIFFUSION_FILES := \
 	$(GAS_DIR)/diffusion/sutherland_viscosity.d \
 	$(GAS_DIR)/diffusion/therm_cond.d \
 	$(GAS_DIR)/diffusion/transport_properties_model.d \
+	$(GAS_DIR)/diffusion/two_temperature_trans_props.d \
 	$(GAS_DIR)/diffusion/viscosity.d \
 	$(GAS_DIR)/diffusion/wilke_mixing_therm_cond.d \
 	$(GAS_DIR)/diffusion/wilke_mixing_viscosity.d \

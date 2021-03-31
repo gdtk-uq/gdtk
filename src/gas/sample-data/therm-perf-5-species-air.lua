@@ -1,3 +1,4 @@
+physical_model = "thermally-perfect-gas"
 species = {'N2', 'O2', 'NO', 'N', 'O', }
 
 db = {}

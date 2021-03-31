@@ -27,6 +27,7 @@ import std.conv;
 
 import util.lua;
 import util.lua_service;
+import nm.complex;
 import nm.number;
 
 import gas;
@@ -258,15 +259,15 @@ private:
     @nogc
     void computeDelta11(GasState gs)
     {
-        double crossSectionCorrection = 1.0;
+        number crossSectionCorrection = 1.0;
         if (mElectronIdx != -1) {
-            auto p_em = 0.0975*pow(gs.T/1000.0, 4.0);
-            auto p_e = gs.p_e/P_atm;
+            number p_em = 0.0975*pow(gs.T/1000.0, 4.0);
+            number p_e = gs.p_e/P_atm;
             if (p_e > p_em) { // "unlikely for aerospace applications" p. 20 in Gupta)
                 crossSectionCorrection = 1.0;
             }
             else {
-                auto tempTerm = gs.T/(1000.0*pow(p_e, 0.25));
+                number tempTerm = gs.T/(1000.0*pow(p_e, 0.25));
                 crossSectionCorrection = 0.5*log(2.09e-2*pow(tempTerm, 4.0) + 1.52*pow(tempTerm, 8./3.));
             }
         }
@@ -297,15 +298,15 @@ private:
     @nogc
     void computeDelta22(GasState gs)
     {
-        double crossSectionCorrection = 1.0;
+        number crossSectionCorrection = 1.0;
         if (mElectronIdx != -1) {
-            auto p_em = 0.0975*pow(gs.T/1000.0, 4.0);
-            auto p_e = gs.p_e/P_atm;
+            number p_em = 0.0975*pow(gs.T/1000.0, 4.0);
+            number p_e = gs.p_e/P_atm;
             if (p_e > p_em) { // "unlikely for aerospace applications" p. 20 in Gupta)
                 crossSectionCorrection = 1.0;
             }
             else {
-                auto tempTerm = gs.T/(1000.0*pow(p_e, 0.25));
+                number tempTerm = gs.T/(1000.0*pow(p_e, 0.25));
                 crossSectionCorrection = 0.5*log(2.09e-2*pow(tempTerm, 4.0) + 1.52*pow(tempTerm, 8./3.));
             }
         }

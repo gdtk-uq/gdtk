@@ -28,7 +28,8 @@ public:
     @nogc number dpdrhoConstT(in GasState gs);
     // Methods related to single properties of the mixture.
     @nogc number gasConstant(in GasState gs);
-    @nogc number internalEnergy(in GasState gs); 
+    @nogc number internalEnergy(in GasState gs);
+    @nogc number energyPerSpeciesInMode(in GasState gs, int isp, int imode);
     @nogc number enthalpy(in GasState gs);
     @nogc number enthalpyPerSpecies(in GasState gs, int isp);
     @nogc number enthalpyPerSpeciesInMode(in GasState gs, int isp, int imode);
