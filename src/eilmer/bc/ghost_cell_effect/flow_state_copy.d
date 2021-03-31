@@ -59,6 +59,21 @@ public:
     } // end apply_unstructured_grid()
 
     @nogc
+    override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        auto blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
+        BoundaryCondition bc = blk.bc[which_boundary];
+        foreach (n; 0 .. blk.n_ghost_cell_layers) {
+            auto ghost = (bc.outsigns[f.i_bndry] == 1) ? f.right_cells[n] : f.left_cells[n];
+            ghost.fs.copy_values_from(fstate);
+            if (blk.omegaz != 0.0) {
+                into_rotating_frame(ghost.fs.vel, ghost.pos[gtl], blk.omegaz);
+            }
+        }
+    } // end apply_for_interface_structured_grid()
+
+    @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         auto blk = cast(SFluidBlock) this.blk;

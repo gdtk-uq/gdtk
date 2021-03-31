@@ -119,11 +119,13 @@ public:
             apply_for_interface_unstructured_grid(t, gtl, ftl, f);
             break;
         case Grid_t.structured_grid:
-	    throw new Error("BFE: apply_for_interface not yet implemented for structured grid");
+            apply_for_interface_structured_grid(t, gtl, ftl, f);
+            break;
         }
     }
     abstract void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f);
     abstract void apply_unstructured_grid(double t, int gtl, int ftl);
+    abstract void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f);
     abstract void apply_structured_grid(double t, int gtl, int ftl);
 } // end class BoundaryFluxEffect()
 
@@ -157,6 +159,12 @@ public:
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         throw new Error("BFE_EnergyFluxFromAdjacentSolid.apply_unstructured_grid() not yet implemented");
+    }
+
+    @nogc
+    override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        throw new Error("BFE_EnergyFluxFromAdjacentSolid.apply_for_interface_structured_grid() not yet implemented");
     }
 
     // not @nogc
@@ -359,6 +367,12 @@ public:
     }
 
     @nogc
+    override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        throw new Error("BFE_ConstFlux.apply_for_interface_structured_grid() not yet implemented");
+    }
+
+    @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         auto blk = cast(SFluidBlock) this.blk;
@@ -436,6 +450,18 @@ public:
             compute_outflow_flux(interior_cell.fs, outsign, blk.omegaz, face);
         }
     }
+
+    @nogc
+    override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        auto blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
+        assert(!(blk.myConfig.MHD), "Oops, not implemented for MHD.");
+        BoundaryCondition bc = blk.bc[which_boundary];
+	int outsign = bc.outsigns[f.i_bndry];
+	FVCell interior_cell = (outsign == 1) ? f.left_cells[0] : f.right_cells[0];
+	compute_outflow_flux(interior_cell.fs, outsign, blk.omegaz, f);
+    } // end apply_for_interface_structured_grid()
 
     @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
@@ -557,6 +583,12 @@ public:
     }
 
     @nogc
+    override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        throw new Error("BFE_UpdateEnergyWallNormalVelocity.apply_for_interface_structured_grid() not yet implemented");
+    }
+
+    @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         Vector3 nx,ny,nz;
@@ -606,6 +638,12 @@ class BFE_ThermionicElectronFlux : BoundaryFluxEffect {
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         throw new Error("BIE_ThermionicElectronEmission.apply_unstructured_grid() not yet implemented");
+    }
+
+    @nogc
+    override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        throw new Error("BIE_ThermionicElectronEmission.apply_for_interface_structured_grid() not yet implemented");
     }
 
     @nogc

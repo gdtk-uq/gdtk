@@ -216,10 +216,12 @@ public:
             apply_for_interface_unstructured_grid(t, gtl, ftl, f);
             break;
         case Grid_t.structured_grid:
-	    throw new Error("GCE: apply_for_interface not yet implemented for structured grid");
+            apply_for_interface_structured_grid(t, gtl, ftl, f);
+            break;
         }
     }
     abstract void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f);
     abstract void apply_unstructured_grid(double t, int gtl, int ftl);
+    abstract void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f);
     abstract void apply_structured_grid(double t, int gtl, int ftl);
 } // end class GhostCellEffect

@@ -593,7 +593,7 @@ public:
 
     @nogc
     override void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0,
-                                         FVCell[] cell_list = [], FVVertex[] vertex_list = [])
+                                         FVCell[] cell_list = [], FVInterface[] iface_list = [], FVVertex[] vertex_list = [])
     // Compute gradients of flow quantities for higher-order reconstruction, if required.
     // To be used, later, in the convective flux calculation.
     {
@@ -640,7 +640,7 @@ public:
 
     @nogc
     override void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0,
-                                         FVCell[] cell_list = [], FVInterface[] iface_list = [])
+                                         FVCell[] cell_list = [], FVInterface[] iface_list = [], FVVertex[] vertex_list = [])
     // Make use of the flow gradients to actually do the high-order reconstruction
     // and then compute fluxes of conserved quantities at all faces.
     {

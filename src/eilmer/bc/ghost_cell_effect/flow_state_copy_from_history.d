@@ -54,6 +54,11 @@ public:
         }
     } // end apply_unstructured_grid()
 
+    override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+	throw new Error("GhostCellFlowStateCopyFromHistory.apply_for_interface_structured_grid() not yet implemented");
+    }
+
     // not @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {

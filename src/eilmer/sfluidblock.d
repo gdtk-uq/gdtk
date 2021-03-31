@@ -518,39 +518,51 @@ public:
         // Set references to boundary faces in bc objects.
         foreach (k; 0 .. nkc) {
             foreach (i; 0 .. nic) {
-                bc[Face.north].faces ~= get_ifj(i, njc, k);
+                auto f = get_ifj(i, njc, k);
+                bc[Face.north].faces ~= f;
                 bc[Face.north].outsigns ~= 1;
+                f.i_bndry = bc[Face.north].outsigns.length - 1;
             }
         }
         foreach (k; 0 .. nkc) {
             foreach (j; 0 .. njc) {
-                bc[Face.east].faces ~= get_ifi(nic, j, k);
+                auto f = get_ifi(nic, j, k);
+                bc[Face.east].faces ~= f;
                 bc[Face.east].outsigns ~= 1;
+                f.i_bndry = bc[Face.east].outsigns.length - 1;
             }
         }
         foreach (k; 0 .. nkc) {
             foreach (i; 0 .. nic) {
-                bc[Face.south].faces ~= get_ifj(i, 0, k);
+                auto f = get_ifj(i, 0, k);
+                bc[Face.south].faces ~= f;
                 bc[Face.south].outsigns ~= -1;
+                f.i_bndry = bc[Face.south].outsigns.length - 1;
             }
         }
         foreach (k; 0 .. nkc) {
             foreach (j; 0 .. njc) {
-                bc[Face.west].faces ~= get_ifi(0, j, k);
+                auto f = get_ifi(0, j, k);
+                bc[Face.west].faces ~= f;
                 bc[Face.west].outsigns ~= -1;
+                f.i_bndry = bc[Face.west].outsigns.length - 1;
             }
         }
         if (myConfig.dimensions == 3) {
             foreach (j; 0 .. njc) {
                 foreach (i; 0 .. nic) {
-                    bc[Face.top].faces ~= get_ifk(i, j, nkc);
+                    auto f = get_ifk(i, j, nkc);
+                    bc[Face.top].faces ~= f;
                     bc[Face.top].outsigns ~= 1;
+                    f.i_bndry = bc[Face.top].outsigns.length - 1;
                 }
             }
             foreach (j; 0 .. njc) {
                 foreach (i; 0 .. nic) {
-                    bc[Face.bottom].faces ~= get_ifk(i, j, 0);
+                    auto f = get_ifk(i, j, 0);
+                    bc[Face.bottom].faces ~= f;
                     bc[Face.bottom].outsigns ~= -1;
+                    f.i_bndry = bc[Face.bottom].outsigns.length - 1;
                 }
             }
         } // end if dimensions == 3
@@ -584,6 +596,32 @@ public:
             }
         }
         //
+        // for instances when a numerical Jacobian will be formed (precondition matrix or adjoint operator), it is helpful
+        // to have the cell_cloud filled with references to the nearby cells that effect the convective fluxes for the given
+        // cell. We may then later treat the structured and unstructured blocks in the same manner when constructing the Jacobian.
+        // NB. currently only gathers nearest-neighbours for a (spatially) first-order Jacobian.
+        foreach (i, c; cells) {
+            int[] cloud_id_list = [];
+            c.cell_cloud ~= c;
+            cloud_id_list ~= c.id;
+            bool cell_found;
+            foreach (f; c.iface) {
+                if (f.left_cells.length > 0) {
+                    cell_found = cloud_id_list.canFind(f.left_cells[0].id);
+                    if (!cell_found) {
+                        c.cell_cloud ~= f.left_cells[0];
+                        cloud_id_list ~= f.left_cells[0].id;
+                    }
+                }
+                if (f.right_cells.length > 0) {
+                    cell_found = cloud_id_list.canFind(f.right_cells[0].id);
+                    if (!cell_found) {
+                        c.cell_cloud ~= f.right_cells[0];
+                        cloud_id_list ~= f.right_cells[0].id;
+                    }
+                }
+            }
+        }
         // Sometimes it is convenient for an interface to come complete
         // with information about the vertices that define it and also
         // the cells that adjoin it, as for the unstructured grid.
@@ -1941,7 +1979,7 @@ public:
 
     @nogc
     override void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0,
-                                         FVCell[] cell_list = [], FVVertex[] vertex_list = [])
+                                         FVCell[] cell_list = [], FVInterface[] iface_list = [], FVVertex[] vertex_list = [])
     // Compute the flux from flow-field data on either-side of the interface.
     {
         // Barring exceptions at the block boundaries, the general process is:
@@ -1951,12 +1989,15 @@ public:
         // (3) Apply the flux calculator to the Lft,Rght flow states.
         //
         bool do_reconstruction = allow_high_order_interpolation && (myConfig.interpolation_order > 1);
+
+        if (iface_list.length == 0) { iface_list = faces; }
+
         //
         // Low-order reconstruction just copies data from adjacent FV_Cell.
         // Note that ,even for high-order reconstruction, we depend upon this copy for
         // the viscous-transport and diffusion coefficients.
         //
-        foreach (f; faces) {
+        foreach (f; iface_list) {
 
             if (myConfig.high_order_flux_calculator && f.is_on_boundary && !bc[f.bc_id].ghost_cell_data_available) {
                 throw new Error("ghost cell data missing");
@@ -1979,7 +2020,7 @@ public:
 
     @nogc
     override void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0,
-                                         FVCell[] cell_list = [], FVInterface[] iface_list = [])
+                                         FVCell[] cell_list = [], FVInterface[] iface_list = [], FVVertex[] vertex_list = [])
     // Compute the flux from data on either-side of the interface.
     // For the structured-grid block, there is nothing to do.
     // The unstructured-grid block needs to work in two phases.

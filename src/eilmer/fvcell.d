@@ -2214,7 +2214,8 @@ public:
             cell_ids ~= cell_cloud[0].id;
             foreach (cell; cell_cloud) {
                 bool cell_exists = cell_ids.canFind(cell.id);
-                if (!cell_exists && cell.id < 1_000_000_000) {
+                if (!cell_exists && cell.id < 1_000_000_000 && is_interior_to_domain) {
+                    //if (!cell_exists && is_interior_to_domain) {
                     unordered_cell_list ~= cell;
                     cell_pos_array[cell.id] = unordered_cell_list.length-1;
                     cell_ids ~= cell.id;
@@ -2248,7 +2249,8 @@ public:
             foreach (icell; 1 .. cell_cloud.length) {
                 foreach (cell; cell_cloud[icell].cell_cloud) {
                     bool cell_exists = cell_ids.canFind(cell.id);
-                    if (!cell_exists && cell.id < 1_000_000_000) {
+                    if (!cell_exists && cell.id < 1_000_000_000 && is_interior_to_domain) {
+                        //if (!cell_exists && is_interior_to_domain) {
                         unordered_cell_list ~= cell;
                         cell_pos_array[cell.id] = unordered_cell_list.length-1;
                         cell_ids ~= cell.id;

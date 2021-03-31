@@ -85,6 +85,30 @@ public:
     } // end apply_unstructured_grid()
 
     @nogc
+    override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        FVCell src_cell, dest_cell;
+        auto copy_opt = CopyDataOption.minimal_flow;
+        auto blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
+        BoundaryCondition bc = blk.bc[which_boundary];
+        foreach (n; 0 .. blk.n_ghost_cell_layers) {
+            if (bc.outsigns[f.i_bndry] == 1) {
+                src_cell = f.left_cells[n];
+                dest_cell = f.right_cells[n];
+            } else {
+                src_cell = f.right_cells[n];
+                dest_cell = f.left_cells[n];
+            }
+            dest_cell.copy_values_from(src_cell, copy_opt);
+            reflect_normal_velocity(dest_cell.fs, f);
+            if (blk.myConfig.MHD) {
+                reflect_normal_magnetic_field(dest_cell.fs, f);
+            }
+        }
+    } // end apply_for_interface_structured_grid()
+
+    @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         FVCell src_cell, dest_cell;

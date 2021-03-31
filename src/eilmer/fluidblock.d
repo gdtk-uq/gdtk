@@ -216,8 +216,8 @@ public:
     abstract void read_new_underlying_grid(string fileName);
     abstract void write_underlying_grid(string fileName);
     @nogc abstract void propagate_inflow_data_west_to_east();
-    @nogc abstract void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0, FVCell[] cell_list = [], FVVertex[] vertex_list = []);
-    @nogc abstract void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0, FVCell[] cell_list = [], FVInterface[] iface_list = []);
+    @nogc abstract void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0, FVCell[] cell_list = [], FVInterface[] iface_list = [], FVVertex[] vertex_list = []);
+    @nogc abstract void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0, FVCell[] cell_list = [], FVInterface[] iface_list = [], FVVertex[] vertex_list = []);
 
     @nogc
     void identify_reaction_zones(int gtl)
@@ -995,7 +995,7 @@ public:
         // at this point as well for convenience, we need them
         // when we apply the boundary condition corrections later
         foreach ( bndary; bc ) {
-            if ( bndary.type == "exchange_using_mapped_cells") { continue; }
+            if ( bndary.type == "exchange_using_mapped_cells" || bndary.type == "exchange_over_full_face") { continue; }
             foreach ( iface, face; bndary.faces) {
                 FVCell ghost_cell; FVCell cell;
                 if (bndary.outsigns[iface] == 1) {
@@ -1168,7 +1168,7 @@ public:
 
         bool do_reconstruction = ( flowJacobianT.spatial_order > 1 );
 
-        convective_flux_phase0(do_reconstruction, gtl, cell_list, []);
+        convective_flux_phase0(do_reconstruction, gtl, cell_list, iface_list);
         convective_flux_phase1(do_reconstruction, gtl, cell_list, iface_list);
 
         foreach(f; iface_list) {
@@ -1264,7 +1264,7 @@ public:
         int gtl = 0; int ftl = 1;
 
         foreach ( bndary; bc ) {
-            if ( bndary.type == "exchange_using_mapped_cells") { continue; }
+            if ( bndary.type == "exchange_using_mapped_cells" || bndary.type == "exchange_over_full_face") { continue; }
             foreach ( bi, bface; bndary.faces) {
                 FVCell ghost_cell; FVCell pcell;
                 if (bndary.outsigns[bi] == 1) {

@@ -160,11 +160,13 @@ public:
             apply_for_interface_unstructured_grid(t, gtl, ftl, f);
             break;
         case Grid_t.structured_grid:
-	    throw new Error("BFE: apply_for_interface not yet implemented for structured grid");
+            apply_for_interface_structured_grid(t, gtl, ftl, f);
+            break;
         }
     }
     abstract void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f);
     abstract void apply_unstructured_grid(double t, int gtl, int ftl);
+    abstract void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f);
     abstract void apply_structured_grid(double t, int gtl, int ftl);
 } // end class BoundaryInterfaceEffect
 
@@ -197,6 +199,16 @@ class BIE_CopyCellData : BoundaryInterfaceEffect {
             auto c = (bc.outsigns[i] == 1) ? f.left_cell : f.right_cell;
             f.fs.copy_values_from(c.fs);
         }
+    }
+
+    override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        auto gmodel = blk.myConfig.gmodel;
+        auto blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
+        BoundaryCondition bc = blk.bc[which_boundary];
+        auto c = (bc.outsigns[f.i_bndry] == 1) ? f.left_cells[0] : f.right_cells[0];
+        f.fs.copy_values_from(c.fs);
     }
 
     override void apply_structured_grid(double t, int gtl, int ftl)
@@ -237,6 +249,15 @@ class BIE_FlowStateCopy : BoundaryInterfaceEffect {
         foreach (i, f; bc.faces) {
             f.fs.copy_values_from(fstate);
         }
+    }
+
+    override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        auto gmodel = blk.myConfig.gmodel;
+        auto blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
+        BoundaryCondition bc = blk.bc[which_boundary];
+	f.fs.copy_values_from(fstate);
     }
 
     override void apply_structured_grid(double t, int gtl, int ftl)
@@ -287,6 +308,16 @@ public:
         }
     }
 
+    override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        auto gmodel = blk.myConfig.gmodel;
+        auto blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
+        BoundaryCondition bc = blk.bc[which_boundary];
+        f.fs.copy_values_from(fprofile.get_flowstate(f.id, f.pos));
+        fprofile.adjust_velocity(f.fs, f.pos);
+    }
+
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         auto gmodel = blk.myConfig.gmodel;
@@ -331,6 +362,12 @@ public:
         auto gmodel = blk.myConfig.gmodel;
         fhistory.set_flowstate(fstate, t, gmodel);
         foreach (i, f; bc.faces) { f.fs.copy_values_from(fstate); }
+    }
+
+    @nogc
+    override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        throw new Error("BIE_FlowStateCopyFromHistory.apply_for_interface_structured_grid() not yet implemented");
     }
 
     override void apply_structured_grid(double t, int gtl, int ftl)
@@ -380,6 +417,14 @@ class BIE_ZeroVelocity : BoundaryInterfaceEffect {
         } // end foreach face
     }
 
+    override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        auto blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
+        BoundaryCondition bc = blk.bc[which_boundary];
+        f.fs.vel.set(0.0, 0.0, 0.0);
+    }
+
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         auto blk = cast(SFluidBlock) this.blk;
@@ -418,6 +463,11 @@ class BIE_TranslatingSurface : BoundaryInterfaceEffect {
         foreach (i, f; bc.faces) {
             f.fs.vel.set(v_trans);
         }
+    }
+
+    override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        f.fs.vel.set(v_trans);
     }
 
     override void apply_structured_grid(double t, int gtl, int ftl)
@@ -463,6 +513,11 @@ class BIE_RotatingSurface : BoundaryInterfaceEffect {
             f.fs.vel = cross(r_omega, f.pos-centre);
         }
     } // end apply_unstructured_grid()
+
+    override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        throw new Error("BIE_RotatingSurface.apply_for_interface_structured_grid() not implemented yet");
+    }
 
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
@@ -513,6 +568,17 @@ public:
             }
         }
     } // end apply_unstructured_grid()
+
+    override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        auto gmodel = blk.myConfig.gmodel;
+        BoundaryCondition bc = blk.bc[which_boundary];
+	FlowState fs = f.fs;
+	fs.gas.T = Twall;
+	version(multi_T_gas) {
+	    foreach(ref elem; fs.gas.T_modes) { elem = Twall; }
+	}
+    }
 
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
@@ -568,6 +634,17 @@ public:
         }
     } // end apply_unstructured_grid()
 
+    @nogc
+    override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        uint nsp = blk.myConfig.n_species;
+        BoundaryCondition bc = blk.bc[which_boundary];
+        FlowState fs = f.fs;
+        version(multi_species_gas) {
+            foreach (isp; 0 .. nsp) { fs.gas.massf[isp] = massfAtWall[isp]; }
+        }
+    }
+
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         uint nsp = blk.myConfig.n_species;
@@ -614,6 +691,15 @@ class BIE_UpdateThermoTransCoeffs : BoundaryInterfaceEffect {
             gmodel.update_trans_coeffs(fs.gas);
         }
     } // end apply_unstructured_grid()
+
+    override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        BoundaryCondition bc = blk.bc[which_boundary];
+        auto gmodel = blk.myConfig.gmodel;
+	FlowState fs = f.fs;
+	gmodel.update_thermo_from_pT(fs.gas);
+	gmodel.update_trans_coeffs(fs.gas);
+    }
 
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
@@ -662,6 +748,18 @@ class BIE_WallTurbulent : BoundaryInterfaceEffect {
                 } else {
                     blk.myConfig.turb_model.set_flowstate_at_wall(gtl, f, f.right_cell, f.fs);
                 }
+            }
+        }
+    } // end apply_unstructured_grid()
+
+    override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        BoundaryCondition bc = blk.bc[which_boundary];
+        version(turbulence) {
+	    if (bc.outsigns[f.i_bndry] == 1) {
+                blk.myConfig.turb_model.set_flowstate_at_wall(gtl, f, f.left_cell, f.fs);
+	    } else {
+                blk.myConfig.turb_model.set_flowstate_at_wall(gtl, f, f.right_cell, f.fs);
             }
         }
     } // end apply_unstructured_grid()
@@ -722,6 +820,11 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         throw new FlowSolverException("WallFunction_InterfaceEffect bc not implemented for unstructured grids.");
+    }
+
+    override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        throw new FlowSolverException("WallFunction_InterfaceEffect.apply_for_interface_structured_grid not implemented yet.");
     }
 
     override void apply_structured_grid(double t, int gtl, int ftl)
@@ -1180,6 +1283,12 @@ public:
     }
 
     @nogc
+    override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        throw new Error("BIE_TemperatureFromGasSolidInterface.apply_structured_grid() not implemented yet");
+    }
+
+    @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         auto myBC = blk.bc[which_boundary];
@@ -1260,6 +1369,12 @@ class BIE_ThermionicRadiativeEquilibrium : BoundaryInterfaceEffect {
             solve_for_wall_temperature_and_energy_flux(c, f, -outsign);
         }
     } // end apply_unstructured_grid()
+
+    @nogc
+    override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        throw new Error("BIE_ThermionicRadiativeEquilibrium.apply_for_interface_structured_grid() not yet implemented");
+    }
 
     @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
@@ -1397,6 +1512,12 @@ class BIE_EquilibriumComposition : BoundaryInterfaceEffect {
         foreach (f; bc.faces) {
             set_equilibrium_composition(f);
         }
+    }
+
+    @nogc
+    override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        set_equilibrium_composition(f);
     }
 
     @nogc

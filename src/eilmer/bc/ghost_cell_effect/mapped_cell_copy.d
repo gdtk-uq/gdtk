@@ -1404,6 +1404,11 @@ public:
         }
     } // end apply_unstructured_grid()
 
+    override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+	assert(0, "apply_for_interface_structured_grid not implemented for this BC.");
+    }
+
     @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {

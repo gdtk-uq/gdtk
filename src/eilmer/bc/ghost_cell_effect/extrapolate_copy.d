@@ -79,6 +79,49 @@ public:
     } // end apply_unstructured_grid()
 
     @nogc
+    override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        auto blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
+        BoundaryCondition bc = blk.bc[which_boundary];
+        if (xOrder == 0) {
+            // Fill ghost cells with data from just inside the boundary
+            // using zero-order extrapolation (i.e. just copy the data).
+            // We assume that this boundary is an outflow boundary.
+            foreach (n; 0 .. blk.n_ghost_cell_layers) {
+                FVCell src_cell, dest_cell;
+                if (bc.outsigns[f.i_bndry] == 1) {
+                    src_cell = f.left_cells[0];
+                    dest_cell = f.right_cells[n];
+                } else {
+                    src_cell = f.right_cells[0];
+                    dest_cell = f.left_cells[n];
+                }
+                dest_cell.fs.copy_values_from(src_cell.fs);
+            }
+        } else {
+            // Extrapolate FlowState (presumably) from cells 0 and 1 into a destination state in cell 2.
+            //    |---c0---|---c1---|---c2---|
+            // This extrapolation assumes that cell-spacing is uniform.
+            if (blk.n_ghost_cell_layers > 0)  {
+                FVCell c0, c1, c2;
+                if (bc.outsigns[f.i_bndry] == 1) {
+                    c0 = f.left_cells[1]; c1 = f.left_cells[0]; c2 = f.right_cells[0];
+                } else {
+                    c0 = f.right_cells[1]; c1 = f.right_cells[0]; c2 = f.left_cells[0];
+                }
+                linearly_extrapolate_flowstate(c0.fs, c1.fs, c2.fs);
+                foreach (n; 1 .. blk.n_ghost_cell_layers) {
+                    // Shuffle along and do next cell.
+                    c0 = c1; c1 = c2;
+                    c2 = (bc.outsigns[f.i_bndry] == 1) ? f.right_cells[n] : f.left_cells[n];
+                    linearly_extrapolate_flowstate(c0.fs, c1.fs, c2.fs);
+                }
+            }
+        } // end else
+    } // end apply_for_interface_structured_grid
+
+    @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         auto blk = cast(SFluidBlock) this.blk;

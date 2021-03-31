@@ -87,6 +87,11 @@ public:
         lua_gc(bc.myL, LUA_GCCOLLECT, 0);
     }  // end apply_unstructured_grid()
 
+    override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        throw new Error("UserDefinedGhostCellEffect.apply_for_interface_structured_grid() not yet implemented");
+    }  // end apply_for_interface_structured_grid()
+
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         auto blk = cast(SFluidBlock) this.blk;
@@ -314,6 +319,14 @@ public:
             callInterfaceUDF(t, gtl, ftl, i, j, k, f);
         }
         lua_gc(bc.myL, LUA_GCCOLLECT, 0);
+    }
+
+    override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        size_t j = 0, k = 0;
+        BoundaryCondition bc = blk.bc[which_boundary];
+	callInterfaceUDF(t, gtl, ftl, f.i_bndry, j, k, f);
+	lua_gc(bc.myL, LUA_GCCOLLECT, 0);
     }
 
     // not @nogc
@@ -556,6 +569,12 @@ public:
         }
         lua_gc(bc.myL, LUA_GCCOLLECT, 0);
     }  // end apply_unstructured_grid()
+
+    @nogc
+    override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        throw new Error("BFE_UserDefinedFluxEffect.apply_for_interface_structured_grid() not yet implemented");
+    }
 
     // not @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
