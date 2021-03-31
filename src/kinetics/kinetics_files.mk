@@ -3,6 +3,8 @@ KINETICS_FILES := $(KINETICS_DIR)/package.d \
 	$(KINETICS_DIR)/thermochemical_reactor.d \
 	$(KINETICS_DIR)/init_thermochemical_reactor.d \
 	$(KINETICS_DIR)/chemistry_update.d \
+	$(KINETICS_DIR)/energy_exchange_mechanism.d \
+	$(KINETICS_DIR)/energy_exchange_system.d \
 	$(KINETICS_DIR)/equilibrium_update.d \
 	$(KINETICS_DIR)/electronic_update.d \
 	$(KINETICS_DIR)/electronically_specific_kinetics.d \
@@ -13,6 +15,8 @@ KINETICS_FILES := $(KINETICS_DIR)/package.d \
 	$(KINETICS_DIR)/rate_constant.d \
 	$(KINETICS_DIR)/reaction.d \
 	$(KINETICS_DIR)/reaction_mechanism.d \
+	$(KINETICS_DIR)/relaxation_time.d \
+	$(KINETICS_DIR)/two_temperature_thermochemical_reactor.d \
 	$(KINETICS_DIR)/two_temperature_air_kinetics.d \
 	$(KINETICS_DIR)/two_temperature_argon_kinetics.d \
 	$(KINETICS_DIR)/two_temperature_argon_with_ideal_gas.d \

@@ -5,7 +5,9 @@
 
 module kinetics.two_temperature_thermochemical_reactor;
 
+import std.format;
 import std.math;
+import std.algorithm;
 import std.conv;
 import nm.complex;
 import nm.number;
@@ -14,24 +16,81 @@ import util.lua;
 import util.lua_service;
 import gas;
 import kinetics.thermochemical_reactor;
+import kinetics.reaction_mechanism;
+import kinetics.energy_exchange_system;
 
-class TwoTemperatureThermochemicalReactor : ThermoChemicalReactor {
+immutable double DT_INCREASE_PERCENT = 10.0; // allowable percentage increase on succesful step
+immutable double DT_DECREASE_PERCENT = 50.0; // allowable percentage decrease on succesful step
+                                             // Yes, you read that right. Sometimes a step is succesful
+                                             // but the timestep selection algorithm will suggest
+                                             // a reduction. We limit that reduction to no more than 50%.
+immutable double DT_REDUCTION_FACTOR = 10.0; // factor by which to reduce timestep
+                                             // after a failed attempt
+immutable double H_MIN = 1.0e-15; // Minimum allowable step size
+immutable double ALLOWABLE_MASSF_ERROR = 1.0e-3; // Maximum allowable error in mass fraction over an update
+
+enum ResultOfStep { success, failure };
+
+class TwoTemperatureThermochemicalReactor : ThermochemicalReactor {
 public:
+
+    this(GasModel gmodel)
+    {
+        super(gmodel);
+        // Hard code N2-N system to get going.
+        mGmodel = gmodel;
+        mNSpecies = mGmodel.n_species;
+        mGsInit = new GasState(gmodel);
+        // Set up 2-T nitrogen dissociation
+        auto L = init_lua_State();
+        doLuaFile(L, "N2-diss-2T.chem");
+        lua_getglobal(L, "reaction");
+        mRmech = createReactionMechanism(L, gmodel, 300.0, 30000.0);
+        // Initialise energy exchange mechanism
+        mEES = new TwoTemperatureEnergyExchange(gmodel);
+        // Set up the rest of the parameters.
+        mMaxSubcycles = 10000;
+        mMaxAttempts = 4;
+        mTol = 1.0e-3;
+
+        initialiseWorkSpace();
+    }
+
+    void initialiseWorkSpace()
+    {
+        mConc0.length = mNSpecies;
+        mConc.length = mNSpecies;
+        m_dCdt.length = mNSpecies;
+        m_duvedt.length = 1;
+        m_y0.length =  mNSpecies + 1;
+        m_yOut.length = mNSpecies + 1;
+        m_yTmp.length = mNSpecies + 1;
+        m_yErr.length = mNSpecies + 1;
+        m_k1.length = mNSpecies + 1;
+        m_k2.length = mNSpecies + 1;
+        m_k3.length = mNSpecies + 1;
+        m_k4.length = mNSpecies + 1;
+        m_k5.length = mNSpecies + 1;
+        m_k6.length = mNSpecies + 1;
+    }
+    
     @nogc
     override void opCall(GasState gs, double tInterval,
                          ref double dtChemSuggest, ref double dtThermSuggest,
                          ref number[maxParams] params)
     {
         mGsInit.copy_values_from(gs);
-        mMgmodel.massf2conc(gs, mConc0);
+        mGmodel.massf2conc(gs, mConc0);
         m_uTotal = mGmodel.internal_energy(gs);
-        m_uVib0 = gs.u_modes[0];
 
+        // Evaluate temperature dependent rate parameters
+        mRmech.eval_rate_constants(gs);
+        mEES.evalRelaxationTimes(gs);
+        
         // Sort out stepsize for possible subcycling.
-        number t = 0.0;
+        double t = 0.0;
         double h;
         double dtSave;
-        double dtSuggest = dtChemSuggest;
         if (dtChemSuggest > tInterval) {
             h = tInterval;
         }
@@ -50,7 +109,9 @@ public:
         foreach (isp; 0 .. mNSpecies) m_y0[isp] = mConc0[isp];
         // Final entry is energy change.
         m_y0[mNSpecies] = gs.u_modes[0];
-        foreach ( ; cycle < mMaxSubcycles; ++cycle) {
+        for ( ; cycle < mMaxSubcycles; ++cycle) {
+            mRmech.eval_rate_constants(gs);
+            mEES.evalRelaxationTimes(gs);
             /* Copy the last good timestep suggestion before moving on.
              * If we're near the end of the interval, we want
              * the penultimate step. In other words, we don't
@@ -60,8 +121,8 @@ public:
             dtSave = dtChemSuggest;
             h = min(h, tInterval - t);
             attempt = 0;
-            foreach ( ; attempt < mMaxAttempts; ++attempt) {
-                ResultOfStep result = step(m_y0, h, m_yOut, dtChemSuggest);
+            for ( ; attempt < mMaxAttempts; ++attempt) {
+                ResultOfStep result = step(gs, m_y0, h, m_yOut, dtChemSuggest);
                 // Unpack m_yOut
                 foreach (isp; 0 .. mNSpecies) mConc0[isp] = m_yOut[isp];
                 
@@ -146,7 +207,6 @@ public:
             gs.u_modes[0] = m_y0[mNSpecies];
             gs.u = m_uTotal - gs.u_modes[0];
             mGmodel.update_thermo_from_rhou(gs);
-            mRmech.eval_rate_constants(gs);
 
             if (t >= tInterval) { // We've done enough cycling.
                 // If we've only taken one cycle, then we would like to use
@@ -172,18 +232,122 @@ public:
         foreach (ref mf; gs.massf) mf /= massfTotal;
 
         dtChemSuggest = dtSave;
+
     }
 
 private:
+    int mNSpecies;
     int mMaxSubcycles;
     int mMaxAttempts;
+    double mTol;
     number[] mConc0;
+    number[] mConc;
+    number[] m_dCdt;
+    number[] m_duvedt;
     number[] m_y0;
     number[] m_yOut;
-    number[][] mRk45WS;
     number m_uTotal;
     GasModel mGmodel;
+    GasState mGsInit;
     ReactionMechanism mRmech;
     EnergyExchangeSystem mEES;
+    // Working arrays for RKF step method.
+    number[] m_yTmp;
+    number[] m_yErr;
+    number[] m_k1;
+    number[] m_k2;
+    number[] m_k3;
+    number[] m_k4;
+    number[] m_k5;
+    number[] m_k6;
+
+    @nogc
+    void evalRates(GasState gs, number[] y, ref number[] rates) {
+        mConc[] = y[0 .. $-1];
+        mRmech.eval_rates(mConc, m_dCdt);
+        rates[0 .. $-1] = m_dCdt[];
+        
+        gs.u_modes[0] = y[$-1];
+        gs.u = m_uTotal - gs.u_modes[0];
+        mEES.evalRates(gs, m_duvedt);
+        rates[$-1] = m_duvedt[0];
+    }
+
+    @nogc
+    ResultOfStep step(GasState gs, number[] y0, double h, ref number[] yOut, ref double hSuggest)
+    {
+        // 0. Set up the constants associated with the update formula
+        // We place them in here for visibility reasons... no one else
+        // needs to be using the coefficients a21, a31, etc.
+        immutable double a21=1./5., a31=3./40., a32=9./40.,
+            a41=3./10., a42=-9./10., a43 = 6./5.,
+            a51=-11./54., a52=5./2., a53=-70./27., a54=35./27.,
+            a61=1631./55296., a62=175./512., a63=575./13824., a64=44275./110592., a65=253./4096.;
+        immutable double b51=37./378., b53=250./621., b54=125./594., b56=512./1771.,
+            b41=2825./27648., b43=18575./48384., b44=13525./55296., b45=277./14336., b46=1.0/4.0;
+        
+        // 1. Apply the formula to evaluate intermediate points
+        evalRates(gs, y0, m_k1);
+        foreach (i; 0 .. y0.length) m_yTmp[i] = y0[i] + h*a21*m_k1[i];
+        
+        evalRates(gs, m_yTmp, m_k2);
+        foreach (i; 0 .. y0.length) m_yTmp[i] = y0[i] + h*(a31*m_k1[i] + a32*m_k2[i]);
+
+        evalRates(gs, m_yTmp, m_k3);
+        foreach (i; 0 .. y0.length) m_yTmp[i] = y0[i] + h*(a41*m_k1[i] + a42*m_k2[i] + a43*m_k3[i]);
+
+        evalRates(gs, m_yTmp, m_k4);
+        foreach (i; 0 .. y0.length) m_yTmp[i] = y0[i] + h*(a51*m_k1[i] + a52*m_k2[i] + a53*m_k3[i] + a54*m_k4[i]);
+
+        evalRates(gs, m_yTmp, m_k5);
+        foreach (i; 0 .. y0.length) m_yTmp[i] = y0[i] + h*(a61*m_k1[i] + a62*m_k2[i] + a63*m_k3[i] + a64*m_k4[i] + a65*m_k5[i]);
+
+        evalRates(gs, m_yTmp, m_k6);
+        
+        // 2. Compute new value and error esimate
+        foreach (i; 0 .. y0.length) yOut[i] = y0[i] + h*(b51*m_k1[i] + b53*m_k3[i] + b54*m_k4[i] + b56*m_k6[i]);
+        foreach (i; 0 .. y0.length) m_yErr[i] = yOut[i] - (y0[i] + h*(b41*m_k1[i] + b43*m_k3[i] + b44*m_k4[i] + b45*m_k5[i] + b46*m_k6[i]));
+
+        // 3. Lastly, use error estimate as a means to suggest
+        //    a new timestep.
+        //    Compute error using tol as atol and rtol as suggested in
+        //    Press et al. (2007)
+        double err = 0.0;
+        double sk = 0.0;
+        double atol = mTol;
+        double rtol = mTol;
+
+        foreach (i; 0 .. m_yErr.length) {
+            sk = atol + rtol*max(fabs(y0[i].re), fabs(yOut[i].re));
+            err += (m_yErr[i].re/sk)*(m_yErr[i].re/sk);
+        }
+        err = sqrt(err/m_yErr.length);
+        // Now use error as an estimate for new step size
+        double scale = 0.0;
+        const double maxscale = 10.0;
+        const double minscale = 0.2;
+        const double safe = 0.9;
+        const double alpha = 0.2;
+        if ( err <= 1.0 ) { // A succesful step...
+            if ( err == 0.0 )
+                scale = maxscale;
+            else {
+                // We are NOT using the PI control version as
+                // given by Press et al. as I do not want to store
+                // the old error from previous integration steps.
+                scale = safe * pow(err, -alpha);
+                if ( scale < minscale )
+                    scale = minscale;
+                if ( scale > maxscale )
+                    scale = maxscale;
+            }
+            hSuggest = scale*h;
+            return ResultOfStep.success;
+        }
+        // else, failed step
+        scale = max(safe*pow(err, -alpha), minscale);
+        hSuggest = scale*h;
+        return ResultOfStep.failure;
+    }
     
 }

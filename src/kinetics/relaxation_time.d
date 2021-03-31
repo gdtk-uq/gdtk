@@ -8,6 +8,7 @@
 module kinetics.relaxation_time;
 
 import std.math;
+import std.conv;
 
 import nm.complex;
 import nm.number;
@@ -18,7 +19,8 @@ import gas;
 
 
 interface RelaxationTime {
-    @nogc numer eval(in GasState gs, number[] molef);
+    RelaxationTime dup();
+    @nogc number eval(in GasState gs, number[] molef);
 }
 
 class MillikanWhiteVT : RelaxationTime {
@@ -39,13 +41,18 @@ public:
         m_mu = getDouble(L, -1, "mu");
     }
 
+    MillikanWhiteVT dup()
+    {
+        return new MillikanWhiteVT(m_q, m_a, m_b, m_mu);
+    }
+    
     @nogc
-    number eval(GasState gs, number[] molef)
+    override number eval(in GasState gs, number[] molef)
     {
         // If bath pressure is very small, then practically no relaxation
         // occurs from collisions with particle q.
         if (molef[m_q] <= SMALL_MOLE_FRACTION)
-            return -1.0;
+            return to!number(-1.0);
         // Set the bath pressure at that of the partial pressure of the 'q' colliders
         // and compute in atm for use in Millikan-White expression
         number pBath = molef[m_q]*gs.p/P_atm;
@@ -59,3 +66,4 @@ private:
     double m_b;
     double m_mu;
 }
+
