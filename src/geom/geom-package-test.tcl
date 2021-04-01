@@ -24,6 +24,7 @@ set module_names [list vector3 vector3_complex \
                       gmopatch gmopatch_complex \
                       bezierpatch bezierpatch_complex \
                       beziertrianglepatch \
+		      spherepatch spherepatch_complex \
 		      tfivolume tfivolume_complex \
                       sweptsurfacevolume sweptsurfacevolume_complex \
                       twosurfacevolume twosurfacevolume_complex \

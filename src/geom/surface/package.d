@@ -11,3 +11,4 @@ public import geom.surface.subrangedsurface;
 public import geom.surface.bezierpatch;
 public import geom.surface.beziertrianglepatch;
 public import geom.surface.nozzleexpansionpatch;
+public import geom.surface.spherepatch;

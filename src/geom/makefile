@@ -30,7 +30,8 @@ TEST_PROGRAMS := vector3_test vector3_complex_test \
 	sgrid_test sgrid_complex_test \
 	usgrid_test usgrid_complex_test \
 	univariatefunctions_test svg_test \
-	beziertrianglepatch_test
+	beziertrianglepatch_test \
+	spherepatch_test spherepatch_complex_test
 
 DEMO_PROGRAMS := vector3_demo gpath_demo surface_demo volume_demo \
 	univariatefunctions_demo \
@@ -309,6 +310,14 @@ svg_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 beziertrianglepatch_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	dmd -of$@ -dip1008 -debug -g -w -version=$@ \
+		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
+
+spherepatch_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d
+	dmd -of$@ -dip1008 -debug -g -w -version=$@ \
+		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
+
+spherepatch_complex_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d
+	dmd -of$@ -dip1008 -debug -g -w -version=spherepatch_test -version=complex_numbers \
 		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 
