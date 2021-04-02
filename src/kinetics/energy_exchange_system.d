@@ -7,8 +7,11 @@
 
 module kinetics.energy_exchange_system;
 
+import std.format;
+import std.string;
 import std.stdio;
 import std.math;
+import std.conv;
 
 import nm.complex;
 import nm.number;
@@ -28,33 +31,81 @@ interface EnergyExchangeSystem {
 class TwoTemperatureEnergyExchange : EnergyExchangeSystem {
 public:
 
-    this(GasModel gmodel)
+    this(string fname, GasModel gmodel)
     {
+	// For 2-T model, one entry in T_modes, so index is 0.
+	int mode = 0;
+	
         mGmodel = gmodel;
         mGsEq = new GasState(gmodel);
-        mVibRelaxers.length = 1;
-        mVibRelaxers[0] = 0;
-        mHeavyParticles.length = 2;
-        mHeavyParticles[0] = 0; mHeavyParticles[1] = 1;
-        mMolef.length = 2;
-        mVT.length = 1;
-        mVT[0].length = 2;
-        double M_N2 = 2.80134000e-02 * 1000.0;
-        double M_N =  1.40067000e-02 * 1000.0;
-        double mu0 = (M_N2*M_N2)/(M_N2 + M_N2);
-        double mu1 = (M_N2*M_N)/(M_N2 + M_N);
-        double theta_v = 3354.0;
-        // N2-N2
-        double a = 1.16e-3*sqrt(mu0)*pow(theta_v, 4./3.);
-        double b = 0.015*pow(mu0, 1./4.);
-        writeln("a= ", a, " b= ", b);
-        auto rt = new MillikanWhiteVT(0, a, b, mu0);
-        mVT[0][0] = new LandauTellerVT(0, 0, rt, gmodel);
-        a = 1.16e-3*sqrt(mu1)*pow(theta_v, 4./3.);
-        b = 0.015*pow(mu1, 1./4.);
-        writeln("a= ", a, " b= ", b);
-        rt = new MillikanWhiteVT(1, a, b, mu1);
-        mVT[0][1] = new LandauTellerVT(0, 0, rt, gmodel);
+
+	// Configure other parameters via a Lua state
+	auto L = init_lua_State();
+	doLuaFile(L, fname);
+
+	// Check on species order before proceeding.
+        lua_getglobal(L, "species");
+	if (lua_isnil(L, -1)) {
+            string errMsg = format("There is no species listing in your kinetics input file: '%s'\n", fname);
+            throw new Error(errMsg);
+        }
+        foreach (isp; 0 .. gmodel.n_species) {
+            lua_rawgeti(L, -1, isp);
+            auto sp = to!string(luaL_checkstring(L, -1));
+            if (sp != gmodel.species_name(isp)) {
+                string errMsg = "Species order is incompatible between gas model and kinetics input.\n";
+                errMsg ~= format("Kinetics input file is: '%s'.\n", fname);
+                errMsg ~= format("In gas model: index %d ==> species '%s'\n", isp, gmodel.species_name(isp));
+                errMsg ~= format("In kinetics: index %d ==> species '%s'\n", isp, sp);
+                throw new Error(errMsg);
+            }
+            lua_pop(L, 1);
+        }
+        lua_pop(L, 1);
+
+	lua_getglobal(L, "vibrational_relaxers");
+	auto nVib = to!int(lua_objlen(L, -1));
+	mVibRelaxers.length = nVib;
+	foreach (int isp; 0 .. nVib) {
+	    lua_rawgeti(L, -1, isp+1);
+	    auto sp = to!string(luaL_checkstring(L, -1));
+	    mVibRelaxers[isp] = gmodel.species_index(sp);
+	    lua_pop(L, 1);
+	}
+	lua_pop(L, 1);
+
+	lua_getglobal(L, "heavy_particles");
+	auto nHvy = to!int(lua_objlen(L, -1));
+	mHeavyParticles.length = nHvy;
+	foreach (int isp; 0 .. nHvy) {
+	    lua_rawgeti(L, -1, isp+1);
+	    auto sp = to!string(luaL_checkstring(L, -1));
+	    mHeavyParticles[isp] = gmodel.species_index(sp);
+	    lua_pop(L, 1);
+	}
+	lua_pop(L, 1);
+
+	mMolef.length = nHvy;
+	// We make mVT of length nHvy for convenience, even thought
+	// we'll only fill array entries associated vibRelaxers.
+	// This just makes indexing consistent, and avoid having
+	// a separate indexing just for the vibRelaxers.
+        mVT.length = nHvy;
+
+	lua_getglobal(L, "mechanism");
+	
+	foreach (ip; mVibRelaxers) {
+	    mVT[ip].length = nHvy;
+	    foreach (iq; 0 .. nHvy) {
+		auto p = gmodel.species_name(ip);
+		auto q = gmodel.species_name(iq);
+		string key = p ~ ":" ~ q ~ "|VT";
+		lua_getfield(L, -1, key.toStringz);
+		mVT[ip][iq] = createVTMechanism(L, ip, iq, mode, gmodel);
+		lua_pop(L, 1);
+	    }
+	}
+	lua_pop(L, 1);
     }
     
     @nogc

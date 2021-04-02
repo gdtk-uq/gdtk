@@ -7,6 +7,7 @@
 
 module kinetics.energy_exchange_mechanism;
 
+import std.format;
 import std.math;
 import std.stdio;
 
@@ -37,6 +38,16 @@ private:
 class LandauTellerVT : EnergyExchangeMechanism {
 public:
 
+    this(lua_State *L, int p, int q, int mode, GasModel gmodel)
+    {
+	m_p = p;
+	m_mode = mode;
+	mGmodel = gmodel;
+	lua_getfield(L, -1, "relaxation_time");
+	mRT = createRelaxationTime(L, q);
+	lua_pop(L, 1);
+    }
+    
     this(int p, int mode, RelaxationTime RT, GasModel gmodel)
     {
         m_p = p;
@@ -60,4 +71,20 @@ public:
 private:
     int m_p;
     int m_mode;
+}
+
+EnergyExchangeMechanism createVTMechanism(lua_State *L, int p, int q, int mode, GasModel gmodel)
+{
+    auto rateModel = getString(L, -1, "rate");
+    switch (rateModel) {
+    case "Landau-Teller":
+	return new LandauTellerVT(L, p, q, mode, gmodel);
+    default:
+	string msg = format("The VT mechanism rate model: %s is not known.", rateModel);
+	throw new Error(msg);
+    }
+    
+    
+
+    
 }

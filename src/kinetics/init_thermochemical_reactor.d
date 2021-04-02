@@ -87,7 +87,7 @@ ThermochemicalReactor init_thermochemical_reactor(GasModel gmodel, string fileNa
             reactor = new ChemistryUpdate(fileName1, gmodel);
         }
         else {
-            reactor = new TwoTemperatureThermochemicalReactor(gmodel);
+            reactor = new TwoTemperatureThermochemicalReactor(fileName1, fileName2, gmodel);
         }
     }
     if (typeid(gmodel) is typeid(ThermallyPerfectGasEquilibrium)) {

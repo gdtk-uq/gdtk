@@ -34,20 +34,19 @@ enum ResultOfStep { success, failure };
 class TwoTemperatureThermochemicalReactor : ThermochemicalReactor {
 public:
 
-    this(GasModel gmodel)
+    this(string fname1, string fname2, GasModel gmodel)
     {
         super(gmodel);
         // Hard code N2-N system to get going.
         mGmodel = gmodel;
         mNSpecies = mGmodel.n_species;
         mGsInit = new GasState(gmodel);
-        // Set up 2-T nitrogen dissociation
         auto L = init_lua_State();
-        doLuaFile(L, "N2-diss-2T.chem");
+        doLuaFile(L, fname1);
         lua_getglobal(L, "reaction");
         mRmech = createReactionMechanism(L, gmodel, 300.0, 30000.0);
         // Initialise energy exchange mechanism
-        mEES = new TwoTemperatureEnergyExchange(gmodel);
+        mEES = new TwoTemperatureEnergyExchange(fname2, gmodel);
         // Set up the rest of the parameters.
         mMaxSubcycles = 10000;
         mMaxAttempts = 4;

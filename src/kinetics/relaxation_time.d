@@ -7,6 +7,7 @@
 
 module kinetics.relaxation_time;
 
+import std.string;
 import std.math;
 import std.conv;
 
@@ -33,9 +34,9 @@ public:
         m_mu = mu;
     }
 
-    this(lua_State *L)
+    this(lua_State *L, int q)
     {
-        m_q = getInt(L, -1, "q");
+        m_q = q;
         m_a = getDouble(L, -1, "a");
         m_b = getDouble(L, -1, "b");
         m_mu = getDouble(L, -1, "mu");
@@ -65,5 +66,18 @@ private:
     double m_a;
     double m_b;
     double m_mu;
+}
+
+RelaxationTime createRelaxationTime(lua_State *L, int q)
+{
+    auto model = getString(L, -1, "model");
+    switch (model) {
+    case "Millikan-White":
+	return new MillikanWhiteVT(L, q);
+    default:
+	string msg = format("The relaxation time model: %s is not known.", model);
+	throw new Error(msg);
+    }
+
 }
 
