@@ -55,6 +55,12 @@ wedgev = WedgeVolume:new{face0123=myface0123, dtheta=0.1}
 print("wedgev=", wedgev)
 print("wedgev(0.1, 0.1, 0.5)= ", wedgev(0.1, 0.1, 0.5))
 --
+print("TwoSurfaceVolume demo")
+myface4567 = CoonsPatch:new{p00=p001, p10=p101, p11=p111, p01=p011}
+tsv = TwoSurfaceVolume:new{face0=myface0123, face1=myface4567, ruled_direction="k"}
+print("tsv=", tsv)
+print("tsv(0.1, 0.1, 0.5)= ", tsv(0.1, 0.1, 0.5))
+--
 print("LuaFnVolume")
 function myLuaFunction(r, s, t)
    -- Simple cube
@@ -78,5 +84,3 @@ print("Done luavolume_demo")
     }
     writeln("Done with luavolume_demo.");
 }
-
-    

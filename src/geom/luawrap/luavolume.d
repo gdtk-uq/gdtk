@@ -244,7 +244,7 @@ extern(C) int newSweptSurfaceVolume(lua_State* L)
  *
  * Supported constructions are:
  * -------------------------
- * vol0 = TwoSurfaceVolume:new{face0123=myFaceBottom, face4567=myFaceTop}
+ * vol0 = TwoSurfaceVolume:new{face0=myFaceBottom, face1=myFaceTop, ruled_direction="k"}
  * --------------------------
  */
 
@@ -263,28 +263,30 @@ extern(C) int newTwoSurfaceVolume(lua_State* L)
             "A table with input parameters is expected as the first argument.";
         luaL_error(L, errMsg.toStringz);
     }
-    if (!checkAllowedNames(L, 1, ["face0123","face4567"])) {
+    if (!checkAllowedNames(L, 1, ["face0","face1","ruled_direction"])) {
         string errMsg = "Error in call to TwoSurfaceVolume:new{}. Invalid name in table.";
         luaL_error(L, errMsg.toStringz);
     }
     // Look for surface to sweep.
-    lua_getfield(L, 1, "face0123");
-    auto face0123 = checkSurface(L, -1);
-    if (face0123 is null) {
-        string errMsg = "Error in constructor TwoSurfaceVolume:new{}. Couldn't find face0123.";
+    lua_getfield(L, 1, "face0");
+    auto face0 = checkSurface(L, -1);
+    if (face0 is null) {
+        string errMsg = "Error in constructor TwoSurfaceVolume:new{}. Couldn't find face0.";
         luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
     // Look for edge to sweep along.
-    lua_getfield(L, 1, "face4567");
-    auto face4567 = checkSurface(L, -1);
-    if (face4567 is null) {
-        string errMsg = "Error in constructor TwoSurfaceVolume:new{}. Couldn't find face4567.";
+    lua_getfield(L, 1, "face1");
+    auto face1 = checkSurface(L, -1);
+    if (face1 is null) {
+        string errMsg = "Error in constructor TwoSurfaceVolume:new{}. Couldn't find face1.";
         luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
+    string ruled_direction = getStringWithDefault(L, 1, "ruled_direction", "k");
+    //
     // Construct the actual surface.
-    auto tsv = new TwoSurfaceVolume(face0123, face4567);
+    auto tsv = new TwoSurfaceVolume(face0, face1, ruled_direction);
     volumeStore ~= pushObj!(TwoSurfaceVolume, TwoSurfaceVolumeMT)(L, tsv);
     return 1;
 } // end newTowSurfaceVolume()
