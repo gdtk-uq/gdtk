@@ -8,7 +8,30 @@
 //
 // 2019-05-31 Ingo's original with face at t=0 and t=1.
 // 2021-04-02 PJ generalize to have the pair of faces in any of the 3 directions.
-
+//
+// Note that the r,s coordinates local to the faces are aligned as per the
+// faces bound to the TFIVolume.  The volume's r,s,t parameters are aligned
+// with its i,j,k grid index directions, respectively.  Thes index directions
+// are shown in the following ASCII figures.
+//
+// 3-------2  7-------6
+// |^      |  |^      |
+// |j  B   |  |j  T   |
+// |   i-> |  |   i-> |
+// 0-------1  4-------5
+//
+// 4-------5  7-------6
+// |^      |  |^      |
+// |k  S   |  |k  N   |
+// |   i-> |  |   i-> |
+// 0-------1  3-------2
+//
+// 4-------7  5-------6
+// |^      |  |^      |
+// |k  W   |  |k  E   |
+// |   j-> |  |   j-> |
+// 0-------3  1-------2
+//
 module geom.volume.twosurfacevolume;
 
 import std.conv;
@@ -41,9 +64,9 @@ public:
         case "s":
         case "j":
             // face0 is south face
-            p[1] = face0(0.0,0.0); p[0] = face0(1.0,0.0); p[4] = face0(1.0,1.0); p[5] = face0(0.0,1.0);
+            p[0] = face0(0.0,0.0); p[1] = face0(1.0,0.0); p[5] = face0(1.0,1.0); p[4] = face0(0.0,1.0);
             // face1 in north face
-            p[2] = face1(0.0,0.0); p[3] = face1(1.0,0.0); p[7] = face1(1.0,1.0); p[6] = face1(0.0,1.0);
+            p[3] = face1(0.0,0.0); p[2] = face1(1.0,0.0); p[6] = face1(1.0,1.0); p[7] = face1(0.0,1.0);
             break;
         case "t":
         case "k":
@@ -88,7 +111,7 @@ public:
             break;
         case "s":
         case "j":
-            p_rst = face0(1.0-r, t).scale(1.0-s) + face1(1.0-r, t).scale(s);
+            p_rst = face0(r, t).scale(1.0-s) + face1(r, t).scale(s);
             break;
         case "t":
         case "k":
