@@ -36,7 +36,7 @@ immutable string RotatedAboutZAxisPathMT = "RotatedAboutZAxisPath";
 
 // A place to hang on to references to objects that are pushed into the Lua domain.
 // We don't want the D garbage collector to prematurely dispose of said objects.
-static const(Path)[] pathStore; 
+static const(Path)[] pathStore;
 
 Path checkPath(lua_State* L, int index) {
     if ( isObjType(L, index, LineMT) ) {
@@ -133,7 +133,7 @@ extern(C) int pathIntersect2D(T, string MTname)(lua_State* L)
     // Expect Vector3 for direction vector.
     lua_getfield(L, 2, "d");
     if (lua_isnil(L, -1)) {
-        string errMsg = "Error in call to Path:intersect2D{}. No d entry found.\n" ~ 
+        string errMsg = "Error in call to Path:intersect2D{}. No d entry found.\n" ~
             "Check that the keyword argument 'd' is present,\n" ~
             "and that a valid object is passed as value.";
         luaL_error(L, errMsg.toStringz());
@@ -199,7 +199,7 @@ extern(C) int newLine(lua_State* L)
     // Expect Vector3 for end point.
     lua_getfield(L, 1, "p1");
     if ( lua_isnil(L, -1) ) {
-        string errMsg = "Error in call to Line:new{}. No p1 entry found.\n" ~ 
+        string errMsg = "Error in call to Line:new{}. No p1 entry found.\n" ~
             "Check that the keyword argument 'p1' is present,\n" ~
             "and that a valid object is passed as value.";
         luaL_error(L, errMsg.toStringz());
@@ -959,7 +959,7 @@ public:
     // things and that diddles with the Lua interpreter's internal state.
     // So the const on the lua_State pointer is more a statement that
     // "I'm not going to switch interpreters on you."
-    // Hence the ugly but (hopefully safe) casts where ever we get 
+    // Hence the ugly but (hopefully safe) casts where ever we get
     // the Lua interpreter to do something.
     // This is the best I can do for the moment.  PJ, 2014-04-22
     string luaFnName;
@@ -977,14 +977,14 @@ public:
     {
         return new LuaFnPath(L, luaFnName);
     }
-    override Vector3 opCall(double t) const 
+    override Vector3 opCall(double t) const
     {
         // Call back to the Lua function.
         lua_getglobal(cast(lua_State*)L, luaFnName.toStringz);
         lua_pushnumber(cast(lua_State*)L, t);
         if ( lua_pcall(cast(lua_State*)L, 1, 1, 0) != 0 ) {
-            string errMsg = "Error in call to " ~ luaFnName ~ 
-                " from LuaFnPath:opCall(): " ~ 
+            string errMsg = "Error in call to " ~ luaFnName ~
+                " from LuaFnPath:opCall(): " ~
                 to!string(lua_tostring(cast(lua_State*)L, -1));
             luaL_error(cast(lua_State*)L, errMsg.toStringz);
         }
@@ -1108,7 +1108,7 @@ extern(C) int newArcLengthParameterizedPath(lua_State* L)
     auto underlying_path = checkPath(L, -1);
     lua_pop(L, 1);
     if ( underlying_path is null ) {
-        string errMsg = "Error in call to ArcLengthParameterizedPath:new{};" ~ 
+        string errMsg = "Error in call to ArcLengthParameterizedPath:new{};" ~
             " Not a valid Path object.";
         luaL_error(L, errMsg.toStringz());
     }
@@ -1160,7 +1160,7 @@ extern(C) int newSubRangedPath(lua_State* L)
     auto underlying_path = checkPath(L, -1);
     lua_pop(L, 1);
     if ( underlying_path is null ) {
-        string errMsg = "Error in call to SubRangedPath:new{};" ~ 
+        string errMsg = "Error in call to SubRangedPath:new{};" ~
             " Not a valid Path object.";
         luaL_error(L, errMsg.toStringz());
     }
@@ -1248,7 +1248,7 @@ extern(C) int newReversedPath(lua_State* L)
     auto underlying_path = checkPath(L, -1);
     lua_pop(L, 1);
     if ( underlying_path is null ) {
-        string errMsg = "Error in call to ReversedPath:new{};" ~ 
+        string errMsg = "Error in call to ReversedPath:new{};" ~
             " Not a valid Path object.";
         luaL_error(L, errMsg.toStringz());
     }
@@ -1299,7 +1299,7 @@ extern(C) int newTranslatedPath(lua_State* L)
     auto original_path = checkPath(L, -1);
     lua_pop(L, 1);
     if ( original_path is null ) {
-        string errMsg = "Error in call to TranslatedPath:new{};" ~ 
+        string errMsg = "Error in call to TranslatedPath:new{};" ~
             " Not a valid Path object.";
         luaL_error(L, errMsg.toStringz());
     }
@@ -1418,7 +1418,7 @@ extern(C) int newRotatedAboutZAxisPath(lua_State* L)
     string errMsgTmplt = "Error in call to RotatedAboutZAxisPath:new{}. " ~
         "A valid value for '%s' was not found in list of arguments. " ~
         "The value, if present, should be a number.";
-    double angle = getNumberFromTable(L, 1, "angle", false, 0.0, true, 
+    double angle = getNumberFromTable(L, 1, "angle", false, 0.0, true,
                                       format(errMsgTmplt, "angle"));
     auto raza_path = new RotatedAboutZAxisPath(original_path, angle);
     pathStore ~= pushObj!(RotatedAboutZAxisPath, RotatedAboutZAxisPathMT)(L, raza_path);
@@ -1431,7 +1431,7 @@ void registerPaths(lua_State* L)
 {
     // Register the Line object
     luaL_newmetatable(L, LineMT.toStringz);
-    
+
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1); // duplicates the current metatable
     lua_setfield(L, -2, "__index");
@@ -1454,7 +1454,7 @@ void registerPaths(lua_State* L)
 
     // Register the Arc object
     luaL_newmetatable(L, ArcMT.toStringz);
-    
+
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1); // duplicates the current metatable
     lua_setfield(L, -2, "__index");
@@ -1476,7 +1476,7 @@ void registerPaths(lua_State* L)
 
     // Register the Arc3 object
     luaL_newmetatable(L, Arc3MT.toStringz);
-    
+
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1); // duplicates the current metatable
     lua_setfield(L, -2, "__index");
@@ -1498,7 +1498,7 @@ void registerPaths(lua_State* L)
 
     // Register the Helix object
     luaL_newmetatable(L, HelixMT.toStringz);
-    
+
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1); // duplicates the current metatable
     lua_setfield(L, -2, "__index");
@@ -1518,7 +1518,7 @@ void registerPaths(lua_State* L)
 
     // Register the Bezier object
     luaL_newmetatable(L, BezierMT.toStringz);
-    
+
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1); // duplicates the current metatable
     lua_setfield(L, -2, "__index");
@@ -1546,7 +1546,7 @@ void registerPaths(lua_State* L)
 
     // Register the NURBS object
     luaL_newmetatable(L, NURBSMT.toStringz);
-    
+
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1); // duplicates the current metatable
     lua_setfield(L, -2, "__index");
@@ -1568,7 +1568,7 @@ void registerPaths(lua_State* L)
 
     // Register the Polyline object
     luaL_newmetatable(L, PolylineMT.toStringz);
-    
+
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1); // duplicates the current metatable
     lua_setfield(L, -2, "__index");
@@ -1592,7 +1592,7 @@ void registerPaths(lua_State* L)
 
     // Register the Spline object which is actually a Polyline in Dlang.
     luaL_newmetatable(L, SplineMT.toStringz);
-    
+
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1); // duplicates the current metatable
     lua_setfield(L, -2, "__index");
@@ -1614,7 +1614,7 @@ void registerPaths(lua_State* L)
 
     // Register the Spline2 object which is also a Polyline in Dlang.
     luaL_newmetatable(L, Spline2MT.toStringz);
-    
+
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1); // duplicates the current metatable
     lua_setfield(L, -2, "__index");
@@ -1636,7 +1636,7 @@ void registerPaths(lua_State* L)
 
     // Register the SVGPath object which is a subclass of Polyline in Dlang.
     luaL_newmetatable(L, SVGPathMT.toStringz);
-    
+
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1); // duplicates the current metatable
     lua_setfield(L, -2, "__index");
@@ -1660,7 +1660,7 @@ void registerPaths(lua_State* L)
 
     // Register the LuaFnPath object
     luaL_newmetatable(L, LuaFnPathMT.toStringz);
-    
+
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1); // duplicates the current metatable
     lua_setfield(L, -2, "__index");
@@ -1682,7 +1682,7 @@ void registerPaths(lua_State* L)
 
     // Register the ArcLengthParameterized object
     luaL_newmetatable(L, ArcLengthParameterizedPathMT.toStringz);
-    
+
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1); // duplicates the current metatable
     lua_setfield(L, -2, "__index");
@@ -1709,7 +1709,7 @@ void registerPaths(lua_State* L)
 
     // Register the SubRangedPath object
     luaL_newmetatable(L, SubRangedPathMT.toStringz);
-    
+
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1); // duplicates the current metatable
     lua_setfield(L, -2, "__index");
@@ -1735,7 +1735,7 @@ void registerPaths(lua_State* L)
 
     // Register the ReversedPath object
     luaL_newmetatable(L, ReversedPathMT.toStringz);
-    
+
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1); // duplicates the current metatable
     lua_setfield(L, -2, "__index");
@@ -1761,7 +1761,7 @@ void registerPaths(lua_State* L)
 
     // Register the TranslatedPath object
     luaL_newmetatable(L, TranslatedPathMT.toStringz);
-    
+
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1); // duplicates the current metatable
     lua_setfield(L, -2, "__index");
@@ -1783,7 +1783,7 @@ void registerPaths(lua_State* L)
 
     // Register the MirrorImagePath object
     luaL_newmetatable(L, MirrorImagePathMT.toStringz);
-    
+
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1); // duplicates the current metatable
     lua_setfield(L, -2, "__index");
@@ -1805,7 +1805,7 @@ void registerPaths(lua_State* L)
 
     // Register the RotatedAboutZAxisPath object
     luaL_newmetatable(L, RotatedAboutZAxisPathMT.toStringz);
-    
+
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1); // duplicates the current metatable
     lua_setfield(L, -2, "__index");
@@ -1823,10 +1823,3 @@ void registerPaths(lua_State* L)
 
     lua_setglobal(L, RotatedAboutZAxisPathMT.toStringz);
 } // end registerPaths()
-    
-
-
-
-
-
-
