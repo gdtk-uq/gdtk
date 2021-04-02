@@ -76,6 +76,26 @@ spp = SweptPathPatch:new{west=cA, south=cB}
 print("spp= ", spp)
 print("spp(0.5,0.5)= ", spp(0.5, 0.5))
 --
+print("SpherePatch demo")
+R = 1.0
+east_patch = SpherePatch:new{radius=R, centre={0.0,0.0,0.0}, face_name="east"}
+mid_e = east_patch(0.5, 0.5)
+p5_east = east_patch(0.0, 1.0)
+p6_east = east_patch(1.0, 1.0)
+print("mid_e=", mid_e)
+print("p5_east=", p5_east)
+print("p6_east=", p6_east)
+south_patch = SpherePatch:new{radius=R, centre={0.0,0.0,0.0}, face_name="south", which_part="top"}
+mid_s = south_patch(0.5, 0.0)
+p5_south = south_patch(1.0, 1.0)
+print("mid_s=", mid_s)
+print("p5_south=", p5_south)
+north_patch = SpherePatch:new{radius=R, centre={0.0,0.0,0.0}, face_name="north", which_part="top-east"}
+mid_n = north_patch(0.0, 0.0)
+p6_north = north_patch(1.0, 1.0)
+print("mid_n=", mid_n)
+print("p6_north=", p6_north)
+--
 print("BezierPatch demo")
 L = 2.0
 H = 1.0

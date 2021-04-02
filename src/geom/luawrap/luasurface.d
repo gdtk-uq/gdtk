@@ -26,6 +26,7 @@ immutable string AOPatchMT = "AOPatch";
 immutable string ChannelPatchMT = "ChannelPatch";
 immutable string NozzleExpansionPatchMT = "NozzleExpansionPatch";
 immutable string SweptPathPatchMT = "SweptPathPatch";
+immutable string SpherePatchMT = "SpherePatch";
 immutable string MeshPatchMT = "MeshPatch";
 immutable string LuaFnSurfaceMT = "LuaFnSurface";
 immutable string SubRangedSurfaceMT = "SubRangedSurface";
@@ -47,6 +48,8 @@ ParametricSurface checkSurface(lua_State* L, int index) {
         return checkObj!(NozzleExpansionPatch, NozzleExpansionPatchMT)(L, index);
     if ( isObjType(L, index, SweptPathPatchMT ) )
         return checkObj!(SweptPathPatch, SweptPathPatchMT)(L, index);
+    if ( isObjType(L, index, SpherePatchMT) )
+        return checkObj!(SpherePatch, SpherePatchMT)(L, index);
     if ( isObjType(L, index, MeshPatchMT ) )
         return checkObj!(MeshPatch, MeshPatchMT)(L, index);
     if ( isObjType(L, index, LuaFnSurfaceMT ) )
@@ -179,7 +182,7 @@ extern(C) int newCoonsPatch(lua_State* L)
     }
     lua_remove(L, 1); // remove first argument "this"
     if ( !lua_istable(L, 1) ) {
-        string errMsg = "Error in constructor CoonPatch:new{}. " ~
+        string errMsg = "Error in constructor CoonsPatch:new{}. " ~
             "A table with input parameters is expected as the first argument.";
         luaL_error(L, errMsg.toStringz);
     }
@@ -492,6 +495,69 @@ extern(C) int newSweptPathPatch(lua_State* L)
     surfaceStore ~= pushObj!(SweptPathPatch, SweptPathPatchMT)(L, spatch);
     return 1;
 } // end newSweptPathPatch()
+
+
+/**
+ * This is the constructor for a SpherePatch to be used from the Lua interface.
+ *
+ * The model is a cube -1,1 remapped to a sphere of unit radius and then scaled
+ * to radius R and moved to center C.
+ * The surface starts as a single, named face of the unit cube. Names are the
+ * usual north, east, south, west, top, bottom.
+ * By default, you will get a full face.  You can request a half face
+ * by specifying a name for the adjoining cube face and you can requast
+ * a quadrant by specifying the pair of names for the adjoining cube faces.
+ *
+ * Supported constructions are:
+ * -------------------------
+ * patch0 = SpherePatch:new{radius=R, centre=C, face_name="east"}
+ * patch1 = SpherePatch:new{radius=R, centre=C, face_name="east", which_part="top"}
+ * patch1 = SpherePatch:new{radius=R, centre=C, face_name="east", which_part="top-south"}
+ * --------------------------
+ *
+ * At successful completion of this function, a new SpherePatch object
+ * is pushed onto the Lua stack.
+ */
+
+extern(C) int newSpherePatch(lua_State* L)
+{
+    int narg = lua_gettop(L);
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected SpherePatch:new{}; ";
+        errMsg ~= "maybe you tried SpherePatch.new{}.";
+        luaL_error(L, errMsg.toStringz);
+        return 0;
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if ( !lua_istable(L, 1) ) {
+        string errMsg = "Error in constructor SpherePatch:new{}. " ~
+            "A table with input parameters is expected as the first argument.";
+        luaL_error(L, errMsg.toStringz);
+        return 0;
+    }
+    if (!checkAllowedNames(L, 1, ["radius","centre","face_name","which_part"])) {
+        string errMsg = "Error in call to SpherePatch:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
+        return 0;
+    }
+    // Now, get our table entries.
+    // Table is at index 1
+    double radius = getDouble(L, 1, "radius");
+    string face_name = getString(L, 1, "face_name");
+    string which_part = getStringWithDefault(L, 1, "which_part", "");
+    lua_getfield(L, 1, "centre");
+    if (lua_isnil(L, -1)) {
+        string errMsg = "Error in call to SpherePatch:new{}. No centre entry found.";
+        luaL_error(L, errMsg.toStringz());
+    }
+    auto centre = toVector3(L, -1);
+    lua_pop(L, 1);
+    //
+    auto spatch = new SpherePatch(radius, centre, face_name, which_part);
+    surfaceStore ~= pushObj!(SpherePatch, SpherePatchMT)(L, spatch);
+    return 1;
+} // end newSpherePatch()
 
 
 /**
@@ -1162,6 +1228,28 @@ void registerSurfaces(lua_State* L)
 
     lua_setglobal(L, SweptPathPatchMT.toStringz);
     lua_getglobal(L, SweptPathPatchMT.toStringz); lua_setglobal(L, "SweptPathSurface"); // alias
+
+    // Register the SpherePatch object
+    luaL_newmetatable(L, SpherePatchMT.toStringz);
+
+    /* metatable.__index = metatable */
+    lua_pushvalue(L, -1); // duplicates the current metatable
+    lua_setfield(L, -2, "__index");
+
+    /* Register methods for use. */
+    lua_pushcfunction(L, &newSpherePatch);
+    lua_setfield(L, -2, "new");
+    lua_pushcfunction(L, &opCallSurface!(SpherePatch, SpherePatchMT));
+    lua_setfield(L, -2, "__call");
+    lua_pushcfunction(L, &opCallSurface!(SpherePatch, SpherePatchMT));
+    lua_setfield(L, -2, "eval");
+    lua_pushcfunction(L, &toStringObj!(SpherePatch, SpherePatchMT));
+    lua_setfield(L, -2, "__tostring");
+    lua_pushcfunction(L, &areaOfSurface!(SpherePatch, SpherePatchMT));
+    lua_setfield(L, -2, "area");
+
+    lua_setglobal(L, SpherePatchMT.toStringz);
+    lua_getglobal(L, SpherePatchMT.toStringz); lua_setglobal(L, "SphereSurface"); // alias
 
     // Register the MeshPatch object
     luaL_newmetatable(L, MeshPatchMT.toStringz);
