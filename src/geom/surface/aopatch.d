@@ -107,9 +107,9 @@ public:
                            this._nx, this._ny);
     }
 
-    override Vector3 opCall(double r, double s) const 
+    override Vector3 opCall(double r, double s) const
     {
-        // Use TFI close to the boundaries.  
+        // Use TFI close to the boundaries.
         // The background mesh is usually pretty coarse.
         double tol = 1.0e-4;
         if ( r < tol || s < tol || r > 1.0-tol || s > 1.0-tol ) {
@@ -184,12 +184,12 @@ private:
                     double dxdXi = (_bgmesh[ix+1][iy].x.re - _bgmesh[ix-1][iy].x.re) / (2.0 * dXi);
                     double dxdEta = (_bgmesh[ix][iy+1].x.re - _bgmesh[ix][iy-1].x.re) / (2.0 * dEta);
                     double d2xdXidEta = ((_bgmesh[ix+1][iy+1].x.re - _bgmesh[ix-1][iy+1].x.re) -
-                                         (_bgmesh[ix+1][iy-1].x.re - _bgmesh[ix-1][iy-1].x.re)) / 
+                                         (_bgmesh[ix+1][iy-1].x.re - _bgmesh[ix-1][iy-1].x.re)) /
                         (4.0 * dXi * dEta);
                     double dydXi = (_bgmesh[ix+1][iy].y.re - _bgmesh[ix-1][iy].y.re) / (2.0 * dXi);
                     double dydEta = (_bgmesh[ix][iy+1].y.re - _bgmesh[ix][iy-1].y.re) / (2.0 * dEta);
                     double d2ydXidEta = ((_bgmesh[ix+1][iy+1].y.re - _bgmesh[ix-1][iy+1].y.re) -
-                                         (_bgmesh[ix+1][iy-1].y.re - _bgmesh[ix-1][iy-1].y.re)) / 
+                                         (_bgmesh[ix+1][iy-1].y.re - _bgmesh[ix-1][iy-1].y.re)) /
                         (4.0 * dXi * dEta);
                     // Calculate intermediate quantities
                     double B = dxdXi * dydEta + dxdEta * dydXi;

@@ -1,6 +1,6 @@
-/** 
+/**
  * nurbssurface.d
- * Author: Reece O. 
+ * Author: Reece O.
  * Date: 2021-03-09
  * TODO Add error messages to nurbs_utils
  */
@@ -17,8 +17,8 @@ import nurbs_utils;
 
 class NURBSSurface : ParametricSurface {
 public:
-    
-    this(const double[4][][] Pw, const double[] U, int p, const double[] V, int q) 
+
+    this(const double[4][][] Pw, const double[] U, int p, const double[] V, int q)
     {
         // Test Pw is minimum viable
 	    if (Pw.length < 2 || Pw[0].length < 2) {
@@ -57,12 +57,12 @@ public:
             errMsg ~= format("Required number of knots in direction v: %s", m_b+q+2);
             throw new Error(text(errMsg));
         }
-        
-        this.mPw = Pw.dup; 
-        this.mU = U.dup; 
-        this.m_p = p; 
-        this.mV = V.dup; 
-        this.m_q = q; 
+
+        this.mPw = Pw.dup;
+        this.mU = U.dup;
+        this.m_p = p;
+        this.mV = V.dup;
+        this.m_q = q;
         mNu.length = p + 1;
         mNws_u = NURBSWorkspace(p);
         mNv.length = q + 1;
@@ -71,12 +71,12 @@ public:
     }
     this(ref const NURBSSurface other)
     {
-        this.mPw = other.mPw.dup; 
-        this.mU = other.mU.dup; 
-        this.m_p = other.m_p; 
+        this.mPw = other.mPw.dup;
+        this.mU = other.mU.dup;
+        this.m_p = other.m_p;
         this.m_a = other.m_a;
-        this.mV = other.mV.dup; 
-        this.m_q = other.m_q; 
+        this.mV = other.mV.dup;
+        this.m_q = other.m_q;
         this.m_b = other.m_p;
         mNu.length = other.m_p + 1;
         mNws_u = NURBSWorkspace(other.m_p);
@@ -99,23 +99,23 @@ public:
 
 private:
     const double[4][][] mPw; // array of weighted control points
-    
+
     const double[] mU; // knot vector in direction u
     int m_p; // degree of curve in direction u
     int m_a; // a+1 = number of control points in direction u
-    
+
     const double[] mV; // knot vector in direction v
     int m_q; // degree of curve in direction v
     int m_b; // b+1 = number of control points in direction v
-    
+
     static double[4] mSw;
-    static double[3] mS; 
+    static double[3] mS;
     static double[] mNu;
     static double[] mNv;
     static double[4][] temp;
     static NURBSWorkspace mNws_u;
     static NURBSWorkspace mNws_v;
-    
+
     Vector3 deBoor(double u, double v) const {
         // Returns the Cartesian coordinates of a point on a NURBS surface at a given set of parameter values
         // This is algorithm A4.3 from Piegl and Tiller (1997) - 'The NURBS Book'
@@ -152,7 +152,7 @@ version(nurbssurface_test) {
     int q = 2;
     double[] U = [0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 4.0, 5.0, 5.0, 5.0];
     double[] V = [0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 3.0, 3.0];
-    
+
     auto nsurf = new NURBSSurface(Pw, U, p, V, q);
     assert(approxEqualVectors(Vector3(2.0, 98.0/27.0, 68.0/27.0), nsurf.opCall(5.0/2.0, 1.0)), failedUnitTest());
     return 0;

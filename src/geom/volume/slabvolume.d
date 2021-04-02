@@ -25,7 +25,7 @@ public:
         Vector3 p0 = face0123(0.0,0.0);
         super(face0123, new Line(p0, p0+dz));
     }
-    
+
     this(ref const(SlabVolume) other)
     {
         dz = other.dz;

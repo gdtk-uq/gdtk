@@ -3,9 +3,9 @@
  * Demonstrate some of the behaviour of the geometric primitives.
  *
  * Author: Peter J.
- * Version: 
+ * Version:
  *  2014-06-16
- *  2017-11-26: Refactor package.        
+ *  2017-11-26: Refactor package.
  */
 
 import std.stdio;
@@ -21,7 +21,7 @@ void main()
     writeln("c = a + b = ", c);
     Vector3 d = a;
     a.refy = 99.0;
-    writeln("a = ", a, ", d = ", d); 
+    writeln("a = ", a, ", d = ", d);
     Vector3 e = a * 2.0;
     Vector3 f = 3 * d; // int promoted to double OK
     writeln("e = ", e, " f = ", f);

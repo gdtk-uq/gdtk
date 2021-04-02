@@ -94,6 +94,6 @@ void main()
     double t;
     double dist = ab.closestDistance(c, t);
     writeln("closest distance of point (0.5,0.5) to line (0.0,0.0) -> (1.0,0.0) is: ", dist);
-    
+
     writeln("Done gpath_demo.");
 }

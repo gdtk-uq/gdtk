@@ -28,7 +28,7 @@ public:
         p[6] = face4567(1.0, 1.0);
         p[7] = face4567(0.0, 1.0);
     }
-    
+
     this(ref const(TwoSurfaceVolume) other)
     {
         face0123 = other.face0123.dup();
@@ -42,17 +42,17 @@ public:
     }
 
     override Vector3 opCall(double r, double s, double t) const
-    // Locate a point within the volume by linear interpolation between 
+    // Locate a point within the volume by linear interpolation between
     // respective points on bottom and top surface.
     // Input:
     //     r: interpolation parameter i-direction west-->east, 0.0<=r<=1.0
-    //     s: interpolation parameter j-direction south-->north, 0.0<=s<=1.0 
+    //     s: interpolation parameter j-direction south-->north, 0.0<=s<=1.0
     //     t: interpolation parameter k-direction bottom-->top, 0.0<=t<=1.0
     // Returns:
     //     a Vector3 value for the point.
     {
         Vector3 p_rst = face0123(r, s).scale(1.0-t) + face4567(r, s).scale(t);
-        return p_rst; 
+        return p_rst;
     } // end opCall
 
     override string toString() const

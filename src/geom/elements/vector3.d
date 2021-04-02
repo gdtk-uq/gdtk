@@ -664,7 +664,7 @@ void cross_product(number ax, number ay, number az, number bx, number by, number
 bool approxEqualVectors(in Vector3 v1, in Vector3 v2,
                         double maxRelDiff=1.0e-2, double maxAbsDiff=1.0e-5)
 {
-    return (approxEqualNumbers(v1._p[0], v2._p[0], maxRelDiff, maxAbsDiff) && 
+    return (approxEqualNumbers(v1._p[0], v2._p[0], maxRelDiff, maxAbsDiff) &&
             approxEqualNumbers(v1._p[1], v2._p[1], maxRelDiff, maxAbsDiff) &&
             approxEqualNumbers(v1._p[2], v2._p[2], maxRelDiff, maxAbsDiff));
 }
@@ -748,7 +748,7 @@ version(vector3_test) {
         assert(approxEqualVectors(a45.rotate2d(15.0*PI/180), a60), failedUnitTest());
         Vector3 a30 = Vector3(cos(to!number(PI)/6),sin(to!number(PI)/6));
         assert(approxEqualVectors(a30.rotate2d(30.0*PI/180), a60), failedUnitTest());
-               
+
         return 0;
     }
 } // end vector3_test

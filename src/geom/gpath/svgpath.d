@@ -37,7 +37,7 @@ public:
         interpret_svg_path(txt);
         super(segments, closed, tolerance);
     }
-    
+
     this(ref const(SVGPath) other)
     {
         this(other.txt,
@@ -45,7 +45,7 @@ public:
              other.xscale, other.yscale,
              other.tolerance);
     }
-    
+
     override SVGPath dup() const
     {
         return new SVGPath(txt, xtrans, ytrans, xscale, yscale, tolerance);
@@ -63,7 +63,7 @@ public:
     {
         return "SVGPath";
     }
-    
+
 private:
     string txt; // Keep a copy of the original text specification.
                 // It will be useful for making copies of the path.
@@ -77,7 +77,7 @@ private:
     Path[] segments;
     bool closed = false;
     double tolerance;
-    
+
     void interpret_svg_path(string txt)
     {
         txt = txt.strip();
@@ -89,7 +89,7 @@ private:
             do_svg_path_command(cmd, argStr);
         }
     } // end interpret_svg_path()
-    
+
     void do_svg_path_command(char cmd, string argStr)
     {
         // We will interpret a subset of the SVG path commands
@@ -206,7 +206,7 @@ version(svgpath_test) {
     int main()
     {
         // We are going to use semicolons as separators between path commands,
-        // single-character command names (MmLlZ) and 
+        // single-character command names (MmLlZ) and
         // commas as separators between coordinate values.
         // Note that the path is restricted to the z=0 plane.
         auto pth1 = new SVGPath("M3.0,3.0;L4.0,3.0;v1.0;h-1.0;Z");

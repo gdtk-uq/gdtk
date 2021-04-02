@@ -5,7 +5,7 @@
  */
 
 import std.stdio;
-import std.math; 
+import std.math;
 
 import geom;
 
@@ -17,7 +17,7 @@ void main()
     double[] ts;
     bool success;
     Bezier bezier = optimiseBezierPoints("sample-data/cowl-spline-pts.dat", 7, b_init_guess, ts, success);
-    
+
     writeln("Optimised control points are:");
     foreach (p; bezier.B) {
         writeln(p.x, " ", p.y);

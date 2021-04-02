@@ -20,7 +20,7 @@ public:
     {
         underlying_path = other.dup();
     }
-    override Vector3 opCall(double t) const 
+    override Vector3 opCall(double t) const
     {
         double tdsh = underlying_t(t);
         return underlying_path(tdsh);
@@ -80,7 +80,7 @@ protected:
     double[] arc_length_vector;
     void set_arc_length_vector(int N)
     {
-        // Compute the arc_lengths for a number of sample points 
+        // Compute the arc_lengths for a number of sample points
         // so that these can later be used to do a reverse interpolation
         // on the evaluation parameter.
         arc_length_vector.length = 0;
@@ -168,7 +168,7 @@ public:
     }
     override string toString() const
     {
-        return "SubRangedPath(underlying_path=" ~ to!string(underlying_path) 
+        return "SubRangedPath(underlying_path=" ~ to!string(underlying_path)
             ~ ", t0=" ~ to!string(t0) ~ " t1=" ~ to!string(t1) ~ ")";
     }
     override string classString() const
@@ -211,7 +211,7 @@ public:
     {
         original_path = other.dup();
     }
-    override Vector3 opCall(double t) const 
+    override Vector3 opCall(double t) const
     {
         Vector3 p = original_path(t);
         return apply_transform(p);
@@ -236,7 +236,7 @@ class TranslatedPath : TransformedPath {
     this(const Path other, const Vector3 shift)
     {
         super(other);
-        this.shift = shift; 
+        this.shift = shift;
     }
     override TranslatedPath dup() const
     {
@@ -244,7 +244,7 @@ class TranslatedPath : TransformedPath {
     }
     override string toString() const
     {
-        return "TranslatedPath(original_path=" ~ to!string(original_path) 
+        return "TranslatedPath(original_path=" ~ to!string(original_path)
             ~ ", shift=" ~ to!string(shift) ~ ")";
     }
     override string classString() const
@@ -275,7 +275,7 @@ class MirrorImagePath : TransformedPath {
     }
     override string toString() const
     {
-        return "MirrorImagePath(original_path=" ~ to!string(original_path) 
+        return "MirrorImagePath(original_path=" ~ to!string(original_path)
             ~ ", point=" ~ to!string(point) ~ ", normal=" ~ to!string(normal) ~ ")";
     }
     override string classString() const
@@ -296,7 +296,7 @@ class RotatedAboutZAxisPath : TransformedPath {
     this(const Path other, double angle)
     {
         super(other);
-        dtheta = angle; 
+        dtheta = angle;
     }
     override RotatedAboutZAxisPath dup() const
     {
@@ -304,7 +304,7 @@ class RotatedAboutZAxisPath : TransformedPath {
     }
     override string toString() const
     {
-        return "RotatedAboutZAxisPath(original_path=" ~ to!string(original_path) 
+        return "RotatedAboutZAxisPath(original_path=" ~ to!string(original_path)
             ~ ", angle=" ~ to!string(dtheta) ~ ")";
     }
     override string classString() const
@@ -334,11 +334,11 @@ version(modifiedpath_test) {
         auto abc_dsh = new ArcLengthParameterizedPath(abc);
         auto f = abc_dsh(0.5);
         assert(approxEqualVectors(f, Vector3(2,2,2)), failedUnitTest());
-    
+
         a = Vector3([2.0, 2.0, 0.0]);
         b = Vector3([1.0, 2.0, 1.0]);
         c = Vector3([1.0, 2.0, 0.0]);
-        auto acb = new ArcLengthParameterizedPath(new Bezier([a, c, b])); 
+        auto acb = new ArcLengthParameterizedPath(new Bezier([a, c, b]));
         auto L = acb.underlying_path.length();
         auto dA = Vector3(-1, 0, 1);
         auto dAdt = abs(dA)/L;
@@ -365,7 +365,7 @@ version(modifiedpath_test) {
         auto polyline = new Polyline([abc, new Line(b, c)]);
         auto rev_poly = new ReversedPath(polyline);
         assert(approxEqualVectors(polyline(0.25), rev_poly(0.75)), failedUnitTest());
-        acb = new SubRangedPath(new Bezier([a, c, b]), 0.5, 0.75); 
+        acb = new SubRangedPath(new Bezier([a, c, b]), 0.5, 0.75);
         assert(approxEqualVectors(acb.dpdt(0), Vector3(-1, 0, 1)/4), failedUnitTest());
         assert(approxEqualVectors(acb.d2pdt2(0), Vector3(2,0,2)/16), failedUnitTest());
         auto r_acb = new ReversedPath(new Bezier([a, c, b]));

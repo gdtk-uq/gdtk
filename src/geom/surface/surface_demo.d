@@ -50,6 +50,6 @@ void main()
 
     writeln("Generating VTK-XML of AOPatch.");
     writeSurfaceAsVtkXml(my_AOpatch, "aopatch.vts", 25, 50);
-    
+
     writeln("Done surface_demo.");
 }

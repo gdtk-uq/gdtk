@@ -38,8 +38,8 @@ public:
     // Helix constructed from point_start to point_end about an axis
     // from axis0 to axis1.
     // We will compute the fundamantal parameters from these points.
-    this(in Vector3 point_start, in Vector3 point_end, 
-         in Vector3 axis0, in Vector3 axis1) 
+    this(in Vector3 point_start, in Vector3 point_end,
+         in Vector3 axis0, in Vector3 axis1)
     {
         // Local vectors relative to axis0.
         Vector3 a = axis1 - axis0;
@@ -69,7 +69,7 @@ public:
     {
         return new Helix(a0, a1, xdsh, r0, r1, theta01);
     }
-    override Vector3 opCall(double t) const 
+    override Vector3 opCall(double t) const
     {
         double r = r0*(1.0-t) + r1*t;
         double theta = theta01 * t;

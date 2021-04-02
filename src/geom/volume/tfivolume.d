@@ -119,14 +119,14 @@ public:
     // Locate a point within the volume by blended linear interpolation.
     // Input:
     //     r: interpolation parameter i-direction west-->east, 0.0<=r<=1.0
-    //     s: interpolation parameter j-direction south-->north, 0.0<=s<=1.0 
+    //     s: interpolation parameter j-direction south-->north, 0.0<=s<=1.0
     //     t: interpolation parameter k-direction bottom-->top, 0.0<=t<=1.0
     // Returns:
     //     a Vector3 value for the point.
     {
-        Vector3 pW = faces[Face.west](s,t); 
+        Vector3 pW = faces[Face.west](s,t);
         Vector3 pE = faces[Face.east](s,t);
-        Vector3 pS = faces[Face.south](r,t); 
+        Vector3 pS = faces[Face.south](r,t);
         Vector3 pN = faces[Face.north](r,t);
         Vector3 pB = faces[Face.bottom](r,s);
         Vector3 pT = faces[Face.top](r,s);
@@ -134,7 +134,7 @@ public:
         Vector3 BigC = (omr*oms*omt)*p[0] + (omr*oms*t)*p[4] + (omr*s*omt)*p[3] + (omr*s*t)*p[7] +
             (r*oms*omt)*p[1] + (r*oms*t)*p[5] + (r*s*omt)*p[2] + (r*s*t)*p[6];
         Vector3 p_rst = 0.5*(omr*pW + r*pE + oms*pS + s*pN + omt*pB + t*pT) - 0.5*BigC;
-        return p_rst; 
+        return p_rst;
     } // end opCall
 
     override string toString() const
@@ -149,7 +149,7 @@ private:
     void checkVolume()
     {
         // Compute the volume of the hexahedron, as defined by the corners of the block.
-        // This should give a rough and ready test for an ill-defined block. 
+        // This should give a rough and ready test for an ill-defined block.
         number volume, iLength, jLength, kLength;
         Vector3 centroid;
         hex_cell_properties(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7],

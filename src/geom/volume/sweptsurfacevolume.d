@@ -30,7 +30,7 @@ public:
         p[6] = edge04(1.0) + face0123(1.0, 1.0) - face0123(0.0, 0.0);
         p[7] = edge04(1.0) + face0123(0.0, 1.0) - face0123(0.0, 0.0);
     }
-    
+
     this(ref const(SweptSurfaceVolume) other)
     {
         face0123 = other.face0123.dup();
@@ -47,13 +47,13 @@ public:
     // Locate a point within the volume by blended linear interpolation.
     // Input:
     //     r: interpolation parameter i-direction west-->east, 0.0<=r<=1.0
-    //     s: interpolation parameter j-direction south-->north, 0.0<=s<=1.0 
+    //     s: interpolation parameter j-direction south-->north, 0.0<=s<=1.0
     //     t: interpolation parameter k-direction bottom-->top, 0.0<=t<=1.0
     // Returns:
     //     a Vector3 value for the point.
     {
         Vector3 p_rst = edge04(t) + face0123(r, s) - face0123(0.0, 0.0);
-        return p_rst; 
+        return p_rst;
     } // end opCall
 
     override string toString() const

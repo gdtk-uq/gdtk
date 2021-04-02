@@ -50,7 +50,7 @@ public:
         return new BezierPatch(this.Q, this.n, this.m);
     }
 
-    override Vector3 opCall(double r, double s) const 
+    override Vector3 opCall(double r, double s) const
     {
         Vector3[] B;
         B.length = n + 1;

@@ -151,7 +151,7 @@ extern(C) int newTFIVolume(lua_State* L)
         string errMsg = "Error in call to TFIVolume:new{}. Invalid name in table.";
         luaL_error(L, errMsg.toStringz);
     }
-    // Look for named ParametricSurfaces. 
+    // Look for named ParametricSurfaces.
     // If found, proceed with construction from these faces.
     lua_getfield(L, 1, "north"); // test item
     if ( !lua_isnil(L, -1) ) {
@@ -413,7 +413,7 @@ public:
     // things and that diddles with the Lua interpreter's internal state.
     // So the const on the lua_State pointer is more a statement that
     // "I'm not going to switch interpreters on you."
-    // Hence the ugly but (hopefully safe) casts where ever we get 
+    // Hence the ugly but (hopefully safe) casts where ever we get
     // the Lua interpreter to do something.
     // This is the best I can do for the moment.  PJ, 2014-04-22, 2015-02-27
     string luaFnName;
@@ -431,7 +431,7 @@ public:
     {
         return new LuaFnVolume(L, luaFnName);
     }
-    override Vector3 opCall(double r, double s, double t) const 
+    override Vector3 opCall(double r, double s, double t) const
     {
         // Call back to the Lua function.
         lua_getglobal(cast(lua_State*)L, luaFnName.toStringz);
@@ -439,8 +439,8 @@ public:
         lua_pushnumber(cast(lua_State*)L, s);
         lua_pushnumber(cast(lua_State*)L, t);
         if ( lua_pcall(cast(lua_State*)L, 3, 1, 0) != 0 ) {
-            string errMsg = "Error in call to " ~ luaFnName ~ 
-                " from LuaFnVolume:opCall(): " ~ 
+            string errMsg = "Error in call to " ~ luaFnName ~
+                " from LuaFnVolume:opCall(): " ~
                 to!string(lua_tostring(cast(lua_State*)L, -1));
             luaL_error(cast(lua_State*)L, errMsg.toStringz);
         }
@@ -583,7 +583,7 @@ void registerVolumes(lua_State* L)
 {
     // Register the TFIVolume object
     luaL_newmetatable(L, TFIVolumeMT.toStringz);
-    
+
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1); // duplicates the current metatable
     lua_setfield(L, -2, "__index");
@@ -602,7 +602,7 @@ void registerVolumes(lua_State* L)
 
     // Register the SweptSurfaceVolume object
     luaL_newmetatable(L, SweptSurfaceVolumeMT.toStringz);
-    
+
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1); // duplicates the current metatable
     lua_setfield(L, -2, "__index");
@@ -621,7 +621,7 @@ void registerVolumes(lua_State* L)
 
     // Register the TwoSurfaceVolume object
     luaL_newmetatable(L, TwoSurfaceVolumeMT.toStringz);
-    
+
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1); // duplicates the current metatable
     lua_setfield(L, -2, "__index");
@@ -640,7 +640,7 @@ void registerVolumes(lua_State* L)
 
     // Register the SlabVolume object
     luaL_newmetatable(L, SlabVolumeMT.toStringz);
-    
+
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1); // duplicates the current metatable
     lua_setfield(L, -2, "__index");
@@ -659,7 +659,7 @@ void registerVolumes(lua_State* L)
 
     // Register the WedgeVolume object
     luaL_newmetatable(L, WedgeVolumeMT.toStringz);
-    
+
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1); // duplicates the current metatable
     lua_setfield(L, -2, "__index");
@@ -678,7 +678,7 @@ void registerVolumes(lua_State* L)
 
     // Register the LuaFnVolume object
     luaL_newmetatable(L, LuaFnVolumeMT.toStringz);
-    
+
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1); // duplicates the current metatable
     lua_setfield(L, -2, "__index");
@@ -697,7 +697,7 @@ void registerVolumes(lua_State* L)
 
     // Register the SubRangedVolume object
     luaL_newmetatable(L, SubRangedVolumeMT.toStringz);
-    
+
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1); // duplicates the current metatable
     lua_setfield(L, -2, "__index");

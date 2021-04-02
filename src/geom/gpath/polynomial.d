@@ -19,7 +19,7 @@ class Polynomial : Path {
 public:
     Vector3[] P; // array of control points to interpolate
     number[] C; // array of coefficients
-        
+
     this(in Vector3[] P)
     {
         if (P.length == 0) {
@@ -85,7 +85,7 @@ public:
         return "Polynomial";
     }
 
-protected:    
+protected:
     void evaluate_coefficients()
     {
         size_t n = P.length;
@@ -102,7 +102,7 @@ protected:
             C ~= x[i,0];
         } // end foreach
     } // end evaluate_coefficients ()
-    
+
     Vector3 evaluate_polynomial(number x) const
     {
         number y=0.0;

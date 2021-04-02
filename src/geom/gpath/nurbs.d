@@ -1,6 +1,6 @@
 /**
  * nurbs.d
- * Author: Reece O. 
+ * Author: Reece O.
  * Date: 2021-02-24
  */
 
@@ -16,8 +16,8 @@ import nurbs_utils;
 
 class NURBS : Path {
 public:
-    
-    this(const double[4][] Pw, const double[] U, int p) 
+
+    this(const double[4][] Pw, const double[] U, int p)
     {
 	    // Test Pw is minimum viable
 	    if (Pw.length < 2) {
@@ -40,14 +40,14 @@ public:
             errMsg ~= format("Required number of knots: %s", m_a+p+2);
             throw new Error(text(errMsg));
         }
-        
+
         this.mPw = Pw.dup;
         this.mU = U.dup;
         this.m_p = p;
         mN.length = p + 1;
         mNws = NURBSWorkspace(p);
-        
-    }    
+
+    }
     this(ref const NURBS other)
     {
         this.mPw = other.mPw.dup;
@@ -73,7 +73,7 @@ public:
     {
         return "NURBS";
     }
-    
+
 private:
     double[4][] mPw; // collection of weighted control points
     double[] mU; // knot vector
@@ -83,7 +83,7 @@ private:
     static double[4] mCw;
     static double[3] mC;
     static NURBSWorkspace mNws;
-    
+
     Vector3 deBoor(double u) const {
         // Returns the Cartesian coordinates of a point on a NURBS curve at a given parameter value
         // This is algorithm A4.1 from Piegl and Tiller (1997) - 'The NURBS Book'
@@ -95,7 +95,7 @@ private:
         foreach (i; 0 .. 3)  mC[i] = mCw[i]/mCw[3];
         return Vector3(mC);
     }
-    
+
 }
 
 version(nurbs_test) {
