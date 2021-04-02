@@ -15,6 +15,8 @@ import std.conv;
 import std.uni;
 import util.lua;
 import util.lua_service;
+import nm.complex;
+import nm.number;
 import geom;
 import geom.luawrap.luageom;
 import geom.luawrap.luagpath;
@@ -554,7 +556,7 @@ extern(C) int newSpherePatch(lua_State* L)
     auto centre = toVector3(L, -1);
     lua_pop(L, 1);
     //
-    auto spatch = new SpherePatch(radius, centre, face_name, which_part);
+    auto spatch = new SpherePatch(to!number(radius), centre, face_name, which_part);
     surfaceStore ~= pushObj!(SpherePatch, SpherePatchMT)(L, spatch);
     return 1;
 } // end newSpherePatch()
