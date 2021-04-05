@@ -1,4 +1,5 @@
 = Thermochemical kinetics
+:source-highlighter: rouge
 
 If you have a gas model with several chemical species and/or with more than one temperature
 you may be interested in allowing the thermochemical processes to change the gas state in
@@ -9,7 +10,17 @@ http://cfcfd.mechmining.uq.edu.au/pdfs/reacting-gas-guide.pdf[Reacting Gas Guide
 
 == ThermochemicalReactor objects
 
- reactor = ThermochemicalReactor(gmodel, filename1, filename2="")
+[source,python]
+----
+# Python
+reactor = ThermochemicalReactor(gmodel, filename1, filename2="")
+----
+
+[source,lua]
+----
+-- Lua
+reactor = ThermochemicalReactor:new{gasmodel=gmodel, filename1='fname1', filename2=''}
+----
 
 `gmodel`::
    _GasModel_ object, no default +
@@ -29,7 +40,17 @@ http://cfcfd.mechmining.uq.edu.au/pdfs/reacting-gas-guide.pdf[Reacting Gas Guide
 == Methods
 To update the gas state over a finite interval of time, call
 
-  reactor.update_state(gstate, t_interval, dt_suggest)
+[source,python]
+----
+# Python
+reactor.update_state(gstate, t_interval, dt_suggest)
+----
+
+[source,lua]
+----
+-- Lua
+reactor:update_state(gstate, t_interval, dt_suggest)
+----
 
 `gstate` ::
   _GasState_ object, no default. +

@@ -1,4 +1,6 @@
 = State-to-state processes (ideal gas)
+:source-highlighter: rouge
+
 
 If the calorically-perfect ideal gas model is sufficient for your analysis needs,
 there is simple set of ideal-gas relations collected into the `eilmer.ideal_gas`
@@ -10,7 +12,9 @@ for fixed ratio of specific heats.
 To get access to the functions, import the module into your Python script.
 For example:
 
+[source,python]
 ----
+# Python
 import eilmer.ideal_gas_flow as igf
 M = 2.0
 print("Normal shock jump...")
@@ -19,10 +23,22 @@ print("Computed: M=%g: M2=%g, T2/T1=%g, p2/p1=%g, r2/r1=%g" %
 print("Expected: M1=2, M2=0.5774, T2/T1=1.687, p2/p1=4.50, r2/r1=2.667")
 ----
 
+In a Lua script given to the `gas-calc` program, the functions are already available
+in the table `idealgasflow`.
 
 == Isentropic/adiabatic steady flow
 
-  igf.A_Astar(M, g=1.4)
+[source,python]
+----
+# Python
+igf.A_Astar(M, g=1.4)
+----
+
+[source,lua]
+----
+-- Lua
+idealgasflow.A_Astar(M, g)
+----
 
 Input:
 
@@ -36,7 +52,17 @@ Input:
 Returns area ratio, `A/Astar`, for an isentropic, quasi-one-dimensional flow.
 
 
-  igf.T0_T(M, g=1.4)
+[source,python]
+----
+# Python
+igf.T0_T(M, g=1.4)
+----
+
+[source,lua]
+----
+-- Lua
+idealgasflow.T0_T(M, g)
+----
 
 Input:
 
@@ -50,7 +76,17 @@ Input:
 Returns `T0/T`, the ratio of total temperature over static temperature for adiabatic flow.
 
 
-  igf.p0_p(M, g=1.4)
+[source,python]
+----
+# Python
+igf.p0_p(M, g=1.4)
+----
+
+[source,lua]
+----
+-- Lua
+idealgasflow.p0_p(M, g)
+----
 
 Input:
 
@@ -63,7 +99,18 @@ Input:
 
 Returns `p0/p`, the ratio of total pressure over static pressure for isentropic flow.
 
-  igf.r0_r(M, g=1.4)
+
+[source,python]
+----
+# Python
+igf.r0_r(M, g=1.4)
+----
+
+[source,lua]
+----
+-- Lua
+idealgasflow.r0_r(M, g)
+----
 
 Input:
 
@@ -79,7 +126,17 @@ Returns `rho0/rho`, the ratio of stagnation density over local for isentropic fl
 
 == Normal shock
 
-  igf.m2_shock(M1, g=1.4)
+[source,python]
+----
+# Python
+igf.m2_shock(M1, g=1.4)
+----
+
+[source,lua]
+----
+-- Lua
+idealgasflow.m2_shock(M1, g)
+----
 
 Input:
 
@@ -93,7 +150,17 @@ Input:
 Returns `m2`, Mach number following the shock processing.
 
 
-  igf.r2_r1(M1, g=1.4)
+[source,python]
+----
+# Python
+igf.r2_r1(M1, g=1.4)
+----
+
+[source,lua]
+----
+-- Lua
+idealgasflow.r2_r1(M1, g)
+----
 
 Input:
 
@@ -107,7 +174,17 @@ Input:
 Returns density ratio, `r2/r1`, across a normal shock.
 
 
-  igf.v2_v1(M1, g=1.4)
+[source,python]
+----
+# Python
+igf.v2_v1(M1, g=1.4)
+----
+
+[source,lua]
+----
+-- Lua
+idealgasflow.u2_u1(M1, g)
+----
 
 Input:
 
@@ -121,7 +198,17 @@ Input:
 Returns velocity ratio, `v2/v1`, across a normal shock.
 
 
-  igf.p2_p1(M1, g=1.4)
+[source,python]
+----
+# Python
+igf.p2_p1(M1, g=1.4)
+----
+
+[source,lua]
+----
+-- Lua
+idealgasflow.p2_p1(M1, g)
+----
 
 Input:
 
@@ -135,7 +222,17 @@ Input:
 Returns static pressure ratio, `p2/p1`, across a normal shock.
 
 
-  igf.T2_T1(M1, g=1.4)
+[source,python]
+----
+# Python
+igf.T2_T1(M1, g=1.4)
+----
+
+[source,lua]
+----
+-- Lua
+idealgasflow.T2_T1(M1, g)
+----
 
 Input:
 
@@ -149,7 +246,17 @@ Input:
 Returns static temperature ratio, `T2/T1`, across a normal shock.
 
 
-  igf.p02_p01(M1, g=1.4)
+[source,python]
+----
+# Python
+igf.p02_p01(M1, g=1.4)
+----
+
+[source,lua]
+----
+-- Lua
+idealgasflow.p02_p01(M1, g)
+----
 
 Input:
 
@@ -163,7 +270,17 @@ Input:
 Returns stagnation pressure ratio, `p02/p01`, across a normal shock.
 
 
-  igf.ds_Cv(M1, g=1.4)
+[source,python]
+----
+# Python
+igf.ds_Cv(M1, g=1.4)
+----
+
+[source,lua]
+----
+-- Lua
+idealgasflow.DS_Cv(M1, g)
+----
 
 Input:
 
@@ -177,7 +294,17 @@ Input:
 Returns nondimensional entropy change, `ds/Cv`, across a normal shock.
 
 
-  igf.pitot_p(p1, M1, g=1.4)
+[source,python]
+----
+# Python
+igf.pitot_p(p1, M1, g=1.4)
+----
+
+[source,lua]
+----
+-- Lua
+idealgasflow.pitot_p(p1, M1, g)
+----
 
 Input:
 
@@ -200,7 +327,17 @@ Rayleigh-line flow.
 The flow starts with local Mach number, `M`, and (hypothetically) enough heat
 is added for the flow to reach sonic (`Mstar=1`) condition.
 
-  igf.T0_T0star(M, g=1.4)
+[source,python]
+----
+# Python
+igf.T0_T0star(M, g=1.4)
+----
+
+[source,lua]
+----
+-- Lua
+idealgasflow.T0_T0star(M, g)
+----
 
 Input:
 
@@ -216,7 +353,17 @@ and `T0star` is the total temperature that would be achieved if enough heat
 is added to get to the sonic condition.
 
 
-  igf.M_Rayleigh(T0T0star, g=1.4)
+[source,python]
+----
+# Python
+igf.M_Rayleigh(T0T0star, g=1.4)
+----
+
+[source,lua]
+----
+-- Lua
+idealgasflow.M_Rayleigh(T0T0star, g)
+----
 
 Input:
 
@@ -232,7 +379,17 @@ Input:
 Returns the initial Mach number, `M`, of the flow.
 
 
-  igf.T_Tstar(M, g=1.4)
+[source,python]
+----
+# Python
+igf.T_Tstar(M, g=1.4)
+----
+
+[source,lua]
+----
+-- Lua
+idealgasflow.T_Tstar(M, g)
+----
 
 Input:
 
@@ -248,7 +405,17 @@ and `Tstar` is the static temperature that would be achieved if enough heat
 is added to get to sonic condition.
 
 
-  igf.p_pstar(M, g=1.4)
+[source,python]
+----
+# Python
+igf.p_pstar(M, g=1.4)
+----
+
+[source,lua]
+----
+-- Lua
+idealgasflow.p_pstar(M, g)
+----
 
 Input:
 
@@ -264,7 +431,17 @@ and `pstar` is the static pressure that would be achieved if enough heat
 is added to get to sonic conditions.
 
 
-  igf.r_rstar(M, g=1.4)
+[source,python]
+----
+# Python
+igf.r_rstar(M, g=1.4)
+----
+
+[source,lua]
+----
+-- Lua
+idealgasflow.r_rstar(M, g)
+----
 
 Input:
 
@@ -280,7 +457,17 @@ of the initial flow and `rhostar` is the density that would be achieved
 if enough heat is added to get to sonic conditions.
 
 
-  igf.p0_p0star(M, g=1.4)
+[source,python]
+----
+# Python
+igf.p0_p0star(M, g=1.4)
+----
+
+[source,lua]
+----
+-- Lua
+idealgasflow.p0_p0star(M, g)
+----
 
 Input:
 
@@ -297,7 +484,17 @@ if enough heat is added to get to sonic conditions.
 
 == Supersonic turning
 
-  igf.PM1(M, g=1.4)
+[source,python]
+----
+# Python
+igf.PM1(M, g=1.4)
+----
+
+[source,lua]
+----
+-- Lua
+idealgasflow.PM1(M, g)
+----
 
 Input:
 
@@ -311,7 +508,17 @@ Input:
 Returns Prandtl-Meyer function value, in radians.
 
 
-  igf.PM2(nu, g=1.4)
+[source,python]
+----
+# Python
+igf.PM2(nu, g=1.4)
+----
+
+[source,lua]
+----
+-- Lua
+idealgasflow.PM2(nu, g)
+----
 
 Input:
 
@@ -325,9 +532,28 @@ Input:
 Returns corresponding Mach number.
 
 
+[source,lua]
+----
+-- Lua
+MachAngle(M)
+----
+
+Returns the Mach angle in radians.
+
+
 == Oblique shock
 
-  igf.beta_obl(M1, theta, g=1.4, tol=1.0e-6)
+[source,python]
+----
+# Python
+igf.beta_obl(M1, theta, g=1.4, tol=1.0e-6)
+----
+
+[source,lua]
+----
+-- Lua
+idealgasflow.beta_obl(M1, theta, g, tol)
+----
 
 Input:
 
@@ -345,7 +571,17 @@ Returns shock angle, `beta` (in radians), with respect to the
 original stream direction.
 
 
-  igf.beta_obl2(M1, p2_p1, g=1.4)
+[source,python]
+----
+# Python
+igf.beta_obl2(M1, p2_p1, g=1.4)
+----
+
+[source,lua]
+----
+-- Lua
+idealgasflow.beta_obl2(M1, p2_p1, g)
+----
 
 Input:
 
@@ -363,7 +599,18 @@ Input:
 Returns shock angle, `beta` (in radians), with respect to the
 original stream direction.
 
-  igf.theta_obl(M1, beta, g=1.4)
+
+[source,python]
+----
+# Python
+igf.theta_obl(M1, beta, g=1.4)
+----
+
+[source,lua]
+----
+-- Lua
+idealgasflow.theta_obl(M1, beta, g)
+----
 
 Input:
 
@@ -381,7 +628,17 @@ Input:
 Returns deflection angle of the stream, `theta` (in radians).
 
 
-  igf.M2_obl(M1, beta, theta, g=1.4)
+[source,python]
+----
+# Python
+igf.M2_obl(M1, beta, theta, g=1.4)
+----
+
+[source,lua]
+----
+-- Lua
+idealgasflow.M2_obl(M1, beta, theta, g)
+----
 
 Input:
 
@@ -402,7 +659,17 @@ Input:
 Returns `M2`, Mach number in flow after the shock.
 
 
-  igf.r2_r1_obl(M1, beta, g=1.4)
+[source,python]
+----
+# Python
+igf.r2_r1_obl(M1, beta, g=1.4)
+----
+
+[source,lua]
+----
+-- Lua
+idealgasflow.r2_r1_obl(M1, beta, g)
+----
 
 Input:
 
@@ -420,7 +687,17 @@ Input:
 Returns density ratio, `rho2/rho1` across an oblique shock.
 
 
-  igf.vn2_vn1_obl(M1, beta, g=1.4)
+[source,python]
+----
+# Python
+igf.vn2_vn1_obl(M1, beta, g=1.4)
+----
+
+[source,lua]
+----
+-- Lua
+idealgasflow.Vn2_Vn1_obl(M1, beta, g)
+----
 
 Input:
 
@@ -438,7 +715,17 @@ Input:
 Returns normal-velocity ratio, `vn1/vn2`, across an oblique shock.
 
 
-  igf.v2_v1_obl(M1, beta, g=1.4)
+[source,python]
+----
+# Python
+igf.v2_v1_obl(M1, beta, g=1.4)
+----
+
+[source,lua]
+----
+-- Lua
+idealgasflow.V2_V1_obl(M1, beta, g)
+----
 
 Input:
 
@@ -456,7 +743,17 @@ Input:
 Returns flow-speed ratio, `v2/v1`, across an oblique shock.
 
 
-  igf.p2_p1_obl(M1, beta, g=1.4)
+[source,python]
+----
+# Python
+igf.p2_p1_obl(M1, beta, g=1.4)
+----
+
+[source,lua]
+----
+-- Lua
+idealgasflow.p2_p1_obl(M1, beta, g)
+----
 
 Input:
 
@@ -474,7 +771,17 @@ Input:
 Returns static pressure ratio, `p2/p1`, across an oblique shock.
 
 
-  igf.T2_T1_obl(M1, beta, g=1.4)
+[source,python]
+----
+# Python
+igf.T2_T1_obl(M1, beta, g=1.4)
+----
+
+[source,lua]
+----
+-- Lua
+idealgasflow.T2_T1_obl(M1, beta, g)
+----
 
 Input:
 
@@ -492,7 +799,17 @@ Input:
 Returns static temperature ratio, `T2/T1`, across an oblique shock.
 
 
-  igf.p02_p01_obl(M1, beta, g=1.4)
+[source,python]
+----
+# Python
+igf.p02_p01_obl(M1, beta, g=1.4)
+----
+
+[source,lua]
+----
+-- Lua
+idealgasflow.p02_p01_obl(M1, beta, g)
+----
 
 Input:
 
@@ -518,7 +835,17 @@ The computation starts with the oblique-shock jump and then integrates
 across theta until V_theta goes through zero.
 The cone surface corresponds to `V_theta == 0`.
 
-  igf.theta_cone(V1, p1, T1, beta, R=287.1, g=1.4)
+[source,python]
+----
+# Python
+igf.theta_cone(V1, p1, T1, beta, R=287.1, g=1.4)
+----
+
+[source,lua]
+----
+-- Lua
+idealgasflow.theta_cone(V1, p1, T1, beta, R, g)
+----
 
 Input:
 
@@ -558,7 +885,17 @@ Returns tuple of (theta_c, V_c, p_c, T_c).
   the cone-surface static temperature, in K
 
 
-  igf.beta_cone(V1, p1, T1, theta, R=287.1, g=1.4)
+[source,python]
+----
+# Python
+igf.beta_cone(V1, p1, T1, theta, R=287.1, g=1.4)
+----
+
+[source,lua]
+----
+-- Lua
+idealgasflow.beta_cone(V1, p1, T1, theta, R, g)
+----
 
 Input:
 
@@ -586,7 +923,17 @@ Input:
 Returns `beta`, the shock wave angle (in radians) with respect to the free-stream flow direction.
 
 
-  igf.beta_cone2(M1, theta, R=287.1, g=1.4)
+[source,python]
+----
+# Python
+igf.beta_cone2(M1, theta, R=287.1, g=1.4)
+----
+
+[source,lua]
+----
+-- Lua
+idealgasflow.beta_cone2(M1, theta, R, g)
+----
 
 Input:
 

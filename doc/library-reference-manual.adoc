@@ -1,28 +1,31 @@
-= Gas-dynamic library for Python
+= Gas-dynamic library
 Peter A. Jacobs; Rowan J. Gollan
-2020-05-18
+2021-04-05
 :toc: right
 :stylesheet: readthedocs.css
 :sectnums:
+:source-highlighter: rouge
 
 :leveloffset: +1
 
-The loadable library is accessible from Python and Ruby.
-It provides access to functions for the thermochemical gas model
-and, built on top of that, simple state-to-state and
-stream-tube flow analysis functions.
+Eilmer's gas-dynamic library is accessible from your Lua scripts
+and is also available as a loadable library for Python and Ruby.
+It provides access to functions for the thermochemical gas model and,
+built on top of that, a number of functions for simple state-to-state and
+stream-tube flow analysis.
+This is the reference manual for the Python and Lua flavours of the library.
 
-This is the reference manual for the Python flavour of the library and,
-because of the history of development, the library comes in the `eilmer` package.
-For example, to use the to set up a gas model and do a normal shock calculation
-from within your Python script, you might try the following:
+Lets start with a small example to set up a gas model and do a normal shock calculation.
+From within your Python script, you might try the following:
 
+[source,python]
 ----
+# Python
 from eilmer.gas import GasModel, GasState, GasFlow
 
 gmodel = GasModel('cea-air5species-gas-model.lua')
 state1 = GasState(gmodel)
-state1.p = 80.0e3 # Pa
+state1.p = 125.0e3 # Pa
 state1.T = 300.0 # K
 state1.update_thermo_from_pT()
 state1.update_sound_speed()
@@ -30,7 +33,7 @@ print("# Initial test gas:")
 print("#   state1: %s" % state1)
 
 print("# Normal shock, given shock speed")
-vs = 2890.0
+vs = 2414.0
 print("#   vs=%g" % vs)
 state2 = GasState(gmodel)
 flow = GasFlow(gmodel)
@@ -39,20 +42,41 @@ print("#   v2=%g vg=%g" % (v2, vg))
 print("#   state2: %s" % state2)
 ----
 
+The same functions are available to a Lua script given to the `gas-calc` program.
+
+[source,lua]
+----
+-- Lua
+gmodel = GasModel:new{'cea-air5species-gas-model.lua'}
+state1 = GasState:new{gmodel}
+state1.p = 125.0e3; state1.T = 300.0
+gmodel:updateThermoFromPT(state1)
+print("state1:"); printValues(state1)
+
+print("normal shock, given shock speed")
+Vs = 2414.0
+state2, V2, Vg = gasflow.normal_shock(state1, Vs)
+print("    V2=", V2, "Vg=", Vg)
+print("    state2:"); printValues(state2)
+----
+
+Note that there are small but significant differences in calling the functions
+from Lua, compared with Python3.
 If you have not yet read the
 http://cfcfd.mechmining.uq.edu.au/pdfs/gas-user-guide.pdf[Gas Models User Guide],
 this is a good time to do so.
 
 = Installing the library
 
-The gas models library for Python3 is part of a larger gas-dynamics toolkit and
+The gas models library for is part of a larger gas-dynamics toolkit and
 general getting started notes can be found at
 http://cfcfd.mechmining.uq.edu.au/docs/getting-started
 There, you will see how to get a copy of the source code,
 and a list of what other software you will need to build and install the tool kit,
 and a collection of environment variables that need to be set.
 
-To install the library, move to the gas source directory and use the `make` utility.
+To install the library and the gas-calc program,
+move to the gas source directory and use the `make` utility.
 ----
 cd dgd/src/gas
 make install

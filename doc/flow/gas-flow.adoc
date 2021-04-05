@@ -2,12 +2,17 @@
 :source-highlighter: rouge
 
 
-For processes involving the general gas models,
-flow analysis functions are collected as methods of the GasFlow class.
-An object of this class needs to be constructed
-in the context of a particular gas model.
+These functions are for computing simple processes involving the general gas models.
+In Python, the flow analysis functions are collected as methods of the GasFlow class.
+An object of this class needs to be constructed in the context of a particular gas model.
 
-  flow = GasFlow(gmodel)
+[source,python]
+----
+# Python
+flow = GasFlow(gmodel)
+----
+
+In Lua, the functions are already available in the `gas-calc` program in a table called `gasflow`.
 
 
 == Normal shock
@@ -15,9 +20,19 @@ in the context of a particular gas model.
 For shock processing when we want to restrict the processing to the ideal-gas behaviour,
 use the following function.
 
-  v2, vg = flow.ideal_shock(state1, vs, state2)
+[source,python]
+----
+# Python
+v2, vg = flow.ideal_shock(state1, vs, state2)
+----
 
-Input:
+[source,lua]
+----
+-- Lua
+state2, v2, vg = gasflow.ideal_shock(state1, vs)
+----
+
+Parameters:
 
 `state1`::
   _GasState_ object, no default. +
@@ -31,10 +46,8 @@ Input:
 `state2`::
   _GasState_ object, no default. +
   The state of the gas after shock processing.
-  Although you might expect `state2` as output, you need to construct it first
-  and pass it into the function to have its values mutated.
-
-The function returns a tuple of velocities.
+  In Python, you need to construct `state2` first,
+  then pass it into the function to have its values mutated.
 
 `v2`::
   _Float_ The post-shock gas speed, in m/s, relative to the shock front.
@@ -47,9 +60,19 @@ The function returns a tuple of velocities.
 For shock processing with more general, but still chemically-frozen, gas behaviour,
 use the following function.
 
-  v2, vg = flow.normal_shock(state1, vs, state2)
+[source,python]
+----
+# Python
+v2, vg = flow.normal_shock(state1, vs, state2)
+----
 
-Input:
+[source,lua]
+----
+-- Lua
+state2, v2, vg = gasflow.normal_shock(state1, vs)
+----
+
+Parameters:
 
 `state1`::
   _GasState_ object, no default. +
@@ -63,10 +86,8 @@ Input:
 `state2`::
   _GasState_ object, no default. +
   The state of the gas after shock processing.
-  Although you might expect `state2` as output, you need to construct it first
-  and pass it into the function to have its values mutated.
-
-The function returns a tuple of velocities.
+  In Python, you need to construct `state2` first,
+  then pass it into the function to have its values mutated.
 
 `v2`::
   _Float_ The post-shock gas speed, in m/s, relative to the shock front.
@@ -78,9 +99,19 @@ The function returns a tuple of velocities.
 
 For the case where the pressure ratio is provided, use the function:
 
-  v2, vg = flow.normal_shock_p2p1(state1, p2p1, state2)
+[source,python]
+----
+# Python
+vs, v2, vg = flow.normal_shock_p2p1(state1, p2p1, state2)
+----
 
-Input:
+[source,lua]
+----
+-- Lua
+vs, v2, vg = gasflow.normal_shock_p2p1(state1, p2p1)
+----
+
+Parameters:
 
 `state1`::
   _GasState_ object, no default. +
@@ -91,12 +122,11 @@ Input:
   Ratio of pressures p2/p1 across the shock.
 
 `state2`::
-  _GasState_ object, no default. +
+  _GasState_ object, no default for Python but not needed in Lua. +
   The state of the gas after shock processing.
-  Although you might expect `state2` as output, you need to construct it first
-  and pass it into the function to have its values mutated.
 
-The function returns a tuple of velocities.
+`vs`::
+  _Float_ The incident shock speed, in m/s.
 
 `v2`::
   _Float_ The post-shock gas speed, in m/s, relative to the shock front.
@@ -109,9 +139,19 @@ The function returns a tuple of velocities.
 For a reflected shock, as would be observed in a shock tunnel,
 we have the function:
 
-  vr = flow.reflected_shock(state2, vg, state5)
+[source,python]
+----
+# Python
+vr = flow.reflected_shock(state2, vg, state5)
+----
 
-Input:
+[source,lua]
+----
+-- Lua
+state5, vr = gasflow.reflected_shock(state2, vg)
+----
+
+Parameters:
 
 `state1`::
   _GasState_ object, no default. +
@@ -121,12 +161,11 @@ Input:
   _Float_ The speed of the incoming gas (in m/s) in the lab frame.
 
 `state5`::
-  _GasState_ object, no default. +
+  _GasState_ object, no default in Python. +
   The state of the gas after reflected-shock processing.
-  Although you might expect `state5` as output, you need to construct it first
-  and pass it into the function to have its values mutated.
 
 The function returns `vr`, the speed of the reflected shock (in m/s) in the lab frame.
+In Python, the values within the user-provided `state5` are altered.
 
 
 == Reversible steady flow
@@ -134,9 +173,19 @@ The function returns `vr`, the speed of the reflected shock (in m/s) in the lab 
 Allow a gas to expand through a steady isentropic process,
 from stagnation to a lower pressure.
 
-  v = flow.expand_from_stagnation(state0, p_over_p0, state1)
+[source,python]
+----
+# Python
+v = flow.expand_from_stagnation(state0, p_over_p0, state1)
+----
 
-Input:
+[source,lua]
+----
+-- Lua
+state1, v = gasflow.expand_from_stagnation(state0, p_over_p0)
+----
+
+Parameters:
 
 `state0`::
   _GasState_ object, no default. +
@@ -147,12 +196,13 @@ Input:
   The pressure of the expanded gas divided by the stagnation pressure.
 
 `state1`::
-  _GasState_ object, no default. +
+  _GasState_ object, no default in Python. +
   The state of the gas after expansion.
-  Although you might expect `state1` as output, you need to construct it first
+  In Python, you need to construct `state1` first
   and pass it into the function to have its values mutated.
 
-The function returns `v`. the velocity (in m/s) of the expanded gas.
+`v`::
+  The velocity (in m/s) of the expanded gas.
 
 
 Allow a gas to expand through a steady isentropic process,
@@ -193,9 +243,19 @@ The Lua flavour also returns `state1`.
 
 Given a free-stream, compute the corresponding stagnation condition.
 
-  flow.total_condition(state1, v1, state0)
+[source,python]
+----
+# Python
+flow.total_condition(state1, v1, state0)
+----
 
-Input:
+[source,lua]
+----
+-- Lua
+state0 = gasflow.total_condition(state1, v1)
+----
+
+Parameters:
 
 `state1`::
   _GasState_ object, no default. +
@@ -206,9 +266,9 @@ Input:
   The velocity (in m/s) of the free stream.
 
 `state0`::
-  _GasState_ object, no default. +
+  _GasState_ object, no default in Python. +
   The stagnation state, following an isentropic compression from the free-stream state.
-  Although you might expect `state0` as output, you need to construct it first
+  In Python, you need to construct `state0` first
   and pass it into the function to have its values mutated.
 
 
@@ -218,9 +278,19 @@ Compute the state of gas at the stagnation point on a Pitot probe.
 For a subsonic free-stream flow, this will be the same as for an isentropic compression.
 For a supersonic flow, there will be a normal shock, followed by an isentropic compression.
 
-  flow.pitot_condition(state1, v1, state2pitot)
+[source,python]
+----
+# Python
+flow.pitot_condition(state1, v1, state2pitot)
+----
 
-Input:
+[source,lua]
+----
+-- Lua
+state2pitot = gasflow.pitot_condition(state1, v1)
+----
+
+Parameters:
 
 `state1`::
   _GasState_ object, no default. +
@@ -233,8 +303,6 @@ Input:
 `state2pitot`::
   _GasState_ object, no default. +
   The stagnation state at the probe tip, after compression from the free-stream state.
-  Although you might expect `state2pitot` as output, you need to construct it first
-  and pass it into the function to have its values mutated.
 
 
 == Steady flow in a duct
@@ -243,10 +311,19 @@ Steady, isentropic flow through a variable-area duct.
 Internally, this function iterates guesses for the pressure ratio,
 in order to keep mass-flux equal.
 
-  v2 = flow.steady_flow_with_area_change(state1, v1, area2_over_area1, state2,
-                                         tol=1.0e-4)
+[source,python]
+----
+# Python
+v2 = flow.steady_flow_with_area_change(state1, v1, area2_over_area1, state2, tol=1.0e-4)
+----
 
-Input:
+[source,lua]
+----
+-- Lua
+state2, v2 = gasflow.steady_flow_with_area_change(state1, v1, area2_over_area1, tol)
+----
+
+Parameters:
 
 `state1`::
   _GasState_ object, no default. +
@@ -263,8 +340,6 @@ Input:
 `state2`::
   _GasState_ object, no default. +
   The gas state at point 2.
-  Although you might expect `state2` as output, you need to construct it first
-  and pass it into the function to have its values mutated.
 
 `tol`::
   _Float_, default `1.0e-4` +
@@ -277,10 +352,19 @@ For compression and expansion processes that travel as a wave,
 the analysis steps along a characteristic trajectory that traverses the wave
 and integrates the effects numerically.
 
-  v2 = flow.finite_wave_dp(state1, v1, characteristic, p2, state2,
-                           steps=100)
+[source,python]
+----
+# Python
+v2 = flow.finite_wave_dp(state1, v1, characteristic, p2, state2, steps=100)
+----
 
-Input:
+[source,lua]
+----
+-- Lua
+state2, v2 = gasflow.finite_wave_dp(state1, v1, characteristic, p2, steps)
+----
+
+Parameters:
 
 `state1`::
   _GasState_ object, no default. +
@@ -306,22 +390,31 @@ Input:
 `state2`::
   _GasState_ object, no default. +
   The gas state after wave processing.
-  Although you might expect `state2` as output, you need to construct it first
-  and pass it into the function to have its values mutated.
 
 `steps`::
   _Int_, default: 100 +
   The pressure change is divided into a number of steps and the effects
   are integrated numerically.
 
-The function returns `v2`, the velocity of the gas following wave processing.
+`v2`::
+  _Float_: +
+  the velocity of the gas following wave processing.
 
 
 For the cases where we know the velocity of the expanded gas,
 we can take steps in velocity to get to the expanded state.
 
-  v2 = flow.finite_wave_dv(state1, v1, characteristic, v2_target, state2,
-                           steps=100, t_min=200.0)
+[source,python]
+----
+# Python
+v2 = flow.finite_wave_dv(state1, v1, characteristic, v2_target, state2, steps=100, t_min=200.0)
+----
+
+[source,lua]
+----
+-- Lua
+state2, v2 = gasflow.finite_wave_dv(state1, v1, characteristic, v2_target, steps, t_min)
+----
 
 Input:
 
@@ -364,7 +457,8 @@ Input:
   A typical symptom of demanding too strong an expansion is a negative temperature
   for the expanded gas.
 
-The function returns `v2`, the velocity of the gas following wave processing.
+`v2`::
+  _Float_: the velocity of the gas following wave processing.
 
 
 == Riemann problem
@@ -377,9 +471,11 @@ The results of wave processing are two intermediate states (labelled `star`)
 that have a common pressure and velocity at the contact surface.
 Osher's approximate Riemann solver assumes that both processing waves are isentropic.
 
-  pstar, wstar, wL, wR, velX0 = flow.osher_riemann(stateL, stateR, velL, velR,
-                                                   stateLstar, stateRstar, stateX0)
-
+[source,python]
+----
+# Python
+pstar, wstar, wL, wR, velX0 = flow.osher_riemann(stateL, stateR, velL, velR, stateLstar, stateRstar, stateX0)
+----
 
 Input:
 
@@ -441,7 +537,11 @@ The function returns:
 
 The Lagrangian flow solver has a specialized Riemann solver at its core.
 
-  pstar, wstar = flow.lrivp(stateL, stateR, velL, velR)
+[source,python]
+----
+# Python
+pstar, wstar = flow.lrivp(stateL, stateR, velL, velR)
+----
 
 Input:
 
@@ -474,7 +574,11 @@ When the gas is up against a solid face of a piston,
 we have the contact-surface velocity as known and
 we need to compute just the gas pressure at the contact-surface.
 
-  pstar = flow.piston_at_left(stateR, velR, wstar)
+[source,python]
+----
+# Python
+pstar = flow.piston_at_left(stateR, velR, wstar)
+----
 
 Input:
 
@@ -493,7 +597,11 @@ Input:
 The function returns `pstar` (in Pa), the pressure at the contact surface.
 
 
-  pstar = flow.piston_at_right(stateL, velL, wstar)
+[source,python]
+----
+# Python
+pstar = flow.piston_at_right(stateL, velL, wstar)
+----
 
 Input:
 
@@ -522,9 +630,19 @@ The streamline deflection angle is `theta`.
 
 Given a shock angle, we can get the flow state after shock processing directly.
 
-  theta, v2 = flow.theta_oblique(state1, v1, beta, state2)
+[source,python]
+----
+# Python
+theta, v2 = flow.theta_oblique(state1, v1, beta, state2)
+----
 
-Input:
+[source,lua]
+----
+-- Lua
+state2, theta, v2 = gasflow.theta_oblique(state1, v1, beta)
+----
+
+Parameters:
 
 `state1`::
   _GasState_ object, no default. +
@@ -544,14 +662,27 @@ Input:
   Although you might expect `state2` as output, you need to construct it first
   and pass it into the function to have its values mutated.
 
-The function returns `theta` the stream deflection angle (in radians) and
-`v2`, the speed of the gas in that deflected stream.
+`theta`::
+  _Float_ the stream deflection angle (in radians)
+
+`v2`::
+  _Float_ the speed of the gas in that deflected stream.
 
 
 When you know the deflection angle and you want the shock angle,
 use the following function.
 
-  beta = flow.beta_oblique(state1, v1, theta)
+[source,python]
+----
+# Python
+beta = flow.beta_oblique(state1, v1, theta)
+----
+
+[source,lua]
+----
+-- Lua
+beta = gasflow.beta_oblique(state1, v1, theta)
+----
 
 Input:
 
@@ -584,7 +715,11 @@ Given the free-stream condition and a conical shock angle, the radial flow condi
 can be integrated from just after the shock to the supporting conical body.
 The axis of the supporting cone is aligned with the free-stream direction.
 
-  theta_c, v2_c = flow.theta_cone(state1, v1, beta, state_c)
+[source,python]
+----
+# Python
+theta_c, v2_c = flow.theta_cone(state1, v1, beta, state_c)
+----
 
 Input:
 
@@ -613,7 +748,11 @@ The function returns `theta_c` the stream deflection angle (in radians) at the c
 When you know the deflecting cone angle and you want the shock angle,
 use the following function.
 
-  beta = flow.beta_cone(state1, v1, theta)
+[source,python]
+----
+# Python
+beta = flow.beta_cone(state1, v1, theta)
+----
 
 Input:
 
