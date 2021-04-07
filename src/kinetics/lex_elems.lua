@@ -43,4 +43,7 @@ FArrow = C(P("=>")) * Space
 FRArrow = C(P("<=>") + P("=")) * Space
 Equals = C(P("=")) * Space
 Plus = P("+") * Space
+AllColliders = C(P("*all"))
+MolcColliders = C(P("*molcs"))
+DoubleTilde = Space * P("~~") * Space
 
