@@ -43,11 +43,26 @@ import fluidblockio_old;
 import bc;
 import grid_motion;
 import grid_motion_udf;
+import geom.luawrap.luasgrid;
+import luaflowstate;
+import fluidblockio_new;
 
 // EPSILON parameter for numerical differentiation of flux jacobian
 // Value used based on Vanden and Orkwis (1996), AIAA J. 34:6 pp. 1125-1129
 immutable double EPSILON = 1.0e-8;
 immutable double ESSENTIALLY_ZERO = 1.0e-15;
+
+pragma(inline, true)
+@nogc
+size_t[3] cell_index_to_logical_coordinates(size_t gid, size_t nic, size_t njc)
+{
+    size_t[3] ijk;
+    size_t slabDim = njc * nic;
+    size_t k = gid / slabDim;
+    size_t j = (gid - k*slabDim) / nic;
+    size_t i = gid - k*slabDim - j*nic;
+    return [i, j, k];
+}
 
 class SFluidBlock: FluidBlock {
 public:
@@ -101,6 +116,126 @@ public:
         omegaz = getJSONdouble(json_data, "omegaz", 0.0);
         may_be_turbulent = getJSONbool(json_data, "may_be_turbulent", true);
     } // end constructor from json
+
+    this(lua_State* L)
+    // generate a new block and fill it with information from a lua state
+    {
+        auto grid = checkStructuredGrid(L, 2);
+        double omegaz = luaL_checknumber(L, 5);
+
+        nic = grid.niv - 1;
+        njc = grid.njv - 1;
+        nkc = grid.nkv - 1;
+        if (GlobalConfig.dimensions == 2) nkc = 1;
+
+        const size_t ncells = nic*njc*nkc;
+
+        super(-1, "nil");
+        grid_type = Grid_t.structured_grid;
+        ncells_expected = ncells;
+        n_ghost_cell_layers = 0;
+
+
+        // do we need a lighter weight config instantiation process?
+        // where could we get a pre-built instance from, GlobalConfig?
+        myConfig = new LocalConfig(-1);
+        myConfig.init_gas_model_bits(); 
+
+        cells.length = ncells; // not defined yet
+
+        bool lua_fs = false;
+        FlowState myfs;
+
+        // check where our flowstate is coming from
+        if ( isObjType(L, 3, "_FlowState") ) {
+            myfs = checkFlowState(L, 3);
+            lua_settop(L, 0); // clear stack
+        } else if (lua_isfunction(L, 3)) {
+            lua_fs = true;
+        }
+
+        Vector3 pos;
+        number volume, iLen, jLen, kLen;
+        size_t[3] ijk;
+        size_t i, j, k;
+
+        foreach(cell_idx, ref cell; cells) {
+
+            // get the cell index in terms of structured grid indices
+            ijk = cell_index_to_logical_coordinates(cell_idx, nic, njc);
+            i = ijk[0]; j = ijk[1]; k = ijk[2];
+
+            // get the cell data
+            Vector3 p000 = *grid[i,j,k];
+            Vector3 p100 = *grid[i+1,j,k];
+            Vector3 p110 = *grid[i+1,j+1,k];
+            Vector3 p010 = *grid[i,j+1,k];
+            
+            if (GlobalConfig.dimensions == 2) {
+                number xyplane_area;
+                xyplane_quad_cell_properties(p000, p100, p110, p010, pos, xyplane_area, iLen, jLen, kLen);
+                volume = xyplane_area * ((GlobalConfig.axisymmetric) ? pos.y : to!number(1.0) );
+            } else if (GlobalConfig.dimensions == 3) {
+                Vector3 p001 = *grid[i,j,k+1];
+                Vector3 p101 = *grid[i+1,j,k+1];
+                Vector3 p111 = *grid[i+1,j+1,k+1];
+                Vector3 p011 = *grid[i,j+1,k+1];
+                hex_cell_properties(p000, p100, p110, p010, p001, p101, p111, p011, pos, volume, iLen, jLen, kLen);
+            } else {
+                throw new Exception("GlobalConfig.dimensions not 2 or 3.");
+            }
+
+            if (omegaz != 0.0) { into_rotating_frame(myfs.vel, pos, omegaz); }
+
+            if (lua_fs) {
+
+                // Now grab flow state via Lua function call.
+                // If the block is in a rotating frame with omegaz != 0.0,
+                // we presume that the Lua function will provide the velocity
+                // components relative to the rotating frame.
+                lua_pushvalue(L, 3);
+                lua_pushnumber(L, pos.x);
+                lua_pushnumber(L, pos.y);
+                lua_pushnumber(L, pos.z);
+                if (lua_pcall(L, 3, 1, 0) != 0) {
+                    string errMsg = "Error in Lua function call for setting FlowState\n";
+                    errMsg ~= "as a function of position (x, y, z).\n";
+                    luaL_error(L, errMsg.toStringz);
+                }
+                if (lua_istable(L, -1)) {
+                    myfs = makeFlowStateFromTable(L, lua_gettop(L));
+                } else {
+                    myfs = checkFlowState(L, -1);
+                }
+                if (!myfs) {
+                    string errMsg = "Error in from Lua function call for setting FlowState\n";
+                    errMsg ~= "as a function of position (x, y, z).\n";
+                    errMsg ~= "The returned object is not a proper _FlowState object or table.";
+                    luaL_error(L, errMsg.toStringz);
+                }
+
+            }
+
+            // make the cell
+            cell = new FVCell(myConfig, pos, myfs, volume, to!int(cell_idx));
+
+        }
+
+        block_io = get_fluid_block_io(this);
+
+        if (lua_fs) lua_settop(L, 0); // clear stack
+    }
+
+    override JSONValue get_header()
+    // return information in JSON format that describes this block
+    {
+        JSONValue header = ["structured": true];
+        header["nic"] = to!int(nic);
+        header["njc"] = to!int(njc);
+        header["nkc"] = to!int(nkc);
+
+        return header;
+    }
 
     override void init_workspace()
     {
@@ -204,12 +339,7 @@ public:
     @nogc
     size_t[3] to_ijk_indices_for_cell(size_t gid) const
     {
-        size_t[3] ijk;
-        size_t slabDim = njc * nic;
-        size_t k = gid / slabDim;
-        size_t j = (gid - k*slabDim) / nic;
-        size_t i = gid - k*slabDim - j*nic;
-        return [i, j, k];
+        return cell_index_to_logical_coordinates(gid, nic, njc);
     }
 
     pragma(inline, true)
@@ -2103,6 +2233,7 @@ public:
     {
         foreach(ref double cc; corner_coords) { cc = double.infinity; }
     }
+
 } // end class SFluidBlock
 
 

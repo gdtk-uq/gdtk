@@ -21,6 +21,13 @@ string make_path_name(string mytype)(int tindx)
     return writer.data;
 }
 
+string make_path_name(string mytype, int tindx)
+{
+    auto writer = appender!string();
+    formattedWrite(writer, "%s/t%04d", mytype, tindx);
+    return writer.data;
+}
+
 string make_file_name(string mytype)(string base_file_name, int blk_id, int tindx, string myext)
 // Build a pathname for "grid" and "flow" files which are stored in
 // subdirectories and labelled with the block id and time index counters.
@@ -28,6 +35,17 @@ string make_file_name(string mytype)(string base_file_name, int blk_id, int tind
     auto writer = appender!string();
     formattedWrite(writer, "%s/t%04d/%s.%s.b%04d.t%04d.%s",
                    mytype, tindx, base_file_name,
+                   mytype, blk_id, tindx, myext);
+    return writer.data;
+}
+
+string make_file_name(string folder, string mytype, string base_file_name, int blk_id, int tindx, string myext)
+// Build a pathname for "grid" and "flow" files which are stored in
+// subdirectories and labelled with the block id and time index counters.
+{
+    auto writer = appender!string();
+    formattedWrite(writer, "%s/%s/t%04d/%s.%s.b%04d.t%04d.%s",
+                   folder, mytype, tindx, base_file_name,
                    mytype, blk_id, tindx, myext);
     return writer.data;
 }

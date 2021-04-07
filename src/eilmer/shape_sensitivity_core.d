@@ -53,6 +53,7 @@ import simcore_exchange;
 import fluxcalc;
 import user_defined_source_terms;
 import flowgradients;
+import fluidblockio;
 
 shared enum ghost_cell_start_id = 1_000_000_000;
 shared immutable double ESSENTIALLY_ZERO = 1.0e-50;

@@ -7,6 +7,7 @@
  *           2017-01-17 : Added globalFluidBlocks for the MPI-parallel.
  *           2020-02-11 : Removed globalFluidBlocks & globalSolidBlocks;
  *                        replaced with globalBlocks (Kyle A. Damm).
+ *           2021-03-30 : Added globalFluidBlockIO
  */
 
 module globaldata;
@@ -19,6 +20,7 @@ import fluidblockarray;
 import ssolidblock;
 import block;
 import loads;
+import fluidblockio_new;
 
 // State data for simulation.
 // Needs to be seen by all of the coordination functions in simcore.d.
@@ -93,3 +95,5 @@ __gshared static size_t[string] runTimeLoadsByName;
 // Here is the storage for that coordination data.
 __gshared static FBArray[] fluidBlockArrays;
 
+// A collection of IO objects that dictate what is written in and out
+__gshared static FluidBlockIO[] globalFluidBlockIO;

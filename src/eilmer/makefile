@@ -99,11 +99,12 @@ EILMER_CORE_FILES := simcore.d simcore_gasdynamic_step.d simcore_solid_step.d \
 	conservedquantities.d flowstate.d \
 	globalconfig.d globaldata.d \
 	block.d fluidblock.d sfluidblock.d ufluidblock.d \
-	fluidblockarray.d fluidblockio_old.d \
+	fluidblockarray.d fluidblockio_old.d fluidblockio_new.d \
 	gas_solid_interface.d \
 	grid_motion.d grid_motion_udf.d grid_motion_shock_fitting.d \
 	history.d loads.d special_block_init.d \
-	mass_diffusion.d shockdetectors.d turbulence.d jacobian.d
+	mass_diffusion.d shockdetectors.d turbulence.d jacobian.d \
+	fluidblockio.d celldata.d
 
 EILMER_LUA_FILES := luaglobalconfig.d lua_helper.d \
 	luaflowsolution.d luaflowstate.d user_defined_source_terms.d

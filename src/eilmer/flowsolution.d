@@ -42,6 +42,7 @@ import json_helper;
 import flowstate;
 import vtk_writer;
 import fluidblockio_old;
+import fluidblockio;
 
 import util.lua;
 import geom.luawrap;
@@ -66,7 +67,7 @@ public:
     BlockFlow[] flowBlocks;
     Grid[] gridBlocks;
 
-    this(string jobName, string dir, int tindx, size_t nBlocks, int gindx=-1)
+    this(string jobName, string dir, int tindx, size_t nBlocks, int gindx=-1, string tag="field")
     {
         // Default action is to set gindx to tindx. The default action
         // is indicated by gindx = -1
@@ -90,9 +91,18 @@ public:
             throw new Error(text("Failed to parse JSON from config file: ", configFileName));
         }
         grid_format = jsonData["grid_format"].str;
-        flow_format = jsonData["flow_format"].str;
         string gridFileExt = "gz"; if (grid_format == "rawbinary") { gridFileExt = "bin"; }
-        string flowFileExt = "gz"; if (flow_format == "rawbinary") { flowFileExt = "bin"; }
+
+        flow_format = jsonData["flow_format"].str;
+        string flowFileExt = "gz"; 
+        if (flow_format == "rawbinary") { 
+            flowFileExt = "bin"; 
+        } else if (flow_format == "eilmer4text" || flow_format == "eilmer4binary") {
+            flowFileExt = "zip";
+        }
+
+        bool new_flow_format =  jsonData["new_flow_format"].boolean;
+
         grid_motion = grid_motion_from_name(jsonData["grid_motion"].str);
         // -- end initialising JSONData
         //
@@ -126,7 +136,12 @@ public:
                 gridBlocks ~= new UnstructuredGrid(fileName, grid_format);
             }
             gridBlocks[$-1].sort_cells_into_bins();
-            fileName = make_file_name!"flow"(jobName, to!int(ib), tindx, flowFileExt);
+            if (new_flow_format) {
+                fileName = make_file_name("CellData",tag, jobName, to!int(ib), tindx, flowFileExt);
+            } else {
+                fileName = make_file_name!"flow"(jobName, to!int(ib), tindx, flowFileExt);
+            }
+            
             fileName = dir ~ "/" ~ fileName;
             flowBlocks ~= new BlockFlow(fileName, ib, jsonData, gridType, flow_format);
         } // end foreach ib
@@ -156,9 +171,9 @@ public:
         return str;
     }
 
-    void add_aux_variables(string[] addVarsList)
+    void add_aux_variables(string[] addVarsList, string tag="field")
     {
-        foreach (blk; flowBlocks) blk.add_aux_variables(addVarsList);
+        foreach (blk; flowBlocks) blk.add_aux_variables(addVarsList, tag);
     }
 
     size_t[] find_enclosing_cell(ref const(Vector3) p)
@@ -490,9 +505,10 @@ public:
         return values_as_string(single_index(i,j,k));
     }
 
-    void add_aux_variables(string[] addVarsList)
+    void add_aux_variables(string[] addVarsList, string tag="field")
     // Adds variables to the data for each cell.
     {
+        if (tag != "field") return;
         GasModel gmodel = GlobalConfig.gmodel_master;
         GasState Q = new GasState(gmodel);
         // Gather massf species names in a list for later use as keys.

@@ -88,6 +88,7 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_string_field("base_file_name", "base_file_name"));
     mixin(get_string_field("grid_format", "grid_format"));
     mixin(get_string_field("flow_format", "flow_format"));
+    mixin(get_bool_field("new_flow_format", "new_flow_format"));
     mixin(get_string_field("title", "title"));
     mixin(get_string_field("gas_model_file", "gas_model_file"));
     mixin(get_string_field("udf_supervisor_file", "udf_supervisor_file"));
@@ -257,6 +258,8 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_bool_field("do_temporal_DFT", "do_temporal_DFT"));
     mixin(get_int_field("DFT_n_modes", "DFT_n_modes"));
     mixin(get_int_field("DFT_step_interval", "DFT_step_interval"));
+    //
+    mixin(get_bool_field("do_flow_average", "do_flow_average"));
 
     // Look for unused keys. These are unsupported keys that the user
     // has supplied. Give a warning.
@@ -284,6 +287,7 @@ extern(C) int configGet(lua_State* L)
     case "base_file_name": lua_pushstring(L, GlobalConfig.base_file_name.toStringz); break;
     case "grid_format": lua_pushstring(L, GlobalConfig.grid_format.toStringz); break;
     case "flow_format": lua_pushstring(L, GlobalConfig.flow_format.toStringz); break;
+    case "new_flow_format": lua_pushboolean(L, GlobalConfig.new_flow_format); break;
     case "title": lua_pushstring(L, GlobalConfig.title.toStringz); break;
     case "gas_model_file": lua_pushstring(L, GlobalConfig.gas_model_file.toStringz); break;
     case "udf_supervisor_file": lua_pushstring(L, toStringz(GlobalConfig.udf_supervisor_file)); break;
@@ -451,6 +455,8 @@ extern(C) int configGet(lua_State* L)
     case "do_temporal_DFT": lua_pushboolean(L, GlobalConfig.do_temporal_DFT); break;
     case "DFT_n_modes": lua_pushnumber(L, GlobalConfig.DFT_n_modes); break;
     case "DFT_step_interval": lua_pushnumber(L, GlobalConfig.DFT_step_interval); break;
+        //
+    case "do_flow_average": lua_pushboolean(L, GlobalConfig.do_flow_average); break;
         //
     default: lua_pushnil(L);
     }

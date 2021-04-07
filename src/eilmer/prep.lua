@@ -142,8 +142,14 @@ function build_grid_and_flow_files(job)
          fluidBlockIdsForPrep[i] = fluidBlocks[i].id
       end
    end
+
+   if (config.new_flow_format) then 
+      os.execute("mkdir -p CellData/field/t0000") -- this violoates "Don't Repeat Yourself" (CellData/field)
+   else
+      os.execute("mkdir -p flow/t0000")
+   end
+
    os.execute("mkdir -p grid/t0000")
-   os.execute("mkdir -p flow/t0000")
    if #solidBlocks >= 1 then
       os.execute("mkdir -p solid-grid/t0000")
       os.execute("mkdir -p solid/t0000")
@@ -162,13 +168,25 @@ function build_grid_and_flow_files(job)
       else
 	 error(string.format("Oops, invalid grid_format: %s", config.grid_format))
       end
-      local fileName = "flow/t0000/" .. job .. string.format(".flow.b%04d.t0000", id)
-      if (config.flow_format == "gziptext") then
-	 fileName = fileName .. ".gz"
-      elseif (config.flow_format == "rawbinary") then
-	 fileName = fileName .. ".bin"
+
+      local fileName;
+
+      if (config.new_flow_format) then 
+         fileName = "CellData/field/t0000/" .. job .. string.format(".field.b%04d.t0000", id)
+         if ((config.flow_format == "eilmer4text") or (config.flow_format == "eilmer4binary")) then
+            fileName = fileName .. ".zip"
+         else
+            error(string.format("Oops, new flow format selected, %s is not valid", config.flow_format))
+         end
       else
-	 error(string.format("Oops, invalid flow_format: %s", config.flow_format))
+         fileName = "flow/t0000/" .. job .. string.format(".flow.b%04d.t0000", id)
+         if (config.flow_format == "gziptext") then
+            fileName = fileName .. ".gz"
+         elseif (config.flow_format == "rawbinary") then
+            fileName = fileName .. ".bin"
+         else
+            error(string.format("Oops, invalid flow_format: %s", config.flow_format))
+         end
       end
       local ifs = fluidBlocks[idx].initialState
       if type(ifs) == "table" and ifs.myType == "FlowState" then

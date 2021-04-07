@@ -20,7 +20,7 @@ puts "e4compact"
 puts "Compact the many solution files for a job into a few archive files."
 
 job_name = ""
-target_dirs = ["grid", "flow", "solid", "loads", "hist", "plot"]
+target_dirs = ["grid", "flow", "solid", "loads", "hist", "plot", "CellData"]
 $verbose = false
 $force = false
 $restore = false

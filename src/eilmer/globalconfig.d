@@ -358,6 +358,7 @@ final class GlobalConfig {
     shared static string base_file_name = "job"; // Change this to suit at run time.
     shared static string grid_format = "gziptext"; // alternative is "rawbinary"
     shared static string flow_format = "gziptext";
+    shared static bool new_flow_format = false; // enable/disable new flow format (to be deprecated)
     // Depending on the format of the contained data, grid and solution files will have
     // a particular file extension.
     shared static string gridFileExt = "gz";
@@ -748,6 +749,8 @@ final class GlobalConfig {
     shared static int DFT_n_modes = 5;
     shared static int DFT_step_interval = 10;
 
+    shared static bool do_flow_average = false;
+
     // Parameters related to the gpu chemistry mode
     version (gpu_chem) {
         static GPUChem gpuChem;
@@ -779,6 +782,7 @@ public:
     int universe_blk_id;
     string grid_format;
     string flow_format;
+    bool new_flow_format;
     int dimensions;
     bool axisymmetric;
     GasdynamicUpdate gasdynamic_update_scheme;
@@ -905,6 +909,8 @@ public:
     int DFT_n_modes;
     int DFT_step_interval;
 
+    bool do_flow_average;
+
     version (nk_accelerator) {
         SteadyStateSolverOptions sssOptions;
     }
@@ -921,6 +927,7 @@ public:
         this.universe_blk_id = universe_blk_id;
         grid_format = GlobalConfig.grid_format;
         flow_format = GlobalConfig.flow_format;
+        new_flow_format = GlobalConfig.new_flow_format;
         dimensions = GlobalConfig.dimensions;
         axisymmetric = GlobalConfig.axisymmetric;
         gasdynamic_update_scheme = GlobalConfig.gasdynamic_update_scheme;
@@ -1042,6 +1049,8 @@ public:
         DFT_n_modes = GlobalConfig.DFT_n_modes;
         DFT_step_interval = GlobalConfig.DFT_step_interval;
         //
+        do_flow_average = GlobalConfig.do_flow_average;
+        //
         version (nk_accelerator) {
             sssOptions = GlobalConfig.sssOptions;
         }
@@ -1151,6 +1160,7 @@ JSONValue read_config_file()
     mixin(update_double("start_time", "start_time"));
     mixin(update_string("grid_format", "grid_format"));
     mixin(update_string("flow_format", "flow_format"));
+    mixin(update_bool("new_flow_format", "new_flow_format"));
     mixin(update_string("gas_model_file", "gas_model_file"));
     auto gm = init_gas_model(GlobalConfig.gas_model_file);
     // The following checks on gas model will need to be maintained
@@ -1196,6 +1206,7 @@ JSONValue read_config_file()
     if (GlobalConfig.verbosity_level > 1) {
         writeln("  grid_format: ", to!string(GlobalConfig.grid_format));
         writeln("  flow_format: ", to!string(GlobalConfig.flow_format));
+        writeln("  new_flow_format: ", to!string(GlobalConfig.new_flow_format));
         writeln("  title: ", to!string(GlobalConfig.title));
         writeln("  gas_model_file: ", to!string(GlobalConfig.gas_model_file));
         writeln("  udf_supervisor_file: ", to!string(GlobalConfig.udf_supervisor_file));
@@ -1484,6 +1495,7 @@ JSONValue read_config_file()
     mixin(update_bool("do_temporal_DFT", "do_temporal_DFT"));
     mixin(update_int("DFT_n_modes", "DFT_n_modes"));
     mixin(update_int("DFT_step_interval", "DFT_step_interval"));
+    mixin(update_bool("do_flow_average", "do_flow_average"));
     if (GlobalConfig.verbosity_level > 1) {
         writeln("  diffuse_wall_bcs_on_init: ", GlobalConfig.diffuseWallBCsOnInit);
         writeln("  number_init_passes: ", GlobalConfig.nInitPasses);
@@ -1502,6 +1514,7 @@ JSONValue read_config_file()
         writeln("  do_temporal_DFT: ", GlobalConfig.do_temporal_DFT);
         writeln("  DFT_n_modes: ", GlobalConfig.DFT_n_modes);
         writeln("  DFT_step_interval: ", GlobalConfig.DFT_step_interval);
+        writeln("  do_flow_average: ", GlobalConfig.do_flow_average);
     }
 
     configCheckPoint4();
