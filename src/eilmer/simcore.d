@@ -1937,64 +1937,55 @@ void determine_time_step_size()
             // Note 'i' is not necessarily the block id but
             // that is not important here, just need a unique spot to poke into local_dt_allow.
             if (myblk.active) {
-                local_dt_allow[i] = myblk.determine_time_step_size(SimState.dt_global,
-                                                                   (SimState.step > 0))[0];
-                local_cfl_max[i] = myblk.determine_time_step_size(SimState.dt_global,
-                                                                   (SimState.step > 0))[1];
-                local_dt_allow_parab[i] = myblk.determine_time_step_size(SimState.dt_global,
-                                                                   (SimState.step > 0))[2];
+                double[3] results = myblk.determine_time_step_size(SimState.dt_global, (SimState.step > 0));
+                local_dt_allow[i] = results[0];
+                local_cfl_max[i] = results[1];
+                local_dt_allow_parab[i] = results[2];
             }
         }
         // Second, reduce this estimate across all local blocks.
-	if (GlobalConfig.with_super_time_stepping) {
-	    SimState.dt_allow = double.max; // to be sure it is replaced.
-	    SimState.cfl_max = 0.0; // to be sure it is replaced.
-	} else {
-	    SimState.dt_allow = double.max; //0.0; // to be sure it is replaced.
-	    SimState.cfl_max = 0.0; // to be sure it is replaced.
-	}
+        // The starting values are sure to be replaced.
+        SimState.dt_allow = double.max;
 	SimState.dt_allow_parab = double.max;
+        SimState.cfl_max = 0.0;
         foreach (i, myblk; localFluidBlocks) { // serial loop
             if (myblk.active) {
-		if (GlobalConfig.with_super_time_stepping) {
-		    SimState.dt_allow = min(SimState.dt_allow, local_dt_allow[i]);
-		    SimState.dt_allow_parab = min(SimState.dt_allow_parab, local_dt_allow_parab[i]);
-		}
-		else SimState.dt_allow = min(SimState.dt_allow, local_dt_allow[i]);
-	    }
-            if (myblk.active) { SimState.cfl_max = max(SimState.cfl_max, local_cfl_max[i]); }
+                SimState.dt_allow = min(SimState.dt_allow, local_dt_allow[i]);
+                SimState.dt_allow_parab = min(SimState.dt_allow_parab, local_dt_allow_parab[i]);
+                SimState.cfl_max = max(SimState.cfl_max, local_cfl_max[i]);
+            }
         }
         version(mpi_parallel) {
             double my_dt_allow = SimState.dt_allow;
             double my_dt_allow_parab = SimState.dt_allow_parab;
             double my_cfl_max = SimState.cfl_max;
             MPI_Allreduce(MPI_IN_PLACE, &my_dt_allow, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-	    MPI_Allreduce(MPI_IN_PLACE, &my_dt_allow_parab, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+            MPI_Allreduce(MPI_IN_PLACE, &my_dt_allow_parab, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
             MPI_Allreduce(MPI_IN_PLACE, &my_cfl_max, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
             SimState.dt_allow = my_dt_allow;
             SimState.dt_allow_parab = my_dt_allow_parab;
             SimState.cfl_max = my_cfl_max;
         }
-	if (GlobalConfig.with_super_time_stepping) {
+        if (GlobalConfig.with_super_time_stepping) {
             if (SimState.step == 0) {
                 // When starting out, we may override the computed value.
                 // This might be handy for situations where the computed estimate
                 // is likely to be not small enough for numerical stability.
                 SimState.dt_allow = fmin(GlobalConfig.dt_init, SimState.dt_allow);
-		SimState.dt_allow_parab = fmin(GlobalConfig.dt_init, SimState.dt_allow_parab);
+                SimState.dt_allow_parab = fmin(GlobalConfig.dt_init, SimState.dt_allow_parab);
             }
             // Now, change the actual time step, as needed.
             if (SimState.dt_allow <= SimState.dt_global) {
                 // If we need to reduce the time step, do it immediately.
                 SimState.dt_global = SimState.dt_allow;
                 SimState.dt_global_parab = SimState.dt_allow_parab;
-	    } else {
+            } else {
                 // Make the transitions to larger time steps gentle.
                 SimState.dt_global = min(SimState.dt_global*1.5, SimState.dt_allow);
                 SimState.dt_global_parab = min(SimState.dt_global_parab*1.5, SimState.dt_allow_parab);
-		// The user may supply, explicitly, a maximum time-step size.
+                // The user may supply, explicitly, a maximum time-step size.
                 SimState.dt_global = min(SimState.dt_global, GlobalConfig.dt_max);
-	    }
+            }
         } else if (GlobalConfig.with_local_time_stepping) {
             SimState.dt_global = SimState.dt_allow;
         } else { // do some global time-stepping checks

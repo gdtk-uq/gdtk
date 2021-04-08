@@ -861,58 +861,61 @@ public:
         }
         // when using implicit residual smoothing we should be able to achieve a higher stable CFL
         // so let's relax the cfl_allow
-        if (myConfig.residual_smoothing &&
-            myConfig.with_local_time_stepping &&
-            GlobalConfig.residual_smoothing_type == ResidualSmoothingType.implicit) cfl_allow *= 10.0;
+        if (myConfig.residual_smoothing && myConfig.with_local_time_stepping &&
+            GlobalConfig.residual_smoothing_type == ResidualSmoothingType.implicit) {
+            cfl_allow *= 10.0;
+        }
         // for local time-stepping we limit the larger time-steps by a factor of the smallest timestep
         int local_time_stepping_limit_factor = myConfig.local_time_stepping_limit_factor;
         bool first = true;
         foreach(FVCell cell; cells) {
             signal = cell.signal_frequency();
 	    if (myConfig.with_super_time_stepping) {
-		signal_hyp = cell.signal_hyp.re;
-		signal_parab = cell.signal_parab.re;
-		if (first) {
-		    dt_allow_hyp = cfl_value / signal_hyp;
-		    dt_allow_parab = cfl_value / signal_parab;
-		    first = false;
-		} else {
+                signal_hyp = cell.signal_hyp.re;
+                signal_parab = cell.signal_parab.re;
+                if (first) {
+                    dt_allow_hyp = cfl_value / signal_hyp;
+                    dt_allow_parab = cfl_value / signal_parab;
+                    first = false;
+                } else {
                     dt_allow_hyp = fmin(dt_allow_hyp, cfl_value / signal_hyp);
-		    dt_allow_parab = fmin(dt_allow_parab, cfl_value / signal_parab);
-		}
-		dt_allow = fmin(dt_allow_hyp, GlobalConfig.dt_max); // set the allowable time-step based on hyperbolic time-step
+                    dt_allow_parab = fmin(dt_allow_parab, cfl_value / signal_parab);
+                }
+                // Set the allowable time-step based on hyperbolic time-step.
+                dt_allow = fmin(dt_allow_hyp, GlobalConfig.dt_max);
             } else {
-		// no STS
-		dt_allow_hyp = 0;
-		dt_allow_parab = 0;
-		//
-		cfl_local = dt_current * signal; // Current (Local) CFL number
-		dt_local = cfl_value / signal; // Recommend a time step size.
-		cell.dt_local = fmin(dt_local, dt_current*local_time_stepping_limit_factor); // set local time-step in cell
-		cell.dt_local = fmin(cell.dt_local, GlobalConfig.dt_max); // Limit the largest local time-step to a set input value
-		if (first) {
-		    cfl_min = cfl_local;
-		    cfl_max = cfl_local;
-		    dt_allow = dt_local;
-		    first = false;
-		} else {
-		    cfl_min = fmin(cfl_min, cfl_local);
-		    cfl_max = fmax(cfl_max, cfl_local);
-		    dt_allow = fmin(dt_allow, dt_local);
-		}
-	    }
+                // no STS
+                dt_allow_hyp = 0;
+                dt_allow_parab = 0;
+                // Compute current (Local) CFL number and recommend a time step.
+                cfl_local = dt_current * signal;
+                dt_local = cfl_value / signal;
+                // Set local time-step in cell.
+                cell.dt_local = fmin(dt_local, dt_current*local_time_stepping_limit_factor);
+                // Limit the largest local time-step to a set input value.
+                cell.dt_local = fmin(cell.dt_local, GlobalConfig.dt_max);
+                if (first) {
+                    cfl_min = cfl_local;
+                    cfl_max = cfl_local;
+                    dt_allow = dt_local;
+                    first = false;
+                } else {
+                    cfl_min = fmin(cfl_min, cfl_local);
+                    cfl_max = fmax(cfl_max, cfl_local);
+                    dt_allow = fmin(dt_allow, dt_local);
+                }
+            }
         } // foreach cell
         if (myConfig.with_super_time_stepping == false && check_cfl && (cfl_max < 0.0 || cfl_max > cfl_allow)) {
-            string msg = "Bad cfl number encountered";
-            debug { msg ~= text(" cfl_max=", cfl_max, " for FluidBlock ", id); }
-            debug { writeln(msg); } // Write out warning message when running in debug mode
-            cfl_max = cfl_adjust*cfl_allow;// If cfl_max exceeds cfl_allow, simply reduce the
-                                    // cfl_max to cfl_adjust*cfl_allow. A value of 0.5 seems
-                                    // to work robustly. Values to 0.7 also work, beyond this
-                                    // and code begins to crash due to numerical instability.
-                                    // Results in auto-limitation of the time step/cfl
-            dt_allow = cfl_max/signal; // Reduce dt_allow according to new rescaled cfl_max
-            //throw new FlowSolverException(msg); // Previous code threw an error and halted
+            debug { writefln("Bad cfl number encountered cfl_max=", cfl_max, " for FluidBlock ", id); }
+            // If cfl_max exceeds cfl_allow, simply reduce the
+            // cfl_max to cfl_adjust*cfl_allow. A value of 0.5 seems
+            // to work robustly. Values to 0.7 also work, beyond this
+            // and code begins to crash due to numerical instability.
+            // Results in auto-limitation of the time step/cfl
+            cfl_max = cfl_adjust*cfl_allow;
+            // Reduce dt_allow according to new rescaled cfl_max
+            dt_allow = cfl_max/signal;
         }
         return [dt_allow, cfl_max, dt_allow_parab];
     } // end determine_time_step_size()
