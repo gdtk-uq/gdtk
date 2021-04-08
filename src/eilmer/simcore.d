@@ -2952,18 +2952,17 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             }
             // We've put this detector step here because it needs the ghost-cell data
             // to be current, as it should be just after a call to apply_convective_bc().
-            if ((GlobalConfig.do_shock_detect) && ((!GlobalConfig.frozen_shock_detector) ||
-                                                   (GlobalConfig.shock_detector_freeze_step > SimState.step))) detect_shocks(gtl, ftl);
-
+            if ((GlobalConfig.do_shock_detect) &&
+                ((!GlobalConfig.frozen_shock_detector) || (GlobalConfig.shock_detector_freeze_step > SimState.step))) {
+                detect_shocks(gtl, ftl);
+            }
             foreach (blk; parallel(localFluidBlocksBySize,1)) {
                 if (blk.active) { blk.convective_flux_phase0(allow_high_order_interpolation, gtl); }
             }
-
             // for unstructured blocks we need to transfer the convective gradients before the flux calc
             if (allow_high_order_interpolation && (GlobalConfig.interpolation_order > 1)) {
                 exchange_ghost_cell_boundary_convective_gradient_data(SimState.time, gtl, ftl);
             }
-
             foreach (blk; parallel(localFluidBlocksBySize,1)) {
                 if (blk.active) { blk.convective_flux_phase1(allow_high_order_interpolation, gtl); }
             }
@@ -3087,7 +3086,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                 MPI_Allreduce(MPI_IN_PLACE, &flagTooManyBadCells, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
             }
             if (flagTooManyBadCells > 0) {
-                throw new FlowSolverException("Too many bad cells; go home.");
+                throw new FlowSolverException("Too many bad cells following first-stage gasdynamic update.");
             }
             //
             if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.tight) {
@@ -3226,8 +3225,9 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                     exchange_ghost_cell_boundary_viscous_gradient_data(SimState.time, gtl, ftl);
                     foreach (blk; parallel(localFluidBlocksBySize,1)) {
                         if (blk.active) {
-                            // we need to average cell-centered spatial (/viscous) gradients to get approximations of the gradients
-                            // at the cell interfaces before the viscous flux calculation.
+                            // we need to average cell-centered spatial (/viscous) gradients
+                            // to get approximations of the gradients at the cell interfaces
+                            // before the viscous flux calculation.
                             if (blk.myConfig.spatial_deriv_locn == SpatialDerivLocn.cells) {
                                 foreach(f; blk.faces) {
                                     f.average_cell_deriv_values(0);
@@ -3309,7 +3309,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                     MPI_Allreduce(MPI_IN_PLACE, &flagTooManyBadCells, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
                 }
                 if (flagTooManyBadCells > 0) {
-                    throw new FlowSolverException("Too many bad cells; go home.");
+                    throw new FlowSolverException("Too many bad cells following second-stage gasdynamic update.");
                 }
                 //
                 if ( GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.tight ) {
@@ -3449,8 +3449,9 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                     exchange_ghost_cell_boundary_viscous_gradient_data(SimState.time, gtl, ftl);
                     foreach (blk; parallel(localFluidBlocksBySize,1)) {
                         if (blk.active) {
-                            // we need to average cell-centered spatial (/viscous) gradients to get approximations of the gradients
-                            // at the cell interfaces before the viscous flux calculation.
+                            // we need to average cell-centered spatial (/viscous) gradients
+                            // to get approximations of the gradients at the cell interfaces
+                            // before the viscous flux calculation.
                             if (blk.myConfig.spatial_deriv_locn == SpatialDerivLocn.cells) {
                                 foreach(f; blk.faces) {
                                     f.average_cell_deriv_values(0);
@@ -3533,7 +3534,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                     MPI_Allreduce(MPI_IN_PLACE, &flagTooManyBadCells, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
                 }
                 if (flagTooManyBadCells > 0) {
-                    throw new FlowSolverException("Too many bad cells; go home.");
+                    throw new FlowSolverException("Too many bad cells following third-stage gasdynamic update.");
                 }
                 //
                 if ( GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.tight ) {
@@ -3606,7 +3607,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         MPI_Allreduce(MPI_IN_PLACE, &step_failed, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
     }
     if (step_failed) {
-        throw new FlowSolverException("Explicit update failed after 3 attempts.");
+        throw new FlowSolverException("Explicit update failed after 3 attempts; giving up.");
     }
     //
     // Get the end conserved data into U[0] for next step.
