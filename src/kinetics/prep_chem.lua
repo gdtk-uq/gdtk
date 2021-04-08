@@ -292,7 +292,7 @@ function main()
    end
 
    if ( #arg > 4 ) then
-      print("Two many arguments.")
+      print("Too many arguments.")
       print("Exiting program without doing anything.")
       printHelp()
    end
