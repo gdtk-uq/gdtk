@@ -3,9 +3,14 @@
 -- Date: 2021-04-08
 --
 
+require 'mechanism'
 
 userMechs = {}
 mechanisms = {}
+
+local validateMechanism = mechanism.validateMechanism
+local addUserMechToTable = mechanism.addUserMechToTable
+local mechanismToLuaStr = mechanism.mechanismToLuaStr
 
 --%--------------------------------------------
 -- Function available to user in input file.
@@ -13,27 +18,27 @@ mechanisms = {}
 
 function Mechanism(t)
    -- Gather mechanisms, but don't yet validate
-   userMechs[#userMechs+1]
+   userMechs[#userMechs+1] = t
 end
 
 -----------------------------------------------
 
 function buildVerboseLuaFile(fName)
-   f = asser(io.open(fName, 'w'))
+   f = assert(io.open(fName, 'w'))
    f:write("species = {")
    for i, sp in ipairs(species) do
       f:write(string.format("[%d]='%s', ", i-1, sp))
    end
    f:write("}\n")
    f:write("vibrational_relaxers = {")
-   for i,p in mechanisms do
-      f:write(string.format("%s, ", p))
+   for p,_ in pairs(mechanisms) do
+      f:write(string.format("'%s', ", p))
    end
    f:write("}\n")
    f:write("\n")
    f:write("mechanism = {}\n")
-   for _,p in ipairs(mechanisms) do
-      for __,q in ipairs(mechanisms[p]) do
+   for p,_ in pairs(mechanisms) do
+      for q,__ in pairs(mechanisms[p]) do
          f:write(mechanismToLuaStr(mechanisms[p][q], p, q))
       end
    end
@@ -75,12 +80,26 @@ function main()
       species[sp] = isp-1
    end
 
+   -- Assemble list of molecules
+   molecules = {}
+   for isp,sp in ipairs(species) do
+      if db[sp].type == "molecule" then
+         molecules[#molecules+1] = sp
+      end
+   end
+
+   print("Identified molecules in mixture:")
+   for p,sp in ipairs(molecules) do
+      print(p, sp)
+   end
+   
+
    -- Load contents from user's file.
    dofile(inFname)
 
    for i,m in ipairs(userMechs) do
       if validateMechanism(m) then
-         addUserMechToTable(m, mechanisms)
+         addUserMechToTable(m, mechanisms, species, molecules, db)
       else
          print("Error while trying to validate mechanism ", i)
          print(m[1])
@@ -90,10 +109,9 @@ function main()
    end
    -- Now write out transformed results
    buildVerboseLuaFile(outFname)
-   
-
 end
-   
+
+main()
    
 
 

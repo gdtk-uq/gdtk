@@ -384,7 +384,7 @@ default: $(PROGRAMS) ugrid_partition
 	@echo "Eilmer4 simulation code built."
 
 install: $(PROGRAMS) $(LUA_MODULES) prep.lua prep-grids.lua prep-flow.lua post.lua \
-		prep-gas prep-chem chemkin2eilmer \
+		prep-gas prep-chem chemkin2eilmer prep-kinetics \
 		$(SHARE_FILES) ugrid_partition
 	- mkdir -p $(INSTALL_DIR)
 	- mkdir -p $(BUILD_DIR)/bin
@@ -469,6 +469,8 @@ prep-chem:
 chemkin2eilmer:
 	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) build-chemkin2eilmer
 
+prep-kinetics:
+	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) build-prep-kinetics
 
 $(LIBGASF):
 	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) libgasf.a

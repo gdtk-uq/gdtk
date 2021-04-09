@@ -26,12 +26,11 @@ interface RelaxationTime {
 
 class MillikanWhiteVT : RelaxationTime {
 public:
-    this(int q, double a, double b, double mu)
+    this(int q, double a, double b)
     {
         m_q = q;
         m_a = a;
         m_b = b;
-        m_mu = mu;
     }
 
     this(lua_State *L, int q)
@@ -39,12 +38,11 @@ public:
         m_q = q;
         m_a = getDouble(L, -1, "a");
         m_b = getDouble(L, -1, "b");
-        m_mu = getDouble(L, -1, "mu");
     }
 
     MillikanWhiteVT dup()
     {
-        return new MillikanWhiteVT(m_q, m_a, m_b, m_mu);
+        return new MillikanWhiteVT(m_q, m_a, m_b);
     }
     
     @nogc
@@ -65,7 +63,6 @@ private:
     int m_q;
     double m_a;
     double m_b;
-    double m_mu;
 }
 
 RelaxationTime createRelaxationTime(lua_State *L, int q)

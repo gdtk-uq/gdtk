@@ -74,34 +74,26 @@ public:
 	}
 	lua_pop(L, 1);
 
-	lua_getglobal(L, "heavy_particles");
-	auto nHvy = to!int(lua_objlen(L, -1));
-	mHeavyParticles.length = nHvy;
-	foreach (int isp; 0 .. nHvy) {
-	    lua_rawgeti(L, -1, isp+1);
-	    auto sp = to!string(luaL_checkstring(L, -1));
-	    mHeavyParticles[isp] = gmodel.species_index(sp);
-	    lua_pop(L, 1);
-	}
-	lua_pop(L, 1);
-
-	mMolef.length = nHvy;
-	// We make mVT of length nHvy for convenience, even thought
+	mMolef.length = gmodel.n_species;
+	// We make mVT of length n_species for convenience, even though
 	// we'll only fill array entries associated vibRelaxers.
 	// This just makes indexing consistent, and avoid having
 	// a separate indexing just for the vibRelaxers.
-        mVT.length = nHvy;
+        mVT.length = gmodel.n_species;
 
 	lua_getglobal(L, "mechanism");
 	
 	foreach (ip; mVibRelaxers) {
-	    mVT[ip].length = nHvy;
-	    foreach (iq; 0 .. nHvy) {
+	    mVT[ip].length = gmodel.n_species;
+	    foreach (iq; 0 .. gmodel.n_species) {
 		auto p = gmodel.species_name(ip);
 		auto q = gmodel.species_name(iq);
 		string key = p ~ ":" ~ q ~ "|VT";
 		lua_getfield(L, -1, key.toStringz);
-		mVT[ip][iq] = createVTMechanism(L, ip, iq, mode, gmodel);
+                if (!lua_isnil(L, -1)) {
+                    mVT[ip][iq] = createVTMechanism(L, ip, iq, mode, gmodel);
+                    mHeavyParticles ~= iq;
+                }
 		lua_pop(L, 1);
 	    }
 	}

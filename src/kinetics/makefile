@@ -55,6 +55,12 @@ build-chemkin2eilmer: chemkin2eilmer.lua lex_elems.lua reaction.lua
 	cp reaction.lua lex_elems.lua $(BUILD_DIR)/lib/
 	cp chemkin2eilmer.lua $(BUILD_DIR)/bin/chemkin2eilmer; chmod +x $(BUILD_DIR)/bin/chemkin2eilmer
 
+build-prep-kinetics: prep_kinetics.lua mechanism.lua lex_elems.lua
+	- mkdir -p $(BUILD_DIR)/bin
+	- mkdir -p $(BUILD_DIR)/lib
+	cp mechanism.lua lex_elems.lua $(BUILD_DIR)/lib/
+	cp prep_kinetics.lua $(BUILD_DIR)/bin/prep-kinetics; chmod +x $(BUILD_DIR)/bin/prep-kinetics
+
 test: $(TEST_PROGRAMS)
 	tclsh kinetics-package-test.tcl
 
