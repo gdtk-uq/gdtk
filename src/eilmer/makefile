@@ -129,6 +129,7 @@ BC_FILES := bc/package.d \
 	bc/ghost_cell_effect/flow_state_copy_from_profile.d \
 	bc/ghost_cell_effect/flow_state_copy_from_history.d \
 	bc/ghost_cell_effect/extrapolate_copy.d \
+	bc/ghost_cell_effect/from_upwind.d \
 	bc/ghost_cell_effect/fixed_p.d \
 	bc/ghost_cell_effect/fixed_pt.d \
 	bc/ghost_cell_effect/from_stagnation.d \

@@ -100,6 +100,15 @@ function FlowStateCopyFromHistory:tojson()
    return str
 end
 
+FromUpwindCopy = GhostCellEffect:new{flowState=nil}
+FromUpwindCopy.type = "from_upwind_copy"
+function FromUpwindCopy:tojson()
+   local str = string.format('          {"type": "%s",', self.type)
+   str = str .. string.format(' "flowstate": %s', self.flowState:toJSONString())
+   str = str .. '}'
+   return str
+end
+
 ExtrapolateCopy = GhostCellEffect:new{xOrder=0}
 ExtrapolateCopy.type = "extrapolate_copy"
 function ExtrapolateCopy:tojson()
@@ -1243,8 +1252,8 @@ function InOutFlowBC_Ambient:new(o)
    if o.flowState == nil then o.flowState = o.flowCondition end -- look for old name
    o = BoundaryCondition.new(self, o)
    o.is_wall_with_viscous_effects = false
-   o.preReconAction = { FlowStateCopy:new{flowState=o.flowState} }
-   o.preSpatialDerivActionAtBndryFaces = { FlowStateCopyToInterface:new{flowState=o.flowState} }
+   o.preReconAction = { FromUpwindCopy:new{flowState=o.flowState} }
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new() }
    o.is_configured = true
    return o
 end

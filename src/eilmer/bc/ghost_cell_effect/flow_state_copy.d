@@ -43,7 +43,7 @@ public:
         if (blk.omegaz != 0.0) {
             into_rotating_frame(ghost.fs.vel, ghost.pos[gtl], blk.omegaz);
         }
-    } // end apply_unstructured_grid()
+    } // end apply_for_interface_unstructured_grid()
 
     @nogc
     override void apply_unstructured_grid(double t, int gtl, int ftl)
