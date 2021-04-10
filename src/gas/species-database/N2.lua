@@ -1,4 +1,12 @@
 db.N2 = {}
+db.N2.type = "molecule"
+db.N2.molecule_type = "linear"
+db.N2.theta_v = {
+   value = 3393.44,
+   units = 'K',
+   description = 'characteristic vibrational temperature',
+   reference = 'Capitelli et al (2005), Table 15. omega_e in ground state converted to K'
+}
 db.N2.atomicConstituents = {N=2}
 db.N2.charge = 0
 db.N2.M = {

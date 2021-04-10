@@ -140,9 +140,12 @@ DFLAGS += -dip1008
 # Here begins the list of targets, starting with the top-level actions.
 # ----------------------------------------------------------------------
 
+CIF_DIR := species-database/collision-integrals
+COLLISION_INTEGRAL_FILES := $(CIF_DIR)/gupta_etal_1990_CI_data.lua
+
 # prep-gas and its database is required by the Eilmer flow solver.
 build-prep-gas: prep_gas.lua species-database/species-database.lua \
-		species-database/species-list.txt species_data_converter.lua
+		species-database/species-list.txt species_data_converter.lua $(COLLISION_INTEGRAL_FILES)
 	- mkdir -p $(BUILD_DIR)/bin
 	cp prep_gas.lua $(BUILD_DIR)/bin/prep-gas; chmod +x $(BUILD_DIR)/bin/prep-gas
 	cp species_data_converter.lua $(BUILD_DIR)/bin/species-data-converter; \
@@ -150,6 +153,7 @@ build-prep-gas: prep_gas.lua species-database/species-database.lua \
 	- mkdir -p $(BUILD_DIR)/data
 	cp species-database/species-database.lua $(BUILD_DIR)/data/
 	cp species-database/species-list.txt $(BUILD_DIR)/data/
+	cp $(COLLISION_INTEGRAL_FILES) $(BUILD_DIR)/data/
 
 # The following are not required by the Eilmer flow solver but
 # they are useful for building stand-alone flow-analysis programs.
@@ -582,3 +586,12 @@ $(KINETICS_DIR)/pseudosp_rhs_ode.o: $(KINETICS_DIR)/pseudosp_rhs_ode.f90
 
 $(KINETICS_DIR)/dvode.o: $(KINETICS_DIR)/dvode.f
 	cd $(KINETICS_DIR); gfortran -c $(FFLAGS_fort) dvode.f
+
+two_temp_air_ci_dump: $(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
+	$(LIBCEQ) $(LIBGASF) $(LIBLUA)
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
+		$(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
+		$(LIBCEQ) $(LIBGASF) $(LIBLUA) $(DLINKFLAGS)
+
+
+

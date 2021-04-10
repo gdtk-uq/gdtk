@@ -758,6 +758,44 @@ version(two_temperature_air_test) {
     }
 }
 
+version(two_temp_air_ci_dump)
+{
+    void main()
+    {
+        import std.stdio;
+        string fname = "gupta_etal_1990_CI_data.lua";
+        auto f = File(fname, "w");
+        f.writeln("-- Collision integral parameters for 11-species air.");
+        f.writeln("-- Source:");
+        f.writeln("--    Gupta, Yos, Thompson and Lee (1990)");
+        f.writeln("--    A Review of Reaction Rates and Thermodynamics and Transport Properties");
+        f.writeln("--    for an 11-Species Air Model for Chemical and Thermal Nonequilibrium Calculations to 30 000 K");
+        f.writeln("");
+        f.writeln("cis = {}");
+
+        // species order matches Gupta tables.
+        string[] species = ["N2", "O2", "N", "O", "NO", "NO+", "e-", "N+", "O+", "N2+", "O2+"];
+
+        foreach (isp; 0 .. species.length) {
+            foreach (jsp; 0 .. isp+1) {
+                string key = species[isp] ~ ":" ~ species[jsp];
+                if (!(key in A_11)) {
+                    // Just reverse the order, eg. N2:O2 --> O2:N2
+                    key = species[jsp] ~ ":" ~ species[isp];
+                }
+                f.writefln("cis['%s'] = {", key);
+                f.writefln("  pi_Omega_11 = {A= % 6.4f, B= % 6.4f, C= % 6.4f, D= % 6.4f},",
+                           A_11[key], B_11[key], C_11[key], D_11[key]);
+                f.writefln("  pi_Omega_22 = {A= % 6.4f, B= % 6.4f, C= % 6.4f, D= % 6.4f}",
+                           A_22[key], B_22[key], C_22[key], D_22[key]);
+                f.writeln("}");
+            }
+        }
+
+        f.close();
+    }
+}
+
 static double[string] A_11, B_11, C_11, D_11;
 static double[string] A_22, B_22, C_22, D_22;
 

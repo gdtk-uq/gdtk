@@ -1,4 +1,12 @@
 db.O2 = {}
+db.O2.type = "molecule"
+db.O2.molecule_type = "linear"
+db.O2.theta_v = {
+   value = 2273.53,
+   units = 'K',
+   description = 'characteristic vibrational temperature',
+   reference = 'Capitelli et al (2005), Table 25. omega_e in ground state converted to K'
+}
 db.O2.atomicConstituents = {O=2,}
 db.O2.charge = 0
 db.O2.M = {

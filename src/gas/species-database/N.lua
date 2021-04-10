@@ -1,4 +1,5 @@
 db.N = {}
+db.N.type = "atom"
 db.N.atomicConstituents = {N=1}
 db.N.charge = 0
 db.N.M = {

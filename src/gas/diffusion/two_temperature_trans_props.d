@@ -60,7 +60,7 @@ public:
         }
         // Fill in support data for collision integrals
         lua_getglobal(L, "db");
-        lua_getfield(L, -1, "cis");
+        lua_getfield(L, -1, "CIs");
         foreach (isp; 0 .. mNSpecies) {
             foreach (jsp; 0 .. isp+1) {
                 string key = speciesNames[isp] ~ ":" ~ speciesNames[jsp];
