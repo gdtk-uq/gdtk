@@ -48,7 +48,7 @@ blk0 = FluidBlock:new{grid=grd0, initialState=inflow,
 blk1 = FluidBlock:new{grid=grd1, initialState=inflow,
 		      bcList={west=InFlowBC_Supersonic:new{flowState=inflow},
 			      north=InFlowBC_Supersonic:new{flowState=inflow}}}
-blks = FluidBlockArray{grid=grd2, nib=10, njb=1, 
+blks = FBArray:new{grid=grd2, nib=10, njb=1, 
 		       initialState=initial,
 		       bcList={north=InFlowBC_Supersonic:new{flowState=inflow},
 			       east=OutFlowBC_Simple:new{},

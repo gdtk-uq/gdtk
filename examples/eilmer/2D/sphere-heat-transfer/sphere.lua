@@ -53,7 +53,7 @@ cf_radial = RobertsFunction:new{end0=false, end1=true, beta=1.2}
 grid = StructuredGrid:new{psurface=psurf, niv=ni+1, njv=nj+1,
 			  cfList={north=cf_radial, south=cf_radial}}
 
-blk = FluidBlockArray{grid=grid, initialState=initial, label='blk',
+blk = FBArray:new{grid=grid, initialState=initial, label='blk',
 		      bcList={west=InFlowBC_ShockFitting:new{flowState=inflow},
 			      east=WallBC_NoSlip_FixedT:new{Twall=296.0},
 			      north=OutFlowBC_Simple:new{}},

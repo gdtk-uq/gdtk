@@ -84,7 +84,7 @@ quad0 = CoonsPatch:new{north=outflowBndry, east=body,
 grid0 = StructuredGrid:new{psurface=quad0, niv=nxcells+1, njv=nycells+1}
 
 -- Blocks
-FluidBlockArray{grid=grid0, initialState=initial, nib=1, njb=4,
+FBArray:new{grid=grid0, initialState=initial, nib=1, njb=4,
 		bcList={north=OutFlowBC_Simple:new{},
 			west=InFlowBC_Supersonic:new{flowState=inflow}}
 }

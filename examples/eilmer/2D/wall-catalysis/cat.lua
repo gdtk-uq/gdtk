@@ -106,7 +106,7 @@ grid = StructuredGrid:new{psurface=surface, niv=niv, njv=njv, cfList=clusterlist
 
 -- Three different kinds of catalytic behaviour are available,
 -- Uncomment one of the "east" lines to try them out.
-blocks = FluidBlockArray{grid=grid,
+blocks = FBArray:new{grid=grid,
                         initialState=initial,
                         bcList={south=WallBC_WithSlip:new{},
                                 --east=WallBC_NoSlip_FixedT:new{catalytic_type="equilibrium", Twall=2200.0, group="wall"},

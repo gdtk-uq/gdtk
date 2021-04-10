@@ -89,7 +89,7 @@ bcList={north=WallBC_NoSlip_Adiabatic:new{wall_function=true},
 	bottom=WallBC_WithSlip:new{},
 	top=WallBC_WithSlip:new{}}
 
-blks = FluidBlockArray{grid=grd, nib=4, njb=2, nkb=1,
+blks = FBArray:new{grid=grd, nib=4, njb=2, nkb=1,
 		       bcList=bcList, initialState=inflow}
 
 identifyBlockConnections()

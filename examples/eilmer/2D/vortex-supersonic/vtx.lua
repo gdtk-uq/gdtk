@@ -37,7 +37,7 @@ bcList = {north=WallBC_WithSlip1:new{},
 	  east=OutFlowBC_Simple:new{},
 	  south=WallBC_WithSlip1:new{},
 	  west=UserDefinedBC:new{fileName='udf-vortex-flow.lua'}}
-blk = FluidBlockArray{grid=grid0, nib=4, njb=1,
+blk = FBArray:new{grid=grid0, nib=4, njb=1,
                       initialState=initial, bcList=bcList,
 		      label="Duct"}
 

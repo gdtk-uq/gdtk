@@ -47,7 +47,7 @@ cf_radial0 = RobertsFunction:new{end0=false, end1=true, beta=1.2}
 grid0 = StructuredGrid:new{psurface=psurf0, niv=n0i+1, njv=n0j+1,
 			  cfList={north=cf_radial0, south=cf_radial0}}
 
-blk0 = FluidBlockArray{grid=grid0, initialState=initial, label='fluidblk',
+blk0 = FBArray:new{grid=grid0, initialState=initial, label='fluidblk',
                        bcList={north=OutFlowBC_Simple:new{},
                                east=None,
                                south=WallBC_WithSlip:new{},

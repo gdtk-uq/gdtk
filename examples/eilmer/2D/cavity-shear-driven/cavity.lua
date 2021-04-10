@@ -45,7 +45,7 @@ grid = StructuredGrid:new{psurface=CoonsPatch:new{p00=p00, p10=p10, p11=p11, p01
 				  south=clustering, west=clustering}
 }
 
-blk = FluidBlockArray{grid=grid, fillCondition=initialFlow, nib=2, njb=2,
+blk = FBArray:new{grid=grid, fillCondition=initialFlow, nib=2, njb=2,
 		 bcList={north=WallBC_TranslatingSurface_Adiabatic:new{v_trans={x=uLid, y=0.0, z=0.0}},
 			 east=WallBC_NoSlip_Adiabatic:new{},
 			 south=WallBC_NoSlip_Adiabatic:new{},

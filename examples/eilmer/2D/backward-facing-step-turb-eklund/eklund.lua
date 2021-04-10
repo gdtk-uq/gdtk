@@ -106,7 +106,7 @@ cflist0 = { north = RobertsFunction:new{end0=true,end1=false,beta=1.08},
             south = RobertsFunction:new{end0=true,end1=false,beta=1.08},
             west  = RobertsFunction:new{end0=true,end1=true, beta=1.01} }
 grid0 = StructuredGrid:new{psurface=surf0, niv=141, njv=61, cfList=cflist0}
-blk0 = FluidBlockArray{grid=grid0, nib=5, njb=1, fillCondition=inflow,
+blk0 = FBArray:new{grid=grid0, nib=5, njb=1, fillCondition=inflow,
                        bcList={north=WallBC_WithSlip:new{}, 
                                east=OutFlowBC_Simple:new{},
                                south=WallBC_NoSlip_Adiabatic:new{}, 
@@ -119,7 +119,7 @@ cflist1 = { north = RobertsFunction:new{end0=true,end1=false,beta=1.08},
             south = RobertsFunction:new{end0=true,end1=false,beta=1.08},
             west  = RobertsFunction:new{end0=true,end1=true, beta=1.0025} }
 grid1 = StructuredGrid:new{psurface=surf1, niv=141, njv=121, cfList=cflist1}
-blk1 = FluidBlockArray{grid=grid1, nib=5, njb=2, fillCondition=inflow,
+blk1 = FBArray:new{grid=grid1, nib=5, njb=2, fillCondition=inflow,
                        bcList={north=WallBC_NoSlip_Adiabatic:new{}, 
                                east=OutFlowBC_Simple:new{},
                                south=WallBC_WithSlip:new{}, 
@@ -138,7 +138,7 @@ cflist2 = { north = RobertsFunction:new{end0=false,end1=true,beta=1.18},
             south = RobertsFunction:new{end0=false,end1=true,beta=1.18}, 
             west  = RobertsFunction:new{end0=true, end1=true,beta=1.0025} }
 grid2 = StructuredGrid:new{psurface=surf2, niv=25, njv=121, cfList=cflist2}
-blk2 = FluidBlockArray{grid=grid2, nib=1, njb=2, fillCondition=inflow,
+blk2 = FBArray:new{grid=grid2, nib=1, njb=2, fillCondition=inflow,
                        bcList={north=WallBC_NoSlip_Adiabatic:new{},
                                east=WallBC_WithSlip:new{},
                                south=WallBC_NoSlip_Adiabatic:new{},
@@ -151,7 +151,7 @@ if use_nozzle_flag then
                 south = RobertsFunction:new{end0=false,end1=true,beta=1.06},
                 west  = RobertsFunction:new{end0=true, end1=true,beta=1.0025} }
     grid3 = StructuredGrid:new{psurface=surf3, niv=101, njv=121, cfList=cflist3}
-    blk_noz = FluidBlockArray{grid=grid3, nib=1, njb=2, fillCondition=inflow,
+    blk_noz = FBArray:new{grid=grid3, nib=1, njb=2, fillCondition=inflow,
                               bcList={north=WallBC_NoSlip_Adiabatic:new{},
                                       east=WallBC_WithSlip:new{},
                                       south=WallBC_NoSlip_Adiabatic:new{},

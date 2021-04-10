@@ -72,7 +72,7 @@ LaminarWallBC = WallBC_NoSlip_FixedT:new{Twall=300.0}
 table.remove(LaminarWallBC.preSpatialDerivAction, 5)
 
 -- Assemble the block from the grid and boundary data.
-blks = FluidBlockArray{grid=grd, nib=22, njb=2, 
+blks = FBArray:new{grid=grd, nib=22, njb=2, 
 		       initialState=inflow,
 		       bcList={north=LaminarWallBC,
 			       east=OutFlowBC_Simple:new{},

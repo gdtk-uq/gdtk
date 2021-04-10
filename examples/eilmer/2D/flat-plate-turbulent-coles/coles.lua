@@ -45,7 +45,7 @@ cflist = {north=cfx, east=RobertsFunction:new{end0=false,end1=true,beta=1.01},
 	  south=cfx, west=RobertsFunction:new{end0=false,end1=true,beta=1.05}}
 grd = StructuredGrid:new{psurface=patch, niv=100, njv=90, cfList=cflist}
 
-blks = FluidBlockArray{grid=grd, nib=4, njb=1, initialState=inflow,
+blks = FBArray:new{grid=grd, nib=4, njb=1, initialState=inflow,
 		       bcList={north=WallBC_NoSlip_Adiabatic:new{},
 			       east=OutFlowBC_Simple:new{},
 			       south=InFlowBC_Supersonic:new{flowState=inflow},

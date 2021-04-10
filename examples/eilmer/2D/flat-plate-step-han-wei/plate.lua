@@ -194,7 +194,7 @@ end
 
 blks = {}
 for i=0,8 do
-   blks[i] = FluidBlockArray{grid=grids[i], nib=nib[i], njb=njb[i], 
+   blks[i] = FBArray:new{grid=grids[i], nib=nib[i], njb=njb[i], 
                              initialState=initial, bcList=bcLists[i],
                              label=blkLabels[i]}
 end

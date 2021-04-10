@@ -58,8 +58,8 @@ grid1 = StructuredGrid:new{psurface=makePatch{north=hg, east=fg, south=ef, west=
         niv=nxcells+1, njv=nycells+1}
 -- Now we create our blocks. We are using the WallBC_WithSlip1 for the
 -- moving mesh. This should account for the contraction/expansion of flow domains
-blk0 = FluidBlockArray{grid=grid0, initialState=initialLeft, nib=1, njb=1, bcList={north=WallBC_WithSlip1:new{}, east=WallBC_WithSlip1:new{group='pistonUpstream'}, south=WallBC_WithSlip1:new{}, west=WallBC_WithSlip1:new{}}}
-blk1 = FluidBlockArray{grid=grid1, initialState=initialRight, nib=1, njb=1, bcList={north=WallBC_WithSlip1:new{}, east=WallBC_WithSlip1:new{}, south= WallBC_WithSlip1:new{}, west=WallBC_WithSlip1:new{group='pistonDownStream'}}}
+blk0 = FBArray:new{grid=grid0, initialState=initialLeft, nib=1, njb=1, bcList={north=WallBC_WithSlip1:new{}, east=WallBC_WithSlip1:new{group='pistonUpstream'}, south=WallBC_WithSlip1:new{}, west=WallBC_WithSlip1:new{}}}
+blk1 = FBArray:new{grid=grid1, initialState=initialRight, nib=1, njb=1, bcList={north=WallBC_WithSlip1:new{}, east=WallBC_WithSlip1:new{}, south= WallBC_WithSlip1:new{}, west=WallBC_WithSlip1:new{group='pistonDownStream'}}}
 -- Set up the run-time loads for computing the piston movement
 run_time_loads={ {group="pistonUpstream",
                               moment_centre=Vector3:new{x= 0., y= 0.}},

@@ -31,7 +31,7 @@ bottom_face0 = CoonsPatch:new{south=Arc:new{p0=e, p1=b, centre=c},
 e2 = e + Vector3:new{x=0, y=0, z=L}
 vol0 = SweptSurfaceVolume:new{face0123=bottom_face0, edge04=Line:new{p0=e, p1=e2}}
 grid0 = StructuredGrid:new{pvolume=vol0, niv=21, njv=5, nkv=11}
-blk0 = FluidBlockArray{grid=grid0, initialState=inflow, omegaz=10.0,
+blk0 = FBArray:new{grid=grid0, initialState=inflow, omegaz=10.0,
 		       bcList={bottom=InFlowBC_Supersonic:new{flowState=inflow},
 			       top=OutFlowBC_Simple:new{}},
                        nkb=2}
@@ -43,7 +43,7 @@ bottom_face1 = CoonsPatch:new{south=Arc:new{p0=g, p1=e, centre=c},
 g2 = g + Vector3:new{x=0, y=0, z=L}
 vol1 = SweptSurfaceVolume:new{face0123=bottom_face1, edge04=Line:new{p0=g, p1=g2}}
 grid1 = StructuredGrid:new{pvolume=vol1, niv=21, njv=5, nkv=11}
-blk1 = FluidBlockArray{grid=grid1, initialState=inflow, omegaz=10.0,
+blk1 = FBArray:new{grid=grid1, initialState=inflow, omegaz=10.0,
 		       bcList={bottom=InFlowBC_Supersonic:new{flowState=inflow},
 			       top=OutFlowBC_Simple:new{}},
                        nkb=2}
@@ -55,7 +55,7 @@ bottom_face2 = CoonsPatch:new{south=Arc:new{p0=i, p1=g, centre=c},
 i2 = i + Vector3:new{x=0, y=0, z=L}
 vol2 = SweptSurfaceVolume:new{face0123=bottom_face2, edge04=Line:new{p0=i, p1=i2}}
 grid2 = StructuredGrid:new{pvolume=vol2, niv=21, njv=5, nkv=11}
-blk2 = FluidBlockArray{grid=grid2, initialState=inflow, omegaz=10.0,
+blk2 = FBArray:new{grid=grid2, initialState=inflow, omegaz=10.0,
 		       bcList={bottom=InFlowBC_Supersonic:new{flowState=inflow},
 			       top=OutFlowBC_Simple:new{}},
                        nkb=2}
@@ -67,7 +67,7 @@ bottom_face3 = CoonsPatch:new{south=Arc:new{p0=b, p1=i, centre=c},
 b2 = b + Vector3:new{x=0, y=0, z=L}
 vol3 = SweptSurfaceVolume:new{face0123=bottom_face3, edge04=Line:new{p0=b, p1=b2}}
 grid3 = StructuredGrid:new{pvolume=vol3, niv=21, njv=5, nkv=11}
-blk3 = FluidBlockArray{grid=grid3, initialState=inflow, omegaz=10.0,
+blk3 = FBArray:new{grid=grid3, initialState=inflow, omegaz=10.0,
 		       bcList={bottom=InFlowBC_Supersonic:new{flowState=inflow},
 			       top=OutFlowBC_Simple:new{}},
                        nkb=2}

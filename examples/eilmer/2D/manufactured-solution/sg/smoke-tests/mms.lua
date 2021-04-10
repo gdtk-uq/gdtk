@@ -76,7 +76,7 @@ if blocking == 'single' then
     blk = FluidBlock:new{grid=grid, initialState=initial, bcList=bcList,
 			 label='blk'}
 else
-   blks = FluidBlockArray{grid=grid, initialState=initial, bcList=bcList,
+   blks = FBArray:new{grid=grid, initialState=initial, bcList=bcList,
 			  nib=2, njb=2, label="blk"}
 end
 

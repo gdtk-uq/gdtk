@@ -34,7 +34,7 @@ N = 7
 grid = StructuredGrid:new{psurface=psurf, niv=40, njv=40}
 
 -- We can leave east and south as slip-walls
-blk = FluidBlockArray{grid=grid, initialState=initial,
+blk = FBArray:new{grid=grid, initialState=initial,
 		      bcList={west=InFlowBC_ShockFitting:new{flowState=inflow},
 			      north=OutFlowBC_Simple:new{}}, 
 		      nib=4, njb=2}

@@ -271,7 +271,7 @@ How do we easily split that up over the four blocks? It can be done but it will 
 in cell sizing at block boundaries. The mismatch will only get worse as the simulation proceeds with
 the transfer process for stage after stage. A neater solution is to take the old grid in four pieces,
 recombine it as a single grid, do the transfer to the new grid as a single piece, the split the new
-grid into four pieces. That way we can make use of our `FluidBlockArray` function which neatly takes
+grid into four pieces. That way we can make use of our `FBArray:new` function which neatly takes
 care of splitting 90 cells across four blocks, for example. The code to this join-transfer-split
 arrangement is shown here. I don't think it's that much more complicated once you know what's going
 on ::

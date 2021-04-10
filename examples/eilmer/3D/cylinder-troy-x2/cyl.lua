@@ -129,7 +129,7 @@ grid2 = StructuredGrid:new{pvolume=beside_cylinder,
 -- Use the grids to define some flow blocks.
 -- Note that we divide up the biggest grid to make better use
 -- of our multiple cpu machine.
-blk0 = FluidBlockArray{grid=grid0, initialState=initial,
+blk0 = FBArray:new{grid=grid0, initialState=initial,
 		       bcList={west=InFlowBC_Supersonic:new{flowState=inflow},
 			       north=OutFlowBC_Simple:new{}}, 
 		       nkb=math.floor(L/D)}

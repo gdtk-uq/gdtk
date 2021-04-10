@@ -160,7 +160,7 @@ grd0 = StructuredGrid:new{psurface=psrf0, niv=wall_normal_cells, njv=stag_cells,
 grd1 = StructuredGrid:new{psurface=psrf1, niv=wall_normal_cells, njv=trailing_edge_cells, cfList=cflist1}
 
 -- Blocks
-blk0 = FluidBlockArray{grid=grd0,
+blk0 = FBArray:new{grid=grd0,
                        initialState=initial,
                        bcList={south=WallBC_WithSlip:new{group="stagnation-line"},
                                east=WallBC_ThermionicEmission:new{emissivity=1.0, Ar=1.20e6, 
@@ -169,7 +169,7 @@ blk0 = FluidBlockArray{grid=grd0,
                                -- east=WallBC_NoSlip_Adiabatic:new{group="cylinder-wedge"},
                                west=InFlowBC_Supersonic:new{flowState=inflow}},
                        nib=2, njb=2}
-blk1 = FluidBlockArray{grid=grd1,
+blk1 = FBArray:new{grid=grd1,
                       initialState=initial,
                       bcList={north=OutFlowBC_Simple:new{},
                               east=WallBC_ThermionicEmission:new{emissivity=1.0, Ar=1.20e6, 

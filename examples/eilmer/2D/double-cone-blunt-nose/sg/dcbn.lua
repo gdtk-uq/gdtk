@@ -79,7 +79,7 @@ grdCone3 = StructuredGrid:new{psurface=CoonsPatch:new{p00=c0,p10=d0,p11=d1,p01=c
 LaminarWallBC = WallBC_NoSlip_FixedT:new{Twall=T_wall}
 table.remove(LaminarWallBC.preSpatialDerivAction, 5)
 
-cone1 = FluidBlockArray{grid=grdCone1, nib=6, njb=2,
+cone1 = FBArray:new{grid=grdCone1, nib=6, njb=2,
 			initialState=inflow,
 			bcList={north=InFlowBC_Supersonic:new{flowState=inflow},
 				east=None,
@@ -87,7 +87,7 @@ cone1 = FluidBlockArray{grid=grdCone1, nib=6, njb=2,
 				west=None},
 			label="cone1"}
 
-cone2 = FluidBlockArray{grid=grdCone2, nib=6, njb=2,
+cone2 = FBArray:new{grid=grdCone2, nib=6, njb=2,
 			initialState=inflow,
 			bcList={north=InFlowBC_Supersonic:new{flowState=inflow},
 				east=None,
@@ -95,7 +95,7 @@ cone2 = FluidBlockArray{grid=grdCone2, nib=6, njb=2,
 				west=None},
 			label="cone2"}  
 
-cone3 = FluidBlockArray{grid=grdCone3, nib=2, njb=2,
+cone3 = FBArray:new{grid=grdCone3, nib=2, njb=2,
 			initialState=inflow,
 			bcList={north=InFlowBC_Supersonic:new{flowState=inflow},
 				east=OutFlowBC_FixedP:new{p_outside=p_inf/5.0},

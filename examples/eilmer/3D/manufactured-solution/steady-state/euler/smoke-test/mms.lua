@@ -51,7 +51,7 @@ if blocking == 'single' then
    blk = FluidBlock:new{grid=grid, fillCondition=initial, bcList=bcList, label="blk"}
    SBlock2UBlock(blocks[1])
 else
-   blks = FluidBlockArray{grid=grid, fillCondition=initial, bcList=bcList,
+   blks = FBArray:new{grid=grid, fillCondition=initial, bcList=bcList,
 		      nib=3, njb=3, nkb=3, label="blk"}
    for i=1,27 do
       SBlock2UBlock(fluidBlocks[i])

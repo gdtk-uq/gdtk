@@ -41,7 +41,7 @@ bp = billig_patch.make_patch{Minf=M_inf, R=Rc, scale=0.9}
 cf_circum = RobertsFunction:new{end0=true, end1=false, beta=1.1}
 grd = StructuredGrid:new{psurface=bp.patch, niv=61, njv=61,
                          cfList={west=cf_circum, east=cf_circum}}
-blk = FluidBlockArray{
+blk = FBArray:new{
    grid=grd, initialState=initial, label='blk',
    bcList={west=InFlowBC_Transient:new{filename='inflow.data'},
            north=OutFlowBC_Simple:new{}},

@@ -85,7 +85,7 @@ grid = StructuredGrid:new{psurface=makePatch{north=de, east=ce, south=abc, west=
 			  niv=nx+1, njv=ny+1}
 
 -- Set up block
-blks = FluidBlockArray{grid=grid, initialState=inflow, nib=2, njb=1,
+blks = FBArray:new{grid=grid, initialState=inflow, nib=2, njb=1,
 		       bcList={north=OutFlowBC_Simple:new{},
 			       east=OutFlowBC_Simple:new{},
 			       south=WallBC_WithSlip:new{},

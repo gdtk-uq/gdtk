@@ -46,11 +46,11 @@ bcList01 = { west=InFlowBC_Supersonic:new{flowState=inflow, label="inflow"} }
 bcList2 = { east=OutFlowBC_Simple:new{label="outflow"} }
 
 -- Define the flow-solution blocks and stitch them together.
-blk0 = FluidBlockArray{grid=grid0, nib=1, njb=1, 
+blk0 = FBArray:new{grid=grid0, nib=1, njb=1, 
 		       initialState=inflow, bcList=bcList01}
-blk1 = FluidBlockArray{grid=grid1, nib=1, njb=4,
+blk1 = FBArray:new{grid=grid1, nib=1, njb=4,
 		       initialState=inflow, bcList=bcList01}
-blk2 = FluidBlockArray{grid=grid2, nib=4, njb=4,
+blk2 = FBArray:new{grid=grid2, nib=4, njb=4,
 		       initialState=inflow, bcList=bcList2}
 identifyBlockConnections()
 

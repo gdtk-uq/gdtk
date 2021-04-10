@@ -56,10 +56,10 @@ grid2 = StructuredGrid:new{psurface=patch2,
 			   cfList={north=rcfx2,east=rcfy,south=rcfx2,west=rcfy},
 			   niv=3*ni0+1, njv=3*nj0+1}
 -- Define the flow-solution blocks and set boundary conditions.
-blk0 = FluidBlockArray{grid=grid0, initialState=initGas, nib=3, njb=2,
+blk0 = FBArray:new{grid=grid0, initialState=initGas, nib=3, njb=2,
 		       bcList={west=InFlowBC_FromStagnation:new{stagnationState=stagGas}}}
-blk1 = FluidBlockArray{grid=grid1, initialState=initGas, nib=1, njb=2}
-blk2 = FluidBlockArray{grid=grid2, initialState=initGas, nib=3, njb=2,
+blk1 = FBArray:new{grid=grid1, initialState=initGas, nib=1, njb=2}
+blk2 = FBArray:new{grid=grid2, initialState=initGas, nib=3, njb=2,
 		       bcList={east=OutFlowBC_FixedP:new{p_outside=p_inf}}}
 identifyBlockConnections()
 

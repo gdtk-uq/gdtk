@@ -52,12 +52,12 @@ grd1 = StructuredGrid:new{filename="pregrid/larc.b0001.txt", fmt="text"}
 --  |             |                      |
 --  *--Symmetry---*------FixedTWall------*
 
-blk0 = FluidBlockArray{grid=grd0, initialState=inflow, nib=1, njb=2, 
+blk0 = FBArray:new{grid=grd0, initialState=inflow, nib=1, njb=2, 
             bcList={north=InFlowBC_Supersonic:new{flowCondition=inflow},
                     west=InFlowBC_Supersonic:new{flowCondition=inflow}}
 }
 
-blk1 = FluidBlockArray{grid=grd1, initialState=inflow, nib=2, njb=2,
+blk1 = FBArray:new{grid=grd1, initialState=inflow, nib=2, njb=2,
           bcList={south=WallBC_NoSlip_FixedT:new{Twall=Tw,wall_function=false,group="wall"},
 --            bcList={south=WallBC_NoSlip_Adiabatic:new{wall_function=false,group="wall"},
                     north=InFlowBC_Supersonic:new{flowCondition=inflow},

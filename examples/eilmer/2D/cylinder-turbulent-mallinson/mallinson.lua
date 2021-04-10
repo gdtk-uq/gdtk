@@ -78,7 +78,7 @@ cflist = {north=cfx, east=RobertsFunction:new{end0=true,end1=false,beta=1.0002},
 grd = StructuredGrid:new{psurface=patch, niv=601, njv=131, cfList=cflist}
 
 -- Assemble the block from the grid and boundary data.
-blks = FluidBlockArray{grid=grd, nib=4, njb=1, fillCondition=inflow, 
+blks = FBArray:new{grid=grd, nib=4, njb=1, fillCondition=inflow, 
                        bcList = {north=UserDefinedBC:new{fileName='udf-supersonic-in.lua'}, 
                                  east=OutFlowBC_Simple:new{}, 
                                  south=WallBC_NoSlip_FixedT:new{Twall=T_wall, wall_function=false}, 

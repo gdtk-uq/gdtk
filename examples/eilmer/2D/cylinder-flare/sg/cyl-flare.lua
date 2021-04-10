@@ -41,7 +41,7 @@ grdFlare = StructuredGrid:new{psurface=CoonsPatch:new{p00=b0,p10=c0,p11=c1,p01=b
 			    cfList= {north=None,east=rcfy,south=None,west=rcfy},
 			    niv=ni0+1, njv=nj0+1}   
 
-cyl = FluidBlockArray{grid=grdCyl, nib=6, njb=2,
+cyl = FBArray:new{grid=grdCyl, nib=6, njb=2,
 		      initialState=inflow,
 		      bcList={north=InFlowBC_Supersonic:new{flowState=inflow},
 			      east=None,
@@ -49,7 +49,7 @@ cyl = FluidBlockArray{grid=grdCyl, nib=6, njb=2,
 			      west=InFlowBC_Supersonic:new{flowState=inflow}},
 		      label="cyl"}
 
-Flare = FluidBlockArray{grid=grdFlare, nib=6, njb=2,
+Flare = FBArray:new{grid=grdFlare, nib=6, njb=2,
 			initialState=initial,
 			bcList={north=InFlowBC_Supersonic:new{flowState=inflow},
 				east=OutFlowBC_FixedP:new{p_outside=p_inf/5.0},
