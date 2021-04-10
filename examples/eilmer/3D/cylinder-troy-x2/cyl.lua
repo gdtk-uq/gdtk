@@ -130,9 +130,9 @@ grid2 = StructuredGrid:new{pvolume=beside_cylinder,
 -- Note that we divide up the biggest grid to make better use
 -- of our multiple cpu machine.
 blk0 = FBArray:new{grid=grid0, initialState=initial,
-		       bcList={west=InFlowBC_Supersonic:new{flowState=inflow},
-			       north=OutFlowBC_Simple:new{}}, 
-		       nkb=math.floor(L/D)}
+                   bcList={west=InFlowBC_Supersonic:new{flowState=inflow},
+                           north=OutFlowBC_Simple:new{}},
+                   nkb=math.floor(L/D)}
 blk1 = FluidBlock:new{grid=grid1, initialState=initial,
 		      bcList={west=InFlowBC_Supersonic:new{flowState=inflow},
 			      north=OutFlowBC_Simple:new{}}}
@@ -144,17 +144,9 @@ identifyBlockConnections()
 -- Set a few more config options
 config.flux_calculator = "adaptive"
 config.thermo_interpolator = "pT"
-config.adjust_invalid_cell_data = true
-config.report_invalid_cells = false
-config.max_invalid_cells = 10
--- config.cfl_count = 3
 config.gasdynamic_update_scheme="euler"
-my_max_time = Rc/V_inf * 30
-print("max_time=", my_max_time)
-config.max_time = my_max_time
+config.max_time = Rc/V_inf * 30
+print("max_time=", config.max_time)
 config.max_step = 40000
 config.dt_init = 1.0e-9
-config.cfl_value = 0.5
-config.cfl_count = 3 -- needed for stability 2019-08-22
-config.flowstate_limits_max_temp = 51000.0 -- to suppress warnings 2019-08-22
-config.dt_plot = my_max_time/10
+config.dt_plot = config.max_time/10
