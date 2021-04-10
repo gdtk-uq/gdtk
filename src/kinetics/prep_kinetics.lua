@@ -12,6 +12,19 @@ local validateMechanism = mechanism.validateMechanism
 local addUserMechToTable = mechanism.addUserMechToTable
 local mechanismToLuaStr = mechanism.mechanismToLuaStr
 
+function printHelp()
+   print("prep-kinetics --- Prepares an energy exchange kinetics file for Eilmer.")
+   print("Usage:")
+   print(" > prep-kinetics gmodelFile kinInput output")
+   print("")
+   print("   gmodelFile  : a gas model file is required as input for context")
+   print("   kinInput    : input energy exchange kinetics file in Lua format.")
+   print("   output      : output file in format ready for Eilmer4.")
+   print("")
+   os.exit(1)
+end
+
+
 --%--------------------------------------------
 -- Function available to user in input file.
 --%--------------------------------------------
