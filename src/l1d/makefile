@@ -127,7 +127,7 @@ default: $(PROGRAMS)
 	@echo "Source code revision string $(REVISION_STRING)"
 	@echo "L1d4 simulation code built."
 
-install: $(PROGRAMS) prep-gas prep-chem chemkin2eilmer
+install: $(PROGRAMS) prep-gas prep-chem chemkin2eilmer libgas
 	- mkdir -p $(INSTALL_DIR)
 	- mkdir -p $(BUILD_DIR)/bin
 	- mkdir -p $(BUILD_DIR)/lib
@@ -188,6 +188,9 @@ l1d4-xt-viewer: xt-viewer.py
 
 prep-gas:
 	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) build-prep-gas
+
+libgas:
+	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) build-libgas
 
 prep-chem:
 	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) build-prep-chem
