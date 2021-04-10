@@ -1,7 +1,7 @@
 # makefile for the CUDA D Hello World test
 # to run, execute: $LD_LIBRARY_PATH=$LD_LIBRARY_PATH:. ./hello
 
-DMD ?= dmd
+DMD ?= ldmd2
 NVCC ?= nvcc
 GPP ?= g++
 

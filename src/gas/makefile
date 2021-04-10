@@ -1,8 +1,6 @@
 # makefile for the gas module
 
-# We can specify the LDC2 compiler as DMD=ldmd2 on the command-line
-# when invoking this makefile.  Can also ask for gdc.
-DMD ?= dmd
+DMD ?= ldc2
 
 # FLAVOUR options are debug, fast, profile
 # Flags for each compiler will be determined on this option.

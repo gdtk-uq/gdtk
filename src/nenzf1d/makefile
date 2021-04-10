@@ -1,7 +1,7 @@
 # makefile for nenzf1d (mostly copied from the l1d makefile).
 # PJ 2020-09-26
 
-DMD ?= dmd
+DMD ?= ldc2
 
 # FLAVOUR options are debug, fast, profile
 # Flags for each compiler will be determined on this option.

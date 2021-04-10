@@ -3,24 +3,17 @@
 # For example:
 # make install
 #
-# As default, we compile with the 'fast' option.
-# For the DMD compiler, the 'fast' option requests
-# production mode and to include optimisations.
-#
-# When more detail is required in the error output,
-# we recommend compiling with the 'debug' option.
-# For the DMD compiler, this invokes all of the assert
-# checks. It also does bounds checks on all of the
-# array accesses.
-
-# We can specify the LDC2 compiler as DMD=ldmd2 on the command-line
-# when invoking this makefile.  Can also ask for gdc and ldc2.
-DMD ?= dmd
+# We can specify the DMD64 compiler as DMD=dmd on the command-line
+# when invoking this makefile.
+DMD ?= ldc2
 NVCC ?= nvcc
 GPP ?= g++
 
 # FLAVOUR options are debug, fast, profile
 # Flags for each compiler will be determined on this option.
+# As default, we compile with the 'debug' option which produces a code
+# that will have better checks and more detailed error messages.
+# The 'fast' option requests production mode and to include optimisations.
 FLAVOUR ?= debug
 
 PLATFORM ?= linux

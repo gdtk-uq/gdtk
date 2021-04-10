@@ -2,7 +2,7 @@
 
 # We can specify the LDC2 compiler as DMD=ldmd2 on the command-line
 # when invoking this makefile.  Can also ask for gdc.
-DMD ?= dmd
+DMD ?= ldc2
 PLATFORM ?= linux
 INSTALL_DIR ?= $(HOME)/dgdinst
 BUILD_DIR ?= ../../build

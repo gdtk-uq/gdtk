@@ -1,7 +1,7 @@
 # makefile for Lagrangian 1D flow solver.
 # PJ 2020-04-05
 
-DMD ?= dmd
+DMD ?= ldc2
 
 # FLAVOUR options are debug, fast, profile
 # Flags for each compiler will be determined on this option.
