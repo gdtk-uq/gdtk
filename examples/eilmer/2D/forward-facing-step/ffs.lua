@@ -46,12 +46,9 @@ bcList01 = { west=InFlowBC_Supersonic:new{flowState=inflow, label="inflow"} }
 bcList2 = { east=OutFlowBC_Simple:new{label="outflow"} }
 
 -- Define the flow-solution blocks and stitch them together.
-blk0 = FBArray:new{grid=grid0, nib=1, njb=1, 
-		       initialState=inflow, bcList=bcList01}
-blk1 = FBArray:new{grid=grid1, nib=1, njb=4,
-		       initialState=inflow, bcList=bcList01}
-blk2 = FBArray:new{grid=grid2, nib=4, njb=4,
-		       initialState=inflow, bcList=bcList2}
+blk0 = FBArray:new{grid=grid0, nib=1, njb=1, initialState=inflow, bcList=bcList01}
+blk1 = FBArray:new{grid=grid1, nib=1, njb=4, initialState=inflow, bcList=bcList01}
+blk2 = FBArray:new{grid=grid2, nib=4, njb=4, initialState=inflow, bcList=bcList2}
 identifyBlockConnections()
 
 -- The number of MPI tasks needs to match the mpirun command.
