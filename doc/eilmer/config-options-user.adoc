@@ -183,6 +183,16 @@ In a typical input script, one might set 10-15 input variables.
   Setting `config.interpolation_order=1` results in no reconstruction
   of intra-cell flow properties.
 
+`config.interpolation_delay` ::
+  _float_, default: `0.0` +
+  The time (in seconds) to wait before increasing the interpolation order.
+  If the delay is enabled, the simulation will begin using `interpolation_order=1`.
+  After the delay time, the interpolation order will switch to that specified in
+  the configuration.
+  This delay is useful to help with robustness during transient starts because the
+  first order spatial reconstruction is very reliable (albeit less accurate as compared
+  to high order reconstruction).
+
 `config.apply_limiter` ::
   _boolean_, default: `true` +
   By default, we apply a limiter to the flow-field reconstruction.
