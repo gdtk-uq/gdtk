@@ -30,7 +30,7 @@ config.adjust_invalid_cell_data = true
 config.max_time = no_flow_times*body_flow_time
 config.max_step = 80000
 config.dt_init = 1.0e-10
-config.cfl_value = 0.25
+config.cfl_value = 0.75
 config.dt_plot = config.max_time/100
 
 grids = importGridproGrid(gproGrid, 1.0)
