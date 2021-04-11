@@ -1,0 +1,10 @@
+set term postscript eps enhanced 20 "Courier"
+set output "stag-prof-T.eps"
+set yrange [0:6000]
+set xtics 0.0005
+set mxtics
+set mytics
+set grid xtics ytics mxtics mytics
+set key autotitle columnhead left font ",15"
+plot 'stag-profile.dat' u 1:24 t 'transrotational temperature' w l lw 2, \
+     'stag-profile.dat' u 1:26 t 'vibrational temperature' w l lw 2
