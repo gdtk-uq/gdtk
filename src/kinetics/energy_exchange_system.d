@@ -80,6 +80,7 @@ public:
 	// This just makes indexing consistent, and avoid having
 	// a separate indexing just for the vibRelaxers.
         mVT.length = gmodel.n_species;
+        mHeavyParticles.length = gmodel.n_species;
 
 	lua_getglobal(L, "mechanism");
 	
@@ -92,7 +93,7 @@ public:
 		lua_getfield(L, -1, key.toStringz);
                 if (!lua_isnil(L, -1)) {
                     mVT[ip][iq] = createVTMechanism(L, ip, iq, mode, gmodel);
-                    mHeavyParticles ~= iq;
+                    mHeavyParticles[ip] ~= iq;
                 }
 		lua_pop(L, 1);
 	    }
@@ -105,7 +106,7 @@ public:
     {
         mGmodel.massf2molef(gs, mMolef);
         foreach (p; mVibRelaxers) {
-            foreach (q; mHeavyParticles) {
+            foreach (q; mHeavyParticles[p]) {
                 mVT[p][q].evalRelaxationTime(gs, mMolef);
             }
         }
@@ -121,18 +122,19 @@ public:
         number rate = 0.0;
         // Compute rate change from VT exchange
         foreach (p; mVibRelaxers) {
-            foreach (q; mHeavyParticles) {
+            foreach (q; mHeavyParticles[p]) {
                 rate += mVT[p][q].rate(gs, mGsEq, mMolef);
             }
         }
         rates[0] = rate;
+
         // TODO: Compute rate change from ET exchange
         // TODO: Compute rate change from chemistry coupling.
     }
 
 private:
     int[] mVibRelaxers;
-    int[] mHeavyParticles;
+    int[][] mHeavyParticles;
     number[] mMolef;
     GasModel mGmodel;
     GasState mGsEq;
