@@ -5,9 +5,9 @@ weight: 20
 draft: false
 ---
 
-## Installing the LDC compiler
+## Installing the LLVM D compiler
 You need a D compiler to build Eilmer from source and we recommend
-the LDC compiler.
+the LLVM D compiler.
 If you have some linux chops, the install process is quite straightforward:
 
   + Download the latest stable release from:
@@ -22,20 +22,20 @@ your environment to use the loadable library.
 
 ### Step-by-step walk through for installing the LDC compiler
 
-For this example, I will install version `ldc-1.20.1`.
-You may find a newer stable release when you visit the ldc webpage.
-That is fine.
-In fact, we often encourage use of the newest stable release.
+For this example, I will install version `ldc-1.25.1`.
+You may find a newer stable release when you visit the ldc relesease webpage.
+You should download that newest release.
 For most of this you will work in a terminal.
 The first step involves the browser to find a package to download.
 
 1. Go to the LDC project github page ( https://github.com/ldc-developers/ldc/releases ),
    scroll down to find the latest stable release.
-   (Note: sometimes a pre-release is listed first. Skip this. Go for a stable release.)
+   _(Note: sometimes a pre-release is listed first. Skip this. Go for a stable release.)_
 
 2. Download the binary package for x86_64 linux. It will have the form:
    `ldc2-X.YY.Z-linux-x86_64.tar.xz`.
-   For this example, I download: ldc2-1.20.1-linux-x86_64.tar.xz.
+   For this example, I downloaded: ldc2-1.25.1-linux-x86_64.tar.xz.
+   I'll assume this has landed in your `Downloads` folder.
 
    This file is what we call a compressed tarball. The tarball refers to the fact
    that all of the files in this package have been grouped together into one file.
@@ -49,13 +49,11 @@ The first step involves the browser to find a package to download.
    The following are terminal commands you can type:
 
         cd
-        mkdir opt
-        cd opt
-        cp ~/Downloads/ldc2-1.20.1-linux-x86_64.tar.xz .
+        mkdir -p opt/ldc2
 
 4. Now unpack the compressed tarball.
 
-        tar -Jxvf ldc2-1.20.1-linux-x86_64.tar.xz
+        tar -Jxvf Downloads/ldc2-1.25.1-linux-x86_64.tar.xz -C opt/ldc2 --strip-components=1
 
    You will see it print a list of all the files that have been unpacked.
 
@@ -78,6 +76,11 @@ The first step involves the browser to find a package to download.
    action will be to try to put things onto tape, and read from tape.
    So you will very very often see the `-f` flag in usage on modern computers since
    we are often working with files on local disk.
+   
+   We controlled the destination for the unpacking with the `-C` option.
+   Also, the `--strip-components=1` removed the leading directory provided
+   in the tarball.
+   This means that our compiler install is sitting directly under `opt/ldc2`.
 
 5. Set your `PATH` variable so that it finds the LDC binaries.
 
@@ -92,11 +95,9 @@ The first step involves the browser to find a package to download.
         cd
         gedit .bashrc
 
-   Now add a line at the end of the file. Perhaps you did not download
-   version 1.20.1. I did, so I'll use that in this example. Adjust
-   your line according to the version you downloaded.
+   Now add a line at the end of the file.
 
-        export PATH=${PATH}:${HOME}/opt/ldc2-1.20.1-linux-x86_64/bin
+        export PATH=${PATH}:${HOME}/opt/ldc2/bin
 
    The `PATH` variable is what we call an environment variable.
    It configures a particular aspect of your working environment.
@@ -114,7 +115,7 @@ The first step involves the browser to find a package to download.
    Note that we *appended* the new search directory to what
    was already set in `PATH`.
    We did that with the expression
-   `${PATH}:${HOME}/opt/ldc2-1.20.1-linux-x86_64/bin`.
+   `${PATH}:${HOME}/opt/ldc2/bin`.
    This is important.
    Using the append expression, we preserve the system default `PATH` search
    directories.
@@ -137,5 +138,5 @@ The first step involves the browser to find a package to download.
 If you are using the loadable library, then you will also need to configure your
 `LD_LIBRARY_PATH`. Again make the appropriate change in `.bashrc` or equivalent:
 
-        export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${HOME}/opt/ldc2-1.20.1-linux-x86_64/lib
+        export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${HOME}/opt/ldc2/lib
 

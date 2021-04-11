@@ -39,22 +39,13 @@ You may build these executable programs from the source code, as described below
 
 ## Prerequisites: building from source
 
-The main requirement is a D language compiler but the story with this is a little complicated.
-The reference D-language compiler is DMD64 and this good for getting started, however,
-our recommendation for building optimised versions of the main simulation programs is the the LLVM D compiler.
-In constrast, the build of the loadable library needs to be done with the DMD64 compiler.
-Note that you do not need to build the loadable library to use the Eilmer simulation code,
-and, vice versa, you do not need to build Eilmer if you just want the loadable library.
-
-If you are just starting out, choose the DMD64 compiler.
-If you are preparing to do large simulations on a cluster computer,
-you should add the LLVM D compiler to you set up.
+The main requirement is a D language compiler.
+We recommend using the latest stable release of the LLVM D compiler.
 
 To build Eilmer and other programs in the toolkit, you will require:
 
   + D compilers
-      + The reference DMD64 compiler (`dmd`) is available from https://dlang.org.
-      + Binary releases for LLVM D compiler (`ldc2` and `ldmd2`)
+      + Binary releases for the latest stable release of the LLVM D compiler (`ldc2` and `ldmd2`)
         may be found at: https://github.com/ldc-developers/ldc/releases
       + An install guide for the LDC compiler is available [here]({{< relref installing-ldc >}}).
   + A C compiler
