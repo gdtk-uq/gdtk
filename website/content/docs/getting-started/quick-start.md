@@ -44,10 +44,10 @@ We recommend using the latest stable release of the LLVM D compiler.
 
 To build Eilmer and other programs in the toolkit, you will require:
 
-  + D compilers
+  + D compiler
       + Binary releases for the latest stable release of the LLVM D compiler (`ldc2` and `ldmd2`)
-        may be found at: https://github.com/ldc-developers/ldc/releases
-      + An install guide for the LDC compiler is available [here]({{< relref installing-ldc >}}).
+        may be found at: https://github.com/ldc-developers/ldc/releases .
+        An install guide for the LLVM D compiler is available [here]({{< relref installing-ldc >}}).
   + A C compiler
       + GNU compiler is a good option and comes standard on most systems.
   + The gfortran compiler (and 32-bit libraries)

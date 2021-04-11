@@ -1,11 +1,11 @@
 ---
-title: "Guide to Installing LDC"
+title: "Guide to Installing LLVM D Compiler"
 date: 2020-04-01T08:22:59+10:00
 weight: 20
 draft: false
 ---
 
-## Installing the LLVM D compiler
+## Installing the LLVM D Compiler
 You need a D compiler to build Eilmer from source and we recommend
 the LLVM D compiler.
 If you have some linux chops, the install process is quite straightforward:
