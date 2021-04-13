@@ -1915,6 +1915,9 @@ void configCheckPoint2()
 {
     // More checking of constraints on the config parameters.
     if (GlobalConfig.grid_motion != GridMotion.none) {
+        version(nk_accelerator) {
+            throw new Error("Grid motion is not compatible e4-nk-dist.");
+        }
         if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.moving_grid_1_stage ||
             GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.moving_grid_2_stage) {
             // pass, we have a consistent selection.

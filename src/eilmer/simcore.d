@@ -1278,41 +1278,40 @@ int integrate_in_time(double target_time_as_requested)
             // 2.2 Update the convective terms.
             // for the unstructured code, at this point we can freeze the limiter
             // to help alleviate any ringing of the residuals
-            if (SimState.step >= GlobalConfig.freeze_limiter_on_step &&
-                GlobalConfig.frozen_limiter == false) {
-                    GlobalConfig.frozen_limiter = true;
+            if (SimState.step >= GlobalConfig.freeze_limiter_on_step && !(GlobalConfig.frozen_limiter)) {
+                GlobalConfig.frozen_limiter = true;
             }
             if (GlobalConfig.grid_motion == GridMotion.none) {
-                if(GlobalConfig.with_super_time_stepping) { sts_gasdynamic_explicit_increment_with_fixed_grid(); }
-		else { gasdynamic_explicit_increment_with_fixed_grid(); }
-            } else {
-                version(nk_accelerator) {
-                    throw new Error("Grid motion is not compatible e4-nk-dist.");
+                // Fixed grid
+                if (GlobalConfig.with_super_time_stepping) {
+                    sts_gasdynamic_explicit_increment_with_fixed_grid();
                 } else {
-                    // Moving Grid - perform gas update for moving grid
-                    gasdynamic_explicit_increment_with_moving_grid();
-                } // end version(!nk_accelerator)
+                    gasdynamic_explicit_increment_with_fixed_grid();
+                }
+            } else {
+                // Moving Grid
+                gasdynamic_explicit_increment_with_moving_grid();
             }
             // 2.3 Solid domain update (if loosely coupled)
             // If tight coupling, then this has already been performed
             // in the gasdynamic_explicit_increment().
-            if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.loose && SimState.step == update_solid_domain_on_step) {
-
+            if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.loose &&
+                SimState.step == update_solid_domain_on_step) {
                 // determine stable time step in solid domain
                 double dt_solid_stable = determine_solid_time_step_size();
                 int n_solid_coupling = to!int(min((floor(dt_solid_stable/SimState.dt_global)), int.max));
                 double dt_solid = n_solid_coupling*SimState.dt_global;
                 update_solid_domain_on_step = SimState.step + n_solid_coupling;
-
+                //
                 if (GlobalConfig.is_master_task) {
                     writeln("-- SOLID DOMAIN UPDATE: cfl = ", GlobalConfig.solid_domain_cfl, ",  dt_solid = ", dt_solid,
                             ", next update on step = ", update_solid_domain_on_step);
                 }
-
+                //
                 // we have currently removed the implicit solid update.
                 // Call Nigel's update function here.
                 // solid_domains_backward_euler_update(SimState.time, SimState.dt_global);
-
+                //
                 // perform an Euler update for the solid domain
                 int ftl = 0;
                 // Next do solid domain update IMMEDIATELY after at same flow update
@@ -1332,7 +1331,7 @@ int integrate_in_time(double target_time_as_requested)
                         if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryCells(SimState.time, ftl); }
                     }
                 }
-
+                //
                 foreach (sblk; parallel(localSolidBlocks, 1)) {
                     if (!sblk.active) continue;
                     sblk.averageTemperatures();
