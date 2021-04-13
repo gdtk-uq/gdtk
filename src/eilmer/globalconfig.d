@@ -1914,10 +1914,12 @@ void configCheckPoint1()
 void configCheckPoint2()
 {
     // More checking of constraints on the config parameters.
-    if (GlobalConfig.grid_motion != GridMotion.none) {
-        version(nk_accelerator) {
+    version(nk_accelerator) {
+        if (GlobalConfig.grid_motion != GridMotion.none) {
             throw new Error("Grid motion is not compatible e4-nk-dist.");
         }
+    }
+    if (GlobalConfig.grid_motion != GridMotion.none) {
         if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.moving_grid_1_stage ||
             GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.moving_grid_2_stage) {
             // pass, we have a consistent selection.
