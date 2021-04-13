@@ -1290,18 +1290,7 @@ int integrate_in_time(double target_time_as_requested)
                     throw new Error("Grid motion is not compatible e4-nk-dist.");
                 } else {
                     // Moving Grid - perform gas update for moving grid
-                    // [TODO] PJ 2018-01-20 Up to here with thinking about MPI parallel.
-                    set_grid_velocities();
                     gasdynamic_explicit_increment_with_moving_grid();
-                    // Recalculate all geometry at gtl 0
-                    // because that is where the update function
-                    // has put the most recent data values.
-                    foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                        if (blk.active) {
-                            blk.compute_primary_cell_geometric_data(0);
-                            blk.compute_least_squares_setup(0);
-                        }
-                    }
                 } // end version(!nk_accelerator)
             }
             // 2.3 Solid domain update (if loosely coupled)
@@ -2033,25 +2022,6 @@ void chemistry_step(double dt)
         }
     }
 } // end chemistry_half_step()
-
-void set_grid_velocities()
-{
-    final switch(GlobalConfig.grid_motion) {
-    case GridMotion.none:
-        throw new Error("Should not be setting grid velocities in with GridMotion.none");
-    case GridMotion.user_defined:
-        // Rely on user to set vertex velocities.
-        // Note that velocities remain unchanged if the user does nothing.
-        assign_vertex_velocities_via_udf(SimState.time, SimState.dt_global);
-        break;
-    case GridMotion.shock_fitting:
-        if (SimState.time > GlobalConfig.shock_fitting_delay) {
-            foreach (i, fba; fluidBlockArrays) {
-                if (fba.shock_fitting) { compute_vtx_velocities_for_sf(fba); }
-            }
-        }
-    } // end switch grid_motion
-} // end set_grid_velocities()
 
 //---------------------------------------------------------------------------
 
@@ -3610,6 +3580,22 @@ void gasdynamic_explicit_increment_with_moving_grid()
     shared int ftl; // time-level within the overall convective-update
     shared int gtl; // grid time-level
 
+    final switch(GlobalConfig.grid_motion) {
+    case GridMotion.none:
+        throw new Error("Should not be setting grid velocities in with GridMotion.none");
+    case GridMotion.user_defined:
+        // Rely on user to set vertex velocities.
+        // Note that velocities remain unchanged if the user does nothing.
+        assign_vertex_velocities_via_udf(SimState.time, SimState.dt_global);
+        break;
+    case GridMotion.shock_fitting:
+        if (SimState.time > GlobalConfig.shock_fitting_delay) {
+            foreach (i, fba; fluidBlockArrays) {
+                if (fba.shock_fitting) { compute_vtx_velocities_for_sf(fba); }
+            }
+        }
+    } // end switch grid_motion
+
     int attempt_number = 0;
     int step_failed = 0; // Use int because we want to reduce across MPI ranks.
     do {
@@ -4066,10 +4052,13 @@ void gasdynamic_explicit_increment_with_moving_grid()
             foreach (scell; sblk.activeCells) { scell.e[0] = scell.e[end_indx]; }
         }
     }
-    // update the latest grid level to the new step grid level 0
-    foreach (blk; localFluidBlocksBySize) {
+    //
+    // Update the latest grid level to the new step grid level 0 and recalculate geometry.
+    foreach (blk; parallel(localFluidBlocksBySize,1)) {
         if (blk.active) {
             foreach (cell; blk.cells) { cell.copy_grid_level_to_level(gtl, 0); }
+            blk.compute_primary_cell_geometric_data(0);
+            blk.compute_least_squares_setup(0);
         }
     }
     // Finally, update the globally known simulation time for the whole step.
