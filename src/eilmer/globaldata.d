@@ -11,6 +11,8 @@
 
 module globaldata;
 
+import std.datetime;
+
 import globalconfig;
 import fluidblock;
 import fluidblockarray;
@@ -18,7 +20,46 @@ import ssolidblock;
 import block;
 import loads;
 
-// For this globally-accessible data we use the __gshared storage class
+// State data for simulation.
+// Needs to be seen by all of the coordination functions in simcore.d.
+final class SimState {
+    shared static double time;  // present simulation time, tracked by code
+    shared static int step;
+    shared static double dt_global;     // simulation time step determined by code
+    shared static double dt_allow;      // allowable global time step determined by code
+    // for STS
+    shared static double dt_global_parab;
+    shared static double dt_allow_parab;
+    shared static int s_RKL;
+    //
+    shared static double cfl_max;      // current max cfl determined by code
+    shared static double dt_override = 0.0;  // A positive value will override a larger computed time step.
+    shared static double target_time;  // simulate_in_time will work toward this value
+
+    // We want to write sets of output files periodically.
+    // The following periods set the cadence for output.
+    shared static double t_plot;
+    shared static double t_history;
+    shared static double t_loads;
+    // Once we write some data to files, we don't want to write another set of files
+    // until we have done some more stepping.  The following flags help us remember
+    // the state of the solution output.
+    shared static bool output_just_written = true;
+    shared static bool history_just_written = true;
+    shared static bool loads_just_written = true;
+    // We connect the sets of files to the simulation time at which they were written
+    // with an index that gets incremented each time we write a set of files.
+    shared static int current_tindx;
+    shared static int current_loads_tindx;
+    // Keep track of the snapshot output
+    shared static int nWrittenSnapshots;
+    // For working out how long the simulation has been running.
+    static SysTime wall_clock_start;
+    static int maxWallClockSeconds;
+} // end class SimState
+
+
+// For the following globally-accessible data we use the __gshared storage class
 // to put the variables in the classic global memory space.
 // All of the threads may access the data but we take responsibility for
 // not allowing the threads to step all over each other.

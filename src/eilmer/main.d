@@ -31,6 +31,7 @@ import nm.luabbla;
 import fvcore: FlowSolverException;
 import globalconfig;
 import simcore;
+import globaldata: SimState;
 import util.lua;
 import geom.luawrap;
 import luaglobalconfig;
@@ -640,7 +641,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
         fail_init = init_simulation(tindxStart, nextLoadsIndx, maxCPUs, threadsPerMPITask, maxWallClock);
         if (!fail_init) {
             if (verbosityLevel > 0 && GlobalConfig.is_master_task) {
-                writeln("starting simulation time= ", simcore.SimState.time);
+                writeln("starting simulation time= ", SimState.time);
             }
             version(mpi_parallel) {
                 stdout.flush();

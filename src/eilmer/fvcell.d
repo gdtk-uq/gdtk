@@ -30,7 +30,7 @@ import fvinterface;
 import globalconfig;
 import lsqinterp;
 import gas.fuel_air_mix;
-import simcore : SimState;
+import globaldata : SimState;
 import turbulence;
 
 import kinetics.chemistry_update;
