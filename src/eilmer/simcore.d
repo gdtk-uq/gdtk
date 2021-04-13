@@ -1217,6 +1217,24 @@ int integrate_in_time(double target_time_as_requested)
         myblk.myConfig.viscous_factor = GlobalConfig.viscous_factor;
     }
     //
+    // Select the actual gasdynamic update function.
+    // These functions are sitting in module simcore_gasdynamic_step.
+    void function() gasdynamic_step;
+    if (GlobalConfig.grid_motion == GridMotion.none) {
+        // Fixed grid
+        if (GlobalConfig.with_super_time_stepping) {
+            gasdynamic_step = &sts_gasdynamic_explicit_increment_with_fixed_grid;
+        } else {
+            gasdynamic_step = &gasdynamic_explicit_increment_with_fixed_grid;
+        }
+    } else {
+        // Moving Grid
+        gasdynamic_step = &gasdynamic_explicit_increment_with_moving_grid;
+    }
+    if (!gasdynamic_step) {
+        throw new Error("Did not set a valid gasdynamic_step function.");
+    }
+    //
     local_dt_allow.length = localFluidBlocks.length; // prepare array for use later
     local_cfl_max.length = localFluidBlocks.length; // prepare array for use later
     local_dt_allow_parab.length = localFluidBlocks.length;
@@ -1265,7 +1283,7 @@ int integrate_in_time(double target_time_as_requested)
             }
             //
             // 2.0 Attempt a time step.
-            // 2.1 Chemistry 1/2 step (if appropriate).
+            // 2.1 Chemistry 1/2 step, if appropriate.
             if (GlobalConfig.strangSplitting == StrangSplittingMode.half_R_full_T_half_R &&
                 GlobalConfig.with_local_time_stepping) {
                 throw new Error("StrangSplitting.half_R_full_T_half_R and LTS aren't currently compatible");
@@ -1275,23 +1293,14 @@ int integrate_in_time(double target_time_as_requested)
                 (SimState.time > GlobalConfig.reaction_time_delay)) {
                 chemistry_step(0.5*SimState.dt_global);
             }
-            // 2.2 Update the convective terms.
-            // for the unstructured code, at this point we can freeze the limiter
-            // to help alleviate any ringing of the residuals
+            //
+            // 2.2 Step the gasdynamic processes.
             if (SimState.step >= GlobalConfig.freeze_limiter_on_step && !(GlobalConfig.frozen_limiter)) {
+                // Freeze the limiter at this point to help alleviate any ringing of the residuals.
                 GlobalConfig.frozen_limiter = true;
             }
-            if (GlobalConfig.grid_motion == GridMotion.none) {
-                // Fixed grid
-                if (GlobalConfig.with_super_time_stepping) {
-                    sts_gasdynamic_explicit_increment_with_fixed_grid();
-                } else {
-                    gasdynamic_explicit_increment_with_fixed_grid();
-                }
-            } else {
-                // Moving Grid
-                gasdynamic_explicit_increment_with_moving_grid();
-            }
+            gasdynamic_step();
+            //
             // 2.3 Solid domain update (if loosely coupled)
             // If tight coupling, then this has already been performed
             // in the gasdynamic_explicit_increment().
@@ -1370,9 +1379,8 @@ int integrate_in_time(double target_time_as_requested)
                         foreach (scell; sblk.activeCells) { scell.e[0] = scell.e[end_indx]; }
                     }
                 } // end foreach sblk
-
             } // solid update finished
-
+            //
             // 2.4 Chemistry step or 1/2 step (if appropriate).
             if ( GlobalConfig.reacting && (SimState.time > GlobalConfig.reaction_time_delay)) {
                 double mydt = (GlobalConfig.strangSplitting == StrangSplittingMode.full_T_full_R) ?
