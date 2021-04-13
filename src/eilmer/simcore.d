@@ -961,10 +961,11 @@ void write_snapshot_files()
             snapshotInfo[iSnap-1] = snapshotInfo[iSnap];
         }
     }
-
-    int snapshotIdx = (SimState.nWrittenSnapshots < GlobalConfig.nTotalSnapshots) ? SimState.nWrittenSnapshots : GlobalConfig.nTotalSnapshots-1;
+    //
+    int snapshotIdx = (SimState.nWrittenSnapshots < GlobalConfig.nTotalSnapshots) ?
+        SimState.nWrittenSnapshots : GlobalConfig.nTotalSnapshots-1;
     snapshotInfo[snapshotIdx] = tuple!("t", "dt")(SimState.time, SimState.dt_global);
-
+    //
     if (GlobalConfig.is_master_task) {
         ensure_directory_is_present(make_snapshot_path_name("flow", snapshotIdx));
         ensure_directory_is_present(make_snapshot_path_name("solid", snapshotIdx));
@@ -1022,7 +1023,6 @@ void write_DFT_files()
     if (GlobalConfig.is_master_task) {
         ensure_directory_is_present("DFT");
     }
-
     version(mpi_parallel) {
         version(mpi_timeouts) {
             MPI_Sync_tasks();
@@ -1030,14 +1030,13 @@ void write_DFT_files()
             MPI_Barrier(MPI_COMM_WORLD);
         }
     }
-
     auto job_name = GlobalConfig.base_file_name;
-
     foreach (myblk; parallel(localFluidBlocksBySize, 1)) {
         auto file_name = make_DFT_file_name(job_name, myblk.id, GlobalConfig.flowFileExt);
         myblk.write_DFT(file_name);
     }
-}
+} // end write_DFT_files()
+
 
 void march_over_blocks()
 {
@@ -1166,6 +1165,7 @@ void march_over_blocks()
     }
 } // end march_over_blocks()
 
+
 int integrate_in_time(double target_time_as_requested)
 {
     version(enable_fp_exceptions) {
@@ -1249,7 +1249,7 @@ int integrate_in_time(double target_time_as_requested)
     //----------------------------------------------------------------
     //                 Top of main time-stepping loop
     //----------------------------------------------------------------
-
+    // When SolidBlocks are in play,
     // we let the fluid time step settle before loosely coupling the solid domain;
     // during this period the fluid and solid are tightly coupled.
     // 1000 iterations appears to be sufficient.
@@ -1257,14 +1257,15 @@ int integrate_in_time(double target_time_as_requested)
     int update_solid_domain_on_step = solid_domain_loose_coupling_delay;
     auto coupling_with_solid_domains_save = GlobalConfig.coupling_with_solid_domains;
     GlobalConfig.coupling_with_solid_domains = SolidDomainCoupling.tight;
-
+    //
     while ( !finished_time_stepping ) {
         try {
-            if (SimState.step == solid_domain_loose_coupling_delay && coupling_with_solid_domains_save == SolidDomainCoupling.loose) {
+            if (SimState.step == solid_domain_loose_coupling_delay &&
+                coupling_with_solid_domains_save == SolidDomainCoupling.loose) {
                 // switch to loose coupling
                 GlobalConfig.coupling_with_solid_domains = SolidDomainCoupling.loose;
             }
-
+            //
             // 0.0 Run-time configuration may change, a halt may be called, etc.
             check_run_time_configuration(target_time_as_requested);
             if (GlobalConfig.grid_motion != GridMotion.none) { synchronize_corner_coords_for_all_blocks(); }
@@ -1551,15 +1552,13 @@ int integrate_in_time(double target_time_as_requested)
                 GC.collect();
                 GC.minimize();
             }
-
+            //
             // 4.3 Increment the DFT in each cell
-            if ((SimState.step % GlobalConfig.DFT_step_interval == 0) && 
-                    GlobalConfig.do_temporal_DFT) {
+            if ((SimState.step % GlobalConfig.DFT_step_interval == 0) && GlobalConfig.do_temporal_DFT) {
                 foreach (blk; localFluidBlocks) {
                     blk.increment_DFT(SimState.step / GlobalConfig.DFT_step_interval - 1);
                 }
             }
-
             //
             // 5.0 Update the run-time loads calculation, if required
             if (GlobalConfig.compute_run_time_loads) {
@@ -1636,7 +1635,7 @@ int integrate_in_time(double target_time_as_requested)
             stdout.flush();
         }
     } // end while !finished_time_stepping
-
+    //
     if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) {
         writeln("Done integrate_in_time().");
         stdout.flush();
@@ -1650,6 +1649,7 @@ int integrate_in_time(double target_time_as_requested)
         return 0; // success
     }
 } // end integrate_in_time()
+
 
 void check_run_time_configuration(double target_time_as_requested)
 {
@@ -2001,12 +2001,12 @@ void update_ch_for_divergence_cleaning()
 void set_mu_and_k()
 {
     version(turbulence){
-    foreach (blk; parallel(localFluidBlocksBySize,1)) {
-        if (blk.active) {
-	    blk.flow_property_spatial_derivatives(0);
-            blk.estimate_turbulence_viscosity();
+        foreach (blk; parallel(localFluidBlocksBySize,1)) {
+            if (blk.active) {
+                blk.flow_property_spatial_derivatives(0);
+                blk.estimate_turbulence_viscosity();
+            }
         }
-    }
     }
 } // end set_mu_and_k()
 
@@ -2030,7 +2030,6 @@ void chemistry_step(double dt)
     }
 } // end chemistry_half_step()
 
-//----------------------------------------------------------------------------
 
 void compute_Linf_residuals(ConservedQuantities Linf_residuals)
 {
@@ -2125,7 +2124,6 @@ void compute_wall_distances() {
 
         @author: Nick Gibbons
     */
-
     // First count many viscous wall faces are in our local blocks
     int nfaces = 0;
     foreach (blk; localFluidBlocksBySize) {
@@ -2133,13 +2131,13 @@ void compute_wall_distances() {
             if (bc.is_wall_with_viscous_effects) nfaces+=bc.faces.length;
         }
     }
-
+    //
     // Now pack their centroid positions into a special buffer
     double[] facepos;
     size_t ii=0;
     facepos.length = nfaces*3;
     int this_rank = GlobalConfig.mpi_rank_for_local_task;
-
+    //
     foreach(blk; localFluidBlocksBySize) {
         foreach(bc; blk.bc) {
             if (bc.is_wall_with_viscous_effects){
@@ -2161,13 +2159,13 @@ void compute_wall_distances() {
     version(mpi_parallel) {
         int my_rank = GlobalConfig.mpi_rank_for_local_task;
         int mpi_worldsize = GlobalConfig.mpi_size;
-
+        //
         int globalsize = to!int(facepos.length);
         MPI_Allreduce(MPI_IN_PLACE,&globalsize,1,MPI_INT,MPI_SUM,MPI_COMM_WORLD);
-
+        //
         double[] globalfacepos;
         globalfacepos.length = globalsize;
-
+        //
         int ngathered = 0;
         double[] taskbuffer;
         int ntask;
@@ -2183,13 +2181,11 @@ void compute_wall_distances() {
             ngathered += ntask;
             taskbuffer.length=0;
         }
-
         // Now clean up by copying the globaldata back into facepos
         facepos.length = globalfacepos.length;
         foreach(i; 0 .. globalfacepos.length)  facepos[i] = globalfacepos[i];
         nfaces = to!int(facepos.length)/3;
     }
-
     if (nfaces == 0) {
         throw new Exception("Turbulence model requires wall distance, but no walls found!");
     }
@@ -2201,7 +2197,7 @@ void compute_wall_distances() {
         nodes ~= node;
     }
     auto root = makeTree(nodes);
-
+    //
     // Now loop over the nodes in each of our local blocks and set dwall
     foreach(blk; localFluidBlocksBySize) {
         foreach(cell; blk.cells){
