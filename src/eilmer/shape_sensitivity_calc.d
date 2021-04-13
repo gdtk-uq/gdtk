@@ -39,6 +39,7 @@ import fileutil;
 import globalconfig;
 import postprocess;
 import simcore;
+import simcore_gasdynamic_step;
 import geom;
 import globaldata;
 

@@ -93,7 +93,7 @@ ifeq ($(WITH_MATPLOTLIB), 1)
 	PROGRAMS += e4shared_mpl
 endif
 
-EILMER_CORE_FILES := simcore.d \
+EILMER_CORE_FILES := simcore.d simcore_gasdynamic_step.d \
 	fileutil.d fvcore.d fvcell.d fvvertex.d fvinterface.d \
 	fluxcalc.d onedinterp.d flowgradients.d lsqinterp.d limiters.d \
 	conservedquantities.d flowstate.d \

@@ -47,6 +47,7 @@ import geom;
 import geom.luawrap;
 import lua_helper;
 import simcore;
+import simcore_gasdynamic_step;
 import fluxcalc;
 import user_defined_source_terms;
 import flowgradients;

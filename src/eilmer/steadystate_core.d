@@ -36,6 +36,7 @@ import sfluidblock;
 import globaldata;
 import globalconfig;
 import simcore;
+import simcore_gasdynamic_step;
 import fvcore;
 import fileutil;
 import user_defined_source_terms;
