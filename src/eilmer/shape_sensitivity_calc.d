@@ -40,6 +40,8 @@ import globalconfig;
 import postprocess;
 import simcore;
 import simcore_gasdynamic_step;
+import simcore_solid_step;
+import simcore_exchange;
 import geom;
 import globaldata;
 

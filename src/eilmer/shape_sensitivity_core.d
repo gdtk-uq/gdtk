@@ -48,6 +48,8 @@ import geom.luawrap;
 import lua_helper;
 import simcore;
 import simcore_gasdynamic_step;
+import simcore_solid_step;
+import simcore_exchange;
 import fluxcalc;
 import user_defined_source_terms;
 import flowgradients;

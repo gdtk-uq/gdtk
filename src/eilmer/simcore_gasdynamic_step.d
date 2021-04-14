@@ -44,14 +44,116 @@ version(mpi_parallel) {
     import mpi;
     import mpi.util;
 }
+import simcore_exchange;
+
 
 // To avoid race conditions, there are a couple of locations where
 // each block will put its result into the following arrays,
 // then we will reduce across the arrays.
-// shared static double[] local_dt_allow;
-// shared static double[] local_dt_allow_parab;
-// shared static double[] local_cfl_max;
+shared static double[] local_dt_allow;
+shared static double[] local_dt_allow_parab;
+shared static double[] local_cfl_max;
 shared static int[] local_invalid_cell_count;
+
+
+void determine_time_step_size()
+{
+    // Set the size of the time step to be the minimum allowed for any active block.
+    // We will check it occasionally, if we have not elected to keep fixed time steps.
+    bool do_dt_check_now =
+        ((SimState.step % GlobalConfig.cfl_count) == 0) ||
+        (SimState.dt_override > 0.0);
+    version(mpi_parallel) {
+        // If one task is doing a time-step check, all tasks have to.
+        int myFlag = to!int(do_dt_check_now);
+        MPI_Allreduce(MPI_IN_PLACE, &myFlag, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+        do_dt_check_now = to!bool(myFlag);
+    }
+    if (do_dt_check_now) {
+        // Adjust the time step...
+        // First, check what each block thinks should be the allowable step size.
+        // Also, if we have done some steps, check the CFL limits.
+        foreach (i, myblk; parallel(localFluidBlocksBySize,1)) {
+            // Note 'i' is not necessarily the block id but
+            // that is not important here, just need a unique spot to poke into local_dt_allow.
+            if (myblk.active) {
+                double[3] results = myblk.determine_time_step_size(SimState.dt_global, (SimState.step > 0));
+                local_dt_allow[i] = results[0];
+                local_cfl_max[i] = results[1];
+                local_dt_allow_parab[i] = results[2];
+            }
+        }
+        // Second, reduce this estimate across all local blocks.
+        // The starting values are sure to be replaced.
+        SimState.dt_allow = double.max;
+	SimState.dt_allow_parab = double.max;
+        SimState.cfl_max = 0.0;
+        foreach (i, myblk; localFluidBlocks) { // serial loop
+            if (myblk.active) {
+                SimState.dt_allow = min(SimState.dt_allow, local_dt_allow[i]);
+                SimState.dt_allow_parab = min(SimState.dt_allow_parab, local_dt_allow_parab[i]);
+                SimState.cfl_max = max(SimState.cfl_max, local_cfl_max[i]);
+            }
+        }
+        version(mpi_parallel) {
+            double my_dt_allow = SimState.dt_allow;
+            double my_dt_allow_parab = SimState.dt_allow_parab;
+            double my_cfl_max = SimState.cfl_max;
+            MPI_Allreduce(MPI_IN_PLACE, &my_dt_allow, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+            MPI_Allreduce(MPI_IN_PLACE, &my_dt_allow_parab, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+            MPI_Allreduce(MPI_IN_PLACE, &my_cfl_max, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+            SimState.dt_allow = my_dt_allow;
+            SimState.dt_allow_parab = my_dt_allow_parab;
+            SimState.cfl_max = my_cfl_max;
+        }
+        if (GlobalConfig.with_super_time_stepping) {
+            if (SimState.step == 0) {
+                // When starting out, we may override the computed value.
+                // This might be handy for situations where the computed estimate
+                // is likely to be not small enough for numerical stability.
+                SimState.dt_allow = fmin(GlobalConfig.dt_init, SimState.dt_allow);
+                SimState.dt_allow_parab = fmin(GlobalConfig.dt_init, SimState.dt_allow_parab);
+            }
+            // Now, change the actual time step, as needed.
+            if (SimState.dt_allow <= SimState.dt_global) {
+                // If we need to reduce the time step, do it immediately.
+                SimState.dt_global = SimState.dt_allow;
+                SimState.dt_global_parab = SimState.dt_allow_parab;
+            } else {
+                // Make the transitions to larger time steps gentle.
+                SimState.dt_global = min(SimState.dt_global*1.5, SimState.dt_allow);
+                SimState.dt_global_parab = min(SimState.dt_global_parab*1.5, SimState.dt_allow_parab);
+                // The user may supply, explicitly, a maximum time-step size.
+                SimState.dt_global = min(SimState.dt_global, GlobalConfig.dt_max);
+            }
+        } else if (GlobalConfig.with_local_time_stepping) {
+            SimState.dt_global = SimState.dt_allow;
+        } else { // do some global time-stepping checks
+            if (SimState.step == 0) {
+                // When starting out, we may override the computed value.
+                // This might be handy for situations where the computed estimate
+                // is likely to be not small enough for numerical stability.
+                SimState.dt_allow = fmin(GlobalConfig.dt_init, SimState.dt_allow);
+            }
+            if (SimState.dt_override > 0.0) {
+                // The user-defined supervisory function atTimestepStart may have set
+                // dt_override because it knows something about the simulation conditions
+                // that is not handled well by our generic CFL check.
+                SimState.dt_allow = fmin(SimState.dt_override, SimState.dt_allow);
+            }
+            // Now, change the actual time step, as needed.
+            if (SimState.dt_allow <= SimState.dt_global) {
+                // If we need to reduce the time step, do it immediately.
+                SimState.dt_global = SimState.dt_allow;
+            } else {
+                // Make the transitions to larger time steps gentle.
+                SimState.dt_global = min(SimState.dt_global*1.5, SimState.dt_allow);
+                // The user may supply, explicitly, a maximum time-step size.
+                SimState.dt_global = min(SimState.dt_global, GlobalConfig.dt_max);
+            }
+        }
+    } // end if do_cfl_check_now
+} // end determine_time_step_size()
 
 
 void sts_gasdynamic_explicit_increment_with_fixed_grid()
@@ -1834,266 +1936,6 @@ void gasdynamic_explicit_increment_with_moving_grid()
     // Finally, update the globally known simulation time for the whole step.
     SimState.time = t0 + SimState.dt_global;
 } // end gasdynamic_explicit_increment_with_moving_grid()
-
-//---------------------------------------------------------------------------
-
-void exchange_ghost_cell_boundary_data(double t, int gtl, int ftl)
-// We have hoisted the exchange of ghost-cell data out of the GhostCellEffect class
-// that used to live only inside the boundary condition attached to a block.
-// The motivation for allowing this leakage of abstraction is that the MPI
-// exchange of messages requires a coordination of actions that spans blocks.
-// Sigh...  2017-01-24 PJ
-// p.s. The data for that coordination is still buried in the FullFaceCopy class.
-// No need to have all its guts hanging out.
-{
-    foreach (blk; localFluidBlocks) {
-        foreach(bc; blk.bc) {
-            foreach (gce; bc.preReconAction) {
-                auto mygce1 = cast(GhostCellMappedCellCopy) gce;
-                if (mygce1) { mygce1.exchange_geometry_phase0(); }
-                auto mygce2 = cast(GhostCellFullFaceCopy) gce;
-                if (mygce2) { mygce2.exchange_geometry_phase0(); }
-            }
-        }
-    }
-    foreach (blk; localFluidBlocks) {
-        foreach(bc; blk.bc) {
-            foreach (gce; bc.preReconAction) {
-                auto mygce1 = cast(GhostCellMappedCellCopy) gce;
-                if (mygce1) { mygce1.exchange_geometry_phase1(); }
-                auto mygce2 = cast(GhostCellFullFaceCopy) gce;
-                if (mygce2) { mygce2.exchange_geometry_phase1(); }
-            }
-        }
-    }
-    foreach (blk; localFluidBlocks) {
-        foreach(bc; blk.bc) {
-            foreach (gce; bc.preReconAction) {
-                auto mygce1 = cast(GhostCellMappedCellCopy) gce;
-                if (mygce1) { mygce1.exchange_geometry_phase2(); }
-                auto mygce2 = cast(GhostCellFullFaceCopy) gce;
-                if (mygce2) { mygce2.exchange_geometry_phase2(); }
-            }
-        }
-    }
-    foreach (blk; localFluidBlocks) {
-        foreach(bc; blk.bc) {
-            foreach (gce; bc.preReconAction) {
-                auto mygce1 = cast(GhostCellMappedCellCopy) gce;
-                if (mygce1) { mygce1.exchange_flowstate_phase0(t, gtl, ftl); }
-                auto mygce2 = cast(GhostCellFullFaceCopy) gce;
-                if (mygce2) { mygce2.exchange_flowstate_phase0(t, gtl, ftl); }
-            }
-        }
-    }
-    foreach (blk; localFluidBlocks) {
-        foreach(bc; blk.bc) {
-            foreach (gce; bc.preReconAction) {
-                auto mygce1 = cast(GhostCellMappedCellCopy) gce;
-                if (mygce1) { mygce1.exchange_flowstate_phase1(t, gtl, ftl); }
-                auto mygce2 = cast(GhostCellFullFaceCopy) gce;
-                if (mygce2) { mygce2.exchange_flowstate_phase1(t, gtl, ftl); }
-            }
-        }
-    }
-    foreach (blk; localFluidBlocks) {
-        foreach(bc; blk.bc) {
-            foreach (gce; bc.preReconAction) {
-                auto mygce1 = cast(GhostCellMappedCellCopy) gce;
-                if (mygce1) { mygce1.exchange_flowstate_phase2(t, gtl, ftl); }
-                auto mygce2 = cast(GhostCellFullFaceCopy) gce;
-                if (mygce2) { mygce2.exchange_flowstate_phase2(t, gtl, ftl); }
-            }
-        }
-    }
-} // end exchange_ghost_cell_boundary_data()
-
-
-void exchange_ghost_cell_shock_data(double t, int gtl, int ftl)
-// exchange shock detector data
-{
-    foreach (blk; localFluidBlocks) {
-        foreach(bc; blk.bc) {
-            foreach (gce; bc.preReconAction) {
-                auto mygce = cast(GhostCellFullFaceCopy) gce;
-                if (mygce) { mygce.exchange_shock_phase0(t, gtl, ftl); }
-            }
-        }
-    }
-    foreach (blk; localFluidBlocks) {
-        foreach(bc; blk.bc) {
-            foreach (gce; bc.preReconAction) {
-                auto mygce = cast(GhostCellFullFaceCopy) gce;
-                if (mygce) { mygce.exchange_shock_phase1(t, gtl, ftl); }
-            }
-        }
-    }
-    foreach (blk; localFluidBlocks) {
-        foreach(bc; blk.bc) {
-            foreach (gce; bc.preReconAction) {
-                auto mygce = cast(GhostCellFullFaceCopy) gce;
-                if (mygce) { mygce.exchange_shock_phase2(t, gtl, ftl); }
-            }
-        }
-    }
-} // end exchange_ghost_cell_boundary_data()
-
-void exchange_ghost_cell_boundary_convective_gradient_data(double t, int gtl, int ftl)
-// We have hoisted the exchange of ghost-cell data out of the GhostCellEffect class
-// that used to live only inside the boundary condition attached to a block.
-// The motivation for allowing this leakage of abstraction is that the MPI
-// exchange of messages requires a coordination of actions that spans blocks.
-// Sigh...  2017-01-24 PJ
-// p.s. The data for that coordination is still buried in the FullFaceCopy class.
-// No need to have all its guts hanging out.
-{
-    foreach (blk; localFluidBlocks) {
-        foreach(bc; blk.bc) {
-            foreach (gce; bc.preReconAction) {
-                auto mygce1 = cast(GhostCellMappedCellCopy) gce;
-                if (mygce1) { mygce1.exchange_convective_gradient_phase0(t, gtl, ftl); }
-            }
-        }
-    }
-    foreach (blk; localFluidBlocks) {
-        foreach(bc; blk.bc) {
-            foreach (gce; bc.preReconAction) {
-                auto mygce1 = cast(GhostCellMappedCellCopy) gce;
-                if (mygce1) { mygce1.exchange_convective_gradient_phase1(t, gtl, ftl); }
-            }
-        }
-    }
-    foreach (blk; localFluidBlocks) {
-        foreach(bc; blk.bc) {
-            foreach (gce; bc.preReconAction) {
-                auto mygce1 = cast(GhostCellMappedCellCopy) gce;
-                if (mygce1) { mygce1.exchange_convective_gradient_phase2(t, gtl, ftl); }
-            }
-        }
-    }
-} // end exchange_ghost_cell_boundary_convective_gradient_data()
-
-void exchange_ghost_cell_boundary_viscous_gradient_data(double t, int gtl, int ftl)
-// We have hoisted the exchange of ghost-cell data out of the GhostCellEffect class
-// that used to live only inside the boundary condition attached to a block.
-// The motivation for allowing this leakage of abstraction is that the MPI
-// exchange of messages requires a coordination of actions that spans blocks.
-// Sigh...  2017-01-24 PJ
-// p.s. The data for that coordination is still buried in the FullFaceCopy class.
-// No need to have all its guts hanging out.
-{
-    foreach (blk; localFluidBlocks) {
-        foreach(bc; blk.bc) {
-            foreach (gce; bc.preReconAction) {
-                auto mygce1 = cast(GhostCellMappedCellCopy) gce;
-                if (mygce1) { mygce1.exchange_viscous_gradient_phase0(t, gtl, ftl); }
-                auto mygce2 = cast(GhostCellFullFaceCopy) gce;
-                if (mygce2) { mygce2.exchange_viscous_gradient_phase0(t, gtl, ftl); }
-            }
-        }
-    }
-    foreach (blk; localFluidBlocks) {
-        foreach(bc; blk.bc) {
-            foreach (gce; bc.preReconAction) {
-                auto mygce1 = cast(GhostCellMappedCellCopy) gce;
-                if (mygce1) { mygce1.exchange_viscous_gradient_phase1(t, gtl, ftl); }
-                auto mygce2 = cast(GhostCellFullFaceCopy) gce;
-                if (mygce2) { mygce2.exchange_viscous_gradient_phase1(t, gtl, ftl); }
-            }
-        }
-    }
-    foreach (blk; localFluidBlocks) {
-        foreach(bc; blk.bc) {
-            foreach (gce; bc.preReconAction) {
-                auto mygce1 = cast(GhostCellMappedCellCopy) gce;
-                if (mygce1) { mygce1.exchange_viscous_gradient_phase2(t, gtl, ftl); }
-                auto mygce2 = cast(GhostCellFullFaceCopy) gce;
-                if (mygce2) { mygce2.exchange_viscous_gradient_phase2(t, gtl, ftl); }
-            }
-        }
-    }
-} // end exchange_ghost_cell_boundary_viscous_gradient_data()
-
-void exchange_ghost_cell_solid_boundary_data()
-{
-    foreach (myblk; localSolidBlocks) {
-        foreach (bc; myblk.bc) {
-            foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
-                auto mygce = cast(SolidGCE_SolidGhostCellFullFaceCopy)gce;
-                if (mygce) { mygce.exchange_solid_data_phase0(); }
-            }
-        }
-    }
-    foreach (myblk; localSolidBlocks) {
-        foreach (bc; myblk.bc) {
-            foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
-                auto mygce = cast(SolidGCE_SolidGhostCellFullFaceCopy)gce;
-                if (mygce) { mygce.exchange_solid_data_phase1(); }
-            }
-        }
-    }
-    foreach (myblk; localSolidBlocks) {
-        foreach (bc; myblk.bc) {
-            foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
-                auto mygce = cast(SolidGCE_SolidGhostCellFullFaceCopy)gce;
-                if (mygce) { mygce.exchange_solid_data_phase2(); }
-            }
-        }
-    }
-} // end exchange_ghost_cell_solid_boundary_data()
-
-
-void exchange_ghost_cell_gas_solid_boundary_data()
-{
-    foreach (myblk; localFluidBlocks) {
-        foreach (bc; myblk.bc) {
-            foreach (gce; bc.preReconAction) {
-                auto mygce = cast(GhostCellGasSolidFullFaceCopy)gce;
-                if (mygce) { mygce.exchange_solidstate_phase0(); }
-            }
-        }
-    }
-    foreach (myblk; localSolidBlocks) {
-        foreach (bc; myblk.bc) {
-            foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
-                auto mygce = cast(GhostCellSolidGasFullFaceCopy)gce;
-                if (mygce) { mygce.exchange_fluidstate_phase0(); }
-            }
-        }
-    }
-    foreach (myblk; localFluidBlocks) {
-        foreach (bc; myblk.bc) {
-            foreach (gce; bc.preReconAction) {
-                auto mygce = cast(GhostCellGasSolidFullFaceCopy)gce;
-                if (mygce) { mygce.exchange_fluidstate_phase1(); }
-            }
-        }
-    }
-    foreach (myblk; localSolidBlocks) {
-        foreach (bc; myblk.bc) {
-            foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
-                auto mygce = cast(GhostCellSolidGasFullFaceCopy)gce;
-                if (mygce) { mygce.exchange_solidstate_phase1(); }
-            }
-        }
-    }
-    foreach (myblk; localFluidBlocks) {
-        foreach (bc; myblk.bc) {
-            foreach (gce; bc.preReconAction) {
-                auto mygce = cast(GhostCellGasSolidFullFaceCopy)gce;
-                if (mygce) { mygce.exchange_solidstate_phase2(); }
-            }
-        }
-    }
-    foreach (myblk; localSolidBlocks) {
-        foreach (bc; myblk.bc) {
-            foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
-                auto mygce = cast(GhostCellSolidGasFullFaceCopy)gce;
-                if (mygce) { mygce.exchange_fluidstate_phase2(); }
-            }
-        }
-    }
-}
 
 //---------------------------------------------------------------------------
 

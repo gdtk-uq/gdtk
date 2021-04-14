@@ -66,20 +66,13 @@ version(mpi_parallel) {
     import mpi.util;
 }
 import simcore_gasdynamic_step;
-
-// To avoid race conditions, there are a couple of locations where
-// each block will put its result into the following arrays,
-// then we will reduce across the arrays.
-shared static double[] local_dt_allow;
-shared static double[] local_dt_allow_parab;
-shared static double[] local_cfl_max;
+import simcore_solid_step;
+import simcore_exchange;
+import simcore_io;
 
 // The shared double[] flavour of GlobalConfig.userPad can give trouble,
 // so we need a normal array for the MPI task to work with.
 double[] userPad_copy;
-
-// Keep a record of simulation time and dt for snapshots
-Tuple!(double, "t", double, "dt")[] snapshotInfo;
 
 //----------------------------------------------------------------------------
 
@@ -761,138 +754,6 @@ int init_simulation(int tindx, int nextLoadsIndx,
     return 0; // Successfully initialized simulation.
 } // end init_simulation()
 
-void write_solution_files()
-{
-    SimState.current_tindx = SimState.current_tindx + 1;
-    if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) {
-        writeln("Write flow solution.");
-        stdout.flush();
-    }
-    if (GlobalConfig.is_master_task) {
-        ensure_directory_is_present(make_path_name!"flow"(SimState.current_tindx));
-        ensure_directory_is_present(make_path_name!"solid"(SimState.current_tindx));
-        if (GlobalConfig.grid_motion != GridMotion.none) {
-            ensure_directory_is_present(make_path_name!"grid"(SimState.current_tindx));
-        }
-    }
-    version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
-    wait_for_directory_to_be_present(make_path_name!"flow"(SimState.current_tindx));
-    auto job_name = GlobalConfig.base_file_name;
-    foreach (myblk; parallel(localFluidBlocksBySize,1)) {
-        auto file_name = make_file_name!"flow"(job_name, myblk.id, SimState.current_tindx, GlobalConfig.flowFileExt);
-        myblk.write_solution(file_name, SimState.time);
-    }
-    wait_for_directory_to_be_present(make_path_name!"solid"(SimState.current_tindx));
-    foreach (ref mySolidBlk; localSolidBlocks) {
-        auto fileName = make_file_name!"solid"(job_name, mySolidBlk.id, SimState.current_tindx, "gz");
-        mySolidBlk.writeSolution(fileName, SimState.time);
-    }
-    if (GlobalConfig.grid_motion != GridMotion.none) {
-        wait_for_directory_to_be_present(make_path_name!"grid"(SimState.current_tindx));
-        if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) { writeln("Write grid"); }
-        foreach (blk; parallel(localFluidBlocksBySize,1)) {
-            blk.sync_vertices_to_underlying_grid(0);
-            auto fileName = make_file_name!"grid"(job_name, blk.id, SimState.current_tindx, GlobalConfig.gridFileExt);
-            blk.write_underlying_grid(fileName);
-        }
-    }
-    // Update times file, connecting the tindx value to SimState.time.
-    if (GlobalConfig.is_master_task) {
-        auto writer = appender!string();
-        formattedWrite(writer, "%04d %.18e %.18e\n", SimState.current_tindx, SimState.time, SimState.dt_global);
-        append("config/" ~ GlobalConfig.base_file_name ~ ".times", writer.data);
-    }
-} // end write_solution_files()
-
-void write_snapshot_files()
-{
-    if (GlobalConfig.nTotalSnapshots == 0) { return; }
-    if (snapshotInfo.length == 0) { snapshotInfo.length = GlobalConfig.nTotalSnapshots; }
-    if (SimState.nWrittenSnapshots >= GlobalConfig.nTotalSnapshots) {
-        // We need to shuffle the existing snapshots down one slot
-        auto job_name = GlobalConfig.base_file_name;
-        foreach (iSnap; 1 .. GlobalConfig.nTotalSnapshots) {
-            foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                auto fromName = make_snapshot_file_name("flow", job_name, blk.id, iSnap, GlobalConfig.flowFileExt);
-                auto toName = make_snapshot_file_name("flow", job_name, blk.id, iSnap-1, GlobalConfig.flowFileExt);
-                rename(fromName, toName);
-            }
-            foreach (ref solidBlk; localSolidBlocks) {
-                auto fromName = make_snapshot_file_name("solid", job_name, solidBlk.id, iSnap, "gz");
-                auto toName = make_snapshot_file_name("solid", job_name, solidBlk.id, iSnap-1, "gz");
-                rename(fromName, toName);
-            }
-            if (GlobalConfig.grid_motion != GridMotion.none) {
-                foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                    auto fromName = make_snapshot_file_name("grid", job_name, blk.id, iSnap, GlobalConfig.gridFileExt);
-                    auto toName = make_snapshot_file_name("grid", job_name, blk.id, iSnap-1, GlobalConfig.gridFileExt);
-                    rename(fromName, toName);
-                }
-            }
-            snapshotInfo[iSnap-1] = snapshotInfo[iSnap];
-        }
-    }
-    int snapshotIdx = (SimState.nWrittenSnapshots < GlobalConfig.nTotalSnapshots) ?
-        SimState.nWrittenSnapshots : GlobalConfig.nTotalSnapshots-1;
-    snapshotInfo[snapshotIdx] = tuple!("t", "dt")(SimState.time, SimState.dt_global);
-    //
-    if (GlobalConfig.is_master_task) {
-        ensure_directory_is_present(make_snapshot_path_name("flow", snapshotIdx));
-        ensure_directory_is_present(make_snapshot_path_name("solid", snapshotIdx));
-        if (GlobalConfig.grid_motion != GridMotion.none) {
-            ensure_directory_is_present(make_snapshot_path_name("grid", snapshotIdx));
-        }
-    }
-    version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
-    wait_for_directory_to_be_present(make_snapshot_path_name("flow", snapshotIdx));
-    auto job_name = GlobalConfig.base_file_name;
-    foreach (myblk; parallel(localFluidBlocksBySize,1)) {
-        auto file_name = make_snapshot_file_name("flow", job_name, myblk.id, snapshotIdx, GlobalConfig.flowFileExt);
-        myblk.write_solution(file_name, SimState.time);
-    }
-    wait_for_directory_to_be_present(make_snapshot_path_name("solid", snapshotIdx));
-    foreach (ref mySolidBlk; localSolidBlocks) {
-        auto fileName = make_snapshot_file_name("solid", job_name, mySolidBlk.id, snapshotIdx, "gz");
-        mySolidBlk.writeSolution(fileName, SimState.time);
-    }
-    if (GlobalConfig.grid_motion != GridMotion.none) {
-        wait_for_directory_to_be_present(make_snapshot_path_name("grid", snapshotIdx));
-        if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) { writeln("   Write grid"); }
-        foreach (blk; parallel(localFluidBlocksBySize,1)) {
-            blk.sync_vertices_to_underlying_grid(0);
-            auto fileName = make_snapshot_file_name("grid", job_name, blk.id, snapshotIdx, GlobalConfig.gridFileExt);
-            blk.write_underlying_grid(fileName);
-        }
-    }
-    // Write out .snapshots file
-    // NOTE: We re-write this completely every time a snapshot is saved.
-    // This is not a performance hit because snapshots are infrequent,
-    // and this file with time records is small.
-    if (GlobalConfig.is_master_task) {
-        auto fname = format("config/%s.snapshots", GlobalConfig.base_file_name);
-        auto f = File(fname, "w");
-        f.writeln("# snapshot-indx sim_time dt_global");
-        foreach (idx, snap; snapshotInfo) {
-            f.writefln("%04d %.18e %.18e", idx, snap.t, snap.dt);
-        }
-        f.close();
-    }
-    SimState.nWrittenSnapshots = SimState.nWrittenSnapshots + 1;
-} // end write_snapshot_files()
-
-void write_DFT_files()
-{
-    if (GlobalConfig.is_master_task) {
-        ensure_directory_is_present("DFT");
-    }
-    version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
-    auto job_name = GlobalConfig.base_file_name;
-    foreach (myblk; parallel(localFluidBlocksBySize, 1)) {
-        auto file_name = make_DFT_file_name(job_name, myblk.id, GlobalConfig.flowFileExt);
-        myblk.write_DFT(file_name);
-    }
-} // end write_DFT_files()
-
 
 void march_over_blocks()
 {
@@ -1153,84 +1014,21 @@ int integrate_in_time(double target_time_as_requested)
             gasdynamic_step();
             //
             // 2.3 Solid domain update (if loosely coupled)
-            // If tight coupling, then this has already been performed
-            // in the gasdynamic_explicit_increment().
+            // If tight coupling, then this has already been performed in the gasdynamic_step().
             if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.loose &&
                 SimState.step == update_solid_domain_on_step) {
-                // determine stable time step in solid domain
+                // Determine stable time step in solid domain.
                 double dt_solid_stable = determine_solid_time_step_size();
                 int n_solid_coupling = to!int(min((floor(dt_solid_stable/SimState.dt_global)), int.max));
                 double dt_solid = n_solid_coupling*SimState.dt_global;
                 update_solid_domain_on_step = SimState.step + n_solid_coupling;
-                //
                 if (GlobalConfig.is_master_task) {
-                    writeln("-- SOLID DOMAIN UPDATE: cfl = ", GlobalConfig.solid_domain_cfl, ",  dt_solid = ", dt_solid,
-                            ", next update on step = ", update_solid_domain_on_step);
+                    writeln("-- SOLID DOMAIN UPDATE: cfl=", GlobalConfig.solid_domain_cfl,
+                            ", dt_solid=", dt_solid,
+                            ", next update on step=", update_solid_domain_on_step);
                 }
-                //
-                // we have currently removed the implicit solid update.
-                // Call Nigel's update function here.
-                // solid_domains_backward_euler_update(SimState.time, SimState.dt_global);
-                //
-                // perform an Euler update for the solid domain
-                int ftl = 0;
-                // Next do solid domain update IMMEDIATELY after at same flow update
-                exchange_ghost_cell_gas_solid_boundary_data();
-                if (GlobalConfig.apply_bcs_in_parallel) {
-                    foreach (sblk; parallel(localSolidBlocks, 1)) {
-                        if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, ftl); }
-                    }
-                    foreach (sblk; parallel(localSolidBlocks, 1)) {
-                        if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryCells(SimState.time, ftl); }
-                    }
-                } else {
-                    foreach (sblk; localSolidBlocks) {
-                        if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, ftl); }
-                    }
-                    foreach (sblk; localSolidBlocks) {
-                        if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryCells(SimState.time, ftl); }
-                    }
-                }
-                //
-                foreach (sblk; parallel(localSolidBlocks, 1)) {
-                    if (!sblk.active) continue;
-                    sblk.averageTemperatures();
-                    sblk.clearSources();
-                    sblk.computeSpatialDerivatives(ftl);
-                }
-                exchange_ghost_cell_solid_boundary_data();
-                foreach (sblk; parallel(localSolidBlocks, 1)) {
-                    if (!sblk.active) continue;
-                    sblk.computeFluxes();
-                }
-                if (GlobalConfig.apply_bcs_in_parallel) {
-                    foreach (sblk; parallel(localSolidBlocks, 1)) {
-                        if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl); }
-                    }
-                } else {
-                    foreach (sblk; localSolidBlocks) {
-                        if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl); }
-                    }
-                }
-                // We need to synchronise before updating
-                foreach (sblk; parallel(localSolidBlocks, 1)) {
-                    foreach (scell; sblk.activeCells) {
-                        if (GlobalConfig.udfSolidSourceTerms) {
-                            addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time);
-                        }
-                        scell.timeDerivatives(ftl, GlobalConfig.dimensions);
-                        scell.eulerUpdate(dt_solid);
-                        scell.T = updateTemperature(scell.sp, scell.e[ftl+1]);
-                    } // end foreach scell
-                } // end foreach sblk
-                foreach (sblk; localSolidBlocks) {
-                    if (sblk.active) {
-                        //size_t end_indx = final_index_for_update_scheme(GlobalConfig.gasdynamic_update_scheme);
-                        size_t end_indx = 1;
-                        foreach (scell; sblk.activeCells) { scell.e[0] = scell.e[end_indx]; }
-                    }
-                } // end foreach sblk
-            } // solid update finished
+                solid_step(dt_solid);
+            }
             //
             // 2.4 Chemistry step or 1/2 step (if appropriate).
             if ( GlobalConfig.reacting && (SimState.time > GlobalConfig.reaction_time_delay)) {
@@ -1476,6 +1274,7 @@ int integrate_in_time(double target_time_as_requested)
     }
 } // end integrate_in_time()
 
+//-------------------------------------------------------------------------
 
 void check_run_time_configuration(double target_time_as_requested)
 {
@@ -1677,127 +1476,6 @@ void call_UDF_at_write_to_file()
         copy_userPad_into_block_interpreters();
     }
 } // end call_UDF_at_write_to_file()
-
-double determine_solid_time_step_size()
-{
-    // Set the size of the time step to be the minimum allowed for any active block.
-    double solid_dt_allow;
-    double local_solid_dt_allow;
-    // First, check what each block thinks should be the allowable step size.
-    foreach (mysblk; parallel(localSolidBlocks,1)) {
-        if (mysblk.active) { local_solid_dt_allow = mysblk.determine_time_step_size(); }
-    }
-    // Second, reduce this estimate across all local blocks.
-    solid_dt_allow = double.max; // to be sure it is replaced.
-    foreach (i, myblk; localFluidBlocks) { // serial loop
-        if (myblk.active) { solid_dt_allow = min(solid_dt_allow, local_solid_dt_allow); }
-    }
-    version(mpi_parallel) {
-        double my_solid_dt_allow = solid_dt_allow;
-        MPI_Allreduce(MPI_IN_PLACE, &my_solid_dt_allow, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-        solid_dt_allow = my_solid_dt_allow;
-    }
-    return solid_dt_allow;
-} // end determine_solid_time_step_size()
-
-void determine_time_step_size()
-{
-    // Set the size of the time step to be the minimum allowed for any active block.
-    // We will check it occasionally, if we have not elected to keep fixed time steps.
-    bool do_dt_check_now =
-        ((SimState.step % GlobalConfig.cfl_count) == 0) ||
-        (SimState.dt_override > 0.0);
-    version(mpi_parallel) {
-        // If one task is doing a time-step check, all tasks have to.
-        int myFlag = to!int(do_dt_check_now);
-        MPI_Allreduce(MPI_IN_PLACE, &myFlag, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-        do_dt_check_now = to!bool(myFlag);
-    }
-    if (do_dt_check_now) {
-        // Adjust the time step...
-        // First, check what each block thinks should be the allowable step size.
-        // Also, if we have done some steps, check the CFL limits.
-        foreach (i, myblk; parallel(localFluidBlocksBySize,1)) {
-            // Note 'i' is not necessarily the block id but
-            // that is not important here, just need a unique spot to poke into local_dt_allow.
-            if (myblk.active) {
-                double[3] results = myblk.determine_time_step_size(SimState.dt_global, (SimState.step > 0));
-                local_dt_allow[i] = results[0];
-                local_cfl_max[i] = results[1];
-                local_dt_allow_parab[i] = results[2];
-            }
-        }
-        // Second, reduce this estimate across all local blocks.
-        // The starting values are sure to be replaced.
-        SimState.dt_allow = double.max;
-	SimState.dt_allow_parab = double.max;
-        SimState.cfl_max = 0.0;
-        foreach (i, myblk; localFluidBlocks) { // serial loop
-            if (myblk.active) {
-                SimState.dt_allow = min(SimState.dt_allow, local_dt_allow[i]);
-                SimState.dt_allow_parab = min(SimState.dt_allow_parab, local_dt_allow_parab[i]);
-                SimState.cfl_max = max(SimState.cfl_max, local_cfl_max[i]);
-            }
-        }
-        version(mpi_parallel) {
-            double my_dt_allow = SimState.dt_allow;
-            double my_dt_allow_parab = SimState.dt_allow_parab;
-            double my_cfl_max = SimState.cfl_max;
-            MPI_Allreduce(MPI_IN_PLACE, &my_dt_allow, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-            MPI_Allreduce(MPI_IN_PLACE, &my_dt_allow_parab, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-            MPI_Allreduce(MPI_IN_PLACE, &my_cfl_max, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-            SimState.dt_allow = my_dt_allow;
-            SimState.dt_allow_parab = my_dt_allow_parab;
-            SimState.cfl_max = my_cfl_max;
-        }
-        if (GlobalConfig.with_super_time_stepping) {
-            if (SimState.step == 0) {
-                // When starting out, we may override the computed value.
-                // This might be handy for situations where the computed estimate
-                // is likely to be not small enough for numerical stability.
-                SimState.dt_allow = fmin(GlobalConfig.dt_init, SimState.dt_allow);
-                SimState.dt_allow_parab = fmin(GlobalConfig.dt_init, SimState.dt_allow_parab);
-            }
-            // Now, change the actual time step, as needed.
-            if (SimState.dt_allow <= SimState.dt_global) {
-                // If we need to reduce the time step, do it immediately.
-                SimState.dt_global = SimState.dt_allow;
-                SimState.dt_global_parab = SimState.dt_allow_parab;
-            } else {
-                // Make the transitions to larger time steps gentle.
-                SimState.dt_global = min(SimState.dt_global*1.5, SimState.dt_allow);
-                SimState.dt_global_parab = min(SimState.dt_global_parab*1.5, SimState.dt_allow_parab);
-                // The user may supply, explicitly, a maximum time-step size.
-                SimState.dt_global = min(SimState.dt_global, GlobalConfig.dt_max);
-            }
-        } else if (GlobalConfig.with_local_time_stepping) {
-            SimState.dt_global = SimState.dt_allow;
-        } else { // do some global time-stepping checks
-            if (SimState.step == 0) {
-                // When starting out, we may override the computed value.
-                // This might be handy for situations where the computed estimate
-                // is likely to be not small enough for numerical stability.
-                SimState.dt_allow = fmin(GlobalConfig.dt_init, SimState.dt_allow);
-            }
-            if (SimState.dt_override > 0.0) {
-                // The user-defined supervisory function atTimestepStart may have set
-                // dt_override because it knows something about the simulation conditions
-                // that is not handled well by our generic CFL check.
-                SimState.dt_allow = fmin(SimState.dt_override, SimState.dt_allow);
-            }
-            // Now, change the actual time step, as needed.
-            if (SimState.dt_allow <= SimState.dt_global) {
-                // If we need to reduce the time step, do it immediately.
-                SimState.dt_global = SimState.dt_allow;
-            } else {
-                // Make the transitions to larger time steps gentle.
-                SimState.dt_global = min(SimState.dt_global*1.5, SimState.dt_allow);
-                // The user may supply, explicitly, a maximum time-step size.
-                SimState.dt_global = min(SimState.dt_global, GlobalConfig.dt_max);
-            }
-        }
-    } // end if do_cfl_check_now
-} // end determine_time_step_size()
 
 void update_ch_for_divergence_cleaning()
 {
