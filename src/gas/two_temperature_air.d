@@ -155,6 +155,7 @@ public:
 
         _R.length = _n_species;
         _molef.length = _n_species;
+        _s.length = _n_species;
         _particleMass.length = _n_species;
         _charge.length = n_species;
         foreach (isp; 0 .. _n_species) {
@@ -552,7 +553,14 @@ public:
     }
     override number entropy(in GasState Q)
     {
-        throw new GasModelException("entropy not implemented in TwoTemperatureNitrogen.");
+        foreach ( isp; 0.._n_species ) {
+            _s[isp] = _curves[isp].eval_s(Q.T) - _R[isp]*log(Q.p/P_atm);
+        }
+        return mass_average(Q, _s);
+    }
+    override number entropy(in GasState Q, int isp)
+    {
+        return _curves[isp].eval_s(Q.T);
     }
 
     override void balance_charge(GasState Q) const
@@ -630,6 +638,7 @@ private:
     PerfectGasMixEOS _pgMixEOS;
     double _R_U_cal = 1.987; // cal/(mole.K)
     number[] _molef; // will be getting mole-fractions from outside, so may be complex
+    number[] _s;
     double[] _particleMass;
     double[] _R;
     CEAThermoCurve[] _curves;
