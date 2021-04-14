@@ -376,7 +376,7 @@ private:
     number[] _numden;
     double[] _particleMass;
     double[][] _mu;
-    int[][] _reactionsByMolecule;
+    int[][] _reactionsBySpecies;
     int[] _neutralidxs;
     int[] _ionidxs;
     int _electronidx;
@@ -384,8 +384,8 @@ private:
     // Numerics control
     int _maxSubcycles = 10000;
     int _maxAttempts = 3;
-    double _energyAbsTolerance = 1.0e-9;
-    double _energyRelTolerance = 1.0e-9;
+    double _energyAbsTolerance = 1.0e-09;
+    double _energyRelTolerance = 1.0e-09;
 
     void initModel(string energyExchFile)
     {
@@ -468,11 +468,11 @@ private:
             _particleMass[isp] = _airModel.mol_masses[isp]/Avogadro_number;
         }
 
-        _reactionsByMolecule.length = nSpecies;
-        foreach (isp; _airModel.molecularSpecies) {
+        _reactionsBySpecies.length = nSpecies;
+        foreach (isp; 0 .. nSpecies) {
             foreach (ir; 0 .. to!int(rmech.n_reactions)) {
                 if (rmech.reactionHasParticipant(ir, isp)) {
-                    _reactionsByMolecule[isp] ~= ir;
+                    _reactionsBySpecies[isp] ~= ir;
                 }
             }
         }
@@ -505,6 +505,7 @@ private:
         number cBar_s = sqrt(8*kB*Q.T/(to!double(PI)*_particleMass[isp]));
         double sigma_s = 1e-20; // Gnoffo p. 17 gives 1.0e-16 cm^2,
                                 // converted to m^2 this is: 1.0e-20 m^2
+
         number tauP = 1.0/(sigma_s*cBar_s*nd);
         // 3. Combine M-W and Park values.
         number tauV = tauMW + tauP;
@@ -535,15 +536,8 @@ private:
             number evStar = _airModel.vibElecEnergy(Q.T, isp);
             number ev = _airModel.vibElecEnergy(Q.T_modes[0], isp);
             rate += Q.massf[isp] * (evStar - ev)/tau;
-            // Vibrational energy change due to chemical reactions.
-            number chemRate = 0.0;
-            foreach (ir; _reactionsByMolecule[isp]) {
-                chemRate += rmech.rate(ir, isp);
-            }
-            chemRate *= _airModel.mol_masses[isp]; // convert mol/m^3/s --> kg/m^3/s
-            number Ds = _c2*ev;
-            rate += Q.massf[isp]*chemRate*Ds;
         }
+        rate += EnergyReactiveSourceTerm(Q);
         if(do_ET_exchange)
            rate += ElectronEnergyExchangeRate(Q);
         return rate;
@@ -591,6 +585,35 @@ private:
         // Unlike Gnoffo's equation 16, we are working directly on u_ve in J/kg,
         // rather than rho u_ve in J/m3. So we use massf[e-] instead of rho[e-]
         return Q.massf[_electronidx]*3.0*R_universal*(Q.T-Te)*nues_on_Ms;
+    }
+
+    @nogc
+    number EnergyReactiveSourceTerm(GasState Q)
+    {
+        /*
+        Since the different species have different amounts of vibronic energy, chemical reactions
+        actually contribute to the ev source terms, albeit not by much.
+
+        See derivation from 21/04/02
+        @author: Nick Gibbons
+        */
+
+        number rate = 0.0;
+        foreach (isp; 0 .. _airModel.n_species) {
+            // Vibrational energy per kilogram of species isp
+            number ev = _airModel.vibElecEnergy(Q.T_modes[0], isp);
+
+            // Vibrational energy change due to chemical reactions.
+            number chemRate = 0.0;
+            foreach (ir; _reactionsBySpecies[isp]) {
+                chemRate += rmech.rate(ir, isp);
+            }
+            chemRate *= _airModel.mol_masses[isp]; // convert mol/m^3/s --> kg/m^3/s
+            rate += chemRate*ev;
+        }
+        rate /= Q.rho; // convert J/m3/s to J/kg(of mixture)/s
+
+        return rate;
     }
 
     @nogc
