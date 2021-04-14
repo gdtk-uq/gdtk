@@ -125,7 +125,6 @@ version(mpi_parallel) {
                 MPI_Abort(MPI_COMM_WORLD, 3);
             }
         }
-        //
         // Wait for expected message be received.
         startTime = Clock.currTime();
         MPI_Status receive_status;
@@ -140,13 +139,9 @@ version(mpi_parallel) {
                 MPI_Abort(MPI_COMM_WORLD, 3);
             }
         }
-
-        //
         // At this point, we know that this rank and its left-neighbour are alive,
         // so we wait for everyone to come to the same conclusion.
-
         MPI_Barrier(MPI_COMM_WORLD);
-
     } // end MPI_Sync_tasks()
 }
 
@@ -257,10 +252,9 @@ int init_simulation(int tindx, int nextLoadsIndx,
     }
     foreach (blk; localFluidBlocks) { GlobalConfig.localFluidBlockIds ~= blk.id; }
     foreach (blk; localSolidBlocks) { GlobalConfig.localSolidBlockIds ~= blk.id; }
-
     //
     // Local blocks may be handled with thread-parallelism.
-    auto nBlocksInThreadParallel = localFluidBlocks.length + localSolidBlocks.length; // max(localFluidBlocks.length, GlobalConfig.nSolidBlocks);
+    auto nBlocksInThreadParallel = localFluidBlocks.length + localSolidBlocks.length;
     // There is no need to have more task threads than blocks local to the process.
     int extraThreadsInPool;
     version(mpi_parallel) {
@@ -519,7 +513,6 @@ int init_simulation(int tindx, int nextLoadsIndx,
     version (gpu_chem) {
         initGPUChem();
     }
-    //
     // solid blocks assigned prior to this
     foreach (ref mySolidBlk; localSolidBlocks) {
         mySolidBlk.assembleArrays();
@@ -618,7 +611,6 @@ int init_simulation(int tindx, int nextLoadsIndx,
             MPI_Barrier(MPI_COMM_WORLD);
         }
     }
-    //
     // For a simulation with shock fitting, the files defining the rails for
     // vertex motion and the scaling of vertex velocities throughout the blocks
     // will have been written by prep.lua + output.lua.
@@ -650,7 +642,6 @@ int init_simulation(int tindx, int nextLoadsIndx,
             }
         }
     }
-
     foreach (myblk; localSolidBlocks) {
         foreach (bc; myblk.bc) {
             foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
@@ -659,7 +650,6 @@ int init_simulation(int tindx, int nextLoadsIndx,
             }
         }
     }
-
     foreach (myblk; localFluidBlocks) {
         foreach (bc; myblk.bc) {
             foreach (gce; bc.preReconAction) {
@@ -741,7 +731,6 @@ int init_simulation(int tindx, int nextLoadsIndx,
             }
         }
     }
-
     // For the MLP limiter (on unstructured grids only), we need access to the
     // gradients stored in the cloud of cells surrounding a vertex.
     if ((GlobalConfig.interpolation_order > 1) &&
@@ -751,7 +740,6 @@ int init_simulation(int tindx, int nextLoadsIndx,
             if (ublock) { ublock.build_cloud_of_cell_references_at_each_vertex(); }
         }
     }
-
     //
     // We can apply a special initialisation to the flow field, if requested.
     // This will take viscous boundary conditions and diffuse them into the
@@ -763,7 +751,6 @@ int init_simulation(int tindx, int nextLoadsIndx,
             diffuseWallBCsIntoBlock(myblk, GlobalConfig.nInitPasses, GlobalConfig.initTWall);
         }
     }
-
     //
     // We conditionally sort the local blocks, based on numbers of cells,
     // in an attempt to balance the load for shared-memory parallel runs.
@@ -785,7 +772,6 @@ int init_simulation(int tindx, int nextLoadsIndx,
             localFluidBlocksBySize ~= localFluidBlocks[blkpair[0]]; // [0] holds the block id
         }
     }
-
     //
     // Flags to indicate that the saved output is fresh.
     // On startup or restart, it is assumed to be so.
@@ -815,7 +801,6 @@ int init_simulation(int tindx, int nextLoadsIndx,
             push_array_to_Lua(L, GlobalConfig.userPad, "userPad");
         }
     }
-
     if (GlobalConfig.user_pad_length > 0) {
         // At this point, userPad has been initialized with values
         // from the job.config file, even if there are no supervisory functions.
@@ -832,20 +817,16 @@ int init_simulation(int tindx, int nextLoadsIndx,
         JSONValue jsonData = parseJSON!string(content);
         initRunTimeLoads(jsonData["run_time_loads"]);
     }
-
     //
     // We want to get the corner-coordinates for each block copied
     // in case the Lua functions try to use them.
     synchronize_corner_coords_for_all_blocks();
     //
-
     if (GlobalConfig.turb_model.needs_dwall) compute_wall_distances();
-
     // Keep our memory foot-print small.
     GC.collect();
     GC.minimize();
     //
-
     version(mpi_parallel) {
         version(mpi_timeouts) {
             MPI_Sync_tasks();
@@ -853,19 +834,16 @@ int init_simulation(int tindx, int nextLoadsIndx,
             MPI_Barrier(MPI_COMM_WORLD);
         }
     }
-
-
     debug{
-    if (GlobalConfig.verbosity_level > 0) {
-        auto myStats = GC.stats();
-        auto heapUsed = to!double(myStats.usedSize)/(2^^20);
-        auto heapFree = to!double(myStats.freeSize)/(2^^20);
-        writefln("Heap memory used for task %d: %.2f  free: %.2f  total: %.1f MB",
-                 GlobalConfig.mpi_rank_for_local_task, heapUsed, heapFree, heapUsed+heapFree);
-        stdout.flush();
+        if (GlobalConfig.verbosity_level > 0) {
+            auto myStats = GC.stats();
+            auto heapUsed = to!double(myStats.usedSize)/(2^^20);
+            auto heapFree = to!double(myStats.freeSize)/(2^^20);
+            writefln("Heap memory used for task %d: %.2f  free: %.2f  total: %.1f MB",
+                     GlobalConfig.mpi_rank_for_local_task, heapUsed, heapFree, heapUsed+heapFree);
+            stdout.flush();
+        }
     }
-    }
-
     version(mpi_parallel) {
         version(mpi_timeouts) {
             MPI_Sync_tasks();
@@ -873,14 +851,12 @@ int init_simulation(int tindx, int nextLoadsIndx,
             MPI_Barrier(MPI_COMM_WORLD);
         }
     }
-
     if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) {
         // For reporting wall-clock time, convert to seconds with precision of milliseconds.
         double wall_clock_elapsed = to!double((Clock.currTime() - SimState.wall_clock_start).total!"msecs"())/1000.0;
         writefln("Done init_simulation() at wall-clock(WC)= %.1f sec", wall_clock_elapsed);
         stdout.flush();
     }
-
     return 0; // Successfully initialized simulation.
 } // end init_simulation()
 
@@ -961,7 +937,6 @@ void write_snapshot_files()
             snapshotInfo[iSnap-1] = snapshotInfo[iSnap];
         }
     }
-    //
     int snapshotIdx = (SimState.nWrittenSnapshots < GlobalConfig.nTotalSnapshots) ?
         SimState.nWrittenSnapshots : GlobalConfig.nTotalSnapshots-1;
     snapshotInfo[snapshotIdx] = tuple!("t", "dt")(SimState.time, SimState.dt_global);
@@ -973,7 +948,6 @@ void write_snapshot_files()
             ensure_directory_is_present(make_snapshot_path_name("grid", snapshotIdx));
         }
     }
-
     version(mpi_parallel) {
         version(mpi_timeouts) {
             MPI_Sync_tasks();
@@ -1014,7 +988,6 @@ void write_snapshot_files()
         }
         f.close();
     }
-
     SimState.nWrittenSnapshots = SimState.nWrittenSnapshots + 1;
 } // end write_snapshot_files()
 
@@ -2097,11 +2070,9 @@ void finalize_simulation()
             update_loads_times_file(SimState.time, SimState.current_loads_tindx);
         }
     }
-
     if (GlobalConfig.do_temporal_DFT) {
         write_DFT_files();
     }
-
     GC.collect();
     GC.minimize();
     if (GlobalConfig.verbosity_level > 0  && GlobalConfig.is_master_task) {
@@ -2172,11 +2143,11 @@ void compute_wall_distances() {
         foreach (task; 0 .. mpi_worldsize){
             if (my_rank == task) ntask = to!int(facepos.length);
             MPI_Bcast(&ntask, 1, MPI_INT, task, MPI_COMM_WORLD);
-
+            //
             taskbuffer.length = ntask;
             if (my_rank == task) foreach(i; 0 .. ntask) taskbuffer[i] = facepos[i];
             MPI_Bcast(taskbuffer.ptr, ntask, MPI_DOUBLE, task, MPI_COMM_WORLD);
-
+            //
             foreach(i; 0 .. ntask) globalfacepos[ngathered+i] = taskbuffer[i];
             ngathered += ntask;
             taskbuffer.length=0;
@@ -2185,7 +2156,8 @@ void compute_wall_distances() {
         facepos.length = globalfacepos.length;
         foreach(i; 0 .. globalfacepos.length)  facepos[i] = globalfacepos[i];
         nfaces = to!int(facepos.length)/3;
-    }
+    } // end version(mpi_parallel)
+    //
     if (nfaces == 0) {
         throw new Exception("Turbulence model requires wall distance, but no walls found!");
     }
@@ -2201,15 +2173,7 @@ void compute_wall_distances() {
     // Now loop over the nodes in each of our local blocks and set dwall
     foreach(blk; localFluidBlocksBySize) {
         foreach(cell; blk.cells){
-            version(complex_numbers){
-            Node cellnode = {[cell.pos[0].x.re,
-                              cell.pos[0].y.re,
-                              cell.pos[0].z.re]};
-            } else {
-            Node cellnode = {[cell.pos[0].x,
-                              cell.pos[0].y,
-                              cell.pos[0].z]};
-            }
+            Node cellnode = {[cell.pos[0].x.re, cell.pos[0].y.re, cell.pos[0].z.re]};
             const(Node)* found = null;
             double bestDist = 0.0;
             size_t nVisited = 0;
