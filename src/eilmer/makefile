@@ -18,7 +18,6 @@ FLAVOUR ?= debug
 
 PLATFORM ?= linux
 WITH_MPI ?= 0
-WITH_MPI_TIMEOUTS ?= 0
 WITH_NK ?= 0
 WITH_LUSGS ?= 0
 WITH_SSC ?= 0
@@ -338,10 +337,6 @@ endif
 # Expect gdc-10 to be out in May 2020.
 DFLAGS += -dip1008
 DFLAGS += -I.. -I$(NM_DIR) -I$(UTIL_DIR) -I$(GEOM_DIR) -I$(GRID_DIR) -I$(GZIP_DIR)
-
-ifeq ($(WITH_MPI_TIMEOUTS),1)
-    DFLAGS += $(DVERSION)mpi_timeouts
-endif
 
 ifeq ($(DEBUG_CHEM),1)
     DFLAGS += $(DVERSION)debug_chem
