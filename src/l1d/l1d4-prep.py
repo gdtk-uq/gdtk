@@ -526,8 +526,8 @@ def add_htcf_patch(xL, xR, htcf):
 
     xL: (float) Left-end location, in metres, of the augmentation region.
     xR: (float) Right-end location, in metres, of the augmentation region.
-    vf: (float) Viscous factor for limiting viscous effects at wall.
-        Nominal value is 1.0.  A completely inviscid wall has a value of 0.0.
+    htcf: (float) Heat-transfer factor for modulating the computed heat transfer.
+        Nominal value is 1.0, to get the heat transfer for a simple circular pipe.
     Returns: Number of heat-transfer-coefficient factor patches defined so far.
     """
     if xR < xL:
