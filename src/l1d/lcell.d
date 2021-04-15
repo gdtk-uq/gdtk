@@ -92,6 +92,10 @@ public:
     double vf;           // Viscous factor, nominally 1.0 for full viscous effects
                          // but may be reduced to 0.0 for some sections of tube
                          // in order to get ideal flow behaviour.
+    double htcf;         // Heat-transfer factor, nominally 1.0,
+                         // may be increased to augment the heat-transfer in
+                         // passages that have significantly more surface area
+                         // than simple circular pipe.
     double K_over_L;     // head-loss loss coefficient per unit length, 1/m
     double shear_stress; // for reporting via solution file
     double heat_flux;    // for reporting via solution file
@@ -320,11 +324,11 @@ public:
 	double St = (f*0.125) * pow(Prandtl, -0.667);
 	double h = gas_ref.rho * gmodel.Cp(gas) * abs_vel * St;
 	// Convective heat transfer from the wall into the gas.
-        // Note the modulation by the viscous factor.
+        // Note the modulation by the viscous factor and Matt's htc augmentation.
 	if (adiabatic) {
 	    heat_flux = 0.0;
 	} else {
-	    heat_flux = h * (T_wall_seen - T_aw) * vf; // units W/m^^2
+	    heat_flux = h * (T_wall_seen - T_aw) * vf * htcf; // units W/m^^2
 	}
         // Shear stress and heat transfer act over the wall-constact surface.
         Q_moment += shear_stress * PI*D*L;

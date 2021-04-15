@@ -31,6 +31,7 @@ Versions:
   2010-Mar-May More reworking for L1d3 and the latest-greatest thermochemistry
   2012-Sep-Oct Much cleaning up and Sphinx docs.
   2020-Apr-04  L1d4 flavour started
+  2021-Apr-16  Matt McGilvray's heat-transfer coefficient factor.
 """
 
 # ----------------------------------------------------------------------
@@ -294,8 +295,9 @@ class Tube(object):
     """
     count = 0
 
-    __slots__ = 'n', 'x_list', 'd_list', 'T_nominal', 'T_patch_list', 'loss_region_list', \
-                'viscous_factor_patch_list', 'xs', 'ds', 'K_over_Ls', 'Ts', 'vfs'
+    __slots__ = 'n', 'x_list', 'd_list', 'T_nominal', 'T_patch_list', \
+        'loss_region_list', 'viscous_factor_patch_list', 'htc_factor_patch_list', \
+        'xs', 'ds', 'K_over_Ls', 'Ts', 'vfs', 'htcfs'
 
     def __init__(self):
         """Accepts user-specified data and sets defaults. Make one only."""
@@ -317,6 +319,8 @@ class Tube(object):
         self.loss_region_list = []
         # Sections of tube may have reduced viscous effects.
         self.viscous_factor_patch_list = []
+        # Sections may also have augmentation of the heat transfer.
+        self.htc_factor_patch_list = []
         #
         Tube.count += 1
         return
@@ -366,6 +370,14 @@ class Tube(object):
                 if x >= xL and x <= xR: value = region['vf']
             self.vfs.append(value)
         #
+        self.htcfs = []
+        for x in self.xs:
+            value = 1.0
+            for region in self.htc_factor_patch_list:
+                xL = region['xL']; xR = region['xR']
+                if x >= xL and x <= xR: value = region['htcf']
+            self.htcfs.append(value)
+        #
         return
 
     def eval(self, x):
@@ -377,11 +389,13 @@ class Tube(object):
             K_over_L = self.K_over_Ls[0]
             Twall = self.Ts[0]
             vf = self.vfs[0]
+            htcf = self.htcfs[0]
         elif x >= self.xs[-1]:
             d = self.ds[-1]
             K_over_L = self.K_over_Ls[-1]
             Twall = self.Ts[-1]
             vf = self.vfs[-1]
+            htcf = self.htcfs[-1]
         else:
             dx = self.xs[1] - self.xs[0]
             i = int((x - self.xs[0])/dx)
@@ -390,19 +404,23 @@ class Tube(object):
             K_over_L = (1.0-frac)*self.K_over_Ls[i] + frac*self.K_over_Ls[i+1]
             Twall = (1.0-frac)*self.Ts[i] + frac*self.Ts[i+1]
             vf = (1.0-frac)*self.vfs[i] + frac*self.vfs[i+1]
+            htcf = (1.0-frac)*self.htcfs[i] + frac*self.htcfs[i+1]
+        # We compute the area from diameter, assuming a circular cross-section.
+        # It is put into the file for later plotting.
         area = math.pi*(d**2)/4
-        return (d, area, K_over_L, Twall, vf)
+        return (d, area, K_over_L, Twall, vf, htcf)
 
     def write(self, fp):
         """
         Writes the tube specification to the specified file, in small steps.
         """
         fp.write('# n= %d\n' % self.n) # n+1 points along tube to follow
-        fp.write('# 1:x,m  2:d,m  3:area,m^2  4:K_over_L,1/m  5:Twall,K  6:viscous-factor\n')
+        fp.write('# 1:x,m  2:d,m  3:area,m^2  4:K_over_L,1/m  5:Twall,K ' +
+                 ' 6:viscous-factor  7:htc-factor\n')
         for i in range(len(self.xs)):
-            fp.write('%e %e %e %e %e %e\n' %
+            fp.write('%e %e %e %e %e %e %e\n' %
                      (self.xs[i], self.ds[i], math.pi*(self.ds[i]**2)/4,
-                      self.K_over_Ls[i], self.Ts[i], self.vfs[i]))
+                      self.K_over_Ls[i], self.Ts[i], self.vfs[i], self.htcfs[i]))
         return
 
 # We will create just one Tube object that the user can alter.
@@ -497,6 +515,26 @@ def add_vf_patch(xL, xR, vf):
         xL, xR = xR, xL
     tube.viscous_factor_patch_list.append({'xL':xL, 'xR':xR, 'vf':vf})
     return len(tube.viscous_factor_patch_list)
+
+
+def add_htcf_patch(xL, xR, htcf):
+    """
+    Add a heat-transfer-coefficient factor patch for a region where
+    heat-transfer is scaled from the nominal value.
+    This may be used to augment the heat hransfer is twisty little
+    passages as found around the valve in the Oxford High-Density Tunnel.
+
+    xL: (float) Left-end location, in metres, of the augmentation region.
+    xR: (float) Right-end location, in metres, of the augmentation region.
+    vf: (float) Viscous factor for limiting viscous effects at wall.
+        Nominal value is 1.0.  A completely inviscid wall has a value of 0.0.
+    Returns: Number of heat-transfer-coefficient factor patches defined so far.
+    """
+    if xR < xL:
+        # Keep x-values in increasing order
+        xL, xR = xR, xL
+    tube.htc_factor_patch_list.append({'xL':xL, 'xR':xR, 'htcf':htcf})
+    return len(tube.htc_factor_patch_list)
 
 
 #----------------------------------------------------------------------
@@ -640,7 +678,7 @@ class GasSlug():
             fp.write("#   x   area\n")
         fp.write("# tindx %d\n" % tindx)
         for x in self.ifxs:
-            d, area, K_over_L, Twall, vf = tube.eval(x)
+            d, area, K_over_L, Twall, vf, htcf = tube.eval(x)
             fp.write("%e %e\n" % (x, area))
         fp.write("# end\n")
         return
@@ -664,7 +702,7 @@ class GasSlug():
         shear_stress=0.0; heat_flux = 0.0
         for j in range(self.ncells):
             xmid = 0.5*(self.ifxs[j+1] + self.ifxs[j])
-            d, area, K_over_L, Twall, vf = tube.eval(xmid)
+            d, area, K_over_L, Twall, vf, htcf = tube.eval(xmid)
             volume = area * (self.ifxs[j+1] - self.ifxs[j])
             fp.write('%e %e %e %e' % (xmid, volume, self.vel, L_bar))
             fp.write(' %e %e %e %e' % (self.gas.rho, self.gas.p, self.gas.T, self.gas.u))
@@ -713,7 +751,7 @@ class GasSlug():
         e = 0.0
         for j in range(self.ncells):
             xmid = 0.5*(self.ifxs[j+1] + self.ifxs[j])
-            d, area, K_over_L, Twall, vf = tube.eval(xmid)
+            d, area, K_over_L, Twall, vf, htcf = tube.eval(xmid)
             volume = area * (self.ifxs[j+1] - self.ifxs[j])
             e += volume*self.gas.rho*(self.gas.internal_energy + 0.5*self.vel*self.vel)
         return e
