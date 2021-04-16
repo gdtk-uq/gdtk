@@ -10,7 +10,7 @@
  * History:
  *   2016-10-17 : Implement right-preconditioned GMRES and
  *                add a preconditioner.
- *   2016-10-28 : Add right-preconditioned flexible GMRES so that 
+ *   2016-10-28 : Add right-preconditioned flexible GMRES so that
  *                we can use a variable preconditioning step.
  *   2016-11-02 : Add restarted GMRES method.
  *   2018-06-07 : Separated solver into two files,
@@ -52,6 +52,8 @@ import conservedquantities;
 import postprocess : readTimesFile;
 import loads;
 import shape_sensitivity_core : sss_preconditioner_initialisation, sss_preconditioner;
+import solid_loose_coupling_update;
+
 version(mpi_parallel) {
     import mpi;
 }
@@ -215,9 +217,13 @@ int main(string[] args)
     init_simulation(snapshotStart, -1, maxCPUs, threadsPerMPITask, maxWallClock);
 
     // Additional memory allocation specific to steady-state solver
-    allocate_global_workspace();
+    allocate_global_fluid_workspace();
     foreach (blk; localFluidBlocks) {
         blk.allocate_GMRES_workspace();
+    }
+    allocate_global_solid_workspace();
+    foreach (sblk; localSolidBlocks) {
+        sblk.allocate_GMRES_workspace();
     }
 
     if (GlobalConfig.extrema_clipping && GlobalConfig.is_master_task) {
@@ -251,7 +257,7 @@ int main(string[] args)
     }
 
     iterate_to_steady_state(snapshotStart, maxCPUs, threadsPerMPITask);
-    
+
     /* Write residuals to file before exit. */
     if (GlobalConfig.is_master_task) {
         ensure_directory_is_present("residuals");

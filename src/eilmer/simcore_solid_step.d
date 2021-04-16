@@ -31,7 +31,6 @@ import solidfvinterface;
 import solid_full_face_copy;
 import solid_gas_full_face_copy;
 import bc.ghost_cell_effect.gas_solid_full_face_copy;
-import solid_loose_coupling_update;
 import bc;
 import user_defined_source_terms;
 import solid_udf_source_terms;
@@ -50,9 +49,11 @@ double determine_solid_time_step_size()
     // Set the size of the time step to be the minimum allowed for any active block.
     double solid_dt_allow;
     double local_solid_dt_allow;
+    double cfl_value = GlobalConfig.solid_domain_cfl;
+
     // First, check what each block thinks should be the allowable step size.
     foreach (mysblk; parallel(localSolidBlocks,1)) {
-        if (mysblk.active) { local_solid_dt_allow = mysblk.determine_time_step_size(); }
+        if (mysblk.active) { local_solid_dt_allow = mysblk.determine_time_step_size(cfl_value); }
     }
     // Second, reduce this estimate across all local blocks.
     solid_dt_allow = double.max; // to be sure it is replaced.

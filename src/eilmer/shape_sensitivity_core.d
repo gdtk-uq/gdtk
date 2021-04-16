@@ -3813,7 +3813,7 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
         }
         
         // Additional memory allocation specific to steady-state solver
-        allocate_global_workspace();
+        allocate_global_fluid_workspace();
         foreach (myblk; localFluidBlocks) {
             myblk.allocate_GMRES_workspace();
         }

@@ -141,7 +141,6 @@ SOLID_FILES := solid/solidbc.d \
 	solid/solid_boundary_interface_effect.d \
 	solid/solid_gas_full_face_copy.d \
 	solid/solid_full_face_copy.d \
-	solid/solid_loose_coupling_update.d \
 	solid/ssolidblock.d \
 	solid/solidfvcell.d \
 	solid/solidfvinterface.d \
@@ -561,7 +560,7 @@ e4mpi: main.d $(EILMER_FILES) \
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
 		$(DLINKFLAGS) -L-lmpi
 
-e4-nk-shared: nk_accelerator.d steadystate_core.d shape_sensitivity_core.d $(EILMER_FILES) \
+e4-nk-shared: nk_accelerator.d steadystate_core.d shape_sensitivity_core.d solid/solid_loose_coupling_update.d $(EILMER_FILES) \
 	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
 	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
@@ -575,7 +574,7 @@ e4-nk-shared: nk_accelerator.d steadystate_core.d shape_sensitivity_core.d $(EIL
 		$(DVERSION)nk_accelerator \
 		$(DVERSION)steady_state \
 		$(DVERSION)shape_sensitivity \
-		nk_accelerator_with_string_subst.d steadystate_core.d shape_sensitivity_core.d \
+		nk_accelerator_with_string_subst.d steadystate_core.d shape_sensitivity_core.d solid/solid_loose_coupling_update.d \
 		$(EILMER_FILES) \
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
@@ -585,7 +584,7 @@ e4-nk-shared: nk_accelerator.d steadystate_core.d shape_sensitivity_core.d $(EIL
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
 		$(DLINKFLAGS)
 
-e4-nk-dist: nk_accelerator.d steadystate_core.d shape_sensitivity_core.d $(EILMER_FILES) \
+e4-nk-dist: nk_accelerator.d steadystate_core.d shape_sensitivity_core.d solid/solid_loose_coupling_update.d $(EILMER_FILES) \
 	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
 	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
@@ -601,7 +600,7 @@ e4-nk-dist: nk_accelerator.d steadystate_core.d shape_sensitivity_core.d $(EILME
 		$(DVERSION)nk_accelerator \
 		$(DVERSION)steady_state \
 		$(DVERSION)shape_sensitivity \
-		mpi_nk_accelerator_with_string_subst.d steadystate_core.d shape_sensitivity_core.d \
+		mpi_nk_accelerator_with_string_subst.d steadystate_core.d shape_sensitivity_core.d solid/solid_loose_coupling_update.d \
 		$(EILMER_FILES) \
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
@@ -661,7 +660,7 @@ e4-lusgs-dist: nk_accelerator.d steadystate_core.d shape_sensitivity_core.d $(EI
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
 		$(DLINKFLAGS) -L-lmpi
 
-e4ssc: shape_sensitivity_calc.d shape_sensitivity_core.d steadystate_core.d $(EILMER_FILES) \
+e4ssc: shape_sensitivity_calc.d shape_sensitivity_core.d steadystate_core.d solid/solid_loose_coupling_update.d $(EILMER_FILES) \
 	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
 	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
@@ -674,7 +673,7 @@ e4ssc: shape_sensitivity_calc.d shape_sensitivity_core.d steadystate_core.d $(EI
 		$(DVERSION)shape_sensitivity \
 		$(DVERSION)nk_accelerator \
 		shape_sensitivity_calc_with_rev_string.d \
-		shape_sensitivity_core.d steadystate_core.d \
+		shape_sensitivity_core.d steadystate_core.d solid/solid_loose_coupling_update.d \
 		$(EILMER_FILES) \
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \

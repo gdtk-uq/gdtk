@@ -44,7 +44,6 @@ import solidfvinterface;
 import solid_full_face_copy;
 import solid_gas_full_face_copy;
 import bc.ghost_cell_effect.gas_solid_full_face_copy;
-import solid_loose_coupling_update;
 import bc;
 import user_defined_source_terms;
 import solid_udf_source_terms;

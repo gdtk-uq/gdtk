@@ -108,11 +108,11 @@ public:
     {
         auto writer = appender!string();
         formattedWrite(writer, "%.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e",
-                       pos.x, pos.y, pos.z, volume, e[0], T,
-                       sp.rho, sp.Cp, sp.k,
-                       sp.k11, sp.k12, sp.k13,
-                       sp.k21, sp.k22, sp.k23,
-                       sp.k31, sp.k32, sp.k33);
+                       pos.x.re, pos.y.re, pos.z.re, volume.re, e[0].re, T.re,
+                       sp.rho.re, sp.Cp.re, sp.k.re,
+                       sp.k11.re, sp.k12.re, sp.k13.re,
+                       sp.k21.re, sp.k22.re, sp.k23.re,
+                       sp.k31.re, sp.k32.re, sp.k33.re);
         return writer.data;
     }
 
@@ -329,6 +329,25 @@ public:
         }
         e[3] = e[0] + dt*(gamma1*dedt[0] + gamma2*dedt[1] + gamma3*dedt[2]);
     }
+
+    version(complex_numbers) {
+    @nogc
+    void clear_imaginary_components()
+    // When performing the complex-step Frechet derivative in the Newton-Krylov accelerator,
+    // the flowstate values accumulate imaginary components, so we have to start with a clean slate, so to speak.
+    {
+        e[0].im = 0.0;
+        e[1].im = 0.0;
+        dedt[0].im = 0.0;
+        dedt[1].im = 0.0;
+        T.im = 0.0;
+        foreach (face; iface) {
+            face.T.im = 0.0;
+            face.e.im = 0.0;
+            face.flux.im = 0.0;
+        }
+    } // end clear_imaginary_components()
+    } // end version(complex)
 }
 
 string[] varListForSolidCell()

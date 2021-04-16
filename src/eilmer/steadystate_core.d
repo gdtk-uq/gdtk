@@ -47,6 +47,8 @@ import postprocess : readTimesFile;
 import loads;
 import shape_sensitivity_core : sss_preconditioner_initialisation, sss_preconditioner;
 import jacobian;
+import solid_loose_coupling_update;
+
 version(mpi_parallel) {
     import mpi;
 }
@@ -700,9 +702,12 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             exit(1);
         }
 
+        // after a successful fluid domain update, proceed to perform a solid domain update
+        if (localSolidBlocks.length > 0) { solid_update(step, pseudoSimTime, cfl, eta, sigma); }
+
         pseudoSimTime += dt;
-        wallClockElapsed = 1.0e-3*(Clock.currTime() - wallClockStart).total!"msecs"();  
-	
+        wallClockElapsed = 1.0e-3*(Clock.currTime() - wallClockStart).total!"msecs"();
+
 	if (!limiterFreezingCondition && (normNew/normRef <= limiterFreezingResidReduction)) {
 	    countsBeforeFreezing++;
 	    if (countsBeforeFreezing >= limiterFreezingCount) {
@@ -842,13 +847,20 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             }
             nWrittenSnapshots++;
             if ( nWrittenSnapshots <= nTotalSnapshots ) {
-                if (GlobalConfig.is_master_task) { ensure_directory_is_present(make_path_name!"flow"(nWrittenSnapshots)); }
+                if (GlobalConfig.is_master_task) {
+                    ensure_directory_is_present(make_path_name!"flow"(nWrittenSnapshots));
+                    ensure_directory_is_present(make_path_name!"solid"(nWrittenSnapshots));
+                }
                 version(mpi_parallel) {
                     MPI_Barrier(MPI_COMM_WORLD);
                 }
                 foreach (blk; localFluidBlocks) {
                     auto fileName = make_file_name!"flow"(jobName, blk.id, nWrittenSnapshots, "gz");
                     blk.write_solution(fileName, pseudoSimTime);
+                }
+                foreach (sblk; localSolidBlocks) {
+                    auto fileName = make_file_name!"solid"(jobName, sblk.id, nWrittenSnapshots, "gz");
+                    sblk.writeSolution(fileName, pseudoSimTime);
                 }
                 restartInfo.pseudoSimTime = pseudoSimTime;
                 restartInfo.dt = dt;
@@ -860,7 +872,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 if (GlobalConfig.is_master_task) { rewrite_times_file(times); }
             }
             else {
-                // We need to shuffle all of the snapshots...
+                // We need to shuffle all of the fluid snapshots...
                 foreach ( iSnap; 2 .. nTotalSnapshots+1) {
                     foreach (blk; localFluidBlocks) {
                         auto fromName = make_file_name!"flow"(jobName, blk.id, iSnap, "gz");
@@ -868,10 +880,23 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                         rename(fromName, toName);
                     }
                 }
-                // ... and add the new snapshot.
+                // ... and add the new fluid snapshot.
                 foreach (blk; localFluidBlocks) {
                     auto fileName = make_file_name!"flow"(jobName, blk.id, nTotalSnapshots, "gz");        
                     blk.write_solution(fileName, pseudoSimTime);
+                }
+                // We need to shuffle all of the solid snapshots...
+                foreach ( iSnap; 2 .. nTotalSnapshots+1) {
+                    foreach (blk; localSolidBlocks) {
+                        auto fromName = make_file_name!"solid"(jobName, blk.id, iSnap, "gz");
+                        auto toName = make_file_name!"solid"(jobName, blk.id, iSnap-1, "gz");
+                        rename(fromName, toName);
+                    }
+                }
+                // ... and add the new solid snapshot.
+                foreach (sblk; localSolidBlocks) {
+                    auto fileName = make_file_name!"solid"(jobName, sblk.id, nTotalSnapshots, "gz");
+                    sblk.writeSolution(fileName, pseudoSimTime);
                 }
                 remove(times, 1);
                 restartInfo.pseudoSimTime = pseudoSimTime;
@@ -1015,7 +1040,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     } // end if (GlobalConfig.frozen_limiter)    
 }
 
-void allocate_global_workspace()
+void allocate_global_fluid_workspace()
 {
     size_t mOuter = to!size_t(GlobalConfig.sssOptions.maxOuterIterations);
     g0.length = mOuter+1;
@@ -1074,7 +1099,7 @@ double determine_min_cfl(double dt)
 void evalRHS(double pseudoSimTime, int ftl)
 {
     fnCount++;
-    
+
     foreach (blk; parallel(localFluidBlocks,1)) {
         blk.clear_fluxes_of_conserved_quantities();
         foreach (cell; blk.cells) cell.clear_source_vector();

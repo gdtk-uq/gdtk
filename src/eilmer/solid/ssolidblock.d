@@ -1070,10 +1070,9 @@ public:
     }
     
     @nogc
-    override double determine_time_step_size()
+    override double determine_time_step_size(double cfl_value)
     {
         double signal, L_min, dt_local, dt_allow;
-        double cfl_value = GlobalConfig.solid_domain_cfl;
         bool first = true;
         foreach(cell; activeCells) {
             L_min = double.max;

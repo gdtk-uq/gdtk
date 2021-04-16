@@ -1,398 +1,527 @@
-/**
- * solid_loose_coupling_update.d
+/** solid_loose_coupling_update.d
  *
- * Author: Nigel Chong and Rowan G.
- * Date: 2017-04-18
+ * Core set of functions used in the Newton-Krylov updates for steady-state convergence.
+ *
+ * Author: Kyle Damm
+ * Date: 01-04-2021
  */
 
 module solid_loose_coupling_update;
 
-import globalconfig;
-import globaldata;
-import solidblock; 
-import solidfvcell;  
-import std.stdio; 
-import std.parallelism;
-import std.math;
+import core.stdc.stdlib : exit;
+import std.stdio;
+import std.file;
+import std.format;
 import std.conv;
+import std.parallelism;
+import std.algorithm;
+import std.getopt;
+import std.string;
+import std.array;
+import std.math;
+import std.datetime;
+
+import nm.smla;
+import nm.bbla;
 import nm.complex;
 import nm.number;
-import nm.bbla;
-import solidprops; 
-import std.datetime; 
+
+import globalconfig;
+import globaldata;
+import solid_full_face_copy;
+import solid_gas_full_face_copy;
+import simcore_exchange;
 import solid_udf_source_terms;
+import solidprops;
 
-// Working space for update.
-// Declared here as globals for this module.
+version(mpi_parallel) {
+    import mpi;
+}
 
-Matrix!number r0;
-Matrix!number v;
-Matrix!number vi;
-Matrix!number wj;
-Matrix!number dX; 
-number[] h;
-number[] hR;
+
+static int fnCount = 0;
+
+// Module-local, global memory arrays and matrices
 number[] g0;
 number[] g1;
+number[] h;
+number[] hR;
 Matrix!number H0;
 Matrix!number H1;
 Matrix!number Gamma;
 Matrix!number Q0;
 Matrix!number Q1;
 
-void initSolidLooseCouplingUpdate()
+@nogc
+double determine_dt(double cfl_value)
 {
-    int ncells = 0;
-    int m = GlobalConfig.sdluOptions.maxGMRESIterations;
+    double dt_local, dt;
+    bool first = true;
     foreach (sblk; localSolidBlocks) {
-        ncells += sblk.activeCells.length;
-    }
-    r0 = new Matrix!number(ncells, 1);
-    v = new Matrix!number(ncells, m+1);
-    vi = new Matrix!number(ncells, 1);
-    wj = new Matrix!number(ncells, 1);
-    dX = new Matrix!number(ncells, 1);
-    g0.length = m+1;
-    g1.length = m+1;
-    h.length = m+1;
-    hR.length = m+1;
-    H0 = new Matrix!number(m+1, m);
-    H1 = new Matrix!number(m+1, m);
-    Gamma = new Matrix!number(m+1, m+1);
-    Q0 = new Matrix!number(m+1, m+1);
-    Q1 = new Matrix!number(m+1, m+1);
-}
-
-Matrix!number eval_dedts(Matrix!number eip1, int ftl, double sim_time)
-// Evaulates the energy derivatives of all the cells in the solid block and puts them into an array (Matrix object)
-// Evaluates derivative when cell energy is "eip1" 
- 
-// Returns: Matrix of numbers
-{ 
-    auto n = eip1.nrows;
-    Matrix!number ret = zeros!number(n, 1); // array that will be returned (empty - to be populated)
-    foreach (sblk; parallel(localSolidBlocks, 1)) {
-        if (!sblk.active) continue;
-        sblk.applyPreSpatialDerivActionAtBndryFaces(sim_time, ftl);
-        sblk.clearSources(); 
-        sblk.computeSpatialDerivatives(ftl); 
-        sblk.computeFluxes();
-    }
-    if (GlobalConfig.apply_bcs_in_parallel) {
-        foreach (sblk; parallel(localSolidBlocks, 1)) {
-            if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
-        }
-    } else {
-        foreach (sblk; localSolidBlocks) {
-            if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
+        dt_local = sblk.determine_time_step_size(cfl_value);
+        if (first) {
+            dt = dt_local;
+            first = false;
+        } else {
+            dt = fmin(dt, dt_local);
         }
     }
-    int i = 0;
-    foreach (sblk; parallel(localSolidBlocks, 1)) {
-        foreach (scell; sblk.activeCells) { 
-            if (GlobalConfig.udfSolidSourceTerms) {
-                addUDFSourceTermsToSolidCell(sblk.myL, scell, sim_time);
-            }
-            scell.e[ftl] = eip1[i, 0];
-            scell.T = updateTemperature(scell.sp, scell.e[ftl]);
-            scell.timeDerivatives(ftl, GlobalConfig.dimensions);
-            ret[i, 0] = scell.dedt[ftl];
-            i += 1;
-        }
-    }
-    return ret;
-}
+    return dt;
+} // end determine_dt
 
-
-Matrix!number e_vec(int ftl)
-// Puts energies from desired ftl into an array (Matrix object) 
-
-// Returns: Matrix of numbers
+void solid_update(int step, double pseudoSimTime, double cfl, double eta, double sigma)
 {
-    number[] test1;
-    foreach (sblk; localSolidBlocks){ 
-        foreach(scell; sblk.activeCells){
-            test1 ~= scell.e[ftl];
-        }
-    } 
-    auto len = test1.length; 
-    Matrix!number ret = zeros!number(len, 1); 
-    int count = 0;
-    foreach (entry; test1){ 
-        ret[count, 0] = entry; 
-        count += 1;
+    // determine the allowable timestep
+    double dt = determine_dt(cfl);
+    version(mpi_parallel) {
+        MPI_Allreduce(MPI_IN_PLACE, &dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
     }
-    return ret;
-} 
 
-Matrix!number F(Matrix!number eip1, Matrix!number ei, double dt_global, double sim_time) 
-// Function for which root needs to be found (for Newton's method)
-// Re-arranged implicit euler equation 
+    // transfer data between solid and fluid domains before performing the solid domain update
+    exchange_ghost_cell_gas_solid_boundary_data();
 
-// Returns: Matrix of numbers
-{
-    return eip1 - ei - dt_global*eval_dedts(eip1, 1, sim_time); // lets get rid of dedt_vec... 
-}
-
-  
-Matrix!number copy_vec(Matrix!number mat)  
-// Copies an original vector to a new vector (i.e. leaves original untouched) 
-
-// Returns: Matrix of numbers
-{
-    auto n = mat.nrows; 
-    auto cop = zeros!number(n, 1); 
-    foreach(i; 0 .. n){
-        cop[i, 0] = mat[i, 0];
-    }
-    return cop; 
-} 
-
-number norm(Matrix!number vec)
-// Calculates the euclidean norm of a vector 
-
-// Returns: number
-{
-    auto n = vec.nrows;
-    number total = 0; 
-    foreach(i;0 .. n){      
-        total += pow(vec[i,0],2);
-    }
-    number ret = pow(total, 0.5);
-    return ret; 
-} 
-
-Matrix!number Jac(Matrix!number Yip1, Matrix!number Yi, double dt, double sim_time)
-// Jacobian of F 
-
-// Returns: Matrix of numbers
-{ 
-    double eps = GlobalConfig.sdluOptions.perturbationSize;
-    auto n = Yip1.nrows;
-    auto ret = eye!number(n);
-    Matrix!number Fout;
-    Matrix!number Fin = F(Yip1, Yi, dt, sim_time);
-    Matrix!number cvec;
-    foreach(i;0 .. n){ 
-        cvec = copy_vec(Yip1);
-        cvec[i, 0] += std.conv.to!number(eps); 
-        Fout = F(cvec, Yi, dt, sim_time); 
-        foreach(j; 0 .. n){
-            ret[j, i] = (Fout[j, 0] - Fin[j, 0])/(eps);               
+    // implicit solid update
+    rpcGMRES_solve(step, pseudoSimTime, dt, eta, sigma);
+    foreach (sblk; parallel(localSolidBlocks,1)) {
+        foreach (i, scell; sblk.cells) {
+            scell.e[1] = scell.e[0] + sblk.de[i];
+            scell.T = updateTemperature(scell.sp, scell.e[1]);
         }
     }
-    return ret;
-}
 
-
-void GMRES(Matrix!number A, Matrix!number b, Matrix!number x0, Matrix!number xm)
-// Executes GMRES_step, can be used to repeat GMRES steps checking for multiple iterations, otherwise relatively useless 
-
-// Returns: Matrix of numbers
-{    
-    double tol = GlobalConfig.sdluOptions.toleranceGMRESSolve;
-    number[] xmV;
-    xmV.length = xm.nrows;
-    foreach (i; 0 .. xmV.length) xmV[i] = xm[i,0];
-    GMRES_step(A, b, x0, xmV, tol);
-    foreach (i; 0 .. xmV.length) xm[i,0] = xmV[i];
-}
-
-void GMRES_step(Matrix!number A, Matrix!number b, Matrix!number x0, number[] xm, double tol)
-// Takes a single GMRES step using Arnoldi 
-// Minimisation problem is solved using Least Squares via Gauss Jordan (see function below) 
-
-// On return, xm is updated with result.
-{
-    immutable double ZERO_TOL = 1.0e-15;
-    int m = GlobalConfig.sdluOptions.maxGMRESIterations;
-    int maxIters = m;
-    int iterCount;
-    number residual;
-    H0.zeros();
-    H1.zeros();
-    Q0.zeros();
-    foreach (ref elem; g0) { elem = 0.0; }
-    foreach (ref elem; g1) { elem = 0.0; }
-    // r0 = b - A*x0
-    dot!number(A, x0, r0);
-    foreach (i; 0 .. r0.nrows) r0[i,0] = b[i,0] - r0[i,0];
-    number beta = norm(r0);  
-    g0[0] = beta;
-    number residTol = tol*beta;
-    v.zeros();
-    foreach (i; 0 .. r0.nrows) v[i,0] = r0[i,0]/beta;
-    foreach (i; 0 .. v.nrows) vi[i,0] = v[i,0];
-    number hjp1j;
-    Matrix!number y; 
-    number hij;
-    foreach (j; 0 .. m) {
-        iterCount = j+1;
-        dot!number(A, vi, wj);
-        foreach (i; 0 .. j+1) {
-            hij = 0.0;
-            foreach (k; 0 .. wj.nrows) hij += wj[k,0] * v[k,i];
-            H0[i,j] = hij;
-            foreach (k; 0 .. wj.nrows) wj[k,0] -= hij*v[k,i];
-        } 
-        hjp1j = norm(wj);
-        H0[j+1, j] = hjp1j;    
-
-        // Add new column to 'v'
-        foreach (k; 0 .. v.nrows) {
-            vi[k,0] = wj[k,0]/hjp1j;
-            v[k,j+1] = vi[k,0];
-        }
-        // Build rotated Hessenberg progressively
-        if (j != 0) {
-            // Extract final column in H0
-            foreach (i; 0 .. j+1) h[i] = H0[i,j];
-            // Rotate column by previous rotations
-            // stored in Q0
-            nm.bbla.dot!number(Q0, j+1, j+1, h, hR);
-            // Place column back in H
-            foreach (i; 0 .. j+1) H0[i,j] = hR[i];
-        }
-        // Now form new Gamma
-        Gamma.eye();
-        number c_j, s_j, denom;
-        denom = sqrt(H0[j,j]*H0[j,j] + H0[j+1,j]*H0[j+1,j]);
-        s_j = H0[j+1,j]/denom; 
-        c_j = H0[j,j]/denom;
-        Gamma[j,j] = c_j; Gamma[j,j+1] = s_j;
-        Gamma[j+1,j] = -s_j; Gamma[j+1,j+1] = c_j;
-        // Apply rotations
-        nm.bbla.dot(Gamma, j+2, j+2, H0, j+1, H1);
-        nm.bbla.dot(Gamma, j+2, j+2, g0, g1);
-        // Accumulate Gamma rotations in Q.
-        if (j == 0) {
-            copy(Gamma, Q1);
-        }
-        else {
-            nm.bbla.dot!number(Gamma, j+2, j+2, Q0, j+2, Q1);
-        }
-        // Prepare for next step
-        copy(H1, H0);
-        g0[] = g1[];
-        copy(Q1, Q0);
-        // Get residual
-        residual = fabs(g1[j+1]);
-        if (residual <= residTol) {
-            m = j+1;
-            break;
+    // Put new solid state into e[0] ready for next iteration.
+    foreach (sblk; parallel(localSolidBlocks,1)) {
+        foreach (scell; sblk.cells) {
+            scell.e[0] = scell.e[1];
         }
     }
-    if ( iterCount == maxIters )
-        m = maxIters;
-    
-    // At end H := R up to row m
-    //        g := gm up to row m
-    upperSolve!number(H1, m, g1);
-    nm.bbla.dot!number(v, v.nrows(), m, g1, xm);
-    foreach (k; 0 .. xm.length) xm[k] += x0[k,0];
+
+    // transfer data between solid and fluid domains after updating the solid domain
+    exchange_ghost_cell_gas_solid_boundary_data();
     return;
 }
 
-Matrix!number lsq_gmres(Matrix!number A, Matrix!number b)
-// Solves the minimisation problem using least squares and direct solution (Gauss Jordan elimination)
-
-// Returns: Matrix of numbers
+void allocate_global_solid_workspace()
 {
-    auto Ht = transpose!number(A); 
-    auto c = hstack!number([dot!number(Ht, A), dot!number(Ht, b)]);
-    gaussJordanElimination!number(c);  
-    auto nr = c.nrows;
-    return arr_2_vert_vec(c.getColumn(nr));
+    size_t mOuter = to!size_t(GlobalConfig.sssOptions.maxOuterIterations);
+    g0.length = mOuter+1;
+    g1.length = mOuter+1;
+    h.length = mOuter+1;
+    hR.length = mOuter+1;
+    H0 = new Matrix!number(mOuter+1, mOuter);
+    H1 = new Matrix!number(mOuter+1, mOuter);
+    Gamma = new Matrix!number(mOuter+1, mOuter+1);
+    Q0 = new Matrix!number(mOuter+1, mOuter+1);
+    Q1 = new Matrix!number(mOuter+1, mOuter+1);
 }
 
-Matrix!number arr_2_vert_vec(number[] arr) 
-// Takes an array (i.e. D equivalent of a python list) and converts it into a vertical Matrix 
-// E.g. [1, 2, 3] --> Matrix[[1], [2], [3]]
 
-// Returns: Matrix of numbers
+void evalRHS(double pseudoSimTime, int ftl)
 {
-    auto len = arr.length;
-    auto ret = zeros!number(len, 1);
-    foreach(i; 0 .. len){
-        ret[i, 0] = arr[i];
+    fnCount++;
+
+    exchange_ghost_cell_solid_boundary_data();
+
+    foreach (sblk; localSolidBlocks) {
+        sblk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, ftl);
     }
-    return ret; 
-}
 
-
-void post(Matrix!number eip1, Matrix!number dei)
-// Does the post processing of an implicit method step 
-
-// Returns: none
-{
-    int i = 0;
-    foreach (sblk; localSolidBlocks){ 
-        foreach(scell; sblk.activeCells){
-            number eicell = eip1[i, 0];
-            scell.e[0] = eicell;
-            scell.de_prev = dei[i, 0];
-            scell.T = updateTemperature(scell.sp, eicell); //not necesary? 
-            i += 1; 
-        }
+    foreach (sblk; localSolidBlocks) {
+        sblk.applyPreSpatialDerivActionAtBndryCells(SimState.time, ftl);
     }
-}
 
-void solid_domains_backward_euler_update(double sim_time, double dt_global) 
-// Executes implicit method
-{  
+    foreach (sblk; parallel(localSolidBlocks, 1)) {
+        sblk.averageTemperatures();
+        sblk.clearSources();
+        sblk.computeSpatialDerivatives(ftl);
+    }
 
-    writeln("== Begin Step ==");
-    auto t0 = Clock.currTime();
-    int n = 0;
+    exchange_ghost_cell_solid_boundary_data();
+
+    foreach (sblk; parallel(localSolidBlocks, 1)) {
+        sblk.computeFluxes();
+    }
+
+    foreach (sblk; localSolidBlocks) {
+        sblk.applyPostFluxAction(SimState.time, ftl);
+    }
+
     foreach (sblk; parallel(localSolidBlocks, 1)) {
         foreach (scell; sblk.activeCells) {
-            if (sim_time-dt_global == 0){ 
-                // initialise e0 values
-                scell.e[0] = updateEnergy(scell.sp, scell.T); 
+            if (GlobalConfig.udfSolidSourceTerms) {
+                addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time);
             }
-            // make a guess for e[1]
-            scell.e[1] = scell.e[0] + scell.de_prev; 
-            n += 1;
+            scell.timeDerivatives(ftl, GlobalConfig.dimensions);
         }
     }
-    double eps = GlobalConfig.sdluOptions.toleranceNewtonUpdate;
-    number omega = 0.01;
-    
-    auto ei = e_vec(0); 
-    // retrieving guess
-    auto eip1 = e_vec(0);
-    // Begin prepping for newton loop
-    auto Xk = copy_vec(eip1);
-    auto Xkp1 = Xk + eps;
-    auto Fk = F(Xk, ei, dt_global, sim_time); 
-    auto Fkp1 = F(Xkp1, ei, dt_global, sim_time); // done so that fabs(normfk - normfkp1) satisfied
-    int count = 0;
-    int maxCount = GlobalConfig.sdluOptions.maxNewtonIterations;
-    Matrix!number Jk;
-    Matrix!number mFk; // e.g. minusFk --> mFk
-    while(fabs(norm(Fk) - norm(Fkp1)) > eps){ 
-        count += 1; 
-        if (count != 1){
-            Xk = Xkp1; 
-            Fk = Fkp1;  
-        }
-        Jk = Jac(Xk, ei, dt_global, sim_time);
-        mFk = -1*Fk;
-        GMRES(Jk, mFk, Xk, dX);
 
-        Xkp1 = Xk + dX; 
-        Fkp1 = F(Xkp1, ei, dt_global, sim_time); 
-        
-        // Break out if stuck or taking too many computations
-        if (count == maxCount){
+} // end evalRHS
+
+
+void evalMatVecProd(double pseudoSimTime, double sigma)
+{
+    version(complex_numbers) {
+
+        // We perform a Frechet derivative to evaluate J*D^(-1)v
+        foreach (sblk; parallel(localSolidBlocks,1)) {
+            sblk.clearSources();
+            foreach (i, scell; sblk.cells) {
+                scell.e[1] = scell.e[0];
+                scell.e[1] += complex(0.0, sigma*sblk.zed[i].re);
+                scell.T = updateTemperature(scell.sp, scell.e[1]);
+            }
+        }
+
+        evalRHS(pseudoSimTime, 1);
+
+        foreach (sblk; parallel(localSolidBlocks,1)) {
+            foreach (i, scell; sblk.cells) {
+                sblk.zed[i] = scell.dedt[1].im/(sigma);
+            }
+            // we must explicitly remove the imaginary components from the cell and interface flowstates
+            foreach(i, scell; sblk.cells) {
+                scell.clear_imaginary_components();
+            }
+        }
+    } else {
+        throw new Error("Oops. Steady-State Solver setting: useComplexMatVecEval is not compatible with real-number version of the code.");
+    }
+}
+
+string dot_over_blocks(string dot, string A, string B)
+{
+    return `
+foreach (sblk; parallel(localSolidBlocks,1)) {
+   sblk.dotAcc = 0.0;
+   foreach (k; 0 .. sblk.nvars) {
+      sblk.dotAcc += sblk.`~A~`[k].re*sblk.`~B~`[k].re;
+   }
+}
+`~dot~` = 0.0;
+foreach (sblk; localSolidBlocks) `~dot~` += sblk.dotAcc;`;
+
+}
+
+void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, double sigma)
+{
+    number resid;
+    int maxIters = GlobalConfig.sssOptions.maxOuterIterations;
+    // We add 1 because the user thinks of "re"starts, so they
+    // might legitimately ask for no restarts. We still have
+    // to execute at least once.
+    int maxRestarts = GlobalConfig.sssOptions.maxRestarts + 1;
+    size_t m = to!size_t(maxIters);
+    size_t r;
+    size_t iterCount;
+
+    // Variables for max rates of change
+    // Use these for equation scaling.
+    double minNonDimVal = 1.0; // minimum value used for non-dimensionalisation
+                               // when our time rates of change are very small
+                               // then we'll avoid non-dimensionalising by
+                               // values close to zero.
+
+    // 1. Evaluate r0, beta, v1
+    evalRHS(pseudoSimTime, 0);
+
+    // Store dedt[0] as F(e)
+    foreach (sblk; parallel(localSolidBlocks,1)) {
+        int cellCount = 0;
+        sblk.maxRate = 0.0;
+        foreach (i, scell; sblk.cells) {
+            sblk.Fe[cellCount] = scell.dedt[0];
+            cellCount += 1;
+            sblk.maxRate = fmax(sblk.maxRate, fabs(scell.dedt[0]));
+        }
+    }
+
+    number maxRate = 0.0;
+    foreach (sblk; localSolidBlocks) {
+        maxRate = fmax(maxRate, sblk.maxRate);
+    }
+
+    // In distributed memory, reduce the max values and ensure everyone has a copy
+    version(mpi_parallel) {
+        MPI_Allreduce(MPI_IN_PLACE, &(maxRate.re), 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+    }
+
+    // Place some guards when time-rate-of-changes are very small.
+    maxRate = fmax(maxRate, minNonDimVal);
+
+    // Get a copy of the maxes out to each block
+    bool useScaling = true;
+    foreach (sblk; parallel(localSolidBlocks,1)) {
+        if (useScaling) {
+            sblk.maxRate = maxRate;
+        }
+        else { // just scale by 1
+            sblk.maxRate = 1.0;
+        }
+    }
+
+    double unscaledNorm2;
+    mixin(dot_over_blocks("unscaledNorm2", "Fe", "Fe"));
+    version(mpi_parallel) {
+        MPI_Allreduce(MPI_IN_PLACE, &unscaledNorm2, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    }
+    unscaledNorm2 = sqrt(unscaledNorm2);
+
+    // Initialise some arrays and matrices that have already been allocated
+    g0[] = to!number(0.0);
+    g1[] = to!number(0.0);
+    H0.zeros();
+    H1.zeros();
+
+    // We'll scale r0 against these max rates of change.
+    // r0 = b - A*x0
+    // Taking x0 = [0] (as is common) gives r0 = b = FU
+    // apply scaling
+    foreach (sblk; parallel(localSolidBlocks,1)) {
+        sblk.x0[] = to!number(0.0);
+        int cellCount = 0;
+        foreach (scell; sblk.cells) {
+            sblk.r0[cellCount] = (1./sblk.maxRate)*sblk.Fe[cellCount];
+            cellCount += 1;
+        }
+    }
+
+    // Then compute v = r0/||r0||
+    number beta;
+    mixin(dot_over_blocks("beta", "r0", "r0"));
+    version(mpi_parallel) {
+        MPI_Allreduce(MPI_IN_PLACE, &(beta.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        version(complex_numbers) { MPI_Allreduce(MPI_IN_PLACE, &(beta.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); }
+    }
+    beta = sqrt(beta);
+    g0[0] = beta;
+    foreach (sblk; parallel(localSolidBlocks,1)) {
+        foreach (k; 0 .. sblk.nvars) {
+            sblk.v[k] = sblk.r0[k]/beta;
+            sblk.V[k,0] = sblk.v[k];
+        }
+    }
+
+    // Compute tolerance
+    auto outerTol = eta*beta;
+
+    // 2. Start outer-loop of restarted GMRES
+    for ( r = 0; r < maxRestarts; r++ ) {
+        // 2a. Begin iterations
+        foreach (j; 0 .. m) {
+            iterCount = j+1;
+
+            // apply scaling
+            foreach (sblk; parallel(localSolidBlocks,1)) {
+                int cellCount = 0;
+                foreach (cell; sblk.cells) {
+                    sblk.v[cellCount] *= (sblk.maxRate);
+                    cellCount += 1;
+                }
+            }
+
+            // TODO: apply preconditioning here
+            foreach (sblk; parallel(localSolidBlocks,1)) {
+                sblk.zed[] = sblk.v[];
+            }
+
+            // Prepare 'w' with (I/dt)(P^-1)v term;
+            foreach (sblk; parallel(localSolidBlocks,1)) {
+                foreach (i, cell; sblk.cells) {
+                    foreach (k; 0..1) {
+                        ulong idx = i*1 + k;
+                        number dtInv;
+                        dtInv = 1.0/(dt);
+                        sblk.w[idx] = dtInv*sblk.zed[idx];
+                    }
+                }
+            }
+
+            // Evaluate Jz and place in z
+            evalMatVecProd(pseudoSimTime, sigma);
+
+            // Now we can complete calculation of w
+            foreach (sblk; parallel(localSolidBlocks,1)) {
+                foreach (k; 0 .. sblk.nvars)  sblk.w[k] = sblk.w[k] - sblk.zed[k];
+            }
+
+            // apply scaling
+            foreach (sblk; parallel(localSolidBlocks,1)) {
+                int cellCount = 0;
+                foreach (cell; sblk.cells) {
+                    sblk.w[cellCount] *= (1./sblk.maxRate);
+                    cellCount += 1;
+                }
+            }
+
+            // The remainder of the algorithm looks a lot like any standard
+            // GMRES implementation (for example, see smla.d)
+            foreach (i; 0 .. j+1) {
+                foreach (sblk; parallel(localSolidBlocks,1)) {
+                    // Extract column 'i'
+                    foreach (k; 0 .. sblk.nvars ) sblk.v[k] = sblk.V[k,i];
+                }
+                number H0_ij;
+                mixin(dot_over_blocks("H0_ij", "w", "v"));
+                version(mpi_parallel) {
+                    MPI_Allreduce(MPI_IN_PLACE, &(H0_ij.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                    version(complex_numbers) { MPI_Allreduce(MPI_IN_PLACE, &(H0_ij.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); }
+                }
+                H0[i,j] = H0_ij;
+                foreach (sblk; parallel(localSolidBlocks,1)) {
+                    foreach (k; 0 .. sblk.nvars) sblk.w[k] -= H0_ij*sblk.v[k];
+                }
+            }
+            number H0_jp1j;
+            mixin(dot_over_blocks("H0_jp1j", "w", "w"));
+            version(mpi_parallel) {
+                MPI_Allreduce(MPI_IN_PLACE, &(H0_jp1j.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                version(complex_numbers) { MPI_Allreduce(MPI_IN_PLACE, &(H0_jp1j.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); }
+            }
+            H0_jp1j = sqrt(H0_jp1j);
+            H0[j+1,j] = H0_jp1j;
+
+            foreach (sblk; parallel(localSolidBlocks,1)) {
+                foreach (k; 0 .. sblk.nvars) {
+                    sblk.v[k] = sblk.w[k]/H0_jp1j;
+                    sblk.V[k,j+1] = sblk.v[k];
+                }
+            }
+
+            // Build rotated Hessenberg progressively
+            if ( j != 0 ) {
+                // Extract final column in H
+                foreach (i; 0 .. j+1) h[i] = H0[i,j];
+                // Rotate column by previous rotations (stored in Q0)
+                nm.bbla.dot(Q0, j+1, j+1, h, hR);
+                // Place column back in H
+                foreach (i; 0 .. j+1) H0[i,j] = hR[i];
+            }
+            // Now form new Gamma
+            Gamma.eye();
+            auto denom = sqrt(H0[j,j]*H0[j,j] + H0[j+1,j]*H0[j+1,j]);
+            auto s_j = H0[j+1,j]/denom;
+            auto c_j = H0[j,j]/denom;
+            Gamma[j,j] = c_j; Gamma[j,j+1] = s_j;
+            Gamma[j+1,j] = -s_j; Gamma[j+1,j+1] = c_j;
+            // Apply rotations
+            nm.bbla.dot(Gamma, j+2, j+2, H0, j+1, H1);
+            nm.bbla.dot(Gamma, j+2, j+2, g0, g1);
+            // Accumulate Gamma rotations in Q.
+            if ( j == 0 ) {
+                copy(Gamma, Q1);
+            }
+            else {
+                nm.bbla.dot!number(Gamma, j+2, j+2, Q0, j+2, Q1);
+            }
+
+            // Prepare for next step
+            copy(H1, H0);
+            g0[] = g1[];
+            copy(Q1, Q0);
+
+            // Get residual
+            resid = fabs(g1[j+1]);
+            // DEBUG:
+            //      writefln("OUTER: restart-count= %d iteration= %d, resid= %e", r, j, resid);
+            if ( resid <= outerTol ) {
+                m = j+1;
+                // DEBUG:
+                //      writefln("OUTER: TOL ACHIEVED restart-count= %d iteration-count= %d, resid= %e", r, m, resid);
+                //      writefln("RANK %d: tolerance achieved on iteration: %d", GlobalConfig.mpi_rank_for_local_task, m);
+                break;
+            }
+        }
+
+        if (iterCount == maxIters)
+            m = maxIters;
+
+        // At end H := R up to row m
+        //        g := gm up to row m
+        upperSolve!number(H1, to!int(m), g1);
+        // In serial, distribute a copy of g1 to each block
+        foreach (sblk; localSolidBlocks) sblk.g1[] = g1[];
+        foreach (sblk; parallel(localSolidBlocks,1)) {
+            nm.bbla.dot!number(sblk.V, sblk.nvars, m, sblk.g1, sblk.zed);
+        }
+
+        // apply scaling
+        foreach (sblk; parallel(localSolidBlocks,1)) {
+            int cellCount = 0;
+            foreach (cell; sblk.cells) {
+                sblk.zed[cellCount] *= (sblk.maxRate);
+                cellCount += 1;
+            }
+        }
+
+        // TODO: apply preconditioning here
+        foreach(sblk; parallel(localSolidBlocks,1)) {
+            sblk.de[] = sblk.zed[];
+        }
+
+        foreach (sblk; parallel(localSolidBlocks,1)) {
+            foreach (k; 0 .. sblk.nvars) sblk.de[k] += sblk.x0[k];
+        }
+
+        if ( resid <= outerTol || r+1 == maxRestarts ) {
+            // DEBUG:  writefln("resid= %e outerTol= %e  r+1= %d  maxRestarts= %d", resid, outerTol, r+1, maxRestarts);
+            // DEBUG:  writefln("Breaking restart loop.");
+            // DEBUG:  writefln("RANK %d: breaking restart loop, resid= %e, r+1= %d", GlobalConfig.mpi_rank_for_local_task, resid, r+1);
             break;
         }
 
-    }                                           
-    eip1 = Xkp1;
-    Matrix!number dei = eip1 - ei;
-    Fk = Fkp1;
-    post(eip1, dei); // post processing incl. writing solns for e, de and updating T.
-    writeln("== End Step ==");
+        // Else, we prepare for restart by setting x0 and computing r0
+        // Computation of r0 as per Fraysee etal (2005)
+        foreach (sblk; parallel(localSolidBlocks,1)) {
+            sblk.x0[] = sblk.de[];
+        }
+
+        foreach (sblk; localSolidBlocks) copy(Q1, sblk.Q1);
+        // Set all values in g0 to 0.0 except for final (m+1) value
+        foreach (i; 0 .. m) g0[i] = 0.0;
+        foreach (sblk; localSolidBlocks) sblk.g0[] = g0[];
+        foreach (sblk; parallel(localSolidBlocks,1)) {
+            nm.bbla.dot(sblk.Q1, m, m+1, sblk.g0, sblk.g1);
+        }
+        foreach (sblk; parallel(localSolidBlocks,1)) {
+            nm.bbla.dot(sblk.V, sblk.nvars, m+1, sblk.g1, sblk.r0);
+        }
+
+        // apply scaling
+        foreach (sblk; parallel(localSolidBlocks,1)) {
+            int cellCount = 0;
+            foreach (cell; sblk.cells) {
+                sblk.r0[cellCount] *= (1.0/sblk.maxRate);
+                cellCount += 1;
+            }
+        }
+
+        mixin(dot_over_blocks("beta", "r0", "r0"));
+        version(mpi_parallel) {
+            MPI_Allreduce(MPI_IN_PLACE, &(beta.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+            version(complex_numbers) { MPI_Allreduce(MPI_IN_PLACE, &(beta.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); }
+        }
+        beta = sqrt(beta);
+
+        // DEBUG: writefln("OUTER: ON RESTART beta= %e", beta);
+        foreach (sblk; parallel(localSolidBlocks,1)) {
+            foreach (k; 0 .. sblk.nvars) {
+                sblk.v[k] = sblk.r0[k]/beta;
+                sblk.V[k,0] = sblk.v[k];
+            }
+        }
+        // Re-initialise some vectors and matrices for restart
+        g0[] = to!number(0.0);
+        g1[] = to!number(0.0);
+        H0.zeros();
+        H1.zeros();
+        // And set first residual entry
+        g0[0] = beta;
+
+    }
+
+    // TODO: handle this output in a more production-ready way
+    auto outFile = File("e4-nk.solid.diagnostics.dat", "a");
+    outFile.writef("%d %.16e %.16e \n", step, dt, unscaledNorm2);
+    outFile.close();
 }
 
