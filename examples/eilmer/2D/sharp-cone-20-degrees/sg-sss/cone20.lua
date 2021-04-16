@@ -58,9 +58,9 @@ setHistoryPoint{ib=1, i=math.floor(2*nx1/3), j=0}
 config.print_count = 1
 
 SteadyStateSolver{
-   use_preconditioning = false,
    number_pre_steps = 3,
-   number_total_steps = 120,
+   number_total_steps = 100,
+   stop_on_relative_global_residual = 1.0e-6,
    -- Settings for FGMRES iterative solver
    max_outer_iterations = 10,
    max_restarts = 0,
@@ -71,7 +71,7 @@ SteadyStateSolver{
    tau0 = 0.1,
    sigma0 = 5.0e-6,
    -- Settings for inexact Newton phase
-   cfl1 = 100000.0,
+   cfl1 = 1000.0,
    tau1 = 0.1,
    sigma1 = 5.0e-6,
    eta1 = 0.0001,

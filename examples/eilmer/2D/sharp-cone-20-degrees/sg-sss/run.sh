@@ -1,3 +1,3 @@
 #!/bin/bash
-e4sss --job=cone20
+e4-nk-shared --job=cone20
 
