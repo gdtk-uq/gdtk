@@ -519,9 +519,11 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
 
     }
 
-    // TODO: handle this output in a more production-ready way
-    auto outFile = File("e4-nk.solid.diagnostics.dat", "a");
-    outFile.writef("%d %.16e %.16e \n", step, dt, unscaledNorm2);
-    outFile.close();
+    if (GlobalConfig.is_master_task) {
+        // TODO: handle this output in a more production-ready way
+        auto outFile = File("e4-nk.solid.diagnostics.dat", "a");
+        outFile.writef("%d %.16e %.16e \n", step, dt, unscaledNorm2);
+        outFile.close();
+    }
 }
 

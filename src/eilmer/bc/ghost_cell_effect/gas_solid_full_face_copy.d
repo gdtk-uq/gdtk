@@ -854,6 +854,7 @@ public:
                 // To match .copy_values_from(mapped_cells[i], CopyDataOption.grid) as defined in fvcell.d.
                 //
                 size_t ne = myBC.solidCells.length * (this_blk.myConfig.n_flow_time_levels * 2 + 24);
+                version(complex_numbers) { ne += myBC.solidCells.length * (this_blk.myConfig.n_flow_time_levels * 2 + 11); }
                 if (incoming_solidstate_buf.length < ne) { incoming_solidstate_buf.length = ne; }
                 //
                 // Post non-blocking receive for geometry data that we expect to receive later
@@ -877,43 +878,39 @@ public:
     void exchange_fluidstate_phase1()
     {
         version(mpi_parallel) {
-            version(complex_numbers) {
-                throw new Error("gas_solid_full_face_copy.d:exchange_fluidstate_phase1() -- not implemented for complex_numbers version.");
-            }
-            else {
-                if (find(GlobalConfig.localSolidBlockIds, other_blk.id).empty) {
-                    // The other block is in another MPI process, go fetch the data via messages.
-                    //
-                    // Blocking send of this block's geometry data
-                    // to the corresponding non-blocking receive that was posted
-                    // in the other MPI process.
-                    outgoing_fluidstate_tag = make_mpi_tag(blk.id, which_boundary, 3);
-                    size_t ne = myBC.solidCells.length * 5;
-                    if (outgoing_fluidstate_buf.length < ne) { outgoing_fluidstate_buf.length = ne; }
-                    size_t ii = 0;
-                    foreach (c; outgoing_mapped_cells) {
-                        outgoing_fluidstate_buf[ii++] = c.pos[0].x;
-                        outgoing_fluidstate_buf[ii++] = c.pos[0].y;
-                        outgoing_fluidstate_buf[ii++] = c.pos[0].z;
-                        outgoing_fluidstate_buf[ii++] = c.fs.gas.T;
-                        outgoing_fluidstate_buf[ii++] = c.fs.gas.k;
-                    }
-                    version(mpi_timeouts) {
-                        MPI_Request send_request;
-                        MPI_Isend(outgoing_fluidstate_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
-                                  outgoing_fluidstate_tag, MPI_COMM_WORLD, &send_request);
-                        MPI_Status send_status;
-                        MPI_Wait_a_while(&send_request, &send_status);
-                    } else {
-                        MPI_Send(outgoing_fluidstate_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
-                                 outgoing_fluidstate_tag, MPI_COMM_WORLD);
-                    }
+            if (find(GlobalConfig.localSolidBlockIds, other_blk.id).empty) {
+                // The other block is in another MPI process, go fetch the data via messages.
+                //
+                // Blocking send of this block's geometry data
+                // to the corresponding non-blocking receive that was posted
+                // in the other MPI process.
+                outgoing_fluidstate_tag = make_mpi_tag(blk.id, which_boundary, 3);
+                size_t ne = myBC.solidCells.length * 5;
+                version(complex_numbers) { ne *= 2; }
+                if (outgoing_fluidstate_buf.length < ne) { outgoing_fluidstate_buf.length = ne; }
+                size_t ii = 0;
+                foreach (c; outgoing_mapped_cells) {
+                    outgoing_fluidstate_buf[ii++] = c.pos[0].x.re; version(complex_numbers) { outgoing_fluidstate_buf[ii++] = c.pos[0].x.im; }
+                    outgoing_fluidstate_buf[ii++] = c.pos[0].y.re; version(complex_numbers) { outgoing_fluidstate_buf[ii++] = c.pos[0].y.im; }
+                    outgoing_fluidstate_buf[ii++] = c.pos[0].z.re; version(complex_numbers) { outgoing_fluidstate_buf[ii++] = c.pos[0].z.im; }
+                    outgoing_fluidstate_buf[ii++] = c.fs.gas.T.re; version(complex_numbers) { outgoing_fluidstate_buf[ii++] = c.fs.gas.T.im; }
+                    outgoing_fluidstate_buf[ii++] = c.fs.gas.k.re; version(complex_numbers) { outgoing_fluidstate_buf[ii++] = c.fs.gas.k.im; }
+                }
+                version(mpi_timeouts) {
+                    MPI_Request send_request;
+                    MPI_Isend(outgoing_fluidstate_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
+                              outgoing_fluidstate_tag, MPI_COMM_WORLD, &send_request);
+                    MPI_Status send_status;
+                    MPI_Wait_a_while(&send_request, &send_status);
                 } else {
+                    MPI_Send(outgoing_fluidstate_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
+                             outgoing_fluidstate_tag, MPI_COMM_WORLD);
+                }
+            } else {
                 // The other block happens to be in this MPI process so
                 // we know that we can just access the cell data directly
                 // in the final phase.
-                }
-            } // END: version(!complex_numbers)
+            }
         } else { // not mpi_parallel
             // For a single process,
             // we know that we can just access the data directly
@@ -938,32 +935,32 @@ public:
                 size_t ii = 0;
                 foreach (c; myBC.solidCells) {
                     foreach (j; 0 .. other_blk.myConfig.n_flow_time_levels) {
-                        c.e[j] = incoming_solidstate_buf[ii++];
-                        c.dedt[j] = incoming_solidstate_buf[ii++];
+                        c.e[j].re = incoming_solidstate_buf[ii++];  version(complex_numbers) { c.e[j].im = incoming_solidstate_buf[ii++]; }
+                        c.dedt[j].re = incoming_solidstate_buf[ii++]; version(complex_numbers) { c.dedt[j].im = incoming_solidstate_buf[ii++]; }
                     }
-                    c.volume = incoming_solidstate_buf[ii++];
-                    c.areaxy = incoming_solidstate_buf[ii++];
-                    c.pos.refx = incoming_solidstate_buf[ii++];
-                    c.pos.refy = incoming_solidstate_buf[ii++];
-                    c.pos.refz = incoming_solidstate_buf[ii++];
-                    c.sp.rho = incoming_solidstate_buf[ii++];
-                    c.sp.k = incoming_solidstate_buf[ii++];
-                    c.sp.Cp = incoming_solidstate_buf[ii++];
-                    c.sp.k11 = incoming_solidstate_buf[ii++];
-                    c.sp.k12 = incoming_solidstate_buf[ii++];
-                    c.sp.k13 = incoming_solidstate_buf[ii++];
-                    c.sp.k21 = incoming_solidstate_buf[ii++];
-                    c.sp.k22 = incoming_solidstate_buf[ii++];
-                    c.sp.k23 = incoming_solidstate_buf[ii++];
-                    c.sp.k31 = incoming_solidstate_buf[ii++];
-                    c.sp.k32 = incoming_solidstate_buf[ii++];
-                    c.sp.k33 = incoming_solidstate_buf[ii++];
-                    c.T = incoming_solidstate_buf[ii++];
-                    c.de_prev = incoming_solidstate_buf[ii++];
-                    c.Q = incoming_solidstate_buf[ii++];
-                    c.dTdx = incoming_solidstate_buf[ii++];
-                    c.dTdy = incoming_solidstate_buf[ii++];
-                    c.dTdz = incoming_solidstate_buf[ii++];
+                    c.volume.re = incoming_solidstate_buf[ii++]; version(complex_numbers) { c.volume.im = incoming_solidstate_buf[ii++]; }
+                    c.areaxy.re = incoming_solidstate_buf[ii++]; version(complex_numbers) { c.areaxy.im = incoming_solidstate_buf[ii++]; }
+                    c.pos.refx.re = incoming_solidstate_buf[ii++]; version(complex_numbers) { c.pos.refx.im = incoming_solidstate_buf[ii++]; }
+                    c.pos.refy.re = incoming_solidstate_buf[ii++]; version(complex_numbers) { c.pos.refy.im = incoming_solidstate_buf[ii++]; }
+                    c.pos.refz.re = incoming_solidstate_buf[ii++]; version(complex_numbers) { c.pos.refz.im = incoming_solidstate_buf[ii++]; }
+                    c.sp.rho.re = incoming_solidstate_buf[ii++];
+                    c.sp.k.re = incoming_solidstate_buf[ii++];
+                    c.sp.Cp.re = incoming_solidstate_buf[ii++];
+                    c.sp.k11.re = incoming_solidstate_buf[ii++];
+                    c.sp.k12.re = incoming_solidstate_buf[ii++];
+                    c.sp.k13.re = incoming_solidstate_buf[ii++];
+                    c.sp.k21.re = incoming_solidstate_buf[ii++];
+                    c.sp.k22.re = incoming_solidstate_buf[ii++];
+                    c.sp.k23.re = incoming_solidstate_buf[ii++];
+                    c.sp.k31.re = incoming_solidstate_buf[ii++];
+                    c.sp.k32.re = incoming_solidstate_buf[ii++];
+                    c.sp.k33.re = incoming_solidstate_buf[ii++];
+                    c.T.re = incoming_solidstate_buf[ii++]; version(complex_numbers) { c.T.im = incoming_solidstate_buf[ii++]; }
+                    c.de_prev.re = incoming_solidstate_buf[ii++]; version(complex_numbers) { c.de_prev.im = incoming_solidstate_buf[ii++]; }
+                    c.Q.re = incoming_solidstate_buf[ii++]; version(complex_numbers) { c.Q.im = incoming_solidstate_buf[ii++]; }
+                    c.dTdx.re = incoming_solidstate_buf[ii++]; version(complex_numbers) { c.dTdx.im = incoming_solidstate_buf[ii++]; }
+                    c.dTdy.re = incoming_solidstate_buf[ii++]; version(complex_numbers) { c.dTdy.im = incoming_solidstate_buf[ii++]; }
+                    c.dTdz.re = incoming_solidstate_buf[ii++]; version(complex_numbers) { c.dTdz.im = incoming_solidstate_buf[ii++]; }
                     if ( incoming_solidstate_buf[ii++] > 0.0)  { c.is_ghost = true; }
                     else { c.is_ghost = false; }
                 }

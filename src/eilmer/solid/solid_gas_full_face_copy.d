@@ -856,6 +856,7 @@ public:
                 // To match .copy_values_from(mapped_cells[i], CopyDataOption.grid) as defined in fvcell.d.
                 //
                 size_t ne = myBC.gasCells.length * 5;
+                version(complex_numbers) { ne *= 2; }
                 if (incoming_fluidstate_buf.length < ne) { incoming_fluidstate_buf.length = ne; }
                 //
                 // Post non-blocking receive for geometry data that we expect to receive later
@@ -879,67 +880,63 @@ public:
     void exchange_solidstate_phase1()
     {
         version(mpi_parallel) {
-            version(complex_numbers) {
-                throw new Error("solid_gas_full_face_copy.d:exchange_solidstate_phase1() -- not implemented for version(complex_numbers)");
-            }
-            else {
-                if (find(GlobalConfig.localFluidBlockIds, other_blk.id).empty) {
-                    // The other block is in another MPI process, go fetch the data via messages.
-                    //
-                    // Blocking send of this block's geometry data
-                    // to the corresponding non-blocking receive that was posted
-                    // in the other MPI process.
-                    outgoing_solidstate_tag = make_mpi_tag(blk.id, which_boundary, 2);
-                    size_t ne = myBC.gasCells.length * (this_blk.myConfig.n_flow_time_levels * 2 + 24);
-                    if (outgoing_solidstate_buf.length < ne) { outgoing_solidstate_buf.length = ne; }
-                    size_t ii = 0;
-                    foreach (c; outgoing_mapped_cells) {
-                        foreach (j; 0 .. this_blk.myConfig.n_flow_time_levels) {
-                            outgoing_solidstate_buf[ii++] = c.e[j];
-                            outgoing_solidstate_buf[ii++] = c.dedt[j];
-                        }
-                        outgoing_solidstate_buf[ii++] = c.volume;
-                        outgoing_solidstate_buf[ii++] = c.areaxy;
-                        outgoing_solidstate_buf[ii++] = c.pos.x;
-                        outgoing_solidstate_buf[ii++] = c.pos.y;
-                        outgoing_solidstate_buf[ii++] = c.pos.z;
-                        outgoing_solidstate_buf[ii++] = c.sp.rho;
-                        outgoing_solidstate_buf[ii++] = c.sp.k;
-                        outgoing_solidstate_buf[ii++] = c.sp.Cp;
-                        outgoing_solidstate_buf[ii++] = c.sp.k11;
-                        outgoing_solidstate_buf[ii++] = c.sp.k12;
-                        outgoing_solidstate_buf[ii++] = c.sp.k13;
-                        outgoing_solidstate_buf[ii++] = c.sp.k21;
-                        outgoing_solidstate_buf[ii++] = c.sp.k22;
-                        outgoing_solidstate_buf[ii++] = c.sp.k23;
-                        outgoing_solidstate_buf[ii++] = c.sp.k31;
-                        outgoing_solidstate_buf[ii++] = c.sp.k32;
-                        outgoing_solidstate_buf[ii++] = c.sp.k33;
-                        outgoing_solidstate_buf[ii++] = c.T;
-                        outgoing_solidstate_buf[ii++] = c.de_prev;
-                        outgoing_solidstate_buf[ii++] = c.Q;
-                        outgoing_solidstate_buf[ii++] = c.dTdx;
-                        outgoing_solidstate_buf[ii++] = c.dTdy;
-                        outgoing_solidstate_buf[ii++] = c.dTdz;
-                        if (c.is_ghost) { outgoing_solidstate_buf[ii++] = 1.0; }
-                        else { outgoing_solidstate_buf[ii++] = -1.0; }
+            if (find(GlobalConfig.localFluidBlockIds, other_blk.id).empty) {
+                // The other block is in another MPI process, go fetch the data via messages.
+                //
+                // Blocking send of this block's geometry data
+                // to the corresponding non-blocking receive that was posted
+                // in the other MPI process.
+                outgoing_solidstate_tag = make_mpi_tag(blk.id, which_boundary, 2);
+                size_t ne = myBC.gasCells.length * (this_blk.myConfig.n_flow_time_levels * 2 + 24);
+                version(complex_numbers) { ne += myBC.gasCells.length * (this_blk.myConfig.n_flow_time_levels * 2 + 11); }
+                if (outgoing_solidstate_buf.length < ne) { outgoing_solidstate_buf.length = ne; }
+                size_t ii = 0;
+                foreach (c; outgoing_mapped_cells) {
+                    foreach (j; 0 .. this_blk.myConfig.n_flow_time_levels) {
+                        outgoing_solidstate_buf[ii++] = c.e[j].re; version(complex_numbers) { outgoing_solidstate_buf[ii++] = c.e[j].im; }
+                        outgoing_solidstate_buf[ii++] = c.dedt[j].re; version(complex_numbers) { outgoing_solidstate_buf[ii++] = c.dedt[j].im; }
                     }
-                    version(mpi_timeouts) {
-                        MPI_Request send_request;
-                        MPI_Isend(outgoing_solidstate_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
-                                  outgoing_solidstate_tag, MPI_COMM_WORLD, &send_request);
-                        MPI_Status send_status;
-                        MPI_Wait_a_while(&send_request, &send_status);
-                    } else {
-                        MPI_Send(outgoing_solidstate_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
-                                 outgoing_solidstate_tag, MPI_COMM_WORLD);
-                    }
-                } else {
-                    // The other block happens to be in this MPI process so
-                    // we know that we can just access the cell data directly
-                    // in the final phase.
+                    outgoing_solidstate_buf[ii++] = c.volume.re; version(complex_numbers) { outgoing_solidstate_buf[ii++] = c.volume.im; }
+                    outgoing_solidstate_buf[ii++] = c.areaxy.re; version(complex_numbers) { outgoing_solidstate_buf[ii++] = c.areaxy.im; }
+                    outgoing_solidstate_buf[ii++] = c.pos.x.re; version(complex_numbers) { outgoing_solidstate_buf[ii++] = c.pos.x.im; }
+                    outgoing_solidstate_buf[ii++] = c.pos.y.re; version(complex_numbers) { outgoing_solidstate_buf[ii++] = c.pos.y.im; }
+                    outgoing_solidstate_buf[ii++] = c.pos.z.re; version(complex_numbers) { outgoing_solidstate_buf[ii++] = c.pos.z.im; }
+                    outgoing_solidstate_buf[ii++] = c.sp.rho.re;
+                    outgoing_solidstate_buf[ii++] = c.sp.k.re;
+                    outgoing_solidstate_buf[ii++] = c.sp.Cp.re;
+                    outgoing_solidstate_buf[ii++] = c.sp.k11.re;
+                    outgoing_solidstate_buf[ii++] = c.sp.k12.re;
+                    outgoing_solidstate_buf[ii++] = c.sp.k13.re;
+                    outgoing_solidstate_buf[ii++] = c.sp.k21.re;
+                    outgoing_solidstate_buf[ii++] = c.sp.k22.re;
+                    outgoing_solidstate_buf[ii++] = c.sp.k23.re;
+                    outgoing_solidstate_buf[ii++] = c.sp.k31.re;
+                    outgoing_solidstate_buf[ii++] = c.sp.k32.re;
+                    outgoing_solidstate_buf[ii++] = c.sp.k33.re;
+                    outgoing_solidstate_buf[ii++] = c.T.re; version(complex_numbers) { outgoing_solidstate_buf[ii++] = c.T.im; }
+                    outgoing_solidstate_buf[ii++] = c.de_prev.re; version(complex_numbers) { outgoing_solidstate_buf[ii++] = c.de_prev.im; }
+                    outgoing_solidstate_buf[ii++] = c.Q.re; version(complex_numbers) { outgoing_solidstate_buf[ii++] = c.Q.im; }
+                    outgoing_solidstate_buf[ii++] = c.dTdx.re; version(complex_numbers) { outgoing_solidstate_buf[ii++] = c.dTdx.im; }
+                    outgoing_solidstate_buf[ii++] = c.dTdy.re; version(complex_numbers) { outgoing_solidstate_buf[ii++] = c.dTdy.im; }
+                    outgoing_solidstate_buf[ii++] = c.dTdz.re; version(complex_numbers) { outgoing_solidstate_buf[ii++] = c.dTdz.im; }
+                    if (c.is_ghost) { outgoing_solidstate_buf[ii++] = 1.0; }
+                    else { outgoing_solidstate_buf[ii++] = -1.0; }
                 }
-            } // END: version(!complex_numbers)
+                version(mpi_timeouts) {
+                    MPI_Request send_request;
+                    MPI_Isend(outgoing_solidstate_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
+                              outgoing_solidstate_tag, MPI_COMM_WORLD, &send_request);
+                    MPI_Status send_status;
+                    MPI_Wait_a_while(&send_request, &send_status);
+                } else {
+                    MPI_Send(outgoing_solidstate_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
+                             outgoing_solidstate_tag, MPI_COMM_WORLD);
+                }
+            } else {
+                // The other block happens to be in this MPI process so
+                // we know that we can just access the cell data directly
+                // in the final phase.
+            }
         } else { // not mpi_parallel
             // For a single process,
             // we know that we can just access the data directly
@@ -963,11 +960,11 @@ public:
                 }
                 size_t ii = 0;
                 foreach (c; myBC.gasCells) {
-                    c.pos[0].refx = incoming_fluidstate_buf[ii++];
-                    c.pos[0].refy = incoming_fluidstate_buf[ii++];
-                    c.pos[0].refz = incoming_fluidstate_buf[ii++];
-                    c.fs.gas.T = incoming_fluidstate_buf[ii++];
-                    c.fs.gas.k = incoming_fluidstate_buf[ii++];
+                    c.pos[0].refx.re = incoming_fluidstate_buf[ii++]; version(complex_numbers) { c.pos[0].refx.im = incoming_fluidstate_buf[ii++]; }
+                    c.pos[0].refy.re = incoming_fluidstate_buf[ii++]; version(complex_numbers) { c.pos[0].refy.im = incoming_fluidstate_buf[ii++]; }
+                    c.pos[0].refz.re = incoming_fluidstate_buf[ii++]; version(complex_numbers) { c.pos[0].refz.im = incoming_fluidstate_buf[ii++]; }
+                    c.fs.gas.T.re = incoming_fluidstate_buf[ii++]; version(complex_numbers) { c.fs.gas.T.im = incoming_fluidstate_buf[ii++]; }
+                    c.fs.gas.k.re = incoming_fluidstate_buf[ii++]; version(complex_numbers) { c.fs.gas.k.im = incoming_fluidstate_buf[ii++]; }
                 }
             } else {
                 // The other block happens to be in this MPI process so
