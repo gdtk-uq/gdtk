@@ -401,13 +401,13 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
             registergasflowFunctions(L);
             registerBBLA(L);
             // Determine which fluidBlocks we need to process.
-            int[] blockList;
+            int[] blockIdList;
             blocksForPrep = blocksForPrep.strip();
             foreach (blkStr; blocksForPrep.split(",")) {
                 blkStr = blkStr.strip();
                 auto blkRange = blkStr.split("..<");
                 if (blkRange.length == 1) {
-                    blockList ~= to!int(blkRange[0]);
+                    blockIdList ~= to!int(blkRange[0]);
                 }
                 else if (blkRange.length == 2) {
                     auto start = to!int(blkRange[0]);
@@ -419,7 +419,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
                         return exitFlag;
                     }
                     foreach (i; start .. end) {
-                        blockList ~= i;
+                        blockIdList ~= i;
                     }
                 }
                 else {
@@ -430,13 +430,13 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
                 }
             }
             // Let's sort blocks in ascending order
-            blockList.sort();
+            blockIdList.sort();
             lua_newtable(L);
-            lua_setglobal(L, "fluidBlocksForPrep");
-            lua_getglobal(L, "fluidBlocksForPrep");
+            lua_setglobal(L, "fluidBlockIdsForPrep");
+            lua_getglobal(L, "fluidBlockIdsForPrep");
             // Use uniq so that we remove any duplicates the user might have supplied
             import std.range;
-            foreach (i, blkId; blockList.uniq().enumerate(1)) {
+            foreach (i, blkId; blockIdList.uniq().enumerate(1)) {
                 lua_pushinteger(L, blkId);
                 lua_rawseti(L, -2, to!int(i));
             }

@@ -136,10 +136,10 @@ function build_config_files(job)
 end
 
 function build_grid_and_flow_files(job)
-   if #fluidBlocksForPrep == 0 then
+   if #fluidBlockIdsForPrep == 0 then
       -- We'll set *all* blocks for processing.
       for i=1,#fluidBlocks do
-         fluidBlocksForPrep[i] = fluidBlocks[i].id
+         fluidBlockIdsForPrep[i] = fluidBlocks[i].id
       end
    end
    os.execute("mkdir -p grid/t0000")
@@ -148,7 +148,7 @@ function build_grid_and_flow_files(job)
       os.execute("mkdir -p solid-grid/t0000")
       os.execute("mkdir -p solid/t0000")
    end
-   for i, id in ipairs(fluidBlocksForPrep) do
+   for i, id in ipairs(fluidBlockIdsForPrep) do
       if false then
          -- May activate print statement for debug.
          print("FluidBlock id=", id)
