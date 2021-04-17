@@ -41,7 +41,7 @@ function registerGrid(o)
    --    a dictionary when the FluidBlock is later constructed.
    -- bcTags: a table of strings that will be used to attach boundary conditions
    --    from a dictionary when the FluidBlock is later constructed.
-   -- GridArrayId: needs to be supplied only if the grid is part of a larger array.
+   -- gridArrayId: needs to be supplied only if the grid is part of a larger array.
    --
    -- Returns:
    -- the grid id number so that we may assign it and use it when making connections.
@@ -51,7 +51,7 @@ function registerGrid(o)
       error("registerGrid expects a single table with named items.", 2)
    end
    o = o or {}
-   flag = checkAllowedNames(o, {"grid", "tag", "bcTags", "GridArrayId"})
+   flag = checkAllowedNames(o, {"grid", "tag", "bcTags", "gridArrayId"})
    if not flag then
       error("Invalid name for item supplied to registerGrid.", 2)
    end
@@ -65,7 +65,7 @@ function registerGrid(o)
    end
    gridsDict[o.tag] = o.id
    -- Set to -1 if NOT part of a grid-array, otherwise use supplied value
-   o.GridArrayId = o.GridArrayId or -1
+   o.gridArrayId = o.gridArrayId or -1
    -- Must have a grid.
    assert(o.grid, "need to supply a grid")
    -- Check the grid information.
@@ -234,6 +234,30 @@ function writeGridFiles(jobName)
       else
 	 error(string.format("Oops, invalid grid_format: %s", config.grid_format))
       end
+      fileName = "grid/" .. jobName .. string.format(".grid.b%04d.metadata", g.id)
+      local f = assert(io.open(fileName, "w"))
+      f:write('{\n')
+      f:write(string.format('  "tag": "%s",\n', g.tag))
+      if g.grid:get_type() == "structured_grid" then
+         f:write('  "type": "structured_grid",\n')
+      else
+         f:write('  "type": "unstructured_grid",\n')
+      end
+      f:write('  "bcTags": {\n')
+      if g.grid:get_type() == "structured_grid" then
+         for k, v in pairs(g.bcTags) do
+            f:write(string.format('    "%s": "%s",\n', k, v)) -- Expect named boundaries
+         end
+      else -- unstructured_grid
+         for j, v in ipairs(g.bcTags) do
+            f:write(string.format('    "%d": "%s",\n', j-1, v)) -- Dlang index will start at zero.
+         end
+      end
+      f:write('    "dummy": "xxxx"\n')
+      f:write('  }\n')
+      f:write(string.format('  "gridArrayId": %d\n', g.gridArrayId))
+      f:write('}\n')
+      f:close()
    end
    --
    os.execute("mkdir -p config/")
