@@ -204,3 +204,22 @@ function applyGridproBoundaryConditions(fname, blks, bcMap, dim)
       end
    end
 end
+
+
+function to_eilmer_axis_map(gridpro_ijk)
+   -- Convert from GridPro axis_map string to Eilmer3 axis_map string.
+   -- From GridPro manual, Section 7.3.2 Connectivity Information.
+   -- Example, 123 --> '+i+j+k'
+   local axis_map = {[0]='xx', [1]='+i', [2]='+j', [3]='+k',
+		     [4]='-i', [5]='-j', [6]='-k'}
+   if type(gridpro_ijk) == "number" then
+      gridpro_ijk = string.format("%03d", gridpro_ijk)
+   end
+   if type(gridpro_ijk) ~= "string" then
+      error("Expected a string or integer of three digits but got:"..tostring(gridpro_ijk))
+   end
+   local eilmer_ijk = axis_map[tonumber(string.sub(gridpro_ijk, 1, 1))] ..
+      axis_map[tonumber(string.sub(gridpro_ijk, 2, 2))] ..
+      axis_map[tonumber(string.sub(gridpro_ijk, 3, 3))]
+   return eilmer_ijk
+end

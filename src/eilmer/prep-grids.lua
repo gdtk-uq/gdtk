@@ -23,6 +23,7 @@ require 'gridpro'
 -- in the configuration script
 applyGridproConnectivity = gridpro.applyGridproConnectivity
 applyGridproBoundaryConditions = gridpro.applyGridproBoundaryConditions
+to_eilmer_axis_map = gridpro.to_eilmer_axis_map
 
 -------------------------------------------------------------------------
 

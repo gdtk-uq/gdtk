@@ -160,7 +160,8 @@ LUA_MODULES := blk_conn.lua \
 	history.lua \
 	zones.lua \
 	output.lua \
-	sssoptions.lua
+	sssoptions.lua \
+	prep_check.lua
 
 
 UTIL_DIR := ../util

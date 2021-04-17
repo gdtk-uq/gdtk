@@ -473,8 +473,8 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
                 }
             }
             if (!noBlockFilesFlag) {
-                if ( luaL_dostring(L, toStringz("build_block_files(\""~jobName~"\")")) != 0 ) {
-                    writeln("There was a problem in the Eilmer build function build_block_files() in prep.lua");
+                if ( luaL_dostring(L, toStringz("build_grid_and_flow_files(\""~jobName~"\")")) != 0 ) {
+                    writeln("There was a problem in the Eilmer build function build_grid_and_flow_files() in prep.lua");
                     string errMsg = to!string(lua_tostring(L, -1));
                     throw new FlowSolverException(errMsg);
                 }
