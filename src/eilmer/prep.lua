@@ -221,7 +221,7 @@ function build_grid_and_flow_files(job)
    end
    --
    if #fluidBlocks == 0 then print("Warning: number of FluidBlocks is zero.") end
-   print("Done building block files.")
+   print("Done building grid and flow files.")
 end
 
 print("Done loading prep.lua")
