@@ -27,9 +27,9 @@ quad1 = makePatch{north=ed, east=cd, south=bc, west=be, gridType="ao"}
 -- register the grids for use in the simulation setup phase.
 nx0 = 10; nx1 = 30; ny = 40
 grid0 = registerGrid{
-      grid=StructuredGrid:new{psurface=quad0, niv=nx0+1, njv=ny+1},
-      tag="inflow-gas",
-      bcTags={west="inflow"}
+   grid=StructuredGrid:new{psurface=quad0, niv=nx0+1, njv=ny+1},
+   tag="inflow-gas",
+   bcTags={west="inflow"}
 }
 grid1 = registerGrid{
    grid=StructuredGrid:new{psurface=quad1, niv=nx1+1, njv=ny+1},

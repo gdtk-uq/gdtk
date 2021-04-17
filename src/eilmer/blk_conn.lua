@@ -299,3 +299,37 @@ for _,v in ipairs(tabulatedData) do
    vtxPairs3D[this_face..other_face..orientation] = vtxPairs
    eilmer_orientation[this_face..other_face..axis_map] = orientation
 end
+
+----------------------------------------------------------------
+
+function isPairInList(targetPair, pairList)
+   local count = 0
+   for _,v in ipairs(pairList) do
+      if (v[1] == targetPair[1] and v[2] == targetPair[2]) or
+	 (v[2] == targetPair[1] and v[1] == targetPair[2])
+      then
+	 count = count + 1
+      end
+   end
+   return count > 0
+end
+
+function closeEnough(vA, vB, tolerance)
+   -- Decide if two Vector quantities are close enough to being equal.
+   -- This will be used to test that the block or grid corners coincide.
+   tolerance = tolerance or 1.0e-4
+   return (vabs(vA - vB)/(vabs(vA + vB)+1.0)) <= tolerance
+end
+
+function verticesAreCoincident(A, B, vtxPairs, tolerance)
+   tolerance = tolerance or 1.0e-6
+   local allVerticesAreClose = true
+   for _,v in ipairs(vtxPairs) do
+      -- print("A.id=", A.id, "B.id=", B.id, "vtxPair=", tostringVtxPair(v)) -- DEBUG
+      -- print("  A.p=", tostring(A.p[v[1]]), "B.p=", tostring(B.p[v[2]])) -- DEBUG
+      if not closeEnough(A.p[v[1]], B.p[v[2]], tolerance) then
+	 allVerticesAreClose = false
+      end
+   end
+   return allVerticesAreClose
+end

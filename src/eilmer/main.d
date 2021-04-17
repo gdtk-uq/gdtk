@@ -221,6 +221,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
                "verbosity", &verbosityLevel,
                "prep", &prepFlag,
                "prep-grid", &prepGridFilesFlag,
+               "prep-grids", &prepGridFilesFlag,
                "prep-flow", &prepFlowFilesFlag,
                "no-config-files", &noConfigFilesFlag,
                "no-block-files", &noBlockFilesFlag,

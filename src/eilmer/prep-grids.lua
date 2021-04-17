@@ -55,10 +55,10 @@ function registerGrid(o)
    if not flag then
       error("Invalid name for item supplied to registerGrid.", 2)
    end
-   -- Make a record of the new block, for later use.
+   -- Make a record of the new grid, for later use.
    -- Note that we want id to start at zero for the D code.
-   o.id = #(gridsList)
-   gridsList[#(gridsList)+1] = o
+   o.id = #gridsList
+   gridsList[#gridsList+1] = o
    o.tag = o.tag or string.format("Grid-%d", o.id)
    if gridsDict[o.tag] then
       error('Have previously defined a Grid with tag "' .. o.tag .. '"', 2)
@@ -131,9 +131,12 @@ end -- function registerGrid
 connectionList = {}
 
 function connectGrids(idA, faceA, idB, faceB, orientation)
-   print("[FIX-ME] implement connectGrids()")
-   local gridA = gridList[idA]
-   local gridB = gridList[idB]
+   if false then --DEBUG
+      print(string.format('connectGrids(idA=%d, faceA="%s", idB=%d, faceB="%s", orientation=%d)',
+                          idA, faceA, idB, faceB, orientation))
+   end
+   local gridA = gridsList[idA+1] -- Note that the id values start at zero.
+   local gridB = gridsList[idB+1]
    if gridA.grid:get_type() ~= "structured_grid" or gridB.grid:get_type() ~= "structured_grid" then
       error("connectGrids() Works only for structured grids.", 2)
    end
@@ -141,9 +144,65 @@ function connectGrids(idA, faceA, idB, faceB, orientation)
 end
 
 
-function identifyGridConnections(t)
-   print("[FIX-ME] implement identifyGridConnections()")
-end
+function identifyGridConnections(includeList, excludeList, tolerance)
+   -- Identify grid connections by trying to match corner points.
+   -- Parameters (all optional):
+   -- includeList: the list of structured grid objects to be included in the search.
+   --    If nil, the whole collection is searched.
+   -- excludeList: list of pairs of structured grid objects that should not be
+   --    included in the search for connections.
+   -- tolerance: spatial tolerance for the colocation of vertices
+   --
+   local myGridList = {}
+   if includeList then
+      -- The caller has provided a list of grids to bound the search.
+      for _,v in ipairs(includeList) do myGridList[#myGridList+1] = v end
+   else
+      -- The caller has not provided a list; use the global grids list.
+      for _,v in ipairs(gridsList) do myGridList[#myGridList+1] = v end
+   end
+   excludeList = excludeList or {}
+   -- Put unstructured grid objects into the exclude list because they don't
+   -- have a simple topology that can always be matched to a structured grid.
+   for _,A in ipairs(myGridList) do
+      if A.grid:get_type() == "unstructured_grid" then excludeList[#excludeList+1] = A end
+   end
+   tolerance = tolerance or 1.0e-6
+   --
+   for _,A in ipairs(myGridList) do
+      for _,B in ipairs(myGridList) do
+	 if (A ~= B) and (not isPairInList({A, B}, excludeList)) then
+	    -- print("Proceed with test for coincident vertices.") -- DEBUG
+	    local connectionCount = 0
+	    if config.dimensions == 2 then
+	       -- print("2D test A.id=", A.id, " B.id=", B.id) -- DEBUG
+	       for vtxPairs,connection in pairs(connections2D) do
+		  -- print("vtxPairs=", tostringVtxPairList(vtxPairs),
+		  --       "connection=", tostringConnection(connection)) -- DEBUG
+                  if verticesAreCoincident(A, B, vtxPairs, tolerance) then
+		     local faceA, faceB = unpack(connection)
+		     connectGrids(A.id, faceA, B.id, faceB, 0)
+		     connectionCount = connectionCount + 1
+		  end
+	       end
+	    else
+	       -- print("   3D test")
+               for vtxPairs,connection in pairs(connections3D) do
+		  if verticesAreCoincident(A, B, vtxPairs, tolerance) then
+		     local faceA, faceB, orientation = unpack(connection)
+		     connectBlocks(A.id, faceA, B.id, faceB, orientation)
+		     connectionCount = connectionCount + 1
+		  end
+	       end
+	    end
+	    if connectionCount > 0 then
+	       -- So we don't double-up on connections.
+	       excludeList[#excludeList+1] = {A,B}
+	    end
+	 end -- if (A ~= B...
+      end -- for _,B
+   end -- for _,A
+end -- identifyGridConnections
 
 
 --
@@ -160,5 +219,34 @@ end
 -- IO functions to write the grid and connection files.
 --
 function writeGridFiles(jobName)
-   print("[FIX-ME] write grid and connection files for job=", jobName)
+   print("Write grid and connection files for job=", jobName)
+   --
+   os.execute("mkdir -p grid/t0000")
+   for i, g in ipairs(gridsList) do
+      if false then -- May activate print statement for debug.
+         print("grid id=", g.id)
+      end
+      local fileName = "grid/t0000/" .. jobName .. string.format(".grid.b%04d.t0000", g.id)
+      if config.grid_format == "gziptext" then
+	 g.grid:write_to_gzip_file(fileName .. ".gz")
+      elseif config.grid_format == "rawbinary" then
+	 g.grid:write_to_raw_binary_file(fileName .. ".bin")
+      else
+	 error(string.format("Oops, invalid grid_format: %s", config.grid_format))
+      end
+   end
+   --
+   os.execute("mkdir -p config/")
+   local fileName = "config/" .. jobName .. ".grid-connections"
+   local f = assert(io.open(fileName, "w"))
+   f:write('{\n')
+   f:write('  "grid-connections": [\n')
+   for i, c in ipairs(connectionList) do
+      f:write(string.format('    {"idA": %d, "faceA": "%s", "idB": %d, "faceB": "%s", "orientation": %d}',
+                            c.idA, c.faceA, c.idB, c.faceB, c.orientation))
+      if i < #connectionList then f:write(',\n') else f:write('\n') end
+   end
+   f:write('  ]\n')
+   f:write('}\n')
+   f:close()
 end
