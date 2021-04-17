@@ -125,6 +125,42 @@ function registerGrid(o)
    return o.id
 end -- function registerGrid
 
+function gridMetadataAsJSON(g)
+   str = '{\n'
+   str = str .. string.format('  "tag": "%s",\n', g.tag)
+   if g.grid:get_type() == "structured_grid" then
+      str = str .. '  "type": "structured_grid",\n'
+      str = str .. string.format('  "dimensions": %d,\n', g.grid:get_dimensions())
+      str = str .. string.format('  "niv": %d,\n', g.grid:get_niv())
+      str = str .. string.format('  "njv": %d,\n', g.grid:get_njv())
+      str = str .. string.format('  "nkv": %d,\n', g.grid:get_nkv())
+      str = str .. string.format('  "nic": %d,\n', g.nic)
+      str = str .. string.format('  "njc": %d,\n', g.njc)
+      str = str .. string.format('  "nkc": %d,\n', g.nkc)
+   else
+      str = str .. '  "type": "unstructured_grid",\n'
+      str = str .. string.format('  "dimensions": %d,\n', g.grid:get_dimensions())
+      str = str .. string.format('  "nvertices": %d,\n', g.grid:get_nvertices())
+      str = str .. string.format('  "ncells": %d,\n', g.grid:get_ncells())
+      str = str .. string.format('  "nfaces": %d,\n', g.grid:get_nfaces())
+      str = str .. string.format('  "nboundaries": %d,\n', g.grid:get_nboundaries())
+   end
+   str = str .. '  "bcTags": {\n'
+   if g.grid:get_type() == "structured_grid" then
+      for k, v in pairs(g.bcTags) do
+         str = str .. string.format('    "%s": "%s",\n', k, v) -- Expect named boundaries
+      end
+   else -- unstructured_grid
+      for j, v in ipairs(g.bcTags) do
+         str = str .. string.format('    "%d": "%s",\n', j-1, v) -- Dlang index will start at zero.
+      end
+   end
+   str = str .. '    "dummy": "xxxx"\n'
+   str = str .. '  }\n'
+   str = str .. string.format('  "gridArrayId": %d\n', g.gridArrayId)
+   str = str .. '}\n'
+   return str
+end
 
 --
 -- Structured grids may be connected full face to full face.
@@ -142,6 +178,12 @@ function connectGrids(idA, faceA, idB, faceB, orientation)
       error("connectGrids() Works only for structured grids.", 2)
    end
    connectionList[#connectionList+1] = {idA=idA, faceA=faceA, idB=idB, faceB=faceB, orientation=orientation}
+end
+
+function connectionAsJSON(c)
+   str = string.format('{"idA": %d, "faceA": "%s", "idB": %d, "faceB": "%s", "orientation": %d}',
+                       c.idA, c.faceA, c.idB, c.faceB, c.orientation)
+   return str
 end
 
 
@@ -222,11 +264,25 @@ end
 function writeGridFiles(jobName)
    print("Write grid and connection files for job=", jobName)
    --
+   os.execute("mkdir -p grid")
+   local fileName = "grid/" .. jobName .. ".grid-connections"
+   local f = assert(io.open(fileName, "w"))
+   f:write('{\n')
+   f:write('  "grid-connections": [\n')
+   for i, c in ipairs(connectionList) do
+      f:write('    ' .. connectionAsJSON(c))
+      if i < #connectionList then f:write(',\n') else f:write('\n') end
+   end
+   f:write('  ]\n')
+   f:write('}\n')
+   f:close()
+   --
    os.execute("mkdir -p grid/t0000")
    for i, g in ipairs(gridsList) do
       if false then -- May activate print statement for debug.
          print("grid id=", g.id)
       end
+      -- Write the grid proper.
       local fileName = "grid/t0000/" .. jobName .. string.format(".grid.b%04d.t0000", g.id)
       if config.grid_format == "gziptext" then
 	 g.grid:write_to_gzip_file(fileName .. ".gz")
@@ -235,43 +291,10 @@ function writeGridFiles(jobName)
       else
 	 error(string.format("Oops, invalid grid_format: %s", config.grid_format))
       end
-      fileName = "grid/" .. jobName .. string.format(".grid.b%04d.metadata", g.id)
+      -- Write the grid metadata.
+      local fileName = "grid/" .. jobName .. string.format(".grid.b%04d.metadata", g.id)
       local f = assert(io.open(fileName, "w"))
-      f:write('{\n')
-      f:write(string.format('  "tag": "%s",\n', g.tag))
-      if g.grid:get_type() == "structured_grid" then
-         f:write('  "type": "structured_grid",\n')
-      else
-         f:write('  "type": "unstructured_grid",\n')
-      end
-      f:write('  "bcTags": {\n')
-      if g.grid:get_type() == "structured_grid" then
-         for k, v in pairs(g.bcTags) do
-            f:write(string.format('    "%s": "%s",\n', k, v)) -- Expect named boundaries
-         end
-      else -- unstructured_grid
-         for j, v in ipairs(g.bcTags) do
-            f:write(string.format('    "%d": "%s",\n', j-1, v)) -- Dlang index will start at zero.
-         end
-      end
-      f:write('    "dummy": "xxxx"\n')
-      f:write('  }\n')
-      f:write(string.format('  "gridArrayId": %d\n', g.gridArrayId))
-      f:write('}\n')
+      f:write(gridMetadataAsJSON(g) .. '\n')
       f:close()
    end
-   --
-   os.execute("mkdir -p config/")
-   local fileName = "config/" .. jobName .. ".grid-connections"
-   local f = assert(io.open(fileName, "w"))
-   f:write('{\n')
-   f:write('  "grid-connections": [\n')
-   for i, c in ipairs(connectionList) do
-      f:write(string.format('    {"idA": %d, "faceA": "%s", "idB": %d, "faceB": "%s", "orientation": %d}',
-                            c.idA, c.faceA, c.idB, c.faceB, c.orientation))
-      if i < #connectionList then f:write(',\n') else f:write('\n') end
-   end
-   f:write('  ]\n')
-   f:write('}\n')
-   f:close()
 end
