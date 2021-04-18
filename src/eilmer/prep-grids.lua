@@ -137,6 +137,15 @@ function gridMetadataAsJSON(g)
       str = str .. string.format('  "nic": %d,\n', g.nic)
       str = str .. string.format('  "njc": %d,\n', g.njc)
       str = str .. string.format('  "nkc": %d,\n', g.nkc)
+      local fmt = '  "p%d": {"x":%.18e, "y":%.18e, "z":%.18e},\n'
+      for i=0, 3 do
+         str = str .. string.format(fmt, i, g.p[i].x, g.p[i].y, g.p[i].z)
+      end
+      if config.dimensions == 3 then
+         for i=4, 7 do
+            str = str .. string.format(fmt, i, g.p[i].x, g.p[i].y, g.p[i].z)
+         end
+      end
    else
       str = str .. '  "type": "unstructured_grid",\n'
       str = str .. string.format('  "dimensions": %d,\n', g.grid:get_dimensions())
@@ -156,8 +165,8 @@ function gridMetadataAsJSON(g)
       end
    end
    str = str .. '    "dummy": "xxxx"\n'
-   str = str .. '  }\n'
-   str = str .. string.format('  "gridArrayId": %d\n', g.gridArrayId)
+   str = str .. '  },\n'
+   str = str .. string.format('  "gridArrayId": %d\n', g.gridArrayId) -- last item, no comma
    str = str .. '}\n'
    return str
 end
@@ -262,12 +271,13 @@ end
 -- IO functions to write the grid and connection files.
 --
 function writeGridFiles(jobName)
-   print("Write grid and connection files for job=", jobName)
+   print("Write grid files for job=", jobName)
    --
    os.execute("mkdir -p grid")
-   local fileName = "grid/" .. jobName .. ".grid-connections"
+   local fileName = "grid/" .. jobName .. ".grid-metadata"
    local f = assert(io.open(fileName, "w"))
    f:write('{\n')
+   f:write(string.format('  "ngrids": %d,\n', #gridsList))
    f:write('  "grid-connections": [\n')
    for i, c in ipairs(connectionList) do
       f:write('    ' .. connectionAsJSON(c))

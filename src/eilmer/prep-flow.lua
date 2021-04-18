@@ -82,6 +82,7 @@ json = require 'json'
 -- Note that the index for this array starts at 1, in the Lua way.
 -- The block ids start at 0 to be like the indexing inside the D code.
 -- Yes, this is confusing...
+gridsList = {}
 fluidBlocks = {}
 -- Storage for later definitions of FluidBlockArray objects.
 fluidBlockArrays = {}
@@ -111,8 +112,8 @@ suppressReconstructionZones = {}
 -- ---------------------------------------------------------------------------------------
 
 function readGridMetadata(jobName)
-   print('Read Grid Metadata and grid connections.')
-   local fileName = "config/" .. jobName .. ".grid-connections"
+   print('Read Grid Metadata.')
+   local fileName = "grid/" .. jobName .. ".grid-metadata"
    local f = assert(io.open(fileName, "r"))
    local jsonStr = f:read("*a")
    f:close()
@@ -123,7 +124,17 @@ function readGridMetadata(jobName)
       print("i=", i, "idA=", c.idA, "faceA=", c.faceA,
             "idB=", c.idB, "faceB=", c.faceB, "orientation=", c.orientation)
    end
-   print('[TODO] set up grid objects (without actual grids).')
+   local ngrids = jsonData["ngrids"]
+   for i=1, ngrids do
+      local fileName = "grid/" .. jobName .. string.format(".grid.b%04d.metadata", i-1)
+      print('Set up grid object from file', fileName)
+      local f = assert(io.open(fileName, "r"))
+      local jsonStr = f:read("*a")
+      f:close()
+      local gridMetadata = json.parse(jsonStr)
+      gridMetadata.id = i-1
+      gridsList[#gridsList+1] = gridMetadata
+   end
 end
 
 function buildRuntimeConfigFiles(jobName)
