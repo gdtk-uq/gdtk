@@ -1072,11 +1072,27 @@ public:
     @nogc
     override double determine_time_step_size(double cfl_value)
     {
-        double signal, L_min, dt_local, dt_allow;
+        number signal, L_min, dt_local, dt_allow;
         bool first = true;
         foreach(cell; activeCells) {
-            L_min = double.max;
-            foreach (iface; cell.iface) { L_min = fmin(L_min, iface.length.re); }
+
+            if (GlobalConfig.dimensions == 2) {
+                L_min = double.max;
+                foreach (iface; cell.iface) { L_min = fmin(L_min, iface.length.re); }
+            } else { // dimensions == 3
+                number dx, dy, dz;
+                auto nface = cell.iface[0]; auto eface = cell.iface[1];
+                auto sface = cell.iface[2]; auto wface = cell.iface[3];
+                auto tface = cell.iface[4]; auto bface = cell.iface[5];
+                dx = eface.pos.x - wface.pos.x; dy = eface.pos.y - wface.pos.y; dz = eface.pos.z - wface.pos.z;
+                auto iLen = sqrt(dx^^2 + dy^^2 + dz^^2);
+                dx = nface.pos.x - sface.pos.x; dy = nface.pos.y - sface.pos.y; dz = nface.pos.z - sface.pos.z;
+                auto jLen = sqrt(dx^^2 + dy^^2 + dz^^2);
+                dx = tface.pos.x - bface.pos.x; dy = tface.pos.y - bface.pos.y; dz = tface.pos.z - bface.pos.z;
+                auto kLen = sqrt(dx^^2 + dy^^2 + dz^^2);
+                L_min = min(iLen, jLen, kLen);
+            }
+
             signal = cell.sp.k / (cell.sp.rho*cell.sp.Cp*(L_min^^2));
             dt_local = cfl_value / signal; // Recommend a time step size.
             if (first) {
@@ -1086,7 +1102,7 @@ public:
                 dt_allow = fmin(dt_allow, dt_local);
             }
         }
-        return dt_allow;
+        return dt_allow.re;
     } // end determine_time_step_size()
     
 }
