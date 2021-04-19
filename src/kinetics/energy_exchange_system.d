@@ -75,6 +75,7 @@ public:
 	lua_pop(L, 1);
 
 	mMolef.length = gmodel.n_species;
+	mNumden.length= gmodel.n_species;
 	// We make mVT of length n_species for convenience, even though
 	// we'll only fill array entries associated vibRelaxers.
 	// This just makes indexing consistent, and avoid having
@@ -105,9 +106,10 @@ public:
     void evalRelaxationTimes(in GasState gs)
     {
         mGmodel.massf2molef(gs, mMolef);
+        mGmodel.massf2numden(gs, mNumden);
         foreach (p; mVibRelaxers) {
             foreach (q; mHeavyParticles[p]) {
-                mVT[p][q].evalRelaxationTime(gs, mMolef);
+                mVT[p][q].evalRelaxationTime(gs, mMolef, mNumden);
             }
         }
     }
@@ -136,6 +138,7 @@ private:
     int[] mVibRelaxers;
     int[][] mHeavyParticles;
     number[] mMolef;
+    number[] mNumden;
     GasModel mGmodel;
     GasState mGsEq;
     EnergyExchangeMechanism[][] mVT;

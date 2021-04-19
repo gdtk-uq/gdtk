@@ -24,9 +24,9 @@ import kinetics.relaxation_time;
 
 class EnergyExchangeMechanism {
     @property @nogc number tau() const { return m_tau; }
-    @nogc void evalRelaxationTime(in GasState gs, number[] molef)
+    @nogc void evalRelaxationTime(in GasState gs, number[] molef, number[] numden)
     {
-        m_tau = mRT.eval(gs, molef);
+        m_tau = mRT.eval(gs, molef, numden);
     }
     @nogc abstract number rate(in GasState gs, in GasState gsEq, number[] molef);
 
@@ -46,7 +46,7 @@ public:
 	m_mode = mode;
 	mGmodel = gmodel;
 	lua_getfield(L, -1, "relaxation_time");
-	mRT = createRelaxationTime(L, q);
+	mRT = createRelaxationTime(L, p, q, gmodel);
 	lua_pop(L, 1);
     }
     

@@ -10,7 +10,7 @@ local sqrt = math.sqrt
 require 'lex_elems'
 
 function transformRelaxationTime(rt, p, q, db)
-   t = {}
+   local t = {}
    t.model = rt[1]
    if t.model == "Millikan-White" then
       M_p = db[p].M*1000.0 -- kg -> g
@@ -19,6 +19,13 @@ function transformRelaxationTime(rt, p, q, db)
       theta_v = db[p].theta_v
       t.a = 1.16e-3*sqrt(mu)*pow(theta_v, 4/3)
       t.b = 0.015*pow(mu, 1/4)
+   elseif t.model == "ParkHTC" then
+      t.submodel = transformRelaxationTime(rt.submodel, p, q, db)
+      if rt.sigma == nil then
+         t.sigma = 1.0e-20 -- Default collision cross section in m^2 (TODO: Is this a good idea?)
+      else
+         t.sigma = rt.sigma
+      end
    else
       print("The relaxation time model: ", t.model, " it not known.")
       print("Bailing out!")
@@ -32,6 +39,9 @@ function relaxationTimeToLuaStr(rt)
    local str = ""
    if rt.model == "Millikan-White" then
       str = string.format("{model='Millikan-White', a=%.3f, b=%.6f}", rt.a, rt.b)
+   elseif rt.model == "ParkHTC" then
+      submodelstr = relaxationTimeToLuaStr(rt.submodel)
+      str = string.format("{model='ParkHTC', sigma=%.4e, submodel=%s}", rt.sigma, submodelstr)
    else
       print(string.format("ERROR: relaxation time model '%s' is not known.", rt.model))
       os.exit(1)
