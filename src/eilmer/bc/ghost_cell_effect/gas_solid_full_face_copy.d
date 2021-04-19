@@ -993,7 +993,7 @@ public:
 
     override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
     {
-	throw new Error("GhostCellFullFaceCopy.apply_for_interface_structured_grid() not implemented");
+	//throw new Error("GhostCellFullFaceCopy.apply_for_interface_structured_grid() not implemented");
     }
 
     @nogc

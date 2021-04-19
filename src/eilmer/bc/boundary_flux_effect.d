@@ -164,7 +164,58 @@ public:
     @nogc
     override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
     {
-        throw new Error("BFE_EnergyFluxFromAdjacentSolid.apply_for_interface_structured_grid() not yet implemented");
+        auto myBC = blk.bc[which_boundary];
+        number dxG, dyG, dzG, dnG, dxS, dyS, dzS, dnS;
+        number kG_dnG, kS_dnS, cosA, cosB, cosC;
+        number T, q;
+        int outsign;
+
+        switch(which_boundary){
+        case Face.north:
+            outsign = 1;
+            break;
+        case Face.east:
+            outsign = 1;
+            break;
+        case Face.south:
+            outsign = -1;
+            break;
+        case Face.west:
+            outsign = -1;
+            break;
+        case Face.top:
+            outsign = 1;
+            break;
+        case Face.bottom:
+            outsign = -1;
+            break;
+        default:
+            throw new Error("oops, wrong boundary id");
+        } // end switch
+
+        cosA = myBC.ifaces[f.i_bndry].n.x;
+        cosB = myBC.ifaces[f.i_bndry].n.y;
+        cosC = myBC.ifaces[f.i_bndry].n.z;
+
+        dxG = myBC.ifaces[f.i_bndry].pos.x - myBC.gasCells[f.i_bndry].pos[0].x;
+        dyG = myBC.ifaces[f.i_bndry].pos.y - myBC.gasCells[f.i_bndry].pos[0].y;
+        dzG = myBC.ifaces[f.i_bndry].pos.z - myBC.gasCells[f.i_bndry].pos[0].z;
+        dnG = fabs(cosA*dxG + cosB*dyG + cosC*dzG);
+
+        dxS = myBC.ifaces[f.i_bndry].pos.x - myBC.solidCells[f.i_bndry].pos.x;
+        dyS = myBC.ifaces[f.i_bndry].pos.y - myBC.solidCells[f.i_bndry].pos.y;
+        dzS = myBC.ifaces[f.i_bndry].pos.z - myBC.solidCells[f.i_bndry].pos.z;
+        dnS = fabs(cosA*dxS + cosB*dyS + cosC*dzS);
+
+        kG_dnG = myBC.gasCells[f.i_bndry].fs.gas.k / dnG;
+        kS_dnS = myBC.solidCells[f.i_bndry].sp.k / dnS;
+
+        T = (myBC.gasCells[f.i_bndry].fs.gas.T*kG_dnG + myBC.solidCells[f.i_bndry].T*kS_dnS) / (kG_dnG + kS_dnS);
+        q = -kG_dnG * (T - myBC.gasCells[f.i_bndry].fs.gas.T);
+
+        // Finally update properties in interfaces
+        myBC.ifaces[f.i_bndry].fs.gas.T = T;
+        myBC.ifaces[f.i_bndry].F.total_energy = outsign*q;
     }
 
     // not @nogc
