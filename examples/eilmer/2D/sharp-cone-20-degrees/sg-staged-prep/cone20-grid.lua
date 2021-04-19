@@ -6,22 +6,15 @@
 --
 config.dimensions = 2
 --
--- Set up two quadrilaterals in the (x,y)-plane by first defining
--- the corner nodes, then the lines between those corners.
-a = Vector3:new{x=0.0, y=0.0}
-b = Vector3:new{x=0.2, y=0.0}
-c = Vector3:new{x=1.0, y=0.29118}
-d = Vector3:new{x=1.0, y=1.0}
-e = Vector3:new{x=0.2, y=1.0}
-f = Vector3:new{x=0.0, y=1.0}
-ab = Line:new{p0=a, p1=b} -- lower boundary, axis
-bc = Line:new{p0=b, p1=c} -- lower boundary, cone surface
-fe = Line:new{p0=f, p1=e}; ed = Line:new{p0=e, p1=d} -- upper boundary
-af = Line:new{p0=a, p1=f} -- vertical line, inflow
-be = Line:new{p0=b, p1=e} -- vertical line, between quads
-cd = Line:new{p0=c, p1=d} -- vertical line, outflow
-quad0 = makePatch{north=fe, east=be, south=ab, west=af}
-quad1 = makePatch{north=ed, east=cd, south=bc, west=be, gridType="ao"}
+-- f--e-----d
+-- |  |     |
+-- |  |     |
+-- |  |  -/-c
+-- a--b-/
+a = {x=0.0, y=0.0}; b = {x=0.2, y=0.0}; c = {x=1.0, y=0.29118}
+d = {x=1.0, y=1.0}; e = {x=0.2, y=1.0}; f = {x=0.0, y=1.0}
+quad0 = CoonsPatch:new{p00=a, p10=b, p11=f, p01=e}
+quad1 = AOPatch:new{p00=b, p10=c, p11=d, p01=e}
 --
 -- Mesh the patches, with particular discretisation and
 -- register the grids for use in the simulation setup phase.

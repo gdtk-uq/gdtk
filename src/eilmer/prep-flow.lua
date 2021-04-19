@@ -109,6 +109,16 @@ reactionZones = {}
 turbulentZones = {}
 suppressReconstructionZones = {}
 
+gridConnections = {} -- Will be overwritten when the JSON data is parsed.
+
+-- ---------------------------------------------------------------------------------------
+
+function makeFluidBlocks(grids, bcDict, flowDict)
+   -- Using the list of grids, apply boundary-conditions and initial flow conditions
+   -- to build FluidBlock objects that are ready for flow simulation.
+   print("[TODO] makeFluidBlocks using loaded gridList and connection data")
+end
+
 -- ---------------------------------------------------------------------------------------
 
 function readGridMetadata(jobName)
@@ -119,7 +129,7 @@ function readGridMetadata(jobName)
    f:close()
    local jsonData = json.parse(jsonStr)
    gridConnections = jsonData["grid-connections"]
-   print('number of connections=', #gridConnections)
+   print('number of connections=', #gridConnections) -- debug, and loop below
    for i, c in ipairs(gridConnections) do
       print("i=", i, "idA=", c.idA, "faceA=", c.faceA,
             "idB=", c.idB, "faceB=", c.faceB, "orientation=", c.orientation)
@@ -127,7 +137,7 @@ function readGridMetadata(jobName)
    local ngrids = jsonData["ngrids"]
    for i=1, ngrids do
       local fileName = "grid/" .. jobName .. string.format(".grid.b%04d.metadata", i-1)
-      print('Set up grid object from file', fileName)
+      print('Set up grid object from file', fileName) --debug
       local f = assert(io.open(fileName, "r"))
       local jsonStr = f:read("*a")
       f:close()
