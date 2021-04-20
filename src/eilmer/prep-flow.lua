@@ -121,11 +121,30 @@ function makeFluidBlocks(bcDict, flowDict)
       if false then -- debug
          print("Make FluidBlock for g.id=", g.id)
       end
-      ifs = flowDict[g.fsTag]
+      local ifs
+      if g.fsTag then ifs = flowDict[g.fsTag] end
+      if not ifs then
+         error(string.format("Grid.id=%d fsTag=%s, does not seem to have a valid initial FlowState.", g.id, g.fsTag))
+      end
       if g.type == "structured_grid" then
-         bcs = {} -- [TODO]
-      else
+         -- Build the bc list for this block,
+         -- using the tags that the user applied when building the grid.
+         bcs = {}
+         for _,face in ipairs(faceList(config.dimensions)) do
+            local tag = g.bcTags[face] -- get the user's spec for this face
+            if tag and tag ~= "" then
+               local bc = bcDict[tag]
+               if bc then bcs[face] = bc end
+            end
+         end
+      else -- unstructured_grid
+         -- We just use the same user-supplied dictionary for all blocks.
          bcs = bcDict
+      end
+      if false then --debug
+         print("  bcs=[")
+         for face, bc in pairs(bcs) do print("    face=", face, " bc=", bc) end
+         print("  ]")
       end
       fb = FluidBlock:new{gridMetadata=g, initialState=ifs, bcDict=bcs}
    end

@@ -97,6 +97,7 @@ function FluidBlock:new(o)
          -- print("FluidBlock id=", o.id, "p0=", tostring(o.p[0]), "p1=", tostring(o.p[1]),
          --       "p2=", tostring(o.p[2]), "p3=", tostring(o.p[3]))
          -- Attach default boundary conditions for those not specified.
+         -- Note that, in the classic preparation, the structured-grid bcs arrive in bcList.
          for _,face in ipairs(faceList(config.dimensions)) do
             o.bcList[face] = o.bcList[face] or WallBC_WithSlip:new()
          end
@@ -152,8 +153,9 @@ function FluidBlock:new(o)
          -- print("FluidBlock id=", o.id, "p0=", tostring(o.p[0]), "p1=", tostring(o.p[1]),
          --       "p2=", tostring(o.p[2]), "p3=", tostring(o.p[3]))
          -- Attach default boundary conditions for those not specified.
+         -- Note that, in the staged-preparation, the bcs arrive as bcDict.
          for _,face in ipairs(faceList(config.dimensions)) do
-            o.bcList[face] = o.bcList[face] or WallBC_WithSlip:new()
+            o.bcList[face] = o.bcDict[face] or WallBC_WithSlip:new()
          end
       end
       if o.gridMetadata.type == "unstructured_grid" then
@@ -166,7 +168,7 @@ function FluidBlock:new(o)
          for i = 0, o.nboundaries-1 do
             local mybc = o.bcList[i]
             if (mybc == nil) and o.bcDict then
-               error("FIX-ME")
+               error("FIX-ME set the unstructured-gird bcs")
                local tag = o.gridMetadata.get_boundaryset_tag(i) -- [FIX-ME]
                mybc = o.bcDict[tag]
             end
@@ -179,8 +181,6 @@ function FluidBlock:new(o)
 end
 
 function FluidBlock:tojson()
-   -- [TODO] Should refactor the boundary condition checking and error messages.
-   -- [TODO] Only the loops are different and we should error() rather than exit(), I think. PJ 2017-04-29
    local str = string.format('"block_%d": {\n', self.id)
    str = str .. string.format('    "type": "%s",\n', self.myType)
    str = str .. string.format('    "label": "%s",\n', self.label)
