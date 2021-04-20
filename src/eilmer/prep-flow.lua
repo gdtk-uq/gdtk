@@ -197,9 +197,9 @@ function buildFlowFiles(jobName)
       local blk = fluidBlocks[idx]
       local gridMetadata = gridsList[idx]
       local fileName = "flow/t0000/" .. jobName .. string.format(".flow.b%04d.t0000", id)
-      if (config.flow_format == "gziptext") then
+      if config.flow_format == "gziptext" then
 	 fileName = fileName .. ".gz"
-      elseif (config.flow_format == "rawbinary") then
+      elseif config.flow_format == "rawbinary" then
 	 fileName = fileName .. ".bin"
       else
 	 error(string.format("Oops, invalid flow_format: %s", config.flow_format))
@@ -208,17 +208,17 @@ function buildFlowFiles(jobName)
       if not blk.grid then
          -- We assume a direct match between FluidBlock and grid id numbers.
          local gridFileName = "grid/t0000/" .. jobName .. string.format(".grid.b%04d.t0000", id)
-         if (config.grid_format == "gziptext") then
+         if config.grid_format == "gziptext" then
             gridFileName = gridFileName .. ".gz"
-         elseif (config.grid_format == "rawbinary") then
+         elseif config.grid_format == "rawbinary" then
             gridFileName = gridFileName .. ".bin"
          else
-	 error(string.format("Oops, invalid grid_format: %s", config.grid_format))
-      end
+            error(string.format("Oops, invalid grid_format: %s", config.grid_format))
+         end
          if gridMetadata.type == "structured_grid" then
-            blk.grid = StructuredGrid:new{fileName=gridFileName}
+            blk.grid = StructuredGrid:new{filename=gridFileName, fmt="gziptext"}
          else
-            blk.grid = UnstructuredGrid:new{fileName=gridFileName}
+            blk.grid = UnstructuredGrid:new{filename=gridFileName, fmt="gziptext"}
          end
       end
       --

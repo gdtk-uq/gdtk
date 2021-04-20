@@ -231,9 +231,10 @@ extern(C) int find_nearest_cell_centre_sg(lua_State *L)
  *                             label="A-3D-Grid"}
  *
  * importedGrid = StructuredGrid:new{file="myFileName.dat", fmt="vtk"}
- * The format "vtk" is the legacy text format for the VTK system.
- * Other format values could be "gzip", which is the Eilmer4 native file
+ * The (default) format "vtk" is the legacy text format for the VTK system.
+ * Other format values could be "gziptext", which is the Eilmer4 native file
  * or "text", which is essentially the Eilmer3 native file uncompressed.
+ * There is also "rawbinary".
  */
 extern(C) int newStructuredGrid(lua_State* L)
 {

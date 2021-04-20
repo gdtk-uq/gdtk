@@ -200,7 +200,8 @@ extern(C) int splitTriangleCell(lua_State* L)
  *
  * Example construction in Lua:
  * grid = UnstructuredGrid:new{sgrid=sgrid_object, new_label="a-new-label"}
- * grid = UnstructuredGrid:new{filename="a-file-name", new_label="a-new-label"}
+ * grid = UnstructuredGrid:new{filename="a-file-name", new_label="a-new-label",
+ *                             fmt="gziptext", scale=1.0, expect_gmsh_order_for_wedges=true}
  */
 extern(C) int newUnstructuredGrid(lua_State* L)
 {
