@@ -20,4 +20,4 @@ bcDict = {
    OUTFLOW=OutFlowBC_Simple:new{},
 }
 --
-makeFluidBlocks(gridsList, bcDict, flowDict)
+makeFluidBlocks(bcDict, flowDict)

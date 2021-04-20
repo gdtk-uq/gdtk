@@ -21,12 +21,12 @@ quad1 = AOPatch:new{p00=b, p10=c, p11=d, p01=e}
 nx0 = 10; nx1 = 30; ny = 40
 grid0 = registerGrid{
    grid=StructuredGrid:new{psurface=quad0, niv=nx0+1, njv=ny+1},
-   tag="inflow-gas",
+   fsTag="inflow-gas",
    bcTags={west="inflow"}
 }
 grid1 = registerGrid{
    grid=StructuredGrid:new{psurface=quad1, niv=nx1+1, njv=ny+1},
-   tag="initial-gas",
+   fsTag="initial-gas",
    bcTags={east="outflow"}
 }
 identifyGridConnections()

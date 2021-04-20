@@ -61,9 +61,20 @@ function perform_spatial_gradient_consistency_check()
    -- First, search for any unstructured grids, since these are the most restricted.
    unstructuredGridsPresent = false
    for _,blk in ipairs(fluidBlocks) do
-      if blk.grid:get_type() == "unstructured_grid" then
+      -- in prep-flow.lua, we may not have a real grid with in the FluidBlock
+      if blk.grid and (blk.grid:get_type() == "unstructured_grid") then
 	 unstructuredGridsPresent = true
 	 break
+      end
+   end
+   if gridsList then
+      -- only found in prep-flow.lua
+      for _,gridMetadata in ipairs(gridsList) do
+         if config.dimensions ~= gridMetadata.dimensions then
+            local msg = string.format("Mismatch in dimensions, config %d grid %d.",
+                                      config.dimensions, gridMetadata.dimensions)
+            error(msg)
+         end
       end
    end
    if unstructuredGridsPresent then

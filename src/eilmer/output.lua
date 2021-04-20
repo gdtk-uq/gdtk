@@ -388,8 +388,13 @@ function write_block_list_file(fileName)
    f:write("# indx type label ncells\n")
    for i = 1, #(fluidBlocks) do
       local blk = fluidBlocks[i]
-      f:write(string.format("%4d %s %s %d\n", blk.id,
-                            blk.grid:get_type(), blk.label, blk.ncells))
+      local grid_type
+      if blk.grid then
+         grid_type = blk.grid:get_type()
+      else
+         grid_type = blk.gridMetadata.type
+      end
+      f:write(string.format("%4d %s %s %d\n", blk.id, grid_type, blk.label, blk.ncells))
    end
    f:close()
 end

@@ -38,7 +38,8 @@ function registerGrid(o)
    -- A single table with named items.
    -- grid: a StructuredGrid or UnstructuredGrid object that has been generated
    --    or imported.
-   -- tag: a string that will be used to select the initial flow condition from
+   -- tag: a string to identify the grid later in the user's script
+   -- fsTag: a string that will be used to select the initial flow condition from
    --    a dictionary when the FluidBlock is later constructed.
    -- bcTags: a table of strings that will be used to attach boundary conditions
    --    from a dictionary when the FluidBlock is later constructed.
@@ -52,7 +53,7 @@ function registerGrid(o)
       error("registerGrid expects a single table with named items.", 2)
    end
    o = o or {}
-   flag = checkAllowedNames(o, {"grid", "tag", "bcTags", "gridArrayId"})
+   flag = checkAllowedNames(o, {"grid", "tag", "fsTag", "bcTags", "gridArrayId"})
    if not flag then
       error("Invalid name for item supplied to registerGrid.", 2)
    end
@@ -67,6 +68,8 @@ function registerGrid(o)
    gridsDict[o.tag] = o.id
    -- Set to -1 if NOT part of a grid-array, otherwise use supplied value
    o.gridArrayId = o.gridArrayId or -1
+   -- Initial FlowState tag
+   o.fsTag = o.fsTag or ""
    -- Must have a grid.
    assert(o.grid, "need to supply a grid")
    -- Check the grid information.
@@ -75,7 +78,8 @@ function registerGrid(o)
 				config.dimensions, o.grid.get_dimensions())
       error(msg)
    end
-   if o.grid:get_type() == "structured_grid" then
+   o.type = o.grid:get_type()
+   if o.type == "structured_grid" then
       -- Extract some information from the StructuredGrid
       -- Note 0-based indexing for vertices and cells.
       o.nic = o.grid:get_niv() - 1
@@ -111,7 +115,7 @@ function registerGrid(o)
 	 o.bcTags[face] = o.bcTags[face] or ""
       end
    end
-   if o.grid:get_type() == "unstructured_grid" then
+   if o.type == "unstructured_grid" then
       -- Extract some information from the UnstructuredGrid
       o.ncells = o.grid:get_ncells()
       o.nvertices = o.grid:get_nvertices()
@@ -128,8 +132,9 @@ end -- function registerGrid
 function gridMetadataAsJSON(g)
    str = '{\n'
    str = str .. string.format('  "tag": "%s",\n', g.tag)
-   if g.grid:get_type() == "structured_grid" then
-      str = str .. '  "type": "structured_grid",\n'
+   str = str .. string.format('  "fsTag": "%s",\n', g.fsTag)
+   str = str .. string.format('  "type": "%s",\n', g.type)
+   if g.type == "structured_grid" then
       str = str .. string.format('  "dimensions": %d,\n', g.grid:get_dimensions())
       str = str .. string.format('  "niv": %d,\n', g.grid:get_niv())
       str = str .. string.format('  "njv": %d,\n', g.grid:get_njv())
@@ -146,8 +151,7 @@ function gridMetadataAsJSON(g)
             str = str .. string.format(fmt, i, g.p[i].x, g.p[i].y, g.p[i].z)
          end
       end
-   else
-      str = str .. '  "type": "unstructured_grid",\n'
+   else -- unstructured-grid
       str = str .. string.format('  "dimensions": %d,\n', g.grid:get_dimensions())
       str = str .. string.format('  "nvertices": %d,\n', g.grid:get_nvertices())
       str = str .. string.format('  "ncells": %d,\n', g.grid:get_ncells())
@@ -155,7 +159,7 @@ function gridMetadataAsJSON(g)
       str = str .. string.format('  "nboundaries": %d,\n', g.grid:get_nboundaries())
    end
    str = str .. '  "bcTags": {\n'
-   if g.grid:get_type() == "structured_grid" then
+   if g.type == "structured_grid" then
       for k, v in pairs(g.bcTags) do
          str = str .. string.format('    "%s": "%s",\n', k, v) -- Expect named boundaries
       end

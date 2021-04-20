@@ -113,10 +113,23 @@ gridConnections = {} -- Will be overwritten when the JSON data is parsed.
 
 -- ---------------------------------------------------------------------------------------
 
-function makeFluidBlocks(grids, bcDict, flowDict)
+function makeFluidBlocks(bcDict, flowDict)
    -- Using the list of grids, apply boundary-conditions and initial flow conditions
    -- to build FluidBlock objects that are ready for flow simulation.
-   print("[TODO] makeFluidBlocks using loaded gridList and connection data")
+   for idx, g in ipairs(gridsList) do
+      print("make FluidBlock for g.id=", g.id)
+      ifs = flowDict[g.fsTag]
+      if g.type == "structured_grid" then
+         bcs = {}
+      else
+         bcs = bcDict
+      end
+      fb = FluidBlock:new{gridMetadata=g, initialState=ifs, bcDict=bcs}
+   end
+   print("[TODO] add exchange boundary conditions.")
+   for idx, c in ipairs(gridConnections) do
+      -- connect a pair of blocks
+   end
 end
 
 -- ---------------------------------------------------------------------------------------
@@ -181,6 +194,8 @@ function buildFlowFiles(jobName)
          print("FluidBlock id=", id)
       end
       local idx = id+1
+      local blk = fluidBlocks[idx]
+      local gridMetadata = gridsList[idx]
       local fileName = "flow/t0000/" .. jobName .. string.format(".flow.b%04d.t0000", id)
       if (config.flow_format == "gziptext") then
 	 fileName = fileName .. ".gz"
@@ -190,10 +205,24 @@ function buildFlowFiles(jobName)
 	 error(string.format("Oops, invalid flow_format: %s", config.flow_format))
       end
       --
-      -- [TODO] Need to have grid loaded at this point,
-      --        so that the flow state writing can use the cell locations.
+      if not blk.grid then
+         -- We assume a direct match between FluidBlock and grid id numbers.
+         local gridFileName = "grid/t0000/" .. jobName .. string.format(".grid.b%04d.t0000", id)
+         if (config.grid_format == "gziptext") then
+            gridFileName = gridFileName .. ".gz"
+         elseif (config.grid_format == "rawbinary") then
+            gridFileName = gridFileName .. ".bin"
+         else
+	 error(string.format("Oops, invalid grid_format: %s", config.grid_format))
+      end
+         if gridMetadata.type == "structured_grid" then
+            blk.grid = StructuredGrid:new{fileName=gridFileName}
+         else
+            blk.grid = UnstructuredGrid:new{fileName=gridFileName}
+         end
+      end
       --
-      local ifs = fluidBlocks[idx].initialState
+      local ifs = blk.initialState
       if type(ifs) == "table" and ifs.myType == "FlowState" then
 	 -- We have one of the pure-Lua FlowState objects and we convert it to
 	 -- a wrapped-D-language _FlowState object.
