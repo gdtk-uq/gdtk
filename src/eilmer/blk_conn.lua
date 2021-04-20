@@ -322,14 +322,23 @@ function closeEnough(vA, vB, tolerance)
 end
 
 function verticesAreCoincident(A, B, vtxPairs, tolerance)
+   if false then -- debug
+      print("allVerticesAreClose:")
+   end
    tolerance = tolerance or 1.0e-6
    local allVerticesAreClose = true
    for _,v in ipairs(vtxPairs) do
-      -- print("A.id=", A.id, "B.id=", B.id, "vtxPair=", tostringVtxPair(v)) -- DEBUG
-      -- print("  A.p=", tostring(A.p[v[1]]), "B.p=", tostring(B.p[v[2]])) -- DEBUG
+      if false then -- debug
+         print("  test vertex pair:")
+         print("  A.id=", A.id, "B.id=", B.id, "vtxPair=", tostringVtxPair(v))
+         print("    A.p=", tostring(A.p[v[1]]), "B.p=", tostring(B.p[v[2]]))
+      end
       if not closeEnough(A.p[v[1]], B.p[v[2]], tolerance) then
 	 allVerticesAreClose = false
       end
+   end
+   if false then -- debug
+      print("  result:", allVerticesAreClose)
    end
    return allVerticesAreClose
 end

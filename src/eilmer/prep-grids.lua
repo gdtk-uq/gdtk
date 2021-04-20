@@ -181,7 +181,7 @@ end
 connectionList = {}
 
 function connectGrids(idA, faceA, idB, faceB, orientation)
-   if false then --DEBUG
+   if true then --DEBUG
       print(string.format('connectGrids(idA=%d, faceA="%s", idB=%d, faceB="%s", orientation=%d)',
                           idA, faceA, idB, faceB, orientation))
    end
@@ -223,6 +223,11 @@ function identifyGridConnections(includeList, excludeList, tolerance)
    for _,A in ipairs(myGridList) do
       if A.grid:get_type() == "unstructured_grid" then excludeList[#excludeList+1] = A end
    end
+   if false then -- debug
+      print('myGridList=[')
+      for _,A in ipairs(myGridList) do print('  ', A.id, ',') end
+      print(']')
+   end
    tolerance = tolerance or 1.0e-6
    --
    for _,A in ipairs(myGridList) do
@@ -233,10 +238,12 @@ function identifyGridConnections(includeList, excludeList, tolerance)
 	    if config.dimensions == 2 then
 	       -- print("2D test A.id=", A.id, " B.id=", B.id) -- DEBUG
 	       for vtxPairs,connection in pairs(connections2D) do
-		  -- print("vtxPairs=", tostringVtxPairList(vtxPairs),
-		  --       "connection=", tostringConnection(connection)) -- DEBUG
+                  if false then -- debug
+                     print("vtxPairs=", tostringVtxPairList(vtxPairs),
+                           "connection=", tostringConnection(connection))
+                  end
                   if verticesAreCoincident(A, B, vtxPairs, tolerance) then
-		     local faceA, faceB = unpack(connection)
+		     local faceA, faceB, orientation = unpack(connection)
 		     connectGrids(A.id, faceA, B.id, faceB, 0)
 		     connectionCount = connectionCount + 1
 		  end

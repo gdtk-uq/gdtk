@@ -296,7 +296,10 @@ function connectBlocks(blkA, faceA, blkB, faceB, orientation)
       print("connectBlocks: blkA.id=", blkA.id, "faceA=", faceA,
             "blkB.id=", blkB.id, "faceB=", faceB, "orientation=", orientation)
    end
-   if blkA.grid:get_type() ~= "structured_grid" or blkB.grid:get_type() ~= "structured_grid" then
+   -- Note that, when doing staged preparation, we may not have the grid object
+   -- actually present at the point of making a FluidBlock connection.
+   if ((blkA.grid and (blkA.grid:get_type() ~= "structured_grid")) or
+      (blkA.grid and (blkB.grid:get_type() ~= "structured_grid"))) then
       error("connectBlocks() Works only for structured-grid blocks.", 2)
    end
    if blkA.myType == "FluidBlock" and blkB.myType == "FluidBlock" then

@@ -116,19 +116,23 @@ gridConnections = {} -- Will be overwritten when the JSON data is parsed.
 function makeFluidBlocks(bcDict, flowDict)
    -- Using the list of grids, apply boundary-conditions and initial flow conditions
    -- to build FluidBlock objects that are ready for flow simulation.
+   print("Make FluidBlock objects.")
    for idx, g in ipairs(gridsList) do
-      print("make FluidBlock for g.id=", g.id)
+      if false then -- debug
+         print("Make FluidBlock for g.id=", g.id)
+      end
       ifs = flowDict[g.fsTag]
       if g.type == "structured_grid" then
-         bcs = {}
+         bcs = {} -- [TODO]
       else
          bcs = bcDict
       end
       fb = FluidBlock:new{gridMetadata=g, initialState=ifs, bcDict=bcs}
    end
-   print("[TODO] add exchange boundary conditions.")
+   print("Make block-to-block connections.")
    for idx, c in ipairs(gridConnections) do
-      -- connect a pair of blocks
+      -- Remember that the Lua array index will be one more than the block id.
+      connectBlocks(fluidBlocks[c.idA+1], c.faceA, fluidBlocks[c.idB+1], c.faceB, c.orientation)
    end
 end
 
@@ -142,15 +146,19 @@ function readGridMetadata(jobName)
    f:close()
    local jsonData = json.parse(jsonStr)
    gridConnections = jsonData["grid-connections"]
-   print('number of connections=', #gridConnections) -- debug, and loop below
-   for i, c in ipairs(gridConnections) do
-      print("i=", i, "idA=", c.idA, "faceA=", c.faceA,
-            "idB=", c.idB, "faceB=", c.faceB, "orientation=", c.orientation)
+   if false then -- debug
+      print('number of connections=', #gridConnections)
+      for i, c in ipairs(gridConnections) do
+         print("i=", i, "idA=", c.idA, "faceA=", c.faceA,
+               "idB=", c.idB, "faceB=", c.faceB, "orientation=", c.orientation)
+      end
    end
    local ngrids = jsonData["ngrids"]
    for i=1, ngrids do
       local fileName = "grid/" .. jobName .. string.format(".grid.b%04d.metadata", i-1)
-      print('Set up grid object from file', fileName) --debug
+      if false then --debug
+         print('Set up grid object from file', fileName)
+      end
       local f = assert(io.open(fileName, "r"))
       local jsonStr = f:read("*a")
       f:close()
@@ -189,8 +197,7 @@ function buildFlowFiles(jobName)
    end
    os.execute("mkdir -p flow/t0000")
    for i, id in ipairs(fluidBlockIdsForPrep) do
-      if false then
-         -- May activate print statement for debug.
+      if false then -- May activate print statement for debug.
          print("FluidBlock id=", id)
       end
       local idx = id+1
@@ -223,6 +230,8 @@ function buildFlowFiles(jobName)
       end
       --
       local ifs = blk.initialState
+      -- Check if we need to do something special with initialState
+      -- before calling the Dlang function to write the initial flow file.
       if type(ifs) == "table" and ifs.myType == "FlowState" then
 	 -- We have one of the pure-Lua FlowState objects and we convert it to
 	 -- a wrapped-D-language _FlowState object.
@@ -251,6 +260,7 @@ function buildFlowFiles(jobName)
       else
 	 error("Unexpected type for initial flow state in block.")
       end
+      -- Ready to use initialState in the Dlang function.
       if type(ifs) ~= "string" then
          local grid = fluidBlocks[idx].grid
          local omegaz = fluidBlocks[idx].omegaz
