@@ -207,6 +207,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
     string trackWaveStr = "";
     string extractLineStr = "";
     string extractSolidLineStr = "";
+    string plotTag = "field";
     string computeLoadsOnGroupStr = "";
     string probeStr = "";
     string outputFormat = "gnuplot";
@@ -251,6 +252,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
                "track-wave", &trackWaveStr,
                "extract-line", &extractLineStr,
                "extract-solid-line", &extractSolidLineStr,
+               "plotTag", &plotTag,
                "compute-loads-on-group", &computeLoadsOnGroupStr,
                "probe", &probeStr,
                "output-format", &outputFormat,
@@ -768,6 +770,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
                 writeln("  trackWaveStr: ", trackWaveStr);
                 writeln("  extractLineStr: ", extractLineStr);
                 writeln("  extractSolidLineStr: ", extractSolidLineStr);
+                writeln("  plotTag: ", plotTag);
                 writeln("  computeLoadsOnGroupStr: ", computeLoadsOnGroupStr);
                 writeln("  probeStr: ", probeStr);
                 writeln("  outputFormat: ", outputFormat);
@@ -780,7 +783,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
                          tecplotBinaryFlag, tecplotAsciiFlag, tecplotAsciiLegacyFlag,
                          outputFileName, sliceListStr, surfaceListStr,
                          extractStreamStr, trackWaveStr, extractLineStr, computeLoadsOnGroupStr,
-                         probeStr, outputFormat, normsStr, regionStr, extractSolidLineStr);
+                         probeStr, outputFormat, normsStr, regionStr, extractSolidLineStr, plotTag);
             if (verbosityLevel > 0) { writeln("Done postprocessing."); }
         } // end NOT mpi_parallel
         return exitFlag;

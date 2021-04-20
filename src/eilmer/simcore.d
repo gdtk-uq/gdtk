@@ -38,6 +38,8 @@ import fluidblock;
 import sfluidblock;
 import ufluidblock;
 import fluidblockio_old;
+import fluidblockio_new;
+import fluidblockio;
 import ssolidblock;
 import solidprops;
 import solidfvinterface;
@@ -68,6 +70,7 @@ import simcore_gasdynamic_step;
 import simcore_solid_step;
 import simcore_exchange;
 import simcore_io;
+import celldata;
 
 // The shared double[] flavour of GlobalConfig.userPad can give trouble,
 // so we need a normal array for the MPI task to work with.
@@ -110,7 +113,21 @@ int init_simulation(int tindx, int nextLoadsIndx,
     }
     //
     if (GlobalConfig.grid_format == "rawbinary") { GlobalConfig.gridFileExt = "bin"; }
-    if (GlobalConfig.flow_format == "rawbinary") { GlobalConfig.flowFileExt = "bin"; }
+
+    if (GlobalConfig.new_flow_format) {
+        switch (GlobalConfig.flow_format) {
+            case "eilmer4text" : GlobalConfig.flowFileExt = "zip"; break;
+            case "eilmer4binary" : GlobalConfig.flowFileExt = "zip"; break;
+            default : throw new Error("Unrecognised flow format");
+        }
+    } else {
+        switch (GlobalConfig.flow_format) {
+            case "gziptext" : GlobalConfig.flowFileExt = "gz"; break;
+            case "rawbinary" : GlobalConfig.flowFileExt = "bin"; break;
+            default : throw new Error("Unrecognised flow format");
+        }
+    }
+
     SimState.current_tindx = tindx;
     SimState.current_loads_tindx = nextLoadsIndx;
     if (SimState.current_loads_tindx == -1) {
@@ -240,6 +257,7 @@ int init_simulation(int tindx, int nextLoadsIndx,
                 myblk.init_grid_and_flow_arrays(make_file_name!"grid"(job_name, myblk.id, 0, GlobalConfig.gridFileExt));
             }
             myblk.compute_primary_cell_geometric_data(0);
+            myblk.add_IO();
         } catch (Exception e) {
             writefln("Block[%d] failed to initialize geometry, msg=%s", myblk.id, e.msg);
             any_block_fail = true;
@@ -270,8 +288,14 @@ int init_simulation(int tindx, int nextLoadsIndx,
         myblk.identify_reaction_zones(0);
         myblk.identify_turbulent_zones(0);
         myblk.identify_suppress_reconstruction_zones();
-        time_array[i] = myblk.read_solution(make_file_name!"flow"(job_name, myblk.id, SimState.current_tindx,
-                                                                  GlobalConfig.flowFileExt), false);
+        if (GlobalConfig.new_flow_format) {
+            time_array[i] = myblk.read_solution(make_file_name("CellData", CellData.tag, job_name, myblk.id, SimState.current_tindx,
+                                                            GlobalConfig.flowFileExt), false);
+        } else {
+            time_array[i] = myblk.read_solution(make_file_name!"flow"(job_name, myblk.id, SimState.current_tindx,
+                                                            GlobalConfig.flowFileExt), false);
+        }
+
         if (myblk.myConfig.verbosity_level >= 2) { writefln("Cold start cells in block %d", myblk.id); }
         foreach (iface; myblk.faces) { iface.gvel.clear(); }
         foreach (cell; myblk.cells) {
@@ -1121,6 +1145,12 @@ int integrate_in_time(double target_time_as_requested)
                 } // end if with_super_time_stepping
                 version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
             } // end if (step...
+            
+            // update any auxiliary values
+            foreach (myblk; parallel(localFluidBlocksBySize,1)) {
+                myblk.update_aux(SimState.dt_global, SimState.time, SimState.step);
+            }
+            
             //
             // 4.0 (Occasionally) Write out an intermediate solution
             if ( SimState.step == GlobalConfig.write_flow_solution_at_step ) {
@@ -1594,7 +1624,7 @@ void finalize_simulation()
             update_loads_times_file(SimState.time, SimState.current_loads_tindx);
         }
     }
-    if (GlobalConfig.do_temporal_DFT) {
+    if (!GlobalConfig.new_flow_format && GlobalConfig.do_temporal_DFT) {
         write_DFT_files();
     }
     GC.collect();

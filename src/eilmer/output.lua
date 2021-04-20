@@ -111,6 +111,7 @@ function write_config_file(fileName)
    f:write(string.format('"start_time": %.18e,\n', config.start_time))
    f:write(string.format('"grid_format": "%s",\n', config.grid_format))
    f:write(string.format('"flow_format": "%s",\n', config.flow_format))
+   f:write(string.format('"new_flow_format": %s,\n',tostring(config.new_flow_format)))
    f:write(string.format('"gas_model_file": "%s",\n', config.gas_model_file))
    f:write(string.format('"udf_supervisor_file": "%s",\n', tostring(config.udf_supervisor_file)))
    if type(user_pad_data) == 'table' then
@@ -277,6 +278,8 @@ function write_config_file(fileName)
    f:write(string.format('"do_temporal_DFT": %s,\n', tostring(config.do_temporal_DFT)))
    f:write(string.format('"DFT_n_modes": %d,\n', config.DFT_n_modes))
    f:write(string.format('"DFT_step_interval": %d,\n', config.DFT_step_interval))
+
+   f:write(string.format('"do_flow_average": %s,\n', tostring(config.do_flow_average)))
 
    f:write('"shape_sensitivity_calculator_options" : {\n')
    f:write(string.format('   "pseudotime": %s,\n', tostring(ShapeSensitivityCalculator.pseudotime)))
