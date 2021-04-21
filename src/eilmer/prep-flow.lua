@@ -5,7 +5,9 @@
 --
 -- Authors: PJ, RJG, Kyle D., Nick G. and Daryl B.
 --
-print("Loading prep-flow.lua...")
+if false then -- debug
+   print("Loading prep-flow.lua.")
+end
 
 require 'lua_helper'
 deepclone = lua_helper.deepclone
@@ -116,7 +118,9 @@ gridConnections = {} -- Will be overwritten when the JSON data is parsed.
 function makeFluidBlocks(bcDict, flowDict)
    -- Using the list of grids, apply boundary-conditions and initial flow conditions
    -- to build FluidBlock objects that are ready for flow simulation.
-   print("Make FluidBlock objects.")
+   if false then -- debug
+      print("Make FluidBlock objects.")
+   end
    for idx, g in ipairs(gridsList) do
       if false then -- debug
          print("Make FluidBlock for g.id=", g.id)
@@ -148,7 +152,9 @@ function makeFluidBlocks(bcDict, flowDict)
       end
       fb = FluidBlock:new{gridMetadata=g, initialState=ifs, bcDict=bcs}
    end
-   print("Make block-to-block connections.")
+   if false then -- debug
+      print("Make block-to-block connections.")
+   end
    for idx, c in ipairs(gridConnections) do
       -- Remember that the Lua array index will be one more than the block id.
       connectBlocks(fluidBlocks[c.idA+1], c.faceA, fluidBlocks[c.idB+1], c.faceB, c.orientation)
@@ -172,6 +178,8 @@ function readGridMetadata(jobName)
                "idB=", c.idB, "faceB=", c.faceB, "orientation=", c.orientation)
       end
    end
+   print(string.format('  #connections: %d', #gridConnections))
+   --
    local ngrids = jsonData["ngrids"]
    for i=1, ngrids do
       local fileName = "grid/" .. jobName .. string.format(".grid.b%04d.metadata", i-1)
@@ -185,15 +193,16 @@ function readGridMetadata(jobName)
       gridMetadata.id = i-1
       gridsList[#gridsList+1] = gridMetadata
    end
+   print(string.format('  #grids: %d', #gridsList))
 end
 
 function buildRuntimeConfigFiles(jobName)
+   print(string.format('Build runtime config files for job="%s"', jobName))
    perform_spatial_gradient_consistency_check()
    warn_if_blocks_not_connected()
    if config.do_temporal_DFT then
        check_DFT_settings()
    end
-   print("Build runtime config files for job:", jobName)
    os.execute("mkdir -p config")
    write_config_file("config/" .. jobName .. ".config")
    write_control_file("config/" .. jobName .. ".control")
@@ -204,10 +213,13 @@ function buildRuntimeConfigFiles(jobName)
    if config.grid_motion == "shock_fitting" then
       write_shock_fitting_helper_files(jobName)
    end
-   print("Done buildRuntimeConfigFiles.")
+   if false then -- debug
+      print("Done buildRuntimeConfigFiles.")
+   end
 end
 
 function buildFlowFiles(jobName)
+   print(string.format('Build flow files for job="%s"', jobName))
    if #fluidBlockIdsForPrep == 0 then
       -- We'll set *all* blocks for processing.
       for i=1,#fluidBlocks do
@@ -292,7 +304,11 @@ function buildFlowFiles(jobName)
    end
    --
    if #fluidBlocks == 0 then print("Warning: number of FluidBlocks is zero.") end
-   print("Done buildingFlowFiles.")
+   if false then -- debug
+      print("Done buildingFlowFiles.")
+   end
 end
 
-print("Done loading prep-flow.lua")
+if false then -- debug
+   print("Done loading prep-flow.lua")
+end

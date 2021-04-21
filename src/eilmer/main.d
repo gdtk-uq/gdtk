@@ -481,7 +481,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
                     throw new FlowSolverException(errMsg);
                 }
             }
-            if (verbosityLevel > 0) { writeln("Done preparation."); }
+            if (verbosityLevel > 0) { writeln("Done."); }
         } // end NOT mpi_parallel
         return exitFlag;
     } // end if prepFlag
@@ -533,7 +533,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
                 string errMsg = to!string(lua_tostring(L, -1));
                 throw new FlowSolverException(errMsg);
             }
-            if (verbosityLevel > 0) { writeln("Done preparation of grid files."); }
+            if (verbosityLevel > 0) { writeln("Done."); }
         } // end NOT mpi_parallel
         return exitFlag;
     } // end if prepGridFilesFlag
@@ -658,7 +658,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
                     throw new FlowSolverException(errMsg);
                 }
             }
-            if (verbosityLevel > 0) { writeln("Done preparation of runtime config and flow files."); }
+            if (verbosityLevel > 0) { writeln("Done."); }
         } // end NOT mpi_parallel
         return exitFlag;
     } // end if prepFlowFilesFlag
@@ -726,7 +726,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
             finalize_simulation();
         }
         if (verbosityLevel > 0 && GlobalConfig.is_master_task) {
-            writeln("Done --run.");
+            writeln("Done.");
         }
         return exitFlag;
     } // end if runFlag
@@ -784,7 +784,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
                          outputFileName, sliceListStr, surfaceListStr,
                          extractStreamStr, trackWaveStr, extractLineStr, computeLoadsOnGroupStr,
                          probeStr, outputFormat, normsStr, regionStr, extractSolidLineStr, plotTag);
-            if (verbosityLevel > 0) { writeln("Done postprocessing."); }
+            if (verbosityLevel > 0) { writeln("Done."); }
         } // end NOT mpi_parallel
         return exitFlag;
     } // end if postFlag
@@ -832,7 +832,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
                 string errMsg = to!string(lua_tostring(L, -1));
                 throw new FlowSolverException(errMsg);
             }
-            if (verbosityLevel > 0) { writeln("Done custom script processing."); }
+            if (verbosityLevel > 0) { writeln("Done."); }
         } // end NOT mpi_parallel
         return exitFlag;
     } // end if customScriptFlag
