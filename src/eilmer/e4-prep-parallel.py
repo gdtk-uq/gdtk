@@ -4,13 +4,15 @@
 Prepare a simulation, writing the block files in batches, concurrently.
 
 Usage:
-  $ e4-prep-parallel --job=<jobName> --n-workers=<int> --nb-per-task=<int> --complex
+  $ e4-prep-parallel --job=<jobName> --n-workers=<int> --nb-per-task=<int> \
+                     --complex --prep=<prepOption>
 
 Authors:
   PAJ and RJG
 
 Version:
-  2020-06-27
+  2020-06-27: original code
+  2021-04-21: We now have classic "prep" and new "prep-flow" options.
 """
 
 import sys
@@ -35,21 +37,22 @@ def run_command(cmd):
         completedCmd = subprocess.run(args, stdout=out, stderr=err)
     return completedCmd.returncode
 
-def main(jobName, nWorkers, nBlocksPerTask, doComplexPrep=False):
+def main(jobName, nWorkers, nBlocksPerTask, doComplexPrep=False, prepOption="prep-flow"):
     """
     Do the real work with the user-supplied parameters.
     """
     print(f"jobName={jobName}, nWorkers={nWorkers}, nBlocksPerBatch={nBlocksPerTask}")
     #
-    inputScriptName = jobName + ".lua"
+    inputScriptName = jobName
+    if prepOption == "prep-flow": inputScriptName += "-flow"
+    inputScriptName += ".lua"
     print("Input script file name: %s" % inputScriptName)
     if not os.path.exists(inputScriptName):
         raise RuntimeError(f"Input script not found: {inputScriptName}")
     if not os.path.exists("logs"): os.mkdir("logs")
     prepProgName = "e4shared"
-    if doComplexPrep:
-        prepProgName = "e4zshared"
-    cmdTxt = f"{prepProgName} --job={jobName} --prep --no-block-files"
+    if doComplexPrep: prepProgName = "e4zshared"
+    cmdTxt = f"{prepProgName} --job={jobName} --{prepOption} --no-block-files"
     tagTxt = f"{0}"
     print(f"cmd={cmdTxt}, tag={tagTxt}")
     returnCode = run_command((cmdTxt, tagTxt))
@@ -69,7 +72,7 @@ def main(jobName, nWorkers, nBlocksPerTask, doComplexPrep=False):
     for i in range(0, nBlocks, nBlocksPerTask):
         n1 = i
         n2 = min(i+nBlocksPerTask, nBlocks)
-        cmdTxt = f"{prepProgName} --job={jobName} --prep --no-config-files --only-blocks=\"{n1}..<{n2}\""
+        cmdTxt = f"{prepProgName} --job={jobName} --{prepOption} --no-config-files --only-blocks=\"{n1}..<{n2}\""
         tagTxt = f"{n2}"
         print(f"cmdTxt={cmdTxt}, tagTxt={tagTxt}")
         cmds.append((cmdTxt, tagTxt))
@@ -87,14 +90,14 @@ def main(jobName, nWorkers, nBlocksPerTask, doComplexPrep=False):
 
 #--------------------------------------------------------------------
 
-shortOptions = "hf:w:b:c"
-longOptions = ["help", "job=", "n-workers=", "nb-per-task=", "complex"]
+shortOptions = "hf:w:b:cp:"
+longOptions = ["help", "job=", "n-workers=", "nb-per-task=", "complex", "prep"]
 
 def printUsage():
     print("Prepare a simulation, writing the block files in batches, concurrently.")
     print("Usage: e4-prep-parallel [--help | -h] [--job=<jobName> | -f <jobName>]\n" +
           "                        [--n-workers=<int> | -w <int>] [--nb-per-task=<int> | -b <int>]\n" +
-          "                        [--complex | -c]")
+          "                        [--complex | -c] [--prep=<option> | -p <option>]")
     print("")
     return
 
@@ -133,6 +136,12 @@ if __name__ == '__main__':
             doComplexPrep = True
         else:
             doComplexPrep = False
-        main(jobName, n_workers, nbpt, doComplexPrep)
+        if "--prep" in uoDict:
+            prepOption = uoDict.get("--prep", "prep-flow")
+        elif "-p" in uoDict:
+            prepOption = uoDict.get("-p", "prep-flow")
+        else:
+            prepOption = "prep-flow"
+        main(jobName, n_workers, nbpt, doComplexPrep, prepOption)
     print("Done.")
     sys.exit(0)
