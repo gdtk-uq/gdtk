@@ -101,7 +101,8 @@ public:
             flowFileExt = "zip";
         }
 
-        bool new_flow_format =  jsonData["new_flow_format"].boolean;
+        bool new_flow_format = false;
+        if ("new_flow_format" in jsonData) new_flow_format =  jsonData["new_flow_format"].boolean;
 
         grid_motion = grid_motion_from_name(jsonData["grid_motion"].str);
         // -- end initialising JSONData
