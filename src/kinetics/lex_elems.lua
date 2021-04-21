@@ -45,5 +45,7 @@ Equals = C(P("=")) * Space
 Plus = P("+") * Space
 AllColliders = C(P("*all"))
 MolcColliders = C(P("*molcs"))
+IonColliders = C(P("*ions"))
+HeavyColliders = C(P("*heavy"))
 DoubleTilde = Space * P("~~") * Space
 

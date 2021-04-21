@@ -83,6 +83,9 @@ function main()
    inFname = arg[2]
    outFname = arg[3]
 
+   outstring = 'Creating kinetics file "' .. outFname .. '" using input file "' .. inFname .. '"...'
+   print(outstring)
+
    -- Execute gas model file so we can get:
    -- 1. list of species
    -- 2. list of energy modes
@@ -94,26 +97,12 @@ function main()
       species[sp] = isp-1
    end
 
-   -- Assemble list of molecules
-   molecules = {}
-   for isp,sp in ipairs(species) do
-      if db[sp].type == "molecule" then
-         molecules[#molecules+1] = sp
-      end
-   end
-
-   print("Identified molecules in mixture:")
-   for p,sp in ipairs(molecules) do
-      print(p, sp)
-   end
-   
-
    -- Load contents from user's file.
    dofile(inFname)
 
    for i,m in ipairs(userMechs) do
       if validateMechanism(m) then
-         addUserMechToTable(m, mechanisms, species, molecules, db)
+         addUserMechToTable(m, mechanisms, species, db)
       else
          print("Error while trying to validate mechanism ", i)
          print(m[1])

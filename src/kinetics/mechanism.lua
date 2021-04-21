@@ -147,7 +147,7 @@ G = lpeg.P{ Mechanism,
             PColliders = lpeg.Ct( Species + (Open * ( (Species * Comma^0)^1 + MolcColliders )  * Close) ),
             QColliders = lpeg.Ct( Species + (Open * ( (Species * Comma^0)^1 + AllColliders )  * Close) )
 }
-                                  
+
 G = Space * G * Space * -1
 
 function parseMechString(s)
@@ -175,58 +175,87 @@ function validateMechanism(m, i)
    return true
 end
 
-function expandPColliders(t, molecules)
-   ps = {}
-   unique_ps = {}
-   for i,p in ipairs(t) do
-      if p == "*molcs" then
-         for _,m in ipairs(molecules) do
-            if unique_ps[m] == nil then
-               unique_ps[m] = true
-               ps[#ps+1] = m
-            end
-         end
+function expandKeywords(keyword, species, db)
+   -- Sometimes we don't want to specify every species in a list. This function defines some handy
+   -- aliases for large groups of species, but will also return a table if given a valid species.
+   --
+   -- Examples:
+   --    *molcs -> {N2, O2, NO}
+   --    N2     -> {N2}
+   -- Notes: If you add a new keyword to this list, also go update lex_elems.lua, and add it to the grammar bit below!
+   -- @author: Nick Gibbons
+   local e = {}
+   if keyword=='*molcs' then
+      for i,s in ipairs(species) do
+         if db[s].type == 'molecule' then e[#e+1] = s end
+      end
+
+   elseif keyword=='*all' then
+      for i,s in ipairs(species) do
+         e[#e+1] = s
+      end
+
+   elseif keyword=='*heavy' then
+      for i,s in ipairs(species) do
+         if s ~= 'e-' then e[#e+1] = s end
+      end
+
+   elseif keyword=='*ions' then
+      for i,s in ipairs(species) do
+         if db[s].charge > 0 then e[#e+1] = s end
+      end
+
+   else
+       -- If we've been given something else check that it is in the species list
+      is_valid_species = false
+      for i,s in ipairs(species) do
+         if keyword==s then is_valid_species=true end
+      end
+      if is_valid_species then
+           e[#e+1] = keyword
       else
-         if unique_ps[p] == nil then
-            unique_ps[p] = true
-            ps[#ps+1] = p
+         print("Error: ", keyword, "is not a valid species or expandable keyword")
+         os.exit(1)
+      end
+   end
+   return e
+end
+
+function expandColliders(t, species, db)
+   -- Process the mechanism string to produce a valid table of species specified in the mechanism
+   --
+   -- Examples:
+   --   (*molcs) -> {N2, O2, NO}
+   --   (N2, O2, *molcs) -> {N2, O2, NO}
+   --   (N2, O2, NO) -> {N2, O2, NO}
+   --   (N2, N2, N2) -> {N2}
+   -- @author: Nick Gibbons
+   local ps = {}
+   local unique_ps = {}
+
+   for i,p in ipairs(t) do
+      eps = expandKeywords(p, species, db)
+      for j,ep in ipairs(eps) do
+         if unique_ps[ep] == nil then
+            unique_ps[ep] = true
+            ps[#ps+1] = ep
          end
       end
    end
    return ps
 end
 
-function expandQColliders(t, species)
-   qs = {}
-   unique_qs = {}
-   for i,q in ipairs(t) do
-      if q == "*all" then
-         for _,s in ipairs(species) do
-            if unique_qs[s] == nil then
-               unique_ps[s] = true
-               qs[#qs+1] = s
-            end
-         end
-      else
-         if unique_qs[q] == nil then
-            unique_qs[q] = true
-            qs[#qs+1] = q
-         end
-      end
-   end
-   return qs
-end
 
-function addUserMechToTable(m, mechanisms, species, molecules, db)
+function addUserMechToTable(m, mechanisms, species, db)
    t = parseMechString(m[1])
-   ps = expandPColliders(t[1], molecules)
-   qs = expandQColliders(t[2], species)
+   ps = expandColliders(t[1], species, db)
+   qs = expandColliders(t[2], species, db)
 
    for _,p in ipairs(ps) do
       if not mechanisms[p] then
          mechanisms[p] = {}
       end
-      
+
       for __,q in ipairs(qs) do
          mechanisms[p][q] = {}
          mechanisms[p][q].type = m.type
@@ -240,9 +269,6 @@ function addUserMechToTable(m, mechanisms, species, molecules, db)
    end
 end
 
-
-
-
 for k,v in pairs(lex_elems) do
    _G[k] = v
 end
@@ -255,10 +281,10 @@ local Mechanism = lpeg.V"Mechanism"
 
 G = lpeg.P{ Mechanism,
             Mechanism = lpeg.Ct( PColliders * DoubleTilde * QColliders ),
-            PColliders = lpeg.Ct( Species + (Open * ( (Species * Comma^0)^1 + MolcColliders )  * Close) ),
-            QColliders = lpeg.Ct( Species + (Open * ( (Species * Comma^0)^1 + AllColliders )  * Close) )
+            PColliders = lpeg.Ct( Species + (Open * ( (Species * Comma^0)^1 + MolcColliders + AllColliders + HeavyColliders + IonColliders )  * Close) ),
+            QColliders = lpeg.Ct( Species + (Open * ( (Species * Comma^0)^1 + MolcColliders + AllColliders + HeavyColliders + IonColliders )  * Close) )
 }
-                                  
+
 G = Space * G * Space * -1
 
 
