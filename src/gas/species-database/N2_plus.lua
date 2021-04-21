@@ -1,4 +1,12 @@
 db['N2+'] = {}
+db['N2+'].type = "molecule"
+db['N2+'].molecule_type = "linear"
+db['N2+'].theta_v = {
+   value = 3393.44,
+   units = 'K',
+   description = 'characteristic vibrational temperature',
+   reference = 'Copied from N2'
+}
 db['N2+'].atomicConstituents = {N=2}
 db['N2+'].charge = 1
 db['N2+'].M = {

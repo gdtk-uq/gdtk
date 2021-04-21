@@ -1,5 +1,6 @@
 db['N+'] = {}
 db['N+'].atomicConstituents = {N=1}
+db['N+'].type = "atom"
 db['N+'].charge = 1
 db['N+'].M = {
    value = 14.0061514e-3,

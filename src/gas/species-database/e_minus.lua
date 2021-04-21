@@ -1,4 +1,5 @@
 db['e-'] = {}
+db['e-'].type = "electron"
 db['e-'].atomicConstituents = {}
 db['e-'].charge = -1
 db['e-'].M = {
