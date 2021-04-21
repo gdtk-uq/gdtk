@@ -476,6 +476,8 @@ class FluidBlockIO {
 FluidBlockIO[] get_fluid_block_io(FluidBlock blk=null)
 {
     FluidBlockIO[] io_list;
+    
+    if (!GlobalConfig.new_flow_format) return io_list;
 
     // output cell variables by default
     io_list ~= new CellVariablesIO(blk);

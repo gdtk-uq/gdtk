@@ -1147,8 +1147,10 @@ int integrate_in_time(double target_time_as_requested)
             } // end if (step...
             
             // update any auxiliary values
-            foreach (myblk; parallel(localFluidBlocksBySize,1)) {
-                myblk.update_aux(SimState.dt_global, SimState.time, SimState.step);
+            if (GlobalConfig.new_flow_format) {
+                foreach (myblk; parallel(localFluidBlocksBySize,1)) {
+                    myblk.update_aux(SimState.dt_global, SimState.time, SimState.step);
+                }
             }
             
             //
