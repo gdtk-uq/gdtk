@@ -30,22 +30,20 @@ interface EnergyExchangeSystem {
 
 class TwoTemperatureEnergyExchange : EnergyExchangeSystem {
 public:
-
     this(string fname, GasModel gmodel)
     {
-	// For 2-T model, one entry in T_modes, so index is 0.
-	int mode = 0;
-	
+        // For 2-T model, one entry in T_modes, so index is 0.
+        int mode = 0;
         mGmodel = gmodel;
         mGsEq = new GasState(gmodel);
 
-	// Configure other parameters via a Lua state
-	auto L = init_lua_State();
-	doLuaFile(L, fname);
+        // Configure other parameters via a Lua state
+        auto L = init_lua_State();
+        doLuaFile(L, fname);
 
-	// Check on species order before proceeding.
+        // Check on species order before proceeding.
         lua_getglobal(L, "species");
-	if (lua_isnil(L, -1)) {
+        if (lua_isnil(L, -1)) {
             string errMsg = format("There is no species listing in your kinetics input file: '%s'\n", fname);
             throw new Error(errMsg);
         }
@@ -63,45 +61,45 @@ public:
         }
         lua_pop(L, 1);
 
-	lua_getglobal(L, "vibrational_relaxers");
-	auto nVib = to!int(lua_objlen(L, -1));
-	mVibRelaxers.length = nVib;
-	foreach (int isp; 0 .. nVib) {
-	    lua_rawgeti(L, -1, isp+1);
-	    auto sp = to!string(luaL_checkstring(L, -1));
-	    mVibRelaxers[isp] = gmodel.species_index(sp);
-	    lua_pop(L, 1);
-	}
-	lua_pop(L, 1);
+        lua_getglobal(L, "vibrational_relaxers");
+        auto nVib = to!int(lua_objlen(L, -1));
+        mVibRelaxers.length = nVib;
+        foreach (int isp; 0 .. nVib) {
+            lua_rawgeti(L, -1, isp+1);
+            auto sp = to!string(luaL_checkstring(L, -1));
+            mVibRelaxers[isp] = gmodel.species_index(sp);
+            lua_pop(L, 1);
+        }
+        lua_pop(L, 1);
 
-	mMolef.length = gmodel.n_species;
-	mNumden.length= gmodel.n_species;
-	// We make mVT of length n_species for convenience, even though
-	// we'll only fill array entries associated vibRelaxers.
-	// This just makes indexing consistent, and avoid having
-	// a separate indexing just for the vibRelaxers.
+        mMolef.length = gmodel.n_species;
+        mNumden.length= gmodel.n_species;
+        // We make mVT of length n_species for convenience, even though
+        // we'll only fill array entries associated vibRelaxers.
+        // This just makes indexing consistent, and avoid having
+        // a separate indexing just for the vibRelaxers.
         mVT.length = gmodel.n_species;
         mHeavyParticles.length = gmodel.n_species;
 
-	lua_getglobal(L, "mechanism");
-	
-	foreach (ip; mVibRelaxers) {
-	    mVT[ip].length = gmodel.n_species;
-	    foreach (iq; 0 .. gmodel.n_species) {
-		auto p = gmodel.species_name(ip);
-		auto q = gmodel.species_name(iq);
-		string key = p ~ ":" ~ q ~ "|VT";
-		lua_getfield(L, -1, key.toStringz);
+        lua_getglobal(L, "mechanism");
+
+        foreach (ip; mVibRelaxers) {
+            mVT[ip].length = gmodel.n_species;
+            foreach (iq; 0 .. gmodel.n_species) {
+                auto p = gmodel.species_name(ip);
+                auto q = gmodel.species_name(iq);
+                string key = p ~ ":" ~ q ~ "|VT";
+                lua_getfield(L, -1, key.toStringz);
                 if (!lua_isnil(L, -1)) {
                     mVT[ip][iq] = createVTMechanism(L, ip, iq, mode, gmodel);
                     mHeavyParticles[ip] ~= iq;
                 }
-		lua_pop(L, 1);
-	    }
-	}
-	lua_pop(L, 1);
+                lua_pop(L, 1);
+            }
+        }
+        lua_pop(L, 1);
     }
-    
+
     @nogc
     void evalRelaxationTimes(in GasState gs)
     {
@@ -113,7 +111,7 @@ public:
             }
         }
     }
-    
+
     @nogc
     void evalRates(in GasState gs, ref number[] rates)
     {
@@ -144,6 +142,5 @@ private:
     EnergyExchangeMechanism[][] mVT;
     // EnergyExchangeMechanism[] mET;
     // EnergyExchangeMechanism[] mChemCoupling;
-    
 }
 
