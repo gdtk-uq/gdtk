@@ -45,6 +45,10 @@ version(mpi_parallel) {
     import mpi;
 }
 
+version(diagnostics) {
+    import gperftools_d.profiler: ProfilerStart, ProfilerStop;
+}
+
 void moveFileToBackup(string fileName)
 {
     if (exists(fileName)) {
@@ -56,6 +60,8 @@ void moveFileToBackup(string fileName)
 
 int main(string[] args)
 {
+    version(diagnostics) {ProfilerStart();}
+
     int exitFlag = 0; // Presume OK in the beginning.
     version(mpi_parallel) {
         // This preamble copied directly from the OpenMPI hello-world example.
@@ -837,5 +843,8 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
         return exitFlag;
     } // end if customScriptFlag
     //
+
+    version(diagnostics) {ProfilerStop();}
+
     return exitFlag;
 } // end main()

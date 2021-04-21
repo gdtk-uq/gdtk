@@ -49,7 +49,7 @@ version(mpi_parallel) {
     import mpi;
 }
 
-// version(matplotlib) {
+// version(diagnostics) {
 // import plt = matplotlibd.pyplot;
 // import std.format;
 // }

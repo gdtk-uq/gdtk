@@ -27,7 +27,7 @@ DEBUG_CHEM ?= 0
 WITH_COMPLEX_NUMBERS ?= 0
 WITH_FPE ?= 0
 WITH_DVODE ?= 0
-WITH_MATPLOTLIB ?= 0
+WITH_DIAGNOSTICS ?= 0
 MULTI_SPECIES_GAS ?= 1
 MULTI_T_GAS ?= 1
 MHD ?= 1
@@ -88,8 +88,8 @@ ifeq ($(WITH_COMPLEX_NUMBERS),1)
     PROGRAMS += e4zshared
 endif
 
-ifeq ($(WITH_MATPLOTLIB), 1)
-	PROGRAMS += e4shared_mpl
+ifeq ($(WITH_DIAGNOSTICS), 1)
+	PROGRAMS += e4shared_diagnostic
 endif
 
 EILMER_CORE_FILES := simcore.d simcore_gasdynamic_step.d simcore_solid_step.d \
@@ -224,7 +224,15 @@ LIBLUAPATH := $(LUA_DIR)/lib
 MPL_DIR := ../extern/matplotlib.d/source
 MPL_FILES := $(MPL_DIR)/matplotlibd/pyplot.d \
 	$(MPL_DIR)/matplotlibd/core/pycall.d \
-	$(MPL_DIR)/matplotlibd/core/translate.d \
+	$(MPL_DIR)/matplotlibd/core/translate.d
+
+GPERF_DIR := ../extern/gperftools_d/source/gperftools_d
+GPERF_FILES := $(GPERF_DIR)/heap_profiler.d \
+	$(GPERF_DIR)/malloc_extension_c.d \
+	$(GPERF_DIR)/malloc_hook_c.d \
+	$(GPERF_DIR)/profiler.d \
+	$(GPERF_DIR)/stacktrace.d \
+	$(GPERF_DIR)/tcmalloc.d \
 
 # The install destination.
 INSTALL_DIR ?= $(HOME)/dgdinst
@@ -436,7 +444,7 @@ clean:
 	- rm -f e4opt optdriver_with_rev_string.d
 	- rm -f mpi_main_with_rev_string.d
 	- rm -f loadbalance_with_rev_string.d
-	- rm -f e4mpi e4loadbalance e4ssc e4zshared e4-nk-shared e4-nk-dist e4-lusgs-shared e4-lusgs-dist e4shared_mpl
+	- rm -f e4mpi e4loadbalance e4ssc e4zshared e4-nk-shared e4-nk-dist e4-lusgs-shared e4-lusgs-dist e4shared_diagnostic
 	- rm -f dgd-for-mech4480.tgz
 	- cd $(OPENMPI_DIR); make clean
 	- cd $(LUA_DIR); make clean
@@ -495,27 +503,27 @@ e4shared: main.d $(EILMER_FILES) \
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
 		$(DLINKFLAGS)
 
-e4shared_mpl: main.d $(EILMER_FILES) \
+e4shared_diagnostic: main.d $(EILMER_FILES) \
 	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
 	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-	$(NM_FILES) $(UTIL_FILES) $(MPL_FILES) \
+	$(NM_FILES) $(UTIL_FILES) $(MPL_FILES) $(GPERF_FILES) \
 	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		main.d > main_with_rev_string.d
 	python3 $(MPL_DIR)/../python/prebuild.py $(MPL_DIR)/..
-	$(DMD) $(DFLAGS) -J$(MPL_DIR)/../views $(OF)e4shared_mpl \
-		$(DVERSION)matplotlib \
+	$(DMD) $(DFLAGS) -J$(MPL_DIR)/../views $(OF)e4shared_diagnostic \
+		$(DVERSION)diagnostics \
 		main_with_rev_string.d \
 		$(EILMER_FILES) \
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
-		$(UTIL_FILES) $(NM_FILES) $(MPL_FILES) \
+		$(UTIL_FILES) $(NM_FILES) $(MPL_FILES) $(GPERF_FILES)\
 		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
-		$(DLINKFLAGS) -I$(MPL_DIR)
+		$(DLINKFLAGS) -I$(MPL_DIR) -I$(GPERF_DIR) -L-lprofiler
 
 e4zshared: main.d $(EILMER_FILES) \
 	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
