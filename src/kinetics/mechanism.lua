@@ -9,6 +9,23 @@ local sqrt = math.sqrt
 
 require 'lex_elems'
 
+function extractVibrationalRelaxers(mechanisms)
+   local vibrational_relaxers = {}
+
+   for p,table in pairs(mechanisms) do
+      hasvib = false
+      for q,mech in pairs(table) do
+         if mech.type=='V-T' then hasvib = true end
+      end
+
+      if hasvib then
+         vibrational_relaxers[#vibrational_relaxers+1] = p
+      end
+   end
+
+   return vibrational_relaxers
+end
+
 function transformRelaxationTime(rt, p, q, db)
    local t = {}
    t.model = rt[1]
@@ -49,18 +66,66 @@ function relaxationTimeToLuaStr(rt)
    return str
 end
 
+function tableToString(o)
+   -- Recursively evaluate a table to produce a lua-readable string
+   --
+   -- Notes: This function assumes that you don't have any "bad" key names
+   --        such as "NO+" which would need to  be wrapped like ["NO+"]
+
+   -- If the object o is a table, loop through it and concatenate the things inside it
+   if type(o) == 'table' then
+      local s = '{'
+
+      -- We need to know how big the table is to not put a ", " at the last entry
+      local tablesize = 0
+      for _,__ in pairs(o) do tablesize = tablesize + 1 end
+
+      local n = 0
+      for k,v in pairs(o) do
+         -- entries with a named key just get put by themselves
+         if type(k) == 'number' then
+            s = s .. tableToString(v)
+         end
+         -- Entries with a named key are written as key=value,
+         if type(k) ~= 'number' then
+            s = s .. k ..' = ' .. tableToString(v)
+         end
+
+         -- Possibly put a comma and a space between entries
+         n = n + 1
+         if n ~= tablesize then
+             s = s .. ', '
+         end
+      end
+      return s .. '}'
+
+   -- The object o is not a table, so just return item in string form.
+   else
+      if type(o) == 'string' then
+          return "'" .. o .. "'"
+      else
+          return tostring(o)
+      end
+   end
+end
+
 function mechanismToLuaStr(m, p, q)
    local typeStr
+   local argStr
    if m.type == "V-T" then
       typeStr = "VT"
+      argStr = string.format("  rate = '%s',\n", m.rate)
+      argStr = argStr .. string.format("  relaxation_time = %s\n", relaxationTimeToLuaStr(m.rt))
+   elseif m.type == "E-T" then
+      typeStr = "ET"
+      argStr = string.format("  exchange_cross_section = %s\n", tableToString(m.exchange_cross_section))
    else
       print("ERROR: type is not known: ", type)
       os.exit(1)
    end
    local key = p .. ":" .. q .. "|" .. typeStr
    local mstr = string.format("mechanism['%s'] = {\n", key)
-   mstr = mstr .. string.format("  rate = '%s',\n", m.rate)
-   mstr = mstr .. string.format("  relaxation_time = %s\n", relaxationTimeToLuaStr(m.rt))
+   mstr = mstr .. argStr
    mstr = mstr .. "}\n"
    return mstr
 end
@@ -165,8 +230,12 @@ function addUserMechToTable(m, mechanisms, species, molecules, db)
       for __,q in ipairs(qs) do
          mechanisms[p][q] = {}
          mechanisms[p][q].type = m.type
-         mechanisms[p][q].rate = m.rate
-         mechanisms[p][q].rt = transformRelaxationTime(m.relaxation_time, p, q, db)
+         if m.type == 'V-T' then
+            mechanisms[p][q].rate = m.rate
+            mechanisms[p][q].rt = transformRelaxationTime(m.relaxation_time, p, q, db)
+         elseif m.type == 'E-T' then
+            mechanisms[p][q].exchange_cross_section = m.exchange_cross_section
+         end
       end
    end
 end

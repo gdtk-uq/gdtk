@@ -11,6 +11,7 @@ mechanisms = {}
 local validateMechanism = mechanism.validateMechanism
 local addUserMechToTable = mechanism.addUserMechToTable
 local mechanismToLuaStr = mechanism.mechanismToLuaStr
+local extractVibrationalRelaxers = mechanism.extractVibrationalRelaxers
 
 function printHelp()
    print("prep-kinetics --- Prepares an energy exchange kinetics file for Eilmer.")
@@ -44,7 +45,7 @@ function buildVerboseLuaFile(fName)
    end
    f:write("}\n")
    f:write("vibrational_relaxers = {")
-   for p,_ in pairs(mechanisms) do
+   for i,p in pairs(extractVibrationalRelaxers(mechanisms)) do
       f:write(string.format("'%s', ", p))
    end
    f:write("}\n")
