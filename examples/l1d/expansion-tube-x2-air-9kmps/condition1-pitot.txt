@@ -1,0 +1,42 @@
+Pitot Version: 22-Nov-2020 doing an expansion tube calculation
+state 4 is the driver condition.
+state 1 is shock tube fill. state 5 is acceleration tube fill.
+state 2 is the shocked test gas.
+state 7 is expanded test gas entering the nozzle.
+state 8 is test gas exiting the nozzle (using area ratio of 5.64).
+state 10f is frozen shocked test gas flowing over the model.
+state 10e is equilibrium shocked test gas flowing over the model.
+Solver used is equilibrium.
+Test is 'fulltheory-pressure'
+Facility is x2.
+Driver gas is {'Ar': 0.2, 'He': 0.8} (by moles).
+Test gas (state 1) is air (gamma = 1.4, R = 287.036078025, {'Air': 1.0} by moles).
+Accelerator gas (state 5) is Air.
+Vs1 = 4237.22 m/s, Ms1 = 12.24, Vs2 = 8507.48 m/s, Ms2 = 24.58
+state P          T        a     V        M     rho      pitot   stgn     
+      Pa         K        m/s   m/s            kg/m^3   kPa     MPa      
+s4    2.790e+07  2700.0   1828  0.0      0.00  13.90900 27900.0 27.900   
+s3s   1.359e+07  2025.8   1584  1582.5   1.00  9.03040  27844.0 27.844   
+s1    3000.0     298.1    346   0.0      0.00  0.03505  3.0     0.003    
+s2    569620.0   4820.6   1413  3814.9   2.70  0.35170  5181.6  15.620   
+s3    561650.0   566.6    838   3814.9   4.55  1.33440  17348.0 98.901   
+s5    10.0       298.1    346   0.0      0.00  1.17e-04 0.0     0.000    
+s6    7999.4     6934.1   2101  8038.3   3.83  2.12e-03 135.3   1.509    
+s7    4536.8     2674.1   954   8507.5   8.92  5.73e-03 404.1   3065.430 
+s8    577.0681   2013.0   846   8672.2   10.26 9.97e-04 73.0    3060.640 
+s10f  67022.61   26514.2  3068  983.5    0.32  8.79e-03 68.0    0.068    
+s10e  70762.0    8142.5   2328  550.8    0.24  0.01569  73.0    0.073    
+The total enthalpy (Ht) leaving the nozzle is 39.637 MJ/kg (H8 - h1).
+The total temperature (Tt) leaving the nozzle is 15783 K.
+The freestream enthalpy (h) leaving the nozzle is 2.0336 MJ/kg (h8 - h1).
+The flight equivalent velocity (Ue) is 8903.5 m/s.
+The Pitot pressure leaving the nozzle (state 8) is 73.012 kPa
+Basic test time = 76.73 microseconds
+Using a freestream (s8) dynamic viscosity (mu) of 6.9943e-05 Pa.s.
+Freestream (s8) unit Reynolds number is 123548.69/m.
+Using a test section post normal shock eq (s10e) dynamic viscosity (mu) of 2.2029e-04 Pa.s.
+Test section post normal shock eq (s10e) unit Reynolds number is 39230.38/m.
+Species in the freestream state (s8) at equilibrium (by moles):
+{'CO2': 0.00030518, 'CO': 1.3116e-05, 'NO': 0.0077404, 'O': 0.004381, 'Ar': 0.0093444, 'N2': 0.77525, 'O2': 0.20296}
+Species in the shock layer at equilibrium (s10e) (by moles):
+{'e-': 0.0034574, 'C+': 1.5116e-05, 'C': 0.00014228, 'N+': 0.0025536, 'CO': 6.5026e-06, 'CN': 1.3572e-06, 'NO': 0.00048177, 'NO+': 0.00025067, 'O': 0.2161, 'N': 0.73708, 'N2+': 4.6484e-05, 'Ar': 0.0048454, 'O+': 0.00058503, 'N2': 0.03442, 'Ar+': 7.7245e-06, 'O2': 5.5889e-06}
