@@ -274,16 +274,16 @@ void assemble_piston_history(int pindx)
     File fp = File(fileName, "r");
     fileName = format("piston-%04d-history.data", pindx);
     File fph = File(fileName, "w");
-    fph.writeln("# tindx  t  x  vel  is_restrain  brakes_on  hit_buffer");
+    fph.writeln("# tindx  t  x  vel  is_restrain  brakes_on  on_buffer");
     string txt = fp.readln().chomp(); // Discard header line
     while (!fp.eof()) {
         txt = fp.readln().chomp();
         if (txt.length > 0) {
-            int tindx; double x, vel; int is_restrain, brakes_on, hit_buffer;
+            int tindx; double x, vel; int is_restrain, brakes_on, on_buffer;
             txt.formattedRead!"%d %e %e %d %d %d"(tindx, x, vel, is_restrain,
-                                                  brakes_on, hit_buffer);
+                                                  brakes_on, on_buffer);
             fph.writefln("%d %e %e %e %d %d %d", tindx, times[tindx], x, vel,
-                         is_restrain, brakes_on, hit_buffer);
+                         is_restrain, brakes_on, on_buffer);
         }
     }
     fp.close();

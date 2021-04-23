@@ -257,8 +257,8 @@ void init_simulation(int tindx_start)
         p.read_data(fp, tindx_start);
         fp.close();
         if (L1dConfig.verbosity_level >= 1) {
-            writeln(format("  x=%e, vel=%e is_restrain=%s brakes_on=%s hit_buffer=%s",
-                           p.x, p.vel, p.is_restrain, p.brakes_on, p.hit_buffer));
+            writeln(format("  x=%e, vel=%e is_restrain=%s brakes_on=%s on_buffer=%s",
+                           p.x, p.vel, p.is_restrain, p.brakes_on, p.on_buffer));
         }
     }
     foreach (i, dia; diaphragms) {
@@ -324,7 +324,7 @@ void integrate_in_time()
             }
         }
         // 2.1 Check Piston and buffer.
-        foreach (p; pistons) { p.check_for_buffer_strike(sim_data.sim_time); }
+        foreach (p; pistons) { p.check_for_buffer_interaction(sim_data.sim_time); }
         // 2.2 Update state of end conditions.
         foreach (ec; ecs) {
             auto dia = cast(Diaphragm) ec;
@@ -412,6 +412,7 @@ void integrate_in_time()
             writefln("Step=%d t=%.3e dt=%.3e cfl=%.3f WC=%.1f WCtFT=%.1f WCtMS=%.1f",
                      sim_data.step, sim_data.sim_time, sim_data.dt_global,
                      sim_data.cfl, elapsed_s, WCtFT, WCtMS);
+            stdout.flush();
         }
         // 7. Update time and (maybe) write solution.
         sim_data.step += 1;

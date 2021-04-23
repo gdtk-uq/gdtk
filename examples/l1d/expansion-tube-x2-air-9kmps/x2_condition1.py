@@ -158,7 +158,7 @@ piston = Piston(mass=10.524,
                 front_seal_f=0.2, 
                 front_seal_area=0.020*0.2568*math.pi,
                 x_buffer=4.5895, 
-                hit_buffer=0,
+                on_buffer=0,
                 label='lightweight piston')
 driver_gas = GasSlug(gmodel_id=gm_he_ar, 
                      p=p_drv_fill, 
