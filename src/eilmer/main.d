@@ -731,6 +731,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
             }
             finalize_simulation();
         }
+        GlobalConfig.finalize();
         if (verbosityLevel > 0 && GlobalConfig.is_master_task) {
             writeln("Done.");
         }

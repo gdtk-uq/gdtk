@@ -179,9 +179,12 @@ public:
         _Rght = new FlowState(gm);
     }
 
-    ~this()
+    void finalize()
     {
-        if (myL != null) lua_close(myL);
+        if (myL) {
+            lua_close(myL);
+            myL = null;
+        }
     }
 
     void post_bc_construction()
@@ -323,7 +326,16 @@ public:
     // BoundaryInterfaceEffect objects may need to initialize it.
     void init_lua_State(string luafname)
     {
-        myL = luaL_newstate();
+        if (GlobalConfig.verbosity_level > 0) {
+            writefln("Starting new Lua interpreter in BC: user-file=%s, blk.id=%d, bndry=%d",
+                     luafname, blk.id, which_boundary);
+        }
+        if (myL) {
+            writeln("Oops, pointer to interpreter is already non-null.");
+        } else {
+            myL = luaL_newstate();
+        }
+        if (!myL) { throw new Error("Could not allocate memory for Lua interpreter."); }
         luaL_openlibs(myL);
         // Top-level, generic data.
         lua_pushinteger(myL, blk.id); lua_setglobal(myL, "blkId");

@@ -1145,14 +1145,14 @@ int integrate_in_time(double target_time_as_requested)
                 } // end if with_super_time_stepping
                 version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
             } // end if (step...
-            
+
             // update any auxiliary values
             if (GlobalConfig.new_flow_format) {
                 foreach (myblk; parallel(localFluidBlocksBySize,1)) {
                     myblk.update_aux(SimState.dt_global, SimState.time, SimState.step);
                 }
             }
-            
+
             //
             // 4.0 (Occasionally) Write out an intermediate solution
             if ( SimState.step == GlobalConfig.write_flow_solution_at_step ) {
@@ -1628,6 +1628,10 @@ void finalize_simulation()
     }
     if (!GlobalConfig.new_flow_format && GlobalConfig.do_temporal_DFT) {
         write_DFT_files();
+    }
+    foreach (blk; localFluidBlocks) {
+        foreach (bc; blk.bc) { bc.finalize(); }
+        blk.finalize();
     }
     GC.collect();
     GC.minimize();

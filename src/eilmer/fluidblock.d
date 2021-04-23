@@ -204,11 +204,6 @@ public:
         Rght = new FlowState(dedicatedConfig[id].gmodel);
     }
 
-    ~this()
-    {
-       lua_close(myL);
-    }
-
     void add_IO()
     {
         if (!is_legacy_format())

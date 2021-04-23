@@ -764,7 +764,7 @@ final class GlobalConfig {
         static ShapeSensitivityCalculatorOptions sscOptions;
     }
 
-    ~this()
+    static void finalize()
     {
         lua_close(master_lua_State);
     }
