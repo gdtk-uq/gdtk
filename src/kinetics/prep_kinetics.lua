@@ -1,5 +1,6 @@
 #!/usr/bin/env dgd-lua
 -- Author: Rowan J. Gollan
+-- Remix by: Nick Gibbons
 -- Date: 2021-04-08
 --
 
@@ -39,22 +40,11 @@ end
 
 function buildVerboseLuaFile(fName)
    f = assert(io.open(fName, 'w'))
-   f:write("species = {")
-   for i, sp in ipairs(species) do
-      f:write(string.format("[%d]='%s', ", i-1, sp))
-   end
-   f:write("}\n")
-   f:write("vibrational_relaxers = {")
-   for i,p in pairs(extractVibrationalRelaxers(mechanisms)) do
-      f:write(string.format("'%s', ", p))
-   end
-   f:write("}\n")
    f:write("\n")
-   f:write("mechanism = {}\n")
-   for p,_ in pairs(mechanisms) do
-      for q,__ in pairs(mechanisms[p]) do
-         f:write(mechanismToLuaStr(mechanisms[p][q], p, q))
-      end
+   f:write("mechanism = {}\n\n")
+   for i,mech in ipairs(mechanisms) do
+      f:write(mechanismToLuaStr(i, mech))
+      f:write("\n")
    end
    f:close()
 end
@@ -100,9 +90,10 @@ function main()
    -- Load contents from user's file.
    dofile(inFname)
 
+   index = 1
    for i,m in ipairs(userMechs) do
       if validateMechanism(m) then
-         addUserMechToTable(m, mechanisms, species, db)
+         index = addUserMechToTable(index, m, mechanisms, species, db)
       else
          print("Error while trying to validate mechanism ", i)
          print(m[1])

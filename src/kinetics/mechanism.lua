@@ -109,22 +109,21 @@ function tableToString(o)
    end
 end
 
-function mechanismToLuaStr(m, p, q)
+function mechanismToLuaStr(index, m)
    local typeStr
    local argStr
    if m.type == "V-T" then
-      typeStr = "VT"
       argStr = string.format("  rate = '%s',\n", m.rate)
       argStr = argStr .. string.format("  relaxation_time = %s\n", relaxationTimeToLuaStr(m.rt))
    elseif m.type == "E-T" then
-      typeStr = "ET"
       argStr = string.format("  exchange_cross_section = %s\n", tableToString(m.exchange_cross_section))
    else
       print("ERROR: type is not known: ", type)
       os.exit(1)
    end
-   local key = p .. ":" .. q .. "|" .. typeStr
-   local mstr = string.format("mechanism['%s'] = {\n", key)
+   local mstr = string.format("mechanism[%s] = {\n", index)
+   mstr = mstr .. string.format("  type = '%s',\n", m.type)
+   mstr = mstr .. string.format("  p = '%s', q = '%s',\n", m.p, m.q)
    mstr = mstr .. argStr
    mstr = mstr .. "}\n"
    return mstr
@@ -246,27 +245,27 @@ function expandColliders(t, species, db)
 end
 
 
-function addUserMechToTable(m, mechanisms, species, db)
+function addUserMechToTable(index, m, mechanisms, species, db)
    t = parseMechString(m[1])
    ps = expandColliders(t[1], species, db)
    qs = expandColliders(t[2], species, db)
 
    for _,p in ipairs(ps) do
-      if not mechanisms[p] then
-         mechanisms[p] = {}
-      end
-
       for __,q in ipairs(qs) do
-         mechanisms[p][q] = {}
-         mechanisms[p][q].type = m.type
+         mechanisms[index] = {}
+         mechanisms[index].type = m.type
+         mechanisms[index].p = p
+         mechanisms[index].q = q
          if m.type == 'V-T' then
-            mechanisms[p][q].rate = m.rate
-            mechanisms[p][q].rt = transformRelaxationTime(m.relaxation_time, p, q, db)
+            mechanisms[index].rate = m.rate
+            mechanisms[index].rt = transformRelaxationTime(m.relaxation_time, p, q, db)
          elseif m.type == 'E-T' then
-            mechanisms[p][q].exchange_cross_section = m.exchange_cross_section
+            mechanisms[index].exchange_cross_section = m.exchange_cross_section
          end
+         index = index + 1
       end
    end
+   return index
 end
 
 for k,v in pairs(lex_elems) do

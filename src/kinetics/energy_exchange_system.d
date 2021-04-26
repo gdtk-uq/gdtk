@@ -36,68 +36,20 @@ public:
         int mode = 0;
         mGmodel = gmodel;
         mGsEq = new GasState(gmodel);
+        mMolef.length = gmodel.n_species;
+        mNumden.length = gmodel.n_species;
 
-        // Configure other parameters via a Lua state
+        // Load in table of energy exchange mechanisms from the verbose lua file 
         auto L = init_lua_State();
         doLuaFile(L, fname);
 
-        // Check on species order before proceeding.
-        lua_getglobal(L, "species");
-        if (lua_isnil(L, -1)) {
-            string errMsg = format("There is no species listing in your kinetics input file: '%s'\n", fname);
-            throw new Error(errMsg);
-        }
-        foreach (isp; 0 .. gmodel.n_species) {
-            lua_rawgeti(L, -1, isp);
-            auto sp = to!string(luaL_checkstring(L, -1));
-            if (sp != gmodel.species_name(isp)) {
-                string errMsg = "Species order is incompatible between gas model and kinetics input.\n";
-                errMsg ~= format("Kinetics input file is: '%s'.\n", fname);
-                errMsg ~= format("In gas model: index %d ==> species '%s'\n", isp, gmodel.species_name(isp));
-                errMsg ~= format("In kinetics: index %d ==> species '%s'\n", isp, sp);
-                throw new Error(errMsg);
-            }
-            lua_pop(L, 1);
-        }
-        lua_pop(L, 1);
-
-        lua_getglobal(L, "vibrational_relaxers");
-        auto nVib = to!int(lua_objlen(L, -1));
-        mVibRelaxers.length = nVib;
-        foreach (int isp; 0 .. nVib) {
-            lua_rawgeti(L, -1, isp+1);
-            auto sp = to!string(luaL_checkstring(L, -1));
-            mVibRelaxers[isp] = gmodel.species_index(sp);
-            lua_pop(L, 1);
-        }
-        lua_pop(L, 1);
-
-        mMolef.length = gmodel.n_species;
-        mNumden.length= gmodel.n_species;
-        // We make mVT of length n_species for convenience, even though
-        // we'll only fill array entries associated vibRelaxers.
-        // This just makes indexing consistent, and avoid having
-        // a separate indexing just for the vibRelaxers.
-        mVT.length = gmodel.n_species;
-        mHeavyParticles.length = gmodel.n_species;
-
         lua_getglobal(L, "mechanism");
-
-        foreach (ip; mVibRelaxers) {
-            mVT[ip].length = gmodel.n_species;
-            foreach (iq; 0 .. gmodel.n_species) {
-                auto p = gmodel.species_name(ip);
-                auto q = gmodel.species_name(iq);
-                string key = p ~ ":" ~ q ~ "|VT";
-                lua_getfield(L, -1, key.toStringz);
-                if (!lua_isnil(L, -1)) {
-                    mVT[ip][iq] = createVTMechanism(L, ip, iq, mode, gmodel);
-                    mHeavyParticles[ip] ~= iq;
-                }
-                lua_pop(L, 1);
-            }
+        lua_pushnil(L); // dummy first key
+        while (lua_next(L, -2) != 0) { // -1 is the dummy key, -2 is the mechanism table
+            mEEM ~= createVTMechanism(L, mode, gmodel);
+            lua_pop(L, 1); // discard value but keep key so that lua_next can remove it (?!)
         }
-        lua_pop(L, 1);
+        lua_pop(L, 1); // remove mechanisms table
     }
 
     @nogc
@@ -105,10 +57,8 @@ public:
     {
         mGmodel.massf2molef(gs, mMolef);
         mGmodel.massf2numden(gs, mNumden);
-        foreach (p; mVibRelaxers) {
-            foreach (q; mHeavyParticles[p]) {
-                mVT[p][q].evalRelaxationTime(gs, mMolef, mNumden);
-            }
+        foreach (mech; mEEM) {
+            mech.evalRelaxationTime(gs, mMolef, mNumden);
         }
     }
 
@@ -121,15 +71,10 @@ public:
         mGmodel.update_thermo_from_pT(mGsEq);
         number rate = 0.0;
         // Compute rate change from VT exchange
-        foreach (p; mVibRelaxers) {
-            foreach (q; mHeavyParticles[p]) {
-                rate += mVT[p][q].rate(gs, mGsEq, mMolef);
-            }
+        foreach (mech; mEEM) {
+            rate += mech.rate(gs, mGsEq, mMolef);
         }
         rates[0] = rate;
-
-        // TODO: Compute rate change from ET exchange
-        // TODO: Compute rate change from chemistry coupling.
     }
 
 private:
@@ -139,7 +84,8 @@ private:
     number[] mNumden;
     GasModel mGmodel;
     GasState mGsEq;
-    EnergyExchangeMechanism[][] mVT;
+    EnergyExchangeMechanism[] mEEM;
+    //EnergyExchangeMechanism[][] mVT;
     // EnergyExchangeMechanism[] mET;
     // EnergyExchangeMechanism[] mChemCoupling;
 }

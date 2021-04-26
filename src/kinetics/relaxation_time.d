@@ -85,7 +85,6 @@ class ParkHTCVT : RelaxationTime {
 
     this(lua_State *L, int p, int q, GasModel gmodel)
     {
-        writeln("Creating ParkHTC relaxation model");
         m_p = p;
         m_q = q;
         m_sigma = getDouble(L, -1, "sigma");

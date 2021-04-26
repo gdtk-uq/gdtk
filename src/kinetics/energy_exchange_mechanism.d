@@ -21,7 +21,6 @@ import gas;
 
 import kinetics.relaxation_time;
 
-
 class EnergyExchangeMechanism {
     @property @nogc number tau() const { return m_tau; }
     @nogc void evalRelaxationTime(in GasState gs, number[] molef, number[] numden)
@@ -39,17 +38,19 @@ private:
 class LandauTellerVT : EnergyExchangeMechanism {
 public:
 
-    this(lua_State *L, int p, int q, int mode, GasModel gmodel)
+    this(lua_State *L, int mode, GasModel gmodel)
     {
-	m_p = p;
-        m_q = q;
-	m_mode = mode;
-	mGmodel = gmodel;
-	lua_getfield(L, -1, "relaxation_time");
-	mRT = createRelaxationTime(L, p, q, gmodel);
-	lua_pop(L, 1);
+        string pspecies = getString(L, -1, "p");
+        string qspecies = getString(L, -1, "q");
+        m_p = gmodel.species_index(pspecies);
+        m_q = gmodel.species_index(qspecies);
+        m_mode = mode;
+        mGmodel = gmodel;
+        lua_getfield(L, -1, "relaxation_time");
+        mRT = createRelaxationTime(L, m_p, m_q, gmodel);
+        lua_pop(L, 1);
     }
-    
+
     this(int p, int q, int mode, RelaxationTime RT, GasModel gmodel)
     {
         m_p = p;
@@ -58,7 +59,7 @@ public:
         mRT = RT.dup();
         mGmodel = gmodel;
     }
-    
+
     @nogc
     override number rate(in GasState gs, in GasState gsEq, number[] molef)
     {
@@ -81,18 +82,72 @@ private:
     int m_mode;
 }
 
-EnergyExchangeMechanism createVTMechanism(lua_State *L, int p, int q, int mode, GasModel gmodel)
+//class ElectronEnergyExchangeMechanism {
+//    this(lua_State *L, int e, int q, int mode, GasModel gmodel)
+//    {
+//        m_e = e;
+//        m_q = q;
+//        m_mode = mode;
+//        mGmodel = gmodel;
+//        lua_getfield(L, -1, "exchange_cross_section");
+//        mCS = createExchangeCrossSection(L, e, q);
+//        lua_pop(L, 1);
+//
+//        m_me = gmodel.mol_masses[m_e]/Avogadro_number;
+//        m_mq = gmodel.mol_masses[m_q]/Avogadro_number;
+//    }
+//
+//    this(int e, int q, int mode, ExchangeCrossSection CS, GasModel gmodel)
+//    {
+//        m_e = e;
+//        m_q = q;
+//        m_mode = mode;
+//        mCS = CS.dup();
+//        mGmodel = gmodel;
+//
+//        m_me = gmodel.mol_masses[m_e]/Avogadro_number;
+//        m_mq = gmodel.mol_masses[m_q]/Avogadro_number;
+//    }
+//
+//    @nogc
+//    number rate(in GasState gs, number[] numden)
+//    {
+//    /*
+//        Electron Exchange rate from Liu and Glass, 1978, equation (11)
+//
+//        Notes: A potential problem with this is that the reactor is updating u and uv,
+//        rather than T and Tv, so this routine isn't seeing the increments done during
+//        the RKF step.
+//    */
+//        number ne = numden[m_e];
+//        number nq = numden[m_q];
+//        number Eq = Boltzmann_constant*gs.T;
+//        number Ee = Boltzmann_constant*gs.T_modes[0];
+//        number Qeq = mCS(gs, numden); // Exchange collision cross section
+//
+//        number rate = six_times_sqrt2*ne*nq*sqrt(m_me*Ee/pi)*Qeq/m_mq*(Eq - Ee);
+//        return rate/gs.rho; // Rate per unit mass of mixture
+//    }
+//
+//private:
+//    int m_e;
+//    int m_q;
+//    int m_mode;
+//    ExchangeCrossSection mCS;
+//    GasModel mGmodel;
+//    double m_me, m_mq;
+//    immutable double six_times_sqrt2 = 6.0*sqrt(2.0);
+//    immutable double pi = to!number(PI);
+//}
+
+EnergyExchangeMechanism createVTMechanism(lua_State *L, int mode, GasModel gmodel)
 {
     auto rateModel = getString(L, -1, "rate");
     switch (rateModel) {
     case "Landau-Teller":
-	return new LandauTellerVT(L, p, q, mode, gmodel);
+        return new LandauTellerVT(L, mode, gmodel);
     default:
-	string msg = format("The VT mechanism rate model: %s is not known.", rateModel);
-	throw new Error(msg);
+        string msg = format("The VT mechanism rate model: %s is not known.", rateModel);
+        throw new Error(msg);
     }
-    
-    
-
-    
 }
