@@ -943,12 +943,16 @@ number[3] roe_flux(const(GasState) stateL, const(GasState) stateR,
     number rho_hat = (sqrtrhoL*rhoL + sqrtrhoR*rhoR)*sqrtLR;
     number vel_hat = (sqrtrhoL*velL + sqrtrhoR*velR)*sqrtLR;
     number H_hat = (sqrtrhoL*HL + sqrtrhoR*HR)*sqrtLR;
-    number a_hat = sqrt((g-1.0)*(H_hat - 0.5*vel_hat*vel_hat));
+    number a_hat2 = (g-1.0)*(H_hat - 0.5*vel_hat*vel_hat);
+    number a_hat = sqrt(a_hat2);
     //
     // Averaged eigenvalues, Toro eq 11.58.
     number L1 = vel_hat - a_hat;
     number L2 = vel_hat;
     number L5 = vel_hat + a_hat;
+    // Note difference in indexing convention for eigenvalues.
+    // Toro  1  2  5
+    // Kyle  2  0  1
     //
     // Entropy fix, eigenvalue limiting, as per Kyle's code.
     number Lref = 0.5*(fabs(vel_hat)+a_hat);
@@ -957,14 +961,26 @@ number[3] roe_flux(const(GasState) stateL, const(GasState) stateR,
     L2 = limiter(L2);
     L5 = limiter(L5);
     //
-    // Wave strengths, Toro eq 11.68 - 11.70
-    number alpha2 = (g-1.0)/(a_hat*a_hat) *
-        ((rhoR-rhoL)*(H_hat-vel_hat*vel_hat) + vel_hat*(velR-velL) - (ER-EL));
-    number alpha1 = ((rhoR-rhoL)*(vel_hat+a_hat) - (velR-velL) - a_hat*alpha2);
-    number alpha5 = (rhoR-rhoL) - (alpha1+alpha2);
+    // Wave strengths.
+    number alpha1, alpha2, alpha5;
+    number drho = rhoR - rhoL;
+    number dp = pR - pL;
+    number dvel = velR - velL;
+    number dE = ER - EL;
+    if (true) {
+        // Toro eq 11.68 - 11.70
+        alpha2 = (g-1.0)/a_hat2 * (drho*(H_hat-vel_hat*vel_hat) + vel_hat*dvel - dE);
+        alpha1 = (drho*(vel_hat+a_hat) - dvel - a_hat*alpha2)/(2.0*a_hat);
+        alpha5 = drho - (alpha1+alpha2);
+    } else {
+        // Kyle's expressions.
+        alpha1 = (dp - rho_hat*a_hat*dvel) / (2.0*a_hat2);
+        alpha2 = drho - (dp)/a_hat2;
+        alpha5 = (dp + rho_hat*a_hat*dvel) / (2.0*a_hat2);
+    }
     //
     // Assemble fluxes, Toro eq 11.29.
-    number F_mass = 0.5*(rhoL*velL+rhoR*velR) - 0.5*(alpha1*L1 + alpha2*L2 + alpha5*L5);
+    number F_mass = 0.5*(rhoL*velL + rhoR*velR) - 0.5*(alpha1*L1 + alpha2*L2 + alpha5*L5);
     number F_momentum = 0.5*(rhoL*velL*velL+pL + rhoR*velR*velR+pR) -
         0.5*(alpha1*L1*(vel_hat-a_hat) + alpha2*L2*vel_hat + alpha5*L5*(vel_hat+a_hat));
     number F_energy = 0.5*(velL*(EL+pL) + velR*(ER+pR)) -

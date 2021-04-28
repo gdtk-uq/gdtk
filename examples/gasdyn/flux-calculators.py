@@ -21,7 +21,7 @@ state1.update_thermo_from_pT()
 print("state1: %s" % state1)
 state4 = GasState(gmodel)
 state4.p = 100.0e3 # Pa
-state4.T = 348.4 # K
+state4.T = 278.8 # 348.4 # K
 state4.update_thermo_from_pT()
 print("state4: %s" % state4)
 
