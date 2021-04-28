@@ -614,6 +614,9 @@ final class GlobalConfig {
     shared static SpatialDerivLocn spatial_deriv_locn = SpatialDerivLocn.vertices;
     shared static bool include_ghost_cells_in_spatial_deriv_clouds = true;
     //
+    // save the gradients used in the viscous calculations to file
+    shared static bool save_viscous_gradients = false;
+    //
     // A factor to scale the viscosity in order to achieve a soft start.
     // The soft-start for viscous effects may be handy for impulsively-started flows.
     // A value of 1.0 means that the viscous effects are fully applied.
@@ -850,6 +853,7 @@ public:
     bool viscous;
     bool use_viscosity_from_cells;
     bool spatial_deriv_from_many_points;
+    bool save_viscous_gradients;
     SpatialDerivCalc spatial_deriv_calc;
     SpatialDerivLocn spatial_deriv_locn;
     bool include_ghost_cells_in_spatial_deriv_clouds;
@@ -1002,6 +1006,7 @@ public:
         spatial_deriv_locn = GlobalConfig.spatial_deriv_locn;
         include_ghost_cells_in_spatial_deriv_clouds =
             GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds;
+        save_viscous_gradients = GlobalConfig.save_viscous_gradients;
         shear_stress_relative_limit = GlobalConfig.shear_stress_relative_limit;
         apply_shear_stress_relative_limit = GlobalConfig.apply_shear_stress_relative_limit;
         viscous_factor = GlobalConfig.viscous_factor;
@@ -1390,6 +1395,7 @@ JSONValue read_config_file()
     mixin(update_enum("spatial_deriv_calc", "spatial_deriv_calc", "spatial_deriv_calc_from_name"));
     mixin(update_enum("spatial_deriv_locn", "spatial_deriv_locn", "spatial_deriv_locn_from_name"));
     mixin(update_bool("include_ghost_cells_in_spatial_deriv_clouds", "include_ghost_cells_in_spatial_deriv_clouds"));
+    mixin(update_bool("save_viscous_gradients", "save_viscous_gradients"));
     mixin(update_double("viscous_delay", "viscous_delay"));
     mixin(update_double("viscous_factor_increment", "viscous_factor_increment"));
     mixin(update_double("shear_stress_relative_limit", "shear_stress_relative_limit"));
@@ -1411,6 +1417,7 @@ JSONValue read_config_file()
         writeln("  spatial_deriv_calc: ", spatial_deriv_calc_name(GlobalConfig.spatial_deriv_calc));
         writeln("  spatial_deriv_locn: ", spatial_deriv_locn_name(GlobalConfig.spatial_deriv_locn));
         writeln("  include_ghost_cells_in_spatial_deriv_clouds: ", GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds);
+        writeln("  save_viscous_gradients: ", GlobalConfig.save_viscous_gradients);
         writeln("  viscous_delay: ", GlobalConfig.viscous_delay);
         writeln("  viscous_factor_increment: ", GlobalConfig.viscous_factor_increment);
         writeln("  shear_stress_relative_limit: ", GlobalConfig.shear_stress_relative_limit);

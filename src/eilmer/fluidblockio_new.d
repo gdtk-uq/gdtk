@@ -486,6 +486,10 @@ FluidBlockIO[] get_fluid_block_io(FluidBlock blk=null)
         io_list ~= new TimeAverageIO(blk);
     }
 
+    if (GlobalConfig.viscous && GlobalConfig.save_viscous_gradients) {
+        io_list ~= new CellGradIO(blk);
+    }
+
     if (GlobalConfig.do_temporal_DFT) {
         io_list ~= new DFTIO(blk);
     }
@@ -678,6 +682,44 @@ class TimeAverageIO : FluidBlockIO
 
         make_buffers(n_cells);
     }
+}
+
+class CellGradIO : FluidBlockIO
+{
+    public:
+
+    this(FluidBlock blk=null)
+    {
+
+        tag = CellGradientData.tag;
+
+        size_t n_cells = 0;
+        LocalConfig myConfig;
+
+        if (blk !is null) {
+            block = blk;
+            myConfig = block.myConfig;
+            n_cells = block.cells.length;
+        } else {
+            myConfig = new LocalConfig(-1);
+            myConfig.gmodel = GlobalConfig.gmodel_master;
+        }
+        
+
+        // get all of the cells data
+        index = iota(0, n_cells).array();
+
+        set_binary(myConfig.flow_format == "eilmer4binary");
+        
+        // get the accessors
+        foreach (key, acc ; CellGradientData.get_accessors(myConfig)) {
+            add_accessor(key, acc);
+        }
+       
+
+        make_buffers(n_cells);
+    }
+
 }
 
 class DFTIO : FluidBlockIO

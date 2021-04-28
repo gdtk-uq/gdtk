@@ -601,7 +601,7 @@ public:
                 iface.average_vertex_deriv_values();
             }
             // Turbulence models will need cell centered gradients (also for axisymmetric!)
-            if (myConfig.axisymmetric || (myConfig.turb_model.isTurbulent)){
+            if (myConfig.axisymmetric || (myConfig.turb_model.isTurbulent || myConfig.save_viscous_gradients)){
                 foreach (cell; cells) {
                     cell.average_vertex_deriv_values();
                 }
@@ -637,7 +637,7 @@ public:
 
             // Finished computing gradients at interfaces, now copy them around if needed
             // Turbulence models and axisymmetric source terms need cell centered gradients
-            if (myConfig.axisymmetric || (myConfig.turb_model.isTurbulent)){
+            if (myConfig.axisymmetric || (myConfig.turb_model.isTurbulent || myConfig.save_viscous_gradients)){
                 foreach (cell; cells) {
                     cell.average_interface_deriv_values();
                 }

@@ -64,6 +64,11 @@ class AuxCellData
             if (name == FlowAverage.tag) return counter;
         }
 
+        if (GlobalConfig.viscous && GlobalConfig.save_viscous_gradients) {
+            counter += 1;
+            if (name == CellGradientData.tag) return counter;
+        }
+
         if (GlobalConfig.do_temporal_DFT) {
             counter += 1;
             if (name == GeneralDFT.tag) return counter;
@@ -91,9 +96,11 @@ class AuxCellData
         i = get_order(FlowAverage.tag);
         if (i >= 0) aux_data[i] = new FlowAverage();
 
+        i = get_order(CellGradientData.tag);
+        if (i >= 0) aux_data[i] = new CellGradientData();
+
         i = get_order(GeneralDFT.tag);
         if (i >= 0) aux_data[i] = new GeneralDFT();
-
 
         foreach (ref aux; aux_data) {
             aux.init(config);
@@ -721,6 +728,135 @@ class FlowAverage : AuxCellData
         return acc;
     }
 }
+
+//=============================================================================
+// Flow Gradients
+//=============================================================================
+
+// we need a different template for array access into FlowGradients
+// as the order of indices is [id][x,y,z] instead of [x,y,z][id]
+template GenGradArrayAccess(string name, string location, string d)
+{
+    const char[] GenGradArrayAccess = 
+    "class "~name~" : VariableAccess
+    {
+        public:
+        this(const size_t idx){
+            buffer.length = num_return; 
+            this.idx = idx;
+        }
+        @nogc override final double[] get(FVCell cell) {
+            buffer[0] = cell."~location~"[idx]["~d~"].re; 
+            return buffer;
+        }
+        @nogc override final void set(FVCell cell, const double[] value) {  
+            cell."~location~"[idx]["~d~"].re = value[0];
+        }
+        @nogc override final string description(){
+            return \"[cell."~location~"[idx]["~d~"].re]\";
+        }
+        private:
+        size_t idx;
+    }";
+}
+
+mixin(GenCellVariableAccess!("AccessDUDX", "grad.vel[0][0]"));
+mixin(GenCellVariableAccess!("AccessDUDY", "grad.vel[0][1]"));
+mixin(GenCellVariableAccess!("AccessDUDZ", "grad.vel[0][2]"));
+mixin(GenCellVariableAccess!("AccessDVDX", "grad.vel[1][0]"));
+mixin(GenCellVariableAccess!("AccessDVDY", "grad.vel[1][1]"));
+mixin(GenCellVariableAccess!("AccessDVDZ", "grad.vel[1][2]"));
+mixin(GenCellVariableAccess!("AccessDWDX", "grad.vel[2][0]"));
+mixin(GenCellVariableAccess!("AccessDWDY", "grad.vel[2][1]"));
+mixin(GenCellVariableAccess!("AccessDWDZ", "grad.vel[2][2]"));
+
+version(multi_species_gas) {
+mixin(GenGradArrayAccess!("AccessDMassFDX", "grad.massf", "0"));
+mixin(GenGradArrayAccess!("AccessDMassFDY", "grad.massf", "1"));
+mixin(GenGradArrayAccess!("AccessDMassFDZ", "grad.massf", "2"));
+}
+
+mixin(GenCellVariableAccess!("AccessDTDX", "grad.T[0]"));
+mixin(GenCellVariableAccess!("AccessDTDY", "grad.T[1]"));
+mixin(GenCellVariableAccess!("AccessDTDZ", "grad.T[2]"));
+
+version(multi_T_gas) {
+mixin(GenGradArrayAccess!("AccessDTModesDX", "grad.T_modes", "0"));
+mixin(GenGradArrayAccess!("AccessDTModesDY", "grad.T_modes", "1"));
+mixin(GenGradArrayAccess!("AccessDTModesDZ", "grad.T_modes", "2"));
+}
+
+version(turbulence) {
+mixin(GenGradArrayAccess!("AccessDTurbDX", "grad.turb", "0"));
+mixin(GenGradArrayAccess!("AccessDTurbDY", "grad.turb", "1"));
+mixin(GenGradArrayAccess!("AccessDTurbDZ", "grad.turb", "2"));
+}
+
+class CellGradientData : AuxCellData
+// An empty auxiliary data item that acts as a pass-through for accessing
+// the viscous flow gradients
+{
+    public:
+
+    static tag = "gradient";
+
+    this(){
+        index = AuxCellData.get_order(tag);
+    }
+
+    override void init(LocalConfig myConfig){}
+
+    override @nogc void update(FVCell cell, double dt, double time, size_t step){}
+
+    static VariableAccess[string] get_accessors(LocalConfig myConfig)
+    {
+        VariableAccess[string] acc;
+
+        acc["du_dx"] = new AccessDUDX();
+        acc["du_dy"] = new AccessDUDY();
+        acc["dv_dx"] = new AccessDVDX();
+        acc["dv_dy"] = new AccessDVDY();
+
+        acc["dT_dx"] = new AccessDTDX();
+        acc["dT_dy"] = new AccessDTDY();
+
+        if (myConfig.dimensions == 3) {
+            acc["du_dz"] = new AccessDUDZ();
+            acc["dv_dz"] = new AccessDVDZ();
+            acc["dw_dx"] = new AccessDWDX();
+            acc["dw_dy"] = new AccessDWDY();
+            acc["dw_dz"] = new AccessDWDZ();
+            acc["dT_dz"] = new AccessDTDZ();
+        }
+
+        version(multi_species_gas) {
+        foreach(it; 0 .. myConfig.gmodel.n_species) {
+            acc["d"~massfName(myConfig.gmodel, it)~"_dx"] = new AccessDMassFDX(it);
+            acc["d"~massfName(myConfig.gmodel, it)~"_dy"] = new AccessDMassFDY(it);
+            if (myConfig.dimensions == 3) acc["d"~massfName(myConfig.gmodel, it)~"_dz"] = new AccessDMassFDZ(it);
+        }
+        }
+
+        version(multi_T_gas) {
+        foreach(it; 0 .. myConfig.gmodel.n_modes) {
+            acc["d"~k_modesName(it)~"_dx"] = new AccessDTModesDX(it);
+            acc["d"~k_modesName(it)~"_dy"] = new AccessDTModesDY(it);
+            if (myConfig.dimensions == 3) acc["d"~k_modesName(it)~"_dz"] = new AccessDTModesDZ(it);
+        }
+        }
+
+        version(turbulence) {
+        foreach(it; 0 .. myConfig.turb_model.nturb) {
+            acc["d"~myConfig.turb_model.primitive_variable_name(it)~"_dx"] = new AccessDTurbDX(it);
+            acc["d"~myConfig.turb_model.primitive_variable_name(it)~"_dy"] = new AccessDTurbDY(it);
+            if (myConfig.dimensions == 3) acc["d"~myConfig.turb_model.primitive_variable_name(it)~"_dz"] = new AccessDTurbDZ(it);
+        }
+        }
+
+        return acc;
+    }
+}
+
 
 //=============================================================================
 // FlowDFT

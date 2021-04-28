@@ -15,14 +15,14 @@ e4shared --prep --job=ffs
 
 # --- PROFILE RUN ---
 CPUPROFILE=./prof.out $BINARY --run --job=ffs --max-cpus=1
-#$PPROF --gv $BINARY ./prof.out
 $PPROF --pdf $BINARY  ./prof.out > profile.pdf
 
 
 # -- NORMAL RUN ---
 #mpirun -np 3 e4mpi --run --job=ffs
-e4shared --run --job=ffs --verbosity=1 --max-cpus=4
+#e4shared --run --job=ffs --verbosity=1 --max-cpus=4
 e4shared --post --job=ffs --tindx-plot=all --vtk-xml
-#e4shared --post --job=ffs --tindx-plot=last --vtk-xml --plotTag="average"
-#e4shared --post --job=ffs --tindx-plot=last --vtk-xml --plotTag="DFT"
+e4shared --post --job=ffs --tindx-plot="1,2,3,4,5" --vtk-xml --plotTag="average"
+e4shared --post --job=ffs --tindx-plot=last --vtk-xml --plotTag="DFT"
+e4shared --post --job=ffs --tindx-plot="1,2,3,4,5" --vtk-xml --plotTag="gradient"
 
