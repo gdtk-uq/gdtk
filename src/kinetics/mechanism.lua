@@ -116,7 +116,8 @@ function mechanismToLuaStr(index, m)
       argStr = string.format("  rate = '%s',\n", m.rate)
       argStr = argStr .. string.format("  relaxation_time = %s\n", relaxationTimeToLuaStr(m.rt))
    elseif m.type == "E-T" then
-      argStr = string.format("  exchange_cross_section = %s\n", tableToString(m.exchange_cross_section))
+      argStr = string.format("  rate = 'ElectronExchange',\n")
+      argStr = argStr .. string.format("  exchange_cross_section = %s\n", tableToString(m.exchange_cross_section))
    else
       print("ERROR: type is not known: ", type)
       os.exit(1)

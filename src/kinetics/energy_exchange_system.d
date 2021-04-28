@@ -46,7 +46,7 @@ public:
         lua_getglobal(L, "mechanism");
         lua_pushnil(L); // dummy first key
         while (lua_next(L, -2) != 0) { // -1 is the dummy key, -2 is the mechanism table
-            mEEM ~= createVTMechanism(L, mode, gmodel);
+            mEEM ~= createEnergyExchangeMechanism(L, mode, gmodel);
             lua_pop(L, 1); // discard value but keep key so that lua_next can remove it (?!)
         }
         lua_pop(L, 1); // remove mechanisms table
@@ -72,7 +72,7 @@ public:
         number rate = 0.0;
         // Compute rate change from VT exchange
         foreach (mech; mEEM) {
-            rate += mech.rate(gs, mGsEq, mMolef);
+            rate += mech.rate(gs, mGsEq, mMolef, mNumden);
         }
         rates[0] = rate;
     }

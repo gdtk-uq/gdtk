@@ -17,4 +17,5 @@ immutable double P_atm = 101.325e3;          // Pa
 immutable double Boltzmann_constant = 1.380658e-23; // J/K -- Tipler (1991)
 immutable double Avogadro_number = 6.02214e23;
 immutable double electron_volt_energy = 1.60219e-19; // J
+immutable double elementary_charge = 1.602176634e-19; // C (Exact as of 2019 SI unit redefinition)
 immutable double vacuum_permittivity = 8.8541878128e-12; // A^2.s^4/kg/m^3

@@ -50,7 +50,7 @@ public:
         // Set up the rest of the parameters.
         mMaxSubcycles = 10000;
         mMaxAttempts = 4;
-        mTol = 1.0e-3;
+        mTol = 1.0e-9;
 
         initialiseWorkSpace();
     }
