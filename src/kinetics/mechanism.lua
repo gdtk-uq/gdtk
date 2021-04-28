@@ -34,12 +34,21 @@ function transformRelaxationTime(rt, p, q, db)
       M_q = db[q].M*1000.0 -- kg -> g
       mu = (M_p * M_q)/(M_p + M_q)
       theta_v = db[p].theta_v
-      t.a = 1.16e-3*sqrt(mu)*pow(theta_v, 4/3)
-      t.b = 0.015*pow(mu, 1/4)
+      -- If the user has not supplied values for a and b compute them from Millikan and White's correlation
+      if rt.a == nil then
+         t.a = 1.16e-3*sqrt(mu)*pow(theta_v, 4/3)
+      else
+         t.a = rt.a
+      end
+      if rt.b == nil then
+         t.b = 0.015*pow(mu, 1/4)
+      else
+         t.b = rt.b
+       end
    elseif t.model == "ParkHTC" then
       t.submodel = transformRelaxationTime(rt.submodel, p, q, db)
       if rt.sigma == nil then
-         t.sigma = 1.0e-20 -- Default collision cross section in m^2 (TODO: Is this a good idea?)
+         t.sigma = 1.0e-20 -- Default collision cross section in m^2
       else
          t.sigma = rt.sigma
       end
