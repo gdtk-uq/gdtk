@@ -9,6 +9,7 @@ import std.format;
 import std.math;
 import std.algorithm;
 import std.conv;
+import std.stdio;
 import nm.complex;
 import nm.number;
 
@@ -41,16 +42,43 @@ public:
         mGmodel = gmodel;
         mNSpecies = mGmodel.n_species;
         mGsInit = new GasState(gmodel);
+
         auto L = init_lua_State();
         doLuaFile(L, fname1);
         lua_getglobal(L, "reaction");
         mRmech = createReactionMechanism(L, gmodel, 300.0, 30000.0);
+
         // Initialise energy exchange mechanism
         mEES = new TwoTemperatureEnergyExchange(fname2, gmodel);
+
         // Set up the rest of the parameters.
-        mMaxSubcycles = 10000;
-        mMaxAttempts = 4;
-        mTol = 1.0e-9;
+        lua_getglobal(L, "config");
+        lua_getfield(L, -1, "odeStep");
+        lua_getfield(L, -1, "method");
+        string ode_method = to!string(lua_tostring(L, -1));
+        lua_pop(L, 1);
+        switch (ode_method) {
+        case "rkf":
+             lua_getfield(L, -1, "errTol");
+             if (!lua_isnil(L, -1)) mTol = lua_tonumber(L, -1);
+             lua_pop(L, 1);
+             break;
+        default:
+             string errMsg = format("ERROR: The odeStep '%s' cannot be used with TwoTemperatureThermochemicalReactor.\n", ode_method);
+             throw new Error(errMsg);
+        }
+        lua_pop(L, 1); // pops 'odeStep'
+
+        lua_getfield(L, -1, "maxSubcycles");
+        if (!lua_isnil(L, -1)) mMaxSubcycles = to!int(luaL_checkinteger(L, -1));
+        lua_pop(L, 1);
+
+        lua_getfield(L, -1, "maxAttempts");
+        if (!lua_isnil(L, -1)) mMaxAttempts = to!int(luaL_checkinteger(L, -1));
+        lua_pop(L, 1);
+
+        lua_pop(L, 1); // pops 'config'
+        lua_close(L);
 
         initialiseWorkSpace();
     }
@@ -236,9 +264,9 @@ public:
 
 private:
     int mNSpecies;
-    int mMaxSubcycles;
-    int mMaxAttempts;
-    double mTol;
+    int mMaxSubcycles=10000;
+    int mMaxAttempts=4;
+    double mTol=1e-3;
     number[] mConc0;
     number[] mConc;
     number[] m_dCdt;
