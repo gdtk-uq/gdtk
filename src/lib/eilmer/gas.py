@@ -94,6 +94,8 @@ ffi.cdef("""
                               int stateX0_id, int gm_id, double* results);
     int gasflow_osher_flux(int stateL_id, int stateR_id, double velL, double velR,
                            int gm_id, double* results);
+    int gasflow_roe_flux(int stateL_id, int stateR_id, double velL, double velR,
+                         int gm_id, double* results);
 
     int gasflow_lrivp(int stateL_id, int stateR_id, double velL, double velR,
                       int gmL_id, int gmR_id, double* wstar, double* pstar);
@@ -749,6 +751,15 @@ class GasFlow(object):
         my_results = ffi.new("double[]", [0.0]*3)
         flag = so.gasflow_osher_flux(stateL.id, stateR.id, velL, velR, self.gmodel.id, my_results)
         if flag < 0: raise Exception("failed to compute Osher flux.")
+        F_mass = my_results[0]
+        F_x_momentum = my_results[1]
+        F_energy = my_results[2]
+        return [F_mass, F_x_momentum, F_energy]
+
+    def roe_flux(self, stateL, stateR, velL, velR):
+        my_results = ffi.new("double[]", [0.0]*3)
+        flag = so.gasflow_roe_flux(stateL.id, stateR.id, velL, velR, self.gmodel.id, my_results)
+        if flag < 0: raise Exception("failed to compute Roe flux.")
         F_mass = my_results[0]
         F_x_momentum = my_results[1]
         F_energy = my_results[2]

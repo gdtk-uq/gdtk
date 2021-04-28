@@ -94,6 +94,8 @@ module Gas
                                     int stateX0_id, int gm_id, double* results)'
   extern 'int gasflow_osher_flux(int stateL_id, int stateR_id, double velL, double velR,
                                  int gm_id, double* results)'
+  extern 'int gasflow_roe_flux(int stateL_id, int stateR_id, double velL, double velR,
+                               int gm_id, double* results)'
 
   extern 'int gasflow_lrivp(int stateL_id, int stateR_id, double velL, double velR,
                             int gmL_id, int gmR_id, double* wstar, double* pstar)'
@@ -761,6 +763,13 @@ class GasFlow
     my_results = [0.0, 0.0, 0.0].pack("d*")
     flag = Gas.gasflow_osher_flux(stateL.id, stateR.id, velL, velR, @gmodel.id, my_results)
     if flag < 0 then raise "failed to compute Osher flux." end
+    return my_results[0, my_results.size].unpack("ddd") # [f_mass, f_x_momentum, f_energy]
+  end
+
+  def roe_flux(stateL, stateR, velL, velR)
+    my_results = [0.0, 0.0, 0.0].pack("d*")
+    flag = Gas.gasflow_roe_flux(stateL.id, stateR.id, velL, velR, @gmodel.id, my_results)
+    if flag < 0 then raise "failed to compute Roe flux." end
     return my_results[0, my_results.size].unpack("ddd") # [f_mass, f_x_momentum, f_energy]
   end
 

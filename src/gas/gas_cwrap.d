@@ -1028,6 +1028,22 @@ int gasflow_osher_flux(int stateL_id, int stateR_id, double velL, double velR,
 }
 
 extern(C)
+int gasflow_roe_flux(int stateL_id, int stateR_id, double velL, double velR,
+                     int gm_id, double* results)
+{
+    try {
+        double[3] F = roe_flux(gas_states[stateL_id], gas_states[stateR_id], velL, velR, gas_models[gm_id]);
+        results[0] = F[0]; // mass
+        results[1] = F[1]; // x-momentum
+        results[2] = F[2]; // energy
+        return 0;
+    } catch (Exception e) {
+        stderr.writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern(C)
 int gasflow_lrivp(int stateL_id, int stateR_id, double velL, double velR,
                   int gmL_id, int gmR_id, double* wstar, double* pstar)
 {
