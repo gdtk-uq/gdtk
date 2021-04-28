@@ -50,6 +50,7 @@ public:
             lua_pop(L, 1); // discard value but keep key so that lua_next can remove it (?!)
         }
         lua_pop(L, 1); // remove mechanisms table
+        lua_close(L);
     }
 
     @nogc
