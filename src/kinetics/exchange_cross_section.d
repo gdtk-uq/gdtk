@@ -111,7 +111,7 @@ class CoulombIonECS : ExchangeCrossSection {
 
 private:
     int e,q;
-    immutable double pi = to!number(PI);
+    immutable double pi = to!double(PI);
 }
 
 ExchangeCrossSection createExchangeCrossSection(lua_State *L, int e, int q)

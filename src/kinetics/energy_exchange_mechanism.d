@@ -143,6 +143,9 @@ class ElectronExchangeET : EnergyExchangeMechanism {
         rather than T and Tv, so this routine isn't seeing the increments done during
         the RKF step.
     */
+        immutable double pi = to!double(PI);
+        immutable double six_times_sqrt2 = 6.0*sqrt(2.0);
+
         number ne = numden[m_e];
         number nq = numden[m_q];
         number Eq = Boltzmann_constant*gs.T;
@@ -168,8 +171,6 @@ private:
     ExchangeCrossSection mCS;
     GasModel mGmodel;
     double m_me, m_mq;
-    immutable double six_times_sqrt2 = 6.0*sqrt(2.0);
-    immutable double pi = to!number(PI);
 
     @nogc final void check_species_indices(int e, int p, GasModel gmodel) {
         if (gmodel.species_name(e)!="e-") {
